@@ -69,3 +69,12 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - El dueño confirmó expresamente crear `amazonfill-prod` con el correo introducido por él y `OrganizationAccountAccessRole`. Solicitud enviada y resultado comprobado en Organizations: existen gestión, `amazonfill-dev` y `amazonfill-prod`. Sin bootstrap ni stacks del juego en prod.
 - El dueño indicó haber completado `af-owner`, pero la validación de la pestaña de Identity Center muestra únicamente el nombre de usuario completado y devuelve errores por correo, confirmación, nombre, apellidos y nombre de visualización vacíos. No se inventaron ni copiaron datos desde otras cuentas. Se dejó el formulario abierto y se pidió completar esa pestaña; usuario todavía no creado.
 - Se mantienen pendientes el alta del usuario, su registro personal de MFA, los conjuntos de permisos y sus asignaciones, CLI/SSO local y todos los pasos de bootstrap/diff/deploy.
+
+### Usuario SSO creado y permisos aprovisionados — 2026-10-21
+
+- El dueño completó los datos de `af-owner` en la consola. Se revisó el alta sin grupos y el dueño confirmó expresamente crear el usuario y enviar instrucciones de contraseña al correo introducido por él.
+- Alta correcta y envío de instrucciones confirmados por AWS. No se generó ni se vio ninguna contraseña. Registro personal de MFA y primer acceso SSO aún pendientes de comprobar; la política exige MFA en cada inicio y registro de dispositivo al primer acceso.
+- Creado el conjunto de permisos `AdministratorAccess`, política administrada de AWS homónima, sesión de 1 hora y descripción de administración inicial del proyecto.
+- Revisada la asignación para un único usuario (`af-owner`) y exactamente dos cuentas (`amazonfill-dev`, `amazonfill-prod`). El dueño confirmó expresamente conceder ese acceso administrativo; AWS mostró «Todas las asignaciones se configuraron correctamente». Cuenta de gestión excluida. Sin grupos ni acceso añadido a otras cuentas.
+- AWS CLI v2 sigue sin encontrarse en las ubicaciones habituales. Siguiente paso: el dueño configura contraseña y MFA desde el correo de AWS e instala manualmente la CLI v2 oficial. Después configurar `af-dev` y `af-prod`, comprobar que cada perfil corresponde a su entorno sin imprimir identificadores y preparar bootstrap solo en dev.
+- Bootstrap, diff, deploy, presupuesto, SNS y comprobaciones del servicio aún no ejecutados. Ningún recurso del juego desplegado en dev, prod ni gestión.
