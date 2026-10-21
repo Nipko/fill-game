@@ -6,6 +6,53 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-20 · B4 · Bitácora del río «1 de 3» + cola de takeovers + pantalla 2 del 10 (`spark/t5-b4`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/t5-b4`, desde `origin/integracion-fase1-fase2` en `d994e586` (avance rápido desde `dbbba004`, la base del trabajo a medias). Recupera los archivos sin commitear que quedaron en el worktree `spark-t5-b4` y los termina en otro worktree (el agente no podía usar aquel), así que la rama local `spark/t5-b4` de ese worktree sigue en `dbbba004` con los archivos sueltos: se pueden borrar. No hizo falta fusionar B1a (ya está en la integración) ni B6.
+- **Nota del bloque:** `docs/dev/bitacora.md` (reglas, pantallas, cola, perfil, analítica, RC, `econ_sim`, parches y Q-B1 a Q-B15).
+- **Commits** (del más antiguo al más reciente): `9ec7d5b7` (lógica, libreta, tarjeta y arranque), `81a7a0a2` (tests y `B4-strings.csv`; la sustitución nunca repite una opción), `8955ec7a` (la cola sobrevive al cambio de idioma; `LogbookOverride` para los tests), `10f66534` (`econ_sim` «1 de 3», `econ_B.md` y `econ_variants.md`), `5a70c5e0` (la nota), `51f2ce05` (los parches), `73d04afd`, `5050805b` y `c315705d` (las tres rondas de revisión) y el de esta entrada.
+- **En la rama** (todo archivo nuevo, salvo `tools/econ_sim.py`, `tools/econ_variants.py` y sus dos salidas, que el encargo §12 asigna a B4):
+  - `Scripts/LiveOps/LoginCalendarTable.cs`, `LoginCalendarRules.cs`, `LoginCalendarRecord.cs`, `LoginCalendarService.cs`, `LoginCalendarConfig.cs` y `LoginCalendarProbeFormat.cs`, con sus tests en `Scripts/LiveOps/Tests/LoginCalendar*Tests.cs`;
+  - `Scripts/GameFlow/TakeoverQueue.cs` y `LevelFlow.Calendar.cs` (el aviso de nivel terminado, sin llamar hasta B4-2), con `Tests/EditMode/TakeoverQueueTests.cs`;
+  - `Scripts/UI/LogbookScreen.cs`, `LogbookCard.cs`, `LogbookText.cs`, `GameBootstrap.Logbook.cs`, `LogbookRunner.cs` y `DevProbe.Logbook.cs` (sin llamar hasta B4-3), con `Tests/PlayMode/LogbookScreenTests.cs` y `LogbookBootstrapTests.cs`;
+  - `docs/dev/traspaso/spark-enganches/B4-strings.csv`: 20 claves `logbook_*`; `logbook_item_hint` y `logbook_item_reveal` en `pendiente_asesor` (fauna); `logbook_item_grand_basket` sin EN ni PT-BR (glosario, pregunta abierta 8).
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, LF; los tres pasan `git apply --check` sobre la rama; orden y detalle en la nota §7):
+  1. **`B4-1-profile.diff`:** `Profile.Calendar` (`CalendarData`) y `ProfileJson` (`calendar` tras `streak`, omitido mientras es null); `LiveOps/ProfileLoginCalendarStore.cs` y sus tests; `LogbookStoreFactory` = `CreateProfileLogbookStore`.
+  2. **`B4-2-flow.diff`:** `OnLevelPlayedCalendar(true)` en `LevelFlow.ResolveWin` y `OnFailCalendar(kind)` en `LevelFlow.Fail`; `Tests/EditMode/LevelPlayedHookTests.cs`.
+  3. **`B4-3-bootstrap.diff`:** en `GameBootstrap.cs`, `SetUpLogbook();` tras `SetUpStreak();`, la libreta antes del Mapa del 10 y Atrás de Android; `NoLogbookUnlessSet()` en `PlayModeHelpers.cs`; `Tests/PlayMode/LogbookHooksTests.cs`.
+  4. **Textos:** las filas de `B4-strings.csv` a `strings.csv`.
+  - **Choque conocido:** B3, B6 y B7 también añaden una línea tras `SetUpStreak();`. Orden propuesto: `SetUpSkip();` (B3), `SetUpLogbook();` (B4), `SetUpSessions();` (B6), `ConnectTelemetry();` (B7). B8 tiene que cubrir `calendar` en la integridad y la fusión del perfil (propuesta [P]: el registro con más avance y la unión de los marcos).
+- **Revisión (skill `code-review`, con las reglas de `.claude/agents/code-reviewer.md`; no había herramienta para lanzar el subagente):**
+  - 1.ª ronda: CAMBIOS NECESARIOS. Verificación sin registrar (esta entrada); tests de la victoria del Reto, de la fila de la victoria, del cambio de idioma y del Mapa del 10 sin condición; `played_date` contra la letra de D-033, punto 6 (Q-B1). Sugerencias: arranque frágil con una tasa de RC que no cuadra, Atrás, medianoche, día 30, copia de `lvl_murky_from_level`, doc de «Salir». Todo arreglado en `73d04afd`.
+  - 2.ª ronda: CAMBIOS NECESARIOS. La constante de la Luciérnaga dependía de `DevBench`, que solo existe en desarrollo: el build de release no habría compilado. Arreglado en `5050805b`, con la medianoche resuelta en el fotograma y el desbordamiento de la tasa.
+  - 3.ª ronda: **APROBADO**. Sugerencias aplicadas en `c315705d`: desbloqueo con `max_level` ≥ nivel (la Luciérnaga ya no se adelanta al regalo del 100), lo recibido no se borra a medianoche, `catch` más estrecho y un test que ata la constante a 08 §9 y a `DevBench`.
+- **Verificación** (`-Architecture arm64`; como mucho un Unity mío a la vez, con el de otro agente en marcha):
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`c315705d`) | `dotnet build dotnet/AmazonFill.slnx -warnaserror` | 0 avisos, 0 errores |
+  | rama | `dotnet test dotnet/AmazonFill.slnx` | 981 (975 + 6 omitidos), 0 fallos |
+  | rama | `python tools/validate_schema.py` | 103/103 PASS, código 0; `schema_example_08_4_1.json` sin cambios |
+  | rama | `python tools/econ_sim.py --runs 300 \| diff --strip-trailing-cr -q - tools/out/econ_B.md` | idéntico (tras regenerarlo) |
+  | rama | `unity-compile.ps1` | 0 |
+  | rama | `unity-test.ps1 -Mode EditMode` | **3.437 (3.434 + 3 omitidos), 0 fallos** (43 nuevos de B4; línea base 3.394) |
+  | rama | `unity-test.ps1 -Mode PlayMode` | **1.702 (1.466 + 236 omitidos), 0 fallos** (18 nuevos de B4; línea base 1.684); 32 min |
+  | temporal (rama + B4-1 + B4-2 + B4-3) | compile; EditMode completo | 0; 3.442 (3.439 + 3), 0 fallos (en la 1.ª pasada; en la última, 1 fallo de rendimiento, `IntroArtTests.FruitFlight_…Within10ms`, ajeno a B4, que pasa relanzado solo) |
+  | temporal | PlayMode completo | 1.699 (1.463 + 236), 0 fallos; tras la 2.ª ronda, 1.705 (1.468 + 236) con 1 *timeout* de 180 s en `TranslatedLocaleOverflowTests` (pt-BR, 130 %), que pasa relanzado (26/26 con `Logbook;TranslatedLocaleOverflowTests`) |
+  | temporal, versión final | EditMode filtrado (`LoginCalendar;TakeoverQueue;LevelPlayedHook;ProfileLoginCalendar;ProfileJson`); PlayMode filtrado (`Logbook;TranslatedLocaleOverflowTests`) | 95/95; 26/26 |
+
+- **Lo marcado [P]** y las **preguntas para el dueño** (Q-B1 a Q-B15, con su recomendada aplicada): `docs/dev/bitacora.md` §8. Las que más pesan:
+  - **Q-B1** (`played_date` en `calendar`): va contra la letra de D-033, punto 6, y cambia 08 §4.3: **que el dueño la confirme antes de integrar B4-1**.
+  - **Q-B3** (cuánto vale una Marea): D-033, punto 1, contra 06 §4.2, regla 1, y la clave `undo3`. Implementada la de D-033 (30 por Marea); con `econ_sim`, «siempre comodín» deja al casual con más bloqueos (96 % frente al 69 % del canon).
+  - **Q-B11:** la fila «Bitácora · elige tu premio» del panel de la victoria la dibuja el escritorio (B1b) con `LogbookVictoryRowDue` y `OpenLogbookFromVictory()`.
+- **Para el GDD** (lo anota el integrador; texto en la nota §7): 06 §4.2 y §2.3; 05 §2.3 y §3 (cifras [sim] nuevas: saldo final del casual 1.912 → 2.227, casual con bloqueo sin recursos 74 % → 69 %, `bitacora` del medio 3.577 → 3.974…); 08 §4.3 (`calendar`), §8.2 (`af_calendar_claim` con `choice` y `cycle`) y §9 (`eco_calendar_table_v2`).
+- **Riesgos:**
+  - `econ_A.md` y `econ_B_tramos.md` ya no se reproducían antes de B4 (Q-B15).
+  - Las dos pruebas de tiempo real que fallaron una vez (`WorldBannerTests.Banner_TimeoutAndWaitMs_UseTheRealClock` en la rama y las dos del temporal) son inestables con dos Unity a la vez; pasan relanzadas.
+  - El arte de la libreta y de la tarjeta es provisional (por código).
+  - Sin capturas de B4 en `Logs/snapshots/` ni prueba en el teléfono.
+
+
 ## 2026-10-20 · S2 = B1a · Crecida + Hoja escudo + Canasta (`spark/t5-b1a`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/t5-b1a`, desde `a759597`. Fusiona `origin/integracion-fase1-fase2` (`815b2e5`) en `7fbc1cd`.
