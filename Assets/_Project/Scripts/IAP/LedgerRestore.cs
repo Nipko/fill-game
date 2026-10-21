@@ -29,6 +29,9 @@ namespace AF.IAP
         /// <summary>De <see cref="Recredited"/>, las que dan Sin anuncios (<c>af_entitlement_restored</c> con <c>type = no_ads</c>).</summary>
         public int RecreditedNoAds { get; internal set; }
 
+        /// <summary>De <see cref="Recredited"/>, las de productos consumibles (semillas, Balsa, Canoas infinitas, Cántaro).</summary>
+        public int RecreditedConsumables { get; internal set; }
+
         /// <summary>Compras <c>ok</c> que faltaban pero cuyo producto ya se tenía: solo se anotó su <c>token_hash</c>.</summary>
         public int AlreadyOwned { get; internal set; }
 
@@ -187,6 +190,11 @@ namespace AF.IAP
                 {
                     case VerifiedCreditKind.Credited:
                         report.Recredited++;
+                        if (product.Kind == ProductKind.Consumable)
+                        {
+                            report.RecreditedConsumables++;
+                        }
+
                         if (content.GrantsNoAds)
                         {
                             report.RecreditedNoAds++;

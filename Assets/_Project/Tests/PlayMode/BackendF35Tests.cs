@@ -28,6 +28,7 @@ namespace AF.Tests.PlayMode
         {
             GameBootstrap.ResetMarketOverrides();
             GameBootstrap.ResetCloudOverrides(); // también los del backend y la banda de edad
+            GameBootstrap.ResetTelemetryOverrides();
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -181,6 +182,92 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Wallet.Seeds, Is.EqualTo(balsaSeeds), "acreditada tarde, una vez: el resto del paquete");
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.StuckModal), "la Cuia de rescate de una Balsa tardía se pierde (F3-3)");
             Assert.That(stuck.PurchaseNoteText, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator APendingPiggy_CreditedLater_EmptiesTheJar_AndALateSkinIsPutOn()
+        {
+            // Q-B5-12: el Cántaro pendiente no se vacía hasta acreditarse, y entonces sí; Q-B5-13: la skin acreditada tarde se pone.
+            var offers = new InMemoryOffersStore();
+            offers.Save(new OffersRecord { PiggySeeds = 1500 });
+            GameBootstrap.OffersStoreOverride = offers;
+            yield return LoadLobby(new MemoryProfileStore(ProfileAt(42)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PiggyJar piggy = boot.Piggy!;
+            Assert.That(piggy.Seeds, Is.EqualTo(1500));
+
+            boot.FakeBackend!.FailNext(new BackendError(BackendErrorKind.Network), 2);
+            PurchaseResult? jar = null;
+            boot.Store!.Purchase(piggy.Request(PurchaseContext.Piggy, 42), r => jar = r);
+            Assert.That(jar!.Status, Is.EqualTo(PurchaseStatus.Pending));
+            Assert.That(piggy.OnPurchaseResult(jar), Is.False);
+            Assert.That(piggy.Seeds, Is.EqualTo(1500), "pendiente: el Cántaro guarda lo suyo");
+            PurchaseResult? skin = null;
+            boot.Store.Purchase(new PurchaseRequest("af_skin_m03", PurchaseContext.Shop, 42), r => skin = r);
+            Assert.That(skin!.Status, Is.EqualTo(PurchaseStatus.Pending));
+
+            FunnelSetup.Clock.Advance(TimeSpan.FromHours(1));
+            boot.VerifiedStore!.Pump();
+            boot.VerifiedStore.Pump(); // una por llamada como mucho a la vez
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(1500 + boot.Services!.StoreLedger.Catalog.Get("af_skin_m03").Content.Seeds), "las dos, una vez");
+            Assert.That(piggy.Seeds, Is.EqualTo(0), "acreditado tarde: se vacía");
+            Assert.That(boot.Profile!.Entitlements.Skins, Does.Contain("af_skin_m03"));
+            Assert.That(boot.Skins!.Equipped, Is.EqualTo("af_skin_m03"), "acreditada tarde, se pone");
+        }
+
+        [UnityTest]
+        public IEnumerator Stuck_WithoutABackend_OffersNeitherHandfulNorBalsa()
+        {
+            GameBootstrap.BackendModeOverride = BackendMode.Unavailable;
+            yield return Fx5Setup.LoadStuck40("es-419", 1f, Fx5Setup.Screen(780));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.StuckModal));
+            StuckModal stuck = boot.View!.Stuck;
+            Assert.That(stuck.HandfulButton.gameObject.activeInHierarchy, Is.False, "la tienda no vende: no se ofrece");
+            Assert.That(stuck.BalsaButton.gameObject.activeInHierarchy, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator BizBackendEnabledOff_NoSales_NoServerDelete_AndNoCode()
+        {
+            // B7: biz_backend_enabled de Remote Config, por RcBackendSwitch: con el backend del build pero apagado.
+            GameBootstrap.RemoteConfigBackendOverride = new AF.RemoteConfig.FakeRemoteConfigBackend().Set("biz_backend_enabled", "false").StoreFetched();
+            GameBootstrap.WipePlayerPrefsForTests = () => { };
+            var store = new MemoryProfileStore(ProfileAt(26, 900));
+            yield return LoadLobby(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.FakeBackend, Is.Not.Null);
+            Assert.That(boot.BackendReady, Is.False);
+            Assert.That(boot.Store!.IsAvailable, Is.False);
+            boot.TickMarket(16f);
+            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
+            Assert.That(boot.Market!.StatusText, Is.EqualTo(MarketText.StoreUnavailable));
+            boot.Market.Close();
+
+            Assert.That(boot.PressSettings(), Is.True);
+            Assert.That(boot.SettingsView!.AccountCodeText, Is.EqualTo(AccountText.CodeUnavailable));
+            Assert.That(boot.FakeBackend!.Calls.ContainsKey(BackendOperation.GetAccountCode.Name), Is.False);
+            Assert.That(boot.OpenDeleteAccount() && boot.ContinueDeleteAccount() && boot.ConfirmDeleteAccount(), Is.True);
+            Assert.That(boot.DeleteAccountView!.WarningText, Is.EqualTo(AccountText.Failed), "sin el servidor no se borra nada [P]");
+            Assert.That(boot.FakeBackend.Deletions, Is.EqualTo(0));
+            Assert.That(store.Json, Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator Settings_AFailedCodeRequest_SaysSo_AndAsksAgainNextTime()
+        {
+            var store = new MemoryProfileStore(ProfileAt(40, 900));
+            yield return LoadLobby(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            boot.FakeBackend!.FailNext(new BackendError(BackendErrorKind.Network));
+            Assert.That(boot.PressSettings(), Is.True);
+            Assert.That(boot.SettingsView!.AccountCodeText, Is.EqualTo(AccountText.CodeUnavailable));
+            Assert.That(boot.Profile!.AccountCode, Is.Null, "no se guarda nada");
+
+            boot.CloseSettings();
+            Assert.That(boot.PressSettings(), Is.True);
+            Assert.That(boot.Profile.AccountCode, Is.EqualTo(boot.FakeBackend.CurrentAccountCode));
+            Assert.That(boot.SettingsView.AccountCodeText, Is.EqualTo(AccountText.Code(boot.Profile.AccountCode!)));
         }
 
         [UnityTest]

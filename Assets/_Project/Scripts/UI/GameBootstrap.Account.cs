@@ -190,7 +190,7 @@ namespace AF.UI
             server(ok =>
             {
                 AccountDeleteInFlight = false;
-                if (!enabled || _deleteAccountDialog != dialog)
+                if (this == null || !enabled || _deleteAccountDialog != dialog)
                 {
                     return; // la escena ya se fue
                 }

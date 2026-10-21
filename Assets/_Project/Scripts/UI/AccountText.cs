@@ -48,7 +48,7 @@ namespace AF.UI
             /// </summary>
             public const string Code = "settings_account_code";
 
-            /// <summary>«Sin conexión: el código para borrar la cuenta en la web aún no está disponible.» (F3-5) [P].</summary>
+            /// <summary>«Sin conexión: el código para borrar tu cuenta en la web aún no está disponible» (F3-5) [P].</summary>
             public const string CodeUnavailable = "settings_account_code_unavailable";
         }
 

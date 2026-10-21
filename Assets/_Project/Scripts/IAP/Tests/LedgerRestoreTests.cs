@@ -51,6 +51,7 @@ namespace AF.IAP.Tests
             LedgerRestoreReport first = Run(restore);
             Assert.That(first.Ran, Is.True);
             Assert.That(first.Recredited, Is.EqualTo(1));
+            Assert.That(first.RecreditedConsumables, Is.EqualTo(1));
             Assert.That(fx.Wallet.Seeds, Is.EqualTo(1000));
             Assert.That(fx.Profile.AppliedPurchases, Is.EqualTo(new[] { hash }));
             Assert.That(fx.Saved().AppliedPurchases, Is.EqualTo(new[] { hash }), "el hash y lo acreditado, guardados");
@@ -100,6 +101,7 @@ namespace AF.IAP.Tests
 
             Assert.That(report.Recredited, Is.EqualTo(2));
             Assert.That(report.RecreditedNoAds, Is.EqualTo(1));
+            Assert.That(report.RecreditedConsumables, Is.EqualTo(0), "Sin anuncios y una skin no son consumibles (af_entitlement_restored)");
             Assert.That(fx.Profile.Entitlements.NoAds, Is.True);
             Assert.That(fx.Profile.Entitlements.Skins, Does.Contain("af_skin_m02"));
         }

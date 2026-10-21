@@ -210,7 +210,7 @@ namespace AF.UI
             }
 
             _ledgerRestored = true;
-            int consumables = report.Recredited - report.RecreditedNoAds;
+            int consumables = report.RecreditedConsumables; // 08 §8.2 type ledger_consumables: solo consumibles
             if (report.RecreditedNoAds > 0)
             {
                 _analytics?.Log(AnalyticsEvent.Create("af_entitlement_restored").Add("type", "no_ads").Add("count", report.RecreditedNoAds));
@@ -338,17 +338,19 @@ namespace AF.UI
             }
 
             _accountCodeInFlight = true;
-            settings.SetAccountCode(AccountText.CodeUnavailable);
+            settings.SetAccountCode(null); // mientras llega, nada (no «sin conexión»)
             client.GetAccountCode(r =>
             {
                 _accountCodeInFlight = false;
-                if (!r.IsOk || _profile != profile)
+                if (this == null || _profile != profile)
                 {
-                    if (!r.IsOk)
-                    {
-                        Debug.LogWarning(LogPrefix + "account/code: " + r.Error);
-                    }
+                    return; // la escena ya se fue
+                }
 
+                if (!r.IsOk)
+                {
+                    Debug.LogWarning(LogPrefix + "account/code: " + r.Error);
+                    _settingsScreen?.SetAccountCode(AccountText.CodeUnavailable);
                     return; // se vuelve a pedir al abrir Ajustes
                 }
 
