@@ -9,7 +9,8 @@
     "AF.Economy",
     "AF.Ads",
     "AF.IAP",
-    "AF.Localization"
+    "AF.Localization",
+    "AF.Backend"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

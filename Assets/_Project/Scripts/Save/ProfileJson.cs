@@ -548,6 +548,11 @@ namespace AF.Save
                 root.Set("country_first", JsonNode.FromString(p.CountryFirst));
             }
 
+            if (p.AccountCode != null)
+            {
+                root.Set("account_code", JsonNode.FromString(p.AccountCode)); // F3-5 [P]: falta hasta que se pide
+            }
+
             if (p.VoidedPurchases.Count > 0)
             {
                 root.Set("voided_purchases", StringList(SortedUnique(p.VoidedPurchases)));
@@ -592,6 +597,7 @@ namespace AF.Save
             p.FirstAppVersion = TolerantString(root, "first_app_version");
             p.Locale = TolerantString(root, "locale");
             p.CountryFirst = TolerantString(root, "country_first");
+            p.AccountCode = TolerantString(root, "account_code");
             ReadStringList(root, "voided_purchases", p.VoidedPurchases);
             Normalize(p.VoidedPurchases);
 

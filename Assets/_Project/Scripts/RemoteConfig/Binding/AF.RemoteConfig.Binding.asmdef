@@ -13,7 +13,9 @@
     "AF.Ads",
     "AF.IAP",
     "AF.Localization",
-    "AF.LiveOps"
+    "AF.LiveOps",
+    "AF.Backend",
+    "AF.GameFlow"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

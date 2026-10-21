@@ -166,7 +166,8 @@ namespace AF.UI
             LoginCalendarService service;
             try
             {
-                service = new LoginCalendarService(store, _wallet, clock, DailyChallengeConfig.Defaults.LiveUnlockLevelDaily, LogbookConfigOverride);
+                // B4: las cifras de la Bitácora de Remote Config (RcConfigBinder, F3-5); los tests las fijan con LogbookConfigOverride.
+                service = new LoginCalendarService(store, _wallet, clock, DailyChallengeConfig.Defaults.LiveUnlockLevelDaily, LogbookConfigOverride ?? _rcConfigs?.LoginCalendar);
             }
             catch (Exception e) when (e is InvalidOperationException || e is OverflowException)
             {
@@ -183,7 +184,7 @@ namespace AF.UI
             _logbookCardCanvas = new OverlayCanvas("LogbookCardCanvas", transform, LogbookCardSortingOrder);
             _logbookCard = new LogbookCard(_logbookCardCanvas.Root, _art, () => OpenLogbook(LogbookOpenSource.Card));
             bool sameSession = ReferenceEquals(s_takeoversProfile, profile) && s_carriedTakeovers != null;
-            _takeovers = sameSession ? s_carriedTakeovers! : new TakeoverQueue();
+            _takeovers = sameSession ? s_carriedTakeovers! : new TakeoverQueue(_rcConfigs?.Takeovers); // ui_max_takeovers_per_session (B4)
             s_takeoversProfile = profile;
             s_carriedTakeovers = _takeovers;
             _takeovers.Register(TakeoverKind.Logbook, LogbookPending); // la función de esta escena, no la de la anterior

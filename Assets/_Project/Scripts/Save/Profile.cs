@@ -197,6 +197,16 @@ namespace AF.Save
         public string? CountryFirst { get; set; }
 
         /// <summary>
+        /// <c>account_code</c> [P] (08 §4.3 y §11; D-035, añadido de F1-F2a; Q-B13-21; F3-5): el código de borrado por web que enseña
+        /// Ajustes en lugar del UID. El servidor solo guarda su hash y rota (cada <c>POST /v1/account/code</c> invalida el anterior), así
+        /// que el cliente lo pide una vez, lo guarda aquí y solo vuelve a pedirlo si lo perdió (reinstalación). Null hasta que se pide;
+        /// entonces la clave falta (entra sin migrar). AF.Save no lo valida (26 caracteres de Base32 de Crockford: lo comprueba
+        /// <c>AF.Backend</c> al recibirlo). En la fusión de la nube es siempre el del dispositivo (<c>CloudMerge</c>): el de otro teléfono
+        /// puede estar ya invalidado.
+        /// </summary>
+        public string? AccountCode { get; set; }
+
+        /// <summary>
         /// <c>voided_purchases</c> [P] (08 §10.1, fila «Compra falsa o recibo reutilizado»: el cliente retira semillas o derechos de
         /// lo que el libro mayor marca <c>voided</c>): los tokens ya retirados, para no retirarlos dos veces (tampoco tras una fusión,
         /// que los une). Vacía, la clave no se escribe.

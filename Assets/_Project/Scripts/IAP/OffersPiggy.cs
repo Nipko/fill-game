@@ -156,12 +156,33 @@ namespace AF.IAP
                 return false;
             }
 
+            Empty();
+            return true;
+        }
+
+        /// <summary>
+        /// Una compra del Cántaro que quedó pendiente (Q-B5-12) se acreditó después, desde la cola de verificación (F3-5: al volver a
+        /// primer plano, en el siguiente arranque o con el <c>Pump</c> periódico): se vacía como con una compra al momento. Con otro
+        /// <paramref name="sku"/> no hace nada. Devuelve si se vació.
+        /// </summary>
+        public bool OnCreditedLater(string sku)
+        {
+            if (!string.Equals(sku, StoreCatalog.Piggy, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            Empty();
+            return true;
+        }
+
+        private void Empty()
+        {
             OffersRecord r = _state.Record;
             r.PiggySeeds = 0;
             r.PiggyCap = StoreConfig.EcoPiggyCap;
             r.PiggyFullCardShown = false;
             _state.Persist();
-            return true;
         }
     }
 }

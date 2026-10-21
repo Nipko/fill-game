@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using AF.Presentation;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,8 +13,9 @@ namespace AF.UI
     /// un enlace subrayado (pie de modal, 07 §7.5) de 48 dp de alto que abre <see cref="DeleteAccountDialog"/> por
     /// <see cref="DeleteAccountPressed"/> (lo fija <c>GameBootstrap.Account.cs</c>). Parcial nuevo: <c>SettingsScreen.cs</c> solo
     /// gana las llamadas a <see cref="BuildAccount"/> (constructor), <see cref="LayoutAccount"/> (<c>Layout</c>) y
-    /// <see cref="AccountLayoutIds"/> (<c>EmitLayout</c>), con el parche <c>B8-ui.diff</c>. El ID de jugador visible que pide la
-    /// vía web (08 §11) llega con Firebase Auth: hoy no hay UID [P].
+    /// <see cref="AccountLayoutIds"/> (<c>EmitLayout</c>), con el parche <c>B8-ui.diff</c>. Encima del enlace, la línea del código de
+    /// borrado para la web (F3-5; 08 §11; Q-B13-21: el código de <c>GetAccountCode</c>, nunca el UID), que pone
+    /// <see cref="SetAccountCode"/>; sin código que enseñar (banda &lt; 13 o sin backend), no sale.
     /// </summary>
     internal sealed partial class SettingsScreen
     {
@@ -25,6 +27,7 @@ namespace AF.UI
 
         private Button? _deleteAccount;
         private TextMeshProUGUI? _deleteAccountLabel;
+        private TextMeshProUGUI? _accountCode;
 
         /// <summary>Hueco de «Eliminar cuenta y datos» (null hasta <see cref="BuildAccount"/>).</summary>
         public RectTransform? AccountSlot { get; private set; }
@@ -38,6 +41,34 @@ namespace AF.UI
         /// <summary>Texto del enlace.</summary>
         public string? DeleteAccountLabel => _deleteAccountLabel?.text;
 
+        /// <summary>La línea del código de borrado para la web (F3-5), o null si no se ve.</summary>
+        public string? AccountCodeText => _accountCode != null && _accountCode.gameObject.activeSelf ? _accountCode.text : null;
+
+        /// <summary>
+        /// Pone la línea del código de borrado (<paramref name="text"/> ya compuesto con <c>AccountText</c>), o la quita con null. Con
+        /// Ajustes abierta, la rehace.
+        /// </summary>
+        public void SetAccountCode(string? text)
+        {
+            if (_accountCode == null)
+            {
+                return;
+            }
+
+            bool shown = !string.IsNullOrEmpty(text);
+            if (shown == _accountCode.gameObject.activeSelf && string.Equals(_accountCode.text, text ?? string.Empty, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _accountCode.text = text ?? string.Empty;
+            _accountCode.gameObject.SetActive(shown);
+            if (Visible)
+            {
+                Layout();
+            }
+        }
+
         /// <summary>Raíz del lienzo propio de Ajustes: el diálogo de dos pasos va encima, dentro del mismo lienzo.</summary>
         public RectTransform OverlayRoot => _canvas.Root;
 
@@ -50,6 +81,10 @@ namespace AF.UI
             }
 
             AccountSlot = UiBuilder.Rect("AccountSlot", _content);
+            _accountCode = UiBuilder.Label("AccountCode", AccountSlot, TextStyle.Body, string.Empty, 14f, Palette.FamilyWood.Base, TextAlignmentOptions.Left);
+            _accountCode.textWrappingMode = TextWrappingModes.Normal;
+            UiBuilder.AutoSize(_accountCode, MinTextSp, 14f);
+            _accountCode.gameObject.SetActive(false);
             _deleteAccount = ModalKit.Link("DeleteAccount", AccountSlot, AccountText.DeleteAccount, () => DeleteAccountPressed?.Invoke(), out TextMeshProUGUI label);
             _deleteAccountLabel = label;
             label.fontSizeMin = MinTextSp;
@@ -67,11 +102,22 @@ namespace AF.UI
             }
 
             _deleteAccountLabel.fontSizeMax = 16f * s;
-            UiBuilder.Place(AccountSlot, 16f, y, inner, rowH);
-            UiBuilder.Place((RectTransform)_deleteAccount.transform, 0f, 0f, inner, rowH);
-            _rowTops.Add(y);
+            float codeH = 0f;
+            if (_accountCode != null && _accountCode.gameObject.activeSelf)
+            {
+                // F3-5: el código, en las líneas que pida (hasta tres con la escala de texto), encima del enlace.
+                _accountCode.fontSizeMax = 14f * s;
+                codeH = Mathf.Ceil(Mathf.Max(20f * s, UiBuilder.MinTextHeight(_accountCode, inner))) + 4f;
+                UiBuilder.Place(_accountCode.rectTransform, 0f, 0f, inner, codeH - 4f);
+                _rowTops.Add(y);
+                _rowHeights.Add(codeH);
+            }
+
+            UiBuilder.Place(AccountSlot, 16f, y, inner, codeH + rowH);
+            UiBuilder.Place((RectTransform)_deleteAccount.transform, 0f, codeH, inner, rowH);
+            _rowTops.Add(y + codeH);
             _rowHeights.Add(rowH);
-            return y + rowH;
+            return y + codeH + rowH;
         }
 
         /// <summary>Escribe la fila en <paramref name="ids"/> y <paramref name="rects"/> desde <paramref name="k"/>; devuelve las escritas.</summary>

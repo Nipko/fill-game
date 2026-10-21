@@ -75,6 +75,12 @@ namespace AF.UI
         public StoreLedger StoreLedger { get; }
 
         /// <summary>
+        /// Las notas de compra («Pendiente de confirmar», «No se pudo confirmar la compra») de la tienda verificada (F3-5), que enseñan
+        /// el Mercado y Aguas estancadas. Las pone el arranque con cada cambio de la verificación.
+        /// </summary>
+        public PurchaseNotes PurchaseNotes { get; } = new PurchaseNotes();
+
+        /// <summary>
         /// Segmento geográfico del modal [P]: T3 (LatAm) mientras no haya detección de país (05 §4.2; el lanzamiento es en
         /// América Latina).
         /// </summary>

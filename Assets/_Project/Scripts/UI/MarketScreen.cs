@@ -52,6 +52,7 @@ namespace AF.UI
         private readonly ReliefParts _close;
         private readonly Image _seedIcon;
         private readonly TextMeshProUGUI _seeds;
+        private readonly TextMeshProUGUI _status;
         private readonly Button[] _tabs = new Button[4];
         private readonly TextMeshProUGUI[] _tabLabels = new TextMeshProUGUI[4];
         private readonly RowView[] _rows = new RowView[MaxRows];
@@ -72,6 +73,11 @@ namespace AF.UI
             _seedIcon = UiBuilder.Image("SeedIcon", _panel, art.IconSeed, Color.white);
             _seedIcon.preserveAspect = true;
             _seeds = UiBuilder.Label("Seeds", _panel, TextStyle.PlainBold, string.Empty, 18f, Palette.FamilyWood.Deep, TextAlignmentOptions.Left);
+            // F3-5: «Las compras no están disponibles ahora» cuando la tienda no vende (backend apagado o ausente).
+            _status = UiBuilder.Label("Status", _panel, TextStyle.PlainBold, string.Empty, 13f, Palette.UiRedWarning, TextAlignmentOptions.Left);
+            _status.textWrappingMode = TextWrappingModes.Normal;
+            UiBuilder.AutoSize(_status, UiBuilder.MinTextSp, 13f);
+            _status.gameObject.SetActive(false);
             for (int i = 0; i < _tabs.Length; i++)
             {
                 MarketTab tab = MarketModel.AllTabs[i];
@@ -105,11 +111,17 @@ namespace AF.UI
         /// <summary>Texto del saldo de semillas.</summary>
         public string SeedsText => _seeds.text;
 
+        /// <summary>La línea «Las compras no están disponibles ahora» (F3-5), o null si no se ve.</summary>
+        public string? StatusText => _status.gameObject.activeSelf ? _status.text : null;
+
         /// <summary>Botón de cierre.</summary>
         public Button CloseButton => _close.Button;
 
         /// <summary>Se vio la pestaña <paramref name="tab"/> (las vacías no salen).</summary>
         public bool TabShown(MarketTab tab) => _tabs[(int)tab].gameObject.activeSelf;
+
+        /// <summary>La versión de las notas de compra con la que se rehízo por última vez (el arranque lo rehace si cambian; F3-5).</summary>
+        public int NotesShown { get; private set; } = -1;
 
         /// <summary>Botón de la fila <paramref name="index"/> (tests).</summary>
         public Button RowButton(int index) => _rows[index].Cta.Button;
@@ -252,6 +264,9 @@ namespace AF.UI
             MarketModel.Build(Tab, _deps.Offers, _deps.Skins, maxLevel, _deps.CurrentWorld(), _model);
             _seeds.text = Loc.Number(_deps.Offers.Ledger.Wallet.Seeds);
             bool storeOn = _deps.Store.IsAvailable && !_deps.PurchasesBlocked;
+            _status.gameObject.SetActive(!_deps.Store.IsAvailable);
+            _status.text = _deps.Store.IsAvailable ? string.Empty : MarketText.StoreUnavailable;
+            NotesShown = _deps.Notes?.Version ?? 0;
             for (int i = 0; i < _tabs.Length; i++)
             {
                 MarketTab tab = MarketModel.AllTabs[i];
@@ -317,7 +332,11 @@ namespace AF.UI
             bool skin = Tab == MarketTab.Cuias;
             view.Name.text = skin ? MarketText.SkinName(row.Id) : MarketText.ProductName(row.Id);
             view.Detail.text = Detail(row, skin);
-            view.Note.text = !skin && row.Id == StoreCatalog.Starter && row.Number > 0 ? MarketText.StarterLeft(row.Number) : string.Empty;
+            // F3-5: la nota de compra («Pendiente de confirmar» o «No se pudo confirmar la compra») gana al temporizador de la Mochila.
+            PurchaseNoteKind noteKind = _deps.Notes?.Of(row.Id) ?? PurchaseNoteKind.None;
+            string? purchaseNote = MarketText.PurchaseNote(noteKind);
+            view.Note.text = purchaseNote ?? (!skin && row.Id == StoreCatalog.Starter && row.Number > 0 ? MarketText.StarterLeft(row.Number) : string.Empty);
+            view.Note.color = noteKind == PurchaseNoteKind.Pending ? (Color)Palette.FamilyWood.Base : (Color)Palette.UiRedWarning;
             Sprite? icon = IconOf(row.Id, skin);
             view.Icon.sprite = icon;
             view.Icon.color = skin ? CuiaSkin.For(row.Id).Rim : Color.white;
@@ -409,6 +428,11 @@ namespace AF.UI
             UiBuilder.Place(_seedIcon.rectTransform, 16f, y + 2f, 24f, 24f);
             UiBuilder.Place(_seeds.rectTransform, 46f, y, inner - 30f, 28f);
             y += 36f;
+            if (_status.gameObject.activeSelf)
+            {
+                UiBuilder.Place(_status.rectTransform, 16f, y, inner, 34f);
+                y += 38f;
+            }
 
             int shownTabs = 0;
             for (int i = 0; i < _tabs.Length; i++)
@@ -527,6 +551,9 @@ namespace AF.UI
 
         /// <summary>Compras bloqueadas (perfil bloqueado; 08 §4.4).</summary>
         public bool PurchasesBlocked { get; set; }
+
+        /// <summary>Las notas de compra de la tienda verificada (F3-5), o null (sin notas).</summary>
+        public PurchaseNotes? Notes { get; set; }
 
         /// <summary><c>af_iap_offer_shown</c> con <c>context = shop</c> de un SKU que la pestaña enseña (08 §8.2), o null.</summary>
         public Action<string>? OfferShown { get; set; }

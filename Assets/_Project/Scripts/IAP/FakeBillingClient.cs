@@ -38,20 +38,37 @@ namespace AF.IAP
         private readonly List<BillingTransaction> _pendingInPlay = new List<BillingTransaction>();
         private readonly List<BillingTransaction> _ownedNonConsumables = new List<BillingTransaction>();
         private readonly List<Action> _held = new List<Action>();
+        private readonly string _tokenPrefix;
         private int _counter;
 
         /// <param name="catalog">Catálogo (precios y tipo de producto).</param>
         /// <param name="currency">Moneda de los precios.</param>
         /// <param name="presenter">Hoja «Compra simulada», o null para responder sin hoja.</param>
         /// <param name="clock">Hora de compra de las transacciones; sin reloj, sin hora.</param>
-        public FakeBillingClient(StoreCatalog catalog, string currency = "USD", ISimulatedPurchasePresenter? presenter = null, IClock? clock = null)
+        /// <param name="tokenPrefix">
+        /// Comienzo de cada token (<see cref="DefaultTokenPrefix"/> en los tests, deterministas). El juego le pone uno distinto en cada
+        /// arranque (F3-5): <c>applied_purchases</c> guarda el <c>token_hash</c>, y con los tokens de siempre la primera compra de la
+        /// sesión siguiente repetiría el de la anterior y no se acreditaría.
+        /// </param>
+        /// <exception cref="ArgumentException">El prefijo no forma tokens del contrato (<c>[A-Za-z0-9._:-]</c>).</exception>
+        public FakeBillingClient(StoreCatalog catalog, string currency = "USD", ISimulatedPurchasePresenter? presenter = null, IClock? clock = null,
+            string tokenPrefix = DefaultTokenPrefix)
         {
+            if (!AF.Backend.Contract.ContractRules.IsPurchaseToken(tokenPrefix))
+            {
+                throw new ArgumentException("El prefijo no forma tokens del contrato.", nameof(tokenPrefix));
+            }
+
+            _tokenPrefix = tokenPrefix;
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             StorePrices.Local(StorePrices.UsdTiers[0], currency); // valida la moneda
             _currency = currency;
             _presenter = presenter;
             _clock = clock;
         }
+
+        /// <summary>Comienzo de los tokens por defecto (<c>fake.purchase.0001</c>…).</summary>
+        public const string DefaultTokenPrefix = "fake.purchase.";
 
         /// <summary>Qué pasa al comprar.</summary>
         public FakeBillingMode Mode { get; set; }
@@ -216,7 +233,7 @@ namespace AF.IAP
             {
                 _counter++;
                 var t = new BillingTransaction(
-                    product.Sku, "fake.purchase." + _counter.ToString("D4", CultureInfo.InvariantCulture), _clock?.UtcNow);
+                    product.Sku, _tokenPrefix + _counter.ToString("D4", CultureInfo.InvariantCulture), _clock?.UtcNow);
                 if (Mode == FakeBillingMode.Pending)
                 {
                     _pendingInPlay.Add(t);

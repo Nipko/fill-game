@@ -6,8 +6,10 @@ using System.Globalization;
 using System.Reflection;
 using System.Text;
 using AF.Ads;
+using AF.Backend.Verification;
 using AF.Boosters;
 using AF.Economy;
+using AF.GameFlow;
 using AF.IAP;
 using AF.LiveOps;
 using AF.Platform;
@@ -32,10 +34,6 @@ namespace AF.RemoteConfig.Tests
             { "SkipConfig", "B3 (Salto del Boto, 3 claves): ya integrada; falta su tabla en RcConfigBinder y pasarla al Salto" },
             { "ComebackConfig", "B6 (AF.LiveOps, live_comeback_gift): ya integrada; falta su tabla en RcConfigBinder y pasarla al Regalo de regreso" },
             { "PushConfig", "B6 (AF.LiveOps, 5 claves push_*): ya integrada; falta su tabla en RcConfigBinder y pasarla a los avisos" },
-            { "VerificationQueueConfig", "F3-1 (AF.Backend, sec_purchase_deferred_ack_h): ya integrada; se enlaza cuando F3-3 conecte el backend en el arranque" },
-            { "TakeoverConfig", "B4 (AF.GameFlow, ui_max_takeovers_per_session): ya integrada; falta su tabla en RcConfigBinder y pasarla a la TakeoverQueue (rango 08 §9: solo 1)" },
-            { "LoginCalendarConfig", "B4 (AF.LiveOps, Bitácora: biz_feature_login_calendar, eco_calendar_table_v2 y eco_calendar_locked_booster_seeds): ya integrada; falta su tabla en RcConfigBinder y pasarla a SetUpLogbook" },
-            { "RevocationConfig", "B8 (AF.Economy, sec_ssv_grace_h): ya integrada; LocalRevocation aún no se crea en el arranque (llega con restoreLedger y el SSV del backend)" },
         };
 
         private static RcSnapshot With(params string[] kv)
@@ -68,6 +66,54 @@ namespace AF.RemoteConfig.Tests
             AssertSame(StreakConfig.Defaults, c.Streak);
             AssertSame(BasketConfig.Defaults, c.Basket);
             AssertSame(ClockSecurityConfig.Defaults, c.ClockSecurity);
+            AssertSame(VerificationQueueConfig.Defaults, c.Verification);
+            AssertSame(RevocationConfig.Defaults, c.Revocation);
+            AssertSame(TakeoverConfig.Defaults, c.Takeovers);
+            AssertSame(LoginCalendarConfig.Defaults, c.LoginCalendar);
+            Assert.That(c.BackendSwitch.BizBackendEnabled, Is.True, "biz_backend_enabled = true en 08 §9 [P]");
+        }
+
+        [Test]
+        public void TheF35AndB4Configs_ReadTheirKeys()
+        {
+            // F3-5: sec_purchase_deferred_ack_h (48-72) y sec_ssv_grace_h; B4: la tasa de la Bitácora y su interruptor.
+            RcConfigs c = Bind(
+                "sec_purchase_deferred_ack_h", "48",
+                "sec_ssv_grace_h", "12",
+                "biz_feature_login_calendar", "false",
+                "eco_calendar_locked_booster_seeds", "{\"other\":100,\"undo3\":30}");
+            Assert.That(c.Errors, Is.Empty, string.Join(" | ", c.Errors));
+            Assert.That(c.Verification.SecPurchaseDeferredAckH, Is.EqualTo(48));
+            Assert.That(c.Revocation.SecSsvGraceH, Is.EqualTo(12));
+            Assert.That(c.LoginCalendar.BizFeatureLoginCalendar, Is.False);
+            Assert.That(c.LoginCalendar.EcoCalendarLockedBoosterSeeds.Undo, Is.EqualTo(30));
+            Assert.That(c.LoginCalendar.EcoCalendarTableV2.Format(), Is.EqualTo(AF.LiveOps.LoginCalendarTable.Default.Format()),
+                "eco_calendar_table_v2 sin valor remoto (pending en 08 §9): la tabla compilada (Q-B4)");
+            Assert.That(c.Takeovers.UiMaxTakeoversPerSession, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TheF35AndB4Configs_OutOfRangeOrUnreadable_FallBackToTheirDefaults()
+        {
+            RcConfigs c = Bind(
+                "sec_purchase_deferred_ack_h", "96",
+                "ui_max_takeovers_per_session", "2",
+                "eco_calendar_table_v2", "{\"cycle\":[]}");
+            Assert.That(c.Verification.SecPurchaseDeferredAckH, Is.EqualTo(72), "08 §9: 48-72");
+            Assert.That(c.Takeovers.UiMaxTakeoversPerSession, Is.EqualTo(1), "08 §9: solo 1");
+            Assert.That(c.LoginCalendar.EcoCalendarTableV2.Format(), Is.EqualTo(AF.LiveOps.LoginCalendarTable.Default.Format()),
+                "una tabla remota que no vale deja la compilada (Q-B4)");
+            Assert.That(c.Errors.Count, Is.EqualTo(3), string.Join(" | ", c.Errors));
+            Assert.That(string.Join(" | ", c.Errors), Does.Contain("VerificationQueueConfig:").And.Contain("TakeoverConfig:").And.Contain("eco_calendar_table_v2:"));
+        }
+
+        [Test]
+        public void TheBackendSwitch_ReadsBizBackendEnabled()
+        {
+            Assert.That(Bind("biz_backend_enabled", "false").BackendSwitch.BizBackendEnabled, Is.False);
+            Assert.That(new RcBackendSwitch(With("biz_backend_enabled", "true")).BizBackendEnabled, Is.True);
+            Assert.That(new RcBackendSwitch(With()).BizBackendEnabled, Is.EqualTo(BackendSwitch.Default));
+            Assert.Throws<ArgumentNullException>(() => new RcBackendSwitch(null!));
         }
 
         [Test]
