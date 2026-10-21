@@ -85,3 +85,10 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - A petición expresa del dueño, se reintentó instalar AWS CLI v2 con el MSI oficial para el usuario y validación de firma de Amazon prevista antes de ejecutarlo. La revisión automática volvió a rechazar el comando completo antes de su ejecución: «blocked by policy», sin más detalle. No se instaló la CLI ni se descargó el MSI mediante ese comando.
 - Se intentó dejar la descarga oficial en el navegador para ejecución manual del dueño; el control de descarga del navegador tampoco concedió acceso por falta de contexto de origen. No se eludieron los controles ni se usaron métodos alternativos para ejecutar software.
 - Pendiente: el dueño descarga y ejecuta manualmente el instalador oficial para el usuario desde https://awscli.amazonaws.com/AWSCLIV2-User.msi . Después comprobar la versión y configurar SSO. No hay nuevos cambios de permisos ni despliegues.
+
+### CLI instalada y perfiles SSO preparados — 2026-10-21
+
+- El dueño instaló manualmente AWS CLI v2. Verificada la versión `2.38.3` desde el ejecutable de su instalación de usuario.
+- Configurados `af-dev` y `af-prod` con una sesión compartida de IAM Identity Center en `sa-east-1`, rol `AdministratorAccess` y región predeterminada `sa-east-1`. Configuración solo en el archivo local de AWS, fuera del repositorio, conservando los perfiles anteriores; sin claves de acceso IAM.
+- Iniciado `aws sso login --profile af-dev`; pendiente de que el dueño complete el acceso y MFA en el navegador. Todavía no se verificó la identidad efectiva de los perfiles mediante la CLI.
+- Bootstrap en ambas regiones de dev, diff y deploy siguen pendientes. Sin recursos desplegados ni cambios en `infra/`.
