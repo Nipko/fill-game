@@ -50,6 +50,7 @@ namespace AF.Tests.PlayMode
             Application.logMessageReceived -= OnLog;
             GameBootstrap.ResetLogbookOverrides();
             GameBootstrap.LogbookOverride = null;
+            LocSetUpFixture.ConfigureEs419();
             LaunchOptions.Reset();
             LocSetUpFixture.ConfigureEs419();
         }
@@ -152,14 +153,102 @@ namespace AF.Tests.PlayMode
             screen.CardButton(LoginCalendarChoice.Booster).onClick.Invoke();
             Assert.That(boot.Logbook!.LastClaim!.Reward.ToJson(), Is.EqualTo("{\"undo\":2}"));
 
+            Assert.That(boot.RiverMapAvailable, Is.True, "la escena trae el Mapa");
             screen.CloseButton.onClick.Invoke();
             Assert.That(screen.Visible, Is.False);
-            if (boot.RiverMapAvailable)
-            {
-                Assert.That(boot.RiverMapView!.Visible, Is.True, "Victoria → libreta → Mapa → Inicio (D-033, punto 11)");
-            }
+            Assert.That(boot.RiverMapView!.Visible, Is.True, "Victoria → libreta → Mapa → Inicio (D-033, punto 11)");
+            Assert.That(boot.RiverMapView.Source, Is.EqualTo(MapOpenSource.L10));
 
             Assert.That(boot.OpenLogbookBeforeL10Map(), Is.False, "sellada hoy: el Mapa sale directo");
+        }
+
+        [UnityTest]
+        public IEnumerator TheVictoryRow_OpensTheNotebookWithoutSpendingTheQuota_AndBackClosesIt()
+        {
+            yield return Boot(playedToday: false);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Step(boot, Frame);
+            boot.Logbook!.Record.PlayedDate = "2026-10-20"; // la victoria de hoy (en la integración, B4-2-flow)
+            Assert.That(boot.LogbookVictoryRowDue, Is.True, "D-033, punto 5: la fila «Bitácora · elige tu premio»");
+            Assert.That(boot.OpenLogbookFromVictory(), Is.True);
+            LogbookScreen screen = boot.LogbookScreen!;
+            Assert.That(screen.Source, Is.EqualTo(LogbookOpenSource.Victory));
+            Assert.That(boot.Takeovers!.ShownThisSession, Is.EqualTo(0), "la fila de la victoria no es un takeover");
+            Assert.That(boot.Takeovers.WasSeen(TakeoverKind.Logbook), Is.True);
+            Assert.That(boot.OpenLogbookFromVictory(), Is.False, "ya está abierta");
+
+            Assert.That(boot.PressLogbookBack(), Is.True, "Atrás la cierra, como «Cerrar»");
+            Assert.That(screen.Visible, Is.False);
+            Assert.That(boot.PressLogbookBack(), Is.False);
+            Step(boot, 5 * Frame);
+            Assert.That(screen.Visible, Is.False, "vista en la sesión: no vuelve a salir sola (Q-B9)");
+            Assert.That(boot.LogbookCard!.DotShown, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator Midnight_WithTheCardsOpen_TheNotebookGoesBackToToday()
+        {
+            yield return Boot(playedToday: true);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Step(boot, Frame);
+            LogbookScreen screen = boot.LogbookScreen!;
+            Assert.That(screen.PressToday(), Is.True);
+            Assert.That(screen.Choosing, Is.True);
+            int seeds = boot.Profile!.Wallet.Seeds;
+
+            _clock.Advance(TimeSpan.FromDays(1)); // 10:00 del día siguiente: hoy aún no se terminó ningún nivel
+            screen.CardButton(LoginCalendarChoice.Seeds).onClick.Invoke();
+            Assert.That(boot.Profile.Wallet.Seeds, Is.EqualTo(seeds), "ya no se puede sellar");
+            Assert.That(screen.Visible, Is.True);
+            Assert.That(screen.Choosing, Is.False, "las tarjetas no se quedan muertas");
+            Assert.That(screen.StatusText, Is.EqualTo("Termina un nivel hoy para sellar la página"));
+            Assert.That(boot.Logbook!.Record.NextDay, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator ATableThatDoesNotMatchTheRate_TurnsTheLogbookOff_WithoutBreakingTheStart()
+        {
+            var config = LoginCalendarConfig.Defaults;
+            config.EcoCalendarLockedBoosterSeeds = new LoginCalendarValueRate(10, 100); // «3 Marea → 30» sin su tabla (Q-B3 (b))
+            GameBootstrap.LogbookConfigOverride = config;
+            GameBootstrap.LogbookStoreOverride = new InMemoryLoginCalendarStore();
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("Bitácora del río apagada")); // una sola vez
+            yield return PlayModeHelpers.LoadApp(_profiles);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.SetUpLogbook(), Is.False);
+            Assert.That(boot.SetUpLogbook(), Is.False, "no lo vuelve a intentar");
+            Assert.That(boot.Logbook, Is.Null);
+            Assert.That(boot.LogbookState, Is.EqualTo(LoginCalendarState.Hidden));
+            Assert.That(boot.OpenLogbookBeforeL10Map(), Is.False, "sin Bitácora, el Mapa del 10 sale directo");
+        }
+
+        [UnityTest]
+        public IEnumerator ChoosingALanguage_IsNotANewSession_SoTheTakeoverDoesNotComeBack()
+        {
+            yield return Boot(playedToday: true);
+            GameBootstrap first = GameBootstrap.Current!;
+            Step(first, Frame);
+            TakeoverQueue queue = first.Takeovers!;
+            Assert.That(queue.ShownThisSession, Is.EqualTo(1));
+            first.LogbookScreen!.CloseButton.onClick.Invoke();
+
+            Assert.That(first.PressSettings(), Is.True);
+            first.SettingsView!.LanguageButton(LocLocale.Pseudo)!.onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                "reconstrucción de la UI en en-XA");
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.SetUpLogbook(), Is.True);
+            boot.LogbookRunner!.enabled = false;
+            Assert.That(boot.Takeovers, Is.SameAs(queue), "el mismo perfil en memoria: la misma sesión");
+            if (boot.SettingsView != null && boot.SettingsView.Visible)
+            {
+                Assert.That(boot.CloseSettings(), Is.True);
+            }
+
+            Step(boot, 5 * Frame);
+            Assert.That(boot.LogbookScreen!.Visible, Is.False, "el único takeover de la sesión ya salió");
+            Assert.That(boot.LogbookCard!.DotShown, Is.True);
         }
 
         [UnityTest]

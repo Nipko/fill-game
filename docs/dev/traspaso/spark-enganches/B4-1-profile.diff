@@ -397,7 +397,7 @@ new file mode 100644
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Logbook.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Logbook.cs
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Logbook.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Logbook.cs
-@@ -80,9 +80,19 @@
+@@ -85,9 +85,19 @@
  
          /// <summary>
          /// Almacén del bloque <c>calendar</c> sobre el perfil (B4-1-profile): recibe el perfil y su almacén (el lote de guardado),

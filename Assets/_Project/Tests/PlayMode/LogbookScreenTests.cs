@@ -148,6 +148,27 @@ namespace AF.Tests.PlayMode
         }
 
         [Test]
+        public void TheDayThe30IsSealed_TheNotebookShowsTheWholeCycleThatClosed()
+        {
+            var store = new InMemoryLoginCalendarStore(new LoginCalendarRecord { NextDay = 30, Cycle = 1, LastClaimDate = "2026-10-19" });
+            _service = new LoginCalendarService(store, _wallet, _clock, 10);
+            _service.MarkPlayed();
+            Assert.That(_service.Claim(LoginCalendarChoice.Seeds, 25, LoginCalendarUnlocks.All, 1)!.Day, Is.EqualTo(30));
+
+            // Reabierta el mismo día (tarjeta «Sellada hoy»): el ciclo 1 entero, no una libreta vacía del ciclo 2.
+            _screen.Show(Peek(), LogbookOpenSource.Card);
+            Assert.That(_screen.StampedDays.Count, Is.EqualTo(30));
+            Assert.That(_screen.FooterText, Is.EqualTo("Página 30 de 30 · Ciclo 1"));
+            Assert.That(_screen.StatusText, Is.EqualTo("Página sellada. La siguiente, mañana"));
+
+            // Al día siguiente, el ciclo 2 empieza en la página 1.
+            _clock.Advance(TimeSpan.FromDays(1));
+            _screen.Show(Peek(), LogbookOpenSource.Card);
+            Assert.That(_screen.StampedDays, Is.Empty);
+            Assert.That(_screen.FooterText, Is.EqualTo("Página 1 de 30 · Ciclo 2"));
+        }
+
+        [Test]
         public void ClosingWithoutChoosing_LeavesThePagePending()
         {
             _service.MarkPlayed();

@@ -1,7 +1,20 @@
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
-@@ -1336,7 +1336,7 @@
+@@ -917,6 +917,12 @@
+                 return _mapScreen.CloseTopSheet() || CloseRiverMap(); // primero la tarjeta de la parada y el Muestrario (M4.1)
+             }
+ 
++            // La libreta de la Bitácora (B4-3), sobre el inicio o la victoria: Atrás es «Cerrar» (en la secuencia del 10, «Seguir»).
++            if (PressLogbookBack())
++            {
++                return true;
++            }
++
+             // Reto del río (E22): Atrás cierra su calendario como «Inicio»; con el tablero del Reto en juego no hace nada, como en un
+             // nivel (02 §3; 04 §6.6). HandleBack devuelve false si no hay calendario abierto.
+             if (_dailyScreen != null && _dailyScreen.IsOpen)
+@@ -1336,7 +1342,7 @@
                  // La secuencia del Mapa del 10 (06 §2.3; P-M4; M4.2): tras «Siguiente» en la victoria del 10 o, si se pulsó Inicio o
                  // se cerró la app, en la primera entrada al inicio con max_level ≥ 10 y map_seen_level < 10. Al acabarla se anota lo
                  // visto hasta el 10: no se repite.
@@ -10,7 +23,7 @@ diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scrip
                  {
                      OpenRiverMap(MapOpenSource.L10);
                  }
-@@ -1611,6 +1611,7 @@
+@@ -1611,6 +1617,7 @@
              _lobby.Bind(_app, _services);
              SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
              SetUpStreak(); // Crecida, Hoja escudo y Canasta (E32; GameBootstrap.Streak.cs): el servicio, inyectado en el flujo
@@ -47,14 +60,18 @@ diff --git a/Assets/_Project/Tests/PlayMode/LogbookHooksTests.cs b/Assets/_Proje
 new file mode 100644
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/LogbookHooksTests.cs
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,170 @@
 +#nullable enable
++using System;
 +using System.Collections;
++using AF.Core.Rules;
++using AF.Economy;
 +using AF.GameFlow;
 +using AF.Localization;
 +using AF.LiveOps;
 +using AF.Platform;
 +using AF.Save;
++using AF.Solver.Search;
 +using AF.UI;
 +using NUnit.Framework;
 +using UnityEngine;
@@ -65,11 +82,13 @@ new file mode 100644
 +    /// <summary>
 +    /// Enganches de la Bitácora aplicados (B4-1-profile, B4-2-flow y B4-3-bootstrap; 06 §2.3 y §4.2; D-033, añadido del
 +    /// 2026-10-20, puntos 5, 6 y 11) con la escena real: el arranque la crea sobre el bloque <c>calendar</c> del perfil, ganar un
-+    /// nivel apunta el día jugado y la libreta sale sola al volver al inicio, y en la victoria del 10 la libreta va antes del
-+    /// Mapa (Victoria → libreta → Mapa → Inicio).
++    /// nivel de campaña o del Reto apunta el día jugado y la libreta sale sola al volver al inicio, en la victoria del 10 la
++    /// libreta va antes del Mapa (Victoria → libreta → Mapa → Inicio) y Atrás de Android la cierra.
 +    /// </summary>
 +    public sealed class LogbookHooksTests
 +    {
++        private const int Frame = PlayModeHelpers.FrameMs;
++
 +        [SetUp]
 +        public void SetUp()
 +        {
@@ -82,6 +101,7 @@ new file mode 100644
 +            GameBootstrap.LogbookOverride = null;
 +            GameBootstrap.L10SequenceOverride = null;
 +            GameBootstrap.ResetLogbookOverrides();
++            GameBootstrap.ResetDailyOverrides();
 +            LaunchOptions.Reset();
 +            LocSetUpFixture.ConfigureEs419();
 +        }
@@ -110,9 +130,37 @@ new file mode 100644
 +
 +            Assert.That(boot.PressHome(), Is.True);
 +            boot.LogbookRunner!.enabled = false;
-+            boot.TickLogbook(PlayModeHelpers.FrameMs);
++            boot.TickLogbook(Frame);
 +            Assert.That(boot.LogbookScreen!.Visible, Is.True, "el único takeover de la sesión al volver al inicio (D-033, punto 5)");
 +            Assert.That(boot.LogbookScreen.Source, Is.EqualTo(LogbookOpenSource.Takeover));
++
++            Assert.That(boot.PressAndroidBack(), Is.True, "B4-3: Atrás de Android cierra la libreta");
++            Assert.That(boot.LogbookScreen.Visible, Is.False);
++            Assert.That(boot.LogbookState, Is.EqualTo(LoginCalendarState.Ready), "cerrar sin elegir la deja pendiente");
++        }
++
++        [UnityTest]
++        public IEnumerator WinningTheReto_AlsoMarksTheDay()
++        {
++            GameBootstrap.DailyPoolOverride = DailyPlayTestPool.Full;
++            GameBootstrap.DailyStoreOverride = new InMemoryDailyChallengeStore();
++            Profile start = VictorySetup.Profile(0);
++            start.Progress.MaxLevel = 25;
++            start.Progress.NextLevel = 26;
++            start.Progress.MapSeenLevel = 25;
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(start));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            boot.DailyRunner!.enabled = false;
++            boot.LogbookRunner!.enabled = false;
++            Assert.That(boot.LogbookState, Is.EqualTo(LoginCalendarState.Waiting));
++
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            boot.TickLogbook(Frame); // el flujo del Reto se crea al abrir la partida: la Bitácora se suscribe al vuelo
++            WinDaily(boot, daily);
++            Assert.That(boot.LogbookState, Is.EqualTo(LoginCalendarState.Ready), "D-033, punto 5: campaña o Reto");
++            Assert.That(boot.Profile!.Calendar!.PlayedDate, Is.Not.Null);
 +        }
 +
 +        [UnityTest]
@@ -146,6 +194,40 @@ new file mode 100644
 +            Assert.That(screen.Visible, Is.False);
 +            Assert.That(boot.RiverMapView.Visible, Is.True, "«Seguir» lleva al Mapa del 10");
 +            Assert.That(boot.RiverMapView.Source, Is.EqualTo(MapOpenSource.L10));
++        }
++
++        // Gana la partida del Reto abierta, con el solver (como DailyHooksTests).
++        private static void WinDaily(GameBootstrap boot, DailyChallengeScreen daily)
++        {
++            LevelFlow flow = daily.Flow!;
++            daily.Actions.TapAnywhere(); // salta la intro
++            StepUntil(boot, () => flow.Phase == FlowPhase.Playing && flow.AcceptsBoardInput, 10000, "fin de la intro del Reto");
++            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
++            Assert.That(solution.IsSolved, Is.True);
++            for (int i = 0; i < solution.MoveCount; i++)
++            {
++                Pour move = solution.GetMove(i);
++                StepUntil(boot, () => flow.AcceptsBoardInput, 5000, "tablero listo para el vertido " + i);
++                daily.Actions.TapCuia(move.Source);
++                daily.Actions.TapCuia(move.Target);
++            }
++
++            StepUntil(boot, () => daily.Won, 10000, "victoria del Reto");
++        }
++
++        private static void StepUntil(GameBootstrap boot, Func<bool> done, int maxMs, string what)
++        {
++            for (int t = 0; t < maxMs; t += Frame)
++            {
++                if (done())
++                {
++                    return;
++                }
++
++                boot.TickDaily(Frame);
++            }
++
++            Assert.That(done(), Is.True, "tiempo agotado: " + what);
 +        }
 +    }
 +}

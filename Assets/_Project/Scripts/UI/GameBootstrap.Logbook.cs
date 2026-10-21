@@ -40,10 +40,11 @@ namespace AF.UI
         public const float LogbookCardGapDp = 8f;
 
         /// <summary>
-        /// Nivel desde el que la Bitácora puede dar una Luciérnaga: <c>lvl_murky_from_level</c> = 100 (08 §9), el estreno de Aguas
-        /// turbias, donde se regala la primera (04 §2.5). Antes, la Luciérnaga se sustituye (D-033, punto 3; Q-B5).
+        /// Nivel desde el que la Bitácora puede dar una Luciérnaga: <c>lvl_murky_from_level</c> (08 §9), el estreno de Aguas
+        /// turbias, donde se regala la primera (04 §2.5). Antes, la Luciérnaga se sustituye (D-033, punto 3; Q-B5). Sin copia
+        /// propia: la única del cliente hasta <c>AF.RemoteConfig</c> es <see cref="DevBench.MurkyFromLevel"/>.
         /// </summary>
-        public const int LogbookRevealUnlockLevel = 100;
+        public const int LogbookRevealUnlockLevel = DevBench.MurkyFromLevel;
 
         /// <summary>Origen de la sonda <c>takeover</c> al entrar al inicio.</summary>
         public const string TakeoverSourceLobby = "lobby";
@@ -64,12 +65,16 @@ namespace AF.UI
         private Action? _logbookAfterClose;
         private string _logbookDay = string.Empty;
         private bool _logbookLobbyShown;
+        private bool _logbookFailed;
         private bool _logbookCardShown;
         private float _logbookCardW;
         private float _logbookCardH;
 
         /// <summary>Almacén de la Bitácora para los tests (gana a <see cref="LogbookStoreFactory"/>).</summary>
         internal static ILoginCalendarStore? LogbookStoreOverride { get; set; }
+
+        /// <summary>Cifras de la Bitácora para los tests (por defecto, <see cref="LoginCalendarConfig.Defaults"/>).</summary>
+        internal static LoginCalendarConfig? LogbookConfigOverride { get; set; }
 
         /// <summary>
         /// Los tests apagan la Bitácora con false (<see cref="SetUpLogbook"/> no crea nada): los que no tratan de ella entran al
@@ -106,6 +111,7 @@ namespace AF.UI
         internal static void ResetLogbookOverrides()
         {
             LogbookStoreOverride = null;
+            LogbookConfigOverride = null;
         }
 
         /// <summary>
@@ -120,7 +126,7 @@ namespace AF.UI
                 return true;
             }
 
-            if (LogbookOverride == false)
+            if (LogbookOverride == false || _logbookFailed)
             {
                 return false;
             }
@@ -146,8 +152,22 @@ namespace AF.UI
             }
 
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
+            LoginCalendarService service;
+            try
+            {
+                service = new LoginCalendarService(store, _wallet, clock, DailyChallengeConfig.Defaults.LiveUnlockLevelDaily, LogbookConfigOverride);
+            }
+            catch (InvalidOperationException e)
+            {
+                // Una tabla y una tasa que no cuadran (por ejemplo, una tasa nueva de Remote Config sin su tabla): la Bitácora no
+                // existe en esta sesión, pero el arranque sigue (SetUpMeta y el resto van después).
+                Debug.LogError(LogPrefix + "Bitácora del río apagada: " + e.Message);
+                _logbookFailed = true; // una vez por escena: otra llamada no lo vuelve a intentar ni a registrar
+                return false;
+            }
+
             _logbookClock = clock;
-            _logbook = new LoginCalendarService(store, _wallet, clock, DailyChallengeConfig.Defaults.LiveUnlockLevelDaily);
+            _logbook = service;
             _logbookScreen = new LogbookScreen(transform, _art, OnLogbookChoose, OnLogbookClose);
             _logbookCardCanvas = new OverlayCanvas("LogbookCardCanvas", transform, LogbookCardSortingOrder);
             _logbookCard = new LogbookCard(_logbookCardCanvas.Root, _art, () => OpenLogbook(LogbookOpenSource.Card));
@@ -324,6 +344,21 @@ namespace AF.UI
             return state;
         }
 
+        /// <summary>
+        /// Atrás de Android con la libreta abierta (lo llama <c>PressAndroidBack</c> con B4-3-bootstrap): como «Cerrar» o «Seguir»
+        /// (en la secuencia del 10, lleva al Mapa). False si la libreta no está a la vista.
+        /// </summary>
+        public bool PressLogbookBack()
+        {
+            if (_logbookScreen == null || !_logbookScreen.Visible)
+            {
+                return false;
+            }
+
+            OnLogbookClose();
+            return true;
+        }
+
         /// <summary>Toque en la tarjeta (lo que hace su botón; los tests lo llaman igual).</summary>
         public bool PressLogbookCard()
         {
@@ -388,6 +423,8 @@ namespace AF.UI
 
             if (claim == null)
             {
+                // Ya no se puede sellar (cambió el día local con las tarjetas abiertas): la libreta vuelve a su estado de hoy.
+                screen.Show(service.Peek(maxLevel, unlocks, world), screen.Source);
                 return;
             }
 

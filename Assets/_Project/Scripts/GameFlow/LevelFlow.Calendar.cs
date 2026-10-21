@@ -34,8 +34,10 @@ namespace AF.GameFlow
     /// <item><description><c>ResolveWin</c>: tras <c>OnWinSkins</c> y dentro del mismo lote del perfil, antes de
     /// <see cref="ILevelFlowListener.OnWin"/> (así la victoria ya sabe que la libreta está lista y el apunte sale en la misma
     /// escritura que la victoria).</description></item>
-    /// <item><description><c>Fail</c>: tras <c>OnHardFailStreak</c>, solo con el fallo duro (04 §5.2: el fallo blando y salir sin
-    /// terminar no son terminar el nivel) y antes de <see cref="ILevelFlowListener.OnFailResolved"/>.</description></item>
+    /// <item><description><c>Fail</c>: tras <c>OnHardFailStreak</c>, solo con el fallo duro y antes de
+    /// <see cref="ILevelFlowListener.OnFailResolved"/>. Es fallo duro Volver a la orilla desde Aguas estancadas en 1-30 y, desde
+    /// el 31, la rendición confirmada o «Salir» con el menú (D-008; 04 §6.6): perder el nivel. El fallo blando (04 §5.2) y salir
+    /// al inicio en 1-30 sin terminar no cuentan.</description></item>
     /// </list>
     /// Vale para la campaña y para el Reto (sus victorias y su Volver a la orilla desde Aguas estancadas pasan por los mismos
     /// <c>ResolveWin</c> y <c>Fail</c>; <see cref="LevelPlayedInfo.Daily"/> los distingue). Sin suscriptores no hace nada.

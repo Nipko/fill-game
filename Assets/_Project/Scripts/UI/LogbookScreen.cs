@@ -399,6 +399,11 @@ namespace AF.UI
         private void Render(int sealedDay = 0)
         {
             LoginCalendarSnapshot snap = _snapshot!;
+            if (sealedDay == 0 && snap.State == LoginCalendarState.Sealed && snap.NextDay == 1 && snap.Cycle > 1)
+            {
+                sealedDay = LoginCalendarTable.Days; // hoy se selló la 30: hasta mañana se ve el ciclo que se cerró, entero
+            }
+
             _title.text = LogbookText.Title;
             bool l10 = Source == LogbookOpenSource.L10;
             _intro.text = l10 ? LogbookText.Intro : string.Empty;
