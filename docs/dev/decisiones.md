@@ -3135,3 +3135,21 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Qué cambia en el GDD** (cuando se apruebe el plan): 08 §2.2 (`AF.Backend`), §2.4 (`functions/` → `infra/` y el código de las funciones), §7 (lista de SDK: sin el módulo Functions), §10.1-§10.3 (App Check → verificación de Play Integrity en el servidor), §11 (libro mayor y borrado en DynamoDB), §12.1 (despliegue), §13.3 (Data Safety: AWS como encargado del tratamiento), §15.3 y 01 (coste por versión).
 
 **Cómo revertir.** Con una decisión nueva. Mientras no haya nada desplegado, sin coste; después, migrando el libro mayor.
+
+### D-035, añadido del 2026-10-20: respuestas del dueño al plan del backend (Q-AWS-1 a Q-AWS-12)
+
+- **Estado:** decididas por el dueño en el chat, tras el formulario de `docs/dev/plan-backend-aws.md` §10: «sigamos las recomendaciones». Todas con la opción (a):
+  - **Q-AWS-1:** AWS CDK v2 en TypeScript (herramienta aprobada).
+  - **Q-AWS-2:** `sdk-integrator` pasa de `functions/**` a `infra/**`; `build-release` lleva `.github/workflows/infra.yml`.
+  - **Q-AWS-3:** dos cuentas de AWS (dev y prod) en Organizations, con IAM Identity Center.
+  - **Q-AWS-4:** integridad con el token de App Check de uso limitado, verificado en AWS contra el JWKS de App Check (sin paquete nuevo). Reinterpreta «Play Integrity en lugar de App Check» de D-035: por debajo sigue siendo Play Integrity.
+  - **Q-AWS-5:** `sa-east-1` para datos, API y funciones; `us-east-1` solo para ACM y WAF de CloudFront y para Budgets.
+  - **Q-AWS-6:** AWS Budgets de 10 USD al mes en dev y 50 en prod, con avisos al 50, 80 y 100 %.
+  - **Q-AWS-7:** la clave JSON de la cuenta de servicio de Google, en Secrets Manager, la carga el dueño; federación sin claves (WIF) como mejora en la 1.1.
+  - **Q-AWS-8:** el arte de los mundos sigue en Play Asset Delivery (08 §6.2); CloudFront solo para `levels_remote` y el catálogo. Corrige la fila «CDN del contenido remoto» de D-035.
+  - **Q-AWS-9:** dev con los dominios de AWS; `tintalu.com` público solo tras el dictamen de marca.
+  - **Q-AWS-10:** límites de peticiones de API Gateway y en DynamoDB en la 1.0; WAF solo si hay abuso.
+  - **Q-AWS-11:** `af_account_delete` con `source = web` solo como métrica de CloudWatch.
+  - **Q-AWS-12:** contrato nuevo en `docs/GDD.md` §7: `infra/contracts/v1` es la fuente única de la API.
+- **Paquetes npm de `infra/` aprobados** (regla 4), con versión exacta fijada por el integrador tras comprobarla (al menos dos semanas de antigüedad) y anotada aquí: `aws-cdk-lib`, `aws-cdk`, `constructs`, `cdk-nag`, `typescript`, `esbuild`, `vitest`, `eslint`, `typescript-eslint`, `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`, `@aws-sdk/client-secrets-manager`, `jose`, `ajv`, `aws-sdk-client-mock`.
+- **Límites de los agentes y `CLAUDE.md`** se amplían en consecuencia (F0-3).
