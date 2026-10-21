@@ -165,7 +165,7 @@ describe('rewardedSsv', () => {
   });
 
   it('error de DynamoDB → 500 (MAX reintenta)', async () => {
-    db.failNext = { command: 'TransactWrite', error: new Error('boom') };
+    db.failNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_REWARDS, error: new Error('boom') };
     expect((await call(q())).status).toBe(500);
   });
 });

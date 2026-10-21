@@ -160,7 +160,7 @@ describe('verifyPurchase', () => {
   });
 
   it('error al escribir en DynamoDB tras reconocer → 500; el reintento ve la compra reconocida y concede', async () => {
-    db.failNext = { command: 'TransactWrite', error: Object.assign(new Error('x'), { name: 'ProvisionedThroughputExceededException' }) };
+    db.failNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_PURCHASES, error: Object.assign(new Error('x'), { name: 'ProvisionedThroughputExceededException' }) };
     const first = await call();
     expect(first.status).toBe(500);
     expect(first.body).toMatchObject({ error: { code: 'internal_error' } });

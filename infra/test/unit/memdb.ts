@@ -49,6 +49,7 @@ export function transactionCanceled(codes: string[]): Error {
 
 type TxItem = {
   Put?: { TableName: string; Item: Item; ConditionExpression?: string; ExpressionAttributeValues?: Item };
+  Update?: { TableName: string; Key: Item; UpdateExpression: string; ConditionExpression?: string; ExpressionAttributeValues?: Item };
   ConditionCheck?: { TableName: string; Key: Item; ConditionExpression: string; ExpressionAttributeValues?: Item };
 };
 
@@ -56,8 +57,27 @@ type TxItem = {
 function txConditionHolds(cond: string | undefined, cur: Item | undefined, values: Item | undefined): boolean {
   if (cond === undefined) return true;
   if (cond === 'attribute_not_exists(#k) OR #t <= :now') return !cur || Number(cur.ttl) <= Number(values?.[':now']);
+  if (cond === 'token_hash = :th') return cur?.token_hash === values?.[':th'];
   if (/^attribute_not_exists\([#a-z_]+\)$/.test(cond)) return !cur;
   throw new Error(`Condición no soportada en MemDb: ${cond}`);
+}
+
+/**
+ * Como DynamoDB: todo alias de ExpressionAttributeNames/Values debe usarse en alguna expresión (si no,
+ * ValidationException) y todo alias usado debe estar definido.
+ */
+function checkAliases(op: object): void {
+  const o = op as Record<string, unknown>;
+  const exprs = ['UpdateExpression', 'ConditionExpression', 'KeyConditionExpression', 'ProjectionExpression', 'FilterExpression']
+    .map((k) => o[k])
+    .filter((x): x is string => typeof x === 'string')
+    .join(' ');
+  for (const [field, re] of [['ExpressionAttributeNames', /#[A-Za-z0-9_]+/g], ['ExpressionAttributeValues', /:[A-Za-z0-9_]+/g]] as const) {
+    const defined = Object.keys(o[field] ?? {});
+    const used = new Set(exprs.match(re) ?? []);
+    for (const d of defined) if (!used.has(d)) throw Object.assign(new Error(`${field} sin usar: ${d}`), { name: 'ValidationException' });
+    for (const u of used) if (!defined.includes(u)) throw Object.assign(new Error(`${field} sin definir: ${u}`), { name: 'ValidationException' });
+  }
 }
 
 export class MemDb {
@@ -98,6 +118,7 @@ export class MemDb {
     });
     m.on(PutCommand).callsFake((i: { TableName: string; Item: Item; ConditionExpression?: string }) => {
       guard('Put', i.TableName);
+        checkAliases(i);
       const pk = PK[i.TableName];
       const key = String(i.Item[pk]);
       const t = this.table(i.TableName);
@@ -108,6 +129,7 @@ export class MemDb {
     m.on(DeleteCommand).callsFake(
       (i: { TableName: string; Key: Item; ConditionExpression?: string; ExpressionAttributeValues?: Item }) => {
         guard('Delete', i.TableName);
+        checkAliases(i);
         const t = this.table(i.TableName);
         const key = String(i.Key[PK[i.TableName]]);
         const cur = t.get(key);
@@ -119,6 +141,7 @@ export class MemDb {
     m.on(UpdateCommand).callsFake(
       (i: { TableName: string; Key: Item; UpdateExpression: string; ConditionExpression?: string; ExpressionAttributeValues: Item }) => {
         guard('Update', i.TableName);
+        checkAliases(i);
         const t = this.table(i.TableName);
         const pk = PK[i.TableName];
         const key = String(i.Key[pk]);
@@ -128,6 +151,12 @@ export class MemDb {
           const next = { [pk]: key, ...(cur ?? {}), count: Number(cur?.count ?? 0) + 1, ttl: cur?.ttl ?? v[':ttl'] };
           t.set(key, next);
           return Promise.resolve({ Attributes: { count: next.count, ttl: next.ttl } });
+        }
+        if (i.UpdateExpression === 'SET token_hash = :th, #t = :ttl') {
+          const ok = !cur || cur.token_hash === v[':th'] || (cur.ttl !== undefined && Number(cur.ttl) <= Number(v[':now']));
+          if (!ok) throw conditionalFailed();
+          t.set(key, { [pk]: key, ...(cur ?? {}), token_hash: v[':th'], ttl: v[':ttl'] });
+          return Promise.resolve({});
         }
         if (i.UpdateExpression === 'SET counted = :t') {
           t.set(key, { [pk]: key, ...(cur ?? {}), counted: v[':t'] });
@@ -149,20 +178,37 @@ export class MemDb {
       },
     );
     m.on(TransactWriteCommand).callsFake((i: { TransactItems: TxItem[] }) => {
-      guard('TransactWrite');
+      // La tabla del primer elemento identifica la transacción (libro mayor, rewards, códigos o integrity).
+      const first = i.TransactItems[0];
+      guard('TransactWrite', (first?.Put ?? first?.Update ?? first?.ConditionCheck)?.TableName);
+      const seen = new Set<string>();
       const codes = i.TransactItems.map((it) => {
-        const op = it.Put ?? it.ConditionCheck;
-        if (!op) throw new Error('MemDb: solo Put y ConditionCheck en transacciones');
-        const key = it.Put ? { [PK[op.TableName]]: it.Put.Item[PK[op.TableName]] } : it.ConditionCheck!.Key;
+        const op = it.Put ?? it.Update ?? it.ConditionCheck;
+        if (!op) throw new Error('MemDb: solo Put, Update y ConditionCheck en transacciones');
+        checkAliases(op);
+        const key = it.Put ? { [PK[op.TableName]]: it.Put.Item[PK[op.TableName]] } : (op as { Key: Item }).Key;
+        // DynamoDB rechaza dos operaciones sobre el mismo ítem en una transacción.
+        const id = `${op.TableName}/${String(key[PK[op.TableName]])}`;
+        if (seen.has(id)) throw Object.assign(new Error(`Dos operaciones sobre ${id}`), { name: 'ValidationException' });
+        seen.add(id);
         return txConditionHolds(op.ConditionExpression, this.get(op.TableName, key), op.ExpressionAttributeValues) ? 'None' : 'ConditionalCheckFailed';
       });
       if (codes.some((c) => c !== 'None')) throw transactionCanceled(codes);
-      for (const it of i.TransactItems) if (it.Put) this.put(it.Put.TableName, it.Put.Item);
+      for (const it of i.TransactItems) {
+        if (it.Put) this.put(it.Put.TableName, it.Put.Item);
+        if (it.Update) {
+          if (it.Update.UpdateExpression !== 'REMOVE #t SET created_at = :now') throw new Error(`Update de transacción no soportado: ${it.Update.UpdateExpression}`);
+          const cur = { ...(this.get(it.Update.TableName, it.Update.Key) ?? {}) };
+          delete cur.ttl;
+          this.put(it.Update.TableName, { ...cur, created_at: it.Update.ExpressionAttributeValues?.[':now'] });
+        }
+      }
       return Promise.resolve({});
     });
     m.on(QueryCommand).callsFake(
       (i: { TableName: string; IndexName?: string; ExpressionAttributeValues: Item }) => {
         guard('Query', i.TableName);
+        checkAliases(i);
         if (i.IndexName !== 'by_uid') throw new Error('MemDb solo consulta by_uid');
         const pk = PK[i.TableName];
         const items = [...this.table(i.TableName).values()]

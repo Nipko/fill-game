@@ -7,6 +7,7 @@ import { sha256hex } from '../../functions/shared/crypto.ts';
 import { ConfigError } from '../../functions/shared/errors.ts';
 import type { FirebaseAdmin } from '../../functions/shared/firebaseAdmin.ts';
 import type { IntegrityVerifier } from '../../functions/shared/integrity.ts';
+import { requireIntegrity } from '../../functions/shared/integrity.ts';
 import { uidHash } from '../../functions/shared/log.ts';
 import type { PlayApi, ProductPurchase, VoidedPage } from '../../functions/shared/playApi.ts';
 import { DELETED_MARK_TTL_S, deletedKey } from '../../functions/shared/rateLimit.ts';
@@ -15,7 +16,7 @@ import { createHandler as deleteHandler } from '../../functions/delete-account/h
 import { createHandler as restoreHandler } from '../../functions/restore-ledger/handler.ts';
 import { createHandler as ssvHandler } from '../../functions/rewarded-ssv/handler.ts';
 import { expectedEventToken } from '../../functions/rewarded-ssv/maxSignature.ts';
-import { createHandler as verifyHandler } from '../../functions/verify-purchase/handler.ts';
+import { ONCE_RESERVATION_S, createHandler as verifyHandler } from '../../functions/verify-purchase/handler.ts';
 import { createHandler as voidedHandler } from '../../functions/voided-purchases-job/handler.ts';
 import { validator } from '../contract/ajv.ts';
 import { MapSecrets, NOW, OTHER_UID, UID, httpEvent, res } from './fixtures.ts';
@@ -140,7 +141,7 @@ describe('F2c-2 · lápida voided para tokens anulados antes de verificarse', ()
 
   it('carrera: la lápida llega mientras verifyPurchase consulta Play → 400, nunca ok', async () => {
     db.hookNext = {
-      command: 'TransactWrite',
+      command: 'TransactWrite', table: TABLES.AF_TABLE_PURCHASES,
       fn: () => db.put(TABLES.AF_TABLE_PURCHASES, { token_hash: sha256hex('tk-late'), state: 'voided', tombstone: true, voided_at: 9 }),
     };
     const v = await verify('tk-late');
@@ -183,17 +184,37 @@ describe('F2c-3 · af_starter una vez por cuenta (05 §4.1: «1 por cuenta»)', 
     expect((await verify('c-2')).body.status).toBe('ok');
   });
 
-  it('carrera: dos tokens de af_starter a la vez para el mismo UID → uno ok y otro 400, una sola fila', async () => {
+  it('carrera: dos tokens de af_starter a la vez para el mismo UID → el que pierde la reserva da 400 SIN reconocer', async () => {
+    // El otro token (st-a) reserva la marca justo antes que este (st-b).
     db.hookNext = {
-      command: 'TransactWrite',
-      fn: () => {
-        db.put(TABLES.AF_TABLE_PURCHASES, { token_hash: sha256hex('st-a'), uid: UID, sku: 'af_starter', state: 'ok', ts: 1 });
-        db.put(TABLES.AF_TABLE_RATE_LIMITS, { key: onceKey('af_starter', UID), token_hash: sha256hex('st-a') });
-      },
+      command: 'Update',
+      table: TABLES.AF_TABLE_RATE_LIMITS,
+      fn: () => db.put(TABLES.AF_TABLE_RATE_LIMITS, { key: onceKey('af_starter', UID), token_hash: sha256hex('st-a'), ttl: Math.floor(NOW / 1000) + 600 }),
     };
     const r = await verify('st-b', 'af_starter');
     expect(r.status).toBe(400);
+    expect(play.acks).not.toContain('st-b');
     expect(db.get(TABLES.AF_TABLE_PURCHASES, { token_hash: sha256hex('st-b') })).toBeUndefined();
+  });
+
+  it('una reserva caducada (acknowledge o escritura fallidos) no bloquea la cuenta; la del mismo token se renueva', async () => {
+    db.put(TABLES.AF_TABLE_RATE_LIMITS, { key: onceKey('af_starter', UID), token_hash: sha256hex('st-x'), ttl: Math.floor(NOW / 1000) - 1 });
+    expect((await verify('st-y', 'af_starter')).body.status).toBe('ok');
+    expect(db.get(TABLES.AF_TABLE_RATE_LIMITS, { key: onceKey('af_starter', UID) })).toEqual({
+      key: onceKey('af_starter', UID), token_hash: sha256hex('st-y'), created_at: NOW,
+    });
+    // Reserva viva del mismo token (reintento tras un fallo): pasa.
+    db.put(TABLES.AF_TABLE_RATE_LIMITS, { key: onceKey('af_starter', OTHER_UID), token_hash: sha256hex('st-z'), ttl: Math.floor(NOW / 1000) + 600 });
+    expect((await verify('st-z', 'af_starter', OTHER_UID)).body.status).toBe('ok');
+  });
+
+  it('la reserva se pierde entre reservar y escribir (caducó y otro token la tomó) → 400, una sola fila', async () => {
+    db.hookNext = {
+      command: 'TransactWrite', table: TABLES.AF_TABLE_PURCHASES,
+      fn: () => db.put(TABLES.AF_TABLE_RATE_LIMITS, { key: onceKey('af_starter', UID), token_hash: sha256hex('st-a') }),
+    };
+    expect((await verify('st-b', 'af_starter')).status).toBe(400);
+    expect(ledgerRows()).toEqual([]);
   });
 
   it('el borrado de la cuenta quita la marca (no quedan datos del UID)', async () => {
@@ -205,12 +226,14 @@ describe('F2c-3 · af_starter una vez por cuenta (05 §4.1: «1 por cuenta»)', 
 
 describe('F2c-4 · carreras del borrado', () => {
   it('verifyPurchase: la marca de borrado llega entre isDeleted y la escritura → 401 y ninguna fila con el uid', async () => {
-    db.hookNext = { command: 'TransactWrite', fn: markDeletedNow };
+    db.hookNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_PURCHASES, fn: markDeletedNow };
     const r = await verify('tk-del', 'af_starter');
     expect(r.status).toBe(401);
     expect(errResponse(r.body)).toBe(true);
     expect(ledgerRows()).toEqual([]);
-    expect(db.get(TABLES.AF_TABLE_RATE_LIMITS, { key: onceKey('af_starter', UID) })).toBeUndefined();
+    // Solo queda la reserva de 15 minutos (sin el UID en claro), nunca una marca permanente.
+    const mark = db.get(TABLES.AF_TABLE_RATE_LIMITS, { key: onceKey('af_starter', UID) });
+    expect(mark?.ttl).toBe(Math.floor(NOW / 1000) + ONCE_RESERVATION_S);
   });
 
   it('verifyPurchase: con la marca ya caducada (más de 2 h) vuelve a escribir', async () => {
@@ -220,12 +243,12 @@ describe('F2c-4 · carreras del borrado', () => {
 
   it('verifyPurchase: TransactionConflict con el ganador ya escrito → duplicate; sin ganador → 500', async () => {
     db.hookNext = {
-      command: 'TransactWrite',
+      command: 'TransactWrite', table: TABLES.AF_TABLE_PURCHASES,
       fn: () => db.put(TABLES.AF_TABLE_PURCHASES, { token_hash: sha256hex('tk-c'), uid: UID, sku: 'af_coins_2', state: 'ok', ts: 1 }),
     };
-    db.failNext = { command: 'TransactWrite', error: transactionCanceled(['TransactionConflict', 'None']) };
+    db.failNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_PURCHASES, error: transactionCanceled(['TransactionConflict', 'None']) };
     expect((await verify('tk-c')).body.status).toBe('duplicate');
-    db.failNext = { command: 'TransactWrite', error: transactionCanceled(['TransactionConflict', 'None']) };
+    db.failNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_PURCHASES, error: transactionCanceled(['TransactionConflict', 'None']) };
     const r = await verify('tk-d');
     expect(r.status).toBe(500);
     expect(db.get(TABLES.AF_TABLE_PURCHASES, { token_hash: sha256hex('tk-d') })).toBeUndefined();
@@ -234,7 +257,7 @@ describe('F2c-4 · carreras del borrado', () => {
   it('rewardedSsv: la marca de borrado llega entre isDeleted y la escritura → 200 sin fila en rewards', async () => {
     const secrets = new MapSecrets();
     secrets.values.set('arn:max', 'clave');
-    db.hookNext = { command: 'TransactWrite', fn: markDeletedNow };
+    db.hookNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_REWARDS, fn: markDeletedNow };
     const r = res(
       await ssvHandler(() => ({ ddb: db.client, secrets, env: { ...TABLES, AF_SECRET_MAX_SSV: 'arn:max' }, now: () => NOW }))(
         httpEvent({
@@ -249,7 +272,7 @@ describe('F2c-4 · carreras del borrado', () => {
   });
 
   it('código de borrado: la marca llega entre isDeleted y la escritura → 401 y ningún código', async () => {
-    db.hookNext = { command: 'TransactWrite', fn: markDeletedNow };
+    db.hookNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_ACCOUNT_CODES, fn: markDeletedNow };
     const r = res(
       await deleteHandler(() => ({
         ddb: db.client,
@@ -262,6 +285,16 @@ describe('F2c-4 · carreras del borrado', () => {
     );
     expect(r.status).toBe(401);
     expect(db.items(TABLES.AF_TABLE_ACCOUNT_CODES)).toEqual([]);
+  });
+
+  it('caché de integridad: con la cuenta marcada como borrada no se guarda el uid, pero el token bueno pasa', async () => {
+    db.hookNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_INTEGRITY, fn: markDeletedNow };
+    const deps = { ddb: db.client, verifier: okIntegrity, integrityTable: TABLES.AF_TABLE_INTEGRITY, rateLimitsTable: TABLES.AF_TABLE_RATE_LIMITS, envName: 'dev', now: () => NOW };
+    await expect(requireIntegrity(deps, UID, 'tok-1')).resolves.toBeUndefined();
+    expect(db.items(TABLES.AF_TABLE_INTEGRITY)).toEqual([]);
+    // Sin marca, sí se guarda.
+    await requireIntegrity(deps, OTHER_UID, 'tok-2');
+    expect(db.get(TABLES.AF_TABLE_INTEGRITY, { uid: OTHER_UID })).toMatchObject({ verdict: 'ok' });
   });
 
   it('segunda pasada de eraseAccount: lo escrito antes de la marca que el GSI aún no enseñaba también se limpia', async () => {
