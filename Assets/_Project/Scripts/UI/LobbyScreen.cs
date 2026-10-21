@@ -79,6 +79,9 @@ namespace AF.UI
         private const float HomeWindowGapDp = 8f;
         private const float SideGutterDp = 16f;
 
+        // Del widget de la Crecida al borde derecho (dp) [P]: la tarjeta del Reto llega a w − 32, así que el widget va en w − 30 … w − 4.
+        private const float StreakWidgetRightDp = 4f;
+
         /// <summary>Cuerpo (sp) de «Faltan {n} niveles para {lugar}» bajo «Jugar» (M2.1), en Nunito Bold.</summary>
         public const float StopRemainingSp = 14f;
 
@@ -142,6 +145,7 @@ namespace AF.UI
         private readonly RectTransform _remaining;
         private readonly TextMeshProUGUI _remainingLabel;
         private readonly HomeWindow _home;
+        private readonly StreakWidget _streakWidget;
         private GameServices? _services;
         private RiverStopCatalog? _riverStops;
         private SeasonTable? _seasons;
@@ -164,6 +168,7 @@ namespace AF.UI
         private float _playTop;
 
         private int _playLevelShown = -1;
+        private PlayButtonMode _playModeShown = PlayButtonMode.Level;
         private string _labelShown = string.Empty;
         private int _seedsShown = -1;
         private int _canoesVisibleShown = -1;
@@ -305,6 +310,9 @@ namespace AF.UI
             _remaining.gameObject.SetActive(false);
             _home = new HomeWindow(_root, art);
 
+            // ---- Widget de la Crecida (06 §4.3 y §4.7, desde el 25; tarea B1b): a la derecha, silencioso y sin toques. ----
+            _streakWidget = new StreakWidget(_root, art);
+
             // ---- Superposición: «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3), con el inicio atenuado detrás. ----
             _overlay = UiBuilder.Rect("Overlay", _root);
             Image dim = UiBuilder.Image("Dim", _overlay, null, new Color(0.04f, 0.06f, 0.05f, 0.62f), true);
@@ -423,6 +431,55 @@ namespace AF.UI
 
         /// <summary>Texto del botón Jugar.</summary>
         public string PlayLabel => _playLabel.text;
+
+        /// <summary>
+        /// El Reto del río está desbloqueado (lo da <c>GameBootstrap</c> al crearlo: en el build, con su interruptor y desde
+        /// <c>live_unlock_level_daily</c>); null o false = sin Reto. Decide el botón Jugar tras acabar el contenido (D-032,
+        /// punto 6; <see cref="PlayModeFor"/>).
+        /// </summary>
+        public Func<bool>? DailyUnlocked { get; set; }
+
+        /// <summary>
+        /// Estado de la Crecida para el nivel de «Jugar» (lo da <c>GameBootstrap.SetUpStreak</c> con <c>StreakService.Peek</c>);
+        /// null o sin <see cref="StreakSnapshot.Active"/> = sin widget (06 §4.7: «widget de Crecida (25+)»). Lee el almacén: se llama
+        /// al mostrar el inicio y al cambiar el nivel de «Jugar», nunca por fotograma (tarea B1b).
+        /// </summary>
+        public Func<int, StreakSnapshot?>? StreakPeek { get; set; }
+
+        /// <summary>El widget de la Crecida (tests y capturas).</summary>
+        internal StreakWidget StreakWidget => _streakWidget;
+
+        /// <summary>Lo que dice y hace el botón Jugar ahora (<see cref="PlayModeFor"/>).</summary>
+        public PlayButtonMode PlayMode => _playModeShown;
+
+        /// <summary>
+        /// Qué es el botón Jugar del inicio (D-032, punto 6): con el nivel de <c>next_level</c> publicado, «Jugar · Nivel {n}»; tras
+        /// acabar el contenido (el siguiente nivel aún no está publicado), «Jugar · Reto del río» si el Reto está desbloqueado
+        /// (y al tocarlo, el Reto) y, si no, «Jugar» a secas (y al tocarlo, «El río sigue creciendo», como antes).
+        /// </summary>
+        public static PlayButtonMode PlayModeFor(bool levelAvailable, bool dailyUnlocked)
+        {
+            if (levelAvailable)
+            {
+                return PlayButtonMode.Level;
+            }
+
+            return dailyUnlocked ? PlayButtonMode.Daily : PlayButtonMode.ContentEnd;
+        }
+
+        /// <summary>El texto del botón Jugar para <paramref name="mode"/> y el nivel <paramref name="level"/> (claves de la tabla).</summary>
+        public static string PlayLabelFor(PlayButtonMode mode, int level)
+        {
+            switch (mode)
+            {
+                case PlayButtonMode.Daily:
+                    return UiText.PlayDaily;
+                case PlayButtonMode.ContentEnd:
+                    return UiText.Play;
+                default:
+                    return UiText.PlayLevel(level);
+            }
+        }
 
         /// <summary>Contador de canoas (botón: con 0/5 abre Sin canoas).</summary>
         public Button CanoesButton => _canoes;
@@ -601,6 +658,7 @@ namespace AF.UI
             }
             ForceRefresh();
             ApplyStopVisibility();
+            RefreshStreak();
             if (_app != null)
             {
                 _probe.App(AppScreenNames.Of(screen), _app);
@@ -649,16 +707,21 @@ namespace AF.UI
             }
 
             int level = app.PlayLevel;
-            if (level != _playLevelShown)
+            Func<bool>? daily = DailyUnlocked;
+            bool available = app.PlayLevelAvailable;
+            PlayButtonMode mode = PlayModeFor(available, !available && daily != null && daily());
+            if (level != _playLevelShown || mode != _playModeShown)
             {
                 _playLevelShown = level;
-                _playLabel.text = UiText.PlayLevel(level);
+                _playModeShown = mode;
+                _playLabel.text = PlayLabelFor(mode, level);
             }
 
             if (level != _stopLevelShown)
             {
                 _stopLevelShown = level;
                 ApplyStop(app, level);
+                RefreshStreak(); // otro nivel de «Jugar»: el widget puede aparecer (el 25) o cambiar
             }
 
             string label = app.PlayLevelLabel;
@@ -705,6 +768,21 @@ namespace AF.UI
                 _mapDotShown = dotFlag;
                 _mapTabDot.gameObject.SetActive(dot);
             }
+        }
+
+        // Widget de la Crecida (B1b): solo en el inicio sin superposición y con la Crecida activa en el nivel de «Jugar».
+        private void RefreshStreak()
+        {
+            AppFlow? app = _app;
+            Func<int, StreakSnapshot?>? peek = StreakPeek;
+            StreakSnapshot? s = app != null && peek != null && _shown == AppScreen.Lobby ? peek(app.PlayLevel) : null;
+            bool show = s.HasValue && s.Value.Active;
+            if (show)
+            {
+                _streakWidget.Set(s!.Value.Wins, s.Value.ShieldAvailable);
+            }
+
+            _streakWidget.SetVisible(show);
         }
 
         private void RefreshCanoes(AppFlow app)
@@ -887,6 +965,12 @@ namespace AF.UI
 
             // Ventanita de casa (M2.1): a la izquierda, bajo los saldos [P]; la píldora de la distancia, a su derecha.
             _home.Place(SideGutterDp, topY + TopRowHeight + HomeWindowGapDp, w - SideGutterDp);
+
+            // Widget de la Crecida (B1b) [P]: en la franja derecha que dejan la tarjeta del Reto (296 dp centrada) y «Jugar», bajo la
+            // ventanita de casa con su píldora debajo (lo más que mide) y sobre el chip de la etiqueta.
+            float widgetTop = topY + TopRowHeight + HomeWindowGapDp + HomeWindow.SizeDp + HomeWindow.PillStackGapDp + HomeWindow.PillHeightDp + HomeWindowGapDp;
+            float widgetBottom = _playTop - ChipGapDp - DifficultyChip.HeightDp;
+            _streakWidget.Place(w - StreakWidgetRightDp - StreakWidget.WidthDp, widgetTop, Mathf.Max(48f, widgetBottom - widgetTop));
 
             // Pestañas: la barra cubre hasta el borde inferior (y la zona de gestos); «Inicio» sobresale 12 dp.
             UiBuilder.Place(_tabBar.rectTransform, -8f, tabTop, w + 16f, h - tabTop + 12f);
@@ -1131,5 +1215,18 @@ namespace AF.UI
             rt.anchoredPosition = new Vector2(x, -yTop);
             rt.sizeDelta = new Vector2(w, h);
         }
+    }
+
+    /// <summary>Qué dice y hace el botón Jugar del inicio (D-032, punto 6; <see cref="LobbyScreen.PlayModeFor"/>).</summary>
+    public enum PlayButtonMode
+    {
+        /// <summary>«Jugar · Nivel {n}»: abre ese nivel (o Sin canoas).</summary>
+        Level = 0,
+
+        /// <summary>«Jugar» tras acabar el contenido, sin el Reto: abre «El río sigue creciendo».</summary>
+        ContentEnd = 1,
+
+        /// <summary>«Jugar · Reto del río» tras acabar el contenido, con el Reto desbloqueado: abre el Reto.</summary>
+        Daily = 2,
     }
 }

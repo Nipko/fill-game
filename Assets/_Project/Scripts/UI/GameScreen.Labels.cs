@@ -21,7 +21,8 @@ namespace AF.UI
     /// niveles de Aguas turbias, el chip gris-pardo «?» (<see cref="MurkyChip"/>); con un contador de Lluvia o Piraña, su chip
     /// (<see cref="HudCounterChip"/>), siempre aparte de ese grupo;</description></item>
     /// <item><description>alrededor del panel, un marco propio de 3 dp ámbar (Difícil) o índigo (Muy difícil), y en Muy difícil
-    /// un velo propio que oscurece el fondo un 15 %, detrás del panel (la variante noche con LUT queda [P]);</description></item>
+    /// la variante noche: desde B14, la LUT de noche del fondo (<see cref="StopBackdrop.NightLut"/> [P]; y en Difícil, la luz de
+    /// tarde, <see cref="StopBackdrop.AfternoonLut"/> [P]), que sustituye al velo del 15 % del paso 1 (02 §10);</description></item>
     /// <item><description>en la victoria, el chip del nivel N + 1 con su cinta «×3»/«×4» colgado de Siguiente (el panel crece
     /// <see cref="NextChipRowDp"/> para hacerle sitio).</description></item>
     /// </list>
@@ -408,7 +409,9 @@ namespace AF.UI
             bool labeled = veryHard || label == LevelDefinition.LabelHard;
             _difficultyFrame.color = FrameColorFor(veryHard);
             _difficultyFrame.gameObject.SetActive(labeled);
-            _nightVeil.gameObject.SetActive(veryHard);
+            // B14: la noche de Muy difícil es ya la LUT del fondo (GameScreen.Stop.cs; 07 §7.7 [P]); el velo del 15 % del paso 1
+            // solo vuelve con la luz de dificultad apagada (capturas de comparación).
+            _nightVeil.gameObject.SetActive(veryHard && !DifficultyLightEnabled);
             _hudCounterIndex = -1;
             _hudCounter.Show(LevelCounter.None, 0);
             RefreshHudCounter(flow);
@@ -467,7 +470,7 @@ namespace AF.UI
             // la Cosecha doble de encima quedan ≈ 12 dp.
             if (_nextChip.Visible)
             {
-                y += NextChipRowDp;
+                y += NextChipRowFor(_victoryCompact);
             }
         }
 
@@ -484,9 +487,9 @@ namespace AF.UI
                 return;
             }
 
-            // LayoutVictory ya bajó Siguiente lo que reservó LabelsVictoryReserve: el chip, centrado sobre su canto.
-            float panelW = Mathf.Min(328f, _canvasW - 32f);
-            _nextChip.PlaceCentered(panelW * 0.5f, _victoryCtaTopDp - NextChipHangDp); // creado tras Siguiente: va delante
+            // LayoutVictory ya bajó Siguiente lo que reservó LabelsVictoryReserve: el chip, centrado sobre su canto (en la fila de la
+            // victoria compacta, sobre el centro de «Siguiente», D-032).
+            _nextChip.PlaceCentered(_victoryNextCenterX, _victoryCtaTopDp - NextChipHangDp); // creado tras Siguiente: va delante
         }
 
         partial void LabelsTick(float dtMs)
@@ -858,7 +861,8 @@ namespace AF.UI
                 + ",\"label\":\"" + _hudLabel + "\""
                 + ",\"murky\":" + (_hudMurky.Visible ? "true" : "false")
                 + ",\"frame\":\"" + (labeled ? (veryHard ? "indigo" : "amber") : "none") + "\""
-                + ",\"veil\":" + (veryHard ? NightVeilAlpha.ToString("0.00", CultureInfo.InvariantCulture) : "0")
+                + ",\"veil\":" + (_nightVeil.gameObject.activeSelf ? NightVeilAlpha.ToString("0.00", CultureInfo.InvariantCulture) : "0")
+                + ",\"light\":\"" + (StopBackdrop.DifficultyLightName(DifficultyLightFor(_hudLabel)) ?? "none") + "\""
                 + ",\"mode\":\"" + ModeKey(_hudMode) + "\""
                 + ",\"seal\":" + (_hudChip.SealShown ? "true" : "false")
                 + ",\"counter\":\"" + counter + "\""

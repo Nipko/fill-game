@@ -18,6 +18,7 @@ namespace AF.UI
         private readonly CanvasScaler _scaler;
         private int _screenW;
         private int _screenH;
+        private Rect _safe;
 
         public OverlayCanvas(string name, Transform host, int sortingOrder)
         {
@@ -43,17 +44,24 @@ namespace AF.UI
 
         public float Height { get; private set; } = 780f;
 
+        /// <summary>Margen superior del safe area, en unidades del lienzo (08 §13.1 #4).</summary>
+        public float SafeTop { get; private set; }
+
+        /// <summary>Margen inferior del safe area (barra de navegación o gestos), en unidades del lienzo (08 §13.1 #4).</summary>
+        public float SafeBottom { get; private set; }
+
         /// <summary>Recalcula la escala si cambió la pantalla; devuelve true si cambió.</summary>
         public bool Measure()
         {
-            GameScreen.ReadScreen(out int sw, out int sh, out Rect _);
-            if (sw == _screenW && sh == _screenH)
+            GameScreen.ReadScreen(out int sw, out int sh, out Rect safe);
+            if (sw == _screenW && sh == _screenH && safe == _safe)
             {
                 return false;
             }
 
             _screenW = sw;
             _screenH = sh;
+            _safe = safe;
             float scale = sw / 360f;
             if (sh / scale < 640f)
             {
@@ -64,6 +72,8 @@ namespace AF.UI
             _scaler.scaleFactor = scale;
             Width = sw / scale;
             Height = sh / scale;
+            SafeTop = Mathf.Max(0f, (sh - safe.yMax) / scale);
+            SafeBottom = Mathf.Max(0f, safe.yMin / scale);
             return true;
         }
     }
@@ -143,6 +153,8 @@ namespace AF.UI
             y += ModalKit.HeightOf(_buy) + 4f;
             UiBuilder.Place((RectTransform)_cancel.transform, (w - 200f) * 0.5f, y, 200f, 48f);
             y += 48f + 12f + 16f;
+            // La hoja llega al borde inferior, pero su contenido queda por encima de la barra de navegación (08 §13.1 #4).
+            y += _canvas.SafeBottom;
             ModalKit.Size(_panel, _surface, _art, (_canvas.Width - w) * 0.5f, _canvas.Height - y + 8f, w, y);
         }
 

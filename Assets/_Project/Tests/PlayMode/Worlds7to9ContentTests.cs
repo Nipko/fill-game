@@ -57,6 +57,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.ResetDailyOverrides();
             GameScreen.SimulatedScreen = null;
             GameScreen.BannerTravelOverride = null;
             LaunchOptions.Reset();
@@ -336,6 +337,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator ContentEnd_Lobby_At701_KeepsTheBackdropAndTiTinoOfTheStopOf700()
         {
+            GameBootstrap.DailyPoolDisabledOverride = true; // sin el Reto: con él, «Jugar · Reto del río» abre el Reto (D-032, punto 6)
             // Quien acabó el 700 tiene el 701 en «Jugar»; el 701 no tiene parada en los datos del Mapa (paradas 0-69), y el inicio
             // sigue con el fondo de la parada actual y TiTino en su ventanita (06 §4, fila Lobby; D-013 Q17-A; D-016): los del 700.
             Profile profile = AF.Economy.Wallet.NewProfile(new AF.Platform.ManualClock(new System.DateTime(2026, 10, 18, 15, 0, 0, System.DateTimeKind.Utc)));

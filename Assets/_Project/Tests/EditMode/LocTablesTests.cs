@@ -509,6 +509,9 @@ namespace AF.Tests.EditMode
             // E6 y E7 del Spark (enganche E5b): la tarjeta del 7 y la línea de Sin canoas.
             keys.AddRange(DailyText.E5bKeys);
 
+            // B14: los nombres de las skins de la 1.0 (skin_<id>_name), que pinta el aviso «{skin} · puesta».
+            keys.AddRange(UiText.SkinNameKeys);
+
             return keys;
         }
 

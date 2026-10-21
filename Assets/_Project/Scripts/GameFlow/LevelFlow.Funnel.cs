@@ -111,6 +111,7 @@ namespace AF.GameFlow
             UndoStatus undo = UndoStatus;
             CanoesStatus canoes = _wallet?.Canoes ?? default;
             RescueQuote quote = _quote ?? default;
+            StreakSnapshot? streak = PeekStreak(); // la línea de la Hoja escudo (04 §6.5; B1b): lee el almacén, solo al armar el modal
             return new StuckContext
             {
                 Level = LevelNumber,
@@ -133,6 +134,9 @@ namespace AF.GameFlow
                 BalsaOk = balsaOk,
                 Geo = geo,
                 UndoGiftUsed = _attempt.UndoGiftUsed,
+                StreakActive = streak.HasValue && streak.Value.Active,
+                StreakWins = streak.HasValue ? streak.Value.Wins : 0,
+                ShieldAvailable = streak.HasValue && streak.Value.ShieldAvailable,
             };
         }
 

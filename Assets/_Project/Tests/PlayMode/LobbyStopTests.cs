@@ -42,6 +42,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.ResetDailyOverrides();
             GameScreen.SimulatedScreen = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();
@@ -70,7 +71,8 @@ namespace AF.Tests.PlayMode
             yield return null;
             StopBackdrop board = boot.View!.StopBackdrop;
             Assert.That(board.Stop, Is.SameAs(stop), "el mismo sitio que el tablero del 58");
-            Assert.That(board.LutColor, Is.EqualTo(backdrop.LutColor));
+            // El tablero lleva además la luz de su dificultad (B14; 07 §7.7 [P]: el 58 es Difícil, luz de tarde); el inicio, no.
+            Assert.That(board.LutColor, Is.EqualTo(backdrop.LutColor * GameScreen.DifficultyLightFor(boot.Flow!.Level.DifficultyLabel)));
             Assert.That(board.HeroSource, Is.EqualTo(hero));
             Assert.That(board.Water, Is.EqualTo(backdrop.Water), "con la misma agua del mundo");
         }
@@ -140,6 +142,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator StopRemaining_HidesAtTheContentEnd_AndWithoutANextStop_AndWithoutCatalogTheLobbyIsAsBefore()
         {
+            GameBootstrap.DailyPoolDisabledOverride = true; // sin el Reto: con él, «Jugar · Reto del río» abre el Reto (D-032, punto 6)
             // Con las 70 paradas de 1-700 (M4.5b), del 191 al 200 la parada siguiente (la 20, Mazán) está en el catálogo y el
             // pack de 201-300 está publicado: «Faltan…» hacia Mazán.
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(195)));

@@ -117,6 +117,10 @@ namespace AF.UI
             _streakService = service;
             _streakClock = clock;
             flow.UseStreak(service);
+            if (_lobby != null)
+            {
+                _lobby.StreakPeek = level => level >= 1 ? service.Peek(level, true) : (StreakSnapshot?)null; // widget del inicio (B1b)
+            }
             if (StreakProbeEnabled)
             {
                 _streakProbeSeen = null;

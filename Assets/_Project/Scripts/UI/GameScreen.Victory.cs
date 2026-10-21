@@ -91,6 +91,475 @@ namespace AF.UI
         private FactLine? _fruitLine;
         private readonly List<StackEntry> _stackNeeds = new List<StackEntry>(4);
 
+        /// <summary>
+        /// Victoria compacta de 16:9, escalón 1 (D-032, punto 2) [P]: márgenes justos (el marco de abajo
+        /// <see cref="VictoryFrameCompactDp"/> dp, el aire bajo la Cosecha <see cref="VictoryHarvestGapCompactDp"/> y los huecos de la
+        /// ranura de <see cref="VictoryLineSlot.Tight"/>) y el título de la cinta en una línea hasta
+        /// <see cref="RibbonTitleCompactMinSp"/> sp antes de pasar a dos.
+        /// </summary>
+        internal const int VictoryCompactMargins = 1;
+
+        /// <summary>
+        /// Escalón 2 (D-032, punto 2) [P]: además, el texto de la ranura del Dato del río (el dato de la llegada y la línea de fruta)
+        /// empieza en <see cref="UiBuilder.MinTextSp"/> sp, no en 14, y la ranura usa casi todo el ancho del panel
+        /// (<see cref="VictorySlotCompactSideDp"/> dp a cada lado).
+        /// </summary>
+        internal const int VictoryCompactText = 2;
+
+        /// <summary>
+        /// Escalón 3 (D-032, punto 2) [P]: además, «Inicio» va a la izquierda de «Siguiente», en su misma fila, con «Ver mapa» entre
+        /// los dos en la victoria con llegada si «Siguiente» conserva sitio para su etiqueta (<see cref="VictoryRowFitsMap"/>; si no,
+        /// no sale: pregunta abierta al dueño en D-032); «Siguiente» crece en alto solo lo que pide su etiqueta
+        /// (no la escala de texto entera) y el chip del nivel siguiente deja <see cref="NextChipRowCompactDp"/> dp sobre él.
+        /// </summary>
+        internal const int VictoryCompactRow = 3;
+
+        /// <summary>El escalón más alto de la victoria compacta.</summary>
+        internal const int VictoryCompactMax = VictoryCompactRow;
+
+        /// <summary>Marco bajo la ranura (o «Inicio») en la victoria de siempre (dp).</summary>
+        internal const float VictoryFrameDp0 = 18f;
+
+        /// <summary>Marco de abajo desde el escalón 1 (dp) [P]: el cuerpo del panel ya tiene 8 dp de borde.</summary>
+        internal const float VictoryFrameCompactDp = 8f;
+
+        /// <summary>Aire bajo la fila de la Cosecha en la victoria de siempre (dp).</summary>
+        internal const float VictoryHarvestGapDp0 = 4f;
+
+        /// <summary>Aire bajo la fila de la Cosecha desde el escalón 1 (dp) [P]: la fila ya lleva el suyo.</summary>
+        internal const float VictoryHarvestGapCompactDp = 0f;
+
+        /// <summary>
+        /// Lo que baja «Siguiente» por el chip del nivel siguiente en el escalón 3 (dp) [P]: los <see cref="NextChipHangDp"/> que
+        /// cuelga y 2 de aire (en la de siempre, <see cref="NextChipRowDp"/>).
+        /// </summary>
+        internal const float NextChipRowCompactDp = NextChipHangDp + 2f;
+
+        // La etiqueta de un CTA va en el 60 % de su cara (UiBuilder.PlaceCtaLabel).
+        private const float CtaLabelFaceShare = 0.60f;
+
+        /// <summary>Lo menos que baja el título de la cinta en una línea desde el escalón 1 (sp, × la escala de texto) [P].</summary>
+        internal const float RibbonTitleCompactMinSp = 16f;
+
+        /// <summary>Margen de la ranura a cada lado desde el escalón 2 (dp) [P]; en la de siempre, <see cref="VictoryLineSlot.SideDp"/>.</summary>
+        internal const float VictorySlotCompactSideDp = 8f;
+
+        /// <summary>
+        /// Margen interior de la línea de fruta a cada lado desde el escalón 2 (dp): lo que la ranura se acerca al canto, para que el
+        /// texto, sin placa propia, quede a <see cref="VictoryLineSlot.SideDp"/> dp del canto, como siempre (8 dp de aire dentro del marco).
+        /// </summary>
+        internal const float FruitLineCompactInsetDp = VictoryLineSlot.SideDp - VictorySlotCompactSideDp;
+
+        /// <summary>Hueco entre «Inicio» y «Siguiente» en la fila del escalón 3 (dp) [P].</summary>
+        internal const float VictoryRowGapDp = 8f;
+
+        /// <summary>Ancho mínimo de «Inicio» en la fila del escalón 3 (dp) [P].</summary>
+        internal const float VictoryRowHomeMinDp = 96f;
+
+        /// <summary>Parte del ancho de la fila que puede llevarse «Inicio» como mucho en el escalón 3 [P].</summary>
+        internal const float VictoryRowHomeMaxShare = 0.42f;
+
+        /// <summary>Cuerpo de la etiqueta de «Siguiente» en la fila del escalón 3: de 22 sp hasta este mínimo (× la escala; el de «Inicio») [P].</summary>
+        internal const float NextRowMinSp = 14f;
+
+        private int _victoryCompact;
+        private string? _nextNeedText;
+        private float _nextNeedScale = -1f;
+        private float _nextNeedFaceDp;
+        private float _victoryNextCenterX = 164f;
+        private string? _ribbonWorstLocale;
+        private float _ribbonWorstScale = -1f;
+        private float _ribbonWorst0;
+        private float _ribbonWorst1;
+
+        /// <summary>
+        /// Escalón de la victoria compacta de la última maquetación (D-032, punto 2; 0 = la de siempre, hasta
+        /// <see cref="VictoryCompactMax"/>): el más bajo con el que la victoria más alta posible de esta pantalla, idioma y escala
+        /// (cinta con el título más alto, Cosecha doble, el chip del nivel siguiente y la ranura) deja la cinta bajo la cabecera
+        /// del HUD. No depende de lo que lleve cada victoria, así que «Siguiente» queda a la misma altura en todas (Q7-A); en el
+        /// escalón 3, en la victoria con «Ver mapa», va más estrecho y empieza más a la derecha, con el mismo canto derecho [P]
+        /// (PlaceVictoryRow).
+        /// </summary>
+        internal int VictoryCompact => _victoryCompact;
+
+        /// <summary>Margen de la ranura a cada lado en el escalón de ahora (dp).</summary>
+        internal float VictorySlotSideDp => _victoryCompact >= VictoryCompactText ? VictorySlotCompactSideDp : VictoryLineSlot.SideDp;
+
+        /// <summary>
+        /// Lo más alto que puede ser el panel de victoria para que la cinta (que asoma <c>RibbonRiseDp</c> sobre él) quede bajo la
+        /// cabecera del HUD (dp): el panel va anclado abajo, a 8 dp de la zona segura.
+        /// </summary>
+        internal float VictoryPanelBudgetDp => _canvasH - _safeBottom - 8f - HudBadgeBottom - RibbonRiseDp;
+
+        /// <summary>Alto de la victoria más alta posible con el escalón <paramref name="level"/> en esta pantalla (dp; tests).</summary>
+        internal float VictoryWorstPanelDp(int level)
+        {
+            int keep = _victoryCompact;
+            ApplyVictoryCompact(level);
+            float panel = WorstPanelDp(level);
+            ApplyVictoryCompact(keep);
+            return panel;
+        }
+
+        // Elige el escalón (lo más bajo que quepa; si ni el último cabe, el último) y deja la ranura y sus proveedores con él. Mide
+        // con TextMeshPro solo lo que no esté en la caché: WarmVictorySlot lo llama al cargar el nivel.
+        private int ChooseVictoryCompact()
+        {
+            float budget = VictoryPanelBudgetDp;
+            _victoryBarsDropped = false;
+            _victoryBars.ForceHalf = false;
+            int level = CompactStepFor(budget);
+            if (level > 0 && VictoryBarsPossible)
+            {
+                // Antes de compactar lo demás, la Crecida y la Canasta en una fila, a media anchura [P] (tarea B1b): así 360 × 780 no
+                // compacta (D-032, punto 2) y en 16:9 se compacta lo menos posible; desde el escalón 2 ya van así (D-033, punto 10).
+                _victoryBars.ForceHalf = true;
+                level = CompactStepFor(budget);
+            }
+
+            if (WorstPanelDp(level) > budget + 0.01f && VictoryBarsPossible)
+            {
+                // Ni el último escalón cabe con las barras de la Crecida y la Canasta: no salen («si no cabe, no sale», como «Ver
+                // mapa» en D-032 y la regla de 02 §5) [P] y el escalón se elige sin ellas (tarea B1b; pregunta abierta al dueño).
+                _victoryBarsDropped = true;
+                level = CompactStepFor(budget);
+            }
+
+            ApplyVictoryCompact(level);
+            return level;
+        }
+
+        // El escalón más bajo con el que la victoria más alta posible cabe en budget (o el último).
+        private int CompactStepFor(float budget)
+        {
+            int level = 0;
+            while (level < VictoryCompactMax)
+            {
+                ApplyVictoryCompact(level);
+                if (WorstPanelDp(level) <= budget + 0.01f)
+                {
+                    break;
+                }
+
+                level++;
+            }
+
+            ApplyVictoryCompact(level);
+            return level;
+        }
+
+        // El escalón en la ranura y en sus proveedores: los huecos (Tight) y el cuerpo del texto (BodySp).
+        private void ApplyVictoryCompact(int level)
+        {
+            _victoryCompact = level;
+            float body = level >= VictoryCompactText ? UiBuilder.MinTextSp : VictoryLineSlot.TextSp;
+            _slot.Tight = level >= VictoryCompactMargins;
+            _slot.BodySp = body;
+            if (_arrival != null)
+            {
+                _arrival.BodySp = body;
+            }
+
+            if (_fruitLine != null)
+            {
+                _fruitLine.BodySp = body;
+                _fruitLine.InsetDp = level >= VictoryCompactText ? FruitLineCompactInsetDp : 0f;
+            }
+        }
+
+        // La victoria más alta posible con el escalón de ahora (ApplyVictoryCompact ya hecho): como LayoutVictory, con la cinta del
+        // título más alto, la Cosecha doble y el chip del nivel siguiente.
+        private float WorstPanelDp(int level)
+        {
+            float ribbon = WorstRibbonDp(level >= VictoryCompactMargins);
+            float above = VictoryHarvestTopDp + (ribbon - RibbonHeightDp) + VictoryHarvestDp + VictoryHarvestGapDp(level)
+                + WorstBarsDp(level) // las barras de la Crecida y la Canasta más altas posibles (D-033, punto 10; GameScreen.Streak.cs)
+                + ModalKit.HeightOf(_double) + 2f + (_labelsBuilt ? NextChipRowFor(level) : 0f);
+            float below = level >= VictoryCompactRow
+                ? Mathf.Max(NextHeightFor(CompactNextStretch()), 48f)
+                : VictoryHomeBelowCtaDp + VictoryNextGrowDp + 48f;
+            if (_slot.Reserved)
+            {
+                _slot.Build(_victoryPanel);
+                string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
+                below += _slot.ReserveFor(SlotContentDp(locale, UiBuilder.TextScale));
+            }
+
+            return above + below + VictoryFrameDp(level);
+        }
+
+        // Lo que Siguiente crece en alto con la escala de texto (ModalKit.StretchForTextScale; tarea L4): Inicio baja lo mismo.
+        private float VictoryNextGrowDp => Mathf.Max(0f, NextHeightFor(Mathf.Max(1f, UiBuilder.TextScale)) - Mathf.Max(48f, _art.CtaLeaf.HeightDp - 6f));
+
+        // Alto de «Siguiente» con su relieve estirado k veces (como ModalKit.HeightOf).
+        private float NextHeightFor(float k)
+        {
+            return Mathf.Max(48f, (_next.Sprites.HeightDp * Mathf.Max(1f, k)) - 6f);
+        }
+
+        // Estirado de «Siguiente» en la fila del escalón 3: lo justo para que su etiqueta quepa a NextRowMinSp en el 60 % de la cara;
+        // nunca más que la escala de texto (lo de siempre).
+        private float CompactNextStretch()
+        {
+            float face = _next.Sprites.FaceHeightDp;
+            float scale = Mathf.Max(1f, UiBuilder.TextScale);
+            if (face <= 0f)
+            {
+                return scale;
+            }
+
+            return Mathf.Clamp(NextNeedFaceDp() / face, 1f, scale);
+        }
+
+        // La cara que necesita la etiqueta de «Siguiente» a NextRowMinSp (× la escala) en el 60 % de su alto (dp): su alto medido con
+        // TextMeshPro (Baloo 2 lleva una línea bastante más alta que su cuerpo), en caché por texto y escala; deja la etiqueta como estaba.
+        private float NextNeedFaceDp()
+        {
+            TMPro.TextMeshProUGUI label = _nextLabel;
+            float scale = UiBuilder.TextScale;
+            string text = label.text;
+            if (string.Equals(_nextNeedText, text, StringComparison.Ordinal) && Mathf.Approximately(_nextNeedScale, scale))
+            {
+                return _nextNeedFaceDp;
+            }
+
+            bool auto = label.enableAutoSizing;
+            float size = label.fontSize;
+            label.enableAutoSizing = false;
+            label.fontSize = NextRowMinSp * scale;
+            float h = label.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).y;
+            label.fontSize = size;
+            label.enableAutoSizing = auto;
+            _nextNeedText = text;
+            _nextNeedScale = scale;
+            _nextNeedFaceDp = Mathf.Ceil((h + 1f) / CtaLabelFaceShare);
+            return _nextNeedFaceDp;
+        }
+
+        // Estira «Siguiente» como siempre (la escala de texto, ModalKit.StretchForTextScale) o, en la fila del escalón 3, lo justo
+        // (CompactNextStretch), y recoloca su etiqueta en la cara; solo si cambia.
+        private void ApplyNextStretch(bool compact)
+        {
+            float k = compact ? CompactNextStretch() : Mathf.Max(1f, UiBuilder.TextScale);
+            RectTransform visual = (RectTransform)_next.Face.parent;
+            float h = _next.Sprites.HeightDp * k;
+            if (Mathf.Approximately(visual.sizeDelta.y, h))
+            {
+                return;
+            }
+
+            visual.sizeDelta = new Vector2(visual.sizeDelta.x, h);
+            UiBuilder.PlaceCtaLabel(_nextLabel.rectTransform, ModalKit.FaceHeightOf(_next));
+        }
+
+        // Lo que baja «Siguiente» por el chip del nivel siguiente con el escalón level.
+        private static float NextChipRowFor(int level)
+        {
+            return level >= VictoryCompactRow ? NextChipRowCompactDp : NextChipRowDp;
+        }
+
+        private static float VictoryHarvestGapDp(int level)
+        {
+            return level >= VictoryCompactMargins ? VictoryHarvestGapCompactDp : VictoryHarvestGapDp0;
+        }
+
+        private static float VictoryFrameDp(int level)
+        {
+            return level >= VictoryCompactMargins ? VictoryFrameCompactDp : VictoryFrameDp0;
+        }
+
+        // Mínimo del título de la cinta (dp, con la escala): 22 sp o, desde el escalón 1, 16 sp.
+        private float RibbonTitleMinDp(bool compact)
+        {
+            return compact ? Mathf.Min(_ribbonTitleMinDp, RibbonTitleCompactMinSp * UiBuilder.TextScale) : _ribbonTitleMinDp;
+        }
+
+        // Alto de la cinta con el título más alto de los dos que puede llevar («¡Perfecto!» y el de siempre, DC14) en el idioma y la
+        // escala de ahora (dp), sin tocar el título que se ve; en caché por idioma y escala.
+        private float WorstRibbonDp(bool compact)
+        {
+            string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
+            float scale = UiBuilder.TextScale;
+            if (!string.Equals(_ribbonWorstLocale, locale, StringComparison.Ordinal) || !Mathf.Approximately(_ribbonWorstScale, scale))
+            {
+                _ribbonWorstLocale = locale;
+                _ribbonWorstScale = scale;
+                string perfect = UiText.VictoryTitle(true);
+                string plain = UiText.VictoryTitle(false);
+                _ribbonWorst0 = Mathf.Max(RibbonHeightFor(perfect, false), RibbonHeightFor(plain, false));
+                _ribbonWorst1 = Mathf.Max(RibbonHeightFor(perfect, true), RibbonHeightFor(plain, true));
+            }
+
+            return compact ? _ribbonWorst1 : _ribbonWorst0;
+        }
+
+        // Alto de la cinta con el título value (como LayoutRibbonTitle, sin cambiar el texto del título; deja su estado como estaba).
+        private float RibbonHeightFor(string value, bool compact)
+        {
+            const float boxW = RibbonWidthDp - 88f;
+            TMPro.TextMeshProUGUI title = _ribbonTitle;
+            bool auto = title.enableAutoSizing;
+            float size = title.fontSize;
+            float min = title.fontSizeMin;
+            float max = title.fontSizeMax;
+            TMPro.TextWrappingModes wrapping = title.textWrappingMode;
+            float spacing = title.lineSpacing;
+            float tmin = RibbonTitleMinDp(compact);
+            title.enableAutoSizing = false;
+            title.fontSize = tmin;
+            title.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+            title.lineSpacing = 0f;
+            float h = RibbonHeightDp;
+            if (!string.IsNullOrEmpty(value) && title.GetPreferredValues(value, float.PositiveInfinity, float.PositiveInfinity).x > boxW)
+            {
+                title.textWrappingMode = TMPro.TextWrappingModes.Normal;
+                title.lineSpacing = RibbonTitleLineSpacing;
+                float need = Mathf.Ceil(title.GetPreferredValues(value, boxW, float.PositiveInfinity).y) + 1f;
+                h = Mathf.Clamp(need + RibbonTitleMarginDp, RibbonHeightDp, RibbonTallDp);
+            }
+
+            title.enableAutoSizing = auto;
+            title.fontSizeMin = min;
+            title.fontSizeMax = max;
+            title.fontSize = size;
+            title.textWrappingMode = wrapping;
+            title.lineSpacing = spacing;
+            return h;
+        }
+
+        // Ancho de «Inicio» en la fila del escalón 3: lo que pide su etiqueta a su mínimo (más sus márgenes), entre
+        // VictoryRowHomeMinDp y VictoryRowHomeMaxShare de la fila.
+        private float VictoryRowHomeWidthDp(float rowW)
+        {
+            float need = Mathf.Ceil(UiBuilder.MinTextWidth(_homeLabel)) + CtaLabelPadDp;
+            return Mathf.Clamp(need, VictoryRowHomeMinDp, Mathf.Floor(rowW * VictoryRowHomeMaxShare));
+        }
+
+        // Lo que pide de ancho un botón para su etiqueta: los 24 dp de sus márgenes (UiBuilder.PlaceCtaLabel) y 2 de holgura.
+        private const float CtaLabelPadDp = 24f + 2f;
+
+        // Ancho de una sola línea del texto de ahora de label a sizeDp (dp), sin el autoajuste; deja la etiqueta como estaba. Mide
+        // con TextMeshPro al colocar, nunca por fotograma.
+        private static float LabelWidthAt(TMPro.TextMeshProUGUI label, float sizeDp)
+        {
+            bool auto = label.enableAutoSizing;
+            float size = label.fontSize;
+            label.enableAutoSizing = false;
+            label.fontSize = sizeDp;
+            float w = label.GetPreferredValues(label.text, float.PositiveInfinity, float.PositiveInfinity).x;
+            label.fontSize = size;
+            label.enableAutoSizing = auto;
+            return w;
+        }
+
+        /// <summary>
+        /// Lo menos que mide de ancho cada botón secundario («Inicio» y «Ver mapa») en la fila del escalón 3 con la llegada, si la
+        /// fila deja ese sitio (dp) [P]; si no, cada uno lo que pide su etiqueta, y nunca menos de 48.
+        /// </summary>
+        internal const float VictoryRowPairMinDp = 72f;
+
+        // Anchos de la fila del escalón 3 con «Ver mapa» (D-032, punto 2): «Inicio» y «Ver mapa» a la izquierda, del mismo ancho si
+        // cabe (lo que pida la etiqueta más larga de las dos a 12 sp × la escala, al menos VictoryRowPairMinDp) o cada uno el suyo, y
+        // «Siguiente» con el resto. false si «Siguiente» no tiene sitio para su etiqueta a NextRowMinSp × la escala.
+        private bool VictoryRowMapWidths(float rowW, out float homeW, out float mapW)
+        {
+            float scale = UiBuilder.TextScale;
+            float homeNeed = Mathf.Max(48f, Mathf.Ceil(UiBuilder.MinTextWidth(_homeLabel)) + CtaLabelPadDp);
+            float mapNeed = _victoryMapLabel != null
+                ? Mathf.Max(48f, Mathf.Ceil(LabelWidthAt(_victoryMapLabel, UiBuilder.MinTextSp * scale)) + CtaLabelPadDp)
+                : 48f;
+            float nextNeed = Mathf.Max(48f, Mathf.Ceil(LabelWidthAt(_nextLabel, Mathf.Max(UiBuilder.MinTextSp, NextRowMinSp) * scale)) + CtaLabelPadDp);
+            float pair = Mathf.Max(VictoryRowPairMinDp, Mathf.Max(homeNeed, mapNeed));
+            if (rowW - (2f * pair) - (2f * VictoryRowGapDp) >= nextNeed)
+            {
+                homeW = pair;
+                mapW = pair;
+                return true;
+            }
+
+            homeW = homeNeed;
+            mapW = mapNeed;
+            return rowW - homeW - mapW - (2f * VictoryRowGapDp) >= nextNeed;
+        }
+
+        /// <summary>
+        /// Con la llegada, en el escalón 3, «Ver mapa» cabe en la fila de «Inicio» y «Siguiente» (D-032, punto 2): «Siguiente» tiene
+        /// sitio para su etiqueta a <see cref="NextRowMinSp"/> sp × la escala. Mide con TextMeshPro; al colocar, nunca por fotograma.
+        /// </summary>
+        internal bool VictoryRowFitsMap()
+        {
+            float nextW = Mathf.Min(_canvasW - 48f, Mathf.Min(312f, VictoryPanelWidthDp - 16f));
+            return VictoryRowMapWidths(nextW, out _, out _);
+        }
+
+        // La fila del escalón 3 (D-032, punto 2) [P]: «Inicio» a la izquierda de «Siguiente», en su misma fila y centrado a lo alto con
+        // él, y, con la llegada (ArrivalVictoryShown), «Ver mapa» entre los dos; «Siguiente» se queda con el resto del ancho y su
+        // etiqueta se ajusta (14-22 sp × la escala, nunca menos de 12). La fila no cambia de alto con «Ver mapa», así que «Siguiente»
+        // queda a la misma altura en todas las victorias (Q7-A) y con el mismo canto derecho; con «Ver mapa», más estrecho y desplazado
+        // a la derecha (su centro y el chip del nivel siguiente también) [P] (D-032, punto 2). Devuelve el pie de la fila.
+        private float PlaceVictoryRow(float rowX, float y, float nextW, float nextH)
+        {
+            float homeW = 0f;
+            float mapW = 0f;
+            bool map = _victoryMapShown && VictoryRowMapWidths(nextW, out homeW, out mapW);
+            if (!map)
+            {
+                homeW = VictoryRowHomeWidthDp(nextW);
+            }
+
+            float left = homeW + VictoryRowGapDp + (map ? mapW + VictoryRowGapDp : 0f);
+            float nextX = rowX + left;
+            float nextRowW = nextW - left;
+            SetNextLabelFit(true);
+            UiBuilder.Place((RectTransform)_next.Button.transform, nextX, y, nextRowW, nextH);
+            _victoryNextCenterX = nextX + (nextRowW * 0.5f);
+            _victoryHomeTopDp = y + Mathf.Max(0f, (nextH - 48f) * 0.5f);
+            UiBuilder.Place((RectTransform)_home.Button.transform, rowX, _victoryHomeTopDp, homeW, 48f);
+            if (map)
+            {
+                UiBuilder.Place((RectTransform)_victoryMap.Button.transform, rowX + homeW + VictoryRowGapDp, _victoryHomeTopDp, mapW, 48f);
+            }
+
+            return y + Mathf.Max(nextH, 48f);
+        }
+
+        // Vuelve a colocar la fila del escalón 3 cuando «Ver mapa» entra o sale tras LayoutVictory (ArrivalVictoryShown), y el chip
+        // del nivel siguiente sobre el nuevo centro de «Siguiente».
+        private void RelayoutVictoryRow()
+        {
+            float panelW = VictoryPanelWidthDp;
+            float nextW = Mathf.Min(_canvasW - 48f, Mathf.Min(312f, panelW - 16f));
+            PlaceVictoryRow((panelW - nextW) / 2f, _victoryCtaTopDp, nextW, ModalKit.HeightOf(_next));
+            LabelsLayoutVictory();
+        }
+
+        // La etiqueta de «Siguiente»: de tamaño fijo (la de siempre) o, en la fila del escalón 3, ajustada de 22 sp a
+        // NextRowMinSp (× la escala de texto). Solo cambia lo que hace falta.
+        private void SetNextLabelFit(bool fit)
+        {
+            TMPro.TextMeshProUGUI label = _nextLabel;
+            if (fit)
+            {
+                if (!label.enableAutoSizing)
+                {
+                    label.enableAutoSizing = true;
+                    label.fontSizeMin = Mathf.Max(UiBuilder.MinTextSp * UiBuilder.TextScale, NextRowMinSp * UiBuilder.TextScale);
+                    label.fontSizeMax = _nextLabelDp;
+                }
+            }
+            else if (label.enableAutoSizing)
+            {
+                label.enableAutoSizing = false;
+                label.fontSize = _nextLabelDp;
+            }
+        }
+
+        /// <summary>Ancho del panel de victoria (dp): 328, o el del lienzo menos 32 si es más estrecho.</summary>
+        internal float VictoryPanelWidthDp => Mathf.Min(328f, _canvasW - 32f);
+
+        /// <summary>Centro de «Siguiente» en el panel de victoria (dp desde su canto izquierdo): ahí cuelga el chip del nivel siguiente.</summary>
+        internal float VictoryNextCenterXDp => _victoryNextCenterX;
+
         /// <summary>La ranura del Dato del río (tests y proveedores).</summary>
         internal VictoryLineSlot VictorySlot => _slot;
 
@@ -277,7 +746,7 @@ namespace AF.UI
         internal float NextAlpha => _nextGroup.alpha;
 
         /// <summary>Ancho de la ranura (dp): el del panel de victoria menos sus márgenes.</summary>
-        internal float VictorySlotWidthDp => Mathf.Min(328f, _canvasW - 32f) - (2f * VictoryLineSlot.SideDp);
+        internal float VictorySlotWidthDp => Mathf.Min(328f, _canvasW - 32f) - (2f * VictorySlotSideDp);
 
         /// <summary>
         /// Título de la cinta en esta victoria (tarea DC14; Magic Sort §10.2 #25, recomendada A; D-029): «¡Perfecto!»
@@ -423,6 +892,7 @@ namespace AF.UI
             int measures = _slot.MeasureCount;
             var watch = System.Diagnostics.Stopwatch.StartNew();
             _slot.Build(_victoryPanel);
+            ChooseVictoryCompact(); // el escalón de la victoria compacta (D-032) mide aquí lo suyo, no en la victoria
             string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
             float content = SlotContentDp(locale, UiBuilder.TextScale);
             double ms = watch.Elapsed.TotalMilliseconds;
@@ -480,7 +950,7 @@ namespace AF.UI
 
             _slot.Build(_victoryPanel);
             string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
-            y += VictoryLineSlot.ReserveOf(SlotContentDp(locale, UiBuilder.TextScale));
+            y += _slot.ReserveFor(SlotContentDp(locale, UiBuilder.TextScale));
         }
 
         partial void SlotLayout()
@@ -493,7 +963,7 @@ namespace AF.UI
 
             string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
             float content = SlotContentDp(locale, UiBuilder.TextScale);
-            _slot.Layout(VictoryLineSlot.SideDp, _slotTopDp, VictorySlotWidthDp, content);
+            _slot.Layout(VictorySlotSideDp, _slotTopDp, VictorySlotWidthDp, content);
         }
 
         partial void SlotVictoryShown(LevelFlow flow)

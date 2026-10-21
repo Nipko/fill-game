@@ -135,8 +135,8 @@ namespace AF.Boosters
         public string StuckOrderT3 { get; set; } = "undo_ad,rescue,pack,balsa";
 
         /// <summary>
-        /// <c>stuck_show_shield_status</c>: línea de la Hoja escudo en el modal (04 §8). La Crecida aún no existe en el cliente:
-        /// la línea no se pinta hasta que llegue (06 §4.3).
+        /// <c>stuck_show_shield_status</c>: línea de la Hoja escudo en el modal (04 §8; <see cref="StuckModalModel.ShieldLineFor"/>,
+        /// tarea B1b). Apagada, el modal no la enseña; la regla de la hoja no cambia.
         /// </summary>
         [RemoteConfigKey("stuck_show_shield_status")]
         public bool StuckShowShieldStatus { get; set; } = true;

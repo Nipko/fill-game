@@ -327,6 +327,9 @@ namespace AF.UI
         private float _victoryPanelDp = 218f;
         private float _victoryCtaTopDp = 84f;
         private float _victoryHomeTopDp = 152f;
+        private readonly TextMeshProUGUI _nextLabel;
+        private readonly TextMeshProUGUI _homeLabel;
+        private readonly float _nextLabelDp;
         private bool _doubleShown;
         private int _harvestFrom;
         private int _harvestTo = -1;
@@ -544,7 +547,7 @@ namespace AF.UI
 
             _victoryPanel = UiBuilder.Rect("Panel", _victoryOverlay);
             _victorySurface = UiBuilder.ModalBody(_victoryPanel, art);
-            _next = UiBuilder.Relief("NextButton", _victoryPanel, art.CtaLeaf, () => _actions.PressNext());
+            _next = UiBuilder.Relief("NextButton", _victoryPanel, art.CtaLeaf, OnNextPressed); // con las barras pendientes, las completa (B1b)
             _nextGroup = _next.Face.parent.gameObject.AddComponent<CanvasGroup>();
             _nextGroup.blocksRaycasts = false;
             // Con la escala de texto, Siguiente y la Cosecha doble crecen en alto con ella, como los CTA de los modales (07 §7.8;
@@ -552,6 +555,8 @@ namespace AF.UI
             ModalKit.StretchForTextScale(_next);
             TextMeshProUGUI nextLabel = UiBuilder.Label("Label", _next.Face, TextStyle.CtaLeaf, UiText.Next, 22f, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.PlaceCtaLabel(nextLabel.rectTransform, ModalKit.FaceHeightOf(_next));
+            _nextLabel = nextLabel;
+            _nextLabelDp = nextLabel.fontSize;
             _next.Relief.Bind(_next.Face, _next.Base, _next.FaceImage, art.CtaLeaf, null, null, nextLabel);
 
             // «Inicio» [P] (06 §4.7; D-008 punto 3): secundario de madera (07 §7.3) bajo Siguiente; vuelve a la pantalla de inicio.
@@ -561,6 +566,7 @@ namespace AF.UI
             TextMeshProUGUI homeLabel = UiBuilder.Label("Label", _home.Face, TextStyle.PillWood, UiText.Home, 18f, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.PlaceCtaLabel(homeLabel.rectTransform, art.CtaWood);
             UiBuilder.AutoSize(homeLabel, 14f, 18f);
+            _homeLabel = homeLabel;
             _home.Relief.Bind(_home.Face, _home.Base, _home.FaceImage, art.CtaWood, null, null, homeLabel);
 
             // Cosecha (02 §6; D-008 punto 3; guía 12): «Cosecha» y la semilla con +20, +60 u +80, que cuenta hacia arriba en
@@ -639,6 +645,7 @@ namespace AF.UI
             RevealBuild();
             HintBuild();
             ArrivalBuild();
+            StreakBuild(); // la barra de la Crecida del HUD y las barras de la victoria (GameScreen.Streak.cs; B1b)
             ApplyScreenMetrics(true);
         }
 
@@ -932,6 +939,7 @@ namespace AF.UI
             TickNotices(); // el siguiente aviso, si el anterior se acaba de ocultar (GameScreen.Notices.cs)
             TickHarvest(dtMs);
             TickAutoNext(dtMs);
+            StreakTick(dtMs); // las barras de la victoria y la espera de 250 ms tras Siguiente (B1b)
             RefreshHud();
             LabelsTick(dtMs);
             CardsTick(dtMs);
@@ -966,6 +974,7 @@ namespace AF.UI
             StopLabelLevelLoaded(level);
             _attemptBanner = false;
             _introDelayMs = -1f;
+            StreakLevelLoaded(level); // fuera la barra del HUD (sale en T) y las de la victoria anterior (B1b)
             BuildBoard(flow);
             _levelText.text = UiText.Level(level);
             FitLevelBadge();
@@ -999,6 +1008,7 @@ namespace AF.UI
             _animator.AdoptBoard(_shownBoard); // la intro pinta el tablero nuevo (también tras Volver a la orilla)
             _introRetry = isShort;
             _introAnimStarted = false;
+            _streakBar.SetVisible(false); // la barra de la Crecida no está durante la intro (07 §7.4; D-030, pregunta 4 (c))
             if (_introDelayMs > 0f)
             {
                 // Variante aliviada (04 §2.7): el cartel «El río bajó» va antes del teñido; la intro arranca al terminar.
@@ -1062,6 +1072,7 @@ namespace AF.UI
             ShowRevealGiftIfReady(ready);
             MaybeShowStopLabel(ready); // el rótulo del lugar, si el nivel no trae otra tarjeta (M2.3)
             MaybeShowSlothRestart(ready); // tras Volver a la orilla en 1-30, el aviso de TiTino (TI6b)
+            StreakTouchEnabled(ready); // la barra de la Crecida sale en T y, tras un fallo cubierto, el aviso de la hoja (B1b)
             PumpNotices();
             _skipCatcher.gameObject.SetActive(false);
             _probe.State("ready", RequireFlow(), int.MinValue, null);
@@ -1217,6 +1228,7 @@ namespace AF.UI
             _ambient.SetSuspended(true);
             _victoryOverlay.gameObject.SetActive(true);
             SetVictoryLights(true);
+            StreakVictoryPlan(flow); // las barras del panel único (D-033, punto 10; GameScreen.Streak.cs): antes de colocar la victoria
 
             // 02 §6: la Cosecha (ya acreditada en el instante de la victoria) cuenta desde 0; desde el 11, Cosecha doble si hay
             // video (rv_double_harvest: reglas, tope, cooldown y fill; sin anuncio no aparece).
@@ -1233,6 +1245,7 @@ namespace AF.UI
             _victoryAnim = 0f;
             ApplyVictoryAnim(0f);
             SyncChrome();
+            StreakVictoryStarted(); // las barras empiezan a contar y saben adónde vuela su premio (B1b)
             _probe.Victory("victory", flow, _doubleShown);
             LabelsVictoryShown(flow);
 
@@ -1290,6 +1303,8 @@ namespace AF.UI
             // AD_GATE (02 §2): Siguiente, Inicio y la Cosecha doble dejan de responder; el intersticial, si toca, va encima. Si
             // Siguiente adelantó el avance tras la Cosecha doble, la espera se cancela: N + 1 se carga una sola vez (D-011).
             _autoNextMs = -1f;
+            _nextHoldMs = -1f;
+            _victoryBars.Complete(); // nada de las barras queda a medias tras Siguiente (D-033, punto 9)
             UiBuilder.SetEnabled(_next.Button, false);
             UiBuilder.SetEnabled(_home.Button, false);
             UiBuilder.SetEnabled(_double.Button, false);
@@ -1315,7 +1330,7 @@ namespace AF.UI
             if (phase == FlowPhase.GiveUpConfirm)
             {
                 ShowFunnelBackdrop();
-                ShiftBoard(ShiftToClear(_stuckPanelY, 12f), false);
+                FitBoardToStuck(false);
                 FunnelModalShowing(phase, flow);
                 _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
                 EmitFunnelLayout(GiveUpConfirmLayout);
@@ -1332,6 +1347,7 @@ namespace AF.UI
                 _probe.State("ready", flow, int.MinValue, null);
             }
 
+            StreakResumed(flow, phase); // reabierto sin intro: la barra de la Crecida ya está (B1b)
             LabelsBoardChanged(flow);
             RevealBoardChanged(flow);
         }
@@ -1353,7 +1369,7 @@ namespace AF.UI
             _stuckBalsaOk = flow.BalsaShownThisBlock
                 || (_services != null && !_services.PurchasesBlocked && _services.StoreLedger.CanOfferBalsa(flow.LevelNumber));
             ShowStuckView(true);
-            ShiftBoard(ShiftToClear(_stuckPanelY, 12f), true); // 07 §5.5: las cuias siguen visibles sobre el modal
+            FitBoardToStuck(true); // 07 §5.5: las cuias siguen visibles sobre el modal
             _stuckAnim = 0f;
             ApplyStuckAnim(0f);
             SyncChrome();
@@ -1459,6 +1475,7 @@ namespace AF.UI
             }
 
             _probe.Funnel(outcome.Kind == FailKind.Hard ? (outcome.CanoeLost ? "fail_hard_canoe" : "fail_hard") : "fail_soft", RequireFlow());
+            StreakFailResolved(RequireFlow()); // la Hoja escudo cubrió el fallo: su aviso, al volver a jugar (B1b)
         }
 
         /// <inheritdoc />
@@ -1480,7 +1497,7 @@ namespace AF.UI
         {
             LevelFlow flow = RequireFlow();
             StuckModalView view = StuckModalModel.Build(StuckContext(flow), flow.Boosters);
-            _stuck.Show(view, _services, _canvasW);
+            _stuck.Show(view, _services, _canvasW, StuckRoomDp);
             _stuckSeedsShown = _services?.Wallet.Seeds ?? 0;
             _stuckUndoShown = flow.UndoStatus.Stock + (flow.UndoStatus.FreeLeft * 1000);
             if (_services != null && _stuckBalsaOk && !flow.BalsaShownThisBlock)
@@ -1503,11 +1520,29 @@ namespace AF.UI
             }
 
             UiBuilder.SetEnabled(_stuck.UndoButton, view.Undo != StuckUndoKind.Undo || flow.CanUndo);
-            _stuckPanelY = _canvasH - _safeBottom - 8f - _stuck.Height;
+            _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
             if (layout || _stuckAnim < 0f)
             {
                 _stuck.Place(_canvasW, _stuckPanelY);
             }
+
+            if (!layout)
+            {
+                // Rearmado con el modal abierto (tras una compra o una recarga): el alto del panel pudo cambiar (FX16a).
+                FitBoardToStuck(true);
+            }
+        }
+
+        /// <summary>
+        /// Rearma Aguas estancadas con <paramref name="view"/> (otra rama del mismo bloqueo; tests de legibilidad), lo coloca en
+        /// su sitio y ajusta el tablero a él como al abrirlo (<see cref="FitBoardToStuck"/>).
+        /// </summary>
+        internal void ShowStuckVariant(StuckModalView view)
+        {
+            _stuck.Show(view, _services, _canvasW, StuckRoomDp);
+            _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
+            _stuck.Place(_canvasW, _stuckPanelY);
+            FitBoardToStuck(false);
         }
 
         // Tablero atenuado detrás del embudo (Nivel fallido, y ¿Seguro? reabierto sin pasar por el modal).
@@ -1716,6 +1751,8 @@ namespace AF.UI
             _harvestShown = -1;
             _doubleShown = false;
             _autoNextMs = -1f;
+            _nextHoldMs = -1f;
+            _victoryBars.Hide();
             _ambient.SetSuspended(false);
             SlothLeave();
         }
@@ -1740,7 +1777,7 @@ namespace AF.UI
             // pendiente baja en cada fotograma mientras la fila cuenta: si entrara en su clave, la bandeja se repintaría entera
             // en cada uno, con cadenas nuevas (08 §5.4). Allí recibe el saldo entero, que no cambia durante la cuenta, y al volver
             // a verse (SetVisible) se repinta de todos modos.
-            int pending = PendingHarvest(flow);
+            int pending = PendingHarvest(flow) + PendingBarSeeds(flow);
             _tray.Refresh(flow.Phase == FlowPhase.Celebration ? pending : 0);
             _walletBar.Refresh(_services?.Wallet, flow.CanoesLevel, pending);
             if (flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
@@ -1802,7 +1839,7 @@ namespace AF.UI
 
             _walletBar.SetVisible(true);
             LayoutWalletBar(pause && phase == FlowPhase.StuckModal);
-            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel, flow == null ? 0 : PendingHarvest(flow));
+            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel, flow == null ? 0 : PendingHarvest(flow) + PendingBarSeeds(flow));
         }
 
         // Saldo grande del embudo a la izquierda (tras la pausa en Aguas estancadas); píldoras de la cabecera de partida entre
@@ -2488,6 +2525,21 @@ namespace AF.UI
             LayoutHud();
             LayoutBoard();
 
+            // Con Aguas estancadas abierto (o ¿Seguro? delante), el panel se rearma con el lienzo y la zona segura nuevos (la
+            // disposición compacta y su alto dependen de ellos: StuckRoomDp) y el tablero se vuelve a ajustar (FX16a).
+            if (!initial && _flow != null && _flow.HasLevel)
+            {
+                if (_flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
+                {
+                    ShowStuckView(true);
+                    FitBoardToStuck(false);
+                }
+                else if (_flow.Phase == FlowPhase.GiveUpConfirm)
+                {
+                    FitBoardToStuck(false);
+                }
+            }
+
             if (!initial && _flow != null && _flow.HasLevel)
             {
                 EmitLevelLayout();
@@ -2677,6 +2729,7 @@ namespace AF.UI
 
             // Bandeja ajustada al contenido (guía 3.6): 16 + n·64 + (n − 1)·8 + 16 (1 ranura en 1-7; 2 desde el 8).
             _tray.Layout(w, TrayTop);
+            _streakBar.Layout(w, BoardTop + StreakBar.BelowHeaderDp, BoardBottom - StreakBar.AboveBoardBottomDp); // 07 §7.4 (B1b)
 
             // Pausa a la izquierda de la fila superior (02 §5; 07 §7.4: 40 dp en un área de 48).
             UiBuilder.Place((RectTransform)_pauseButton.Button.transform, 8f, TopRowY, 48f, 48f);
@@ -2685,7 +2738,7 @@ namespace AF.UI
 
             // Paneles anclados abajo (07 §5.4, §5.5, §7.5), con los CTA en la zona del pulgar (02 §3.3).
             float panelW = Mathf.Min(328f, w - 32f);
-            _stuckPanelY = _canvasH - _safeBottom - 8f - _stuck.Height;
+            _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
             _stuck.Place(w, _stuckPanelY);
 
             LayoutVictory();
@@ -2703,20 +2756,27 @@ namespace AF.UI
             float panelW = Mathf.Min(328f, w - 32f);
             float nextW = Mathf.Min(w - 48f, Mathf.Min(312f, panelW - 16f));
 
+            // Victoria compacta (D-032, punto 2; GameScreen.Victory.cs): el escalón más bajo con el que la victoria más alta posible
+            // de esta pantalla, idioma y escala cabe bajo la cabecera del HUD. En 360 × 780, y en 16:9 con sitio, el 0 (la de siempre).
+            int compact = ChooseVictoryCompact();
+
             // Con el título en dos líneas la cinta crece hacia abajo (su borde de arriba sigue a RibbonRiseDp sobre el panel) y
             // todo lo del panel (la Cosecha, Siguiente, Inicio y la ranura del Dato del río) baja lo mismo; el panel crece.
-            _ribbonHeightDp = LayoutRibbonTitle();
+            _ribbonHeightDp = LayoutRibbonTitle(compact >= VictoryCompactMargins);
             float y = VictoryHarvestTopDp + (_ribbonHeightDp - RibbonHeightDp);
             UiBuilder.Place(_harvestRow, 0f, y, panelW, VictoryHarvestDp);
             float mid = panelW * 0.5f;
             UiBuilder.Place(_harvestLabel.rectTransform, 16f, 0f, mid - 22f, VictoryHarvestDp);
             UiBuilder.Place(_harvestSeed.rectTransform, mid - 2f, 6f, 32f, 32f);
             UiBuilder.Place(_harvestValue.rectTransform, mid + 34f, 0f, mid - 50f, VictoryHarvestDp);
-            y += VictoryHarvestDp + 4f;
+            y += VictoryHarvestDp + VictoryHarvestGapDp(compact);
+
+            // Las barras del panel único (D-033, punto 10): Crecida y Canasta, entre la Cosecha y la Cosecha doble (GameScreen.Streak.cs).
+            y += _victoryBarsDropped ? _victoryBars.Collapse() : _victoryBars.Layout(VictoryBarsSideDp, y, panelW - (2f * VictoryBarsSideDp), compact);
 
             // Tras la Cosecha doble, mientras espera a avanzar solo (D-011, punto 4), Inicio y la Cosecha doble quedan inactivos,
             // también al recolocar la pantalla (LayoutHud); Siguiente sigue activo y puede adelantar el avance.
-            bool autoNext = _autoNextMs >= 0f;
+            bool autoNext = _autoNextMs >= 0f || _nextHoldMs >= 0f; // también en la espera de 250 ms de Siguiente (B1b)
             _double.Button.gameObject.SetActive(_doubleShown);
             UiBuilder.SetEnabled(_double.Button, !autoNext);
             if (_doubleShown)
@@ -2731,17 +2791,32 @@ namespace AF.UI
 
             LabelsVictoryReserve(ref y); // el chip del nivel siguiente colgado de Siguiente: Siguiente e Inicio bajan, el panel crece
             _victoryCtaTopDp = y;
-            UiBuilder.Place((RectTransform)_next.Button.transform, (panelW - nextW) / 2f, y, nextW, ModalKit.HeightOf(_next));
+            ApplyNextStretch(compact >= VictoryCompactRow); // en la fila del escalón 3, Siguiente con el alto que pide su etiqueta
+            float nextH = ModalKit.HeightOf(_next);
             UiBuilder.SetEnabled(_next.Button, true);
             UiBuilder.SetEnabled(_home.Button, !autoNext);
-            float homeW = Mathf.Min(VictoryHomeWidthDp, nextW);
-            // Con la escala de texto, Siguiente crece en alto (ModalKit.StretchForTextScale; tarea L4) e Inicio baja lo mismo.
-            float nextGrow = Mathf.Max(0f, ModalKit.HeightOf(_next) - Mathf.Max(48f, _art.CtaLeaf.HeightDp - 6f));
-            _victoryHomeTopDp = y + VictoryHomeBelowCtaDp + nextGrow;
-            UiBuilder.Place((RectTransform)_home.Button.transform, (panelW - homeW) / 2f, _victoryHomeTopDp, homeW, 48f);
-            float bottom = _victoryHomeTopDp + 48f;
+            float bottom;
+            float rowX = (panelW - nextW) / 2f;
+            if (compact >= VictoryCompactRow)
+            {
+                // Victoria compacta, escalón 3 (D-032, punto 2) [P]: «Inicio» (y «Ver mapa», con la llegada) a la izquierda de
+                // «Siguiente», en su misma fila (GameScreen.Victory.cs, PlaceVictoryRow).
+                bottom = PlaceVictoryRow(rowX, y, nextW, nextH);
+            }
+            else
+            {
+                SetNextLabelFit(false);
+                UiBuilder.Place((RectTransform)_next.Button.transform, rowX, y, nextW, nextH);
+                _victoryNextCenterX = panelW * 0.5f;
+                float homeW = Mathf.Min(VictoryHomeWidthDp, nextW);
+                // Con la escala de texto, Siguiente crece en alto (ModalKit.StretchForTextScale; tarea L4) e Inicio baja lo mismo.
+                _victoryHomeTopDp = y + VictoryHomeBelowCtaDp + VictoryNextGrowDp;
+                UiBuilder.Place((RectTransform)_home.Button.transform, (panelW - homeW) / 2f, _victoryHomeTopDp, homeW, 48f);
+                bottom = _victoryHomeTopDp + 48f;
+            }
+
             SlotReserveBelowHome(ref bottom); // la ranura del Dato del río bajo Inicio: Siguiente sube una vez y el panel crece
-            _victoryPanelDp = bottom + 18f;
+            _victoryPanelDp = bottom + VictoryFrameDp(compact);
 
             _victoryPanelY = _canvasH - _safeBottom - 8f - _victoryPanelDp;
             UiBuilder.Place(_victoryPanel, (w - panelW) / 2f, _victoryPanelY, panelW, _victoryPanelDp);
@@ -2760,12 +2835,13 @@ namespace AF.UI
         // de 256 × 42 dp de la cinta de 72; si ni a 22 cabe en una línea, en dos a 22 sp (nunca menos) con el interlineado
         // apretado, y la cinta crece a lo alto lo que haga falta, hasta RibbonTallDp. Devuelve el alto de la cinta. Mide al
         // colocar, nunca por fotograma.
-        private float LayoutRibbonTitle()
+        private float LayoutRibbonTitle(bool compact)
         {
             const float boxW = RibbonWidthDp - 88f;
             TextMeshProUGUI title = _ribbonTitle;
+            float min = RibbonTitleMinDp(compact);
             title.enableAutoSizing = true;
-            title.fontSizeMin = _ribbonTitleMinDp;
+            title.fontSizeMin = min;
             title.fontSizeMax = _ribbonTitleMaxDp;
             title.textWrappingMode = TextWrappingModes.NoWrap;
             title.lineSpacing = 0f;
@@ -2776,7 +2852,7 @@ namespace AF.UI
             }
 
             title.enableAutoSizing = false;
-            title.fontSize = _ribbonTitleMinDp;
+            title.fontSize = min;
             title.textWrappingMode = TextWrappingModes.Normal;
             title.lineSpacing = RibbonTitleLineSpacing;
             float need = Mathf.Ceil(title.GetPreferredValues(title.text, boxW, float.PositiveInfinity).y) + 1f;
@@ -2812,6 +2888,7 @@ namespace AF.UI
             _layoutRects.Add((RectTransform)_next.Button.transform);
             _layoutIds.Add("home");
             _layoutRects.Add((RectTransform)_home.Button.transform);
+            StreakLayoutIds(_layoutIds, _layoutRects); // las barras de la Crecida y la Canasta (B1b)
             SlotLayoutIds(_layoutIds, _layoutRects);
             ArrivalLayoutIds(_layoutIds, _layoutRects);
             _probe.Layout("victory", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
@@ -2884,6 +2961,11 @@ namespace AF.UI
         /// </summary>
         internal bool TakeAutoNext()
         {
+            if (TakeNextHold())
+            {
+                return true; // Siguiente con las barras pendientes, tras sus 250 ms (D-033, punto 9; GameScreen.Streak.cs)
+            }
+
             if (_autoNextMs != 0f)
             {
                 return false;
@@ -2904,9 +2986,10 @@ namespace AF.UI
         // esté inactivo (LayoutVictory).
         private void OnVictoryHome()
         {
-            if (_autoNextMs < 0f)
+            if (_autoNextMs < 0f && _nextHoldMs < 0f)
             {
                 LevelFlow flow = RequireFlow();
+                _victoryBars.Complete(); // lo de las barras llega al saldo antes de salir (D-033, punto 9)
                 SlotHomePressed(flow);
                 ArrivalHomePressed(flow);
                 _actions.PressHome();
@@ -3126,6 +3209,48 @@ namespace AF.UI
             float needed = _layout.PanelBottom - (panelTop - gap);
             float room = highestTop - BoardTop;
             return Mathf.Clamp(needed, 0f, Mathf.Max(0f, room));
+        }
+
+        /// <summary>
+        /// Alto que le queda a Aguas estancadas, con su aire de abajo, para no tapar ninguna cuia con el tablero subido hasta su
+        /// tope (<see cref="ShiftToClear"/>): del pie más bajo de las cuias, más <see cref="StuckCuiaGapDp"/>, a la zona segura
+        /// de abajo. Solo en los lienzos más bajos que <see cref="StuckModal.CompactCanvasBelowDp"/> (el 16:9; tarea FX16a): en
+        /// los demás, sin límite (el panel no cambia).
+        /// </summary>
+        internal float StuckRoomDp
+        {
+            get
+            {
+                if (_layout == null || _views.Length == 0 || _canvasH >= StuckModal.CompactCanvasBelowDp - 0.5f)
+                {
+                    return float.PositiveInfinity;
+                }
+
+                float highestTop = float.MaxValue;
+                float lowestFoot = float.MinValue;
+                for (int i = 0; i < _views.Length; i++)
+                {
+                    highestTop = Mathf.Min(highestTop, _layout.FootY[i] - (_views[i].HeightU * _views[i].Unit) - CuiaView.LiftDp);
+                    lowestFoot = Mathf.Max(lowestFoot, _layout.FootY[i]);
+                }
+
+                float lift = Mathf.Max(0f, highestTop - BoardTop);
+                return _canvasH - _safeBottom - (lowestFoot - lift + StuckCuiaGapDp);
+            }
+        }
+
+        /// <summary>Aire mínimo entre el pie de las cuias y el panel de Aguas estancadas compacto (dp) [P] (tarea FX16a).</summary>
+        internal const float StuckCuiaGapDp = 2f;
+
+        /// <summary>
+        /// Con Aguas estancadas abierto (o ¿Seguro? delante), el tablero sube lo justo para que el panel no lo tape, sin pasar
+        /// del borde de abajo del HUD (<see cref="ShiftToClear"/>; 04 §6.6: «sube lo justo para que el panel no lo tape»; 07
+        /// §5.5). El tablero no cambia de tamaño: en 16:9, lo que el panel compacto aún tapa en los tableros que no caben (el 640,
+        /// de 3 filas, y la rama B del 31 al 130 %) es una pregunta del dueño (tarea FX16a; <c>StuckCompactTests</c>).
+        /// </summary>
+        private void FitBoardToStuck(bool animate)
+        {
+            ShiftBoard(ShiftToClear(_stuckPanelY, 12f), animate);
         }
 
         private void ShiftBoard(float target, bool animate)
