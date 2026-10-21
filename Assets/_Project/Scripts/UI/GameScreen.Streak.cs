@@ -22,7 +22,9 @@ namespace AF.UI
     /// (<see cref="WorstBarsDp"/>; D-032, punto 2) siempre que la pantalla tenga Crecida (la campaña con su servicio), así que
     /// «Siguiente» no cambia de sitio de una victoria a otra (Q7-A). Un toque en Siguiente con animaciones pendientes las completa,
     /// enseña el estado final <see cref="NextHoldMs"/> ms y sigue (D-033, punto 9; <see cref="TakeNextHold"/>). Las semillas que
-    /// pagan no se enseñan en el saldo hasta que llegan (D-011; <see cref="PendingBarSeeds"/>).</description></item>
+    /// pagan no se enseñan en el saldo hasta que llegan (D-011; <see cref="PendingBarSeeds"/>). En los hitos de TiTino (D-016,
+    /// T6-A), si con las barras su frase no cabe y sin ellas sí, la victoria va sin barras y TiTino habla (B1b-Q10 (c), decisión
+    /// del dueño; <see cref="StreakYieldToSloth"/>).</description></item>
     /// <item><description><b>El aviso de la Hoja escudo</b> (04 §6.5 y §8: «toast del primer fallo cubierto»): con el fallo duro que
     /// cubre la hoja suena <c>sfx_streak_shield</c> y, en cuanto se vuelve a jugar tras la intro, sale <c>shield_toast</c> por la
     /// cola de avisos [P] (en 1-30 el reinicio vacía la cola y desde el 31 va Nivel fallido delante).</description></item>
@@ -41,6 +43,8 @@ namespace AF.UI
         private Func<RectTransform, Vector2> _canvasCenter = null!;
         private float _nextHoldMs = -1f;
         private bool _victoryBarsDropped;
+        private bool _victoryBarsYield;
+        private bool _victoryBarsYieldTried;
         private bool _shieldToastPending;
         private int _shieldToastLevel;
         private readonly float[] _worstBars = new float[2 * (VictoryCompactMax + 1)]; // a lo ancho y, detrás, en una fila
@@ -58,6 +62,18 @@ namespace AF.UI
         /// [P] (tarea B1b; medido: solo en en-XA al 130 % en 16:9). Lo decide <c>ChooseVictoryCompact</c>.
         /// </summary>
         internal bool VictoryBarsDropped => _victoryBarsDropped;
+
+        /// <summary>
+        /// Esta victoria, un hito de TiTino, va sin barras para que él diga su frase (B1b-Q10 (c), decisión del dueño;
+        /// <see cref="StreakYieldToSloth"/>): lo que pagan llega igual al saldo y a la bandeja (<see cref="VictoryBars.Barless"/>).
+        /// </summary>
+        internal bool VictoryBarsYielded => _victoryBarsYield;
+
+        /// <summary>
+        /// En esta victoria se probó quitar las barras para que TiTino hablara (un hito suyo que con ellas no cabía); si
+        /// <see cref="VictoryBarsYielded"/> es false, ni sin ellas cabía y se quedaron (tests).
+        /// </summary>
+        internal bool VictoryBarsYieldTried => _victoryBarsYieldTried;
 
         /// <summary>Siguiente se pulsó con las barras pendientes y espera sus 250 ms (tests).</summary>
         internal bool NextHoldPending => _nextHoldMs >= 0f;
@@ -85,6 +101,8 @@ namespace AF.UI
 
             _streakBar.SetVisible(false);
             _victoryBars.Hide();
+            _victoryBarsYield = false;
+            _victoryBarsYieldTried = false;
             _nextHoldMs = -1f;
         }
 
@@ -136,6 +154,8 @@ namespace AF.UI
         {
             _streakBar.SetVisible(false); // la victoria la replica en grande (02 §6)
             _nextHoldMs = -1f;
+            _victoryBarsYield = false; // con barras, hasta que StreakYieldToSloth decida lo contrario
+            _victoryBarsYieldTried = false;
             StreakService? service = flow.Streak;
             string? place = null;
             RiverStopCatalog? stops = RiverStops;
@@ -147,6 +167,48 @@ namespace AF.UI
             _victoryBars.Plan.Build(flow.LevelNumber, !flow.IsDaily, flow.PeekStreak(), flow.LastStreakResult, service?.Config,
                 service?.Basket, service?.BasketUnlockLevel ?? 0, place);
             _victoryBars.Prepare(flow.ReduceMotion, _canvasCenter);
+        }
+
+        /// <summary>
+        /// B1b-Q10 (c), decisión del dueño (D-033, añadido del 2026-10-20): en los hitos de TiTino (<see cref="VictoryLineArbiter.IsSlothHito"/>:
+        /// 60, 80 y 140; D-016, T6-A), si con las barras de la Crecida y la Canasta su frase no cabe (<c>SlothVictoryShown</c> no le
+        /// dio voz), la victoria se coloca otra vez sin ellas y, si así cabe, va sin barras y TiTino habla como antes de B1b; si ni
+        /// así cabe (16:9 con la ranura, 130 % con el héroe), las barras se quedan, porque quitarlas no le daría la voz. Sin barras,
+        /// su secuencia sigue (<see cref="VictoryBars.Barless"/>): la Canasta del 60 se abre y su contenido vuela al saldo y a la
+        /// bandeja (D-011), y la Crecida avanza igual (ya lo hizo <see cref="StreakService"/>) aunque su barra no se dibuje. Se llama
+        /// con la victoria ya colocada, tras <c>SlothVictoryShown</c> y antes de que la ranura pida su línea al árbitro; deja en
+        /// <paramref name="bandTop"/> y <paramref name="bandBottom"/> la franja con la que se decidió.
+        /// </summary>
+        private void StreakYieldToSloth(LevelFlow flow, ref float bandTop, ref float bandBottom)
+        {
+            int won = flow.LevelNumber;
+            if (_slothCanSpeak || SlothBoxCanSpeakOverride.HasValue || !SlothEnabled || !SlothVoice || won < 1 || won > WorldTable.LastLevel
+                || !VictoryLineArbiter.IsSlothHito(won) || _victoryBarsDropped || !_victoryBars.Root.gameObject.activeSelf
+                || _victoryBars.Height <= 0f)
+            {
+                return;
+            }
+
+            _victoryBarsYieldTried = true;
+            _victoryBarsYield = true;
+            RelayoutForSloth(flow, out bandTop, out bandBottom);
+            if (_slothCanSpeak)
+            {
+                return;
+            }
+
+            _victoryBarsYield = false; // ni sin barras cabe su frase: la victoria se queda como estaba, con ellas
+            RelayoutForSloth(flow, out bandTop, out bandBottom);
+        }
+
+        // Vuelve a colocar la victoria recién abierta (como OnVictoryScreen) y a decidir la caja de TiTino con ella.
+        private void RelayoutForSloth(LevelFlow flow, out float bandTop, out float bandBottom)
+        {
+            LayoutVictory();
+            ShiftBoard(ShiftToClear(_victoryPanelY - RibbonRiseDp, 8f), true);
+            ApplyVictoryAnim(0f);
+            VictoryFreeBand(out bandTop, out bandBottom);
+            SlothVictoryShown(flow, bandTop, bandBottom);
         }
 
         // Con la victoria colocada y el saldo arriba (SyncChrome): adónde vuelan las semillas (el saldo) y los comodines (la bandeja).
@@ -235,9 +297,9 @@ namespace AF.UI
         /// </summary>
         private float WorstBarsDp(int level)
         {
-            if (!VictoryBarsPossible || _victoryBarsDropped)
+            if (!VictoryBarsPossible || _victoryBarsDropped || _victoryBarsYield)
             {
-                return 0f;
+                return 0f; // sin barras (o cedidas a TiTino en su hito, B1b-Q10 (c)), el escalón se elige como antes de B1b
             }
 
             string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
