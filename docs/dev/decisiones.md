@@ -3165,3 +3165,14 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Alcance.** Esta aprobación no autoriza por sí sola instalar o aprobar SDK, paquetes o versiones, crear cuentas, desplegar servicios ni publicar la app. Las aprobaciones previas de otros componentes conservan su propio alcance. No se cambia `ForceInternetPermission`, el manifiesto ni la configuración de Unity en esta tarea: según el estado documentado, Unity ya añade el permiso automáticamente.
 
 **Cómo revertir.** Mediante una nueva decisión del dueño y evaluación del efecto sobre los servicios de red antes de modificar el permiso en la app.
+
+### D-035, añadido del 2026-10-21: preguntas de F1-F2a del backend (con la regla «si tienen recomendada, vamos con esa»)
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño («sigamos las recomendaciones», 2026-10-20); son lo que implementa `backend/f1-f2a` (`897a077`, `358c8ea`). El dueño puede cambiarlas.
+- **Código de borrado (Q-B13-21):** rota; cada `POST /v1/account/code` emite uno nuevo de 128 bits (Base32 de Crockford) que invalida el anterior; el servidor solo guarda su hash; tras reinstalar, el cliente pide otro [P].
+- **Límite por IP en el borrado por web:** no en la 1.0; límite por ruta (2 rps, ráfaga 5) y contador por código; WAF con límite por IP en prod si hay abuso (Q-AWS-10). Riesgo anotado: el límite global por ruta deja que un atacante sature el borrado por web.
+- **IP en los logs de acceso de la API:** se conserva 30 días (va en Data Safety); se corrige «logs sin PII» de `docs/dev/plan-backend-aws.md` §5; lo revisa el abogado.
+- **Cuenta en prod:** `-c account` opcional y documentada (la síntesis de prod sin cuenta forma parte de la verificación).
+- **Concurrencia reservada:** no en la 1.0 (las cuentas nuevas suelen tener límite de 10).
+- **HSTS de 2 años con `includeSubDomains`:** se confirma en F5-1, antes de fijar el dominio de prod.
+- **Rutas propuestas:** `/v1/purchases/verify`, `/v1/ledger/restore`, `/v1/ssv` (GET y POST hasta verificar el formato de MAX), `/v1/account/code`, `/v1/account/delete`, `/v1/account/delete-request` y `/v1/account/delete-confirm`, en `infra/contracts/v1/index.json`.
