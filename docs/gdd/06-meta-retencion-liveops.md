@@ -147,22 +147,22 @@ function reclamar_reto(jugador, fecha):      # fecha = la del día en que se emp
 
 ### 4.2 Bitácora del río (`login_calendar`)
 
-**Reglas.** 30 casillas que se sellan una por día; condición: haber jugado ≥1 nivel (campaña o Reto) ese día local. Reclamo **secuencial sin reinicio**: si el jugador falta un día, la siguiente casilla sigue esperando (patrón Unity Daily Rewards / Mistplay, research/04 C1 §3 [V]); al sellar la 30 empieza un ciclo nuevo con el arte del mundo actual. Reclamo manual (toque) para crear el momento; el takeover de la Bitácora es el único automático al abrir la sesión si hay casilla pendiente. Total por ciclo: **3.000 semillas** + 15 Marea + 3 Morpho + 3 Cuia extra + 1 Luciérnaga + 2 Canastas + 1 Canasta grande (dirección 12; research/04 C1 §3 [E]; D-033: los totales no cambian con la Bitácora «1 de 3»). Las semillas se concentran en los hitos 7/14/21/30 (modelo "zigzag con hitos", research/04 C1 §3 [V]): su peso baja del 53 % [E] al 51,7 % con el retoque de D-033.
+**Reglas.** 30 casillas que se sellan una por día; condición: haber jugado ≥1 nivel (campaña o Reto) ese día local. Reclamo **secuencial sin reinicio**: si el jugador falta un día, la siguiente casilla sigue esperando (patrón Unity Daily Rewards / Mistplay, research/04 C1 §3 [V]); al sellar la 30 empieza un ciclo nuevo con el arte del mundo actual. Reclamo manual (toque) para crear el momento; el takeover de la Bitácora es el único automático al abrir la sesión si hay casilla pendiente. Total por ciclo: **3.000 semillas** + 5 Marea + 3 Morpho + 3 Cuia extra + 1 Luciérnaga + 2 Canastas + 1 Canasta grande (dirección 12; research/04 C1 §3 [E]; D-033: las semillas no cambian con la Bitácora «1 de 3», y las Mareas sueltas pasan de 15 a 5 con el canon «1 Marea + 30» del añadido del 2026-10-21). Las semillas se concentran en los hitos 7/14/21/30 (modelo "zigzag con hitos", research/04 C1 §3 [V]): su peso baja del 53 % [E] al 51,7 % con el retoque de D-033.
 
 | Día | Premio | Día | Premio | Día | Premio |
 |---|---|---|---|---|---|
 | 1 | 60 | 11 | 100 | 21 | **400 + Canasta** |
-| 2 | 3 Marea + 30 | 12 | 1 Morpho | 22 | 100 |
+| 2 | 1 Marea + 30 | 12 | 1 Morpho | 22 | 100 |
 | 3 | 60 | 13 | 100 | 23 | 1 Cuia extra |
 | 4 | 1 Morpho | 14 | **300 + 1 Cuia extra** | 24 | 100 |
 | 5 | 100 | 15 | 60 | 25 | 1 Morpho |
 | 6 | 1 Cuia extra | 16 | 100 | 26 | 100 |
-| 7 | **250 + Canasta** | 17 | 3 Marea + 30 | 27 | 3 Marea + 30 |
+| 7 | **250 + Canasta** | 17 | 1 Marea + 30 | 27 | 1 Marea + 30 |
 | 8 | 60 | 18 | 100 | 28 | 100 |
-| 9 | 60 | 19 | 3 Marea + 30 | 29 | 1 Luciérnaga |
-| 10 | 3 Marea + 30 | 20 | 100 | 30 | **600 + Canasta grande + marco de país** |
+| 9 | 60 | 19 | 1 Marea + 30 | 29 | 1 Luciérnaga |
+| 10 | 1 Marea + 30 | 20 | 100 | 30 | **600 + Canasta grande + marco de país** |
 
-Es el canon retocado de la Bitácora «1 de 3» (D-033, añadido del 2026-10-20, punto 2: las casillas 1, 3, 8, 9 y 15 pasan de 50 a 60 semillas; las 2, 10, 17, 19 y 27, de «3 Marea» a «3 Marea + 30»; las 20, 26 y 28 bajan de 150 a 100, y el día 30, de 650 a 600). Verificación: 60 × 5 + 30 × 5 + 100 × 10 + 250 + 300 + 400 + 600 = 3.000. Cada casilla ofrece 3 opciones de igual valor (semillas / comodín / mezcla), con la tabla de opciones de 05 §2.3 (copia de D-033). La tabla vive en Remote Config como `eco_calendar_table_v2` [P] (30 casillas × 3 opciones y el canon; 08 §9; misma tabla en 05 §2.3) y se puede reemplazar sin actualización; `eco_calendar_table_v1` queda de respaldo y la 1.0 no la lee (Q-B4).
+Es el canon retocado de la Bitácora «1 de 3» (D-033, añadido del 2026-10-20, punto 2: las casillas 1, 3, 8, 9 y 15 pasan de 50 a 60 semillas; las 2, 10, 17, 19 y 27, de «3 Marea» a «1 Marea + 30» (añadido del 2026-10-21: vale 60, como sus tres opciones); las 20, 26 y 28 bajan de 150 a 100, y el día 30, de 650 a 600). Verificación: 60 × 5 + 30 × 5 + 100 × 10 + 250 + 300 + 400 + 600 = 3.000 semillas; Marea: 1 × 5 = 5. Cada casilla ofrece 3 opciones de igual valor (semillas / comodín / mezcla), con la tabla de opciones de 05 §2.3 (copia de D-033). La tabla vive en Remote Config como `eco_calendar_table_v2` [P] (30 casillas × 3 opciones y el canon; 08 §9; misma tabla en 05 §2.3) y se puede reemplazar sin actualización; `eco_calendar_table_v1` queda de respaldo y la 1.0 no la lee (Q-B4).
 
 Reglas complementarias [P]: (1) `eco_calendar_locked_booster_seeds` es la tasa de valor de la Bitácora «1 de 3», con la que sus tres opciones valen lo mismo (D-033, punto 1: cada Marea → 30, por unidad (Q-B3: la clave `undo3` = 30 se lee por Marea; antes, «3 Marea → 30»); Morpho, Cuia extra o Luciérnaga → 100); un comodín aún no desbloqueado ya no se convierte en semillas: se sustituye por el siguiente desbloqueado del mismo valor (Morpho → Cuia extra → «2 Marea + 40»; D-033, punto 3), así la casilla nunca queda vacía para un jugador de nivel bajo; (2) **Canasta grande** (pendiente de confirmación en el glosario, pregunta 4): 150 semillas + 1 Cuia extra + 1 Morpho + 3 Marea, contenido visible; (3) placement rewarded "cofre diario" (`rv_daily_chest`, dirección 13; **v1.1**, `eco_calendar_double_ad_enabled` = false en 1.0 y true en 1.1, 08 §9): botón "Duplicar con video" solo en casillas de semillas que no sean hito, 1/día; impacto máximo +1.700 semillas/ciclo para quien siempre lo use, ≈+600 con una adopción del 35 % [E]; (4) el marco de país del día 30 es el del mundo donde está el jugador.
 
