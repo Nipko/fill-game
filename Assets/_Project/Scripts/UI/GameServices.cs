@@ -108,6 +108,20 @@ namespace AF.UI
         public int HandfulSeeds => StoreLedger.Config.SeedPackAmount(StoreCatalog.Handful);
 
         /// <summary>
+        /// ¿La Balsa de rescate acredita Canoas infinitas? No con <c>biz_feature_lives</c> apagado (D-038, añadido del 2026-10-21):
+        /// la misma regla que la acreditación (<see cref="AF.IAP.StoreLedger.CreditedCanoes"/>), para que la línea del modal diga
+        /// lo que se da.
+        /// </summary>
+        public bool BalsaGivesCanoes
+        {
+            get
+            {
+                ProductContent content = StoreLedger.Catalog.Get(StoreCatalog.Rescue).Content;
+                return StoreLedger.CreditedCanoes(content, content.InfiniteCanoes) > TimeSpan.Zero;
+            }
+        }
+
+        /// <summary>
         /// Patrones de fruta en el nivel <paramref name="level"/> con el ajuste del jugador (<see cref="PatternsResolver.IsOn"/>:
         /// auto = desde el 41, on = siempre, off = nunca; 02 §12). Sin asignaciones.
         /// </summary>

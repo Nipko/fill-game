@@ -124,6 +124,18 @@ namespace AF.IAP.Tests
             Assert.That(later.Wallet.RescuesToday, Is.EqualTo(0), "fuera del nivel no hay Cuia de rescate que aplicar");
         }
 
+        [Test]
+        public void Ok_Balsa_WithLivesOff_DoesNotCreditTheServersInfiniteCanoes()
+        {
+            // D-038: el grant del servidor espeja el catálogo (con los 30 min), pero con biz_feature_lives apagado no se acreditan.
+            var fx = new VerifiedStoreFixture();
+            fx.Wallet.LivesEnabled = false;
+            PurchaseResult live = fx.Buy("af_rescue", level: 31, context: PurchaseContext.Stuck);
+            Assert.That(live.AppliesRescue, Is.True);
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(1000));
+            Assert.That(fx.Wallet.Canoes.IsInfinite, Is.False);
+        }
+
         // ------------------------------------------------------------------ setObfuscatedAccountId
 
         [Test]

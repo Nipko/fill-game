@@ -2,6 +2,7 @@
 using System.Collections;
 using AF.Boosters;
 using AF.GameFlow;
+using AF.IAP;
 using AF.Presentation;
 using AF.Save;
 using AF.UI;
@@ -127,6 +128,30 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Level31_WithLivesOff_TheBalsaIsSeedsAndACuia_AtTheSamePrice()
+        {
+            // D-038, añadido del 2026-10-21: con biz_feature_lives apagado, la Balsa queda en «semillas y una cuia» (texto y
+            // contenido), con el mismo precio; con el interruptor en su default, nada cambia.
+            // (El default, con «canoas infinitas», lo comprueba Fx5Tests.Stuck40_NoSeeds_HandfulAndBalsaWithItsLine.)
+            GameBootstrap boot = null!;
+            yield return Load31(0, b => boot = b, livesOn: false);
+            GameScreen view = boot.View!;
+            Assert.That(boot.Services!.BalsaGivesCanoes, Is.False);
+            string priced = UiText.StuckBalsaLine(boot.Services.PriceText(StoreCatalog.Rescue));
+            FunnelSetup.GetStuck(boot);
+            Assert.That(view.Stuck.BalsaButton.gameObject.activeInHierarchy, Is.True, "la Balsa se sigue ofreciendo");
+            Assert.That(view.Stuck.BalsaNote.text, Is.EqualTo(UiText.StuckBalsaContentNoCanoes));
+            Assert.That(view.Stuck.BalsaNote.text, Is.Not.EqualTo(UiText.StuckBalsaContent));
+            Assert.That(view.Stuck.BalsaLabel.text, Is.EqualTo(priced), "mismo precio");
+            int cuias = view.Views.Length;
+            view.Stuck.BalsaButton.onClick.Invoke();
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing), "rescate aplicado");
+            Assert.That(view.Views.Length, Is.EqualTo(cuias + 1));
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(1000));
+            Assert.That(boot.Wallet.Canoes.IsInfinite, Is.False, "sin Canoas infinitas");
+        }
+
+        [UnityTest]
         public IEnumerator Level31_GiveUp_OpensAreYouSure_WithTheSameRescue()
         {
             GameBootstrap boot = null!;
@@ -183,12 +208,17 @@ namespace AF.Tests.PlayMode
             return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
         }
 
-        private static IEnumerator Load31(int seeds, System.Action<GameBootstrap> done)
+        private static IEnumerator Load31(int seeds, System.Action<GameBootstrap> done, bool livesOn = true)
         {
             LaunchOptions.LevelOffsetOverride = 25;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(seeds));
             yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
             GameBootstrap boot = GameBootstrap.Current!;
+            if (!livesOn)
+            {
+                boot.Wallet!.LivesEnabled = false; // lo que deja ConnectWallet con biz_feature_lives = false (08 §9; D-038)
+            }
+
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
             PlayModeHelpers.Step(boot, 50);

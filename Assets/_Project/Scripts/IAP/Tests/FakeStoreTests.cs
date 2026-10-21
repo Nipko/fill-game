@@ -67,6 +67,32 @@ namespace AF.IAP.Tests
         }
 
         [Test]
+        public void Balsa_WithLivesOff_IsSeedsAndACuia_WithoutInfiniteCanoes_AtTheSamePrice()
+        {
+            // D-038, añadido del 2026-10-21: con biz_feature_lives apagado, la Balsa no da Canoas infinitas; el precio no cambia.
+            var on = new StoreFixture();
+            var fx = new StoreFixture();
+            fx.Wallet.LivesEnabled = false;
+            Assert.That(fx.Service.PriceOf(StoreCatalog.Rescue).ToString(), Is.EqualTo(on.Service.PriceOf(StoreCatalog.Rescue).ToString()));
+
+            PurchaseResult result = fx.Buy("af_rescue", level: 31, context: PurchaseContext.Stuck);
+
+            Assert.That(result.IsPurchased, Is.True);
+            Assert.That(result.AppliesRescue, Is.True, "la Cuia de rescate, igual");
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(1000));
+            Assert.That(fx.Stock(BoosterKind.ExtraCuia), Is.EqualTo(1));
+            Assert.That(fx.Wallet.Canoes.IsInfinite, Is.False, "sin Canoas infinitas");
+            Assert.That(fx.Wallet.Canoes.InfiniteRemaining, Is.EqualTo(TimeSpan.Zero));
+            Assert.That(fx.Ledger.CreditedCanoes(fx.Ledger.Catalog.Get(StoreCatalog.Rescue).Content, TimeSpan.FromMinutes(30)),
+                Is.EqualTo(TimeSpan.Zero));
+
+            // Las Canoas infinitas de 1 h no son la Balsa: la regla no las toca.
+            ProductContent hour = fx.Ledger.Catalog.Get(StoreCatalog.InfiniteCanoes1h).Content;
+            Assert.That(fx.Ledger.CreditedCanoes(hour, hour.InfiniteCanoes), Is.EqualTo(TimeSpan.FromMinutes(60)));
+            Assert.That(() => fx.Ledger.CreditedCanoes(null!, TimeSpan.Zero), Throws.ArgumentNullException);
+        }
+
+        [Test]
         public void Balsa_IsNotSoldBeforeLevel31()
         {
             var fx = new StoreFixture();

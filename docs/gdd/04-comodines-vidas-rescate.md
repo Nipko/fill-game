@@ -245,7 +245,7 @@ Lectura para 02 y 03: cerrar la app nunca es fallo. En 1-30, solo lo es la salid
 
 En 1-30 solo existe el paso 1, con «Volver a la orilla (gratis)» al pie (rama C). Las cifras no cambian (08 §9). Ninguna de estas pantallas lleva anuncio (05 §10).
 
-**Con `biz_feature_lives` apagado (D-038):** desde el 31 tampoco hay canoas, así que el embudo es el de 1-30: solo el paso 1, sin línea de canoa y con «Volver a la orilla (gratis)» al pie (rama C) en lugar de «Rendirse». El rescate (Cuia y Balsa de rescate) no cambia: lo gobierna `biz_feature_rescue`, y el resto de ramas desde el 31 (A, A', B, D, E, F) se arman igual. Con el interruptor en su default (true), nada cambia.
+**Con `biz_feature_lives` apagado (D-038):** desde el 31 tampoco hay canoas, así que el embudo es el de 1-30: solo el paso 1, sin línea de canoa y con «Volver a la orilla (gratis)» al pie (rama C) en lugar de «Rendirse». El rescate (Cuia y Balsa de rescate) se sigue ofreciendo: lo gobierna `biz_feature_rescue`, y el resto de ramas desde el 31 (A, A', B, D, E, F) se arman igual. **La Balsa de rescate sin Canoas infinitas** (D-038, añadido del 2026-10-21): su contenido queda en Cuia de rescate + 1.000 semillas + 1 Cuia extra, y su línea en «semillas y una cuia» (`stuck_balsa_499_content_no_canoes` [P], §6.5); **el precio no cambia**. Con el interruptor en su default (true), nada cambia.
 
 ### 6.1 Entradas del contexto
 
@@ -396,6 +396,7 @@ La rama F debe ser excepcional (<0,5 % de bloqueos); si un nivel la dispara más
 | `stuck_undo_refill_seeds` | +3 Deshacer · 30 semillas |
 | `stuck_pack_199` | Puñado de semillas · 1.000 · {precio_local} |
 | `stuck_balsa_499` | Balsa de rescate · {precio_local} · Todo para seguir: semillas, una cuia y canoas infinitas |
+| `stuck_balsa_499_content_no_canoes` [P] | Con `biz_feature_lives` apagado (D-038, añadido del 2026-10-21), la segunda parte: Todo para seguir: semillas y una cuia |
 | `stuck_skip` | Salto del Boto · 300 · Rosa te lleva río arriba, al siguiente nivel |
 | `stuck_restart` | Volver a la orilla (gratis) |
 | `stuck_canoe_lost` | Travesía perdida: −1 canoa |
@@ -586,7 +587,7 @@ Reglas de interacción: el botón Atrás de Android no cierra el modal ni ¿Segu
 - Con 1 canoa, la línea de estado del modal avisa "Travesía perdida: tu última canoa" (`stuck_canoe_lost_last`) y ¿Seguro? repite «Perderás tu última canoa» [P] (D-008). Desde el 31 el pie es «Rendirse» [P]: el coste es del bloqueo, no del reinicio. Al pulsar «Reintentar» con 0 canoas se abre Sin canoas; el nivel queda en curso y, en cuanto hay una canoa, vuelve a Nivel fallido con «Reintentar» [P] (§7.1 "Qué bloquea"; §7.3).
 - La Cuia de rescate nunca consume canoa: es la segunda razón de compra tras conservar la Crecida (pérdida triple de Magic Sort: nivel, racha, vida, research/magic-sort/b §5 [V]). Con D-008 se ofrece dos veces en el mismo bloqueo: en Aguas estancadas y en ¿Seguro?, al mismo precio y con las mismas condiciones; sigue siendo 1 rescate por nivel como máximo.
 - Canoas infinitas activas: la línea "Travesía perdida" no se muestra, «Rendirse» pasa directo a Nivel fallido [P] (D-008) y la presión recae solo en la Crecida y el tiempo invertido. Las Canoas infinitas **no quitan los intersticiales** (05 §6.1; postura del dueño del 2026-10-08).
-- `biz_feature_lives` apagado (D-038; 08 §9): las canoas desaparecen en todos los niveles (ni la cabecera, ni el modal, ni los avisos, ni Sin canoas) y desde el 31 todo funciona como en 1-30: salir es gratis y no es fallo, y el pie del modal es «Volver a la orilla (gratis)» (§6, rama C). No es lo mismo que Canoas infinitas: con ellas el embudo de D-008 sigue. El rescate sigue con `biz_feature_rescue`.
+- `biz_feature_lives` apagado (D-038; 08 §9): las canoas desaparecen en todos los niveles (ni la cabecera, ni el modal, ni los avisos, ni Sin canoas) y desde el 31 todo funciona como en 1-30: salir es gratis y no es fallo, y el pie del modal es «Volver a la orilla (gratis)» (§6, rama C). No es lo mismo que Canoas infinitas: con ellas el embudo de D-008 sigue. El rescate sigue con `biz_feature_rescue`, y la Balsa de rescate no da Canoas infinitas: queda en «semillas y una cuia», con el mismo precio (D-038, añadido del 2026-10-21; §6).
 
 ### 7.3 Pantalla Sin canoas
 

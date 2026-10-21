@@ -47,6 +47,21 @@ namespace AF.IAP
         /// <summary>Cartera donde se acredita.</summary>
         public Wallet Wallet { get; }
 
+        /// <summary>
+        /// Las Canoas infinitas que acredita una compra: con <c>biz_feature_lives</c> apagado (<see cref="Wallet.LivesEnabled"/>), la
+        /// Balsa de rescate (el producto que aplica la Cuia de rescate) no las da y queda en «semillas y una cuia», con el mismo
+        /// precio (D-038, añadido del 2026-10-21; 04 §6 y §7.2). Con el interruptor en su default, lo del catálogo o del servidor.
+        /// </summary>
+        public TimeSpan CreditedCanoes(ProductContent content, TimeSpan canoes)
+        {
+            if (content == null)
+            {
+                throw new ArgumentNullException(nameof(content));
+            }
+
+            return content.AppliesRescue && !Wallet.LivesEnabled ? TimeSpan.Zero : canoes;
+        }
+
         /// <summary>Impresiones de la Balsa de rescate hoy (día local).</summary>
         public int BalsaShownToday => DailyCounters.IsStale(_profile.Daily, _clock.LocalDateKey()) ? 0 : _profile.Daily.AfRescueShown;
 
@@ -185,7 +200,7 @@ namespace AF.IAP
             ProductContent content = product.Content;
             int seeds = content.PiggySeeds ? request.PiggySeeds : content.Seeds;
             Transaction transaction = Transaction.Purchase(
-                product.Sku, seeds, content.Stock, content.InfiniteCanoes, content.AppliesRescue, content.GrantsNoAds);
+                product.Sku, seeds, content.Stock, CreditedCanoes(content, content.InfiniteCanoes), content.AppliesRescue, content.GrantsNoAds);
 
             // Lo que no es de la cartera se anota antes para que el mismo guardado de Wallet.Apply lo incluya.
             AdsData ads = _profile.Ads;
@@ -327,7 +342,8 @@ namespace AF.IAP
 
                 bool noAds = content.GrantsNoAds || (entitlements != null && entitlements.NoAds == true);
                 transaction = Transaction.Purchase(
-                    product.Sku, checked((int)seeds), stock, TimeSpan.FromMinutes(canoesMinutes), rescue && appliesRescueNow, noAds);
+                    product.Sku, checked((int)seeds), stock, CreditedCanoes(content, TimeSpan.FromMinutes(canoesMinutes)), rescue && appliesRescueNow,
+                    noAds);
             }
             catch (OverflowException)
             {

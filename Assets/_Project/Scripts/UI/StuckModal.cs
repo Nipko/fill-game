@@ -482,6 +482,8 @@ namespace AF.UI
             _handful.Button.gameObject.SetActive(handful);
             _balsa.Button.gameObject.SetActive(balsa);
             _balsaNote.gameObject.SetActive(balsa);
+            // D-038: con las canoas apagadas, la Balsa queda en «semillas y una cuia» (sin canoas infinitas; mismo precio).
+            _balsaNote.text = services == null || services.BalsaGivesCanoes ? UiText.StuckBalsaContent : UiText.StuckBalsaContentNoCanoes;
             if (handful || balsa)
             {
                 string handfulPrice = services?.PriceText(StoreCatalog.Handful) ?? string.Empty;
