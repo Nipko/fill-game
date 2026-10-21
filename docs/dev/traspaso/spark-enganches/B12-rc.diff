@@ -40,7 +40,7 @@ index 2c045036..2bc85098 100644
  
          /// <summary>El mapa de 08 §9: BR, CO, PE, MX propios; EEE, UK y CH por UMP; el resto, <c>default</c>.</summary>
 diff --git a/Assets/_Project/Scripts/RemoteConfig/Binding/ConsentConfigBinder.cs b/Assets/_Project/Scripts/RemoteConfig/Binding/ConsentConfigBinder.cs
-index d8e9406f..311dc65f 100644
+index 38e58786..9b982501 100644
 --- a/Assets/_Project/Scripts/RemoteConfig/Binding/ConsentConfigBinder.cs
 +++ b/Assets/_Project/Scripts/RemoteConfig/Binding/ConsentConfigBinder.cs
 @@ -8,8 +8,8 @@ namespace AF.RemoteConfig.Binding

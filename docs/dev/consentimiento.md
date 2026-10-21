@@ -65,13 +65,16 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 |---|---|---|---|---|---|---|
 | sin decidir | no | `npa`, sin inicializar | no | no | — | no |
 | `<13` | no | `npa`, sin inicializar | **sí** | no | no | no |
-| `13-17` | según decisión | `npa` siempre | no | sí, con doble confirmación | sí | no |
+| `13-17` (con `biz_under18_no_personalization`, el default) | según decisión | `npa` siempre, también en el EEE | no | sí, con doble confirmación | sí | no |
+| `13-17` sin `biz_under18_no_personalization` | según decisión | como 18+ (interruptor o UMP) | no | sí, sin doble confirmación | sí | sí |
 | `18+` | según decisión | según decisión (sin país: `npa`) | no | sí | sí | sí |
 | `18+` con `ump` | según decisión | UMP (sin forzar `npa`) | no | sí | sí | sí |
 
 - `maxAdContentRating` = G en todas las bandas (05 §7, D-029).
 - Con `biz_under18_no_personalization` = false, 13-17 se trata como 18+ salvo TFCD, también con UMP.
 - Los flags se aplican una vez por decisión: antes de enviar `af_consent` y, si no hubo evento, al cerrar el paso.
+- Los flags siempre se calculan con el perfil legal y el país de ahora (`ConsentPolicy.Flags(record, config, perfil, país conocido)`): una decisión de otro perfil cuenta como sin decidir hasta volver a preguntar, y sin país nunca hay anuncios personalizados ni los decide UMP. Play Games, solo con una decisión vigente.
+- Con la edad o el consentimiento pendientes, o con el bloqueo, la sesión no cuenta y no se programan avisos locales al pasar a segundo plano (`ConsentHoldsSession`; su gancho, en `GameBootstrap.Sessions.cs`, va en `B12-ui.diff`). La sesión del arranque en frío (`stats.sessions`) sí se cuenta antes de la pantalla de edad [P].
 - La sonda `AF_STATE consent` escribe `npa` como lo recibe el proveedor de anuncios y añade `ump`.
 - Al subir `consent_text_version` se vuelven a pedir las finalidades, no la edad [P] (Q-B12-2). Mientras tanto, todo sigue apagado.
 
@@ -167,6 +170,7 @@ Se aplican en este orden, con `git -c core.autocrlf=false apply`.
      - `ConsentBack` en el Atrás;
      - `RefreshConsentRows` al abrir Ajustes;
    - en `GameBootstrap.Telemetry.cs`, solo el comentario del consentimiento;
+   - en `GameBootstrap.Sessions.cs`, `ConsentHoldsSession` en `SessionsPaused`: sin avisos locales con la edad pendiente o el bloqueo;
    - en `SettingsScreen.cs`: `BuildConsent`, `LayoutConsent` y `ConsentLayoutIds`;
    - en `PlayModeHelpers.cs`:
      - `GameBootstrap.ConsentEnabledOverride ??= false`, para que los tests de siempre arranquen como antes;

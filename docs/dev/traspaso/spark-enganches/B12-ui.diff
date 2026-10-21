@@ -1,5 +1,5 @@
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
-index f74d294a..4decdf75 100644
+index 816659fd..406bfe34 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
 @@ -141,12 +141,8 @@ private void SetUpConsent(IClock clock, IConsentStore store)
@@ -17,6 +17,21 @@ index f74d294a..4decdf75 100644
  
              _consentCountry = ConsentCountry.Resolve(SimCountryOverride ?? AndroidSimCountry.ForPlatform(), _deviceLocale, out _consentCountrySource);
              string profile = _consentConfig.ProfileFor(_consentCountry);
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Sessions.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Sessions.cs
+index 322912e9..e9c28439 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Sessions.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Sessions.cs
+@@ -176,7 +176,9 @@ internal void SessionsPaused(bool paused)
+         {
+             SessionTracker? sessions = _sessions;
+             NotificationService? notifications = _notifications;
+-            if (sessions == null || notifications == null)
++
++            // B12: con la edad o el consentimiento pendientes, o el bloqueo de <13, ni sesión ni avisos locales (08 §7).
++            if (sessions == null || notifications == null || ConsentHoldsSession)
+             {
+                 return;
+             }
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
 index b89ff9cb..8a0b40f9 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
@@ -168,10 +183,10 @@ index 79bcd977..caf0b481 100644
          }
 diff --git a/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs b/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs
 new file mode 100644
-index 00000000..5ee415b2
+index 00000000..4fa8111c
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs
-@@ -0,0 +1,254 @@
+@@ -0,0 +1,256 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -233,6 +248,7 @@ index 00000000..5ee415b2
 +            Assert.That(boot.Analytics!.CollectionEnabled, Is.False, "08 §2.3: apagada hasta el consentimiento");
 +            Assert.That(boot.ConsentAds!.Initialized, Is.False, "MAX sin inicializar");
 +            Assert.That(boot.Consent!.Profile, Is.EqualTo(LegalProfiles.Co1581), "Q-T3 (a): el país de la SIM");
++            Assert.That(boot.ConsentHoldsSession, Is.True, "sin sesión ni avisos locales hasta decidir");
 +            Assert.That(boot.PressAndroidBack(), Is.False, "Atrás no salta la pantalla");
 +            Assert.That(view.Visible, Is.True);
 +
@@ -245,6 +261,7 @@ index 00000000..5ee415b2
 +            view.AcceptAllButton.onClick.Invoke();
 +            yield return PlayModeHelpers.WaitFor(() => boot.App.Screen != AppScreen.Boot, "la primera pantalla tras el consentimiento");
 +            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Level), "la primera vez, el nivel 1");
++            Assert.That(boot.ConsentHoldsSession, Is.False);
 +            Assert.That(view.Visible, Is.False);
 +            Assert.That(boot.Analytics.CollectionEnabled, Is.True);
 +            Assert.That(boot.ConsentAds.Initialized, Is.True);
