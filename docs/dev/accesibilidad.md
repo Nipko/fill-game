@@ -73,7 +73,9 @@ Lo marcado [P] es propuesta sin decisión del dueño; cada [P] remite a su pregu
 - **Al soltar:** ni toque ni arrastre. Mantener 400 ms nunca es un toque: tampoco si en ese momento algo tapa el tablero (la pausa, otro lienzo con velo) y los nombres no llegan a salir.
 - **Con los nombres a la vista:** un velo que se abre encima los quita; se comprueba cada 250 ms [P] (`GameScreen.HoldCoverCheckMs`), no en cada fotograma.
 - **Dedos:** se siguen por su `pointerId`. Un touch-up que se pierde de verdad (la cuia se destruye, la pantalla se oculta o la app va a segundo plano con el dedo abajo) lo cubre `HoldReset` al construir el tablero, al ocultar la pantalla y en `SnapToModel`.
-- **Límite conocido:** si otro dedo toca la misma cuia mientras salen los nombres, su touch-up también se traga, porque `CuiaView.OnCuiaUp` no pasa el `pointerId`.
+- **Límites conocidos:**
+  - si otro dedo toca la misma cuia mientras salen los nombres, su touch-up también se traga, porque `CuiaView.OnCuiaUp` no pasa el `pointerId`;
+  - si otro dedo toca otra cuia con los nombres a la vista, ese toque cuenta (selecciona o vierte) y los nombres siguen; C11 solo impide que salgan nombres con dos dedos.
 
 ### 2.5 TalkBack
 

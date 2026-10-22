@@ -137,7 +137,7 @@ namespace AF.UI
             _animator.ApplyPatterns(PatternsOn(level));
             if (_highContrast)
             {
-                LiquidGraphic.ApplyPatternOpacity(A11yRules.PatternOpacity(true, Palette.PatternOpacity));
+                LiquidGraphic.ApplyPatternOpacity(A11yRules.HighContrastPatternOpacity);
             }
         }
 
@@ -343,14 +343,9 @@ namespace AF.UI
             }
         }
 
-        // C9 es del tablero jugable: no con un modal (también la pausa, que no cambia la fase), la celebración o la selección de la
-        // Luciérnaga (el toque elige la cuia). Recorre el lienzo (sin asignar): al bajar el dedo.
-        private bool BoardTakesHold()
-        {
-            return FlowTakesHold() && !A11yScanner.BlockedAbove(_canvas, _board);
-        }
-
-        // Lo barato de BoardTakesHold, lo que se mira en cada fotograma con el dedo abajo: solo el flujo.
+        // C9 es del tablero jugable: no con un modal, la celebración o la selección de la Luciérnaga (el toque elige la cuia). Solo
+        // el flujo (barato: al bajar el dedo y en cada fotograma); un velo encima que no cambia la fase (la pausa) se mira al ir a
+        // enseñar los nombres y mientras se ven (Covered), y además un velo no deja que el dedo llegue a la cuia.
         private bool FlowTakesHold()
         {
             LevelFlow? flow = _flow;
@@ -373,7 +368,7 @@ namespace AF.UI
                 _namesBubble?.Hide();
             }
 
-            if (!BoardTakesHold())
+            if (!FlowTakesHold())
             {
                 _hold.Cancel();
             }
