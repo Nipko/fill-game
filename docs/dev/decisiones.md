@@ -3570,7 +3570,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - PT «Nova espécie à vista!».
 - **7 · Textos legales de B12 traducidos con IA:** se quedan como **borrador** hasta que los revise el abogado. No bloquean el selector de idioma, pero sí el lanzamiento en esos idiomas.
 - **8 · Comodines en el glosario:** «Boosters» / «Reforços».
-- **9 · `firebase-appcheck-debug` en release:** se excluye del AAB de release antes del primer AAB de producción. La compuerta comprueba que no esté; dev y el ensayo la conservan.
+- **9 · `firebase-appcheck-debug` en release:** se excluye del AAB de release antes del primer AAB de producción. La compuerta comprueba que no esté. Solo dev la conserva: el ensayo (`-afRehearsal`) es variante release de Gradle y usa Play Integrity, así que tampoco la lleva. En el registro inicial de este punto el integrador escribió por error «dev y el ensayo la conservan»; lo corrigió al integrar `tanda5/appcheck-release`, sin cambiar la decisión del dueño («excluirla del release»).
 - **10 · Q-B9-13, daltonismo:** los pares 7-10 (protanopía) y 5-14 (deuteranopía) entran en los pares de riesgo de 07 §3 y del glosario §9, y el generador los limita. Si cambia algún tablero publicado, se vuelve a generar con `level-qa` en verde.
 - **11 · Desbordes al 130 %:** se lanza ya la tarea de las filas del Mercado, la pestaña «Sin anuncios» y el código de cuenta de Ajustes, en los tres idiomas.
 - **12 · Tanda de pulido**, con los pendientes ya diagnosticados:
