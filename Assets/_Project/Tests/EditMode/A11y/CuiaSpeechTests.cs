@@ -180,6 +180,18 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void InRelease_ThePendingMechanicName_IsNotSaid() // la regla de release: pendiente_asesor no se enseña
+        {
+            Loc.Configure(B9Loc.Catalog(), LocLocale.SourceLocale, false);
+            Assert.That(A11yText.MechanicName("hoja"), Is.Empty, "mechanic.hoja espera al asesor");
+            BoardState state = Board(Cuia.Create(4, new[] { Acai }).WithMechanic(MechanicType.Hoja, key: Aguaje), Cuia.Empty(4).WithMechanic(MechanicType.Matapi));
+            string label = CuiaSpeech.Label(state, 0);
+            Assert.That(label, Is.EqualTo("cuia 1: fruta, 3 huecos"), "la etiqueta de 02 §12 (la fruta también espera al asesor), sin nombre detrás");
+            Assert.That(label, Does.Not.Contain("Hoja"));
+            Assert.That(CuiaSpeech.Label(state, 1), Is.EqualTo("cuia 2: 4 huecos"), "vacía, igual");
+        }
+
+        [Test]
         public void Selection_IsAnnouncedWithTheTopFruit()
         {
             BoardState state = Board(Cuia.Create(4, new[] { Aguaje, Acai }));
