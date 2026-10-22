@@ -186,6 +186,7 @@ namespace AF.UI
             // Pista por inactividad (MO3): una fila que se marca o se desmarca, en su hueco.
             IdleHintSlot = UiBuilder.Rect("IdleHintSlot", _content);
             _idleRow = Option(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
+            BuildA11yRows(); // Reducir movimiento y Alto contraste (B9; SettingsScreen.A11y.cs)
 
             // Privacidad (B12; SettingsScreen.Consent.cs), oculta hasta que GameBootstrap la enseñe.
             BuildConsent();
@@ -384,6 +385,11 @@ namespace AF.UI
 
             yield return _slothRow.Label;
             yield return _idleRow.Label;
+            foreach (TextMeshProUGUI label in A11yTexts())
+            {
+                yield return label;
+            }
+
             foreach (TextMeshProUGUI label in AudioTexts())
             {
                 yield return label;
@@ -578,7 +584,10 @@ namespace AF.UI
             _rowHeights.Add(rowH);
             y += rowH + RowGapDp;
 
-            // Privacidad (B12), si se ve: sus filas tras la pista por inactividad, con el hueco de sección.
+            // Reducir movimiento y Alto contraste (B9): dos filas en su hueco, tras la pista por inactividad.
+            y = LayoutA11y(y, inner, rowH, s);
+
+            // Privacidad (B12), si se ve: sus filas tras las de accesibilidad, con el hueco de sección.
             if (PrivacyShown)
             {
                 y = LayoutConsent(y - RowGapDp + SectionGapDp, y, inner, rowH, s) + RowGapDp;
@@ -694,7 +703,7 @@ namespace AF.UI
                 return;
             }
 
-            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount;
+            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount;
             var ids = new string[n];
             var rects = new RectTransform[n];
             ids[0] = "close";
@@ -718,9 +727,10 @@ namespace AF.UI
             ids[k] = _idleRow.Id; // idle_hint (MO3)
             rects[k] = _idleRow.Root;
             AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
-            AboutLayoutIds(ids, rects, k + 1 + AudioRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
-            AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + AboutLayoutCount); // delete_account (B8)
-            ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + AboutLayoutCount + AccountLayoutCount); // consent y age_band (B12)
+            A11yLayoutIds(ids, rects, k + 1 + AudioRowCount); // reduce_motion y high_contrast (B9)
+            AboutLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
+            AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount); // delete_account (B8)
+            ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount); // consent y age_band (B12)
 
             _probe.Layout("settings", 0, null, ids, rects);
         }

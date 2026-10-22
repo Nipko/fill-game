@@ -60,7 +60,11 @@ namespace AF.UI
             {
                 // Vertido ilegal (la regla, del núcleo): un arrastre que no vierte no selecciona nada, ni X ni Y (sin C5) [P]
                 // (Q-B11-11); Y se sacude con el sonido neutro del rechazo, como en C6, y X baja al soltar (OnCuiaUp).
-                _views[target].Shake();
+                if (!flow.ReduceMotion)
+                {
+                    _views[target].Shake(); // con Reducir movimiento, sin sacudidas (02 §12; B9), como el toque ilegal
+                }
+
                 AF.Audio.AudioCues.Play(AF.Audio.SfxId.Illegal);
                 _probe.State("reject", flow, target, null); // AF_STATE reject, como el toque ilegal (C6)
                 return true;
