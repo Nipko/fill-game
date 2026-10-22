@@ -3610,3 +3610,10 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - el resto sigue con 2.
 - **Código:** `LocPrice.DecimalsOf` (y, por ella, `LocalPrice`, `MinorUnitsFromMicros` y `PlayBillingClient.TryLocalPrice`), con tests en `LocPriceTests`. Los importes llegan en micros de Play Billing y se redondean «la mitad hacia fuera» a esos decimales.
 - **Abierto [P]:** otras monedas sin céntimos o con tres decimales de ISO 4217 (por ejemplo KRW, VND, OMR, JOD, TND) siguen con 2 hasta que se decida; solo importan si la cuenta de Play del jugador está en una de ellas.
+
+### D-033, añadido del 2026-10-22: Q-B9-17 hecha (TalkBack en las listas que se desplazan)
+
+- **Estado:** integrada con `tanda5/talkback-scroll`, con la revisión APROBADO. Sustituye al «Pendiente» de Q-B9-17 del añadido de B9.
+- **Qué hace:** las filas de una lista que se desplaza se publican todas al lector, también las recortadas, con la acción `scrolled`, y el visor se desplaza hasta la fila enfocada. Es la (a), más la primera mitad de la (b): publicar las filas recortadas.
+- **Alcance:** vale para toda `ScrollRect` vertical: Ajustes, el Mercado, la ficha de frutas y el Muestrario del Mapa. Las dos últimas no se pidieron, pero se dejan [P] por coherencia.
+- **Pendiente:** probarlo en el teléfono con TalkBack. Queda por ver el marco de 1 px de las filas recortadas y el orden de recorrido.
