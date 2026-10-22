@@ -47,13 +47,18 @@ Balsa sin Canoas infinitas), D-028 (P5: el dedo guía es una ayuda explícita co
   tablero, sobre «+1 cuia», tocando en bucle; sale cuando ya se fue el aviso de Capi (y cualquier otro aviso), se juega y la
   bandeja ofrece la del stock sin haber aplicado ninguna en el nivel; se va al usarla (02 §13 y 06 §2.2: «dedo guía en su
   primer uso»). En cada intento del 8 hasta usarla [P] (Q-B11-10). Con Reducir movimiento, mano fija. No captura toques.
-- **Tooltip «Reiniciar es gratis…» del 6 y del 8** (`TipBubble`): encima del panel de Aguas estancadas, con el pico en el eje de
-  «Volver a la orilla (gratis)» [P] (encima del botón taparía Marea, la primera opción del modal); una vez por nivel mientras la
+- **Tooltip «Reiniciar es gratis…» del 6 y del 8** (`TipBubble`): dentro del panel de Aguas estancadas, en un hueco que el panel deja sobre
+  «Volver a la orilla (gratis)» (`GameScreen.RestartTipRoomFor`, `StuckModal.RestartTipRoomDp`, con `RestartTipGapDp` = 4 dp de aire
+  con la opción de arriba), con la punta del pico en el canto de arriba del botón y en su eje, sin tapar Marea [P] (observación 3
+  de la prueba del 2026-10-22; antes iba encima del panel, con el pico en su borde); una vez por nivel mientras la
   app siga abierta (la primera vez que el modal se ve quieto en ese nivel; no en los reintentos ni al volver a entrar) [P]; se
   va con el modal. Texto canon de 04 §2.7 (`tutorial_restart_free_canoe`). Con
   `biz_feature_lives` apagado, solo la primera frase (`tutorial_restart_free`; D-038: sin canoas en los avisos; Q-B11-2).
 - **Tooltip de la Cosecha doble del 11**: en la victoria del nivel de `ads_rv_double_harvest_from_level`, encima del botón y
-  con el pico hacia él, cuando el panel ya subió y si el botón sale (con anuncio); se va al pulsarlo, al desactivarse o al dejar
+  con el pico hacia él, en un hueco que el panel de victoria deja sobre el botón (`GameScreen.DoubleTipRoomFor`) para no tapar la
+  línea «Cosecha +20» (observación 4 de la prueba del 2026-10-22); el hueco cuenta en el presupuesto de la victoria compacta (D-032, punto 2; `ChooseVictoryCompact`), así que en
+  360 × 640 la victoria se compacta con él; solo si ni el último escalón cabe, el hueco que cabe, y el tooltip pisa las barras de la
+  Crecida y la Canasta [P]; cuando el panel ya subió y si el botón sale (con anuncio); se va al pulsarlo, al desactivarse o al dejar
   la victoria. Sin personaje (D-013, T1-A). Si en esa victoria no hay anuncio, no sale nunca (Q-B11-12). Texto [P]
   (Q-B11-4).
 - Todo por reglas puras de `AF.GameFlow.TutorialTips` (sin motor; claves, nunca texto), con sondas `AF_STATE tutorial_tip` y

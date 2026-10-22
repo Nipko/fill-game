@@ -25,8 +25,9 @@ namespace AF.Analytics
     }
 
     /// <summary>
-    /// Sumidero que además recoge datos por su cuenta (Firebase Analytics: sesiones, primera apertura) y por eso tiene que saber si
-    /// hay consentimiento aunque no reciba eventos (08 §2.3: <c>Analytics.SetEnabled(profile.consent.analytics)</c>).
+    /// Sumidero que tiene que saber si hay consentimiento de analítica (08 §2.3: <c>Analytics.SetEnabled(profile.consent.analytics)</c>):
+    /// Firebase Analytics, que además recoge datos por su cuenta (sesiones, primera apertura) aunque no reciba eventos, y el de
+    /// logcat, que lo usa para marcar sus líneas como no enviadas (<c>AF_EVENT_UNSENT</c>; observación 5 de la prueba del 2026-10-22).
     /// <see cref="AnalyticsService"/> se lo dice al añadirlo y en cada cambio.
     /// </summary>
     public interface ICollectionAwareSink

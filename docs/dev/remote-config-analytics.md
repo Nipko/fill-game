@@ -201,7 +201,7 @@ recogida apagada y la línea `AF_EVENT_UNSENT` en el log, porque la escena de pr
 | Q-B7-13 | `boosters_json` | (a) `{"undo":n,"extra_cuia":n}` con lo que sabe el flujo, solo lo > 0; (b) añadir Morpho, Luciérnaga y Pororoca cuando sus ganchos lo cuenten |
 | Q-B7-14 | Qué apaga cada `biz_feature_<sistema>` (08 §9 y 09 solo dicen «kill switch por sistema») | (a) `lives` = las canoas no cuentan (como antes del 31), `rescue` = sin Cuia de rescate; los demás, al llegar su sistema; (b) definirlos todos ya en 09 |
 | Q-B7-15 | `anim_speed_factor_late` (D-033, Q-N1: «se corrigen 08 §9 y 02 §4») | Cerrada: la integración corrigió 08 §9 y 02 §4 (`f4f4bdee`) y `B7-gdd.diff` se retiró |
-| Q-B7-16 | Formato del sumidero de logcat | (a) `AF_EVENT {json plano}`, solo desarrollo y Editor; (b) dentro de `AF_STATE` |
+| Q-B7-16 | Formato del sumidero de logcat | (a) `AF_EVENT {json plano}`, solo desarrollo y Editor; (b) dentro de `AF_STATE`. *Desde el 2026-10-22 (observación 5 de la prueba en el teléfono):* sin consentimiento de analítica, `AF_EVENT_UNSENT {json plano}` (§4); quien filtre por `AF_EVENT ` con espacio solo ve las enviadas |
 | Q-B7-17 | `session_id` | (a) GUID aleatorio; (b) el instante de inicio en ms |
 | Q-B7-18 | Booleanos | (a) `true`/`false` en el evento; el sumidero de Firebase los pasará a 0/1; (b) 0/1 ya en el catálogo |
 | Q-B7-19 | `rc_variant` | (a) `biz_experiment_tag` tal cual (08 §9); (b) además la condición de Firebase |

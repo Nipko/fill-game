@@ -192,9 +192,10 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level6_Stuck_TheRestartTip_AboveTheModal_OncePerLevel()
+        public IEnumerator Level6_Stuck_TheRestartTip_AboveTheModal_OncePerLevel([Values(false, true)] bool small)
         {
-            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // el lienzo del teléfono, no el apaisado del runner sin gráficos
+            // El lienzo del teléfono (360 × 780 y 360 × 640), no el apaisado del runner sin gráficos.
+            GameScreen.SimulatedScreen = small ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
             yield return TutorialSlothTests.Load(6);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -258,10 +259,11 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level11_Victory_TheDoubleHarvestTip_AboveTheButton_UntilPressed([Values(false, true)] bool small)
+        public IEnumerator Level11_Victory_TheDoubleHarvestTip_AboveTheButton_UntilPressed([Values(false, true)] bool small, [Values(1f, 1.3f)] float scale)
         {
             // En el lienzo del teléfono (360 × 780 y 360 × 640), no en el apaisado del runner sin gráficos.
             GameScreen.SimulatedScreen = small ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
+            LaunchOptions.FontScaleOverride = scale;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
             yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -285,9 +287,11 @@ namespace AF.Tests.PlayMode
             Rect glass = VictorySetup.CanvasRect(tip.Rect, space);
             Rect harvest = VictorySetup.CanvasRect(view.VictoryHarvestRect, space);
             Rect button = VictorySetup.CanvasRect((RectTransform)view.DoubleHarvestButton.transform, space);
-            // En 360 × 640 el hueco entero no cabe y el tooltip pisa las barras hasta el pie de la fila de la Cosecha, que deja 6 dp
-            // de aire bajo la semilla (GameScreen.LayoutVictory: semilla de 32 dp a 6 dp del canto de arriba); el texto no se toca.
-            float air = small ? 4f : 0f;
+            // En 360 × 640 la victoria compacta (D-032) ya cuenta con el hueco del tooltip (ChooseVictoryCompact); al 130 % ni el último
+            // escalón da para el hueco entero, que se recorta: el tooltip puede pisar el aire bajo la semilla de la fila de la Cosecha
+            // (la fila mide VictoryHarvestDp con la semilla de 32 dp a 6 dp de arriba; captura b11_03_double_harvest_tip_640_130), nunca su texto.
+            Debug.Log("AF_TIP double " + (small ? "640" : "780") + " al " + (scale * 100f) + " %: hueco " + view.DoubleTipRoomShownDp + " dp");
+            float air = small && scale > 1.01f ? 4f : 0.01f;
             Assert.That(glass.yMin, Is.GreaterThanOrEqualTo(harvest.yMax - air), "bajo la línea de la Cosecha");
             Assert.That(tip.TailTip.y, Is.EqualTo(button.yMin).Within(1f), "la punta del pico, en el canto de arriba del botón");
             Assert.That(tip.TailTip.x, Is.EqualTo(button.center.x).Within(1f), "y en su eje");

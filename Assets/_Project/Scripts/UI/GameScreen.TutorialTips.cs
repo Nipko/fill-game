@@ -280,13 +280,20 @@ namespace AF.UI
             EmitTipProbe("double_harvest", true, TutorialTips.DoubleHarvestKey);
         }
 
-        /// <summary>Aire mínimo entre la cinta de la victoria y el pie de la cabecera para dejar el hueco del tooltip (dp) [P].</summary>
-        internal const float DoubleTipMinHeaderAirDp = 8f;
+        /// <summary>
+        /// Aire mínimo entre la cinta de la victoria y el pie de la cabecera con el hueco del tooltip (dp): 0, el mismo tope que el
+        /// presupuesto de la victoria compacta (<c>VictoryPanelBudgetDp</c>), que ya cuenta con el hueco.
+        /// </summary>
+        internal const float DoubleTipMinHeaderAirDp = 0f;
 
         // Lo que se le quita al hueco del tooltip de la Cosecha doble en esta victoria porque entero no cabe (la cinta subiría por
-        // encima de la cabecera; en 360 × 640): el tooltip pisa entonces las barras de la Crecida y la Canasta, nunca la línea de
-        // la Cosecha (PlaceDoubleHarvestTip). Se decide de nuevo en cada victoria (OnVictoryScreen).
+        // encima de la cabecera; en 360 × 640): el tooltip pisa entonces las barras de la Crecida y la Canasta. Se vuelve a medir
+        // en cada disposición de la victoria (LayoutVictory).
         private float _doubleTipRoomCutDp;
+
+        // El hueco entero del tooltip de la Cosecha doble en esta disposición (0 si no sale): ChooseVictoryCompact lo resta de su
+        // presupuesto, así que el escalón de la victoria compacta (D-032, punto 2) ya cuenta con él.
+        private float _doubleTipFullRoomDp;
 
         /// <summary>Hueco del tooltip de la Cosecha doble que dejó la última disposición de la victoria (dp; 0 si no; tests).</summary>
         internal float DoubleTipRoomShownDp { get; private set; }

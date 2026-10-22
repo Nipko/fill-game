@@ -94,6 +94,23 @@ namespace AF.Tests.PlayMode
             yield return Save(dir, "b11_03_double_harvest_tip_" + (small ? "640" : "780") + "_100");
         }
 
+        /// <summary>El tooltip de la Cosecha doble en 360 × 640 al 130 %: va sin las filas de las barras para no tapar la Cosecha.</summary>
+        [UnityTest]
+        public IEnumerator DoubleHarvestTip640At130()
+        {
+            string dir = Prepare(true);
+            LaunchOptions.FontScaleOverride = 1.3f;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
+            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 2500);
+            Assert.That(boot.View!.DoubleHarvestTipVisible, Is.True);
+            SnapshotKit.Attach(boot);
+            yield return Save(dir, "b11_03_double_harvest_tip_640_130");
+        }
+
         [UnityTest]
         public IEnumerator ExtraCuiaFinger()
         {

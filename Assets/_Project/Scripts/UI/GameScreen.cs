@@ -1259,7 +1259,6 @@ namespace AF.UI
             }
 
             VictoryTitleShown(flow); // «¡Perfecto!» o el de siempre (DC14), antes de que LayoutVictory mida el título
-            _doubleTipRoomCutDp = 0f; // el hueco del tooltip de la Cosecha doble se decide en cada victoria
             LayoutVictory();
             StartHarvestCount(0, flow.HarvestSeeds, HarvestCountDelayMs);
             ShiftBoard(ShiftToClear(_victoryPanelY - RibbonRiseDp, 8f), true);
@@ -2831,6 +2830,14 @@ namespace AF.UI
         // centrados en la cinta (02 §6; guía 5.3 y 12).
         private void LayoutVictory()
         {
+            _doubleTipRoomCutDp = 0f; // el hueco del tooltip de la Cosecha doble se mide de nuevo en cada disposición
+            _doubleTipFullRoomDp = DoubleTipRoomFor(); // entero: cuenta en el presupuesto de la victoria compacta (ChooseVictoryCompact)
+            LayoutVictoryPass();
+        }
+
+        // Una pasada de LayoutVictory; se repite (LayoutVictoryPass) mientras el hueco del tooltip de la Cosecha doble no quepa.
+        private void LayoutVictoryPass()
+        {
             float w = _canvasW;
             float panelW = Mathf.Min(328f, w - 32f);
             float nextW = Mathf.Min(w - 48f, Mathf.Min(312f, panelW - 16f));
@@ -2904,10 +2911,11 @@ namespace AF.UI
             float tipDeficit = HudBadgeBottom + DoubleTipMinHeaderAirDp - (_victoryPanelY - RibbonRiseDp);
             if (DoubleTipRoomShownDp > 0f && tipDeficit > 0.01f)
             {
-                // Con el hueco entero del tooltip la cinta subiría por encima de la cabecera (360 × 640): el hueco que cabe, y el
-                // tooltip pisa las barras de la Crecida y la Canasta, no la línea de la Cosecha [P]. Una sola pasada más.
+                // Ni el último escalón de la victoria compacta cabe con el hueco entero del tooltip: el hueco que cabe, y el
+                // tooltip pisa las barras de la Crecida y la Canasta [P]. Otra pasada, hasta que quepa o el hueco llegue a 0 (el
+                // recorte solo crece: termina).
                 _doubleTipRoomCutDp += Mathf.Min(DoubleTipRoomShownDp, tipDeficit);
-                LayoutVictory();
+                LayoutVictoryPass();
                 return;
             }
 

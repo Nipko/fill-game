@@ -205,7 +205,7 @@ namespace AF.UI
         // con TextMeshPro solo lo que no esté en la caché: WarmVictorySlot lo llama al cargar el nivel.
         private int ChooseVictoryCompact()
         {
-            float budget = VictoryPanelBudgetDp;
+            float budget = VictoryPanelBudgetDp - _doubleTipFullRoomDp; // con el hueco del tooltip de la Cosecha doble del 11 (B11)
             _victoryBarsDropped = false;
             _victoryBars.LogbookSuppressed = _logbookRowYield; // cedida a la frase de TiTino en su hito (GameScreen.Streak.cs)
             int level = CompactStepWithBars(budget);

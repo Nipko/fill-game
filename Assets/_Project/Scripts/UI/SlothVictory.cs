@@ -273,7 +273,8 @@ namespace AF.UI
         /// <summary>
         /// Lo mismo que <see cref="FootprintBottomDp"/> para un TiTino que aún no sale (espera la vista con 11-16 cuias) en la caja
         /// de <paramref name="top"/> a <paramref name="bottom"/> con <paramref name="rows"/> filas: con frase, la caja entera
-        /// (el bocadillo aún no está medido); sin ella, el rig. NaN si con esa caja no saldría.
+        /// (el bocadillo aún no está medido); sin ella, el rig. NaN si con esa caja no saldría. Hoy no se alcanza desde la tarjeta
+        /// del 7 (su tablero tiene 7 cuias: TiTino no espera la vista); si cuando salga su caja crece, su pie puede bajar.
         /// </summary>
         public static float FootprintBottomFor(float top, float bottom, int rows, bool withText)
         {
