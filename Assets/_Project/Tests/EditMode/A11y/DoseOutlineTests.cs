@@ -9,7 +9,7 @@ using UnityEngine;
 namespace AF.Tests.EditMode
 {
     /// <summary>
-    /// Contorno de dosis de «Alto contraste» (07 §3, regla 5: 1,5 px de diseño, que el cliente toma como dp [P]; Q-B9-6): la propiedad <c>_DoseOutlinePx</c> del shader del
+    /// Contorno de dosis de «Alto contraste» (07 §3, regla 5: 1,5 px de diseño, que el cliente toma como dp [P]; Q-B9-6): la propiedad <c>_DoseOutlineDp</c> del shader del
     /// líquido, que fija <see cref="LiquidGraphic.ApplyDoseOutline"/>, y su espejo en CPU (<see cref="LiquidGraphic.DoseOutlineAt"/>).
     /// Las capturas del shader real están en <c>AF.Tests.PlayMode.DoseOutlineCaptureTests</c> (<c>[Explicit]</c>).
     /// </summary>
@@ -72,6 +72,21 @@ namespace AF.Tests.EditMode
             Assert.That(code.Contains("((halfU - abs(ya - doseBottom)) / pix) + 0.5"), Is.True, "centrada en el arco, con medio píxel de antialias");
             Assert.That(code.Contains("alpha = max(alpha, outline * topAlpha);"), Is.True, "opaca también bajo el arco");
             Assert.That(LiquidGraphic.OutlineMarginU, Is.GreaterThan(0f), "la malla baja bajo el arco para la mitad de abajo");
+        }
+
+        [Test]
+        public void TheMeshMargin_HoldsTheLowerHalfOfTheLine_InTheNarrowestCuia()
+        {
+            // Peor caso (revisión de la tanda de pulido): la cuia más estrecha (BoardLayout.MinCuiaWidth, u = ancho / 2 dp) a 1 px
+            // por dp. Bajo el arco hacen falta la mitad de la línea y el medio píxel de antialias; si no caben en la malla, la línea
+            // se corta en seco.
+            float dpPerU = AF.UI.BoardLayout.MinCuiaWidth / 2f;
+            const float pxPerDp = 1f;
+            float needU = ((0.5f * A11yRules.HighContrastDoseOutlinePx) + (0.5f / pxPerDp)) / dpPerU;
+            Assert.That(LiquidGraphic.OutlineMarginU, Is.GreaterThanOrEqualTo(needU),
+                "OutlineMarginU frente a la cuia de " + AF.UI.BoardLayout.MinCuiaWidth + " dp");
+            Assert.That(LiquidGraphic.DoseOutlineAt(1, A11yRules.HighContrastDoseOutlinePx, pxPerDp, -LiquidGraphic.OutlineMarginU * dpPerU * pxPerDp),
+                Is.EqualTo(0f), "en el borde de la malla ya no queda tinta");
         }
     }
 }

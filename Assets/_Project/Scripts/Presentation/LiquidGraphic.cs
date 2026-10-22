@@ -304,10 +304,12 @@ namespace AF.Presentation
 
         /// <summary>
         /// Margen de malla bajo el arco (u de capa) para la mitad de abajo del contorno de dosis de Alto contraste (07 §3, regla 5;
-        /// Q-B9-6), que se pinta centrado en el arco: ≈ 3 px a 1080 px de ancho. Sin contorno, el shader no enseña nada bajo el
+        /// Q-B9-6), que se pinta centrado en el arco. Peor caso: la cuia más estrecha (<c>BoardLayout.MinCuiaWidth</c> = 28 dp,
+        /// 14 dp por u) a 1 px por dp, donde la mitad de abajo (0,75 dp) más el medio píxel de antialias (0,5 dp) piden 1,25 dp =
+        /// 0,089 u; 0,1 u deja algo de holgura (lo fija <c>DoseOutlineTests</c>). Sin contorno, el shader no enseña nada bajo el
         /// arco, así que no cambia lo que se ve.
         /// </summary>
-        public const float OutlineMarginU = 0.05f;
+        public const float OutlineMarginU = 0.1f;
 
         // La dosis superior sube la mitad de la cara superior más la onda y un margen, para que quepa la elipse.
         private const float TopExtraU = (0.5f * CuiaGeometry.TopFaceU) + RippleAmplitudeU + 0.05f;

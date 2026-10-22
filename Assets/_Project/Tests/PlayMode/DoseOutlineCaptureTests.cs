@@ -65,7 +65,7 @@ namespace AF.Tests.PlayMode
 
             // En la cuia del Aguaje y el Achiote (4 dosis, 3 fronteras), una franja de 41 px alrededor del eje: las filas en que casi
             // toda la franja se oscurece con el ajuste son las líneas de contorno (el patrón al 35 % oscurece píxeles sueltos, no
-            // filas enteras). Cada frontera da 1-2 grupos de filas seguidas.
+            // filas enteras). Cada frontera da un solo grupo de filas seguidas (las de su línea), así que se esperan exactamente 3.
             int lines = OutlineRows(off, on, aguaje, out float maxDrop);
             string report = string.Format(CultureInfo.InvariantCulture,
                 "Cuia 1 (Aguaje y Achiote): {0} grupos de filas oscurecidas en la franja del eje; mayor caída de luma {1:0.000}.", lines, maxDrop);
