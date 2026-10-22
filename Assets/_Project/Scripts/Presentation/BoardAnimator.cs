@@ -371,17 +371,23 @@ namespace AF.Presentation
 
         /// <summary>
         /// Factor de velocidad del nivel (<c>GameConfig.SpeedFactor</c>; 02 §4): multiplica las duraciones que la cola no
-        /// recibe ya multiplicadas, las de los pasos de mecánica (desde la ola 2; con <see cref="ReduceMotion"/>, × 0,5). Las
-        /// de <see cref="PourTimings"/> ya lo llevan, y el traslado inverso de Marea (<see cref="UndoTransferMs"/>, 04 §2.1)
-        /// no cambia. 1 por defecto.
+        /// recibe ya multiplicadas, las de los pasos de mecánica (desde la ola 2; con <see cref="ReduceMotion"/>, ×
+        /// <see cref="ReduceMotionFactor"/>). Las de <see cref="PourTimings"/> ya lo llevan, y el traslado inverso de Marea
+        /// (<see cref="UndoTransferMs"/>, 04 §2.1) no cambia, tampoco con Reducir movimiento [P] (Q-B9-12). 1 por defecto.
         /// </summary>
         public float SpeedFactor { get; set; } = 1f;
 
-        /// <summary>Reducir movimiento (02 §4; 07 §7.8): los pasos de mecánica van a la mitad de tiempo y sin partículas.</summary>
+        /// <summary>Reducir movimiento (02 §4; 07 §7.8): los pasos de mecánica van a <see cref="ReduceMotionFactor"/> de su tiempo y sin partículas.</summary>
         public bool ReduceMotion { get; set; }
 
-        /// <summary>Factor de los pasos de mecánica antes del presupuesto: <see cref="SpeedFactor"/>, × 0,5 con <see cref="ReduceMotion"/>.</summary>
-        public float StepSpeedBase => Mathf.Max(0.01f, SpeedFactor) * (ReduceMotion ? 0.5f : 1f);
+        /// <summary>
+        /// <c>anim_reduce_motion_factor</c> (08 §9: 0,5; B9): con <see cref="ReduceMotion"/>, todas las duraciones × este factor (02 §4).
+        /// Las de <see cref="PourTimings"/> ya lo llevan (las fija la pantalla); aquí, el de los pasos de mecánica.
+        /// </summary>
+        public float ReduceMotionFactor { get; set; } = 0.5f;
+
+        /// <summary>Factor de los pasos de mecánica antes del presupuesto: <see cref="SpeedFactor"/>, × <see cref="ReduceMotionFactor"/> con <see cref="ReduceMotion"/>.</summary>
+        public float StepSpeedBase => Mathf.Max(0.01f, SpeedFactor) * (ReduceMotion ? ReduceMotionFactor : 1f);
 
         /// <summary>
         /// Patrones de fruta del nivel (07 §3, regla 1; 02 §12; T-E): con true, cada cuia lleva el icono de su fruta en sus
@@ -420,9 +426,10 @@ namespace AF.Presentation
 
         /// <summary>
         /// <c>anim_pour_dose_ms</c> sin el factor de velocidad (280 ms con los defaults de 08 §9): lo que dura la gota de la
-        /// Lluvia y cada mitad del mordisco en sus pasos por defecto.
+        /// Lluvia y cada mitad del mordisco en sus pasos por defecto. Sin el de Reducir movimiento tampoco (B9): los pasos lo
+        /// aplican con <see cref="StepSpeedBase"/>, una sola vez.
         /// </summary>
-        public float DoseNominalMs => _timings.DoseMs / Mathf.Max(0.01f, SpeedFactor);
+        public float DoseNominalMs => _timings.DoseMs / Mathf.Max(0.01f, StepSpeedBase);
 
         /// <summary>Cuias asociadas.</summary>
         int ICuiaBoard.Count => _views.Length;
@@ -1305,7 +1312,11 @@ namespace AF.Presentation
                         while (job.Splashes < due)
                         {
                             job.Splashes++;
-                            t.Ripple();
+                            if (!ReduceMotion)
+                            {
+                                t.Ripple(); // con Reducir movimiento, la onda del shader se apaga (02 §12; B9)
+                            }
+
                             Fx?.Splash(surface, color, u);
                         }
                     }
@@ -2124,7 +2135,11 @@ namespace AF.Presentation
             if (time >= job.StreamStart && job.Splashes == 0)
             {
                 job.Splashes = 1;
-                t.Ripple(); // el agua entra en su cuia
+                if (!ReduceMotion)
+                {
+                    t.Ripple(); // el agua entra en su cuia; con Reducir movimiento, sin onda (02 §12; B9)
+                }
+
                 ScoopAudio(ref job); // el «glup» al llegar a la boca (02 §4.1)
             }
 

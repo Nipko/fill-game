@@ -112,6 +112,19 @@ Lo que el integrador debería anotar en el GDD: 08 §4.3 (`settings.push.pre_pro
 
 ## 8. La implementación real (`B6-notifications-real.diff`)
 
+**Estado (2026-10-22, rama `tanda5/notificaciones`): integrada** con la orden del dueño del añadido de D-033 del 2026-10-21. Lo que cambia respecto al parche:
+- El programador vive en su propio ensamblado, `Scripts/Platform/Notifications/AF.Platform.Notifications.asmdef` (como los de Firebase), el único que referencia `Unity.Notifications.Android` y que lleva el `versionDefines` de `AF_MOBILE_NOTIFICATIONS` (2.4.3). AF.UI solo ve `DeviceNotifications` (`Available`, `Create`, `Poll`, `CancelAllOnDevice`), sin `#if` del paquete.
+- La guarda es `AF_MOBILE_NOTIFICATIONS && UNITY_ANDROID && !UNITY_EDITOR`: el cuerpo se compila en el build de Android (comprobado con `BuildDev`) y en el editor sigue el falso.
+- La hora va en UTC (el paquete la convierte con `ToUniversalTime`), no en hora local: un cambio de zona después de programar no mueve el aviso (cierra el riesgo 5).
+- `ShouldAutoCancel` = true (el aviso se quita al tocarlo); la intención ya contada se recuerda por proceso, para que la reconstrucción por idioma no repita `af_push_open`.
+- **Banda <13 (B12):** al bloquear (en el arranque o al corregir la edad) se cancela todo lo programado y la bandeja (`GameBootstrap.CancelNotificationsForBlock`); el diálogo nativo nunca sale sin «Avísame». Con 13-17 y 18+ los avisos son los mismos, siempre con su opt-in: son recordatorios del estado del juego, sin datos ni anuncios.
+- **Ajustes del paquete:** `ProjectSettings/NotificationsSettings.asset` lo generó Unity al construir, con los valores por defecto, y va versionado: «Schedule at exact time» apagado (`UnityNotificationAndroidScheduleExactAlarms` = 0; `exact_scheduling` = 0 en el manifiesto) y «Reschedule on Device Restart» apagado (`UnityNotificationAndroidRescheduleOnDeviceRestart` = False). Solo se cambian desde Project Settings › Mobile Notifications (regla dura 3), y un test de EditMode (`DeviceNotificationsTests`) exige esos dos valores. Su parte de iOS trae «Request Authorization on App Launch» encendido (valor por defecto del paquete): no afecta a Android, pero hay que apagarlo en el Editor antes del primer build de iOS (06 §8.1). El manifiesto fusionado del `dev.apk` solo gana `POST_NOTIFICATIONS` y el receptor `UnityNotificationManager` (no exportado); `ci/check-manifest.ps1` lo admite y hace fallar, con una pista, `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED` y `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
+- La lista de programados de `af_push_sent` (`PlayerPrefs` `af_push_scheduled`) usa `AF.Platform.ScheduledNotificationLog` (sin motor, con tests de entradas corruptas).
+- **Para probarlo en el teléfono** sin la tarjeta del pre-prompt ni la fila de Ajustes (que siguen faltando en la UI): el extra de desarrollo `af_dev_push` (`docs/dev/prototipo-v0.md`).
+- Siguen pendientes: el icono pequeño de silueta y el grande de TiTino (arte; sin ellos Android usa el icono de la app) y la UI del pre-prompt y de «Avisos».
+
+Lo que sigue es la nota original del Spark.
+
 **Qué trae:**
 - `Packages/manifest.json`: `"com.unity.mobile.notifications": "2.4.3"`.
 - `Scripts/UI/AF.UI.asmdef`: la referencia `Unity.Notifications.Android` y un `versionDefines` que define `AF_MOBILE_NOTIFICATIONS` con el paquete.

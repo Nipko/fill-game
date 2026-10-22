@@ -21,10 +21,11 @@
          aprobo el dueno en D-039 y su anadido del 2026-10-21 (los trae Firebase Analytics, play-services-measurement;
          el segundo es el Install Referrer de Play). AD_ID, ACCESS_ADSERVICES_ATTRIBUTION, ACCESS_ADSERVICES_AD_ID y
          READ_GSERVICES se quitan en Assets/Plugins/Android/LauncherManifest.xml y siguen fuera de la lista blanca.
-         android.permission.POST_NOTIFICATIONS esta aprobado en D-033 (Q-M5) junto con el paquete
-         com.unity.mobile.notifications, pero todavia NO esta en la lista blanca: entra en $BasePermissions
-         en la misma tarea que integre ese paquete (mientras tanto falla con una pista; un build de prueba
-         puede pasarlo con -AllowPermission android.permission.POST_NOTIFICATIONS).
+         android.permission.POST_NOTIFICATIONS lo aprobo el dueno en D-033 (Q-M5) y su anadido del 2026-10-21,
+         con el paquete com.unity.mobile.notifications 2.4.3 (lo declara su manifiesto, Android 13+). Las alarmas
+         son inexactas: SCHEDULE_EXACT_ALARM, USE_EXACT_ALARM, RECEIVE_BOOT_COMPLETED y
+         REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (los anade el paquete si se tocan sus ajustes) siguen fuera de la
+         lista blanca y fallan con una pista.
       3. Play Billing: si el manifiesto lleva la meta-data com.google.android.play.billingclient.version
          o el permiso BILLING, la version mayor debe ser >= 8 (08 sec. 13.1 #4). Sin billing se anota
          (todavia no hay IAP); con -RequireBilling, falla.
@@ -86,12 +87,14 @@ $BillingMetaName = 'com.google.android.play.billingclient.version'
 $BillingPermission = 'com.android.vending.BILLING'
 $InternetPermission = 'android.permission.INTERNET'          # aprobado: D-036
 $NetworkStatePermission = 'android.permission.ACCESS_NETWORK_STATE'   # aprobado: D-037 (comun net, 08 sec. 8.1)
-# Aprobado en D-033 (Q-M5) con com.unity.mobile.notifications; se anade a $BasePermissions al integrar ese paquete
-# (y solo ese: SCHEDULE_EXACT_ALARM, USE_EXACT_ALARM y RECEIVE_BOOT_COMPLETED siguen fuera de la lista blanca).
+# Aprobado en D-033 (Q-M5) y su anadido del 2026-10-21, con com.unity.mobile.notifications 2.4.3. Solo ese: las
+# alarmas son inexactas, asi que los permisos de alarma exacta, de reinicio y de bateria siguen fuera (con pista).
 $NotificationsPermission = 'android.permission.POST_NOTIFICATIONS'
+$NotificationsNotApproved = @('android.permission.SCHEDULE_EXACT_ALARM', 'android.permission.USE_EXACT_ALARM',
+    'android.permission.RECEIVE_BOOT_COMPLETED', 'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS')
 $WakeLockPermission = 'android.permission.WAKE_LOCK'   # aprobado: D-039 (Firebase Analytics)
 $InstallReferrerPermission = 'com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE'   # aprobado: D-039, anadido del 2026-10-21 (Install Referrer de Play)
-$BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission)
+$BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission, $NotificationsPermission)
 
 function Stop-WithCode {
     param([int]$Code, [string]$Message)
@@ -254,8 +257,8 @@ function Test-Manifest($M, [string]$Prof, [int]$Target, [int]$Min, [string[]]$Ex
     foreach ($p in $M.Permissions) {
         if (-not $seen.Add($p)) { continue }
         if ($allowed.Contains($p)) { continue }
-        if ($p -eq $NotificationsPermission) {
-            $fail.Add("permiso fuera de la lista blanca: '$p' (aprobado en D-033 Q-M5, pero entra en la lista blanca de este script con la tarea que integra com.unity.mobile.notifications; hasta entonces, -AllowPermission $p)")
+        if ($p -in $NotificationsNotApproved) {
+            $fail.Add("permiso fuera de la lista blanca: '$p' (D-033 Q-M5 solo aprueba POST_NOTIFICATIONS con alarmas inexactas: deja en Mobile Notifications 'Schedule at exact time' y 'Reschedule on Device Restart' apagados; regla dura 4)")
         }
         else { $fail.Add("permiso fuera de la lista blanca: '$p' (regla dura 4: lo aprueba el dueno)") }
     }
@@ -352,8 +355,13 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'xml: minSdk 24';                              Fmt = 'xml'; Text = $okXml.Replace('minSdkVersion="26"', 'minSdkVersion="24"'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: permiso CAMERA';                         Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.CAMERA'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: CAMERA con -AllowPermission';            Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.CAMERA'); Prof = 'release'; Fails = 0; Allow = @('android.permission.CAMERA') }
-        @{ Name = 'xml: POST_NOTIFICATIONS sin integrar';        Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.POST_NOTIFICATIONS'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: POST_NOTIFICATIONS aprobado (D-033 Q-M5)'; Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.POST_NOTIFICATIONS'); Prof = 'release'; Fails = 0 }
         @{ Name = 'xml: POST_NOTIFICATIONS con -AllowPermission'; Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.POST_NOTIFICATIONS'); Prof = 'release'; Fails = 0; Allow = @('android.permission.POST_NOTIFICATIONS') }
+        @{ Name = 'xml: SCHEDULE_EXACT_ALARM sigue fuera';       Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.SCHEDULE_EXACT_ALARM'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: USE_EXACT_ALARM sigue fuera';            Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.USE_EXACT_ALARM'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: RECEIVE_BOOT_COMPLETED sigue fuera';     Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.RECEIVE_BOOT_COMPLETED'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: IGNORE_BATTERY_OPTIMIZATIONS sdk-23 fuera'; Fmt = 'xml'; Text = $okXml.Replace('<uses-permission android:name="android.permission.VIBRATE"/>', '<uses-permission-sdk-23 android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'aapt2: POST_NOTIFICATIONS en build de prueba'; Fmt = 'tree'; Text = $okTree.Replace('"android.permission.VIBRATE"', '"android.permission.POST_NOTIFICATIONS"'); Prof = 'dev'; Fails = 0 }
         @{ Name = 'xml: billing 7';                              Fmt = 'xml'; Text = $okXml.Replace('android:value="8.0.0"', 'android:value="7.1.1"'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: BILLING sin meta-data';                  Fmt = 'xml'; Text = $okXml.Replace('com.google.android.play.billingclient.version" android:value="8.0.0"', 'otra" android:value="8.0.0"'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: appCategory social';                     Fmt = 'xml'; Text = $okXml.Replace('android:appCategory="0"', 'android:appCategory="4"'); Prof = 'release'; Fails = 1 }
@@ -398,10 +406,10 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
     if ($r.Failures.Count -ne 0 -or ($r.Notes | Where-Object { $_ -like '*INTERNET*' -or $_ -like '*ACCESS_NETWORK_STATE*' })) { $bad++; Write-Output "[FALLA] INTERNET o ACCESS_NETWORK_STATE aprobados dan fallos o notas: $((@($r.Failures) + @($r.Notes)) -join '; ')" }
     elseif (-not ((ConvertFrom-Aapt2Tree $okTree).Permissions -contains $NetworkStatePermission)) { $bad++; Write-Output '[FALLA] el caso aapt2 no lleva ACCESS_NETWORK_STATE' }
     else { Write-Output '[OK]    INTERNET (D-036) y ACCESS_NETWORK_STATE (D-037) aprobados: sin fallos ni nota' }
-    # La pista de POST_NOTIFICATIONS remite a D-033 Q-M5 (sin aprobarlo en la lista blanca).
-    $r = Test-Manifest (ConvertFrom-ManifestXml $okXml.Replace('android.permission.VIBRATE', $NotificationsPermission)) 'release' 36 26 @() $false $false
-    if (-not ($r.Failures | Where-Object { $_ -like '*POST_NOTIFICATIONS*Q-M5*' })) { $bad++; Write-Output '[FALLA] POST_NOTIFICATIONS sin la pista de D-033 Q-M5' }
-    else { Write-Output '[OK]    POST_NOTIFICATIONS falla con la pista de D-033 Q-M5' }
+    # Las alarmas exactas y el reinicio fallan con la pista de D-033 Q-M5 (alarmas inexactas).
+    $r = Test-Manifest (ConvertFrom-ManifestXml $okXml.Replace('android.permission.VIBRATE', 'android.permission.SCHEDULE_EXACT_ALARM')) 'release' 36 26 @() $false $false
+    if (-not ($r.Failures | Where-Object { $_ -like '*SCHEDULE_EXACT_ALARM*Q-M5*' })) { $bad++; Write-Output '[FALLA] SCHEDULE_EXACT_ALARM sin la pista de D-033 Q-M5' }
+    else { Write-Output '[OK]    SCHEDULE_EXACT_ALARM falla con la pista de D-033 Q-M5' }
     $total = $cases.Count + 2
     if ($bad -gt 0) { Stop-WithCode 1 "AUTOTEST: $bad de $total casos fallan." }
     Write-Output "AUTOTEST OK: $total casos."

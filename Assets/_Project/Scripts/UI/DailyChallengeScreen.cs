@@ -140,6 +140,12 @@ namespace AF.UI
         /// <summary>Vista del tablero (null hasta la primera partida).</summary>
         public GameScreen? View => _view;
 
+        /// <summary>
+        /// Prepara el flujo y la vista de cada partida antes de construir el tablero (bloque B9: Reducir movimiento, su factor, Alto
+        /// contraste y el lector de pantalla, que pone <c>GameBootstrap.A11y</c>); null, nada.
+        /// </summary>
+        public Action<LevelFlow, GameScreen>? Prepare { get; set; }
+
         /// <summary>Almacén de la partida abierta (R-Q4), o null.</summary>
         public DailyLevelStateStore? StateStore => _stateStore;
 
@@ -211,6 +217,7 @@ namespace AF.UI
             _calendarFromCard = false;
 
             GameScreen view = EnsureView();
+            Prepare?.Invoke(flow, view); // B9: antes de que StartDaily/ResumeDaily construya el tablero
             view.Bind(flow, _context.Services);
             view.SetVisible(true);
             _levelStartBoard = play.BoardId; // level_start pendiente: sale al terminar Llenar y teñir (08 §8.2), una vez por partida

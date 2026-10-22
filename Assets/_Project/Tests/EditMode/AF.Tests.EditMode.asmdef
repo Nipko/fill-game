@@ -27,7 +27,8 @@
     "AF.RemoteConfig",
     "AF.RemoteConfig.Binding",
     "AF.Analytics",
-    "AF.Backend"
+    "AF.Backend",
+    "AF.Platform.Notifications"
   ],
   "includePlatforms": [
     "Editor"

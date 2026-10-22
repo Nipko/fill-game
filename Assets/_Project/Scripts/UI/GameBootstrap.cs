@@ -924,6 +924,7 @@ namespace AF.UI
                 profile.Settings.SlothMessages);
             settings.MarkAudio(profile.Settings.Sound, profile.Settings.Music, profile.Settings.Haptics); // AU1
             settings.MarkIdleHint(profile.Settings.IdleHint); // MO3
+            settings.MarkA11y(_reduceMotionNow, profile.Settings.HighContrast); // B9
             ShowAccountCode(); // F3-5: el código de borrado para la web en lugar del UID (Q-B13-21; GameBootstrap.Backend.cs)
             RefreshConsentRows(); // B12: «Privacidad y datos» y «Corregir mi edad» (GameBootstrap.Consent.cs)
             _skipNextDelta = true;
@@ -1616,9 +1617,9 @@ namespace AF.UI
             if (_splash != null)
             {
                 // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
-                // de la victoria) o sin su arte final (release), no sale y no hay espera. Reducir movimiento aún no es un ajuste
-                // del jugador (07 §7.8): la pose se anima.
-                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: false))
+                // de la victoria) o sin su arte final (release), no sale y no hay espera. Con Reducir movimiento (B9; 02 §12, fila
+                // «Mensajes de TiTino»), pose quieta y fundido.
+                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: ResolveReduceMotion(profile)))
                 {
                     yield return null; // TiTino, a la vista mientras se construye el resto
                 }
@@ -1714,6 +1715,7 @@ namespace AF.UI
             SetUpLogbook(); // Bitácora del río y cola de takeovers (B4-3; GameBootstrap.Logbook.cs): tarjeta, libreta y takeover
             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
             SetUpMarket(); // B5 (GameBootstrap.Market.cs): el Mercado, las ofertas y el Cántaro, con las sesiones de B6
+            SetUpA11y(); // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y el lector de pantalla
             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
             SetUpConsent(clock, consentStore); // B12: cifras, país y perfil legal, flujo y pantalla (GameBootstrap.Consent.cs)
             ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
@@ -1785,6 +1787,7 @@ namespace AF.UI
             }
 
             TickBackend(Time.unscaledDeltaTime * 1000f); // F3-5: la cola de verificación de compras, cada pocos segundos
+            TickA11y(Time.unscaledDeltaTime * 1000f); // B9: el lector de pantalla (solo con TalkBack) y el Reto
 
             float dt = Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs);
             if (_skipNextDelta)
@@ -2274,6 +2277,7 @@ namespace AF.UI
         {
             CutSplash();
             PersistNow("destruir la escena");
+            ClearA11y(); // B9: TalkBack no se queda con los nodos de esta escena (recarga por idioma o por borrar la cuenta)
 
             // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
             // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya

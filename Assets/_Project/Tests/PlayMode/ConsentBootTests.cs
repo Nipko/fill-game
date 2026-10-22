@@ -121,6 +121,32 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Under13_CancelsTheLocalNotifications_AndNeverAsksForThePermission()
+        {
+            // Q-M5 de D-033 (añadido del 2026-10-21) y 08 §7: con <13 no queda ningún aviso local programado ni en la bandeja, y el
+            // diálogo nativo de POST_NOTIFICATIONS nunca sale.
+            var scheduler = new FakeNotificationScheduler(new ManualClock(T0));
+            GameBootstrap.NotificationSchedulerOverride = scheduler;
+            var store = new MemoryProfileStore();
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap first = GameBootstrap.Current!;
+            int cancelsBefore = scheduler.CancelCount;
+            first.ConsentView!.AgeButton(AgeBand.Under13).onClick.Invoke();
+            yield return null;
+            Assert.That(first.ConsentBlocked, Is.True);
+            Assert.That(scheduler.CancelCount, Is.GreaterThan(cancelsBefore), "el bloqueo cancela los avisos locales");
+            Assert.That(scheduler.Scheduled.Count, Is.EqualTo(0));
+
+            first.SessionsPaused(true); // pasar a segundo plano bloqueado no programa nada
+            Assert.That(scheduler.Scheduled.Count, Is.EqualTo(0));
+            yield return PlayModeHelpers.WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked,
+                "el arranque bloqueado tras elegir <13");
+            Assert.That(GameBootstrap.Current!.Notifications, Is.Null, "sin sesiones ni avisos en el arranque bloqueado");
+            Assert.That(scheduler.PermissionRequests, Is.EqualTo(0), "06 §8.1: nunca el diálogo nativo sin «Avísame»");
+        }
+
+        [UnityTest]
         public IEnumerator Settings_CorrectingTo13_Blocks_WithoutTheSession()
         {
             var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Teen)));

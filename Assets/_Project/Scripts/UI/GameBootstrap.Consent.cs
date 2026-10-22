@@ -104,6 +104,7 @@ namespace AF.UI
 
             ConsentBlocked = true;
             Under13Firebase(); // F3-6: Crashlytics apagado y la analítica sin recoger, de forma explícita (persisten entre arranques)
+            CancelNotificationsForBlock(); // Q-M5: con <13, ningún aviso local pendiente ni en la bandeja (08 §7)
             CutSplash();
             _consentScreen ??= new ConsentScreen(transform, _art);
             _consentScreen.ShowBlocked();
@@ -275,6 +276,7 @@ namespace AF.UI
         {
             ConsentBlocked = true;
             Under13Firebase(); // F3-6 (ApplyConsentFlags ya apagó la analítica; Crashlytics, aquí)
+            CancelNotificationsForBlock(); // Q-M5: los avisos locales programados en otra salida, fuera (08 §7)
             _consentScreen?.ShowBlocked();
             ProbeConsent();
             RebuildUi(); // el perfil en memoria viaja al arranque siguiente (también si no se pudo guardar: perfil en solo lectura)

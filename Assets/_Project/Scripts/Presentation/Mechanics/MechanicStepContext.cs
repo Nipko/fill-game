@@ -107,8 +107,8 @@ namespace AF.Presentation.Mechanics
         public ProceduralArt? Art { get; }
 
         /// <summary>
-        /// Multiplica las duraciones nominales: el factor del nivel (02 §4, <c>anim_speed_factor_*</c>), × 0,5 con
-        /// <see cref="ReduceMotion"/> y el recorte del presupuesto desde el último vertido tocado (FX6; como mucho × 0,35;
+        /// Multiplica las duraciones nominales: el factor del nivel (02 §4, <c>anim_speed_factor_*</c>), ×
+        /// <c>anim_reduce_motion_factor</c> (0,5; B9) con <see cref="ReduceMotion"/> y el recorte del presupuesto desde el último vertido tocado (FX6; como mucho × 0,35;
         /// ver <see cref="MechanicStepQueue"/>).
         /// </summary>
         public float SpeedFactor { get; }
