@@ -20,7 +20,7 @@ El archivo de traducciones va en UTF-8 sin BOM, LF, RFC 4180 y en orden ordinal 
 nombre: strings*.csv va a strings.csv y facts*.csv a facts.csv.
 
 Uso (desde la raíz del repositorio):
-    python tools/loc/apply_translations.py                 # aplica strings.csv, strings_p14.csv y strings_t2b.csv de la carpeta de entrega
+    python tools/loc/apply_translations.py                 # aplica strings.csv, strings_p14.csv, strings_t2b.csv, facts_mapa.csv y facts_mapa_2.csv de la carpeta de entrega
     python tools/loc/apply_translations.py --check         # no escribe; código 1 si aplicar cambiaría algo o hay conflictos
     python tools/loc/apply_translations.py <archivos.csv>  # solo esos archivos (strings_mapa.csv, strings_glosario.csv, facts*.csv)
     python tools/loc/apply_translations.py --self-test     # pruebas propias, en memoria
@@ -36,6 +36,11 @@ Retención (T2-Q6; 08 §4.7: «una traducción solo vale con status en aprobado_
 mientras el español no esté aprobado): en facts.csv, una fila con status por debajo de aprobado_es no se escribe; sale como
 «RETENIDA» (aviso, no conflicto) y se aplicará cuando el asesor apruebe el español. Si entonces el español cambió, la
 comprobación del es-419 la convierte en conflicto.
+Excepción, el bloque map.* (prueba en el teléfono del 2026-10-23, observación 1: los nombres de parada, las preguntas de
+los mundos y los datos del Mapa salían vacíos en en y pt-BR porque estaban retenidos): sus filas se escriben aunque el
+español siga en pendiente_asesor. Siguen sin llegar al jugador en release, porque Loc solo muestra un texto largo con
+aprobado_es y revisado_nativo (08 §4.7); en desarrollo, como el español sin aprobar, sí se ven. stops.py las conserva solo
+mientras el es-419 no cambie (T2-Q1). El resto de facts.csv (frutas y fauna) sigue retenido.
 
 Qué hace y qué no:
 - Cambia solo las celdas en, pt-BR, status_en y status_pt-BR de las filas citadas. Las demás filas, las demás columnas, el
@@ -68,7 +73,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_LOC = REPO / "Assets" / "_Project" / "Data" / "Loc"
 DEFAULT_DIR = REPO / "docs" / "dev" / "traspaso" / "spark-traducciones"
-DEFAULT_FILES = ("strings.csv", "strings_p14.csv", "strings_t2b.csv")
+DEFAULT_FILES = ("strings.csv", "strings_p14.csv", "strings_t2b.csv", "facts_mapa.csv", "facts_mapa_2.csv")
 STATUS_ORDER = {"": 0, "borrador": 1, "pendiente_asesor": 2, "aprobado_es": 3}
 STOPS_MARKER = "PRESERVED_LOCALE_COLUMNS"  # lo añade stops-preserve.diff a tools/river-map/stops.py
 MAP_TEST_OLD = 'Is.Empty, key + " (" + locale + "): pendiente del traductor"'  # lo quita MapTextTests.diff
@@ -293,7 +298,8 @@ def apply(table_text: str, table_name: str, translations: list[dict], tr_name: s
             res.conflicts.append(f"{tr_name} {key}: el es-419 de la tabla cambió desde la traducción "
                                  f"(tabla «{values['es-419']}», traducción «{tr['es-419']}»)")
             continue
-        if table_name.startswith("facts") and STATUS_ORDER.get(values["status"], 0) < STATUS_ORDER["aprobado_es"]:
+        if (table_name.startswith("facts") and not key.startswith(GENERATED_PREFIX)
+                and STATUS_ORDER.get(values["status"], 0) < STATUS_ORDER["aprobado_es"]):
             if any(tr[loc] for loc in LOCALES):
                 res.retained.append(f"{tr_name} {key}: español en «{values['status'] or 'sin estado'}»; se aplicará con aprobado_es")
             continue
@@ -582,6 +588,14 @@ def self_test() -> int:
     rows12, _ = read_translations(tr([["map.stop.x.dato_01", "Dato", "Fact", "", "traducido", ""]]), "facts_mapa.csv")
     case("map.* sin el parche: conflicto", apply(facts2, "facts.csv", rows12, "facts_mapa.csv").conflicts)
     case("map.* con el parche: se escribe", apply(facts2, "facts.csv", rows12, "facts_mapa.csv", True).changes == ["map.stop.x.dato_01 (en)"])
+    # 12b. El bloque map.* no se retiene con el español en pendiente_asesor (observación 1 de la prueba del 2026-10-23); el
+    # resto de facts.csv, sí.
+    facts12 = (H + "fact.x.01,Mide 35 m,,,ctx,90,pendiente_asesor,,,,\n"
+               + "map.stop.x.dato_01,Dato,,,ctx,90,pendiente_asesor,,,generado,\n")
+    r12b = apply(facts12, "facts.csv", rows11[:1] + rows12, "facts_mapa.csv", True)
+    case("map.* en pendiente_asesor: se escribe; fact.* sigue retenida", r12b.changes == ["map.stop.x.dato_01 (en)"]
+         and len(r12b.retained) == 1 and "fact.x.01" in r12b.retained[0]
+         and "map.stop.x.dato_01,Dato,Fact,,ctx,90,pendiente_asesor,traducido,,generado," in (r12b.text or ""))
     # 13. Entregas que piden un parche.
     with tempfile.TemporaryDirectory() as d:
         repo = Path(d)
