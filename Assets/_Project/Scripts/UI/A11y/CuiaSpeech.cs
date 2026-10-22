@@ -12,7 +12,8 @@ namespace AF.UI
     /// <item><see cref="Label"/>: su etiqueta del lector de pantalla (02 §12, fila «Lector de pantalla»): las dosis de abajo
     /// arriba y los huecos («cuia 3: açaí, açaí, aguaje, 1 hueco»); una oculta se lee «turbia»; la Tinaja, sin nombres ocultos ni
     /// «turbia» ni huecos («tinaja: camu camu en la boca, 3 dosis dentro»), y su cuia, como una cuia («su cuia chica: açaí, 1
-    /// hueco»; D-019);</item>
+    /// hueco»; D-019); con mecánica, detrás el nombre de la mecánica (08 §14.2; Q-B9-14: «cuia 3: açaí, 1 hueco. Hoja»), con
+    /// <see cref="MechanicId"/>;</item>
     /// <item><see cref="Names"/>: los nombres de C9 (02 §3.1 y §12), de arriba abajo [P] y uno por línea: en una turbia, «turbia»
     /// por cada oculta (sin decir cuál es); en la Tinaja, solo la boca y las capas ya reveladas, nunca las ocultas.</item>
     /// </list>
@@ -50,9 +51,35 @@ namespace AF.UI
                 doses = A11yText.Append(doses, DoseName(cuia, k));
             }
 
-            return cuia.Mechanic == MechanicType.Cucharon
-                ? A11yText.Cucharon(doses, cuia.Count, cuia.Space)
-                : A11yText.Cuia(index + 1, doses, cuia.Count, cuia.Space);
+            if (cuia.Mechanic == MechanicType.Cucharon)
+            {
+                return A11yText.Cucharon(doses, cuia.Count, cuia.Space);
+            }
+
+            string label = A11yText.Cuia(index + 1, doses, cuia.Count, cuia.Space);
+            return A11yText.WithMechanic(label, A11yText.MechanicName(MechanicId(cuia)));
+        }
+
+        /// <summary>
+        /// Id del glosario (§6.5; <c>mechanic.&lt;id&gt;</c>) de la mecánica de <paramref name="cuia"/> que se dice en su etiqueta
+        /// (Q-B9-14), o «» si no se dice ninguna: una cuia normal, y la Tinaja y su cuia chica, que ya se nombran en la suya. El
+        /// Brote de dos hojas y la Liana de cuenta se distinguen por <c>n</c> (<see cref="Cuia.MechanicN"/>), como en el modelo.
+        /// </summary>
+        public static string MechanicId(Cuia cuia)
+        {
+            switch (cuia.Mechanic)
+            {
+                case MechanicType.Hoja: return "hoja";
+                case MechanicType.HojaAtada: return "hoja_atada";
+                case MechanicType.Brote: return cuia.MechanicN > 0 ? "brote_n2" : "brote";
+                case MechanicType.Liana: return cuia.MechanicN > 0 ? "liana_n" : "liana";
+                case MechanicType.Matapi: return "matapi";
+                case MechanicType.Remolino: return "remolino";
+                case MechanicType.Lluvia: return "lluvia";
+                case MechanicType.Pirana: return "pirana";
+                case MechanicType.Flor: return "flor";
+                default: return string.Empty;
+            }
         }
 
         /// <summary>

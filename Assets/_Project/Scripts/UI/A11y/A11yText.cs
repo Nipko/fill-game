@@ -33,7 +33,14 @@ namespace AF.UI
             Keys.Cuia, Keys.CuiaFull, Keys.CuiaEmpty, Keys.List, Keys.Murky, Keys.Mud, Keys.Tinaja, Keys.TinajaEmpty,
             Keys.Cucharon, Keys.CucharonFull, Keys.CucharonEmpty, Keys.Selected, Keys.ButtonRemaining, Keys.NamesJoin,
             Keys.SettingsReduceMotion, Keys.SettingsHighContrast, Keys.FruitUnnamed, Keys.Close, Keys.TapToContinue,
+            Keys.CuiaMechanic,
         };
+
+        /// <summary>
+        /// Prefijo de las claves de los nombres de las mecánicas en <c>facts.csv</c> (<c>mechanic.&lt;id&gt;</c>, las del glosario
+        /// §6.5 y de <c>glossary.csv</c>; Q-B9-14).
+        /// </summary>
+        public const string MechanicNamePrefix = "mechanic.";
 
         /// <summary>
         /// Etiqueta de la cuia en la ranura <paramref name="slot"/> (1..n) con <paramref name="count"/> dosis, ya en lista en
@@ -112,6 +119,30 @@ namespace AF.UI
             return name.Length > 0 ? name : Loc.T(Keys.FruitUnnamed);
         }
 
+        /// <summary>
+        /// Etiqueta de una cuia con mecánica (08 §14.2; Q-B9-14 (a)): <paramref name="cuia"/> (la de <see cref="Cuia"/>) y detrás
+        /// el nombre de la mecánica <paramref name="mechanic"/> («cuia 3: açaí, 1 hueco. Hoja»). Sin nombre (o si aún no se puede
+        /// enseñar en este idioma o build), la etiqueta tal cual.
+        /// </summary>
+        public static string WithMechanic(string cuia, string mechanic)
+        {
+            if (cuia == null)
+            {
+                throw new ArgumentNullException(nameof(cuia));
+            }
+
+            return string.IsNullOrEmpty(mechanic) ? cuia : Loc.T(Keys.CuiaMechanic, LocArgs.Of("cuia", cuia).And("mechanic", mechanic));
+        }
+
+        /// <summary>
+        /// Nombre visible de la mecánica <paramref name="id"/> (<c>mechanic.&lt;id&gt;</c> de <c>facts.csv</c>, glosario §6.5), o
+        /// «» si no lo hay en este idioma o build (en release, mientras no lo apruebe el asesor; Q-B9-14).
+        /// </summary>
+        public static string MechanicName(string id)
+        {
+            return string.IsNullOrEmpty(id) ? string.Empty : Loc.Fact(MechanicNamePrefix + id);
+        }
+
         /// <summary>Anuncio de la selección (02 §12): «açaí seleccionado: elige destino».</summary>
         public static string Selected(string fruit)
         {
@@ -159,6 +190,9 @@ namespace AF.UI
 
             /// <summary>«cuia {n}: {holes:plural:…}», vacía [P].</summary>
             public const string CuiaEmpty = "a11y_cuia_empty";
+
+            /// <summary>«{cuia}. {mechanic}»: la etiqueta de la cuia con el nombre de su mecánica [P] (08 §14.2; Q-B9-14).</summary>
+            public const string CuiaMechanic = "a11y_cuia_mechanic";
 
             /// <summary>Patrón de lista «{list}, {item}» [P].</summary>
             public const string List = "a11y_list";
