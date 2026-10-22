@@ -29,7 +29,8 @@
     "AF.Backend",
     "AF.Backend.Unity",
     "AF.Analytics.Firebase",
-    "AF.RemoteConfig.Firebase"
+    "AF.RemoteConfig.Firebase",
+    "AF.Platform.Notifications"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

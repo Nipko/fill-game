@@ -92,6 +92,7 @@ namespace AF.UI
             s_sessionsProfile = null;
             s_carriedSessions = null;
             s_carriedSessionStore = null;
+            ResetDevPush();
         }
 
         /// <summary>

@@ -1,0 +1,23 @@
+{
+  "name": "AF.Platform.Notifications",
+  "rootNamespace": "AF.Platform.Notifications",
+  "references": [
+    "AF.Platform",
+    "Unity.Notifications.Android"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [
+    {
+      "name": "com.unity.mobile.notifications",
+      "expression": "2.4.3",
+      "define": "AF_MOBILE_NOTIFICATIONS"
+    }
+  ],
+  "noEngineReferences": false
+}
