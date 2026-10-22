@@ -218,8 +218,8 @@ namespace AF.UI
                 _current.Add(item);
                 _refs.Add(nodeRef);
                 Apply(node, item);
-                node.frameGetter = () => nodeRef.Item.Rect != null ? ScreenFrame(nodeRef.Item.Rect!) : Rect.zero;
-                node.invoked += () => nodeRef.Live && nodeRef.Item.Invoke != null && nodeRef.Item.Invoke!();
+                node.frameGetter = nodeRef.Frame;
+                node.invoked += nodeRef.Invoke;
                 if (focused != null && string.Equals(item.Id, focused, StringComparison.Ordinal))
                 {
                     refocus = node;
@@ -246,6 +246,30 @@ namespace AF.UI
             public A11yItem Item { get; set; }
 
             public bool Live => ReferenceEquals(AssistiveSupport.activeHierarchy, _hierarchy);
+
+            // El marco del elemento de ahora (el de una publicación en sitio, no el de cuando se creó el nodo).
+            public Rect Frame()
+            {
+                return Item.Rect != null ? ScreenFrame(Item.Rect!) : Rect.zero;
+            }
+
+            // Activar: solo si su jerarquía es la activa (un nodo de una jerarquía vieja no hace nada).
+            public bool Invoke()
+            {
+                return Live && Item.Invoke != null && Item.Invoke!();
+            }
+        }
+
+        /// <summary>Lo que hace el nodo <paramref name="index"/> al activarlo (tests: un nodo viejo, tras republicar, no hace nada).</summary>
+        internal Func<bool> NodeInvoker(int index)
+        {
+            return _refs[index].Invoke;
+        }
+
+        /// <summary>El marco que da el nodo <paramref name="index"/> (tests: tras una publicación en sitio, el del elemento nuevo).</summary>
+        internal Func<Rect> NodeFrame(int index)
+        {
+            return _refs[index].Frame;
         }
 
         private static void Apply(AccessibilityNode node, A11yItem item)

@@ -137,18 +137,24 @@ namespace AF.UI
             }
         }
 
-        // El tablero acepta toques del lector: jugable y sin un modal encima (en su lienzo o en otro: la pausa, una confirmación). En la
-        // selección de la Luciérnaga también: tocar una cuia es elegir la que se revela (04 §2.5).
-        private bool BoardReadable()
+        // El tablero acepta toques del lector: jugable y sin un modal encima (la pausa, una confirmación). En la selección de la
+        // Luciérnaga también: tocar una cuia es elegir la que se revela (04 §2.5). Con otherCanvases, mira también los lienzos de
+        // encima (al activar un nodo); en Collect no hace falta: el escáner ya se paró en el lienzo que tapa.
+        private bool BoardReadable(bool otherCanvases)
         {
             LevelFlow? flow = _flow;
-            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && _views.Length > 0 && !A11yScanner.Covered(_canvas, _board);
+            if (flow == null || !flow.HasLevel || !flow.AcceptsBoardInput || _views.Length == 0)
+            {
+                return false;
+            }
+
+            return otherCanvases ? !A11yScanner.Covered(_canvas, _board) : !A11yScanner.BlockedAbove(_canvas, _board);
         }
 
         bool IA11ySource.Collect(Canvas canvas, A11yScanner scanner, List<A11yItem> into)
         {
             LevelFlow? flow = _flow;
-            if (!ReferenceEquals(canvas, _canvas) || flow == null || !BoardReadable())
+            if (!ReferenceEquals(canvas, _canvas) || flow == null || !BoardReadable(false))
             {
                 return false; // fuera del tablero jugable (intro, celebración, pausa, modales): el recorrido genérico
             }
@@ -234,7 +240,7 @@ namespace AF.UI
         // Activar una cuia con el lector (doble toque): el mismo toque que con el dedo (C1-C6), nunca a través de un modal.
         private bool TapFromReader(int index)
         {
-            if (!BoardReadable() || (uint)index >= (uint)_views.Length)
+            if (!BoardReadable(true) || (uint)index >= (uint)_views.Length)
             {
                 return false;
             }
@@ -299,14 +305,29 @@ namespace AF.UI
                 return;
             }
 
-            if (_hold.Tick(dtMs))
+            if (_hold.Fired)
             {
-                if (A11yScanner.Covered(_canvas, _board))
+                // Con los nombres a la vista, un velo que se abre encima en el mismo lienzo (la pausa no cambia la fase) los quita; el
+                // touch-up de ese dedo se sigue tragando. Sin asignar: solo mientras se ven.
+                if (A11yScanner.BlockedAbove(_canvas, _board))
                 {
-                    _hold.Cancel(); // la pausa u otro velo encima (no cambian la fase): sin nombres debajo
-                    return;
+                    _hold.Cancel();
+                    _namesBubble?.Hide();
                 }
 
+                return;
+            }
+
+            if (_hold.WouldFire(dtMs) && A11yScanner.Covered(_canvas, _board))
+            {
+                // Algo tapa el tablero justo cuando iban a salir los nombres: no salen, y como no llegaron a salir, soltar es un toque
+                // normal (el mismo camino que si el flujo cambia antes).
+                _hold.Cancel();
+                return;
+            }
+
+            if (_hold.Tick(dtMs))
+            {
                 ShowHoldNames(_hold.Index);
             }
         }

@@ -5,12 +5,14 @@ using System.Collections.Generic;
 using System.IO;
 using AF.GameFlow;
 using AF.Localization;
+using AF.Presentation;
 using AF.Save;
 using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Accessibility;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace AF.Tests.PlayMode
 {
@@ -78,6 +80,85 @@ namespace AF.Tests.PlayMode
                 {
                     Assert.That(UnityScreenReaderHost.ScreenFrame(item.Rect).Overlaps(viewport), Is.True, item.Label + ": dentro del visor");
                 }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ATapRelay_IsPublished_UnlessItsCanvasGroupStopsTouches()
+        {
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(4)));
+            var go = new GameObject("A11yRelayCanvas", typeof(RectTransform), typeof(Canvas));
+            try
+            {
+                Canvas canvas = go.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 90; // encima del inicio, sin tapar: es pequeño
+                CanvasGroup group = go.AddComponent<CanvasGroup>();
+                RectTransform relayRect = UiBuilder.Rect("Relay", go.transform);
+                UiBuilder.Place(relayRect, 40f, 40f, 80f, 80f);
+                UiBuilder.Image("Hit", relayRect, null, new Color(1f, 1f, 1f, 0.5f), raycast: true);
+                Image hit = relayRect.GetComponentInChildren<Image>();
+                int taps = 0;
+                hit.gameObject.AddComponent<PointerTapRelay>().Bind(() => taps++);
+                yield return null;
+
+                var host = new FakeScreenReaderHost(true);
+                var service = new A11yService(host);
+                service.Refresh();
+                string id = "tap_" + hit.gameObject.GetInstanceID();
+                A11yItem? relay = FindId(host.Items, id);
+                Assert.That(relay, Is.Not.Null, "un relé de toque se publica como botón");
+                Assert.That(relay!.Invoke!(), Is.True);
+                Assert.That(taps, Is.EqualTo(1), "activarlo es el mismo toque");
+
+                group.blocksRaycasts = false; // un velo que se va: un dedo ya no lo alcanza
+                service.Refresh();
+                Assert.That(FindId(host.Items, id), Is.Null, "ni se publica");
+                Assert.That(A11yScanner.Tap(hit.gameObject), Is.False, "ni se toca");
+                Assert.That(relay.Invoke(), Is.False);
+                Assert.That(taps, Is.EqualTo(1));
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(go);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator UnityHost_AnOldNodeDoesNothing_AndAnInPlaceUpdateUsesTheNewItem()
+        {
+            var go = new GameObject("A11yHostCanvas", typeof(RectTransform), typeof(Canvas));
+            var host = new UnityScreenReaderHost();
+            try
+            {
+                go.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+                RectTransform a = UiBuilder.Rect("A", go.transform);
+                UiBuilder.Place(a, 10f, 10f, 50f, 50f);
+                RectTransform b = UiBuilder.Rect("B", go.transform);
+                UiBuilder.Place(b, 100f, 10f, 70f, 50f);
+                yield return null;
+                int first = 0;
+                int second = 0;
+                host.Publish(new[] { new A11yItem("x", "uno", AccessibilityRole.Button, a, () => ++first > 0) });
+                Func<bool> old = host.NodeInvoker(0);
+                Assert.That(old(), Is.True);
+                Assert.That(first, Is.EqualTo(1));
+
+                // Misma identidad, otro elemento: el nodo es el mismo y hace lo nuevo, con el marco nuevo.
+                host.Publish(new[] { new A11yItem("x", "uno bis", AccessibilityRole.Button, b, () => ++second > 0) });
+                Assert.That(host.NodeInvoker(0)(), Is.True);
+                Assert.That(second, Is.EqualTo(1), "la publicación en sitio cambia lo que hace el nodo");
+                Assert.That(host.NodeFrame(0)().width, Is.EqualTo(UnityScreenReaderHost.ScreenFrame(b).width).Within(0.5f), "y su marco");
+
+                // Otra identidad: jerarquía nueva; el nodo viejo ya no hace nada.
+                host.Publish(new[] { new A11yItem("y", "dos", AccessibilityRole.Button, a, () => true) });
+                Assert.That(old(), Is.False, "un nodo de una jerarquía vieja no actúa");
+                Assert.That(first, Is.EqualTo(1));
+            }
+            finally
+            {
+                host.Clear();
+                UnityEngine.Object.Destroy(go);
             }
         }
 
@@ -165,6 +246,20 @@ namespace AF.Tests.PlayMode
             A11yItem? pause = host.Find(UiText.Pause);
             Assert.That(pause, Is.Not.Null, "02 §12: la pausa, botón de solo icono, dice «Pausa»");
             Assert.That(pause!.Role, Is.EqualTo(AccessibilityRole.Button));
+
+            // Un velo en otro lienzo de encima (como el Mercado o un anuncio): el lector se para en él y una cuia no se toca a través.
+            var veil = new GameObject("A11yVeilCanvas", typeof(RectTransform), typeof(Canvas));
+            veil.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            veil.GetComponent<Canvas>().sortingOrder = 100;
+            UiBuilder.Stretch(UiBuilder.Image("Veil", veil.transform, null, new Color(0f, 0f, 0f, 0.5f), raycast: true).rectTransform);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(items[1].Invoke!(), Is.False, "Covered: otro lienzo con velo tapa el tablero");
+            service.Refresh();
+            Assert.That(FindId(host.Items, "cuia_0"), Is.Null, "y el lector no publica las cuias de debajo");
+            UnityEngine.Object.DestroyImmediate(veil);
+            service.Refresh();
+            Assert.That(FindId(host.Items, "cuia_0"), Is.Not.Null);
+
             Assert.That(items[0].Invoke!(), Is.True);
             Assert.That(boot.Flow!.Selected, Is.EqualTo(0), "activar la cuia 1 la selecciona (C1), como el dedo");
             service.Refresh();
@@ -180,6 +275,19 @@ namespace AF.Tests.PlayMode
 
             Assert.That(items[1].Invoke!(), Is.False, "un nodo viejo de una cuia no toca a través de la pausa");
             boot.View.A11y = null;
+        }
+
+        private static A11yItem? FindId(IReadOnlyList<A11yItem> items, string id)
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].Id == id)
+                {
+                    return items[i];
+                }
+            }
+
+            return null;
         }
 
         private static bool Has(IReadOnlyList<A11yItem> items, AccessibilityRole role, string label)

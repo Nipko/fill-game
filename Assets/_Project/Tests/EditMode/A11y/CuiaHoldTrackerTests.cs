@@ -145,6 +145,29 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void ALostReleaseOfAnUntrackedFinger_IsForgottenWhenItsIdComesBack()
+        {
+            var hold = new CuiaHoldTracker();
+            hold.Press(1, 0, At); // A, seguido
+            hold.Press(4, 1, At); // B
+            hold.Release(1, 0); // A sube; el touch-up de B se pierde
+            hold.Press(2, 1, At); // el id de B vuelve a bajar: era un touch-up perdido
+            Assert.That(hold.Tick(400f), Is.True, "C9 no se queda bloqueado por un dedo que ya no está");
+            Assert.That(hold.Index, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void WouldFire_TellsTheStepThatShowsTheNames()
+        {
+            var hold = new CuiaHoldTracker();
+            hold.Press(1, 0, At);
+            Assert.That(hold.WouldFire(399f), Is.False);
+            Assert.That(hold.WouldFire(400f), Is.True);
+            hold.Tick(400f);
+            Assert.That(hold.WouldFire(16f), Is.False, "ya salieron");
+        }
+
+        [Test]
         public void Reset_ForgetsEverything()
         {
             var hold = new CuiaHoldTracker();

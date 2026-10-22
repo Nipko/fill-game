@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using AF.Platform;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -24,7 +25,9 @@ namespace AF.UI
         /// <summary>Sin cuia pulsada.</summary>
         public const int None = -1;
 
-        private int _fingers;
+        // Los dedos abajo sobre cuias, por su pointerId (sin asignar: capacidad para diez dedos). Un id que baja otra vez sin haber
+        // subido es un touch-up perdido: se descuenta solo ese dedo, sin tocar a los demás (C11 sigue valiendo).
+        private readonly List<int> _down = new List<int>(10);
         private int _pointer;
         private int _swallowed = None;
         private Vector2 _start;
@@ -49,27 +52,26 @@ namespace AF.UI
         public int Pointer => _pointer;
 
         /// <summary>Hay algún dedo abajo sobre una cuia.</summary>
-        public bool AnyDown => _fingers > 0;
+        public bool AnyDown => _down.Count > 0;
 
         /// <summary>Un dedo <paramref name="pointer"/> baja en la cuia <paramref name="index"/>, en <paramref name="positionDp"/> (dp).</summary>
         public void Press(int index, int pointer, Vector2 positionDp)
         {
-            if (_fingers > 0 && pointer == _pointer)
+            if (_down.Remove(pointer) && pointer == _pointer)
             {
-                // El mismo dedo vuelve a bajar: su touch-up se perdió (el lienzo se ocultó, el sistema canceló el toque). Se empieza
-                // de cero para que el contador de dedos no se quede arriba para siempre. (Un segundo dedo cuyo touch-up se pierda
-                // queda contado hasta el siguiente tablero o la vuelta de segundo plano, que llaman a Reset: así C11 nunca enseña
-                // nombres con otro dedo abajo.)
-                Reset();
+                // El dedo que se seguía vuelve a bajar: su touch-up se perdió (el lienzo se ocultó, el sistema canceló el toque).
+                Index = None;
+                Fired = false;
+                _pointer = int.MinValue;
             }
 
-            if (_fingers == 0)
+            if (_down.Count == 0)
             {
                 _swallowed = None; // un gesto nuevo
             }
 
-            _fingers++;
-            if (_fingers > 1)
+            _down.Add(pointer);
+            if (_down.Count > 1)
             {
                 // C11: otro dedo mientras uno estaba abajo; nada de nombres hasta que se suelten todos (si ya salieron, se quedan
                 // hasta soltar el primero).
@@ -100,6 +102,15 @@ namespace AF.UI
             {
                 Index = None; // C10: ya es un arrastre; no vuelve a contar hasta soltar
             }
+        }
+
+        /// <summary>
+        /// Los nombres saldrían en este paso de <paramref name="dtMs"/> ms (para mirar antes si algo los tapa y cortar sin tragarse el
+        /// touch-up: no llegaron a salir).
+        /// </summary>
+        public bool WouldFire(float dtMs)
+        {
+            return Index != None && !Fired && _heldMs + Mathf.Max(0f, dtMs) >= A11yRules.HoldMs;
         }
 
         /// <summary>Avanza <paramref name="dtMs"/> ms; devuelve true en el instante en que se cumplen los 400 ms (enseñar los nombres).</summary>
@@ -133,15 +144,15 @@ namespace AF.UI
                 _swallowed = index;
             }
 
-            _fingers = Mathf.Max(0, _fingers - 1);
+            _down.Remove(pointer);
             if (swallow || pointer == _pointer)
             {
                 Index = None;
                 Fired = false;
-                _pointer = int.MinValue; // ya no se sigue: un toque nuevo con el mismo id no es un touch-up perdido
+                _pointer = int.MinValue; // ya no se sigue
             }
 
-            if (_fingers == 0)
+            if (_down.Count == 0)
             {
                 int swallowed = _swallowed;
                 Reset();
@@ -180,7 +191,7 @@ namespace AF.UI
         public void Reset()
         {
             Index = None;
-            _fingers = 0;
+            _down.Clear();
             _pointer = int.MinValue;
             _heldMs = 0f;
             Fired = false;

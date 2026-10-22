@@ -182,8 +182,9 @@ namespace AF.UI
 
         /// <summary>
         /// Lo de <paramref name="marker"/> en <paramref name="canvas"/> está tapado: por un velo dibujado después en el mismo lienzo
-        /// (<see cref="BlockedAbove"/>) o por otro lienzo de encima con un velo (la pausa, que va en su propio lienzo). Recorre los
-        /// lienzos (asigna): solo para el lector y al ir a enseñar los nombres de C9, nunca por fotograma.
+        /// (<see cref="BlockedAbove"/>: la pausa, una confirmación) o por otro lienzo de encima con un velo (el Mercado, un anuncio, la
+        /// tarjeta del Reto), con el mismo orden que <see cref="Scan"/> (<see cref="IsAbove"/>). Recorre los lienzos (asigna): solo
+        /// al activar un nodo del lector y al ir a enseñar los nombres de C9, nunca por fotograma.
         /// </summary>
         public static bool Covered(Canvas canvas, Transform marker)
         {
@@ -197,7 +198,7 @@ namespace AF.UI
             {
                 Canvas c = all[i];
                 if (c != canvas && c.isRootCanvas && c.isActiveAndEnabled && c.renderMode != RenderMode.WorldSpace
-                    && c.sortingOrder > canvas.sortingOrder && HasBlocker(c))
+                    && IsAbove(c, canvas) && HasBlocker(c))
                 {
                     return true;
                 }
@@ -261,6 +262,21 @@ namespace AF.UI
             return true;
         }
 
+        /// <summary>
+        /// <paramref name="a"/> se dibuja encima de <paramref name="b"/> en el orden del lector: <see cref="Canvas.sortingOrder"/>
+        /// mayor y, con empate, el de <see cref="UnityEngine.Object.GetInstanceID"/> mayor (el mismo criterio que <see cref="Scan"/>).
+        /// </summary>
+        public static bool IsAbove(Canvas a, Canvas b)
+        {
+            return CompareTop(a, b) < 0;
+        }
+
+        // De arriba abajo: negativo si a va antes (encima) que b.
+        private static int CompareTop(Canvas a, Canvas b)
+        {
+            return a.sortingOrder != b.sortingOrder ? b.sortingOrder.CompareTo(a.sortingOrder) : b.GetInstanceID().CompareTo(a.GetInstanceID());
+        }
+
         // Los lienzos raíz activos, de arriba abajo (sortingOrder mayor primero; empate, el último creado encima).
         private static void RootCanvases(List<Canvas> into)
         {
@@ -275,7 +291,7 @@ namespace AF.UI
                 }
             }
 
-            into.Sort((a, b) => a.sortingOrder != b.sortingOrder ? b.sortingOrder.CompareTo(a.sortingOrder) : b.GetInstanceID().CompareTo(a.GetInstanceID()));
+            into.Sort(CompareTop);
         }
 
         // Recorrido en orden de dibujo: un velo descarta lo recogido hasta él en este lienzo.
