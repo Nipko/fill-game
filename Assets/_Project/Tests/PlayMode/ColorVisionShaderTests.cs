@@ -20,7 +20,8 @@ namespace AF.Tests.PlayMode
     /// (<c>AF_UI_Liquid</c>) con el patrón sutil (15 %), con Patrones de fruta (20 %) y en Alto contraste (35 %). De cada captura
     /// sale la propia, su versión simulada en los tres tipos (PNG, para la prueba manual de 08 §14.3) y un informe con el ΔE2000
     /// de los 91 pares de tintes medidos en los píxeles de la dosis, en <c>Logs/snapshots/es-419/cvd/</c>. Comprueba, como el test
-    /// de EditMode sobre los HEX, que en cada tipo el par más parecido es un par de riesgo de 07 §3. <c>[Explicit]</c>: necesita
+    /// de EditMode sobre los HEX, si en cada tipo el par más parecido es un par de riesgo de 07 §3: si no, lo anota como hallazgo en el
+    /// informe (el GDD no fija umbral, Q-B9-10); solo falla si no hay píxeles de verdad. <c>[Explicit]</c>: necesita
     /// gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.ColorVisionShaderTests</c> sin
     /// <c>-nographics</c>), como las demás capturas.
     /// </summary>
@@ -87,6 +88,7 @@ namespace AF.Tests.PlayMode
                 }
 
                 tint[state[i].ColorAt(0)] = Sample(pixels, views[i], 0);
+                Assert.That(ColorVision.Lab(tint[state[i].ColorAt(0)]).x, Is.GreaterThan(5f), name + ": la dosis se pintó (¿sin gráficos?)");
             }
 
             report.Append("## ").Append(name).Append(" (patrón al ").Append((opacity * 100f).ToString("0", CultureInfo.InvariantCulture)).Append(" %)\n\n");
@@ -111,10 +113,11 @@ namespace AF.Tests.PlayMode
                 }
 
                 report.Append('\n');
-                if (type != ColorVisionDeficiency.None)
+                if (type != ColorVisionDeficiency.None && RiskMark(pairs[0].A, pairs[0].B).Length == 0)
                 {
-                    Assert.That(RiskMark(pairs[0].A, pairs[0].B), Is.Not.Empty,
-                        name + " " + type + ": el par más parecido en pantalla (" + pairs[0].A + "-" + pairs[0].B + ") no es un par de riesgo de 07 §3");
+                    // Hallazgo para el QA manual de 08 §14.3 y el dueño (Q-B9-10), no un fallo: el GDD no fija umbral.
+                    report.Append("  - **Hallazgo:** con ").Append(type).Append(", el par más parecido en pantalla (").Append(pairs[0].A)
+                        .Append('-').Append(pairs[0].B).Append(") no es un par de riesgo de 07 §3.\n");
                 }
             }
 

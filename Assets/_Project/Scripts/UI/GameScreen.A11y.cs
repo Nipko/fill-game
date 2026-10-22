@@ -18,8 +18,9 @@ namespace AF.UI
     /// (<see cref="CuiaHoldTracker"/>, con el reloj de la pantalla) y el bocadillo con los nombres
     /// (<see cref="CuiaNamesBubble"/>). Al soltar tras los nombres no hay toque ni arrastre (<see cref="HoldSwallows"/>).</item>
     /// <item><b>Alto contraste</b> (<see cref="HighContrast"/>): el patrón del líquido al 35 % (<see cref="ApplyLevelPatterns"/>).</item>
-    /// <item><b>Reducir movimiento</b>: el factor de las duraciones del vertido (<see cref="MotionFactor"/>, 0,5 de
-    /// <c>anim_reduce_motion_factor</c>); el resto ya lo lleva <c>LevelFlow.ReduceMotion</c>.</item>
+    /// <item><b>Reducir movimiento</b> (02 §4 y §12; 07 §7.8): el factor de las duraciones del vertido
+    /// (<see cref="PourMotionFactor"/>, 0,5 de <c>anim_reduce_motion_factor</c>); el parche quita además la sacudida del rechazo,
+    /// la onda del agua y el confeti; el resto ya lo lleva <c>LevelFlow.ReduceMotion</c>.</item>
     /// <item><b>Lector de pantalla</b> (<see cref="A11y"/>): esta pantalla es una fuente propia (<see cref="IA11ySource"/>):
     /// con el tablero jugable, las cuias por orden de ranura, después la barra de comodines y después lo demás del lienzo (la
     /// pausa, los saldos…); la selección se anuncia (<see cref="A11yTapped"/>).</item>
@@ -77,10 +78,16 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Factor de las duraciones del vertido (02 §4: × <c>anim_reduce_motion_factor</c> con «Reducir movimiento»; 1 sin él). Lo
-        /// fija <c>GameBootstrap</c>; se toma al cargar cada nivel.
+        /// <c>anim_reduce_motion_factor</c> (08 §9: 0,5): con «Reducir movimiento» (<c>LevelFlow.ReduceMotion</c>), las duraciones
+        /// del vertido se multiplican por él (02 §4). Lo fija <c>GameBootstrap</c> desde Remote Config; se toma al cargar cada nivel.
         /// </summary>
-        internal float MotionFactor { get; set; } = 1f;
+        internal double ReduceMotionFactor { get; set; } = A11yConfig.Defaults.AnimReduceMotionFactor;
+
+        /// <summary>Factor de las duraciones del vertido del nivel de <paramref name="flow"/>: <see cref="ReduceMotionFactor"/> o 1.</summary>
+        internal float PourMotionFactor(LevelFlow flow)
+        {
+            return A11yRules.MotionFactor(flow.ReduceMotion, ReduceMotionFactor);
+        }
 
         /// <summary>El seguimiento de C9 (tests).</summary>
         internal CuiaHoldTracker Hold => _hold;
