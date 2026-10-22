@@ -31,6 +31,10 @@ namespace AF.EditorTools
     /// El ID y el nombre de release se ponen solo durante el build y se restauran al terminar, así que
     /// <c>ProjectSettings/</c> sigue con los valores de <see cref="ProjectSetup"/>.
     ///
+    /// Sin Development Build, Unity construye la variante <c>release</c> de Gradle, y
+    /// <c>Assets/Plugins/Android/settingsTemplate.gradle</c> excluye de ella <c>firebase-appcheck-debug</c> (release y ensayo;
+    /// D-033, añadido del 2026-10-22, punto 9). Compuerta: <c>ci/check-release-classes.ps1</c>.
+    ///
     /// Uso en batchmode (sin ningún Editor abierto en la carpeta; en el escritorio x64, <c>--architecture x86_64</c>):
     ///   unity run &lt;repo&gt; --architecture arm64 --log-file Logs/build-release.log --no-tail --timeout 5400 --non-interactive
     ///             -- -nographics -buildTarget Android -executeMethod AF.EditorTools.BuildRelease.BuildAndroid -afRehearsal -afApk
