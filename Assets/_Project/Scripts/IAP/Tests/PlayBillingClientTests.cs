@@ -423,7 +423,7 @@ namespace AF.IAP.Tests
         [Test]
         public void ALiveAnswerWithAKnownOrder_FailsTheOpenSheet_WithoutTrackingItTwice()
         {
-            // Unity IAP responde a un «cancelar» con el pedido sin terminar del mismo SKU que ya había (y la cola ya lo tiene).
+            // Un aviso en vivo que trae el pedido sin terminar del mismo SKU que ya había (y la cola ya lo tiene), no uno nuevo (Unity IAP lo hacía al cancelar).
             var account = new FakePlayAccount();
             FakePlayEntry old = account.Add("af_coins_2", FakePlayState.Purchased);
             (PlayBillingClient client, FakePlayStorePort port) = Ready(account);

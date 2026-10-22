@@ -133,10 +133,11 @@ namespace AF.IAP
     }
 
     /// <summary>
-    /// Tienda (GDD 08 §2.1 principio 6 y §2.2 <c>AF.IAP</c>). En la fase 2 (D-008) solo existe
-    /// <see cref="FakeStoreService"/>, sin Play Billing ni red; Unity IAP 5.4.4 entrará después detrás de esta misma
-    /// interfaz, con precios desde la tienda, verificación en el backend antes de acreditar (08 §10.3; D-035) y restauración: lo
-    /// hace <see cref="VerifiedStoreService"/> (F3-3) sobre <see cref="IBillingClient"/>.
+    /// Tienda (GDD 08 §2.1 principio 6 y §2.2 <c>AF.IAP</c>). En el editor y en los tests es <see cref="FakeStoreService"/>, sin
+    /// Play Billing ni red; la tienda real va detrás de esta misma interfaz, con precios desde la tienda, verificación en el
+    /// backend antes de acreditar (08 §10.3; D-035) y restauración: lo hace <see cref="VerifiedStoreService"/> (F3-3) sobre
+    /// <see cref="IBillingClient"/>, que en Android es <see cref="PlayBillingClient"/> con el plugin propio de Play Billing
+    /// Library 9.0.0 (D-040).
     /// Lo comprado se acredita siempre con <see cref="StoreLedger.Fulfill"/> (<c>Wallet.Apply</c>). Hilo principal.
     /// </summary>
     public interface IStoreService
@@ -152,9 +153,9 @@ namespace AF.IAP
 
         /// <summary>
         /// Precio que se muestra para <paramref name="sku"/> (moneda local): importe y moneda, que se escriben con la función única
-        /// de precios (<see cref="LocalPrice.ToString"/>, <c>Loc.Price</c>; D-025). El adaptador de Unity IAP lo compondrá desde
-        /// <c>priceAmountMicros</c> y el código de moneda del producto (D-025, punto 3 [P]; <c>Loc.PriceFromMicros</c>), nunca
-        /// desde la cadena formateada de Google Play.
+        /// de precios (<see cref="LocalPrice.ToString"/>, <c>Loc.Price</c>; D-025). <see cref="PlayBillingClient"/> lo compone desde
+        /// <c>getPriceAmountMicros</c> y <c>getPriceCurrencyCode</c> de la oferta de compra única (D-025, punto 3 [P];
+        /// <c>LocPrice.MinorUnitsFromMicros</c>), nunca desde la cadena formateada de Google Play.
         /// </summary>
         LocalPrice PriceOf(string sku);
 

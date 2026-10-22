@@ -78,7 +78,7 @@ namespace AF.Backend.Contract
         /// <summary><c>ok</c>: verificada; el cliente acredita <see cref="VerifyPurchaseResponse.Grant"/>.</summary>
         Ok = 0,
 
-        /// <summary><c>pending</c>: no se concede; la transacción sigue en Unity IAP.</summary>
+        /// <summary><c>pending</c>: no se concede; la compra sigue sin terminar en Play Billing (08 §10.3).</summary>
         Pending = 1,
 
         /// <summary><c>duplicate</c>: el token ya está en el libro mayor de este UID.</summary>

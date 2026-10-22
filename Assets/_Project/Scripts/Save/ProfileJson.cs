@@ -463,7 +463,7 @@ namespace AF.Save
             Normalize(p.AppliedPurchases);
 
             // purchase_queue (F3-3 [P]): AF.Save no la interpreta; si no es un objeto, se descarta (las compras sin terminar
-            // vuelven con Unity IAP al arrancar y nada se acredita sin el servidor).
+            // vuelven de Play Billing al arrancar, D-040, y nada se acredita sin el servidor).
             JsonNode? queue = TolerantSection(root, "purchase_queue");
             p.PurchaseQueue = queue == null ? null : JsonText.Write(queue);
 

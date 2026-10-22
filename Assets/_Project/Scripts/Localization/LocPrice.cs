@@ -11,9 +11,9 @@ namespace AF.Localization
     /// es-CO, «COP 3.900»; en es-MX, «MXN 19»; en pt-BR, «BRL 4,99».
     /// <para>Es la única función de precios: la usan la tienda simulada (<c>AF.IAP</c>: <c>LocalPrice</c>,
     /// <c>FakeStoreService</c>) y, por ella, todos los textos con precio de la UI (<c>GameServices.PriceText</c>). Con la tienda
-    /// real (Unity IAP 5.4.4 y Play Billing; D-025, punto 3 [P]), el adaptador de <c>AF.IAP</c> compondrá el precio desde el importe
-    /// y la moneda del producto (<c>priceAmountMicros</c> y el código de moneda) con <see cref="MinorUnitsFromMicros"/> y
-    /// <see cref="Format"/>, en lugar de la cadena ya formateada de Google Play, para que la tienda simulada y la real se vean
+    /// real (el plugin propio de Play Billing Library 9.0.0, D-040; D-025, punto 3 [P]), <c>AF.IAP.PlayBillingClient</c> compone el
+    /// precio desde el importe y la moneda del producto (<c>getPriceAmountMicros</c> y <c>getPriceCurrencyCode</c>) con
+    /// <see cref="MinorUnitsFromMicros"/> y <see cref="Format"/>, en lugar de la cadena ya formateada de Google Play, para que la tienda simulada y la real se vean
     /// iguales.</para>
     /// </summary>
     public static class LocPrice
