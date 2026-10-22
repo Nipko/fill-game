@@ -24,9 +24,9 @@ map.stop.anavilhanas.dato_01.source,Câmara dos Deputados,Câmara dos Deputados,
 map.stop.anavilhanas.name,Anavilhanas,Anavilhanas,Anavilhanas,traducido,traducido
 map.stop.atalaya.dato_01,"En Atalaya, el Tambo y el Urubamba se juntan y nace el río Ucayali.","In Atalaya, the Tambo and the Urubamba meet and the Ucayali River is born.","Em Atalaya, o Tambo e o Urubamba se juntam e nasce o rio Ucayali.",traducido,traducido
 map.stop.atalaya.dato_01.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
-map.stop.atalaya.dato_02,"A Atalaya se llega por río, en avioneta o por una trocha de unos {n} km.","You reach Atalaya by river, by small plane or by a dirt track of about {n} km.","Chega-se a Atalaya pelo rio, de teco-teco ou por uma trilha de uns {n} km.",traducido,traducido
+map.stop.atalaya.dato_02,"A Atalaya se llega por río, en avioneta o por una trocha de unos {n} km.","You reach Atalaya by river, by small plane or by a dirt track of about {n} km.","Chega-se a Atalaya pelo rio, de teco-teco ou por uma trilha de uns {n} km.",traducido,traducido
 map.stop.atalaya.dato_02.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
-map.stop.atalaya.dato_03,El Urubamba corre unos {n} km desde los Andes de Puno hasta juntarse con el Tambo.,The Urubamba runs about {n} km from the Andes of Puno until it meets the Tambo.,O Urubamba corre uns {n} km dos Andes de Puno até se juntar ao Tambo.,traducido,traducido
+map.stop.atalaya.dato_03,El Urubamba corre unos {n} km desde los Andes de Puno hasta juntarse con el Tambo.,The Urubamba runs about {n} km from the Andes of Puno until it meets the Tambo.,O Urubamba corre uns {n} km dos Andes de Puno até se juntar ao Tambo.,traducido,traducido
 map.stop.atalaya.dato_03.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.atalaya.dato_04,"Atalaya se fundó en 1928, justo donde empieza el Ucayali.","Atalaya was founded in 1928, right where the Ucayali begins.","Atalaya foi fundada em 1928, bem onde começa o Ucayali.",traducido,traducido
 map.stop.atalaya.dato_04.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
@@ -46,7 +46,7 @@ map.stop.boca_del_xingu.name,Boca del Xingu,Mouth of the Xingu,Foz do Xingu,trad
 map.stop.boca_manu.dato_01,"En Boca Manu, el río Manu se junta con el Alto Madre de Dios.","At Boca Manu, the Manu River meets the Upper Madre de Dios.","Em Boca Manu, o rio Manu se junta ao Alto Madre de Dios.",traducido,traducido
 map.stop.boca_manu.dato_01.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.boca_manu.dato_02.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
-map.stop.boca_manu.dato_03,El río Manu mide unos {n} km y corre entero por la región de Madre de Dios.,The Manu River is about {n} km long and runs entirely through the Madre de Dios region.,O rio Manu mede uns {n} km e corre inteiro pela região de Madre de Dios.,traducido,traducido
+map.stop.boca_manu.dato_03,El río Manu mide unos {n} km y corre entero por la región de Madre de Dios.,The Manu River is about {n} km long and runs entirely through the Madre de Dios region.,O rio Manu mede uns {n} km e corre inteiro pela região de Madre de Dios.,traducido,traducido
 map.stop.boca_manu.dato_03.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.boca_manu.name,Boca Manu,Boca Manu,Boca Manu,traducido,traducido
 map.stop.boca_manu.river,Madre de Dios y Manu,Madre de Dios and Manu,Madre de Dios e Manu,traducido,traducido
@@ -54,7 +54,7 @@ map.stop.bolognesi.dato_01.source,Wikipedia,Wikipedia,Wikipedia,traducido,traduc
 map.stop.bolognesi.dato_02,Las lagunas que dejan las curvas del Amazonas son un buen hogar para el lobo de río.,The lagoons left by the Amazon's bends are a good home for the giant otter.,As lagoas que as curvas do Amazonas deixam são um bom lar para a ariranha.,traducido,traducido
 map.stop.bolognesi.dato_02.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.bolognesi.dato_03.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
-map.stop.bolognesi.dato_04,"Desde Atalaya hasta el Marañón, el Ucayali corre unos {n} km.","From Atalaya to the Marañón, the Ucayali runs about {n} km.","De Atalaya até o Marañón, o Ucayali corre uns {n} km.",traducido,traducido
+map.stop.bolognesi.dato_04,"Desde Atalaya hasta el Marañón, el Ucayali corre unos {n} km.","From Atalaya to the Marañón, the Ucayali runs about {n} km.","De Atalaya até o Marañón, o Ucayali corre uns {n} km.",traducido,traducido
 map.stop.bolognesi.dato_04.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.bolognesi.name,Bolognesi,Bolognesi,Bolognesi,traducido,traducido
 map.stop.breves.name,Breves,Breves,Breves,traducido,traducido
@@ -100,7 +100,7 @@ map.stop.iquitos.dato_01.source,Guinness World Records,Guinness World Records,Gu
 map.stop.iquitos.river,Amazonas e Itaya,Amazon and Itaya,Amazonas e Itaya,traducido,traducido
 map.stop.isla_de_marajo.name,Isla de Marajó,Marajó Island,Ilha de Marajó,traducido,traducido
 map.stop.itacoatiara.name,Itacoatiara,Itacoatiara,Itacoatiara,traducido,traducido
-map.stop.itaya.dato_01,"En la creciente, el Itaya sube 5-6 m y hay casas sobre balsas que flotan con él.","In the flood season, the Itaya rises 5-6 m and some houses on rafts float with it.","Na cheia, o Itaya sobe 5-6 m e há casas sobre balsas que flutuam com ele.",traducido,traducido
+map.stop.itaya.dato_01,"En la creciente, el Itaya sube 5-6 m y hay casas sobre balsas que flotan con él.","In the flood season, the Itaya rises 5-6 m and some houses on rafts float with it.","Na cheia, o Itaya sobe 5-6 m e há casas sobre balsas que flutuam com ele.",traducido,traducido
 map.stop.itaya.dato_01.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.itaya.name,Río Itaya (Iquitos),Itaya River (Iquitos),Rio Itaya (Iquitos),traducido,traducido
 map.stop.itaya.river,Itaya,Itaya,Itaya,traducido,traducido
@@ -152,7 +152,7 @@ map.stop.manu.name,Manu alto,Upper Manu,Alto Manu,traducido,traducido
 map.stop.manu.river,Manu,Manu,Manu,traducido,traducido
 map.stop.manu_cochas.name,Las cochas del Manu,The Manu oxbow lakes,As cochas do Manu,traducido,traducido
 map.stop.manu_cochas.river,Manu,Manu,Manu,traducido,traducido
-map.stop.mazan.dato_01,"Cerca de su boca, en Mazán, el Napo lleva de media unos {n} m³ de agua por segundo.","Near its mouth, at Mazán, the Napo carries on average about {n} m³ of water per second.","Perto da foz, em Mazán, o Napo leva em média uns {n} m³ de água por segundo.",traducido,traducido
+map.stop.mazan.dato_01,"Cerca de su boca, en Mazán, el Napo lleva de media unos {n} m³ de agua por segundo.","Near its mouth, at Mazán, the Napo carries on average about {n} m³ of water per second.","Perto da foz, em Mazán, o Napo leva em média uns {n} m³ de água por segundo.",traducido,traducido
 map.stop.mazan.dato_01.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.mazan.name,Mazán,Mazán,Mazán,traducido,traducido
 map.stop.misahualli.dato_01,"El Napo nace en las laderas de volcanes de Ecuador, como el Cotopaxi y el Antisana.","The Napo is born on the slopes of Ecuador's volcanoes, such as Cotopaxi and Antisana.","O Napo nasce nas encostas de vulcões do Equador, como o Cotopaxi e o Antisana.",traducido,traducido
@@ -206,15 +206,15 @@ map.stop.puerto_narino.name,Puerto Nariño,Puerto Nariño,Puerto Nariño,traduci
 map.stop.puerto_narino.river,Loretoyacu y Amazonas,Loretoyacu and Amazon,Loretoyacu e Amazonas,traducido,traducido
 map.stop.puerto_prado.dato_01,"En Puerto Prado, el Ene y el Perené se juntan y forman el río Tambo.","At Puerto Prado, the Ene and the Perené meet and form the Tambo River.","Em Puerto Prado, o Ene e o Perené se juntam e formam o rio Tambo.",traducido,traducido
 map.stop.puerto_prado.dato_01.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
-map.stop.puerto_prado.dato_02,El Perené mide unos {n} km y baja de las laderas orientales de los Andes.,The Perené is about {n} km long and comes down the eastern slopes of the Andes.,O Perené mede uns {n} km e desce das encostas orientais dos Andes.,traducido,traducido
+map.stop.puerto_prado.dato_02,El Perené mide unos {n} km y baja de las laderas orientales de los Andes.,The Perené is about {n} km long and comes down the eastern slopes of the Andes.,O Perené mede uns {n} km e desce das encostas orientais dos Andes.,traducido,traducido
 map.stop.puerto_prado.dato_02.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
-map.stop.puerto_prado.dato_03,El Tambo mide unos {n} km y es parte de las cabeceras del Amazonas.,The Tambo is about {n} km long and is part of the Amazon's headwaters.,O Tambo mede uns {n} km e faz parte das cabeceiras do Amazonas.,traducido,traducido
+map.stop.puerto_prado.dato_03,El Tambo mide unos {n} km y es parte de las cabeceras del Amazonas.,The Tambo is about {n} km long and is part of the Amazon's headwaters.,O Tambo mede uns {n} km e faz parte das cabeceiras do Amazonas.,traducido,traducido
 map.stop.puerto_prado.dato_03.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.puerto_prado.dato_04,"Río arriba quedan el Ene y el Apurímac, que nace en el nevado Mismi.","Upriver lie the Ene and the Apurímac, which is born on Mount Mismi.","Rio acima ficam o Ene e o Apurímac, que nasce no Nevado Mismi.",traducido,traducido
 map.stop.puerto_prado.dato_04.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.puerto_prado.name,Puerto Prado,Puerto Prado,Puerto Prado,traducido,traducido
 map.stop.puerto_prado.river,Tambo,Tambo,Tambo,traducido,traducido
-map.stop.requena.dato_01,"En Requena, el Ucayali lleva de media unos {n} m³ de agua por segundo.","At Requena, the Ucayali carries on average about {n} m³ of water per second.","Em Requena, o Ucayali leva em média uns {n} m³ de água por segundo.",traducido,traducido
+map.stop.requena.dato_01,"En Requena, el Ucayali lleva de media unos {n} m³ de agua por segundo.","At Requena, the Ucayali carries on average about {n} m³ of water per second.","Em Requena, o Ucayali leva em média uns {n} m³ de água por segundo.",traducido,traducido
 map.stop.requena.dato_01.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.requena.dato_02,Requena se fundó en 1907 a orillas del Tapiche y del Ucayali.,Requena was founded in 1907 on the banks of the Tapiche and the Ucayali.,Requena foi fundada em 1907 às margens do Tapiche e do Ucayali.,traducido,traducido
 map.stop.requena.dato_02.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
@@ -295,7 +295,7 @@ map.stop.yarinacocha.dato_01,El Ucayali cambia de curso: Yarinacocha es una viej
 map.stop.yarinacocha.dato_01.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.yarinacocha.dato_02,"En las lluvias, la laguna de Yarinacocha se une al Ucayali por sus dos extremos.","In the rainy season, the Yarinacocha lagoon joins the Ucayali at both ends.","Nas chuvas, a lagoa de Yarinacocha se une ao Ucayali pelas duas pontas.",traducido,traducido
 map.stop.yarinacocha.dato_02.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
-map.stop.yarinacocha.dato_03,La laguna de Yarinacocha mide unos {n} km de largo.,The Yarinacocha lagoon is about {n} km long.,A lagoa de Yarinacocha mede uns {n} km de comprimento.,traducido,traducido
+map.stop.yarinacocha.dato_03,La laguna de Yarinacocha mide unos {n} km de largo.,The Yarinacocha lagoon is about {n} km long.,A lagoa de Yarinacocha mede uns {n} km de comprimento.,traducido,traducido
 map.stop.yarinacocha.dato_03.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
 map.stop.yarinacocha.dato_04,"En Yarinacocha abundan las garzas, los shanshos y los patos silvestres.","Yarinacocha is full of herons, hoatzins and wild ducks.","Em Yarinacocha há muitas garças, ciganas e patos selvagens.",traducido,traducido
 map.stop.yarinacocha.dato_04.source,Wikipedia,Wikipedia,Wikipedia,traducido,traducido
