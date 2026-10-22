@@ -3447,3 +3447,11 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-R20-3:** el tope del 20 % se redondea hacia abajo (8, 12, 12, 20, 24, 28 y 28 en los mundos 3-9; 132 tableros).
 - **Q-R20-4:** en la 1.0, `level_overrides` solo se aplica cuando una mecánica está apagada (08 §9); sustituir niveles en alarma o por segmento (DDA, 03 §2 y §15) queda para otra tarea.
 - **Q-R20-5:** los tableros de reserva no publican `difficulty.D` (no entran en el pool del rango).
+
+### D-033, añadido del 2026-10-21: preguntas del cierre de B11, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `tanda5/b11-cierre` (revisión APROBADO). El dueño puede cambiarlas.
+- **P1:** a 360 × 640 (16:9) la fila «Bitácora · elige tu premio» no sale (necesitaría el escalón 3 de la victoria compacta); ahí la libreta sale sola al volver al inicio.
+- **P2:** en teléfonos de menos de 320 dp el lienzo mide 320 dp escalado; en un 16:9 de 320 dp manda el alto mínimo de 640 (lienzo 360 × 640).
+- **P3:** `af_label_shown` sale con cada intento, como `level_start`.
+- **P4:** al sellar desde la fila, la victoria se recoloca y «Siguiente» puede moverse una vez.
