@@ -1,0 +1,12 @@
+<!--
+Plugin propio de Play Billing de Amazon Fill (Assets/_Project/Plugins/Android/AfBilling.androidlib; docs/dev/iap.md).
+EDM4U (com.google.external-dependency-manager 1.2.189, el que trae Firebase) lee este archivo y escribe la dependencia en
+Assets/Plugins/Android/mainTemplate.gradle. Versión exacta aprobada por el dueño en D-040, añadido de Q-IAP-1 (2026-10-22):
+cambiarla exige otra aprobación. La misma versión va en el build.gradle del plugin (compileOnly).
+-->
+<dependencies>
+  <androidPackages>
+    <androidPackage spec="com.android.billingclient:billing:9.0.0">
+    </androidPackage>
+  </androidPackages>
+</dependencies>

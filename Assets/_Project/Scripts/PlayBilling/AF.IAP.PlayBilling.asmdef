@@ -1,0 +1,16 @@
+{
+  "name": "AF.IAP.PlayBilling",
+  "rootNamespace": "AF.IAP.PlayBilling",
+  "references": [
+    "AF.IAP"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

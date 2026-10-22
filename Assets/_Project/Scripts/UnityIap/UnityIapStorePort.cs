@@ -190,6 +190,10 @@ namespace AF.IAP.UnityIap
             }
         }
 
+        /// <inheritdoc />
+        /// <remarks>Unity IAP 5.4.4 no reconoce sin consumir (Q-IAP-2): este puerto se retira con <c>BILL-manifest.diff</c>.</remarks>
+        public bool Acknowledge(string token) => false;
+
         private void OnPurchasePending(PendingOrder order)
         {
             PlayOrder? mapped = Map(order, PlayOrderState.Purchased);
