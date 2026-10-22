@@ -21,7 +21,8 @@ namespace AF.Tests.PlayMode
     /// y <b>falla</b> si algún texto visible se sale de su caja, no cabe ni al mínimo del autoajuste, baja de 12 sp o se parte a
     /// media palabra (<see cref="LocInventory"/>).
     /// <para>
-    /// Mientras en y pt-BR estén incompletos, el idioma de desarrollo no se puede elegir (<see cref="LocTables.Configure(LocCatalog, string, bool)"/>
+    /// Desde la traducción 3 (D-033), en y pt-BR están completos y el andamio no rellena nada; si volviera a faltar alguna celda,
+    /// mientras en y pt-BR estén incompletos, el idioma de desarrollo no se puede elegir (<see cref="LocTables.Configure(LocCatalog, string, bool)"/>
     /// se queda en es-419): el test arranca con las tablas del proyecto (<see cref="LaunchOptions.LocTablesOverride"/>) en las que
     /// cada celda vacía del idioma medido se rellena, solo aquí, con el texto de es-419 (que ya mide la compuerta de en-XA con un
     /// 35 % más). Es un andamio de medida, nunca una tabla del juego: lo que se mide de verdad son las traducciones que ya están.

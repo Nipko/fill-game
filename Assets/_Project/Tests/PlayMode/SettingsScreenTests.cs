@@ -43,7 +43,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Language_DevThenSavedThenPhoneThenEn_AndTheNumbersFollowThePhoneRegion()
         {
-            // Teléfono en México: es-* → es-419 (el único completo) y las cifras de es-MX, «1,000».
+            // Teléfono en México: es-* → es-419 y las cifras de es-MX, «1,000».
             LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("es-MX");
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(4)));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -62,27 +62,29 @@ namespace AF.Tests.PlayMode
             Assert.That(Loc.NumberFormat.Tag, Is.EqualTo("es-CO"), "sin región, es-CO [P]");
             Assert.That(UiText.Grouped(1000), Is.EqualTo("1.000"));
 
-            // Teléfono en otro idioma sin región (en, pt): la UI es es-419 y las cifras no salen de la fila de ese idioma
-            // («1,000» de en), sino de es-CO (notas de la tanda 4, punto 10; revisión de L3).
-            foreach (string tag in new[] { "en", "pt" })
+            // Teléfono en otro idioma sin región (en, pt): con en y pt-BR completos (traducción 3, D-033), la UI sale en ese
+            // idioma y las cifras, de la fila del idioma de la UI (DefaultNumberTag: en «1,000», pt-BR «1.000»).
+            foreach ((string tag, string ui, string next, string grouped) in new[] { ("en", LocLocale.English, "Next", "1,000"), ("pt", LocLocale.PortugueseBrazil, "Próximo", "1.000") })
             {
                 LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale(tag);
                 yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(4)));
                 boot = GameBootstrap.Current!;
                 Assert.That(boot.DeviceTag, Is.EqualTo(tag), "AF_STATE loc enseña la etiqueta leída");
-                Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.SourceLocale), tag);
-                Assert.That(Loc.NumberFormat.Tag, Is.EqualTo("es-CO"), tag + " sin región: es-CO [P]");
-                Assert.That(UiText.Grouped(1000), Is.EqualTo("1.000"), tag);
+                Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(ui), tag);
+                Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Device), tag);
+                Assert.That(Loc.NumberFormat.Tag, Is.EqualTo(ui), tag + " sin región: la fila del idioma de la UI");
+                Assert.That(UiText.Grouped(1000), Is.EqualTo(grouped), tag);
+                Assert.That(UiText.Next, Is.EqualTo(next), tag);
             }
 
-            // Teléfono en Brasil: pt-BR aún no está completo y en tampoco → es-419 de respaldo, con las cifras de Brasil.
+            // Teléfono en Brasil: pt-BR completo → la UI en portugués, con las cifras de Brasil.
             LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("pt-BR");
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(4)));
             boot = GameBootstrap.Current!;
-            Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.SourceLocale));
-            Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Fallback), "notas de la tanda 4, punto 10");
+            Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.PortugueseBrazil));
+            Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Device), "pt-* → pt-BR, ya completo");
             Assert.That(Loc.NumberFormat.Tag, Is.EqualTo("pt-BR"));
-            Assert.That(UiText.Next, Is.EqualTo("Siguiente"), "nunca otro idioma a medias");
+            Assert.That(UiText.Next, Is.EqualTo("Próximo"));
 
             // El idioma guardado manda sobre el del teléfono…
             Profile saved = ProfileAt(4);
@@ -119,11 +121,13 @@ namespace AF.Tests.PlayMode
             Assert.That(settings.Title, Is.EqualTo("Ajustes"));
             Assert.That(settings.LanguageTitle, Is.EqualTo("Idioma"));
             Assert.That(settings.PatternsTitle, Is.EqualTo("Patrones de fruta"));
-            Assert.That(settings.LanguageOptions, Is.EqualTo(new[] { "auto", LocLocale.SourceLocale, LocLocale.Pseudo }),
-                "Automático, los idiomas con la UI completa (hoy es-419) y, en desarrollo, en-XA");
+            Assert.That(settings.LanguageOptions, Is.EqualTo(new[] { "auto", LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil, LocLocale.Pseudo }),
+                "Automático, los idiomas con la UI completa (es-419, en y pt-BR desde la traducción 3, D-033) y, en desarrollo, en-XA");
             Assert.That(settings.LanguageLabel("auto"), Is.EqualTo("Automático"));
             Assert.That(settings.LanguageLabel(LocLocale.SourceLocale), Is.EqualTo("Español"), "con su nombre propio");
-            Assert.That(settings.LanguageLabel("en"), Is.Null, "en no está completo: no se ofrece");
+            Assert.That(settings.LanguageLabel(LocLocale.English), Is.EqualTo("English"), "con su nombre propio");
+            Assert.That(settings.LanguageLabel(LocLocale.PortugueseBrazil), Is.EqualTo("Português"), "con su nombre propio");
+            Assert.That(settings.LanguageLabel("fr"), Is.Null, "fr no es una columna: no se ofrece");
             Assert.That(settings.LanguageMarked("auto"), Is.True, "lo guardado: auto");
             Assert.That(settings.PatternsLabel(PatternsSetting.Auto), Is.EqualTo("Automático"));
             Assert.That(settings.PatternsLabel(PatternsSetting.On), Is.EqualTo("Siempre"));
@@ -247,7 +251,7 @@ namespace AF.Tests.PlayMode
             Assert.That(lines.FindLast(l => l.StartsWith("AF_STATE {\"event\":\"settings\"", StringComparison.Ordinal)), Does.Contain("\"language\":\"en-XA\""),
                 "la sonda vuelve a escribir AF_STATE settings, en el idioma nuevo");
 
-            // Automático: el teléfono no da nada → es-419 de respaldo, y otra vez se reconstruye.
+            // Automático: el teléfono en español (PlayModeHelpers) → es-419, y otra vez se reconstruye.
             settings.LanguageButton("auto")!.onClick.Invoke();
             Assert.That(ProfileJson.Deserialize(store.Json!).Settings.Language, Is.EqualTo(SettingsData.LanguageAuto));
             yield return PlayModeHelpers.WaitFor(
@@ -256,12 +260,12 @@ namespace AF.Tests.PlayMode
             boot = GameBootstrap.Current!;
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
             Assert.That(Loc.Locale, Is.EqualTo(LocLocale.SourceLocale));
-            Assert.That(boot.Locale!.Value.Source, Is.EqualTo(LocSource.Fallback));
+            Assert.That(boot.Locale!.Value.Source, Is.EqualTo(LocSource.Device));
             Assert.That(boot.Lobby!.PlayLabel, Is.EqualTo("Jugar · Nivel 4"));
             Assert.That(boot.SettingsView!.Visible && boot.SettingsView.LanguageMarked("auto"), Is.True, "Ajustes sigue abierta, con Automático");
             Assert.That(boot.SettingsView.Title, Is.EqualTo("Ajustes"), "ya en español");
             Assert.That(boot.CloseSettings(), Is.True, "y se cierra como siempre");
-            Assert.That(boot.ChooseLanguage("en"), Is.False, "un idioma que no se ofrece no se guarda");
+            Assert.That(boot.ChooseLanguage("fr"), Is.False, "un idioma que no se ofrece no se guarda");
             Assert.That(ProfileJson.Deserialize(store.Json!).Settings.Language, Is.EqualTo(SettingsData.LanguageAuto));
         }
 

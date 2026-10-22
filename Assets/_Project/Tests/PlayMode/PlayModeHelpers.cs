@@ -299,16 +299,18 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Sin idioma del teléfono fijado por el test, uno vacío (ManualDeviceLocale): los textos y las cifras no dependen de la
-        // cultura del equipo (tarea L3; el idioma automático da es-419 y las cifras, es-CO). Sin pantalla de arranque (TI6d)
-        // salvo que el test la encienda (BootSplash.EnabledOverride = true; BootSplashTests la vuelve a null en su TearDown):
+        // Sin idioma del teléfono fijado por el test, «es» sin región (ManualDeviceLocale): los textos y las cifras no dependen
+        // de la cultura del equipo (tarea L3; el idioma automático da es-419 y las cifras, es-CO). Con en y pt-BR completos
+        // (traducción 3, D-033), un teléfono vacío ya no cae en es-419 sino en en (D-018, Q7-A: teléfono → en); «es» sin región
+        // conserva el es-419 de siempre sin país para el consentimiento ni tramo de precios (T3, como la etiqueta vacía).
+        // Sin pantalla de arranque (TI6d) salvo que el test la encienda (BootSplash.EnabledOverride = true; BootSplashTests la vuelve a null en su TearDown):
         // los tests que no tratan de ella arrancan como antes de que existiera, todo en el Start, sin fotogramas de más ni el
         // segundo de sloth_wake de la primera apertura.
         private static IEnumerator LoadScene()
         {
             if (LaunchOptions.DeviceLocaleOverride == null)
             {
-                LaunchOptions.DeviceLocaleOverride = new AF.Platform.ManualDeviceLocale(string.Empty);
+                LaunchOptions.DeviceLocaleOverride = new AF.Platform.ManualDeviceLocale("es");
             }
 
             if (BootSplash.EnabledOverride == null)
