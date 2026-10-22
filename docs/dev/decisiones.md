@@ -3432,3 +3432,12 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-B11-12:** el tooltip de la Cosecha doble sale **solo en el 11**: si en esa victoria no hay anuncio, no sale nunca.
 
 - **Quedan para otras tareas (del integrador):** enlazar `drag_pour_enabled`, `lvl_label_override` y `level_overrides` con Remote Config en el arranque; emitir `af_label_shown` (con `LevelCatalog.IsRelabeled` para `source`) y todas las elecciones de `af_no_canoes_choice` a la vez; Q-B11-5 (lienzo a 320 dp); Q-B11-7 (la reserva); los cambios propuestos al GDD de la nota §4 (02 §5 y §13, 03 §13 y §17, 04 §7.1 y 06 §2.2).
+
+### D-033, añadido del 2026-10-21: preguntas de la reserva del 20 %, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `tanda5/reserva-20` (revisión APROBADO). El dueño puede cambiarlas.
+- **Q-R20-1:** el 20 % se reparte por rondas de mecánica, para que cada una tenga cubiertos sus primeros niveles.
+- **Q-R20-2:** el tablero de reserva quita todas las mecánicas de su slot (también las Aguas turbias) y conserva las capacidades; un tablero cubre todos los kill switches de su slot.
+- **Q-R20-3:** el tope del 20 % se redondea hacia abajo (8, 12, 12, 20, 24, 28 y 28 en los mundos 3-9; 132 tableros).
+- **Q-R20-4:** en la 1.0, `level_overrides` solo se aplica cuando una mecánica está apagada (08 §9); sustituir niveles en alarma o por segmento (DDA, 03 §2 y §15) queda para otra tarea.
+- **Q-R20-5:** los tableros de reserva no publican `difficulty.D` (no entran en el pool del rango).
