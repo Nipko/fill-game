@@ -1116,6 +1116,15 @@ namespace AF.UI
         private void PlaceSilhouettes(MapSpace space)
         {
             RiverMap map = _map!;
+            for (int i = 0; i < _silhouettes.Count; i++)
+            {
+                // Cada colocación empieza con las placas en una línea; las de la Cuenca que no caben así pasan a dos en PlatesFit.
+                if (_silhouettes[i].TwoLines && _silhouettes[i].Root.gameObject.activeSelf)
+                {
+                    SetSilhouetteText(_silhouettes[i], false);
+                }
+            }
+
             float contentW = space.DpPerUnit * map.Width;
             float contentH = space.DpPerUnit * map.Height;
             Rect canoe = CanoeHomeBox(space);
@@ -2133,11 +2142,8 @@ namespace AF.UI
                 changed |= s.World != world || !s.Root.gameObject.activeSelf;
                 s.World = world;
                 s.MapPoint = PlacePoint(map, route.At);
-                s.Label.text = UiText.MapNextWorld(world, gate.FirstLevel);
-                Vector2 size = s.Label.GetPreferredValues(s.Label.text, float.PositiveInfinity, float.PositiveInfinity);
-                float w = Mathf.Ceil(size.x) + 12f;
-                float h = Mathf.Max(20f, Mathf.Ceil(size.y) + 4f);
-                s.Root.sizeDelta = new Vector2(w, h);
+                s.FirstLevel = gate.FirstLevel;
+                SetSilhouetteText(s, false);
                 s.Root.gameObject.name = "Silhouette_w" + world.ToString("00", System.Globalization.CultureInfo.InvariantCulture);
                 if (!s.Root.gameObject.activeSelf)
                 {
@@ -2155,6 +2161,18 @@ namespace AF.UI
             }
 
             return changed;
+        }
+
+        // El texto de la placa (map_next_world) en una línea o, con twoLines, en dos (el nivel debajo; observación 2 de la prueba en
+        // el teléfono del 2026-10-23), y la caja a su medida. Asigna la cadena: solo al construir o al colocar las placas.
+        private static void SetSilhouetteText(Silhouette s, bool twoLines)
+        {
+            s.TwoLines = twoLines;
+            s.Label.text = UiText.MapNextWorld(s.World, s.FirstLevel, twoLines ? 1 : 0);
+            Vector2 size = s.Label.GetPreferredValues(s.Label.text, float.PositiveInfinity, float.PositiveInfinity);
+            float w = Mathf.Ceil(size.x) + 12f;
+            float h = Mathf.Max(20f, Mathf.Ceil(size.y) + 4f);
+            s.Root.sizeDelta = new Vector2(w, h);
         }
 
         private Silhouette SilhouetteAt(int i)
@@ -2396,6 +2414,12 @@ namespace AF.UI
             public int FillHits { get; set; }
 
             public int FillMin { get; set; }
+
+            /// <summary>Primer nivel de su mundo (el «Nivel n» de <c>map_next_world</c>).</summary>
+            public int FirstLevel { get; set; }
+
+            /// <summary>La placa va en dos líneas (<see cref="SetSilhouetteText"/>).</summary>
+            public bool TwoLines { get; set; }
         }
 
         /// <summary>

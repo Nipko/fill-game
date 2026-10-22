@@ -96,7 +96,14 @@ namespace AF.UI
         // La tienda del arranque (Start): verificada siempre (F3-5), con el cliente que toque.
         private IStoreService CreateStore(Profile profile, StoreLedger ledger, ISimulatedPurchasePresenter presenter, IClock deviceClock, IClock capsClock, ProfileSaveBatch batch)
         {
-            BackendMode mode = BackendModeOverride ?? BackendEndpoints.Mode;
+            bool fakeStore = LaunchOptions.ResolveFakeStore(Debug.isDebugBuild);
+            BackendMode mode = StoreBackendMode(BackendModeOverride ?? BackendEndpoints.Mode, fakeStore);
+            if (fakeStore)
+            {
+                Debug.LogWarning("AF_FAKE_STORE " + LaunchOptions.IntentExtraFakeStore + " (solo desarrollo): tienda simulada y verificación del "
+                    + "backend falso; las compras se acreditan sin Play ni el servidor, solo en este perfil de pruebas.");
+            }
+
             IBackendClient client = BackendClientOverride ?? CreateBackendClient(mode, deviceClock);
             _backend = client;
             if (client is FakeBackendClient fake)
@@ -110,7 +117,8 @@ namespace AF.UI
             _backendSwitch = new GameBackendSwitch(!(client is UnavailableBackendClient), _rcConfigs?.BackendSwitch);
 
             // D-040: Play Billing de verdad (plugin propio, Play Billing Library 9.0.0) solo en el teléfono y con el backend real que
-            // verifica cada compra; con el backend falso (editor, desarrollo sin google-services.json), la tienda simulada de siempre.
+            // verifica cada compra; con el backend falso (editor, desarrollo sin google-services.json o con af_fake_store, solo en
+            // DEVELOPMENT_BUILD), la tienda simulada de siempre.
             IBillingClient billing;
             _playBilling = client is HttpBackendClient ? PlayBillingFactory.TryCreate(ledger.Catalog, LaunchOptions.DefaultStoreCurrency) : null;
             if (_playBilling != null)
@@ -246,6 +254,16 @@ namespace AF.UI
         {
             PlayBillingClient? play = _playBilling;
             return play != null && !play.CanSell(product.Sku) ? PurchaseStatus.StoreUnavailable : (PurchaseStatus?)null;
+        }
+
+        /// <summary>
+        /// El modo del backend de la tienda: <paramref name="mode"/> o, con <c>af_fake_store</c> (<paramref name="fakeStore"/>, que
+        /// solo puede ser true en desarrollo: <see cref="LaunchOptions.ResolveFakeStore(bool)"/>), el backend falso, que verifica
+        /// la tienda simulada. Con el falso no se crea Play Billing (<see cref="CreateStore"/>).
+        /// </summary>
+        internal static BackendMode StoreBackendMode(BackendMode mode, bool fakeStore)
+        {
+            return fakeStore ? BackendMode.Fake : mode;
         }
 
         private static IBackendClient CreateBackendClient(BackendMode mode, IClock clock)

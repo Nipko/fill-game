@@ -885,6 +885,23 @@ def without_block(data: bytes) -> bytes:
     return "".join(kept).encode("utf-8")
 
 
+def without_translations(data: bytes) -> bytes:
+    """facts.csv con en, pt-BR y sus estados vacios en las filas map.*: lo que da --write-texts sin el bloque anterior, del
+    que conserva las traducciones (T2-Q1); las de las demas filas no se tocan."""
+    records = split_csv_records(data.decode("utf-8"))
+    header = parse_csv_record(records[0])
+    cols = [header.index(c) for c in stops.PRESERVED_LOCALE_COLUMNS]
+    out = [records[0]]
+    for r in records[1:]:
+        fields = parse_csv_record(r)
+        if fields[0].startswith("map.") and any(fields[i] for i in cols):
+            for i in cols:
+                fields[i] = ""
+            r = stops.format_csv_row(fields)
+        out.append(r)
+    return "".join(out).encode("utf-8")
+
+
 class TextBlockTests(unittest.TestCase):
     """El bloque map.* que escribe stops.py --write-texts en facts.csv: contenido, columnas, orden y args."""
 
@@ -948,10 +965,13 @@ class TextBlockTests(unittest.TestCase):
             if not key.startswith("map."):
                 continue
             with self.subTest(key=key):
-                self.assertEqual("", row["en"])
-                self.assertEqual("", row["pt-BR"])
-                self.assertEqual("", row["status_en"])
-                self.assertEqual("", row["status_pt-BR"])
+                # en y pt-BR: vacios y sin estado, o con su traduccion y su estado (T2-Q1: stops.py los conserva mientras el
+                # es-419 no cambie; prueba en el telefono del 2026-10-23, observacion 1: el bloque map.* ya no se retiene).
+                for loc in ("en", "pt-BR"):
+                    if row[loc]:
+                        self.assertIn(row["status_" + loc], ("traducido", "revisado_nativo"), loc)
+                    else:
+                        self.assertEqual("", row["status_" + loc], loc)
                 self.assertEqual("pendiente_asesor", row["status"])
                 self.assertRegex(row["notes"], r"^\[(V|E|P)\] ")
                 if re.search(r"\[(V|E)\]", row["notes"]):
@@ -1334,7 +1354,8 @@ class WriteTextsTests(unittest.TestCase):
         committed = FACTS_PATH.read_bytes()
         proc, out = self.write(without_block(committed))
         self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
-        self.assertEqual(committed, out)
+        # Sin el bloque no hay traducciones que conservar: sale el commiteado con en y pt-BR vacios en las filas map.*.
+        self.assertEqual(without_translations(committed), out)
 
     def test_rows_outside_the_block_do_not_change(self):
         # Filas ajenas antes y despues del bloque en orden ordinal (una de fruta, con puntos, antes de «map.» y una de
@@ -1352,7 +1373,7 @@ class WriteTextsTests(unittest.TestCase):
         proc, out = self.write(source.encode("utf-8"))
         self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
         expected = "".join([records[0], extra_before] + before + block + after + [extra_after])
-        self.assertEqual(expected, out.decode("utf-8"))
+        self.assertEqual(without_translations(expected.encode("utf-8")).decode("utf-8"), out.decode("utf-8"))
         keys = [r[0] for r in facts_rows(out)[1:]]
         self.assertEqual(sorted(keys), keys)
 
@@ -1512,8 +1533,13 @@ class SourceRowTests(unittest.TestCase):
                 row = self.table[key + stops.SOURCE_SUFFIX]
                 url = self.fuentes[sid]["url"]
                 self.assertEqual(self.names[sid], row["es-419"])
-                self.assertEqual(("", "", "", ""), (row["en"], row["pt-BR"], row["status_en"], row["status_pt-BR"]),
-                                 "nombre propio sin traducir: el traductor lo copia al revisar la fila")
+                # Nombre propio que no se traduce: sin traducir, o copiado tal cual por el traductor con su estado.
+                if row["en"] or row["pt-BR"] or row["status_en"] or row["status_pt-BR"]:
+                    self.assertEqual((row["es-419"], row["es-419"]), (row["en"], row["pt-BR"]), "copiado tal cual")
+                    self.assertIn(row["status_en"], ("traducido", "revisado_nativo"))
+                    self.assertIn(row["status_pt-BR"], ("traducido", "revisado_nativo"))
+                else:
+                    self.assertEqual(("", "", "", ""), (row["en"], row["pt-BR"], row["status_en"], row["status_pt-BR"]))
                 self.assertEqual("pendiente_asesor", row["status"])
                 self.assertEqual("40", row["max_chars"])
                 self.assertEqual("", row["args"])
