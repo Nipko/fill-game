@@ -59,8 +59,8 @@ python docs/research/mapa-del-rio/generar_mapa.py --check
 python tools/remote-config/rc_defaults.py --check        # Remote Config (los dos): solo si tocas 08 §9 o Remote Config; «identico (252 claves)», código 1 si difiere
 python -m unittest discover -s tools/remote-config -p "test_*.py"
 pwsh -NoProfile -File scripts/unity-compile.ps1       # ¿compila Unity? errores: solo las 30 primeras líneas "error CS"
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 3.986 hoy en integracion-fase1-fase2 (3.983 + 3 omitidos; con AF.Backend, F3-3, F3-5, F3-6, B7, B8, B4, B5 y D-038); dotnet test: 1.002 (996 + 6 omitidos)
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.778 (1.538 + 240 explícitos: capturas y los 16 KnownIssue de FX16a); antes de cada PR que toque Unity
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 4.076 hoy en integra/spark-b12 (4.073 + 3 omitidos; con AF.Backend, F3-3, F3-5, F3-6, B7, B8, B4, B5, B12 y D-038); dotnet test: 1.002 (996 + 6 omitidos)
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.803 (1.561 + 242 explícitos: capturas y los 16 KnownIssue de FX16a); antes de cada PR que toque Unity
                                                       # tarda 30-40 min: el límite por defecto en PlayMode es -TimeoutSec 3600 (a 900 s no da veredicto)
 ```
 - Las pruebas de `tools/` van como fixtures (`tools/level-generator/specs/tests/`, `tools/level-qa/fixtures/`) y como un modo `--self-test` en la propia herramienta; `tools/river-map/` suma sus `test_*.py` (unittest). No hay proyectos de tests de `tools/` en `dotnet/AmazonFill.slnx`.
