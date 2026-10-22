@@ -674,3 +674,20 @@ El dueño respondió las 29 preguntas de `docs/dev/plan-tanda5.md` §5, todas co
 3. **B9 · Accesibilidad** (3 días): Reducir movimiento y Alto contraste al 35 % (Q-N4 (a)), escala de fuente del sistema, C9 (mantener pulsado), test del simulador de daltonismo y TalkBack completo (02 §12). Choca con `GameScreen`: parches probados.
 
 Por cada bloque: revisión (code-reviewer), arreglos, verificación completa de `CLAUDE.md` y entrada en `spark-estado.md` con «listo para integrar». Lo que no esté decidido, como pregunta con opciones y una recomendada.
+
+---
+
+## 14. Encargo siguiente (2026-10-22): Unity IAP 5.4.4 (Play Billing)
+
+B12, B11 y B9 están entregados (B12 y B11 integrados; B9 integrándose). El dueño aprobó (D-040): «Encarga al Spark integrar Unity IAP 5.4.4 (Play Billing) tras IBillingClient, con la tienda falsa en el editor; apruebo el paquete com.unity.purchasing 5.4.4.» Rama `spark/t5-iap` desde `origin/integracion-fase1-fase2` (haz pull: trae F3-3, F3-5 y F3-6 con Firebase, B12 y D-035 a D-040), con las reglas de las secciones 1-3, 11 y 12. Lee antes D-035 (todos sus añadidos de F3-3 y F3-5), D-040, `docs/dev/plan-backend-aws.md` §7, `infra/contracts/v1` (verifyPurchase y restoreLedger), 05 §4 (SKU `af_*`), 08 §7, §10.3 y §13.3, y `.claude/agents/sdk-integrator.md`.
+
+**Qué hacer:**
+1. `com.unity.purchasing` **5.4.4** exacta. No edites `Packages/manifest.json` en tu rama: entrégalo como parche probado (`docs/dev/traspaso/spark-enganches/IAP-manifest.diff`) junto con lo que regenere Unity, como hiciste con B6.
+2. `IBillingClient` real (`UNITY_ANDROID && !UNITY_EDITOR`) sobre Unity IAP 5.4.4: catálogo de 05 §4.1 con sus ids `af_*`; `setObfuscatedAccountId = UID` (F3-3); compras pendientes (`PENDING`), compras sin terminar al arrancar (`Resume`), confirmar sin consumir para el `deferred_ack` (Q-F3-3 3: si Unity IAP 5.4.4 no lo permite, para y anótalo como pregunta) y consumo solo tras acreditar (D-035). El editor y los tests siguen con `FakeBillingClient`; `VerifiedStoreService` no cambia de contrato.
+3. Respeta B12: compras de 13-17 con doble confirmación + autenticación de Google Play (Q-T4); con `<13`, sin compras.
+4. Precios locales: el Mercado muestra el precio que da la tienda (no el de 05 §4), con el de 05 como respaldo en el editor.
+5. **Permisos:** Play Billing añade `com.android.vending.BILLING`, pendiente de la confirmación del dueño (D-040): no lo metas en la lista blanca; anótalo. Si aparece cualquier otro permiso, para y pregúntalo.
+6. Data Safety (08 §13.3, fila Unity IAP / Play Billing) y 08 §7.
+7. Pruebas sin Play: EditMode y PlayMode con la tienda falsa; un modo de ensayo documentado para probar en el teléfono con licencias de prueba cuando exista la app en Play Console (D-034: aún no).
+
+Por cada paso: revisión (code-reviewer) centrada en no acreditar dos veces ni sin verificación, verificación completa de `CLAUDE.md` y entrada en `spark-estado.md` con «listo para integrar».

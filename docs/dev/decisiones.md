@@ -3461,3 +3461,11 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Estado:** el dueño ordenó en el chat: «Integra las notificaciones reales con com.unity.mobile.notifications 2.4.3 y POST_NOTIFICATIONS (D-033 Q-M5), desde el parche B6-notifications-real, con la verificación completa.»
 - **Versión exacta aprobada:** `com.unity.mobile.notifications` **2.4.3** (la que declara el Editor 6000.3.25f1, propuesta por el Spark en B6), del registro de Unity. Permiso `android.permission.POST_NOTIFICATIONS` aprobado (Android 13+, con el pre-prompt de B6 antes de pedirlo). Entra en la lista blanca de `ci/check-manifest.ps1`.
 - Si el paquete añade otros permisos (por ejemplo `RECEIVE_BOOT_COMPLETED` o `SCHEDULE_EXACT_ALARM`), se para y se pregunta; 08 §13 y Q-M5 piden alarmas inexactas.
+
+## D-040 · Integración de Unity IAP 5.4.4 (Play Billing), encargada al Spark
+
+- **Fecha:** 2026-10-22. Registrada el 2026-10-22 por el integrador.
+- **Estado:** aprobado por el dueño en el chat: «Encarga al Spark integrar Unity IAP 5.4.4 (Play Billing) tras IBillingClient, con la tienda falsa en el editor; apruebo el paquete com.unity.purchasing 5.4.4. Prepárale el encargo y la frase.»
+- **Decisión:** `com.unity.purchasing` **5.4.4** exacta (plan de instalación; 08 §7), que trae Play Billing 8 o superior. La implementación real va detrás de `IBillingClient` (F3-3) solo en `UNITY_ANDROID && !UNITY_EDITOR`; el editor y los tests siguen con `FakeBillingClient`. La verificación sigue en el servidor (`VerifiedStoreService`, D-035): el cliente nunca acredita sin el `ok` o el `duplicate` del backend.
+- **Permiso:** Play Billing añade `com.android.vending.BILLING`, que es inseparable de cobrar en Google Play. **Pendiente de la confirmación expresa del dueño** antes de añadirlo a la lista blanca de `ci/check-manifest.ps1`; cualquier otro permiso nuevo, se para y se pregunta.
+- **Encargo:** `docs/dev/traspaso/spark-reto-del-rio.md` §14.
