@@ -10,7 +10,7 @@ Tinaja (M13; D-019, Q-Ti1 A; 03 §8; propuesta de la tinaja c.3): paso «Ti» de
 
 | Pack | Niveles | Bytes | Bytes sin relief | Bytes sin relief por 100 niveles (≤ 100 KB, 03 §17 #11) | SHA-256 |
 |---|---|---|---|---|---|
-| `tools/out/sample_tinaja/mundo_07_v1.json` | 20 | 25077 | 15894 | 77.6 KB | `1deee76bd8901dcb0eb81e92b21a64e21c9921ff7ae7efc675b4af17e7416666` |
+| `tools/out/sample_tinaja/mundo_07_v1.json` | 20 | 25077 | 15894 | 77.6 KB | `5bba926d3b0377b99a69f3890bab102e4b76ac636df07e2fc707573626eb409a` |
 
 ## Pool por rango e índice D (03 §7)
 
@@ -40,7 +40,7 @@ Columnas: p = posición en el ciclo (0 en la rampa); E = vacíos de capacidad �
 
 | Nivel | p | Rol | Calendario | K | E (libres) | Cuias | Fuente | Par | Estados A* | bot_fail | Ventana | Etiqueta | Objetivo | D | q (banda) | Ramif. | Trampas | TT | Compl. | Alivio | Notas |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 321 | 1 | recuperacion | R | 7 | 2 (2) | 9 | walk | 14 | 752 | 0.000 | [0.00, 0.30) | normal | — | -0.73 | 0.063 (recuperacion) | 5.00 | 0.00 | 0 | 38 | −2(13; 0.00) +(0.00) |  |
+| 321 | 1 | recuperacion | R | 7 | 2 (2) | 9 | walk | 14 | 752 | 0.000 | [0.00, 0.30) | normal | — | -0.73 | 0.063 (recuperacion) | 5.00 | 0.00 | 0 | 38 | −7(13; 0.00) +(0.00) |  |
 | 322 | 2 | recuperacion | R | 7 | 2 (2) | 9 | walk | 14 | 562 | 0.000 | [0.00, 0.30) | normal | — | -0.69 | 0.097 (recuperacion) | 5.29 | 0.00 | 0 | 38 | −3(13; 0.00) +(0.00) |  |
 | 323 | 3 | estreno | *Ti | 6 | 2 (2) | 10 | walk | 16 | 5097 | 0.000 | [0.00, 0.20) | normal | — | -0.46 | 0.131 (comodidad) | 5.13 | 0.00 | 0 | 42 | −6(15; 0.00) +(0.00) | tinaja: K <= 6 en el estreno (propuesta de la tinaja c.3 y d.3); tinaja: 3 dosis (2 ocultas), 1 realidades |
 | 324 | 4 | estreno | *Ti | 6 | 2 (2) | 10 | walk | 13 | 1704 | 0.000 | [0.00, 0.20) | normal | — | -0.79 | 0.040 (recuperacion) | 4.23 | 0.00 | 0 | 36 | −7(12; 0.00) +(0.00) | tinaja: K <= 6 en el estreno (propuesta de la tinaja c.3 y d.3); tinaja: 3 dosis (2 ocultas), 1 realidades |

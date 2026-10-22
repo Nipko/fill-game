@@ -10,7 +10,7 @@ Compuerta automática (verde antes de pedir la curación): `dotnet run --project
 
 | Pack | Niveles | `pack_schema` | Bytes | SHA-256 |
 |---|---|---|---|---|
-| `Assets/_Project/Data/Levels/mundo_09_v1.json` | 140 | 3 | 202712 | `5212a11194e7d70cfc7f78fe3787e6eccc6cbfae264c84926b956808f338fb4a` |
+| `Assets/_Project/Data/Levels/mundo_09_v1.json` | 140 | 3 | 202709 | `a40f04d5a6d4b8ac50b5f1e5ed8a22a0d44dba805d8902f01c415a762e7ead4e` |
 
 - Retos e hitos: 42 (35 retos y 7 hitos); 34 miden la etiqueta objetivo o más (D-009) y 8 no.
 - No miden su etiqueta objetivo y se publican con la que miden (c.2; 03 §7): 566 (reto Ma+Re (D): Normal, bot_fail 0.700), 569 (reto B2+Ba (D): Normal, bot_fail 0.675), 592 (reto Pi+B2 (D): Normal, bot_fail 0.425), 615 (reto Li+Re (D): Normal, bot_fail 0.650), 646 (reto Pi+Br+Ha (D): Normal, bot_fail 0.550; primer reto con tres mecánicas, d.5.2; 03 §11), 658 (reto Ha+Re (D): Normal, bot_fail 0.675), 686 (reto Ma+Ho (D): Normal, bot_fail 0.625), 692 (reto Ma+Ha (D): Normal, bot_fail 0.725).

@@ -4,7 +4,7 @@ Generado por `tools/level-generator --daily` (tarea R3 del encargo `docs/dev/tra
 
 - Comando: `dotnet run --project tools/level-generator -- --daily --spec tools/level-generator/specs/daily_v1.json --bands 1,2,3 --days 0-9 --out tools/out/daily_sample --report tools/out/daily_sample_report.md`
 - Especificación: `tools/level-generator/specs/daily_v1.json` (daily_v1); tintes y pares de riesgo de `campaign_v2.json`.
-- Pack: `tools/out/daily_sample/daily_pool_v1.json`, 19967 bytes, SHA-256 `eb64897fc38d81603316fd2cdedb1af1cb18efea4d36d2f298f8dd1307a4dd69`.
+- Pack: `tools/out/daily_sample/daily_pool_v1.json`, 19967 bytes, SHA-256 `ec905aab615600130ef2717ecdea7944ee02b1c049a2dd207fefce1c0394ae3e`.
 - Tableros: 30; errores: 0.
 - **Estado:** R-Q1b (a) y R-Q11 (a) decididas por el dueño el 2026-10-19: B2 solo con K = 8, B3 con max_pares_riesgo libre (03 §4.5) y la ventana del bot como compuerta (un día fuera de ventana no se publica; `level-qa --daily` lo da como fallo). Siguen [P] la fórmula del agua de R-Q2, `k_by_day` y las fuentes de cada banda.
 - Tope de pares de riesgo por banda: B1 0, B2 1, B3 libre.
@@ -43,10 +43,10 @@ Ninguno.
 
 ## Tiempos
 
-- Total (pared): 1.4 s con 20 hilos.
-- B1: 7.8 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 777 ms por tablero; el más lento, 1232 ms).
-- B2: 10.6 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 1062 ms por tablero; el más lento, 1392 ms).
-- B3: 3.9 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 387 ms por tablero; el más lento, 887 ms).
+- Total (pared): 5.2 s con 24 hilos.
+- B1: 6.4 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 636 ms por tablero; el más lento, 1246 ms).
+- B2: 8.8 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 880 ms por tablero; el más lento, 3862 ms).
+- B3: 2.7 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 274 ms por tablero; el más lento, 744 ms).
 
 ## Tableros
 

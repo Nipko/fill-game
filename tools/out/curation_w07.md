@@ -10,7 +10,7 @@ Compuerta automática (verde antes de pedir la curación): `dotnet run --project
 
 | Pack | Niveles | `pack_schema` | Bytes | SHA-256 |
 |---|---|---|---|---|
-| `Assets/_Project/Data/Levels/mundo_07_v1.json` | 120 | 3 | 175924 | `f5b3415b8daf5c145f3491afa6e321d2e492208f1248b3feed3e6d21765b395c` |
+| `Assets/_Project/Data/Levels/mundo_07_v1.json` | 120 | 3 | 175927 | `779a830acdea3ff83d5803cb3f9fe3d2ef5cf419b2b1a4bf34733c331cd211fe` |
 
 - Retos e hitos: 36 (30 retos y 6 hitos); 35 miden la etiqueta objetivo o más (D-009) y 1 no.
 - No miden su etiqueta objetivo y se publican con la que miden (c.2; 03 §7): 369 (reto Pi+B2 (D): Normal, bot_fail 0.450).
@@ -122,7 +122,7 @@ p20 de cada ciclo («Pico» de c.3): Muy difícil por el bot (≥ 0,90; D-009) y
 | 345 | 5 | ★B2 | — | brote n=2 (2 dosis) | 1 | 2 | 22 | 0.000 | -0.69 | 0.057 (recuperación) | cumple |
 | 403 | 3 | ★Fl | `flor` | flor key=3 key2=1 (4 dosis) | 1 | 2 | 21 | 0.150 | -0.51 | 0.169 (comodidad) | cumple |
 | 404 | 4 | ★Fl | — | flor key=3 key2=2 (4 dosis) | 1 | 2 | 20 | 0.125 | -0.93 | 0.031 (recuperación) | cumple |
-| 405 | 5 | ★Fl | — | flor key=5 key2=4 (4 dosis) | 1 | 2 | 23 | 0.100 | -0.63 | 0.106 (comodidad) | cumple |
+| 405 | 5 | ★Fl | — | flor key=13 key2=5 (4 dosis) | 1 | 2 | 23 | 0.100 | -0.63 | 0.106 (comodidad) | cumple |
 
 ## Variantes de la 1.0
 
@@ -161,7 +161,7 @@ Variantes de 02 §9.1 (propuesta de D-007 b.3; firma de `pack_schema` 3, D-023 p
 | 400 | 20 | hito | Li+Ha+Ba (MD) | hoja_atada key=5 (4 dosis) | 3 | 1 | 0.975 |
 | 403 | 3 | estreno | ★Fl | flor key=3 key2=1 (4 dosis) | 1 | 2 | 0.150 |
 | 404 | 4 | estreno | ★Fl | flor key=3 key2=2 (4 dosis) | 1 | 2 | 0.125 |
-| 405 | 5 | estreno | ★Fl | flor key=5 key2=4 (4 dosis) | 1 | 2 | 0.100 |
+| 405 | 5 | estreno | ★Fl | flor key=13 key2=5 (4 dosis) | 1 | 2 | 0.100 |
 | 407 | 7 | comodidad | Fl | flor key=12 key2=2 (4 dosis) | 1 | 2 | 0.550 |
 | 409 | 9 | reto | Fl (D) | flor key=1 key2=13 (4 dosis) | 1 | 1 | 0.775 |
 | 412 | 12 | reto | Fl+Ba (D) | flor key=6 key2=12 (4 dosis) | 2 | 0 | 0.850 |

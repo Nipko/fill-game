@@ -1,16 +1,16 @@
-# Curación de 201-300 (variante a): retos, hitos y estrenos para el dueño
+# Curación de 201-300 (variante b): retos, hitos y estrenos para el dueño
 
-Generado por `dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --variant a --out Assets/_Project/Data/Levels --curation tools/out/curation_w06.md --decisions tools/level-generator/specs/curation_v2.json` con los mismos niveles colocados que el pack: no se edita a mano y no lleva tiempos (la decisión del dueño sale de `tools/level-generator/specs/curation_v2.json`). Niveles del mundo 6 (Oriente, 201-300).
+Generado por `dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --variant b --out Assets/_Project/Data/Levels --curation tools/out/curation_w06.md --decisions tools/level-generator/specs/curation_v2.json` con los mismos niveles colocados que el pack: no se edita a mano y no lleva tiempos (la decisión del dueño sale de `tools/level-generator/specs/curation_v2.json`). Niveles del mundo 6 (Oriente, 201-300).
 
 Fuentes: 09 §0.1 (fila de level-pipeline-dev: el dueño aprueba la curación de retos e hitos de cada paquete) y §0.3 (propuesta de curación de los 30 retos e hitos que aprueba el dueño), 03 §7 (un reto por debajo de 0,75 se publica sin etiqueta y la curación decide si se sustituye por otro del pool del slot; banda por el cuantil q de D en el pool del rango), D-009 (etiqueta por el bot ×40 con la semilla del nivel: Difícil ≥ 0,75 y Muy difícil ≥ 0,90; retos en p6, p9, p12, p15 y p18 e hito en p20; c.2: un reto o el hito fuera de su ventana se publica con la etiqueta que mide), 03 §11-§12, 02 §9.2 regla 2 (estrenos) y la tabla de novedades de D2 (d.5.3; D-023 punto 10). La columna «Propuesta» es [P]: la decide el dueño.
 
-Compuerta automática (verde antes de pedir la curación): `dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_06_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --variant a`. Cada reto o hito con aviso QA-WINDOW (bot_fail fuera de la ventana del slot) sale aquí como «revisar», y cada hito con aviso QA-BAND-Q (fuera de la banda de hito con el mínimo cumplido), como «revisar» o con nota de banda; los avisos QA-BAND-Q de las recuperaciones no entran en este informe. QA-BAND-Q no mira los retos y level-qa no mira risk_adjacent: las notas de banda de los retos y los «revisar» por risk_adjacent salen solo de este informe.
+Compuerta automática (verde antes de pedir la curación): `dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_06_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --variant b`. Cada reto o hito con aviso QA-WINDOW (bot_fail fuera de la ventana del slot) sale aquí como «revisar», y cada hito con aviso QA-BAND-Q (fuera de la banda de hito con el mínimo cumplido), como «revisar» o con nota de banda; los avisos QA-BAND-Q de las recuperaciones no entran en este informe. QA-BAND-Q no mira los retos y level-qa no mira risk_adjacent: las notas de banda de los retos y los «revisar» por risk_adjacent salen solo de este informe.
 
 ## Resumen
 
 | Pack | Niveles | `pack_schema` | Bytes | SHA-256 |
 |---|---|---|---|---|
-| `Assets/_Project/Data/Levels/mundo_06_v1.json` | 100 | 3 | 139470 | `9903e8363553e65c9f77a067ed7221146a8250e6dedbccb6cfdae96db031689f` |
+| `Assets/_Project/Data/Levels/mundo_06_v1.json` | 100 | 3 | 139473 | `beb83f41bb42a297246963083b27574f90469c263da943aa0be3edfc7b9b98d6` |
 
 - Retos e hitos: 30 (25 retos y 5 hitos); 27 miden la etiqueta objetivo o más (D-009) y 3 no.
 - No miden su etiqueta objetivo y se publican con la que miden (c.2; 03 §7): 246 (reto Ma+Re (D): Normal, bot_fail 0.600), 266 (reto Pi+Br (D): Normal, bot_fail 0.425), 280 (hito Pi+Br (MD): Normal, bot_fail 0.675).

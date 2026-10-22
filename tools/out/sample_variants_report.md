@@ -8,7 +8,7 @@ Fuentes: D-009 (ciclo escalonado) y D-007 (debuts) con la propuesta `docs/resear
 
 | Pack | Niveles | Bytes | Bytes sin relief | Bytes sin relief por 100 niveles (≤ 100 KB, 03 §17 #11) | SHA-256 |
 |---|---|---|---|---|---|
-| `tools/out/sample_variants/mundo_06_v1.json` | 60 | 78213 | 49103 | 79.9 KB | `a46ff4d372b82a19dbb42613a13d4b97dc44c01014b638330380711eaedea931` |
+| `tools/out/sample_variants/mundo_06_v1.json` | 60 | 78213 | 49103 | 79.9 KB | `3cc89e498e5b64cdea8a3e7f912e0b659a15e946ddea39b4b3ec79cd84f818c5` |
 | `tools/out/sample_variants/mundo_07_v1.json` | 20 | 26261 | 16710 | 81.6 KB | `fb8faf487ac9cbca7e6a1d590368f9d8d120343194415aa88a7dd61d37bb29d2` |
 
 ## Pool por rango e índice D (03 §7)
@@ -43,10 +43,10 @@ Columnas: p = posición en el ciclo (0 en la rampa); E = vacíos de capacidad �
 | Nivel | p | Rol | Calendario | K | E (libres) | Cuias | Fuente | Par | Estados A* | bot_fail | Ventana | Etiqueta | Objetivo | D | q (banda) | Ramif. | Trampas | TT | Compl. | Alivio | Notas |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 241 | 1 | recuperacion | R | 8 | 2 (2) | 10 | walk | 16 | 1482 | 0.075 | [0.00, 0.30) | normal | — | -0.85 | 0.017 (recuperacion) | 4.38 | 0.00 | 0 | 42 | −4(14; 0.00) +(0.00) | 1 ronda(s) de banda |
-| 242 | 2 | recuperacion | R | 8 | 2 (2) | 10 | walk | 16 | 1435 | 0.100 | [0.00, 0.30) | normal | — | -0.77 | 0.030 (recuperacion) | 4.75 | 0.00 | 0 | 44 | −4(15; 0.00) +(0.00) |  |
+| 242 | 2 | recuperacion | R | 8 | 2 (2) | 10 | walk | 16 | 1435 | 0.100 | [0.00, 0.30) | normal | — | -0.77 | 0.030 (recuperacion) | 4.75 | 0.00 | 0 | 44 | −3(15; 0.00) +(0.00) |  |
 | 243 | 3 | estreno | *Ln | 9 | 2 (2) | 11 | walk | 22 | 9301 | 0.175 | [0.00, 0.20) | normal | — | -0.21 | 0.396 (comodidad) | 6.50 | 0.00 | 0 | 56 | −7(21; 0.00) +(0.08) |  |
 | 244 | 4 | estreno | *Ln | 9 | 2 (2) | 11 | walk | 20 | 2787 | 0.000 | [0.00, 0.20) | normal | — | -0.52 | 0.153 (comodidad) | 6.70 | 0.00 | 0 | 54 | −6(19; 0.00) +(0.00) |  |
-| 245 | 5 | estreno | *Ln | 9 | 2 (2) | 11 | walk | 19 | 1171 | 0.000 | [0.00, 0.20) | normal | — | -0.64 | 0.076 (recuperacion) | 5.95 | 0.03 | 0 | 52 | −4(18; 0.00) +(0.00) |  |
+| 245 | 5 | estreno | *Ln | 9 | 2 (2) | 11 | walk | 19 | 1171 | 0.000 | [0.00, 0.20) | normal | — | -0.64 | 0.076 (recuperacion) | 5.95 | 0.03 | 0 | 52 | −9(18; 0.00) +(0.00) |  |
 | 246 | 6 | reto | Ln (D) | 9 | 2 (2) | 11 | fill | 26 | 7283 | 0.875 | [0.75, 0.90) | hard | hard | 0.53 | 0.781 (reto) | 3.46 | 0.02 | 0 | 64 | −3(22; 0.00) +(0.10) | relajacion: fill con 2 vacios (03 sec. 4.4) |
 | 247 | 7 | comodidad | C | 9 | 2 (2) | 11 | walk | 18 | 3000 | 0.500 | [0.20, 0.60] | normal | — | -0.19 | 0.410 (comodidad) | 4.67 | 0.10 | 0 | 48 | −1(16; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
 | 248 | 8 | comodidad | C | 9 | 2 (2) | 11 | walk | 21 | 6769 | 0.400 | [0.20, 0.60] | normal | — | -0.03 | 0.559 (comodidad) | 6.33 | 0.00 | 0 | 54 | −8(20; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
@@ -91,16 +91,16 @@ Columnas: p = posición en el ciclo (0 en la rampa); E = vacíos de capacidad �
 | 287 | 7 | comodidad | C | 9 | 2 (2) | 11 | walk | 18 | 1752 | 0.350 | [0.20, 0.60] | normal | — | -0.26 | 0.336 (comodidad) | 6.56 | 0.00 | 0 | 50 | −9(17; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica); 1 ronda(s) extra de candidatos |
 | 288 | 8 | comodidad | C | 9 | 2 (2) | 11 | walk | 19 | 4416 | 0.350 | [0.20, 0.60] | normal | — | -0.16 | 0.436 (comodidad) | 6.32 | 0.05 | 0 | 50 | −5(18; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
 | 289 | 9 | reto | C (D) | 9 | 2 (2) | 11 | fill | 29 | 11659 | 0.775 | [0.75, 0.90) | hard | hard | 0.54 | 0.787 (reto) | 3.10 | 0.00 | 0 | 68 | −11(25; 0.05) +(0.03) | relajacion: fill con 2 vacios (03 sec. 4.4); 1 ronda(s) extra de candidatos |
-| 290 | 10 | comodidad | C | 9 | 2 (2) | 11 | walk | 18 | 5334 | 0.200 | [0.20, 0.60] | normal | — | -0.38 | 0.219 (comodidad) | 7.00 | 0.00 | 0 | 48 | −4(17; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica); 1 ronda(s) extra de candidatos |
-| 291 | 11 | comodidad | B2 | 9 | 1 (1) | 11 | walk | 19 | 1113 | 0.250 | [0.20, 0.60] | normal | — | -0.12 | 0.476 (comodidad) | 7.26 | 0.00 | 0 | 57 | +(0.00) −1(18; 0.00) |  |
+| 290 | 10 | comodidad | C | 9 | 2 (2) | 11 | walk | 18 | 5334 | 0.200 | [0.20, 0.60] | normal | — | -0.38 | 0.219 (comodidad) | 7.00 | 0.00 | 0 | 48 | −3(17; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica); 1 ronda(s) extra de candidatos |
+| 291 | 11 | comodidad | B2 | 9 | 1 (1) | 11 | walk | 19 | 1113 | 0.250 | [0.20, 0.60] | normal | — | -0.12 | 0.476 (comodidad) | 7.26 | 0.00 | 0 | 57 | +(0.00) −3(18; 0.00) |  |
 | 292 | 12 | reto | B2 (D) | 9 | 1 (1) | 11 | deep | 22 | 7951 | 0.825 | [0.75, 0.90) | hard | hard | 0.68 | 0.861 (reto) | 6.59 | 0.01 | 0 | 58 | +(0.00) −4(20; 0.00) | 1 ronda(s) extra de candidatos |
 | 293 | 13 | comodidad | C | 9 | 1 (1) | 10 | walk | 18 | 212 | 0.450 | [0.20, 0.60] | normal | — | -0.15 | 0.450 (comodidad) | 3.28 | 0.22 | 0 | 48 | +(0.08) −14(17; 0.13) | 1 ronda(s) extra de candidatos |
 | 294 | 14 | comodidad | C | 9 | 2 (2) | 11 | walk | 21 | 3713 | 0.550 | [0.20, 0.60] | normal | — | -0.11 | 0.490 (comodidad) | 3.95 | 0.02 | 0 | 52 | −3(19; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
 | 295 | 15 | reto | C (D) | 9 | 2 (2) | 11 | fill | 30 | 11540 | 0.825 | [0.75, 0.90) | hard | hard | 0.70 | 0.877 (reto) | 3.37 | 0.01 | 0 | 72 | −3(25; 0.00) +(0.08) | relajacion: fill con 2 vacios (03 sec. 4.4); 1 ronda(s) extra de candidatos |
 | 296 | 16 | comodidad | C | 9 | 2 (2) | 11 | walk | 21 | 6251 | 0.375 | [0.20, 0.60] | normal | — | 0.03 | 0.604 (comodidad) | 7.05 | 0.00 | 0 | 56 | −4(20; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica); 1 ronda(s) extra de candidatos |
-| 297 | 17 | comodidad | C | 9 | 2 (2) | 11 | walk | 18 | 2765 | 0.400 | [0.20, 0.60] | normal | — | -0.36 | 0.224 (comodidad) | 5.22 | 0.00 | 0 | 50 | −1(17; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
+| 297 | 17 | comodidad | C | 9 | 2 (2) | 11 | walk | 18 | 2765 | 0.400 | [0.20, 0.60] | normal | — | -0.36 | 0.224 (comodidad) | 5.22 | 0.00 | 0 | 50 | −5(17; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
 | 298 | 18 | reto | B2 (D) | 9 | 1 (1) | 11 | deep | 24 | 16311 | 0.825 | [0.75, 0.90) | hard | hard | 0.71 | 0.881 (reto) | 5.42 | 0.04 | 0 | 63 | +(0.00) −1(23; 0.05) | 1 ronda(s) extra de candidatos |
-| 299 | 19 | remanso | S | 9 | 2 (2) | 11 | walk | 19 | 3286 | 0.300 | [0.20, 0.40] | normal | — | -0.52 | 0.156 (comodidad) | 4.37 | 0.00 | 0 | 52 | −7(18; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica); 1 ronda(s) extra de candidatos |
+| 299 | 19 | remanso | S | 9 | 2 (2) | 11 | walk | 19 | 3286 | 0.300 | [0.20, 0.40] | normal | — | -0.52 | 0.156 (comodidad) | 4.37 | 0.00 | 0 | 52 | −9(18; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica); 1 ronda(s) extra de candidatos |
 | 300 | 20 | hito | B2 (MD) | 9 | 1 (1) | 11 | deep | 22 | 6203 | 0.950 | [0.90, 1.00] | very_hard | very_hard | 0.77 | 0.914 (reto) | 4.82 | 0.13 | 0 | 59 | +(0.08) −3(20; 0.05) | relajacion: deep con 60.000 nodos; 1 ronda(s) extra de candidatos; 6 ronda(s) de banda |
 | 301 | 1 | recuperacion | R | 8 | 2 (2) | 10 | walk | 16 | 2321 | 0.000 | [0.00, 0.30) | normal | — | -0.66 | 0.066 (recuperacion) | 6.63 | 0.00 | 0 | 42 | −10(14; 0.00) +(0.00) |  |
 | 302 | 2 | recuperacion | R | 8 | 2 (2) | 10 | walk | 17 | 1949 | 0.050 | [0.00, 0.30) | normal | — | -0.66 | 0.070 (recuperacion) | 5.65 | 0.00 | 0 | 46 | −2(16; 0.00) +(0.00) |  |
