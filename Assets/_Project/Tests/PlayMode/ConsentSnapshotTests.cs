@@ -19,7 +19,7 @@ namespace AF.Tests.PlayMode
     /// (<c>Logs/snapshots/es-419/</c>) y en en-XA (<c>Logs/snapshots/en-XA/</c>): <c>b12_01_age</c> (la edad neutral, ninguna banda
     /// marcada), <c>b12_02_choices</c> (las finalidades con 18+ en Colombia), <c>b12_03_blocked</c> (el bloqueo de &lt;13),
     /// <c>b12_04_confirm</c> (la doble confirmación de 13-17 con el precio de la tienda), <c>b12_05_settings_privacy</c> (Ajustes con
-    /// «Privacidad y datos» y «Corregir mi edad», desplazado hasta el final) y <c>b12_06_settings_130_16x9</c> (lo mismo en un teléfono
+    /// «Privacidad y datos» y «Corregir mi edad», desplazado hasta la sección) y <c>b12_06_settings_130_16x9</c> (lo mismo en un teléfono
     /// 16:9). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.ConsentSnapshotTests</c> sin
     /// <c>-nographics</c>.
     /// </summary>
@@ -121,7 +121,7 @@ namespace AF.Tests.PlayMode
             Assert.That(settings.PrivacyShown && settings.AgeShown, Is.True);
             SnapshotKit.AttachOverlay(settings.Canvas);
             settings.FontScale = 1.3f;
-            settings.ScrollToEnd();
+            settings.ScrollToPrivacy();
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, "b12_05_settings_privacy");
             settings.FontScale = 1f;
@@ -137,7 +137,7 @@ namespace AF.Tests.PlayMode
             settings = boot.SettingsView!;
             SnapshotKit.AttachOverlay(settings.Canvas);
             settings.FontScale = 1.3f;
-            settings.ScrollToEnd();
+            settings.ScrollToPrivacy();
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.SaveTop(dir, "b12_06_settings_130_16x9", (int)HudLabelTests.Screen640.y);
             Assert.That(File.Exists(Path.Combine(dir, "b12_06_settings_130_16x9.png")), Is.True);

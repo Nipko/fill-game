@@ -55,6 +55,23 @@ namespace AF.UI
         public bool AgeShown => _ageShown && _age != null;
 
         /// <summary>
+        /// Desplaza Ajustes hasta que la sección de privacidad quede arriba del visor (capturas de Q-B12-16, como
+        /// <see cref="ScrollToAbout"/>). Sin la sección o sin desplazamiento, nada.
+        /// </summary>
+        public void ScrollToPrivacy()
+        {
+            float range = _content.rect.height - _viewport.rect.height;
+            if (!PrivacyShown || ConsentSlot == null || !_scroll.vertical || range <= 0f)
+            {
+                return;
+            }
+
+            float top = Mathf.Clamp(-ConsentSlot.anchoredPosition.y - 8f, 0f, range);
+            _scroll.verticalNormalizedPosition = 1f - (top / range);
+            UpdateFades();
+        }
+
+        /// <summary>
         /// Qué filas se ven (al abrir Ajustes y tras corregir la edad); con la pantalla abierta, la vuelve a colocar.
         /// </summary>
         public void ShowConsentRows(bool privacy, bool age)
