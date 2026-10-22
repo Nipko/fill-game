@@ -3504,3 +3504,14 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Analítica:** `origin` de `af_push_prompt` y la clave `push` de `af_settings_change` se dan de alta en 08 §8.2 y en `AnalyticsCatalog` en una tarea aparte.
 - **Tope de espera del diálogo nativo tras «Avísame»:** 5 s con la app delante [P].
 - El integrador confirma que la tarea podía tocar `docs/dev/prototipo-v0.md` y `docs/dev/sesiones-notificaciones.md` (las sondas se anotan en el mismo PR).
+
+### D-033, añadido del 2026-10-22: preguntas de los arreglos de la prueba en el teléfono del 2026-10-22, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño mientras dormía; integradas con `tanda5/fx-telefono-1022` (revisión APROBADO). El dueño puede cambiarlas.
+- **02 §13, fila 6:** el tooltip «Reiniciar es gratis…» va dentro del panel, sobre el botón (se corrige el texto del GDD en la próxima tarea de documentos).
+- **En el 7, la tarjeta del Reto tiene prioridad sobre el gesto de TiTino** [P].
+- **Prefijo `AF_EVENT_UNSENT`** en logcat para los eventos sin consentimiento (Firebase no recibe nada sin él).
+- **Excepción a Q7-A:** en la victoria del 11, en pantallas bajas, «Siguiente» puede quedar algo más arriba [P].
+- **Q-B9-18:** «Reducir movimiento» sigue como interruptor sí/no (con `auto` al arrancar hasta que el jugador lo toque).
+- **Aviso «unity pipeline upgrade»** de `com.unity.pipeline` 0.8.0-exp.1: no se toca hasta que falle algo; actualizarlo sería un cambio de versión que aprueba el dueño.
+- **Riesgos bajos que se dejan hasta verlos en el teléfono:** la tarjeta del Reto no se recoloca si TiTino cambia de caja después; en 16:9 el hueco del tooltip del 6 puede pasar Aguas estancadas a la disposición compacta.
