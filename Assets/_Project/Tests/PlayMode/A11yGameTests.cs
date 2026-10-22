@@ -174,12 +174,15 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View!.Views[empty0].Shaking, Is.True, "sin el ajuste, el rechazo se sacude (D-012)");
             PlayModeHelpers.Step(boot, 300);
             int normal = PourMs(boot);
+            Assert.That(boot.View.Animator.UndoTransferNowMs, Is.EqualTo(250f), "04 §2.1: el traslado inverso de Marea, 250 ms");
 
             Profile reduced = SettingsScreenTests.ProfileAt(1);
             reduced.Settings.ReduceMotion = ReduceMotionSetting.On;
             yield return LoadLevel1(reduced, b => boot = b);
             Assert.That(boot.ReduceMotionNow, Is.True);
             Assert.That(boot.Flow!.ReduceMotion, Is.True, "LevelFlow.ReduceMotion: intro en fundido, sin partículas…");
+            Assert.That(boot.View!.Animator.UndoTransferNowMs, Is.EqualTo(125f).Within(1e-4f),
+                "02 §4 y Q-B9-12: el traslado inverso de Marea, también × anim_reduce_motion_factor (0,5)");
 
             // Rechazo (C2: una cuia vacía no puede ser origen): sin sacudida (02 §12).
             int empty = FirstEmpty(boot);
@@ -223,6 +226,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(daily.Flow!.ReduceMotion, Is.True, "el flujo del Reto, con Reducir movimiento desde el principio");
                 Assert.That(daily.View!.Animator.ReduceMotion, Is.True, "el tablero se construyó ya con Reducir movimiento");
                 Assert.That(daily.View.Animator.StepSpeedBase, Is.EqualTo(0.5f).Within(1e-6f));
+                Assert.That(daily.View.Animator.UndoTransferNowMs, Is.EqualTo(125f).Within(1e-4f), "y la Marea (Q-B9-12)");
                 Assert.That(daily.View.HighContrast, Is.True);
                 Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(0.35f).Within(1e-6f), "Alto contraste en el tablero del Reto");
                 Assert.That(LiquidGraphic.ShaderDoseOutline, Is.EqualTo(1.5f).Within(1e-6f), "y su contorno de dosis");

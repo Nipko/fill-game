@@ -59,6 +59,16 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void TheMareaReverseTransfer_IsScaledByReduceMotion() // Q-B9-12; 02 §4: «todas las duraciones»
+        {
+            Assert.That(AF.Presentation.BoardAnimator.UndoTransferMs, Is.EqualTo(250f), "04 §2.1");
+            Assert.That(AF.Presentation.BoardAnimator.UndoTransferFor(false, 0.5f), Is.EqualTo(250f));
+            Assert.That(AF.Presentation.BoardAnimator.UndoTransferFor(true, 0.5f), Is.EqualTo(125f).Within(1e-4f));
+            Assert.That(AF.Presentation.BoardAnimator.UndoTransferFor(true, 0.3f), Is.EqualTo(75f).Within(1e-4f), "08 §9: 0,3-0,7");
+            Assert.That(AF.Presentation.BoardAnimator.UndoTransferFor(true, 0.7f), Is.EqualTo(175f).Within(1e-4f));
+        }
+
+        [Test]
         public void HighContrast_PutsThePatternAt35Percent_OtherwiseTheLevels()
         {
             Assert.That(A11yRules.HighContrastPatternOpacity, Is.EqualTo(0.35f), "07 §3, regla 5; D-033, Q-N4 (a)");
