@@ -184,9 +184,20 @@ internal sealed class LevelPlan
 
     public IReadOnlyList<CapacityInfo> Capacities => Cell.Capacities;
 
-    public string SeedText => string.Create(CultureInfo.InvariantCulture, $"amazonfill:v1:m{World.World:00}:v1:n{Level:0000}");
+    /// <summary>
+    /// Número del tablero de reserva del slot (1-9; D-033, añadido «la reserva del 20 %», Q-B11-7 a; pack_schema 4) o 0 en un
+    /// nivel de campaña. Cambia la semilla (sufijo <c>:r{k}</c>) y el id (<c>_r{k}</c>); el id del slot sigue en <see cref="CampaignId"/>.
+    /// </summary>
+    public int Reserve { get; init; }
 
-    public string Id => string.Create(CultureInfo.InvariantCulture, $"m{World.World:00}_v1_n{Level:0000}");
+    public string SeedText => Reserve == 0
+        ? string.Create(CultureInfo.InvariantCulture, $"amazonfill:v1:m{World.World:00}:v1:n{Level:0000}")
+        : string.Create(CultureInfo.InvariantCulture, $"amazonfill:v1:m{World.World:00}:v1:n{Level:0000}:r{Reserve}");
+
+    public string Id => Reserve == 0 ? CampaignId : string.Create(CultureInfo.InvariantCulture, $"{CampaignId}_r{Reserve}");
+
+    /// <summary>Id de campaña del slot (<c>m{mm}_v1_n{nnnn}</c>): el <c>replaces</c> de un tablero de reserva.</summary>
+    public string CampaignId => string.Create(CultureInfo.InvariantCulture, $"m{World.World:00}_v1_n{Level:0000}");
 
     /// <summary>Banda del JSON (03 §12; el remanso es comfort [P]: el esquema no tiene otro valor).</summary>
     public string Band => Role switch

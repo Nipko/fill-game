@@ -184,6 +184,7 @@ namespace AF.Save
             Profile loser = winner == CloudMergeWinner.Local ? cloud : local;
             Profile merged = ProfileJson.Deserialize(winner == CloudMergeWinner.Local ? localJson : cloudJson);
             merged.AccountCode = local.AccountCode; // F3-5 [P]: el código de borrado es del dispositivo (el otro puede estar invalidado)
+            merged.Consent = local.Consent; // Q-B12-8 (a): la edad y el consentimiento son del dispositivo (08 §7); uno nuevo vuelve a preguntar
             if (reason != CloudMergeReason.Integrity)
             {
                 MergeFields(merged, loser);

@@ -32,9 +32,9 @@ namespace AF.UI
     /// <item><see cref="ConnectTelemetry"/>, con todo construido: el bus a la cartera y al flujo de campaña, la analítica a las
     /// pantallas y <c>biz_feature_lives</c> a la cartera.</item>
     /// </list>
-    /// Consentimiento: aún no hay pantalla (B12), así que la recogida se queda apagada
-    /// (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3): Firebase Analytics no recibe nada ni recoge por su cuenta,
-    /// y solo escriben los sumideros locales [P].
+    /// Consentimiento: la recogida empieza apagada (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3): Firebase
+    /// Analytics no recibe nada ni recoge por su cuenta hasta que la decisión de la pantalla de consentimiento (B12;
+    /// <c>GameBootstrap.Consent.cs</c>) la enciende antes de <c>AppFlow.Start</c>; con la banda &lt; 13 nunca se enciende.
     /// </summary>
     public sealed partial class GameBootstrap
     {
@@ -79,13 +79,15 @@ namespace AF.UI
             ActiveRcConfigs = null;
         }
 
-        private void SetUpTelemetry(IClock clock)
+        // Remote Config y las cifras enlazadas (08 §2.3: RC.LoadDefaults(); RC.ActivateCached(); RC.FetchAsync), al principio de Start,
+        // antes de cargar el catálogo de niveles (que lee mech_enabled.* y level_overrides; D-033, Q-B11-7 a). Una vez por escena:
+        // SetUpTelemetry no lo repite.
+        private void SetUpRemoteConfig(IClock clock)
         {
-            _telemetryClock = clock;
-            _events = new EventBus
+            if (_rc != null)
             {
-                HandlerFailed = (type, e) => Debug.LogError(LogPrefix + "Un oyente de " + type.Name + " falló: " + e.Message),
-            };
+                return;
+            }
 
             IRemoteConfigBackend rcBackend = RemoteConfigBackendOverride ?? RemoteConfigBackends.CreateDefault(RemoteConfigDefaults.Compiled);
             _rc = new RemoteConfigService(null, rcBackend);
@@ -110,8 +112,18 @@ namespace AF.UI
             {
                 Debug.LogWarning(LogPrefix + "Remote Config: " + _rcConfigs.Errors[i]);
             }
+        }
 
-            CrashReporting.Start(); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono
+        private void SetUpTelemetry(IClock clock)
+        {
+            _telemetryClock = clock;
+            _events = new EventBus
+            {
+                HandlerFailed = (type, e) => Debug.LogError(LogPrefix + "Un oyente de " + type.Name + " falló: " + e.Message),
+            };
+
+            SetUpRemoteConfig(clock); // ya hecho al principio de Start; aquí solo si alguien llama sin él
+            SetCrashReporting(true); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono. <13: BlockedAtBoot lo apaga (B12)
             s_session ??= new SessionTracker(clock.UtcNow);
             _analytics = new AnalyticsService(_events, new CommonSource(this));
             _analytics.AddSink(new LogcatAnalyticsSink());

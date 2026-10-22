@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using AF.Platform;
 using AF.Save.Json;
 
 namespace AF.Save
@@ -19,7 +20,9 @@ namespace AF.Save
     /// <c>calendar</c> (B4) y <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
     /// (vacía y 0): son economía y un tipo equivocado en ellos es corrupción. Los de B14 son cosméticos y tolerantes:
     /// <c>entitlements.skin_equipped</c> y <c>entitlements.frames</c> se omiten en su default (null y vacía), y <c>album</c>
-    /// (solo <c>fruits</c>), sin tintes; un valor que no vale toma el default o se descarta.
+    /// (solo <c>fruits</c>), sin tintes; un valor que no vale toma el default o se descarta. <c>consent</c> (B12) se omite mientras
+    /// es null y es tolerante: un bloque que no se entiende (sin perfil, con otro tipo) se lee como null y se vuelve a preguntar,
+    /// nunca hace corrupto el perfil.
     /// </summary>
     public static class ProfileJson
     {
@@ -85,6 +88,10 @@ namespace AF.Save
             root.Set(SchemaKey, JsonNode.FromInt(Profile.CurrentSchema));
             root.Set("created_at", Timestamp(p.CreatedAt));
             root.Set("economy_ts", Timestamp(p.EconomyTs));
+            if (p.Consent != null)
+            {
+                root.Set("consent", ConsentNode(p.Consent)); // B12: la clave falta hasta la primera decisión
+            }
 
             JsonNode canoes = JsonNode.NewObject();
             canoes.Set("count", JsonNode.FromInt(p.Wallet.Canoes.Count));
@@ -314,6 +321,7 @@ namespace AF.Save
             var p = new Profile();
             p.CreatedAt = ReadTimestamp(root, "created_at") ?? default(DateTime);
             p.EconomyTs = ReadTimestamp(root, "economy_ts");
+            p.Consent = ReadConsent(root); // B12: tolerante
 
             JsonNode? wallet = Section(root, "wallet");
             if (wallet != null)
@@ -990,6 +998,43 @@ namespace AF.Save
         private static JsonNode Timestamp(DateTime? value)
         {
             return value.HasValue ? JsonNode.FromString(FormatTimestamp(value.Value)) : JsonNode.Null;
+        }
+
+        // consent (B12; 08 §4.3): age_band_corrected [P] solo si es cierto.
+        private static JsonNode ConsentNode(ConsentRecord c)
+        {
+            JsonNode node = JsonNode.NewObject();
+            node.Set("profile", JsonNode.FromString(c.Profile));
+            node.Set("text_version", JsonNode.FromInt(c.TextVersion));
+            node.Set("at", Timestamp(c.At));
+            node.Set("analytics", JsonNode.FromBool(c.Analytics));
+            node.Set("ads_personalized", JsonNode.FromBool(c.AdsPersonalized));
+            node.Set("age_band", JsonNode.FromString(AgeBands.Id(c.AgeBand)));
+            if (c.AgeBandCorrected)
+            {
+                node.Set("age_band_corrected", JsonNode.FromBool(true));
+            }
+
+            return node;
+        }
+
+        // Tolerante: sin bloque, sin perfil o con otro tipo, null (se vuelve a preguntar); una banda que no se entiende queda sin
+        // declarar y una versión que no se entiende, 0 (las dos obligan a preguntar otra vez).
+        private static ConsentRecord? ReadConsent(JsonNode root)
+        {
+            JsonNode? node = TolerantSection(root, "consent");
+            string? profile = node == null ? null : TolerantString(node, "profile");
+            if (node == null || string.IsNullOrEmpty(profile))
+            {
+                return null;
+            }
+
+            int version = Math.Max(0, TolerantInt(node, "text_version", 0));
+            DateTime at = TolerantTimestamp(node, "at") ?? default(DateTime);
+            return new ConsentRecord(
+                profile!, version, DateTime.SpecifyKind(at, DateTimeKind.Utc), TolerantBool(node, "analytics", false),
+                TolerantBool(node, "ads_personalized", false), AgeBands.Parse(TolerantString(node, "age_band")),
+                TolerantBool(node, "age_band_corrected", false));
         }
 
         // ---------------------------------------------------------------- lectura tolerante

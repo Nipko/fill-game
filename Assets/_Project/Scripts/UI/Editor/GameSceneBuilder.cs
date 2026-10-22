@@ -57,6 +57,23 @@ namespace AF.UI.Editor
             "Assets/_Project/Data/Levels/mundo_09_v1.json",
         };
 
+        /// <summary>
+        /// Paquetes de reserva de la escena (D-033, añadido «la reserva del 20 %», Q-B11-7 a; 03 §17): uno por mundo con mecánicas
+        /// (<c>kind</c> = <c>reserve</c>, <c>pack_schema</c> 4; el mundo 2 no tiene, porque solo lleva capacidades), generados por
+        /// <c>tools/level-generator --reserve</c> desde los paquetes de campaña publicados. No son niveles de campaña: van en
+        /// <c>reserveLevelPacks</c> y solo se leen al resolver <c>level_overrides</c>.
+        /// </summary>
+        public static readonly string[] ReservePackPaths =
+        {
+            "Assets/_Project/Data/Levels/reserva_03_v1.json",
+            "Assets/_Project/Data/Levels/reserva_04_v1.json",
+            "Assets/_Project/Data/Levels/reserva_05_v1.json",
+            "Assets/_Project/Data/Levels/reserva_06_v1.json",
+            "Assets/_Project/Data/Levels/reserva_07_v1.json",
+            "Assets/_Project/Data/Levels/reserva_08_v1.json",
+            "Assets/_Project/Data/Levels/reserva_09_v1.json",
+        };
+
         /// <summary>Catálogo de miquitos de la intro «Llenar y teñir» (<c>af-fauna/0</c>; guion de la intro §4.3).</summary>
         public const string FaunaCatalogPath = "Assets/_Project/Data/Fauna/miquitos_v0.json";
 
@@ -124,6 +141,17 @@ namespace AF.UI.Editor
                 }
             }
 
+            var reserve = new TextAsset[ReservePackPaths.Length];
+            for (int i = 0; i < ReservePackPaths.Length; i++)
+            {
+                reserve[i] = AssetDatabase.LoadAssetAtPath<TextAsset>(ReservePackPaths[i]);
+                if (reserve[i] == null)
+                {
+                    Debug.LogError(LogPrefix + "no existe el paquete de reserva " + ReservePackPaths[i] + ".");
+                    return 2;
+                }
+            }
+
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
                 Debug.LogWarning(LogPrefix + "cancelado: hay escenas sin guardar.");
@@ -152,6 +180,7 @@ namespace AF.UI.Editor
             var bootstrapGo = new GameObject("GameBootstrap");
             GameBootstrap bootstrap = bootstrapGo.AddComponent<GameBootstrap>();
             bootstrap.Configure(packs);
+            bootstrap.ConfigureReservePacks(reserve);
             TextAsset? fauna = AssetDatabase.LoadAssetAtPath<TextAsset>(FaunaCatalogPath);
             if (fauna == null)
             {

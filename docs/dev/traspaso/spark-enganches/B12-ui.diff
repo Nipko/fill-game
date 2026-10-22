@@ -1,0 +1,499 @@
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
+index 816659fd..406bfe34 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
+@@ -141,12 +141,8 @@ private void SetUpConsent(IClock clock, IConsentStore store)
+                 return;
+             }
+ 
+-            var errors = new List<string>();
+-            _consentConfig = _rc != null ? ConsentConfigBinder.Bind(_rc.Freeze(), errors) : ConsentConfig.Defaults;
+-            for (int i = 0; i < errors.Count; i++)
+-            {
+-                Debug.LogWarning(LogPrefix + "Remote Config: " + errors[i]);
+-            }
++            // Las cifras ya enlazadas con el resto (RcConfigBinder; sus errores ya salieron en SetUpTelemetry): una sola fuente.
++            _consentConfig = _rcConfigs?.Consent ?? ConsentConfig.Defaults;
+ 
+             _consentCountry = ConsentCountry.Resolve(SimCountryOverride ?? AndroidSimCountry.ForPlatform(), _deviceLocale, out _consentCountrySource);
+             string profile = _consentConfig.ProfileFor(_consentCountry);
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Sessions.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Sessions.cs
+index 322912e9..e9c28439 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Sessions.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Sessions.cs
+@@ -176,7 +176,9 @@ internal void SessionsPaused(bool paused)
+         {
+             SessionTracker? sessions = _sessions;
+             NotificationService? notifications = _notifications;
+-            if (sessions == null || notifications == null)
++
++            // B12: con la edad o el consentimiento pendientes, o el bloqueo de <13, ni sesión ni avisos locales (08 §7).
++            if (sessions == null || notifications == null || ConsentHoldsSession)
+             {
+                 return;
+             }
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
+index b89ff9cb..8a0b40f9 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
+@@ -28,8 +28,9 @@ namespace AF.UI
+     /// <item><see cref="ConnectTelemetry"/>, con todo construido: el bus a la cartera y al flujo de campaña, la analítica a las
+     /// pantallas y <c>biz_feature_lives</c> a la cartera.</item>
+     /// </list>
+-    /// Consentimiento: aún no hay pantalla ni sumidero real (Firebase), así que la recogida se queda apagada
+-    /// (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3) y solo escriben los sumideros locales [P].
++    /// Consentimiento: la recogida empieza apagada (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3) y la
++    /// enciende la decisión de la pantalla de consentimiento antes de <c>AppFlow.Start</c> (B12; <c>GameBootstrap.Consent.cs</c>);
++    /// sin sumidero real (Firebase), solo escriben los locales.
+     /// </summary>
+     public sealed partial class GameBootstrap
+     {
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 010305e5..83868ab0 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -881,6 +881,7 @@ public bool PressSettings()
+                 profile.Settings.SlothMessages);
+             settings.MarkAudio(profile.Settings.Sound, profile.Settings.Music, profile.Settings.Haptics); // AU1
+             settings.MarkIdleHint(profile.Settings.IdleHint); // MO3
++            RefreshConsentRows(); // B12: «Privacidad y datos» y «Corregir mi edad» (GameBootstrap.Consent.cs)
+             _skipNextDelta = true;
+             return true;
+         }
+@@ -900,6 +901,13 @@ public bool PressAndroidBack()
+                 return false;
+             }
+ 
++            // B12: la edad, el consentimiento o la doble confirmación, encima de todo: Atrás la cierra si se puede (Ajustes, compra) y
++            // nunca sigue a lo de debajo (en el bloqueo no hace nada).
++            if (ConsentBack())
++            {
++                return true;
++            }
++
+             if ((_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || (_lockedNotice != null && _lockedNotice.Visible))
+             {
+                 return false;
+@@ -1526,6 +1534,14 @@ private IEnumerator Start()
+ 
+             _art = SharedArt(catalog.WaterBase);
+             _probe = new DevProbe { Settings = profile.Settings };
++
++            // B12 (08 §7): con la banda <13 guardada, «Pide a un adulto que instale el juego» y nada más: el arranque se para antes de
++            // crear los anuncios, la tienda y las pantallas (no se crea sesión de juego; GameBootstrap.Consent.cs).
++            var consentStore = new ProfileConsentStore(profile, batch.Durable);
++            if (BlockedAtBoot(consentStore))
++            {
++                yield break;
++            }
+             if (_splash != null)
+             {
+                 // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
+@@ -1554,9 +1570,9 @@ private IEnumerator Start()
+             ISimulatedPurchasePresenter purchasePresenter = new BatchedPurchasePresenter(
+                 LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art)), batch);
+             _ads = AdController.Create(
+-                WrapAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill())), profile, batch, clock, firstRun, _rcConfigs?.Ads);
++                WrapAds(WrapConsentAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()))), profile, batch, clock, firstRun, _rcConfigs?.Ads);
+             _storeLedger = new StoreLedger(profile, _wallet, batch, clock, _rcConfigs?.Store);
+-            _store = WrapStore(new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency));
++            _store = WrapStore(WrapConsentStore(new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency))); // B12: flags de edad
+             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
+                 mapProgress: progress);
+ 
+@@ -1623,6 +1639,7 @@ private IEnumerator Start()
+             SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
+             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
+             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
++            SetUpConsent(clock, consentStore); // B12: cifras, país y perfil legal, flujo y pantalla (GameBootstrap.Consent.cs)
+ 
+             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
+             if (requested <= 0 && !rebuilt)
+@@ -1635,6 +1652,18 @@ private IEnumerator Start()
+                 yield return FinishSplash(firstRun); // fin de la carga: se corta, con el segundo de sloth_wake si toca y cabe
+             }
+ 
++            // B12 (08 §2.3): la edad y el consentimiento, y sus flags a la analítica, los anuncios y la tienda, siempre antes de
++            // GameFlow.Go. Sin pantalla que enseñar no hay ningún yield. Con <13, la app no arranca.
++            if (StartConsentAtBoot())
++            {
++                yield return WaitConsentAtBoot();
++            }
++
++            if (ConsentBlocked)
++            {
++                yield break;
++            }
++
+             if (requested > 0)
+             {
+                 _app.StartAtLevel(requested);
+diff --git a/Assets/_Project/Scripts/UI/SettingsScreen.cs b/Assets/_Project/Scripts/UI/SettingsScreen.cs
+index 79bcd977..caf0b481 100644
+--- a/Assets/_Project/Scripts/UI/SettingsScreen.cs
++++ b/Assets/_Project/Scripts/UI/SettingsScreen.cs
+@@ -32,6 +32,8 @@ namespace AF.UI
+     /// <item><b>Pista por inactividad</b> (tarea MO3; 02 §3.4 y §12; 04 §2.3; 07 §7.8): una fila que se marca o se desmarca
+     /// (<c>settings.idle_hint</c> [P], activada por defecto; apagada equivale a <c>hint_idle_delay_s</c> = 0 en el dispositivo y
+     /// no afecta a Morpho), en <see cref="IdleHintSlot"/>, tras «Mensajes de TiTino».</item>
++    /// <item><b>Privacidad</b> (bloque B12; 05 §7 y 08 §7), tras «Pista por inactividad»: «Privacidad y datos» y «Corregir mi
++    /// edad» (una vez), en <see cref="ConsentSlot"/> (<c>SettingsScreen.Consent.cs</c>).</item>
+     /// <item><b>Sobre la Amazonía</b> (tarea F4; D-017 Q4-A; 07 §8.2), al final: «Frutas del río» con una ficha por serie del
+     /// calendario, que abre su ficha (<see cref="FruitSheet"/>), en <see cref="AboutSlot"/> (<c>SettingsScreen.About.cs</c>).</item>
+     /// </list>
+@@ -184,6 +186,9 @@ public SettingsScreen(Transform host, ProceduralArt art, DevProbe probe, Action<
+             IdleHintSlot = UiBuilder.Rect("IdleHintSlot", _content);
+             _idleRow = new OptionRow(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
+ 
++            // Privacidad (B12; SettingsScreen.Consent.cs), oculta hasta que GameBootstrap la enseñe.
++            BuildConsent();
++
+             // «Sobre la Amazonía» (F4), oculto hasta que haya algo que enseñar (SettingsScreen.About.cs).
+             AboutSlot = HiddenSlot("AboutSlot");
+             BuildAbout();
+@@ -571,6 +576,12 @@ private void Layout()
+             _rowHeights.Add(rowH);
+             y += rowH + RowGapDp;
+ 
++            // Privacidad (B12), si se ve: sus filas tras la pista por inactividad, con el hueco de sección.
++            if (PrivacyShown)
++            {
++                y = LayoutConsent(y - RowGapDp + SectionGapDp, y, inner, rowH, s) + RowGapDp;
++            }
++
+             // Sobre la Amazonía (F4), si hay frutas que enseñar. El contenido acaba en la última fila.
+             y -= RowGapDp;
+             if (AboutShown)
+@@ -678,7 +689,7 @@ private void EmitLayout()
+                 return;
+             }
+ 
+-            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount;
++            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount + ConsentLayoutCount;
+             var ids = new string[n];
+             var rects = new RectTransform[n];
+             ids[0] = "close";
+@@ -703,6 +714,7 @@ private void EmitLayout()
+             rects[k] = _idleRow.Root;
+             AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
+             AboutLayoutIds(ids, rects, k + 1 + AudioRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
++            ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + AboutLayoutCount); // consent y age_band (B12)
+ 
+             _probe.Layout("settings", 0, null, ids, rects);
+         }
+diff --git a/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs b/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs
+new file mode 100644
+index 00000000..4fa8111c
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs
+@@ -0,0 +1,256 @@
++#nullable enable
++using System;
++using System.Collections;
++using AF.Economy;
++using AF.GameFlow;
++using AF.IAP;
++using AF.Platform;
++using AF.Save;
++using AF.UI;
++using NUnit.Framework;
++using UnityEngine.TestTools;
++
++namespace AF.Tests.PlayMode
++{
++    /// <summary>
++    /// La edad y el consentimiento en la escena <c>Game</c> real (bloque B12, parche <c>B12-ui.diff</c>; 08 §2.3 y §7; 05 §7; 06 §2.1,
++    /// regla 3; Q-T3 (a) y Q-T4 (a)): la primera vez, la edad neutral y el consentimiento antes del nivel 1, con los flags a la
++    /// analítica, los anuncios y la tienda antes de <c>AppFlow.Start</c>; &lt;13 bloquea y sigue bloqueado en el arranque siguiente;
++    /// una decisión vigente no enseña nada; con 13-17, la doble confirmación antes de la hoja de compra; y en Ajustes, cambiar las
++    /// finalidades y corregir la edad una vez.
++    /// </summary>
++    public sealed class ConsentBootTests
++    {
++        private static readonly DateTime T0 = new DateTime(2026, 10, 21, 15, 0, 0, DateTimeKind.Utc);
++
++        [SetUp]
++        public void SetUp()
++        {
++            GameBootstrap.ConsentEnabledOverride = true;
++            GameBootstrap.SimCountryOverride = new ManualSimCountry("CO");
++            LaunchOptions.ClockOverride = new ManualClock(T0, TimeSpan.FromHours(-5));
++        }
++
++        [TearDown]
++        public void TearDown()
++        {
++            LaunchOptions.Reset();
++            GameBootstrap.ResetConsentOverrides();
++        }
++
++        private static Profile ProfileWith(ConsentRecord? consent, int nextLevel = 4)
++        {
++            Profile profile = Wallet.NewProfile(new ManualClock(T0));
++            profile.Progress.NextLevel = nextLevel;
++            profile.Progress.MaxLevel = nextLevel - 1;
++            profile.Consent = consent;
++            return profile;
++        }
++
++        [UnityTest]
++        public IEnumerator FirstRun_AgeThenConsent_BeforeLevel1_WithTheFlagsAppliedFirst()
++        {
++            var store = new MemoryProfileStore();
++            yield return PlayModeHelpers.LoadAppWithConsent(store);
++            GameBootstrap boot = GameBootstrap.Current!;
++            ConsentScreen view = boot.ConsentView!;
++            Assert.That(view.View, Is.EqualTo(ConsentView.Age), "06 §2.1, regla 3: antes del nivel 1");
++            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Boot));
++            Assert.That(boot.Analytics!.CollectionEnabled, Is.False, "08 §2.3: apagada hasta el consentimiento");
++            Assert.That(boot.ConsentAds!.Initialized, Is.False, "MAX sin inicializar");
++            Assert.That(boot.Consent!.Profile, Is.EqualTo(LegalProfiles.Co1581), "Q-T3 (a): el país de la SIM");
++            Assert.That(boot.ConsentHoldsSession, Is.True, "sin sesión ni avisos locales hasta decidir");
++            Assert.That(boot.PressAndroidBack(), Is.False, "Atrás no salta la pantalla");
++            Assert.That(view.Visible, Is.True);
++
++            view.AgeButton(AgeBand.Adult).onClick.Invoke();
++            yield return null;
++            Assert.That(view.View, Is.EqualTo(ConsentView.Choices));
++            Assert.That(view.AdsToggleShown, Is.True);
++            Assert.That(view.AnalyticsSelected, Is.False);
++
++            view.AcceptAllButton.onClick.Invoke();
++            yield return PlayModeHelpers.WaitFor(() => boot.App.Screen != AppScreen.Boot, "la primera pantalla tras el consentimiento");
++            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Level), "la primera vez, el nivel 1");
++            Assert.That(boot.ConsentHoldsSession, Is.False);
++            Assert.That(view.Visible, Is.False);
++            Assert.That(boot.Analytics.CollectionEnabled, Is.True);
++            Assert.That(boot.ConsentAds.Initialized, Is.True);
++            Assert.That(boot.ConsentAds.NonPersonalized, Is.False);
++            Assert.That(boot.ConsentAds.MaxAdContentRating, Is.EqualTo("G"));
++            Profile saved = store.Load().Profile!;
++            Assert.That(saved.Consent!.Profile, Is.EqualTo("co_1581"));
++            Assert.That(saved.Consent.AgeBand, Is.EqualTo(AgeBand.Adult));
++            Assert.That(saved.Consent.Analytics, Is.True);
++            Assert.That(saved.Consent.At, Is.EqualTo(T0), "la prueba lleva la fecha (05 §7)");
++        }
++
++        [UnityTest]
++        public IEnumerator Under13_Blocks_AndTheNextBootStaysBlocked_WithoutBuildingTheGame()
++        {
++            var store = new MemoryProfileStore();
++            yield return PlayModeHelpers.LoadAppWithConsent(store);
++            GameBootstrap first = GameBootstrap.Current!;
++            first.ConsentView!.AgeButton(AgeBand.Under13).onClick.Invoke();
++            yield return null; // el arranque, que espera la decisión, aplica los flags y bloquea
++            Assert.That(first.ConsentBlocked, Is.True);
++            Assert.That(first.Analytics!.CollectionEnabled, Is.False);
++            Assert.That(first.ConsentAds!.ChildDirected, Is.True, "TFCD antes de bloquear (08 §7)");
++            Assert.That(first.ConsentStore!.PurchasesAllowed, Is.False);
++            Assert.That(store.Load().Profile!.Consent!.AgeBand, Is.EqualTo(AgeBand.Under13));
++
++            // La escena se recarga y el arranque se para en el bloqueo, antes de crear el juego (sin sesión, audio ni avisos).
++            yield return PlayModeHelpers.WaitFor(
++                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked,
++                "el arranque bloqueado tras elegir <13");
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.ConsentView!.View, Is.EqualTo(ConsentView.Blocked));
++            Assert.That(boot.App, Is.Null, "no se crea sesión de juego");
++            Assert.That(boot.Ads, Is.Null);
++            Assert.That(boot.Store, Is.Null);
++            Assert.That(boot.PressAndroidBack(), Is.False);
++            Assert.That(boot.ConsentView.Visible, Is.True);
++
++            yield return PlayModeHelpers.LoadAppWithConsent(store);
++            boot = GameBootstrap.Current!;
++            Assert.That(boot.ConsentBlocked, Is.True, "en cualquier arranque posterior (08 §7)");
++            Assert.That(boot.ConsentView!.View, Is.EqualTo(ConsentView.Blocked));
++            Assert.That(boot.App, Is.Null, "el arranque se para antes de crear el juego");
++        }
++
++        [UnityTest]
++        public IEnumerator Settings_CorrectingTo13_Blocks_WithoutTheSession()
++        {
++            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Teen)));
++            yield return PlayModeHelpers.LoadAppWithConsent(store);
++            GameBootstrap first = GameBootstrap.Current!;
++            Assert.That(first.PressSettings(), Is.True);
++            first.SettingsView!.AgeButton!.onClick.Invoke();
++            first.ConsentView!.AgeButton(AgeBand.Under13).onClick.Invoke();
++
++            yield return PlayModeHelpers.WaitFor(
++                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked,
++                "el arranque bloqueado tras corregir a <13");
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.App, Is.Null, "la sesión de juego no sigue debajo");
++            Assert.That(boot.ConsentView!.View, Is.EqualTo(ConsentView.Blocked));
++            ConsentRecord saved = store.Load().Profile!.Consent!;
++            Assert.That(saved.AgeBand, Is.EqualTo(AgeBand.Under13));
++            Assert.That(saved.AgeBandCorrected, Is.True);
++        }
++
++        [UnityTest]
++        public IEnumerator UnknownCountry_IsStrict_AndUmp_LeavesTheAdsToUmp()
++        {
++            GameBootstrap.SimCountryOverride = ManualSimCountry.None;
++            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("es-419");
++            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.ConsentCountryCode, Is.Null);
++            boot.ConsentView!.AgeButton(AgeBand.Adult).onClick.Invoke();
++            Assert.That(boot.ConsentView.AdsToggleShown, Is.False, "Q-T3 (a): sin país, lo más estricto");
++            Assert.That(boot.ConsentView.AdsLineText, Is.EqualTo(ConsentText.T(ConsentText.Keys.AdsStrict)));
++            boot.ConsentView.AcceptAllButton.onClick.Invoke();
++            yield return PlayModeHelpers.WaitFor(() => boot.App!.Screen != AppScreen.Boot, "la primera pantalla");
++            Assert.That(boot.ConsentAds!.NonPersonalized, Is.True);
++
++            LaunchOptions.Reset();
++            GameBootstrap.SimCountryOverride = new ManualSimCountry("DE");
++            LaunchOptions.ClockOverride = new ManualClock(T0, TimeSpan.Zero);
++            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Ump, 1, T0, true, false, AgeBand.Adult)));
++            yield return PlayModeHelpers.LoadAppWithConsent(store);
++            boot = GameBootstrap.Current!;
++            Assert.That(boot.ConsentAds!.UmpDecides, Is.True);
++            Assert.That(boot.ConsentAds.NonPersonalized, Is.False, "en el EEE decide UMP (08 §7 #2)");
++            Assert.That(boot.PressSettings(), Is.True);
++            boot.SettingsView!.PrivacyButton!.onClick.Invoke();
++            Assert.That(boot.ConsentView!.AdsOptionsShown, Is.True, "revocación en Ajustes (05 §7)");
++            boot.ConsentView.AdsOptionsButton.onClick.Invoke();
++            Assert.That(boot.ConsentAds.PrivacyOptionsRequests, Is.EqualTo(1));
++        }
++
++        [UnityTest]
++        public IEnumerator AValidDecision_ShowsNothing_AndAppliesItsFlags()
++        {
++            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, false, true, AgeBand.Adult)));
++            yield return PlayModeHelpers.LoadAppWithConsent(store);
++            GameBootstrap boot = GameBootstrap.Current!;
++
++            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
++            Assert.That(boot.ConsentView!.Visible, Is.False);
++            Assert.That(boot.Analytics!.CollectionEnabled, Is.False, "rechazó la analítica");
++            Assert.That(boot.ConsentAds!.Initialized, Is.True);
++            Assert.That(boot.ConsentAds.NonPersonalized, Is.False);
++        }
++
++        [UnityTest]
++        public IEnumerator Teen_ASecondConfirmation_BeforeTheStoreSheet()
++        {
++            var presenter = new ImmediatePurchasePresenter();
++            LaunchOptions.PurchasePresenterOverride = presenter;
++            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, false, AgeBand.Teen)));
++            yield return PlayModeHelpers.LoadAppWithConsent(store);
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.ConsentAds!.NonPersonalized, Is.True, "13-17: npa");
++
++            PurchaseResult? result = null;
++            boot.Store!.Purchase(new PurchaseRequest("af_coins_2"), r => result = r);
++            Assert.That(boot.ConsentView!.View, Is.EqualTo(ConsentView.Confirm), "Q-T4 (a): la segunda confirmación");
++            Assert.That(presenter.Presented, Is.EqualTo(0), "la hoja de compra, después");
++            Assert.That(boot.PressAndroidBack(), Is.True, "Atrás la cancela");
++            Assert.That(result!.Status, Is.EqualTo(PurchaseStatus.Cancelled));
++            Assert.That(presenter.Presented, Is.EqualTo(0));
++
++            result = null;
++            boot.Store.Purchase(new PurchaseRequest("af_coins_2"), r => result = r);
++            boot.ConsentView.ConfirmBuyButton.onClick.Invoke();
++            Assert.That(presenter.Presented, Is.EqualTo(1));
++            Assert.That(result!.Status, Is.EqualTo(PurchaseStatus.Purchased));
++        }
++
++        [UnityTest]
++        public IEnumerator Settings_ChangeTheChoices_AndCorrectTheAgeOnce()
++        {
++            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Adult)));
++            yield return PlayModeHelpers.LoadAppWithConsent(store);
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.Analytics!.CollectionEnabled, Is.True);
++            Assert.That(boot.PressSettings(), Is.True);
++            SettingsScreen settings = boot.SettingsView!;
++            Assert.That(settings.PrivacyShown, Is.True);
++            Assert.That(settings.AgeShown, Is.True);
++
++            // «Privacidad y datos»: lo guardado marcado; apagar la analítica la apaga al momento (05 §7: revocación en Ajustes).
++            settings.PrivacyButton!.onClick.Invoke();
++            ConsentScreen view = boot.ConsentView!;
++            Assert.That(view.View, Is.EqualTo(ConsentView.Choices));
++            Assert.That(view.Closable, Is.True);
++            Assert.That(view.AnalyticsSelected, Is.True);
++            Assert.That(view.AdsSelected, Is.True);
++            view.AnalyticsToggleButton.onClick.Invoke();
++            view.SaveButton.onClick.Invoke();
++            Assert.That(view.Visible, Is.False);
++            Assert.That(settings.Visible, Is.True, "se vuelve a Ajustes");
++            Assert.That(boot.Analytics.CollectionEnabled, Is.False);
++            Assert.That(store.Load().Profile!.Consent!.Analytics, Is.False);
++
++            // «Corregir mi edad» a 13-17: npa, la marca de corregida y el enlace desaparece.
++            settings.AgeButton!.onClick.Invoke();
++            Assert.That(view.View, Is.EqualTo(ConsentView.Age));
++            Assert.That(boot.PressAndroidBack(), Is.True, "Atrás la cierra sin cambiar nada");
++            Assert.That(view.Visible, Is.False);
++            Assert.That(settings.AgeShown, Is.True);
++
++            settings.AgeButton.onClick.Invoke();
++            view.AgeButton(AgeBand.Teen).onClick.Invoke();
++            Assert.That(view.Visible, Is.False);
++            ConsentRecord saved = store.Load().Profile!.Consent!;
++            Assert.That(saved.AgeBand, Is.EqualTo(AgeBand.Teen));
++            Assert.That(saved.AgeBandCorrected, Is.True);
++            Assert.That(saved.AdsPersonalized, Is.False);
++            Assert.That(boot.ConsentAds!.NonPersonalized, Is.True);
++            Assert.That(settings.AgeShown, Is.False, "una sola vez (08 §7)");
++            Assert.That(settings.PrivacyShown, Is.True);
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs.meta b/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs.meta
+new file mode 100644
+index 00000000..035f7170
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: f113f7f13f02d65499ce156522aa1470
+\ No newline at end of file
+diff --git a/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs b/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs
+index 46845bc3..91d605bf 100644
+--- a/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs
++++ b/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs
+@@ -60,6 +60,26 @@ public static IEnumerator LoadApp(IProfileStore store)
+                 "arranque de la escena Game");
+         }
+ 
++        /// <summary>
++        /// Como <see cref="LoadApp"/>, pero la espera acaba también cuando el arranque deja a la vista la pantalla de la edad, del
++        /// consentimiento o del bloqueo (B12; <see cref="GameBootstrap.ConsentView"/>), que van antes de decidir la primera pantalla.
++        /// </summary>
++        public static IEnumerator LoadAppWithConsent(IProfileStore store)
++        {
++            LaunchOptions.StartLevelOverride = 0;
++            LaunchOptions.ProgressStoreOverride = null;
++            LaunchOptions.ProfileStoreOverride = store;
++            NoLevelCardsUnlessSet();
++            yield return LoadScene();
++            yield return WaitFor(
++                () =>
++                {
++                    GameBootstrap? boot = GameBootstrap.Current;
++                    return boot != null && ((boot.ConsentView != null && boot.ConsentView.Visible) || (boot.App != null && boot.App.Screen != AppScreen.Boot));
++                },
++                "arranque de la escena Game hasta el consentimiento o la primera pantalla");
++        }
++
+         /// <summary>
+         /// Como <see cref="LoadApp"/>, pero con el <c>LocalProfileStore</c> que crea el propio arranque en la carpeta
+         /// <paramref name="directory"/> (<see cref="LaunchOptions.ProfileDirectoryOverride"/>) en vez de un almacén del test.
+@@ -251,6 +271,13 @@ private static IEnumerator LoadScene()
+                 BootSplash.EnabledOverride = false;
+             }
+ 
++            // Sin la edad ni el consentimiento (B12) salvo que el test los encienda (GameBootstrap.ConsentEnabledOverride = true;
++            // ConsentBootTests la vuelve a null en su TearDown): los tests de siempre arrancan como antes, con la analítica sin recoger.
++            if (GameBootstrap.ConsentEnabledOverride == null)
++            {
++                GameBootstrap.ConsentEnabledOverride = false;
++            }
++
+ #if UNITY_EDITOR
+             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+ #else

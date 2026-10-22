@@ -30,7 +30,10 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
         hoja_atada exige key; el Brote admite n 1 o 2 (Brote de dos hojas); flor exige key y key2, con key distinta de
         key2; intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P]; key2 solo en la Flor. Con pack_schema 1 y
         2 nada de eso valida (hoja_atada en un pack 2 falla) y lo demas sigue igual (el 1 y el 2 no restringen el n
-        del Brote).
+        del Brote);
+    (h) pack_schema 4 (D-033, anadido "la reserva del 20 %", Q-B11-7 a; contrato 21): el pack de reserva (kind reserve,
+        pack_id reserva_{mm}_v{v}, replaces, id con _r{k} y seed con :r{k}, sin intro_mechanic) solo valida con el 4;
+        replaces, los sufijos y el pack_id reserva_ fallan fuera de kind reserve; un pack de campana con el 4 valida.
 
 Imprime PASS/FAIL por caso y termina con codigo 1 si alguno falla. Requiere jsonschema >= 4.18.
 
@@ -313,8 +316,8 @@ def main() -> int:
     check(validator, "e8", "pack 1: intro_mechanic = matapi",
           pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja", "key": 4}, "matapi", pack=1), False)
     d = copy.deepcopy(example)
-    d["pack_schema"] = 4
-    check(validator, "e9", "pack_schema = 4, una version que el esquema no conoce (el cliente lo rechazaria, 08 §4.4)", d, False)
+    d["pack_schema"] = 5
+    check(validator, "e9", "pack_schema = 5, una version que el esquema no conoce (el cliente lo rechazaria, 08 §4.4)", d, False)
     check(validator, "e10", "pack 2: Hoja sin key",
           pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja"}, "hoja"), False)
     d = pack2_level(4, "w04_trapecio", "white", 103, {"type": "remolino", "partner": 8}, "remolino")
@@ -541,6 +544,60 @@ def main() -> int:
     check(validator, "g29", "pack 3: Hoja atada junto a la Tinaja (filtro admitido con la tinaja, 02 §9.1)", d, True)
     check(attr_validator, "g30", "attr {type: hoja_atada, key: 4} contra $defs/attr", hoja_atada, True)
     check(attr_validator, "g31", "attr {type: flor, key: 3, key2: 4} contra $defs/attr", flor, True)
+
+    # (h) pack_schema 4: el pack de reserva (D-033, anadido "la reserva del 20 %", Q-B11-7 a; contrato 21)
+    def reserve_pack(pack: int = 4) -> dict:
+        """El ejemplo de 08 §4.1 (43, estreno de la Hoja) como tablero de reserva de su slot: sin la Hoja ni intro."""
+        p = copy.deepcopy(example)
+        p.update({"pack_schema": pack, "pack_id": "reserva_03_v1", "kind": "reserve"})
+        p.pop("cycle20", None)
+        lv = p["levels"][0]
+        lv.update({"id": "m03_v1_n0043_r1", "seed": "amazonfill:v1:m03:v1:n0043:r1", "replaces": "m03_v1_n0043",
+                   "intro_mechanic": None, "skippable": True})
+        lv["attrs"] = [None] * len(lv["cuias"])
+        for board in lv["relief"]:
+            board["attrs"] = None
+        return p
+
+    check(validator, "h1", "pack 4: reserva del 43 (kind reserve, reserva_03_v1, replaces m03_v1_n0043, _r1 y :r1, sin intro)",
+          reserve_pack(), True)
+    check(validator, "h2", "pack 3: el mismo pack de reserva (kind reserve solo con pack_schema 4)", reserve_pack(pack=3), False)
+    d = reserve_pack()
+    del d["levels"][0]["replaces"]
+    check(validator, "h3", "pack 4: reserva sin replaces", d, False)
+    d = reserve_pack()
+    d["levels"][0]["id"] = "m03_v1_n0043"
+    check(validator, "h4", "pack 4: reserva con el id de campana, sin _r1", d, False)
+    d = reserve_pack()
+    d["levels"][0]["seed"] = "amazonfill:v1:m03:v1:n0043"
+    check(validator, "h5", "pack 4: reserva con la semilla de campana, sin :r1", d, False)
+    d = reserve_pack()
+    d["pack_id"] = "mundo_03_v1"
+    check(validator, "h6", "pack 4: reserva con pack_id mundo_03_v1", d, False)
+    d = reserve_pack()
+    d["levels"][0]["intro_mechanic"] = "hoja"
+    check(validator, "h7", "pack 4: reserva con intro_mechanic (un tablero de reserva no estrena nada)", d, False)
+    d = reserve_pack()
+    d["levels"][0]["replaces"] = "m03_v1_n0043_r1"
+    check(validator, "h8", "pack 4: replaces con el sufijo _r1 (replaces es un id de campana)", d, False)
+    d = copy.deepcopy(example)
+    d["levels"][0]["replaces"] = "m03_v1_n0043"
+    check(validator, "h9", "pack 1: nivel de campana con replaces (solo en kind reserve)", d, False)
+    d = copy.deepcopy(example)
+    d["pack_schema"] = 4
+    d["levels"][0]["id"] = "m03_v1_n0043_r1"
+    d["levels"][0]["seed"] = "amazonfill:v1:m03:v1:n0043:r1"
+    check(validator, "h10", "pack 4: nivel de campana con id y seed de reserva", d, False)
+    d = copy.deepcopy(example)
+    d["pack_schema"] = 4
+    d["pack_id"] = "reserva_03_v1"
+    check(validator, "h11", "pack 4: pack de campana con pack_id reserva_03_v1", d, False)
+    d = copy.deepcopy(example)
+    d["pack_schema"] = 4
+    check(validator, "h12", "pack 4: el ejemplo de campana con pack_schema 4 (el 4 es el 3 mas la reserva)", d, True)
+    d = copy.deepcopy(daily)
+    d["levels"][0]["replaces"] = "m03_v1_n0043"
+    check(validator, "h13", "tablero diario con replaces", d, False)
 
     failed = RESULTS.count(False)
     print(f"\n{len(RESULTS) - failed}/{len(RESULTS)} casos PASS" + (f"; {failed} FAIL" if failed else ""))

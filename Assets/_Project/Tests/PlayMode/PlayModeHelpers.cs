@@ -61,6 +61,26 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
+        /// Como <see cref="LoadApp"/>, pero la espera acaba también cuando el arranque deja a la vista la pantalla de la edad, del
+        /// consentimiento o del bloqueo (B12; <see cref="GameBootstrap.ConsentView"/>), que van antes de decidir la primera pantalla.
+        /// </summary>
+        public static IEnumerator LoadAppWithConsent(IProfileStore store)
+        {
+            LaunchOptions.StartLevelOverride = 0;
+            LaunchOptions.ProgressStoreOverride = null;
+            LaunchOptions.ProfileStoreOverride = store;
+            NoLevelCardsUnlessSet();
+            yield return LoadScene();
+            yield return WaitFor(
+                () =>
+                {
+                    GameBootstrap? boot = GameBootstrap.Current;
+                    return boot != null && ((boot.ConsentView != null && boot.ConsentView.Visible) || (boot.App != null && boot.App.Screen != AppScreen.Boot));
+                },
+                "arranque de la escena Game hasta el consentimiento o la primera pantalla");
+        }
+
+        /// <summary>
         /// Como <see cref="LoadApp"/>, pero con el <c>LocalProfileStore</c> que crea el propio arranque en la carpeta
         /// <paramref name="directory"/> (<see cref="LaunchOptions.ProfileDirectoryOverride"/>) en vez de un almacén del test.
         /// </summary>
@@ -95,11 +115,26 @@ namespace AF.Tests.PlayMode
             NoSlothRestartNoticeUnlessSet();
             NoTutorialSlothUnlessSet();
             NoTutorialFingerUnlessSet();
+            NoTutorialTipsUnlessSet();
             NoL10SequenceUnlessSet();
             NoContentEndMapUnlessSet();
             NoIdleHintUnlessSet();
             NoShuffleUnlessSet();
             NoLogbookUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga las ayudas del tutorial de B11 (los tooltips del 6, el 8 y el 11 y el dedo de la Cuia extra del 8) si el test no
+        /// las fijó (<see cref="GameScreen.TutorialTipsOverride"/> = null): los tests que no tratan de ellas ven los modales, la
+        /// victoria y la bandeja como antes, y sus capturas igual. Los que las prueban (<c>TutorialTipsHooksTests</c>) las encienden
+        /// y las vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoTutorialTipsUnlessSet()
+        {
+            if (GameScreen.TutorialTipsOverride == null)
+            {
+                GameScreen.TutorialTipsOverride = false;
+            }
         }
 
         /// <summary>
@@ -264,6 +299,13 @@ namespace AF.Tests.PlayMode
             if (BootSplash.EnabledOverride == null)
             {
                 BootSplash.EnabledOverride = false;
+            }
+
+            // Sin la edad ni el consentimiento (B12) salvo que el test los encienda (GameBootstrap.ConsentEnabledOverride = true;
+            // ConsentBootTests la vuelve a null en su TearDown): los tests de siempre arrancan como antes, con la analítica sin recoger.
+            if (GameBootstrap.ConsentEnabledOverride == null)
+            {
+                GameBootstrap.ConsentEnabledOverride = false;
             }
 
 #if UNITY_EDITOR

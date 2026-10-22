@@ -47,6 +47,15 @@ namespace AF.Save
         public DateTime CreatedAt { get; set; }
 
         /// <summary>
+        /// <c>consent</c> (08 §4.3; bloque B12): <c>{profile, text_version, at, analytics, ads_personalized, age_band}</c> más
+        /// <c>age_band_corrected</c> [P], o null si nunca se decidió (entonces la clave no se escribe). Es la prueba del
+        /// consentimiento (05 §7: fecha, versión, país y decisión) y la banda de edad, que vive solo en el dispositivo (08 §7). Las
+        /// reglas las aplica <c>AF.Platform.ConsentFlow</c> por <see cref="ProfileConsentStore"/>; aquí solo se guarda. Entra sin
+        /// migración, como <c>map_seen_level</c>, porque el esquema aún no se ha publicado.
+        /// </summary>
+        public ConsentRecord? Consent { get; set; }
+
+        /// <summary>
         /// <c>economy_ts</c>: última mutación de <c>wallet</c>, <c>stock</c> o <c>daily</c> (08 §4.3), UTC; null si
         /// nunca ha cambiado. Desempata los conflictos de guardado a igual nivel máximo (08 §11).
         /// </summary>

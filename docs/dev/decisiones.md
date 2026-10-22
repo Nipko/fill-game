@@ -3350,7 +3350,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Cántaro devuelto por `restoreLedger` o anulado:** se usa `eco_piggy_min_buy` [P].
 - **Intervalo de `Pump`:** 5 s [P].
 - **Textos de las 5 claves nuevas** (`iap_pending_confirm`, `iap_verify_failed`, `market_store_unavailable`, `settings_account_code`, `settings_account_code_unavailable`): aprobados en es-419; se piden EN y PT-BR.
-- **Banda de edad** hasta que llegue B12 (Spark): se trata como 13 o más, con el `TODO(B12)` en `PlayerUnder13()`.
+- **Banda de edad** hasta que llegue B12 (Spark): se trata como 13 o más, con el `TODO(B12)` en `PlayerUnder13()`. **Conectada al integrar B12 (2026-10-21):** `PlayerUnder13()` lee la banda guardada (`profile.consent.age_band`) o el bloqueo del arranque, y el `TODO` se quita (ver el añadido de D-033 de B12).
 
 ## D-039 · Integración del Firebase Unity SDK 13.17.0 (F3-6)
 
@@ -3379,3 +3379,65 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Se quitan** del manifiesto fusionado (`tools:node="remove"`), como `AD_ID`: `android.permission.ACCESS_ADSERVICES_ATTRIBUTION` y `android.permission.ACCESS_ADSERVICES_AD_ID` (Privacy Sandbox de anuncios, de Firebase Analytics) y `com.google.android.providers.gsf.permission.READ_GSERVICES` (de reCAPTCHA, que arrastra Firebase Auth; el acceso anónimo no lo usa: se comprueba en el teléfono).
 - **Se aprueban** `com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE` (Install Referrer de Play, para saber el origen de cada instalación; servicio de la propia Play Store, no un SDK de atribución aparte: matiza 08 §7) y `android.permission.WAKE_LOCK` (ya aprobado si aparecía). Entran en la lista blanca de `ci/check-manifest.ps1` y en Data Safety (08 §13.3).
 - **App Check:** proveedor de depuración en los builds de desarrollo (`DEVELOPMENT_BUILD`; el dueño registra su token de depuración en la consola de Firebase) y Play Integrity en release.
+
+### D-033, añadido del 2026-10-21: la reserva del 20 % (Q-B11-7)
+
+- **Estado:** el dueño delegó la decisión en el integrador: «escoje lo conveniente si toca esperar esperamos o no entiendo exactametne que estoy eligiendo si es bueno o malo para el proyecto». El integrador elige la (a), la recomendada por el Spark, y se lo explicó al dueño en el chat.
+- **Decisión (a):** un pack de reserva por mundo con, para cada nivel con mecánica (los primeros que necesita el kill switch de D-020) y hasta el 20 %, otro tablero de su mismo slot sin esa mecánica y en su ventana, con ids y `pack_id` propios. Cambia `schemas/af-level-1.schema.json` (contrato 21, `pack_schema`) de forma aditiva; el catálogo solo usa esos packs desde `level_overrides` (nunca como niveles de campaña). Se genera y se pasa por level-qa como el resto de la campaña.
+- **Motivo:** el seguro del kill switch funciona desde la 1.0, cuando más riesgo hay, y su peso es pequeño (JSON); sin reserva, apagar una mecánica en producción solo podría sustituir sus niveles por otros ya publicados.
+- **Implementada (2026-10-21, rama `tanda5/reserva-20`):** `pack_schema` 4 (`kind` = `reserve`, `pack_id` `reserva_{mm}_v{v}`, `replaces`, sufijos `_r{k}` y `:r{k}`); `tools/level-generator --reserve` y `tools/level-qa --reserve`; 132 tableros en los mundos 3-9 (8, 12, 12, 20, 24, 28 y 28; el mundo 2 solo lleva capacidades); el cliente los carga solo para `level_overrides` y lee `mech_enabled.*` y `level_overrides` de Remote Config en el arranque, antes del catálogo (`RcLevelBinder`). Reglas [P] de la herramienta (orden por rondas de los kill switches, celda sin mecánicas con sus capacidades, misma etiqueta y `bot_fail` más cercano) en 03 §17 y `tools/level-generator/README.md`. GDD: 03 §2, §10 y §17; 08 §4.1 y §9; 02 §9.2 regla 3 y pregunta 14.
+
+### D-033, añadido del 2026-10-21: preguntas de B12 (consentimiento y edad) del Spark, con la recomendada
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** decisión del dueño en el chat: «Integra B12 del Spark con sus parches y la verificación completa, y aplica sus 16 preguntas con la recomendada.» Integradas en `integra/spark-b12` con `spark/t5-b12` (`b5a18d0e`) y sus parches. Detalle y opciones en `docs/dev/consentimiento.md` §4. Completa Q-T3 (a) y Q-T4 (a) de D-033. **Los textos legales siguen [P], en `borrador` y con la nota «pendiente del abogado»**; lo que el abogado confirme puede cambiar las respuestas marcadas abajo.
+
+- **Q-B12-1:** la pantalla de edad neutral son **tres botones iguales**, uno por banda, sin ninguno marcado (no el año de nacimiento). Pendiente del abogado: la neutralidad para Google Play.
+- **Q-B12-2:** al subir `consent_text_version` **solo se vuelven a pedir las finalidades**; la banda guardada se conserva (08 §7 permite una sola corrección).
+- **Q-B12-3:** el bloqueo de `<13` **es definitivo** en el dispositivo: no se vuelve a preguntar ni con textos nuevos y no hay salida desde la pantalla (solo reinstalar).
+- **Q-B12-4:** el diagnóstico (Crashlytics) es una **línea informativa sin interruptor** (interés legítimo, 08 §2.3), pendiente de la pregunta 6 de 08 al abogado.
+- **Q-B12-5:** los textos legales van en `strings.csv` con el estado **`borrador`** y la nota «pendiente del abogado» (sin un estado nuevo en el contrato 32).
+- **Q-B12-6:** la doble confirmación es **una pantalla más**: el toque en «Comprar» del juego, una confirmación con el precio de la tienda y después la hoja de Google Play. Pendiente del abogado, con Q-T4.
+- **Q-B12-7:** con 13-17 **la analítica se ofrece** como finalidad que se puede aceptar (sin audiencias ni anuncios personalizados). Pendiente del abogado (ECA Digital).
+- **Q-B12-8:** `profile.consent` **es del dispositivo**: la fusión con la nube conserva el del local y un teléfono nuevo vuelve a preguntar. Aplicada en `CloudMerge` al integrar (`merged.Consent = local.Consent`, con test).
+- **Q-B12-9:** con el perfil `ump`, **la analítica en la pantalla propia y los anuncios por UMP**, hasta que el dueño configure UMP.
+- **Q-B12-10:** el campo nuevo se llama **`consent.age_band_corrected`** (bool) [P]; se anota en 08 §4.3.
+- **Q-B12-11:** `af_settings_change.value` con `key = consent` vale **`choices` o `age`** [P].
+- **Q-B12-12:** el encargo del Spark decía que `INTERNET` no estaba aprobado; **lo aprobó D-036** (2026-10-20). Sin efecto en B12 (no usa red); se corrige el encargo.
+- **Q-B12-13:** «el tratamiento más estricto» sin país es **el perfil `default` + `npa` sin elección** (la analítica se puede aceptar).
+- **Q-B12-14:** la fila marcable se **extrae a una clase común de AF.UI al integrar**: `OptionRow` (`Scripts/UI/OptionRow.cs`), usada por Ajustes y por las finalidades de la pantalla de consentimiento.
+- **Q-B12-15:** si cambia el perfil legal del país (otra SIM, un viaje), **se vuelve a preguntar** las finalidades con el perfil de ahora y la banda guardada.
+- **Q-B12-16:** las capturas de referencia de los textos nuevos las saca **el integrador con `SnapshotKit`** (es-419 y en-XA al 130 %): `ConsentSnapshotTests` (explícita) con la edad, las finalidades, el bloqueo, la doble confirmación y Ajustes (también en 16:9).
+
+- **Del integrador, al aplicar la nota §6 (sugerencias de la 4.ª revisión):** la 1 (`ConsentHoldsSession` retiene la sesión y los avisos mientras no haya una decisión vigente, también en el segundo de la pantalla de arranque de quien debe volver a decidir, con su test) y la 7 (Q-B12-14). Las demás (2-6 y 8) quedan abiertas para una tarea aparte.
+- **Orden de arranque (del integrador):** `SetUpConsent` va tras `ConnectTelemetry` y **antes** de `ResumeBackend` (F3-5), para que los flags guardados lleguen a la analítica, los anuncios y la tienda antes de reanudar las compras; el decorador de la tienda de B12 envuelve la tienda verificada de F3-5 (`WrapStore(WrapConsentStore(CreateStore(...)))`).
+- **Enganches con F3-6 (Firebase; D-039), a petición del coordinador de la integración:** (1) la decisión llega a la recogida propia de Firebase Analytics por `AnalyticsService.SetCollectionEnabled` (`ICollectionAwareSink`) y con la banda `<13` nunca se enciende; (2) con `<13` Crashlytics se apaga de forma explícita (`CrashReporting.Stop`: `IsCrashlyticsCollectionEnabled = false`, que persiste entre arranques), al bloquear y en cada arranque bloqueado; (3) «Eliminar cuenta y datos» llama también a `FirebaseAnalyticsSink.ResetData()` (08 §13.3). Con tests PlayMode (`ConsentBootTests` y `AccountAndCloudTests`).
+
+### D-033, añadido del 2026-10-21: preguntas de B11 (tutorial, Sin canoas y contenido) del Spark, con la regla «si tienen recomendada, vamos con esa»
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** decididas con la recomendada (la (a), ya aplicada en la rama) por la regla del dueño «si tienen recomendada, vamos con esa», salvo Q-B11-7, que ya decidió el añadido «la reserva del 20 %» de arriba. Integradas en `integra/spark-b11` con `spark/t5-b11` (`0fe3e99c`) y sus seis parches. Detalle y opciones en `docs/dev/tutorial-b11.md` §5. Respetan D-038 y su añadido de la Balsa: con `biz_feature_lives` apagado no hay tarjeta de Canoas, el tooltip del 6 y del 8 pierde la frase de las canoas y Sin canoas no se abre.
+
+- **Q-B11-1:** el dedo del 2 **señala antes el vertido que abre la lección** y después la lección [P] (sonda `lesson = partial_setup`).
+- **Q-B11-2:** con `biz_feature_lives` apagado, el tooltip del 6 y del 8 lleva **solo la primera frase**, «Reiniciar es gratis, siempre, mismo tablero.» (`tutorial_restart_free`).
+- **Q-B11-3:** **se acepta la excepción del 680**: con la Cuia extra, su tercer fallo sigue con el tablero base; el resto de 31-700 lleva `minus_color` (segunda pasada de Q-N2 (a), presupuesto 2.000.000 [P]).
+- **Q-B11-4:** texto del tooltip de la Cosecha doble del 11: **«Con un video, las semillas de este nivel valen el doble.»** [P].
+- **Q-B11-5:** **lienzo al ancho del teléfono entre 320 y 360 dp**, con 1 dp físico por dp (toca `CanvasScale` de `GameScreen` y `LobbyScreen` y sus pruebas). **No aplicado en esta integración: tarea del escritorio aparte**; hasta entonces el lienzo sigue midiendo 360 dp.
+- **Q-B11-6:** «25 minutos» y «nivel 31» van **literales** en los textos (Q-E4 (a) y 04 §2.7); si Remote Config cambia `canoes_regen_min` o `rescue_min_level`, hay que revisar los textos.
+- **Q-B11-7:** decidida en el añadido «la reserva del 20 %» (un pack de reserva por mundo); **no se implementa aquí**: será otra tarea (hecha el 2026-10-21 en `tanda5/reserva-20`, con `level_overrides` enlazado a Remote Config).
+- **Q-B11-8:** se quedan el id `home` de `AF_LAYOUT` y la fila `back_home`.
+- **Q-B11-9:** la tarjeta del 31 habla **solo de las canoas** (el texto de Q-E4 (a)), sin línea de la Cuia de rescate.
+- **Q-B11-10:** el dedo de la Cuia extra del 8 sale **en cada intento hasta usarla**.
+- **Q-B11-11:** C10 **solo arrastra la cuia que se elevó en el touch-down sin selección** (también si otro dedo selecciona entre medias, C11); un arrastre ilegal no selecciona nada: Y se sacude (C6), sin C5.
+- **Q-B11-12:** el tooltip de la Cosecha doble sale **solo en el 11**: si en esa victoria no hay anuncio, no sale nunca.
+
+- **Quedan para otras tareas (del integrador):** enlazar `drag_pour_enabled`, `lvl_label_override` y `level_overrides` con Remote Config en el arranque; emitir `af_label_shown` (con `LevelCatalog.IsRelabeled` para `source`) y todas las elecciones de `af_no_canoes_choice` a la vez; Q-B11-5 (lienzo a 320 dp); Q-B11-7 (la reserva); los cambios propuestos al GDD de la nota §4 (02 §5 y §13, 03 §13 y §17, 04 §7.1 y 06 §2.2).
+
+### D-033, añadido del 2026-10-21: preguntas de la reserva del 20 %, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `tanda5/reserva-20` (revisión APROBADO). El dueño puede cambiarlas.
+- **Q-R20-1:** el 20 % se reparte por rondas de mecánica, para que cada una tenga cubiertos sus primeros niveles.
+- **Q-R20-2:** el tablero de reserva quita todas las mecánicas de su slot (también las Aguas turbias) y conserva las capacidades; un tablero cubre todos los kill switches de su slot.
+- **Q-R20-3:** el tope del 20 % se redondea hacia abajo (8, 12, 12, 20, 24, 28 y 28 en los mundos 3-9; 132 tableros).
+- **Q-R20-4:** en la 1.0, `level_overrides` solo se aplica cuando una mecánica está apagada (08 §9); sustituir niveles en alarma o por segmento (DDA, 03 §2 y §15) queda para otra tarea.
+- **Q-R20-5:** los tableros de reserva no publican `difficulty.D` (no entran en el pool del rango).

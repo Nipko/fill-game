@@ -154,6 +154,8 @@ namespace AF.Presentation
                     return BuildHeroPixels(name, DrawBroteTwoLeavesGlyph); // ProceduralArt.BroteDosHojas.cs (VA1b)
                 case StreakHeroIconKey:
                     return BuildHeroPixels(name, DrawStreakGlyph); // la tarjeta de la Crecida del 25 (ProceduralArt.Streak.cs; B1b)
+                case CanoesHeroIconKey:
+                    return IconCanoe; // la tarjeta de las Canoas del 31: la canoa de la cabecera (glosario §2.2; B11)
                 default:
                     if (!MechanicTypes.TryParse(key, out MechanicType type) || type == MechanicType.None)
                     {

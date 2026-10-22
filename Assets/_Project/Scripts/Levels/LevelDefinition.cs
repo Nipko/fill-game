@@ -69,7 +69,8 @@ namespace AF.Levels
             bool skippable = true,
             bool hintSupported = true,
             string? band = null,
-            bool parApprox = false)
+            bool parApprox = false,
+            string? replaces = null)
         {
             if (attrs.Length != caps.Length)
             {
@@ -97,7 +98,18 @@ namespace AF.Levels
             HintSupported = hintSupported;
             Band = band;
             ParApprox = parApprox;
+            Replaces = replaces;
         }
+
+        /// <summary>
+        /// <c>replaces</c> (solo en un paquete de reserva, <c>kind</c> = <c>reserve</c>, <c>pack_schema</c> 4; D-033, añadido «la
+        /// reserva del 20 %», Q-B11-7 a; 08 §4.1): el id de campaña del slot (<c>m{mm}_v{v}_n{nnnn}</c>) al que sustituye este
+        /// tablero desde <c>level_overrides</c>; null en los niveles de campaña y del Reto del río.
+        /// </summary>
+        public string? Replaces { get; }
+
+        /// <summary>Tablero de reserva (<see cref="Replaces"/> no es null): solo se sirve desde <c>level_overrides</c>.</summary>
+        public bool IsReserve => Replaces != null;
 
         /// <summary>
         /// <c>relief</c> (08 §4.1; 03 §13): tableros de alivio en orden de prioridad (vacía antes del 31 y en el subconjunto v0).

@@ -541,6 +541,9 @@ namespace AF.Tests.EditMode
                 "comeback_streak_line", "comeback_logbook_line", "comeback_reminder_line",
             });
 
+            // B12: la edad, el consentimiento y la doble confirmación de compras, que pinta AF.UI.ConsentText.
+            keys.AddRange(ConsentText.AllKeys);
+
             // La Pororoca del Spark (bloque B2; B2-strings.csv): las pinta AF.UI.ShuffleText.
             keys.AddRange(ShuffleText.AllKeys);
 
@@ -564,6 +567,10 @@ namespace AF.Tests.EditMode
 
             // B5: el Mercado, sus tarjetas de oferta y el Cántaro (B5-loc.diff): los pinta AF.UI.MarketText.
             keys.AddRange(MarketText.AllKeys);
+
+            // B11: la tarjeta de las Canoas del 31, los tooltips del 6, el 8 y el 11 y «Volver al Mapa del río» de Sin canoas
+            // (B11-loc.diff): los pinta AF.UI.TutorialTipsText.
+            keys.AddRange(TutorialTipsText.AllKeys);
 
             return keys;
         }

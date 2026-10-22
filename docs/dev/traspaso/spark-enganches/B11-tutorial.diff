@@ -1,0 +1,735 @@
+diff --git a/Assets/_Project/Scripts/UI/GameScreen.Cards.cs b/Assets/_Project/Scripts/UI/GameScreen.Cards.cs
+index 2431c413..65591110 100644
+--- a/Assets/_Project/Scripts/UI/GameScreen.Cards.cs
++++ b/Assets/_Project/Scripts/UI/GameScreen.Cards.cs
+@@ -89,7 +89,8 @@ namespace AF.UI
+     /// nivel (02 l. 280: dedo guía → «Fruta nueva» → miquito): no añade otra tarjeta. El vertido lo elige
+     /// <see cref="TutorialFinger.TryChoose"/> con el solver sobre el tablero del momento (el pack no guarda la solución): en el
+     /// 1, el primero de la solución; en el 2, el vertido parcial de la lección (una racha de 3 sobre un hueco de 2) en cuanto es
+-    /// legal, que en su tablero inicial, lleno, no lo es: sale tras el primer vertido que lo deja posible. Se va al hacer ese
++    /// legal, que en su tablero inicial, lleno, no lo es: antes señala el vertido que la deja posible (B11,
++    /// <see cref="TutorialFingerSetup"/>, sonda <c>partial_setup</c>; hecho u otro vertido, vuelve a esperar) [P]. Se va al hacer ese
+     /// vertido; si el jugador hace otro, se va y no vuelve en ese intento [P] (en el 1, también si vierte antes de que salga:
+     /// ya pasaron los dos primeros toques). Deshacer con Marea no es otro vertido [P]: con el dedo a la vista, se va (sonda con
+     /// <c>reason</c> <c>undo</c>) y vuelve a esperar su momento sobre el tablero deshecho (en el 2, a que la lección vuelva a ser
+@@ -313,6 +314,7 @@ partial void CardsTick(float dtMs)
+ 
+             TickTutorialAfterPour(); // el tooltip de Marea del 3, tras el primer vertido que no acerca (TU1a)
+             TickTutorialFinger(dtMs); // el dedo guía del 1 y el 2 (DC6)
++            TutorialTipsTick(dtMs); // los tooltips del 6, el 8 y el 11 y el dedo de la Cuia extra del 8 (B11)
+ 
+             LevelFlow? flow = _flow;
+             bool inCard = flow != null && flow.HasLevel && flow.Phase == FlowPhase.LevelCard;
+@@ -362,6 +364,7 @@ partial void CardsLevelLoaded(LevelFlow flow)
+             _tutorialAfterPour = null; // el tooltip de Marea que esperaba un vertido era del nivel anterior (TU1a)
+             _undoTutorialDue = false;
+             EndTutorialFinger(FingerState.Off, null); // las vistas son nuevas: nada del dedo del nivel anterior (DC6)
++            TutorialTipsLevelLoaded(flow); // ni de los tooltips ni del dedo de la Cuia extra (B11)
+             _levelCard.HideNow();
+             BannerLevelLoaded();
+         }
+@@ -384,6 +387,8 @@ partial void CardsLayoutIds(List<string> ids, List<RectTransform> rects)
+                 ids.Add("tutorial_finger"); // la mano del dedo guía del 1 y el 2 (DC6), donde está al emitir
+                 rects.Add(_finger.Hand.rectTransform);
+             }
++
++            TutorialTipsLayoutIds(ids, rects); // los tooltips y el dedo de la Cuia extra (B11)
+         }
+ 
+         // 1 toque en cualquier punto (T13): directo al flujo, que arranca la intro; la tarjeta sale sin bloquear el siguiente
+@@ -962,6 +967,9 @@ private void EmitTutorialProbe(int ms, string mode)
+         private int _fingerScoop = -1;
+         private FingerSafeJob? _fingerJob;
+ 
++        // En el 2, el vertido que señala es el paso previo de la lección (B11; TutorialFingerSetup), no la lección.
++        private bool _fingerSetup;
++
+         // Del dedo en el intento: apagado (sin dedo o retirado), esperando su momento (también tras deshacer con el dedo a la
+         // vista [P]), a la vista (o suspendido), hecho (el jugador hizo el vertido) o cancelado (hizo otro: no vuelve en ese
+         // intento [P]).
+@@ -1116,6 +1124,17 @@ private void TickTutorialFinger(float dtMs)
+                 if (_fingerState == FingerState.Showing)
+                 {
+                     bool followed = onePour && last.Source == _fingerPour.Source && last.Target == _fingerPour.Target;
++                    if (_fingerSetup)
++                    {
++                        // El paso previo del 2 (B11): hecho u otro vertido, el dedo vuelve a esperar su momento sobre el tablero nuevo
++                        // (la lección, si ya es legal, u otro paso previo) [P]. El vertido no puede ser la lección: con el paso previo
++                        // a la vista, la lección no era legal en ese tablero.
++                        EndTutorialFinger(FingerState.Armed, followed ? "followed" : "other_pour");
++                        _fingerWatchPours = pours;
++                        _fingerWatchBoard = current;
++                        return;
++                    }
++
+                     if (followed && _fingerLesson == FingerLesson.TinajaScoop && _fingerStep == 1)
+                     {
+                         // Sacó, como señalaba: el dedo se va y espera, con la vista quieta tras el gesto de sacar (TJ3), para
+@@ -1214,8 +1233,20 @@ private void TickTutorialFinger(float dtMs)
+                 {
+                     _fingerChosenFor = current;
+                     _fingerSolver ??= new AStarSolver();
+-                    _fingerHasChoice = TutorialFinger.TryChoose(_fingerLesson, current, session.PourMode, session.FutileRuleEnabled,
+-                        _fingerSolver, out _fingerPour);
++                    _fingerSetup = false;
++                    if (_fingerLesson == FingerLesson.PartialRun && !TutorialFingerSetup.LessonLegal(current, session.PourMode))
++                    {
++                        // B11: en el 2 la lección aún no es legal (su tablero inicial está lleno): el dedo señala antes el vertido que
++                        // la deja posible (TutorialFingerSetup; pregunta Q-B11-1). Sin él, espera, como antes.
++                        _fingerHasChoice = TutorialFingerSetup.TryChoose(current, session.PourMode, session.FutileRuleEnabled, _fingerSolver,
++                            out _fingerPour);
++                        _fingerSetup = _fingerHasChoice;
++                    }
++                    else
++                    {
++                        _fingerHasChoice = TutorialFinger.TryChoose(_fingerLesson, current, session.PourMode, session.FutileRuleEnabled,
++                            _fingerSolver, out _fingerPour);
++                    }
+                 }
+             }
+ 
+@@ -1255,7 +1286,7 @@ private float FingerCeilingY()
+         // primer vertido: si sigue a la vista, se va con su fundido normal (revisión de DC6) [P]. Sin asignaciones.
+         private void LeaveStaleTutorialCard()
+         {
+-            if (_fingerLesson == FingerLesson.PartialRun && TutorialSlothVisible)
++            if (_fingerLesson == FingerLesson.PartialRun && !_fingerSetup && TutorialSlothVisible)
+             {
+                 _slothNotice!.Leave();
+             }
+@@ -1275,6 +1306,8 @@ private void EndTutorialFinger(FingerState state, string? reason)
+             {
+                 EmitFingerProbe(false, reason);
+             }
++
++            _fingerSetup = false;
+         }
+ 
+         // El estreno de la Tinaja: lanza la búsqueda del vertido del paso de ahora sobre current si no hay una para él (y la de
+@@ -1387,7 +1420,7 @@ private string FingerLessonProbeName()
+         {
+             switch (_fingerLesson)
+             {
+-                case FingerLesson.PartialRun: return "partial";
++                case FingerLesson.PartialRun: return _fingerSetup ? "partial_setup" : "partial";
+                 case FingerLesson.HojaKey: return "hoja";
+                 case FingerLesson.TinajaScoop: return _fingerStep == 2 ? "tinaja_pour" : "tinaja_scoop";
+                 default: return "first";
+diff --git a/Assets/_Project/Tests/PlayMode/B11SnapshotTests.cs b/Assets/_Project/Tests/PlayMode/B11SnapshotTests.cs
+new file mode 100644
+index 00000000..b8794449
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/B11SnapshotTests.cs
+@@ -0,0 +1,174 @@
++#nullable enable
++using System.Collections;
++using AF.GameFlow;
++using AF.Localization;
++using AF.Presentation;
++using AF.Save;
++using AF.UI;
++using NUnit.Framework;
++using UnityEngine;
++using UnityEngine.TestTools;
++
++namespace AF.Tests.PlayMode
++{
++    /// <summary>
++    /// Capturas de la tarea B11 en <c>Logs/snapshots/es-419/</c>, a 360 × 780 dp y al 100 % (las que citan las filas nuevas de
++    /// <c>strings.csv</c>, B11-loc.diff):
++    /// <list type="bullet">
++    /// <item><c>b11_01_canoes_card_780_100</c>: la tarjeta de las Canoas antes del 31 (04 §7.1; D-033, Q-E4);</item>
++    /// <item><c>b11_02_restart_tip_780_100</c> y <c>b11_02b_restart_tip_no_lives_780_100</c>: el tooltip «Reiniciar es gratis…»
++    /// encima de Aguas estancadas en el 6, con y sin canoas (D-038);</item>
++    /// <item><c>b11_03_double_harvest_tip_780_100</c>: el tooltip de la Cosecha doble en la victoria del 11;</item>
++    /// <item><c>b11_04_extra_cuia_finger_780_100</c>: el dedo sobre «+1 cuia» en el 8, tocando;</item>
++    /// <item><c>b11_05_no_canoes_map_780_100</c>: Sin canoas con «Volver al Mapa del río» (04 §7.3);</item>
++    /// <item><c>b11_06_finger_level2_setup_780_100</c>: el dedo del 2 en el paso previo (Q-B11-1), a medio viaje.</item>
++    /// </list>
++    /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.B11SnapshotTests</c>
++    /// sin <c>-nographics</c>).
++    /// </summary>
++    [Explicit("Capturas de la tarea B11; necesitan dispositivo gráfico.")]
++    public sealed class B11SnapshotTests
++    {
++        [SetUp]
++        public void SetUp()
++        {
++            TutorialSlothTests.Hooks();
++            GameScreen.TutorialTipsOverride = true;
++        }
++
++        [TearDown]
++        public void TearDown()
++        {
++            SnapshotKit.Release();
++            GameScreen.TutorialTipsOverride = null;
++            GameScreen.TutorialFingerOverride = null;
++            GameScreen.TutorialSlothOverride = null;
++            GameScreen.SimulatedScreen = null;
++            MapArtRule.ForceProvisional = null;
++            LaunchOptions.Reset();
++        }
++
++        [UnityTest]
++        public IEnumerator CanoesCard()
++        {
++            string dir = Prepare();
++            LaunchOptions.LevelCardsOverride = true;
++            LaunchOptions.LevelOffsetOverride = 25;
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
++            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelCard));
++            Assert.That(boot.Flow.LevelCard!.IntroMechanic, Is.EqualTo(LevelCardInfo.CanoesIntro));
++            SnapshotKit.Attach(boot);
++            PlayModeHelpers.Step(boot, 800);
++            yield return Save(dir, "b11_01_canoes_card_780_100");
++        }
++
++        [UnityTest]
++        public IEnumerator RestartTip([Values(true, false)] bool lives)
++        {
++            string dir = Prepare();
++            yield return TutorialSlothTests.Load(6);
++            GameBootstrap boot = GameBootstrap.Current!;
++            boot.Wallet!.LivesEnabled = lives;
++            FunnelSetup.GetStuck(boot);
++            PlayModeHelpers.Step(boot, 600);
++            Assert.That(boot.View!.RestartTipVisible, Is.True);
++            SnapshotKit.Attach(boot);
++            yield return Save(dir, lives ? "b11_02_restart_tip_780_100" : "b11_02b_restart_tip_no_lives_780_100");
++        }
++
++        [UnityTest]
++        public IEnumerator DoubleHarvestTip()
++        {
++            string dir = Prepare();
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
++            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            VictorySetup.WinToVictoryScreen(boot);
++            PlayModeHelpers.Step(boot, 2500);
++            Assert.That(boot.View!.DoubleHarvestTipVisible, Is.True);
++            SnapshotKit.Attach(boot);
++            yield return Save(dir, "b11_03_double_harvest_tip_780_100");
++        }
++
++        [UnityTest]
++        public IEnumerator ExtraCuiaFinger()
++        {
++            string dir = Prepare();
++            yield return TutorialSlothTests.Load(8);
++            GameBootstrap boot = GameBootstrap.Current!;
++            GameScreen view = boot.View!;
++            for (int t = 0; t < 15000 && !view.ExtraCuiaFingerVisible; t += PlayModeHelpers.FrameMs)
++            {
++                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++            }
++
++            Assert.That(view.ExtraCuiaFingerVisible, Is.True);
++            TrayFinger finger = view.ExtraCuiaFinger!;
++            float press = TrayFinger.AppearMs + (0.5f * TrayFinger.PressMs);
++            for (int guard = 0; guard < 400 && finger.CycleTimeMs < press; guard++)
++            {
++                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++            }
++
++            SnapshotKit.Attach(boot);
++            yield return Save(dir, "b11_04_extra_cuia_finger_780_100");
++        }
++
++        [UnityTest]
++        public IEnumerator NoCanoesMap()
++        {
++            string dir = Prepare();
++            LaunchOptions.LevelOffsetOverride = 25;
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0, 1));
++            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            boot.TapAnywhere();
++            FunnelSetup.GetStuck(boot);
++            boot.PressGiveUp();
++            boot.ConfirmGiveUp();
++            boot.PressRetry();
++            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.NoCanoes));
++            PlayModeHelpers.Step(boot, 600);
++            SnapshotKit.Attach(boot);
++            yield return Save(dir, "b11_05_no_canoes_map_780_100");
++        }
++
++        [UnityTest]
++        public IEnumerator Level2SetupFinger()
++        {
++            string dir = Prepare();
++            GameScreen.TutorialFingerOverride = true;
++            yield return TutorialSlothTests.Load(2);
++            GameBootstrap boot = GameBootstrap.Current!;
++            TutorialFinger finger = TutorialFingerTests.WaitForFinger(boot, "el 2, el paso previo");
++            float half = TutorialFinger.AppearMs + TutorialFinger.PressMs + (0.5f * TutorialFinger.MoveMs);
++            for (int guard = 0; guard < 400 && finger.CycleTimeMs < half; guard++)
++            {
++                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++            }
++
++            SnapshotKit.Attach(boot);
++            yield return Save(dir, "b11_06_finger_level2_setup_780_100");
++        }
++
++        private static IEnumerator Save(string dir, string name)
++        {
++            yield return SnapshotKit.Wait(0.2f);
++            SnapshotKit.Save(dir, name);
++            Debug.Log("AF_B11_SNAPSHOT " + name);
++        }
++
++        private static string Prepare()
++        {
++            string dir = SnapshotKit.Prepare(LocLocale.SpanishLatinAmerica);
++            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
++            LaunchOptions.FontScaleOverride = 1f;
++            return dir;
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/PlayMode/B11SnapshotTests.cs.meta b/Assets/_Project/Tests/PlayMode/B11SnapshotTests.cs.meta
+new file mode 100644
+index 00000000..9fb7f8c0
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/B11SnapshotTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 3a554d26dda5dd14f8e6ae503199499f
+\ No newline at end of file
+diff --git a/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs b/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs
+index d4317dec..3a4cfe90 100644
+--- a/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs
++++ b/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs
+@@ -95,6 +95,7 @@ public static void NoLevelCardsUnlessSet()
+             NoSlothRestartNoticeUnlessSet();
+             NoTutorialSlothUnlessSet();
+             NoTutorialFingerUnlessSet();
++            NoTutorialTipsUnlessSet();
+             NoL10SequenceUnlessSet();
+             NoContentEndMapUnlessSet();
+             NoIdleHintUnlessSet();
+@@ -102,6 +103,20 @@ public static void NoLevelCardsUnlessSet()
+             NoLogbookUnlessSet();
+         }
+ 
++        /// <summary>
++        /// Apaga las ayudas del tutorial de B11 (los tooltips del 6, el 8 y el 11 y el dedo de la Cuia extra del 8) si el test no
++        /// las fijó (<see cref="GameScreen.TutorialTipsOverride"/> = null): los tests que no tratan de ellas ven los modales, la
++        /// victoria y la bandeja como antes, y sus capturas igual. Los que las prueban (<c>TutorialTipsHooksTests</c>) las encienden
++        /// y las vuelven a null en su TearDown.
++        /// </summary>
++        public static void NoTutorialTipsUnlessSet()
++        {
++            if (GameScreen.TutorialTipsOverride == null)
++            {
++                GameScreen.TutorialTipsOverride = false;
++            }
++        }
++
+         /// <summary>
+         /// Apaga la Bitácora del río (B4) si el test no la fijó (<see cref="GameBootstrap.LogbookOverride"/> = null): los tests que
+         /// no tratan de ella entran al inicio sin la libreta encima (el takeover de la sesión, D-033, punto 5) y ven el Mapa del 10
+diff --git a/Assets/_Project/Tests/PlayMode/TutorialFingerTests.cs b/Assets/_Project/Tests/PlayMode/TutorialFingerTests.cs
+index 066aeb73..4dd783e4 100644
+--- a/Assets/_Project/Tests/PlayMode/TutorialFingerTests.cs
++++ b/Assets/_Project/Tests/PlayMode/TutorialFingerTests.cs
+@@ -19,8 +19,9 @@ namespace AF.Tests.PlayMode
+     /// D-002):
+     /// <list type="bullet">
+     /// <item>en el 1 y el 2, primer intento: sale tras la intro y cuando la tropa ya se fue, señala el vertido de la lección (el
+-    /// primero de la solución en el 1; en el 2, la racha de 3 sobre el hueco de 2, en cuanto es legal), nunca bloquea el toque, y
+-    /// se va al hacerlo; los dos niveles, de punta a punta siguiendo el dedo;</item>
++    /// primero de la solución en el 1; en el 2, la racha de 3 sobre el hueco de 2, en cuanto es legal, y antes, el vertido que la
++    /// deja posible: tarea B11, Q-B11-1), nunca bloquea el toque, y se va al hacerlo; los dos niveles, de punta a punta siguiendo
++    /// el dedo;</item>
+     /// <item>otro vertido: se va y no vuelve en ese intento [P]; tampoco tras Volver a la orilla [P];</item>
+     /// <item>deshacer con Marea con el dedo a la vista no es otro vertido [P]: se va (<c>undo</c>) y vuelve cuando la lección es
+     /// legal otra vez; en el 2, la instrucción de TiTino se va al salir el dedo [P];</item>
+@@ -88,22 +89,22 @@ public IEnumerator Level1_AfterTheIntro_PointsAtTheFirstPour_FollowingItWins()
+         }
+ 
+         [UnityTest]
+-        public IEnumerator Level2_WaitsForTheLessonToBeLegal_ThenPointsAtTheRunOf3OnTheHoleOf2_FollowingItWins()
++        public IEnumerator Level2_PointsFirstAtThePourThatOpensTheLesson_ThenAtTheRunOf3OnTheHoleOf2_FollowingItWins()
+         {
+             yield return TutorialSlothTests.Load(2);
+             GameBootstrap boot = GameBootstrap.Current!;
+             GameScreen view = boot.View!;
+             LevelFlow flow = boot.Flow!;
+ 
+-            // El tablero inicial del 2 está lleno: no hay hueco de 2 y el dedo espera (la tropa ya se fue).
+-            PlayModeHelpers.Step(boot, 6000);
+-            Assert.That(view.IntroTroopVisible, Is.False, "condición del test: la tropa ya se fue");
+-            Assert.That(view.TutorialFingerVisible, Is.False, "sin lección legal, sin dedo");
+-            Assert.That(view.TutorialFingerArmed, Is.True, "espera");
++            // El tablero inicial del 2 está lleno: no hay hueco de 2 y el dedo señala antes el vertido que lo abre (B11, Q-B11-1).
++            WaitForFinger(boot, "el 2, el paso previo");
++            Assert.That(view.LastTutorialFingerProbe, Does.Contain("\"lesson\":\"partial_setup\""));
+ 
+             // El primer vertido de la solución deja la lección posible: las dos dosis de arriba de la cuia 0 a la vacía 3.
+             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+             Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
++            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++            Assert.That(view.TutorialFingerVisible, Is.False, "tras el paso previo, espera la lección");
+             PlayModeHelpers.StepUntilIdle(boot, 6000);
+             TutorialFinger finger = WaitForFinger(boot, "el 2");
+             Pour pour = view.TutorialFingerPour;
+@@ -123,7 +124,7 @@ public IEnumerator Level2_WaitsForTheLessonToBeLegal_ThenPointsAtTheRunOf3OnTheH
+             Assert.That(view.TutorialFingerFollowed, Is.True);
+             Assert.That(flow.Session.Current[2].Count, Is.EqualTo(2), "el parcial: la tercera dosis se queda");
+             yield return FinishWithTheSolver(boot, "el 2");
+-            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(1));
++            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(2), "el paso previo y la lección");
+         }
+ 
+         [UnityTest]
+@@ -206,20 +207,20 @@ public IEnumerator Level2_UndoWithTheFingerShowing_ItGoes_AndComesBackWhenTheLes
+             Assert.That(view.TutorialFingerCancelled, Is.False, "no es otro vertido");
+             Assert.That(view.TutorialFingerArmed, Is.True, "vuelve a esperar");
+             AssertProbe(view, false, 2, 0, "undo");
+-            for (int t = 0; t < 3000; t += PlayModeHelpers.FrameMs)
+-            {
+-                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+-                Assert.That(view.TutorialFingerVisible, Is.False, "sin lección legal, sin dedo (a los " + t + " ms)");
+-            }
++
++            // Sobre el tablero deshecho, lleno, sin la lección: el dedo vuelve con el paso previo (B11, Q-B11-1).
++            WaitForFinger(boot, "el 2 tras deshacer, el paso previo");
++            Assert.That(view.LastTutorialFingerProbe, Does.Contain("\"lesson\":\"partial_setup\""));
+ 
+             // El mismo primer vertido vuelve a dejar la lección posible: el dedo vuelve y se sigue hasta ganar.
+             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+             Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
++            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+             PlayModeHelpers.StepUntilIdle(boot, 6000);
+             finger = WaitForFinger(boot, "el 2 tras deshacer");
+             Assert.That(view.TutorialFingerPour, Is.EqualTo(new Pour(2, 0, 2)));
+             AssertProbe(view, true, 2, 0, "show");
+-            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(2), "vuelve una vez");
++            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(3), "la lección, el paso previo tras deshacer y la lección otra vez");
+             Assert.That(boot.TapCuia(2).Kind, Is.EqualTo(TapKind.Selected));
+             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Poured));
+             PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+@@ -242,6 +243,7 @@ public IEnumerator Level2_TheTiTinoInstructionLeavesWhenTheFingerShows()
+             Assert.That(view.TutorialSlothVisible, Is.True, "condición del test: la instrucción del 2 a la vista");
+             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+             Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
++            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs); // el dedo del paso previo (B11), si se veía, se va con el vertido
+             for (int t = 0; t < 8000 && !view.TutorialFingerVisible; t += PlayModeHelpers.FrameMs)
+             {
+                 Assert.That(view.TutorialSlothVisible || !view.TutorialFingerVisible, Is.True);
+diff --git a/Assets/_Project/Tests/PlayMode/TutorialTipsHooksTests.cs b/Assets/_Project/Tests/PlayMode/TutorialTipsHooksTests.cs
+new file mode 100644
+index 00000000..ebc9b1ab
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/TutorialTipsHooksTests.cs
+@@ -0,0 +1,292 @@
++#nullable enable
++using System.Collections;
++using AF.Core.Board;
++using AF.Core.Rules;
++using AF.GameFlow;
++using AF.Localization;
++using AF.Presentation;
++using AF.Save;
++using AF.Solver.Search;
++using AF.UI;
++using NUnit.Framework;
++using UnityEngine;
++using UnityEngine.TestTools;
++using UnityEngine.UI;
++
++namespace AF.Tests.PlayMode
++{
++    /// <summary>
++    /// Las ayudas del tutorial de la tarea B11 en el juego (parche B11-tutorial; 02 §13; 06 §2.2):
++    /// <list type="bullet">
++    /// <item>el dedo del 2 señala al empezar el vertido que deja la lección posible y, hecho, la lección (Q-B11-1);</item>
++    /// <item>el dedo de la Cuia extra del 8, tras el aviso de Capi y hasta usarla (04 §2.2);</item>
++    /// <item>el tooltip «Reiniciar es gratis…» encima de Aguas estancadas en el 6 (y el 8), una vez por nivel, con la frase de las
++    /// canoas solo con <c>biz_feature_lives</c> encendido (D-038);</item>
++    /// <item>el tooltip de la Cosecha doble en la victoria del 11, y no en la del 12.</item>
++    /// </list>
++    /// </summary>
++    public sealed class TutorialTipsHooksTests
++    {
++        [SetUp]
++        public void SetUp()
++        {
++            TutorialSlothTests.Hooks();
++            GameScreen.TutorialTipsOverride = true;
++        }
++
++        [TearDown]
++        public void TearDown()
++        {
++            GameScreen.TutorialTipsOverride = null;
++            GameScreen.TutorialFingerOverride = null;
++            GameScreen.TutorialSlothOverride = null;
++            GameScreen.SimulatedScreen = null;
++            MapArtRule.ForceProvisional = null;
++            LaunchOptions.Reset();
++        }
++
++        [UnityTest]
++        public IEnumerator Level2_TheFingerFirstPointsAtThePourThatOpensTheLesson_ThenAtTheLesson()
++        {
++            GameScreen.TutorialFingerOverride = true;
++            yield return TutorialSlothTests.Load(2);
++            GameBootstrap boot = GameBootstrap.Current!;
++            GameScreen view = boot.View!;
++            LevelFlow flow = boot.Flow!;
++            Assert.That(TutorialFingerSetup.TryChoose(flow.Session.Current, flow.Session.PourMode, flow.Session.FutileRuleEnabled,
++                new AStarSolver(), out Pour setup), Is.True);
++            TutorialFinger finger = TutorialFingerTests.WaitForFinger(boot, "el 2, al empezar");
++            Assert.That(view.TutorialFingerPour.Source, Is.EqualTo(setup.Source), "el paso previo (Q-B11-1)");
++            Assert.That(view.TutorialFingerPour.Target, Is.EqualTo(setup.Target));
++            Assert.That(view.LastTutorialFingerProbe, Does.Contain("\"lesson\":\"partial_setup\""));
++            Assert.That(view.TutorialSlothVisible || view.TutorialShownCount == 1, Is.True,
++                "la instrucción de TiTino no se va con el paso previo: habla de este tablero");
++
++            Assert.That(boot.TapCuia(setup.Source).Kind, Is.EqualTo(TapKind.Selected));
++            Assert.That(boot.TapCuia(setup.Target).Kind, Is.EqualTo(TapKind.Poured));
++            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++            Assert.That(view.TutorialFingerVisible, Is.False, "el paso previo hecho: se va");
++            Assert.That(view.TutorialFingerArmed, Is.True, "y espera la lección");
++            PlayModeHelpers.StepUntilIdle(boot, 6000);
++            finger = TutorialFingerTests.WaitForFinger(boot, "el 2, la lección");
++            Pour lesson = view.TutorialFingerPour;
++            Assert.That(TutorialInstruction.IsPartialRunLesson(flow.Session.Current, lesson.Source, lesson.Target, flow.Session.PourMode), Is.True,
++                "la racha de 3 sobre el hueco de 2 (02 §13)");
++            Assert.That(view.LastTutorialFingerProbe, Does.Contain("\"lesson\":\"partial\""));
++            Assert.That(boot.TapCuia(lesson.Source).Kind, Is.EqualTo(TapKind.Selected));
++            Assert.That(boot.TapCuia(lesson.Target).Kind, Is.EqualTo(TapKind.Poured));
++            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++            Assert.That(view.TutorialFingerFollowed, Is.True);
++            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(2), "el paso previo y la lección");
++            Assert.That(finger.Shown, Is.False);
++        }
++
++        [UnityTest]
++        public IEnumerator Level2_AnotherPourDuringTheSetupStep_TheFingerWaitsAgain()
++        {
++            GameScreen.TutorialFingerOverride = true;
++            yield return TutorialSlothTests.Load(2);
++            GameBootstrap boot = GameBootstrap.Current!;
++            GameScreen view = boot.View!;
++            LevelFlow flow = boot.Flow!;
++            TutorialFingerTests.WaitForFinger(boot, "el 2, al empezar");
++            Pour setup = view.TutorialFingerPour;
++            BoardState board = flow.Session.Current;
++            int source = -1;
++            int target = -1;
++            for (int s = 0; s < board.Count && source < 0; s++)
++            {
++                for (int t = 0; t < board.Count; t++)
++                {
++                    if (s != t && (s != setup.Source || t != setup.Target) && PourRules.IsLegal(board, s, t))
++                    {
++                        source = s;
++                        target = t;
++                        break;
++                    }
++                }
++            }
++
++            Assert.That(source, Is.GreaterThanOrEqualTo(0), "condición del test: otro vertido legal");
++            Assert.That(boot.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected));
++            Assert.That(boot.TapCuia(target).Kind, Is.EqualTo(TapKind.Poured));
++            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++            Assert.That(view.TutorialFingerCancelled, Is.False, "el paso previo no se cancela con otro vertido [P]");
++            Assert.That(view.TutorialFingerArmed, Is.True, "vuelve a esperar sobre el tablero nuevo");
++        }
++
++        [UnityTest]
++        public IEnumerator Level8_ExtraCuiaFinger_AfterCapi_UntilItIsUsed()
++        {
++            yield return TutorialSlothTests.Load(8);
++            GameBootstrap boot = GameBootstrap.Current!;
++            GameScreen view = boot.View!;
++            LevelFlow flow = boot.Flow!;
++            Assert.That(flow.ExtraCuia.Stock, Is.EqualTo(1), "condición del test: Capi regaló una (04 §2.2)");
++            bool sawToastWithFinger = false;
++            for (int t = 0; t < 15000 && !view.ExtraCuiaFingerVisible; t += PlayModeHelpers.FrameMs)
++            {
++                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++                sawToastWithFinger |= view.ExtraCuiaFingerVisible && view.ToastText != null;
++            }
++
++            Assert.That(view.ExtraCuiaFingerVisible, Is.True, "el dedo de la Cuia extra sale (02 §13 y 06 §2.2: en su primer uso)");
++            Assert.That(sawToastWithFinger, Is.False, "nunca a la vez que el aviso de Capi");
++            Assert.That(view.ToastText, Is.Null, "el aviso de Capi ya se fue");
++            TrayFinger finger = view.ExtraCuiaFinger!;
++            Assert.That(finger.Target, Is.SameAs((RectTransform)view.Tray.ExtraCuiaButton.transform), "sobre «+1 cuia»");
++            foreach (Graphic g in finger.Hand.transform.parent.GetComponentsInChildren<Graphic>(true))
++            {
++                Assert.That(g.raycastTarget, Is.False, g.name + " no captura toques");
++            }
++
++            Assert.That(view.LastTutorialTipProbe, Does.Contain("\"tip\":\"extra_cuia_finger\"").And.Contains("\"visible\":true"));
++            Vector3 tip = finger.Hand.rectTransform.position;
++            var button = (RectTransform)view.Tray.ExtraCuiaButton.transform;
++            Vector3 local = button.InverseTransformPoint(tip);
++            Assert.That(button.rect.Contains(new Vector2(local.x, local.y)), Is.True, "la yema, sobre el botón");
++
++            // Sigue mientras no se use (en bucle) y se va al usarla; no vuelve en el nivel.
++            PlayModeHelpers.Step(boot, (int)TrayFinger.CycleMs + 100);
++            Assert.That(view.ExtraCuiaFingerVisible, Is.True);
++            Assert.That(boot.PressExtraCuia(), Is.True, "la Cuia extra del stock");
++            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++            Assert.That(view.ExtraCuiaFingerVisible, Is.False, "usada: se va");
++            PlayModeHelpers.Step(boot, 3000);
++            Assert.That(view.ExtraCuiaFingerVisible, Is.False, "y no vuelve");
++        }
++
++        [UnityTest]
++        public IEnumerator Level8_ExtraCuiaFinger_ReduceMotion_FixedHand()
++        {
++            yield return TutorialSlothTests.Load(8);
++            GameBootstrap boot = GameBootstrap.Current!;
++            GameScreen view = boot.View!;
++            boot.Flow!.ReduceMotion = true;
++            for (int t = 0; t < 15000 && !view.ExtraCuiaFingerVisible; t += PlayModeHelpers.FrameMs)
++            {
++                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++            }
++
++            TrayFinger finger = view.ExtraCuiaFinger!;
++            Assert.That(finger.ReduceMotion, Is.True);
++            Vector3 at = finger.Hand.rectTransform.position;
++            for (int t = 0; t < (int)TrayFinger.CycleMs + 200; t += PlayModeHelpers.FrameMs)
++            {
++                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++                Assert.That(Vector3.Distance(finger.Hand.rectTransform.position, at), Is.LessThan(0.01f), "sin animación");
++                Assert.That(finger.HandAlpha, Is.EqualTo(1f).Within(0.001f), "sin fundidos");
++            }
++        }
++
++        [UnityTest]
++        public IEnumerator OtherLevels_NoExtraCuiaFinger([Values(9, 12)] int level)
++        {
++            yield return TutorialSlothTests.Load(level);
++            GameBootstrap boot = GameBootstrap.Current!;
++            for (int t = 0; t < 8000; t += PlayModeHelpers.FrameMs)
++            {
++                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++                Assert.That(boot.View!.ExtraCuiaFingerVisible, Is.False, "solo en el 8 (a los " + t + " ms)");
++            }
++        }
++
++        [UnityTest]
++        public IEnumerator Level6_Stuck_TheRestartTip_AboveTheModal_OncePerLevel()
++        {
++            yield return TutorialSlothTests.Load(6);
++            GameBootstrap boot = GameBootstrap.Current!;
++            GameScreen view = boot.View!;
++            FunnelSetup.GetStuck(boot);
++            PlayModeHelpers.Step(boot, 300);
++            Assert.That(view.RestartTipVisible, Is.True, "02 §13, fila 6: el tooltip con el primer modal");
++            TipBubble tip = view.RestartTip!;
++            Assert.That(tip.Text, Is.EqualTo(Loc.T(TutorialTips.RestartFreeCanoeKey)), "el texto canon de 04 §2.7");
++            Assert.That(tip.TailUp, Is.False, "encima del panel, con el pico hacia él");
++
++            // El pico, en el eje de «Volver a la orilla (gratis)» y en el canto de arriba del panel.
++            var restart = (RectTransform)view.Stuck.RestartButton.transform;
++            var space = (RectTransform)tip.Rect.parent;
++            Vector3 center = space.InverseTransformPoint(restart.TransformPoint(restart.rect.center));
++            Assert.That(tip.TailTip.x, Is.EqualTo(center.x - space.rect.xMin).Within(1f), "el pico, en el eje de «Volver a la orilla»");
++            var corners = new Vector3[4];
++            tip.Rect.GetWorldCorners(corners);
++            float tipBottom = corners[0].y;
++            view.Stuck.Panel.GetWorldCorners(corners);
++            float panelTop = corners[1].y;
++            Assert.That(tipBottom, Is.GreaterThanOrEqualTo(panelTop - 0.5f), "no tapa el panel (Marea, la primera opción)");
++            Assert.That(tip.Alpha, Is.GreaterThan(0.5f));
++            Assert.That(view.LastTutorialTipProbe, Does.Contain("\"tip\":\"restart\"").And.Contains(TutorialTips.RestartFreeCanoeKey));
++
++            // Marea cierra el modal: el tooltip se va; un segundo bloqueo en el mismo nivel ya no lo trae.
++            Assert.That(boot.PressUndo(), Is.True);
++            PlayModeHelpers.Step(boot, 400);
++            Assert.That(view.RestartTipVisible, Is.False, "se va con el modal");
++            PlayModeHelpers.StepUntilIdle(boot, 3000);
++            FunnelSetup.GetStuck(boot);
++            PlayModeHelpers.Step(boot, 300);
++            Assert.That(view.RestartTipVisible, Is.False, "una vez por nivel [P]");
++
++            // Tampoco al salir al inicio y volver a entrar en el 6 (la app sigue abierta) [P].
++            Assert.That(boot.PressQuit(), Is.True, "en 1-30, salir es gratis");
++            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
++            Assert.That(boot.PressPlay(), Is.True);
++            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(6));
++            boot.TapAnywhere();
++            PlayModeHelpers.Step(boot, 50);
++            FunnelSetup.GetStuck(boot);
++            PlayModeHelpers.Step(boot, 300);
++            Assert.That(view.RestartTipVisible, Is.False, "ni al volver a entrar [P]");
++        }
++
++        [UnityTest]
++        public IEnumerator Level6_WithoutLives_TheTipDropsTheCanoeSentence_D038()
++        {
++            yield return TutorialSlothTests.Load(6);
++            GameBootstrap boot = GameBootstrap.Current!;
++            boot.Wallet!.LivesEnabled = false; // lo que deja ConnectWallet con biz_feature_lives = false (08 §9; D-038)
++            FunnelSetup.GetStuck(boot);
++            PlayModeHelpers.Step(boot, 300);
++            Assert.That(boot.View!.RestartTipVisible, Is.True);
++            Assert.That(boot.View.RestartTip!.Text, Is.EqualTo(Loc.T(TutorialTips.RestartFreeKey)), "sin canoas en los avisos (D-038)");
++            Assert.That(boot.View.RestartTip.Text, Does.Not.Contain("canoa"));
++        }
++
++        [UnityTest]
++        public IEnumerator Level11_Victory_TheDoubleHarvestTip_AboveTheButton_UntilPressed()
++        {
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
++            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            GameScreen view = boot.View!;
++            VictorySetup.WinToVictoryScreen(boot);
++            PlayModeHelpers.Step(boot, 600);
++            Assert.That(view.DoubleHarvestShown, Is.True, "condición del test: la Cosecha doble, con su video");
++            Assert.That(view.DoubleHarvestTipVisible, Is.True, "06 §2.2, fila 11: presentada con un tooltip sin personaje");
++            TipBubble tip = view.DoubleHarvestTip!;
++            Assert.That(tip.Text, Is.EqualTo(Loc.T(TutorialTips.DoubleHarvestKey)));
++            var corners = new Vector3[4];
++            tip.Rect.GetWorldCorners(corners);
++            float tipBottom = corners[0].y;
++            ((RectTransform)view.DoubleHarvestButton.transform).GetWorldCorners(corners);
++            Assert.That(tipBottom, Is.GreaterThanOrEqualTo(corners[1].y - 0.5f), "encima del botón, sin taparlo");
++            Assert.That(boot.PressDoubleHarvest(), Is.True);
++            PlayModeHelpers.Step(boot, 400);
++            Assert.That(view.DoubleHarvestTipVisible, Is.False, "se va al pulsarlo");
++        }
++
++        [UnityTest]
++        public IEnumerator Level12_Victory_NoDoubleHarvestTip()
++        {
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
++            yield return PlayModeHelpers.LoadGame(12, new MemoryProgressStore(12, 11));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            VictorySetup.WinToVictoryScreen(boot);
++            PlayModeHelpers.Step(boot, 600);
++            Assert.That(boot.View!.DoubleHarvestShown, Is.True, "condición del test: la Cosecha doble, con su video");
++            Assert.That(boot.View.DoubleHarvestTipVisible, Is.False, "una sola vez: en el 11");
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/PlayMode/TutorialTipsHooksTests.cs.meta b/Assets/_Project/Tests/PlayMode/TutorialTipsHooksTests.cs.meta
+new file mode 100644
+index 00000000..b773aa00
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/TutorialTipsHooksTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 4f18b449e694f1b4cb830c82943a7e99
+\ No newline at end of file

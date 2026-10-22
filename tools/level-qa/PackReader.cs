@@ -19,14 +19,15 @@ internal sealed record QaLevel(
     string[] Palette, int UnitsDefault, IReadOnlyDictionary<int, int> UnitsOverrides,
     BoardData Board, bool Murky, string Label, double BotFail, int Par, double Branching, double Traps,
     int Complexity, double D, string Band, bool HasParApprox, int RiskPairs, string? Intro, bool Skippable,
-    bool HintSupported, List<QaRelief> Relief, string[] ForbiddenKeys, string Source)
+    bool HintSupported, List<QaRelief> Relief, string[] ForbiddenKeys, string Source, string? Replaces = null, bool HasD = true)
 {
     public int K => Palette.Length;
 }
 
 internal sealed record QaPack(
     string Path, int PackSchema, string PackId, int World, string WorldId, string WaterBase, string[] Pool,
-    int KMin, int KMax, int MaxRiskPairs, List<QaLevel> Levels, long Bytes, long BytesWithoutRelief, long HeaderBytes);
+    int KMin, int KMax, int MaxRiskPairs, List<QaLevel> Levels, long Bytes, long BytesWithoutRelief, long HeaderBytes,
+    string Kind = "campaign");
 
 internal sealed class PackFormatException(string message) : Exception(message);
 
@@ -61,7 +62,8 @@ internal static class PackReader
             levels,
             bytes.LongLength,
             WithoutRelief(root, keepLevels: true),
-            WithoutRelief(root, keepLevels: false));
+            WithoutRelief(root, keepLevels: false),
+            root.TryGetProperty("kind", out JsonElement kind) ? kind.GetString() ?? "campaign" : "campaign");
     }
 
     /// <summary>Bytes del pack minificado sin las variantes de relief (03 §17 #11).</summary>
@@ -166,7 +168,9 @@ internal static class PackReader
             lv.GetProperty("hint_supported").GetBoolean(),
             relief,
             Forbidden.Where(f => lv.TryGetProperty(f, out _)).ToArray(),
-            lv.GetProperty("gen").TryGetProperty("source", out JsonElement src) ? src.GetString() ?? "" : "");
+            lv.GetProperty("gen").TryGetProperty("source", out JsonElement src) ? src.GetString() ?? "" : "",
+            lv.TryGetProperty("replaces", out JsonElement replaces) ? replaces.GetString() : null,
+            diff.TryGetProperty("D", out _));
     }
 
     private static BoardData Board(JsonElement caps, JsonElement cuias, JsonElement attrs, JsonElement hidden)

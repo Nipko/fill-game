@@ -10,8 +10,8 @@ Fuentes: D-009 (ciclo escalonado) y D-007 (debuts) con la propuesta `docs/resear
 |---|---|---|---|---|---|
 | `Assets/_Project/Data/Levels/mundo_02_v1.json` | 30 | 26162 | 22509 | 73.3 KB | `510694990af435774e4917335367e4ca618358feff93f39e3374bec540ea783e` |
 | `Assets/_Project/Data/Levels/mundo_03_v1.json` | 40 | 48527 | 31190 | 76.1 KB | `1a692717cf1147bc5e1021507ffaba94e36bcff5308518c3b2a1968b3b5e4439` |
-| `Assets/_Project/Data/Levels/mundo_04_v1.json` | 60 | 78577 | 49411 | 80.4 KB | `0dbf54df4b7dbe3130166821f49c933f255d3231142b682a9d98381bcf4d4a90` |
-| `Assets/_Project/Data/Levels/mundo_05_v1.json` | 60 | 80101 | 49821 | 81.1 KB | `f9abfb475fb1081c6ea3f33b1146c08afe3147df6a93c3545d6c1ac8d27bc3b3` |
+| `Assets/_Project/Data/Levels/mundo_04_v1.json` | 60 | 78917 | 49411 | 80.4 KB | `55d251417b588065c23685b35a9d7d51430bd5f2dd6290dd54b6f51441efa1e1` |
+| `Assets/_Project/Data/Levels/mundo_05_v1.json` | 60 | 80389 | 49821 | 81.1 KB | `12be58f2d3a61121d6ec4c4fa0b330d8c0d57a442e2be054ddceb9f9556e3fb1` |
 
 ## Pool por rango e índice D (03 §7)
 
@@ -163,7 +163,7 @@ Columnas: p = posición en el ciclo (0 en la rampa); E = vacíos de capacidad �
 | 115 | 15 | reto | Ma+Tu (D) | 9 | 1 (0) | 11 | deep | 23 | 18657 | 0.775 | [0.75, 0.90) | hard | hard | 0.78 | 0.924 (reto) | 6.17 | 0.15 | 0 | 63 | +(0.15) −3(21; 0.00) | turbia: 2 dosis ocultas en 1 cuia(s), 2 realidades |
 | 116 | 16 | comodidad | C | 9 | 2 (2) | 11 | walk | 18 | 2073 | 0.225 | [0.20, 0.60] | normal | — | -0.58 | 0.090 (recuperacion) | 5.89 | 0.00 | 0 | 50 | −11(17; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
 | 117 | 17 | comodidad | C | 9 | 2 (2) | 11 | walk | 20 | 6691 | 0.400 | [0.20, 0.60] | normal | — | 0.03 | 0.575 (comodidad) | 7.45 | 0.04 | 0 | 52 | −1(18; 0.00) +(0.03) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
-| 118 | 18 | reto | Re+Ho (D) | 9 | 2 (1) | 11 | walk | 23 | 109491 | 0.875 | [0.75, 0.90) | hard | hard | 0.98 | 0.944 (reto) | 8.00 | 0.01 | 0 | 58 | +(0.10) | relajacion: walk con 1 vacio |
+| 118 | 18 | reto | Re+Ho (D) | 9 | 2 (1) | 11 | walk | 23 | 109491 | 0.875 | [0.75, 0.90) | hard | hard | 0.98 | 0.944 (reto) | 8.00 | 0.01 | 0 | 58 | +(0.10) −1(22; 0.10) | relajacion: walk con 1 vacio |
 | 119 | 19 | remanso | S | 9 | 2 (2) | 11 | walk | 19 | 3933 | 0.250 | [0.20, 0.40] | normal | — | -0.24 | 0.347 (comodidad) | 8.05 | 0.00 | 0 | 52 | −7(18; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
 | 120 | 20 | hito | Re+Ma (MD) | 9 | 1 (0) | 10 | deep | 22 | 4403 | 1.000 | [0.90, 1.00] | very_hard | very_hard | 1.16 | 0.962 (hito) | 6.09 | 0.32 | 4 | 52 | +(0.35) −11(19; 0.15) |  |
 | 121 | 1 | recuperacion | R | 8 | 2 (2) | 10 | walk | 16 | 1832 | 0.200 | [0.00, 0.30) | normal | — | -0.60 | 0.079 (recuperacion) | 5.44 | 0.03 | 0 | 42 | −1(14; 0.00) +(0.00) |  |
@@ -245,7 +245,7 @@ Columnas: p = posición en el ciclo (0 en la rampa); E = vacíos de capacidad �
 | 197 | 17 | comodidad | C | 9 | 2 (2) | 11 | walk | 20 | 2538 | 0.375 | [0.20, 0.60] | normal | — | -0.19 | 0.393 (comodidad) | 6.10 | 0.00 | 0 | 54 | −1(18; 0.00) +(0.03) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
 | 198 | 18 | reto | Pi+Ho (D) | 9 | 1 (0) | 11 | fill | 28 | 30499 | 0.875 | [0.75, 0.90) | hard | hard | 0.94 | 0.941 (reto) | 3.14 | 0.05 | 0 | 66 | +(0.00) −6(22; 0.00) | 1 ronda(s) extra de candidatos |
 | 199 | 19 | remanso | S | 9 | 2 (2) | 11 | walk | 19 | 5968 | 0.300 | [0.20, 0.40] | normal | — | -0.39 | 0.227 (comodidad) | 5.89 | 0.00 | 0 | 50 | −2(18; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica); 1 ronda(s) extra de candidatos |
-| 200 | 20 | hito | Pi+Ba (MD) | 9 | 0 (0) | 11 | fill | 28 | 39689 | 0.975 | [0.90, 1.00] | very_hard | very_hard | 1.17 | 0.965 (hito) | 4.43 | 0.03 | 0 | 69 | +(0.03) | 1 ronda(s) extra de candidatos |
+| 200 | 20 | hito | Pi+Ba (MD) | 9 | 0 (0) | 11 | fill | 28 | 39689 | 0.975 | [0.90, 1.00] | very_hard | very_hard | 1.17 | 0.965 (hito) | 4.43 | 0.03 | 0 | 69 | +(0.03) −1(26; 0.00) | 1 ronda(s) extra de candidatos |
 
 ## Par / 2K por fuente frente a 03 §18
 

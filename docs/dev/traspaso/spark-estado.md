@@ -6,6 +6,185 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-21 · B12 · Consentimiento y edad, con implementaciones falsas (`spark/t5-b12`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/t5-b12`, desde `origin/integracion-fase1-fase2` en `4a9a42a0`.
+  - Sin fusiones: la integración no se movió durante el bloque (`git fetch` antes de la verificación final).
+  - Empujada, sin `--force`.
+- **Nota:** `docs/dev/consentimiento.md`. Recoge:
+  - qué hace;
+  - los archivos y los parches;
+  - lo que queda para los SDK;
+  - las preguntas Q-B12-1 a Q-B12-16;
+  - los hallazgos para el GDD;
+  - las sugerencias abiertas de la revisión (§6).
+- **Canon:**
+  - 08 §2.3 (arranque), §4.3 (`profile.consent`), §7 («Consentimiento»), §8.1-§8.2 (`consent_profile`, `af_consent` y `af_settings_change`) y §9 (las 5 claves `consent_*` y `biz_*`);
+  - 05 §7;
+  - 06 §2.1, regla 3;
+  - Q-T3 (a) y Q-T4 (a) de D-033.
+- **Qué hace:**
+  - **Pantalla de edad neutral:** tres bandas iguales y ninguna marcada.
+    - `<13`: bloqueo en la 1.0 («Pide a un adulto que instale el juego», sin sesión de juego).
+    - `13-17`: `npa`, contenido G y doble confirmación de compras.
+    - `18+`: normal.
+  - **Consentimiento propio:** finalidades separadas y «Rechazar todo» al mismo nivel que «Aceptar todo».
+    - Perfil legal por SIM → región → `default` estricto.
+    - UMP decide los anuncios en el EEE, el Reino Unido y Suiza.
+  - `profile.consent` como prueba LGPD.
+  - **Flags:**
+    - a la analítica, con la recogida apagada hasta decidir (B7);
+    - a los anuncios: TFCD, `npa`, G y sin inicializar hasta decidir;
+    - a la tienda: sin compras con `<13` o sin decidir, falla cerrada.
+  - **Compras de 13-17:** segunda confirmación con el precio de la tienda antes de la hoja de Google Play. No se confirma lo que no se puede comprar.
+  - **Ajustes:**
+    - «Privacidad y datos», que cambia o retira, y con UMP reabre su mensaje;
+    - «Corregir mi edad», una vez.
+  - **Textos legales:** [P], en `borrador` con la nota «pendiente del abogado» (Q-B12-5).
+  - Sin SDK, sin paquetes, sin permisos (la SIM se lee sin `READ_PHONE_STATE`) y sin red.
+- **Commits** (del más antiguo al más reciente):
+  - `ac8e84bd`: la lógica sin motor, los decoradores, el lector de Remote Config, las pantallas, Ajustes, la sonda y los tests;
+  - `1a9d401f`: los parches y la nota;
+  - `ed31a5a8`, `aea499f4` y `8008af94`: los arreglos de las revisiones 1, 2 y 3;
+  - `9ecacbd0`, `4ebfdb95` y `06f20442`: los parches regenerados tras cada revisión;
+  - el commit de esta entrada.
+- **En la rama** (archivos nuevos; ningún archivo del escritorio cambia):
+  - `Scripts/Platform/ConsentModel.cs`, `ConsentConfig.cs`, `ConsentPolicy.cs` y `ConsentFlow.cs`;
+  - `Scripts/Ads/ConsentAdService.cs` y `Scripts/IAP/ConsentStoreService.cs`;
+  - `Scripts/RemoteConfig/Binding/ConsentConfigBinder.cs`;
+  - `Scripts/UI/ConsentText.cs`, `ConsentScreen.cs`, `AndroidSimCountry.cs`, `SettingsScreen.Consent.cs`, `GameBootstrap.Consent.cs` y `DevProbe.Consent.cs`;
+  - tests: `Tests/EditMode/ConsentTests.cs`, `Scripts/Ads/Tests/ConsentAdServiceTests.cs`, `Scripts/IAP/Tests/ConsentStoreTests.cs` y `Tests/PlayMode/ConsentScreenTests.cs`.
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, en LF, en este orden, con `git -c core.autocrlf=false apply`):
+  1. `B12-profile.diff`: `Profile.Consent`, `ProfileJson` (tolerante), `ProfileConsentStore` y `ProfileConsentTests`.
+  2. `B12-rc.diff`: `[RemoteConfigKey]` en `ConsentConfig`, `RcConfigBinder.BoundKeys`, `RcConfigs.Consent` y `RcConfigBinderTests`.
+  3. `B12-ui.diff` (necesita el 1 y el 2):
+     - en `GameBootstrap.cs`:
+       - envolver anuncios y tienda;
+       - `BlockedAtBoot`, `SetUpConsent` y `StartConsentAtBoot`/`WaitConsentAtBoot` antes de `AppFlow.Start`;
+       - el Atrás;
+       - las filas de Ajustes;
+     - `GameBootstrap.Consent.cs`, con `_rcConfigs.Consent`;
+     - `GameBootstrap.Sessions.cs` (`ConsentHoldsSession`);
+     - el comentario de `GameBootstrap.Telemetry.cs`;
+     - `SettingsScreen.cs`;
+     - `PlayModeHelpers.cs`: `ConsentEnabledOverride ??= false` y `LoadAppWithConsent`;
+     - `ConsentBootTests` (PlayMode, la escena real).
+  4. `B12-loc.diff`: 23 claves en `strings.csv`, por orden ordinal, y `ConsentText.AllKeys` en `LocTablesTests.UiTextKeys`.
+  - Sin parche de `AppFlow`: el paso «Consent» de 08 §2.2 corre con `AppFlow` en `Boot` (nota §2.2).
+- **Choques con B8** (`spark/t5-b8`, sin integrar):
+  - `SettingsScreen.EmitLayout`: la suma de `n`, a mano: `+ AccountLayoutCount + ConsentLayoutCount`;
+  - `LocTablesTests` y `ProfileJson` tocan puntos distintos;
+  - `CloudMerge` (B8) debería conservar el `consent` del dispositivo (Q-B12-8).
+- **Revisión** (skill `code-review` con las reglas de `.claude/agents/code-reviewer.md`; el subagente no estaba disponible):
+  - **1.ª ronda: 10 hallazgos, arreglados:**
+    - UMP forzaba `npa`;
+    - el país desconocido no era estricto;
+    - `<13` desde Ajustes dejaba la sesión viva; ahora recarga la escena y para en `BlockedAtBoot`;
+    - sin enlace de UMP en Ajustes;
+    - la doble confirmación antes de `CheckPurchasable`;
+    - una confirmación tapada se quedaba colgada;
+    - el perfil y la versión de la corrección no coincidían con `af_consent`;
+    - una sola fuente de `ConsentConfig`;
+    - la tienda falla cerrada;
+    - código muerto.
+  - **2.ª ronda: 10 hallazgos, arreglados:**
+    - un perfil legal distinto vuelve a preguntar;
+    - 13-17 con UMP sin la restricción;
+    - la sonda `npa`/`ump`;
+    - los flags una vez por decisión;
+    - la tienda recomprueba los flags al responder;
+    - los textos con quién habla y la captura pendiente (Q-B12-16);
+    - el texto de `consent_ads_ump`.
+  - **3.ª ronda: 1 bloqueante y 6 menores, arreglados:**
+    - la línea de anuncios sigue a los flags;
+    - `Flags` con el perfil y el país de ahora;
+    - Play Games solo decidido;
+    - las claves de país en mayúsculas;
+    - sin avisos con la edad pendiente;
+    - la tabla de la nota.
+  - **4.ª ronda: APROBADO**, con 8 sugerencias que quedan en la nota §6, la más relevante:
+    - `ConsentHoldsSession` no cubre el segundo de la pantalla de arranque de quien debe volver a decidir.
+- **Verificación** (ARM64, `-Architecture arm64`; un solo Unity a la vez):
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`06f20442` + entrada) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos y 0 errores; **1.002 (996 + 6), 0 fallos**; 103/103, sin cambios en `tools/out/schema_example_08_4_1.json` |
+  | rama | `unity-compile`; EditMode; PlayMode | 0; **3.821 (3.818 + 3), 0 fallos** (4,9 min); **1.726 (1.489 + 237), 0 fallos** (34,5 min) |
+  | rama + los cuatro parches | `unity-compile`; EditMode; PlayMode | 0; **3.830 (3.826 + 3) y 1 fallo de tiempo** (`IntroArtTests.FruitFlight…GeneratedWithin10ms`), que relanzado con filtro da 9/9 (no es de B12); **1.733 (1.496 + 237), 0 fallos** (34,5 min) |
+
+- **Preguntas para el dueño** (se avanzó con la recomendada; detalle y opciones en la nota §4):
+
+  | Id | Pregunta | Recomendada |
+  |---|---|---|
+  | Q-B12-1 | Pantalla de edad: tres botones o año de nacimiento | (a) tres botones |
+  | Q-B12-2 | ¿Repetir la edad al subir los textos? | (a) no, solo las finalidades |
+  | Q-B12-3 | Bloqueo `<13` definitivo | (a) sí |
+  | Q-B12-4 | Diagnóstico sin interruptor | (a) sí, pendiente del abogado |
+  | Q-B12-5 | Estado «pendiente del abogado» | (a) `borrador` + nota |
+  | Q-B12-6 | Doble confirmación: una pantalla más | (a) |
+  | Q-B12-7 | Analítica con 13-17 | (a) se puede aceptar |
+  | Q-B12-8 | `consent` en la nube | (a) es del dispositivo |
+  | Q-B12-9 | Analítica en UMP | (a) en la pantalla propia |
+  | Q-B12-10 | `consent.age_band_corrected` | anotarlo en 08 §4.3 |
+  | Q-B12-11 | `af_settings_change.value` | `choices` o `age` |
+  | Q-B12-12 | El encargo dice que `INTERNET` no está aprobado; D-036 sí lo aprobó | sin efecto en B12 |
+  | Q-B12-13 | Lo más estricto sin país | (a) `default` + `npa` sin elección |
+  | Q-B12-14 | Extraer `OptionRow` | (a) al integrar |
+  | Q-B12-15 | Otro perfil legal: volver a preguntar | (a) sí |
+  | Q-B12-16 | Capturas de los textos nuevos | (a) el integrador con `SnapshotKit` |
+
+- **Riesgos:**
+  - **Legal:**
+    - todos los textos son borradores sin el abogado;
+    - la autenticación de Google Play no se puede forzar desde el cliente [NV];
+    - Play Age Signals sin implementar;
+    - la neutralidad de la pantalla de edad la valida el abogado.
+  - **SDK:** pasar los flags reales a MAX (TFCD, `npa`, G, el formulario de UMP) y al sumidero de Firebase [NV].
+  - **Sesión:** la del arranque en frío se cuenta antes de la pantalla de edad (`stats.sessions`) [P].
+  - **Bloqueo:** con `<13`, la recarga de la escena reutiliza `RebuildUi`, cuyo `PersistNow` pone «idioma» en el log.
+  - **Ajustes en el teléfono:** probar la fila de Privacidad al 130 % y en 16:9 (sin capturas en el Spark).
+
+---
+
+## 2026-10-21 · B11 · Tutorial, Sin canoas y contenido (`spark/t5-b11`): HECHA salvo la reserva del 20 % (parada: Q-B11-7) · verificación completa VERDE (rama y rama + parches) · lista para integrar
+
+- **Rama:** `spark/t5-b11` (local `t5-b11`), desde `origin/integracion-fase1-fase2` en `2ed45753`; fusiona la integración una sola vez, al final: `19caed28` (F3-5, el canon «1 Marea + 30» y D-039) en `abde6db6`, sin conflictos. Empujada sin `--force`.
+- **Nota del bloque:** `docs/dev/tutorial-b11.md` (qué hace, archivos, parches, para el integrador, cambios para el GDD, preguntas Q-B11-1 a Q-B11-12 y riesgos).
+- **Decisiones del dueño aplicadas:** D-033, Q-N2 (a) (V3: `minus_color` desde el 31 en el generador) y Q-E4 (a) (el texto de la tarjeta de Canoas del 31). **D-038 respetado y cubierto por tests:** con `biz_feature_lives` apagado no hay tarjeta de Canoas (`CanoesCardFlowTests.WithoutLives_NoCard_D038`), el tooltip del 6 y del 8 pierde la frase de las canoas (`TutorialTipsHooksTests.Level6_WithoutLives_TheTipDropsTheCanoeSentence_D038`) y Sin canoas no se abre, así que «Volver al Mapa del río» no hace nada (`NoCanoesMapTests.WithoutLives_NoCanoesNeverOpens_D038`). Nada del embudo de D-038 cambia.
+- **Commits:** `6fb7a4bf` (el bloque en la rama), `abde6db6` (la fusión) y el de los parches, esta entrada y la nota al día (el último de la rama) (parches, esta entrada y la nota al día).
+- **En la rama:**
+  - `tools/level-generator/Metrics/Relief.cs`: segunda pasada de `minus_color` (A* w = 1 a 2.000.000 [P], solo para los colores que agotaron la primera, reutilizando lo ya evaluado) y su README (tabla de bytes y hashes al día); `tools/level-qa/Checks/ReliefChecks.cs`, solo la descripción de QA-RELIEF-MINUS. Datos regenerados con el generador: `mundo_04`, `05`, `07`, `08` y `09_v1.json` (solo el `relief` de 17 niveles; el 680 sigue sin `minus_color`, Q-B11-3), `tools/out/salida_a/mundo_07-09_v1.json`, `campaign_v1_report.md`, `curation_w07-09.md` y `level_qa_report.md`.
+  - Código nuevo, sin llamar hasta los parches: `LevelLabelOverrides`, `TutorialTips`, `DragPour`, `ProceduralArt.Canoes.cs`, `TipBubble`, `TrayFinger`, `TutorialFingerSetup`, `TutorialTipsText`, `LevelLabelSource`, `GameScreen.TutorialTips.cs`, `GameScreen.Drag.cs` y `GameBootstrap.NoCanoesMap.cs`.
+  - Tests: `LevelLabelOverridesTests`, `DragPourTests`, `TutorialTipsTests`, `ReliefMinusColorTests` y `BoardLayout320Tests` (EditMode); `CampaignPackTests` con las cuentas nuevas de variantes (1.327 en la «b», 1.328 en la «a»).
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, LF, independientes; los `.meta` de los archivos nuevos dentro, como los generó Unity; los seis pasan `git apply --check` sobre `abde6db6`):
+  1. `B11-loc.diff`: 5 claves en su sitio por orden ordinal (`no_canoes_map` `borrador`; `tutorial_canoes`, `tutorial_double_harvest`, `tutorial_restart_free` y `tutorial_restart_free_canoe` `pendiente_asesor`, como todas las `tutorial_*`), sin EN ni PT-BR, con su captura de referencia; `TutorialTipsText.AllKeys` en `LocTablesTests.UiTextKeys`.
+  2. `B11-flow.diff`: `LevelCardInfo.CanoesIntro`/`ForCanoes`, `LevelFlow.Canoes.cs` (nuevo), la tarjeta en `LevelFlow.Cards.TryShowLevelCard`, su texto en `UiText.Cards` y su icono en `ProceduralArt.Cards`; `CanoesCardFlowTests`.
+  3. `B11-labels.diff`: `lvl_label_override` en `LevelCatalog.Create` (con `IsRelabeled`/`RelabeledLevels`; `IsOverridden` mira la lista de sustituidos) y en el arranque (`LevelLabelSource`); `LevelLabelCatalogTests`.
+  4. `B11-tutorial.diff`: en `GameScreen.Cards.cs`, el paso previo del dedo del 2 y las llamadas a `GameScreen.TutorialTips.cs` (tick, carga y `AF_LAYOUT`); `PlayModeHelpers.NoTutorialTipsUnlessSet`; los tests del dedo del 2 al día (`TutorialFingerTests`); `TutorialTipsHooksTests` y `B11SnapshotTests` (explícito).
+  5. `B11-drag.diff`: posiciones del puntero en `CuiaView` y `OnCuiaUp` → `TryDragPour`; `DragPourHooksTests`.
+  6. `B11-nocanoes.diff`: «Volver al Mapa del río» en `NoCanoesScreen`; `LobbyScreen.BackButton` pasa a la X de Sin canoas (las pruebas que «vuelven al inicio»); `NoCanoesMapTests`.
+- **Parado:** la reserva del 20 % de 03 §17 (Q-B11-7): publicarla cambia el contrato 21 (`pack_id` e `id` del esquema) y el catálogo; nada generado.
+- **Revisión** (skill `code-review` con las reglas de `.claude/agents/code-reviewer.md`; no había herramienta para lanzar el subagente): tres rondas con CAMBIOS NECESARIOS y la cuarta **APROBADO**. Arreglado, entre otras cosas: `IsOverridden` ya no confunde un nivel reetiquetado con un override (y `IsRelabeled` para `source = override`); `LobbyScreen.BackButton` en el parche (las 2 pruebas de PlayMode que fallaban); el tooltip de la Cosecha doble espera a que suba el panel y el tooltip mide el texto una vez; el arrastre: con otro dedo (C11) cancela, sobre una Y ilegal no selecciona nada y Y se sacude (C6), elige la cuia por su cuerpo antes que por el área táctil y deja `AF_STATE reject`; la segunda pasada de `minus_color` solo resuelve lo que agotó la primera y no repite el bot; «una vez por nivel» de los tooltips sin borrarse al cargar otro nivel, con su sonda al ocultarse; la tarjeta de Canoas en `LevelCardInfo` junto a la de la Crecida; el enlace de Sin canoas solo cae al camino de siempre sin arranque y la elección `map` no va sola a `AF.Analytics` (como la del Reto, E7). Sugerencias que quedan (no bloquean): `LevelDefinition.WithLabel` dentro de la clase en vez de `Relabel` desde fuera; `PressNoCanoesMap` en `IGameActions` en vez de `GameBootstrap.Current` (como E7); el doble `LessonLegal`.
+- **Verificación** (`-Architecture x86_64`, este equipo es AMD64; un solo Unity mío a la vez):
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama fusionada (`abde6db6`) | `dotnet build dotnet/AmazonFill.slnx -warnaserror --no-incremental` | 0 avisos, 0 errores |
+  | rama fusionada | `dotnet test dotnet/AmazonFill.slnx` | 1.002 (996 + 6 omitidos), 0 fallos (2 min 14 s) |
+  | rama fusionada | `python tools/validate_schema.py` | 103/103 PASS; `schema_example_08_4_1.json` sin cambios |
+  | rama | `level-generator --spec ... --check` (11-200; 201-300; 301-420, 421-560 y 561-700 en la «b» y en la «a»; muestras de la Tinaja y de las variantes) | todos «coincide con el generado» (tras el último cambio de `Relief.cs`) |
+  | rama | `level-qa` de los 8 packs (11-200 con `--report`, 201-300, 301-700 «b» y «a»), antes de los dos últimos retoques de `Relief.cs` (que no cambian ningún byte: ver los `--check`) | 0 fallos; avisos 28, 5, 8, 10, 12, 9, 11 y 12 (los mismos que documenta el README) |
+  | rama | `level-generator --self-test` y `level-qa --self-test` | todo PASS (código 0) |
+  | rama fusionada (`abde6db6`), sin parches | `unity-compile.ps1`; `unity-test.ps1 -Mode EditMode`; `-Mode PlayMode` | 0; **4.012 (4.009 + 3 omitidos), 0 fallos** (5,3 min); **1.778 (1.538 + 240 omitidos), 0 fallos** (39,8 min) |
+  | rama fusionada + los 6 parches (aplicados y revertidos) | `unity-compile.ps1`; `unity-test.ps1 -Mode EditMode`; `-Mode PlayMode` | 0; **4.024 (4.021 + 3 omitidos), 0 fallos** (4,8 min); **1.804 (1.557 + 247 omitidos), 0 fallos** (35,9 min) |
+
+  Antes de la fusión, con los parches: EditMode 4.000 (3.997 + 3) y PlayMode 1.790 con 2 fallos (`HomeSlothTests` y `LobbyStopTests`, por «Volver» de Sin canoas; arreglado con `LobbyScreen.BackButton`).
+- **Preguntas para el dueño** (nota §5; la recomendada aplicada, [P]): Q-B11-1 dedo del 2 con paso previo; Q-B11-2 tooltip sin la frase de las canoas con las canoas apagadas; Q-B11-3 el 680 sin `minus_color`; Q-B11-4 texto del tooltip de la Cosecha doble; Q-B11-5 teléfonos de 320 dp (el lienzo siempre mide 360); Q-B11-6 «25 minutos» y «nivel 31» literales (el revisor lo señala); **Q-B11-7 reserva del 20 % (parada)**; Q-B11-8 id `home` y `back_home`; Q-B11-9 la tarjeta del 31 sin la Cuia de rescate; Q-B11-10 dedo de la Cuia extra en cada intento; Q-B11-11 arrastre solo sin selección y sin C5; Q-B11-12 tooltip de la Cosecha doble solo en el 11; y el presupuesto de 2.000.000 de la segunda pasada.
+- **Para el integrador:** enlazar `drag_pour_enabled`, `lvl_label_override` y `level_overrides` con Remote Config; emitir `af_label_shown` (con `IsRelabeled` para `source`) y `af_no_canoes_choice` de todas las elecciones a la vez; las capturas de `B11SnapshotTests` (explícito, con gráficos) son las que citan las filas nuevas de `strings.csv`.
+- **Riesgos:** el `relief[0]` de 358, 615, 618, 672 y 679 pasa a −1 color por la regla de orden de 03 §13; la segunda pasada alarga la generación (hasta ~90 s en el 620); arte provisional (icono de la tarjeta, tooltips); sin prueba en el teléfono; textos sin EN ni PT-BR.
+
+---
+
 ## 2026-10-21 · B5 · Mercado, ofertas y Cántaro con la tienda falsa (`spark/t5-b5`): HECHA · verificación completa VERDE (rama y rama + parches) · lista para integrar
 
 - **Rama:** `spark/t5-b5` (local `spark/t5-b5-agent`), desde `origin/integracion-fase1-fase2` en `0d5965cc`. Fusiona la integración **una sola vez**, al final: `0c0c725a` (arreglos de B7 y D-037) en `a06760fa`, sin conflictos. Empujada sin `--force`.
