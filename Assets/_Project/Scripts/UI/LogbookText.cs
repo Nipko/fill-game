@@ -89,7 +89,7 @@ namespace AF.UI
         {
             Keys.Title, Keys.Intro, Keys.Footer, Keys.StatusPlay, Keys.StatusReady, Keys.StatusChoose, Keys.StatusSealed,
             Keys.CardReady, Keys.CardPlay, Keys.CardSealed, Keys.ItemSeeds, Keys.ItemUndo, Keys.ItemHint, Keys.ItemReveal,
-            Keys.ItemExtraCuia, Keys.ItemBasket, Keys.ItemGrandBasket, Keys.ItemFrame, Keys.Continue, Keys.Close, Keys.VictoryRow,
+            Keys.ItemExtraCuia, Keys.ItemBasket, Keys.ItemGrandBasket, Keys.ItemFrame, Keys.Continue, Keys.Close,
         };
 
         /// <summary>«Bitácora del río».</summary>
