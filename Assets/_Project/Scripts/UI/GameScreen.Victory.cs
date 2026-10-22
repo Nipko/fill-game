@@ -207,7 +207,7 @@ namespace AF.UI
         {
             float budget = VictoryPanelBudgetDp;
             _victoryBarsDropped = false;
-            _victoryBars.LogbookSuppressed = false;
+            _victoryBars.LogbookSuppressed = _logbookRowYield; // cedida a la frase de TiTino en su hito (GameScreen.Streak.cs)
             int level = CompactStepWithBars(budget);
             if (level >= VictoryCompactRow && _victoryBars.Plan.Logbook)
             {

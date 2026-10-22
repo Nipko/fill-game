@@ -18,14 +18,18 @@ namespace AF.UI
     /// 2), y si con ella haría falta el escalón 3, donde iría tras el chevron (D-033, punto 10: «2 barras y chevron»), no sale y el
     /// escalón se elige sin ella [P] (<see cref="VictoryBars.LogbookSuppressed"/>). Sin ella, la libreta sale sola al volver al inicio
     /// (D-033, punto 5).</item>
-    /// <item>No sale en la victoria del 10 (su secuencia abre la libreta después: D-033, punto 11), ni en el Reto (sin barras: Q-C2), ni
-    /// en el hito de TiTino que se queda sin barras (B1b-Q10 (c)) [P].</item>
+    /// <item>No sale en la victoria del 10 (su secuencia abre la libreta después: D-033, punto 11), ni en el Reto (sin barras: Q-C2); en
+    /// un hito de TiTino cuya frase no cabe, se quita la fila antes que la Crecida y la Canasta (B1b-Q10 (c)) [P].</item>
+    /// <item>Al sellar, la victoria se recoloca sin la fila y su escalón puede bajar (Siguiente se mueve una vez) [P].</item>
     /// </list>
     /// </summary>
     public sealed partial class GameScreen
     {
         /// <summary>Nivel cuya victoria no lleva la fila: la secuencia del 10 abre la libreta tras ella (06 §2.3; D-033, punto 11).</summary>
         internal const int LogbookRowSkipLevel = 10;
+
+        // En el hito de TiTino, la fila se quita antes que las barras para que él hable (B1b-Q10 (c); StreakYieldToSloth).
+        private bool _logbookRowYield;
 
         /// <summary>Veces que la fila abrió la libreta (tests).</summary>
         internal int VictoryLogbookOpened { get; private set; }

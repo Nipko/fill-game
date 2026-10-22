@@ -128,12 +128,12 @@ namespace AF.RemoteConfig.Tests
         {
             RcConfigs c = Bind(
                 "drag_pour_enabled", "false",
-                "lvl_label_override", "{\"57\":\"very_hard\",\"41\":\"hard\",\"120\":\"normal\"}");
+                "lvl_label_override", "{\"65\":\"very_hard\",\"41\":\"hard\",\"120\":\"normal\"}");
             Assert.That(c.Errors, Is.Empty, string.Join(" | ", c.Errors));
             Assert.That(c.DragPourEnabled, Is.False);
-            Assert.That(c.LevelLabels.Levels, Is.EqualTo(new[] { 41, 57, 120 }));
-            Assert.That(c.LevelLabels.TryGet(57, out string label57), Is.True);
-            Assert.That(label57, Is.EqualTo(AF.Levels.LevelDefinition.LabelVeryHard));
+            Assert.That(c.LevelLabels.Levels, Is.EqualTo(new[] { 41, 65, 120 }));
+            Assert.That(c.LevelLabels.TryGet(65, out string label65), Is.True);
+            Assert.That(label65, Is.EqualTo(AF.Levels.LevelDefinition.LabelVeryHard));
             Assert.That(c.LevelLabels.TryGet(120, out string label120), Is.True);
             Assert.That(label120, Is.EqualTo(AF.Levels.LevelDefinition.LabelNormal));
         }

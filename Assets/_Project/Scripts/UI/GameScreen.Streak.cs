@@ -156,6 +156,7 @@ namespace AF.UI
             _nextHoldMs = -1f;
             _victoryBarsYield = false; // con barras, hasta que StreakYieldToSloth decida lo contrario
             _victoryBarsYieldTried = false;
+            _logbookRowYield = false;
             StreakService? service = flow.Streak;
             string? place = null;
             RiverStopCatalog? stops = RiverStops;
@@ -191,6 +192,18 @@ namespace AF.UI
             }
 
             _victoryBarsYieldTried = true;
+            if (_victoryBars.LogbookShown)
+            {
+                // Primero sin la fila de la Bitácora (GameScreen.LogbookRow.cs): si así TiTino ya cabe, la Crecida y la Canasta se
+                // quedan y la libreta sale sola al volver al inicio (D-033, punto 5) [P].
+                _logbookRowYield = true;
+                RelayoutForSloth(flow, out bandTop, out bandBottom);
+                if (_slothCanSpeak)
+                {
+                    return;
+                }
+            }
+
             _victoryBarsYield = true;
             RelayoutForSloth(flow, out bandTop, out bandBottom);
             if (_slothCanSpeak)
@@ -199,6 +212,7 @@ namespace AF.UI
             }
 
             _victoryBarsYield = false; // ni sin barras cabe su frase: la victoria se queda como estaba, con ellas
+            _logbookRowYield = false; // y con la fila de la Bitácora
             RelayoutForSloth(flow, out bandTop, out bandBottom);
         }
 

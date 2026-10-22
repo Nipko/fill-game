@@ -152,7 +152,6 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.WaitFor(() => boot.Wallet!.Canoes.Count == 1, "la canoa del vídeo");
 
             Assert.That(boot.NoCanoesChoiceCount, Is.EqualTo(1), "la recompensa del vídeo no es otra elección");
-            Assert.That(boot.NoCanoesChoiceCount, Is.EqualTo(1));
         }
 
         [UnityTest]
@@ -167,6 +166,52 @@ namespace AF.Tests.PlayMode
             AssertChoice(boot, GameBootstrap.NoCanoesMapChoice, 1);
             Assert.That(boot.CloseRiverMap(), Is.True);
             Assert.That(boot.NoCanoesChoiceCount, Is.EqualTo(1), "cerrar el Mapa no es otra elección");
+        }
+
+        [UnityTest]
+        public IEnumerator NoCanoes_FromLevelFailed_EachChoiceIsSentOnce([Values("wait", "ad", "seeds_refill", "iap_infinite")] string choice)
+        {
+            // Sin canoas dentro del nivel (Reintentar con 0 canoas; 04 §7.3): cada elección, una af_no_canoes_choice, y la salida
+            // sola del flujo cuando vuelven las canoas no añade un «wait» de más.
+            LaunchOptions.LevelOffsetOverride = 25; // el 31 juega el tablero 6 del tutorial (FunnelSetup.GetStuck)
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500, 1));
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            FunnelSetup.GetStuck(boot);
+            boot.PressGiveUp();
+            boot.ConfirmGiveUp();
+            boot.PressRetry();
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.NoCanoes));
+            NoCanoesPanel panel = boot.View!.NoCanoes;
+            switch (choice)
+            {
+                case "wait":
+                    panel.CloseButton.onClick.Invoke();
+                    Assert.That(boot.Flow.Phase, Is.Not.EqualTo(FlowPhase.NoCanoes));
+                    break;
+                case "ad":
+                    Assert.That(panel.VideoShown, Is.True);
+                    panel.VideoButton.onClick.Invoke();
+                    break;
+                case "seeds_refill":
+                    panel.RefillButton.onClick.Invoke();
+                    Assert.That(boot.Wallet!.Canoes.Count, Is.EqualTo(5));
+                    break;
+                default:
+                    panel.InfiniteButton.onClick.Invoke();
+                    break;
+            }
+
+            for (int i = 0; i < 30; i++)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                yield return null;
+            }
+
+            AssertChoice(boot, choice, 1);
+            Assert.That(boot.Analytics!.Violations, Is.Empty);
         }
 
         // Termina la intro (con toques, como el jugador) hasta que empieza el intento (level_start, 08 §8.2).

@@ -103,13 +103,13 @@ namespace AF.Tests.EditMode
         {
             // Cierre de B11: el arranque lee lvl_label_override de Remote Config (RcGameplayBinder) y el catálogo usa esa tabla.
             var service = new AF.RemoteConfig.RemoteConfigService();
-            service.Activate(new System.Collections.Generic.Dictionary<string, string> { { "lvl_label_override", "{\"57\":\"very_hard\"}" } });
+            service.Activate(new System.Collections.Generic.Dictionary<string, string> { { "lvl_label_override", "{\"65\":\"very_hard\"}" } });
             AF.RemoteConfig.Binding.RcConfigs rc = AF.RemoteConfig.Binding.RcConfigBinder.Bind(service.Freeze(), "1.0");
             LevelLabelSource.JsonOverride = null;
             string? warned = null;
             LevelLabelOverrides table = LevelLabelSource.Create(rc, w => warned = w);
             Assert.That(table, Is.SameAs(rc.LevelLabels));
-            Assert.That(table.TryGet(57, out string label), Is.True);
+            Assert.That(table.TryGet(65, out string label), Is.True);
             Assert.That(label, Is.EqualTo(LevelDefinition.LabelVeryHard));
             Assert.That(warned, Is.Null, "los avisos de la tabla de Remote Config ya salieron con los de Remote Config");
 
