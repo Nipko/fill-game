@@ -150,10 +150,17 @@ namespace AF.UI
         }
 
         // La victoria (de campaña o del Reto, <paramref name="daily"/>) se dejó por otro camino (TickSessions): lo apuntado se olvida.
-        private void ForgetPrePromptAtVictory(bool daily)
+        // Si era el segundo por el hito 3, el hito se recuerda (second_due_session, D-033, UI de los avisos (b)): la racha ya pasó de
+        // 3 y, si no, solo quedaría la regla de los 7 días (revisión de la tanda de pulido).
+        internal void ForgetPrePromptAtVictory(bool daily)
         {
             if (_prePromptDue != PrePromptKind.None && _prePromptDueDaily == daily)
             {
+                if (_prePromptDue == PrePromptKind.Second && _prePromptMoment.Sessions > 0)
+                {
+                    _push?.RememberMilestone(in _prePromptMoment);
+                }
+
                 _prePromptDue = PrePromptKind.None;
             }
         }
