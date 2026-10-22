@@ -417,6 +417,11 @@ namespace AF.UI
                 return; // sin tienda (biz_iap_enabled, mantenimiento) o con el perfil bloqueado: ninguna tarjeta ni apunte
             }
 
+            if (PrePromptDueAtCampaignVictory(won))
+            {
+                return; // 06 §8.1: el pre-prompt de push va primero; la Mochila (y cualquier oferta) pasa a la siguiente victoria
+            }
+
             int world = WorldTable.WorldOf(Math.Clamp(won, 1, WorldTable.LastLevel));
             var ctx = new VictoryOfferContext(won, _sessions?.Current?.Number ?? 1, world);
             OfferKind kind = offers.PickAtVictory(in ctx);
@@ -642,7 +647,7 @@ namespace AF.UI
         // (D-033, punto 9). Si no, la tarjeta gastaría el cupo para quitarse al momento.
         private bool VictoryClear()
         {
-            return _app != null && _app.Screen == AppScreen.Level && !HomeWindowCovered && !MarketCommerceOpen && !FruitSheetOpen
+            return _app != null && _app.Screen == AppScreen.Level && !HomeWindowCovered && !MarketCommerceOpen && !FruitSheetOpen && !PrePromptCardVisible
                 && (_dailyScreen == null || !_dailyScreen.IsOpen) && (_lockedNotice == null || !_lockedNotice.Visible)
                 && !VictoryLeaving;
         }

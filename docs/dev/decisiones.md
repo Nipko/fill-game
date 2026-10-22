@@ -3494,3 +3494,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-B9-16:** `af_settings_change.key` admite **`reduce_motion` y `high_contrast`**. **Pendiente:** añadirlos a 08 §8.2.
 - **Q-B9-17:** TalkBack con la lista de Ajustes que se desplaza (al 130 % o en pantallas bajas): la acción de desplazar del lector (`AccessibilityNode.scrolled`) va **en una tarea aparte**. **Pendiente:** hasta entonces las filas bajo el corte no se publican.
 - **Del integrador:** el rechazo del arrastre C10 (B11, `GameScreen.Drag.cs`) tampoco sacude la cuia con Reducir movimiento, como el toque ilegal (02 §12). Los ayudantes de prueba `B9Loc`, `B9LocPlay` y `docs/dev/traspaso/spark-enganches/B9-strings.csv` se quedan: con `B9-loc.diff` aplicado no añaden ninguna fila.
+
+### D-033, añadido del 2026-10-22: preguntas de la UI de los avisos, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `tanda5/notif-ui` (revisión APROBADO). El dueño puede cambiarlas.
+- **Segundo pre-prompt con el hito 3 en la misma sesión que el primero:** (b) se recuerda que el hito 3 ya se alcanzó y el segundo sale en la primera victoria de la sesión siguiente. **Pendiente de implementar** (hoy se va a los 7 días).
+- **Victoria del pre-prompt:** no sale ninguna oferta (no solo la Mochila) [P].
+- **Entrada al inicio tras el pre-prompt:** no abre la libreta sola ni gasta el cupo de takeovers; sale en la siguiente entrada [P].
+- **Analítica:** `origin` de `af_push_prompt` y la clave `push` de `af_settings_change` se dan de alta en 08 §8.2 y en `AnalyticsCatalog` en una tarea aparte.
+- **Tope de espera del diálogo nativo tras «Avísame»:** 5 s con la app delante [P].
+- El integrador confirma que la tarea podía tocar `docs/dev/prototipo-v0.md` y `docs/dev/sesiones-notificaciones.md` (las sondas se anotan en el mismo PR).

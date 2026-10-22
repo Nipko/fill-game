@@ -4,7 +4,8 @@ apply_translations.py - Amazon Fill (Tintalú): vuelca traducciones entregadas a
 
 Las tablas de textos son Assets/_Project/Data/Loc/strings.csv y facts.csv (contrato 32; 08 §4.7; D-018). Las
 traducciones con IA de la tarea T2 (D-022, pregunta 51 (b)) se entregan en docs/dev/traspaso/spark-traducciones/, un CSV
-por tabla, para no chocar con las ramas que añaden filas a las tablas:
+por tabla, para no chocar con las ramas que añaden filas a las tablas (strings_t2b.csv: la segunda tanda, del 2026-10-22,
+con las claves de UI que llegaron después de T2; lo que queda vacío a propósito, en pendientes_t2b.csv):
 
     key,es-419,en,pt-BR,status_en,status_pt-BR
 
@@ -19,7 +20,7 @@ El archivo de traducciones va en UTF-8 sin BOM, LF, RFC 4180 y en orden ordinal 
 nombre: strings*.csv va a strings.csv y facts*.csv a facts.csv.
 
 Uso (desde la raíz del repositorio):
-    python tools/loc/apply_translations.py                 # aplica strings.csv y strings_p14.csv de la carpeta de entrega
+    python tools/loc/apply_translations.py                 # aplica strings.csv, strings_p14.csv y strings_t2b.csv de la carpeta de entrega
     python tools/loc/apply_translations.py --check         # no escribe; código 1 si aplicar cambiaría algo o hay conflictos
     python tools/loc/apply_translations.py <archivos.csv>  # solo esos archivos (strings_mapa.csv, strings_glosario.csv, facts*.csv)
     python tools/loc/apply_translations.py --self-test     # pruebas propias, en memoria
@@ -67,7 +68,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_LOC = REPO / "Assets" / "_Project" / "Data" / "Loc"
 DEFAULT_DIR = REPO / "docs" / "dev" / "traspaso" / "spark-traducciones"
-DEFAULT_FILES = ("strings.csv", "strings_p14.csv")
+DEFAULT_FILES = ("strings.csv", "strings_p14.csv", "strings_t2b.csv")
 STATUS_ORDER = {"": 0, "borrador": 1, "pendiente_asesor": 2, "aprobado_es": 3}
 STOPS_MARKER = "PRESERVED_LOCALE_COLUMNS"  # lo añade stops-preserve.diff a tools/river-map/stops.py
 MAP_TEST_OLD = 'Is.Empty, key + " (" + locale + "): pendiente del traductor"'  # lo quita MapTextTests.diff
@@ -632,7 +633,7 @@ def self_test() -> int:
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Vuelca traducciones (key,es-419,en,pt-BR,status_en,status_pt-BR) sobre strings.csv y facts.csv.")
-    ap.add_argument("files", nargs="*", type=Path, help=f"archivos de traducciones (por defecto, {' y '.join(DEFAULT_FILES)} de {DEFAULT_DIR.relative_to(REPO)})")
+    ap.add_argument("files", nargs="*", type=Path, help=f"archivos de traducciones (por defecto, {', '.join(DEFAULT_FILES)} de {DEFAULT_DIR.relative_to(REPO)})")
     ap.add_argument("--check", action="store_true", help="no escribe; código 1 si aplicar cambiaría algo o hay conflictos")
     ap.add_argument("--self-test", action="store_true", help="pruebas propias en memoria")
     ap.add_argument("--loc-dir", type=Path, default=DEFAULT_LOC, help="carpeta de strings.csv y facts.csv")
