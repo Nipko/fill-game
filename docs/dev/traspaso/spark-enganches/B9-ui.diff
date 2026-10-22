@@ -1,8 +1,42 @@
 diff --git a/Assets/_Project/Scripts/Presentation/BoardAnimator.cs b/Assets/_Project/Scripts/Presentation/BoardAnimator.cs
-index 6d7024da..899eb77d 100644
+index 6d7024da..2ba47811 100644
 --- a/Assets/_Project/Scripts/Presentation/BoardAnimator.cs
 +++ b/Assets/_Project/Scripts/Presentation/BoardAnimator.cs
-@@ -1305,7 +1305,11 @@ private void Advance(int index, float dtMs)
+@@ -377,11 +377,17 @@ public int ActiveStreams
+         /// </summary>
+         public float SpeedFactor { get; set; } = 1f;
+ 
+-        /// <summary>Reducir movimiento (02 §4; 07 §7.8): los pasos de mecánica van a la mitad de tiempo y sin partículas.</summary>
++        /// <summary>Reducir movimiento (02 §4; 07 §7.8): los pasos de mecánica van a <see cref="ReduceMotionFactor"/> de su tiempo y sin partículas.</summary>
+         public bool ReduceMotion { get; set; }
+ 
+-        /// <summary>Factor de los pasos de mecánica antes del presupuesto: <see cref="SpeedFactor"/>, × 0,5 con <see cref="ReduceMotion"/>.</summary>
+-        public float StepSpeedBase => Mathf.Max(0.01f, SpeedFactor) * (ReduceMotion ? 0.5f : 1f);
++        /// <summary>
++        /// <c>anim_reduce_motion_factor</c> (08 §9: 0,5; B9): con <see cref="ReduceMotion"/>, todas las duraciones × este factor (02 §4).
++        /// Las de <see cref="PourTimings"/> ya lo llevan (las fija la pantalla); aquí, el de los pasos de mecánica.
++        /// </summary>
++        public float ReduceMotionFactor { get; set; } = 0.5f;
++
++        /// <summary>Factor de los pasos de mecánica antes del presupuesto: <see cref="SpeedFactor"/>, × <see cref="ReduceMotionFactor"/> con <see cref="ReduceMotion"/>.</summary>
++        public float StepSpeedBase => Mathf.Max(0.01f, SpeedFactor) * (ReduceMotion ? ReduceMotionFactor : 1f);
+ 
+         /// <summary>
+         /// Patrones de fruta del nivel (07 §3, regla 1; 02 §12; T-E): con true, cada cuia lleva el icono de su fruta en sus
+@@ -420,9 +426,10 @@ public void ApplyPatterns(bool on)
+ 
+         /// <summary>
+         /// <c>anim_pour_dose_ms</c> sin el factor de velocidad (280 ms con los defaults de 08 §9): lo que dura la gota de la
+-        /// Lluvia y cada mitad del mordisco en sus pasos por defecto.
++        /// Lluvia y cada mitad del mordisco en sus pasos por defecto. Sin el de Reducir movimiento tampoco (B9): los pasos lo
++        /// aplican con <see cref="StepSpeedBase"/>, una sola vez.
+         /// </summary>
+-        public float DoseNominalMs => _timings.DoseMs / Mathf.Max(0.01f, SpeedFactor);
++        public float DoseNominalMs => _timings.DoseMs / Mathf.Max(0.01f, StepSpeedBase);
+ 
+         /// <summary>Cuias asociadas.</summary>
+         int ICuiaBoard.Count => _views.Length;
+@@ -1305,7 +1312,11 @@ private void Advance(int index, float dtMs)
                          while (job.Splashes < due)
                          {
                              job.Splashes++;
@@ -15,7 +49,7 @@ index 6d7024da..899eb77d 100644
                              Fx?.Splash(surface, color, u);
                          }
                      }
-@@ -2124,7 +2128,11 @@ private void ScoopPose(ref Job job, float time, Color color)
+@@ -2124,7 +2135,11 @@ private void ScoopPose(ref Job job, float time, Color color)
              if (time >= job.StreamStart && job.Splashes == 0)
              {
                  job.Splashes = 1;
@@ -28,12 +62,37 @@ index 6d7024da..899eb77d 100644
                  ScoopAudio(ref job); // el «glup» al llegar a la boca (02 §4.1)
              }
  
+diff --git a/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs b/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
+index 3c820091..8b1bb0f3 100644
+--- a/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
++++ b/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
+@@ -140,6 +140,12 @@ public DailyChallengeScreen(Transform host, ProceduralArt art, DailyChallengeSer
+         /// <summary>Vista del tablero (null hasta la primera partida).</summary>
+         public GameScreen? View => _view;
+ 
++        /// <summary>
++        /// Prepara el flujo y la vista de cada partida antes de construir el tablero (bloque B9: Reducir movimiento, su factor, Alto
++        /// contraste y el lector de pantalla, que pone <c>GameBootstrap.A11y</c>); null, nada.
++        /// </summary>
++        public Action<LevelFlow, GameScreen>? Prepare { get; set; }
++
+         /// <summary>Almacén de la partida abierta (R-Q4), o null.</summary>
+         public DailyLevelStateStore? StateStore => _stateStore;
+ 
+@@ -211,6 +217,7 @@ public bool Open(int maxLevel)
+             _calendarFromCard = false;
+ 
+             GameScreen view = EnsureView();
++            Prepare?.Invoke(flow, view); // B9: antes de que StartDaily/ResumeDaily construya el tablero
+             view.Bind(flow, _context.Services);
+             view.SetVisible(true);
+             _levelStartBoard = play.BoardId; // level_start pendiente: sale al terminar Llenar y teñir (08 §8.2), una vez por partida
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
 new file mode 100644
-index 00000000..fa7bc1e2
+index 00000000..ad1118df
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
-@@ -0,0 +1,150 @@
+@@ -0,0 +1,157 @@
 +#nullable enable
 +using AF.Platform;
 +using AF.Save;
@@ -46,8 +105,8 @@ index 00000000..fa7bc1e2
 +    /// <list type="bullet">
 +    /// <item><b>Reducir movimiento</b>: <c>settings.reduce_motion</c> [P] (<c>auto</c>, <c>on</c> u <c>off</c>); en <c>auto</c>,
 +    /// <c>ui_reduce_motion_default</c> o [P] el teléfono con «Quitar animaciones» (<see cref="A11yRules.ReduceMotion"/>; Q-B9-3).
-+    /// Llega a <c>LevelFlow.ReduceMotion</c> (de campaña y del Reto), al Mapa del río y al factor de los vertidos de la pantalla
-+    /// (<c>anim_reduce_motion_factor</c>).</item>
++    /// Llega a <c>LevelFlow.ReduceMotion</c> (de campaña y del Reto, este con <c>DailyChallengeScreen.Prepare</c> antes de construir
++    /// su tablero), al Mapa del río y al factor de los vertidos y de los pasos de mecánica (<c>anim_reduce_motion_factor</c>).</item>
 +    /// <item><b>Alto contraste</b>: <c>settings.high_contrast</c> [P] → el patrón al 35 % en el tablero.</item>
 +    /// <item><b>Lector de pantalla</b>: <see cref="A11yService"/> con el módulo de accesibilidad de Unity
 +    /// (<see cref="UnityScreenReaderHost"/>; los tests ponen el falso con <see cref="A11yHostOverride"/>), con la pantalla del nivel
@@ -124,6 +183,19 @@ index 00000000..fa7bc1e2
 +                _settingsScreen.A11yToggled = (id, on) => ChooseA11y(id, on);
 +            }
 +
++            if (_dailyScreen != null)
++            {
++                // El Reto crea su flujo y su vista al abrirse: se preparan antes de construir su tablero (sin un fotograma tarde).
++                _dailyScreen.Prepare = (flow, view) =>
++                {
++                    flow.ReduceMotion = _reduceMotionNow;
++                    if (_profile != null)
++                    {
++                        ApplyA11y(view, _rcConfigs?.A11y ?? A11yConfig.Defaults, _profile);
++                    }
++                };
++            }
++
 +            ApplyA11y();
 +        }
 +
@@ -171,15 +243,9 @@ index 00000000..fa7bc1e2
 +            screen.A11y = _a11y;
 +        }
 +
-+        // Cada fotograma: el lector (solo con TalkBack) y el Reto, que crea su flujo y su pantalla al abrirse.
++        // Cada fotograma: el lector de pantalla (solo trabaja con TalkBack encendido).
 +        private void TickA11y(float dtMs)
 +        {
-+            DailyChallengeScreen? daily = _dailyScreen;
-+            if (daily?.Flow != null && (daily.Flow.ReduceMotion != _reduceMotionNow || (daily.View != null && daily.View.A11y != _a11y)))
-+            {
-+                ApplyA11y();
-+            }
-+
 +            _a11y?.Tick(dtMs);
 +        }
 +    }
@@ -222,7 +288,7 @@ index 8aa51d6e..08f88213 100644
              float dt = Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs);
              if (_skipNextDelta)
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.cs b/Assets/_Project/Scripts/UI/GameScreen.cs
-index f2c12924..ae30bd99 100644
+index f2c12924..7c85633e 100644
 --- a/Assets/_Project/Scripts/UI/GameScreen.cs
 +++ b/Assets/_Project/Scripts/UI/GameScreen.cs
 @@ -910,6 +910,8 @@ public void Tick(float dtMs)
@@ -310,7 +376,7 @@ index f2c12924..ae30bd99 100644
              }
  
              _views = views;
-@@ -1682,17 +1690,18 @@ private void BuildBoard(LevelFlow flow)
+@@ -1682,17 +1690,19 @@ private void BuildBoard(LevelFlow flow)
              _tinajaPair = BindTinajaPair(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
              OrderBoardLayers();
              float f = GameConfig.SpeedFactor(flow.LevelNumber);
@@ -329,13 +395,14 @@ index f2c12924..ae30bd99 100644
              _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours, _mechanicBackLayer, _mechanicFrontLayer);
              _animator.SpeedFactor = f;
              _animator.ReduceMotion = flow.ReduceMotion;
++            _animator.ReduceMotionFactor = (float)ReduceMotionFactor; // B9: el de los pasos de mecánica, el mismo que el de los vertidos
              _fx.ReduceMotion = flow.ReduceMotion;
 -            _animator.ApplyPatterns(PatternsOn(flow.LevelNumber)); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3)
 +            ApplyLevelPatterns(flow.LevelNumber); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3); Alto contraste, 35 % (B9)
              for (int i = 0; i < board.Count; i++)
              {
                  _animator.ShowContent(i, board[i], board.IsSealed(i));
-@@ -2338,11 +2347,12 @@ private void AddCuiaView(LevelFlow flow, int index)
+@@ -2338,11 +2348,12 @@ private void AddCuiaView(LevelFlow flow, int index)
                  views[i] = _views[i];
              }
  
@@ -462,10 +529,10 @@ index 04bde497..9578696c 100644
              public string Id { get; private set; }
 diff --git a/Assets/_Project/Tests/PlayMode/A11yGameTests.cs b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
 new file mode 100644
-index 00000000..78b0a38a
+index 00000000..f07f4f18
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
-@@ -0,0 +1,286 @@
+@@ -0,0 +1,309 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -576,6 +643,29 @@ index 00000000..78b0a38a
 +
 +            int fast = PourMs(boot);
 +            Assert.That(fast, Is.LessThan(normal * 0.75f), "02 §4: × anim_reduce_motion_factor (0,5): " + fast + " frente a " + normal + " ms");
++
++            // Los pasos de mecánica, con el mismo factor y una sola vez (la gota y el mordisco parten de la dosis sin factores).
++            BoardAnimator animator = boot.View.Animator;
++            Assert.That(animator.StepSpeedBase, Is.EqualTo(0.5f).Within(1e-6f), "× anim_reduce_motion_factor, no un 0,5 fijo aparte");
++            Assert.That(animator.DoseNominalMs, Is.EqualTo(GameConfig.AnimPourDoseMs).Within(0.5f), "sin el factor: no se aplica dos veces");
++        }
++
++        [UnityTest]
++        public IEnumerator ReduceMotion_ReachesTheDailyBoardBeforeItIsBuilt()
++        {
++            Profile reduced = SettingsScreenTests.ProfileAt(1);
++            reduced.Settings.ReduceMotion = ReduceMotionSetting.On;
++            reduced.Settings.HighContrast = true;
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(reduced, b => boot = b);
++            Assert.That(boot.DailyScreen, Is.Not.Null);
++            Assert.That(boot.DailyScreen!.Prepare, Is.Not.Null, "el Reto prepara su flujo y su vista antes de StartDaily");
++            boot.Flow!.ReduceMotion = false;
++            boot.View!.HighContrast = false;
++            boot.DailyScreen.Prepare!(boot.Flow, boot.View);
++            Assert.That(boot.Flow.ReduceMotion, Is.True);
++            Assert.That(boot.View.HighContrast, Is.True);
++            Assert.That(boot.View.A11y, Is.SameAs(boot.A11y));
 +        }
 +
 +        [UnityTest]
