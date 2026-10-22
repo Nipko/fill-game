@@ -1139,8 +1139,8 @@ namespace AF.UI
 
         /// <inheritdoc />
         /// <remarks>
-        /// Marea (04 §2.1; 02 §14): la cola salta a su final y las dosis vuelven de la cuia tocada al origen en 250 ms con la
-        /// tapa que salta. Si la cuia tocada no cambió (vertido por un Remolino), no hay traslado: el origen y la pareja saltan
+        /// Marea (04 §2.1; 02 §14): la cola salta a su final y las dosis vuelven de la cuia tocada al origen en 250 ms (× el factor
+        /// de Reducir movimiento, Q-B9-12) con la tapa que salta. Si la cuia tocada no cambió (vertido por un Remolino), no hay traslado: el origen y la pareja saltan
         /// al estado nuevo [P] (Magic Sort no se observó; paso 2). Después, las demás cuias que difieren del tablero que se
         /// veía (la gota, el mordisco, la Liana que se vuelve a atar…) saltan a su estado.
         /// </remarks>

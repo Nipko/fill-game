@@ -29,9 +29,9 @@ namespace AF.UI
     /// pide el permiso si hace falta; con el teléfono bloqueándolos, abre los ajustes de la app en Android y, al volver con el
     /// permiso dado, los enciende; apagar cancela lo programado y guarda <c>settings.push</c>. TalkBack lee el estado y lo anuncia
     /// al cambiar (B9).</item>
-    /// <item><b>Analítica</b> (08 §8.2): <c>af_push_prompt</c> con <c>step</c> y <c>result</c> en cada paso que informa
-    /// <see cref="PushPermissionService.Reported"/> (pre-prompt y diálogo nativo; el <c>origin</c> [P] de B6 solo va a la sonda: el
-    /// catálogo de 08 §8.2 no lo tiene).</item>
+    /// <item><b>Analítica</b> (08 §8.2): <c>af_push_prompt</c> con <c>step</c>, <c>result</c> y <c>origin</c> (dado de alta con el
+    /// añadido de la UI de los avisos de D-033) en cada paso que informa <see cref="PushPermissionService.Reported"/> (pre-prompt y
+    /// diálogo nativo).</item>
     /// </list>
     /// </summary>
     public sealed partial class GameBootstrap
@@ -130,13 +130,13 @@ namespace AF.UI
                 return PrePromptKind.None;
             }
 
+            moment = new PrePromptMoment(sessions.Sessions, maxLevelBeforeVictory, _profile?.Streak?.Wins ?? 0, _sessionClock.UtcNow);
             if (!PushUiRules.CanOffer(_prePrompt != null, PlayerUnder13(), ConsentHoldsSession, push.Asking || _prePromptLeave != null,
                     sessions.Sessions, s_prePromptSession))
             {
                 return PrePromptKind.None;
             }
 
-            moment = new PrePromptMoment(sessions.Sessions, maxLevelBeforeVictory, _profile?.Streak?.Wins ?? 0, _sessionClock.UtcNow);
             return push.Due(in moment);
         }
 
@@ -150,10 +150,17 @@ namespace AF.UI
         }
 
         // La victoria (de campaña o del Reto, <paramref name="daily"/>) se dejó por otro camino (TickSessions): lo apuntado se olvida.
-        private void ForgetPrePromptAtVictory(bool daily)
+        // Si era el segundo por el hito 3, el hito se recuerda (second_due_session, D-033, UI de los avisos (b)): la racha ya pasó de
+        // 3 y, si no, solo quedaría la regla de los 7 días (revisión de la tanda de pulido).
+        internal void ForgetPrePromptAtVictory(bool daily)
         {
             if (_prePromptDue != PrePromptKind.None && _prePromptDueDaily == daily)
             {
+                if (_prePromptDue == PrePromptKind.Second && _prePromptMoment.Sessions > 0)
+                {
+                    _push?.RememberMilestone(in _prePromptMoment);
+                }
+
                 _prePromptDue = PrePromptKind.None;
             }
         }
@@ -163,6 +170,12 @@ namespace AF.UI
         {
             _prePromptDue = PrePromptDueNow(maxLevelBeforeVictory, out _prePromptMoment);
             _prePromptDueDaily = daily;
+            if (_prePromptDue != PrePromptKind.Second && _prePromptMoment.Sessions > 0)
+            {
+                // D-033, UI de los avisos (b): el hito 3 en una victoria que no lleva el segundo (la misma sesión que el primero) se
+                // recuerda y el segundo sale en la primera victoria de la sesión siguiente.
+                _push?.RememberMilestone(in _prePromptMoment);
+            }
         }
 
         /// <summary>
@@ -255,10 +268,11 @@ namespace AF.UI
             RefreshPushRow();
         }
 
-        // af_push_prompt (08 §8.2): step y result; el origin [P] de B6 no está en el catálogo y solo va a la sonda.
+        // af_push_prompt (08 §8.2): step, result y origin (first, second o settings; dado de alta con el añadido de la UI de los
+        // avisos de D-033).
         private void LogPushPrompt(PushPromptEvent e)
         {
-            _analytics?.Log(AnalyticsEvent.Create("af_push_prompt").Add("step", e.Step).Add("result", e.Result));
+            _analytics?.Log(AnalyticsEvent.Create("af_push_prompt").Add("step", e.Step).Add("result", e.Result).Add("origin", e.Origin));
         }
 
         /// <summary>Pone la fila «Avisos» de Ajustes en su estado de ahora (al abrir Ajustes y tras cada cambio).</summary>

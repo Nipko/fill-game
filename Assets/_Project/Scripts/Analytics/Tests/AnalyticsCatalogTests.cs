@@ -110,6 +110,29 @@ namespace AF.Analytics.Tests
         }
 
         [Test]
+        public void SettingsChangeKeys_AndPushPromptOrigins_AreThoseOf08_2() // Q-B9-16 y añadido de la UI de los avisos (D-033)
+        {
+            Dictionary<string, string> rows = Rows(Section(Chapter("08-arquitectura-tecnica-publicacion.md"), "### 8.2 Tabla de eventos", "\n## 9. "));
+            Assert.That(ValuesOf(rows["af_settings_change"], "key"), Is.EqualTo(AnalyticsCatalog.SettingsChangeKeys));
+            Assert.That(ValuesOf(rows["af_push_prompt"], "origin"), Is.EqualTo(AnalyticsCatalog.PushPromptOrigins));
+            Assert.That(AnalyticsCatalog.Find("af_push_prompt")!.Allows("origin"), Is.True);
+        }
+
+        // Los valores de «`param ∈ {a, b, c}`» de una celda.
+        private static List<string> ValuesOf(string cell, string param)
+        {
+            Match m = Regex.Match(cell, "`" + param + @" ∈ \{([^}]*)\}`");
+            Assert.That(m.Success, Is.True, param + " ∈ {…} en 08 §8.2");
+            var values = new List<string>();
+            foreach (string v in m.Groups[1].Value.Split(','))
+            {
+                values.Add(v.Trim());
+            }
+
+            return values;
+        }
+
+        [Test]
         public void TheCatalog_IsExactlyThe08_2Table()
         {
             Dictionary<string, List<string>> expected = ExpectedFromGdd();

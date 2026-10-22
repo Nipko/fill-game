@@ -134,7 +134,7 @@ namespace AF.Tests.PlayMode
             AnalyticsEvent e = _sink.Last("af_push_prompt")!;
             Assert.That(e.Find("step")!.Value.Text, Is.EqualTo("pre"));
             Assert.That(e.Find("result")!.Value.Text, Is.EqualTo("declined"));
-            Assert.That(e.Find("origin"), Is.Null, "origin [P] no está en el catálogo de 08 §8.2");
+            Assert.That(e.Find("origin")!.Value.Text, Is.EqualTo("first"), "origin, dado de alta en 08 §8.2 (añadido de la UI de los avisos)");
         }
 
         [UnityTest]
@@ -279,6 +279,32 @@ namespace AF.Tests.PlayMode
             _clock.Advance(TimeSpan.FromMinutes(31));
             boot.SessionsPaused(false);
             Assert.That(boot.Sessions!.Sessions, Is.EqualTo(3));
+            Assert.That(boot.PrePromptDueNow(12, out _), Is.EqualTo(PrePromptKind.Second));
+        }
+
+        [UnityTest]
+        public IEnumerator ASecondAtStreak3_LeftByAnotherPath_IsRemembered_ForTheNextSession() // D-033, UI de los avisos (b)
+        {
+            // El primero ya salió (y se rechazó) hace un día; la Crecida en 3 al ganar: toca el segundo por el hito.
+            _push.Save(new PushSettingsRecord { PrePromptShown = true, PrePromptAt = T0.AddDays(-1) });
+            Profile profile = ProfileAt(12);
+            profile.Streak = new StreakData { Wins = 3 };
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
+            yield return PlayModeHelpers.LoadGame(12, new MemoryProgressStore(12, 11));
+            GameBootstrap boot = Win();
+            Assert.That(boot.PrePromptPending, Is.EqualTo(PrePromptKind.Second), "el hito 3 tras el primero (06 §8.1, regla 2)");
+
+            // La victoria se deja por otro camino: lo apuntado se olvida, pero el hito se recuerda (no solo los 7 días).
+            boot.ForgetPrePromptAtVictory(false);
+            Assert.That(boot.PrePromptPending, Is.EqualTo(PrePromptKind.None));
+            Assert.That(_push.Load().SecondDueSession, Is.EqualTo(boot.Sessions!.Sessions));
+            Assert.That(_push.Load().SecondPromptShown, Is.False);
+
+            // En la sesión siguiente, con la racha ya en 4 y antes de los 7 días, el segundo.
+            profile.Streak.Wins = 4;
+            boot.SessionsPaused(true);
+            _clock.Advance(TimeSpan.FromMinutes(31));
+            boot.SessionsPaused(false);
             Assert.That(boot.PrePromptDueNow(12, out _), Is.EqualTo(PrePromptKind.Second));
         }
 

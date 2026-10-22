@@ -3600,3 +3600,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - El detalle está en `docs/dev/accesibilidad.md` §2.6.
 - **Descartado:** hacer el bot independiente del color (cambio del núcleo). Quitaría casi todos los contactos, pero cambiaría `bot_fail` y la curva de todos los packs. Solo si el dueño lo pide.
 - **Del integrador:** el carril tocaba tests de Unity y `docs/gdd/**` porque el encargo lo pedía (GDD y tests).
+
+### D-025, añadido del 2026-10-22: decimales de las monedas fuera de 05 §4.2 (Q-IAP-3)
+
+- **Fecha:** 2026-10-22. Registrado por la tanda de pulido (D-033, punto 12) con la recomendada de Q-IAP-3 (D-040): fijar en D-025 los decimales de las monedas sin céntimos y de las de tres decimales. No cambia el texto de D-025: lo completa.
+- **Decisión:** el punto 2 de D-025 («los decimales de la moneda: 0 en COP y MXN; 2 en el resto») suma, para las monedas que la tienda real puede dar fuera de las cinco de 05 §4.2 (`LocalPrice` admite cualquier código ISO 4217, Q-IAP-3):
+  - **0 decimales** en **CLP** y **JPY** (monedas sin céntimos): «CLP 1.990», «JPY 160»;
+  - **3 decimales** en **KWD** y **BHD**: «KWD 1.250» con el teléfono en en-US;
+  - el resto sigue con 2.
+- **Código:** `LocPrice.DecimalsOf` (y, por ella, `LocalPrice`, `MinorUnitsFromMicros` y `PlayBillingClient.TryLocalPrice`), con tests en `LocPriceTests`. Los importes llegan en micros de Play Billing y se redondean «la mitad hacia fuera» a esos decimales.
+- **Abierto [P]:** otras monedas sin céntimos o con tres decimales de ISO 4217 (por ejemplo KRW, VND, OMR, JOD, TND) siguen con 2 hasta que se decida; solo importan si la cuenta de Play del jugador está en una de ellas.

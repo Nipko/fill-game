@@ -18,7 +18,8 @@ namespace AF.UI
     /// <item><b>C9, mantener pulsado</b>: un <see cref="CuiaHoldRelay"/> en cada cuia (<see cref="AttachHold"/>), el seguimiento
     /// (<see cref="CuiaHoldTracker"/>, con el reloj de la pantalla) y el bocadillo con los nombres
     /// (<see cref="CuiaNamesBubble"/>). Al soltar tras los nombres no hay toque ni arrastre (<see cref="HoldSwallows"/>).</item>
-    /// <item><b>Alto contraste</b> (<see cref="HighContrast"/>): el patrón del líquido al 35 % (<see cref="ApplyLevelPatterns"/>).</item>
+    /// <item><b>Alto contraste</b> (<see cref="HighContrast"/>): el patrón del líquido al 35 % y el contorno de dosis de 1,5 px
+    /// (<see cref="ApplyLevelPatterns"/>).</item>
     /// <item><b>Reducir movimiento</b> (02 §4 y §12; 07 §7.8): el factor de las duraciones del vertido
     /// (<see cref="PourMotionFactor"/>, 0,5 de <c>anim_reduce_motion_factor</c>); el parche quita además la sacudida del rechazo,
     /// la onda del agua y el confeti; el resto ya lo lleva <c>LevelFlow.ReduceMotion</c>.</item>
@@ -78,8 +79,8 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// «Alto contraste» (07 §3, regla 5; 02 §12; D-033, Q-N4 (a)): el patrón del líquido al 35 %. Se aplica al momento al nivel
-        /// cargado y a los siguientes.
+        /// «Alto contraste» (07 §3, regla 5; 02 §12; D-033, Q-N4 (a)): el patrón del líquido al 35 % y el contorno de dosis de
+        /// 1,5 px (Q-B9-6). Se aplica al momento al nivel cargado y a los siguientes.
         /// </summary>
         internal bool HighContrast
         {
@@ -130,11 +131,13 @@ namespace AF.UI
 
         /// <summary>
         /// Patrones de fruta del nivel <paramref name="level"/> con el ajuste del jugador y, en «Alto contraste», el patrón al 35 %
-        /// (07 §3, reglas 1 y 5). Sustituye a las llamadas a <c>_animator.ApplyPatterns</c> (parche).
+        /// y el contorno de dosis de 1,5 px (07 §3, reglas 1 y 5; Q-B9-6). Sustituye a las llamadas a
+        /// <c>_animator.ApplyPatterns</c> (parche).
         /// </summary>
         internal void ApplyLevelPatterns(int level)
         {
             _animator.ApplyPatterns(PatternsOn(level));
+            LiquidGraphic.ApplyDoseOutline(_highContrast ? A11yRules.HighContrastDoseOutlinePx : 0f);
             if (_highContrast)
             {
                 LiquidGraphic.ApplyPatternOpacity(A11yRules.HighContrastPatternOpacity);

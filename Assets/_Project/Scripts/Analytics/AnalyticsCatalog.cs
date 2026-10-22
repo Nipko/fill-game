@@ -52,6 +52,18 @@ namespace AF.Analytics
             "app_version", "content_version", "rc_variant", "session_id", "net",
         };
 
+        /// <summary>
+        /// Valores de <c>key</c> de <c>af_settings_change</c> (08 §8.2, en su orden): los de siempre, <c>push</c> (la fila «Avisos»;
+        /// añadido de la UI de los avisos de D-033) y <c>reduce_motion</c> y <c>high_contrast</c> (Q-B9-16).
+        /// </summary>
+        public static readonly IReadOnlyList<string> SettingsChangeKeys = new[]
+        {
+            "patterns", "sound", "music", "haptics", "language", "consent", "sloth_messages", "push", "reduce_motion", "high_contrast",
+        };
+
+        /// <summary>Valores de <c>origin</c> de <c>af_push_prompt</c> (08 §8.2; B6-Q17): el primer pre-prompt, el segundo o Ajustes.</summary>
+        public static readonly IReadOnlyList<string> PushPromptOrigins = new[] { "first", "second", "settings" };
+
         /// <summary>Propiedades de usuario de 08 §8.1, en su orden.</summary>
         public static readonly IReadOnlyList<string> UserProperties = new[]
         {
@@ -63,7 +75,7 @@ namespace AF.Analytics
         {
             E("af_boot", "cold_start_ms", "first_interaction_ms", "rc_source", "migrated_from_schema"),
             E("af_consent", "profile", "text_version", "analytics", "ads_personalized", "age_band", "step"),
-            E("af_push_prompt", "step", "result"),
+            E("af_push_prompt", "step", "result", "origin"), // origin: añadido de la UI de los avisos (D-033)
             E("af_push_sent", "type"),
             E("af_push_open", "type"),
             E("af_asset_pack", "pack", "state", "bytes", "ms"),

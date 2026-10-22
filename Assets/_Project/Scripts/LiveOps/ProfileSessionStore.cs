@@ -84,6 +84,7 @@ namespace AF.LiveOps
                 Granted = push.Granted,
                 PrePromptAt = push.PrePromptAt,
                 SecondPromptShown = push.SecondPromptShown,
+                SecondDueSession = push.SecondDueSession,
             };
         }
 
@@ -110,6 +111,7 @@ namespace AF.LiveOps
                 _live.Granted = record.Granted;
                 _live.PrePromptAt = record.PrePromptAt;
                 _live.SecondPromptShown = record.SecondPromptShown;
+                _live.SecondDueSession = record.SecondDueSession;
             }
 
             PushSettingsData push = _profile.Settings.Push;
@@ -117,6 +119,7 @@ namespace AF.LiveOps
             push.Granted = _live.Granted;
             push.PrePromptAt = _live.PrePromptAt;
             push.SecondPromptShown = _live.SecondPromptShown;
+            push.SecondDueSession = _live.SecondDueSession;
             PendingSave = !_store.TrySave(_profile);
         }
     }

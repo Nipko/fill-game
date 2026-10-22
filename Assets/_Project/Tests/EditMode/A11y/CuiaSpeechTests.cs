@@ -116,6 +116,82 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void ACuiaWithAMechanic_SaysItsName_AfterTheLabel() // 08 §14.2; Q-B9-14 (a)
+        {
+            BoardState state = Board(
+                Cuia.Create(4, new[] { Acai }).WithMechanic(MechanicType.Hoja, key: Aguaje),
+                Cuia.Empty(4).WithMechanic(MechanicType.Matapi),
+                Cuia.Create(4, new[] { Acai, Acai, Acai, Acai }).WithMechanic(MechanicType.Liana, key: Aguaje),
+                Cuia.Create(4, new[] { Aguaje }).WithMechanic(MechanicType.Liana, n: 2),
+                Cuia.Create(4, new[] { CamuCamu }).WithMechanic(MechanicType.Brote, key: CamuCamu),
+                Cuia.Create(4, new[] { CamuCamu }).WithMechanic(MechanicType.Brote, key: CamuCamu, n: 2),
+                Cuia.Create(4, new[] { Acai }));
+            Assert.That(CuiaSpeech.Label(state, 0), Is.EqualTo("cuia 1: Açaí, 3 huecos. Hoja"));
+            Assert.That(CuiaSpeech.Label(state, 1), Is.EqualTo("cuia 2: 4 huecos. Matapi"), "también vacía");
+            Assert.That(CuiaSpeech.Label(state, 2), Is.EqualTo("cuia 3: Açaí, Açaí, Açaí, Açaí. Liana con fruta"), "y llena");
+            Assert.That(CuiaSpeech.Label(state, 3), Is.EqualTo("cuia 4: Aguaje, 3 huecos. Liana de cuenta"), "la Liana de cuenta, por n");
+            Assert.That(CuiaSpeech.Label(state, 4), Does.EndWith(". Brote"));
+            Assert.That(CuiaSpeech.Label(state, 5), Does.EndWith(". Brote de dos hojas"), "el Brote de dos hojas, por n");
+            Assert.That(CuiaSpeech.Label(state, 6), Is.EqualTo("cuia 7: Açaí, 3 huecos"), "una cuia normal, como 02 §12");
+        }
+
+        [Test]
+        public void EveryMechanicThatIsSaid_HasItsNameInTheThreeLanguages()
+        {
+            var ids = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
+            foreach (MechanicType type in System.Enum.GetValues(typeof(MechanicType)))
+            {
+                foreach (int n in new[] { 0, 2 })
+                {
+                    Cuia cuia = type == MechanicType.None ? Cuia.Empty(4) : Cuia.Empty(4).WithMechanic(type, key: Aguaje, n: type == MechanicType.Flor ? 0 : n, key2: type == MechanicType.Flor ? Acai : 0);
+                    string id = CuiaSpeech.MechanicId(cuia);
+                    if (id.Length > 0)
+                    {
+                        ids.Add(id);
+                    }
+                }
+            }
+
+            Assert.That(ids, Is.EquivalentTo(new[] { "hoja", "hoja_atada", "brote", "brote_n2", "liana", "liana_n", "matapi", "remolino", "lluvia", "pirana", "flor" }),
+                "todas menos la Tinaja y su cuia chica, que ya se nombran");
+            LocCatalog catalog = B9Loc.Catalog();
+            foreach (string id in ids)
+            {
+                foreach (string locale in new[] { LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil })
+                {
+                    Loc.Configure(catalog, locale, true);
+                    Assert.That(A11yText.MechanicName(id), Is.Not.Empty, "mechanic." + id + " en " + locale);
+                }
+            }
+
+            Loc.Configure(catalog, LocLocale.English, true);
+            Assert.That(A11yText.MechanicName("remolino"), Is.EqualTo("Whirlpool"), "glosario §6.5");
+            Loc.Configure(catalog, LocLocale.PortugueseBrazil, true);
+            Assert.That(A11yText.MechanicName("hoja"), Is.EqualTo("Palha"), "glosario §6.5");
+        }
+
+        [Test]
+        public void WithoutTheMechanicName_TheLabelIsAsIn02_12()
+        {
+            // En release, mechanic.<id> espera al asesor: Loc.Fact da «» y la etiqueta queda como la de 02 §12.
+            Loc.Configure(new LocCatalog(B9Loc.Catalog().Strings, null), LocLocale.SourceLocale, true);
+            BoardState state = Board(Cuia.Create(4, new[] { Acai }).WithMechanic(MechanicType.Matapi));
+            Assert.That(CuiaSpeech.Label(state, 0), Is.EqualTo("cuia 1: fruta, 3 huecos"));
+        }
+
+        [Test]
+        public void InRelease_ThePendingMechanicName_IsNotSaid() // la regla de release: pendiente_asesor no se enseña
+        {
+            Loc.Configure(B9Loc.Catalog(), LocLocale.SourceLocale, false);
+            Assert.That(A11yText.MechanicName("hoja"), Is.Empty, "mechanic.hoja espera al asesor");
+            BoardState state = Board(Cuia.Create(4, new[] { Acai }).WithMechanic(MechanicType.Hoja, key: Aguaje), Cuia.Empty(4).WithMechanic(MechanicType.Matapi));
+            string label = CuiaSpeech.Label(state, 0);
+            Assert.That(label, Is.EqualTo("cuia 1: fruta, 3 huecos"), "la etiqueta de 02 §12 (la fruta también espera al asesor), sin nombre detrás");
+            Assert.That(label, Does.Not.Contain("Hoja"));
+            Assert.That(CuiaSpeech.Label(state, 1), Is.EqualTo("cuia 2: 4 huecos"), "vacía, igual");
+        }
+
+        [Test]
         public void Selection_IsAnnouncedWithTheTopFruit()
         {
             BoardState state = Board(Cuia.Create(4, new[] { Aguaje, Acai }));

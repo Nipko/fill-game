@@ -89,6 +89,24 @@ namespace AF.LiveOps
             return false;
         }
 
+        /// <summary>
+        /// En cada victoria, antes de ver si sale el pre-prompt: si alcanza el hito 3 tras el primero con el segundo pendiente, guarda
+        /// su sesión (<c>second_due_session</c>; D-033, UI de los avisos, (b)), así que si esta victoria no lo lleva (el hito 3 en la
+        /// misma sesión que el primero) sale en la primera victoria de la sesión siguiente. Devuelve si lo guardó.
+        /// </summary>
+        public bool RememberMilestone(in PrePromptMoment moment)
+        {
+            PushSettingsRecord record = _store.Load();
+            if (!PushPrePromptRules.RemembersMilestone(record, in moment))
+            {
+                return false;
+            }
+
+            record.SecondDueSession = moment.Sessions;
+            _store.Save(record);
+            return true;
+        }
+
         /// <summary>El pre-prompt que tocaría en <paramref name="moment"/> (sin enseñarlo).</summary>
         public PrePromptKind Due(in PrePromptMoment moment)
         {

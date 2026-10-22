@@ -132,8 +132,21 @@ namespace AF.Presentation
         /// <summary>El chorro arranca al 70 % del traslado (02 §4.1).</summary>
         public const float StreamStartFraction = 0.7f;
 
-        /// <summary>Marea: el agua vuelve a su cuia en 250 ms (04 §2.1, VFX).</summary>
+        /// <summary>
+        /// Marea: el agua vuelve a su cuia en 250 ms (04 §2.1, VFX); con Reducir movimiento, × su factor
+        /// (<see cref="UndoTransferNowMs"/>; 02 §4, «todas las duraciones»; Q-B9-12).
+        /// </summary>
         public const float UndoTransferMs = 250f;
+
+        /// <summary>
+        /// Duración del traslado inverso de Marea (Q-B9-12): <see cref="UndoTransferMs"/> y, con <paramref name="reduceMotion"/>,
+        /// × <paramref name="reduceMotionFactor"/> (02 §4: con Reducir movimiento, todas las duraciones × <c>anim_reduce_motion_factor</c>).
+        /// El factor de velocidad del nivel no la cambia (04 §2.1 la fija en 250 ms).
+        /// </summary>
+        public static float UndoTransferFor(bool reduceMotion, float reduceMotionFactor)
+        {
+            return reduceMotion ? UndoTransferMs * Mathf.Max(0.01f, reduceMotionFactor) : UndoTransferMs;
+        }
 
         /// <summary>Altura del arco que traza el centro de la boca en el traslado ("arco, no línea recta", 07 §5.2), en u.</summary>
         public const float TravelArcU = 0.4f;
@@ -373,7 +386,8 @@ namespace AF.Presentation
         /// Factor de velocidad del nivel (<c>GameConfig.SpeedFactor</c>; 02 §4): multiplica las duraciones que la cola no
         /// recibe ya multiplicadas, las de los pasos de mecánica (desde la ola 2; con <see cref="ReduceMotion"/>, ×
         /// <see cref="ReduceMotionFactor"/>). Las de <see cref="PourTimings"/> ya lo llevan, y el traslado inverso de Marea
-        /// (<see cref="UndoTransferMs"/>, 04 §2.1) no cambia, tampoco con Reducir movimiento [P] (Q-B9-12). 1 por defecto.
+        /// (<see cref="UndoTransferMs"/>, 04 §2.1) no cambia con él; con Reducir movimiento, sí (× <see cref="ReduceMotionFactor"/>,
+        /// <see cref="UndoTransferNowMs"/>; Q-B9-12). 1 por defecto.
         /// </summary>
         public float SpeedFactor { get; set; } = 1f;
 
@@ -388,6 +402,12 @@ namespace AF.Presentation
 
         /// <summary>Factor de los pasos de mecánica antes del presupuesto: <see cref="SpeedFactor"/>, × <see cref="ReduceMotionFactor"/> con <see cref="ReduceMotion"/>.</summary>
         public float StepSpeedBase => Mathf.Max(0.01f, SpeedFactor) * (ReduceMotion ? ReduceMotionFactor : 1f);
+
+        /// <summary>
+        /// El traslado inverso de Marea en este tablero (ms; Q-B9-12): 250 ms, × <see cref="ReduceMotionFactor"/> con
+        /// <see cref="ReduceMotion"/> (<see cref="UndoTransferFor"/>). Se toma al empezar cada traslado.
+        /// </summary>
+        public float UndoTransferNowMs => UndoTransferFor(ReduceMotion, ReduceMotionFactor);
 
         /// <summary>
         /// Patrones de fruta del nivel (07 §3, regla 1; 02 §12; T-E): con true, cada cuia lleva el icono de su fruta en sus
@@ -1175,13 +1195,14 @@ namespace AF.Presentation
             CuiaView t = _views[job.Target];
             if (job.IsUndo)
             {
-                job.DoseMs = UndoTransferMs / Mathf.Max(1, job.Amount);
+                float undoMs = UndoTransferNowMs; // 250 ms; con Reducir movimiento, × su factor (Q-B9-12)
+                job.DoseMs = undoMs / Mathf.Max(1, job.Amount);
                 job.StreamStart = 0f;
-                job.FlowEnd = UndoTransferMs;
-                job.StreamEnd = UndoTransferMs;
-                job.ReturnStart = UndoTransferMs;
-                job.SrcEnd = UndoTransferMs;
-                job.TgtEnd = UndoTransferMs;
+                job.FlowEnd = undoMs;
+                job.StreamEnd = undoMs;
+                job.ReturnStart = undoMs;
+                job.SrcEnd = undoMs;
+                job.TgtEnd = undoMs;
                 if (s.Sealed)
                 {
                     s.SetSealed(false); // la tapa salta: el sello se reabre (04 §2.1)

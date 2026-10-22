@@ -300,7 +300,16 @@ namespace AF.Presentation
         /// Lo que baja la malla de cada dosis bajo su frontera (u de capa): la flecha de los arcos en el eje, la mitad de la
         /// cara superior (<see cref="CuiaGeometry.FaceSagU"/>).
         /// </summary>
-        public const float BottomExtraU = 0.5f * CuiaGeometry.TopFaceU;
+        public const float BottomExtraU = (0.5f * CuiaGeometry.TopFaceU) + OutlineMarginU;
+
+        /// <summary>
+        /// Margen de malla bajo el arco (u de capa) para la mitad de abajo del contorno de dosis de Alto contraste (07 §3, regla 5;
+        /// Q-B9-6), que se pinta centrado en el arco. Peor caso: la cuia más estrecha (<c>BoardLayout.MinCuiaWidth</c> = 28 dp,
+        /// 14 dp por u) a 1 px por dp, donde la mitad de abajo (0,75 dp) más el medio píxel de antialias (0,5 dp) piden 1,25 dp =
+        /// 0,089 u; 0,1 u deja algo de holgura (lo fija <c>DoseOutlineTests</c>). Sin contorno, el shader no enseña nada bajo el
+        /// arco, así que no cambia lo que se ve.
+        /// </summary>
+        public const float OutlineMarginU = 0.1f;
 
         // La dosis superior sube la mitad de la cara superior más la onda y un margen, para que quepa la elipse.
         private const float TopExtraU = (0.5f * CuiaGeometry.TopFaceU) + RippleAmplitudeU + 0.05f;
@@ -317,6 +326,8 @@ namespace AF.Presentation
 
         private static readonly int DpUId = Shader.PropertyToID("_DpU");
         private static readonly int PatternOpacityId = Shader.PropertyToID("_PatternOpacity");
+        private static readonly int DoseOutlineDpId = Shader.PropertyToID("_DoseOutlineDp");
+        private static float _doseOutlineDp;
         private static readonly int IconAtlasId = Shader.PropertyToID("_IconAtlas");
         private static readonly int PatternRowsId = Shader.PropertyToID("_PatternRows");
         private static readonly int MurkyRowId = Shader.PropertyToID("_MurkyRow");
@@ -429,6 +440,7 @@ namespace AF.Presentation
                 mat.SetFloat(PatternRowsId, atlas.height / (float)ProceduralArt.PatternRowPx);
                 mat.SetFloat(MurkyRowId, ProceduralArt.MurkyPatternRow); // la trama y el «?» (al revelarse, TEXCOORD3.a es la fruta)
                 mat.SetFloat(PatternOpacityId, Palette.PatternOpacity); // 07 §3, regla 1: la del nivel (ApplyPatternOpacity)
+                mat.SetFloat(DoseOutlineDpId, _doseOutlineDp); // 07 §3, regla 5: el contorno de Alto contraste (ApplyDoseOutline)
                 if (iconAtlas != null)
                 {
                     mat.SetTexture(IconAtlasId, iconAtlas); // iconos de accesibilidad por tinte (07 §3; T-E.3)
@@ -480,6 +492,52 @@ namespace AF.Presentation
             {
                 mat.SetFloat(PatternOpacityId, Palette.PatternOpacity);
             }
+        }
+
+        /// <summary>
+        /// Contorno de dosis (07 §3, regla 5; Q-B9-6): <paramref name="width"/> px de diseño (dp: los px de 07 son a 360 de ancho
+        /// [P]) de tinta centrados en el arco de abajo de cada dosis menos la del fondo (<c>A11yRules.HighContrastDoseOutlinePx</c>
+        /// = 1,5 en «Alto contraste»; 0 lo quita). Lo fija en la propiedad <c>_DoseOutlineDp</c> del material compartido del
+        /// líquido (todas las cuias), como <see cref="ApplyPatternOpacity"/>: al cargar el nivel y al cambiar el ajuste. Un valor
+        /// negativo o que no es un número cuenta como 0. Sin asignaciones.
+        /// </summary>
+        public static void ApplyDoseOutline(float width)
+        {
+            _doseOutlineDp = float.IsNaN(width) || width <= 0f ? 0f : width;
+            Material? mat = UiMaterials.Liquid;
+            if (mat != null)
+            {
+                mat.SetFloat(DoseOutlineDpId, _doseOutlineDp);
+            }
+        }
+
+        /// <summary>
+        /// Contorno de dosis que pinta el shader (dp): la propiedad <c>_DoseOutlineDp</c> del material compartido (sin material, lo
+        /// último que se fijó con <see cref="ApplyDoseOutline"/>). Para la sonda de desarrollo y los tests.
+        /// </summary>
+        public static float ShaderDoseOutline
+        {
+            get
+            {
+                Material? mat = UiMaterials.Liquid;
+                return mat != null ? mat.GetFloat(DoseOutlineDpId) : _doseOutlineDp;
+            }
+        }
+
+        /// <summary>
+        /// Espejo en CPU del contorno de dosis del shader (07 §3, regla 5): cuánto se mezcla la tinta (0-1) a
+        /// <paramref name="pxFromArc"/> píxeles de pantalla del arco de abajo de la dosis <paramref name="dose"/> (positivo por
+        /// encima), con un contorno de <paramref name="outlineDp"/> dp centrado en el arco, <paramref name="pxPerDp"/> píxeles por
+        /// dp y medio píxel de antialias en cada borde. La dosis 0 y un contorno de 0 no llevan línea.
+        /// </summary>
+        public static float DoseOutlineAt(int dose, float outlineDp, float pxPerDp, float pxFromArc)
+        {
+            if (dose <= 0 || outlineDp <= 0f)
+            {
+                return 0f;
+            }
+
+            return Mathf.Clamp01(((0.5f * outlineDp * pxPerDp) - Mathf.Abs(pxFromArc)) + 0.5f);
         }
 
         /// <summary>

@@ -39,6 +39,10 @@ namespace AF.Tests.EditMode
         [TestCase("BRL", 2)]
         [TestCase("PEN", 2)]
         [TestCase("EUR", 2)]
+        [TestCase("CLP", 0)] // añadido de D-025 por Q-IAP-3: monedas sin céntimos
+        [TestCase("JPY", 0)]
+        [TestCase("KWD", 3)] // y las de tres decimales
+        [TestCase("BHD", 3)]
         public void Decimals_AreZeroInCopAndMxn_AndTwoInTheRest(string currency, int decimals)
         {
             Assert.That(LocPrice.DecimalsOf(currency), Is.EqualTo(decimals));
@@ -104,6 +108,12 @@ namespace AF.Tests.EditMode
         [TestCase("USD", 1994999L, "en-US", 199L, "USD 1.99")]
         [TestCase("USD", 1995000L, "en-US", 200L, "USD 2.00")]
         [TestCase("PEN", 0L, "es-PE", 0L, "PEN 0.00")]
+        [TestCase("CLP", 1990000000L, "es-CL", 1990L, "CLP 1.990")] // Q-IAP-3: sin céntimos
+        [TestCase("CLP", 990500000L, "es-CL", 991L, "CLP 991")]
+        [TestCase("JPY", 160000000L, "en-US", 160L, "JPY 160")]
+        [TestCase("KWD", 1250000L, "en-US", 1250L, "KWD 1.250")] // Q-IAP-3: tres decimales
+        [TestCase("BHD", 1999500L, "en-US", 2000L, "BHD 2.000")]
+        [TestCase("BHD", 600000L, "en-US", 600L, "BHD 0.600")]
         public void FromPlayBillingMicros_ComposesWithTheSameFunction(string currency, long micros, string region, long minor, string expected)
         {
             Loc.Configure(LocSetUpFixture.Catalog, LocLocale.SourceLocale, true, region);

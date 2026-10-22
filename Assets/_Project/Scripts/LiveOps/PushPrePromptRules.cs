@@ -57,7 +57,10 @@ namespace AF.LiveOps
     /// posterior con <c>push_preprompt_min_level</c> (10) ya superado antes de esa victoria. Si la 2.ª sesión empieza antes del 10,
     /// se espera a la primera victoria posterior al 10; la del 10 nunca (su secuencia, 06 §2.3).</item>
     /// <item><b>Segundo y último</b> (si el primero no acabó en avisos): en la victoria que alcanza el hito 3 de la Crecida (la deja
-    /// justo en 3) después del primero, o en la primera victoria a partir de 7 días del primero, lo que ocurra antes [P].</item>
+    /// justo en 3) después del primero, o en la primera victoria a partir de 7 días del primero, lo que ocurra antes [P]. Si esa
+    /// victoria no puede llevarlo (sobre todo, el hito 3 en la misma sesión que el primero: como mucho uno por sesión), se recuerda
+    /// (<see cref="RemembersMilestone"/>, <c>second_due_session</c>) y sale en la primera victoria de una sesión posterior
+    /// (D-033, añadido de la UI de los avisos, (b)).</item>
     /// <item>Después, solo el acceso de Ajustes (<see cref="PushPermissionService.SetFromSettings"/>).</item>
     /// </list>
     /// Con los avisos ya concedidos, o bloqueados en el teléfono (el diálogo nativo ya no saldría), no hay pre-prompt [P].
@@ -69,6 +72,27 @@ namespace AF.LiveOps
 
         /// <summary>El hito de la Crecida que adelanta el segundo pre-prompt (06 §8.1: «el hito 3»).</summary>
         public const int SecondAtStreakWins = StreakRecord.HitSeeds;
+
+        /// <summary>
+        /// La victoria de <paramref name="moment"/> alcanza el hito 3 tras el primer pre-prompt, con el segundo aún pendiente y sin
+        /// recordar todavía (D-033, UI de los avisos, (b)): quien la ve guarda su sesión en <c>second_due_session</c>
+        /// (<see cref="PushPermissionService.RememberMilestone"/>) por si esta victoria no lleva el segundo.
+        /// </summary>
+        public static bool RemembersMilestone(PushSettingsRecord record, in PrePromptMoment moment)
+        {
+            if (record == null)
+            {
+                throw new ArgumentNullException(nameof(record));
+            }
+
+            return !record.Granted && record.PrePromptShown && !record.SecondPromptShown && record.SecondDueSession == 0 && moment.Sessions > 0
+                && ReachesMilestone(record, in moment);
+        }
+
+        private static bool ReachesMilestone(PushSettingsRecord record, in PrePromptMoment moment)
+        {
+            return moment.StreakWins == SecondAtStreakWins && (!record.PrePromptAt.HasValue || moment.NowUtc > record.PrePromptAt.Value);
+        }
 
         /// <summary>El pre-prompt que toca en <paramref name="moment"/>.</summary>
         public static PrePromptKind Due(PushSettingsRecord record, PushConfig config, PushPermission system, in PrePromptMoment moment)
@@ -100,9 +124,15 @@ namespace AF.LiveOps
                 return PrePromptKind.None;
             }
 
+            // (b): el hito 3 ya se alcanzó en una sesión anterior sin que saliera el segundo.
+            if (record.SecondDueSession > 0 && moment.Sessions > record.SecondDueSession)
+            {
+                return PrePromptKind.Second;
+            }
+
             // «Al alcanzar el hito 3»: la victoria que deja la Crecida justo en 3, después del primero (no una racha que ya estaba en 3
             // o más al rechazar).
-            if (moment.StreakWins == SecondAtStreakWins && (!record.PrePromptAt.HasValue || moment.NowUtc > record.PrePromptAt.Value))
+            if (ReachesMilestone(record, in moment))
             {
                 return PrePromptKind.Second;
             }

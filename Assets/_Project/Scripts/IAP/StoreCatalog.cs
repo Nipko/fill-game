@@ -40,7 +40,10 @@ namespace AF.IAP
         /// <summary>Importe.</summary>
         public decimal Amount { get; }
 
-        /// <summary>Cifras decimales con que se escribe (<see cref="LocPrice.DecimalsOf"/>: 0 en COP y MXN; 2 en el resto, 05 §4.2).</summary>
+        /// <summary>
+        /// Cifras decimales con que se escribe (<see cref="LocPrice.DecimalsOf"/>: 0 en COP y MXN, 2 en el resto, 05 §4.2; y, por el
+        /// añadido de D-025 de Q-IAP-3, 0 en CLP y JPY y 3 en KWD y BHD).
+        /// </summary>
         public int Decimals { get; }
 
         /// <summary>Importe en unidades menores de <see cref="Decimals"/> (BRL 4,99 → 499; COP 3.900 → 3900).</summary>

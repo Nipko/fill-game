@@ -205,6 +205,49 @@ namespace AF.LiveOps.Tests
         }
 
         [Test]
+        public void Streak3InTheSameSessionAsTheFirst_IsRemembered_AndTheSecondComesInTheNextSession() // D-033, UI de los avisos (b)
+        {
+            var f = new Fixture();
+            Assert.That(f.Service.OnVictory(new PrePromptMoment(2, 10, 1, T0), f.Presenter), Is.EqualTo(PrePromptKind.First));
+
+            // La victoria que deja la Crecida en 3, en la misma sesión: la UI no puede llevar el segundo (uno por sesión), así que se
+            // recuerda; la racha que sigue (4, 5…) ya no lo trae por el hito.
+            var hit = new PrePromptMoment(2, 11, 3, T0.AddMinutes(10));
+            Assert.That(f.Service.RememberMilestone(in hit), Is.True);
+            Assert.That(f.Store.Load().SecondDueSession, Is.EqualTo(2));
+            Assert.That(f.Service.RememberMilestone(in hit), Is.False, "una sola vez");
+            Assert.That(f.Service.Due(new PrePromptMoment(2, 12, 4, T0.AddMinutes(20))), Is.EqualTo(PrePromptKind.None), "no en la misma sesión");
+
+            // La primera victoria de la sesión siguiente, con la racha ya en 0 y antes de los 7 días: el segundo.
+            Assert.That(f.Service.OnVictory(new PrePromptMoment(3, 12, 0, T0.AddDays(1)), f.Presenter), Is.EqualTo(PrePromptKind.Second));
+            Assert.That(f.Store.Load().SecondPromptShown, Is.True);
+            Assert.That(f.Service.OnVictory(new PrePromptMoment(4, 13, 0, T0.AddDays(8)), f.Presenter), Is.EqualTo(PrePromptKind.None), "nunca un tercero");
+        }
+
+        [Test]
+        public void RememberMilestone_OnlyAfterTheFirst_WithTheSecondPending_AndAtExactly3()
+        {
+            var config = PushConfig.Defaults;
+            var hit = new PrePromptMoment(2, 20, 3, T0.AddHours(1));
+            Assert.That(PushPrePromptRules.RemembersMilestone(new PushSettingsRecord(), in hit), Is.False, "sin el primero, no");
+            var first = new PushSettingsRecord { PrePromptShown = true, PrePromptAt = T0 };
+            Assert.That(PushPrePromptRules.RemembersMilestone(first, in hit), Is.True);
+            Assert.That(PushPrePromptRules.RemembersMilestone(first, new PrePromptMoment(2, 20, 4, T0.AddHours(1))), Is.False, "racha ya pasada de 3");
+            Assert.That(PushPrePromptRules.RemembersMilestone(first, new PrePromptMoment(2, 20, 3, T0)), Is.False, "no en el mismo instante del primero");
+            Assert.That(PushPrePromptRules.RemembersMilestone(new PushSettingsRecord { PrePromptShown = true, PrePromptAt = T0, SecondPromptShown = true }, in hit),
+                Is.False, "el segundo ya salió");
+            Assert.That(PushPrePromptRules.RemembersMilestone(new PushSettingsRecord { PrePromptShown = true, PrePromptAt = T0, Granted = true }, in hit),
+                Is.False, "con los avisos concedidos");
+
+            var due = new PushSettingsRecord { PrePromptShown = true, PrePromptAt = T0, SecondDueSession = 2 };
+            Assert.That(Due(due, config, new PrePromptMoment(2, 20, 0, T0.AddHours(2))), Is.EqualTo(PrePromptKind.None));
+            Assert.That(Due(due, config, new PrePromptMoment(3, 20, 0, T0.AddHours(30))), Is.EqualTo(PrePromptKind.Second));
+            Assert.That(PushPrePromptRules.Due(due, config, PushPermission.Blocked, new PrePromptMoment(3, 20, 0, T0.AddHours(30))),
+                Is.EqualTo(PrePromptKind.None), "bloqueado en el teléfono, tampoco");
+            Assert.That(due.Clone().SecondDueSession, Is.EqualTo(2));
+        }
+
+        [Test]
         public void AnOpenPrePrompt_IsNotShownTwice()
         {
             var f = new Fixture();

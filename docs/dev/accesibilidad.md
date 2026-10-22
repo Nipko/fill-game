@@ -19,7 +19,7 @@ Lo marcado [P] es propuesta sin decisión del dueño; cada [P] remite a su pregu
   - la selección se anuncia («açaí seleccionado: elige destino»).
 - **07 §3, regla 3; 07 §7.8; 08 §14.3:** QA con simulador de daltonismo de los tres tipos sobre el shader real. El método no está fijado: es [P].
 - **08 §9:** `ui_reduce_motion_default` (bool, false) y `anim_reduce_motion_factor` (float, 0,5, rango 0,3-0,7). No hay clave para Alto contraste ni para C9.
-- **08 §4.3:** `settings`, sin estos ajustes todavía. Los campos nuevos son [P] (Q-B9-15).
+- **08 §4.3:** `settings`, con `reduce_motion` y `high_contrast` anotados el 2026-10-22 (tanda de pulido, D-033 punto 12). Los campos son [P] (Q-B9-15).
 
 ## 2. Qué hace
 
@@ -45,7 +45,7 @@ Lo marcado [P] es propuesta sin decisión del dueño; cada [P] remite a su pregu
 - **Ajuste:** «Alto contraste» en Ajustes.
 - **Perfil:** `settings.high_contrast` (bool) [P], escrito solo si está encendido.
 - **Efecto:** el patrón del líquido al 35 % (`A11yRules.HighContrastPatternOpacity`) al momento, en campaña y en el Reto. No toca los iconos, que son de Patrones de fruta (Q-B9-5).
-- **Pendiente:** el contorno de dosis de 1,5 px (Q-B9-6).
+- **Contorno de dosis** (Q-B9-6, tanda de pulido del 2026-10-22): una línea de tinta (`ui_tinta`) de 1,5 px de diseño, que el cliente toma como dp [P] (`A11yRules.HighContrastDoseOutlinePx`) centrada en el arco de abajo de cada dosis menos la del fondo, en el shader del líquido (`_DoseOutlineDp`, que fija `LiquidGraphic.ApplyDoseOutline`). Va también entre dos dosis de la misma fruta [P]. Capturas: `DoseOutlineCaptureTests` (`[Explicit]`), en `Logs/snapshots/es-419/a11y/`.
 
 ### 2.3 Escala de fuente del sistema
 
@@ -257,5 +257,5 @@ Más [P] sin pregunta propia:
 - **`ColorVision` vive en `AF.UI`** para que lo vean los tests de EditMode y de PlayMode. El juego no lo referencia y el stripping High (B10) lo quita del player.
 - **Hallazgos para el GDD:**
   - 02 §12 debería citar el contorno de 1,5 px de 07 §3;
-  - 08 §4.3 y §8.2 necesitan los campos y las claves de Q-B9-15 y Q-B9-16;
-  - 08 §14.2 frente a 02 §12, en el contenido de la etiqueta (Q-B9-14).
+  - 08 §4.3 y §8.2 necesitan los campos y las claves de Q-B9-15 y Q-B9-16 (anotados el 2026-10-22, tanda de pulido);
+  - 08 §14.2 frente a 02 §12, en el contenido de la etiqueta (Q-B9-14; hecho el 2026-10-22: «cuia 3: açaí, 1 hueco. Hoja», con `a11y_cuia_mechanic` y los nombres `mechanic.<id>` de `facts.csv`, que esperan al asesor; la Marea con el factor de Reducir movimiento, Q-B9-12, también).

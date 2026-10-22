@@ -925,8 +925,15 @@ namespace AF.Save
         /// <summary><c>second_prompt_shown</c> [P]: ya salió el segundo y último pre-prompt.</summary>
         public bool SecondPromptShown { get; set; }
 
+        /// <summary>
+        /// <c>second_due_session</c> [P] (D-033, UI de los avisos, (b)): la sesión (<c>stats.sessions</c>) en que se alcanzó el hito 3
+        /// de la Crecida tras el primer pre-prompt sin que saliera el segundo; el segundo sale en la primera victoria de una sesión
+        /// posterior. 0: ninguna.
+        /// </summary>
+        public int SecondDueSession { get; set; }
+
         /// <summary>Todos los campos en su default (entonces no se escribe).</summary>
-        public bool IsDefault => !PrePromptShown && !Granted && !PrePromptAt.HasValue && !SecondPromptShown;
+        public bool IsDefault => !PrePromptShown && !Granted && !PrePromptAt.HasValue && !SecondPromptShown && SecondDueSession == 0;
     }
 
     /// <summary>

@@ -630,8 +630,9 @@ namespace AF.IAP
 
         /// <summary>
         /// El precio de la tienda como <see cref="LocalPrice"/>: unidades menores con los decimales de la función única de precios
-        /// (D-025) y, de ellas, el importe. False si la moneda no se puede escribir (no es ISO 4217 o <see cref="LocalPrice"/> no la
-        /// admite todavía, Q-IAP-3): entonces vale el precio de respaldo y el SKU no se vende.
+        /// (D-025, con el añadido de Q-IAP-3: 0 decimales en COP, MXN, CLP y JPY, 3 en KWD y BHD y 2 en el resto) y, de ellas, el
+        /// importe. False si la moneda no se puede escribir (no es un código ISO 4217): entonces vale el precio de respaldo y el SKU
+        /// no se vende.
         /// </summary>
         public static bool TryLocalPrice(string currency, long micros, out LocalPrice price)
         {
