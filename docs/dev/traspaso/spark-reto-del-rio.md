@@ -686,7 +686,7 @@ B12, B11 y B9 están entregados (B12 y B11 integrados; B9 integrándose). El due
 2. `IBillingClient` real (`UNITY_ANDROID && !UNITY_EDITOR`) sobre Unity IAP 5.4.4: catálogo de 05 §4.1 con sus ids `af_*`; `setObfuscatedAccountId = UID` (F3-3); compras pendientes (`PENDING`), compras sin terminar al arrancar (`Resume`), confirmar sin consumir para el `deferred_ack` (Q-F3-3 3: si Unity IAP 5.4.4 no lo permite, para y anótalo como pregunta) y consumo solo tras acreditar (D-035). El editor y los tests siguen con `FakeBillingClient`; `VerifiedStoreService` no cambia de contrato.
 3. Respeta B12: compras de 13-17 con doble confirmación + autenticación de Google Play (Q-T4); con `<13`, sin compras.
 4. Precios locales: el Mercado muestra el precio que da la tienda (no el de 05 §4), con el de 05 como respaldo en el editor.
-5. **Permisos:** Play Billing añade `com.android.vending.BILLING`, pendiente de la confirmación del dueño (D-040): no lo metas en la lista blanca; anótalo. Si aparece cualquier otro permiso, para y pregúntalo.
+5. **Permisos:** Play Billing añade `com.android.vending.BILLING`, **aprobado por el dueño** (D-040, 2026-10-22): entrégalo en la lista blanca de `ci/check-manifest.ps1` (con su autotest y la cita a D-040) como parte del parche. Si aparece cualquier otro permiso, para y pregúntalo.
 6. Data Safety (08 §13.3, fila Unity IAP / Play Billing) y 08 §7.
 7. Pruebas sin Play: EditMode y PlayMode con la tienda falsa; un modo de ensayo documentado para probar en el teléfono con licencias de prueba cuando exista la app en Play Console (D-034: aún no).
 
