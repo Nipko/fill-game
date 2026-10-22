@@ -15,9 +15,9 @@ namespace AF.UI
     /// <c>com.unity.mobile.notifications</c>). En el editor y en los tests sigue el <see cref="FakeNotificationScheduler"/>.
     /// <para>
     /// Solo en builds de desarrollo, el extra de intent <c>af_dev_push</c> (<see cref="IntentExtraDevPush"/>) sirve para probarlo en el
-    /// teléfono mientras la UI no tenga la tarjeta del pre-prompt ni la fila «Avisos» de Ajustes (nota de B6, §6): con 1 hace lo
-    /// mismo que encender esa fila, una vez y con la edad y el consentimiento ya decididos; con 2, además, el primer aviso de cada
-    /// salida a segundo plano se adelanta a 60 s. Nunca se lee en un build de release.
+    /// teléfono sin jugar hasta el pre-prompt (la tarjeta y la fila «Avisos» de Ajustes están en <c>GameBootstrap.PushUi.cs</c>): con
+    /// 1 hace lo mismo que encender esa fila, una vez y con la edad y el consentimiento ya decididos; con 2, además, el primer aviso
+    /// de cada salida a segundo plano se adelanta a 60 s. Nunca se lee en un build de release.
     /// </para>
     /// </summary>
     public sealed partial class GameBootstrap

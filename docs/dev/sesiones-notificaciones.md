@@ -84,10 +84,7 @@ Reglas:
 
 - `GameBootstrap.SetUpSessions()` (parcial nuevo) crea los servicios con el perfil, la cartera y el reloj de `Start`, cuenta el arranque en frío y añade `SessionRunner`. El runner lleva `OnApplicationPause`, `OnApplicationQuit` y, cada fotograma, la entrada en la pantalla de victoria (campaña y Reto) para `last_win_at` y el pre-prompt.
 - **Sondas** (`AF_STATE`, solo en desarrollo): `session`, `comeback_gift`, `push_prompt`, `push_plan`, `push_sent` y `push_open` (formato en `SessionProbeFormat`). El integrador puede añadirlas a `docs/dev/prototipo-v0.md`.
-- **Falta UI** (fuera de B6, toca archivos del escritorio):
-  - la tarjeta real del pre-prompt, después del panel de la victoria y antes de la Mochila (D-033 #11: pantalla aparte, no takeover);
-  - la fila «Avisos» de Ajustes (`SettingsScreen`), con `GameBootstrap.Push.SetFromSettings`;
-  - el aviso del Regalo de regreso (`GameBootstrap.LastComeback`), con `comeback_streak_line` y, desde B4, `comeback_logbook_line`, y `comeback_reminder_line`.
+- **UI de los avisos (tanda 5, rama `tanda5/notif-ui`, 2026-10-22): hecha** la tarjeta del pre-prompt y la fila «Avisos» (sección 11). Falta el aviso del Regalo de regreso (`GameBootstrap.LastComeback`), con `comeback_streak_line` y, desde B4, `comeback_logbook_line`, y `comeback_reminder_line`.
 
 ## 7. Parches y orden de aplicación
 
@@ -120,8 +117,8 @@ Lo que el integrador debería anotar en el GDD: 08 §4.3 (`settings.push.pre_pro
 - **Banda <13 (B12):** al bloquear (en el arranque o al corregir la edad) se cancela todo lo programado y la bandeja (`GameBootstrap.CancelNotificationsForBlock`); el diálogo nativo nunca sale sin «Avísame». Con 13-17 y 18+ los avisos son los mismos, siempre con su opt-in: son recordatorios del estado del juego, sin datos ni anuncios.
 - **Ajustes del paquete:** `ProjectSettings/NotificationsSettings.asset` lo generó Unity al construir, con los valores por defecto, y va versionado: «Schedule at exact time» apagado (`UnityNotificationAndroidScheduleExactAlarms` = 0; `exact_scheduling` = 0 en el manifiesto) y «Reschedule on Device Restart» apagado (`UnityNotificationAndroidRescheduleOnDeviceRestart` = False). Solo se cambian desde Project Settings › Mobile Notifications (regla dura 3), y un test de EditMode (`DeviceNotificationsTests`) exige esos dos valores. Su parte de iOS trae «Request Authorization on App Launch» encendido (valor por defecto del paquete): no afecta a Android, pero hay que apagarlo en el Editor antes del primer build de iOS (06 §8.1). El manifiesto fusionado del `dev.apk` solo gana `POST_NOTIFICATIONS` y el receptor `UnityNotificationManager` (no exportado); `ci/check-manifest.ps1` lo admite y hace fallar, con una pista, `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED` y `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
 - La lista de programados de `af_push_sent` (`PlayerPrefs` `af_push_scheduled`) usa `AF.Platform.ScheduledNotificationLog` (sin motor, con tests de entradas corruptas).
-- **Para probarlo en el teléfono** sin la tarjeta del pre-prompt ni la fila de Ajustes (que siguen faltando en la UI): el extra de desarrollo `af_dev_push` (`docs/dev/prototipo-v0.md`).
-- Siguen pendientes: el icono pequeño de silueta y el grande de TiTino (arte; sin ellos Android usa el icono de la app) y la UI del pre-prompt y de «Avisos».
+- **Para probarlo en el teléfono:** la tarjeta del pre-prompt y la fila «Avisos» (sección 11); el extra de desarrollo `af_dev_push` (`docs/dev/prototipo-v0.md`) sigue para encender los avisos sin jugar hasta la 2.ª sesión.
+- Sigue pendiente el icono pequeño de silueta y el grande de TiTino (arte; sin ellos Android usa el icono de la app).
 
 Lo que sigue es la nota original del Spark.
 
@@ -181,3 +178,12 @@ Lo que sigue es la nota original del Spark.
 ## 10. Verificación
 
 Los comandos y sus resultados están en el informe del bloque (entrada de `spark-estado.md`, la escribe el integrador).
+
+## 11. La UI de los avisos (rama `tanda5/notif-ui`, 2026-10-22)
+
+- **Tarjeta del pre-prompt** (`Scripts/UI/PushPrePromptCard.cs`, `GameBootstrap.PushUi.cs`; B6-Q16 (a)): al entrar en la victoria (de campaña o del Reto) solo se apunta el pre-prompt que toca por las reglas de B6; sale al pulsar Siguiente o Inicio (también el avance solo tras la Cosecha doble y el «Inicio» del calendario del Reto), como pantalla aparte encima de la victoria, con el retrato de TiTino, «Avísame» y «Ahora no» (Atrás = «Ahora no»). Al contestar, y tras el diálogo nativo si «Avísame» lo pidió (con un tope de 5 s con la app delante [P]), sigue el camino pulsado. Nunca con la banda <13, ni con la edad o el consentimiento pendientes, y como mucho una por sesión (`stats.sessions`).
+- **Con la cola de takeovers** [P]: el pre-prompt no es un takeover (D-033 #11) y no gasta el cupo; en la victoria en que toca no sale ninguna tarjeta de oferta [P] (06 §8.1 solo nombra la Mochila: «pasa a la siguiente victoria») y la entrada al inicio que sigue no abre la libreta sola (sale en la siguiente).
+- **Fila «Avisos» de Ajustes** (`SettingsScreen.Push.cs`), tras las de accesibilidad y antes de «Privacidad y datos»: «Activados», «Desactivados» o, con el teléfono bloqueándolos, «Actívalos en los ajustes del teléfono.» y el enlace «Abrir ajustes del teléfono» (`AndroidAppSettings`: `APP_NOTIFICATION_SETTINGS`, sin permisos). Al volver con el permiso dado desde ese enlace, los avisos se encienden; si el jugador los activó en el teléfono sin pasar por la fila, no (B6-Q3). Apagar cancela lo programado. TalkBack lee «Avisos: activados»… y lo anuncia al cambiar.
+- **Analítica:** `af_push_prompt` con `step` y `result` (08 §8.2) en cada paso (pre-prompt y diálogo nativo, también desde Ajustes). `origin` [P] solo va a la sonda: no está en el catálogo de 08 §8.2. La fila escribe `settings_change` con la clave `push` [P] en la sonda.
+- **Sonda:** `AF_LAYOUT` con `"screen":"push_preprompt"` (`push_accept`, `push_decline`) y, en `settings`, `push` y `push_open_phone`.
+- **Textos nuevos** (`borrador`): `settings_notifications_on`, `settings_notifications_off`, `settings_notifications_open_phone`, `a11y_notifications_on`, `a11y_notifications_off`, `a11y_notifications_blocked`. Capturas: `PushUiSnapshotTests` (explícita), `push_01_card_*` y `push_02_settings_*` en 360 × 780 y 16:9, al 100 % y al 130 %, en es-419 y en-XA.

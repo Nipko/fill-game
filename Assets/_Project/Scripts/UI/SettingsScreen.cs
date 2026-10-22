@@ -32,6 +32,8 @@ namespace AF.UI
     /// <item><b>Pista por inactividad</b> (tarea MO3; 02 §3.4 y §12; 04 §2.3; 07 §7.8): una fila que se marca o se desmarca
     /// (<c>settings.idle_hint</c> [P], activada por defecto; apagada equivale a <c>hint_idle_delay_s</c> = 0 en el dispositivo y
     /// no afecta a Morpho), en <see cref="IdleHintSlot"/>, tras «Mensajes de TiTino».</item>
+    /// <item><b>Avisos</b> (06 §8.1; nota de B6), tras las filas de accesibilidad: <c>settings.push</c> con su estado, en
+    /// <see cref="PushSlot"/> (<c>SettingsScreen.Push.cs</c>).</item>
     /// <item><b>Privacidad</b> (bloque B12; 05 §7 y 08 §7), tras «Pista por inactividad»: «Privacidad y datos» y «Corregir mi
     /// edad» (una vez), en <see cref="ConsentSlot"/> (<c>SettingsScreen.Consent.cs</c>).</item>
     /// <item><b>Sobre la Amazonía</b> (tarea F4; D-017 Q4-A; 07 §8.2), al final: «Frutas del río» con una ficha por serie del
@@ -187,6 +189,7 @@ namespace AF.UI
             IdleHintSlot = UiBuilder.Rect("IdleHintSlot", _content);
             _idleRow = Option(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
             BuildA11yRows(); // Reducir movimiento y Alto contraste (B9; SettingsScreen.A11y.cs)
+            BuildPush(); // «Avisos» (06 §8.1; SettingsScreen.Push.cs), oculta hasta que GameBootstrap la enseñe
 
             // Privacidad (B12; SettingsScreen.Consent.cs), oculta hasta que GameBootstrap la enseñe.
             BuildConsent();
@@ -390,6 +393,11 @@ namespace AF.UI
                 yield return label;
             }
 
+            foreach (TextMeshProUGUI label in PushTexts())
+            {
+                yield return label;
+            }
+
             foreach (TextMeshProUGUI label in AudioTexts())
             {
                 yield return label;
@@ -587,6 +595,12 @@ namespace AF.UI
             // Reducir movimiento y Alto contraste (B9): dos filas en su hueco, tras la pista por inactividad.
             y = LayoutA11y(y, inner, rowH, s);
 
+            // Avisos (06 §8.1), si se ve: su fila tras las de accesibilidad, con el hueco de sección.
+            if (PushShown)
+            {
+                y = LayoutPush(y - RowGapDp + SectionGapDp, y, inner, rowH, s) + RowGapDp;
+            }
+
             // Privacidad (B12), si se ve: sus filas tras las de accesibilidad, con el hueco de sección.
             if (PrivacyShown)
             {
@@ -703,7 +717,7 @@ namespace AF.UI
                 return;
             }
 
-            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount;
+            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount + PushLayoutCount;
             var ids = new string[n];
             var rects = new RectTransform[n];
             ids[0] = "close";
@@ -730,7 +744,8 @@ namespace AF.UI
             A11yLayoutIds(ids, rects, k + 1 + AudioRowCount); // reduce_motion y high_contrast (B9)
             AboutLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
             AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount); // delete_account (B8)
-            ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount); // consent y age_band (B12)
+            int consent = ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount); // consent y age_band (B12)
+            PushLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + consent); // push y push_open_phone
 
             _probe.Layout("settings", 0, null, ids, rects);
         }

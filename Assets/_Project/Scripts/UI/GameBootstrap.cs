@@ -502,13 +502,42 @@ namespace AF.UI
         /// <summary>Siguiente (pantalla de victoria): N + 1, «El río sigue creciendo» o Sin canoas (<see cref="AppFlow.PressNext"/>).</summary>
         public bool PressNext()
         {
-            return _app != null && _app.PressNext();
+            AppFlow? app = _app;
+            if (app == null || PrePromptHoldsLeave)
+            {
+                return false; // con la tarjeta del pre-prompt (o su diálogo nativo) delante, la victoria espera
+            }
+
+            // 06 §8.1 (B6-Q16 (a)): si esta victoria lleva el pre-prompt de push, sale antes del nivel siguiente (GameBootstrap.PushUi.cs).
+            if (VictoryOnScreen() && TryPrePromptOnLeave(false, false, () => app.PressNext()))
+            {
+                return true;
+            }
+
+            return app.PressNext();
         }
 
         /// <summary>«Inicio» (pantalla de victoria) [P]: vuelve a la pantalla de inicio.</summary>
         public bool PressHome()
         {
-            return _app != null && _app.PressHome();
+            AppFlow? app = _app;
+            if (app == null || PrePromptHoldsLeave)
+            {
+                return false;
+            }
+
+            if (VictoryOnScreen() && TryPrePromptOnLeave(false, true, () => app.PressHome()))
+            {
+                return true;
+            }
+
+            return app.PressHome();
+        }
+
+        // La victoria de campaña está a la vista (Siguiente e Inicio solo valen ahí: AppFlow.PressNext y PressHome).
+        private bool VictoryOnScreen()
+        {
+            return _app != null && _app.Screen == AppScreen.Level && _flow != null && _flow.Phase == FlowPhase.VictoryScreen;
         }
 
         /// <summary>
@@ -927,6 +956,7 @@ namespace AF.UI
             settings.MarkA11y(_reduceMotionNow, profile.Settings.HighContrast); // B9
             ShowAccountCode(); // F3-5: el código de borrado para la web en lugar del UID (Q-B13-21; GameBootstrap.Backend.cs)
             RefreshConsentRows(); // B12: «Privacidad y datos» y «Corregir mi edad» (GameBootstrap.Consent.cs)
+            RefreshPushRow(); // «Avisos» (06 §8.1; GameBootstrap.PushUi.cs)
             _skipNextDelta = true;
             return true;
         }
@@ -949,6 +979,12 @@ namespace AF.UI
             // B12: la edad, el consentimiento o la doble confirmación, encima de todo: Atrás la cierra si se puede (Ajustes, compra) y
             // nunca sigue a lo de debajo (en el bloqueo no hace nada).
             if (ConsentBack())
+            {
+                return true;
+            }
+
+            // La tarjeta del pre-prompt de push, encima de la victoria: Atrás es «Ahora no» (B6).
+            if (PressPrePromptBack())
             {
                 return true;
             }
@@ -1863,6 +1899,7 @@ namespace AF.UI
             }
 
             ResumeBackend(true); // F3-5: lo que Play cobró mientras tanto vuelve como compra sin terminar (08 §10.3)
+            PushUiResumed(); // «Avisos»: de vuelta de los ajustes del teléfono (GameBootstrap.PushUi.cs)
 
             // 02 §14: al volver de segundo plano la vista salta al modelo sin animar (también la luciérnaga en vuelo: la cuia
             // queda revelada) y la selección se limpia.
