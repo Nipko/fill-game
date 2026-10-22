@@ -128,7 +128,7 @@ namespace AF.UI
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _onClosed = onClosed ?? throw new ArgumentNullException(nameof(onClosed));
             _actions = new DailyGameActions(this);
-            _calendar = new DailyStampCalendar(host, art, () => GoHome(), () => PressDoubleHarvest());
+            _calendar = new DailyStampCalendar(host, art, () => LeaveCalendar(), () => PressDoubleHarvest());
         }
 
         /// <summary>Hay una partida (o el calendario desde la tarjeta) abierta.</summary>
@@ -163,6 +163,35 @@ namespace AF.UI
 
         /// <summary>Se ganó la partida abierta.</summary>
         public bool Won => _won;
+
+        /// <summary>
+        /// Al dejar la victoria del Reto (Siguiente o Inicio): si devuelve true, quien lo fija (<c>GameBootstrap</c>, el pre-prompt
+        /// de push de 06 §8.1) se queda con el camino y llama a la acción que recibe para seguirlo. Null: se sale al momento.
+        /// </summary>
+        internal Func<Action, bool>? LeavingVictory { get; set; }
+
+        // «Inicio» del calendario (y Atrás): tras ganar, como dejar la victoria (con el pre-prompt, si toca); si no, al inicio.
+        private bool LeaveCalendar()
+        {
+            return _won ? LeaveVictory() : GoHome();
+        }
+
+        // Siguiente o Inicio de la victoria: el pre-prompt de push (si toca) y, después, al inicio.
+        private bool LeaveVictory()
+        {
+            if (!_won)
+            {
+                return false;
+            }
+
+            Func<Action, bool>? leaving = LeavingVictory;
+            if (leaving != null && leaving(() => GoHome()))
+            {
+                return true;
+            }
+
+            return GoHome();
+        }
 
         /// <summary>Resultado del último cobro (tras la victoria), o null.</summary>
         public ClaimOutcome? LastClaimOutcome { get; private set; }
@@ -406,7 +435,7 @@ namespace AF.UI
         /// </summary>
         public bool HandleBack()
         {
-            return _calendar.Visible && GoHome();
+            return _calendar.Visible && LeaveCalendar();
         }
 
         // ---- ILevelFlowListener (todo a la vista salvo la pantalla de victoria de campaña) ----
@@ -764,12 +793,12 @@ namespace AF.UI
 
             public bool PressNext()
             {
-                return _owner._won && _owner.GoHome();
+                return _owner.LeaveVictory();
             }
 
             public bool PressHome()
             {
-                return _owner._won && _owner.GoHome();
+                return _owner.LeaveVictory();
             }
 
             public bool PressDoubleHarvest()
