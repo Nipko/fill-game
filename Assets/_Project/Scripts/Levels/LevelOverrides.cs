@@ -297,10 +297,14 @@ namespace AF.Levels
     /// <remarks>
     /// <para>En la 1.0 solo la usa el kill switch: <see cref="LevelCatalog"/> sirve el override de un nivel cuando el nivel usa una
     /// mecánica apagada (<c>mech_enabled.&lt;id&gt;</c> = false). El formato de respaldo por slot es de la 1.1 (D-020).</para>
-    /// <para>Fuente: <see cref="LocalSource"/>, vacía en release, hasta que exista <c>AF.RemoteConfig</c>; los tests pasan la
-    /// suya. Cada <c>level_id</c> (<c>m{mm}_v{v}_n{nnnn}</c>, glosario §11) se busca en los paquetes dados, en su orden. Una
-    /// entrada inválida (slot que no es un entero positivo, id que no es una cadena o que no está en ningún paquete, slot
-    /// repetido) no rompe el arranque: se descarta y se anota en <see cref="Problems"/>.</para>
+    /// <para>Fuente: el valor de Remote Config de <c>level_overrides</c> (<c>RcLevelBinder</c>, en el arranque, antes de crear el
+    /// catálogo) o, sin él, <see cref="LocalSource"/>; los tests pasan la suya. Cada <c>level_id</c> se busca en los paquetes
+    /// dados, en su orden: los de campaña (<c>m{mm}_v{v}_n{nnnn}</c>, glosario §11) y los de reserva
+    /// (<c>m{mm}_v{v}_n{nnnn}_r{k}</c>; D-033, añadido «la reserva del 20 %», Q-B11-7 a; <see cref="LevelPack.IsReserve"/>). Un
+    /// tablero de reserva solo vale para su slot (<see cref="LevelDefinition.Level"/>, el del <c>replaces</c>): en otro se
+    /// descarta, porque su ventana de dificultad es la de ese slot. Una entrada inválida (slot que no es un entero positivo, id
+    /// que no es una cadena o que no está en ningún paquete, reserva en otro slot, slot repetido) no rompe el arranque: se
+    /// descarta y se anota en <see cref="Problems"/>.</para>
     /// </remarks>
     public sealed class LevelOverrides
     {
@@ -401,6 +405,13 @@ namespace AF.Levels
                 if (level == null)
                 {
                     problems.Add(Key + ": el slot " + slotText + " pide " + id + ", que no está en ningún paquete; se ignora.");
+                    continue;
+                }
+
+                if (level.IsReserve && level.Level != slot)
+                {
+                    problems.Add(Key + ": el slot " + slotText + " pide " + id + ", que es la reserva del slot "
+                        + level.Level.ToString(CultureInfo.InvariantCulture) + " (" + level.Replaces + "); se ignora.");
                     continue;
                 }
 

@@ -14,9 +14,11 @@ namespace AF.Levels
     /// <see cref="LevelPack"/>.
     /// </summary>
     /// <remarks>
-    /// <para>Acepta <c>pack_schema</c> 1, 2 o 3 (<see cref="MinPackSchema"/>-<see cref="SupportedPackSchema"/>) o
+    /// <para>Acepta <c>pack_schema</c> 1 a 4 (<see cref="MinPackSchema"/>-<see cref="SupportedPackSchema"/>) o
     /// <c>subset_of</c> = <c>af-level/1</c>, que se lee como <c>pack_schema</c> 1; rechaza cualquier otra versión, también un
-    /// paquete 4 (08 §4.4: el cliente rechaza esquemas que no conoce). Con <c>pack_schema</c> 1 rechaza lo que el esquema solo
+    /// paquete 5 (08 §4.4: el cliente rechaza esquemas que no conoce). El 4 es el 3 más el paquete de reserva (D-033, añadido
+    /// «la reserva del 20 %», Q-B11-7 a; contrato 21): <c>kind</c> = <c>reserve</c> solo con el 4, <c>replaces</c> obligatorio
+    /// en cada nivel de reserva y prohibido fuera de ella, y sin <c>intro_mechanic</c> (<see cref="LevelDefinition.Replaces"/>). Con <c>pack_schema</c> 1 rechaza lo que el esquema solo
     /// admite desde el 2 (allOf): el tipo <c>matapi</c>, <c>intro_mechanic</c> <c>chica</c>, <c>alta</c>, <c>matapi</c> o
     /// <c>murky</c> y <c>difficulty.par_approx</c>. Con el 1 y el 2 rechaza lo que el esquema solo admite en el 3 (D-019,
     /// punto 9, y D-023, punto 5; contrato 21): los tipos <c>tinaja</c>, <c>cucharon</c>, <c>hoja_atada</c> y <c>flor</c>,
@@ -43,8 +45,11 @@ namespace AF.Levels
         /// <summary>Valor de <c>subset_of</c> que admite el cliente v0.</summary>
         public const string SubsetOf = "af-level/1";
 
-        /// <summary>Última versión de <c>pack_schema</c> que admite el cliente (D-007, D-019 y D-023; contrato 21).</summary>
-        public const int SupportedPackSchema = 3;
+        /// <summary>Última versión de <c>pack_schema</c> que admite el cliente (D-007, D-019, D-023 y D-033, Q-B11-7 a; contrato 21).</summary>
+        public const int SupportedPackSchema = 4;
+
+        /// <summary>Primera versión de <c>pack_schema</c> con el paquete de reserva (<c>kind</c> = <c>reserve</c>; D-033, Q-B11-7 a).</summary>
+        public const int ReservePackSchema = 4;
 
         /// <summary>Primera versión de <c>pack_schema</c> que admite el cliente.</summary>
         public const int MinPackSchema = 1;
@@ -91,6 +96,12 @@ namespace AF.Levels
             int version = CheckSchema(root);
             string packId = RequireString(root, "pack_id", "paquete");
             string kind = RequireString(root, "kind", packId);
+            bool reserve = string.Equals(kind, LevelPack.KindReserve, StringComparison.Ordinal);
+            if (reserve && version < ReservePackSchema)
+            {
+                throw new LevelFormatException(packId + ": un paquete de reserva (kind reserve) necesita pack_schema 4 (D-033, Q-B11-7 a; contrato 21).");
+            }
+
             int world = RequireInt(root, "world", packId);
             string worldId = RequireString(root, "world_id", packId);
             string waterBase = RequireWaterBase(root, packId);
@@ -104,7 +115,7 @@ namespace AF.Levels
             var levels = new List<LevelDefinition>(levelsNode.Items.Count);
             for (int i = 0; i < levelsNode.Items.Count; i++)
             {
-                LevelDefinition level = ReadLevel(levelsNode.Items[i], packId, i, version);
+                LevelDefinition level = ReadLevel(levelsNode.Items[i], packId, i, version, reserve);
                 for (int k = 0; k < levels.Count; k++)
                 {
                     if (levels[k].Level == level.Level)
@@ -126,7 +137,7 @@ namespace AF.Levels
             return a.Level.CompareTo(b.Level);
         }
 
-        // pack_schema 1-3 o subset_of = af-level/1 (que se lee como el 1). Devuelve la versión.
+        // pack_schema 1-4 o subset_of = af-level/1 (que se lee como el 1). Devuelve la versión.
         private static int CheckSchema(JsonValue root)
         {
             JsonValue? idNode = root.Get("pack_id");
@@ -153,10 +164,10 @@ namespace AF.Levels
                 return MinPackSchema;
             }
 
-            throw new LevelFormatException(where + ": el paquete no declara pack_schema (1, 2 o 3) ni subset_of = \"" + SubsetOf + "\".");
+            throw new LevelFormatException(where + ": el paquete no declara pack_schema (1 a 4) ni subset_of = \"" + SubsetOf + "\".");
         }
 
-        private static LevelDefinition ReadLevel(JsonValue node, string packId, int position, int version)
+        private static LevelDefinition ReadLevel(JsonValue node, string packId, int position, int version, bool reserve)
         {
             string where = packId + ".levels[" + position.ToString(CultureInfo.InvariantCulture) + "]";
             if (node.Kind != JsonKind.Object)
@@ -196,13 +207,43 @@ namespace AF.Levels
             string? band = ReadBand(difficulty, where);
             bool parApprox = ReadParApprox(difficulty, version, where);
             string? intro = ReadIntroMechanic(node, version, where);
+            string? replaces = ReadReplaces(node, reserve, intro, where);
             bool skippable = ReadOptionalBool(node, "skippable", true, where);
             bool hintSupported = ReadOptionalBool(node, "hint_supported", true, where);
 
             BuildAndValidate(caps, cuias, attrs, hidden.Length == 0 ? null : hidden, units, where);
             ReliefBoard[] relief = ReadRelief(node, units, version, where);
             return new LevelDefinition(
-                id, level, world, waterBase, palette, units, caps, cuias, attrs, murky, hidden, par, label, relief, intro, skippable, hintSupported, band, parApprox);
+                id, level, world, waterBase, palette, units, caps, cuias, attrs, murky, hidden, par, label, relief, intro, skippable, hintSupported, band, parApprox, replaces);
+        }
+
+        // replaces (pack_schema 4; D-033, Q-B11-7 a; contrato 21): en un paquete de reserva, la cadena obligatoria con el id de
+        // campaña del slot (que sea el del mismo level lo comprueba LevelOverrides al resolver level_overrides) y sin
+        // intro_mechanic; fuera de la reserva no se admite.
+        private static string? ReadReplaces(JsonValue node, bool reserve, string? intro, string where)
+        {
+            JsonValue? value = node.Get("replaces");
+            if (!reserve)
+            {
+                if (value != null)
+                {
+                    throw new LevelFormatException(where + ": 'replaces' solo va en un paquete de reserva (kind reserve; contrato 21).");
+                }
+
+                return null;
+            }
+
+            if (value == null || value.Kind != JsonKind.String || value.AsString().Length == 0)
+            {
+                throw new LevelFormatException(where + ": un nivel de reserva necesita 'replaces' con el id de campaña de su slot (contrato 21).");
+            }
+
+            if (intro != null)
+            {
+                throw new LevelFormatException(where + ": un nivel de reserva no estrena nada: 'intro_mechanic' debe ser null (contrato 21).");
+            }
+
+            return value.AsString();
         }
 
         // BoardBuilder (formato y campos de cada mecánica, U_c con las gotas de la Lluvia) y LevelValidation (03 §17 #5-#6;

@@ -2,15 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:amazonfill:schemas:af-level-1",
   "title": "Amazon Fill · paquete de niveles af-level/1",
-  "description": "JSON Schema canónico del formato de nivel definido en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.1 (pack_schema 1, 2 y 3; única copia del esquema; el formato de nivel sigue siendo af-level/1). pack_schema 2 (D-007, contrato 21) añade el tipo matapi, la Liana con fruta (key) o de cuenta (n), una y solo una, los campos obligatorios de cada tipo (hoja: key; remolino: partner; lluvia: key y n), intro_mechanic matapi, chica, alta y murky [P] y difficulty.par_approx [P]; con pack_schema 1 todo valida igual que antes. pack_schema 3 (D-019, punto 9, y D-023, punto 5; contrato 21) es el 2 más la Tinaja (M13): los tipos tinaja y cucharon (su cuia chica), sin campos, e intro_mechanic tinaja, y hidden en relief_board si y solo si la variante lleva la tinaja (su máscara); más las variantes de la 1.0 (02 §9.1; propuesta de D-007, b.3): hoja_atada con key, Brote con n 1 o 2 (Brote de dos hojas), flor con key y key2 distintas, e intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P]; con pack_schema 1 y 2 nada de eso valida (key2 tampoco), salvo el n del Brote, que no se restringe con el 1 ni con el 2, como antes, y todo lo demás sigue igual. Lo emite tools/level-generator y lo validan tools/level-qa y AF.Levels (comprobación: python tools/validate_schema.py). El esquema exige: patrones de id y seed de campaña (m{mm}_v{v}_n{nnnn} / amazonfill:v1:m{mm}:v{v}:n{nnnn}) y del Reto del río (kind daily: d{b}_n{nnnn} / amazonfill:v1:daily:b{b}:d{ddd}, 03 §16); relief con al menos una variante desde el nivel 31; par de relief nulo solo en plus_empty (03 §13). Lo que el esquema no puede expresar lo comprueba tools/level-qa: igualdad de longitud de caps, cuias y attrs; cada tinte con exactamente units_per_color unidades; tinte con level_debut posterior al nivel; risk_pairs <= max_risk_pairs; K (longitud de palette) <= k_max; par >= 2*K; label coherente con bot_fail (>=0,75 hard, >=0,90 very_hard); Aguas turbias con >=1 vertido seguro en todas las realidades y ocultos en <= 3 cuias; con la Tinaja, una sola tinaja con su cuia contigua en la misma fila y hidden = todas sus capas menos la boca, también en las variantes de relief que la lleven; variantes de relief resolubles con bot_fail que baja >=0,20 (si el base tiene bot_fail <0,20, como los debuts de 02 §9.2, basta par menor en minus_color o el vacío extra de plus_empty); bot_fail en la ventana del slot (<0,20 en debuts); semilla que reproduce el tablero base; en daily, banda y día de slot coherentes con id y seed; <=14 cuias generadas (02 R1). Cualquier cambio de este archivo que altere la validación sube pack_schema; los cambios editoriales de description no.",
+  "description": "JSON Schema canónico del formato de nivel definido en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.1 (pack_schema 1, 2, 3 y 4; única copia del esquema; el formato de nivel sigue siendo af-level/1). pack_schema 2 (D-007, contrato 21) añade el tipo matapi, la Liana con fruta (key) o de cuenta (n), una y solo una, los campos obligatorios de cada tipo (hoja: key; remolino: partner; lluvia: key y n), intro_mechanic matapi, chica, alta y murky [P] y difficulty.par_approx [P]; con pack_schema 1 todo valida igual que antes. pack_schema 3 (D-019, punto 9, y D-023, punto 5; contrato 21) es el 2 más la Tinaja (M13): los tipos tinaja y cucharon (su cuia chica), sin campos, e intro_mechanic tinaja, y hidden en relief_board si y solo si la variante lleva la tinaja (su máscara); más las variantes de la 1.0 (02 §9.1; propuesta de D-007, b.3): hoja_atada con key, Brote con n 1 o 2 (Brote de dos hojas), flor con key y key2 distintas, e intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P]; con pack_schema 1 y 2 nada de eso valida (key2 tampoco), salvo el n del Brote, que no se restringe con el 1 ni con el 2, como antes, y todo lo demás sigue igual. pack_schema 4 (D-033, añadido «la reserva del 20 %», Q-B11-7 (a); contrato 21) es el 3 más el pack de reserva: kind reserve, pack_id reserva_{mm}_v{v}, y en cada nivel replaces (el id de campaña m{mm}_v{v}_n{nnnn} del slot al que sustituye), id m{mm}_v{v}_n{nnnn}_r{k} y seed amazonfill:v1:m{mm}:v{v}:n{nnnn}:r{k}, sin intro_mechanic; replaces y los sufijos _r{k} y :r{k} solo en kind reserve, y kind reserve solo con pack_schema 4; un pack de reserva nunca da niveles de campaña: el cliente solo lo usa desde level_overrides (08 §9); con pack_schema 1-3 todo valida igual que antes. Lo emite tools/level-generator y lo validan tools/level-qa y AF.Levels (comprobación: python tools/validate_schema.py). El esquema exige: patrones de id y seed de campaña (m{mm}_v{v}_n{nnnn} / amazonfill:v1:m{mm}:v{v}:n{nnnn}) y del Reto del río (kind daily: d{b}_n{nnnn} / amazonfill:v1:daily:b{b}:d{ddd}, 03 §16); relief con al menos una variante desde el nivel 31; par de relief nulo solo en plus_empty (03 §13). Lo que el esquema no puede expresar lo comprueba tools/level-qa: igualdad de longitud de caps, cuias y attrs; cada tinte con exactamente units_per_color unidades; tinte con level_debut posterior al nivel; risk_pairs <= max_risk_pairs; K (longitud de palette) <= k_max; par >= 2*K; label coherente con bot_fail (>=0,75 hard, >=0,90 very_hard); Aguas turbias con >=1 vertido seguro en todas las realidades y ocultos en <= 3 cuias; con la Tinaja, una sola tinaja con su cuia contigua en la misma fila y hidden = todas sus capas menos la boca, también en las variantes de relief que la lleven; variantes de relief resolubles con bot_fail que baja >=0,20 (si el base tiene bot_fail <0,20, como los debuts de 02 §9.2, basta par menor en minus_color o el vacío extra de plus_empty); bot_fail en la ventana del slot (<0,20 en debuts); semilla que reproduce el tablero base; en daily, banda y día de slot coherentes con id y seed; <=14 cuias generadas (02 R1). Cualquier cambio de este archivo que altere la validación sube pack_schema; los cambios editoriales de description no.",
   "type": "object",
   "additionalProperties": false,
   "required": ["pack_schema", "pack_id", "generator", "pool", "k_min", "k_max", "max_risk_pairs", "cap_default", "empties_default", "levels"],
   "properties": {
     "pack_schema": {
       "type": "integer",
-      "enum": [1, 2, 3],
-      "description": "Versión de la estructura del pack (08 §4.4): 1 = formato original; 2 = mecánicas de D-007 (matapi, Liana con fruta o de cuenta, campos obligatorios por tipo, intro_mechanic chica/alta/matapi/murky y difficulty.par_approx); 3 = el 2 más la Tinaja de D-019 (tipos tinaja y cucharon, sin campos, e intro_mechanic tinaja) y las variantes de la 1.0 firmadas (hoja_atada {key}, Brote con n 1 o 2, flor {key, key2} e intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P]). Los packs 11-200 siguen con el 2. El cliente rechaza un paquete remoto con pack_schema mayor al que conoce."
+      "enum": [1, 2, 3, 4],
+      "description": "Versión de la estructura del pack (08 §4.4): 1 = formato original; 2 = mecánicas de D-007 (matapi, Liana con fruta o de cuenta, campos obligatorios por tipo, intro_mechanic chica/alta/matapi/murky y difficulty.par_approx); 3 = el 2 más la Tinaja de D-019 (tipos tinaja y cucharon, sin campos, e intro_mechanic tinaja) y las variantes de la 1.0 firmadas (hoja_atada {key}, Brote con n 1 o 2, flor {key, key2} e intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P]). 4 = el 3 más el pack de reserva (kind reserve y replaces; D-033, Q-B11-7 a). Los packs 11-200 siguen con el 2. El cliente rechaza un paquete remoto con pack_schema mayor al que conoce."
     },
     "schema_file": {
       "type": "string",
@@ -19,14 +19,14 @@
     },
     "pack_id": {
       "type": "string",
-      "pattern": "^(mundo_[0-9]{2}_v[1-9][0-9]*|daily_pool_v[1-9][0-9]*|event_[a-z0-9_]+_v[1-9][0-9]*)$",
-      "description": "mundo_{mm}_v{vuelta} para la campaña (archivo mundo_{mm}_v{vuelta}.json), daily_pool_v{n} para el Reto del río, event_{nombre}_v{n} para eventos."
+      "pattern": "^(mundo_[0-9]{2}_v[1-9][0-9]*|reserva_[0-9]{2}_v[1-9][0-9]*|daily_pool_v[1-9][0-9]*|event_[a-z0-9_]+_v[1-9][0-9]*)$",
+      "description": "mundo_{mm}_v{vuelta} para la campaña (archivo mundo_{mm}_v{vuelta}.json), reserva_{mm}_v{vuelta} para el pack de reserva del mundo (kind reserve, pack_schema 4; archivo reserva_{mm}_v{vuelta}.json), daily_pool_v{n} para el Reto del río, event_{nombre}_v{n} para eventos."
     },
     "kind": {
       "type": "string",
-      "enum": ["campaign", "daily", "event"],
+      "enum": ["campaign", "daily", "event", "reserve"],
       "default": "campaign",
-      "description": "campaign (por defecto) / daily / event. En daily (pool del Reto del río, 03 §16) cada nivel lleva slot en lugar de level, id d{b}_n{nnnn} y seed amazonfill:v1:daily:b{b}:d{ddd}; difficulty, world y lap son opcionales y la cabecera no exige world, world_id, lap ni water_base (el pool mezcla mundos; cada tablero declara su water_base)."
+      "description": "campaign (por defecto) / daily / event / reserve. En reserve (pack de reserva del mundo, solo con pack_schema 4; D-033, Q-B11-7 a; 03 §17) cada nivel es otro tablero de un slot de campaña con mecánica, sin ella y en la ventana del slot, con replaces, id m{mm}_v{v}_n{nnnn}_r{k} y seed amazonfill:v1:m{mm}:v{v}:n{nnnn}:r{k}; lleva lo mismo que campaign (world, lap, difficulty, relief desde el 31) y el cliente solo lo usa desde level_overrides (08 §9), nunca como nivel de campaña. En daily (pool del Reto del río, 03 §16) cada nivel lleva slot en lugar de level, id d{b}_n{nnnn} y seed amazonfill:v1:daily:b{b}:d{ddd}; difficulty, world y lap son opcionales y la cabecera no exige world, world_id, lap ni water_base (el pool mezcla mundos; cada tablero declara su water_base)."
     },
     "generator": {
       "type": "object",
@@ -92,8 +92,42 @@
               "required": ["level", "world", "lap", "difficulty"],
               "not": { "required": ["slot"] },
               "properties": {
-                "id": { "pattern": "^m[0-9]{2}_v[1-9][0-9]*_n[0-9]{4}$" },
-                "seed": { "pattern": "^amazonfill:v1:m[0-9]{2}:v[1-9][0-9]*:n[0-9]{4}$" }
+                "id": { "pattern": "^m[0-9]{2}_v[1-9][0-9]*_n[0-9]{4}(_r[1-9])?$" },
+                "seed": { "pattern": "^amazonfill:v1:m[0-9]{2}:v[1-9][0-9]*:n[0-9]{4}(:r[1-9])?$" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "Pack de reserva (kind reserve; D-033, añadido «la reserva del 20 %», Q-B11-7 a; contrato 21): solo con pack_schema 4 y pack_id reserva_{mm}_v{v}; cada nivel lleva replaces y el sufijo _r{k} en id y :r{k} en seed, y va sin intro_mechanic (no estrena nada). Fuera de reserve no hay replaces, ni sufijos, ni pack_id reserva_. Que replaces sea el slot del mismo level, que el sustituido use una mecánica con kill switch y que el de reserva no la lleve lo comprueba tools/level-qa --reserve.",
+      "if": { "properties": { "kind": { "const": "reserve" } }, "required": ["kind"] },
+      "then": {
+        "properties": {
+          "pack_schema": { "const": 4 },
+          "pack_id": { "pattern": "^reserva_[0-9]{2}_v[1-9][0-9]*$" },
+          "levels": {
+            "items": {
+              "required": ["replaces"],
+              "properties": {
+                "id": { "pattern": "_r[1-9]$" },
+                "seed": { "pattern": ":r[1-9]$" },
+                "intro_mechanic": { "const": null }
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "pack_id": { "not": { "pattern": "^reserva_" } },
+          "levels": {
+            "items": {
+              "properties": {
+                "replaces": false,
+                "id": { "not": { "pattern": "_r[1-9]$" } },
+                "seed": { "not": { "pattern": ":r[1-9]$" } }
               }
             }
           }
@@ -136,9 +170,9 @@
       }
     },
     {
-      "if": { "properties": { "pack_schema": { "const": 3 } }, "required": ["pack_schema"] },
+      "if": { "properties": { "pack_schema": { "enum": [3, 4] } }, "required": ["pack_schema"] },
       "then": {
-        "description": "pack_schema 3 (D-019, punto 9, y D-023, punto 5; contrato 21): todo lo del 2 más la Tinaja (M13), con los tipos tinaja y cucharon, sin campos, e intro_mechanic tinaja, y las variantes de la 1.0 de 02 §9.1 (b.3): hoja_atada {key}, Brote con n 1 o 2 y flor {key, key2} con key distinta de key2 (attr_pack3), e intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P] (el enum del nivel). Una variante de relief repite la tinaja (03 §13) con su máscara, que AF.Core exige (todas sus capas menos la boca): relief_board lleva hidden (el mismo $defs/hidden, como mucho 4 pares) si y solo si su attrs contiene la tinaja, y entonces es obligatorio y no vacío; sin la tinaja (Aguas turbias incluidas) va sin hidden (decisión del dueño del 2026-10-14, opción a de la revisión de P2a; 08 §4.1). Que sea exactamente la máscara de la tinaja lo comprueba tools/level-qa.",
+        "description": "pack_schema 3 y 4 (el 4 es el 3 más el pack de reserva; D-033, Q-B11-7 a). pack_schema 3 (D-019, punto 9, y D-023, punto 5; contrato 21): todo lo del 2 más la Tinaja (M13), con los tipos tinaja y cucharon, sin campos, e intro_mechanic tinaja, y las variantes de la 1.0 de 02 §9.1 (b.3): hoja_atada {key}, Brote con n 1 o 2 y flor {key, key2} con key distinta de key2 (attr_pack3), e intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P] (el enum del nivel). Una variante de relief repite la tinaja (03 §13) con su máscara, que AF.Core exige (todas sus capas menos la boca): relief_board lleva hidden (el mismo $defs/hidden, como mucho 4 pares) si y solo si su attrs contiene la tinaja, y entonces es obligatorio y no vacío; sin la tinaja (Aguas turbias incluidas) va sin hidden (decisión del dueño del 2026-10-14, opción a de la revisión de P2a; 08 §4.1). Que sea exactamente la máscara de la tinaja lo comprueba tools/level-qa.",
         "properties": {
           "levels": {
             "items": {
@@ -381,9 +415,14 @@
         "schema": { "type": "string", "const": "af-level/1" },
         "id": {
           "type": "string",
-          "description": "Campaña y eventos: m{mm}_v{v}_n{nnnn} con el mismo padding que la semilla (p. ej. m03_v1_n0043). Reto del río (kind daily): d{b}_n{nnnn} (p. ej. d2_n0417). Las variantes de relief no tienen id propio."
+          "description": "Campaña y eventos: m{mm}_v{v}_n{nnnn} con el mismo padding que la semilla (p. ej. m03_v1_n0043). Reserva (kind reserve): m{mm}_v{v}_n{nnnn}_r{k}, el id del slot al que sustituye más el número del tablero de reserva (p. ej. m03_v1_n0043_r1). Reto del río (kind daily): d{b}_n{nnnn} (p. ej. d2_n0417). Las variantes de relief no tienen id propio."
         },
-        "level": { "type": "integer", "minimum": 1, "description": "Nivel de ruta (campaign y event)." },
+        "level": { "type": "integer", "minimum": 1, "description": "Nivel de ruta (campaign y event); en reserve, el slot de campaña al que sustituye." },
+        "replaces": {
+          "type": "string",
+          "pattern": "^m[0-9]{2}_v[1-9][0-9]*_n[0-9]{4}$",
+          "description": "Solo en kind reserve (pack_schema 4; D-033, Q-B11-7 a): id de campaña del nivel al que sustituye este tablero de reserva desde level_overrides (08 §9), el del mismo slot (level) y mundo; obligatorio en reserve y prohibido en los demás."
+        },
         "slot": {
           "type": "object",
           "additionalProperties": false,
@@ -398,7 +437,7 @@
         "lap": { "$ref": "#/$defs/lap", "description": "Obligatorio en campaign y event; opcional en daily." },
         "seed": {
           "type": "string",
-          "description": "Campaña y eventos: amazonfill:v1:m{mm}:v{v}:n{nnnn} con ceros a la izquierda (p. ej. amazonfill:v1:m03:v1:n0043). Reto del río (kind daily): amazonfill:v1:daily:b{b}:d{ddd} (p. ej. amazonfill:v1:daily:b2:d417). Reproduce el tablero base en tools/level-generator (prueba de determinismo por hash, dirección 7)."
+          "description": "Campaña y eventos: amazonfill:v1:m{mm}:v{v}:n{nnnn} con ceros a la izquierda (p. ej. amazonfill:v1:m03:v1:n0043). Reserva (kind reserve): amazonfill:v1:m{mm}:v{v}:n{nnnn}:r{k}. Reto del río (kind daily): amazonfill:v1:daily:b{b}:d{ddd} (p. ej. amazonfill:v1:daily:b2:d417). Reproduce el tablero base en tools/level-generator (prueba de determinismo por hash, dirección 7)."
         },
         "gen": {
           "type": "object",

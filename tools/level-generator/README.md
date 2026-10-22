@@ -18,7 +18,8 @@ ejecuciones den los mismos bytes.
 | `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--curation <md> [--decisions <json>]] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación; `--curation`, el informe de curación para el dueño (P7a), con su decisión de `--decisions` | `Assets/_Project/Data/Levels/mundo_0N_v1.json`, `tools/out/campaign_v1_report.md` y `tools/out/curation_wNN.md` |
 | `--seasons <campaign.json> [...] --out <tabla.json> [--until <nivel>] [--check]` | Tabla de temporada del cliente (pregunta 32 b), hasta el último nivel publicado | `Assets/_Project/Data/Levels/seasons_v1.json` |
 | `--daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <md>] [--check] [--threads n]` | Pool del Reto del río (03 §16): un tablero por banda y día | `<carpeta>/daily_pool_v1.json` y el informe (la muestra: `tools/out/daily_sample/` y `tools/out/daily_sample_report.md`) |
-| `--self-test [tinaja\|seasons\|variants\|registry\|curation\|holgura\|daily]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
+| `--reserve <mundo_NN_v1.json> [...] --spec <campaign.json> [--variant a\|b] --out <carpeta> [--report <md>] [--check]` | La reserva del 20 % (D-033, Q-B11-7 (a); 03 §17): un pack de reserva por mundo desde el pack de campaña publicado | `Assets/_Project/Data/Levels/reserva_0N_v1.json` y `tools/out/reserve_campaign_v1.md` / `reserve_campaign_v2.md` |
+| `--self-test [tinaja\|seasons\|variants\|registry\|curation\|holgura\|reserve\|daily]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -756,6 +757,46 @@ de cada nivel 21-200 frente a `CampaignSpec.SeasonOf`, el formato, el determinis
 corte de `--until` (hasta el 200, la tabla de `campaign_v1.json`; hasta el 60, dos ciclos), la unión de dos especificaciones y
 los rechazos (también `--until` a mitad de ciclo o fuera de las especificaciones), entre ellos el fixture
 `specs/tests/seasons_invalid_letter.json` (ciclo 61 con temporada C, que también falla `--validate-spec` por SEASONS).
+
+## La reserva del 20 % (`--reserve`; D-033, añadido «la reserva del 20 %», Q-B11-7 (a))
+
+El seguro del kill switch `mech_enabled.<id>` (08 §9; D-020, pregunta 31 b) desde la 1.0: un pack de reserva por mundo
+(`reserva_{mm}_v1.json`, `kind` = `reserve`, `pack_schema` 4; 03 §10 y §17; 08 §4.1) con, para los niveles del pack de campaña
+publicado que usan una mecánica con kill switch, otro tablero del mismo slot sin mecánicas, en la ventana del slot, con
+`replaces` = el id del slot, id `m{mm}_v1_n{nnnn}_r1` y semilla `amazonfill:v1:m{mm}:v1:n{nnnn}:r1`. El cliente solo los usa
+desde `level_overrides`. Código: `Generation/ReserveRunner.cs` (también enlazado en level-qa, que lo usa para QA-RES-REPRO).
+
+```
+dotnet run --project tools/level-generator -c Release -- --reserve Assets/_Project/Data/Levels/mundo_02_v1.json Assets/_Project/Data/Levels/mundo_03_v1.json Assets/_Project/Data/Levels/mundo_04_v1.json Assets/_Project/Data/Levels/mundo_05_v1.json --spec tools/level-generator/specs/campaign_v1.json --out Assets/_Project/Data/Levels --report tools/out/reserve_campaign_v1.md
+dotnet run --project tools/level-generator -c Release -- --reserve Assets/_Project/Data/Levels/mundo_06_v1.json Assets/_Project/Data/Levels/mundo_07_v1.json Assets/_Project/Data/Levels/mundo_08_v1.json Assets/_Project/Data/Levels/mundo_09_v1.json --spec tools/level-generator/specs/campaign_v2.json --out Assets/_Project/Data/Levels --report tools/out/reserve_campaign_v2.md
+```
+
+Con `--check` no escribe y sale con 1 si algún pack del disco difiere (o si existe el de un mundo sin reserva). Unos 10 s
+(mundos 2-5) y 80 s (mundos 6-9) en el escritorio. La entrada es el pack **publicado**: si se regenera un pack de campaña, se
+regenera su reserva. `--variant` es el de la especificación (por defecto, la publicada; con la b no hay Tinaja que cubrir).
+
+Reglas [P] (las mismas que cuenta el informe):
+
+- **Tope:** el 20 % de los niveles del mundo, hacia abajo (`ReserveRunner.Cap`: 6, 8, 12, 12, 20, 24, 28 y 28 en los mundos 2-9).
+- **Qué slots:** máscara de kill switches del tablero base publicado (`attrs`; la Hoja atada cuenta como Hoja, la Flor como
+  Liana y el cucharón como Tinaja, como `MechanicSwitches` del cliente; el Barro, por la unidad 15 en `cuias`). Orden por
+  rondas sobre los kill switches de 08 §9 (hoja, matapi, liana, remolino, barro, lluvia, brote, pirana, tinaja): en cada ronda,
+  cada mecánica toma su primer nivel aún sin elegir. Un slot sin tablero válido tras 6 rondas se salta (el informe lo lista) y
+  entra el siguiente del orden.
+- **Qué tablero:** `ReserveRunner.Plan`: el plan de la especificación (rol, K, vacíos, fuente, ventana y etiqueta permitida)
+  con la celda sin mecánicas, también sin Aguas turbias (que no tienen kill switch), con sus capacidades y sin
+  `intro_mechanic`. `SlotGenerator` genera los candidatos como en la campaña, con la semilla de reserva; se elige, entre los
+  del pool (en la ventana, etiqueta permitida, contrato 6, par ≥ 2K, trampas tempranas) con el par en el objetivo del rango
+  ±30 % (QA-PAR), el de la misma etiqueta que el publicado y el `bot_fail` más cercano al suyo, y desde el 31 el primero de
+  ellos (hasta 3 por ronda) con alivio (`Relief.Compute`).
+- **Pack:** la cabecera de la campaña sin `cycle20`, `kind` `reserve` y `pack_schema` 4; cada nivel como en `PackWriter`, con
+  `replaces` tras `id` y sin `difficulty.D` (la reserva no entra en el pool del rango, 03 §7).
+
+Resultado (2026-10-21): el mundo 2 no tiene pack (solo capacidades); 132 tableros en los mundos 3-9 (8, 12, 12, 20, 24, 28 y
+28), sin saltados, 176.268 bytes en total (unos 19 KB con deflate; el AAB de ensayo con ellos mide 53,48 MB). La cobertura por mecánica de cada mundo está en los informes.
+
+`--self-test reserve`: el orden por rondas (sintético), los topes de los mundos 2-9, el plan del 43 sin la Hoja (y el de un
+nivel con capacidades, que las conserva), los ids y semillas de reserva y el mundo 3 generado dos veces con los mismos bytes.
 
 ## Reto del río (`--daily`; R2-R3 del encargo del Spark)
 

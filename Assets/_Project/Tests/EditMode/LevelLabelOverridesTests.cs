@@ -93,6 +93,7 @@ namespace AF.Tests.EditMode
             Assert.That(copy.World, Is.EqualTo(source.World));
             Assert.That(copy.WaterBase, Is.EqualTo(source.WaterBase));
             Assert.That(copy.Par, Is.EqualTo(source.Par));
+            Assert.That(copy.Replaces, Is.EqualTo(source.Replaces), "el slot que sustituye (reserva), igual");
             Assert.That(copy.Band, Is.EqualTo(source.Band));
             Assert.That(copy.IntroMechanic, Is.EqualTo(source.IntroMechanic));
             Assert.That(copy.Skippable, Is.EqualTo(source.Skippable));
