@@ -1,13 +1,13 @@
 diff --git a/Assets/_Project/Scripts/UI/AF.UI.asmdef b/Assets/_Project/Scripts/UI/AF.UI.asmdef
-index b9026c64..2535baf3 100644
+index 59f6b41a..b1ef46ef 100644
 --- a/Assets/_Project/Scripts/UI/AF.UI.asmdef
 +++ b/Assets/_Project/Scripts/UI/AF.UI.asmdef
-@@ -29,7 +29,9 @@
-     "AF.Backend",
+@@ -30,7 +30,9 @@
      "AF.Backend.Unity",
      "AF.Analytics.Firebase",
--    "AF.RemoteConfig.Firebase"
-+    "AF.RemoteConfig.Firebase",
+     "AF.RemoteConfig.Firebase",
+-    "AF.Platform.Notifications"
++    "AF.Platform.Notifications",
 +    "AF.IAP.UnityIap",
 +    "AF.Backend.Firebase"
    ],
@@ -211,10 +211,10 @@ index 6e57ecc3..71cc77b0 100644
              {
                  Debug.LogWarning(LogPrefix + "restoreLedger: " + report.Error);
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
-index 8a141fcd..2023d740 100644
+index e40a984a..a62ff500 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
-@@ -206,7 +206,8 @@ private void SetUpConsent(IClock clock, IConsentStore store)
+@@ -207,7 +207,8 @@ private void SetUpConsent(IClock clock, IConsentStore store)
              if (_consentStore != null)
              {
                  _consentStore.Confirmation = _consentScreen; // Q-T4 (a): la segunda confirmación con 13-17
@@ -224,7 +224,7 @@ index 8a141fcd..2023d740 100644
              }
          }
  
-@@ -266,6 +267,7 @@ private void FinishConsentAtBoot()
+@@ -267,6 +268,7 @@ private void FinishConsentAtBoot()
  
              _consentScreen?.Hide();
              ProbeConsent();
@@ -233,13 +233,13 @@ index 8a141fcd..2023d740 100644
  
          // <13 (en el arranque o al corregir la edad en Ajustes): el bloqueo a la vista y la escena se recarga, como al cambiar de idioma
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
-index 9cc0f324..bc3878b0 100644
+index ed70ef25..420ca6e8 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
-@@ -2274,6 +2274,7 @@ private void OnDestroy()
-         {
+@@ -2278,6 +2278,7 @@ private void OnDestroy()
              CutSplash();
              PersistNow("destruir la escena");
+             ClearA11y(); // B9: TalkBack no se queda con los nodos de esta escena (recarga por idioma o por borrar la cuenta)
 +            DisposeBilling(); // D-040: la tienda de Play de esta escena suelta Unity IAP (GameBootstrap.Backend.cs)
  
              // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global

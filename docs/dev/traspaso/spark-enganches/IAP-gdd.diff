@@ -1,5 +1,5 @@
 diff --git a/docs/gdd/08-arquitectura-tecnica-publicacion.md b/docs/gdd/08-arquitectura-tecnica-publicacion.md
-index 9168a932..f53dcc4e 100644
+index 1bae8ace..64b29f48 100644
 --- a/docs/gdd/08-arquitectura-tecnica-publicacion.md
 +++ b/docs/gdd/08-arquitectura-tecnica-publicacion.md
 @@ -514,7 +514,7 @@ ## 7. Lista de SDKs
@@ -27,5 +27,5 @@ index 9168a932..f53dcc4e 100644
 -| Unity IAP / Play Billing | Historial de compras (token) | Funcionalidad | Procesado por Google Play | Gestionado por Google Play |
 +| Unity IAP / Play Billing (D-040; permiso `com.android.vending.BILLING`) | Historial de compras (token); UID anónimo como `obfuscatedAccountId` en Google Play (sección 10.1). Además, Unity IAP 5.4.4 envía a Unity (Insights) en cada compra el SKU, el precio, el token, el modelo, el sistema y los idiomas del dispositivo, el espacio total, la hora de instalación, el id de la app y su versión, sin ID de publicidad mientras no haya consentimiento de anuncios de Unity [E, leído en el código del paquete; pendiente de decisión y del abogado: Q-IAP-1 de `docs/dev/iap.md`] | Funcionalidad; en Unity, informes de ingresos | Procesado por Google Play; Unity (pendiente de Q-IAP-1) | Gestionado por Google Play; lo enviado a Unity, según Unity [pendiente de Q-IAP-1] |
  | Play Games Services | ID de jugador, datos de partida guardada | Funcionalidad | No | **En app y web**: el cliente borra el snapshot `af_main`; el jugador puede además borrar su perfil de Play Games |
- | Unity Mobile Notifications | Ninguno (local) | — | — | — |
+ | Unity Mobile Notifications 2.4.3 | Ninguno: avisos locales programados en el teléfono, con el texto ya redactado y su tipo (`daily_ready`…); nada sale del dispositivo. Permiso `POST_NOTIFICATIONS` (Android 13+, D-033 Q-M5), pedido solo tras «Avísame» o desde Ajustes; alarmas inexactas, sin `SCHEDULE_EXACT_ALARM` ni `RECEIVE_BOOT_COMPLETED`. Con <13, ninguno | Funcionalidad (06 §8) | No | Al apagarlos en Ajustes o en el teléfono se cancelan; al desinstalar desaparecen |
  | Firebase Messaging (solo 1.2) | Token FCM | Funcionalidad (push remoto) | No | Con la cuenta; token eliminado en `deleteAccount` |
