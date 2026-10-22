@@ -46,6 +46,39 @@ namespace AF.UI
                 .Add("world", world));
         }
 
+        /// <summary>
+        /// <c>af_label_shown</c> (08 §8.2; cierre de B11): la etiqueta Difícil o Muy difícil (<paramref name="label"/>, <c>hard</c> o
+        /// <c>very_hard</c>) que se mostró al cargar el nivel, y de dónde vino (<paramref name="relabeled"/>: <c>override</c>, la de
+        /// <c>lvl_label_override</c>; si no, <c>pack</c>). Con <c>normal</c> no hay etiqueta a la vista y no se envía nada.
+        /// </summary>
+        public static void LabelShown(AnalyticsService? analytics, string label, bool relabeled)
+        {
+            if (!string.Equals(label, LevelDefinition.LabelHard, StringComparison.Ordinal)
+                && !string.Equals(label, LevelDefinition.LabelVeryHard, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            analytics?.Log(AnalyticsEvent.Create("af_label_shown")
+                .Add("label", label)
+                .Add("source", relabeled ? LabelSourceOverride : LabelSourcePack));
+        }
+
+        /// <summary><c>source</c> de <c>af_label_shown</c> con la etiqueta del paquete (08 §8.2).</summary>
+        public const string LabelSourcePack = "pack";
+
+        /// <summary><c>source</c> de <c>af_label_shown</c> con la etiqueta de <c>lvl_label_override</c> (08 §8.2).</summary>
+        public const string LabelSourceOverride = "override";
+
+        /// <summary>
+        /// <c>af_no_canoes_choice</c> (04 §11; 08 §8.2; cierre de B11): la elección del jugador en Sin canoas, <c>choice</c> ∈
+        /// {<c>wait</c>, <c>ad</c>, <c>seeds_refill</c>, <c>iap_infinite</c>, <c>daily_challenge</c>, <c>map</c>}.
+        /// </summary>
+        public static void NoCanoesChoice(AnalyticsService? analytics, string choice)
+        {
+            analytics?.Log(AnalyticsEvent.Create("af_no_canoes_choice").Add("choice", choice));
+        }
+
         /// <summary><c>af_map_close</c>: lo que se hizo en el Mapa.</summary>
         public static void MapClose(AnalyticsService? analytics, in MapCloseStats stats)
         {

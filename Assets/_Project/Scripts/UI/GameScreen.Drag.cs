@@ -14,16 +14,19 @@ namespace AF.UI
     /// X baja (sin C5) [P]. Soltar sobre el fondo, sobre otra cosa o sin
     /// moverse lo bastante cancela, como antes. Los 24 dp son del lienzo (360 dp de ancho, como todo el layout; Q-B11-5). Lo llama <c>OnCuiaUp</c> al soltar fuera de X (parche B11-drag), con las
     /// posiciones del puntero que guarda <see cref="CuiaView"/> en el touch-down y el touch-up (el parche se las añade). Interruptor
-    /// <c>drag_pour_enabled</c> (08 §9, default true): <see cref="DragPourEnabled"/>; aún sin enlace a Remote Config, como
-    /// <c>tap_switch_selection</c> (<c>GameConfig.TapSwitchSelection</c>).
+    /// <c>drag_pour_enabled</c> (08 §9, default true): <see cref="DragPourEnabled"/>, el valor de Remote Config del arranque
+    /// (<c>RcConfigs.DragPourEnabled</c>, <c>RcGameplayBinder</c>; cierre de B11).
     /// </summary>
     public sealed partial class GameScreen
     {
         /// <summary>Solo tests: fuerza <c>drag_pour_enabled</c> (null = el default de 08 §9).</summary>
         internal static bool? DragPourOverride { get; set; }
 
-        /// <summary><c>drag_pour_enabled</c> en esta partida (08 §9; C10).</summary>
-        internal static bool DragPourEnabled => DragPourOverride ?? DragPour.EnabledDefault;
+        /// <summary>
+        /// <c>drag_pour_enabled</c> en esta partida (08 §9; C10): el del test, si no el de Remote Config del arranque
+        /// (<see cref="GameBootstrap.ActiveRcConfigs"/>) y, sin arranque, el default de 08 §9.
+        /// </summary>
+        internal static bool DragPourEnabled => DragPourOverride ?? GameBootstrap.ActiveRcConfigs?.DragPourEnabled ?? DragPour.EnabledDefault;
 
         /// <summary>El último soltar fuera de la cuia pulsada que se tomó como arrastre (tests).</summary>
         internal int LastDragSource { get; private set; } = -1;

@@ -27,9 +27,24 @@ namespace AF.UI
         public static bool TryChoose(BoardState state, PourMode mode, bool futileRule, AStarSolver solver, out Pour pour)
         {
             pour = default;
-            if (state == null || state.IsWon() || LessonLegal(state, mode))
+            if (state == null || LessonLegal(state, mode))
             {
                 return false; // con la lección ya legal no hay paso previo (la señala TutorialFinger.TryChoose)
+            }
+
+            return TryChooseWhileIllegal(state, mode, futileRule, solver, out pour);
+        }
+
+        /// <summary>
+        /// Como <see cref="TryChoose"/>, cuando quien llama ya comprobó que la lección no es legal (<see cref="LessonLegal"/> false):
+        /// así <c>GameScreen.TickTutorialFinger</c> no la comprueba dos veces (sugerencia de la revisión del Spark de B11).
+        /// </summary>
+        internal static bool TryChooseWhileIllegal(BoardState state, PourMode mode, bool futileRule, AStarSolver solver, out Pour pour)
+        {
+            pour = default;
+            if (state.IsWon())
+            {
+                return false;
             }
 
             SolverOptions options = SolverOptions.ForPipeline(mode).WithFutileRule(futileRule).ForLevel(state);

@@ -109,6 +109,63 @@ namespace AF.RemoteConfig.Tests
         }
 
         [Test]
+        public void TheB11Values_AreTheirDefaults_WithTheCompiledDefaults()
+        {
+            // Cierre de B11 (nota tutorial-b11 §3): drag_pour_enabled = true y lvl_label_override = {} (08 §9).
+            RcConfigs c = RcConfigBinder.Bind(new RemoteConfigService(), "1.0");
+            Assert.That(c.DragPourEnabled, Is.EqualTo(DragPour.EnabledDefault));
+            Assert.That(c.DragPourEnabled, Is.True);
+            Assert.That(c.LevelLabels.Count, Is.EqualTo(0));
+            Assert.That(RcGameplayBinder.Keys, Is.EqualTo(new[] { "drag_pour_enabled", "lvl_label_override", "lvl_labels_from_level", "lvl_very_hard_from_level" }));
+            foreach (string key in RcGameplayBinder.Keys)
+            {
+                Assert.That(RemoteConfigDefaults.Compiled.Find(key), Is.Not.Null, key + " está en 08 §9");
+            }
+        }
+
+        [Test]
+        public void TheB11Values_ReadTheirKeys()
+        {
+            RcConfigs c = Bind(
+                "drag_pour_enabled", "false",
+                "lvl_label_override", "{\"57\":\"very_hard\",\"41\":\"hard\",\"120\":\"normal\"}");
+            Assert.That(c.Errors, Is.Empty, string.Join(" | ", c.Errors));
+            Assert.That(c.DragPourEnabled, Is.False);
+            Assert.That(c.LevelLabels.Levels, Is.EqualTo(new[] { 41, 57, 120 }));
+            Assert.That(c.LevelLabels.TryGet(57, out string label57), Is.True);
+            Assert.That(label57, Is.EqualTo(AF.Levels.LevelDefinition.LabelVeryHard));
+            Assert.That(c.LevelLabels.TryGet(120, out string label120), Is.True);
+            Assert.That(label120, Is.EqualTo(AF.Levels.LevelDefinition.LabelNormal));
+        }
+
+        [Test]
+        public void TheLabelTable_UsesTheFirstLevelOfEachLabel_FromRemoteConfig()
+        {
+            // lvl_labels_from_level / lvl_very_hard_from_level (08 §9): con 45 y 70, «hard» en el 41 y «very_hard» en el 65 no valen.
+            RcConfigs c = Bind(
+                "lvl_labels_from_level", "45",
+                "lvl_very_hard_from_level", "70",
+                "lvl_label_override", "{\"41\":\"hard\",\"65\":\"very_hard\",\"50\":\"hard\"}");
+            Assert.That(c.LevelLabels.Levels, Is.EqualTo(new[] { 50 }));
+            Assert.That(c.Errors.Count, Is.EqualTo(2), string.Join(" | ", c.Errors));
+            Assert.That(string.Join(" | ", c.Errors), Does.Contain("lvl_labels_from_level = 45").And.Contain("lvl_very_hard_from_level = 70"));
+        }
+
+        [Test]
+        public void TheB11Values_Unreadable_FallBackToTheirDefaults_WithoutBreakingTheRest()
+        {
+            RcConfigs c = Bind(
+                "lvl_label_override", "[1,2]",
+                "eco_reward_hard", "70");
+            Assert.That(c.DragPourEnabled, Is.True);
+            Assert.That(c.LevelLabels.Count, Is.EqualTo(0), "un JSON que no es un objeto deja {} (08 §9)");
+            Assert.That(c.Economy.EcoRewardHard, Is.EqualTo(70), "lo demás se lee igual");
+            Assert.That(string.Join(" | ", c.Errors), Does.Contain("lvl_label_override"));
+            Assert.Throws<ArgumentNullException>(() => RcGameplayBinder.DragPourEnabled(null!));
+            Assert.Throws<ArgumentNullException>(() => RcGameplayBinder.LevelLabels(null!));
+        }
+
+        [Test]
         public void TheBackendSwitch_ReadsBizBackendEnabled()
         {
             Assert.That(Bind("biz_backend_enabled", "false").BackendSwitch.BizBackendEnabled, Is.False);

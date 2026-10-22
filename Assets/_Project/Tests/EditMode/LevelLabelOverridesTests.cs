@@ -78,12 +78,15 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Relabel_ChangesOnlyTheLabel()
+        public void WithLabel_ChangesOnlyTheLabel()
         {
             LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
             LevelDefinition source = catalog.Find(118)!; // reto Difícil con Remolino y Hoja y su alivio (03 §13)
             Assert.That(source.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelHard));
-            LevelDefinition copy = LevelLabelOverrides.Relabel(source, LevelDefinition.LabelNormal);
+            LevelDefinition copy = source.WithLabel(LevelDefinition.LabelNormal);
+            Assert.That(copy, Is.Not.SameAs(source));
+            Assert.That(source.WithLabel(LevelDefinition.LabelHard), Is.SameAs(source), "la misma etiqueta: el mismo nivel");
+            Assert.Throws<System.ArgumentException>(() => source.WithLabel("facil"));
             Assert.That(copy.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelNormal));
             Assert.That(copy.Id, Is.EqualTo(source.Id));
             Assert.That(copy.Level, Is.EqualTo(source.Level));
@@ -107,12 +110,12 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Relabel_KeepsTheHiddenDosesOfMurkyLevels()
+        public void WithLabel_KeepsTheHiddenDosesOfMurkyLevels()
         {
             LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
             LevelDefinition murky = catalog.Find(100)!; // estreno de Aguas turbias (02 §11)
             Assert.That(murky.IsMurky, Is.True);
-            LevelDefinition copy = LevelLabelOverrides.Relabel(murky, LevelDefinition.LabelHard);
+            LevelDefinition copy = murky.WithLabel(murky.DifficultyLabel == LevelDefinition.LabelHard ? LevelDefinition.LabelVeryHard : LevelDefinition.LabelHard);
             Assert.That(copy.IsMurky, Is.True);
             Assert.That(copy.HiddenCount, Is.EqualTo(murky.HiddenCount));
             for (int i = 0; i < murky.HiddenCount; i++)

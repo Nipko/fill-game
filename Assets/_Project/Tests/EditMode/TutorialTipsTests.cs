@@ -74,6 +74,11 @@ namespace AF.Tests.EditMode
             Assert.That(TutorialFinger.TryChoose(FingerLesson.PartialRun, start, PourMode.Run, true, solver, out _), Is.False,
                 "al empezar, la lección no es legal (prueba en el teléfono del 2026-10-20, observación 3)");
             Assert.That(TutorialFingerSetup.TryChoose(start, PourMode.Run, true, solver, out Pour setup), Is.True);
+            Assert.That(TutorialFingerSetup.LessonLegal(start, PourMode.Run), Is.False);
+            Assert.That(TutorialFingerSetup.TryChooseWhileIllegal(start, PourMode.Run, true, solver, out Pour same), Is.True,
+                "la variante sin la comprobación repetida (la que usa GameScreen) elige lo mismo");
+            Assert.That(same.Source, Is.EqualTo(setup.Source));
+            Assert.That(same.Target, Is.EqualTo(setup.Target));
             Assert.That(PourRules.IsLegal(start, setup.Source, setup.Target), Is.True);
             BoardState next = PourRules.Apply(start, setup.Source, setup.Target, PourMode.Run);
             Assert.That(TutorialFinger.TryChoose(FingerLesson.PartialRun, next, PourMode.Run, true, solver, out Pour lesson), Is.True);

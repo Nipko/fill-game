@@ -311,7 +311,7 @@ namespace AF.UI
 
         /// <summary>
         /// «Mientras esperas: Jugar el Reto del río» de Sin canoas (E7): registra <c>af_no_canoes_choice</c> con
-        /// <c>choice = daily_challenge</c> (04 §11; 08 §8.2; hasta <c>AF.Analytics</c>, la sonda <c>AF_STATE no_canoes_choice</c>),
+        /// <c>choice = daily_challenge</c> (04 §11; 08 §8.2; con la sonda <c>AF_STATE no_canoes_choice</c>),
         /// cierra Sin canoas por el camino de «Volver al inicio» (<see cref="PressNoCanoesHome"/>: desde el inicio, al inicio;
         /// desde un nivel, sale al inicio como ese botón) y abre el tablero de hoy como la tarjeta. Devuelve si se abrió; con el
         /// Reto no disponible (<see cref="NoCanoesDailyAvailable"/>) o sin Sin canoas delante, no hace nada.
@@ -338,14 +338,14 @@ namespace AF.UI
 
             // La elección se registra cuando Sin canoas ya se cerró por su camino (revisión de T1).
             DevProbe.DailyNoCanoesChoice();
-            LastNoCanoesChoice = DailyProbeFormat.NoCanoesDailyChoice;
+            TrackNoCanoesChoice(DailyProbeFormat.NoCanoesDailyChoice); // af_no_canoes_choice (cierre de B11)
 
             _dailyCardShown = false;
             RefreshDailyCard();
             return OpenDaily(state);
         }
 
-        /// <summary>Última elección de Sin canoas registrada por el Reto (<c>daily_challenge</c>), o null (tests).</summary>
+        /// <summary>Última elección de Sin canoas (<c>af_no_canoes_choice</c>: <c>wait</c>, <c>ad</c>, <c>seeds_refill</c>, <c>iap_infinite</c>, <c>daily_challenge</c> o <c>map</c>), o null (tests).</summary>
         public string? LastNoCanoesChoice { get; private set; }
 
         private void OnDailyDayEnded(DailyPlayEnd end)

@@ -76,6 +76,12 @@ namespace AF.UI
 
             /// <summary>Botón para cerrar la libreta (la casilla, si no se eligió, queda pendiente).</summary>
             public const string Close = "logbook_close";
+
+            /// <summary>
+            /// La fila «Bitácora · elige tu premio» del panel de la victoria (D-033, añadido del 2026-10-20, punto 5; cierre de B11): abre
+            /// la libreta encima de la victoria.
+            /// </summary>
+            public const string VictoryRow = "logbook_victory_row";
         }
 
         /// <summary>Las claves nuevas (filas de <c>B4-strings.csv</c>).</summary>
@@ -83,11 +89,14 @@ namespace AF.UI
         {
             Keys.Title, Keys.Intro, Keys.Footer, Keys.StatusPlay, Keys.StatusReady, Keys.StatusChoose, Keys.StatusSealed,
             Keys.CardReady, Keys.CardPlay, Keys.CardSealed, Keys.ItemSeeds, Keys.ItemUndo, Keys.ItemHint, Keys.ItemReveal,
-            Keys.ItemExtraCuia, Keys.ItemBasket, Keys.ItemGrandBasket, Keys.ItemFrame, Keys.Continue, Keys.Close,
+            Keys.ItemExtraCuia, Keys.ItemBasket, Keys.ItemGrandBasket, Keys.ItemFrame, Keys.Continue, Keys.Close, Keys.VictoryRow,
         };
 
         /// <summary>«Bitácora del río».</summary>
         public static string Title => Loc.T(Keys.Title);
+
+        /// <summary>«Bitácora · elige tu premio» (la fila del panel de la victoria).</summary>
+        public static string VictoryRow => Loc.T(Keys.VictoryRow);
 
         /// <summary>«Cada día que juegues, sella una página».</summary>
         public static string Intro => Loc.T(Keys.Intro);

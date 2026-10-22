@@ -300,14 +300,35 @@ namespace AF.UI
         /// <summary>«Canoas infinitas 1 h» (compra simulada).</summary>
         bool PressInfiniteCanoes();
 
-        /// <summary>«Volver al inicio» de Sin canoas.</summary>
+        /// <summary>
+        /// Cierra Sin canoas por el camino de «Volver al inicio» (desde el nivel o desde el inicio): el que usan «Volver al Mapa del
+        /// río» y «Jugar el Reto del río»; no es una elección de <c>af_no_canoes_choice</c>.
+        /// </summary>
         bool PressNoCanoesHome();
+
+        /// <summary>
+        /// «Volver al Mapa del río» de Sin canoas (04 §7.3; tarea B11): cierra Sin canoas al inicio y abre el Mapa encima;
+        /// <c>af_no_canoes_choice</c> con <c>choice = map</c>. False sin Sin canoas delante.
+        /// </summary>
+        bool PressNoCanoesMap();
 
         /// <summary>X de Sin canoas: vuelve a donde se abrió.</summary>
         bool PressNoCanoesClose();
 
         /// <summary>Pausa › «Salir», ya confirmado desde el 31.</summary>
         bool PressQuit();
+
+        /// <summary>
+        /// La victoria de hoy lleva la fila «Bitácora · elige tu premio» (D-033, añadido del 2026-10-20, punto 5): la casilla de hoy de
+        /// la Bitácora se puede sellar. Sin asignaciones (se lee en cada fotograma de la victoria).
+        /// </summary>
+        bool LogbookVictoryRowDue { get; }
+
+        /// <summary>
+        /// La fila «Bitácora · elige tu premio» de la victoria: abre la libreta encima y, al cerrarla, vuelve a la victoria. False si
+        /// la Bitácora no existe para el jugador o ya está abierta.
+        /// </summary>
+        bool OpenLogbookFromVictory();
 
         /// <summary>
         /// Abre el Mapa del río (D-013; 06 §4.7; tarea M3.3) desde <paramref name="source"/>, en la vista Mundo. False si no hay

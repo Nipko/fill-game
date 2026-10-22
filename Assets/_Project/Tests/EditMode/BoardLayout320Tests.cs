@@ -79,5 +79,37 @@ namespace AF.Tests.EditMode
                 }
             }
         }
+
+        // ------------------------------------------------------------------------------------- la escala del lienzo (Q-B11-5 (a))
+
+        [Test]
+        public void CanvasScale_From320To360PhysicalDp_TheCanvasIsThePhone_With1PhysicalDpPerDp()
+        {
+            // Q-B11-5 (a) (D-033, añadido de B11): entre 320 y 360 dp físicos, 1 dp físico por dp de lienzo.
+            Assert.That(GameScreen.CanvasScale(720, 1520, 2.25f), Is.EqualTo(2.25f).Within(1e-5f), "320 dp (720 px a 2,25 px/dp)");
+            Assert.That(720f / GameScreen.CanvasScale(720, 1520, 2.25f), Is.EqualTo(320f).Within(0.01f));
+            Assert.That(GameScreen.CanvasScale(1020, 2200, 3f), Is.EqualTo(3f).Within(1e-5f), "340 dp: 340 × 733 dp");
+            Assert.That(1020f / GameScreen.CanvasScale(1020, 2200, 3f), Is.EqualTo(340f).Within(0.01f));
+        }
+
+        [Test]
+        public void CanvasScale_From360Up_IsAsBefore_AndBelow320_TheCanvasIs320()
+        {
+            Assert.That(GameScreen.CanvasScale(1080, 2340, 3f), Is.EqualTo(GameScreen.CanvasScale(1080, 2340)).Within(1e-5f), "360 dp, como siempre");
+            Assert.That(GameScreen.CanvasScale(1236, 2745, 3f), Is.EqualTo(1236f / 360f).Within(1e-5f), "412 dp (SM-S938B): 360 dp de lienzo");
+            Assert.That(GameScreen.CanvasScale(600, 1300, 2f), Is.EqualTo(600f / 320f).Within(1e-5f), "300 dp: el lienzo mide 320");
+            Assert.That(GameScreen.CanvasScale(720, 1520, 0f), Is.EqualTo(2f).Within(1e-5f), "sin densidad, 360 dp como antes");
+            Assert.That(GameScreen.CanvasScale(720, 1520, -1f), Is.EqualTo(2f).Within(1e-5f));
+        }
+
+        [Test]
+        public void CanvasScale_At320_KeepsTheMinimumHeightOf640()
+        {
+            // 320 dp en 16:9 (720 × 1280 px a 2,25 px/dp = 320 × 569 dp): manda el alto (D-028; D-032, punto 5), 640 dp.
+            float k = GameScreen.CanvasScale(720, 1280, 2.25f);
+            Assert.That(1280f / k, Is.EqualTo(GameScreen.MinHeight).Within(0.01f));
+            Assert.That(720f / k, Is.EqualTo(360f).Within(0.01f), "y el ancho vuelve a 360");
+            Assert.That(GameScreen.MinWidth, Is.EqualTo(320f));
+        }
     }
 }

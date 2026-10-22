@@ -207,14 +207,14 @@ namespace AF.UI
         {
             float budget = VictoryPanelBudgetDp;
             _victoryBarsDropped = false;
-            _victoryBars.ForceHalf = false;
-            int level = CompactStepFor(budget);
-            if (level > 0 && VictoryBarsPossible)
+            _victoryBars.LogbookSuppressed = false;
+            int level = CompactStepWithBars(budget);
+            if (level >= VictoryCompactRow && _victoryBars.Plan.Logbook)
             {
-                // Antes de compactar lo demás, la Crecida y la Canasta en una fila, a media anchura [P] (tarea B1b): así 360 × 780 no
-                // compacta (D-032, punto 2) y en 16:9 se compacta lo menos posible; desde el escalón 2 ya van así (D-033, punto 10).
-                _victoryBars.ForceHalf = true;
-                level = CompactStepFor(budget);
+                // La fila de la Bitácora (GameScreen.LogbookRow.cs) en el escalón 3 iría tras el chevron (D-033, punto 10): no sale y
+                // el escalón se elige sin ella [P]; la libreta sale sola al volver al inicio (D-033, punto 5).
+                _victoryBars.LogbookSuppressed = true;
+                level = CompactStepWithBars(budget);
             }
 
             if (WorstPanelDp(level) > budget + 0.01f && VictoryBarsPossible)
@@ -226,6 +226,22 @@ namespace AF.UI
             }
 
             ApplyVictoryCompact(level);
+            return level;
+        }
+
+        // El escalón con las barras de la Crecida y la Canasta: antes de compactar lo demás, en una fila, a media anchura [P] (tarea
+        // B1b): así 360 × 780 no compacta (D-032, punto 2) y en 16:9 se compacta lo menos posible; desde el escalón 2 ya van así
+        // (D-033, punto 10).
+        private int CompactStepWithBars(float budget)
+        {
+            _victoryBars.ForceHalf = false;
+            int level = CompactStepFor(budget);
+            if (level > 0 && VictoryBarsPossible)
+            {
+                _victoryBars.ForceHalf = true;
+                level = CompactStepFor(budget);
+            }
+
             return level;
         }
 

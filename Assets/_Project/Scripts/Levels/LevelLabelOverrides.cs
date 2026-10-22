@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using AF.Core.Mechanics;
 using AF.Levels.Json;
 
 namespace AF.Levels
@@ -170,7 +169,7 @@ namespace AF.Levels
         /// <summary>
         /// Los niveles servidos <paramref name="served"/> (con su número de campaña en <paramref name="numbers"/>, en el mismo
         /// orden) con la etiqueta de esta tabla. Si ninguno cambia, devuelve el mismo array; si no, una copia con los niveles
-        /// reetiquetados (<see cref="Relabel"/>). Solo al crear el catálogo.
+        /// reetiquetados (<see cref="LevelDefinition.WithLabel"/>). Solo al crear el catálogo.
         /// </summary>
         /// <exception cref="ArgumentException">Los dos arrays no tienen la misma longitud.</exception>
         public LevelDefinition[] Apply(LevelDefinition[] served, int[] numbers)
@@ -194,73 +193,10 @@ namespace AF.Levels
                 }
 
                 result ??= (LevelDefinition[])served.Clone();
-                result[i] = Relabel(served[i], label);
+                result[i] = served[i].WithLabel(label);
             }
 
             return result ?? served;
-        }
-
-        /// <summary>
-        /// Copia de <paramref name="level"/> con la etiqueta <paramref name="label"/>: el mismo tablero, las mismas variantes de
-        /// alivio y los mismos datos del paquete; solo cambia <see cref="LevelDefinition.DifficultyLabel"/>.
-        /// </summary>
-        public static LevelDefinition Relabel(LevelDefinition level, string label)
-        {
-            if (level == null)
-            {
-                throw new ArgumentNullException(nameof(level));
-            }
-
-            string canonical = CanonicalLabel(label) ?? throw new ArgumentException("Etiqueta desconocida: " + label, nameof(label));
-            int count = level.CuiaCount;
-            var caps = new int[count];
-            var cuias = new int[count][];
-            var attrs = new MechanicSpec[count];
-            for (int i = 0; i < count; i++)
-            {
-                caps[i] = level.CapacityOf(i);
-                cuias[i] = level.CopyDoses(i);
-                attrs[i] = level.Attrs[i];
-            }
-
-            var palette = new string[level.Palette.Count];
-            for (int i = 0; i < palette.Length; i++)
-            {
-                palette[i] = level.Palette[i];
-            }
-
-            var hidden = new int[level.Hidden.Count][];
-            for (int i = 0; i < hidden.Length; i++)
-            {
-                hidden[i] = (int[])level.Hidden[i].Clone();
-            }
-
-            var relief = new ReliefBoard[level.Relief.Count];
-            for (int i = 0; i < relief.Length; i++)
-            {
-                relief[i] = level.Relief[i];
-            }
-
-            return new LevelDefinition(
-                level.Id,
-                level.Level,
-                level.World,
-                level.WaterBase,
-                palette,
-                level.Units,
-                caps,
-                cuias,
-                attrs,
-                level.HasHiddenDoses,
-                hidden.Length == 0 ? null : hidden,
-                level.Par,
-                canonical,
-                relief,
-                level.IntroMechanic,
-                level.Skippable,
-                level.HintSupported,
-                level.Band,
-                level.ParApprox);
         }
 
         // Una de las tres etiquetas de difficulty.label (08 §4.1), con la cadena canónica; null si no lo es.

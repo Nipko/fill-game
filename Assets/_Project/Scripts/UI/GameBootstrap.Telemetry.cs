@@ -79,13 +79,15 @@ namespace AF.UI
             ActiveRcConfigs = null;
         }
 
-        private void SetUpTelemetry(IClock clock)
+        // Remote Config y las cifras enlazadas (08 §2.3: RC.LoadDefaults(); RC.ActivateCached(); RC.FetchAsync), al principio de Start,
+        // antes de cargar el catálogo de niveles (que aplica lvl_label_override; cierre de B11). Una vez por escena: SetUpTelemetry
+        // no lo repite.
+        private void SetUpRemoteConfig(IClock clock)
         {
-            _telemetryClock = clock;
-            _events = new EventBus
+            if (_rc != null)
             {
-                HandlerFailed = (type, e) => Debug.LogError(LogPrefix + "Un oyente de " + type.Name + " falló: " + e.Message),
-            };
+                return;
+            }
 
             IRemoteConfigBackend rcBackend = RemoteConfigBackendOverride ?? RemoteConfigBackends.CreateDefault(RemoteConfigDefaults.Compiled);
             _rc = new RemoteConfigService(null, rcBackend);
@@ -110,10 +112,21 @@ namespace AF.UI
             {
                 Debug.LogWarning(LogPrefix + "Remote Config: " + _rcConfigs.Errors[i]);
             }
+        }
 
+        private void SetUpTelemetry(IClock clock)
+        {
+            _telemetryClock = clock;
+            _events = new EventBus
+            {
+                HandlerFailed = (type, e) => Debug.LogError(LogPrefix + "Un oyente de " + type.Name + " falló: " + e.Message),
+            };
+
+            SetUpRemoteConfig(clock); // ya hecho al principio de Start; aquí solo si alguien llama sin él
             SetCrashReporting(true); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono. <13: BlockedAtBoot lo apaga (B12)
             s_session ??= new SessionTracker(clock.UtcNow);
             _analytics = new AnalyticsService(_events, new CommonSource(this));
+            _events.Subscribe<LevelStarted>(OnLevelStartedLabel); // af_label_shown, tras level_start (cierre de B11)
             _analytics.AddSink(new LogcatAnalyticsSink());
             IAnalyticsSink? firebaseSink = FirebaseAnalyticsSink.TryCreate(); // null en el editor y sin google-services.json
             if (firebaseSink != null)
@@ -196,6 +209,15 @@ namespace AF.UI
             {
                 session.Resume(clock.UtcNow);
             }
+        }
+
+        // af_label_shown (08 §8.2; cierre de B11): con cada intento de un nivel de campaña Difícil o Muy difícil (el chip a la vista
+        // al cargar el nivel, 02 §10), justo tras level_start; source = override si la etiqueta es de lvl_label_override
+        // (LevelCatalog.IsRelabeled), si no pack. El Reto no publica LevelStarted.
+        private void OnLevelStartedLabel(LevelStarted e)
+        {
+            LevelCatalog? catalog = _app?.Catalog;
+            UiAnalytics.LabelShown(_analytics, e.Difficulty, catalog != null && catalog.IsRelabeled(e.Level));
         }
 
         private void TrackMapOpen(MapOpenSource source, RiverStop? stop, int world)

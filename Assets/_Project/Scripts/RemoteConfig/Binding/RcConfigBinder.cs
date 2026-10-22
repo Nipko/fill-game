@@ -258,6 +258,8 @@ namespace AF.RemoteConfig.Binding
                 LoginCalendar = calendar,
                 BackendSwitch = new RcBackendSwitch(rc),
                 Consent = consent,
+                DragPourEnabled = RcGameplayBinder.DragPourEnabled(rc, errors), // B11: C10 (RcGameplayBinder)
+                LevelLabels = RcGameplayBinder.LevelLabels(rc, errors), // B11: lvl_label_override
             };
         }
 
@@ -535,6 +537,12 @@ namespace AF.RemoteConfig.Binding
 
         /// <summary>Bitácora del río (B4).</summary>
         public LoginCalendarConfig LoginCalendar { get; internal set; } = LoginCalendarConfig.Defaults;
+
+        /// <summary><c>drag_pour_enabled</c> (C10, el arrastre; 08 §9; B11; <see cref="RcGameplayBinder"/>).</summary>
+        public bool DragPourEnabled { get; internal set; } = AF.GameFlow.DragPour.EnabledDefault;
+
+        /// <summary><c>lvl_label_override</c> ya leída (08 §9; B11; <see cref="RcGameplayBinder"/>): la aplica el catálogo de niveles.</summary>
+        public AF.Levels.LevelLabelOverrides LevelLabels { get; internal set; } = AF.Levels.LevelLabelOverrides.Empty;
 
         /// <summary><c>biz_backend_enabled</c> de estos valores (<see cref="RcBackendSwitch"/>; B7 y F3-5).</summary>
         public IBackendSwitch BackendSwitch { get; internal set; } = new AF.IAP.BackendSwitch();

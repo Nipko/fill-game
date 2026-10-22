@@ -276,6 +276,29 @@ namespace AF.Levels
             return false;
         }
 
+        /// <summary>
+        /// Este nivel con la etiqueta <paramref name="label"/> (<c>lvl_label_override</c>, 08 §9; tarea B11): el mismo tablero, las
+        /// mismas variantes de alivio y los mismos datos del paquete; solo cambia <see cref="DifficultyLabel"/>. Comparte los arrays
+        /// del original, que nunca cambian (la clase es inmutable). Con la misma etiqueta devuelve este mismo nivel.
+        /// </summary>
+        /// <exception cref="ArgumentException"><paramref name="label"/> no es <see cref="LabelNormal"/>, <see cref="LabelHard"/> ni
+        /// <see cref="LabelVeryHard"/>.</exception>
+        public LevelDefinition WithLabel(string label)
+        {
+            string canonical = string.Equals(label, LabelNormal, StringComparison.Ordinal) ? LabelNormal
+                : string.Equals(label, LabelHard, StringComparison.Ordinal) ? LabelHard
+                : string.Equals(label, LabelVeryHard, StringComparison.Ordinal) ? LabelVeryHard
+                : throw new ArgumentException("Etiqueta desconocida: " + label, nameof(label));
+            if (string.Equals(canonical, DifficultyLabel, StringComparison.Ordinal))
+            {
+                return this;
+            }
+
+            return new LevelDefinition(
+                Id, Level, World, WaterBase, _palette, Units, _caps, _cuias, _attrs, HasHiddenDoses, _hidden.Length == 0 ? null : _hidden,
+                Par, canonical, _relief, IntroMechanic, Skippable, HintSupported, Band, ParApprox);
+        }
+
         /// <summary>Capacidad de la cuia <paramref name="index"/>.</summary>
         public int CapacityOf(int index)
         {

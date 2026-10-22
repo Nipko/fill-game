@@ -1238,8 +1238,8 @@ namespace AF.UI
                     {
                         // B11: en el 2 la lección aún no es legal (su tablero inicial está lleno): el dedo señala antes el vertido que
                         // la deja posible (TutorialFingerSetup; pregunta Q-B11-1). Sin él, espera, como antes.
-                        _fingerHasChoice = TutorialFingerSetup.TryChoose(current, session.PourMode, session.FutileRuleEnabled, _fingerSolver,
-                            out _fingerPour);
+                        _fingerHasChoice = TutorialFingerSetup.TryChooseWhileIllegal(current, session.PourMode, session.FutileRuleEnabled,
+                            _fingerSolver, out _fingerPour);
                         _fingerSetup = _fingerHasChoice;
                     }
                     else

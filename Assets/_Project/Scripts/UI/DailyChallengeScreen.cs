@@ -912,6 +912,18 @@ namespace AF.UI
                 return false;
             }
 
+            public bool PressNoCanoesMap()
+            {
+                return false;
+            }
+
+            public bool LogbookVictoryRowDue => false; // la victoria del Reto no lleva barras (Q-C2)
+
+            public bool OpenLogbookFromVictory()
+            {
+                return false;
+            }
+
             public bool PressNoCanoesClose()
             {
                 return false;

@@ -55,6 +55,13 @@ namespace AF.UI
         public const float ReferenceWidth = 360f;
 
         /// <summary>
+        /// Ancho mínimo del lienzo (dp; 02 §5, «Dispositivos»: «a 320 dp de ancho se admiten 6 cuias por fila»). Entre 320 y 360 dp
+        /// físicos el lienzo mide lo que el teléfono, con 1 dp físico por dp de lienzo (Q-B11-5 (a), D-033, añadido de B11; cierre
+        /// de B11); por debajo de 320, mide 320 y se escala (<see cref="CanvasScale(int, int, float)"/>).
+        /// </summary>
+        public const float MinWidth = 320f;
+
+        /// <summary>
         /// Alto mínimo del lienzo (dp; 16:9 de 02 §5). El lienzo mide 360 dp de ancho y, si así quedaran menos de 640 dp de alto,
         /// manda el alto (<see cref="CanvasScale"/>): en 16:9 mide 360 × 640 dp y 1 dp de lienzo es 1 dp físico, así que el texto
         /// no baja de 12 sp físicos (02 §12; pregunta 19 de GDD.md §6.3, (a); D-028, tarea DC3). En 19,5:9 y 20:9, 360 × 780 y
@@ -610,7 +617,7 @@ namespace AF.UI
             _giveUp = new GiveUpConfirm(_root, art, actions);
             _failed = new LevelFailedScreen(_root, art, actions);
             _noCanoes = new NoCanoesPanel(_root, art, () => _actions.PressExtraCanoeVideo(), () => _actions.PressRefillCanoes(),
-                () => _actions.PressInfiniteCanoes(), () => _actions.PressNoCanoesHome(), () => _actions.PressNoCanoesClose());
+                () => _actions.PressInfiniteCanoes(), () => _actions.PressNoCanoesMap(), () => _actions.PressNoCanoesClose());
 
             // ---- Capa superior: pausa (02 §5: izquierda de la fila superior; disco de 40 dp) y saldos del embudo (D-008). ----
             _topLayer = UiBuilder.Rect("TopLayer", _root);
@@ -2541,7 +2548,7 @@ namespace AF.UI
         {
             ReadScreen(out _screenW, out _screenH, out _safeArea);
 
-            float scale = CanvasScale(_screenW, _screenH);
+            float scale = CurrentCanvasScale(_screenW, _screenH); // de 320 a 360 dp de ancho con 1 dp físico por dp (Q-B11-5 (a))
             _scaler.scaleFactor = scale;
             _art.ScreenScale = scale;
             _canvasW = _screenW / scale;
@@ -3401,20 +3408,96 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Escala del lienzo del juego (px por dp) para una pantalla de <paramref name="width"/> × <paramref name="height"/> px,
-        /// como en <see cref="LobbyScreen"/>: 360 dp de ancho y, si así quedaran menos de <see cref="MinHeight"/> dp de alto,
-        /// manda el alto (D-028, tarea DC3). Antes era min(ancho / 360, alto / 780): en 16:9 el lienzo medía 438,75 × 780 dp y el
-        /// texto de 12 sp salía a 9,8 sp físicos.
+        /// Escala del lienzo del juego (px por dp) para una pantalla de <paramref name="width"/> × <paramref name="height"/> px sin
+        /// saber su densidad: 360 dp de ancho y, si así quedaran menos de <see cref="MinHeight"/> dp de alto, manda el alto (D-028,
+        /// tarea DC3). Antes era min(ancho / 360, alto / 780): en 16:9 el lienzo medía 438,75 × 780 dp y el texto de 12 sp salía a
+        /// 9,8 sp físicos.
         /// </summary>
         public static float CanvasScale(int width, int height)
         {
-            float scale = width / ReferenceWidth;
+            return CanvasScale(width, height, 0f);
+        }
+
+        /// <summary>
+        /// Escala del lienzo (px por dp) con la densidad del teléfono, <paramref name="pxPerDp"/> (px por dp físico; ≤ 0 = no se sabe):
+        /// el lienzo mide 360 dp de ancho, salvo en los teléfonos de 320 a 360 dp físicos, donde mide su ancho con 1 dp físico por
+        /// dp de lienzo (así el texto de 12 sp sale a 12 sp físicos, 02 §12, y el tablero usa el layout de 320 dp de 02 §5; Q-B11-5
+        /// (a)), y en los de menos de 320, donde mide 320 dp. Después, la regla del alto mínimo de 640 dp (D-028; D-032, punto 5),
+        /// que manda en las pantallas anchas. Todas las pantallas del juego usan esta misma escala (el inicio, la tienda y las capas
+        /// de encima).
+        /// </summary>
+        public static float CanvasScale(int width, int height, float pxPerDp)
+        {
+            float canvasWidth = ReferenceWidth;
+            if (pxPerDp > 0f)
+            {
+                float physical = width / pxPerDp;
+                if (physical < ReferenceWidth)
+                {
+                    canvasWidth = Mathf.Max(MinWidth, physical);
+                }
+            }
+
+            float scale = width / canvasWidth;
             if (height / scale < MinHeight)
             {
                 scale = height / MinHeight;
             }
 
             return Mathf.Max(0.01f, scale);
+        }
+
+        /// <summary>Solo tests: la densidad de <see cref="SimulatedScreen"/> (px por dp físico; null = no se sabe, el lienzo de 360 dp).</summary>
+        internal static float? SimulatedPxPerDp { get; set; }
+
+        private static float s_devicePxPerDp = -1f;
+
+        /// <summary>
+        /// La densidad de la pantalla (px por dp físico): la de <see cref="SimulatedPxPerDp"/> con una pantalla simulada; en Android, la
+        /// de <c>DisplayMetrics.density</c> (se lee una vez); en el Editor y si no se puede leer, 0 (no se sabe: lienzo de 360 dp).
+        /// </summary>
+        internal static float ReadPxPerDp()
+        {
+            if (SimulatedScreen.HasValue)
+            {
+                return SimulatedPxPerDp ?? 0f;
+            }
+
+            if (s_devicePxPerDp < 0f)
+            {
+                s_devicePxPerDp = QueryDevicePxPerDp();
+            }
+
+            return s_devicePxPerDp;
+        }
+
+        /// <summary>Escala del lienzo para la pantalla de ahora (<see cref="ReadScreen"/> y <see cref="ReadPxPerDp"/>).</summary>
+        internal static float CurrentCanvasScale(int width, int height)
+        {
+            return CanvasScale(width, height, ReadPxPerDp());
+        }
+
+        private static float QueryDevicePxPerDp()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                using (AndroidJavaObject activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
+                using (AndroidJavaObject resources = activity.Call<AndroidJavaObject>("getResources"))
+                using (AndroidJavaObject metrics = resources.Call<AndroidJavaObject>("getDisplayMetrics"))
+                {
+                    float density = metrics.Get<float>("density");
+                    return density > 0f ? density : 0f;
+                }
+            }
+            catch (System.Exception)
+            {
+                return 0f; // sin densidad, el lienzo de 360 dp de siempre
+            }
+#else
+            return 0f;
+#endif
         }
 
         internal static void ReadScreen(out int width, out int height, out Rect safeArea)

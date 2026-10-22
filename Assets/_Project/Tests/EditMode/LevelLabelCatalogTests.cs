@@ -82,12 +82,46 @@ namespace AF.Tests.EditMode
         [Test]
         public void Source_IsEmptyInRelease_AndTheTestHookOtherwise()
         {
-            Assert.That(LevelLabelSource.ResolveJson(), Is.EqualTo("{}"), "08 §9: default {}");
+            LevelLabelSource.JsonOverride = null;
+            Assert.That(LevelLabelSource.Create(null, null).Count, Is.EqualTo(0), "08 §9: default {}");
             LevelLabelSource.JsonOverride = "{\"41\": \"hard\", \"10\": \"hard\"}";
+            try
+            {
+                string? warned = null;
+                LevelLabelOverrides table = LevelLabelSource.Create(null, w => warned = w);
+                Assert.That(table.Count, Is.EqualTo(1));
+                Assert.That(warned, Does.Contain("10").And.Contains("lvl_labels_from_level"), "la entrada descartada se avisa");
+            }
+            finally
+            {
+                LevelLabelSource.JsonOverride = null;
+            }
+        }
+
+        [Test]
+        public void Source_WithRemoteConfig_IsItsTable_AndTheTestHookWins()
+        {
+            // Cierre de B11: el arranque lee lvl_label_override de Remote Config (RcGameplayBinder) y el catálogo usa esa tabla.
+            var service = new AF.RemoteConfig.RemoteConfigService();
+            service.Activate(new System.Collections.Generic.Dictionary<string, string> { { "lvl_label_override", "{\"57\":\"very_hard\"}" } });
+            AF.RemoteConfig.Binding.RcConfigs rc = AF.RemoteConfig.Binding.RcConfigBinder.Bind(service.Freeze(), "1.0");
+            LevelLabelSource.JsonOverride = null;
             string? warned = null;
-            LevelLabelOverrides table = LevelLabelSource.Create(w => warned = w);
-            Assert.That(table.Count, Is.EqualTo(1));
-            Assert.That(warned, Does.Contain("10").And.Contains("lvl_labels_from_level"), "la entrada descartada se avisa");
+            LevelLabelOverrides table = LevelLabelSource.Create(rc, w => warned = w);
+            Assert.That(table, Is.SameAs(rc.LevelLabels));
+            Assert.That(table.TryGet(57, out string label), Is.True);
+            Assert.That(label, Is.EqualTo(LevelDefinition.LabelVeryHard));
+            Assert.That(warned, Is.Null, "los avisos de la tabla de Remote Config ya salieron con los de Remote Config");
+
+            LevelLabelSource.JsonOverride = "{}";
+            try
+            {
+                Assert.That(LevelLabelSource.Create(rc, null).Count, Is.EqualTo(0), "el gancho del test gana");
+            }
+            finally
+            {
+                LevelLabelSource.JsonOverride = null;
+            }
         }
     }
 }

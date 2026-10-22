@@ -768,6 +768,7 @@ namespace AF.UI
                 return false;
             }
 
+            TrackNoCanoesChoiceIfOpen(NoCanoesChoiceAd); // af_no_canoes_choice (cierre de B11), antes del vídeo
             ads.ShowRewarded(AdPlacement.ExtraCanoe, r =>
             {
                 if (r.IsRewarded)
@@ -781,13 +782,35 @@ namespace AF.UI
         /// <summary>«Llenar canoas · 200 semillas» (hasta 5/5).</summary>
         public bool PressRefillCanoes()
         {
-            return _wallet != null && _wallet.Apply(Transaction.Buy(SeedSink.CanoesRefill)).IsApplied;
+            bool open = NoCanoesInFront;
+            if (_wallet == null || !_wallet.Apply(Transaction.Buy(SeedSink.CanoesRefill)).IsApplied)
+            {
+                return false;
+            }
+
+            if (open)
+            {
+                TrackNoCanoesChoice(NoCanoesChoiceRefill); // af_no_canoes_choice (cierre de B11)
+            }
+
+            return true;
         }
 
         /// <summary>«Canoas infinitas 1 h» (<c>af_infinite_canoes_1h</c>): compra simulada.</summary>
         public bool PressInfiniteCanoes()
         {
-            return Purchase(StoreCatalog.InfiniteCanoes1h, PurchaseContext.NoCanoes, null);
+            bool open = NoCanoesInFront;
+            if (!Purchase(StoreCatalog.InfiniteCanoes1h, PurchaseContext.NoCanoes, null))
+            {
+                return false;
+            }
+
+            if (open)
+            {
+                TrackNoCanoesChoice(NoCanoesChoiceInfinite); // af_no_canoes_choice (cierre de B11): la compra empieza
+            }
+
+            return true;
         }
 
         /// <summary>«Volver al inicio» de Sin canoas (desde el nivel o desde el inicio).</summary>
@@ -806,15 +829,28 @@ namespace AF.UI
             return _flow != null && _flow.Phase == FlowPhase.NoCanoes && _app.ExitToLobby();
         }
 
-        /// <summary>X de Sin canoas: vuelve a donde se abrió (Nivel fallido o el tablero; desde el inicio, al inicio).</summary>
+        /// <summary>
+        /// X de Sin canoas: vuelve a donde se abrió (Nivel fallido o el tablero; desde el inicio, al inicio). Es la elección
+        /// «esperar» de <c>af_no_canoes_choice</c> (<c>wait</c>; 04 §7.3: la próxima canoa vuelve sola).
+        /// </summary>
         public bool PressNoCanoesClose()
         {
+            bool closed;
             if (_app != null && _app.Screen == AppScreen.NoCanoes)
             {
-                return _app.CloseOverlay();
+                closed = _app.CloseOverlay();
+            }
+            else
+            {
+                closed = _flow != null && InLevel && _flow.Phase == FlowPhase.NoCanoes && _flow.CloseNoCanoes();
             }
 
-            return _flow != null && InLevel && _flow.CloseNoCanoes();
+            if (closed)
+            {
+                TrackNoCanoesChoice(NoCanoesChoiceWait); // af_no_canoes_choice (cierre de B11)
+            }
+
+            return closed;
         }
 
         /// <summary>
@@ -861,7 +897,14 @@ namespace AF.UI
         /// <summary>Volver desde «El río sigue creciendo» o Sin canoas.</summary>
         public bool PressBack()
         {
-            return AudioBack(_app != null && _app.CloseOverlay()); // AU1: sfx_ui_back al volver
+            bool noCanoes = _app != null && _app.Screen == AppScreen.NoCanoes;
+            bool closed = _app != null && _app.CloseOverlay();
+            if (closed && noCanoes)
+            {
+                TrackNoCanoesChoice(NoCanoesChoiceWait); // Atrás en Sin canoas es su X: esperar (af_no_canoes_choice; cierre de B11)
+            }
+
+            return AudioBack(closed); // AU1: sfx_ui_back al volver
         }
 
         /// <summary>
@@ -1477,6 +1520,9 @@ namespace AF.UI
                 yield return null; // el río y el logotipo, a la vista antes de cargar
             }
 
+            // Remote Config antes del catálogo (cierre de B11): lvl_label_override (y level_overrides) se aplican al crearlo.
+            IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
+            SetUpRemoteConfig(clock);
             LevelCatalog? catalog = LoadCatalog();
             if (catalog == null)
             {
@@ -1485,7 +1531,6 @@ namespace AF.UI
                 yield break;
             }
 
-            IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
             string profileDirectory = LaunchOptions.ProfileDirectoryOverride ?? Application.persistentDataPath;
 
             // Tras elegir idioma en Ajustes, la escena se recargó (RebuildUi): se vuelve al inicio con el perfil de la sesión, tal
@@ -1998,8 +2043,8 @@ namespace AF.UI
                     Debug.LogWarning(LogPrefix + overrides.Problems[i]);
                 }
 
-                // lvl_label_override (08 §9; B11): fuente local vacía hasta leerlo de Remote Config, como level_overrides.
-                LevelLabelOverrides labels = LevelLabelSource.Create(w => Debug.LogWarning(LogPrefix + w));
+                // lvl_label_override (08 §9; B11): el de Remote Config (SetUpRemoteConfig, antes de cargar el catálogo).
+                LevelLabelOverrides labels = LevelLabelSource.Create(_rcConfigs, w => Debug.LogWarning(LogPrefix + w));
                 LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w), labels);
                 watch.Stop();
                 if (DevProbe.Enabled)

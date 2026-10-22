@@ -62,13 +62,7 @@ namespace AF.UI
             _screenW = sw;
             _screenH = sh;
             _safe = safe;
-            float scale = sw / 360f;
-            if (sh / scale < 640f)
-            {
-                scale = sh / 640f;
-            }
-
-            scale = Mathf.Max(0.01f, scale);
+            float scale = GameScreen.CurrentCanvasScale(sw, sh); // la de la pantalla de nivel (Q-B11-5 (a))
             _scaler.scaleFactor = scale;
             Width = sw / scale;
             Height = sh / scale;

@@ -18,8 +18,8 @@ namespace AF.UI
     /// («Tu próxima canoa vuelve en mm:ss», siempre), «Canoa extra · Ver video» +1 (<c>rv_extra_canoe</c>, si hay anuncio y
     /// tope), «Llenar canoas» por <c>canoes_refill_seed_price</c> (hasta 5/5), «Canoas infinitas 1 h · {precio}»
     /// (<c>af_infinite_canoes_1h</c>, compra simulada) y «Volver al Mapa del río» (el wireframe de 04 §7.3; tarea B11: cierra Sin
-    /// canoas por el camino de «Volver al inicio» y abre el Mapa encima del inicio, <c>GameBootstrap.PressNoCanoesMap</c>; sin
-    /// arranque, el de siempre). Nunca muestra intersticial (05 §10). La usan la
+    /// canoas por el camino de «Volver al inicio» y abre el Mapa encima del inicio, <see cref="IGameActions.PressNoCanoesMap"/>).
+    /// Nunca muestra intersticial (05 §10). La usan la
     /// pantalla de nivel (desde Nivel fallido o la cabecera) y la de inicio (Jugar o el contador en 0/5). El cronómetro se
     /// refresca sin asignar memoria.
     /// </summary>
@@ -51,7 +51,7 @@ namespace AF.UI
         private float _canvasW = 360f;
         private float _canvasH = 780f;
 
-        public NoCanoesPanel(Transform parent, ProceduralArt art, Action onVideo, Action onRefill, Action onInfinite, Action onHome, Action onClose)
+        public NoCanoesPanel(Transform parent, ProceduralArt art, Action onVideo, Action onRefill, Action onInfinite, Action onMap, Action onClose)
         {
             _art = art;
             _root = UiBuilder.Rect("NoCanoes", parent);
@@ -68,18 +68,7 @@ namespace AF.UI
             _refillPrice = new PriceTag("Price", _refill.Face, art);
             _refillNote = ModalKit.Line("RefillNote", _panel, string.Empty, 13f, Palette.UiRedWarning);
             _infinite = ModalKit.Cta("InfiniteButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 16f, onInfinite, out _infiniteLabel);
-            _home = ModalKit.Link("HomeButton", _panel, TutorialTipsText.NoCanoesMap, () =>
-            {
-                GameBootstrap? boot = GameBootstrap.Current;
-                if (boot != null)
-                {
-                    boot.PressNoCanoesMap(); // B11: cierra Sin canoas y abre el Mapa
-                }
-                else
-                {
-                    onHome(); // sin arranque (la pantalla sola en un test): el camino de siempre
-                }
-            }, out _);
+            _home = ModalKit.Link("HomeButton", _panel, TutorialTipsText.NoCanoesMap, onMap, out _); // B11: IGameActions.PressNoCanoesMap
             _daily = new NoCanoesDailyLink(_panel);
             _root.gameObject.SetActive(false);
         }

@@ -88,7 +88,7 @@ namespace AF.UI
         {
             _streakBar = new StreakBar(_hud, _art);
             RectTransform fly = UiBuilder.Rect("BarsFly", _victoryOverlay); // detrás del saldo (capa superior), delante del panel
-            _victoryBars = new VictoryBars(_victoryPanel, fly, _art);
+            _victoryBars = new VictoryBars(_victoryPanel, fly, _art, OnVictoryLogbookPressed); // la fila de la Bitácora (GameScreen.LogbookRow.cs)
             _canvasCenter = CanvasCenterDp;
         }
 
@@ -166,6 +166,7 @@ namespace AF.UI
 
             _victoryBars.Plan.Build(flow.LevelNumber, !flow.IsDaily, flow.PeekStreak(), flow.LastStreakResult, service?.Config,
                 service?.Basket, service?.BasketUnlockLevel ?? 0, place);
+            _victoryBars.Plan.Logbook = LogbookRowWanted(flow); // la tercera barra: «Bitácora · elige tu premio» (GameScreen.LogbookRow.cs)
             _victoryBars.Prepare(flow.ReduceMotion, _canvasCenter);
         }
 
@@ -224,6 +225,7 @@ namespace AF.UI
             if (_victoryOverlay.gameObject.activeSelf)
             {
                 _victoryBars.Tick(dtMs);
+                LogbookRowTick(); // la fila de la Bitácora se va al sellar la casilla (GameScreen.LogbookRow.cs)
             }
 
             if (_nextHoldMs > 0f)
@@ -322,7 +324,9 @@ namespace AF.UI
             }
 
             int step = Mathf.Clamp(level, 0, VictoryCompactMax);
-            return _worstBars[(_victoryBars.ForceHalf ? VictoryCompactMax + 1 : 0) + step];
+            // La fila de la Bitácora, solo en la victoria que la lleva (GameScreen.LogbookRow.cs): las demás no cambian de escalón.
+            float logbook = _victoryBars.Plan.Logbook && !_victoryBars.LogbookSuppressed ? VictoryBars.LogbookWorstExtra(step) : 0f;
+            return _worstBars[(_victoryBars.ForceHalf ? VictoryCompactMax + 1 : 0) + step] + logbook;
         }
 
         private void StreakLayoutIds(List<string> ids, List<RectTransform> rects)
@@ -342,6 +346,12 @@ namespace AF.UI
             {
                 ids.Add("basket_bar");
                 rects.Add(_victoryBars.BasketRect);
+            }
+
+            if (_victoryBars.LogbookShown)
+            {
+                ids.Add("victory_logbook"); // la fila «Bitácora · elige tu premio» (cierre de B11)
+                rects.Add((RectTransform)_victoryBars.LogbookButton.transform);
             }
         }
 
