@@ -5,7 +5,7 @@ Encargo: `docs/dev/traspaso/spark-reto-del-rio.md` §15 (antes, §14). Rama `spa
 - el permiso `com.android.vending.BILLING`;
 - quitar Unity IAP 5.4.4 (`com.unity.purchasing`) y sus tres dependencias de Unity Services.
 
-Nada más está aprobado. Lo que la biblioteca arrastra por Maven va como pregunta (Q-BILL-1).
+Lo que la biblioteca arrastra por Maven (Q-BILL-1) lo aprobó el dueño el 2026-10-22, con las versiones que resuelve Gradle. Nada más está aprobado.
 
 Canon:
 - 08 §2.2 (`AF.IAP`), §7 #3, §10.1, §10.3 y §13.3;
@@ -201,7 +201,7 @@ La app aún no existe en Play Console (D-034). Cuando el dueño la cree, en este
 
 En cada una va **aplicada la recomendada**, por la regla del dueño (D-040): «si tienen recomendada, vamos con esa». Lo que necesita aprobación expresa (regla dura 4) no se da por aprobado.
 
-- **Q-BILL-1 · Dependencias Maven que arrastra `billing:9.0.0`. Necesita aprobación expresa del dueño (regla dura 4; no se da por aprobada).** Las declara el POM de la biblioteca (`billing-9.0.0.pom`, caché de Gradle). Son exactamente las mismas que ya entraban en el AAB con Unity IAP 5.4.4, que traía `billing:9.0.0` por Gradle (`IAPAndroidDependencies.cs`). Ninguna añade permisos (comprobado en el manifiesto fusionado, §6, y en el AAR de `play-services-location` 19.0.0, que no declara ninguno). Gradle sube algunas a la versión que pide Firebase, tal como ya pasaba.
+- **Q-BILL-1 · Dependencias Maven que arrastra `billing:9.0.0`. Aprobadas por el dueño el 2026-10-22: «Apruebo las dependencias Maven de com.android.billingclient:billing 9.0.0 de Q-BILL-1 con las versiones que resuelve Gradle; anótalo para D-040.» El integrador las anota en D-040 con las versiones resueltas de la tabla.** Las declara el POM de la biblioteca (`billing-9.0.0.pom`, caché de Gradle). Son exactamente las mismas que ya entraban en el AAB con Unity IAP 5.4.4, que traía `billing:9.0.0` por Gradle (`IAPAndroidDependencies.cs`). Ninguna añade permisos (comprobado en el manifiesto fusionado, §6, y en el AAR de `play-services-location` 19.0.0, que no declara ninguno). Gradle sube algunas a la versión que pide Firebase, tal como ya pasaba.
   | Dependencia (versión que pide el POM) | Versión que resuelve Gradle con Firebase (dev.apk, `:unityLibrary:dependencies`) |
   |---|---|
   | `androidx.activity:activity` 1.2.3 | 1.6.0 |
