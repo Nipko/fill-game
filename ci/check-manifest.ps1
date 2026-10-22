@@ -12,7 +12,7 @@
       2. Permisos (uses-permission y uses-permission-sdk-23) dentro de la lista blanca:
          android.permission.INTERNET, android.permission.VIBRATE y android.permission.ACCESS_NETWORK_STATE, el permiso propio
          <package>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION que declara androidx.core y com.android.vending.BILLING
-         (Play Billing de Unity IAP 5.4.4; aprobado por el dueno en D-040, 2026-10-22). Cualquier otro falla (CLAUDE.md,
+         (Play Billing Library 9.0.0 del plugin propio AfBilling; aprobado por el dueno en D-040, 2026-10-22). Cualquier otro falla (CLAUDE.md,
          regla dura 4: ningun permiso Android nuevo sin el dueno; -AllowPermission anade los aprobados).
          INTERNET lo aprobo el dueno en D-036 (2026-10-20; lo anade Unity con ForceInternetPermission en Auto).
          ACCESS_NETWORK_STATE lo aprobo el dueno en D-037 (2026-10-21; lo anade Unity al leer
@@ -28,7 +28,7 @@
          lista blanca y fallan con una pista.
       3. Play Billing: si el manifiesto lleva la meta-data com.google.android.play.billingclient.version
          o el permiso BILLING, la version mayor debe ser >= 8 (08 sec. 13.1 #4). Sin billing se anota
-         (un build sin com.unity.purchasing); con -RequireBilling, falla: desde D-040 el build de release
+         (un build sin el plugin de Play Billing); con -RequireBilling, falla: desde D-040 el build de release
          debe pasarlo con -RequireBilling.
       4. android:appCategory = game (valor 0 compilado) en <application> (08 sec. 13.1 #4).
       5. applicationId (CLAUDE.md, regla dura 6; 08 sec. 13.1 #1):
@@ -85,7 +85,7 @@ $ErrorActionPreference = 'Stop'
 $AndroidNs = 'http://schemas.android.com/apk/res/android'
 $ProvisionalId = 'com.amazonfill.dev'
 $BillingMetaName = 'com.google.android.play.billingclient.version'
-$BillingPermission = 'com.android.vending.BILLING'   # aprobado: D-040 (Play Billing de Unity IAP 5.4.4, 2026-10-22)
+$BillingPermission = 'com.android.vending.BILLING'   # aprobado: D-040 (Play Billing Library 9.0.0, plugin propio; 2026-10-22)
 $InternetPermission = 'android.permission.INTERNET'          # aprobado: D-036
 $NetworkStatePermission = 'android.permission.ACCESS_NETWORK_STATE'   # aprobado: D-037 (comun net, 08 sec. 8.1)
 # Aprobado en D-033 (Q-M5) y su anadido del 2026-10-21, con com.unity.mobile.notifications 2.4.3. Solo ese: las
@@ -270,7 +270,7 @@ function Test-Manifest($M, [string]$Prof, [int]$Target, [int]$Min, [string[]]$Ex
         else { $note.Add("Play Billing $($M.BillingVer).") }
     }
     elseif ($NeedBilling) { $fail.Add('sin Play Billing (-RequireBilling)') }
-    else { $note.Add('NOTA: sin Play Billing en el manifiesto (build sin com.unity.purchasing; en release, usar -RequireBilling: D-040).') }
+    else { $note.Add('NOTA: sin Play Billing en el manifiesto (build sin el plugin de Play Billing; en release, usar -RequireBilling: D-040).') }
 
     if (-not $M.HasApplication) { $fail.Add('sin <application>') }
     elseif ("$($M.AppCategory)".ToLowerInvariant() -notin @('0', 'game')) { $fail.Add("appCategory='$($M.AppCategory)' (esperado game)") }
