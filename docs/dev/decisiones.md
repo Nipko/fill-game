@@ -3571,7 +3571,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **7 · Textos legales de B12 traducidos con IA:** se quedan como **borrador** hasta que los revise el abogado. No bloquean el selector de idioma, pero sí el lanzamiento en esos idiomas.
 - **8 · Comodines en el glosario:** «Boosters» / «Reforços».
 - **9 · `firebase-appcheck-debug` en release:** se excluye del AAB de release antes del primer AAB de producción. La compuerta comprueba que no esté. Solo dev la conserva: el ensayo (`-afRehearsal`) es variante release de Gradle y usa Play Integrity, así que tampoco la lleva. En el registro inicial de este punto el integrador escribió por error «dev y el ensayo la conservan»; lo corrigió al integrar `tanda5/appcheck-release`, sin cambiar la decisión del dueño («excluirla del release»).
-- **10 · Q-B9-13, daltonismo:** los pares 7-10 (protanopía) y 5-14 (deuteranopía) entran en los pares de riesgo de 07 §3 y del glosario §9, y el generador los limita. Si cambia algún tablero publicado, se vuelve a generar con `level-qa` en verde.
+- **10 · Q-B9-13, daltonismo:** los pares 7-10 (protanopía) y 5-14 (deuteranopía) entran en los pares de riesgo de 07 §3 y del glosario §9, y el generador los limita. Si cambia algún tablero publicado, se vuelve a generar con `level-qa` en verde. **Matizado por Q-B9-13 bis** (añadido siguiente).
 - **11 · Desbordes al 130 %:** se lanza ya la tarea de las filas del Mercado, la pestaña «Sin anuncios» y el código de cuenta de Ajustes, en los tres idiomas.
 - **11, consecuencia (integración de `tanda5/fx-130`):** Ajustes muestra el código de cuenta en grupos de 4 con guiones de Crockford. El valor guardado no lleva guiones y la app nunca envía el código. La futura web de borrado (D-035) debe quitar guiones y espacios y pasar a mayúsculas antes de llamar a `/v1/account/delete-request`, como ya exige `infra/contracts/v1/common.schema.json`. Recomendada aplicada: requisito con su test cuando se haga la web, sin tocar la Lambda.
 - **12 · Tanda de pulido**, con los pendientes ya diagnosticados:
@@ -3581,3 +3581,22 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - el nombre de la mecánica en la etiqueta de la cuia (Q-B9-14);
   - TalkBack en la lista de Ajustes que se desplaza (Q-B9-17);
   - los decimales de CLP, JPY, KWD y BHD en D-025 (Q-IAP-3).
+
+### D-033, añadido del 2026-10-22: Q-B9-13 bis, cómo entran los pares del simulador de daltonismo
+
+- **Estado:** el dueño eligió el punto 10 con la recomendada («Pendientes 2 a 12: todas con la recomendada»). El carril `tanda5/daltonismo-pares` encontró que aplicarlo al pie de la letra choca con el GDD. El integrador aplicó en cada paso la recomendada del carril, por la regla del dueño «si tienen recomendada, vamos con esa». Integrado con la revisión APROBADO. El dueño puede cambiarlo.
+- **El problema:**
+  - Contar 7-10 y 5-14 en `risk_pairs` y `max_pares_riesgo` hace imposibles los K que fija el GDD en 11-80 y en las bandas B1 y B2 del Reto (03 §4.5 y §16).
+  - Desde el 201 pasaría además el tope de 10 del esquema.
+  - Obligaría a regenerar alrededor del 90 % de lo publicado.
+- **Decisión, (b) y (A):**
+  - Los dos pares entran en 07 §3 y en el glosario §9 como **pares del simulador**, que no cuentan en el tope.
+  - El generador evita que queden juntos en una cuia solo si una permutación alternativa de tintes (hasta 50, con la subsemilla 5) **mide exactamente igual**: el bot ×40, la ventana, el par, las trampas, la ramificación, la D y el alivio. Si no lo consigue, se queda la asignación de siempre.
+  - `level-qa` da `QA-CVD-ADJ` y `QA-DAILY-CVD-ADJ` como fallo en el tablero base. Como aviso, en las variantes y en lo inevitable.
+- **Resultado:**
+  - Al regenerar solo cambian tintes en 23 packs: 0 cambios de forma, de `bot_fail`, de candidato o de D. El tutorial no cambia.
+  - Contactos que se eliminan: los 14 del mundo 2; 753 de los 1.102 del Reto del río (quedan 349); en los mundos 3-9, solo entre 3 y 7 tableros por pack.
+  - El resto se queda como aviso y lo distinguen los patrones y el icono de fruta (07 §3, reglas 1 y 2).
+  - El detalle está en `docs/dev/accesibilidad.md` §2.6.
+- **Descartado:** hacer el bot independiente del color (cambio del núcleo). Quitaría casi todos los contactos, pero cambiaría `bot_fail` y la curva de todos los packs. Solo si el dueño lo pide.
+- **Del integrador:** el carril tocaba tests de Unity y `docs/gdd/**` porque el encargo lo pedía (GDD y tests).
