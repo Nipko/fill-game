@@ -6,6 +6,89 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-21 · B9 · Accesibilidad: Reducir movimiento, Alto contraste, escala de fuente, C9, simulador de daltonismo y TalkBack (`spark/t5-b9`): HECHA · verificación completa VERDE (rama y rama + parches) · lista para integrar
+
+- **Rama:**
+  - `spark/t5-b9`, desde `origin/integracion-fase1-fase2` en `6c1406e3`.
+  - Una fusión con `bacf72a8` (B11, B12 y la reserva del 20 %) antes de la verificación final. Los parches se rehicieron sobre esa base, con el arrastre C10 de B11 y `OptionRow` de B12.
+  - Empujada, sin `--force`.
+- **Nota:** `docs/dev/accesibilidad.md`. Recoge el canon, qué hace, los archivos, los parches, los choques, las preguntas Q-B9-1 a Q-B9-17 y los riesgos.
+- **Canon:**
+  - 02 §3.1 (C9) y §12;
+  - 07 §3, reglas 3 y 5, y §7.8;
+  - 08 §9 (`ui_reduce_motion_default` y `anim_reduce_motion_factor`), §14.2 y §14.3;
+  - D-033, Q-N4 (a).
+- **Qué hace:**
+  - **Reducir movimiento** (`settings.reduce_motion` [P]: `auto`, `on` u `off`):
+    - en `auto`, sigue a Remote Config o [P] al teléfono con «Quitar animaciones»;
+    - vertidos y pasos de mecánica × `anim_reduce_motion_factor`, una sola vez;
+    - sin sacudida, sin onda del agua y sin confeti;
+    - llega al Reto, al Mapa y a la pantalla de arranque.
+  - **Alto contraste** (`settings.high_contrast` [P]): el patrón al 35 %. El contorno de 1,5 px queda pendiente: Q-B9-6.
+  - **Escala de fuente del sistema** hasta el 130 %:
+    - `ISystemScale` con su falsa en el Editor;
+    - `AndroidSystemScale`, sobre el módulo de accesibilidad de Unity, que ya estaba en el manifiesto, más JNI.
+  - **C9:** 400 ms sin moverse (< 24 dp [P]) muestra los nombres. Al soltar no selecciona. En la Tinaja, solo lo visible.
+  - **TalkBack completo:**
+    - cuias por ranura con su etiqueta de 02 §12, después la bandeja («Deshacer, 2 restantes») y después lo demás;
+    - la selección se anuncia;
+    - cada botón, con su etiqueta: la pausa, la X, el engranaje y las filas con marca;
+    - los velos «toca para seguir», como «Continuar» [P];
+    - lo tapado y lo recortado no se publica;
+    - sin paquete nuevo.
+  - **Simulador de daltonismo** [P] (Machado 2009 + CIEDE2000):
+    - test de EditMode en la suite;
+    - captura `[Explicit]` sobre el shader real, con informe.
+    - Hallazgos: 7-10 (protanopía) y 5-14 (deuteranopía) quedan cerca y no son pares de riesgo (Q-B9-13).
+- **En la rama:** archivos nuevos, sin tocar ninguno del escritorio:
+  - `Scripts/Platform/A11yConfig.cs`, `A11yRules.cs`, `ISystemScale.cs` y `FakeSystemScale.cs`;
+  - `Scripts/RemoteConfig/Binding/A11yConfigBinder.cs`;
+  - `Scripts/UI/A11y/*` (11 archivos);
+  - `Scripts/UI/GameScreen.A11y.cs` y `SettingsScreen.A11y.cs`;
+  - tests: `Tests/EditMode/A11y/*` (5 tests y el ayudante `B9Loc`), `Tests/PlayMode/A11yScannerTests.cs`, `ColorVisionShaderTests.cs` (`[Explicit]`) y `B9LocPlay.cs`;
+  - `docs/dev/traspaso/spark-enganches/B9-strings.csv` (19 claves).
+- **Parches** (en `docs/dev/traspaso/spark-enganches/`, en LF, en este orden, con `git -c core.autocrlf=false apply`):
+  1. `B9-profile.diff`;
+  2. `B9-rc.diff`;
+  3. `B9-ui.diff` (necesita el 1 y el 2);
+  4. `B9-loc.diff`.
+  - El detalle, en la nota §4.
+  - Escena y prefabs, sin cambios.
+- **Revisión** (skill `code-review` con las reglas de `.claude/agents/code-reviewer.md`; el subagente no estaba disponible):
+  - 10 rondas, arregladas en `ea672065`…`064f6c52`:
+    - nombres de fruta sin aprobar;
+    - doble factor en los pasos de mecánica;
+    - `??` sobre objetos de Unity;
+    - el Reto un fotograma tarde;
+    - el foco de TalkBack;
+    - tocar a través de la pausa o de otro lienzo;
+    - velos que se van;
+    - relés de toque;
+    - etiquetas de solo icono;
+    - la Luciérnaga con el lector;
+    - C9 con varios dedos, velos y touch-ups perdidos;
+    - el orden de lectura;
+    - tests de la onda, el confeti, el Mapa y los velos.
+  - **Última ronda completa: APROBADO.** Las sugerencias no bloqueantes que quedan están en la nota (§2.4 y §6).
+- **Verificación:** ARM64, `-Architecture arm64`, un solo Unity a la vez, sobre la base fusionada (`bacf72a8`).
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama + parches | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 errores y 0 avisos; **1.002 (996 + 6), 0 fallos**; 116/116, sin cambios en `tools/out/schema_example_08_4_1.json` |
+  | rama + los cuatro parches | `unity-compile`; EditMode; PlayMode | 0; **4.193 (4.190 + 3), 0 fallos** (7,9 min); **1.855 (1.605 + 250), 0 fallos** (37 min) |
+  | rama sola (`4babc262`) | `unity-compile`; EditMode; PlayMode | 0; **4.184 (4.181 + 3), 0 fallos** (4,9 min); **1.840 (1.590 + 250), 0 fallos** (36 min) |
+  | rama, `[Explicit]` con gráficos | `unity test . --mode PlayMode --architecture arm64 --filter AF.Tests.PlayMode.ColorVisionShaderTests` | 1/1; capturas e informe en `Logs/snapshots/es-419/cvd/` |
+
+  Sin fallos de tiempo que relanzar.
+- **Preguntas para el dueño:** Q-B9-1 a Q-B9-17 (nota §5). En todas se aplicó la (a), la recomendada.
+- **Riesgos:**
+  - TalkBack sin probar en el teléfono [NV] (marcos, relectura, doble toque);
+  - el contorno de 1,5 px de Alto contraste (Q-B9-6);
+  - TalkBack y la lista de Ajustes que se desplaza (Q-B9-17);
+  - las capturas de las filas nuevas de Ajustes, pendientes.
+
+---
+
 ## 2026-10-21 · B12 · Consentimiento y edad, con implementaciones falsas (`spark/t5-b12`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/t5-b12`, desde `origin/integracion-fase1-fase2` en `4a9a42a0`.
