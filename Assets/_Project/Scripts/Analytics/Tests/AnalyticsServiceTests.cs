@@ -260,6 +260,62 @@ namespace AF.Analytics.Tests
             Assert.That(new LogcatAnalyticsSink().RequiresConsent, Is.False);
         }
 
+        /// <summary>
+        /// Observación 5 de la hoja del 2026-10-22: con la analítica apagada seguían saliendo líneas <c>AF_EVENT</c>. Son solo de
+        /// logcat: el sumidero que envía fuera (Firebase, aquí uno falso con <c>RequiresConsent</c>) no recibe nada, y la línea lo
+        /// dice con su prefijo <c>AF_EVENT_UNSENT</c>; con el consentimiento, <c>AF_EVENT</c> y el sumidero que envía lo recibe.
+        /// </summary>
+        [Test]
+        public void WithoutConsent_OnlyLogcat_AndItsLineSaysUnsent()
+        {
+            var lines = new List<string>();
+            void OnLog(string condition, string stack, UnityEngine.LogType type)
+            {
+                if (condition.StartsWith("AF_EVENT", StringComparison.Ordinal))
+                {
+                    lines.Add(condition);
+                }
+            }
+
+            UnityEngine.Application.logMessageReceived += OnLog;
+            try
+            {
+                var service = new AnalyticsService();
+                var logcat = new LogcatAnalyticsSink();
+                var firebase = new FakeAnalyticsSink(requiresConsent: true);
+                service.AddSink(logcat);
+                service.AddSink(firebase);
+                Assert.That(logcat.CollectionEnabled, Is.False, "apagado hasta el consentimiento (08 §2.3)");
+
+                Assert.That(service.Log(AnalyticsEvent.Create("af_map_open").Add("source", "home")), Is.True);
+                service.SetUserProperty("geo_tier", "t3");
+                Assert.That(firebase.Events, Is.Empty, "sin consentimiento, nada al sumidero que envía (B12, F3-6)");
+                Assert.That(firebase.Properties, Is.Empty);
+                Assert.That(lines.Count, Is.EqualTo(2));
+                Assert.That(lines[0], Does.StartWith(LogcatAnalyticsSink.UnsentPrefix + "{\"event\":\"af_map_open\""));
+                Assert.That(lines[1], Does.StartWith(LogcatAnalyticsSink.UnsentPrefix + "{\"user_property\":\"geo_tier\""));
+
+                lines.Clear();
+                service.SetCollectionEnabled(true);
+                Assert.That(logcat.CollectionEnabled, Is.True);
+                service.Log(AnalyticsEvent.Create("af_map_open").Add("source", "home"));
+                Assert.That(firebase.Names, Is.EqualTo(new[] { "af_map_open" }));
+                Assert.That(lines.Count, Is.EqualTo(1));
+                Assert.That(lines[0], Does.StartWith(LogcatAnalyticsSink.Prefix + "{\"event\":\"af_map_open\""));
+
+                lines.Clear();
+                service.SetCollectionEnabled(false); // «Privacidad y datos» › analítica apagada: al momento
+                service.Log(AnalyticsEvent.Create("af_map_close").Add("dwell_ms", 1200));
+                Assert.That(service.Violations, Is.Empty);
+                Assert.That(firebase.Names, Is.EqualTo(new[] { "af_map_open" }), "nada más tras apagarla");
+                Assert.That(lines[0], Does.StartWith(LogcatAnalyticsSink.UnsentPrefix));
+            }
+            finally
+            {
+                UnityEngine.Application.logMessageReceived -= OnLog;
+            }
+        }
+
         [Test]
         public void TextValues_AreEscaped()
         {

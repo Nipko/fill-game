@@ -123,11 +123,19 @@ Consume `AF.Analytics`. Las interfaces de escucha que ya existen (`ILevelFlowLis
 - **Servicio** (`AnalyticsService`): valida cada evento contra el catálogo (lo que no está se descarta y se anota en
   `Violations` [P]), añade los comunes de 08 §8.1 en su orden (los null no se envían; un específico con el mismo nombre manda)
   [P] (Q-B7-12) y entrega a los sumideros. **Consentimiento** (08 §2.3): los sumideros que envían fuera (`RequiresConsent`, el de
-  Firebase cuando llegue) solo reciben con `CollectionEnabled`, que empieza apagado; hoy no hay pantalla de consentimiento, así
-  que queda apagado y solo escriben los locales [P] (Q-B7-20).
+  Firebase, F3-6) solo reciben con `CollectionEnabled`, que empieza apagado y sigue al consentimiento de analítica (B12: la
+  pantalla «Tu privacidad» y Ajustes › «Privacidad y datos», al momento); sin él solo escriben los locales [P] (Q-B7-20). Además,
+  `FirebaseAnalyticsSink` tiene la recogida propia apagada (`SetAnalyticsCollectionEnabled`, `ICollectionAwareSink`).
 - **Sumideros**: `FakeAnalyticsSink` (tests) y `LogcatAnalyticsSink` (`AF.Analytics.Unity`): una línea
   `AF_EVENT {"event":"…",<específicos>,<comunes>}` por evento, solo en desarrollo y en el Editor [P] (Q-B7-16). Prefijo propio:
   las sondas `AF_STATE` de `DevProbe` no cambian y no se duplican.
+  - **Sin consentimiento, `AF_EVENT_UNSENT {…}`** (observación 5 de `docs/dev/traspaso/pruebas-telefono-2026-10-22.md`): con la
+    analítica apagada el sumidero de logcat sigue escribiendo (Q-B7-20 (a): es diagnóstico local, no sale del teléfono), pero con
+    el prefijo `AF_EVENT_UNSENT` en lugar de `AF_EVENT`, para que se vea en el log que **ese evento no llegó a ningún sumidero
+    que envía fuera** (Firebase no lo recibe: `AnalyticsService` no se lo entrega). `AF_EVENT` quiere decir «con consentimiento»:
+    se entregó también a los sumideros que envían, si los hay (en el Editor y sin `google-services.json`, ninguno). El sumidero
+    lo sabe por `ICollectionAwareSink`, como Firebase. Las propiedades de usuario siguen la misma regla. Con <13 (bloqueo de
+    B12) no sale ninguna línea, como se vio en el teléfono. Test: `AnalyticsServiceTests.WithoutConsent_OnlyLogcat_AndItsLineSaysUnsent`.
 - **Sesión** (`SessionTracker`, D-033, Q-M4 (a)): arranque en frío o vuelta tras ≥ 30 min en segundo plano; id aleatorio sin
   datos del jugador [P] (Q-B7-17).
 - **Eventos emitidos con los parches** (§5): `level_start`, `af_level_win`, `af_level_fail`, `level_end`, `af_level_abandon`
@@ -172,7 +180,7 @@ Cómo se prueban: `TelemetryHooksTests` (EditMode: la cartera publica con su fue
 inicio, victoria, fallo duro, segundo intento y abandono del flujo; la cadena del flujo a 08 §8.2 sin violaciones) y
 `TelemetryBootTests` (PlayMode: la escena real arranca con la caché de RC en la cartera, un nivel ganado da `level_start`,
 `earn_virtual_currency` (25 semillas con `eco_reward_normal` = 25 en la caché), `af_level_win` y `level_end` con los comunes, la
-recogida apagada y la línea `AF_EVENT` en el log).
+recogida apagada y la línea `AF_EVENT_UNSENT` en el log, porque la escena de prueba arranca sin consentimiento).
 
 ## 6. Preguntas (todas con la recomendada aplicada, [P])
 
