@@ -93,6 +93,42 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Cancel_AfterTheNames_StillSwallowsThatFingersRelease_ButNotTheNextGesture()
+        {
+            var hold = new CuiaHoldTracker();
+            hold.Press(3, 0, At);
+            Assert.That(hold.Tick(400f), Is.True);
+            hold.Cancel(); // se abre la Luciérnaga con el dedo abajo
+            Assert.That(hold.Index, Is.EqualTo(CuiaHoldTracker.None));
+            Assert.That(hold.Swallows(3), Is.True, "C9: al soltar ese dedo no selecciona (ni elige la cuia de la Luciérnaga)");
+            hold.Release(3, 0);
+            Assert.That(hold.Swallows(3), Is.True, "en el mismo touch-up");
+            hold.Press(3, 0, At);
+            Assert.That(hold.Swallows(3), Is.False, "el gesto siguiente es un toque normal");
+        }
+
+        [Test]
+        public void Cancel_BeforeTheNames_LetsTheReleaseBeATap()
+        {
+            var hold = new CuiaHoldTracker();
+            hold.Press(3, 0, At);
+            hold.Tick(200f);
+            hold.Cancel();
+            Assert.That(hold.Release(3, 0), Is.False);
+            Assert.That(hold.Swallows(3), Is.False);
+        }
+
+        [Test]
+        public void ALostRelease_DoesNotBlockHoldForever()
+        {
+            var hold = new CuiaHoldTracker();
+            hold.Press(1, 0, At); // su touch-up no llega nunca (el lienzo se ocultó)
+            hold.Press(2, 0, At); // el mismo dedo vuelve a bajar
+            Assert.That(hold.Tick(400f), Is.True, "no se trata como un segundo dedo (C11)");
+            Assert.That(hold.Index, Is.EqualTo(2));
+        }
+
+        [Test]
         public void Reset_ForgetsEverything()
         {
             var hold = new CuiaHoldTracker();

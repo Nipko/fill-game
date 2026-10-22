@@ -171,10 +171,23 @@ namespace AF.UI
         {
             if (_hierarchy != null && SameIds(items))
             {
+                AccessibilityNode? focusedChanged = null;
                 for (int i = 0; i < items.Count; i++)
                 {
+                    bool changed = !items[i].SameAs(_current[i]);
                     _current[i] = items[i];
                     Apply(_nodes[i], items[i]);
+                    if (changed && _nodes[i].isFocused)
+                    {
+                        focusedChanged = _nodes[i];
+                    }
+                }
+
+                if (focusedChanged != null)
+                {
+                    // El elemento enfocado cambió (tras un vertido, «1 hueco» → «2 huecos»): se avisa con el foco en él mismo, para
+                    // que TalkBack no se quede con la descripción vieja [NV] y sin mover el foco.
+                    AssistiveSupport.notificationDispatcher.SendLayoutChanged(focusedChanged);
                 }
 
                 return;

@@ -77,7 +77,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             boot.TapAnywhere();
             yield return PlayModeHelpers.WaitFor(() => boot.Flow!.Phase == FlowPhase.Playing && boot.View!.IsViewIdle, "nivel 1 jugable");
-            UseB9Texts();
+            B9LocPlay.Use();
             var host = new FakeScreenReaderHost(true);
             var service = new A11yService(host);
             boot.View!.A11y = service;
@@ -104,36 +104,6 @@ namespace AF.Tests.PlayMode
             service.Refresh();
             Assert.That(host.Items[0].Selected, Is.True, "y el lector la dice seleccionada");
             boot.View.A11y = null;
-        }
-
-        // Las etiquetas de B9 con su texto: la tabla del proyecto más B9-strings.csv (hasta B9-loc.diff), sobre la de la escena.
-        private static void UseB9Texts()
-        {
-#if UNITY_EDITOR
-            string root = Path.GetDirectoryName(Application.dataPath) ?? ".";
-            IReadOnlyList<LocCsvRow> project = LocCsv.Parse(LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile), LocCatalog.StringsFile);
-            var rows = new List<LocCsvRow>(project);
-            string extra = Path.Combine(root, "docs/dev/traspaso/spark-enganches/B9-strings.csv");
-            if (File.Exists(extra))
-            {
-                var keys = new HashSet<string>(StringComparer.Ordinal);
-                for (int i = 1; i < project.Count; i++)
-                {
-                    keys.Add(project[i].Fields[0]);
-                }
-
-                IReadOnlyList<LocCsvRow> mine = LocCsv.Parse(LocCsv.Decode(File.ReadAllBytes(extra), "B9-strings.csv"), "B9-strings.csv");
-                for (int i = 1; i < mine.Count; i++)
-                {
-                    if (!keys.Contains(mine[i].Fields[0]))
-                    {
-                        rows.Add(mine[i]);
-                    }
-                }
-            }
-
-            Loc.Configure(new LocCatalog(LocTable.FromRows(rows, LocCatalog.StringsFile), Loc.Catalog.Facts), LocLocale.SourceLocale, true);
-#endif
         }
 
         private static bool Has(IReadOnlyList<A11yItem> items, AccessibilityRole role, string label)

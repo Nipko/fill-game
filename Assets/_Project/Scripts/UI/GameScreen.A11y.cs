@@ -33,6 +33,7 @@ namespace AF.UI
         private CuiaNamesBubble? _namesBubble;
         private A11yService? _a11y;
         private bool _highContrast;
+        private float _boardMotionFactor = 1f;
 
         /// <summary>
         /// El lector de pantalla del juego (null: sin él, en los tests que no lo tratan). Al asignarlo, esta pantalla se registra
@@ -83,11 +84,18 @@ namespace AF.UI
         /// </summary>
         internal double ReduceMotionFactor { get; set; } = A11yConfig.Defaults.AnimReduceMotionFactor;
 
-        /// <summary>Factor de las duraciones del vertido del nivel de <paramref name="flow"/>: <see cref="ReduceMotionFactor"/> o 1.</summary>
+        /// <summary>
+        /// Factor de las duraciones del vertido del nivel de <paramref name="flow"/>: <see cref="ReduceMotionFactor"/> o 1. Se toma al
+        /// construir el tablero y se guarda en <see cref="BoardMotionFactor"/>: un cambio a mitad de nivel llega con el siguiente.
+        /// </summary>
         internal float PourMotionFactor(LevelFlow flow)
         {
-            return A11yRules.MotionFactor(flow.ReduceMotion, ReduceMotionFactor);
+            _boardMotionFactor = A11yRules.MotionFactor(flow.ReduceMotion, ReduceMotionFactor);
+            return _boardMotionFactor;
         }
+
+        /// <summary>El factor con que se construyó el tablero en curso (las cuias que se añaden después llevan el mismo).</summary>
+        internal float BoardMotionFactor => _boardMotionFactor;
 
         /// <summary>El seguimiento de C9 (tests).</summary>
         internal CuiaHoldTracker Hold => _hold;
@@ -222,7 +230,10 @@ namespace AF.UI
 
             if (!BoardTakesHold())
             {
-                HoldReset(); // se abrió un modal, la celebración o la Luciérnaga con el dedo abajo: sin nombres encima
+                // Se abrió un modal, la celebración o la Luciérnaga con el dedo abajo: sin nombres encima, pero si ya habían salido,
+                // ese dedo al soltar sigue sin seleccionar (02 §3.1, C9).
+                _hold.Cancel();
+                _namesBubble?.Hide();
                 return;
             }
 
@@ -250,7 +261,11 @@ namespace AF.UI
         {
             if (!BoardTakesHold())
             {
-                HoldReset(); // sin restos de un C9 anterior que se tragaran este toque (el de la Luciérnaga, por ejemplo)
+                if (!_hold.AnyDown)
+                {
+                    HoldReset(); // un gesto nuevo: sin restos de un C9 anterior que se tragaran este toque (el de la Luciérnaga)
+                }
+
                 return;
             }
 
@@ -264,8 +279,12 @@ namespace AF.UI
 
         private void OnHoldUp(int index, int pointer)
         {
+            bool tracked = pointer == _hold.Pointer; // los nombres son del dedo que los sacó: otro dedo no los quita
             _hold.Release(index, pointer);
-            _namesBubble?.Hide();
+            if (tracked || _hold.Index == CuiaHoldTracker.None)
+            {
+                _namesBubble?.Hide();
+            }
         }
 
         private void ShowHoldNames(int index)

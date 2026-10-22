@@ -45,10 +45,27 @@ namespace AF.UI
         /// <summary>Tiempo que lleva abajo el dedo que se sigue (ms).</summary>
         public float HeldMs => _heldMs;
 
+        /// <summary>Dedo que se sigue (el primero del gesto), o <see cref="int.MinValue"/> sin ninguno.</summary>
+        public int Pointer => _pointer;
+
+        /// <summary>Hay algún dedo abajo sobre una cuia.</summary>
+        public bool AnyDown => _fingers > 0;
+
         /// <summary>Un dedo <paramref name="pointer"/> baja en la cuia <paramref name="index"/>, en <paramref name="positionDp"/> (dp).</summary>
         public void Press(int index, int pointer, Vector2 positionDp)
         {
-            _swallowed = None;
+            if (_fingers > 0 && pointer == _pointer)
+            {
+                // El mismo dedo vuelve a bajar: su touch-up se perdió (el lienzo se ocultó, el sistema canceló el toque). Se empieza
+                // de cero para que el contador de dedos no se quede arriba para siempre.
+                Reset();
+            }
+
+            if (_fingers == 0)
+            {
+                _swallowed = None; // un gesto nuevo
+            }
+
             _fingers++;
             if (_fingers > 1)
             {
@@ -138,6 +155,22 @@ namespace AF.UI
         public bool Swallows(int index)
         {
             return index != None && ((Fired && Index == index) || _swallowed == index);
+        }
+
+        /// <summary>
+        /// Corta el mantener pulsado con el dedo aún abajo (se abrió un modal, la celebración o la Luciérnaga): no hay nombres que
+        /// enseñar, pero si ya habían salido, el touch-up de ese dedo se sigue tragando (02 §3.1, C9: «al soltar no selecciona»).
+        /// </summary>
+        public void Cancel()
+        {
+            if (Fired && Index != None)
+            {
+                _swallowed = Index;
+            }
+
+            Index = None;
+            Fired = false;
+            _heldMs = 0f;
         }
 
         /// <summary>Lo olvida todo (cambio de nivel, segundo plano).</summary>
