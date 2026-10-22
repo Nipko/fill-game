@@ -3385,6 +3385,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Estado:** el dueño delegó la decisión en el integrador: «escoje lo conveniente si toca esperar esperamos o no entiendo exactametne que estoy eligiendo si es bueno o malo para el proyecto». El integrador elige la (a), la recomendada por el Spark, y se lo explicó al dueño en el chat.
 - **Decisión (a):** un pack de reserva por mundo con, para cada nivel con mecánica (los primeros que necesita el kill switch de D-020) y hasta el 20 %, otro tablero de su mismo slot sin esa mecánica y en su ventana, con ids y `pack_id` propios. Cambia `schemas/af-level-1.schema.json` (contrato 21, `pack_schema`) de forma aditiva; el catálogo solo usa esos packs desde `level_overrides` (nunca como niveles de campaña). Se genera y se pasa por level-qa como el resto de la campaña.
 - **Motivo:** el seguro del kill switch funciona desde la 1.0, cuando más riesgo hay, y su peso es pequeño (JSON); sin reserva, apagar una mecánica en producción solo podría sustituir sus niveles por otros ya publicados.
+- **Implementada (2026-10-21, rama `tanda5/reserva-20`):** `pack_schema` 4 (`kind` = `reserve`, `pack_id` `reserva_{mm}_v{v}`, `replaces`, sufijos `_r{k}` y `:r{k}`); `tools/level-generator --reserve` y `tools/level-qa --reserve`; 132 tableros en los mundos 3-9 (8, 12, 12, 20, 24, 28 y 28; el mundo 2 solo lleva capacidades); el cliente los carga solo para `level_overrides` y lee `mech_enabled.*` y `level_overrides` de Remote Config en el arranque, antes del catálogo (`RcLevelBinder`). Reglas [P] de la herramienta (orden por rondas de los kill switches, celda sin mecánicas con sus capacidades, misma etiqueta y `bot_fail` más cercano) en 03 §17 y `tools/level-generator/README.md`. GDD: 03 §2, §10 y §17; 08 §4.1 y §9; 02 §9.2 regla 3 y pregunta 14.
 
 ### D-033, añadido del 2026-10-21: preguntas de B12 (consentimiento y edad) del Spark, con la recomendada
 
@@ -3423,7 +3424,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-B11-4:** texto del tooltip de la Cosecha doble del 11: **«Con un video, las semillas de este nivel valen el doble.»** [P].
 - **Q-B11-5:** **lienzo al ancho del teléfono entre 320 y 360 dp**, con 1 dp físico por dp (toca `CanvasScale` de `GameScreen` y `LobbyScreen` y sus pruebas). **No aplicado en esta integración: tarea del escritorio aparte**; hasta entonces el lienzo sigue midiendo 360 dp.
 - **Q-B11-6:** «25 minutos» y «nivel 31» van **literales** en los textos (Q-E4 (a) y 04 §2.7); si Remote Config cambia `canoes_regen_min` o `rescue_min_level`, hay que revisar los textos.
-- **Q-B11-7:** decidida en el añadido «la reserva del 20 %» (un pack de reserva por mundo); **no se implementa aquí**: será otra tarea.
+- **Q-B11-7:** decidida en el añadido «la reserva del 20 %» (un pack de reserva por mundo); **no se implementa aquí**: será otra tarea (hecha el 2026-10-21 en `tanda5/reserva-20`, con `level_overrides` enlazado a Remote Config).
 - **Q-B11-8:** se quedan el id `home` de `AF_LAYOUT` y la fila `back_home`.
 - **Q-B11-9:** la tarjeta del 31 habla **solo de las canoas** (el texto de Q-E4 (a)), sin línea de la Cuia de rescate.
 - **Q-B11-10:** el dedo de la Cuia extra del 8 sale **en cada intento hasta usarla**.
