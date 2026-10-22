@@ -113,10 +113,10 @@ index 3c820091..8b1bb0f3 100644
              _levelStartBoard = play.BoardId; // level_start pendiente: sale al terminar Llenar y teñir (08 §8.2), una vez por partida
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
 new file mode 100644
-index 00000000..f047761b
+index 00000000..53d2c8fa
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
-@@ -0,0 +1,173 @@
+@@ -0,0 +1,185 @@
 +#nullable enable
 +using AF.GameFlow;
 +using AF.Platform;
@@ -233,9 +233,21 @@ index 00000000..f047761b
 +                return;
 +            }
 +
-+            _reduceMotionNow = ResolveReduceMotion(profile);
++            // Lo resuelto en el arranque o en Ajustes, el mismo que la campaña (no se vuelve a leer el teléfono a medias).
 +            flow.ReduceMotion = _reduceMotionNow;
 +            ApplyA11y(view, _rcConfigs?.A11y ?? A11yConfig.Defaults, profile);
++        }
++
++        // Al destruir la escena: quita lo publicado para TalkBack, cuyas acciones apuntan a esta escena.
++        private void ClearA11y()
++        {
++            if (_screen != null)
++            {
++                _screen.A11y = null;
++            }
++
++            _a11y?.Host.Clear();
++            _a11y = null;
 +        }
 +
 +        // Lo que está en vigor, a todo lo que lo usa: el flujo y la pantalla del nivel, los del Reto, el Mapa y Ajustes.
@@ -312,7 +324,7 @@ index dde03f4f..9ecf16c5 100644
              _dailyCard = new DailyChallengeCard(_dailyCardCanvas.Root, _art, OnDailyCardTap);
              DailyChallengeRunner runner = gameObject.GetComponent<DailyChallengeRunner>();
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
-index 8aa51d6e..f7a3dcc7 100644
+index 8aa51d6e..c31d31f6 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
 @@ -881,6 +881,7 @@ public bool PressSettings()
@@ -352,8 +364,16 @@ index 8aa51d6e..f7a3dcc7 100644
  
              float dt = Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs);
              if (_skipNextDelta)
+@@ -2196,6 +2199,7 @@ private void OnDestroy()
+         {
+             CutSplash();
+             PersistNow("destruir la escena");
++            ClearA11y(); // B9: TalkBack no se queda con los nodos de esta escena (recarga por idioma o por borrar la cuenta)
+ 
+             // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
+             // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.cs b/Assets/_Project/Scripts/UI/GameScreen.cs
-index f2c12924..e5e8b19f 100644
+index f2c12924..d3befc56 100644
 --- a/Assets/_Project/Scripts/UI/GameScreen.cs
 +++ b/Assets/_Project/Scripts/UI/GameScreen.cs
 @@ -910,6 +910,8 @@ public void Tick(float dtMs)
@@ -445,7 +465,7 @@ index f2c12924..e5e8b19f 100644
              _tinajaPair = BindTinajaPair(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
              OrderBoardLayers();
              float f = GameConfig.SpeedFactor(flow.LevelNumber);
-+            float m = f * PourMotionFactor(flow); // B9: con Reducir movimiento, × anim_reduce_motion_factor (02 §4 y §12)
++            float m = f * BoardMotionFactor; // B9: con Reducir movimiento, × anim_reduce_motion_factor (02 §4 y §12), el de arriba
              _timings = new PourTimings(
 -                GameConfig.AnimLiftMs * f,
 -                GameConfig.AnimTravelMs * f,
@@ -594,10 +614,10 @@ index 04bde497..9578696c 100644
              public string Id { get; private set; }
 diff --git a/Assets/_Project/Tests/PlayMode/A11yGameTests.cs b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
 new file mode 100644
-index 00000000..2f48f419
+index 00000000..c039cfc9
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
-@@ -0,0 +1,300 @@
+@@ -0,0 +1,311 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -834,6 +854,17 @@ index 00000000..2f48f419
 +            Assert.That(host.Announcements, Has.Member(fruit + " seleccionado: elige destino"), "02 §12");
 +            boot.A11y!.Refresh();
 +            Assert.That(host.Items[0].Selected, Is.True);
++            A11yItem cuia = host.Items[0];
++
++            // Con la pausa abierta (un velo en el mismo lienzo), el tablero queda debajo: ni se publica ni se toca a través de ella.
++            boot.View.PauseButton.onClick.Invoke();
++            boot.A11y.Refresh();
++            foreach (A11yItem item in host.Items)
++            {
++                Assert.That(item.Id, Does.Not.StartWith("cuia_"), "la pausa tapa el tablero");
++            }
++
++            Assert.That(cuia.Invoke!(), Is.False, "un nodo viejo de una cuia no toca a través de la pausa");
 +        }
 +
 +        private static IEnumerator LoadLevel1(Profile profile, Action<GameBootstrap> done)
