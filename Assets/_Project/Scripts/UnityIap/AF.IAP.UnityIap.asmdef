@@ -1,0 +1,23 @@
+{
+  "name": "AF.IAP.UnityIap",
+  "rootNamespace": "AF.IAP.UnityIap",
+  "references": [
+    "AF.IAP",
+    "Unity.Purchasing"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [
+    {
+      "name": "com.unity.purchasing",
+      "expression": "5.4.4",
+      "define": "AF_UNITY_IAP"
+    }
+  ],
+  "noEngineReferences": false
+}

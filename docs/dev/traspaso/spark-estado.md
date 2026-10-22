@@ -6,6 +6,20 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-22 · T5-IAP · Unity IAP 5.4.4 (Play Billing) detrás de `IBillingClient` (`spark/t5-iap`): HECHA · verificación completa VERDE (rama y rama + parches) · lista para integrar
+
+- **Encargo:** `spark-reto-del-rio.md` §14; D-040 (paquete `com.unity.purchasing` 5.4.4 y permiso `com.android.vending.BILLING`). Nota: `docs/dev/iap.md`.
+- **Rama:** `spark/t5-iap`, desde `origin/integracion-fase1-fase2` en `741595c7`; una fusión al final con `d9c8e955` (B9 y las notificaciones reales), con los parches rehechos encima. Empujada sin `--force`.
+- **En la rama** (archivos nuevos): `Scripts/IAP/PlayStorePort.cs`, `PlayBillingClient.cs`, `BillingReadyStoreService.cs`, `DelegatePlayerUid.cs`, `IStoreDecorator.cs`; `Scripts/UnityIap/` (`AF.IAP.UnityIap`: `UnityIapStorePort.cs`, `PlayBillingFactory.cs`); `Scripts/Backend/Firebase/FirebaseAuthUid.cs`; tests `Scripts/IAP/Tests/FakePlayStorePort.cs`, `PlayBillingClientTests.cs` (37), `PlayBillingVerifiedTests.cs` (19) y `Tests/PlayMode/PlayBillingPlayModeTests.cs` (2). `VerifiedStoreService` no cambia de contrato (solo una propiedad aditiva en su evento, en el parche de analítica).
+- **Parches** (`spark-enganches/`, LF, en este orden): `IAP-manifest.diff` (manifiesto, `packages-lock.json`, `Assets/Resources/BillingMode.json` y BILLING en la lista blanca de `ci/check-manifest.ps1` con su autotest y la cita a D-040), `IAP-bootstrap.diff` (`AF.UI.asmdef`, `GameBootstrap.Backend.cs`, una línea en `GameBootstrap.Consent.cs` y otra en `GameBootstrap.cs`), `IAP-analytics.diff` (`VerifiedStoreService.cs`, `ConsentStoreService.cs`, `AnalyticsStoreService.cs` y su test; arregla también un fallo anterior de B12: la analítica no oía lo acreditado tarde con el consentimiento activo), `IAP-price.diff` (Q-IAP-3 (a)) e `IAP-gdd.diff` (08 §7 #3, §10.1 y §13.3, con la fila de Data Safety).
+- **Permisos del manifiesto fusionado:** solo uno nuevo, `com.android.vending.BILLING` (de `com.android.billingclient:billing:9.0.0`). Ningún otro.
+- **Verificación** (ARM64; detalle en `docs/dev/iap.md` §6): dotnet build 0 avisos; dotnet test 1.002 (996 + 6); `validate_schema.py` 116/116; EditMode 4.264 (4.261 + 3) en la rama y 4.267 (4.264 + 3) con los parches; PlayMode 1.888 (1.633 + 255) en los dos; `check-manifest --self-test` 50 OK; build de humo con los parches: AAB 48,16 MB (+6,58 MB frente a la rama), `size-gate` OK, `check-manifest -Mode dev` OK con PBL 9.0.0, 16 KB OK.
+- **Revisión:** skill `code-review` (reglas de `code-reviewer.md`), tres rondas: CAMBIOS NECESARIOS (10 hallazgos), CAMBIOS NECESARIOS (10), **APROBADO** (sugerencias, casi todas aplicadas; las demás, en «Riesgos» de la nota).
+- **Preguntas** (`docs/dev/iap.md` §4; en todas va aplicada la recomendada como propuesta, sin decidir): Q-IAP-1 telemetría de compras de Unity IAP a Unity (**bloquea el soft launch** hasta que decidan el dueño y el abogado); Q-IAP-2 `deferred_ack` de consumibles (5.4.4 no lo permite: no se hace); Q-IAP-3 monedas fuera de 05 §4.2; Q-IAP-4 no consumibles con otro UID (409 en cada arranque; tarea del backend); Q-IAP-5 Play solo con la edad decidida; Q-IAP-6 paquetes que arrastra Unity IAP (`services.core` 1.18.0, `services.deployment` 1.7.2, `deployment.api` 1.1.3: anotarlos en D-040); Q-IAP-7 `BillingMode.json`.
+- **Modo de ensayo** con licencias de prueba: `docs/dev/iap.md` §3 (no ejecutado: la app no existe en Play Console, D-034).
+
+---
+
 ## 2026-10-21 · B9 · Accesibilidad: Reducir movimiento, Alto contraste, escala de fuente, C9, simulador de daltonismo y TalkBack (`spark/t5-b9`): HECHA · verificación completa VERDE (rama y rama + parches) · lista para integrar
 
 - **Rama:**
