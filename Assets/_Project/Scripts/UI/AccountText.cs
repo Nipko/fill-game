@@ -80,7 +80,45 @@ namespace AF.UI
         public static string Failed => Loc.T(Keys.Failed);
 
         /// <summary>«Código para borrar tu cuenta en la web: {code}».</summary>
-        public static string Code(string code) => Loc.T(Keys.Code, LocArgs.Of("code", code ?? string.Empty));
+        public static string Code(string code) => Loc.T(Keys.Code, LocArgs.Of("code", CodeGroups(code ?? string.Empty)));
+
+        /// <summary>Caracteres por grupo del código en pantalla (<see cref="CodeGroups"/>).</summary>
+        public const int CodeGroupSize = 4;
+
+        /// <summary>
+        /// El código de borrado como se enseña (D-033, punto 11: al 130 % sus 26 caracteres seguidos no cabían en una línea de
+        /// Ajustes): en grupos de como mucho <see cref="CodeGroupSize"/> caracteres, repartidos lo más igual posible, unidos por
+        /// guiones (26 = 4-4-4-4-4-3-3). El guion es el separador del Base32 de Crockford, que lo ignora al decodificar, y deja
+        /// que la línea se corte entre grupos sin partir ninguno. No cambia ni añade ningún carácter del código: quitando los
+        /// guiones queda el mismo. No es texto traducible (el traductor no toca <c>{code}</c>).
+        /// </summary>
+        public static string CodeGroups(string code)
+        {
+            int n = code.Length;
+            if (n <= CodeGroupSize)
+            {
+                return code;
+            }
+
+            int groups = (n + CodeGroupSize - 1) / CodeGroupSize;
+            int size = n / groups;
+            int longer = n % groups;
+            var sb = new System.Text.StringBuilder(n + groups - 1);
+            int at = 0;
+            for (int g = 0; g < groups; g++)
+            {
+                if (g > 0)
+                {
+                    sb.Append('-');
+                }
+
+                int len = size + (g < longer ? 1 : 0);
+                sb.Append(code, at, len);
+                at += len;
+            }
+
+            return sb.ToString();
+        }
 
         /// <summary>Sin el código (sin red o sin respuesta del servidor).</summary>
         public static string CodeUnavailable => Loc.T(Keys.CodeUnavailable);

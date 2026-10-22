@@ -105,8 +105,11 @@ namespace AF.UI
             float codeH = 0f;
             if (_accountCode != null && _accountCode.gameObject.activeSelf)
             {
-                // F3-5: el código, en las líneas que pida (hasta tres con la escala de texto), encima del enlace.
+                // F3-5: el código, en las líneas que pida (hasta tres con la escala de texto), encima del enlace. D-033, punto 11:
+                // nunca por debajo de 12 sp × escala (02 §12); el código va en grupos con guiones (AccountText.CodeGroups), así que
+                // la línea se corta entre grupos en lugar de encoger la letra.
                 _accountCode.fontSizeMax = 14f * s;
+                _accountCode.fontSizeMin = Mathf.Max(MinTextSp, UiBuilder.MinTextSp * s);
                 codeH = Mathf.Ceil(Mathf.Max(20f * s, UiBuilder.MinTextHeight(_accountCode, inner))) + 4f;
                 UiBuilder.Place(_accountCode.rectTransform, 0f, 0f, inner, codeH - 4f);
                 _rowTops.Add(y);
