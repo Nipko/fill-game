@@ -54,12 +54,12 @@ namespace AF.UI
         /// <summary>Un dedo <paramref name="pointer"/> baja en la cuia <paramref name="index"/>, en <paramref name="positionDp"/> (dp).</summary>
         public void Press(int index, int pointer, Vector2 positionDp)
         {
-            if (_fingers > 0 && (pointer == _pointer || (_pointer == int.MinValue && !Fired && _swallowed == None)))
+            if (_fingers > 0 && pointer == _pointer)
             {
-                // El mismo dedo vuelve a bajar (su touch-up se perdió) o queda contado un dedo que nadie sigue (el touch-up de un
-                // segundo dedo se perdió tras soltar el primero): se empieza de cero para que C9 no se quede bloqueado.
                 // El mismo dedo vuelve a bajar: su touch-up se perdió (el lienzo se ocultó, el sistema canceló el toque). Se empieza
-                // de cero para que el contador de dedos no se quede arriba para siempre.
+                // de cero para que el contador de dedos no se quede arriba para siempre. (Un segundo dedo cuyo touch-up se pierda
+                // queda contado hasta el siguiente tablero o la vuelta de segundo plano, que llaman a Reset: así C11 nunca enseña
+                // nombres con otro dedo abajo.)
                 Reset();
             }
 

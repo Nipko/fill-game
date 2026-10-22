@@ -154,6 +154,7 @@ namespace AF.UI
 
         private readonly List<AccessibilityNode> _nodes = new List<AccessibilityNode>();
         private readonly List<A11yItem> _current = new List<A11yItem>();
+        private readonly List<NodeRef> _refs = new List<NodeRef>();
         private AccessibilityHierarchy? _hierarchy;
 
         /// <summary>Lector forzado por un test o un build de desarrollo (null: el del sistema).</summary>
@@ -176,6 +177,7 @@ namespace AF.UI
                 {
                     bool changed = !items[i].SameAs(_current[i]);
                     _current[i] = items[i];
+                    _refs[i].Item = items[i];
                     Apply(_nodes[i], items[i]);
                     if (changed && _nodes[i].isFocused)
                     {
@@ -205,17 +207,19 @@ namespace AF.UI
             var hierarchy = new AccessibilityHierarchy();
             _nodes.Clear();
             _current.Clear();
+            _refs.Clear();
             AccessibilityNode? refocus = null;
             for (int i = 0; i < items.Count; i++)
             {
-                int k = i;
                 A11yItem item = items[i];
                 AccessibilityNode node = hierarchy.AddNode(item.Label, null);
+                var nodeRef = new NodeRef(hierarchy, item);
                 _nodes.Add(node);
                 _current.Add(item);
+                _refs.Add(nodeRef);
                 Apply(node, item);
-                node.frameGetter = () => k < _current.Count && _current[k].Rect != null ? ScreenFrame(_current[k].Rect!) : Rect.zero;
-                node.invoked += () => k < _current.Count && _current[k].Invoke != null && _current[k].Invoke!();
+                node.frameGetter = () => nodeRef.Item.Rect != null ? ScreenFrame(nodeRef.Item.Rect!) : Rect.zero;
+                node.invoked += () => nodeRef.Live && nodeRef.Item.Invoke != null && nodeRef.Item.Invoke!();
                 if (focused != null && string.Equals(item.Id, focused, StringComparison.Ordinal))
                 {
                     refocus = node;
@@ -225,6 +229,23 @@ namespace AF.UI
             _hierarchy = hierarchy;
             AssistiveSupport.activeHierarchy = hierarchy;
             AssistiveSupport.notificationDispatcher.SendLayoutChanged(refocus);
+        }
+
+        // Lo que hace un nodo: su elemento de ahora (se actualiza en sitio) y su jerarquía; uno de una jerarquía que ya no está
+        // activa no hace nada.
+        private sealed class NodeRef
+        {
+            private readonly AccessibilityHierarchy _hierarchy;
+
+            public NodeRef(AccessibilityHierarchy hierarchy, A11yItem item)
+            {
+                _hierarchy = hierarchy;
+                Item = item;
+            }
+
+            public A11yItem Item { get; set; }
+
+            public bool Live => ReferenceEquals(AssistiveSupport.activeHierarchy, _hierarchy);
         }
 
         private static void Apply(AccessibilityNode node, A11yItem item)
@@ -263,6 +284,7 @@ namespace AF.UI
             _hierarchy = null;
             _nodes.Clear();
             _current.Clear();
+            _refs.Clear();
         }
 
         /// <inheritdoc />

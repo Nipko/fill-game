@@ -143,15 +143,14 @@ namespace AF.UI
             Rect canvasRect = ((RectTransform)canvas.transform).rect;
             List<Graphic> graphics = GraphicsBuffer;
             canvas.GetComponentsInChildren(false, graphics);
-            for (int i = 0; i < graphics.Count; i++)
+            bool blocked = false;
+            for (int i = 0; i < graphics.Count && !blocked; i++)
             {
-                if (IsBlocker(graphics[i], canvasRect))
-                {
-                    return true;
-                }
+                blocked = IsBlocker(graphics[i], canvasRect);
             }
 
-            return false;
+            graphics.Clear();
+            return blocked;
         }
 
         /// <summary>
@@ -165,16 +164,40 @@ namespace AF.UI
             List<Graphic> graphics = GraphicsBuffer; // en orden de dibujo (profundidad primero); sin asignar
             canvas.GetComponentsInChildren(false, graphics);
             bool past = false;
-            for (int i = 0; i < graphics.Count; i++)
+            bool blocked = false;
+            for (int i = 0; i < graphics.Count && !blocked; i++)
             {
-                bool inside = graphics[i].transform.IsChildOf(marker);
-                if (inside)
+                if (graphics[i].transform.IsChildOf(marker))
                 {
                     past = true;
                     continue;
                 }
 
-                if (past && IsBlocker(graphics[i], canvasRect))
+                blocked = past && IsBlocker(graphics[i], canvasRect);
+            }
+
+            graphics.Clear();
+            return blocked;
+        }
+
+        /// <summary>
+        /// Lo de <paramref name="marker"/> en <paramref name="canvas"/> está tapado: por un velo dibujado después en el mismo lienzo
+        /// (<see cref="BlockedAbove"/>) o por otro lienzo de encima con un velo (la pausa, que va en su propio lienzo). Recorre los
+        /// lienzos (asigna): solo para el lector y al ir a enseñar los nombres de C9, nunca por fotograma.
+        /// </summary>
+        public static bool Covered(Canvas canvas, Transform marker)
+        {
+            if (BlockedAbove(canvas, marker))
+            {
+                return true;
+            }
+
+            Canvas[] all = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            for (int i = 0; i < all.Length; i++)
+            {
+                Canvas c = all[i];
+                if (c != canvas && c.isRootCanvas && c.isActiveAndEnabled && c.renderMode != RenderMode.WorldSpace
+                    && c.sortingOrder > canvas.sortingOrder && HasBlocker(c))
                 {
                     return true;
                 }
@@ -294,7 +317,7 @@ namespace AF.UI
 
             // Lo que se toca sin ser un botón (un velo «toca para seguir» de la tarjeta previa o del banner, un marcador): un botón
             // que hace el mismo toque.
-            if (graphic != null && graphic.raycastTarget && IsTapTarget(t))
+            if (graphic != null && graphic.raycastTarget && IsTapTarget(t) && BlocksRaycasts(graphic))
             {
                 string? label = TapLabel(t, graphic, canvasRect);
                 if (label != null)
@@ -324,6 +347,12 @@ namespace AF.UI
             if (target == null || !target.activeInHierarchy || EventSystem.current == null)
             {
                 return false;
+            }
+
+            Graphic? graphic = target.GetComponent<Graphic>();
+            if (graphic != null && !BlocksRaycasts(graphic))
+            {
+                return false; // un velo que se está yendo: un dedo ya no lo alcanza, el lector tampoco
             }
 
             RectTransform rt = (RectTransform)target.transform;
@@ -365,6 +394,8 @@ namespace AF.UI
                     text = A11yText.Append(text, TextsBuffer[i].text.Trim());
                 }
             }
+
+            TextsBuffer.Clear();
 
             if (text.Length > 0)
             {
@@ -425,12 +456,14 @@ namespace AF.UI
         private static bool BlocksRaycasts(Graphic graphic)
         {
             graphic.GetComponentsInParent(false, GroupsBuffer);
+            bool blocks = true;
             for (int i = 0; i < GroupsBuffer.Count; i++)
             {
                 CanvasGroup group = GroupsBuffer[i];
                 if (!group.blocksRaycasts)
                 {
-                    return false;
+                    blocks = false;
+                    break;
                 }
 
                 if (group.ignoreParentGroups)
@@ -439,7 +472,8 @@ namespace AF.UI
                 }
             }
 
-            return true;
+            GroupsBuffer.Clear();
+            return blocks;
         }
 
         private static bool Covers(Graphic graphic, Rect canvasRect)

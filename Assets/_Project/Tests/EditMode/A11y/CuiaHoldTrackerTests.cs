@@ -129,6 +129,22 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void C11_AFingerThatComesBackWhileAnotherIsDown_ShowsNoNames()
+        {
+            var hold = new CuiaHoldTracker();
+            hold.Press(1, 0, At); // A
+            hold.Press(4, 1, At); // B, sigue abajo
+            hold.Release(1, 0); // A sube antes de los 400 ms
+            hold.Press(1, 0, At); // A vuelve a bajar con el mismo id
+            Assert.That(hold.Tick(1000f), Is.False, "C11: con B abajo, nada de nombres");
+            hold.Release(1, 0);
+            hold.Release(4, 1);
+            Assert.That(hold.AnyDown, Is.False);
+            hold.Press(2, 0, At);
+            Assert.That(hold.Tick(400f), Is.True, "con todos fuera, vuelve a funcionar");
+        }
+
+        [Test]
         public void Reset_ForgetsEverything()
         {
             var hold = new CuiaHoldTracker();

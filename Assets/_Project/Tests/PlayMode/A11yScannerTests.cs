@@ -40,7 +40,7 @@ namespace AF.Tests.PlayMode
             var host = new FakeScreenReaderHost(true);
             var service = new A11yService(host);
             Assert.That(service.Refresh(), Is.True);
-            IReadOnlyList<A11yItem> items = host.Items;
+            IReadOnlyList<A11yItem> items = new List<A11yItem>(host.Items); // copia: Publish rehace la lista del anfitrión
             Assert.That(items, Is.Not.Empty);
             Assert.That(Has(items, AccessibilityRole.Button, boot.Lobby!.PlayLabel), Is.True, "«Jugar · Nivel 4» con su etiqueta funcional");
             AssertReadingOrder(items);
@@ -58,7 +58,7 @@ namespace AF.Tests.PlayMode
             var host = new FakeScreenReaderHost(true);
             var service = new A11yService(host);
             service.Refresh();
-            IReadOnlyList<A11yItem> items = host.Items;
+            IReadOnlyList<A11yItem> items = new List<A11yItem>(host.Items); // copia: Publish rehace la lista del anfitrión
             Assert.That(Has(items, AccessibilityRole.Button, boot.Lobby!.PlayLabel), Is.False, "el inicio queda debajo del velo de Ajustes");
             Assert.That(Has(items, AccessibilityRole.StaticText, UiText.Settings), Is.True, "la cabecera «Ajustes»");
             A11yItem? sound = host.Find(UiText.Sound);
@@ -79,6 +79,38 @@ namespace AF.Tests.PlayMode
                     Assert.That(UnityScreenReaderHost.ScreenFrame(item.Rect).Overlaps(viewport), Is.True, item.Label + ": dentro del visor");
                 }
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Luciernaga_TheCuiaToRevealIsChosenWithTheReader()
+        {
+            // Nivel 100 (estreno de Aguas turbias, 1 Luciérnaga regalada; la cuia 0 es la turbia): abrir Revelar y elegir la cuia
+            // con el lector (04 §2.5: en la selección, tocar una cuia es elegirla).
+            FunnelSetup.Hooks();
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+            yield return PlayModeHelpers.LoadGame(100, new MemoryProgressStore(100, 99));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            for (int t = 0; t < 4000 && (boot.Flow!.Phase != FlowPhase.Playing || !boot.View!.IsViewIdle); t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            PlayModeHelpers.Step(boot, 50);
+            B9LocPlay.Use();
+            var host = new FakeScreenReaderHost(true);
+            var service = new A11yService(host);
+            boot.View!.A11y = service;
+            Assert.That(boot.Flow!.Session.Current[0].HiddenMask, Is.Not.Zero, "la cuia 0 es la turbia");
+            Assert.That(boot.PressReveal(), Is.True);
+            Assert.That(boot.Flow.RevealSelecting, Is.True);
+            PlayModeHelpers.Step(boot, 160);
+            service.Refresh();
+            Assert.That(host.Items[0].Id, Is.EqualTo("cuia_0"), "en la selección, las cuias siguen publicadas");
+            Assert.That(host.Items[0].Invoke!(), Is.True);
+            Assert.That(boot.Flow.RevealSelecting, Is.False, "elegida con el lector: se revela");
+            boot.View.A11y = null;
         }
 
         [UnityTest]
@@ -112,7 +144,7 @@ namespace AF.Tests.PlayMode
             var service = new A11yService(host);
             boot.View!.A11y = service;
             service.Refresh();
-            IReadOnlyList<A11yItem> items = host.Items;
+            IReadOnlyList<A11yItem> items = new List<A11yItem>(host.Items); // copia: Publish rehace la lista del anfitrión
             int cuias = boot.View.Views.Length;
             Assert.That(items.Count, Is.GreaterThan(cuias));
             for (int i = 0; i < cuias; i++)
@@ -130,10 +162,23 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(host.Find(A11yText.TapToContinue), Is.Null, "el fondo del tablero (C7) no se publica como «Continuar»");
+            A11yItem? pause = host.Find(UiText.Pause);
+            Assert.That(pause, Is.Not.Null, "02 §12: la pausa, botón de solo icono, dice «Pausa»");
+            Assert.That(pause!.Role, Is.EqualTo(AccessibilityRole.Button));
             Assert.That(items[0].Invoke!(), Is.True);
             Assert.That(boot.Flow!.Selected, Is.EqualTo(0), "activar la cuia 1 la selecciona (C1), como el dedo");
             service.Refresh();
             Assert.That(host.Items[0].Selected, Is.True, "y el lector la dice seleccionada");
+
+            // La pausa por el lector: se abre y tapa el tablero (ni se publica ni se toca a través de ella).
+            Assert.That(pause.Invoke!(), Is.True);
+            service.Refresh();
+            foreach (A11yItem item in host.Items)
+            {
+                Assert.That(item.Id, Does.Not.StartWith("cuia_"), "la pausa tapa el tablero");
+            }
+
+            Assert.That(items[1].Invoke!(), Is.False, "un nodo viejo de una cuia no toca a través de la pausa");
             boot.View.A11y = null;
         }
 

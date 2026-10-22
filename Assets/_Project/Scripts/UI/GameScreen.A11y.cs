@@ -137,12 +137,12 @@ namespace AF.UI
             }
         }
 
-        // El tablero acepta toques del lector: jugable y sin un modal encima en el mismo lienzo (la pausa, una confirmación). En la
+        // El tablero acepta toques del lector: jugable y sin un modal encima (en su lienzo o en otro: la pausa, una confirmación). En la
         // selección de la Luciérnaga también: tocar una cuia es elegir la que se revela (04 §2.5).
         private bool BoardReadable()
         {
             LevelFlow? flow = _flow;
-            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && _views.Length > 0 && !A11yScanner.BlockedAbove(_canvas, _board);
+            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && _views.Length > 0 && !A11yScanner.Covered(_canvas, _board);
         }
 
         bool IA11ySource.Collect(Canvas canvas, A11yScanner scanner, List<A11yItem> into)
@@ -290,7 +290,7 @@ namespace AF.UI
                 return;
             }
 
-            if (!BoardTakesHold())
+            if (!FlowTakesHold())
             {
                 // Se abrió un modal, la celebración o la Luciérnaga con el dedo abajo: sin nombres encima, pero si ya habían salido,
                 // ese dedo al soltar sigue sin seleccionar (02 §3.1, C9).
@@ -301,16 +301,28 @@ namespace AF.UI
 
             if (_hold.Tick(dtMs))
             {
+                if (A11yScanner.Covered(_canvas, _board))
+                {
+                    _hold.Cancel(); // la pausa u otro velo encima (no cambian la fase): sin nombres debajo
+                    return;
+                }
+
                 ShowHoldNames(_hold.Index);
             }
         }
 
         // C9 es del tablero jugable: no con un modal (también la pausa, que no cambia la fase), la celebración o la selección de la
-        // Luciérnaga (el toque elige la cuia). Sin asignar: se mira en cada fotograma mientras un dedo está abajo.
+        // Luciérnaga (el toque elige la cuia). Recorre el lienzo (sin asignar): solo al bajar el dedo y al ir a enseñar los nombres.
         private bool BoardTakesHold()
         {
+            return FlowTakesHold() && !A11yScanner.BlockedAbove(_canvas, _board);
+        }
+
+        // Lo barato de BoardTakesHold, lo que se mira en cada fotograma con el dedo abajo: solo el flujo.
+        private bool FlowTakesHold()
+        {
             LevelFlow? flow = _flow;
-            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && !flow.RevealSelecting && !A11yScanner.BlockedAbove(_canvas, _board);
+            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && !flow.RevealSelecting;
         }
 
         /// <summary>Olvida C9 y oculta los nombres (parche: al construir el tablero y al volver de segundo plano).</summary>
@@ -354,7 +366,7 @@ namespace AF.UI
         private void ShowHoldNames(int index)
         {
             LevelFlow? flow = _flow;
-            if (flow == null || !BoardTakesHold() || (uint)index >= (uint)_views.Length || index >= flow.Session.Current.Count)
+            if (flow == null || !FlowTakesHold() || (uint)index >= (uint)_views.Length || index >= flow.Session.Current.Count)
             {
                 return;
             }
