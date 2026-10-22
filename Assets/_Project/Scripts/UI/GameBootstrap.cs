@@ -1477,6 +1477,8 @@ namespace AF.UI
                 yield return null; // el río y el logotipo, a la vista antes de cargar
             }
 
+            IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
+            EnsureRemoteConfig(clock); // mech_enabled.* y level_overrides se leen al crear el catálogo (D-033, Q-B11-7 a)
             LevelCatalog? catalog = LoadCatalog();
             if (catalog == null)
             {
@@ -1485,7 +1487,6 @@ namespace AF.UI
                 yield break;
             }
 
-            IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
             string profileDirectory = LaunchOptions.ProfileDirectoryOverride ?? Application.persistentDataPath;
 
             // Tras elegir idioma en Ajustes, la escena se recargó (RebuildUi): se vuelve al inicio con el perfil de la sesión, tal
@@ -1989,10 +1990,12 @@ namespace AF.UI
                     return null;
                 }
 
-                // Kill switch de mecánicas (KS1; D-020, pregunta 31 b): mech_enabled.* (defaults de GameConfig y af_mech_off en
-                // desarrollo) y level_overrides (fuente local vacía hasta AF.RemoteConfig), con los ids buscados en los paquetes.
-                MechanicSwitches switches = LaunchOptions.ResolveMechSwitches();
-                LevelOverrides overrides = LevelOverrides.Create(LaunchOptions.ResolveLevelOverridesJson(), packs);
+                // Kill switch de mecánicas (KS1; D-020, pregunta 31 b): mech_enabled.* (defaults de GameConfig, Remote Config y
+                // af_mech_off en desarrollo) y level_overrides (Remote Config o la fuente local), con los ids buscados en los
+                // paquetes de campaña y en los de reserva (D-033, Q-B11-7 a; GameBootstrap.Reserve.cs).
+                MechanicSwitches switches = ResolveCatalogSwitches();
+                string overridesJson = ResolveCatalogOverridesJson();
+                LevelOverrides overrides = LevelOverrides.Create(overridesJson, OverridePool(packs, overridesJson));
                 for (int i = 0; i < overrides.Problems.Count; i++)
                 {
                     Debug.LogWarning(LogPrefix + overrides.Problems[i]);

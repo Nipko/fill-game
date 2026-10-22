@@ -260,7 +260,8 @@ namespace AF.Levels
                 level.Skippable,
                 level.HintSupported,
                 level.Band,
-                level.ParApprox);
+                level.ParApprox,
+                level.Replaces);
         }
 
         // Una de las tres etiquetas de difficulty.label (08 §4.1), con la cadena canónica; null si no lo es.

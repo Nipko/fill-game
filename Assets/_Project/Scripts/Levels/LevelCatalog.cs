@@ -50,6 +50,9 @@ namespace AF.Levels
     /// formato de respaldo por slot es de la 1.1. Con todas las mecánicas encendidas ningún nivel cambia, haya o no
     /// <c>level_overrides</c> [P]. <see cref="Find"/> y <see cref="Serve"/> devuelven ya el nivel servido; <see cref="PackOf"/>,
     /// el paquete del publicado.</para>
+    /// <para>Los paquetes de reserva (<see cref="LevelPack.IsReserve"/>, <c>reserva_{mm}_v{v}</c>; D-033, añadido «la reserva del
+    /// 20 %», Q-B11-7 a) nunca son niveles de campaña: <see cref="Create(IReadOnlyList{LevelPack}, int, LevelOverrides?, MechanicSwitches, Action{string}?, LevelLabelOverrides?)"/>
+    /// los rechaza. Sus tableros solo llegan como sustitutos, por <see cref="LevelOverrides"/>.</para>
     /// <para>Inmutable salvo la marca de «aviso ya escrito». Las búsquedas son binarias y no asignan memoria.</para>
     /// </remarks>
     public sealed class LevelCatalog
@@ -205,7 +208,8 @@ namespace AF.Levels
         /// </summary>
         /// <exception cref="ArgumentException">No hay paquetes o alguno es null.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="levelOffset"/> fuera de 0..<see cref="MaxLevelOffset"/>.</exception>
-        /// <exception cref="LevelFormatException">Un nivel está en dos paquetes.</exception>
+        /// <exception cref="LevelFormatException">Un nivel está en dos paquetes, o un paquete es de reserva (D-033, Q-B11-7 a: solo
+        /// se sirve desde <c>level_overrides</c>).</exception>
         public static LevelCatalog Create(
             IReadOnlyList<LevelPack> packs,
             int levelOffset,
@@ -229,6 +233,12 @@ namespace AF.Levels
             for (int p = 0; p < packs.Count; p++)
             {
                 packArray[p] = packs[p] ?? throw new ArgumentException("Un paquete es null.", nameof(packs));
+                if (packArray[p].IsReserve)
+                {
+                    throw new LevelFormatException(packArray[p].PackId + " es un paquete de reserva: sus tableros solo se sirven desde "
+                        + LevelOverrides.Key + ", nunca como niveles de campaña (D-033, Q-B11-7 a).");
+                }
+
                 total += packArray[p].Count;
             }
 

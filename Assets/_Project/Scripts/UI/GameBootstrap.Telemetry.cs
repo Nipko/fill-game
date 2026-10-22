@@ -79,17 +79,19 @@ namespace AF.UI
             ActiveRcConfigs = null;
         }
 
-        private void SetUpTelemetry(IClock clock)
+        // Remote Config de la sesión, una vez: 08 §2.3, RC.LoadDefaults(); RC.ActivateCached(); RC.FetchAsync(min_interval=12h).
+        // Va antes del catálogo de niveles (Start), que lee mech_enabled.* y level_overrides (D-033, Q-B11-7 a), y
+        // SetUpTelemetry lo reutiliza.
+        private RemoteConfigService EnsureRemoteConfig(IClock clock)
         {
-            _telemetryClock = clock;
-            _events = new EventBus
+            if (_rc != null)
             {
-                HandlerFailed = (type, e) => Debug.LogError(LogPrefix + "Un oyente de " + type.Name + " falló: " + e.Message),
-            };
+                return _rc;
+            }
 
             IRemoteConfigBackend rcBackend = RemoteConfigBackendOverride ?? RemoteConfigBackends.CreateDefault(RemoteConfigDefaults.Compiled);
             _rc = new RemoteConfigService(null, rcBackend);
-            _rc.ActivateCached(); // 08 §2.3: RC.LoadDefaults(); RC.ActivateCached(); RC.FetchAsync(min_interval=12h)
+            _rc.ActivateCached();
             if (rcBackend is FirebaseRemoteConfigBackend firebaseRc)
             {
                 // No bloquea; lo descargado se aplica en el arranque siguiente (las cifras no cambian a mitad de sesión).
@@ -104,7 +106,18 @@ namespace AF.UI
             }
 
             AF.RemoteConfig.RC.Use(_rc);
-            _rcConfigs = RcConfigBinder.Bind(_rc, Application.version);
+            return _rc;
+        }
+
+        private void SetUpTelemetry(IClock clock)
+        {
+            _telemetryClock = clock;
+            _events = new EventBus
+            {
+                HandlerFailed = (type, e) => Debug.LogError(LogPrefix + "Un oyente de " + type.Name + " falló: " + e.Message),
+            };
+
+            _rcConfigs = RcConfigBinder.Bind(EnsureRemoteConfig(clock), Application.version);
             ActiveRcConfigs = _rcConfigs;
             for (int i = 0; i < _rcConfigs.Errors.Count; i++)
             {

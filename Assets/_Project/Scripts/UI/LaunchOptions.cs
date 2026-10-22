@@ -82,11 +82,12 @@ namespace AF.UI
 
         /// <summary>
         /// Extra de intent (string) de los builds de desarrollo (tarea KS1; D-020, pregunta 31 b): apaga los kill switches
-        /// <c>mech_enabled.&lt;id&gt;</c> de 08 §9 de la lista separada por comas (<c>--es af_mech_off hoja,matapi</c>). En el
-        /// teléfono solo prueba el respaldo sin override: <c>level_overrides</c> sale de la fuente local
-        /// (<see cref="LevelOverrides.LocalSource"/>, <c>{}</c>), así que <see cref="LevelCatalog"/> sirve el publicado y escribe el
-        /// aviso [P]. La sustitución con un override la prueban los tests EditMode (<see cref="LevelOverridesJsonOverride"/>). Un id
-        /// desconocido se ignora y se avisa en el log. Nunca se lee en un build de release.
+        /// <c>mech_enabled.&lt;id&gt;</c> de 08 §9 de la lista separada por comas (<c>--es af_mech_off hoja,matapi</c>), además de
+        /// los que apague Remote Config. <c>level_overrides</c> sale de Remote Config (o de la fuente local,
+        /// <see cref="LevelOverrides.LocalSource"/>, <c>{}</c>): sin entradas, <see cref="LevelCatalog"/> sirve el publicado y
+        /// escribe el aviso [P]; con una entrada que apunte a un tablero de la reserva del 20 % (D-033, Q-B11-7 a), lo sustituye.
+        /// Los tests lo fuerzan con <see cref="LevelOverridesJsonOverride"/>. Un id desconocido se ignora y se avisa en el log.
+        /// Nunca se lee en un build de release.
         /// </summary>
         public const string IntentExtraMechOff = "af_mech_off";
 
@@ -139,11 +140,17 @@ namespace AF.UI
         public static string? MechOffOverride { get; set; }
 
         /// <summary>
-        /// <c>level_overrides</c> (JSON <c>{slot: level_id}</c>, 08 §9) forzado por un test en lugar de la fuente local
-        /// (<see cref="LevelOverrides.LocalSource"/>, vacía). Null = la fuente local. Solo tests: ningún extra de intent lo rellena,
-        /// así que en un build de desarrollo <c>af_mech_off</c> no puede ejercitar la sustitución (solo el respaldo con aviso).
+        /// <c>level_overrides</c> (JSON <c>{slot: level_id}</c>, 08 §9) forzado por un test en lugar del de Remote Config (o, sin
+        /// él, la fuente local <see cref="LevelOverrides.LocalSource"/>, vacía). Null = el de Remote Config. Solo tests: ningún
+        /// extra de intent lo rellena.
         /// </summary>
         public static string? LevelOverridesJsonOverride { get; set; }
+
+        /// <summary>
+        /// Paquetes de reserva (JSON, <c>kind</c> = <c>reserve</c>; D-033, Q-B11-7 a) forzados por un test en lugar de los de la
+        /// escena; null = los de la escena. Solo tests.
+        /// </summary>
+        public static string[]? ReservePackJsonOverride { get; set; }
 
         /// <summary>Nivel de arranque forzado por un test (0 = ninguno).</summary>
         public static int StartLevelOverride { get; set; }
@@ -294,6 +301,7 @@ namespace AF.UI
             DevWalletOverride = null;
             MechOffOverride = null;
             LevelOverridesJsonOverride = null;
+            ReservePackJsonOverride = null;
             BenchMorphoOverride = null;
             DevMaxLevelOverride = null;
             DevRejectOverride = null;
@@ -336,8 +344,17 @@ namespace AF.UI
         /// </summary>
         public static MechanicSwitches ResolveMechSwitches()
         {
+            return ResolveMechSwitches(GameConfig.MechEnabled);
+        }
+
+        /// <summary>
+        /// Como <see cref="ResolveMechSwitches()"/>, sobre <paramref name="baseline"/>: los defaults compilados ya combinados con
+        /// los <c>mech_enabled.*</c> de Remote Config (<c>RcLevelBinder.MechEnabled</c>; D-033, Q-B11-7 a).
+        /// </summary>
+        public static MechanicSwitches ResolveMechSwitches(MechanicSwitches baseline)
+        {
             string? list = MechOffOverride ?? ReadIntentString(IntentExtraMechOff);
-            MechanicSwitches switches = GameConfig.MechEnabled.WithOffList(list, out string? unknown);
+            MechanicSwitches switches = baseline.WithOffList(list, out string? unknown);
             if (unknown != null)
             {
                 Debug.LogWarning("[AF.LaunchOptions] " + IntentExtraMechOff + ": mecánicas desconocidas (\"" + unknown + "\"); se ignoran.");
@@ -353,11 +370,12 @@ namespace AF.UI
 
         /// <summary>
         /// Texto de <c>level_overrides</c> de la partida (tarea KS1): el del test (<see cref="LevelOverridesJsonOverride"/>) o, si
-        /// no, la fuente local (<see cref="LevelOverrides.LocalSource"/>, <c>{}</c>) hasta que exista <c>AF.RemoteConfig</c>.
+        /// no, el de Remote Config (<paramref name="remote"/>, <c>RcLevelBinder.LevelOverridesJson</c>; D-033, Q-B11-7 a) o, sin
+        /// él, la fuente local (<see cref="LevelOverrides.LocalSource"/>, <c>{}</c>).
         /// </summary>
-        public static string ResolveLevelOverridesJson()
+        public static string ResolveLevelOverridesJson(string? remote = null)
         {
-            return LevelOverridesJsonOverride ?? LevelOverrides.LocalSource;
+            return LevelOverridesJsonOverride ?? remote ?? LevelOverrides.LocalSource;
         }
 
         /// <summary>

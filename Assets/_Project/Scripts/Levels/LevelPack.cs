@@ -29,8 +29,17 @@ namespace AF.Levels
         /// <summary>Identificador del paquete (p. ej. <c>tutorial_v0</c>).</summary>
         public string PackId { get; }
 
-        /// <summary><c>campaign</c> o <c>daily</c>.</summary>
+        /// <summary><c>kind</c> del paquete: <c>campaign</c>, <c>daily</c>, <c>event</c> o <c>reserve</c> (<see cref="KindReserve"/>).</summary>
         public string Kind { get; }
+
+        /// <summary>
+        /// <c>kind</c> del paquete de reserva de un mundo (<c>reserva_{mm}_v{v}</c>, <c>pack_schema</c> 4; D-033, añadido «la reserva
+        /// del 20 %», Q-B11-7 a; 03 §17): sus tableros solo se sirven desde <c>level_overrides</c>, nunca como niveles de campaña.
+        /// </summary>
+        public const string KindReserve = "reserve";
+
+        /// <summary>Es un paquete de reserva (<see cref="KindReserve"/>): <see cref="LevelCatalog"/> lo rechaza como campaña.</summary>
+        public bool IsReserve => string.Equals(Kind, KindReserve, StringComparison.Ordinal);
 
         /// <summary>Mundo del paquete.</summary>
         public int World { get; }

@@ -88,12 +88,12 @@ namespace AF.Tests.EditMode
         }
 
         [TestCase("\"pack_schema\": 0", "t: pack_schema 0 no admitido")]
-        [TestCase("\"pack_schema\": 4", "t: pack_schema 4 no admitido")]
+        [TestCase("\"pack_schema\": 5", "t: pack_schema 5 no admitido")]
         [TestCase("\"subset_of\": \"af-level/2\"", "t: el paquete no declara pack_schema")]
         [TestCase("\"note\": \"sin esquema\"", "t: el paquete no declara pack_schema")]
         public void Reader_RejectsUnknownSchema(string header, string expected)
         {
-            // 08 §4.4: el cliente rechaza un paquete con un pack_schema que no conoce (lee del 1 al 3, contrato 21). El mensaje
+            // 08 §4.4: el cliente rechaza un paquete con un pack_schema que no conoce (lee del 1 al 4, contrato 21). El mensaje
             // empieza por el id del paquete ("t") y dice por qué: la versión que no admite o que no declara ninguna.
             Assert.That(() => LevelPackReader.Read(TestPacks.MinimalPack(null, header)),
                 Throws.TypeOf<LevelFormatException>().With.Message.Contains("pack_schema").And.Message.Contains(expected));
