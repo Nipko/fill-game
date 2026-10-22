@@ -3617,3 +3617,19 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Qué hace:** las filas de una lista que se desplaza se publican todas al lector, también las recortadas, con la acción `scrolled`, y el visor se desplaza hasta la fila enfocada. Es la (a), más la primera mitad de la (b): publicar las filas recortadas.
 - **Alcance:** vale para toda `ScrollRect` vertical: Ajustes, el Mercado, la ficha de frutas y el Muestrario del Mapa. Las dos últimas no se pidieron, pero se dejan [P] por coherencia.
 - **Pendiente:** probarlo en el teléfono con TalkBack. Queda por ver el marco de 1 px de las filas recortadas y el orden de recorrido.
+
+### D-033, añadido del 2026-10-23: preguntas de los arreglos de la prueba en el teléfono del 2026-10-23, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada, por la regla del dueño. Integradas con `tanda5/fx-telefono-1023`, con la revisión APROBADO tras dos bloqueantes corregidos. El dueño puede cambiarlas.
+- **T2-Q6, solo para el bloque `map.*` de `facts.csv`:**
+  - las traducciones del Mapa se guardan aunque el español siga en `pendiente_asesor`, y solo se ven en desarrollo;
+  - release sigue sin mostrarlas hasta `aprobado_es` + `revisado_nativo` (08 §4.7);
+  - frutas y fauna siguen retenidas como antes;
+  - las 313 filas que faltaban, traducidas con IA;
+  - «Manaos» y «Leticia» sin traducir, como los topónimos del glosario §8.
+- **Placas de la vista Cuenca al 130 %:** una placa que pisa otra o un país prueba otro sitio y luego dos líneas; si aun así no cabe, se oculta, dando prioridad a los mundos más cercanos. La del mundo siguiente nunca se oculta. Al principio del juego se ocultan entre 5 y 7 placas de los mundos 7 a 9.
+- **Extra de desarrollo `--ez af_fake_store true`:**
+  - solo con `DEVELOPMENT_BUILD`; en release no se lee;
+  - pone la tienda simulada y el backend falso en toda la sesión, así que no sirve para probar App Check ni el borrado real;
+  - documentado en `docs/dev/prototipo-v0.md`.
+- **Regla nueva de `tools/loc/apply_translations.py`:** una traducción con menos U+00A0 entre cifra o marcador y su unidad que el es-419 es un conflicto. La excepción es el «%», que en en y pt va pegado.
