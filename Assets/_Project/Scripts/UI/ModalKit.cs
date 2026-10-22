@@ -304,6 +304,7 @@ namespace AF.UI
             visual.anchorMax = new Vector2(0.5f, 1f);
             visual.sizeDelta = new Vector2(art.DiscWood.Painted ? art.DiscWood.HeightDp : 40f, art.DiscWood.HeightDp);
             visual.anchoredPosition = new Vector2(0f, -4f);
+            A11yLabels.Set(close.Button, () => A11yText.Close); // TalkBack: la X es un botón de solo icono (02 §12; B9)
             Image glyph = UiBuilder.Image("Icon", close.Face, art.IconClose, Color.white);
             UiBuilder.Place(glyph.rectTransform, 9f, 9f, 22f, 22f);
             close.Relief.Bind(close.Face, close.Base, close.FaceImage, art.DiscWood, glyph, null, null);

@@ -1,0 +1,218 @@
+diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
+index ad1e966c..7789b3d8 100644
+--- a/Assets/_Project/Scripts/Save/Profile.cs
++++ b/Assets/_Project/Scripts/Save/Profile.cs
+@@ -707,6 +707,23 @@ public enum PatternsSetting
+         Off = 2,
+     }
+ 
++    /// <summary>
++    /// Valor de <c>settings.reduce_motion</c> [P] (bloque B9; 07 §7.8; 08 §9 <c>ui_reduce_motion_default</c>): el ajuste «Reducir
++    /// movimiento». <c>Auto</c> (sin elegir) sigue a Remote Config y [P] al teléfono con «Quitar animaciones» (Q-B9-3); lo resuelve
++    /// <c>AF.Platform.A11yRules.ReduceMotion</c>.
++    /// </summary>
++    public enum ReduceMotionSetting
++    {
++        /// <summary><c>auto</c> (default): sin elegir.</summary>
++        Auto = 0,
++
++        /// <summary><c>on</c>: elegido en Ajustes.</summary>
++        On = 1,
++
++        /// <summary><c>off</c>: apagado en Ajustes.</summary>
++        Off = 2,
++    }
++
+     /// <summary>
+     /// <c>settings</c> (08 §4.3): solo los ajustes que ya existen en el juego (<c>sound</c>, <c>music</c> y <c>haptics</c> desde
+     /// AU1) y <c>push</c> (B6; <see cref="PushSettingsData"/>). Un valor que falta o no es válido en el archivo toma el default (los
+@@ -724,6 +741,7 @@ public sealed class SettingsData
+ 
+         private string _language = LanguageAuto;
+         private PatternsSetting _patterns = PatternsSetting.Auto;
++        private ReduceMotionSetting _reduceMotion = ReduceMotionSetting.Auto;
+ 
+         /// <summary>Códigos de idioma que admite <see cref="Language"/> además de <see cref="LanguageAuto"/>, con su forma canónica.</summary>
+         public static IReadOnlyList<string> Languages { get; } = Array.AsReadOnly(LanguageCodes);
+@@ -776,6 +794,31 @@ public string Language
+         /// <summary><c>idle_hint</c> [P]: la pista por inactividad (04 §2.3), que se puede apagar en Ajustes. Default true.</summary>
+         public bool IdleHint { get; set; } = true;
+ 
++        /// <summary>
++        /// <c>reduce_motion</c> [P] (bloque B9; 07 §7.8): «Reducir movimiento», <c>auto</c> (sin elegir; default), <c>on</c> u
++        /// <c>off</c>. Se escribe solo si deja su default.
++        /// </summary>
++        /// <exception cref="ArgumentOutOfRangeException">Al asignar un valor que no es del enum.</exception>
++        public ReduceMotionSetting ReduceMotion
++        {
++            get => _reduceMotion;
++            set
++            {
++                if (value != ReduceMotionSetting.Auto && value != ReduceMotionSetting.On && value != ReduceMotionSetting.Off)
++                {
++                    throw new ArgumentOutOfRangeException(nameof(value), "Ajuste de Reducir movimiento desconocido.");
++                }
++
++                _reduceMotion = value;
++            }
++        }
++
++        /// <summary>
++        /// <c>high_contrast</c> [P] (bloque B9; 07 §3, regla 5; D-033, Q-N4 (a)): «Alto contraste», el patrón al 35 %. Default
++        /// false (08 §9 no tiene clave de su default). Se escribe solo si deja su default.
++        /// </summary>
++        public bool HighContrast { get; set; }
++
+         /// <summary>
+         /// <c>push</c> (08 §4.3: <c>pre_prompt_shown</c> y <c>granted</c>; B6): el pre-prompt y el permiso de los avisos, con
+         /// <c>pre_prompt_at</c> y <c>second_prompt_shown</c> [P] para el segundo pre-prompt de 06 §8.1. Las reglas son de
+@@ -816,6 +859,32 @@ internal static string PatternsText(PatternsSetting value)
+             return value == PatternsSetting.On ? "on" : value == PatternsSetting.Off ? "off" : "auto";
+         }
+ 
++        /// <summary>Texto de <paramref name="value"/> en el JSON (<c>settings.reduce_motion</c>): <c>auto</c>, <c>on</c> u <c>off</c>.</summary>
++        internal static string ReduceMotionText(ReduceMotionSetting value)
++        {
++            return value == ReduceMotionSetting.On ? "on" : value == ReduceMotionSetting.Off ? "off" : "auto";
++        }
++
++        /// <summary>Lee <c>auto</c>, <c>on</c> u <c>off</c> de <c>settings.reduce_motion</c>; false con cualquier otro texto.</summary>
++        internal static bool TryParseReduceMotion(string text, out ReduceMotionSetting value)
++        {
++            switch (text)
++            {
++                case "auto":
++                    value = ReduceMotionSetting.Auto;
++                    return true;
++                case "on":
++                    value = ReduceMotionSetting.On;
++                    return true;
++                case "off":
++                    value = ReduceMotionSetting.Off;
++                    return true;
++                default:
++                    value = ReduceMotionSetting.Auto;
++                    return false;
++            }
++        }
++
+         /// <summary>Lee <c>auto</c>, <c>on</c> u <c>off</c>; false con cualquier otro texto.</summary>
+         internal static bool TryParsePatterns(string text, out PatternsSetting value)
+         {
+diff --git a/Assets/_Project/Scripts/Save/ProfileJson.cs b/Assets/_Project/Scripts/Save/ProfileJson.cs
+index 8abbaac8..5def4cc1 100644
+--- a/Assets/_Project/Scripts/Save/ProfileJson.cs
++++ b/Assets/_Project/Scripts/Save/ProfileJson.cs
+@@ -228,6 +228,17 @@ internal static JsonNode ToNode(Profile p)
+             settings.Set("language", JsonNode.FromString(p.Settings.Language));
+             settings.Set("sloth_messages", JsonNode.FromBool(p.Settings.SlothMessages));
+             settings.Set("idle_hint", JsonNode.FromBool(p.Settings.IdleHint));
++            if (p.Settings.ReduceMotion != ReduceMotionSetting.Auto)
++            {
++                // B9: settings.reduce_motion [P], solo cuando deja su default (no cambia los perfiles que aún no lo usan).
++                settings.Set("reduce_motion", JsonNode.FromString(SettingsData.ReduceMotionText(p.Settings.ReduceMotion)));
++            }
++
++            if (p.Settings.HighContrast)
++            {
++                settings.Set("high_contrast", JsonNode.FromBool(true)); // B9: settings.high_contrast [P], solo encendido
++            }
++
+             if (!p.Settings.Push.IsDefault)
+             {
+                 // B6: settings.push (08 §4.3) solo cuando deja su default, para no cambiar los perfiles que aún no lo usan.
+@@ -871,6 +882,13 @@ private static void ReadSettings(JsonNode node, SettingsData s)
+             s.Haptics = TolerantBool(node, "haptics", s.Haptics);
+             s.SlothMessages = TolerantBool(node, "sloth_messages", s.SlothMessages);
+             s.IdleHint = TolerantBool(node, "idle_hint", s.IdleHint);
++            string? reduceMotion = TolerantString(node, "reduce_motion");
++            if (reduceMotion != null && SettingsData.TryParseReduceMotion(reduceMotion, out ReduceMotionSetting motion))
++            {
++                s.ReduceMotion = motion; // B9
++            }
++
++            s.HighContrast = TolerantBool(node, "high_contrast", s.HighContrast); // B9
+             JsonNode? push = TolerantSection(node, "push");
+             if (push != null)
+             {
+diff --git a/Assets/_Project/Scripts/Save/Tests/A11ySettingsProfileTests.cs b/Assets/_Project/Scripts/Save/Tests/A11ySettingsProfileTests.cs
+new file mode 100644
+index 00000000..c81de9ff
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/Tests/A11ySettingsProfileTests.cs
+@@ -0,0 +1,66 @@
++#nullable enable
++using System;
++using NUnit.Framework;
++
++namespace AF.Save.Tests
++{
++    /// <summary>
++    /// <c>settings.reduce_motion</c> y <c>settings.high_contrast</c> [P] (bloque B9; 07 §7.8 y §3, regla 5; 08 §4.3): defaults
++    /// (<c>auto</c> y apagado), ida y vuelta, que solo se escriben cuando dejan su default (un perfil que no los usa no cambia) y
++    /// lectura tolerante (lo ausente o inválido toma el default; nunca hace corrupto un perfil). Sin migración, como
++    /// <c>map_seen_level</c>.
++    /// </summary>
++    public sealed class A11ySettingsProfileTests
++    {
++        [Test]
++        public void NewProfile_ReduceMotionAuto_AndHighContrastOff_AndNeitherIsWritten()
++        {
++            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2}");
++            Assert.That(p.Settings.ReduceMotion, Is.EqualTo(ReduceMotionSetting.Auto));
++            Assert.That(p.Settings.HighContrast, Is.False);
++            string json = ProfileJson.Serialize(p);
++            StringAssert.DoesNotContain("reduce_motion", json, "con su default no se escribe: los perfiles de antes no cambian");
++            StringAssert.DoesNotContain("high_contrast", json);
++        }
++
++        [TestCase(ReduceMotionSetting.On, "on")]
++        [TestCase(ReduceMotionSetting.Off, "off")]
++        public void ReduceMotion_RoundTrips(ReduceMotionSetting value, string text)
++        {
++            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2}");
++            p.Settings.ReduceMotion = value;
++            p.Settings.HighContrast = true;
++            string json = ProfileJson.Serialize(p);
++            StringAssert.Contains("\"reduce_motion\": \"" + text + "\"", json);
++            StringAssert.Contains("\"high_contrast\": true", json);
++            Profile copy = ProfileJson.Deserialize(json);
++            Assert.That(copy.Settings.ReduceMotion, Is.EqualTo(value));
++            Assert.That(copy.Settings.HighContrast, Is.True);
++        }
++
++        [TestCase("\"sí\"")]
++        [TestCase("true")]
++        [TestCase("3")]
++        [TestCase("null")]
++        public void AnInvalidReduceMotion_IsAuto(string raw)
++        {
++            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"settings\": {\"reduce_motion\": " + raw + ", \"sound\": false}}");
++            Assert.That(p.Settings.ReduceMotion, Is.EqualTo(ReduceMotionSetting.Auto));
++            Assert.That(p.Settings.Sound, Is.False, "los demás ajustes se leen igual");
++        }
++
++        [Test]
++        public void AnInvalidHighContrast_IsOff()
++        {
++            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"settings\": {\"high_contrast\": \"sí\"}}");
++            Assert.That(p.Settings.HighContrast, Is.False);
++        }
++
++        [Test]
++        public void ReduceMotion_RejectsAValueOutsideTheEnum()
++        {
++            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2}");
++            Assert.Throws<ArgumentOutOfRangeException>(() => p.Settings.ReduceMotion = (ReduceMotionSetting)7);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Save/Tests/A11ySettingsProfileTests.cs.meta b/Assets/_Project/Scripts/Save/Tests/A11ySettingsProfileTests.cs.meta
+new file mode 100644
+index 00000000..fed7c92e
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/Tests/A11ySettingsProfileTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: ea885504ef4c3dc4d915068edd95aede
+\ No newline at end of file

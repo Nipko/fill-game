@@ -206,6 +206,7 @@ namespace AF.RemoteConfig.Binding
             { typeof(TakeoverConfig), KeysOf(TakeoverEntries) },
             { typeof(LoginCalendarConfig), KeysOf(LoginCalendarEntries) },
             { typeof(ConsentConfig), ConsentConfigBinder.Keys }, // B12: su lector propio (ConsentConfigBinder)
+            { typeof(A11yConfig), A11yConfigBinder.Keys }, // B9: su lector propio (A11yConfigBinder)
         };
 
         /// <summary>
@@ -235,6 +236,7 @@ namespace AF.RemoteConfig.Binding
             TakeoverConfig takeovers = Fill(new TakeoverConfig(), TakeoverEntries, rc, errors, c => c.Validate(), () => TakeoverConfig.Defaults);
             LoginCalendarConfig calendar = Fill(new LoginCalendarConfig(), LoginCalendarEntries, rc, errors, c => c.Validate(), () => LoginCalendarConfig.Defaults);
             ConsentConfig consent = ConsentConfigBinder.Bind(rc, errors);
+            A11yConfig a11y = A11yConfigBinder.Bind(rc, errors); // B9
 
             // Compuertas de negocio (08 §9): el mantenimiento apaga anuncios e IAP; la versión mínima, las compras.
             ads.BizAdsEnabled = gates.AdsEnabled;
@@ -260,6 +262,7 @@ namespace AF.RemoteConfig.Binding
                 Consent = consent,
                 DragPourEnabled = RcGameplayBinder.DragPourEnabled(rc, errors), // B11: C10 (RcGameplayBinder)
                 LevelLabels = RcGameplayBinder.LevelLabels(rc, errors), // B11: lvl_label_override
+                A11y = a11y,
             };
         }
 
@@ -546,6 +549,9 @@ namespace AF.RemoteConfig.Binding
 
         /// <summary><c>biz_backend_enabled</c> de estos valores (<see cref="RcBackendSwitch"/>; B7 y F3-5).</summary>
         public IBackendSwitch BackendSwitch { get; internal set; } = new AF.IAP.BackendSwitch();
+
+        /// <summary>Accesibilidad: <c>ui_reduce_motion_default</c> y <c>anim_reduce_motion_factor</c> (B9).</summary>
+        public A11yConfig A11y { get; internal set; } = A11yConfig.Defaults;
     }
 
     /// <summary>

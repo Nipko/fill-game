@@ -181,6 +181,7 @@ namespace AF.UI
 
             _dailyService = service;
             _dailyScreen = new DailyChallengeScreen(transform, _art, service, context, OnDailyClosed);
+            _dailyScreen.Prepare = PrepareDaily; // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y TalkBack
             _dailyCardCanvas = new OverlayCanvas("DailyCardCanvas", transform, DailyCardSortingOrder);
             _dailyCard = new DailyChallengeCard(_dailyCardCanvas.Root, _art, OnDailyCardTap);
             DailyChallengeRunner runner = gameObject.GetComponent<DailyChallengeRunner>();

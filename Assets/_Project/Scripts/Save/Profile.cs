@@ -708,6 +708,23 @@ namespace AF.Save
     }
 
     /// <summary>
+    /// Valor de <c>settings.reduce_motion</c> [P] (bloque B9; 07 §7.8; 08 §9 <c>ui_reduce_motion_default</c>): el ajuste «Reducir
+    /// movimiento». <c>Auto</c> (sin elegir) sigue a Remote Config y [P] al teléfono con «Quitar animaciones» (Q-B9-3); lo resuelve
+    /// <c>AF.Platform.A11yRules.ReduceMotion</c>.
+    /// </summary>
+    public enum ReduceMotionSetting
+    {
+        /// <summary><c>auto</c> (default): sin elegir.</summary>
+        Auto = 0,
+
+        /// <summary><c>on</c>: elegido en Ajustes.</summary>
+        On = 1,
+
+        /// <summary><c>off</c>: apagado en Ajustes.</summary>
+        Off = 2,
+    }
+
+    /// <summary>
     /// <c>settings</c> (08 §4.3): solo los ajustes que ya existen en el juego (<c>sound</c>, <c>music</c> y <c>haptics</c> desde
     /// AU1) y <c>push</c> (B6; <see cref="PushSettingsData"/>). Un valor que falta o no es válido en el archivo toma el default (los
     /// ajustes nunca hacen corrupto un perfil).
@@ -724,6 +741,7 @@ namespace AF.Save
 
         private string _language = LanguageAuto;
         private PatternsSetting _patterns = PatternsSetting.Auto;
+        private ReduceMotionSetting _reduceMotion = ReduceMotionSetting.Auto;
 
         /// <summary>Códigos de idioma que admite <see cref="Language"/> además de <see cref="LanguageAuto"/>, con su forma canónica.</summary>
         public static IReadOnlyList<string> Languages { get; } = Array.AsReadOnly(LanguageCodes);
@@ -777,6 +795,31 @@ namespace AF.Save
         public bool IdleHint { get; set; } = true;
 
         /// <summary>
+        /// <c>reduce_motion</c> [P] (bloque B9; 07 §7.8): «Reducir movimiento», <c>auto</c> (sin elegir; default), <c>on</c> u
+        /// <c>off</c>. Se escribe solo si deja su default.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Al asignar un valor que no es del enum.</exception>
+        public ReduceMotionSetting ReduceMotion
+        {
+            get => _reduceMotion;
+            set
+            {
+                if (value != ReduceMotionSetting.Auto && value != ReduceMotionSetting.On && value != ReduceMotionSetting.Off)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), "Ajuste de Reducir movimiento desconocido.");
+                }
+
+                _reduceMotion = value;
+            }
+        }
+
+        /// <summary>
+        /// <c>high_contrast</c> [P] (bloque B9; 07 §3, regla 5; D-033, Q-N4 (a)): «Alto contraste», el patrón al 35 %. Default
+        /// false (08 §9 no tiene clave de su default). Se escribe solo si deja su default.
+        /// </summary>
+        public bool HighContrast { get; set; }
+
+        /// <summary>
         /// <c>push</c> (08 §4.3: <c>pre_prompt_shown</c> y <c>granted</c>; B6): el pre-prompt y el permiso de los avisos, con
         /// <c>pre_prompt_at</c> y <c>second_prompt_shown</c> [P] para el segundo pre-prompt de 06 §8.1. Las reglas son de
         /// <c>AF.LiveOps</c> (<c>PushPermissionService</c>).
@@ -814,6 +857,32 @@ namespace AF.Save
         internal static string PatternsText(PatternsSetting value)
         {
             return value == PatternsSetting.On ? "on" : value == PatternsSetting.Off ? "off" : "auto";
+        }
+
+        /// <summary>Texto de <paramref name="value"/> en el JSON (<c>settings.reduce_motion</c>): <c>auto</c>, <c>on</c> u <c>off</c>.</summary>
+        internal static string ReduceMotionText(ReduceMotionSetting value)
+        {
+            return value == ReduceMotionSetting.On ? "on" : value == ReduceMotionSetting.Off ? "off" : "auto";
+        }
+
+        /// <summary>Lee <c>auto</c>, <c>on</c> u <c>off</c> de <c>settings.reduce_motion</c>; false con cualquier otro texto.</summary>
+        internal static bool TryParseReduceMotion(string text, out ReduceMotionSetting value)
+        {
+            switch (text)
+            {
+                case "auto":
+                    value = ReduceMotionSetting.Auto;
+                    return true;
+                case "on":
+                    value = ReduceMotionSetting.On;
+                    return true;
+                case "off":
+                    value = ReduceMotionSetting.Off;
+                    return true;
+                default:
+                    value = ReduceMotionSetting.Auto;
+                    return false;
+            }
         }
 
         /// <summary>Lee <c>auto</c>, <c>on</c> u <c>off</c>; false con cualquier otro texto.</summary>

@@ -3462,3 +3462,35 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Versión exacta aprobada:** `com.unity.mobile.notifications` **2.4.3** (la que declara el Editor 6000.3.25f1, propuesta por el Spark en B6), del registro de Unity. Permiso `android.permission.POST_NOTIFICATIONS` aprobado (Android 13+, con el pre-prompt de B6 antes de pedirlo). Entra en la lista blanca de `ci/check-manifest.ps1`.
 - Si el paquete añade otros permisos (por ejemplo `RECEIVE_BOOT_COMPLETED` o `SCHEDULE_EXACT_ALARM`), se para y se pregunta; 08 §13 y Q-M5 piden alarmas inexactas.
 - **Integración (rama `tanda5/notificaciones`, 2026-10-22):** el manifiesto fusionado del `dev.apk` y del ensayo `rehearsal.aab` solo gana `android.permission.POST_NOTIFICATIONS` y el receptor `com.unity.androidnotifications.UnityNotificationManager` (no exportado), con `com.unity.androidnotifications.exact_scheduling` = 0: **ningún otro permiso**, sin `RECEIVE_BOOT_COMPLETED`, `SCHEDULE_EXACT_ALARM` ni `USE_EXACT_ALARM` (los ajustes del paquete se quedan en sus valores por defecto). Sin `.so` nuevos (el paquete es Java). Peso: el `rehearsal.aab` pasa de 53,49 a 53,56 MB (+70.750 bytes; descarga de Play de 52,46-52,52 a 52,54-52,59 MB) y el `dev.apk`, +81.162 bytes. Programador en `Scripts/Platform/Notifications/` (`AF.Platform.Notifications`); detalle en `docs/dev/sesiones-notificaciones.md` §8. Consecuencia aceptada de no tener `RECEIVE_BOOT_COMPLETED`: tras reiniciar el teléfono los avisos programados se pierden hasta la siguiente salida de la app. Con <13, al bloquear se cancelan los avisos y la bandeja.
+
+## D-040 · Integración de Unity IAP 5.4.4 (Play Billing), encargada al Spark
+
+- **Fecha:** 2026-10-22. Registrada el 2026-10-22 por el integrador.
+- **Estado:** aprobado por el dueño en el chat: «Encarga al Spark integrar Unity IAP 5.4.4 (Play Billing) tras IBillingClient, con la tienda falsa en el editor; apruebo el paquete com.unity.purchasing 5.4.4. Prepárale el encargo y la frase.»
+- **Decisión:** `com.unity.purchasing` **5.4.4** exacta (plan de instalación; 08 §7), que trae Play Billing 8 o superior. La implementación real va detrás de `IBillingClient` (F3-3) solo en `UNITY_ANDROID && !UNITY_EDITOR`; el editor y los tests siguen con `FakeBillingClient`. La verificación sigue en el servidor (`VerifiedStoreService`, D-035): el cliente nunca acredita sin el `ok` o el `duplicate` del backend.
+- **Permiso:** Play Billing añade `com.android.vending.BILLING`, que es inseparable de cobrar en Google Play. **Aprobado por el dueño el 2026-10-22:** «Apruebo el permiso com.android.vending.BILLING para Play Billing (D-040); que entre en la lista blanca de check-manifest cuando se integre Unity IAP.» Entra en la lista blanca de `ci/check-manifest.ps1` con la integración de Unity IAP; cualquier otro permiso nuevo, se para y se pregunta.
+- **Encargo:** `docs/dev/traspaso/spark-reto-del-rio.md` §14.
+
+### D-033, añadido del 2026-10-22: preguntas de B9 (accesibilidad) del Spark, con la regla «si tienen recomendada, vamos con esa»
+
+- **Fecha:** 2026-10-22. Registrada el 2026-10-22 por el integrador.
+- **Estado:** decididas con la recomendada (la (a), ya aplicada en la rama) por la regla del dueño «si tienen recomendada, vamos con esa». Integradas en `integra/spark-b9` con `spark/t5-b9` (`7f924192`) y sus cuatro parches (`B9-profile`, `B9-rc`, `B9-ui` y `B9-loc`). Detalle y opciones en `docs/dev/accesibilidad.md` §5. El dueño puede cambiarlas. **Quedan pendientes** (la (a) es «tarea aparte» o depende del dueño o de otros): Q-B9-6, Q-B9-12, Q-B9-13, Q-B9-14, Q-B9-17, y los cambios al GDD de Q-B9-15 y Q-B9-16.
+
+- **Q-B9-1:** un cambio de la fuente del sistema con el juego abierto **se aplica al volver a abrirlo** (la escala se lee una vez por arranque).
+- **Q-B9-2:** con la fuente del sistema por debajo del 100 %, el texto **se queda al 100 %** (≥ 12 sp, 02 §12).
+- **Q-B9-3:** con el ajuste en `auto`, «Quitar animaciones» de Android **enciende Reducir movimiento**.
+- **Q-B9-4:** «sin mover el dedo» en C9 es **< 24 dp**, el umbral de C10.
+- **Q-B9-5:** Alto contraste **no enciende los iconos** (son de Patrones de fruta; 07 §3, regla 5 literal).
+- **Q-B9-6:** el contorno de dosis de 1,5 px de 07 §3, regla 5, va en **una tarea aparte** con el shader y capturas (`A11yRules.HighContrastDoseOutlinePx` ya existe). **Pendiente:** hasta entonces Alto contraste solo sube el patrón al 35 %.
+- **Q-B9-7:** una fruta sin nombre aprobado por el asesor se lee como **«fruta»** (`a11y_fruit_unnamed`).
+- **Q-B9-8:** las «3 dosis dentro» de la Tinaja se leen **todas, con la boca**.
+- **Q-B9-9:** el botón de comodín con precio o video lleva **solo la etiqueta** («Deshacer, 2 restantes»), sin el precio.
+- **Q-B9-10:** el simulador es **Machado 2009 + CIEDE2000**, con informe sin umbral y QA manual (08 §14.3); no es compuerta.
+- **Q-B9-11:** «{fruit} seleccionado» va **tal cual el texto de 02 §12**, también con frutas femeninas (pendiente del revisor de textos).
+- **Q-B9-12:** el traslado inverso de Marea (250 ms) se multiplicará por el factor de Reducir movimiento (02 §4, «todas las duraciones») **en una tarea aparte**. **Pendiente:** hoy sigue fijo.
+- **Q-B9-13:** los pares 7-10 (protanopía) y 5-14 (deuteranopía) del simulador **se añaden a la lista de pares de riesgo** de 07 §3 y del glosario §9, para que el generador los limite. **Pendiente del dueño y de otra tarea:** editar el GDD y el generador (y volver a generar si cambia algún tablero); no se toca en esta integración.
+- **Q-B9-14:** la etiqueta de la cuia añadirá el nombre de la mecánica con las claves de sus nombres (08 §14.2) **en una tarea aparte**. **Pendiente:** hoy la etiqueta es la de 02 §12.
+- **Q-B9-15:** los campos del perfil son **`settings.reduce_motion`** (`auto` | `on` | `off`) y **`settings.high_contrast`** (bool) [P]. **Pendiente:** anotarlos en 08 §4.3.
+- **Q-B9-16:** `af_settings_change.key` admite **`reduce_motion` y `high_contrast`**. **Pendiente:** añadirlos a 08 §8.2.
+- **Q-B9-17:** TalkBack con la lista de Ajustes que se desplaza (al 130 % o en pantallas bajas): la acción de desplazar del lector (`AccessibilityNode.scrolled`) va **en una tarea aparte**. **Pendiente:** hasta entonces las filas bajo el corte no se publican.
+- **Del integrador:** el rechazo del arrastre C10 (B11, `GameScreen.Drag.cs`) tampoco sacude la cuia con Reducir movimiento, como el toque ilegal (02 §12). Los ayudantes de prueba `B9Loc`, `B9LocPlay` y `docs/dev/traspaso/spark-enganches/B9-strings.csv` se quedan: con `B9-loc.diff` aplicado no añaden ninguna fila.
