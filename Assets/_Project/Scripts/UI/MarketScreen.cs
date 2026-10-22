@@ -43,6 +43,12 @@ namespace AF.UI
         /// <summary>Ancho del botón de precio de cada fila (dp) [P].</summary>
         public const float BuyWidthDp = 108f;
 
+        /// <summary>Alto mínimo de una pestaña (dp): el área táctil de 07 §7.8.</summary>
+        public const float TabDp = 48f;
+
+        /// <summary>Margen interior de cada lado de la etiqueta de una pestaña (dp) [P].</summary>
+        public const float TabPadDp = 3f;
+
         private readonly ProceduralArt _art;
         private readonly OverlayCanvas _canvas;
         private readonly RectTransform _panel;
@@ -56,7 +62,14 @@ namespace AF.UI
         private readonly Button[] _tabs = new Button[4];
         private readonly TextMeshProUGUI[] _tabLabels = new TextMeshProUGUI[4];
         private readonly RowView[] _rows = new RowView[MaxRows];
+        private readonly RectTransform _viewport;
+        private readonly RectTransform _content;
+        private readonly ScrollRect _scroll;
+        private readonly Image _fadeTop;
+        private readonly Image _fadeBottom;
         private readonly List<MarketRow> _model = new List<MarketRow>(MaxRows);
+        private readonly float[] _tabWidths = new float[4];
+        private readonly float[] _rowHeights = new float[MaxRows];
         private readonly MarketDeps _deps;
         private Action? _onClosed;
         private bool _logShown;
@@ -84,14 +97,32 @@ namespace AF.UI
                 _tabs[i] = UiBuilder.BareButton("Tab" + tab, _panel, () => SelectTab(tab));
                 _tabLabels[i] = UiBuilder.Label("Label", _tabs[i].transform, TextStyle.PlainBold, string.Empty, 15f, Palette.FamilyWood.Base, TextAlignmentOptions.Center);
                 UiBuilder.Stretch(_tabLabels[i].rectTransform);
+                // D-033, punto 11: al 130 % «Sin anuncios» no cabía en una línea de su cuarto de fila: va en dos, sin partir palabras.
+                _tabLabels[i].textWrappingMode = TextWrappingModes.Normal;
                 UiBuilder.AutoSize(_tabLabels[i], UiBuilder.MinTextSp, 15f);
             }
 
+            // Las filas van en un visor que se desplaza si no caben (D-033, punto 11: al 130 % las filas crecen con su texto), con
+            // los fundidos de Ajustes en los bordes mientras quede lista por ese lado.
+            _viewport = UiBuilder.Rect("Rows", _panel);
+            _viewport.gameObject.AddComponent<RectMask2D>();
+            _viewport.gameObject.AddComponent<HitArea>().raycastTarget = true; // el arrastre entre filas también desplaza
+            _content = UiBuilder.Rect("Content", _viewport);
+            _scroll = _viewport.gameObject.AddComponent<ScrollRect>();
+            _scroll.viewport = _viewport;
+            _scroll.content = _content;
+            _scroll.horizontal = false;
+            _scroll.vertical = false;
+            _scroll.movementType = ScrollRect.MovementType.Clamped;
             for (int i = 0; i < _rows.Length; i++)
             {
                 int index = i;
-                _rows[i] = new RowView(_panel, art, i, () => PressRow(index));
+                _rows[i] = new RowView(_content, art, i, () => PressRow(index));
             }
+
+            _fadeTop = UiBuilder.Image("FadeTop", _viewport, art.ScrollFade(true), Color.white);
+            _fadeBottom = UiBuilder.Image("FadeBottom", _viewport, art.ScrollFade(false), Color.white);
+            _scroll.onValueChanged.AddListener(_ => UpdateFades());
 
             _canvas.Canvas.gameObject.SetActive(false);
         }
@@ -122,6 +153,21 @@ namespace AF.UI
 
         /// <summary>La versión de las notas de compra con la que se rehízo por última vez (el arranque lo rehace si cambian; F3-5).</summary>
         public int NotesShown { get; private set; } = -1;
+
+        /// <summary>Alto del lienzo (dp; tests).</summary>
+        public float AreaHeight => _canvas.Height;
+
+        /// <summary>Ancho del lienzo (dp; tests).</summary>
+        public float AreaWidth => _canvas.Width;
+
+        /// <summary>Margen de la zona segura de arriba (dp; tests).</summary>
+        public float SafeTopDp => _canvas.SafeTop;
+
+        /// <summary>Margen de la zona segura de abajo (dp; tests).</summary>
+        public float SafeBottomDp => _canvas.SafeBottom;
+
+        /// <summary>Las filas no caben y se desplazan (D-033, punto 11).</summary>
+        public bool RowsScroll => _scroll.vertical;
 
         /// <summary>Botón de la fila <paramref name="index"/> (tests).</summary>
         public Button RowButton(int index) => _rows[index].Cta.Button;
@@ -443,7 +489,7 @@ namespace AF.UI
                 }
             }
 
-            float tabW = shownTabs > 0 ? inner / shownTabs : inner;
+            float tabH = TabWidths(inner, shownTabs);
             float x = 16f;
             for (int i = 0; i < _tabs.Length; i++)
             {
@@ -452,28 +498,191 @@ namespace AF.UI
                     continue;
                 }
 
-                UiBuilder.Place((RectTransform)_tabs[i].transform, x, y, tabW, 48f);
-                x += tabW;
+                UiBuilder.Place((RectTransform)_tabs[i].transform, x, y, _tabWidths[i], tabH);
+                UiBuilder.Place(_tabLabels[i].rectTransform, TabPadDp, 0f, _tabWidths[i] - (2f * TabPadDp), tabH);
+                x += _tabWidths[i];
             }
 
-            y += 56f;
+            y += tabH + 8f;
             int count = Math.Min(_model.Count, MaxRows);
             float rowH = RowDp;
             if (count > 0)
             {
+                // Cada fila, al alto que pidan sus textos y su botón (D-033, punto 11: al 130 % el contenido va en las líneas que
+                // pida); las que caben se reparten el sitio como siempre, entre MinRowDp y RowDp.
                 float room = available - y - 16f;
+                for (int i = 0; i < count; i++)
+                {
+                    _rowHeights[i] = _rows[i].Needed(inner);
+                }
+
                 rowH = Mathf.Clamp(Mathf.Floor(room / count), MinRowDp, RowDp);
+
+                // Si no caben a su alto de siempre, las que no lo necesitan bajan hasta su mínimo (nunca por debajo de lo que piden).
+                while (rowH > MinRowDp && RowsHeight(count, rowH) > room)
+                {
+                    rowH = Mathf.Max(MinRowDp, rowH - 1f);
+                }
             }
 
+            float contentH = 0f;
             for (int i = 0; i < count; i++)
             {
-                _rows[i].Place(16f, y, inner, rowH);
-                y += rowH;
+                float rowHi = Mathf.Max(rowH, _rowHeights[i]);
+                _rowHeights[i] = rowHi;
+                _rows[i].Place(0f, contentH, inner, rowHi);
+                contentH += rowHi;
             }
 
-            y += 16f;
+            // Si ni así caben, el visor se desplaza y acaba a media fila (como Ajustes: un corte limpio no parece el final).
+            float rowsRoom = Mathf.Max(MinRowDp, available - y - 16f);
+            float viewH = Mathf.Min(contentH, rowsRoom);
+            _scroll.vertical = contentH > viewH + 0.5f;
+            if (_scroll.vertical)
+            {
+                viewH = CutAtRow(viewH, count);
+            }
+
+            UiBuilder.Place(_viewport, 16f, y, inner, viewH);
+            UiBuilder.Place(_content, 0f, 0f, inner, contentH);
+            _scroll.velocity = Vector2.zero;
+            float panelH = y + viewH + 16f;
+            float surfaceH = panelH - 16f;
+            _fadeTop.color = ProceduralArt.ModalSurfaceColorAt(y - 8f, surfaceH);
+            _fadeBottom.color = ProceduralArt.ModalSurfaceColorAt(y + viewH - 8f, surfaceH);
+            UiBuilder.Place(_fadeTop.rectTransform, 0f, 0f, inner, SettingsScreen.FadeTopDp);
+            UiBuilder.Place(_fadeBottom.rectTransform, 0f, viewH - SettingsScreen.FadeBottomDp, inner, SettingsScreen.FadeBottomDp);
+            UpdateFades();
+            y += viewH + 16f;
             float h = y;
             ModalKit.Size(_panel, _surface, _art, (_canvas.Width - w) * 0.5f, top + Mathf.Max(0f, (available - h) * 0.5f), w, h, sharedSurface: true);
+        }
+
+        /// <summary>
+        /// Alto del visor para que la última fila cortada se vea entre <see cref="SettingsScreen.CutRowMin"/> y
+        /// <see cref="SettingsScreen.CutRowMax"/> de su alto; si no, acaba en la mitad de la última que se ve al menos a medias
+        /// (nunca de la primera). Usa los altos ya colocados de <see cref="_rowHeights"/>.
+        /// </summary>
+        private float CutAtRow(float viewH, int count)
+        {
+            float top = 0f;
+            for (int i = 0; i < count; i++)
+            {
+                float h = _rowHeights[i];
+                if (top + h > viewH + 0.5f)
+                {
+                    float seen = (viewH - top) / h;
+                    if (seen >= SettingsScreen.CutRowMin && seen <= SettingsScreen.CutRowMax)
+                    {
+                        return viewH;
+                    }
+
+                    if (seen >= 0.5f)
+                    {
+                        return Mathf.Floor(top + (0.5f * h));
+                    }
+
+                    return i == 0 ? viewH : Mathf.Floor(top - (0.5f * _rowHeights[i - 1]));
+                }
+
+                top += h;
+            }
+
+            return viewH;
+        }
+
+        // Cada fundido sale solo si queda lista por ese lado (verticalNormalizedPosition: 1 arriba, 0 abajo).
+        private void UpdateFades()
+        {
+            bool scrolls = _scroll.vertical;
+            float pos = scrolls ? _scroll.verticalNormalizedPosition : 1f;
+            bool top = scrolls && pos < 0.99f;
+            bool bottom = scrolls && pos > 0.01f;
+            if (_fadeTop.gameObject.activeSelf != top)
+            {
+                _fadeTop.gameObject.SetActive(top);
+            }
+
+            if (_fadeBottom.gameObject.activeSelf != bottom)
+            {
+                _fadeBottom.gameObject.SetActive(bottom);
+            }
+        }
+
+        private float RowsHeight(int count, float rowH)
+        {
+            float total = 0f;
+            for (int i = 0; i < count; i++)
+            {
+                total += Mathf.Max(rowH, _rowHeights[i]);
+            }
+
+            return total;
+        }
+
+        /// <summary>
+        /// Reparte <paramref name="inner"/> entre las <paramref name="shown"/> pestañas visibles (en <see cref="_tabWidths"/>) y
+        /// devuelve su alto (D-033, punto 11; 02 §12). A partes iguales, salvo que la palabra más ancha de una etiqueta no quepa
+        /// en su parte a 12 sp (× escala): esa se queda el ancho de su palabra y las demás se reparten el resto. Así ninguna
+        /// palabra se parte; la etiqueta que no cabe en una línea va en dos y la fila de pestañas crece lo que pida (≥ 48 dp).
+        /// Mide al colocar, nunca por fotograma.
+        /// </summary>
+        private float TabWidths(float inner, int shown)
+        {
+            for (int i = 0; i < _tabs.Length; i++)
+            {
+                _tabWidths[i] = _tabs[i].gameObject.activeSelf ? -1f : 0f;
+            }
+
+            if (shown <= 0)
+            {
+                return TabDp;
+            }
+
+            // Reparto con mínimos: fija las que no caben en la parte igual y vuelve a repartir lo que queda entre las demás.
+            float left = inner;
+            int free = shown;
+            bool changed = true;
+            while (changed && free > 0)
+            {
+                changed = false;
+                float share = left / free;
+                for (int i = 0; i < _tabs.Length; i++)
+                {
+                    if (_tabWidths[i] >= 0f)
+                    {
+                        continue;
+                    }
+
+                    float word = Mathf.Ceil(UiBuilder.LongestWordWidth(_tabLabels[i])) + (2f * TabPadDp) + 1f;
+                    if (word > share)
+                    {
+                        _tabWidths[i] = word;
+                        left -= word;
+                        free--;
+                        changed = true;
+                    }
+                }
+            }
+
+            float rest = free > 0 ? Mathf.Max(0f, left) / free : 0f;
+            float h = TabDp;
+            for (int i = 0; i < _tabs.Length; i++)
+            {
+                if (!_tabs[i].gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (_tabWidths[i] < 0f)
+                {
+                    _tabWidths[i] = rest;
+                }
+
+                h = Mathf.Max(h, Mathf.Ceil(UiBuilder.MinTextHeight(_tabLabels[i], _tabWidths[i] - (2f * TabPadDp))) + 4f);
+            }
+
+            return h;
         }
 
         /// <summary>Una fila: icono, nombre, contenido y botón.</summary>
@@ -485,11 +694,13 @@ namespace AF.UI
                 Icon = UiBuilder.Image("Icon", Root, art.IconSeed, Color.white);
                 Icon.preserveAspect = true;
                 Name = UiBuilder.Label("Name", Root, TextStyle.PlainBold, string.Empty, 16f, Palette.FamilyWood.Deep, TextAlignmentOptions.Left);
+                Name.textWrappingMode = TextWrappingModes.Normal; // un nombre largo va en dos líneas (D-033, punto 11)
                 UiBuilder.AutoSize(Name, UiBuilder.MinTextSp, 16f);
                 Detail = UiBuilder.Label("Detail", Root, TextStyle.Body, string.Empty, 13f, Palette.FamilyWood.Base, TextAlignmentOptions.Left);
                 Detail.textWrappingMode = TextWrappingModes.Normal;
                 UiBuilder.AutoSize(Detail, UiBuilder.MinTextSp, 13f);
                 Note = UiBuilder.Label("Note", Root, TextStyle.PlainBold, string.Empty, 12f, Palette.UiRedWarning, TextAlignmentOptions.Left);
+                Note.textWrappingMode = TextWrappingModes.Normal;
                 UiBuilder.AutoSize(Note, UiBuilder.MinTextSp, 12f);
                 Cta = ModalKit.Cta("BuyButton", Root, art.CtaLeaf, TextStyle.CtaLeaf, string.Empty, 17f, onPress, out TextMeshProUGUI label);
                 CtaLabel = label;
@@ -511,19 +722,44 @@ namespace AF.UI
 
             public TextMeshProUGUI CtaLabel { get; }
 
+            /// <summary>
+            /// Alto que pide la fila con <paramref name="w"/> dp de ancho (D-033, punto 11; 02 §12): el nombre, el contenido y la
+            /// nota en las líneas que pidan a su tamaño mínimo (12 sp × escala o más), y el botón con su relieve, el que sea mayor.
+            /// Con los textos que ya cabían no pasa de <see cref="MinRowDp"/>: nada cambia donde ya cabía.
+            /// </summary>
+            public float Needed(float w)
+            {
+                float textW = TextWidth(w);
+                float text = 2f + NameHeight(textW) + DetailHeight(textW) + NoteHeight(textW) + 4f;
+                float cta = Cta.Button.gameObject.activeSelf ? ModalKit.HeightOf(Cta) + 4f : 0f;
+                return Mathf.Ceil(Mathf.Max(MinRowDp, Mathf.Max(text, cta)));
+            }
+
             public void Place(float x, float y, float w, float h)
             {
                 UiBuilder.Place(Root, x, y, w, h);
                 UiBuilder.Place(Icon.rectTransform, 0f, (h - 36f) * 0.5f, 36f, 36f);
                 float textX = 44f;
-                float textW = w - textX - BuyWidthDp - 8f;
-                bool note = Note.text.Length > 0;
-                UiBuilder.Place(Name.rectTransform, textX, 2f, textW, 20f);
-                UiBuilder.Place(Detail.rectTransform, textX, 22f, textW, note ? 18f : Mathf.Max(18f, h - 26f));
-                UiBuilder.Place(Note.rectTransform, textX, 40f, textW, Mathf.Max(14f, h - 42f));
+                float textW = TextWidth(w);
+                float nameH = NameHeight(textW);
+                float detailH = DetailHeight(textW);
+                float noteH = NoteHeight(textW);
+                float top = 2f + nameH;
+                UiBuilder.Place(Name.rectTransform, textX, 2f, textW, nameH);
+                UiBuilder.Place(Detail.rectTransform, textX, top, textW, noteH > 0f ? detailH : Mathf.Max(detailH, h - top - 4f));
+                UiBuilder.Place(Note.rectTransform, textX, top + detailH, textW, Mathf.Max(Mathf.Max(14f, noteH), h - top - detailH - 2f));
                 float ctaH = ModalKit.HeightOf(Cta);
                 ModalKit.Place(Cta, w - BuyWidthDp, Mathf.Max(0f, (h - ctaH) * 0.5f), BuyWidthDp);
             }
+
+            private static float TextWidth(float w) => w - 44f - BuyWidthDp - 8f;
+
+            // Los altos de siempre (20, 18 y 14 dp) o, si el texto no cabe ni a su mínimo, lo que pida.
+            private float NameHeight(float textW) => Mathf.Max(20f, Mathf.Ceil(UiBuilder.MinTextHeight(Name, textW)));
+
+            private float DetailHeight(float textW) => Mathf.Max(18f, Mathf.Ceil(UiBuilder.MinTextHeight(Detail, textW)));
+
+            private float NoteHeight(float textW) => Note.text.Length > 0 ? Mathf.Max(14f, Mathf.Ceil(UiBuilder.MinTextHeight(Note, textW))) : 0f;
         }
     }
 

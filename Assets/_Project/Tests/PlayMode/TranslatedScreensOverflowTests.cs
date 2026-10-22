@@ -23,13 +23,13 @@ namespace AF.Tests.PlayMode
     /// al mínimo del autoajuste, baja de 12 sp o se parte a media palabra, salvo que la misma pieza falle igual en es-419 en la
     /// misma pantalla (la línea base: eso es un límite del diseño de la pantalla, no de la traducción, y sale como aviso).
     /// <para>
-    /// Usa el andamio de <see cref="TranslatedTables"/>: las celdas que siguen vacías a propósito (las de
-    /// <c>docs/dev/traspaso/spark-traducciones/pendientes_t2b.csv</c>) se rellenan solo aquí con su es-419, para que el idioma se
-    /// pueda elegir; lo que se mide de verdad son las traducciones que ya están.
+    /// Usa el andamio de <see cref="TranslatedTables"/>: si alguna celda quedara vacía (las de
+    /// <c>docs/dev/traspaso/spark-traducciones/pendientes_t2b.csv</c>, vacío desde la traducción 3, D-033), se rellenaría solo
+    /// aquí con su es-419, para que el idioma se pueda elegir; lo que se mide de verdad son las traducciones que ya están.
     /// </para>
     /// <para>
-    /// Y Ajustes › Idioma: con en y pt-BR completos, ofrece English y Português (D-018, Q7-A; observación 1 de la prueba en el
-    /// teléfono del 2026-10-22).
+    /// Y Ajustes › Idioma: con en y pt-BR completos en las tablas del proyecto (traducción 3, D-033, sin andamio), ofrece English y
+    /// Português (D-018, Q7-A; observación 1 de la prueba en el teléfono del 2026-10-22).
     /// </para>
     /// </summary>
     public sealed class TranslatedScreensOverflowTests
@@ -164,6 +164,7 @@ namespace AF.Tests.PlayMode
             LocTableTexts tables = TranslatedTables.Completed(new[] { LocLocale.English, LocLocale.PortugueseBrazil }, out _, out int filled, missing);
             TestContext.WriteLine("AF_T2B celdas de strings.csv aún vacías en en o pt-BR (" + filled.ToString(CultureInfo.InvariantCulture) + "): "
                 + string.Join(", ", missing));
+            Assert.That(missing, Is.Empty, "en y pt-BR, completos en strings.csv: el andamio no rellena nada (traducción 3, D-033)");
 
             LaunchOptions.LocTablesOverride = tables;
             LaunchOptions.LanguageOverride = LocLocale.SourceLocale;

@@ -26,7 +26,8 @@ namespace AF.Tests.EditMode
     /// cada traducción, en un 30 % más (propuesta de idiomas §3.4 y §3.7; <see cref="VisibleLength"/>).</item>
     /// <item>Plantillas válidas y las traducciones con los mismos marcadores; ninguna cifra con separador ni decimales en
     /// <c>facts.csv</c> (Q8-A: van con <c>{n}</c> y su valor en <c>args</c>).</item>
-    /// <item>EN y PT-BR incompletos: el idioma automático se queda en es-419 (notas de la tanda 4, punto 10); en-XA pone toda la
+    /// <item>EN y PT-BR completos desde la traducción 3 (D-033, añadido del 2026-10-22): Ajustes › Idioma los ofrece y el
+    /// idioma automático sigue al teléfono (es-* → es-419, pt-* → pt-BR y el resto → en; D-018, Q7-A); en-XA pone toda la
     /// UI entre corchetes; y nada depende de la cultura del equipo (<see cref="LocSetUpFixture"/>).</item>
     /// </list>
     /// </summary>
@@ -330,22 +331,34 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void EnAndPtBr_AreIncomplete_SoTheAutomaticLanguageStaysEs419()
+        public void EnAndPtBr_AreComplete_SoSettingsOffersThem_AndTheAutomaticLanguageFollowsThePhone()
         {
             LocCatalog catalog = LocSetUpFixture.Catalog;
             Assert.That(catalog.IsComplete(LocLocale.SourceLocale), Is.True, "es-419, completo");
-            Assert.That(catalog.IsComplete(LocLocale.English), Is.False);
-            Assert.That(catalog.IsComplete(LocLocale.PortugueseBrazil), Is.False);
-            foreach (string device in new[] { "en-US", "pt-BR", "es-MX", "fr-FR" })
+            Assert.That(catalog.IsComplete(LocLocale.English), Is.True, "en, completo (traducción 3, D-033)");
+            Assert.That(catalog.IsComplete(LocLocale.PortugueseBrazil), Is.True, "pt-BR, completo (traducción 3, D-033)");
+            Assert.That(LocLocale.Offered(catalog, false), Is.EqualTo(new[] { LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil }),
+                "Ajustes › Idioma en release: los tres");
+            Assert.That(LocLocale.Offered(catalog, true), Is.EqualTo(new[] { LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil, LocLocale.Pseudo }),
+                "y en-XA en desarrollo");
+            foreach ((string device, string expected) in new[]
+            {
+                ("en-US", LocLocale.English), ("pt-BR", LocLocale.PortugueseBrazil), ("pt-PT", LocLocale.PortugueseBrazil),
+                ("es-MX", LocLocale.SourceLocale), ("fr-FR", LocLocale.English),
+            })
             {
                 LocResolution resolution = LocLocale.Resolve(catalog, null, null, device, false);
-                Assert.That(resolution.Locale, Is.EqualTo(LocLocale.SourceLocale), device);
+                Assert.That(resolution.Locale, Is.EqualTo(expected), device);
+                Assert.That(resolution.Source, Is.EqualTo(LocSource.Device), device);
             }
+
+            Assert.That(LocLocale.Resolve(catalog, null, null, null, false).Locale, Is.EqualTo(LocLocale.English), "sin teléfono: en (D-018, Q7-A)");
 
             Assert.That(LocTables.Configure(catalog, "en-XA", true).Source, Is.EqualTo(LocSource.Dev), "af_lang en-XA en desarrollo");
             Assert.That(Loc.Locale, Is.EqualTo(LocLocale.Pseudo));
-            Assert.That(LocTables.Configure(catalog, "en-XA", false).Locale, Is.EqualTo(LocLocale.SourceLocale), "en release no hay af_lang");
-            Assert.That(LocTables.Configure(catalog, "en", true).Locale, Is.EqualTo(LocLocale.SourceLocale), "en está incompleto");
+            Assert.That(LocTables.Configure(catalog, "en-XA", false).Locale, Is.EqualTo(LocLocale.English), "en release no hay af_lang: sin teléfono, en");
+            Assert.That(LocTables.Configure(catalog, "en", true).Locale, Is.EqualTo(LocLocale.English), "en, completo: af_lang en");
+            Assert.That(LocTables.Configure(catalog, "pt-BR", true).Locale, Is.EqualTo(LocLocale.PortugueseBrazil), "pt-BR, completo: af_lang pt-BR");
         }
 
         [Test]
@@ -709,7 +722,7 @@ namespace AF.Tests.EditMode
             Assert.That(catalog.Strings.Count, Is.EqualTo(LocSetUpFixture.Catalog.Strings.Count));
             Assert.That(catalog.Facts.Count, Is.EqualTo(0));
 
-            LocTables.Configure(catalog, null, true);
+            LocTables.Configure(catalog, null, null, "es", true); // teléfono en español: con en completo, sin él sería en
             Assert.That(UiText.Next, Is.EqualTo("Siguiente"));
             Assert.That(UiText.FaunaFact(FaunaKey), Is.Empty, "sin facts.csv, ningún dato de fauna (ni «[clave]»)");
         }
@@ -752,7 +765,7 @@ namespace AF.Tests.EditMode
             Assert.That(error, Does.Contain("facts.csv, línea 2: la clave «next» ya está en strings.csv"));
             Assert.That(catalog.Facts.Count, Is.EqualTo(0));
 
-            LocTables.Configure(catalog, null, true);
+            LocTables.Configure(catalog, null, null, "es", true); // teléfono en español: con en completo, sin él sería en
             Assert.That(UiText.Next, Is.EqualTo("Siguiente"));
             Assert.That(UiText.FaunaFact(FaunaKey), Is.Empty);
         }
@@ -769,7 +782,7 @@ namespace AF.Tests.EditMode
                 Assert.That(error, Is.Null);
                 Assert.That(catalog.Strings.Count, Is.EqualTo(LocSetUpFixture.Catalog.Strings.Count));
                 Assert.That(catalog.Facts.Count, Is.EqualTo(LocSetUpFixture.Catalog.Facts.Count));
-                LocTables.Configure(catalog, null, true);
+                LocTables.Configure(catalog, null, null, "es", true); // teléfono en español
                 Assert.That(UiText.Next, Is.EqualTo("Siguiente"));
                 Assert.That(UiText.FaunaFact(FaunaKey), Is.EqualTo("Cruza el bosque en fila, por ramas finas"));
 

@@ -15,9 +15,10 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Carga de los textos al arrancar (D-018, nivel 2; tarea L2b): la escena <c>Game</c> lleva las dos tablas
     /// (<c>GameSceneBuilder</c>) y <c>GameBootstrap</c> configura <see cref="Loc"/> con ellas antes de construir la UI. Sin
-    /// <c>af_lang</c>, el idioma automático da es-419 (el único con la UI completa); con <c>af_lang</c> = en-XA (gancho
-    /// <see cref="LaunchOptions.LanguageOverride"/>), todo texto de la pantalla sale entre corchetes; y un <c>af_lang</c> sin la
-    /// UI completa («en») se queda en es-419 con un aviso. Sin tablas o con una rota (gancho
+    /// <c>af_lang</c>, con el teléfono en español, el idioma automático da es-419; con <c>af_lang</c> = en-XA (gancho
+    /// <see cref="LaunchOptions.LanguageOverride"/>), todo texto de la pantalla sale entre corchetes; con <c>af_lang</c> = en, ya
+    /// completo (traducción 3, D-033), la UI sale en inglés; y un <c>af_lang</c> sin la UI completa (en con una celda vacía) se
+    /// queda en es-419 con un aviso. Sin tablas o con una rota (gancho
     /// <see cref="LaunchOptions.LocTablesOverride"/>), el juego arranca igual en es-419 y construye la UI con cada texto como
     /// «[clave]», con un aviso o un error en el log y nunca con una excepción en <c>Start</c> (tarea L2b, punto 4).
     /// </summary>
@@ -45,7 +46,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.FactsTableAsset, Is.Not.Null, "facts.csv en la escena (GameSceneBuilder)");
             Assert.That(boot.Locale.HasValue, Is.True);
             Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.SourceLocale));
-            Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Fallback), "sin af_lang ni idioma guardado o del teléfono (L3)");
+            Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Device), "sin af_lang ni idioma guardado: el teléfono en español de PlayModeHelpers (L3)");
             Assert.That(Loc.Locale, Is.EqualTo(LocLocale.SourceLocale));
             Assert.That(Loc.Catalog.Strings.Count, Is.GreaterThan(100));
             Assert.That(Loc.Catalog.Facts.Count, Is.GreaterThan(0));
@@ -90,14 +91,30 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator AfLang_En_WithTheUiComplete_PutsTheGameInEnglish()
+        {
+            LaunchOptions.LanguageOverride = LocLocale.English;
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.English), "en, completo en strings.csv (traducción 3, D-033)");
+            Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Dev));
+            Assert.That(UiText.Next, Is.EqualTo("Next"));
+        }
+
+        [UnityTest]
         public IEnumerator AfLang_WithoutACompleteUi_StaysInEs419()
         {
+            // Las tablas del proyecto con una celda de en vacía («next»): en deja de estar completo.
+            string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
+            string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
+            Assert.That(strings, Does.Contain("\nnext,Siguiente,Next,"));
+            LaunchOptions.LocTablesOverride = new LocTableTexts(strings.Replace("\nnext,Siguiente,Next,", "\nnext,Siguiente,,"), facts);
             LaunchOptions.LanguageOverride = LocLocale.English;
             LogAssert.Expect(LogType.Warning, new Regex("af_lang = \"en\" no tiene la UI completa: se usa es-419"));
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.SourceLocale));
-            Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Fallback));
+            Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Device), "el siguiente candidato: el teléfono en español");
             Assert.That(UiText.Next, Is.EqualTo("Siguiente"));
         }
 
@@ -109,7 +126,7 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.SourceLocale));
-            Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Fallback));
+            Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Device), "el teléfono en español de PlayModeHelpers; la tabla vacía no tiene en");
             Assert.That(Loc.Catalog.Strings.Count, Is.EqualTo(0));
             Assert.That(Loc.Catalog.Facts.Count, Is.EqualTo(0));
             Assert.That(UiText.Next, Is.EqualTo("[next]"), "en desarrollo, la clave entre corchetes");

@@ -20,7 +20,7 @@ difficulty_hard,ui,Difícil,Hard,Difícil,Etiqueta de dificultad (glosario §6.1
 difficulty_subtitle_hard,ui,Aguas bravas,Rough Waters,Águas bravas,"Subtítulo temático de Difícil (glosario §6.1); clave de strings.csv. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 difficulty_subtitle_very_hard,ui,Noche de jaguar,Jaguar Night,Noite da Onça,"Subtítulo temático de Muy difícil (glosario §6.1; nombra al jaguar); clave de strings.csv. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 extra_cuia,booster,+1 cuia,+1 cuia,+1 cuia,Etiqueta del HUD del comodín Cuia extra (glosario §5.1 y §10): «cuia» no se traduce.
-fact_sheet_title,ui,Frutas del río,,,"Ficha y serie de Frutas del río (glosario §10; D-017) [P]. EN y PT, pendientes del traductor."
+fact_sheet_title,ui,Frutas del río,River Fruits,Frutas do Rio,"Ficha y serie de Frutas del río (glosario §10; D-017) [P]. EN y PT del glosario §10 (D-033, añadido del 2026-10-22, punto 4)."
 fauna.agouti,fauna,agutí,agouti,cutia,"Fauna citada en los textos (T2-Q3). EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 fauna.anaconda,fauna,anaconda,anaconda,sucuri,"Fauna citada en los textos (T2-Q3). EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 fauna.caiman,fauna,caimán,caiman,jacaré,"Fauna citada en los textos (T2-Q3). EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
@@ -35,6 +35,7 @@ fauna.toucan,fauna,tucán,toucan,tucano,"Fauna citada en los textos (T2-Q3). EN 
 hint,booster,Pista,Hint,Dica,Etiqueta del HUD del comodín Morpho (glosario §5.1 y §10).
 iap_af_rescue_name,ui,Balsa de rescate,Rescue Raft,Balsa de Resgate,"Oferta IAP tras fallar, ID af_rescue (glosario §5.1); clave de strings.csv (T2-Q4)."
 lives,currency,Canoas,Canoes,Canoas,"Vidas, ID canoes (glosario §2.2); clave de UI lives (glosario §10). Derivados: Canoa extra, Canoas infinitas. Nunca «canoa» para la mecánica Lancha (glosario §6.5)."
+market_tab_boosters,ui,Comodines,Boosters,Reforços,"Nombre del conjunto de los comodines (glosario §5 y §10); pestaña del Mercado, clave de strings.csv (D-033, añadido del 2026-10-22, punto 8)."
 mechanic.alta,mechanic,Cuia alta,Tall Cuia,Cuia alta,"Variante de capacidad: 5 dosis desde el nivel 27; 6 solo en hitos desde el 141 (glosario §4; 02 §8). intro_mechanic alta. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3)."
 mechanic.barro,mechanic,Barro,Mud,Barro,"Residuo que ocupa una dosis, tinte 15 del motor (glosario §6.5); debut en el 123. No es un tipo de attrs: es el tinte 15. Pendiente del asesor cultural (07 §8.2). EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3)."
 mechanic.brote,mechanic,Brote,Sprout,Broto,"Tapón que germina y se abre con su color (glosario §6.5); debut en el 163. Nunca «semilla» (es la moneda). Pendiente del asesor cultural (07 §8.2). EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3)."
@@ -53,6 +54,8 @@ mechanic.tinaja,mechanic,Tinaja,Water Jar,Talha,"Vasija de barro con 3-5 dosis d
 murky,modifier,Aguas turbias,Murky waters,Águas turvas,"Modificador de colores ocultos, no una de las 12 mecánicas (glosario §6.2 y §10); desde el nivel 100. Como nombre del modificador, glosario §6.2 escribe «Murky Waters»."
 no_ads,ui,Sin anuncios,No ads,Sem anúncios,Compra que quita los intersticiales (glosario §7.1 y §10).
 patterns_toggle,ui,Patrones de fruta,Fruit patterns,Padrões de fruta,Ajuste de accesibilidad: patrones e iconos de fruta de los tintes (glosario §9 y §10).
+place.amazonas,place,Amazonas,Amazon,Amazonas,"Lugar: el río (world_w01_river y world_w04_river; en EN «Amazon»); el estado brasileño de world_w03_country es «Amazonas» en los tres idiomas. Glosario §1.1: la regla de la cadena «Amazon» no alcanza a la geografía (D-033, añadido del 2026-10-22, punto 3). Pendiente del asesor cultural (07 §8.2)."
+place.amazonia,place,Amazonía,the Amazon,Amazônia,"Lugar: la región (settings_about_amazon, «About the Amazon» / «Sobre a Amazônia»). Glosario §1.1: la regla de la cadena «Amazon» no alcanza a la geografía (D-033, añadido del 2026-10-22, punto 3). Pendiente del asesor cultural (07 §8.2)."
 place.andes,place,Andes,Andes,Andes,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.atlantic,place,océano Atlántico,Atlantic Ocean,oceano Atlântico,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.belem,place,Belém,Belém,Belém,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
@@ -76,18 +79,21 @@ place.maranon,place,Marañón,Marañón,Marañón,"Lugar (T2-Q3): exónimo habit
 place.maroni,place,Maroni,Maroni,Maroni,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.meeting_of_waters,place,Encuentro de las Aguas,Meeting of Waters,Encontro das Águas,"Lugar (T2-Q3): la confluencia del Negro y el Solimões en Manaos, que da nombre al evento de temporada (glosario §7.2, con los mismos EN y PT) y a la Cuia del Encuentro. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.mexico,place,México,Mexico,México,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
+place.mismi,place,nevado Mismi,Mount Mismi,Nevado Mismi,"Lugar: la naciente del mundo 13 (glosario §8, fila 13; map_source_name, «El nevado Mismi»). EN y PT provisionales (D-033, añadido del 2026-10-22, punto 6). Pendiente del asesor cultural (07 §8.2)."
 place.napo,place,Napo,Napo,Napo,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.negro,place,Negro,Negro,Negro,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2). El río; el tinte es «Agua del Río Negro» (Rio Negro Water)."
 place.noel_kempff,place,Noel Kempff,Noel Kempff,Noel Kempff,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.orinoco,place,Orinoco,Orinoco,Orinoco,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.para,place,Pará,Pará,Pará,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.peru,place,Perú,Peru,Peru,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
+place.putumayo,place,Putumayo,Putumayo,Putumayo,"Lugar: río del mundo 4 (glosario §8; world_w04_river); invariante (D-033, añadido del 2026-10-22, punto 3). Pendiente del asesor cultural (07 §8.2)."
 place.santarem,place,Santarém,Santarém,Santarém,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.shanay_timpishka,place,Shanay-Timpishka,Shanay-Timpishka,Shanay-Timpishka,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.solimoes,place,Solimões,Solimões,Solimões,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.suriname,place,Surinam,Suriname,Suriname,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.takutu,place,Takutu,Takutu,Takutu,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.tambopata,place,Tambopata,Tambopata,Tambopata,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
+place.tocantins,place,Tocantins,Tocantins,Tocantins,"Lugar: río del mundo 1 (glosario §8; world_w01_river); invariante (D-033, añadido del 2026-10-22, punto 3). Pendiente del asesor cultural (07 §8.2)."
 place.tuichi,place,Tuichi,Tuichi,Tuichi,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 place.venezuela,place,Venezuela,Venezuela,Venezuela,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 restart,booster,Reiniciar,Restart,Reiniciar,Etiqueta del HUD de Volver a la orilla (glosario §5.1 y §10).
@@ -95,7 +101,9 @@ reveal,booster,Revelar,Reveal,Revelar,Etiqueta del HUD del comodín Luciérnaga 
 river_fact,ui,Dato del río,River fact,Curiosidade do rio,Dato educativo de la victoria (glosario §6.4 y §10).
 river_lowered,ui,El río bajó,The river dropped,O rio baixou,Aviso de la variante aliviada (glosario §6.3 y §10).
 shop,ui,Mercado,Market,Mercado,"La tienda, ambientada en Ver-o-Peso (glosario §7.1 y §10)."
-shuffle,booster,Barajar,Shuffle,Embaralhar,Etiqueta del HUD del comodín Pororoca (glosario §5.1 y §10).
+shuffle,booster,Barajar,Mix,Misturar,"Etiqueta del HUD del comodín Pororoca (glosario §5.1 y §10). EN y PT cortos: «Shuffle» y «Embaralhar» no caben en la ranura de 56 dp a 12 sp (D-033, añadido del 2026-10-22, punto 2; P-18 de docs/dev/pororoca.md)."
+skin_af_skin_m03_name,ui,Cuia del Encuentro,Meeting Cuia,Cuia do Encontro,"Skin del mundo 3 (glosario §4), clave de strings.csv; nombre corto en EN y PT, también en su pack iap_af_skin_m03_name (D-033, añadido del 2026-10-22, punto 5). Provisional: Pendiente del asesor cultural (07 §8.2)."
+skin_af_skin_m04_name,ui,Totuma,Totuma,Totuma,"Skin del mundo 4 (glosario §4), clave de strings.csv; igual en los tres idiomas, también en su pack iap_af_skin_m04_name (D-033, añadido del 2026-10-22, punto 6). Provisional: Pendiente del asesor cultural (07 §8.2)."
 skip,booster,Saltar nivel,Skip level,Pular nível,"Etiqueta del comodín Salto del Boto (glosario §10; en el HUD, «Saltar», glosario §5.1)."
 streak,ui,Racha,Streak,Sequência,"Racha de victorias (glosario §10). El sistema se llama Crecida (EN «Rising River», PT «Enchente»; glosario §6.3)."
 stuck_subtitle,ui,Aguas estancadas,Still waters,Águas paradas,"Nombre interno y subtítulo del modal de bloqueo (glosario §5.1, stuck_modal); clave de strings.csv (T2-Q4)."
@@ -114,6 +122,7 @@ tint.lulo.name,tint,Lulo,Lulo,Lulo,"Tinte lulo (glosario §9): color verde, #4EB
 tint.tapereba.name,tint,Taperebá,Hog Plum,Taperebá,"Tinte tapereba (glosario §9): color amarillo dorado, #F2B705, patrón «puntos grandes», icono «ciruela», debut (mundo · nivel) 1 · 2. Fruta: Pendiente del asesor cultural (07 §8.2)."
 tint.urucum.name,tint,Achiote,Achiote,Urucum,"Tinte urucum (glosario §9): color bermellón, #CF3E1C, patrón «triángulos», icono «cápsula erizada», debut (mundo · nivel) 3 · 41. Nombre ES elegido por reconocimiento en CO/PE/MX [P]. Fruta: Pendiente del asesor cultural (07 §8.2)."
 ui.basin,ui,Cuenca,Basin,Bacia,"Vista de la cuenca del Mapa del río (D-013, punto 5; map_view_basin) (T2-Q4)."
+ui.grand_basket,ui,Canasta grande,Big Basket,Cesta grande,"La casilla 30 de la Bitácora (glosario, pregunta abierta 8; logbook_item_grand_basket). Provisional (D-033, añadido del 2026-10-22, punto 6): Pendiente del asesor cultural (07 §8.2)."
 ui.handful,ui,Puñado de semillas,Handful of seeds,Punhado de sementes,"Pack de 1,99 (glosario §2.1, «Puñado»); el nombre de tienda iap_af_coins_2_name es «Handful» / «Punhado» (T2-Q4)."
 ui.infinite_canoes,ui,Canoas infinitas,Endless Canoes,Canoas infinitas,Canoas infinitas 1 h y la Balsa de rescate (glosario §2.2 y §5.1) (T2-Q4).
 ui.river_samples,ui,Muestrario del río,River Samples,Mostruário do Rio,"Coleccionable del Mapa, river_samples [P] (glosario §7.1; D-013, Q9-A) (T2-Q4)."

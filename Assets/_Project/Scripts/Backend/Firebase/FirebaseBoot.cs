@@ -152,6 +152,9 @@ namespace AF.Backend.Firebase
                 // Antes que cualquier otra llamada a Firebase (lo exige App Check; D-039, añadido del 2026-10-21): en los builds de
                 // desarrollo, el proveedor de depuración (el SDK de Android escribe en logcat el secreto que el dueño registra en la
                 // consola; docs/dev/firebase-cliente.md §4); en release, Play Integrity (Q-AWS-4 (a)), que no escribe nada.
+                // La fábrica de depuración solo puede ir bajo DEVELOPMENT_BUILD: sin Development Build, Gradle quita
+                // firebase-appcheck-debug del APK/AAB (settingsTemplate.gradle; D-033, añadido del 2026-10-22, punto 9) y
+                // usarla sería JNI a una clase ausente. Lo vigila ci/check-release-classes.ps1.
 #if DEVELOPMENT_BUILD
                 FirebaseAppCheck.SetAppCheckProviderFactory(DebugAppCheckProviderFactory.Instance);
 #else

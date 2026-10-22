@@ -136,7 +136,10 @@ namespace AF.UI
         private PatternsSetting _patterns = PatternsSetting.Auto;
         private bool _slothMessages = true;
         private bool _idleHint = true;
-        private float _fontScale = 1f;
+        // D-033, punto 11: arranca con la escala de texto global (B9: la del sistema o af_font_scale, 1-1,3), la misma con la que
+        // se crean sus textos; antes empezaba en 1 y, al 130 %, la colocación volvía a poner algunos topes al 100 % (el código de
+        // borrado bajaba de 12 sp × escala).
+        private float _fontScale = Mathf.Clamp(UiBuilder.TextScale, 1f, LevelCardView.MaxFontScale);
         private int _screenW;
         private int _screenH;
         private Rect _safeArea;
