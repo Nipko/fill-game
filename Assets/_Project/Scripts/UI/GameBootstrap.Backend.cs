@@ -8,7 +8,7 @@ using AF.Backend.Unity;
 using AF.Economy;
 using AF.GameFlow;
 using AF.IAP;
-using AF.IAP.UnityIap;
+using AF.IAP.PlayBilling;
 using AF.Platform;
 using AF.Save;
 using UnityEngine;
@@ -20,7 +20,8 @@ namespace AF.UI
     /// cuenta, con el cliente que da <see cref="BackendFactory"/> para este build.
     /// <list type="bullet">
     /// <item><see cref="CreateStore"/>: <see cref="VerifiedStoreService"/> sobre la tienda de Play real (<see cref="PlayBillingClient"/>
-    /// con Unity IAP 5.4.4; D-040) en un teléfono con el paquete y con el backend real (<see cref="HttpBackendClient"/>), o sobre
+    /// con el plugin propio de Play Billing 9.0.0; D-040 y su añadido de Q-IAP-1) en un teléfono y con el backend real
+    /// (<see cref="HttpBackendClient"/>), o sobre
     /// <see cref="FakeBillingClient"/> (la hoja «Compra simulada» de siempre, con tokens nuevos en cada arranque) en el resto; con el UID
     /// de Firebase Auth como <c>setObfuscatedAccountId</c> (<see cref="FirebaseAuthUid"/>); y el cliente del backend: <see cref="FakeBackendClient"/> en el editor y en
     /// <c>DEVELOPMENT_BUILD</c> sin la configuración de Firebase (concede lo del catálogo, como el servidor: <see cref="CatalogGrants"/>),
@@ -77,7 +78,7 @@ namespace AF.UI
         /// <summary>La tienda verificada (null antes del arranque).</summary>
         public VerifiedStoreService? VerifiedStore => _verifiedStore;
 
-        /// <summary>La tienda de la plataforma simulada (tests y builds sin Unity IAP).</summary>
+        /// <summary>La tienda de la plataforma simulada (editor, tests y builds sin el backend real).</summary>
         public FakeBillingClient? FakeBilling => _fakeBilling;
 
         /// <summary>La tienda de Play real (D-040), solo en el teléfono con el backend real; null en el resto.</summary>
@@ -115,8 +116,9 @@ namespace AF.UI
 
             _backendSwitch = new GameBackendSwitch(!(client is UnavailableBackendClient), _rcConfigs?.BackendSwitch);
 
-            // D-040: Play Billing de verdad (Unity IAP 5.4.4) solo en el teléfono, con el paquete y con el backend real que verifica cada
-            // compra; con el backend falso (editor, desarrollo sin google-services.json) o sin el paquete, la tienda simulada de siempre.
+            // D-040: Play Billing de verdad (plugin propio, Play Billing Library 9.0.0) solo en el teléfono y con el backend real que
+            // verifica cada compra; con el backend falso (editor, desarrollo sin google-services.json o con af_fake_store, solo en
+            // DEVELOPMENT_BUILD), la tienda simulada de siempre.
             IBillingClient billing;
             _playBilling = client is HttpBackendClient ? PlayBillingFactory.TryCreate(ledger.Catalog, LaunchOptions.DefaultStoreCurrency) : null;
             if (_playBilling != null)
@@ -195,7 +197,7 @@ namespace AF.UI
 
         /// <summary>
         /// Al destruir la escena (<c>OnDestroy</c>: una recarga con RebuildUi o RestartAsFirstRun crea otra tienda): la tienda de Play de
-        /// esta escena suelta Unity IAP, cuyos servicios son únicos en el proceso, para que sus avisos no lleguen también a la tienda vieja.
+        /// esta escena suelta su conexión con Play (endConnection del plugin), para que sus avisos no lleguen también a la tienda vieja.
         /// Lo que quede sin terminar en Play vuelve a la tienda nueva. (La tienda verificada vieja y sus peticiones en vuelo al servidor
         /// siguen como antes de D-040: ver «Riesgos» de <c>docs/dev/iap.md</c>.)
         /// </summary>

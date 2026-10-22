@@ -127,7 +127,7 @@ namespace AF.IAP
         private string? _purchaseInStore;
 
         /// <param name="ledger">Registro de la tienda (perfil y cartera).</param>
-        /// <param name="billing">Tienda de la plataforma (Unity IAP o <see cref="FakeBillingClient"/>).</param>
+        /// <param name="billing">Tienda de la plataforma (<see cref="PlayBillingClient"/> o <see cref="FakeBillingClient"/>).</param>
         /// <param name="backend">Cliente del backend (<see cref="HttpBackendClient"/> o <see cref="FakeBackendClient"/>).</param>
         /// <param name="clock">Reloj (el plazo de 72 h se mide con el del dispositivo).</param>
         /// <param name="backendSwitch"><c>biz_backend_enabled</c>; null: el default (<c>true</c>).</param>
@@ -264,7 +264,16 @@ namespace AF.IAP
                     continue; // un producto que esta versión no vende: se deja como está
                 }
 
-                if (_queue.Contains(t.Token) || _waiting.ContainsKey(t.Token) || _rejectedThisSession.Contains(t.Token))
+                PendingVerification? queued = _queue.Get(t.Token);
+                if (queued != null && queued.IsDeferredAck)
+                {
+                    // 08 §10.3: el acknowledge local ya tocó. Se vuelve a pedir en cada Resume (arranque, vuelta a primer plano y compra sin
+                    // terminar nueva) por si Play no lo hizo (red caída, otra sesión): la tienda no repite lo ya reconocido ni lo que está en
+                    // vuelo. Nunca acredita ni consume (D-035, F3-1 y F3-2).
+                    _billing.AcknowledgeLocal(t.Sku, t.Token);
+                }
+
+                if (queued != null || _waiting.ContainsKey(t.Token) || _rejectedThisSession.Contains(t.Token))
                 {
                     continue;
                 }

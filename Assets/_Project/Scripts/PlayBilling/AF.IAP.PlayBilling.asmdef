@@ -1,9 +1,8 @@
 {
-  "name": "AF.IAP.UnityIap",
-  "rootNamespace": "AF.IAP.UnityIap",
+  "name": "AF.IAP.PlayBilling",
+  "rootNamespace": "AF.IAP.PlayBilling",
   "references": [
-    "AF.IAP",
-    "Unity.Purchasing"
+    "AF.IAP"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
@@ -12,12 +11,6 @@
   "precompiledReferences": [],
   "autoReferenced": false,
   "defineConstraints": [],
-  "versionDefines": [
-    {
-      "name": "com.unity.purchasing",
-      "expression": "5.4.4",
-      "define": "AF_UNITY_IAP"
-    }
-  ],
+  "versionDefines": [],
   "noEngineReferences": false
 }

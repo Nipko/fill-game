@@ -302,6 +302,9 @@ namespace AF.Tests.PlayMode
                 return true;
             }
 
+            // El deferred_ack (72 h) no llega en estas pruebas de fotogramas; el puerto lo acepta sin terminar nada.
+            public bool Acknowledge(string token) => !_done.Contains(token);
+
             private PlayOrder NewOrder(string sku, PlayOrderState state)
             {
                 _counter++;

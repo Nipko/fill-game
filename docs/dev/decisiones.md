@@ -3556,6 +3556,16 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Pendiente aparte (sin encargo):** comprobar qué envía el propio runtime de Unity 6.3 en un build Android (Engine Diagnostics o Insights, que el emisor de IAP menciona). Es tema del abogado y de Data Safety.
 - **Encargo:** `docs/dev/traspaso/spark-reto-del-rio.md` §15.
 
+### D-040, añadido del 2026-10-22: dependencias Maven de Play Billing Library 9.0.0 (Q-BILL-1)
+
+- **Estado:** aprobado por el dueño en la sesión del Spark (registro en `docs/dev/iap.md` §4.1, commit `ea348c76` de `spark/t5-billing`): «Apruebo las dependencias Maven de com.android.billingclient:billing 9.0.0 de Q-BILL-1 con las versiones que resuelve Gradle; anótalo para D-040.»
+- Quedan aprobadas las dependencias que declara el POM de `billing:9.0.0`, con la versión que pide el POM como mínimo y tal como las resuelve Gradle junto a Firebase (dev.apk, `:unityLibrary:dependencies`; tabla en `iap.md` §4.1):
+  - `androidx.activity:activity` 1.2.3 → 1.6.0; `androidx.core:core` 1.15.0 → 1.15.0;
+  - `com.google.android.datatransport:transport-api` 3.0.0 → 3.2.0, `transport-backend-cct` 3.1.8 → 3.3.0 y `transport-runtime` 3.1.8 → 3.3.0;
+  - `com.google.android.gms:play-services-base` 18.5.0 → 18.10.1, `play-services-basement` 18.9.0 → 18.11.0, `play-services-location` 19.0.0 → 19.0.0 (con `play-services-places-placereport` 17.0.0) y `play-services-tasks` 18.2.0 → 18.4.1.
+- Son las mismas que ya entraban con Unity IAP 5.4.4 (que traía `billing:9.0.0`); ninguna añade permisos. Las únicas que solo trae Play Billing son `play-services-location` y `places-placereport`. Subir `billing` o fijar otras versiones a mano exige otra aprobación.
+- Con la integración de `spark/t5-billing` y sus parches `BILL-*` (rama `integra/spark-billing`), Unity IAP y sus tres dependencias de Unity Services salen de `integracion-fase1-fase2`.
+
 ### D-033, añadido del 2026-10-22: pendientes del dueño 2 a 12, todos con la recomendada
 
 - **Estado:** decididos por el dueño en el chat: «Pendientes 2 a 12: todas con la recomendada.» El 1 es Q-IAP-1 (D-040).
@@ -3633,3 +3643,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - pone la tienda simulada y el backend falso en toda la sesión, así que no sirve para probar App Check ni el borrado real;
   - documentado en `docs/dev/prototipo-v0.md`.
 - **Regla nueva de `tools/loc/apply_translations.py`:** una traducción con menos U+00A0 entre cifra o marcador y su unidad que el es-419 es un conflicto. La excepción es el «%», que en en y pt va pegado.
+
+### D-040, añadido del 2026-10-23: preguntas abiertas del plugin propio de Play Billing (Q-BILL-2 a Q-BILL-5)
+
+- **Estado:** integradas con `spark/t5-billing`, con la revisión APROBADO tras corregir el GDD. La recomendada va aplicada donde la hay. Detalle en `docs/dev/iap.md` §4.1.
+- **Q-BILL-2 · Registros de diagnóstico de la biblioteca a Google:** se declaran en la fila «Google Play Billing» de 08 §13.3 [E]. Pendiente del abogado.
+- **Q-BILL-3 · Una sola oferta por producto:** la configura el dueño en Play Console.
+- **Q-BILL-4 · Compras de varias unidades:** el plugin salta las que traen `getQuantity() != 1`. No se acreditan ni se reconocen, y Play las reembolsa. El dueño no activa las varias unidades en Play Console.
+- **Q-BILL-5 · `sec_purchase_deferred_ack_h`:** la recomendada es bajarlo de 72 a 48 h en 08 §9 y regenerar los defaults. Con 72 h, el reconocimiento local puede llegar tarde, en el mismo plazo en que Play reembolsa. Se aplica en una tarea aparte (regla «si tienen recomendada, vamos con esa»).
+- **Sin probar:** la compra real por JNI en un teléfono, con el modo de ensayo de `iap.md` §3. Hace falta antes de cualquier release, con los productos `af_*` dados de alta en Play Console (D-034).
+

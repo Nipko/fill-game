@@ -31,7 +31,7 @@
     "AF.Analytics.Firebase",
     "AF.RemoteConfig.Firebase",
     "AF.Platform.Notifications",
-    "AF.IAP.UnityIap",
+    "AF.IAP.PlayBilling",
     "AF.Backend.Firebase"
   ],
   "includePlatforms": [],

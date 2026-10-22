@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sin permisos propios: com.android.vending.BILLING lo declara la Play Billing Library 9.0.0 (aprobado en D-040). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

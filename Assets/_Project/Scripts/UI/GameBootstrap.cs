@@ -1681,7 +1681,7 @@ namespace AF.UI
                 WrapAds(WrapConsentAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()))), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
             _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
             // F3-5: la compra verificada (F3-3) con el cliente del backend de este build (GameBootstrap.Backend.cs); la hoja «Compra
-            // simulada» sigue siendo la de la tienda de la plataforma simulada (FakeBillingClient) mientras no llegue Unity IAP.
+            // simulada» es la de la tienda de la plataforma simulada (FakeBillingClient) sin Play real (D-040).
             _store = WrapStore(WrapConsentStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch))); // B12: flags de edad
             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
@@ -2315,7 +2315,7 @@ namespace AF.UI
             CutSplash();
             PersistNow("destruir la escena");
             ClearA11y(); // B9: TalkBack no se queda con los nodos de esta escena (recarga por idioma o por borrar la cuenta)
-            DisposeBilling(); // D-040: la tienda de Play de esta escena suelta Unity IAP (GameBootstrap.Backend.cs)
+            DisposeBilling(); // D-040: la tienda de Play de esta escena suelta su conexión con Play (GameBootstrap.Backend.cs)
 
             // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
             // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya
