@@ -68,8 +68,8 @@ namespace AF.UI
         private void BuildA11yRows()
         {
             A11ySlot = UiBuilder.Rect("A11ySlot", _content);
-            _a11yRows[0] = new OptionRow(A11ySlot, _art, "ReduceMotion", ReduceMotionId, A11yText.SettingsReduceMotion, () => ToggleA11y(0));
-            _a11yRows[1] = new OptionRow(A11ySlot, _art, "HighContrast", HighContrastId, A11yText.SettingsHighContrast, () => ToggleA11y(1));
+            _a11yRows[0] = Option(A11ySlot, _art, "ReduceMotion", ReduceMotionId, A11yText.SettingsReduceMotion, () => ToggleA11y(0));
+            _a11yRows[1] = Option(A11ySlot, _art, "HighContrast", HighContrastId, A11yText.SettingsHighContrast, () => ToggleA11y(1));
             MarkA11y(false, false);
         }
 
