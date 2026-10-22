@@ -182,14 +182,34 @@ namespace AF.Tests.PlayMode
                 Assert.That(settings.FruitCount, Is.GreaterThan(10), "las fichas de «Frutas del río», con sus botones fruit_*");
                 string at = "Ajustes con " + (next - 1);
                 AssertTheLines(at, "settings");
-                string[] ids = AfLayoutLog.ButtonIds(LastProbe("settings"));
-                int fruits = 0;
-                foreach (string id in ids)
+
+                // Desde la revisión de fx-130, la línea solo da las filas que el visor no recorta del todo y sale otra al desplazar
+                // la lista si cambian: bajando a pasos, cada línea da justo las fichas que se ven y entre todas salen todas.
+                var fruits = new HashSet<string>();
+                UnityEngine.UI.ScrollRect list = settings.Viewport.GetComponent<UnityEngine.UI.ScrollRect>();
+                for (int step = 0; step <= 20; step++)
                 {
-                    fruits += id.StartsWith("fruit_", StringComparison.Ordinal) ? 1 : 0;
+                    if (settings.Scrolls)
+                    {
+                        list.verticalNormalizedPosition = 1f - (step / 20f);
+                    }
+
+                    yield return null; // el visor avisa al desplazarse (ScrollRect.onValueChanged, en LateUpdate)
+                    int shown = 0;
+                    foreach (string id in AfLayoutLog.ButtonIds(LastProbe("settings")!))
+                    {
+                        if (id.StartsWith("fruit_", StringComparison.Ordinal))
+                        {
+                            fruits.Add(id);
+                            shown++;
+                        }
+                    }
+
+                    Assert.That(shown, Is.EqualTo(ShownFruits(settings)), at + ", paso " + step + ": las fichas que el visor no recorta");
                 }
 
-                Assert.That(fruits, Is.EqualTo(settings.FruitCount), at + ": un botón fruit_* por ficha, en sus partes");
+                Assert.That(fruits.Count, Is.EqualTo(settings.FruitCount), at + ": un botón fruit_* por ficha, en sus partes");
+                AssertTheLines(at + " al desplazar", "settings");
                 settings.FruitButton("acai")!.onClick.Invoke();
                 PlayModeHelpers.Step(boot, 600);
                 AssertTheLines(at + " con la ficha del açaí", null);
@@ -268,6 +288,18 @@ namespace AF.Tests.PlayMode
         }
 
         // La última sonda AF_LAYOUT de la pantalla (sus partes, una por renglón, para leer sus botones), o null.
+        // Las fichas de «Frutas del río» de Ajustes que el visor no recorta del todo.
+        private static int ShownFruits(SettingsScreen settings)
+        {
+            int shown = 0;
+            for (int i = 0; i < settings.FruitCount; i++)
+            {
+                shown += A11yScroll.ClippedOut((RectTransform)settings.FruitButton(i).transform) ? 0 : 1;
+            }
+
+            return shown;
+        }
+
         private string? LastProbe(string screen)
         {
             string tag = "AF_LAYOUT {\"screen\":\"" + screen + "\",";

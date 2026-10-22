@@ -141,6 +141,7 @@ namespace AF.UI
         // borrado bajaba de 12 sp × escala).
         private float _fontScale = Mathf.Clamp(UiBuilder.TextScale, 1f, LevelCardView.MaxFontScale);
         private int _screenW;
+        private int _layoutSignature; // las filas a la vista en el último AF_LAYOUT (0: aún ninguno; sonda de desarrollo)
         private int _screenH;
         private Rect _safeArea;
 
@@ -206,7 +207,11 @@ namespace AF.UI
             // lista por debajo y arriba en cuanto se ha desplazado, para que el corte no parezca un fallo (D-003).
             _fadeTop = UiBuilder.Image("FadeTop", _viewport, art.ScrollFade(true), Color.white);
             _fadeBottom = UiBuilder.Image("FadeBottom", _viewport, art.ScrollFade(false), Color.white);
-            _scroll.onValueChanged.AddListener(_ => UpdateFades());
+            _scroll.onValueChanged.AddListener(_ =>
+            {
+                UpdateFades();
+                ProbeScrolled();
+            });
 
             _canvas.Canvas.gameObject.SetActive(false);
         }
@@ -713,6 +718,8 @@ namespace AF.UI
             UiBuilder.Place(text.rectTransform, x, y, w, h);
         }
 
+        // AF_LAYOUT settings (desarrollo): la X y las filas que el visor no recorta del todo (las de debajo del corte no se pueden
+        // tocar: salen cuando se desplaza la lista hasta ellas, ProbeScrolled).
         private void EmitLayout()
         {
             if (!DevProbe.Enabled || !Visible)
@@ -720,9 +727,52 @@ namespace AF.UI
                 return;
             }
 
+            LayoutTargets(out string[] ids, out RectTransform[] rects, out int shown, out int signature);
+            _layoutSignature = signature;
+            if (shown < ids.Length)
+            {
+                var keptIds = new string[shown];
+                var keptRects = new RectTransform[shown];
+                int k = 0;
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    if (rects[i] != null && !A11yScroll.ClippedOut(rects[i]))
+                    {
+                        keptIds[k] = ids[i];
+                        keptRects[k] = rects[i];
+                        k++;
+                    }
+                }
+
+                ids = keptIds;
+                rects = keptRects;
+            }
+
+            _probe.Layout("settings", 0, null, ids, rects);
+        }
+
+        // Desarrollo: al desplazar la lista, si cambian las filas que se ven, otra línea AF_LAYOUT con las de ahora.
+        private void ProbeScrolled()
+        {
+            if (!DevProbe.Enabled || !Visible || _layoutSignature == 0)
+            {
+                return;
+            }
+
+            LayoutTargets(out _, out _, out _, out int signature);
+            if (signature != _layoutSignature)
+            {
+                EmitLayout();
+            }
+        }
+
+        // Todos los ids y rectángulos de AF_LAYOUT settings, cuántos se ven (no recortados del todo por el visor) y una firma de
+        // cuáles (distinta de 0).
+        private void LayoutTargets(out string[] ids, out RectTransform[] rects, out int shown, out int signature)
+        {
             int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount + PushLayoutCount;
-            var ids = new string[n];
-            var rects = new RectTransform[n];
+            ids = new string[n];
+            rects = new RectTransform[n];
             ids[0] = "close";
             rects[0] = (RectTransform)_close.Button.transform;
             int k = 1;
@@ -750,7 +800,21 @@ namespace AF.UI
             int consent = ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount); // consent y age_band (B12)
             PushLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + consent); // push y push_open_phone
 
-            _probe.Layout("settings", 0, null, ids, rects);
+            shown = 0;
+            signature = 17;
+            for (int i = 0; i < n; i++)
+            {
+                if (rects[i] != null && !A11yScroll.ClippedOut(rects[i]))
+                {
+                    shown++;
+                    signature = unchecked((signature * 31) + i + 1);
+                }
+            }
+
+            if (signature == 0)
+            {
+                signature = 1;
+            }
         }
 
         private TextMeshProUGUI SectionTitle(string name, string text)

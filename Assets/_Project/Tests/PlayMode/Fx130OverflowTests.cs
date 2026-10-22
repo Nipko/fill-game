@@ -133,11 +133,11 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// Ajustes con el código de borrado y las cuatro pestañas del Mercado (la Cuia de Santarém puesta, el Cántaro a 1.230) en
-        /// <paramref name="locale"/> con la fuente a <paramref name="scale"/>; apunta en <paramref name="problems"/> lo que falle y
-        /// en <paramref name="counts"/>[0] los textos mirados. Con <paramref name="dir"/>, guarda cada captura.
+        /// Arranca el juego en <paramref name="locale"/> con la fuente a <paramref name="scale"/>, a 360 × 640 dp (o en
+        /// <paramref name="screen"/>), con el perfil de las capturas: nivel 46, 2.450 semillas, la Cuia de Santarém puesta y el
+        /// Cántaro a 1.230.
         /// </summary>
-        public static IEnumerator Run(string locale, float scale, string? dir, string prefix, List<string> problems, int[] counts)
+        public static IEnumerator Load(string locale, float scale, Vector4? screen = null)
         {
             FunnelSetup.Hooks();
             LaunchOptions.LocTablesOverride = locale == LocLocale.SourceLocale ? null : TranslatedTables.Completed(locale, out _, out _);
@@ -145,7 +145,7 @@ namespace AF.Tests.PlayMode
             LaunchOptions.FontScaleOverride = scale;
             LaunchOptions.ClockOverride = new ManualClock(T0);
             LaunchOptions.PurchasePresenterOverride = new ImmediatePurchasePresenter();
-            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
+            GameScreen.SimulatedScreen = screen ?? HudLabelTests.Screen640;
 
             Profile profile = Wallet.NewProfile(new ManualClock(T0));
             profile.Progress.NextLevel = 46;
@@ -158,6 +158,16 @@ namespace AF.Tests.PlayMode
             jar.Save(new OffersRecord { PiggySeeds = 1230, PiggyCap = 3000 });
             GameBootstrap.OffersStoreOverride = jar;
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+        }
+
+        /// <summary>
+        /// Ajustes con el código de borrado y las cuatro pestañas del Mercado (la Cuia de Santarém puesta, el Cántaro a 1.230) en
+        /// <paramref name="locale"/> con la fuente a <paramref name="scale"/>; apunta en <paramref name="problems"/> lo que falle y
+        /// en <paramref name="counts"/>[0] los textos mirados. Con <paramref name="dir"/>, guarda cada captura.
+        /// </summary>
+        public static IEnumerator Run(string locale, float scale, string? dir, string prefix, List<string> problems, int[] counts)
+        {
+            yield return Load(locale, scale);
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(Loc.Locale, Is.EqualTo(locale), "la UI en el idioma medido");
             var inventory = new LocInventory(locale, scale);

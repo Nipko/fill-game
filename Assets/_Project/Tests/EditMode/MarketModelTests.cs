@@ -182,5 +182,45 @@ namespace AF.Tests.EditMode
         {
             Assert.That(GeoTierRule.FromLanguageTag(tag), Is.EqualTo(tier));
         }
+
+        [Test]
+        public void TabWidths_ShareTheRow_AndNeverLeaveThePanel()
+        {
+            var widths = new float[4];
+
+            // Caben a partes iguales: un cuarto cada una; una pestaña oculta se queda en 0.
+            MarketScreen.ShareTabWidths(296f, new[] { 50f, 60f, -1f, 70f }, widths);
+            Assert.That(widths, Is.EqualTo(new[] { 296f / 3f, 296f / 3f, 0f, 296f / 3f }).Within(0.01f));
+
+            // Una palabra no cabe en su parte: se queda su ancho y las demás se reparten el resto.
+            MarketScreen.ShareTabWidths(296f, new[] { 40f, 40f, 40f, 130f }, widths);
+            Assert.That(widths[3], Is.EqualTo(130f));
+            Assert.That(widths[0], Is.EqualTo(166f / 3f).Within(0.01f));
+            Assert.That(Sum(widths), Is.EqualTo(296f).Within(0.01f));
+
+            // Salvaguarda (revisión de fx-130): las palabras suman más que el panel; cada una, en proporción, y sin salirse.
+            MarketScreen.ShareTabWidths(296f, new[] { 100f, 120f, 90f, 130f }, widths);
+            Assert.That(Sum(widths), Is.LessThanOrEqualTo(296f));
+            Assert.That(Sum(widths), Is.GreaterThan(295.9f));
+            Assert.That(widths[3] / widths[0], Is.EqualTo(1.3f).Within(0.01f), "en proporción a su palabra");
+            foreach (float w in widths)
+            {
+                Assert.That(w, Is.GreaterThan(0f), "ninguna se queda sin sitio");
+            }
+
+            MarketScreen.ShareTabWidths(296f, new[] { -1f, -1f, -1f, -1f }, widths);
+            Assert.That(Sum(widths), Is.EqualTo(0f));
+        }
+
+        private static float Sum(float[] values)
+        {
+            float sum = 0f;
+            foreach (float v in values)
+            {
+                sum += v;
+            }
+
+            return sum;
+        }
     }
 }

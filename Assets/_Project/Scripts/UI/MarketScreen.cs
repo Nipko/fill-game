@@ -69,10 +69,15 @@ namespace AF.UI
         private readonly Image _fadeBottom;
         private readonly List<MarketRow> _model = new List<MarketRow>(MaxRows);
         private readonly float[] _tabWidths = new float[4];
+        private readonly float[] _tabWords = new float[4];
         private readonly float[] _rowHeights = new float[MaxRows];
         private readonly MarketDeps _deps;
         private Action? _onClosed;
         private bool _logShown;
+        private bool _keepScroll; // el próximo Layout conserva la posición de la lista (un Refresh sin cambio de pestaña)
+        private MarketTab _laidTab;
+        private bool _laidOut;
+        private int _visibleRows = -1; // filas con botón a la vista en el último AF_LAYOUT (máscara de bits; sonda de desarrollo)
 
         public MarketScreen(Transform host, ProceduralArt art, MarketDeps deps)
         {
@@ -122,7 +127,11 @@ namespace AF.UI
 
             _fadeTop = UiBuilder.Image("FadeTop", _viewport, art.ScrollFade(true), Color.white);
             _fadeBottom = UiBuilder.Image("FadeBottom", _viewport, art.ScrollFade(false), Color.white);
-            _scroll.onValueChanged.AddListener(_ => UpdateFades());
+            _scroll.onValueChanged.AddListener(_ =>
+            {
+                UpdateFades();
+                ProbeScrolled();
+            });
 
             _canvas.Canvas.gameObject.SetActive(false);
         }
@@ -193,7 +202,10 @@ namespace AF.UI
         /// <summary>Se puso otra skin.</summary>
         public event Action<string>? SkinSelected;
 
-        /// <summary>Se abrió o cambió de pestaña (para <c>AF_LAYOUT</c>).</summary>
+        /// <summary>
+        /// Se abrió o cambió de pestaña (para <c>AF_LAYOUT</c>); en desarrollo, también cuando al desplazar la lista cambian las filas
+        /// que se ven.
+        /// </summary>
         public event Action? Shown;
 
         /// <summary>Abre el Mercado en <paramref name="tab"/> (si no tiene nada, en Semillas) y llama a <paramref name="onClosed"/> al cerrarlo.</summary>
@@ -205,6 +217,7 @@ namespace AF.UI
             _canvas.Measure();
             Tab = MarketModel.TabVisible(tab, _deps.Offers, _deps.MaxLevel()) ? tab : MarketTab.Seeds;
             _logShown = true;
+            _laidOut = false; // al abrir, la lista empieza arriba
             Refresh();
             Shown?.Invoke();
         }
@@ -237,7 +250,10 @@ namespace AF.UI
             Shown?.Invoke();
         }
 
-        /// <summary>Botones visibles para <c>AF_LAYOUT</c> (sonda de desarrollo): la X, las pestañas y el botón de cada fila.</summary>
+        /// <summary>
+        /// Botones visibles para <c>AF_LAYOUT</c> (sonda de desarrollo): la X, las pestañas y el botón de cada fila que el visor no
+        /// recorta del todo (las de debajo del corte salen cuando se desplaza la lista hasta ellas).
+        /// </summary>
         public void VisibleButtons(List<string> ids, List<RectTransform> rects)
         {
             if (!Visible)
@@ -256,13 +272,40 @@ namespace AF.UI
                 }
             }
 
+            _visibleRows = VisibleRowMask();
             for (int i = 0; i < _model.Count && i < _rows.Length; i++)
             {
-                if (_rows[i].Cta.Button.gameObject.activeSelf)
+                if ((_visibleRows & (1 << i)) != 0)
                 {
                     ids.Add("market_row_" + _model[i].Id);
                     rects.Add((RectTransform)_rows[i].Cta.Button.transform);
                 }
+            }
+        }
+
+        // Las filas cuyo botón se ve (bit i: la fila i): con botón y sin que el visor lo recorte del todo (como el lector; las de
+        // debajo del corte no se pueden tocar).
+        private int VisibleRowMask()
+        {
+            int mask = 0;
+            for (int i = 0; i < _model.Count && i < _rows.Length; i++)
+            {
+                Button button = _rows[i].Cta.Button;
+                if (button.gameObject.activeInHierarchy && !A11yScroll.ClippedOut((RectTransform)button.transform))
+                {
+                    mask |= 1 << i;
+                }
+            }
+
+            return mask;
+        }
+
+        // Desarrollo: al desplazar la lista, si cambian las filas que se ven, otra línea AF_LAYOUT con las de ahora.
+        private void ProbeScrolled()
+        {
+            if (DevProbe.Enabled && Visible && _visibleRows >= 0 && VisibleRowMask() != _visibleRows)
+            {
+                Shown?.Invoke();
             }
         }
 
@@ -307,6 +350,9 @@ namespace AF.UI
                 Tab = MarketTab.Seeds;
             }
 
+            // Un Refresh que no cambia de pestaña (comprar, equipar, una nota o el estado de la tienda) deja la lista donde estaba;
+            // abrir el Mercado o cambiar de pestaña la lleva arriba.
+            _keepScroll = _laidOut && _laidTab == Tab;
             MarketModel.Build(Tab, _deps.Offers, _deps.Skins, maxLevel, _deps.CurrentWorld(), _model);
             _seeds.text = Loc.Number(_deps.Offers.Ledger.Wallet.Seeds);
             bool storeOn = _deps.Store.IsAvailable && !_deps.PurchasesBlocked;
@@ -543,9 +589,18 @@ namespace AF.UI
                 viewH = CutAtRow(viewH, count);
             }
 
+            float keep = _keepScroll ? _content.anchoredPosition.y : 0f; // lo que la lista ya bajó (dp)
             UiBuilder.Place(_viewport, 16f, y, inner, viewH);
             UiBuilder.Place(_content, 0f, 0f, inner, contentH);
             _scroll.velocity = Vector2.zero;
+            if (_scroll.vertical && keep > 0f)
+            {
+                _content.anchoredPosition = new Vector2(0f, Mathf.Clamp(keep, 0f, contentH - viewH));
+            }
+
+            _laidTab = Tab;
+            _laidOut = true;
+            _keepScroll = false;
             float panelH = y + viewH + 16f;
             float surfaceH = panelH - 16f;
             _fadeTop.color = ProceduralArt.ModalSurfaceColorAt(y - 8f, surfaceH);
@@ -624,19 +679,77 @@ namespace AF.UI
         /// Reparte <paramref name="inner"/> entre las <paramref name="shown"/> pestañas visibles (en <see cref="_tabWidths"/>) y
         /// devuelve su alto (D-033, punto 11; 02 §12). A partes iguales, salvo que la palabra más ancha de una etiqueta no quepa
         /// en su parte a 12 sp (× escala): esa se queda el ancho de su palabra y las demás se reparten el resto. Así ninguna
-        /// palabra se parte; la etiqueta que no cabe en una línea va en dos y la fila de pestañas crece lo que pida (≥ 48 dp).
-        /// Mide al colocar, nunca por fotograma.
+        /// palabra se parte; la etiqueta que no cabe en una línea va en dos y la fila de pestañas crece lo que pida (≥ 48 dp). Si
+        /// ni así caben, la salvaguarda de <see cref="ShareTabWidths"/> las mete en el panel. Mide al colocar, nunca por fotograma.
         /// </summary>
         private float TabWidths(float inner, int shown)
         {
-            for (int i = 0; i < _tabs.Length; i++)
-            {
-                _tabWidths[i] = _tabs[i].gameObject.activeSelf ? -1f : 0f;
-            }
-
             if (shown <= 0)
             {
+                for (int i = 0; i < _tabs.Length; i++)
+                {
+                    _tabWidths[i] = 0f;
+                }
+
                 return TabDp;
+            }
+
+            for (int i = 0; i < _tabs.Length; i++)
+            {
+                _tabWords[i] = _tabs[i].gameObject.activeSelf ? Mathf.Ceil(UiBuilder.LongestWordWidth(_tabLabels[i])) + (2f * TabPadDp) + 1f : -1f;
+            }
+
+            ShareTabWidths(inner, _tabWords, _tabWidths);
+            float h = TabDp;
+            for (int i = 0; i < _tabs.Length; i++)
+            {
+                if (_tabs[i].gameObject.activeSelf)
+                {
+                    h = Mathf.Max(h, Mathf.Ceil(UiBuilder.MinTextHeight(_tabLabels[i], _tabWidths[i] - (2f * TabPadDp))) + 4f);
+                }
+            }
+
+            return h;
+        }
+
+        /// <summary>
+        /// Reparte <paramref name="inner"/> dp entre las pestañas (en <paramref name="widths"/>) según lo que pide la palabra más
+        /// ancha de cada una (<paramref name="words"/>, en dp; negativa: la pestaña no se ve y se queda en 0). A partes iguales,
+        /// salvo las que no caben en su parte, que se quedan el ancho de su palabra mientras las demás se reparten el resto.
+        /// Salvaguarda: si ni así caben (la suma de las palabras pasa de <paramref name="inner"/>), cada una se queda una parte
+        /// proporcional a su palabra, y la etiqueta se encoge o parte la palabra; las pestañas nunca se salen del panel: la suma de
+        /// <paramref name="widths"/> nunca pasa de <paramref name="inner"/>.
+        /// </summary>
+        internal static void ShareTabWidths(float inner, float[] words, float[] widths)
+        {
+            int shown = 0;
+            float total = 0f;
+            for (int i = 0; i < words.Length; i++)
+            {
+                widths[i] = words[i] >= 0f ? -1f : 0f;
+                if (words[i] >= 0f)
+                {
+                    shown++;
+                    total += words[i];
+                }
+            }
+
+            if (shown == 0)
+            {
+                return;
+            }
+
+            if (total > inner)
+            {
+                for (int i = 0; i < words.Length; i++)
+                {
+                    if (words[i] >= 0f)
+                    {
+                        widths[i] = total > 0f ? Mathf.Floor(inner * (words[i] / total) * 100f) / 100f : inner / shown;
+                    }
+                }
+
+                return;
             }
 
             // Reparto con mínimos: fija las que no caben en la parte igual y vuelve a repartir lo que queda entre las demás.
@@ -647,18 +760,12 @@ namespace AF.UI
             {
                 changed = false;
                 float share = left / free;
-                for (int i = 0; i < _tabs.Length; i++)
+                for (int i = 0; i < words.Length; i++)
                 {
-                    if (_tabWidths[i] >= 0f)
+                    if (widths[i] < 0f && words[i] > share)
                     {
-                        continue;
-                    }
-
-                    float word = Mathf.Ceil(UiBuilder.LongestWordWidth(_tabLabels[i])) + (2f * TabPadDp) + 1f;
-                    if (word > share)
-                    {
-                        _tabWidths[i] = word;
-                        left -= word;
+                        widths[i] = words[i];
+                        left -= words[i];
                         free--;
                         changed = true;
                     }
@@ -666,23 +773,13 @@ namespace AF.UI
             }
 
             float rest = free > 0 ? Mathf.Max(0f, left) / free : 0f;
-            float h = TabDp;
-            for (int i = 0; i < _tabs.Length; i++)
+            for (int i = 0; i < words.Length; i++)
             {
-                if (!_tabs[i].gameObject.activeSelf)
+                if (widths[i] < 0f)
                 {
-                    continue;
+                    widths[i] = rest;
                 }
-
-                if (_tabWidths[i] < 0f)
-                {
-                    _tabWidths[i] = rest;
-                }
-
-                h = Mathf.Max(h, Mathf.Ceil(UiBuilder.MinTextHeight(_tabLabels[i], _tabWidths[i] - (2f * TabPadDp))) + 4f);
             }
-
-            return h;
         }
 
         /// <summary>Una fila: icono, nombre, contenido y botón.</summary>
