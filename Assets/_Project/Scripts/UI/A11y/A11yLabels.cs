@@ -56,6 +56,12 @@ namespace AF.UI
             return true;
         }
 
+        /// <summary>Si la opción registrada para <paramref name="go"/> está marcada (sin calcular su etiqueta); false si no hay.</summary>
+        public static bool SelectedOf(GameObject go)
+        {
+            return go != null && Table.TryGetValue(go, out Entry entry) && entry.Selected != null && entry.Selected();
+        }
+
         private sealed class Entry
         {
             public Entry(Func<string> label, Func<bool>? selected)

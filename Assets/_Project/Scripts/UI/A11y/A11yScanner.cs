@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using AF.Presentation;
 using UnityEngine.Accessibility;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace AF.UI
@@ -44,6 +46,9 @@ namespace AF.UI
         public const float BlockerCover = 0.9f;
 
         private static readonly Vector3[] Corners = new Vector3[4];
+        private static readonly List<Graphic> GraphicsBuffer = new List<Graphic>();
+        private static readonly List<CanvasGroup> GroupsBuffer = new List<CanvasGroup>();
+        private static readonly List<TextMeshProUGUI> TextsBuffer = new List<TextMeshProUGUI>();
 
         private readonly List<IA11ySource> _sources = new List<IA11ySource>();
         private readonly List<Canvas> _canvases = new List<Canvas>();
@@ -136,8 +141,9 @@ namespace AF.UI
         public static bool HasBlocker(Canvas canvas)
         {
             Rect canvasRect = ((RectTransform)canvas.transform).rect;
-            Graphic[] graphics = canvas.GetComponentsInChildren<Graphic>(false);
-            for (int i = 0; i < graphics.Length; i++)
+            List<Graphic> graphics = GraphicsBuffer;
+            canvas.GetComponentsInChildren(false, graphics);
+            for (int i = 0; i < graphics.Count; i++)
             {
                 if (IsBlocker(graphics[i], canvasRect))
                 {
@@ -156,9 +162,10 @@ namespace AF.UI
         public static bool BlockedAbove(Canvas canvas, Transform marker)
         {
             Rect canvasRect = ((RectTransform)canvas.transform).rect;
-            Graphic[] graphics = canvas.GetComponentsInChildren<Graphic>(false); // en orden de dibujo (profundidad primero)
+            List<Graphic> graphics = GraphicsBuffer; // en orden de dibujo (profundidad primero); sin asignar
+            canvas.GetComponentsInChildren(false, graphics);
             bool past = false;
-            for (int i = 0; i < graphics.Length; i++)
+            for (int i = 0; i < graphics.Count; i++)
             {
                 bool inside = graphics[i].transform.IsChildOf(marker);
                 if (inside)
@@ -205,7 +212,7 @@ namespace AF.UI
             if (labelOverride != null)
             {
                 label = labelOverride;
-                A11yLabels.TryGet(button.gameObject, out _, out selected);
+                selected = A11yLabels.SelectedOf(button.gameObject);
             }
             else
             {
@@ -285,6 +292,18 @@ namespace AF.UI
                 return; // sus textos son su etiqueta
             }
 
+            // Lo que se toca sin ser un botón (un velo «toca para seguir» de la tarjeta previa o del banner, un marcador): un botón
+            // que hace el mismo toque.
+            if (graphic != null && graphic.raycastTarget && IsTapTarget(t))
+            {
+                string? label = TapLabel(t, graphic, canvasRect);
+                if (label != null)
+                {
+                    GameObject target = t.gameObject;
+                    Add(new A11yItem("tap_" + target.GetInstanceID(), label, AccessibilityRole.Button, (RectTransform)t, () => Tap(target)), (RectTransform)t);
+                }
+            }
+
             if (graphic is TextMeshProUGUI text && Shown(text) && !Silenced(text))
             {
                 Add(new A11yItem("txt_" + text.GetInstanceID(), text.text.Trim(), AccessibilityRole.StaticText, text.rectTransform, null), text.rectTransform);
@@ -294,6 +313,65 @@ namespace AF.UI
             {
                 Walk(t.GetChild(i), skip, canvasRect, ref blocks, alpha);
             }
+        }
+
+        /// <summary>
+        /// Toca <paramref name="target"/> como un dedo en su centro (touch-down, touch-up y clic), para lo que no es un
+        /// <see cref="Button"/> (los relés de toque). False si ya no está activo.
+        /// </summary>
+        public static bool Tap(GameObject target)
+        {
+            if (target == null || !target.activeInHierarchy || EventSystem.current == null)
+            {
+                return false;
+            }
+
+            RectTransform rt = (RectTransform)target.transform;
+            Rect frame = UnityScreenReaderHost.ScreenFrame(rt);
+            var data = new PointerEventData(EventSystem.current)
+            {
+                position = new Vector2(frame.center.x, Screen.height - frame.center.y),
+                button = PointerEventData.InputButton.Left,
+            };
+            data.pointerPress = target;
+            data.rawPointerPress = target;
+            ExecuteEvents.Execute(target, data, ExecuteEvents.pointerDownHandler);
+            ExecuteEvents.Execute(target, data, ExecuteEvents.pointerUpHandler);
+            ExecuteEvents.Execute(target, data, ExecuteEvents.pointerClickHandler);
+            return true;
+        }
+
+        // Un relé de toque del juego (PointerTapRelay o PointerDownRelay de AF.Presentation).
+        private static bool IsTapTarget(Transform t)
+        {
+            return t.GetComponent<PointerTapRelay>() != null || t.GetComponent<PointerDownRelay>() != null;
+        }
+
+        // Etiqueta de un relé: la registrada (null si es «»: se calla, como el fondo del tablero, C7), sus textos o, si cubre casi
+        // todo el lienzo (un velo «toca para seguir»), «Continuar» [P]; si no, «» (sin etiqueta: lo dice la sonda).
+        private static string? TapLabel(Transform t, Graphic graphic, Rect canvasRect)
+        {
+            if (A11yLabels.TryGet(t.gameObject, out string label, out _))
+            {
+                return label.Length == 0 ? null : label;
+            }
+
+            string text = string.Empty;
+            t.GetComponentsInChildren(false, TextsBuffer);
+            for (int i = 0; i < TextsBuffer.Count; i++)
+            {
+                if (Shown(TextsBuffer[i]))
+                {
+                    text = A11yText.Append(text, TextsBuffer[i].text.Trim());
+                }
+            }
+
+            if (text.Length > 0)
+            {
+                return text;
+            }
+
+            return Covers(graphic, canvasRect) ? A11yText.TapToContinue : string.Empty;
         }
 
         // Un texto con etiqueta registrada a «» se calla (decorativo).
@@ -335,11 +413,37 @@ namespace AF.UI
 
         private static bool IsBlocker(Graphic graphic, Rect canvasRect)
         {
-            if (!graphic.isActiveAndEnabled || !graphic.raycastTarget || graphic is TextMeshProUGUI)
+            if (!graphic.isActiveAndEnabled || !graphic.raycastTarget || graphic is TextMeshProUGUI || !BlocksRaycasts(graphic))
             {
                 return false;
             }
 
+            return Covers(graphic, canvasRect);
+        }
+
+        // Un CanvasGroup de encima con blocksRaycasts apagado (un velo que se está yendo) deja pasar los toques: no tapa.
+        private static bool BlocksRaycasts(Graphic graphic)
+        {
+            graphic.GetComponentsInParent(false, GroupsBuffer);
+            for (int i = 0; i < GroupsBuffer.Count; i++)
+            {
+                CanvasGroup group = GroupsBuffer[i];
+                if (!group.blocksRaycasts)
+                {
+                    return false;
+                }
+
+                if (group.ignoreParentGroups)
+                {
+                    break;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool Covers(Graphic graphic, Rect canvasRect)
+        {
             RectTransform rt = graphic.rectTransform;
             rt.GetWorldCorners(Corners);
             Transform canvas = graphic.canvas != null ? graphic.canvas.rootCanvas.transform : rt.root;

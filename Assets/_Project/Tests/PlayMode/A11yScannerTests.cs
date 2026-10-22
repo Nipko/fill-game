@@ -82,6 +82,25 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TheTapAnywhereVeil_IsAContinueButton_AndActivatingItIsTheTap()
+        {
+            // Llenar y teñir del nivel 1: se salta tocando en cualquier sitio (un relé de toque, no un botón). Con TalkBack no hay
+            // toque libre: el velo se publica como «Continuar» y activarlo es el mismo toque.
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            B9LocPlay.Use();
+            Assert.That(boot.Flow!.Phase, Is.Not.EqualTo(FlowPhase.Playing), "la intro está en marcha");
+            var host = new FakeScreenReaderHost(true);
+            var service = new A11yService(host);
+            service.Refresh();
+            A11yItem? next = host.Find(A11yText.TapToContinue);
+            Assert.That(next, Is.Not.Null, "el velo de la intro, como botón");
+            Assert.That(next!.Role, Is.EqualTo(AccessibilityRole.Button));
+            Assert.That(next.Invoke!(), Is.True);
+            yield return PlayModeHelpers.WaitFor(() => boot.Flow.Phase == FlowPhase.Playing && boot.View!.IsViewIdle, "la intro se saltó");
+        }
+
+        [UnityTest]
         public IEnumerator Board_CuiasBySlot_ThenTheTray_AndActivatingACuiaIsATap()
         {
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
@@ -110,6 +129,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(items[cuias].Role, Is.EqualTo(AccessibilityRole.Button));
             }
 
+            Assert.That(host.Find(A11yText.TapToContinue), Is.Null, "el fondo del tablero (C7) no se publica como «Continuar»");
             Assert.That(items[0].Invoke!(), Is.True);
             Assert.That(boot.Flow!.Selected, Is.EqualTo(0), "activar la cuia 1 la selecciona (C1), como el dedo");
             service.Refresh();

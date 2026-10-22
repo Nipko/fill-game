@@ -15,6 +15,12 @@ namespace AF.Tests.EditMode
     /// </summary>
     public sealed class A11yRulesTests
     {
+        [Test]
+        public void TheTextScaleCap_IsTheSameEverywhere()
+        {
+            Assert.That(A11yRules.MaxTextScale, Is.EqualTo(AF.UI.UiBuilder.MaxTextScale), "02 §12: un solo tope del 130 %");
+        }
+
         [TestCase(1f, 1f)]
         [TestCase(1.15f, 1.15f)]
         [TestCase(1.3f, 1.3f)]

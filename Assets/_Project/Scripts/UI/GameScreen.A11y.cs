@@ -59,6 +59,17 @@ namespace AF.UI
                 _a11y?.Scanner.RemoveSource(this);
                 _a11y = value;
                 _a11y?.Scanner.AddSource(this);
+                if (value != null)
+                {
+                    // 02 §12: la pausa es un botón de solo icono (su etiqueta funcional, «Pausa»); el fondo del tablero (C7, deseleccionar)
+                    // no se publica: con el lector se deselecciona tocando otra vez la cuia elegida (C3).
+                    A11yLabels.Set(_pauseButton.Button, () => UiText.Pause);
+                    Transform? background = _root.Find("BackgroundCatcher");
+                    if (background != null)
+                    {
+                        A11yLabels.Set(background, () => string.Empty);
+                    }
+                }
             }
         }
 
@@ -122,16 +133,16 @@ namespace AF.UI
             _animator.ApplyPatterns(PatternsOn(level));
             if (_highContrast)
             {
-                LiquidGraphic.ApplyPatternOpacity(A11yRules.HighContrastPatternOpacity);
+                LiquidGraphic.ApplyPatternOpacity(A11yRules.PatternOpacity(true, Palette.PatternOpacity));
             }
         }
 
-        // El tablero acepta toques del lector: jugable y sin un modal encima en el mismo lienzo (la pausa, una confirmación).
+        // El tablero acepta toques del lector: jugable y sin un modal encima en el mismo lienzo (la pausa, una confirmación). En la
+        // selección de la Luciérnaga también: tocar una cuia es elegir la que se revela (04 §2.5).
         private bool BoardReadable()
         {
             LevelFlow? flow = _flow;
-            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && _views.Length > 0 && !flow.RevealSelecting
-                && !A11yScanner.BlockedAbove(_canvas, _board);
+            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && _views.Length > 0 && !A11yScanner.BlockedAbove(_canvas, _board);
         }
 
         bool IA11ySource.Collect(Canvas canvas, A11yScanner scanner, List<A11yItem> into)
@@ -294,11 +305,12 @@ namespace AF.UI
             }
         }
 
-        // C9 es del tablero jugable: no con un modal, la celebración o la selección de la Luciérnaga (el toque elige la cuia).
+        // C9 es del tablero jugable: no con un modal (también la pausa, que no cambia la fase), la celebración o la selección de la
+        // Luciérnaga (el toque elige la cuia). Sin asignar: se mira en cada fotograma mientras un dedo está abajo.
         private bool BoardTakesHold()
         {
             LevelFlow? flow = _flow;
-            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && !flow.RevealSelecting;
+            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && !flow.RevealSelecting && !A11yScanner.BlockedAbove(_canvas, _board);
         }
 
         /// <summary>Olvida C9 y oculta los nombres (parche: al construir el tablero y al volver de segundo plano).</summary>

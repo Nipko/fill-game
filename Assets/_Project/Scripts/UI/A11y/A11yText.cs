@@ -32,7 +32,7 @@ namespace AF.UI
         {
             Keys.Cuia, Keys.CuiaFull, Keys.CuiaEmpty, Keys.List, Keys.Murky, Keys.Mud, Keys.Tinaja, Keys.TinajaEmpty,
             Keys.Cucharon, Keys.CucharonFull, Keys.CucharonEmpty, Keys.Selected, Keys.ButtonRemaining, Keys.NamesJoin,
-            Keys.SettingsReduceMotion, Keys.SettingsHighContrast, Keys.FruitUnnamed,
+            Keys.SettingsReduceMotion, Keys.SettingsHighContrast, Keys.FruitUnnamed, Keys.Close, Keys.TapToContinue,
         };
 
         /// <summary>
@@ -124,6 +124,12 @@ namespace AF.UI
             return Loc.T(Keys.ButtonRemaining, LocArgs.Of("label", label ?? throw new ArgumentNullException(nameof(label))).AndDigits("n", remaining));
         }
 
+        /// <summary>Etiqueta del lector de la X de cerrar de los modales y hojas [P]: «Cerrar».</summary>
+        public static string Close => Loc.T(Keys.Close);
+
+        /// <summary>Etiqueta del lector de un velo que se toca para seguir (tarjeta previa, banner del mundo) [P]: «Continuar».</summary>
+        public static string TapToContinue => Loc.T(Keys.TapToContinue);
+
         /// <summary>Fila de Ajustes «Reducir movimiento» (07 §7.8).</summary>
         public static string SettingsReduceMotion => Loc.T(Keys.SettingsReduceMotion);
 
@@ -156,6 +162,12 @@ namespace AF.UI
 
             /// <summary>Patrón de lista «{list}, {item}» [P].</summary>
             public const string List = "a11y_list";
+
+            /// <summary>«Cerrar», la X de los modales [P].</summary>
+            public const string Close = "a11y_close";
+
+            /// <summary>«Continuar», un velo que se toca para seguir [P].</summary>
+            public const string TapToContinue = "a11y_tap_to_continue";
 
             /// <summary>«fruta», una fruta cuyo nombre aún no se puede enseñar [P] (Q-B9-7).</summary>
             public const string FruitUnnamed = "a11y_fruit_unnamed";

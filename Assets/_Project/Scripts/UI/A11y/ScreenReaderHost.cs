@@ -214,8 +214,8 @@ namespace AF.UI
                 _nodes.Add(node);
                 _current.Add(item);
                 Apply(node, item);
-                node.frameGetter = () => _current[k].Rect != null ? ScreenFrame(_current[k].Rect!) : Rect.zero;
-                node.invoked += () => _current[k].Invoke != null && _current[k].Invoke!();
+                node.frameGetter = () => k < _current.Count && _current[k].Rect != null ? ScreenFrame(_current[k].Rect!) : Rect.zero;
+                node.invoked += () => k < _current.Count && _current[k].Invoke != null && _current[k].Invoke!();
                 if (focused != null && string.Equals(item.Id, focused, StringComparison.Ordinal))
                 {
                     refocus = node;
