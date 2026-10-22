@@ -3455,3 +3455,9 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **P2:** en teléfonos de menos de 320 dp el lienzo mide 320 dp escalado; en un 16:9 de 320 dp manda el alto mínimo de 640 (lienzo 360 × 640).
 - **P3:** `af_label_shown` sale con cada intento, como `level_start`.
 - **P4:** al sellar desde la fila, la victoria se recoloca y «Siguiente» puede moverse una vez.
+
+### D-033, añadido del 2026-10-21: notificaciones reales (Q-M5)
+
+- **Estado:** el dueño ordenó en el chat: «Integra las notificaciones reales con com.unity.mobile.notifications 2.4.3 y POST_NOTIFICATIONS (D-033 Q-M5), desde el parche B6-notifications-real, con la verificación completa.»
+- **Versión exacta aprobada:** `com.unity.mobile.notifications` **2.4.3** (la que declara el Editor 6000.3.25f1, propuesta por el Spark en B6), del registro de Unity. Permiso `android.permission.POST_NOTIFICATIONS` aprobado (Android 13+, con el pre-prompt de B6 antes de pedirlo). Entra en la lista blanca de `ci/check-manifest.ps1`.
+- Si el paquete añade otros permisos (por ejemplo `RECEIVE_BOOT_COMPLETED` o `SCHEDULE_EXACT_ALARM`), se para y se pregunta; 08 §13 y Q-M5 piden alarmas inexactas.
