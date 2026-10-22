@@ -165,6 +165,7 @@ internal static class ReserveQaCommand
         List<LevelEval> evals = Evaluator.Evaluate(spec, packs);
         var ctx = new QaContext { Spec = spec, Packs = packs, Levels = evals };
         var issues = new List<QaIssue>();
+        var cvdUnavoidable = new HashSet<(string Pack, int Level)>();
         foreach (QaPack pack in packs)
         {
             issues.AddRange(BaseChecks.RunPack(pack));
@@ -178,7 +179,7 @@ internal static class ReserveQaCommand
             issues.AddRange(Count(spec, pack, campaign.Sources));
             if (reproduce)
             {
-                issues.AddRange(Reproduce(spec, pack, campaign.Path));
+                issues.AddRange(Reproduce(spec, pack, campaign.Path, cvdUnavoidable));
             }
         }
 
@@ -192,6 +193,16 @@ internal static class ReserveQaCommand
             if (campaignByWorld.TryGetValue(pack.World, out var campaign))
             {
                 issues.AddRange(Level(spec, e.Level, campaign.Pack, campaign.Sources));
+            }
+        }
+
+        // QA-CVD-ADJ (Q-B9-13 bis): aviso, no fallo, si el pack se reproduce y el generador no encontró en sus 50 permutaciones
+        // ninguna asignación sin contactos del simulador.
+        for (int i = 0; i < issues.Count; i++)
+        {
+            if (issues[i] is { Check: "QA-CVD-ADJ", Warning: false } c && cvdUnavoidable.Contains((c.Pack, c.Level)))
+            {
+                issues[i] = c with { Message = c.Message + "; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)", Warning = true };
             }
         }
 
@@ -233,13 +244,13 @@ internal static class ReserveQaCommand
         string first = lines[1]; // el primer nivel (el 43, estreno de la Hoja): la cabecera va en la línea 0
         int fails = 0;
 
-        void Expect(string name, string mutated, string id, bool shouldFail = true)
+        void Expect(string name, string mutated, string id, bool shouldFail = true, bool reproduce = false)
         {
             string path = Path.Combine(Path.GetTempPath(), "af_reserve_selftest_" + name + ".json");
             File.WriteAllText(path, mutated, new UTF8Encoding(false));
             try
             {
-                (List<QaPack> _, List<QaIssue> issues, int _) = Collect(spec, [path], [Campaign], reproduce: false);
+                (List<QaPack> _, List<QaIssue> issues, int _) = Collect(spec, [path], [Campaign], reproduce);
                 List<QaIssue> failures = issues.Where(i => !i.Warning).ToList();
                 bool ok = shouldFail ? failures.Any(i => i.Check == id) : failures.Count == 0;
                 fails += ok ? 0 : 1;
@@ -262,7 +273,10 @@ internal static class ReserveQaCommand
             return text.Replace(first, first.Replace(from, to, StringComparison.Ordinal), StringComparison.Ordinal);
         }
 
-        Expect("valido", text, "", shouldFail: false);
+        // El pack publicado tiene contactos del simulador de daltonismo que el generador no pudo evitar (Q-B9-13 bis): sin la
+        // reproducción, QA-CVD-ADJ falla; con ella, la reproducción lo demuestra y queda en aviso.
+        Expect("valido", text, "", shouldFail: false, reproduce: true);
+        Expect("cvd_sin_reproduccion", text, "QA-CVD-ADJ");
         Expect("pack_schema_3", text.Replace("\"pack_schema\":4", "\"pack_schema\":3", StringComparison.Ordinal), "QA-RES-HEADER");
         Expect("kind_campaign", text.Replace("\"kind\":\"reserve\"", "\"kind\":\"campaign\"", StringComparison.Ordinal), "QA-RES-HEADER");
         Expect("pack_id_otro_mundo", text.Replace("\"pack_id\":\"reserva_03_v1\"", "\"pack_id\":\"reserva_04_v1\"", StringComparison.Ordinal), "QA-RES-HEADER");
@@ -329,7 +343,7 @@ internal static class ReserveQaCommand
         }
     }
 
-    private static IEnumerable<QaIssue> Reproduce(CampaignSpec spec, QaPack pack, string campaignPath)
+    private static IEnumerable<QaIssue> Reproduce(CampaignSpec spec, QaPack pack, string campaignPath, HashSet<(string Pack, int Level)> cvdUnavoidable)
     {
         ReserveResult? r = ReserveRunner.Generate(spec, campaignPath, _ => { }, out string error);
         byte[] onDisk = File.ReadAllBytes(pack.Path);
@@ -341,6 +355,13 @@ internal static class ReserveQaCommand
         {
             yield return new QaIssue("QA-RES-REPRO", pack.Path, 0, string.Create(CultureInfo.InvariantCulture,
                 $"el pack regenerado ({r.Bytes.Length} bytes) no coincide con el del disco ({onDisk.Length} bytes)"));
+        }
+        else
+        {
+            foreach (ReserveLevel l in r.Levels.Where(l => l.Chosen.Tints.CvdAdjacent > 0))
+            {
+                cvdUnavoidable.Add((pack.Path, l.Plan.Level));
+            }
         }
     }
 

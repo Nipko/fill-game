@@ -207,8 +207,9 @@ namespace AF.Tests.EditMode
             }
 
             // Pares de riesgo de 07 §3 (y glosario §9): siluetas distintas (IoU de las máscaras binarias < 0,7). Además, la
-            // Guanábana frente al Lulo y al Aguaje (revisión de B3: el 1 y el 11 se confundían).
-            int[,] pairs = { { 4, 5 }, { 5, 6 }, { 6, 13 }, { 13, 14 }, { 14, 4 }, { 3, 12 }, { 12, 11 }, { 11, 10 }, { 8, 9 }, { 1, 2 }, { 1, 11 }, { 1, 4 } };
+            // Guanábana frente al Lulo y al Aguaje (revisión de B3: el 1 y el 11 se confundían), y los 2 pares del simulador de
+            // daltonismo (07 §3, regla 3; Q-B9-13 bis): 7-10 y 5-14.
+            int[,] pairs = { { 4, 5 }, { 5, 6 }, { 6, 13 }, { 13, 14 }, { 14, 4 }, { 3, 12 }, { 12, 11 }, { 11, 10 }, { 8, 9 }, { 1, 2 }, { 1, 11 }, { 1, 4 }, { 7, 10 }, { 5, 14 } };
             for (int p = 0; p < pairs.GetLength(0); p++)
             {
                 float iou = Iou(masks[pairs[p, 0]], masks[pairs[p, 1]]);

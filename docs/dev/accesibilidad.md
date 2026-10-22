@@ -111,6 +111,37 @@ Lo marcado [P] es propuesta sin decisión del dueño; cada [P] remite a su pregu
   - Sobre los HEX, con protanopía, 7-10 da 4,9 y 5-14 (Achiote / Agua del Río Negro) 6,1.
   - Con deuteranopía, 5-14 da 3,5 (3,7-4,4 en el shader).
   - Pregunta Q-B9-13.
+- **Decisión (Q-B9-13 bis, recomendadas (b) y (A), 2026-10-22):** 7-10 y 5-14 entran en 07 §3 y en el glosario §9 como **pares del simulador**.
+  - **No cuentan en `risk_pairs` ni en `max_pares_riesgo`.** Con ellos dentro del tope:
+    - 11-20 no tendría paleta: el pool son 6 tintes, entre ellos el 7 y el 10;
+    - 21-40 no podría jugar con K = 7;
+    - 41-80 y la banda 2 del Reto (K = 8) necesitarían 2 pares con tope 1.
+  - **Generador** (`tools/level-generator/README.md`, «Pares del simulador de daltonismo»):
+    - la asignación de tintes de siempre no cambia;
+    - si deja un par del simulador junto en una cuia, prueba hasta 50 permutaciones de los tintes libres con su propia subsemilla;
+    - solo acepta una si todo lo que se mide da lo mismo: bot ×40, ventana, par, trampas, ruta, filtros de la tinaja y alivio;
+    - si no, se queda la de siempre.
+  - **Por qué hay que medir:** el bot casual no da lo mismo al cambiar los tintes (`CasualBot` ordena el tablero con `BoardCanon.Sort`, que depende del número de color). Sin esta condición, cambiaban `bot_fail`, la D y el candidato elegido, y los mundos 7 y 9 no se generaban.
+  - **level-qa:**
+    - `QA-CVD-ADJ` (campaña y reserva) y `QA-DAILY-CVD-ADJ` (Reto del río) dan fallo con un par del simulador junto en el tablero base;
+    - dan aviso en las variantes de `relief` y cuando el pack se reproduce y el generador no pudo evitarlo.
+  - **Resultado al volver a generar:** solo cambian tintes, sin cambios de forma, `bot_fail`, candidato ni D (comprobado contra HEAD). El tutorial no cambia.
+
+    | Pack | Tableros que cambian de tintes | Tableros con un par del simulador junto, antes → después |
+    |---|---|---|
+    | mundo_02 | 14 de 30 | 14 → 0 |
+    | mundo_03 | 6 de 40 | 20 → 14 |
+    | mundo_04 | 3 de 60 | 22 → 19 |
+    | mundo_05 | 7 de 60 | 22 → 15 |
+    | mundo_06 | 4 de 100 | 39 → 35 |
+    | mundo_07 | 5 de 120 | 41 → 36 |
+    | mundo_08 | 3 de 140 | 56 → 53 |
+    | mundo_09 | 4 de 140 | 53 → 49 |
+    | reserva_04 | 1 de 12 | 5 → 4 |
+    | resto de la reserva | 0 | sin cambios |
+    | `daily_pool_v1` | 753 de 2.187 | 1.102 → 349 |
+
+  - **Lo que queda:** los contactos que quedan son los avisos de `level-qa`. Desde el 41 los distinguen los patrones y el icono de fruta (07 §3, reglas 1 y 2).
 
 ## 3. Archivos
 
@@ -195,7 +226,7 @@ En todas se implementó la (a), la recomendada.
 | Q-B9-10 | Método del simulador y umbral | (a) Machado 2009 + CIEDE2000, informe sin umbral y QA manual (08 §14.3); (b) fijar un ΔE mínimo como compuerta | — |
 | Q-B9-11 | «{fruit} seleccionado» con frutas femeninas | (a) el texto de 02 §12 tal cual; (b) neutro («elegiste açaí: elige destino») | Textos |
 | Q-B9-12 | El traslado inverso de Marea (250 ms) con Reducir movimiento | (a) × el factor, como dice 02 §4 («todas las duraciones»), en una tarea aparte; (b) fijo, como hoy | — |
-| Q-B9-13 | Hallazgo del simulador: 7-10 (protanopía) y 5-14 (deuteranopía) no son pares de riesgo | (a) añadirlos a la lista de 07 §3 y glosario §9 (el generador los limita); (b) dejarla | Generador |
+| Q-B9-13 | Hallazgo del simulador: 7-10 (protanopía) y 5-14 (deuteranopía) no son pares de riesgo | (a) añadirlos a la lista de 07 §3 y glosario §9 (el generador los limita); (b) dejarla. **Decidida:** (a), con Q-B9-13 bis (b): pares del simulador, fuera del tope, que el generador no deja juntos en una cuia (`QA-CVD-ADJ`; D-033, añadido de B9, punto 10) | Generador |
 | Q-B9-14 | 08 §14.2 pide anunciar la capacidad y la mecánica; 02 §12 no | (a) añadir el nombre de la mecánica con las claves de sus nombres, en una tarea aparte; (b) como 02 §12 | — |
 | Q-B9-15 | Campos del perfil | (a) `settings.reduce_motion` (`auto`/`on`/`off`) y `settings.high_contrast` en 08 §4.3; (b) otros nombres | GDD |
 | Q-B9-16 | `af_settings_change.key` | (a) añadir `reduce_motion` y `high_contrast` a 08 §8.2; (b) no enviarlos | Analítica |

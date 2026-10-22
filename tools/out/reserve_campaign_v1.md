@@ -13,7 +13,7 @@ Reglas [P] de esta herramienta: orden por rondas sobre los kill switches de 08 �
 |---|---|---|---|---|---|---|---|---|
 | 2 (11-40) | — | 30 | 0 | 6 | 0 | 0 | 0 | — |
 | 3 (41-80) | `reserva_03_v1.json` | 40 | 18 | 8 | 8 | 0 | 9765 | `edc2516c80ebd42ffeb05a3cc12b91b82aead47784ad54f3cb5765b65b4c76bb` |
-| 4 (81-140) | `reserva_04_v1.json` | 60 | 33 | 12 | 12 | 0 | 15345 | `698256d4d8789f736a1914ce478f6744487543aa3662077be716753be5f1c316` |
+| 4 (81-140) | `reserva_04_v1.json` | 60 | 33 | 12 | 12 | 0 | 15348 | `126fe684c2ea11f1746e19b200d5e95196f1bf68ed50e7c000f472763a253665` |
 | 5 (141-200) | `reserva_05_v1.json` | 60 | 36 | 12 | 12 | 0 | 15426 | `f5241da8dfc25b8d1bfdc6e345535ef82f44231d37e61709d57a70351de0468a` |
 
 ## Cobertura por mecánica

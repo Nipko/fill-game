@@ -164,6 +164,11 @@ internal static class CampaignReport
                 notes.Add(F($"risk_adjacent: {c.Tints.RiskAdjacent} contacto(s)"));
             }
 
+            if (c.Tints.CvdAdjacent > 0)
+            {
+                notes.Add(F($"cvd_adjacent: {c.Tints.CvdAdjacent} contacto(s)"));
+            }
+
             if (l.Rounds > 0)
             {
                 notes.Add(F($"{l.Rounds} ronda(s) extra de candidatos"));

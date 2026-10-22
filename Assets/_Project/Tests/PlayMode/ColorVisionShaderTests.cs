@@ -179,6 +179,12 @@ namespace AF.Tests.PlayMode
                 }
             }
 
+            // Pares del simulador de daltonismo (07 §3, regla 3; Q-B9-13 bis): 7-10 y 5-14.
+            if ((a == 7 && b == 10) || (a == 10 && b == 7) || (a == 5 && b == 14) || (a == 14 && b == 5))
+            {
+                return " (S)";
+            }
+
             return string.Empty;
         }
 

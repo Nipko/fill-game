@@ -243,6 +243,36 @@ dotnet run --project tools/level-generator -c Release -- --parity
 Resultado actual: par 40/40, complejidad 40/40, ramificación 40/40, trampas 40/40 y −1 color 39/39 (el nivel 19 del lote
 híbrido no tiene −1 color en el prototipo).
 
+## Pares del simulador de daltonismo (`cvd_pairs`; Q-B9-13 bis)
+
+`campaign_v1.json` y `campaign_v2.json` llevan, además de `risk_pairs`, `"cvd_pairs": [[7, 10], [5, 14]]`: los pares que el
+simulador de B9 encontró demasiado parecidos (protanopía y deuteranopía; 07 §3, regla 3; glosario §9). El Reto del río los lee
+de su `tints_from`. **No cuentan en `risk_pairs` ni en `max_risk_pairs`**. Lo que hace el generador:
+
+- La asignación de tintes de siempre no cambia (`TintAssigner.Assign` y `DailyTints.Assign`).
+- Si deja dos tintes de un par del simulador juntos en una cuia, `TintAssigner.CvdAlternatives` propone hasta 50 barajados de
+  los tintes libres, con la subsemilla `CvdStream` = 5. Cada uno tiene que quedar sin contactos del simulador y sin más contactos
+  de pares de riesgo.
+- El generador acepta el primero que mida igual que la asignación de siempre, comprobado en tres momentos:
+  - al construir el candidato: bot ×40, ventana, etiqueta, rechazo, complejidad y realidades;
+  - al medirlo (`Measure`): par, trampas tempranas, ramificación, trampas y filtros de la tinaja;
+  - al calcular el alivio (`SlotGenerator.ReliefOf`): las mismas variantes, con el mismo par y el mismo bot.
+
+  Si algo no da igual, vuelve a la asignación de siempre (`Candidate.RevertTints`; en el Reto, `Built.RevertTints` con el par).
+- Así cada tablero solo cambia de tintes. La forma, K, la semilla, `bot_fail`, el candidato elegido, la D, el ciclo y la curva
+  quedan iguales.
+- Lo que no se puede evitar queda en `TintResult.CvdAdjacent` y `level-qa` lo da como aviso (`QA-CVD-ADJ` y `QA-DAILY-CVD-ADJ`).
+  Los informes de la campaña y de curación lo anotan como `cvd_adjacent: N contacto(s)`, igual que `risk_adjacent`.
+- `--self-test cvd` (`Generation/CvdSelfTest.cs`, también en el `--self-test` sin nombre) prueba cuatro cosas:
+  - `CvdAlternatives` sobre tableros escritos a mano;
+  - `SameColors` y `SameRelief`;
+  - `RevertTints`;
+  - la invariancia con y sin `cvd_pairs` en los slots 13, 14, 22 y 23 del mundo 2 y en los días 4, 7, 9 y 10 de la banda 1 del
+    Reto: mismos candidatos, bot, par, trampas, D y elegido, y el mismo tablero salvo los tintes.
+
+Hace falta medir porque el bot casual no da lo mismo al cambiar los tintes: `CasualBot` ordena el tablero con `BoardCanon.Sort`,
+que depende del número de cada color.
+
 ## Generación de la campaña (`--spec`, `Generation/`)
 
 ```
@@ -498,15 +528,17 @@ curación y la b en `tools/out/salida_b/`): los bytes de cada pack no cambian co
 
 | Pack | Niveles | Bytes | SHA-256 | Tiempo (s) |
 |---|---|---|---|---|
-| `salida_a/mundo_07_v1.json` (a) | 120 | 176.122 | `96b45544f0972d53c0853abf4beda9f8552b8f9c8a4e50e347ef05473099705f` | 1.025 · 1.047 |
-| `salida_a/mundo_08_v1.json` (a) | 140 | 202.589 | `24755327569c7ac1f64a5ea1c2d1cdfdadbcd290be84762106912008595e866e` | 405 · 423 |
-| `salida_a/mundo_09_v1.json` (a) | 140 | 203.664 | `cc31a9346c928dc1a6901e988db19157dd78601eb2d76a051f438ba24ee9da44` | 625 · 704 |
-| `mundo_07_v1.json` (b, publicada) | 120 | 175.924 | `f5b3415b8daf5c145f3491afa6e321d2e492208f1248b3feed3e6d21765b395c` | 440 · 456 |
-| `mundo_08_v1.json` (b, publicada) | 140 | 202.032 | `0b22801f518b68714fc30443860f5f4042fcf4459b9551671f010bc8e25f2985` | 402 · 425 |
-| `mundo_09_v1.json` (b, publicada) | 140 | 202.712 | `5212a11194e7d70cfc7f78fe3787e6eccc6cbfae264c84926b956808f338fb4a` | 622 · 681 |
+| `salida_a/mundo_07_v1.json` (a) | 120 | 176.122 | `267f732b1f5e3692ce79befd27d1467d63c583c03116711e064e69d3c97f648d` | 1.025 · 1.047 |
+| `salida_a/mundo_08_v1.json` (a) | 140 | 202.589 | `bf710928e47dd5496a102865fd1730a227da1b48c94432f1fb40c50b473ae4cb` | 405 · 423 |
+| `salida_a/mundo_09_v1.json` (a) | 140 | 203.661 | `2ad05a389e50576bec8e52ee1fa5cb4316917456b828cb7a23ae210082dd0399` | 625 · 704 |
+| `mundo_07_v1.json` (b, publicada) | 120 | 175.927 | `779a830acdea3ff83d5803cb3f9fe3d2ef5cf419b2b1a4bf34733c331cd211fe` | 440 · 456 |
+| `mundo_08_v1.json` (b, publicada) | 140 | 202.032 | `5fe84fcb7f762581cc61ae4011fa5af902274f110fb7d2c71b204ac03235b799` | 402 · 425 |
+| `mundo_09_v1.json` (b, publicada) | 140 | 202.709 | `a40f04d5a6d4b8ac50b5f1e5ed8a22a0d44dba805d8902f01c415a762e7ead4e` | 622 · 681 |
 
-Bytes y hashes tras la segunda pasada de `minus_color` de B11 (Q-N2 (a); antes de B11: 173.002, 201.608 y 200.770 en la «a»
-y 174.986, 201.051 y 199.466 en la «b»; los tiempos son los de GEN79). Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
+Bytes y hashes tras los pares del simulador de daltonismo (Q-B9-13 bis (A)). Solo cambian tintes, en 3-5 tableros por pack.
+Antes de Q-B9-13 bis, tras la segunda pasada de `minus_color` de B11 (Q-N2 (a)), eran 176.122, 202.589 y 203.664 bytes en la
+«a» y 175.924, 202.032 y 202.712 en la «b». Antes de B11 eran 173.002, 201.608 y 200.770 en la «a» y 174.986, 201.051 y
+199.466 en la «b». Los tiempos son los de GEN79. Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
 generadores a la vez: la primera ejecución y la última (en la b, la de `--check`), de unos 6 a 17 minutos cada uno y unos 17
 minutos los seis juntos. La variante a sola, en serie, son unos 20 minutos (la propuesta: 629, 201 y 385 s). Determinismo: tres ejecuciones de cada pack (la primera, una segunda en otra carpeta y la
 última, con el generador final, en el repositorio) dan los mismos bytes, y coinciden con los hashes de la propuesta en las variantes a de los tres mundos y en la b del mundo 7

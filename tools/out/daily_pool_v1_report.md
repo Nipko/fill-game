@@ -4,7 +4,7 @@ Generado por `tools/level-generator --daily` (tarea R3 del encargo `docs/dev/tra
 
 - Comando: `dotnet run --project tools/level-generator -- --daily --spec tools/level-generator/specs/daily_v1.json --out Assets/_Project/Data/Daily --report tools/out/daily_pool_v1_report.md`
 - Especificación: `tools/level-generator/specs/daily_v1.json` (daily_v1); tintes y pares de riesgo de `campaign_v2.json`.
-- Pack: `Assets/_Project/Data/Daily/daily_pool_v1.json`, 1430135 bytes, SHA-256 `6371e164f3c7a2f7fe1c9a5a01a864316eb9a1a2b4c8e77486f37b285163a3b9`.
+- Pack: `Assets/_Project/Data/Daily/daily_pool_v1.json`, 1430135 bytes, SHA-256 `50dd629141ef68cf008c18a5440152202e51f2d9f86f0058e367ad6bca07fbd6`.
 - Tableros: 2187; errores: 0.
 - **Estado:** R-Q1b (a) y R-Q11 (a) decididas por el dueño el 2026-10-19: B2 solo con K = 8, B3 con max_pares_riesgo libre (03 §4.5) y la ventana del bot como compuerta (un día fuera de ventana no se publica; `level-qa --daily` lo da como fallo). Siguen [P] la fórmula del agua de R-Q2, `k_by_day` y las fuentes de cada banda.
 - Tope de pares de riesgo por banda: B1 0, B2 1, B3 libre.
@@ -43,10 +43,10 @@ Ninguno.
 
 ## Tiempos
 
-- Total (pared): 13.0 s con 20 hilos.
-- B1: 69.6 s sumando el tiempo de pared de cada uno de sus 729 tableros (con varios hilos se solapan; 95 ms por tablero; el más lento, 4984 ms).
-- B2: 110.9 s sumando el tiempo de pared de cada uno de sus 729 tableros (con varios hilos se solapan; 152 ms por tablero; el más lento, 2907 ms).
-- B3: 58.1 s sumando el tiempo de pared de cada uno de sus 729 tableros (con varios hilos se solapan; 80 ms por tablero; el más lento, 2665 ms).
+- Total (pared): 21.6 s con 24 hilos.
+- B1: 173.4 s sumando el tiempo de pared de cada uno de sus 729 tableros (con varios hilos se solapan; 238 ms por tablero; el más lento, 4999 ms).
+- B2: 229.3 s sumando el tiempo de pared de cada uno de sus 729 tableros (con varios hilos se solapan; 314 ms por tablero; el más lento, 1674 ms).
+- B3: 86.3 s sumando el tiempo de pared de cada uno de sus 729 tableros (con varios hilos se solapan; 118 ms por tablero; el más lento, 757 ms).
 
 ## Tableros
 

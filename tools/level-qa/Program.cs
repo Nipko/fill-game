@@ -81,6 +81,9 @@ const string Usage = """
     0, 1 (algun FAIL) o 2.
     --self-test daily: el fixture valido y los malos de tools/level-qa/fixtures/daily/ (cada uno falla con su id), los
     avisos de R-Q10 y el tope de tamano. Sale con 0, 1 (algun FAIL) o 2.
+    --self-test cvd (Q-B9-13 bis): QA-CVD-ADJ falla con el fixture del 7 sobre el 10 en el tablero base, es aviso si el
+    contacto solo esta en una variante de relief, y GateChecks.CvdUnavoidable solo lo baja a aviso con el pack reproducido
+    y Tints.CvdAdjacent > 0. Sale con 0, 1 (algun FAIL) o 2. El --self-test sin nombre suma key2, daily, reserve y cvd.
 
     Codigos de salida: 0 = todo cumple (los avisos no fallan) o ayuda; 1 = algun nivel no cumple, el esquema falla, un
     pack no se reproduce o falta Python; 2 = uso incorrecto, sin paquetes o archivos ilegibles.
@@ -121,9 +124,9 @@ if (args[0] == "--reserve")
 
 if (args[0] == "--self-test")
 {
-    if (args.Length > 2 || (args.Length == 2 && args[1] != "key2" && args[1] != "reglas" && args[1] != "variante" && args[1] != "reserve"))
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "key2" && args[1] != "reglas" && args[1] != "variante" && args[1] != "reserve" && args[1] != "cvd"))
     {
-        return UsageError("--self-test solo admite: key2, reglas, variante, reserve o daily.");
+        return UsageError("--self-test solo admite: key2, reglas, variante, reserve, cvd o daily.");
     }
 
     if (args.Length == 2 && args[1] == "reserve")
@@ -141,6 +144,11 @@ if (args[0] == "--self-test")
         return RulesSelfTest.Run();
     }
 
+    if (args.Length == 2 && args[1] == "cvd")
+    {
+        return CvdQaSelfTest.Run();
+    }
+
     int key2 = VariantsSelfTest.RunPackReadBack("level-qa PackReader", path =>
     {
         QaLevel level = PackReader.Read(path).Levels[0];
@@ -148,8 +156,9 @@ if (args[0] == "--self-test")
     });
 
     // E17 (Spark): el --self-test sin nombre suma el del Reto del río (--self-test daily) y el de la reserva (--self-test reserve).
-    return args.Length == 2 ? key2 : Math.Max(Math.Max(key2, AmazonFill.Tools.LevelQa.Daily.DailyQaCommand.Run(["--self-test", "daily"])),
-        AmazonFill.Tools.LevelQa.Reserve.ReserveQaCommand.SelfTest());
+    // Q-B9-13 bis: también el de QA-CVD-ADJ (--self-test cvd).
+    return args.Length == 2 ? key2 : Math.Max(Math.Max(Math.Max(key2, AmazonFill.Tools.LevelQa.Daily.DailyQaCommand.Run(["--self-test", "daily"])),
+        AmazonFill.Tools.LevelQa.Reserve.ReserveQaCommand.SelfTest()), CvdQaSelfTest.Run());
 }
 
 var packages = new List<string>();
@@ -265,6 +274,7 @@ if (reproduce)
     if (regenerated is not null)
     {
         issues.AddRange(GateChecks.Bands(ctx, regenerated, reproduced));
+        GateChecks.CvdUnavoidable(issues, ctx, regenerated, reproduced);
     }
 }
 else

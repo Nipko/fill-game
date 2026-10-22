@@ -37,6 +37,10 @@ internal static class HandmadeCanon
         (4, 5), (5, 6), (6, 13), (13, 14), (14, 4), (3, 12), (12, 11), (11, 10), (8, 9), (1, 2),
     ];
 
+    // Los 2 pares del simulador de daltonismo (glosario §9; 07 §3, regla 3; Q-B9-13 bis): 7-10 y 5-14. No cuentan en
+    // max_pares_riesgo y en el tutorial no aparecen: sus tintes (1, 3, 4, 7 y 8) no forman ninguno, porque el 10 debuta en el
+    // 11 y el 5 en el 41 (lo comprueba TutorialPackTests en EditMode).
+
     /// <summary>Glosario §9: <c>max_pares_riesgo</c> = 0 en los niveles 1-40.</summary>
     public const int MaxRiskPairs = 0;
 
