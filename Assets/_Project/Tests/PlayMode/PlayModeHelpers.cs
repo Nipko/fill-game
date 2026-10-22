@@ -121,6 +121,21 @@ namespace AF.Tests.PlayMode
             NoIdleHintUnlessSet();
             NoShuffleUnlessSet();
             NoLogbookUnlessSet();
+            NoPrePromptUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga la tarjeta del pre-prompt de push (06 §8.1) si el test no la fijó (<see cref="GameBootstrap.PrePromptCardOverride"/> =
+        /// null): los tests que no tratan de ella ganan desde la 2.ª sesión pasado el 10 y pulsan Siguiente o Inicio como antes de
+        /// que existiera, y la tarjeta de oferta de esa victoria sale igual. Los que la prueban (<c>PushUiTests</c>) la encienden y
+        /// la vuelven a null en su TearDown (<see cref="GameBootstrap.ResetSessionOverrides"/>).
+        /// </summary>
+        public static void NoPrePromptUnlessSet()
+        {
+            if (GameBootstrap.PrePromptCardOverride == null)
+            {
+                GameBootstrap.PrePromptCardOverride = false;
+            }
         }
 
         /// <summary>

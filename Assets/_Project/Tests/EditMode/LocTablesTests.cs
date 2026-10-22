@@ -533,13 +533,16 @@ namespace AF.Tests.EditMode
             keys.Add(AF.LiveOps.PrePromptRequest.DeclineKey);
 
             // B6, con la UI pendiente (docs/dev/sesiones-notificaciones.md): el canal de Android (lo usa el programador real,
-            // B6-notifications-real), la fila «Avisos» de Ajustes y el aviso del Regalo de regreso. Se quitan de aquí cuando su
-            // pantalla los pinte.
+            // B6-notifications-real) y el aviso del Regalo de regreso. Se quitan de aquí cuando su pantalla los pinte.
             keys.AddRange(new[]
             {
-                "push_channel_name", "push_channel_description", "settings_notifications", "settings_notifications_blocked",
+                "push_channel_name", "push_channel_description",
                 "comeback_streak_line", "comeback_logbook_line", "comeback_reminder_line",
             });
+
+            // La UI de los avisos (tanda 5): la fila «Avisos» de Ajustes, su estado y su etiqueta de TalkBack, que pinta o dice
+            // AF.UI.PushText (la tarjeta del pre-prompt usa las claves de PrePromptRequest, arriba).
+            keys.AddRange(PushText.AllKeys);
 
             // B12: la edad, el consentimiento y la doble confirmación de compras, que pinta AF.UI.ConsentText.
             keys.AddRange(ConsentText.AllKeys);

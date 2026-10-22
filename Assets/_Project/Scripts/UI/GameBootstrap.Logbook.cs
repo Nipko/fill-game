@@ -66,6 +66,7 @@ namespace AF.UI
         private Action? _logbookAfterClose;
         private string _logbookDay = string.Empty;
         private bool _logbookLobbyShown;
+        private bool _skipLobbyTakeover;
         private bool _logbookFailed;
         private bool _logbookCardShown;
         private float _logbookCardW;
@@ -334,6 +335,15 @@ namespace AF.UI
             _logbookCard?.SetShown(cardOn);
         }
 
+        /// <summary>
+        /// La siguiente entrada al inicio no saca ningún takeover (la del pre-prompt de push, que es una pantalla aparte: D-033, añadido
+        /// del 2026-10-20, punto 11) ni gasta el cupo de la sesión.
+        /// </summary>
+        internal void SkipNextLobbyTakeover()
+        {
+            _skipLobbyTakeover = true;
+        }
+
         /// <summary>La app pasa a segundo plano (true) o vuelve (false): la sesión de la cola de takeovers (Q-M4 (a)).</summary>
         public void LogbookPause(bool paused)
         {
@@ -401,8 +411,18 @@ namespace AF.UI
         private void TakeoverAtLobby()
         {
             TakeoverQueue? queue = _takeovers;
+            bool skip = _skipLobbyTakeover;
+            _skipLobbyTakeover = false;
             if (queue == null || (_app != null && _app.L10MapDue))
             {
+                return;
+            }
+
+            if (skip)
+            {
+                // Se llega al inicio tras el pre-prompt de push (GameBootstrap.PushUi.cs): esta entrada no apila la libreta encima;
+                // sale en la siguiente entrada de la sesión, sin gastar el cupo [P].
+                LastTakeover = TakeoverKind.None;
                 return;
             }
 

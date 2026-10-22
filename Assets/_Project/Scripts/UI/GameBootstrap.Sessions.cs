@@ -27,10 +27,10 @@ namespace AF.UI
     /// <item><b>B6-notifications-real</b> (aparte; con el paquete <c>com.unity.mobile.notifications</c>, Q-M5): implementa
     /// <see cref="CreatePlatformScheduler"/> con el programador de Android. Sin él, <see cref="FakeNotificationScheduler"/>.</item>
     /// </list>
-    /// Sin B6-profile: en desarrollo, almacenes en memoria (se pierden al cerrar la app); en release no hay sesiones ni avisos. Hasta
-    /// que la UI tenga la tarjeta del pre-prompt no sale ninguno (el simulado, <see cref="SimulatedPushPrePrompt"/>, solo con
-    /// <see cref="PrePromptOverride"/>). El disparador está en la entrada a la pantalla de victoria; con la tarjeta real se mueve a
-    /// Siguiente o Inicio (B6-Q16). Las cifras son las de 08 §9 (<see cref="PushConfig.Defaults"/> y <see cref="ComebackConfig.Defaults"/>).
+    /// Sin B6-profile: en desarrollo, almacenes en memoria (se pierden al cerrar la app); en release no hay sesiones ni avisos. El
+    /// pre-prompt es la tarjeta real (<see cref="PushPrePromptCard"/>; el simulado, <see cref="SimulatedPushPrePrompt"/>, solo con
+    /// <see cref="PrePromptOverride"/>): se apunta al entrar en la victoria y sale al pulsar Siguiente o Inicio (B6-Q16 (a);
+    /// <c>GameBootstrap.PushUi.cs</c>). Las cifras son las de 08 §9 (<see cref="PushConfig.Defaults"/> y <see cref="ComebackConfig.Defaults"/>).
     /// </summary>
     public sealed partial class GameBootstrap
     {
@@ -63,7 +63,7 @@ namespace AF.UI
         /// <summary>Programador de avisos para los tests (gana al real y al falso por defecto).</summary>
         internal static INotificationScheduler? NotificationSchedulerOverride { get; set; }
 
-        /// <summary>Pre-prompt para los tests (por defecto, el simulado en desarrollo y ninguno en release).</summary>
+        /// <summary>Pre-prompt para los tests (gana a la tarjeta real, <see cref="PushPrePromptCard"/>).</summary>
         internal static IPushPrePromptPresenter? PrePromptOverride { get; set; }
 
         /// <summary>Hora del servidor para el anti-reloj del regalo (por defecto, sin red).</summary>
@@ -93,6 +93,9 @@ namespace AF.UI
             s_carriedSessions = null;
             s_carriedSessionStore = null;
             ResetDevPush();
+            PrePromptCardOverride = null;
+            OpenPhoneSettingsOverride = null;
+            s_prePromptSession = 0;
         }
 
         /// <summary>
@@ -145,9 +148,8 @@ namespace AF.UI
             _push = new PushPermissionService(pushStore!, _notificationScheduler);
             _push.Reported += OnPushPromptReported;
             _notifications = new NotificationService(_notificationScheduler, _push, new LocNotificationTexts());
-            // Sin la tarjeta real no hay pre-prompt: el simulado solo con PrePromptOverride (tests), para no gastar los pre-prompts
-            // del perfil de pruebas (revisión de B6).
-            _prePrompt = PrePromptOverride;
+            // La tarjeta real del pre-prompt (GameBootstrap.PushUi.cs), o la de los tests (PrePromptOverride).
+            _prePrompt = CreatePrePromptPresenter(rebuilt);
             _campaignPhaseSeen = _flow.Phase;
             _dailyPhaseSeen = _dailyScreen?.Flow?.Phase ?? FlowPhase.Loading;
 
@@ -225,6 +227,7 @@ namespace AF.UI
             }
 
             TickPlatformScheduler();
+            TickPushUi(Mathf.Min(Time.unscaledDeltaTime, 1f) * 1000f);
             LevelFlow? flow = _flow;
             if (flow != null)
             {
@@ -234,7 +237,11 @@ namespace AF.UI
                     _campaignPhaseSeen = phase;
                     if (phase == FlowPhase.VictoryScreen)
                     {
-                        OnVictoryShown(Math.Max(0, flow.LevelNumber - 1));
+                        OnVictoryShown(Math.Max(0, flow.LevelNumber - 1), false);
+                    }
+                    else
+                    {
+                        ForgetPrePromptAtVictory(false);
                     }
                 }
             }
@@ -246,7 +253,11 @@ namespace AF.UI
                 _dailyPhaseSeen = dailyPhase;
                 if (dailyPhase == FlowPhase.VictoryScreen)
                 {
-                    OnVictoryShown(_progress?.MaxLevel ?? 0); // el Reto no cambia max_level
+                    OnVictoryShown(_progress?.MaxLevel ?? 0, true); // el Reto no cambia max_level
+                }
+                else if (_dailyScreen == null || !_dailyScreen.Won)
+                {
+                    ForgetPrePromptAtVictory(true); // el calendario de sellos sigue a la victoria del Reto: se olvida al salir de él
                 }
             }
         }
@@ -335,7 +346,7 @@ namespace AF.UI
             }
         }
 
-        private void OnVictoryShown(int maxLevelBeforeVictory)
+        private void OnVictoryShown(int maxLevelBeforeVictory, bool daily)
         {
             SessionTracker? sessions = _sessions;
             if (sessions == null || _sessionClock == null)
@@ -344,18 +355,14 @@ namespace AF.UI
             }
 
             sessions.OnVictory();
-            IPushPrePromptPresenter? presenter = _prePrompt;
-            if (_push == null || presenter == null)
-            {
-                return;
-            }
 
-            var moment = new PrePromptMoment(sessions.Sessions, maxLevelBeforeVictory, _profile?.Streak?.Wins ?? 0, _sessionClock.UtcNow);
-            _push.OnVictory(in moment, presenter);
+            // El pre-prompt sale al dejar la victoria (Siguiente o Inicio, B6-Q16 (a); GameBootstrap.PushUi.cs): aquí solo se apunta.
+            NotePrePromptAtVictory(maxLevelBeforeVictory, daily);
         }
 
         private void OnPushPromptReported(PushPromptEvent e)
         {
+            LogPushPrompt(e); // af_push_prompt (08 §8.2)
             if (DevProbe.Enabled)
             {
                 DevProbe.Write(SessionProbeFormat.Prompt(SessionProbeMs(), in e));
