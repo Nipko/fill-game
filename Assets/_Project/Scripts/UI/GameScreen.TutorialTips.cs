@@ -13,13 +13,15 @@ namespace AF.UI
     /// Las ayudas del tutorial de la tarea B11 (reglas en <see cref="TutorialTips"/>; 02 §13 y 06 §2.2), que la pantalla de nivel
     /// enseña mirando su propio estado en cada fotograma (<see cref="TutorialTipsTick"/>), sin ganchos nuevos en el flujo:
     /// <list type="bullet">
-    /// <item><description><b>«Reiniciar es gratis…»</b> (6 y 8): un tooltip sin personaje (<see cref="TipBubble"/>) encima del
-    /// panel de Aguas estancadas, con el pico hacia abajo en el eje de «Volver a la orilla (gratis)» [P] (encima del botón taparía
-    /// Marea, la primera opción del modal). Una vez por nivel mientras la pantalla de nivel exista (la app abierta): la primera vez
+    /// <item><description><b>«Reiniciar es gratis…»</b> (6 y 8): un tooltip sin personaje (<see cref="TipBubble"/>) dentro del
+    /// panel de Aguas estancadas, en un hueco que el panel deja sobre «Volver a la orilla (gratis)» (<see cref="RestartTipRoomFor"/>),
+    /// con el pico hacia abajo apuntando al botón y sin tapar Marea ni las demás opciones (observación 3 de la hoja del
+    /// 2026-10-22; antes iba encima del panel con el pico en su borde) [P]. Una vez por nivel mientras la pantalla de nivel exista (la app abierta): la primera vez
     /// que el modal se ve quieto en ese nivel, no en los reintentos ni al volver a entrar [P]; se va con el modal. Con
     /// <c>biz_feature_lives</c> apagado, solo la primera frase (D-038; <see cref="TutorialTips.RestartTipKey"/>).</description></item>
     /// <item><description><b>Cosecha doble</b> (11): en la victoria, encima del botón «Cosecha doble: x2 por video», con el pico
-    /// hacia él, si el botón sale y el panel ya subió; se va al pulsarlo, al desactivarse o al dejar la victoria. Una vez por nivel
+    /// hacia él, en un hueco que el panel deja sobre el botón (<see cref="DoubleTipRoomFor"/>) para no tapar la línea «Cosecha +20»
+    /// (observación 4 de la hoja del 2026-10-22) [P], si el botón sale y el panel ya subió; se va al pulsarlo, al desactivarse o al dejar la victoria. Una vez por nivel
     /// mientras la app siga abierta; si en esa victoria no hay anuncio, no sale (Q-B11-12).</description></item>
     /// <item><description><b>Dedo guía de la Cuia extra</b> (8): la mano de <see cref="TrayFinger"/> sobre «+1 cuia» mientras se
     /// juega, la bandeja ofrece la del stock, no se aplicó ninguna en el nivel y no hay otra cosa a la vista (el aviso de Capi y
@@ -190,21 +192,57 @@ namespace AF.UI
             EmitTipProbe("restart", true, key);
         }
 
-        // Encima del panel del modal, con la punta del pico en su canto de arriba y en el eje de «Volver a la orilla».
+        /// <summary>Aire entre el tooltip «Reiniciar es gratis…» y la opción que queda encima de su hueco en el panel (dp) [P].</summary>
+        internal const float RestartTipGapDp = 4f;
+
+        /// <summary>
+        /// Hueco que deja Aguas estancadas sobre «Volver a la orilla (gratis)» para el tooltip (observación 3 de la hoja del
+        /// 2026-10-22: el pico tiene que apuntar al botón, no al borde del panel), en dp; 0 si el tooltip no va a salir ni se ve.
+        /// Sale con el pie de 1-30, en los niveles del tooltip y solo la primera vez (las mismas reglas que
+        /// <see cref="TickRestartTip"/>), o si ya se ve (el panel se rearma tras una compra). Mide el texto: solo al disponer el
+        /// modal.
+        /// </summary>
+        private float RestartTipRoomFor(LevelFlow flow, StuckModalView view)
+        {
+            if (view.Footer != StuckFooter.RestartFree)
+            {
+                return 0f;
+            }
+
+            bool visible = _restartTip != null && _restartTip.Visible && !_restartTip.Leaving;
+            if (!visible)
+            {
+                int bit = RestartTipBit(flow.LevelNumber);
+                if (!(TutorialTipsOverride ?? true) || !flow.HasLevel || flow.IsDaily || !TutorialTips.ShowsRestartTip(flow.LevelNumber)
+                    || bit == 0 || (_restartTipShownMask & bit) != 0)
+                {
+                    return 0f;
+                }
+            }
+
+            bool lives = _services == null || _services.Wallet.LivesEnabled;
+            _restartTip ??= new TipBubble(_stuckOverlay, _art, "RestartTip");
+            string text = TutorialTipsText.Tip(TutorialTips.RestartTipKey(lives));
+            return _restartTip.AboveHeightFor(text, TipEdgeDp, _canvasW - TipEdgeDp, TipMaxWidthDp) + RestartTipGapDp;
+        }
+
+        // Con su hueco en el panel (RestartTipRoomFor), encima de «Volver a la orilla», con la punta del pico en su canto de arriba
+        // y en su eje; sin hueco (el modal se dispuso sin él), encima del panel, con la punta en su canto de arriba y en ese eje.
         private void PlaceRestartTip(bool force)
         {
             TipBubble tip = _restartTip!;
             RectTransform space = _stuckOverlay;
-            Vector2 button = TopLeftOf(space, WorldCenter((RectTransform)_stuck.RestartButton.transform));
-            Vector2 panelTop = TopLeftOf(space, WorldTop(_stuck.Panel));
-            var anchor = new Vector2(button.x, panelTop.y);
+            var restart = (RectTransform)_stuck.RestartButton.transform;
+            Vector2 button = TopLeftOf(space, WorldCenter(restart));
+            Vector2 top = TopLeftOf(space, WorldTop(_stuck.RestartTipRoomShownDp > 0f ? restart : _stuck.Panel));
+            var anchor = new Vector2(button.x, top.y);
             if (!force && anchor == _restartTipAnchor)
             {
                 return;
             }
 
             _restartTipAnchor = anchor;
-            tip.PlaceAbove(anchor.x, anchor.y, TipEdgeDp, space.rect.width - TipEdgeDp, _safeTop + TipEdgeDp, TipMaxWidthDp);
+            tip.PlaceAbove(anchor.x, anchor.y, TipEdgeDp, _canvasW - TipEdgeDp, _safeTop + TipEdgeDp, TipMaxWidthDp);
         }
 
         private void TickDoubleHarvestTip(LevelFlow? flow, float dtMs)
@@ -242,6 +280,44 @@ namespace AF.UI
             EmitTipProbe("double_harvest", true, TutorialTips.DoubleHarvestKey);
         }
 
+        /// <summary>Aire mínimo entre la cinta de la victoria y el pie de la cabecera para dejar el hueco del tooltip (dp) [P].</summary>
+        internal const float DoubleTipMinHeaderAirDp = 8f;
+
+        // Lo que se le quita al hueco del tooltip de la Cosecha doble en esta victoria porque entero no cabe (la cinta subiría por
+        // encima de la cabecera; en 360 × 640): el tooltip pisa entonces las barras de la Crecida y la Canasta, nunca la línea de
+        // la Cosecha (PlaceDoubleHarvestTip). Se decide de nuevo en cada victoria (OnVictoryScreen).
+        private float _doubleTipRoomCutDp;
+
+        /// <summary>Hueco del tooltip de la Cosecha doble que dejó la última disposición de la victoria (dp; 0 si no; tests).</summary>
+        internal float DoubleTipRoomShownDp { get; private set; }
+
+        /// <summary>
+        /// Hueco que deja el panel de victoria sobre «Cosecha doble: x2 por video» para su tooltip (observación 4 de la hoja del
+        /// 2026-10-22: tapaba la línea «Cosecha +20»), en dp; 0 si el tooltip no va a salir ni se ve. Si entero no cabe, el que
+        /// cabe (<see cref="_doubleTipRoomCutDp"/>). Las reglas de <see cref="TickDoubleHarvestTip"/>: en su nivel, la primera
+        /// vez, con el botón a la vista. Mide el texto: solo al disponer la victoria.
+        /// </summary>
+        private float DoubleTipRoomFor()
+        {
+            LevelFlow? flow = _flow;
+            if (!_doubleShown || flow == null || !flow.HasLevel)
+            {
+                return 0f;
+            }
+
+            bool visible = _doubleTip != null && _doubleTip.Visible && !_doubleTip.Leaving;
+            if (!visible && (!(TutorialTipsOverride ?? true) || _doubleTipShownLevel == flow.LevelNumber
+                || !TutorialTips.ShowsDoubleHarvestTip(flow.LevelNumber, flow.DoubleHarvestFromLevel, flow.IsDaily)))
+            {
+                return 0f;
+            }
+
+            _doubleTip ??= new TipBubble(_victoryOverlay, _art, "DoubleHarvestTip");
+            string text = TutorialTipsText.Tip(TutorialTips.DoubleHarvestKey);
+            float room = _doubleTip.AboveHeightFor(text, TipEdgeDp, _canvasW - TipEdgeDp, TipMaxWidthDp) + RestartTipGapDp;
+            return Mathf.Max(0f, room - _doubleTipRoomCutDp);
+        }
+
         // Encima del botón de la Cosecha doble, con la punta del pico en su canto de arriba y en su eje.
         private void PlaceDoubleHarvestTip(bool force)
         {
@@ -257,7 +333,7 @@ namespace AF.UI
             }
 
             _doubleTipAnchor = anchor;
-            tip.PlaceAbove(anchor.x, anchor.y, TipEdgeDp, space.rect.width - TipEdgeDp, _safeTop + TipEdgeDp, TipMaxWidthDp);
+            tip.PlaceAbove(anchor.x, anchor.y, TipEdgeDp, _canvasW - TipEdgeDp, _safeTop + TipEdgeDp, TipMaxWidthDp);
         }
 
         private void TickExtraCuiaFinger(LevelFlow? flow, float dtMs)

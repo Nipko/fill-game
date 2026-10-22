@@ -16,9 +16,9 @@ namespace AF.Tests.PlayMode
     /// <c>strings.csv</c>, B11-loc.diff):
     /// <list type="bullet">
     /// <item><c>b11_01_canoes_card_780_100</c>: la tarjeta de las Canoas antes del 31 (04 §7.1; D-033, Q-E4);</item>
-    /// <item><c>b11_02_restart_tip_780_100</c> y <c>b11_02b_restart_tip_no_lives_780_100</c>: el tooltip «Reiniciar es gratis…»
+    /// <item><c>b11_02_restart_tip_{780,640}_100</c> y <c>b11_02b_restart_tip_no_lives_{780,640}_100</c>: el tooltip «Reiniciar es gratis…»
     /// encima de Aguas estancadas en el 6, con y sin canoas (D-038);</item>
-    /// <item><c>b11_03_double_harvest_tip_780_100</c>: el tooltip de la Cosecha doble en la victoria del 11;</item>
+    /// <item><c>b11_03_double_harvest_tip_{780,640}_100</c>: el tooltip de la Cosecha doble en la victoria del 11;</item>
     /// <item><c>b11_04_extra_cuia_finger_780_100</c>: el dedo sobre «+1 cuia» en el 8, tocando;</item>
     /// <item><c>b11_05_no_canoes_map_780_100</c>: Sin canoas con «Volver al Mapa del río» (04 §7.3);</item>
     /// <item><c>b11_06_finger_level2_setup_780_100</c>: el dedo del 2 en el paso previo (Q-B11-1), a medio viaje.</item>
@@ -66,9 +66,9 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator RestartTip([Values(true, false)] bool lives)
+        public IEnumerator RestartTip([Values(true, false)] bool lives, [Values(false, true)] bool small)
         {
-            string dir = Prepare();
+            string dir = Prepare(small);
             yield return TutorialSlothTests.Load(6);
             GameBootstrap boot = GameBootstrap.Current!;
             boot.Wallet!.LivesEnabled = lives;
@@ -76,13 +76,13 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 600);
             Assert.That(boot.View!.RestartTipVisible, Is.True);
             SnapshotKit.Attach(boot);
-            yield return Save(dir, lives ? "b11_02_restart_tip_780_100" : "b11_02b_restart_tip_no_lives_780_100");
+            yield return Save(dir, (lives ? "b11_02_restart_tip_" : "b11_02b_restart_tip_no_lives_") + (small ? "640" : "780") + "_100");
         }
 
         [UnityTest]
-        public IEnumerator DoubleHarvestTip()
+        public IEnumerator DoubleHarvestTip([Values(false, true)] bool small)
         {
-            string dir = Prepare();
+            string dir = Prepare(small);
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
             yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -91,7 +91,7 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 2500);
             Assert.That(boot.View!.DoubleHarvestTipVisible, Is.True);
             SnapshotKit.Attach(boot);
-            yield return Save(dir, "b11_03_double_harvest_tip_780_100");
+            yield return Save(dir, "b11_03_double_harvest_tip_" + (small ? "640" : "780") + "_100");
         }
 
         [UnityTest]
@@ -163,10 +163,10 @@ namespace AF.Tests.PlayMode
             Debug.Log("AF_B11_SNAPSHOT " + name);
         }
 
-        private static string Prepare()
+        private static string Prepare(bool small = false)
         {
             string dir = SnapshotKit.Prepare(LocLocale.SpanishLatinAmerica);
-            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            GameScreen.SimulatedScreen = small ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
             LaunchOptions.FontScaleOverride = 1f;
             return dir;
         }

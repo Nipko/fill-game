@@ -1140,6 +1140,7 @@ namespace AF.UI
         partial void SlothVictoryShown(LevelFlow flow, float top, float bottom)
         {
             _slothPending = false;
+            SlothYieldedToTeaser = false;
             _slothViewHero = new Rect(0f, 0f, 0f, 0f);
             if (SlothViewOn)
             {
@@ -1397,6 +1398,69 @@ namespace AF.UI
             _sloth?.Hide();
             SetHeronAlpha(1f);
         }
+
+        /// <summary>
+        /// Canto de arriba de la franja de la tarjeta del Reto del 7 (<see cref="DailyTeaserCard"/>, de <paramref name="h"/> dp)
+        /// para que TiTino no tape su texto (observación 2 de la hoja de la prueba del 2026-10-22: «De[…]ivel 10»), entre
+        /// <paramref name="top"/> (el pie de la cabecera) y <paramref name="ribbonTop"/> (la cinta):
+        /// <list type="bullet">
+        /// <item>sin TiTino, o con TiTino por encima de <paramref name="top"/>, <paramref name="top"/>;</item>
+        /// <item>si la tarjeta cabe entre el pie de TiTino y la cinta, ese pie: TiTino arriba con su gesto y la tarjeta debajo;</item>
+        /// <item>si no cabe y TiTino solo hace el gesto, TiTino cede la franja y se va de esta victoria (devuelve
+        /// <paramref name="top"/>): D-016, punto 5, da el gesto «si cabe», y la tarjeta es la presentación del Reto que el GDD pone
+        /// en esta victoria (06 §2.2, nivel 7); es la misma prioridad que B1b-Q10 (c) (D-033, añadido del 2026-10-20), donde lo
+        /// que cede es lo otro solo cuando TiTino habla en su hito;</item>
+        /// <item>si no cabe y TiTino habla (con su bocadillo, solo en sus hitos: el 7 no lo es), NaN: la tarjeta no sale y TiTino
+        /// habla como dice D-016 (B1b-Q10 (c)).</item>
+        /// </list>
+        /// Solo al abrirse la victoria, sin asignaciones.
+        /// </summary>
+        private float TeaserTopClearOfSloth(float top, float ribbonTop, float h)
+        {
+            SlothVictory? sloth = _sloth;
+            if (sloth == null)
+            {
+                return top;
+            }
+
+            bool speaks;
+            float foot;
+            if (_slothPending)
+            {
+                speaks = _slothPendingText != null;
+                foot = SlothVictory.FootprintBottomFor(_slothBandTop, _slothBandBottom, SlothRows, speaks);
+            }
+            else
+            {
+                speaks = sloth.HasBubble;
+                foot = sloth.FootprintBottomDp;
+            }
+
+            if (float.IsNaN(foot) || foot <= top)
+            {
+                return top;
+            }
+
+            if (ribbonTop - foot >= h)
+            {
+                return foot;
+            }
+
+            if (speaks)
+            {
+                return float.NaN;
+            }
+
+            _slothPending = false;
+            _slothPendingText = null;
+            sloth.Hide();
+            SetHeronAlpha(1f);
+            SlothYieldedToTeaser = true;
+            return top;
+        }
+
+        /// <summary>TiTino cedió su franja a la tarjeta del Reto en esta victoria (tests).</summary>
+        internal bool SlothYieldedToTeaser { get; private set; }
 
         /// <summary>
         /// Fundido de la garza blanca del fondo mientras TiTino está a la vista en la victoria (ms) [P; revisión de TI6a]: la garza

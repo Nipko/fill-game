@@ -1259,6 +1259,7 @@ namespace AF.UI
             }
 
             VictoryTitleShown(flow); // «¡Perfecto!» o el de siempre (DC14), antes de que LayoutVictory mida el título
+            _doubleTipRoomCutDp = 0f; // el hueco del tooltip de la Cosecha doble se decide en cada victoria
             LayoutVictory();
             StartHarvestCount(0, flow.HarvestSeeds, HarvestCountDelayMs);
             ShiftBoard(ShiftToClear(_victoryPanelY - RibbonRiseDp, 8f), true);
@@ -1285,10 +1286,27 @@ namespace AF.UI
             {
                 _dailyTeaser ??= new DailyTeaserCard(_victoryOverlay, _art);
                 bool inBuild = GameBootstrap.Current != null && GameBootstrap.Current.DailyInBuild;
-                // La cima de las cuias ya desplazadas, no bandBottom: con la victoria con vista (DC2), bandBottom es el pie de la
-                // caja de TiTino, pegado a la cinta, y la tarjeta la pisaría.
-                float cuiasTop = Mathf.Max(bandTop, CuiasTopDp() - _boardShiftTarget);
-                _dailyTeaser.Show(flow.LevelNumber, inBuild, _canvasW, bandTop, cuiasTop, _victoryPanelY - RibbonRiseDp);
+                // La cinta con el aire de la caja de TiTino (SlothRibbonGapDp): la placa tiene borde y sombra bajo su rectángulo,
+                // y la cinta crece un poco en su entrada (ApplyVictoryAnim).
+                float ribbonTop = _victoryPanelY - RibbonRiseDp - SlothRibbonGapDp;
+                float teaserTop = bandTop;
+                if (DailyTeaserCard.ShouldShow(flow.LevelNumber, inBuild, _dailyTeaser.Config))
+                {
+                    // Nunca debajo de TiTino (observación 2 de la hoja del 2026-10-22): bajo su gesto si cabe; si no, él cede.
+                    teaserTop = TeaserTopClearOfSloth(bandTop, ribbonTop, _dailyTeaser.HeightDp(_canvasW));
+                }
+
+                if (float.IsNaN(teaserTop))
+                {
+                    _dailyTeaser.Hide(); // TiTino habla en su hito y la tarjeta no cabe debajo (hoy no pasa en el 7)
+                }
+                else
+                {
+                    // La cima de las cuias ya desplazadas, no bandBottom: con la victoria con vista (DC2), bandBottom es el pie de
+                    // la caja de TiTino, pegado a la cinta, y la tarjeta la pisaría.
+                    float cuiasTop = Mathf.Max(teaserTop, CuiasTopDp() - _boardShiftTarget);
+                    _dailyTeaser.Show(flow.LevelNumber, inBuild, _canvasW, teaserTop, cuiasTop, ribbonTop);
+                }
             }
         }
 
@@ -1525,6 +1543,7 @@ namespace AF.UI
             }
 
             StuckModalView view = StuckModalModel.Build(StuckContext(flow), flow.Boosters);
+            _stuck.RestartTipRoomDp = RestartTipRoomFor(flow, view); // el hueco del tooltip del 6 y el 8 (GameScreen.TutorialTips.cs)
             _stuck.Show(view, _services, _canvasW, StuckRoomDp);
             _stuckSeedsShown = _services?.Wallet.Seeds ?? 0;
             _stuckNotesShown = _services?.PurchaseNotes.Version ?? 0;
@@ -1568,6 +1587,7 @@ namespace AF.UI
         /// </summary>
         internal void ShowStuckVariant(StuckModalView view)
         {
+            _stuck.RestartTipRoomDp = 0f;
             _stuck.Show(view, _services, _canvasW, StuckRoomDp);
             _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
             _stuck.Place(_canvasW, _stuckPanelY);
@@ -2839,8 +2859,10 @@ namespace AF.UI
             bool autoNext = _autoNextMs >= 0f || _nextHoldMs >= 0f; // también en la espera de 250 ms de Siguiente (B1b)
             _double.Button.gameObject.SetActive(_doubleShown);
             UiBuilder.SetEnabled(_double.Button, !autoNext);
+            DoubleTipRoomShownDp = DoubleTipRoomFor(); // el hueco del tooltip del 11 sobre el botón (GameScreen.TutorialTips.cs)
             if (_doubleShown)
             {
+                y += DoubleTipRoomShownDp;
                 UiBuilder.Place((RectTransform)_double.Button.transform, (panelW - nextW) / 2f, y, nextW, ModalKit.HeightOf(_double));
                 float face = ModalKit.FaceHeightOf(_double);
                 UiBuilder.Place(_doubleIcon.rectTransform, 12f, (face - 22f) * 0.5f, 24f, 22f);
@@ -2879,6 +2901,16 @@ namespace AF.UI
             _victoryPanelDp = bottom + VictoryFrameDp(compact);
 
             _victoryPanelY = _canvasH - _safeBottom - 8f - _victoryPanelDp;
+            float tipDeficit = HudBadgeBottom + DoubleTipMinHeaderAirDp - (_victoryPanelY - RibbonRiseDp);
+            if (DoubleTipRoomShownDp > 0f && tipDeficit > 0.01f)
+            {
+                // Con el hueco entero del tooltip la cinta subiría por encima de la cabecera (360 × 640): el hueco que cabe, y el
+                // tooltip pisa las barras de la Crecida y la Canasta, no la línea de la Cosecha [P]. Una sola pasada más.
+                _doubleTipRoomCutDp += Mathf.Min(DoubleTipRoomShownDp, tipDeficit);
+                LayoutVictory();
+                return;
+            }
+
             UiBuilder.Place(_victoryPanel, (w - panelW) / 2f, _victoryPanelY, panelW, _victoryPanelDp);
             PlaceAt(_ribbon.rectTransform, panelW / 2f, -RibbonRiseDp + (_ribbonHeightDp * 0.5f), RibbonWidthDp, _ribbonHeightDp, new Vector2(0.5f, 0.5f));
             float ribbonY = _victoryPanelY - RibbonRiseDp + (_ribbonHeightDp * 0.5f);

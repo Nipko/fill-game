@@ -181,6 +181,23 @@ namespace AF.UI
             PlaceTails(tailX, 0f);
         }
 
+        /// <summary>
+        /// Alto que ocupa encima de su punto (<see cref="PlaceAbove"/>) con <paramref name="text"/>: el vidrio con su borde de
+        /// arriba y el pico (dp). Deja el texto puesto y el tooltip como estaba (oculto si lo estaba). Mide: solo al disponer.
+        /// </summary>
+        public float AboveHeightFor(string text, float minX, float maxX, float maxWidth)
+        {
+            if (!string.Equals(_label.text, text, System.StringComparison.Ordinal) || _label.fontSize != TextSp * UiBuilder.TextScale)
+            {
+                _label.text = text;
+                _label.fontSize = TextSp * UiBuilder.TextScale;
+                _fitLimit = float.NaN;
+            }
+
+            Measure(minX, maxX, maxWidth, out _, out float height);
+            return height + SpeechBubble.RimDp + SpeechBubble.TailOutDp;
+        }
+
         private void Measure(float minX, float maxX, float maxWidth, out float width, out float height)
         {
             float room = Mathf.Max(0f, maxX - minX - (2f * SpeechBubble.RimDp));

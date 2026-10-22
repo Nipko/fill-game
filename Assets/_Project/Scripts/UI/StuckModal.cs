@@ -286,6 +286,16 @@ namespace AF.UI
         /// <summary>Pie desde el 31: «Rendirse».</summary>
         public Button GiveUpButton => _giveUp;
 
+        /// <summary>
+        /// Hueco sobre «Volver a la orilla (gratis)» para el tooltip «Reiniciar es gratis…» de los niveles 6 y 8 (dp; 0 sin
+        /// tooltip): lo fija <c>GameScreen</c> antes de <see cref="Show"/> y el panel crece hacia arriba lo mismo, así que el
+        /// tooltip apunta al botón sin tapar Marea ni las demás opciones (observación 3 de la hoja del 2026-10-22).
+        /// </summary>
+        public float RestartTipRoomDp { get; set; }
+
+        /// <summary>Hueco del tooltip que dejó la última disposición (dp; 0 si no lo dejó; tests).</summary>
+        public float RestartTipRoomShownDp { get; private set; }
+
         /// <summary>Línea de canoa visible (texto), o null.</summary>
         public string? CanoeLineText => _canoeLine.gameObject.activeSelf ? _canoeLine.text : null;
 
@@ -656,8 +666,10 @@ namespace AF.UI
             bool restart = view.Footer == StuckFooter.RestartFree;
             _restart.Button.gameObject.SetActive(restart);
             _giveUp.gameObject.SetActive(!restart);
+            RestartTipRoomShownDp = restart ? Mathf.Max(0f, RestartTipRoomDp) : 0f;
             if (restart)
             {
+                y += RestartTipRoomShownDp; // el tooltip del 6 y el 8, entre la opción de arriba y el botón
                 FitStretch(_restart, compact, CompactK(_restart, _restartLabel, inner - 24f, CtaOneLineShare, MinTouchDp));
                 PlaceButton(_restart, 16f, y, inner);
                 UiBuilder.PlaceCtaLabel(_restartLabel.rectTransform, FaceOf(_restart));

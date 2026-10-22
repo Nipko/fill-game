@@ -194,6 +194,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Level6_Stuck_TheRestartTip_AboveTheModal_OncePerLevel()
         {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // el lienzo del teléfono, no el apaisado del runner sin gráficos
             yield return TutorialSlothTests.Load(6);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -202,19 +203,23 @@ namespace AF.Tests.PlayMode
             Assert.That(view.RestartTipVisible, Is.True, "02 §13, fila 6: el tooltip con el primer modal");
             TipBubble tip = view.RestartTip!;
             Assert.That(tip.Text, Is.EqualTo(Loc.T(TutorialTips.RestartFreeCanoeKey)), "el texto canon de 04 §2.7");
-            Assert.That(tip.TailUp, Is.False, "encima del panel, con el pico hacia él");
+            Assert.That(tip.TailUp, Is.False, "encima del botón, con el pico hacia él");
 
-            // El pico, en el eje de «Volver a la orilla (gratis)» y en el canto de arriba del panel.
+            // Observación 3 de la hoja del 2026-10-22: el pico apunta a «Volver a la orilla (gratis)» (en su eje y en su canto de
+            // arriba), en un hueco del panel, sin tapar Marea ni salirse del panel.
+            Assert.That(view.Stuck.RestartTipRoomShownDp, Is.GreaterThan(0f), "el panel deja el hueco del tooltip");
             var restart = (RectTransform)view.Stuck.RestartButton.transform;
             var space = (RectTransform)tip.Rect.parent;
-            Vector3 center = space.InverseTransformPoint(restart.TransformPoint(restart.rect.center));
-            Assert.That(tip.TailTip.x, Is.EqualTo(center.x - space.rect.xMin).Within(1f), "el pico, en el eje de «Volver a la orilla»");
-            var corners = new Vector3[4];
-            tip.Rect.GetWorldCorners(corners);
-            float tipBottom = corners[0].y;
-            view.Stuck.Panel.GetWorldCorners(corners);
-            float panelTop = corners[1].y;
-            Assert.That(tipBottom, Is.GreaterThanOrEqualTo(panelTop - 0.5f), "no tapa el panel (Marea, la primera opción)");
+            Rect button = VictorySetup.CanvasRect(restart, space);
+            Assert.That(tip.TailTip.x, Is.EqualTo(button.center.x).Within(1f), "el pico, en el eje de «Volver a la orilla»");
+            Assert.That(tip.TailTip.y, Is.EqualTo(button.yMin).Within(1f), "la punta del pico, en el canto de arriba del botón");
+            Rect glass = VictorySetup.CanvasRect(tip.Rect, space);
+            Rect undo = VictorySetup.CanvasRect((RectTransform)view.Stuck.UndoButton.transform, space);
+            Rect panel = VictorySetup.CanvasRect(view.Stuck.Panel, space);
+            Assert.That(glass.yMin, Is.GreaterThanOrEqualTo(undo.yMax), "no tapa Marea, la primera opción");
+            Assert.That(glass.yMax, Is.LessThanOrEqualTo(button.yMin), "ni el botón");
+            Assert.That(glass.yMin, Is.GreaterThanOrEqualTo(panel.yMin), "dentro del panel");
+            Assert.That(glass.width, Is.GreaterThan(240f), "a lo ancho (hasta 296 dp), no en una columna estrecha");
             Assert.That(tip.Alpha, Is.GreaterThan(0.5f));
             Assert.That(view.LastTutorialTipProbe, Does.Contain("\"tip\":\"restart\"").And.Contains(TutorialTips.RestartFreeCanoeKey));
 
@@ -253,8 +258,10 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level11_Victory_TheDoubleHarvestTip_AboveTheButton_UntilPressed()
+        public IEnumerator Level11_Victory_TheDoubleHarvestTip_AboveTheButton_UntilPressed([Values(false, true)] bool small)
         {
+            // En el lienzo del teléfono (360 × 780 y 360 × 640), no en el apaisado del runner sin gráficos.
+            GameScreen.SimulatedScreen = small ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
             yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -271,9 +278,23 @@ namespace AF.Tests.PlayMode
             float tipBottom = corners[0].y;
             ((RectTransform)view.DoubleHarvestButton.transform).GetWorldCorners(corners);
             Assert.That(tipBottom, Is.GreaterThanOrEqualTo(corners[1].y - 0.5f), "encima del botón, sin taparlo");
+
+            // Observación 4 de la hoja del 2026-10-22: no tapa la línea «Cosecha +20» (el panel deja su hueco sobre el botón).
+            Assert.That(view.DoubleTipRoomShownDp, Is.GreaterThan(0f), "el panel deja el hueco del tooltip");
+            var space = (RectTransform)tip.Rect.parent;
+            Rect glass = VictorySetup.CanvasRect(tip.Rect, space);
+            Rect harvest = VictorySetup.CanvasRect(view.VictoryHarvestRect, space);
+            Rect button = VictorySetup.CanvasRect((RectTransform)view.DoubleHarvestButton.transform, space);
+            // En 360 × 640 el hueco entero no cabe y el tooltip pisa las barras hasta el pie de la fila de la Cosecha, que deja 6 dp
+            // de aire bajo la semilla (GameScreen.LayoutVictory: semilla de 32 dp a 6 dp del canto de arriba); el texto no se toca.
+            float air = small ? 4f : 0f;
+            Assert.That(glass.yMin, Is.GreaterThanOrEqualTo(harvest.yMax - air), "bajo la línea de la Cosecha");
+            Assert.That(tip.TailTip.y, Is.EqualTo(button.yMin).Within(1f), "la punta del pico, en el canto de arriba del botón");
+            Assert.That(tip.TailTip.x, Is.EqualTo(button.center.x).Within(1f), "y en su eje");
             Assert.That(boot.PressDoubleHarvest(), Is.True);
             PlayModeHelpers.Step(boot, 400);
             Assert.That(view.DoubleHarvestTipVisible, Is.False, "se va al pulsarlo");
+            Assert.That(view.DoubleTipRoomShownDp, Is.EqualTo(0f), "y el panel cierra su hueco");
         }
 
         [UnityTest]
