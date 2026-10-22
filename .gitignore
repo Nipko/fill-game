@@ -28,6 +28,23 @@
 /[Aa]ssets/_SmokeTemp/
 /[Aa]ssets/_SmokeTemp.meta
 
+# Firebase (D-039, F3-6; docs/dev/firebase-cliente.md). Van después de la regla de los .meta para que ganen.
+# - google-services.json lo coloca el dueño aquí (regla dura 5); la carpeta entera, con su .meta, queda fuera de git.
+/[Aa]ssets/_LocalSecrets/
+/[Aa]ssets/_LocalSecrets.meta
+# - Lo que genera el editor de Firebase a partir de google-services.json (recursos con las claves del proyecto) y el id de build
+#   de Crashlytics: se regeneran en cada build.
+/[Aa]ssets/Plugins/Android/FirebaseApp.androidlib/
+/[Aa]ssets/Plugins/Android/FirebaseApp.androidlib.meta
+/[Aa]ssets/Plugins/Android/FirebaseCrashlytics.androidlib/
+/[Aa]ssets/Plugins/Android/FirebaseCrashlytics.androidlib.meta
+# - La copia de escritorio que el editor de Firebase saca de google-services.json (mismas claves del proyecto).
+/[Aa]ssets/StreamingAssets/google-services-desktop.json
+/[Aa]ssets/StreamingAssets/google-services-desktop.json.meta
+# - EDM4U (Android Resolver con mainTemplate.gradle): las copias .aar de los .srcaar de los paquetes.
+/[Aa]ssets/GeneratedLocalRepo/
+/[Aa]ssets/GeneratedLocalRepo.meta
+
 # PNG de relleno que AF.EditorTools.SizeEstimate (tarea B0) importa y borra al terminar (por si se corta a medias).
 /[Aa]ssets/_SizeEstimateTemp/
 /[Aa]ssets/_SizeEstimateTemp.meta

@@ -19,9 +19,11 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><see cref="CreateStore"/>: <see cref="VerifiedStoreService"/> sobre <see cref="FakeBillingClient"/> (la hoja «Compra
     /// simulada» de siempre, con tokens nuevos en cada arranque) y el cliente del backend: <see cref="FakeBackendClient"/> en el editor y en
-    /// <c>DEVELOPMENT_BUILD</c> sin URL (concede lo del catálogo, como el servidor: <see cref="CatalogGrants"/>), y
-    /// <see cref="UnavailableBackendClient"/> en release sin URL (y hasta F3-6 con URL: sin proveedores de tokens), con el que la tienda no
-    /// vende (<see cref="GameBackendSwitch"/>): el Mercado lo dice y Aguas estancadas no ofrece Puñado ni Balsa.
+    /// <c>DEVELOPMENT_BUILD</c> sin la configuración de Firebase (concede lo del catálogo, como el servidor: <see cref="CatalogGrants"/>),
+    /// <see cref="HttpBackendClient"/> contra el API de dev con los tokens reales de Firebase Auth y App Check en un
+    /// <c>DEVELOPMENT_BUILD</c> con <c>google-services.json</c> (F3-6), y <see cref="UnavailableBackendClient"/> en release sin URL o sin
+    /// Firebase, con el que la tienda no vende (<see cref="GameBackendSwitch"/>): el Mercado lo dice y Aguas estancadas no ofrece Puñado
+    /// ni Balsa.
     /// <c>biz_backend_enabled</c> (08 §9, B7) llega por <see cref="AF.RemoteConfig.Binding.RcBackendSwitch"/>.</item>
     /// <item><see cref="ResumeBackend"/>, al terminar el arranque y al volver a primer plano: las compras sin terminar vuelven de la tienda
     /// (<see cref="VerifiedStoreService.Resume"/>) y, tras la fusión con la nube de B8, <c>restoreLedger</c> (<see cref="LedgerRestore"/>:
@@ -140,7 +142,8 @@ namespace AF.UI
                 case BackendMode.Fake:
                     return new FakeBackendClient(clock);
                 case BackendMode.Http:
-                    // Sin los proveedores reales de tokens (Firebase Auth y App Check llegan con F3-6) la fábrica no concede nada.
+                    // Con los proveedores reales de Firebase Auth y App Check si el build los tiene (F3-6); si no, el falso en
+                    // desarrollo y nada en release.
                     return BackendFactory.Create(clock, null, null, null);
                 default:
                     return new UnavailableBackendClient();

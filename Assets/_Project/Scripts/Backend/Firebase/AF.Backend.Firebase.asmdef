@@ -1,0 +1,16 @@
+{
+  "name": "AF.Backend.Firebase",
+  "rootNamespace": "AF.Backend.Firebase",
+  "references": [
+    "AF.Backend"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

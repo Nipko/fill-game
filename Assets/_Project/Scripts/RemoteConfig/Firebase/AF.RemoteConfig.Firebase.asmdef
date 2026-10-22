@@ -1,0 +1,17 @@
+{
+  "name": "AF.RemoteConfig.Firebase",
+  "rootNamespace": "AF.RemoteConfig.Firebase",
+  "references": [
+    "AF.RemoteConfig",
+    "AF.Backend.Firebase"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

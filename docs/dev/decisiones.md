@@ -3373,6 +3373,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 **Cómo revertir.** Quitando los paquetes de `manifest.json` y las implementaciones reales; las interfaces y las falsas siguen.
 
+### D-039, añadido del 2026-10-21: los permisos que trae Firebase y App Check en desarrollo
+
+- **Estado:** decidido por el dueño en el chat: «F3-6: quita ACCESS_ADSERVICES_ATTRIBUTION, ACCESS_ADSERVICES_AD_ID y READ_GSERVICES; aprueba BIND_GET_INSTALL_REFERRER_SERVICE (lista blanca y Data Safety). App Check: depuración en desarrollo, Play Integrity en release.»
+- **Se quitan** del manifiesto fusionado (`tools:node="remove"`), como `AD_ID`: `android.permission.ACCESS_ADSERVICES_ATTRIBUTION` y `android.permission.ACCESS_ADSERVICES_AD_ID` (Privacy Sandbox de anuncios, de Firebase Analytics) y `com.google.android.providers.gsf.permission.READ_GSERVICES` (de reCAPTCHA, que arrastra Firebase Auth; el acceso anónimo no lo usa: se comprueba en el teléfono).
+- **Se aprueban** `com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE` (Install Referrer de Play, para saber el origen de cada instalación; servicio de la propia Play Store, no un SDK de atribución aparte: matiza 08 §7) y `android.permission.WAKE_LOCK` (ya aprobado si aparecía). Entran en la lista blanca de `ci/check-manifest.ps1` y en Data Safety (08 §13.3).
+- **App Check:** proveedor de depuración en los builds de desarrollo (`DEVELOPMENT_BUILD`; el dueño registra su token de depuración en la consola de Firebase) y Play Integrity en release.
+
 ### D-033, añadido del 2026-10-21: preguntas de B12 (consentimiento y edad) del Spark, con la recomendada
 
 - **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.

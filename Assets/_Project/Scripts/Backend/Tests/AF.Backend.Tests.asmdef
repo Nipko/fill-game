@@ -5,6 +5,7 @@
     "AF.Platform",
     "AF.Backend",
     "AF.Backend.Unity",
+    "AF.Backend.Firebase",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
   ],

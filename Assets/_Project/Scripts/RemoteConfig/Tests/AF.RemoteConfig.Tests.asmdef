@@ -4,6 +4,7 @@
   "references": [
     "AF.RemoteConfig",
     "AF.RemoteConfig.Binding",
+    "AF.RemoteConfig.Firebase",
     "AF.Core",
     "AF.Solver",
     "AF.Levels",

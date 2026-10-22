@@ -3,6 +3,7 @@ using System;
 using AF.Ads;
 using AF.Analytics;
 using AF.Analytics.Adapters;
+using AF.Analytics.Firebase;
 using AF.Analytics.Unity;
 using AF.Economy;
 using AF.Events;
@@ -12,6 +13,7 @@ using AF.Levels;
 using AF.Platform;
 using AF.RemoteConfig;
 using AF.RemoteConfig.Binding;
+using AF.RemoteConfig.Firebase;
 using UnityEngine;
 
 namespace AF.UI
@@ -20,17 +22,19 @@ namespace AF.UI
     /// Remote Config, bus y analítica del arranque (bloque B7, parche B7-bootstrap; 08 §2.2-§2.3, §8 y §9):
     /// <list type="number">
     /// <item><see cref="SetUpTelemetry"/>, antes de la cartera: el bus (<see cref="EventBus"/>), Remote Config con los defaults
-    /// compilados y la caché del proveedor (hoy el falso: <see cref="FakeRemoteConfigBackend"/>, sin red), las clases de cifras
-    /// enlazadas (<see cref="RcConfigBinder"/>; <see cref="ActiveRcConfigs"/>), la sesión y <see cref="AnalyticsService"/> con
-    /// el sumidero de logcat (<c>AF_EVENT</c>, solo desarrollo).</item>
+    /// compilados y la caché del proveedor (<see cref="RemoteConfigBackends.CreateDefault"/>: Firebase Remote Config en el teléfono con
+    /// la configuración de Firebase, que además descarga para el arranque siguiente; si no, el falso vacío, sin red), las clases de
+    /// cifras enlazadas (<see cref="RcConfigBinder"/>; <see cref="ActiveRcConfigs"/>), Crashlytics (08 §2.3, diagnóstico), la sesión y
+    /// <see cref="AnalyticsService"/> con el sumidero de logcat (<c>AF_EVENT</c>, solo desarrollo) y, en el teléfono, el de Firebase
+    /// Analytics (F3-6).</item>
     /// <item>Las cifras van a la cartera, el flujo, los anuncios, la tienda, el Reto y la Crecida; los anuncios y la tienda se
     /// envuelven con los adaptadores de analítica (<see cref="WrapAds"/>, <see cref="WrapStore"/>).</item>
     /// <item><see cref="ConnectTelemetry"/>, con todo construido: el bus a la cartera y al flujo de campaña, la analítica a las
     /// pantallas y <c>biz_feature_lives</c> a la cartera.</item>
     /// </list>
-    /// Consentimiento: la recogida empieza apagada (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3) y la
-    /// enciende la decisión de la pantalla de consentimiento antes de <c>AppFlow.Start</c> (B12; <c>GameBootstrap.Consent.cs</c>);
-    /// sin sumidero real (Firebase), solo escriben los locales.
+    /// Consentimiento: la recogida empieza apagada (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3): Firebase
+    /// Analytics no recibe nada ni recoge por su cuenta hasta que la decisión de la pantalla de consentimiento (B12;
+    /// <c>GameBootstrap.Consent.cs</c>) la enciende antes de <c>AppFlow.Start</c>; con la banda &lt; 13 nunca se enciende.
     /// </summary>
     public sealed partial class GameBootstrap
     {
@@ -83,8 +87,22 @@ namespace AF.UI
                 HandlerFailed = (type, e) => Debug.LogError(LogPrefix + "Un oyente de " + type.Name + " falló: " + e.Message),
             };
 
-            _rc = new RemoteConfigService(null, RemoteConfigBackendOverride ?? new FakeRemoteConfigBackend());
-            _rc.ActivateCached(); // 08 §2.3: RC.LoadDefaults(); RC.ActivateCached(); el fetch llega con Firebase
+            IRemoteConfigBackend rcBackend = RemoteConfigBackendOverride ?? RemoteConfigBackends.CreateDefault(RemoteConfigDefaults.Compiled);
+            _rc = new RemoteConfigService(null, rcBackend);
+            _rc.ActivateCached(); // 08 §2.3: RC.LoadDefaults(); RC.ActivateCached(); RC.FetchAsync(min_interval=12h)
+            if (rcBackend is FirebaseRemoteConfigBackend firebaseRc)
+            {
+                // No bloquea; lo descargado se aplica en el arranque siguiente (las cifras no cambian a mitad de sesión).
+                DateTime fetchAt = clock.UtcNow;
+                _rc.FetchIfDue(fetchAt, firebaseRc.LastFetchUtc, ok =>
+                {
+                    if (ok)
+                    {
+                        firebaseRc.MarkFetched(fetchAt);
+                    }
+                });
+            }
+
             AF.RemoteConfig.RC.Use(_rc);
             _rcConfigs = RcConfigBinder.Bind(_rc, Application.version);
             ActiveRcConfigs = _rcConfigs;
@@ -93,9 +111,16 @@ namespace AF.UI
                 Debug.LogWarning(LogPrefix + "Remote Config: " + _rcConfigs.Errors[i]);
             }
 
+            CrashReporting.Start(); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono
             s_session ??= new SessionTracker(clock.UtcNow);
             _analytics = new AnalyticsService(_events, new CommonSource(this));
             _analytics.AddSink(new LogcatAnalyticsSink());
+            IAnalyticsSink? firebaseSink = FirebaseAnalyticsSink.TryCreate(); // null en el editor y sin google-services.json
+            if (firebaseSink != null)
+            {
+                _analytics.AddSink(firebaseSink); // apagado hasta el consentimiento (AddSink le pasa CollectionEnabled = false)
+            }
+
             if (AnalyticsSinkOverride != null)
             {
                 _analytics.AddSink(AnalyticsSinkOverride);
