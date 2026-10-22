@@ -38,6 +38,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap.A11yHostOverride = null;
             LaunchOptions.Reset();
             LocSetUpFixture.ConfigureEs419();
+            LiquidGraphic.ApplyDoseOutline(0f); // el material del líquido es compartido: sin el contorno de Alto contraste
         }
 
         [UnityTest]
@@ -224,6 +225,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(daily.View.Animator.StepSpeedBase, Is.EqualTo(0.5f).Within(1e-6f));
                 Assert.That(daily.View.HighContrast, Is.True);
                 Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(0.35f).Within(1e-6f), "Alto contraste en el tablero del Reto");
+                Assert.That(LiquidGraphic.ShaderDoseOutline, Is.EqualTo(1.5f).Within(1e-6f), "y su contorno de dosis");
                 Assert.That(daily.View.A11y, Is.SameAs(boot.A11y));
             }
             finally
@@ -276,11 +278,14 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = null!;
             yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
             Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(Palette.PatternOpacitySubtle).Within(1e-6f), "hasta el 40, 15 %");
+            Assert.That(LiquidGraphic.ShaderDoseOutline, Is.EqualTo(0f), "sin Alto contraste, sin contorno de dosis");
             Assert.That(boot.ChooseA11y(SettingsScreen.HighContrastId, true), Is.True);
             Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(0.35f).Within(1e-6f), "07 §3, regla 5: Alto contraste, 35 %");
+            Assert.That(LiquidGraphic.ShaderDoseOutline, Is.EqualTo(1.5f).Within(1e-6f), "07 §3, regla 5: y el contorno de dosis a 1,5 px (Q-B9-6)");
             Assert.That(boot.Profile!.Settings.HighContrast, Is.True);
             Assert.That(boot.ChooseA11y(SettingsScreen.HighContrastId, false), Is.True);
             Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(Palette.PatternOpacitySubtle).Within(1e-6f), "y vuelve al del nivel");
+            Assert.That(LiquidGraphic.ShaderDoseOutline, Is.EqualTo(0f), "y el contorno se va");
         }
 
         [UnityTest]

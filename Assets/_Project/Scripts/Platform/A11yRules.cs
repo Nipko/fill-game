@@ -21,7 +21,11 @@ namespace AF.Platform
         /// <summary>Opacidad del patrón en «Alto contraste» (07 §3, reglas 1 y 5; 02 §12, fila «Modo daltónico»; D-033, Q-N4 (a)): 35 %.</summary>
         public const float HighContrastPatternOpacity = 0.35f;
 
-        /// <summary>Contorno de la dosis en «Alto contraste» (07 §3, regla 5): 1,5 px. Sin aplicar todavía (Q-B9-6).</summary>
+        /// <summary>
+        /// Contorno de la dosis en «Alto contraste» (07 §3, regla 5): 1,5 px de tinta centrados en el arco de abajo de cada dosis
+        /// (Q-B9-6; lo pinta el shader del líquido, <c>LiquidGraphic.ApplyDoseOutline</c>). Los px de 07 son de diseño, a 360 de
+        /// ancho: el cliente los toma como dp [P] (1,5 px de pantalla no se ven en un teléfono de 1.080 px).
+        /// </summary>
         public const float HighContrastDoseOutlinePx = 1.5f;
 
         /// <summary>C9 (02 §3.1 y §12): mantener al menos 400 ms sobre una cuia muestra los nombres de sus dosis.</summary>

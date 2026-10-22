@@ -45,7 +45,7 @@ Lo marcado [P] es propuesta sin decisión del dueño; cada [P] remite a su pregu
 - **Ajuste:** «Alto contraste» en Ajustes.
 - **Perfil:** `settings.high_contrast` (bool) [P], escrito solo si está encendido.
 - **Efecto:** el patrón del líquido al 35 % (`A11yRules.HighContrastPatternOpacity`) al momento, en campaña y en el Reto. No toca los iconos, que son de Patrones de fruta (Q-B9-5).
-- **Pendiente:** el contorno de dosis de 1,5 px (Q-B9-6).
+- **Contorno de dosis** (Q-B9-6, tanda de pulido del 2026-10-22): una línea de tinta (`ui_tinta`) de 1,5 px de diseño, que el cliente toma como dp [P] (`A11yRules.HighContrastDoseOutlinePx`) centrada en el arco de abajo de cada dosis menos la del fondo, en el shader del líquido (`_DoseOutlineDp`, que fija `LiquidGraphic.ApplyDoseOutline`). Va también entre dos dosis de la misma fruta [P]. Capturas: `DoseOutlineCaptureTests` (`[Explicit]`), en `Logs/snapshots/es-419/a11y/`.
 
 ### 2.3 Escala de fuente del sistema
 

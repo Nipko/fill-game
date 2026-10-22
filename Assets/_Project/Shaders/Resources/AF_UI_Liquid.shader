@@ -113,6 +113,9 @@ Shader "AF/UI/Liquid"
         _MurkyLitLin ("Brillo del pardo en lineal", Vector) = (0.338, 0.270, 0.200, 1)
         // Opacidad del patrón del nivel (07 §3, regla 1; ui_pattern_opacity de 08 §9): la fija LiquidGraphic.ApplyPatternOpacity.
         _PatternOpacity ("Opacidad del patrón", Float) = 0.15
+        // Contorno de dosis en dp (07 §3, regla 5: 1,5 px de diseño, a 360 de ancho) en Alto contraste, 0 sin él; la fija
+        // LiquidGraphic.ApplyDoseOutline (Q-B9-6).
+        _DoseOutlineDp ("Contorno de dosis (dp)", Float) = 0
         // Iconos de accesibilidad por tinte (ProceduralArt.FruitIconAtlas): la fija LiquidGraphic.Setup.
         _IconAtlas ("Iconos de fruta", 2D) = "black" {}
         _StencilComp ("Stencil Comparison", Float) = 8
@@ -235,6 +238,7 @@ Shader "AF/UI/Liquid"
             half4 _MurkyLin;
             half4 _MurkyLitLin;
             float _PatternOpacity;
+            float _DoseOutlineDp;
             sampler2D _IconAtlas;
             int _UIVertexColorAlwaysGammaSpace;
 
@@ -363,7 +367,8 @@ Shader "AF/UI/Liquid"
                 float top = i.surf.x + wave;
                 float topEdge = top + faceHalf;
                 float pix = max(abs(dY.x) + abs(dY.y), 1e-4);
-                float alpha = saturate(((topEdge - y) / pix) + 0.5);
+                float topAlpha = saturate(((topEdge - y) / pix) + 0.5);
+                float alpha = topAlpha;
 
                 // Frontera inferior en arco (como Magic Sort): la dosis k > 0 se ve desde el borde delantero de una elipse
                 // igual a la de la cara superior, faceHalf bajo su nivel en el eje; tapa la de debajo entre la recta y el
@@ -529,6 +534,22 @@ Shader "AF/UI/Liquid"
                         col = lerp(col, _InkLin.rgb, halo * q.g * fade);
                         col = lerp(col, ivory, q.r * fade);
                     }
+                }
+
+                // Contorno de dosis (07 §3, regla 5; Q-B9-6): en Alto contraste, una línea de tinta (ui_tinta, el color de los
+                // contornos de 07 §7.2) de _DoseOutlineDp dp (1,5: los px de 07 son de diseño, a 360 de ancho [P]) centrada en el
+                // arco de abajo de cada dosis k > 0, la frontera con la de debajo, así que cada dosis queda separada de su vecina.
+                // Es opaca también en su mitad de debajo del arco (la malla baja LiquidGraphic.OutlineMarginU más para tenerla),
+                // con medio píxel de antialias en cada borde (pix: u de capa por píxel; dpU: u por dp). La dosis 0 no la lleva (el
+                // fondo de la cavidad ya la separa) ni la cara superior (su línea clara). Sin Alto contraste, _DoseOutlineDp = 0 y
+                // la rama (uniforme: material y banda) no se paga. Espejo: LiquidGraphic.DoseOutlineAt.
+                UNITY_BRANCH
+                if (_DoseOutlineDp > 0.0 && k > 0.5)
+                {
+                    float halfU = 0.5 * _DoseOutlineDp * dpU;
+                    half outline = (half)saturate(((halfU - abs(ya - doseBottom)) / pix) + 0.5);
+                    col = lerp(col, _InkLin.rgb, outline);
+                    alpha = max(alpha, outline * topAlpha);
                 }
 
                 // Cara superior (D-006): la elipse entera con el color aclarado del menisco, más clara que el tinte, y una
