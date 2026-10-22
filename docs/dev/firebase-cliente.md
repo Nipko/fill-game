@@ -62,6 +62,15 @@ El build de desarrollo **compila y funciona igual que antes de F3-6**:
 
 Permisos que deja el manifiesto fusionado de `dev.apk`: `INTERNET`, `ACCESS_NETWORK_STATE`, `VIBRATE`, `WAKE_LOCK`, `BIND_GET_INSTALL_REFERRER_SERVICE` y el propio `com.amazonfill.dev.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (`ci/check-manifest.ps1 -Mode dev` en verde).
 
+### Tamaño y compuertas (2026-10-21, escritorio x64)
+
+| Artefacto | Antes (19caed28) | Con Firebase |
+|---|---|---|
+| `dev.apk` (BuildDev) | 61,98 MB | 69,30 MB |
+| `rehearsal.aab` (`-afRehearsal`) | 47,34 MB; descarga de Play 46,45-46,46 MB | 53,38 MB; descarga de Play 52,37-52,42 MB |
+
+Los dos pasan `ci/check-manifest.ps1 -Mode dev`, `ci/check-16kb.sh` (18 bibliotecas arm64, también las `libFirebaseCpp*.so` y las de Crashlytics) y, el AAB, `ci/size-gate.ps1` (≤ 80 MB).
+
 ## 6. Código
 
 | Ensamblado | Qué |
