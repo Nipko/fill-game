@@ -54,15 +54,28 @@ namespace AF.UI
         /// <summary>Hay algún dedo abajo sobre una cuia.</summary>
         public bool AnyDown => _down.Count > 0;
 
-        /// <summary>Un dedo <paramref name="pointer"/> baja en la cuia <paramref name="index"/>, en <paramref name="positionDp"/> (dp).</summary>
-        public void Press(int index, int pointer, Vector2 positionDp)
+        /// <summary>
+        /// Un dedo <paramref name="pointer"/> baja en la cuia <paramref name="index"/>, en <paramref name="positionDp"/> (dp).
+        /// <paramref name="othersDown"/> son los otros contactos que el dispositivo tiene de verdad en pantalla (−1 si no se sabe): con
+        /// 0, cualquier dedo que siguiera contado aquí perdió su touch-up (el Input System no repite ids), y se olvida. Devuelve true si
+        /// olvidó un gesto anterior (quien llama oculta sus nombres).
+        /// </summary>
+        public bool Press(int index, int pointer, Vector2 positionDp, int othersDown = -1)
         {
+            bool stale = false;
+            if (othersDown == 0 && _down.Count > 0)
+            {
+                Reset(); // nadie más toca la pantalla: lo contado era de touch-ups perdidos
+                stale = true;
+            }
+
             if (_down.Remove(pointer) && pointer == _pointer)
             {
                 // El dedo que se seguía vuelve a bajar: su touch-up se perdió (el lienzo se ocultó, el sistema canceló el toque).
                 Index = None;
                 Fired = false;
                 _pointer = int.MinValue;
+                stale = true;
             }
 
             if (_down.Count == 0)
@@ -80,7 +93,7 @@ namespace AF.UI
                     Index = None;
                 }
 
-                return;
+                return stale;
             }
 
             Index = index;
@@ -88,6 +101,7 @@ namespace AF.UI
             _start = positionDp;
             _heldMs = 0f;
             Fired = false;
+            return stale;
         }
 
         /// <summary>El dedo <paramref name="pointer"/> se mueve a <paramref name="positionDp"/> (dp).</summary>
@@ -102,15 +116,6 @@ namespace AF.UI
             {
                 Index = None; // C10: ya es un arrastre; no vuelve a contar hasta soltar
             }
-        }
-
-        /// <summary>
-        /// Los nombres saldrían en este paso de <paramref name="dtMs"/> ms (para mirar antes si algo los tapa y cortar sin tragarse el
-        /// touch-up: no llegaron a salir).
-        /// </summary>
-        public bool WouldFire(float dtMs)
-        {
-            return Index != None && !Fired && _heldMs + Mathf.Max(0f, dtMs) >= A11yRules.HoldMs;
         }
 
         /// <summary>Avanza <paramref name="dtMs"/> ms; devuelve true en el instante en que se cumplen los 400 ms (enseñar los nombres).</summary>

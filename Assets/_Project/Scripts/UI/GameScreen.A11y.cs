@@ -35,6 +35,7 @@ namespace AF.UI
         private A11yService? _a11y;
         private bool _highContrast;
         private float _boardMotionFactor = 1f;
+        private readonly List<Canvas> _holdAbove = new List<Canvas>();
         private string[] _a11yIds = new string[0];
         private string[] _a11yLabels = new string[0];
         private System.Func<bool>[] _a11yTaps = new System.Func<bool>[0];
@@ -307,9 +308,10 @@ namespace AF.UI
 
             if (_hold.Fired)
             {
-                // Con los nombres a la vista, un velo que se abre encima en el mismo lienzo (la pausa no cambia la fase) los quita; el
-                // touch-up de ese dedo se sigue tragando. Sin asignar: solo mientras se ven.
-                if (A11yScanner.BlockedAbove(_canvas, _board))
+                // Con los nombres a la vista, un velo que se abre encima (la pausa no cambia la fase; o el Mercado, un anuncio, en otro
+                // lienzo) los quita; el touch-up de ese dedo se sigue tragando. Sin asignar: los lienzos de encima se apuntaron al salir
+                // los nombres.
+                if (A11yScanner.CoveredBy(_canvas, _board, _holdAbove))
                 {
                     _hold.Cancel();
                     _namesBubble?.Hide();
@@ -318,16 +320,17 @@ namespace AF.UI
                 return;
             }
 
-            if (_hold.WouldFire(dtMs) && A11yScanner.Covered(_canvas, _board))
-            {
-                // Algo tapa el tablero justo cuando iban a salir los nombres: no salen, y como no llegaron a salir, soltar es un toque
-                // normal (el mismo camino que si el flujo cambia antes).
-                _hold.Cancel();
-                return;
-            }
-
             if (_hold.Tick(dtMs))
             {
+                // Mantener 400 ms sin mover el dedo es C9, nunca un toque (02 §3.1: «al soltar no selecciona»): aunque algo tape el
+                // tablero en ese momento y los nombres no salgan, soltar no selecciona ni vierte debajo del velo.
+                A11yScanner.CanvasesAbove(_canvas, _holdAbove);
+                if (A11yScanner.CoveredBy(_canvas, _board, _holdAbove))
+                {
+                    _hold.Cancel();
+                    return;
+                }
+
                 ShowHoldNames(_hold.Index);
             }
         }
@@ -355,14 +358,14 @@ namespace AF.UI
 
         private void OnHoldDown(int index, int pointer, Vector2 screenPx)
         {
-            if (_hold.AnyDown && pointer == _hold.Pointer)
+            // El dedo se cuenta siempre (cada touch-up descuenta uno); sin tablero jugable (un modal, la selección de la
+            // Luciérnaga) no puede sacar nombres: se corta al momento, y un gesto nuevo no arrastra el trago de uno anterior. Con los
+            // contactos reales del dispositivo, lo que quedara contado de touch-ups perdidos se olvida (y sus nombres se van).
+            if (_hold.Press(index, pointer, ToDp(screenPx), OtherContacts()))
             {
-                _namesBubble?.Hide(); // el mismo dedo vuelve a bajar: su touch-up se perdió y los nombres de entonces se van
+                _namesBubble?.Hide();
             }
 
-            // El dedo se cuenta siempre (cada touch-up descuenta uno); sin tablero jugable (un modal, la selección de la
-            // Luciérnaga) no puede sacar nombres: se corta al momento, y un gesto nuevo no arrastra el trago de uno anterior.
-            _hold.Press(index, pointer, ToDp(screenPx));
             if (!BoardTakesHold())
             {
                 _hold.Cancel();
@@ -395,6 +398,39 @@ namespace AF.UI
             _namesBubble ??= new CuiaNamesBubble(_topLayer, _art);
             _namesBubble.Show(CuiaSpeech.Names(flow.Session.Current, index), _views[index].Body);
             _probe.State("hold", flow, index, null);
+        }
+
+        // Otros contactos de verdad en pantalla, además del que acaba de bajar (Input System: toques en curso y el botón del ratón);
+        // −1 sin dispositivo. Sin asignar.
+        private static int OtherContacts()
+        {
+            int contacts = 0;
+            bool known = false;
+            UnityEngine.InputSystem.Touchscreen? touch = UnityEngine.InputSystem.Touchscreen.current;
+            if (touch != null)
+            {
+                known = true;
+                var touches = touch.touches;
+                for (int i = 0; i < touches.Count; i++)
+                {
+                    if (touches[i].press.isPressed)
+                    {
+                        contacts++;
+                    }
+                }
+            }
+
+            UnityEngine.InputSystem.Mouse? mouse = UnityEngine.InputSystem.Mouse.current;
+            if (mouse != null)
+            {
+                known = true;
+                if (mouse.leftButton.isPressed)
+                {
+                    contacts++;
+                }
+            }
+
+            return known ? System.Math.Max(0, contacts - 1) : -1;
         }
 
         // px de pantalla → dp del lienzo (CanvasScaler: 1 unidad = 1 dp).

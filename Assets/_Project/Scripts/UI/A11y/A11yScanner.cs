@@ -49,6 +49,7 @@ namespace AF.UI
         private static readonly List<Graphic> GraphicsBuffer = new List<Graphic>();
         private static readonly List<CanvasGroup> GroupsBuffer = new List<CanvasGroup>();
         private static readonly List<TextMeshProUGUI> TextsBuffer = new List<TextMeshProUGUI>();
+        private static readonly List<Canvas> CanvasBuffer = new List<Canvas>();
 
         private readonly List<IA11ySource> _sources = new List<IA11ySource>();
         private readonly List<Canvas> _canvases = new List<Canvas>();
@@ -56,6 +57,7 @@ namespace AF.UI
         private readonly List<A11yItem> _canvasItems = new List<A11yItem>();
         private readonly List<List<A11yItem>> _layers = new List<List<A11yItem>>();
         private readonly List<RectMask2D> _masks = new List<RectMask2D>();
+        private bool _groupBlocks;
 
         /// <summary>Elementos sin etiqueta encontrados en el último recorrido (botones de solo icono sin registrar; tests y sonda).</summary>
         public int Unlabeled { get; private set; }
@@ -86,6 +88,7 @@ namespace AF.UI
             into.Clear();
             Unlabeled = 0;
             RootCanvases(_canvases);
+            _groupBlocks = false;
             int layers = 0;
             for (int c = 0; c < _canvases.Count; c++)
             {
@@ -104,9 +107,16 @@ namespace AF.UI
                 }
 
                 bool blocks = claimed ? HasBlocker(canvas) : CollectGeneric(canvas, null, layer);
-                if (blocks)
+                _groupBlocks |= blocks;
+                bool groupEnds = c + 1 >= _canvases.Count || _canvases[c + 1].sortingOrder != canvas.sortingOrder;
+                if (groupEnds)
                 {
-                    break;
+                    if (_groupBlocks)
+                    {
+                        break;
+                    }
+
+                    _groupBlocks = false;
                 }
             }
 
@@ -182,23 +192,52 @@ namespace AF.UI
 
         /// <summary>
         /// Lo de <paramref name="marker"/> en <paramref name="canvas"/> está tapado: por un velo dibujado después en el mismo lienzo
-        /// (<see cref="BlockedAbove"/>: la pausa, una confirmación) o por otro lienzo de encima con un velo (el Mercado, un anuncio, la
-        /// tarjeta del Reto), con el mismo orden que <see cref="Scan"/> (<see cref="IsAbove"/>). Recorre los lienzos (asigna): solo
-        /// al activar un nodo del lector y al ir a enseñar los nombres de C9, nunca por fotograma.
+        /// (<see cref="BlockedAbove"/>: la pausa, una confirmación) o por otro lienzo de encima o del mismo orden con un velo (el
+        /// Mercado, un anuncio, la tarjeta del Reto). Busca los lienzos (asigna): solo al activar un nodo del lector, nunca por
+        /// fotograma.
         /// </summary>
         public static bool Covered(Canvas canvas, Transform marker)
+        {
+            CanvasesAbove(canvas, CanvasBuffer);
+            bool covered = CoveredBy(canvas, marker, CanvasBuffer);
+            CanvasBuffer.Clear();
+            return covered;
+        }
+
+        /// <summary>
+        /// Deja en <paramref name="into"/> los lienzos raíz que pueden ir encima de <paramref name="canvas"/>: los de
+        /// <see cref="Canvas.sortingOrder"/> mayor o igual (con el mismo orden, Unity no fija cuál va encima: se cuentan los dos, por
+        /// prudencia). Asigna (busca los lienzos): una vez, no por fotograma.
+        /// </summary>
+        public static void CanvasesAbove(Canvas canvas, List<Canvas> into)
+        {
+            into.Clear();
+            Canvas[] all = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < all.Length; i++)
+            {
+                Canvas c = all[i];
+                if (c != canvas && c.isRootCanvas && c.renderMode != RenderMode.WorldSpace && c.sortingOrder >= canvas.sortingOrder)
+                {
+                    into.Add(c);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Como <see cref="Covered"/>, con los lienzos de encima ya buscados (<see cref="CanvasesAbove"/>): sin asignar, para mirarlo
+        /// en cada fotograma mientras se ven los nombres de C9.
+        /// </summary>
+        public static bool CoveredBy(Canvas canvas, Transform marker, List<Canvas> above)
         {
             if (BlockedAbove(canvas, marker))
             {
                 return true;
             }
 
-            Canvas[] all = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-            for (int i = 0; i < all.Length; i++)
+            for (int i = 0; i < above.Count; i++)
             {
-                Canvas c = all[i];
-                if (c != canvas && c.isRootCanvas && c.isActiveAndEnabled && c.renderMode != RenderMode.WorldSpace
-                    && IsAbove(c, canvas) && HasBlocker(c))
+                Canvas c = above[i];
+                if (c != null && c.isActiveAndEnabled && HasBlocker(c))
                 {
                     return true;
                 }
@@ -262,19 +301,10 @@ namespace AF.UI
             return true;
         }
 
-        /// <summary>
-        /// <paramref name="a"/> se dibuja encima de <paramref name="b"/> en el orden del lector: <see cref="Canvas.sortingOrder"/>
-        /// mayor y, con empate, el de <see cref="UnityEngine.Object.GetInstanceID"/> mayor (el mismo criterio que <see cref="Scan"/>).
-        /// </summary>
-        public static bool IsAbove(Canvas a, Canvas b)
-        {
-            return CompareTop(a, b) < 0;
-        }
-
-        // De arriba abajo: negativo si a va antes (encima) que b.
+        // De arriba abajo por sortingOrder; con el mismo orden, el de la jerarquía (Unity no lo fija: Scan los trata como un grupo).
         private static int CompareTop(Canvas a, Canvas b)
         {
-            return a.sortingOrder != b.sortingOrder ? b.sortingOrder.CompareTo(a.sortingOrder) : b.GetInstanceID().CompareTo(a.GetInstanceID());
+            return b.sortingOrder.CompareTo(a.sortingOrder);
         }
 
         // Los lienzos raíz activos, de arriba abajo (sortingOrder mayor primero; empate, el último creado encima).
