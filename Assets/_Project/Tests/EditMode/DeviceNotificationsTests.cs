@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using AF.Platform;
@@ -62,6 +63,58 @@ namespace AF.Tests.EditMode
             Assert.That(source, Does.Not.Contain("RequestExactScheduling"));
             Assert.That(source, Does.Not.Contain("RequestIgnoreBatteryOptimizations"));
             Assert.That(source, Does.Not.Contain("RepeatInterval"));
+        }
+
+        [Test]
+        public void ThePackageSettings_KeepInexactAlarms_AndNoRescheduleOnRestart()
+        {
+            // Q-M5: con estos dos ajustes encendidos el paquete añadiría SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM o
+            // RECEIVE_BOOT_COMPLETED al manifiesto (AndroidNotificationPostProcessor), que no están aprobados.
+            string text = File.ReadAllText(Path.Combine(RepoRoot, "ProjectSettings", "NotificationsSettings.asset"));
+            Match block = Regex.Match(text, @"""m_AndroidNotificationSettingsValues""\s*:\s*\{\s*""m_Keys""\s*:\s*\[(?<keys>[^\]]*)\]\s*,\s*""m_Values""\s*:\s*\[(?<values>[^\]]*)\]");
+            Assert.That(block.Success, Is.True, "bloque de Android de NotificationsSettings.asset");
+            MatchCollection keys = Regex.Matches(block.Groups["keys"].Value, "\"([^\"]*)\"");
+            MatchCollection values = Regex.Matches(block.Groups["values"].Value, "\"([^\"]*)\"");
+            Assert.That(values.Count, Is.EqualTo(keys.Count));
+            var settings = new Dictionary<string, string>();
+            for (int i = 0; i < keys.Count; i++)
+            {
+                settings[keys[i].Groups[1].Value] = values[i].Groups[1].Value;
+            }
+
+            Assert.That(settings["UnityNotificationAndroidScheduleExactAlarms"], Is.EqualTo("0"), "alarmas inexactas");
+            Assert.That(settings["UnityNotificationAndroidRescheduleOnDeviceRestart"], Is.EqualTo("False"), "sin RECEIVE_BOOT_COMPLETED");
+        }
+
+        [Test]
+        public void TheScheduledLog_RoundTrips_AndSkipsWhatItCannotRead()
+        {
+            var entries = new List<DeliveredNotification>
+            {
+                new DeliveredNotification(1001, "daily_ready", T0),
+                new DeliveredNotification(-7, "comeback_d7", T0.AddDays(7)),
+                new DeliveredNotification(5, "a:b", T0), // no se podría leer: se salta
+                new DeliveredNotification(6, string.Empty, T0),
+            };
+            string raw = ScheduledNotificationLog.Format(entries);
+            Assert.That(raw, Is.EqualTo("1001:daily_ready:" + T0.Ticks + ";-7:comeback_d7:" + T0.AddDays(7).Ticks));
+
+            var back = new List<DeliveredNotification>();
+            ScheduledNotificationLog.Parse(raw, back);
+            Assert.That(back.Count, Is.EqualTo(2));
+            Assert.That(back[0].Id, Is.EqualTo(1001));
+            Assert.That(back[0].Type, Is.EqualTo("daily_ready"));
+            Assert.That(back[0].FireAtUtc, Is.EqualTo(T0));
+            Assert.That(back[0].FireAtUtc.Kind, Is.EqualTo(DateTimeKind.Utc));
+            Assert.That(back[1].Id, Is.EqualTo(-7));
+
+            var bad = new List<DeliveredNotification>();
+            ScheduledNotificationLog.Parse(null, bad);
+            ScheduledNotificationLog.Parse(string.Empty, bad);
+            ScheduledNotificationLog.Parse(";;x:y:z;1::5;2:t:0;3:t:-4;4:t:99999999999999999999;5:t:" + (DateTime.MaxValue.Ticks + 1) + ";6:t", bad);
+            Assert.That(bad, Is.Empty, "las entradas corruptas se descartan sin excepción");
+            ScheduledNotificationLog.Parse("x;7:canoes_full:" + T0.Ticks + ";garbage", bad);
+            Assert.That(bad.Count, Is.EqualTo(1), "las válidas se quedan");
         }
 
         [Test]

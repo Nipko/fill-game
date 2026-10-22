@@ -2,8 +2,6 @@
 #if AF_MOBILE_NOTIFICATIONS && UNITY_ANDROID && !UNITY_EDITOR
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text;
 using Unity.Notifications.Android;
 using UnityEngine;
 
@@ -26,7 +24,7 @@ namespace AF.Platform.Notifications
     /// <item>La hora de entrega va en UTC (el paquete la pasa a milisegundos desde 1970 con <c>ToUniversalTime</c>): un cambio de
     /// zona después de programar no la mueve.</item>
     /// <item>Para <c>af_push_sent</c> (08 §8.2: «registrada en la siguiente apertura») guarda en <see cref="PlayerPrefs"/> los
-    /// programados (<c>id:tipo:ticks</c>, sin datos personales) y al abrir da por entregados los vencidos que el sistema ya no
+    /// programados (<see cref="ScheduledNotificationLog"/>: <c>id:tipo:ticks</c>, sin datos personales) y al abrir da por entregados los vencidos que el sistema ya no
     /// tiene como programados (aproximado: uno descartado por el sistema también cuenta).</item>
     /// </list>
     /// </summary>
@@ -40,7 +38,7 @@ namespace AF.Platform.Notifications
         private static int? s_lastIntentId;
 
         private readonly IClock _clock;
-        private readonly List<Entry> _scheduled = new List<Entry>();
+        private readonly List<DeliveredNotification> _scheduled = new List<DeliveredNotification>();
         private readonly List<DeliveredNotification> _delivered = new List<DeliveredNotification>();
         private readonly int _sdk;
         private PermissionRequest? _request;
@@ -133,7 +131,7 @@ namespace AF.Platform.Notifications
                 }
             }
 
-            _scheduled.Add(new Entry(notification.Id, notification.Type, notification.FireAtUtc));
+            _scheduled.Add(new DeliveredNotification(notification.Id, notification.Type, notification.FireAtUtc));
             Save();
         }
 
@@ -195,7 +193,7 @@ namespace AF.Platform.Notifications
             bool changed = false;
             for (int i = _scheduled.Count - 1; i >= 0; i--)
             {
-                Entry e = _scheduled[i];
+                DeliveredNotification e = _scheduled[i];
                 if (e.FireAtUtc > now)
                 {
                     continue;
@@ -203,7 +201,7 @@ namespace AF.Platform.Notifications
 
                 if (allowed && AndroidNotificationCenter.CheckScheduledNotificationStatus(e.Id) != NotificationStatus.Scheduled)
                 {
-                    _delivered.Add(new DeliveredNotification(e.Id, e.Type, e.FireAtUtc));
+                    _delivered.Add(e);
                 }
 
                 _scheduled.RemoveAt(i);
@@ -243,57 +241,13 @@ namespace AF.Platform.Notifications
         private void Load()
         {
             _scheduled.Clear();
-            string raw = PlayerPrefs.GetString(PrefsKey, string.Empty);
-            if (raw.Length == 0)
-            {
-                return;
-            }
-
-            foreach (string item in raw.Split(';'))
-            {
-                string[] parts = item.Split(':');
-                if (parts.Length == 3
-                    && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int id)
-                    && long.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out long ticks)
-                    && parts[1].Length > 0 && ticks > 0 && ticks <= DateTime.MaxValue.Ticks)
-                {
-                    _scheduled.Add(new Entry(id, parts[1], new DateTime(ticks, DateTimeKind.Utc)));
-                }
-            }
+            ScheduledNotificationLog.Parse(PlayerPrefs.GetString(PrefsKey, string.Empty), _scheduled);
         }
 
         private void Save()
         {
-            var sb = new StringBuilder();
-            for (int i = 0; i < _scheduled.Count; i++)
-            {
-                if (i > 0)
-                {
-                    sb.Append(';');
-                }
-
-                sb.Append(_scheduled[i].Id.ToString(CultureInfo.InvariantCulture)).Append(':').Append(_scheduled[i].Type).Append(':')
-                    .Append(_scheduled[i].FireAtUtc.Ticks.ToString(CultureInfo.InvariantCulture));
-            }
-
-            PlayerPrefs.SetString(PrefsKey, sb.ToString());
+            PlayerPrefs.SetString(PrefsKey, ScheduledNotificationLog.Format(_scheduled));
             PlayerPrefs.Save();
-        }
-
-        private readonly struct Entry
-        {
-            public Entry(int id, string type, DateTime fireAtUtc)
-            {
-                Id = id;
-                Type = type;
-                FireAtUtc = fireAtUtc;
-            }
-
-            public int Id { get; }
-
-            public string Type { get; }
-
-            public DateTime FireAtUtc { get; }
         }
     }
 }
