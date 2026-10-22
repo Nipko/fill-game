@@ -3643,3 +3643,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - pone la tienda simulada y el backend falso en toda la sesión, así que no sirve para probar App Check ni el borrado real;
   - documentado en `docs/dev/prototipo-v0.md`.
 - **Regla nueva de `tools/loc/apply_translations.py`:** una traducción con menos U+00A0 entre cifra o marcador y su unidad que el es-419 es un conflicto. La excepción es el «%», que en en y pt va pegado.
+
+### D-040, añadido del 2026-10-23: preguntas abiertas del plugin propio de Play Billing (Q-BILL-2 a Q-BILL-5)
+
+- **Estado:** integradas con `spark/t5-billing`, con la revisión APROBADO tras corregir el GDD. La recomendada va aplicada donde la hay. Detalle en `docs/dev/iap.md` §4.1.
+- **Q-BILL-2 · Registros de diagnóstico de la biblioteca a Google:** se declaran en la fila «Google Play Billing» de 08 §13.3 [E]. Pendiente del abogado.
+- **Q-BILL-3 · Una sola oferta por producto:** la configura el dueño en Play Console.
+- **Q-BILL-4 · Compras de varias unidades:** el plugin salta las que traen `getQuantity() != 1`. No se acreditan ni se reconocen, y Play las reembolsa. El dueño no activa las varias unidades en Play Console.
+- **Q-BILL-5 · `sec_purchase_deferred_ack_h`:** la recomendada es bajarlo de 72 a 48 h en 08 §9 y regenerar los defaults. Con 72 h, el reconocimiento local puede llegar tarde, en el mismo plazo en que Play reembolsa. Se aplica en una tarea aparte (regla «si tienen recomendada, vamos con esa»).
+- **Sin probar:** la compra real por JNI en un teléfono, con el modo de ensayo de `iap.md` §3. Hace falta antes de cualquier release, con los productos `af_*` dados de alta en Play Console (D-034).
+

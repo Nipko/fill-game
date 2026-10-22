@@ -286,6 +286,8 @@ y en la cabecera del workflow, junto a `check-release-classes`, la compuerta nue
 
 ## 7. Riesgos
 
+- **Reloj del dispositivo y `deferred_ack`:** el plazo de 72 h se mide con el reloj del teléfono frente al `purchaseTime` de Play. Con el reloj adelantado, el reconocimiento local puede llegar antes de tiempo. Nunca acredita, así que no hay riesgo de dinero.
+
 - **Hoja de Play sin respuesta**: si Play nunca responde a una compra y el servicio no se cae (proceso de la Play Store colgado), la tienda queda «comprando» hasta reiniciar la app; al reiniciar, lo cobrado vuelve sin terminar y se acredita una vez. Si se cae el servicio, la hoja espera su respuesta, y si al reconectar sigue sin ella, falla (§1.4): si Play había cobrado, el jugador ve un fallo y la compra se acredita después sin el contexto de la hoja.
 - **Aviso OK vacío con la hoja abierta**: si Play mandara, con nuestra hoja abierta, un aviso OK sin ninguna compra utilizable que no fuera su respuesta, la hoja fallaría y su cobro llegaría después por la consulta, sin el contexto de la compra (Cántaro, Cuia de rescate): se acredita una vez con el contenido mínimo del catálogo. Muy raro.
 - **Re-pedir el `deferred_ack` con la lista de antes del `Refresh`**: `ResumeBackend` llama a `Refresh` (asíncrono) y en seguida a `Resume`, que vuelve a pedir el reconocimiento con lo que el puerto sabía antes de la consulta: como mucho, una llamada de más a `acknowledgePurchase` de algo que Play ya reconoció (inofensiva).
