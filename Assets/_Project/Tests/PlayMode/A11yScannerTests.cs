@@ -125,6 +125,43 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator CanvasesWithTheSameOrder_AreOneGroup_AndAVeilInItHidesWhatIsBelow()
+        {
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(4)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            var veilGo = new GameObject("A11yVeil50", typeof(RectTransform), typeof(Canvas));
+            var buttonGo = new GameObject("A11yButton50", typeof(RectTransform), typeof(Canvas));
+            try
+            {
+                // Dos lienzos con el mismo sortingOrder (Unity no fija cuál va encima): uno con un velo, otro con un botón.
+                foreach (GameObject g in new[] { veilGo, buttonGo })
+                {
+                    Canvas c = g.GetComponent<Canvas>();
+                    c.renderMode = RenderMode.ScreenSpaceOverlay;
+                    c.sortingOrder = 50;
+                    g.AddComponent<GraphicRaycaster>();
+                }
+
+                UiBuilder.Stretch(UiBuilder.Image("Veil", veilGo.transform, null, new Color(0f, 0f, 0f, 0.5f), raycast: true).rectTransform);
+                Button button = UiBuilder.BareButton("Probe", buttonGo.transform, () => { });
+                UiBuilder.Place((RectTransform)button.transform, 40f, 40f, 120f, 60f);
+                A11yLabels.Set(button, () => "sonda");
+                yield return null;
+
+                var host = new FakeScreenReaderHost(true);
+                var service = new A11yService(host);
+                service.Refresh();
+                Assert.That(host.Find("sonda"), Is.Not.Null, "el grupo del mismo orden se publica entero");
+                Assert.That(Has(host.Items, AccessibilityRole.Button, boot.Lobby!.PlayLabel), Is.False, "y tapa lo de debajo");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(veilGo);
+                UnityEngine.Object.Destroy(buttonGo);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator UnityHost_AnOldNodeDoesNothing_AndAnInPlaceUpdateUsesTheNewItem()
         {
             var go = new GameObject("A11yHostCanvas", typeof(RectTransform), typeof(Canvas));
@@ -259,6 +296,15 @@ namespace AF.Tests.PlayMode
             UnityEngine.Object.DestroyImmediate(veil);
             service.Refresh();
             Assert.That(FindId(host.Items, "cuia_0"), Is.Not.Null);
+
+            // Con el mismo sortingOrder que el lienzo del tablero también tapa (Unity no fija cuál de los dos va encima).
+            var tie = new GameObject("A11yTieCanvas", typeof(RectTransform), typeof(Canvas));
+            tie.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            tie.GetComponent<Canvas>().sortingOrder = boot.View.Canvas.sortingOrder;
+            UiBuilder.Stretch(UiBuilder.Image("Veil", tie.transform, null, new Color(0f, 0f, 0f, 0.5f), raycast: true).rectTransform);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(items[1].Invoke!(), Is.False, "un velo del mismo orden cuenta como tapa");
+            UnityEngine.Object.DestroyImmediate(tie);
 
             Assert.That(items[0].Invoke!(), Is.True);
             Assert.That(boot.Flow!.Selected, Is.EqualTo(0), "activar la cuia 1 la selecciona (C1), como el dedo");

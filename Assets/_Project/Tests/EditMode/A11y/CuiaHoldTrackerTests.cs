@@ -157,26 +157,28 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void WithNoOtherContactOnScreen_LostFingersAreForgotten()
+        public void TheSameFingerComingBack_ForgetsItsOldGesture_AndSaysSo()
         {
-            // En el teléfono el Input System no repite ids: un touch-up perdido se descubre porque el dispositivo dice que no hay
-            // nadie más tocando (othersDown = 0).
             var hold = new CuiaHoldTracker();
             hold.Press(1, 7, At);
             Assert.That(hold.Tick(400f), Is.True); // nombres de la cuia 1; su touch-up se pierde
-            Assert.That(hold.Press(2, 8, At, othersDown: 0), Is.True, "olvida el gesto viejo (y quien llama quita sus nombres)");
+            Assert.That(hold.Press(2, 7, At), Is.True, "olvida el gesto viejo (y quien llama quita sus nombres)");
             Assert.That(hold.Swallows(1), Is.False, "la cuia 1 vuelve a aceptar toques");
-            Assert.That(hold.Tick(400f), Is.True, "C9 funciona con el dedo nuevo");
+            Assert.That(hold.Tick(400f), Is.True);
             Assert.That(hold.Index, Is.EqualTo(2));
         }
 
         [Test]
-        public void WithAnotherContactOnScreen_C11Holds()
+        public void AResetAfterALostRelease_LetsC9WorkAgain()
         {
+            // Un touch-up perdido de otro id (la cuia se destruyó o la pantalla se ocultó con el dedo abajo): lo cubre el Reset de
+            // GameScreen al construir el tablero, al ocultarse o al volver de segundo plano.
             var hold = new CuiaHoldTracker();
             hold.Press(1, 7, At);
-            Assert.That(hold.Press(2, 8, At, othersDown: 1), Is.False);
-            Assert.That(hold.Tick(1000f), Is.False, "C11: dos dedos de verdad, sin nombres");
+            hold.Press(4, 8, At);
+            hold.Reset();
+            hold.Press(2, 9, At);
+            Assert.That(hold.Tick(400f), Is.True);
         }
 
         [Test]

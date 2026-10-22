@@ -57,7 +57,6 @@ namespace AF.UI
         private readonly List<A11yItem> _canvasItems = new List<A11yItem>();
         private readonly List<List<A11yItem>> _layers = new List<List<A11yItem>>();
         private readonly List<RectMask2D> _masks = new List<RectMask2D>();
-        private bool _groupBlocks;
 
         /// <summary>Elementos sin etiqueta encontrados en el último recorrido (botones de solo icono sin registrar; tests y sonda).</summary>
         public int Unlabeled { get; private set; }
@@ -88,7 +87,7 @@ namespace AF.UI
             into.Clear();
             Unlabeled = 0;
             RootCanvases(_canvases);
-            _groupBlocks = false;
+            bool groupBlocks = false;
             int layers = 0;
             for (int c = 0; c < _canvases.Count; c++)
             {
@@ -107,16 +106,16 @@ namespace AF.UI
                 }
 
                 bool blocks = claimed ? HasBlocker(canvas) : CollectGeneric(canvas, null, layer);
-                _groupBlocks |= blocks;
+                groupBlocks |= blocks;
                 bool groupEnds = c + 1 >= _canvases.Count || _canvases[c + 1].sortingOrder != canvas.sortingOrder;
                 if (groupEnds)
                 {
-                    if (_groupBlocks)
+                    if (groupBlocks)
                     {
                         break;
                     }
 
-                    _groupBlocks = false;
+                    groupBlocks = false;
                 }
             }
 
@@ -223,10 +222,7 @@ namespace AF.UI
             }
         }
 
-        /// <summary>
-        /// Como <see cref="Covered"/>, con los lienzos de encima ya buscados (<see cref="CanvasesAbove"/>): sin asignar, para mirarlo
-        /// en cada fotograma mientras se ven los nombres de C9.
-        /// </summary>
+        /// <summary>Como <see cref="Covered"/>, con los lienzos de encima ya buscados (<see cref="CanvasesAbove"/>), sin asignar.</summary>
         public static bool CoveredBy(Canvas canvas, Transform marker, List<Canvas> above)
         {
             if (BlockedAbove(canvas, marker))
@@ -307,7 +303,7 @@ namespace AF.UI
             return b.sortingOrder.CompareTo(a.sortingOrder);
         }
 
-        // Los lienzos raíz activos, de arriba abajo (sortingOrder mayor primero; empate, el último creado encima).
+        // Los lienzos raíz activos, de arriba abajo por sortingOrder (los de un mismo orden van juntos: Scan los trata como grupo).
         private static void RootCanvases(List<Canvas> into)
         {
             into.Clear();

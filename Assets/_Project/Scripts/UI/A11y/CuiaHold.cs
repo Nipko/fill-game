@@ -55,20 +55,14 @@ namespace AF.UI
         public bool AnyDown => _down.Count > 0;
 
         /// <summary>
-        /// Un dedo <paramref name="pointer"/> baja en la cuia <paramref name="index"/>, en <paramref name="positionDp"/> (dp).
-        /// <paramref name="othersDown"/> son los otros contactos que el dispositivo tiene de verdad en pantalla (−1 si no se sabe): con
-        /// 0, cualquier dedo que siguiera contado aquí perdió su touch-up (el Input System no repite ids), y se olvida. Devuelve true si
-        /// olvidó un gesto anterior (quien llama oculta sus nombres).
+        /// Un dedo <paramref name="pointer"/> baja en la cuia <paramref name="index"/>, en <paramref name="positionDp"/> (dp). Devuelve
+        /// true si olvidó un gesto anterior del mismo dedo (su touch-up se perdió; quien llama oculta sus nombres). Los touch-ups que se
+        /// pierden de verdad (la cuia se destruye o el lienzo se oculta con el dedo abajo, la app va a segundo plano) los cubre quien
+        /// llama con <see cref="Reset"/>: al construir el tablero, al ocultar la pantalla y al volver de segundo plano.
         /// </summary>
-        public bool Press(int index, int pointer, Vector2 positionDp, int othersDown = -1)
+        public bool Press(int index, int pointer, Vector2 positionDp)
         {
             bool stale = false;
-            if (othersDown == 0 && _down.Count > 0)
-            {
-                Reset(); // nadie más toca la pantalla: lo contado era de touch-ups perdidos
-                stale = true;
-            }
-
             if (_down.Remove(pointer) && pointer == _pointer)
             {
                 // El dedo que se seguía vuelve a bajar: su touch-up se perdió (el lienzo se ocultó, el sistema canceló el toque).
