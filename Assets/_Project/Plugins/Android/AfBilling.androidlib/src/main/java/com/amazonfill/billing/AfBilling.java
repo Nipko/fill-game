@@ -41,6 +41,11 @@ import java.util.Map;
  */
 public final class AfBilling implements PurchasesUpdatedListener {
     private static final int OK = BillingClient.BillingResponseCode.OK;
+    /** Espera a que termine una reconexión automática de la biblioteca: hasta 60 vueltas de 500 ms (30 s). */
+    private static final int RECONNECT_POLLS = 60;
+    private static final long RECONNECT_POLL_MS = 500L;
+    /** Antes de abrir la hoja sin conexión: hasta 10 vueltas de 500 ms (5 s). */
+    private static final int LAUNCH_POLLS = 10;
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final Context context;
@@ -48,6 +53,8 @@ public final class AfBilling implements PurchasesUpdatedListener {
     private final Map<String, ProductDetails> details = new HashMap<>();
     private BillingClient client;
     private boolean connecting;
+    private boolean waitingReconnect;
+    private int latestProductsRequest;
     private boolean released;
 
     /**
@@ -89,38 +96,66 @@ public final class AfBilling implements PurchasesUpdatedListener {
                 return;
             }
 
-            if (connecting) {
+            if (connecting || waitingReconnect) {
                 return; // la respuesta de la conexión en curso vale para todos los que esperan
             }
 
-            connecting = true;
-            try {
-                client.startConnection(new BillingClientStateListener() {
-                    @Override
-                    public void onBillingSetupFinished(BillingResult result) {
-                        main.post(() -> {
-                            connecting = false;
-                            if (!released) {
-                                listener.onSetupFinished(code(result));
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onBillingServiceDisconnected() {
-                        main.post(() -> {
-                            connecting = false;
-                            if (!released) {
-                                listener.onDisconnected();
-                            }
-                        });
-                    }
-                });
-            } catch (RuntimeException e) {
-                connecting = false;
-                listener.onSetupFinished(BillingClient.BillingResponseCode.ERROR);
-            }
+            startOrWait(0);
         });
+    }
+
+    private void startOrWait(final int polls) {
+        waitingReconnect = false;
+        if (released) {
+            return;
+        }
+
+        if (client.isReady()) {
+            listener.onSetupFinished(OK);
+            return;
+        }
+
+        if (client.getConnectionState() == BillingClient.ConnectionState.CONNECTING) {
+            // La biblioteca ya se está reconectando sola (enableAutoServiceReconnection): otro startConnection respondería
+            // DEVELOPER_ERROR. Se espera a que termine (una sola espera para todos); si no termina a tiempo, se responde «sin
+            // servicio» (el próximo Refresh lo vuelve a intentar).
+            if (polls < RECONNECT_POLLS) {
+                waitingReconnect = true;
+                main.postDelayed(() -> startOrWait(polls + 1), RECONNECT_POLL_MS);
+            } else {
+                listener.onSetupFinished(BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE);
+            }
+
+            return;
+        }
+
+        connecting = true;
+        try {
+            client.startConnection(new BillingClientStateListener() {
+                @Override
+                public void onBillingSetupFinished(BillingResult result) {
+                    main.post(() -> {
+                        connecting = false;
+                        if (!released) {
+                            listener.onSetupFinished(code(result));
+                        }
+                    });
+                }
+
+                @Override
+                public void onBillingServiceDisconnected() {
+                    main.post(() -> {
+                        connecting = false;
+                        if (!released) {
+                            listener.onDisconnected();
+                        }
+                    });
+                }
+            });
+        } catch (RuntimeException e) {
+            connecting = false;
+            listener.onSetupFinished(BillingClient.BillingResponseCode.ERROR);
+        }
     }
 
     /**
@@ -134,6 +169,8 @@ public final class AfBilling implements PurchasesUpdatedListener {
             }
 
             create();
+            latestProductsRequest = requestId;
+            details.clear(); // solo se vende lo que Play devuelva a esta consulta
             List<QueryProductDetailsParams.Product> products = new ArrayList<>();
             for (String sku : lines(skus)) {
                 products.add(QueryProductDetailsParams.Product.newBuilder()
@@ -163,6 +200,11 @@ public final class AfBilling implements PurchasesUpdatedListener {
         }
 
         int code = code(result);
+        if (requestId != latestProductsRequest) {
+            listener.onProducts(requestId, code, null); // una consulta anterior: C# ya no la espera y no toca los productos
+            return;
+        }
+
         if (code != OK || found == null) {
             listener.onProducts(requestId, code == OK ? BillingClient.BillingResponseCode.ERROR : code, null);
             return;
@@ -218,45 +260,55 @@ public final class AfBilling implements PurchasesUpdatedListener {
      * {@link #onPurchasesUpdated}; si la hoja no se abre, por {@link AfBillingListener#onLaunchFailed}.
      */
     public void launch(final Activity activity, final String sku, final String obfuscatedAccountId) {
-        main.post(() -> {
-            if (released) {
-                return;
+        main.post(() -> launchWhenReady(activity, sku, obfuscatedAccountId, 0));
+    }
+
+    private void launchWhenReady(final Activity activity, final String sku, final String obfuscatedAccountId, final int polls) {
+        if (released) {
+            return;
+        }
+
+        create();
+        if (!client.isReady() && polls < LAUNCH_POLLS) {
+            // Sin conexión (el servicio se cayó): la biblioteca se reconecta sola; se espera un poco antes de abrir la hoja, para no
+            // responder SERVICE_DISCONNECTED mientras se reconecta. Si no llega, launchBillingFlow responde con su código.
+            if (client.getConnectionState() == BillingClient.ConnectionState.DISCONNECTED && !connecting && !waitingReconnect) {
+                startOrWait(0);
             }
 
-            create();
-            ProductDetails pd = sku == null ? null : details.get(sku);
-            if (pd == null || activity == null) {
-                listener.onLaunchFailed(sku, BillingClient.BillingResponseCode.ITEM_UNAVAILABLE);
-                return;
+            main.postDelayed(() -> launchWhenReady(activity, sku, obfuscatedAccountId, polls + 1), RECONNECT_POLL_MS);
+            return;
+        }
+
+        ProductDetails pd = sku == null ? null : details.get(sku);
+        if (pd == null || activity == null) {
+            listener.onLaunchFailed(sku, BillingClient.BillingResponseCode.ITEM_UNAVAILABLE);
+            return;
+        }
+
+        // Si tras la espera sigue sin conexión, launchBillingFlow (con enableAutoServiceReconnection) lo intenta; si no puede, devuelve
+        // el código del fallo y la hoja no se abre.
+        try {
+            BillingFlowParams.ProductDetailsParams.Builder product =
+                    BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(pd);
+            ProductDetails.OneTimePurchaseOfferDetails offer = pd.getOneTimePurchaseOfferDetails();
+            if (offer != null && offer.getOfferToken() != null && !offer.getOfferToken().isEmpty()) {
+                product.setOfferToken(offer.getOfferToken()); // la oferta cuyo precio enseña el Mercado
             }
 
-            if (!client.isReady()) {
-                listener.onLaunchFailed(sku, BillingClient.BillingResponseCode.SERVICE_DISCONNECTED);
-                return;
+            BillingFlowParams.Builder flow = BillingFlowParams.newBuilder()
+                    .setProductDetailsParamsList(Collections.singletonList(product.build()));
+            if (obfuscatedAccountId != null && !obfuscatedAccountId.isEmpty()) {
+                flow.setObfuscatedAccountId(obfuscatedAccountId);
             }
 
-            try {
-                BillingFlowParams.ProductDetailsParams.Builder product =
-                        BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(pd);
-                ProductDetails.OneTimePurchaseOfferDetails offer = pd.getOneTimePurchaseOfferDetails();
-                if (offer != null && offer.getOfferToken() != null && !offer.getOfferToken().isEmpty()) {
-                    product.setOfferToken(offer.getOfferToken()); // la oferta cuyo precio enseña el Mercado
-                }
-
-                BillingFlowParams.Builder flow = BillingFlowParams.newBuilder()
-                        .setProductDetailsParamsList(Collections.singletonList(product.build()));
-                if (obfuscatedAccountId != null && !obfuscatedAccountId.isEmpty()) {
-                    flow.setObfuscatedAccountId(obfuscatedAccountId);
-                }
-
-                int code = code(client.launchBillingFlow(activity, flow.build()));
-                if (code != OK) {
-                    listener.onLaunchFailed(sku, code);
-                }
-            } catch (RuntimeException e) {
-                listener.onLaunchFailed(sku, BillingClient.BillingResponseCode.ERROR);
+            int code = code(client.launchBillingFlow(activity, flow.build()));
+            if (code != OK) {
+                listener.onLaunchFailed(sku, code);
             }
-        });
+        } catch (RuntimeException e) {
+            listener.onLaunchFailed(sku, BillingClient.BillingResponseCode.ERROR);
+        }
     }
 
     /** Consume un consumible ya acreditado; responde con {@link AfBillingListener#onConsumed}. */
@@ -354,6 +406,9 @@ public final class AfBilling implements PurchasesUpdatedListener {
 
             List<String> products = p.getProducts();
             String sku = products == null || products.size() != 1 ? null : products.get(0); // compras de un solo producto
+            if (p.getQuantity() != 1) {
+                continue; // varias unidades: no se acredita ni se termina (Q-BILL-4; sin reconocer, Play la reembolsa)
+            }
             String token = p.getPurchaseToken();
             int state = p.getPurchaseState();
             if (!clean(sku) || !clean(token)

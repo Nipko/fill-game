@@ -60,10 +60,10 @@ namespace AF.IAP
     /// después por <see cref="UnfinishedChanged"/> sin el contexto de la compra abierta.</item>
     /// <item><see cref="Finish"/> hace <see cref="IPlayStorePort.Confirm"/> (consume o reconoce) solo de un pedido que tiene; nunca antes de acreditar
     /// (lo garantiza quien llama). Si Play no lo terminó y vuelve como cobrado, se vuelve a pedir (ya acreditado: solo se termina).</item>
-    /// <item><see cref="AcknowledgeLocal"/> (<c>deferred_ack</c>, 08 §10.3): reconoce sin consumir, una vez. Con un no consumible,
-    /// <see cref="IPlayStorePort.Confirm"/> (que solo reconoce); con un consumible, <see cref="IPlayStorePort.Acknowledge"/>
-    /// (<c>acknowledgePurchase</c>), y el pedido sigue cobrado hasta que <see cref="Finish"/> lo consuma tras acreditar (D-040, añadido de
-    /// Q-IAP-1: Q-IAP-2 se reabre; <c>docs/dev/iap.md</c>).</item>
+    /// <item><see cref="AcknowledgeLocal"/> (<c>deferred_ack</c>, 08 §10.3): <see cref="IPlayStorePort.Acknowledge"/>
+    /// (<c>acknowledgePurchase</c>), también con un consumible, que sigue cobrado hasta que <see cref="Finish"/> lo consuma tras
+    /// acreditar (D-040, añadido de Q-IAP-1: Q-IAP-2 se reabre; <c>docs/dev/iap.md</c>). Se puede repetir: el puerto no repite lo ya
+    /// reconocido.</item>
     /// <item>Precios: los de la tienda (importe y moneda; D-025, punto 3 [P]); mientras no lleguen, o si la moneda no se puede escribir o
     /// el precio no es positivo, los de 05 §4.2 en <c>fallbackCurrency</c>, y ese SKU no se vende (<see cref="CanSell"/>,
     /// <see cref="BillingReadyStoreService"/>).</item>
@@ -82,6 +82,7 @@ namespace AF.IAP
         private readonly Dictionary<string, LocalPrice> _prices = new Dictionary<string, LocalPrice>(StringComparer.Ordinal);
         private readonly List<Tracked> _unfinished = new List<Tracked>();
         private readonly HashSet<string> _finished = new HashSet<string>(StringComparer.Ordinal);
+        private readonly HashSet<string> _ackRejected = new HashSet<string>(StringComparer.Ordinal);
         private Open? _open;
         private int _generation;
         private bool _disposed;
@@ -142,9 +143,10 @@ namespace AF.IAP
         public event Action? StateChanged;
 
         /// <summary>
-        /// Veces que un <c>deferred_ack</c> no se pudo pedir a Play (el puerto ya no tenía el pedido cobrado). Con el plugin propio el
-        /// consumible también se reconoce sin consumir, así que solo sube si el puerto lo rechaza (antes contaba lo que Unity IAP 5.4.4 no
-        /// permitía; Q-IAP-2).
+        /// Pedidos cuyo <c>deferred_ack</c> rechazó el puerto alguna vez en la sesión (no tenía el pedido cobrado o el plugin falló), uno
+        /// por pedido aunque después se reconozca. Se queda con su nombre para
+        /// no cambiar el contrato (D-040, añadido de Q-IAP-1); con Unity IAP 5.4.4 contaba los consumibles, que no se podían reconocer sin
+        /// consumir (Q-IAP-2), y con el plugin propio eso ya no pasa.
         /// </summary>
         public int AcknowledgeUnsupported { get; private set; }
 
@@ -322,35 +324,13 @@ namespace AF.IAP
                 return;
             }
 
-            if (TypeOf(product) == PlayProductType.NonConsumable)
+            // Reconocer sin consumir (acknowledgePurchase), también un consumible: nunca se consume sin acreditar. Sigue cobrado y en la
+            // cola; Finish lo termina (consume o da por terminado) cuando el servidor lo verifique. Se puede pedir más de una vez
+            // (VerifiedStoreService.Resume lo vuelve a pedir si Play aún no lo reconoció): el puerto no repite lo ya reconocido ni lo
+            // que está en vuelo.
+            if (!_port.Acknowledge(token) && _ackRejected.Add(token))
             {
-                // Reconocer un no consumible es terminarlo (Confirm): Play ya no lo reembolsa y sigue en la cola hasta que el servidor responda.
-                if (_port.Confirm(token))
-                {
-                    t.State = PlayOrderState.Confirmed;
-                }
-                else
-                {
-                    AcknowledgeUnsupported++;
-                }
-
-                return;
-            }
-
-            // Consumible: reconocer sin consumir (acknowledgePurchase); nunca se consume sin acreditar. Sigue cobrado (Purchased) y en la
-            // cola: Finish lo consumirá cuando el servidor lo verifique.
-            if (t.AcknowledgedLocally)
-            {
-                return;
-            }
-
-            if (_port.Acknowledge(token))
-            {
-                t.AcknowledgedLocally = true;
-            }
-            else
-            {
-                AcknowledgeUnsupported++;
+                AcknowledgeUnsupported++; // una vez por pedido, aunque Resume lo vuelva a pedir
             }
         }
 
@@ -694,9 +674,6 @@ namespace AF.IAP
             public string Token { get; }
 
             public PlayOrderState State { get; set; }
-
-            /// <summary>Consumible ya reconocido sin consumir (<c>deferred_ack</c>) en esta sesión: no se vuelve a pedir.</summary>
-            public bool AcknowledgedLocally { get; set; }
 
             /// <summary>Llegó por una consulta con la hoja de su SKU abierta: no se ofrece a la cola hasta que la hoja responda.</summary>
             public bool AwaitingOpen { get; set; }

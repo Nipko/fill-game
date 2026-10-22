@@ -89,6 +89,8 @@ namespace AF.IAP.Tests
     {
         private readonly List<Action> _queued = new List<Action>();
         private readonly HashSet<string> _seenPurchased = new HashSet<string>(StringComparer.Ordinal);
+        private readonly HashSet<string> _seenAcknowledged = new HashSet<string>(StringComparer.Ordinal); // no consumibles reconocidos vistos
+        private readonly HashSet<string> _fetched = new HashSet<string>(StringComparer.Ordinal); // SKU pedidos a esta sesión (FetchProducts)
         private string? _openSku;
         private string? _openAccountId;
 
@@ -123,7 +125,10 @@ namespace AF.IAP.Tests
 
         public List<string> Confirmed { get; } = new List<string>();
 
-        /// <summary>Tokens que <see cref="Acknowledge"/> reconoció sin consumir.</summary>
+        /// <summary><see cref="Acknowledge"/> se pide (true) pero Play no lo hace: el pedido sigue sin reconocer.</summary>
+        public bool FailAcknowledge { get; set; }
+
+        /// <summary>Tokens que se pidió reconocer sin consumir (<see cref="Acknowledge"/>), uno por petición que llegó a Play.</summary>
         public List<string> Acknowledged { get; } = new List<string>();
 
         /// <summary>Se llama justo antes de terminar un pedido en Play (para mirar qué había en disco en ese momento).</summary>
@@ -176,6 +181,7 @@ namespace AF.IAP.Tests
             for (int i = 0; i < products.Count; i++)
             {
                 Account.Types[products[i].Sku] = products[i].Type;
+                _fetched.Add(products[i].Sku);
             }
 
             Run(() =>
@@ -257,6 +263,11 @@ namespace AF.IAP.Tests
 
         public bool Confirm(string token)
         {
+            if (!CrashOnConfirm && _seenAcknowledged.Contains(token) && _fetched.Contains(Account.Orders[token].Sku))
+            {
+                return true; // como el puerto real: un no consumible ya reconocido que vio y cuyo tipo conoce está terminado
+            }
+
             if (CrashOnConfirm || !_seenPurchased.Contains(token) || !Account.Orders.TryGetValue(token, out FakePlayEntry? entry))
             {
                 return false;
@@ -276,6 +287,11 @@ namespace AF.IAP.Tests
             _seenPurchased.Remove(token);
             Confirmed.Add(token);
             entry.State = Account.IsConsumable(entry.Sku) ? FakePlayState.Consumed : FakePlayState.Acknowledged;
+            if (entry.State == FakePlayState.Acknowledged)
+            {
+                _seenAcknowledged.Add(token);
+            }
+
             return true;
         }
 
@@ -285,13 +301,27 @@ namespace AF.IAP.Tests
         /// </summary>
         public bool Acknowledge(string token)
         {
-            if (CrashOnConfirm || !_seenPurchased.Contains(token) || !Account.Orders.TryGetValue(token, out FakePlayEntry? entry)
-                || entry.State != FakePlayState.Purchased)
+            if (CrashOnConfirm || !Account.Orders.TryGetValue(token, out FakePlayEntry? entry))
+            {
+                return false;
+            }
+
+            if ((entry.AcknowledgedOnly && _seenPurchased.Contains(token)) || _seenAcknowledged.Contains(token))
+            {
+                return true; // ya reconocido y visto en esta sesión: como el puerto real, no se repite
+            }
+
+            if (!_seenPurchased.Contains(token) || entry.State != FakePlayState.Purchased)
             {
                 return false;
             }
 
             Acknowledged.Add(token);
+            if (FailAcknowledge)
+            {
+                return true; // pedido, pero Play no lo hizo (sin red)
+            }
+
             if (Account.IsConsumable(entry.Sku))
             {
                 entry.AcknowledgedOnly = true;
@@ -299,6 +329,7 @@ namespace AF.IAP.Tests
             else
             {
                 _seenPurchased.Remove(token);
+                _seenAcknowledged.Add(token);
                 entry.State = FakePlayState.Acknowledged;
             }
 
@@ -360,6 +391,7 @@ namespace AF.IAP.Tests
                         list.Add(new PlayOrder(e.Sku, e.Token, PlayOrderState.PaymentPending));
                         break;
                     case FakePlayState.Acknowledged:
+                        _seenAcknowledged.Add(e.Token);
                         list.Add(new PlayOrder(e.Sku, e.Token, PlayOrderState.Confirmed));
                         break;
                 }

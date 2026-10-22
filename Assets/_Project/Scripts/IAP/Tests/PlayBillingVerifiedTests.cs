@@ -374,6 +374,47 @@ namespace AF.IAP.Tests
             Assert.That(next.Billing.UnfinishedTransactions(), Is.Empty);
         }
 
+        [Test]
+        public void DeferredAck_ThatPlayDidNotDo_IsAskedAgainOnResume_InThisSessionAndTheNext_WithoutCrediting()
+        {
+            // 08 §10.3: el acknowledge local evita el reembolso automático. Si Play no lo hizo (sin red), se vuelve a pedir al volver a
+            // primer plano y en el arranque siguiente; nunca se consume ni se acredita sin el servidor (D-035).
+            Session s = NewSession();
+            s.Backend.FailNext(BackendError.Network("offline"), 100000);
+            s.Port.FailAcknowledge = true;
+            Assert.That(s.Buy("af_coins_3").Status, Is.EqualTo(PurchaseStatus.Pending));
+            for (int hour = 0; hour < 80; hour++)
+            {
+                s.Clock.Advance(TimeSpan.FromHours(1));
+                s.Verified.Pump();
+            }
+
+            string token = FakePlayAccount.Token(1);
+            Assert.That(s.Port.Acknowledged, Is.EqualTo(new[] { token }), "se pidió una vez");
+            Assert.That(s.Account.Orders[token].AcknowledgedOnly, Is.False, "Play no lo hizo");
+
+            s.Billing.Refresh(); // vuelta a primer plano: la consulta y el Resume del juego
+            s.Verified.Resume();
+            Assert.That(s.Port.Acknowledged, Is.EqualTo(new[] { token, token }), "se vuelve a pedir");
+
+            Session next = s.Reopen(); // arranque siguiente, ya con red para Play
+            next.Port.FailAcknowledge = false;
+            next.Verified.Resume();
+            Assert.That(next.Port.Acknowledged, Is.EqualTo(new[] { token }));
+            Assert.That(next.Account.Orders[token].AcknowledgedOnly, Is.True, "reconocido sin consumir");
+            Assert.That(next.Account.StateOf(token), Is.EqualTo(FakePlayState.Purchased));
+            next.Verified.Resume();
+            Assert.That(next.Port.Acknowledged, Has.Count.EqualTo(1), "ya reconocido: no se repite");
+            Assert.That(next.Wallet.Seeds, Is.EqualTo(0), "el deferred_ack no acredita");
+            Assert.That(next.Port.Confirmed, Is.Empty, "ni consume");
+
+            s.Backend.ClearFailures();
+            next.Clock.Advance(TimeSpan.FromHours(6));
+            next.Verified.Pump();
+            Assert.That(next.Wallet.Seeds, Is.EqualTo(2800), "acreditado una vez al verificar");
+            Assert.That(next.Port.Confirmed, Is.EqualTo(new[] { token }), "y después consumido");
+        }
+
         // ------------------------------------------------------------------ restauración
 
         [Test]

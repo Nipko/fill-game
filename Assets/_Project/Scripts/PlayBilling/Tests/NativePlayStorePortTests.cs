@@ -148,7 +148,10 @@ namespace AF.IAP.PlayBilling.Tests
             Assert.That(orders[0].PurchasedUtc, Is.EqualTo(DateTimeOffset.FromUnixTimeMilliseconds(1792000000000L).UtcDateTime));
             Assert.That(orders[0].PurchasedUtc!.Value.Kind, Is.EqualTo(DateTimeKind.Utc));
             Assert.That(orders[4].PurchasedUtc, Is.Null, "purchaseTime 0: sin hora");
-            Assert.That(port.KnownPurchases, Is.EqualTo(3), "solo lo cobrado sin terminar se puede terminar");
+            Assert.That(port.KnownPurchases, Is.EqualTo(4), "lo cobrado sin terminar y el no consumible ya reconocido");
+            Assert.That(port.Acknowledge("tok.4"), Is.True, "ya reconocido: hecho, sin pedirlo otra vez");
+            Assert.That(port.Confirm("tok.4"), Is.True);
+            Assert.That(bridge.Acknowledges, Is.Empty);
         }
 
         [Test]
@@ -216,10 +219,16 @@ namespace AF.IAP.PlayBilling.Tests
             port.PurchaseFailed += (sku, kind) => failures.Add(new KeyValuePair<string?, PlayFailureKind>(sku, kind));
 
             ((IBillingBridgeListener)port).OnPurchasesUpdated(code, null);
+            Assert.That(failures, Is.Empty, "sin hoja abierta, un error en vivo no responde a nada");
+
+            port.Purchase("af_coins_2", null);
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(code, null);
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(code, null);
+            port.Purchase("af_noads", null);
             ((IBillingBridgeListener)port).OnLaunchFailed("af_noads", code);
 
-            Assert.That(failures, Has.Count.EqualTo(2));
-            Assert.That(failures[0].Key, Is.Null, "Play no dice el SKU: es la hoja abierta");
+            Assert.That(failures, Has.Count.EqualTo(2), "una respuesta por hoja");
+            Assert.That(failures[0].Key, Is.EqualTo("af_coins_2"), "Play no dice el SKU: es el de la hoja abierta");
             Assert.That(failures[0].Value, Is.EqualTo(expected));
             Assert.That(failures[1].Key, Is.EqualTo("af_noads"));
             Assert.That(failures[1].Value, Is.EqualTo(expected));
@@ -279,7 +288,9 @@ namespace AF.IAP.PlayBilling.Tests
             Assert.That(bridge.Acknowledges, Is.EqualTo(new[] { "tok.1" }), "un no consumible no se consume");
             Assert.That(bridge.Consumes, Is.Empty);
             ((IBillingBridgeListener)port).OnAcknowledged("tok.1", BillingCodes.Ok);
-            Assert.That(port.KnownPurchases, Is.EqualTo(0));
+            Assert.That(port.Confirm("tok.1"), Is.True, "ya reconocido: terminado");
+            Assert.That(port.Acknowledge("tok.1"), Is.True);
+            Assert.That(bridge.Acknowledges, Has.Count.EqualTo(1));
 
             Assert.That(port.Confirm("tok.unknown"), Is.False);
         }
@@ -309,19 +320,230 @@ namespace AF.IAP.PlayBilling.Tests
         }
 
         [Test]
-        public void Acknowledge_FailedOrUnknown_CanBeRetried()
+        public void Acknowledge_Failed_IsNotRetriedAlone_ButTheCallerCanAskAgain_AndItIsIdempotent()
         {
             (NativePlayStorePort port, FakeBillingBridge bridge) = WithProducts();
             Assert.That(port.Acknowledge("tok.nope"), Is.False);
             Query(port, bridge, FakeBillingBridge.Row("af_coins_2", "tok.1"));
-            port.Acknowledge("tok.1");
-            ((IBillingBridgeListener)port).OnAcknowledged("tok.1", BillingCodes.ServiceUnavailable);
-            port.Acknowledge("tok.1");
+
+            Assert.That(port.Acknowledge("tok.1"), Is.True);
+            ((IBillingBridgeListener)port).OnAcknowledged("tok.1", BillingCodes.NetworkError);
+            Assert.That(bridge.Acknowledges, Has.Count.EqualTo(1), "sin reintento solo: lo repite VerifiedStoreService.Resume");
+
+            Assert.That(port.Acknowledge("tok.1"), Is.True);
+            Assert.That(port.Acknowledge("tok.1"), Is.True, "en vuelo: no se repite");
+            Assert.That(bridge.Acknowledges, Has.Count.EqualTo(2));
+            ((IBillingBridgeListener)port).OnAcknowledged("tok.1", BillingCodes.Ok);
+            Assert.That(port.Acknowledge("tok.1"), Is.True, "ya reconocido");
             Assert.That(bridge.Acknowledges, Has.Count.EqualTo(2));
 
+            Query(port, bridge, FakeBillingBridge.Row("af_coins_2", "tok.2"));
             bridge.Throw = true;
-            ((IBillingBridgeListener)port).OnAcknowledged("tok.1", BillingCodes.Error);
-            Assert.That(port.Acknowledge("tok.1"), Is.False, "el plugin falló: no se pidió");
+            Assert.That(port.Acknowledge("tok.2"), Is.False, "el plugin falló: no se pidió");
+        }
+
+        [Test]
+        public void Confirm_ProductThatWasNotFetched_IsNeverFinished()
+        {
+            // Sin el tipo no se sabe si consumirlo: consumir Sin anuncios lo borraría de Play (y de la restauración).
+            (NativePlayStorePort port, FakeBillingBridge bridge) = New();
+            IReadOnlyList<PlayOrder> orders = Query(port, bridge, FakeBillingBridge.Rows(
+                FakeBillingBridge.Row("af_noads", "tok.1"),
+                FakeBillingBridge.Row("af_noads", "tok.2", acknowledged: true)))!;
+
+            Assert.That(orders[1].State, Is.EqualTo(PlayOrderState.Purchased), "sin el tipo, no se da por restauración");
+            Assert.That(port.Confirm("tok.1"), Is.False);
+            Assert.That(port.Confirm("tok.2"), Is.False);
+            Assert.That(bridge.Consumes, Is.Empty);
+            Assert.That(bridge.Acknowledges, Is.Empty);
+        }
+
+        [Test]
+        public void LiveUpdate_OkWithoutAnyUsablePurchase_FailsOnlyASheetThisPortOpened()
+        {
+            (NativePlayStorePort port, FakeBillingBridge _) = WithProducts();
+            var failures = new List<KeyValuePair<string?, PlayFailureKind>>();
+            int orders = 0;
+            port.PurchaseFailed += (sku, k) => failures.Add(new KeyValuePair<string?, PlayFailureKind>(sku, k));
+            port.OrderUpdated += _ => orders++;
+
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(BillingCodes.Ok, null);
+            Assert.That(failures, Is.Empty, "sin hoja abierta no hay nada que responder");
+
+            port.Purchase("af_coins_2", null);
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(BillingCodes.Ok, "af_coins_2\ttok.1\t0\t1\t0"); // UNSPECIFIED_STATE
+            Assert.That(failures, Has.Count.EqualTo(1), "la hoja no se queda colgada");
+            Assert.That(failures[0].Key, Is.EqualTo("af_coins_2"));
+            Assert.That(failures[0].Value, Is.EqualTo(PlayFailureKind.Failed));
+            Assert.That(orders, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Disconnect_WithNothingInFlight_KeepsTheStore_AndReissuesAnInFlightConsume()
+        {
+            // enableAutoServiceReconnection: la biblioteca se reconecta en la próxima llamada; una caída sin nada en vuelo no deja la
+            // tienda sin vender. Un consumo en vuelo (ya acreditado) se vuelve a pedir en el acto (Play no consume dos veces).
+            (NativePlayStorePort port, FakeBillingBridge bridge) = WithProducts();
+            Query(port, bridge, FakeBillingBridge.Row("af_coins_2", "tok.1"));
+            int disconnected = 0;
+            port.Disconnected += () => disconnected++;
+
+            port.Confirm("tok.1");
+            ((IBillingBridgeListener)port).OnDisconnected();
+            Assert.That(disconnected, Is.EqualTo(0));
+            Assert.That(bridge.Consumes, Is.EqualTo(new[] { "tok.1", "tok.1" }));
+            Assert.That(port.Confirm("tok.1"), Is.True, "en vuelo otra vez");
+            Assert.That(bridge.Consumes, Has.Count.EqualTo(2));
+
+            ((IBillingBridgeListener)port).OnConsumed("tok.1", BillingCodes.Ok);
+            ((IBillingBridgeListener)port).OnConsumed("tok.1", BillingCodes.ItemNotOwned);
+            Assert.That(port.KnownPurchases, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Disconnect_WithADeferredAckInFlight_AcknowledgesAgain_NeverConsumes()
+        {
+            // D-035: nunca se consume sin acreditar. El reconocimiento en vuelo se repite como reconocimiento.
+            (NativePlayStorePort port, FakeBillingBridge bridge) = WithProducts();
+            Query(port, bridge, FakeBillingBridge.Row("af_coins_2", "tok.1"));
+
+            port.Acknowledge("tok.1");
+            ((IBillingBridgeListener)port).OnDisconnected();
+
+            Assert.That(bridge.Acknowledges, Is.EqualTo(new[] { "tok.1", "tok.1" }));
+            Assert.That(bridge.Consumes, Is.Empty, "un consumible sin acreditar no se consume");
+        }
+
+        [Test]
+        public void Disconnect_WithTheSheetOpen_StopsSelling_ButTheSheetStillGetsItsAnswer()
+        {
+            // La hoja de Play es otra actividad: su respuesta llega por el resultado de la actividad aunque el servicio se caiga, y el
+            // jugador aún puede pagar. No se da por fallida (el jugador vería un error y quizá pagaría dos veces).
+            (NativePlayStorePort port, FakeBillingBridge _) = WithProducts();
+            var failures = new List<PlayFailureKind>();
+            var orders = new List<PlayOrder>();
+            int disconnected = 0;
+            port.PurchaseFailed += (_, k) => failures.Add(k);
+            port.OrderUpdated += orders.Add;
+            port.Disconnected += () => disconnected++;
+
+            port.Purchase("af_noads", "uidTest0123456789");
+            ((IBillingBridgeListener)port).OnDisconnected();
+            Assert.That(disconnected, Is.EqualTo(1), "deja de vender hasta Refresh");
+            Assert.That(failures, Is.Empty);
+
+            // Un pago pendiente de otro SKU que Play cobra ahora no cierra la hoja.
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(BillingCodes.Ok, FakeBillingBridge.Row("af_coins_2", "tok.cash"));
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(BillingCodes.Ok, FakeBillingBridge.Row("af_noads", "tok.1"));
+            Assert.That(orders, Has.Count.EqualTo(2));
+            Assert.That(orders[1].Sku, Is.EqualTo("af_noads"));
+
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(BillingCodes.UserCanceled, null);
+            Assert.That(failures, Is.Empty, "la hoja ya respondió: un error tardío no responde a nada");
+        }
+
+        [Test]
+        public void Disconnect_WithTheSheetOpen_AndItsAnswerLost_TheReconnectFailsIt()
+        {
+            // La respuesta de la hoja se perdió (la Play Store murió con la hoja abierta): al reconectar (Refresh al volver a primer plano)
+            // la hoja falla, para que la tienda no se quede «comprando» toda la sesión.
+            (NativePlayStorePort port, FakeBillingBridge _) = WithProducts();
+            var failures = new List<KeyValuePair<string?, PlayFailureKind>>();
+            port.PurchaseFailed += (sku, k) => failures.Add(new KeyValuePair<string?, PlayFailureKind>(sku, k));
+
+            port.Purchase("af_noads", null);
+            ((IBillingBridgeListener)port).OnDisconnected();
+            port.Connect(_ => { });
+            ((IBillingBridgeListener)port).OnSetupFinished(BillingCodes.BillingUnavailable);
+            Assert.That(failures, Is.Empty, "sin reconectar no se sabe nada");
+
+            port.Connect(_ => { });
+            ((IBillingBridgeListener)port).OnSetupFinished(BillingCodes.Ok);
+            Assert.That(failures, Has.Count.EqualTo(1));
+            Assert.That(failures[0].Key, Is.EqualTo("af_noads"));
+            Assert.That(failures[0].Value, Is.EqualTo(PlayFailureKind.Unavailable));
+
+            ((IBillingBridgeListener)port).OnSetupFinished(BillingCodes.Ok);
+            Assert.That(failures, Has.Count.EqualTo(1), "una vez");
+
+            // Una reconexión que llega sola (sin Connect pedido), con la hoja aún en pantalla, no la da por perdida.
+            port.Purchase("af_noads", null);
+            ((IBillingBridgeListener)port).OnDisconnected();
+            ((IBillingBridgeListener)port).OnSetupFinished(BillingCodes.Ok);
+            Assert.That(failures, Has.Count.EqualTo(1));
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(BillingCodes.UserCanceled, null);
+            Assert.That(failures, Has.Count.EqualTo(2), "su respuesta la cierra");
+
+            // Sin caída del servicio, reconectar no toca la hoja abierta.
+            port.Purchase("af_coins_2", null);
+            port.Connect(_ => { });
+            ((IBillingBridgeListener)port).OnSetupFinished(BillingCodes.Ok);
+            Assert.That(failures, Has.Count.EqualTo(2), "sin caída, la hoja sigue abierta");
+        }
+
+        [Test]
+        public void LiveError_WithoutASheet_DoesNotStopSelling()
+        {
+            (NativePlayStorePort port, FakeBillingBridge _) = WithProducts();
+            int disconnected = 0;
+            port.Disconnected += () => disconnected++;
+
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(BillingCodes.ServiceDisconnected, null);
+            Assert.That(disconnected, Is.EqualTo(0));
+
+            port.Purchase("af_coins_2", null);
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(BillingCodes.ServiceDisconnected, null);
+            Assert.That(disconnected, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void SheetAnsweredWithAnAlreadyAcknowledgedNonConsumable_FailsAsAlreadyOwned_AndRestores()
+        {
+            // Play responde a la hoja de Sin anuncios con la compra que ya estaba reconocida: no es un cobro nuevo. La hoja no se queda
+            // colgada (falla como «ya lo tiene») y la compra sigue por la restauración (UnfinishedChanged).
+            FakeBillingBridge? bridge = null;
+            var port = new NativePlayStorePort(l => bridge = new FakeBillingBridge(l));
+            var client = new PlayBillingClient(port, StoreCatalog.Default, "USD");
+            client.Start();
+            var listener = (IBillingBridgeListener)port;
+            listener.OnSetupFinished(BillingCodes.Ok);
+            listener.OnProducts(bridge!.LastProductsId, BillingCodes.Ok, "af_noads\tBRL\t24900000");
+            listener.OnPurchases(bridge.LastPurchasesId, BillingCodes.Ok, "");
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Ready));
+
+            int unfinished = 0;
+            bool sheetClosedFirst = false;
+            BillingResult? result = null;
+            client.UnfinishedChanged += () =>
+            {
+                unfinished++;
+                sheetClosedFirst = result != null; // con la hoja abierta, VerifiedStoreService.Resume se saltaría el SKU
+            };
+            client.Purchase("af_noads", "uidTest0123456789", r => result = r);
+            listener.OnPurchasesUpdated(BillingCodes.Ok, FakeBillingBridge.Row("af_noads", "tok.owned", acknowledged: true));
+
+            Assert.That(result, Is.Not.Null, "la hoja respondió");
+            Assert.That(result!.Kind, Is.EqualTo(BillingResultKind.Failed), "no se cobró nada nuevo");
+            Assert.That(unfinished, Is.EqualTo(1), "la restauración sigue por la cola");
+            Assert.That(sheetClosedFirst, Is.True, "la hoja se cierra antes de ofrecer la restauración a la cola");
+            Assert.That(client.UnfinishedTransactions(), Has.Count.EqualTo(1));
+            Assert.That(bridge.PurchaseQueries, Has.Count.EqualTo(2), "y se vuelven a consultar las compras");
+        }
+
+        [Test]
+        public void LaunchFailed_BecauseTheServiceIsGone_StopsSelling()
+        {
+            (NativePlayStorePort port, FakeBillingBridge _) = WithProducts();
+            int disconnected = 0;
+            port.Disconnected += () => disconnected++;
+
+            port.Purchase("af_coins_2", null);
+            ((IBillingBridgeListener)port).OnLaunchFailed("af_coins_2", BillingCodes.ItemUnavailable);
+            Assert.That(disconnected, Is.EqualTo(0));
+
+            port.Purchase("af_coins_2", null);
+            ((IBillingBridgeListener)port).OnLaunchFailed("af_coins_2", BillingCodes.ServiceDisconnected);
+            Assert.That(disconnected, Is.EqualTo(1), "PlayBillingClient deja de vender hasta Refresh");
         }
 
         // ------------------------------------------------------------------ soltar

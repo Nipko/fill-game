@@ -18,9 +18,14 @@ namespace AF.IAP.PlayBilling
     /// <see cref="PlayOrderState.PaymentPending"/>. Un consumible reconocido sin consumir (<c>deferred_ack</c>) sigue siendo
     /// <see cref="PlayOrderState.Purchased"/>: se consume tras acreditar.</item>
     /// <item><see cref="Confirm"/> consume (<c>consumeAsync</c>) o reconoce (<c>acknowledgePurchase</c>) según el tipo con que se pidió el
-    /// producto en <see cref="FetchProducts"/>; si Play falla, el pedido sigue guardado y vuelve en la próxima consulta.</item>
+    /// producto en <see cref="FetchProducts"/>; un producto que no se pidió no se termina. Si Play falla, el pedido sigue guardado y
+    /// vuelve en la próxima consulta. <see cref="Acknowledge"/> no repite lo ya reconocido ni lo que está en vuelo.</item>
     /// <item>Una consulta de productos nueva deja sin respuesta (null) a la anterior; cada consulta de compras responde a quien la pidió.</item>
-    /// <item>Al desconectarse Play, las consultas en vuelo responden null; <see cref="Dispose"/> suelta la conexión y no avisa de nada más.</item>
+    /// <item>Al desconectarse Play, lo que esperaba respuesta responde null o false y se avisa <see cref="Disconnected"/> (también con una
+    /// hoja abierta, que no se da por fallida: su respuesta llega igual); sin nada en vuelo no se avisa (la biblioteca se reconecta sola en
+    /// la próxima llamada). <see cref="Dispose"/> suelta la conexión y no avisa de nada más.</item>
+    /// <item>Un aviso en vivo de error, o OK sin ninguna compra utilizable, hace fallar la hoja que abrió este puerto (no se queda colgada);
+    /// sin hoja abierta no responde a nada.</item>
     /// <item>El precio sale del importe en micros y de la moneda (nunca de la cadena de Play); la hora de compra, de <c>purchaseTime</c>.</item>
     /// </list>
     /// Hilo principal de Unity (el puente real pasa ahí los avisos de Java). Nunca escribe el token ni el UID en los logs.
@@ -35,6 +40,8 @@ namespace AF.IAP.PlayBilling
         private Action<IReadOnlyList<PlayProductInfo>?>? _productsDone;
         private int _productsRequest;
         private int _nextRequest;
+        private string? _launching; // SKU de la hoja que este puerto abrió y aún no respondió
+        private bool _launchSurvivedDisconnect; // el servicio se cayó con esa hoja abierta
         private bool _disposed;
 
         /// <param name="bridge">Crea el puente con este puerto como oyente (el real, con JNI, solo en el teléfono).</param>
@@ -57,7 +64,7 @@ namespace AF.IAP.PlayBilling
         /// <inheritdoc />
         public event Action? Disconnected;
 
-        /// <summary>Pedidos cobrados que este puerto puede terminar o reconocer (para los tests).</summary>
+        /// <summary>Pedidos cobrados que conoce este puerto: sin terminar, o no consumibles ya reconocidos (para los tests).</summary>
         public int KnownPurchases => _known.Count;
 
         /// <inheritdoc />
@@ -174,12 +181,15 @@ namespace AF.IAP.PlayBilling
                 return;
             }
 
+            _launching = sku;
+            _launchSurvivedDisconnect = false;
             try
             {
                 _bridge.Launch(sku, obfuscatedAccountId);
             }
             catch (Exception)
             {
+                ClearLaunch();
                 PurchaseFailed?.Invoke(sku, PlayFailureKind.Failed);
             }
         }
@@ -187,12 +197,13 @@ namespace AF.IAP.PlayBilling
         /// <inheritdoc />
         public bool Confirm(string token)
         {
-            if (_disposed || token == null || !_known.TryGetValue(token, out Known? k))
+            if (_disposed || token == null || !_known.TryGetValue(token, out Known? k)
+                || !_types.TryGetValue(k.Sku, out PlayProductType type))
             {
-                return false;
+                return false; // sin el pedido, o de un producto que no se pidió: no se sabe si consumirlo, así que no se termina
             }
 
-            if (TypeOf(k.Sku) == PlayProductType.Consumable)
+            if (type == PlayProductType.Consumable)
             {
                 if (k.Consuming)
                 {
@@ -212,13 +223,7 @@ namespace AF.IAP.PlayBilling
                 }
             }
 
-            if (k.Acknowledged)
-            {
-                _known.Remove(token); // un no consumible ya reconocido está terminado
-                return true;
-            }
-
-            return RequestAcknowledge(token, k);
+            return k.Acknowledged || RequestAcknowledge(token, k); // un no consumible reconocido está terminado
         }
 
         /// <inheritdoc />
@@ -263,9 +268,26 @@ namespace AF.IAP.PlayBilling
         /// <inheritdoc />
         void IBillingBridgeListener.OnSetupFinished(int code)
         {
-            if (!_disposed)
+            if (_disposed)
             {
-                DeliverConnect(code == BillingCodes.Ok);
+                return;
+            }
+
+            // La hoja abierta cuando se cayó el servicio y que sigue sin respuesta tras reconectar (Refresh al volver a primer plano,
+            // así que la hoja ya se cerró): su resultado se perdió. Falla para que la tienda no se quede «comprando»; si Play cobró, la
+            // compra vuelve con la consulta que sigue y la cola la acredita una vez (sin el contexto de la hoja; iap.md §7).
+            // Solo la respuesta a un Connect pedido (el Restart del Refresh): una reconexión que llega sola, con la hoja aún en pantalla,
+            // no la da por perdida.
+            string? orphan = code == BillingCodes.Ok && _launchSurvivedDisconnect && _connectWaiting.Count > 0 ? _launching : null;
+            if (orphan != null)
+            {
+                ClearLaunch();
+            }
+
+            DeliverConnect(code == BillingCodes.Ok);
+            if (orphan != null && !_disposed)
+            {
+                PurchaseFailed?.Invoke(orphan, PlayFailureKind.Unavailable);
             }
         }
 
@@ -277,10 +299,50 @@ namespace AF.IAP.PlayBilling
                 return;
             }
 
+            // La biblioteca se reconecta sola en la próxima llamada (enableAutoServiceReconnection).
+            // - Lo que esperaba respuesta (conexión, consultas) responde ya, sin Play, y se avisa: PlayBillingClient queda sin Play hasta
+            //   Refresh. Sin nada de eso en vuelo, la tienda sigue lista y la próxima llamada reconecta.
+            // - Una hoja abierta no se da por fallida: la hoja de Play es otra actividad y su respuesta llega por el resultado de la
+            //   actividad, no por la conexión del servicio (y el jugador aún puede pagar). Se deja de vender (Disconnected) y la hoja
+            //   espera su respuesta en vivo, que sí la cierra.
+            // - Consumos y reconocimientos en vuelo se vuelven a pedir en el acto (la biblioteca reconecta; Play no repite lo hecho).
+            bool waiting = _connectWaiting.Count > 0 || _productsDone != null || _purchasesWaiting.Count > 0 || _launching != null;
+            _launchSurvivedDisconnect |= _launching != null;
+            var reconsume = new List<string>();
+            var reacknowledge = new List<KeyValuePair<string, Known>>();
+            foreach (KeyValuePair<string, Known> pair in _known)
+            {
+                // Solo se repite lo mismo que estaba en vuelo: un consumo (ya acreditado) o un reconocimiento (sin consumir).
+                if (pair.Value.Consuming)
+                {
+                    reconsume.Add(pair.Key);
+                }
+                else if (pair.Value.Acknowledging)
+                {
+                    reacknowledge.Add(pair);
+                }
+
+                pair.Value.Consuming = false;
+                pair.Value.Acknowledging = false;
+            }
+
             DeliverConnect(false);
             DeliverProducts(null);
             DeliverAllPurchases();
-            Disconnected?.Invoke();
+            if (waiting && !_disposed)
+            {
+                Disconnected?.Invoke();
+            }
+
+            for (int i = 0; i < reconsume.Count && !_disposed; i++)
+            {
+                Confirm(reconsume[i]); // solo se pidió consumir tras acreditar (PlayBillingClient.Finish)
+            }
+
+            for (int i = 0; i < reacknowledge.Count && !_disposed; i++)
+            {
+                RequestAcknowledge(reacknowledge[i].Key, reacknowledge[i].Value);
+            }
         }
 
         /// <inheritdoc />
@@ -327,16 +389,63 @@ namespace AF.IAP.PlayBilling
                 return;
             }
 
+            string? launching = _launching;
             if (code != BillingCodes.Ok)
             {
-                PurchaseFailed?.Invoke(null, BillingCodes.FailureOf(code)); // Play no dice el SKU: es el de la hoja abierta
+                // Un error en vivo solo puede ser la respuesta de la hoja (Play no dice el SKU): sin hoja de este puerto, no responde a nada.
+                ClearLaunch();
+                if (launching != null)
+                {
+                    PurchaseFailed?.Invoke(launching, BillingCodes.FailureOf(code));
+                    RaiseIfServiceLost(code);
+                }
+
                 return;
             }
 
             List<BillingPurchaseRow> purchases = BillingRows.Purchases(rows);
-            for (int i = 0; i < purchases.Count && !_disposed; i++)
+            if (purchases.Count == 0)
             {
-                OrderUpdated?.Invoke(Map(purchases[i]));
+                // OK sin ninguna compra que se pueda usar (lista vacía, varios productos, estado sin especificar). Con una hoja de este
+                // puerto abierta, falla, para que no quede colgada; si Play cobró algo, vuelve con la próxima consulta y la cola lo
+                // acredita una vez. Sin hoja abierta, no hay nada que responder.
+                ClearLaunch();
+                if (launching != null)
+                {
+                    PurchaseFailed?.Invoke(launching, PlayFailureKind.Failed);
+                }
+
+                return;
+            }
+
+            var orders = new List<PlayOrder>(purchases.Count);
+            bool answered = false;
+            bool alreadyOwned = true;
+            for (int i = 0; i < purchases.Count; i++)
+            {
+                PlayOrder order = Map(purchases[i]);
+                orders.Add(order);
+                if (launching != null && string.Equals(order.Sku, launching, StringComparison.Ordinal))
+                {
+                    answered = true; // la respuesta de la hoja; un aviso de otro SKU (un pago pendiente que se cobró) no la cierra
+                    alreadyOwned &= order.State == PlayOrderState.Confirmed;
+                }
+            }
+
+            if (answered)
+            {
+                ClearLaunch();
+                if (alreadyOwned)
+                {
+                    // Solo un no consumible que ya estaba reconocido: no es un cobro nuevo. La hoja responde «ya lo tiene» ANTES del aviso,
+                    // para que, ya cerrada, la restauración entre en la cola (con la hoja abierta, VerifiedStoreService.Resume se la salta).
+                    PurchaseFailed?.Invoke(launching, PlayFailureKind.AlreadyOwned);
+                }
+            }
+
+            for (int i = 0; i < orders.Count && !_disposed; i++)
+            {
+                OrderUpdated?.Invoke(orders[i]);
             }
         }
 
@@ -345,7 +454,21 @@ namespace AF.IAP.PlayBilling
         {
             if (!_disposed)
             {
+                ClearLaunch();
                 PurchaseFailed?.Invoke(string.IsNullOrEmpty(sku) ? null : sku, BillingCodes.FailureOf(code));
+                RaiseIfServiceLost(code);
+            }
+        }
+
+        /// <summary>
+        /// La hoja no se abrió o falló porque el servicio de Play se cayó y no se pudo reconectar: se avisa como desconexión, para que
+        /// PlayBillingClient deje de vender hasta reconectar (Refresh), en lugar de fallar cada compra.
+        /// </summary>
+        private void RaiseIfServiceLost(int code)
+        {
+            if (code == BillingCodes.ServiceDisconnected && !_disposed)
+            {
+                Disconnected?.Invoke();
             }
         }
 
@@ -375,17 +498,21 @@ namespace AF.IAP.PlayBilling
             k.Acknowledging = false;
             if (code != BillingCodes.Ok)
             {
-                return; // sigue sin reconocer: se volverá a pedir
+                // Sigue sin reconocer: quien lo pidió lo puede volver a pedir (VerifiedStoreService.Resume repite el deferred_ack al
+                // arrancar y al volver a primer plano; PlayBillingClient vuelve a terminar lo que Play devuelve sin terminar).
+                return;
             }
 
-            k.Acknowledged = true;
-            if (TypeOf(k.Sku) == PlayProductType.NonConsumable)
-            {
-                _known.Remove(token); // un no consumible reconocido está terminado
-            }
+            k.Acknowledged = true; // un no consumible reconocido queda como «hecho» para Acknowledge y Confirm
         }
 
         // ------------------------------------------------------------------ privado
+
+        private void ClearLaunch()
+        {
+            _launching = null;
+            _launchSurvivedDisconnect = false;
+        }
 
         private bool RequestAcknowledge(string token, Known k)
         {
@@ -414,12 +541,6 @@ namespace AF.IAP.PlayBilling
                 return new PlayOrder(row.Sku, row.Token, PlayOrderState.PaymentPending, row.PurchasedUtc);
             }
 
-            if (row.Acknowledged && TypeOf(row.Sku) == PlayProductType.NonConsumable)
-            {
-                _known.Remove(row.Token);
-                return new PlayOrder(row.Sku, row.Token, PlayOrderState.Confirmed, row.PurchasedUtc);
-            }
-
             if (!_known.TryGetValue(row.Token, out Known? k))
             {
                 k = new Known(row.Sku);
@@ -427,12 +548,14 @@ namespace AF.IAP.PlayBilling
             }
 
             k.Acknowledged |= row.Acknowledged;
+            if (row.Acknowledged && _types.TryGetValue(row.Sku, out PlayProductType type) && type == PlayProductType.NonConsumable)
+            {
+                // Restauración: ya reconocido. Se queda como conocido para que Acknowledge y Confirm respondan «hecho».
+                return new PlayOrder(row.Sku, row.Token, PlayOrderState.Confirmed, row.PurchasedUtc);
+            }
+
             return new PlayOrder(row.Sku, row.Token, PlayOrderState.Purchased, row.PurchasedUtc);
         }
-
-        /// <summary>Tipo con que se pidió el producto; uno que no se pidió se trata como consumible (lo que no sea del catálogo no se termina).</summary>
-        private PlayProductType TypeOf(string sku) =>
-            _types.TryGetValue(sku, out PlayProductType type) ? type : PlayProductType.Consumable;
 
         private void DeliverConnect(bool connected)
         {

@@ -547,13 +547,14 @@ namespace AF.IAP.Tests
             client.AcknowledgeLocal("af_noads", token);
             client.AcknowledgeLocal("af_noads", token);
 
-            Assert.That(port.Confirmed, Is.EqualTo(new[] { token }), "reconocer un no consumible es ConfirmPurchase, una vez");
+            // Con el plugin propio, el deferred_ack es siempre acknowledgePurchase (antes, ConfirmPurchase de Unity IAP), una vez.
+            Assert.That(port.Acknowledged, Is.EqualTo(new[] { token }), "acknowledgePurchase, una vez");
             Assert.That(port.Account.StateOf(token), Is.EqualTo(FakePlayState.Acknowledged));
             Assert.That(client.UnfinishedTransactions().Count, Is.EqualTo(1), "sigue esperando al servidor");
             Assert.That(client.AcknowledgeUnsupported, Is.EqualTo(0));
 
             client.Finish("af_noads", token, false);
-            Assert.That(port.Confirmed, Has.Count.EqualTo(1), "ya reconocida: Finish no vuelve a confirmar");
+            Assert.That(port.Confirmed, Is.Empty, "ya reconocida: Finish no la vuelve a reconocer");
             Assert.That(client.UnfinishedTransactions(), Is.Empty);
         }
 
