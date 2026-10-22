@@ -14,7 +14,7 @@ index b9026c64..2535baf3 100644
    "includePlatforms": [],
    "excludePlatforms": [],
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
-index 6e57ecc3..25aa2eb4 100644
+index 6e57ecc3..71cc77b0 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
 @@ -3,10 +3,12 @@
@@ -100,7 +100,7 @@ index 6e57ecc3..25aa2eb4 100644
  
              _revocation = new LocalRevocation(profile, ledger.Wallet, batch, capsClock, _rcConfigs?.Revocation);
              _ledgerRestore = new LedgerRestore(ledger, _revocation, client, _backendSwitch, _verifiedStore);
-@@ -132,7 +160,90 @@ private IStoreService CreateStore(Profile profile, StoreLedger ledger, ISimulate
+@@ -132,7 +160,91 @@ private IStoreService CreateStore(Profile profile, StoreLedger ledger, ISimulate
                  };
              }
  
@@ -133,8 +133,9 @@ index 6e57ecc3..25aa2eb4 100644
 +
 +        /// <summary>
 +        /// Al destruir la escena (<c>OnDestroy</c>: una recarga con RebuildUi o RestartAsFirstRun crea otra tienda): la tienda de Play de
-+        /// esta escena suelta Unity IAP, cuyos servicios son únicos en el proceso, para que no siga verificando ni guardando sobre un perfil
-+        /// que ya no es el de la sesión. Lo que quede sin terminar en Play vuelve a la tienda nueva.
++        /// esta escena suelta Unity IAP, cuyos servicios son únicos en el proceso, para que sus avisos no lleguen también a la tienda vieja.
++        /// Lo que quede sin terminar en Play vuelve a la tienda nueva. (La tienda verificada vieja y sus peticiones en vuelo al servidor
++        /// siguen como antes de D-040: ver «Riesgos» de <c>docs/dev/iap.md</c>.)
 +        /// </summary>
 +        private void DisposeBilling()
 +        {
@@ -151,16 +152,16 @@ index 6e57ecc3..25aa2eb4 100644
 +        }
 +
 +        /// <summary>
-+        /// D-040: Play se conecta tras decidir el consentimiento (va en <see cref="ResumeBackend"/>, después de <c>SetUpConsent</c>), nunca
-+        /// con la banda &lt; 13 (08 §7: «sin IAP») y solo con el UID de Firebase ya creado, para que cada compra lleve
-+        /// <c>setObfuscatedAccountId</c> y la cola la guarde con él (08 §10.1; el usuario anónimo lo crea la primera llamada autenticada, el
-+        /// <c>restoreLedger</c> del arranque, que vuelve a llamar aquí). Al volver a primer plano, consulta lo que Play cobró mientras tanto
-+        /// o vuelve a conectar si se cayó.
++        /// D-040: Play se conecta solo con la edad ya decidida (y nunca con la banda &lt; 13; 08 §7: «sin IAP») y con el UID de Firebase ya
++        /// creado, para que cada compra lleve <c>setObfuscatedAccountId</c> y la cola la guarde con él (08 §10.1; el usuario anónimo lo crea
++        /// la primera llamada autenticada, el <c>restoreLedger</c> del arranque). Por eso se intenta en <see cref="ResumeBackend"/>, al
++        /// responder el <c>restoreLedger</c> y al cerrar la pantalla de edad y consentimiento (<c>FinishConsentAtBoot</c>). Al volver a
++        /// primer plano, consulta lo que Play cobró mientras tanto o vuelve a conectar si se cayó.
 +        /// </summary>
 +        private void StartPlayBilling(bool foreground)
 +        {
 +            PlayBillingClient? play = _playBilling;
-+            if (play == null || ProfileLocked || PlayerUnder13())
++            if (play == null || ProfileLocked || PlayerUnder13() || (ConsentEnabled && _consentFlow?.Record == null))
 +            {
 +                return;
 +            }
@@ -192,7 +193,7 @@ index 6e57ecc3..25aa2eb4 100644
          }
  
          private static IBackendClient CreateBackendClient(BackendMode mode, IClock clock)
-@@ -163,6 +274,8 @@ internal void ResumeBackend(bool foreground)
+@@ -163,6 +275,8 @@ internal void ResumeBackend(bool foreground)
                  return;
              }
  
@@ -201,7 +202,7 @@ index 6e57ecc3..25aa2eb4 100644
              using (Saves())
              {
                  store.Resume();
-@@ -206,6 +319,7 @@ public bool RestoreLedgerNow()
+@@ -206,6 +320,7 @@ public bool RestoreLedgerNow()
          private void OnLedgerRestored(LedgerRestoreReport report)
          {
              LastLedgerRestore = report;
@@ -210,7 +211,7 @@ index 6e57ecc3..25aa2eb4 100644
              {
                  Debug.LogWarning(LogPrefix + "restoreLedger: " + report.Error);
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
-index 8a141fcd..abe51d51 100644
+index 8a141fcd..2023d740 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
 @@ -206,7 +206,8 @@ private void SetUpConsent(IClock clock, IConsentStore store)
@@ -223,6 +224,14 @@ index 8a141fcd..abe51d51 100644
              }
          }
  
+@@ -266,6 +267,7 @@ private void FinishConsentAtBoot()
+ 
+             _consentScreen?.Hide();
+             ProbeConsent();
++            StartPlayBilling(false); // D-040: con la edad ya decidida (y no < 13), Play puede conectarse
+         }
+ 
+         // <13 (en el arranque o al corregir la edad en Ajustes): el bloqueo a la vista y la escena se recarga, como al cambiar de idioma
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
 index 9cc0f324..bc3878b0 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.cs

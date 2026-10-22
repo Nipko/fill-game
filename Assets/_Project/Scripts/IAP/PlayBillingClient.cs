@@ -32,6 +32,12 @@ namespace AF.IAP
 
         /// <summary>Lista y con el precio de la tienda de <paramref name="sku"/> (nunca se cobra con un precio de respaldo).</summary>
         bool CanSell(string sku);
+
+        /// <summary>
+        /// ¿El precio de <paramref name="sku"/> es el de la tienda (cargado alguna vez en esta sesión), aunque ahora no esté lista? Para
+        /// la analítica de lo que se acredita tarde.
+        /// </summary>
+        bool HasStorePrice(string sku);
     }
 
     /// <summary>
@@ -159,8 +165,9 @@ namespace AF.IAP
         }
 
         /// <summary>
-        /// Al destruir la escena: suelta el puerto (y con él los eventos del SDK), responde «fallida» a la compra abierta sin cobrar nada
-        /// nuevo y deja de avisar. Lo cobrado sin terminar sigue en Play y vuelve en la sesión siguiente.
+        /// Al destruir la escena: suelta el puerto (y con él los eventos del SDK) y deja de avisar, sin llamar a nadie (tampoco a la compra
+        /// abierta: la escena se está destruyendo y Play aún puede cobrarla). Lo cobrado sin terminar sigue en Play y vuelve a la tienda de
+        /// la escena nueva.
         /// </summary>
         public void Dispose()
         {
@@ -176,11 +183,9 @@ namespace AF.IAP
             _port.Disconnected -= OnDisconnected;
             UnfinishedChanged = null;
             StateChanged = null;
-            Open? open = _open;
             _open = null;
             State = PlayBillingState.Unavailable;
             _port.Dispose();
-            open?.OnDone(BillingResult.Failed());
         }
 
         private void Restart()
@@ -221,17 +226,14 @@ namespace AF.IAP
                 return;
             }
 
-            if (State == PlayBillingState.Ready)
+            int generation = _generation;
+            FetchPurchases(ok =>
             {
-                int generation = _generation;
-                FetchPurchases(ok =>
+                if (!ok && generation == _generation && State == PlayBillingState.Ready)
                 {
-                    if (!ok && generation == _generation && State == PlayBillingState.Ready)
-                    {
-                        SetState(PlayBillingState.Unavailable);
-                    }
-                });
-            }
+                    SetState(PlayBillingState.Unavailable);
+                }
+            });
         }
 
         /// <inheritdoc />
@@ -245,7 +247,7 @@ namespace AF.IAP
             return _prices.TryGetValue(product.Sku, out LocalPrice price) ? price : product.PriceIn(_fallbackCurrency);
         }
 
-        /// <summary>¿El precio de <paramref name="sku"/> es el de la tienda (y no el de respaldo de 05 §4.2)?</summary>
+        /// <inheritdoc />
         public bool HasStorePrice(string sku) => sku != null && _prices.ContainsKey(sku);
 
         /// <inheritdoc />

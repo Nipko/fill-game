@@ -1,5 +1,5 @@
 diff --git a/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs b/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs
-index 8f0bc2be..11d1a66e 100644
+index 8f0bc2be..d450cd77 100644
 --- a/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs
 +++ b/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs
 @@ -19,20 +19,27 @@ namespace AF.Analytics.Adapters
@@ -61,10 +61,10 @@ index 8f0bc2be..11d1a66e 100644
 -                .Add("currency", price.Currency)
 -                .Add("items", e.Sku));
 +            AnalyticsEvent purchase = AnalyticsEvent.Create("purchase");
-+            if (_ready == null || _ready.Billing.CanSell(e.Sku))
++            if (_ready == null || _ready.Billing.HasStorePrice(e.Sku))
 +            {
 +                // Con Play real, solo el precio de la tienda (antes de que Play lo dé, el de 05 §4.2 sería otra moneda): sin él, no se
-+                // inventa el ingreso (D-040).
++                // inventa el ingreso (D-040). Vale el ya cargado aunque Play se haya desconectado después.
 +                LocalPrice price = _inner.PriceOf(e.Sku);
 +                purchase.Add("value", (double)price.Amount).Add("currency", price.Currency);
 +            }
@@ -74,10 +74,10 @@ index 8f0bc2be..11d1a66e 100644
  
          /// <summary><c>context</c> de 08 §8.2 (<c>stuck</c>, <c>no_canoes</c>, <c>shop</c>, <c>starter_window</c>, <c>noads_prompt</c>, <c>piggy</c>).</summary>
 diff --git a/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs b/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs
-index b1e57493..dbfad301 100644
+index b1e57493..201c652f 100644
 --- a/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs
 +++ b/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs
-@@ -138,6 +138,111 @@ public void TheVerifiedStore_LogsALivePurchaseOnce_AndALateCreditWithoutContext(
+@@ -138,6 +138,113 @@ public void TheVerifiedStore_LogsALivePurchaseOnce_AndALateCreditWithoutContext(
              Assert.That(analytics.Violations, Is.Empty);
          }
  
@@ -184,6 +184,8 @@ index b1e57493..dbfad301 100644
 +            public bool IsReady => true;
 +
 +            public bool CanSell(string sku) => Sell;
++
++            public bool HasStorePrice(string sku) => Sell;
 +        }
 +
          // Una compra cancelada de verdad, con el presentador que dice que no.

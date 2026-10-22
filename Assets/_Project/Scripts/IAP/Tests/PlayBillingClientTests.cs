@@ -388,7 +388,7 @@ namespace AF.IAP.Tests
 
             client.Dispose();
 
-            Assert.That(result!.Kind, Is.EqualTo(BillingResultKind.Failed), "la compra abierta no queda colgada");
+            Assert.That(result, Is.Null, "no se llama a nadie mientras la escena se destruye (Play aún puede cobrarla: vuelve a la nueva)");
             Assert.That(port.HasListeners, Is.False);
             Assert.That(port.Disposed, Is.EqualTo(1));
             Assert.That(client.IsReady, Is.False);

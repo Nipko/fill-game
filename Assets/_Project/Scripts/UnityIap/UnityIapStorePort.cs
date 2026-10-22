@@ -36,8 +36,11 @@ namespace AF.IAP.UnityIap
         private readonly StoreController _store;
         private readonly Dictionary<string, PendingOrder> _pending = new Dictionary<string, PendingOrder>(StringComparer.Ordinal);
         private readonly List<Action<IReadOnlyList<PlayOrder>?>> _purchasesWaiting = new List<Action<IReadOnlyList<PlayOrder>?>>();
+        // Del proceso, como los servicios de Unity IAP: tras recargar la escena, el puerto nuevo sabe que Unity sigue reintentando la
+        // consulta de productos del anterior (pedir otra fallaría en el acto) y recibe su respuesta.
+        private static bool s_productsInFlight;
+
         private Action<IReadOnlyList<PlayProductInfo>?>? _productsDone;
-        private bool _productsInFlight;
         private bool _disposed;
 
         public UnityIapStorePort()
@@ -100,7 +103,7 @@ namespace AF.IAP.UnityIap
 
             DeliverProducts(null); // una consulta anterior sin responder ya no cuenta
             _productsDone = onDone ?? throw new ArgumentNullException(nameof(onDone));
-            if (_productsInFlight)
+            if (s_productsInFlight)
             {
                 return; // Unity IAP sigue reintentando la anterior: su respuesta será la de esta
             }
@@ -112,14 +115,14 @@ namespace AF.IAP.UnityIap
                 definitions.Add(new ProductDefinition(p.Sku, p.Type == PlayProductType.NonConsumable ? ProductType.NonConsumable : ProductType.Consumable));
             }
 
-            _productsInFlight = true;
+            s_productsInFlight = true;
             try
             {
                 _store.FetchProducts(definitions);
             }
             catch (Exception)
             {
-                _productsInFlight = false;
+                s_productsInFlight = false;
                 DeliverProducts(null);
             }
         }
@@ -232,14 +235,14 @@ namespace AF.IAP.UnityIap
 
         private void OnProductsFetched(List<Product> products)
         {
-            _productsInFlight = false;
+            s_productsInFlight = false;
             DeliverProducts(products);
         }
 
         private void OnProductsFetchFailed(ProductFetchFailed failure)
         {
             // Algún producto no está en Play Console (o falló la consulta): vale lo que ya haya en la caché; sin nada, no hay tienda.
-            _productsInFlight = false;
+            s_productsInFlight = false;
             var cached = new List<Product>(_store.GetProducts());
             DeliverProducts(cached.Count > 0 ? cached : null);
         }
