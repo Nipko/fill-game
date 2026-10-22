@@ -1,0 +1,256 @@
+#nullable enable
+using System;
+using System.Collections.Generic;
+using AF.Platform;
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+namespace AF.UI
+{
+    /// <summary>
+    /// C9, mantener pulsado (02 §3.1 y §12; bloque B9): un dedo que se queda al menos <see cref="A11yRules.HoldMs"/> ms sobre una
+    /// cuia sin moverse (menos de <see cref="A11yRules.HoldSlopDp"/> dp [P]) muestra los nombres de sus dosis, y al soltarlo no
+    /// selecciona (ni vierte). Lógica sin vista, con el reloj de la pantalla (los tests lo avanzan con <c>Step</c>):
+    /// <list type="bullet">
+    /// <item>solo sigue al primer dedo; si baja otro (C11), lo que estuviera en curso se cancela;</item>
+    /// <item>moverse <see cref="A11yRules.HoldSlopDp"/> dp o más antes de tiempo lo cancela para siempre (ya es el arrastre,
+    /// C10);</item>
+    /// <item>una vez mostrados los nombres, soltar no hace nada más (<see cref="Release"/> devuelve true y quien llama se traga el
+    /// toque y el arrastre) [P].</item>
+    /// </list>
+    /// Sin asignaciones.
+    /// </summary>
+    public sealed class CuiaHoldTracker
+    {
+        /// <summary>Sin cuia pulsada.</summary>
+        public const int None = -1;
+
+        // Los dedos abajo sobre cuias, por su pointerId (sin asignar: capacidad para diez dedos). Un id que baja otra vez sin haber
+        // subido es un touch-up perdido: se descuenta solo ese dedo, sin tocar a los demás (C11 sigue valiendo).
+        private readonly List<int> _down = new List<int>(10);
+        private int _pointer;
+        private int _swallowed = None;
+        private Vector2 _start;
+        private float _heldMs;
+
+        /// <summary>Crea el seguimiento, sin nada pulsado.</summary>
+        public CuiaHoldTracker()
+        {
+            Reset();
+        }
+
+        /// <summary>Cuia bajo el dedo que se sigue (aún sin nombres o ya con ellos), o <see cref="None"/>.</summary>
+        public int Index { get; private set; }
+
+        /// <summary>Ya se mostraron los nombres de <see cref="Index"/> (el dedo sigue abajo).</summary>
+        public bool Fired { get; private set; }
+
+        /// <summary>Tiempo que lleva abajo el dedo que se sigue (ms).</summary>
+        public float HeldMs => _heldMs;
+
+        /// <summary>Dedo que se sigue (el primero del gesto), o <see cref="int.MinValue"/> sin ninguno.</summary>
+        public int Pointer => _pointer;
+
+        /// <summary>Hay algún dedo abajo sobre una cuia.</summary>
+        public bool AnyDown => _down.Count > 0;
+
+        /// <summary>
+        /// Un dedo <paramref name="pointer"/> baja en la cuia <paramref name="index"/>, en <paramref name="positionDp"/> (dp). Devuelve
+        /// true si olvidó un gesto anterior del mismo dedo (su touch-up se perdió; quien llama oculta sus nombres). Los touch-ups que se
+        /// pierden de verdad (la cuia se destruye o el lienzo se oculta con el dedo abajo, la app va a segundo plano) los cubre quien
+        /// llama con <see cref="Reset"/>: al construir el tablero, al ocultar la pantalla y al volver de segundo plano.
+        /// </summary>
+        public bool Press(int index, int pointer, Vector2 positionDp)
+        {
+            bool stale = false;
+            if (_down.Remove(pointer) && pointer == _pointer)
+            {
+                // El dedo que se seguía vuelve a bajar: su touch-up se perdió (el lienzo se ocultó, el sistema canceló el toque).
+                Index = None;
+                Fired = false;
+                _pointer = int.MinValue;
+                stale = true;
+            }
+
+            if (_down.Count == 0)
+            {
+                _swallowed = None; // un gesto nuevo
+            }
+
+            _down.Add(pointer);
+            if (_down.Count > 1)
+            {
+                // C11: otro dedo mientras uno estaba abajo; nada de nombres hasta que se suelten todos (si ya salieron, se quedan
+                // hasta soltar el primero).
+                if (!Fired)
+                {
+                    Index = None;
+                }
+
+                return stale;
+            }
+
+            Index = index;
+            _pointer = pointer;
+            _start = positionDp;
+            _heldMs = 0f;
+            Fired = false;
+            return stale;
+        }
+
+        /// <summary>El dedo <paramref name="pointer"/> se mueve a <paramref name="positionDp"/> (dp).</summary>
+        public void Move(int pointer, Vector2 positionDp)
+        {
+            if (Index == None || Fired || pointer != _pointer)
+            {
+                return;
+            }
+
+            if ((positionDp - _start).sqrMagnitude >= A11yRules.HoldSlopDp * A11yRules.HoldSlopDp)
+            {
+                Index = None; // C10: ya es un arrastre; no vuelve a contar hasta soltar
+            }
+        }
+
+        /// <summary>Avanza <paramref name="dtMs"/> ms; devuelve true en el instante en que se cumplen los 400 ms (enseñar los nombres).</summary>
+        public bool Tick(float dtMs)
+        {
+            if (Index == None || Fired)
+            {
+                return false;
+            }
+
+            _heldMs += Mathf.Max(0f, dtMs);
+            if (_heldMs < A11yRules.HoldMs)
+            {
+                return false;
+            }
+
+            Fired = true;
+            return true;
+        }
+
+        /// <summary>
+        /// Se suelta el dedo <paramref name="pointer"/> que bajó en la cuia <paramref name="index"/>: true si ese dedo ya había
+        /// mostrado los nombres de esa cuia (quien llama no hace el toque ni el arrastre). Con el último dedo fuera, queda listo
+        /// para el siguiente.
+        /// </summary>
+        public bool Release(int index, int pointer)
+        {
+            bool swallow = Fired && Index == index && pointer == _pointer;
+            if (swallow)
+            {
+                _swallowed = index;
+            }
+
+            _down.Remove(pointer);
+            if (swallow || pointer == _pointer)
+            {
+                Index = None;
+                Fired = false;
+                _pointer = int.MinValue; // ya no se sigue
+            }
+
+            if (_down.Count == 0)
+            {
+                int swallowed = _swallowed;
+                Reset();
+                _swallowed = swallowed; // el touch-up de la cuia aún puede preguntar (Swallows)
+            }
+
+            return swallow;
+        }
+
+        /// <summary>
+        /// El touch-up de la cuia <paramref name="index"/> que llega ahora es el de un C9 ya mostrado: no es un toque ni un arrastre.
+        /// Vale antes o después de <see cref="Release"/> en el mismo touch-up (el orden de los componentes del objeto no importa).
+        /// </summary>
+        public bool Swallows(int index)
+        {
+            return index != None && ((Fired && Index == index) || _swallowed == index);
+        }
+
+        /// <summary>
+        /// Corta el mantener pulsado con el dedo aún abajo (se abrió un modal, la celebración o la Luciérnaga): no hay nombres que
+        /// enseñar, pero si ya habían salido, el touch-up de ese dedo se sigue tragando (02 §3.1, C9: «al soltar no selecciona»).
+        /// </summary>
+        public void Cancel()
+        {
+            if (Fired && Index != None)
+            {
+                _swallowed = Index;
+            }
+
+            Index = None;
+            Fired = false;
+            _heldMs = 0f;
+        }
+
+        /// <summary>
+        /// Deja el gesto sin C9 aunque ya hubiera disparado (una cuia vacía, sin nombres que enseñar): su touch-up vuelve a ser un
+        /// toque normal.
+        /// </summary>
+        public void Abort()
+        {
+            Index = None;
+            Fired = false;
+            _heldMs = 0f;
+        }
+
+        /// <summary>Lo olvida todo (cambio de nivel, segundo plano).</summary>
+        public void Reset()
+        {
+            Index = None;
+            _down.Clear();
+            _pointer = int.MinValue;
+            _heldMs = 0f;
+            Fired = false;
+            _swallowed = None;
+        }
+    }
+
+    /// <summary>
+    /// Escucha los dedos de una cuia para C9 (bloque B9) en su propio objeto, sin tocar <c>CuiaView</c>: el sistema de eventos de
+    /// Unity entrega el touch-down, el touch-up y el arrastre a todos los componentes del objeto. Pasa las posiciones en px de
+    /// pantalla a quien la crea (<c>GameScreen</c>), que las pasa a dp.
+    /// </summary>
+    public sealed class CuiaHoldRelay : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
+    {
+        private Action<int, int, Vector2>? _down;
+        private Action<int, int, Vector2>? _move;
+        private Action<int, int>? _up;
+
+        /// <summary>Índice de la cuia de este objeto.</summary>
+        public int Index { get; private set; }
+
+        /// <summary>Pone (o reutiliza) el escuchador en <paramref name="target"/>, para la cuia <paramref name="index"/>.</summary>
+        public static CuiaHoldRelay Attach(GameObject target, int index, Action<int, int, Vector2> down, Action<int, int, Vector2> move, Action<int, int> up)
+        {
+            // TryGetComponent y no «??»: un componente que falta es un objeto nulo de Unity, no null de C#.
+            CuiaHoldRelay relay = target.TryGetComponent(out CuiaHoldRelay existing) ? existing : target.AddComponent<CuiaHoldRelay>();
+            relay.Index = index;
+            relay._down = down;
+            relay._move = move;
+            relay._up = up;
+            return relay;
+        }
+
+        /// <inheritdoc />
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            _down?.Invoke(Index, eventData.pointerId, eventData.position);
+        }
+
+        /// <inheritdoc />
+        public void OnDrag(PointerEventData eventData)
+        {
+            _move?.Invoke(Index, eventData.pointerId, eventData.position);
+        }
+
+        /// <inheritdoc />
+        public void OnPointerUp(PointerEventData eventData)
+        {
+            _up?.Invoke(Index, eventData.pointerId);
+        }
+    }
+}
