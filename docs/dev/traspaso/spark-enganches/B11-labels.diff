@@ -1,0 +1,241 @@
+diff --git a/Assets/_Project/Scripts/Levels/LevelCatalog.cs b/Assets/_Project/Scripts/Levels/LevelCatalog.cs
+index 9393ff26..2dda9ee0 100644
+--- a/Assets/_Project/Scripts/Levels/LevelCatalog.cs
++++ b/Assets/_Project/Scripts/Levels/LevelCatalog.cs
+@@ -96,6 +96,7 @@ public sealed class LevelCatalog
+         private readonly bool[]? _warned;
+         private readonly int[] _overridden;
+         private readonly int[] _fallbacks;
++        private readonly int[] _relabeled;
+         private readonly Action<string>? _warn;
+ 
+         private LevelCatalog(
+@@ -109,6 +110,7 @@ private LevelCatalog(
+             string?[]? fallbackWarnings,
+             int[] overridden,
+             int[] fallbacks,
++            int[] relabeled,
+             MechanicSwitches switches,
+             Action<string>? warn)
+         {
+@@ -123,6 +125,7 @@ private LevelCatalog(
+             _warned = fallbackWarnings == null ? null : new bool[fallbackWarnings.Length];
+             _overridden = overridden;
+             _fallbacks = fallbacks;
++            _relabeled = relabeled;
+             Switches = switches;
+             _warn = warn;
+         }
+@@ -139,6 +142,12 @@ private LevelCatalog(
+         /// </summary>
+         public IReadOnlyList<int> FallbackLevels => _fallbacks;
+ 
++        /// <summary>
++        /// Niveles servidos con la etiqueta de <c>lvl_label_override</c> en lugar de la del paquete (B11), de menor a mayor: el
++        /// <c>source = override</c> de <c>af_label_shown</c> (08 §8.2) frente a <c>pack</c>.
++        /// </summary>
++        public IReadOnlyList<int> RelabeledLevels => _relabeled;
++
+         /// <summary>Desplazamiento del número de campaña respecto al de los paquetes (0 en producción).</summary>
+         public int LevelOffset { get; }
+ 
+@@ -191,7 +200,8 @@ public static LevelCatalog Create(IReadOnlyList<LevelPack> packs, int levelOffse
+         /// mecánica apagada en <paramref name="switches"/> se sustituye por su entrada de <paramref name="overrides"/> si la hay y
+         /// no usa a su vez una mecánica apagada; si no, se sirve el publicado y <see cref="Serve"/> escribe en
+         /// <paramref name="warn"/> un aviso [P] la primera vez que lo carga. Los avisos se componen aquí, una vez: cargar un nivel
+-        /// no asigna memoria.
++        /// no asigna memoria. Con <paramref name="labels"/> (<c>lvl_label_override</c>, 08 §9; tarea B11), cada nivel servido lleva
++        /// la etiqueta de la tabla (<see cref="LevelLabelOverrides.Apply"/>): la que se muestra y paga (03 §7).
+         /// </summary>
+         /// <exception cref="ArgumentException">No hay paquetes o alguno es null.</exception>
+         /// <exception cref="ArgumentOutOfRangeException"><paramref name="levelOffset"/> fuera de 0..<see cref="MaxLevelOffset"/>.</exception>
+@@ -201,7 +211,8 @@ public static LevelCatalog Create(
+             int levelOffset,
+             LevelOverrides? overrides,
+             MechanicSwitches switches,
+-            Action<string>? warn)
++            Action<string>? warn,
++            LevelLabelOverrides? labels = null)
+         {
+             if (packs == null || packs.Count == 0)
+             {
+@@ -307,6 +318,21 @@ public static LevelCatalog Create(
+                 }
+             }
+ 
++            // lvl_label_override (B11): sobre el nivel servido, sea el publicado o su override.
++            var relabeled = new List<int>();
++            if (labels != null && labels.Count > 0)
++            {
++                LevelDefinition[] before = served;
++                served = labels.Apply(served, numbers);
++                for (int i = 0; i < total; i++)
++                {
++                    if (!ReferenceEquals(served[i], before[i]))
++                    {
++                        relabeled.Add(numbers[i]);
++                    }
++                }
++            }
++
+             return new LevelCatalog(
+                 packArray,
+                 numbers,
+@@ -318,6 +344,7 @@ public static LevelCatalog Create(
+                 warnings,
+                 overridden.ToArray(),
+                 fallbacks.ToArray(),
++                relabeled.ToArray(),
+                 switches,
+                 warn);
+         }
+@@ -371,11 +398,23 @@ public bool Contains(int level)
+             return i < 0 ? null : _published[i];
+         }
+ 
+-        /// <summary>El nivel de campaña <paramref name="level"/> se sirve con su override de <c>level_overrides</c> (KS1).</summary>
++        /// <summary>
++        /// El nivel de campaña <paramref name="level"/> se sirve con su override de <c>level_overrides</c> (KS1). Un nivel solo
++        /// reetiquetado por <c>lvl_label_override</c> (B11) no cuenta: la lista de los sustituidos, no la identidad del nivel.
++        /// Sin asignaciones.
++        /// </summary>
+         public bool IsOverridden(int level)
+         {
+-            int i = IndexOf(level);
+-            return i >= 0 && !ReferenceEquals(_definitions[i], _published[i]);
++            return Array.BinarySearch(_overridden, level) >= 0;
++        }
++
++        /// <summary>
++        /// El nivel de campaña <paramref name="level"/> se sirve con la etiqueta de <c>lvl_label_override</c> (B11), no con la del
++        /// paquete: <c>af_label_shown</c> con <c>source = override</c> (08 §8.2). Sin asignaciones.
++        /// </summary>
++        public bool IsRelabeled(int level)
++        {
++            return Array.BinarySearch(_relabeled, level) >= 0;
+         }
+ 
+         /// <summary>Paquete que contiene el nivel de campaña <paramref name="level"/> (el del publicado), o null si no está.</summary>
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 8aa51d6e..685afda7 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -1969,7 +1969,9 @@ private LocResolution SetUpTexts(string savedLanguage, string deviceTag)
+                     Debug.LogWarning(LogPrefix + overrides.Problems[i]);
+                 }
+ 
+-                LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w));
++                // lvl_label_override (08 §9; B11): fuente local vacía hasta leerlo de Remote Config, como level_overrides.
++                LevelLabelOverrides labels = LevelLabelSource.Create(w => Debug.LogWarning(LogPrefix + w));
++                LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w), labels);
+                 watch.Stop();
+                 if (DevProbe.Enabled)
+                 {
+diff --git a/Assets/_Project/Tests/EditMode/LevelLabelCatalogTests.cs b/Assets/_Project/Tests/EditMode/LevelLabelCatalogTests.cs
+new file mode 100644
+index 00000000..c2a2526c
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/LevelLabelCatalogTests.cs
+@@ -0,0 +1,93 @@
++#nullable enable
++using AF.Economy;
++using AF.GameFlow;
++using AF.Levels;
++using AF.UI;
++using NUnit.Framework;
++
++namespace AF.Tests.EditMode
++{
++    /// <summary>
++    /// <c>lvl_label_override</c> en el catálogo (tarea B11, parche B11-labels; 08 §9; 02 §10; 03 §7: la etiqueta se muestra y
++    /// paga): <see cref="LevelCatalog.Create(System.Collections.Generic.IReadOnlyList{LevelPack}, int, LevelOverrides, MechanicSwitches, System.Action{string}, LevelLabelOverrides)"/>
++    /// sirve el nivel con la etiqueta de la tabla, la tarjeta previa y la Cosecha la leen, y el arranque toma la tabla de
++    /// <see cref="LevelLabelSource"/> (vacía en release).
++    /// </summary>
++    public sealed class LevelLabelCatalogTests
++    {
++        [TearDown]
++        public void TearDown()
++        {
++            LevelLabelSource.JsonOverride = null;
++        }
++
++        [Test]
++        public void Catalog_ServesTheOverriddenLabel_AndTheCardPaysIt()
++        {
++            LevelLabelOverrides labels = LevelLabelOverrides.Create("{\"42\": \"hard\", \"40\": \"normal\"}");
++            LevelCatalog plain = LevelCatalog.Create(TestPacks.Campaign);
++            LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign, 0, null, MechanicSwitches.AllOn, null, labels);
++            Assert.That(plain.Find(42)!.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelNormal), "condición del test");
++            Assert.That(plain.Find(40)!.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelHard), "condición del test: el primer Difícil");
++            Assert.That(catalog.Find(42)!.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelHard));
++            Assert.That(catalog.Find(40)!.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelNormal), "también quita una etiqueta");
++            Assert.That(catalog.Find(43), Is.SameAs(plain.Find(43)), "los demás, el mismo nivel del paquete");
++
++            // La etiqueta se muestra y paga (03 §7): la tarjeta previa del 42 es la del Difícil, con su premio y su cinta.
++            EconomyConfig economy = EconomyConfig.Defaults;
++            LevelCardInfo card = LevelCardInfo.For(catalog.Find(42)!, 42, economy, false)!;
++            Assert.That(card.Kind, Is.EqualTo(LevelCardKind.Difficulty));
++            Assert.That(card.RewardSeeds, Is.EqualTo(economy.EcoRewardHard), "eco_reward_hard (05)");
++            Assert.That(LevelCardInfo.For(catalog.Find(40)!, 40, economy, false), Is.Null, "el 40 sin etiqueta: sin tarjeta");
++        }
++
++        [Test]
++        public void Relabeled_IsNotAnOverride_AndAnOverrideTakesItsLabel()
++        {
++            LevelCatalog plain = LevelCatalog.Create(TestPacks.Campaign);
++            LevelCatalog relabeled = LevelCatalog.Create(TestPacks.Campaign, 0, null, MechanicSwitches.AllOn, null,
++                LevelLabelOverrides.Create("{\"42\": \"hard\"}"));
++            Assert.That(relabeled.IsOverridden(42), Is.False, "solo reetiquetado: no es un override de level_overrides (KS1)");
++            Assert.That(relabeled.OverriddenLevels, Is.Empty);
++            Assert.That(relabeled.IsRelabeled(42), Is.True, "af_label_shown: source = override (08 §8.2)");
++            Assert.That(relabeled.IsRelabeled(41), Is.False, "source = pack");
++            Assert.That(relabeled.RelabeledLevels, Is.EqualTo(new[] { 42 }));
++            Assert.That(plain.RelabeledLevels, Is.Empty);
++
++            // Con la Hoja apagada, el 43 (su estreno) se sirve con su override (el tablero del 42) y con la etiqueta de la tabla.
++            LevelDefinition replacement = plain.Find(42)!;
++            Assert.That(plain.Find(43)!.HasMechanic(AF.Core.Mechanics.MechanicType.Hoja), Is.True, "condición del test");
++            Assert.That(replacement.HasMechanic(AF.Core.Mechanics.MechanicType.Hoja), Is.False, "condición del test");
++            LevelOverrides overrides = LevelOverrides.Create("{\"43\": \"" + replacement.Id + "\"}", TestPacks.Campaign);
++            MechanicSwitches switches = MechanicSwitches.AllOn.With(MechanicSwitch.Hoja, false);
++            LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign, 0, overrides, switches, null,
++                LevelLabelOverrides.Create("{\"43\": \"hard\"}"));
++            Assert.That(catalog.IsOverridden(43), Is.True);
++            Assert.That(catalog.IsRelabeled(43), Is.True);
++            Assert.That(catalog.Find(43)!.Id, Is.EqualTo(replacement.Id));
++            Assert.That(catalog.Find(43)!.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelHard), "la etiqueta, sobre el nivel servido");
++        }
++
++        [Test]
++        public void Catalog_WithoutTheTable_IsThePack()
++        {
++            LevelCatalog plain = LevelCatalog.Create(TestPacks.Campaign);
++            LevelCatalog empty = LevelCatalog.Create(TestPacks.Campaign, 0, null, MechanicSwitches.AllOn, null, LevelLabelOverrides.Empty);
++            for (int level = 1; level <= 700; level++)
++            {
++                Assert.That(empty.Find(level), Is.SameAs(plain.Find(level)), "nivel " + level);
++            }
++        }
++
++        [Test]
++        public void Source_IsEmptyInRelease_AndTheTestHookOtherwise()
++        {
++            Assert.That(LevelLabelSource.ResolveJson(), Is.EqualTo("{}"), "08 §9: default {}");
++            LevelLabelSource.JsonOverride = "{\"41\": \"hard\", \"10\": \"hard\"}";
++            string? warned = null;
++            LevelLabelOverrides table = LevelLabelSource.Create(w => warned = w);
++            Assert.That(table.Count, Is.EqualTo(1));
++            Assert.That(warned, Does.Contain("10").And.Contains("lvl_labels_from_level"), "la entrada descartada se avisa");
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/EditMode/LevelLabelCatalogTests.cs.meta b/Assets/_Project/Tests/EditMode/LevelLabelCatalogTests.cs.meta
+new file mode 100644
+index 00000000..263408a6
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/LevelLabelCatalogTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 001a94c297eddbc4d9da16f3d164e4ca
+\ No newline at end of file
