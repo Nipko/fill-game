@@ -195,3 +195,28 @@ Balsa sin Canoas infinitas), D-028 (P5: el dedo guía es una ayuda explícita co
 - Arte provisional: el icono de la tarjeta de Canoas (la canoa de la cabecera) y los tooltips (el vidrio del bocadillo).
 - Sin prueba en el teléfono: el dedo de la Cuia extra junto a la bandeja y los tooltips en 16:9.
 - Los textos nuevos, sin EN ni PT-BR.
+
+## 7. Cierre en el escritorio (rama `tanda5/b11-cierre`)
+
+Lo que la nota dejaba «para el integrador» (§3) y las tareas de D-033, añadido de B11 («Quedan para otras tareas»), salvo la
+reserva del 20 % y `level_overrides` (otro carril):
+- **Remote Config:** `drag_pour_enabled` y `lvl_label_override` (con `lvl_labels_from_level` y `lvl_very_hard_from_level`) se
+  leen en `RcGameplayBinder` (`RcConfigs.DragPourEnabled` y `RcConfigs.LevelLabels`). Remote Config se prepara ahora al principio
+  de `Start` (`GameBootstrap.SetUpRemoteConfig`), antes de cargar el catálogo, para que la tabla de etiquetas (y, cuando llegue,
+  `level_overrides`) se aplique al crearlo. `GameScreen.DragPourEnabled` lee el valor del arranque.
+- **Analítica (08 §8.2):** `af_label_shown` con cada intento de un nivel Difícil o Muy difícil, justo tras `level_start`
+  (`source = override` con `LevelCatalog.IsRelabeled`, si no `pack`) [P: por intento, como `level_start`]; y todas las
+  elecciones de Sin canoas en `af_no_canoes_choice`: `wait` (la X o Atrás), `ad` (al empezar el vídeo), `seeds_refill` (cobrado),
+  `iap_infinite` (al empezar la compra), `daily_challenge` y `map`.
+- **Sugerencias de la revisión del Spark:** `LevelDefinition.WithLabel` (comparte los arrays del nivel, que es inmutable) en lugar
+  de `LevelLabelOverrides.Relabel`; `IGameActions.PressNoCanoesMap` en lugar de `GameBootstrap.Current`; `GameScreen` ya no
+  comprueba dos veces `LessonLegal` (`TutorialFingerSetup.TryChooseWhileIllegal`).
+- **La fila «Bitácora · elige tu premio»** (`GameScreen.LogbookRow.cs`, `VictoryBars`): la tercera barra, de 48 dp, bajo la Crecida
+  y la Canasta; abre la libreta encima de la victoria y se va al sellar. Solo cuenta en la victoria compacta de la victoria que la
+  lleva; si con ella hiciera falta el escalón 3 (donde iría tras el chevron), no sale y la libreta sale sola al inicio [P]. Hoy
+  sale a 360 × 780 y no a 360 × 640 (medido en `LogbookVictoryRowTests`). No sale en el 10 ni en el Reto.
+- **Q-B11-5 (a):** `GameScreen.CanvasScale(width, height, pxPerDp)` con `DisplayMetrics.density` en Android: de 320 a 360 dp
+  físicos, el lienzo mide el teléfono (1 dp físico por dp); por debajo, 320; desde 360, como antes; luego el alto mínimo de 640.
+  Lo usan la pantalla de nivel, el inicio y las capas de encima (`OverlayCanvas`). `Canvas320Tests` y `Canvas320SnapshotTests`.
+- **GDD:** 02 §5 y §13, 03 §13, 04 §7.1, 05 §7 (UMP dentro de MAX; doble confirmación en lugar del PIN) y 08 §7 (el PIN), con
+  su decisión citada en cada cambio.
