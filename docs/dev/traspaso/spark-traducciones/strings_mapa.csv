@@ -9,7 +9,7 @@ map_facts_count,Datos del río · {k}/{n},River facts · {k}/{n},Curiosidades do
 map_hito_preview,"Si lo superas, llegas a {place}",Beat it and you'll reach {place},"Se vencer, você chega a {place}",traducido,traducido
 map_home_distance,Casa · a unos {km} km,Home · about {km} km,Casa · a cerca de {km} km,traducido,traducido
 map_l10_intro,"Yo vivo aquí, donde el río entra al mar.","I live here, where the river meets the sea.","Eu moro aqui, onde o rio encontra o mar.",traducido,traducido
-map_next_world,Mundo {n} · {name} · Nivel {level},World {n} · {name} · Level {level},Mundo {n} · {name} · Nível {level},traducido,traducido
+map_next_world,Mundo {n} · {name}{sep}Nivel {level},World {n} · {name}{sep}Level {level},Mundo {n} · {name}{sep}Nível {level},traducido,traducido
 map_north_up,Norte arriba,North up,Norte para cima,traducido,traducido
 map_open,Ver mapa,View map,Ver mapa,traducido,traducido
 map_samples,Muestrario · {k}/{n},Samples · {k}/{n},Mostruário · {k}/{n},traducido,traducido
