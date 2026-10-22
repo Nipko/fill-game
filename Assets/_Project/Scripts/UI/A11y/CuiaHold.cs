@@ -136,6 +136,7 @@ namespace AF.UI
             {
                 Index = None;
                 Fired = false;
+                _pointer = int.MinValue; // ya no se sigue: un toque nuevo con el mismo id no es un touch-up perdido
             }
 
             if (_fingers == 0)

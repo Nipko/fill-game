@@ -50,6 +50,7 @@ namespace AF.UI
         private readonly List<Entry> _entries = new List<Entry>();
         private readonly List<A11yItem> _canvasItems = new List<A11yItem>();
         private readonly List<List<A11yItem>> _layers = new List<List<A11yItem>>();
+        private readonly List<RectMask2D> _masks = new List<RectMask2D>();
 
         /// <summary>Elementos sin etiqueta encontrados en el último recorrido (botones de solo icono sin registrar; tests y sonda).</summary>
         public int Unlabeled { get; private set; }
@@ -147,6 +148,34 @@ namespace AF.UI
             return false;
         }
 
+        /// <summary>
+        /// En <paramref name="canvas"/>, algo dibujado después de <paramref name="marker"/> (y fuera de él) lo tapa: un velo que recibe
+        /// toques y cubre casi todo el lienzo (un modal en el mismo lienzo: la pausa, una confirmación). Lo de debajo de
+        /// <paramref name="marker"/> (el fondo que recoge los toques del tablero) no cuenta.
+        /// </summary>
+        public static bool BlockedAbove(Canvas canvas, Transform marker)
+        {
+            Rect canvasRect = ((RectTransform)canvas.transform).rect;
+            Graphic[] graphics = canvas.GetComponentsInChildren<Graphic>(false); // en orden de dibujo (profundidad primero)
+            bool past = false;
+            for (int i = 0; i < graphics.Length; i++)
+            {
+                bool inside = graphics[i].transform.IsChildOf(marker);
+                if (inside)
+                {
+                    past = true;
+                    continue;
+                }
+
+                if (past && IsBlocker(graphics[i], canvasRect))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>Etiqueta de <paramref name="button"/>: la registrada o sus textos a la vista, en orden («» si no tiene).</summary>
         public static string ButtonLabel(Button button, out bool selected)
         {
@@ -171,8 +200,19 @@ namespace AF.UI
         /// <summary>Elemento de botón para <paramref name="button"/> (etiqueta, desactivado y la pulsación).</summary>
         public static A11yItem ButtonItem(Button button, string? labelOverride = null)
         {
-            string label = ButtonLabel(button, out bool selected);
-            return new A11yItem("btn_" + button.GetInstanceID(), labelOverride ?? label, AccessibilityRole.Button, (RectTransform)button.transform, () => Press(button))
+            bool selected;
+            string label;
+            if (labelOverride != null)
+            {
+                label = labelOverride;
+                A11yLabels.TryGet(button.gameObject, out _, out selected);
+            }
+            else
+            {
+                label = ButtonLabel(button, out selected);
+            }
+
+            return new A11yItem("btn_" + button.GetInstanceID(), label, AccessibilityRole.Button, (RectTransform)button.transform, () => Press(button))
             {
                 Disabled = !button.IsInteractable(),
                 Selected = selected,
@@ -268,6 +308,16 @@ namespace AF.UI
             if (frame.width <= 0f || frame.height <= 0f || frame.xMax <= 0f || frame.yMax <= 0f || frame.xMin >= Screen.width || frame.yMin >= Screen.height)
             {
                 return; // fuera de la pantalla
+            }
+
+            // Recortado del todo por un visor (RectMask2D; la lista de Ajustes que se desplaza): no se ve, no se publica.
+            rect.GetComponentsInParent(false, _masks);
+            for (int i = 0; i < _masks.Count; i++)
+            {
+                if (_masks[i].isActiveAndEnabled && !UnityScreenReaderHost.ScreenFrame(_masks[i].rectTransform).Overlaps(frame))
+                {
+                    return;
+                }
             }
 
             if (item.Label.Length == 0)

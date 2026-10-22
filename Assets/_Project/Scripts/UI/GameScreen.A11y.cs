@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using AF.Core.Board;
 using AF.GameFlow;
+using AF.Localization;
 using AF.Platform;
 using AF.Presentation;
 using UnityEngine;
@@ -34,6 +35,12 @@ namespace AF.UI
         private A11yService? _a11y;
         private bool _highContrast;
         private float _boardMotionFactor = 1f;
+        private string[] _a11yIds = new string[0];
+        private string[] _a11yLabels = new string[0];
+        private System.Func<bool>[] _a11yTaps = new System.Func<bool>[0];
+        private BoardState? _a11yLabelState;
+        private string? _a11yLabelLocale;
+        private LocCatalog? _a11yLabelCatalog;
 
         /// <summary>
         /// El lector de pantalla del juego (null: sin él, en los tests que no lo tratan). Al asignarlo, esta pantalla se registra
@@ -115,31 +122,39 @@ namespace AF.UI
             _animator.ApplyPatterns(PatternsOn(level));
             if (_highContrast)
             {
-                LiquidGraphic.ApplyPatternOpacity(A11yRules.PatternOpacity(true, LiquidGraphic.ShaderPatternOpacity));
+                LiquidGraphic.ApplyPatternOpacity(A11yRules.HighContrastPatternOpacity);
             }
+        }
+
+        // El tablero acepta toques del lector: jugable y sin un modal encima en el mismo lienzo (la pausa, una confirmación).
+        private bool BoardReadable()
+        {
+            LevelFlow? flow = _flow;
+            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && _views.Length > 0 && !flow.RevealSelecting
+                && !A11yScanner.BlockedAbove(_canvas, _board);
         }
 
         bool IA11ySource.Collect(Canvas canvas, A11yScanner scanner, List<A11yItem> into)
         {
             LevelFlow? flow = _flow;
-            if (!ReferenceEquals(canvas, _canvas) || flow == null || !flow.HasLevel || !flow.AcceptsBoardInput || _views.Length == 0
-                || flow.RevealSelecting)
+            if (!ReferenceEquals(canvas, _canvas) || flow == null || !BoardReadable())
             {
-                return false; // fuera del tablero jugable (intro, celebración, modales): el recorrido genérico
+                return false; // fuera del tablero jugable (intro, celebración, pausa, modales): el recorrido genérico
             }
 
-            // 02 §12: el foco recorre las cuias por orden de ranura y después la barra de comodines.
+            // 02 §12: el foco recorre las cuias por orden de ranura y después la barra de comodines. Las etiquetas se rehacen solo
+            // cuando cambia el tablero (o el idioma), no en cada recorrido.
             BoardState state = flow.Session.Current;
+            RefreshCuiaLabels(state);
             for (int i = 0; i < _views.Length && i < state.Count; i++)
             {
-                int index = i;
                 CuiaView view = _views[i];
                 if (view == null || !view.gameObject.activeInHierarchy)
                 {
                     continue;
                 }
 
-                into.Add(new A11yItem("cuia_" + i, CuiaSpeech.Label(state, i), AccessibilityRole.Button, view.Body, () => TapFromReader(index))
+                into.Add(new A11yItem(_a11yIds[i], _a11yLabels[i], AccessibilityRole.Button, view.Body, _a11yTaps[i])
                 {
                     Selected = flow.Selected == i,
                 });
@@ -168,11 +183,47 @@ namespace AF.UI
             }
         }
 
-        // Activar una cuia con el lector (doble toque): el mismo toque que con el dedo (C1-C6).
+        // Las etiquetas, ids y acciones de las cuias, guardados: las etiquetas solo cambian con el tablero o el idioma.
+        private void RefreshCuiaLabels(BoardState state)
+        {
+            if (_a11yIds.Length < state.Count)
+            {
+                int old = _a11yIds.Length;
+                System.Array.Resize(ref _a11yIds, state.Count);
+                System.Array.Resize(ref _a11yTaps, state.Count);
+                for (int i = old; i < state.Count; i++)
+                {
+                    int index = i;
+                    _a11yIds[i] = "cuia_" + i;
+                    _a11yTaps[i] = () => TapFromReader(index);
+                }
+            }
+
+            if (ReferenceEquals(state, _a11yLabelState) && ReferenceEquals(Loc.Catalog, _a11yLabelCatalog)
+                && string.Equals(Loc.Locale, _a11yLabelLocale, System.StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (_a11yLabels.Length < state.Count)
+            {
+                System.Array.Resize(ref _a11yLabels, state.Count);
+            }
+
+            for (int i = 0; i < state.Count; i++)
+            {
+                _a11yLabels[i] = CuiaSpeech.Label(state, i);
+            }
+
+            _a11yLabelState = state;
+            _a11yLabelLocale = Loc.Locale;
+            _a11yLabelCatalog = Loc.Catalog;
+        }
+
+        // Activar una cuia con el lector (doble toque): el mismo toque que con el dedo (C1-C6), nunca a través de un modal.
         private bool TapFromReader(int index)
         {
-            LevelFlow? flow = _flow;
-            if (flow == null || !flow.AcceptsBoardInput || (uint)index >= (uint)_views.Length)
+            if (!BoardReadable() || (uint)index >= (uint)_views.Length)
             {
                 return false;
             }
@@ -259,17 +310,18 @@ namespace AF.UI
 
         private void OnHoldDown(int index, int pointer, Vector2 screenPx)
         {
-            if (!BoardTakesHold())
+            if (_hold.AnyDown && pointer == _hold.Pointer)
             {
-                if (!_hold.AnyDown)
-                {
-                    HoldReset(); // un gesto nuevo: sin restos de un C9 anterior que se tragaran este toque (el de la Luciérnaga)
-                }
-
-                return;
+                _namesBubble?.Hide(); // el mismo dedo vuelve a bajar: su touch-up se perdió y los nombres de entonces se van
             }
 
+            // El dedo se cuenta siempre (cada touch-up descuenta uno); sin tablero jugable (un modal, la selección de la
+            // Luciérnaga) no puede sacar nombres: se corta al momento, y un gesto nuevo no arrastra el trago de uno anterior.
             _hold.Press(index, pointer, ToDp(screenPx));
+            if (!BoardTakesHold())
+            {
+                _hold.Cancel();
+            }
         }
 
         private void OnHoldMove(int index, int pointer, Vector2 screenPx)

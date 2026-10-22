@@ -68,6 +68,17 @@ namespace AF.Tests.PlayMode
             Assert.That(sound.Invoke!(), Is.True, "activar (doble toque) es pulsar la fila");
             Assert.That(boot.Profile.Settings.Sound, Is.False, "el ajuste cambió");
             Assert.That(UnityScreenReaderHost.ScreenFrame(sound.Rect!).width, Is.GreaterThan(0f));
+
+            // Lo que el visor de Ajustes recorta del todo (la lista se desplaza) no se publica: no se ve ni se puede tocar.
+            SettingsScreen settings = boot.SettingsView!;
+            Rect viewport = UnityScreenReaderHost.ScreenFrame(settings.Viewport);
+            foreach (A11yItem item in host.Items)
+            {
+                if (item.Rect != null && item.Rect.IsChildOf(settings.Viewport))
+                {
+                    Assert.That(UnityScreenReaderHost.ScreenFrame(item.Rect).Overlaps(viewport), Is.True, item.Label + ": dentro del visor");
+                }
+            }
         }
 
         [UnityTest]
