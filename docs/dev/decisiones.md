@@ -3556,6 +3556,16 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Pendiente aparte (sin encargo):** comprobar qué envía el propio runtime de Unity 6.3 en un build Android (Engine Diagnostics o Insights, que el emisor de IAP menciona). Es tema del abogado y de Data Safety.
 - **Encargo:** `docs/dev/traspaso/spark-reto-del-rio.md` §15.
 
+### D-040, añadido del 2026-10-22: dependencias Maven de Play Billing Library 9.0.0 (Q-BILL-1)
+
+- **Estado:** aprobado por el dueño en la sesión del Spark (registro en `docs/dev/iap.md` §4.1, commit `ea348c76` de `spark/t5-billing`): «Apruebo las dependencias Maven de com.android.billingclient:billing 9.0.0 de Q-BILL-1 con las versiones que resuelve Gradle; anótalo para D-040.»
+- Quedan aprobadas las dependencias que declara el POM de `billing:9.0.0`, con la versión que pide el POM como mínimo y tal como las resuelve Gradle junto a Firebase (dev.apk, `:unityLibrary:dependencies`; tabla en `iap.md` §4.1):
+  - `androidx.activity:activity` 1.2.3 → 1.6.0; `androidx.core:core` 1.15.0 → 1.15.0;
+  - `com.google.android.datatransport:transport-api` 3.0.0 → 3.2.0, `transport-backend-cct` 3.1.8 → 3.3.0 y `transport-runtime` 3.1.8 → 3.3.0;
+  - `com.google.android.gms:play-services-base` 18.5.0 → 18.10.1, `play-services-basement` 18.9.0 → 18.11.0, `play-services-location` 19.0.0 → 19.0.0 (con `play-services-places-placereport` 17.0.0) y `play-services-tasks` 18.2.0 → 18.4.1.
+- Son las mismas que ya entraban con Unity IAP 5.4.4 (que traía `billing:9.0.0`); ninguna añade permisos. Las únicas que solo trae Play Billing son `play-services-location` y `places-placereport`. Subir `billing` o fijar otras versiones a mano exige otra aprobación.
+- Con la integración de `spark/t5-billing` y sus parches `BILL-*` (rama `integra/spark-billing`), Unity IAP y sus tres dependencias de Unity Services salen de `integracion-fase1-fase2`.
+
 ### D-033, añadido del 2026-10-22: pendientes del dueño 2 a 12, todos con la recomendada
 
 - **Estado:** decididos por el dueño en el chat: «Pendientes 2 a 12: todas con la recomendada.» El 1 es Q-IAP-1 (D-040).
