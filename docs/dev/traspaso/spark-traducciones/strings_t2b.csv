@@ -25,14 +25,14 @@ comeback_streak_line,Tu Crecida de {n} sigue en pie,Your Rising River of {n} sti
 consent_accept_all,Aceptar todo,Accept all,Aceitar tudo,traducido,traducido
 consent_ads_strict,Los anuncios no son personalizados.,Ads aren't personalized.,Os anúncios não são personalizados.,traducido,traducido
 consent_ads_teen,"Con tu edad, los anuncios no son personalizados.","At your age, ads aren't personalized.","Na sua idade, os anúncios não são personalizados.",traducido,traducido
-consent_ads_ump,Los anuncios personalizados se eligen en el aviso de Google.,Personalized ads are chosen in Google's notice.,Os anúncios personalizados são escolhidos no aviso do Google.,traducido,traducido
+consent_ads_ump,Los anuncios personalizados se eligen en el aviso de Google.,You choose personalized ads in Google's notice.,Os anúncios personalizados são escolhidos no aviso do Google.,traducido,traducido
 consent_ads_ump_options,Elegir los anuncios en el aviso de Google,Choose ads in Google's notice,Escolher os anúncios no aviso do Google,traducido,traducido
 consent_age_13_17,De 13 a 17,13 to 17,De 13 a 17,traducido,traducido
 consent_age_18_plus,18 o más,18 or older,18 ou mais,traducido,traducido
 consent_age_title,¿Cuántos años tienes?,How old are you?,Quantos anos você tem?,traducido,traducido
 consent_age_under_13,Menos de 13,Under 13,Menos de 13,traducido,traducido
 consent_blocked,Pide a un adulto que instale el juego,Ask an adult to install the game,Peça a um adulto para instalar o jogo,traducido,traducido
-consent_body,Elige para qué podemos usar tus datos. Puedes cambiarlo cuando quieras en Ajustes.,Choose what we can use your data for. You can change it anytime in Settings.,Escolha para que podemos usar seus dados. Você pode mudar isso quando quiser em Configurações.,traducido,traducido
+consent_body,Elige para qué podemos usar tus datos. Puedes cambiarlo cuando quieras en Ajustes.,Choose what we can use your data for. You can change it anytime in Settings.,Escolha como podemos usar seus dados. Você pode mudar isso quando quiser em Configurações.,traducido,traducido
 consent_diagnostics,Los informes de fallos están siempre activos para que el juego funcione bien.,Crash reports are always on so the game runs well.,Os relatórios de falhas estão sempre ativos para que o jogo funcione bem.,traducido,traducido
 consent_purpose_ads,Anuncios personalizados,Personalized ads,Anúncios personalizados,traducido,traducido
 consent_purpose_analytics,Analítica para mejorar el juego,Analytics to improve the game,Análises para melhorar o jogo,traducido,traducido
@@ -57,7 +57,7 @@ market_noads_owned,Ya no ves anuncios entre niveles,You no longer see ads betwee
 market_piggy_content,{seeds} de {cap:plural:{} semilla|{} semillas},{seeds} of {cap:plural:{} seed|{} seeds},{seeds} de {cap:plural:{} semente|{} sementes},traducido,traducido
 market_piggy_fills,Se llena con cada victoria,Fills up with every win,Enche a cada vitória,traducido,traducido
 market_piggy_full,¡Lleno!,Full!,Cheio!,traducido,traducido
-market_piggy_locked,{n:plural:Se puede comprar desde {} semilla|Se puede comprar desde {} semillas},{n:plural:Can be bought from {} seed|Can be bought from {} seeds},{n:plural:Pode ser comprado a partir de {} semente|Pode ser comprado a partir de {} sementes},traducido,traducido
+market_piggy_locked,{n:plural:Se puede comprar desde {} semilla|Se puede comprar desde {} semillas},{n:plural:Available from {} seed|Available from {} seeds},{n:plural:Pode ser comprado a partir de {} semente|Pode ser comprado a partir de {} sementes},traducido,traducido
 market_seeds_amount,{n:plural:{} semilla|{} semillas},{n:plural:{} seed|{} seeds},{n:plural:{} semente|{} sementes},traducido,traducido
 market_skin_equip,Poner,Equip,Usar,traducido,traducido
 market_skin_equipped,Puesta,Equipped,Em uso,traducido,traducido
@@ -99,7 +99,6 @@ shuffle_name,Pororoca,Pororoca,Pororoca,traducido,traducido
 shuffle_tagline,La ola remueve el río sin tocar las cuias llenas.,The wave stirs the river without touching full cuias.,A onda agita o rio sem tocar nas cuias cheias.,traducido,traducido
 shuffle_unsupported,La ola no llega con la lluvia ni las pirañas,The wave doesn't come with rain or piranhas,A onda não vem com a chuva nem com as piranhas,traducido,traducido
 skin_af_skin_m02_name,Cuia de Santarém,Santarém Cuia,Cuia de Santarém,traducido,traducido
-skin_af_skin_m03_name,Cuia del Encuentro,Meeting Cuia,Cuia do Encontro,traducido,traducido
 skin_cuia_vidrio_name,Cuia de vidrio,Glass Cuia,Cuia de vidro,traducido,traducido
 skin_equipped_toast,{skin} · puesta,{skin} · equipped,{skin} · equipada,traducido,traducido
 skip_banner,Rosa puede llevarte río arriba · {price},Rosa can take you upriver · {price},Rosa pode levar você rio acima · {price},traducido,traducido
