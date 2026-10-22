@@ -20,7 +20,7 @@ El archivo de traducciones va en UTF-8 sin BOM, LF, RFC 4180 y en orden ordinal 
 nombre: strings*.csv va a strings.csv y facts*.csv a facts.csv.
 
 Uso (desde la raíz del repositorio):
-    python tools/loc/apply_translations.py                 # aplica strings.csv, strings_p14.csv y strings_t2b.csv de la carpeta de entrega
+    python tools/loc/apply_translations.py                 # aplica strings.csv, strings_p14.csv, strings_t2b.csv, facts_mapa.csv y facts_mapa_2.csv de la carpeta de entrega
     python tools/loc/apply_translations.py --check         # no escribe; código 1 si aplicar cambiaría algo o hay conflictos
     python tools/loc/apply_translations.py <archivos.csv>  # solo esos archivos (strings_mapa.csv, strings_glosario.csv, facts*.csv)
     python tools/loc/apply_translations.py --self-test     # pruebas propias, en memoria
@@ -36,6 +36,11 @@ Retención (T2-Q6; 08 §4.7: «una traducción solo vale con status en aprobado_
 mientras el español no esté aprobado): en facts.csv, una fila con status por debajo de aprobado_es no se escribe; sale como
 «RETENIDA» (aviso, no conflicto) y se aplicará cuando el asesor apruebe el español. Si entonces el español cambió, la
 comprobación del es-419 la convierte en conflicto.
+Excepción, el bloque map.* (prueba en el teléfono del 2026-10-23, observación 1: los nombres de parada, las preguntas de
+los mundos y los datos del Mapa salían vacíos en en y pt-BR porque estaban retenidos): sus filas se escriben aunque el
+español siga en pendiente_asesor. Siguen sin llegar al jugador en release, porque Loc solo muestra un texto largo con
+aprobado_es y revisado_nativo (08 §4.7); en desarrollo, como el español sin aprobar, sí se ven. stops.py las conserva solo
+mientras el es-419 no cambie (T2-Q1). El resto de facts.csv (frutas y fauna) sigue retenido.
 
 Qué hace y qué no:
 - Cambia solo las celdas en, pt-BR, status_en y status_pt-BR de las filas citadas. Las demás filas, las demás columnas, el
@@ -46,7 +51,8 @@ Qué hace y qué no:
 - Nunca escribe en las filas map.* de facts.csv mientras tools/river-map/stops.py las regenere con en y pt-BR vacíos (08
   §4.5): sin stops-preserve.diff, una traducción ahí se perdería en la siguiente regeneración.
 - Comprueba cada traducción como LocTablesTests: los mismos marcadores con nombre que es-419 (también {sep}), las llaves
-  parejas y la longitud visible ≤ max_chars × 1,3 (la regla de VisibleLength).
+  parejas y la longitud visible ≤ max_chars × 1,3 (la regla de VisibleLength); y, si el es-419 lleva el espacio duro U+00A0
+  entre una cifra y su unidad (08 §4.7), que la traducción también lo lleve (salvo antes de «%», que en en y pt-BR va pegado).
 - Una clave que ya no existe en la tabla es un aviso (se salta), no un conflicto.
 - Lo aplicado a strings.csv se aplica igual a sus copias (MIRRORS: docs/dev/traspaso/spark-strings-reto.csv, cuyas filas
   DailyUiLogicTests exige idénticas a las de la tabla), solo en las claves que tienen.
@@ -68,7 +74,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_LOC = REPO / "Assets" / "_Project" / "Data" / "Loc"
 DEFAULT_DIR = REPO / "docs" / "dev" / "traspaso" / "spark-traducciones"
-DEFAULT_FILES = ("strings.csv", "strings_p14.csv", "strings_t2b.csv")
+DEFAULT_FILES = ("strings.csv", "strings_p14.csv", "strings_t2b.csv", "facts_mapa.csv", "facts_mapa_2.csv")
 STATUS_ORDER = {"": 0, "borrador": 1, "pendiente_asesor": 2, "aprobado_es": 3}
 STOPS_MARKER = "PRESERVED_LOCALE_COLUMNS"  # lo añade stops-preserve.diff a tools/river-map/stops.py
 MAP_TEST_OLD = 'Is.Empty, key + " (" + locale + "): pendiente del traductor"'  # lo quita MapTextTests.diff
@@ -209,6 +215,11 @@ def visible_length(s: str, start: int = 0, end: int | None = None) -> int:
 MARKER = re.compile(r"\{([A-Za-z0-9_]+)(?=[}:])")
 
 
+# Espacio duro (U+00A0) entre una cifra (o un marcador, «{n}») y su unidad (08 §4.7; .claude/rules/localizacion.md): «6\u00a0km»,
+# «{n}\u00a0m³». No cuenta el de antes de «%»: en en y pt-BR el porcentaje va pegado («42%»).
+NBSP_UNIT = re.compile("[0-9}]\u00a0(?!%)")
+
+
 def markers(s: str) -> list[str]:
     return sorted(MARKER.findall(s))
 
@@ -219,6 +230,10 @@ def text_problems(source: str, text: str, max_chars: int) -> list[str]:
         out.append(f"marcadores {markers(text)} y no {markers(source)} como es-419")
     if text.count("{") != text.count("}"):
         out.append("llaves desparejas")
+    need = len(NBSP_UNIT.findall(source))
+    have = len(NBSP_UNIT.findall(text))
+    if have < need:
+        out.append(f"es-419 lleva {need} espacio(s) duro(s) U+00A0 entre cifra y unidad y la traducción solo {have} (08 §4.7)")
     if max_chars > 0 and visible_length(text) * 10 > max_chars * 13:
         out.append(f"mide {visible_length(text)} y pasa de max_chars × 1,3 ({max_chars} × 1,3)")
     return out
@@ -293,7 +308,8 @@ def apply(table_text: str, table_name: str, translations: list[dict], tr_name: s
             res.conflicts.append(f"{tr_name} {key}: el es-419 de la tabla cambió desde la traducción "
                                  f"(tabla «{values['es-419']}», traducción «{tr['es-419']}»)")
             continue
-        if table_name.startswith("facts") and STATUS_ORDER.get(values["status"], 0) < STATUS_ORDER["aprobado_es"]:
+        if (table_name.startswith("facts") and not key.startswith(GENERATED_PREFIX)
+                and STATUS_ORDER.get(values["status"], 0) < STATUS_ORDER["aprobado_es"]):
             if any(tr[loc] for loc in LOCALES):
                 res.retained.append(f"{tr_name} {key}: español en «{values['status'] or 'sin estado'}»; se aplicará con aprobado_es")
             continue
@@ -582,6 +598,19 @@ def self_test() -> int:
     rows12, _ = read_translations(tr([["map.stop.x.dato_01", "Dato", "Fact", "", "traducido", ""]]), "facts_mapa.csv")
     case("map.* sin el parche: conflicto", apply(facts2, "facts.csv", rows12, "facts_mapa.csv").conflicts)
     case("map.* con el parche: se escribe", apply(facts2, "facts.csv", rows12, "facts_mapa.csv", True).changes == ["map.stop.x.dato_01 (en)"])
+    # 12c. El espacio duro entre cifra y unidad (08 §4.7): si el es-419 lo lleva, la traducción también; «42%» pegado vale.
+    case("U+00A0: falta en la traducción", any("U+00A0" in p for p in text_problems("Mide {n}\u00a0km.", "It is {n} km long.", 90)))
+    case("U+00A0: con él, sin problema", not text_problems("Mide {n}\u00a0km.", "It is {n}\u00a0km long.", 90))
+    case("U+00A0: el de antes de % no cuenta", not text_problems("Ocupa el 42\u00a0%.", "It covers 42%.", 90))
+    case("U+00A0: sin él en es-419, no se pide", not text_problems("Mide 5 metros.", "It is 5 meters.", 90))
+    # 12b. El bloque map.* no se retiene con el español en pendiente_asesor (observación 1 de la prueba del 2026-10-23); el
+    # resto de facts.csv, sí.
+    facts12 = (H + "fact.x.01,Mide 35 m,,,ctx,90,pendiente_asesor,,,,\n"
+               + "map.stop.x.dato_01,Dato,,,ctx,90,pendiente_asesor,,,generado,\n")
+    r12b = apply(facts12, "facts.csv", rows11[:1] + rows12, "facts_mapa.csv", True)
+    case("map.* en pendiente_asesor: se escribe; fact.* sigue retenida", r12b.changes == ["map.stop.x.dato_01 (en)"]
+         and len(r12b.retained) == 1 and "fact.x.01" in r12b.retained[0]
+         and "map.stop.x.dato_01,Dato,Fact,,ctx,90,pendiente_asesor,traducido,,generado," in (r12b.text or ""))
     # 13. Entregas que piden un parche.
     with tempfile.TemporaryDirectory() as d:
         repo = Path(d)

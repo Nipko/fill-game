@@ -378,6 +378,7 @@ namespace AF.UI
             SetDragEnabled(!_northUpOn);
             ApplyNorthUpLatch();
             _activeMs = ActiveLingerMs;
+            PlatesStackedForNorthUp(_northUpOn); // observación 2 del 2026-10-23: con el norte arriba salen todas las placas
             if (_northUpOn)
             {
                 NorthUpLabelShifts();

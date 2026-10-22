@@ -209,7 +209,18 @@ namespace AF.UI
         /// </summary>
         public static string MapNextWorld(int world, int firstLevel)
         {
-            return Format(Keys.MapNextWorld, LocArgs.OfDigits("n", Check(world)).And("name", WorldName(world)).AndDigits("level", NonNegative(firstLevel)));
+            return MapNextWorld(world, firstLevel, 0);
+        }
+
+        /// <summary>
+        /// <c>map_next_world</c> [P] con cortes: su plantilla lleva <c>{sep}</c> donde la placa se puede partir en dos líneas (antes
+        /// del nivel: «Mundo {n} · {nombre}» y «Nivel {nivel}»), y el <c>{sep}</c> número i es un salto de línea si el bit i de
+        /// <paramref name="breaks"/> está puesto y « · » si no. Con 0, la línea de siempre. Lo usan las placas de la Cuenca que no
+        /// caben en una línea sin pisar otra (observación 2 de la prueba en el teléfono del 2026-10-23).
+        /// </summary>
+        public static string MapNextWorld(int world, int firstLevel, int breaks)
+        {
+            return Format(Keys.MapNextWorld, LocArgs.OfDigits("n", Check(world)).And("name", WorldName(world)).AndDigits("level", NonNegative(firstLevel)), breaks);
         }
 
         /// <summary><c>map_samples</c> [P]: «Muestrario · {k}/{n}», con el separador de miles de la región.</summary>

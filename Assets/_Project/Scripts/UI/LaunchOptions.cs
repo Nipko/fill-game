@@ -129,6 +129,22 @@ namespace AF.UI
         public static bool? DevRejectOverride { get; set; }
 
         /// <summary>
+        /// Extra de intent (booleano) de los builds de desarrollo (observación del Mercado de la prueba en el teléfono del
+        /// 2026-10-23): con <c>--ez af_fake_store true</c>, la tienda es la simulada (<c>FakeBillingClient</c>, la hoja «Compra
+        /// simulada») y la verificación, la del backend falso (<c>FakeBackendClient</c>, que concede lo del catálogo, como en el
+        /// editor), aunque el build tenga el backend real y Play Billing. Sirve para ver y probar el Mercado en el teléfono sin la
+        /// app en Play Console. Lo que se compra así se acredita sin Play ni el servidor, solo en ese perfil de pruebas, y logcat lo
+        /// dice con <c>AF_FAKE_STORE</c> al arrancar. Nunca se lee en un build de release (<see cref="ResolveFakeStore(bool)"/>).
+        /// </summary>
+        public const string IntentExtraFakeStore = "af_fake_store";
+
+        /// <summary>
+        /// <c>af_fake_store</c> forzado por un test (true = tienda simulada con el backend falso); null = el extra. Solo tests; fuera
+        /// de desarrollo no cuenta (<see cref="ResolveFakeStore(bool)"/>).
+        /// </summary>
+        public static bool? FakeStoreOverride { get; set; }
+
+        /// <summary>
         /// <c>af_max_level</c> simulado por un test (−1 = no tocar); null = el del intent. Solo tests: ningún extra de intent lo
         /// rellena.
         /// </summary>
@@ -317,6 +333,22 @@ namespace AF.UI
             BenchMorphoOverride = null;
             DevMaxLevelOverride = null;
             DevRejectOverride = null;
+            FakeStoreOverride = null;
+        }
+
+        /// <summary>
+        /// Si la tienda de la partida es la simulada con el backend falso de verificación (<c>af_fake_store</c>): solo en un build de
+        /// desarrollo (<paramref name="development"/>, el <c>Debug.isDebugBuild</c> del arranque) y con el extra a true (o
+        /// <see cref="FakeStoreOverride"/> en un test). En release, siempre false: nunca se acredita sin verificación.
+        /// </summary>
+        public static bool ResolveFakeStore(bool development)
+        {
+            if (!development)
+            {
+                return false;
+            }
+
+            return FakeStoreOverride ?? ReadIntentBool(IntentExtraFakeStore);
         }
 
         /// <summary>
@@ -676,6 +708,32 @@ namespace AF.UI
             }
 #else
             return missing;
+#endif
+        }
+
+        /// <summary>Extra de intent booleano <paramref name="name"/> (<c>--ez</c>; solo Android y solo en builds de desarrollo); false si no hay.</summary>
+        public static bool ReadIntentBool(string name)
+        {
+            if (!Debug.isDebugBuild || Application.platform != RuntimePlatform.Android)
+            {
+                return false;
+            }
+
+#if UNITY_ANDROID
+            try
+            {
+                using (AndroidJavaObject? intent = CurrentIntent())
+                {
+                    return intent != null && intent.Call<bool>("getBooleanExtra", name, false);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[AF.LaunchOptions] no se pudo leer el extra " + name + ": " + e.Message);
+                return false;
+            }
+#else
+            return false;
 #endif
         }
 
