@@ -352,7 +352,9 @@ namespace AF.Tests.EditMode
                 Assert.That(resolution.Source, Is.EqualTo(LocSource.Device), device);
             }
 
-            Assert.That(LocLocale.Resolve(catalog, null, null, null, false).Locale, Is.EqualTo(LocLocale.English), "sin teléfono: en (D-018, Q7-A)");
+            LocResolution noDevice = LocLocale.Resolve(catalog, null, null, null, false);
+            Assert.That(noDevice.Locale, Is.EqualTo(LocLocale.English), "sin teléfono: en (D-018, Q7-A)");
+            Assert.That(noDevice.Source, Is.EqualTo(LocSource.Default), "sin teléfono: el idioma por defecto, no el del teléfono");
 
             Assert.That(LocTables.Configure(catalog, "en-XA", true).Source, Is.EqualTo(LocSource.Dev), "af_lang en-XA en desarrollo");
             Assert.That(Loc.Locale, Is.EqualTo(LocLocale.Pseudo));
