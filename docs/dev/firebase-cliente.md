@@ -54,7 +54,7 @@ Firebase la declara en `AppCheckDependencies.xml` y EDM4U la escribe en su bloqu
 ### Registrar el token de depuración de App Check (lo hace el dueño, una vez por instalación)
 
 1. Instala `dev.apk` con `google-services.json` y abre el juego con red. La primera petición con integridad lo dispara (por ejemplo, «Eliminar cuenta y datos» en Ajustes; puede fallar esa primera vez).
-2. Lee el secreto en logcat: `adb logcat -s DebugAppCheckProvider` (o busca `Enter this debug secret into the allow list`). Es un UUID: **no lo pegues en el chat, en el repositorio ni en issues**; es una credencial de dev.
+2. Lee el secreto en logcat: `adb logcat -d | findstr /C:"debug token:"` (Windows) o `adb logcat -d | grep "debug token:"`. La etiqueta es el nombre completo de la clase (`com.google.firebase.appcheck.debug.internal.DebugAppCheckProvider`), así que `-s DebugAppCheckProvider` no encuentra nada (comprobado en el SM-S938B el 2026-10-22). Antes, `adb logcat -c` y abrir la app. Es un UUID: **no lo pegues en el chat, en el repositorio ni en issues**; es una credencial de dev.
 3. Consola de Firebase → proyecto `fill-dev-e75a2` → App Check → Apps → app Android `com.amazonfill.dev` → menú ⋮ → **Manage debug tokens** → **Add debug token**: pega el secreto y ponle un nombre (por ejemplo, el teléfono).
 4. Vuelve a probar. El secreto vive en los datos de la app: si la desinstalas o borras sus datos, sale uno nuevo y hay que registrarlo otra vez (y borrar el viejo de la consola).
 - **Remote Config:** al arrancar se activa la caché propia (`af_rc_cache.json` en `persistentDataPath`, que se lee sin esperar a Firebase); luego se descarga en segundo plano (intervalo mínimo de 12 h) y lo descargado se aplica en el **arranque siguiente**.
