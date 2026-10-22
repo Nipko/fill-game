@@ -30,7 +30,9 @@
     "AF.Backend.Unity",
     "AF.Analytics.Firebase",
     "AF.RemoteConfig.Firebase",
-    "AF.Platform.Notifications"
+    "AF.Platform.Notifications",
+    "AF.IAP.UnityIap",
+    "AF.Backend.Firebase"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -44,7 +44,8 @@ namespace AF.IAP
     public sealed class PurchaseVerificationEvent
     {
         internal PurchaseVerificationEvent(
-            string sku, PurchaseVerificationState state, BackendError? error, int unknownGrantItems, bool isLive, int creditedPiggySeeds = 0)
+            string sku, PurchaseVerificationState state, BackendError? error, int unknownGrantItems, bool isLive, int creditedPiggySeeds = 0,
+            bool isDuplicate = false)
         {
             Sku = sku;
             State = state;
@@ -52,7 +53,16 @@ namespace AF.IAP
             UnknownGrantItems = unknownGrantItems;
             IsLive = isLive;
             CreditedPiggySeeds = creditedPiggySeeds;
+            IsDuplicate = isDuplicate;
         }
+
+        /// <summary>
+        /// Con <see cref="PurchaseVerificationState.Credited"/>: el servidor respondió <c>duplicate</c> (el token ya estaba en el libro
+        /// mayor de este UID) y se acreditó el contenido del catálogo porque este perfil no lo tenía: una restauración (otra instalación,
+        /// un no consumible que Play devuelve) o una compra cuyo <c>ok</c> se perdió (D-040). La analítica no la cuenta como ingreso nuevo
+        /// si es un no consumible.
+        /// </summary>
+        public bool IsDuplicate { get; }
 
         public string Sku { get; }
 
@@ -424,7 +434,7 @@ namespace AF.IAP
 
             if (credit.Kind == VerifiedCreditKind.Credited)
             {
-                Raise(sku, PurchaseVerificationState.Credited, live, null, credit.UnknownItems, credit.PiggySeeds);
+                Raise(sku, PurchaseVerificationState.Credited, live, null, credit.UnknownItems, credit.PiggySeeds, response.Status == VerifyStatus.Duplicate);
                 Complete(token, PurchaseStatus.Purchased, credit.Transaction);
             }
             else
@@ -510,9 +520,10 @@ namespace AF.IAP
         }
 
         private void Raise(
-            string sku, PurchaseVerificationState state, bool live, BackendError? error = null, int unknownItems = 0, int piggySeeds = 0)
+            string sku, PurchaseVerificationState state, bool live, BackendError? error = null, int unknownItems = 0, int piggySeeds = 0,
+            bool duplicate = false)
         {
-            VerificationChanged?.Invoke(new PurchaseVerificationEvent(sku, state, error, unknownItems, live, piggySeeds));
+            VerificationChanged?.Invoke(new PurchaseVerificationEvent(sku, state, error, unknownItems, live, piggySeeds, duplicate));
         }
 
         private string? AccountId()

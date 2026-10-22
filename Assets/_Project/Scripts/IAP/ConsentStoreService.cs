@@ -58,7 +58,7 @@ namespace AF.IAP
     /// </list>
     /// Mientras la confirmación está abierta, <see cref="IsPurchasing"/> es cierto (una sola compra a la vez). Hilo principal.
     /// </summary>
-    public sealed class ConsentStoreService : IStoreService
+    public sealed class ConsentStoreService : IStoreService, IStoreDecorator
     {
         private readonly IStoreService _inner;
         private bool _confirming;

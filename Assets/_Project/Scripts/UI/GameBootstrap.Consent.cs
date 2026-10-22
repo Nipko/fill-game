@@ -207,7 +207,8 @@ namespace AF.UI
             if (_consentStore != null)
             {
                 _consentStore.Confirmation = _consentScreen; // Q-T4 (a): la segunda confirmación con 13-17
-                _consentStore.Precheck = (product, request) => _storeLedger?.CheckPurchasable(product, request); // nunca confirmar lo imposible
+                _consentStore.Precheck = (product, request) =>
+                    BillingPrecheck(product) ?? _storeLedger?.CheckPurchasable(product, request); // nunca confirmar lo imposible (ni sin precio de Play, D-040)
             }
         }
 
@@ -267,6 +268,7 @@ namespace AF.UI
 
             _consentScreen?.Hide();
             ProbeConsent();
+            StartPlayBilling(false); // D-040: con la edad ya decidida (y no < 13), Play puede conectarse
         }
 
         // <13 (en el arranque o al corregir la edad en Ajustes): el bloqueo a la vista y la escena se recarga, como al cambiar de idioma

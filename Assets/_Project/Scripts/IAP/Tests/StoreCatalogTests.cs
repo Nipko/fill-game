@@ -172,7 +172,9 @@ namespace AF.IAP.Tests
             Assert.That(StoreCatalog.Default.Get("af_rescue").PriceIn("COP").ToString(), Is.EqualTo("COP 9.900"));
             Assert.That(StoreCatalog.Default.Get("af_coins_6").PriceIn("BRL").ToString(), Is.EqualTo("BRL 129,90"));
             Assert.Throws<ArgumentException>(() => StorePrices.Local(1.98m, "USD"));
-            Assert.Throws<ArgumentException>(() => new LocalPrice("EUR", 1m));
+            Assert.Throws<ArgumentException>(() => StorePrices.Local(0.99m, "EUR"), "la tienda simulada solo tiene las columnas de 05 §4.2");
+            Assert.That(new LocalPrice("EUR", 0.99m).MinorUnits, Is.EqualTo(99), "la real, la moneda que dé Play (Q-IAP-3)");
+            Assert.Throws<ArgumentException>(() => new LocalPrice("eur", 1m));
         }
 
         [Test]

@@ -19,20 +19,27 @@ namespace AF.Analytics.Adapters
     /// sale una sola vez, con su resultado, por <see cref="Purchase"/>.
     /// </para>
     /// </summary>
-    public sealed class AnalyticsStoreService : IStoreService
+    public sealed class AnalyticsStoreService : IStoreService, IStoreDecorator
     {
         private readonly IStoreService _inner;
         private readonly AnalyticsService _analytics;
+        private readonly BillingReadyStoreService? _ready;
 
-        /// <summary>Envuelve <paramref name="inner"/>.</summary>
+        /// <summary>
+        /// Envuelve <paramref name="inner"/>. La tienda verificada se busca bajo los envoltorios (<see cref="IStoreDecorator"/>: el
+        /// consentimiento de B12 y la tienda lista de Play de D-040), para oír lo que se acredita fuera de una compra abierta.
+        /// </summary>
         public AnalyticsStoreService(IStoreService inner, AnalyticsService analytics)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _analytics = analytics ?? throw new ArgumentNullException(nameof(analytics));
-            if (inner is VerifiedStoreService verified)
+            VerifiedStoreService? verified = StoreDecorators.Find<VerifiedStoreService>(inner);
+            if (verified != null)
             {
                 verified.VerificationChanged += OnVerificationChanged;
             }
+
+            _ready = StoreDecorators.Find<BillingReadyStoreService>(inner);
         }
 
         /// <inheritdoc />
@@ -115,17 +122,34 @@ namespace AF.Analytics.Adapters
                 return;
             }
 
+            StoreProduct? product = _inner.Catalog.Find(e.Sku);
+            if (e.State == PurchaseVerificationState.Credited && e.IsDuplicate && product != null && product.Kind == ProductKind.NonConsumable)
+            {
+                // D-040: un no consumible que Play devuelve y el servidor ya tenía (duplicate) es una restauración, no un ingreso nuevo.
+                if (product.Content.GrantsNoAds)
+                {
+                    _analytics.Log(AnalyticsEvent.Create("af_entitlement_restored").Add("type", "no_ads").Add("count", 1)); // 08 §8.2
+                }
+
+                return;
+            }
+
             _analytics.Log(AnalyticsEvent.Create("af_iap_result").Add("sku", e.Sku).Add("result", result));
             if (e.State != PurchaseVerificationState.Credited)
             {
                 return;
             }
 
-            LocalPrice price = _inner.PriceOf(e.Sku);
-            _analytics.Log(AnalyticsEvent.Create("purchase")
-                .Add("value", (double)price.Amount)
-                .Add("currency", price.Currency)
-                .Add("items", e.Sku));
+            AnalyticsEvent purchase = AnalyticsEvent.Create("purchase");
+            if (_ready == null || _ready.Billing.HasStorePrice(e.Sku))
+            {
+                // Con Play real, solo el precio de la tienda (antes de que Play lo dé, el de 05 §4.2 sería otra moneda): sin él, no se
+                // inventa el ingreso (D-040). Vale el ya cargado aunque Play se haya desconectado después.
+                LocalPrice price = _inner.PriceOf(e.Sku);
+                purchase.Add("value", (double)price.Amount).Add("currency", price.Currency);
+            }
+
+            _analytics.Log(purchase.Add("items", e.Sku));
         }
 
         /// <summary><c>context</c> de 08 §8.2 (<c>stuck</c>, <c>no_canoes</c>, <c>shop</c>, <c>starter_window</c>, <c>noads_prompt</c>, <c>piggy</c>).</summary>

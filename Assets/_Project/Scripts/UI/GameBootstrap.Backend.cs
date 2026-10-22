@@ -3,10 +3,12 @@ using System;
 using System.Globalization;
 using AF.Analytics;
 using AF.Backend;
+using AF.Backend.Firebase;
 using AF.Backend.Unity;
 using AF.Economy;
 using AF.GameFlow;
 using AF.IAP;
+using AF.IAP.UnityIap;
 using AF.Platform;
 using AF.Save;
 using UnityEngine;
@@ -17,8 +19,10 @@ namespace AF.UI
     /// El backend en el juego (F3-5; D-035; plan del backend §7 y §9; 08 §10.2, §10.3 y §11): la tienda verificada, el libro mayor y la
     /// cuenta, con el cliente que da <see cref="BackendFactory"/> para este build.
     /// <list type="bullet">
-    /// <item><see cref="CreateStore"/>: <see cref="VerifiedStoreService"/> sobre <see cref="FakeBillingClient"/> (la hoja «Compra
-    /// simulada» de siempre, con tokens nuevos en cada arranque) y el cliente del backend: <see cref="FakeBackendClient"/> en el editor y en
+    /// <item><see cref="CreateStore"/>: <see cref="VerifiedStoreService"/> sobre la tienda de Play real (<see cref="PlayBillingClient"/>
+    /// con Unity IAP 5.4.4; D-040) en un teléfono con el paquete y con el backend real (<see cref="HttpBackendClient"/>), o sobre
+    /// <see cref="FakeBillingClient"/> (la hoja «Compra simulada» de siempre, con tokens nuevos en cada arranque) en el resto; con el UID
+    /// de Firebase Auth como <c>setObfuscatedAccountId</c> (<see cref="FirebaseAuthUid"/>); y el cliente del backend: <see cref="FakeBackendClient"/> en el editor y en
     /// <c>DEVELOPMENT_BUILD</c> sin la configuración de Firebase (concede lo del catálogo, como el servidor: <see cref="CatalogGrants"/>),
     /// <see cref="HttpBackendClient"/> contra el API de dev con los tokens reales de Firebase Auth y App Check en un
     /// <c>DEVELOPMENT_BUILD</c> con <c>google-services.json</c> (F3-6), y <see cref="UnavailableBackendClient"/> en release sin URL o sin
@@ -45,6 +49,7 @@ namespace AF.UI
         private IBackendClient? _backend;
         private VerifiedStoreService? _verifiedStore;
         private FakeBillingClient? _fakeBilling;
+        private PlayBillingClient? _playBilling;
         private GameBackendSwitch? _backendSwitch;
         private LocalRevocation? _revocation;
         private LedgerRestore? _ledgerRestore;
@@ -75,6 +80,9 @@ namespace AF.UI
         /// <summary>La tienda de la plataforma simulada (tests y builds sin Unity IAP).</summary>
         public FakeBillingClient? FakeBilling => _fakeBilling;
 
+        /// <summary>La tienda de Play real (D-040), solo en el teléfono con el backend real; null en el resto.</summary>
+        public PlayBillingClient? PlayBilling => _playBilling;
+
         /// <summary>El cliente falso del backend, si es el de este build (editor y desarrollo sin URL).</summary>
         public FakeBackendClient? FakeBackend => _backend as FakeBackendClient;
 
@@ -100,13 +108,33 @@ namespace AF.UI
 
             _backendSwitch = new GameBackendSwitch(!(client is UnavailableBackendClient), _rcConfigs?.BackendSwitch);
 
-            // Tokens distintos en cada arranque: applied_purchases guarda su token_hash y la tienda simulada no recuerda los de antes.
-            string prefix = FakeBillingClient.DefaultTokenPrefix + Guid.NewGuid().ToString("N") + ".";
-            _fakeBilling = new FakeBillingClient(ledger.Catalog, LaunchOptions.DefaultStoreCurrency, presenter, deviceClock, prefix);
+            // D-040: Play Billing de verdad (Unity IAP 5.4.4) solo en el teléfono, con el paquete y con el backend real que verifica cada
+            // compra; con el backend falso (editor, desarrollo sin google-services.json) o sin el paquete, la tienda simulada de siempre.
+            IBillingClient billing;
+            _playBilling = client is HttpBackendClient ? PlayBillingFactory.TryCreate(ledger.Catalog, LaunchOptions.DefaultStoreCurrency) : null;
+            if (_playBilling != null)
+            {
+                _fakeBilling = null;
+                billing = _playBilling;
+            }
+            else
+            {
+                // Tokens distintos en cada arranque: applied_purchases guarda su token_hash y la tienda simulada no recuerda los de antes.
+                string prefix = FakeBillingClient.DefaultTokenPrefix + Guid.NewGuid().ToString("N") + ".";
+                _fakeBilling = new FakeBillingClient(ledger.Catalog, LaunchOptions.DefaultStoreCurrency, presenter, deviceClock, prefix);
+                billing = _fakeBilling;
+            }
 
-            // El plazo de 72 h se mide con el reloj del dispositivo (D-035, añadido de F3-1 y F3-2); sin UID hasta Firebase Auth (F3-6).
-            _verifiedStore = new VerifiedStoreService(ledger, _fakeBilling, client, deviceClock, _backendSwitch, null, _rcConfigs?.Verification);
+            // El plazo de 72 h se mide con el reloj del dispositivo (D-035, añadido de F3-1 y F3-2); setObfuscatedAccountId = el UID de
+            // Firebase Auth en el momento de comprar (08 §10.1; null en el editor y hasta la primera llamada autenticada).
+            _verifiedStore = new VerifiedStoreService(
+                ledger, billing, client, deviceClock, _backendSwitch, new DelegatePlayerUid(() => FirebaseAuthUid.Current), _rcConfigs?.Verification);
             _verifiedStore.VerificationChanged += OnVerificationChanged;
+            if (_playBilling != null)
+            {
+                _playBilling.UnfinishedChanged += OnPlayUnfinished;
+                _playBilling.StateChanged += OnPlayStateChanged;
+            }
 
             _revocation = new LocalRevocation(profile, ledger.Wallet, batch, capsClock, _rcConfigs?.Revocation);
             _ledgerRestore = new LedgerRestore(ledger, _revocation, client, _backendSwitch, _verifiedStore);
@@ -132,7 +160,91 @@ namespace AF.UI
                 };
             }
 
-            return _verifiedStore;
+            // Con Play real no se vende hasta que Play responda con sus precios y sus compras sin terminar (BillingReadyStoreService).
+            return _playBilling != null ? new BillingReadyStoreService(_verifiedStore, _playBilling) : (IStoreService)_verifiedStore;
+        }
+
+        // D-040: una compra cobrada fuera de la hoja abierta (pendiente de pago que Play cobró, de otra sesión o un no consumible que Play
+        // devuelve) entra en la cola de verificación ya, sin esperar al próximo arranque.
+        private void OnPlayUnfinished()
+        {
+            VerifiedStoreService? store = _verifiedStore;
+            if (store == null || ProfileLocked)
+            {
+                return;
+            }
+
+            using (Saves())
+            {
+                store.Resume();
+            }
+        }
+
+        // Play conectó (o se cayó) o llegaron sus precios: el Mercado se repinta si está abierto.
+        private void OnPlayStateChanged()
+        {
+            _market?.Refresh();
+        }
+
+        /// <summary>
+        /// Al destruir la escena (<c>OnDestroy</c>: una recarga con RebuildUi o RestartAsFirstRun crea otra tienda): la tienda de Play de
+        /// esta escena suelta Unity IAP, cuyos servicios son únicos en el proceso, para que sus avisos no lleguen también a la tienda vieja.
+        /// Lo que quede sin terminar en Play vuelve a la tienda nueva. (La tienda verificada vieja y sus peticiones en vuelo al servidor
+        /// siguen como antes de D-040: ver «Riesgos» de <c>docs/dev/iap.md</c>.)
+        /// </summary>
+        private void DisposeBilling()
+        {
+            PlayBillingClient? play = _playBilling;
+            if (play == null)
+            {
+                return;
+            }
+
+            play.UnfinishedChanged -= OnPlayUnfinished;
+            play.StateChanged -= OnPlayStateChanged;
+            play.Dispose();
+            _playBilling = null;
+        }
+
+        /// <summary>
+        /// D-040: Play se conecta solo con la edad ya decidida (y nunca con la banda &lt; 13; 08 §7: «sin IAP») y con el UID de Firebase ya
+        /// creado, para que cada compra lleve <c>setObfuscatedAccountId</c> y la cola la guarde con él (08 §10.1; el usuario anónimo lo crea
+        /// la primera llamada autenticada, el <c>restoreLedger</c> del arranque). Por eso se intenta en <see cref="ResumeBackend"/>, al
+        /// responder el <c>restoreLedger</c> y al cerrar la pantalla de edad y consentimiento (<c>FinishConsentAtBoot</c>). Al volver a
+        /// primer plano, consulta lo que Play cobró mientras tanto o vuelve a conectar si se cayó.
+        /// </summary>
+        private void StartPlayBilling(bool foreground)
+        {
+            PlayBillingClient? play = _playBilling;
+            if (play == null || ProfileLocked || PlayerUnder13() || (ConsentEnabled && _consentFlow?.Record == null))
+            {
+                return;
+            }
+
+            if (play.State == PlayBillingState.NotStarted)
+            {
+                if (FirebaseAuthUid.Current != null)
+                {
+                    play.Start();
+                }
+
+                return;
+            }
+
+            if (foreground)
+            {
+                play.Refresh();
+            }
+        }
+
+        /// <summary>
+        /// Con Play real, un SKU sin el precio de la tienda no se vende (<see cref="BillingReadyStoreService"/>): la segunda confirmación
+        /// de 13-17 tampoco se abre con un precio de respaldo (05 §4.1; Q-B12-6).
+        /// </summary>
+        private PurchaseStatus? BillingPrecheck(StoreProduct product)
+        {
+            PlayBillingClient? play = _playBilling;
+            return play != null && !play.CanSell(product.Sku) ? PurchaseStatus.StoreUnavailable : (PurchaseStatus?)null;
         }
 
         private static IBackendClient CreateBackendClient(BackendMode mode, IClock clock)
@@ -162,6 +274,8 @@ namespace AF.UI
             {
                 return;
             }
+
+            StartPlayBilling(foreground); // D-040
 
             using (Saves())
             {
@@ -206,6 +320,7 @@ namespace AF.UI
         private void OnLedgerRestored(LedgerRestoreReport report)
         {
             LastLedgerRestore = report;
+            StartPlayBilling(false); // D-040: tras la primera llamada autenticada ya hay UID para setObfuscatedAccountId
             if (!report.Ran)
             {
                 Debug.LogWarning(LogPrefix + "restoreLedger: " + report.Error);

@@ -138,6 +138,113 @@ namespace AF.Analytics.Tests
             Assert.That(analytics.Violations, Is.Empty);
         }
 
+        [Test]
+        public void ALateCredit_IsLoggedAlsoBehindConsentAndTheReadyStore()
+        {
+            // D-040: en el juego la tienda verificada va envuelta por el consentimiento (B12) y por la tienda lista de Play; lo que se
+            // acredita tarde (un pago pendiente que Play cobra después, la cola) también sale como af_iap_result ok y purchase (08 §8.2).
+            (AnalyticsService analytics, FakeAnalyticsSink sink) = NewAnalytics();
+            var clock = new ManualClock(new DateTime(2026, 10, 22, 15, 0, 0, DateTimeKind.Utc), TimeSpan.FromHours(-5));
+            Profile profile = Wallet.NewProfile(clock);
+            var store = new MemoryProfileStore();
+            var wallet = new Wallet(profile, store, clock);
+            var ledger = new StoreLedger(profile, wallet, store, clock);
+            StoreCatalog catalog = ledger.Catalog;
+            var backend = new AF.Backend.FakeBackendClient(clock) { GrantFor = r => CatalogGrants.For(catalog, r.Sku) };
+            var verified = new VerifiedStoreService(ledger, new FakeBillingClient(catalog, "USD", null, clock), backend, clock);
+            var consent = new ConsentStoreService(new BillingReadyStoreService(verified, new StubAvailability()));
+            consent.Apply(ConsentPolicy.Flags(
+                new ConsentRecord(LegalProfiles.Co1581, 1, new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc), true, true, AgeBand.Adult),
+                ConsentConfig.Defaults));
+            var service = new AnalyticsStoreService(consent, analytics);
+
+            backend.FailNext(new AF.Backend.BackendError(AF.Backend.BackendErrorKind.Network));
+            PurchaseResult? pending = null;
+            service.Purchase(new PurchaseRequest("af_coins_3", PurchaseContext.Shop), r => pending = r);
+            Assert.That(pending!.Status, Is.EqualTo(PurchaseStatus.Pending));
+
+            sink.Clear();
+            clock.Advance(TimeSpan.FromHours(1));
+            verified.Pump();
+            Assert.That(sink.Names, Is.EqualTo(new[] { "af_iap_result", "purchase" }), "se oye a la tienda verificada bajo los envoltorios");
+            Assert.That(sink.Events[0].ToJson(), Is.EqualTo("{\"event\":\"af_iap_result\",\"sku\":\"af_coins_3\",\"result\":\"ok\"}"));
+        }
+
+        [Test]
+        public void ALateCreditBeforePlayHasItsPrices_IsLoggedWithoutInventingTheRevenue()
+        {
+            // D-040: si la cola acredita antes de que Play dé sus precios, el de 05 §4.2 sería otra moneda: purchase sale sin value.
+            (AnalyticsService analytics, FakeAnalyticsSink sink) = NewAnalytics();
+            var clock = new ManualClock(new DateTime(2026, 10, 22, 15, 0, 0, DateTimeKind.Utc), TimeSpan.FromHours(-5));
+            Profile profile = Wallet.NewProfile(clock);
+            var store = new MemoryProfileStore();
+            var wallet = new Wallet(profile, store, clock);
+            var ledger = new StoreLedger(profile, wallet, store, clock);
+            StoreCatalog catalog = ledger.Catalog;
+            var backend = new AF.Backend.FakeBackendClient(clock) { GrantFor = r => CatalogGrants.For(catalog, r.Sku) };
+            var verified = new VerifiedStoreService(ledger, new FakeBillingClient(catalog, "USD", null, clock), backend, clock);
+            var availability = new StubAvailability();
+            var service = new AnalyticsStoreService(new BillingReadyStoreService(verified, availability), analytics);
+
+            backend.FailNext(new AF.Backend.BackendError(AF.Backend.BackendErrorKind.Network));
+            service.Purchase(new PurchaseRequest("af_coins_3", PurchaseContext.Shop), _ => { });
+            sink.Clear();
+            availability.Sell = false; // reinicio: Play aún no respondió con sus precios
+            clock.Advance(TimeSpan.FromHours(1));
+            verified.Pump();
+
+            Assert.That(sink.Names, Is.EqualTo(new[] { "af_iap_result", "purchase" }));
+            Assert.That(sink.Events[1].ToJson(), Is.EqualTo("{\"event\":\"purchase\",\"items\":\"af_coins_3\"}"));
+            Assert.That(analytics.Violations, Is.Empty);
+        }
+
+        [Test]
+        public void ANoAdsRestoredFromPlay_IsARestorationNotARevenue()
+        {
+            // D-040: reinstalar con la misma cuenta de Google y el mismo UID: Play devuelve Sin anuncios, el servidor dice duplicate y se
+            // acredita; no es un ingreso nuevo (af_entitlement_restored, 08 §8.2), ni af_iap_result ni purchase.
+            (AnalyticsService analytics, FakeAnalyticsSink sink) = NewAnalytics();
+            var clock = new ManualClock(new DateTime(2026, 10, 22, 15, 0, 0, DateTimeKind.Utc), TimeSpan.FromHours(-5));
+            Profile first = Wallet.NewProfile(clock);
+            var firstStore = new MemoryProfileStore();
+            var firstWallet = new Wallet(first, firstStore, clock);
+            var firstLedger = new StoreLedger(first, firstWallet, firstStore, clock);
+            StoreCatalog catalog = firstLedger.Catalog;
+            var backend = new AF.Backend.FakeBackendClient(clock)
+            {
+                GrantFor = r => CatalogGrants.For(catalog, r.Sku),
+                EntitlementsFor = r => CatalogGrants.EntitlementsFor(catalog, r.Sku),
+            };
+            var billing = new FakeBillingClient(catalog, "USD", null, clock);
+            var firstStoreService = new VerifiedStoreService(firstLedger, billing, backend, clock);
+            firstStoreService.Purchase(new PurchaseRequest("af_noads", PurchaseContext.Shop), _ => { });
+            Assert.That(first.Entitlements.NoAds, Is.True);
+
+            Profile fresh = Wallet.NewProfile(clock);
+            var freshStore = new MemoryProfileStore();
+            var freshLedger = new StoreLedger(fresh, new Wallet(fresh, freshStore, clock), freshStore, clock);
+            var verified = new VerifiedStoreService(freshLedger, billing, backend, clock);
+            var service = new AnalyticsStoreService(new ConsentStoreService(verified), analytics);
+            billing.RestoreOwnedOnNewDevice();
+            verified.Resume();
+
+            Assert.That(fresh.Entitlements.NoAds, Is.True, "restaurado");
+            Assert.That(sink.Names, Is.EqualTo(new[] { "af_entitlement_restored" }));
+            Assert.That(sink.Events[0].ToJson(), Is.EqualTo("{\"event\":\"af_entitlement_restored\",\"type\":\"no_ads\",\"count\":1}"));
+            Assert.That(service.Inner, Is.Not.Null);
+        }
+
+        private sealed class StubAvailability : IBillingAvailability
+        {
+            public bool Sell { get; set; } = true;
+
+            public bool IsReady => true;
+
+            public bool CanSell(string sku) => Sell;
+
+            public bool HasStorePrice(string sku) => Sell;
+        }
+
         // Una compra cancelada de verdad, con el presentador que dice que no.
         private static PurchaseResult PurchaseResultFor(AnalyticsStoreService service, string sku, bool confirm)
         {

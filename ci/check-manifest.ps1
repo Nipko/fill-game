@@ -11,8 +11,8 @@
          a 37 antes del 31-08-2027, parametro -TargetSdk).
       2. Permisos (uses-permission y uses-permission-sdk-23) dentro de la lista blanca:
          android.permission.INTERNET, android.permission.VIBRATE y android.permission.ACCESS_NETWORK_STATE, el permiso propio
-         <package>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION que declara androidx.core y, solo si
-         el manifiesto lleva Play Billing, com.android.vending.BILLING. Cualquier otro falla (CLAUDE.md,
+         <package>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION que declara androidx.core y com.android.vending.BILLING
+         (Play Billing de Unity IAP 5.4.4; aprobado por el dueno en D-040, 2026-10-22). Cualquier otro falla (CLAUDE.md,
          regla dura 4: ningun permiso Android nuevo sin el dueno; -AllowPermission anade los aprobados).
          INTERNET lo aprobo el dueno en D-036 (2026-10-20; lo anade Unity con ForceInternetPermission en Auto).
          ACCESS_NETWORK_STATE lo aprobo el dueno en D-037 (2026-10-21; lo anade Unity al leer
@@ -28,7 +28,8 @@
          lista blanca y fallan con una pista.
       3. Play Billing: si el manifiesto lleva la meta-data com.google.android.play.billingclient.version
          o el permiso BILLING, la version mayor debe ser >= 8 (08 sec. 13.1 #4). Sin billing se anota
-         (todavia no hay IAP); con -RequireBilling, falla.
+         (un build sin com.unity.purchasing); con -RequireBilling, falla: desde D-040 el build de release
+         debe pasarlo con -RequireBilling.
       4. android:appCategory = game (valor 0 compilado) en <application> (08 sec. 13.1 #4).
       5. applicationId (CLAUDE.md, regla dura 6; 08 sec. 13.1 #1):
            -Mode release: falla si el package es el provisional com.amazonfill.dev o lleva "amazon"
@@ -84,7 +85,7 @@ $ErrorActionPreference = 'Stop'
 $AndroidNs = 'http://schemas.android.com/apk/res/android'
 $ProvisionalId = 'com.amazonfill.dev'
 $BillingMetaName = 'com.google.android.play.billingclient.version'
-$BillingPermission = 'com.android.vending.BILLING'
+$BillingPermission = 'com.android.vending.BILLING'   # aprobado: D-040 (Play Billing de Unity IAP 5.4.4, 2026-10-22)
 $InternetPermission = 'android.permission.INTERNET'          # aprobado: D-036
 $NetworkStatePermission = 'android.permission.ACCESS_NETWORK_STATE'   # aprobado: D-037 (comun net, 08 sec. 8.1)
 # Aprobado en D-033 (Q-M5) y su anadido del 2026-10-21, con com.unity.mobile.notifications 2.4.3. Solo ese: las
@@ -94,7 +95,7 @@ $NotificationsNotApproved = @('android.permission.SCHEDULE_EXACT_ALARM', 'androi
     'android.permission.RECEIVE_BOOT_COMPLETED', 'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS')
 $WakeLockPermission = 'android.permission.WAKE_LOCK'   # aprobado: D-039 (Firebase Analytics)
 $InstallReferrerPermission = 'com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE'   # aprobado: D-039, anadido del 2026-10-21 (Install Referrer de Play)
-$BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission, $NotificationsPermission)
+$BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission, $NotificationsPermission, $BillingPermission)
 
 function Stop-WithCode {
     param([int]$Code, [string]$Message)
@@ -252,7 +253,6 @@ function Test-Manifest($M, [string]$Prof, [int]$Target, [int]$Min, [string[]]$Ex
     $billingPresent = [bool]$M.BillingVer -or $M.Permissions.Contains($BillingPermission)
     $allowed = [System.Collections.Generic.HashSet[string]]::new([string[]]($BasePermissions + $ExtraAllowed))
     if ($pkg) { [void]$allowed.Add("$pkg.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION") }
-    if ($billingPresent) { [void]$allowed.Add($BillingPermission) }
     $seen = [System.Collections.Generic.HashSet[string]]::new()
     foreach ($p in $M.Permissions) {
         if (-not $seen.Add($p)) { continue }
@@ -270,7 +270,7 @@ function Test-Manifest($M, [string]$Prof, [int]$Target, [int]$Min, [string[]]$Ex
         else { $note.Add("Play Billing $($M.BillingVer).") }
     }
     elseif ($NeedBilling) { $fail.Add('sin Play Billing (-RequireBilling)') }
-    else { $note.Add('NOTA: sin Play Billing en el manifiesto (todavia no hay IAP).') }
+    else { $note.Add('NOTA: sin Play Billing en el manifiesto (build sin com.unity.purchasing; en release, usar -RequireBilling: D-040).') }
 
     if (-not $M.HasApplication) { $fail.Add('sin <application>') }
     elseif ("$($M.AppCategory)".ToLowerInvariant() -notin @('0', 'game')) { $fail.Add("appCategory='$($M.AppCategory)' (esperado game)") }
@@ -346,6 +346,9 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'xml: ACCESS_NETWORK_STATE como sdk-23';       Fmt = 'xml'; Text = $okXml.Replace('<uses-permission android:name="android.permission.VIBRATE"/>', '<uses-permission-sdk-23 android:name="android.permission.ACCESS_NETWORK_STATE"/>'); Prof = 'release'; Fails = 0 }
         @{ Name = 'xml: WAKE_LOCK aprobado (D-039)';             Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', $WakeLockPermission); Prof = 'release'; Fails = 0 }
         @{ Name = 'xml: INSTALL_REFERRER aprobado (D-039)';      Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', $InstallReferrerPermission); Prof = 'release'; Fails = 0 }
+        @{ Name = 'xml: BILLING aprobado (D-040) con PBL 9';     Fmt = 'xml'; Text = $okXml.Replace('android:value="8.0.0"', 'android:value="9.0.0"'); Prof = 'release'; Fails = 0; Billing = $true }
+        @{ Name = 'xml: BILLING como sdk-23 (D-040)';            Fmt = 'xml'; Text = $okXml.Replace('<uses-permission android:name="com.android.vending.BILLING"/>', '<uses-permission-sdk-23 android:name="com.android.vending.BILLING"/>'); Prof = 'release'; Fails = 0 }
+        @{ Name = 'xml: otro permiso de la tienda sigue fuera';  Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'com.android.vending.CHECK_LICENSE'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: AD_ID sigue fuera (D-039)';              Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'com.google.android.gms.permission.AD_ID'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: ACCESS_ADSERVICES_AD_ID sigue fuera';    Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.ACCESS_ADSERVICES_AD_ID'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: ACCESS_ADSERVICES_ATTRIBUTION fuera';    Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.ACCESS_ADSERVICES_ATTRIBUTION'); Prof = 'release'; Fails = 1 }
@@ -376,6 +379,7 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'aapt2: sin ACCESS_NETWORK_STATE tambien vale'; Fmt = 'tree'; Text = ((($okTree -split "`n") | Where-Object { $_ -notmatch 'line=37|ACCESS_NETWORK_STATE' }) -join "`n"); Prof = 'dev'; Fails = 0 }
         @{ Name = 'aapt2: id provisional y debuggable en release'; Fmt = 'tree'; Text = $okTree; Prof = 'release'; Fails = 2 }
         @{ Name = 'aapt2: WAKE_LOCK e INSTALL_REFERRER (D-039)'; Fmt = 'tree'; Text = $okTree.Replace('"android.permission.VIBRATE"', '"' + $WakeLockPermission + '"').Replace('"android.permission.ACCESS_NETWORK_STATE"', '"' + $InstallReferrerPermission + '"'); Prof = 'dev'; Fails = 0 }
+        @{ Name = 'aapt2: BILLING sin version de PBL (D-040)';   Fmt = 'tree'; Text = $okTree.Replace('"android.permission.VIBRATE"', '"' + $BillingPermission + '"'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'aapt2: permiso RECORD_AUDIO';                 Fmt = 'tree'; Text = $okTree.Replace('"android.permission.VIBRATE"', '"android.permission.RECORD_AUDIO"'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'aapt2: targetSdk 37 con -TargetSdk 36';       Fmt = 'tree'; Text = $okTree.Replace('(0x01010270)=36', '(0x01010270)=37'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'aapt2: appCategory 3';                        Fmt = 'tree'; Text = $okTree.Replace('(0x01010545)=0', '(0x01010545)=3'); Prof = 'dev'; Fails = 1 }
@@ -410,7 +414,11 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
     $r = Test-Manifest (ConvertFrom-ManifestXml $okXml.Replace('android.permission.VIBRATE', 'android.permission.SCHEDULE_EXACT_ALARM')) 'release' 36 26 @() $false $false
     if (-not ($r.Failures | Where-Object { $_ -like '*SCHEDULE_EXACT_ALARM*Q-M5*' })) { $bad++; Write-Output '[FALLA] SCHEDULE_EXACT_ALARM sin la pista de D-033 Q-M5' }
     else { Write-Output '[OK]    SCHEDULE_EXACT_ALARM falla con la pista de D-033 Q-M5' }
-    $total = $cases.Count + 2
+    # BILLING (D-040) esta en la lista blanca: sin la meta-data de version solo falla la version de Play Billing, no el permiso.
+    $r = Test-Manifest (ConvertFrom-Aapt2Tree $okTree.Replace('"android.permission.VIBRATE"', '"' + $BillingPermission + '"')) 'dev' 36 26 @() $false $false
+    if (($r.Failures | Where-Object { $_ -like '*lista blanca*' }) -or -not ($r.Failures | Where-Object { $_ -like 'Play Billing*' })) { $bad++; Write-Output "[FALLA] BILLING (D-040) fuera de la lista blanca o sin exigir la version de Play Billing: $($r.Failures -join '; ')" }
+    else { Write-Output '[OK]    BILLING (D-040) en la lista blanca; la version de Play Billing se sigue exigiendo' }
+    $total = $cases.Count + 3
     if ($bad -gt 0) { Stop-WithCode 1 "AUTOTEST: $bad de $total casos fallan." }
     Write-Output "AUTOTEST OK: $total casos."
     exit 0
