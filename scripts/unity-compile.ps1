@@ -23,7 +23,11 @@
       3  el proyecto Unity todavia no existe (falta ProjectSettings/ProjectVersion.txt, Assets/ o Packages/manifest.json)
       4  no se encuentra la Unity CLI ni Unity.exe de la version fijada
       5  el proyecto ya esta abierto en un Editor y no se puede usar "unity recompile"
-      6  sin veredicto (timeout, licencia, Editor caido o inalcanzable): lee el log indicado
+      6  sin veredicto (timeout, licencia, Editor caido o inalcanzable): lee el log indicado.
+         Caso especial con el Editor abierto: si "unity recompile" responde que el servidor del pipeline
+         no esta disponible (HTTP 503, "Service Unavailable") mientras el Editor reimporta (p. ej. tras un
+         pull grande), se reintenta cada -ReimportRetrySec s durante -ReimportWaitSec s como mucho; si sigue
+         reimportando, sale con 6 y "REIMPORTANDO: ... vuelve a lanzar" (no es un error de compilacion).
 
 .PARAMETER ProjectPath
     Raiz del proyecto Unity. Por defecto, la carpeta padre de scripts/ (sirve igual en un worktree).
@@ -43,6 +47,17 @@
 
 .PARAMETER UnityExe
     Ruta explicita a Unity.exe para el respaldo (tambien se lee de la variable UNITY_EDITOR_PATH).
+
+.PARAMETER ReimportWaitSec
+    Con el Editor abierto, cuanto se espera como mucho a que termine de reimportar si "unity recompile"
+    responde 503 (0-3600; 300 por defecto; 0 = no reintentar).
+
+.PARAMETER ReimportRetrySec
+    Espera entre reintentos en ese caso (5-300; 15 por defecto).
+
+.PARAMETER UnityCli
+    Ruta explicita a la Unity CLI (por defecto, el comando "unity" del PATH). Sirve para diagnosticos y
+    para probar las ramas del script con una CLI falsa.
 
 .PARAMETER LogFile
     Log del Editor (por defecto Logs/compile.log dentro del proyecto; Logs/ esta en .gitignore).
@@ -71,6 +86,9 @@ param(
     [string]$Architecture = 'arm64',
     [string]$UnityExe = '',
     [string]$LogFile = '',
+    [string]$ReimportWaitSec = '300',
+    [string]$ReimportRetrySec = '15',
+    [string]$UnityCli = '',
     [Parameter(ValueFromRemainingArguments = $true)][string[]]$UnknownArgs
 )
 
@@ -106,6 +124,8 @@ $Runner = $Runner.ToLowerInvariant()
 $Architecture = $Architecture.ToLowerInvariant()
 $maxLines = ConvertTo-CheckedInt -Name 'MaxErrors' -Value $MaxErrors -Min 1 -Max 500
 $timeoutSeconds = ConvertTo-CheckedInt -Name 'TimeoutSec' -Value $TimeoutSec -Min 60 -Max 14400
+$reimportWait = ConvertTo-CheckedInt -Name 'ReimportWaitSec' -Value $ReimportWaitSec -Min 0 -Max 3600
+$reimportRetry = ConvertTo-CheckedInt -Name 'ReimportRetrySec' -Value $ReimportRetrySec -Min 5 -Max 300
 
 function Get-UnityProjectInfo {
     param([string]$Path)
@@ -157,14 +177,33 @@ function Test-ProjectOpenInEditor {
 }
 
 function Get-UnityCli {
-    $cmd = Get-Command unity -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $cmd) { return $null }
+    param([string]$Explicit)
+    if ($Explicit) {
+        if (-not (Test-Path -LiteralPath $Explicit -PathType Leaf)) { Stop-WithCode 4 "ERROR: -UnityCli no existe: $Explicit" }
+        $path = (Resolve-Path -LiteralPath $Explicit).Path
+    }
+    else {
+        $cmd = Get-Command unity -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $cmd) { return $null }
+        $path = $cmd.Source
+    }
     try {
-        $v = (& $cmd.Source --version 2>$null | Out-String).Trim()
-        if ($LASTEXITCODE -eq 0 -and $v -match '^\d+\.\d+\.\d+') { return $cmd.Source }
+        $v = (& $path --version 2>$null | Out-String).Trim()
+        if ($LASTEXITCODE -eq 0 -and $v -match '^\d+\.\d+\.\d+') { return $path }
     }
     catch { }
+    if ($Explicit) { Stop-WithCode 4 "ERROR: -UnityCli no responde a --version: $Explicit" }
     return $null
+}
+
+function Test-PipelineBusy {
+    # "unity recompile" sin veredicto porque el servidor de com.unity.pipeline no atiende mientras el Editor reimporta
+    # (HTTP 503 / Service Unavailable). Nunca cuando la salida trae errores CS: eso es un error de compilacion.
+    param([string[]]$Lines, [int]$Code)
+    if ($Code -eq 0) { return $false }
+    $text = $Lines -join "`n"
+    if ($text -match '\bCS\d{4}\b') { return $false }
+    return ($text -match '\b503\b' -or $text -match '(?i)service unavailable')
 }
 
 function Find-UnityEditorExe {
@@ -280,7 +319,7 @@ $logDir = Split-Path -Parent $LogFile
 if ($logDir -and -not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
 
 $cli = $null
-if ($Runner -ne 'batchmode') { $cli = Get-UnityCli }
+if ($Runner -ne 'batchmode') { $cli = Get-UnityCli -Explicit $UnityCli }
 if ($Runner -eq 'cli' -and -not $cli) {
     Stop-WithCode 4 'ERROR: no se encuentra la Unity CLI (comando "unity"). Instalacion: paso s04 del plan (la hace el propietario).'
 }
@@ -293,8 +332,21 @@ if (Test-ProjectOpenInEditor -Root $info.Root) {
     }
     Write-Output 'Editor abierto sobre esta carpeta: unity recompile'
     $recompileTimeout = [Math]::Min($timeoutSeconds, 600)
-    $out = & $cli recompile --project-path $info.Root --timeout $recompileTimeout 2>&1 | ForEach-Object { "$_" }
-    $code = $LASTEXITCODE
+    $waitStart = Get-Date
+    while ($true) {
+        $out = @(& $cli recompile --project-path $info.Root --timeout $recompileTimeout 2>&1 | ForEach-Object { "$_" })
+        $code = $LASTEXITCODE
+        if (-not (Test-PipelineBusy -Lines $out -Code $code)) { break }
+        $waited = [int]((Get-Date) - $waitStart).TotalSeconds
+        if ($waited + $reimportRetry -gt $reimportWait) {
+            $tail = ($out | Select-Object -Last 5) -join [Environment]::NewLine
+            Stop-WithCode 6 ("REIMPORTANDO: el Editor abierto sigue reimportando (el servidor de com.unity.pipeline responde 503)" +
+                " tras $waited s de espera. No es un error de compilacion: espera a que el Editor termine de importar y vuelve a" +
+                " lanzar el script (o sube -ReimportWaitSec). Ultima salida:" + [Environment]::NewLine + $tail)
+        }
+        Write-Output "El Editor esta reimportando (503 del pipeline); reintento en $reimportRetry s (esperado ${waited} s de $reimportWait) ..."
+        Start-Sleep -Seconds $reimportRetry
+    }
     if ($code -eq 0) {
         Write-Output 'OK: compila (unity recompile).'
         exit 0

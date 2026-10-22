@@ -152,7 +152,7 @@ Escrito por la sesión de Claude Code del portátil (Windows 11 ARM64) para la s
 ### Reparto entre los dos equipos (decisión del dueño, 2026-10-09)
 
 - **Escritorio (remoto, siempre encendido):** hace el trabajo de los pasos de la sección 6 sobre `integracion-fase1-fase2`. Al terminar cada paso verificado (sección 3), hace **commit y push de esa rama** a `origin`. No hace falta su teléfono ni su build de Android: el APK no está en git.
-- **Portátil (con el teléfono):** el dueño actualiza (`git pull` en `integracion-fase1-fase2`), compila el APK de desarrollo (`AF.EditorTools.BuildDev.BuildAndroidDev`, con `--architecture arm64`) y lo instala por cable en el Samsung (`adb install -r Builds/Android/dev.apk`).
+- **Portátil (con el teléfono):** el dueño actualiza (`git pull` en `integracion-fase1-fase2`), compila el APK de desarrollo (`AF.EditorTools.BuildDev.BuildAndroidDev`, con `--architecture arm64`; mejor con `pwsh -NoProfile -File scripts/unity-build.ps1 -Method Dev`, que da el veredicto por la línea `[AF.BuildDev] OK` del log aunque `unity run` salga con 6) y lo instala por cable en el Samsung (`adb install -r Builds/Android/dev.apk`).
 - Por eso, en cada push explica en el mensaje del commit qué probar en el teléfono (niveles, pantallas y extras de `adb` útiles).
 - No trabajes los dos equipos a la vez sobre la misma rama sin hacer pull antes.
 
