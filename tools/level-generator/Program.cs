@@ -10,6 +10,8 @@
 // --registry (P4): registro de combinaciones publicadas (propuesta de D-009 d.5.6; Campaign/SpecValidator.cs,
 // CombinationsRegistry). --variant a|b (P4): variante de una especificación con respaldos (d.5.4; salida B de D-019).
 // Sin --levels, --spec genera todos los niveles de la especificación (first_level-last_level).
+// --reserve: la reserva del 20 % (D-033, añadido «la reserva del 20 %», Q-B11-7 a; Generation/ReserveRunner.cs): un pack de
+// reserva por mundo (kind reserve, pack_schema 4) desde el pack de campaña publicado.
 // Todo lo que se imprime es ASCII (.claude/rules/ci.md): la consola de Windows y Git Bash corrompen
 // '§' y los acentos al capturar la salida. Los comentarios sí pueden llevar acentos.
 using AF.Core.Board;
@@ -30,8 +32,9 @@ const string Usage = """
       dotnet run --project tools/level-generator -- --registry <campaign.json> --out <registro.json> [--variant a|b] [--check]
       dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
       dotnet run --project tools/level-generator -- --seasons <campaign.json> [<campaign.json> ...] --out <tabla.json> [--until <nivel>] [--check]
+      dotnet run --project tools/level-generator -c Release -- --reserve <mundo_NN_v1.json> [<mundo_NN_v1.json> ...] --spec <campaign.json> [--variant a|b] --out <carpeta> [--report <informe.md>] [--check]
       dotnet run --project tools/level-generator -c Release -- --daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <informe.md>] [--check] [--threads n]
-      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura|daily]
+      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura|reserve|daily]
       dotnet run --project tools/level-generator -- --help
 
     --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json, 11-200, y campaign_v2.json,
@@ -80,7 +83,9 @@ const string Usage = """
       561-700 y de los retos con la cueva de la Pirana y el Brote; ningun slot de 11-560 la usa y la que la usa lleva la
       cuia de holgura). "daily" (Reto del rio, 03 sec. 16): ids y semillas del pool (DailyIds), la especificacion
       specs/daily_v1.json y sus rechazos, y la generacion de 3 dias por banda (determinismo byte a byte con 1 hilo y en
-      paralelo; la semilla reproduce el tablero). Desde la raiz del repositorio.
+      paralelo; la semilla reproduce el tablero). "reserve" (la reserva del 20 %): el orden por rondas, el tope del 20 % de los
+      mundos 2-9, el plan sin mecanicas (con sus capacidades, ids y semillas de reserva y la ventana del slot) y el mundo 3
+      generado dos veces con los mismos bytes. Desde la raiz del repositorio.
       Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
@@ -109,6 +114,15 @@ const string Usage = """
       sin entrada para el nivel (o con otra celda), "pendiente". Codigo 2 si esta mal formado, decide un nivel fuera de
       la especificacion o decide un nivel del rango que no es reto, hito ni primer tablero de estreno; las decisiones de
       la especificacion fuera de --levels se ignoran (--self-test curation).
+    --reserve: la reserva del 20 % (D-033, anadido "la reserva del 20 %", Q-B11-7 a; 03 sec. 17; D-020, pregunta 31 b):
+      por cada pack de campana publicado (de la especificacion --spec y su variante, la publicada por defecto), un pack
+      <carpeta>/reserva_{mm}_v1.json (af-level/1, kind reserve, pack_schema 4) con, para los niveles que usan una mecanica
+      con kill switch (mech_enabled.*, 08 sec. 9), otro tablero del mismo slot sin mecanicas, en la ventana del slot y con
+      alivio desde el 31, hasta el 20 % de los niveles del mundo, en el orden por rondas de los kill switches de 08 sec. 9
+      (cada mecanica toma su primer nivel aun sin elegir). Ids m{mm}_v1_n{nnnn}_r1, semillas amazonfill:v1:m{mm}:v1:n{nnnn}:r1
+      y replaces = el id del slot. Un mundo sin mecanicas con kill switch no tiene pack. Con --check no escribe: falla si
+      algun pack del disco difiere. La QA es level-qa --reserve. Codigos: 0 = escrito o identico; 1 = un mundo sin ningun
+      tablero o --check distinto; 2 = uso, especificacion o pack ilegible.
     --daily: pool del Reto del rio (03 sec. 16; docs/dev/reto-del-rio.md): un tablero por banda (1-3) y dia (0-728) desde
       la semilla amazonfill:v1:daily:b{b}:d{ddd}, sin mecanicas ni alivio, en <carpeta>/<pack_id>.json (daily_pool_v1.json;
       af-level/1, kind daily) y, con --report, el informe. --bands y --days: listas con rangos (p. ej. 0-9,100); por defecto
@@ -142,6 +156,54 @@ if (args.Length >= 1 && (args[0] == "--daily" || (args.Length == 2 && args[0] ==
     return AmazonFill.Tools.LevelGenerator.Daily.DailyCommand.Run(args);
 }
 
+if (args.Length >= 1 && args[0] == "--reserve")
+{
+    var reservePacks = new List<string>();
+    string? reserveSpec = null;
+    string? reserveOut = null;
+    string? reserveReport = null;
+    string? reserveVariant = null;
+    bool reserveCheck = false;
+    for (int i = 1; i < args.Length; i++)
+    {
+        if (args[i] == "--spec" && i + 1 < args.Length && reserveSpec is null)
+        {
+            reserveSpec = args[++i];
+        }
+        else if (args[i] == "--out" && i + 1 < args.Length && reserveOut is null)
+        {
+            reserveOut = args[++i];
+        }
+        else if (args[i] == "--report" && i + 1 < args.Length && reserveReport is null)
+        {
+            reserveReport = args[++i];
+        }
+        else if (args[i] == "--variant" && i + 1 < args.Length && reserveVariant is null)
+        {
+            reserveVariant = args[++i];
+        }
+        else if (args[i] == "--check" && !reserveCheck)
+        {
+            reserveCheck = true;
+        }
+        else if (!args[i].StartsWith("--", StringComparison.Ordinal))
+        {
+            reservePacks.Add(args[i]);
+        }
+        else
+        {
+            return UsageError($"--reserve: argumento no valido, repetido o sin valor: {args[i]}");
+        }
+    }
+
+    if (reservePacks.Count == 0 || reserveSpec is null || reserveOut is null)
+    {
+        return UsageError(reservePacks.Count == 0 ? "--reserve lleva al menos un pack de campana." : reserveSpec is null ? "--reserve: falta --spec." : "--reserve: falta --out.");
+    }
+
+    return ReserveRunner.Run(reserveSpec, reserveVariant, reservePacks, reserveOut, reserveReport, reserveCheck);
+}
+
 if (args.Length >= 1 && args[0] == "--self-test")
 {
     if (args.Length == 1)
@@ -153,7 +215,13 @@ if (args.Length >= 1 && args[0] == "--self-test")
         int curationTest = CurationSelfTest.Run();
         int holgura = HolguraSelfTest.Run();
         int daily = AmazonFill.Tools.LevelGenerator.Daily.DailyCommand.Run(["--self-test", "daily"]);
-        return Math.Max(Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura)), daily);
+        int reserve = ReserveRunner.SelfTest();
+        return Math.Max(Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura)), Math.Max(daily, reserve));
+    }
+
+    if (args.Length == 2 && args[1] == "reserve")
+    {
+        return ReserveRunner.SelfTest();
     }
 
     if (args.Length == 2 && args[1] == "holgura")
@@ -186,7 +254,7 @@ if (args.Length >= 1 && args[0] == "--self-test")
         return SeasonTableWriter.SelfTest();
     }
 
-    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry, curation, holgura o daily.");
+    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry, curation, holgura, reserve o daily.");
 }
 
 if (args.Length >= 1 && args[0] == "--seasons")
