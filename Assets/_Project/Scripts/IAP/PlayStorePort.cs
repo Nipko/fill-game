@@ -113,9 +113,10 @@ namespace AF.IAP
     /// El puerto de la tienda de Play que usa <see cref="PlayBillingClient"/>: lo mínimo de Unity IAP 5.4.4 (<c>StoreController</c>) para
     /// cobrar, consultar y terminar compras, sin tipos del SDK. La implementación real es <c>AF.IAP.UnityIap.UnityIapStorePort</c>
     /// (solo con el paquete <c>com.unity.purchasing</c>; D-040); los tests usan un puerto falso. No acredita nada. Hilo principal: cada
-    /// <c>onDone</c> se llama una vez (puede ser antes de volver) y los eventos llegan en el hilo principal.
+    /// <c>onDone</c> se llama una vez (puede ser antes de volver) y los eventos llegan en el hilo principal. <see cref="IDisposable.Dispose"/>
+    /// suelta los eventos del SDK (al recargar la escena se crea otro puerto: el anterior no debe seguir oyendo).
     /// </summary>
-    public interface IPlayStorePort
+    public interface IPlayStorePort : IDisposable
     {
         /// <summary>Conecta con Play (<c>StoreController.Connect</c>); true si quedó conectada.</summary>
         void Connect(Action<bool> onDone);
@@ -191,5 +192,10 @@ namespace AF.IAP
 
         /// <inheritdoc />
         public bool Confirm(string token) => false;
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+        }
     }
 }

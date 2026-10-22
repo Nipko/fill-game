@@ -14,7 +14,7 @@ index b9026c64..2535baf3 100644
    "includePlatforms": [],
    "excludePlatforms": [],
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
-index 6e57ecc3..20a889a6 100644
+index 6e57ecc3..25aa2eb4 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
 @@ -3,10 +3,12 @@
@@ -100,7 +100,7 @@ index 6e57ecc3..20a889a6 100644
  
              _revocation = new LocalRevocation(profile, ledger.Wallet, batch, capsClock, _rcConfigs?.Revocation);
              _ledgerRestore = new LedgerRestore(ledger, _revocation, client, _backendSwitch, _verifiedStore);
-@@ -132,7 +160,71 @@ private IStoreService CreateStore(Profile profile, StoreLedger ledger, ISimulate
+@@ -132,7 +160,90 @@ private IStoreService CreateStore(Profile profile, StoreLedger ledger, ISimulate
                  };
              }
  
@@ -129,6 +129,25 @@ index 6e57ecc3..20a889a6 100644
 +        private void OnPlayStateChanged()
 +        {
 +            _market?.Refresh();
++        }
++
++        /// <summary>
++        /// Al destruir la escena (<c>OnDestroy</c>: una recarga con RebuildUi o RestartAsFirstRun crea otra tienda): la tienda de Play de
++        /// esta escena suelta Unity IAP, cuyos servicios son únicos en el proceso, para que no siga verificando ni guardando sobre un perfil
++        /// que ya no es el de la sesión. Lo que quede sin terminar en Play vuelve a la tienda nueva.
++        /// </summary>
++        private void DisposeBilling()
++        {
++            PlayBillingClient? play = _playBilling;
++            if (play == null)
++            {
++                return;
++            }
++
++            play.UnfinishedChanged -= OnPlayUnfinished;
++            play.StateChanged -= OnPlayStateChanged;
++            play.Dispose();
++            _playBilling = null;
 +        }
 +
 +        /// <summary>
@@ -173,7 +192,7 @@ index 6e57ecc3..20a889a6 100644
          }
  
          private static IBackendClient CreateBackendClient(BackendMode mode, IClock clock)
-@@ -163,6 +255,8 @@ internal void ResumeBackend(bool foreground)
+@@ -163,6 +274,8 @@ internal void ResumeBackend(bool foreground)
                  return;
              }
  
@@ -182,7 +201,7 @@ index 6e57ecc3..20a889a6 100644
              using (Saves())
              {
                  store.Resume();
-@@ -206,6 +300,7 @@ public bool RestoreLedgerNow()
+@@ -206,6 +319,7 @@ public bool RestoreLedgerNow()
          private void OnLedgerRestored(LedgerRestoreReport report)
          {
              LastLedgerRestore = report;
@@ -204,3 +223,15 @@ index 8a141fcd..abe51d51 100644
              }
          }
  
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 9cc0f324..bc3878b0 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -2274,6 +2274,7 @@ private void OnDestroy()
+         {
+             CutSplash();
+             PersistNow("destruir la escena");
++            DisposeBilling(); // D-040: la tienda de Play de esta escena suelta Unity IAP (GameBootstrap.Backend.cs)
+ 
+             // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
+             // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya

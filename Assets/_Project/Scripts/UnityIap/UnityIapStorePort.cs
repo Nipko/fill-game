@@ -21,6 +21,11 @@ namespace AF.IAP.UnityIap
     /// que lo terminó); <c>DeferredOrder</c> → <see cref="PlayOrderState.PaymentPending"/>; <c>ConfirmedOrder</c> (no consumible ya
     /// reconocido) → <see cref="PlayOrderState.Confirmed"/>.</item>
     /// <item>Un producto sin cargar (<c>availableToPurchase</c> false) o con precio 0 no da precio.</item>
+    /// <item>Una consulta de productos que Unity IAP sigue reintentando (su política reintenta siempre) no se pide otra vez: la respuesta
+    /// tardía va al que espere entonces. Cada consulta de compras sí se pide a Unity IAP (si una se pierde, la siguiente no queda
+    /// tapada).</item>
+    /// <item><see cref="Dispose"/> suelta los eventos de Unity IAP, cuyos servicios son únicos en el proceso: al recargar la escena el
+    /// puerto anterior deja de oír.</item>
     /// <item>El token es el <c>purchaseToken</c> de Play (<c>IGoogleOrderInfo.PurchaseToken</c>; Unity IAP lo usa también como
     /// <c>TransactionID</c>). Nunca va a los logs.</item>
     /// </list>
@@ -32,6 +37,8 @@ namespace AF.IAP.UnityIap
         private readonly Dictionary<string, PendingOrder> _pending = new Dictionary<string, PendingOrder>(StringComparer.Ordinal);
         private readonly List<Action<IReadOnlyList<PlayOrder>?>> _purchasesWaiting = new List<Action<IReadOnlyList<PlayOrder>?>>();
         private Action<IReadOnlyList<PlayProductInfo>?>? _productsDone;
+        private bool _productsInFlight;
+        private bool _disposed;
 
         public UnityIapStorePort()
         {
@@ -93,6 +100,11 @@ namespace AF.IAP.UnityIap
 
             DeliverProducts(null); // una consulta anterior sin responder ya no cuenta
             _productsDone = onDone ?? throw new ArgumentNullException(nameof(onDone));
+            if (_productsInFlight)
+            {
+                return; // Unity IAP sigue reintentando la anterior: su respuesta será la de esta
+            }
+
             var definitions = new List<ProductDefinition>(products.Count);
             for (int i = 0; i < products.Count; i++)
             {
@@ -100,12 +112,14 @@ namespace AF.IAP.UnityIap
                 definitions.Add(new ProductDefinition(p.Sku, p.Type == PlayProductType.NonConsumable ? ProductType.NonConsumable : ProductType.Consumable));
             }
 
+            _productsInFlight = true;
             try
             {
                 _store.FetchProducts(definitions);
             }
             catch (Exception)
             {
+                _productsInFlight = false;
                 DeliverProducts(null);
             }
         }
@@ -118,12 +132,7 @@ namespace AF.IAP.UnityIap
                 throw new ArgumentNullException(nameof(onDone));
             }
 
-            _purchasesWaiting.Add(onDone);
-            if (_purchasesWaiting.Count > 1)
-            {
-                return; // ya hay una consulta en vuelo: su respuesta va a todos
-            }
-
+            _purchasesWaiting.Add(onDone); // la primera respuesta que llegue va a todos los que esperan
             try
             {
                 _store.FetchPurchases();
@@ -223,21 +232,46 @@ namespace AF.IAP.UnityIap
 
         private void OnProductsFetched(List<Product> products)
         {
+            _productsInFlight = false;
             DeliverProducts(products);
         }
 
         private void OnProductsFetchFailed(ProductFetchFailed failure)
         {
             // Algún producto no está en Play Console (o falló la consulta): vale lo que ya haya en la caché; sin nada, no hay tienda.
+            _productsInFlight = false;
             var cached = new List<Product>(_store.GetProducts());
             DeliverProducts(cached.Count > 0 ? cached : null);
         }
 
         private void OnStoreDisconnected(StoreConnectionFailureDescription failure)
         {
-            DeliverProducts(null);
+            DeliverProducts(null); // si Unity IAP sigue reintentando los productos, su respuesta irá al próximo que pregunte
             DeliverPurchases(null);
             Disconnected?.Invoke();
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _store.OnPurchasePending -= OnPurchasePending;
+            _store.OnPurchaseDeferred -= OnPurchaseDeferred;
+            _store.OnPurchaseFailed -= OnPurchaseFailedRaw;
+            _store.OnPurchaseConfirmed -= OnPurchaseConfirmed;
+            _store.OnProductsFetched -= OnProductsFetched;
+            _store.OnProductsFetchFailed -= OnProductsFetchFailed;
+            _store.OnPurchasesFetched -= OnPurchasesFetched;
+            _store.OnPurchasesFetchFailed -= OnPurchasesFetchFailed;
+            _store.OnStoreDisconnected -= OnStoreDisconnected;
+            DeliverProducts(null);
+            DeliverPurchases(null);
+            _pending.Clear();
         }
 
         private void DeliverProducts(IList<Product>? products)

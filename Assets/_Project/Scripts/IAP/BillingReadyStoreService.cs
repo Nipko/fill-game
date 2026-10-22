@@ -12,7 +12,7 @@ namespace AF.IAP
     /// respaldo (05 §4.1: «precio local con impuestos visible antes de comprar»). No cambia el contrato de la tienda envuelta (<see cref="VerifiedStoreService"/>): la cola de
     /// verificación sigue con su <see cref="VerifiedStoreService.Resume"/> y su <see cref="VerifiedStoreService.Pump"/>. Hilo principal.
     /// </summary>
-    public sealed class BillingReadyStoreService : IStoreService
+    public sealed class BillingReadyStoreService : IStoreService, IStoreDecorator
     {
         private readonly IStoreService _inner;
         private readonly IBillingAvailability _billing;
@@ -25,6 +25,9 @@ namespace AF.IAP
 
         /// <summary>La tienda envuelta.</summary>
         public IStoreService Inner => _inner;
+
+        /// <summary>La tienda de la plataforma (lista o no, y con qué precios de la tienda).</summary>
+        public IBillingAvailability Billing => _billing;
 
         /// <inheritdoc />
         public bool IsAvailable => _billing.IsReady && _inner.IsAvailable;

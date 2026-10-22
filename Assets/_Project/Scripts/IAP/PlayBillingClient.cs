@@ -60,11 +60,13 @@ namespace AF.IAP
     /// el precio no es positivo, los de 05 §4.2 en <c>fallbackCurrency</c>, y ese SKU no se vende (<see cref="CanSell"/>,
     /// <see cref="BillingReadyStoreService"/>).</item>
     /// <item>Si Play se desconecta o falla una consulta, queda <see cref="PlayBillingState.Unavailable"/> y <see cref="Refresh"/> vuelve
-    /// a conectar.</item>
+    /// a conectar; un arranque que no termina (Play no contesta) también se repite en <see cref="Refresh"/>.</item>
+    /// <item><see cref="Dispose"/> (al destruir la escena): suelta el puerto y deja de avisar; lo que quede sin terminar en Play vuelve en
+    /// la sesión siguiente.</item>
     /// </list>
     /// Nunca escribe tokens ni el UID en los logs. Hilo principal.
     /// </summary>
-    public sealed class PlayBillingClient : IBillingClient, IBillingAvailability
+    public sealed class PlayBillingClient : IBillingClient, IBillingAvailability, IDisposable
     {
         private readonly IPlayStorePort _port;
         private readonly StoreCatalog _catalog;
@@ -74,6 +76,9 @@ namespace AF.IAP
         private readonly HashSet<string> _finished = new HashSet<string>(StringComparer.Ordinal);
         private Open? _open;
         private int _generation;
+        private bool _disposed;
+        private bool _notifyPending;
+        private int _batchDepth;
 
         /// <param name="port">Puerto de Play (Unity IAP en el teléfono; uno falso en los tests).</param>
         /// <param name="catalog">Catálogo de 1.0 (los productos que se piden y su tipo).</param>
@@ -145,11 +150,41 @@ namespace AF.IAP
         /// <summary>Conecta, pide los productos y consulta las compras sin terminar. Sin efecto si ya arrancó y no está en <see cref="PlayBillingState.Unavailable"/>.</summary>
         public void Start()
         {
-            if (State == PlayBillingState.Starting || State == PlayBillingState.Ready)
+            if (_disposed || State == PlayBillingState.Starting || State == PlayBillingState.Ready)
             {
                 return;
             }
 
+            Restart();
+        }
+
+        /// <summary>
+        /// Al destruir la escena: suelta el puerto (y con él los eventos del SDK), responde «fallida» a la compra abierta sin cobrar nada
+        /// nuevo y deja de avisar. Lo cobrado sin terminar sigue en Play y vuelve en la sesión siguiente.
+        /// </summary>
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _generation++;
+            _port.OrderUpdated -= OnOrderUpdated;
+            _port.PurchaseFailed -= OnPurchaseFailed;
+            _port.Disconnected -= OnDisconnected;
+            UnfinishedChanged = null;
+            StateChanged = null;
+            Open? open = _open;
+            _open = null;
+            State = PlayBillingState.Unavailable;
+            _port.Dispose();
+            open?.OnDone(BillingResult.Failed());
+        }
+
+        private void Restart()
+        {
             int generation = ++_generation;
             SetState(PlayBillingState.Starting);
             _port.Connect(connected =>
@@ -175,9 +210,14 @@ namespace AF.IAP
         /// </summary>
         public void Refresh()
         {
-            if (State == PlayBillingState.Unavailable || State == PlayBillingState.NotStarted)
+            if (_disposed)
             {
-                Start();
+                return;
+            }
+
+            if (State != PlayBillingState.Ready)
+            {
+                Restart(); // sin Play, sin arrancar o con un arranque que no contestó: otra vez (lo que conteste tarde no cuenta)
                 return;
             }
 
@@ -328,26 +368,65 @@ namespace AF.IAP
 
         private void FetchPurchases(Action<bool> onDone)
         {
+            int generation = _generation;
             _port.FetchPurchases(orders =>
             {
+                if (_disposed || generation != _generation)
+                {
+                    return; // de un arranque anterior o tras soltar el puerto
+                }
+
                 if (orders != null)
                 {
-                    for (int i = 0; i < orders.Count; i++)
+                    // Un solo UnfinishedChanged por consulta (cada uno es un Resume completo).
+                    _batchDepth++;
+                    try
                     {
-                        if (orders[i] != null)
+                        for (int i = 0; i < orders.Count; i++)
                         {
-                            Accept(orders[i], false);
+                            if (orders[i] != null)
+                            {
+                                Accept(orders[i], false);
+                            }
                         }
                     }
+                    finally
+                    {
+                        _batchDepth--;
+                    }
+
+                    FlushUnfinished();
                 }
 
                 onDone(orders != null);
             });
         }
 
+        private void NotifyUnfinished()
+        {
+            if (_batchDepth > 0)
+            {
+                _notifyPending = true;
+                return;
+            }
+
+            UnfinishedChanged?.Invoke();
+        }
+
+        private void FlushUnfinished()
+        {
+            if (!_notifyPending)
+            {
+                return;
+            }
+
+            _notifyPending = false;
+            UnfinishedChanged?.Invoke();
+        }
+
         private void OnOrderUpdated(PlayOrder order)
         {
-            if (order != null)
+            if (order != null && !_disposed)
             {
                 Accept(order, true);
             }
@@ -355,7 +434,7 @@ namespace AF.IAP
 
         private void OnDisconnected()
         {
-            if (State == PlayBillingState.Ready || State == PlayBillingState.Starting)
+            if (!_disposed && (State == PlayBillingState.Ready || State == PlayBillingState.Starting))
             {
                 _generation++; // lo que respondan tarde las consultas del arranque ya no cuenta
                 SetState(PlayBillingState.Unavailable);
@@ -399,7 +478,7 @@ namespace AF.IAP
                     }
 
                     _unfinished.Add(new Tracked(order.Sku, order.Token, PlayOrderState.Confirmed));
-                    UnfinishedChanged?.Invoke();
+                    NotifyUnfinished();
                     return;
 
                 default:
@@ -410,21 +489,36 @@ namespace AF.IAP
 
         private void AcceptPurchased(PlayOrder order, bool live)
         {
+            bool liveForOpen = live && IsOpenFor(order.Sku);
             if (_finished.Contains(order.Token))
             {
                 // Ya acreditado y terminado en esta sesión, pero Play lo sigue teniendo cobrado: el ConfirmPurchase falló. Se vuelve a pedir.
                 _port.Confirm(order.Token);
+                if (liveForOpen)
+                {
+                    Resolve(BillingResult.Failed(), null); // la hoja no cobró nada nuevo (Unity IAP responde con el pedido que ya había)
+                }
+
                 return;
             }
 
             Tracked? t = Find(order.Token);
             if (t != null)
             {
-                // Repetido. Solo cuenta si es el aviso en vivo de un pedido que la consulta trajo con la hoja abierta: es su respuesta.
-                if (live && t.AwaitingOpen && IsOpenFor(order.Sku))
+                // Repetido. Si es el aviso en vivo de un pedido que la consulta trajo con la hoja abierta, es su respuesta; si ya se
+                // conocía (Unity IAP responde a un «cancelar» con el pedido sin terminar del mismo SKU), la hoja no cobró nada nuevo:
+                // falla, y ese pedido sigue su camino en la cola.
+                if (liveForOpen)
                 {
-                    t.AwaitingOpen = false;
-                    Resolve(BillingResult.Purchased(t.Transaction), t);
+                    if (t.AwaitingOpen)
+                    {
+                        t.AwaitingOpen = false;
+                        Resolve(BillingResult.Purchased(t.Transaction), t);
+                    }
+                    else
+                    {
+                        Resolve(BillingResult.Failed(), null);
+                    }
                 }
 
                 return;
@@ -446,12 +540,12 @@ namespace AF.IAP
                 return;
             }
 
-            UnfinishedChanged?.Invoke();
+            NotifyUnfinished();
         }
 
         private void OnPurchaseFailed(string? sku, PlayFailureKind kind)
         {
-            if (_open == null || (sku != null && !string.Equals(sku, _open.Sku, StringComparison.Ordinal)))
+            if (_disposed || _open == null || (sku != null && !string.Equals(sku, _open.Sku, StringComparison.Ordinal)))
             {
                 return;
             }
@@ -492,12 +586,17 @@ namespace AF.IAP
 
             if (released)
             {
-                UnfinishedChanged?.Invoke();
+                NotifyUnfinished();
             }
         }
 
         private void SetState(PlayBillingState state)
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             State = state;
             StateChanged?.Invoke();
         }

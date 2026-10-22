@@ -136,6 +136,14 @@ namespace AF.IAP.Tests
         /// <summary>Play se desconecta.</summary>
         public void Disconnect() => Disconnected?.Invoke();
 
+        /// <summary>Veces que se soltó el puerto.</summary>
+        public int Disposed { get; private set; }
+
+        public void Dispose() => Disposed++;
+
+        /// <summary>¿Alguien oye todavía los avisos de Play?</summary>
+        public bool HasListeners => OrderUpdated != null || PurchaseFailed != null || Disconnected != null;
+
         /// <summary>Precio en BRL (columna de 05 §4.2) para todo el catálogo salvo <paramref name="except"/>.</summary>
         public FakePlayStorePort PriceAll(StoreCatalog catalog, params string[] except)
         {

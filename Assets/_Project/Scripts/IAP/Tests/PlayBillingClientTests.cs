@@ -375,6 +375,88 @@ namespace AF.IAP.Tests
         }
 
         [Test]
+        public void Dispose_ReleasesThePort_AnswersTheOpenSheet_AndStopsNotifying()
+        {
+            // Al recargar la escena (RebuildUi, RestartAsFirstRun) se crea otra tienda: la anterior no debe seguir oyendo a Play.
+            (PlayBillingClient client, FakePlayStorePort port) = Ready();
+            port.NextOutcome = FakePlayOutcome.Silent;
+            BillingResult? result = null;
+            client.Purchase("af_coins_2", Uid, r => result = r);
+            int notifications = 0;
+            client.UnfinishedChanged += () => notifications++;
+            client.StateChanged += () => notifications++;
+
+            client.Dispose();
+
+            Assert.That(result!.Kind, Is.EqualTo(BillingResultKind.Failed), "la compra abierta no queda colgada");
+            Assert.That(port.HasListeners, Is.False);
+            Assert.That(port.Disposed, Is.EqualTo(1));
+            Assert.That(client.IsReady, Is.False);
+
+            port.Respond(FakePlayOutcome.Purchase); // Play contesta tarde: ya no lo oye nadie de esta tienda
+            port.Disconnect();
+            client.Refresh();
+            client.Dispose();
+            Assert.That(notifications, Is.EqualTo(0));
+            Assert.That(port.Disposed, Is.EqualTo(1));
+            Assert.That(port.ConnectCalls, Is.EqualTo(1), "una tienda soltada no vuelve a conectar");
+        }
+
+        [Test]
+        public void Refresh_RestartsAStartThatNeverAnswered()
+        {
+            var port = new FakePlayStorePort { Async = true }.PriceAll(StoreCatalog.Default);
+            var client = new PlayBillingClient(port, StoreCatalog.Default);
+            client.Start();
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Starting));
+
+            port.Async = false;
+            client.Refresh(); // al volver a primer plano, Play aún no había contestado
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Ready));
+            Assert.That(port.ConnectCalls, Is.EqualTo(2));
+
+            port.Flush(); // la respuesta del primer arranque llega tarde
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Ready));
+            Assert.That(port.FetchPurchasesCalls, Is.EqualTo(1), "el arranque abandonado no sigue consultando");
+        }
+
+        [Test]
+        public void ALiveAnswerWithAKnownOrder_FailsTheOpenSheet_WithoutTrackingItTwice()
+        {
+            // Unity IAP responde a un «cancelar» con el pedido sin terminar del mismo SKU que ya había (y la cola ya lo tiene).
+            var account = new FakePlayAccount();
+            FakePlayEntry old = account.Add("af_coins_2", FakePlayState.Purchased);
+            (PlayBillingClient client, FakePlayStorePort port) = Ready(account);
+            port.NextOutcome = FakePlayOutcome.Silent;
+            BillingResult? result = null;
+            client.Purchase("af_coins_2", Uid, r => result = r);
+
+            port.Redeliver(old.Token);
+
+            Assert.That(result!.Kind, Is.EqualTo(BillingResultKind.Failed), "la hoja no queda abierta para siempre");
+            Assert.That(client.UnfinishedTransactions().Count, Is.EqualTo(1));
+            port.NextOutcome = FakePlayOutcome.Purchase;
+            Assert.That(Buy(client, "af_coins_3")!.Kind, Is.EqualTo(BillingResultKind.Purchased), "y se puede volver a comprar");
+        }
+
+        [Test]
+        public void AQueryWithSeveralOrders_NotifiesOnce()
+        {
+            var account = new FakePlayAccount();
+            (PlayBillingClient client, FakePlayStorePort port) = Ready(account);
+            account.Add("af_coins_2", FakePlayState.Purchased);
+            account.Add("af_coins_3", FakePlayState.Purchased);
+            account.Add("af_noads", FakePlayState.Acknowledged);
+            int notifications = 0;
+            client.UnfinishedChanged += () => notifications++;
+
+            client.Refresh();
+
+            Assert.That(notifications, Is.EqualTo(1), "un Resume por consulta, no uno por pedido");
+            Assert.That(client.UnfinishedTransactions().Count, Is.EqualTo(3));
+        }
+
+        [Test]
         public void OrdersOfUnknownProductsOrWithBadTokens_AreIgnored()
         {
             (PlayBillingClient client, FakePlayStorePort port) = Ready();

@@ -286,6 +286,10 @@ namespace AF.Tests.PlayMode
                 }
             }
 
+            public void Dispose()
+            {
+            }
+
             public bool Confirm(string token)
             {
                 if (_done.Contains(token))
