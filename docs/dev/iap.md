@@ -159,7 +159,8 @@ En el editor, en los tests y en cualquier build sin el backend real, la tienda d
    - `Assets/Plugins/Android/mainTemplate.gradle` y `ProjectSettings/AndroidResolverDependencies.xml` tal como los escribió EDM4U al construir: una línea, `implementation 'com.android.billingclient:billing:9.0.0'`.
 3. **`BILL-ci.diff`**: `ci/check-no-unity-iap.ps1` (nuevo, con autotest de 9 casos; si en una carpeta hay un artefacto con Unity IAP y otro ilegible, sale con 1; lee cada entrada por trozos de 4 MB con solape y un solo búfer, así que la memoria no crece con el tamaño de `libil2cpp.so`) y comentarios de `ci/check-manifest.ps1` (BILLING sigue en la lista blanca y `-RequireBilling` en release, sin cambios de lógica; su autotest sigue en 50 casos). El paso del workflow es un enganche de texto (§6), no un parche: `.github/` no lo toca este rol.
 4. **`BILL-gdd.diff`**: 08 §2.2 (fila `AF.IAP`), §1 (resumen), §7 #3 (Google Play Billing Library 9.0.0 con el plugin propio), §7 #9 (Authentication ya no entra con IAP), §10.1 (consumo con Play Billing y `deferred_ack` también de consumibles), §10.3 (flujo), §13.1 #4 y §13.3 (la fila pasa a «Google Play Billing», sin Unity).
-5. **`BILL-claude.diff`**: los recuentos de `CLAUDE.md` y el mapa del repositorio (`Scripts/PlayBilling/`, `Plugins/`, la compuerta nueva).
+5. **`BILL-claude.diff`**: los recuentos de `CLAUDE.md` (EditMode 4.315; PlayMode sigue en 1.940), el mapa del repositorio (`Scripts/PlayBilling/`, `Plugins/`), la compuerta nueva y la nota de que Play Billing 9.0.0 sustituye a IAP 5.4.4 del plan de instalación.
+6. **`BILL-rules.diff`** (del dueño: `.claude/**` no lo tocan los agentes): `.claude/rules/sdk.md` y `.claude/agents/sdk-integrator.md` con Play Billing Library 9.0.0 en lugar de Unity IAP 5.4.4 y las rutas nuevas (`Scripts/PlayBilling/`, `Assets/_Project/Plugins/`).
 
 Cada parche se aplica solo sobre la rama, salvo el 2, que necesita el 1. Están probados juntos (§6).
 
@@ -250,7 +251,7 @@ En cada una va **aplicada la recomendada**, por la regla del dueño (D-040): «s
 
 ## 6. Verificación
 
-Máquina: ARM64 (Snapdragon), 64 GB, Editor 6000.3.25f1 ARM64, Python 3.14. Rama desde `origin/integracion-fase1-fase2` en `0ad1de46`.
+Máquina: ARM64 (Snapdragon), 64 GB, Editor 6000.3.25f1 ARM64, Python 3.14.7. Rama desde `origin/integracion-fase1-fase2` en `0ad1de46`, con una fusión al final de `509f6d24` (appcheck-release con `ci/check-release-classes.ps1`, FX-130 y la traducción 3); los parches están rehechos sobre esa fusión y la verificación final es sobre ella.
 
 | Comprobación | Rama sola | Rama + los parches (`BILL-bootstrap`, `-manifest`, `-ci`, `-gdd`) |
 |---|---|---|
@@ -258,12 +259,12 @@ Máquina: ARM64 (Snapdragon), 64 GB, Editor 6000.3.25f1 ARM64, Python 3.14. Rama
 | `dotnet test dotnet/AmazonFill.slnx` | 1.002 (996 + 6 omitidos) | (no lo tocan) |
 | `python tools/validate_schema.py` | 116/116 PASS, sin cambios en `tools/out` | (no lo tocan) |
 | `scripts/unity-compile.ps1 -Architecture arm64` | OK | OK (sin Unity IAP: `Packages/` ya no lo trae) |
-| `scripts/unity-test.ps1 -Mode EditMode` | RAMA_EDIT | 4.315 (4.312 + 3 omitidos) |
-| `scripts/unity-test.ps1 -Mode PlayMode` | — | PATCH_PLAY |
+| `scripts/unity-test.ps1 -Mode EditMode` | 4.315 (4.312 + 3 omitidos) | 4.315 (4.312 + 3 omitidos); antes de esta rama, 4.272 (+43 casos nuevos) |
+| `scripts/unity-test.ps1 -Mode PlayMode` | — (no cambia ningún test de PlayMode salvo el puerto de fotogramas) | 1.940 (1.669 + 271 omitidos), sin fallos |
 | `ci/check-manifest.ps1 --self-test` | — | 50 casos OK |
 | `ci/check-no-unity-iap.ps1 --self-test` | — | 9 casos OK; y sobre el `dev.apk` de `spark/t5-iap` (con Unity IAP): **FALLO**, el host en `global-metadata.dat` (control positivo) |
 | Build de desarrollo (`BuildDev`) | — | `dev.apk` 70,37 MB; `check-manifest -Mode dev` OK con Play Billing 9.0.0; `check-no-unity-iap` OK; 16 KB: 18 `.so`, 0 fallos; `AfBilling` y `BillingClient` en `classes.dex` |
-| Ensayo (`BuildRelease -afRehearsal -afApk`, stripping High) | — | **AAB 54,20 MB** (54.195.654 bytes) frente a **60,23 MB** con Unity IAP: **−6,03 MB**; APK 59,62 MB; `size-gate` OK (sin bundletool); `check-manifest -Mode dev -RequireBilling` OK (AAB y APK); `check-no-unity-iap` OK; 16 KB: 18 `.so`, 0 fallos; `BillingListenerProxy` y sus métodos siguen en `global-metadata.dat` tras el stripping |
+| Ensayo (`BuildRelease -afRehearsal -afApk`, stripping High) | — | **AAB 54,20 MB** (54.202.160 bytes, tras la fusión; 54.195.654 antes de ella) frente a **60,23 MB** con Unity IAP: **−6,03 MB**; APK 59,63 MB; `size-gate` OK (sin bundletool); `check-manifest -Mode dev -RequireBilling` OK (AAB y APK); `check-no-unity-iap` OK; `check-release-classes` OK (2 `.dex`, 17.192 clases); 16 KB: 18 `.so`, 0 fallos; `BillingListenerProxy` y sus métodos siguen en `global-metadata.dat` tras el stripping |
 | Árbol de Gradle (`:unityLibrary:dependencies`, `debugRuntimeClasspath`, sin red) | — | `billing:9.0.0` y sus dependencias como en Q-BILL-1; `AfBilling.androidlib` no añade nada en tiempo de ejecución (`compileOnly`) |
 
 **Permisos del manifiesto fusionado** (dev.apk y ensayo, AAB y APK): `INTERNET`, `ACCESS_NETWORK_STATE`, `VIBRATE`, `com.android.vending.BILLING`, `WAKE_LOCK`, `BIND_GET_INSTALL_REFERRER_SERVICE`, `POST_NOTIFICATIONS` y el propio `com.amazonfill.dev.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. **Ninguno nuevo**: son los mismos que con Unity IAP. `com.android.vending.BILLING` lo declara la biblioteca 9.0.0 (aprobado en D-040); el manifiesto del plugin no declara ninguno.
@@ -272,12 +273,14 @@ Máquina: ARM64 (Snapdragon), 64 GB, Editor 6000.3.25f1 ARM64, Python 3.14. Rama
 
 Los builds son locales (ARM64); la referencia es el CI Linux x64. En el teléfono no se probó nada (la app no existe en Play Console, D-034).
 
-**Enganche del workflow** (`.github/workflows/ci.yml`, para el integrador; texto, no parche): tras el paso «Compuerta del manifiesto», añadir
+**Enganche del workflow** (`.github/workflows/ci.yml`, para el integrador; texto, no parche): tras el paso «Compuerta de clases prohibidas en release (firebase-appcheck-debug)», añadir
 
 ```yaml
       - name: Compuerta sin Unity IAP ni su telemetria (D-040, Q-IAP-1)
         run: pwsh -NoProfile -File ci/check-no-unity-iap.ps1 build/Android
 ```
+
+y en la cabecera del workflow, junto a `check-release-classes`, la compuerta nueva. Alternativa para las clases: añadir `com.unity.purchasing` a `$ForbiddenPackages` de `ci/check-release-classes.ps1` (que mira `class_def` en los `.dex`); el host de la telemetría, en cambio, solo lo encuentra `check-no-unity-iap.ps1`, porque Unity IAP 5.4.4 lo lleva en el código C# (`global-metadata.dat`), no en Java.
 
 ---
 

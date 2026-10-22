@@ -1,0 +1,87 @@
+diff --git a/Assets/_Project/Scripts/UI/AF.UI.asmdef b/Assets/_Project/Scripts/UI/AF.UI.asmdef
+index b1ef46ef..1fab0e77 100644
+--- a/Assets/_Project/Scripts/UI/AF.UI.asmdef
++++ b/Assets/_Project/Scripts/UI/AF.UI.asmdef
+@@ -31,7 +31,7 @@
+     "AF.Analytics.Firebase",
+     "AF.RemoteConfig.Firebase",
+     "AF.Platform.Notifications",
+-    "AF.IAP.UnityIap",
++    "AF.IAP.PlayBilling",
+     "AF.Backend.Firebase"
+   ],
+   "includePlatforms": [],
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
+index 71cc77b0..cc0b7594 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
+@@ -8,7 +8,7 @@
+ using AF.Economy;
+ using AF.GameFlow;
+ using AF.IAP;
+-using AF.IAP.UnityIap;
++using AF.IAP.PlayBilling;
+ using AF.Platform;
+ using AF.Save;
+ using UnityEngine;
+@@ -20,7 +20,8 @@ namespace AF.UI
+     /// cuenta, con el cliente que da <see cref="BackendFactory"/> para este build.
+     /// <list type="bullet">
+     /// <item><see cref="CreateStore"/>: <see cref="VerifiedStoreService"/> sobre la tienda de Play real (<see cref="PlayBillingClient"/>
+-    /// con Unity IAP 5.4.4; D-040) en un teléfono con el paquete y con el backend real (<see cref="HttpBackendClient"/>), o sobre
++    /// con el plugin propio de Play Billing 9.0.0; D-040 y su añadido de Q-IAP-1) en un teléfono y con el backend real
++    /// (<see cref="HttpBackendClient"/>), o sobre
+     /// <see cref="FakeBillingClient"/> (la hoja «Compra simulada» de siempre, con tokens nuevos en cada arranque) en el resto; con el UID
+     /// de Firebase Auth como <c>setObfuscatedAccountId</c> (<see cref="FirebaseAuthUid"/>); y el cliente del backend: <see cref="FakeBackendClient"/> en el editor y en
+     /// <c>DEVELOPMENT_BUILD</c> sin la configuración de Firebase (concede lo del catálogo, como el servidor: <see cref="CatalogGrants"/>),
+@@ -77,7 +78,7 @@ internal static void ResetBackendOverrides()
+         /// <summary>La tienda verificada (null antes del arranque).</summary>
+         public VerifiedStoreService? VerifiedStore => _verifiedStore;
+ 
+-        /// <summary>La tienda de la plataforma simulada (tests y builds sin Unity IAP).</summary>
++        /// <summary>La tienda de la plataforma simulada (editor, tests y builds sin el backend real).</summary>
+         public FakeBillingClient? FakeBilling => _fakeBilling;
+ 
+         /// <summary>La tienda de Play real (D-040), solo en el teléfono con el backend real; null en el resto.</summary>
+@@ -108,8 +109,8 @@ private IStoreService CreateStore(Profile profile, StoreLedger ledger, ISimulate
+ 
+             _backendSwitch = new GameBackendSwitch(!(client is UnavailableBackendClient), _rcConfigs?.BackendSwitch);
+ 
+-            // D-040: Play Billing de verdad (Unity IAP 5.4.4) solo en el teléfono, con el paquete y con el backend real que verifica cada
+-            // compra; con el backend falso (editor, desarrollo sin google-services.json) o sin el paquete, la tienda simulada de siempre.
++            // D-040: Play Billing de verdad (plugin propio, Play Billing Library 9.0.0) solo en el teléfono y con el backend real que
++            // verifica cada compra; con el backend falso (editor, desarrollo sin google-services.json), la tienda simulada de siempre.
+             IBillingClient billing;
+             _playBilling = client is HttpBackendClient ? PlayBillingFactory.TryCreate(ledger.Catalog, LaunchOptions.DefaultStoreCurrency) : null;
+             if (_playBilling != null)
+@@ -188,7 +189,7 @@ private void OnPlayStateChanged()
+ 
+         /// <summary>
+         /// Al destruir la escena (<c>OnDestroy</c>: una recarga con RebuildUi o RestartAsFirstRun crea otra tienda): la tienda de Play de
+-        /// esta escena suelta Unity IAP, cuyos servicios son únicos en el proceso, para que sus avisos no lleguen también a la tienda vieja.
++        /// esta escena suelta su conexión con Play (endConnection del plugin), para que sus avisos no lleguen también a la tienda vieja.
+         /// Lo que quede sin terminar en Play vuelve a la tienda nueva. (La tienda verificada vieja y sus peticiones en vuelo al servidor
+         /// siguen como antes de D-040: ver «Riesgos» de <c>docs/dev/iap.md</c>.)
+         /// </summary>
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 5b0496e5..4467eab3 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -1681,7 +1681,7 @@ private IEnumerator Start()
+                 WrapAds(WrapConsentAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()))), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
+             _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
+             // F3-5: la compra verificada (F3-3) con el cliente del backend de este build (GameBootstrap.Backend.cs); la hoja «Compra
+-            // simulada» sigue siendo la de la tienda de la plataforma simulada (FakeBillingClient) mientras no llegue Unity IAP.
++            // simulada» es la de la tienda de la plataforma simulada (FakeBillingClient) sin Play real (D-040).
+             _store = WrapStore(WrapConsentStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch))); // B12: flags de edad
+             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
+                 mapProgress: progress);
+@@ -2315,7 +2315,7 @@ private void OnDestroy()
+             CutSplash();
+             PersistNow("destruir la escena");
+             ClearA11y(); // B9: TalkBack no se queda con los nodos de esta escena (recarga por idioma o por borrar la cuenta)
+-            DisposeBilling(); // D-040: la tienda de Play de esta escena suelta Unity IAP (GameBootstrap.Backend.cs)
++            DisposeBilling(); // D-040: la tienda de Play de esta escena suelta su conexión con Play (GameBootstrap.Backend.cs)
+ 
+             // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
+             // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya
