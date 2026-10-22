@@ -309,6 +309,7 @@ namespace AF.Save.Tests
             cloud.Settings.Push.PrePromptShown = true;
             cloud.Settings.Push.PrePromptAt = T0;
             cloud.Settings.Push.Granted = true;
+            local.Settings.Push.SecondDueSession = 3; // D-033, UI de los avisos (b): el recuerdo del hito 3, por máximo [P]
 
             Profile m = CloudMerge.Resolve(local, cloud).Merged;
             Assert.That(m.Progress.MaxLevel, Is.EqualTo(40), "gana la nube");
@@ -317,6 +318,7 @@ namespace AF.Save.Tests
             Assert.That(m.Settings.Push.PrePromptShown, Is.True);
             Assert.That(m.Settings.Push.PrePromptAt, Is.EqualTo(T0));
             Assert.That(m.Settings.Push.Granted, Is.False, "el permiso es del teléfono");
+            Assert.That(m.Settings.Push.SecondDueSession, Is.EqualTo(3), "el recuerdo del hito 3 no se pierde al fusionar");
         }
 
         [Test]

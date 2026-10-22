@@ -27,6 +27,13 @@ namespace AF.LiveOps
         /// <summary><c>second_prompt_shown</c> [P]: ya salió el segundo y último pre-prompt; después, solo Ajustes.</summary>
         public bool SecondPromptShown { get; set; }
 
+        /// <summary>
+        /// <c>second_due_session</c> [P] (D-033, añadido de la UI de los avisos, (b)): la sesión en que se alcanzó el hito 3 de la
+        /// Crecida después del primer pre-prompt sin que saliera el segundo (en la misma sesión que el primero, como mucho uno por
+        /// sesión); el segundo sale en la primera victoria de una sesión posterior. 0: ninguna.
+        /// </summary>
+        public int SecondDueSession { get; set; }
+
         /// <summary>Copia.</summary>
         public PushSettingsRecord Clone()
         {
@@ -36,6 +43,7 @@ namespace AF.LiveOps
                 Granted = Granted,
                 PrePromptAt = PrePromptAt,
                 SecondPromptShown = SecondPromptShown,
+                SecondDueSession = SecondDueSession,
             };
         }
     }

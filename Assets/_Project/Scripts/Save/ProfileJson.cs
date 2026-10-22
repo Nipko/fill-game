@@ -248,6 +248,11 @@ namespace AF.Save
                 pushNode.Set("granted", JsonNode.FromBool(push.Granted));
                 pushNode.Set("pre_prompt_at", Timestamp(push.PrePromptAt));
                 pushNode.Set("second_prompt_shown", JsonNode.FromBool(push.SecondPromptShown));
+                if (push.SecondDueSession > 0)
+                {
+                    pushNode.Set("second_due_session", JsonNode.FromInt(push.SecondDueSession)); // D-033, UI de los avisos (b) [P]
+                }
+
                 settings.Set("push", pushNode);
             }
 
@@ -896,6 +901,7 @@ namespace AF.Save
                 s.Push.Granted = TolerantBool(push, "granted", s.Push.Granted);
                 s.Push.PrePromptAt = TolerantTimestamp(push, "pre_prompt_at");
                 s.Push.SecondPromptShown = TolerantBool(push, "second_prompt_shown", s.Push.SecondPromptShown);
+                s.Push.SecondDueSession = Math.Max(0, TolerantInt(push, "second_due_session", 0)); // D-033, UI de los avisos (b)
             }
         }
 

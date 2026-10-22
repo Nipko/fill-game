@@ -130,13 +130,13 @@ namespace AF.UI
                 return PrePromptKind.None;
             }
 
+            moment = new PrePromptMoment(sessions.Sessions, maxLevelBeforeVictory, _profile?.Streak?.Wins ?? 0, _sessionClock.UtcNow);
             if (!PushUiRules.CanOffer(_prePrompt != null, PlayerUnder13(), ConsentHoldsSession, push.Asking || _prePromptLeave != null,
                     sessions.Sessions, s_prePromptSession))
             {
                 return PrePromptKind.None;
             }
 
-            moment = new PrePromptMoment(sessions.Sessions, maxLevelBeforeVictory, _profile?.Streak?.Wins ?? 0, _sessionClock.UtcNow);
             return push.Due(in moment);
         }
 
@@ -163,6 +163,12 @@ namespace AF.UI
         {
             _prePromptDue = PrePromptDueNow(maxLevelBeforeVictory, out _prePromptMoment);
             _prePromptDueDaily = daily;
+            if (_prePromptDue != PrePromptKind.Second && _prePromptMoment.Sessions > 0)
+            {
+                // D-033, UI de los avisos (b): el hito 3 en una victoria que no lleva el segundo (la misma sesión que el primero) se
+                // recuerda y el segundo sale en la primera victoria de la sesión siguiente.
+                _push?.RememberMilestone(in _prePromptMoment);
+            }
         }
 
         /// <summary>

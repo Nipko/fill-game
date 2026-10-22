@@ -54,6 +54,30 @@ namespace AF.LiveOps.Tests
         }
 
         [Test]
+        public void SecondDueSession_RoundTrips_OnlyWhenSet_AndThroughThePushStore() // D-033, UI de los avisos (b)
+        {
+            Profile p = Wallet.NewProfile(new ManualClock(T0));
+            p.Settings.Push.PrePromptShown = true;
+            StringAssert.DoesNotContain("second_due_session", ProfileJson.Serialize(p), "0: no se escribe");
+            var disk = new MemoryProfileStore();
+            var store = new ProfilePushSettingsStore(p, disk);
+            PushSettingsRecord r = store.Load();
+            r.SecondDueSession = 4;
+            store.Save(r);
+            Assert.That(p.Settings.Push.SecondDueSession, Is.EqualTo(4));
+            Profile back = ProfileJson.Deserialize(disk.Json!);
+            Assert.That(back.Settings.Push.SecondDueSession, Is.EqualTo(4));
+            Assert.That(new ProfilePushSettingsStore(back, new MemoryProfileStore()).Load().SecondDueSession, Is.EqualTo(4));
+
+            var fresh = Wallet.NewProfile(new ManualClock(T0));
+            fresh.Settings.Push.SecondDueSession = 2;
+            Assert.That(fresh.Settings.Push.IsDefault, Is.False, "solo el recuerdo ya se escribe");
+            string bad = ProfileJson.Serialize(fresh).Replace("\"second_due_session\": 2", "\"second_due_session\": -3")
+                .Replace("\"second_due_session\":2", "\"second_due_session\":-3");
+            Assert.That(ProfileJson.Deserialize(bad).Settings.Push.SecondDueSession, Is.EqualTo(0), "un negativo, 0");
+        }
+
+        [Test]
         public void BadValues_TakeTheirDefault_WithoutCorruptingTheProfile()
         {
             Profile p = Wallet.NewProfile(new ManualClock(T0));

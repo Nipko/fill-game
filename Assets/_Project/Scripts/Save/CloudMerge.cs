@@ -392,6 +392,7 @@ namespace AF.Save
             push.PrePromptShown = push.PrePromptShown || other.Settings.Push.PrePromptShown;
             push.SecondPromptShown = push.SecondPromptShown || other.Settings.Push.SecondPromptShown;
             push.PrePromptAt = MaxTs(push.PrePromptAt, other.Settings.Push.PrePromptAt);
+            push.SecondDueSession = Math.Max(push.SecondDueSession, other.Settings.Push.SecondDueSession); // UI de los avisos (b) [P]
             push.Granted = local.Settings.Push.Granted;
 
             // B14: los marcos de país por unión, como las skins (EntitlementsData.MergeOwned), y el álbum de frutas por unión.
