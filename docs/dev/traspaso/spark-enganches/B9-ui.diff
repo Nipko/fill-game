@@ -113,10 +113,10 @@ index 3c820091..8b1bb0f3 100644
              _levelStartBoard = play.BoardId; // level_start pendiente: sale al terminar Llenar y teñir (08 §8.2), una vez por partida
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
 new file mode 100644
-index 00000000..71f6ac3b
+index 00000000..929b64e1
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
-@@ -0,0 +1,195 @@
+@@ -0,0 +1,205 @@
 +#nullable enable
 +using AF.GameFlow;
 +using AF.Platform;
@@ -143,6 +143,8 @@ index 00000000..71f6ac3b
 +    {
 +        private A11yService? _a11y;
 +        private bool _reduceMotionNow;
++        private float _animatorScale = float.NaN;
++        private bool _animatorScaleRead;
 +
 +        /// <summary>Anfitrión del lector de pantalla de un test (null: el de Unity). Se lee en el arranque.</summary>
 +        internal static IScreenReaderHost? A11yHostOverride { get; set; }
@@ -156,8 +158,9 @@ index 00000000..71f6ac3b
 +        /// <summary>
 +        /// Ajustes › Reducir movimiento o Alto contraste (bloque B9; <paramref name="id"/> = <see cref="SettingsScreen.ReduceMotionId"/>
 +        /// o <see cref="SettingsScreen.HighContrastId"/>): guarda <paramref name="on"/> en <c>settings.reduce_motion</c> (<c>on</c> u
-+        /// <c>off</c>: desde ahí manda la elección) o <c>settings.high_contrast</c> en el acto y lo aplica al momento. La sonda
-+        /// escribe <c>settings_change</c> con esa clave.
++        /// <c>off</c>: desde ahí manda la elección) o <c>settings.high_contrast</c> en el acto. Alto contraste se ve al momento;
++        /// Reducir movimiento llega al flujo al momento y a los tiempos del tablero con el siguiente que se construya (Ajustes solo
++        /// se abre desde el inicio: el siguiente tablero es el próximo nivel). La sonda escribe <c>settings_change</c> con esa clave.
 +        /// </summary>
 +        public bool ChooseA11y(string id, bool on)
 +        {
@@ -225,7 +228,14 @@ index 00000000..71f6ac3b
 +        {
 +            A11yConfig config = _rcConfigs?.A11y ?? A11yConfig.Defaults;
 +            bool? choice = profile.Settings.ReduceMotion == ReduceMotionSetting.Auto ? (bool?)null : profile.Settings.ReduceMotion == ReduceMotionSetting.On;
-+            return A11yRules.ReduceMotion(choice, config.UiReduceMotionDefault, LaunchOptions.SystemScale.AnimatorDurationScale);
++            if (!_animatorScaleRead)
++            {
++                // «Quitar animaciones» del teléfono se lee una vez por arranque (JNI), como la escala de fuente (Q-B9-1).
++                _animatorScale = LaunchOptions.SystemScale.AnimatorDurationScale;
++                _animatorScaleRead = true;
++            }
++
++            return A11yRules.ReduceMotion(choice, config.UiReduceMotionDefault, _animatorScale);
 +        }
 +
 +        // El Reto crea su flujo y su vista al abrirse (DailyChallengeScreen.Prepare, que pone SetUpDaily): se preparan antes de
@@ -658,10 +668,10 @@ index 04bde497..9578696c 100644
              public string Id { get; private set; }
 diff --git a/Assets/_Project/Tests/PlayMode/A11yGameTests.cs b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
 new file mode 100644
-index 00000000..6329fa65
+index 00000000..a71cd09c
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
-@@ -0,0 +1,394 @@
+@@ -0,0 +1,452 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -724,6 +734,22 @@ index 00000000..6329fa65
 +            Assert.That(boot.View.HoldNamesVisible, Is.False, "al soltar, los nombres se van");
 +            PlayModeHelpers.Step(boot, 200);
 +            Assert.That(view.IsLifted, Is.False, "la cuia vuelve a su sitio");
++        }
++
++        [UnityTest]
++        public IEnumerator C9_HoldingAnEmptyCuia_IsStillATap()
++        {
++            // Una cuia vacía no tiene nombres que enseñar: mantenerla no es C9 y soltar es el toque de siempre (aquí, el destino).
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            int empty = FirstEmpty(boot);
++            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
++            CuiaView view = boot.View!.Views[empty];
++            Press(view, Center(view));
++            PlayModeHelpers.Step(boot, 450);
++            Assert.That(boot.View.HoldNamesVisible, Is.False);
++            Release(view, Center(view));
++            Assert.That(boot.Flow!.Session.AppliedPours, Is.EqualTo(1), "el vertido 0 → vacía se hace");
 +        }
 +
 +        [UnityTest]
@@ -881,6 +907,31 @@ index 00000000..6329fa65
 +        }
 +
 +        [UnityTest]
++        public IEnumerator ReduceMotion_NoRippleNoConfetti_AndTheMapToo()
++        {
++            // Sin el ajuste: la onda del agua al caer la dosis y el confeti de la celebración (control).
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            Assert.That(PourRipples(boot), Is.True, "sin Reducir movimiento, la dosis agita la superficie (08 §5.2)");
++            boot.View!.OnCelebrationStarted();
++            PlayModeHelpers.Step(boot, 600);
++            Assert.That(boot.View.Burst.Running, Is.True, "sin Reducir movimiento, confeti (07 §5.4)");
++
++            // Con el ajuste (02 §12, fila «Movimiento»): ni onda ni confeti; el Mapa del río también lo recibe.
++            Profile reduced = SettingsScreenTests.ProfileAt(1);
++            reduced.Settings.ReduceMotion = ReduceMotionSetting.On;
++            yield return LoadLevel1(reduced, b => boot = b);
++            Assert.That(PourRipples(boot), Is.False, "la onda del shader se apaga");
++            boot.View!.OnCelebrationStarted();
++            PlayModeHelpers.Step(boot, 600);
++            Assert.That(boot.View.Burst.Running, Is.False, "sin confeti");
++            if (boot.RiverMapView != null)
++            {
++                Assert.That(boot.RiverMapView.ProgressReduceMotion, Is.True, "el Mapa del río, sin movimiento");
++            }
++        }
++
++        [UnityTest]
 +        public IEnumerator ReduceMotion_Auto_FollowsThePhoneWithoutAnimations_ButTheChoiceWins()
 +        {
 +            LaunchOptions.SystemScaleOverride = new FakeSystemScale(1f, 0f);
@@ -1017,6 +1068,23 @@ index 00000000..6329fa65
 +            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
 +            Assert.That(boot.TapCuia(empty).Kind, Is.EqualTo(TapKind.Poured));
 +            return PlayModeHelpers.StepUntilIdle(boot, 5000);
++        }
++
++        // Un vertido legal del nivel 1 hasta el reposo: si en algún fotograma el destino tuvo la onda en marcha.
++        private static bool PourRipples(GameBootstrap boot)
++        {
++            int empty = FirstEmpty(boot);
++            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
++            Assert.That(boot.TapCuia(empty).Kind, Is.EqualTo(TapKind.Poured));
++            CuiaView target = boot.View!.Views[empty];
++            bool rippled = false;
++            for (int t = 0; t < 4000 && !boot.View.IsViewIdle; t += PlayModeHelpers.FrameMs)
++            {
++                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++                rippled |= target.Rippling;
++            }
++
++            return rippled;
 +        }
 +
 +        private static int FirstEmpty(GameBootstrap boot)
