@@ -691,3 +691,52 @@ B12, B11 y B9 están entregados (B12 y B11 integrados; B9 integrándose). El due
 7. Pruebas sin Play: EditMode y PlayMode con la tienda falsa; un modo de ensayo documentado para probar en el teléfono con licencias de prueba cuando exista la app en Play Console (D-034: aún no).
 
 Por cada paso: revisión (code-reviewer) centrada en no acreditar dos veces ni sin verificación, verificación completa de `CLAUDE.md` y entrada en `spark-estado.md` con «listo para integrar».
+
+## 15. Encargo siguiente (2026-10-22): plugin propio de Play Billing en lugar de Unity IAP (Q-IAP-1 (c))
+
+`spark/t5-iap` está integrado en `integracion-fase1-fase2`. El dueño decidió Q-IAP-1 (D-040, añadido del 2026-10-22): «Q-IAP-1: opción (c). Apruebo com.android.billingclient:billing directo y quitar Unity IAP y sus dependencias.» El motivo es que Unity IAP 5.4.4 envía cada compra a Unity sin consentimiento y sin borrado, y su licencia no permite anular el emisor.
+
+Rama `spark/t5-billing` desde `origin/integracion-fase1-fase2`; haz pull, porque trae tu IAP ya integrado. Aplican las reglas de las secciones 1-3, 11 y 12. Lee antes:
+- D-040 con todos sus añadidos;
+- `docs/dev/iap.md`, todo: sus reglas de §1.2 siguen valiendo;
+- 08 §7 #3, §10.1, §10.3 y §13.3;
+- 05 §4.1;
+- `.claude/agents/sdk-integrator.md`.
+
+**Qué hacer:**
+1. **El plugin, en `.androidlib` y en Java** (sin plugin de Kotlin en Gradle). Por ejemplo, `Assets/_Project/Plugins/Android/AfBilling.androidlib/`, sobre `com.android.billingclient:billing:9.0.0` exacta.
+   - Declara la dependencia con un `*Dependencies.xml` de EDM4U, como Firebase, para que el resolvedor la escriba en `mainTemplate.gradle`.
+   - Si la librería arrastra otra dependencia o algún permiso además de `com.android.vending.BILLING`, **para y pregúntalo**.
+   - Debe cubrir, como mínimo:
+     - `enablePendingPurchases(PendingPurchasesParams…enableOneTimeProducts())` y reconexión automática;
+     - `queryProductDetailsAsync`, `launchBillingFlow` con `setObfuscatedAccountId` = UID y `queryPurchasesAsync`;
+     - `consumeAsync` y `acknowledgePurchase`;
+     - los avisos de `PurchasesUpdatedListener`.
+   - **El plugin no habla con ningún host**, solo con Play.
+2. **El puerto en C#.** `NativePlayStorePort` (o el nombre que encaje) implementa el `IPlayStorePort` actual mediante `AndroidJavaObject`/`AndroidJavaProxy`, en un ensamblado propio que solo compila en `UNITY_ANDROID && !UNITY_EDITOR`.
+   - `PlayBillingClient`, `BillingReadyStoreService`, `VerifiedStoreService` y `ConsentStoreService` no cambian de contrato.
+   - Siguen valiendo todas las reglas de `iap.md` §1.2: un token una vez por sesión, consumo solo tras acreditar, `PENDING`, `Resume`, `Refresh` al volver a primer plano, `Dispose` en `OnDestroy`, precios en micros y moneda (nunca la cadena de Play), `CanSell`, edad decidida y nunca `<13`, solo con `HttpBackendClient`, y `UnavailablePlayStorePort` si el plugin falla.
+   - Los tests de `PlayBillingClient` con el puerto falso deben seguir pasando sin tocarlos, o explica cada cambio.
+3. **`deferred_ack` (Q-IAP-2 se reabre).** Con la librería directa, a las 72 h sin respuesta del servidor se **reconoce sin consumir** también el consumible (`acknowledgePurchase`), como pedía Q-F3-3 3. Si `purchaseTime` está disponible, el plazo cuenta desde ahí. Anótalo en `iap.md` y en el parche de 08 §10.3.
+4. **Quitar Unity IAP.** Saca `com.unity.purchasing`, `com.unity.services.core`, `com.unity.services.deployment` y `com.unity.services.deployment.api`, además de `Assets/Resources/BillingMode.json` (con su carpeta, si queda vacía), `AF.IAP.UnityIap` y `AF_UNITY_IAP`.
+   - No edites `Packages/manifest.json` en tu rama: entrégalo como parche probado (`docs/dev/traspaso/spark-enganches/BILL-manifest.diff`) con lo que regenere Unity (`packages-lock.json` y `mainTemplate.gradle`), como en IAP.
+5. **Compuertas.**
+   - `ci/check-manifest.ps1` sigue igual: BILLING en la lista blanca y `-RequireBilling` en release.
+   - Añade una comprobación, con su autotest, de que el AAB/APK **no** contiene `prd.insights.analytics.unity3d.com` ni clases `com.unity.purchasing`.
+   - Mide el tamaño del AAB de ensayo antes (60,23 MB) y después.
+6. **Documentos.**
+   - Reescribe `docs/dev/iap.md` para el plugin, con §4 y §5 al día.
+   - 08 §7 #3 y §13.3 van como parche `BILL-gdd.diff`. La fila pasa a «Google Play Billing», sin Unity.
+   - `CLAUDE.md`: los recuentos.
+7. **Pruebas.**
+   - EditMode y PlayMode con la tienda falsa.
+   - Tests del puerto con un `AndroidJavaProxy` simulado donde se pueda.
+   - Build `dev.apk` y ensayo, con el manifiesto fusionado medido.
+   - El modo de ensayo con licencias de prueba de `iap.md` §3 se adapta, aunque sigue sin ejecutarse hasta que exista la app en Play Console (D-034).
+
+Por cada paso:
+- revisión (code-reviewer) centrada en no acreditar dos veces ni sin verificación, y en que el plugin no envíe nada fuera de Play;
+- verificación completa de `CLAUDE.md`;
+- entrada en `spark-estado.md` con «listo para integrar».
+
+Preguntas nuevas, como Q-BILL-n con su recomendada aplicada.

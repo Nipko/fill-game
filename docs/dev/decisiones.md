@@ -3532,3 +3532,26 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 - **Estado:** aprobado por el dueño en la sesión del Spark (registro en `docs/dev/iap.md` §4, commit `1f3f468a` de `spark/t5-iap`): «Apruebo com.unity.services.core 1.18.0, com.unity.services.deployment 1.7.2 y com.unity.services.deployment.api 1.1.3, dependencias de Unity IAP 5.4.4 (Q-IAP-6); anótalo para D-040.»
 - Quedan aprobadas esas tres versiones exactas, que trae `com.unity.purchasing` 5.4.4 y fija `packages-lock.json`. Q-IAP-1 (telemetría de compras a Unity) sigue pendiente del dueño y del abogado.
+
+### D-040, añadido del 2026-10-22: Q-IAP-1 decidida, plugin propio de Play Billing en lugar de Unity IAP
+
+- **Estado:** decidido por el dueño en el chat, tras leer el análisis de la licencia y de las opciones: «Q-IAP-1: opción (c). Apruebo com.android.billingclient:billing directo y quitar Unity IAP y sus dependencias; prepara el encargo al Spark y regístralo en D-040.»
+- **Por qué:**
+  - La licencia de `com.unity.purchasing` (su `LICENSE.md`) lo somete a los términos de los servicios de Unity Operate. Ahí Unity se declara responsable de los datos del servicio (§3.1) y puede usar los de cada jugador (§3.2). El consentimiento y la política de privacidad nos tocan a nosotros (§3.3). La licencia solo permite usar el SDK «como dice la documentación» (§1.1), así que parchearlo para anular el emisor (opción (b)) queda fuera de ella.
+  - En Unity 6000.3, `PurchaseEventEmitter` envía cada compra por HTTP a `prd.insights.analytics.unity3d.com` sin mirar el consentimiento: solo lo anota dentro del evento.
+  - La documentación de privacidad de IAP 5.4+ dice que los datos básicos se recogen siempre y que el producto no tiene servicio de consentimiento.
+  - Su ficha de Data Safety declara historial de compras, identificadores, ubicación aproximada y diagnóstico, sin forma de que el jugador pida el borrado. No encaja con «Eliminar cuenta y datos» (B8). El panel de «Developer Data» de la opción (a) no está documentado para IAP.
+- **Decisión:**
+  - Se sustituye Unity IAP 5.4.4 por un plugin Android propio (`.androidlib`) sobre la **Play Billing Library 9.0.0** (`com.android.billingclient:billing:9.0.0`), que se declara como dependencia directa. Es la versión que ya entraba por Unity IAP; cambiarla exige otra aprobación.
+  - El plugin va detrás del mismo puerto (`IPlayStorePort` bajo `PlayBillingClient` e `IBillingClient`). `VerifiedStoreService`, `BillingReadyStoreService`, `ConsentStoreService`, la tienda falsa del editor y la verificación en AWS no cambian.
+  - Se quitan `com.unity.purchasing` 5.4.4 y las dependencias que traía y nadie más usa: `com.unity.services.core` 1.18.0, `com.unity.services.deployment` 1.7.2 y `com.unity.services.deployment.api` 1.1.3. Así **se retira la aprobación de Q-IAP-6**.
+  - Se quitan también `Assets/Resources/BillingMode.json` (Q-IAP-7), el ensamblado `AF.IAP.UnityIap` y el símbolo `AF_UNITY_IAP`.
+  - El permiso `com.android.vending.BILLING` sigue aprobado y en la lista blanca.
+- **Consecuencias:**
+  - Desaparecen la telemetría de compras a Unity y la búsqueda en el catálogo remoto de Unity (`StoreOverrideReverseLookupService`).
+  - La fila de 08 §13.3 pasa a ser solo «Google Play Billing», sin terceros.
+  - **Q-IAP-2 se reabre:** con la librería directa sí se puede reconocer un consumible sin consumirlo (`acknowledgePurchase`). El encargo lo hace como pedía Q-F3-3 3 y lo anota.
+  - Q-IAP-3, Q-IAP-4 y Q-IAP-5 siguen como estaban.
+- **Mientras tanto:** Unity IAP sigue en `integracion-fase1-fase2` hasta que se integre el reemplazo, solo para pruebas internas. Las compras reales necesitan además la ficha de Play Console, que espera al dictamen de marca (D-034).
+- **Pendiente aparte (sin encargo):** comprobar qué envía el propio runtime de Unity 6.3 en un build Android (Engine Diagnostics o Insights, que el emisor de IAP menciona). Es tema del abogado y de Data Safety.
+- **Encargo:** `docs/dev/traspaso/spark-reto-del-rio.md` §15.
