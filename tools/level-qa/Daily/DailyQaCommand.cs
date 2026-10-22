@@ -157,7 +157,17 @@ internal static class DailyQaCommand
         issues.AddRange(DailyChecks.Repetition(pack));
         if (reproduce)
         {
-            issues.AddRange(Reproduce(pack, spec, tints));
+            var cvdUnavoidable = new HashSet<string>(StringComparer.Ordinal);
+            issues.AddRange(Reproduce(pack, spec, tints, cvdUnavoidable));
+            // QA-DAILY-CVD-ADJ (Q-B9-13 bis): aviso, no fallo, si el tablero se reproduce y el generador no encontró en sus 50
+            // permutaciones ninguna asignación sin contactos del simulador.
+            for (int i = 0; i < issues.Count; i++)
+            {
+                if (issues[i] is { Check: "QA-DAILY-CVD-ADJ", Warning: false } c && cvdUnavoidable.Contains(c.Board))
+                {
+                    issues[i] = c with { Message = c.Message + "; ninguna de las 50 permutaciones lo evita (reproducido)", Warning = true };
+                }
+            }
         }
         else
         {
@@ -171,7 +181,7 @@ internal static class DailyQaCommand
     /// QA-DAILY-REPRO: regenera en memoria, con el DailyRunner y el DailyPackWriter del generador (enlazados), las bandas y los
     /// días del pack, y compara cada tablero entero con el regenerado.
     /// </summary>
-    private static IEnumerable<DailyIssue> Reproduce(DailyQaPack pack, DailySpec spec, CampaignSpec tints)
+    private static IEnumerable<DailyIssue> Reproduce(DailyQaPack pack, DailySpec spec, CampaignSpec tints, HashSet<string> cvdUnavoidable)
     {
         List<DailyQaLevel> slots = pack.Levels.Where(l => l.Band is int b && l.Day is int d && DailyIds.Problem(b, d) is null).ToList();
         if (slots.Count == 0)
@@ -217,7 +227,14 @@ internal static class DailyQaCommand
                 continue;
             }
 
-            if (!JsonNode.DeepEquals(lv.Json, r))
+            if (JsonNode.DeepEquals(lv.Json, r))
+            {
+                if (run.Boards.FirstOrDefault(x => x.Id == id) is { Palette.CvdAdjacent: > 0 })
+                {
+                    cvdUnavoidable.Add(lv.Name);
+                }
+            }
+            else
             {
                 string[] diff = lv.Json.Select(kv => kv.Key).Union(r.Select(kv => kv.Key), StringComparer.Ordinal)
                     .Where(k => !JsonNode.DeepEquals(lv.Json[k], r[k])).ToArray();
@@ -242,14 +259,15 @@ internal static class DailyQaCommand
         ("QA-DAILY-SHAPE__k_de_otro_dia.json", true, false, "QA-DAILY-SHAPE", ["QA-DAILY-BOT"]),
         ("QA-DAILY-CUIAS-14__quince_cuias.json", true, false, "QA-DAILY-CUIAS-14", ["QA-DAILY-BOT", "QA-DAILY-RISK", "QA-DAILY-SHAPE"]),
         ("QA-DAILY-PALETTE__tinte_antes_de_su_debut.json", true, false, "QA-DAILY-PALETTE", []),
-        ("QA-DAILY-RISK__b2_tres_pares.json", true, false, "QA-DAILY-RISK", []),
+        ("QA-DAILY-RISK__b2_tres_pares.json", true, false, "QA-DAILY-RISK", ["QA-DAILY-CVD-ADJ"]),
         ("QA-DAILY-MECH__murky_con_ocultos.json", true, false, "QA-DAILY-MECH", []),
         ("QA-DAILY-FIELDS__con_difficulty.json", true, false, "QA-DAILY-FIELDS", []),
         ("QA-DAILY-RELIEF__con_variante.json", true, false, "QA-DAILY-RELIEF", []),
         ("QA-DAILY-WATER__mundo_de_otro_dia.json", true, false, "QA-DAILY-WATER", []),
-        ("QA-DAILY-ASTAR__irresoluble.json", true, false, "QA-DAILY-ASTAR", ["QA-DAILY-BOT"]),
+        ("QA-DAILY-ASTAR__irresoluble.json", true, false, "QA-DAILY-ASTAR", ["QA-DAILY-BOT", "QA-DAILY-CVD-ADJ"]),
         ("QA-DAILY-PAR__casi_resuelto.json", true, false, "QA-DAILY-PAR", ["QA-DAILY-BOT"]),
-        ("QA-DAILY-BOT__fuera_de_ventana.json", true, false, "QA-DAILY-BOT", []),
+        ("QA-DAILY-BOT__fuera_de_ventana.json", true, false, "QA-DAILY-BOT", ["QA-DAILY-CVD-ADJ"]),
+        ("QA-DAILY-CVD-ADJ__par_del_simulador_junto.json", true, false, "QA-DAILY-CVD-ADJ", ["QA-DAILY-BOT"]),
         ("QA-DAILY-REPRO__otros_candidatos.json", true, true, "QA-DAILY-REPRO", []),
         ("QA-DAILY-REPRO__cuias_permutadas.json", true, true, "QA-DAILY-REPRO", ["QA-DAILY-BOT"]),
         ("daily_valido.json", false, false, "QA-DAILY-DAYS", []),

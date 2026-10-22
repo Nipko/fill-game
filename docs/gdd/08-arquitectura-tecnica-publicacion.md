@@ -256,7 +256,7 @@ Validación en `tools/level-qa` (falla el CI): JSON inválido contra `schemas/af
 
 ### 4.2 Paleta global (`tints.json`)
 
-Tabla `tinte_id → {index_motor, hex, pattern, icon, name_es/en/pt, world_debut, level_debut}` con los 14 tintes del glosario §9 y la lista de 10 pares de riesgo; `water_base ∈ {black:#522500, white:#B08A5A, clear:#2E8B8B}` (research/07 §2 [E]). El shader lee los HEX de aquí en tiempo de carga; cambiar un color no exige tocar materiales.
+Tabla `tinte_id → {index_motor, hex, pattern, icon, name_es/en/pt, world_debut, level_debut}` con los 14 tintes del glosario §9, la lista de 10 pares de riesgo y los 2 pares del simulador de daltonismo (7-10 y 5-14; 07 §3, regla 3), que no cuentan en `risk_pairs` ni en `max_risk_pairs`; `water_base ∈ {black:#522500, white:#B08A5A, clear:#2E8B8B}` (research/07 §2 [E]). El shader lee los HEX de aquí en tiempo de carga; cambiar un color no exige tocar materiales.
 
 ### 4.3 Perfil de jugador
 

@@ -7,14 +7,20 @@
 //     81-200), hasta 50 barajados del pool;
 //   - con max_pares_riesgo > 0 se evita que dos tintes de un par de riesgo queden juntos en una cuia permutando la
 //     asignación índice → tinte (hasta 50 permutaciones); si ninguna lo logra se acepta la de menos contactos y se marca
-//     risk_adjacent en el informe (el esquema no tiene ese campo).
+//     risk_adjacent en el informe (el esquema no tiene ese campo);
+//   - pares del simulador de daltonismo (cvd_pairs; Q-B9-13 bis (b) y (A); 07 §3, regla 3, y glosario §9): no cuentan en
+//     risk_pairs ni en max_pares_riesgo. La asignación de arriba no cambia; si deja dos tintes de un par del simulador juntos
+//     en una cuia, CvdAlternatives propone otras permutaciones de los tintes libres (con su propia subsemilla, sin tocar el
+//     PRNG de arriba) sin contactos del simulador y sin más contactos de pares de riesgo, y el generador solo acepta una si el
+//     bot (y todo lo que se mide del tablero) da lo mismo que con la de hoy (SlotGenerator y DailyRunner). Si ninguna de las 50
+//     lo cumple, se queda la de hoy y se marca cvd_adjacent (level-qa: QA-CVD-ADJ, aviso).
 using AF.Core.Board;
 using AF.Core.Determinism;
 using AmazonFill.Tools.LevelGenerator.Campaign;
 
 namespace AmazonFill.Tools.LevelGenerator.Generation;
 
-internal sealed record TintResult(int[] Map, IReadOnlyList<TintInfo> Palette, int RiskPairs, int RiskAdjacent);
+internal sealed record TintResult(int[] Map, IReadOnlyList<TintInfo> Palette, int RiskPairs, int RiskAdjacent, int CvdAdjacent = 0);
 
 internal static class TintAssigner
 {
@@ -120,6 +126,13 @@ internal static class TintAssigner
         return spec.RiskPairs.Count(p => engines.Contains(p.A) && engines.Contains(p.B));
     }
 
+    /// <summary>Pares del simulador de daltonismo (cvd_pairs) presentes en un conjunto de tintes; no cuentan en risk_pairs.</summary>
+    public static int CvdCount(CampaignSpec spec, IEnumerable<TintInfo> tints)
+    {
+        var engines = tints.Select(t => t.Engine).ToHashSet();
+        return spec.CvdPairs.Count(p => engines.Contains(p.A) && engines.Contains(p.B));
+    }
+
     public static int RiskCountEngines(CampaignSpec spec, IEnumerable<int> engines)
     {
         var set = engines.ToHashSet();
@@ -127,23 +140,82 @@ internal static class TintAssigner
     }
 
     /// <summary>Contactos entre tintes de un par de riesgo en capas vecinas de una misma cuia.</summary>
-    public static int Adjacent(CampaignSpec spec, GenBoard board, int[] map)
+    public static int Adjacent(CampaignSpec spec, GenBoard board, int[] map) => Contacts(spec.RiskPairs, board.Cuias, map);
+
+    /// <summary>Contactos entre tintes de un par del simulador de daltonismo (cvd_pairs) en capas vecinas de una misma cuia.</summary>
+    public static int CvdAdjacent(CampaignSpec spec, GenBoard board, int[] map) => Contacts(spec.CvdPairs, board.Cuias, map);
+
+    /// <summary>
+    /// Contactos de los pares <paramref name="pairs"/> en capas vecinas de una misma cuia; <paramref name="map"/> traduce cada
+    /// color de la cuia a su tinte (null: las cuias ya llevan el índice de motor, como en un pack publicado). El Barro no cuenta.
+    /// </summary>
+    public static int Contacts(IReadOnlyList<(int A, int B)> pairs, IEnumerable<IReadOnlyList<int>> cuias, int[]? map)
     {
+        if (pairs.Count == 0)
+        {
+            return 0;
+        }
+
         int count = 0;
-        foreach (List<int> cuia in board.Cuias)
+        foreach (IReadOnlyList<int> cuia in cuias)
         {
             for (int k = 1; k < cuia.Count; k++)
             {
-                int a = cuia[k - 1] == Cuia.MudColor ? 0 : map[cuia[k - 1]];
-                int b = cuia[k] == Cuia.MudColor ? 0 : map[cuia[k]];
-                if (spec.RiskPairs.Any(p => (p.A == a && p.B == b) || (p.A == b && p.B == a)))
+                int a = cuia[k - 1] == Cuia.MudColor ? 0 : map is null ? cuia[k - 1] : map[cuia[k - 1]];
+                int b = cuia[k] == Cuia.MudColor ? 0 : map is null ? cuia[k] : map[cuia[k]];
+                foreach ((int pa, int pb) in pairs)
                 {
-                    count++;
+                    if ((pa == a && pb == b) || (pa == b && pb == a))
+                    {
+                        count++;
+                        break;
+                    }
                 }
             }
         }
 
         return count;
+    }
+
+    /// <summary>
+    /// Otras asignaciones de los <paramref name="colors"/> colores abstractos sin contactos del simulador de daltonismo y sin más
+    /// contactos de pares de riesgo que <paramref name="map"/> (Q-B9-13 bis (A)): hasta <see cref="MaxTries"/> barajados de los
+    /// tintes libres (los de <paramref name="fixedColors"/> no se mueven) con el PRNG <paramref name="rng"/>, en el orden en que
+    /// salen y sin repetidas. Vacía si <paramref name="map"/> no tiene contactos del simulador.
+    /// </summary>
+    public static List<int[]> CvdAlternatives(CampaignSpec spec, GenBoard board, int[] map, int colors, ICollection<int> fixedColors, Prng rng)
+    {
+        var result = new List<int[]>();
+        if (CvdAdjacent(spec, board, map) == 0)
+        {
+            return result;
+        }
+
+        int risk = Adjacent(spec, board, map);
+        int[] freeColors = Enumerable.Range(1, colors).Where(c => !fixedColors.Contains(c)).ToArray();
+        List<int> free = freeColors.Select(c => map[c]).ToList();
+        var seen = new HashSet<string>(StringComparer.Ordinal) { string.Join(",", free) };
+        for (int attempt = 0; attempt < MaxTries; attempt++)
+        {
+            Shuffle(free, rng);
+            if (!seen.Add(string.Join(",", free)))
+            {
+                continue;
+            }
+
+            int[] alt = (int[])map.Clone();
+            for (int i = 0; i < freeColors.Length; i++)
+            {
+                alt[freeColors[i]] = free[i];
+            }
+
+            if (CvdAdjacent(spec, board, alt) == 0 && Adjacent(spec, board, alt) <= risk)
+            {
+                result.Add(alt);
+            }
+        }
+
+        return result;
     }
 
     private static void Shuffle<T>(List<T> list, Prng rng)

@@ -230,7 +230,7 @@ internal static class ReserveRunner
                 List<ReliefBoard> relief = [];
                 if (plan.Level >= 31)
                 {
-                    relief = Relief.Compute(gen.Metrics, c.Board, c.Par, c.Bot, plan.SeedText).Published;
+                    relief = SlotGenerator.ReliefOf(gen.Metrics, c, plan.SeedText).Published;
                     if (relief.Count == 0)
                     {
                         noRelief++;

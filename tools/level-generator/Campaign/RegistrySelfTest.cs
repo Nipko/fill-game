@@ -134,6 +134,8 @@ internal static class RegistrySelfTest
         // 6. Lo que sale de la especificación.
         Check(a.MaxRiskPairsAt(201) == a.RiskPairs.Count && a.RiskPairs.Count == 10 && v1.MaxRiskPairsAt(200) == 2,
             "max_risk_pairs \"libre\" desde el 201 = los 10 pares de riesgo (03 sec. 11); campaign_v1 sin cambios (2 en el 200)");
+        Check(a.CvdPairs.SequenceEqual([(7, 10), (5, 14)]) && v1.CvdPairs.SequenceEqual(a.CvdPairs) && !a.CvdPairs.Any(p => a.RiskPairs.Contains(p) || a.RiskPairs.Contains((p.B, p.A))),
+            "cvd_pairs = 7-10 y 5-14 en campaign_v1 y campaign_v2, fuera de los pares de riesgo (07 sec. 3, regla 3; Q-B9-13 bis)");
         Check(a.KAt(306) == 11 && a.KAt(418) == 11 && a.KAt(429) == 10 && a.KAt(558) == 10 && a.KAt(560) == 11 && a.KAt(578) == 10
               && a.KAt(580) == 12 && a.KAt(640) == 12 && a.KAt(700) == 12 && a.KAt(620) == 13 && a.KAt(680) == 13 && a.KAt(561) == 10 && a.KAt(562) == 10,
             "k_plan (D-027): retos de 11 en el mundo 7 y de 10 en 421-700, hito 11 en el 560; hitos de 561-700 con K = 12 (580, 640 y 700), salvo el 620 y el 680 con 13; 10 en recuperacion del mundo 9");

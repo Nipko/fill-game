@@ -247,5 +247,29 @@ internal static class GateChecks
         return ds.Count == 0 ? null : ds.Min();
     }
 
+    /// <summary>
+    /// QA-CVD-ADJ (Q-B9-13 bis): el fallo del tablero base pasa a aviso cuando el pack se reproduce byte a byte y el generador,
+    /// en ese nivel, no encontró en sus 50 permutaciones ninguna asignación sin contactos del simulador (TintResult.CvdAdjacent).
+    /// </summary>
+    public static void CvdUnavoidable(List<QaIssue> issues, QaContext ctx, CampaignResult result, HashSet<string> reproduced)
+    {
+        var generated = result.Levels.ToDictionary(l => l.Plan.Level);
+        for (int i = 0; i < issues.Count; i++)
+        {
+            QaIssue issue = issues[i];
+            if (issue.Check != "QA-CVD-ADJ" || issue.Warning)
+            {
+                continue;
+            }
+
+            QaPack? pack = ctx.Packs.FirstOrDefault(p => p.Path == issue.Pack);
+            if (pack is not null && reproduced.Contains(pack.PackId)
+                && generated.TryGetValue(issue.Level, out GeneratedLevel? gl) && gl.Chosen is { Tints.CvdAdjacent: > 0 })
+            {
+                issues[i] = issue with { Message = issue.Message + "; ninguna de las 50 permutaciones lo evita (reproducido)", Warning = true };
+            }
+        }
+    }
+
     private static string PackIdOf(QaContext ctx, QaLevel lv) => ctx.Packs.First(p => p.Path == lv.Pack).PackId;
 }

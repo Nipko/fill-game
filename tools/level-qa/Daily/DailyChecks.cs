@@ -86,6 +86,7 @@ internal static class DailyChecks
         ("QA-DAILY-CUIAS-14", "como mucho 14 cuias (02 R1; 03 sec. 17 #5)"),
         ("QA-DAILY-PALETTE", "paleta = tintes presentes, de tints_from y con debut <= debut_until de la banda (R-Q1)"),
         ("QA-DAILY-RISK", "risk_pairs coherente y <= max_risk_pairs de la banda en la especificacion, no de la cabecera; \"libre\" no pone tope (R-Q1 y R-Q1b (a): B3 libre)"),
+        ("QA-DAILY-CVD-ADJ", "ningun par del simulador de daltonismo (cvd_pairs de tints_from: 7-10, 5-14) junto en una cuia; aviso si ninguna de las 50 permutaciones del generador lo evita (con la reproduccion) (Q-B9-13 bis; 07 sec. 3)"),
         ("QA-DAILY-MECH", "sin mecanicas ni ocultos: attrs todo null, murky false, hidden [] e intro_mechanic null (03 sec. 16; 03 sec. 17 #6 y #7)"),
         ("QA-DAILY-FIELDS", "sin level, difficulty, solution, safe_path ni qa (03 sec. 16; 08 sec. 4.1)"),
         ("QA-DAILY-RELIEF", "relief vacio (03 sec. 16)"),
@@ -383,6 +384,15 @@ internal static class DailyChecks
         {
             yield return new DailyIssue("QA-DAILY-RISK", n, string.Create(CultureInfo.InvariantCulture,
                 $"{risk} pares de riesgo con K = {k}; el tope de la banda {b} es {db.MaxRiskPairs} (R-Q1 y R-Q1b; nota sec. 1.1)"));
+        }
+
+        // Pares del simulador de daltonismo (Q-B9-13 bis): no cuentan en risk_pairs; ninguno junto en una cuia (fallo, que
+        // DailyQaCommand baja a aviso si la reproducción demuestra que ninguna de las 50 permutaciones del generador lo evita).
+        int cvd = TintAssigner.Contacts(tints.CvdPairs, lv.Cuias, null);
+        if (cvd > 0)
+        {
+            yield return new DailyIssue("QA-DAILY-CVD-ADJ", n, string.Create(CultureInfo.InvariantCulture,
+                $"{cvd} contacto(s) de un par del simulador de daltonismo en una cuia"));
         }
 
         // Medidas.

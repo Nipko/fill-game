@@ -199,6 +199,7 @@ pack tiene que traer las 3 bandas × 729 días (R-Q2b).
 | QA-DAILY-CUIAS-14 | como mucho 14 cuias (02 R1) |
 | QA-DAILY-PALETTE | paleta = tintes presentes, con debut dentro del tramo de la banda (R-Q1) |
 | QA-DAILY-RISK | `risk_pairs` recalculado y dentro del tope de la banda (B3 libre: R-Q1b (a)) |
+| QA-DAILY-CVD-ADJ | Ningún par del simulador de daltonismo (`cvd_pairs` de `tints_from`: 7-10 y 5-14) junto en una cuia. Es aviso si el tablero se reproduce y ninguna de las 50 permutaciones del generador lo evita con el mismo bot (Q-B9-13 bis) |
 | QA-DAILY-MECH | sin mecánicas ni ocultos (03 §16) |
 | QA-DAILY-FIELDS | sin `level`, `difficulty`, `solution`, `safe_path` ni `qa` |
 | QA-DAILY-RELIEF | `relief` vacío |
@@ -235,7 +236,7 @@ dotnet run --project tools/level-qa -c Release -- --reserve Assets/_Project/Data
 
 Cada pack de reserva (`kind` = `reserve`, `pack_schema` 4) con su pack de campaña (emparejados por mundo) y la especificación
 (`--variant`, la del generador): las comprobaciones base sobre cada tablero (QA-STRUCT, QA-UNITS, QA-SEALED, QA-STUCK,
-QA-VALID, QA-PAR, QA-TINT-DEBUT, QA-KMAX, QA-RISK, QA-PALETTE, QA-BOT, QA-LABEL, QA-LABEL-EARLY, QA-CUIAS como aviso, QA-FIELDS,
+QA-VALID, QA-PAR, QA-TINT-DEBUT, QA-KMAX, QA-RISK, QA-CVD-ADJ, QA-PALETTE, QA-BOT, QA-LABEL, QA-LABEL-EARLY, QA-CUIAS como aviso, QA-FIELDS,
 QA-SIZE, QA-EARLY-TRAPS), el alivio (QA-RELIEF-*), las de Aguas turbias y la tinaja (que no llevan), QA-SCHEMA y:
 
 | Id | Regla |
@@ -273,6 +274,7 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-TINT-DEBUT | cada tinte con debut anterior o igual al nivel | 03 §17 #4 |
 | QA-KMAX | K entre `k_min` y `k_max` de la cabecera | 03 §17 #4 |
 | QA-RISK | `risk_pairs` recalculado y ≤ `max_risk_pairs` | 03 §4.5 |
+| QA-CVD-ADJ | Ningún par del simulador de daltonismo (`cvd_pairs`: 7-10 y 5-14; no cuentan en `risk_pairs`) junto en una cuia del tablero base. Aviso en las variantes de `relief` y cuando el pack se reproduce y ninguna de las 50 permutaciones del generador lo evita midiendo igual (también en `--reserve`) | 03 §4.5; 07 §3, regla 3; Q-B9-13 bis |
 | QA-PALETTE | `palette` = tintes presentes en `cuias` | 08 §4.1 |
 | QA-BOT | `bot_fail` recalculado con la semilla del nivel, idéntico | 03 §6 |
 | QA-LABEL | etiqueta coherente (≥ 0,75 hard y ≥ 0,90 very_hard, desde el 40 y el 60) | 03 §7, §11 |

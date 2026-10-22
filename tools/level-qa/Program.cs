@@ -265,6 +265,7 @@ if (reproduce)
     if (regenerated is not null)
     {
         issues.AddRange(GateChecks.Bands(ctx, regenerated, reproduced));
+        GateChecks.CvdUnavoidable(issues, ctx, regenerated, reproduced);
     }
 }
 else

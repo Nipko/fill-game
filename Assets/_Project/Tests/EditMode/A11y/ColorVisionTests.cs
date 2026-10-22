@@ -24,6 +24,13 @@ namespace AF.Tests.EditMode
             { 1, 2 }, { 3, 12 }, { 4, 5 }, { 4, 14 }, { 5, 6 }, { 6, 13 }, { 8, 9 }, { 10, 11 }, { 11, 12 }, { 13, 14 },
         };
 
+        /// <summary>
+        /// Los 2 pares del simulador de daltonismo de 07 §3, regla 3 (y glosario §9; <c>cvd_pairs</c> de
+        /// <c>campaign_v1.json</c>): 7-10 (protanopía) y 5-14 (deuteranopía). No cuentan en <c>max_risk_pairs</c>; el generador
+        /// no los deja juntos en una cuia (Q-B9-13 bis).
+        /// </summary>
+        public static readonly int[,] CvdPairs = { { 7, 10 }, { 5, 14 } };
+
         private static readonly ColorVisionDeficiency[] Types = { ColorVisionDeficiency.Protan, ColorVisionDeficiency.Deutan, ColorVisionDeficiency.Tritan };
 
         [Test]
@@ -68,15 +75,15 @@ namespace AF.Tests.EditMode
                 {
                     (double de, int a, int b) = pairs[i];
                     report.Append(' ').Append(a).Append('-').Append(b).Append('=').Append(de.ToString("0.0", CultureInfo.InvariantCulture))
-                        .Append(IsRisk(a, b) ? "(R)" : string.Empty);
+                        .Append(IsRisk(a, b) ? "(R)" : IsCvd(a, b) ? "(S)" : string.Empty);
                 }
 
                 report.Append('\n');
-                Assert.That(IsRisk(pairs[0].A, pairs[0].B), Is.True,
-                    type + ": el par más parecido (" + pairs[0].A + "-" + pairs[0].B + ") no es un par de riesgo de 07 §3");
+                Assert.That(IsRisk(pairs[0].A, pairs[0].B) || IsCvd(pairs[0].A, pairs[0].B), Is.True,
+                    type + ": el par más parecido (" + pairs[0].A + "-" + pairs[0].B + ") no es un par de riesgo ni del simulador de 07 §3");
             }
 
-            TestContext.WriteLine("ΔE2000 de los 8 pares más parecidos por tipo ((R) = par de riesgo de 07 §3):\n" + report);
+            TestContext.WriteLine("ΔE2000 de los 8 pares más parecidos por tipo ((R) = par de riesgo de 07 §3; (S) = par del simulador):\n" + report);
         }
 
         /// <summary>Los 91 pares de tintes con su ΔE2000 bajo <paramref name="type"/>, del más parecido al menos.</summary>
@@ -93,6 +100,20 @@ namespace AF.Tests.EditMode
 
             pairs.Sort((x, y) => x.Item1.CompareTo(y.Item1));
             return pairs;
+        }
+
+        /// <summary>El par (<paramref name="a"/>, <paramref name="b"/>) es del simulador de daltonismo según 07 §3, regla 3.</summary>
+        public static bool IsCvd(int a, int b)
+        {
+            for (int i = 0; i < CvdPairs.GetLength(0); i++)
+            {
+                if ((CvdPairs[i, 0] == a && CvdPairs[i, 1] == b) || (CvdPairs[i, 0] == b && CvdPairs[i, 1] == a))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>El par (<paramref name="a"/>, <paramref name="b"/>) es de riesgo según 07 §3.</summary>

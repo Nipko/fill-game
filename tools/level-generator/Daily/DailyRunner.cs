@@ -79,6 +79,9 @@ internal static class DailyRunner
     public const ulong TintStream = 2;
     public const ulong ShuffleStream = 3;
 
+    /// <summary>Subsemilla de las asignaciones alternativas sin contactos del simulador de daltonismo (Q-B9-13 bis (A)).</summary>
+    public const ulong CvdStream = SlotGenerator.CvdStream;
+
     /// <summary>Tolerancia de los extremos de la ventana del bot, la misma que Generation/SlotGenerator (1e-9).</summary>
     public const double WindowTolerance = 1e-9;
 
@@ -123,15 +126,32 @@ internal static class DailyRunner
         public required int Attempt { get; init; }
         public required string Source { get; init; }
         public required int Depth { get; init; }
-        public required BoardData Board { get; init; }
-        public required BoardState State { get; init; }
-        public required DailyPalette Palette { get; init; }
+        public required BoardData Board { get; set; }
+        public required BoardState State { get; set; }
+        public required DailyPalette Palette { get; set; }
         public required double Bot { get; init; }
         public required bool InWindow { get; init; }
         public required double Distance { get; init; }
         public required bool Fallback { get; init; }
         public int Par { get; set; } = -1;
         public bool ParChecked { get; set; }
+
+        /// <summary>
+        /// El mismo candidato con la asignación de tintes de siempre, cuando este lleva otra sin contactos del simulador de
+        /// daltonismo con el mismo bot (Q-B9-13 bis (A)); si el par no da lo mismo, se vuelve a él (<see cref="RevertTints"/>).
+        /// </summary>
+        public Built? Usual { get; set; }
+
+        public void RevertTints()
+        {
+            Built u = Usual!;
+            Board = u.Board;
+            State = u.State;
+            Palette = u.Palette;
+            Par = u.Par;
+            ParChecked = u.ParChecked;
+            Usual = null;
+        }
     }
 
     private sealed class DayGenerator(DailySpec spec, DailyTints tints)
@@ -179,6 +199,16 @@ internal static class DailyRunner
                     }
 
                     string? parReject = CheckPar(c, k);
+                    if (c.Usual is Built usual)
+                    {
+                        string? usualReject = CheckPar(usual, k);
+                        if (usualReject != parReject || usual.Par != c.Par)
+                        {
+                            c.RevertTints();
+                            parReject = usualReject;
+                        }
+                    }
+
                     if (parReject is not null)
                     {
                         Count(rejects, parReject);
@@ -304,6 +334,35 @@ internal static class DailyRunner
 
             GenBoard board = GenBoard.From(baseState);
             DailyPalette palette = tints.Assign(band, k, board, new Prng(Prng.SubSeed(seed, TintStream)));
+            // Pares del simulador de daltonismo (Q-B9-13 bis (A)): el candidato de siempre y, si deja un par del simulador junto
+            // en una cuia, la primera asignación alternativa (subsemilla CvdStream) con el mismo bot y la misma ventana.
+            GenBoard abstractBoard = board.Clone();
+            int cvd = tints.CvdAdjacent(abstractBoard, palette.Map);
+            Built? usual = Finish(board, palette with { CvdAdjacent = cvd }, out why);
+            if (usual is null || cvd == 0)
+            {
+                return usual;
+            }
+
+            foreach (DailyPalette alt in tints.Alternatives(palette, k, abstractBoard, new Prng(Prng.SubSeed(seed, CvdStream))))
+            {
+                Built? c = Finish(abstractBoard.Clone(), alt, out _);
+                if (c is not null && c.Bot.Equals(usual.Bot) && c.InWindow == usual.InWindow)
+                {
+                    c.Usual = usual;
+                    return c;
+                }
+            }
+
+            return usual;
+
+            Built? Finish(GenBoard b, DailyPalette p, out string? w) => FinishBuilt(b, p, attempt, gen, depth, fallback, seed, seedText, band, out w);
+        }
+
+        private Built? FinishBuilt(GenBoard board, DailyPalette palette, int attempt, string gen, int depth, bool fallback, ulong seed, string seedText,
+            DailyBand band, out string? why)
+        {
+            why = null;
             board.MapColors(palette.Map);
             board = board.Shuffled(new Prng(Prng.SubSeed(seed, ShuffleStream)));
             BoardData data = board.ToData();

@@ -26,6 +26,10 @@ namespace AF.Tests.EditMode
 
         // Glosario §9: pares de riesgo (índices de motor); max_pares_riesgo = 0 en los niveles 1-40.
         private static readonly int[,] RiskPairs = { { 4, 5 }, { 5, 6 }, { 6, 13 }, { 13, 14 }, { 14, 4 }, { 3, 12 }, { 12, 11 }, { 11, 10 }, { 8, 9 }, { 1, 2 } };
+
+        // Glosario §9 y 07 §3, regla 3: pares del simulador de daltonismo (no cuentan en max_pares_riesgo; ninguno junto en una
+        // cuia; Q-B9-13 bis).
+        private static readonly int[,] CvdPairs = { { 7, 10 }, { 5, 14 } };
         [Test]
         public void EveryLevel_StartsPlayable_AndSolverMatchesPar([Range(1, 10)] int level)
         {
@@ -83,6 +87,18 @@ namespace AF.Tests.EditMode
             }
 
             Assert.That(risk, Is.EqualTo(0));
+            for (int i = 0; i < def.CuiaCount; i++)
+            {
+                int[] doses = def.CopyDoses(i);
+                for (int d = 1; d < doses.Length; d++)
+                {
+                    for (int p = 0; p < CvdPairs.GetLength(0); p++)
+                    {
+                        bool touch = (doses[d - 1] == CvdPairs[p, 0] && doses[d] == CvdPairs[p, 1]) || (doses[d - 1] == CvdPairs[p, 1] && doses[d] == CvdPairs[p, 0]);
+                        Assert.That(touch, Is.False, "cuia " + i + ": par del simulador " + CvdPairs[p, 0] + "-" + CvdPairs[p, 1] + " junto");
+                    }
+                }
+            }
         }
 
         [Test]

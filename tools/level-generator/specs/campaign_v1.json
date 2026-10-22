@@ -23,6 +23,8 @@
     {"id": "agua_negro", "engine": 14, "name_es": "Agua del Río Negro", "debut": 61}
   ],
   "risk_pairs": [[4, 5], [5, 6], [6, 13], [13, 14], [14, 4], [3, 12], [12, 11], [11, 10], [8, 9], [1, 2]],
+  "cvd_pairs": [[7, 10], [5, 14]],
+  "cvd_pairs_note": "Pares del simulador de daltonismo (Q-B9-13 bis; D-033, añadido de B9, punto 10; 07 §3 y glosario §9): 7-10 en protanopía y 5-14 en deuteranopía. No cuentan en risk_pairs ni en max_risk_pairs; el generador evita que queden juntos en una cuia y level-qa lo comprueba (QA-CVD-ADJ).",
   "max_risk_pairs": [
     {"levels": [1, 40], "max": 0},
     {"levels": [41, 80], "max": 1},
