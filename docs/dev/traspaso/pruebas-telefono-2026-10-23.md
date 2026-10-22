@@ -65,7 +65,7 @@ Tras el build queda sin seguimiento `Assets/StreamingAssets.meta`, que generó U
 
 ## Sin probar
 
-- **Eliminar cuenta y datos con integridad:** queda para después de que el dueño registre el token de depuración de App Check.
+- **Eliminar cuenta y datos con integridad:** probado después y con fallo; ver el apartado siguiente.
 - **El Mercado al 130 % en los tres idiomas** (pestañas en dos líneas, filas que crecen y desplazamiento): no se ve sin la tienda, y no hay extra de desarrollo para forzar la falsa.
 - **Remote Config aplicado:** no hay sonda que diga si la descarga terminó; se aplica en el arranque siguiente.
 - **Lo que cambia ajustes del sistema:**
@@ -74,3 +74,62 @@ Tras el build queda sin seguimiento `Assets/StreamingAssets.meta`, que generó U
   - TalkBack;
   - el modo avión;
   - la hora.
+
+## Eliminar cuenta con integridad (2026-10-22, 13:38-13:39 PDT = 20:38-20:39 UTC)
+
+El dueño ya había registrado el token de depuración de App Check, y Codex había cargado el secreto `af-dev/firebase-admin-service-account` más de 5 minutos antes. Se limpió logcat (`adb logcat -c`) y el dueño hizo en el teléfono Ajustes › «Eliminar cuenta y datos» › Continuar › Eliminar dos veces: la segunda tras reabrir la app. No se recompiló: es el mismo `dev.apk` de `509f6d24`.
+
+**Logcat**, sin secretos, ID tokens ni UID (filtradas las líneas de `DebugAppCheckProvider`):
+
+```
+13:38:37.234 AF_STATE {"event":"af_account_delete","t":170571,"step":"confirmed","source":"app"}
+13:38:43.429 [AF.GameBootstrap] deleteAccount: BackendError(Http 500 internal_error)
+13:38:43.429 [AF.GameBootstrap] el servidor no confirmó el borrado de la cuenta (deleteAccount): no se borra nada
+13:38:43.429 AF_STATE {"event":"af_account_delete","t":176765,"step":"failed","source":"app"}
+13:39:08.619 AF_STATE {"event":"af_account_delete","t":7184,"step":"requested","source":"app"}
+13:39:10.412 AF_STATE {"event":"af_account_delete","t":8976,"step":"confirmed","source":"app"}
+13:39:15.691 [AF.GameBootstrap] deleteAccount: BackendError(Http 500 internal_error)
+13:39:15.691 [AF.GameBootstrap] el servidor no confirmó el borrado de la cuenta (deleteAccount): no se borra nada
+13:39:15.691 AF_STATE {"event":"af_account_delete","t":14256,"step":"failed","source":"app"}
+```
+
+No sale «Failed to exchange debug token» ni ningún error de App Check o de Firebase Auth en el cliente. El cliente no borra nada local cuando falla, como debe.
+
+**Código:** **HTTP 500 `internal_error`** en los dos intentos, unos 5-6 s después de confirmar (`Call.RetryOrFail` agota los reintentos).
+
+**Qué lo produce en el servidor** (`infra/functions/delete-account/handler.ts` y `infra/functions/shared/`). `withErrors` (`shared/http.ts`) solo devuelve 500 `internal_error` en dos casos:
+- **`ConfigError`**, con la línea de log `config_error` y su `detail`:
+  - `googleAuth.ts` `parseServiceAccount`: el secreto no es JSON («¿sigue el relleno inicial?»), o no tiene `type: service_account`, un `client_email` que acabe en `.iam.gserviceaccount.com` o un `private_key` que contenga «PRIVATE KEY»;
+  - `importPKCS8`: la clave privada no es PKCS#8 RSA válida, por ejemplo con los `
+` escapados dos veces al cargarla con `put-secret-value`;
+  - `secrets.ts`: el secreto no tiene valor de texto;
+  - `env.ts` `requireEnv`: falta una variable (`AF_TABLE_*`, `AF_FIREBASE_PROJECT_ID`, `AF_SECRET_FIREBASE_ADMIN`).
+- **Un error no tipado**, con la línea `internal_error` y `err` y `detail`: lo más probable, de DynamoDB (`AccessDeniedException` del rol, `ResourceNotFoundException` o una `ValidationException` porque falta el índice `by_uid`) en `markDeleted`, `sweep` o el borrado de `account_codes`; o un fallo de `jose` al firmar.
+
+**Lo que queda descartado:**
+- la integridad: un fallo daría 403 `integrity_failed`, y aquí `requireIntegrity` pasó, porque va antes de `eraseAccount`;
+- Identity Toolkit `accounts:delete`, el canje OAuth en Google y Secrets Manager: un fallo de estos da 502 `upstream_error`;
+- la caché de 5 minutos del secreto (`secrets.ts`): ya había caducado, según codex-estado.md.
+
+**Causa probable:** un `ConfigError` del secreto de la cuenta de servicio, cargado pero con una forma que `parseServiceAccount` o `importPKCS8` rechazan (el caso típico es el `private_key` con los saltos de línea mal escapados). Le sigue un permiso o un índice de DynamoDB. Solo el log de la Lambda lo distingue.
+
+**Lo que necesita Codex** (no hay credenciales de AWS en el portátil). En CloudWatch Logs Insights, región `sa-east-1`:
+- grupo de logs: `/aws/lambda/af-dev-delete-account` (la Lambda `af-dev-delete-account` de `AfDevApi`);
+- ventana: **2026-10-22 20:37:30 a 20:40:30 UTC**;
+- consulta:
+
+```
+fields @timestamp, @requestId, level, msg, operation, code, detail, err, service, upstream_status
+| filter level = "ERROR" or msg in ["config_error", "internal_error", "upstream_error", "http_error", "rejected", "account_deleted"]
+| sort @timestamp asc
+| limit 50
+```
+
+Si sale vacío, hay que ampliar a `fields @timestamp, @message | sort @timestamp asc | limit 100` en la misma ventana, para ver los `START`/`END`/`REPORT` y un posible tiempo agotado. El campo `detail` de `config_error` dice cuál de los casos de arriba es, sin enseñar el secreto.
+
+Según el resultado:
+- **`config_error` del secreto:** volver a cargar `af-dev/firebase-admin-service-account` con el JSON de la cuenta de servicio tal cual lo descarga Google (`put-secret-value --secret-string file://clave.json`, sin reescapar el `private_key`), esperar 5 minutos o forzar un arranque en frío, y repetir la prueba;
+- **`internal_error` de DynamoDB:** revisar el rol de `af-dev-delete-account` y los índices `by_uid` de `account_codes`, `purchases` y `rewards` en `AfDevData`;
+- **ninguna línea:** el 500 sale antes de la Lambda (API Gateway o autorizador). Hay que mirar `/aws/apigateway/af-dev-api` en la misma ventana, con el `status` y el `integrationErrorMessage` de la ruta `POST /v1/account/delete`.
+
+**Incidente con el secreto de App Check en el portátil.** Al leer la tercera consulta (`BackendError|AppCheck|FirebaseAuth`), el filtro por «debug token» y «debug secret» no tapó una línea de `DebugAppCheckProvider`: el comando de ejemplo `firebase appcheck:debugtokens:create`, que lleva el secreto. La línea quedó en la salida de una herramienta de la sesión de Claude Code. No se ha copiado en ningún archivo, documento ni commit, y no se repite aquí. **Recomendación:** revocar ese token en la consola (App Check › app `com.amazonfill.dev` › Manage debug tokens) y registrar uno nuevo: borrar los datos de la app (`pm clear`), abrirla y leerlo con el comando de `firebase-cliente.md` §4. Desde entonces el portátil descarta además toda línea de `DebugAppCheckProvider` y las que contienen `appcheck:debugtokens`.
