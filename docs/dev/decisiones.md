@@ -3411,3 +3411,23 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Del integrador, al aplicar la nota §6 (sugerencias de la 4.ª revisión):** la 1 (`ConsentHoldsSession` retiene la sesión y los avisos mientras no haya una decisión vigente, también en el segundo de la pantalla de arranque de quien debe volver a decidir, con su test) y la 7 (Q-B12-14). Las demás (2-6 y 8) quedan abiertas para una tarea aparte.
 - **Orden de arranque (del integrador):** `SetUpConsent` va tras `ConnectTelemetry` y **antes** de `ResumeBackend` (F3-5), para que los flags guardados lleguen a la analítica, los anuncios y la tienda antes de reanudar las compras; el decorador de la tienda de B12 envuelve la tienda verificada de F3-5 (`WrapStore(WrapConsentStore(CreateStore(...)))`).
 - **Enganches con F3-6 (Firebase; D-039), a petición del coordinador de la integración:** (1) la decisión llega a la recogida propia de Firebase Analytics por `AnalyticsService.SetCollectionEnabled` (`ICollectionAwareSink`) y con la banda `<13` nunca se enciende; (2) con `<13` Crashlytics se apaga de forma explícita (`CrashReporting.Stop`: `IsCrashlyticsCollectionEnabled = false`, que persiste entre arranques), al bloquear y en cada arranque bloqueado; (3) «Eliminar cuenta y datos» llama también a `FirebaseAnalyticsSink.ResetData()` (08 §13.3). Con tests PlayMode (`ConsentBootTests` y `AccountAndCloudTests`).
+
+### D-033, añadido del 2026-10-21: preguntas de B11 (tutorial, Sin canoas y contenido) del Spark, con la regla «si tienen recomendada, vamos con esa»
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** decididas con la recomendada (la (a), ya aplicada en la rama) por la regla del dueño «si tienen recomendada, vamos con esa», salvo Q-B11-7, que ya decidió el añadido «la reserva del 20 %» de arriba. Integradas en `integra/spark-b11` con `spark/t5-b11` (`0fe3e99c`) y sus seis parches. Detalle y opciones en `docs/dev/tutorial-b11.md` §5. Respetan D-038 y su añadido de la Balsa: con `biz_feature_lives` apagado no hay tarjeta de Canoas, el tooltip del 6 y del 8 pierde la frase de las canoas y Sin canoas no se abre.
+
+- **Q-B11-1:** el dedo del 2 **señala antes el vertido que abre la lección** y después la lección [P] (sonda `lesson = partial_setup`).
+- **Q-B11-2:** con `biz_feature_lives` apagado, el tooltip del 6 y del 8 lleva **solo la primera frase**, «Reiniciar es gratis, siempre, mismo tablero.» (`tutorial_restart_free`).
+- **Q-B11-3:** **se acepta la excepción del 680**: con la Cuia extra, su tercer fallo sigue con el tablero base; el resto de 31-700 lleva `minus_color` (segunda pasada de Q-N2 (a), presupuesto 2.000.000 [P]).
+- **Q-B11-4:** texto del tooltip de la Cosecha doble del 11: **«Con un video, las semillas de este nivel valen el doble.»** [P].
+- **Q-B11-5:** **lienzo al ancho del teléfono entre 320 y 360 dp**, con 1 dp físico por dp (toca `CanvasScale` de `GameScreen` y `LobbyScreen` y sus pruebas). **No aplicado en esta integración: tarea del escritorio aparte**; hasta entonces el lienzo sigue midiendo 360 dp.
+- **Q-B11-6:** «25 minutos» y «nivel 31» van **literales** en los textos (Q-E4 (a) y 04 §2.7); si Remote Config cambia `canoes_regen_min` o `rescue_min_level`, hay que revisar los textos.
+- **Q-B11-7:** decidida en el añadido «la reserva del 20 %» (un pack de reserva por mundo); **no se implementa aquí**: será otra tarea.
+- **Q-B11-8:** se quedan el id `home` de `AF_LAYOUT` y la fila `back_home`.
+- **Q-B11-9:** la tarjeta del 31 habla **solo de las canoas** (el texto de Q-E4 (a)), sin línea de la Cuia de rescate.
+- **Q-B11-10:** el dedo de la Cuia extra del 8 sale **en cada intento hasta usarla**.
+- **Q-B11-11:** C10 **solo arrastra la cuia que se elevó en el touch-down sin selección** (también si otro dedo selecciona entre medias, C11); un arrastre ilegal no selecciona nada: Y se sacude (C6), sin C5.
+- **Q-B11-12:** el tooltip de la Cosecha doble sale **solo en el 11**: si en esa victoria no hay anuncio, no sale nunca.
+
+- **Quedan para otras tareas (del integrador):** enlazar `drag_pour_enabled`, `lvl_label_override` y `level_overrides` con Remote Config en el arranque; emitir `af_label_shown` (con `LevelCatalog.IsRelabeled` para `source`) y todas las elecciones de `af_no_canoes_choice` a la vez; Q-B11-5 (lienzo a 320 dp); Q-B11-7 (la reserva); los cambios propuestos al GDD de la nota §4 (02 §5 y §13, 03 §13 y §17, 04 §7.1 y 06 §2.2).
