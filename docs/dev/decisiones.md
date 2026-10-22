@@ -3527,3 +3527,8 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-IAP-6 · Paquetes que arrastra Unity IAP:** (a) se aprueban como parte de D-040 con su versión, tal como los resuelve Unity en `packages-lock.json`: `com.unity.services.core` 1.18.0, `com.unity.services.deployment` 1.7.2 y `com.unity.services.deployment.api` 1.1.3 (sin permisos Android; no se llama a `UnityServices.InitializeAsync`). También entran por Gradle Play Billing Library 9.0.0 (`com.android.billingclient:billing:9.0.0`) y dos *stubs* de `kotlin-stdlib-jdk7/jdk8` 1.8.22.
 - **Q-IAP-7 · `Assets/Resources/BillingMode.json`:** (a) commiteado una vez (`{"androidStore":"GooglePlay"}`, con su carpeta), no ignorado.
 - **Permisos del manifiesto fusionado:** el único nuevo es `com.android.vending.BILLING` (aprobado en D-040).
+
+### D-040, añadido del 2026-10-22: dependencias de Unity IAP 5.4.4 (Q-IAP-6)
+
+- **Estado:** aprobado por el dueño en la sesión del Spark (registro en `docs/dev/iap.md` §4, commit `1f3f468a` de `spark/t5-iap`): «Apruebo com.unity.services.core 1.18.0, com.unity.services.deployment 1.7.2 y com.unity.services.deployment.api 1.1.3, dependencias de Unity IAP 5.4.4 (Q-IAP-6); anótalo para D-040.»
+- Quedan aprobadas esas tres versiones exactas, que trae `com.unity.purchasing` 5.4.4 y fija `packages-lock.json`. Q-IAP-1 (telemetría de compras a Unity) sigue pendiente del dueño y del abogado.
