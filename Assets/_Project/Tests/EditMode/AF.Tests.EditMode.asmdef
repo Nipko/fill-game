@@ -22,7 +22,13 @@
     "AF.Audio",
     "AF.Audio.Unity",
     "AF.Audio.Editor",
-    "Unity.TextMeshPro"
+    "Unity.TextMeshPro",
+    "AF.Events",
+    "AF.RemoteConfig",
+    "AF.RemoteConfig.Binding",
+    "AF.Analytics",
+    "AF.Backend",
+    "AF.Platform.Notifications"
   ],
   "includePlatforms": [
     "Editor"

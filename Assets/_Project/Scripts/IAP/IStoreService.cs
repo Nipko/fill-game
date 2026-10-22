@@ -49,6 +49,18 @@ namespace AF.IAP
 
         /// <summary>Ya hay una compra en curso.</summary>
         Busy = 6,
+
+        /// <summary>
+        /// Pagada (o pendiente de pago en Play) pero aún sin verificar en el servidor (<c>pending</c> de <c>af_iap_result</c>; 08 §10.3,
+        /// F3-3): no se acreditó nada todavía; se acreditará una sola vez cuando el servidor la verifique (cola de 72 h).
+        /// </summary>
+        Pending = 7,
+
+        /// <summary>
+        /// El servidor la rechazó (400 o 409: cancelada, anulada, segundo <c>af_starter</c> o de otra cuenta; <c>verify_failed</c>): no
+        /// se acredita ni se consume (consumir también reconoce y Play ya no la reembolsaría).
+        /// </summary>
+        VerifyFailed = 8,
     }
 
     /// <summary>Petición de compra.</summary>
@@ -123,7 +135,8 @@ namespace AF.IAP
     /// <summary>
     /// Tienda (GDD 08 §2.1 principio 6 y §2.2 <c>AF.IAP</c>). En la fase 2 (D-008) solo existe
     /// <see cref="FakeStoreService"/>, sin Play Billing ni red; Unity IAP 5.4.4 entrará después detrás de esta misma
-    /// interfaz, con precios desde la tienda, verificación en Cloud Function antes de acreditar (08 §10.3) y restauración.
+    /// interfaz, con precios desde la tienda, verificación en el backend antes de acreditar (08 §10.3; D-035) y restauración: lo
+    /// hace <see cref="VerifiedStoreService"/> (F3-3) sobre <see cref="IBillingClient"/>.
     /// Lo comprado se acredita siempre con <see cref="StoreLedger.Fulfill"/> (<c>Wallet.Apply</c>). Hilo principal.
     /// </summary>
     public interface IStoreService

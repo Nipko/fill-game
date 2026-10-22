@@ -14,11 +14,15 @@ namespace AF.IAP
     /// </summary>
     public readonly struct LocalPrice : IEquatable<LocalPrice>
     {
-        /// <summary>Crea el precio.</summary>
-        /// <exception cref="ArgumentException">Moneda no admitida (<see cref="StorePrices.Currencies"/>).</exception>
+        /// <summary>
+        /// Crea el precio. Cualquier código ISO 4217: los de la tienda real llegan en la moneda de la cuenta de Play del jugador (D-040;
+        /// Q-IAP-3), también fuera de las cinco columnas de 05 §4.2 (<see cref="StorePrices.Currencies"/>, que siguen siendo las únicas
+        /// de la tienda simulada).
+        /// </summary>
+        /// <exception cref="ArgumentException">No es un código ISO 4217 de tres letras mayúsculas.</exception>
         public LocalPrice(string currency, decimal amount)
         {
-            Decimals = StorePrices.DecimalsOf(currency);
+            Decimals = LocPrice.DecimalsOf(currency);
             Currency = currency;
             Amount = amount;
             decimal scale = 1m;
@@ -30,7 +34,7 @@ namespace AF.IAP
             MinorUnits = (long)Math.Round(amount * scale, 0, MidpointRounding.AwayFromZero);
         }
 
-        /// <summary>Código ISO 4217 (<c>USD</c>, <c>BRL</c>, <c>MXN</c>, <c>COP</c> o <c>PEN</c>).</summary>
+        /// <summary>Código ISO 4217 (en la tienda simulada, <c>USD</c>, <c>BRL</c>, <c>MXN</c>, <c>COP</c> o <c>PEN</c>).</summary>
         public string Currency { get; }
 
         /// <summary>Importe.</summary>

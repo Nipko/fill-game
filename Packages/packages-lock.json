@@ -6,6 +6,60 @@
       "source": "embedded",
       "dependencies": {}
     },
+    "com.google.external-dependency-manager": {
+      "version": "file:firebase/com.google.external-dependency-manager-1.2.189.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {}
+    },
+    "com.google.firebase.analytics": {
+      "version": "file:firebase/com.google.firebase.analytics-13.17.0.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.google.firebase.app": "13.17.0"
+      }
+    },
+    "com.google.firebase.app": {
+      "version": "file:firebase/com.google.firebase.app-13.17.0.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.google.external-dependency-manager": "1.2.186"
+      }
+    },
+    "com.google.firebase.app-check": {
+      "version": "file:firebase/com.google.firebase.app-check-13.17.0.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.google.firebase.app": "13.17.0"
+      }
+    },
+    "com.google.firebase.auth": {
+      "version": "file:firebase/com.google.firebase.auth-13.17.0.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.google.firebase.app": "13.17.0"
+      }
+    },
+    "com.google.firebase.crashlytics": {
+      "version": "file:firebase/com.google.firebase.crashlytics-13.17.0.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.google.firebase.app": "13.17.0"
+      }
+    },
+    "com.google.firebase.remote-config": {
+      "version": "file:firebase/com.google.firebase.remote-config-13.17.0.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.google.firebase.app": "13.17.0"
+      }
+    },
     "com.unity.2d.animation": {
       "version": "13.0.6",
       "depth": 0,
@@ -175,6 +229,15 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
+    "com.unity.mobile.notifications": {
+      "version": "2.4.3",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.modules.androidjni": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
     "com.unity.multiplayer.center": {
       "version": "1.0.1",
       "depth": 0,
@@ -208,6 +271,20 @@
         "com.unity.modules.jsonserialize": "1.0.0",
         "com.unity.modules.screencapture": "1.0.0",
         "com.unity.nuget.newtonsoft-json": "3.0.2"
+      },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.purchasing": {
+      "version": "5.4.4",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0",
+        "com.unity.services.core": "1.18.0",
+        "com.unity.modules.androidjni": "1.0.0",
+        "com.unity.services.deployment": "1.7.2",
+        "com.unity.modules.jsonserialize": "1.0.0",
+        "com.unity.modules.unitywebrequest": "1.0.0"
       },
       "url": "https://packages.unity.com"
     },
@@ -245,6 +322,34 @@
     },
     "com.unity.searcher": {
       "version": "4.9.5",
+      "depth": 2,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.services.core": {
+      "version": "1.18.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.modules.androidjni": "1.0.0",
+        "com.unity.nuget.newtonsoft-json": "3.2.2",
+        "com.unity.modules.unitywebrequest": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.services.deployment": {
+      "version": "1.7.2",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.services.core": "1.15.1",
+        "com.unity.services.deployment.api": "1.1.2"
+      },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.services.deployment.api": {
+      "version": "1.1.3",
       "depth": 2,
       "source": "registry",
       "dependencies": {},

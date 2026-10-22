@@ -203,9 +203,10 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Volver a la orilla está disponible: PLAYING sin pendientes (cabecera o pausa) o, en 1-30, el pie del modal (rama C).
-        /// Desde el 31 el pie del modal es «Rendirse» (D-008).
+        /// Desde el 31 el pie del modal es «Rendirse» (D-008), salvo con <c>biz_feature_lives</c> apagado, donde sigue siendo el
+        /// de 1-30 (D-038; <see cref="CanoeFunnel"/>).
         /// </summary>
-        public bool CanRestart => _session != null && (AcceptsBoardInput || (Phase == FlowPhase.StuckModal && !CanoesLevel));
+        public bool CanRestart => _session != null && (AcceptsBoardInput || (Phase == FlowPhase.StuckModal && !CanoeFunnel));
 
         /// <summary>Nivel de arranque: <paramref name="requested"/> si el catálogo lo tiene; si no, el primero.</summary>
         public int ResolveLevel(int requested)
@@ -483,6 +484,8 @@ namespace AF.GameFlow
                     return false;
                 }
 
+                CountUndoForEvents(); // undo_used de af_level_win (B7; LevelFlow.Events.cs)
+
                 bool fromModal = Phase == FlowPhase.StuckModal;
                 Pour undone = _session.GetAppliedPour(_session.AppliedPours - 1);
                 _taps.Clear();
@@ -503,7 +506,7 @@ namespace AF.GameFlow
         /// conserva las cuias añadidas. Desde la cabecera es gratis: con ≥ <c>restart_confirm_min_pours</c> vertidos cuenta
         /// como fallo blando (la vista pide antes la confirmación de una línea: <see cref="RestartNeedsConfirm"/>); desde el 31
         /// con 0 canoas abre Sin canoas (04 §7.1 «Qué bloquea»). Desde el pie del modal en 1-30 es el fallo duro de la rama C
-        /// (sin canoa). Al tercer fallo se sirve la variante aliviada (<c>relief[0]</c>), si el nivel la tiene.
+        /// (sin canoa), como desde el 31 con <c>biz_feature_lives</c> apagado (D-038). Al tercer fallo se sirve la variante aliviada (<c>relief[0]</c>), si el nivel la tiene.
         /// </summary>
         public bool Restart()
         {
@@ -620,6 +623,7 @@ namespace AF.GameFlow
         {
             Phase = FlowPhase.Playing;
             _phaseMs = 0;
+            PublishLevelStarted(); // level_start por el bus (B7; LevelFlow.Events.cs)
             _listener.OnIntroFinished(skipped);
             EvaluateStatus();
         }

@@ -334,7 +334,7 @@ namespace AF.UI
 
             // Sin canoas con sus opciones (04 §7.3; B2-3): la misma tarjeta que en la pantalla de nivel.
             _noCanoes = new NoCanoesPanel(_root, art, () => actions.PressExtraCanoeVideo(), () => actions.PressRefillCanoes(),
-                () => actions.PressInfiniteCanoes(), () => actions.PressNoCanoesHome(), () => actions.PressNoCanoesClose());
+                () => actions.PressInfiniteCanoes(), () => actions.PressNoCanoesMap(), () => actions.PressNoCanoesClose());
 
             ApplyScreenMetrics();
             _canvas.gameObject.SetActive(false);
@@ -414,6 +414,9 @@ namespace AF.UI
         /// <summary>Ancho del lienzo en dp.</summary>
         public float CanvasWidth => _canvasW;
 
+        /// <summary>Raíz del lienzo del inicio (tests de layout).</summary>
+        internal RectTransform Root => _root;
+
         /// <summary>Alto del lienzo en dp.</summary>
         public float CanvasHeight => _canvasH;
 
@@ -487,8 +490,11 @@ namespace AF.UI
         /// <summary>Botón de Ajustes: abre <see cref="SettingsScreen"/> (tarea L3).</summary>
         public Button SettingsButton => _settings.Button;
 
-        /// <summary>Botón Volver de la superposición («Volver al inicio» en Sin canoas).</summary>
-        public Button BackButton => _noCanoes.Visible ? _noCanoes.HomeButton : _back.Button;
+        /// <summary>
+        /// Botón Volver de la superposición: en Sin canoas, su X, que vuelve al inicio (desde B11 su enlace de abajo es «Volver al
+        /// Mapa del río», <c>NoCanoes.HomeButton</c>, que abre el Mapa encima).
+        /// </summary>
+        public Button BackButton => _noCanoes.Visible ? _noCanoes.CloseButton : _back.Button;
 
         /// <summary>Contador de semillas.</summary>
         public RectTransform SeedsRect => _seeds;
@@ -890,14 +896,9 @@ namespace AF.UI
         {
             GameScreen.ReadScreen(out _screenW, out _screenH, out _safeArea);
 
-            // 360 dp de ancho; si la pantalla es tan ancha que quedarían menos de 640 dp de alto, manda el alto.
-            float scale = _screenW / ReferenceWidth;
-            if (_screenH / scale < MinHeight)
-            {
-                scale = _screenH / MinHeight;
-            }
-
-            scale = Mathf.Max(0.01f, scale);
+            // La escala de la pantalla de nivel (GameScreen.CanvasScale): 360 dp de ancho (de 320 a 360 en los teléfonos de ese ancho,
+            // Q-B11-5 (a)); si la pantalla es tan ancha que quedarían menos de 640 dp de alto, manda el alto.
+            float scale = GameScreen.CurrentCanvasScale(_screenW, _screenH);
             _scaler.scaleFactor = scale;
             _canvasW = _screenW / scale;
             _canvasH = _screenH / scale;

@@ -15,6 +15,7 @@
     "AF.Boosters",
     "AF.Ads",
     "AF.IAP",
+    "AF.Backend",
     "AF.Localization",
     "AF.Audio",
     "AF.Audio.Unity",
@@ -22,7 +23,11 @@
     "UnityEditor.TestRunner",
     "Unity.TextMeshPro",
     "Unity.InputSystem",
-    "Unity.InputSystem.TestFramework"
+    "Unity.InputSystem.TestFramework",
+    "AF.Events",
+    "AF.RemoteConfig",
+    "AF.RemoteConfig.Binding",
+    "AF.Analytics"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

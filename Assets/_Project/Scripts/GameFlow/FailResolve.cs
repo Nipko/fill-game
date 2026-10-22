@@ -12,7 +12,8 @@ namespace AF.GameFlow
     {
         /// <summary>
         /// Fallo duro: en 1-30, Volver a la orilla desde Aguas estancadas; desde el 31, la rendición confirmada o «Salir» con
-        /// el menú (D-008). <c>fails_level</c> + 1 y, desde el 31, −1 canoa salvo Canoas infinitas.
+        /// el menú (D-008); con <c>biz_feature_lives</c> apagado, desde el 31 como en 1-30 (D-038). <c>fails_level</c> + 1 y,
+        /// desde el 31 con las canoas encendidas, −1 canoa salvo Canoas infinitas.
         /// </summary>
         Hard = 0,
 

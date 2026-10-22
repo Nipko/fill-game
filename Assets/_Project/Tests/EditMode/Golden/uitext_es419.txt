@@ -193,6 +193,7 @@ UiText.SimulatedAdTitle	Anuncio simulado
 UiText.SimulatedPurchaseTitle	Compra simulada
 UiText.Sound	Sonido
 UiText.StuckBalsaContent	Todo para seguir: semillas, una cuia y canoas infinitas
+UiText.StuckBalsaContentNoCanoes	Todo para seguir: semillas y una cuia
 UiText.StuckCanoeLost	Travesía perdida: –1 canoa
 UiText.StuckCanoeLostLast	Travesía perdida: tu última canoa
 UiText.StuckGiveUp	Rendirse

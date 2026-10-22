@@ -1,0 +1,16 @@
+{
+  "name": "AF.Backend",
+  "rootNamespace": "AF.Backend",
+  "references": [
+    "AF.Platform"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}

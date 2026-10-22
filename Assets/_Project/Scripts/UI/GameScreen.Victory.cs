@@ -176,7 +176,8 @@ namespace AF.UI
         /// Escalón de la victoria compacta de la última maquetación (D-032, punto 2; 0 = la de siempre, hasta
         /// <see cref="VictoryCompactMax"/>): el más bajo con el que la victoria más alta posible de esta pantalla, idioma y escala
         /// (cinta con el título más alto, Cosecha doble, el chip del nivel siguiente y la ranura) deja la cinta bajo la cabecera
-        /// del HUD. No depende de lo que lleve cada victoria, así que «Siguiente» queda a la misma altura en todas (Q7-A); en el
+        /// del HUD. No depende de lo que lleve cada victoria, así que «Siguiente» queda a la misma altura en todas (Q7-A), salvo en
+        /// la del tooltip de la Cosecha doble del 11, cuyo hueco puede subir el escalón (B11) [P]; en el
         /// escalón 3, en la victoria con «Ver mapa», va más estrecho y empieza más a la derecha, con el mismo canto derecho [P]
         /// (PlaceVictoryRow).
         /// </summary>
@@ -207,14 +208,14 @@ namespace AF.UI
         {
             float budget = VictoryPanelBudgetDp;
             _victoryBarsDropped = false;
-            _victoryBars.ForceHalf = false;
-            int level = CompactStepFor(budget);
-            if (level > 0 && VictoryBarsPossible)
+            _victoryBars.LogbookSuppressed = _logbookRowYield; // cedida a la frase de TiTino en su hito (GameScreen.Streak.cs)
+            int level = CompactStepWithBars(budget);
+            if (level >= VictoryCompactRow && _victoryBars.Plan.Logbook)
             {
-                // Antes de compactar lo demás, la Crecida y la Canasta en una fila, a media anchura [P] (tarea B1b): así 360 × 780 no
-                // compacta (D-032, punto 2) y en 16:9 se compacta lo menos posible; desde el escalón 2 ya van así (D-033, punto 10).
-                _victoryBars.ForceHalf = true;
-                level = CompactStepFor(budget);
+                // La fila de la Bitácora (GameScreen.LogbookRow.cs) en el escalón 3 iría tras el chevron (D-033, punto 10): no sale y
+                // el escalón se elige sin ella [P]; la libreta sale sola al volver al inicio (D-033, punto 5).
+                _victoryBars.LogbookSuppressed = true;
+                level = CompactStepWithBars(budget);
             }
 
             if (WorstPanelDp(level) > budget + 0.01f && VictoryBarsPossible)
@@ -225,7 +226,47 @@ namespace AF.UI
                 level = CompactStepFor(budget);
             }
 
+            if (_doubleTipFullRoomDp > 0f)
+            {
+                // El hueco del tooltip de la Cosecha doble del 11 (B11; observación 4 de la prueba del 2026-10-22) solo sube el
+                // escalón: las barras y la fila de la Bitácora las decide el presupuesto de siempre (no las quita un tooltip), y el
+                // escalón no pasa del que dejaría la Bitácora tras el chevron. Si ni así cabe, LayoutVictory recorta el hueco y el
+                // tooltip pisa las barras [P]. En esa victoria, «Siguiente» puede ir algo más arriba que en las demás (Q7-A) [P].
+                int cap = _victoryBars.Plan.Logbook && !_victoryBars.LogbookSuppressed ? VictoryCompactRow - 1 : VictoryCompactMax;
+                int tip = level;
+                while (tip < cap)
+                {
+                    _victoryBars.ForceHalf = tip > 0 && VictoryBarsPossible && !_victoryBarsDropped;
+                    ApplyVictoryCompact(tip);
+                    if (WorstPanelDp(tip) <= budget - _doubleTipFullRoomDp + 0.01f)
+                    {
+                        break;
+                    }
+
+                    tip++;
+                }
+
+                level = Mathf.Max(level, tip);
+                _victoryBars.ForceHalf = level > 0 && VictoryBarsPossible && !_victoryBarsDropped;
+            }
+
             ApplyVictoryCompact(level);
+            return level;
+        }
+
+        // El escalón con las barras de la Crecida y la Canasta: antes de compactar lo demás, en una fila, a media anchura [P] (tarea
+        // B1b): así 360 × 780 no compacta (D-032, punto 2) y en 16:9 se compacta lo menos posible; desde el escalón 2 ya van así
+        // (D-033, punto 10).
+        private int CompactStepWithBars(float budget)
+        {
+            _victoryBars.ForceHalf = false;
+            int level = CompactStepFor(budget);
+            if (level > 0 && VictoryBarsPossible)
+            {
+                _victoryBars.ForceHalf = true;
+                level = CompactStepFor(budget);
+            }
+
             return level;
         }
 
@@ -1082,6 +1123,7 @@ namespace AF.UI
             LastRiverFactId = factId;
             LastRiverFactDismissedMs = dismissedMs;
             _probe.RiverFactShown(flow.LevelNumber, factId, dismissedMs);
+            UiAnalytics.RiverFactShown(Analytics, factId, dismissedMs); // af_river_fact_shown (B7)
         }
 
         /// <summary>
@@ -1123,6 +1165,7 @@ namespace AF.UI
         partial void SlothVictoryShown(LevelFlow flow, float top, float bottom)
         {
             _slothPending = false;
+            SlothYieldedToTeaser = false;
             _slothViewHero = new Rect(0f, 0f, 0f, 0f);
             if (SlothViewOn)
             {
@@ -1380,6 +1423,69 @@ namespace AF.UI
             _sloth?.Hide();
             SetHeronAlpha(1f);
         }
+
+        /// <summary>
+        /// Canto de arriba de la franja de la tarjeta del Reto del 7 (<see cref="DailyTeaserCard"/>, de <paramref name="h"/> dp)
+        /// para que TiTino no tape su texto (observación 2 de la hoja de la prueba del 2026-10-22: «De[…]ivel 10»), entre
+        /// <paramref name="top"/> (el pie de la cabecera) y <paramref name="ribbonTop"/> (la cinta):
+        /// <list type="bullet">
+        /// <item>sin TiTino, o con TiTino por encima de <paramref name="top"/>, <paramref name="top"/>;</item>
+        /// <item>si la tarjeta cabe entre el pie de TiTino y la cinta, ese pie: TiTino arriba con su gesto y la tarjeta debajo;</item>
+        /// <item>si no cabe y TiTino solo hace el gesto, TiTino cede la franja y se va de esta victoria (devuelve
+        /// <paramref name="top"/>): D-016, punto 5, da el gesto «si cabe», y la tarjeta es la presentación del Reto que el GDD pone
+        /// en esta victoria (06 §2.2, nivel 7); es la misma prioridad que B1b-Q10 (c) (D-033, añadido del 2026-10-20), donde lo
+        /// que cede es lo otro solo cuando TiTino habla en su hito;</item>
+        /// <item>si no cabe y TiTino habla (con su bocadillo, solo en sus hitos: el 7 no lo es), NaN: la tarjeta no sale y TiTino
+        /// habla como dice D-016 (B1b-Q10 (c)).</item>
+        /// </list>
+        /// Solo al abrirse la victoria, sin asignaciones.
+        /// </summary>
+        private float TeaserTopClearOfSloth(float top, float ribbonTop, float h)
+        {
+            SlothVictory? sloth = _sloth;
+            if (sloth == null)
+            {
+                return top;
+            }
+
+            bool speaks;
+            float foot;
+            if (_slothPending)
+            {
+                speaks = _slothPendingText != null;
+                foot = SlothVictory.FootprintBottomFor(_slothBandTop, _slothBandBottom, SlothRows, speaks);
+            }
+            else
+            {
+                speaks = sloth.HasBubble;
+                foot = sloth.FootprintBottomDp;
+            }
+
+            if (float.IsNaN(foot) || foot <= top)
+            {
+                return top;
+            }
+
+            if (ribbonTop - foot >= h)
+            {
+                return foot;
+            }
+
+            if (speaks)
+            {
+                return float.NaN;
+            }
+
+            _slothPending = false;
+            _slothPendingText = null;
+            sloth.Hide();
+            SetHeronAlpha(1f);
+            SlothYieldedToTeaser = true;
+            return top;
+        }
+
+        /// <summary>TiTino cedió su franja a la tarjeta del Reto en esta victoria (tests).</summary>
+        internal bool SlothYieldedToTeaser { get; private set; }
 
         /// <summary>
         /// Fundido de la garza blanca del fondo mientras TiTino está a la vista en la victoria (ms) [P; revisión de TI6a]: la garza

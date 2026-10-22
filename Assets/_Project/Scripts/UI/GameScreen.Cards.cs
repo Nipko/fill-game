@@ -89,7 +89,8 @@ namespace AF.UI
     /// nivel (02 l. 280: dedo guía → «Fruta nueva» → miquito): no añade otra tarjeta. El vertido lo elige
     /// <see cref="TutorialFinger.TryChoose"/> con el solver sobre el tablero del momento (el pack no guarda la solución): en el
     /// 1, el primero de la solución; en el 2, el vertido parcial de la lección (una racha de 3 sobre un hueco de 2) en cuanto es
-    /// legal, que en su tablero inicial, lleno, no lo es: sale tras el primer vertido que lo deja posible. Se va al hacer ese
+    /// legal, que en su tablero inicial, lleno, no lo es: antes señala el vertido que la deja posible (B11,
+    /// <see cref="TutorialFingerSetup"/>, sonda <c>partial_setup</c>; hecho u otro vertido, vuelve a esperar) [P]. Se va al hacer ese
     /// vertido; si el jugador hace otro, se va y no vuelve en ese intento [P] (en el 1, también si vierte antes de que salga:
     /// ya pasaron los dos primeros toques). Deshacer con Marea no es otro vertido [P]: con el dedo a la vista, se va (sonda con
     /// <c>reason</c> <c>undo</c>) y vuelve a esperar su momento sobre el tablero deshecho (en el 2, a que la lección vuelva a ser
@@ -313,6 +314,7 @@ namespace AF.UI
 
             TickTutorialAfterPour(); // el tooltip de Marea del 3, tras el primer vertido que no acerca (TU1a)
             TickTutorialFinger(dtMs); // el dedo guía del 1 y el 2 (DC6)
+            TutorialTipsTick(dtMs); // los tooltips del 6, el 8 y el 11 y el dedo de la Cuia extra del 8 (B11)
 
             LevelFlow? flow = _flow;
             bool inCard = flow != null && flow.HasLevel && flow.Phase == FlowPhase.LevelCard;
@@ -362,6 +364,7 @@ namespace AF.UI
             _tutorialAfterPour = null; // el tooltip de Marea que esperaba un vertido era del nivel anterior (TU1a)
             _undoTutorialDue = false;
             EndTutorialFinger(FingerState.Off, null); // las vistas son nuevas: nada del dedo del nivel anterior (DC6)
+            TutorialTipsLevelLoaded(flow); // ni de los tooltips ni del dedo de la Cuia extra (B11)
             _levelCard.HideNow();
             BannerLevelLoaded();
         }
@@ -384,6 +387,8 @@ namespace AF.UI
                 ids.Add("tutorial_finger"); // la mano del dedo guía del 1 y el 2 (DC6), donde está al emitir
                 rects.Add(_finger.Hand.rectTransform);
             }
+
+            TutorialTipsLayoutIds(ids, rects); // los tooltips y el dedo de la Cuia extra (B11)
         }
 
         // 1 toque en cualquier punto (T13): directo al flujo, que arranca la intro; la tarjeta sale sin bloquear el siguiente
@@ -962,6 +967,9 @@ namespace AF.UI
         private int _fingerScoop = -1;
         private FingerSafeJob? _fingerJob;
 
+        // En el 2, el vertido que señala es el paso previo de la lección (B11; TutorialFingerSetup), no la lección.
+        private bool _fingerSetup;
+
         // Del dedo en el intento: apagado (sin dedo o retirado), esperando su momento (también tras deshacer con el dedo a la
         // vista [P]), a la vista (o suspendido), hecho (el jugador hizo el vertido) o cancelado (hizo otro: no vuelve en ese
         // intento [P]).
@@ -1116,6 +1124,17 @@ namespace AF.UI
                 if (_fingerState == FingerState.Showing)
                 {
                     bool followed = onePour && last.Source == _fingerPour.Source && last.Target == _fingerPour.Target;
+                    if (_fingerSetup)
+                    {
+                        // El paso previo del 2 (B11): hecho u otro vertido, el dedo vuelve a esperar su momento sobre el tablero nuevo
+                        // (la lección, si ya es legal, u otro paso previo) [P]. El vertido no puede ser la lección: con el paso previo
+                        // a la vista, la lección no era legal en ese tablero.
+                        EndTutorialFinger(FingerState.Armed, followed ? "followed" : "other_pour");
+                        _fingerWatchPours = pours;
+                        _fingerWatchBoard = current;
+                        return;
+                    }
+
                     if (followed && _fingerLesson == FingerLesson.TinajaScoop && _fingerStep == 1)
                     {
                         // Sacó, como señalaba: el dedo se va y espera, con la vista quieta tras el gesto de sacar (TJ3), para
@@ -1214,8 +1233,20 @@ namespace AF.UI
                 {
                     _fingerChosenFor = current;
                     _fingerSolver ??= new AStarSolver();
-                    _fingerHasChoice = TutorialFinger.TryChoose(_fingerLesson, current, session.PourMode, session.FutileRuleEnabled,
-                        _fingerSolver, out _fingerPour);
+                    _fingerSetup = false;
+                    if (_fingerLesson == FingerLesson.PartialRun && !TutorialFingerSetup.LessonLegal(current, session.PourMode))
+                    {
+                        // B11: en el 2 la lección aún no es legal (su tablero inicial está lleno): el dedo señala antes el vertido que
+                        // la deja posible (TutorialFingerSetup; pregunta Q-B11-1). Sin él, espera, como antes.
+                        _fingerHasChoice = TutorialFingerSetup.TryChooseWhileIllegal(current, session.PourMode, session.FutileRuleEnabled,
+                            _fingerSolver, out _fingerPour);
+                        _fingerSetup = _fingerHasChoice;
+                    }
+                    else
+                    {
+                        _fingerHasChoice = TutorialFinger.TryChoose(_fingerLesson, current, session.PourMode, session.FutileRuleEnabled,
+                            _fingerSolver, out _fingerPour);
+                    }
                 }
             }
 
@@ -1255,7 +1286,7 @@ namespace AF.UI
         // primer vertido: si sigue a la vista, se va con su fundido normal (revisión de DC6) [P]. Sin asignaciones.
         private void LeaveStaleTutorialCard()
         {
-            if (_fingerLesson == FingerLesson.PartialRun && TutorialSlothVisible)
+            if (_fingerLesson == FingerLesson.PartialRun && !_fingerSetup && TutorialSlothVisible)
             {
                 _slothNotice!.Leave();
             }
@@ -1275,6 +1306,8 @@ namespace AF.UI
             {
                 EmitFingerProbe(false, reason);
             }
+
+            _fingerSetup = false;
         }
 
         // El estreno de la Tinaja: lanza la búsqueda del vertido del paso de ahora sobre current si no hay una para él (y la de
@@ -1387,7 +1420,7 @@ namespace AF.UI
         {
             switch (_fingerLesson)
             {
-                case FingerLesson.PartialRun: return "partial";
+                case FingerLesson.PartialRun: return _fingerSetup ? "partial_setup" : "partial";
                 case FingerLesson.HojaKey: return "hoja";
                 case FingerLesson.TinajaScoop: return _fingerStep == 2 ? "tinaja_pour" : "tinaja_scoop";
                 default: return "first";

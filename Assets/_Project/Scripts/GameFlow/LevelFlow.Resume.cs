@@ -182,7 +182,20 @@ namespace AF.GameFlow
                 phase = SavedPhase.Playing;
             }
 
-            if ((phase == SavedPhase.GiveUpConfirm || phase == SavedPhase.LevelFailed) && !CanoesLevel)
+            // Sin el embudo con canoas (1-30, o desde el 31 con biz_feature_lives apagado: D-038) no hay ¿Seguro? ni Nivel fallido.
+            // ¿Seguro? aún no cobró nada: vuelve a Aguas estancadas (o al tablero). Nivel fallido ya resolvió su fallo duro
+            // (fails_level, af_level_fail, la Crecida): empieza el intento siguiente, como el reinicio directo de la rama C, sin
+            // otro fallo; reabrir el modal o seguir el intento ya fallado lo contaría dos veces.
+            if (phase == SavedPhase.LevelFailed && !CanoeFunnel)
+            {
+                Phase = FlowPhase.Playing;
+                _listener.OnResumed(FlowPhase.Playing);
+                _listener.OnRestart(true);
+                BeginAttempt();
+                return true;
+            }
+
+            if (phase == SavedPhase.GiveUpConfirm && !CanoeFunnel)
             {
                 phase = stuck ? SavedPhase.StuckModal : SavedPhase.Playing;
             }

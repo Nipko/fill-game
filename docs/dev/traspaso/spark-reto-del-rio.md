@@ -652,7 +652,7 @@ Cuando termines S1, empieza **sin esperar** el bloque del plan que más acerque 
 
 ## 12. Encargo siguiente (2026-10-20): la tanda 5, bloques del Spark
 
-El dueño respondió las 29 preguntas de `docs/dev/plan-tanda5.md` §5, todas con la opción (a), la recomendada: queda registrado en **D-033** (`docs/dev/decisiones.md`). Incluye tres aprobaciones explícitas de la regla 4: `com.unity.mobile.notifications` + `POST_NOTIFICATIONS` (Q-M5), `ci.yml` de s30 (Q-T5) y coverlet para `dotnet test` (Q-T7). El permiso `INTERNET` **no** está aprobado.
+El dueño respondió las 29 preguntas de `docs/dev/plan-tanda5.md` §5, todas con la opción (a), la recomendada: queda registrado en **D-033** (`docs/dev/decisiones.md`). Incluye tres aprobaciones explícitas de la regla 4: `com.unity.mobile.notifications` + `POST_NOTIFICATIONS` (Q-M5), `ci.yml` de s30 (Q-T5) y coverlet para `dotnet test` (Q-T7). El permiso `INTERNET` **no** estaba aprobado entonces; **lo aprobó D-036 (2026-10-20)** (corregido al integrar B12, Q-B12-12).
 
 **Reparto.** El Spark hace, en este orden y en ramas `spark/t5-<bloque>` desde `origin/integracion-fase1-fase2` (con B1a ya integrado): **B2 → B3 → B6 → B7 → B5 → B8** (B13, los borradores de publicación, pasa a un agente Codex aparte: `docs/dev/traspaso/codex-publicacion.md`), y **B4**, cuyo diseño (Bitácora «1 de 3», panel de la victoria y cola de takeovers) ya aprobó el dueño: está en el añadido de D-033 del 2026-10-20. B4 incluye el retoque de `CALENDAR` en `tools/econ_sim.py` con `--calendar-pick`, las Canastas de los días 7, 21 y 30 y la regeneración de `tools/out/econ_B.md` y `econ_variants.md` (comprobación de `CLAUDE.md`). El escritorio hace B1b, B9, B10, B11, B12 y B14.
 
@@ -662,3 +662,81 @@ El dueño respondió las 29 preguntas de `docs/dev/plan-tanda5.md` §5, todas co
 - **B6:** con Q-M5 aprobado, deja la lógica y `INotificationScheduler` con su implementación falsa, y prepara la implementación real con `com.unity.mobile.notifications` como parche aparte (manifiesto, versión propuesta y `POST_NOTIFICATIONS`): el integrador la aplica tras anotar la versión en D-033. No toques `Packages/manifest.json` en tu rama.
 - **B7:** el bus mínimo `AF.Events` (Q-T1, sin motor) va dentro de B7.
 - Por cada bloque: revisión (code-reviewer), arreglos, verificación completa de `CLAUDE.md` y entrada en `spark-estado.md` con «listo para integrar». Si un bloque deja algo sin decidir, apúntalo como pregunta con opciones y una recomendada, sin inventarlo.
+
+---
+
+## 13. Encargo siguiente (2026-10-21): B12, B11 y B9
+
+**B10 ya está hecho** en el escritorio (compuertas de release, stripping High, `ci.yml` y coverlet; integrado en `9eb593c`): no lo empieces. Tu lista de la sección 12 (B2, B3, B6, B7, B5, B8 y B4) está entregada; B8, B4 y B5 se están integrando ahora en el escritorio. Sigue, en este orden y en ramas `spark/t5-<bloque>` desde `origin/integracion-fase1-fase2` (haz pull antes: trae el backend de AWS, D-035 a D-038 y el GDD 1.19), con las mismas reglas de las secciones 1-3, 11 y 12:
+
+1. **B12 · Consentimiento y edad** (plan §4, 2,5 días), con implementaciones falsas: pantalla de edad neutral con bandas `<13` (bloqueado en la 1.0), `13-17` y `18+`; consentimiento por país (Q-T3 (a): SIM, luego región, si no el perfil más estricto); `profile.consent`; los flags hacia anuncios, analítica (B7: la recogida sigue apagada hasta el consentimiento) e IAP; compras de 13-17 con doble confirmación + autenticación de Google Play (Q-T4 (a)); cambio desde Ajustes. Los textos legales, [P] y `pendiente` del abogado. Choca con `AppFlow` y `SettingsScreen`: parches probados.
+2. **B11 · Tutorial, Sin canoas y contenido** (1,5 días): lo de la fila B11 del plan, con Q-N2 (a) (variante `minus_color` desde el 31 en `tools/level-generator`, regenerando lo que toque con sus `--check`) y Q-E4 (a) (texto de la tarjeta de Canoas del 31). Ojo con **D-038** (con `biz_feature_lives` apagado, desde el 31 todo como antes del 31): el escritorio lo está implementando en `LevelFlow`/`FailResolve`; si B11 toca Sin canoas o el embudo, parte de la integración que traiga D-038 y no lo deshagas.
+3. **B9 · Accesibilidad** (3 días): Reducir movimiento y Alto contraste al 35 % (Q-N4 (a)), escala de fuente del sistema, C9 (mantener pulsado), test del simulador de daltonismo y TalkBack completo (02 §12). Choca con `GameScreen`: parches probados.
+
+Por cada bloque: revisión (code-reviewer), arreglos, verificación completa de `CLAUDE.md` y entrada en `spark-estado.md` con «listo para integrar». Lo que no esté decidido, como pregunta con opciones y una recomendada.
+
+---
+
+## 14. Encargo siguiente (2026-10-22): Unity IAP 5.4.4 (Play Billing)
+
+B12, B11 y B9 están entregados (B12 y B11 integrados; B9 integrándose). El dueño aprobó (D-040): «Encarga al Spark integrar Unity IAP 5.4.4 (Play Billing) tras IBillingClient, con la tienda falsa en el editor; apruebo el paquete com.unity.purchasing 5.4.4.» Rama `spark/t5-iap` desde `origin/integracion-fase1-fase2` (haz pull: trae F3-3, F3-5 y F3-6 con Firebase, B12 y D-035 a D-040), con las reglas de las secciones 1-3, 11 y 12. Lee antes D-035 (todos sus añadidos de F3-3 y F3-5), D-040, `docs/dev/plan-backend-aws.md` §7, `infra/contracts/v1` (verifyPurchase y restoreLedger), 05 §4 (SKU `af_*`), 08 §7, §10.3 y §13.3, y `.claude/agents/sdk-integrator.md`.
+
+**Qué hacer:**
+1. `com.unity.purchasing` **5.4.4** exacta. No edites `Packages/manifest.json` en tu rama: entrégalo como parche probado (`docs/dev/traspaso/spark-enganches/IAP-manifest.diff`) junto con lo que regenere Unity, como hiciste con B6.
+2. `IBillingClient` real (`UNITY_ANDROID && !UNITY_EDITOR`) sobre Unity IAP 5.4.4: catálogo de 05 §4.1 con sus ids `af_*`; `setObfuscatedAccountId = UID` (F3-3); compras pendientes (`PENDING`), compras sin terminar al arrancar (`Resume`), confirmar sin consumir para el `deferred_ack` (Q-F3-3 3: si Unity IAP 5.4.4 no lo permite, para y anótalo como pregunta) y consumo solo tras acreditar (D-035). El editor y los tests siguen con `FakeBillingClient`; `VerifiedStoreService` no cambia de contrato.
+3. Respeta B12: compras de 13-17 con doble confirmación + autenticación de Google Play (Q-T4); con `<13`, sin compras.
+4. Precios locales: el Mercado muestra el precio que da la tienda (no el de 05 §4), con el de 05 como respaldo en el editor.
+5. **Permisos:** Play Billing añade `com.android.vending.BILLING`, **aprobado por el dueño** (D-040, 2026-10-22): entrégalo en la lista blanca de `ci/check-manifest.ps1` (con su autotest y la cita a D-040) como parte del parche. Si aparece cualquier otro permiso, para y pregúntalo.
+6. Data Safety (08 §13.3, fila Unity IAP / Play Billing) y 08 §7.
+7. Pruebas sin Play: EditMode y PlayMode con la tienda falsa; un modo de ensayo documentado para probar en el teléfono con licencias de prueba cuando exista la app en Play Console (D-034: aún no).
+
+Por cada paso: revisión (code-reviewer) centrada en no acreditar dos veces ni sin verificación, verificación completa de `CLAUDE.md` y entrada en `spark-estado.md` con «listo para integrar».
+
+## 15. Encargo siguiente (2026-10-22): plugin propio de Play Billing en lugar de Unity IAP (Q-IAP-1 (c))
+
+`spark/t5-iap` está integrado en `integracion-fase1-fase2`. El dueño decidió Q-IAP-1 (D-040, añadido del 2026-10-22): «Q-IAP-1: opción (c). Apruebo com.android.billingclient:billing directo y quitar Unity IAP y sus dependencias.» El motivo es que Unity IAP 5.4.4 envía cada compra a Unity sin consentimiento y sin borrado, y su licencia no permite anular el emisor.
+
+Rama `spark/t5-billing` desde `origin/integracion-fase1-fase2`; haz pull, porque trae tu IAP ya integrado. Aplican las reglas de las secciones 1-3, 11 y 12. Lee antes:
+- D-040 con todos sus añadidos;
+- `docs/dev/iap.md`, todo: sus reglas de §1.2 siguen valiendo;
+- 08 §7 #3, §10.1, §10.3 y §13.3;
+- 05 §4.1;
+- `.claude/agents/sdk-integrator.md`.
+
+**Qué hacer:**
+1. **El plugin, en `.androidlib` y en Java** (sin plugin de Kotlin en Gradle). Por ejemplo, `Assets/_Project/Plugins/Android/AfBilling.androidlib/`, sobre `com.android.billingclient:billing:9.0.0` exacta.
+   - Declara la dependencia con un `*Dependencies.xml` de EDM4U, como Firebase, para que el resolvedor la escriba en `mainTemplate.gradle`.
+   - Si la librería arrastra otra dependencia o algún permiso además de `com.android.vending.BILLING`, **para y pregúntalo**.
+   - Debe cubrir, como mínimo:
+     - `enablePendingPurchases(PendingPurchasesParams…enableOneTimeProducts())` y reconexión automática;
+     - `queryProductDetailsAsync`, `launchBillingFlow` con `setObfuscatedAccountId` = UID y `queryPurchasesAsync`;
+     - `consumeAsync` y `acknowledgePurchase`;
+     - los avisos de `PurchasesUpdatedListener`.
+   - **El plugin no habla con ningún host**, solo con Play.
+2. **El puerto en C#.** `NativePlayStorePort` (o el nombre que encaje) implementa el `IPlayStorePort` actual mediante `AndroidJavaObject`/`AndroidJavaProxy`, en un ensamblado propio que solo compila en `UNITY_ANDROID && !UNITY_EDITOR`.
+   - `PlayBillingClient`, `BillingReadyStoreService`, `VerifiedStoreService` y `ConsentStoreService` no cambian de contrato.
+   - Siguen valiendo todas las reglas de `iap.md` §1.2: un token una vez por sesión, consumo solo tras acreditar, `PENDING`, `Resume`, `Refresh` al volver a primer plano, `Dispose` en `OnDestroy`, precios en micros y moneda (nunca la cadena de Play), `CanSell`, edad decidida y nunca `<13`, solo con `HttpBackendClient`, y `UnavailablePlayStorePort` si el plugin falla.
+   - Los tests de `PlayBillingClient` con el puerto falso deben seguir pasando sin tocarlos, o explica cada cambio.
+3. **`deferred_ack` (Q-IAP-2 se reabre).** Con la librería directa, a las 72 h sin respuesta del servidor se **reconoce sin consumir** también el consumible (`acknowledgePurchase`), como pedía Q-F3-3 3. Si `purchaseTime` está disponible, el plazo cuenta desde ahí. Anótalo en `iap.md` y en el parche de 08 §10.3.
+4. **Quitar Unity IAP.** Saca `com.unity.purchasing`, `com.unity.services.core`, `com.unity.services.deployment` y `com.unity.services.deployment.api`, además de `Assets/Resources/BillingMode.json` (con su carpeta, si queda vacía), `AF.IAP.UnityIap` y `AF_UNITY_IAP`.
+   - No edites `Packages/manifest.json` en tu rama: entrégalo como parche probado (`docs/dev/traspaso/spark-enganches/BILL-manifest.diff`) con lo que regenere Unity (`packages-lock.json` y `mainTemplate.gradle`), como en IAP.
+5. **Compuertas.**
+   - `ci/check-manifest.ps1` sigue igual: BILLING en la lista blanca y `-RequireBilling` en release.
+   - Añade una comprobación, con su autotest, de que el AAB/APK **no** contiene `prd.insights.analytics.unity3d.com` ni clases `com.unity.purchasing`.
+   - Mide el tamaño del AAB de ensayo antes (60,23 MB) y después.
+6. **Documentos.**
+   - Reescribe `docs/dev/iap.md` para el plugin, con §4 y §5 al día.
+   - 08 §7 #3 y §13.3 van como parche `BILL-gdd.diff`. La fila pasa a «Google Play Billing», sin Unity.
+   - `CLAUDE.md`: los recuentos.
+7. **Pruebas.**
+   - EditMode y PlayMode con la tienda falsa.
+   - Tests del puerto con un `AndroidJavaProxy` simulado donde se pueda.
+   - Build `dev.apk` y ensayo, con el manifiesto fusionado medido.
+   - El modo de ensayo con licencias de prueba de `iap.md` §3 se adapta, aunque sigue sin ejecutarse hasta que exista la app en Play Console (D-034).
+
+Por cada paso:
+- revisión (code-reviewer) centrada en no acreditar dos veces ni sin verificación, y en que el plugin no envíe nada fuera de Play;
+- verificación completa de `CLAUDE.md`;
+- entrada en `spark-estado.md` con «listo para integrar».
+
+Preguntas nuevas, como Q-BILL-n con su recomendada aplicada.

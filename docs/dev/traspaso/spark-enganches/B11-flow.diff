@@ -1,0 +1,240 @@
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelCardInfo.cs b/Assets/_Project/Scripts/GameFlow/LevelCardInfo.cs
+index 417b44f8..afb336e7 100644
+--- a/Assets/_Project/Scripts/GameFlow/LevelCardInfo.cs
++++ b/Assets/_Project/Scripts/GameFlow/LevelCardInfo.cs
+@@ -47,6 +47,14 @@ public sealed class LevelCardInfo
+         /// </summary>
+         public const string StreakIntro = "win_streak";
+ 
++        /// <summary>
++        /// Estreno de la tarjeta de las Canoas (02 §13: «31 Canoas + Cuia de rescate (tarjeta de 1 pantalla antes del nivel)»; 04
++        /// §7.1, «Debut»; tarea B11): como <see cref="StreakIntro"/>, no es un <c>intro_mechanic</c> del paquete sino el ID del
++        /// sistema de las Canoas (<c>lives</c>, glosario §6.3, el de <c>biz_feature_lives</c>), con el que el flujo arma la tarjeta
++        /// al cargar el primer nivel con canoas (<see cref="ForCanoes"/>).
++        /// </summary>
++        public const string CanoesIntro = "lives";
++
+         private readonly int _mechanics;
+ 
+         /// <summary>
+@@ -242,6 +250,16 @@ public static LevelCardInfo ForStreak(int levelNumber)
+             return new LevelCardInfo(levelNumber, LevelDefinition.LabelNormal, 0, 1, StreakIntro, 0, false, false, false, false, false);
+         }
+ 
++        /// <summary>
++        /// Tarjeta de las Canoas del nivel <paramref name="levelNumber"/> (04 §7.1; D-033, Q-E4; tarea B11) [P]: un estreno sin
++        /// etiqueta con <see cref="CanoesIntro"/>, sin iconos ni premio, como <see cref="ForStreak"/>. Solo la pide el flujo para
++        /// un nivel sin tarjeta propia (si el nivel ya tiene tarjeta, esa gana).
++        /// </summary>
++        public static LevelCardInfo ForCanoes(int levelNumber)
++        {
++            return new LevelCardInfo(levelNumber, LevelDefinition.LabelNormal, 0, 1, CanoesIntro, 0, false, false, false, false, false);
++        }
++
+         /// <summary>
+         /// Cinta «×N» de <paramref name="tier"/>: premio de la etiqueta entre el normal, solo si es un múltiplo exacto (con los
+         /// defaults de 08 §9, 60/20 = 3 y 80/20 = 4); si no, 1.
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Canoes.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Canoes.cs
+new file mode 100644
+index 00000000..e52a0ca9
+--- /dev/null
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Canoes.cs
+@@ -0,0 +1,31 @@
++#nullable enable
++
++namespace AF.GameFlow
++{
++    /// <summary>
++    /// Tarjeta de las Canoas antes del nivel 31 (tarea B11; 02 §13: «31 Canoas + Cuia de rescate (tarjeta de 1 pantalla antes del
++    /// nivel)»; 04 §7.1, «Debut»: «Nivel 31, con 5/5 y tarjeta»), con el texto que decidió el dueño (D-033, Q-E4 (a): «Canoas: si te
++    /// rindes o sales del nivel, pierdes una. Vuelven solas cada 25 minutos.» [P]; el de 04 §7.1 quedó obsoleto con D-008). Es la
++    /// tarjeta previa de 1 toque de un estreno sin etiqueta, como la de la Crecida del 25 (<c>LevelFlow.Streak.cs</c>), con el ID del
++    /// sistema (<see cref="LevelCardInfo.CanoesIntro"/>, <c>lives</c>, glosario §6.3) en lugar de un <c>intro_mechanic</c> del
++    /// paquete (<see cref="LevelCardInfo.ForCanoes"/>, junto a <see cref="LevelCardInfo.ForStreak"/>).
++    /// <para>Sale en el primer nivel con canoas (<c>rescue_min_level</c>, 31: <c>Wallet.CanoesActive</c>), solo en la
++    /// campaña y solo si las canoas cuentan: con <c>biz_feature_lives</c> apagado (D-038) no hay canoas en ninguna parte y no hay
++    /// tarjeta. No sale al reintentar (intro corta) ni al reanudar, como las demás tarjetas; si el nivel ya tiene tarjeta (una
++    /// etiqueta o un estreno), esa gana.</para>
++    /// </summary>
++    public sealed partial class LevelFlow
++    {
++        // La tarjeta de las Canoas del nivel que se carga, o null (ver la clase). La pide TryShowLevelCard tras la del nivel y la
++        // de la Crecida (parche B11-flow).
++        private LevelCardInfo? CanoesCardFor(bool isShort)
++        {
++            if (isShort || IsDaily || _wallet == null || _levelNumber != RescueMinLevel || !_wallet.CanoesActive(_levelNumber))
++            {
++                return null;
++            }
++
++            return LevelCardInfo.ForCanoes(_levelNumber);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Canoes.cs.meta b/Assets/_Project/Scripts/GameFlow/LevelFlow.Canoes.cs.meta
+new file mode 100644
+index 00000000..7e4c3de8
+--- /dev/null
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Canoes.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 419186f48451ab94bb8129da1f5a7a7e
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Cards.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Cards.cs
+index 7088dc0b..5d2584c6 100644
+--- a/Assets/_Project/Scripts/GameFlow/LevelFlow.Cards.cs
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Cards.cs
+@@ -180,7 +180,7 @@ private bool TryShowLevelCard(int introMs, bool isShort, bool revealGifted, stri
+             }
+ 
+             EconomyConfig economy = _wallet?.Config ?? EconomyConfig.Defaults;
+-            LevelCardInfo? card = LevelCardInfo.For(_level, _levelNumber, economy, revealGifted) ?? StreakCardFor(isShort);
++            LevelCardInfo? card = LevelCardInfo.For(_level, _levelNumber, economy, revealGifted) ?? StreakCardFor(isShort) ?? CanoesCardFor(isShort);
+             if (card == null)
+             {
+                 return false;
+diff --git a/Assets/_Project/Scripts/Presentation/ProceduralArt.Cards.cs b/Assets/_Project/Scripts/Presentation/ProceduralArt.Cards.cs
+index c6864d48..7077680f 100644
+--- a/Assets/_Project/Scripts/Presentation/ProceduralArt.Cards.cs
++++ b/Assets/_Project/Scripts/Presentation/ProceduralArt.Cards.cs
+@@ -154,6 +154,8 @@ public Sprite CardMedallionFor(string? introMechanic)
+                     return BuildHeroPixels(name, DrawBroteTwoLeavesGlyph); // ProceduralArt.BroteDosHojas.cs (VA1b)
+                 case StreakHeroIconKey:
+                     return BuildHeroPixels(name, DrawStreakGlyph); // la tarjeta de la Crecida del 25 (ProceduralArt.Streak.cs; B1b)
++                case CanoesHeroIconKey:
++                    return IconCanoe; // la tarjeta de las Canoas del 31: la canoa de la cabecera (glosario §2.2; B11)
+                 default:
+                     if (!MechanicTypes.TryParse(key, out MechanicType type) || type == MechanicType.None)
+                     {
+diff --git a/Assets/_Project/Scripts/UI/UiText.Cards.cs b/Assets/_Project/Scripts/UI/UiText.Cards.cs
+index 876b6e23..7aafb109 100644
+--- a/Assets/_Project/Scripts/UI/UiText.Cards.cs
++++ b/Assets/_Project/Scripts/UI/UiText.Cards.cs
+@@ -140,6 +140,7 @@ public static partial class UiText
+                 case "pirana": return TutorialPirana;
+                 case TinajaTutorial.IntroMechanic: return TutorialTinaja; // la línea 2 va en su renglón (LevelCardView; TJ4)
+                 case LevelCardInfo.StreakIntro: return TutorialStreak; // la tarjeta de la Crecida del 25 (04 §4; B1b)
++                case LevelCardInfo.CanoesIntro: return TutorialTipsText.Canoes; // la tarjeta de las Canoas del 31 (04 §7.1; D-033, Q-E4; B11)
+                 default: return null;
+             }
+         }
+diff --git a/Assets/_Project/Tests/EditMode/CanoesCardFlowTests.cs b/Assets/_Project/Tests/EditMode/CanoesCardFlowTests.cs
+new file mode 100644
+index 00000000..6c9af4b1
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/CanoesCardFlowTests.cs
+@@ -0,0 +1,105 @@
++#nullable enable
++using AF.Economy;
++using AF.GameFlow;
++using AF.Levels;
++using NUnit.Framework;
++
++namespace AF.Tests.EditMode
++{
++    /// <summary>
++    /// La tarjeta de las Canoas del 31 en el flujo (tarea B11, parche B11-flow; 02 §13: «31 Canoas + Cuia de rescate (tarjeta de
++    /// 1 pantalla antes del nivel)»; 04 §7.1, «Debut»; D-033, Q-E4): LOADING → LEVEL_CARD con <c>lives</c> en el primer nivel con
++    /// canoas, solo si las canoas cuentan (D-038: con <c>biz_feature_lives</c> apagado, no) y solo al entrar.
++    /// </summary>
++    public sealed class CanoesCardFlowTests
++    {
++        [Test]
++        public void ForCanoes_IsAnUnlabeledDebut_WithTheLivesId()
++        {
++            LevelCardInfo card = LevelCardInfo.ForCanoes(31);
++            Assert.That(LevelCardInfo.CanoesIntro, Is.EqualTo("lives"), "glosario §6.3: ID del sistema de las Canoas");
++            Assert.That(card.Level, Is.EqualTo(31));
++            Assert.That(card.IntroMechanic, Is.EqualTo(LevelCardInfo.CanoesIntro));
++            Assert.That(card.Kind, Is.EqualTo(LevelCardKind.Debut), "sin etiqueta, como la de la Crecida del 25");
++            Assert.That(card.RewardSeeds, Is.EqualTo(0));
++            Assert.That(card.MechanicMask, Is.EqualTo(0));
++        }
++
++        [Test]
++        public void Level31_OpensTheCanoesCard()
++        {
++            var fx = new FunnelFixture(offset: 30, maxLevel: 30); // el 31 juega el tablero del 1
++            fx.Flow.LevelCardsEnabled = true;
++            fx.Flow.Load(31);
++            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
++            LevelCardInfo card = fx.Flow.LevelCard!;
++            Assert.That(card.IntroMechanic, Is.EqualTo(LevelCardInfo.CanoesIntro));
++            Assert.That(card.Kind, Is.EqualTo(LevelCardKind.Debut));
++            Assert.That(fx.Flow.DismissLevelCard(), Is.True, "1 toque");
++            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
++        }
++
++        [Test]
++        public void WithoutLives_NoCard_D038()
++        {
++            var fx = new FunnelFixture(offset: 30, maxLevel: 30);
++            fx.Wallet.LivesEnabled = false; // biz_feature_lives = false (08 §9; D-038): no hay canoas en ninguna parte
++            fx.Flow.LevelCardsEnabled = true;
++            fx.Flow.Load(31);
++            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
++            Assert.That(fx.Flow.LevelCard, Is.Null);
++        }
++
++        [Test]
++        public void OtherLevels_NoCard([Values(30, 32)] int level)
++        {
++            var fx = new FunnelFixture(offset: 29, maxLevel: level - 1); // el 30 juega el tablero del 1, el 32 el del 3
++            fx.Flow.LevelCardsEnabled = true;
++            fx.Flow.Load(level);
++            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.Intro), "solo en el primer nivel con canoas (rescue_min_level)");
++        }
++
++        [Test]
++        public void FollowsRescueMinLevel()
++        {
++            var fx = new FunnelFixture(offset: 34, maxLevel: 34);
++            fx.Wallet.Config.RescueMinLevel = 35;
++            fx.Flow.LevelCardsEnabled = true;
++            fx.Flow.Load(35);
++            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "rescue_min_level = 35: el primer nivel con canoas");
++            Assert.That(fx.Flow.LevelCard!.IntroMechanic, Is.EqualTo(LevelCardInfo.CanoesIntro));
++        }
++
++        [Test]
++        public void Retry_NoCard()
++        {
++            var fx = new FunnelFixture(offset: 30, maxLevel: 30);
++            fx.Flow.LevelCardsEnabled = true;
++            fx.Flow.Load(31);
++            fx.Flow.DismissLevelCard();
++            fx.TickIntro();
++            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
++            Assert.That(fx.Flow.PressRestart(), Is.True);
++            Assert.That(fx.Flow.Phase, Is.Not.EqualTo(FlowPhase.LevelCard), "no en el reintento, como las demás tarjetas");
++        }
++
++        [Test]
++        public void ALabeledLevelKeepsItsOwnCard()
++        {
++            // Si el primer nivel con canoas trae su propia tarjeta (una etiqueta o un estreno), esa gana. En la campaña el 31 es
++            // normal y sin estreno; aquí, con rescue_min_level en el 40 (el primer Difícil, 03 §11).
++            var fx = new FunnelFixture(pack: null, maxLevel: 39);
++            LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
++            Assert.That(catalog.Find(40)!.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelHard), "condición del test");
++            EconomyConfig config = fx.Wallet.Config;
++            config.RescueMinLevel = 40;
++            var flow = new LevelFlow(catalog, fx.Progress, fx.Listener, GameConfig.TapSwitchSelection, AF.Core.Rules.PourModes.Default, fx.Wallet)
++            {
++                LevelCardsEnabled = true,
++            };
++            flow.Load(40);
++            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
++            Assert.That(flow.LevelCard!.Kind, Is.EqualTo(LevelCardKind.Difficulty), "la del Difícil");
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/EditMode/CanoesCardFlowTests.cs.meta b/Assets/_Project/Tests/EditMode/CanoesCardFlowTests.cs.meta
+new file mode 100644
+index 00000000..7e834ebe
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/CanoesCardFlowTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: fb1919cc636218b448029a37b2ab53b9
+\ No newline at end of file

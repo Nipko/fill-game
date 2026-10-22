@@ -72,6 +72,7 @@ namespace AF.UI
 
         // Escala del extra af_font_scale, leída una vez (NaN: aún no se leyó).
         private static float s_intentFontScale = float.NaN;
+        private static ISystemScale? s_systemScale;
 
         /// <summary>
         /// Extra de intent (string) de los builds de desarrollo (D-018; tarea L2b): el idioma de la UI, primero en la resolución
@@ -82,11 +83,12 @@ namespace AF.UI
 
         /// <summary>
         /// Extra de intent (string) de los builds de desarrollo (tarea KS1; D-020, pregunta 31 b): apaga los kill switches
-        /// <c>mech_enabled.&lt;id&gt;</c> de 08 §9 de la lista separada por comas (<c>--es af_mech_off hoja,matapi</c>). En el
-        /// teléfono solo prueba el respaldo sin override: <c>level_overrides</c> sale de la fuente local
-        /// (<see cref="LevelOverrides.LocalSource"/>, <c>{}</c>), así que <see cref="LevelCatalog"/> sirve el publicado y escribe el
-        /// aviso [P]. La sustitución con un override la prueban los tests EditMode (<see cref="LevelOverridesJsonOverride"/>). Un id
-        /// desconocido se ignora y se avisa en el log. Nunca se lee en un build de release.
+        /// <c>mech_enabled.&lt;id&gt;</c> de 08 §9 de la lista separada por comas (<c>--es af_mech_off hoja,matapi</c>), además de
+        /// los que apague Remote Config. <c>level_overrides</c> sale de Remote Config (o de la fuente local,
+        /// <see cref="LevelOverrides.LocalSource"/>, <c>{}</c>): sin entradas, <see cref="LevelCatalog"/> sirve el publicado y
+        /// escribe el aviso [P]; con una entrada que apunte a un tablero de la reserva del 20 % (D-033, Q-B11-7 a), lo sustituye.
+        /// Los tests lo fuerzan con <see cref="LevelOverridesJsonOverride"/>. Un id desconocido se ignora y se avisa en el log.
+        /// Nunca se lee en un build de release.
         /// </summary>
         public const string IntentExtraMechOff = "af_mech_off";
 
@@ -139,11 +141,17 @@ namespace AF.UI
         public static string? MechOffOverride { get; set; }
 
         /// <summary>
-        /// <c>level_overrides</c> (JSON <c>{slot: level_id}</c>, 08 §9) forzado por un test en lugar de la fuente local
-        /// (<see cref="LevelOverrides.LocalSource"/>, vacía). Null = la fuente local. Solo tests: ningún extra de intent lo rellena,
-        /// así que en un build de desarrollo <c>af_mech_off</c> no puede ejercitar la sustitución (solo el respaldo con aviso).
+        /// <c>level_overrides</c> (JSON <c>{slot: level_id}</c>, 08 §9) forzado por un test en lugar del de Remote Config (o, sin
+        /// él, la fuente local <see cref="LevelOverrides.LocalSource"/>, vacía). Null = el de Remote Config. Solo tests: ningún
+        /// extra de intent lo rellena.
         /// </summary>
         public static string? LevelOverridesJsonOverride { get; set; }
+
+        /// <summary>
+        /// Paquetes de reserva (JSON, <c>kind</c> = <c>reserve</c>; D-033, Q-B11-7 a) forzados por un test en lugar de los de la
+        /// escena; null = los de la escena. Solo tests.
+        /// </summary>
+        public static string[]? ReservePackJsonOverride { get; set; }
 
         /// <summary>Nivel de arranque forzado por un test (0 = ninguno).</summary>
         public static int StartLevelOverride { get; set; }
@@ -236,6 +244,15 @@ namespace AF.UI
         public static float? FontScaleOverride { get; set; }
 
         /// <summary>
+        /// Escalas del sistema de un test (bloque B9; <see cref="ISystemScale"/>: la fuente y las animaciones del teléfono); null =
+        /// las de la plataforma (<see cref="AndroidSystemScale.ForPlatform"/>: en el Editor, 100 % y animaciones normales).
+        /// </summary>
+        public static ISystemScale? SystemScaleOverride { get; set; }
+
+        /// <summary>Las escalas del sistema en uso: las del test o las de la plataforma (se crean una vez).</summary>
+        public static ISystemScale SystemScale => SystemScaleOverride ?? (s_systemScale ??= AndroidSystemScale.ForPlatform());
+
+        /// <summary>
         /// Idioma de desarrollo forzado por un test (el de <c>af_lang</c>: «en-XA» para la pseudolocalización); null = ninguno.
         /// Solo cuenta en desarrollo (<see cref="Debug.isDebugBuild"/>, también en el Editor).
         /// </summary>
@@ -288,12 +305,15 @@ namespace AF.UI
             BannerArtFaultOverride = null;
             BannerArtTimeoutMsOverride = null;
             FontScaleOverride = null;
+            SystemScaleOverride = null;
+            s_intentFontScale = float.NaN; // B9: la escala se vuelve a resolver con las del sistema de verdad
             LanguageOverride = null;
             LocTablesOverride = null;
             DeviceLocaleOverride = null;
             DevWalletOverride = null;
             MechOffOverride = null;
             LevelOverridesJsonOverride = null;
+            ReservePackJsonOverride = null;
             BenchMorphoOverride = null;
             DevMaxLevelOverride = null;
             DevRejectOverride = null;
@@ -336,8 +356,17 @@ namespace AF.UI
         /// </summary>
         public static MechanicSwitches ResolveMechSwitches()
         {
+            return ResolveMechSwitches(GameConfig.MechEnabled);
+        }
+
+        /// <summary>
+        /// Como <see cref="ResolveMechSwitches()"/>, sobre <paramref name="baseline"/>: los defaults compilados ya combinados con
+        /// los <c>mech_enabled.*</c> de Remote Config (<c>RcLevelBinder.MechEnabled</c>; D-033, Q-B11-7 a).
+        /// </summary>
+        public static MechanicSwitches ResolveMechSwitches(MechanicSwitches baseline)
+        {
             string? list = MechOffOverride ?? ReadIntentString(IntentExtraMechOff);
-            MechanicSwitches switches = GameConfig.MechEnabled.WithOffList(list, out string? unknown);
+            MechanicSwitches switches = baseline.WithOffList(list, out string? unknown);
             if (unknown != null)
             {
                 Debug.LogWarning("[AF.LaunchOptions] " + IntentExtraMechOff + ": mecánicas desconocidas (\"" + unknown + "\"); se ignoran.");
@@ -353,11 +382,12 @@ namespace AF.UI
 
         /// <summary>
         /// Texto de <c>level_overrides</c> de la partida (tarea KS1): el del test (<see cref="LevelOverridesJsonOverride"/>) o, si
-        /// no, la fuente local (<see cref="LevelOverrides.LocalSource"/>, <c>{}</c>) hasta que exista <c>AF.RemoteConfig</c>.
+        /// no, el de Remote Config (<paramref name="remote"/>, <c>RcLevelBinder.LevelOverridesJson</c>; D-033, Q-B11-7 a) o, sin
+        /// él, la fuente local (<see cref="LevelOverrides.LocalSource"/>, <c>{}</c>).
         /// </summary>
-        public static string ResolveLevelOverridesJson()
+        public static string ResolveLevelOverridesJson(string? remote = null)
         {
-            return LevelOverridesJsonOverride ?? LevelOverrides.LocalSource;
+            return LevelOverridesJsonOverride ?? remote ?? LevelOverrides.LocalSource;
         }
 
         /// <summary>
@@ -390,7 +420,9 @@ namespace AF.UI
             if (float.IsNaN(s_intentFontScale))
             {
                 int percent = ReadIntentInt(IntentExtraFontScale, 0);
-                s_intentFontScale = percent > 0 ? ClampTextScale(percent / 100f) : 1f;
+                // Sin el extra de desarrollo, la escala de fuente del sistema (02 §12: hasta el 130 %; B9), leída una vez: un cambio
+                // con el juego abierto se ve al volver a abrirlo [P] (Q-B9-1).
+                s_intentFontScale = percent > 0 ? ClampTextScale(percent / 100f) : ClampTextScale(SystemScale.FontScale);
                 if (percent > 0)
                 {
                     Debug.LogWarning("[AF.LaunchOptions] " + IntentExtraFontScale + " = " + percent + ": escala de texto " + s_intentFontScale.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ".");
@@ -406,12 +438,7 @@ namespace AF.UI
         /// </summary>
         public static float ClampTextScale(float scale)
         {
-            if (float.IsNaN(scale) || float.IsInfinity(scale))
-            {
-                return 1f;
-            }
-
-            return Mathf.Clamp(scale, 1f, UiBuilder.MaxTextScale);
+            return A11yRules.TextScaleFor(scale); // B9: una sola regla del tope de 02 §12, la de la fuente del sistema
         }
 
         /// <summary>

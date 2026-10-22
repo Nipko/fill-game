@@ -502,6 +502,11 @@ internal static class CurationReport
             review.Add(F($"risk_adjacent: {c.Tints.RiskAdjacent} contacto(s) de tintes de un par de riesgo en una cuia (03 §4.5)"));
         }
 
+        if (c.Tints.CvdAdjacent > 0)
+        {
+            review.Add(F($"cvd_adjacent: {c.Tints.CvdAdjacent} contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3)"));
+        }
+
         if (l.Slot.MurkyDropped)
         {
             review.Add("publicado sin Aguas turbias (T1): ningún candidato turbio entró en la ventana");
@@ -579,6 +584,11 @@ internal static class CurationReport
         if (c.Tints.RiskAdjacent > 0)
         {
             flags.Add(string.Create(CultureInfo.InvariantCulture, $"risk_adjacent: {c.Tints.RiskAdjacent} contacto(s)"));
+        }
+
+        if (c.Tints.CvdAdjacent > 0)
+        {
+            flags.Add(string.Create(CultureInfo.InvariantCulture, $"cvd_adjacent: {c.Tints.CvdAdjacent} contacto(s)"));
         }
 
         flags.AddRange(l.Notes);

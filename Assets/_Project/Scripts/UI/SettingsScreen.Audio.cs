@@ -91,9 +91,9 @@ namespace AF.UI
         private void BuildAudioRows()
         {
             AudioSlot = UiBuilder.Rect("AudioSlot", _content);
-            _audioRows[0] = new OptionRow(AudioSlot, _art, "Sound", SoundId, UiText.Sound, () => ToggleAudio(0));
-            _audioRows[1] = new OptionRow(AudioSlot, _art, "Music", MusicId, UiText.Music, () => ToggleAudio(1));
-            _audioRows[2] = new OptionRow(AudioSlot, _art, "Haptics", HapticsId, UiText.Haptics, () => ToggleAudio(2));
+            _audioRows[0] = Option(AudioSlot, _art, "Sound", SoundId, UiText.Sound, () => ToggleAudio(0));
+            _audioRows[1] = Option(AudioSlot, _art, "Music", MusicId, UiText.Music, () => ToggleAudio(1));
+            _audioRows[2] = Option(AudioSlot, _art, "Haptics", HapticsId, UiText.Haptics, () => ToggleAudio(2));
             MarkAudio(true, true, true);
         }
 

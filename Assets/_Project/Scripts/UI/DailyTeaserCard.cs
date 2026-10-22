@@ -23,7 +23,8 @@ namespace AF.UI
     /// <item><b>Momento y sitio</b> [P]: entra <see cref="DelayMs"/> después de verse la victoria (el panel ya subió y la Cosecha
     /// terminó de contar: 250 + 400 ms de GameScreen, más 250 de aire) y se centra sobre las cuias, en la franja entre la cima de las cuias
     /// (ya desplazadas por la victoria) y la cinta del panel; nunca tapa el panel (Cosecha, Siguiente, Inicio, la ranura del
-    /// Dato) ni la cabecera, y deja libre la caja de TiTino de arriba si cabe. Va dentro de la capa de la victoria: si la
+    /// Dato) ni la cabecera, y nunca queda debajo de TiTino: va bajo su gesto si cabe y, si no, TiTino cede la franja
+    /// (<c>GameScreen.TeaserTopClearOfSloth</c>; observación 2 de la hoja del 2026-10-22). Va dentro de la capa de la victoria: si la
     /// victoria se cierra antes (Siguiente o Inicio), se va con ella.</item>
     /// <item><b>Ningún aviso encima de la victoria</b> (D-011, punto 2) habla de la cola de avisos del tablero; esto no entra en
     /// esa cola: es la presentación que el GDD pone en esta victoria.</item>
@@ -124,6 +125,19 @@ namespace AF.UI
             _delayLeftMs = DelayMs;
             Place(minTop);
             return true;
+        }
+
+        /// <summary>
+        /// Alto que tendrá la placa con su texto en un lienzo de <paramref name="canvasW"/> dp (para decidir su franja antes de
+        /// <see cref="Show"/>; deja la placa oculta). Mide el texto: solo al abrirse la victoria.
+        /// </summary>
+        public float HeightDp(float canvasW)
+        {
+            _toast.Hide();
+            _toast.Show(TextFor(Config), VisibleMs);
+            float h = _toast.PreferredHeightDp(canvasW);
+            _toast.Hide();
+            return h;
         }
 
         /// <summary>Se va ya (también si aún esperaba).</summary>

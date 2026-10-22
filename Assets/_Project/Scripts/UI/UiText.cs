@@ -150,6 +150,12 @@ namespace AF.UI
         /// <summary><c>stuck_balsa_499</c>, segunda parte: el contenido de la Balsa.</summary>
         public static string StuckBalsaContent => Loc.T(Keys.StuckBalsaContent);
 
+        /// <summary>
+        /// <c>stuck_balsa_499_content_no_canoes</c> [P]: el contenido de la Balsa con <c>biz_feature_lives</c> apagado, sin las
+        /// Canoas infinitas (D-038, añadido del 2026-10-21).
+        /// </summary>
+        public static string StuckBalsaContentNoCanoes => Loc.T(Keys.StuckBalsaContentNoCanoes);
+
         /// <summary><c>stuck_canoe_lost</c> («Travesía perdida: −1 canoa», con U+2013 por el atlas).</summary>
         public static string StuckCanoeLost => Loc.T(Keys.StuckCanoeLost);
 
@@ -736,6 +742,9 @@ namespace AF.UI
 
             /// <summary><c>stuck_balsa_499_content</c> [P]: segunda parte de <c>stuck_balsa_499</c>.</summary>
             public const string StuckBalsaContent = "stuck_balsa_499_content";
+
+            /// <summary><c>stuck_balsa_499_content_no_canoes</c> [P]: la segunda parte con las canoas apagadas (D-038).</summary>
+            public const string StuckBalsaContentNoCanoes = "stuck_balsa_499_content_no_canoes";
 
             /// <summary><c>stuck_canoe_lost</c>.</summary>
             public const string StuckCanoeLost = "stuck_canoe_lost";

@@ -47,6 +47,14 @@ namespace AF.GameFlow
         /// </summary>
         public const string StreakIntro = "win_streak";
 
+        /// <summary>
+        /// Estreno de la tarjeta de las Canoas (02 §13: «31 Canoas + Cuia de rescate (tarjeta de 1 pantalla antes del nivel)»; 04
+        /// §7.1, «Debut»; tarea B11): como <see cref="StreakIntro"/>, no es un <c>intro_mechanic</c> del paquete sino el ID del
+        /// sistema de las Canoas (<c>lives</c>, glosario §6.3, el de <c>biz_feature_lives</c>), con el que el flujo arma la tarjeta
+        /// al cargar el primer nivel con canoas (<see cref="ForCanoes"/>).
+        /// </summary>
+        public const string CanoesIntro = "lives";
+
         private readonly int _mechanics;
 
         /// <summary>
@@ -240,6 +248,16 @@ namespace AF.GameFlow
         public static LevelCardInfo ForStreak(int levelNumber)
         {
             return new LevelCardInfo(levelNumber, LevelDefinition.LabelNormal, 0, 1, StreakIntro, 0, false, false, false, false, false);
+        }
+
+        /// <summary>
+        /// Tarjeta de las Canoas del nivel <paramref name="levelNumber"/> (04 §7.1; D-033, Q-E4; tarea B11) [P]: un estreno sin
+        /// etiqueta con <see cref="CanoesIntro"/>, sin iconos ni premio, como <see cref="ForStreak"/>. Solo la pide el flujo para
+        /// un nivel sin tarjeta propia (si el nivel ya tiene tarjeta, esa gana).
+        /// </summary>
+        public static LevelCardInfo ForCanoes(int levelNumber)
+        {
+            return new LevelCardInfo(levelNumber, LevelDefinition.LabelNormal, 0, 1, CanoesIntro, 0, false, false, false, false, false);
         }
 
         /// <summary>

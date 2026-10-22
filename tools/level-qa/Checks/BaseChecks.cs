@@ -25,6 +25,7 @@ internal static class BaseChecks
         ("QA-TINT-DEBUT", "cada tinte con debut anterior o igual al nivel (03 sec. 17 #4)"),
         ("QA-KMAX", "K <= k_max y >= k_min de la cabecera (03 sec. 17 #4)"),
         ("QA-RISK", "risk_pairs recalculado igual al publicado y <= max_risk_pairs (03 sec. 4.5)"),
+        ("QA-CVD-ADJ", "ningun par del simulador de daltonismo (cvd_pairs: 7-10, 5-14) junto en una cuia del tablero base; aviso en las variantes de relief y si ninguna de las 50 permutaciones del generador lo evita midiendo igual (con la reproduccion) (Q-B9-13 bis; 07 sec. 3)"),
         ("QA-PALETTE", "palette = tintes presentes en cuias (08 sec. 4.1)"),
         ("QA-BOT", "bot_fail recalculado con la semilla del nivel identico al publicado (03 sec. 6)"),
         ("QA-LABEL", "etiqueta coherente: >= 0,75 hard y >= 0,90 very_hard, desde el 40 y el 60 (03 sec. 7, 11)"),
@@ -171,6 +172,25 @@ internal static class BaseChecks
         if (risk > max)
         {
             yield return Fail("QA-RISK", string.Create(CultureInfo.InvariantCulture, $"{risk} pares de riesgo (como mucho {max})"));
+        }
+
+        // Pares del simulador de daltonismo (Q-B9-13 bis; 07 §3 y glosario §9): no cuentan en risk_pairs; ninguno junto en una
+        // cuia del tablero base (fallo; GateChecks.CvdUnavoidable lo baja a aviso si la reproducción demuestra que ninguna de
+        // las 50 permutaciones del generador lo evita) y aviso en las variantes de relief.
+        int cvd = TintAssigner.Contacts(spec.CvdPairs, b.Cuias, null);
+        if (cvd > 0)
+        {
+            yield return Fail("QA-CVD-ADJ", string.Create(CultureInfo.InvariantCulture, $"{cvd} contacto(s) de un par del simulador de daltonismo en una cuia del tablero base"));
+        }
+
+        foreach (QaRelief r in lv.Relief)
+        {
+            int rc = TintAssigner.Contacts(spec.CvdPairs, r.Board.Cuias, null);
+            if (rc > 0)
+            {
+                yield return new QaIssue("QA-CVD-ADJ", pack, n, string.Create(CultureInfo.InvariantCulture,
+                    $"relief {r.Type}: {rc} contacto(s) de un par del simulador de daltonismo en una cuia"), Warning: true);
+            }
         }
 
         // Bot y etiqueta (03 §6-§7).

@@ -184,9 +184,20 @@ internal sealed class LevelPlan
 
     public IReadOnlyList<CapacityInfo> Capacities => Cell.Capacities;
 
-    public string SeedText => string.Create(CultureInfo.InvariantCulture, $"amazonfill:v1:m{World.World:00}:v1:n{Level:0000}");
+    /// <summary>
+    /// Número del tablero de reserva del slot (1-9; D-033, añadido «la reserva del 20 %», Q-B11-7 a; pack_schema 4) o 0 en un
+    /// nivel de campaña. Cambia la semilla (sufijo <c>:r{k}</c>) y el id (<c>_r{k}</c>); el id del slot sigue en <see cref="CampaignId"/>.
+    /// </summary>
+    public int Reserve { get; init; }
 
-    public string Id => string.Create(CultureInfo.InvariantCulture, $"m{World.World:00}_v1_n{Level:0000}");
+    public string SeedText => Reserve == 0
+        ? string.Create(CultureInfo.InvariantCulture, $"amazonfill:v1:m{World.World:00}:v1:n{Level:0000}")
+        : string.Create(CultureInfo.InvariantCulture, $"amazonfill:v1:m{World.World:00}:v1:n{Level:0000}:r{Reserve}");
+
+    public string Id => Reserve == 0 ? CampaignId : string.Create(CultureInfo.InvariantCulture, $"{CampaignId}_r{Reserve}");
+
+    /// <summary>Id de campaña del slot (<c>m{mm}_v1_n{nnnn}</c>): el <c>replaces</c> de un tablero de reserva.</summary>
+    public string CampaignId => string.Create(CultureInfo.InvariantCulture, $"m{World.World:00}_v1_n{Level:0000}");
 
     /// <summary>Banda del JSON (03 §12; el remanso es comfort [P]: el esquema no tiene otro valor).</summary>
     public string Band => Role switch
@@ -244,6 +255,24 @@ internal sealed class CampaignSpec
     public required int LastLevel { get; init; }
     public required IReadOnlyList<TintInfo> Tints { get; init; }
     public required IReadOnlyList<(int A, int B)> RiskPairs { get; init; }
+
+    /// <summary>
+    /// Pares del simulador de daltonismo (clave opcional <c>cvd_pairs</c>; Q-B9-13 bis, D-033 añadido de B9, punto 10; 07 §3 y
+    /// glosario §9): 7-10 (protanopía) y 5-14 (deuteranopía). No cuentan en <c>risk_pairs</c> ni en <c>max_pares_riesgo</c>; el
+    /// generador solo evita que queden juntos en una cuia (TintAssigner) y level-qa lo comprueba (QA-CVD-ADJ).
+    /// </summary>
+    public IReadOnlyList<(int A, int B)> CvdPairs { get; private set; } = [];
+
+    /// <summary>
+    /// La misma especificación sin pares del simulador de daltonismo: la generación de antes de Q-B9-13 bis, con la que
+    /// --self-test cvd comprueba que solo cambian los tintes.
+    /// </summary>
+    public CampaignSpec WithoutCvdPairs()
+    {
+        var copy = (CampaignSpec)MemberwiseClone();
+        copy.CvdPairs = [];
+        return copy;
+    }
     public required IReadOnlyList<(int First, int Last, int Max)> MaxRiskPairsRows { get; init; }
     public required IReadOnlyList<WorldInfo> Worlds { get; init; }
     public required IReadOnlyList<RangeInfo> Ranges { get; init; }
@@ -762,6 +791,9 @@ internal sealed class CampaignSpec
         var tints = root["tints"]!.AsArray().Select(t => new TintInfo(
             Str(t!, "id"), Int(t!, "engine"), Str(t!, "name_es"), Int(t!, "debut"))).ToList();
         var riskPairs = root["risk_pairs"]!.AsArray().Select(p => (p![0]!.GetValue<int>(), p[1]!.GetValue<int>())).ToList();
+        var cvdPairs = root["cvd_pairs"] is JsonArray cvd
+            ? cvd.Select(p => (p![0]!.GetValue<int>(), p[1]!.GetValue<int>())).ToList()
+            : [];
         // «libre» (03 §11, desde el 201): sin tope propio; como mucho los pares de riesgo que existen (el esquema del pack admite 0-10).
         var maxRisk = root["max_risk_pairs"]!.AsArray().Select(r => (r!["levels"]![0]!.GetValue<int>(), r["levels"]![1]!.GetValue<int>(),
             MaxRisk(r, riskPairs.Count))).ToList();
@@ -873,6 +905,7 @@ internal sealed class CampaignSpec
             LastLevel = Int(root, "last_level"),
             Tints = tints,
             RiskPairs = riskPairs,
+            CvdPairs = cvdPairs,
             MaxRiskPairsRows = maxRisk,
             Worlds = worlds,
             Ranges = ranges,

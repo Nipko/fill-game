@@ -22,7 +22,8 @@ namespace AF.UI
     /// <item><description>rama D (bloque B3): «Salto del Boto» con su precio (300) y «Rosa te lleva río arriba, al siguiente
     /// nivel», tras el rescate y las ofertas (04 §6.2), o en gris con «Te faltan {n} semillas»; un toque abre la confirmación
     /// (<see cref="ISkipActions"/>, en <c>GameBootstrap.Skip.cs</c>);</description></item>
-    /// <item><description>pie: «Volver a la orilla (gratis)» como botón en 1-30 y el enlace «Rendirse» [P] desde el 31.</description></item>
+    /// <item><description>pie: «Volver a la orilla (gratis)» como botón en 1-30 (y desde el 31 con <c>biz_feature_lives</c>
+    /// apagado, D-038) y el enlace «Rendirse» [P] desde el 31.</description></item>
     /// </list>
     /// Se rearma con <see cref="Show"/> cada vez que cambia el contexto (p. ej. tras comprar un Puñado: mismo precio, saldo
     /// nuevo). El alto depende de las opciones (<see cref="Height"/>) y de la escala de texto (02 §12: las líneas y los CTA
@@ -144,6 +145,7 @@ namespace AF.UI
         private readonly ReliefParts _balsa;
         private readonly TextMeshProUGUI _balsaLabel;
         private readonly TextMeshProUGUI _balsaNote;
+        private readonly TextMeshProUGUI _purchaseNote;
         private readonly TextMeshProUGUI _shieldLine;
         private readonly ReliefParts _skip;
         private readonly TextMeshProUGUI _skipLabel;
@@ -187,6 +189,9 @@ namespace AF.UI
             _balsa = ModalKit.Cta("BalsaButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 14f, () => actions.PressBalsa(), out _balsaLabel);
             _balsaLabel.textWrappingMode = TextWrappingModes.Normal;
             _balsaNote = ModalKit.Line("BalsaNote", _panel, UiText.StuckBalsaContent, 12f, Palette.FamilyWood.Base);
+            // F3-5: «Pendiente de confirmar» o «No se pudo confirmar la compra» del Puñado o de la Balsa (tienda verificada).
+            _purchaseNote = ModalKit.Line("PurchaseNote", _panel, string.Empty, 13f, Palette.FamilyWood.Base);
+            _purchaseNote.gameObject.SetActive(false);
 
             // Línea de la Hoja escudo sobre el pie (04 §6.5 y §6.6, wireframes A y D; tarea B1b): hasta dos líneas, sin toques.
             _shieldLine = ModalKit.Line("ShieldLine", _panel, string.Empty, 14f, Palette.FamilyWood.Base);
@@ -254,6 +259,12 @@ namespace AF.UI
         /// <summary>Línea «Todo para seguir: semillas, una cuia y canoas infinitas» bajo la Balsa (tests; tarea FX5).</summary>
         internal TextMeshProUGUI BalsaNote => _balsaNote;
 
+        /// <summary>
+        /// La nota de compra bajo Puñado y Balsa («Pendiente de confirmar» o «No se pudo confirmar la compra»; F3-5), o null si no se
+        /// ve.
+        /// </summary>
+        public string? PurchaseNoteText => _purchaseNote.gameObject.activeSelf ? _purchaseNote.text : null;
+
         /// <summary>Puñado de semillas.</summary>
         public Button HandfulButton => _handful.Button;
 
@@ -274,6 +285,16 @@ namespace AF.UI
 
         /// <summary>Pie desde el 31: «Rendirse».</summary>
         public Button GiveUpButton => _giveUp;
+
+        /// <summary>
+        /// Hueco sobre «Volver a la orilla (gratis)» para el tooltip «Reiniciar es gratis…» de los niveles 6 y 8 (dp; 0 sin
+        /// tooltip): lo fija <c>GameScreen</c> antes de <see cref="Show"/> y el panel crece hacia arriba lo mismo, así que el
+        /// tooltip apunta al botón sin tapar Marea ni las demás opciones (observación 3 de la hoja del 2026-10-22).
+        /// </summary>
+        public float RestartTipRoomDp { get; set; }
+
+        /// <summary>Hueco del tooltip que dejó la última disposición (dp; 0 si no lo dejó; tests).</summary>
+        public float RestartTipRoomShownDp { get; private set; }
 
         /// <summary>Línea de canoa visible (texto), o null.</summary>
         public string? CanoeLineText => _canoeLine.gameObject.activeSelf ? _canoeLine.text : null;
@@ -307,6 +328,12 @@ namespace AF.UI
             {
                 ids.Add("balsa_note");
                 rects.Add(_balsaNote.rectTransform);
+            }
+
+            if (_purchaseNote.gameObject.activeInHierarchy)
+            {
+                ids.Add("purchase_note"); // F3-5: la nota de compra (un texto, no se toca)
+                rects.Add(_purchaseNote.rectTransform);
             }
 
             Add(ids, rects, "skip", _skip.Button);
@@ -481,6 +508,12 @@ namespace AF.UI
             _handful.Button.gameObject.SetActive(handful);
             _balsa.Button.gameObject.SetActive(balsa);
             _balsaNote.gameObject.SetActive(balsa);
+            string? purchaseNote = handful || balsa
+                ? MarketText.PurchaseNote(services?.PurchaseNotes.Of(StoreCatalog.Handful, StoreCatalog.Rescue) ?? PurchaseNoteKind.None)
+                : null;
+            _purchaseNote.gameObject.SetActive(purchaseNote != null);
+            // D-038: con las canoas apagadas, la Balsa queda en «semillas y una cuia» (sin canoas infinitas; mismo precio).
+            _balsaNote.text = services == null || services.BalsaGivesCanoes ? UiText.StuckBalsaContent : UiText.StuckBalsaContentNoCanoes;
             if (handful || balsa)
             {
                 string handfulPrice = services?.PriceText(StoreCatalog.Handful) ?? string.Empty;
@@ -578,6 +611,14 @@ namespace AF.UI
                     y += ModalKit.PlaceLine(_balsaNote, 16f, y, inner, compact ? 0f : 18f) + lineAir;
                 }
 
+                if (purchaseNote != null)
+                {
+                    bool failed = services != null && services.PurchaseNotes.Of(StoreCatalog.Handful, StoreCatalog.Rescue) == PurchaseNoteKind.Failed;
+                    _purchaseNote.text = purchaseNote;
+                    _purchaseNote.color = failed ? (Color)Palette.UiRedWarning : (Color)Palette.FamilyWood.Base;
+                    y += ModalKit.PlaceLine(_purchaseNote, 16f, y, inner, compact ? 0f : 18f) + lineAir;
+                }
+
                 y += compact ? 0f : 6f;
             }
 
@@ -625,8 +666,10 @@ namespace AF.UI
             bool restart = view.Footer == StuckFooter.RestartFree;
             _restart.Button.gameObject.SetActive(restart);
             _giveUp.gameObject.SetActive(!restart);
+            RestartTipRoomShownDp = restart ? Mathf.Max(0f, RestartTipRoomDp) : 0f;
             if (restart)
             {
+                y += RestartTipRoomShownDp; // el tooltip del 6 y el 8, entre la opción de arriba y el botón
                 FitStretch(_restart, compact, CompactK(_restart, _restartLabel, inner - 24f, CtaOneLineShare, MinTouchDp));
                 PlaceButton(_restart, 16f, y, inner);
                 UiBuilder.PlaceCtaLabel(_restartLabel.rectTransform, FaceOf(_restart));

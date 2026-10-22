@@ -23,6 +23,7 @@ namespace AF.Tests.PlayMode
     public sealed class NoCanoesDailyTests
     {
         private InMemoryDailyChallengeStore _store = null!;
+        private AF.Analytics.FakeAnalyticsSink _sink = null!;
 
         [SetUp]
         public void SetUp()
@@ -32,12 +33,15 @@ namespace AF.Tests.PlayMode
             _store = new InMemoryDailyChallengeStore();
             GameBootstrap.DailyPoolOverride = DailyPlayTestPool.Full;
             GameBootstrap.DailyStoreOverride = _store;
+            _sink = new AF.Analytics.FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = _sink; // af_no_canoes_choice (cierre de B11)
         }
 
         [TearDown]
         public void TearDown()
         {
             GameBootstrap.ResetDailyOverrides();
+            GameBootstrap.ResetTelemetryOverrides();
             LaunchOptions.Reset();
             LocSetUpFixture.ConfigureEs419();
         }
@@ -64,6 +68,17 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby), "Sin canoas se cerró; AppFlow sigue en el inicio");
             Assert.That(boot.Lobby.Visible, Is.False, "el tablero del Reto sustituye al inicio");
             Assert.That(boot.LastNoCanoesChoice, Is.EqualTo("daily_challenge"), "af_no_canoes_choice (04 §11)");
+            int sent = 0;
+            foreach (AF.Analytics.AnalyticsEvent e in _sink.Events)
+            {
+                if (e.Name == "af_no_canoes_choice")
+                {
+                    sent++;
+                    Assert.That(e.Find("choice")!.Value.Text, Is.EqualTo("daily_challenge"));
+                }
+            }
+
+            Assert.That(sent, Is.EqualTo(1), "una sola af_no_canoes_choice, la del Reto (cierre de B11)");
             Assert.That(boot.Profile!.Wallet.Canoes.Count, Is.EqualTo(0), "el Reto no gasta canoas (04 §7.1)");
             Assert.That(boot.NoCanoesDailyAvailable, Is.False, "con el Reto abierto ya no se ofrece");
         }

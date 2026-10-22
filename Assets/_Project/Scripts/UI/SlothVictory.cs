@@ -251,6 +251,47 @@ namespace AF.UI
                 _bubbleTop + _bubbleHeight + BubbleRimDp)
             : default;
 
+        /// <summary>
+        /// Canto de abajo de lo que ocupa TiTino ahora (el rig con su gesto, el bocadillo si lo lleva y su margen; dp desde
+        /// arriba), o NaN si no se ve. Lo usa la tarjeta del Reto del 7 para no quedar debajo de él (observación 2 de la hoja del
+        /// 2026-10-22).
+        /// </summary>
+        public float FootprintBottomDp
+        {
+            get
+            {
+                if (_clockMs < 0f || _rig == null || Mode == SlothVictoryMode.None)
+                {
+                    return float.NaN;
+                }
+
+                float foot = _rootY + (RigDownS * _rig.Size) + InsetDp;
+                return HasBubble ? Mathf.Max(foot, BubbleRect.yMax + InsetDp) : foot;
+            }
+        }
+
+        /// <summary>
+        /// Lo mismo que <see cref="FootprintBottomDp"/> para un TiTino que aún no sale (espera la vista con 11-16 cuias) en la caja
+        /// de <paramref name="top"/> a <paramref name="bottom"/> con <paramref name="rows"/> filas: con frase, la caja entera
+        /// (el bocadillo aún no está medido); sin ella, el rig. NaN si con esa caja no saldría. Hoy no se alcanza desde la tarjeta
+        /// del 7 (su tablero tiene 7 cuias: TiTino no espera la vista); si cuando salga su caja crece, su pie puede bajar.
+        /// </summary>
+        public static float FootprintBottomFor(float top, float bottom, int rows, bool withText)
+        {
+            SlothVictoryMode mode = ModeFor(bottom - top, rows);
+            if (mode == SlothVictoryMode.None)
+            {
+                return float.NaN;
+            }
+
+            if (withText && mode == SlothVictoryMode.Speak)
+            {
+                return bottom;
+            }
+
+            return top + (2f * InsetDp) + ((RigUpS + RigDownS) * SizeFor(mode, bottom - top));
+        }
+
         /// <summary>Canto de arriba de la caja de esta victoria (dp desde arriba).</summary>
         public float BoxTop => _top;
 

@@ -1,0 +1,106 @@
+#nullable enable
+using AF.Localization;
+
+namespace AF.UI
+{
+    /// <summary>
+    /// Textos de la edad, el consentimiento y la doble confirmación de compras (bloque B12; 08 §2.3 y §7; 05 §7; 06 §2.1, regla 3;
+    /// Q-T4 (a)): solo claves, con <see cref="Loc"/>. Las claves nuevas entran en <c>strings.csv</c> con el parche
+    /// <c>B12-loc.diff</c> (las registra también en <c>LocTablesTests</c>). Todas son [P] y quedan en <c>borrador</c> con la nota
+    /// «pendiente del abogado» (el contrato 32 no tiene un estado para eso: pregunta Q-B12-5); la única literal del GDD es
+    /// <see cref="Keys.Blocked"/> («Pide a un adulto que instale el juego», 08 §7 y 05 §7). No es un parcial de <c>UiText</c>
+    /// porque los <c>UiText*.cs</c> están reservados (encargo §3.2), como <c>AccountText</c> de B8.
+    /// </summary>
+    public static class ConsentText
+    {
+        /// <summary>Claves.</summary>
+        public static class Keys
+        {
+            /// <summary>Título de la pantalla de edad neutral.</summary>
+            public const string AgeTitle = "consent_age_title";
+
+            /// <summary>Banda &lt;13.</summary>
+            public const string AgeUnder13 = "consent_age_under_13";
+
+            /// <summary>Banda 13-17.</summary>
+            public const string AgeTeen = "consent_age_13_17";
+
+            /// <summary>Banda 18+.</summary>
+            public const string AgeAdult = "consent_age_18_plus";
+
+            /// <summary>Título de la pantalla de consentimiento.</summary>
+            public const string Title = "consent_title";
+
+            /// <summary>Línea bajo el título.</summary>
+            public const string Body = "consent_body";
+
+            /// <summary>Finalidad «Anuncios personalizados».</summary>
+            public const string PurposeAds = "consent_purpose_ads";
+
+            /// <summary>Finalidad «Analítica».</summary>
+            public const string PurposeAnalytics = "consent_purpose_analytics";
+
+            /// <summary>Línea del diagnóstico (Crashlytics como interés legítimo, 08 §2.3; sin interruptor).</summary>
+            public const string Diagnostics = "consent_diagnostics";
+
+            /// <summary>Línea de los anuncios en el EEE, el Reino Unido y Suiza: los decide el aviso de UMP.</summary>
+            public const string AdsByUmp = "consent_ads_ump";
+
+            /// <summary>Línea de los anuncios con 13-17: no personalizados.</summary>
+            public const string AdsTeen = "consent_ads_teen";
+
+            /// <summary>Línea de los anuncios sin país conocido: no personalizados (Q-T3 (a), el tratamiento más estricto).</summary>
+            public const string AdsStrict = "consent_ads_strict";
+
+            /// <summary>Enlace de Ajustes con el perfil <c>ump</c>: vuelve a abrir el mensaje de UMP.</summary>
+            public const string AdsUmpOptions = "consent_ads_ump_options";
+
+            /// <summary>«Aceptar todo».</summary>
+            public const string AcceptAll = "consent_accept_all";
+
+            /// <summary>«Rechazar todo», al mismo nivel que «Aceptar todo» (05 §7).</summary>
+            public const string RejectAll = "consent_reject_all";
+
+            /// <summary>«Guardar mi elección».</summary>
+            public const string Save = "consent_save";
+
+            /// <summary>«Pide a un adulto que instale el juego» (08 §7; 05 §7).</summary>
+            public const string Blocked = "consent_blocked";
+
+            /// <summary>Fila de Ajustes que abre la pantalla de consentimiento.</summary>
+            public const string SettingsPrivacy = "settings_privacy";
+
+            /// <summary>Fila de Ajustes que abre la pantalla de edad (una vez).</summary>
+            public const string SettingsAge = "settings_age_correct";
+
+            /// <summary>Título de la segunda confirmación de una compra (13-17).</summary>
+            public const string ConfirmTitle = "purchase_confirm_title";
+
+            /// <summary>Línea de la segunda confirmación: <c>{product}</c> y <c>{price}</c>.</summary>
+            public const string ConfirmBody = "purchase_confirm_body";
+
+            /// <summary>Botón que compra.</summary>
+            public const string ConfirmBuy = "purchase_confirm_buy";
+
+            /// <summary>Botón que no compra.</summary>
+            public const string ConfirmCancel = "purchase_confirm_cancel";
+        }
+
+        /// <summary>Todas las claves (para <c>LocTablesTests</c>, con el parche <c>B12-loc.diff</c>).</summary>
+        public static readonly string[] AllKeys =
+        {
+            Keys.AgeTitle, Keys.AgeUnder13, Keys.AgeTeen, Keys.AgeAdult, Keys.Title, Keys.Body, Keys.PurposeAds, Keys.PurposeAnalytics,
+            Keys.Diagnostics, Keys.AdsByUmp, Keys.AdsTeen, Keys.AdsStrict, Keys.AdsUmpOptions, Keys.AcceptAll, Keys.RejectAll, Keys.Save, Keys.Blocked, Keys.SettingsPrivacy,
+            Keys.SettingsAge, Keys.ConfirmTitle, Keys.ConfirmBody, Keys.ConfirmBuy, Keys.ConfirmCancel,
+        };
+
+        /// <summary>Texto de <paramref name="key"/>.</summary>
+        public static string T(string key) => Loc.T(key);
+
+        /// <summary>La línea de la segunda confirmación con el nombre del producto y su precio (ya escrito por la tienda).</summary>
+        public static string ConfirmBody(string productName, string price)
+        {
+            return Loc.T(Keys.ConfirmBody, LocArgs.Of("product", productName).And("price", price));
+        }
+    }
+}

@@ -1,0 +1,260 @@
+diff --git a/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs b/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs
+index 8f0bc2be..d450cd77 100644
+--- a/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs
++++ b/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs
+@@ -19,20 +19,27 @@ namespace AF.Analytics.Adapters
+     /// sale una sola vez, con su resultado, por <see cref="Purchase"/>.
+     /// </para>
+     /// </summary>
+-    public sealed class AnalyticsStoreService : IStoreService
++    public sealed class AnalyticsStoreService : IStoreService, IStoreDecorator
+     {
+         private readonly IStoreService _inner;
+         private readonly AnalyticsService _analytics;
++        private readonly BillingReadyStoreService? _ready;
+ 
+-        /// <summary>Envuelve <paramref name="inner"/>.</summary>
++        /// <summary>
++        /// Envuelve <paramref name="inner"/>. La tienda verificada se busca bajo los envoltorios (<see cref="IStoreDecorator"/>: el
++        /// consentimiento de B12 y la tienda lista de Play de D-040), para oír lo que se acredita fuera de una compra abierta.
++        /// </summary>
+         public AnalyticsStoreService(IStoreService inner, AnalyticsService analytics)
+         {
+             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+             _analytics = analytics ?? throw new ArgumentNullException(nameof(analytics));
+-            if (inner is VerifiedStoreService verified)
++            VerifiedStoreService? verified = StoreDecorators.Find<VerifiedStoreService>(inner);
++            if (verified != null)
+             {
+                 verified.VerificationChanged += OnVerificationChanged;
+             }
++
++            _ready = StoreDecorators.Find<BillingReadyStoreService>(inner);
+         }
+ 
+         /// <inheritdoc />
+@@ -115,17 +122,34 @@ public void OnVerificationChanged(PurchaseVerificationEvent e)
+                 return;
+             }
+ 
++            StoreProduct? product = _inner.Catalog.Find(e.Sku);
++            if (e.State == PurchaseVerificationState.Credited && e.IsDuplicate && product != null && product.Kind == ProductKind.NonConsumable)
++            {
++                // D-040: un no consumible que Play devuelve y el servidor ya tenía (duplicate) es una restauración, no un ingreso nuevo.
++                if (product.Content.GrantsNoAds)
++                {
++                    _analytics.Log(AnalyticsEvent.Create("af_entitlement_restored").Add("type", "no_ads").Add("count", 1)); // 08 §8.2
++                }
++
++                return;
++            }
++
+             _analytics.Log(AnalyticsEvent.Create("af_iap_result").Add("sku", e.Sku).Add("result", result));
+             if (e.State != PurchaseVerificationState.Credited)
+             {
+                 return;
+             }
+ 
+-            LocalPrice price = _inner.PriceOf(e.Sku);
+-            _analytics.Log(AnalyticsEvent.Create("purchase")
+-                .Add("value", (double)price.Amount)
+-                .Add("currency", price.Currency)
+-                .Add("items", e.Sku));
++            AnalyticsEvent purchase = AnalyticsEvent.Create("purchase");
++            if (_ready == null || _ready.Billing.HasStorePrice(e.Sku))
++            {
++                // Con Play real, solo el precio de la tienda (antes de que Play lo dé, el de 05 §4.2 sería otra moneda): sin él, no se
++                // inventa el ingreso (D-040). Vale el ya cargado aunque Play se haya desconectado después.
++                LocalPrice price = _inner.PriceOf(e.Sku);
++                purchase.Add("value", (double)price.Amount).Add("currency", price.Currency);
++            }
++
++            _analytics.Log(purchase.Add("items", e.Sku));
+         }
+ 
+         /// <summary><c>context</c> de 08 §8.2 (<c>stuck</c>, <c>no_canoes</c>, <c>shop</c>, <c>starter_window</c>, <c>noads_prompt</c>, <c>piggy</c>).</summary>
+diff --git a/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs b/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs
+index b1e57493..201c652f 100644
+--- a/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs
++++ b/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs
+@@ -138,6 +138,113 @@ public void TheVerifiedStore_LogsALivePurchaseOnce_AndALateCreditWithoutContext(
+             Assert.That(analytics.Violations, Is.Empty);
+         }
+ 
++        [Test]
++        public void ALateCredit_IsLoggedAlsoBehindConsentAndTheReadyStore()
++        {
++            // D-040: en el juego la tienda verificada va envuelta por el consentimiento (B12) y por la tienda lista de Play; lo que se
++            // acredita tarde (un pago pendiente que Play cobra después, la cola) también sale como af_iap_result ok y purchase (08 §8.2).
++            (AnalyticsService analytics, FakeAnalyticsSink sink) = NewAnalytics();
++            var clock = new ManualClock(new DateTime(2026, 10, 22, 15, 0, 0, DateTimeKind.Utc), TimeSpan.FromHours(-5));
++            Profile profile = Wallet.NewProfile(clock);
++            var store = new MemoryProfileStore();
++            var wallet = new Wallet(profile, store, clock);
++            var ledger = new StoreLedger(profile, wallet, store, clock);
++            StoreCatalog catalog = ledger.Catalog;
++            var backend = new AF.Backend.FakeBackendClient(clock) { GrantFor = r => CatalogGrants.For(catalog, r.Sku) };
++            var verified = new VerifiedStoreService(ledger, new FakeBillingClient(catalog, "USD", null, clock), backend, clock);
++            var consent = new ConsentStoreService(new BillingReadyStoreService(verified, new StubAvailability()));
++            consent.Apply(ConsentPolicy.Flags(
++                new ConsentRecord(LegalProfiles.Co1581, 1, new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc), true, true, AgeBand.Adult),
++                ConsentConfig.Defaults));
++            var service = new AnalyticsStoreService(consent, analytics);
++
++            backend.FailNext(new AF.Backend.BackendError(AF.Backend.BackendErrorKind.Network));
++            PurchaseResult? pending = null;
++            service.Purchase(new PurchaseRequest("af_coins_3", PurchaseContext.Shop), r => pending = r);
++            Assert.That(pending!.Status, Is.EqualTo(PurchaseStatus.Pending));
++
++            sink.Clear();
++            clock.Advance(TimeSpan.FromHours(1));
++            verified.Pump();
++            Assert.That(sink.Names, Is.EqualTo(new[] { "af_iap_result", "purchase" }), "se oye a la tienda verificada bajo los envoltorios");
++            Assert.That(sink.Events[0].ToJson(), Is.EqualTo("{\"event\":\"af_iap_result\",\"sku\":\"af_coins_3\",\"result\":\"ok\"}"));
++        }
++
++        [Test]
++        public void ALateCreditBeforePlayHasItsPrices_IsLoggedWithoutInventingTheRevenue()
++        {
++            // D-040: si la cola acredita antes de que Play dé sus precios, el de 05 §4.2 sería otra moneda: purchase sale sin value.
++            (AnalyticsService analytics, FakeAnalyticsSink sink) = NewAnalytics();
++            var clock = new ManualClock(new DateTime(2026, 10, 22, 15, 0, 0, DateTimeKind.Utc), TimeSpan.FromHours(-5));
++            Profile profile = Wallet.NewProfile(clock);
++            var store = new MemoryProfileStore();
++            var wallet = new Wallet(profile, store, clock);
++            var ledger = new StoreLedger(profile, wallet, store, clock);
++            StoreCatalog catalog = ledger.Catalog;
++            var backend = new AF.Backend.FakeBackendClient(clock) { GrantFor = r => CatalogGrants.For(catalog, r.Sku) };
++            var verified = new VerifiedStoreService(ledger, new FakeBillingClient(catalog, "USD", null, clock), backend, clock);
++            var availability = new StubAvailability();
++            var service = new AnalyticsStoreService(new BillingReadyStoreService(verified, availability), analytics);
++
++            backend.FailNext(new AF.Backend.BackendError(AF.Backend.BackendErrorKind.Network));
++            service.Purchase(new PurchaseRequest("af_coins_3", PurchaseContext.Shop), _ => { });
++            sink.Clear();
++            availability.Sell = false; // reinicio: Play aún no respondió con sus precios
++            clock.Advance(TimeSpan.FromHours(1));
++            verified.Pump();
++
++            Assert.That(sink.Names, Is.EqualTo(new[] { "af_iap_result", "purchase" }));
++            Assert.That(sink.Events[1].ToJson(), Is.EqualTo("{\"event\":\"purchase\",\"items\":\"af_coins_3\"}"));
++            Assert.That(analytics.Violations, Is.Empty);
++        }
++
++        [Test]
++        public void ANoAdsRestoredFromPlay_IsARestorationNotARevenue()
++        {
++            // D-040: reinstalar con la misma cuenta de Google y el mismo UID: Play devuelve Sin anuncios, el servidor dice duplicate y se
++            // acredita; no es un ingreso nuevo (af_entitlement_restored, 08 §8.2), ni af_iap_result ni purchase.
++            (AnalyticsService analytics, FakeAnalyticsSink sink) = NewAnalytics();
++            var clock = new ManualClock(new DateTime(2026, 10, 22, 15, 0, 0, DateTimeKind.Utc), TimeSpan.FromHours(-5));
++            Profile first = Wallet.NewProfile(clock);
++            var firstStore = new MemoryProfileStore();
++            var firstWallet = new Wallet(first, firstStore, clock);
++            var firstLedger = new StoreLedger(first, firstWallet, firstStore, clock);
++            StoreCatalog catalog = firstLedger.Catalog;
++            var backend = new AF.Backend.FakeBackendClient(clock)
++            {
++                GrantFor = r => CatalogGrants.For(catalog, r.Sku),
++                EntitlementsFor = r => CatalogGrants.EntitlementsFor(catalog, r.Sku),
++            };
++            var billing = new FakeBillingClient(catalog, "USD", null, clock);
++            var firstStoreService = new VerifiedStoreService(firstLedger, billing, backend, clock);
++            firstStoreService.Purchase(new PurchaseRequest("af_noads", PurchaseContext.Shop), _ => { });
++            Assert.That(first.Entitlements.NoAds, Is.True);
++
++            Profile fresh = Wallet.NewProfile(clock);
++            var freshStore = new MemoryProfileStore();
++            var freshLedger = new StoreLedger(fresh, new Wallet(fresh, freshStore, clock), freshStore, clock);
++            var verified = new VerifiedStoreService(freshLedger, billing, backend, clock);
++            var service = new AnalyticsStoreService(new ConsentStoreService(verified), analytics);
++            billing.RestoreOwnedOnNewDevice();
++            verified.Resume();
++
++            Assert.That(fresh.Entitlements.NoAds, Is.True, "restaurado");
++            Assert.That(sink.Names, Is.EqualTo(new[] { "af_entitlement_restored" }));
++            Assert.That(sink.Events[0].ToJson(), Is.EqualTo("{\"event\":\"af_entitlement_restored\",\"type\":\"no_ads\",\"count\":1}"));
++            Assert.That(service.Inner, Is.Not.Null);
++        }
++
++        private sealed class StubAvailability : IBillingAvailability
++        {
++            public bool Sell { get; set; } = true;
++
++            public bool IsReady => true;
++
++            public bool CanSell(string sku) => Sell;
++
++            public bool HasStorePrice(string sku) => Sell;
++        }
++
+         // Una compra cancelada de verdad, con el presentador que dice que no.
+         private static PurchaseResult PurchaseResultFor(AnalyticsStoreService service, string sku, bool confirm)
+         {
+diff --git a/Assets/_Project/Scripts/IAP/ConsentStoreService.cs b/Assets/_Project/Scripts/IAP/ConsentStoreService.cs
+index b0b4707b..d6a2e492 100644
+--- a/Assets/_Project/Scripts/IAP/ConsentStoreService.cs
++++ b/Assets/_Project/Scripts/IAP/ConsentStoreService.cs
+@@ -58,7 +58,7 @@ public void Confirm(StoreProduct product, LocalPrice price, Action<bool> onAnswe
+     /// </list>
+     /// Mientras la confirmación está abierta, <see cref="IsPurchasing"/> es cierto (una sola compra a la vez). Hilo principal.
+     /// </summary>
+-    public sealed class ConsentStoreService : IStoreService
++    public sealed class ConsentStoreService : IStoreService, IStoreDecorator
+     {
+         private readonly IStoreService _inner;
+         private bool _confirming;
+diff --git a/Assets/_Project/Scripts/IAP/VerifiedStoreService.cs b/Assets/_Project/Scripts/IAP/VerifiedStoreService.cs
+index 73847fbf..20ed2316 100644
+--- a/Assets/_Project/Scripts/IAP/VerifiedStoreService.cs
++++ b/Assets/_Project/Scripts/IAP/VerifiedStoreService.cs
+@@ -44,7 +44,8 @@ public enum PurchaseVerificationState
+     public sealed class PurchaseVerificationEvent
+     {
+         internal PurchaseVerificationEvent(
+-            string sku, PurchaseVerificationState state, BackendError? error, int unknownGrantItems, bool isLive, int creditedPiggySeeds = 0)
++            string sku, PurchaseVerificationState state, BackendError? error, int unknownGrantItems, bool isLive, int creditedPiggySeeds = 0,
++            bool isDuplicate = false)
+         {
+             Sku = sku;
+             State = state;
+@@ -52,8 +53,17 @@ internal PurchaseVerificationEvent(
+             UnknownGrantItems = unknownGrantItems;
+             IsLive = isLive;
+             CreditedPiggySeeds = creditedPiggySeeds;
++            IsDuplicate = isDuplicate;
+         }
+ 
++        /// <summary>
++        /// Con <see cref="PurchaseVerificationState.Credited"/>: el servidor respondió <c>duplicate</c> (el token ya estaba en el libro
++        /// mayor de este UID) y se acreditó el contenido del catálogo porque este perfil no lo tenía: una restauración (otra instalación,
++        /// un no consumible que Play devuelve) o una compra cuyo <c>ok</c> se perdió (D-040). La analítica no la cuenta como ingreso nuevo
++        /// si es un no consumible.
++        /// </summary>
++        public bool IsDuplicate { get; }
++
+         public string Sku { get; }
+ 
+         /// <summary>
+@@ -424,7 +434,7 @@ private void OnAnswered(string token, string sku, StoreProduct? product, Pending
+ 
+             if (credit.Kind == VerifiedCreditKind.Credited)
+             {
+-                Raise(sku, PurchaseVerificationState.Credited, live, null, credit.UnknownItems, credit.PiggySeeds);
++                Raise(sku, PurchaseVerificationState.Credited, live, null, credit.UnknownItems, credit.PiggySeeds, response.Status == VerifyStatus.Duplicate);
+                 Complete(token, PurchaseStatus.Purchased, credit.Transaction);
+             }
+             else
+@@ -510,9 +520,10 @@ private void Complete(string token, PurchaseStatus status, TransactionResult? tr
+         }
+ 
+         private void Raise(
+-            string sku, PurchaseVerificationState state, bool live, BackendError? error = null, int unknownItems = 0, int piggySeeds = 0)
++            string sku, PurchaseVerificationState state, bool live, BackendError? error = null, int unknownItems = 0, int piggySeeds = 0,
++            bool duplicate = false)
+         {
+-            VerificationChanged?.Invoke(new PurchaseVerificationEvent(sku, state, error, unknownItems, live, piggySeeds));
++            VerificationChanged?.Invoke(new PurchaseVerificationEvent(sku, state, error, unknownItems, live, piggySeeds, duplicate));
+         }
+ 
+         private string? AccountId()

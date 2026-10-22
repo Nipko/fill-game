@@ -121,7 +121,8 @@ namespace AF.Economy
         /// Escribe <paramref name="record"/>, que salió de <paramref name="loaded"/>, en <paramref name="profile"/> (con copias: el
         /// perfil no comparte listas con el registro). <c>streak</c> siempre; los campos del día, con
         /// <see cref="StreakRecord.MergeDay"/>, después de pasar <c>daily</c> entero al día del registro cuando es posterior
-        /// (<see cref="DailyCounters.RollOver"/>). Devuelve si cambió algún campo de <c>daily</c>.
+        /// (<see cref="DailyCounters.RollOver"/>). Devuelve si cambió algún campo de <c>daily</c> o de <c>streak</c> (B1a-Q2 (a),
+        /// D-033: un cambio que solo toca <c>streak</c> también marca <c>economy_ts</c>; bloque B8).
         /// </summary>
         public static bool WriteTo(Profile profile, StreakRecord loaded, StreakRecord record)
         {
@@ -140,10 +141,12 @@ namespace AF.Economy
                 throw new ArgumentNullException(nameof(record));
             }
 
+            StreakData? before = profile.Streak;
+            bool streakChanged = before == null ? record.Wins != 0 || record.RiverFull : before.Wins != record.Wins || before.RiverFull != record.RiverFull;
             profile.Streak = new StreakData { Wins = record.Wins, RiverFull = record.RiverFull };
 
             DailyData daily = profile.Daily;
-            bool changed = record.DateLocal != null && DailyCounters.RollOver(daily, record.DateLocal);
+            bool changed = (record.DateLocal != null && DailyCounters.RollOver(daily, record.DateLocal)) | streakChanged;
             var current = new StreakRecord
             {
                 DateLocal = daily.DateLocal,

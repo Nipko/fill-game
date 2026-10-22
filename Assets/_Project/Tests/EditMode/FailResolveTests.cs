@@ -109,6 +109,110 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Matrix_From31_WithLivesOff_QuitIsFree_AndNotAFail_AsIn1To30()
+        {
+            // D-038: con biz_feature_lives = false (08 §9), desde el 31 todo funciona como en 1-30: sin canoas (ni en la barra ni
+            // en el aviso), y «Salir» es gratis, no es fallo duro, no suma a fails_level y no abre Nivel fallido.
+            var fx = new FunnelFixture(offset: 30, maxLevel: 35);
+            fx.Wallet.LivesEnabled = false;
+            fx.StartPlaying(31);
+            Assert.That(fx.Flow.CanoesLevel, Is.True, "el rescate sigue desde el 31");
+            Assert.That(fx.Flow.CanoeFunnel, Is.False, "D-038: sin el embudo con canoas");
+            Assert.That(fx.Flow.CanoesActive, Is.False, "la barra de la cartera no enseña canoas");
+            Assert.That(fx.Flow.CanoeAtStake, Is.False);
+            Assert.That(fx.Flow.QuitIsHardFail, Is.False, "salir no es fallo duro (D-038)");
+            Assert.That(fx.Flow.QuitCostsCanoe, Is.False, "«Salir» no anuncia ninguna canoa");
+            Assert.That(fx.Flow.CanQuit, Is.True);
+            Assert.That(fx.Flow.ConfirmQuit(), Is.False, "la salida sin coste la hace AppFlow.ExitToLobby, como en 1-30");
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(fx.Wallet.Canoes.Count, Is.EqualTo(5));
+            Assert.That(fx.Flow.Attempt.FailsLevel, Is.EqualTo(0), "no suma a fails_level");
+            Assert.That(fx.Listener.Events.Exists(e => e.StartsWith("fail:", StringComparison.Ordinal)), Is.False, "salir no es fallo");
+            Assert.That(fx.Listener.Saw("phase:LevelFailed"), Is.False);
+        }
+
+        [Test]
+        public void Matrix_From31_WithLivesOff_TheStuckModalFooterIsThe1To30One_AndRestartsDirectly()
+        {
+            // D-038: sin canoas, el pie del modal es «Volver a la orilla (gratis)» de la rama C (no hay «Rendirse» ni ¿Seguro?
+            // ni Nivel fallido) y hace lo mismo que en 1-30: el fallo duro sin canoa y el reinicio directo con la misma semilla.
+            var fx = new FunnelFixture(offset: 30, maxLevel: 35);
+            fx.Wallet.LivesEnabled = false;
+            fx.StartPlaying(36);
+            fx.GetStuck();
+            StuckContext ctx = fx.Flow.BuildStuckContext(false, false, GeoTier.T3);
+            Assert.That(ctx.LivesOff, Is.True);
+            StuckModalView view = StuckModalModel.Build(ctx, fx.Flow.Boosters);
+            Assert.That(view.CanoeLine, Is.EqualTo(StuckCanoeLine.None), "el modal no anuncia la canoa");
+            Assert.That(view.Footer, Is.EqualTo(StuckFooter.RestartFree), "el pie de 1-30");
+            Assert.That(StuckModalModel.GiveUpNeedsConfirm(ctx), Is.False);
+            Assert.That(fx.Flow.PressGiveUp(), Is.False, "sin «Rendirse», como en 1-30");
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
+            Assert.That(fx.Flow.CanRestart, Is.True);
+            Assert.That(fx.Flow.PressRestart(), Is.True);
+            Assert.That(fx.Wallet.Canoes.Count, Is.EqualTo(5), "sin canoas");
+            Assert.That(fx.Flow.Attempt.FailsLevel, Is.EqualTo(1), "rama C: es el fallo duro, como en 1-30 (04 §5.2)");
+            Assert.That(fx.Listener.Saw("fail:Hard:1"), Is.True);
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.Intro), "reinicio directo, sin Nivel fallido");
+            Assert.That(fx.Listener.Saw("phase:LevelFailed"), Is.False);
+            Assert.That(fx.Listener.Saw("phase:GiveUpConfirm"), Is.False);
+            Assert.That(fx.Flow.Session.Current.Equals(fx.Flow.Session.Initial), Is.True, "misma semilla");
+        }
+
+        [Test]
+        public void Matrix_From31_WithLivesOff_TheRescueDoesNotChange()
+        {
+            // D-038: el rescate lo gobierna biz_feature_rescue, no biz_feature_lives.
+            var fx = new FunnelFixture(offset: 30, seeds: 1000, maxLevel: 35);
+            fx.Wallet.LivesEnabled = false;
+            fx.StartPlaying(36);
+            fx.GetStuck();
+            Assert.That(fx.Flow.RescueOffered, Is.True, "«Continuar: +1 cuia» sigue en el modal");
+            StuckModalView view = StuckModalModel.Build(fx.Flow.BuildStuckContext(false, false, GeoTier.T3), fx.Flow.Boosters);
+            Assert.That(view.Rescue, Is.EqualTo(StuckRescueKind.Available));
+            int cuias = fx.Flow.Session.Current.Count;
+            Assert.That(fx.Flow.BuyRescue()!.IsApplied, Is.True);
+            Assert.That(fx.Flow.Session.Current.Count, Is.EqualTo(cuias + 1));
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(fx.Wallet.Canoes.Count, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void Matrix_From31_WithLivesOff_AndInfiniteCanoes_LivesOffWins()
+        {
+            // Canoas infinitas activas con biz_feature_lives apagado: manda D-038 (pie de 1-30, sin Nivel fallido).
+            var fx = new FunnelFixture(offset: 30, maxLevel: 35);
+            fx.Wallet.Apply(Transaction.InfiniteCanoesFor(TimeSpan.FromHours(1)));
+            fx.Wallet.LivesEnabled = false;
+            fx.StartPlaying(36);
+            Assert.That(fx.Flow.QuitIsHardFail, Is.False);
+            fx.GetStuck();
+            StuckContext ctx = fx.Flow.BuildStuckContext(false, false, GeoTier.T3);
+            Assert.That(StuckModalModel.Build(ctx, fx.Flow.Boosters).Footer, Is.EqualTo(StuckFooter.RestartFree));
+            Assert.That(fx.Flow.PressGiveUp(), Is.False);
+            Assert.That(fx.Flow.PressRestart(), Is.True);
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(fx.Listener.Saw("phase:LevelFailed"), Is.False);
+        }
+
+        [Test]
+        public void Matrix_From31_WithLivesOn_TheFunnelDoesNotChange()
+        {
+            // D-038: con biz_feature_lives en su default (true), el embudo de D-008 sigue igual.
+            var fx = new FunnelFixture(offset: 30, maxLevel: 35);
+            fx.StartPlaying(36);
+            Assert.That(fx.Flow.CanoeFunnel, Is.True);
+            Assert.That(fx.Flow.QuitIsHardFail, Is.True);
+            fx.GetStuck();
+            StuckContext ctx = fx.Flow.BuildStuckContext(false, false, GeoTier.T3);
+            Assert.That(ctx.LivesOff, Is.False);
+            Assert.That(StuckModalModel.Build(ctx, fx.Flow.Boosters).Footer, Is.EqualTo(StuckFooter.GiveUp));
+            Assert.That(fx.Flow.CanRestart, Is.False, "desde el 31 el pie es «Rendirse»");
+            Assert.That(fx.Flow.PressGiveUp(), Is.True);
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.GiveUpConfirm));
+        }
+
+        [Test]
         public void Matrix_QuitIn1To30_IsFree_AndNotAFail()
         {
             var fx = new FunnelFixture();

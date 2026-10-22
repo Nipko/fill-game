@@ -1,0 +1,107 @@
+diff --git a/Assets/_Project/Scripts/Platform/ConsentConfig.cs b/Assets/_Project/Scripts/Platform/ConsentConfig.cs
+index 2c045036..2bc85098 100644
+--- a/Assets/_Project/Scripts/Platform/ConsentConfig.cs
++++ b/Assets/_Project/Scripts/Platform/ConsentConfig.cs
+@@ -9,8 +9,7 @@ namespace AF.Platform
+     /// <c>consent_text_version</c>, <c>consent_under13_policy</c>, <c>consent_age_signal_source</c>,
+     /// <c>biz_legal_profile_by_country</c> y <c>biz_under18_no_personalization</c>. Vive en <c>AF.Platform</c>, junto a
+     /// <see cref="ConsentPolicy"/>, porque la leen los anuncios, la tienda y el arranque. Las enlaza con Remote Config
+-    /// <c>AF.RemoteConfig.Binding.ConsentConfigBinder</c>; el parche <c>B12-rc.diff</c> les pone <c>[RemoteConfigKey]</c> y las
+-    /// mete en <c>RcConfigBinder</c> (hasta entonces, sin el atributo, para que la prueba de cobertura del binder no falle en la rama).
++    /// <c>AF.RemoteConfig.Binding.ConsentConfigBinder</c>, desde <c>RcConfigBinder</c> (<c>RcConfigs.Consent</c>).
+     /// </summary>
+     public sealed class ConsentConfig
+     {
+@@ -47,21 +46,26 @@ public sealed class ConsentConfig
+         public static ConsentConfig Defaults => new ConsentConfig();
+ 
+         /// <summary><c>consent_text_version</c> (08): sube al cambiar los textos legales y obliga a volver a pedir el consentimiento.</summary>
++        [RemoteConfigKey("consent_text_version")]
+         public int ConsentTextVersion { get; set; } = 1;
+ 
+         /// <summary><c>consent_under13_policy</c> (05): <see cref="PolicyBlock"/> o <see cref="PolicyParentalConsent"/> (reservado).</summary>
++        [RemoteConfigKey("consent_under13_policy")]
+         public string ConsentUnder13Policy { get; set; } = PolicyBlock;
+ 
+         /// <summary><c>consent_age_signal_source</c> (05): <see cref="SourceSelfDeclared"/> o <see cref="SourceWithPlayAgeSignals"/>.</summary>
++        [RemoteConfigKey("consent_age_signal_source")]
+         public string ConsentAgeSignalSource { get; set; } = SourceSelfDeclared;
+ 
+         /// <summary>
+         /// <c>biz_legal_profile_by_country</c> (01): país (ISO alfa-2, o <see cref="EeaKey"/>, <see cref="UkKey"/> y
+         /// <see cref="RestKey"/>) → perfil legal (<see cref="LegalProfiles"/>).
+         /// </summary>
++        [RemoteConfigKey("biz_legal_profile_by_country")]
+         public IReadOnlyDictionary<string, string> BizLegalProfileByCountry { get; set; } = DefaultProfiles();
+ 
+         /// <summary><c>biz_under18_no_personalization</c> (01): con 13-17, <c>npa</c>, contenido G, sin perfilado y doble confirmación de compras.</summary>
++        [RemoteConfigKey("biz_under18_no_personalization")]
+         public bool BizUnder18NoPersonalization { get; set; } = true;
+ 
+         /// <summary>El mapa de 08 §9: BR, CO, PE, MX propios; EEE, UK y CH por UMP; el resto, <c>default</c>.</summary>
+diff --git a/Assets/_Project/Scripts/RemoteConfig/Binding/ConsentConfigBinder.cs b/Assets/_Project/Scripts/RemoteConfig/Binding/ConsentConfigBinder.cs
+index 38e58786..9b982501 100644
+--- a/Assets/_Project/Scripts/RemoteConfig/Binding/ConsentConfigBinder.cs
++++ b/Assets/_Project/Scripts/RemoteConfig/Binding/ConsentConfigBinder.cs
+@@ -8,8 +8,8 @@ namespace AF.RemoteConfig.Binding
+     /// <summary>
+     /// <see cref="ConsentConfig"/> leída de Remote Config (bloque B12; 08 §9), como las tablas de <see cref="RcConfigBinder"/>: sin
+     /// reflexión, cada clave con su asignación; un valor que no se entiende deja el default de esa propiedad y se anota; si la clase
+-    /// entera no pasa su <c>Validate()</c>, se usan sus defaults (Q-B7-7). Archivo propio de B12: el parche <c>B12-rc.diff</c> lo
+-    /// conecta a <see cref="RcConfigBinder.Bind(RcSnapshot, string)"/> (<c>RcConfigs.Consent</c>) y a su prueba de cobertura.
++    /// entera no pasa su <c>Validate()</c>, se usan sus defaults (Q-B7-7). Lo llama <see cref="RcConfigBinder.Bind(RcSnapshot, string)"/>
++    /// (<c>RcConfigs.Consent</c>), que publica sus claves en <see cref="RcConfigBinder.BoundKeys"/>.
+     /// </summary>
+     public static class ConsentConfigBinder
+     {
+diff --git a/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs b/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
+index d7823dd3..d8e345a2 100644
+--- a/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
++++ b/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
+@@ -161,6 +161,7 @@ public static class RcConfigBinder
+             { typeof(StreakConfig), KeysOf(StreakEntries) },
+             { typeof(BasketConfig), KeysOf(BasketEntries) },
+             { typeof(ClockSecurityConfig), KeysOf(ClockEntries) },
++            { typeof(ConsentConfig), ConsentConfigBinder.Keys }, // B12: su lector propio (ConsentConfigBinder)
+         };
+ 
+         /// <summary>
+@@ -184,6 +185,7 @@ public static RcConfigs Bind(RcSnapshot rc, string appVersion)
+             StreakConfig streak = Fill(new StreakConfig(), StreakEntries, rc, errors, c => c.Validate(), () => StreakConfig.Defaults);
+             BasketConfig basket = Fill(new BasketConfig(), BasketEntries, rc, errors, c => c.Validate(), () => BasketConfig.Defaults);
+             ClockSecurityConfig clock = Fill(new ClockSecurityConfig(), ClockEntries, rc, errors, c => c.Validate(), () => ClockSecurityConfig.Defaults);
++            ConsentConfig consent = ConsentConfigBinder.Bind(rc, errors);
+ 
+             // Compuertas de negocio (08 §9): el mantenimiento apaga anuncios e IAP; la versión mínima, las compras.
+             ads.BizAdsEnabled = gates.AdsEnabled;
+@@ -199,7 +201,7 @@ public static RcConfigs Bind(RcSnapshot rc, string appVersion)
+             {
+                 boosters.RescueMaxPerLevel = 0;
+             }
+-            return new RcConfigs(rc, gates, economy, boosters, ads, store, daily, streak, basket, clock, errors);
++            return new RcConfigs(rc, gates, economy, boosters, ads, store, daily, streak, basket, clock, errors) { Consent = consent };
+         }
+ 
+         /// <summary>Atajo: <see cref="Bind"/> con los valores vigentes de <paramref name="service"/>.</summary>
+@@ -432,6 +434,9 @@ internal RcConfigs(
+         /// <summary>Anti-reloj.</summary>
+         public ClockSecurityConfig ClockSecurity { get; }
+ 
++        /// <summary>Consentimiento y edad (B12).</summary>
++        public ConsentConfig Consent { get; internal set; } = ConsentConfig.Defaults;
++
+         /// <summary>Lo que no se pudo leer (clave: motivo), en orden; vacío si todo vino bien.</summary>
+         public IReadOnlyList<string> Errors { get; }
+     }
+diff --git a/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs b/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs
+index caa91dba..63c3e037 100644
+--- a/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs
++++ b/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs
+@@ -64,6 +64,7 @@ public void WithTheCompiledDefaults_EveryConfigIsItsDefaults()
+             AssertSame(StreakConfig.Defaults, c.Streak);
+             AssertSame(BasketConfig.Defaults, c.Basket);
+             AssertSame(ClockSecurityConfig.Defaults, c.ClockSecurity);
++            AssertSame(ConsentConfig.Defaults, c.Consent); // B12
+         }
+ 
+         [Test]

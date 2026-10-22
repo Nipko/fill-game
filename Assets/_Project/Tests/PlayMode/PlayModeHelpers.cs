@@ -61,6 +61,26 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
+        /// Como <see cref="LoadApp"/>, pero la espera acaba también cuando el arranque deja a la vista la pantalla de la edad, del
+        /// consentimiento o del bloqueo (B12; <see cref="GameBootstrap.ConsentView"/>), que van antes de decidir la primera pantalla.
+        /// </summary>
+        public static IEnumerator LoadAppWithConsent(IProfileStore store)
+        {
+            LaunchOptions.StartLevelOverride = 0;
+            LaunchOptions.ProgressStoreOverride = null;
+            LaunchOptions.ProfileStoreOverride = store;
+            NoLevelCardsUnlessSet();
+            yield return LoadScene();
+            yield return WaitFor(
+                () =>
+                {
+                    GameBootstrap? boot = GameBootstrap.Current;
+                    return boot != null && ((boot.ConsentView != null && boot.ConsentView.Visible) || (boot.App != null && boot.App.Screen != AppScreen.Boot));
+                },
+                "arranque de la escena Game hasta el consentimiento o la primera pantalla");
+        }
+
+        /// <summary>
         /// Como <see cref="LoadApp"/>, pero con el <c>LocalProfileStore</c> que crea el propio arranque en la carpeta
         /// <paramref name="directory"/> (<see cref="LaunchOptions.ProfileDirectoryOverride"/>) en vez de un almacén del test.
         /// </summary>
@@ -95,10 +115,55 @@ namespace AF.Tests.PlayMode
             NoSlothRestartNoticeUnlessSet();
             NoTutorialSlothUnlessSet();
             NoTutorialFingerUnlessSet();
+            NoTutorialTipsUnlessSet();
             NoL10SequenceUnlessSet();
             NoContentEndMapUnlessSet();
             NoIdleHintUnlessSet();
             NoShuffleUnlessSet();
+            NoLogbookUnlessSet();
+            NoPrePromptUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga la tarjeta del pre-prompt de push (06 §8.1) si el test no la fijó (<see cref="GameBootstrap.PrePromptCardOverride"/> =
+        /// null): los tests que no tratan de ella ganan desde la 2.ª sesión pasado el 10 y pulsan Siguiente o Inicio como antes de
+        /// que existiera, y la tarjeta de oferta de esa victoria sale igual. Los que la prueban (<c>PushUiTests</c>) la encienden y
+        /// la vuelven a null en su TearDown (<see cref="GameBootstrap.ResetSessionOverrides"/>).
+        /// </summary>
+        public static void NoPrePromptUnlessSet()
+        {
+            if (GameBootstrap.PrePromptCardOverride == null)
+            {
+                GameBootstrap.PrePromptCardOverride = false;
+            }
+        }
+
+        /// <summary>
+        /// Apaga las ayudas del tutorial de B11 (los tooltips del 6, el 8 y el 11 y el dedo de la Cuia extra del 8) si el test no
+        /// las fijó (<see cref="GameScreen.TutorialTipsOverride"/> = null): los tests que no tratan de ellas ven los modales, la
+        /// victoria y la bandeja como antes, y sus capturas igual. Los que las prueban (<c>TutorialTipsHooksTests</c>) las encienden
+        /// y las vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoTutorialTipsUnlessSet()
+        {
+            if (GameScreen.TutorialTipsOverride == null)
+            {
+                GameScreen.TutorialTipsOverride = false;
+            }
+        }
+
+        /// <summary>
+        /// Apaga la Bitácora del río (B4) si el test no la fijó (<see cref="GameBootstrap.LogbookOverride"/> = null): los tests que
+        /// no tratan de ella entran al inicio sin la libreta encima (el takeover de la sesión, D-033, punto 5) y ven el Mapa del 10
+        /// sin la libreta delante, como antes de que existiera. Los que la prueban (<c>LogbookBootstrapTests</c>,
+        /// <c>LogbookHooksTests</c>) la encienden y la vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoLogbookUnlessSet()
+        {
+            if (GameBootstrap.LogbookOverride == null)
+            {
+                GameBootstrap.LogbookOverride = false;
+            }
         }
 
         /// <summary>
@@ -234,21 +299,30 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Sin idioma del teléfono fijado por el test, uno vacío (ManualDeviceLocale): los textos y las cifras no dependen de la
-        // cultura del equipo (tarea L3; el idioma automático da es-419 y las cifras, es-CO). Sin pantalla de arranque (TI6d)
-        // salvo que el test la encienda (BootSplash.EnabledOverride = true; BootSplashTests la vuelve a null en su TearDown):
+        // Sin idioma del teléfono fijado por el test, «es» sin región (ManualDeviceLocale): los textos y las cifras no dependen
+        // de la cultura del equipo (tarea L3; el idioma automático da es-419 y las cifras, es-CO). Con en y pt-BR completos
+        // (traducción 3, D-033), un teléfono vacío ya no cae en es-419 sino en en (D-018, Q7-A: teléfono → en); «es» sin región
+        // conserva el es-419 de siempre sin país para el consentimiento ni tramo de precios (T3, como la etiqueta vacía).
+        // Sin pantalla de arranque (TI6d) salvo que el test la encienda (BootSplash.EnabledOverride = true; BootSplashTests la vuelve a null en su TearDown):
         // los tests que no tratan de ella arrancan como antes de que existiera, todo en el Start, sin fotogramas de más ni el
         // segundo de sloth_wake de la primera apertura.
         private static IEnumerator LoadScene()
         {
             if (LaunchOptions.DeviceLocaleOverride == null)
             {
-                LaunchOptions.DeviceLocaleOverride = new AF.Platform.ManualDeviceLocale(string.Empty);
+                LaunchOptions.DeviceLocaleOverride = new AF.Platform.ManualDeviceLocale("es");
             }
 
             if (BootSplash.EnabledOverride == null)
             {
                 BootSplash.EnabledOverride = false;
+            }
+
+            // Sin la edad ni el consentimiento (B12) salvo que el test los encienda (GameBootstrap.ConsentEnabledOverride = true;
+            // ConsentBootTests la vuelve a null en su TearDown): los tests de siempre arrancan como antes, con la analítica sin recoger.
+            if (GameBootstrap.ConsentEnabledOverride == null)
+            {
+                GameBootstrap.ConsentEnabledOverride = false;
             }
 
 #if UNITY_EDITOR

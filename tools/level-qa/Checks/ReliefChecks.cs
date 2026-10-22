@@ -27,7 +27,7 @@ internal static class ReliefChecks
     [
         ("QA-RELIEF-MIN", "relief con al menos una variante desde el nivel 31 (03 sec. 13; 08 sec. 4.1)"),
         ("QA-RELIEF-VALID", "cada variante es un tablero valido (BoardBuilder y LevelValidation; con tinaja, su forma: una, su cuia contigua y en la misma fila, <= 13 cuias (D-027), T4 y combinaciones)"),
-        ("QA-RELIEF-MINUS", "minus_color resoluble (A* a 100.000) con el par entero publicado y sin el color removed, que nunca es una fruta de la tinaja (03 sec. 13; propuesta de la tinaja c.3 punto 4)"),
+        ("QA-RELIEF-MINUS", "minus_color resoluble (A* w = 1 a 2.000.000: la segunda pasada del generador, Q-N2 (a); la primera, a 100.000) con el par entero publicado y sin el color removed, que nunca es una fruta de la tinaja (03 sec. 13; propuesta de la tinaja c.3 punto 4)"),
         ("QA-RELIEF-PLUS", "plus_empty = el tablero base con exactamente un vacio de 4 mas (al final; con tinaja, en la ranura que deja la pareja en la misma fila) (03 sec. 13)"),
         ("QA-RELIEF-BOT", "bot_fail de la variante recalculado; baja >= 0,20, o con base < 0,20 par menor (minus_color) o el vacio extra (plus_empty) (03 sec. 17 #8)"),
         ("QA-RELIEF-MASK", "variante de un nivel con tinaja: la conserva y su hidden es la mascara (todas sus capas menos la boca); variante sin tinaja: sin hidden (08 sec. 4.1)"),

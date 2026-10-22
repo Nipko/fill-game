@@ -10,7 +10,7 @@ Tinaja (M13; D-019, Q-Ti1 A; 03 §8; propuesta de la tinaja c.3): paso «Ti» de
 
 | Pack | Niveles | Bytes | Bytes sin relief | Bytes sin relief por 100 niveles (≤ 100 KB, 03 §17 #11) | SHA-256 |
 |---|---|---|---|---|---|
-| `tools/out/sample_tinaja/mundo_07_v1.json` | 20 | 25077 | 15894 | 77.6 KB | `1deee76bd8901dcb0eb81e92b21a64e21c9921ff7ae7efc675b4af17e7416666` |
+| `tools/out/sample_tinaja/mundo_07_v1.json` | 20 | 25077 | 15894 | 77.6 KB | `5bba926d3b0377b99a69f3890bab102e4b76ac636df07e2fc707573626eb409a` |
 
 ## Pool por rango e índice D (03 §7)
 
@@ -40,7 +40,7 @@ Columnas: p = posición en el ciclo (0 en la rampa); E = vacíos de capacidad �
 
 | Nivel | p | Rol | Calendario | K | E (libres) | Cuias | Fuente | Par | Estados A* | bot_fail | Ventana | Etiqueta | Objetivo | D | q (banda) | Ramif. | Trampas | TT | Compl. | Alivio | Notas |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 321 | 1 | recuperacion | R | 7 | 2 (2) | 9 | walk | 14 | 752 | 0.000 | [0.00, 0.30) | normal | — | -0.73 | 0.063 (recuperacion) | 5.00 | 0.00 | 0 | 38 | −2(13; 0.00) +(0.00) |  |
+| 321 | 1 | recuperacion | R | 7 | 2 (2) | 9 | walk | 14 | 752 | 0.000 | [0.00, 0.30) | normal | — | -0.73 | 0.063 (recuperacion) | 5.00 | 0.00 | 0 | 38 | −7(13; 0.00) +(0.00) |  |
 | 322 | 2 | recuperacion | R | 7 | 2 (2) | 9 | walk | 14 | 562 | 0.000 | [0.00, 0.30) | normal | — | -0.69 | 0.097 (recuperacion) | 5.29 | 0.00 | 0 | 38 | −3(13; 0.00) +(0.00) |  |
 | 323 | 3 | estreno | *Ti | 6 | 2 (2) | 10 | walk | 16 | 5097 | 0.000 | [0.00, 0.20) | normal | — | -0.46 | 0.131 (comodidad) | 5.13 | 0.00 | 0 | 42 | −6(15; 0.00) +(0.00) | tinaja: K <= 6 en el estreno (propuesta de la tinaja c.3 y d.3); tinaja: 3 dosis (2 ocultas), 1 realidades |
 | 324 | 4 | estreno | *Ti | 6 | 2 (2) | 10 | walk | 13 | 1704 | 0.000 | [0.00, 0.20) | normal | — | -0.79 | 0.040 (recuperacion) | 4.23 | 0.00 | 0 | 36 | −7(12; 0.00) +(0.00) | tinaja: K <= 6 en el estreno (propuesta de la tinaja c.3 y d.3); tinaja: 3 dosis (2 ocultas), 1 realidades |
@@ -49,7 +49,7 @@ Columnas: p = posición en el ciclo (0 en la rampa); E = vacíos de capacidad �
 | 327 | 7 | comodidad | Ti | 7 | 1 (1) | 10 | walk | 15 | 876 | 0.425 | [0.20, 0.60] | normal | — | -0.23 | 0.358 (comodidad) | 3.67 | 0.04 | 0 | 39 | +(0.00) −7(14; 0.00) | tinaja: 3 dosis (2 ocultas), 1 realidades |
 | 328 | 8 | comodidad | C | 7 | 1 (1) | 8 | walk | 15 | 90 | 0.275 | [0.20, 0.60] | normal | — | -0.21 | 0.369 (comodidad) | 3.07 | 0.24 | 0 | 40 | +(0.00) −1(14; 0.00) |  |
 | 329 | 9 | reto | Ti (D) | 8 | 1 (1) | 11 | deep | 23 | 4297 | 0.800 | [0.75, 0.90) | hard | hard | 0.50 | 0.744 (reto) | 2.96 | 0.04 | 0 | 47 | +(0.00) −3(22; 0.00) | tinaja: 5 dosis (4 ocultas), 24 realidades |
-| 330 | 10 | comodidad | C | 7 | 2 (2) | 9 | walk | 16 | 1887 | 0.425 | [0.20, 0.60] | normal | — | 0.10 | 0.631 (comodidad) | 6.00 | 0.04 | 0 | 40 | −3(14; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica) |
+| 330 | 10 | comodidad | C | 7 | 2 (2) | 9 | walk | 16 | 1887 | 0.425 | [0.20, 0.60] | normal | — | 0.10 | 0.631 (comodidad) | 6.00 | 0.04 | 0 | 40 | −3(14; 0.00) +(0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica); cvd_adjacent: 1 contacto(s) |
 | 331 | 11 | comodidad | C | 7 | 1 (1) | 8 | walk | 16 | 156 | 0.400 | [0.20, 0.60] | normal | — | -0.37 | 0.210 (comodidad) | 2.38 | 0.05 | 0 | 42 | +(0.03) −6(15; 0.00) |  |
 | 332 | 12 | reto | Ti (D) | 7 | 1 (1) | 10 | deep | 22 | 4408 | 0.825 | [0.75, 0.90) | hard | hard | 0.58 | 0.761 (reto) | 3.32 | 0.00 | 0 | 48 | +(0.00) −10(21; 0.00) | relajacion: K - 1 (tinaja: vacios fijos); 1 ronda(s) extra de candidatos; tinaja: 5 dosis (4 ocultas), 18 realidades |
 | 333 | 13 | comodidad | C | 7 | 2 (2) | 9 | walk | 18 | 2586 | 0.200 | [0.20, 0.60] | normal | — | -0.10 | 0.517 (comodidad) | 5.78 | 0.02 | 0 | 44 | −3(16; 0.00) | relajacion: 2 vacios (03 sec. 4.4; nivel puro, sin Cuia chica); alivio plus_empty no publicado (no baja bot_fail 0,20) |

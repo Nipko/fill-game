@@ -384,7 +384,7 @@ internal static class CampaignRunner
         Parallel.ForEach(levels.Where(l => l.Plan.Level >= 31), new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, l =>
         {
             Candidate c = l.Chosen!;
-            (List<ReliefBoard> published, List<ReliefBoard> rejected) = Relief.Compute(generators.Value!.Metrics, c.Board, c.Par, c.Bot, l.Plan.SeedText);
+            (List<ReliefBoard> published, List<ReliefBoard> rejected) = SlotGenerator.ReliefOf(generators.Value!.Metrics, c, l.Plan.SeedText);
             l.Relief = published;
             l.ReliefRejected = rejected;
         });

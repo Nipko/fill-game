@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using AF.Platform;
 using AF.Save.Json;
 
 namespace AF.Save
@@ -15,11 +16,13 @@ namespace AF.Save
     /// <c>settings</c>, <c>sloth</c> y <c>progress.map_seen_level</c> toman su default ante un valor ausente o inválido
     /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>]; igual
     /// <c>progress.undo_tip_seen</c> (DC23), que sin la clave o con otro tipo queda en «no visto». <c>fauna</c>
-    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta. <c>streak</c> y
-    /// <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
+    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta. <c>streak</c>,
+    /// <c>calendar</c> (B4) y <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
     /// (vacía y 0): son economía y un tipo equivocado en ellos es corrupción. Los de B14 son cosméticos y tolerantes:
     /// <c>entitlements.skin_equipped</c> y <c>entitlements.frames</c> se omiten en su default (null y vacía), y <c>album</c>
-    /// (solo <c>fruits</c>), sin tintes; un valor que no vale toma el default o se descarta.
+    /// (solo <c>fruits</c>), sin tintes; un valor que no vale toma el default o se descarta. <c>consent</c> (B12) se omite mientras
+    /// es null y es tolerante: un bloque que no se entiende (sin perfil, con otro tipo) se lee como null y se vuelve a preguntar,
+    /// nunca hace corrupto el perfil.
     /// </summary>
     public static class ProfileJson
     {
@@ -85,6 +88,10 @@ namespace AF.Save
             root.Set(SchemaKey, JsonNode.FromInt(Profile.CurrentSchema));
             root.Set("created_at", Timestamp(p.CreatedAt));
             root.Set("economy_ts", Timestamp(p.EconomyTs));
+            if (p.Consent != null)
+            {
+                root.Set("consent", ConsentNode(p.Consent)); // B12: la clave falta hasta la primera decisión
+            }
 
             JsonNode canoes = JsonNode.NewObject();
             canoes.Set("count", JsonNode.FromInt(p.Wallet.Canoes.Count));
@@ -150,7 +157,52 @@ namespace AF.Save
                 root.Set("streak", streak);
             }
 
+            if (p.Calendar != null)
+            {
+                // Bitácora del río (Q-M3 (a) [P]; B4-1-profile): la clave falta hasta el primer guardado.
+                JsonNode calendar = JsonNode.NewObject();
+                calendar.Set("cycle", JsonNode.FromInt(p.Calendar.Cycle));
+                calendar.Set("next_day", JsonNode.FromInt(p.Calendar.NextDay));
+                calendar.Set("last_claim_date", JsonNode.FromString(p.Calendar.LastClaimDate));
+                calendar.Set("played_date", JsonNode.FromString(p.Calendar.PlayedDate));
+                root.Set("calendar", calendar);
+            }
+
+            if (p.Piggy != null)
+            {
+                // Cántaro (08 §4.3; B5): falta hasta el primer guardado del Cántaro o de las ofertas.
+                JsonNode piggy = JsonNode.NewObject();
+                piggy.Set("seeds", JsonNode.FromInt(p.Piggy.Seeds));
+                piggy.Set("cap", JsonNode.FromInt(p.Piggy.Cap));
+                piggy.Set("last_level", JsonNode.FromInt(p.Piggy.LastLevel));
+                piggy.Set("full_card", JsonNode.FromBool(p.Piggy.FullCard));
+                root.Set("piggy", piggy);
+            }
+
+            if (p.Offers != null)
+            {
+                // Ofertas (B5 [P]): falta hasta la primera oferta o el primer intersticial.
+                OffersData o = p.Offers;
+                JsonNode offers = JsonNode.NewObject();
+                offers.Set("starter_first_seen_at", Timestamp(o.StarterFirstSeenAt));
+                offers.Set("starter_reminders", IntList(o.StarterReminders));
+                offers.Set("noads_card_date", o.NoAdsCardDate == null ? JsonNode.Null : JsonNode.FromString(o.NoAdsCardDate));
+                offers.Set("noads_declines", JsonNode.FromInt(o.NoAdsDeclines));
+                offers.Set("interstitials_seen", JsonNode.FromInt(o.InterstitialsSeen));
+                offers.Set("skin_cards", IntList(o.SkinCards));
+                root.Set("offers", offers);
+            }
+
             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
+            if (p.AppliedPurchases.Count > 0)
+            {
+                root.Set("applied_purchases", StringList(SortedUnique(p.AppliedPurchases))); // F3-3: falta mientras está vacía; B8: orden ordinal
+            }
+
+            if (p.PurchaseQueue != null)
+            {
+                root.Set("purchase_queue", PurchaseQueueNode(p.PurchaseQueue)); // F3-3 [P]: falta si nunca se guardó
+            }
 
             JsonNode entitlements = JsonNode.NewObject();
             entitlements.Set("no_ads", JsonNode.FromBool(p.Entitlements.NoAds));
@@ -176,6 +228,17 @@ namespace AF.Save
             settings.Set("language", JsonNode.FromString(p.Settings.Language));
             settings.Set("sloth_messages", JsonNode.FromBool(p.Settings.SlothMessages));
             settings.Set("idle_hint", JsonNode.FromBool(p.Settings.IdleHint));
+            if (p.Settings.ReduceMotion != ReduceMotionSetting.Auto)
+            {
+                // B9: settings.reduce_motion [P], solo cuando deja su default (no cambia los perfiles que aún no lo usan).
+                settings.Set("reduce_motion", JsonNode.FromString(SettingsData.ReduceMotionText(p.Settings.ReduceMotion)));
+            }
+
+            if (p.Settings.HighContrast)
+            {
+                settings.Set("high_contrast", JsonNode.FromBool(true)); // B9: settings.high_contrast [P], solo encendido
+            }
+
             if (!p.Settings.Push.IsDefault)
             {
                 // B6: settings.push (08 §4.3) solo cuando deja su default, para no cambiar los perfiles que aún no lo usan.
@@ -258,6 +321,7 @@ namespace AF.Save
                 root.Set("daily_challenge", DailyChallengeNode(p.DailyChallenge)); // E4: la clave falta hasta el primer guardado del Reto
             }
 
+            WriteB8(root, p); // B8: identidad, compras, recompensas provisionales e integrity, omitidos en su default
             return root;
         }
 
@@ -268,6 +332,7 @@ namespace AF.Save
             var p = new Profile();
             p.CreatedAt = ReadTimestamp(root, "created_at") ?? default(DateTime);
             p.EconomyTs = ReadTimestamp(root, "economy_ts");
+            p.Consent = ReadConsent(root); // B12: tolerante
 
             JsonNode? wallet = Section(root, "wallet");
             if (wallet != null)
@@ -342,8 +407,60 @@ namespace AF.Save
                 p.Streak = streak;
             }
 
+            // calendar (Bitácora del río; Q-M3 (a) [P]; B4-1-profile): es economía (last_claim_date impide cobrar dos veces una
+            // casilla), así que un tipo equivocado es corrupción. Una clave que falta toma su default y una desconocida se ignora
+            // (el bloque de ejemplo antiguo de 08 §4.3, con month y claimed_days, se lee como un ciclo 1 en la casilla 1). Los
+            // rangos (next_day 1-30) los recorta AF.LiveOps.
+            JsonNode? calendarNode = Section(root, "calendar");
+            if (calendarNode != null)
+            {
+                var calendar = new CalendarData();
+                calendar.Cycle = ReadInt(calendarNode, "cycle", calendar.Cycle);
+                calendar.NextDay = ReadInt(calendarNode, "next_day", calendar.NextDay);
+                calendar.LastClaimDate = ReadString(calendarNode, "last_claim_date", calendar.LastClaimDate);
+                calendar.PlayedDate = ReadString(calendarNode, "played_date", calendar.PlayedDate);
+                p.Calendar = calendar;
+            }
+
+            // piggy (Cántaro; B5): seeds y cap son semillas que se compran, así que un tipo equivocado es corrupción, como en wallet;
+            // last_level y full_card [P] no son dinero: un valor que no vale toma su default.
+            JsonNode? piggyNode = Section(root, "piggy");
+            if (piggyNode != null)
+            {
+                var piggy = new PiggyData();
+                piggy.Seeds = ReadInt(piggyNode, "seeds", piggy.Seeds);
+                piggy.Cap = ReadInt(piggyNode, "cap", piggy.Cap);
+                piggy.LastLevel = Math.Max(0, TolerantInt(piggyNode, "last_level", piggy.LastLevel));
+                piggy.FullCard = TolerantBool(piggyNode, "full_card", piggy.FullCard);
+                p.Piggy = piggy;
+            }
+
+            // offers (B5 [P]): no es dinero; un valor que no vale toma su default, sin corrupción.
+            JsonNode? offersNode = TolerantSection(root, "offers");
+            if (offersNode != null)
+            {
+                var offers = new OffersData();
+                offers.StarterFirstSeenAt = TolerantTimestamp(offersNode, "starter_first_seen_at");
+                TolerantIntList(offersNode, "starter_reminders", offers.StarterReminders);
+                offers.NoAdsCardDate = TolerantString(offersNode, "noads_card_date");
+                offers.NoAdsDeclines = Math.Max(0, TolerantInt(offersNode, "noads_declines", 0));
+                offers.InterstitialsSeen = Math.Max(0, TolerantInt(offersNode, "interstitials_seen", 0));
+                TolerantIntList(offersNode, "skin_cards", offers.SkinCards);
+                p.Offers = offers;
+            }
+
             JsonNode? levelState = Section(root, "level_state");
             p.LevelState = levelState == null ? null : ReadLevelState(levelState);
+
+            // applied_purchases (F3-3) es dinero: un tipo equivocado es corrupción, como en wallet. Los repetidos, una vez, y en
+            // orden ordinal (B8: la firma no depende del orden).
+            ReadStringList(root, "applied_purchases", p.AppliedPurchases);
+            Normalize(p.AppliedPurchases);
+
+            // purchase_queue (F3-3 [P]): AF.Save no la interpreta; si no es un objeto, se descarta (las compras sin terminar
+            // vuelven con Unity IAP al arrancar y nada se acredita sin el servidor).
+            JsonNode? queue = TolerantSection(root, "purchase_queue");
+            p.PurchaseQueue = queue == null ? null : JsonText.Write(queue);
 
             JsonNode? entitlements = Section(root, "entitlements");
             if (entitlements != null)
@@ -411,7 +528,164 @@ namespace AF.Save
 
             JsonNode? dailyChallenge = Section(root, "daily_challenge");
             p.DailyChallenge = dailyChallenge == null ? null : ReadDailyChallenge(dailyChallenge);
+            ReadB8(root, p);
             return p;
+        }
+
+        // purchase_queue (F3-3 [P]): el JSON de la cola como objeto anidado; si el texto no es un objeto JSON, se descarta.
+        private static JsonNode PurchaseQueueNode(string json)
+        {
+            try
+            {
+                JsonNode node = JsonText.Parse(json);
+                return node.Kind == JsonKind.Object ? node : JsonNode.Null;
+            }
+            catch (FormatException)
+            {
+                return JsonNode.Null;
+            }
+        }
+
+        // Bloque B8 (08 §4.3): first_app_version, locale y country_first (tolerantes: no son economía; un valor que no es texto
+        // toma null), voided_purchases (economía: un tipo equivocado es corrupción; se leen en orden ordinal
+        // y sin repetidos), pending_rewards [P] (economía) e integrity (tolerante: una firma ilegible deja el perfil sin firma,
+        // y ProfileIntegrity.Verify lo dirá). Cada clave se omite en su default, así un perfil anterior a B8 se escribe igual.
+        private static void WriteB8(JsonNode root, Profile p)
+        {
+            if (p.FirstAppVersion != null)
+            {
+                root.Set("first_app_version", JsonNode.FromString(p.FirstAppVersion));
+            }
+
+            if (p.Locale != null)
+            {
+                root.Set("locale", JsonNode.FromString(p.Locale));
+            }
+
+            if (p.CountryFirst != null)
+            {
+                root.Set("country_first", JsonNode.FromString(p.CountryFirst));
+            }
+
+            if (p.AccountCode != null)
+            {
+                root.Set("account_code", JsonNode.FromString(p.AccountCode)); // F3-5 [P]: falta hasta que se pide
+            }
+
+            if (p.VoidedPurchases.Count > 0)
+            {
+                root.Set("voided_purchases", StringList(SortedUnique(p.VoidedPurchases)));
+            }
+
+            if (p.PendingRewards.Count > 0)
+            {
+                JsonNode rewards = JsonNode.NewArray();
+                for (int i = 0; i < p.PendingRewards.Count; i++)
+                {
+                    ProvisionalRewardData r = p.PendingRewards[i];
+                    JsonNode entry = JsonNode.NewObject();
+                    entry.Set("nonce", JsonNode.FromString(r.Nonce));
+                    entry.Set("placement", JsonNode.FromString(r.Placement));
+                    entry.Set("granted_at", Timestamp(r.GrantedAt));
+                    entry.Set("seeds", JsonNode.FromInt(r.Seeds));
+                    JsonNode stock = JsonNode.NewObject();
+                    stock.Set("undo", JsonNode.FromInt(r.Stock.Undo));
+                    stock.Set("hint", JsonNode.FromInt(r.Stock.Hint));
+                    stock.Set("reveal", JsonNode.FromInt(r.Stock.Reveal));
+                    stock.Set("extra_cuia", JsonNode.FromInt(r.Stock.ExtraCuia));
+                    stock.Set("shuffle", JsonNode.FromInt(r.Stock.Shuffle));
+                    entry.Set("stock", stock);
+                    rewards.Add(entry);
+                }
+
+                root.Set("pending_rewards", rewards);
+            }
+
+            if (!p.Integrity.IsEmpty)
+            {
+                JsonNode integrity = JsonNode.NewObject();
+                integrity.Set("hmac", JsonNode.FromString(p.Integrity.Hmac));
+                integrity.Set("device_first", JsonNode.FromString(p.Integrity.DeviceFirst));
+                integrity.Set("fraud_flag", JsonNode.FromInt(p.Integrity.FraudFlag));
+                root.Set("integrity", integrity);
+            }
+        }
+
+        private static void ReadB8(JsonNode root, Profile p)
+        {
+            p.FirstAppVersion = TolerantString(root, "first_app_version");
+            p.Locale = TolerantString(root, "locale");
+            p.CountryFirst = TolerantString(root, "country_first");
+            p.AccountCode = TolerantString(root, "account_code");
+            ReadStringList(root, "voided_purchases", p.VoidedPurchases);
+            Normalize(p.VoidedPurchases);
+
+            p.PendingRewards.Clear();
+            JsonNode? rewards = root.Get("pending_rewards");
+            if (rewards != null && !rewards.IsNull)
+            {
+                if (rewards.Kind != JsonKind.Array)
+                {
+                    throw new FormatException("'pending_rewards' debe ser una lista JSON.");
+                }
+
+                IReadOnlyList<JsonNode> items = rewards.Items;
+                for (int i = 0; i < items.Count; i++)
+                {
+                    if (items[i].Kind != JsonKind.Object)
+                    {
+                        throw new FormatException("'pending_rewards' debe ser una lista de objetos.");
+                    }
+
+                    var r = new ProvisionalRewardData();
+                    r.Nonce = ReadString(items[i], "nonce", null) ?? throw new FormatException("'pending_rewards': falta nonce.");
+                    r.Placement = ReadString(items[i], "placement", r.Placement) ?? string.Empty;
+                    r.GrantedAt = ReadTimestamp(items[i], "granted_at") ?? throw new FormatException("'pending_rewards': falta granted_at.");
+                    r.Seeds = ReadInt(items[i], "seeds", r.Seeds);
+                    JsonNode? stock = Section(items[i], "stock");
+                    if (stock != null)
+                    {
+                        r.Stock.Undo = ReadInt(stock, "undo", 0);
+                        r.Stock.Hint = ReadInt(stock, "hint", 0);
+                        r.Stock.Reveal = ReadInt(stock, "reveal", 0);
+                        r.Stock.ExtraCuia = ReadInt(stock, "extra_cuia", 0);
+                        r.Stock.Shuffle = ReadInt(stock, "shuffle", 0);
+                    }
+
+                    p.PendingRewards.Add(r);
+                }
+            }
+
+            JsonNode? integrity = TolerantSection(root, "integrity");
+            if (integrity != null)
+            {
+                p.Integrity.Hmac = TolerantString(integrity, "hmac");
+                p.Integrity.DeviceFirst = TolerantString(integrity, "device_first");
+                p.Integrity.FraudFlag = Math.Max(0, TolerantInt(integrity, "fraud_flag", 0));
+            }
+        }
+
+        // Orden ordinal y sin repetidos (applied_purchases y voided_purchases): la ida y vuelta, y la firma, no dependen del orden.
+        private static List<string> SortedUnique(List<string> values)
+        {
+            var copy = new List<string>(values);
+            Normalize(copy);
+            return copy;
+        }
+
+        private static void Normalize(List<string> values)
+        {
+            values.Sort(StringComparer.Ordinal);
+            int w = 0;
+            for (int r = 0; r < values.Count; r++)
+            {
+                if (w == 0 || !string.Equals(values[r], values[w - 1], StringComparison.Ordinal))
+                {
+                    values[w++] = values[r];
+                }
+            }
+
+            values.RemoveRange(w, values.Count - w);
         }
 
         // fauna.sighted (esquema 2; DC15): una entrada que no es un objeto {species_id, level} válido se descarta; si una especie
@@ -608,6 +882,13 @@ namespace AF.Save
             s.Haptics = TolerantBool(node, "haptics", s.Haptics);
             s.SlothMessages = TolerantBool(node, "sloth_messages", s.SlothMessages);
             s.IdleHint = TolerantBool(node, "idle_hint", s.IdleHint);
+            string? reduceMotion = TolerantString(node, "reduce_motion");
+            if (reduceMotion != null && SettingsData.TryParseReduceMotion(reduceMotion, out ReduceMotionSetting motion))
+            {
+                s.ReduceMotion = motion; // B9
+            }
+
+            s.HighContrast = TolerantBool(node, "high_contrast", s.HighContrast); // B9
             JsonNode? push = TolerantSection(node, "push");
             if (push != null)
             {
@@ -737,6 +1018,43 @@ namespace AF.Save
             return value.HasValue ? JsonNode.FromString(FormatTimestamp(value.Value)) : JsonNode.Null;
         }
 
+        // consent (B12; 08 §4.3): age_band_corrected [P] solo si es cierto.
+        private static JsonNode ConsentNode(ConsentRecord c)
+        {
+            JsonNode node = JsonNode.NewObject();
+            node.Set("profile", JsonNode.FromString(c.Profile));
+            node.Set("text_version", JsonNode.FromInt(c.TextVersion));
+            node.Set("at", Timestamp(c.At));
+            node.Set("analytics", JsonNode.FromBool(c.Analytics));
+            node.Set("ads_personalized", JsonNode.FromBool(c.AdsPersonalized));
+            node.Set("age_band", JsonNode.FromString(AgeBands.Id(c.AgeBand)));
+            if (c.AgeBandCorrected)
+            {
+                node.Set("age_band_corrected", JsonNode.FromBool(true));
+            }
+
+            return node;
+        }
+
+        // Tolerante: sin bloque, sin perfil o con otro tipo, null (se vuelve a preguntar); una banda que no se entiende queda sin
+        // declarar y una versión que no se entiende, 0 (las dos obligan a preguntar otra vez).
+        private static ConsentRecord? ReadConsent(JsonNode root)
+        {
+            JsonNode? node = TolerantSection(root, "consent");
+            string? profile = node == null ? null : TolerantString(node, "profile");
+            if (node == null || string.IsNullOrEmpty(profile))
+            {
+                return null;
+            }
+
+            int version = Math.Max(0, TolerantInt(node, "text_version", 0));
+            DateTime at = TolerantTimestamp(node, "at") ?? default(DateTime);
+            return new ConsentRecord(
+                profile!, version, DateTime.SpecifyKind(at, DateTimeKind.Utc), TolerantBool(node, "analytics", false),
+                TolerantBool(node, "ads_personalized", false), AgeBands.Parse(TolerantString(node, "age_band")),
+                TolerantBool(node, "age_band_corrected", false));
+        }
+
         // ---------------------------------------------------------------- lectura tolerante
 
         private static JsonNode? Section(JsonNode parent, string key)
@@ -852,6 +1170,26 @@ namespace AF.Save
                     {
                         target.Add(value);
                     }
+                }
+            }
+        }
+
+        // Lista de enteros tolerante (B5): sin la clave, o si no es una lista, vacía; lo que no es un entero (o repetido), fuera.
+        private static void TolerantIntList(JsonNode parent, string key, List<int> target)
+        {
+            target.Clear();
+            JsonNode? node = parent.Get(key);
+            if (node == null || node.Kind != JsonKind.Array)
+            {
+                return;
+            }
+
+            IReadOnlyList<JsonNode> items = node.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (TryInt(items[i], out int value) && !target.Contains(value))
+                {
+                    target.Add(value);
                 }
             }
         }

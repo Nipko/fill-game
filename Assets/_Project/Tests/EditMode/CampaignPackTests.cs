@@ -101,7 +101,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Relief_BuildAndValidate_All1310()
+        public void Relief_BuildAndValidate_All1327()
         {
             LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
             int variants = 0;
@@ -143,10 +143,11 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            int worlds7to9 = LevelCatalog.TinajaPublished ? 774 : 778;
-            Assert.That(variants, Is.EqualTo(334 + 198 + worlds7to9),
-                "334 en 1-200, 198 en el mundo 6 (100 de un color menos y 98 de una vacía más) y, en los mundos 7-9, 774 en la variante «a» "
-                + "(379 y 395) o 778 en la «b» (384 y 394)");
+            // B11 (Q-N2 (a)): desde el 31, minus_color en todos los niveles salvo el 680 (segunda pasada del generador).
+            int worlds7to9 = LevelCatalog.TinajaPublished ? 794 : 793;
+            Assert.That(variants, Is.EqualTo(336 + 198 + worlds7to9),
+                "336 en 1-200 (170 de un color menos y 166 de una vacía más), 198 en el mundo 6 (100 y 98) y, en los mundos 7-9, 794 en "
+                + "la variante «a» (399 y 395) o 793 en la «b» (399 y 394)");
         }
 
         [Test]
@@ -342,7 +343,7 @@ namespace AF.Tests.EditMode
 
             Assert.That(catalog.Find(323)!.HasMechanic(MechanicType.Tinaja), Is.True, "el 323 estrena la Tinaja");
             Assert.That(tinajaLevels, Is.EqualTo(18), "la Tinaja en 18 niveles de 301-700 (10 en el mundo 7, 3 en el 8 y 5 en el 9)");
-            Assert.That(variants, Is.EqualTo(774));
+            Assert.That(variants, Is.EqualTo(794), "399 de un color menos y 395 de una vacía más (B11, Q-N2 (a))");
         }
 
         [Test]

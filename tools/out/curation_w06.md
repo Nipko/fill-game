@@ -1,21 +1,21 @@
-# Curación de 201-300 (variante a): retos, hitos y estrenos para el dueño
+# Curación de 201-300 (variante b): retos, hitos y estrenos para el dueño
 
-Generado por `dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --variant a --out Assets/_Project/Data/Levels --curation tools/out/curation_w06.md --decisions tools/level-generator/specs/curation_v2.json` con los mismos niveles colocados que el pack: no se edita a mano y no lleva tiempos (la decisión del dueño sale de `tools/level-generator/specs/curation_v2.json`). Niveles del mundo 6 (Oriente, 201-300).
+Generado por `dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --variant b --out Assets/_Project/Data/Levels --curation tools/out/curation_w06.md --decisions tools/level-generator/specs/curation_v2.json` con los mismos niveles colocados que el pack: no se edita a mano y no lleva tiempos (la decisión del dueño sale de `tools/level-generator/specs/curation_v2.json`). Niveles del mundo 6 (Oriente, 201-300).
 
 Fuentes: 09 §0.1 (fila de level-pipeline-dev: el dueño aprueba la curación de retos e hitos de cada paquete) y §0.3 (propuesta de curación de los 30 retos e hitos que aprueba el dueño), 03 §7 (un reto por debajo de 0,75 se publica sin etiqueta y la curación decide si se sustituye por otro del pool del slot; banda por el cuantil q de D en el pool del rango), D-009 (etiqueta por el bot ×40 con la semilla del nivel: Difícil ≥ 0,75 y Muy difícil ≥ 0,90; retos en p6, p9, p12, p15 y p18 e hito en p20; c.2: un reto o el hito fuera de su ventana se publica con la etiqueta que mide), 03 §11-§12, 02 §9.2 regla 2 (estrenos) y la tabla de novedades de D2 (d.5.3; D-023 punto 10). La columna «Propuesta» es [P]: la decide el dueño.
 
-Compuerta automática (verde antes de pedir la curación): `dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_06_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --variant a`. Cada reto o hito con aviso QA-WINDOW (bot_fail fuera de la ventana del slot) sale aquí como «revisar», y cada hito con aviso QA-BAND-Q (fuera de la banda de hito con el mínimo cumplido), como «revisar» o con nota de banda; los avisos QA-BAND-Q de las recuperaciones no entran en este informe. QA-BAND-Q no mira los retos y level-qa no mira risk_adjacent: las notas de banda de los retos y los «revisar» por risk_adjacent salen solo de este informe.
+Compuerta automática (verde antes de pedir la curación): `dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_06_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --variant b`. Cada reto o hito con aviso QA-WINDOW (bot_fail fuera de la ventana del slot) sale aquí como «revisar», y cada hito con aviso QA-BAND-Q (fuera de la banda de hito con el mínimo cumplido), como «revisar» o con nota de banda; los avisos QA-BAND-Q de las recuperaciones no entran en este informe. QA-BAND-Q no mira los retos y level-qa no mira risk_adjacent: las notas de banda de los retos y los «revisar» por risk_adjacent salen solo de este informe.
 
 ## Resumen
 
 | Pack | Niveles | `pack_schema` | Bytes | SHA-256 |
 |---|---|---|---|---|
-| `Assets/_Project/Data/Levels/mundo_06_v1.json` | 100 | 3 | 139470 | `9903e8363553e65c9f77a067ed7221146a8250e6dedbccb6cfdae96db031689f` |
+| `Assets/_Project/Data/Levels/mundo_06_v1.json` | 100 | 3 | 139473 | `beb83f41bb42a297246963083b27574f90469c263da943aa0be3edfc7b9b98d6` |
 
 - Retos e hitos: 30 (25 retos y 5 hitos); 27 miden la etiqueta objetivo o más (D-009) y 3 no.
 - No miden su etiqueta objetivo y se publican con la que miden (c.2; 03 §7): 246 (reto Ma+Re (D): Normal, bot_fail 0.600), 266 (reto Pi+Br (D): Normal, bot_fail 0.425), 280 (hito Pi+Br (MD): Normal, bot_fail 0.675).
 - Etiquetas publicadas en 201-300: 23 Difícil y 4 Muy difícil de 100 niveles (03 §11: 25 % y 5 %).
-- Para revisar: 246 (reto), 266 (reto), 280 (hito), 298 (reto). El resto, aceptar.
+- Para revisar: 215 (reto), 226 (reto), 232 (reto), 240 (hito), 246 (reto), 252 (reto), 266 (reto), 269 (reto), 275 (reto), 278 (reto), 280 (hito), 286 (reto), 289 (reto), 295 (reto), 298 (reto). El resto, aceptar.
 - Estrenos: ★Ln en 243, 244, 245; ★Ha en 283, 284, 285 (6 de 6 con un ejemplar, 2 vacíos y bot_fail < 0,20).
 
 ## Retos e hitos
@@ -27,31 +27,31 @@ Etiqueta = la que mide el bot ×40 y se publica (D-009); Objetivo = la de la cel
 | 206 | 6 | reto | Pi+Ba (D) | 10 | 12 | 0 (0) | 25 | 0.800 | [0.75, 0.90) | Difícil | Difícil | 0.43 | 0.784 (reto) | 11 | aceptar |
 | 209 | 9 | reto | Li+Re (D) | 10 | 11 | 1 (1) | 23 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.59 | 0.854 (reto) | 5 | aceptar |
 | 212 | 12 | reto | Pi (D) | 10 | 12 | 1 (1) | 24 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.78 | 0.895 (reto) | 6 | aceptar |
-| 215 | 15 | reto | Re+Ba (D) | 10 | 12 | 1 (1) | 25 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.85 | 0.911 (reto) | 2 | aceptar |
+| 215 | 15 | reto | Re+Ba (D) | 10 | 12 | 1 (1) | 25 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.85 | 0.911 (reto) | 2 | **revisar**: cvd_adjacent: 1 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) |
 | 218 | 18 | reto | Li+Ba (D) | 10 | 12 | 1 (1) | 30 | 0.825 | [0.75, 0.90) | Difícil | Difícil | 1.08 | 0.944 (reto) | 7 | aceptar |
 | 220 | 20 | hito | Ba+Tu+Ch (MD) | 10 | 12 | 1 (1) | 28 | 1.000 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.20 | 0.967 (hito) | 3 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
-| 226 | 6 | reto | Ll+Ho (D) | 10 | 12 | 2 (0) | 23 | 0.800 | [0.75, 0.90) | Difícil | Difícil | 0.35 | 0.759 (reto) | 11 | aceptar |
+| 226 | 6 | reto | Ll+Ho (D) | 10 | 12 | 2 (0) | 23 | 0.800 | [0.75, 0.90) | Difícil | Difícil | 0.35 | 0.759 (reto) | 11 | **revisar**: cvd_adjacent: 1 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) |
 | 229 | 9 | reto | Br+Ll (D) | 10 | 12 | 1 (0) | 23 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.37 | 0.765 (reto) | 3 | aceptar |
-| 232 | 12 | reto | Ma+Ho (D) | 10 | 12 | 2 (0) | 25 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.42 | 0.779 (reto) | 8 | aceptar |
+| 232 | 12 | reto | Ma+Ho (D) | 10 | 12 | 2 (0) | 25 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.42 | 0.779 (reto) | 8 | **revisar**: cvd_adjacent: 1 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) |
 | 235 | 15 | reto | Br+Tu (D) | 10 | 11 | 0 (0) | 23 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.49 | 0.816 (reto) | 11 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 2 realidad(es) compatibles con lo visible) |
 | 238 | 18 | reto | Ll+Ho (D) | 10 | 12 | 2 (0) | 25 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.49 | 0.811 (reto) | 10 | aceptar |
-| 240 | 20 | hito | Ho+Br (MD) | 10 | 13 | 2 (1) | 25 | 0.900 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.01 | 0.936 (reto) | 56 | aceptar (D en banda reto (q 0.936), con el mínimo del hito cumplido: par − 2K = 5 ≥ 2.4 (aviso QA-BAND-Q)) |
+| 240 | 20 | hito | Ho+Br (MD) | 10 | 13 | 2 (1) | 25 | 0.900 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.01 | 0.936 (reto) | 56 | **revisar**: cvd_adjacent: 1 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) (D en banda reto (q 0.936), con el mínimo del hito cumplido: par − 2K = 5 ≥ 2.4 (aviso QA-BAND-Q)) |
 | 246 | 6 | reto | Ma+Re (D) | 10 | 12 | 2 (0) | 21 | 0.600 | [0.75, 0.90) | Normal | Difícil | 0.24 | 0.716 (reto) | 0 | **revisar**: mide Normal (bot_fail 0.600) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda |
 | 249 | 9 | reto | Ln (D) | 10 | 11 | 1 (1) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.36 | 0.760 (reto) | 5 | aceptar |
-| 252 | 12 | reto | Ln+Re (D) | 10 | 11 | 1 (1) | 20 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.52 | 0.831 (reto) | 2 | aceptar |
+| 252 | 12 | reto | Ln+Re (D) | 10 | 11 | 1 (1) | 20 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.52 | 0.831 (reto) | 2 | **revisar**: cvd_adjacent: 1 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) |
 | 255 | 15 | reto | Ma+Tu (D) | 10 | 12 | 1 (0) | 25 | 0.800 | [0.75, 0.90) | Difícil | Difícil | 0.61 | 0.865 (reto) | 11 | aceptar (turbia: 3 dosis ocultas en 2 cuia(s), 2 realidad(es) compatibles con lo visible) |
 | 258 | 18 | reto | Ln+Ma (D) | 10 | 12 | 2 (1) | 24 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.65 | 0.875 (reto) | 4 | aceptar |
 | 260 | 20 | hito | Ln+Ba (MD) | 10 | 11 | 0 (0) | 30 | 1.000 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.22 | 0.972 (hito) | 11 | aceptar |
 | 266 | 6 | reto | Pi+Br (D) | 10 | 13 | 1 (1) | 23 | 0.425 | [0.75, 0.90) | Normal | Difícil | 0.36 | 0.760 (reto) | 0 | **revisar**: mide Normal (bot_fail 0.425) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda |
-| 269 | 9 | reto | Ln+Br (D) | 10 | 12 | 1 (1) | 24 | 0.800 | [0.75, 0.90) | Difícil | Difícil | 0.39 | 0.768 (reto) | 13 | aceptar |
+| 269 | 9 | reto | Ln+Br (D) | 10 | 12 | 1 (1) | 24 | 0.800 | [0.75, 0.90) | Difícil | Difícil | 0.39 | 0.768 (reto) | 13 | **revisar**: cvd_adjacent: 1 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) |
 | 272 | 12 | reto | Pi+Ba (D) | 10 | 12 | 0 (0) | 23 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.45 | 0.801 (reto) | 17 | aceptar |
-| 275 | 15 | reto | Ba+Tu (D) | 10 | 12 | 1 (1) | 25 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.51 | 0.826 (reto) | 2 | aceptar (turbia: 3 dosis ocultas en 2 cuia(s), 2 realidad(es) compatibles con lo visible) |
-| 278 | 18 | reto | Ln+Ba (D) | 10 | 11 | 0 (0) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.65 | 0.872 (reto) | 16 | aceptar |
+| 275 | 15 | reto | Ba+Tu (D) | 10 | 12 | 1 (1) | 25 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.51 | 0.826 (reto) | 2 | **revisar**: cvd_adjacent: 1 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) (turbia: 3 dosis ocultas en 2 cuia(s), 2 realidad(es) compatibles con lo visible) |
+| 278 | 18 | reto | Ln+Ba (D) | 10 | 11 | 0 (0) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.65 | 0.872 (reto) | 16 | **revisar**: cvd_adjacent: 2 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) |
 | 280 | 20 | hito | Pi+Br (MD) | 10 | 13 | 1 (1) | 25 | 0.675 | [0.90, 1.00] | Normal | Muy difícil | 0.95 | 0.928 (reto) | 0 | **revisar**: mide Normal (bot_fail 0.675) y apunta a Muy difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda |
-| 286 | 6 | reto | Li+Re (D) | 10 | 11 | 1 (1) | 20 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.05 | 0.583 (comodidad) | 7 | aceptar (Difícil por el bot, con D en banda comodidad (q 0.583)) |
-| 289 | 9 | reto | Ha (D) | 10 | 11 | 1 (1) | 23 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.15 | 0.653 (comodidad) | 9 | aceptar (Difícil por el bot, con D en banda comodidad (q 0.653)) |
+| 286 | 6 | reto | Li+Re (D) | 10 | 11 | 1 (1) | 20 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.05 | 0.583 (comodidad) | 7 | **revisar**: cvd_adjacent: 2 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) (Difícil por el bot, con D en banda comodidad (q 0.583)) |
+| 289 | 9 | reto | Ha (D) | 10 | 11 | 1 (1) | 23 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.15 | 0.653 (comodidad) | 9 | **revisar**: cvd_adjacent: 2 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) (Difícil por el bot, con D en banda comodidad (q 0.653)) |
 | 292 | 12 | reto | Ha+Re (D) | 10 | 11 | 1 (0) | 20 | 0.825 | [0.75, 0.90) | Difícil | Difícil | 0.25 | 0.719 (reto) | 1 | aceptar |
-| 295 | 15 | reto | Br+Tu (D) | 10 | 12 | 1 (1) | 22 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.29 | 0.730 (reto) | 17 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 2 realidad(es) compatibles con lo visible) |
+| 295 | 15 | reto | Br+Tu (D) | 10 | 12 | 1 (1) | 22 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.29 | 0.730 (reto) | 17 | **revisar**: cvd_adjacent: 1 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) (turbia: 2 dosis ocultas en 1 cuia(s), 2 realidad(es) compatibles con lo visible) |
 | 298 | 18 | reto | Ha+Br (D) | 10 | 12 | 1 (1) | 23 | 0.825 | [0.75, 0.90) | Difícil | Difícil | 0.34 | 0.754 (reto) | 13 | **revisar**: risk_adjacent: 1 contacto(s) de tintes de un par de riesgo en una cuia (03 §4.5) |
 | 300 | 20 | hito | Ha+Li (MD) «Cuyabeno» [P] | 10 | 12 | 2 (2) | 34 | 1.000 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.45 | 0.986 (hito) | 17 | aceptar |
 
@@ -73,7 +73,7 @@ p20 de cada ciclo («Pico» de c.3): Muy difícil por el bot (≥ 0,90; D-009) y
 - Mecánicas: Ho key=14 (cuia de 4); Br (cuia de 4).
 - Medida: par 25 (2K = 20; par − 2K = 5, media del pool 2.4), bot_fail 0.900 → Muy difícil (objetivo Muy difícil), D 1.01, q 0.936 (banda reto), ramificación 8.04, trampas tempranas 0.
 - Notas de la generación: relajacion: deep con 60.000 nodos; 1 ronda(s) extra de candidatos; 6 ronda(s) de banda.
-- Propuesta [P]: aceptar (D en banda reto (q 0.936), con el mínimo del hito cumplido: par − 2K = 5 ≥ 2.4 (aviso QA-BAND-Q)).
+- Propuesta [P]: **revisar**: cvd_adjacent: 1 contacto(s) de tintes de un par del simulador de daltonismo en una cuia (03 §4.5; 07 §3, regla 3) (D en banda reto (q 0.936), con el mínimo del hito cumplido: par − 2K = 5 ≥ 2.4 (aviso QA-BAND-Q)).
 
 ### 260 · Ln+Ba (MD)
 
@@ -150,9 +150,31 @@ Todas las celdas con una variante la llevan en el nivel publicado.
 
 | Nivel | Rol | Calendario | Aviso |
 |---|---|---|---|
-| 277 | comodidad | Ho | risk_adjacent: 1 contacto(s) |
+| 204 | comodidad | C | cvd_adjacent: 3 contacto(s) |
+| 211 | comodidad | Li | cvd_adjacent: 1 contacto(s) |
+| 216 | comodidad | C | cvd_adjacent: 1 contacto(s) |
+| 217 | comodidad | Ho | cvd_adjacent: 1 contacto(s) |
+| 223 | comodidad | Ll | cvd_adjacent: 1 contacto(s) |
+| 224 | comodidad | C | cvd_adjacent: 1 contacto(s) |
+| 230 | comodidad | C | cvd_adjacent: 1 contacto(s) |
+| 231 | comodidad | Ll | cvd_adjacent: 1 contacto(s) |
+| 236 | comodidad | C | cvd_adjacent: 1 contacto(s) |
+| 243 | estreno | ★Ln | cvd_adjacent: 1 contacto(s) |
+| 245 | estreno | ★Ln | cvd_adjacent: 2 contacto(s) |
+| 247 | comodidad | Ln | cvd_adjacent: 1 contacto(s) |
+| 248 | comodidad | C | cvd_adjacent: 1 contacto(s) |
+| 253 | comodidad | C | cvd_adjacent: 1 contacto(s) |
+| 259 | remanso | S | cvd_adjacent: 1 contacto(s) |
+| 263 | comodidad | Pi | cvd_adjacent: 1 contacto(s) |
+| 264 | comodidad | C | cvd_adjacent: 1 contacto(s) |
+| 267 | comodidad | C | cvd_adjacent: 2 contacto(s) |
+| 268 | comodidad | Re | cvd_adjacent: 1 contacto(s) |
+| 273 | comodidad | C | cvd_adjacent: 1 contacto(s) |
+| 277 | comodidad | Ho | risk_adjacent: 1 contacto(s); cvd_adjacent: 1 contacto(s) |
 | 287 | comodidad | Ha | tras una etiqueta no baja una banda entera de D (solo baja D) |
-| 290 | comodidad | C | tras una etiqueta no baja una banda entera de D (solo baja D) |
+| 288 | comodidad | C | cvd_adjacent: 1 contacto(s) |
+| 290 | comodidad | C | cvd_adjacent: 2 contacto(s); tras una etiqueta no baja una banda entera de D (solo baja D) |
+| 299 | remanso | S | cvd_adjacent: 1 contacto(s) |
 
 ## Curación del dueño
 
@@ -163,31 +185,31 @@ Estado: **pendiente** (0 de 32 niveles decididos) (09 §0.1 y §0.3). La decisi�
 | 206 | reto | Pi+Ba (D) | Difícil / Difícil | aceptar | pendiente |
 | 209 | reto | Li+Re (D) | Difícil / Difícil | aceptar | pendiente |
 | 212 | reto | Pi (D) | Difícil / Difícil | aceptar | pendiente |
-| 215 | reto | Re+Ba (D) | Difícil / Difícil | aceptar | pendiente |
+| 215 | reto | Re+Ba (D) | Difícil / Difícil | revisar | pendiente |
 | 218 | reto | Li+Ba (D) | Difícil / Difícil | aceptar | pendiente |
 | 220 | hito | Ba+Tu+Ch (MD) | Muy difícil / Muy difícil | aceptar | pendiente |
-| 226 | reto | Ll+Ho (D) | Difícil / Difícil | aceptar | pendiente |
+| 226 | reto | Ll+Ho (D) | Difícil / Difícil | revisar | pendiente |
 | 229 | reto | Br+Ll (D) | Difícil / Difícil | aceptar | pendiente |
-| 232 | reto | Ma+Ho (D) | Difícil / Difícil | aceptar | pendiente |
+| 232 | reto | Ma+Ho (D) | Difícil / Difícil | revisar | pendiente |
 | 235 | reto | Br+Tu (D) | Difícil / Difícil | aceptar | pendiente |
 | 238 | reto | Ll+Ho (D) | Difícil / Difícil | aceptar | pendiente |
-| 240 | hito | Ho+Br (MD) | Muy difícil / Muy difícil | aceptar | pendiente |
+| 240 | hito | Ho+Br (MD) | Muy difícil / Muy difícil | revisar | pendiente |
 | 246 | reto | Ma+Re (D) | Normal / Difícil | revisar | pendiente |
 | 249 | reto | Ln (D) | Difícil / Difícil | aceptar | pendiente |
-| 252 | reto | Ln+Re (D) | Difícil / Difícil | aceptar | pendiente |
+| 252 | reto | Ln+Re (D) | Difícil / Difícil | revisar | pendiente |
 | 255 | reto | Ma+Tu (D) | Difícil / Difícil | aceptar | pendiente |
 | 258 | reto | Ln+Ma (D) | Difícil / Difícil | aceptar | pendiente |
 | 260 | hito | Ln+Ba (MD) | Muy difícil / Muy difícil | aceptar | pendiente |
 | 266 | reto | Pi+Br (D) | Normal / Difícil | revisar | pendiente |
-| 269 | reto | Ln+Br (D) | Difícil / Difícil | aceptar | pendiente |
+| 269 | reto | Ln+Br (D) | Difícil / Difícil | revisar | pendiente |
 | 272 | reto | Pi+Ba (D) | Difícil / Difícil | aceptar | pendiente |
-| 275 | reto | Ba+Tu (D) | Difícil / Difícil | aceptar | pendiente |
-| 278 | reto | Ln+Ba (D) | Difícil / Difícil | aceptar | pendiente |
+| 275 | reto | Ba+Tu (D) | Difícil / Difícil | revisar | pendiente |
+| 278 | reto | Ln+Ba (D) | Difícil / Difícil | revisar | pendiente |
 | 280 | hito | Pi+Br (MD) | Normal / Muy difícil | revisar | pendiente |
-| 286 | reto | Li+Re (D) | Difícil / Difícil | aceptar | pendiente |
-| 289 | reto | Ha (D) | Difícil / Difícil | aceptar | pendiente |
+| 286 | reto | Li+Re (D) | Difícil / Difícil | revisar | pendiente |
+| 289 | reto | Ha (D) | Difícil / Difícil | revisar | pendiente |
 | 292 | reto | Ha+Re (D) | Difícil / Difícil | aceptar | pendiente |
-| 295 | reto | Br+Tu (D) | Difícil / Difícil | aceptar | pendiente |
+| 295 | reto | Br+Tu (D) | Difícil / Difícil | revisar | pendiente |
 | 298 | reto | Ha+Br (D) | Difícil / Difícil | revisar | pendiente |
 | 300 | hito | Ha+Li (MD) «Cuyabeno» [P] | Muy difícil / Muy difícil | aceptar | pendiente |
 | 243 | estreno | ★Ln | Normal / — | aceptar | pendiente |

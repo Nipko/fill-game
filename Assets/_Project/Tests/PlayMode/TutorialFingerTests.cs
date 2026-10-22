@@ -19,8 +19,9 @@ namespace AF.Tests.PlayMode
     /// D-002):
     /// <list type="bullet">
     /// <item>en el 1 y el 2, primer intento: sale tras la intro y cuando la tropa ya se fue, señala el vertido de la lección (el
-    /// primero de la solución en el 1; en el 2, la racha de 3 sobre el hueco de 2, en cuanto es legal), nunca bloquea el toque, y
-    /// se va al hacerlo; los dos niveles, de punta a punta siguiendo el dedo;</item>
+    /// primero de la solución en el 1; en el 2, la racha de 3 sobre el hueco de 2, en cuanto es legal, y antes, el vertido que la
+    /// deja posible: tarea B11, Q-B11-1), nunca bloquea el toque, y se va al hacerlo; los dos niveles, de punta a punta siguiendo
+    /// el dedo;</item>
     /// <item>otro vertido: se va y no vuelve en ese intento [P]; tampoco tras Volver a la orilla [P];</item>
     /// <item>deshacer con Marea con el dedo a la vista no es otro vertido [P]: se va (<c>undo</c>) y vuelve cuando la lección es
     /// legal otra vez; en el 2, la instrucción de TiTino se va al salir el dedo [P];</item>
@@ -88,22 +89,22 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level2_WaitsForTheLessonToBeLegal_ThenPointsAtTheRunOf3OnTheHoleOf2_FollowingItWins()
+        public IEnumerator Level2_PointsFirstAtThePourThatOpensTheLesson_ThenAtTheRunOf3OnTheHoleOf2_FollowingItWins()
         {
             yield return TutorialSlothTests.Load(2);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             LevelFlow flow = boot.Flow!;
 
-            // El tablero inicial del 2 está lleno: no hay hueco de 2 y el dedo espera (la tropa ya se fue).
-            PlayModeHelpers.Step(boot, 6000);
-            Assert.That(view.IntroTroopVisible, Is.False, "condición del test: la tropa ya se fue");
-            Assert.That(view.TutorialFingerVisible, Is.False, "sin lección legal, sin dedo");
-            Assert.That(view.TutorialFingerArmed, Is.True, "espera");
+            // El tablero inicial del 2 está lleno: no hay hueco de 2 y el dedo señala antes el vertido que lo abre (B11, Q-B11-1).
+            WaitForFinger(boot, "el 2, el paso previo");
+            Assert.That(view.LastTutorialFingerProbe, Does.Contain("\"lesson\":\"partial_setup\""));
 
             // El primer vertido de la solución deja la lección posible: las dos dosis de arriba de la cuia 0 a la vacía 3.
             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
             Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.TutorialFingerVisible, Is.False, "tras el paso previo, espera la lección");
             PlayModeHelpers.StepUntilIdle(boot, 6000);
             TutorialFinger finger = WaitForFinger(boot, "el 2");
             Pour pour = view.TutorialFingerPour;
@@ -123,7 +124,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.TutorialFingerFollowed, Is.True);
             Assert.That(flow.Session.Current[2].Count, Is.EqualTo(2), "el parcial: la tercera dosis se queda");
             yield return FinishWithTheSolver(boot, "el 2");
-            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(1));
+            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(2), "el paso previo y la lección");
         }
 
         [UnityTest]
@@ -206,20 +207,20 @@ namespace AF.Tests.PlayMode
             Assert.That(view.TutorialFingerCancelled, Is.False, "no es otro vertido");
             Assert.That(view.TutorialFingerArmed, Is.True, "vuelve a esperar");
             AssertProbe(view, false, 2, 0, "undo");
-            for (int t = 0; t < 3000; t += PlayModeHelpers.FrameMs)
-            {
-                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
-                Assert.That(view.TutorialFingerVisible, Is.False, "sin lección legal, sin dedo (a los " + t + " ms)");
-            }
+
+            // Sobre el tablero deshecho, lleno, sin la lección: el dedo vuelve con el paso previo (B11, Q-B11-1).
+            WaitForFinger(boot, "el 2 tras deshacer, el paso previo");
+            Assert.That(view.LastTutorialFingerProbe, Does.Contain("\"lesson\":\"partial_setup\""));
 
             // El mismo primer vertido vuelve a dejar la lección posible: el dedo vuelve y se sigue hasta ganar.
             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
             Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
             PlayModeHelpers.StepUntilIdle(boot, 6000);
             finger = WaitForFinger(boot, "el 2 tras deshacer");
             Assert.That(view.TutorialFingerPour, Is.EqualTo(new Pour(2, 0, 2)));
             AssertProbe(view, true, 2, 0, "show");
-            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(2), "vuelve una vez");
+            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(3), "la lección, el paso previo tras deshacer y la lección otra vez");
             Assert.That(boot.TapCuia(2).Kind, Is.EqualTo(TapKind.Selected));
             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Poured));
             PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
@@ -242,6 +243,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.TutorialSlothVisible, Is.True, "condición del test: la instrucción del 2 a la vista");
             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
             Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs); // el dedo del paso previo (B11), si se veía, se va con el vertido
             for (int t = 0; t < 8000 && !view.TutorialFingerVisible; t += PlayModeHelpers.FrameMs)
             {
                 Assert.That(view.TutorialSlothVisible || !view.TutorialFingerVisible, Is.True);

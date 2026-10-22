@@ -2,7 +2,7 @@
 
 Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_02_v1.json Assets/_Project/Data/Levels/mundo_03_v1.json Assets/_Project/Data/Levels/mundo_04_v1.json Assets/_Project/Data/Levels/mundo_05_v1.json --report tools/out/level_qa_report.md`: no se edita a mano.
 
-- Niveles: 190; fallos: **0**; avisos: 28.
+- Niveles: 190; fallos: **0**; avisos: 170.
 
 | Comprobación | Regla | Fallos |
 |---|---|---|
@@ -11,10 +11,11 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 | `QA-SEALED` | ninguna cuia sellada al inicio (03 sec. 17 #5) | 0 |
 | `QA-STUCK` | atascado(S0) = false (02 sec. 9.2 regla 1) | 0 |
 | `QA-VALID` | resto de LevelValidation de AF.Core (mecanicas, Barro, Aguas turbias) | 0 |
-| `QA-PAR` | par recalculado (A* w = 1, run) igual al publicado; par >= 2K; dentro del par objetivo del rango +-30 % (03 sec. 17 #1-#2) | 0 |
+| `QA-PAR` | par recalculado (A* w = 1, run) igual al publicado; par >= 2K; dentro del par objetivo del rango +-30 % (03 sec. 17 #1-#2), salvo los tableros de estreno de la Tinaja (K <= 6; D-027) | 0 |
 | `QA-TINT-DEBUT` | cada tinte con debut anterior o igual al nivel (03 sec. 17 #4) | 0 |
 | `QA-KMAX` | K <= k_max y >= k_min de la cabecera (03 sec. 17 #4) | 0 |
 | `QA-RISK` | risk_pairs recalculado igual al publicado y <= max_risk_pairs (03 sec. 4.5) | 0 |
+| `QA-CVD-ADJ` | ningun par del simulador de daltonismo (cvd_pairs: 7-10, 5-14) junto en una cuia del tablero base; aviso en las variantes de relief y si ninguna de las 50 permutaciones del generador lo evita midiendo igual (con la reproduccion) (Q-B9-13 bis; 07 sec. 3) | 0 |
 | `QA-PALETTE` | palette = tintes presentes en cuias (08 sec. 4.1) | 0 |
 | `QA-BOT` | bot_fail recalculado con la semilla del nivel identico al publicado (03 sec. 6) | 0 |
 | `QA-LABEL` | etiqueta coherente: >= 0,75 hard y >= 0,90 very_hard, desde el 40 y el 60 (03 sec. 7, 11) | 0 |
@@ -36,8 +37,8 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 | `QA-LABEL-ACCURACY` | aviso: acierto de etiqueta por ciclo < 60 % (c.7) | 0 |
 | `QA-HITO-14` | K = 13 solo en un hito con K = 13 en el k_plan de la especificacion, con 14 cuias de 4: 13 colores + 1 vacio de holgura (capacidad - unidades = 4, sin el Barro; puede ir repartido en cuias a medias), sin capacidades, cueva de la Pirana ni Tinaja (03 sec. 1, 11-12; d.5.1 [P]); las 14 cuias con K <= 12 (la cueva de la Pirana) no son de esta comprobacion y el tope, de QA-STRUCT | 0 |
 | `QA-RELIEF-MIN` | relief con al menos una variante desde el nivel 31 (03 sec. 13; 08 sec. 4.1) | 0 |
-| `QA-RELIEF-VALID` | cada variante es un tablero valido (BoardBuilder y LevelValidation; con tinaja, su forma: una, su cuia contigua y en la misma fila, <= 12 cuias, T4 y combinaciones) | 0 |
-| `QA-RELIEF-MINUS` | minus_color resoluble (A* a 100.000) con el par entero publicado y sin el color removed, que nunca es una fruta de la tinaja (03 sec. 13; propuesta de la tinaja c.3 punto 4) | 0 |
+| `QA-RELIEF-VALID` | cada variante es un tablero valido (BoardBuilder y LevelValidation; con tinaja, su forma: una, su cuia contigua y en la misma fila, <= 13 cuias (D-027), T4 y combinaciones) | 0 |
+| `QA-RELIEF-MINUS` | minus_color resoluble (A* w = 1 a 2.000.000: la segunda pasada del generador, Q-N2 (a); la primera, a 100.000) con el par entero publicado y sin el color removed, que nunca es una fruta de la tinaja (03 sec. 13; propuesta de la tinaja c.3 punto 4) | 0 |
 | `QA-RELIEF-PLUS` | plus_empty = el tablero base con exactamente un vacio de 4 mas (al final; con tinaja, en la ranura que deja la pareja en la misma fila) (03 sec. 13) | 0 |
 | `QA-RELIEF-BOT` | bot_fail de la variante recalculado; baja >= 0,20, o con base < 0,20 par menor (minus_color) o el vacio extra (plus_empty) (03 sec. 17 #8) | 0 |
 | `QA-RELIEF-MASK` | variante de un nivel con tinaja: la conserva y su hidden es la mascara (todas sus capas menos la boca); variante sin tinaja: sin hidden (08 sec. 4.1) | 0 |
@@ -84,25 +85,167 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 - aviso `QA-CUIAS` nivel 37 (`Assets/_Project/Data/Levels/mundo_02_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 41 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 8 cuias (K = 6); el rango 31-60 pide 9-11 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 42 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 8 cuias (K = 6); el rango 31-60 pide 9-11 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 46 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 46 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 46 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 47 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 3 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 47 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 3 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 47 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 3 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-CUIAS` nivel 48 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 48 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 48 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 48 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-CUIAS` nivel 51 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 52 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 52 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 52 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-CUIAS` nivel 53 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 54 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 54 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 3 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 54 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 3 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 54 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 3 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-CUIAS` nivel 55 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 55 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 55 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 55 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-CUIAS` nivel 56 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 57 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 57 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 58 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 58 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 58 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-CUIAS` nivel 59 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 61 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 9 cuias (K = 7); el rango 61-100 pide 10-12 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 62 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 9 cuias (K = 7); el rango 61-100 pide 10-12 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 65 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 65 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 65 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 66 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 2 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 66 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 66 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 2 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-WINDOW` nivel 66 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): bot_fail 0.725 fuera de la ventana [0.75, 0.90) (reto)
+- aviso `QA-CVD-ADJ` nivel 68 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 68 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 68 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 71 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 71 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 71 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-CUIAS` nivel 73 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 9 cuias (K = 8); el rango 61-100 pide 10-12 (03 sec. 11)
 - aviso `QA-WINDOW` nivel 75 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): bot_fail 0.725 fuera de la ventana [0.75, 0.90) (reto)
 - aviso `QA-CUIAS` nivel 76 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 9 cuias (K = 8); el rango 61-100 pide 10-12 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 78 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 78 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 78 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 79 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 79 (`Assets/_Project/Data/Levels/mundo_03_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-CUIAS` nivel 81 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 9 cuias (K = 7); el rango 61-100 pide 10-12 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 81 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 3 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 81 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 3 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 81 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 3 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-CUIAS` nivel 82 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 9 cuias (K = 7); el rango 61-100 pide 10-12 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 82 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 82 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 82 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 86 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 86 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 86 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-CUIAS` nivel 88 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 9 cuias (K = 8); el rango 61-100 pide 10-12 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 90 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 9 cuias (K = 8); el rango 61-100 pide 10-12 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 94 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 9 cuias (K = 8); el rango 61-100 pide 10-12 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 96 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 9 cuias (K = 8); el rango 61-100 pide 10-12 (03 sec. 11)
+- aviso `QA-CVD-ADJ` nivel 97 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 2 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 97 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 97 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 98 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-BAND-Q` nivel 100 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): hito en banda reto (q 0.899); cumple el minimo: par - 2K = 4 >= media del pool (3.0)
+- aviso `QA-CVD-ADJ` nivel 101 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 101 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 101 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 104 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 104 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 104 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 107 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 107 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 107 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 109 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 109 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 109 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 113 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 113 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 113 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 115 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 115 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 115 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 116 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 116 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 116 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 117 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 117 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 117 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 118 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 118 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 118 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 120 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 120 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 120 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 130 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 130 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 131 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 131 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 131 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 133 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 2 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 133 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 133 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 136 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 136 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 136 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 139 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 139 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 139 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 146 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 146 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 146 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 148 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 3 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 148 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 3 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 148 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 3 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 149 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 149 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 149 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 150 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 150 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 150 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 152 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 2 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 152 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 152 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 156 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 156 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 156 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-WINDOW` nivel 166 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): bot_fail 0.675 fuera de la ventana [0.75, 0.90) (reto)
+- aviso `QA-CVD-ADJ` nivel 169 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 2 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 169 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 169 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 179 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 2 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 179 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 179 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 180 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 180 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 180 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 183 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 183 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 183 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 189 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 189 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 189 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
 - aviso `QA-WINDOW` nivel 189 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): bot_fail 0.725 fuera de la ventana [0.75, 0.90) (reto)
+- aviso `QA-CVD-ADJ` nivel 192 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 1 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 192 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 192 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 1 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 195 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 2 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 195 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 195 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 198 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 2 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 198 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 198 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 3 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 200 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): 2 contacto(s) de un par del simulador de daltonismo en una cuia del tablero base; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)
+- aviso `QA-CVD-ADJ` nivel 200 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief plus_empty: 2 contacto(s) de un par del simulador de daltonismo en una cuia
+- aviso `QA-CVD-ADJ` nivel 200 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): relief minus_color: 2 contacto(s) de un par del simulador de daltonismo en una cuia

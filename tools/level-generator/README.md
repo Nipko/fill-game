@@ -18,7 +18,8 @@ ejecuciones den los mismos bytes.
 | `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--curation <md> [--decisions <json>]] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación; `--curation`, el informe de curación para el dueño (P7a), con su decisión de `--decisions` | `Assets/_Project/Data/Levels/mundo_0N_v1.json`, `tools/out/campaign_v1_report.md` y `tools/out/curation_wNN.md` |
 | `--seasons <campaign.json> [...] --out <tabla.json> [--until <nivel>] [--check]` | Tabla de temporada del cliente (pregunta 32 b), hasta el último nivel publicado | `Assets/_Project/Data/Levels/seasons_v1.json` |
 | `--daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <md>] [--check] [--threads n]` | Pool del Reto del río (03 §16): un tablero por banda y día | `<carpeta>/daily_pool_v1.json` y el informe (la muestra: `tools/out/daily_sample/` y `tools/out/daily_sample_report.md`) |
-| `--self-test [tinaja\|seasons\|variants\|registry\|curation\|holgura\|daily]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
+| `--reserve <mundo_NN_v1.json> [...] --spec <campaign.json> [--variant a\|b] --out <carpeta> [--report <md>] [--check]` | La reserva del 20 % (D-033, Q-B11-7 (a); 03 §17): un pack de reserva por mundo desde el pack de campaña publicado | `Assets/_Project/Data/Levels/reserva_0N_v1.json` y `tools/out/reserve_campaign_v1.md` / `reserve_campaign_v2.md` |
+| `--self-test [tinaja\|seasons\|variants\|registry\|curation\|holgura\|reserve\|daily]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -218,7 +219,16 @@ de cada fixture enumera sus reglas.
   por capacidad y mecánica y por origen), la definición de 03 §7 [P].
 - `Relief.cs`: variantes de alivio de 03 §13 (`plus_empty` sin resolver, con par null; `minus_color` = la eliminación
   resoluble de par más alto con A* a 100.000). Se publican las dos [P] en el orden de 03 §13, si cumplen el criterio de
-  level-qa (03 §17 #8). Nunca se quita un color que sea llave o contenido de una mecánica [P]. Con la tinaja, `plus_empty`
+  level-qa (03 §17 #8). **Segunda pasada (Q-N2 (a) de D-033; tarea B11; V3):** desde el 31 se publica siempre una
+  `minus_color` para el alivio con la Cuia extra (04 §2.2, caso b): si la primera pasada no deja ninguna que cumpla, se repite
+  la misma regla con A* w = 1 a `Relief.MinusColorSecondBudget` (2.000.000) [P]. El par sigue siendo el óptimo exacto, así
+  que level-qa lo recalcula con ese presupuesto (`Relief.MinusColorBudget`) y da el mismo número, y los niveles que ya tenían
+  `minus_color` no cambian. Con ella, 17 de los 18 niveles de 31-700 que solo tenían `plus_empty` (118, 200, 358, 392, 395,
+  423, 483, 540, 578, 580, 615, 618, 620, 660, 672, 679 y 700) la llevan; en el 358, el 615, el 618, el 672 y el 679, con 2
+  vacíos libres, pasa a `relief[0]` por la regla de orden de 03 §13. El 680 (hito de 14 cuias con K = 13) no tiene ninguna
+  que baje el fallo del bot 0,20 y sigue solo con `plus_empty` (pregunta Q-B11-3 de `docs/dev/tutorial-b11.md`). En la
+  variante «a» de 301-700 (`tools/out/salida_a/`) la ganan el 309, 329, 335, 338, 340, 352, 358, 378 y 395 del mundo 7 y los
+  mismos de los mundos 8 y 9 salvo el 580 (que en la «a» ya la tenía), y queda sin ella solo el 680. Nunca se quita un color que sea llave o contenido de una mecánica [P]. Con la tinaja, `plus_empty`
   llega a 13 cuias con la pareja (el tope de 12 del nivel más su cuia vacía; decisión del dueño del 2026-10-18, D-027;
   `Superposition.TinajaReliefMaxCuias`), y level-qa aplica el mismo tope en QA-RELIEF-VALID.
 - `Parity.cs` (`--parity`): sobre los 40 niveles de `tools/out/levels_proto.json` y `tools/out_inverse/levels_proto.json`
@@ -232,6 +242,36 @@ dotnet run --project tools/level-generator -c Release -- --parity
 
 Resultado actual: par 40/40, complejidad 40/40, ramificación 40/40, trampas 40/40 y −1 color 39/39 (el nivel 19 del lote
 híbrido no tiene −1 color en el prototipo).
+
+## Pares del simulador de daltonismo (`cvd_pairs`; Q-B9-13 bis)
+
+`campaign_v1.json` y `campaign_v2.json` llevan, además de `risk_pairs`, `"cvd_pairs": [[7, 10], [5, 14]]`: los pares que el
+simulador de B9 encontró demasiado parecidos (protanopía y deuteranopía; 07 §3, regla 3; glosario §9). El Reto del río los lee
+de su `tints_from`. **No cuentan en `risk_pairs` ni en `max_risk_pairs`**. Lo que hace el generador:
+
+- La asignación de tintes de siempre no cambia (`TintAssigner.Assign` y `DailyTints.Assign`).
+- Si deja dos tintes de un par del simulador juntos en una cuia, `TintAssigner.CvdAlternatives` propone hasta 50 barajados de
+  los tintes libres, con la subsemilla `CvdStream` = 5. Cada uno tiene que quedar sin contactos del simulador y sin más contactos
+  de pares de riesgo.
+- El generador acepta el primero que mida igual que la asignación de siempre, comprobado en tres momentos:
+  - al construir el candidato: bot ×40, ventana, etiqueta, rechazo, complejidad y realidades;
+  - al medirlo (`Measure`): par, trampas tempranas, ramificación, trampas y filtros de la tinaja;
+  - al calcular el alivio (`SlotGenerator.ReliefOf`): las mismas variantes, con el mismo par y el mismo bot.
+
+  Si algo no da igual, vuelve a la asignación de siempre (`Candidate.RevertTints`; en el Reto, `Built.RevertTints` con el par).
+- Así cada tablero solo cambia de tintes. La forma, K, la semilla, `bot_fail`, el candidato elegido, la D, el ciclo y la curva
+  quedan iguales.
+- Lo que no se puede evitar queda en `TintResult.CvdAdjacent` y `level-qa` lo da como aviso (`QA-CVD-ADJ` y `QA-DAILY-CVD-ADJ`).
+  Los informes de la campaña y de curación lo anotan como `cvd_adjacent: N contacto(s)`, igual que `risk_adjacent`.
+- `--self-test cvd` (`Generation/CvdSelfTest.cs`, también en el `--self-test` sin nombre) prueba cuatro cosas:
+  - `CvdAlternatives` sobre tableros escritos a mano;
+  - `SameColors` y `SameRelief`;
+  - `RevertTints`;
+  - la invariancia con y sin `cvd_pairs` en los slots 13, 14, 22 y 23 del mundo 2 y en los días 4, 7, 9 y 10 de la banda 1 del
+    Reto: mismos candidatos, bot, par, trampas, D y elegido, y el mismo tablero salvo los tintes.
+
+Hace falta medir porque el bot casual no da lo mismo al cambiar los tintes: `CasualBot` ordena el tablero con `BoardCanon.Sort`,
+que depende del número de cada color.
 
 ## Generación de la campaña (`--spec`, `Generation/`)
 
@@ -488,14 +528,17 @@ curación y la b en `tools/out/salida_b/`): los bytes de cada pack no cambian co
 
 | Pack | Niveles | Bytes | SHA-256 | Tiempo (s) |
 |---|---|---|---|---|
-| `salida_a/mundo_07_v1.json` (a) | 120 | 173.002 | `347846ec92f9b0991b74c0ade72a605a235af5d51b5d09c4cec6ab1cb18bdb44` | 1.025 · 1.047 |
-| `salida_a/mundo_08_v1.json` (a) | 140 | 201.608 | `c3e8c7bf3465285b1ab519ea4eb248f6b8c1780837179d7560d0f73d3f6c2ac9` | 405 · 423 |
-| `salida_a/mundo_09_v1.json` (a) | 140 | 200.770 | `ddf2ffb8433b6958b7edd05f5798770413adfc583f852b5cc6aa020112533872` | 625 · 704 |
-| `mundo_07_v1.json` (b, publicada) | 120 | 174.986 | `348e0939d1a32042a362d58a8ce2e7ff2f694705bf49f2287c043cb1686a4106` | 440 · 456 |
-| `mundo_08_v1.json` (b, publicada) | 140 | 201.051 | `a5e8422b8712d8ed29be22667a1912398b0051530dbb027ce9f529dc9ddda19f` | 402 · 425 |
-| `mundo_09_v1.json` (b, publicada) | 140 | 199.466 | `e49492d72b6f5ca0e20108971fc7d54a957a77ff1114c13d41a77034966ed12c` | 622 · 681 |
+| `salida_a/mundo_07_v1.json` (a) | 120 | 176.122 | `267f732b1f5e3692ce79befd27d1467d63c583c03116711e064e69d3c97f648d` | 1.025 · 1.047 |
+| `salida_a/mundo_08_v1.json` (a) | 140 | 202.589 | `bf710928e47dd5496a102865fd1730a227da1b48c94432f1fb40c50b473ae4cb` | 405 · 423 |
+| `salida_a/mundo_09_v1.json` (a) | 140 | 203.661 | `2ad05a389e50576bec8e52ee1fa5cb4316917456b828cb7a23ae210082dd0399` | 625 · 704 |
+| `mundo_07_v1.json` (b, publicada) | 120 | 175.927 | `779a830acdea3ff83d5803cb3f9fe3d2ef5cf419b2b1a4bf34733c331cd211fe` | 440 · 456 |
+| `mundo_08_v1.json` (b, publicada) | 140 | 202.032 | `5fe84fcb7f762581cc61ae4011fa5af902274f110fb7d2c71b204ac03235b799` | 402 · 425 |
+| `mundo_09_v1.json` (b, publicada) | 140 | 202.709 | `a40f04d5a6d4b8ac50b5f1e5ed8a22a0d44dba805d8902f01c415a762e7ead4e` | 622 · 681 |
 
-Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
+Bytes y hashes tras los pares del simulador de daltonismo (Q-B9-13 bis (A)). Solo cambian tintes, en 3-5 tableros por pack.
+Antes de Q-B9-13 bis, tras la segunda pasada de `minus_color` de B11 (Q-N2 (a)), eran 176.122, 202.589 y 203.664 bytes en la
+«a» y 175.924, 202.032 y 202.712 en la «b». Antes de B11 eran 173.002, 201.608 y 200.770 en la «a» y 174.986, 201.051 y
+199.466 en la «b». Los tiempos son los de GEN79. Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
 generadores a la vez: la primera ejecución y la última (en la b, la de `--check`), de unos 6 a 17 minutos cada uno y unos 17
 minutos los seis juntos. La variante a sola, en serie, son unos 20 minutos (la propuesta: 629, 201 y 385 s). Determinismo: tres ejecuciones de cada pack (la primera, una segunda en otra carpeta y la
 última, con el generador final, en el repositorio) dan los mismos bytes, y coinciden con los hashes de la propuesta en las variantes a de los tres mundos y en la b del mundo 7
@@ -746,6 +789,46 @@ de cada nivel 21-200 frente a `CampaignSpec.SeasonOf`, el formato, el determinis
 corte de `--until` (hasta el 200, la tabla de `campaign_v1.json`; hasta el 60, dos ciclos), la unión de dos especificaciones y
 los rechazos (también `--until` a mitad de ciclo o fuera de las especificaciones), entre ellos el fixture
 `specs/tests/seasons_invalid_letter.json` (ciclo 61 con temporada C, que también falla `--validate-spec` por SEASONS).
+
+## La reserva del 20 % (`--reserve`; D-033, añadido «la reserva del 20 %», Q-B11-7 (a))
+
+El seguro del kill switch `mech_enabled.<id>` (08 §9; D-020, pregunta 31 b) desde la 1.0: un pack de reserva por mundo
+(`reserva_{mm}_v1.json`, `kind` = `reserve`, `pack_schema` 4; 03 §10 y §17; 08 §4.1) con, para los niveles del pack de campaña
+publicado que usan una mecánica con kill switch, otro tablero del mismo slot sin mecánicas, en la ventana del slot, con
+`replaces` = el id del slot, id `m{mm}_v1_n{nnnn}_r1` y semilla `amazonfill:v1:m{mm}:v1:n{nnnn}:r1`. El cliente solo los usa
+desde `level_overrides`. Código: `Generation/ReserveRunner.cs` (también enlazado en level-qa, que lo usa para QA-RES-REPRO).
+
+```
+dotnet run --project tools/level-generator -c Release -- --reserve Assets/_Project/Data/Levels/mundo_02_v1.json Assets/_Project/Data/Levels/mundo_03_v1.json Assets/_Project/Data/Levels/mundo_04_v1.json Assets/_Project/Data/Levels/mundo_05_v1.json --spec tools/level-generator/specs/campaign_v1.json --out Assets/_Project/Data/Levels --report tools/out/reserve_campaign_v1.md
+dotnet run --project tools/level-generator -c Release -- --reserve Assets/_Project/Data/Levels/mundo_06_v1.json Assets/_Project/Data/Levels/mundo_07_v1.json Assets/_Project/Data/Levels/mundo_08_v1.json Assets/_Project/Data/Levels/mundo_09_v1.json --spec tools/level-generator/specs/campaign_v2.json --out Assets/_Project/Data/Levels --report tools/out/reserve_campaign_v2.md
+```
+
+Con `--check` no escribe y sale con 1 si algún pack del disco difiere (o si existe el de un mundo sin reserva). Unos 10 s
+(mundos 2-5) y 80 s (mundos 6-9) en el escritorio. La entrada es el pack **publicado**: si se regenera un pack de campaña, se
+regenera su reserva. `--variant` es el de la especificación (por defecto, la publicada; con la b no hay Tinaja que cubrir).
+
+Reglas [P] (las mismas que cuenta el informe):
+
+- **Tope:** el 20 % de los niveles del mundo, hacia abajo (`ReserveRunner.Cap`: 6, 8, 12, 12, 20, 24, 28 y 28 en los mundos 2-9).
+- **Qué slots:** máscara de kill switches del tablero base publicado (`attrs`; la Hoja atada cuenta como Hoja, la Flor como
+  Liana y el cucharón como Tinaja, como `MechanicSwitches` del cliente; el Barro, por la unidad 15 en `cuias`). Orden por
+  rondas sobre los kill switches de 08 §9 (hoja, matapi, liana, remolino, barro, lluvia, brote, pirana, tinaja): en cada ronda,
+  cada mecánica toma su primer nivel aún sin elegir. Un slot sin tablero válido tras 6 rondas se salta (el informe lo lista) y
+  entra el siguiente del orden.
+- **Qué tablero:** `ReserveRunner.Plan`: el plan de la especificación (rol, K, vacíos, fuente, ventana y etiqueta permitida)
+  con la celda sin mecánicas, también sin Aguas turbias (que no tienen kill switch), con sus capacidades y sin
+  `intro_mechanic`. `SlotGenerator` genera los candidatos como en la campaña, con la semilla de reserva; se elige, entre los
+  del pool (en la ventana, etiqueta permitida, contrato 6, par ≥ 2K, trampas tempranas) con el par en el objetivo del rango
+  ±30 % (QA-PAR), el de la misma etiqueta que el publicado y el `bot_fail` más cercano al suyo, y desde el 31 el primero de
+  ellos (hasta 3 por ronda) con alivio (`Relief.Compute`).
+- **Pack:** la cabecera de la campaña sin `cycle20`, `kind` `reserve` y `pack_schema` 4; cada nivel como en `PackWriter`, con
+  `replaces` tras `id` y sin `difficulty.D` (la reserva no entra en el pool del rango, 03 §7).
+
+Resultado (2026-10-21): el mundo 2 no tiene pack (solo capacidades); 132 tableros en los mundos 3-9 (8, 12, 12, 20, 24, 28 y
+28), sin saltados, 176.268 bytes en total (unos 19 KB con deflate; el AAB de ensayo con ellos mide 53,48 MB). La cobertura por mecánica de cada mundo está en los informes.
+
+`--self-test reserve`: el orden por rondas (sintético), los topes de los mundos 2-9, el plan del 43 sin la Hoja (y el de un
+nivel con capacidades, que las conserva), los ids y semillas de reserva y el mundo 3 generado dos veces con los mismos bytes.
 
 ## Reto del río (`--daily`; R2-R3 del encargo del Spark)
 

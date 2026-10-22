@@ -9,7 +9,9 @@
 //     banda el mínimo de pares posible supera el tope, la especificación no se puede cumplir: error (DailySpecException) y
 //     no se genera nada (R-Q1b (a) decidió B2 solo con K = 8 justo por eso; nota §1.1);
 //   - la asignación índice -> tinte evita que dos tintes de un par de riesgo queden juntos en una cuia, como TintAssigner
-//     (hasta 50 permutaciones, con TintAssigner.Adjacent; si ninguna lo logra, la de menos contactos).
+//     (hasta 50 permutaciones, con TintAssigner.Adjacent; si ninguna lo logra, la de menos contactos);
+//   - pares del simulador de daltonismo (cvd_pairs de tints_from; Q-B9-13 bis (A)): Alternatives propone otras asignaciones
+//     sin contactos del simulador (TintAssigner.CvdAlternatives) y DailyRunner solo acepta una si el bot da lo mismo.
 using AF.Core.Board;
 using AF.Core.Determinism;
 using AmazonFill.Tools.LevelGenerator.Campaign;
@@ -17,7 +19,7 @@ using AmazonFill.Tools.LevelGenerator.Generation;
 
 namespace AmazonFill.Tools.LevelGenerator.Daily;
 
-internal sealed record DailyPalette(int[] Map, IReadOnlyList<TintInfo> Palette, int RiskPairs, int RiskAdjacent);
+internal sealed record DailyPalette(int[] Map, IReadOnlyList<TintInfo> Palette, int RiskPairs, int RiskAdjacent, int CvdAdjacent = 0);
 
 internal sealed class DailyTints
 {
@@ -82,6 +84,14 @@ internal sealed class DailyTints
 
     /// <summary>Conjuntos de K tintes dentro del tope efectivo.</summary>
     public int SetCount(int band, int k) => _sets[(band, k)].Sets.Count;
+
+    /// <summary>Contactos del simulador de daltonismo con la asignación <paramref name="map"/>.</summary>
+    public int CvdAdjacent(GenBoard board, int[] map) => TintAssigner.CvdAdjacent(_tints, board, map);
+
+    /// <summary>Otras asignaciones sin contactos del simulador (TintAssigner.CvdAlternatives; Q-B9-13 bis (A)).</summary>
+    public List<DailyPalette> Alternatives(DailyPalette p, int k, GenBoard board, Prng rng) =>
+        TintAssigner.CvdAlternatives(_tints, board, p.Map, k, Array.Empty<int>(), rng)
+            .Select(m => p with { Map = m, RiskAdjacent = TintAssigner.Adjacent(_tints, board, m), CvdAdjacent = 0 }).ToList();
 
     public DailyPalette Assign(DailyBand band, int k, GenBoard board, Prng rng)
     {

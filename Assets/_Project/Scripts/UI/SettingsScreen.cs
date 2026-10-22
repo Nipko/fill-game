@@ -32,10 +32,16 @@ namespace AF.UI
     /// <item><b>Pista por inactividad</b> (tarea MO3; 02 §3.4 y §12; 04 §2.3; 07 §7.8): una fila que se marca o se desmarca
     /// (<c>settings.idle_hint</c> [P], activada por defecto; apagada equivale a <c>hint_idle_delay_s</c> = 0 en el dispositivo y
     /// no afecta a Morpho), en <see cref="IdleHintSlot"/>, tras «Mensajes de TiTino».</item>
+    /// <item><b>Avisos</b> (06 §8.1; nota de B6), tras las filas de accesibilidad: <c>settings.push</c> con su estado, en
+    /// <see cref="PushSlot"/> (<c>SettingsScreen.Push.cs</c>).</item>
+    /// <item><b>Privacidad</b> (bloque B12; 05 §7 y 08 §7), tras «Pista por inactividad»: «Privacidad y datos» y «Corregir mi
+    /// edad» (una vez), en <see cref="ConsentSlot"/> (<c>SettingsScreen.Consent.cs</c>).</item>
     /// <item><b>Sobre la Amazonía</b> (tarea F4; D-017 Q4-A; 07 §8.2), al final: «Frutas del río» con una ficha por serie del
     /// calendario, que abre su ficha (<see cref="FruitSheet"/>), en <see cref="AboutSlot"/> (<c>SettingsScreen.About.cs</c>).</item>
+    /// <item><b>Eliminar cuenta y datos</b> (bloque B8; 08 §11), al final: un enlace que abre la confirmación en dos pasos, en
+    /// <see cref="AccountSlot"/> (<c>SettingsScreen.Account.cs</c>).</item>
     /// </list>
-    /// Sin Eliminar cuenta: no existe (D-008: lo que no existe se oculta). Elegir llama a quien
+    /// Elegir llama a quien
     /// la abre (<c>GameBootstrap</c>), que guarda el perfil y aplica: el idioma reconstruye la UI volviendo al inicio, con esta
     /// pantalla otra vez abierta (FXT); los patrones y la pista por inactividad, al momento; los mensajes de TiTino, desde su
     /// siguiente aparición. Escala de la fuente
@@ -96,7 +102,6 @@ namespace AF.UI
 
         private const float RowGapDp = 6f;
         private const float SectionGapDp = 12f;
-        private const float RadioDp = 20f;
 
         private static readonly PatternsSetting[] PatternOrder = { PatternsSetting.Auto, PatternsSetting.On, PatternsSetting.Off };
 
@@ -131,7 +136,10 @@ namespace AF.UI
         private PatternsSetting _patterns = PatternsSetting.Auto;
         private bool _slothMessages = true;
         private bool _idleHint = true;
-        private float _fontScale = 1f;
+        // D-033, punto 11: arranca con la escala de texto global (B9: la del sistema o af_font_scale, 1-1,3), la misma con la que
+        // se crean sus textos; antes empezaba en 1 y, al 130 %, la colocación volvía a poner algunos topes al 100 % (el código de
+        // borrado bajaba de 12 sp × escala).
+        private float _fontScale = Mathf.Clamp(UiBuilder.TextScale, 1f, LevelCardView.MaxFontScale);
         private int _screenW;
         private int _screenH;
         private Rect _safeArea;
@@ -171,22 +179,28 @@ namespace AF.UI
             for (int i = 0; i < PatternOrder.Length; i++)
             {
                 PatternsSetting value = PatternOrder[i];
-                _patternRows[i] = new OptionRow(_content, art, "Patterns_" + DevProbe.PatternsKey(value), "patterns_" + DevProbe.PatternsKey(value),
+                _patternRows[i] = Option(_content, art, "Patterns_" + DevProbe.PatternsKey(value), "patterns_" + DevProbe.PatternsKey(value),
                     PatternLabel(value), () => _onPatterns(value));
             }
 
             // Mensajes de TiTino (TI3): una fila que se marca o se desmarca, en su hueco.
             SlothMessagesSlot = UiBuilder.Rect("SlothMessagesSlot", _content);
-            _slothRow = new OptionRow(SlothMessagesSlot, art, "SlothMessages", SlothMessagesId, UiText.SettingsSlothMessages,
+            _slothRow = Option(SlothMessagesSlot, art, "SlothMessages", SlothMessagesId, UiText.SettingsSlothMessages,
                 () => _onSlothMessages(!_slothMessages));
 
             // Pista por inactividad (MO3): una fila que se marca o se desmarca, en su hueco.
             IdleHintSlot = UiBuilder.Rect("IdleHintSlot", _content);
-            _idleRow = new OptionRow(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
+            _idleRow = Option(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
+            BuildA11yRows(); // Reducir movimiento y Alto contraste (B9; SettingsScreen.A11y.cs)
+            BuildPush(); // «Avisos» (06 §8.1; SettingsScreen.Push.cs), oculta hasta que GameBootstrap la enseñe
+
+            // Privacidad (B12; SettingsScreen.Consent.cs), oculta hasta que GameBootstrap la enseñe.
+            BuildConsent();
 
             // «Sobre la Amazonía» (F4), oculto hasta que haya algo que enseñar (SettingsScreen.About.cs).
             AboutSlot = HiddenSlot("AboutSlot");
             BuildAbout();
+            BuildAccount(); // «Eliminar cuenta y datos» (B8; SettingsScreen.Account.cs), al final de la lista
 
             // Fundidos de los bordes del visor (revisión de AU1), encima del contenido y sin recibir toques: abajo mientras quede
             // lista por debajo y arriba en cuanto se ha desplazado, para que el corte no parezca un fallo (D-003).
@@ -377,6 +391,16 @@ namespace AF.UI
 
             yield return _slothRow.Label;
             yield return _idleRow.Label;
+            foreach (TextMeshProUGUI label in A11yTexts())
+            {
+                yield return label;
+            }
+
+            foreach (TextMeshProUGUI label in PushTexts())
+            {
+                yield return label;
+            }
+
             foreach (TextMeshProUGUI label in AudioTexts())
             {
                 yield return label;
@@ -409,7 +433,7 @@ namespace AF.UI
 
             while (_languageRows.Count < _offered.Count)
             {
-                _languageRows.Add(new OptionRow(_languageGroup, _art, "Language_" + _languageRows.Count, string.Empty, string.Empty, null));
+                _languageRows.Add(Option(_languageGroup, _art, "Language_" + _languageRows.Count, string.Empty, string.Empty, null));
             }
 
             for (int i = 0; i < _languageRows.Count; i++)
@@ -571,12 +595,30 @@ namespace AF.UI
             _rowHeights.Add(rowH);
             y += rowH + RowGapDp;
 
+            // Reducir movimiento y Alto contraste (B9): dos filas en su hueco, tras la pista por inactividad.
+            y = LayoutA11y(y, inner, rowH, s);
+
+            // Avisos (06 §8.1), si se ve: su fila tras las de accesibilidad, con el hueco de sección.
+            if (PushShown)
+            {
+                y = LayoutPush(y - RowGapDp + SectionGapDp, y, inner, rowH, s) + RowGapDp;
+            }
+
+            // Privacidad (B12), si se ve: sus filas tras las de accesibilidad, con el hueco de sección.
+            if (PrivacyShown)
+            {
+                y = LayoutConsent(y - RowGapDp + SectionGapDp, y, inner, rowH, s) + RowGapDp;
+            }
+
             // Sobre la Amazonía (F4), si hay frutas que enseñar. El contenido acaba en la última fila.
             y -= RowGapDp;
             if (AboutShown)
             {
                 y = LayoutAbout(y + SectionGapDp, w, inner, rowH, titleH, s);
             }
+
+            // Eliminar cuenta y datos (B8), lo último de la lista.
+            y = LayoutAccount(y + SectionGapDp, inner, rowH, s);
 
             // La tarjeta crece con el contenido hasta el alto libre entre las zonas seguras; si no cabe, el contenido se desplaza
             // (empieza arriba cada vez que se coloca). El visor deja abajo el mismo margen interior de 16 dp que la cabecera arriba:
@@ -678,7 +720,7 @@ namespace AF.UI
                 return;
             }
 
-            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount;
+            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount + PushLayoutCount;
             var ids = new string[n];
             var rects = new RectTransform[n];
             ids[0] = "close";
@@ -702,7 +744,11 @@ namespace AF.UI
             ids[k] = _idleRow.Id; // idle_hint (MO3)
             rects[k] = _idleRow.Root;
             AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
-            AboutLayoutIds(ids, rects, k + 1 + AudioRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
+            A11yLayoutIds(ids, rects, k + 1 + AudioRowCount); // reduce_motion y high_contrast (B9)
+            AboutLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
+            AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount); // delete_account (B8)
+            int consent = ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount); // consent y age_band (B12)
+            PushLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + consent); // push y push_open_phone
 
             _probe.Layout("settings", 0, null, ids, rects);
         }
@@ -757,107 +803,16 @@ namespace AF.UI
             }
         }
 
-        // Placa de una opción no elegida: crema (más clara que la tarjeta, la levanta; la madera oscura encima, 11,5:1) con un
-        // borde opaco de 2 dp de la madera base #7E5638 (5,1:1 sobre la madera clara de la tarjeta, ≥ 3:1 de WCAG 1.4.11 para
-        // el límite de un componente), para que se lea como botón y no como texto suelto (revisión de L3: el papel solo se
-        // separaba de la tarjeta un 3 % de luminancia y el primer borde, la madera oscura al 25 %, daba 1,56:1). Opaco y no con
-        // alfa: el proyecto está en Linear y la GPU mezcla en lineal (ColorMath.CompositeLinear), así que la madera oscura al
-        // 60 % quedaría en 2,2:1 en pantalla aunque en sRGB dé 3,3:1.
-        private static readonly Color OptionPlate = Palette.Cream;
-        private static readonly Color OptionBorder = Palette.FamilyWood.Base;
-        private const float OptionBorderDp = 2f;
-        private const float OptionRadiusDp = 12f;
+        // Placa y borde de una opción (OptionRow.cs; Q-B12-14 (a)): los usan también «Sobre la Amazonía» y la prueba de contraste.
+        private static readonly Color OptionPlate = OptionRow.Plate;
+        private static readonly Color OptionBorder = OptionRow.Border;
+        private const float OptionBorderDp = OptionRow.BorderDp;
+        private const float OptionRadiusDp = OptionRow.RadiusDp;
 
-        // Una opción: placa crema con borde de madera, o de hoja si está elegida, con su marca de radio a la izquierda (anillo,
-        // hueco y punto: el estado no depende solo del color) y el texto. Toda la fila es el área táctil (≥ 48 dp).
-        private sealed class OptionRow
+        // Una opción de Ajustes (OptionRow, común con la pantalla de consentimiento de B12): el cuerpo de Ajustes.
+        private static OptionRow Option(Transform parent, ProceduralArt art, string name, string id, string text, Action? onClick)
         {
-            private readonly Image _border;
-            private readonly Image _plate;
-            private readonly Image _ring;
-            private readonly Image _hole;
-            private readonly Image _dot;
-            private Action? _onClick;
-
-            public OptionRow(Transform parent, ProceduralArt art, string name, string id, string text, Action? onClick)
-            {
-                Id = id;
-                _onClick = onClick;
-                Button = UiBuilder.BareButton(name, parent, () => _onClick?.Invoke());
-                Root = (RectTransform)Button.transform;
-                _border = UiBuilder.Sliced("Border", Root, art.RoundedRect, OptionBorder);
-                UiBuilder.Stretch(_border.rectTransform);
-                _plate = UiBuilder.Sliced("Plate", Root, art.RoundedRect, OptionPlate);
-                UiBuilder.Stretch(_plate.rectTransform);
-                _border.pixelsPerUnitMultiplier = 24f / OptionRadiusDp;
-                _ring = Circle("Ring", art, RadioDp);
-                _hole = Circle("Hole", art, RadioDp - 6f);
-                _dot = Circle("Dot", art, 10f);
-                Label = UiBuilder.Label("Label", Root, TextStyle.PlainBold, text, OptionSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
-                UiBuilder.AutoSize(Label, MinTextSp + 1f, OptionSp);
-                SetSelected(false);
-            }
-
-            public string Id { get; private set; }
-
-            public Button Button { get; }
-
-            public RectTransform Root { get; }
-
-            public TextMeshProUGUI Label { get; }
-
-            public bool Selected { get; private set; }
-
-            public void Rebind(string id, string text, Action onClick)
-            {
-                Id = id;
-                Label.text = text;
-                _onClick = onClick;
-            }
-
-            public void SetSelected(bool selected)
-            {
-                Selected = selected;
-                Color plate = selected ? Palette.FamilyLeaf.Deep : OptionPlate;
-                Color ink = selected ? (Color)Palette.Cream : Palette.FamilyWood.Deep;
-                _plate.color = plate;
-                Label.color = ink;
-                _ring.color = ink;
-                _hole.color = plate;
-                _dot.color = ink;
-                _dot.gameObject.SetActive(selected);
-
-                // La elegida, verde llena hasta el borde y sin él; las demás, la placa dentro del borde.
-                float inset = selected ? 0f : OptionBorderDp;
-                _border.gameObject.SetActive(!selected);
-                _plate.rectTransform.offsetMin = new Vector2(inset, inset);
-                _plate.rectTransform.offsetMax = new Vector2(-inset, -inset);
-                _plate.pixelsPerUnitMultiplier = 24f / (OptionRadiusDp - inset);
-            }
-
-            public void Place(float x, float y, float w, float h, float s)
-            {
-                UiBuilder.Place(Root, x, y, w, h);
-                float r = h * 0.5f;
-                Center(_ring.rectTransform, 14f + (RadioDp * 0.5f), r, RadioDp);
-                Center(_hole.rectTransform, 14f + (RadioDp * 0.5f), r, RadioDp - 6f);
-                Center(_dot.rectTransform, 14f + (RadioDp * 0.5f), r, 10f);
-                Label.fontSizeMax = OptionSp * s;
-                Label.fontSizeMin = MinTextSp + 1f;
-                UiBuilder.Place(Label.rectTransform, 14f + RadioDp + 12f, 0f, w - (14f + RadioDp + 12f) - 12f, h);
-            }
-
-            private Image Circle(string name, ProceduralArt art, float d)
-            {
-                Image img = UiBuilder.Sliced(name, Root, art.RoundedRect, Color.white);
-                img.pixelsPerUnitMultiplier = 24f / (d * 0.5f);
-                return img;
-            }
-
-            private static void Center(RectTransform rt, float cx, float cy, float d)
-            {
-                UiBuilder.Place(rt, cx - (d * 0.5f), cy - (d * 0.5f), d, d);
-            }
+            return new OptionRow(parent, art, name, id, text, onClick, OptionSp, MinTextSp + 1f);
         }
     }
 }

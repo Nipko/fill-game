@@ -502,13 +502,42 @@ namespace AF.UI
         /// <summary>Siguiente (pantalla de victoria): N + 1, «El río sigue creciendo» o Sin canoas (<see cref="AppFlow.PressNext"/>).</summary>
         public bool PressNext()
         {
-            return _app != null && _app.PressNext();
+            AppFlow? app = _app;
+            if (app == null || PrePromptHoldsLeave)
+            {
+                return false; // con la tarjeta del pre-prompt (o su diálogo nativo) delante, la victoria espera
+            }
+
+            // 06 §8.1 (B6-Q16 (a)): si esta victoria lleva el pre-prompt de push, sale antes del nivel siguiente (GameBootstrap.PushUi.cs).
+            if (VictoryOnScreen() && TryPrePromptOnLeave(false, false, () => app.PressNext()))
+            {
+                return true;
+            }
+
+            return app.PressNext();
         }
 
         /// <summary>«Inicio» (pantalla de victoria) [P]: vuelve a la pantalla de inicio.</summary>
         public bool PressHome()
         {
-            return _app != null && _app.PressHome();
+            AppFlow? app = _app;
+            if (app == null || PrePromptHoldsLeave)
+            {
+                return false;
+            }
+
+            if (VictoryOnScreen() && TryPrePromptOnLeave(false, true, () => app.PressHome()))
+            {
+                return true;
+            }
+
+            return app.PressHome();
+        }
+
+        // La victoria de campaña está a la vista (Siguiente e Inicio solo valen ahí: AppFlow.PressNext y PressHome).
+        private bool VictoryOnScreen()
+        {
+            return _app != null && _app.Screen == AppScreen.Level && _flow != null && _flow.Phase == FlowPhase.VictoryScreen;
         }
 
         /// <summary>
@@ -768,6 +797,7 @@ namespace AF.UI
                 return false;
             }
 
+            TrackNoCanoesChoiceIfOpen(NoCanoesChoiceAd); // af_no_canoes_choice (cierre de B11), antes del vídeo
             ads.ShowRewarded(AdPlacement.ExtraCanoe, r =>
             {
                 if (r.IsRewarded)
@@ -781,13 +811,35 @@ namespace AF.UI
         /// <summary>«Llenar canoas · 200 semillas» (hasta 5/5).</summary>
         public bool PressRefillCanoes()
         {
-            return _wallet != null && _wallet.Apply(Transaction.Buy(SeedSink.CanoesRefill)).IsApplied;
+            bool open = NoCanoesInFront;
+            if (_wallet == null || !_wallet.Apply(Transaction.Buy(SeedSink.CanoesRefill)).IsApplied)
+            {
+                return false;
+            }
+
+            if (open)
+            {
+                TrackNoCanoesChoice(NoCanoesChoiceRefill); // af_no_canoes_choice (cierre de B11)
+            }
+
+            return true;
         }
 
         /// <summary>«Canoas infinitas 1 h» (<c>af_infinite_canoes_1h</c>): compra simulada.</summary>
         public bool PressInfiniteCanoes()
         {
-            return Purchase(StoreCatalog.InfiniteCanoes1h, PurchaseContext.NoCanoes, null);
+            bool open = NoCanoesInFront;
+            if (!Purchase(StoreCatalog.InfiniteCanoes1h, PurchaseContext.NoCanoes, null))
+            {
+                return false;
+            }
+
+            if (open)
+            {
+                TrackNoCanoesChoice(NoCanoesChoiceInfinite); // af_no_canoes_choice (cierre de B11): la compra empieza
+            }
+
+            return true;
         }
 
         /// <summary>«Volver al inicio» de Sin canoas (desde el nivel o desde el inicio).</summary>
@@ -806,20 +858,33 @@ namespace AF.UI
             return _flow != null && _flow.Phase == FlowPhase.NoCanoes && _app.ExitToLobby();
         }
 
-        /// <summary>X de Sin canoas: vuelve a donde se abrió (Nivel fallido o el tablero; desde el inicio, al inicio).</summary>
+        /// <summary>
+        /// X de Sin canoas: vuelve a donde se abrió (Nivel fallido o el tablero; desde el inicio, al inicio). Es la elección
+        /// «esperar» de <c>af_no_canoes_choice</c> (<c>wait</c>; 04 §7.3: la próxima canoa vuelve sola).
+        /// </summary>
         public bool PressNoCanoesClose()
         {
+            bool closed;
             if (_app != null && _app.Screen == AppScreen.NoCanoes)
             {
-                return _app.CloseOverlay();
+                closed = _app.CloseOverlay();
+            }
+            else
+            {
+                closed = _flow != null && InLevel && _flow.Phase == FlowPhase.NoCanoes && _flow.CloseNoCanoes();
             }
 
-            return _flow != null && InLevel && _flow.CloseNoCanoes();
+            if (closed)
+            {
+                TrackNoCanoesChoice(NoCanoesChoiceWait); // af_no_canoes_choice (cierre de B11)
+            }
+
+            return closed;
         }
 
         /// <summary>
         /// Pausa › «Salir» (D-008): desde el 31, ya confirmado, fallo duro y Nivel fallido (−1 canoa si hay una en juego); en
-        /// 1-30, al inicio sin coste.
+        /// 1-30, y desde el 31 con <c>biz_feature_lives</c> apagado (D-038), al inicio sin coste.
         /// </summary>
         public bool PressQuit()
         {
@@ -861,7 +926,14 @@ namespace AF.UI
         /// <summary>Volver desde «El río sigue creciendo» o Sin canoas.</summary>
         public bool PressBack()
         {
-            return AudioBack(_app != null && _app.CloseOverlay()); // AU1: sfx_ui_back al volver
+            bool noCanoes = _app != null && _app.Screen == AppScreen.NoCanoes;
+            bool closed = _app != null && _app.CloseOverlay();
+            if (closed && noCanoes)
+            {
+                TrackNoCanoesChoice(NoCanoesChoiceWait); // Atrás en Sin canoas es su X: esperar (af_no_canoes_choice; cierre de B11)
+            }
+
+            return AudioBack(closed); // AU1: sfx_ui_back al volver
         }
 
         /// <summary>
@@ -881,6 +953,10 @@ namespace AF.UI
                 profile.Settings.SlothMessages);
             settings.MarkAudio(profile.Settings.Sound, profile.Settings.Music, profile.Settings.Haptics); // AU1
             settings.MarkIdleHint(profile.Settings.IdleHint); // MO3
+            settings.MarkA11y(_reduceMotionNow, profile.Settings.HighContrast); // B9
+            ShowAccountCode(); // F3-5: el código de borrado para la web en lugar del UID (Q-B13-21; GameBootstrap.Backend.cs)
+            RefreshConsentRows(); // B12: «Privacidad y datos» y «Corregir mi edad» (GameBootstrap.Consent.cs)
+            RefreshPushRow(); // «Avisos» (06 §8.1; GameBootstrap.PushUi.cs)
             _skipNextDelta = true;
             return true;
         }
@@ -900,6 +976,19 @@ namespace AF.UI
                 return false;
             }
 
+            // B12: la edad, el consentimiento o la doble confirmación, encima de todo: Atrás la cierra si se puede (Ajustes, compra) y
+            // nunca sigue a lo de debajo (en el bloqueo no hace nada).
+            if (ConsentBack())
+            {
+                return true;
+            }
+
+            // La tarjeta del pre-prompt de push, encima de la victoria: Atrás es «Ahora no» (B6).
+            if (PressPrePromptBack())
+            {
+                return true;
+            }
+
             if ((_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || (_lockedNotice != null && _lockedNotice.Visible))
             {
                 return false;
@@ -917,6 +1006,12 @@ namespace AF.UI
                 return _mapScreen.CloseTopSheet() || CloseRiverMap(); // primero la tarjeta de la parada y el Muestrario (M4.1)
             }
 
+            // La libreta de la Bitácora (B4-3), sobre el inicio o la victoria: Atrás es «Cerrar» (en la secuencia del 10, «Seguir»).
+            if (PressLogbookBack())
+            {
+                return true;
+            }
+
             // Reto del río (E22): Atrás cierra su calendario como «Inicio»; con el tablero del Reto en juego no hace nada, como en un
             // nivel (02 §3; 04 §6.6). HandleBack devuelve false si no hay calendario abierto.
             if (_dailyScreen != null && _dailyScreen.IsOpen)
@@ -924,9 +1019,22 @@ namespace AF.UI
                 return _dailyScreen.HandleBack();
             }
 
+            // Mercado y tarjeta de oferta (B5): Atrás cierra la tarjeta como «Ahora no» (también encima de la victoria) y el Mercado
+            // como su X. Con la hoja de compra delante no llega aquí (arriba).
+            if (PressMarketBack())
+            {
+                return true;
+            }
+
             if (_app.Screen == AppScreen.Level)
             {
                 return false;
+            }
+
+            // «Eliminar cuenta y datos» (B8), encima de Ajustes: Atrás lo cierra sin borrar y deja Ajustes abierta.
+            if (DeleteAccountOpen)
+            {
+                return CancelDeleteAccount();
             }
 
             if (_settingsScreen != null && _settingsScreen.Visible)
@@ -988,6 +1096,7 @@ namespace AF.UI
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
+            TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;
         }
@@ -1010,6 +1119,7 @@ namespace AF.UI
             }
 
             _probe?.MapClose(stats, progress?.MapSeenLevel ?? 0);
+            TrackMapClose(stats); // af_map_close (B7)
             if (_app != null && _app.Screen != AppScreen.Level)
             {
                 _lobby?.SetCommerceOpen(HomeWindowCovered); // la ventanita de casa vuelve con el inicio a la vista (revisión de M4.2)
@@ -1336,7 +1446,7 @@ namespace AF.UI
                 // La secuencia del Mapa del 10 (06 §2.3; P-M4; M4.2): tras «Siguiente» en la victoria del 10 o, si se pulsó Inicio o
                 // se cerró la app, en la primera entrada al inicio con max_level ≥ 10 y map_seen_level < 10. Al acabarla se anota lo
                 // visto hasta el 10: no se repite.
-                if (_app.L10MapDue)
+                if (_app.L10MapDue && !OpenLogbookBeforeL10Map()) // B4-3: Victoria → libreta → Mapa → Inicio (D-033, punto 11)
                 {
                     OpenRiverMap(MapOpenSource.L10);
                 }
@@ -1369,8 +1479,8 @@ namespace AF.UI
         private bool InLevel => _app == null || _app.Screen == AppScreen.Level;
 
         // Hay una pantalla de pago delante: la hoja «Compra simulada» o un anuncio (y lo que lo rodea; propuesta del personaje
-        // d.11). Las ofertas que vengan (Mochila de inicio, Mercado) se suman aquí. Sin asignar memoria.
-        private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible);
+        // d.11). Con B5, también el Mercado y las tarjetas de oferta (MarketCommerceOpen). Sin asignar memoria.
+        private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || MarketCommerceOpen;
 
         // La ventanita de casa del inicio no sale (LobbyScreen.SetCommerceOpen): con una pantalla de pago delante (D-013, punto 6)
         // o con el Mapa del río encima, que es opaco (revisión de M4.2). Con el Mapa, TiTino no se ve: su saludo del día (como
@@ -1447,6 +1557,9 @@ namespace AF.UI
                 yield return null; // el río y el logotipo, a la vista antes de cargar
             }
 
+            // Remote Config antes del catálogo: mech_enabled.*, level_overrides (con la reserva) y lvl_label_override se aplican al crearlo.
+            IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
+            SetUpRemoteConfig(clock);
             LevelCatalog? catalog = LoadCatalog();
             if (catalog == null)
             {
@@ -1455,7 +1568,6 @@ namespace AF.UI
                 yield break;
             }
 
-            IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
             string profileDirectory = LaunchOptions.ProfileDirectoryOverride ?? Application.persistentDataPath;
 
             // Tras elegir idioma en Ajustes, la escena se recargó (RebuildUi): se vuelve al inicio con el perfil de la sesión, tal
@@ -1487,6 +1599,7 @@ namespace AF.UI
             {
                 bool migrateLegacy = LaunchOptions.ProfileStoreOverride == null && LaunchOptions.ProfileDirectoryOverride == null;
                 profile = LoadProfile(store, clock, migrateLegacy, out firstRun, out _profileStatus);
+                VerifyBootProfile(profile); // B8 (GameBootstrap.Cloud.cs): la firma tal como se leyó, antes de los extras de desarrollo
                 if (LaunchOptions.ApplyDevWallet(profile, clock))
                 {
                     store.TrySave(profile); // extras af_seeds y af_canoes de los builds de desarrollo [P] (B2-6)
@@ -1496,6 +1609,9 @@ namespace AF.UI
                 {
                     store.TrySave(profile); // extra af_max_level de los builds de desarrollo [P] (M3.3)
                 }
+
+                // B8 (GameBootstrap.Cloud.cs): la firma del perfil y la fusión con la nube, antes de crear ningún servicio.
+                profile = SyncProfileAtBoot(profile, store, IsLocked(_profileStatus));
             }
 
             bool locked = IsLocked(_profileStatus);
@@ -1507,25 +1623,39 @@ namespace AF.UI
             _deviceLocale = LaunchOptions.DeviceLocaleOverride ?? AndroidDeviceLocale.ForPlatform();
             _deviceTag = _deviceLocale.LanguageTag ?? string.Empty;
             LocResolution locale = SetUpTexts(profile.Settings.Language, _deviceTag);
+            StampProfileIdentity(profile, firstRun, locale, _deviceTag); // B8: first_app_version, country_first y locale (08 §4.3)
 
             // Cartera, progreso, nivel en curso, anuncios y tienda guardan el mismo perfil por el lote: dentro de una acción del
             // jugador (vertido, victoria, rescate, rendición, compra, anuncio) el perfil se escribe una sola vez (revisión B2-5).
             // Con el perfil en disco (LocalProfileStore), el lote escribe en segundo plano (T-D): el vertido solo serializa en el
             // hilo principal. La cartera guarda por batch.Durable: cada mutación espera al escritor y escribe en síncrono.
-            var batch = new ProfileSaveBatch(store);
+            var batch = new ProfileSaveBatch(SigningStore(store)); // B8: cada escritura lleva integrity.hmac (08 §4.3)
             _saveBatch = batch;
-            _wallet = new Wallet(profile, batch.Durable, clock);
+            SetUpTelemetry(clock); // Remote Config, bus y analítica antes de la cartera (B7; GameBootstrap.Telemetry.cs)
+            IClock capsClock = CreateCapsClock(clock); // B8: anti-reloj de canoas y topes diarios (08 §10.1; 04 §7.1)
+            _wallet = new Wallet(profile, batch.Durable, capsClock, _rcConfigs?.Economy);
+            // La cartera, al bus y con biz_feature_lives nada más crearse: lo que gane o gaste el arranque (el Regalo de regreso
+            // de SetUpSessions, en el arranque en frío) llega a la analítica. ConnectTelemetry la vuelve a conectar (solo asigna).
+            ConnectWallet(_wallet);
             IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new ProfileProgressStore(profile, batch);
             _progress = progress;
 
             _art = SharedArt(catalog.WaterBase);
             _probe = new DevProbe { Settings = profile.Settings };
+
+            // B12 (08 §7): con la banda <13 guardada, «Pide a un adulto que instale el juego» y nada más: el arranque se para antes de
+            // crear los anuncios, la tienda y las pantallas (no se crea sesión de juego; GameBootstrap.Consent.cs).
+            var consentStore = new ProfileConsentStore(profile, batch.Durable);
+            if (BlockedAtBoot(consentStore))
+            {
+                yield break;
+            }
             if (_splash != null)
             {
                 // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
-                // de la victoria) o sin su arte final (release), no sale y no hay espera. Reducir movimiento aún no es un ajuste
-                // del jugador (07 §7.8): la pose se anima.
-                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: false))
+                // de la victoria) o sin su arte final (release), no sale y no hay espera. Con Reducir movimiento (B9; 02 §12, fila
+                // «Mensajes de TiTino»), pose quieta y fundido.
+                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: ResolveReduceMotion(profile)))
                 {
                     yield return null; // TiTino, a la vista mientras se construye el resto
                 }
@@ -1547,10 +1677,13 @@ namespace AF.UI
                 batch);
             ISimulatedPurchasePresenter purchasePresenter = new BatchedPurchasePresenter(
                 LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art)), batch);
-            _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()), profile, batch, clock, firstRun);
-            _storeLedger = new StoreLedger(profile, _wallet, batch, clock);
-            _store = new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency);
-            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
+            _ads = AdController.Create(
+                WrapAds(WrapConsentAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()))), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
+            _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
+            // F3-5: la compra verificada (F3-3) con el cliente del backend de este build (GameBootstrap.Backend.cs); la hoja «Compra
+            // simulada» sigue siendo la de la tienda de la plataforma simulada (FakeBillingClient) mientras no llegue Unity IAP.
+            _store = WrapStore(WrapConsentStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch))); // B12: flags de edad
+            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
 
             _screen = new GameScreen(transform, _art, _probe, this);
@@ -1584,9 +1717,11 @@ namespace AF.UI
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
             _settingsScreen.IdleHintToggled = on => ChooseIdleHint(on); // MO3: Pista por inactividad
             BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
+            SetUpAccount(); // B8: «Eliminar cuenta y datos» en Ajustes, en dos pasos (GameBootstrap.Account.cs)
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
-            _flow = new LevelFlow(catalog, progress, _screen, LaunchOptions.ResolveTapSwitchSelection(), LaunchOptions.ResolvePourMode(), _wallet)
+            _flow = new LevelFlow(
+                catalog, progress, _screen, LaunchOptions.ResolveTapSwitchSelection(), LaunchOptions.ResolvePourMode(), _wallet, _rcConfigs?.Boosters)
             {
                 AdGate = new InterstitialGate(_ads, _probe, _wallet), // AD_GATE tras «Siguiente» (B2-4)
                 StateStore = new ProfileLevelStateStore(profile, batch), // nivel en curso tras cada vertido (B2-5)
@@ -1613,7 +1748,13 @@ namespace AF.UI
             SetUpStreak(); // Crecida, Hoja escudo y Canasta (E32; GameBootstrap.Streak.cs): el servicio, inyectado en el flujo
             SetUpMeta(); // B14: skins por hito, álbum de frutas, la Canasta en el Mapa y «Datos del río» (GameBootstrap.Meta.cs)
             SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
+            SetUpLogbook(); // Bitácora del río y cola de takeovers (B4-3; GameBootstrap.Logbook.cs): tarjeta, libreta y takeover
             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
+            SetUpMarket(); // B5 (GameBootstrap.Market.cs): el Mercado, las ofertas y el Cántaro, con las sesiones de B6
+            SetUpA11y(); // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y el lector de pantalla
+            ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
+            SetUpConsent(clock, consentStore); // B12: cifras, país y perfil legal, flujo y pantalla (GameBootstrap.Consent.cs)
+            ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
             if (requested <= 0 && !rebuilt)
@@ -1624,6 +1765,18 @@ namespace AF.UI
             if (_splash != null)
             {
                 yield return FinishSplash(firstRun); // fin de la carga: se corta, con el segundo de sloth_wake si toca y cabe
+            }
+
+            // B12 (08 §2.3): la edad y el consentimiento, y sus flags a la analítica, los anuncios y la tienda, siempre antes de
+            // GameFlow.Go. Sin pantalla que enseñar no hay ningún yield. Con <13, la app no arranca.
+            if (StartConsentAtBoot())
+            {
+                yield return WaitConsentAtBoot();
+            }
+
+            if (ConsentBlocked)
+            {
+                yield break;
             }
 
             if (requested > 0)
@@ -1668,6 +1821,9 @@ namespace AF.UI
                 _backPresses = 0; // Atrás durante el arranque: aún no hay nada que cerrar
                 return;
             }
+
+            TickBackend(Time.unscaledDeltaTime * 1000f); // F3-5: la cola de verificación de compras, cada pocos segundos
+            TickA11y(Time.unscaledDeltaTime * 1000f); // B9: el lector de pantalla (solo con TalkBack) y el Reto
 
             float dt = Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs);
             if (_skipNextDelta)
@@ -1735,11 +1891,15 @@ namespace AF.UI
 
         private void OnApplicationPause(bool paused)
         {
+            TelemetryPause(paused); // la sesión de la analítica: nueva tras ≥ 30 min fuera (B7; D-033, Q-M4)
             if (paused)
             {
                 PersistNow("segundo plano");
                 return;
             }
+
+            ResumeBackend(true); // F3-5: lo que Play cobró mientras tanto vuelve como compra sin terminar (08 §10.3)
+            PushUiResumed(); // «Avisos»: de vuelta de los ajustes del teléfono (GameBootstrap.PushUi.cs)
 
             // 02 §14: al volver de segundo plano la vista salta al modelo sin animar (también la luciérnaga en vuelo: la cuia
             // queda revelada) y la selección se limpia.
@@ -1914,16 +2074,20 @@ namespace AF.UI
                     return null;
                 }
 
-                // Kill switch de mecánicas (KS1; D-020, pregunta 31 b): mech_enabled.* (defaults de GameConfig y af_mech_off en
-                // desarrollo) y level_overrides (fuente local vacía hasta AF.RemoteConfig), con los ids buscados en los paquetes.
-                MechanicSwitches switches = LaunchOptions.ResolveMechSwitches();
-                LevelOverrides overrides = LevelOverrides.Create(LaunchOptions.ResolveLevelOverridesJson(), packs);
+                // Kill switch de mecánicas (KS1; D-020, pregunta 31 b): mech_enabled.* (defaults de GameConfig, Remote Config y
+                // af_mech_off en desarrollo) y level_overrides (Remote Config o la fuente local), con los ids buscados en los
+                // paquetes de campaña y en los de reserva (D-033, Q-B11-7 a; GameBootstrap.Reserve.cs).
+                MechanicSwitches switches = ResolveCatalogSwitches();
+                string overridesJson = ResolveCatalogOverridesJson();
+                LevelOverrides overrides = LevelOverrides.Create(overridesJson, OverridePool(packs, overridesJson));
                 for (int i = 0; i < overrides.Problems.Count; i++)
                 {
                     Debug.LogWarning(LogPrefix + overrides.Problems[i]);
                 }
 
-                LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w));
+                // lvl_label_override (08 §9; B11): el de Remote Config (SetUpRemoteConfig, antes de cargar el catálogo).
+                LevelLabelOverrides labels = LevelLabelSource.Create(_rcConfigs, w => Debug.LogWarning(LogPrefix + w));
+                LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w), labels);
                 watch.Stop();
                 if (DevProbe.Enabled)
                 {
@@ -1965,6 +2129,7 @@ namespace AF.UI
         {
             ProfileLoadResult result = store.Load();
             status = result.Status;
+            s_bootLoadMigrated = result.Migrated; // B8: un perfil migrado no se puede comprobar con su firma (GameBootstrap.Cloud.cs)
             if (result.Error != null)
             {
                 Debug.LogWarning(LogPrefix + "perfil (" + result.Status + "): " + result.Error);
@@ -2149,6 +2314,8 @@ namespace AF.UI
         {
             CutSplash();
             PersistNow("destruir la escena");
+            ClearA11y(); // B9: TalkBack no se queda con los nodos de esta escena (recarga por idioma o por borrar la cuenta)
+            DisposeBilling(); // D-040: la tienda de Play de esta escena suelta Unity IAP (GameBootstrap.Backend.cs)
 
             // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
             // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya

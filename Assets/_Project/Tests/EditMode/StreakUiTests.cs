@@ -209,6 +209,29 @@ namespace AF.Tests.EditMode
             Assert.That(VictoryBarsRule.Chevron(3, 2), Is.False);
         }
 
+        [Test]
+        public void LogbookRow_IsTheThirdBar_AndCountsInTheWorstHeightOnlyWhereItIsVisible()
+        {
+            // Cierre de B11 (D-033, añadido del 2026-10-20, puntos 5 y 10): la fila «Bitácora · elige tu premio» es la tercera barra.
+            var plan = new VictoryBarsPlan();
+            plan.Build(26, true, null, null, null, null, 0, null);
+            Assert.That(plan.BarCount, Is.EqualTo(0));
+            plan.Logbook = true;
+            Assert.That(plan.Extra, Is.EqualTo(1));
+            Assert.That(plan.BarCount, Is.EqualTo(1));
+            plan.Clear();
+            Assert.That(plan.Logbook, Is.False, "se rearma en cada victoria");
+            Assert.That(plan.Extra, Is.EqualTo(0));
+
+            Assert.That(VictoryBars.LogbookRowDp, Is.GreaterThanOrEqualTo(48f), "un objetivo de 48 dp (02 §3.3)");
+            for (int step = 0; step < GameScreen.VictoryCompactRow; step++)
+            {
+                Assert.That(VictoryBars.LogbookWorstExtra(step), Is.EqualTo(VictoryBars.LogbookRowDp + VictoryBars.GapDp), "escalón " + step);
+            }
+
+            Assert.That(VictoryBars.LogbookWorstExtra(GameScreen.VictoryCompactRow), Is.EqualTo(0f), "escalón 3: iría tras el chevron, no cuenta");
+        }
+
         // ---- Ayudas ----
 
         private sealed class Fx

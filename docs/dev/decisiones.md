@@ -3199,3 +3199,404 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Riesgos residuales aceptados** (detalle en `infra/README.md`, «Riesgos residuales conocidos (F2c)»): más de 15 min entre reservar y escribir; borrado de la cuenta durante una compra (queda reconocida sin conceder).
 - **`infra.yml`** sintetiza prod con un id de app de ejemplo, porque prod exige `-c firebaseAppIds` desde F2c.
 - **Sugerencia pendiente** (no afecta al dinero): en `shared/integrity.ts`, una `TransactionConflict` al guardar la caché lanza 500 después de gastar el token de App Check de un solo uso; registrarla y seguir sin guardar.
+
+### D-035, añadido del 2026-10-21: preguntas de F3-1 y F3-2 (cliente AF.Backend), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f3-1` (revisión APROBADO sobre `a7a1bca`). El dueño puede cambiarlas.
+- **`deferred_ack` (08 §10.3):** al vencer el plazo solo se hace `acknowledge` local más `deferred_ack`; **no se acredita** hasta que el servidor verifique la compra en un `restoreLedger` o en un reintento (el plazo se mide con el reloj del dispositivo, que se puede adelantar). Se corrige 08 §10.3 en F3-3.
+- **URL de la API de dev (F4-2):** se escribe en `BackendEndpoints.Dev` en un commit (la URL de `execute-api` no es secreta).
+- **`biz_backend_enabled` [P]:** se añade a 08 §9 con la integración del GDD y se conecta en F3-3 como interruptor de corte.
+- **Riesgo para F3-3:** comprobar en el dispositivo que `SHA256.Create()` sobrevive al Managed Stripping High; si no, `SHA256Managed` o una entrada de `link.xml`.
+
+### D-035, añadido del 2026-10-21: Firebase dev en la cuenta personal del dueño
+
+- **Estado:** decisión del dueño en la sesión con Codex (registro en `docs/dev/traspaso/codex-estado.md`): crear Firebase dev desde su cuenta personal de Google, porque la cuenta empresarial no tiene permiso para crear proyectos (`resourcemanager.projects.create`) hasta que su administrador lo conceda.
+- **Identificadores públicos de dev:** proyecto `fill-dev-e75a2` (el id `amazon-fill-dev` no estaba disponible); app Android `com.amazonfill.dev` con id `1:528273757148:android:45d5cf0ddb2e3021c93519`. Auth anónimo activado; App Check con Play Integrity registrado **sin enforcement**; Analytics activado (cuenta dedicada, ubicación EE. UU.); plan Spark sin coste.
+- **AWS dev** (`AfDevApi`) ya autoriza con emisor y audiencia `fill-dev-e75a2` y admite ese id de app. Mientras `infra/lib/config.ts` siga con el default `amazon-fill-dev`, **todo despliegue de dev debe pasar** `-c firebaseProjectId=fill-dev-e75a2 -c firebaseAppIds=1:528273757148:android:45d5cf0ddb2e3021c93519`; se cambiará el default de dev en la próxima tarea de `infra/`.
+- **Pendiente para prod:** crear Firebase prod en la cuenta empresarial (con el permiso del administrador) o decidir otra cosa; prod sigue sin bootstrap ni stacks.
+
+### D-033, añadido del 2026-10-21: preguntas de B7 (Remote Config, analítica y bus `AF.Events`), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada, la (a), por la regla del dueño; integradas con `spark/t5-b7` (`17046f38`; revisión del Spark en `d2889a40`) y sus parches B7-*. El dueño puede cambiarlas. Detalle y opciones en `docs/dev/remote-config-analytics.md` §6.
+- **Q-T1:** bus mínimo `AF.Events` sin motor; las interfaces de escucha que ya existían siguen.
+- **Q-B7-1:** `AF.RemoteConfig` sin dependencias. Ver Q-B7-24 abajo: con D-035, `AF.Backend` es el cliente de la API en AWS, no Firebase.
+- **Q-B7-2:** `AF.Events` sin dependencias; lo referencian Economy, GameFlow, Analytics y UI. Se añade su fila a 08 §2.2 en esta integración.
+- **Q-B7-3:** dos ensamblados de composición (`AF.RemoteConfig.Binding` y `AF.Analytics.Adapters`) que solo usa `AF.UI`; se añade su fila a 08 §2.2 en esta integración.
+- **Q-B7-4 / Q-B7-5:** «resto» en los mapas por país = la clave `"*"`; `ads_rv_cooldown_s_<placement>` para los seis placements de `ads_rv_cap_<placement>`.
+- **Q-B7-6:** los defaults que remiten a otra tabla (`eco_calendar_table_v1`, `biz_kpi_*`, premios de liga y regata, `eco_price_tier_<country>`) quedan `null` + `pending`; cada bloque transcribe la suya a 08 §9.
+- **Q-B7-7:** un valor remoto que no pasa `Validate()` devuelve la clase entera a `Defaults`. Ojo: las `Validate()` no comprueban los rangos de 08 §9; completarlas en sus bloques.
+- **Q-B7-8:** `biz_maintenance_message` es una clave de `strings.csv` (vacía = aviso genérico).
+- **Q-B7-9:** la analítica del Reto sigue como sonda `AF_STATE` (R10); su gancho, en un parche aparte.
+- **Q-B7-10 a Q-B7-13:** `af_level_win.double_harvest` = estado en la victoria; `af_level_abandon.reason` solo `map`; los comunes de 08 §8.1 a todos los eventos, sin los null; `boosters_json` con `undo` y `extra_cuia`.
+- **Q-B7-14:** `biz_feature_lives` apagado = las canoas no cuentan; `biz_feature_rescue` apagado = sin Cuia de rescate; los demás, al llegar su sistema.
+- **Q-B7-15:** `anim_speed_factor_late` = 1,0. El GDD ya lo traía (integración de D-035), así que `B7-gdd.diff` no se aplicó: solo se regeneró el JSON.
+- **Q-B7-16 a Q-B7-21:** `AF_EVENT {json}` en logcat solo en desarrollo y en el Editor; `session_id` GUID; booleanos `true`/`false`; `rc_variant` = `biz_experiment_tag`; recogida apagada hasta el consentimiento (los sumideros locales escriben); el JSON compilado como constante.
+- **Q-B7-22 / Q-B7-23:** `pours` y `t_ms` se añaden a los eventos de comodines y del modal al engancharlos; `level_start.band` = `difficulty.band` del nivel.
+- **[P] de la nota:** el formato `af-rc-defaults/1`, las interpretaciones de las diez celdas no literales de 08 §9, la congelación por `RcSnapshot`, la validación contra el catálogo, el sumidero `AF_EVENT` y la sesión.
+- **Ajustes del integrador por D-035:** los defaults se regeneran desde 08 §9 actual (entra `biz_backend_enabled` = true, sale `sec_appcheck_enforce`; siguen 251 claves). `VerificationQueueConfig` (F3-1, `sec_purchase_deferred_ack_h`) queda en `NotBoundYet` del test del binder hasta que F3-3 conecte el backend en el arranque.
+- **Q-B7-24 (nueva, del integrador):** 08 §2.2 sigue diciendo que `AF.RemoteConfig` depende de `Backend`, pero con D-035 `AF.Backend` es el cliente de la API propia en AWS y Remote Config va con Firebase en el cliente. Opciones: (a) **recomendada, aplicada en el código:** `AF.RemoteConfig` sin dependencias (o solo `Platform`, para `IServerDate`) y corregir esa celda de 08 §2.2 en la próxima edición del GDD; (b) que `AF.RemoteConfig` referencie `AF.Backend`.
+- **Q-B7-25 (nueva, del integrador):** el común `net` (08 §8.1) se leía con `Application.internetReachability`, y eso hace que Unity añada `ACCESS_NETWORK_STATE` al manifiesto, un permiso no aprobado (regla dura 4; `ci/check-manifest.ps1 -Mode dev` falló con el dev.apk). Opciones: (a) **recomendada, aplicada:** no enviar `net` (null, se omite) hasta que el dueño apruebe `ACCESS_NETWORK_STATE`, que traerá igualmente el SDK de Firebase (F3-6); entonces se vuelve a leer y se añade a la lista blanca de `check-manifest.ps1`; (b) aprobarlo ya y enviar `net` desde ahora. **Respondida en D-037 con la (b):** `net` vuelve a enviarse y el permiso está en la lista blanca.
+- **`IBackendSwitch` (F3-3) y `biz_backend_enabled`:** no se conecta todavía a Remote Config: `VerifiedStoreService` aún no está en el arranque (tarea con F3-5). Al conectarlo, basta un adaptador en `AF.RemoteConfig.Binding` que lea `biz_backend_enabled` del `RcSnapshot` (o fijar `BackendSwitch.BizBackendEnabled` al enlazar).
+- **Pendientes de B7 tras integrar:** enlazar en `RcConfigBinder` `ShuffleConfig`, `SkipConfig`, `ComebackConfig`, `PushConfig` y `VerificationQueueConfig` (hoy usan sus `Defaults`) y `sec_ssv_grace_h` con B8; los ganchos que faltan (`af_boot`, `af_consent`, comodines, modal, canoas, Reto, Ajustes, `af_level_load`, `af_error`…); las pantallas «Actualiza Tintalú» y de mantenimiento.
+
+### D-035, añadido del 2026-10-21: preguntas de F3-3 (compra verificada en el cliente), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f3-3` (revisión final APROBADO sobre `fd162926`). El dueño puede cambiarlas.
+- **`purchase_queue` [P]:** la cola de compras pendientes es solo local (lleva `purchaseToken` en claro); la fusión de 08 §11 conserva la del dispositivo y no viaja en la nube.
+- **Balsa acreditada tarde** (por la cola o al reabrir): la Cuia de rescate se pierde; el resto se acredita [P].
+- **Unity IAP 5.4.4 [NV]:** si no permite reconocer un consumible sin consumirlo, se vuelve a decidir el `deferred_ack` al integrar el SDK (F3-6).
+- **`biz_backend_enabled`:** ya dado de alta en 08 §9 (`bool`, `true` [P]); en el cliente es `IBackendSwitch` con default `true` hasta que B7 lo lea de Remote Config.
+- **Cántaro recuperado sin sus semillas** (cierre entre el cobro y el primer guardado): se acredita con `eco_piggy_min_buy` [P].
+- **Conectar `VerifiedStoreService` al juego** (`Resume` al arrancar y al volver a primer plano, `Pump` periódico y la UI de `Pending` y `VerifyFailed`): tarea de unity-gameplay-dev junto con F3-5.
+- **Ejemplos `GPA.…` de `applied_purchases`** en 08 §4.3 y 04 §10.1: pasan a `token_hash` en la próxima tarea de documentación.
+- **Mochila con la marca local puesta:** se acredita la que el servidor verifica; el servidor hace cumplir «una por cuenta» (F2c).
+
+## D-037 · Aprobación del permiso Android ACCESS_NETWORK_STATE
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** aprobado por el dueño en el chat: «Apruebo el permiso ACCESS_NETWORK_STATE para el común net de la analítica (Q-B7-25 b); añádelo a la lista blanca de check-manifest.»
+
+**Decisión.** Se aprueba `android.permission.ACCESS_NETWORK_STATE`, que Unity añade al leer `Application.internetReachability`, para el parámetro común `net` de la analítica (08 §8.1; B7). Se añade a la lista blanca de `ci/check-manifest.ps1` y el común `net` vuelve a enviarse. Responde Q-B7-25 con la opción (b) y sustituye la (a) que se había aplicado al integrar B7 (`0d5965cc`).
+
+**Alcance.** No aprueba otros permisos, SDK, paquetes ni versiones.
+
+**Cómo revertir.** Con una decisión nueva: quitarlo de la lista blanca y dejar de leer la red en `GameBootstrap.Telemetry.cs`.
+
+## D-038 · Con `biz_feature_lives` apagado, desde el 31 todo funciona como antes del 31
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** decidida por el dueño en el chat, al cerrar la revisión de B7: «biz_feature_lives=false: desde el 31 todo como antes del 31: salir es gratis y no cuenta como fallo, sin ¿Seguro? ni Nivel fallido por salir y sin canoas; el rescate sigue con su propio interruptor.»
+
+**Decisión.** Con el interruptor de 08 §9 `biz_feature_lives` en `false`, en los niveles 31 y siguientes el embudo de D-008 se comporta como en 1-30: no hay canoas (ni en la barra, ni en el modal, ni en los avisos), salir del nivel es gratis, no es fallo duro, no suma a `fails_level` y no abre ¿Seguro? ni Nivel fallido; «Rendirse» hace lo mismo que en 1-30. El rescate (Cuia y Balsa de rescate) no cambia: lo gobierna su propio interruptor, `biz_feature_rescue`. Con el interruptor en su valor por defecto, nada cambia. Sustituye la regla [P] aplicada en `tanda5/b7-fixes` (`d47ac8fe`), donde salir seguía siendo fallo duro y «Rendirse» iba directo a Nivel fallido.
+
+**Cómo revertir.** Con una decisión nueva.
+
+### D-033, añadido del 2026-10-21: preguntas de B8, B4 y B5 del Spark, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas en `integra/spark-t5c` con `spark/t5-b8`, `spark/t5-b4` y `spark/t5-b5` y sus parches. El dueño puede cambiarlas. Detalle y opciones en `docs/dev/nube-integridad.md` (B8), `docs/dev/bitacora.md` §8 (B4) y `docs/dev/mercado.md` §7 (B5).
+
+**B8 (nube sin SDK, integridad, anti-fraude local y «Eliminar cuenta»).**
+- **Q-B8-1:** `applied_purchases` por unión (08 §11, canon). La nota recomienda cambiar 08 §11 a «la lista del ganador + `restoreLedger`»: **pendiente del dueño** (no se aplica sin su decisión). Con F3-3 la lista guarda el `token_hash`; se escribe en orden ordinal y sin repetidos.
+- **Q-B8-2:** la clave del HMAC sale de `integrity.device_first`.
+- **Q-B8-3:** la huella sale de un id aleatorio por instalación (`af_install_id` en `PlayerPrefs`): sin identificador del dispositivo ni fila nueva de Data Safety.
+- **Q-B8-4:** `locale` = el idioma de la UI resuelto en cada arranque.
+- **Q-B8-5:** un perfil sin firma o migrado es coherente.
+- **Q-B8-6 / Q-B8-7:** `daily` con fechas distintas, el bloque del día más reciente; empate total, el local.
+- **Q-B8-8 / Q-B8-9:** revocar Sin anuncios quita el derecho; `ApplyLedger` en orden ordinal de token.
+- **Q-B8-10:** la sospecha solo se mide (08 §10.1: sin castigo automático).
+- **Q-B8-11:** con B6, `stats.last_seen_at` y `last_win_at` por máximo; en `settings.push`, «o» en los pre-prompts, máximo en `pre_prompt_at` y `granted` del dispositivo. Aplicada en `CloudMerge` al integrar.
+- **Del integrador:** `purchase_queue` es solo local también en la nube de B8 (no se compara, no sube, no entra en la firma; D-035, añadido de F3-3). La fusión cubre además `entitlements.frames` y `album.fruits` por unión (B14), `calendar` (B4) y `offers` (B5). «Eliminar cuenta» deja preparado `GameBootstrap.ServerAccountDelete` para `IBackendClient.DeleteAccount` (F3-5) sin conectarlo; Ajustes no enseña el UID y el identificador para la web será el código de `GetAccountCode` (Q-B13-21). `RevocationConfig` (`sec_ssv_grace_h`) queda en `NotBoundYet` hasta que `LocalRevocation` llegue al arranque.
+
+**B4 (Bitácora del río «1 de 3», cola de takeovers y pantalla 2 del 10).**
+- **Q-B1:** `played_date` dentro de `calendar` (a). **Ojo:** va contra la letra de D-033, punto 6 («solo `calendar` = `{cycle, next_day, last_claim_date}`»); se aplica por la regla y se anota en 08 §4.3 [P]. Opciones: (a) `played_date` en `calendar` (aplicada); (b) solo en memoria (cerrar la app antes de sellar obliga a jugar otro nivel); (c) un campo en `daily`. **El dueño debe confirmarla.**
+- **Q-B2:** la pantalla 2 del 10 es la libreta sola con las 3 tarjetas de la casilla 1; la Canasta, en la victoria.
+- **Q-B3:** 30 semillas por Marea, como D-033 (06 §4.2 y `undo3` dicen 10): el dueño confirma con los datos de `econ_sim`.
+- **Q-B4:** la 1.0 lee `eco_calendar_table_v2` (fila nueva [P] en 08 §9) y, si falta o no vale, la tabla compilada; la v1 no se lee.
+- **Q-B5:** la Luciérnaga bloqueada sigue la cadena Morpho → Cuia extra → «2 Marea + 40»; se desbloquea con `max_level` ≥ 100 (constante hasta que `lvl_murky_from_level` llegue a `BoosterConfig`).
+- **Q-B6:** marco de país `frame_wNN` por mundo. **Q-B7:** Canasta de los días 7 y 21 = `eco_basket_seeds` + el comodín de la próxima Canasta de nivel. **Q-B8:** `reward_type` según lo recibido; `choice` la tarjeta tocada; `reward_value` sin lo fijo (08 §8.2 al día). **Q-B9:** si ya se abrió la libreta en la sesión, no sale sola. **Q-B10:** sesiones de la cola con su reloj de 30 min. **Q-B12:** tarjeta encima de la del Reto con sus tres estados. **Q-B13:** sin «Duplicar con video» en la 1.0. **Q-B14:** `econ_sim` da la Bitácora desde el día 1.
+- **Q-B11:** la fila «Bitácora · elige tu premio» la dibuja el escritorio en la tercera barra de `VictoryBars` con `LogbookVictoryRowDue` y `OpenLogbookFromVictory()`. **Pendiente (tarea aparte):** la barra aún no existe; hasta entonces la libreta sale sola al volver al Inicio (punto 5).
+- **Q-B15:** regenerar `econ_A.md` y `econ_B_tramos.md` aparte: **pendiente del visto bueno del dueño**.
+- **Q-B16:** el aviso «Bitácora sin sellar» de B6 se conecta en una tarea aparte con un texto sin premio; hasta entonces, apagado.
+- **Fusión [P] (del integrador, propuesta de la nota):** `calendar` el registro con más avance (`cycle`, `next_day`) y `played_date` por máximo.
+- **Del integrador:** `TakeoverConfig` y `LoginCalendarConfig` quedan en `NotBoundYet` (falta su tabla en `RcConfigBinder`).
+
+**B5 (Mercado, ofertas y Cántaro con la tienda falsa).**
+- **Q-B5-1:** venta de skins apagada hasta el arte final. **Q-B5-2:** ninguna tarjeta de pago salvo la Mochila antes de `rescue_min_level`. **Q-B5-3:** las 48 h de la Mochila desde su primera tarjeta. **Q-B5-4:** recordatorios en la primera victoria desde el 15 y desde el 19, con cupo. **Q-B5-5:** el Reto no llena el Cántaro. **Q-B5-6:** Mochila y Cántaro en la victoria; Sin anuncios y skin al volver al inicio. **Q-B5-7:** Cántaro en el inicio bajo Ajustes. **Q-B5-8:** `piggy.last_level`, `piggy.full_card` y `offers` [P] en 08 §4.3. **Q-B5-11:** lista T1 de la nota. **Q-B5-12:** el Cántaro con una compra pendiente no se vacía hasta acreditarse (F3-5 lo vacía al acreditar). **Q-B5-13:** la skin comprada se pone. **Q-B5-14:** contexto `shop` de la tarjeta de skin. **Q-B5-15:** `from` = `lobby`.
+- **Q-B5-9:** `piggy` del ganador; `offers` con listas unidas y contadores por máximo. Aplicada en `CloudMerge` al integrar; de las fechas, la primera vista de la Mochila más antigua (para no alargar sus 48 h) y la última tarjeta Sin anuncios más reciente [P].
+- **Q-B5-10:** un solo cupo, el de la `TakeoverQueue` de B4 (`TakeoverQueueBudget`). Aplicada al integrar.
+- **Con D-033 ya decididas:** Q-E2, Q-E3, Q-E5 («Restaurar compras» oculto), Q-E6, Q-M4 y Q-M8.
+- **Sin conectar:** `VerifiedStoreService` (F3-3) en el Mercado, con F3-5.
+
+### D-033, añadido del 2026-10-21: respuestas del dueño a tres preguntas de B4 y B8
+
+- **Estado:** decididas por el dueño en el chat (formulario), con la recomendada en las tres.
+- **Q-B1 (B4):** «hoy ya terminaste un nivel» se guarda como `played_date` dentro de `calendar`, que queda `{cycle, next_day, last_claim_date, played_date}` [P]. Matiza el punto 6 del diseño aprobado de la Bitácora. Se anota en 08 §4.3.
+- **Q-B8-1 (B8):** al fusionar dos perfiles, `applied_purchases` es **la lista del perfil ganador**, y `restoreLedger` (el servidor) devuelve las compras que falten para reacreditarlas. Cambia 08 §11, que decía «unión». Se implementa en `CloudMerge` con su test.
+- **Q-B15 (B4):** se regeneran `tools/out/econ_A.md` y `econ_B_tramos.md`, que ya no se reproducían antes de B4, en una tarea aparte; antes de darlas por buenas se enseñan al dueño las cifras [sim] que cambien.
+- **Q-B3 (B4):** Marea = 30 semillas en la tasa de la Bitácora, como fijó D-033 (tasa (a)); se corrige 06 §4.2 donde diga 10.
+- **Aplicadas (integrador, rama `tanda5/t5d-verify`):** Q-B8-1 en `CloudMerge.Fields.cs` (sin `Profile.MergeAppliedPurchases`), con `voided_purchases` [P] también del ganador (con la unión, un token reembolsado solo en el perdedor y acreditado en la cartera del ganador quedaría marcado como retirado y `ApplyLedger` ya no lo retiraría); 08 §11 (tabla y `ResolveConflict`), 08 §4.3 (`played_date`, Q-B1) y 06 §4.2 (Q-B3) al día. **Para F3-5:** el cliente aún no llama a `restoreLedger` tras fusionar (`CloudSync` solo fusiona; la parte local es `LocalRevocation.ApplyLedger`): con Q-B8-1, sin esa llamada una compra hecha solo en el teléfono que pierde no se reacredita hasta conectarla.
+
+### D-038, añadido del 2026-10-21: la Balsa con las canoas apagadas
+
+- **Estado:** decidido por el dueño en el chat: «Balsa con las canoas apagadas: quita las Canoas infinitas de su contenido y de la línea del modal (queda «semillas y una cuia»), sin cambiar el precio; anótalo en D-038 y en 04 §6 y §7.2.»
+- **Decisión.** Con `biz_feature_lives = false`, la Balsa de rescate no incluye las Canoas infinitas: su contenido y la línea del modal de Aguas estancadas quedan en «semillas y una cuia». **El precio no cambia.** Con el interruptor en su default, la Balsa no cambia.
+- **Aplicada (integrador, rama `tanda5/t5d-verify`):** `StoreLedger.CreditedCanoes` quita los 30 min de la Balsa (compra simulada y grant del servidor) y la línea pasa a `stuck_balsa_499_content_no_canoes` [P] («Todo para seguir: semillas y una cuia», `borrador`); 04 §6, §6.5 y §7.2 al día. **Para F3-5:** `LocalRevocation.ApplyLedger` reacredita `entry.InfiniteCanoes` tal como viene del libro mayor, así que con las canoas apagadas una Balsa devuelta por `restoreLedger` daría las 30 min; al conectarlo, aplicar la misma regla (quien arma las entradas desde el catálogo, o un dato de rescate en `LedgerEntry`).
+
+### D-033, añadido del 2026-10-21: las cifras [sim] de B4 al GDD (Q-B15)
+
+- **Estado:** decidido por el dueño en el chat: «Apruebo poner al día en el GDD (05 §2.4, §3.2, Desviación 1 y docs/GDD.md) las cifras [sim] de econ_A.md, econ_B_tramos.md y las columnas B de econ_B.md tras B4.»
+- **Decisión.** Las cifras [sim] del GDD pasan a la corrida con la Bitácora «1 de 3» de D-033 (B4): `tools/out/econ_B.md` de `10f66534` y `econ_A.md` y `econ_B_tramos.md` de `201f2b6c` (300 corridas por perfil, semilla 2026). Cierra la parte pendiente de Q-B15.
+- **Aplicada (rama `tanda5/econ-gdd`):** 05 (Resumen, principio 3, §2.4, §3.1-§3.6, Desviación 1, Conflictos, preguntas 1 y 2 y Dependencias), 04 (§2.4, §2.5, §3, §9 y Dependencias), 01 (§7.2 y Dependencias), 09 (§8, decisión 15) y `docs/GDD.md` (convención [sim], §2 #16, §3.3, §6.1 #4, §6.2 #3, §7.2 #25 y #27 y §8 #3). Los ratios de referencia de B pasan de 7,7 / 7,2:1 a 7,6 / 7,1:1 y, con tramos, el de 101-500 de 10,3 a 10,1:1 (sigue en banda). **Ojo:** el ratio del casual en 31-100 pasa de 10,1:1 («sí», en banda) a 9,9:1 («bajo») en los dos escenarios; ninguna conclusión del GDD dependía de que estuviera en banda. Sin tocar: la tabla de 05 §3.6, que sale de `econ_variants.md` (regenerado también en `10f66534`), sigue con la salida anterior a B4 hasta su propio visto bueno.
+
+### D-033, añadido del 2026-10-21: la tabla de 05 §3.6 y la Bitácora «1 de 3» en 05 §2.3 y §3.1
+
+- **Estado:** decidido por el dueño en el chat: «Apruebo poner al día la tabla V0-V7 de 05 §3.6 con econ_variants.md tras B4 y revisar 05 §2.3 y §3.1 frente al canon de la Bitácora «1 de 3» de D-033.»
+- **Decisión.** La tabla V0-V7 de 05 §3.6 pasa a `tools/out/econ_variants.md` de `10f66534` (200 corridas por perfil, semilla 2026, con la Bitácora «1 de 3»), y 05 §2.3 y §3.1 se ponen de acuerdo con el canon de la Bitácora «1 de 3» de este registro (añadido del 2026-10-20, puntos 1-7, con Q-B1, Q-B3 y Q-B4). Cierra la parte de §3.6 que dejó abierta el añadido anterior (las cifras [sim] de B4).
+- **Aplicada (rama `tanda5/econ-gdd2`):** `econ_variants.md` se reproduce idéntico con `py -3.14 tools/econ_variants.py`. 05 §3.6 (tabla y lectura) y §3.3 (V3: 8,7 / 8,1:1); 05 §2.1 (fila de la Bitácora), §2.3 (tabla retocada, opciones, totales, hitos con Canasta, Canasta grande y marco, tasa Marea = 30 y comodín = 100, `played_date`, `eco_calendar_table_v2`), §3.1 (los comodines del canon en lugar de «los 12 comodines») y «Parámetros»; 06 §4.2 y «Parámetros», por coherencia (D-033 ya los listaba en «Qué cambia en el GDD»); la cabecera de 05 y la convención [sim] y §3.3 de `docs/GDD.md` sin la marca de pendiente. Ninguna conclusión de 05 §3.6 cambia de sentido: V1, V4, V5 y V7 siguen en banda en los dos tramos (10,1-13,0:1, antes 10,3-13,2:1), V2 y V3 siguen fuera, y el casual con bloqueo baja en V0 del 76 % al 70 % (el descuento del primer rescate del día libra al 30 % de sus corridas, antes al 24 %).
+
+### D-033, añadido del 2026-10-21: el canon de las casillas 2, 10, 17, 19 y 27 de la Bitácora
+
+- **Estado:** decidido por el dueño en el chat (formulario), con la recomendada: «Canon «1 Marea + 30»».
+- **Contexto:** con la tasa de valor de la Bitácora (Marea = 30 semillas por unidad; Q-B3), el canon «3 Marea + 30» de esas cinco casillas valía 120, pero sus tres opciones (60 semillas, 2 Marea, 1 Marea + 30) valen 60.
+- **Decisión:** el canon de las casillas 2, 10, 17, 19 y 27 pasa a **«1 Marea + 30»** (vale 60, igual que la opción de mezcla). El ciclo pasa de 15 a 5 Mareas sueltas; las semillas del ciclo no cambian. Se ponen al día la tabla compilada del cliente y el default de `eco_calendar_table_v2` (08 §9), `CALENDAR` de `tools/econ_sim.py`, las simulaciones `tools/out/econ_*.md` y las cifras [sim] del GDD que dependan de ellas, y las tablas de 05 §2.3 y 06 §4.2.
+- **Aplicada (rama `tanda5/bitacora-canon`):** `LoginCalendarTable.Default` y sus tests (5 Mareas sueltas en el canon; el canon de cada casilla vale lo mismo que sus opciones), `CALENDAR` de `tools/econ_sim.py`, 05 §2.1, §2.3 y §3.1, 06 §4.2 (con la suma de verificación de las Mareas), 08 §9 (`eco_calendar_table_v2` y, de paso, `eco_calendar_locked_booster_seeds` como tasa de valor que sustituye el comodín bloqueado) y `docs/GDD.md` (versión 1.22 y convención [sim]). El default de `eco_calendar_table_v2` en `RemoteConfigDefaults.json` sigue en `null` con su `pending` (la tabla compilada del cliente es el respaldo; `rc_defaults.py --check` idéntico). **Ninguna cifra [sim] cambia:** `econ_B.md`, `econ_A.md`, `econ_B_tramos.md` y `econ_variants.md` se reproducen byte a byte con el canon nuevo, porque el simulador cuenta 3 Mareas sueltas como una unidad `undo` y su inventario de Marea nunca está vacío en un bloqueo que pide Marea (las Canastas lo llenan de sobra; 0 llamadas al anuncio de Marea en 300 corridas por perfil), así que las 10 Mareas menos por ciclo (unas 3,3 unidades `undo`) no cambian ninguna decisión ni la secuencia aleatoria de las corridas. El peso de los hitos (51,7 %) y las 3.000 semillas no cambian. De paso, 05 §3.6 y su pregunta abierta 2 dejan de proponer «Cuia extra y Morpho ofrecidos antes del nivel» (Q-E1).
+
+### D-035, añadido del 2026-10-21: preguntas de F3-5, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f3-5` (revisión APROBADO). El dueño puede cambiarlas.
+- **«Eliminar cuenta» sin servidor** (sin red o con `biz_backend_enabled` apagado): no se borra nada, se muestra «No se pudo eliminar» y se puede reintentar.
+- **`account_code` en la fusión con la nube:** manda el del dispositivo; tras reinstalar se pide otro (se anota en la tabla de 08 §11).
+- **Cántaro acreditado tarde:** se resta solo lo acreditado, para no perder lo que entró en el Cántaro después de la compra (la recomendada; sustituye la (a) que aplicó F3-5 de vaciarlo entero).
+- **Cántaro devuelto por `restoreLedger` o anulado:** se usa `eco_piggy_min_buy` [P].
+- **Intervalo de `Pump`:** 5 s [P].
+- **Textos de las 5 claves nuevas** (`iap_pending_confirm`, `iap_verify_failed`, `market_store_unavailable`, `settings_account_code`, `settings_account_code_unavailable`): aprobados en es-419; se piden EN y PT-BR.
+- **Banda de edad** hasta que llegue B12 (Spark): se trata como 13 o más, con el `TODO(B12)` en `PlayerUnder13()`. **Conectada al integrar B12 (2026-10-21):** `PlayerUnder13()` lee la banda guardada (`profile.consent.age_band`) o el bloqueo del arranque, y el `TODO` se quita (ver el añadido de D-033 de B12).
+
+## D-039 · Integración del Firebase Unity SDK 13.17.0 (F3-6)
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** aprobado por el dueño en el chat: «Apruebo integrar el Firebase Unity SDK 13.17.0 con solo Auth, App Check, Analytics, Crashlytics y Remote Config (sin Functions), detrás de sus interfaces y con implementaciones falsas en el editor (F3-6). El google-services.json de dev lo coloco yo fuera del repo.» Y en el formulario: los paquetes se descargan y se versionan (Git LFS, referenciados por `file:` en `Packages/manifest.json`); si Firebase Analytics añade `com.google.android.gms.permission.AD_ID`, se quita del manifiesto fusionado (`tools:remove`) hasta que lleguen los anuncios de MAX; `WAKE_LOCK` se aprueba si aparece.
+
+**Decisión.**
+- Paquetes (descargados por el integrador el 2026-10-21 de `https://dl.google.com/games/registry/unity/<paquete>/<paquete>-<versión>.tgz`), con su SHA-256:
+  - `com.google.external-dependency-manager-1.2.189.tgz`: `67087dbbb5f26746f5e2456159558de35ac14162a4ece7632d3ed3bdc0bfc175`
+  - `com.google.firebase.analytics-13.17.0.tgz`: `8f857d19e09794f6f50921d0af419cbcd86dfb94e53586a9f41270728ae1f8f8`
+  - `com.google.firebase.app-13.17.0.tgz`: `d74830478ed10eab56d848d92484e23b3aa9b27cbd1c843c21745be04f57eaa5`
+  - `com.google.firebase.app-check-13.17.0.tgz`: `976a99eab31448dbf77aebedabc65fb6d51bd0ccedc9e5fdf228776a41a256ea`
+  - `com.google.firebase.auth-13.17.0.tgz`: `14df2538229dc129a35c6509a799970bf998f32386beba080b4567e8f8b80092`
+  - `com.google.firebase.crashlytics-13.17.0.tgz`: `0911e76db75e0a6410493e3db2e609b619ab0386cd7e9d66689406c3c7ec5658`
+  - `com.google.firebase.remote-config-13.17.0.tgz`: `1862f969c6a1f78496796379a7d703deeb877fb5b687b9ed9dd06ba5fa8a16ee`
+- Solo `app`, `auth`, `app-check`, `analytics`, `crashlytics` y `remote-config`, más EDM4U 1.2.189 (lo trae Firebase; 08 §7 #4). **Sin** `functions` ni `firestore`.
+- Cada SDK, detrás de su interfaz con implementación falsa en el editor (08 §2.1, principio 6); los reales solo en `UNITY_ANDROID && !UNITY_EDITOR`. La recogida de Analytics sigue apagada hasta el consentimiento (B12).
+- `google-services.json` lo coloca el dueño en una ruta ignorada por git; **ningún agente lo lee, lo crea, lo imprime ni lo commitea** (regla 5).
+- Permisos: `WAKE_LOCK` aprobado si lo añade el SDK; `AD_ID` se quita hasta MAX. Cualquier otro permiso nuevo para la integración y se pregunta.
+
+**Cómo revertir.** Quitando los paquetes de `manifest.json` y las implementaciones reales; las interfaces y las falsas siguen.
+
+### D-039, añadido del 2026-10-21: los permisos que trae Firebase y App Check en desarrollo
+
+- **Estado:** decidido por el dueño en el chat: «F3-6: quita ACCESS_ADSERVICES_ATTRIBUTION, ACCESS_ADSERVICES_AD_ID y READ_GSERVICES; aprueba BIND_GET_INSTALL_REFERRER_SERVICE (lista blanca y Data Safety). App Check: depuración en desarrollo, Play Integrity en release.»
+- **Se quitan** del manifiesto fusionado (`tools:node="remove"`), como `AD_ID`: `android.permission.ACCESS_ADSERVICES_ATTRIBUTION` y `android.permission.ACCESS_ADSERVICES_AD_ID` (Privacy Sandbox de anuncios, de Firebase Analytics) y `com.google.android.providers.gsf.permission.READ_GSERVICES` (de reCAPTCHA, que arrastra Firebase Auth; el acceso anónimo no lo usa: se comprueba en el teléfono).
+- **Se aprueban** `com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE` (Install Referrer de Play, para saber el origen de cada instalación; servicio de la propia Play Store, no un SDK de atribución aparte: matiza 08 §7) y `android.permission.WAKE_LOCK` (ya aprobado si aparecía). Entran en la lista blanca de `ci/check-manifest.ps1` y en Data Safety (08 §13.3).
+- **App Check:** proveedor de depuración en los builds de desarrollo (`DEVELOPMENT_BUILD`; el dueño registra su token de depuración en la consola de Firebase) y Play Integrity en release.
+
+### D-033, añadido del 2026-10-21: la reserva del 20 % (Q-B11-7)
+
+- **Estado:** el dueño delegó la decisión en el integrador: «escoje lo conveniente si toca esperar esperamos o no entiendo exactametne que estoy eligiendo si es bueno o malo para el proyecto». El integrador elige la (a), la recomendada por el Spark, y se lo explicó al dueño en el chat.
+- **Decisión (a):** un pack de reserva por mundo con, para cada nivel con mecánica (los primeros que necesita el kill switch de D-020) y hasta el 20 %, otro tablero de su mismo slot sin esa mecánica y en su ventana, con ids y `pack_id` propios. Cambia `schemas/af-level-1.schema.json` (contrato 21, `pack_schema`) de forma aditiva; el catálogo solo usa esos packs desde `level_overrides` (nunca como niveles de campaña). Se genera y se pasa por level-qa como el resto de la campaña.
+- **Motivo:** el seguro del kill switch funciona desde la 1.0, cuando más riesgo hay, y su peso es pequeño (JSON); sin reserva, apagar una mecánica en producción solo podría sustituir sus niveles por otros ya publicados.
+- **Implementada (2026-10-21, rama `tanda5/reserva-20`):** `pack_schema` 4 (`kind` = `reserve`, `pack_id` `reserva_{mm}_v{v}`, `replaces`, sufijos `_r{k}` y `:r{k}`); `tools/level-generator --reserve` y `tools/level-qa --reserve`; 132 tableros en los mundos 3-9 (8, 12, 12, 20, 24, 28 y 28; el mundo 2 solo lleva capacidades); el cliente los carga solo para `level_overrides` y lee `mech_enabled.*` y `level_overrides` de Remote Config en el arranque, antes del catálogo (`RcLevelBinder`). Reglas [P] de la herramienta (orden por rondas de los kill switches, celda sin mecánicas con sus capacidades, misma etiqueta y `bot_fail` más cercano) en 03 §17 y `tools/level-generator/README.md`. GDD: 03 §2, §10 y §17; 08 §4.1 y §9; 02 §9.2 regla 3 y pregunta 14.
+
+### D-033, añadido del 2026-10-21: preguntas de B12 (consentimiento y edad) del Spark, con la recomendada
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** decisión del dueño en el chat: «Integra B12 del Spark con sus parches y la verificación completa, y aplica sus 16 preguntas con la recomendada.» Integradas en `integra/spark-b12` con `spark/t5-b12` (`b5a18d0e`) y sus parches. Detalle y opciones en `docs/dev/consentimiento.md` §4. Completa Q-T3 (a) y Q-T4 (a) de D-033. **Los textos legales siguen [P], en `borrador` y con la nota «pendiente del abogado»**; lo que el abogado confirme puede cambiar las respuestas marcadas abajo.
+
+- **Q-B12-1:** la pantalla de edad neutral son **tres botones iguales**, uno por banda, sin ninguno marcado (no el año de nacimiento). Pendiente del abogado: la neutralidad para Google Play.
+- **Q-B12-2:** al subir `consent_text_version` **solo se vuelven a pedir las finalidades**; la banda guardada se conserva (08 §7 permite una sola corrección).
+- **Q-B12-3:** el bloqueo de `<13` **es definitivo** en el dispositivo: no se vuelve a preguntar ni con textos nuevos y no hay salida desde la pantalla (solo reinstalar).
+- **Q-B12-4:** el diagnóstico (Crashlytics) es una **línea informativa sin interruptor** (interés legítimo, 08 §2.3), pendiente de la pregunta 6 de 08 al abogado.
+- **Q-B12-5:** los textos legales van en `strings.csv` con el estado **`borrador`** y la nota «pendiente del abogado» (sin un estado nuevo en el contrato 32).
+- **Q-B12-6:** la doble confirmación es **una pantalla más**: el toque en «Comprar» del juego, una confirmación con el precio de la tienda y después la hoja de Google Play. Pendiente del abogado, con Q-T4.
+- **Q-B12-7:** con 13-17 **la analítica se ofrece** como finalidad que se puede aceptar (sin audiencias ni anuncios personalizados). Pendiente del abogado (ECA Digital).
+- **Q-B12-8:** `profile.consent` **es del dispositivo**: la fusión con la nube conserva el del local y un teléfono nuevo vuelve a preguntar. Aplicada en `CloudMerge` al integrar (`merged.Consent = local.Consent`, con test).
+- **Q-B12-9:** con el perfil `ump`, **la analítica en la pantalla propia y los anuncios por UMP**, hasta que el dueño configure UMP.
+- **Q-B12-10:** el campo nuevo se llama **`consent.age_band_corrected`** (bool) [P]; se anota en 08 §4.3.
+- **Q-B12-11:** `af_settings_change.value` con `key = consent` vale **`choices` o `age`** [P].
+- **Q-B12-12:** el encargo del Spark decía que `INTERNET` no estaba aprobado; **lo aprobó D-036** (2026-10-20). Sin efecto en B12 (no usa red); se corrige el encargo.
+- **Q-B12-13:** «el tratamiento más estricto» sin país es **el perfil `default` + `npa` sin elección** (la analítica se puede aceptar).
+- **Q-B12-14:** la fila marcable se **extrae a una clase común de AF.UI al integrar**: `OptionRow` (`Scripts/UI/OptionRow.cs`), usada por Ajustes y por las finalidades de la pantalla de consentimiento.
+- **Q-B12-15:** si cambia el perfil legal del país (otra SIM, un viaje), **se vuelve a preguntar** las finalidades con el perfil de ahora y la banda guardada.
+- **Q-B12-16:** las capturas de referencia de los textos nuevos las saca **el integrador con `SnapshotKit`** (es-419 y en-XA al 130 %): `ConsentSnapshotTests` (explícita) con la edad, las finalidades, el bloqueo, la doble confirmación y Ajustes (también en 16:9).
+
+- **Del integrador, al aplicar la nota §6 (sugerencias de la 4.ª revisión):** la 1 (`ConsentHoldsSession` retiene la sesión y los avisos mientras no haya una decisión vigente, también en el segundo de la pantalla de arranque de quien debe volver a decidir, con su test) y la 7 (Q-B12-14). Las demás (2-6 y 8) quedan abiertas para una tarea aparte.
+- **Orden de arranque (del integrador):** `SetUpConsent` va tras `ConnectTelemetry` y **antes** de `ResumeBackend` (F3-5), para que los flags guardados lleguen a la analítica, los anuncios y la tienda antes de reanudar las compras; el decorador de la tienda de B12 envuelve la tienda verificada de F3-5 (`WrapStore(WrapConsentStore(CreateStore(...)))`).
+- **Enganches con F3-6 (Firebase; D-039), a petición del coordinador de la integración:** (1) la decisión llega a la recogida propia de Firebase Analytics por `AnalyticsService.SetCollectionEnabled` (`ICollectionAwareSink`) y con la banda `<13` nunca se enciende; (2) con `<13` Crashlytics se apaga de forma explícita (`CrashReporting.Stop`: `IsCrashlyticsCollectionEnabled = false`, que persiste entre arranques), al bloquear y en cada arranque bloqueado; (3) «Eliminar cuenta y datos» llama también a `FirebaseAnalyticsSink.ResetData()` (08 §13.3). Con tests PlayMode (`ConsentBootTests` y `AccountAndCloudTests`).
+
+### D-033, añadido del 2026-10-21: preguntas de B11 (tutorial, Sin canoas y contenido) del Spark, con la regla «si tienen recomendada, vamos con esa»
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** decididas con la recomendada (la (a), ya aplicada en la rama) por la regla del dueño «si tienen recomendada, vamos con esa», salvo Q-B11-7, que ya decidió el añadido «la reserva del 20 %» de arriba. Integradas en `integra/spark-b11` con `spark/t5-b11` (`0fe3e99c`) y sus seis parches. Detalle y opciones en `docs/dev/tutorial-b11.md` §5. Respetan D-038 y su añadido de la Balsa: con `biz_feature_lives` apagado no hay tarjeta de Canoas, el tooltip del 6 y del 8 pierde la frase de las canoas y Sin canoas no se abre.
+
+- **Q-B11-1:** el dedo del 2 **señala antes el vertido que abre la lección** y después la lección [P] (sonda `lesson = partial_setup`).
+- **Q-B11-2:** con `biz_feature_lives` apagado, el tooltip del 6 y del 8 lleva **solo la primera frase**, «Reiniciar es gratis, siempre, mismo tablero.» (`tutorial_restart_free`).
+- **Q-B11-3:** **se acepta la excepción del 680**: con la Cuia extra, su tercer fallo sigue con el tablero base; el resto de 31-700 lleva `minus_color` (segunda pasada de Q-N2 (a), presupuesto 2.000.000 [P]).
+- **Q-B11-4:** texto del tooltip de la Cosecha doble del 11: **«Con un video, las semillas de este nivel valen el doble.»** [P].
+- **Q-B11-5:** **lienzo al ancho del teléfono entre 320 y 360 dp**, con 1 dp físico por dp (toca `CanvasScale` de `GameScreen` y `LobbyScreen` y sus pruebas). **No aplicado en esta integración: tarea del escritorio aparte**; hasta entonces el lienzo sigue midiendo 360 dp.
+- **Q-B11-6:** «25 minutos» y «nivel 31» van **literales** en los textos (Q-E4 (a) y 04 §2.7); si Remote Config cambia `canoes_regen_min` o `rescue_min_level`, hay que revisar los textos.
+- **Q-B11-7:** decidida en el añadido «la reserva del 20 %» (un pack de reserva por mundo); **no se implementa aquí**: será otra tarea (hecha el 2026-10-21 en `tanda5/reserva-20`, con `level_overrides` enlazado a Remote Config).
+- **Q-B11-8:** se quedan el id `home` de `AF_LAYOUT` y la fila `back_home`.
+- **Q-B11-9:** la tarjeta del 31 habla **solo de las canoas** (el texto de Q-E4 (a)), sin línea de la Cuia de rescate.
+- **Q-B11-10:** el dedo de la Cuia extra del 8 sale **en cada intento hasta usarla**.
+- **Q-B11-11:** C10 **solo arrastra la cuia que se elevó en el touch-down sin selección** (también si otro dedo selecciona entre medias, C11); un arrastre ilegal no selecciona nada: Y se sacude (C6), sin C5.
+- **Q-B11-12:** el tooltip de la Cosecha doble sale **solo en el 11**: si en esa victoria no hay anuncio, no sale nunca.
+
+- **Quedan para otras tareas (del integrador):** enlazar `drag_pour_enabled`, `lvl_label_override` y `level_overrides` con Remote Config en el arranque; emitir `af_label_shown` (con `LevelCatalog.IsRelabeled` para `source`) y todas las elecciones de `af_no_canoes_choice` a la vez; Q-B11-5 (lienzo a 320 dp); Q-B11-7 (la reserva); los cambios propuestos al GDD de la nota §4 (02 §5 y §13, 03 §13 y §17, 04 §7.1 y 06 §2.2).
+
+### D-033, añadido del 2026-10-21: cierre de B11 en el escritorio (rama `tanda5/b11-cierre`)
+
+- **Estado:** aplicado por el integrador; detalle en `docs/dev/tutorial-b11.md` §7. Cierra, del añadido de B11, «Quedan para otras tareas» salvo `level_overrides` y Q-B11-7 (la reserva, otro carril), y la Q-B11 de B4 (la fila de la victoria ya existe).
+- **Hecho:** `drag_pour_enabled` y `lvl_label_override` desde Remote Config (antes del catálogo); `af_label_shown` y todas las elecciones de `af_no_canoes_choice`; la fila «Bitácora · elige tu premio» (tercera barra, 48 dp); Q-B11-5 (a), lienzo de 320 a 360 dp con 1 dp físico por dp; los cambios al GDD de la nota §4 (sin 03 §17) y 05 §7 alineado con Q-T4 (a) y la UMP dentro de MAX (también 01 y 08, que aún decían «PIN»).
+- **[P] del integrador, para confirmar:** (1) la fila no sale si con ella la victoria compacta necesitaría el escalón 3 (iría tras el chevron): hoy no sale a 360 × 640, y la libreta sale sola al inicio; (2) por debajo de 320 dp físicos el lienzo mide 320 dp escalado, y en un 16:9 de 320 dp manda el alto mínimo de 640 (lienzo de 360 × 640, texto por debajo de 12 sp físicos); (3) `af_label_shown` con cada intento, como `level_start`; (4) en el hito de TiTino que no cabe, se quita la fila antes que la Crecida y la Canasta; (5) al sellar desde la fila la victoria se recoloca y su escalón puede bajar.
+
+### D-033, añadido del 2026-10-21: preguntas de la reserva del 20 %, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `tanda5/reserva-20` (revisión APROBADO). El dueño puede cambiarlas.
+- **Q-R20-1:** el 20 % se reparte por rondas de mecánica, para que cada una tenga cubiertos sus primeros niveles.
+- **Q-R20-2:** el tablero de reserva quita todas las mecánicas de su slot (también las Aguas turbias) y conserva las capacidades; un tablero cubre todos los kill switches de su slot.
+- **Q-R20-3:** el tope del 20 % se redondea hacia abajo (8, 12, 12, 20, 24, 28 y 28 en los mundos 3-9; 132 tableros).
+- **Q-R20-4:** en la 1.0, `level_overrides` solo se aplica cuando una mecánica está apagada (08 §9); sustituir niveles en alarma o por segmento (DDA, 03 §2 y §15) queda para otra tarea.
+- **Q-R20-5:** los tableros de reserva no publican `difficulty.D` (no entran en el pool del rango).
+
+### D-033, añadido del 2026-10-21: preguntas del cierre de B11, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `tanda5/b11-cierre` (revisión APROBADO). El dueño puede cambiarlas.
+- **P1:** a 360 × 640 (16:9) la fila «Bitácora · elige tu premio» no sale (necesitaría el escalón 3 de la victoria compacta); ahí la libreta sale sola al volver al inicio.
+- **P2:** en teléfonos de menos de 320 dp el lienzo mide 320 dp escalado; en un 16:9 de 320 dp manda el alto mínimo de 640 (lienzo 360 × 640).
+- **P3:** `af_label_shown` sale con cada intento, como `level_start`.
+- **P4:** al sellar desde la fila, la victoria se recoloca y «Siguiente» puede moverse una vez.
+
+### D-033, añadido del 2026-10-21: notificaciones reales (Q-M5)
+
+- **Estado:** el dueño ordenó en el chat: «Integra las notificaciones reales con com.unity.mobile.notifications 2.4.3 y POST_NOTIFICATIONS (D-033 Q-M5), desde el parche B6-notifications-real, con la verificación completa.»
+- **Versión exacta aprobada:** `com.unity.mobile.notifications` **2.4.3** (la que declara el Editor 6000.3.25f1, propuesta por el Spark en B6), del registro de Unity. Permiso `android.permission.POST_NOTIFICATIONS` aprobado (Android 13+, con el pre-prompt de B6 antes de pedirlo). Entra en la lista blanca de `ci/check-manifest.ps1`.
+- Si el paquete añade otros permisos (por ejemplo `RECEIVE_BOOT_COMPLETED` o `SCHEDULE_EXACT_ALARM`), se para y se pregunta; 08 §13 y Q-M5 piden alarmas inexactas.
+- **Integración (rama `tanda5/notificaciones`, 2026-10-22):** el manifiesto fusionado del `dev.apk` y del ensayo `rehearsal.aab` solo gana `android.permission.POST_NOTIFICATIONS` y el receptor `com.unity.androidnotifications.UnityNotificationManager` (no exportado), con `com.unity.androidnotifications.exact_scheduling` = 0: **ningún otro permiso**, sin `RECEIVE_BOOT_COMPLETED`, `SCHEDULE_EXACT_ALARM` ni `USE_EXACT_ALARM` (los ajustes del paquete se quedan en sus valores por defecto). Sin `.so` nuevos (el paquete es Java). Peso: el `rehearsal.aab` pasa de 53,49 a 53,56 MB (+70.750 bytes; descarga de Play de 52,46-52,52 a 52,54-52,59 MB) y el `dev.apk`, +81.162 bytes. Programador en `Scripts/Platform/Notifications/` (`AF.Platform.Notifications`); detalle en `docs/dev/sesiones-notificaciones.md` §8. Consecuencia aceptada de no tener `RECEIVE_BOOT_COMPLETED`: tras reiniciar el teléfono los avisos programados se pierden hasta la siguiente salida de la app. Con <13, al bloquear se cancelan los avisos y la bandeja.
+
+## D-040 · Integración de Unity IAP 5.4.4 (Play Billing), encargada al Spark
+
+- **Fecha:** 2026-10-22. Registrada el 2026-10-22 por el integrador.
+- **Estado:** aprobado por el dueño en el chat: «Encarga al Spark integrar Unity IAP 5.4.4 (Play Billing) tras IBillingClient, con la tienda falsa en el editor; apruebo el paquete com.unity.purchasing 5.4.4. Prepárale el encargo y la frase.»
+- **Decisión:** `com.unity.purchasing` **5.4.4** exacta (plan de instalación; 08 §7), que trae Play Billing 8 o superior. La implementación real va detrás de `IBillingClient` (F3-3) solo en `UNITY_ANDROID && !UNITY_EDITOR`; el editor y los tests siguen con `FakeBillingClient`. La verificación sigue en el servidor (`VerifiedStoreService`, D-035): el cliente nunca acredita sin el `ok` o el `duplicate` del backend.
+- **Permiso:** Play Billing añade `com.android.vending.BILLING`, que es inseparable de cobrar en Google Play. **Aprobado por el dueño el 2026-10-22:** «Apruebo el permiso com.android.vending.BILLING para Play Billing (D-040); que entre en la lista blanca de check-manifest cuando se integre Unity IAP.» Entra en la lista blanca de `ci/check-manifest.ps1` con la integración de Unity IAP; cualquier otro permiso nuevo, se para y se pregunta.
+- **Encargo:** `docs/dev/traspaso/spark-reto-del-rio.md` §14.
+
+### D-033, añadido del 2026-10-22: preguntas de B9 (accesibilidad) del Spark, con la regla «si tienen recomendada, vamos con esa»
+
+- **Fecha:** 2026-10-22. Registrada el 2026-10-22 por el integrador.
+- **Estado:** decididas con la recomendada (la (a), ya aplicada en la rama) por la regla del dueño «si tienen recomendada, vamos con esa». Integradas en `integra/spark-b9` con `spark/t5-b9` (`7f924192`) y sus cuatro parches (`B9-profile`, `B9-rc`, `B9-ui` y `B9-loc`). Detalle y opciones en `docs/dev/accesibilidad.md` §5. El dueño puede cambiarlas. **Quedan pendientes** (la (a) es «tarea aparte» o depende del dueño o de otros): Q-B9-6, Q-B9-12, Q-B9-13, Q-B9-14, Q-B9-17, y los cambios al GDD de Q-B9-15 y Q-B9-16.
+
+- **Q-B9-1:** un cambio de la fuente del sistema con el juego abierto **se aplica al volver a abrirlo** (la escala se lee una vez por arranque).
+- **Q-B9-2:** con la fuente del sistema por debajo del 100 %, el texto **se queda al 100 %** (≥ 12 sp, 02 §12).
+- **Q-B9-3:** con el ajuste en `auto`, «Quitar animaciones» de Android **enciende Reducir movimiento**.
+- **Q-B9-4:** «sin mover el dedo» en C9 es **< 24 dp**, el umbral de C10.
+- **Q-B9-5:** Alto contraste **no enciende los iconos** (son de Patrones de fruta; 07 §3, regla 5 literal).
+- **Q-B9-6:** el contorno de dosis de 1,5 px de 07 §3, regla 5, va en **una tarea aparte** con el shader y capturas (`A11yRules.HighContrastDoseOutlinePx` ya existe). **Pendiente:** hasta entonces Alto contraste solo sube el patrón al 35 %.
+- **Q-B9-7:** una fruta sin nombre aprobado por el asesor se lee como **«fruta»** (`a11y_fruit_unnamed`).
+- **Q-B9-8:** las «3 dosis dentro» de la Tinaja se leen **todas, con la boca**.
+- **Q-B9-9:** el botón de comodín con precio o video lleva **solo la etiqueta** («Deshacer, 2 restantes»), sin el precio.
+- **Q-B9-10:** el simulador es **Machado 2009 + CIEDE2000**, con informe sin umbral y QA manual (08 §14.3); no es compuerta.
+- **Q-B9-11:** «{fruit} seleccionado» va **tal cual el texto de 02 §12**, también con frutas femeninas (pendiente del revisor de textos).
+- **Q-B9-12:** el traslado inverso de Marea (250 ms) se multiplicará por el factor de Reducir movimiento (02 §4, «todas las duraciones») **en una tarea aparte**. **Pendiente:** hoy sigue fijo.
+- **Q-B9-13:** los pares 7-10 (protanopía) y 5-14 (deuteranopía) del simulador **se añaden a la lista de pares de riesgo** de 07 §3 y del glosario §9, para que el generador los limite. **Pendiente del dueño y de otra tarea:** editar el GDD y el generador (y volver a generar si cambia algún tablero); no se toca en esta integración.
+- **Q-B9-14:** la etiqueta de la cuia añadirá el nombre de la mecánica con las claves de sus nombres (08 §14.2) **en una tarea aparte**. **Pendiente:** hoy la etiqueta es la de 02 §12.
+- **Q-B9-15:** los campos del perfil son **`settings.reduce_motion`** (`auto` | `on` | `off`) y **`settings.high_contrast`** (bool) [P]. **Pendiente:** anotarlos en 08 §4.3.
+- **Q-B9-16:** `af_settings_change.key` admite **`reduce_motion` y `high_contrast`**. **Pendiente:** añadirlos a 08 §8.2.
+- **Q-B9-17:** TalkBack con la lista de Ajustes que se desplaza (al 130 % o en pantallas bajas): la acción de desplazar del lector (`AccessibilityNode.scrolled`) va **en una tarea aparte**. **Pendiente:** hasta entonces las filas bajo el corte no se publican.
+- **Del integrador:** el rechazo del arrastre C10 (B11, `GameScreen.Drag.cs`) tampoco sacude la cuia con Reducir movimiento, como el toque ilegal (02 §12). Los ayudantes de prueba `B9Loc`, `B9LocPlay` y `docs/dev/traspaso/spark-enganches/B9-strings.csv` se quedan: con `B9-loc.diff` aplicado no añaden ninguna fila.
+
+### D-033, añadido del 2026-10-22: preguntas de la UI de los avisos, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `tanda5/notif-ui` (revisión APROBADO). El dueño puede cambiarlas.
+- **Segundo pre-prompt con el hito 3 en la misma sesión que el primero:** (b) se recuerda que el hito 3 ya se alcanzó y el segundo sale en la primera victoria de la sesión siguiente. **Pendiente de implementar** (hoy se va a los 7 días).
+- **Victoria del pre-prompt:** no sale ninguna oferta (no solo la Mochila) [P].
+- **Entrada al inicio tras el pre-prompt:** no abre la libreta sola ni gasta el cupo de takeovers; sale en la siguiente entrada [P].
+- **Analítica:** `origin` de `af_push_prompt` y la clave `push` de `af_settings_change` se dan de alta en 08 §8.2 y en `AnalyticsCatalog` en una tarea aparte.
+- **Tope de espera del diálogo nativo tras «Avísame»:** 5 s con la app delante [P].
+- El integrador confirma que la tarea podía tocar `docs/dev/prototipo-v0.md` y `docs/dev/sesiones-notificaciones.md` (las sondas se anotan en el mismo PR).
+
+### D-033, añadido del 2026-10-22: preguntas de los arreglos de la prueba en el teléfono del 2026-10-22, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño mientras dormía; integradas con `tanda5/fx-telefono-1022` (revisión APROBADO). El dueño puede cambiarlas.
+- **02 §13, fila 6:** el tooltip «Reiniciar es gratis…» va dentro del panel, sobre el botón (se corrige el texto del GDD en la próxima tarea de documentos).
+- **En el 7, la tarjeta del Reto tiene prioridad sobre el gesto de TiTino** [P].
+- **Prefijo `AF_EVENT_UNSENT`** en logcat para los eventos sin consentimiento (Firebase no recibe nada sin él).
+- **Excepción a Q7-A:** en la victoria del 11, en pantallas bajas, «Siguiente» puede quedar algo más arriba [P].
+- **Q-B9-18:** «Reducir movimiento» sigue como interruptor sí/no (con `auto` al arrancar hasta que el jugador lo toque).
+- **Aviso «unity pipeline upgrade»** de `com.unity.pipeline` 0.8.0-exp.1: no se toca hasta que falle algo; actualizarlo sería un cambio de versión que aprueba el dueño.
+- **Riesgos bajos que se dejan hasta verlos en el teléfono:** la tarjeta del Reto no se recoloca si TiTino cambia de caja después; en 16:9 el hueco del tooltip del 6 puede pasar Aguas estancadas a la disposición compacta.
+
+### D-040, añadido del 2026-10-22: preguntas de la integración de Unity IAP (Q-IAP-n), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** Q-IAP-2 a Q-IAP-7 aplicadas con su recomendada por la regla del dueño; integradas con `spark/t5-iap` (revisión APROBADO en el Spark) y sus parches `IAP-*`. El dueño puede cambiarlas. **Q-IAP-1 no está decidida.** Detalle: `docs/dev/iap.md` §4.
+- **Q-IAP-1 · Telemetría de compras de Unity IAP a Unity: pendiente del dueño y del abogado; bloquea el soft launch.** Unity IAP 5.4.4 envía a Unity (Insights, `prd.insights.analytics.unity3d.com`) un evento por cada paso de cada compra con el SKU, el precio, el token y datos del dispositivo, sin pasar por nuestro consentimiento y sin interruptor en el cliente; no está en Data Safety ni en la política. Opciones: (a) seguir con Unity IAP para las pruebas internas y, antes del soft launch, que el dueño desactive la recogida de «Developer Data» en el panel de Unity si el proyecto se vincula (hoy no lo está), el abogado valore la fila de Data Safety y la política, y se mida en el teléfono con un proxy qué sale; (b) copiar el paquete como embebido y anular el emisor (modificar un paquete de Unity: mantenimiento y licencia por revisar); (c) sustituir Unity IAP por un plugin propio de Play Billing 9 (`.androidlib`) detrás del mismo `IBillingClient` (sin telemetría de terceros; más trabajo y una dependencia nueva que aprobar). Mientras tanto el código sigue como en (a) solo para pruebas internas; la fila de 08 §13.3 queda marcada pendiente.
+- **Q-IAP-2 · `deferred_ack` de consumibles:** (a) con un consumible no se hace nada (Unity IAP 5.4.4 no reconoce sin consumir; si el servidor no verifica en 72 h, Play reembolsa y no se acreditó nada); con un no consumible, `ConfirmPurchase` (solo reconoce). Lo dice 08 §10.1 (parche de docs).
+- **Q-IAP-3 · Monedas fuera de 05 §4.2:** (a) `LocalPrice` admite cualquier código ISO 4217 (`IAP-price.diff`, aplicado), con los decimales de `LocPrice`; queda para otra tarea fijar en D-025 los decimales de las monedas sin céntimos (CLP, JPY) y de las de tres decimales (KWD, BHD).
+- **Q-IAP-4 · No consumibles con otro UID:** (a) tarea pendiente del backend (`infra/`): con un no consumible de otro UID que Play da como comprado por esta cuenta, el servidor reasigna el derecho o responde `duplicate`. Hasta entonces, cada arranque recibe un 409 de Sin anuncios en ese caso. El cliente nunca acredita sin el servidor.
+- **Q-IAP-5 · Conectar Play antes de elegir la edad:** (a) solo con la edad decidida, nunca con la banda `<13` y con el UID de Firebase ya creado.
+- **Q-IAP-6 · Paquetes que arrastra Unity IAP:** (a) se aprueban como parte de D-040 con su versión, tal como los resuelve Unity en `packages-lock.json`: `com.unity.services.core` 1.18.0, `com.unity.services.deployment` 1.7.2 y `com.unity.services.deployment.api` 1.1.3 (sin permisos Android; no se llama a `UnityServices.InitializeAsync`). También entran por Gradle Play Billing Library 9.0.0 (`com.android.billingclient:billing:9.0.0`) y dos *stubs* de `kotlin-stdlib-jdk7/jdk8` 1.8.22.
+- **Q-IAP-7 · `Assets/Resources/BillingMode.json`:** (a) commiteado una vez (`{"androidStore":"GooglePlay"}`, con su carpeta), no ignorado.
+- **Permisos del manifiesto fusionado:** el único nuevo es `com.android.vending.BILLING` (aprobado en D-040).
+
+### D-040, añadido del 2026-10-22: dependencias de Unity IAP 5.4.4 (Q-IAP-6)
+
+- **Estado:** aprobado por el dueño en la sesión del Spark (registro en `docs/dev/iap.md` §4, commit `1f3f468a` de `spark/t5-iap`): «Apruebo com.unity.services.core 1.18.0, com.unity.services.deployment 1.7.2 y com.unity.services.deployment.api 1.1.3, dependencias de Unity IAP 5.4.4 (Q-IAP-6); anótalo para D-040.»
+- Quedan aprobadas esas tres versiones exactas, que trae `com.unity.purchasing` 5.4.4 y fija `packages-lock.json`. Q-IAP-1 (telemetría de compras a Unity) sigue pendiente del dueño y del abogado.
+
+### D-040, añadido del 2026-10-22: Q-IAP-1 decidida, plugin propio de Play Billing en lugar de Unity IAP
+
+- **Estado:** decidido por el dueño en el chat, tras leer el análisis de la licencia y de las opciones: «Q-IAP-1: opción (c). Apruebo com.android.billingclient:billing directo y quitar Unity IAP y sus dependencias; prepara el encargo al Spark y regístralo en D-040.»
+- **Por qué:**
+  - La licencia de `com.unity.purchasing` (su `LICENSE.md`) lo somete a los términos de los servicios de Unity Operate. Ahí Unity se declara responsable de los datos del servicio (§3.1) y puede usar los de cada jugador (§3.2). El consentimiento y la política de privacidad nos tocan a nosotros (§3.3). La licencia solo permite usar el SDK «como dice la documentación» (§1.1), así que parchearlo para anular el emisor (opción (b)) queda fuera de ella.
+  - En Unity 6000.3, `PurchaseEventEmitter` envía cada compra por HTTP a `prd.insights.analytics.unity3d.com` sin mirar el consentimiento: solo lo anota dentro del evento.
+  - La documentación de privacidad de IAP 5.4+ dice que los datos básicos se recogen siempre y que el producto no tiene servicio de consentimiento.
+  - Su ficha de Data Safety declara historial de compras, identificadores, ubicación aproximada y diagnóstico, sin forma de que el jugador pida el borrado. No encaja con «Eliminar cuenta y datos» (B8). El panel de «Developer Data» de la opción (a) no está documentado para IAP.
+- **Decisión:**
+  - Se sustituye Unity IAP 5.4.4 por un plugin Android propio (`.androidlib`) sobre la **Play Billing Library 9.0.0** (`com.android.billingclient:billing:9.0.0`), que se declara como dependencia directa. Es la versión que ya entraba por Unity IAP; cambiarla exige otra aprobación.
+  - El plugin va detrás del mismo puerto (`IPlayStorePort` bajo `PlayBillingClient` e `IBillingClient`). `VerifiedStoreService`, `BillingReadyStoreService`, `ConsentStoreService`, la tienda falsa del editor y la verificación en AWS no cambian.
+  - Se quitan `com.unity.purchasing` 5.4.4 y las dependencias que traía y nadie más usa: `com.unity.services.core` 1.18.0, `com.unity.services.deployment` 1.7.2 y `com.unity.services.deployment.api` 1.1.3. Así **se retira la aprobación de Q-IAP-6**.
+  - Se quitan también `Assets/Resources/BillingMode.json` (Q-IAP-7), el ensamblado `AF.IAP.UnityIap` y el símbolo `AF_UNITY_IAP`.
+  - El permiso `com.android.vending.BILLING` sigue aprobado y en la lista blanca.
+- **Consecuencias:**
+  - Desaparecen la telemetría de compras a Unity y la búsqueda en el catálogo remoto de Unity (`StoreOverrideReverseLookupService`).
+  - La fila de 08 §13.3 pasa a ser solo «Google Play Billing», sin terceros.
+  - **Q-IAP-2 se reabre:** con la librería directa sí se puede reconocer un consumible sin consumirlo (`acknowledgePurchase`). El encargo lo hace como pedía Q-F3-3 3 y lo anota.
+  - Q-IAP-3, Q-IAP-4 y Q-IAP-5 siguen como estaban.
+- **Mientras tanto:** Unity IAP sigue en `integracion-fase1-fase2` hasta que se integre el reemplazo, solo para pruebas internas. Las compras reales necesitan además la ficha de Play Console, que espera al dictamen de marca (D-034).
+- **Pendiente aparte (sin encargo):** comprobar qué envía el propio runtime de Unity 6.3 en un build Android (Engine Diagnostics o Insights, que el emisor de IAP menciona). Es tema del abogado y de Data Safety.
+- **Encargo:** `docs/dev/traspaso/spark-reto-del-rio.md` §15.
+
+### D-033, añadido del 2026-10-22: pendientes del dueño 2 a 12, todos con la recomendada
+
+- **Estado:** decididos por el dueño en el chat: «Pendientes 2 a 12: todas con la recomendada.» El 1 es Q-IAP-1 (D-040).
+- **2 · Pororoca en inglés y portugués (P-18 de `docs/dev/pororoca.md`):** la etiqueta corta es «Mix» / «Misturar». «Shuffle» y «Embaralhar» no caben en la ranura de 56 dp a 12 sp. Se anota en el glosario §10.
+- **3 · Nombres geográficos (T2-Q7 y T2-Q8):** se permiten en los textos del juego «the Amazon» / «Amazônia», «Amazonas», Tocantins y Putumayo. La regla de evitar la cadena «Amazon» (glosario §1) vale para el nombre de la app y los identificadores, no para la geografía. El asesor cultural puede ajustarlos. `settings_about_amazon`: «About the Amazon» / «Sobre a Amazônia».
+- **4 · Título de la ficha de frutas (T2-Q10):** «River Fruits» / «Frutas do Rio». Se anota en el glosario §10, con el que `glossary.csv` debe coincidir.
+- **5 · Cuia del Encuentro:** nombre corto «Meeting Cuia» / «Cuia do Encontro», para la skin y el pack (`skin_af_skin_m03_name`, `iap_af_skin_m03_name`). La fila del Mercado no se ensancha.
+- **6 · Nombres provisionales, hasta el asesor:**
+  - «Totuma», igual en los tres idiomas (skin y pack m04);
+  - «Mount Mismi» / «Nevado Mismi»;
+  - «Big Basket» / «Cesta grande»;
+  - PT «Nova espécie à vista!».
+- **7 · Textos legales de B12 traducidos con IA:** se quedan como **borrador** hasta que los revise el abogado. No bloquean el selector de idioma, pero sí el lanzamiento en esos idiomas.
+- **8 · Comodines en el glosario:** «Boosters» / «Reforços».
+- **9 · `firebase-appcheck-debug` en release:** se excluye del AAB de release antes del primer AAB de producción. La compuerta comprueba que no esté. Solo dev la conserva: el ensayo (`-afRehearsal`) es variante release de Gradle y usa Play Integrity, así que tampoco la lleva. En el registro inicial de este punto el integrador escribió por error «dev y el ensayo la conservan»; lo corrigió al integrar `tanda5/appcheck-release`, sin cambiar la decisión del dueño («excluirla del release»).
+- **10 · Q-B9-13, daltonismo:** los pares 7-10 (protanopía) y 5-14 (deuteranopía) entran en los pares de riesgo de 07 §3 y del glosario §9, y el generador los limita. Si cambia algún tablero publicado, se vuelve a generar con `level-qa` en verde. **Matizado por Q-B9-13 bis** (añadido siguiente).
+- **11 · Desbordes al 130 %:** se lanza ya la tarea de las filas del Mercado, la pestaña «Sin anuncios» y el código de cuenta de Ajustes, en los tres idiomas.
+- **11, consecuencia (integración de `tanda5/fx-130`):** Ajustes muestra el código de cuenta en grupos de 4 con guiones de Crockford. El valor guardado no lleva guiones y la app nunca envía el código. La futura web de borrado (D-035) debe quitar guiones y espacios y pasar a mayúsculas antes de llamar a `/v1/account/delete-request`, como ya exige `infra/contracts/v1/common.schema.json`. Recomendada aplicada: requisito con su test cuando se haga la web, sin tocar la Lambda.
+- **12 · Tanda de pulido**, con los pendientes ya diagnosticados:
+  - el contorno de Alto contraste (Q-B9-6);
+  - el segundo aviso tras el hito 3 (UI de los avisos, (b));
+  - la Marea con el factor de Reducir movimiento (Q-B9-12);
+  - el nombre de la mecánica en la etiqueta de la cuia (Q-B9-14);
+  - TalkBack en la lista de Ajustes que se desplaza (Q-B9-17);
+  - los decimales de CLP, JPY, KWD y BHD en D-025 (Q-IAP-3).
+
+### D-033, añadido del 2026-10-22: Q-B9-13 bis, cómo entran los pares del simulador de daltonismo
+
+- **Estado:** el dueño eligió el punto 10 con la recomendada («Pendientes 2 a 12: todas con la recomendada»). El carril `tanda5/daltonismo-pares` encontró que aplicarlo al pie de la letra choca con el GDD. El integrador aplicó en cada paso la recomendada del carril, por la regla del dueño «si tienen recomendada, vamos con esa». Integrado con la revisión APROBADO. El dueño puede cambiarlo.
+- **El problema:**
+  - Contar 7-10 y 5-14 en `risk_pairs` y `max_pares_riesgo` hace imposibles los K que fija el GDD en 11-80 y en las bandas B1 y B2 del Reto (03 §4.5 y §16).
+  - Desde el 201 pasaría además el tope de 10 del esquema.
+  - Obligaría a regenerar alrededor del 90 % de lo publicado.
+- **Decisión, (b) y (A):**
+  - Los dos pares entran en 07 §3 y en el glosario §9 como **pares del simulador**, que no cuentan en el tope.
+  - El generador evita que queden juntos en una cuia solo si una permutación alternativa de tintes (hasta 50, con la subsemilla 5) **mide exactamente igual**: el bot ×40, la ventana, el par, las trampas, la ramificación, la D y el alivio. Si no lo consigue, se queda la asignación de siempre.
+  - `level-qa` da `QA-CVD-ADJ` y `QA-DAILY-CVD-ADJ` como fallo en el tablero base. Como aviso, en las variantes y en lo inevitable.
+- **Resultado:**
+  - Al regenerar solo cambian tintes en 23 packs: 0 cambios de forma, de `bot_fail`, de candidato o de D. El tutorial no cambia.
+  - Contactos que se eliminan: los 14 del mundo 2; 753 de los 1.102 del Reto del río (quedan 349); en los mundos 3-9, solo entre 3 y 7 tableros por pack.
+  - El resto se queda como aviso y lo distinguen los patrones y el icono de fruta (07 §3, reglas 1 y 2).
+  - El detalle está en `docs/dev/accesibilidad.md` §2.6.
+- **Descartado:** hacer el bot independiente del color (cambio del núcleo). Quitaría casi todos los contactos, pero cambiaría `bot_fail` y la curva de todos los packs. Solo si el dueño lo pide.
+- **Del integrador:** el carril tocaba tests de Unity y `docs/gdd/**` porque el encargo lo pedía (GDD y tests).

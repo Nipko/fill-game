@@ -1,0 +1,27 @@
+{
+  "name": "AF.Backend.Tests",
+  "rootNamespace": "AF.Backend.Tests",
+  "references": [
+    "AF.Platform",
+    "AF.Backend",
+    "AF.Backend.Unity",
+    "AF.Backend.Firebase",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -55,6 +55,13 @@ namespace AF.UI
         public const float ReferenceWidth = 360f;
 
         /// <summary>
+        /// Ancho mínimo del lienzo (dp; 02 §5, «Dispositivos»: «a 320 dp de ancho se admiten 6 cuias por fila»). Entre 320 y 360 dp
+        /// físicos el lienzo mide lo que el teléfono, con 1 dp físico por dp de lienzo (Q-B11-5 (a), D-033, añadido de B11; cierre
+        /// de B11); por debajo de 320, mide 320 y se escala (<see cref="CanvasScale(int, int, float)"/>).
+        /// </summary>
+        public const float MinWidth = 320f;
+
+        /// <summary>
         /// Alto mínimo del lienzo (dp; 16:9 de 02 §5). El lienzo mide 360 dp de ancho y, si así quedaran menos de 640 dp de alto,
         /// manda el alto (<see cref="CanvasScale"/>): en 16:9 mide 360 × 640 dp y 1 dp de lienzo es 1 dp físico, así que el texto
         /// no baja de 12 sp físicos (02 §12; pregunta 19 de GDD.md §6.3, (a); D-028, tarea DC3). En 19,5:9 y 20:9, 360 × 780 y
@@ -318,6 +325,7 @@ namespace AF.UI
         private PourTimings _timings;
         private int _stuckSeedsShown = -1;
         private int _stuckUndoShown = -1;
+        private int _stuckNotesShown = -1; // F3-5: la versión de las notas de compra con la que se armó el modal
         private bool _stuckBalsaOk;
         private bool _attemptBanner;
         private FlowPhase _chromePhase = FlowPhase.Loading;
@@ -609,7 +617,7 @@ namespace AF.UI
             _giveUp = new GiveUpConfirm(_root, art, actions);
             _failed = new LevelFailedScreen(_root, art, actions);
             _noCanoes = new NoCanoesPanel(_root, art, () => _actions.PressExtraCanoeVideo(), () => _actions.PressRefillCanoes(),
-                () => _actions.PressInfiniteCanoes(), () => _actions.PressNoCanoesHome(), () => _actions.PressNoCanoesClose());
+                () => _actions.PressInfiniteCanoes(), () => _actions.PressNoCanoesMap(), () => _actions.PressNoCanoesClose());
 
             // ---- Capa superior: pausa (02 §5: izquierda de la fila superior; disco de 40 dp) y saldos del embudo (D-008). ----
             _topLayer = UiBuilder.Rect("TopLayer", _root);
@@ -863,6 +871,7 @@ namespace AF.UI
             if (!visible)
             {
                 SlothLeave(); // Inicio o «El río sigue creciendo»: TiTino no se queda colgado de una victoria que ya no se ve
+                HoldReset(); // C9 (B9): un dedo abajo al ocultarse pierde su touch-up; no se queda contado
             }
         }
 
@@ -908,6 +917,8 @@ namespace AF.UI
             {
                 _views[i].Tick(dtMs);
             }
+
+            HoldTick(dtMs); // C9 (B9): a los 400 ms, los nombres
 
             SyncLiftFront();
             if (_confettiDelay >= 0f)
@@ -959,6 +970,7 @@ namespace AF.UI
         {
             _animator.SnapAll();
             _intro.Clear();
+            HoldReset(); // C9 (B9): al volver de segundo plano no queda nada pulsado
         }
 
         /// <inheritdoc />
@@ -1102,9 +1114,9 @@ namespace AF.UI
 
                 case TapKind.Rejected:
                     SetLift(result.PreviousSelection, false);
-                    if ((uint)result.Tapped < (uint)_views.Length)
+                    if ((uint)result.Tapped < (uint)_views.Length && !flow.ReduceMotion)
                     {
-                        _views[result.Tapped].Shake();
+                        _views[result.Tapped].Shake(); // con Reducir movimiento, sin sacudidas (02 §12; B9)
                     }
 
                     AF.Audio.AudioCues.Play(AF.Audio.SfxId.Illegal); // AU1: madera neutra, nunca háptico en un rechazo (02 §4)
@@ -1121,6 +1133,8 @@ namespace AF.UI
                     ShuffleBoardChanged(flow);
                     break;
             }
+
+            A11yTapped(flow, result); // B9: con TalkBack, la selección se anuncia (02 §12)
         }
 
         /// <inheritdoc />
@@ -1217,7 +1231,7 @@ namespace AF.UI
             }
 
             _ambient.SetSuspended(true);
-            _confettiDelay = 500f;
+            _confettiDelay = _flow != null && _flow.ReduceMotion ? -1f : 500f; // con Reducir movimiento, sin confeti (02 §12; B9)
             AF.Audio.AudioCues.Play(AF.Audio.SfxId.WinToada); // AU1: la toada y el háptico medio de la victoria
             AF.Audio.AudioCues.Haptic(AF.Audio.HapticKind.Win);
             _skipCatcher.gameObject.SetActive(true);
@@ -1271,10 +1285,27 @@ namespace AF.UI
             {
                 _dailyTeaser ??= new DailyTeaserCard(_victoryOverlay, _art);
                 bool inBuild = GameBootstrap.Current != null && GameBootstrap.Current.DailyInBuild;
-                // La cima de las cuias ya desplazadas, no bandBottom: con la victoria con vista (DC2), bandBottom es el pie de la
-                // caja de TiTino, pegado a la cinta, y la tarjeta la pisaría.
-                float cuiasTop = Mathf.Max(bandTop, CuiasTopDp() - _boardShiftTarget);
-                _dailyTeaser.Show(flow.LevelNumber, inBuild, _canvasW, bandTop, cuiasTop, _victoryPanelY - RibbonRiseDp);
+                // La cinta con el aire de la caja de TiTino (SlothRibbonGapDp): la placa tiene borde y sombra bajo su rectángulo,
+                // y la cinta crece un poco en su entrada (ApplyVictoryAnim).
+                float ribbonTop = _victoryPanelY - RibbonRiseDp - SlothRibbonGapDp;
+                float teaserTop = bandTop;
+                if (DailyTeaserCard.ShouldShow(flow.LevelNumber, inBuild, _dailyTeaser.Config))
+                {
+                    // Nunca debajo de TiTino (observación 2 de la hoja del 2026-10-22): bajo su gesto si cabe; si no, él cede.
+                    teaserTop = TeaserTopClearOfSloth(bandTop, ribbonTop, _dailyTeaser.HeightDp(_canvasW));
+                }
+
+                if (float.IsNaN(teaserTop))
+                {
+                    _dailyTeaser.Hide(); // TiTino habla en su hito y la tarjeta no cabe debajo (hoy no pasa en el 7)
+                }
+                else
+                {
+                    // La cima de las cuias ya desplazadas, no bandBottom: con la victoria con vista (DC2), bandBottom es el pie de
+                    // la caja de TiTino, pegado a la cinta, y la tarjeta la pisaría.
+                    float cuiasTop = Mathf.Max(teaserTop, CuiasTopDp() - _boardShiftTarget);
+                    _dailyTeaser.Show(flow.LevelNumber, inBuild, _canvasW, teaserTop, cuiasTop, ribbonTop);
+                }
             }
         }
 
@@ -1505,9 +1536,16 @@ namespace AF.UI
         internal void ShowStuckView(bool layout)
         {
             LevelFlow flow = RequireFlow();
+            if (layout)
+            {
+                _services?.PurchaseNotes.ClearFailures(); // F3-5: «No se pudo confirmar» es de la compra de antes, no de este bloqueo
+            }
+
             StuckModalView view = StuckModalModel.Build(StuckContext(flow), flow.Boosters);
+            _stuck.RestartTipRoomDp = RestartTipRoomFor(flow, view); // el hueco del tooltip del 6 y el 8 (GameScreen.TutorialTips.cs)
             _stuck.Show(view, _services, _canvasW, StuckRoomDp);
             _stuckSeedsShown = _services?.Wallet.Seeds ?? 0;
+            _stuckNotesShown = _services?.PurchaseNotes.Version ?? 0;
             _stuckUndoShown = flow.UndoStatus.Stock + (flow.UndoStatus.FreeLeft * 1000);
             if (_services != null && _stuckBalsaOk && !flow.BalsaShownThisBlock)
             {
@@ -1548,6 +1586,7 @@ namespace AF.UI
         /// </summary>
         internal void ShowStuckVariant(StuckModalView view)
         {
+            _stuck.RestartTipRoomDp = 0f;
             _stuck.Show(view, _services, _canvasW, StuckRoomDp);
             _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
             _stuck.Place(_canvasW, _stuckPanelY);
@@ -1570,7 +1609,9 @@ namespace AF.UI
         {
             bool undoAd = _services != null && _services.RewardedReady(AdPlacement.UndoRefill);
             StuckContext ctx = flow.BuildStuckContext(undoAd, _stuckBalsaOk, _services?.Geo ?? GeoTier.T3);
-            ctx.PurchasesBlocked = _services != null && _services.PurchasesBlocked;
+            // Sin compras con el perfil en solo lectura (08 §4.4) ni con la tienda que no vende (biz_iap_enabled, o el backend apagado o
+            // ausente en este build: F3-5, que no las podría acreditar).
+            ctx.PurchasesBlocked = _services != null && (_services.PurchasesBlocked || !_services.Store.IsAvailable);
             return ctx;
         }
 
@@ -1600,12 +1641,23 @@ namespace AF.UI
             }
         }
 
-        // Soltar dentro del área táctil es un toque (C1-C6); soltar fuera cancela (C10, el arrastre, queda fuera de v0).
+        // Soltar dentro del área táctil es un toque (C1-C6); soltar fuera, sobre otra cuia y tras ≥ 24 dp, es el arrastre (C10;
+        // B11, GameScreen.Drag.cs); si no, cancela. Tras mantener 400 ms (C9, B9), soltar no es ni un toque ni un arrastre (02 §3.1:
+        // «al soltar no selecciona»).
         private void OnCuiaUp(int index, bool inside)
         {
-            if (inside)
+            if (HoldSwallows(index))
+            {
+                // C9: nada; la cuia baja abajo, como cualquier toque que no selecciona.
+            }
+            else if (inside)
             {
                 _actions.TapCuia(index);
+            }
+            else if ((uint)index < (uint)_views.Length)
+            {
+                CuiaView view = _views[index];
+                TryDragPour(index, _pressPreview == index, view.PressScreenPosition, view.ReleaseScreenPosition, view.PointerCamera);
             }
 
             if (_pressPreview == index)
@@ -1631,7 +1683,7 @@ namespace AF.UI
                 return false;
             }
 
-            _animator.ApplyPatterns(PatternsOn(flow.LevelNumber));
+            ApplyLevelPatterns(flow.LevelNumber); // con Alto contraste, el patrón al 35 % (B9)
             return true;
         }
 
@@ -1661,11 +1713,13 @@ namespace AF.UI
 
             BoardState board = flow.Session.Current;
             var views = new CuiaView[board.Count];
-            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber);
+            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber) * PourMotionFactor(flow); // B9: × 0,5 con Reducir movimiento (02 §4)
+            HoldReset(); // C9 (B9): nada pulsado en el tablero nuevo
             for (int i = 0; i < board.Count; i++)
             {
                 views[i] = CuiaView.Create(_board, i, board[i].Capacity, _art, _cuiaDown, _cuiaUp, _fx);
                 views[i].SetLiftDuration(liftMs);
+                AttachHold(views[i]); // C9, mantener pulsado (B9; GameScreen.A11y.cs)
             }
 
             _views = views;
@@ -1673,17 +1727,19 @@ namespace AF.UI
             _tinajaPair = BindTinajaPair(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
             OrderBoardLayers();
             float f = GameConfig.SpeedFactor(flow.LevelNumber);
+            float m = f * BoardMotionFactor; // B9: con Reducir movimiento, × anim_reduce_motion_factor (02 §4 y §12), el de arriba
             _timings = new PourTimings(
-                GameConfig.AnimLiftMs * f,
-                GameConfig.AnimTravelMs * f,
-                GameConfig.AnimPourDoseMs * f,
-                GameConfig.AnimPourTailMs * f,
-                GameConfig.AnimReturnMs * f);
+                GameConfig.AnimLiftMs * m,
+                GameConfig.AnimTravelMs * m,
+                GameConfig.AnimPourDoseMs * m,
+                GameConfig.AnimPourTailMs * m,
+                GameConfig.AnimReturnMs * m);
             _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours, _mechanicBackLayer, _mechanicFrontLayer);
             _animator.SpeedFactor = f;
             _animator.ReduceMotion = flow.ReduceMotion;
+            _animator.ReduceMotionFactor = (float)ReduceMotionFactor; // B9: el de los pasos de mecánica, el mismo que el de los vertidos
             _fx.ReduceMotion = flow.ReduceMotion;
-            _animator.ApplyPatterns(PatternsOn(flow.LevelNumber)); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3)
+            ApplyLevelPatterns(flow.LevelNumber); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3); Alto contraste, 35 % (B9)
             for (int i = 0; i < board.Count; i++)
             {
                 _animator.ShowContent(i, board[i], board.IsSealed(i));
@@ -1759,6 +1815,7 @@ namespace AF.UI
             _harvestCounting = false;
             _harvestShown = -1;
             _doubleShown = false;
+            _doubleTipFullRoomDp = 0f; // el escalón que se calcula al cargar el nivel (WarmVictorySlot) va sin el tooltip del 11
             _autoNextMs = -1f;
             _nextHoldMs = -1f;
             _victoryBars.Hide();
@@ -1788,15 +1845,16 @@ namespace AF.UI
             // a verse (SetVisible) se repinta de todos modos.
             int pending = PendingHarvest(flow) + PendingBarSeeds(flow);
             _tray.Refresh(flow.Phase == FlowPhase.Celebration ? pending : 0);
-            _walletBar.Refresh(_services?.Wallet, flow.CanoesLevel, pending);
+            _walletBar.Refresh(_services?.Wallet, flow.CanoesActive, pending); // biz_feature_lives (08 §9): sin canoas, sin su contador
             if (flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
             {
                 // Tras comprar un Puñado o recargar Marea, el modal se rearma con el saldo nuevo y el mismo precio.
                 int seeds = _services?.Wallet.Seeds ?? 0;
                 int undo = flow.UndoStatus.Stock + (flow.UndoStatus.FreeLeft * 1000);
-                if (seeds != _stuckSeedsShown || undo != _stuckUndoShown)
+                int notes = _services?.PurchaseNotes.Version ?? 0;
+                if (seeds != _stuckSeedsShown || undo != _stuckUndoShown || notes != _stuckNotesShown)
                 {
-                    ShowStuckView(false);
+                    ShowStuckView(false); // también con una nota de compra nueva (F3-5: pendiente, rechazada o acreditada)
                 }
             }
             else if (flow.Phase == FlowPhase.NoCanoes && _noCanoes.Refresh(_services))
@@ -1848,7 +1906,7 @@ namespace AF.UI
 
             _walletBar.SetVisible(true);
             LayoutWalletBar(pause && phase == FlowPhase.StuckModal);
-            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel, flow == null ? 0 : PendingHarvest(flow) + PendingBarSeeds(flow));
+            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesActive, flow == null ? 0 : PendingHarvest(flow) + PendingBarSeeds(flow));
         }
 
         // Saldo grande del embudo a la izquierda (tras la pausa en Aguas estancadas); píldoras de la cabecera de partida entre
@@ -1989,7 +2047,7 @@ namespace AF.UI
         }
 
         // D-008: desde el 31 «Salir» pregunta «¿Salir del nivel? Perderás 1 canoa» [P] (sin la línea de canoa si no hay canoa
-        // en juego: Canoas infinitas o 0 canoas); en 1-30 sale sin coste.
+        // en juego: Canoas infinitas o 0 canoas); en 1-30, y desde el 31 con biz_feature_lives apagado (D-038), sale sin coste.
         private void OnPauseQuit()
         {
             _pause.Hide();
@@ -2328,11 +2386,12 @@ namespace AF.UI
                 views[i] = _views[i];
             }
 
-            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber);
+            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber) * BoardMotionFactor; // B9: el del tablero en curso
             for (int i = old; i < views.Length; i++)
             {
                 views[i] = CuiaView.Create(_board, i, board[i].Capacity, _art, _cuiaDown, _cuiaUp, _fx);
                 views[i].SetLiftDuration(liftMs);
+                AttachHold(views[i]); // C9 (B9)
             }
 
             _views = views;
@@ -2525,7 +2584,7 @@ namespace AF.UI
         {
             ReadScreen(out _screenW, out _screenH, out _safeArea);
 
-            float scale = CanvasScale(_screenW, _screenH);
+            float scale = CurrentCanvasScale(_screenW, _screenH); // de 320 a 360 dp de ancho con 1 dp físico por dp (Q-B11-5 (a))
             _scaler.scaleFactor = scale;
             _art.ScreenScale = scale;
             _canvasW = _screenW / scale;
@@ -2772,6 +2831,14 @@ namespace AF.UI
         // centrados en la cinta (02 §6; guía 5.3 y 12).
         private void LayoutVictory()
         {
+            _doubleTipRoomCutDp = 0f; // el hueco del tooltip de la Cosecha doble se mide de nuevo en cada disposición
+            _doubleTipFullRoomDp = DoubleTipRoomFor(); // entero: cuenta en el presupuesto de la victoria compacta (ChooseVictoryCompact)
+            LayoutVictoryPass();
+        }
+
+        // Una pasada de LayoutVictory; se repite (LayoutVictoryPass) mientras el hueco del tooltip de la Cosecha doble no quepa.
+        private void LayoutVictoryPass()
+        {
             float w = _canvasW;
             float panelW = Mathf.Min(328f, w - 32f);
             float nextW = Mathf.Min(w - 48f, Mathf.Min(312f, panelW - 16f));
@@ -2800,8 +2867,10 @@ namespace AF.UI
             bool autoNext = _autoNextMs >= 0f || _nextHoldMs >= 0f; // también en la espera de 250 ms de Siguiente (B1b)
             _double.Button.gameObject.SetActive(_doubleShown);
             UiBuilder.SetEnabled(_double.Button, !autoNext);
+            DoubleTipRoomShownDp = DoubleTipRoomFor(); // el hueco del tooltip del 11 sobre el botón (GameScreen.TutorialTips.cs)
             if (_doubleShown)
             {
+                y += DoubleTipRoomShownDp;
                 UiBuilder.Place((RectTransform)_double.Button.transform, (panelW - nextW) / 2f, y, nextW, ModalKit.HeightOf(_double));
                 float face = ModalKit.FaceHeightOf(_double);
                 UiBuilder.Place(_doubleIcon.rectTransform, 12f, (face - 22f) * 0.5f, 24f, 22f);
@@ -2840,6 +2909,17 @@ namespace AF.UI
             _victoryPanelDp = bottom + VictoryFrameDp(compact);
 
             _victoryPanelY = _canvasH - _safeBottom - 8f - _victoryPanelDp;
+            float tipDeficit = HudBadgeBottom + DoubleTipMinHeaderAirDp - (_victoryPanelY - RibbonRiseDp);
+            if (DoubleTipRoomShownDp > 0f && tipDeficit > 0.01f)
+            {
+                // Ni el último escalón de la victoria compacta cabe con el hueco entero del tooltip: el hueco que cabe, y el
+                // tooltip pisa las barras de la Crecida y la Canasta [P]. Otra pasada, hasta que quepa o el hueco llegue a 0 (el
+                // recorte solo crece: termina).
+                _doubleTipRoomCutDp += Mathf.Min(DoubleTipRoomShownDp, tipDeficit);
+                LayoutVictoryPass();
+                return;
+            }
+
             UiBuilder.Place(_victoryPanel, (w - panelW) / 2f, _victoryPanelY, panelW, _victoryPanelDp);
             PlaceAt(_ribbon.rectTransform, panelW / 2f, -RibbonRiseDp + (_ribbonHeightDp * 0.5f), RibbonWidthDp, _ribbonHeightDp, new Vector2(0.5f, 0.5f));
             float ribbonY = _victoryPanelY - RibbonRiseDp + (_ribbonHeightDp * 0.5f);
@@ -3385,20 +3465,96 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Escala del lienzo del juego (px por dp) para una pantalla de <paramref name="width"/> × <paramref name="height"/> px,
-        /// como en <see cref="LobbyScreen"/>: 360 dp de ancho y, si así quedaran menos de <see cref="MinHeight"/> dp de alto,
-        /// manda el alto (D-028, tarea DC3). Antes era min(ancho / 360, alto / 780): en 16:9 el lienzo medía 438,75 × 780 dp y el
-        /// texto de 12 sp salía a 9,8 sp físicos.
+        /// Escala del lienzo del juego (px por dp) para una pantalla de <paramref name="width"/> × <paramref name="height"/> px sin
+        /// saber su densidad: 360 dp de ancho y, si así quedaran menos de <see cref="MinHeight"/> dp de alto, manda el alto (D-028,
+        /// tarea DC3). Antes era min(ancho / 360, alto / 780): en 16:9 el lienzo medía 438,75 × 780 dp y el texto de 12 sp salía a
+        /// 9,8 sp físicos.
         /// </summary>
         public static float CanvasScale(int width, int height)
         {
-            float scale = width / ReferenceWidth;
+            return CanvasScale(width, height, 0f);
+        }
+
+        /// <summary>
+        /// Escala del lienzo (px por dp) con la densidad del teléfono, <paramref name="pxPerDp"/> (px por dp físico; ≤ 0 = no se sabe):
+        /// el lienzo mide 360 dp de ancho, salvo en los teléfonos de 320 a 360 dp físicos, donde mide su ancho con 1 dp físico por
+        /// dp de lienzo (así el texto de 12 sp sale a 12 sp físicos, 02 §12, y el tablero usa el layout de 320 dp de 02 §5; Q-B11-5
+        /// (a)), y en los de menos de 320, donde mide 320 dp. Después, la regla del alto mínimo de 640 dp (D-028; D-032, punto 5),
+        /// que manda en las pantallas anchas. Todas las pantallas del juego usan esta misma escala (el inicio, la tienda y las capas
+        /// de encima).
+        /// </summary>
+        public static float CanvasScale(int width, int height, float pxPerDp)
+        {
+            float canvasWidth = ReferenceWidth;
+            if (pxPerDp > 0f)
+            {
+                float physical = width / pxPerDp;
+                if (physical < ReferenceWidth)
+                {
+                    canvasWidth = Mathf.Max(MinWidth, physical);
+                }
+            }
+
+            float scale = width / canvasWidth;
             if (height / scale < MinHeight)
             {
                 scale = height / MinHeight;
             }
 
             return Mathf.Max(0.01f, scale);
+        }
+
+        /// <summary>Solo tests: la densidad de <see cref="SimulatedScreen"/> (px por dp físico; null = no se sabe, el lienzo de 360 dp).</summary>
+        internal static float? SimulatedPxPerDp { get; set; }
+
+        private static float s_devicePxPerDp = -1f;
+
+        /// <summary>
+        /// La densidad de la pantalla (px por dp físico): la de <see cref="SimulatedPxPerDp"/> con una pantalla simulada; en Android, la
+        /// de <c>DisplayMetrics.density</c> (se lee una vez); en el Editor y si no se puede leer, 0 (no se sabe: lienzo de 360 dp).
+        /// </summary>
+        internal static float ReadPxPerDp()
+        {
+            if (SimulatedScreen.HasValue)
+            {
+                return SimulatedPxPerDp ?? 0f;
+            }
+
+            if (s_devicePxPerDp < 0f)
+            {
+                s_devicePxPerDp = QueryDevicePxPerDp();
+            }
+
+            return s_devicePxPerDp;
+        }
+
+        /// <summary>Escala del lienzo para la pantalla de ahora (<see cref="ReadScreen"/> y <see cref="ReadPxPerDp"/>).</summary>
+        internal static float CurrentCanvasScale(int width, int height)
+        {
+            return CanvasScale(width, height, ReadPxPerDp());
+        }
+
+        private static float QueryDevicePxPerDp()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                using (AndroidJavaObject activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
+                using (AndroidJavaObject resources = activity.Call<AndroidJavaObject>("getResources"))
+                using (AndroidJavaObject metrics = resources.Call<AndroidJavaObject>("getDisplayMetrics"))
+                {
+                    float density = metrics.Get<float>("density");
+                    return density > 0f ? density : 0f;
+                }
+            }
+            catch (System.Exception)
+            {
+                return 0f; // sin densidad, el lienzo de 360 dp de siempre
+            }
+#else
+            return 0f;
+#endif
         }
 
         internal static void ReadScreen(out int width, out int height, out Rect safeArea)

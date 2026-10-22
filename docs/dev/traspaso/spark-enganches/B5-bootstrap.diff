@@ -1,0 +1,239 @@
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
+index a8a430fd..d31e8974 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
+@@ -173,7 +173,7 @@ public bool SetUpDaily()
+             DevProbe.DailyEarn(rules.Reconcile().SeedsPaid); // R10: semillas de los cobros pendientes que se confirman al abrir
+ 
+             GameServices? services = _ads != null && _store != null && _storeLedger != null
+-                ? new GameServices(dailyWallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: ProfileLocked, deviceLocale: _deviceLocale, settings: profile.Settings)
++                ? new GameServices(dailyWallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: ProfileLocked, deviceLocale: _deviceLocale, settings: profile.Settings)
+                 : null;
+             var context = new DailyPlayContext(
+                 store, clock, progress, dailyWallet, services, batch, profile.Settings,
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
+index b89ff9cb..ff1e794a 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
+@@ -119,6 +119,11 @@ private void ConnectTelemetry()
+             }
+ 
+             ConnectWallet(_wallet);
++            if (_analytics != null && _services != null)
++            {
++                _analytics.SetUserProperty("geo_tier", GeoTierRule.IdOf(_services.Geo)); // 08 §8.1, propiedad de usuario (Q-E3 (a), B5)
++            }
++
+             if (_flow != null)
+             {
+                 _flow.Events = _events;
+@@ -214,7 +219,9 @@ public void Fill(CommonParams p)
+                     p.Streak = _boot._streakService.Peek(app.PlayLevel, true).Wins;
+                 }
+ 
+-                // geo_tier: null hasta Q-E3 (B5; región del dispositivo y país de la tienda); el T3 fijo de GameServices no es un dato.
++                // geo_tier (Q-E3 (a), B5): el de GameServices, de la región del teléfono; con el IAP real, el país de la tienda.
++                GameServices? services = _boot._services;
++                p.GeoTier = services != null ? GeoTierRule.IdOf(services.Geo) : null;
+                 p.NoAds = _boot._profile?.Entitlements.NoAds;
+                 p.AppVersion = Application.version;
+                 RemoteConfigService? rc = _boot._rc;
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 010305e5..64b75d9f 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -924,6 +924,13 @@ public bool PressAndroidBack()
+                 return _dailyScreen.HandleBack();
+             }
+ 
++            // Mercado y tarjeta de oferta (B5): Atrás cierra la tarjeta como «Ahora no» (también encima de la victoria) y el Mercado
++            // como su X. Con la hoja de compra delante no llega aquí (arriba).
++            if (PressMarketBack())
++            {
++                return true;
++            }
++
+             if (_app.Screen == AppScreen.Level)
+             {
+                 return false;
+@@ -1371,8 +1378,8 @@ private static bool MapOutlivesItsScreen(MapOpenSource source, AppScreen screen)
+         private bool InLevel => _app == null || _app.Screen == AppScreen.Level;
+ 
+         // Hay una pantalla de pago delante: la hoja «Compra simulada» o un anuncio (y lo que lo rodea; propuesta del personaje
+-        // d.11). Las ofertas que vengan (Mochila de inicio, Mercado) se suman aquí. Sin asignar memoria.
+-        private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible);
++        // d.11). Con B5, también el Mercado y las tarjetas de oferta (MarketCommerceOpen). Sin asignar memoria.
++        private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || MarketCommerceOpen;
+ 
+         // La ventanita de casa del inicio no sale (LobbyScreen.SetCommerceOpen): con una pantalla de pago delante (D-013, punto 6)
+         // o con el Mapa del río encima, que es opaco (revisión de M4.2). Con el Mapa, TiTino no se ve: su saludo del día (como
+@@ -1557,7 +1564,7 @@ private IEnumerator Start()
+                 WrapAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill())), profile, batch, clock, firstRun, _rcConfigs?.Ads);
+             _storeLedger = new StoreLedger(profile, _wallet, batch, clock, _rcConfigs?.Store);
+             _store = WrapStore(new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency));
+-            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
++            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
+                 mapProgress: progress);
+ 
+             _screen = new GameScreen(transform, _art, _probe, this);
+@@ -1622,6 +1629,7 @@ private IEnumerator Start()
+             SetUpMeta(); // B14: skins por hito, álbum de frutas, la Canasta en el Mapa y «Datos del río» (GameBootstrap.Meta.cs)
+             SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
+             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
++            SetUpMarket(); // B5 (GameBootstrap.Market.cs): el Mercado, las ofertas y el Cántaro, con las sesiones de B6
+             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
+ 
+             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
+diff --git a/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs
+new file mode 100644
+index 00000000..9464218a
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs
+@@ -0,0 +1,138 @@
++#nullable enable
++using System;
++using System.Collections;
++using AF.Boosters;
++using AF.Economy;
++using AF.GameFlow;
++using AF.IAP;
++using AF.LiveOps;
++using AF.Platform;
++using AF.Save;
++using AF.UI;
++using NUnit.Framework;
++using UnityEngine.TestTools;
++
++namespace AF.Tests.PlayMode
++{
++    /// <summary>
++    /// Los enganches de B5 (parches B5-bootstrap y B5-profile) en la escena <c>Game</c> real: <c>Start</c> crea el Mercado; Atrás de
++    /// Android cierra el Mercado y la tarjeta de oferta (también encima de la victoria); el Mercado cuenta como pantalla de pago
++    /// (la ventanita de casa no sale); <c>geo_tier</c> sale de la región del teléfono (Q-E3 (a)); y el Cántaro vive en el perfil.
++    /// </summary>
++    public sealed class MarketHooksTests
++    {
++        private static readonly DateTime T0 = new DateTime(2026, 10, 20, 15, 0, 0, DateTimeKind.Utc);
++
++        [TearDown]
++        public void TearDown()
++        {
++            GameBootstrap.ResetMarketOverrides();
++            GameBootstrap.ResetSessionOverrides();
++            GameBootstrap.ResetTelemetryOverrides();
++            LaunchOptions.Reset();
++        }
++
++        private static Profile ProfileAt(int nextLevel)
++        {
++            Profile profile = Wallet.NewProfile(new ManualClock(T0));
++            profile.Progress.NextLevel = nextLevel;
++            profile.Progress.MaxLevel = nextLevel - 1;
++            return profile;
++        }
++
++        [UnityTest]
++        public IEnumerator Start_CreatesTheMarket_AndBackClosesIt()
++        {
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(26)));
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.Market, Is.Not.Null, "SetUpMarket en Start (B5-bootstrap)");
++            boot.GetComponent<MarketRunner>().enabled = false;
++            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
++            Assert.That(boot.Lobby!.Visible, Is.True);
++            Assert.That(boot.PressAndroidBack(), Is.True);
++            Assert.That(boot.Market!.Visible, Is.False);
++            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby), "Atrás no sale del inicio con el Mercado abierto");
++        }
++
++        [UnityTest]
++        public IEnumerator TheMarket_IsAPaymentScreen_ForTheLobby()
++        {
++            // D-013, punto 6: con una pantalla de pago delante no sale la ventanita de casa, y el Mapa no se abre encima.
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(26)));
++            GameBootstrap boot = GameBootstrap.Current!;
++            boot.GetComponent<MarketRunner>().enabled = false;
++            LobbyScreen lobby = boot.Lobby!;
++            yield return null;
++            Assert.That(lobby.CommerceOpen, Is.False);
++            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
++            yield return null;
++            Assert.That(lobby.CommerceOpen, Is.True, "CommerceOpen incluye el Mercado (B5-bootstrap)");
++            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.False);
++            boot.Market!.Close();
++            yield return null;
++            Assert.That(lobby.CommerceOpen, Is.False);
++        }
++
++        [UnityTest]
++        public IEnumerator BackClosesTheOfferCard_OnTheVictory()
++        {
++            GameBootstrap.SessionStoreOverride = new InMemorySessionStore(new SessionRecord { Sessions = 1 });
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(ProfileAt(12));
++            yield return PlayModeHelpers.LoadGame(12, new MemoryProgressStore(12, 11));
++            GameBootstrap boot = GameBootstrap.Current!;
++            boot.GetComponent<MarketRunner>().enabled = false;
++            PlayModeHelpers.TakeClock(boot);
++            VictorySetup.WinToVictoryScreen(boot);
++            boot.TickMarket(16f);
++            boot.TickMarket(GameBootstrap.OfferCardDelayMs + 16f);
++            Assert.That(boot.OfferCardView!.Visible, Is.True);
++            Assert.That(boot.PressAndroidBack(), Is.True);
++            Assert.That(boot.OfferCardView.Visible, Is.False);
++            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "la victoria sigue debajo");
++        }
++
++        [UnityTest]
++        public IEnumerator GeoTier_ComesFromThePhoneRegion()
++        {
++            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("es-ES");
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(26)));
++            Assert.That(GameBootstrap.Current!.Services!.Geo, Is.EqualTo(GeoTier.T1));
++
++            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("es-CO");
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(26)));
++            Assert.That(GameBootstrap.Current!.Services!.Geo, Is.EqualTo(GeoTier.T3));
++        }
++
++        [UnityTest]
++        public IEnumerator GeoTier_GoesToTheAnalyticsCommonParams()
++        {
++            var sink = new AF.Analytics.FakeAnalyticsSink();
++            GameBootstrap.AnalyticsSinkOverride = sink;
++            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("es-ES");
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(26)));
++            GameBootstrap boot = GameBootstrap.Current!;
++            boot.GetComponent<MarketRunner>().enabled = false;
++            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
++            AF.Analytics.AnalyticsEvent view = sink.Last("af_shop_view")!;
++            Assert.That(view.Find("geo_tier")!.Value.Text, Is.EqualTo("T1"), "08 §8.1: común geo_tier (Q-E3 (a))");
++            Assert.That(sink.Properties.TryGetValue("geo_tier", out string? property) ? property : null, Is.EqualTo("T1"),
++                "08 §8.1: también como propiedad de usuario");
++        }
++
++        [UnityTest]
++        public IEnumerator TheJar_LivesInTheProfile()
++        {
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(ProfileAt(20));
++            yield return PlayModeHelpers.LoadGame(20, new MemoryProgressStore(20, 19));
++            GameBootstrap boot = GameBootstrap.Current!;
++            boot.GetComponent<MarketRunner>().enabled = false;
++            PlayModeHelpers.TakeClock(boot);
++            VictorySetup.WinToVictoryScreen(boot);
++            boot.TickMarket(16f);
++            Assert.That(boot.Profile!.Piggy, Is.Not.Null, "B5-profile: el bloque piggy");
++            Assert.That(boot.Profile.Piggy!.Seeds, Is.EqualTo(boot.Piggy!.FillFor(boot.Flow!.HarvestTier)));
++            Assert.That(boot.Profile.Piggy.LastLevel, Is.EqualTo(20));
++            StringAssert.Contains("\"piggy\": {", ProfileJson.Serialize(boot.Profile));
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs.meta b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs.meta
+new file mode 100644
+index 00000000..73b56b87
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 935eb0a1e0beed84cb62bedf1925498a
+\ No newline at end of file

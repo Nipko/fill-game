@@ -427,6 +427,7 @@ namespace AF.UI
             _lastCatchArrivalSkipped = skipped;
             _lastCatchArrivalLevel = level;
             _probe.StopArrive(level, stop, skipped, true);
+            UiAnalytics.StopArrive(Analytics, level, stop, skipped, true); // af_stop_arrive en el Mapa (B7)
         }
     }
 }

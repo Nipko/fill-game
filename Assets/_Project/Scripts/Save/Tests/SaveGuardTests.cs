@@ -69,16 +69,39 @@ namespace AF.Save.Tests
                 Assert.That(text.Contains(forbidden), Is.False, asmdef + " no debe referenciar " + forbidden);
             }
 
-            string testsDir = Path.Combine(ScriptsDir, module, "Tests") + Path.DirectorySeparatorChar;
-            foreach (string file in Directory.GetFiles(Path.Combine(ScriptsDir, module), "*.cs", SearchOption.AllDirectories))
+            string moduleDir = Path.GetFullPath(Path.Combine(ScriptsDir, module));
+            string testsDir = Path.Combine(moduleDir, "Tests") + Path.DirectorySeparatorChar;
+            foreach (string file in Directory.GetFiles(moduleDir, "*.cs", SearchOption.AllDirectories))
             {
-                if (Path.GetFullPath(file).StartsWith(Path.GetFullPath(testsDir), System.StringComparison.OrdinalIgnoreCase))
+                if (Path.GetFullPath(file).StartsWith(testsDir, System.StringComparison.OrdinalIgnoreCase))
                 {
                     continue; // los tests sí usan el motor (Application.dataPath)
                 }
 
+                if (InNestedAssembly(file, moduleDir))
+                {
+                    continue; // otro ensamblado con su propio asmdef (p. ej. AF.Platform.Notifications, el puente con el paquete)
+                }
+
                 Assert.That(File.ReadAllText(file).Contains("using Unity"), Is.False, Path.GetFileName(file));
             }
+        }
+
+        // El archivo está en una subcarpeta con su propio .asmdef: pertenece a otro ensamblado, no al del módulo.
+        private static bool InNestedAssembly(string file, string moduleDir)
+        {
+            string? dir = Path.GetDirectoryName(Path.GetFullPath(file));
+            while (dir != null && dir.Length > moduleDir.Length)
+            {
+                if (Directory.GetFiles(dir, "*.asmdef").Length > 0)
+                {
+                    return true;
+                }
+
+                dir = Path.GetDirectoryName(dir);
+            }
+
+            return false;
         }
     }
 }

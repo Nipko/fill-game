@@ -40,14 +40,14 @@ internal sealed class Candidate
     public required int Attempt { get; init; }
     public required StageConfig Config { get; init; }
     public required string Source { get; init; }
-    public required BoardData Board { get; init; }
-    public required BoardState State { get; init; }
-    public required TintResult Tints { get; init; }
+    public required BoardData Board { get; set; }
+    public required BoardState State { get; set; }
+    public required TintResult Tints { get; set; }
     public required int Depth { get; init; }
     public required double Bot { get; init; }
     public required string MeasuredLabel { get; init; }
     public required bool InWindow { get; init; }
-    public required int Complexity { get; init; }
+    public required int Complexity { get; set; }
     public required int MaxRealities { get; set; }
     public int Par { get; set; } = -1;
     public int Expanded { get; set; }
@@ -61,6 +61,33 @@ internal sealed class Candidate
 
     /// <summary>Resultado de los filtros de la tinaja (null si el nivel no la lleva o aún no se midió).</summary>
     public TinajaCheckResult? TinajaCheck { get; set; }
+
+    /// <summary>
+    /// El mismo candidato con la asignación de tintes de siempre, cuando este lleva otra sin contactos del simulador de
+    /// daltonismo (Q-B9-13 bis (A)): se mide igual y, si algo de lo que se mide o del alivio no da lo mismo, se vuelve a él
+    /// (<see cref="RevertTints"/>). Null si el candidato ya lleva la asignación de siempre.
+    /// </summary>
+    public Candidate? Fallback { get; set; }
+
+    /// <summary>Vuelve a la asignación de tintes de siempre (<see cref="Fallback"/>), con todo lo medido sobre ella.</summary>
+    public void RevertTints()
+    {
+        Candidate f = Fallback!;
+        Board = f.Board;
+        State = f.State;
+        Tints = f.Tints;
+        Complexity = f.Complexity;
+        MaxRealities = f.MaxRealities;
+        Par = f.Par;
+        Expanded = f.Expanded;
+        EarlyTraps = f.EarlyTraps;
+        Branching = f.Branching;
+        Traps = f.Traps;
+        Reject = f.Reject;
+        Measured = f.Measured;
+        TinajaCheck = f.TinajaCheck;
+        Fallback = null;
+    }
 
     public bool PoolMember => Measured && Reject is null && InWindow;
 
@@ -230,6 +257,30 @@ internal sealed class SlotGenerator(CampaignSpec spec)
 
     /// <summary>Par, trampas tempranas (con el tope de su etiqueta, Q16 B) y métricas de la ruta.</summary>
     public void Measure(LevelPlan plan, Candidate c, bool full)
+    {
+        if (c.Measured)
+        {
+            return;
+        }
+
+        MeasureOne(plan, c, full);
+        if (c.Fallback is Candidate f)
+        {
+            // Q-B9-13 bis (A): la asignación sin contactos del simulador solo vale si todo lo medido da lo mismo que con la de
+            // siempre; si no, se vuelve a ella.
+            MeasureOne(plan, f, full);
+            bool same = c.Par == f.Par && c.Reject == f.Reject && c.EarlyTraps == f.EarlyTraps && c.Branching.Equals(f.Branching)
+                && c.Traps.Equals(f.Traps) && c.MaxRealities == f.MaxRealities
+                && (c.TinajaCheck is null) == (f.TinajaCheck is null)
+                && (c.TinajaCheck is null || (c.TinajaCheck.Reject == f.TinajaCheck!.Reject && c.TinajaCheck.MaxRealities == f.TinajaCheck.MaxRealities));
+            if (!same)
+            {
+                c.RevertTints();
+            }
+        }
+    }
+
+    private void MeasureOne(LevelPlan plan, Candidate c, bool full)
     {
         if (c.Measured)
         {
@@ -775,6 +826,158 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             return null;
         }
 
+        // Pares del simulador de daltonismo (Q-B9-13 bis (A)): el candidato de siempre; si deja un par del simulador junto en
+        // una cuia, la primera asignación alternativa (TintAssigner.CvdAlternatives, subsemilla CvdStream) con la que el bot y
+        // lo demás que se mide aquí dan lo mismo. Lo que se mide después (Measure y el alivio) se compara con el de siempre.
+        GenBoard abstractBoard = board.Clone();
+        int cvd = TintAssigner.CvdAdjacent(spec, abstractBoard, tints.Map);
+        Candidate? usual = Finish(board, tints with { CvdAdjacent = cvd }, out why);
+        if (usual is null || cvd == 0)
+        {
+            return usual;
+        }
+
+        foreach (int[] alt in TintAssigner.CvdAlternatives(spec, abstractBoard, tints.Map, k, ctx.FixedTints.Keys.ToList(), new Prng(Prng.SubSeed(seed, CvdStream))))
+        {
+            TintResult t = tints with { Map = alt, RiskAdjacent = TintAssigner.Adjacent(spec, abstractBoard, alt), CvdAdjacent = 0 };
+            Candidate? c = Finish(abstractBoard.Clone(), t, out _);
+            if (c is not null && c.Bot.Equals(usual.Bot) && c.InWindow == usual.InWindow && c.Reject == usual.Reject
+                && c.MeasuredLabel == usual.MeasuredLabel && c.Complexity == usual.Complexity && c.MaxRealities == usual.MaxRealities)
+            {
+                c.Fallback = usual;
+                return c;
+            }
+        }
+
+        return usual;
+
+        Candidate? Finish(GenBoard b, TintResult t, out string? w) =>
+            FinishCandidate(b, t, plan, spec, seed, tinaja, attempt, config, source, depth, out w);
+    }
+
+    /// <summary>
+    /// Alivio (03 §13; Relief.Compute) del candidato elegido. Con una asignación alternativa de tintes (Q-B9-13 bis (A)) se
+    /// calcula también con la de siempre y, si no da lo mismo salvo los tintes (tipo, par, bot, criterio, nota y tablero con
+    /// los colores traducidos), el candidato vuelve a la de siempre y se publica ese alivio.
+    /// </summary>
+    public static (List<ReliefBoard> Published, List<ReliefBoard> Rejected) ReliefOf(MetricsEngine metrics, Candidate c, string seedText)
+    {
+        (List<ReliefBoard> Published, List<ReliefBoard> Rejected) r = Relief.Compute(metrics, c.Board, c.Par, c.Bot, seedText);
+        if (c.Fallback is not Candidate f)
+        {
+            return r;
+        }
+
+        (List<ReliefBoard> Published, List<ReliefBoard> Rejected) r0 = Relief.Compute(metrics, f.Board, f.Par, f.Bot, seedText);
+        var map = new Dictionary<int, int>();
+        bool same = SameColors(map, f.Board, c.Board) && SameRelief(map, r0.Published, r.Published) && SameRelief(map, r0.Rejected, r.Rejected);
+        if (same)
+        {
+            return r;
+        }
+
+        c.RevertTints();
+        return r0;
+    }
+
+    internal static bool SameRelief(Dictionary<int, int> map, List<ReliefBoard> a, List<ReliefBoard> b)
+    {
+        if (a.Count != b.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.Count; i++)
+        {
+            ReliefBoard x = a[i];
+            ReliefBoard y = b[i];
+            if (x.Type != y.Type || x.Par != y.Par || !x.BotFail.Equals(y.BotFail) || x.Meets != y.Meets || x.Note != y.Note
+                || x.Removed.HasValue != y.Removed.HasValue || (x.Removed is int rx && !SameColor(map, rx, y.Removed!.Value))
+                || !SameColors(map, x.Board, y.Board))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Mismo tablero salvo los tintes: <paramref name="map"/> acumula la traducción color de <paramref name="a"/> → de <paramref name="b"/>.</summary>
+    internal static bool SameColors(Dictionary<int, int> map, BoardData a, BoardData b)
+    {
+        if (!a.Caps.AsSpan().SequenceEqual(b.Caps) || a.Cuias.Length != b.Cuias.Length || a.Attrs.Length != b.Attrs.Length
+            || a.Hidden.Length != b.Hidden.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.Hidden.Length; i++)
+        {
+            if (!a.Hidden[i].AsSpan().SequenceEqual(b.Hidden[i]))
+            {
+                return false;
+            }
+        }
+
+        for (int i = 0; i < a.Cuias.Length; i++)
+        {
+            if (a.Cuias[i].Length != b.Cuias[i].Length)
+            {
+                return false;
+            }
+
+            for (int j = 0; j < a.Cuias[i].Length; j++)
+            {
+                if (!SameColor(map, a.Cuias[i][j], b.Cuias[i][j]))
+                {
+                    return false;
+                }
+            }
+        }
+
+        for (int i = 0; i < a.Attrs.Length; i++)
+        {
+            MechanicSpec x = a.Attrs[i];
+            MechanicSpec y = b.Attrs[i];
+            if (x.Type != y.Type || x.Partner != y.Partner || x.N != y.N || x.K != y.K
+                || (x.Key == 0) != (y.Key == 0) || (x.Key != 0 && !SameColor(map, x.Key, y.Key))
+                || (x.Key2 == 0) != (y.Key2 == 0) || (x.Key2 != 0 && !SameColor(map, x.Key2, y.Key2)))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool SameColor(Dictionary<int, int> map, int a, int b)
+    {
+        if (a == Cuia.MudColor || b == Cuia.MudColor)
+        {
+            return a == b;
+        }
+
+        if (map.TryGetValue(a, out int m))
+        {
+            return m == b;
+        }
+
+        if (map.ContainsValue(b))
+        {
+            return false;
+        }
+
+        map[a] = b;
+        return true;
+    }
+
+    /// <summary>Subsemilla de las asignaciones alternativas sin contactos del simulador de daltonismo (Q-B9-13 bis (A)).</summary>
+    public const ulong CvdStream = 5;
+
+    private Candidate? FinishCandidate(GenBoard board, TintResult tints, LevelPlan plan, CampaignSpec spec, ulong seed, bool tinaja,
+        int attempt, StageConfig config, string source, int depth, out string? why)
+    {
+        why = null;
         board.MapColors(tints.Map);
         // Con tinaja, su cuia queda contigua y en la misma fila (b.2 regla 1); en los demás slots, el barajado de siempre.
         board = tinaja ? Superposition.ShuffledWithTinaja(board, new Prng(Prng.SubSeed(seed, 3))) : board.Shuffled(new Prng(Prng.SubSeed(seed, 3)));

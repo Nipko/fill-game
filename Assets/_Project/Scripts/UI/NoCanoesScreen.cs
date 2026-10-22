@@ -17,7 +17,9 @@ namespace AF.UI
     /// apiladas) y el material de D-003: canoa volcada en lugar del corazón. Opciones en el orden de 04 §7.3: esperar
     /// («Tu próxima canoa vuelve en mm:ss», siempre), «Canoa extra · Ver video» +1 (<c>rv_extra_canoe</c>, si hay anuncio y
     /// tope), «Llenar canoas» por <c>canoes_refill_seed_price</c> (hasta 5/5), «Canoas infinitas 1 h · {precio}»
-    /// (<c>af_infinite_canoes_1h</c>, compra simulada) y «Volver al inicio». Nunca muestra intersticial (05 §10). La usan la
+    /// (<c>af_infinite_canoes_1h</c>, compra simulada) y «Volver al Mapa del río» (el wireframe de 04 §7.3; tarea B11: cierra Sin
+    /// canoas por el camino de «Volver al inicio» y abre el Mapa encima del inicio, <see cref="IGameActions.PressNoCanoesMap"/>).
+    /// Nunca muestra intersticial (05 §10). La usan la
     /// pantalla de nivel (desde Nivel fallido o la cabecera) y la de inicio (Jugar o el contador en 0/5). El cronómetro se
     /// refresca sin asignar memoria.
     /// </summary>
@@ -49,7 +51,7 @@ namespace AF.UI
         private float _canvasW = 360f;
         private float _canvasH = 780f;
 
-        public NoCanoesPanel(Transform parent, ProceduralArt art, Action onVideo, Action onRefill, Action onInfinite, Action onHome, Action onClose)
+        public NoCanoesPanel(Transform parent, ProceduralArt art, Action onVideo, Action onRefill, Action onInfinite, Action onMap, Action onClose)
         {
             _art = art;
             _root = UiBuilder.Rect("NoCanoes", parent);
@@ -66,7 +68,7 @@ namespace AF.UI
             _refillPrice = new PriceTag("Price", _refill.Face, art);
             _refillNote = ModalKit.Line("RefillNote", _panel, string.Empty, 13f, Palette.UiRedWarning);
             _infinite = ModalKit.Cta("InfiniteButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 16f, onInfinite, out _infiniteLabel);
-            _home = ModalKit.Link("HomeButton", _panel, UiText.BackHome, onHome, out _);
+            _home = ModalKit.Link("HomeButton", _panel, TutorialTipsText.NoCanoesMap, onMap, out _); // B11: IGameActions.PressNoCanoesMap
             _daily = new NoCanoesDailyLink(_panel);
             _root.gameObject.SetActive(false);
         }

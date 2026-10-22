@@ -49,8 +49,9 @@ namespace AF.UI
     /// Qué llevan las barras del panel único de la victoria (D-033, puntos 8-10; 02 §6, filas «Crecida» y «Barras de evento»; 06
     /// §4.3-§4.4; tarea B1b), sin motor de UI: la réplica de la Crecida (desde <c>streak_unlock_level</c>, con el chip del hito) y la
     /// barra «Canasta · {sitio} k/10» (desde <c>live_unlock_level_daily</c>), que se abre sola en el <c>10k</c>. La tercera barra
-    /// rotativa (skin ganada &gt; Bitácora lista &gt; Reto) aún no existe: <see cref="Extra"/> es su hueco (B4). Se rearma en cada
-    /// victoria (asigna sus listas una vez).
+    /// rotativa (skin ganada &gt; Bitácora lista &gt; Reto): de las tres, hoy solo existe la fila «Bitácora · elige tu premio»
+    /// (<see cref="Logbook"/>; cierre de B11), que cuenta en <see cref="Extra"/>. Se rearma en cada victoria (asigna sus listas una
+    /// vez).
     /// </summary>
     internal sealed class VictoryBarsPlan
     {
@@ -96,8 +97,24 @@ namespace AF.UI
         /// <summary>El contenido de la Canasta del tramo, visible antes de abrirla (06 §4.4; K6).</summary>
         public List<RewardItem> BasketReward { get; } = new List<RewardItem>(5);
 
-        /// <summary>Barras rotativas de más (la tercera de D-033, punto 10: skin ganada, Bitácora o Reto): 0 hasta B4.</summary>
+        /// <summary>Barras rotativas de más (la tercera de D-033, punto 10: skin ganada, Bitácora o Reto): hoy, 1 con <see cref="Logbook"/>.</summary>
         public int Extra { get; set; }
+
+        /// <summary>
+        /// Lleva la fila «Bitácora · elige tu premio» (D-033, añadido del 2026-10-20, puntos 5 y 10: la tercera barra rotativa, con
+        /// prioridad skin ganada &gt; Bitácora lista &gt; Reto; de las tres, hoy solo existe esta) [P]. Cuenta en <see cref="Extra"/>.
+        /// </summary>
+        public bool Logbook
+        {
+            get => _logbook;
+            set
+            {
+                _logbook = value;
+                Extra = value ? 1 : 0;
+            }
+        }
+
+        private bool _logbook;
 
         /// <summary>Barras que lleva esta victoria.</summary>
         public int BarCount => (Streak ? 1 : 0) + (Basket ? 1 : 0) + Extra;
@@ -120,7 +137,7 @@ namespace AF.UI
             BasketPlace = null;
             BasketOpens = false;
             BasketReward.Clear();
-            Extra = 0;
+            Logbook = false;
             PaidSeeds = 0;
         }
 
@@ -346,10 +363,17 @@ namespace AF.UI
         /// <summary>Lo que tarda en volar un premio al saldo o a la bandeja (ms).</summary>
         public const float FlyMs = 300f;
 
+        /// <summary>
+        /// Alto de la fila «Bitácora · elige tu premio» (dp): un objetivo táctil de 48 dp (02 §3.3; 02 §6, victoria compacta:
+        /// ningún objetivo por debajo de 48 dp) [P].
+        /// </summary>
+        public const float LogbookRowDp = 48f;
+
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
         private readonly Row _streak;
         private readonly Row _basket;
+        private readonly LogbookRow _logbookRow;
         private readonly Image _chevron;
         private readonly Strip _burst;
         private readonly Flyer[] _flyers = new Flyer[10];
@@ -366,12 +390,13 @@ namespace AF.UI
         private Vector2 _stockTarget;
         private Func<RectTransform, Vector2>? _toCanvas;
 
-        public VictoryBars(RectTransform panel, RectTransform flyLayer, ProceduralArt art)
+        public VictoryBars(RectTransform panel, RectTransform flyLayer, ProceduralArt art, Action onLogbook)
         {
             _art = art;
             _root = UiBuilder.Rect("Bars", panel);
             _streak = new Row("StreakBar", _root, art, Palette.FamilyWater.Base, true);
             _basket = new Row("BasketBar", _root, art, Palette.FamilyLeaf.Base, false);
+            _logbookRow = new LogbookRow(_root, art, onLogbook);
             _chevron = UiBuilder.Image("Chevron", _root, art.FingerArrowHead, Palette.FamilyWood.Deep);
             _chevron.preserveAspect = true;
             _chevron.gameObject.SetActive(false);
@@ -396,6 +421,24 @@ namespace AF.UI
 
         /// <summary>Barra de la Canasta (tests).</summary>
         internal RectTransform BasketRect => _basket.Root;
+
+        /// <summary>La fila «Bitácora · elige tu premio» (tests).</summary>
+        internal RectTransform LogbookRect => _logbookRow.Root;
+
+        /// <summary>El botón de la fila «Bitácora · elige tu premio» (tests).</summary>
+        internal Button LogbookButton => _logbookRow.Button;
+
+        /// <summary>Texto de la fila «Bitácora · elige tu premio» (tests).</summary>
+        internal string LogbookRowText => _logbookRow.Label.text;
+
+        /// <summary>Se ve la fila «Bitácora · elige tu premio».</summary>
+        public bool LogbookShown => _root.gameObject.activeInHierarchy && _logbookRow.Root.gameObject.activeSelf;
+
+        /// <summary>
+        /// La victoria compacta no deja sitio a la fila de la Bitácora (en su escalón 3 iría tras el chevron): no sale y la libreta
+        /// sale sola al volver al inicio (D-033, punto 5) [P]. Lo decide <c>GameScreen.ChooseVictoryCompact</c> antes de colocar.
+        /// </summary>
+        public bool LogbookSuppressed { get; set; }
 
         /// <summary>Texto de la barra de la Crecida (tests).</summary>
         internal string StreakText => _streak.Label.text;
@@ -524,6 +567,12 @@ namespace AF.UI
                 _streak.SetTextAlpha(1f);
             }
 
+            _logbookRow.Root.gameObject.SetActive(_plan.Logbook);
+            if (_plan.Logbook)
+            {
+                _logbookRow.Label.text = AF.UI.LogbookText.VictoryRow;
+            }
+
             _basket.Root.gameObject.SetActive(_plan.Basket);
             if (_plan.Basket)
             {
@@ -550,6 +599,7 @@ namespace AF.UI
         public void Hide()
         {
             Barless = false;
+            LogbookSuppressed = false;
             _root.gameObject.SetActive(false);
             _ms = -1f;
             _bursting = null;
@@ -567,6 +617,7 @@ namespace AF.UI
         /// </summary>
         public float Collapse()
         {
+            _logbookRow.Root.gameObject.SetActive(false);
             _ms = -1f; // sin animación ni sonido: lo pagado ya cuenta en el saldo
             _landedSeeds = _plan.PaidSeeds;
             EndBurst();
@@ -589,10 +640,12 @@ namespace AF.UI
         /// </summary>
         public float Layout(float x, float y, float width, int compact)
         {
-            int bars = _plan.BarCount;
+            bool logbook = _plan.Logbook && !LogbookSuppressed && !Barless;
+            int bars = _plan.BarCount - (_plan.Logbook && !logbook ? 1 : 0);
             _width = width;
             if (bars == 0 || !_root.gameObject.activeSelf)
             {
+                _logbookRow.Root.gameObject.SetActive(false);
                 Height = 0f;
                 return 0f;
             }
@@ -602,6 +655,7 @@ namespace AF.UI
                 // Sin filas ni alto: el bloque queda en su sitio con 0 dp de alto, de donde despega lo que vuela (B1b-Q10 (c)).
                 _streak.Root.gameObject.SetActive(false);
                 _basket.Root.gameObject.SetActive(false);
+                _logbookRow.Root.gameObject.SetActive(false);
                 _chevron.gameObject.SetActive(false);
                 Half = false;
                 UiBuilder.Place(_streak.Root, 0f, 0f, width, 0f);
@@ -625,6 +679,14 @@ namespace AF.UI
                 h = Mathf.Max(_streak.Layout(half), _basket.Layout(half));
                 UiBuilder.Place(_streak.Root, 0f, 0f, half, h);
                 UiBuilder.Place(_basket.Root, half + GapDp, 0f, half, h);
+                logbook = logbook && visible > 2; // la fila de la Bitácora, debajo, si va a la vista (si no, tras el chevron)
+                if (logbook)
+                {
+                    h += GapDp;
+                    _logbookRow.Layout(width - right);
+                    UiBuilder.Place(_logbookRow.Root, 0f, h, width - right, LogbookRowDp);
+                    h += LogbookRowDp;
+                }
             }
             else
             {
@@ -643,10 +705,21 @@ namespace AF.UI
                     float b = _basket.Layout(width - right);
                     UiBuilder.Place(_basket.Root, 0f, h, width - right, b);
                     h += b + GapDp;
+                    shown++;
+                }
+
+                logbook = logbook && shown < visible; // la tercera, la rotativa (D-033, punto 10)
+                if (logbook)
+                {
+                    _logbookRow.Layout(width - right);
+                    UiBuilder.Place(_logbookRow.Root, 0f, h, width - right, LogbookRowDp);
+                    h += LogbookRowDp + GapDp;
                 }
 
                 h = Mathf.Max(0f, h - GapDp);
             }
+
+            _logbookRow.Root.gameObject.SetActive(logbook);
 
             if (chevron)
             {
@@ -671,6 +744,30 @@ namespace AF.UI
             float row = _streak.RowHeight();
             float h = ForceHalf || VictoryBarsRule.HalfWidth(compact, bars) ? row : row + GapDp + row;
             return h + GapDp;
+        }
+
+        /// <summary>
+        /// Lo que añade la fila «Bitácora · elige tu premio» a <see cref="WorstHeight"/> con el escalón <paramref name="compact"/> (dp):
+        /// su alto y su hueco si va a la vista (la tercera barra; en el escalón 3, con dos barras delante, iría tras el chevron y no
+        /// añade nada).
+        /// </summary>
+        public static float LogbookWorstExtra(int compact)
+        {
+            return VictoryBarsRule.Visible(compact, 3) >= 3 ? LogbookRowDp + GapDp : 0f;
+        }
+
+        /// <summary>
+        /// La casilla de hoy ya no se puede sellar (se selló en la libreta que abrió la fila): la fila se va. Quien llama recoloca la
+        /// victoria.
+        /// </summary>
+        public void DropLogbook()
+        {
+            _plan.Logbook = false;
+            _logbookRow.Root.gameObject.SetActive(false);
+            if (_plan.BarCount == 0)
+            {
+                _root.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>Avanza las animaciones (ms desde la pantalla de victoria). Sin asignaciones salvo los cambios de texto.</summary>
@@ -1188,6 +1285,77 @@ namespace AF.UI
 
                 SetFill(Fill01);
                 return trackY + TrackDp;
+            }
+        }
+
+        // ------------------------------------------------------------------------------------------------------- Bitácora
+
+        // La fila «Bitácora · elige tu premio» (D-033, añadido del 2026-10-20, punto 5): la libreta en miniatura (la de la tarjeta del
+        // inicio, LogbookCard) con su punto, la línea de texto de 14 a 12 sp y una flecha; toda la fila (48 dp) es el botón que abre
+        // la libreta encima de la victoria [P].
+        private sealed class LogbookRow
+        {
+            private const float BookDp = 28f;
+            private const float DotDp = 10f;
+            private const float ArrowDp = 16f;
+            private readonly Image _plate;
+            private readonly RectTransform _book;
+            private readonly RectTransform _dot;
+            private readonly Image _arrow;
+
+            public LogbookRow(RectTransform parent, ProceduralArt art, Action onTap)
+            {
+                Root = UiBuilder.Rect("LogbookRow", parent);
+                _plate = UiBuilder.Sliced("Plate", Root, art.RoundedRect, new Color(Palette.FamilyWood.Edge.r, Palette.FamilyWood.Edge.g, Palette.FamilyWood.Edge.b, 0.22f));
+                _plate.pixelsPerUnitMultiplier = 3f;
+                Image book = UiBuilder.Image("Book", Root, art.RoundedRect, Palette.UiAmber);
+                _book = book.rectTransform;
+                Image page = UiBuilder.Image("Page", _book, art.RoundedRect, Palette.UiPaper);
+                UiBuilder.Place(page.rectTransform, 4f, 4f, BookDp - 8f, BookDp - 8f);
+                _dot = UiBuilder.Rect("ReadyDot", Root);
+                Image rim = UiBuilder.Image("Rim", _dot, art.Disc, Palette.Cream);
+                UiBuilder.Stretch(rim.rectTransform);
+                Image dot = UiBuilder.Image("Dot", _dot, art.Disc, Palette.Heliconia);
+                UiBuilder.Place(dot.rectTransform, 1.5f, 1.5f, DotDp - 3f, DotDp - 3f);
+                Label = UiBuilder.Label("Label", Root, TextStyle.PlainBold, string.Empty, LabelSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
+                _arrow = UiBuilder.Image("Arrow", Root, art.FingerArrowHead, Palette.FamilyWood.Deep);
+                _arrow.preserveAspect = true;
+                Button = UiBuilder.BareButton("Tap", Root, onTap);
+                UiBuilder.Stretch((RectTransform)Button.transform);
+                Root.gameObject.SetActive(false);
+            }
+
+            public RectTransform Root { get; }
+
+            public TextMeshProUGUI Label { get; }
+
+            public Button Button { get; }
+
+            // Coloca la fila en width × LogbookRowDp: la libreta a la izquierda, el texto en una línea (de 14 a 12 sp con la escala; si
+            // ni a 12 cabe, se recorta con puntos suspensivos) y la flecha a la derecha.
+            public void Layout(float width)
+            {
+                float h = LogbookRowDp;
+                UiBuilder.Place(_plate.rectTransform, 0f, 4f, width, h - 8f);
+                float bookY = (h - BookDp) * 0.5f;
+                UiBuilder.Place(_book, 8f, bookY, BookDp, BookDp);
+                UiBuilder.Place(_dot, 8f + BookDp - (DotDp * 0.6f), bookY - (DotDp * 0.4f), DotDp, DotDp);
+                UiBuilder.Place(_arrow.rectTransform, width - ArrowDp - 10f, (h - ArrowDp) * 0.5f, ArrowDp, ArrowDp);
+                _arrow.rectTransform.localRotation = Quaternion.identity; // la punta de FingerArrowHead mira a la derecha: «abrir»
+                float x0 = 8f + BookDp + 10f;
+                float avail = Mathf.Max(24f, width - x0 - ArrowDp - 16f);
+                TextMeshProUGUI t = Label;
+                t.textWrappingMode = TextWrappingModes.NoWrap;
+                t.overflowMode = TextOverflowModes.Ellipsis;
+                t.enableAutoSizing = false;
+                float scale = UiBuilder.TextScale;
+                t.fontSize = LabelSp * scale;
+                if (t.GetPreferredValues(t.text, float.PositiveInfinity, float.PositiveInfinity).x > avail)
+                {
+                    t.fontSize = UiBuilder.MinTextSp * scale;
+                }
+
+                UiBuilder.Place(t.rectTransform, x0, 0f, avail, h);
             }
         }
 

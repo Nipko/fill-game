@@ -25,6 +25,7 @@ const string Usage = """
     Uso:
       dotnet run --project tools/level-qa -c Release -- <paquete.json> [<paquete.json> ...] [--report <informe.md>] [--spec <campaign.json>] [--levels a-b] [--variant a|b] [--no-reproduce]
       dotnet run --project tools/level-qa -c Release -- --daily <daily_pool_v1.json> [--spec <daily_v1.json>] [--partial] [--no-reproduce]
+      dotnet run --project tools/level-qa -c Release -- --reserve <reserva_NN_v1.json> ... --campaign <mundo_NN_v1.json> ... --spec <campaign.json> [--variant a|b] [--report <informe.md>] [--no-reproduce]
       dotnet run --project tools/level-qa -- --self-test [key2|reglas|variante|daily]
       dotnet run --project tools/level-qa -- --help
 
@@ -48,7 +49,7 @@ const string Usage = """
     --variant a|b (P7b): la variante de una especificacion con respaldos, la misma del --variant del generador (por
     defecto la publicada, published_variant; b = la salida B de D-019, sin la Tinaja, de campaign_v2.json): el
     calendario de las comprobaciones y la regeneracion de QA-REPRO y QA-BAND-Q salen de ella.
-    --self-test (sin nombre): key2 y daily, con el codigo mayor de los dos.
+    --self-test (sin nombre): key2, daily y reserve, con el codigo mayor.
     --self-test key2: genera el estreno de cada variante de la 1.0 de tools/level-generator/specs/sample_variants.json,
     lo escribe a un pack temporal y comprueba que este lector lo lee (tambien la key2 de la Flor y el relief) con el mismo
     tablero y el mismo hash que el generador; la Flor sin key2 no se construye. Sale con 0, 1 (algun FAIL) o 2.
@@ -68,8 +69,21 @@ const string Usage = """
     < 2 MB y QA-DAILY-REPRO (regenera en memoria los dias del pack con el codigo del generador y compara cada tablero
     entero); la anti-repeticion y las trampas tempranas, solo aviso (R-Q10). --partial: una muestra (los dias que faltan no
     fallan; avisa de que no es el pool completo). --no-reproduce salta QA-DAILY-REPRO; nunca en el CI.
+    --reserve (la reserva del 20 %; D-033, anadido "la reserva del 20 %", Q-B11-7 a; 03 sec. 17): QA de los packs de
+    reserva (kind reserve, pack_schema 4) con sus packs de campana (--campaign, emparejados por mundo) y la especificacion
+    (--spec, la del generador; --variant, la misma): las comprobaciones base sobre cada tablero (par, bot, etiqueta,
+    contrato 6, trampas tempranas, paleta, K, pares de riesgo), el alivio, el tamano, QA-SCHEMA y QA-RES-* (cabecera,
+    slot, replaces, id y semilla, sin mecanicas ni Barro, ventana, etiqueta y band del slot, tope del 20 %, sin D y
+    QA-RES-REPRO, que regenera cada pack en memoria con el codigo del generador y lo compara byte a byte).
+    --no-reproduce salta QA-RES-REPRO; nunca en el CI.
+    --self-test reserve: el pack de reserva del mundo 3 pasa sin fallos y cada copia estropeada (pack_schema, kind, pack_id,
+    replaces, id, seed, la Hoja, el Barro, intro_mechanic, D, la ventana y el tope del 20 %) falla con su QA-RES-*. Sale con
+    0, 1 (algun FAIL) o 2.
     --self-test daily: el fixture valido y los malos de tools/level-qa/fixtures/daily/ (cada uno falla con su id), los
     avisos de R-Q10 y el tope de tamano. Sale con 0, 1 (algun FAIL) o 2.
+    --self-test cvd (Q-B9-13 bis): QA-CVD-ADJ falla con el fixture del 7 sobre el 10 en el tablero base, es aviso si el
+    contacto solo esta en una variante de relief, y GateChecks.CvdUnavoidable solo lo baja a aviso con el pack reproducido
+    y Tints.CvdAdjacent > 0. Sale con 0, 1 (algun FAIL) o 2. El --self-test sin nombre suma key2, daily, reserve y cvd.
 
     Codigos de salida: 0 = todo cumple (los avisos no fallan) o ayuda; 1 = algun nivel no cumple, el esquema falla, un
     pack no se reproduce o falta Python; 2 = uso incorrecto, sin paquetes o archivos ilegibles.
@@ -102,11 +116,22 @@ if (args[0] == "--daily" || (args.Length == 2 && args[0] == "--self-test" && arg
 // generador con el mismo tablero y el mismo hash (VariantsSelfTest.RunPackReadBack, enlazado del generador).
 // --self-test reglas (P6): QA-MECH-COUNT, QA-HITO-14 y las casas de QA-VAR-FLOR en positivo (Checks/RulesSelfTest.cs).
 // --self-test variante (P7b): la opción --variant con las dos variantes de campaign_v2 (Checks/VariantOptionSelfTest.cs).
+// La reserva del 20 % (D-033, Q-B11-7 a): --reserve, con su propio lector de opciones (Reserve/ReserveQaCommand.cs).
+if (args[0] == "--reserve")
+{
+    return AmazonFill.Tools.LevelQa.Reserve.ReserveQaCommand.Run(args, UsageError);
+}
+
 if (args[0] == "--self-test")
 {
-    if (args.Length > 2 || (args.Length == 2 && args[1] != "key2" && args[1] != "reglas" && args[1] != "variante"))
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "key2" && args[1] != "reglas" && args[1] != "variante" && args[1] != "reserve" && args[1] != "cvd"))
     {
-        return UsageError("--self-test solo admite: key2, reglas, variante o daily.");
+        return UsageError("--self-test solo admite: key2, reglas, variante, reserve, cvd o daily.");
+    }
+
+    if (args.Length == 2 && args[1] == "reserve")
+    {
+        return AmazonFill.Tools.LevelQa.Reserve.ReserveQaCommand.SelfTest();
     }
 
     if (args.Length == 2 && args[1] == "variante")
@@ -119,14 +144,21 @@ if (args[0] == "--self-test")
         return RulesSelfTest.Run();
     }
 
+    if (args.Length == 2 && args[1] == "cvd")
+    {
+        return CvdQaSelfTest.Run();
+    }
+
     int key2 = VariantsSelfTest.RunPackReadBack("level-qa PackReader", path =>
     {
         QaLevel level = PackReader.Read(path).Levels[0];
         return (level.Board, [.. level.Relief.Select(r => r.Board)]);
     });
 
-    // E17 (Spark): el --self-test sin nombre suma el del Reto del río (--self-test daily).
-    return args.Length == 2 ? key2 : Math.Max(key2, AmazonFill.Tools.LevelQa.Daily.DailyQaCommand.Run(["--self-test", "daily"]));
+    // E17 (Spark): el --self-test sin nombre suma el del Reto del río (--self-test daily) y el de la reserva (--self-test reserve).
+    // Q-B9-13 bis: también el de QA-CVD-ADJ (--self-test cvd).
+    return args.Length == 2 ? key2 : Math.Max(Math.Max(Math.Max(key2, AmazonFill.Tools.LevelQa.Daily.DailyQaCommand.Run(["--self-test", "daily"])),
+        AmazonFill.Tools.LevelQa.Reserve.ReserveQaCommand.SelfTest()), CvdQaSelfTest.Run());
 }
 
 var packages = new List<string>();
@@ -242,6 +274,7 @@ if (reproduce)
     if (regenerated is not null)
     {
         issues.AddRange(GateChecks.Bands(ctx, regenerated, reproduced));
+        GateChecks.CvdUnavoidable(issues, ctx, regenerated, reproduced);
     }
 }
 else

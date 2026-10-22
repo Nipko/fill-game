@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections;
+using System.Collections.Generic;
 using AF.GameFlow;
 using AF.LiveOps;
 using AF.Save;
@@ -77,6 +78,67 @@ namespace AF.Tests.PlayMode
 
             Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(8), "Siguiente lleva al 8 como siempre");
             Assert.That(teaser.Pending, Is.False);
+        }
+
+        /// <summary>
+        /// Observación 2 de la hoja del 2026-10-22: TiTino de la victoria tapaba parte del texto («De[…]ivel 10»). La tarjeta va
+        /// bajo su gesto si cabe; si no, TiTino cede la franja (D-016, punto 5: el gesto «si cabe»). Nunca se cruzan, en 360 × 780 y
+        /// 360 × 640, al 100 % y al 130 %.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Victory7_TheTeaser_IsNeverUnderTiTino([Values(false, true)] bool small, [Values(1f, 1.3f)] float scale)
+        {
+            GameScreen.SimulatedScreen = small ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
+            LaunchOptions.FontScaleOverride = scale;
+            try
+            {
+                GameBootstrap boot = null!;
+                yield return Load(7, true, b => boot = b);
+                VictorySetup.WinToVictoryScreen(boot);
+                GameScreen view = boot.View!;
+                PlayModeHelpers.Step(boot, (int)DailyTeaserCard.DelayMs + 48);
+                DailyTeaserCard teaser = view.DailyTeaser!;
+                Assert.That(teaser.Visible, Is.True);
+                SlothVictory sloth = view.SlothView;
+                string at = (small ? "640" : "780") + " al " + (scale * 100f) + " %";
+                if (!sloth.Visible)
+                {
+                    Assert.That(view.SlothYieldedToTeaser, Is.True, at + ": sin TiTino solo si cedió la franja a la tarjeta");
+                    Debug.Log("AF_TEASER " + at + ": TiTino cede la franja");
+                    yield break;
+                }
+
+                Assert.That(view.SlothYieldedToTeaser, Is.False, at);
+                var mine = new List<Rect>();
+                sloth.CollectRects(sloth.Layer, mine, true);
+                Assert.That(mine.Count, Is.GreaterThan(0), at + ": las piezas de TiTino");
+                int checkedParts = 0;
+                foreach (Graphic g in teaser.Root.GetComponentsInChildren<Graphic>(false))
+                {
+                    Rect card = VictorySetup.CanvasRect(g.rectTransform, sloth.Layer);
+                    if (card.width <= 0.01f || card.height <= 0.01f)
+                    {
+                        continue;
+                    }
+
+                    checkedParts++;
+                    foreach (Rect part in mine)
+                    {
+                        if (part.width > 0.01f && part.height > 0.01f)
+                        {
+                            Assert.That(card.Overlaps(part), Is.False, at + ": la tarjeta " + card + " (" + g.name + ") bajo TiTino " + part);
+                        }
+                    }
+                }
+
+                Assert.That(checkedParts, Is.GreaterThan(0), at + ": la tarjeta, medida");
+                Assert.That(teaser.SeenRect.yMin, Is.GreaterThanOrEqualTo(sloth.FootprintBottomDp - 0.5f), at + ": la tarjeta, bajo el pie de TiTino");
+                Debug.Log("AF_TEASER " + at + ": TiTino hasta " + sloth.FootprintBottomDp + " dp; tarjeta " + teaser.SeenRect);
+            }
+            finally
+            {
+                GameScreen.SimulatedScreen = null;
+            }
         }
 
         [UnityTest]

@@ -199,6 +199,7 @@ pack tiene que traer las 3 bandas × 729 días (R-Q2b).
 | QA-DAILY-CUIAS-14 | como mucho 14 cuias (02 R1) |
 | QA-DAILY-PALETTE | paleta = tintes presentes, con debut dentro del tramo de la banda (R-Q1) |
 | QA-DAILY-RISK | `risk_pairs` recalculado y dentro del tope de la banda (B3 libre: R-Q1b (a)) |
+| QA-DAILY-CVD-ADJ | Ningún par del simulador de daltonismo (`cvd_pairs` de `tints_from`: 7-10 y 5-14) junto en una cuia. Es aviso si el tablero se reproduce y ninguna de las 50 permutaciones del generador lo evita con el mismo bot (Q-B9-13 bis) |
 | QA-DAILY-MECH | sin mecánicas ni ocultos (03 §16) |
 | QA-DAILY-FIELDS | sin `level`, `difficulty`, `solution`, `safe_path` ni `qa` |
 | QA-DAILY-RELIEF | `relief` vacío |
@@ -226,7 +227,36 @@ su id y solo con las comprobaciones que su cambio arrastra; además, el tope de 
 trampas tempranas, la anti-repetición (también con dos días casi iguales y con la vuelta del ciclo, 728 → 0) solo avisan.
 Sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación; tarda unos 20 s.
 
-**`--self-test` sin nombre** ejecuta `key2` y `daily` y sale con el código mayor de los dos. `reglas` y `variante` se lanzan
+## La reserva del 20 %: `--reserve` (D-033, añadido «la reserva del 20 %», Q-B11-7 (a); 03 §17)
+
+```
+dotnet run --project tools/level-qa -c Release -- --reserve Assets/_Project/Data/Levels/reserva_03_v1.json Assets/_Project/Data/Levels/reserva_04_v1.json Assets/_Project/Data/Levels/reserva_05_v1.json --campaign Assets/_Project/Data/Levels/mundo_03_v1.json Assets/_Project/Data/Levels/mundo_04_v1.json Assets/_Project/Data/Levels/mundo_05_v1.json --spec tools/level-generator/specs/campaign_v1.json
+dotnet run --project tools/level-qa -c Release -- --reserve Assets/_Project/Data/Levels/reserva_06_v1.json Assets/_Project/Data/Levels/reserva_07_v1.json Assets/_Project/Data/Levels/reserva_08_v1.json Assets/_Project/Data/Levels/reserva_09_v1.json --campaign Assets/_Project/Data/Levels/mundo_06_v1.json Assets/_Project/Data/Levels/mundo_07_v1.json Assets/_Project/Data/Levels/mundo_08_v1.json Assets/_Project/Data/Levels/mundo_09_v1.json --spec tools/level-generator/specs/campaign_v2.json
+```
+
+Cada pack de reserva (`kind` = `reserve`, `pack_schema` 4) con su pack de campaña (emparejados por mundo) y la especificación
+(`--variant`, la del generador): las comprobaciones base sobre cada tablero (QA-STRUCT, QA-UNITS, QA-SEALED, QA-STUCK,
+QA-VALID, QA-PAR, QA-TINT-DEBUT, QA-KMAX, QA-RISK, QA-CVD-ADJ, QA-PALETTE, QA-BOT, QA-LABEL, QA-LABEL-EARLY, QA-CUIAS como aviso, QA-FIELDS,
+QA-SIZE, QA-EARLY-TRAPS), el alivio (QA-RELIEF-*), las de Aguas turbias y la tinaja (que no llevan), QA-SCHEMA y:
+
+| Id | Regla |
+|---|---|
+| QA-RES-HEADER | `pack_schema` 4, `kind` `reserve`, `pack_id` `reserva_{mm}_v1` del mundo del pack de campaña |
+| QA-RES-SLOT | `replaces` = el id de campaña del mismo `level` y mundo, presente en el pack de campaña; `id` = `replaces` + `_r1`; `seed` = la del slot + `:r1` |
+| QA-RES-MECH | el sustituido usa una mecánica con kill switch; el de reserva no lleva ninguna mecánica ni Barro (tampoco su alivio), ni ocultas ni `intro_mechanic` [P] |
+| QA-RES-WINDOW | `bot_fail` en la ventana del slot, etiqueta permitida en el slot y `band` del slot |
+| QA-RES-COUNT | como mucho el 20 % de los niveles del mundo; aviso si hay menos que min(tope, niveles con mecánica) |
+| QA-RES-D | sin `difficulty.D` |
+| QA-RES-REPRO | el pack se regenera byte a byte desde el pack de campaña y la especificación (`Generation/ReserveRunner.cs`, enlazado) |
+
+`--no-reproduce` salta QA-RES-REPRO (nunca en el CI); `--report <md>` escribe el informe. Unos 10 s (mundos 3-5) y 90 s (6-9).
+
+`--self-test reserve`: el pack de reserva del mundo 3 pasa sin fallos y cada copia estropeada en un archivo temporal falla con
+su id (`pack_schema` 3, `kind` campaign y `pack_id` de otro mundo: QA-RES-HEADER; `replaces` de otro slot e `id` y `seed` sin
+sufijo: QA-RES-SLOT; la Hoja en `attrs`, el Barro en `cuias` e `intro_mechanic`: QA-RES-MECH; `D`: QA-RES-D; `bot_fail` fuera de
+la ventana: QA-RES-WINDOW; un noveno tablero: QA-RES-COUNT).
+
+**`--self-test` sin nombre** ejecuta `key2`, `daily` y `reserve` y sale con el código mayor. `reglas` y `variante` se lanzan
 por su nombre.
 
 ## Comprobaciones
@@ -244,6 +274,7 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-TINT-DEBUT | cada tinte con debut anterior o igual al nivel | 03 §17 #4 |
 | QA-KMAX | K entre `k_min` y `k_max` de la cabecera | 03 §17 #4 |
 | QA-RISK | `risk_pairs` recalculado y ≤ `max_risk_pairs` | 03 §4.5 |
+| QA-CVD-ADJ | Ningún par del simulador de daltonismo (`cvd_pairs`: 7-10 y 5-14; no cuentan en `risk_pairs`) junto en una cuia del tablero base. Aviso en las variantes de `relief` y cuando el pack se reproduce y ninguna de las 50 permutaciones del generador lo evita midiendo igual (también en `--reserve`) | 03 §4.5; 07 §3, regla 3; Q-B9-13 bis |
 | QA-PALETTE | `palette` = tintes presentes en `cuias` | 08 §4.1 |
 | QA-BOT | `bot_fail` recalculado con la semilla del nivel, idéntico | 03 §6 |
 | QA-LABEL | etiqueta coherente (≥ 0,75 hard y ≥ 0,90 very_hard, desde el 40 y el 60) | 03 §7, §11 |
@@ -332,6 +363,14 @@ for f in tools/level-qa/fixtures/QA-*.json; do
   echo "$(basename "$f"): exit=$code $(echo "$out" | grep -q "\[$id\]" && echo presente || echo AUSENTE)$extra"
 done
 ```
+
+`QA-CVD-ADJ__par_del_simulador_junto.json` es el nivel 46 del mundo 3: lleva un 7 (Bacaba) sobre un 10 (Agua del Tapajós)
+en el tablero base, un contacto que el generador no pudo evitar. Sin la reproducción falla QA-CVD-ADJ; con ella, en el pack
+completo, es aviso (Q-B9-13 bis). `--self-test cvd` (`Checks/CvdQaSelfTest.cs`, también en el `--self-test` sin nombre)
+prueba tres cosas:
+- que este fixture falla;
+- que un contacto solo en una variante de `relief` es aviso y no fallo;
+- que `GateChecks.CvdUnavoidable` solo baja el fallo a aviso con el pack reproducido y `Tints.CvdAdjacent` > 0.
 
 Todos deben dar `exit=1` y `presente`, sin nada detrás: `flor_casas_ocupadas` comprueba además que no salgan QA-MECH-COUNT
 (es un reto del 306 con tres mecánicas, que desde el 301 valen en los retos) ni QA-VALID (AF.Core lo da por válido). Los de QA-RAMP (11), QA-LABEL-EARLY (58), QA-MECH-CELL (160) y QA-REMANSO
