@@ -113,10 +113,10 @@ index 3c820091..8b1bb0f3 100644
              _levelStartBoard = play.BoardId; // level_start pendiente: sale al terminar Llenar y teñir (08 §8.2), una vez por partida
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
 new file mode 100644
-index 00000000..53d2c8fa
+index 00000000..71f6ac3b
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
-@@ -0,0 +1,185 @@
+@@ -0,0 +1,195 @@
 +#nullable enable
 +using AF.GameFlow;
 +using AF.Platform;
@@ -208,6 +208,11 @@ index 00000000..53d2c8fa
 +                _settingsScreen.A11yToggled = (id, on) => ChooseA11y(id, on);
 +            }
 +
++            if (_lobby != null)
++            {
++                A11yLabels.Set(_lobby.SettingsButton, () => UiText.Settings); // TalkBack: el engranaje es un botón de solo icono (02 §12)
++            }
++
 +            ApplyA11y();
 +        }
 +
@@ -244,6 +249,11 @@ index 00000000..53d2c8fa
 +            if (_screen != null)
 +            {
 +                _screen.A11y = null;
++            }
++
++            if (_dailyScreen?.View != null)
++            {
++                _dailyScreen.View.A11y = null;
 +            }
 +
 +            _a11y?.Host.Clear();
@@ -502,7 +512,7 @@ index f2c12924..d3befc56 100644
  
              _views = views;
 diff --git a/Assets/_Project/Scripts/UI/LaunchOptions.cs b/Assets/_Project/Scripts/UI/LaunchOptions.cs
-index 0e18deac..2cd581bc 100644
+index 0e18deac..2be60c4b 100644
 --- a/Assets/_Project/Scripts/UI/LaunchOptions.cs
 +++ b/Assets/_Project/Scripts/UI/LaunchOptions.cs
 @@ -72,6 +72,7 @@ public static class LaunchOptions
@@ -545,10 +555,36 @@ index 0e18deac..2cd581bc 100644
 -                s_intentFontScale = percent > 0 ? ClampTextScale(percent / 100f) : 1f;
 +                // Sin el extra de desarrollo, la escala de fuente del sistema (02 §12: hasta el 130 %; B9), leída una vez: un cambio
 +                // con el juego abierto se ve al volver a abrirlo [P] (Q-B9-1).
-+                s_intentFontScale = percent > 0 ? ClampTextScale(percent / 100f) : A11yRules.TextScaleFor(SystemScale.FontScale);
++                s_intentFontScale = percent > 0 ? ClampTextScale(percent / 100f) : ClampTextScale(SystemScale.FontScale);
                  if (percent > 0)
                  {
                      Debug.LogWarning("[AF.LaunchOptions] " + IntentExtraFontScale + " = " + percent + ": escala de texto " + s_intentFontScale.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ".");
+@@ -406,12 +420,7 @@ public static float ResolveTextScale()
+         /// </summary>
+         public static float ClampTextScale(float scale)
+         {
+-            if (float.IsNaN(scale) || float.IsInfinity(scale))
+-            {
+-                return 1f;
+-            }
+-
+-            return Mathf.Clamp(scale, 1f, UiBuilder.MaxTextScale);
++            return A11yRules.TextScaleFor(scale); // B9: una sola regla del tope de 02 §12, la de la fuente del sistema
+         }
+ 
+         /// <summary>
+diff --git a/Assets/_Project/Scripts/UI/ModalKit.cs b/Assets/_Project/Scripts/UI/ModalKit.cs
+index 635dc092..b44be9fb 100644
+--- a/Assets/_Project/Scripts/UI/ModalKit.cs
++++ b/Assets/_Project/Scripts/UI/ModalKit.cs
+@@ -304,6 +304,7 @@ public static ReliefParts Close(string name, Transform parent, ProceduralArt art
+             visual.anchorMax = new Vector2(0.5f, 1f);
+             visual.sizeDelta = new Vector2(art.DiscWood.Painted ? art.DiscWood.HeightDp : 40f, art.DiscWood.HeightDp);
+             visual.anchoredPosition = new Vector2(0f, -4f);
++            A11yLabels.Set(close.Button, () => A11yText.Close); // TalkBack: la X es un botón de solo icono (02 §12; B9)
+             Image glyph = UiBuilder.Image("Icon", close.Face, art.IconClose, Color.white);
+             UiBuilder.Place(glyph.rectTransform, 9f, 9f, 22f, 22f);
+             close.Relief.Bind(close.Face, close.Base, close.FaceImage, art.DiscWood, glyph, null, null);
 diff --git a/Assets/_Project/Scripts/UI/SettingsScreen.cs b/Assets/_Project/Scripts/UI/SettingsScreen.cs
 index 04bde497..9578696c 100644
 --- a/Assets/_Project/Scripts/UI/SettingsScreen.cs
@@ -614,10 +650,10 @@ index 04bde497..9578696c 100644
              public string Id { get; private set; }
 diff --git a/Assets/_Project/Tests/PlayMode/A11yGameTests.cs b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
 new file mode 100644
-index 00000000..c039cfc9
+index 00000000..7c950166
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
-@@ -0,0 +1,311 @@
+@@ -0,0 +1,332 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -798,6 +834,27 @@ index 00000000..c039cfc9
 +            Assert.That(boot.Profile!.Settings.HighContrast, Is.True);
 +            Assert.That(boot.ChooseA11y(SettingsScreen.HighContrastId, false), Is.True);
 +            Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(Palette.PatternOpacitySubtle).Within(1e-6f), "y vuelve al del nivel");
++        }
++
++        [UnityTest]
++        public IEnumerator TalkBack_IconOnlyButtons_HaveTheirFunctionalLabel()
++        {
++            var host = new FakeScreenReaderHost(true);
++            GameBootstrap.A11yHostOverride = host;
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(4)));
++            GameBootstrap boot = GameBootstrap.Current!;
++            B9LocPlay.Use();
++            boot.A11y!.Refresh();
++            A11yItem? gear = host.Find(UiText.Settings);
++            Assert.That(gear, Is.Not.Null, "02 §12: el engranaje del inicio dice «Ajustes»");
++            Assert.That(gear!.Invoke!(), Is.True);
++            Assert.That(boot.SettingsView!.Visible, Is.True, "activarlo abre Ajustes");
++            boot.A11y.Refresh();
++            A11yItem? close = host.Find(A11yText.Close);
++            Assert.That(close, Is.Not.Null, "la X de Ajustes dice «Cerrar»");
++            Assert.That(host.Find(UiText.Sound)!.Selected, Is.True, "las filas dicen si están marcadas (Sonido, activado)");
++            Assert.That(close!.Invoke!(), Is.True);
++            Assert.That(boot.SettingsView.Visible, Is.False);
 +        }
 +
 +        [UnityTest]
