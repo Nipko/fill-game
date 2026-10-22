@@ -383,10 +383,18 @@ index 8aa51d6e..c31d31f6 100644
              // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
              // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.cs b/Assets/_Project/Scripts/UI/GameScreen.cs
-index f2c12924..d3befc56 100644
+index f2c12924..94eb9f41 100644
 --- a/Assets/_Project/Scripts/UI/GameScreen.cs
 +++ b/Assets/_Project/Scripts/UI/GameScreen.cs
-@@ -910,6 +910,8 @@ public void Tick(float dtMs)
+@@ -864,6 +864,7 @@ public void SetVisible(bool visible)
+             if (!visible)
+             {
+                 SlothLeave(); // Inicio o «El río sigue creciendo»: TiTino no se queda colgado de una victoria que ya no se ve
++                HoldReset(); // C9 (B9): un dedo abajo al ocultarse pierde su touch-up; no se queda contado
+             }
+         }
+ 
+@@ -910,6 +911,8 @@ public void Tick(float dtMs)
                  _views[i].Tick(dtMs);
              }
  
@@ -395,7 +403,7 @@ index f2c12924..d3befc56 100644
              SyncLiftFront();
              if (_confettiDelay >= 0f)
              {
-@@ -960,6 +962,7 @@ public void SnapToModel()
+@@ -960,6 +963,7 @@ public void SnapToModel()
          {
              _animator.SnapAll();
              _intro.Clear();
@@ -403,7 +411,7 @@ index f2c12924..d3befc56 100644
          }
  
          /// <inheritdoc />
-@@ -1103,9 +1106,9 @@ public void OnTap(TapResult result)
+@@ -1103,9 +1107,9 @@ public void OnTap(TapResult result)
  
                  case TapKind.Rejected:
                      SetLift(result.PreviousSelection, false);
@@ -415,7 +423,7 @@ index f2c12924..d3befc56 100644
                      }
  
                      AF.Audio.AudioCues.Play(AF.Audio.SfxId.Illegal); // AU1: madera neutra, nunca háptico en un rechazo (02 §4)
-@@ -1122,6 +1125,8 @@ public void OnTap(TapResult result)
+@@ -1122,6 +1126,8 @@ public void OnTap(TapResult result)
                      ShuffleBoardChanged(flow);
                      break;
              }
@@ -424,7 +432,7 @@ index f2c12924..d3befc56 100644
          }
  
          /// <inheritdoc />
-@@ -1218,7 +1223,7 @@ public void OnCelebrationStarted()
+@@ -1218,7 +1224,7 @@ public void OnCelebrationStarted()
              }
  
              _ambient.SetSuspended(true);
@@ -433,7 +441,7 @@ index f2c12924..d3befc56 100644
              AF.Audio.AudioCues.Play(AF.Audio.SfxId.WinToada); // AU1: la toada y el háptico medio de la victoria
              AF.Audio.AudioCues.Haptic(AF.Audio.HapticKind.Win);
              _skipCatcher.gameObject.SetActive(true);
-@@ -1609,10 +1614,11 @@ private void OnCuiaDown(int index)
+@@ -1609,10 +1615,11 @@ private void OnCuiaDown(int index)
              }
          }
  
@@ -447,7 +455,7 @@ index f2c12924..d3befc56 100644
              {
                  _actions.TapCuia(index);
              }
-@@ -1640,7 +1646,7 @@ internal bool RefreshFruitPatterns()
+@@ -1640,7 +1647,7 @@ internal bool RefreshFruitPatterns()
                  return false;
              }
  
@@ -456,7 +464,7 @@ index f2c12924..d3befc56 100644
              return true;
          }
  
-@@ -1670,11 +1676,13 @@ private void BuildBoard(LevelFlow flow)
+@@ -1670,11 +1677,13 @@ private void BuildBoard(LevelFlow flow)
  
              BoardState board = flow.Session.Current;
              var views = new CuiaView[board.Count];
@@ -471,7 +479,7 @@ index f2c12924..d3befc56 100644
              }
  
              _views = views;
-@@ -1682,17 +1690,19 @@ private void BuildBoard(LevelFlow flow)
+@@ -1682,17 +1691,19 @@ private void BuildBoard(LevelFlow flow)
              _tinajaPair = BindTinajaPair(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
              OrderBoardLayers();
              float f = GameConfig.SpeedFactor(flow.LevelNumber);
@@ -497,7 +505,7 @@ index f2c12924..d3befc56 100644
              for (int i = 0; i < board.Count; i++)
              {
                  _animator.ShowContent(i, board[i], board.IsSealed(i));
-@@ -2338,11 +2348,12 @@ private void AddCuiaView(LevelFlow flow, int index)
+@@ -2338,11 +2349,12 @@ private void AddCuiaView(LevelFlow flow, int index)
                  views[i] = _views[i];
              }
  
@@ -650,10 +658,10 @@ index 04bde497..9578696c 100644
              public string Id { get; private set; }
 diff --git a/Assets/_Project/Tests/PlayMode/A11yGameTests.cs b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
 new file mode 100644
-index 00000000..ba39d464
+index 00000000..6329fa65
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
-@@ -0,0 +1,365 @@
+@@ -0,0 +1,394 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -728,11 +736,40 @@ index 00000000..ba39d464
 +            PlayModeHelpers.Step(boot, 416);
 +            Assert.That(boot.View.HoldNamesVisible, Is.True);
 +            boot.View.PauseButton.onClick.Invoke(); // otro dedo abre la pausa (no cambia la fase)
-+            PlayModeHelpers.Step(boot, 32);
++            PlayModeHelpers.Step(boot, (int)GameScreen.HoldCoverCheckMs + 32);
 +            Assert.That(boot.View.HoldNamesVisible, Is.False, "la pausa encima quita los nombres");
 +            Release(view, Center(view));
 +            Assert.That(boot.Flow!.Selected, Is.EqualTo(TapController.NoSelection), "al soltar no selecciona (ni debajo de la pausa)");
 +            Assert.That(boot.Flow.Session.AppliedPours, Is.Zero);
++        }
++
++        [UnityTest]
++        public IEnumerator C9_AVeilInAnotherCanvasOverTheNames_HidesThem()
++        {
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            CuiaView view = boot.View!.Views[0];
++            Press(view, Center(view));
++            PlayModeHelpers.Step(boot, 416);
++            Assert.That(boot.View.HoldNamesVisible, Is.True);
++
++            // Un lienzo nuevo con velo encima (como el Mercado o un anuncio, que se crean al primer uso).
++            var veil = new GameObject("A11yVeilCanvas", typeof(RectTransform), typeof(Canvas));
++            veil.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
++            veil.GetComponent<Canvas>().sortingOrder = 100;
++            UiBuilder.Stretch(UiBuilder.Image("Veil", veil.transform, null, new Color(0f, 0f, 0f, 0.5f), raycast: true).rectTransform);
++            try
++            {
++                Canvas.ForceUpdateCanvases();
++                PlayModeHelpers.Step(boot, (int)GameScreen.HoldCoverCheckMs + 32);
++                Assert.That(boot.View.HoldNamesVisible, Is.False, "el velo de encima quita los nombres");
++                Release(view, Center(view));
++                Assert.That(boot.Flow!.Selected, Is.EqualTo(TapController.NoSelection), "y soltar sigue sin seleccionar");
++            }
++            finally
++            {
++                UnityEngine.Object.DestroyImmediate(veil);
++            }
 +        }
 +
 +        [UnityTest]

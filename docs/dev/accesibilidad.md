@@ -70,7 +70,10 @@ Lo marcado [P] es propuesta sin decisión del dueño; cada [P] remite a su pregu
 - **Qué se enseña:** los nombres de arriba abajo, uno por línea [P].
   - Una dosis oculta se ve como «turbia».
   - En la Tinaja, solo la boca y lo revelado.
-- **Al soltar:** ni toque ni arrastre. Tampoco si C9 se corta con el dedo abajo porque se abre un modal, la pausa o la Luciérnaga.
+- **Al soltar:** ni toque ni arrastre. Mantener 400 ms nunca es un toque: tampoco si en ese momento algo tapa el tablero (la pausa, otro lienzo con velo) y los nombres no llegan a salir.
+- **Con los nombres a la vista:** un velo que se abre encima los quita; se comprueba cada 250 ms [P] (`GameScreen.HoldCoverCheckMs`), no en cada fotograma.
+- **Dedos:** se siguen por su `pointerId`. Un touch-up que se pierde de verdad (la cuia se destruye, la pantalla se oculta o la app va a segundo plano con el dedo abajo) lo cubre `HoldReset` al construir el tablero, al ocultar la pantalla y en `SnapToModel`.
+- **Límite conocido:** si otro dedo toca la misma cuia mientras salen los nombres, su touch-up también se traga, porque `CuiaView.OnCuiaUp` no pasa el `pointerId`.
 
 ### 2.5 TalkBack
 
@@ -140,7 +143,7 @@ Están en `docs/dev/traspaso/spark-enganches/`, en LF, y se aplican en este orde
      - sin sacudida, sin confeti;
      - `ApplyLevelPatterns`;
      - el anuncio de la selección;
-     - `HoldReset` al construir el tablero y en `SnapToModel`.
+     - `HoldReset` al construir el tablero, en `SnapToModel` y al ocultar la pantalla (`SetVisible(false)`).
    - **`BoardAnimator.cs`:** `ReduceMotionFactor`, `DoseNominalMs` sin el factor y sin onda (`Ripple`) con Reducir movimiento.
    - **`MechanicStepContext.cs`:** documentación.
    - **`SettingsScreen.cs`:** las dos filas, su sitio en el visor y en la sonda, y `A11yLabels` en `OptionRow`.
@@ -196,7 +199,9 @@ Más [P] sin pregunta propia:
 - el número de la cuia = su índice + 1;
 - «Continuar» para los velos de toque;
 - 250 ms entre recorridos;
-- el 90 % de cobertura para considerar un velo.
+- el 90 % de cobertura para considerar un velo;
+- los lienzos con el mismo `sortingOrder` se tratan como grupo, porque Unity no fija cuál va encima: si uno tiene velo, tapa lo de debajo, y para un nodo del lector cuenta como tapa;
+- 250 ms entre comprobaciones de si algo tapa los nombres de C9.
 
 ## 6. Riesgos y pendientes
 
