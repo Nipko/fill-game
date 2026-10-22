@@ -64,6 +64,7 @@ namespace AF.UI
 
             UiBuilder.AutoSize(Label, labelMinSp, labelSp);
             SetSelected(false);
+            A11yLabels.Set(Button, () => Label.text, () => Selected); // TalkBack: su texto y si está marcada (B9; 02 §12)
         }
 
         public string Id { get; private set; }

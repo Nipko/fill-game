@@ -228,6 +228,17 @@ namespace AF.Save
             settings.Set("language", JsonNode.FromString(p.Settings.Language));
             settings.Set("sloth_messages", JsonNode.FromBool(p.Settings.SlothMessages));
             settings.Set("idle_hint", JsonNode.FromBool(p.Settings.IdleHint));
+            if (p.Settings.ReduceMotion != ReduceMotionSetting.Auto)
+            {
+                // B9: settings.reduce_motion [P], solo cuando deja su default (no cambia los perfiles que aún no lo usan).
+                settings.Set("reduce_motion", JsonNode.FromString(SettingsData.ReduceMotionText(p.Settings.ReduceMotion)));
+            }
+
+            if (p.Settings.HighContrast)
+            {
+                settings.Set("high_contrast", JsonNode.FromBool(true)); // B9: settings.high_contrast [P], solo encendido
+            }
+
             if (!p.Settings.Push.IsDefault)
             {
                 // B6: settings.push (08 §4.3) solo cuando deja su default, para no cambiar los perfiles que aún no lo usan.
@@ -871,6 +882,13 @@ namespace AF.Save
             s.Haptics = TolerantBool(node, "haptics", s.Haptics);
             s.SlothMessages = TolerantBool(node, "sloth_messages", s.SlothMessages);
             s.IdleHint = TolerantBool(node, "idle_hint", s.IdleHint);
+            string? reduceMotion = TolerantString(node, "reduce_motion");
+            if (reduceMotion != null && SettingsData.TryParseReduceMotion(reduceMotion, out ReduceMotionSetting motion))
+            {
+                s.ReduceMotion = motion; // B9
+            }
+
+            s.HighContrast = TolerantBool(node, "high_contrast", s.HighContrast); // B9
             JsonNode? push = TolerantSection(node, "push");
             if (push != null)
             {

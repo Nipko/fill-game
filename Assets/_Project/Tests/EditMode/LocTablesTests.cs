@@ -547,6 +547,9 @@ namespace AF.Tests.EditMode
             // La Pororoca del Spark (bloque B2; B2-strings.csv): las pinta AF.UI.ShuffleText.
             keys.AddRange(ShuffleText.AllKeys);
 
+            // B9: la accesibilidad (lector de pantalla, C9 y las filas de Ajustes), que pinta o dice AF.UI.A11yText.
+            keys.AddRange(A11yText.AllKeys);
+
             // B8: «Eliminar cuenta y datos» (Ajustes y su diálogo de dos pasos), que pinta AF.UI.AccountText.
             foreach (FieldInfo f in typeof(AccountText.Keys).GetFields(BindingFlags.Public | BindingFlags.Static))
             {

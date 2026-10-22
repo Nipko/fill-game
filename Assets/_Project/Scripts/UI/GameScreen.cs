@@ -871,6 +871,7 @@ namespace AF.UI
             if (!visible)
             {
                 SlothLeave(); // Inicio o «El río sigue creciendo»: TiTino no se queda colgado de una victoria que ya no se ve
+                HoldReset(); // C9 (B9): un dedo abajo al ocultarse pierde su touch-up; no se queda contado
             }
         }
 
@@ -916,6 +917,8 @@ namespace AF.UI
             {
                 _views[i].Tick(dtMs);
             }
+
+            HoldTick(dtMs); // C9 (B9): a los 400 ms, los nombres
 
             SyncLiftFront();
             if (_confettiDelay >= 0f)
@@ -967,6 +970,7 @@ namespace AF.UI
         {
             _animator.SnapAll();
             _intro.Clear();
+            HoldReset(); // C9 (B9): al volver de segundo plano no queda nada pulsado
         }
 
         /// <inheritdoc />
@@ -1110,9 +1114,9 @@ namespace AF.UI
 
                 case TapKind.Rejected:
                     SetLift(result.PreviousSelection, false);
-                    if ((uint)result.Tapped < (uint)_views.Length)
+                    if ((uint)result.Tapped < (uint)_views.Length && !flow.ReduceMotion)
                     {
-                        _views[result.Tapped].Shake();
+                        _views[result.Tapped].Shake(); // con Reducir movimiento, sin sacudidas (02 §12; B9)
                     }
 
                     AF.Audio.AudioCues.Play(AF.Audio.SfxId.Illegal); // AU1: madera neutra, nunca háptico en un rechazo (02 §4)
@@ -1129,6 +1133,8 @@ namespace AF.UI
                     ShuffleBoardChanged(flow);
                     break;
             }
+
+            A11yTapped(flow, result); // B9: con TalkBack, la selección se anuncia (02 §12)
         }
 
         /// <inheritdoc />
@@ -1225,7 +1231,7 @@ namespace AF.UI
             }
 
             _ambient.SetSuspended(true);
-            _confettiDelay = 500f;
+            _confettiDelay = _flow != null && _flow.ReduceMotion ? -1f : 500f; // con Reducir movimiento, sin confeti (02 §12; B9)
             AF.Audio.AudioCues.Play(AF.Audio.SfxId.WinToada); // AU1: la toada y el háptico medio de la victoria
             AF.Audio.AudioCues.Haptic(AF.Audio.HapticKind.Win);
             _skipCatcher.gameObject.SetActive(true);
@@ -1617,10 +1623,15 @@ namespace AF.UI
         }
 
         // Soltar dentro del área táctil es un toque (C1-C6); soltar fuera, sobre otra cuia y tras ≥ 24 dp, es el arrastre (C10;
-        // B11, GameScreen.Drag.cs); si no, cancela.
+        // B11, GameScreen.Drag.cs); si no, cancela. Tras mantener 400 ms (C9, B9), soltar no es ni un toque ni un arrastre (02 §3.1:
+        // «al soltar no selecciona»).
         private void OnCuiaUp(int index, bool inside)
         {
-            if (inside)
+            if (HoldSwallows(index))
+            {
+                // C9: nada; la cuia baja abajo, como cualquier toque que no selecciona.
+            }
+            else if (inside)
             {
                 _actions.TapCuia(index);
             }
@@ -1653,7 +1664,7 @@ namespace AF.UI
                 return false;
             }
 
-            _animator.ApplyPatterns(PatternsOn(flow.LevelNumber));
+            ApplyLevelPatterns(flow.LevelNumber); // con Alto contraste, el patrón al 35 % (B9)
             return true;
         }
 
@@ -1683,11 +1694,13 @@ namespace AF.UI
 
             BoardState board = flow.Session.Current;
             var views = new CuiaView[board.Count];
-            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber);
+            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber) * PourMotionFactor(flow); // B9: × 0,5 con Reducir movimiento (02 §4)
+            HoldReset(); // C9 (B9): nada pulsado en el tablero nuevo
             for (int i = 0; i < board.Count; i++)
             {
                 views[i] = CuiaView.Create(_board, i, board[i].Capacity, _art, _cuiaDown, _cuiaUp, _fx);
                 views[i].SetLiftDuration(liftMs);
+                AttachHold(views[i]); // C9, mantener pulsado (B9; GameScreen.A11y.cs)
             }
 
             _views = views;
@@ -1695,17 +1708,19 @@ namespace AF.UI
             _tinajaPair = BindTinajaPair(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
             OrderBoardLayers();
             float f = GameConfig.SpeedFactor(flow.LevelNumber);
+            float m = f * BoardMotionFactor; // B9: con Reducir movimiento, × anim_reduce_motion_factor (02 §4 y §12), el de arriba
             _timings = new PourTimings(
-                GameConfig.AnimLiftMs * f,
-                GameConfig.AnimTravelMs * f,
-                GameConfig.AnimPourDoseMs * f,
-                GameConfig.AnimPourTailMs * f,
-                GameConfig.AnimReturnMs * f);
+                GameConfig.AnimLiftMs * m,
+                GameConfig.AnimTravelMs * m,
+                GameConfig.AnimPourDoseMs * m,
+                GameConfig.AnimPourTailMs * m,
+                GameConfig.AnimReturnMs * m);
             _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours, _mechanicBackLayer, _mechanicFrontLayer);
             _animator.SpeedFactor = f;
             _animator.ReduceMotion = flow.ReduceMotion;
+            _animator.ReduceMotionFactor = (float)ReduceMotionFactor; // B9: el de los pasos de mecánica, el mismo que el de los vertidos
             _fx.ReduceMotion = flow.ReduceMotion;
-            _animator.ApplyPatterns(PatternsOn(flow.LevelNumber)); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3)
+            ApplyLevelPatterns(flow.LevelNumber); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3); Alto contraste, 35 % (B9)
             for (int i = 0; i < board.Count; i++)
             {
                 _animator.ShowContent(i, board[i], board.IsSealed(i));
@@ -2351,11 +2366,12 @@ namespace AF.UI
                 views[i] = _views[i];
             }
 
-            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber);
+            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber) * BoardMotionFactor; // B9: el del tablero en curso
             for (int i = old; i < views.Length; i++)
             {
                 views[i] = CuiaView.Create(_board, i, board[i].Capacity, _art, _cuiaDown, _cuiaUp, _fx);
                 views[i].SetLiftDuration(liftMs);
+                AttachHold(views[i]); // C9 (B9)
             }
 
             _views = views;

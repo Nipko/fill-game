@@ -72,6 +72,7 @@ namespace AF.UI
 
         // Escala del extra af_font_scale, leída una vez (NaN: aún no se leyó).
         private static float s_intentFontScale = float.NaN;
+        private static ISystemScale? s_systemScale;
 
         /// <summary>
         /// Extra de intent (string) de los builds de desarrollo (D-018; tarea L2b): el idioma de la UI, primero en la resolución
@@ -243,6 +244,15 @@ namespace AF.UI
         public static float? FontScaleOverride { get; set; }
 
         /// <summary>
+        /// Escalas del sistema de un test (bloque B9; <see cref="ISystemScale"/>: la fuente y las animaciones del teléfono); null =
+        /// las de la plataforma (<see cref="AndroidSystemScale.ForPlatform"/>: en el Editor, 100 % y animaciones normales).
+        /// </summary>
+        public static ISystemScale? SystemScaleOverride { get; set; }
+
+        /// <summary>Las escalas del sistema en uso: las del test o las de la plataforma (se crean una vez).</summary>
+        public static ISystemScale SystemScale => SystemScaleOverride ?? (s_systemScale ??= AndroidSystemScale.ForPlatform());
+
+        /// <summary>
         /// Idioma de desarrollo forzado por un test (el de <c>af_lang</c>: «en-XA» para la pseudolocalización); null = ninguno.
         /// Solo cuenta en desarrollo (<see cref="Debug.isDebugBuild"/>, también en el Editor).
         /// </summary>
@@ -295,6 +305,8 @@ namespace AF.UI
             BannerArtFaultOverride = null;
             BannerArtTimeoutMsOverride = null;
             FontScaleOverride = null;
+            SystemScaleOverride = null;
+            s_intentFontScale = float.NaN; // B9: la escala se vuelve a resolver con las del sistema de verdad
             LanguageOverride = null;
             LocTablesOverride = null;
             DeviceLocaleOverride = null;
@@ -408,7 +420,9 @@ namespace AF.UI
             if (float.IsNaN(s_intentFontScale))
             {
                 int percent = ReadIntentInt(IntentExtraFontScale, 0);
-                s_intentFontScale = percent > 0 ? ClampTextScale(percent / 100f) : 1f;
+                // Sin el extra de desarrollo, la escala de fuente del sistema (02 §12: hasta el 130 %; B9), leída una vez: un cambio
+                // con el juego abierto se ve al volver a abrirlo [P] (Q-B9-1).
+                s_intentFontScale = percent > 0 ? ClampTextScale(percent / 100f) : ClampTextScale(SystemScale.FontScale);
                 if (percent > 0)
                 {
                     Debug.LogWarning("[AF.LaunchOptions] " + IntentExtraFontScale + " = " + percent + ": escala de texto " + s_intentFontScale.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ".");
@@ -424,12 +438,7 @@ namespace AF.UI
         /// </summary>
         public static float ClampTextScale(float scale)
         {
-            if (float.IsNaN(scale) || float.IsInfinity(scale))
-            {
-                return 1f;
-            }
-
-            return Mathf.Clamp(scale, 1f, UiBuilder.MaxTextScale);
+            return A11yRules.TextScaleFor(scale); // B9: una sola regla del tope de 02 §12, la de la fuente del sistema
         }
 
         /// <summary>

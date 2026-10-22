@@ -70,6 +70,7 @@ namespace AF.RemoteConfig.Tests
             AssertSame(RevocationConfig.Defaults, c.Revocation);
             AssertSame(TakeoverConfig.Defaults, c.Takeovers);
             AssertSame(LoginCalendarConfig.Defaults, c.LoginCalendar);
+            AssertSame(A11yConfig.Defaults, c.A11y); // B9
             Assert.That(c.BackendSwitch.BizBackendEnabled, Is.True, "biz_backend_enabled = true en 08 §9 [P]");
             AssertSame(ConsentConfig.Defaults, c.Consent); // B12
         }

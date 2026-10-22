@@ -8,9 +8,9 @@ namespace AF.RemoteConfig.Binding
     /// <summary>
     /// <see cref="A11yConfig"/> leída de Remote Config (bloque B9; 08 §9), como las tablas de <see cref="RcConfigBinder"/>: sin
     /// reflexión, cada clave con su asignación; un valor que no se entiende deja el default de esa propiedad y se anota; si la clase
-    /// entera no pasa su <c>Validate()</c> (el factor fuera de 0,3-0,7), se usan sus defaults (Q-B7-7). Archivo propio de B9: el
-    /// parche <c>B9-rc.diff</c> lo conecta a <see cref="RcConfigBinder.Bind(RcSnapshot, string)"/> (<c>RcConfigs.A11y</c>) y a su
-    /// prueba de cobertura.
+    /// entera no pasa su <c>Validate()</c> (el factor fuera de 0,3-0,7), se usan sus defaults (Q-B7-7). Lo llama
+    /// <see cref="RcConfigBinder.Bind(RcSnapshot, string)"/> (<c>RcConfigs.A11y</c>), que publica sus claves en
+    /// <see cref="RcConfigBinder.BoundKeys"/>.
     /// </summary>
     public static class A11yConfigBinder
     {
