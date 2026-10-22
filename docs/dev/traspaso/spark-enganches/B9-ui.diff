@@ -1,8 +1,17 @@
 diff --git a/Assets/_Project/Scripts/Presentation/BoardAnimator.cs b/Assets/_Project/Scripts/Presentation/BoardAnimator.cs
-index 6d7024da..2ba47811 100644
+index 6d7024da..5dc04607 100644
 --- a/Assets/_Project/Scripts/Presentation/BoardAnimator.cs
 +++ b/Assets/_Project/Scripts/Presentation/BoardAnimator.cs
-@@ -377,11 +377,17 @@ public int ActiveStreams
+@@ -371,17 +371,23 @@ public int ActiveStreams
+ 
+         /// <summary>
+         /// Factor de velocidad del nivel (<c>GameConfig.SpeedFactor</c>; 02 §4): multiplica las duraciones que la cola no
+-        /// recibe ya multiplicadas, las de los pasos de mecánica (desde la ola 2; con <see cref="ReduceMotion"/>, × 0,5). Las
+-        /// de <see cref="PourTimings"/> ya lo llevan, y el traslado inverso de Marea (<see cref="UndoTransferMs"/>, 04 §2.1)
+-        /// no cambia. 1 por defecto.
++        /// recibe ya multiplicadas, las de los pasos de mecánica (desde la ola 2; con <see cref="ReduceMotion"/>, ×
++        /// <see cref="ReduceMotionFactor"/>). Las de <see cref="PourTimings"/> ya lo llevan, y el traslado inverso de Marea
++        /// (<see cref="UndoTransferMs"/>, 04 §2.1) no cambia, tampoco con Reducir movimiento [P] (Q-B9-12). 1 por defecto.
          /// </summary>
          public float SpeedFactor { get; set; } = 1f;
  
@@ -62,6 +71,21 @@ index 6d7024da..2ba47811 100644
                  ScoopAudio(ref job); // el «glup» al llegar a la boca (02 §4.1)
              }
  
+diff --git a/Assets/_Project/Scripts/Presentation/Mechanics/MechanicStepContext.cs b/Assets/_Project/Scripts/Presentation/Mechanics/MechanicStepContext.cs
+index fc15d071..84fdf5e6 100644
+--- a/Assets/_Project/Scripts/Presentation/Mechanics/MechanicStepContext.cs
++++ b/Assets/_Project/Scripts/Presentation/Mechanics/MechanicStepContext.cs
+@@ -107,8 +107,8 @@ public MechanicStepContext(
+         public ProceduralArt? Art { get; }
+ 
+         /// <summary>
+-        /// Multiplica las duraciones nominales: el factor del nivel (02 §4, <c>anim_speed_factor_*</c>), × 0,5 con
+-        /// <see cref="ReduceMotion"/> y el recorte del presupuesto desde el último vertido tocado (FX6; como mucho × 0,35;
++        /// Multiplica las duraciones nominales: el factor del nivel (02 §4, <c>anim_speed_factor_*</c>), ×
++        /// <c>anim_reduce_motion_factor</c> (0,5; B9) con <see cref="ReduceMotion"/> y el recorte del presupuesto desde el último vertido tocado (FX6; como mucho × 0,35;
+         /// ver <see cref="MechanicStepQueue"/>).
+         /// </summary>
+         public float SpeedFactor { get; }
 diff --git a/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs b/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
 index 3c820091..8b1bb0f3 100644
 --- a/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
@@ -89,11 +113,12 @@ index 3c820091..8b1bb0f3 100644
              _levelStartBoard = play.BoardId; // level_start pendiente: sale al terminar Llenar y teñir (08 §8.2), una vez por partida
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
 new file mode 100644
-index 00000000..ad1118df
+index 00000000..f047761b
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
-@@ -0,0 +1,157 @@
+@@ -0,0 +1,173 @@
 +#nullable enable
++using AF.GameFlow;
 +using AF.Platform;
 +using AF.Save;
 +using UnityEngine;
@@ -183,20 +208,34 @@ index 00000000..ad1118df
 +                _settingsScreen.A11yToggled = (id, on) => ChooseA11y(id, on);
 +            }
 +
-+            if (_dailyScreen != null)
++            ApplyA11y();
++        }
++
++        /// <summary>
++        /// «Reducir movimiento» en vigor con <paramref name="profile"/>: la elección del jugador o, en <c>auto</c>,
++        /// <c>ui_reduce_motion_default</c> o [P] el teléfono sin animaciones. Lo usa también la pantalla de arranque, antes de
++        /// <see cref="SetUpA11y"/>.
++        /// </summary>
++        private bool ResolveReduceMotion(Profile profile)
++        {
++            A11yConfig config = _rcConfigs?.A11y ?? A11yConfig.Defaults;
++            bool? choice = profile.Settings.ReduceMotion == ReduceMotionSetting.Auto ? (bool?)null : profile.Settings.ReduceMotion == ReduceMotionSetting.On;
++            return A11yRules.ReduceMotion(choice, config.UiReduceMotionDefault, LaunchOptions.SystemScale.AnimatorDurationScale);
++        }
++
++        // El Reto crea su flujo y su vista al abrirse (DailyChallengeScreen.Prepare, que pone SetUpDaily): se preparan antes de
++        // construir su tablero, sin un fotograma tarde.
++        private void PrepareDaily(LevelFlow flow, GameScreen view)
++        {
++            Profile? profile = _profile;
++            if (profile == null)
 +            {
-+                // El Reto crea su flujo y su vista al abrirse: se preparan antes de construir su tablero (sin un fotograma tarde).
-+                _dailyScreen.Prepare = (flow, view) =>
-+                {
-+                    flow.ReduceMotion = _reduceMotionNow;
-+                    if (_profile != null)
-+                    {
-+                        ApplyA11y(view, _rcConfigs?.A11y ?? A11yConfig.Defaults, _profile);
-+                    }
-+                };
++                return;
 +            }
 +
-+            ApplyA11y();
++            _reduceMotionNow = ResolveReduceMotion(profile);
++            flow.ReduceMotion = _reduceMotionNow;
++            ApplyA11y(view, _rcConfigs?.A11y ?? A11yConfig.Defaults, profile);
 +        }
 +
 +        // Lo que está en vigor, a todo lo que lo usa: el flujo y la pantalla del nivel, los del Reto, el Mapa y Ajustes.
@@ -209,18 +248,19 @@ index 00000000..ad1118df
 +            }
 +
 +            A11yConfig config = _rcConfigs?.A11y ?? A11yConfig.Defaults;
-+            bool? choice = profile.Settings.ReduceMotion == ReduceMotionSetting.Auto ? (bool?)null : profile.Settings.ReduceMotion == ReduceMotionSetting.On;
-+            _reduceMotionNow = A11yRules.ReduceMotion(choice, config.UiReduceMotionDefault, LaunchOptions.SystemScale.AnimatorDurationScale);
++            _reduceMotionNow = ResolveReduceMotion(profile);
 +            if (_flow != null)
 +            {
 +                _flow.ReduceMotion = _reduceMotionNow;
 +            }
 +
 +            ApplyA11y(_screen, config, profile);
-+            ApplyA11y(_dailyScreen?.View, config, profile);
 +            if (_dailyScreen?.Flow != null)
 +            {
++                // Solo con el Reto abierto: una vista cerrada conserva su nivel y pisaría la opacidad global del patrón del tablero
++                // que se ve (el de campaña). Al abrirse, la prepara PrepareDaily.
 +                _dailyScreen.Flow.ReduceMotion = _reduceMotionNow;
++                ApplyA11y(_dailyScreen.View, config, profile);
 +            }
 +
 +            if (_mapScreen != null)
@@ -259,8 +299,20 @@ index 00000000..d469f36c
 +fileFormatVersion: 2
 +guid: 056888c2b7e58544caa5abf8af18698b
 \ No newline at end of file
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
+index dde03f4f..9ecf16c5 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
+@@ -181,6 +181,7 @@ public bool SetUpDaily()
+ 
+             _dailyService = service;
+             _dailyScreen = new DailyChallengeScreen(transform, _art, service, context, OnDailyClosed);
++            _dailyScreen.Prepare = PrepareDaily; // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y TalkBack
+             _dailyCardCanvas = new OverlayCanvas("DailyCardCanvas", transform, DailyCardSortingOrder);
+             _dailyCard = new DailyChallengeCard(_dailyCardCanvas.Root, _art, OnDailyCardTap);
+             DailyChallengeRunner runner = gameObject.GetComponent<DailyChallengeRunner>();
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
-index 8aa51d6e..08f88213 100644
+index 8aa51d6e..f7a3dcc7 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
 @@ -881,6 +881,7 @@ public bool PressSettings()
@@ -271,6 +323,19 @@ index 8aa51d6e..08f88213 100644
              ShowAccountCode(); // F3-5: el código de borrado para la web en lugar del UID (Q-B13-21; GameBootstrap.Backend.cs)
              _skipNextDelta = true;
              return true;
+@@ -1555,9 +1556,9 @@ private IEnumerator Start()
+             if (_splash != null)
+             {
+                 // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
+-                // de la victoria) o sin su arte final (release), no sale y no hay espera. Reducir movimiento aún no es un ajuste
+-                // del jugador (07 §7.8): la pose se anima.
+-                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: false))
++                // de la victoria) o sin su arte final (release), no sale y no hay espera. Con Reducir movimiento (B9; 02 §12, fila
++                // «Mensajes de TiTino»), pose quieta y fundido.
++                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: ResolveReduceMotion(profile)))
+                 {
+                     yield return null; // TiTino, a la vista mientras se construye el resto
+                 }
 @@ -1653,6 +1654,7 @@ private IEnumerator Start()
              SetUpLogbook(); // Bitácora del río y cola de takeovers (B4-3; GameBootstrap.Logbook.cs): tarjeta, libreta y takeover
              SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
@@ -288,7 +353,7 @@ index 8aa51d6e..08f88213 100644
              float dt = Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs);
              if (_skipNextDelta)
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.cs b/Assets/_Project/Scripts/UI/GameScreen.cs
-index f2c12924..7c85633e 100644
+index f2c12924..e5e8b19f 100644
 --- a/Assets/_Project/Scripts/UI/GameScreen.cs
 +++ b/Assets/_Project/Scripts/UI/GameScreen.cs
 @@ -910,6 +910,8 @@ public void Tick(float dtMs)
@@ -407,7 +472,7 @@ index f2c12924..7c85633e 100644
              }
  
 -            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber);
-+            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber) * PourMotionFactor(flow); // B9
++            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber) * BoardMotionFactor; // B9: el del tablero en curso
              for (int i = old; i < views.Length; i++)
              {
                  views[i] = CuiaView.Create(_board, i, board[i].Capacity, _art, _cuiaDown, _cuiaUp, _fx);
@@ -529,15 +594,16 @@ index 04bde497..9578696c 100644
              public string Id { get; private set; }
 diff --git a/Assets/_Project/Tests/PlayMode/A11yGameTests.cs b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
 new file mode 100644
-index 00000000..f07f4f18
+index 00000000..2f48f419
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
-@@ -0,0 +1,309 @@
+@@ -0,0 +1,300 @@
 +#nullable enable
 +using System;
 +using System.Collections;
 +using System.Collections.Generic;
 +using System.IO;
++using AF.Economy;
 +using AF.GameFlow;
 +using AF.Localization;
 +using AF.Platform;
@@ -579,7 +645,7 @@ index 00000000..f07f4f18
 +        {
 +            GameBootstrap boot = null!;
 +            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
-+            UseB9Texts();
++            B9LocPlay.Use();
 +            CuiaView view = boot.View!.Views[0];
 +            Press(view, Center(view));
 +            PlayModeHelpers.Step(boot, 384);
@@ -653,19 +719,39 @@ index 00000000..f07f4f18
 +        [UnityTest]
 +        public IEnumerator ReduceMotion_ReachesTheDailyBoardBeforeItIsBuilt()
 +        {
-+            Profile reduced = SettingsScreenTests.ProfileAt(1);
++            // El Reto del río de verdad (como DailyChallengeTests): pool de prueba, almacén en memoria y reloj fijo; se abre la
++            // tarjeta y se mira el tablero ya construido por StartDaily.
++            var bogota = TimeSpan.FromHours(-5);
++            var clock = new ManualClock(new DateTime(2026, 10, 19, 15, 0, 0, DateTimeKind.Utc), bogota);
++            Profile reduced = Wallet.NewProfile(clock);
++            reduced.Progress.MaxLevel = 25;
++            reduced.Progress.NextLevel = 26;
 +            reduced.Settings.ReduceMotion = ReduceMotionSetting.On;
 +            reduced.Settings.HighContrast = true;
-+            GameBootstrap boot = null!;
-+            yield return LoadLevel1(reduced, b => boot = b);
-+            Assert.That(boot.DailyScreen, Is.Not.Null);
-+            Assert.That(boot.DailyScreen!.Prepare, Is.Not.Null, "el Reto prepara su flujo y su vista antes de StartDaily");
-+            boot.Flow!.ReduceMotion = false;
-+            boot.View!.HighContrast = false;
-+            boot.DailyScreen.Prepare!(boot.Flow, boot.View);
-+            Assert.That(boot.Flow.ReduceMotion, Is.True);
-+            Assert.That(boot.View.HighContrast, Is.True);
-+            Assert.That(boot.View.A11y, Is.SameAs(boot.A11y));
++            LaunchOptions.ClockOverride = clock;
++            GameBootstrap.DailyPoolOverride = DailyPlayTestPool.Full;
++            GameBootstrap.DailyStoreOverride = new AF.LiveOps.InMemoryDailyChallengeStore();
++            try
++            {
++                yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(reduced));
++                GameBootstrap boot = GameBootstrap.Current!;
++                PlayModeHelpers.TakeClock(boot);
++                Assert.That(boot.SetUpDaily(), Is.True);
++                boot.DailyRunner!.enabled = false;
++                Assert.That(boot.PressDailyCard(), Is.True, "se abre el Reto");
++                DailyChallengeScreen daily = boot.DailyScreen!;
++                Assert.That(daily.Flow, Is.Not.Null);
++                Assert.That(daily.Flow!.ReduceMotion, Is.True, "el flujo del Reto, con Reducir movimiento desde el principio");
++                Assert.That(daily.View!.Animator.ReduceMotion, Is.True, "el tablero se construyó ya con Reducir movimiento");
++                Assert.That(daily.View.Animator.StepSpeedBase, Is.EqualTo(0.5f).Within(1e-6f));
++                Assert.That(daily.View.HighContrast, Is.True);
++                Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(0.35f).Within(1e-6f), "Alto contraste en el tablero del Reto");
++                Assert.That(daily.View.A11y, Is.SameAs(boot.A11y));
++            }
++            finally
++            {
++                GameBootstrap.ResetDailyOverrides();
++            }
 +        }
 +
 +        [UnityTest]
@@ -740,7 +826,7 @@ index 00000000..f07f4f18
 +            GameBootstrap.A11yHostOverride = host;
 +            GameBootstrap boot = null!;
 +            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
-+            UseB9Texts();
++            B9LocPlay.Use();
 +            Assert.That(boot.A11y, Is.Not.Null);
 +            Assert.That(boot.View!.A11y, Is.SameAs(boot.A11y));
 +            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
@@ -809,36 +895,6 @@ index 00000000..f07f4f18
 +        {
 +            RectTransform body = view.Body;
 +            return RectTransformUtility.WorldToScreenPoint(null, body.TransformPoint(body.rect.center));
-+        }
-+
-+        // Las etiquetas de B9 con su texto: la tabla de la escena más las filas de B9-strings.csv que falten.
-+        private static void UseB9Texts()
-+        {
-+#if UNITY_EDITOR
-+            string root = Path.GetDirectoryName(Application.dataPath) ?? ".";
-+            IReadOnlyList<LocCsvRow> project = LocCsv.Parse(LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile), LocCatalog.StringsFile);
-+            var rows = new List<LocCsvRow>(project);
-+            string extra = Path.Combine(root, "docs/dev/traspaso/spark-enganches/B9-strings.csv");
-+            if (File.Exists(extra))
-+            {
-+                var keys = new HashSet<string>(StringComparer.Ordinal);
-+                for (int i = 1; i < project.Count; i++)
-+                {
-+                    keys.Add(project[i].Fields[0]);
-+                }
-+
-+                IReadOnlyList<LocCsvRow> mine = LocCsv.Parse(LocCsv.Decode(File.ReadAllBytes(extra), "B9-strings.csv"), "B9-strings.csv");
-+                for (int i = 1; i < mine.Count; i++)
-+                {
-+                    if (!keys.Contains(mine[i].Fields[0]))
-+                    {
-+                        rows.Add(mine[i]);
-+                    }
-+                }
-+            }
-+
-+            Loc.Configure(new LocCatalog(LocTable.FromRows(rows, LocCatalog.StringsFile), Loc.Catalog.Facts), LocLocale.SourceLocale, true);
-+#endif
 +        }
 +    }
 +}
