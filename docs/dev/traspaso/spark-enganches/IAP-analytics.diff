@@ -1,0 +1,99 @@
+diff --git a/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs b/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs
+index 8f0bc2be..91920417 100644
+--- a/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs
++++ b/Assets/_Project/Scripts/Analytics/Adapters/AnalyticsStoreService.cs
+@@ -29,7 +29,8 @@ public AnalyticsStoreService(IStoreService inner, AnalyticsService analytics)
+         {
+             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+             _analytics = analytics ?? throw new ArgumentNullException(nameof(analytics));
+-            if (inner is VerifiedStoreService verified)
++            VerifiedStoreService? verified = FindVerified(inner);
++            if (verified != null)
+             {
+                 verified.VerificationChanged += OnVerificationChanged;
+             }
+@@ -47,6 +48,34 @@ public AnalyticsStoreService(IStoreService inner, AnalyticsService analytics)
+         /// <summary>El servicio envuelto.</summary>
+         public IStoreService Inner => _inner;
+ 
++        /// <summary>
++        /// La tienda verificada bajo los envoltorios conocidos (el consentimiento de B12 y la tienda lista de D-040), para oír lo que se
++        /// acredita fuera de una compra abierta: sin esto, con el consentimiento activo o con Play real, los pagos pendientes (OXXO, PSE…)
++        /// que Play cobra después nunca darían <c>af_iap_result</c> ni <c>purchase</c> (08 §8.2).
++        /// </summary>
++        internal static VerifiedStoreService? FindVerified(IStoreService store)
++        {
++            IStoreService? current = store;
++            for (int depth = 0; depth < 8 && current != null; depth++)
++            {
++                switch (current)
++                {
++                    case VerifiedStoreService verified:
++                        return verified;
++                    case ConsentStoreService consent:
++                        current = consent.Inner;
++                        break;
++                    case BillingReadyStoreService ready:
++                        current = ready.Inner;
++                        break;
++                    default:
++                        return null;
++                }
++            }
++
++            return null;
++        }
++
+         /// <inheritdoc />
+         public LocalPrice PriceOf(string sku) => _inner.PriceOf(sku);
+ 
+diff --git a/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs b/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs
+index b1e57493..e2982c56 100644
+--- a/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs
++++ b/Assets/_Project/Scripts/Analytics/Tests/AnalyticsAdaptersTests.cs
+@@ -138,6 +138,45 @@ public void TheVerifiedStore_LogsALivePurchaseOnce_AndALateCreditWithoutContext(
+             Assert.That(analytics.Violations, Is.Empty);
+         }
+ 
++        [Test]
++        public void ALateCredit_IsLoggedAlsoBehindConsentAndTheReadyStore()
++        {
++            // D-040: en el juego la tienda verificada va envuelta por el consentimiento (B12) y por la tienda lista de Play; lo que se
++            // acredita tarde (un pago pendiente que Play cobra después, la cola) también sale como af_iap_result ok y purchase (08 §8.2).
++            (AnalyticsService analytics, FakeAnalyticsSink sink) = NewAnalytics();
++            var clock = new ManualClock(new DateTime(2026, 10, 22, 15, 0, 0, DateTimeKind.Utc), TimeSpan.FromHours(-5));
++            Profile profile = Wallet.NewProfile(clock);
++            var store = new MemoryProfileStore();
++            var wallet = new Wallet(profile, store, clock);
++            var ledger = new StoreLedger(profile, wallet, store, clock);
++            StoreCatalog catalog = ledger.Catalog;
++            var backend = new AF.Backend.FakeBackendClient(clock) { GrantFor = r => CatalogGrants.For(catalog, r.Sku) };
++            var verified = new VerifiedStoreService(ledger, new FakeBillingClient(catalog, "USD", null, clock), backend, clock);
++            var consent = new ConsentStoreService(new BillingReadyStoreService(verified, new AlwaysReady()));
++            consent.Apply(ConsentPolicy.Flags(
++                new ConsentRecord(LegalProfiles.Co1581, 1, new DateTime(2026, 10, 22, 12, 0, 0, DateTimeKind.Utc), true, true, AgeBand.Adult),
++                ConsentConfig.Defaults));
++            var service = new AnalyticsStoreService(consent, analytics);
++
++            backend.FailNext(new AF.Backend.BackendError(AF.Backend.BackendErrorKind.Network));
++            PurchaseResult? pending = null;
++            service.Purchase(new PurchaseRequest("af_coins_3", PurchaseContext.Shop), r => pending = r);
++            Assert.That(pending!.Status, Is.EqualTo(PurchaseStatus.Pending));
++
++            sink.Clear();
++            clock.Advance(TimeSpan.FromHours(1));
++            verified.Pump();
++            Assert.That(sink.Names, Is.EqualTo(new[] { "af_iap_result", "purchase" }), "se oye a la tienda verificada bajo los envoltorios");
++            Assert.That(sink.Events[0].ToJson(), Is.EqualTo("{\"event\":\"af_iap_result\",\"sku\":\"af_coins_3\",\"result\":\"ok\"}"));
++        }
++
++        private sealed class AlwaysReady : IBillingAvailability
++        {
++            public bool IsReady => true;
++
++            public bool CanSell(string sku) => true;
++        }
++
+         // Una compra cancelada de verdad, con el presentador que dice que no.
+         private static PurchaseResult PurchaseResultFor(AnalyticsStoreService service, string sku, bool confirm)
+         {

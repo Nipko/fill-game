@@ -17,7 +17,10 @@ namespace AF.IAP
         /// <summary>Lista: precios de la tienda cargados y compras sin terminar consultadas.</summary>
         Ready = 2,
 
-        /// <summary>Sin Play (sin conexión, sin Play Store o la consulta falló): no se vende; <see cref="PlayBillingClient.Refresh"/> reintenta.</summary>
+        /// <summary>
+        /// Sin Play (sin conexión, sin Play Store, la consulta falló o Play se desconectó): no se vende; <see cref="PlayBillingClient.Refresh"/>
+        /// reintenta.
+        /// </summary>
         Unavailable = 3,
     }
 
@@ -26,6 +29,9 @@ namespace AF.IAP
     {
         /// <summary>Conectada, con precios y con las compras sin terminar ya consultadas.</summary>
         bool IsReady { get; }
+
+        /// <summary>Lista y con el precio de la tienda de <paramref name="sku"/> (nunca se cobra con un precio de respaldo).</summary>
+        bool CanSell(string sku);
     }
 
     /// <summary>
@@ -41,13 +47,20 @@ namespace AF.IAP
     /// <item>Lo cobrado sin terminar (de otra sesión, de otra instalación o los no consumibles que Play devuelve) se consulta al
     /// arrancar (<see cref="Start"/>) y al volver a primer plano (<see cref="Refresh"/>), y <see cref="UnfinishedTransactions"/> lo
     /// devuelve hasta <see cref="Finish"/>. Cada token, una vez por sesión: los repetidos de Play no abren otra verificación.</item>
+    /// <item>La compra abierta solo la responde un aviso en vivo de Play (<see cref="IPlayStorePort.OrderUpdated"/> o
+    /// <see cref="IPlayStorePort.PurchaseFailed"/>), nunca una consulta: un pedido del mismo SKU que llega por la consulta con la hoja
+    /// abierta (otra sesión, otro dispositivo, una pendiente de pago antigua) espera a que la hoja responda y, si no era el suyo, sale
+    /// después por <see cref="UnfinishedChanged"/> sin el contexto de la compra abierta.</item>
     /// <item><see cref="Finish"/> hace <c>ConfirmPurchase</c> (consume o reconoce) solo de un pedido que tiene; nunca antes de acreditar
-    /// (lo garantiza quien llama) y nunca dos veces.</item>
+    /// (lo garantiza quien llama). Si Play no lo terminó y vuelve como cobrado, se vuelve a pedir (ya acreditado: solo se termina).</item>
     /// <item><see cref="AcknowledgeLocal"/> (<c>deferred_ack</c>): con un no consumible, <c>ConfirmPurchase</c> (que solo reconoce); con
     /// un consumible Unity IAP 5.4.4 no permite reconocer sin consumir, así que no hace nada y lo cuenta
     /// (<see cref="AcknowledgeUnsupported"/>): pregunta Q-IAP-2 de <c>docs/dev/iap.md</c>.</item>
-    /// <item>Precios: los de la tienda (importe y moneda; D-025, punto 3 [P]); mientras no lleguen, o si la moneda no se puede escribir,
-    /// los de 05 §4.2 en <c>fallbackCurrency</c>. Mientras no esté lista no se vende (<see cref="BillingReadyStoreService"/>).</item>
+    /// <item>Precios: los de la tienda (importe y moneda; D-025, punto 3 [P]); mientras no lleguen, o si la moneda no se puede escribir o
+    /// el precio no es positivo, los de 05 §4.2 en <c>fallbackCurrency</c>, y ese SKU no se vende (<see cref="CanSell"/>,
+    /// <see cref="BillingReadyStoreService"/>).</item>
+    /// <item>Si Play se desconecta o falla una consulta, queda <see cref="PlayBillingState.Unavailable"/> y <see cref="Refresh"/> vuelve
+    /// a conectar.</item>
     /// </list>
     /// Nunca escribe tokens ni el UID en los logs. Hilo principal.
     /// </summary>
@@ -60,7 +73,7 @@ namespace AF.IAP
         private readonly List<Tracked> _unfinished = new List<Tracked>();
         private readonly HashSet<string> _finished = new HashSet<string>(StringComparer.Ordinal);
         private Open? _open;
-        private bool _fetchingPurchases;
+        private int _generation;
 
         /// <param name="port">Puerto de Play (Unity IAP en el teléfono; uno falso en los tests).</param>
         /// <param name="catalog">Catálogo de 1.0 (los productos que se piden y su tipo).</param>
@@ -73,6 +86,31 @@ namespace AF.IAP
             _fallbackCurrency = fallbackCurrency;
             _port.OrderUpdated += OnOrderUpdated;
             _port.PurchaseFailed += OnPurchaseFailed;
+            _port.Disconnected += OnDisconnected;
+        }
+
+        /// <summary>
+        /// <see cref="PlayBillingClient"/> sobre el puerto que da <paramref name="port"/>; si crearlo lanza (el SDK sin su plugin, por
+        /// ejemplo), sobre <see cref="UnavailablePlayStorePort"/>: el juego arranca y la tienda no vende.
+        /// </summary>
+        public static PlayBillingClient Create(Func<IPlayStorePort> port, StoreCatalog catalog, string fallbackCurrency)
+        {
+            if (port == null)
+            {
+                throw new ArgumentNullException(nameof(port));
+            }
+
+            IPlayStorePort created;
+            try
+            {
+                created = port() ?? new UnavailablePlayStorePort();
+            }
+            catch (Exception)
+            {
+                created = new UnavailablePlayStorePort(); // sin escribir nada en el log: el arranque sigue sin tienda
+            }
+
+            return new PlayBillingClient(created, catalog, fallbackCurrency);
         }
 
         /// <summary>Estado de la conexión.</summary>
@@ -112,22 +150,28 @@ namespace AF.IAP
                 return;
             }
 
+            int generation = ++_generation;
             SetState(PlayBillingState.Starting);
             _port.Connect(connected =>
             {
+                if (generation != _generation)
+                {
+                    return; // un arranque anterior que respondió tarde
+                }
+
                 if (!connected)
                 {
                     SetState(PlayBillingState.Unavailable);
                     return;
                 }
 
-                _port.FetchProducts(Definitions(), OnProducts);
+                _port.FetchProducts(Definitions(), products => OnProducts(generation, products));
             });
         }
 
         /// <summary>
         /// Al volver a primer plano: si no hay Play, vuelve a intentarlo; si la hay, consulta otra vez las compras (lo que Play cobró
-        /// mientras tanto).
+        /// mientras tanto). Si la consulta falla, queda sin Play hasta el próximo intento.
         /// </summary>
         public void Refresh()
         {
@@ -139,7 +183,14 @@ namespace AF.IAP
 
             if (State == PlayBillingState.Ready)
             {
-                FetchPurchases(null);
+                int generation = _generation;
+                FetchPurchases(ok =>
+                {
+                    if (!ok && generation == _generation && State == PlayBillingState.Ready)
+                    {
+                        SetState(PlayBillingState.Unavailable);
+                    }
+                });
             }
         }
 
@@ -158,6 +209,9 @@ namespace AF.IAP
         public bool HasStorePrice(string sku) => sku != null && _prices.ContainsKey(sku);
 
         /// <inheritdoc />
+        public bool CanSell(string sku) => IsReady && HasStorePrice(sku);
+
+        /// <inheritdoc />
         public void Purchase(string sku, string? obfuscatedAccountId, Action<BillingResult> onDone)
         {
             if (onDone == null)
@@ -166,9 +220,9 @@ namespace AF.IAP
             }
 
             _catalog.Get(sku);
-            if (State != PlayBillingState.Ready || _open != null)
+            if (!CanSell(sku) || _open != null)
             {
-                onDone(BillingResult.Failed()); // sin Play o con otra hoja abierta: no se cobra nada
+                onDone(BillingResult.Failed()); // sin Play, sin su precio o con otra hoja abierta: no se cobra nada
                 return;
             }
 
@@ -179,10 +233,13 @@ namespace AF.IAP
         /// <inheritdoc />
         public IReadOnlyList<BillingTransaction> UnfinishedTransactions()
         {
-            var list = new BillingTransaction[_unfinished.Count];
+            var list = new List<BillingTransaction>(_unfinished.Count);
             for (int i = 0; i < _unfinished.Count; i++)
             {
-                list[i] = _unfinished[i].Transaction;
+                if (!_unfinished[i].AwaitingOpen)
+                {
+                    list.Add(_unfinished[i].Transaction);
+                }
             }
 
             return list;
@@ -202,7 +259,7 @@ namespace AF.IAP
             if (t.State == PlayOrderState.Purchased)
             {
                 // ConfirmPurchase consume o reconoce según el tipo registrado (TypeOf), que coincide con consume (VerifiedStoreService).
-                // Si el puerto ya no tiene el pedido, sigue sin terminar en Play y vuelve en la próxima sesión (ya acreditado: solo se termina).
+                // Si Play no lo termina, el pedido vuelve como cobrado y Accept lo vuelve a pedir (ya acreditado: solo se termina).
                 _port.Confirm(token);
             }
         }
@@ -231,8 +288,13 @@ namespace AF.IAP
             AcknowledgeUnsupported++; // Q-IAP-2: Unity IAP 5.4.4 no reconoce un consumible sin consumirlo; no se consume sin acreditar
         }
 
-        private void OnProducts(IReadOnlyList<PlayProductInfo>? products)
+        private void OnProducts(int generation, IReadOnlyList<PlayProductInfo>? products)
         {
+            if (generation != _generation)
+            {
+                return;
+            }
+
             if (products == null)
             {
                 SetState(PlayBillingState.Unavailable);
@@ -243,9 +305,9 @@ namespace AF.IAP
             for (int i = 0; i < products.Count; i++)
             {
                 PlayProductInfo info = products[i];
-                if (info == null || _catalog.Find(info.Sku) == null || info.PriceMicros < 0)
+                if (info == null || _catalog.Find(info.Sku) == null || info.PriceMicros <= 0)
                 {
-                    continue;
+                    continue; // un precio 0 es un producto sin datos de la tienda, no un regalo
                 }
 
                 if (TryLocalPrice(info.Currency, info.PriceMicros, out LocalPrice price))
@@ -255,33 +317,31 @@ namespace AF.IAP
             }
 
             MissingPrices = _catalog.Products.Count - _prices.Count;
-            FetchPurchases(ok => SetState(ok ? PlayBillingState.Ready : PlayBillingState.Unavailable));
+            FetchPurchases(ok =>
+            {
+                if (generation == _generation)
+                {
+                    SetState(ok ? PlayBillingState.Ready : PlayBillingState.Unavailable);
+                }
+            });
         }
 
-        private void FetchPurchases(Action<bool>? onDone)
+        private void FetchPurchases(Action<bool> onDone)
         {
-            if (_fetchingPurchases)
-            {
-                onDone?.Invoke(true);
-                return;
-            }
-
-            _fetchingPurchases = true;
             _port.FetchPurchases(orders =>
             {
-                _fetchingPurchases = false;
                 if (orders != null)
                 {
                     for (int i = 0; i < orders.Count; i++)
                     {
                         if (orders[i] != null)
                         {
-                            Accept(orders[i]);
+                            Accept(orders[i], false);
                         }
                     }
                 }
 
-                onDone?.Invoke(orders != null);
+                onDone(orders != null);
             });
         }
 
@@ -289,21 +349,34 @@ namespace AF.IAP
         {
             if (order != null)
             {
-                Accept(order);
+                Accept(order, true);
             }
         }
 
-        private void Accept(PlayOrder order)
+        private void OnDisconnected()
+        {
+            if (State == PlayBillingState.Ready || State == PlayBillingState.Starting)
+            {
+                _generation++; // lo que respondan tarde las consultas del arranque ya no cuenta
+                SetState(PlayBillingState.Unavailable);
+            }
+        }
+
+        /// <summary>
+        /// Un pedido de Play. <paramref name="live"/>: aviso en vivo (puede responder a la compra abierta); si no, viene de una consulta
+        /// de compras (nunca responde a la compra abierta).
+        /// </summary>
+        private void Accept(PlayOrder order, bool live)
         {
             StoreProduct? product = _catalog.Find(order.Sku);
             bool validToken = ContractRules.IsPurchaseToken(order.Token);
             if (product == null || !validToken)
             {
-                // Un producto que esta versión no vende, o un token que no cumple el contrato: no se verifica. Si era la compra abierta,
-                // falla (si se cobró, Play la devolverá sin terminar y la versión que la venda la terminará).
-                if (_open != null && string.Equals(_open.Sku, order.Sku, StringComparison.Ordinal) && order.State != PlayOrderState.Confirmed)
+                // Un producto que esta versión no vende, o un token que no cumple el contrato: no se verifica. Si era el aviso de la compra
+                // abierta, falla (si se cobró, Play la devolverá sin terminar y la versión que la venda la terminará).
+                if (live && IsOpenFor(order.Sku) && order.State != PlayOrderState.Confirmed)
                 {
-                    Resolve(BillingResult.Failed());
+                    Resolve(BillingResult.Failed(), null);
                 }
 
                 return;
@@ -312,9 +385,9 @@ namespace AF.IAP
             switch (order.State)
             {
                 case PlayOrderState.PaymentPending:
-                    if (IsOpenFor(order.Sku))
+                    if (live && IsOpenFor(order.Sku))
                     {
-                        Resolve(BillingResult.Pending());
+                        Resolve(BillingResult.Pending(), null);
                     }
 
                     return;
@@ -330,24 +403,50 @@ namespace AF.IAP
                     return;
 
                 default:
-                    if (_finished.Contains(order.Token) || Find(order.Token) != null)
-                    {
-                        return; // Play lo repite (consulta y aviso a la vez): un token, una vez
-                    }
-
-                    var t = new Tracked(order.Sku, order.Token, PlayOrderState.Purchased);
-                    _unfinished.Add(t);
-                    if (IsOpenFor(order.Sku))
-                    {
-                        Resolve(BillingResult.Purchased(t.Transaction));
-                    }
-                    else
-                    {
-                        UnfinishedChanged?.Invoke();
-                    }
-
+                    AcceptPurchased(order, live);
                     return;
             }
+        }
+
+        private void AcceptPurchased(PlayOrder order, bool live)
+        {
+            if (_finished.Contains(order.Token))
+            {
+                // Ya acreditado y terminado en esta sesión, pero Play lo sigue teniendo cobrado: el ConfirmPurchase falló. Se vuelve a pedir.
+                _port.Confirm(order.Token);
+                return;
+            }
+
+            Tracked? t = Find(order.Token);
+            if (t != null)
+            {
+                // Repetido. Solo cuenta si es el aviso en vivo de un pedido que la consulta trajo con la hoja abierta: es su respuesta.
+                if (live && t.AwaitingOpen && IsOpenFor(order.Sku))
+                {
+                    t.AwaitingOpen = false;
+                    Resolve(BillingResult.Purchased(t.Transaction), t);
+                }
+
+                return;
+            }
+
+            t = new Tracked(order.Sku, order.Token, PlayOrderState.Purchased);
+            _unfinished.Add(t);
+            if (IsOpenFor(order.Sku))
+            {
+                if (live)
+                {
+                    Resolve(BillingResult.Purchased(t.Transaction), t);
+                }
+                else
+                {
+                    t.AwaitingOpen = true; // de una consulta con la hoja abierta: espera a que la hoja responda
+                }
+
+                return;
+            }
+
+            UnfinishedChanged?.Invoke();
         }
 
         private void OnPurchaseFailed(string? sku, PlayFailureKind kind)
@@ -357,16 +456,20 @@ namespace AF.IAP
                 return;
             }
 
-            Resolve(kind == PlayFailureKind.Cancelled ? BillingResult.Cancelled() : BillingResult.Failed());
+            Resolve(kind == PlayFailureKind.Cancelled ? BillingResult.Cancelled() : BillingResult.Failed(), null);
             if (kind == PlayFailureKind.AlreadyOwned && State == PlayBillingState.Ready)
             {
-                FetchPurchases(null); // la compra anterior sin terminar vuelve y la termina la cola
+                FetchPurchases(_ => { }); // la compra anterior sin terminar vuelve y la termina la cola
             }
         }
 
         private bool IsOpenFor(string sku) => _open != null && string.Equals(_open.Sku, sku, StringComparison.Ordinal);
 
-        private void Resolve(BillingResult result)
+        /// <summary>
+        /// Responde a la compra abierta y suelta los pedidos que la consulta trajo con la hoja abierta y que no eran su respuesta: salen
+        /// por <see cref="UnfinishedChanged"/>, ya con la hoja cerrada, para que la cola los verifique sin el contexto de esta compra.
+        /// </summary>
+        private void Resolve(BillingResult result, Tracked? answer)
         {
             Open? open = _open;
             if (open == null)
@@ -376,6 +479,21 @@ namespace AF.IAP
 
             _open = null;
             open.OnDone(result);
+
+            bool released = false;
+            for (int i = 0; i < _unfinished.Count; i++)
+            {
+                if (_unfinished[i].AwaitingOpen && !ReferenceEquals(_unfinished[i], answer))
+                {
+                    _unfinished[i].AwaitingOpen = false;
+                    released = true;
+                }
+            }
+
+            if (released)
+            {
+                UnfinishedChanged?.Invoke();
+            }
         }
 
         private void SetState(PlayBillingState state)
@@ -412,7 +530,7 @@ namespace AF.IAP
         /// <summary>
         /// El precio de la tienda como <see cref="LocalPrice"/>: unidades menores con los decimales de la función única de precios
         /// (D-025) y, de ellas, el importe. False si la moneda no se puede escribir (no es ISO 4217 o <see cref="LocalPrice"/> no la
-        /// admite todavía): entonces vale el precio de respaldo.
+        /// admite todavía, Q-IAP-3): entonces vale el precio de respaldo y el SKU no se vende.
         /// </summary>
         public static bool TryLocalPrice(string currency, long micros, out LocalPrice price)
         {
@@ -451,6 +569,9 @@ namespace AF.IAP
             public string Token { get; }
 
             public PlayOrderState State { get; set; }
+
+            /// <summary>Llegó por una consulta con la hoja de su SKU abierta: no se ofrece a la cola hasta que la hoja responda.</summary>
+            public bool AwaitingOpen { get; set; }
 
             public BillingTransaction Transaction { get; }
         }

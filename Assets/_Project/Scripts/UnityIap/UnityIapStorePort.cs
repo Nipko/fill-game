@@ -15,10 +15,12 @@ namespace AF.IAP.UnityIap
     /// <item>La tienda se pide por nombre (<c>GooglePlay</c>), sin depender de <c>Resources/BillingMode.json</c>: sin ese archivo Unity IAP
     /// usaría la tienda falsa en Android.</item>
     /// <item>No llama a <c>UnityServices.InitializeAsync</c>: el juego no usa Unity Gaming Services en la 1.0 (08 §7 #9).</item>
-    /// <item>Las compras de <c>FetchPurchases</c> llegan solo por <c>OnPurchasesFetched</c> (<c>ProcessPendingOrdersOnPurchasesFetched(false)</c>).</item>
-    /// <item><c>PendingOrder</c> → <see cref="PlayOrderState.Purchased"/> (se guarda para <see cref="Confirm"/>);
-    /// <c>DeferredOrder</c> → <see cref="PlayOrderState.PaymentPending"/>; <c>ConfirmedOrder</c> (no consumible ya reconocido) →
-    /// <see cref="PlayOrderState.Confirmed"/>.</item>
+    /// <item>Las compras de <c>FetchPurchases</c> llegan solo por <c>OnPurchasesFetched</c> (<c>ProcessPendingOrdersOnPurchasesFetched(false)</c>);
+    /// <see cref="OrderUpdated"/> es solo lo que Play avisa en vivo.</item>
+    /// <item><c>PendingOrder</c> → <see cref="PlayOrderState.Purchased"/> (se guarda para <see cref="Confirm"/> hasta que Unity IAP confirma
+    /// que lo terminó); <c>DeferredOrder</c> → <see cref="PlayOrderState.PaymentPending"/>; <c>ConfirmedOrder</c> (no consumible ya
+    /// reconocido) → <see cref="PlayOrderState.Confirmed"/>.</item>
+    /// <item>Un producto sin cargar (<c>availableToPurchase</c> false) o con precio 0 no da precio.</item>
     /// <item>El token es el <c>purchaseToken</c> de Play (<c>IGoogleOrderInfo.PurchaseToken</c>; Unity IAP lo usa también como
     /// <c>TransactionID</c>). Nunca va a los logs.</item>
     /// </list>
@@ -28,8 +30,8 @@ namespace AF.IAP.UnityIap
     {
         private readonly StoreController _store;
         private readonly Dictionary<string, PendingOrder> _pending = new Dictionary<string, PendingOrder>(StringComparer.Ordinal);
+        private readonly List<Action<IReadOnlyList<PlayOrder>?>> _purchasesWaiting = new List<Action<IReadOnlyList<PlayOrder>?>>();
         private Action<IReadOnlyList<PlayProductInfo>?>? _productsDone;
-        private Action<IReadOnlyList<PlayOrder>?>? _purchasesDone;
 
         public UnityIapStorePort()
         {
@@ -47,6 +49,7 @@ namespace AF.IAP.UnityIap
             _store.OnProductsFetchFailed += OnProductsFetchFailed;
             _store.OnPurchasesFetched += OnPurchasesFetched;
             _store.OnPurchasesFetchFailed += OnPurchasesFetchFailed;
+            _store.OnStoreDisconnected += OnStoreDisconnected;
         }
 
         /// <inheritdoc />
@@ -54,6 +57,9 @@ namespace AF.IAP.UnityIap
 
         /// <inheritdoc />
         public event Action<string?, PlayFailureKind>? PurchaseFailed;
+
+        /// <inheritdoc />
+        public event Action? Disconnected;
 
         /// <inheritdoc />
         public async void Connect(Action<bool> onDone)
@@ -85,6 +91,7 @@ namespace AF.IAP.UnityIap
                 throw new ArgumentNullException(nameof(products));
             }
 
+            DeliverProducts(null); // una consulta anterior sin responder ya no cuenta
             _productsDone = onDone ?? throw new ArgumentNullException(nameof(onDone));
             var definitions = new List<ProductDefinition>(products.Count);
             for (int i = 0; i < products.Count; i++)
@@ -106,7 +113,17 @@ namespace AF.IAP.UnityIap
         /// <inheritdoc />
         public void FetchPurchases(Action<IReadOnlyList<PlayOrder>?> onDone)
         {
-            _purchasesDone = onDone ?? throw new ArgumentNullException(nameof(onDone));
+            if (onDone == null)
+            {
+                throw new ArgumentNullException(nameof(onDone));
+            }
+
+            _purchasesWaiting.Add(onDone);
+            if (_purchasesWaiting.Count > 1)
+            {
+                return; // ya hay una consulta en vuelo: su respuesta va a todos
+            }
+
             try
             {
                 _store.FetchPurchases();
@@ -121,7 +138,7 @@ namespace AF.IAP.UnityIap
         public void Purchase(string sku, string? obfuscatedAccountId)
         {
             Product? product = _store.GetProductById(sku);
-            if (product == null)
+            if (product == null || !product.availableToPurchase)
             {
                 PurchaseFailed?.Invoke(sku, PlayFailureKind.Unavailable); // no publicado en Play Console o sin cargar
                 return;
@@ -150,10 +167,9 @@ namespace AF.IAP.UnityIap
                 return false;
             }
 
-            _pending.Remove(token);
             try
             {
-                _store.ConfirmPurchase(order);
+                _store.ConfirmPurchase(order); // el PendingOrder se suelta en OnPurchaseConfirmed, solo si Play lo terminó
                 return true;
             }
             catch (Exception)
@@ -185,8 +201,18 @@ namespace AF.IAP.UnityIap
 
         private void OnPurchaseConfirmed(Order order)
         {
-            // Nada que hacer: ConfirmPurchase solo se llama tras acreditar. Un FailedOrder aquí deja la compra sin terminar en Play y
-            // vuelve en la próxima consulta (ya en applied_purchases: se termina sin volver a acreditar).
+            // ConfirmPurchase solo se llama tras acreditar. Si Play lo terminó, se suelta el PendingOrder; un FailedOrder lo deja: el
+            // pedido sigue cobrado en Play, vuelve en la próxima consulta y PlayBillingClient lo vuelve a terminar (sin acreditar otra vez).
+            if (order is FailedOrder)
+            {
+                return;
+            }
+
+            string? token = TokenOf(order);
+            if (token != null)
+            {
+                _pending.Remove(token);
+            }
         }
 
         private void OnPurchaseFailedRaw(FailedOrder order)
@@ -205,6 +231,13 @@ namespace AF.IAP.UnityIap
             // Algún producto no está en Play Console (o falló la consulta): vale lo que ya haya en la caché; sin nada, no hay tienda.
             var cached = new List<Product>(_store.GetProducts());
             DeliverProducts(cached.Count > 0 ? cached : null);
+        }
+
+        private void OnStoreDisconnected(StoreConnectionFailureDescription failure)
+        {
+            DeliverProducts(null);
+            DeliverPurchases(null);
+            Disconnected?.Invoke();
         }
 
         private void DeliverProducts(IList<Product>? products)
@@ -228,7 +261,8 @@ namespace AF.IAP.UnityIap
                 Product? p = products[i];
                 ProductMetadata? meta = p?.metadata;
                 string? sku = p?.definition?.id;
-                if (meta == null || string.IsNullOrEmpty(sku) || string.IsNullOrEmpty(meta.isoCurrencyCode) || meta.localizedPrice < 0m)
+                if (p == null || !p.availableToPurchase || meta == null || string.IsNullOrEmpty(sku) || string.IsNullOrEmpty(meta.isoCurrencyCode)
+                    || meta.localizedPrice <= 0m)
                 {
                     continue;
                 }
@@ -283,26 +317,35 @@ namespace AF.IAP.UnityIap
 
         private void DeliverPurchases(IReadOnlyList<PlayOrder>? orders)
         {
-            Action<IReadOnlyList<PlayOrder>?>? done = _purchasesDone;
-            if (done == null)
+            if (_purchasesWaiting.Count == 0)
             {
                 return;
             }
 
-            _purchasesDone = null;
-            done(orders);
+            var waiting = _purchasesWaiting.ToArray();
+            _purchasesWaiting.Clear();
+            for (int i = 0; i < waiting.Length; i++)
+            {
+                waiting[i](orders);
+            }
         }
 
         private static PlayOrder? Map(Order order, PlayOrderState state)
         {
             string? sku = SkuOf(order);
-            string? token = order.Info?.Google?.PurchaseToken;
+            string? token = TokenOf(order);
+            return string.IsNullOrEmpty(sku) || token == null ? null : new PlayOrder(sku!, token, state);
+        }
+
+        private static string? TokenOf(Order order)
+        {
+            string? token = order?.Info?.Google?.PurchaseToken;
             if (string.IsNullOrEmpty(token))
             {
-                token = order.Info?.TransactionID;
+                token = order?.Info?.TransactionID;
             }
 
-            return string.IsNullOrEmpty(sku) || string.IsNullOrEmpty(token) ? null : new PlayOrder(sku!, token!, state);
+            return string.IsNullOrEmpty(token) ? null : token;
         }
 
         private static string? SkuOf(Order order)

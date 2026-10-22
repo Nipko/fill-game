@@ -39,7 +39,7 @@ namespace AF.IAP.Tests
                     EntitlementsFor = r => CatalogGrants.EntitlementsFor(catalog, r.Sku),
                 };
                 Port = new FakePlayStorePort(account);
-                Port.Prices["af_coins_2"] = new KeyValuePair<string, long>("BRL", 4990000L);
+                Port.PriceAll(catalog);
                 Billing = new PlayBillingClient(Port, catalog, "USD");
                 Verified = new VerifiedStoreService(Ledger, Billing, Backend, clock, new BackendSwitch(), new FixedPlayerUid(Uid));
                 Verified.VerificationChanged += e => Events.Add(e.State);
@@ -408,6 +408,21 @@ namespace AF.IAP.Tests
 
             cold.Port.Flush();
             Assert.That(cold.Ready.IsAvailable, Is.True);
+        }
+
+        [Test]
+        public void ASkuWithoutTheStoresPrice_IsNotSold_TheRestIs()
+        {
+            Session s = NewSession();
+            Session cold = s.Reopen(start: false);
+            cold.Port.Prices.Remove("af_coins_6"); // no publicado en Play Console (o moneda que no se escribe)
+            cold.Billing.Start();
+
+            Assert.That(cold.Ready.IsAvailable, Is.True);
+            Assert.That(cold.TryBuy(cold.Ready, "af_coins_6")!.Status, Is.EqualTo(PurchaseStatus.StoreUnavailable),
+                "05 §4.1: no se cobra con el precio de respaldo");
+            Assert.That(cold.Port.Purchases, Is.Empty);
+            Assert.That(cold.Buy("af_coins_2").IsPurchased, Is.True);
         }
 
         [Test]

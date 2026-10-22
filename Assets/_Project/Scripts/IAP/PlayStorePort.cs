@@ -137,17 +137,59 @@ namespace AF.IAP
 
         /// <summary>
         /// <c>ConfirmPurchase</c> del pedido cobrado de <paramref name="token"/>: Unity IAP consume los consumibles y reconoce los no
-        /// consumibles según el tipo con que se registró el producto. False si el puerto no tiene ese pedido sin terminar.
+        /// consumibles según el tipo con que se registró el producto. False si el puerto no tiene ese pedido sin terminar. True solo dice
+        /// que se pidió: si Play falla al terminarlo, el pedido sigue cobrado y vuelve en la próxima consulta.
         /// </summary>
         bool Confirm(string token);
 
         /// <summary>
-        /// Un pedido nuevo o que cambia: lo cobrado (de la compra abierta, de una pendiente de pago que Play cobró o de otra sesión) y
-        /// lo pendiente de pago. Puede repetirse con el mismo token.
+        /// Aviso en vivo de Play (no de una consulta): lo cobrado de la compra abierta o de una pendiente de pago que Play cobró con la app
+        /// abierta, y lo pendiente de pago de la compra abierta. Puede repetirse con el mismo token. Lo de <see cref="FetchPurchases"/>
+        /// llega solo por su <c>onDone</c>.
         /// </summary>
         event Action<PlayOrder>? OrderUpdated;
 
         /// <summary>Falló la compra abierta (SKU, o null si Play no lo dice, y el motivo).</summary>
         event Action<string?, PlayFailureKind>? PurchaseFailed;
+
+        /// <summary>Se perdió la conexión con Play (<c>OnStoreDisconnected</c>): las consultas en vuelo ya respondieron null.</summary>
+        event Action? Disconnected;
+    }
+
+    /// <summary>
+    /// Puerto sin Play: no conecta nunca. Lo usa <c>PlayBillingFactory</c> si Unity IAP falla al crearse en el teléfono, para que el juego
+    /// arranque sin tienda (no con la simulada, que en un build real «vendería» compras que el servidor rechazaría).
+    /// </summary>
+    public sealed class UnavailablePlayStorePort : IPlayStorePort
+    {
+#pragma warning disable CS0067 // nunca hay pedidos, fallos ni desconexiones que avisar
+        /// <inheritdoc />
+        public event Action<PlayOrder>? OrderUpdated;
+
+        /// <inheritdoc />
+        public event Action<string?, PlayFailureKind>? PurchaseFailed;
+
+        /// <inheritdoc />
+        public event Action? Disconnected;
+#pragma warning restore CS0067
+
+        /// <inheritdoc />
+        public void Connect(Action<bool> onDone) => (onDone ?? throw new ArgumentNullException(nameof(onDone)))(false);
+
+        /// <inheritdoc />
+        public void FetchProducts(IReadOnlyList<PlayProductDefinition> products, Action<IReadOnlyList<PlayProductInfo>?> onDone) =>
+            (onDone ?? throw new ArgumentNullException(nameof(onDone)))(null);
+
+        /// <inheritdoc />
+        public void FetchPurchases(Action<IReadOnlyList<PlayOrder>?> onDone) => (onDone ?? throw new ArgumentNullException(nameof(onDone)))(null);
+
+        /// <inheritdoc />
+        public void Purchase(string sku, string? obfuscatedAccountId)
+        {
+            throw new InvalidOperationException("Sin Play no se abre ninguna compra.");
+        }
+
+        /// <inheritdoc />
+        public bool Confirm(string token) => false;
     }
 }

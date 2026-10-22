@@ -113,6 +113,9 @@ namespace AF.IAP.Tests
         /// <summary><see cref="Confirm"/> devuelve false sin terminar nada (la app se cierra antes de consumir).</summary>
         public bool CrashOnConfirm { get; set; }
 
+        /// <summary><see cref="Confirm"/> se pide (true) pero Play no lo termina: el pedido sigue cobrado (el consumo asíncrono falla).</summary>
+        public bool FailConfirm { get; set; }
+
         public List<KeyValuePair<string, string?>> Purchases { get; } = new List<KeyValuePair<string, string?>>();
 
         public List<string> Confirmed { get; } = new List<string>();
@@ -127,6 +130,26 @@ namespace AF.IAP.Tests
         public event Action<PlayOrder>? OrderUpdated;
 
         public event Action<string?, PlayFailureKind>? PurchaseFailed;
+
+        public event Action? Disconnected;
+
+        /// <summary>Play se desconecta.</summary>
+        public void Disconnect() => Disconnected?.Invoke();
+
+        /// <summary>Precio en BRL (columna de 05 §4.2) para todo el catálogo salvo <paramref name="except"/>.</summary>
+        public FakePlayStorePort PriceAll(StoreCatalog catalog, params string[] except)
+        {
+            for (int i = 0; i < catalog.Products.Count; i++)
+            {
+                StoreProduct p = catalog.Products[i];
+                if (Array.IndexOf(except, p.Sku) < 0)
+                {
+                    Prices[p.Sku] = new KeyValuePair<string, long>("BRL", (long)(StorePrices.Local(p.UsdPrice, "BRL").Amount * 1000000m));
+                }
+            }
+
+            return this;
+        }
 
         public void Connect(Action<bool> onDone)
         {
@@ -228,6 +251,11 @@ namespace AF.IAP.Tests
             if (entry.State != FakePlayState.Purchased)
             {
                 return false;
+            }
+
+            if (FailConfirm)
+            {
+                return true; // pedido, pero Play no lo terminó
             }
 
             OnConfirm?.Invoke(token);

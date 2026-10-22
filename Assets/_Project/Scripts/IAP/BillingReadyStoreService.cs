@@ -7,8 +7,9 @@ namespace AF.IAP
     /// La tienda solo vende cuando la tienda de la plataforma está lista (<see cref="IBillingAvailability"/>: Play conectada, con sus
     /// precios y con las compras sin terminar ya consultadas; D-040). Mientras tanto <see cref="IsAvailable"/> es false (el Mercado dice
     /// «tienda no disponible» y Aguas estancadas no ofrece Puñado ni Balsa) y toda compra da
-    /// <see cref="PurchaseStatus.StoreUnavailable"/> sin abrir nada, para no cobrar con un precio de respaldo (05 §4.1: «precio local con
-    /// impuestos visible antes de comprar»). No cambia el contrato de la tienda envuelta (<see cref="VerifiedStoreService"/>): la cola de
+    /// <see cref="PurchaseStatus.StoreUnavailable"/> sin abrir nada; y un SKU sin el precio de la tienda (no publicado en Play Console o con
+    /// una moneda que no se escribe) tampoco se vende (<see cref="IBillingAvailability.CanSell"/>), para no cobrar con un precio de
+    /// respaldo (05 §4.1: «precio local con impuestos visible antes de comprar»). No cambia el contrato de la tienda envuelta (<see cref="VerifiedStoreService"/>): la cola de
     /// verificación sigue con su <see cref="VerifiedStoreService.Resume"/> y su <see cref="VerifiedStoreService.Pump"/>. Hilo principal.
     /// </summary>
     public sealed class BillingReadyStoreService : IStoreService
@@ -50,7 +51,7 @@ namespace AF.IAP
                 throw new ArgumentNullException(nameof(onDone));
             }
 
-            if (!_billing.IsReady)
+            if (!_billing.CanSell(request.Sku))
             {
                 StoreProduct product = Catalog.Get(request.Sku);
                 onDone(new PurchaseResult(request, product, _inner.IsPurchasing ? PurchaseStatus.Busy : PurchaseStatus.StoreUnavailable));

@@ -85,8 +85,19 @@ namespace AF.Tests.PlayMode
             // Play cobra; la app vuelve a primer plano y consulta antes del aviso de la compra.
             string token = port.PayOpenSheetSilently();
             billing.Refresh();
+            for (int i = 0; i < 5; i++)
+            {
+                yield return null;
+                verified.Resume();
+                verified.Pump();
+            }
+
+            Assert.That(result, Is.Null, "la consulta no responde a la hoja abierta");
+            Assert.That(backend.VerifyRequests, Is.Empty, "ni la cola la toma mientras la hoja sigue abierta");
+
+            port.Redeliver(token); // el aviso de la compra llega tarde: es la respuesta
             yield return WaitFor(() => backend.VerifyRequests.Count == 1, 30);
-            port.Redeliver(token); // el aviso de la compra llega tarde
+            port.Redeliver(token); // Play lo repite
             for (int i = 0; i < 5; i++)
             {
                 yield return null;
@@ -133,6 +144,7 @@ namespace AF.Tests.PlayMode
             };
             _host = new GameObject("FramePlayPort");
             FramePlayPort port = _host.AddComponent<FramePlayPort>();
+            port.Price("af_coins_2", "MXN", 19000000L);
             var billing = new PlayBillingClient(port, catalog, "USD");
             var verified = new VerifiedStoreService(ledger, billing, backend, clock, new BackendSwitch(), new FixedPlayerUid(Uid));
             billing.UnfinishedChanged += () => verified.Resume();
@@ -188,6 +200,8 @@ namespace AF.Tests.PlayMode
 
 #pragma warning disable CS0067 // este puerto no falla compras
             public event Action<string?, PlayFailureKind>? PurchaseFailed;
+
+            public event Action? Disconnected;
 #pragma warning restore CS0067
 
             public void Price(string sku, string currency, long micros) => _prices[sku] = new KeyValuePair<string, long>(currency, micros);

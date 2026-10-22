@@ -14,7 +14,7 @@ index b9026c64..2535baf3 100644
    "includePlatforms": [],
    "excludePlatforms": [],
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
-index 6e57ecc3..f599b163 100644
+index 6e57ecc3..20a889a6 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Backend.cs
 @@ -3,10 +3,12 @@
@@ -100,7 +100,7 @@ index 6e57ecc3..f599b163 100644
  
              _revocation = new LocalRevocation(profile, ledger.Wallet, batch, capsClock, _rcConfigs?.Revocation);
              _ledgerRestore = new LedgerRestore(ledger, _revocation, client, _backendSwitch, _verifiedStore);
-@@ -132,7 +160,30 @@ private IStoreService CreateStore(Profile profile, StoreLedger ledger, ISimulate
+@@ -132,7 +160,71 @@ private IStoreService CreateStore(Profile profile, StoreLedger ledger, ISimulate
                  };
              }
  
@@ -129,28 +129,78 @@ index 6e57ecc3..f599b163 100644
 +        private void OnPlayStateChanged()
 +        {
 +            _market?.Refresh();
-         }
- 
-         private static IBackendClient CreateBackendClient(BackendMode mode, IClock clock)
-@@ -163,6 +214,21 @@ internal void ResumeBackend(bool foreground)
-                 return;
-             }
- 
-+            // D-040: Play se conecta tras decidir el consentimiento (este método va después de SetUpConsent) y nunca con la banda < 13
-+            // (08 §7: «sin IAP»); al volver a primer plano, consulta lo que Play cobró mientras tanto.
++        }
++
++        /// <summary>
++        /// D-040: Play se conecta tras decidir el consentimiento (va en <see cref="ResumeBackend"/>, después de <c>SetUpConsent</c>), nunca
++        /// con la banda &lt; 13 (08 §7: «sin IAP») y solo con el UID de Firebase ya creado, para que cada compra lleve
++        /// <c>setObfuscatedAccountId</c> y la cola la guarde con él (08 §10.1; el usuario anónimo lo crea la primera llamada autenticada, el
++        /// <c>restoreLedger</c> del arranque, que vuelve a llamar aquí). Al volver a primer plano, consulta lo que Play cobró mientras tanto
++        /// o vuelve a conectar si se cayó.
++        /// </summary>
++        private void StartPlayBilling(bool foreground)
++        {
 +            PlayBillingClient? play = _playBilling;
-+            if (play != null && !PlayerUnder13())
++            if (play == null || ProfileLocked || PlayerUnder13())
 +            {
-+                if (play.State == PlayBillingState.NotStarted)
++                return;
++            }
++
++            if (play.State == PlayBillingState.NotStarted)
++            {
++                if (FirebaseAuthUid.Current != null)
 +                {
 +                    play.Start();
 +                }
-+                else if (foreground)
-+                {
-+                    play.Refresh();
-+                }
++
++                return;
 +            }
++
++            if (foreground)
++            {
++                play.Refresh();
++            }
++        }
++
++        /// <summary>
++        /// Con Play real, un SKU sin el precio de la tienda no se vende (<see cref="BillingReadyStoreService"/>): la segunda confirmación
++        /// de 13-17 tampoco se abre con un precio de respaldo (05 §4.1; Q-B12-6).
++        /// </summary>
++        private PurchaseStatus? BillingPrecheck(StoreProduct product)
++        {
++            PlayBillingClient? play = _playBilling;
++            return play != null && !play.CanSell(product.Sku) ? PurchaseStatus.StoreUnavailable : (PurchaseStatus?)null;
+         }
+ 
+         private static IBackendClient CreateBackendClient(BackendMode mode, IClock clock)
+@@ -163,6 +255,8 @@ internal void ResumeBackend(bool foreground)
+                 return;
+             }
+ 
++            StartPlayBilling(foreground); // D-040
 +
              using (Saves())
              {
                  store.Resume();
+@@ -206,6 +300,7 @@ public bool RestoreLedgerNow()
+         private void OnLedgerRestored(LedgerRestoreReport report)
+         {
+             LastLedgerRestore = report;
++            StartPlayBilling(false); // D-040: tras la primera llamada autenticada ya hay UID para setObfuscatedAccountId
+             if (!report.Ran)
+             {
+                 Debug.LogWarning(LogPrefix + "restoreLedger: " + report.Error);
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
+index 8a141fcd..abe51d51 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
+@@ -206,7 +206,8 @@ private void SetUpConsent(IClock clock, IConsentStore store)
+             if (_consentStore != null)
+             {
+                 _consentStore.Confirmation = _consentScreen; // Q-T4 (a): la segunda confirmación con 13-17
+-                _consentStore.Precheck = (product, request) => _storeLedger?.CheckPurchasable(product, request); // nunca confirmar lo imposible
++                _consentStore.Precheck = (product, request) =>
++                    BillingPrecheck(product) ?? _storeLedger?.CheckPurchasable(product, request); // nunca confirmar lo imposible (ni sin precio de Play, D-040)
+             }
+         }
+ 

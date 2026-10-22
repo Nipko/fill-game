@@ -16,9 +16,7 @@ namespace AF.IAP.Tests
 
         private static (PlayBillingClient Client, FakePlayStorePort Port) Ready(FakePlayAccount? account = null, string fallback = "USD")
         {
-            var port = new FakePlayStorePort(account);
-            port.Prices["af_coins_2"] = new KeyValuePair<string, long>("BRL", 4990000L);
-            port.Prices["af_noads"] = new KeyValuePair<string, long>("BRL", 12900000L);
+            var port = new FakePlayStorePort(account).PriceAll(StoreCatalog.Default);
             var client = new PlayBillingClient(port, StoreCatalog.Default, fallback);
             client.Start();
             Assert.That(client.State, Is.EqualTo(PlayBillingState.Ready));
@@ -65,7 +63,11 @@ namespace AF.IAP.Tests
         [Test]
         public void Prices_AreTheStoresAmountAndCurrency_WithThe05PricesAsFallback()
         {
-            (PlayBillingClient client, _) = Ready(fallback: "COP");
+            var port = new FakePlayStorePort();
+            port.Prices["af_coins_2"] = new KeyValuePair<string, long>("BRL", 4990000L);
+            port.Prices["af_noads"] = new KeyValuePair<string, long>("BRL", 12900000L);
+            var client = new PlayBillingClient(port, StoreCatalog.Default, "COP");
+            client.Start();
             StoreCatalog catalog = StoreCatalog.Default;
 
             Assert.That(client.PriceOf(catalog.Get("af_coins_2")), Is.EqualTo(new LocalPrice("BRL", 4.99m)), "D-025: importe y moneda de la tienda");
@@ -74,6 +76,12 @@ namespace AF.IAP.Tests
             Assert.That(client.HasStorePrice("af_coins_3"), Is.False);
             Assert.That(client.PriceOf(catalog.Get("af_coins_3")), Is.EqualTo(StorePrices.Local(4.99m, "COP")), "sin precio de Play: el de 05 §4.2");
             Assert.That(client.MissingPrices, Is.EqualTo(catalog.Products.Count - 2));
+            Assert.That(client.CanSell("af_coins_2"), Is.True);
+            Assert.That(client.CanSell("af_coins_3"), Is.False, "sin el precio de la tienda no se vende");
+
+            BillingResult result = Buy(client, "af_coins_3")!;
+            Assert.That(result.Kind, Is.EqualTo(BillingResultKind.Failed));
+            Assert.That(port.Purchases, Is.Empty, "no se abre la hoja de Play con un precio de respaldo");
         }
 
         [Test]
@@ -95,11 +103,13 @@ namespace AF.IAP.Tests
             var port = new FakePlayStorePort();
             port.Prices["af_coins_2"] = new KeyValuePair<string, long>("brl", 4990000L);
             port.Prices["af_coins_3"] = new KeyValuePair<string, long>("BRL", -1L);
+            port.Prices["af_coins_4"] = new KeyValuePair<string, long>("BRL", 0L);
             var client = new PlayBillingClient(port, StoreCatalog.Default, "USD");
             client.Start();
 
             Assert.That(client.HasStorePrice("af_coins_2"), Is.False, "no es un código ISO 4217");
             Assert.That(client.HasStorePrice("af_coins_3"), Is.False);
+            Assert.That(client.HasStorePrice("af_coins_4"), Is.False, "precio 0: producto sin datos de la tienda");
             Assert.That(client.PriceOf(StoreCatalog.Default.Get("af_coins_2")), Is.EqualTo(new LocalPrice("USD", 1.99m)));
         }
 
@@ -242,7 +252,7 @@ namespace AF.IAP.Tests
         }
 
         [Test]
-        public void AQueryWhileTheSheetIsOpen_AnswersTheOpenPurchase_AndThePurchaseEventIsIgnored()
+        public void AQueryWhileTheSheetIsOpen_DoesNotAnswerIt_ThePurchaseEventDoes()
         {
             // La hoja de Play pausa la app; al volver, el juego consulta las compras (Refresh) antes de que llegue la respuesta.
             (PlayBillingClient client, FakePlayStorePort port) = Ready();
@@ -259,13 +269,109 @@ namespace AF.IAP.Tests
 
             FakePlayEntry entry = port.Account.Add("af_coins_2", FakePlayState.Purchased, Uid); // Play ya la cobró
             client.Refresh();
-            Assert.That(result!.Kind, Is.EqualTo(BillingResultKind.Purchased));
-            Assert.That(result.Transaction!.Token, Is.EqualTo(entry.Token));
+            Assert.That(result, Is.Null, "una consulta nunca responde a la hoja abierta");
+            Assert.That(client.UnfinishedTransactions(), Is.Empty, "ni se ofrece a la cola mientras la hoja sigue abierta");
 
             port.Redeliver(entry.Token); // llega el aviso de la compra
             Assert.That(calls, Is.EqualTo(1));
+            Assert.That(result!.Kind, Is.EqualTo(BillingResultKind.Purchased));
+            Assert.That(result.Transaction!.Token, Is.EqualTo(entry.Token));
             Assert.That(unfinishedEvents, Is.EqualTo(0));
             Assert.That(client.UnfinishedTransactions().Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AnotherSessionsOrderOfTheSameSku_FetchedWithTheSheetOpen_IsReleasedWhenTheSheetCloses()
+        {
+            (PlayBillingClient client, FakePlayStorePort port) = Ready();
+            port.NextOutcome = FakePlayOutcome.Silent;
+            BillingResult? result = null;
+            client.Purchase("af_rescue", Uid, r => result = r);
+            int unfinishedEvents = 0;
+            client.UnfinishedChanged += () => unfinishedEvents++;
+            FakePlayEntry other = port.Account.Add("af_rescue", FakePlayState.Purchased); // de otro dispositivo
+            client.Refresh();
+            Assert.That(result, Is.Null, "no se le pone el contexto (nivel, Cuia de rescate) de la compra abierta");
+
+            port.Respond(FakePlayOutcome.Cancel);
+
+            Assert.That(result!.Kind, Is.EqualTo(BillingResultKind.Cancelled), "el rechazo de la Balsa cuenta");
+            Assert.That(unfinishedEvents, Is.EqualTo(1), "ya con la hoja cerrada, a la cola sin contexto");
+            Assert.That(client.UnfinishedTransactions()[0].Token, Is.EqualTo(other.Token));
+        }
+
+        [Test]
+        public void AnOldPaymentPendingOrder_FetchedWithTheSheetOpen_DoesNotAnswerPending()
+        {
+            var account = new FakePlayAccount();
+            account.Add("af_coins_2", FakePlayState.PaymentPending);
+            (PlayBillingClient client, FakePlayStorePort port) = Ready(account);
+            port.NextOutcome = FakePlayOutcome.Silent;
+            BillingResult? result = null;
+            client.Purchase("af_coins_2", Uid, r => result = r);
+
+            client.Refresh();
+            Assert.That(result, Is.Null);
+
+            port.Respond(FakePlayOutcome.Purchase);
+            Assert.That(result!.Kind, Is.EqualTo(BillingResultKind.Purchased));
+        }
+
+        [Test]
+        public void Disconnected_StopsSelling_AndRefreshReconnects()
+        {
+            (PlayBillingClient client, FakePlayStorePort port) = Ready();
+            int changes = 0;
+            client.StateChanged += () => changes++;
+
+            port.Disconnect();
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Unavailable));
+            Assert.That(client.CanSell("af_coins_2"), Is.False);
+            Assert.That(Buy(client)!.Kind, Is.EqualTo(BillingResultKind.Failed));
+            Assert.That(port.Purchases, Is.Empty);
+
+            client.Refresh();
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Ready));
+            Assert.That(port.ConnectCalls, Is.EqualTo(2));
+            Assert.That(changes, Is.EqualTo(3), "sin Play, conectando, lista");
+        }
+
+        [Test]
+        public void Refresh_WhenTheQueryFails_IsUnavailableUntilTheNextTry()
+        {
+            (PlayBillingClient client, FakePlayStorePort port) = Ready();
+            port.FailPurchases = true;
+            client.Refresh();
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Unavailable));
+
+            port.FailPurchases = false;
+            client.Refresh();
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Ready));
+        }
+
+        [Test]
+        public void LateAnswersOfAnAbandonedStart_AreIgnored()
+        {
+            var port = new FakePlayStorePort { Async = true }.PriceAll(StoreCatalog.Default);
+            var client = new PlayBillingClient(port, StoreCatalog.Default);
+            client.Start();
+            port.Disconnect(); // antes de que Play conteste
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Unavailable));
+
+            client.Refresh(); // un arranque nuevo
+            port.Flush(); // contestan el primero (tarde) y el nuevo
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Ready));
+            Assert.That(port.FetchPurchasesCalls, Is.EqualTo(1), "solo el arranque vigente sigue con las consultas");
+        }
+
+        [Test]
+        public void Create_WhenTheSdkThrows_TheStoreIsUnavailable_AndTheGameGoesOn()
+        {
+            PlayBillingClient client = PlayBillingClient.Create(() => throw new InvalidOperationException("sin plugin"), StoreCatalog.Default, "USD");
+            client.Start();
+
+            Assert.That(client.State, Is.EqualTo(PlayBillingState.Unavailable));
+            Assert.That(Buy(client)!.Kind, Is.EqualTo(BillingResultKind.Failed));
         }
 
         [Test]
@@ -328,6 +434,26 @@ namespace AF.IAP.Tests
 
             (PlayBillingClient next, _) = Ready(account);
             Assert.That(next.UnfinishedTransactions().Count, Is.EqualTo(1), "vuelve: la cola la termina sin acreditarla otra vez");
+        }
+
+        [Test]
+        public void Finish_WhenPlayFailsToConsume_TheNextQueryAsksAgain_WithoutTrackingItAgain()
+        {
+            (PlayBillingClient client, FakePlayStorePort port) = Ready();
+            string token = Buy(client)!.Transaction!.Token;
+            port.FailConfirm = true;
+            client.Finish("af_coins_2", token, true);
+            Assert.That(port.Account.StateOf(token), Is.EqualTo(FakePlayState.Purchased), "el consumo asíncrono falló");
+            int unfinishedEvents = 0;
+            client.UnfinishedChanged += () => unfinishedEvents++;
+
+            port.FailConfirm = false;
+            client.Refresh(); // p. ej. tras ITEM_ALREADY_OWNED, o al volver a primer plano
+
+            Assert.That(port.Account.StateOf(token), Is.EqualTo(FakePlayState.Consumed), "se vuelve a pedir: ya estaba acreditado");
+            Assert.That(client.UnfinishedTransactions(), Is.Empty, "no vuelve a la cola");
+            Assert.That(unfinishedEvents, Is.EqualTo(0));
+            Assert.That(Buy(client)!.Kind, Is.EqualTo(BillingResultKind.Purchased), "y se puede volver a comprar");
         }
 
         [Test]
