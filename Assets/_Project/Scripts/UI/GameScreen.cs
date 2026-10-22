@@ -1609,12 +1609,18 @@ namespace AF.UI
             }
         }
 
-        // Soltar dentro del área táctil es un toque (C1-C6); soltar fuera cancela (C10, el arrastre, queda fuera de v0).
+        // Soltar dentro del área táctil es un toque (C1-C6); soltar fuera, sobre otra cuia y tras ≥ 24 dp, es el arrastre (C10;
+        // B11, GameScreen.Drag.cs); si no, cancela.
         private void OnCuiaUp(int index, bool inside)
         {
             if (inside)
             {
                 _actions.TapCuia(index);
+            }
+            else if ((uint)index < (uint)_views.Length)
+            {
+                CuiaView view = _views[index];
+                TryDragPour(index, _pressPreview == index, view.PressScreenPosition, view.ReleaseScreenPosition, view.PointerCamera);
             }
 
             if (_pressPreview == index)

@@ -1998,7 +1998,9 @@ namespace AF.UI
                     Debug.LogWarning(LogPrefix + overrides.Problems[i]);
                 }
 
-                LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w));
+                // lvl_label_override (08 §9; B11): fuente local vacía hasta leerlo de Remote Config, como level_overrides.
+                LevelLabelOverrides labels = LevelLabelSource.Create(w => Debug.LogWarning(LogPrefix + w));
+                LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w), labels);
                 watch.Stop();
                 if (DevProbe.Enabled)
                 {

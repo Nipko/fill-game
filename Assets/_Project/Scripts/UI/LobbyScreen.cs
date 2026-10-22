@@ -487,8 +487,11 @@ namespace AF.UI
         /// <summary>Botón de Ajustes: abre <see cref="SettingsScreen"/> (tarea L3).</summary>
         public Button SettingsButton => _settings.Button;
 
-        /// <summary>Botón Volver de la superposición («Volver al inicio» en Sin canoas).</summary>
-        public Button BackButton => _noCanoes.Visible ? _noCanoes.HomeButton : _back.Button;
+        /// <summary>
+        /// Botón Volver de la superposición: en Sin canoas, su X, que vuelve al inicio (desde B11 su enlace de abajo es «Volver al
+        /// Mapa del río», <c>NoCanoes.HomeButton</c>, que abre el Mapa encima).
+        /// </summary>
+        public Button BackButton => _noCanoes.Visible ? _noCanoes.CloseButton : _back.Button;
 
         /// <summary>Contador de semillas.</summary>
         public RectTransform SeedsRect => _seeds;

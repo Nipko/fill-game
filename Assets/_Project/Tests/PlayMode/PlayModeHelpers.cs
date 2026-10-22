@@ -115,11 +115,26 @@ namespace AF.Tests.PlayMode
             NoSlothRestartNoticeUnlessSet();
             NoTutorialSlothUnlessSet();
             NoTutorialFingerUnlessSet();
+            NoTutorialTipsUnlessSet();
             NoL10SequenceUnlessSet();
             NoContentEndMapUnlessSet();
             NoIdleHintUnlessSet();
             NoShuffleUnlessSet();
             NoLogbookUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga las ayudas del tutorial de B11 (los tooltips del 6, el 8 y el 11 y el dedo de la Cuia extra del 8) si el test no
+        /// las fijó (<see cref="GameScreen.TutorialTipsOverride"/> = null): los tests que no tratan de ellas ven los modales, la
+        /// victoria y la bandeja como antes, y sus capturas igual. Los que las prueban (<c>TutorialTipsHooksTests</c>) las encienden
+        /// y las vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoTutorialTipsUnlessSet()
+        {
+            if (GameScreen.TutorialTipsOverride == null)
+            {
+                GameScreen.TutorialTipsOverride = false;
+            }
         }
 
         /// <summary>

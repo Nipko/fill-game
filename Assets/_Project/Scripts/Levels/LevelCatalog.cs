@@ -96,6 +96,7 @@ namespace AF.Levels
         private readonly bool[]? _warned;
         private readonly int[] _overridden;
         private readonly int[] _fallbacks;
+        private readonly int[] _relabeled;
         private readonly Action<string>? _warn;
 
         private LevelCatalog(
@@ -109,6 +110,7 @@ namespace AF.Levels
             string?[]? fallbackWarnings,
             int[] overridden,
             int[] fallbacks,
+            int[] relabeled,
             MechanicSwitches switches,
             Action<string>? warn)
         {
@@ -123,6 +125,7 @@ namespace AF.Levels
             _warned = fallbackWarnings == null ? null : new bool[fallbackWarnings.Length];
             _overridden = overridden;
             _fallbacks = fallbacks;
+            _relabeled = relabeled;
             Switches = switches;
             _warn = warn;
         }
@@ -138,6 +141,12 @@ namespace AF.Levels
         /// mayor.
         /// </summary>
         public IReadOnlyList<int> FallbackLevels => _fallbacks;
+
+        /// <summary>
+        /// Niveles servidos con la etiqueta de <c>lvl_label_override</c> en lugar de la del paquete (B11), de menor a mayor: el
+        /// <c>source = override</c> de <c>af_label_shown</c> (08 §8.2) frente a <c>pack</c>.
+        /// </summary>
+        public IReadOnlyList<int> RelabeledLevels => _relabeled;
 
         /// <summary>Desplazamiento del número de campaña respecto al de los paquetes (0 en producción).</summary>
         public int LevelOffset { get; }
@@ -191,7 +200,8 @@ namespace AF.Levels
         /// mecánica apagada en <paramref name="switches"/> se sustituye por su entrada de <paramref name="overrides"/> si la hay y
         /// no usa a su vez una mecánica apagada; si no, se sirve el publicado y <see cref="Serve"/> escribe en
         /// <paramref name="warn"/> un aviso [P] la primera vez que lo carga. Los avisos se componen aquí, una vez: cargar un nivel
-        /// no asigna memoria.
+        /// no asigna memoria. Con <paramref name="labels"/> (<c>lvl_label_override</c>, 08 §9; tarea B11), cada nivel servido lleva
+        /// la etiqueta de la tabla (<see cref="LevelLabelOverrides.Apply"/>): la que se muestra y paga (03 §7).
         /// </summary>
         /// <exception cref="ArgumentException">No hay paquetes o alguno es null.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="levelOffset"/> fuera de 0..<see cref="MaxLevelOffset"/>.</exception>
@@ -201,7 +211,8 @@ namespace AF.Levels
             int levelOffset,
             LevelOverrides? overrides,
             MechanicSwitches switches,
-            Action<string>? warn)
+            Action<string>? warn,
+            LevelLabelOverrides? labels = null)
         {
             if (packs == null || packs.Count == 0)
             {
@@ -307,6 +318,21 @@ namespace AF.Levels
                 }
             }
 
+            // lvl_label_override (B11): sobre el nivel servido, sea el publicado o su override.
+            var relabeled = new List<int>();
+            if (labels != null && labels.Count > 0)
+            {
+                LevelDefinition[] before = served;
+                served = labels.Apply(served, numbers);
+                for (int i = 0; i < total; i++)
+                {
+                    if (!ReferenceEquals(served[i], before[i]))
+                    {
+                        relabeled.Add(numbers[i]);
+                    }
+                }
+            }
+
             return new LevelCatalog(
                 packArray,
                 numbers,
@@ -318,6 +344,7 @@ namespace AF.Levels
                 warnings,
                 overridden.ToArray(),
                 fallbacks.ToArray(),
+                relabeled.ToArray(),
                 switches,
                 warn);
         }
@@ -371,11 +398,23 @@ namespace AF.Levels
             return i < 0 ? null : _published[i];
         }
 
-        /// <summary>El nivel de campaña <paramref name="level"/> se sirve con su override de <c>level_overrides</c> (KS1).</summary>
+        /// <summary>
+        /// El nivel de campaña <paramref name="level"/> se sirve con su override de <c>level_overrides</c> (KS1). Un nivel solo
+        /// reetiquetado por <c>lvl_label_override</c> (B11) no cuenta: la lista de los sustituidos, no la identidad del nivel.
+        /// Sin asignaciones.
+        /// </summary>
         public bool IsOverridden(int level)
         {
-            int i = IndexOf(level);
-            return i >= 0 && !ReferenceEquals(_definitions[i], _published[i]);
+            return Array.BinarySearch(_overridden, level) >= 0;
+        }
+
+        /// <summary>
+        /// El nivel de campaña <paramref name="level"/> se sirve con la etiqueta de <c>lvl_label_override</c> (B11), no con la del
+        /// paquete: <c>af_label_shown</c> con <c>source = override</c> (08 §8.2). Sin asignaciones.
+        /// </summary>
+        public bool IsRelabeled(int level)
+        {
+            return Array.BinarySearch(_relabeled, level) >= 0;
         }
 
         /// <summary>Paquete que contiene el nivel de campaña <paramref name="level"/> (el del publicado), o null si no está.</summary>

@@ -1188,15 +1188,29 @@ namespace AF.Presentation
             return TinajaSwayDeg * Mathf.Sin(2f * Mathf.PI * t) * (1f - t);
         }
 
+        /// <summary>Posición de pantalla (px) del último touch-down sobre esta cuia (C10, el arrastre; tarea B11).</summary>
+        public Vector2 PressScreenPosition { get; private set; }
+
+        /// <summary>Posición de pantalla (px) del último touch-up del dedo que bajó en esta cuia (C10; B11).</summary>
+        public Vector2 ReleaseScreenPosition { get; private set; }
+
+        /// <summary>Cámara del último evento de puntero (null en un lienzo Screen Space Overlay; C10; B11).</summary>
+        public Camera? PointerCamera { get; private set; }
+
         /// <inheritdoc />
         public void OnPointerDown(PointerEventData eventData)
         {
+            PressScreenPosition = eventData.position;
+            ReleaseScreenPosition = eventData.position;
+            PointerCamera = eventData.pressEventCamera;
             _onDown?.Invoke(Index);
         }
 
         /// <inheritdoc />
         public void OnPointerUp(PointerEventData eventData)
         {
+            ReleaseScreenPosition = eventData.position;
+            PointerCamera = eventData.pressEventCamera;
             bool inside = RectTransformUtility.RectangleContainsScreenPoint(_root, eventData.position, eventData.pressEventCamera);
             _onUp?.Invoke(Index, inside);
         }
