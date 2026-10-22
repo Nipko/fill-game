@@ -44,8 +44,58 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            RiverMapScreen.PlateTestStackedWorld = 0;
+            RiverMapScreen.PlateTestObstacle = null;
+            RiverMapScreen.PlateTestObstacleWorld = 0;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
+        }
+
+        /// <summary>
+        /// La placa del mundo siguiente nunca se oculta en la Cuenca (revisión de la observación 2): forzada a pisar algo
+        /// (<see cref="RiverMapScreen.PlateTestStackedWorld"/>) y sin ningún sitio ni en dos líneas
+        /// (<see cref="RiverMapScreen.PlateTestObstacle"/> en todo el mapa), sale en una línea donde la puso FX7; otra placa en el
+        /// mismo caso sí deja de salir.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator BasinPlates_TheNextWorld_IsNeverHidden_EvenWithNoRoom([Values(LocLocale.SourceLocale, LocLocale.English)] string locale)
+        {
+            yield return Open(locale, 1.3f, 41);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            map.SetView(MapView.Basin);
+            map.Tick(16f);
+            Assert.That(map.SilhouetteCount, Is.GreaterThanOrEqualTo(2), "placas de mundos futuros jugando el 41");
+            int next = map.SilhouetteWorld(0);
+            int far = map.SilhouetteWorld(map.SilhouetteCount - 1);
+            foreach (int world in new[] { next, far })
+            {
+                RiverMapScreen.PlateTestStackedWorld = world;
+                RiverMapScreen.PlateTestObstacleWorld = world;
+                RiverMapScreen.PlateTestObstacle = new Rect(-100000f, -100000f, 200000f, 200000f); // todo el mapa
+                map.SetView(MapView.World);
+                map.Tick(16f);
+                map.SetView(MapView.Basin);
+                map.Tick(16f);
+                int i = -1;
+                for (int k = 0; k < map.SilhouetteCount && i < 0; k++)
+                {
+                    i = map.SilhouetteWorld(k) == world ? k : -1;
+                }
+
+                Assert.That(i, Is.GreaterThanOrEqualTo(0), "la placa del mundo " + world);
+                if (world == next)
+                {
+                    Assert.That(i, Is.EqualTo(0));
+                    Assert.That(map.PlateFitHidden(0), Is.False, "la placa del mundo siguiente nunca se oculta");
+                    Assert.That(map.SilhouettePlate(0).enabled && map.SilhouetteLabel(0).enabled, Is.True, "pintada");
+                    Assert.That(map.SilhouetteTwoLines(0), Is.False, "sin sitio para dos líneas, en una, donde la puso FX7");
+                }
+                else
+                {
+                    Assert.That(map.PlateFitHidden(i), Is.True, "otra placa sin sitio no sale (la cadena de PlatesUnstack sí corre)");
+                    Assert.That(map.PlateFitHidden(0), Is.False, "la del mundo siguiente sigue a la vista");
+                }
+            }
         }
 
         [UnityTest]

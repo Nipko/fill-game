@@ -293,12 +293,19 @@ namespace AF.UI
         }
 
         // La Cuenca, tras FX10 (ver el resumen de la clase): cada placa que pisa otra que sale o un país, a otro sitio; si no lo hay,
-        // en dos líneas (en su sitio o en otro); y si tampoco, no sale con este encuadre [P].
+        // en dos líneas (en su sitio o en otro); y si tampoco, no sale con este encuadre [P], salvo la del mundo siguiente.
         private void PlatesUnstack(RiverMap map, Vector2 o, Rect inner, bool window, bool button)
         {
-            // Del mundo más lejano al más cercano: de dos placas que se pisan, se mueve (o, sin sitio, no sale) la del mundo más
-            // lejano, y la del mundo siguiente se queda donde la puso FX7 (como la opción A del norte arriba, que da prioridad a los
-            // mundos futuros más cercanos).
+            // Del mundo más lejano al más cercano, para que de dos placas que se pisan se mueva primero (o, sin sitio, no salga) la
+            // del mundo más lejano. La del mundo siguiente (la primera que sale) también busca otro sitio o dos líneas, pero, si nada
+            // cabe, se queda en una línea donde la puso FX7 y nunca se oculta (como la opción A del norte arriba, que da prioridad a
+            // los mundos futuros más cercanos).
+            int next = -1;
+            for (int k = 0; k < _silhouettes.Count && next < 0; k++)
+            {
+                next = _silhouettes[k].Root.gameObject.activeSelf ? k : -1;
+            }
+
             for (int k = _silhouettes.Count - 1; k >= 0; k--)
             {
                 Silhouette s = _silhouettes[k];
@@ -329,9 +336,12 @@ namespace AF.UI
                 }
                 else
                 {
-                    SetSilhouetteText(s, false);
-                    ShowPlate(k, false); // ni en dos líneas cabe sin pisar otra placa o un país [P]
-                    _plateStacked[k] = true;
+                    SetSilhouetteText(s, false); // en una línea, en el sitio de FX7 (la posición no se tocó)
+                    if (k != next)
+                    {
+                        ShowPlate(k, false); // ni en dos líneas cabe sin pisar otra placa o un país [P]
+                        _plateStacked[k] = true;
+                    }
                 }
             }
         }
@@ -343,9 +353,21 @@ namespace AF.UI
             _plateFitMoves++;
         }
 
+        /// <summary>
+        /// Para los tests: la placa de este mundo cuenta como si pisara otra placa o un país en la Cuenca (<c>PlatesUnstack</c>),
+        /// sin depender de la geometría; con <see cref="PlateTestObstacle"/> en todo el mapa, además, no le queda ningún sitio. 0 en
+        /// el juego.
+        /// </summary>
+        internal static int PlateTestStackedWorld { get; set; }
+
         // La placa k en box (coordenadas locales del contenido) pisa otra placa que sale o un país que se ve.
         private bool PlateStacked(int k, Rect box)
         {
+            if (PlateTestStackedWorld != 0 && _silhouettes[k].World == PlateTestStackedWorld)
+            {
+                return true;
+            }
+
             for (int j = 0; j < _silhouettes.Count; j++)
             {
                 RectTransform other = _silhouettes[j].Root;
