@@ -344,7 +344,7 @@ index dde03f4f..9ecf16c5 100644
              _dailyCard = new DailyChallengeCard(_dailyCardCanvas.Root, _art, OnDailyCardTap);
              DailyChallengeRunner runner = gameObject.GetComponent<DailyChallengeRunner>();
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
-index 8aa51d6e..c31d31f6 100644
+index 19ca950a..825ec2eb 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
 @@ -881,6 +881,7 @@ public bool PressSettings()
@@ -353,9 +353,9 @@ index 8aa51d6e..c31d31f6 100644
              settings.MarkIdleHint(profile.Settings.IdleHint); // MO3
 +            settings.MarkA11y(_reduceMotionNow, profile.Settings.HighContrast); // B9
              ShowAccountCode(); // F3-5: el código de borrado para la web en lugar del UID (Q-B13-21; GameBootstrap.Backend.cs)
+             RefreshConsentRows(); // B12: «Privacidad y datos» y «Corregir mi edad» (GameBootstrap.Consent.cs)
              _skipNextDelta = true;
-             return true;
-@@ -1555,9 +1556,9 @@ private IEnumerator Start()
+@@ -1573,9 +1574,9 @@ private IEnumerator Start()
              if (_splash != null)
              {
                  // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
@@ -368,15 +368,15 @@ index 8aa51d6e..c31d31f6 100644
                  {
                      yield return null; // TiTino, a la vista mientras se construye el resto
                  }
-@@ -1653,6 +1654,7 @@ private IEnumerator Start()
+@@ -1671,6 +1672,7 @@ private IEnumerator Start()
              SetUpLogbook(); // Bitácora del río y cola de takeovers (B4-3; GameBootstrap.Logbook.cs): tarjeta, libreta y takeover
              SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
              SetUpMarket(); // B5 (GameBootstrap.Market.cs): el Mercado, las ofertas y el Cántaro, con las sesiones de B6
 +            SetUpA11y(); // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y el lector de pantalla
              ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
+             SetUpConsent(clock, consentStore); // B12: cifras, país y perfil legal, flujo y pantalla (GameBootstrap.Consent.cs)
              ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
- 
-@@ -1711,6 +1713,7 @@ private void Update()
+@@ -1742,6 +1744,7 @@ private void Update()
              }
  
              TickBackend(Time.unscaledDeltaTime * 1000f); // F3-5: la cola de verificación de compras, cada pocos segundos
@@ -384,7 +384,7 @@ index 8aa51d6e..c31d31f6 100644
  
              float dt = Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs);
              if (_skipNextDelta)
-@@ -2196,6 +2199,7 @@ private void OnDestroy()
+@@ -2231,6 +2234,7 @@ private void OnDestroy()
          {
              CutSplash();
              PersistNow("destruir la escena");
@@ -393,7 +393,7 @@ index 8aa51d6e..c31d31f6 100644
              // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
              // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.cs b/Assets/_Project/Scripts/UI/GameScreen.cs
-index f2c12924..94eb9f41 100644
+index 168fbcdb..ad12a367 100644
 --- a/Assets/_Project/Scripts/UI/GameScreen.cs
 +++ b/Assets/_Project/Scripts/UI/GameScreen.cs
 @@ -864,6 +864,7 @@ public void SetVisible(bool visible)
@@ -451,21 +451,25 @@ index f2c12924..94eb9f41 100644
              AF.Audio.AudioCues.Play(AF.Audio.SfxId.WinToada); // AU1: la toada y el háptico medio de la victoria
              AF.Audio.AudioCues.Haptic(AF.Audio.HapticKind.Win);
              _skipCatcher.gameObject.SetActive(true);
-@@ -1609,10 +1615,11 @@ private void OnCuiaDown(int index)
-             }
+@@ -1610,10 +1616,15 @@ private void OnCuiaDown(int index)
          }
  
--        // Soltar dentro del área táctil es un toque (C1-C6); soltar fuera cancela (C10, el arrastre, queda fuera de v0).
-+        // Soltar dentro del área táctil es un toque (C1-C6); soltar fuera cancela (C10, el arrastre, queda fuera de v0). Tras los
-+        // nombres de C9 (B9), soltar no es ni un toque ni un arrastre (02 §3.1: «al soltar no selecciona»).
+         // Soltar dentro del área táctil es un toque (C1-C6); soltar fuera, sobre otra cuia y tras ≥ 24 dp, es el arrastre (C10;
+-        // B11, GameScreen.Drag.cs); si no, cancela.
++        // B11, GameScreen.Drag.cs); si no, cancela. Tras mantener 400 ms (C9, B9), soltar no es ni un toque ni un arrastre (02 §3.1:
++        // «al soltar no selecciona»).
          private void OnCuiaUp(int index, bool inside)
          {
 -            if (inside)
-+            if (inside && !HoldSwallows(index))
++            if (HoldSwallows(index))
++            {
++                // C9: nada; la cuia baja abajo, como cualquier toque que no selecciona.
++            }
++            else if (inside)
              {
                  _actions.TapCuia(index);
              }
-@@ -1640,7 +1647,7 @@ internal bool RefreshFruitPatterns()
+@@ -1646,7 +1657,7 @@ internal bool RefreshFruitPatterns()
                  return false;
              }
  
@@ -474,7 +478,7 @@ index f2c12924..94eb9f41 100644
              return true;
          }
  
-@@ -1670,11 +1677,13 @@ private void BuildBoard(LevelFlow flow)
+@@ -1676,11 +1687,13 @@ private void BuildBoard(LevelFlow flow)
  
              BoardState board = flow.Session.Current;
              var views = new CuiaView[board.Count];
@@ -489,7 +493,7 @@ index f2c12924..94eb9f41 100644
              }
  
              _views = views;
-@@ -1682,17 +1691,19 @@ private void BuildBoard(LevelFlow flow)
+@@ -1688,17 +1701,19 @@ private void BuildBoard(LevelFlow flow)
              _tinajaPair = BindTinajaPair(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
              OrderBoardLayers();
              float f = GameConfig.SpeedFactor(flow.LevelNumber);
@@ -515,7 +519,7 @@ index f2c12924..94eb9f41 100644
              for (int i = 0; i < board.Count; i++)
              {
                  _animator.ShowContent(i, board[i], board.IsSealed(i));
-@@ -2338,11 +2349,12 @@ private void AddCuiaView(LevelFlow flow, int index)
+@@ -2344,11 +2359,12 @@ private void AddCuiaView(LevelFlow flow, int index)
                  views[i] = _views[i];
              }
  
@@ -530,7 +534,7 @@ index f2c12924..94eb9f41 100644
  
              _views = views;
 diff --git a/Assets/_Project/Scripts/UI/LaunchOptions.cs b/Assets/_Project/Scripts/UI/LaunchOptions.cs
-index 0e18deac..2be60c4b 100644
+index fcec2b13..d4b0a584 100644
 --- a/Assets/_Project/Scripts/UI/LaunchOptions.cs
 +++ b/Assets/_Project/Scripts/UI/LaunchOptions.cs
 @@ -72,6 +72,7 @@ public static class LaunchOptions
@@ -541,7 +545,7 @@ index 0e18deac..2be60c4b 100644
  
          /// <summary>
          /// Extra de intent (string) de los builds de desarrollo (D-018; tarea L2b): el idioma de la UI, primero en la resolución
-@@ -235,6 +236,15 @@ public static class LaunchOptions
+@@ -242,6 +243,15 @@ public static class LaunchOptions
          /// </summary>
          public static float? FontScaleOverride { get; set; }
  
@@ -557,7 +561,7 @@ index 0e18deac..2be60c4b 100644
          /// <summary>
          /// Idioma de desarrollo forzado por un test (el de <c>af_lang</c>: «en-XA» para la pseudolocalización); null = ninguno.
          /// Solo cuenta en desarrollo (<see cref="Debug.isDebugBuild"/>, también en el Editor).
-@@ -288,6 +298,8 @@ public static void Reset()
+@@ -295,6 +305,8 @@ public static void Reset()
              BannerArtFaultOverride = null;
              BannerArtTimeoutMsOverride = null;
              FontScaleOverride = null;
@@ -566,7 +570,7 @@ index 0e18deac..2be60c4b 100644
              LanguageOverride = null;
              LocTablesOverride = null;
              DeviceLocaleOverride = null;
-@@ -390,7 +402,9 @@ public static float ResolveTextScale()
+@@ -408,7 +420,9 @@ public static float ResolveTextScale()
              if (float.IsNaN(s_intentFontScale))
              {
                  int percent = ReadIntentInt(IntentExtraFontScale, 0);
@@ -577,7 +581,7 @@ index 0e18deac..2be60c4b 100644
                  if (percent > 0)
                  {
                      Debug.LogWarning("[AF.LaunchOptions] " + IntentExtraFontScale + " = " + percent + ": escala de texto " + s_intentFontScale.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ".");
-@@ -406,12 +420,7 @@ public static float ResolveTextScale()
+@@ -424,12 +438,7 @@ public static float ResolveTextScale()
          /// </summary>
          public static float ClampTextScale(float scale)
          {
@@ -603,19 +607,31 @@ index 635dc092..b44be9fb 100644
              Image glyph = UiBuilder.Image("Icon", close.Face, art.IconClose, Color.white);
              UiBuilder.Place(glyph.rectTransform, 9f, 9f, 22f, 22f);
              close.Relief.Bind(close.Face, close.Base, close.FaceImage, art.DiscWood, glyph, null, null);
+diff --git a/Assets/_Project/Scripts/UI/OptionRow.cs b/Assets/_Project/Scripts/UI/OptionRow.cs
+index 8ca6020b..ad2be63a 100644
+--- a/Assets/_Project/Scripts/UI/OptionRow.cs
++++ b/Assets/_Project/Scripts/UI/OptionRow.cs
+@@ -64,6 +64,7 @@ public OptionRow(Transform parent, ProceduralArt art, string name, string id, st
+ 
+             UiBuilder.AutoSize(Label, labelMinSp, labelSp);
+             SetSelected(false);
++            A11yLabels.Set(Button, () => Label.text, () => Selected); // TalkBack: su texto y si está marcada (B9; 02 §12)
+         }
+ 
+         public string Id { get; private set; }
 diff --git a/Assets/_Project/Scripts/UI/SettingsScreen.cs b/Assets/_Project/Scripts/UI/SettingsScreen.cs
-index 04bde497..9578696c 100644
+index 25567aab..5896d489 100644
 --- a/Assets/_Project/Scripts/UI/SettingsScreen.cs
 +++ b/Assets/_Project/Scripts/UI/SettingsScreen.cs
-@@ -185,6 +185,7 @@ public SettingsScreen(Transform host, ProceduralArt art, DevProbe probe, Action<
+@@ -186,6 +186,7 @@ public SettingsScreen(Transform host, ProceduralArt art, DevProbe probe, Action<
              // Pista por inactividad (MO3): una fila que se marca o se desmarca, en su hueco.
              IdleHintSlot = UiBuilder.Rect("IdleHintSlot", _content);
-             _idleRow = new OptionRow(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
+             _idleRow = Option(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
 +            BuildA11yRows(); // Reducir movimiento y Alto contraste (B9; SettingsScreen.A11y.cs)
  
-             // «Sobre la Amazonía» (F4), oculto hasta que haya algo que enseñar (SettingsScreen.About.cs).
-             AboutSlot = HiddenSlot("AboutSlot");
-@@ -380,6 +381,11 @@ public IEnumerable<TextMeshProUGUI> Texts()
+             // Privacidad (B12; SettingsScreen.Consent.cs), oculta hasta que GameBootstrap la enseñe.
+             BuildConsent();
+@@ -384,6 +385,11 @@ public IEnumerable<TextMeshProUGUI> Texts()
  
              yield return _slothRow.Label;
              yield return _idleRow.Label;
@@ -627,45 +643,41 @@ index 04bde497..9578696c 100644
              foreach (TextMeshProUGUI label in AudioTexts())
              {
                  yield return label;
-@@ -574,6 +580,9 @@ private void Layout()
+@@ -578,7 +584,10 @@ private void Layout()
              _rowHeights.Add(rowH);
              y += rowH + RowGapDp;
  
+-            // Privacidad (B12), si se ve: sus filas tras la pista por inactividad, con el hueco de sección.
 +            // Reducir movimiento y Alto contraste (B9): dos filas en su hueco, tras la pista por inactividad.
 +            y = LayoutA11y(y, inner, rowH, s);
 +
-             // Sobre la Amazonía (F4), si hay frutas que enseñar. El contenido acaba en la última fila.
-             y -= RowGapDp;
-             if (AboutShown)
-@@ -684,7 +693,7 @@ private void EmitLayout()
++            // Privacidad (B12), si se ve: sus filas tras las de accesibilidad, con el hueco de sección.
+             if (PrivacyShown)
+             {
+                 y = LayoutConsent(y - RowGapDp + SectionGapDp, y, inner, rowH, s) + RowGapDp;
+@@ -694,7 +703,7 @@ private void EmitLayout()
                  return;
              }
  
--            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount + AccountLayoutCount;
-+            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount;
+-            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount;
++            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount;
              var ids = new string[n];
              var rects = new RectTransform[n];
              ids[0] = "close";
-@@ -708,8 +717,9 @@ private void EmitLayout()
+@@ -718,9 +727,10 @@ private void EmitLayout()
              ids[k] = _idleRow.Id; // idle_hint (MO3)
              rects[k] = _idleRow.Root;
              AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
 -            AboutLayoutIds(ids, rects, k + 1 + AudioRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
 -            AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + AboutLayoutCount); // delete_account (B8)
+-            ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + AboutLayoutCount + AccountLayoutCount); // consent y age_band (B12)
 +            A11yLayoutIds(ids, rects, k + 1 + AudioRowCount); // reduce_motion y high_contrast (B9)
 +            AboutLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
 +            AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount); // delete_account (B8)
++            ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount); // consent y age_band (B12)
  
              _probe.Layout("settings", 0, null, ids, rects);
          }
-@@ -803,6 +813,7 @@ public OptionRow(Transform parent, ProceduralArt art, string name, string id, st
-                 Label = UiBuilder.Label("Label", Root, TextStyle.PlainBold, text, OptionSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
-                 UiBuilder.AutoSize(Label, MinTextSp + 1f, OptionSp);
-                 SetSelected(false);
-+                A11yLabels.Set(Button, () => Label.text, () => Selected); // TalkBack: su texto y si está marcada (B9; 02 §12)
-             }
- 
-             public string Id { get; private set; }
 diff --git a/Assets/_Project/Tests/PlayMode/A11yGameTests.cs b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
 new file mode 100644
 index 00000000..a71cd09c

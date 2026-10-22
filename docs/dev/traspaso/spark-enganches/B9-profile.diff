@@ -1,8 +1,8 @@
 diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
-index 263632e3..269224a6 100644
+index ad1e966c..7789b3d8 100644
 --- a/Assets/_Project/Scripts/Save/Profile.cs
 +++ b/Assets/_Project/Scripts/Save/Profile.cs
-@@ -698,6 +698,23 @@ public enum PatternsSetting
+@@ -707,6 +707,23 @@ public enum PatternsSetting
          Off = 2,
      }
  
@@ -26,7 +26,7 @@ index 263632e3..269224a6 100644
      /// <summary>
      /// <c>settings</c> (08 §4.3): solo los ajustes que ya existen en el juego (<c>sound</c>, <c>music</c> y <c>haptics</c> desde
      /// AU1) y <c>push</c> (B6; <see cref="PushSettingsData"/>). Un valor que falta o no es válido en el archivo toma el default (los
-@@ -715,6 +732,7 @@ public sealed class SettingsData
+@@ -724,6 +741,7 @@ public sealed class SettingsData
  
          private string _language = LanguageAuto;
          private PatternsSetting _patterns = PatternsSetting.Auto;
@@ -34,7 +34,7 @@ index 263632e3..269224a6 100644
  
          /// <summary>Códigos de idioma que admite <see cref="Language"/> además de <see cref="LanguageAuto"/>, con su forma canónica.</summary>
          public static IReadOnlyList<string> Languages { get; } = Array.AsReadOnly(LanguageCodes);
-@@ -767,6 +785,31 @@ public string Language
+@@ -776,6 +794,31 @@ public string Language
          /// <summary><c>idle_hint</c> [P]: la pista por inactividad (04 §2.3), que se puede apagar en Ajustes. Default true.</summary>
          public bool IdleHint { get; set; } = true;
  
@@ -66,7 +66,7 @@ index 263632e3..269224a6 100644
          /// <summary>
          /// <c>push</c> (08 §4.3: <c>pre_prompt_shown</c> y <c>granted</c>; B6): el pre-prompt y el permiso de los avisos, con
          /// <c>pre_prompt_at</c> y <c>second_prompt_shown</c> [P] para el segundo pre-prompt de 06 §8.1. Las reglas son de
-@@ -807,6 +850,32 @@ internal static string PatternsText(PatternsSetting value)
+@@ -816,6 +859,32 @@ internal static string PatternsText(PatternsSetting value)
              return value == PatternsSetting.On ? "on" : value == PatternsSetting.Off ? "off" : "auto";
          }
  
@@ -100,10 +100,10 @@ index 263632e3..269224a6 100644
          internal static bool TryParsePatterns(string text, out PatternsSetting value)
          {
 diff --git a/Assets/_Project/Scripts/Save/ProfileJson.cs b/Assets/_Project/Scripts/Save/ProfileJson.cs
-index 29e7712c..0ab37a02 100644
+index 8abbaac8..5def4cc1 100644
 --- a/Assets/_Project/Scripts/Save/ProfileJson.cs
 +++ b/Assets/_Project/Scripts/Save/ProfileJson.cs
-@@ -221,6 +221,17 @@ internal static JsonNode ToNode(Profile p)
+@@ -228,6 +228,17 @@ internal static JsonNode ToNode(Profile p)
              settings.Set("language", JsonNode.FromString(p.Settings.Language));
              settings.Set("sloth_messages", JsonNode.FromBool(p.Settings.SlothMessages));
              settings.Set("idle_hint", JsonNode.FromBool(p.Settings.IdleHint));
@@ -121,7 +121,7 @@ index 29e7712c..0ab37a02 100644
              if (!p.Settings.Push.IsDefault)
              {
                  // B6: settings.push (08 §4.3) solo cuando deja su default, para no cambiar los perfiles que aún no lo usan.
-@@ -863,6 +874,13 @@ private static void ReadSettings(JsonNode node, SettingsData s)
+@@ -871,6 +882,13 @@ private static void ReadSettings(JsonNode node, SettingsData s)
              s.Haptics = TolerantBool(node, "haptics", s.Haptics);
              s.SlothMessages = TolerantBool(node, "sloth_messages", s.SlothMessages);
              s.IdleHint = TolerantBool(node, "idle_hint", s.IdleHint);

@@ -45,34 +45,34 @@ index 715c1d26..83dd578b 100644
      public static class A11yConfigBinder
      {
 diff --git a/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs b/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
-index 258098b3..7efb60b7 100644
+index f5c842a0..3f5fc22d 100644
 --- a/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
 +++ b/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
-@@ -205,6 +205,7 @@ public static class RcConfigBinder
-             { typeof(RevocationConfig), KeysOf(RevocationEntries) },
+@@ -206,6 +206,7 @@ public static class RcConfigBinder
              { typeof(TakeoverConfig), KeysOf(TakeoverEntries) },
              { typeof(LoginCalendarConfig), KeysOf(LoginCalendarEntries) },
+             { typeof(ConsentConfig), ConsentConfigBinder.Keys }, // B12: su lector propio (ConsentConfigBinder)
 +            { typeof(A11yConfig), A11yConfigBinder.Keys }, // B9: su lector propio (A11yConfigBinder)
          };
  
          /// <summary>
-@@ -233,6 +234,7 @@ public static RcConfigs Bind(RcSnapshot rc, string appVersion)
-             RevocationConfig revocation = Fill(new RevocationConfig(), RevocationEntries, rc, errors, c => c.Validate(), () => RevocationConfig.Defaults);
+@@ -235,6 +236,7 @@ public static RcConfigs Bind(RcSnapshot rc, string appVersion)
              TakeoverConfig takeovers = Fill(new TakeoverConfig(), TakeoverEntries, rc, errors, c => c.Validate(), () => TakeoverConfig.Defaults);
              LoginCalendarConfig calendar = Fill(new LoginCalendarConfig(), LoginCalendarEntries, rc, errors, c => c.Validate(), () => LoginCalendarConfig.Defaults);
+             ConsentConfig consent = ConsentConfigBinder.Bind(rc, errors);
 +            A11yConfig a11y = A11yConfigBinder.Bind(rc, errors); // B9
  
              // Compuertas de negocio (08 §9): el mantenimiento apaga anuncios e IAP; la versión mínima, las compras.
              ads.BizAdsEnabled = gates.AdsEnabled;
-@@ -255,6 +257,7 @@ public static RcConfigs Bind(RcSnapshot rc, string appVersion)
-                 Takeovers = takeovers,
+@@ -258,6 +260,7 @@ public static RcConfigs Bind(RcSnapshot rc, string appVersion)
                  LoginCalendar = calendar,
                  BackendSwitch = new RcBackendSwitch(rc),
+                 Consent = consent,
 +                A11y = a11y,
              };
          }
  
-@@ -532,6 +535,9 @@ internal RcConfigs(
+@@ -538,6 +541,9 @@ internal RcConfigs(
  
          /// <summary><c>biz_backend_enabled</c> de estos valores (<see cref="RcBackendSwitch"/>; B7 y F3-5).</summary>
          public IBackendSwitch BackendSwitch { get; internal set; } = new AF.IAP.BackendSwitch();
@@ -83,7 +83,7 @@ index 258098b3..7efb60b7 100644
  
      /// <summary>
 diff --git a/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs b/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs
-index cfd0f02b..52a1225c 100644
+index 14e0ea74..b78ab815 100644
 --- a/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs
 +++ b/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs
 @@ -70,6 +70,7 @@ public void WithTheCompiledDefaults_EveryConfigIsItsDefaults()
@@ -92,5 +92,5 @@ index cfd0f02b..52a1225c 100644
              AssertSame(LoginCalendarConfig.Defaults, c.LoginCalendar);
 +            AssertSame(A11yConfig.Defaults, c.A11y); // B9
              Assert.That(c.BackendSwitch.BizBackendEnabled, Is.True, "biz_backend_enabled = true en 08 §9 [P]");
+             AssertSame(ConsentConfig.Defaults, c.Consent); // B12
          }
- 

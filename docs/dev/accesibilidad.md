@@ -148,7 +148,8 @@ Están en `docs/dev/traspaso/spark-enganches/`, en LF, y se aplican en este orde
      - `HoldReset` al construir el tablero, en `SnapToModel` y al ocultar la pantalla (`SetVisible(false)`).
    - **`BoardAnimator.cs`:** `ReduceMotionFactor`, `DoseNominalMs` sin el factor y sin onda (`Ripple`) con Reducir movimiento.
    - **`MechanicStepContext.cs`:** documentación.
-   - **`SettingsScreen.cs`:** las dos filas, su sitio en el visor y en la sonda, y `A11yLabels` en `OptionRow`.
+   - **`SettingsScreen.cs`:** las dos filas, su sitio en el visor (antes de la privacidad de B12) y en la sonda.
+   - **`OptionRow.cs`** (común con B12): `A11yLabels`, con su texto y si está marcada.
    - **`LaunchOptions.cs`:** `SystemScaleOverride`, `SystemScale`, la escala del sistema en `ResolveTextScale` y `ClampTextScale` con la regla de B9.
    - **`ModalKit.cs`:** la etiqueta «Cerrar» de la X.
    - **`GameBootstrap.cs`:** `SetUpA11y`, `TickA11y`, `MarkA11y` al abrir Ajustes, la pantalla de arranque con Reducir movimiento y `ClearA11y` en `OnDestroy`.
@@ -159,7 +160,9 @@ Están en `docs/dev/traspaso/spark-enganches/`, en LF, y se aplican en este orde
 
 **Escena y prefabs:** ningún cambio; todo se crea por código.
 
-### 4.1 Choques con B11 y B12 (sin integrar)
+### 4.1 Choques con B11 y B12
+
+Ya integrados en `bacf72a8`: la rama se fusionó con esa base y los parches están rehechos sobre ella. El arrastre C10 de B11 va detrás de C9 en `OnCuiaUp`, y las filas de B9 van antes de la privacidad de B12, con la suma de la sonda junta. Lo de abajo queda como referencia.
 
 - **B11, `B11-drag.diff`:**
   - toca el mismo `OnCuiaUp`: el arrastre C10 va en un `else if` después del toque.
