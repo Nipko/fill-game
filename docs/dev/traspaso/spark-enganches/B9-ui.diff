@@ -650,10 +650,10 @@ index 04bde497..9578696c 100644
              public string Id { get; private set; }
 diff --git a/Assets/_Project/Tests/PlayMode/A11yGameTests.cs b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
 new file mode 100644
-index 00000000..7c950166
+index 00000000..ba39d464
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
-@@ -0,0 +1,332 @@
+@@ -0,0 +1,365 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -716,6 +716,39 @@ index 00000000..7c950166
 +            Assert.That(boot.View.HoldNamesVisible, Is.False, "al soltar, los nombres se van");
 +            PlayModeHelpers.Step(boot, 200);
 +            Assert.That(view.IsLifted, Is.False, "la cuia vuelve a su sitio");
++        }
++
++        [UnityTest]
++        public IEnumerator C9_APauseOverTheNames_HidesThem_AndTheReleaseIsNotATap()
++        {
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            CuiaView view = boot.View!.Views[0];
++            Press(view, Center(view));
++            PlayModeHelpers.Step(boot, 416);
++            Assert.That(boot.View.HoldNamesVisible, Is.True);
++            boot.View.PauseButton.onClick.Invoke(); // otro dedo abre la pausa (no cambia la fase)
++            PlayModeHelpers.Step(boot, 32);
++            Assert.That(boot.View.HoldNamesVisible, Is.False, "la pausa encima quita los nombres");
++            Release(view, Center(view));
++            Assert.That(boot.Flow!.Selected, Is.EqualTo(TapController.NoSelection), "al soltar no selecciona (ni debajo de la pausa)");
++            Assert.That(boot.Flow.Session.AppliedPours, Is.Zero);
++        }
++
++        [UnityTest]
++        public IEnumerator C9_APauseBeforeTheNames_ShowsNone_AndTheHoldIsStillNotATap()
++        {
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            CuiaView view = boot.View!.Views[0];
++            Press(view, Center(view));
++            PlayModeHelpers.Step(boot, 160);
++            boot.View.PauseButton.onClick.Invoke();
++            PlayModeHelpers.Step(boot, 400);
++            Assert.That(boot.View.HoldNamesVisible, Is.False, "con la pausa encima no salen los nombres");
++            Release(view, Center(view));
++            Assert.That(boot.Flow!.Selected, Is.EqualTo(TapController.NoSelection), "mantener 400 ms es C9, nunca un toque bajo el velo");
++            Assert.That(boot.Flow.Session.AppliedPours, Is.Zero);
 +        }
 +
 +        [UnityTest]
