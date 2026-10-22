@@ -793,7 +793,7 @@ Reglas [P] (las mismas que cuenta el informe):
   `replaces` tras `id` y sin `difficulty.D` (la reserva no entra en el pool del rango, 03 §7).
 
 Resultado (2026-10-21): el mundo 2 no tiene pack (solo capacidades); 132 tableros en los mundos 3-9 (8, 12, 12, 20, 24, 28 y
-28), sin saltados, 176.268 bytes en total. La cobertura por mecánica de cada mundo está en los informes.
+28), sin saltados, 176.268 bytes en total (unos 19 KB con deflate; el AAB de ensayo con ellos mide 53,48 MB). La cobertura por mecánica de cada mundo está en los informes.
 
 `--self-test reserve`: el orden por rondas (sintético), los topes de los mundos 2-9, el plan del 43 sin la Hoja (y el de un
 nivel con capacidades, que las conserva), los ids y semillas de reserva y el mundo 3 generado dos veces con los mismos bytes.

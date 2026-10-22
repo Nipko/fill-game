@@ -43,7 +43,7 @@ namespace AF.UI
         }
 
         // mech_enabled.* del catálogo: los defaults compilados (GameConfig) combinados con los de Remote Config (la sesión ya lo
-        // tiene activado: EnsureRemoteConfig) y, en desarrollo, con af_mech_off.
+        // tiene activado: SetUpRemoteConfig) y, en desarrollo, con af_mech_off.
         private MechanicSwitches ResolveCatalogSwitches()
         {
             MechanicSwitches baseline = GameConfig.MechEnabled;

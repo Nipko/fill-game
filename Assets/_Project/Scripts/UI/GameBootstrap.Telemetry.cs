@@ -79,19 +79,19 @@ namespace AF.UI
             ActiveRcConfigs = null;
         }
 
-        // Remote Config de la sesión, una vez: 08 §2.3, RC.LoadDefaults(); RC.ActivateCached(); RC.FetchAsync(min_interval=12h).
-        // Va antes del catálogo de niveles (Start), que lee mech_enabled.* y level_overrides (D-033, Q-B11-7 a), y
-        // SetUpTelemetry lo reutiliza.
-        private RemoteConfigService EnsureRemoteConfig(IClock clock)
+        // Remote Config y las cifras enlazadas (08 §2.3: RC.LoadDefaults(); RC.ActivateCached(); RC.FetchAsync), al principio de Start,
+        // antes de cargar el catálogo de niveles (que lee mech_enabled.* y level_overrides; D-033, Q-B11-7 a). Una vez por escena:
+        // SetUpTelemetry no lo repite.
+        private void SetUpRemoteConfig(IClock clock)
         {
             if (_rc != null)
             {
-                return _rc;
+                return;
             }
 
             IRemoteConfigBackend rcBackend = RemoteConfigBackendOverride ?? RemoteConfigBackends.CreateDefault(RemoteConfigDefaults.Compiled);
             _rc = new RemoteConfigService(null, rcBackend);
-            _rc.ActivateCached();
+            _rc.ActivateCached(); // 08 §2.3: RC.LoadDefaults(); RC.ActivateCached(); RC.FetchAsync(min_interval=12h)
             if (rcBackend is FirebaseRemoteConfigBackend firebaseRc)
             {
                 // No bloquea; lo descargado se aplica en el arranque siguiente (las cifras no cambian a mitad de sesión).
@@ -106,7 +106,12 @@ namespace AF.UI
             }
 
             AF.RemoteConfig.RC.Use(_rc);
-            return _rc;
+            _rcConfigs = RcConfigBinder.Bind(_rc, Application.version);
+            ActiveRcConfigs = _rcConfigs;
+            for (int i = 0; i < _rcConfigs.Errors.Count; i++)
+            {
+                Debug.LogWarning(LogPrefix + "Remote Config: " + _rcConfigs.Errors[i]);
+            }
         }
 
         private void SetUpTelemetry(IClock clock)
@@ -117,13 +122,7 @@ namespace AF.UI
                 HandlerFailed = (type, e) => Debug.LogError(LogPrefix + "Un oyente de " + type.Name + " falló: " + e.Message),
             };
 
-            _rcConfigs = RcConfigBinder.Bind(EnsureRemoteConfig(clock), Application.version);
-            ActiveRcConfigs = _rcConfigs;
-            for (int i = 0; i < _rcConfigs.Errors.Count; i++)
-            {
-                Debug.LogWarning(LogPrefix + "Remote Config: " + _rcConfigs.Errors[i]);
-            }
-
+            SetUpRemoteConfig(clock); // ya hecho al principio de Start; aquí solo si alguien llama sin él
             SetCrashReporting(true); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono. <13: BlockedAtBoot lo apaga (B12)
             s_session ??= new SessionTracker(clock.UtcNow);
             _analytics = new AnalyticsService(_events, new CommonSource(this));

@@ -1477,8 +1477,9 @@ namespace AF.UI
                 yield return null; // el río y el logotipo, a la vista antes de cargar
             }
 
+            // Remote Config antes del catálogo (cierre de B11): lvl_label_override (y level_overrides) se aplican al crearlo.
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
-            EnsureRemoteConfig(clock); // mech_enabled.* y level_overrides se leen al crear el catálogo (D-033, Q-B11-7 a)
+            SetUpRemoteConfig(clock);
             LevelCatalog? catalog = LoadCatalog();
             if (catalog == null)
             {
