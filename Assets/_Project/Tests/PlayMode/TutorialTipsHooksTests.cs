@@ -291,6 +291,11 @@ namespace AF.Tests.PlayMode
             // escalón da para el hueco entero, que se recorta: el tooltip puede pisar el aire bajo la semilla de la fila de la Cosecha
             // (la fila mide VictoryHarvestDp con la semilla de 32 dp a 6 dp de arriba; captura b11_03_double_harvest_tip_640_130), nunca su texto.
             Debug.Log("AF_TIP double " + (small ? "640" : "780") + " al " + (scale * 100f) + " %: hueco " + view.DoubleTipRoomShownDp + " dp");
+            if (scale < 1.01f)
+            {
+                Assert.That(view.VictoryBarsDropped, Is.False, "el tooltip no quita las barras de la Crecida y la Canasta");
+            }
+
             float air = small && scale > 1.01f ? 4f : 0.01f;
             Assert.That(glass.yMin, Is.GreaterThanOrEqualTo(harvest.yMax - air), "bajo la línea de la Cosecha");
             Assert.That(tip.TailTip.y, Is.EqualTo(button.yMin).Within(1f), "la punta del pico, en el canto de arriba del botón");

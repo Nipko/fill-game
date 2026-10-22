@@ -94,7 +94,7 @@ namespace AF.Tests.PlayMode
             yield return Save(dir, "b11_03_double_harvest_tip_" + (small ? "640" : "780") + "_100");
         }
 
-        /// <summary>El tooltip de la Cosecha doble en 360 × 640 al 130 %: va sin las filas de las barras para no tapar la Cosecha.</summary>
+        /// <summary>El tooltip de la Cosecha doble en 360 × 640 al 130 %: con la victoria compactada y, si no basta, sobre las barras, sin tapar la Cosecha.</summary>
         [UnityTest]
         public IEnumerator DoubleHarvestTip640At130()
         {

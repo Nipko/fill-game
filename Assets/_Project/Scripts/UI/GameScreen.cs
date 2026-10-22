@@ -1815,6 +1815,7 @@ namespace AF.UI
             _harvestCounting = false;
             _harvestShown = -1;
             _doubleShown = false;
+            _doubleTipFullRoomDp = 0f; // el escalón que se calcula al cargar el nivel (WarmVictorySlot) va sin el tooltip del 11
             _autoNextMs = -1f;
             _nextHoldMs = -1f;
             _victoryBars.Hide();

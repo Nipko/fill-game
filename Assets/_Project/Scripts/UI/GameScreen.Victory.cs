@@ -176,7 +176,8 @@ namespace AF.UI
         /// Escalón de la victoria compacta de la última maquetación (D-032, punto 2; 0 = la de siempre, hasta
         /// <see cref="VictoryCompactMax"/>): el más bajo con el que la victoria más alta posible de esta pantalla, idioma y escala
         /// (cinta con el título más alto, Cosecha doble, el chip del nivel siguiente y la ranura) deja la cinta bajo la cabecera
-        /// del HUD. No depende de lo que lleve cada victoria, así que «Siguiente» queda a la misma altura en todas (Q7-A); en el
+        /// del HUD. No depende de lo que lleve cada victoria, así que «Siguiente» queda a la misma altura en todas (Q7-A), salvo en
+        /// la del tooltip de la Cosecha doble del 11, cuyo hueco puede subir el escalón (B11) [P]; en el
         /// escalón 3, en la victoria con «Ver mapa», va más estrecho y empieza más a la derecha, con el mismo canto derecho [P]
         /// (PlaceVictoryRow).
         /// </summary>
@@ -205,7 +206,7 @@ namespace AF.UI
         // con TextMeshPro solo lo que no esté en la caché: WarmVictorySlot lo llama al cargar el nivel.
         private int ChooseVictoryCompact()
         {
-            float budget = VictoryPanelBudgetDp - _doubleTipFullRoomDp; // con el hueco del tooltip de la Cosecha doble del 11 (B11)
+            float budget = VictoryPanelBudgetDp;
             _victoryBarsDropped = false;
             _victoryBars.LogbookSuppressed = _logbookRowYield; // cedida a la frase de TiTino en su hito (GameScreen.Streak.cs)
             int level = CompactStepWithBars(budget);
@@ -223,6 +224,30 @@ namespace AF.UI
                 // mapa» en D-032 y la regla de 02 §5) [P] y el escalón se elige sin ellas (tarea B1b; pregunta abierta al dueño).
                 _victoryBarsDropped = true;
                 level = CompactStepFor(budget);
+            }
+
+            if (_doubleTipFullRoomDp > 0f)
+            {
+                // El hueco del tooltip de la Cosecha doble del 11 (B11; observación 4 de la prueba del 2026-10-22) solo sube el
+                // escalón: las barras y la fila de la Bitácora las decide el presupuesto de siempre (no las quita un tooltip), y el
+                // escalón no pasa del que dejaría la Bitácora tras el chevron. Si ni así cabe, LayoutVictory recorta el hueco y el
+                // tooltip pisa las barras [P]. En esa victoria, «Siguiente» puede ir algo más arriba que en las demás (Q7-A) [P].
+                int cap = _victoryBars.Plan.Logbook && !_victoryBars.LogbookSuppressed ? VictoryCompactRow - 1 : VictoryCompactMax;
+                int tip = level;
+                while (tip < cap)
+                {
+                    _victoryBars.ForceHalf = tip > 0 && VictoryBarsPossible && !_victoryBarsDropped;
+                    ApplyVictoryCompact(tip);
+                    if (WorstPanelDp(tip) <= budget - _doubleTipFullRoomDp + 0.01f)
+                    {
+                        break;
+                    }
+
+                    tip++;
+                }
+
+                level = Mathf.Max(level, tip);
+                _victoryBars.ForceHalf = level > 0 && VictoryBarsPossible && !_victoryBarsDropped;
             }
 
             ApplyVictoryCompact(level);
