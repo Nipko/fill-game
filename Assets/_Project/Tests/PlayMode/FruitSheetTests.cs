@@ -362,8 +362,24 @@ namespace AF.Tests.PlayMode
             }
 
             SettingsScreenTests.AssertFits(settings, "Ajustes con Sobre la Amazonía");
-            string layout = log.RequireLast("settings", 0, "AF_LAYOUT settings");
-            Assert.That(AfLayoutLog.ButtonIds(layout), Does.Contain("fruit_acai").And.Contain("fruit_rio_napo"));
+            // Desde la revisión de fx-130, AF_LAYOUT settings solo da las filas que el visor no recorta del todo, y otra línea al
+            // desplazar la lista si cambian: bajando a pasos salen todas las fichas.
+            var fruitIds = new HashSet<string>();
+            ScrollRect list = settings.Viewport.GetComponent<ScrollRect>();
+            for (int step = 0; step <= 20; step++)
+            {
+                if (settings.Scrolls)
+                {
+                    list.verticalNormalizedPosition = 1f - (step / 20f);
+                }
+
+                yield return null; // el visor avisa al desplazarse (ScrollRect.onValueChanged, en LateUpdate)
+                fruitIds.UnionWith(AfLayoutLog.ButtonIds(log.RequireLast("settings", 0, "AF_LAYOUT settings")));
+            }
+
+            Assert.That(fruitIds, Does.Contain("fruit_acai").And.Contain("fruit_rio_napo"));
+            list.verticalNormalizedPosition = 1f;
+            yield return null;
 
             // Tocar el achiote (empezado por el Salto del Boto): su ficha, encima de Ajustes, que sigue abierta.
             settings.FruitButton("urucum")!.onClick.Invoke();

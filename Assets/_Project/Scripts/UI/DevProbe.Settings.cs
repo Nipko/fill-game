@@ -22,7 +22,8 @@ namespace AF.UI
     /// también tras un arranque en frío: FXT).</item>
     /// <item><c>AF_LAYOUT</c> con <c>"screen":"settings"</c> y los ids <c>close</c>, <c>lang_&lt;idioma&gt;</c> (<c>lang_auto</c>,
     /// <c>lang_es-419</c>…), <c>patterns_&lt;auto|on|off&gt;</c> y <c>sloth_messages</c>, para tocarlos con
-    /// <c>adb shell input tap</c>.</item>
+    /// <c>adb shell input tap</c>. Solo salen las filas que el visor no recorta del todo (las de debajo del corte no se pueden
+    /// tocar); al desplazar la lista, si cambian las que se ven, sale otra línea con las de ahora (revisión de fx-130).</item>
     /// </list>
     /// </summary>
     public sealed partial class DevProbe
