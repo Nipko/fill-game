@@ -15,6 +15,9 @@ a11y_names_join,"{list}
 {item}","{list}
 {item}","{list}
 {item}",traducido,traducido
+a11y_notifications_blocked,Avisos: bloqueados en el teléfono,Notifications: blocked on the phone,Notificações: bloqueadas no telefone,traducido,traducido
+a11y_notifications_off,Avisos: desactivados,Notifications: off,Notificações: desativadas,traducido,traducido
+a11y_notifications_on,Avisos: activados,Notifications: on,Notificações: ativadas,traducido,traducido
 a11y_selected,{fruit} seleccionado: elige destino,{fruit} selected: choose a target,{fruit} selecionado: escolha o destino,traducido,traducido
 a11y_tap_to_continue,Continuar,Continue,Continuar,traducido,traducido
 a11y_tinaja,"tinaja: {fruit} en la boca, {n:plural:{} dosis dentro|{} dosis dentro}","water jar: {fruit} at the mouth, {n:plural:{} dose inside|{} doses inside}","talha: {fruit} na boca, {n:plural:{} dose dentro|{} doses dentro}",traducido,traducido
@@ -88,6 +91,9 @@ settings_delete_account,Eliminar cuenta y datos,Delete account and data,Excluir 
 settings_high_contrast,Alto contraste,High contrast,Alto contraste,traducido,traducido
 settings_notifications,Avisos,Notifications,Notificações,traducido,traducido
 settings_notifications_blocked,Actívalos en los ajustes del teléfono.,Turn them on in your phone settings.,Ative-as nas configurações do telefone.,traducido,traducido
+settings_notifications_off,Desactivados,Off,Desativadas,traducido,traducido
+settings_notifications_on,Activados,On,Ativadas,traducido,traducido
+settings_notifications_open_phone,Abrir ajustes del teléfono,Open phone settings,Abrir configurações do telefone,traducido,traducido
 settings_privacy,Privacidad y datos,Privacy and data,Privacidade e dados,traducido,traducido
 settings_reduce_motion,Reducir movimiento,Reduce motion,Reduzir movimento,traducido,traducido
 settings_river_facts,Datos del río,River facts,Curiosidades do rio,traducido,traducido
