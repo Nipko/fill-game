@@ -1,0 +1,763 @@
+diff --git a/Assets/_Project/Scripts/Presentation/BoardAnimator.cs b/Assets/_Project/Scripts/Presentation/BoardAnimator.cs
+index 6d7024da..899eb77d 100644
+--- a/Assets/_Project/Scripts/Presentation/BoardAnimator.cs
++++ b/Assets/_Project/Scripts/Presentation/BoardAnimator.cs
+@@ -1305,7 +1305,11 @@ private void Advance(int index, float dtMs)
+                         while (job.Splashes < due)
+                         {
+                             job.Splashes++;
+-                            t.Ripple();
++                            if (!ReduceMotion)
++                            {
++                                t.Ripple(); // con Reducir movimiento, la onda del shader se apaga (02 §12; B9)
++                            }
++
+                             Fx?.Splash(surface, color, u);
+                         }
+                     }
+@@ -2124,7 +2128,11 @@ private void ScoopPose(ref Job job, float time, Color color)
+             if (time >= job.StreamStart && job.Splashes == 0)
+             {
+                 job.Splashes = 1;
+-                t.Ripple(); // el agua entra en su cuia
++                if (!ReduceMotion)
++                {
++                    t.Ripple(); // el agua entra en su cuia; con Reducir movimiento, sin onda (02 §12; B9)
++                }
++
+                 ScoopAudio(ref job); // el «glup» al llegar a la boca (02 §4.1)
+             }
+ 
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
+new file mode 100644
+index 00000000..fa7bc1e2
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs
+@@ -0,0 +1,150 @@
++#nullable enable
++using AF.Platform;
++using AF.Save;
++using UnityEngine;
++
++namespace AF.UI
++{
++    /// <summary>
++    /// Accesibilidad en el arranque (bloque B9; parche <c>B9-ui.diff</c>; 02 §12; 07 §3, regla 5, y §7.8; 08 §4.3 y §9):
++    /// <list type="bullet">
++    /// <item><b>Reducir movimiento</b>: <c>settings.reduce_motion</c> [P] (<c>auto</c>, <c>on</c> u <c>off</c>); en <c>auto</c>,
++    /// <c>ui_reduce_motion_default</c> o [P] el teléfono con «Quitar animaciones» (<see cref="A11yRules.ReduceMotion"/>; Q-B9-3).
++    /// Llega a <c>LevelFlow.ReduceMotion</c> (de campaña y del Reto), al Mapa del río y al factor de los vertidos de la pantalla
++    /// (<c>anim_reduce_motion_factor</c>).</item>
++    /// <item><b>Alto contraste</b>: <c>settings.high_contrast</c> [P] → el patrón al 35 % en el tablero.</item>
++    /// <item><b>Lector de pantalla</b>: <see cref="A11yService"/> con el módulo de accesibilidad de Unity
++    /// (<see cref="UnityScreenReaderHost"/>; los tests ponen el falso con <see cref="A11yHostOverride"/>), con la pantalla del nivel
++    /// (y la del Reto) como fuente propia, avanzado en cada fotograma; con TalkBack apagado no cuesta nada.</item>
++    /// <item>La escala de fuente del sistema la lee <see cref="LaunchOptions.ResolveTextScale"/> al construir los textos.</item>
++    /// </list>
++    /// </summary>
++    public sealed partial class GameBootstrap
++    {
++        private A11yService? _a11y;
++        private bool _reduceMotionNow;
++
++        /// <summary>Anfitrión del lector de pantalla de un test (null: el de Unity). Se lee en el arranque.</summary>
++        internal static IScreenReaderHost? A11yHostOverride { get; set; }
++
++        /// <summary>El lector de pantalla del juego (tests).</summary>
++        internal A11yService? A11y => _a11y;
++
++        /// <summary>«Reducir movimiento» en vigor (lo resuelto: la elección del jugador, Remote Config o el teléfono).</summary>
++        public bool ReduceMotionNow => _reduceMotionNow;
++
++        /// <summary>
++        /// Ajustes › Reducir movimiento o Alto contraste (bloque B9; <paramref name="id"/> = <see cref="SettingsScreen.ReduceMotionId"/>
++        /// o <see cref="SettingsScreen.HighContrastId"/>): guarda <paramref name="on"/> en <c>settings.reduce_motion</c> (<c>on</c> u
++        /// <c>off</c>: desde ahí manda la elección) o <c>settings.high_contrast</c> en el acto y lo aplica al momento. La sonda
++        /// escribe <c>settings_change</c> con esa clave.
++        /// </summary>
++        public bool ChooseA11y(string id, bool on)
++        {
++            Profile? profile = _profile;
++            if (profile == null)
++            {
++                return false;
++            }
++
++            if (id == SettingsScreen.ReduceMotionId)
++            {
++                ReduceMotionSetting value = on ? ReduceMotionSetting.On : ReduceMotionSetting.Off;
++                if (profile.Settings.ReduceMotion != value)
++                {
++                    profile.Settings.ReduceMotion = value;
++                    SaveSettings(profile);
++                }
++            }
++            else if (id == SettingsScreen.HighContrastId)
++            {
++                if (profile.Settings.HighContrast != on)
++                {
++                    profile.Settings.HighContrast = on;
++                    SaveSettings(profile);
++                }
++            }
++            else
++            {
++                return false;
++            }
++
++            ApplyA11y();
++            _probe?.SettingsChange(id, on ? "true" : "false", null);
++            return true;
++        }
++
++        // En el arranque, con el flujo, las pantallas y Remote Config listos.
++        private void SetUpA11y()
++        {
++            _a11y = new A11yService(A11yHostOverride ?? new UnityScreenReaderHost());
++            if (_screen != null)
++            {
++                _screen.A11y = _a11y;
++            }
++
++            if (_settingsScreen != null)
++            {
++                _settingsScreen.A11yToggled = (id, on) => ChooseA11y(id, on);
++            }
++
++            ApplyA11y();
++        }
++
++        // Lo que está en vigor, a todo lo que lo usa: el flujo y la pantalla del nivel, los del Reto, el Mapa y Ajustes.
++        private void ApplyA11y()
++        {
++            Profile? profile = _profile;
++            if (profile == null)
++            {
++                return;
++            }
++
++            A11yConfig config = _rcConfigs?.A11y ?? A11yConfig.Defaults;
++            bool? choice = profile.Settings.ReduceMotion == ReduceMotionSetting.Auto ? (bool?)null : profile.Settings.ReduceMotion == ReduceMotionSetting.On;
++            _reduceMotionNow = A11yRules.ReduceMotion(choice, config.UiReduceMotionDefault, LaunchOptions.SystemScale.AnimatorDurationScale);
++            if (_flow != null)
++            {
++                _flow.ReduceMotion = _reduceMotionNow;
++            }
++
++            ApplyA11y(_screen, config, profile);
++            ApplyA11y(_dailyScreen?.View, config, profile);
++            if (_dailyScreen?.Flow != null)
++            {
++                _dailyScreen.Flow.ReduceMotion = _reduceMotionNow;
++            }
++
++            if (_mapScreen != null)
++            {
++                _mapScreen.ProgressReduceMotion = _reduceMotionNow;
++            }
++
++            _settingsScreen?.MarkA11y(_reduceMotionNow, profile.Settings.HighContrast);
++        }
++
++        private void ApplyA11y(GameScreen? screen, A11yConfig config, Profile profile)
++        {
++            if (screen == null)
++            {
++                return;
++            }
++
++            screen.ReduceMotionFactor = config.AnimReduceMotionFactor;
++            screen.HighContrast = profile.Settings.HighContrast;
++            screen.A11y = _a11y;
++        }
++
++        // Cada fotograma: el lector (solo con TalkBack) y el Reto, que crea su flujo y su pantalla al abrirse.
++        private void TickA11y(float dtMs)
++        {
++            DailyChallengeScreen? daily = _dailyScreen;
++            if (daily?.Flow != null && (daily.Flow.ReduceMotion != _reduceMotionNow || (daily.View != null && daily.View.A11y != _a11y)))
++            {
++                ApplyA11y();
++            }
++
++            _a11y?.Tick(dtMs);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs.meta b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs.meta
+new file mode 100644
+index 00000000..d469f36c
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.A11y.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 056888c2b7e58544caa5abf8af18698b
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 8aa51d6e..08f88213 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -881,6 +881,7 @@ public bool PressSettings()
+                 profile.Settings.SlothMessages);
+             settings.MarkAudio(profile.Settings.Sound, profile.Settings.Music, profile.Settings.Haptics); // AU1
+             settings.MarkIdleHint(profile.Settings.IdleHint); // MO3
++            settings.MarkA11y(_reduceMotionNow, profile.Settings.HighContrast); // B9
+             ShowAccountCode(); // F3-5: el código de borrado para la web en lugar del UID (Q-B13-21; GameBootstrap.Backend.cs)
+             _skipNextDelta = true;
+             return true;
+@@ -1653,6 +1654,7 @@ private IEnumerator Start()
+             SetUpLogbook(); // Bitácora del río y cola de takeovers (B4-3; GameBootstrap.Logbook.cs): tarjeta, libreta y takeover
+             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
+             SetUpMarket(); // B5 (GameBootstrap.Market.cs): el Mercado, las ofertas y el Cántaro, con las sesiones de B6
++            SetUpA11y(); // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y el lector de pantalla
+             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
+             ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
+ 
+@@ -1711,6 +1713,7 @@ private void Update()
+             }
+ 
+             TickBackend(Time.unscaledDeltaTime * 1000f); // F3-5: la cola de verificación de compras, cada pocos segundos
++            TickA11y(Time.unscaledDeltaTime * 1000f); // B9: el lector de pantalla (solo con TalkBack) y el Reto
+ 
+             float dt = Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs);
+             if (_skipNextDelta)
+diff --git a/Assets/_Project/Scripts/UI/GameScreen.cs b/Assets/_Project/Scripts/UI/GameScreen.cs
+index f2c12924..ae30bd99 100644
+--- a/Assets/_Project/Scripts/UI/GameScreen.cs
++++ b/Assets/_Project/Scripts/UI/GameScreen.cs
+@@ -910,6 +910,8 @@ public void Tick(float dtMs)
+                 _views[i].Tick(dtMs);
+             }
+ 
++            HoldTick(dtMs); // C9 (B9): a los 400 ms, los nombres
++
+             SyncLiftFront();
+             if (_confettiDelay >= 0f)
+             {
+@@ -960,6 +962,7 @@ public void SnapToModel()
+         {
+             _animator.SnapAll();
+             _intro.Clear();
++            HoldReset(); // C9 (B9): al volver de segundo plano no queda nada pulsado
+         }
+ 
+         /// <inheritdoc />
+@@ -1103,9 +1106,9 @@ public void OnTap(TapResult result)
+ 
+                 case TapKind.Rejected:
+                     SetLift(result.PreviousSelection, false);
+-                    if ((uint)result.Tapped < (uint)_views.Length)
++                    if ((uint)result.Tapped < (uint)_views.Length && !flow.ReduceMotion)
+                     {
+-                        _views[result.Tapped].Shake();
++                        _views[result.Tapped].Shake(); // con Reducir movimiento, sin sacudidas (02 §12; B9)
+                     }
+ 
+                     AF.Audio.AudioCues.Play(AF.Audio.SfxId.Illegal); // AU1: madera neutra, nunca háptico en un rechazo (02 §4)
+@@ -1122,6 +1125,8 @@ public void OnTap(TapResult result)
+                     ShuffleBoardChanged(flow);
+                     break;
+             }
++
++            A11yTapped(flow, result); // B9: con TalkBack, la selección se anuncia (02 §12)
+         }
+ 
+         /// <inheritdoc />
+@@ -1218,7 +1223,7 @@ public void OnCelebrationStarted()
+             }
+ 
+             _ambient.SetSuspended(true);
+-            _confettiDelay = 500f;
++            _confettiDelay = _flow != null && _flow.ReduceMotion ? -1f : 500f; // con Reducir movimiento, sin confeti (02 §12; B9)
+             AF.Audio.AudioCues.Play(AF.Audio.SfxId.WinToada); // AU1: la toada y el háptico medio de la victoria
+             AF.Audio.AudioCues.Haptic(AF.Audio.HapticKind.Win);
+             _skipCatcher.gameObject.SetActive(true);
+@@ -1609,10 +1614,11 @@ private void OnCuiaDown(int index)
+             }
+         }
+ 
+-        // Soltar dentro del área táctil es un toque (C1-C6); soltar fuera cancela (C10, el arrastre, queda fuera de v0).
++        // Soltar dentro del área táctil es un toque (C1-C6); soltar fuera cancela (C10, el arrastre, queda fuera de v0). Tras los
++        // nombres de C9 (B9), soltar no es ni un toque ni un arrastre (02 §3.1: «al soltar no selecciona»).
+         private void OnCuiaUp(int index, bool inside)
+         {
+-            if (inside)
++            if (inside && !HoldSwallows(index))
+             {
+                 _actions.TapCuia(index);
+             }
+@@ -1640,7 +1646,7 @@ internal bool RefreshFruitPatterns()
+                 return false;
+             }
+ 
+-            _animator.ApplyPatterns(PatternsOn(flow.LevelNumber));
++            ApplyLevelPatterns(flow.LevelNumber); // con Alto contraste, el patrón al 35 % (B9)
+             return true;
+         }
+ 
+@@ -1670,11 +1676,13 @@ private void BuildBoard(LevelFlow flow)
+ 
+             BoardState board = flow.Session.Current;
+             var views = new CuiaView[board.Count];
+-            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber);
++            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber) * PourMotionFactor(flow); // B9: × 0,5 con Reducir movimiento (02 §4)
++            HoldReset(); // C9 (B9): nada pulsado en el tablero nuevo
+             for (int i = 0; i < board.Count; i++)
+             {
+                 views[i] = CuiaView.Create(_board, i, board[i].Capacity, _art, _cuiaDown, _cuiaUp, _fx);
+                 views[i].SetLiftDuration(liftMs);
++                AttachHold(views[i]); // C9, mantener pulsado (B9; GameScreen.A11y.cs)
+             }
+ 
+             _views = views;
+@@ -1682,17 +1690,18 @@ private void BuildBoard(LevelFlow flow)
+             _tinajaPair = BindTinajaPair(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
+             OrderBoardLayers();
+             float f = GameConfig.SpeedFactor(flow.LevelNumber);
++            float m = f * PourMotionFactor(flow); // B9: con Reducir movimiento, × anim_reduce_motion_factor (02 §4 y §12)
+             _timings = new PourTimings(
+-                GameConfig.AnimLiftMs * f,
+-                GameConfig.AnimTravelMs * f,
+-                GameConfig.AnimPourDoseMs * f,
+-                GameConfig.AnimPourTailMs * f,
+-                GameConfig.AnimReturnMs * f);
++                GameConfig.AnimLiftMs * m,
++                GameConfig.AnimTravelMs * m,
++                GameConfig.AnimPourDoseMs * m,
++                GameConfig.AnimPourTailMs * m,
++                GameConfig.AnimReturnMs * m);
+             _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours, _mechanicBackLayer, _mechanicFrontLayer);
+             _animator.SpeedFactor = f;
+             _animator.ReduceMotion = flow.ReduceMotion;
+             _fx.ReduceMotion = flow.ReduceMotion;
+-            _animator.ApplyPatterns(PatternsOn(flow.LevelNumber)); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3)
++            ApplyLevelPatterns(flow.LevelNumber); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3); Alto contraste, 35 % (B9)
+             for (int i = 0; i < board.Count; i++)
+             {
+                 _animator.ShowContent(i, board[i], board.IsSealed(i));
+@@ -2338,11 +2347,12 @@ private void AddCuiaView(LevelFlow flow, int index)
+                 views[i] = _views[i];
+             }
+ 
+-            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber);
++            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber) * PourMotionFactor(flow); // B9
+             for (int i = old; i < views.Length; i++)
+             {
+                 views[i] = CuiaView.Create(_board, i, board[i].Capacity, _art, _cuiaDown, _cuiaUp, _fx);
+                 views[i].SetLiftDuration(liftMs);
++                AttachHold(views[i]); // C9 (B9)
+             }
+ 
+             _views = views;
+diff --git a/Assets/_Project/Scripts/UI/LaunchOptions.cs b/Assets/_Project/Scripts/UI/LaunchOptions.cs
+index 0e18deac..2cd581bc 100644
+--- a/Assets/_Project/Scripts/UI/LaunchOptions.cs
++++ b/Assets/_Project/Scripts/UI/LaunchOptions.cs
+@@ -72,6 +72,7 @@ public static class LaunchOptions
+ 
+         // Escala del extra af_font_scale, leída una vez (NaN: aún no se leyó).
+         private static float s_intentFontScale = float.NaN;
++        private static ISystemScale? s_systemScale;
+ 
+         /// <summary>
+         /// Extra de intent (string) de los builds de desarrollo (D-018; tarea L2b): el idioma de la UI, primero en la resolución
+@@ -235,6 +236,15 @@ public static class LaunchOptions
+         /// </summary>
+         public static float? FontScaleOverride { get; set; }
+ 
++        /// <summary>
++        /// Escalas del sistema de un test (bloque B9; <see cref="ISystemScale"/>: la fuente y las animaciones del teléfono); null =
++        /// las de la plataforma (<see cref="AndroidSystemScale.ForPlatform"/>: en el Editor, 100 % y animaciones normales).
++        /// </summary>
++        public static ISystemScale? SystemScaleOverride { get; set; }
++
++        /// <summary>Las escalas del sistema en uso: las del test o las de la plataforma (se crean una vez).</summary>
++        public static ISystemScale SystemScale => SystemScaleOverride ?? (s_systemScale ??= AndroidSystemScale.ForPlatform());
++
+         /// <summary>
+         /// Idioma de desarrollo forzado por un test (el de <c>af_lang</c>: «en-XA» para la pseudolocalización); null = ninguno.
+         /// Solo cuenta en desarrollo (<see cref="Debug.isDebugBuild"/>, también en el Editor).
+@@ -288,6 +298,8 @@ public static void Reset()
+             BannerArtFaultOverride = null;
+             BannerArtTimeoutMsOverride = null;
+             FontScaleOverride = null;
++            SystemScaleOverride = null;
++            s_intentFontScale = float.NaN; // B9: la escala se vuelve a resolver con las del sistema de verdad
+             LanguageOverride = null;
+             LocTablesOverride = null;
+             DeviceLocaleOverride = null;
+@@ -390,7 +402,9 @@ public static float ResolveTextScale()
+             if (float.IsNaN(s_intentFontScale))
+             {
+                 int percent = ReadIntentInt(IntentExtraFontScale, 0);
+-                s_intentFontScale = percent > 0 ? ClampTextScale(percent / 100f) : 1f;
++                // Sin el extra de desarrollo, la escala de fuente del sistema (02 §12: hasta el 130 %; B9), leída una vez: un cambio
++                // con el juego abierto se ve al volver a abrirlo [P] (Q-B9-1).
++                s_intentFontScale = percent > 0 ? ClampTextScale(percent / 100f) : A11yRules.TextScaleFor(SystemScale.FontScale);
+                 if (percent > 0)
+                 {
+                     Debug.LogWarning("[AF.LaunchOptions] " + IntentExtraFontScale + " = " + percent + ": escala de texto " + s_intentFontScale.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ".");
+diff --git a/Assets/_Project/Scripts/UI/SettingsScreen.cs b/Assets/_Project/Scripts/UI/SettingsScreen.cs
+index 04bde497..9578696c 100644
+--- a/Assets/_Project/Scripts/UI/SettingsScreen.cs
++++ b/Assets/_Project/Scripts/UI/SettingsScreen.cs
+@@ -185,6 +185,7 @@ public SettingsScreen(Transform host, ProceduralArt art, DevProbe probe, Action<
+             // Pista por inactividad (MO3): una fila que se marca o se desmarca, en su hueco.
+             IdleHintSlot = UiBuilder.Rect("IdleHintSlot", _content);
+             _idleRow = new OptionRow(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
++            BuildA11yRows(); // Reducir movimiento y Alto contraste (B9; SettingsScreen.A11y.cs)
+ 
+             // «Sobre la Amazonía» (F4), oculto hasta que haya algo que enseñar (SettingsScreen.About.cs).
+             AboutSlot = HiddenSlot("AboutSlot");
+@@ -380,6 +381,11 @@ public IEnumerable<TextMeshProUGUI> Texts()
+ 
+             yield return _slothRow.Label;
+             yield return _idleRow.Label;
++            foreach (TextMeshProUGUI label in A11yTexts())
++            {
++                yield return label;
++            }
++
+             foreach (TextMeshProUGUI label in AudioTexts())
+             {
+                 yield return label;
+@@ -574,6 +580,9 @@ private void Layout()
+             _rowHeights.Add(rowH);
+             y += rowH + RowGapDp;
+ 
++            // Reducir movimiento y Alto contraste (B9): dos filas en su hueco, tras la pista por inactividad.
++            y = LayoutA11y(y, inner, rowH, s);
++
+             // Sobre la Amazonía (F4), si hay frutas que enseñar. El contenido acaba en la última fila.
+             y -= RowGapDp;
+             if (AboutShown)
+@@ -684,7 +693,7 @@ private void EmitLayout()
+                 return;
+             }
+ 
+-            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount + AccountLayoutCount;
++            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount;
+             var ids = new string[n];
+             var rects = new RectTransform[n];
+             ids[0] = "close";
+@@ -708,8 +717,9 @@ private void EmitLayout()
+             ids[k] = _idleRow.Id; // idle_hint (MO3)
+             rects[k] = _idleRow.Root;
+             AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
+-            AboutLayoutIds(ids, rects, k + 1 + AudioRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
+-            AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + AboutLayoutCount); // delete_account (B8)
++            A11yLayoutIds(ids, rects, k + 1 + AudioRowCount); // reduce_motion y high_contrast (B9)
++            AboutLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
++            AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount); // delete_account (B8)
+ 
+             _probe.Layout("settings", 0, null, ids, rects);
+         }
+@@ -803,6 +813,7 @@ public OptionRow(Transform parent, ProceduralArt art, string name, string id, st
+                 Label = UiBuilder.Label("Label", Root, TextStyle.PlainBold, text, OptionSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
+                 UiBuilder.AutoSize(Label, MinTextSp + 1f, OptionSp);
+                 SetSelected(false);
++                A11yLabels.Set(Button, () => Label.text, () => Selected); // TalkBack: su texto y si está marcada (B9; 02 §12)
+             }
+ 
+             public string Id { get; private set; }
+diff --git a/Assets/_Project/Tests/PlayMode/A11yGameTests.cs b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
+new file mode 100644
+index 00000000..78b0a38a
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs
+@@ -0,0 +1,286 @@
++#nullable enable
++using System;
++using System.Collections;
++using System.Collections.Generic;
++using System.IO;
++using AF.GameFlow;
++using AF.Localization;
++using AF.Platform;
++using AF.Presentation;
++using AF.Save;
++using AF.UI;
++using NUnit.Framework;
++using UnityEngine;
++using UnityEngine.EventSystems;
++using UnityEngine.TestTools;
++
++namespace AF.Tests.PlayMode
++{
++    /// <summary>
++    /// B9 en la escena <c>Game</c> real (parche <c>B9-ui.diff</c>; 02 §3.1 C9, §4 y §12; 07 §3, regla 5, y §7.8; 08 §9 y §14.2):
++    /// <list type="bullet">
++    /// <item>C9: mantener 400 ms sobre una cuia enseña los nombres de sus dosis y al soltar no selecciona; un toque corto sigue
++    /// siendo un toque; moverse 24 dp antes lo cancela (es el arrastre, C10).</item>
++    /// <item>Reducir movimiento (<c>settings.reduce_motion</c>): los vertidos a la mitad de tiempo (<c>anim_reduce_motion_factor</c>),
++    /// sin sacudida en el rechazo; en <c>auto</c>, el teléfono con «Quitar animaciones» lo enciende [P].</item>
++    /// <item>Alto contraste (<c>settings.high_contrast</c>): el patrón al 35 %, al momento.</item>
++    /// <item>Ajustes: las dos filas guardan el perfil y se aplican.</item>
++    /// <item>La escala de fuente del sistema llega a la escala de texto, con el tope del 130 %.</item>
++    /// <item>TalkBack: la selección se anuncia.</item>
++    /// </list>
++    /// </summary>
++    public sealed class A11yGameTests
++    {
++        [TearDown]
++        public void TearDown()
++        {
++            GameBootstrap.A11yHostOverride = null;
++            LaunchOptions.Reset();
++            LocSetUpFixture.ConfigureEs419();
++        }
++
++        [UnityTest]
++        public IEnumerator C9_Holding400ms_ShowsTheNames_AndReleasingDoesNotSelect()
++        {
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            UseB9Texts();
++            CuiaView view = boot.View!.Views[0];
++            Press(view, Center(view));
++            PlayModeHelpers.Step(boot, 384);
++            Assert.That(boot.View.HoldNamesVisible, Is.False, "antes de 400 ms, nada");
++            PlayModeHelpers.Step(boot, 32);
++            Assert.That(boot.View.HoldNamesVisible, Is.True, "02 §3.1, C9: ≥ 400 ms");
++            Assert.That(boot.View.HoldNamesText, Is.EqualTo(CuiaSpeech.Names(boot.Flow!.Session.Current, 0)));
++            Assert.That(boot.View.HoldNamesText, Is.Not.Empty);
++            Release(view, Center(view));
++            Assert.That(boot.Flow.Selected, Is.EqualTo(TapController.NoSelection), "al soltar no selecciona");
++            Assert.That(boot.Flow.Session.AppliedPours, Is.Zero);
++            Assert.That(boot.View.HoldNamesVisible, Is.False, "al soltar, los nombres se van");
++            PlayModeHelpers.Step(boot, 200);
++            Assert.That(view.IsLifted, Is.False, "la cuia vuelve a su sitio");
++        }
++
++        [UnityTest]
++        public IEnumerator C9_AShortPressIsStillATap_AndMovingCancelsTheHold()
++        {
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            CuiaView view = boot.View!.Views[0];
++            Press(view, Center(view));
++            PlayModeHelpers.Step(boot, 160);
++            Release(view, Center(view));
++            Assert.That(boot.Flow!.Selected, Is.EqualTo(0), "C1: un toque corto selecciona");
++            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Deselected));
++            PlayModeHelpers.Step(boot, 200);
++
++            // Moverse 24 dp antes de los 400 ms: ya es el arrastre (C10), no un mantener pulsado.
++            float px = A11yRules.HoldSlopDp * boot.View.Canvas.scaleFactor;
++            Press(view, Center(view));
++            Drag(view, Center(view) + new Vector2(0f, px + 2f));
++            PlayModeHelpers.Step(boot, 600);
++            Assert.That(boot.View.HoldNamesVisible, Is.False, "02 §3.1: «sin mover el dedo»");
++            Release(view, Center(view));
++        }
++
++        [UnityTest]
++        public IEnumerator ReduceMotion_HalvesThePour_AndRemovesTheShake()
++        {
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            Assert.That(boot.ReduceMotionNow, Is.False, "08 §9: ui_reduce_motion_default = false");
++            int empty0 = FirstEmpty(boot);
++            Assert.That(boot.TapCuia(empty0).Kind, Is.EqualTo(TapKind.Rejected));
++            Assert.That(boot.View!.Views[empty0].Shaking, Is.True, "sin el ajuste, el rechazo se sacude (D-012)");
++            PlayModeHelpers.Step(boot, 300);
++            int normal = PourMs(boot);
++
++            Profile reduced = SettingsScreenTests.ProfileAt(1);
++            reduced.Settings.ReduceMotion = ReduceMotionSetting.On;
++            yield return LoadLevel1(reduced, b => boot = b);
++            Assert.That(boot.ReduceMotionNow, Is.True);
++            Assert.That(boot.Flow!.ReduceMotion, Is.True, "LevelFlow.ReduceMotion: intro en fundido, sin partículas…");
++
++            // Rechazo (C2: una cuia vacía no puede ser origen): sin sacudida (02 §12).
++            int empty = FirstEmpty(boot);
++            Assert.That(boot.TapCuia(empty).Kind, Is.EqualTo(TapKind.Rejected));
++            Assert.That(boot.View!.Views[empty].Shaking, Is.False, "con Reducir movimiento, sin sacudidas");
++
++            int fast = PourMs(boot);
++            Assert.That(fast, Is.LessThan(normal * 0.75f), "02 §4: × anim_reduce_motion_factor (0,5): " + fast + " frente a " + normal + " ms");
++        }
++
++        [UnityTest]
++        public IEnumerator ReduceMotion_Auto_FollowsThePhoneWithoutAnimations_ButTheChoiceWins()
++        {
++            LaunchOptions.SystemScaleOverride = new FakeSystemScale(1f, 0f);
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            Assert.That(boot.ReduceMotionNow, Is.True, "[P] Q-B9-3: «Quitar animaciones» del teléfono con el ajuste en auto");
++            Assert.That(boot.ChooseA11y(SettingsScreen.ReduceMotionId, false), Is.True);
++            Assert.That(boot.ReduceMotionNow, Is.False, "elegido en Ajustes, manda la elección");
++            Assert.That(boot.Flow!.ReduceMotion, Is.False);
++            Assert.That(boot.Profile!.Settings.ReduceMotion, Is.EqualTo(ReduceMotionSetting.Off));
++        }
++
++        [UnityTest]
++        public IEnumerator HighContrast_PutsThePatternAt35Percent_AtOnce()
++        {
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(Palette.PatternOpacitySubtle).Within(1e-6f), "hasta el 40, 15 %");
++            Assert.That(boot.ChooseA11y(SettingsScreen.HighContrastId, true), Is.True);
++            Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(0.35f).Within(1e-6f), "07 §3, regla 5: Alto contraste, 35 %");
++            Assert.That(boot.Profile!.Settings.HighContrast, Is.True);
++            Assert.That(boot.ChooseA11y(SettingsScreen.HighContrastId, false), Is.True);
++            Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(Palette.PatternOpacitySubtle).Within(1e-6f), "y vuelve al del nivel");
++        }
++
++        [UnityTest]
++        public IEnumerator Settings_TheTwoRows_SaveAndApply()
++        {
++            var store = new MemoryProfileStore(SettingsScreenTests.ProfileAt(4));
++            yield return PlayModeHelpers.LoadApp(store);
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.PressSettings(), Is.True);
++            SettingsScreen settings = boot.SettingsView!;
++            Assert.That(settings.A11yMarked(SettingsScreen.ReduceMotionId), Is.False);
++            Assert.That(settings.A11yMarked(SettingsScreen.HighContrastId), Is.False);
++            settings.A11yButton(SettingsScreen.ReduceMotionId).onClick.Invoke();
++            settings.A11yButton(SettingsScreen.HighContrastId).onClick.Invoke();
++            Assert.That(settings.A11yMarked(SettingsScreen.ReduceMotionId), Is.True);
++            Assert.That(settings.A11yMarked(SettingsScreen.HighContrastId), Is.True);
++            Assert.That(boot.Profile!.Settings.ReduceMotion, Is.EqualTo(ReduceMotionSetting.On));
++            Assert.That(boot.Profile.Settings.HighContrast, Is.True);
++            Assert.That(boot.Flow!.ReduceMotion, Is.True, "se aplica al momento");
++            Assert.That(store.SaveCount, Is.GreaterThan(0), "se guarda en el acto");
++            foreach (TMPro.TextMeshProUGUI text in settings.Texts())
++            {
++                Assert.That(text.fontSizeMin, Is.GreaterThanOrEqualTo(12f), text.name + ": 02 §12, ≥ 12 sp");
++            }
++        }
++
++        [UnityTest]
++        public IEnumerator SystemFontScale_ReachesTheTextScale_UpTo130Percent()
++        {
++            LaunchOptions.SystemScaleOverride = new FakeSystemScale(1.15f);
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(4)));
++            Assert.That(UiBuilder.TextScale, Is.EqualTo(1.15f).Within(1e-6f), "02 §12: la escala de fuente del sistema");
++            LaunchOptions.Reset();
++            LaunchOptions.SystemScaleOverride = new FakeSystemScale(2f);
++            Assert.That(UiBuilder.TextScale, Is.EqualTo(UiBuilder.MaxTextScale).Within(1e-6f), "por encima del 130 %, ese tope");
++            LaunchOptions.Reset();
++            LaunchOptions.SystemScaleOverride = new FakeSystemScale(2f);
++            LaunchOptions.FontScaleOverride = 1f;
++            Assert.That(UiBuilder.TextScale, Is.EqualTo(1f), "el gancho de los tests manda");
++        }
++
++        [UnityTest]
++        public IEnumerator TalkBack_TheSelectionIsAnnounced()
++        {
++            var host = new FakeScreenReaderHost(true);
++            GameBootstrap.A11yHostOverride = host;
++            GameBootstrap boot = null!;
++            yield return LoadLevel1(SettingsScreenTests.ProfileAt(1), b => boot = b);
++            UseB9Texts();
++            Assert.That(boot.A11y, Is.Not.Null);
++            Assert.That(boot.View!.A11y, Is.SameAs(boot.A11y));
++            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
++            string fruit = CuiaSpeech.TopName(boot.Flow!.Session.Current, 0);
++            Assert.That(host.Announcements, Has.Member(fruit + " seleccionado: elige destino"), "02 §12");
++            boot.A11y!.Refresh();
++            Assert.That(host.Items[0].Selected, Is.True);
++        }
++
++        private static IEnumerator LoadLevel1(Profile profile, Action<GameBootstrap> done)
++        {
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
++            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            boot.TapAnywhere();
++            for (int t = 0; t < 8000 && (boot.Flow!.Phase != FlowPhase.Playing || !boot.View!.IsViewIdle); t += PlayModeHelpers.FrameMs)
++            {
++                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
++            }
++
++            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing));
++            done(boot);
++        }
++
++        // Un vertido legal del nivel 1, del toque al reposo (ms).
++        private static int PourMs(GameBootstrap boot)
++        {
++            int empty = FirstEmpty(boot);
++            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
++            Assert.That(boot.TapCuia(empty).Kind, Is.EqualTo(TapKind.Poured));
++            return PlayModeHelpers.StepUntilIdle(boot, 5000);
++        }
++
++        private static int FirstEmpty(GameBootstrap boot)
++        {
++            AF.Core.Board.BoardState state = boot.Flow!.Session.Current;
++            for (int i = 0; i < state.Count; i++)
++            {
++                if (state[i].IsEmpty)
++                {
++                    return i;
++                }
++            }
++
++            Assert.Fail("el nivel 1 tiene una cuia vacía");
++            return -1;
++        }
++
++        private static void Press(CuiaView view, Vector2 at)
++        {
++            ExecuteEvents.Execute(view.gameObject, new PointerEventData(EventSystem.current) { position = at, pointerId = 0 }, ExecuteEvents.pointerDownHandler);
++        }
++
++        private static void Drag(CuiaView view, Vector2 at)
++        {
++            ExecuteEvents.Execute(view.gameObject, new PointerEventData(EventSystem.current) { position = at, pointerId = 0 }, ExecuteEvents.dragHandler);
++        }
++
++        private static void Release(CuiaView view, Vector2 at)
++        {
++            ExecuteEvents.Execute(view.gameObject, new PointerEventData(EventSystem.current) { position = at, pointerId = 0 }, ExecuteEvents.pointerUpHandler);
++        }
++
++        private static Vector2 Center(CuiaView view)
++        {
++            RectTransform body = view.Body;
++            return RectTransformUtility.WorldToScreenPoint(null, body.TransformPoint(body.rect.center));
++        }
++
++        // Las etiquetas de B9 con su texto: la tabla de la escena más las filas de B9-strings.csv que falten.
++        private static void UseB9Texts()
++        {
++#if UNITY_EDITOR
++            string root = Path.GetDirectoryName(Application.dataPath) ?? ".";
++            IReadOnlyList<LocCsvRow> project = LocCsv.Parse(LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile), LocCatalog.StringsFile);
++            var rows = new List<LocCsvRow>(project);
++            string extra = Path.Combine(root, "docs/dev/traspaso/spark-enganches/B9-strings.csv");
++            if (File.Exists(extra))
++            {
++                var keys = new HashSet<string>(StringComparer.Ordinal);
++                for (int i = 1; i < project.Count; i++)
++                {
++                    keys.Add(project[i].Fields[0]);
++                }
++
++                IReadOnlyList<LocCsvRow> mine = LocCsv.Parse(LocCsv.Decode(File.ReadAllBytes(extra), "B9-strings.csv"), "B9-strings.csv");
++                for (int i = 1; i < mine.Count; i++)
++                {
++                    if (!keys.Contains(mine[i].Fields[0]))
++                    {
++                        rows.Add(mine[i]);
++                    }
++                }
++            }
++
++            Loc.Configure(new LocCatalog(LocTable.FromRows(rows, LocCatalog.StringsFile), Loc.Catalog.Facts), LocLocale.SourceLocale, true);
++#endif
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/PlayMode/A11yGameTests.cs.meta b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs.meta
+new file mode 100644
+index 00000000..ed1e026e
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/A11yGameTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: a366a7a5da4fdad4c8f1eaa2700bb866
+\ No newline at end of file
