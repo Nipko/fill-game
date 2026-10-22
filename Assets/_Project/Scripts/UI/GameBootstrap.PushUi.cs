@@ -29,9 +29,9 @@ namespace AF.UI
     /// pide el permiso si hace falta; con el teléfono bloqueándolos, abre los ajustes de la app en Android y, al volver con el
     /// permiso dado, los enciende; apagar cancela lo programado y guarda <c>settings.push</c>. TalkBack lee el estado y lo anuncia
     /// al cambiar (B9).</item>
-    /// <item><b>Analítica</b> (08 §8.2): <c>af_push_prompt</c> con <c>step</c> y <c>result</c> en cada paso que informa
-    /// <see cref="PushPermissionService.Reported"/> (pre-prompt y diálogo nativo; el <c>origin</c> [P] de B6 solo va a la sonda: el
-    /// catálogo de 08 §8.2 no lo tiene).</item>
+    /// <item><b>Analítica</b> (08 §8.2): <c>af_push_prompt</c> con <c>step</c>, <c>result</c> y <c>origin</c> (dado de alta con el
+    /// añadido de la UI de los avisos de D-033) en cada paso que informa <see cref="PushPermissionService.Reported"/> (pre-prompt y
+    /// diálogo nativo).</item>
     /// </list>
     /// </summary>
     public sealed partial class GameBootstrap
@@ -261,10 +261,11 @@ namespace AF.UI
             RefreshPushRow();
         }
 
-        // af_push_prompt (08 §8.2): step y result; el origin [P] de B6 no está en el catálogo y solo va a la sonda.
+        // af_push_prompt (08 §8.2): step, result y origin (first, second o settings; dado de alta con el añadido de la UI de los
+        // avisos de D-033).
         private void LogPushPrompt(PushPromptEvent e)
         {
-            _analytics?.Log(AnalyticsEvent.Create("af_push_prompt").Add("step", e.Step).Add("result", e.Result));
+            _analytics?.Log(AnalyticsEvent.Create("af_push_prompt").Add("step", e.Step).Add("result", e.Result).Add("origin", e.Origin));
         }
 
         /// <summary>Pone la fila «Avisos» de Ajustes en su estado de ahora (al abrir Ajustes y tras cada cambio).</summary>

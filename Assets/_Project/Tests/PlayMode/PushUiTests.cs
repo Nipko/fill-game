@@ -134,7 +134,7 @@ namespace AF.Tests.PlayMode
             AnalyticsEvent e = _sink.Last("af_push_prompt")!;
             Assert.That(e.Find("step")!.Value.Text, Is.EqualTo("pre"));
             Assert.That(e.Find("result")!.Value.Text, Is.EqualTo("declined"));
-            Assert.That(e.Find("origin"), Is.Null, "origin [P] no está en el catálogo de 08 §8.2");
+            Assert.That(e.Find("origin")!.Value.Text, Is.EqualTo("first"), "origin, dado de alta en 08 §8.2 (añadido de la UI de los avisos)");
         }
 
         [UnityTest]
