@@ -603,7 +603,7 @@ namespace AF.Tests.PlayMode
             Assert.That(map.SilhouetteLocalBox(hidden), Is.EqualTo(box), plate + ": en su sitio");
             Assert.That(map.SilhouetteBlockedAt(other, free), Is.True, plate + ": a la vista, vuelve a ser obstáculo");
 
-            // (d) Al abrir otra vez la vista se vuelve a pesar: en la Cuenca nunca se oculta; en el Mundo, otra vez no sale.
+            // (d) Al abrir otra vez la vista se vuelve a pesar: en la Cuenca solo se oculta si pisaría otra placa (AssertNoneHidden); en el Mundo, otra vez no sale.
             map.SetView(MapView.Basin);
             map.Tick(16f);
             AssertNoneHidden(map, "140 en en-XA al 130 %, Cuenca");
@@ -622,16 +622,27 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // En la Cuenca ninguna placa se oculta (FX10 solo oculta en la vista Mundo): todas pintadas.
+        // En la Cuenca, FX10 no oculta ninguna placa por no caber entera a la vista; desde la observación 2 de la prueba en el teléfono
+        // del 2026-10-23 solo se oculta una que, ni en dos líneas, cabe sin pisar otra placa o un país (PlatesUnstack), nunca la del
+        // mundo siguiente. Las que salen, pintadas y sin pisarse; las ocultas, sin pintar.
         private static void AssertNoneHidden(RiverMapScreen map, string at)
         {
             Assert.That(map.View, Is.EqualTo(MapView.Basin), at);
             Assert.That(map.SilhouetteCount, Is.GreaterThan(0), at + ": placas de mundos futuros");
+            Assert.That(map.PlateFitHidden(0), Is.False, at + ": la placa del mundo siguiente sale");
             for (int i = 0; i < map.SilhouetteCount; i++)
             {
                 string plate = "la placa «" + map.SilhouetteText(i) + "»";
-                Assert.That(map.PlateFitHidden(i), Is.False, at + ": " + plate + " no se oculta");
-                Assert.That(map.SilhouettePlate(i).enabled && map.SilhouetteLabel(i).enabled, Is.True, at + ": " + plate + " pintada");
+                bool shown = !map.PlateFitHidden(i);
+                Assert.That(map.SilhouettePlate(i).enabled && map.SilhouetteLabel(i).enabled, Is.EqualTo(shown), at + ": " + plate + (shown ? " pintada" : " sin pintar"));
+                for (int k = i + 1; shown && k < map.SilhouetteCount; k++)
+                {
+                    Rect a = map.SilhouetteLocalBox(i);
+                    Rect b = map.SilhouetteLocalBox(k);
+                    bool overlap = Rect.MinMaxRect(a.xMin + 0.5f, a.yMin + 0.5f, a.xMax - 0.5f, a.yMax - 0.5f)
+                        .Overlaps(Rect.MinMaxRect(b.xMin + 0.5f, b.yMin + 0.5f, b.xMax - 0.5f, b.yMax - 0.5f));
+                    Assert.That(!map.PlateFitHidden(k) && overlap, Is.False, at + ": " + plate + " pisa «" + map.SilhouetteText(k) + "»");
+                }
             }
         }
 
