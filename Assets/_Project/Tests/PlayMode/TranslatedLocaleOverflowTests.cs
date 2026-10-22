@@ -84,26 +84,39 @@ namespace AF.Tests.PlayMode
         /// </summary>
         public static LocTableTexts Completed(string locale, out int translated, out int filled)
         {
+            return Completed(new[] { locale }, out translated, out filled, null);
+        }
+
+        /// <summary>
+        /// Como <see cref="Completed(string, out int, out int)"/>, con varios idiomas a la vez (T2b: Ajustes › Idioma con en y
+        /// pt-BR completos); <paramref name="missing"/>, si no es null, recibe «clave (idioma)» de cada celda rellena.
+        /// </summary>
+        public static LocTableTexts Completed(string[] locales, out int translated, out int filled, List<string>? missing)
+        {
             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
             List<List<string>> records = Parse(strings);
             List<string> header = records[0];
             int source = header.IndexOf(LocLocale.SourceLocale);
-            int target = header.IndexOf(locale);
             Assert.That(source, Is.GreaterThanOrEqualTo(0));
-            Assert.That(target, Is.GreaterThanOrEqualTo(0), locale + " es una columna de strings.csv");
             translated = 0;
             filled = 0;
-            for (int r = 1; r < records.Count; r++)
+            foreach (string locale in locales)
             {
-                if (records[r][target].Length > 0)
+                int target = header.IndexOf(locale);
+                Assert.That(target, Is.GreaterThanOrEqualTo(0), locale + " es una columna de strings.csv");
+                for (int r = 1; r < records.Count; r++)
                 {
-                    translated++;
-                }
-                else
-                {
-                    records[r][target] = records[r][source];
-                    filled++;
+                    if (records[r][target].Length > 0)
+                    {
+                        translated++;
+                    }
+                    else
+                    {
+                        records[r][target] = records[r][source];
+                        filled++;
+                        missing?.Add(records[r][0] + " (" + locale + ")");
+                    }
                 }
             }
 

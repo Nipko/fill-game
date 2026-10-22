@@ -1,0 +1,112 @@
+key,es-419,en,pt-BR,status_en,status_pt-BR
+a11y_button_remaining,"{label}, {n:plural:{} restante|{} restantes}","{label}, {n:plural:{} left|{} left}","{label}, {n:plural:{} restante|{} restantes}",traducido,traducido
+a11y_close,Cerrar,Close,Fechar,traducido,traducido
+a11y_cucharon,"su cuia chica: {doses}, {holes:plural:{} hueco|{} huecos}","its small cuia: {doses}, {holes:plural:{} empty slot|{} empty slots}","sua cuia pequena: {doses}, {holes:plural:{} espaço vazio|{} espaços vazios}",traducido,traducido
+a11y_cucharon_empty,su cuia chica: {holes:plural:{} hueco|{} huecos},its small cuia: {holes:plural:{} empty slot|{} empty slots},sua cuia pequena: {holes:plural:{} espaço vazio|{} espaços vazios},traducido,traducido
+a11y_cucharon_full,su cuia chica: {doses},its small cuia: {doses},sua cuia pequena: {doses},traducido,traducido
+a11y_cuia,"cuia {n}: {doses}, {holes:plural:{} hueco|{} huecos}","cuia {n}: {doses}, {holes:plural:{} empty slot|{} empty slots}","cuia {n}: {doses}, {holes:plural:{} espaço vazio|{} espaços vazios}",traducido,traducido
+a11y_cuia_empty,cuia {n}: {holes:plural:{} hueco|{} huecos},cuia {n}: {holes:plural:{} empty slot|{} empty slots},cuia {n}: {holes:plural:{} espaço vazio|{} espaços vazios},traducido,traducido
+a11y_cuia_full,cuia {n}: {doses},cuia {n}: {doses},cuia {n}: {doses},traducido,traducido
+a11y_fruit_unnamed,fruta,fruit,fruta,traducido,traducido
+a11y_list,"{list}, {item}","{list}, {item}","{list}, {item}",traducido,traducido
+a11y_mud,barro,mud,barro,traducido,traducido
+a11y_murky,turbia,murky,turva,traducido,traducido
+a11y_names_join,"{list}
+{item}","{list}
+{item}","{list}
+{item}",traducido,traducido
+a11y_selected,{fruit} seleccionado: elige destino,{fruit} selected: choose a target,{fruit} selecionado: escolha o destino,traducido,traducido
+a11y_tap_to_continue,Continuar,Continue,Continuar,traducido,traducido
+a11y_tinaja,"tinaja: {fruit} en la boca, {n:plural:{} dosis dentro|{} dosis dentro}","water jar: {fruit} at the mouth, {n:plural:{} dose inside|{} doses inside}","talha: {fruit} na boca, {n:plural:{} dose dentro|{} doses dentro}",traducido,traducido
+a11y_tinaja_empty,tinaja: vacía,water jar: empty,talha: vazia,traducido,traducido
+comeback_logbook_line,{k:plural:Te esperaba {} página|Te esperaban {} páginas},{k:plural:{} page was waiting for you|{} pages were waiting for you},{k:plural:{} página esperava por você|{} páginas esperavam por você},traducido,traducido
+comeback_reminder_line,¿Recuerdas? Toca una cuia y luego otra,"Remember? Tap one cuia, then another",Lembra? Toque em uma cuia e depois em outra,traducido,traducido
+comeback_streak_line,Tu Crecida de {n} sigue en pie,Your Rising River of {n} still stands,Sua Enchente de {n} continua de pé,traducido,traducido
+consent_accept_all,Aceptar todo,Accept all,Aceitar tudo,traducido,traducido
+consent_ads_strict,Los anuncios no son personalizados.,Ads aren't personalized.,Os anúncios não são personalizados.,traducido,traducido
+consent_ads_teen,"Con tu edad, los anuncios no son personalizados.","At your age, ads aren't personalized.","Na sua idade, os anúncios não são personalizados.",traducido,traducido
+consent_ads_ump,Los anuncios personalizados se eligen en el aviso de Google.,Personalized ads are chosen in Google's notice.,Os anúncios personalizados são escolhidos no aviso do Google.,traducido,traducido
+consent_ads_ump_options,Elegir los anuncios en el aviso de Google,Choose ads in Google's notice,Escolher os anúncios no aviso do Google,traducido,traducido
+consent_age_13_17,De 13 a 17,13 to 17,De 13 a 17,traducido,traducido
+consent_age_18_plus,18 o más,18 or older,18 ou mais,traducido,traducido
+consent_age_title,¿Cuántos años tienes?,How old are you?,Quantos anos você tem?,traducido,traducido
+consent_age_under_13,Menos de 13,Under 13,Menos de 13,traducido,traducido
+consent_blocked,Pide a un adulto que instale el juego,Ask an adult to install the game,Peça a um adulto para instalar o jogo,traducido,traducido
+consent_body,Elige para qué podemos usar tus datos. Puedes cambiarlo cuando quieras en Ajustes.,Choose what we can use your data for. You can change it anytime in Settings.,Escolha para que podemos usar seus dados. Você pode mudar isso quando quiser em Configurações.,traducido,traducido
+consent_diagnostics,Los informes de fallos están siempre activos para que el juego funcione bien.,Crash reports are always on so the game runs well.,Os relatórios de falhas estão sempre ativos para que o jogo funcione bem.,traducido,traducido
+consent_purpose_ads,Anuncios personalizados,Personalized ads,Anúncios personalizados,traducido,traducido
+consent_purpose_analytics,Analítica para mejorar el juego,Analytics to improve the game,Análises para melhorar o jogo,traducido,traducido
+consent_reject_all,Rechazar todo,Reject all,Rejeitar tudo,traducido,traducido
+consent_save,Guardar mi elección,Save my choice,Salvar minha escolha,traducido,traducido
+consent_title,Tu privacidad,Your privacy,Sua privacidade,traducido,traducido
+delete_account_body,"Se borrarán tu progreso, tus semillas y tus comodines de este teléfono y de la nube.","Your progress, seeds and boosters will be deleted from this phone and from the cloud.","Seu progresso, suas sementes e seus reforços serão apagados deste telefone e da nuvem.",traducido,traducido
+delete_account_confirm_body,No se puede deshacer. El juego volverá a empezar desde el nivel 1.,This can't be undone. The game will start over from level 1.,Não dá para desfazer. O jogo vai recomeçar do nível 1.,traducido,traducido
+delete_account_confirm_cta,Eliminar,Delete,Excluir,traducido,traducido
+delete_account_confirm_title,¿Eliminar todo?,Delete everything?,Excluir tudo?,traducido,traducido
+delete_account_continue,Continuar,Continue,Continuar,traducido,traducido
+delete_account_failed,No se pudo eliminar. Inténtalo de nuevo.,Couldn't delete. Please try again.,Não foi possível excluir. Tente de novo.,traducido,traducido
+delete_account_keep,Conservar mis datos,Keep my data,Manter meus dados,traducido,traducido
+delete_account_no_refund,Las compras no se reembolsan.,Purchases are not refunded.,As compras não são reembolsadas.,traducido,traducido
+iap_pending_confirm,Pendiente de confirmar,Awaiting confirmation,Aguardando confirmação,traducido,traducido
+iap_verify_failed,No se pudo confirmar la compra,Couldn't confirm the purchase,Não foi possível confirmar a compra,traducido,traducido
+map_card_basket,Canasta,Basket,Cesta,traducido,traducido
+map_world_prize,{n:plural:Premio del mundo · falta {}|Premio del mundo · faltan {}},{n:plural:World prize · {} left|World prize · {} left},{n:plural:Prêmio do mundo · falta {}|Prêmio do mundo · faltam {}},traducido,traducido
+market_canoes_content,{n} min de Canoas infinitas,{n} min of Endless Canoes,{n} min de Canoas infinitas,traducido,traducido
+market_noads_content,"{n:plural:Sin anuncios entre niveles, para siempre. Los videos opcionales siguen. +{} semilla|Sin anuncios entre niveles, para siempre. Los videos opcionales siguen. +{} semillas}","{n:plural:No ads between levels, forever. Optional videos stay. +{} seed|No ads between levels, forever. Optional videos stay. +{} seeds}","{n:plural:Sem anúncios entre níveis, para sempre. Os vídeos opcionais continuam. +{} semente|Sem anúncios entre níveis, para sempre. Os vídeos opcionais continuam. +{} sementes}",traducido,traducido
+market_noads_owned,Ya no ves anuncios entre niveles,You no longer see ads between levels,Você não vê mais anúncios entre níveis,traducido,traducido
+market_piggy_content,{seeds} de {cap:plural:{} semilla|{} semillas},{seeds} of {cap:plural:{} seed|{} seeds},{seeds} de {cap:plural:{} semente|{} sementes},traducido,traducido
+market_piggy_fills,Se llena con cada victoria,Fills up with every win,Enche a cada vitória,traducido,traducido
+market_piggy_full,¡Lleno!,Full!,Cheio!,traducido,traducido
+market_piggy_locked,{n:plural:Se puede comprar desde {} semilla|Se puede comprar desde {} semillas},{n:plural:Can be bought from {} seed|Can be bought from {} seeds},{n:plural:Pode ser comprado a partir de {} semente|Pode ser comprado a partir de {} sementes},traducido,traducido
+market_seeds_amount,{n:plural:{} semilla|{} semillas},{n:plural:{} seed|{} seeds},{n:plural:{} semente|{} sementes},traducido,traducido
+market_skin_equip,Poner,Equip,Usar,traducido,traducido
+market_skin_equipped,Puesta,Equipped,Em uso,traducido,traducido
+market_skin_prize,{n:plural:Premio del mundo · falta {}|Premio del mundo · faltan {}},{n:plural:World prize · {} left|World prize · {} left},{n:plural:Prêmio do mundo · falta {}|Prêmio do mundo · faltam {}},traducido,traducido
+market_starter_content,"{seeds:plural:{} semilla|{} semillas}, {extra:plural:{} Cuia extra|{} Cuia extra} y {hints:plural:{} Morpho|{} Morpho}","{seeds:plural:{} seed|{} seeds}, {extra:plural:{} Extra Cuia|{} Extra Cuia} and {hints:plural:{} Morpho|{} Morpho}","{seeds:plural:{} semente|{} sementes}, {extra:plural:{} Cuia Extra|{} Cuia Extra} e {hints:plural:{} Morpho|{} Morpho}",traducido,traducido
+market_starter_left,{h:plural:Queda {} hora|Quedan {} horas},{h:plural:{} hour left|{} hours left},{h:plural:Falta {} hora|Faltam {} horas},traducido,traducido
+market_store_unavailable,Las compras no están disponibles ahora,Purchases aren't available right now,As compras não estão disponíveis agora,traducido,traducido
+market_tab_boosters,Comodines,Boosters,Reforços,traducido,traducido
+market_tab_cuias,Cuias,Cuias,Cuias,traducido,traducido
+no_canoes_map,Volver al Mapa del río,Back to the River Map,Voltar ao Mapa do Rio,traducido,traducido
+offer_not_now,Ahora no,Not now,Agora não,traducido,traducido
+purchase_confirm_body,"{product} por {price}. Después, Google Play te pedirá confirmar el pago.",{product} for {price}. Google Play will then ask you to confirm the payment.,"{product} por {price}. Depois, o Google Play vai pedir que você confirme o pagamento.",traducido,traducido
+purchase_confirm_buy,Comprar,Buy,Comprar,traducido,traducido
+purchase_confirm_cancel,Cancelar,Cancel,Cancelar,traducido,traducido
+purchase_confirm_title,¿Confirmas la compra?,Confirm the purchase?,Confirmar a compra?,traducido,traducido
+push_channel_description,"Reto del río, Bitácora, Crecida y canoas.","River Challenge, Logbook, Rising River and canoes.","Desafio do Rio, Diário, Enchente e canoas.",traducido,traducido
+push_channel_name,Avisos del río,River alerts,Avisos do rio,traducido,traducido
+push_comeback_d14,Capi te guardó una Cuia extra y {seeds:plural:{} semilla|{} semillas}. El río te espera en {world} (nivel {level}).,Capi saved you an Extra Cuia and {seeds:plural:{} seed|{} seeds}. The river is waiting for you in {world} (level {level}).,Capi guardou uma Cuia Extra e {seeds:plural:{} semente|{} sementes} para você. O rio espera por você em {world} (nível {level}).,traducido,traducido
+push_comeback_d30,Capi te guardó una Cuia extra y {seeds:plural:{} semilla|{} semillas}. El río te espera en {world} (nivel {level}).,Capi saved you an Extra Cuia and {seeds:plural:{} seed|{} seeds}. The river is waiting for you in {world} (level {level}).,Capi guardou uma Cuia Extra e {seeds:plural:{} semente|{} sementes} para você. O rio espera por você em {world} (nível {level}).,traducido,traducido
+push_comeback_d60,Capi te guardó una Cuia extra y {seeds:plural:{} semilla|{} semillas}. El río te espera en {world} (nivel {level}).,Capi saved you an Extra Cuia and {seeds:plural:{} seed|{} seeds}. The river is waiting for you in {world} (level {level}).,Capi guardou uma Cuia Extra e {seeds:plural:{} semente|{} sementes} para você. O rio espera por você em {world} (nível {level}).,traducido,traducido
+push_preprompt_accept,Avísame,Notify me,Me avise,traducido,traducido
+push_preprompt_body,¿Te avisamos cuando tu Reto del río esté listo y tu Bitácora espere?,Shall we let you know when your River Challenge is ready and your Logbook is waiting?,Podemos avisar quando seu Desafio do Rio estiver pronto e seu Diário estiver esperando?,traducido,traducido
+push_preprompt_decline,Ahora no,Not now,Agora não,traducido,traducido
+settings_account_code,Código para borrar tu cuenta en la web: {code},Code to delete your account on the web: {code},Código para excluir sua conta na web: {code},traducido,traducido
+settings_account_code_unavailable,Sin conexión: el código para borrar tu cuenta en la web aún no está disponible,Offline: the code to delete your account on the web isn't available yet,Sem conexão: o código para excluir sua conta na web ainda não está disponível,traducido,traducido
+settings_age_correct,Corregir mi edad,Correct my age,Corrigir minha idade,traducido,traducido
+settings_delete_account,Eliminar cuenta y datos,Delete account and data,Excluir conta e dados,traducido,traducido
+settings_high_contrast,Alto contraste,High contrast,Alto contraste,traducido,traducido
+settings_notifications,Avisos,Notifications,Notificações,traducido,traducido
+settings_notifications_blocked,Actívalos en los ajustes del teléfono.,Turn them on in your phone settings.,Ative-as nas configurações do telefone.,traducido,traducido
+settings_privacy,Privacidad y datos,Privacy and data,Privacidade e dados,traducido,traducido
+settings_reduce_motion,Reducir movimiento,Reduce motion,Reduzir movimento,traducido,traducido
+settings_river_facts,Datos del río,River facts,Curiosidades do rio,traducido,traducido
+shuffle_confirm,La ola remueve el río sin tocar las cuias llenas. {price} semillas. ¿Seguir?,The wave stirs the river without touching full cuias. {price} seeds. Continue?,A onda agita o rio sem tocar nas cuias cheias. {price} sementes. Continuar?,traducido,traducido
+shuffle_confirm_yes,Seguir,Continue,Continuar,traducido,traducido
+shuffle_failed,La ola no pudo remover el río,The wave couldn't stir the river,A onda não conseguiu agitar o rio,traducido,traducido
+shuffle_low_water,Hay poca agua libre para la ola,There's too little free water for the wave,Há pouca água livre para a onda,traducido,traducido
+shuffle_name,Pororoca,Pororoca,Pororoca,traducido,traducido
+shuffle_tagline,La ola remueve el río sin tocar las cuias llenas.,The wave stirs the river without touching full cuias.,A onda agita o rio sem tocar nas cuias cheias.,traducido,traducido
+shuffle_unsupported,La ola no llega con la lluvia ni las pirañas,The wave doesn't come with rain or piranhas,A onda não vem com a chuva nem com as piranhas,traducido,traducido
+skin_af_skin_m02_name,Cuia de Santarém,Santarém Cuia,Cuia de Santarém,traducido,traducido
+skin_af_skin_m03_name,Cuia del Encuentro,Meeting Cuia,Cuia do Encontro,traducido,traducido
+skin_cuia_vidrio_name,Cuia de vidrio,Glass Cuia,Cuia de vidro,traducido,traducido
+skin_equipped_toast,{skin} · puesta,{skin} · equipped,{skin} · equipada,traducido,traducido
+skip_banner,Rosa puede llevarte río arriba · {price},Rosa can take you upriver · {price},Rosa pode levar você rio acima · {price},traducido,traducido
+skip_confirm_extra_cuia,Perderás la Cuia extra de este nivel,You'll lose this level's Extra Cuia,Você vai perder a Cuia Extra deste nível,traducido,traducido
+skip_confirm_title,¿Saltar el nivel?,Skip the level?,Pular o nível?,traducido,traducido
+skip_tagline,"Rosa te lleva río arriba, al siguiente nivel","Rosa takes you upriver, to the next level","Rosa leva você rio acima, para o próximo nível",traducido,traducido
+tutorial_canoes,"Canoas: si te rindes o sales del nivel, pierdes una. Vuelven solas cada 25 minutos.","Canoes: if you give up or leave the level, you lose one. They come back on their own every 25 minutes.","Canoas: se você desistir ou sair do nível, perde uma. Elas voltam sozinhas a cada 25 minutos.",traducido,traducido
+tutorial_double_harvest,"Con un video, las semillas de este nivel valen el doble.","With a video, this level's seeds are worth double.","Com um vídeo, as sementes deste nível valem o dobro.",traducido,traducido
+tutorial_restart_free,"Reiniciar es gratis, siempre, mismo tablero.","Restarting is free, always, same board.","Reiniciar é grátis, sempre, mesmo tabuleiro.",traducido,traducido
+tutorial_restart_free_canoe,"Reiniciar es gratis, siempre, mismo tablero. Desde el nivel 31, quedarte sin vertidos cuesta una canoa","Restarting is free, always, same board. From level 31, running out of pours costs a canoe","Reiniciar é grátis, sempre, mesmo tabuleiro. A partir do nível 31, ficar sem despejos custa uma canoa",traducido,traducido
