@@ -215,10 +215,28 @@ namespace AF.UI
         /// <summary>Avanza C9 (parche: en <c>Tick</c>): a los 400 ms, los nombres.</summary>
         internal void HoldTick(float dtMs)
         {
+            if (_hold.Index == CuiaHoldTracker.None)
+            {
+                return;
+            }
+
+            if (!BoardTakesHold())
+            {
+                HoldReset(); // se abrió un modal, la celebración o la Luciérnaga con el dedo abajo: sin nombres encima
+                return;
+            }
+
             if (_hold.Tick(dtMs))
             {
                 ShowHoldNames(_hold.Index);
             }
+        }
+
+        // C9 es del tablero jugable: no con un modal, la celebración o la selección de la Luciérnaga (el toque elige la cuia).
+        private bool BoardTakesHold()
+        {
+            LevelFlow? flow = _flow;
+            return flow != null && flow.HasLevel && flow.AcceptsBoardInput && !flow.RevealSelecting;
         }
 
         /// <summary>Olvida C9 y oculta los nombres (parche: al construir el tablero y al volver de segundo plano).</summary>
@@ -230,10 +248,10 @@ namespace AF.UI
 
         private void OnHoldDown(int index, int pointer, Vector2 screenPx)
         {
-            LevelFlow? flow = _flow;
-            if (flow == null || !flow.HasLevel || !flow.AcceptsBoardInput || flow.RevealSelecting)
+            if (!BoardTakesHold())
             {
-                return; // C9 es del tablero jugable; en la selección de la Luciérnaga el toque elige la cuia
+                HoldReset(); // sin restos de un C9 anterior que se tragaran este toque (el de la Luciérnaga, por ejemplo)
+                return;
             }
 
             _hold.Press(index, pointer, ToDp(screenPx));
@@ -253,7 +271,7 @@ namespace AF.UI
         private void ShowHoldNames(int index)
         {
             LevelFlow? flow = _flow;
-            if (flow == null || !flow.HasLevel || (uint)index >= (uint)_views.Length || index >= flow.Session.Current.Count)
+            if (flow == null || !BoardTakesHold() || (uint)index >= (uint)_views.Length || index >= flow.Session.Current.Count)
             {
                 return;
             }

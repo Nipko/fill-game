@@ -33,8 +33,8 @@ namespace AF.UI
     /// <item>Cada <see cref="Button"/> activo es un botón: su etiqueta es la registrada en <see cref="A11yLabels"/> o, si no hay,
     /// sus textos a la vista en orden, con el patrón de lista (<see cref="A11yText.Append"/>); gris, desactivado; activarlo pulsa el
     /// botón. Cada texto suelto a la vista es un texto.</item>
-    /// <item>El orden es el de lectura: de arriba abajo por filas de <see cref="RowBandPx"/> px y, dentro de una fila, de izquierda
-    /// a derecha; los lienzos de debajo antes que los de encima (un aviso que flota sobre el tablero se lee después).</item>
+    /// <item>El orden es el de lectura: de arriba abajo por filas (dos elementos van en la misma fila si sus centros están a menos de
+    /// media altura, la menor) y, dentro de una fila, de izquierda a derecha; los lienzos de debajo antes que los de encima (un aviso que flota sobre el tablero se lee después).</item>
     /// </list>
     /// Solo corre con el lector encendido (<see cref="A11yService"/>): asigna listas y cadenas.
     /// </summary>
@@ -42,9 +42,6 @@ namespace AF.UI
     {
         /// <summary>Fracción del lienzo que tiene que cubrir una imagen que recibe toques para tapar lo de debajo [P].</summary>
         public const float BlockerCover = 0.9f;
-
-        /// <summary>Alto de las filas del orden de lectura (px) [P]: dos elementos cuyo centro cae en la misma banda van en la misma fila.</summary>
-        public const float RowBandPx = 24f;
 
         private static readonly Vector3[] Corners = new Vector3[4];
 
@@ -124,7 +121,7 @@ namespace AF.UI
             Rect canvasRect = ((RectTransform)canvas.transform).rect;
             bool blocks = false;
             Walk(canvas.transform, skip, canvasRect, ref blocks, 1f);
-            _entries.Sort(CompareEntries);
+            SortReadingOrder();
             for (int i = 0; i < _entries.Count; i++)
             {
                 into.Add(_entries[i].Item);
@@ -278,7 +275,7 @@ namespace AF.UI
                 Unlabeled++;
             }
 
-            _entries.Add(new Entry(item, Mathf.Floor(frame.center.y / RowBandPx), frame.xMin, _entries.Count));
+            _entries.Add(new Entry(item, frame.center.y, frame.height, frame.xMin, _entries.Count));
         }
 
         private static bool Shown(TextMeshProUGUI text)
@@ -303,6 +300,30 @@ namespace AF.UI
             return canvasRect.width > 0f && canvasRect.height > 0f && w * h >= BlockerCover * canvasRect.width * canvasRect.height;
         }
 
+        // Orden de lectura: primero de arriba abajo por el centro; después, filas por solape (un elemento entra en la fila si su
+        // centro queda a menos de media altura, la menor de las dos, del centro del primero de la fila); dentro de cada fila, de
+        // izquierda a derecha. Determinista (el empate final es el orden de dibujo).
+        private void SortReadingOrder()
+        {
+            _entries.Sort((a, b) => a.CenterY != b.CenterY ? a.CenterY.CompareTo(b.CenterY) : a.Order.CompareTo(b.Order));
+            int row = 0;
+            int anchor = 0;
+            for (int i = 0; i < _entries.Count; i++)
+            {
+                Entry e = _entries[i];
+                Entry first = _entries[anchor];
+                if (i > anchor && e.CenterY - first.CenterY >= Mathf.Max(1f, Mathf.Min(e.Height, first.Height) * 0.5f))
+                {
+                    row++;
+                    anchor = i;
+                }
+
+                _entries[i] = e.WithRow(row);
+            }
+
+            _entries.Sort(CompareEntries);
+        }
+
         private static int CompareEntries(Entry a, Entry b)
         {
             if (a.Row != b.Row)
@@ -320,21 +341,32 @@ namespace AF.UI
 
         private readonly struct Entry
         {
-            public Entry(A11yItem item, float row, float x, int order)
+            public Entry(A11yItem item, float centerY, float height, float x, int order, int row = 0)
             {
                 Item = item;
-                Row = row;
+                CenterY = centerY;
+                Height = height;
                 X = x;
                 Order = order;
+                Row = row;
             }
 
             public A11yItem Item { get; }
 
-            public float Row { get; }
+            public float CenterY { get; }
+
+            public float Height { get; }
 
             public float X { get; }
 
             public int Order { get; }
+
+            public int Row { get; }
+
+            public Entry WithRow(int row)
+            {
+                return new Entry(Item, CenterY, Height, X, Order, row);
+            }
         }
     }
 }

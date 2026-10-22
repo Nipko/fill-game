@@ -2,6 +2,7 @@
 using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Mechanics;
+using AF.Localization;
 using AF.UI;
 using NUnit.Framework;
 
@@ -98,6 +99,20 @@ namespace AF.Tests.EditMode
         {
             BoardState state = Board(Cuia.Create(4, new[] { Cuia.MudColor, Acai }));
             Assert.That(CuiaSpeech.Label(state, 0), Is.EqualTo("cuia 1: barro, Açaí, 2 huecos"));
+        }
+
+        [Test]
+        public void WithoutFruitNames_TheDosesAreStillCounted_AndReadAsFruta()
+        {
+            // En release, tint.<tinte>.name espera al asesor: Loc.Fact da «». La cuia llena no puede sonar vacía (Q-B9-7).
+            Loc.Configure(new LocCatalog(B9Loc.Catalog().Strings, null), LocLocale.SourceLocale, true);
+            BoardState state = Board(Cuia.Create(4, new[] { Acai, Acai, Acai, Acai }), Cuia.Create(4, new[] { Aguaje }),
+                Cuia.Create(5, new[] { Acai, Aguaje, CamuCamu }, 0b011).WithMechanic(MechanicType.Tinaja));
+            Assert.That(CuiaSpeech.Label(state, 0), Is.EqualTo("cuia 1: fruta, fruta, fruta, fruta"));
+            Assert.That(CuiaSpeech.Label(state, 1), Is.EqualTo("cuia 2: fruta, 3 huecos"));
+            Assert.That(CuiaSpeech.Label(state, 2), Is.EqualTo("tinaja: fruta en la boca, 3 dosis dentro"), "nunca «vacía» con dosis");
+            Assert.That(CuiaSpeech.Names(state, 1), Is.EqualTo("fruta"));
+            Assert.That(CuiaSpeech.TopName(state, 0), Is.EqualTo("fruta"), "la selección se anuncia igual");
         }
 
         [Test]

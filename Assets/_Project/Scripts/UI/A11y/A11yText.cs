@@ -32,13 +32,17 @@ namespace AF.UI
         {
             Keys.Cuia, Keys.CuiaFull, Keys.CuiaEmpty, Keys.List, Keys.Murky, Keys.Mud, Keys.Tinaja, Keys.TinajaEmpty,
             Keys.Cucharon, Keys.CucharonFull, Keys.CucharonEmpty, Keys.Selected, Keys.ButtonRemaining, Keys.NamesJoin,
-            Keys.SettingsReduceMotion, Keys.SettingsHighContrast,
+            Keys.SettingsReduceMotion, Keys.SettingsHighContrast, Keys.FruitUnnamed,
         };
 
-        /// <summary>Etiqueta de la cuia en la ranura <paramref name="slot"/> (1..n) con las dosis <paramref name="doses"/> ya en lista y <paramref name="holes"/> huecos.</summary>
-        public static string Cuia(int slot, string doses, int holes)
+        /// <summary>
+        /// Etiqueta de la cuia en la ranura <paramref name="slot"/> (1..n) con <paramref name="count"/> dosis, ya en lista en
+        /// <paramref name="doses"/>, y <paramref name="holes"/> huecos. La forma (vacía, con huecos o llena) sale de las cifras, nunca
+        /// del texto.
+        /// </summary>
+        public static string Cuia(int slot, string doses, int count, int holes)
         {
-            if (doses.Length == 0)
+            if (count <= 0)
             {
                 return Loc.T(Keys.CuiaEmpty, LocArgs.OfDigits("n", slot).AndDigits("holes", holes));
             }
@@ -49,9 +53,9 @@ namespace AF.UI
         }
 
         /// <summary>Etiqueta de la cuia chica de la Tinaja (M13; D-019): «su cuia chica: açaí, 1 hueco».</summary>
-        public static string Cucharon(string doses, int holes)
+        public static string Cucharon(string doses, int count, int holes)
         {
-            if (doses.Length == 0)
+            if (count <= 0)
             {
                 return Loc.T(Keys.CucharonEmpty, LocArgs.OfDigits("holes", holes));
             }
@@ -64,7 +68,7 @@ namespace AF.UI
         /// <summary>Etiqueta de la Tinaja: «tinaja: camu camu en la boca, 3 dosis dentro»; sin dosis, «tinaja: vacía» [P].</summary>
         public static string Tinaja(string mouth, int doses)
         {
-            return doses <= 0 || mouth.Length == 0
+            return doses <= 0
                 ? Loc.T(Keys.TinajaEmpty)
                 : Loc.T(Keys.Tinaja, LocArgs.Of("fruit", mouth).AndDigits("n", doses));
         }
@@ -97,15 +101,15 @@ namespace AF.UI
         /// <summary>Una dosis de Barro (M5, 02 §9.1) [P]: «barro».</summary>
         public static string Mud => Loc.T(Keys.Mud);
 
-        /// <summary>Nombre visible de la fruta <paramref name="tint"/> (1..14; <c>tint.&lt;tinte&gt;.name</c>), o «» si no lo hay en este idioma o build.</summary>
+        /// <summary>
+        /// Nombre visible de la fruta <paramref name="tint"/> (1..14; <c>tint.&lt;tinte&gt;.name</c>) o, si no lo hay en este idioma
+        /// o build (en release, mientras no lo apruebe el asesor), «fruta» [P] (<see cref="Keys.FruitUnnamed"/>; Q-B9-7): el lector
+        /// nunca se salta una dosis ni deja una cuia llena como si estuviera vacía.
+        /// </summary>
         public static string FruitName(int tint)
         {
-            if (tint < 1 || tint >= NameKeys.Length)
-            {
-                return string.Empty;
-            }
-
-            return Loc.Fact(NameKeys[tint]);
+            string name = tint >= 1 && tint < NameKeys.Length ? Loc.Fact(NameKeys[tint]) : string.Empty;
+            return name.Length > 0 ? name : Loc.T(Keys.FruitUnnamed);
         }
 
         /// <summary>Anuncio de la selección (02 §12): «açaí seleccionado: elige destino».</summary>
@@ -152,6 +156,9 @@ namespace AF.UI
 
             /// <summary>Patrón de lista «{list}, {item}» [P].</summary>
             public const string List = "a11y_list";
+
+            /// <summary>«fruta», una fruta cuyo nombre aún no se puede enseñar [P] (Q-B9-7).</summary>
+            public const string FruitUnnamed = "a11y_fruit_unnamed";
 
             /// <summary>«turbia» (02 §12).</summary>
             public const string Murky = "a11y_murky";

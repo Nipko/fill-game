@@ -17,7 +17,7 @@ namespace AF.UI
     /// por cada oculta (sin decir cuál es); en la Tinaja, solo la boca y las capas ya reveladas, nunca las ocultas.</item>
     /// </list>
     /// El número de la cuia es su ranura empezando en 1 (el índice del tablero + 1) [P]. Una fruta sin nombre en este idioma o
-    /// build (<c>tint.&lt;tinte&gt;.name</c> aún sin aprobar en release) no se dice (Q-B9-7). Asignan cadenas: solo cuando cambia
+    /// build (<c>tint.&lt;tinte&gt;.name</c> aún sin aprobar en release) se dice «fruta» [P] (Q-B9-7). Asignan cadenas: solo cuando cambia
     /// el tablero, nunca por fotograma.
     /// </summary>
     public static class CuiaSpeech
@@ -51,8 +51,8 @@ namespace AF.UI
             }
 
             return cuia.Mechanic == MechanicType.Cucharon
-                ? A11yText.Cucharon(doses, cuia.Space)
-                : A11yText.Cuia(index + 1, doses, cuia.Space);
+                ? A11yText.Cucharon(doses, cuia.Count, cuia.Space)
+                : A11yText.Cuia(index + 1, doses, cuia.Count, cuia.Space);
         }
 
         /// <summary>

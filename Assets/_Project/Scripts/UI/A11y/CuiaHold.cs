@@ -169,7 +169,8 @@ namespace AF.UI
         /// <summary>Pone (o reutiliza) el escuchador en <paramref name="target"/>, para la cuia <paramref name="index"/>.</summary>
         public static CuiaHoldRelay Attach(GameObject target, int index, Action<int, int, Vector2> down, Action<int, int, Vector2> move, Action<int, int> up)
         {
-            CuiaHoldRelay relay = target.GetComponent<CuiaHoldRelay>() ?? target.AddComponent<CuiaHoldRelay>();
+            // TryGetComponent y no «??»: un componente que falta es un objeto nulo de Unity, no null de C#.
+            CuiaHoldRelay relay = target.TryGetComponent(out CuiaHoldRelay existing) ? existing : target.AddComponent<CuiaHoldRelay>();
             relay.Index = index;
             relay._down = down;
             relay._move = move;

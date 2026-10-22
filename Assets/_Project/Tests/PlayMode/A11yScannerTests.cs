@@ -149,13 +149,13 @@ namespace AF.Tests.PlayMode
             return false;
         }
 
-        // De arriba abajo por filas (A11yScanner.RowBandPx) y de izquierda a derecha dentro de cada lienzo: el orden de lectura (los
-        // lienzos van uno tras otro, el de debajo primero).
+        // El orden de lectura dentro de cada lienzo (los lienzos van uno tras otro, el de debajo primero): ningún elemento queda
+        // claramente por encima del anterior (más de media altura), y en la misma fila, de izquierda a derecha.
         private static void AssertReadingOrder(IReadOnlyList<A11yItem> items)
         {
             Canvas? canvas = null;
-            float lastRow = float.MinValue;
-            float lastX = float.MinValue;
+            Rect last = default;
+            bool has = false;
             for (int i = 0; i < items.Count; i++)
             {
                 RectTransform? rect = items[i].Rect;
@@ -168,20 +168,22 @@ namespace AF.Tests.PlayMode
                 if (!ReferenceEquals(root, canvas))
                 {
                     canvas = root;
-                    lastRow = float.MinValue;
-                    lastX = float.MinValue;
+                    has = false;
                 }
 
                 Rect frame = UnityScreenReaderHost.ScreenFrame(rect);
-                float row = Mathf.Floor(frame.center.y / A11yScanner.RowBandPx);
-                Assert.That(row, Is.GreaterThanOrEqualTo(lastRow), items[i].Label + ": de arriba abajo");
-                if (row == lastRow)
+                if (has)
                 {
-                    Assert.That(frame.xMin, Is.GreaterThanOrEqualTo(lastX), items[i].Label + ": de izquierda a derecha");
+                    float half = Mathf.Max(last.height, frame.height) * 0.5f;
+                    Assert.That(frame.center.y, Is.GreaterThan(last.center.y - half), items[i].Label + ": de arriba abajo");
+                    if (Mathf.Abs(frame.center.y - last.center.y) < Mathf.Min(last.height, frame.height) * 0.25f)
+                    {
+                        Assert.That(frame.xMin, Is.GreaterThanOrEqualTo(last.xMin), items[i].Label + ": de izquierda a derecha");
+                    }
                 }
 
-                lastRow = row;
-                lastX = frame.xMin;
+                last = frame;
+                has = true;
             }
         }
     }

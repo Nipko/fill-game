@@ -141,8 +141,8 @@ namespace AF.UI
 
     /// <summary>
     /// <see cref="IScreenReaderHost"/> real (bloque B9): el módulo de accesibilidad de Unity (<c>com.unity.modules.accessibility</c>,
-    /// ya en el manifiesto: sin paquete nuevo). Cada publicación rehace un <see cref="AccessibilityHierarchy"/> plano, con un nodo
-    /// por elemento en el orden del foco, y lo activa (<see cref="AssistiveSupport.activeHierarchy"/>); el marco de cada nodo se
+    /// ya en el manifiesto: sin paquete nuevo). Un <see cref="AccessibilityHierarchy"/> plano, con un nodo por elemento en el orden
+    /// del foco (se rehace solo si cambian los elementos; si no, se actualizan sus nodos sin mover el foco), que se activa (<see cref="AssistiveSupport.activeHierarchy"/>); el marco de cada nodo se
     /// calcula de su <see cref="RectTransform"/> cuando el lector lo pide (<see cref="AccessibilityNode.frameGetter"/>); activarlo
     /// (doble toque) llama a <see cref="A11yItem.Invoke"/>; los anuncios van por
     /// <see cref="AssistiveSupport.notificationDispatcher"/>. El origen de coordenadas del marco es la esquina de arriba a la
@@ -152,6 +152,8 @@ namespace AF.UI
     {
         private static readonly Vector3[] Corners = new Vector3[4];
 
+        private readonly List<AccessibilityNode> _nodes = new List<AccessibilityNode>();
+        private readonly List<A11yItem> _current = new List<A11yItem>();
         private AccessibilityHierarchy? _hierarchy;
 
         /// <summary>Lector forzado por un test o un build de desarrollo (null: el del sistema).</summary>
@@ -160,32 +162,81 @@ namespace AF.UI
         /// <inheritdoc />
         public bool ScreenReaderOn => ScreenReaderOverride ?? AssistiveSupport.isScreenReaderEnabled;
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Publica <paramref name="items"/>. Si son los mismos elementos en el mismo orden (mismos <see cref="A11yItem.Id"/>), solo
+        /// cambia la etiqueta y el estado de cada nodo: el foco de TalkBack no se mueve (tras seleccionar una cuia o verter, el
+        /// jugador sigue donde estaba). Si cambian, rehace la jerarquía y devuelve el foco al elemento que lo tenía, si sigue.
+        /// </summary>
         public void Publish(IReadOnlyList<A11yItem> items)
         {
-            var hierarchy = new AccessibilityHierarchy();
-            for (int i = 0; i < items.Count; i++)
+            if (_hierarchy != null && SameIds(items))
             {
-                A11yItem item = items[i];
-                AccessibilityNode node = hierarchy.AddNode(item.Label, null);
-                node.role = item.Role;
-                node.state = item.Disabled ? AccessibilityState.Disabled : item.Selected ? AccessibilityState.Selected : AccessibilityState.None;
-                RectTransform? rect = item.Rect;
-                if (rect != null)
+                for (int i = 0; i < items.Count; i++)
                 {
-                    node.frameGetter = () => ScreenFrame(rect);
+                    _current[i] = items[i];
+                    Apply(_nodes[i], items[i]);
                 }
 
-                Func<bool>? invoke = item.Invoke;
-                if (invoke != null)
+                return;
+            }
+
+            string? focused = null;
+            for (int i = 0; i < _nodes.Count; i++)
+            {
+                if (_nodes[i].isFocused)
                 {
-                    node.invoked += () => invoke();
+                    focused = _current[i].Id;
+                }
+            }
+
+            var hierarchy = new AccessibilityHierarchy();
+            _nodes.Clear();
+            _current.Clear();
+            AccessibilityNode? refocus = null;
+            for (int i = 0; i < items.Count; i++)
+            {
+                int k = i;
+                A11yItem item = items[i];
+                AccessibilityNode node = hierarchy.AddNode(item.Label, null);
+                _nodes.Add(node);
+                _current.Add(item);
+                Apply(node, item);
+                node.frameGetter = () => _current[k].Rect != null ? ScreenFrame(_current[k].Rect!) : Rect.zero;
+                node.invoked += () => _current[k].Invoke != null && _current[k].Invoke!();
+                if (focused != null && string.Equals(item.Id, focused, StringComparison.Ordinal))
+                {
+                    refocus = node;
                 }
             }
 
             _hierarchy = hierarchy;
             AssistiveSupport.activeHierarchy = hierarchy;
-            AssistiveSupport.notificationDispatcher.SendLayoutChanged(null);
+            AssistiveSupport.notificationDispatcher.SendLayoutChanged(refocus);
+        }
+
+        private static void Apply(AccessibilityNode node, A11yItem item)
+        {
+            node.label = item.Label;
+            node.role = item.Role;
+            node.state = item.Disabled ? AccessibilityState.Disabled : item.Selected ? AccessibilityState.Selected : AccessibilityState.None;
+        }
+
+        private bool SameIds(IReadOnlyList<A11yItem> items)
+        {
+            if (items.Count != _current.Count)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (!string.Equals(items[i].Id, _current[i].Id, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <inheritdoc />
@@ -197,6 +248,8 @@ namespace AF.UI
             }
 
             _hierarchy = null;
+            _nodes.Clear();
+            _current.Clear();
         }
 
         /// <inheritdoc />
