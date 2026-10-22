@@ -1,8 +1,10 @@
 #nullable enable
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using AF.Ads;
 using AF.Analytics;
+using AF.Analytics.Firebase;
 using AF.IAP;
 using AF.Platform;
 using AF.RemoteConfig.Binding;
@@ -77,6 +79,8 @@ namespace AF.UI
         {
             ConsentEnabledOverride = null;
             ConsentStoreOverride = null;
+            CrashReportingOverride = null;
+            AnalyticsResetOverride = null;
             SimCountryOverride = null;
         }
 
@@ -99,11 +103,59 @@ namespace AF.UI
             }
 
             ConsentBlocked = true;
+            Under13Firebase(); // F3-6: Crashlytics apagado y la analítica sin recoger, de forma explícita (persisten entre arranques)
             CutSplash();
             _consentScreen ??= new ConsentScreen(transform, _art);
             _consentScreen.ShowBlocked();
             DevProbe.ConsentState("blocked", ConsentPolicy.Flags(record, ConsentConfig.Defaults), record!.Profile, null, CountrySource.None);
             return true;
+        }
+
+        /// <summary>
+        /// Tests de los enganches con Firebase (F3-6): recibe true al encender Crashlytics y false al apagarlo, en lugar de
+        /// <see cref="CrashReporting"/>.
+        /// </summary>
+        internal static Action<bool>? CrashReportingOverride { get; set; }
+
+        /// <summary>Tests: sustituye a <see cref="FirebaseAnalyticsSink.ResetData"/> al eliminar la cuenta (F3-6).</summary>
+        internal static Action? AnalyticsResetOverride { get; set; }
+
+        /// <summary>Crashlytics encendido o apagado (F3-6; en el editor, nada salvo el gancho de los tests).</summary>
+        private static void SetCrashReporting(bool on)
+        {
+            if (CrashReportingOverride != null)
+            {
+                CrashReportingOverride(on);
+            }
+            else if (on)
+            {
+                CrashReporting.Start();
+            }
+            else
+            {
+                CrashReporting.Stop();
+            }
+        }
+
+        /// <summary>Los datos de analítica del dispositivo, borrados (08 §13.3; F3-6), al eliminar la cuenta.</summary>
+        private static void ResetAnalyticsData()
+        {
+            if (AnalyticsResetOverride != null)
+            {
+                AnalyticsResetOverride();
+            }
+            else
+            {
+                FirebaseAnalyticsSink.ResetData();
+            }
+        }
+
+        // Banda < 13 (08 §7): la analítica nunca se enciende (la recogida a false también en Firebase, que la recuerda entre
+        // arranques) y Crashlytics se apaga de forma explícita, porque IsCrashlyticsCollectionEnabled también persiste.
+        private void Under13Firebase()
+        {
+            _analytics?.SetCollectionEnabled(false);
+            SetCrashReporting(false);
         }
 
         /// <summary>Envuelve los anuncios con los flags del consentimiento (sin él, tal cual).</summary>
@@ -222,6 +274,7 @@ namespace AF.UI
         private void BlockSession()
         {
             ConsentBlocked = true;
+            Under13Firebase(); // F3-6 (ApplyConsentFlags ya apagó la analítica; Crashlytics, aquí)
             _consentScreen?.ShowBlocked();
             ProbeConsent();
             RebuildUi(); // el perfil en memoria viaja al arranque siguiente (también si no se pudo guardar: perfil en solo lectura)

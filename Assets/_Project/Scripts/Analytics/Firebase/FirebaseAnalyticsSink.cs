@@ -190,5 +190,28 @@ namespace AF.Analytics.Firebase
 #endif
             return true;
         }
+
+        /// <summary>
+        /// Lo apaga de forma explícita (B12, banda &lt; 13; 08 §7): <c>IsCrashlyticsCollectionEnabled = false</c>, que persiste entre
+        /// arranques, así que un <see cref="Start"/> anterior queda anulado. False si este build no tiene Crashlytics.
+        /// </summary>
+        public static bool Stop()
+        {
+            if (!FirebaseBoot.IsConfigured)
+            {
+                return false;
+            }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            FirebaseBoot.WhenReady(ok =>
+            {
+                if (ok)
+                {
+                    global::Firebase.Crashlytics.Crashlytics.IsCrashlyticsCollectionEnabled = false;
+                }
+            });
+#endif
+            return true;
+        }
     }
 }

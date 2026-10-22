@@ -111,7 +111,7 @@ namespace AF.UI
                 Debug.LogWarning(LogPrefix + "Remote Config: " + _rcConfigs.Errors[i]);
             }
 
-            CrashReporting.Start(); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono
+            SetCrashReporting(true); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono. <13: BlockedAtBoot lo apaga (B12)
             s_session ??= new SessionTracker(clock.UtcNow);
             _analytics = new AnalyticsService(_events, new CommonSource(this));
             _analytics.AddSink(new LogcatAnalyticsSink());

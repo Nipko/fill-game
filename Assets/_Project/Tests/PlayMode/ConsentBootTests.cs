@@ -37,6 +37,7 @@ namespace AF.Tests.PlayMode
             LaunchOptions.Reset();
             GameBootstrap.ResetConsentOverrides();
             GameBootstrap.ResetSessionOverrides();
+            GameBootstrap.ResetTelemetryOverrides();
         }
 
         private static Profile ProfileWith(ConsentRecord? consent, int nextLevel = 4)
@@ -194,6 +195,60 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.ConsentHoldsSession, Is.False);
             boot.SessionsPaused(true);
             Assert.That(boot.Sessions.InBackground, Is.True, "decidido: la sesión vuelve a contar");
+        }
+
+        [UnityTest]
+        public IEnumerator Firebase_FollowsTheConsent_AndUnder13_TurnsCrashlyticsOff()
+        {
+            // Enganches de B12 con F3-6 (D-039): la decisión llega a la recogida propia de Firebase Analytics
+            // (AnalyticsService.SetCollectionEnabled → ICollectionAwareSink); con la banda < 13 nunca se enciende y Crashlytics se
+            // apaga de forma explícita (IsCrashlyticsCollectionEnabled persiste entre arranques), también en el arranque bloqueado.
+            var sink = new CollectionSink();
+            var crash = new System.Collections.Generic.List<bool>();
+            GameBootstrap.AnalyticsSinkOverride = sink;
+            GameBootstrap.CrashReportingOverride = on => crash.Add(on);
+            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(sink.Calls, Is.Not.Empty.And.No.Member(true), "apagada hasta decidir (AddSink)");
+            Assert.That(crash, Is.EqualTo(new[] { true }), "08 §2.3: Crashlytics en el arranque");
+            boot.ConsentView!.AgeButton(AgeBand.Adult).onClick.Invoke();
+            boot.ConsentView.AcceptAllButton.onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(() => boot.App!.Screen != AppScreen.Boot, "la primera pantalla");
+            Assert.That(sink.Calls[sink.Calls.Count - 1], Is.True, "aceptó la analítica");
+            Assert.That(crash, Is.EqualTo(new[] { true }));
+
+            sink.Calls.Clear();
+            crash.Clear();
+            var store = new MemoryProfileStore();
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap first = GameBootstrap.Current!;
+            first.ConsentView!.AgeButton(AgeBand.Under13).onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked,
+                "el arranque bloqueado tras elegir <13");
+            Assert.That(sink.Calls, Has.No.Member(true), "con < 13 la recogida nunca se enciende");
+            Assert.That(crash, Does.Contain(false), "Crashlytics apagado al bloquear");
+            Assert.That(crash[crash.Count - 1], Is.False, "y apagado en el arranque bloqueado, tras el Start del arranque");
+        }
+
+        private sealed class CollectionSink : AF.Analytics.IAnalyticsSink, AF.Analytics.ICollectionAwareSink
+        {
+            public readonly System.Collections.Generic.List<bool> Calls = new System.Collections.Generic.List<bool>();
+
+            public bool RequiresConsent => true;
+
+            public void Send(AF.Analytics.AnalyticsEvent e)
+            {
+            }
+
+            public void SetUserProperty(string name, string value)
+            {
+            }
+
+            public void SetCollectionEnabled(bool enabled)
+            {
+                Calls.Add(enabled);
+            }
         }
 
         [UnityTest]

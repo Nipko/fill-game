@@ -59,6 +59,7 @@ namespace AF.UI
             CloudSaveOverride = null;
             FailAccountDeleteForTests = false;
             WipePlayerPrefsForTests = null;
+            AnalyticsResetOverride = null;
             ResetBackendOverrides();
         }
 
@@ -281,6 +282,8 @@ namespace AF.UI
                 PlayerPrefs.DeleteAll();
                 PlayerPrefs.Save();
             }
+
+            ResetAnalyticsData(); // F3-6 (08 §13.3): resetAnalyticsData() de Firebase, con un ID de instancia nuevo
 
             ICloudSave? cloud = _cloudSave;
             if (cloud != null && cloud.HasSession)
