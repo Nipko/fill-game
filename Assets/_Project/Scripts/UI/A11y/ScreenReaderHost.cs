@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Accessibility;
+using UnityEngine.UI;
 
 namespace AF.UI
 {
@@ -45,11 +46,18 @@ namespace AF.UI
         /// <summary>Lo que hace al activarlo; null si no hace nada (un texto). Devuelve si hizo algo.</summary>
         public Func<bool>? Invoke { get; }
 
+        /// <summary>
+        /// La lista que se desplaza en la que va (Ajustes, el Mercado; Q-B9-17), o null: el lector le da la acción de desplazar y,
+        /// al enfocarlo, desplaza el visor para enseñarlo (<see cref="A11yScroll"/>). Se publica aunque el visor lo recorte.
+        /// </summary>
+        public ScrollRect? Scroll { get; set; }
+
         /// <summary>Misma identidad y mismo contenido que <paramref name="other"/> (si no cambia nada, no se vuelve a publicar).</summary>
         public bool SameAs(A11yItem other)
         {
             return other != null && string.Equals(Id, other.Id, StringComparison.Ordinal) && string.Equals(Label, other.Label, StringComparison.Ordinal)
-                && Role == other.Role && Disabled == other.Disabled && Selected == other.Selected && ReferenceEquals(Rect, other.Rect);
+                && Role == other.Role && Disabled == other.Disabled && Selected == other.Selected && ReferenceEquals(Rect, other.Rect)
+                && ReferenceEquals(Scroll, other.Scroll);
         }
     }
 
@@ -147,6 +155,10 @@ namespace AF.UI
     /// (doble toque) llama a <see cref="A11yItem.Invoke"/>; los anuncios van por
     /// <see cref="AssistiveSupport.notificationDispatcher"/>. El origen de coordenadas del marco es la esquina de arriba a la
     /// izquierda de la pantalla [NV]: hay que comprobarlo en el teléfono con TalkBack (el recuadro del foco sobre cada cuia).
+    /// Los nodos de una lista que se desplaza (<see cref="A11yItem.Scroll"/>; Q-B9-17) llevan además la acción de desplazar
+    /// (<see cref="AccessibilityNode.scrolled"/>: una página, y el foco pasa a la primera fila que se ve entera) y, al recibir el
+    /// foco (<see cref="AccessibilityNode.focusChanged"/>), desplazan el visor para enseñarse; su marco es lo que se ve de ellos
+    /// en el visor (<see cref="A11yScroll.Frame"/>).
     /// </summary>
     public sealed class UnityScreenReaderHost : IScreenReaderHost
     {
@@ -170,7 +182,7 @@ namespace AF.UI
         /// </summary>
         public void Publish(IReadOnlyList<A11yItem> items)
         {
-            if (_hierarchy != null && SameIds(items))
+            if (_hierarchy != null && SameShape(items))
             {
                 AccessibilityNode? focusedChanged = null;
                 for (int i = 0; i < items.Count; i++)
@@ -213,13 +225,19 @@ namespace AF.UI
             {
                 A11yItem item = items[i];
                 AccessibilityNode node = hierarchy.AddNode(item.Label, null);
-                var nodeRef = new NodeRef(hierarchy, item);
+                var nodeRef = new NodeRef(this, hierarchy, node, item);
                 _nodes.Add(node);
                 _current.Add(item);
                 _refs.Add(nodeRef);
                 Apply(node, item);
                 node.frameGetter = nodeRef.Frame;
                 node.invoked += nodeRef.Invoke;
+                if (item.Scroll != null)
+                {
+                    // Q-B9-17: la fila de una lista que se desplaza se desplaza con el lector y se enseña al enfocarla.
+                    node.scrolled += nodeRef.Scroll;
+                    node.focusChanged += nodeRef.FocusChanged;
+                }
                 if (focused != null && string.Equals(item.Id, focused, StringComparison.Ordinal))
                 {
                     refocus = node;
@@ -235,22 +253,33 @@ namespace AF.UI
         // activa no hace nada.
         private sealed class NodeRef
         {
+            private readonly UnityScreenReaderHost _host;
             private readonly AccessibilityHierarchy _hierarchy;
 
-            public NodeRef(AccessibilityHierarchy hierarchy, A11yItem item)
+            public NodeRef(UnityScreenReaderHost host, AccessibilityHierarchy hierarchy, AccessibilityNode node, A11yItem item)
             {
+                _host = host;
                 _hierarchy = hierarchy;
+                Node = node;
                 Item = item;
             }
+
+            public AccessibilityNode Node { get; }
 
             public A11yItem Item { get; set; }
 
             public bool Live => ReferenceEquals(AssistiveSupport.activeHierarchy, _hierarchy);
 
-            // El marco del elemento de ahora (el de una publicación en sitio, no el de cuando se creó el nodo).
+            // El marco del elemento de ahora (el de una publicación en sitio, no el de cuando se creó el nodo); en una lista que se
+            // desplaza, lo que se ve de él en el visor.
             public Rect Frame()
             {
-                return Item.Rect != null ? ScreenFrame(Item.Rect!) : Rect.zero;
+                if (Item.Rect == null)
+                {
+                    return Rect.zero;
+                }
+
+                return Item.Scroll != null ? A11yScroll.Frame(Item.Scroll!, Item.Rect!) : ScreenFrame(Item.Rect!);
             }
 
             // Activar: solo si su jerarquía es la activa (un nodo de una jerarquía vieja no hace nada).
@@ -258,6 +287,48 @@ namespace AF.UI
             {
                 return Live && Item.Invoke != null && Item.Invoke!();
             }
+
+            // La acción de desplazar del lector (Q-B9-17): una página de su lista; si se movió, el foco pasa a la primera fila que se
+            // ve entera y el lector vuelve a leer los marcos.
+            public bool Scroll(AccessibilityScrollDirection direction)
+            {
+                if (!Live || Item.Scroll == null || !A11yScroll.Page(Item.Scroll!, direction))
+                {
+                    return false;
+                }
+
+                AssistiveSupport.notificationDispatcher.SendLayoutChanged(_host.FirstShownIn(Item.Scroll!));
+                return true;
+            }
+
+            // El foco del lector llegó a la fila: si el visor la recorta, se desplaza para enseñarla y el lector relee su marco.
+            public void FocusChanged(AccessibilityNode node, bool focused)
+            {
+                if (focused && Reveal())
+                {
+                    AssistiveSupport.notificationDispatcher.SendLayoutChanged(node);
+                }
+            }
+
+            public bool Reveal()
+            {
+                return Live && Item.Scroll != null && Item.Rect != null && A11yScroll.Reveal(Item.Scroll!, Item.Rect!);
+            }
+        }
+
+        // El nodo de la primera fila de list que se ve entera (null si ninguna).
+        private AccessibilityNode? FirstShownIn(ScrollRect list)
+        {
+            for (int i = 0; i < _refs.Count; i++)
+            {
+                A11yItem item = _refs[i].Item;
+                if (ReferenceEquals(item.Scroll, list) && item.Rect != null && A11yScroll.FullyShown(list, item.Rect!))
+                {
+                    return _refs[i].Node;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>Lo que hace el nodo <paramref name="index"/> al activarlo (tests: un nodo viejo, tras republicar, no hace nada).</summary>
@@ -272,6 +343,18 @@ namespace AF.UI
             return _refs[index].Frame;
         }
 
+        /// <summary>La acción de desplazar del nodo <paramref name="index"/> (tests de Q-B9-17).</summary>
+        internal Func<AccessibilityScrollDirection, bool> NodeScroller(int index)
+        {
+            return _refs[index].Scroll;
+        }
+
+        /// <summary>Lo que hace el nodo <paramref name="index"/> al recibir el foco: si su lista lo recorta, se enseña (tests de Q-B9-17).</summary>
+        internal Func<bool> NodeReveal(int index)
+        {
+            return _refs[index].Reveal;
+        }
+
         private static void Apply(AccessibilityNode node, A11yItem item)
         {
             node.label = item.Label;
@@ -279,7 +362,9 @@ namespace AF.UI
             node.state = item.Disabled ? AccessibilityState.Disabled : item.Selected ? AccessibilityState.Selected : AccessibilityState.None;
         }
 
-        private bool SameIds(IReadOnlyList<A11yItem> items)
+        // Mismos elementos en el mismo orden y, cada uno, dentro o fuera de una lista que se desplaza como antes (las acciones de
+        // desplazar de un nodo se ponen al crearlo: si una lista empieza o deja de desplazarse, se rehace la jerarquía).
+        private bool SameShape(IReadOnlyList<A11yItem> items)
         {
             if (items.Count != _current.Count)
             {
@@ -288,7 +373,7 @@ namespace AF.UI
 
             for (int i = 0; i < items.Count; i++)
             {
-                if (!string.Equals(items[i].Id, _current[i].Id, StringComparison.Ordinal))
+                if (!string.Equals(items[i].Id, _current[i].Id, StringComparison.Ordinal) || (items[i].Scroll == null) != (_current[i].Scroll == null))
                 {
                     return false;
                 }

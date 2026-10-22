@@ -91,7 +91,7 @@ Lo marcado [P] es propuesta sin decisión del dueño; cada [P] remite a su pregu
   - todo `Button`, con su etiqueta: la registrada en `A11yLabels` o sus textos;
   - los relés de «toca para seguir», como «Continuar» [P];
   - los textos sueltos;
-  - nada recortado por un visor ni tapado por un velo;
+  - nada recortado por un visor ni tapado por un velo, salvo las filas de una lista que se desplaza (Ajustes, el Mercado; Q-B9-17): se publican todas, también las de debajo del corte, seguidas en el sitio del visor. Llevan la acción de desplazar del lector (`AccessibilityNode.scrolled`: una página, y el foco pasa a la primera fila que se ve entera) y, al recibir el foco, desplazan el visor para enseñarse (`A11yScroll`). Su marco es lo que se ve de ellas en el visor; si están recortadas del todo, una franja de 1 px en el borde [NV en el teléfono];
   - orden de lectura por filas.
 - **Botones de solo icono, con su etiqueta funcional:** la pausa, la X de los modales (`ModalKit.Close`) y el engranaje. Las filas de Ajustes dicen si están marcadas.
 - **Anuncio de la selección:** «Açaí seleccionado: elige destino».
@@ -199,7 +199,7 @@ En todas se implementó la (a), la recomendada.
 | Q-B9-14 | 08 §14.2 pide anunciar la capacidad y la mecánica; 02 §12 no | (a) añadir el nombre de la mecánica con las claves de sus nombres, en una tarea aparte; (b) como 02 §12 | — |
 | Q-B9-15 | Campos del perfil | (a) `settings.reduce_motion` (`auto`/`on`/`off`) y `settings.high_contrast` en 08 §4.3; (b) otros nombres | GDD |
 | Q-B9-16 | `af_settings_change.key` | (a) añadir `reduce_motion` y `high_contrast` a 08 §8.2; (b) no enviarlos | Analítica |
-| Q-B9-17 | TalkBack y la lista de Ajustes que se desplaza (al 130 % o en pantallas bajas, las últimas filas quedan bajo el corte y no se publican) | (a) añadir la acción de desplazar del lector (`AccessibilityNode.scrolled`) en una tarea aparte; (b) publicar las filas recortadas y desplazar al activarlas | TalkBack en Ajustes |
+| Q-B9-17 (hecha el 2026-10-22, D-033 punto 12) | TalkBack y la lista de Ajustes que se desplaza (al 130 % o en pantallas bajas, las últimas filas quedan bajo el corte y no se publican) | (a) añadir la acción de desplazar del lector (`AccessibilityNode.scrolled`) en una tarea aparte; (b) publicar las filas recortadas y desplazar al activarlas. **Hecha la (a)** en `tanda5/talkback-scroll`, para Ajustes y el Mercado (§2.5) | TalkBack en Ajustes |
 | Q-B9-18 (2026-10-22, abierta) | «Reducir movimiento» en Ajustes: hoy es sí o no y, una vez tocado, no vuelve a seguir al teléfono (§2.1) | (a) dejarlo así (02 §12 habla de un ajuste; lo decidido en Q-B9-3 y Q-B9-15); (b) selector de tres opciones (Automático, Sí, No) que devuelve `auto`, con una clave de texto nueva | — |
 
 Más [P] sin pregunta propia:

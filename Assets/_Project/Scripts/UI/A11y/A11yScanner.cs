@@ -37,6 +37,10 @@ namespace AF.UI
     /// botón. Cada texto suelto a la vista es un texto.</item>
     /// <item>El orden es el de lectura: de arriba abajo por filas (dos elementos van en la misma fila si sus centros están a menos de
     /// media altura, la menor) y, dentro de una fila, de izquierda a derecha; los lienzos de debajo antes que los de encima (un aviso que flota sobre el tablero se lee después).</item>
+    /// <item>Lo que un visor (<see cref="RectMask2D"/>) recorta del todo o queda fuera de la pantalla no se publica, salvo en una
+    /// lista que se desplaza (<see cref="ScrollRect"/>: Ajustes y el Mercado; Q-B9-17): sus filas se publican todas, seguidas y en
+    /// su orden de lectura en el sitio del visor, cada una con la lista (<see cref="A11yItem.Scroll"/>), para que el lector la
+    /// recorra entera y desplace el visor (<see cref="A11yScroll"/>).</item>
     /// </list>
     /// Solo corre con el lector encendido (<see cref="A11yService"/>): asigna listas y cadenas.
     /// </summary>
@@ -53,10 +57,10 @@ namespace AF.UI
 
         private readonly List<IA11ySource> _sources = new List<IA11ySource>();
         private readonly List<Canvas> _canvases = new List<Canvas>();
-        private readonly List<Entry> _entries = new List<Entry>();
         private readonly List<A11yItem> _canvasItems = new List<A11yItem>();
         private readonly List<List<A11yItem>> _layers = new List<List<A11yItem>>();
-        private readonly List<RectMask2D> _masks = new List<RectMask2D>();
+        private List<Entry> _entries = new List<Entry>();
+        private ScrollRect? _list; // la lista que se desplaza que se está recorriendo (Q-B9-17), o null
 
         /// <summary>Elementos sin etiqueta encontrados en el último recorrido (botones de solo icono sin registrar; tests y sonda).</summary>
         public int Unlabeled { get; private set; }
@@ -133,13 +137,22 @@ namespace AF.UI
         public bool CollectGeneric(Canvas canvas, ICollection<Transform>? skip, List<A11yItem> into)
         {
             _entries.Clear();
+            _list = null;
             Rect canvasRect = ((RectTransform)canvas.transform).rect;
             bool blocks = false;
             Walk(canvas.transform, skip, canvasRect, ref blocks, 1f);
-            SortReadingOrder();
+            SortReadingOrder(_entries);
             for (int i = 0; i < _entries.Count; i++)
             {
-                into.Add(_entries[i].Item);
+                Entry e = _entries[i];
+                if (e.Block != null)
+                {
+                    into.AddRange(e.Block); // una lista que se desplaza: sus filas seguidas, en su orden de lectura
+                }
+                else
+                {
+                    into.Add(e.Item!);
+                }
             }
 
             _entries.Clear();
@@ -374,10 +387,62 @@ namespace AF.UI
                 Add(new A11yItem("txt_" + text.GetInstanceID(), text.text.Trim(), AccessibilityRole.StaticText, text.rectTransform, null), text.rectTransform);
             }
 
+            ScrollRect? list = t.GetComponent<ScrollRect>();
+            if (A11yScroll.Scrolls(list))
+            {
+                WalkList(t, list!, skip, canvasRect, ref blocks, alpha);
+                return;
+            }
+
             for (int i = 0; i < t.childCount; i++)
             {
                 Walk(t.GetChild(i), skip, canvasRect, ref blocks, alpha);
             }
+        }
+
+        // Una lista que se desplaza (Q-B9-17: Ajustes, el Mercado): todas sus filas, también las que el visor recorta, cada una con
+        // la lista (A11yItem.Scroll), en su propio orden de lectura y seguidas, en el sitio del visor dentro del lienzo (las de
+        // debajo del corte no se mezclan con lo que va debajo de la lista).
+        private void WalkList(Transform t, ScrollRect list, ICollection<Transform>? skip, Rect canvasRect, ref bool blocks, float alpha)
+        {
+            List<Entry> outer = _entries;
+            ScrollRect? outerList = _list;
+            var inner = new List<Entry>();
+            _entries = inner;
+            _list = list;
+            for (int i = 0; i < t.childCount; i++)
+            {
+                Walk(t.GetChild(i), skip, canvasRect, ref blocks, alpha);
+            }
+
+            _entries = outer;
+            _list = outerList;
+            if (inner.Count == 0)
+            {
+                return;
+            }
+
+            SortReadingOrder(inner);
+            var block = new List<A11yItem>(inner.Count);
+            for (int i = 0; i < inner.Count; i++)
+            {
+                if (inner[i].Block != null)
+                {
+                    block.AddRange(inner[i].Block!);
+                }
+                else
+                {
+                    block.Add(inner[i].Item!);
+                }
+            }
+
+            Rect view = UnityScreenReaderHost.ScreenFrame(A11yScroll.ViewportOf(list)!);
+            if (OffScreen(view) || A11yScroll.ClippedOut(A11yScroll.ViewportOf(list)!, view))
+            {
+                return; // el visor no se ve: sus filas tampoco
+            }
+
+            _entries.Add(new Entry(null, block, view.center.y, view.height, view.xMin, _entries.Count));
         }
 
         /// <summary>
@@ -456,19 +521,26 @@ namespace AF.UI
         private void Add(A11yItem item, RectTransform rect)
         {
             Rect frame = UnityScreenReaderHost.ScreenFrame(rect);
-            if (frame.width <= 0f || frame.height <= 0f || frame.xMax <= 0f || frame.yMax <= 0f || frame.xMin >= Screen.width || frame.yMin >= Screen.height)
+            if (frame.width <= 0f || frame.height <= 0f)
             {
-                return; // fuera de la pantalla
+                return; // sin tamaño
             }
 
-            // Recortado del todo por un visor (RectMask2D; la lista de Ajustes que se desplaza): no se ve, no se publica.
-            rect.GetComponentsInParent(false, _masks);
-            for (int i = 0; i < _masks.Count; i++)
+            if (_list != null)
             {
-                if (_masks[i].isActiveAndEnabled && !UnityScreenReaderHost.ScreenFrame(_masks[i].rectTransform).Overlaps(frame))
+                // En una lista que se desplaza (Q-B9-17) se publica aunque su visor lo recorte o quede fuera de la pantalla: el lector
+                // la recorre entera y desplaza el visor al enfocarla. El visor de la lista lo mira WalkList; otro visor dentro de
+                // la lista que lo recorte del todo sí lo calla.
+                if (A11yScroll.ClippedOut(rect, frame, A11yScroll.ViewportOf(_list)))
                 {
                     return;
                 }
+
+                item.Scroll = _list;
+            }
+            else if (OffScreen(frame) || A11yScroll.ClippedOut(rect, frame))
+            {
+                return; // fuera de la pantalla, o recortado del todo por un visor (RectMask2D): no se ve, no se publica
             }
 
             if (item.Label.Length == 0)
@@ -477,6 +549,12 @@ namespace AF.UI
             }
 
             _entries.Add(new Entry(item, frame.center.y, frame.height, frame.xMin, _entries.Count));
+        }
+
+        // Fuera de la pantalla (marco en píxeles, origen arriba a la izquierda).
+        private static bool OffScreen(Rect frame)
+        {
+            return frame.width <= 0f || frame.height <= 0f || frame.xMax <= 0f || frame.yMax <= 0f || frame.xMin >= Screen.width || frame.yMin >= Screen.height;
         }
 
         private static bool Shown(TextMeshProUGUI text)
@@ -533,25 +611,25 @@ namespace AF.UI
         // Orden de lectura: primero de arriba abajo por el centro; después, filas por solape (un elemento entra en la fila si su
         // centro queda a menos de media altura, la menor de las dos, del centro del primero de la fila); dentro de cada fila, de
         // izquierda a derecha. Determinista (el empate final es el orden de dibujo).
-        private void SortReadingOrder()
+        private static void SortReadingOrder(List<Entry> entries)
         {
-            _entries.Sort((a, b) => a.CenterY != b.CenterY ? a.CenterY.CompareTo(b.CenterY) : a.Order.CompareTo(b.Order));
+            entries.Sort((a, b) => a.CenterY != b.CenterY ? a.CenterY.CompareTo(b.CenterY) : a.Order.CompareTo(b.Order));
             int row = 0;
             int anchor = 0;
-            for (int i = 0; i < _entries.Count; i++)
+            for (int i = 0; i < entries.Count; i++)
             {
-                Entry e = _entries[i];
-                Entry first = _entries[anchor];
+                Entry e = entries[i];
+                Entry first = entries[anchor];
                 if (i > anchor && e.CenterY - first.CenterY >= Mathf.Max(1f, Mathf.Min(e.Height, first.Height) * 0.5f))
                 {
                     row++;
                     anchor = i;
                 }
 
-                _entries[i] = e.WithRow(row);
+                entries[i] = e.WithRow(row);
             }
 
-            _entries.Sort(CompareEntries);
+            entries.Sort(CompareEntries);
         }
 
         private static int CompareEntries(Entry a, Entry b)
@@ -569,11 +647,18 @@ namespace AF.UI
             return a.Order.CompareTo(b.Order);
         }
 
+        // Un elemento o, con Block, las filas de una lista que se desplaza ya ordenadas, en el sitio de su visor.
         private readonly struct Entry
         {
-            public Entry(A11yItem item, float centerY, float height, float x, int order, int row = 0)
+            public Entry(A11yItem item, float centerY, float height, float x, int order)
+                : this(item, null, centerY, height, x, order, 0)
+            {
+            }
+
+            public Entry(A11yItem? item, List<A11yItem>? block, float centerY, float height, float x, int order, int row = 0)
             {
                 Item = item;
+                Block = block;
                 CenterY = centerY;
                 Height = height;
                 X = x;
@@ -581,7 +666,9 @@ namespace AF.UI
                 Row = row;
             }
 
-            public A11yItem Item { get; }
+            public A11yItem? Item { get; }
+
+            public List<A11yItem>? Block { get; }
 
             public float CenterY { get; }
 
@@ -595,7 +682,7 @@ namespace AF.UI
 
             public Entry WithRow(int row)
             {
-                return new Entry(Item, CenterY, Height, X, Order, row);
+                return new Entry(Item, Block, CenterY, Height, X, Order, row);
             }
         }
     }

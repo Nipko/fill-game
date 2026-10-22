@@ -71,16 +71,212 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Profile.Settings.Sound, Is.False, "el ajuste cambió");
             Assert.That(UnityScreenReaderHost.ScreenFrame(sound.Rect!).width, Is.GreaterThan(0f));
 
-            // Lo que el visor de Ajustes recorta del todo (la lista se desplaza) no se publica: no se ve ni se puede tocar.
+            // Lo que el visor de Ajustes recorta del todo también se publica si la lista se desplaza (Q-B9-17), con la lista; si
+            // no se desplaza, todo se ve y nada lleva lista.
             SettingsScreen settings = boot.SettingsView!;
             Rect viewport = UnityScreenReaderHost.ScreenFrame(settings.Viewport);
             foreach (A11yItem item in host.Items)
             {
                 if (item.Rect != null && item.Rect.IsChildOf(settings.Viewport))
                 {
-                    Assert.That(UnityScreenReaderHost.ScreenFrame(item.Rect).Overlaps(viewport), Is.True, item.Label + ": dentro del visor");
+                    Assert.That(item.Scroll != null, Is.EqualTo(settings.Scrolls), item.Label + ": con la lista solo si se desplaza");
+                    if (!settings.Scrolls)
+                    {
+                        Assert.That(UnityScreenReaderHost.ScreenFrame(item.Rect).Overlaps(viewport), Is.True, item.Label + ": dentro del visor");
+                    }
                 }
             }
+        }
+
+        [UnityTest]
+        public IEnumerator ScrollList_EveryRowIsPublishedInOrder_AndTheReaderScrollsToIt()
+        {
+            // Q-B9-17: una lista de 10 filas en un visor de 3 (las de abajo, recortadas y fuera de la pantalla) y un botón debajo.
+            var go = new GameObject("A11yListCanvas", typeof(RectTransform), typeof(Canvas));
+            var host = new UnityScreenReaderHost();
+            try
+            {
+                Canvas canvas = go.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 95;
+                ScrollRect list = BuildList(go.transform, 10, out Button[] rows, out Button after);
+                yield return null;
+                Canvas.ForceUpdateCanvases();
+
+                var scanner = new A11yScanner();
+                var all = new List<A11yItem>();
+                scanner.Scan(all);
+                List<A11yItem> items = Under(all, go.transform);
+                Assert.That(items.Count, Is.EqualTo(11), "las 10 filas, también las recortadas, y el botón de debajo");
+                for (int i = 0; i < rows.Length; i++)
+                {
+                    Assert.That(items[i].Label, Is.EqualTo("fila " + i), "las filas seguidas, en su orden");
+                    Assert.That(items[i].Scroll, Is.SameAs(list), "cada fila, con su lista");
+                }
+
+                Assert.That(items[10].Label, Is.EqualTo("después"), "lo de debajo del visor va tras la última fila, aunque esté por encima de ella en pantalla");
+                Assert.That(items[10].Scroll, Is.Null);
+                Assert.That(A11yScroll.FullyShown(list, (RectTransform)rows[8].transform), Is.False, "la fila 8, bajo el corte");
+
+                host.Publish(items);
+                Rect strip = host.NodeFrame(8)();
+                Rect view = UnityScreenReaderHost.ScreenFrame(list.viewport);
+                Assert.That(strip.height, Is.EqualTo(A11yScroll.EdgeStripPx).Within(0.01f), "recortada: una franja en el borde del visor");
+                Assert.That(strip.yMax, Is.EqualTo(view.yMax).Within(0.5f), "en el de abajo");
+
+                // El foco llega a la fila 8: el visor se desplaza hasta enseñarla entera; ya a la vista, no se mueve más.
+                Assert.That(host.NodeReveal(8)(), Is.True);
+                Assert.That(A11yScroll.FullyShown(list, (RectTransform)rows[8].transform), Is.True, "la fila enfocada, entera en el visor");
+                Assert.That(host.NodeReveal(8)(), Is.False);
+                Assert.That(host.NodeFrame(8)().height, Is.EqualTo(UnityScreenReaderHost.ScreenFrame((RectTransform)rows[8].transform).height).Within(0.5f), "y su marco es el de verdad");
+                Assert.That(host.NodeReveal(10)(), Is.False, "fuera de la lista no se desplaza nada");
+
+                // La acción de desplazar: una página hacia arriba hasta el tope, y hacia abajo hasta el otro.
+                int pages = 0;
+                while (host.NodeScroller(8)(AccessibilityScrollDirection.Backward) && pages < 20)
+                {
+                    pages++;
+                }
+
+                Assert.That(pages, Is.GreaterThan(0));
+                Assert.That(list.verticalNormalizedPosition, Is.EqualTo(1f).Within(0.01f), "arriba del todo");
+                Assert.That(host.NodeScroller(0)(AccessibilityScrollDirection.Up), Is.False, "en el tope no se mueve");
+                Assert.That(host.NodeScroller(0)(AccessibilityScrollDirection.Left), Is.False, "una lista vertical no se desplaza de lado");
+                Assert.That(host.NodeScroller(0)(AccessibilityScrollDirection.Forward), Is.True, "una página hacia abajo");
+                Assert.That(list.verticalNormalizedPosition, Is.LessThan(1f));
+                while (host.NodeScroller(0)(AccessibilityScrollDirection.Down) && pages < 40)
+                {
+                    pages++;
+                }
+
+                Assert.That(list.verticalNormalizedPosition, Is.EqualTo(0f).Within(0.01f), "abajo del todo");
+                Assert.That(A11yScroll.FullyShown(list, (RectTransform)rows[9].transform), Is.True, "la última fila, a la vista");
+
+                // Si la lista deja de desplazarse (cabe entera), sus filas se publican como las de cualquier pantalla.
+                list.vertical = false;
+                scanner.Scan(all);
+                foreach (A11yItem item in Under(all, go.transform))
+                {
+                    Assert.That(item.Scroll, Is.Null, item.Label);
+                }
+            }
+            finally
+            {
+                host.Clear();
+                UnityEngine.Object.Destroy(go);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Settings_At130In16x9_TheRowsUnderTheCutReachTheReader()
+        {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(4)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressSettings(), Is.True);
+            yield return null;
+            SettingsScreen settings = boot.SettingsView!;
+            settings.FontScale = 1.3f;
+            Canvas.ForceUpdateCanvases();
+            Assert.That(settings.Scrolls, Is.True, "en 16:9 al 130 % no cabe: se desplaza");
+            ScrollRect list = settings.Viewport.GetComponent<ScrollRect>();
+            var host = new UnityScreenReaderHost();
+            try
+            {
+                var service = new A11yService(host);
+                service.Refresh();
+                IReadOnlyList<A11yItem> items = new List<A11yItem>(service.Published);
+                int last = -1;
+                int clipped = 0;
+                foreach (Button button in settings.Viewport.GetComponentsInChildren<Button>(false))
+                {
+                    Rect frame = UnityScreenReaderHost.ScreenFrame((RectTransform)button.transform);
+                    if (!button.enabled || frame.width <= 0f || frame.height <= 0f)
+                    {
+                        continue;
+                    }
+
+                    int index = IndexOfId(items, "btn_" + button.GetInstanceID());
+                    Assert.That(index, Is.GreaterThanOrEqualTo(0), button.name + ": toda fila de Ajustes llega al lector");
+                    Assert.That(items[index].Scroll, Is.SameAs(list), button.name);
+                    if (!A11yScroll.FullyShown(list, (RectTransform)button.transform))
+                    {
+                        clipped++;
+                    }
+
+                    last = Math.Max(last, index);
+                }
+
+                Assert.That(clipped, Is.GreaterThan(0), "hay filas bajo el corte");
+                Assert.That(settings.ScrollPosition, Is.EqualTo(1f).Within(0.01f), "arriba del todo");
+                Assert.That(host.NodeReveal(last)(), Is.True, "el foco en la última fila desplaza el visor");
+                Assert.That(A11yScroll.FullyShown(list, items[last].Rect!), Is.True, "y la enseña entera");
+                Assert.That(settings.ScrollPosition, Is.LessThan(0.5f));
+                Assert.That(items[last].Invoke, Is.Not.Null, "y se activa como cualquier botón");
+            }
+            finally
+            {
+                host.Clear();
+                GameScreen.SimulatedScreen = null;
+            }
+        }
+
+        // Una lista de rowCount filas de 50 en un visor de 150 en (40, 40) del lienzo, con un botón «después» debajo del visor.
+        internal static ScrollRect BuildList(Transform parent, int rowCount, out Button[] rows, out Button after)
+        {
+            RectTransform viewport = UiBuilder.Rect("Viewport", parent);
+            UiBuilder.Place(viewport, 40f, 40f, 200f, 150f);
+            viewport.gameObject.AddComponent<RectMask2D>();
+            RectTransform content = UiBuilder.Rect("Content", viewport);
+            UiBuilder.Place(content, 0f, 0f, 200f, rowCount * 50f);
+            ScrollRect list = viewport.gameObject.AddComponent<ScrollRect>();
+            list.viewport = viewport;
+            list.content = content;
+            list.horizontal = false;
+            list.vertical = true;
+            list.movementType = ScrollRect.MovementType.Clamped;
+            list.inertia = false;
+            rows = new Button[rowCount];
+            for (int i = 0; i < rowCount; i++)
+            {
+                string label = "fila " + i;
+                rows[i] = UiBuilder.BareButton("Row" + i, content, () => { });
+                UiBuilder.Place((RectTransform)rows[i].transform, 0f, i * 50f, 200f, 48f);
+                A11yLabels.Set(rows[i], () => label);
+            }
+
+            after = UiBuilder.BareButton("After", parent, () => { });
+            UiBuilder.Place((RectTransform)after.transform, 40f, 200f, 200f, 48f);
+            A11yLabels.Set(after, () => "después");
+            return list;
+        }
+
+        // Los elementos de items que van bajo root, en orden.
+        internal static List<A11yItem> Under(IReadOnlyList<A11yItem> items, Transform root)
+        {
+            var under = new List<A11yItem>();
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].Rect != null && items[i].Rect!.IsChildOf(root))
+                {
+                    under.Add(items[i]);
+                }
+            }
+
+            return under;
+        }
+
+        private static int IndexOfId(IReadOnlyList<A11yItem> items, string id)
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].Id == id)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         [UnityTest]
