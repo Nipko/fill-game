@@ -149,6 +149,15 @@ namespace AF.UI
             return PrePromptDueNow(Math.Max(0, wonLevel - 1), out _) != PrePromptKind.None;
         }
 
+        // La victoria (de campaña o del Reto, <paramref name="daily"/>) se dejó por otro camino (TickSessions): lo apuntado se olvida.
+        private void ForgetPrePromptAtVictory(bool daily)
+        {
+            if (_prePromptDue != PrePromptKind.None && _prePromptDueDaily == daily)
+            {
+                _prePromptDue = PrePromptKind.None;
+            }
+        }
+
         // Al entrar en la pantalla de victoria (TickSessions): apunta el pre-prompt que toca, que saldrá al dejarla.
         private void NotePrePromptAtVictory(int maxLevelBeforeVictory, bool daily)
         {
@@ -211,7 +220,7 @@ namespace AF.UI
         }
 
         // Cada fotograma (TickSessions): la tarjeta a la pantalla y, tras «Avísame», la espera del diálogo nativo con su tope.
-        private void TickPushUi(float dtMs)
+        internal void TickPushUi(float dtMs)
         {
             _prePromptCard?.Tick();
             if (_prePromptLeave == null || PrePromptCardVisible)

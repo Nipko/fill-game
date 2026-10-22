@@ -148,13 +148,14 @@ namespace AF.UI
 
             float textX = 14f + OptionRow.RadioDp + 12f;
             float textW = inner - textX - 12f;
-            float labelH = Mathf.Round((OptionSp * s) + 8f);
+            // Cada línea con el alto de línea de su fuente (≈ 1,45 × el cuerpo, con los acentos de arriba) a la escala s.
+            float labelH = Mathf.Ceil(OptionSp * s * 1.45f) + 2f;
             _pushState.fontSizeMax = PushStateSp * s;
-            float stateH = Mathf.Max(Mathf.Round((PushStateSp * s) + 6f), Mathf.Ceil(UiBuilder.MinTextHeight(_pushState, textW)));
-            float plateH = Mathf.Max(rowH, labelH + stateH + 16f);
+            float stateH = Mathf.Max(Mathf.Ceil(PushStateSp * s * 1.45f) + 2f, Mathf.Ceil(UiBuilder.MinTextHeight(_pushState, textW)) + 2f);
+            float plateH = Mathf.Max(rowH, labelH + stateH + 12f);
             _pushRow.Place(0f, 0f, inner, plateH, s);
-            UiBuilder.Place(_pushRow.Label.rectTransform, textX, 8f, textW, labelH);
-            UiBuilder.Place(_pushState.rectTransform, textX, 8f + labelH, textW, stateH);
+            UiBuilder.Place(_pushRow.Label.rectTransform, textX, 6f, textW, labelH);
+            UiBuilder.Place(_pushState.rectTransform, textX, 6f + labelH, textW, stateH);
             _rowTops.Add(y);
             _rowHeights.Add(plateH);
             float slotH = plateH;

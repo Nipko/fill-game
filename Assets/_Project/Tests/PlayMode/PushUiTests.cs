@@ -1,7 +1,9 @@
 #nullable enable
 using System;
 using System.Collections;
+using AF.Ads;
 using AF.Analytics;
+using AF.Core.Session;
 using AF.Economy;
 using AF.GameFlow;
 using AF.IAP;
@@ -164,6 +166,65 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby), "con la respuesta, Inicio sigue");
             Assert.That(_push.Load().Granted, Is.False);
             Assert.That(_sink.Last("af_push_prompt")!.Find("result")!.Value.Text, Is.EqualTo("denied"));
+        }
+
+        [UnityTest]
+        public IEnumerator Accept_ANativeDialogThatNeverAnswers_LetsTheVictoryGoOnOnce()
+        {
+            _scheduler.NativeAnswer = PushPermission.NotRequested; // el diálogo nunca contesta
+            yield return Load(12);
+            GameBootstrap boot = Win();
+            Assert.That(boot.PressNext(), Is.True);
+            boot.PrePromptCard!.AcceptButton.onClick.Invoke();
+            LevelSession won = boot.Flow!.Session;
+
+            // Una vuelta de segundo plano (un fotograma enorme) cuenta como mucho 100 ms.
+            boot.TickPushUi(60000f);
+            for (int t = 100; t < GameBootstrap.PrePromptNativeWaitMs - 200f; t += PlayModeHelpers.FrameMs)
+            {
+                boot.TickPushUi(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(boot.Flow.Session, Is.SameAs(won), "antes del tope, la victoria espera al diálogo");
+            for (int t = 0; t < 400; t += PlayModeHelpers.FrameMs)
+            {
+                boot.TickPushUi(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(13), "con el tope, sigue el camino de Siguiente");
+            LevelSession next = boot.Flow.Session;
+            _scheduler.Answer(PushPermission.Allowed); // la respuesta llega tarde
+            Assert.That(_push.Load().Granted, Is.True, "y se guarda");
+            Assert.That(boot.Flow.Session, Is.SameAs(next), "pero el camino no se repite");
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(13));
+        }
+
+        [UnityTest]
+        public IEnumerator TheAutoNextAfterTheDoubleHarvest_BringsTheCard_AndGoesOnOnce()
+        {
+            // D-011, punto 4: tras el video de la Cosecha doble, la victoria pasa sola por el camino de Siguiente: ahí sale la tarjeta.
+            LaunchOptions.LevelOffsetOverride = 11;
+            LaunchOptions.AdPresenterOverride = new ImmediateAdPresenter();
+            yield return Load(12);
+            GameBootstrap boot = Win();
+            GameScreen view = boot.View!;
+            PlayModeHelpers.Step(boot, 900);
+            Assert.That(view.DoubleHarvestShown, Is.True);
+            view.DoubleHarvestButton.onClick.Invoke();
+            Assert.That(view.AutoNextPending, Is.True);
+            PlayModeHelpers.Step(boot, 1500); // vence la espera: TakeAutoNext → PressNext
+            Assert.That(boot.PrePromptCard!.Visible, Is.True, "el avance solo trae la tarjeta");
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(12));
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "la victoria espera debajo");
+            PlayModeHelpers.Step(boot, 2000);
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(12), "sin la respuesta no avanza");
+
+            boot.PrePromptCard.DeclineButton.onClick.Invoke();
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(13));
+            LevelSession loaded = boot.Flow.Session;
+            PlayModeHelpers.Step(boot, 2000);
+            Assert.That(boot.Flow.Session, Is.SameAs(loaded), "N + 1 una sola vez");
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(13));
         }
 
         [UnityTest]

@@ -239,6 +239,10 @@ namespace AF.UI
                     {
                         OnVictoryShown(Math.Max(0, flow.LevelNumber - 1), false);
                     }
+                    else
+                    {
+                        ForgetPrePromptAtVictory(false);
+                    }
                 }
             }
 
@@ -250,6 +254,10 @@ namespace AF.UI
                 if (dailyPhase == FlowPhase.VictoryScreen)
                 {
                     OnVictoryShown(_progress?.MaxLevel ?? 0, true); // el Reto no cambia max_level
+                }
+                else if (_dailyScreen == null || !_dailyScreen.Won)
+                {
+                    ForgetPrePromptAtVictory(true); // el calendario de sellos sigue a la victoria del Reto: se olvida al salir de él
                 }
             }
         }
