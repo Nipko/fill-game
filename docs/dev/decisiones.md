@@ -3650,6 +3650,6 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-BILL-2 · Registros de diagnóstico de la biblioteca a Google:** se declaran en la fila «Google Play Billing» de 08 §13.3 [E]. Pendiente del abogado.
 - **Q-BILL-3 · Una sola oferta por producto:** la configura el dueño en Play Console.
 - **Q-BILL-4 · Compras de varias unidades:** el plugin salta las que traen `getQuantity() != 1`. No se acreditan ni se reconocen, y Play las reembolsa. El dueño no activa las varias unidades en Play Console.
-- **Q-BILL-5 · `sec_purchase_deferred_ack_h`:** la recomendada es bajarlo de 72 a 48 h en 08 §9 y regenerar los defaults. Con 72 h, el reconocimiento local puede llegar tarde, en el mismo plazo en que Play reembolsa. Se aplica en una tarea aparte (regla «si tienen recomendada, vamos con esa»).
+- **Q-BILL-5 · `sec_purchase_deferred_ack_h`:** la recomendada es bajarlo de 72 a 48 h en 08 §9 y regenerar los defaults. Con 72 h, el reconocimiento local puede llegar tarde, en el mismo plazo en que Play reembolsa. Se aplica en una tarea aparte (regla «si tienen recomendada, vamos con esa»). **Aplicada en `tanda5/bill-restos`:** 08 §9 dice 48, los defaults regenerados y `VerificationQueueConfig` compila 48; el rango sigue en 48-72.
 - **Sin probar:** la compra real por JNI en un teléfono, con el modo de ensayo de `iap.md` §3. Hace falta antes de cualquier release, con los productos `af_*` dados de alta en Play Console (D-034).
 

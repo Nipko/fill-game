@@ -52,7 +52,7 @@ namespace AF.IAP
 
         /// <summary>
         /// Pagada (o pendiente de pago en Play) pero aún sin verificar en el servidor (<c>pending</c> de <c>af_iap_result</c>; 08 §10.3,
-        /// F3-3): no se acreditó nada todavía; se acreditará una sola vez cuando el servidor la verifique (cola de 72 h).
+        /// F3-3): no se acreditó nada todavía; se acreditará una sola vez cuando el servidor la verifique (cola de 48 h).
         /// </summary>
         Pending = 7,
 

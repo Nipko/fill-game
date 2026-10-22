@@ -298,7 +298,7 @@ namespace AF.IAP.PlayBilling.Tests
         [Test]
         public void Acknowledge_Consumable_DeferredAck_WithoutConsuming_ThenConsumedAfterCrediting()
         {
-            // 08 §10.3: a las 72 h sin respuesta del servidor, acknowledge local sin consumir (D-040, añadido de Q-IAP-1; Q-IAP-2 se reabre).
+            // 08 §10.3: a las 48 h sin respuesta del servidor, acknowledge local sin consumir (D-040, añadido de Q-IAP-1; Q-IAP-2 se reabre).
             (NativePlayStorePort port, FakeBillingBridge bridge) = WithProducts();
             Query(port, bridge, FakeBillingBridge.Row("af_coins_2", "tok.1"));
 

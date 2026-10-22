@@ -27,13 +27,13 @@ namespace AF.IAP
         /// <summary><c>pending</c>: Play aún no la da por pagada; no se acredita y se vuelve a preguntar.</summary>
         Pending = 3,
 
-        /// <summary>Fallo pasajero: queda en la cola de 72 h con su espera; no se acredita.</summary>
+        /// <summary>Fallo pasajero: queda en la cola de 48 h con su espera; no se acredita.</summary>
         Queued = 4,
 
         /// <summary><c>verify_failed</c>: 400 o 409; ni se acredita ni se consume.</summary>
         Rejected = 5,
 
-        /// <summary><c>deferred_ack</c>: 72 h sin respuesta; <c>acknowledge</c> local, sin acreditar (sigue en la cola).</summary>
+        /// <summary><c>deferred_ack</c>: 48 h sin respuesta; <c>acknowledge</c> local, sin acreditar (sigue en la cola).</summary>
         DeferredAck = 6,
 
         /// <summary>El servidor la verificó pero no se pudo acreditar (la cartera la rechazó o la respuesta no cuadra): no se termina.</summary>
@@ -93,7 +93,7 @@ namespace AF.IAP
 
     /// <summary>
     /// Tienda con compra verificada (F3-3; 08 §10.3; D-035): <see cref="IBillingClient"/> cobra, el backend verifica
-    /// (<see cref="IBackendClient.VerifyPurchase"/> por la <see cref="VerificationQueue"/> de 72 h) y solo entonces
+    /// (<see cref="IBackendClient.VerifyPurchase"/> por la <see cref="VerificationQueue"/> de 48 h) y solo entonces
     /// <see cref="StoreLedger"/> acredita, <b>una sola vez por</b> <c>token_hash</c> (<c>applied_purchases</c>):
     /// <list type="bullet">
     /// <item><c>ok</c>: acredita el <c>grant</c> del servidor si el hash no está aplicado; luego consume (consumibles) o confirma.</item>
@@ -102,7 +102,7 @@ namespace AF.IAP
     /// <item><c>pending</c>: nada; se queda en la cola y se vuelve a preguntar.</item>
     /// <item>400 o 409: nada, y tampoco se consume ni se confirma (consumir también reconoce: Play ya no reembolsaría el segundo
     /// <c>af_starter</c>; plan §9, F2c).</item>
-    /// <item>Fallo pasajero: se queda en la cola con espera; a las 72 h (<c>sec_purchase_deferred_ack_h</c>) se hace
+    /// <item>Fallo pasajero: se queda en la cola con espera; a las 48 h (<c>sec_purchase_deferred_ack_h</c>) se hace
     /// <c>acknowledge</c> local y <c>deferred_ack</c> <b>sin acreditar</b>, y se sigue reintentando hasta que el servidor la verifique
     /// (D-035, añadido de F3-1 y F3-2).</item>
     /// </list>
@@ -129,7 +129,7 @@ namespace AF.IAP
         /// <param name="ledger">Registro de la tienda (perfil y cartera).</param>
         /// <param name="billing">Tienda de la plataforma (<see cref="PlayBillingClient"/> o <see cref="FakeBillingClient"/>).</param>
         /// <param name="backend">Cliente del backend (<see cref="HttpBackendClient"/> o <see cref="FakeBackendClient"/>).</param>
-        /// <param name="clock">Reloj (el plazo de 72 h se mide con el del dispositivo).</param>
+        /// <param name="clock">Reloj (el plazo de 48 h se mide con el del dispositivo).</param>
         /// <param name="backendSwitch"><c>biz_backend_enabled</c>; null: el default (<c>true</c>).</param>
         /// <param name="uid">UID de Firebase Auth para <c>setObfuscatedAccountId</c>; null: sin UID.</param>
         /// <param name="queueConfig"><c>sec_purchase_deferred_ack_h</c>; null: el default de 08 §9.</param>
@@ -177,7 +177,7 @@ namespace AF.IAP
         /// <inheritdoc />
         public StoreCatalog Catalog => _ledger.Catalog;
 
-        /// <summary>Compras cobradas que esperan al servidor (cola de 72 h, también las ya reconocidas en local).</summary>
+        /// <summary>Compras cobradas que esperan al servidor (cola de 48 h, también las ya reconocidas en local).</summary>
         public IReadOnlyList<PendingVerification> PendingVerifications => _queue.Entries;
 
         /// <inheritdoc />
@@ -386,7 +386,7 @@ namespace AF.IAP
                     Complete(token, PurchaseStatus.VerifyFailed, null);
                     return;
                 case VerificationOutcomeKind.DeferredAck:
-                    // 72 h sin respuesta: acknowledge local para que Play no la reembolse; NO se acredita (D-035, F3-1 y F3-2).
+                    // 48 h sin respuesta: acknowledge local para que Play no la reembolse; NO se acredita (D-035, F3-1 y F3-2).
                     _billing.AcknowledgeLocal(sku, token);
                     Raise(sku, PurchaseVerificationState.DeferredAck, live);
                     Complete(token, PurchaseStatus.Pending, null);

@@ -16,7 +16,7 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// F3-3 en Play Mode: la compra verificada con la tienda y el backend falsos, con las respuestas del servidor llegando unos
     /// fotogramas después (como la red real) y la cola bombeada en cada fotograma, como hará el juego. Una prueba por rama (ok,
-    /// duplicate, pending, 400, 409, fallo pasajero y 72 h), la carrera de dos compras y la cola al reabrir. Lo que se vigila: nada se
+    /// duplicate, pending, 400, 409, fallo pasajero y 48 h), la carrera de dos compras y la cola al reabrir. Lo que se vigila: nada se
     /// acredita sin verificar ni dos veces, y nada se consume sin acreditar.
     /// </summary>
     public sealed class VerifiedPurchasePlayModeTests
@@ -101,7 +101,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Transient_ThenDeferredAckAfter72h_ThenCreditedOnceWhenVerified()
+        public IEnumerator Transient_ThenDeferredAckAfter48h_ThenCreditedOnceWhenVerified()
         {
             var fx = new Fx();
             fx.Backend.FailNext(BackendError.Network("offline"), 10000);
@@ -109,7 +109,7 @@ namespace AF.Tests.PlayMode
             yield return fx.Network();
             Assert.That(fx.Last!.Status, Is.EqualTo(PurchaseStatus.Pending));
 
-            for (int hour = 0; hour < 75; hour++)
+            for (int hour = 0; hour < 51; hour++)
             {
                 fx.Clock.Advance(TimeSpan.FromHours(1));
                 yield return fx.Network();

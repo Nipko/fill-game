@@ -12,7 +12,7 @@ namespace AF.Analytics.Adapters
     /// va a la analítica); <c>value</c> es el precio local de la tienda y <c>items</c>, el SKU.
     /// <para>
     /// Con la tienda verificada (<see cref="VerifiedStoreService"/>, F3-5) también escucha
-    /// <see cref="VerifiedStoreService.VerificationChanged"/>: lo que se resuelve fuera de una compra abierta (desde la cola de 72 h, al
+    /// <see cref="VerifiedStoreService.VerificationChanged"/>: lo que se resuelve fuera de una compra abierta (desde la cola de 48 h, al
     /// volver a primer plano o en el siguiente arranque; <see cref="PurchaseVerificationEvent.IsLive"/> false) sale como
     /// <c>af_iap_result</c> sin <c>context</c> (la cola no lo guarda: no se inventa): <c>ok</c> (y <c>purchase</c>) al acreditarse,
     /// <c>verify_failed</c> si el servidor la rechaza y <c>deferred_ack</c> al cumplir el plazo sin respuesta. Lo de una compra abierta
