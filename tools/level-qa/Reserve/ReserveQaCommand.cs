@@ -202,7 +202,7 @@ internal static class ReserveQaCommand
         {
             if (issues[i] is { Check: "QA-CVD-ADJ", Warning: false } c && cvdUnavoidable.Contains((c.Pack, c.Level)))
             {
-                issues[i] = c with { Message = c.Message + "; ninguna de las 50 permutaciones lo evita (reproducido)", Warning = true };
+                issues[i] = c with { Message = c.Message + "; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)", Warning = true };
             }
         }
 

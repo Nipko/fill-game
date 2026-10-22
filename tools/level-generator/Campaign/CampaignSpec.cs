@@ -261,7 +261,18 @@ internal sealed class CampaignSpec
     /// glosario §9): 7-10 (protanopía) y 5-14 (deuteranopía). No cuentan en <c>risk_pairs</c> ni en <c>max_pares_riesgo</c>; el
     /// generador solo evita que queden juntos en una cuia (TintAssigner) y level-qa lo comprueba (QA-CVD-ADJ).
     /// </summary>
-    public IReadOnlyList<(int A, int B)> CvdPairs { get; init; } = [];
+    public IReadOnlyList<(int A, int B)> CvdPairs { get; private set; } = [];
+
+    /// <summary>
+    /// La misma especificación sin pares del simulador de daltonismo: la generación de antes de Q-B9-13 bis, con la que
+    /// --self-test cvd comprueba que solo cambian los tintes.
+    /// </summary>
+    public CampaignSpec WithoutCvdPairs()
+    {
+        var copy = (CampaignSpec)MemberwiseClone();
+        copy.CvdPairs = [];
+        return copy;
+    }
     public required IReadOnlyList<(int First, int Last, int Max)> MaxRiskPairsRows { get; init; }
     public required IReadOnlyList<WorldInfo> Worlds { get; init; }
     public required IReadOnlyList<RangeInfo> Ranges { get; init; }

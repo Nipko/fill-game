@@ -262,6 +262,13 @@ de su `tints_from`. **No cuentan en `risk_pairs` ni en `max_risk_pairs`**. Lo qu
 - Así cada tablero solo cambia de tintes. La forma, K, la semilla, `bot_fail`, el candidato elegido, la D, el ciclo y la curva
   quedan iguales.
 - Lo que no se puede evitar queda en `TintResult.CvdAdjacent` y `level-qa` lo da como aviso (`QA-CVD-ADJ` y `QA-DAILY-CVD-ADJ`).
+  Los informes de la campaña y de curación lo anotan como `cvd_adjacent: N contacto(s)`, igual que `risk_adjacent`.
+- `--self-test cvd` (`Generation/CvdSelfTest.cs`, también en el `--self-test` sin nombre) prueba cuatro cosas:
+  - `CvdAlternatives` sobre tableros escritos a mano;
+  - `SameColors` y `SameRelief`;
+  - `RevertTints`;
+  - la invariancia con y sin `cvd_pairs` en los slots 13, 14, 22 y 23 del mundo 2 y en los días 4, 7, 9 y 10 de la banda 1 del
+    Reto: mismos candidatos, bot, par, trampas, D y elegido, y el mismo tablero salvo los tintes.
 
 Hace falta medir porque el bot casual no da lo mismo al cambiar los tintes: `CasualBot` ordena el tablero con `BoardCanon.Sort`,
 que depende del número de cada color.
@@ -528,8 +535,10 @@ curación y la b en `tools/out/salida_b/`): los bytes de cada pack no cambian co
 | `mundo_08_v1.json` (b, publicada) | 140 | 202.032 | `5fe84fcb7f762581cc61ae4011fa5af902274f110fb7d2c71b204ac03235b799` | 402 · 425 |
 | `mundo_09_v1.json` (b, publicada) | 140 | 202.709 | `a40f04d5a6d4b8ac50b5f1e5ed8a22a0d44dba805d8902f01c415a762e7ead4e` | 622 · 681 |
 
-Bytes y hashes tras los pares del simulador de daltonismo (Q-B9-13 bis (A): solo cambian tintes en 4-5 tableros por pack; antes, tras la segunda pasada de `minus_color` de B11: 176.122, 202.589 y 203.664 en la «a» y 175.924, 202.032 y 202.712 en la «b»). Antes, tras la segunda pasada de `minus_color` de B11 (Q-N2 (a); antes de B11: 173.002, 201.608 y 200.770 en la «a»
-y 174.986, 201.051 y 199.466 en la «b»; los tiempos son los de GEN79). Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
+Bytes y hashes tras los pares del simulador de daltonismo (Q-B9-13 bis (A)). Solo cambian tintes, en 3-5 tableros por pack.
+Antes de Q-B9-13 bis, tras la segunda pasada de `minus_color` de B11 (Q-N2 (a)), eran 176.122, 202.589 y 203.664 bytes en la
+«a» y 175.924, 202.032 y 202.712 en la «b». Antes de B11 eran 173.002, 201.608 y 200.770 en la «a» y 174.986, 201.051 y
+199.466 en la «b». Los tiempos son los de GEN79. Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
 generadores a la vez: la primera ejecución y la última (en la b, la de `--check`), de unos 6 a 17 minutos cada uno y unos 17
 minutos los seis juntos. La variante a sola, en serie, son unos 20 minutos (la propuesta: 629, 201 y 385 s). Determinismo: tres ejecuciones de cada pack (la primera, una segunda en otra carpeta y la
 última, con el generador final, en el repositorio) dan los mismos bytes, y coinciden con los hashes de la propuesta en las variantes a de los tres mundos y en la b del mundo 7

@@ -34,7 +34,7 @@ const string Usage = """
       dotnet run --project tools/level-generator -- --seasons <campaign.json> [<campaign.json> ...] --out <tabla.json> [--until <nivel>] [--check]
       dotnet run --project tools/level-generator -c Release -- --reserve <mundo_NN_v1.json> [<mundo_NN_v1.json> ...] --spec <campaign.json> [--variant a|b] --out <carpeta> [--report <informe.md>] [--check]
       dotnet run --project tools/level-generator -c Release -- --daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <informe.md>] [--check] [--threads n]
-      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura|reserve|daily]
+      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura|reserve|cvd|daily]
       dotnet run --project tools/level-generator -- --help
 
     --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json, 11-200, y campaign_v2.json,
@@ -216,7 +216,13 @@ if (args.Length >= 1 && args[0] == "--self-test")
         int holgura = HolguraSelfTest.Run();
         int daily = AmazonFill.Tools.LevelGenerator.Daily.DailyCommand.Run(["--self-test", "daily"]);
         int reserve = ReserveRunner.SelfTest();
-        return Math.Max(Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura)), Math.Max(daily, reserve));
+        int cvd = CvdSelfTest.Run();
+        return Math.Max(Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura)), Math.Max(Math.Max(daily, reserve), cvd));
+    }
+
+    if (args.Length == 2 && args[1] == "cvd")
+    {
+        return CvdSelfTest.Run();
     }
 
     if (args.Length == 2 && args[1] == "reserve")
@@ -254,7 +260,7 @@ if (args.Length >= 1 && args[0] == "--self-test")
         return SeasonTableWriter.SelfTest();
     }
 
-    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry, curation, holgura, reserve o daily.");
+    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry, curation, holgura, reserve, cvd o daily.");
 }
 
 if (args.Length >= 1 && args[0] == "--seasons")

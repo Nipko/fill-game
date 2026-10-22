@@ -5,7 +5,9 @@
 //     la banda tiene respaldos ("fallback", uno o una lista), otros max_candidates con cada uno, en orden. El candidato n (0, 1, ... contando
 //     también los del respaldo) sale de la sub-semilla Prng.SubSeed(semilla, CandidateStream + n), y de ella, como en
 //     Generation/SlotGenerator: la fuente con esa sub-semilla, los tintes con SubSeed(.., 2) y el orden visual con
-//     SubSeed(.., 3). CandidateStream es el mismo valor que el de SlotGenerator ("GEN\0");
+//     SubSeed(.., 3). Si los tintes dejan un par del simulador de daltonismo junto en una cuia (Q-B9-13 bis (A)), las
+//     asignaciones alternativas salen de SubSeed(.., 5) (CvdStream, el mismo que SlotGenerator) y solo se acepta una con el
+//     mismo bot, la misma ventana y el mismo par. CandidateStream es el mismo valor que el de SlotGenerator ("GEN\0");
 //   - cada candidato: tablero base de la fuente (InverseWalk, InverseDeep o FillSource de AF.Solver / Generation, sin
 //     cambiarlos) con K cuias de 4 llenas y los vacíos de la banda, sin mecánicas ni ocultas; tintes (DailyTints); orden
 //     visual al azar (GenBoard.Shuffled); BoardBuilder y LevelValidation de AF.Core; bot x40 (MetricsEngine.BotFail con la

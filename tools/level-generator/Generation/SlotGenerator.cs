@@ -880,7 +880,7 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         return r0;
     }
 
-    private static bool SameRelief(Dictionary<int, int> map, List<ReliefBoard> a, List<ReliefBoard> b)
+    internal static bool SameRelief(Dictionary<int, int> map, List<ReliefBoard> a, List<ReliefBoard> b)
     {
         if (a.Count != b.Count)
         {
@@ -903,7 +903,7 @@ internal sealed class SlotGenerator(CampaignSpec spec)
     }
 
     /// <summary>Mismo tablero salvo los tintes: <paramref name="map"/> acumula la traducción color de <paramref name="a"/> → de <paramref name="b"/>.</summary>
-    private static bool SameColors(Dictionary<int, int> map, BoardData a, BoardData b)
+    internal static bool SameColors(Dictionary<int, int> map, BoardData a, BoardData b)
     {
         if (!a.Caps.AsSpan().SequenceEqual(b.Caps) || a.Cuias.Length != b.Cuias.Length || a.Attrs.Length != b.Attrs.Length
             || a.Hidden.Length != b.Hidden.Length)

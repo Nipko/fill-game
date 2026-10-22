@@ -266,7 +266,7 @@ internal static class GateChecks
             if (pack is not null && reproduced.Contains(pack.PackId)
                 && generated.TryGetValue(issue.Level, out GeneratedLevel? gl) && gl.Chosen is { Tints.CvdAdjacent: > 0 })
             {
-                issues[i] = issue with { Message = issue.Message + "; ninguna de las 50 permutaciones lo evita (reproducido)", Warning = true };
+                issues[i] = issue with { Message = issue.Message + "; ninguna de las 50 permutaciones lo evita midiendo igual (reproducido)", Warning = true };
             }
         }
     }

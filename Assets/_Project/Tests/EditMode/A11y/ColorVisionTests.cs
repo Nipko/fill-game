@@ -64,7 +64,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void TheClosestPairOfEachDeficiency_IsADeclaredRiskPair()
+        public void TheClosestPairOfEachDeficiency_IsADeclaredRiskOrSimulatorPair()
         {
             var report = new StringBuilder();
             foreach (ColorVisionDeficiency type in Types)

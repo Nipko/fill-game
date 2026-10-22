@@ -364,6 +364,14 @@ for f in tools/level-qa/fixtures/QA-*.json; do
 done
 ```
 
+`QA-CVD-ADJ__par_del_simulador_junto.json` es el nivel 46 del mundo 3: lleva un 7 (Bacaba) sobre un 10 (Agua del Tapajós)
+en el tablero base, un contacto que el generador no pudo evitar. Sin la reproducción falla QA-CVD-ADJ; con ella, en el pack
+completo, es aviso (Q-B9-13 bis). `--self-test cvd` (`Checks/CvdQaSelfTest.cs`, también en el `--self-test` sin nombre)
+prueba tres cosas:
+- que este fixture falla;
+- que un contacto solo en una variante de `relief` es aviso y no fallo;
+- que `GateChecks.CvdUnavoidable` solo baja el fallo a aviso con el pack reproducido y `Tints.CvdAdjacent` > 0.
+
 Todos deben dar `exit=1` y `presente`, sin nada detrás: `flor_casas_ocupadas` comprueba además que no salgan QA-MECH-COUNT
 (es un reto del 306 con tres mecánicas, que desde el 301 valen en los retos) ni QA-VALID (AF.Core lo da por válido). Los de QA-RAMP (11), QA-LABEL-EARLY (58), QA-MECH-CELL (160) y QA-REMANSO
 (108, 110 y 119, `remanso_mas_dificil_que_la_comodidad`) son niveles de los packs anteriores a la revisión del
