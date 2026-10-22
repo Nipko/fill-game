@@ -64,6 +64,27 @@ namespace AF.Save.Tests
         }
 
         [Test]
+        public void Consent_IsAlwaysTheDevicesInTheMerge()
+        {
+            // Q-B12-8 (a) (D-033, 2026-10-21; 08 §7: «la banda declarada vive solo en el dispositivo»): la fusión conserva el consent
+            // del dispositivo aunque gane la nube, y un teléfono nuevo (sin consent) vuelve a preguntar.
+            Profile local = At(40, T0, 100);
+            Profile cloud = At(50, T0, 900);
+            cloud.Consent = new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Adult);
+            CloudMergeResult won = CloudMerge.Resolve(local, cloud);
+            Assert.That(won.Winner, Is.EqualTo(CloudMergeWinner.Cloud));
+            Assert.That(won.Merged.Consent, Is.Null, "teléfono nuevo: se vuelve a preguntar");
+
+            local.Consent = new ConsentRecord(LegalProfiles.BrLgpdEca, 2, T0, false, false, AgeBand.Teen, ageBandCorrected: true);
+            ConsentRecord? merged = CloudMerge.Resolve(local, cloud).Merged.Consent;
+            Assert.That(merged, Is.Not.Null);
+            Assert.That(merged!.Profile, Is.EqualTo(LegalProfiles.BrLgpdEca));
+            Assert.That(merged.AgeBand, Is.EqualTo(AgeBand.Teen));
+            Assert.That(merged.AgeBandCorrected, Is.True);
+            Assert.That(CloudMerge.Resolve(local, null).Merged.Consent!.AgeBand, Is.EqualTo(AgeBand.Teen));
+        }
+
+        [Test]
         public void Case2_Identical_NothingToDo()
         {
             Profile local = At(40, T0, 300);

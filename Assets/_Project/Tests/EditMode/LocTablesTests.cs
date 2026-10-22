@@ -541,6 +541,9 @@ namespace AF.Tests.EditMode
                 "comeback_streak_line", "comeback_logbook_line", "comeback_reminder_line",
             });
 
+            // B12: la edad, el consentimiento y la doble confirmación de compras, que pinta AF.UI.ConsentText.
+            keys.AddRange(ConsentText.AllKeys);
+
             // La Pororoca del Spark (bloque B2; B2-strings.csv): las pinta AF.UI.ShuffleText.
             keys.AddRange(ShuffleText.AllKeys);
 

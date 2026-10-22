@@ -32,9 +32,9 @@ namespace AF.UI
     /// <item><see cref="ConnectTelemetry"/>, con todo construido: el bus a la cartera y al flujo de campaña, la analítica a las
     /// pantallas y <c>biz_feature_lives</c> a la cartera.</item>
     /// </list>
-    /// Consentimiento: aún no hay pantalla (B12), así que la recogida se queda apagada
-    /// (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3): Firebase Analytics no recibe nada ni recoge por su cuenta,
-    /// y solo escriben los sumideros locales [P].
+    /// Consentimiento: la recogida empieza apagada (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3): Firebase
+    /// Analytics no recibe nada ni recoge por su cuenta hasta que la decisión de la pantalla de consentimiento (B12;
+    /// <c>GameBootstrap.Consent.cs</c>) la enciende antes de <c>AppFlow.Start</c>; con la banda &lt; 13 nunca se enciende.
     /// </summary>
     public sealed partial class GameBootstrap
     {
@@ -111,7 +111,7 @@ namespace AF.UI
                 Debug.LogWarning(LogPrefix + "Remote Config: " + _rcConfigs.Errors[i]);
             }
 
-            CrashReporting.Start(); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono
+            SetCrashReporting(true); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono. <13: BlockedAtBoot lo apaga (B12)
             s_session ??= new SessionTracker(clock.UtcNow);
             _analytics = new AnalyticsService(_events, new CommonSource(this));
             _analytics.AddSink(new LogcatAnalyticsSink());

@@ -205,6 +205,7 @@ namespace AF.RemoteConfig.Binding
             { typeof(RevocationConfig), KeysOf(RevocationEntries) },
             { typeof(TakeoverConfig), KeysOf(TakeoverEntries) },
             { typeof(LoginCalendarConfig), KeysOf(LoginCalendarEntries) },
+            { typeof(ConsentConfig), ConsentConfigBinder.Keys }, // B12: su lector propio (ConsentConfigBinder)
         };
 
         /// <summary>
@@ -233,6 +234,7 @@ namespace AF.RemoteConfig.Binding
             RevocationConfig revocation = Fill(new RevocationConfig(), RevocationEntries, rc, errors, c => c.Validate(), () => RevocationConfig.Defaults);
             TakeoverConfig takeovers = Fill(new TakeoverConfig(), TakeoverEntries, rc, errors, c => c.Validate(), () => TakeoverConfig.Defaults);
             LoginCalendarConfig calendar = Fill(new LoginCalendarConfig(), LoginCalendarEntries, rc, errors, c => c.Validate(), () => LoginCalendarConfig.Defaults);
+            ConsentConfig consent = ConsentConfigBinder.Bind(rc, errors);
 
             // Compuertas de negocio (08 §9): el mantenimiento apaga anuncios e IAP; la versión mínima, las compras.
             ads.BizAdsEnabled = gates.AdsEnabled;
@@ -255,6 +257,7 @@ namespace AF.RemoteConfig.Binding
                 Takeovers = takeovers,
                 LoginCalendar = calendar,
                 BackendSwitch = new RcBackendSwitch(rc),
+                Consent = consent,
             };
         }
 
@@ -514,6 +517,9 @@ namespace AF.RemoteConfig.Binding
 
         /// <summary>Anti-reloj.</summary>
         public ClockSecurityConfig ClockSecurity { get; }
+
+        /// <summary>Consentimiento y edad (B12).</summary>
+        public ConsentConfig Consent { get; internal set; } = ConsentConfig.Defaults;
 
         /// <summary>Lo que no se pudo leer (clave: motivo), en orden; vacío si todo vino bien.</summary>
         public IReadOnlyList<string> Errors { get; }

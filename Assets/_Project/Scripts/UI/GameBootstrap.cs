@@ -882,6 +882,7 @@ namespace AF.UI
             settings.MarkAudio(profile.Settings.Sound, profile.Settings.Music, profile.Settings.Haptics); // AU1
             settings.MarkIdleHint(profile.Settings.IdleHint); // MO3
             ShowAccountCode(); // F3-5: el código de borrado para la web en lugar del UID (Q-B13-21; GameBootstrap.Backend.cs)
+            RefreshConsentRows(); // B12: «Privacidad y datos» y «Corregir mi edad» (GameBootstrap.Consent.cs)
             _skipNextDelta = true;
             return true;
         }
@@ -899,6 +900,13 @@ namespace AF.UI
             if (_app == null || _app.Screen == AppScreen.Boot)
             {
                 return false;
+            }
+
+            // B12: la edad, el consentimiento o la doble confirmación, encima de todo: Atrás la cierra si se puede (Ajustes, compra) y
+            // nunca sigue a lo de debajo (en el bloqueo no hace nada).
+            if (ConsentBack())
+            {
+                return true;
             }
 
             if ((_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || (_lockedNotice != null && _lockedNotice.Visible))
@@ -1552,6 +1560,14 @@ namespace AF.UI
 
             _art = SharedArt(catalog.WaterBase);
             _probe = new DevProbe { Settings = profile.Settings };
+
+            // B12 (08 §7): con la banda <13 guardada, «Pide a un adulto que instale el juego» y nada más: el arranque se para antes de
+            // crear los anuncios, la tienda y las pantallas (no se crea sesión de juego; GameBootstrap.Consent.cs).
+            var consentStore = new ProfileConsentStore(profile, batch.Durable);
+            if (BlockedAtBoot(consentStore))
+            {
+                yield break;
+            }
             if (_splash != null)
             {
                 // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
@@ -1580,11 +1596,11 @@ namespace AF.UI
             ISimulatedPurchasePresenter purchasePresenter = new BatchedPurchasePresenter(
                 LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art)), batch);
             _ads = AdController.Create(
-                WrapAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill())), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
+                WrapAds(WrapConsentAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()))), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
             _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
             // F3-5: la compra verificada (F3-3) con el cliente del backend de este build (GameBootstrap.Backend.cs); la hoja «Compra
             // simulada» sigue siendo la de la tienda de la plataforma simulada (FakeBillingClient) mientras no llegue Unity IAP.
-            _store = WrapStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch));
+            _store = WrapStore(WrapConsentStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch))); // B12: flags de edad
             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
 
@@ -1654,6 +1670,7 @@ namespace AF.UI
             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
             SetUpMarket(); // B5 (GameBootstrap.Market.cs): el Mercado, las ofertas y el Cántaro, con las sesiones de B6
             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
+            SetUpConsent(clock, consentStore); // B12: cifras, país y perfil legal, flujo y pantalla (GameBootstrap.Consent.cs)
             ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
@@ -1665,6 +1682,18 @@ namespace AF.UI
             if (_splash != null)
             {
                 yield return FinishSplash(firstRun); // fin de la carga: se corta, con el segundo de sloth_wake si toca y cabe
+            }
+
+            // B12 (08 §2.3): la edad y el consentimiento, y sus flags a la analítica, los anuncios y la tienda, siempre antes de
+            // GameFlow.Go. Sin pantalla que enseñar no hay ningún yield. Con <13, la app no arranca.
+            if (StartConsentAtBoot())
+            {
+                yield return WaitConsentAtBoot();
+            }
+
+            if (ConsentBlocked)
+            {
+                yield break;
             }
 
             if (requested > 0)

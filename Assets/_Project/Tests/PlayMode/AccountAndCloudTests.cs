@@ -28,6 +28,7 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             GameBootstrap.ResetCloudOverrides();
+            GameBootstrap.AnalyticsResetOverride = null;
         }
 
         private static Profile ProfileAt(int nextLevel, int seeds)
@@ -46,6 +47,8 @@ namespace AF.Tests.PlayMode
             int wipes = 0;
             GameBootstrap.CloudSaveOverride = cloud;
             GameBootstrap.WipePlayerPrefsForTests = () => wipes++;
+            int analyticsResets = 0;
+            GameBootstrap.AnalyticsResetOverride = () => analyticsResets++;
             var store = new MemoryProfileStore(ProfileAt(40, 900));
             yield return PlayModeHelpers.LoadApp(store);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -81,6 +84,7 @@ namespace AF.Tests.PlayMode
             Assert.That(cloud.Blob, Is.Null);
             Assert.That(store.Json, Is.Null, "profile.json y profile.bak (IProfileStore.Delete)");
             Assert.That(wipes, Is.EqualTo(1), "PlayerPrefs");
+            Assert.That(analyticsResets, Is.EqualTo(1), "F3-6 (08 §13.3): FirebaseAnalyticsSink.ResetData, con un ID de instancia nuevo");
 
             yield return PlayModeHelpers.WaitFor(
                 () => GameBootstrap.Current != null && GameBootstrap.Current != boot && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,

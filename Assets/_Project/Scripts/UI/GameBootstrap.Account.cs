@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using AF.GameFlow;
+using AF.Platform;
 using AF.Save;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -58,6 +59,7 @@ namespace AF.UI
             CloudSaveOverride = null;
             FailAccountDeleteForTests = false;
             WipePlayerPrefsForTests = null;
+            AnalyticsResetOverride = null;
             ResetBackendOverrides();
         }
 
@@ -77,9 +79,9 @@ namespace AF.UI
         /// </summary>
         public bool RemoteAccountAllowed => !(AgeUnder13Override ?? PlayerUnder13());
 
-        // TODO(B12, lo hace el Spark; plan del backend §7, «B12: … con la banda < 13 no hay IAP ni borrado remoto»): leer la banda de
-        // edad de la pantalla neutral de 08 §2.3 cuando exista. Hasta entonces no hay banda: se trata como 13 o más.
-        private static bool PlayerUnder13() => false;
+        // Plan del backend §7 («B12: … con la banda < 13 no hay IAP ni borrado remoto»): la banda guardada de la pantalla neutral de
+        // 08 §2.3 (B12; GameBootstrap.Consent.cs), o el bloqueo del arranque. Sin el flujo (apagado en los tests) no hay banda: 13 o más.
+        private bool PlayerUnder13() => ConsentBlocked || _consentFlow?.Record?.AgeBand == AgeBand.Under13;
 
         /// <summary>La nube del guardado (null antes de <see cref="SetUpAccount"/>).</summary>
         public ICloudSave? CloudSave => _cloudSave;
@@ -280,6 +282,8 @@ namespace AF.UI
                 PlayerPrefs.DeleteAll();
                 PlayerPrefs.Save();
             }
+
+            ResetAnalyticsData(); // F3-6 (08 §13.3): resetAnalyticsData() de Firebase, con un ID de instancia nuevo
 
             ICloudSave? cloud = _cloudSave;
             if (cloud != null && cloud.HasSession)
