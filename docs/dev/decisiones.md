@@ -3555,3 +3555,28 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Mientras tanto:** Unity IAP sigue en `integracion-fase1-fase2` hasta que se integre el reemplazo, solo para pruebas internas. Las compras reales necesitan además la ficha de Play Console, que espera al dictamen de marca (D-034).
 - **Pendiente aparte (sin encargo):** comprobar qué envía el propio runtime de Unity 6.3 en un build Android (Engine Diagnostics o Insights, que el emisor de IAP menciona). Es tema del abogado y de Data Safety.
 - **Encargo:** `docs/dev/traspaso/spark-reto-del-rio.md` §15.
+
+### D-033, añadido del 2026-10-22: pendientes del dueño 2 a 12, todos con la recomendada
+
+- **Estado:** decididos por el dueño en el chat: «Pendientes 2 a 12: todas con la recomendada.» El 1 es Q-IAP-1 (D-040).
+- **2 · Pororoca en inglés y portugués (P-18 de `docs/dev/pororoca.md`):** la etiqueta corta es «Mix» / «Misturar». «Shuffle» y «Embaralhar» no caben en la ranura de 56 dp a 12 sp. Se anota en el glosario §10.
+- **3 · Nombres geográficos (T2-Q7 y T2-Q8):** se permiten en los textos del juego «the Amazon» / «Amazônia», «Amazonas», Tocantins y Putumayo. La regla de evitar la cadena «Amazon» (glosario §1) vale para el nombre de la app y los identificadores, no para la geografía. El asesor cultural puede ajustarlos. `settings_about_amazon`: «About the Amazon» / «Sobre a Amazônia».
+- **4 · Título de la ficha de frutas (T2-Q10):** «River Fruits» / «Frutas do Rio». Se anota en el glosario §10, con el que `glossary.csv` debe coincidir.
+- **5 · Cuia del Encuentro:** nombre corto «Meeting Cuia» / «Cuia do Encontro», para la skin y el pack (`skin_af_skin_m03_name`, `iap_af_skin_m03_name`). La fila del Mercado no se ensancha.
+- **6 · Nombres provisionales, hasta el asesor:**
+  - «Totuma», igual en los tres idiomas (skin y pack m04);
+  - «Mount Mismi» / «Nevado Mismi»;
+  - «Big Basket» / «Cesta grande»;
+  - PT «Nova espécie à vista!».
+- **7 · Textos legales de B12 traducidos con IA:** se quedan como **borrador** hasta que los revise el abogado. No bloquean el selector de idioma, pero sí el lanzamiento en esos idiomas.
+- **8 · Comodines en el glosario:** «Boosters» / «Reforços».
+- **9 · `firebase-appcheck-debug` en release:** se excluye del AAB de release antes del primer AAB de producción. La compuerta comprueba que no esté; dev y el ensayo la conservan.
+- **10 · Q-B9-13, daltonismo:** los pares 7-10 (protanopía) y 5-14 (deuteranopía) entran en los pares de riesgo de 07 §3 y del glosario §9, y el generador los limita. Si cambia algún tablero publicado, se vuelve a generar con `level-qa` en verde.
+- **11 · Desbordes al 130 %:** se lanza ya la tarea de las filas del Mercado, la pestaña «Sin anuncios» y el código de cuenta de Ajustes, en los tres idiomas.
+- **12 · Tanda de pulido**, con los pendientes ya diagnosticados:
+  - el contorno de Alto contraste (Q-B9-6);
+  - el segundo aviso tras el hito 3 (UI de los avisos, (b));
+  - la Marea con el factor de Reducir movimiento (Q-B9-12);
+  - el nombre de la mecánica en la etiqueta de la cuia (Q-B9-14);
+  - TalkBack en la lista de Ajustes que se desplaza (Q-B9-17);
+  - los decimales de CLP, JPY, KWD y BHD en D-025 (Q-IAP-3).
