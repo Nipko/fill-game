@@ -74,10 +74,13 @@ namespace AF.IAP.Tests
         public FakePlayState State { get; set; }
 
         public string? ObfuscatedAccountId { get; }
+
+        /// <summary>Consumible reconocido sin consumir (<c>deferred_ack</c>): sigue cobrado (<see cref="FakePlayState.Purchased"/>).</summary>
+        public bool AcknowledgedOnly { get; set; }
     }
 
     /// <summary>
-    /// <see cref="IPlayStorePort"/> falso, una sesión de la app sobre una <see cref="FakePlayAccount"/>: como Unity IAP, devuelve en la
+    /// <see cref="IPlayStorePort"/> falso, una sesión de la app sobre una <see cref="FakePlayAccount"/>: como Play Billing, devuelve en la
     /// consulta los pedidos cobrados sin consumir (también un consumible ya reconocido), los pendientes de pago y los no consumibles
     /// reconocidos, y <see cref="Confirm"/> solo termina un pedido cobrado que esta sesión vio. Por defecto responde en el acto; con
     /// <see cref="Async"/>, retiene las respuestas hasta <see cref="Flush"/>.
@@ -119,6 +122,9 @@ namespace AF.IAP.Tests
         public List<KeyValuePair<string, string?>> Purchases { get; } = new List<KeyValuePair<string, string?>>();
 
         public List<string> Confirmed { get; } = new List<string>();
+
+        /// <summary>Tokens que <see cref="Acknowledge"/> reconoció sin consumir.</summary>
+        public List<string> Acknowledged { get; } = new List<string>();
 
         /// <summary>Se llama justo antes de terminar un pedido en Play (para mirar qué había en disco en ese momento).</summary>
         public Action<string>? OnConfirm { get; set; }
@@ -273,6 +279,32 @@ namespace AF.IAP.Tests
             return true;
         }
 
+        /// <summary>
+        /// Reconoce sin consumir un pedido cobrado que esta sesión vio (<c>acknowledgePurchase</c>): un consumible sigue cobrado; un no
+        /// consumible queda reconocido.
+        /// </summary>
+        public bool Acknowledge(string token)
+        {
+            if (CrashOnConfirm || !_seenPurchased.Contains(token) || !Account.Orders.TryGetValue(token, out FakePlayEntry? entry)
+                || entry.State != FakePlayState.Purchased)
+            {
+                return false;
+            }
+
+            Acknowledged.Add(token);
+            if (Account.IsConsumable(entry.Sku))
+            {
+                entry.AcknowledgedOnly = true;
+            }
+            else
+            {
+                _seenPurchased.Remove(token);
+                entry.State = FakePlayState.Acknowledged;
+            }
+
+            return true;
+        }
+
         /// <summary>Play cobra un pedido pendiente de pago y avisa a la app abierta.</summary>
         public void Settle(string token)
         {
@@ -282,7 +314,7 @@ namespace AF.IAP.Tests
             OrderUpdated?.Invoke(new PlayOrder(entry.Sku, token, PlayOrderState.Purchased));
         }
 
-        /// <summary>Play vuelve a avisar de un pedido que ya avisó (Unity IAP lo hace al consultar compras).</summary>
+        /// <summary>Play vuelve a avisar de un pedido que ya avisó.</summary>
         public void Redeliver(string token)
         {
             FakePlayEntry entry = Account.Orders[token];

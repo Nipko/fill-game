@@ -331,8 +331,10 @@ namespace AF.IAP.Tests
 
             string token = FakePlayAccount.Token(1);
             Assert.That(s.Events, Does.Contain(PurchaseVerificationState.DeferredAck));
-            Assert.That(s.Billing.AcknowledgeUnsupported, Is.EqualTo(1), "Q-IAP-2: Unity IAP 5.4.4 no reconoce sin consumir");
-            Assert.That(s.Port.Confirmed, Is.Empty);
+            // D-040, añadido de Q-IAP-1: el consumible se reconoce sin consumir (antes, AcknowledgeUnsupported == 1 con Unity IAP).
+            Assert.That(s.Port.Acknowledged, Is.EqualTo(new[] { token }), "08 §10.3: acknowledge local a las 72 h");
+            Assert.That(s.Billing.AcknowledgeUnsupported, Is.EqualTo(0));
+            Assert.That(s.Port.Confirmed, Is.Empty, "sin consumir");
             Assert.That(s.Wallet.Seeds, Is.EqualTo(0));
 
             s.Backend.ClearFailures();

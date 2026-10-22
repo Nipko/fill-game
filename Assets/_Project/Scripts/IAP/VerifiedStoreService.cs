@@ -127,7 +127,7 @@ namespace AF.IAP
         private string? _purchaseInStore;
 
         /// <param name="ledger">Registro de la tienda (perfil y cartera).</param>
-        /// <param name="billing">Tienda de la plataforma (Unity IAP o <see cref="FakeBillingClient"/>).</param>
+        /// <param name="billing">Tienda de la plataforma (<see cref="PlayBillingClient"/> o <see cref="FakeBillingClient"/>).</param>
         /// <param name="backend">Cliente del backend (<see cref="HttpBackendClient"/> o <see cref="FakeBackendClient"/>).</param>
         /// <param name="clock">Reloj (el plazo de 72 h se mide con el del dispositivo).</param>
         /// <param name="backendSwitch"><c>biz_backend_enabled</c>; null: el default (<c>true</c>).</param>

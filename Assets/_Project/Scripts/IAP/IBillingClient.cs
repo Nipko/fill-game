@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace AF.IAP
 {
-    /// <summary>Cómo terminó una compra en la tienda de la plataforma (Play Billing por Unity IAP), antes de verificarla.</summary>
+    /// <summary>Cómo terminó una compra en la tienda de la plataforma (Play Billing), antes de verificarla.</summary>
     public enum BillingResultKind
     {
         /// <summary>Play la da por pagada (<c>PURCHASED</c>): trae su <see cref="BillingTransaction"/> para verificarla.</summary>
@@ -12,7 +12,7 @@ namespace AF.IAP
 
         /// <summary>
         /// Play la tiene pendiente de pago (<c>PENDING</c>: efectivo, transferencia…): no se verifica ni se acredita; cuando se pague,
-        /// Unity IAP la entrega como compra sin terminar (<see cref="IBillingClient.UnfinishedTransactions"/>).
+        /// Play la entrega como compra sin terminar (<see cref="IBillingClient.UnfinishedTransactions"/>).
         /// </summary>
         Pending = 1,
 
@@ -90,16 +90,15 @@ namespace AF.IAP
     }
 
     /// <summary>
-    /// La tienda de la plataforma por debajo de <see cref="VerifiedStoreService"/> (F3-3; 08 §10.3; D-035): lo que hará Unity IAP 5.4.4
-    /// con Play Billing cuando el dueño apruebe integrarlo, y <see cref="FakeBillingClient"/> en el editor, los tests y los builds sin
-    /// SDK. No acredita nada: eso lo hace <see cref="VerifiedStoreService"/> solo tras verificar en el servidor. Hilo principal; cada
+    /// La tienda de la plataforma por debajo de <see cref="VerifiedStoreService"/> (F3-3; 08 §10.3; D-035): <see cref="PlayBillingClient"/>
+    /// sobre Play Billing Library 9.0.0 en el teléfono (D-040), y <see cref="FakeBillingClient"/> en el editor, los tests y los builds sin
+    /// backend real. No acredita nada: eso lo hace <see cref="VerifiedStoreService"/> solo tras verificar en el servidor. Hilo principal; cada
     /// llamada con <c>onDone</c> lo llama una sola vez (puede ser antes de volver).
     /// <para>
-    /// Correspondencia prevista con Unity IAP [NV hasta integrar el SDK]: <see cref="Purchase"/> = <c>InitiatePurchase</c> con
-    /// <c>setObfuscatedAccountId</c> (en Unity IAP 5, el <c>obfuscatedAccountId</c> de las opciones de Google Play);
-    /// <see cref="UnfinishedTransactions"/> = los pedidos pendientes que Unity IAP vuelve a entregar al iniciar porque la app no los
-    /// confirmó; <see cref="Finish"/> = <c>ConfirmPurchase</c> (consume los consumibles y reconoce el resto);
-    /// <see cref="AcknowledgeLocal"/> = reconocer sin consumir (<c>acknowledgePurchase</c> de Play Billing).
+    /// Correspondencia con Play Billing: <see cref="Purchase"/> = <c>launchBillingFlow</c> con <c>setObfuscatedAccountId</c>;
+    /// <see cref="UnfinishedTransactions"/> = lo que devuelve <c>queryPurchasesAsync</c> sin terminar; <see cref="Finish"/> =
+    /// <c>consumeAsync</c> (consumibles) o <c>acknowledgePurchase</c> (el resto); <see cref="AcknowledgeLocal"/> = reconocer sin consumir
+    /// (<c>acknowledgePurchase</c>).
     /// </para>
     /// </summary>
     public interface IBillingClient

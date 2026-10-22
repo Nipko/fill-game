@@ -558,17 +558,25 @@ namespace AF.IAP.Tests
         }
 
         [Test]
-        public void AcknowledgeLocal_Consumable_DoesNothing_BecauseItWouldConsume()
+        public void AcknowledgeLocal_Consumable_AcknowledgesWithoutConsuming_Once()
         {
+            // D-040, añadido de Q-IAP-1 (Q-IAP-2 se reabre): con el plugin propio el consumible se reconoce sin consumir (antes, con
+            // Unity IAP 5.4.4, no se hacía nada y se contaba en AcknowledgeUnsupported).
             (PlayBillingClient client, FakePlayStorePort port) = Ready();
             string token = Buy(client)!.Transaction!.Token;
 
             client.AcknowledgeLocal("af_coins_2", token);
+            client.AcknowledgeLocal("af_coins_2", token);
 
-            Assert.That(port.Confirmed, Is.Empty, "Unity IAP 5.4.4 no reconoce sin consumir (Q-IAP-2): nunca se consume sin acreditar");
-            Assert.That(port.Account.StateOf(token), Is.EqualTo(FakePlayState.Purchased));
-            Assert.That(client.AcknowledgeUnsupported, Is.EqualTo(1));
-            Assert.That(client.UnfinishedTransactions().Count, Is.EqualTo(1));
+            Assert.That(port.Acknowledged, Is.EqualTo(new[] { token }), "acknowledgePurchase, una vez");
+            Assert.That(port.Confirmed, Is.Empty, "nunca se consume sin acreditar");
+            Assert.That(port.Account.StateOf(token), Is.EqualTo(FakePlayState.Purchased), "sigue cobrado: se consume tras acreditar");
+            Assert.That(client.AcknowledgeUnsupported, Is.EqualTo(0));
+            Assert.That(client.UnfinishedTransactions().Count, Is.EqualTo(1), "sigue esperando al servidor");
+
+            client.Finish("af_coins_2", token, true);
+            Assert.That(port.Confirmed, Is.EqualTo(new[] { token }), "tras acreditar, se consume");
+            Assert.That(port.Account.StateOf(token), Is.EqualTo(FakePlayState.Consumed));
         }
 
         // ------------------------------------------------------------------ entre sesiones

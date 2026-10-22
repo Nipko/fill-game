@@ -1,0 +1,29 @@
+// Plugin propio de Play Billing de Amazon Fill (D-040, añadido de Q-IAP-1; docs/dev/iap.md).
+// Solo Java: sin el plugin de Kotlin en Gradle. Habla solo con Play (BillingClient), con ningún otro host.
+// La biblioteca de Play Billing entra en el build por EDM4U (Assets/_Project/Plugins/Editor/AfBillingDependencies.xml,
+// que la escribe en mainTemplate.gradle). Aquí solo se compila contra ella (compileOnly), con la misma versión exacta:
+// cambiarla exige la aprobación del dueño (D-040) y el test AfBillingPluginTests la comprueba en los dos sitios.
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.amazonfill.billing'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+    }
+}
+
+dependencies {
+    compileOnly 'com.android.billingclient:billing:9.0.0'
+}
