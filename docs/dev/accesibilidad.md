@@ -193,6 +193,7 @@ En todas se implementó la (a), la recomendada.
 | Q-B9-14 | 08 §14.2 pide anunciar la capacidad y la mecánica; 02 §12 no | (a) añadir el nombre de la mecánica con las claves de sus nombres, en una tarea aparte; (b) como 02 §12 | — |
 | Q-B9-15 | Campos del perfil | (a) `settings.reduce_motion` (`auto`/`on`/`off`) y `settings.high_contrast` en 08 §4.3; (b) otros nombres | GDD |
 | Q-B9-16 | `af_settings_change.key` | (a) añadir `reduce_motion` y `high_contrast` a 08 §8.2; (b) no enviarlos | Analítica |
+| Q-B9-17 | TalkBack y la lista de Ajustes que se desplaza (al 130 % o en pantallas bajas, las últimas filas quedan bajo el corte y no se publican) | (a) añadir la acción de desplazar del lector (`AccessibilityNode.scrolled`) en una tarea aparte; (b) publicar las filas recortadas y desplazar al activarlas | TalkBack en Ajustes |
 
 Más [P] sin pregunta propia:
 - el orden de los nombres de C9, de arriba abajo;
@@ -211,7 +212,8 @@ Más [P] sin pregunta propia:
   - el anuncio;
   - el doble toque.
   - Lo prueba el dueño en el teléfono de clase A (plan, §3).
-- **Lectura de la escala de animación por JNI [NV]:** si falla, da NaN y se ignora.
+- **Lectura de la escala de animación por JNI [NV]:** se hace una vez por arranque; si falla, da NaN y se ignora.
+- **Sin test automático:** la pose de TiTino en la pantalla de arranque con Reducir movimiento (los tests apagan la pantalla de arranque) y el factor de la cuia añadida a mitad de nivel.
 - **Snapshot de Alto contraste y de las filas nuevas de Ajustes:** sin capturas en este equipo para las filas (las de daltonismo sí). El integrador puede hacerlas con `SnapshotKit`.
 - **El escáner genérico depende de que las pantallas usen `Button`, textos TMP y velos con `raycastTarget`.** Un control nuevo hecho de otra forma no se publica. La sonda `Unlabeled` cuenta los botones sin etiqueta.
 - **`ColorVision` vive en `AF.UI`** para que lo vean los tests de EditMode y de PlayMode. El juego no lo referencia y el stripping High (B10) lo quita del player.

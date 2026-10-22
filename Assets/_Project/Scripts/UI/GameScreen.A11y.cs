@@ -402,8 +402,16 @@ namespace AF.UI
                 return;
             }
 
+            string names = CuiaSpeech.Names(flow.Session.Current, index);
+            if (names.Length == 0)
+            {
+                // Una cuia vacía no tiene nombres que enseñar: no es C9, y soltar sigue siendo el toque de siempre (un destino).
+                _hold.Abort();
+                return;
+            }
+
             _namesBubble ??= new CuiaNamesBubble(_topLayer, _art);
-            _namesBubble.Show(CuiaSpeech.Names(flow.Session.Current, index), _views[index].Body);
+            _namesBubble.Show(names, _views[index].Body);
             _probe.State("hold", flow, index, null);
         }
 

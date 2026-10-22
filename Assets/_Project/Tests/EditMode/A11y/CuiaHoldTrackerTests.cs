@@ -182,6 +182,18 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Abort_AfterFiring_LetsTheReleaseBeATap()
+        {
+            var hold = new CuiaHoldTracker();
+            hold.Press(5, 0, At);
+            Assert.That(hold.Tick(450f), Is.True);
+            hold.Abort(); // una cuia vacía: no hay nombres
+            Assert.That(hold.Swallows(5), Is.False);
+            Assert.That(hold.Release(5, 0), Is.False);
+            Assert.That(hold.Swallows(5), Is.False, "soltar es el toque de siempre (un destino)");
+        }
+
+        [Test]
         public void Reset_ForgetsEverything()
         {
             var hold = new CuiaHoldTracker();

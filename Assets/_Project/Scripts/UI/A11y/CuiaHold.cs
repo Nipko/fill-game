@@ -186,6 +186,17 @@ namespace AF.UI
             _heldMs = 0f;
         }
 
+        /// <summary>
+        /// Deja el gesto sin C9 aunque ya hubiera disparado (una cuia vacía, sin nombres que enseñar): su touch-up vuelve a ser un
+        /// toque normal.
+        /// </summary>
+        public void Abort()
+        {
+            Index = None;
+            Fired = false;
+            _heldMs = 0f;
+        }
+
         /// <summary>Lo olvida todo (cambio de nivel, segundo plano).</summary>
         public void Reset()
         {
