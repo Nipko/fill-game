@@ -10,7 +10,8 @@
 #   changes       decide si el PR toca Unity (Assets, Packages, ProjectSettings, ci, workflows) o el nucleo.
 #   unity-tests   EditMode + PlayMode (game-ci/unity-test-runner) en PR listos (no borradores) que tocan Unity y en main.
 #   build-android solo en main (o a mano): AAB sin firma de release con AF.EditorTools.BuildRelease, IL2CPP ARM64 y
-#                 Managed Stripping High, y las compuertas size-gate (<= 80 MB), check-16kb y check-manifest.
+#                 Managed Stripping High, y las compuertas size-gate (<= 80 MB), check-16kb, check-manifest y
+#                 check-release-classes (sin firebase-appcheck-debug; D-033, anadido del 2026-10-22, punto 9).
 #
 # Licencia Personal: solo los secretos UNITY_EMAIL y UNITY_PASSWORD (los crea el dueno; aqui solo se referencian) y
 # los jobs de Unity en serie (concurrency unity-personal-seat). Sin keystore: el AAB va firmado con la clave de
@@ -301,6 +302,10 @@ jobs:
 
       - name: Compuerta del manifiesto (target/min, permisos, billing, appCategory, ID, IL2CPP ARM64)
         run: pwsh -NoProfile -File ci/check-manifest.ps1 build/Android -Mode ${{ steps.identity.outputs.mode }}
+
+      # En el ensayo y en el release por igual: ninguno es Development Build (D-033, anadido del 2026-10-22, punto 9).
+      - name: Compuerta de clases prohibidas en release (firebase-appcheck-debug)
+        run: pwsh -NoProfile -File ci/check-release-classes.ps1 build/Android
 
       - name: AAB
         uses: actions/upload-artifact@v4.6.2
