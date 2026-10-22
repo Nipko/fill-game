@@ -171,3 +171,7 @@ mono_crash.*
 
 # CI: lista de objetos LFS para la clave de la cache (.github/workflows/ci.yml)
 /.lfs-assets-id
+
+# Salidas del framework de pruebas de rendimiento de Unity que deja cada PlayMode (no deben llegar al APK)
+/Assets/Resources/PerformanceTestRun*.json
+/Assets/Resources/PerformanceTestRun*.json.meta
