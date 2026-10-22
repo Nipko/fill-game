@@ -25,9 +25,10 @@ Lo marcado [P] es propuesta sin decisión del dueño; cada [P] remite a su pregu
 
 ### 2.1 Reducir movimiento
 
-- **Ajuste:** «Reducir movimiento» en Ajustes, tras «Pista por inactividad».
-- **Perfil:** `settings.reduce_motion` = `auto` | `on` | `off` [P]. Se escribe solo si deja `auto` y se lee de forma tolerante.
-- **Valor en `auto`:** `ui_reduce_motion_default` o [P] el teléfono con «Quitar animaciones» (Q-B9-3).
+- **Ajuste:** «Reducir movimiento» en Ajustes, tras «Pista por inactividad». **En la pantalla es un interruptor de sí o no** (02 §12, fila «Movimiento»), no un selector de tres opciones: enseña el valor en vigor y, al tocarlo, guarda `on` u `off`.
+- **Perfil:** `settings.reduce_motion` = `auto` | `on` | `off` [P] (Q-B9-15). `auto` es el estado antes de tocar el interruptor (perfiles nuevos y anteriores a B9); se escribe solo si deja `auto` y se lee de forma tolerante. Desde Ajustes no se vuelve a `auto` (no hay opción «Automático»): una vez tocado, el interruptor manda y la escala de animación del teléfono ya no cuenta.
+- **Valor en `auto`:** `ui_reduce_motion_default` o [P] el teléfono con «Quitar animaciones» (Q-B9-3), es decir, la escala de animación del sistema a 0.
+- **Aclaración del 2026-10-22** (observación 6 de `docs/dev/traspaso/pruebas-telefono-2026-10-22.md`): los commits de B9 hablan de `auto`/`on`/`off`, que son **los valores del perfil**; lo decidido (Q-B9-3 y Q-B9-15 con su recomendada, D-033) es el interruptor de sí o no con `auto` al arrancar, y eso es lo que hace el cliente. Si el dueño quiere un selector de tres opciones (Automático, Sí, No) en Ajustes, es una pregunta nueva (ver §5).
   - Lo resuelve `A11yRules.ReduceMotion`.
 - **A qué llega:**
   - `LevelFlow.ReduceMotion` de la campaña y del Reto: el Reto lo recibe por `DailyChallengeScreen.Prepare` antes de construir su tablero;
@@ -199,6 +200,7 @@ En todas se implementó la (a), la recomendada.
 | Q-B9-15 | Campos del perfil | (a) `settings.reduce_motion` (`auto`/`on`/`off`) y `settings.high_contrast` en 08 §4.3; (b) otros nombres | GDD |
 | Q-B9-16 | `af_settings_change.key` | (a) añadir `reduce_motion` y `high_contrast` a 08 §8.2; (b) no enviarlos | Analítica |
 | Q-B9-17 | TalkBack y la lista de Ajustes que se desplaza (al 130 % o en pantallas bajas, las últimas filas quedan bajo el corte y no se publican) | (a) añadir la acción de desplazar del lector (`AccessibilityNode.scrolled`) en una tarea aparte; (b) publicar las filas recortadas y desplazar al activarlas | TalkBack en Ajustes |
+| Q-B9-18 (2026-10-22, abierta) | «Reducir movimiento» en Ajustes: hoy es sí o no y, una vez tocado, no vuelve a seguir al teléfono (§2.1) | (a) dejarlo así (02 §12 habla de un ajuste; lo decidido en Q-B9-3 y Q-B9-15); (b) selector de tres opciones (Automático, Sí, No) que devuelve `auto`, con una clave de texto nueva | — |
 
 Más [P] sin pregunta propia:
 - el orden de los nombres de C9, de arriba abajo;
