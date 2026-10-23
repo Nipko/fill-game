@@ -1,5 +1,11 @@
 # Traspaso al integrador: pendientes del dueño y AWS dev
 
+## Firebase prod empresarial — preparación 2026-10-22
+
+- El dueño solicita preparar Firebase prod después de resolver con su administrador el acceso empresarial a Google Cloud. Proyecto existente comprobado en ambas consolas y confirmado por el dueño: nombre e ID público `tintalu`. Se reutiliza ese proyecto; no se crea otro duplicado. La consola de Firebase lo muestra bajo un recurso de organización empresarial, cuyo dominio e identificador no se consignan aquí.
+- El dueño completó la verificación de identidad empresarial y autorizó expresamente aceptar las Condiciones de Firebase para añadirlo al proyecto. Aceptadas en el asistente. Paso actual: Google Analytics habilitado; la consola propone cuenta nueva, ubicación Estados Unidos y datos compartidos predeterminados. Pendiente aceptación específica de las Condiciones de Analytics antes del botón «Agregar Firebase». Firebase todavía no añadido en esta etapa.
+- Trabajo documental en rama `codex/firebase-prod`, desde `origin/integracion-fase1-fase2`, reutilizando un worktree propio limpio. Checkout principal sin cambio de rama. Esta nueva autorización comprende preparar Firebase prod; no autoriza desplegar AWS prod, publicar ni elegir el paquete Android definitivo. No se registra Android hasta resolver el dictamen de marca; no se crean claves Admin, se descargan archivos de configuración ni se cambia el Firebase dev personal.
+
 Actualizado: 2026-10-22. AWS dev desplegado y comprobado con autorización del dueño, desde la rama `codex/aws-dev`. Los apartados siguientes conservan el historial; sus pendientes quedan sustituidos por las verificaciones posteriores.
 
 ## Estado actual de AWS dev
