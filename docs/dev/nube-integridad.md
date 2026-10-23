@@ -185,9 +185,10 @@ Preguntas de otros bloques que este cierra:
 
 - Aplicar los parches en orden (§9), con `B8-loc.diff` para los textos (en vez de copiar `B8-strings.csv` a mano).
 - Con B6 ya integrado: `CloudMerge` no fusiona `settings.push` ni `stats.last_seen_at` / `last_win_at` (se quedan los del ganador). B6 propone `last_seen_at` y `last_win_at` por máximo y `pre_prompt_shown` / `second_prompt_shown` por «o», con `granted` del dispositivo [P]: pendiente de decidir (Q-B8-11).
-- Con Play Games (dueño): un marcador persistente de «borrado pendiente» que se procese antes de `CloudSync.AtStartup` (si el `Delete`
+- ~~Con Play Games (dueño): un marcador persistente de «borrado pendiente» que se procese antes de `CloudSync.AtStartup` (si el `Delete`
   de la nube falla, el arranque siguiente descargaría la cuenta borrada); la implementación real de `ICloudSave` y las subidas periódicas (cada `save_cloud_interval_levels` niveles,
-  tras cada compra y al pasar a segundo plano), con `CloudSync.Upload`; esperar el `Load` asíncrono en el arranque.
+  tras cada compra y al pasar a segundo plano), con `CloudSync.Upload`; esperar el `Load` asíncrono en el arranque.~~ Hecho con D-042
+  (rama `tanda5/sdk-pgs`): `CloudErase`, `PlayGamesCloudSave`, `CloudSession` y `GameBootstrap.CloudSession.cs`; ver `docs/dev/play-games.md`.
 - Con Functions: `restoreLedger` → `LocalRevocation.ApplyLedger`; `rewardedSsv` → `RegisterProvisional`/`Confirm`/`ExpireStale`;
   `deleteAccount`; `IServerDate` real con la cabecera `Date`.
 - B7: enlazar `RevocationConfig.SecSsvGraceH` con Remote Config (`sec_ssv_grace_h`) y llevar `af_save_sync` y `af_account_delete` a la
