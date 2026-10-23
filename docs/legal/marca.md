@@ -106,27 +106,32 @@ Clases 28 (peluches de Capi y Rosa), 16 y 25 solo si hay merchandising y con bú
 
 ## 4. Dominios y redes sociales
 
+Actualización consultada el **22-10-2026**, según el encargo del integrador fechado 23-10-2026. Evidencias, consultas reproducibles y límites en [investigacion-marca-2026-10.md](investigacion-marca-2026-10.md) §5. **[D]** indica confirmación del dueño transmitida por ese encargo; no implica comprobación de su cuenta privada.
+
 ### 4.1 Dominios
 
-| Dominio | Estado (06-10-2026) | Decisión | Quién | Hecho |
+| Dominio | Estado al 22-10-2026 | Decisión / próximo paso | Quién | Hecho |
 |---|---|---|---|---|
-| **tintalu.com** | Libre (RDAP) [V] | **Registrar hoy.** Propuesta [E]: dominio canónico (web, política de privacidad, página de eliminación de cuenta, `app-ads.txt` y enlaces de la ficha), porque esta vez el `.com` está libre; lo confirma el dueño | Dueño | Pendiente de confirmar |
-| **tintalu.app** | Libre (RDAP) [V] | **Registrar hoy.** `.app` exige HTTPS | Dueño | Pendiente de confirmar |
-| **tintalu.co** | Libre (RDAP) [V] | **Registrar hoy** (Colombia es el primer mercado) | Dueño | Pendiente de confirmar |
-| **tintalu.com.br** | Libre (RDAP) [V] | **Registrar hoy** a través del abogado o representante brasileño: Registro.br exige CPF o CNPJ | Dueño + abogado BR | Pendiente de confirmar |
-| tintalu.games, tintalu.net | Libres [V] | Opcionales y defensivos | Dueño | — |
-| tintaloo.com, tintalú.com (IDN) | Libres [V] | Defensivos opcionales: variante fonética en inglés y forma con tilde | Dueño | — |
+| **tintalu.com** | **Comprado por el dueño; en Cloudflare [D]** | Mantener como dominio principal; el dominio no sustituye el dictamen de marca | Dueño | Compra confirmada en [codex-marca.md](../dev/traspaso/codex-marca.md) |
+| **tintalu.app** | RDAP oficial: HTTP 404 con error JSON Not Found [V]; aparentemente no registrado [E] | Secundario aplazado; compra, reserva y precio [NV] | Dueño | Solo consulta de [Google Registry](https://pubapi.registry.google/rdap/domain/tintalu.app) |
+| **tintalu.co** | Disponibilidad **[NV]**: el encaminador RDAP informa que no hay servicio para el recurso | Secundario aplazado; comprobar antes de decidir | Dueño | [Consulta](https://rdap.org/domain/tintalu.co); no interpretar como libre |
+| **tintalu.com.br** | Disponibilidad **[NV]**: endpoint RDAP devuelve 404 sin cuerpo JSON verificable | Secundario aplazado; comprobar con Registro.br y requisitos del titular antes de decidir | Dueño + abogado BR | [Consulta](https://rdap.registro.br/domain/tintalu.com.br) |
+| **tintalu.games** | RDAP oficial: HTTP 404 con error JSON Object not found [V]; aparentemente no registrado [E] | Opcional, aplazado; compra, reserva y precio [NV] | Dueño | Solo consulta de [Identity Digital](https://rdap.identitydigital.services/rdap/domain/tintalu.games) |
+| tintalu.net, tintaloo.com, tintalú.com (IDN) | **[NV] en esta actualización**; el cribado del 06-10-2026 los consideraba libres | Defensivos opcionales; repetir consulta si el dueño decide comprarlos | Dueño | Sin compra ni nueva verificación |
 
-Coste orientativo de los cuatro principales: ≈50-100 USD/año [E]. Un dominio no da derechos de marca; el precio exacto (premium o reservado) se confirma en el registrador al comprar.
+Solo se confirma la compra del principal. Ningún secundario se compró ni reservó durante la investigación. Ausencia en RDAP no garantiza que un nombre sea comprable, no reservado o de tarifa ordinaria. No se revalida la estimación anterior de 50-100 USD/año.
 
 ### 4.2 Usuarios en redes sociales
 
-| Red | Usuario | Estado (06-10-2026) | Acción | Quién | Hecho |
-|---|---|---|---|---|---|
-| YouTube | @Tintalu | **Ocupado**: canal vacío creado el 07-04-2026 [V] | Reservar hoy una variante (por ejemplo @TintaluGame) [E]; vigilar el canal cada mes y, si se activa con contenido confuso, reclamarlo por la vía de marca cuando haya registro | Dueño | — |
-| TikTok | @tintalu | Probablemente libre [E] | **Reservar hoy** | Dueño | — |
-| Instagram | @tintalu | Sin verificar [NV] | **Comprobar y reservar hoy** | Dueño | — |
-| X | @tintalu | Sin verificar [NV] | **Comprobar y reservar hoy** | Dueño | — |
+Consulta del 22-10-2026. Un perfil no visible o un 404 no acredita que su usuario se pueda registrar. No se creó ni reservó ningún usuario.
+
+| Red | @tintalu | @tintalugame | Acción pendiente / evidencia |
+|---|---|---|---|
+| YouTube | **Ocupado [V]**, canal sin contenido visible | Página 404 [V]; disponibilidad para registro [NV] | [Tintalu](https://www.youtube.com/@tintalu) / [TintaluGame](https://www.youtube.com/@tintalugame). No se revalida la fecha de creación que constaba antes |
+| TikTok | **[NV]** | **[NV]** | [Tintalu](https://www.tiktok.com/@tintalu) / [TintaluGame](https://www.tiktok.com/@tintalugame): acceso bloqueado/robots; comprobar manualmente sin crear cuenta en este encargo |
+| Instagram | **[NV]** | **[NV]** | [Tintalu](https://www.instagram.com/tintalu/) / [TintaluGame](https://www.instagram.com/tintalugame/): lector limitado por throttling |
+| X | **[NV]** | **[NV]** | [Tintalu](https://x.com/tintalu) / [TintaluGame](https://x.com/tintalugame): HTTP 403; no afirmar que estén libres |
+| Facebook | **[NV]** | **[NV]** | [Tintalu](https://www.facebook.com/tintalu) / [TintaluGame](https://www.facebook.com/tintalugame): lector limitado por throttling |
 
 ## 5. Abogados
 
@@ -182,6 +187,7 @@ Coste orientativo de los cuatro principales: ≈50-100 USD/año [E]. Un dominio 
 | 2026-10-06 | Cribado de nombres alternativos: "Selva Fill" y variantes (Selvagua, riesgo bajo-medio) y 48 candidatos con 5 de los 10 finalistas documentados (Tintalú, 83/100, riesgo medio; Cuiazú, riesgo bajo provisional) | `selva-fill-cribado.md`; `nombres-candidatos.md` |
 | 2026-10-06 | **Decisión del dueño: nombre comercial Tintalú** ("Tintalu" en ASCII), con riesgo medio aceptado; Aquazonia descartado. Dominios `tintalu.com`, `.app`, `.co` y `.com.br` y usuarios en redes, a registrar hoy; abogado: INPI (clases 9, 41 y 28), México frente a EL TINTAL y EE. UU. frente a TINTA; ningún AAB con `com.<estudio>.tintalu` antes del dictamen; builds de prueba con `com.amazonfill.dev`; planes B Cuiazú, Botonda y Selvagua. Documento reescrito | `nombres-candidatos.md` § Decisión del dueño; GDD 1.4 |
 | 2026-10-06 | Renombrado interno sin la marca descartada: `Packages/com.aquazonia.core` pasa a `Packages/com.amazonfill.core` y `dotnet/Aquazonia.slnx` a `dotnet/AmazonFill.slnx`; espacios de nombres de las herramientas `AmazonFill.Tools.*`; `$id` del esquema `urn:amazonfill:schemas:af-level-1` (sin cambio de validación). Los identificadores internos usan Amazon Fill, nunca la marca comercial | Este documento, sección 8 |
+| 2026-10-22 | Investigación previa documentada: compra de tintalu.com en Cloudflare confirmada por el dueño vía encargo; secundarios aplazados; .app y .games sin objeto RDAP; .co y .com.br sin disponibilidad verificada; YouTube @Tintalu ocupado y otras redes con límites. Informe separado con antecedentes oficiales, nuevo Tinta — Ball Sort Puzzle y cálculo Madrid desde Colombia; no modifica el dictamen, los riesgos aceptados ni la compuerta de publicación | `investigacion-marca-2026-10.md`; `../dev/traspaso/codex-marca.md` |
 
 ## 10. Historia: Aquazonia (descartado el 2026-10-06)
 
