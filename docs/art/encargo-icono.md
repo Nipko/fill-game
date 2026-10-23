@@ -1,6 +1,6 @@
 # Tintalú: dirección y encargo del icono
 
-23-10-2026 · Exploración aprobada por el dueño: **ver cuia que vierte y TiTino**. No se ha elegido un final. El registro de marca está aplazado. Estas propuestas no llevan ® ni acreditan exclusividad.
+23-10-2026 · El dueño comparó cuia que vierte y TiTino y **eligió la dirección de las cuias vertiendo**. Pidió una versión simplificada para el icono, sin texto y con toque amazónico. La exportación final aún no está integrada. El registro de marca está aplazado. Estas propuestas no llevan ® ni acreditan exclusividad.
 
 ## 1. Criterio de diseño
 
@@ -37,4 +37,4 @@ Evitar texto promocional, rankings, ofertas o insignias falsas; sonrisa/flecha d
 
 ## 5. Próximo paso
 
-Elegir A o D, o identificar qué rasgos combinar. Solo después preparar logotipo escrito, versiones de color/monocromo, composición de cabecera de web y exportaciones finales. No se tocó `Assets/`, no se cambió el nombre de la app y no se presentó ninguna marca.
+Dirección A elegida por el dueño: dos cuias-garrafa de vidrio vertiendo, fieles a las capturas del juego, con cuello corto y fibra en boca/base. El icono simplificado elimina nombre, placa, racimos y paisaje; conserva tres tintes, chorro púrpura y dos hojas de palma sobre azul petróleo. Se produjo una imagen con ImageGen y una corrección de inclinación/márgenes; queda local en `Logs/art-concepts/tintalu-icono/` con sus prompts, fuera de Git. Aún faltan exportaciones de tienda, capas adaptativas y monocroma, comprobación a tamaños pequeños/máscaras e integración. No se tocó `Assets/`, no se cambió el nombre de la app y no se presentó ninguna marca.
