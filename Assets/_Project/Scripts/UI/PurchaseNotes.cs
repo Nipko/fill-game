@@ -16,12 +16,19 @@ namespace AF.UI
 
         /// <summary>«No se pudo confirmar la compra»: el servidor la rechazó (<c>verify_failed</c>); ni se acreditó ni se consumió.</summary>
         Failed = 2,
+
+        /// <summary>
+        /// «Confirmando…»: Play acaba de cobrar la compra que el jugador abrió y se está preguntando al servidor ahora mismo (08 §10.3:
+        /// «estado "verifying"; UI muestra "Confirmando…" (≤3 s)»). Si el servidor no responde, pasa a <see cref="Pending"/>.
+        /// </summary>
+        Verifying = 3,
     }
 
     /// <summary>
     /// Las notas de compra que enseñan el Mercado (B5) y Aguas estancadas (Puñado y Balsa de rescate) mientras una compra espera al
     /// servidor o tras un rechazo (F3-5). Las pone <see cref="Track"/> con cada <see cref="PurchaseVerificationEvent"/> de la tienda
-    /// verificada: <c>verifying</c>, <c>pending</c>, en cola y <c>deferred_ack</c> → <see cref="PurchaseNoteKind.Pending"/>; <c>verify_failed</c>
+    /// verificada: <c>verifying</c> de la compra en vivo → <see cref="PurchaseNoteKind.Verifying"/> («Confirmando…», 08 §10.3);
+    /// <c>verifying</c> de otra, <c>pending</c>, en cola y <c>deferred_ack</c> → <see cref="PurchaseNoteKind.Pending"/>; <c>verify_failed</c>
     /// → <see cref="PurchaseNoteKind.Failed"/>; acreditada o ya aplicada → sin nota. <see cref="Version"/> sube con cada cambio, para
     /// que las vistas se rehagan solo entonces (sin asignaciones por fotograma: leer es un <c>TryGetValue</c>). Hilo principal.
     /// </summary>
@@ -38,13 +45,25 @@ namespace AF.UI
             return sku != null && _notes.TryGetValue(sku, out PurchaseNoteKind kind) ? kind : PurchaseNoteKind.None;
         }
 
-        /// <summary>La nota con más peso de dos productos (el fallo antes que lo pendiente): la de Puñado y Balsa en el modal.</summary>
+        /// <summary>
+        /// La nota con más peso de dos productos (el fallo, luego lo que se confirma ahora y luego lo pendiente): la de Puñado y Balsa
+        /// en el modal.
+        /// </summary>
         public PurchaseNoteKind Of(string first, string second)
         {
             PurchaseNoteKind a = Of(first);
             PurchaseNoteKind b = Of(second);
-            return a == PurchaseNoteKind.Failed || b == PurchaseNoteKind.Failed ? PurchaseNoteKind.Failed
-                : (a == PurchaseNoteKind.Pending || b == PurchaseNoteKind.Pending ? PurchaseNoteKind.Pending : PurchaseNoteKind.None);
+            if (a == PurchaseNoteKind.Failed || b == PurchaseNoteKind.Failed)
+            {
+                return PurchaseNoteKind.Failed;
+            }
+
+            if (a == PurchaseNoteKind.Verifying || b == PurchaseNoteKind.Verifying)
+            {
+                return PurchaseNoteKind.Verifying;
+            }
+
+            return a == PurchaseNoteKind.Pending || b == PurchaseNoteKind.Pending ? PurchaseNoteKind.Pending : PurchaseNoteKind.None;
         }
 
         /// <summary>Pone la nota que toca para <paramref name="e"/>.</summary>
@@ -57,6 +76,9 @@ namespace AF.UI
 
             switch (e.State)
             {
+                case PurchaseVerificationState.Verifying when e.IsLive:
+                    Set(e.Sku, PurchaseNoteKind.Verifying); // la compra recién cobrada, preguntando al servidor: «Confirmando…»
+                    break;
                 case PurchaseVerificationState.Verifying:
                 case PurchaseVerificationState.Pending:
                 case PurchaseVerificationState.Queued:

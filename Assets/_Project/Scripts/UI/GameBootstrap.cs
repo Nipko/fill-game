@@ -1031,7 +1031,8 @@ namespace AF.UI
                 return false;
             }
 
-            // «Eliminar cuenta y datos» (B8), encima de Ajustes: Atrás lo cierra sin borrar y deja Ajustes abierta.
+            // «Eliminar cuenta y datos» (B8), encima de Ajustes: Atrás lo cierra sin borrar y deja Ajustes abierta; con «Eliminando…»
+            // o la confirmación a la vista no hace nada (CancelDeleteAccount da false y BackBlocked, el háptico de Atrás bloqueado).
             if (DeleteAccountOpen)
             {
                 return CancelDeleteAccount();
@@ -1819,6 +1820,15 @@ namespace AF.UI
             if (_flow == null || _screen == null || _app == null || _app.Screen == AppScreen.Boot)
             {
                 _backPresses = 0; // Atrás durante el arranque: aún no hay nada que cerrar
+                return;
+            }
+
+            // «Eliminar cuenta y datos»: los puntos de espera y, con la cuenta ya borrada, la confirmación hasta la recarga (con el
+            // perfil borrado no avanza nada más; Atrás no hace nada).
+            if (TickAccount(Time.unscaledDeltaTime * 1000f))
+            {
+                _backPresses = 0;
+                TickA11y(Time.unscaledDeltaTime * 1000f);
                 return;
             }
 

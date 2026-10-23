@@ -398,6 +398,11 @@ namespace AF.UI
         private void OnVerificationChanged(PurchaseVerificationEvent e)
         {
             _services?.PurchaseNotes.Track(e);
+            if (e.IsLive && e.State == PurchaseVerificationState.Verifying)
+            {
+                _a11y?.Announce(MarketText.PurchaseVerifying); // TalkBack: «Confirmando…» mientras el servidor verifica (08 §10.3)
+            }
+
             if (DevProbe.Enabled)
             {
                 MarketProbe("iap_verification", "\"sku\":\"" + e.Sku + "\",\"state\":\"" + StateId(e.State) + "\",\"live\":" + (e.IsLive ? "true" : "false"));

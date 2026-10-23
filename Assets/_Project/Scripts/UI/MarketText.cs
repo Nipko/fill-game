@@ -83,6 +83,12 @@ namespace AF.UI
             /// </summary>
             public const string PurchasePending = "iap_pending_confirm";
 
+            /// <summary>
+            /// «Confirmando…» (08 §10.3: «estado "verifying"; UI muestra "Confirmando…" (≤3 s)») [P]: la compra recién cobrada mientras
+            /// se pregunta al servidor, en su fila del Mercado y bajo Puñado y Balsa en Aguas estancadas.
+            /// </summary>
+            public const string PurchaseVerifying = "iap_verifying";
+
             /// <summary>«No se pudo confirmar la compra» (F3-5; <c>verify_failed</c>) [P]: el servidor la rechazó; no se cobró en el juego.</summary>
             public const string PurchaseFailed = "iap_verify_failed";
 
@@ -102,7 +108,7 @@ namespace AF.UI
             Keys.Title, Keys.TabSeeds, Keys.TabBoosters, Keys.TabCuias, Keys.TabNoAds, Keys.SeedsAmount, Keys.StarterContent,
             Keys.StarterLeft, Keys.NoAdsContent, Keys.NoAdsOwned, Keys.PiggyContent, Keys.PiggyLocked, Keys.PiggyFull, Keys.PiggyFills,
             Keys.CanoesContent, Keys.SkinEquip, Keys.SkinEquipped, Keys.NotNow, Keys.WorldPrize, Keys.PurchasePending, Keys.PurchaseFailed,
-            Keys.StoreUnavailable,
+            Keys.StoreUnavailable, Keys.PurchaseVerifying,
         };
 
         /// <summary>«Mercado».</summary>
@@ -198,6 +204,9 @@ namespace AF.UI
         /// <summary>«No se pudo confirmar la compra».</summary>
         public static string PurchaseFailed => Loc.T(Keys.PurchaseFailed);
 
+        /// <summary>«Confirmando…».</summary>
+        public static string PurchaseVerifying => Loc.T(Keys.PurchaseVerifying);
+
         /// <summary>«Las compras no están disponibles ahora».</summary>
         public static string StoreUnavailable => Loc.T(Keys.StoreUnavailable);
 
@@ -208,6 +217,7 @@ namespace AF.UI
             {
                 case PurchaseNoteKind.Pending: return PurchasePending;
                 case PurchaseNoteKind.Failed: return PurchaseFailed;
+                case PurchaseNoteKind.Verifying: return PurchaseVerifying;
                 default: return null;
             }
         }
