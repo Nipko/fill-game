@@ -40,7 +40,7 @@ Medidas de nuevo el 2026-10-23, tras poner en EN y PT-BR los nombres de D-033 (p
 
 ## 3. Preguntas para el dueño (y el abogado)
 
-**Las 23 se decidieron con su recomendada (a) el 2026-10-20** («las preguntas dejemos las recomendadas»: `docs/dev/decisiones.md`, D-033, añadido del 2026-10-20, «preguntas de B13, B6, B3 y B2 del Spark»). Desde entonces, las decisiones posteriores y la web han **cerrado** 15. Las otras 8 siguen **abiertas**: la decisión está tomada, pero falta un dato, una cuenta o el abogado. Las Q-B13-24 y Q-B13-25 son nuevas de esta puesta al día. Se conserva la numeración.
+**Las 23 se decidieron con su recomendada (a) el 2026-10-20** («las preguntas dejemos las recomendadas»: `docs/dev/decisiones.md`, D-033, añadido del 2026-10-20, «preguntas de B13, B6, B3 y B2 del Spark»). De las 23, **15 están cerradas**: 10 por esa misma decisión, ya aplicada en estos borradores (5, 6, 7, 8, 10, 11, 13, 14, 15 y 23), y 5 por decisiones posteriores o por la web (1 y 2, D-041; 18, la web; 20, D-040; 21, D-035). Las otras 8 siguen **abiertas**: la decisión está tomada, pero falta un dato, una cuenta o el abogado. Las Q-B13-24 y Q-B13-25 son nuevas de esta puesta al día, con su recomendada aplicada en el borrador **a la espera del sí del dueño y del abogado**. Se conserva la numeración.
 
 ### 3.1 Abiertas
 
@@ -54,8 +54,8 @@ Medidas de nuevo el 2026-10-23, tras poner en EN y PT-BR los nombres de D-033 (p
 | Q-B13-17 | Pix (Brasil) y OXXO (México) en las fichas por país | Solo tras comprobar en Play Console que se ofrecen al lanzar | La app en Play Console, que espera al dictamen (D-034) | Dueño |
 | Q-B13-19 | Retención de Firebase Analytics | La mínima que permita el panel, por minimización | Configurarla en el proyecto de Firebase de prod y anotarla en la web (privacidad, sección 9, hoy `[[DATO DEL DUEÑO]]`) | Dueño |
 | Q-B13-22 | Partida de Play Games y datos del teléfono cuando el borrado llega por la web | Decir que se borran la próxima vez que se abre el juego y que el jugador puede borrar su perfil de Play Games | La web deja el texto como `[[ABOGADO]]`, y Play Games aún no está en el juego (D-042): el texto se completa al integrarlo | Abogado; integrador de D-042 |
-| Q-B13-24 [nueva] | Data Safety: la dirección IP que guardan 30 días los registros de acceso del backend y de la web (08 §13.3, fila «Backend propio»; privacidad de la web, sección 9) | **(a) recomendada, aplicada en el borrador:** no se declara como un tipo aparte, porque solo sirve para seguridad y no se deriva ninguna ubicación; lo confirma el abogado; (b) declararla como «Ubicación aproximada» | El abogado | Abogado |
-| Q-B13-25 [nueva] | 08 §13.3 no tiene fila para Google UMP, que llega con MAX en D-042 | **(a) recomendada, aplicada en el borrador:** se cubre con la fila de MAX hasta que el integrador de D-042 confirme con la guía de Google qué trata UMP; si trata algo propio, el integrador añade la fila a 08 §13.3; (b) añadir ya una fila «UMP: nada» | El integrador de D-042 | Integrador; dueño |
+| Q-B13-24 [nueva; pendiente del sí del dueño y del abogado] | Data Safety: la dirección IP que guardan 30 días los registros de acceso del backend y de la web (08 §13.3, fila «Backend propio»; privacidad de la web, sección 9) | **(a) recomendada, aplicada en el borrador:** no se declara como un tipo aparte, porque solo sirve para seguridad y no se deriva ninguna ubicación; lo confirma el abogado; (b) declararla como «Ubicación aproximada» | El abogado | Abogado |
+| Q-B13-25 [nueva; pendiente del sí del dueño y del abogado] | 08 §13.3 no tiene fila para Google UMP, que llega con MAX en D-042 | **(a) recomendada, aplicada en el borrador:** se cubre con la fila de MAX hasta que el integrador de D-042 confirme con la guía de Google qué trata UMP; si trata algo propio, el integrador añade la fila a 08 §13.3; (b) añadir ya una fila «UMP: nada» | El integrador de D-042 | Integrador; dueño |
 
 ### 3.2 Cerradas
 
@@ -63,19 +63,19 @@ Medidas de nuevo el 2026-10-23, tras poner en EN y PT-BR los nombres de D-033 (p
 |---|---|---|
 | Q-B13-1 | Dominio y ruta de la página de borrado | **D-041:** `tintalu.com`, del dueño. La web aplica la (a): `/tintalu/eliminar-cuenta/`, `/tintalu/en/delete-account/` y `/tintalu/pt-br/excluir-conta/` (`infra/web/src/site.ts`). Conectar el dominio es un paso aparte del dueño (D-041; D-034) |
 | Q-B13-2 | Titular legal y desarrollador en Play | **D-041:** Parallext, LLC (parallext.com), sin ninguna forma de «Amazon». La consecuencia que queda (la cuenta de Play Console está a nombre de AUTOMATION AI S A S) la decide el dueño según D-041, «Consecuencias» |
-| Q-B13-5 | Texto de las capturas «en papel marfil» frente a D-003 | (a): placa de madera clara o de vidrio del UI kit (`assets-tienda.md` §1) |
-| Q-B13-6 | Captura 4 en EN y PT-BR | (a): la propuesta de B13 hasta el revisor nativo |
-| Q-B13-7 | Número de niveles en la ficha | (a): no se da en la 1.0 (fichas, notas de §3) |
-| Q-B13-8 | Peso de descarga en la ficha | (a): no se da hasta medir el AAB de release con los SDK |
-| Q-B13-10 | «Sin wifi» frente a videos y compras | (a): se mantiene el canon y se aclara en la descripción larga. Con D-042, la frase de los videos solo vale si el build lleva MAX (fichas, notas de §3) |
-| Q-B13-11 | IARC: la Piraña muerde una cuia | (a): «sin violencia» (`iarc.md` §2) |
-| Q-B13-13 | Cómo se acredita el código escrito por agentes de IA | (a): «Parallext, LLC, con ayuda de herramientas de inteligencia artificial», como ya dice la web (`credits.html`). El dueño puede ajustar la redacción |
-| Q-B13-14 | Créditos y licencias de terceros | (a): botón «Licencias de terceros» con las OFL y el agradecimiento CC0 (`creditos.md` §2). Qué avisos de cada SDK hay que mostrar sigue en `[[ABOGADO]]` en la web |
-| Q-B13-15 | Dónde se guardan los PNG y PSD de la tienda | (a): `docs/store-listing/assets/<idioma>/` por Git LFS |
+| Q-B13-5 | Texto de las capturas «en papel marfil» frente a D-003 | D-033, añadido del 2026-10-20, (a): placa de madera clara o de vidrio del UI kit (`assets-tienda.md` §1) |
+| Q-B13-6 | Captura 4 en EN y PT-BR | D-033, añadido del 2026-10-20, (a): la propuesta de B13 hasta el revisor nativo |
+| Q-B13-7 | Número de niveles en la ficha | D-033, añadido del 2026-10-20, (a): no se da en la 1.0 (fichas, notas de §3) |
+| Q-B13-8 | Peso de descarga en la ficha | D-033, añadido del 2026-10-20, (a): no se da hasta medir el AAB de release con los SDK |
+| Q-B13-10 | «Sin wifi» frente a videos y compras | D-033, añadido del 2026-10-20, (a): se mantiene el canon y se aclara en la descripción larga. Con D-042, la frase de los videos solo vale si el build lleva MAX (fichas, notas de §3) |
+| Q-B13-11 | IARC: la Piraña muerde una cuia | D-033, añadido del 2026-10-20, (a): «sin violencia» (`iarc.md` §2) |
+| Q-B13-13 | Cómo se acredita el código escrito por agentes de IA | D-033, añadido del 2026-10-20, (a): «Parallext, LLC, con ayuda de herramientas de inteligencia artificial», como ya dice la web (`credits.html`). El dueño puede ajustar la redacción |
+| Q-B13-14 | Créditos y licencias de terceros | D-033, añadido del 2026-10-20, (a): botón «Licencias de terceros» con las OFL y el agradecimiento CC0 (`creditos.md` §2). Qué avisos de cada SDK hay que mostrar sigue en `[[ABOGADO]]` en la web |
+| Q-B13-15 | Dónde se guardan los PNG y PSD de la tienda | D-033, añadido del 2026-10-20, (a): `docs/store-listing/assets/<idioma>/` por Git LFS |
 | Q-B13-18 | Términos de servicio | La web ya los tiene en borrador (`infra/web/src/content/*/terms.html`), con Parallext, LLC como titular (D-041). Los revisa el abogado |
 | Q-B13-20 | Unity Authentication, dependencia de Unity IAP, sin fila en 08 §13.3 | **Obsoleta por D-040 (añadido de Q-IAP-1):** Unity IAP y sus dependencias de Unity Services salen del juego, sustituidos por el plugin propio de Play Billing 9.0.0. La fila de 08 §13.3 es ahora solo «Google Play Billing», con Q-BILL-2 |
 | Q-B13-21 | Cómo sabe la web que quien pide el borrado es el dueño | **D-035** (añadido de F1-F2a) y 08 §11: un código de cuenta aleatorio de 128 bits, distinto del UID, del que el servidor solo guarda el hash, que rota y se confirma en 5 minutos, con límites por ruta y por código. Ajustes lo muestra con guiones y la web lo normaliza (D-033, añadido del 2026-10-22, punto 11). El «ID de jugador» del borrador es ahora el **código de cuenta** |
-| Q-B13-23 | Captura 2, «14 frutas, 14 colores» | (a): «14 colores de frutas y ríos» / «14 colors from fruit and rivers» / «14 cores de frutas e rios» (fichas §6; `assets-tienda.md` §4) |
+| Q-B13-23 | Captura 2, «14 frutas, 14 colores» | D-033, añadido del 2026-10-20, (a): «14 colores de frutas y ríos» / «14 colors from fruit and rivers» / «14 cores de frutas e rios» (fichas §6; `assets-tienda.md` §4) |
 
 ### 3.3 Historia: las 23 tal como las planteó B13
 
@@ -90,11 +90,11 @@ Ya tienen dueño fuera de este bloque y no se repiten aquí: Crashlytics y Analy
 
 ## 4. Enganches para el integrador (no aplicados en esta rama)
 
-0. **`docs/qa/regresion-release.md`, RR-60:** todavía habla del «ID de jugador» y de «pendiente de Q-B13-21». Pasa a «código de cuenta» (con guiones, que la web normaliza) y a Q-B13-21 cerrada (D-035); la fuente es `infra/web/src/content/*/delete.html`, no `docs/store-listing/eliminar-cuenta.md`.
+0. **`docs/qa/regresion-release.md`, RR-60:** hecho en esta rama (código de cuenta y Q-B13-21 resuelta).
 1. **`Assets/_Project/Data/Loc/strings.csv`:** las 16 filas de `strings-creditos.csv` (`credits_*`), ya en orden ordinal y con la cabecera de 08 §4.7, cuando exista la pantalla de Créditos. Se prueba con los tests de las tablas de textos.
 2. **Glosario §1.3:** la cifra de la descripción corta EN (77 → 74; sección 2).
 3. **GDD, con lo ya decidido:** 07 §10.2 (Q-B13-5, Q-B13-6 y Q-B13-23); 08 §11 ya recoge Q-B13-21 y Q-B13-1 (falta Q-B13-22, cuando el abogado cierre el texto); 08 §13.3: la fila de Crashlytics antes de la pantalla de edad, UMP (Q-B13-25) y el runtime de Unity (Q-B13-9). Q-B13-20 ya no pide nada (D-040).
-3 bis. **La web (`infra/web/`, fuera de esta rama):** la cabecera de `infra/web/src/static/app-ads.txt` dice «Fuente: docs/store-listing/app-ads.txt»; ahora es al revés (la web es la fuente). Lo corrige quien toque la web. Y, al integrar D-042, privacidad (secciones 2, 3 y 5), términos (sección 6) y créditos de la web, a la vez que `data-safety.md` y 08 §13.3.
+3 bis. **La web (`infra/web/`):** la cabecera de `app-ads.txt` y el matiz de la banda de edad y el consentimiento en la privacidad ya están hechos en esta rama. Al integrar D-042, privacidad (secciones 2, 3 y 5), términos (sección 6) y créditos de la web, a la vez que `data-safety.md` y 08 §13.3.
 4. **`docs/dev/traspaso/spark-estado.md`:** la entrada de B13 («listo para integrar»), que el coordinador de la tanda escribe al integrar.
 
 ## 5. Lo que este bloque no hace
