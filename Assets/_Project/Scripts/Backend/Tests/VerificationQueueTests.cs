@@ -8,7 +8,7 @@ using NUnit.Framework;
 
 namespace AF.Backend.Tests
 {
-    /// <summary>F3-1: la cola de verificación de 72 h de 08 §10.3 y su procesador.</summary>
+    /// <summary>F3-1: la cola de verificación de 48 h de 08 §10.3 y su procesador.</summary>
     public sealed class VerificationQueueTests
     {
         private static readonly DateTime T0 = new DateTime(2026, 10, 21, 12, 0, 0, DateTimeKind.Utc);
@@ -62,22 +62,23 @@ namespace AF.Backend.Tests
         }
 
         [Test]
-        public void EntriesExpireAfter72Hours()
+        public void EntriesExpireAfter48HoursByDefault()
         {
             var queue = new VerificationQueue();
             queue.Enqueue(Purchase(), T0);
-            Assert.That(queue.DeferredAckAfter, Is.EqualTo(TimeSpan.FromHours(72)));
-            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(72).AddTicks(-1)), Is.False);
-            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(72)), Is.True);
-            Assert.That(queue.Due(T0.AddHours(72)), Is.Empty, "una vencida ya no se intenta");
+            Assert.That(queue.DeferredAckAfter, Is.EqualTo(TimeSpan.FromHours(48)), "D-040, Q-BILL-5");
+            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(48).AddTicks(-1)), Is.False);
+            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(48)), Is.True);
+            Assert.That(queue.Due(T0.AddHours(48)), Is.Empty, "una vencida ya no se intenta");
         }
 
         [Test]
         public void DeadlineComesFromRemoteConfigWithinItsRange()
         {
-            var queue = new VerificationQueue(new VerificationQueueConfig { SecPurchaseDeferredAckH = 48 });
+            var queue = new VerificationQueue(new VerificationQueueConfig { SecPurchaseDeferredAckH = 72 });
             queue.Enqueue(Purchase(), T0);
-            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(48)), Is.True);
+            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(72).AddTicks(-1)), Is.False);
+            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(72)), Is.True);
             Assert.That(() => new VerificationQueue(new VerificationQueueConfig { SecPurchaseDeferredAckH = 47 }), Throws.InvalidOperationException);
             Assert.That(() => new VerificationQueue(new VerificationQueueConfig { SecPurchaseDeferredAckH = 73 }), Throws.InvalidOperationException);
         }
@@ -201,11 +202,11 @@ namespace AF.Backend.Tests
         {
             var queue = new VerificationQueue();
             queue.Enqueue(Purchase(), T0);
-            queue.RecordPending("tok-1", T0.AddHours(70));
-            Assert.That(queue.Entries[0].FirstQueuedUtc, Is.EqualTo(T0.AddHours(70)), "el servidor respondió: el plazo vuelve a contar");
-            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(100)), Is.False);
+            queue.RecordPending("tok-1", T0.AddHours(46));
+            Assert.That(queue.Entries[0].FirstQueuedUtc, Is.EqualTo(T0.AddHours(46)), "el servidor respondió: el plazo vuelve a contar");
+            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(80)), Is.False);
             Assert.That(queue.Entries[0].Attempts, Is.EqualTo(1));
-            Assert.That(queue.Entries[0].NextAttemptUtc, Is.EqualTo(T0.AddHours(70).AddSeconds(30)));
+            Assert.That(queue.Entries[0].NextAttemptUtc, Is.EqualTo(T0.AddHours(46).AddSeconds(30)));
         }
 
         [Test]
@@ -237,7 +238,7 @@ namespace AF.Backend.Tests
         }
 
         [Test]
-        public void RunnerDefersTheAckAfter72HoursOnceAndKeepsRetrying()
+        public void RunnerDefersTheAckAfter48HoursOnceAndKeepsRetrying()
         {
             var fx = new RunnerFixture();
             fx.Queue.Enqueue(Purchase("tok-1"), T0);
@@ -254,12 +255,12 @@ namespace AF.Backend.Tests
                 fx.Clock.Advance(TimeSpan.FromHours(1));
             }
 
-            Assert.That(deferredAt, Is.EqualTo(72), "se anota en el primer Pump a las 72 h");
+            Assert.That(deferredAt, Is.EqualTo(48), "se anota en el primer Pump a las 48 h");
             Assert.That(fx.Outcomes.FindAll(o => o.Kind == VerificationOutcomeKind.DeferredAck), Has.Count.EqualTo(1), "una sola vez");
             Assert.That(fx.Outcomes.TrueForAll(o => o.Kind != VerificationOutcomeKind.Answered), Is.True, "nunca se acredita sin respuesta");
             Assert.That(fx.Queue.Count, Is.EqualTo(1), "D-035: sigue en la cola hasta que el servidor la verifique");
             Assert.That(fx.Queue.Entries[0].IsDeferredAck, Is.True);
-            Assert.That(fx.Queue.Entries[0].DeferredAckUtc, Is.EqualTo(T0.AddHours(72)));
+            Assert.That(fx.Queue.Entries[0].DeferredAckUtc, Is.EqualTo(T0.AddHours(48)));
 
             int calls = fx.Backend.Calls["verifyPurchase"];
             Assert.That(calls, Is.GreaterThan(10), "se reintenta también después del deferred_ack");
@@ -281,7 +282,7 @@ namespace AF.Backend.Tests
             fx.Queue.Enqueue(Purchase("tok-1"), T0);
             fx.Runner.Pump(send: false);
             Assert.That(fx.Backend.Calls.ContainsKey("verifyPurchase"), Is.False, "biz_backend_enabled = false: sin red");
-            fx.Clock.Advance(TimeSpan.FromHours(72));
+            fx.Clock.Advance(TimeSpan.FromHours(48));
             fx.Runner.Pump(send: false);
             Assert.That(fx.Outcomes, Has.Count.EqualTo(1));
             Assert.That(fx.Outcomes[0].Kind, Is.EqualTo(VerificationOutcomeKind.DeferredAck));
@@ -294,14 +295,14 @@ namespace AF.Backend.Tests
             var queue = new VerificationQueue();
             queue.Enqueue(Purchase("tok-1", "af_piggy"), T0, clientSeeds: 1500);
             queue.Enqueue(Purchase("tok-2"), T0);
-            queue.MarkDeferredAck("tok-2", T0.AddHours(72));
+            queue.MarkDeferredAck("tok-2", T0.AddHours(48));
             Assert.That(() => queue.Enqueue(Purchase("tok-3"), T0, clientSeeds: -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
 
             Assert.That(VerificationQueue.TryFromJson(queue.ToJson(), out VerificationQueue? back, out string? error), Is.True, error);
             Assert.That(back!.Get("tok-1")!.ClientSeeds, Is.EqualTo(1500));
             Assert.That(back.Get("tok-1")!.IsDeferredAck, Is.False);
             Assert.That(back.Get("tok-2")!.ClientSeeds, Is.Null);
-            Assert.That(back.Get("tok-2")!.DeferredAckUtc, Is.EqualTo(T0.AddHours(72)));
+            Assert.That(back.Get("tok-2")!.DeferredAckUtc, Is.EqualTo(T0.AddHours(48)));
             Assert.That(back.IsExpired(back.Get("tok-2")!, T0.AddHours(500)), Is.False, "ya reconocida: no vuelve a vencer");
             Assert.That(back.IsExpired(back.Get("tok-1")!, T0.AddHours(500)), Is.True);
             Assert.That(back.Due(T0.AddHours(500)), Has.Count.EqualTo(1), "la reconocida se sigue intentando; la vencida espera su deferred_ack");

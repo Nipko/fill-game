@@ -80,12 +80,12 @@ namespace AF.RemoteConfig.Tests
         {
             // F3-5: sec_purchase_deferred_ack_h (48-72) y sec_ssv_grace_h; B4: la tasa de la Bitácora y su interruptor.
             RcConfigs c = Bind(
-                "sec_purchase_deferred_ack_h", "48",
+                "sec_purchase_deferred_ack_h", "72",
                 "sec_ssv_grace_h", "12",
                 "biz_feature_login_calendar", "false",
                 "eco_calendar_locked_booster_seeds", "{\"other\":100,\"undo3\":30}");
             Assert.That(c.Errors, Is.Empty, string.Join(" | ", c.Errors));
-            Assert.That(c.Verification.SecPurchaseDeferredAckH, Is.EqualTo(48));
+            Assert.That(c.Verification.SecPurchaseDeferredAckH, Is.EqualTo(72), "el máximo del rango: distinto del default de 48");
             Assert.That(c.Revocation.SecSsvGraceH, Is.EqualTo(12));
             Assert.That(c.LoginCalendar.BizFeatureLoginCalendar, Is.False);
             Assert.That(c.LoginCalendar.EcoCalendarLockedBoosterSeeds.Undo, Is.EqualTo(30));
@@ -101,7 +101,7 @@ namespace AF.RemoteConfig.Tests
                 "sec_purchase_deferred_ack_h", "96",
                 "ui_max_takeovers_per_session", "2",
                 "eco_calendar_table_v2", "{\"cycle\":[]}");
-            Assert.That(c.Verification.SecPurchaseDeferredAckH, Is.EqualTo(72), "08 §9: 48-72");
+            Assert.That(c.Verification.SecPurchaseDeferredAckH, Is.EqualTo(48), "08 §9: 48-72, default 48 (D-040, Q-BILL-5)");
             Assert.That(c.Takeovers.UiMaxTakeoversPerSession, Is.EqualTo(1), "08 §9: solo 1");
             Assert.That(c.LoginCalendar.EcoCalendarTableV2.Format(), Is.EqualTo(AF.LiveOps.LoginCalendarTable.Default.Format()),
                 "una tabla remota que no vale deja la compilada (Q-B4)");

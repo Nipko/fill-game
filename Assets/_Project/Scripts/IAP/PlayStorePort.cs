@@ -164,7 +164,7 @@ namespace AF.IAP
 
         /// <summary>
         /// Reconoce sin consumir el pedido cobrado de <paramref name="token"/> (<c>acknowledgePurchase</c>), también un consumible: es el
-        /// <c>deferred_ack</c> de 08 §10.3 (72 h sin respuesta del servidor; Play ya no lo reembolsa a los 3 días). No acredita nada y el
+        /// <c>deferred_ack</c> de 08 §10.3 (48 h sin respuesta del servidor; Play ya no lo reembolsa a los 3 días). No acredita nada y el
         /// pedido sigue sin terminar (un consumible se consume después de acreditar). False si el puerto no tiene ese pedido sin terminar.
         /// </summary>
         bool Acknowledge(string token);

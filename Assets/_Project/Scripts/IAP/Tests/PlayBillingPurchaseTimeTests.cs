@@ -7,7 +7,7 @@ namespace AF.IAP.Tests
 {
     /// <summary>
     /// Con el plugin propio, Play da la hora de la compra (<c>purchaseTime</c>): <see cref="PlayBillingClient"/> la pasa a la
-    /// <see cref="BillingTransaction"/>, y de ahí la cola de verificación cuenta las 72 h del <c>deferred_ack</c> desde la compra y no desde
+    /// <see cref="BillingTransaction"/>, y de ahí la cola de verificación cuenta las 48 h del <c>deferred_ack</c> desde la compra y no desde
     /// que entra en la cola (08 §10.3; D-040, añadido de Q-IAP-1).
     /// </summary>
     public sealed class PlayBillingPurchaseTimeTests

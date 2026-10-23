@@ -163,7 +163,7 @@ namespace AF.Save
         /// <c>purchase_queue</c> [P] (F3-3): la cola de verificación de compras de 08 §10.3 (<c>AF.Backend.Verification.VerificationQueue</c>),
         /// como el JSON que escribe esa cola, o null si nunca se guardó (entonces la clave falta). Lleva los <c>purchaseToken</c>: va
         /// al perfil, nunca a los logs. AF.Save no la interpreta; si no se entiende, <c>AF.IAP</c> empieza con la cola vacía y las
-        /// compras sin terminar vuelven con Unity IAP al arrancar.
+        /// compras sin terminar vuelven de Play Billing al arrancar (la consulta de compras, D-040).
         /// </summary>
         public string? PurchaseQueue { get; set; }
 

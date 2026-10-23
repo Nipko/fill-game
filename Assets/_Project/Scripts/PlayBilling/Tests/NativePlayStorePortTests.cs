@@ -122,6 +122,33 @@ namespace AF.IAP.PlayBilling.Tests
             Assert.That(answers[1], Is.Null);
         }
 
+        [Test]
+        public void Purchase_WhileAProductsRefreshIsInFlight_IsLaunched_AndBothAnswersArrive()
+        {
+            // Una compra abierta con un Refresh en vuelo va al plugin, que la abre con los productos de la consulta anterior
+            // (AfBilling.java solo los sustituye cuando llega la respuesta nueva): no espera a la consulta ni falla por ella.
+            (NativePlayStorePort port, FakeBillingBridge bridge) = WithProducts();
+            var orders = new List<PlayOrder>();
+            port.OrderUpdated += orders.Add;
+            IReadOnlyList<PlayProductInfo>? refreshed = null;
+            port.FetchProducts(Defs, p => refreshed = p);
+            int refresh = bridge.LastProductsId;
+            var failures = new List<PlayFailureKind>();
+            port.PurchaseFailed += (_, kind) => failures.Add(kind);
+
+            port.Purchase("af_coins_2", "uidTest0123456789");
+            Assert.That(bridge.Launches, Has.Count.EqualTo(1), "no espera a la consulta en vuelo");
+            Assert.That(failures, Is.Empty);
+
+            ((IBillingBridgeListener)port).OnPurchasesUpdated(BillingCodes.Ok, FakeBillingBridge.Row("af_coins_2", "tok.refresh"));
+            Assert.That(orders, Has.Count.EqualTo(1));
+            Assert.That(orders[0].Token, Is.EqualTo("tok.refresh"));
+
+            ((IBillingBridgeListener)port).OnProducts(refresh, BillingCodes.Ok, "af_coins_2\tBRL\t4990000");
+            Assert.That(refreshed, Has.Count.EqualTo(1), "la consulta responde después, sin tocar la compra");
+            Assert.That(port.Confirm("tok.refresh"), Is.True, "el pedido sigue siendo un consumible que se puede terminar");
+        }
+
         // ------------------------------------------------------------------ compras
 
         [Test]
@@ -298,7 +325,7 @@ namespace AF.IAP.PlayBilling.Tests
         [Test]
         public void Acknowledge_Consumable_DeferredAck_WithoutConsuming_ThenConsumedAfterCrediting()
         {
-            // 08 §10.3: a las 72 h sin respuesta del servidor, acknowledge local sin consumir (D-040, añadido de Q-IAP-1; Q-IAP-2 se reabre).
+            // 08 §10.3: a las 48 h sin respuesta del servidor, acknowledge local sin consumir (D-040, añadido de Q-IAP-1; Q-IAP-2 se reabre).
             (NativePlayStorePort port, FakeBillingBridge bridge) = WithProducts();
             Query(port, bridge, FakeBillingBridge.Row("af_coins_2", "tok.1"));
 

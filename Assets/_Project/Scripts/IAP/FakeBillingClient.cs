@@ -146,7 +146,7 @@ namespace AF.IAP
             BillingTransaction? t = Take(_unfinished, token);
             if (t == null)
             {
-                return; // ya terminada: idempotente, como ConfirmPurchase sobre un pedido confirmado
+                return; // ya terminada: idempotente, como terminar en Play un pedido ya terminado
             }
 
             if (consume)

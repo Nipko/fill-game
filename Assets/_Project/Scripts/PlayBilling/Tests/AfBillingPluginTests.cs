@@ -128,6 +128,38 @@ namespace AF.IAP.PlayBilling.Tests
         }
 
         [Test]
+        public void ProductDetails_AreReplacedOnlyWhenTheLatestAnswerArrives()
+        {
+            // AfBilling.java: lanzar una consulta de productos (Refresh) no vacía los de la anterior, así que una compra abierta
+            // mientras está en vuelo no responde ITEM_UNAVAILABLE; el mapa se sustituye entero con la respuesta de la consulta más
+            // reciente (o se vacía si esa falla), y la de una consulta anterior no lo toca.
+            string plugin = Read(JavaDir, "AfBilling.java").Replace("\r\n", "\n");
+            string query = Between(plugin, "public void queryProducts(", "private void onProductDetails(");
+            string answer = Between(plugin, "private void onProductDetails(", "public void queryPurchases(");
+
+            StringAssert.DoesNotContain("details.clear()", query, "al lanzar la consulta no se vacía");
+            StringAssert.DoesNotContain("details.put(", query);
+            StringAssert.Contains("Map<String, ProductDetails> fresh = new HashMap<>();", answer);
+            StringAssert.Contains("fresh.put(sku, pd);", answer);
+            StringAssert.Contains("details = fresh;", answer);
+            StringAssert.DoesNotContain("details.put(", answer, "nunca se mezcla con la consulta anterior");
+            int stale = answer.IndexOf("requestId != latestProductsRequest", StringComparison.Ordinal);
+            int firstWrite = answer.IndexOf("details = ", StringComparison.Ordinal);
+            Assert.That(stale, Is.GreaterThanOrEqualTo(0));
+            Assert.That(firstWrite, Is.GreaterThan(stale), "la respuesta de una consulta anterior sale antes de tocar los productos");
+            Assert.That(Regex.Matches(plugin, @"details\.clear\(\)").Count, Is.EqualTo(1), "solo release() los vacía en el sitio");
+        }
+
+        private static string Between(string text, string start, string end)
+        {
+            int a = text.IndexOf(start, StringComparison.Ordinal);
+            int b = a < 0 ? -1 : text.IndexOf(end, a, StringComparison.Ordinal);
+            Assert.That(a, Is.GreaterThanOrEqualTo(0), start);
+            Assert.That(b, Is.GreaterThan(a), end);
+            return text.Substring(a, b - a);
+        }
+
+        [Test]
         public void PlayBillingScripts_WriteNoLogs()
         {
             foreach (string file in Directory.GetFiles(ScriptsDir, "*.cs", SearchOption.TopDirectoryOnly))

@@ -327,7 +327,7 @@ namespace AF.IAP.Tests
             Assert.That(fx.Wallet.Seeds, Is.EqualTo(1000));
         }
 
-        // ------------------------------------------------------------------ fallos pasajeros y 72 h
+        // ------------------------------------------------------------------ fallos pasajeros y 48 h
 
         [Test]
         public void Transient_QueuesWithBackoff_AndCreditsOnceWhenTheServerAnswers()
@@ -354,7 +354,7 @@ namespace AF.IAP.Tests
         }
 
         [Test]
-        public void After72HoursWithoutAnswer_AcknowledgesLocallyWithoutCrediting()
+        public void After48HoursWithoutAnswer_AcknowledgesLocallyWithoutCrediting()
         {
             var fx = new VerifiedStoreFixture();
             fx.Backend.FailNext(BackendError.Network("offline"), 10000);
@@ -637,7 +637,7 @@ namespace AF.IAP.Tests
             Assert.That(fx.Buy("af_coins_3").Status, Is.EqualTo(PurchaseStatus.StoreUnavailable));
             Assert.That(fx.Billing.Requests, Has.Count.EqualTo(1));
 
-            fx.Clock.Advance(TimeSpan.FromHours(73));
+            fx.Clock.Advance(TimeSpan.FromHours(49));
             fx.Service.Resume();
             Assert.That(fx.VerifyCalls, Is.EqualTo(1), "biz_backend_enabled = false: sin red");
             Assert.That(fx.Billing.LocallyAcknowledged, Has.Count.EqualTo(1), "Play no la reembolsa");

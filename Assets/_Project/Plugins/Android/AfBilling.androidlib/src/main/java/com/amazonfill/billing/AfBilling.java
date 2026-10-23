@@ -50,7 +50,12 @@ public final class AfBilling implements PurchasesUpdatedListener {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final Context context;
     private final AfBillingListener listener;
-    private final Map<String, ProductDetails> details = new HashMap<>();
+    /**
+     * Los productos de la última consulta que respondió (los únicos que se venden). Se sustituye entero solo cuando llega la
+     * respuesta de la consulta más reciente, nunca al lanzarla: una compra abierta mientras un Refresh está en vuelo usa los de
+     * la consulta anterior, que son los que enseña el Mercado.
+     */
+    private Map<String, ProductDetails> details = new HashMap<>();
     private BillingClient client;
     private boolean connecting;
     private boolean waitingReconnect;
@@ -169,8 +174,7 @@ public final class AfBilling implements PurchasesUpdatedListener {
             }
 
             create();
-            latestProductsRequest = requestId;
-            details.clear(); // solo se vende lo que Play devuelva a esta consulta
+            latestProductsRequest = requestId; // details sigue con la consulta anterior hasta que responda esta (onProductDetails)
             List<QueryProductDetailsParams.Product> products = new ArrayList<>();
             for (String sku : lines(skus)) {
                 products.add(QueryProductDetailsParams.Product.newBuilder()
@@ -180,6 +184,7 @@ public final class AfBilling implements PurchasesUpdatedListener {
             }
 
             if (products.isEmpty()) {
+                details = new HashMap<>(); // nada pedido: nada que vender
                 listener.onProducts(requestId, OK, "");
                 return;
             }
@@ -206,10 +211,12 @@ public final class AfBilling implements PurchasesUpdatedListener {
         }
 
         if (code != OK || found == null) {
+            details = new HashMap<>(); // la consulta más reciente falló: no se vende nada (C# queda sin Play hasta otro intento)
             listener.onProducts(requestId, code == OK ? BillingClient.BillingResponseCode.ERROR : code, null);
             return;
         }
 
+        Map<String, ProductDetails> fresh = new HashMap<>(); // solo se vende lo que Play devuelva a esta consulta
         StringBuilder rows = new StringBuilder();
         List<ProductDetails> list = found.getProductDetailsList();
         if (list != null) {
@@ -221,11 +228,12 @@ public final class AfBilling implements PurchasesUpdatedListener {
                     continue;
                 }
 
-                details.put(sku, pd);
+                fresh.put(sku, pd);
                 appendRow(rows, sku, currency, Long.toString(offer.getPriceAmountMicros()));
             }
         }
 
+        details = fresh;
         listener.onProducts(requestId, OK, rows.toString());
     }
 

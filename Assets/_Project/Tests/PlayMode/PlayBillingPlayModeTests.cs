@@ -16,7 +16,7 @@ namespace AF.Tests.PlayMode
 {
     /// <summary>
     /// La tienda de Play real (<see cref="PlayBillingClient"/>, D-040) bajo la tienda verificada, con respuestas de Play que llegan
-    /// fotogramas después (como Unity IAP en el teléfono) y el backend falso: la hoja de Play pausa la app y el juego consulta las
+    /// fotogramas después (como las del plugin en el teléfono, por el hilo principal) y el backend falso: la hoja de Play pausa la app y el juego consulta las
     /// compras al volver antes de que llegue el aviso; Play repite el pedido; el servidor tarda. En todos los casos se acredita una
     /// vez, solo con <c>ok</c> del servidor, y Play consume después. Sin escena: solo el bucle de fotogramas.
     /// </summary>
@@ -180,7 +180,7 @@ namespace AF.Tests.PlayMode
             Assert.That(condition(), Is.True, "no llegó a tiempo");
         }
 
-        /// <summary>Puerto de Play cuyas respuestas llegan en el fotograma siguiente (en <c>Update</c>), como las de Unity IAP.</summary>
+        /// <summary>Puerto de Play cuyas respuestas llegan en el fotograma siguiente (en <c>Update</c>), como las del plugin en el teléfono.</summary>
         private sealed class FramePlayPort : MonoBehaviour, IPlayStorePort
         {
             private readonly List<Action> _next = new List<Action>();
@@ -302,7 +302,7 @@ namespace AF.Tests.PlayMode
                 return true;
             }
 
-            // El deferred_ack (72 h) no llega en estas pruebas de fotogramas; el puerto lo acepta sin terminar nada.
+            // El deferred_ack (48 h) no llega en estas pruebas de fotogramas; el puerto lo acepta sin terminar nada.
             public bool Acknowledge(string token) => !_done.Contains(token);
 
             private PlayOrder NewOrder(string sku, PlayOrderState state)

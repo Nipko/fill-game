@@ -10,7 +10,7 @@ namespace AF.Backend.Verification
     /// <summary>
     /// Cifras de la cola con el <b>default compilado</b> de la tabla única de 08 §9. <c>sec_purchase_deferred_ack_h</c>: horas sin
     /// respuesta del servidor tras las que el cliente hace <c>acknowledge</c> local y marca <c>deferred_ack</c> (08 §10.1 y §10.3);
-    /// default 72, rango 48-72 (Play reembolsa sola una compra sin reconocer a los 3 días).
+    /// default 48, rango 48-72 (Play reembolsa sola una compra sin reconocer a los 3 días; 48 y no 72 para dejar margen: D-040, Q-BILL-5).
     /// </summary>
     public sealed class VerificationQueueConfig
     {
@@ -25,7 +25,7 @@ namespace AF.Backend.Verification
 
         /// <summary><c>sec_purchase_deferred_ack_h</c> [P].</summary>
         [RemoteConfigKey("sec_purchase_deferred_ack_h")]
-        public int SecPurchaseDeferredAckH { get; set; } = 72;
+        public int SecPurchaseDeferredAckH { get; set; } = 48;
 
         /// <summary>El plazo como intervalo.</summary>
         public TimeSpan DeferredAckAfter => TimeSpan.FromHours(SecPurchaseDeferredAckH);
@@ -93,7 +93,7 @@ namespace AF.Backend.Verification
     }
 
     /// <summary>
-    /// Cola local de verificaciones de compra de 08 §10.3: «error de red → cola local con backoff; a las 72 h acknowledge local +
+    /// Cola local de verificaciones de compra de 08 §10.3: «error de red → cola local con backoff; a las 48 h acknowledge local +
     /// <c>deferred_ack</c> [P]» (08 §10.1, fila «Compra falsa»), con el plazo de <c>sec_purchase_deferred_ack_h</c> (08 §9). Es solo el estado y sus reglas, sin red ni guardado: la procesa
     /// <see cref="VerificationQueueRunner"/> y la guarda quien la tenga (F3-3: <c>AF.IAP.VerifiedStoreService</c>, en el perfil con <see cref="ToJson"/>).
     /// Los <c>purchaseToken</c> viajan dentro del JSON: no va a los logs.

@@ -134,7 +134,7 @@ namespace AF.UI
                 billing = _fakeBilling;
             }
 
-            // El plazo de 72 h se mide con el reloj del dispositivo (D-035, añadido de F3-1 y F3-2); setObfuscatedAccountId = el UID de
+            // El plazo de 48 h se mide con el reloj del dispositivo (D-035, añadido de F3-1 y F3-2); setObfuscatedAccountId = el UID de
             // Firebase Auth en el momento de comprar (08 §10.1; null en el editor y hasta la primera llamada autenticada).
             _verifiedStore = new VerifiedStoreService(
                 ledger, billing, client, deviceClock, _backendSwitch, new DelegatePlayerUid(() => FirebaseAuthUid.Current), _rcConfigs?.Verification);

@@ -1099,7 +1099,7 @@ namespace AF.RemoteConfig
     },
     ""sec_purchase_deferred_ack_h"": {
       ""type"": ""int"",
-      ""default"": 72
+      ""default"": 48
     },
     ""perf_sample_rate"": {
       ""type"": ""float"",

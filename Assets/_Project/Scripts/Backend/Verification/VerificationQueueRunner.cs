@@ -57,7 +57,7 @@ namespace AF.Backend.Verification
 
     /// <summary>
     /// Procesa la <see cref="VerificationQueue"/>: en cada <see cref="Pump"/> anota el <c>acknowledge</c> local de las que cumplieron
-    /// 72 h (<see cref="VerificationOutcomeKind.DeferredAck"/>, una sola vez por compra) y manda las que tocan, una petición por compra
+    /// <c>sec_purchase_deferred_ack_h</c> (48 h por defecto; <see cref="VerificationOutcomeKind.DeferredAck"/>, una sola vez por compra) y manda las que tocan, una petición por compra
     /// como mucho a la vez. Qué se acredita con cada resultado lo decide quien lo use (F3-3: <c>AF.IAP.VerifiedStoreService</c>, con
     /// <c>Wallet.Apply</c> y <c>applied_purchases</c>). <c>onOutcome</c> recibe cada resultado con la cola ya actualizada (para que lo
     /// que acredite se guarde junto con la cola) y después <c>onChanged</c> avisa de que la cola cambió, para guardarla.

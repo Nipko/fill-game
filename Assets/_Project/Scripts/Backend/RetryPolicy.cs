@@ -8,7 +8,7 @@ namespace AF.Backend
     /// <summary>
     /// Reintentos con espera exponencial (08 §10.3: «error de red → cola local con backoff»). Dos usos:
     /// <see cref="InCall"/>, dentro de una llamada (pocos intentos y esperas cortas, para no alargar «Confirmando…»), y
-    /// <see cref="Queue"/>, entre intentos de la cola de verificación de 72 h (<c>VerificationQueue</c>).
+    /// <see cref="Queue"/>, entre intentos de la cola de verificación de 48 h (<c>VerificationQueue</c>).
     /// Las cifras son [P]: el GDD no las fija y no son claves de Remote Config.
     /// </summary>
     public sealed class RetryPolicy
@@ -33,7 +33,7 @@ namespace AF.Backend
         /// <summary>Dentro de una llamada [P]: 3 intentos, esperas de 1 y 2 s, tope de 8 s.</summary>
         public static RetryPolicy InCall => new RetryPolicy(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(8));
 
-        /// <summary>Cola de verificación [P]: sin tope de intentos (manda el plazo de 72 h), de 30 s a 6 h.</summary>
+        /// <summary>Cola de verificación [P]: sin tope de intentos (manda el plazo de 48 h), de 30 s a 6 h.</summary>
         public static RetryPolicy Queue => new RetryPolicy(int.MaxValue, TimeSpan.FromSeconds(30), TimeSpan.FromHours(6));
 
         /// <summary>Intentos totales (el primero incluido).</summary>
