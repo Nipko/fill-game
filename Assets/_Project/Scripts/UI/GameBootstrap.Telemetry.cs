@@ -80,7 +80,7 @@ namespace AF.UI
         }
 
         // Remote Config y las cifras enlazadas (08 §2.3: RC.LoadDefaults(); RC.ActivateCached(); RC.FetchAsync), al principio de Start,
-        // antes de cargar el catálogo de niveles (que lee mech_enabled.* y level_overrides, D-033, Q-B11-7 a, y aplica
+        // antes de cargar el catálogo de niveles (que lee mech_enabled_* y level_overrides, D-033, Q-B11-7 a, y aplica
         // lvl_label_override, cierre de B11). Una vez por escena: SetUpTelemetry no lo repite.
         private void SetUpRemoteConfig(IClock clock)
         {

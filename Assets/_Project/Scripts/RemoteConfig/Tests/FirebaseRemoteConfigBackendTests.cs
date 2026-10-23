@@ -114,5 +114,96 @@ namespace AF.RemoteConfig.Tests
             Assert.That(d.Count, Is.EqualTo(withValue));
             Assert.That(withValue, Is.GreaterThan(0));
         }
+
+        [TestCase("rc_schema", true)]
+        [TestCase("mech_enabled_hoja", true)]
+        [TestCase("_x1", true)]
+        [TestCase("A9_b", true)]
+        [TestCase("mech_enabled.hoja", false)]
+        [TestCase("1abc", false)]
+        [TestCase("eco-price", false)]
+        [TestCase("niño", false)]
+        [TestCase("", false)]
+        [TestCase(null, false)]
+        public void IsValidKey_FollowsTheFirebaseRule(string? key, bool valid)
+        {
+            Assert.That(FirebaseRemoteConfigBackend.IsValidKey(key), Is.EqualTo(valid));
+        }
+
+        [Test]
+        public void IsValidKey_AcceptsUpTo256Characters()
+        {
+            Assert.That(FirebaseRemoteConfigBackend.IsValidKey(new string('a', 256)), Is.True);
+            Assert.That(FirebaseRemoteConfigBackend.IsValidKey(new string('a', 257)), Is.False);
+        }
+
+        [Test]
+        public void TheDefaultsForFirebase_LeaveOutTheKeysFirebaseRejects()
+        {
+            RemoteConfigDefaults defaults = RemoteConfigDefaults.Parse(
+                "{\"format\":\"af-rc-defaults/1\",\"params\":{"
+                + "\"a_ok\":{\"type\":\"int\",\"default\":1},"
+                + "\"b.dot\":{\"type\":\"bool\",\"default\":true},"
+                + "\"c_table\":{\"type\":\"json\",\"default\":null,\"pending\":\"tabla\"}}}");
+            Dictionary<string, object> d = FirebaseRemoteConfigBackend.DefaultsFor(defaults);
+            Assert.That(d.Count, Is.EqualTo(1));
+            Assert.That(d["a_ok"], Is.EqualTo("1"));
+        }
+
+        [Test]
+        public void D043_EveryCompiledKeyIsValidForFirebase()
+        {
+            foreach (RcParam p in RemoteConfigDefaults.Compiled.Params)
+            {
+                Assert.That(FirebaseRemoteConfigBackend.IsValidKey(p.Key), Is.True, p.Key);
+            }
+        }
+
+        [Test]
+        public void ThePublishedTemplate_IsWhatTheClientGivesFirebase_ValueByValue()
+        {
+            // tools/out/remote_config_template_dev.json (tools/remote-config/rc_template.py): lo que se publica en la consola tiene que
+            // ser, clave a clave, lo que el cliente le da a Firebase como default; si no, publicar cambiaría el comportamiento.
+            string path = Path.Combine(RemoteConfigDefaultsTests.RepoRoot, "tools", "out", "remote_config_template_dev.json");
+            Assert.That(File.Exists(path), Is.True, path);
+            RcJson root = RcJson.Parse(File.ReadAllText(path, System.Text.Encoding.UTF8));
+            RcJson? parameters = root["parameters"];
+            Assert.That(parameters, Is.Not.Null);
+            Assert.That(parameters!.Kind, Is.EqualTo(RcJsonKind.Object));
+
+            Dictionary<string, object> d = FirebaseRemoteConfigBackend.DefaultsFor(RemoteConfigDefaults.Compiled);
+            Assert.That(parameters.Members.Count, Is.EqualTo(d.Count), "las mismas claves");
+            for (int i = 0; i < parameters.Members.Count; i++)
+            {
+                string key = parameters.Members[i].Key;
+                RcJson p = parameters.Members[i].Value;
+                Assert.That(d.ContainsKey(key), Is.True, key + ": en la plantilla y no en DefaultsFor");
+                RcParam param = RemoteConfigDefaults.Compiled.Find(key)!;
+                string published = p["defaultValue"]!["value"]!.Text!;
+                Assert.That(p["valueType"]!.Text, Is.EqualTo(ValueTypeOf(param.Type)), key);
+                Assert.That(RcValue.TryFromRemote(param.Type, published, out RcValue back), Is.True, key + ": el cliente la entiende");
+                Assert.That(back, Is.EqualTo(param.Default!.Value), key + ": el mismo valor que el compilado");
+                if (param.Type != RcType.Float)
+                {
+                    Assert.That(published, Is.EqualTo((string)d[key]), key + ": el mismo texto");
+                }
+            }
+        }
+
+        private static string ValueTypeOf(RcType type)
+        {
+            switch (type)
+            {
+                case RcType.Int:
+                case RcType.Float:
+                    return "NUMBER";
+                case RcType.Bool:
+                    return "BOOLEAN";
+                case RcType.Json:
+                    return "JSON";
+                default:
+                    return "STRING";
+            }
+        }
     }
 }

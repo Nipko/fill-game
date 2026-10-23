@@ -181,83 +181,83 @@
       "type": "int",
       "default": 8
     },
-    "mech_enabled.hoja": {
+    "mech_enabled_hoja": {
       "type": "bool",
       "default": true
     },
-    "mech_enabled.matapi": {
+    "mech_enabled_matapi": {
       "type": "bool",
       "default": true
     },
-    "mech_enabled.liana": {
+    "mech_enabled_liana": {
       "type": "bool",
       "default": true
     },
-    "mech_enabled.remolino": {
+    "mech_enabled_remolino": {
       "type": "bool",
       "default": true
     },
-    "mech_enabled.barro": {
+    "mech_enabled_barro": {
       "type": "bool",
       "default": true
     },
-    "mech_enabled.lluvia": {
+    "mech_enabled_lluvia": {
       "type": "bool",
       "default": true
     },
-    "mech_enabled.brote": {
+    "mech_enabled_brote": {
       "type": "bool",
       "default": true
     },
-    "mech_enabled.pirana": {
+    "mech_enabled_pirana": {
       "type": "bool",
       "default": true
     },
-    "mech_enabled.tinaja": {
+    "mech_enabled_tinaja": {
       "type": "bool",
       "default": true
     },
-    "mech_debut_level.chica": {
+    "mech_debut_level_chica": {
       "type": "int",
       "default": 14
     },
-    "mech_debut_level.alta": {
+    "mech_debut_level_alta": {
       "type": "int",
       "default": 27
     },
-    "mech_debut_level.hoja": {
+    "mech_debut_level_hoja": {
       "type": "int",
       "default": 43
     },
-    "mech_debut_level.matapi": {
+    "mech_debut_level_matapi": {
       "type": "int",
       "default": 63
     },
-    "mech_debut_level.liana": {
+    "mech_debut_level_liana": {
       "type": "int",
       "default": 83
     },
-    "mech_debut_level.remolino": {
+    "mech_debut_level_remolino": {
       "type": "int",
       "default": 103
     },
-    "mech_debut_level.barro": {
+    "mech_debut_level_barro": {
       "type": "int",
       "default": 123
     },
-    "mech_debut_level.lluvia": {
+    "mech_debut_level_lluvia": {
       "type": "int",
       "default": 143
     },
-    "mech_debut_level.brote": {
+    "mech_debut_level_brote": {
       "type": "int",
       "default": 163
     },
-    "mech_debut_level.pirana": {
+    "mech_debut_level_pirana": {
       "type": "int",
       "default": 183
     },
-    "mech_debut_level.tinaja": {
+    "mech_debut_level_tinaja": {
       "type": "int",
       "default": 323
     },

@@ -1,0 +1,1728 @@
+{
+  "conditions": [],
+  "parameters": {
+    "rc_schema": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: —. Versión del esquema de claves; el cliente ignora esquemas mayores",
+      "valueType": "NUMBER"
+    },
+    "consent_text_version": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: —. Fuerza re-consentimiento al cambiar textos legales",
+      "valueType": "NUMBER"
+    },
+    "consent_under13_policy": {
+      "defaultValue": {
+        "value": "block"
+      },
+      "description": "Rango 08 §9: block · parental_consent. Banda <13 de la pantalla de edad neutral (05 §7; sección 2.3): block = bloqueo en 1.0 con \"Pide a un adulto que instale el juego\", TFCD, Analytics sin ID y sin Play Games ni IAP; parental_consent queda reservado (con…",
+      "valueType": "STRING"
+    },
+    "consent_age_signal_source": {
+      "defaultValue": {
+        "value": "self_declared"
+      },
+      "description": "Rango 08 §9: self_declared · self_declared+play_age_signals. Fuente de la banda de edad: declaración en la pantalla neutral; la segunda opción añade Play Age Signals API (compuerta de la Fase 5, 09 §2.3; 05 §7)",
+      "valueType": "STRING"
+    },
+    "biz_market_phase": {
+      "defaultValue": {
+        "value": "closed_beta"
+      },
+      "description": "Rango 08 §9: closed_beta · soft_launch_latam · soft_launch_br · global · ios. Fase de mercado; habilita funciones por fase y segmenta cohortes (absorbe launch_phase de 09)",
+      "valueType": "STRING"
+    },
+    "biz_country_enabled": {
+      "defaultValue": {
+        "value": "{\"CO\":true,\"PE\":true,\"MX\":true,\"*\":false}"
+      },
+      "description": "Rango 08 §9: —. Compuerta por país además de la distribución de Play",
+      "valueType": "JSON"
+    },
+    "biz_min_app_version": {
+      "defaultValue": {
+        "value": "1.0.0"
+      },
+      "description": "Rango 08 §9: —. Por debajo, pantalla \"Actualiza Tintalú\" (compras y liga bloqueadas)",
+      "valueType": "STRING"
+    },
+    "biz_maintenance_mode": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. Bloquea anuncios e IAP durante incidentes; el juego offline sigue",
+      "valueType": "BOOLEAN"
+    },
+    "biz_maintenance_message": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "Rango 08 §9: —. Bloquea anuncios e IAP durante incidentes; el juego offline sigue",
+      "valueType": "STRING"
+    },
+    "biz_backend_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. [P] Interruptor de corte de la API propia en AWS (D-035, añadido de F3-1 y F3-2; plan §7, B7): apagado, el cliente deja de llamarla; lo conecta F3-3. La URL base no va en Remote Config: va compilada por entorno",
+      "valueType": "BOOLEAN"
+    },
+    "biz_iap_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switches: tienda, todos los anuncios (los recompensados pasan a cobrar semillas), solo intersticiales (único interruptor de intersticiales), solo recompensados",
+      "valueType": "BOOLEAN"
+    },
+    "biz_ads_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switches: tienda, todos los anuncios (los recompensados pasan a cobrar semillas), solo intersticiales (único interruptor de intersticiales), solo recompensados",
+      "valueType": "BOOLEAN"
+    },
+    "biz_interstitials_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switches: tienda, todos los anuncios (los recompensados pasan a cobrar semillas), solo intersticiales (único interruptor de intersticiales), solo recompensados",
+      "valueType": "BOOLEAN"
+    },
+    "biz_rewarded_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switches: tienda, todos los anuncios (los recompensados pasan a cobrar semillas), solo intersticiales (único interruptor de intersticiales), solo recompensados",
+      "valueType": "BOOLEAN"
+    },
+    "biz_feature_daily_challenge": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por sistema (R2, R13 del capítulo 9). biz_feature_lives = false (D-038): desde el 31 todo funciona como en 1-30 (04 §5.2, §6 y §7): sin canoas en ninguna parte, salir del nivel es gratis y no es fallo, sin «Rendirse», ¿Seguro?…",
+      "valueType": "BOOLEAN"
+    },
+    "biz_feature_login_calendar": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por sistema (R2, R13 del capítulo 9). biz_feature_lives = false (D-038): desde el 31 todo funciona como en 1-30 (04 §5.2, §6 y §7): sin canoas en ninguna parte, salir del nivel es gratis y no es fallo, sin «Rendirse», ¿Seguro?…",
+      "valueType": "BOOLEAN"
+    },
+    "biz_feature_win_streak": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por sistema (R2, R13 del capítulo 9). biz_feature_lives = false (D-038): desde el 31 todo funciona como en 1-30 (04 §5.2, §6 y §7): sin canoas en ninguna parte, salir del nivel es gratis y no es fallo, sin «Rendirse», ¿Seguro?…",
+      "valueType": "BOOLEAN"
+    },
+    "biz_feature_lives": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por sistema (R2, R13 del capítulo 9). biz_feature_lives = false (D-038): desde el 31 todo funciona como en 1-30 (04 §5.2, §6 y §7): sin canoas en ninguna parte, salir del nivel es gratis y no es fallo, sin «Rendirse», ¿Seguro?…",
+      "valueType": "BOOLEAN"
+    },
+    "biz_feature_rescue": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por sistema (R2, R13 del capítulo 9). biz_feature_lives = false (D-038): desde el 31 todo funciona como en 1-30 (04 §5.2, §6 y §7): sin canoas en ninguna parte, salir del nivel es gratis y no es fallo, sin «Rendirse», ¿Seguro?…",
+      "valueType": "BOOLEAN"
+    },
+    "biz_feature_murky": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por sistema (R2, R13 del capítulo 9). biz_feature_lives = false (D-038): desde el 31 todo funciona como en 1-30 (04 §5.2, §6 y §7): sin canoas en ninguna parte, salir del nivel es gratis y no es fallo, sin «Rendirse», ¿Seguro?…",
+      "valueType": "BOOLEAN"
+    },
+    "biz_feature_piggy": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por sistema (R2, R13 del capítulo 9). biz_feature_lives = false (D-038): desde el 31 todo funciona como en 1-30 (04 §5.2, §6 y §7): sin canoas en ninguna parte, salir del nivel es gratis y no es fallo, sin «Rendirse», ¿Seguro?…",
+      "valueType": "BOOLEAN"
+    },
+    "biz_feature_shop": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por sistema (R2, R13 del capítulo 9). biz_feature_lives = false (D-038): desde el 31 todo funciona como en 1-30 (04 §5.2, §6 y §7): sin canoas en ninguna parte, salir del nivel es gratis y no es fallo, sin «Rendirse», ¿Seguro?…",
+      "valueType": "BOOLEAN"
+    },
+    "biz_legal_profile_by_country": {
+      "defaultValue": {
+        "value": "{\"BR\":\"br_lgpd_eca\",\"CO\":\"co_1581\",\"PE\":\"pe_29733\",\"MX\":\"mx_lfpdppp\",\"EEE\":\"ump\",\"UK\":\"ump\",\"CH\":\"ump\",\"*\":\"default\"}"
+      },
+      "description": "Rango 08 §9: —. Pantalla de consentimiento y tratamiento de edad (sección 7)",
+      "valueType": "JSON"
+    },
+    "biz_under18_no_personalization": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Bandas de edad {<13, 13-17, 18+} de la pantalla neutral (05 §7; sección 2.3): 13-17 → npa, maxAdContentRating = G y doble confirmación de compras en el juego (Q-T4 (a), Q-B12-6; D-033); <13 → bloqueo en 1.0 con TFCD, Analytics sin ID, sin…",
+      "valueType": "BOOLEAN"
+    },
+    "biz_disclaimer_in_store_copy": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Solo registro: correlación con la ficha activa (absorben store_title_variant del glosario y store_icon_variant de 07)",
+      "valueType": "BOOLEAN"
+    },
+    "biz_store_title_variant": {
+      "defaultValue": {
+        "value": "A"
+      },
+      "description": "Rango 08 §9: —. Solo registro: correlación con la ficha activa (absorben store_title_variant del glosario y store_icon_variant de 07)",
+      "valueType": "STRING"
+    },
+    "biz_store_icon_variant": {
+      "defaultValue": {
+        "value": "A"
+      },
+      "description": "Rango 08 §9: —. Solo registro: correlación con la ficha activa (absorben store_title_variant del glosario y store_icon_variant de 07)",
+      "valueType": "STRING"
+    },
+    "biz_ua_paid_enabled_by_country": {
+      "defaultValue": {
+        "value": "{\"*\":false}"
+      },
+      "description": "Rango 08 §9: —. UA pagada en US solo con D7 ≥15 % y ARPDAU ≥0,08 (dirección 19); marca de cohortes de prueba",
+      "valueType": "JSON"
+    },
+    "biz_ua_test_active": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. UA pagada en US solo con D7 ≥15 % y ARPDAU ≥0,08 (dirección 19); marca de cohortes de prueba",
+      "valueType": "BOOLEAN"
+    },
+    "biz_experiment_tag": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "Rango 08 §9: —. Cohorte de experimento activa; viaja en analítica como rc_variant; nunca sobre Cuia de rescate ni Canoas",
+      "valueType": "STRING"
+    },
+    "biz_ga_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. Segunda capa GameAnalytics",
+      "valueType": "BOOLEAN"
+    },
+    "tap_switch_selection": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Controles C5 y C10",
+      "valueType": "BOOLEAN"
+    },
+    "drag_pour_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Controles C5 y C10",
+      "valueType": "BOOLEAN"
+    },
+    "queue_max_lag_pours": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "description": "Rango 08 §9: 1-3. Cola visual de toques por cuia",
+      "valueType": "NUMBER"
+    },
+    "futile_rule_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Excluir vertidos fútiles en la detección de Aguas estancadas",
+      "valueType": "BOOLEAN"
+    },
+    "rules_pour_mode": {
+      "defaultValue": {
+        "value": "run"
+      },
+      "description": "Rango 08 §9: run · single. Cantidad por vertido (D-005, decisión del dueño del 2026-10-08 que sustituye a D-001; 02 §1.2, R9; PourMode { Run, Single } en AF.Core): run = la racha visible que cabe, con vertido parcial (por defecto, como Magic Sort); single…",
+      "valueType": "STRING"
+    },
+    "stuck_modal_delay_ms": {
+      "defaultValue": {
+        "value": "400"
+      },
+      "description": "Rango 08 §9: 200-800. Espera antes del modal de bloqueo",
+      "valueType": "NUMBER"
+    },
+    "restart_confirm_min_pours": {
+      "defaultValue": {
+        "value": "8"
+      },
+      "description": "Rango 08 §9: 5-12. Confirmación de Volver a la orilla y umbral de fallo blando",
+      "valueType": "NUMBER"
+    },
+    "mech_enabled_hoja": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_matapi": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_liana": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_remolino": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_barro": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_lluvia": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_brote": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_pirana": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_tinaja": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_debut_level_chica": {
+      "defaultValue": {
+        "value": "14"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_alta": {
+      "defaultValue": {
+        "value": "27"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_hoja": {
+      "defaultValue": {
+        "value": "43"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_matapi": {
+      "defaultValue": {
+        "value": "63"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_liana": {
+      "defaultValue": {
+        "value": "83"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_remolino": {
+      "defaultValue": {
+        "value": "103"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_barro": {
+      "defaultValue": {
+        "value": "123"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_lluvia": {
+      "defaultValue": {
+        "value": "143"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_brote": {
+      "defaultValue": {
+        "value": "163"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_pirana": {
+      "defaultValue": {
+        "value": "183"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_tinaja": {
+      "defaultValue": {
+        "value": "323"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "lluvia_k_pours": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 2-5. Ritmo por defecto de Lluvia y Piraña si el JSON no lo fija",
+      "valueType": "NUMBER"
+    },
+    "pirana_k_pours": {
+      "defaultValue": {
+        "value": "4"
+      },
+      "description": "Rango 08 §9: 2-5. Ritmo por defecto de Lluvia y Piraña si el JSON no lo fija",
+      "valueType": "NUMBER"
+    },
+    "anim_tint_duration_ms_early": {
+      "defaultValue": {
+        "value": "1400"
+      },
+      "description": "Rango 08 §9: 1200-1500. Llenar y teñir (dirección 18; sección 5.3); si la tasa de salto en 1-20 supera anim_tint_skip_alarm_pct, bajar a 1200 (nunca por debajo)",
+      "valueType": "NUMBER"
+    },
+    "anim_tint_duration_ms_late": {
+      "defaultValue": {
+        "value": "800"
+      },
+      "description": "Rango 08 §9: 600-1000. Llenar y teñir (dirección 18; sección 5.3); si la tasa de salto en 1-20 supera anim_tint_skip_alarm_pct, bajar a 1200 (nunca por debajo)",
+      "valueType": "NUMBER"
+    },
+    "anim_tint_fast_from_level": {
+      "defaultValue": {
+        "value": "21"
+      },
+      "description": "Rango 08 §9: 11-30. Cambio a la versión corta; saltable al primer toque",
+      "valueType": "NUMBER"
+    },
+    "anim_tint_skippable": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: nunca false en producción. Cambio a la versión corta; saltable al primer toque",
+      "valueType": "BOOLEAN"
+    },
+    "anim_tint_skip_alarm_pct": {
+      "defaultValue": {
+        "value": "0.4"
+      },
+      "description": "Rango 08 §9: —. Umbral de alarma de af_anim_skipped",
+      "valueType": "NUMBER"
+    },
+    "anim_pour_dose_ms": {
+      "defaultValue": {
+        "value": "280"
+      },
+      "description": "Rango 08 §9: 80-300. Caudal por dosis y cola (sección 5.2; D-006: ≈ 285 ms por dosis en Magic Sort)",
+      "valueType": "NUMBER"
+    },
+    "anim_pour_tail_ms": {
+      "defaultValue": {
+        "value": "80"
+      },
+      "description": "Rango 08 §9: 50-120. Caudal por dosis y cola (sección 5.2; D-006: ≈ 285 ms por dosis en Magic Sort)",
+      "valueType": "NUMBER"
+    },
+    "anim_lift_ms": {
+      "defaultValue": {
+        "value": "100"
+      },
+      "description": "Rango 08 §9: —. Duraciones base del vertido (02 §4.1; D-006)",
+      "valueType": "NUMBER"
+    },
+    "anim_travel_ms": {
+      "defaultValue": {
+        "value": "300"
+      },
+      "description": "Rango 08 §9: —. Duraciones base del vertido (02 §4.1; D-006)",
+      "valueType": "NUMBER"
+    },
+    "anim_return_ms": {
+      "defaultValue": {
+        "value": "300"
+      },
+      "description": "Rango 08 §9: —. Duraciones base del vertido (02 §4.1; D-006)",
+      "valueType": "NUMBER"
+    },
+    "anim_speed_factor_early": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 0.7-1.2. Velocidad global de animación; anim_speed_factor_late = 1,0, los tiempos de Magic Sort de D-006 también desde el 21 (D-033, Q-N1)",
+      "valueType": "NUMBER"
+    },
+    "anim_speed_factor_late": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 0.6-1.0. Velocidad global de animación; anim_speed_factor_late = 1,0, los tiempos de Magic Sort de D-006 también desde el 21 (D-033, Q-N1)",
+      "valueType": "NUMBER"
+    },
+    "anim_fast_from_level": {
+      "defaultValue": {
+        "value": "21"
+      },
+      "description": "Rango 08 §9: 11-30. Velocidad global de animación; anim_speed_factor_late = 1,0, los tiempos de Magic Sort de D-006 también desde el 21 (D-033, Q-N1)",
+      "valueType": "NUMBER"
+    },
+    "anim_celebration_ms": {
+      "defaultValue": {
+        "value": "900"
+      },
+      "description": "Rango 08 §9: 600-1200. Celebración de victoria",
+      "valueType": "NUMBER"
+    },
+    "anim_river_lowered_banner_ms": {
+      "defaultValue": {
+        "value": "2000"
+      },
+      "description": "Rango 08 §9: 1500-2500. Banner \"El río bajó\" al servir relief[0] (dirección 7)",
+      "valueType": "NUMBER"
+    },
+    "anim_confetti_max_particles": {
+      "defaultValue": {
+        "value": "60"
+      },
+      "description": "Rango 08 §9: 20-120. Densidad en gama baja",
+      "valueType": "NUMBER"
+    },
+    "anim_reduce_motion_factor": {
+      "defaultValue": {
+        "value": "0.5"
+      },
+      "description": "Rango 08 §9: 0.3-0.7. Multiplicador con \"reducir movimiento\"",
+      "valueType": "NUMBER"
+    },
+    "victory_autonext_s": {
+      "defaultValue": {
+        "value": "0"
+      },
+      "description": "Rango 08 §9: 0 (cualquier valor > 0 adelanta la pantalla pero nunca dispara AD_GATE sin toque). Auto-avance de la pantalla de victoria apagado (incidencia 10; mismo valor en 02 §6, 06 §4.7 y 07 §5.4): el intersticial exige un toque explícito en \"Siguiente…",
+      "valueType": "NUMBER"
+    },
+    "ui_patterns_default_from_level": {
+      "defaultValue": {
+        "value": "41"
+      },
+      "description": "Rango 08 §9: 1-80. Toggle Patrones activado por defecto (dirección 3). Mientras no exista la pantalla de Ajustes, el cliente usa el default como constante [P] (D-012)",
+      "valueType": "NUMBER"
+    },
+    "ui_pattern_opacity": {
+      "defaultValue": {
+        "value": "0.2"
+      },
+      "description": "Rango 08 §9: 0.15-0.35. _PatternOpacity del shader (sección 5.2) con Patrones de fruta activado; sin él (hasta el nivel 40 por defecto), el patrón va sutil al 15 % (07 §3, regla 1; D-012)",
+      "valueType": "NUMBER"
+    },
+    "ui_show_difficulty_subtitles": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. \"Aguas bravas\" / \"Noche de jaguar\"; cadencia de la llegada del Mapa del río con su dato, cada 10 niveles, la cadencia de paradas de D-013 (pregunta 45 de GDD.md §6.3, decidida el 2026-10-14: (a); D-022); tarjeta Aguas turbias · Bonus, cont…",
+      "valueType": "BOOLEAN"
+    },
+    "ui_river_fact_every_n_levels": {
+      "defaultValue": {
+        "value": "10"
+      },
+      "description": "Rango 08 §9: —. \"Aguas bravas\" / \"Noche de jaguar\"; cadencia de la llegada del Mapa del río con su dato, cada 10 niveles, la cadencia de paradas de D-013 (pregunta 45 de GDD.md §6.3, decidida el 2026-10-14: (a); D-022); tarjeta Aguas turbias · Bonus, cont…",
+      "valueType": "NUMBER"
+    },
+    "ui_murky_bonus_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. \"Aguas bravas\" / \"Noche de jaguar\"; cadencia de la llegada del Mapa del río con su dato, cada 10 niveles, la cadencia de paradas de D-013 (pregunta 45 de GDD.md §6.3, decidida el 2026-10-14: (a); D-022); tarjeta Aguas turbias · Bonus, cont…",
+      "valueType": "BOOLEAN"
+    },
+    "ui_mascot_rescue_anim": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. \"Aguas bravas\" / \"Noche de jaguar\"; cadencia de la llegada del Mapa del río con su dato, cada 10 niveles, la cadencia de paradas de D-013 (pregunta 45 de GDD.md §6.3, decidida el 2026-10-14: (a); D-022); tarjeta Aguas turbias · Bonus, cont…",
+      "valueType": "BOOLEAN"
+    },
+    "ui_fruit_line_every_n_levels": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 0 (apagada) · 1 · 2 (una cada dos niveles; D-017, Q2-A). Cadencia de la línea de fruta de Frutas del río (D-017), con clave propia por la pregunta 45, (a) (D-022); default [P]. Con 1, en cada victoria; con N > 1, solo si el nivel n es múltipl…",
+      "valueType": "NUMBER"
+    },
+    "ui_very_hard_night_lut": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Variante nocturna del fondo en Muy difícil",
+      "valueType": "BOOLEAN"
+    },
+    "ui_tinaja_show_contents": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. La Tinaja enseña qué frutas guarda, sin el orden (D-019, Q-Ti5-A: apagada; se enciende si el soft launch muestra quejas de suerte). Al solver no le cambia nada",
+      "valueType": "BOOLEAN"
+    },
+    "ui_sloth_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. TiTino (D-016): interruptor general, para apagarlo en remoto, y su aparición en Nivel fallido [P]",
+      "valueType": "BOOLEAN"
+    },
+    "ui_sloth_fail_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. TiTino (D-016): interruptor general, para apagarlo en remoto, y su aparición en Nivel fallido [P]",
+      "valueType": "BOOLEAN"
+    },
+    "ui_sloth_win_line_every_n": {
+      "defaultValue": {
+        "value": "4"
+      },
+      "description": "Rango 08 §9: —. TiTino (D-016): frase en 1 de cada N victorias (salvo sus tres hitos, en los que habla siempre) y tope de frases por sesión [P]. Una sola línea de texto por victoria (T6-A)",
+      "valueType": "NUMBER"
+    },
+    "ui_sloth_lines_per_session_max": {
+      "defaultValue": {
+        "value": "4"
+      },
+      "description": "Rango 08 §9: —. TiTino (D-016): frase en 1 de cada N victorias (salvo sus tres hitos, en los que habla siempre) y tope de frases por sesión [P]. Una sola línea de texto por victoria (T6-A)",
+      "valueType": "NUMBER"
+    },
+    "ui_map_mode": {
+      "defaultValue": {
+        "value": "stops"
+      },
+      "description": "Rango 08 §9: stops · worlds. Mapa del río de D-013: stops, 100 paradas (una cada 10 niveles); worlds, solo las grandes paradas (la primera de cada mundo), sin boyas intermedias: una por mundo, las 13 del canon anterior (Q1-C de la propuesta del Mapa). Es…",
+      "valueType": "STRING"
+    },
+    "ui_map_autopen": {
+      "defaultValue": {
+        "value": "l10_world"
+      },
+      "description": "Rango 08 §9: l10 · l10_world. Cuándo sale solo el Mapa (D-013, Q4-D): l10_world, en el 10 y con el viaje de mundo dentro del banner de los cambios de mundo; l10, solo en el 10 (el cambio de mundo, como cualquier llegada, en la victoria) [P]",
+      "valueType": "STRING"
+    },
+    "ui_bg_per_stop": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Fondo por parada (D-013, Q5-A); false = el kit del mundo con el héroe de su gran parada, fijo en todo el mundo. Es un cambio de búsqueda en el catálogo, sin arte ni código aparte [P]",
+      "valueType": "BOOLEAN"
+    },
+    "ui_stop_label": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Rótulo del lugar en el primer nivel de cada parada (D-013; reglas de lectura de D-011) [P]",
+      "valueType": "BOOLEAN"
+    },
+    "ui_victory_view": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Victoria con vista (D-013, Q6-A): el panel y las cuias se desvanecen en 250 ms y se ve el sitio [P]",
+      "valueType": "BOOLEAN"
+    },
+    "anim_map_world_ms": {
+      "defaultValue": {
+        "value": "6000"
+      },
+      "description": "Rango 08 §9: 3000-8000. Tope del viaje de mundo en la pantalla del Mapa del río (D-013): al acabarse el contenido y al abrirlo con «Ver mapa». Dentro del banner de mundo manda el tope de ≤ 4 s de Q4-D, no esta clave. Las demás duraciones del Mapa son cons…",
+      "valueType": "NUMBER"
+    },
+    "ui_map_quiz": {
+      "defaultValue": {
+        "value": "off"
+      },
+      "description": "Rango 08 §9: off · victory · map. «¿Verdad o mito?» del Mapa del río: experimento de la 1.1, apagado en la 1.0 (D-013, Q12-A); en la 1.0, el dato simple [P]",
+      "valueType": "STRING"
+    },
+    "ui_max_takeovers_per_session": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 1. Un solo pop-up fuera de hitos por sesión",
+      "valueType": "NUMBER"
+    },
+    "ui_haptics_default_on": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Ajustes iniciales",
+      "valueType": "BOOLEAN"
+    },
+    "ui_reduce_motion_default": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. Ajustes iniciales",
+      "valueType": "BOOLEAN"
+    },
+    "audio_music_default_on": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Ajustes iniciales",
+      "valueType": "BOOLEAN"
+    },
+    "audio_sfx_default_on": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Ajustes iniciales",
+      "valueType": "BOOLEAN"
+    },
+    "audio_music_percussion_layers": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "description": "Rango 08 §9: 0-3. Capas que entran al sellar cuias; multiplicador de lluvia ambiental",
+      "valueType": "NUMBER"
+    },
+    "audio_ambient_rain_scale": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 0-2. Capas que entran al sellar cuias; multiplicador de lluvia ambiental",
+      "valueType": "NUMBER"
+    },
+    "level_overrides": {
+      "defaultValue": {
+        "value": "{}"
+      },
+      "description": "Rango 08 §9: —. Sustituir o reordenar niveles sin build (research/02 §7.3 [E]); también por segmento (DDA). level_id es un nivel de campaña o un tablero de reserva de ese mismo slot (m{mm}_v{v}_n{nnnn}_r{k}, de los packs reserva_{mm}_v{v} con kind = reser…",
+      "valueType": "JSON"
+    },
+    "content_version": {
+      "defaultValue": {
+        "value": "1.0.0"
+      },
+      "description": "Rango 08 §9: —. Catálogo de paquetes publicado en levels_remote (sección 6.2); si difiere del local, el cliente descarga y muestra \"nuevos niveles\"",
+      "valueType": "STRING"
+    },
+    "daily_overrides": {
+      "defaultValue": {
+        "value": "{}"
+      },
+      "description": "Rango 08 §9: —. Sustituciones fechadas del Reto del río, por banda y con ids d{b}_n{nnnn} del propio pool (R-Q6, D-031; research/02 Complemento 4.2 [V])",
+      "valueType": "JSON"
+    },
+    "lvl_daily_bracket_levels": {
+      "defaultValue": {
+        "value": "[41,201]"
+      },
+      "description": "Rango 08 §9: —. Umbrales de las 3 bandas del Reto del río",
+      "valueType": "JSON"
+    },
+    "relief_after_fails": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 2-4. Alivio determinista \"El río bajó\" (dirección 7; 03 §13); relief_mode ordena relief[] en el generador",
+      "valueType": "NUMBER"
+    },
+    "relief_mode": {
+      "defaultValue": {
+        "value": "auto"
+      },
+      "description": "Rango 08 §9: auto · plus_empty · minus_color. Alivio determinista \"El río bajó\" (dirección 7; 03 §13); relief_mode ordena relief[] en el generador",
+      "valueType": "STRING"
+    },
+    "relief_second_step_fails": {
+      "defaultValue": {
+        "value": "0"
+      },
+      "description": "Rango 08 §9: 0, 5-8. Alivio determinista \"El río bajó\" (dirección 7; 03 §13); relief_mode ordena relief[] en el generador",
+      "valueType": "NUMBER"
+    },
+    "lvl_labels_from_level": {
+      "defaultValue": {
+        "value": "40"
+      },
+      "description": "Rango 08 §9: —. Primer nivel que puede mostrar Difícil / Muy difícil",
+      "valueType": "NUMBER"
+    },
+    "lvl_very_hard_from_level": {
+      "defaultValue": {
+        "value": "60"
+      },
+      "description": "Rango 08 §9: —. Primer nivel que puede mostrar Difícil / Muy difícil",
+      "valueType": "NUMBER"
+    },
+    "lvl_label_thresholds": {
+      "defaultValue": {
+        "value": "{\"hard\":0.75,\"very_hard\":0.9}"
+      },
+      "description": "Rango 08 §9: —. Solo lectura/registro; las etiquetas vienen en el paquete (dirección 5)",
+      "valueType": "JSON"
+    },
+    "lvl_label_override": {
+      "defaultValue": {
+        "value": "{}"
+      },
+      "description": "Rango 08 §9: —. Reetiquetado por intentos medios en vivo (dirección 5)",
+      "valueType": "JSON"
+    },
+    "lvl_murky_from_level": {
+      "defaultValue": {
+        "value": "100"
+      },
+      "description": "Rango 08 §9: 90-120. Aguas turbias (dirección 6; incidencia 8): máximo 4 dosis ocultas → ≤24 realidades que enumera AF.Solver; sin Pista parcial; validación en cliente, no generación. No rige la Tinaja (D-019): el núcleo usa para ella un tope propio de 4…",
+      "valueType": "NUMBER"
+    },
+    "lvl_murky_max_cuias": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 2-3. Aguas turbias (dirección 6; incidencia 8): máximo 4 dosis ocultas → ≤24 realidades que enumera AF.Solver; sin Pista parcial; validación en cliente, no generación. No rige la Tinaja (D-019): el núcleo usa para ella un tope propio de 4 ocu…",
+      "valueType": "NUMBER"
+    },
+    "lvl_murky_max_hidden_units": {
+      "defaultValue": {
+        "value": "4"
+      },
+      "description": "Rango 08 §9: 2-4. Aguas turbias (dirección 6; incidencia 8): máximo 4 dosis ocultas → ≤24 realidades que enumera AF.Solver; sin Pista parcial; validación en cliente, no generación. No rige la Tinaja (D-019): el núcleo usa para ella un tope propio de 4 ocu…",
+      "valueType": "NUMBER"
+    },
+    "lvl_dda_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. Dificultad adaptativa (03 §14): apagada en 1.0 (incidencia 13; 03/06/09); se enciende por Remote Config tras el soft launch",
+      "valueType": "BOOLEAN"
+    },
+    "lvl_dda_risk_window": {
+      "defaultValue": {
+        "value": "5"
+      },
+      "description": "Rango 08 §9: —. Dificultad adaptativa (03 §14): apagada en 1.0 (incidencia 13; 03/06/09); se enciende por Remote Config tras el soft launch",
+      "valueType": "NUMBER"
+    },
+    "lvl_dda_risk_fails": {
+      "defaultValue": {
+        "value": "4"
+      },
+      "description": "Rango 08 §9: —. Dificultad adaptativa (03 §14): apagada en 1.0 (incidencia 13; 03/06/09); se enciende por Remote Config tras el soft launch",
+      "valueType": "NUMBER"
+    },
+    "lvl_dda_max_per_cycle": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "description": "Rango 08 §9: —. Dificultad adaptativa (03 §14): apagada en 1.0 (incidencia 13; 03/06/09); se enciende por Remote Config tras el soft launch",
+      "valueType": "NUMBER"
+    },
+    "lvl_kpi_alarm_attempts": {
+      "defaultValue": {
+        "value": "{\"normal\":2.5,\"hard\":4,\"very_hard\":6}"
+      },
+      "description": "Rango 08 §9: —. Umbrales de alarma de intentos medios (03 §15; capítulo 1 §8.1)",
+      "valueType": "JSON"
+    },
+    "lvl_endless_gen_budget_ms": {
+      "defaultValue": {
+        "value": "100"
+      },
+      "description": "Rango 08 §9: —. Río sin fin (1.2)",
+      "valueType": "NUMBER"
+    },
+    "lvl_endless_fallback_pool": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Río sin fin (1.2)",
+      "valueType": "BOOLEAN"
+    },
+    "undo_free_per_level": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 3-5. Marea (dirección 9): ilimitada en 1-10 (excepción de tutorial) y 3 por nivel desde el 11 (02 §13, 04 §2.1)",
+      "valueType": "NUMBER"
+    },
+    "undo_unlimited_until_level": {
+      "defaultValue": {
+        "value": "10"
+      },
+      "description": "Rango 08 §9: 0-20. Marea (dirección 9): ilimitada en 1-10 (excepción de tutorial) y 3 por nivel desde el 11 (02 §13, 04 §2.1)",
+      "valueType": "NUMBER"
+    },
+    "undo_refill_amount": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 3-5. Marea (dirección 9): ilimitada en 1-10 (excepción de tutorial) y 3 por nivel desde el 11 (02 §13, 04 §2.1)",
+      "valueType": "NUMBER"
+    },
+    "undo_refill_seed_price": {
+      "defaultValue": {
+        "value": "30"
+      },
+      "description": "Rango 08 §9: 20-50. Marea (dirección 9): ilimitada en 1-10 (excepción de tutorial) y 3 por nivel desde el 11 (02 §13, 04 §2.1)",
+      "valueType": "NUMBER"
+    },
+    "extra_cuia_unlock_level": {
+      "defaultValue": {
+        "value": "8"
+      },
+      "description": "Rango 08 §9: 6-10. Cuia extra (dirección 9): 1 regalada en el 8 (excepción de tutorial, 02 §13)",
+      "valueType": "NUMBER"
+    },
+    "extra_cuia_seed_price": {
+      "defaultValue": {
+        "value": "150"
+      },
+      "description": "Rango 08 §9: 100-200. Cuia extra (dirección 9): 1 regalada en el 8 (excepción de tutorial, 02 §13)",
+      "valueType": "NUMBER"
+    },
+    "extra_cuia_max_per_level": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 1-2. Cuia extra (dirección 9): 1 regalada en el 8 (excepción de tutorial, 02 §13)",
+      "valueType": "NUMBER"
+    },
+    "hint_unlock_level": {
+      "defaultValue": {
+        "value": "12"
+      },
+      "description": "Rango 08 §9: 10-15. Morpho (dirección 9): debut en el 12 con 3 Morphos regalados (excepción de tutorial; 02 §13, 04 §2.3, 06 §2.2)",
+      "valueType": "NUMBER"
+    },
+    "hint_tutorial_units": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 3. Morpho (dirección 9): debut en el 12 con 3 Morphos regalados (excepción de tutorial; 02 §13, 04 §2.3, 06 §2.2)",
+      "valueType": "NUMBER"
+    },
+    "hint_seed_price": {
+      "defaultValue": {
+        "value": "100"
+      },
+      "description": "Rango 08 §9: 60-120. Morpho (dirección 9): debut en el 12 con 3 Morphos regalados (excepción de tutorial; 02 §13, 04 §2.3, 06 §2.2)",
+      "valueType": "NUMBER"
+    },
+    "hint_idle_from_level": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 1-5. Pista gratuita por inactividad en todos los niveles desde el 3, sin tope superior (02 §3.4, 04 §2.3; incidencia 9): tras 12 s sin toques pulsa un origen de la ruta del solver; no muestra el destino ni cobra; el interruptor de Ajustes equ…",
+      "valueType": "NUMBER"
+    },
+    "hint_idle_delay_s": {
+      "defaultValue": {
+        "value": "12"
+      },
+      "description": "Rango 08 §9: 8-20 (0 = apagada). Pista gratuita por inactividad en todos los niveles desde el 3, sin tope superior (02 §3.4, 04 §2.3; incidencia 9): tras 12 s sin toques pulsa un origen de la ruta del solver; no muestra el destino ni cobra; el interruptor…",
+      "valueType": "NUMBER"
+    },
+    "hint_budget_nodes": {
+      "defaultValue": {
+        "value": "40000"
+      },
+      "description": "Rango 08 §9: 20000-80000. Solver en cliente (Morpho y pista por inactividad; por realidad en Aguas turbias); al agotarse no se cobra; sin Pista parcial",
+      "valueType": "NUMBER"
+    },
+    "hint_weight": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "description": "Rango 08 §9: —. Solver en cliente (Morpho y pista por inactividad; por realidad en Aguas turbias); al agotarse no se cobra; sin Pista parcial",
+      "valueType": "NUMBER"
+    },
+    "hint_timeout_ms": {
+      "defaultValue": {
+        "value": "150"
+      },
+      "description": "Rango 08 §9: 100-300. Solver en cliente (Morpho y pista por inactividad; por realidad en Aguas turbias); al agotarse no se cobra; sin Pista parcial",
+      "valueType": "NUMBER"
+    },
+    "shuffle_unlock_level": {
+      "defaultValue": {
+        "value": "30"
+      },
+      "description": "Rango 08 §9: 25-40. Pororoca (dirección 9)",
+      "valueType": "NUMBER"
+    },
+    "shuffle_seed_price": {
+      "defaultValue": {
+        "value": "300"
+      },
+      "description": "Rango 08 §9: 200-400. Pororoca (dirección 9)",
+      "valueType": "NUMBER"
+    },
+    "shuffle_max_per_level": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 1-2. Pororoca (dirección 9)",
+      "valueType": "NUMBER"
+    },
+    "shuffle_max_per_day": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 2-5. Pororoca (dirección 9)",
+      "valueType": "NUMBER"
+    },
+    "shuffle_par_slack": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "description": "Rango 08 §9: 1-3. Par nuevo ≤ par + slack; la ola revela las capas ocultas",
+      "valueType": "NUMBER"
+    },
+    "shuffle_budget_nodes": {
+      "defaultValue": {
+        "value": "40000"
+      },
+      "description": "Rango 08 §9: —. Par nuevo ≤ par + slack; la ola revela las capas ocultas",
+      "valueType": "NUMBER"
+    },
+    "shuffle_reveals_murky": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Par nuevo ≤ par + slack; la ola revela las capas ocultas",
+      "valueType": "BOOLEAN"
+    },
+    "reveal_seed_price": {
+      "defaultValue": {
+        "value": "120"
+      },
+      "description": "Rango 08 §9: 100-150. Luciérnaga (dirección 9)",
+      "valueType": "NUMBER"
+    },
+    "skip_seed_price": {
+      "defaultValue": {
+        "value": "300"
+      },
+      "description": "Rango 08 §9: 250-400. Salto del Boto (dirección 9); skip_min_level nunca baja de 31 (05 §10; D-033, B3-Q-S9)",
+      "valueType": "NUMBER"
+    },
+    "skip_min_fails": {
+      "defaultValue": {
+        "value": "5"
+      },
+      "description": "Rango 08 §9: 4-6. Salto del Boto (dirección 9); skip_min_level nunca baja de 31 (05 §10; D-033, B3-Q-S9)",
+      "valueType": "NUMBER"
+    },
+    "skip_min_gap_levels": {
+      "defaultValue": {
+        "value": "10"
+      },
+      "description": "Rango 08 §9: 8-15. Salto del Boto (dirección 9); skip_min_level nunca baja de 31 (05 §10; D-033, B3-Q-S9)",
+      "valueType": "NUMBER"
+    },
+    "skip_min_level": {
+      "defaultValue": {
+        "value": "31"
+      },
+      "description": "Rango 08 §9: 31-40. Salto del Boto (dirección 9); skip_min_level nunca baja de 31 (05 §10; D-033, B3-Q-S9)",
+      "valueType": "NUMBER"
+    },
+    "rescue_min_level": {
+      "defaultValue": {
+        "value": "31"
+      },
+      "description": "Rango 08 §9: 25-40. Debut de Canoas, Cuia de rescate y Salto del Boto (direcciones 10-11); antes, fallar solo reinicia gratis. Desde aquí, el embudo de D-008: el pie del modal es «Rendirse» y salir del nivel con el menú cuesta una canoa (04 §5.2 y §6)",
+      "valueType": "NUMBER"
+    },
+    "rescue_price_bands": {
+      "defaultValue": {
+        "value": "[[31,600]]"
+      },
+      "description": "Rango 08 §9: 600 fijo (un solo tramo; sin 750/900 ni cohortes geográficas). Precio de la Cuia de rescate: 600 semillas fijas desde el nivel 31 (dirección 10; incidencia 4). Clave única: no existe rescue_base_price; el ajuste LatAm va en el precio local de…",
+      "valueType": "JSON"
+    },
+    "rescue_first_day_mult": {
+      "defaultValue": {
+        "value": "0.5"
+      },
+      "description": "Rango 08 §9: 0.5. Primer rescate del día a 300 semillas (dirección 10)",
+      "valueType": "NUMBER"
+    },
+    "rescue_max_per_level": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 1. Máximo 1 rescate por nivel: 14 + Cuia extra + Cuia de rescate ≤ 16 ranuras (02 §7); verificación \"la compra cumple\" (02, 04 y 05 ya en 1). La oferta repetida en ¿Seguro? es el mismo rescate: si se compra ahí, cuenta para este tope (D-008)",
+      "valueType": "NUMBER"
+    },
+    "rescue_check_solvable": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Máximo 1 rescate por nivel: 14 + Cuia extra + Cuia de rescate ≤ 16 ranuras (02 §7); verificación \"la compra cumple\" (02, 04 y 05 ya en 1). La oferta repetida en ¿Seguro? es el mismo rescate: si se compra ahí, cuenta para este tope (D-008)",
+      "valueType": "BOOLEAN"
+    },
+    "stuck_order_t1": {
+      "defaultValue": {
+        "value": "undo,rescue,balsa,pack"
+      },
+      "description": "Rango 08 §9: —. Orden de opciones del modal por geo; línea de Hoja escudo",
+      "valueType": "STRING"
+    },
+    "stuck_order_t3": {
+      "defaultValue": {
+        "value": "undo_ad,rescue,pack,balsa"
+      },
+      "description": "Rango 08 §9: —. Orden de opciones del modal por geo; línea de Hoja escudo",
+      "valueType": "STRING"
+    },
+    "stuck_show_shield_status": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Orden de opciones del modal por geo; línea de Hoja escudo",
+      "valueType": "BOOLEAN"
+    },
+    "af_rescue_daily_cap": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 1. Balsa de rescate: tope diario (dirección 14) y ocultación 48 h",
+      "valueType": "NUMBER"
+    },
+    "af_rescue_hide_after_declines": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "description": "Rango 08 §9: 2-3. Balsa de rescate: tope diario (dirección 14) y ocultación 48 h",
+      "valueType": "NUMBER"
+    },
+    "canoes_max": {
+      "defaultValue": {
+        "value": "5"
+      },
+      "description": "Rango 08 §9: 5. Canoas (dirección 11)",
+      "valueType": "NUMBER"
+    },
+    "canoes_regen_min": {
+      "defaultValue": {
+        "value": "25"
+      },
+      "description": "Rango 08 §9: 20-30. Canoas (dirección 11)",
+      "valueType": "NUMBER"
+    },
+    "canoes_refill_seeds_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Llenar canoas con semillas",
+      "valueType": "BOOLEAN"
+    },
+    "canoes_refill_seed_price": {
+      "defaultValue": {
+        "value": "200"
+      },
+      "description": "Rango 08 §9: 150-300. Llenar canoas con semillas",
+      "valueType": "NUMBER"
+    },
+    "streak_shield_per_day": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 1-2. Hoja escudo (dirección 12)",
+      "valueType": "NUMBER"
+    },
+    "streak_milestones": {
+      "defaultValue": {
+        "value": "{\"3\":300,\"6\":\"chest\",\"10\":\"extra_cuia+rio_crecido\"}"
+      },
+      "description": "Rango 08 §9: hito 3: 200-300; 6 y 10 fijos. Escalera canónica de la Crecida (05 §2.4; dirección 12; incidencia 5): 3 → 300 semillas · 6 → Canasta · 10 → 1 Cuia extra + río crecido (sin semillas). Al pagar el hito 10 la barra vuelve a 0 y el río crecido si…",
+      "valueType": "JSON"
+    },
+    "streak_daily_cap": {
+      "defaultValue": {
+        "value": "600"
+      },
+      "description": "Rango 08 §9: 300-900. Tope diario 600: suma solo el hito 3 (300) y las 50 semillas de la Canasta del hito 6; el bonus del río crecido y los comodines de los hitos 6 y 10 no cuentan; cada hito se paga una vez por día local (05 §2.4); debut de la Crecida",
+      "valueType": "NUMBER"
+    },
+    "streak_hits_once_per_day": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Tope diario 600: suma solo el hito 3 (300) y las 50 semillas de la Canasta del hito 6; el bonus del río crecido y los comodines de los hitos 6 y 10 no cuentan; cada hito se paga una vez por día local (05 §2.4); debut de la Crecida",
+      "valueType": "BOOLEAN"
+    },
+    "streak_unlock_level": {
+      "defaultValue": {
+        "value": "25"
+      },
+      "description": "Rango 08 §9: 20-40. Tope diario 600: suma solo el hito 3 (300) y las 50 semillas de la Canasta del hito 6; el bonus del río crecido y los comodines de los hitos 6 y 10 no cuentan; cada hito se paga una vez por día local (05 §2.4); debut de la Crecida",
+      "valueType": "NUMBER"
+    },
+    "streak_reminder_hours": {
+      "defaultValue": {
+        "value": "36"
+      },
+      "description": "Rango 08 §9: 24-48. Push local \"Crecida te espera\" (la Crecida no caduca); Volver a la orilla voluntario no rompe la racha",
+      "valueType": "NUMBER"
+    },
+    "streak_restart_counts_as_fail": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. Push local \"Crecida te espera\" (la Crecida no caduca); Volver a la orilla voluntario no rompe la racha",
+      "valueType": "BOOLEAN"
+    },
+    "ads_first_interstitial_level": {
+      "defaultValue": {
+        "value": "22"
+      },
+      "description": "Rango 08 §9: ≥22. Dirección 13: ninguno antes del 22; solo tras victoria, nunca en reintento",
+      "valueType": "NUMBER"
+    },
+    "ads_interstitial_every_n_levels": {
+      "defaultValue": {
+        "value": "[[22,3],[61,2]]"
+      },
+      "description": "Rango 08 §9: n ≥2. Cadencia: cada 3 niveles en 22-60, cada 2 desde el 61 (05 §6.1); el nivel del segundo par es el único \"paso a cada 2\" (sin clave aparte)",
+      "valueType": "JSON"
+    },
+    "ads_interstitial_min_gap_s": {
+      "defaultValue": {
+        "value": "150"
+      },
+      "description": "Rango 08 §9: ≥150. Separación mínima (dirección 13) y calentamiento de sesión",
+      "valueType": "NUMBER"
+    },
+    "ads_interstitial_session_warmup_s": {
+      "defaultValue": {
+        "value": "120"
+      },
+      "description": "Rango 08 §9: ≥60. Separación mínima (dirección 13) y calentamiento de sesión",
+      "valueType": "NUMBER"
+    },
+    "ads_interstitial_session_cap": {
+      "defaultValue": {
+        "value": "6"
+      },
+      "description": "Rango 08 §9: ≤6. Topes por sesión (dirección 13) y por día [P]",
+      "valueType": "NUMBER"
+    },
+    "ads_interstitial_daily_cap": {
+      "defaultValue": {
+        "value": "12"
+      },
+      "description": "Rango 08 §9: ≤14. Topes por sesión (dirección 13) y por día [P]",
+      "valueType": "NUMBER"
+    },
+    "ads_interstitial_suppress_after_iap_h": {
+      "defaultValue": {
+        "value": "24"
+      },
+      "description": "Rango 08 §9: 12-48. Sin intersticiales tras cualquier compra (research/04 §Reglas [E]), también tras af_infinite_canoes_1h. Es lo único que los corta durante unas Canoas infinitas, que por sí mismas no los quitan (D-008)",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_double_harvest_from_level": {
+      "defaultValue": {
+        "value": "11"
+      },
+      "description": "Rango 08 §9: 10-15. Primer recompensado voluntario: Cosecha doble (dirección 13)",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cap_double_harvest": {
+      "defaultValue": {
+        "value": "5"
+      },
+      "description": "Rango 08 §9: 1-5. Topes diarios por ubicación (dirección 13); sustituye a los *_ad_cap_day por comodín de 04",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cap_undo_refill": {
+      "defaultValue": {
+        "value": "4"
+      },
+      "description": "Rango 08 §9: 1-5. Topes diarios por ubicación (dirección 13); sustituye a los *_ad_cap_day por comodín de 04",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cap_hint": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 1-5. Topes diarios por ubicación (dirección 13); sustituye a los *_ad_cap_day por comodín de 04",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cap_reveal": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 1-5. Topes diarios por ubicación (dirección 13); sustituye a los *_ad_cap_day por comodín de 04",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cap_extra_canoe": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 1-5. Topes diarios por ubicación (dirección 13); sustituye a los *_ad_cap_day por comodín de 04",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cap_daily_chest": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: 1-5. Topes diarios por ubicación (dirección 13); sustituye a los *_ad_cap_day por comodín de 04",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cooldown_s_double_harvest": {
+      "defaultValue": {
+        "value": "60"
+      },
+      "description": "Rango 08 §9: 60-120. Cooldown por ubicación (dirección 13)",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cooldown_s_undo_refill": {
+      "defaultValue": {
+        "value": "60"
+      },
+      "description": "Rango 08 §9: 60-120. Cooldown por ubicación (dirección 13)",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cooldown_s_hint": {
+      "defaultValue": {
+        "value": "60"
+      },
+      "description": "Rango 08 §9: 60-120. Cooldown por ubicación (dirección 13)",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cooldown_s_reveal": {
+      "defaultValue": {
+        "value": "60"
+      },
+      "description": "Rango 08 §9: 60-120. Cooldown por ubicación (dirección 13)",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cooldown_s_extra_canoe": {
+      "defaultValue": {
+        "value": "90"
+      },
+      "description": "Rango 08 §9: 60-120. Cooldown por ubicación (dirección 13)",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_cooldown_s_daily_chest": {
+      "defaultValue": {
+        "value": "60"
+      },
+      "description": "Rango 08 §9: 60-120. Cooldown por ubicación (dirección 13)",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_global_cap_day": {
+      "defaultValue": {
+        "value": "15"
+      },
+      "description": "Rango 08 §9: 10-20. Tope global de recompensados",
+      "valueType": "NUMBER"
+    },
+    "ads_rv_max_wait_fill_ms": {
+      "defaultValue": {
+        "value": "1500"
+      },
+      "description": "Rango 08 §9: 500-3000. Espera máxima de carga antes de ocultar el botón de video",
+      "valueType": "NUMBER"
+    },
+    "ads_ilr_to_firebase": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Enviar ad_impression con valor desde MAX",
+      "valueType": "BOOLEAN"
+    },
+    "eco_reward_normal": {
+      "defaultValue": {
+        "value": "20"
+      },
+      "description": "Rango 08 §9: 15-30. Ingreso por victoria (dirección 12)",
+      "valueType": "NUMBER"
+    },
+    "eco_reward_hard": {
+      "defaultValue": {
+        "value": "60"
+      },
+      "description": "Rango 08 §9: 45-90. Ingreso por victoria (dirección 12)",
+      "valueType": "NUMBER"
+    },
+    "eco_reward_very_hard": {
+      "defaultValue": {
+        "value": "80"
+      },
+      "description": "Rango 08 §9: 60-120. Ingreso por victoria (dirección 12)",
+      "valueType": "NUMBER"
+    },
+    "eco_calendar_locked_booster_seeds": {
+      "defaultValue": {
+        "value": "{\"undo3\":30,\"other\":100}"
+      },
+      "description": "Rango 08 §9: —. Tasa de valor de la Bitácora «1 de 3», con la que sus tres opciones valen lo mismo (Marea = 30 por unidad, Q-B3; cualquier otro comodín = 100; D-033, punto 1); un comodín bloqueado ya no se convierte en semillas: se sustituye por el siguie…",
+      "valueType": "JSON"
+    },
+    "eco_calendar_double_ad_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. Tasa de valor de la Bitácora «1 de 3», con la que sus tres opciones valen lo mismo (Marea = 30 por unidad, Q-B3; cualquier otro comodín = 100; D-033, punto 1); un comodín bloqueado ya no se convierte en semillas: se sustituye por el siguie…",
+      "valueType": "BOOLEAN"
+    },
+    "eco_basket_cycle": {
+      "defaultValue": {
+        "value": "[\"undo3\",\"hint\",\"extra_cuia\",\"undo3\",\"hint\"]"
+      },
+      "description": "Rango 08 §9: —. Canasta cada 10 niveles: ciclo determinista y visible antes de abrir (dirección 15; IARC \"ítems aleatorios: no\"); sin probabilidades",
+      "valueType": "JSON"
+    },
+    "eco_basket_seeds": {
+      "defaultValue": {
+        "value": "50"
+      },
+      "description": "Rango 08 §9: 30-50. Semillas de cada Canasta (también la primera)",
+      "valueType": "NUMBER"
+    },
+    "eco_piggy_from_level": {
+      "defaultValue": {
+        "value": "20"
+      },
+      "description": "Rango 08 §9: 15-30. Cántaro (dirección 14; determinista, tope visible)",
+      "valueType": "NUMBER"
+    },
+    "eco_piggy_fill": {
+      "defaultValue": {
+        "value": "[15,30,40]"
+      },
+      "description": "Rango 08 §9: —. Cántaro (dirección 14; determinista, tope visible)",
+      "valueType": "JSON"
+    },
+    "eco_piggy_cap": {
+      "defaultValue": {
+        "value": "3000"
+      },
+      "description": "Rango 08 §9: 2000-4000. Cántaro (dirección 14; determinista, tope visible)",
+      "valueType": "NUMBER"
+    },
+    "eco_piggy_min_buy": {
+      "defaultValue": {
+        "value": "1000"
+      },
+      "description": "Rango 08 §9: —. Cántaro (dirección 14; determinista, tope visible)",
+      "valueType": "NUMBER"
+    },
+    "eco_starter_window_levels": {
+      "defaultValue": {
+        "value": "[10,20]"
+      },
+      "description": "Rango 08 §9: —. Mochila de inicio (dirección 14)",
+      "valueType": "JSON"
+    },
+    "eco_starter_timer_h": {
+      "defaultValue": {
+        "value": "48"
+      },
+      "description": "Rango 08 §9: —. Mochila de inicio (dirección 14)",
+      "valueType": "NUMBER"
+    },
+    "eco_starter_first_show": {
+      "defaultValue": {
+        "value": "L12_or_session2"
+      },
+      "description": "Rango 08 §9: —. Mochila de inicio (dirección 14)",
+      "valueType": "STRING"
+    },
+    "eco_noads_bonus_seeds": {
+      "defaultValue": {
+        "value": "500"
+      },
+      "description": "Rango 08 §9: 300-600. Bono y disparador de la tarjeta Sin anuncios (dirección 14)",
+      "valueType": "NUMBER"
+    },
+    "eco_noads_card_trigger": {
+      "defaultValue": {
+        "value": "3_interstitials_or_d2"
+      },
+      "description": "Rango 08 §9: —. Bono y disparador de la tarjeta Sin anuncios (dirección 14)",
+      "valueType": "STRING"
+    },
+    "eco_seed_pack_amounts": {
+      "defaultValue": {
+        "value": "{\"af_coins_2\":1000,\"af_coins_3\":2800,\"af_coins_4\":6000,\"af_coins_5\":13000,\"af_coins_6\":36000}"
+      },
+      "description": "Rango 08 §9: —. Glosario §2.1; espejo de iap_catalog.json; SKU de Canoas infinitas 1 h = af_infinite_canoes_1h",
+      "valueType": "JSON"
+    },
+    "eco_model_version": {
+      "defaultValue": {
+        "value": "B-2026-10-06e"
+      },
+      "description": "Rango 08 §9: —. Solo registro: los precios viven en Play Console; eco_model_version identifica el modelo de la simulación de 05 (escenario B de tools/econ_sim.py, corrida del 2026-10-06; e = on_fail con la regla del contrato 19: un fallo duro con la barra…",
+      "valueType": "STRING"
+    },
+    "live_unlock_level_daily": {
+      "defaultValue": {
+        "value": "10"
+      },
+      "description": "Rango 08 §9: 8-12. Desbloquea Reto del río, Bitácora, Mapa del río, Canasta y Mercado",
+      "valueType": "NUMBER"
+    },
+    "live_unlock_level_league": {
+      "defaultValue": {
+        "value": "41"
+      },
+      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0",
+      "valueType": "NUMBER"
+    },
+    "live_unlock_level_trail": {
+      "defaultValue": {
+        "value": "41"
+      },
+      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0",
+      "valueType": "NUMBER"
+    },
+    "live_unlock_level_regatta": {
+      "defaultValue": {
+        "value": "51"
+      },
+      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0",
+      "valueType": "NUMBER"
+    },
+    "live_unlock_level_meeting": {
+      "defaultValue": {
+        "value": "61"
+      },
+      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0",
+      "valueType": "NUMBER"
+    },
+    "live_unlock_level_village": {
+      "defaultValue": {
+        "value": "31"
+      },
+      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0",
+      "valueType": "NUMBER"
+    },
+    "live_daily_challenge_reward": {
+      "defaultValue": {
+        "value": "{\"seeds\":60,\"murky_bonus_mult\":2}"
+      },
+      "description": "Rango 08 §9: seeds 40-80. Premio del Reto del río; el bonus Aguas turbias paga el doble",
+      "valueType": "JSON"
+    },
+    "live_daily_offset": {
+      "defaultValue": {
+        "value": "0"
+      },
+      "description": "Rango 08 §9: —. Desplazamiento del índice por fecha (mod 729; con cualquier valor el mundo del agua y del fondo sigue a la fecha, y si no es múltiplo de 9 queda desplazado por él: R-Q2b); premio por cada 7 Retos seguidos ganados (R-Q7)",
+      "valueType": "NUMBER"
+    },
+    "live_daily_streak7_reward": {
+      "defaultValue": {
+        "value": "shuffle"
+      },
+      "description": "Rango 08 §9: —. Desplazamiento del índice por fecha (mod 729; con cualquier valor el mundo del agua y del fondo sigue a la fecha, y si no es múltiplo de 9 queda desplazado por él: R-Q2b); premio por cada 7 Retos seguidos ganados (R-Q7)",
+      "valueType": "STRING"
+    },
+    "live_events_schedule": {
+      "defaultValue": {
+        "value": "[]"
+      },
+      "description": "Rango 08 §9: —. Calendario de eventos 1.2 (start/end UTC, type, pack) y definición del evento activo",
+      "valueType": "JSON"
+    },
+    "live_event_active": {
+      "defaultValue": {
+        "value": "{}"
+      },
+      "description": "Rango 08 §9: —. Calendario de eventos 1.2 (start/end UTC, type, pack) y definición del evento activo",
+      "valueType": "JSON"
+    },
+    "live_comeback_gift": {
+      "defaultValue": {
+        "value": "{\"days\":7,\"seeds\":200,\"extra_cuia\":1,\"refill_canoes\":true}"
+      },
+      "description": "Rango 08 §9: —. Regalo de regreso y Mochila de regreso",
+      "valueType": "JSON"
+    },
+    "live_comeback_offer_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. Regalo de regreso y Mochila de regreso",
+      "valueType": "BOOLEAN"
+    },
+    "live_content_end_message": {
+      "defaultValue": {
+        "value": "{\"next_batch_eta_days\":14}"
+      },
+      "description": "Rango 08 §9: 7-21. Pantalla \"El río sigue creciendo\" y push local \"Nuevos niveles\" (sección 6.2)",
+      "valueType": "JSON"
+    },
+    "live_world_bg_variant_override": {
+      "defaultValue": {
+        "value": ""
+      },
+      "description": "Rango 08 §9: lluvia · noche · alba. Fuerza una variante de LUT (eventos)",
+      "valueType": "STRING"
+    },
+    "push_preprompt_session": {
+      "defaultValue": {
+        "value": "2"
+      },
+      "description": "Rango 08 §9: 2-3. Pre-prompt de push en la primera victoria de la 2.ª sesión con el nivel 10 ya superado (06 §8.1; incidencia 15; sustituye a push_preprompt_level), horas silenciosas y topes de notificaciones (todas locales en 1.0)",
+      "valueType": "NUMBER"
+    },
+    "push_preprompt_min_level": {
+      "defaultValue": {
+        "value": "10"
+      },
+      "description": "Rango 08 §9: 8-12. Pre-prompt de push en la primera victoria de la 2.ª sesión con el nivel 10 ya superado (06 §8.1; incidencia 15; sustituye a push_preprompt_level), horas silenciosas y topes de notificaciones (todas locales en 1.0)",
+      "valueType": "NUMBER"
+    },
+    "push_quiet_hours": {
+      "defaultValue": {
+        "value": "22-09"
+      },
+      "description": "Rango 08 §9: —. Pre-prompt de push en la primera victoria de la 2.ª sesión con el nivel 10 ya superado (06 §8.1; incidencia 15; sustituye a push_preprompt_level), horas silenciosas y topes de notificaciones (todas locales en 1.0)",
+      "valueType": "STRING"
+    },
+    "push_daily_cap_d0_d7": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Rango 08 §9: —. Pre-prompt de push en la primera victoria de la 2.ª sesión con el nivel 10 ya superado (06 §8.1; incidencia 15; sustituye a push_preprompt_level), horas silenciosas y topes de notificaciones (todas locales en 1.0)",
+      "valueType": "NUMBER"
+    },
+    "push_weekly_cap_lapsed": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: —. Pre-prompt de push en la primera victoria de la 2.ª sesión con el nivel 10 ya superado (06 §8.1; incidencia 15; sustituye a push_preprompt_level), horas silenciosas y topes de notificaciones (todas locales en 1.0)",
+      "valueType": "NUMBER"
+    },
+    "league_bucket_size": {
+      "defaultValue": {
+        "value": "50"
+      },
+      "description": "Rango 08 §9: —. Liga del río y Regata (1.2)",
+      "valueType": "NUMBER"
+    },
+    "regatta_bucket_size": {
+      "defaultValue": {
+        "value": "20"
+      },
+      "description": "Rango 08 §9: —. Liga del río y Regata (1.2)",
+      "valueType": "NUMBER"
+    },
+    "league_points": {
+      "defaultValue": {
+        "value": "{\"normal\":10,\"hard\":20,\"very_hard\":30,\"daily\":20,\"trail\":10}"
+      },
+      "description": "Rango 08 §9: —. Liga del río y Regata (1.2)",
+      "valueType": "JSON"
+    },
+    "league_anticheat_max_wins_per_hour": {
+      "defaultValue": {
+        "value": "40"
+      },
+      "description": "Rango 08 §9: —. Liga del río y Regata (1.2)",
+      "valueType": "NUMBER"
+    },
+    "save_cloud_interval_levels": {
+      "defaultValue": {
+        "value": "3"
+      },
+      "description": "Rango 08 §9: 1-5. Subidas a Saved Games; sección 11",
+      "valueType": "NUMBER"
+    },
+    "save_conflict_policy": {
+      "defaultValue": {
+        "value": "max_level_then_ts"
+      },
+      "description": "Rango 08 §9: —. Subidas a Saved Games; sección 11",
+      "valueType": "STRING"
+    },
+    "sec_clock_max_drift_h": {
+      "defaultValue": {
+        "value": "24"
+      },
+      "description": "Rango 08 §9: 12-48. Anti-reloj (única clave global; absorbe canoes_clock_max_drift_h), ventana SSV y plazo del acknowledge local, que no acredita [P] (sección 10.3; 48 h y no 72 para dejar margen frente a los 3 días en que Play reembolsa lo no reconocido:…",
+      "valueType": "NUMBER"
+    },
+    "sec_ssv_grace_h": {
+      "defaultValue": {
+        "value": "24"
+      },
+      "description": "Rango 08 §9: 12-48. Anti-reloj (única clave global; absorbe canoes_clock_max_drift_h), ventana SSV y plazo del acknowledge local, que no acredita [P] (sección 10.3; 48 h y no 72 para dejar margen frente a los 3 días en que Play reembolsa lo no reconocido:…",
+      "valueType": "NUMBER"
+    },
+    "sec_purchase_deferred_ack_h": {
+      "defaultValue": {
+        "value": "48"
+      },
+      "description": "Rango 08 §9: 48-72. Anti-reloj (única clave global; absorbe canoes_clock_max_drift_h), ventana SSV y plazo del acknowledge local, que no acredita [P] (sección 10.3; 48 h y no 72 para dejar margen frente a los 3 días en que Play reembolsa lo no reconocido:…",
+      "valueType": "NUMBER"
+    },
+    "perf_sample_rate": {
+      "defaultValue": {
+        "value": "0.05"
+      },
+      "description": "Rango 08 §9: 0-0.2. Fracción de sesiones con af_perf_sample; OnDemandRendering en Mapa del río y Mercado",
+      "valueType": "NUMBER"
+    },
+    "perf_target_fps_menus": {
+      "defaultValue": {
+        "value": "30"
+      },
+      "description": "Rango 08 §9: 30-60. Fracción de sesiones con af_perf_sample; OnDemandRendering en Mapa del río y Mercado",
+      "valueType": "NUMBER"
+    }
+  },
+  "parameterGroups": {}
+}

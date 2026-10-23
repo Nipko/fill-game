@@ -5,7 +5,7 @@ using AF.Levels;
 namespace AF.RemoteConfig.Binding
 {
     /// <summary>
-    /// Las claves de Remote Config del catálogo de niveles (08 §9): los kill switches <c>mech_enabled.*</c> y la tabla
+    /// Las claves de Remote Config del catálogo de niveles (08 §9): los kill switches <c>mech_enabled_*</c> y la tabla
     /// <c>level_overrides</c> (D-020, pregunta 31 b; tarea KS1; D-033, añadido «la reserva del 20 %», Q-B11-7 a). Se leen en el
     /// arranque, antes de crear el catálogo (<see cref="LevelCatalog"/>), y no cambian a mitad de sesión: lo que se descargue se
     /// aplica en el arranque siguiente (08 §2.3). Sin reflexión ni motor; separado de <see cref="RcConfigBinder"/> porque no son

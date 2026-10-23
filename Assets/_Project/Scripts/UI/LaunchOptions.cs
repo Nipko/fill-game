@@ -83,7 +83,7 @@ namespace AF.UI
 
         /// <summary>
         /// Extra de intent (string) de los builds de desarrollo (tarea KS1; D-020, pregunta 31 b): apaga los kill switches
-        /// <c>mech_enabled.&lt;id&gt;</c> de 08 §9 de la lista separada por comas (<c>--es af_mech_off hoja,matapi</c>), además de
+        /// <c>mech_enabled_&lt;id&gt;</c> de 08 §9 de la lista separada por comas (<c>--es af_mech_off hoja,matapi</c>), además de
         /// los que apague Remote Config. <c>level_overrides</c> sale de Remote Config (o de la fuente local,
         /// <see cref="LevelOverrides.LocalSource"/>, <c>{}</c>): sin entradas, <see cref="LevelCatalog"/> sirve el publicado y
         /// escribe el aviso [P]; con una entrada que apunte a un tablero de la reserva del 20 % (D-033, Q-B11-7 a), lo sustituye.
@@ -382,7 +382,7 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Kill switches de la partida (tarea KS1): los defaults compilados de <c>mech_enabled.*</c>
+        /// Kill switches de la partida (tarea KS1): los defaults compilados de <c>mech_enabled_*</c>
         /// (<see cref="GameConfig.MechEnabled"/>, todos true) con las mecánicas apagadas por el test (<see cref="MechOffOverride"/>)
         /// o, si no, por el extra <c>af_mech_off</c> (solo builds de desarrollo en Android). Un id desconocido se ignora y se avisa.
         /// </summary>
@@ -393,7 +393,7 @@ namespace AF.UI
 
         /// <summary>
         /// Como <see cref="ResolveMechSwitches()"/>, sobre <paramref name="baseline"/>: los defaults compilados ya combinados con
-        /// los <c>mech_enabled.*</c> de Remote Config (<c>RcLevelBinder.MechEnabled</c>; D-033, Q-B11-7 a).
+        /// los <c>mech_enabled_*</c> de Remote Config (<c>RcLevelBinder.MechEnabled</c>; D-033, Q-B11-7 a).
         /// </summary>
         public static MechanicSwitches ResolveMechSwitches(MechanicSwitches baseline)
         {

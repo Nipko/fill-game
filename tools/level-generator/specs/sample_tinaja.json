@@ -74,7 +74,7 @@
   "mechanics": [
     {"code": "Ti", "id": "tinaja", "kind": "source", "debut": 323, "season": "B"}
   ],
-  "mechanics_note": "Tinaja (M13): estreno en el 323 (D-019, Q-Ti3 A; mech_debut_level.tinaja, 08 §9), temporada B (aguas bajas; propuesta de la tinaja d.1). Clase «source» [P]: fuente de dosis ocultas; no es un filtro, así que --validate-spec la rechaza con Aguas turbias (FORBIDDEN), y AF.Core (LevelValidation) la rechaza con Liana, Remolino, Lluvia y Piraña. Su cuia chica (cucharon) va con ella: no es una celda aparte.",
+  "mechanics_note": "Tinaja (M13): estreno en el 323 (D-019, Q-Ti3 A; mech_debut_level_tinaja, 08 §9), temporada B (aguas bajas; propuesta de la tinaja d.1). Clase «source» [P]: fuente de dosis ocultas; no es un filtro, así que --validate-spec la rechaza con Aguas turbias (FORBIDDEN), y AF.Core (LevelValidation) la rechaza con Liana, Remolino, Lluvia y Piraña. Su cuia chica (cucharon) va con ella: no es una celda aparte.",
   "capacities": [],
   "seasons": {"321": "B"},
   "calendar": {

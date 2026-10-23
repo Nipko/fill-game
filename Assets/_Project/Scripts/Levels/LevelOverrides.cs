@@ -9,41 +9,41 @@ using AF.Levels.Json;
 namespace AF.Levels
 {
     /// <summary>
-    /// Mecánica con kill switch: las claves <c>mech_enabled.{hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja}</c>
+    /// Mecánica con kill switch: las claves <c>mech_enabled_{hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja}</c>
     /// de GDD 08 §9, en el orden de la tabla (02 §9.2, regla 3; D-007; D-019).
     /// </summary>
     public enum MechanicSwitch
     {
-        /// <summary><c>mech_enabled.hoja</c>: M1 Hoja y su variante Hoja atada [P].</summary>
+        /// <summary><c>mech_enabled_hoja</c>: M1 Hoja y su variante Hoja atada [P].</summary>
         Hoja = 0,
 
-        /// <summary><c>mech_enabled.matapi</c>: M10 Matapi.</summary>
+        /// <summary><c>mech_enabled_matapi</c>: M10 Matapi.</summary>
         Matapi = 1,
 
-        /// <summary><c>mech_enabled.liana</c>: M3 Liana y su variante Flor de vitória-régia [P].</summary>
+        /// <summary><c>mech_enabled_liana</c>: M3 Liana y su variante Flor de vitória-régia [P].</summary>
         Liana = 2,
 
-        /// <summary><c>mech_enabled.remolino</c>: M4 Remolino.</summary>
+        /// <summary><c>mech_enabled_remolino</c>: M4 Remolino.</summary>
         Remolino = 3,
 
-        /// <summary><c>mech_enabled.barro</c>: M5 Barro (el tinte 15 en <c>cuias</c>, no un <c>type</c> de <c>attrs</c>).</summary>
+        /// <summary><c>mech_enabled_barro</c>: M5 Barro (el tinte 15 en <c>cuias</c>, no un <c>type</c> de <c>attrs</c>).</summary>
         Barro = 4,
 
-        /// <summary><c>mech_enabled.lluvia</c>: M6 Lluvia.</summary>
+        /// <summary><c>mech_enabled_lluvia</c>: M6 Lluvia.</summary>
         Lluvia = 5,
 
-        /// <summary><c>mech_enabled.brote</c>: M2 Brote (con <c>n</c> = 1 o 2).</summary>
+        /// <summary><c>mech_enabled_brote</c>: M2 Brote (con <c>n</c> = 1 o 2).</summary>
         Brote = 6,
 
-        /// <summary><c>mech_enabled.pirana</c>: M7 Piraña.</summary>
+        /// <summary><c>mech_enabled_pirana</c>: M7 Piraña.</summary>
         Pirana = 7,
 
-        /// <summary><c>mech_enabled.tinaja</c>: M13 Tinaja y su cuia chica (<c>cucharon</c>).</summary>
+        /// <summary><c>mech_enabled_tinaja</c>: M13 Tinaja y su cuia chica (<c>cucharon</c>).</summary>
         Tinaja = 8,
     }
 
     /// <summary>
-    /// Estado de los kill switches <c>mech_enabled.*</c> (08 §9; tarea KS1): qué mecánicas están apagadas. El valor por
+    /// Estado de los kill switches <c>mech_enabled_*</c> (08 §9; tarea KS1): qué mecánicas están apagadas. El valor por
     /// defecto (<see cref="AllOn"/>) las tiene todas encendidas, como los defaults de 08 §9. Sin motor y sin asignaciones.
     /// </summary>
     /// <remarks>
@@ -57,7 +57,7 @@ namespace AF.Levels
         public const int Count = 9;
 
         /// <summary>Prefijo de las claves de Remote Config (08 §9).</summary>
-        public const string KeyPrefix = "mech_enabled.";
+        public const string KeyPrefix = "mech_enabled_";
 
         private const int AllBits = (1 << Count) - 1;
 
@@ -92,14 +92,14 @@ namespace AF.Levels
             return Ids[Index(mechanic)];
         }
 
-        /// <summary>Clave completa de Remote Config: <c>"mech_enabled.hoja"</c>… (08 §9).</summary>
+        /// <summary>Clave completa de Remote Config: <c>"mech_enabled_hoja"</c>… (08 §9).</summary>
         public static string KeyOf(MechanicSwitch mechanic)
         {
             return Keys[Index(mechanic)];
         }
 
         /// <summary>
-        /// Convierte un id (<c>"hoja"</c>) o una clave completa (<c>"mech_enabled.hoja"</c>), sin cultura y sin distinguir
+        /// Convierte un id (<c>"hoja"</c>) o una clave completa (<c>"mech_enabled_hoja"</c>), sin cultura y sin distinguir
         /// espacios alrededor. Devuelve false con cualquier otro valor.
         /// </summary>
         public static bool TryParse(string? value, out MechanicSwitch mechanic)
@@ -296,7 +296,7 @@ namespace AF.Levels
     /// </summary>
     /// <remarks>
     /// <para>En la 1.0 solo la usa el kill switch: <see cref="LevelCatalog"/> sirve el override de un nivel cuando el nivel usa una
-    /// mecánica apagada (<c>mech_enabled.&lt;id&gt;</c> = false). El formato de respaldo por slot es de la 1.1 (D-020).</para>
+    /// mecánica apagada (<c>mech_enabled_&lt;id&gt;</c> = false). El formato de respaldo por slot es de la 1.1 (D-020).</para>
     /// <para>Fuente: el valor de Remote Config de <c>level_overrides</c> (<c>RcLevelBinder</c>, en el arranque, antes de crear el
     /// catálogo) o, sin él, <see cref="LocalSource"/>; los tests pasan la suya. Cada <c>level_id</c> se busca en los paquetes
     /// dados, en su orden: los de campaña (<c>m{mm}_v{v}_n{nnnn}</c>, glosario §11) y los de reserva
