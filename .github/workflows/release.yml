@@ -14,8 +14,11 @@
 #              CHECK16_REQUIRE_ZIPALIGN=1, check-manifest -Mode release -RequireBilling, check-release-classes,
 #              check-no-unity-iap, applicationId y version del manifiesto, y la firma (ci/check-release-signature.sh).
 #
-# Secretos (los crea el dueno; aqui solo se referencian, nunca con echo): UNITY_EMAIL, UNITY_PASSWORD,
-# ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASS, ANDROID_KEYALIAS_NAME, ANDROID_KEYALIAS_PASS.
+# Secretos (los crea el dueno; aqui solo se referencian, nunca con echo): UNITY_EMAIL y UNITY_PASSWORD en el
+# repositorio; ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASS, ANDROID_KEYALIAS_NAME y ANDROID_KEYALIAS_PASS en el
+# Environment "release" de GitHub (limitado a main y, si el dueno quiere, con un revisor obligatorio). Los dos jobs
+# declaran environment: release: es la barrera que no depende del contenido de este archivo, porque los secretos del
+# Environment solo llegan a jobs de main que lo declaran (y, con revisor, tras su aprobacion).
 # Variable de repositorio (no secreta): AF_RELEASE_APPLICATION_ID, solo tras el dictamen de marca (D-034, D-041).
 #
 # El keystore: se decodifica con umask 077 en $RUNNER_TEMP, fuera del repositorio, y se borra al acabar (paso con
@@ -55,6 +58,7 @@ jobs:
   preflight:
     name: Comprobaciones previas (sin Unity)
     runs-on: ubuntu-24.04
+    environment: release
     timeout-minutes: 10
     outputs:
       application_id: ${{ steps.check.outputs.application_id }}
@@ -105,6 +109,7 @@ jobs:
     name: Build Android firmado + compuertas
     needs: preflight
     runs-on: ubuntu-24.04
+    environment: release
     timeout-minutes: 120
     concurrency:
       group: unity-personal-seat

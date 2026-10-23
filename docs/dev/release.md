@@ -6,17 +6,26 @@ El workflow `.github/workflows/release.yml` construye el AAB de release **firmad
 
 ## 1. Qué crea el dueño en GitHub
 
-Los agentes no crean secretos ni variables (`gh secret` está bloqueado). Se crean en **Settings › Secrets and variables › Actions** del repositorio `Nipko/fill-game`.
+Los agentes no crean secretos ni variables (`gh secret` está bloqueado). Todo se crea en **Settings** del repositorio `Nipko/fill-game`.
 
-| Tipo | Nombre | Valor | Cuándo |
-|---|---|---|---|
-| Secreto | `UNITY_EMAIL` | Correo de la cuenta Unity dedicada al CI, sin 2FA (ya lo usa `ci.yml`) | Ya previsto en s30 |
-| Secreto | `UNITY_PASSWORD` | Su contraseña (ya la usa `ci.yml`) | Ya previsto en s30 |
-| Secreto | `ANDROID_KEYSTORE_BASE64` | El keystore de subida en Base64 (§2) | Al crear la clave de subida |
-| Secreto | `ANDROID_KEYSTORE_PASS` | Contraseña del keystore | Ídem |
-| Secreto | `ANDROID_KEYALIAS_NAME` | Alias de la clave de subida (recomendado `tintalu-upload`) | Ídem |
-| Secreto | `ANDROID_KEYALIAS_PASS` | Contraseña de la clave (con PKCS12, la misma que la del keystore) | Ídem |
-| **Variable** (pestaña *Variables*, no es secreta) | `AF_RELEASE_APPLICATION_ID` | El `applicationId` definitivo; recomendado `com.parallext.tintalu` (D-041) | **Solo tras el dictamen de marca** (D-034; regla dura 6) |
+**Primero, el Environment `release`** (Settings › Environments › New environment):
+
+- **Deployment branches and tags:** *Selected branches*, solo `main`.
+- **Required reviewers** (opcional, recomendado): tú. Cada ejecución espera tu aprobación antes de recibir los secretos.
+
+Los dos jobs de `release.yml` declaran `environment: release`. Es la barrera que no depende del contenido del workflow: los secretos del Environment solo llegan a jobs que lo declaran, en `main` y, con revisor, tras tu aprobación. Un workflow modificado en otra rama no puede leerlos.
+
+| Dónde | Tipo | Nombre | Valor | Cuándo |
+|---|---|---|---|---|
+| Repositorio (Secrets and variables › Actions) | Secreto | `UNITY_EMAIL` | Correo de la cuenta Unity dedicada al CI, sin 2FA (ya lo usa `ci.yml`) | Ya previsto en s30 |
+| Repositorio | Secreto | `UNITY_PASSWORD` | Su contraseña (ya la usa `ci.yml`) | Ya previsto en s30 |
+| **Environment `release`** | Secreto | `ANDROID_KEYSTORE_BASE64` | El keystore de subida en Base64 (§2) | Al crear la clave de subida |
+| Environment `release` | Secreto | `ANDROID_KEYSTORE_PASS` | Contraseña del keystore | Ídem |
+| Environment `release` | Secreto | `ANDROID_KEYALIAS_NAME` | Alias de la clave de subida (recomendado `tintalu-upload`) | Ídem |
+| Environment `release` | Secreto | `ANDROID_KEYALIAS_PASS` | Contraseña de la clave (con PKCS12, la misma que la del keystore) | Ídem |
+| Repositorio (pestaña *Variables*; no es secreta) | Variable | `AF_RELEASE_APPLICATION_ID` | El `applicationId` definitivo; recomendado `com.parallext.tintalu` (D-041) | **Solo tras el dictamen de marca** (D-034; regla dura 6) |
+
+Los cuatro `ANDROID_*` **no** se crean como secretos del repositorio, solo en el Environment. Si GitHub no tiene el Environment `release`, lo crea vacío en la primera ejecución; el job `preflight` fallaría entonces con 5 (faltan los secretos), sin llegar a Unity.
 
 Sin `AF_RELEASE_APPLICATION_ID`, con `com.amazonfill.dev` o con un ID que lleve «amazon», el workflow falla en el primer job, sin pedir la licencia de Unity. Mientras la variable no exista, el job `build-android` de `ci.yml` sigue construyendo un ensayo con la identidad de prueba. Cuando exista, ese job construye el release con el ID definitivo, firmado con la clave de depuración, y solo `release.yml` lo firma con la de subida.
 
