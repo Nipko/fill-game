@@ -37,6 +37,14 @@ android {
   }
 }
 // Android Resolver Exclusions End
+// AF D-042 Play Games: play-services-nearby no entra (anadido de D-042; docs/dev/play-games.md). Lo declara
+// GooglePlayGamesPluginDependencies.xml del plugin 2.3.0 y EDM4U lo escribe arriba: aqui se quita la dependencia
+// declarada y cualquier llegada transitiva. Lo vigila ci/check-manifest.ps1 (componentes com.google.android.gms.nearby.).
+configurations.configureEach { c ->
+    c.withDependencies { deps -> deps.removeIf { it.group == 'com.google.android.gms' && it.name == 'play-services-nearby' } }
+    c.exclude group: 'com.google.android.gms', module: 'play-services-nearby'
+}
+// AF D-042 Play Games: fin
 android {
     namespace "com.unity3d.player"
     ndkPath "**NDKPATH**"

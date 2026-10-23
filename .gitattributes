@@ -137,6 +137,8 @@ LightingData.asset     binary
 *.dll   filter=lfs diff=lfs merge=lfs -text
 # Paquetes UPM descargados y versionados (D-039: Firebase Unity SDK 13.17.0 y EDM4U 1.2.189, por file: en Packages/manifest.json)
 /Packages/firebase/*.tgz  filter=lfs diff=lfs merge=lfs -text
+# D-042: Play Games plugin for Unity 2.3.0, reempaquetado desde el .unitypackage oficial (docs/dev/play-games.md §2)
+/Packages/playgames/*.tgz  filter=lfs diff=lfs merge=lfs -text
 
 # BEGIN unity vcs merge-setup
 # Unity scene and prefab merging. Managed block: edits here are overwritten.

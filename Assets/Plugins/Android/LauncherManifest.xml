@@ -11,6 +11,10 @@
   - 08 sec. 2.3 y sec. 7 (consentimiento antes que nada): Firebase Analytics arranca sin recoger nada, sin almacenamiento de
     analitica ni de anuncios y sin ID de publicidad; AF.Analytics.Firebase.FirebaseAnalyticsSink lo enciende con el consentimiento.
     Crashlytics arranca apagado y lo enciende el codigo en el arranque (AF.Analytics.Firebase.CrashReporting).
+  - D-042 (Play Games 2.3.0): se quita PlayGamesInitProvider de play-services-games-v2. Inicia PGS v2 al arrancar el proceso,
+    y PGS v2 intenta iniciar sesion solo, antes de saber la edad: con <13 no debe arrancar (D-033, anadido del 2026-10-23;
+    08 sec. 2.3 y 7). El plugin de Unity llama a PlayGamesSdk.initialize al crear su cliente, y AF.Save.PlayGames solo lo crea
+    con 13-17 o 18+ y con el APP_ID configurado (docs/dev/play-games.md sec. 6).
 -->
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -37,5 +41,8 @@
         <meta-data android:name="google_analytics_default_allow_ad_user_data" android:value="false"/>
         <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false"/>
         <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false"/>
+        <provider android:name="com.google.android.gms.games.provider.PlayGamesInitProvider"
+                  android:authorities="${applicationId}.playgamesinitprovider"
+                  tools:node="remove"/>
     </application>
 </manifest>
