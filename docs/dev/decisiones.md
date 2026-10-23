@@ -3728,3 +3728,17 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   Así entran en la plantilla de Remote Config y los interruptores de cada mecánica se pueden accionar desde la consola.
 - **Sin cambio de comportamiento:** los valores siguen siendo los mismos, y un valor remoto con el nombre viejo no existe, porque nunca se publicó.
 - **Encargo:** carril `tanda5/rc-plantilla` (Q-RC-1).
+
+## D-044 · Publicar ya la web en tintalu.com; Codex publica, completa los datos y lleva el logo y la marca
+
+- **Fecha:** 2026-10-23. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat: «la pagina web y el resto del contenido ya esta, esta publicada? sino pasala a codex que se encargue de publicar y completar todo con respecto a eso, como tambien el logo de la app y lo que falta con la marca».
+- **Decisión:**
+  - **La web se publica ahora en `tintalu.com`**, sin esperar al dictamen de marca, por decisión expresa del dueño. Esto levanta para la web la espera de D-034, Q-AWS-9 y D-041. **Play Console** y el **`applicationId` definitivo** siguen esperando al dictamen.
+  - **DNS:** se usa la opción A de `infra/README.md`. El DNS se queda en Cloudflare, con certificado de ACM en us-east-1 validado por CNAME.
+  - **Prod:** la web pública va en el entorno de prod, con los stacks de web y CDN.
+  - **Reparto del trabajo:**
+    - el cambio de CDK lo hace el equipo de Claude (carril `tanda5/web-dominio`);
+    - el despliegue, el DNS y los datos del dueño los hace Codex con el dueño (`docs/dev/traspaso/codex-web-marca.md`).
+  - **Logo y marca:** Codex prepara el encargo del icono (07 §10.1) y lo que falta de la marca: completar la investigación en INPI y WIPO, y el paquete para el abogado.
+- **Riesgo aceptado por el dueño:** usar «Tintalú» en público antes del dictamen.
