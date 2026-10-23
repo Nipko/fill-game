@@ -1,5 +1,7 @@
 # Encargo de arte: assets de la tienda (icono, gráfico, capturas y vídeo) · BORRADOR
 
+> **Actualización del icono, 23-10-2026:** el dueño aprobó la identidad oficial de una cuia vertiendo al río y encargó sus exportaciones, incluida iOS. La selección vigente y archivos están en [marca oficial v1](../art/marca-oficial/v1/README.md). Sus entregas y procedencia sustituyen las alternativas y el encargo humano del icono de este borrador. El resto de piezas de tienda conserva sus pendientes; la aprobación visual no acredita un dictamen jurídico ni la publicación de la app.
+
 Fecha: 2026-10-20 · Autor: equipo Spark (agente; tanda 5, bloque B13) · Para: el dueño, que lo envía al artista 2D freelance, y el asesor cultural (07 §8.2, fila «Ficha de tienda y creativos de UA») · Estado: **borrador; no se envía hasta que el dueño lo revise.**
 
 Fuentes: 07 §10 (assets de tienda; manda), §1.3 (trade dress excluido), §7 (UI kit), §8 (pautas culturales) y §11 (fila «Tienda»: 1 + 24 + 1 + 2 piezas, 8 días-persona [P]); 08 §13.1 #5 y #6; glosario §1.2-§1.3; D-003 (dirección visual «Selva brillante premium»); D-013 y D-016 (TiTino); `docs/art/direccion-visual-v2.md`; los textos, de `es-419/ficha.md`, `en/ficha.md` y `pt-BR/ficha.md` §6.

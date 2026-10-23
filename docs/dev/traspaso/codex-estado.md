@@ -9,7 +9,7 @@
 - `support@parallext.com` es **solo soporte**. Habrá otro buzón de privacidad; dirección pendiente.
 - Objetivo de disponibilidad mundial; no equivale a una revisión jurídica mundial ya completada.
 - Registro de marca y sus gastos **aplazados** hasta tracción/versiones posteriores. No continuar solicitudes, selección de despachos de registro ni presupuesto Madrid en este encargo.
-- Comparar dos bocetos provisionales: cuia que vierte y TiTino. Ninguno elegido como final.
+- Identidad oficial aprobada: una cuia alargada que vierte púrpura sobre río ámbar con meandro adicional; dosis transversales como en el juego. La elección final sustituye los primeros bocetos de dos cuias y TiTino. El dueño pidió también versión iOS.
 
 No se inventó una aprobación de D-045. El integrador debe reflejar estas decisiones en el canon. El aplazamiento del registro no resuelve expresamente el requisito anterior de dictamen antes del applicationId/subida a Play (D-034/regla 6); queda por reconciliar antes de esa acción, sin impedir preparar la web.
 
@@ -19,12 +19,12 @@ No se inventó una aprobación de D-045. El integrador debe reflejar estas decis
 - `docs/legal/acuerdo-publicacion-borrador.md`: bases de licencia y anexos, sin inventar remuneración ni facultades; no listo para firma.
 - `docs/legal/paquete-abogado.md`: revisión pendiente de operación, privacidad y consumo; preguntas técnicas y correo preparado, no enviado. La búsqueda de marca sigue parcial.
 - `docs/legal/inventario-web.md`: marcadores restantes de datos/revisión en web y ficha. No se eliminaron marcadores legales sin resolverlos.
-- `docs/art/encargo-icono.md`: dirección, cuatro conceptos del canon, requisitos de entrega y comparación cuia/TiTino.
+- `docs/art/marca-oficial/v1/`: maestro aprobado sin modificar, logo horizontal/vertical, Play 512, App Store 1024, catálogo iOS normal/oscuro/tintado, Android adaptativo/monocromo y legacy, favicons, procedencia, guía y exportador. `docs/art/encargo-icono.md` señala esta selección vigente y conserva las alternativas históricas.
 - Web en español, inglés y portugués: Wyoming y dirección de correspondencia de la LLC, operación desde Colombia, S.A.S como editora prevista y soporte confirmado. Privacidad conserva su buzón pendiente. Fuentes y salida generada incluidas.
 
 Los tres PDF se extrajeron y revisaron visualmente, incluidas páginas escaneadas. La extracción detallada queda en `Logs/legal-review/datos-empresas.md`, **ignorada por Git**, junto a renders locales. No se incluyen EIN, NIT, documentos personales, firmas ni originales en el commit. Los documentos aportados no prueban todas las facultades vigentes ni los datos actuales de las cuentas de plataforma.
 
-Los dos bocetos generados con IA se mostraron al dueño y permanecen en la carpeta local de imágenes generadas de Codex. No se incorporaron a Assets ni se certificaron como exportaciones Play. Cuia comunica mejor la mecánica; TiTino necesita simplificación para funcionar como icono pequeño. Falta elección y arte final.
+La identidad oficial v1 está preparada en el repositorio; PNG bajo Git LFS. Se revisaron visualmente miniaturas y recortes, y se comprobaron dimensiones, canales, peso Play y referencias del catálogo. El original se conserva por SHA-256. No se integró en Assets/web ni se ejecutó Xcode, Unity o prueba física para estos iconos. Las capas transparentes y monocromas son derivados con ImageGen; tamaños y composiciones tipográficas se exportan de forma determinista. No se entregan PSD, vector ni proyecto Icon Composer.
 
 ## Verificación y alcance
 
@@ -42,7 +42,7 @@ Se amplió mínimamente el alcance original a dos líneas de `infra/test/web/sit
 1. Dirección y puesta en servicio del correo de privacidad; encargado/contactos adicionales cuando correspondan.
 2. Facultades vigentes, cadena de derechos, términos económicos y firma de licencia; revisión contable de ambas entidades.
 3. Resolver marcadores legales y datos operativos: retención Analytics real, SDK/ads y seller IDs, créditos, fechas y versiones. El canon indica `consent_text_version = 1` inicial; coordinar la versión final con Remote Config, sin afirmar que se verificó producción.
-4. Elección del concepto visual y entregables definitivos.
+4. Integrar el paquete visual oficial v1 en Unity/web/Xcode y comprobarlo en builds/dispositivos; el concepto y las exportaciones ya están resueltos. Capturas, gráfico de tienda y vídeo siguen siendo piezas independientes.
 5. Integración real del cambio Cloudflare/web-only. En la base comprobada, `infra/README.md` aún describe el cambio pendiente y no ofrece el procedimiento nuevo. La mera existencia/ascendencia de `tanda5/web-dominio` no demuestra que su implementación esté integrada.
 
 **No se desplegó, no se hizo bootstrap, no se cambió DNS y no se generó gasto.** Tras integrar infraestructura y cerrar contenido publicable: preparar el diff de los stacks web prod, presentarlo al dueño y seguir la aprobación concreta del encargo antes de deploy/DNS. No publicar como definitivas las políticas con marcadores pendientes.

@@ -1,0 +1,2 @@
+<!-- Dentro de application; no sustituye el manifest completo. -->
+<application android:icon="@mipmap/ic_launcher" />

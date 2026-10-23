@@ -1,6 +1,8 @@
 # Tintalú: dirección y encargo del icono
 
-23-10-2026 · El dueño comparó cuia que vierte y TiTino y **eligió la dirección de las cuias vertiendo**. Pidió una versión simplificada para el icono, sin texto y con toque amazónico. La exportación final aún no está integrada. El registro de marca está aplazado. Estas propuestas no llevan ® ni acreditan exclusividad.
+23-10-2026 · **Identidad oficial v1 aprobada por el dueño:** una cuia de vidrio que vierte púrpura al río ámbar, con un meandro adicional al fondo. Dosis transversales fieles al juego; el río cambia de color solo desde el vertimiento aguas abajo. El paquete de [marca oficial v1](marca-oficial/v1/README.md) contiene el maestro aprobado, logotipos y exportaciones Android, iOS y web. Preparado y verificado localmente; integración en la app pendiente. Registro de marca aplazado, sin ®.
+
+Los apartados 1–4 conservan el encargo y alternativas históricos; la selección y entrega actuales prevalecen sobre sus propuestas de comparar conceptos o encargar el original a un artista. No se acredita revisión cultural ni exclusividad jurídica.
 
 ## 1. Criterio de diseño
 
@@ -35,6 +37,8 @@ No considerar que evitar proporciones infantiles resuelva por sí solo las polí
 
 Evitar texto promocional, rankings, ofertas o insignias falsas; sonrisa/flecha de Amazon; decoración étnica no revisada; gatos, calderos, gemas y otros elementos vetados por la dirección visual. Fuentes del proyecto: `docs/store-listing/assets-tienda.md`, GDD 07 §10.1 y D-003.
 
-## 5. Próximo paso
+## 5. Entrega vigente y próximo paso
 
-Dirección A elegida por el dueño: dos cuias-garrafa de vidrio vertiendo, fieles a las capturas del juego, con cuello corto y fibra en boca/base. El icono simplificado elimina nombre, placa, racimos y paisaje; conserva tres tintes, chorro púrpura y dos hojas de palma sobre azul petróleo. Se produjo una imagen con ImageGen y una corrección de inclinación/márgenes; queda local en `Logs/art-concepts/tintalu-icono/` con sus prompts, fuera de Git. Aún faltan exportaciones de tienda, capas adaptativas y monocroma, comprobación a tamaños pequeños/máscaras e integración. No se tocó `Assets/`, no se cambió el nombre de la app y no se presentó ninguna marca.
+La evolución posterior sustituyó las dos cuias y las palmas por una sola cuia alargada y un río con meandro sobre azul petróleo. El dueño aprobó el último dibujo como oficial y pidió versión iOS. `marca-oficial/v1/` conserva el original sin modificación, procedencia/prompts, logo con Baloo 2, iconos de tiendas, catálogo Xcode normal/oscuro/tintado, recursos adaptativos/monocromos Android y favicons. Incluye lámina de tamaños y máscaras, manifiesto SHA-256 y exportador reproducible. No hay PSD ni vector original; no afirmar lo contrario.
+
+Siguiente paso del integrador: asignar iconos en Unity y web, incorporar el catálogo iOS al exportar a Xcode y comprobar builds y dispositivos. No se tocó `Assets/`, no se cambió el applicationId ni se publicó en tiendas.
