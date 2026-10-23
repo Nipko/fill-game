@@ -93,7 +93,7 @@
     <tr><td>Crash reports</td><td>90 days</td></tr>
     <tr><td>Analytics</td><td>[[DATO DEL DUEÑO: retención configurada en Google Analytics para Firebase]]</td></tr>
     <tr><td>Saved game, age range and consent</td><td>On your phone, until you delete the account or uninstall the game</td></tr>
-    <tr><td>Copy of the saved game in Google Play Games</td><td>Until you delete the account from the game or delete your Play Games data</td></tr>
+    <tr><td>Copy of the saved game in Google Play Games</td><td>Until you delete the account from the game (see <a href="#borrado">Deleting your account and data</a>) or delete the game’s data in the Play Games app</td></tr>
   </tbody>
 </table>
 </div>
@@ -113,11 +113,11 @@
 <h2 id="borrado">11. Deleting your account and data</h2>
 <p>There are two ways, with the same result:</p>
 <ol>
-  <li><strong>In the game:</strong> Settings › “Delete account and data”, with two confirmations. It also deletes the game data on your phone and the copy of your saved game in Google Play Games (if you are offline, it is deleted the next time you open the game).</li>
+  <li><strong>In the game:</strong> Settings › “Delete account and data”, with two confirmations. It also deletes the game data on your phone and asks for the copy of your saved game in Google Play Games to be deleted.</li>
   <li><strong>On the web:</strong> on <a href="{{page:delete}}">the account deletion page</a>, with the code shown in Settings.</li>
 </ol>
 <p>Your anonymous account, your data on our server and your Firebase Authentication user are deleted. The purchase ledger is kept, <strong>without your identifier</strong>, for tax purposes (section 9). For 2 hours we also keep a deleted-account mark, with your identifier only as a hash, so that nothing is written again in the name of the deleted account. Purchases are not refunded.</p>
-<p>From the web we cannot delete the copy of your saved game in Google Play Games, because it is in your Google account: delete it from the game or from the Play Games settings. [[ABOGADO: revisar]]</p>
+<p><strong>The copy in Google Play Games:</strong> the game asks for it to be deleted when you delete the account, and checks that it was deleted (deleting it again if needed) the next time you open the game with Play Games, if you are 13 or older. If you don’t open the game again, or you delete the account from the web (which cannot reach your Google account), delete it yourself from the Play Games app (Settings › delete this game’s data). [[ABOGADO: revisar]]</p>
 
 <h2 id="seguridad">12. Security</h2>
 <p>Data travels encrypted (HTTPS) and is stored encrypted on our server. Features that grant value (purchases and in-app deletion) require the integrity check. The game doesn’t keep secret keys on the phone, and our logs don’t store your UID in clear text or your purchase receipts.</p>

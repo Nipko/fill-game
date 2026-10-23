@@ -93,7 +93,7 @@
     <tr><td>Informes de fallos</td><td>90 días</td></tr>
     <tr><td>Analítica</td><td>[[DATO DEL DUEÑO: retención configurada en Google Analytics para Firebase]]</td></tr>
     <tr><td>Partida, banda de edad y consentimiento</td><td>En tu teléfono, hasta que borres la cuenta o desinstales el juego</td></tr>
-    <tr><td>Copia de la partida en Google Play Juegos</td><td>Hasta que borres la cuenta desde el juego o borres tus datos de Play Juegos</td></tr>
+    <tr><td>Copia de la partida en Google Play Juegos</td><td>Hasta que borres la cuenta desde el juego (ver <a href="#borrado">Borrar tu cuenta y tus datos</a>) o borres los datos del juego en la app Play Juegos</td></tr>
   </tbody>
 </table>
 </div>
@@ -113,11 +113,11 @@
 <h2 id="borrado">11. Borrar tu cuenta y tus datos</h2>
 <p>Hay dos caminos con el mismo resultado:</p>
 <ol>
-  <li><strong>En el juego:</strong> Ajustes › «Eliminar cuenta y datos», con dos confirmaciones. También borra los datos del juego de tu teléfono y la copia de tu partida en Google Play Juegos (si no hay conexión, se borra la próxima vez que abras el juego).</li>
+  <li><strong>En el juego:</strong> Ajustes › «Eliminar cuenta y datos», con dos confirmaciones. También borra los datos del juego de tu teléfono y pide borrar la copia de tu partida en Google Play Juegos.</li>
   <li><strong>En la web:</strong> en <a href="{{page:delete}}">la página de eliminación de cuenta</a>, con el código que ves en Ajustes.</li>
 </ol>
 <p>Se borran tu cuenta anónima, tus datos en nuestro servidor y el usuario de Firebase Authentication. Se conserva el libro de compras, <strong>sin tu identificador</strong>, por obligación fiscal (sección 9). Durante 2 horas guardamos además una marca de cuenta borrada, con tu identificador solo como hash, para que nada vuelva a escribirse a nombre de la cuenta borrada. Las compras no se reembolsan.</p>
-<p>Desde la web no podemos borrar la copia de tu partida en Google Play Juegos, porque está en tu cuenta de Google: bórrala desde el juego o desde la configuración de Play Juegos. [[ABOGADO: revisar]]</p>
+<p><strong>La copia en Google Play Juegos:</strong> el juego pide borrarla al eliminar la cuenta y comprueba que se borró (y, si hace falta, la vuelve a borrar) la próxima vez que lo abras con Play Juegos y con 13 años o más. Si no vuelves a abrir el juego, o eliminas la cuenta desde la web (que no puede llegar a tu cuenta de Google), bórrala tú desde la app Play Juegos (Ajustes › eliminar los datos de este juego). [[ABOGADO: revisar]]</p>
 
 <h2 id="seguridad">12. Seguridad</h2>
 <p>Los datos viajan cifrados (HTTPS) y se guardan cifrados en nuestro servidor. Las funciones que dan valor (compras y borrado desde la app) exigen la verificación de integridad. El juego no guarda claves secretas en el teléfono, y nuestros registros no guardan tu UID en claro ni tus comprobantes de compra.</p>

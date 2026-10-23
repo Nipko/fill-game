@@ -121,7 +121,7 @@
     <tr><td>Relatórios de falhas</td><td>90 dias</td></tr>
     <tr><td>Análises</td><td><mark class="pending">[[DATO DEL DUEÑO: retención configurada en Google Analytics para Firebase]]</mark></td></tr>
     <tr><td>Jogo salvo, faixa de idade e consentimento</td><td>No seu celular, até você excluir a conta ou desinstalar o jogo</td></tr>
-    <tr><td>Cópia do jogo salvo no Google Play Games</td><td>Até você excluir a conta pelo jogo ou apagar os seus dados do Play Games</td></tr>
+    <tr><td>Cópia do jogo salvo no Google Play Games</td><td>Até você excluir a conta pelo jogo (veja <a href="#borrado">Excluir sua conta e seus dados</a>) ou apagar os dados do jogo no app Play Games</td></tr>
   </tbody>
 </table>
 </div>
@@ -141,11 +141,11 @@
 <h2 id="borrado">11. Excluir sua conta e seus dados</h2>
 <p>Há dois caminhos com o mesmo resultado:</p>
 <ol>
-  <li><strong>No jogo:</strong> Configurações › «Excluir conta e dados», com duas confirmações. Também apaga os dados do jogo do seu celular e a cópia do seu jogo salvo no Google Play Games (se não houver conexão, ela é apagada na próxima vez que você abrir o jogo).</li>
+  <li><strong>No jogo:</strong> Configurações › «Excluir conta e dados», com duas confirmações. Também apaga os dados do jogo do seu celular e pede para apagar a cópia do seu jogo salvo no Google Play Games.</li>
   <li><strong>Na web:</strong> na <a href="/tintalu/pt-br/excluir-conta/">página de exclusão de conta</a>, com o código que aparece em Configurações.</li>
 </ol>
 <p>São apagados sua conta anônima, seus dados no nosso servidor e o usuário do Firebase Authentication. O livro de compras é mantido, <strong>sem o seu identificador</strong>, por obrigação fiscal (seção 9). Durante 2 horas guardamos também uma marca de conta excluída, com o seu identificador só como hash, para que nada volte a ser gravado em nome da conta excluída. As compras não são reembolsadas.</p>
-<p>Pela web não conseguimos apagar a cópia do seu jogo salvo no Google Play Games, porque ela está na sua conta do Google: apague-a pelo jogo ou nas configurações do Play Games. <mark class="pending">[[ABOGADO: revisar]]</mark></p>
+<p><strong>A cópia no Google Play Games:</strong> o jogo pede para apagá-la ao excluir a conta e confere se foi apagada (e, se precisar, apaga de novo) na próxima vez que você abrir o jogo com o Play Games e com 13 anos ou mais. Se você não abrir o jogo de novo, ou excluir a conta pela web (que não chega à sua conta do Google), apague-a você mesmo no app Play Games (Configurações › excluir os dados deste jogo). <mark class="pending">[[ABOGADO: revisar]]</mark></p>
 
 <h2 id="seguridad">12. Segurança</h2>
 <p>Os dados viajam criptografados (HTTPS) e são guardados criptografados no nosso servidor. Os recursos que dão valor (compras e exclusão pelo app) exigem a verificação de integridade. O jogo não guarda chaves secretas no celular, e nossos registros não guardam seu UID em claro nem seus comprovantes de compra.</p>

@@ -42,11 +42,13 @@ En el editor, en los tests y en un build sin `APP_ID` (hoy todos: D-034), `PlayG
 
 ### 1.2 Si la nube llega tarde
 
-Pasa si el arranque dejó de esperar o en el primer arranque. Si la fusión cambia el perfil (gana la nube o aporta campos), `TickCloud` hace lo mismo que el cambio de idioma:
-- guarda el fusionado, firmado;
+Pasa si el arranque dejó de esperar o en el primer arranque. Se guarda **el perfil remoto** (`CloudSyncReport.Remote`), no la fusión de cuando llegó, y `TickCloud` lo vuelve a fusionar con **el perfil vivo** al aplicarlo (`CloudMerge.Resolve`, las reglas de 08 §11): lo jugado o comprado mientras esperaba entra en la fusión (revisión de D-042). Si la fusión cambia el perfil de la sesión, `TickCloud` hace lo mismo que el cambio de idioma:
+- guarda el fusionado, firmado, y lo sube;
 - recarga la escena al inicio con él (`RebuildUi(persist: false)`).
 
-Espera si hay una compra en curso, un borrado de cuenta o la pantalla de consentimiento. La sesión de nube (`CloudSession`) pasa a la escena siguiente con la recarga, ya fusionada.
+Si gana el vivo entero, no recarga y solo lo sube si la nube quedó atrás. Espera si hay una compra en curso, un borrado de cuenta o la pantalla de consentimiento. **Mientras espera, no se sube nada** (`CloudReplacePending`: ni las victorias, ni la compra, ni el segundo plano, ni el reintento), porque sería subir el local sin fusionar. La sesión de nube (`CloudSession`) pasa a la escena siguiente con la recarga, ya fusionada.
+
+Una compra que pierde la fusión (la nube tiene más nivel) sigue la regla de siempre (Q-B8-1: los consumibles y `applied_purchases` son del ganador) y la vuelve a acreditar `restoreLedger`.
 
 ### 1.3 Subidas (08 §11)
 
@@ -69,10 +71,12 @@ Espera si hay una compra en curso, un borrado de cuenta o la pantalla de consent
 - **Lo que no entra del `.unitypackage`:**
   - `Assets/ExternalDependencyManager/` (EDM4U **1.2.182**): el proyecto ya tiene EDM4U 1.2.189 de Firebase, y el `package.json` del plugin pide 1.2.182 o superior;
   - `Assets/Plugins/Android/GooglePlayGamesManifest.androidlib/project.properties`: lo crea el Setup con el manifiesto (§8).
-- **Rarezas de Google que quedan tal cual** (para que la procedencia se pueda auditar):
-  - `current-build/GooglePlayGamesPlugin-2.2.0.unitypackage` (2,8 MB), que Unity no importa desde `Packages/`;
-  - `Editor/GooglePlayGamesPlugin_v2.2.1.txt`;
-  - `PluginVersion.cs` dice 2.1.0.
+- **Rarezas de Google que quedan tal cual dentro del `.tgz`** (no se tocan para que la procedencia se pueda auditar contra el `.unitypackage` oficial):
+  - `current-build/GooglePlayGamesPlugin-2.2.0.unitypackage` (2,8 MB): un paquete viejo anidado. Unity no importa un `.unitypackage` desde `Packages/` y no entra en el build; solo pesa en Git LFS;
+  - `Editor/GooglePlayGamesPlugin_v2.2.1.txt`: la lista de archivos de la 2.2.1, que el plugin usa para limpiar versiones viejas;
+  - `PluginVersion.cs` dice **2.1.0**: es lo que el plugin escribe en la meta-data `com.google.android.gms.games.unityVersion` y en `ProjectSettings/GooglePlayGameSettings.txt`. El código es el de la 2.3.0 (`package.json` 2.3.0, `play-services-games-v2` 22.1.0 y la API de eventos inmediatos de su nota de versión).
+- **`PlayGamesAppShortcutsActivity`** (de `play-services-games-v2`) es una actividad **exportada**: la usan los accesos directos de Play Games para abrir el juego. No pide permisos ni expone datos del juego, y viene así en la biblioteca de Google; se deja (quitarla podría romper la integración de Play Games con el sistema). Lo revisa el abogado con el resto del manifiesto.
+- **Por qué `GooglePlayGamesManifest.androidlib` se versiona** (y `PlayGamesSettings.asset` y `GooglePlayGameSettings.txt`): el plugin los escribe solo al abrir el Editor con Android como plataforma activa (`GPGSUpgrader`), aunque no haya configuración. Sin versionarlos, cada máquina y el CI tendrían archivos sin seguimiento y builds distintos (con o sin la meta-data `APP_ID`). Versionados, todos los builds son iguales; el Setup del dueño (§9) los sustituye en un PR propio y el `APP_ID` no es secreto (va en el manifiesto de la app). A diferencia de `FirebaseApp.androidlib` y `FirebaseCrashlytics.androidlib`, que Firebase genera desde `google-services.json` (con claves) y siguen fuera de git.
 
 ### 2.1 Cómo reproducir el `.tgz` (Git Bash, GNU tar 1.35)
 
@@ -133,10 +137,12 @@ Marcas (`ICloudSaveFlags`), fuera del perfil porque tienen que sobrevivir al bor
 
 | Marca | En el teléfono (`PlayerPrefs`) | Quién la pone | Quién la quita |
 |---|---|---|---|
-| Borrado pendiente | `af_cloud_delete_pending` = 1 | «Eliminar cuenta y datos», **tras** borrar `PlayerPrefs` | `CloudErase` cuando `af_main` está vacío |
+| Borrado pendiente | `af_cloud_delete_pending` = 1 | «Eliminar cuenta y datos»: **antes** de borrar lo local (si la app se cierra a mitad) y otra vez **tras** borrar `PlayerPrefs`; si el borrado local falla, vuelve a como estaba | `CloudErase` cuando `af_main` está vacío |
 | Subida pendiente | `af_cloud_resync_pending` = 1 | Una subida fallida o sin red | Una subida hecha con red, o el borrado |
 
 En el editor y en los tests, en memoria (`MemoryCloudSaveFlags`; `GameBootstrap.CloudFlagsOverride`).
+
+**Qué garantiza el borrado de la copia en la nube (y qué no):** la marca solo se procesa cuando el juego se vuelve a abrir **con sesión de Play Games** y con la banda 13-17 o 18+. Si el jugador no vuelve a abrir el juego, no tiene Play Games en el teléfono o declara `<13` en la primera ejecución siguiente, el snapshot puede quedar en su cuenta de Google hasta que lo borre él desde la app Play Games (Ajustes › eliminar los datos del juego). Así lo dicen la política de privacidad, 08 §13.3 y la nota del paso 2 de «Eliminar cuenta y datos» (`delete_account_cloud_note`), con `[[ABOGADO]]` en la web.
 
 ## 6. Edad, borrado y `PlayGamesInitProvider`
 
@@ -153,6 +159,7 @@ En el editor y en los tests, en memoria (`MemoryCloudSaveFlags`; `GameBootstrap.
 
   Así, una cuenta borrada sin red no vuelve de la nube.
 - **Borrado por la web:** no puede borrar Saved Games, que está en la cuenta de Google del jugador. Lo dicen la política de privacidad y 08 §13.3; lo revisa el abogado (§11, Q-PGS-3).
+- **`<13` declarado en Ajustes con la nube en marcha** (revisión de D-042): `CloudSession.Stop()` deja la sesión `Closed` (sin marca de borrado) y cierra `PlayGamesCloudSave`; lo que llegue después no fusiona, no escribe (`WriteGate`) y no recarga (`OnCloudStarted` lo ignora con `ConsentBlocked`).
 
 ## 7. Privacidad (08 §13.3)
 
@@ -243,6 +250,7 @@ Hoy no hacen falta para construir: sin ellos, el build va sin Play Games (nube f
 | Q-PGS-3 | El borrado por la web no puede borrar Saved Games | (a) decirlo en la política y en Data Safety (hecho) · (b) además, borrar `af_main` desde la app en el siguiente arranque si el servidor dice que la cuenta se borró | **(a)**, aplicada; (b) necesita un contrato nuevo en `infra/contracts/v1` |
 | Q-PGS-4 | ¿Cuánto espera el arranque a Play Games? | (a) 2.500 ms [P] con la pantalla de arranque, y si no, la fusión llega tarde y recarga · (b) no esperar | **(a)**, aplicada (`CloudBootWaitMs`) |
 | Q-PGS-5 | Quitar `PlayGamesInitProvider` (§6) | (a) quitarlo, por la edad · (b) dejarlo | **(a)**, aplicada; hay que comprobarlo en el teléfono |
+| Q-PGS-6 | La política y la app prometían que la copia de Play Juegos se borra siempre; el código solo puede comprobarlo al volver a abrir el juego con Play Juegos y 13+ | (a) ajustar el texto a lo que hace el código (y remitir a la app Play Juegos) · (b) prometer más y cambiar el código | **(a)**, aplicada en la revisión de D-042 (privacidad, 08 §13.3, §5 y `delete_account_cloud_note`) |
 
 ## 12. Pruebas y verificación
 
@@ -258,6 +266,8 @@ Hoy no hacen falta para construir: sin ellos, el build va sin Play Games (nube f
   - borrado y cierre;
   - `CloudErase`;
   - `CloudSession`: arranque, subidas cada 3 victorias, nunca antes de fusionar, reintento, borrado pendiente y borrado de la cuenta;
+  - `Stop()` con la sesión arrancando (no fusiona, no escribe, sin marca) y el cierre inmediato de escrituras al borrar la cuenta;
+  - el conflicto de Play con una versión de esquema más nuevo (se queda esa) y el perfil remoto en el informe;
   - el blob sin `consent` ni `account_code`, y la firma anterior.
 - **PlayMode** `PlayGamesCloudBootTests` (escena `Game` real):
   - el arranque que espera y empieza con la nube;
@@ -265,5 +275,8 @@ Hoy no hacen falta para construir: sin ellos, el build va sin Play Games (nube f
   - sin red al arrancar;
   - `<13` en el primer arranque;
   - 18+ en el primer arranque, que recupera la partida;
-  - el borrado de la cuenta con la marca pendiente y sin escrituras.
+  - el borrado de la cuenta con la marca pendiente y sin escrituras;
+  - la fusión tardía con una compra en vuelo y con una victoria mientras espera: no se pierden y no se sube el local sin fusionar;
+  - `<13` en Ajustes con la nube arrancando: ni `Save` ni recarga.
+- **130 %:** `DeleteAccountWaitTests.At130Percent_TheNewTextsFit` mide también el paso 2 con la nota de Play Juegos, en los tres idiomas.
 - **Los comandos y sus resultados** van en la descripción del PR.

@@ -67,7 +67,10 @@ el fusionado y se guarda. Con el perfil en solo lectura (08 §4.4) no se fusiona
 
 ## 3. Integridad (`integrity.hmac`)
 
-- **Lo firmado:** el JSON del perfil (`ProfileJson.Serialize`, determinista) con `integrity.hmac` = null. Las claves nuevas se omiten en su
+- **Lo firmado:** el JSON del perfil (`ProfileJson.Serialize`, determinista) con `integrity.hmac` = null, sin lo que es solo del dispositivo
+  (`CloudMerge.SharedJson`): `purchase_queue` (F3-3) y, desde D-042, `consent` (con la banda de edad) y `account_code`, que no suben a la
+  nube; editarlos a mano no rompe la firma (no dan valor económico, y la fusión ya se queda con los del dispositivo). Un perfil firmado
+  antes de D-042, con esos dos campos dentro de lo firmado, sigue valiendo hasta su próxima escritura (`ProfileIntegrity.Verify`). Las claves nuevas se omiten en su
   default, así un perfil anterior a B8 se escribe igual que antes.
 - **La clave:** SHA-256 de una sal pública + `integrity.device_first`, que es la huella (SHA-256 con sal, 32 hexadecimales) del id del
   instalación que creó el perfil (un id aleatorio, `af_install_id` en PlayerPrefs; nunca un identificador del dispositivo). Al restaurar en otro teléfono,
