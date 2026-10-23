@@ -189,6 +189,11 @@ def section_9(text: str) -> str:
 
 def table_rows(section: str):
     """Filas de la tabla: [(primera celda, tipo, default)] en el orden de 08 §9."""
+    return [cells[:3] for cells in table_rows_full(section)]
+
+
+def table_rows_full(section: str):
+    """Filas de la tabla con sus seis celdas: [(clave, tipo, default, rango, dueño, uso)] en el orden de 08 §9."""
     rows = []
     stray = []
     for line in section.split("\n"):
@@ -202,7 +207,7 @@ def table_rows(section: str):
         cells = line.split("|")
         if len(cells) != 8:
             raise GddError("fila con %d celdas (se esperan 6): %s" % (len(cells) - 2, line[:80]))
-        rows.append((cells[1].strip(), cells[2].strip(), cells[3].strip()))
+        rows.append(tuple(c.strip() for c in cells[1:7]))
     if stray:
         raise GddError("%d filas de 08 §9 no empiezan por una clave entre comillas invertidas: %s" % (len(stray), " | ".join(stray)))
     if len(rows) < 100:
@@ -297,9 +302,15 @@ def convert(raw: str, type_: str, key: str):
 
 def read_params(gdd_text: str):
     """[(clave, tipo, default, pending)] en el orden de 08 §9. pending es el texto de la celda si no hay valor literal."""
-    params = []
+    return [p for _, rows in read_param_rows(gdd_text) for p in rows]
+
+
+def read_param_rows(gdd_text: str):
+    """Por cada fila de 08 §9, en su orden: (sus seis celdas, [(clave, tipo, default, pending)] que salen de ella)."""
+    out = []
     seen = set()
-    for key_cell, type_cell, default_cell in table_rows(section_9(gdd_text)):
+    for cells in table_rows_full(section_9(gdd_text)):
+        key_cell, type_cell, default_cell = cells[:3]
         keys, first = expand_keys(key_cell)
         types = _types(type_cell)
         if first in INTERPRETATIONS:
@@ -333,8 +344,8 @@ def read_params(gdd_text: str):
             if row[0] in seen:
                 raise GddError("clave repetida en 08 §9: %s" % row[0])
             seen.add(row[0])
-            params.append(row)
-    return params
+        out.append((cells, rows))
+    return out
 
 
 # --------------------------------------------------------------------------------------------------------------------

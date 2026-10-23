@@ -12,6 +12,7 @@ propuesta de esta nota; según la regla del dueño del 2026-10-19, va la recomen
 | Pieza | Dónde | Motor | Depende de |
 |---|---|---|---|
 | Generador de `RemoteConfigDefaults.json` | `tools/remote-config/rc_defaults.py` (+ `test_rc_defaults.py`) | — | Python 3.14, biblioteca estándar |
+| Generador de la plantilla de Firebase (§9) | `tools/remote-config/rc_template.py` (+ `test_rc_template.py`) → `tools/out/remote_config_template_{dev,prod}.json` | — | `rc_defaults.py` |
 | Defaults compilados | `Assets/_Project/Data/Config/RemoteConfigDefaults.json` y `Scripts/RemoteConfig/RemoteConfigDefaults.Generated.cs` (generados) | — | — |
 | `AF.Events` | `Scripts/Events/` | no | — |
 | `AF.RemoteConfig` | `Scripts/RemoteConfig/` | no | — |
@@ -225,3 +226,94 @@ recogida apagada y la línea `AF_EVENT_UNSENT` en el log, porque la escena de pr
 
 La de `CLAUDE.md` en `spark/t5-b7` y en un worktree temporal con los parches aplicados (siete desde que se retiró `B7-gdd.diff`); resultados en el informe del
 bloque.
+
+## 9. Publicar la plantilla en Firebase (guía del dueño)
+
+Hasta ahora ningún proyecto de Firebase (dev `fill-dev-e75a2`, prod `tintalu`) tiene parámetros publicados: el juego funciona
+con los defaults compilados. Esta sección deja lista la publicación. **Los agentes no tocan la consola ni la nube: publica el
+dueño.**
+
+### 9.1 La plantilla
+
+`python tools/remote-config/rc_template.py` lee 08 §9 con el mismo lector que `rc_defaults.py` y escribe la plantilla en el
+formato de la API REST de Remote Config v1 (`{"conditions": [], "parameters": {clave: {"defaultValue": {"value": …},
+"description": …, "valueType": …}}, "parameterGroups": {}}`):
+
+- `tools/out/remote_config_template_dev.json` → proyecto `fill-dev-e75a2`;
+- `tools/out/remote_config_template_prod.json` → proyecto `tintalu`.
+
+08 §9 no distingue valores por entorno, así que **las dos son iguales**. `--check` no escribe y sale con 1 si alguna difiere de
+lo que generaría; `--self-test` prueba la herramienta en memoria y contra la tabla real; `test_rc_template.py` comprueba los
+tipos, que cada valor es el default de `RemoteConfigDefaults.json`, que no hay claves fuera de 08 §9, los límites y la forma de
+la API. Cada vez que cambie 08 §9 se regeneran las dos (con `rc_defaults.py`) y se vuelven a publicar (§9.4).
+
+- **Valores:** exactamente los defaults compilados, escritos como el cliente se los da a Firebase
+  (`FirebaseRemoteConfigBackend.DefaultsFor`): `int` y `float` → `NUMBER` (un float entero va sin «.0», como el «R» de .NET),
+  `bool` → `BOOLEAN` (`true`/`false`), `string` (y `enum`) → `STRING`, `json` (y `map país→…`) → `JSON` compacto. El cliente
+  trata un valor remoto igual al default como si no hubiera llegado: **publicar la plantilla no cambia el comportamiento**.
+- **Descripción:** «Rango 08 §9: <rango>. <uso>» de la fila, cortada a 256 caracteres. Es la chuleta para editar en la consola.
+- **Quedan fuera (226 de 252 parámetros van en la plantilla):**
+  - las 6 claves sin valor literal en 08 §9 (`biz_kpi_targets`, `biz_kpi_alert_thresholds`, `eco_calendar_table_v1`,
+    `eco_calendar_table_v2`, `league_prizes`, `regatta_prizes`; Q-B7-6): no hay valor que publicar;
+  - las 20 claves con punto (`mech_enabled.*` y `mech_debut_level.*`): Remote Config solo admite claves de letras inglesas,
+    cifras y «_» que empiezan por letra o «_». Siguen con su default compilado y **no se pueden cambiar desde la consola**
+    (tampoco el interruptor de corte de cada mecánica) hasta que 08 §9 les dé un nombre válido (pregunta Q-RC-1 del informe).
+  - La herramienta las nombra en cada ejecución.
+
+### 9.2 Desarrollo (`fill-dev-e75a2`): importar en la consola
+
+1. Regenera y comprueba: `py -3.14 tools/remote-config/rc_template.py --check` («identico (226 parámetros; …)»).
+2. Consola de Firebase → proyecto `fill-dev-e75a2` → **Remote Config**. Si ya hay parámetros o condiciones, descarga antes una
+   copia: menú ⋮ → **Descargar el archivo de configuración actual** (*Download current config file*).
+3. Menú ⋮ → **Publicar desde un archivo** (*Publish from a file*) → elige `tools/out/remote_config_template_dev.json` →
+   revisa el resumen → **Publicar**. Ojo: **sustituye la plantilla entera**, incluidas las condiciones y los valores
+   condicionales que hubiera en la consola.
+4. Comprueba en el teléfono con el build de desarrollo: el juego debe comportarse igual (los valores publicados son los
+   compilados; la descarga se aplica en el arranque siguiente, §2.2).
+
+### 9.3 Con la CLI de Firebase (alternativa)
+
+La CLI publica la plantilla con `firebase deploy --only remoteconfig`, que lee la ruta de `firebase.json`. Para no añadir un
+`firebase.json` al repositorio, hazlo desde una carpeta temporal fuera de él:
+
+```
+mkdir C:\tmp\rc-dev ; cd C:\tmp\rc-dev
+copy <repo>\tools\out\remote_config_template_dev.json .
+# firebase.json con este contenido:
+#   { "remoteconfig": { "template": "remote_config_template_dev.json" } }
+firebase remoteconfig:get --project fill-dev-e75a2 -o copia_antes.json     # copia de lo publicado
+firebase deploy --only remoteconfig --project fill-dev-e75a2
+firebase remoteconfig:versions:list --project fill-dev-e75a2               # la versión nueva, arriba
+```
+
+Volver atrás: consola → Remote Config → **Historial de cambios** → versión anterior → **Revertir**, o
+`firebase remoteconfig:rollback --project fill-dev-e75a2` (con la versión que da `versions:list`; `--help` muestra la opción).
+
+### 9.4 Producción (`tintalu`): todavía no
+
+- **No publiques en `tintalu` hasta que esté registrada la app de prod** (con el `applicationId` definitivo, que espera el
+  dictamen de marca: `CLAUDE.md`, regla dura 6) y su `google-services.json`. Sin app no hay cliente que la lea, y publicar antes
+  solo deja una plantilla que nadie ha probado contra un build de release.
+- Cuando toque: el mismo procedimiento de §9.2 o §9.3 con `remote_config_template_prod.json` y `--project tintalu`, después
+  de probarlo en dev con la misma versión de la plantilla (las dos deben salir de la misma ejecución de `rc_template.py`).
+- Después de publicar, un cambio de 08 §9 que mueva un default **no llega** a los jugadores con solo subir un build: el valor
+  publicado manda sobre el compilado. Cada cambio de 08 §9 = regenerar, probar en dev y volver a publicar en los dos proyectos.
+
+### 9.5 Cambiar un valor sin romper 08 §9
+
+- **Solo dentro del rango de 08 §9** (está al principio de la descripción del parámetro). Un valor fuera del rango es un cambio de
+  diseño: primero se cambia 08 §9 (con su capítulo dueño) y después la plantilla, nunca al revés.
+- **Respeta el tipo y la forma:** `NUMBER` con punto decimal y sin separador de miles (`0.5`, no `0,5`); en las claves `int`, un
+  entero sin decimales (`3`, no `3.0`); `BOOLEAN` solo `true`/`false`; `JSON` válido y con la misma forma que el default (mismas
+  claves; las listas, con elementos del mismo tipo). El cliente descarta un valor que no entiende y se queda con el anterior
+  (`Rejected`, §2.2), así que un error de tipo no rompe el juego, pero el cambio no llega; el rango, en cambio, el cliente no lo
+  comprueba.
+- **Nunca subas `rc_schema`** por encima del que lleva el build publicado: el cliente ignora entero un conjunto con un esquema
+  mayor (08 §9).
+- No crees claves nuevas en la consola: una clave fuera de 08 §9 no existe para el cliente (se ignora). Las claves nuevas
+  nacen en 08 §9 y llegan con `rc_defaults.py` y `rc_template.py`.
+- Para valores por país, experimentos o pruebas (condiciones de Firebase), crea la condición en la consola y añade el valor
+  condicional sobre el parámetro existente; el valor por defecto de la plantilla sigue siendo el de 08 §9. Recuerda que volver a
+  publicar desde un archivo (§9.2, paso 3) borra esas condiciones si no están en el archivo.
+- Los cambios se aplican en el arranque siguiente a la descarga, y la descarga es como mucho cada 12 h (08 §9): un cambio tarda
+  hasta un día en llegar a todos.
