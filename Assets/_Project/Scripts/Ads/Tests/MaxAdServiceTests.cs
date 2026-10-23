@@ -156,6 +156,30 @@ namespace AF.Ads.Tests
         }
 
         [Test]
+        public void UmpAdultCorrectedToTeen_AfterInit_StopsLoadingAds()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: false, profile: LegalProfiles.Ump);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Loaded);
+            Assert.That(rig.Consent.IsReady(AdPlacement.Hint), Is.True);
+            int loads = rig.Port.Loads(MaxAdKind.Rewarded);
+
+            rig.Consent.Apply(FlagsFor(AgeBand.Teen, ads: false, profile: LegalProfiles.Ump)); // Ajustes › corregir la edad
+
+            Assert.That(rig.Consent.IsReady(AdPlacement.Hint), Is.False, "Q-MAX-6 (b): con 13-17 y UMP, ningún anuncio más");
+            AdOutcome? outcome = null;
+            rig.Consent.Show(AdPlacement.Hint, o => outcome = o);
+            Assert.That(outcome, Is.EqualTo(AdOutcome.NoFill));
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.LoadFailed);
+            rig.Clock.Advance(TimeSpan.FromMinutes(5));
+            rig.Consent.IsReady(AdPlacement.Hint);
+            Assert.That(rig.Port.Loads(MaxAdKind.Rewarded), Is.EqualTo(loads), "no vuelve a cargar");
+            Assert.That(rig.Port.HasUserConsent, Is.False);
+            Assert.That(rig.Port.DoNotSell, Is.True);
+            Assert.That(rig.Port.Initializations, Is.EqualTo(1));
+        }
+
+        [Test]
         public void LateReward_WithinTheGrace_IsRewarded()
         {
             var rig = new Rig();
