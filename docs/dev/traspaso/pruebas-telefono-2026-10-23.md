@@ -133,3 +133,11 @@ Según el resultado:
 - **ninguna línea:** el 500 sale antes de la Lambda (API Gateway o autorizador). Hay que mirar `/aws/apigateway/af-dev-api` en la misma ventana, con el `status` y el `integrationErrorMessage` de la ruta `POST /v1/account/delete`.
 
 **Incidente con el secreto de App Check en el portátil.** Al leer la tercera consulta (`BackendError|AppCheck|FirebaseAuth`), el filtro por «debug token» y «debug secret» no tapó una línea de `DebugAppCheckProvider`: el comando de ejemplo `firebase appcheck:debugtokens:create`, que lleva el secreto. La línea quedó en la salida de una herramienta de la sesión de Claude Code. No se ha copiado en ningún archivo, documento ni commit, y no se repite aquí. **Recomendación:** revocar ese token en la consola (App Check › app `com.amazonfill.dev` › Manage debug tokens) y registrar uno nuevo: borrar los datos de la app (`pm clear`), abrirla y leerlo con el comando de `firebase-cliente.md` §4. Desde entonces el portátil descarta además toda línea de `DebugAppCheckProvider` y las que contienen `appcheck:debugtokens`.
+
+## Eliminar cuenta con integridad: resuelto (2026-10-22, 20:05 hora de Colombia)
+
+- **Causa del 500:** el secreto `af-dev/firebase-admin-service-account` contenía un JSON que no era una clave de cuenta de servicio (676 bytes, sin `service_account` ni clave privada). Codex cargó la clave correcta: forma `[2372, true, true, true]`, una sola clave activa y las anteriores revocadas (`codex-estado.md`).
+- **Resultado:** en el teléfono, el borrado funcionó y el juego volvió al primer arranque, según el dueño. En CloudWatch, Codex confirmó `account_deleted` a las 01:05:37 UTC.
+- **Observación nueva:** mientras borra, el diálogo no muestra nada («tosco, sin mostrar si carga o procesa»). Se arregla en el carril `tanda5/borrado-espera`.
+- **Pendiente del dueño:** revocar el token de depuración de App Check que salió en el chat y registrar uno nuevo.
+
