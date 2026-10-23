@@ -43,7 +43,7 @@
 <ul>
   <li>You play without signing up: we don’t ask for your name, email or phone number. The game creates an anonymous identifier.</li>
   <li>When you start, we ask for your age range (not your date of birth) and, depending on your age and country, your consent for analytics. Saying no is as easy as saying yes, and you can change it in Settings › “Privacy and data”.</li>
-  <li>If you are under 13, the game doesn’t open.</li>
+  <li>If you say you are under 13, the game is locked and stops collecting usage data (section 6).</li>
   <li>The game doesn’t show ads today.</li>
   <li>You can delete your account and your data in the game or on <a href="/tintalu/en/delete-account/">our website</a>.</li>
 </ul>
@@ -57,16 +57,18 @@
   <tbody>
     <tr><td>An anonymous player identifier (UID)</td><td>Firebase Authentication (Google), in anonymous mode</td><td>Recognize your game without sign-up, link your purchases and allow account deletion</td><td><mark class="pending">[[ABOGADO: base legal (ejecución del servicio)]]</mark></td></tr>
     <tr><td>Verification that the app and device are genuine</td><td>Firebase App Check with Google Play Integrity</td><td>Protect purchases and account deletion against abuse</td><td><mark class="pending">[[ABOGADO: base legal (interés legítimo)]]</mark></td></tr>
-    <tr><td>An installation identifier and the game configuration</td><td>Firebase Remote Config</td><td>Adjust game values without releasing a new version</td><td><mark class="pending">[[ABOGADO: base legal]]</mark></td></tr>
+    <tr><td>An installation identifier and the game configuration</td><td>Firebase Remote Config, from the moment you open the game, also before the age screen</td><td>Adjust game values without releasing a new version</td><td><mark class="pending">[[ABOGADO: base legal]]</mark></td></tr>
     <tr><td>How you use the game (levels, wins, booster use, performance), an instance identifier, country, phone model and install source. Without the advertising ID</td><td>Google Analytics for Firebase</td><td>Improve the game and balance its difficulty</td><td><strong>Your consent</strong>: analytics stays off until you accept it</td></tr>
-    <tr><td>Crash reports and device state (model, Android version, memory), without your UID</td><td>Firebase Crashlytics</td><td>Find and fix bugs</td><td><mark class="pending">[[ABOGADO: base legal (hoy, interés legítimo; siempre activo)]]</mark></td></tr>
+    <tr><td>Crash reports and device state (model, Android version, memory), without your UID</td><td>Firebase Crashlytics, always on from the moment you open the game, also before the age screen</td><td>Find and fix bugs</td><td><mark class="pending">[[ABOGADO: base legal (hoy, interés legítimo; siempre activo)]]</mark></td></tr>
     <tr><td>Your purchases: product, status, date and purchase receipt. Google Play receives your anonymous UID as an obfuscated account identifier</td><td>Google Play Billing, which processes the payment; our server verifies the purchase</td><td>Deliver what you buy, prevent fraud and meet tax obligations</td><td><mark class="pending">[[ABOGADO: base legal (contrato y obligación legal)]]</mark></td></tr>
     <tr><td>Diagnostic logs of the purchase library</td><td>The Google Play Billing library sends them to Google on its own</td><td>Operation of Google Play Billing</td><td><mark class="pending">[[ABOGADO: revisar el contenido y la base legal (Q-BILL-2)]]</mark></td></tr>
-    <tr><td>On our server: your UID, your purchase ledger (with the receipt stored only as a cryptographic fingerprint, a “hash”), the integrity check result, the deletion code (only its hash) and the IP address in the access logs</td><td>Our backend on Amazon Web Services, São Paulo region (Brazil)</td><td>Verify purchases, restore them if you change phones, prevent fraud and handle the deletion of your account</td><td><mark class="pending">[[ABOGADO: base legal]]</mark></td></tr>
+    <tr><td>On our server: your UID, your purchase ledger (with the receipt stored only as a cryptographic fingerprint, a “hash”), the integrity check result, the deletion code (only its hash) and the IP address in the access logs, including those of visits to this website</td><td>Our backend on Amazon Web Services, São Paulo region (Brazil)</td><td>Verify purchases, restore them if you change phones, prevent fraud and handle the deletion of your account</td><td><mark class="pending">[[ABOGADO: base legal]]</mark></td></tr>
     <tr><td>Your saved game (progress, seeds, boosters and settings), your age range and your consent choices (date, text version, country and choice)</td><td>The game, <strong>only on your phone</strong></td><td>Let you continue where you left off and apply the treatment that fits your age and country</td><td><mark class="pending">[[ABOGADO: base legal]]</mark></td></tr>
   </tbody>
 </table>
 </div>
+<p><strong>When you open the game:</strong> before you are asked your age, Firebase Remote Config (downloads the game configuration) and Firebase Crashlytics (crash reports, always on and without your UID) are already running. Analytics doesn’t start until you accept it.</p>
+<p><strong>This website:</strong> it uses no cookies or trackers. Its access logs keep the IP address of each visit for 30 days, for security and to detect abuse.</p>
 <p><strong>Notifications:</strong> the game’s reminders (for example, “The River Challenge is ready”) are local: your phone schedules them and no data is sent for them. They are only requested if you tap the reminder option or turn them on in Settings, and you can turn them off in Settings or in Android.</p>
 <p><strong>Country:</strong> to know which privacy rules apply, we use the country of your SIM card or, if there is none, your phone’s region, without sending it to any server. If it can’t be determined, we apply the strictest treatment.</p>
 
@@ -89,7 +91,7 @@
 <ul>
   <li>Tintalú is for people aged 13 and over and is not part of the Google Play Families program.</li>
   <li>The first time you open the game we ask your age on a neutral screen, in three ranges: under 13, 13 to 17, and 18 or older. The answer stays only on your phone and you can correct it once in Settings.</li>
-  <li><strong>Under 13:</strong> the game doesn’t open and asks you to have an adult install it. No anonymous account is created, analytics is not turned on and purchases are not possible.</li>
+  <li><strong>Under 13:</strong> the game is locked and asks you to have an adult install it. Crashlytics crash reports are turned off when you state your age and on every later launch; analytics is never turned on; neither the anonymous account nor our server is used, and purchases are not possible. Firebase Remote Config still downloads the game configuration each time you open it.</li>
   <li><strong>13 to 17:</strong> purchases require a double confirmation in the game and Google Play authentication. <mark class="pending">[[ABOGADO: tratamiento de adolescentes por país (LGPD art. 14 y ECA Digital en Brasil)]]</mark></li>
   <li>If you think a child under 13 used the game, write to <mark class="pending">[[DATO DEL DUEÑO: correo de privacidad]]</mark> and we will delete their data.</li>
 </ul>
@@ -113,7 +115,8 @@
     <tr><td>Anonymous account and data on our server</td><td>While you use the game or until you delete the account</td></tr>
     <tr><td>Purchase ledger</td><td>After the account is deleted it is kept <strong>without your identifier</strong> for <mark class="pending">[[ABOGADO: plazo fiscal]]</mark></td></tr>
     <tr><td>Integrity check result</td><td>24 hours</td></tr>
-    <tr><td>Access logs of our server (with the IP address)</td><td>30 days</td></tr>
+    <tr><td>Access logs of our server and of this website, including your visits (with the IP address)</td><td>30 days</td></tr>
+    <tr><td>Deleted-account mark (with your identifier only as a hash)</td><td>2 hours after the deletion</td></tr>
     <tr><td>Deletion code (only its hash)</td><td>Until the game requests a new one or you delete the account; the web deletion confirmation expires after 5 minutes</td></tr>
     <tr><td>Crash reports</td><td>90 days</td></tr>
     <tr><td>Analytics</td><td><mark class="pending">[[DATO DEL DUEÑO: retención configurada en Google Analytics para Firebase]]</mark></td></tr>
@@ -140,7 +143,7 @@
   <li><strong>In the game:</strong> Settings › “Delete account and data”, with two confirmations. It also deletes the game data on your phone.</li>
   <li><strong>On the web:</strong> on <a href="/tintalu/en/delete-account/">the account deletion page</a>, with the code shown in Settings.</li>
 </ol>
-<p>Your anonymous account, your data on our server and your Firebase Authentication user are deleted. The purchase ledger is kept, <strong>without your identifier</strong>, for tax purposes (section 9). Purchases are not refunded.</p>
+<p>Your anonymous account, your data on our server and your Firebase Authentication user are deleted. The purchase ledger is kept, <strong>without your identifier</strong>, for tax purposes (section 9). For 2 hours we also keep a deleted-account mark, with your identifier only as a hash, so that nothing is written again in the name of the deleted account. Purchases are not refunded.</p>
 
 <h2 id="seguridad">12. Security</h2>
 <p>Data travels encrypted (HTTPS) and is stored encrypted on our server. Features that grant value (purchases and in-app deletion) require the integrity check. The game doesn’t keep secret keys on the phone, and our logs don’t store your UID in clear text or your purchase receipts.</p>

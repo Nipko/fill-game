@@ -40,7 +40,7 @@ function deleteForm(lang: Lang): string {
   const data = Object.entries(t.msg)
     .map(([k, v]) => ` data-msg-${k.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase())}="${escapeHtml(v)}"`)
     .join('');
-  return `<form id="delete-form" class="delete-form" novalidate hidden${data}>
+  return `<form id="delete-form" class="delete-form" method="post" novalidate hidden${data}>
   <fieldset id="delete-step-code">
     <legend>${escapeHtml(t.legend)}</legend>
     <label for="account-code">${escapeHtml(t.label)}</label>

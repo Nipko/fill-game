@@ -223,6 +223,7 @@ describe('web/site', () => {
         expect(doc, `${lang}: ${attr}`).toMatch(new RegExp(`${attr}="[^"]+"`));
       }
       expect(doc, lang).toContain('{minutes}');
+      expect(doc, lang).toMatch(/<form id="delete-form"[^>]*\smethod="post"/); // sin JS nunca un GET con el código en la URL
       expect(doc, lang).toMatch(/<label for="account-code">/);
       expect(doc, lang).toMatch(/role="status" aria-live="polite"/);
       expect(doc, lang).toContain('<noscript>');

@@ -44,7 +44,7 @@
   <li>Escribe tu código y toca «Continuar».</li>
   <li>Revisa el código y confirma con «Sí, eliminar» en los 5 minutos siguientes.</li>
 </ol>
-<form id="delete-form" class="delete-form" novalidate hidden data-msg-invalid="Ese código no es válido. Revísalo en Ajustes: tiene 26 letras y números." data-msg-sending="Un momento…" data-msg-not-found="No encontramos ese código. Revisa que sea el último que ves en Ajustes." data-msg-expired="La confirmación caducó. Vuelve a escribir tu código." data-msg-rate-limited="Demasiados intentos. Prueba de nuevo dentro de {minutes} min." data-msg-unavailable="No se pudo completar ahora. Inténtalo más tarde." data-msg-config="Esta página no está bien configurada. Borra tu cuenta desde el juego o inténtalo más tarde." data-msg-cancelled="No se eliminó nada." data-msg-done="Listo. Tu cuenta se eliminó.">
+<form id="delete-form" class="delete-form" method="post" novalidate hidden data-msg-invalid="Ese código no es válido. Revísalo en Ajustes: tiene 26 letras y números." data-msg-sending="Un momento…" data-msg-not-found="No encontramos ese código. Revisa que sea el último que ves en Ajustes." data-msg-expired="La confirmación caducó. Vuelve a escribir tu código." data-msg-rate-limited="Demasiados intentos. Prueba de nuevo dentro de {minutes} min." data-msg-unavailable="No se pudo completar ahora. Inténtalo más tarde." data-msg-config="Esta página no está bien configurada. Borra tu cuenta desde el juego o inténtalo más tarde." data-msg-cancelled="No se eliminó nada." data-msg-done="Listo. Tu cuenta se eliminó.">
   <fieldset id="delete-step-code">
     <legend>Eliminar con tu código de cuenta</legend>
     <label for="account-code">Código de cuenta</label>
@@ -70,6 +70,7 @@
 <ul>
   <li>Tu cuenta anónima, también en Firebase Authentication.</li>
   <li>Tus datos en nuestro servidor: la verificación de integridad, tu código de cuenta y el vínculo entre tus compras y tu cuenta.</li>
+  <li>Durante 2 horas queda una marca de cuenta borrada, con tu identificador solo como hash, para que nada vuelva a escribirse a nombre de la cuenta; después desaparece.</li>
   <li>Desde el juego, además, tu progreso, tus semillas, tus comodines y tus ajustes guardados en el teléfono.</li>
 </ul>
 <p>Si borras la cuenta desde esta página, los datos del juego que queden en tu teléfono no se pueden borrar desde aquí: desaparecen al desinstalar el juego. <mark class="pending">[[ABOGADO: texto sobre los datos del teléfono cuando el borrado llega por la web (Q-B13-22)]]</mark></p>

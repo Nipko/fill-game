@@ -44,7 +44,7 @@
   <li>Digite seu código e toque em «Continuar».</li>
   <li>Confira o código e confirme com «Sim, excluir» nos 5 minutos seguintes.</li>
 </ol>
-<form id="delete-form" class="delete-form" novalidate hidden data-msg-invalid="Esse código não é válido. Confira em Configurações: ele tem 26 letras e números." data-msg-sending="Um momento…" data-msg-not-found="Não encontramos esse código. Confira se é o último que aparece em Configurações." data-msg-expired="A confirmação expirou. Digite seu código de novo." data-msg-rate-limited="Muitas tentativas. Tente de novo em {minutes} min." data-msg-unavailable="Não foi possível concluir agora. Tente mais tarde." data-msg-config="Esta página não está configurada corretamente. Exclua sua conta no jogo ou tente mais tarde." data-msg-cancelled="Nada foi excluído." data-msg-done="Pronto. Sua conta foi excluída.">
+<form id="delete-form" class="delete-form" method="post" novalidate hidden data-msg-invalid="Esse código não é válido. Confira em Configurações: ele tem 26 letras e números." data-msg-sending="Um momento…" data-msg-not-found="Não encontramos esse código. Confira se é o último que aparece em Configurações." data-msg-expired="A confirmação expirou. Digite seu código de novo." data-msg-rate-limited="Muitas tentativas. Tente de novo em {minutes} min." data-msg-unavailable="Não foi possível concluir agora. Tente mais tarde." data-msg-config="Esta página não está configurada corretamente. Exclua sua conta no jogo ou tente mais tarde." data-msg-cancelled="Nada foi excluído." data-msg-done="Pronto. Sua conta foi excluída.">
   <fieldset id="delete-step-code">
     <legend>Excluir com o código da sua conta</legend>
     <label for="account-code">Código da conta</label>
@@ -70,6 +70,7 @@
 <ul>
   <li>Sua conta anônima, inclusive no Firebase Authentication.</li>
   <li>Seus dados no nosso servidor: a verificação de integridade, o código da sua conta e o vínculo entre suas compras e sua conta.</li>
+  <li>Durante 2 horas fica uma marca de conta excluída, com o seu identificador só como hash, para que nada volte a ser gravado em nome da conta; depois ela some.</li>
   <li>Pelo jogo, também seu progresso, suas sementes, seus reforços e suas configurações guardados no celular.</li>
 </ul>
 <p>Se você excluir a conta por esta página, os dados do jogo que ficarem no seu celular não podem ser apagados daqui: eles somem ao desinstalar o jogo. <mark class="pending">[[ABOGADO: texto sobre los datos del teléfono cuando el borrado llega por la web (Q-B13-22)]]</mark></p>
