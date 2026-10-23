@@ -1,3 +1,59 @@
+# Estado de Codex: web, empresas y arte
+
+23-10-2026 · Rama `codex/web-marca`, worktree propio. Base de integración comprobada: `35147396` (`origin/integracion-fase1-fase2`); pull fast-forward sin cambios. No se modifica el checkout principal.
+
+## Decisiones del dueño que prevalecen sobre el encargo anterior
+
+- PARALLEXT, LLC opera el juego, decide sobre sus datos, administra Firebase/AWS y atiende soporte y borrados. El dueño la dirige actualmente desde Colombia.
+- AUTOMATION AI S.A.S es la editora prevista y titular de la cuenta de Play/cobros según el dueño. No se verificó Play Console ni se firmó una licencia entre empresas.
+- `support@parallext.com` es **solo soporte**. Habrá otro buzón de privacidad; dirección pendiente.
+- Objetivo de disponibilidad mundial; no equivale a una revisión jurídica mundial ya completada.
+- Registro de marca y sus gastos **aplazados** hasta tracción/versiones posteriores. No continuar solicitudes, selección de despachos de registro ni presupuesto Madrid en este encargo.
+- Comparar dos bocetos provisionales: cuia que vierte y TiTino. Ninguno elegido como final.
+
+No se inventó una aprobación de D-045. El integrador debe reflejar estas decisiones en el canon. El aplazamiento del registro no resuelve expresamente el requisito anterior de dictamen antes del applicationId/subida a Play (D-034/regla 6); queda por reconciliar antes de esa acción, sin impedir preparar la web.
+
+## Entrega
+
+- `docs/legal/estructura-publicacion.md`: datos societarios mínimos comprobados, reparto de funciones propuesto, límites de la evidencia y fuentes oficiales. El DDA §11 requiere derechos de monetización propia de la editora: no describir la S.A.S como mero préstamo de cuenta.
+- `docs/legal/acuerdo-publicacion-borrador.md`: bases de licencia y anexos, sin inventar remuneración ni facultades; no listo para firma.
+- `docs/legal/paquete-abogado.md`: revisión pendiente de operación, privacidad y consumo; preguntas técnicas y correo preparado, no enviado. La búsqueda de marca sigue parcial.
+- `docs/legal/inventario-web.md`: marcadores restantes de datos/revisión en web y ficha. No se eliminaron marcadores legales sin resolverlos.
+- `docs/art/encargo-icono.md`: dirección, cuatro conceptos del canon, requisitos de entrega y comparación cuia/TiTino.
+- Web en español, inglés y portugués: Wyoming y dirección de correspondencia de la LLC, operación desde Colombia, S.A.S como editora prevista y soporte confirmado. Privacidad conserva su buzón pendiente. Fuentes y salida generada incluidas.
+
+Los tres PDF se extrajeron y revisaron visualmente, incluidas páginas escaneadas. La extracción detallada queda en `Logs/legal-review/datos-empresas.md`, **ignorada por Git**, junto a renders locales. No se incluyen EIN, NIT, documentos personales, firmas ni originales en el commit. Los documentos aportados no prueban todas las facultades vigentes ni los datos actuales de las cuentas de plataforma.
+
+Los dos bocetos generados con IA se mostraron al dueño y permanecen en la carpeta local de imágenes generadas de Codex. No se incorporaron a Assets ni se certificaron como exportaciones Play. Cuia comunica mejor la mecánica; TiTino necesita simplificación para funcionar como icono pequeño. Falta elección y arte final.
+
+## Verificación y alcance
+
+- `npm ci`: correcto. Auditoría informa una vulnerabilidad alta heredada en `brace-expansion`, dentro de `aws-cdk-lib`; trasladar al integrador. No se actualizaron dependencias en este carril.
+- `npm run web:build`: correcto, 18 archivos generados.
+- `npm test`: **277 pruebas / 18 archivos, correctos**.
+- `npm run web:check` y `npm run typecheck`: correctos.
+- ESLint sobre `infra/test/web/site.test.ts`: correcto.
+- `git diff --check`: correcto.
+
+Se amplió mínimamente el alcance original a dos líneas de `infra/test/web/site.test.ts`: retirar la prohibición obsoleta del nombre AUTOMATION AI y reconocer enlaces `mailto:` como no locales. Es necesario para verificar el contenido autorizado por el dueño. Sin cambios de CDK, runtime, Assets ni dependencias. No corresponden pruebas Unity a esta entrega de web/documentación.
+
+## Pendientes y despliegue
+
+1. Dirección y puesta en servicio del correo de privacidad; encargado/contactos adicionales cuando correspondan.
+2. Facultades vigentes, cadena de derechos, términos económicos y firma de licencia; revisión contable de ambas entidades.
+3. Resolver marcadores legales y datos operativos: retención Analytics real, SDK/ads y seller IDs, créditos, fechas y versiones. El canon indica `consent_text_version = 1` inicial; coordinar la versión final con Remote Config, sin afirmar que se verificó producción.
+4. Elección del concepto visual y entregables definitivos.
+5. Integración real del cambio Cloudflare/web-only. En la base comprobada, `infra/README.md` aún describe el cambio pendiente y no ofrece el procedimiento nuevo. La mera existencia/ascendencia de `tanda5/web-dominio` no demuestra que su implementación esté integrada.
+
+**No se desplegó, no se hizo bootstrap, no se cambió DNS y no se generó gasto.** Tras integrar infraestructura y cerrar contenido publicable: preparar el diff de los stacks web prod, presentarlo al dueño y seguir la aprobación concreta del encargo antes de deploy/DNS. No publicar como definitivas las políticas con marcadores pendientes.
+
+No se enviaron correos, no se contrataron servicios ni se presentaron registros. El integrador fusiona esta rama; este carril no modifica la rama compartida.
+
+
+---
+
+# Historial de entregas anteriores (conservado)
+
 # Traspaso al integrador: pendientes del dueño y AWS dev
 
 ## Firebase prod empresarial — configurado en consola 2026-10-22
