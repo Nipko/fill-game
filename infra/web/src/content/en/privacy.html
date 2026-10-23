@@ -63,7 +63,7 @@
 <ul>
   <li>Tintalú is for people aged 13 and over and is not part of the Google Play Families program.</li>
   <li>The first time you open the game we ask your age on a neutral screen, in three ranges: under 13, 13 to 17, and 18 or older. The answer stays only on your phone and you can correct it once in Settings.</li>
-  <li><strong>Under 13:</strong> the game is locked and asks you to have an adult install it. Crashlytics crash reports are turned off when you state your age and on every later launch; analytics is never turned on; neither the anonymous account nor our server is used, and purchases are not possible. Firebase Remote Config still downloads the game configuration each time you open it.</li>
+  <li><strong>Under 13:</strong> the game is locked and asks you to have an adult install it. Crashlytics crash reports are turned off when you state your age. From then on, each time you open the game Crashlytics is not turned on and the Firebase Remote Config configuration is not downloaded (the game uses the one it already has); analytics is never turned on; neither the anonymous account nor our server is used, and purchases are not possible.</li>
   <li><strong>13 to 17:</strong> purchases require a double confirmation in the game and Google Play authentication. [[ABOGADO: tratamiento de adolescentes por país (LGPD art. 14 y ECA Digital en Brasil)]]</li>
   <li>If you think a child under 13 used the game, write to [[DATO DEL DUEÑO: correo de privacidad]] and we will delete their data.</li>
 </ul>
