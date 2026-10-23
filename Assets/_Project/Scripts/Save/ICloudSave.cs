@@ -5,9 +5,10 @@ namespace AF.Save
 {
     /// <summary>
     /// Guardado en la nube del perfil (GDD 08 §11, fila «Nube Android 1.0»: Play Games Services v2 Saved Games, un solo snapshot
-    /// <c>af_main</c>, sin portada; 04 §10.2; bloque B8). La implementación real llega con el SDK de Play Games cuando el dueño lo
-    /// apruebe (regla 4 de <c>CLAUDE.md</c>; 08 §2.1 principio 6: cada SDK detrás de una interfaz con implementación falsa); hoy el
-    /// juego y los tests usan <see cref="FakeCloudSave"/>. El blob es el JSON del perfil en UTF-8 (<see cref="ProfileJson"/>,
+    /// <c>af_main</c>, sin portada; 04 §10.2; bloque B8). La real es <see cref="PlayGamesCloudSave"/> (D-042: Play Games plugin
+    /// for Unity 2.3.0, solo en el teléfono y con el <c>APP_ID</c> de Play Console; <c>docs/dev/play-games.md</c>); el editor, los
+    /// tests y el build sin configurar usan <see cref="FakeCloudSave"/> (08 §2.1 principio 6). El blob es el JSON compartido del
+    /// perfil en UTF-8 (<see cref="CloudMerge.SharedJson"/>, sin lo que es solo del dispositivo; <see cref="ProfileJson"/>,
     /// &lt; 100 KB, 08 §4.3). Las operaciones son asíncronas en el SDK: terminan llamando a su <c>done</c> en el hilo principal
     /// (la falsa, en el acto). Quién gana un conflicto lo decide <see cref="CloudMerge"/>, nunca el SDK (08 §11, «Conflicto»:
     /// resolución manual, no <c>UseLongestPlaytime</c>).

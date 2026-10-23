@@ -83,8 +83,11 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Nube al arrancar (antes de crear los servicios), con la firma de <see cref="VerifyBootProfile"/>. Con el perfil en solo
-        /// lectura no se fusiona ni se sube nada. Devuelve el perfil con el que seguir.
+        /// Nube al arrancar (antes de crear los servicios), con la firma de <see cref="VerifyBootProfile"/> (D-042: por
+        /// <see cref="CloudSession"/>). Con el perfil en solo lectura no se fusiona ni se sube nada; sin la edad declarada (primer
+        /// arranque con el consentimiento en marcha) tampoco: arranca tras la pantalla de edad (<see cref="StartCloudAfterConsent"/>;
+        /// 08 §2.3). Devuelve el perfil con el que seguir: si la nube responde en el acto (la falsa), ya fusionado; si no (Play
+        /// Games), el mismo, y quien arranca espera con <see cref="WaitCloudAtBoot"/>.
         /// </summary>
         private Profile SyncProfileAtBoot(Profile profile, IProfileStore store, bool locked)
         {
@@ -93,32 +96,19 @@ namespace AF.UI
                 return profile;
             }
 
-            _cloudSave ??= CloudSaveOverride ?? FakeCloudSave.WithoutSession();
-            Profile result = profile;
-            CloudSync.AtStartup(profile, _cloudSave, DeviceIdentity, localIntegrity: BootIntegrity ?? IntegrityStatus.Unsigned, done: report =>
+            CloudSession session = EnsureCloudSession();
+            if (!CloudAllowedAtBoot(profile))
             {
-                BootCloudSync = report;
-                if (!report.Ran)
-                {
-                    return;
-                }
+                return profile;
+            }
 
-                if (report.Error != null)
-                {
-                    Debug.LogWarning(LogPrefix + "nube: " + report.Error);
-                }
-
-                if (report.Replaced)
-                {
-                    result = report.Profile;
-                    ProfileIntegrity.Sign(result, DeviceIdentity);
-                    store.TrySave(result);
-                }
-            });
-
-            return result; // la nube falsa responde en el acto; la de Play Games, cuando llegue, también se espera aquí [P]
+            _cloudBootWindow = true;
+            _cloudBootProfile = profile;
+            _cloudBootStore = store;
+            session.Start(() => _cloudBootWindow ? _cloudBootProfile! : (_profile ?? profile), RouteCloudStart,
+                BootIntegrity ?? IntegrityStatus.Unsigned);
+            return _cloudBootProfile;
         }
-
         /// <summary><c>first_app_version</c> y <c>country_first</c> (primera ejecución) y <c>locale</c> (siempre), sin guardar: sale con el siguiente guardado.</summary>
         private void StampProfileIdentity(Profile profile, bool firstRun, LocResolution locale, string deviceTag)
         {

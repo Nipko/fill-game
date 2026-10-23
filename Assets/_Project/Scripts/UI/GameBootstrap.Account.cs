@@ -83,6 +83,7 @@ namespace AF.UI
             DeleteDoneHoldMsOverride = null;
             AnalyticsResetOverride = null;
             ResetBackendOverrides();
+            ResetCloudSessionOverrides();
         }
 
         /// <summary>
@@ -148,7 +149,7 @@ namespace AF.UI
                 return false;
             }
 
-            _cloudSave ??= CloudSaveOverride ?? FakeCloudSave.WithoutSession();
+            EnsureCloudSession(); // D-042 (GameBootstrap.CloudSession.cs)
             _deleteAccountDialog = new DeleteAccountDialog(settings.OverlayRoot, _art, () => ContinueDeleteAccount(), () => ConfirmDeleteAccount(), () => CancelDeleteAccount());
             settings.DeleteAccountPressed = () => OpenDeleteAccount();
             ReportBootIntegrity();
@@ -401,17 +402,16 @@ namespace AF.UI
 
             ResetAnalyticsData(); // F3-6 (08 §13.3): resetAnalyticsData() de Firebase, con un ID de instancia nuevo
 
-            ICloudSave? cloud = _cloudSave;
-            if (cloud != null && cloud.HasSession)
+            // D-042: la marca de borrado pendiente (tras borrar PlayerPrefs, para que sobreviva), el borrado de af_main si hay sesión y
+            // la sesión de nube cerrada: nada más se sube. El arranque siguiente comprueba que el snapshot quedó vacío (CloudErase).
+            _cloudLateProfile = null;
+            EnsureCloudSession().EraseForAccountDelete(result =>
             {
-                cloud.Delete(result =>
+                if (result != CloudWriteResult.Ok && result != CloudWriteResult.NoSession)
                 {
-                    if (result != CloudWriteResult.Ok)
-                    {
-                        Debug.LogWarning(LogPrefix + "no se pudo borrar el snapshot " + CloudSaveNames.Snapshot + " de la nube: " + result);
-                    }
-                });
-            }
+                    Debug.LogWarning(LogPrefix + "no se pudo borrar el snapshot " + CloudSaveNames.Snapshot + " de la nube: " + result + " (se reintenta al arrancar)");
+                }
+            });
 
             return true;
         }
@@ -425,6 +425,7 @@ namespace AF.UI
             s_rebuildProfile = null;
             s_rebuildStore = null;
             s_rebuildReopenSettings = false;
+            s_rebuildCloud = null; // D-042: la primera ejecución empieza con una nube nueva (la marca de borrado pendiente sigue)
             if (!covered)
             {
                 _settingsScreen?.Hide();

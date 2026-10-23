@@ -137,7 +137,10 @@ namespace AF.Save
                 CloudMergeResult merge = CloudMerge.Resolve(
                     local, remote, ProfileIntegrity.IsCoherent(localStatus), remoteIntegrity.HasValue && ProfileIntegrity.IsCoherent(remoteIntegrity.Value));
                 Profile result = merge.LocalChanged ? merge.Merged : local;
-                if (!merge.CloudChanged)
+                // #3379 (D-042): la última subida puede no constar en la nube (sin red o fallida): se vuelve a subir aunque la
+                // fusión no lo pida.
+                bool resync = cloud is ICloudResync pending && pending.NeedsResync;
+                if (!merge.CloudChanged && !resync)
                 {
                     done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, null, readBytes, null));
                     return;
@@ -169,6 +172,55 @@ namespace AF.Save
             ProfileIntegrity.Sign(profile, device);
             byte[] blob = Encoding.UTF8.GetBytes(CloudMerge.SharedJson(profile)); // sin purchase_queue: solo local (F3-3)
             cloud.Save(blob, write => done(write, blob.Length));
+        }
+
+        /// <summary>
+        /// Conflicto de Saved Games (D-042; 08 §11, «Conflicto»: resolución manual): Play guarda dos versiones de <c>af_main</c> y
+        /// hay que elegir los bytes que quedan. Se leen las dos como perfiles y se fusionan con <see cref="CloudMerge.Resolve"/> (la
+        /// <paramref name="original"/> hace de «local»; la fusión de verdad con el local llega después, en <see cref="AtStartup"/>).
+        /// Si una no se puede leer (ilegible o de un esquema más nuevo que esta app), queda la otra tal cual; si ninguna, la
+        /// <paramref name="original"/>. El resultado se firma con <paramref name="device"/> si cambió.
+        /// </summary>
+        public static byte[] ResolveSnapshotConflict(byte[] original, byte[] unmerged, IDeviceIdentity device)
+        {
+            if (original == null)
+            {
+                throw new ArgumentNullException(nameof(original));
+            }
+
+            if (unmerged == null)
+            {
+                throw new ArgumentNullException(nameof(unmerged));
+            }
+
+            if (device == null)
+            {
+                throw new ArgumentNullException(nameof(device));
+            }
+
+            bool okA = ReadBlob(original, out Profile? a, out bool migratedA, out _) == BlobRead.Ok && a != null;
+            bool okB = ReadBlob(unmerged, out Profile? b, out bool migratedB, out _) == BlobRead.Ok && b != null;
+            if (!okA)
+            {
+                return okB ? (byte[])unmerged.Clone() : (byte[])original.Clone();
+            }
+
+            if (!okB)
+            {
+                return (byte[])original.Clone();
+            }
+
+            bool coherentA = migratedA || ProfileIntegrity.IsCoherent(ProfileIntegrity.Verify(a!));
+            bool coherentB = migratedB || ProfileIntegrity.IsCoherent(ProfileIntegrity.Verify(b!));
+            CloudMergeResult merge = CloudMerge.Resolve(a!, b, coherentA, coherentB);
+            if (!merge.LocalChanged)
+            {
+                return (byte[])original.Clone();
+            }
+
+            Profile merged = merge.Merged;
+            ProfileIntegrity.Sign(merged, device);
+            return Encoding.UTF8.GetBytes(CloudMerge.SharedJson(merged));
         }
 
         private enum BlobRead

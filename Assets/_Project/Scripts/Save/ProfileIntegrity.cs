@@ -28,8 +28,9 @@ namespace AF.Save
     public static class ProfileIntegrity
     {
         /// <summary>
-        /// El texto que se firma: el perfil sin su <c>hmac</c> y sin <c>purchase_queue</c> (F3-3: es solo del dispositivo y no sube
-        /// a la nube, <see cref="CloudMerge.SharedJson"/>; así el blob de la nube se puede comprobar). No cambia
+        /// El texto que se firma: el perfil sin su <c>hmac</c> y sin lo que es solo del dispositivo (<c>purchase_queue</c>, F3-3;
+        /// <c>consent</c> y <c>account_code</c>, D-042), que no sube a la nube (<see cref="CloudMerge.SharedJson"/>; así el blob de la
+        /// nube se puede comprobar). No cambia
         /// <paramref name="profile"/>.
         /// </summary>
         public static string Payload(Profile profile)
@@ -44,6 +45,21 @@ namespace AF.Save
             try
             {
                 return CloudMerge.SharedJson(profile);
+            }
+            finally
+            {
+                profile.Integrity.Hmac = hmac;
+            }
+        }
+
+        // Lo que se firmaba antes de D-042 (CloudMerge.LegacySharedJson sin hmac).
+        private static string LegacyPayload(Profile profile)
+        {
+            string? hmac = profile.Integrity.Hmac;
+            profile.Integrity.Hmac = null;
+            try
+            {
+                return CloudMerge.LegacySharedJson(profile);
             }
             finally
             {
@@ -91,8 +107,14 @@ namespace AF.Save
                 return IntegrityStatus.Unsigned;
             }
 
-            string expected = ProfileHmac.Sign(Payload(profile), ProfileHmac.DeriveKey(deviceFirst!));
-            return ProfileHmac.Matches(expected, hmac) ? IntegrityStatus.Valid : IntegrityStatus.Mismatch;
+            byte[] key = ProfileHmac.DeriveKey(deviceFirst!);
+            if (ProfileHmac.Matches(ProfileHmac.Sign(Payload(profile), key), hmac))
+            {
+                return IntegrityStatus.Valid;
+            }
+
+            // Firmado antes de D-042 (con consent y account_code en lo firmado): sigue valiendo hasta la próxima escritura.
+            return ProfileHmac.Matches(ProfileHmac.Sign(LegacyPayload(profile), key), hmac) ? IntegrityStatus.Valid : IntegrityStatus.Mismatch;
         }
 
         /// <summary>
