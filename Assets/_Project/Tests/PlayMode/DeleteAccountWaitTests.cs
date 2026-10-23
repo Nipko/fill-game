@@ -99,6 +99,8 @@ namespace AF.Tests.PlayMode
         {
             var host = new FakeScreenReaderHost(true);
             GameBootstrap.A11yHostOverride = host;
+            const float hold = 400f; // la confirmación, más corta en el test (la de verdad: DeleteDoneHoldMs)
+            GameBootstrap.DeleteDoneHoldMsOverride = hold;
             var store = new MemoryProfileStore(ProfileAt(40, 900));
             var server = new SlowServer();
             GameBootstrap boot = null!;
@@ -170,8 +172,8 @@ namespace AF.Tests.PlayMode
                 yield return null;
             }
 
-            Assert.That(fadeSeenAt - doneAt, Is.GreaterThanOrEqualTo((GameBootstrap.DeleteDoneHoldMs / 1000f) - 0.3f),
-                "la confirmación se ve " + GameBootstrap.DeleteDoneHoldMs + " ms antes del fundido");
+            Assert.That(fadeSeenAt - doneAt, Is.GreaterThanOrEqualTo((hold / 1000f) - 0.2f),
+                "la confirmación se ve " + hold + " ms antes del fundido");
             Assert.That(lowestPanel, Is.LessThan(1f), "la tarjeta se funde");
             Assert.That(highestVeil, Is.GreaterThan(DeleteAccountDialog.DimAlpha), "y el velo se oscurece");
 
@@ -180,6 +182,64 @@ namespace AF.Tests.PlayMode
                 "arranque en frío tras eliminar la cuenta");
             Assert.That(GameBootstrap.Current!.App!.Screen, Is.EqualTo(AppScreen.Level), "primera ejecución: el nivel 1 (08 §2.3)");
             Assert.That(GameBootstrap.Current.Profile!.Wallet.Seeds, Is.EqualTo(0));
+        }
+
+        [UnityTest]
+        public IEnumerator DuringTheConfirmation_PauseAndResume_NeitherWriteTheProfileNorCallTheServer()
+        {
+            // Revisión de tanda5/borrado-espera: con «Tu cuenta y tus datos se eliminaron.» a la vista, Inicio y la vuelta pasaban
+            // por SessionsPaused → ProfileSessionStore.Save → ProfileSaveBatch.Save, que volvía a crear profile.json, y por
+            // ResumeBackend, RestoreLedgerNow y PushUiResumed, que llamaban al servidor.
+            GameBootstrap.DeleteDoneHoldMsOverride = 60000f; // la confirmación se queda mientras se simula la pausa
+            var store = new MemoryProfileStore(ProfileAt(40, 900));
+            var server = new SlowServer();
+            GameBootstrap boot = null!;
+            yield return OpenStep2(store, server, b => boot = b);
+            Assert.That(boot.FakeBackend, Is.Not.Null, "editor: el backend falso");
+            Assert.That(boot.ConfirmDeleteAccount(), Is.True);
+            server.Answer(true);
+            Assert.That(boot.AccountDeleted, Is.True);
+            Assert.That(store.Json, Is.Null);
+            int calls = BackendCalls(boot);
+            int billing = boot.FakeBilling?.Requests.Count ?? 0;
+
+            // Inicio y vuelta, por las dos rutas: los runners (SendMessage llega a todos los componentes del objeto, también a
+            // SessionRunner y LogbookRunner) y las llamadas directas.
+            boot.gameObject.SendMessage("OnApplicationPause", true);
+            boot.gameObject.SendMessage("OnApplicationQuit");
+            boot.SessionsPaused(true);
+            boot.LogbookPause(true);
+            yield return null;
+            boot.gameObject.SendMessage("OnApplicationPause", false);
+            boot.SessionsPaused(false);
+            boot.LogbookPause(false);
+            boot.ResumeBackend(true);
+            Assert.That(boot.RestoreLedgerNow(), Is.False, "restoreLedger no se pide");
+            boot.PushUiResumed();
+            boot.TickSessions();
+            boot.TickLogbook(16f);
+            boot.TickMarket(16f);
+            for (int i = 0; i < 5; i++)
+            {
+                yield return null;
+            }
+
+            Assert.That(store.Json, Is.Null, "profile.json no vuelve");
+            Assert.That(BackendCalls(boot), Is.EqualTo(calls), "ninguna llamada más al backend");
+            Assert.That(boot.FakeBilling?.Requests.Count ?? 0, Is.EqualTo(billing), "ni a Play");
+            Assert.That(GameBootstrap.Current, Is.SameAs(boot), "sigue la confirmación");
+            Assert.That(boot.DeleteAccountView!.Step, Is.EqualTo(DeleteAccountStep.Done));
+        }
+
+        private static int BackendCalls(GameBootstrap boot)
+        {
+            int n = 0;
+            foreach (KeyValuePair<string, int> call in boot.FakeBackend!.Calls)
+            {
+                n += call.Value;
+            }
+
+            return n;
         }
 
         [UnityTest]
@@ -220,8 +280,9 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator WithReduceMotion_TheWaitDotsStayStill()
+        public IEnumerator WithReduceMotion_TheWaitDotsStayStill_AndTheConfirmationFadesFaster()
         {
+            GameBootstrap.DeleteDoneHoldMsOverride = 100f;
             var store = new MemoryProfileStore(ProfileAt(40, 900, true));
             var server = new SlowServer();
             GameBootstrap boot = null!;
@@ -240,8 +301,26 @@ namespace AF.Tests.PlayMode
             Assert.That(Alphas(dialog.Dots), Is.EqualTo(before), "quietos");
             Assert.That(before, Is.All.EqualTo(1f), "todos encendidos");
             server.Answer(false);
-            Assert.That(boot.CancelDeleteAccount(), Is.True, "tras el fallo, la X cierra sin borrar");
+            Assert.That(dialog.CloseInteractable, Is.True, "tras el fallo, la X vuelve a cerrar sin borrar");
             Assert.That(store.Json, Is.Not.Null);
+
+            // La confirmación con Reducir movimiento: el fundido × anim_reduce_motion_factor (0,5: 150 ms), sin puntos.
+            Assert.That(boot.DeleteFadeMsNow, Is.EqualTo(GameBootstrap.DeleteFadeMs * 0.5f).Within(0.01f));
+            Assert.That(boot.ConfirmDeleteAccount(), Is.True);
+            Assert.That(dialog.Dots.Animating, Is.False);
+            server.Answer(true);
+            Assert.That(dialog.Step, Is.EqualTo(DeleteAccountStep.Done));
+            Assert.That(dialog.Dots.Visible, Is.False);
+            float lowest = 1f;
+            float start2 = Time.realtimeSinceStartup;
+            while (GameBootstrap.Current == boot && boot != null)
+            {
+                lowest = Mathf.Min(lowest, dialog.PanelAlpha);
+                Assert.That(Time.realtimeSinceStartup - start2, Is.LessThan(PlayModeHelpers.TimeoutSeconds), "la recarga llega");
+                yield return null;
+            }
+
+            Assert.That(lowest, Is.LessThan(1f), "también se funde (más corto), no un corte");
         }
 
         [UnityTest]

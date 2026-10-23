@@ -335,6 +335,11 @@ namespace AF.UI
         /// </summary>
         internal void PushUiResumed()
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             PushPermissionService? push = _push;
             bool fromPhone = _pushOpenedPhone;
             _pushOpenedPhone = false;

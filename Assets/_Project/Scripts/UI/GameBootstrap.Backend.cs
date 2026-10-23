@@ -288,6 +288,11 @@ namespace AF.UI
         /// </summary>
         internal void ResumeBackend(bool foreground)
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             VerifiedStoreService? store = _verifiedStore;
             if (store == null || ProfileLocked)
             {
@@ -310,6 +315,11 @@ namespace AF.UI
         /// <summary>Pide <c>restoreLedger</c> y aplica su respuesta en una escritura del perfil. False si no se pidió (en vuelo o apagado).</summary>
         public bool RestoreLedgerNow()
         {
+            if (AccountDeleted)
+            {
+                return false; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             LedgerRestore? restore = _ledgerRestore;
             if (restore == null || ProfileLocked)
             {

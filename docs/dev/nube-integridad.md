@@ -127,8 +127,20 @@ pudo eliminar» y no se borra nada más. Sonda: `AF_STATE af_account_delete` con
   háptico de Atrás bloqueado). TalkBack lo anuncia.
 - **Al terminar bien** (paso `Done`): lo local se borra y se ve «Tu cuenta y tus datos se eliminaron.» en una tarjeta sin cabecera ni
   botones durante 1.800 ms [P]; luego la tarjeta se funde y el velo se oscurece en 300 ms [P] (× `anim_reduce_motion_factor` con Reducir
-  movimiento) y se recarga la escena como primera ejecución. Mientras, el resto del arranque no avanza (`TickAccount`): nada escribe el
-  perfil ni llama al servidor. TalkBack lo anuncia.
+  movimiento) y se recarga la escena como primera ejecución. TalkBack lo anuncia. Lo que garantiza el código desde el borrado local
+  hasta que la escena se va (`AccountDeleted`, que ya no vuelve a false):
+  - **en la raíz:** `ProfileSaveBatch.Delete()` deja el lote cerrado (`Closed`): descarta todo `Save` posterior, también por
+    `Durable` (la cartera y `ProfileSessionStore`), el cierre de un lote abierto antes del borrado y `FlushSync`, así que nada de
+    esta escena vuelve a crear `profile.json` (`SaveBatchTests.AfterDelete_*`);
+  - **sin llamadas ni trabajo:** `Update` de `GameBootstrap` solo avanza la confirmación (`TickAccount`, sin `TickBackend` ni la cola
+    de verificación), y no hacen nada `OnApplicationPause` y `OnApplicationQuit` (también `TelemetryPause`), `SessionsPaused`,
+    `LogbookPause`, `ResumeBackend`, `RestoreLedgerNow`, `PushUiResumed` y los `Tick*` de los runners (`TickSessions`,
+    `TickLogbook`, `TickMarket`, `TickMeta`, `TickDaily`, `TickSkipBanner`, `TickStreakProbe`). Así, Inicio y la vuelta con la
+    confirmación a la vista no escriben el perfil, no reprograman avisos y no llaman al backend ni a Play
+    (`DeleteAccountWaitTests.DuringTheConfirmation_PauseAndResume_NeitherWriteTheProfileNorCallTheServer`);
+  - **no cubierto:** `PlayerPrefs` que escriba otra pieza de esta escena y que no pase por esos puntos (no se encontró ninguna) y las
+    respuestas de red que ya estaban en vuelo antes del borrado: no escriben el perfil, porque el lote está cerrado y `_saveBatch` es
+    null, pero sus registros pueden salir.
 - **Al fallar:** «No se pudo eliminar. Inténtalo de nuevo.» y el botón dice «Reintentar» (antes, «Eliminar»); la X sigue cerrando sin
   borrar. TalkBack anuncia el fallo.
 - **Otras esperas de red revisadas:**

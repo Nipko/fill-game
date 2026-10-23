@@ -44,12 +44,17 @@ namespace AF.UI
         private DeleteAccountDialog? _deleteAccountDialog;
         private ICloudSave? _cloudSave;
         private float _deleteDoneMs = -1f;
+        private bool _accountWiped;
+        private bool _restartAsked;
 
         /// <summary>Lo que se ve «Tu cuenta y tus datos se eliminaron.» antes del fundido (ms) [P]: lo justo para leer una línea.</summary>
         public const float DeleteDoneHoldMs = 1800f;
 
         /// <summary>Fundido de la confirmación al velo antes de la recarga (ms) [P].</summary>
         public const float DeleteFadeMs = 300f;
+
+        /// <summary>El fundido final en vigor (ms): <see cref="DeleteFadeMs"/>, × <c>anim_reduce_motion_factor</c> con Reducir movimiento.</summary>
+        internal float DeleteFadeMsNow => ReduceMotionNow ? DeleteFadeMs * (float)(_rcConfigs?.A11y ?? A11yConfig.Defaults).AnimReduceMotionFactor : DeleteFadeMs;
 
         /// <summary>Sustituye <see cref="DeleteDoneHoldMs"/> en los tests (capturas); <see cref="ResetAccountOverrides"/> lo limpia.</summary>
         internal static float? DeleteDoneHoldMsOverride { get; set; }
@@ -113,10 +118,17 @@ namespace AF.UI
         /// El borrado espera al servidor o ya terminó (la confirmación antes de la recarga): ni la X ni el Atrás de Android cierran
         /// el diálogo y sus botones no responden.
         /// </summary>
-        public bool DeleteAccountBusy => AccountDeleteInFlight || _deleteDoneMs >= 0f || (_deleteAccountDialog != null && _deleteAccountDialog.Busy);
+        public bool DeleteAccountBusy => AccountDeleteInFlight || _accountWiped || (_deleteAccountDialog != null && _deleteAccountDialog.Busy);
 
-        /// <summary>Los datos ya se borraron y se ve la confirmación: la escena se recarga al acabar (<see cref="TickAccount"/>).</summary>
-        public bool AccountDeleted => _deleteDoneMs >= 0f;
+        /// <summary>
+        /// Los datos ya se borraron (desde el borrado local hasta que la escena se va; no vuelve a false): se ve la confirmación y la
+        /// escena se recarga al acabar (<see cref="TickAccount"/>). Mientras, nada de esta escena escribe el perfil, llama al
+        /// servidor ni avanza: cortan <c>OnApplicationPause</c> y <c>OnApplicationQuit</c>, <c>SessionsPaused</c>,
+        /// <c>LogbookPause</c>, <c>ResumeBackend</c>, <c>RestoreLedgerNow</c>, <c>PushUiResumed</c> y los <c>Tick*</c> de los
+        /// runners (sesiones, Bitácora, Mercado, meta, Reto, Salto y Crecida); y el lote del perfil queda cerrado
+        /// (<see cref="ProfileSaveBatch.Closed"/>), que descarta cualquier guardado que aún llegue.
+        /// </summary>
+        public bool AccountDeleted => _accountWiped;
 
         /// <summary>
         /// Crea el diálogo encima de Ajustes y conecta su fila. False, sin crear nada, si Ajustes aún no existe; una segunda llamada
@@ -272,6 +284,7 @@ namespace AF.UI
                 return;
             }
 
+            _accountWiped = true; // desde aquí nada de esta escena escribe ni llama al servidor (AccountDeleted)
             _probe?.AccountDelete("done");
             if (!dialog.Visible)
             {
@@ -300,14 +313,19 @@ namespace AF.UI
             }
 
             dialog.Tick(dtMs);
-            if (_deleteDoneMs < 0f)
+            if (!_accountWiped)
             {
                 return false;
             }
 
+            if (_restartAsked || _deleteDoneMs < 0f)
+            {
+                return true; // la recarga ya se pidió (llega el fotograma siguiente): nada más de esta escena
+            }
+
             _deleteDoneMs += Mathf.Max(0f, dtMs);
             float hold = DeleteDoneHoldMsOverride ?? DeleteDoneHoldMs;
-            float fade = ReduceMotionNow ? DeleteFadeMs * (float)(_rcConfigs?.A11y ?? A11yConfig.Defaults).AnimReduceMotionFactor : DeleteFadeMs;
+            float fade = DeleteFadeMsNow;
             if (_deleteDoneMs < hold)
             {
                 return true;
@@ -317,7 +335,7 @@ namespace AF.UI
             dialog.SetFade(t);
             if (t >= 1f)
             {
-                _deleteDoneMs = -1f;
+                _restartAsked = true;
                 RestartAsFirstRun(true);
             }
 

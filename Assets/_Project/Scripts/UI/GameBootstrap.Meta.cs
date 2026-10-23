@@ -124,6 +124,11 @@ namespace AF.UI
         /// </summary>
         public void TickMeta(float dtMs)
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             LevelFlow? flow = _flow;
             if (flow == null)
             {

@@ -1901,6 +1901,11 @@ namespace AF.UI
 
         private void OnApplicationPause(bool paused)
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             TelemetryPause(paused); // la sesión de la analítica: nueva tras ≥ 30 min fuera (B7; D-033, Q-M4)
             if (paused)
             {
@@ -2194,6 +2199,11 @@ namespace AF.UI
 
         private void OnApplicationQuit()
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             PersistNow("cierre");
         }
 
