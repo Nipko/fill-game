@@ -360,6 +360,12 @@ namespace AF.UI
         private bool DeleteAccountData(out string? error)
         {
             error = null;
+
+            // D-042: la marca de borrado pendiente de la nube, antes de borrar nada (si la app se cierra a mitad, el arranque siguiente
+            // borra af_main igual); se vuelve a poner tras borrar PlayerPrefs, que la borra. Si el borrado local falla, vuelve a como estaba.
+            ICloudSaveFlags cloudFlags = EnsureCloudSession().Flags;
+            bool wasPending = cloudFlags.DeletePending;
+            cloudFlags.DeletePending = true;
             try
             {
                 if (FailAccountDeleteForTests)
@@ -380,11 +386,13 @@ namespace AF.UI
             catch (IOException e)
             {
                 error = e.Message;
+                cloudFlags.DeletePending = wasPending;
                 return false;
             }
             catch (UnauthorizedAccessException e)
             {
                 error = e.Message;
+                cloudFlags.DeletePending = wasPending;
                 return false;
             }
 
@@ -402,9 +410,9 @@ namespace AF.UI
 
             ResetAnalyticsData(); // F3-6 (08 §13.3): resetAnalyticsData() de Firebase, con un ID de instancia nuevo
 
-            // D-042: la marca de borrado pendiente (tras borrar PlayerPrefs, para que sobreviva), el borrado de af_main si hay sesión y
-            // la sesión de nube cerrada: nada más se sube. El arranque siguiente comprueba que el snapshot quedó vacío (CloudErase).
-            _cloudLateProfile = null;
+            // D-042: la marca de borrado pendiente otra vez (PlayerPrefs.DeleteAll la borró), el borrado de af_main si hay sesión y la
+            // sesión de nube cerrada: nada más se sube. El arranque siguiente comprueba que el snapshot quedó vacío (CloudErase).
+            _cloudLateRemote = null;
             EnsureCloudSession().EraseForAccountDelete(result =>
             {
                 if (result != CloudWriteResult.Ok && result != CloudWriteResult.NoSession)

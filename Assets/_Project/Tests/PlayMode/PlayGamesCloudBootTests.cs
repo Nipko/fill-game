@@ -4,6 +4,7 @@ using System.Collections;
 using System.Text;
 using AF.Economy;
 using AF.GameFlow;
+using AF.IAP;
 using AF.Platform;
 using AF.Save;
 using AF.UI;
@@ -31,6 +32,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap.ResetSessionOverrides();
             GameBootstrap.ResetTelemetryOverrides();
             GameBootstrap.ResetCloudOverrides();
+            GameBootstrap.ResetMarketOverrides();
         }
 
         private static Profile ProfileAt(int nextLevel, int seeds, ConsentRecord? consent = null)
@@ -44,6 +46,26 @@ namespace AF.Tests.PlayMode
         }
 
         private static byte[] Blob(Profile p) => Encoding.UTF8.GetBytes(ProfileJson.Serialize(p));
+
+        private static Profile Read(byte[] blob) => ProfileJson.Deserialize(Encoding.UTF8.GetString(blob));
+
+        // Hoja de compra que no responde hasta que el test lo dice (la compra queda en vuelo).
+        private sealed class HeldPurchasePresenter : ISimulatedPurchasePresenter
+        {
+            private Action<bool>? _onClosed;
+
+            public void Present(SimulatedPurchase purchase, Action<bool> onClosed)
+            {
+                _onClosed = onClosed;
+            }
+
+            public void Close(bool confirmed)
+            {
+                Action<bool>? close = _onClosed;
+                _onClosed = null;
+                close?.Invoke(confirmed);
+            }
+        }
 
         [UnityTest]
         public IEnumerator Boot_WaitsForPlayGames_AndStartsWithTheCloudProfile()
@@ -100,6 +122,130 @@ namespace AF.Tests.PlayMode
             Assert.That(ProfileJson.Deserialize(store.Json!).Progress.MaxLevel, Is.EqualTo(120));
             Assert.That(boot.CloudSessionNow!.State, Is.EqualTo(CloudSessionState.Synced), "la sesión de nube sigue tras la recarga");
             Assert.That(boot.UploadCloud(), Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator ALateCloud_WithAPurchaseInFlight_KeepsThePurchase_AndNeverUploadsTheUnmergedLocal()
+        {
+            // Revisión de D-042: la nube (con el mismo nivel y una economía más nueva) responde con una compra en vuelo. La fusión se
+            // rehace con el perfil vivo al aplicarla: la compra (más nueva aún) no se pierde, y mientras no se sube el local sin fusionar.
+            var held = new HeldPurchasePresenter();
+            LaunchOptions.PurchasePresenterOverride = held;
+            // economy_ts sale del reloj del teléfono (el de verdad), y el arranque ya lo marca: la nube va unos segundos por delante
+            // de ese arranque (gana al llegar) y la compra se acredita después (gana al aplicar la fusión).
+            Profile remote = ProfileAt(26, 50);
+            DateTime cloudTs = DateTime.UtcNow.AddSeconds(8);
+            remote.EconomyTs = cloudTs;
+            Profile local = ProfileAt(26, 0);
+            var cloud = new FakeCloudSave(Blob(remote)) { Deferred = true };
+            GameBootstrap.CloudSaveOverride = cloud;
+            GameBootstrap.CloudBootWaitMsOverride = 0f;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(local));
+            GameBootstrap boot = GameBootstrap.Current!;
+
+            PurchaseResult? bought = null;
+            boot.Store!.Purchase(new PurchaseRequest("af_coins_2"), r => bought = r);
+            Assert.That(boot.Store.IsPurchasing, Is.True, "la hoja de la compra, abierta");
+            cloud.Flush(); // gana la nube por economy_ts (la compra aún no se acreditó)
+            Assert.That(boot.CloudReplacePending, Is.True);
+            int saves = cloud.SaveCount;
+            yield return null;
+            yield return null;
+            Assert.That(GameBootstrap.Current, Is.SameAs(boot), "con una compra en vuelo no se recarga");
+
+            while (DateTime.UtcNow <= cloudTs.AddSeconds(1))
+            {
+                yield return null; // la compra, ya más nueva que la nube
+            }
+
+            Assert.That(GameBootstrap.Current, Is.SameAs(boot), "con la compra en vuelo sigue sin recargar");
+            held.Close(true);
+            Assert.That(bought!.IsPurchased, Is.True);
+            Assert.That(boot.Profile!.Wallet.Seeds, Is.EqualTo(1000));
+            var applied = new System.Collections.Generic.List<string>(boot.Profile.AppliedPurchases);
+            Assert.That(cloud.SaveCount, Is.EqualTo(saves), "la subida tras la compra no sale: sería el local sin fusionar");
+            Assert.That(boot.UploadCloud(), Is.False);
+
+            yield return PlayModeHelpers.WaitFor(() => !boot.CloudReplacePending || GameBootstrap.Current != boot, "la fusión tardía, aplicada");
+            yield return null;
+            yield return PlayModeHelpers.WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                "la sesión tras la fusión");
+            cloud.Flush();
+            Profile final = GameBootstrap.Current!.Profile!;
+            Assert.That(final.Wallet.Seeds, Is.EqualTo(1000), "la compra no se pierde (gana el perfil vivo, más nuevo)");
+            Assert.That(final.AppliedPurchases, Is.SupersetOf(applied), "ni su applied_purchases");
+            Assert.That(Read(cloud.Blob!).Wallet.Seeds, Is.EqualTo(1000), "la nube se pone al día con lo fusionado");
+        }
+
+        [UnityTest]
+        public IEnumerator ALateCloud_WithAWinWhileWaiting_KeepsTheWin_AndNeverUploadsTheUnmergedLocal()
+        {
+            Profile remote = ProfileAt(26, 50);
+            remote.EconomyTs = T0.AddDays(1);
+            var cloud = new FakeCloudSave(Blob(remote)) { Deferred = true };
+            GameBootstrap.CloudSaveOverride = cloud;
+            GameBootstrap.CloudBootWaitMsOverride = 0f;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(26, 0)));
+            GameBootstrap boot = GameBootstrap.Current!;
+
+            cloud.Flush(); // gana la nube por economy_ts
+            Assert.That(boot.CloudReplacePending, Is.True);
+            int saves = cloud.SaveCount;
+
+            // Una victoria antes de que se aplique (en el mismo fotograma): el nivel 26 superado, y tres victorias al bus.
+            boot.Profile!.Progress.MaxLevel = 26;
+            boot.Profile.Progress.NextLevel = 27;
+            for (int i = 0; i < 3; i++)
+            {
+                boot.Events!.Publish(new AF.Events.LevelWon(26, "w03_l26", 10, 10, 0, "{}", 1000, 0, false, false));
+            }
+
+            Assert.That(cloud.SaveCount, Is.EqualTo(saves), "las victorias no suben el local sin fusionar");
+            boot.gameObject.SendMessage("OnApplicationPause", true);
+            Assert.That(cloud.SaveCount, Is.EqualTo(saves), "ni el paso a segundo plano");
+            boot.gameObject.SendMessage("OnApplicationPause", false);
+
+            yield return PlayModeHelpers.WaitFor(() => !boot.CloudReplacePending || GameBootstrap.Current != boot, "la fusión tardía, aplicada");
+            yield return null;
+            yield return PlayModeHelpers.WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                "la sesión tras la fusión");
+            cloud.Flush();
+            Assert.That(GameBootstrap.Current!.Profile!.Progress.MaxLevel, Is.EqualTo(26), "la victoria no se pierde (gana el mayor max_level)");
+            Assert.That(Read(cloud.Blob!).Progress.MaxLevel, Is.EqualTo(26), "y la nube se pone al día");
+        }
+
+        [UnityTest]
+        public IEnumerator Under13InSettings_WithTheCloudStarting_NeitherSavesNorReloads()
+        {
+            GameBootstrap.ConsentEnabledOverride = true;
+            GameBootstrap.SimCountryOverride = new ManualSimCountry("CO");
+            var cloud = new FakeCloudSave(Blob(ProfileAt(80, 3))) { Deferred = true };
+            GameBootstrap.CloudSaveOverride = cloud;
+            GameBootstrap.CloudBootWaitMsOverride = 0f;
+            var store = new MemoryProfileStore(ProfileAt(10, 300, new ConsentRecord(LegalProfiles.Co1581, 1, T0, false, false, AgeBand.Adult)));
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap first = GameBootstrap.Current!;
+            Assert.That(first.CloudSessionNow!.State, Is.EqualTo(CloudSessionState.Starting));
+
+            Assert.That(first.OpenAgeCorrection(), Is.True);
+            first.ConsentView!.AgeButton(AgeBand.Under13).onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked,
+                "el arranque bloqueado tras corregir a <13");
+            GameBootstrap blocked = GameBootstrap.Current!;
+
+            cloud.Flush(); // la nube responde ahora (con más niveles: querría recargar y subir)
+            for (int i = 0; i < 5; i++)
+            {
+                yield return null;
+            }
+
+            Assert.That(cloud.SaveCount, Is.EqualTo(0), "D-033: con <13 no se escribe en la nube");
+            Assert.That(GameBootstrap.Current, Is.SameAs(blocked), "ni se recarga con el perfil de la nube");
+            Assert.That(blocked.CloudReplacePending, Is.False);
+            Assert.That(ProfileJson.Deserialize(store.Json!).Progress.MaxLevel, Is.EqualTo(9), "el perfil del teléfono no cambia");
         }
 
         [UnityTest]

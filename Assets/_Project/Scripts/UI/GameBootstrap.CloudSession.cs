@@ -43,7 +43,8 @@ namespace AF.UI
         private bool _cloudBootWindow;
         private Profile? _cloudBootProfile;
         private IProfileStore? _cloudBootStore;
-        private Profile? _cloudLateProfile;
+        private Profile? _cloudLateRemote;
+        private bool _cloudLateRemoteCoherent;
 
         /// <summary>Marcas de la nube para los tests (por defecto: en memoria en el editor, <c>PlayerPrefs</c> en el teléfono).</summary>
         internal static ICloudSaveFlags? CloudFlagsOverride { get; set; }
@@ -54,8 +55,14 @@ namespace AF.UI
         /// <summary>La nube de la sesión (null antes del arranque).</summary>
         public CloudSession? CloudSessionNow => _cloudSession;
 
-        /// <summary>Hay un perfil de la nube esperando a sustituir al de la sesión (llegó tarde y la escena se recargará).</summary>
-        public bool CloudReplacePending => _cloudLateProfile != null;
+        /// <summary>
+        /// Llegó tarde un perfil de la nube que cambia el de la sesión: espera a <see cref="TickCloud"/>, que lo vuelve a fusionar con
+        /// el perfil vivo. Mientras, no se sube nada (sería subir el local sin fusionar).
+        /// </summary>
+        public bool CloudReplacePending => _cloudLateRemote != null;
+
+        // La firma del perfil de la sesión para fusionar: la que tenía al leerse del disco (lo de después lo escribe el propio juego).
+        private IntegrityStatus SessionIntegrity => BootIntegrity ?? IntegrityStatus.Unsigned;
 
         private static ICloudSaveFlags CloudFlags
         {
@@ -160,7 +167,7 @@ namespace AF.UI
             CloudSession session = EnsureCloudSession();
             if (session.State == CloudSessionState.Idle)
             {
-                session.Start(() => _profile ?? profile, RouteCloudStart);
+                session.Start(() => _profile ?? profile, RouteCloudStart, SessionIntegrity);
             }
         }
 
@@ -177,9 +184,9 @@ namespace AF.UI
         private void OnCloudStarted(CloudSessionStart start)
         {
             CloudSyncReport? report = start.Report;
-            if (report == null)
+            if (report == null || start.State == CloudSessionState.Closed || ConsentBlocked || AccountDeleted)
             {
-                return;
+                return; // <13 declarado o cuenta borrada mientras la nube respondía: nada de lo que traiga se usa
             }
 
             bool late = !_cloudBootWindow;
@@ -213,37 +220,54 @@ namespace AF.UI
                 return;
             }
 
-            if (!AccountDeleted)
+            if (report.Remote != null)
             {
-                _cloudLateProfile = report.Profile; // TickCloud la aplica en cuanto se pueda
+                // TickCloud la vuelve a fusionar con el perfil vivo en cuanto se pueda (lo jugado o comprado mientras no se pierde).
+                _cloudLateRemote = report.Remote;
+                _cloudLateRemoteCoherent = !report.CloudIntegrity.HasValue || ProfileIntegrity.IsCoherent(report.CloudIntegrity.Value);
             }
         }
 
         /// <summary>
-        /// Cada fotograma: el perfil de la nube que llegó tarde sustituye al de la sesión (se guarda firmado y la escena se recarga
-        /// al inicio con él), salvo con una compra, un borrado o la pantalla de consentimiento en curso. True si recargó.
+        /// Cada fotograma: el perfil de la nube que llegó tarde se vuelve a fusionar con el perfil vivo (<see cref="CloudMerge.Resolve"/>,
+        /// las reglas de 08 §11: lo jugado o comprado mientras esperaba entra en la fusión, no se pisa con la fusión de cuando llegó).
+        /// Si la fusión cambia el perfil de la sesión, se guarda firmado, se sube y la escena se recarga al inicio con él; si no, solo se
+        /// sube si la nube quedó atrás. Espera con una compra, un borrado o la pantalla de consentimiento en curso. True si recargó.
         /// </summary>
         internal bool TickCloud()
         {
-            Profile? merged = _cloudLateProfile;
-            if (merged == null)
+            Profile? remote = _cloudLateRemote;
+            if (remote == null)
             {
                 return false;
             }
 
-            if (AccountDeleted)
+            if (AccountDeleted || ConsentBlocked)
             {
-                _cloudLateProfile = null;
+                _cloudLateRemote = null;
                 return false;
             }
 
-            if ((_store != null && _store.IsPurchasing) || DeleteAccountBusy || AccountDeleteInFlight || ConsentHoldsSession)
+            Profile? live = _profile;
+            if (live == null || (_store != null && _store.IsPurchasing) || DeleteAccountBusy || AccountDeleteInFlight || ConsentHoldsSession)
             {
                 return false;
             }
 
-            _cloudLateProfile = null;
-            PersistNow("nube"); // lo de esta sesión, en disco antes de sustituirlo
+            _cloudLateRemote = null;
+            PersistNow("nube"); // lo de esta sesión, en disco antes de fusionar
+            CloudMergeResult merge = CloudMerge.Resolve(live, remote, ProfileIntegrity.IsCoherent(SessionIntegrity), _cloudLateRemoteCoherent);
+            if (!merge.LocalChanged)
+            {
+                if (merge.CloudChanged)
+                {
+                    _cloudSession?.Upload(live); // gana el vivo: la nube se pone al día con él
+                }
+
+                return false;
+            }
+
+            Profile merged = merge.Merged;
             ProfileSaveBatch? batch = _saveBatch;
             if (batch != null)
             {
@@ -255,6 +279,11 @@ namespace AF.UI
             {
                 ProfileIntegrity.Sign(merged, DeviceIdentity);
                 _profileStore?.TrySave(merged);
+            }
+
+            if (merge.CloudChanged)
+            {
+                _cloudSession?.Upload(merged); // la sesión de nube sigue tras la recarga
             }
 
             _profile = merged;
@@ -272,9 +301,9 @@ namespace AF.UI
         {
             CloudSession? session = _cloudSession;
             Profile? profile = _profile;
-            if (session == null || profile == null || AccountDeleted || ProfileLocked)
+            if (session == null || profile == null || AccountDeleted || ProfileLocked || ConsentBlocked || CloudReplacePending)
             {
-                return;
+                return; // con una fusión tardía pendiente no se sube el local sin fusionar (TickCloud sube lo fusionado)
             }
 
             if (_rc != null && _rc.TryGet("save_cloud_interval_levels", out long interval))
@@ -290,9 +319,9 @@ namespace AF.UI
         {
             CloudSession? session = _cloudSession;
             Profile? profile = _profile;
-            if (session == null || profile == null || AccountDeleted || ProfileLocked || ConsentBlocked)
+            if (session == null || profile == null || AccountDeleted || ProfileLocked || ConsentBlocked || CloudReplacePending)
             {
-                return false;
+                return false; // con una fusión tardía pendiente no se sube el local sin fusionar (TickCloud sube lo fusionado)
             }
 
             return session.Upload(profile);
@@ -302,19 +331,20 @@ namespace AF.UI
         internal bool RetryCloud()
         {
             CloudSession? session = _cloudSession;
-            if (session == null || _profile == null || AccountDeleted || ProfileLocked || ConsentBlocked)
+            if (session == null || _profile == null || AccountDeleted || ProfileLocked || ConsentBlocked || CloudReplacePending)
             {
                 return false;
             }
 
             Profile current = _profile;
-            return session.Retry(() => _profile ?? current, RouteCloudStart);
+            return session.Retry(() => _profile ?? current, RouteCloudStart, SessionIntegrity);
         }
 
         // <13 declarado (al corregir la edad en Ajustes): la nube no vuelve a usarse en esta sesión.
         private void StopCloudForBlock()
         {
-            _cloudLateProfile = null;
+            _cloudLateRemote = null;
+            _cloudSession?.Stop(); // lo que esté en vuelo ya no fusiona ni escribe (Closed, sin marca de borrado)
             _cloudSession = null;
             s_rebuildCloud = null;
         }

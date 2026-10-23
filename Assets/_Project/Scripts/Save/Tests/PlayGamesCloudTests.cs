@@ -358,6 +358,67 @@ namespace AF.Save.Tests
         }
 
         [Test]
+        public void APlayConflict_WithANewerSchema_KeepsThatVersionAsItIs()
+        {
+            // 08 §4.4: una versión de otro teléfono ya actualizado no se pisa con la vieja (revisión de D-042).
+            byte[] old = Blob(AtLevel(80, 9));
+            byte[] newerA = Encoding.UTF8.GetBytes("{\"profile_schema\": " + (Profile.CurrentSchema + 1) + ", \"progress\": {\"max_level\": 3}}");
+            byte[] newerB = Encoding.UTF8.GetBytes("{\"profile_schema\": " + (Profile.CurrentSchema + 2) + ", \"progress\": {\"max_level\": 4}}");
+            Assert.That(CloudSync.ResolveSnapshotConflict(old, newerB, Phone), Is.EqualTo(newerB), "la nueva va de unmerged");
+            Assert.That(CloudSync.ResolveSnapshotConflict(newerA, old, Phone), Is.EqualTo(newerA), "la nueva va de original");
+            Assert.That(CloudSync.ResolveSnapshotConflict(newerA, newerB, Phone), Is.EqualTo(newerA), "las dos nuevas: la original");
+        }
+
+        [Test]
+        public void Session_Stop_WhileStarting_NeitherMergesNorWrites_AndLeavesNoDeleteMark()
+        {
+            // La banda pasa a <13 en Ajustes con la nube respondiendo (D-033): lo que llegue ya no fusiona ni escribe.
+            var cloud = new FakeCloudSave(Blob(AtLevel(4, 1))) { Deferred = true };
+            var flags = new MemoryCloudSaveFlags();
+            var session = new CloudSession(cloud, flags, Phone);
+            Profile local = AtLevel(30, 3); // gana el local: la fusión querría subirlo
+            CloudSessionStart? start = null;
+            session.Start(() => local, s => start = s);
+            Assert.That(session.State, Is.EqualTo(CloudSessionState.Starting));
+            session.Stop();
+            cloud.Flush();
+            Assert.That(start!.State, Is.EqualTo(CloudSessionState.Closed));
+            Assert.That(cloud.SaveCount, Is.EqualTo(0), "ni la subida de la fusión");
+            Assert.That(Read(cloud.Blob!).Progress.MaxLevel, Is.EqualTo(4));
+            Assert.That(flags.DeletePending, Is.False, "parar no es borrar");
+            Assert.That(session.Upload(local), Is.False);
+            Assert.That(session.Start(() => local, _ => { }), Is.False);
+        }
+
+        [Test]
+        public void Session_EraseForAccountDelete_ClosesWritesAtOnce_EvenWithASaveInFlight()
+        {
+            var cloud = new FakeCloudSave();
+            var session = new CloudSession(cloud, new MemoryCloudSaveFlags(), Phone);
+            Profile local = AtLevel(15, 5);
+            session.Start(() => local, _ => { });
+            cloud.Deferred = true;
+            Assert.That(session.Upload(local), Is.True); // en vuelo
+            Assert.That(session.Upload(local), Is.True); // se repetiría al terminar
+            session.EraseForAccountDelete();
+            cloud.Flush();
+            Assert.That(cloud.Blob, Is.Null, "lo último que llega es el borrado; la subida repetida no sale");
+            Assert.That(session.State, Is.EqualTo(CloudSessionState.Closed));
+        }
+
+        [Test]
+        public void CloudSync_ReportsTheRemoteProfile_ForALateRemerge()
+        {
+            var cloud = new FakeCloudSave(Blob(AtLevel(40, 7)));
+            CloudSyncReport? report = null;
+            CloudSync.AtStartup(AtLevel(10, 1), cloud, Phone, r => report = r);
+            Assert.That(report!.Remote, Is.Not.Null);
+            Assert.That(report.Remote!.Progress.MaxLevel, Is.EqualTo(40));
+            CloudSync.AtStartup(AtLevel(10, 1), new FakeCloudSave(), Phone, r => report = r);
+            Assert.That(report!.Remote, Is.Null, "sin nube");
+        }
+
+        [Test]
         public void TheBlob_CarriesNeitherTheAgeBandNorTheDeletionCode_AndPreD042SignaturesStillVerify()
         {
             // 08 §7: la banda declarada vive solo en el dispositivo; el código de borrado tampoco sube a Google (D-042).

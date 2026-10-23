@@ -61,6 +61,7 @@ namespace AF.Save
     public sealed class CloudSession
     {
         private readonly ICloudSave _cloud;
+        private readonly WriteGate _gate;
         private readonly ICloudSaveFlags _flags;
         private readonly IDeviceIdentity _device;
         private int _levelsSinceUpload;
@@ -71,6 +72,7 @@ namespace AF.Save
         public CloudSession(ICloudSave cloud, ICloudSaveFlags flags, IDeviceIdentity device)
         {
             _cloud = cloud ?? throw new ArgumentNullException(nameof(cloud));
+            _gate = new WriteGate(this, cloud);
             _flags = flags ?? throw new ArgumentNullException(nameof(flags));
             _device = device ?? throw new ArgumentNullException(nameof(device));
         }
@@ -125,7 +127,7 @@ namespace AF.Save
         }
 
         /// <summary>Al volver de segundo plano: si la fusión no llegó, otra vez; si ya está fusionada y hay una subida pendiente (#3379), la sube.</summary>
-        public bool Retry(Func<Profile> current, Action<CloudSessionStart> done)
+        public bool Retry(Func<Profile> current, Action<CloudSessionStart> done, IntegrityStatus? localIntegrity = null)
         {
             if (current == null)
             {
@@ -134,7 +136,7 @@ namespace AF.Save
 
             if (State == CloudSessionState.Unsynced || State == CloudSessionState.NoSession)
             {
-                return Start(current, done);
+                return Start(current, done, localIntegrity);
             }
 
             if (State == CloudSessionState.Synced && _cloud is ICloudResync pending && pending.NeedsResync)
@@ -187,7 +189,7 @@ namespace AF.Save
 
             _uploading = true;
             Uploads++;
-            CloudSync.Upload(profile, _cloud, _device, (result, _) =>
+            CloudSync.Upload(profile, _gate, _device, (result, _) =>
             {
                 _uploading = false;
                 done?.Invoke(result);
@@ -209,19 +211,29 @@ namespace AF.Save
         {
             _flags.DeletePending = true;
             _uploadAgain = null;
-            State = CloudSessionState.Closed;
-            if (_cloud.HasSession)
+            State = CloudSessionState.Closed; // desde ya, ninguna escritura (WriteGate), haya sesión o no
+            bool session = _cloud.HasSession;
+            if (session)
             {
-                _cloud.Delete(result =>
-                {
-                    (_cloud as PlayGamesCloudSave)?.Close();
-                    done?.Invoke(result);
-                });
-                return;
+                _cloud.Delete(result => done?.Invoke(result)); // se pide antes de cerrar: el borrado sí sale
             }
 
+            (_cloud as PlayGamesCloudSave)?.Close(); // y la real tampoco escribe lo que ya estuviera en vuelo
+            if (!session)
+            {
+                done?.Invoke(CloudWriteResult.NoSession);
+            }
+        }
+
+        /// <summary>
+        /// Para la nube de esta sesión sin borrar nada (la banda pasa a &lt;13 desde Ajustes; D-033): <see cref="CloudSessionState.Closed"/>,
+        /// sin marca de borrado; lo que esté en vuelo ya no fusiona ni escribe.
+        /// </summary>
+        public void Stop()
+        {
+            _uploadAgain = null;
+            State = CloudSessionState.Closed;
             (_cloud as PlayGamesCloudSave)?.Close();
-            done?.Invoke(CloudWriteResult.NoSession);
         }
 
         private void AfterSignIn(Func<Profile> current, Action<CloudSessionStart> done, IntegrityStatus? localIntegrity)
@@ -254,7 +266,7 @@ namespace AF.Save
                     return;
                 }
 
-                CloudSync.AtStartup(current(), _cloud, _device, report =>
+                CloudSync.AtStartup(current(), _gate, _device, report =>
                 {
                     if (State == CloudSessionState.Closed)
                     {
@@ -272,6 +284,39 @@ namespace AF.Save
                     done(new CloudSessionStart(State, erase, report));
                 }, localIntegrity);
             });
+        }
+
+        // La nube vista por la sesión: lee y borra como la de debajo, pero no escribe con la sesión cerrada (cuenta borrada o <13),
+        // aunque la escritura venga de una fusión o una subida que ya estaba en vuelo.
+        private sealed class WriteGate : ICloudSave, ICloudResync
+        {
+            private readonly CloudSession _session;
+            private readonly ICloudSave _inner;
+
+            public WriteGate(CloudSession session, ICloudSave inner)
+            {
+                _session = session;
+                _inner = inner;
+            }
+
+            public bool HasSession => _inner.HasSession;
+
+            public bool NeedsResync => _inner is ICloudResync r && r.NeedsResync;
+
+            public void Load(Action<CloudLoadResult> done) => _inner.Load(done);
+
+            public void Save(byte[] blob, Action<CloudWriteResult> done)
+            {
+                if (_session.State == CloudSessionState.Closed)
+                {
+                    done(CloudWriteResult.NoSession);
+                    return;
+                }
+
+                _inner.Save(blob, done);
+            }
+
+            public void Delete(Action<CloudWriteResult> done) => _inner.Delete(done);
         }
     }
 }

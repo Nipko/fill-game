@@ -10,8 +10,9 @@ namespace AF.Save
     public sealed class CloudSyncReport
     {
         internal CloudSyncReport(bool ran, CloudSyncResult result, CloudMergeReason? reason, Profile profile, bool replaced,
-            IntegrityStatus localIntegrity, IntegrityStatus? cloudIntegrity, CloudWriteResult? upload, int bytes, string? error)
+            IntegrityStatus localIntegrity, IntegrityStatus? cloudIntegrity, CloudWriteResult? upload, int bytes, string? error, Profile? remote = null)
         {
+            Remote = remote;
             Ran = ran;
             Result = result;
             Reason = reason;
@@ -50,6 +51,12 @@ namespace AF.Save
 
         /// <summary>Bytes del blob subido o leído (<c>af_save_sync.bytes</c>).</summary>
         public int Bytes { get; }
+
+        /// <summary>
+        /// El perfil leído de la nube (migrado al esquema actual), o null si no había o no se pudo leer. Sirve para volver a fusionar
+        /// con el perfil vivo si la respuesta llega tarde y el local cambió mientras (D-042; <c>GameBootstrap.TickCloud</c>).
+        /// </summary>
+        public Profile? Remote { get; }
 
         /// <summary>Qué falló (nube caída, blob ilegible o de una versión más nueva), o null.</summary>
         public string? Error { get; }
@@ -142,12 +149,12 @@ namespace AF.Save
                 bool resync = cloud is ICloudResync pending && pending.NeedsResync;
                 if (!merge.CloudChanged && !resync)
                 {
-                    done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, null, readBytes, null));
+                    done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, null, readBytes, null, remote));
                     return;
                 }
 
                 Upload(result, cloud, device, (write, bytes) =>
-                    done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, write, bytes, null)));
+                    done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, write, bytes, null, remote)));
             });
         }
 
@@ -178,8 +185,8 @@ namespace AF.Save
         /// Conflicto de Saved Games (D-042; 08 §11, «Conflicto»: resolución manual): Play guarda dos versiones de <c>af_main</c> y
         /// hay que elegir los bytes que quedan. Se leen las dos como perfiles y se fusionan con <see cref="CloudMerge.Resolve"/> (la
         /// <paramref name="original"/> hace de «local»; la fusión de verdad con el local llega después, en <see cref="AtStartup"/>).
-        /// Si una no se puede leer (ilegible o de un esquema más nuevo que esta app), queda la otra tal cual; si ninguna, la
-        /// <paramref name="original"/>. El resultado se firma con <paramref name="device"/> si cambió.
+        /// Si una es de un esquema más nuevo que esta app, queda esa tal cual (si lo son las dos, la <paramref name="original"/>);
+        /// si una no se puede leer, queda la otra tal cual; si ninguna, la <paramref name="original"/>. El resultado se firma con <paramref name="device"/> si cambió.
         /// </summary>
         public static byte[] ResolveSnapshotConflict(byte[] original, byte[] unmerged, IDeviceIdentity device)
         {
@@ -198,8 +205,23 @@ namespace AF.Save
                 throw new ArgumentNullException(nameof(device));
             }
 
-            bool okA = ReadBlob(original, out Profile? a, out bool migratedA, out _) == BlobRead.Ok && a != null;
-            bool okB = ReadBlob(unmerged, out Profile? b, out bool migratedB, out _) == BlobRead.Ok && b != null;
+            BlobRead readA = ReadBlob(original, out Profile? a, out bool migratedA, out _);
+            BlobRead readB = ReadBlob(unmerged, out Profile? b, out bool migratedB, out _);
+
+            // Una versión de un esquema más nuevo que esta app (otro teléfono ya actualizado) no se pisa ni se fusiona: se queda tal
+            // cual (08 §4.4, como en AtStartup); si lo son las dos, la original.
+            if (readA == BlobRead.TooNew)
+            {
+                return (byte[])original.Clone();
+            }
+
+            if (readB == BlobRead.TooNew)
+            {
+                return (byte[])unmerged.Clone();
+            }
+
+            bool okA = readA == BlobRead.Ok && a != null;
+            bool okB = readB == BlobRead.Ok && b != null;
             if (!okA)
             {
                 return okB ? (byte[])unmerged.Clone() : (byte[])original.Clone();
