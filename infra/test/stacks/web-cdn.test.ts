@@ -1,6 +1,7 @@
 import { Match } from 'aws-cdk-lib/assertions';
 import type { Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
+import { WEB_CSP, webRuntimeConfig } from '../../lib/web-stack.ts';
 import { build, DEV, PROD, PROD_DOMAIN, resourcesOfType } from '../helpers.ts';
 
 type Statement = { Effect: string; Principal?: unknown; Action: string | string[]; Condition?: unknown };
@@ -81,6 +82,20 @@ describe.each([
     const robots = custom.find((h) => h.Header === 'X-Robots-Tag');
     if (envName === 'dev') expect(robots?.Value).toBe('noindex, nofollow');
     else expect(robots).toBeUndefined();
+  });
+
+  it('despliega el sitio, config.json (base de la API, mismo origen) y robots.txt', () => {
+    const deployments = resourcesOfType(json, 'Custom::CDKBucketDeployment');
+    expect(deployments).toHaveLength(1);
+    expect(deployments[0][1].SourceObjectKeys as unknown[]).toHaveLength(3);
+    expect(webRuntimeConfig(build(ctx).config)).toEqual({ apiBase: '' });
+  });
+
+  it('la CSP deja la web sin terceros: scripts, estilos y conexiones solo del mismo origen', () => {
+    for (const d of ["default-src 'self'", "script-src 'self'", "style-src 'self'", "connect-src 'self'", "object-src 'none'", "form-action 'self'", "frame-ancestors 'none'"]) {
+      expect(WEB_CSP).toContain(d);
+    }
+    expect(WEB_CSP).not.toMatch(/unsafe-inline|unsafe-eval|https?:|\*/);
   });
 
   it('sin dominio no hay certificado, alias ni registros DNS', () => {

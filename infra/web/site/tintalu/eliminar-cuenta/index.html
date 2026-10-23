@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es-419">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eliminar tu cuenta · Tintalú</title>
+  <meta name="description" content="Cómo borrar tu cuenta de Tintalú y sus datos, desde el juego o desde esta página.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="/assets/site.css">
+  <link rel="alternate" hreflang="es-419" href="/tintalu/eliminar-cuenta/">
+  <link rel="alternate" hreflang="en" href="/tintalu/en/delete-account/">
+  <link rel="alternate" hreflang="pt-BR" href="/tintalu/pt-br/excluir-conta/">
+  <script src="/assets/delete-account.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="site-header">
+    <a class="brand" href="/">Tintalú</a>
+    <nav class="lang" aria-label="Idioma">
+      <ul>
+      <li><a href="/tintalu/eliminar-cuenta/" hreflang="es-419" lang="es-419" aria-current="page">Español</a></li>
+      <li><a href="/tintalu/en/delete-account/" hreflang="en" lang="en">English</a></li>
+      <li><a href="/tintalu/pt-br/excluir-conta/" hreflang="pt-BR" lang="pt-BR">Português</a></li>
+      </ul>
+    </nav>
+  </header>
+  <div class="draft" role="note"><strong>BORRADOR: requiere revisión del abogado.</strong> Este texto todavía no es definitivo. Los datos entre dobles corchetes están pendientes.</div>
+  <main id="main" tabindex="-1">
+<h1>Eliminar tu cuenta de Tintalú</h1>
+<p class="lead">Puedes borrar tu cuenta de Tintalú y los datos asociados en cualquier momento, sin costo. Tintalú es un juego de Parallext, LLC.</p>
+
+<h2 id="app">Desde el juego (lo más rápido)</h2>
+<ol>
+  <li>Abre Tintalú y entra en Ajustes.</li>
+  <li>Toca «Eliminar cuenta y datos».</li>
+  <li>Confirma dos veces.</li>
+</ol>
+<p>Así se borran también la partida y los demás datos del juego guardados en tu teléfono.</p>
+
+<h2 id="web">Desde esta página</h2>
+<p>Si ya no tienes el juego instalado o prefieres hacerlo aquí, necesitas tu <strong>código de cuenta</strong>. Lo ves en Tintalú › Ajustes, en la línea «Código para borrar tu cuenta en la web». Tiene 26 letras y números en grupos separados por guiones, por ejemplo <code>3HZ7-M2Q9-XK4T-8VB1-NC6D-RF0-WPE</code> (este es solo un ejemplo).</p>
+<ol>
+  <li>Escribe tu código y toca «Continuar».</li>
+  <li>Revisa el código y confirma con «Sí, eliminar» en los 5 minutos siguientes.</li>
+</ol>
+<form id="delete-form" class="delete-form" method="post" novalidate hidden data-msg-invalid="Ese código no es válido. Revísalo en Ajustes: tiene 26 letras y números." data-msg-sending="Un momento…" data-msg-not-found="No encontramos ese código. Revisa que sea el último que ves en Ajustes." data-msg-expired="La confirmación caducó. Vuelve a escribir tu código." data-msg-rate-limited="Demasiados intentos. Prueba de nuevo dentro de {minutes} min." data-msg-unavailable="No se pudo completar ahora. Inténtalo más tarde." data-msg-config="Esta página no está bien configurada. Borra tu cuenta desde el juego o inténtalo más tarde." data-msg-cancelled="No se eliminó nada." data-msg-done="Listo. Tu cuenta se eliminó.">
+  <fieldset id="delete-step-code">
+    <legend>Eliminar con tu código de cuenta</legend>
+    <label for="account-code">Código de cuenta</label>
+    <input id="account-code" name="code" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="64" required aria-describedby="account-code-hint delete-status">
+    <p id="account-code-hint" class="hint">Lo ves en Tintalú › Ajustes, en «Código para borrar tu cuenta en la web». Puedes escribirlo con o sin guiones.</p>
+    <button id="delete-submit" type="submit">Continuar</button>
+  </fieldset>
+  <fieldset id="delete-step-confirm" hidden>
+    <legend>¿Seguro que quieres eliminar tu cuenta?</legend>
+    <p>Se borrarán tu cuenta y tus datos en la nube. No se puede deshacer y las compras no se reembolsan.</p>
+    <p>Código: <strong id="delete-confirm-code" class="code"></strong></p>
+    <div class="actions">
+      <button id="delete-yes" type="button" class="danger">Sí, eliminar</button>
+      <button id="delete-no" type="button" class="secondary">Cancelar</button>
+    </div>
+  </fieldset>
+</form>
+<p id="delete-status" class="status" role="status" aria-live="polite" tabindex="-1"></p>
+<noscript><p class="notice">El formulario necesita JavaScript. Si no puedes activarlo, borra tu cuenta desde el juego (Ajustes › «Eliminar cuenta y datos»).</p></noscript>
+<p>Usa el último código que hayas visto en Ajustes: cuando el juego pide uno nuevo (por ejemplo, al reinstalarlo), el anterior deja de valer. Nunca te pediremos este código por correo ni por teléfono.</p>
+
+<h2 id="borra">Qué se borra</h2>
+<ul>
+  <li>Tu cuenta anónima, también en Firebase Authentication.</li>
+  <li>Tus datos en nuestro servidor: la verificación de integridad, tu código de cuenta y el vínculo entre tus compras y tu cuenta.</li>
+  <li>Durante 2 horas queda una marca de cuenta borrada, con tu identificador solo como hash, para que nada vuelva a escribirse a nombre de la cuenta; después desaparece.</li>
+  <li>Desde el juego, además, tu progreso, tus semillas, tus comodines y tus ajustes guardados en el teléfono.</li>
+</ul>
+<p>Si borras la cuenta desde esta página, los datos del juego que queden en tu teléfono no se pueden borrar desde aquí: desaparecen al desinstalar el juego. <mark class="pending">[[ABOGADO: texto sobre los datos del teléfono cuando el borrado llega por la web (Q-B13-22)]]</mark></p>
+
+<h2 id="conserva">Qué se conserva</h2>
+<p>El historial de compras, <strong>sin ningún dato que te identifique</strong>, durante <mark class="pending">[[ABOGADO: plazo fiscal]]</mark> por obligaciones fiscales. Las compras <strong>no se reembolsan</strong> y no se pueden recuperar. Los datos de analítica no están unidos a tu cuenta y se borran solos según su plazo de retención.</p>
+
+<h2 id="tarda">Cuánto tarda</h2>
+<p>Al momento: cuando ves «Listo. Tu cuenta se eliminó.», el borrado ya está hecho.</p>
+
+<h2 id="sin-codigo">Si no tienes el código</h2>
+<p>Si el juego está instalado, ábrelo con conexión a internet y entra en Ajustes: ahí aparece el código, o puedes borrar la cuenta directamente. Si ya no lo tienes, escríbenos a <mark class="pending">[[DATO DEL DUEÑO: correo de privacidad]]</mark>.</p>
+<p>Más información en nuestra <a href="/privacidad/">política de privacidad</a>.</p>
+  </main>
+  <footer class="site-footer">
+    <nav aria-label="Páginas del sitio">
+      <ul>
+      <li><a href="/">Tintalú</a></li>
+      <li><a href="/privacidad/">Política de privacidad</a></li>
+      <li><a href="/terminos/">Términos de uso</a></li>
+      <li><a href="/tintalu/eliminar-cuenta/" aria-current="page">Eliminar tu cuenta</a></li>
+      <li><a href="/creditos/">Créditos y licencias</a></li>
+      </ul>
+    </nav>
+    <p>Tintalú es un juego de Parallext, LLC.</p>
+    <p>Juego independiente inspirado en la cuenca amazónica; sin relación con Amazon.com, Inc.</p>
+  </footer>
+</body>
+</html>

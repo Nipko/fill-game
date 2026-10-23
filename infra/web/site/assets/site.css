@@ -1,0 +1,78 @@
+/* Web pública de Tintalú: ligera, sin fuentes ni recursos externos (CSP estricta), modo claro y oscuro. */
+:root {
+  color-scheme: light dark;
+  --bg: #f6f4ee;
+  --surface: #ffffff;
+  --fg: #1d2a24;
+  --muted: #4a5a52;
+  --accent: #0b5d63;
+  --accent-fg: #ffffff;
+  --danger: #a3261b;
+  --ok: #1d6b3a;
+  --border: #cdd6d0;
+  --draft-bg: #fff3c4;
+  --draft-fg: #4a3800;
+  --mark-bg: #ffe08a;
+  --mark-fg: #3a2c00;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #102019;
+    --surface: #17291f;
+    --fg: #e8efe9;
+    --muted: #b4c3b9;
+    --accent: #5cc6cc;
+    --accent-fg: #0b1a14;
+    --danger: #ff8a7d;
+    --ok: #7ad69a;
+    --border: #2f4a3c;
+    --draft-bg: #3d3210;
+    --draft-fg: #ffe9a8;
+    --mark-bg: #6b5410;
+    --mark-fg: #fff3c4;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); }
+body { font: 1rem/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); text-underline-offset: 0.15em; }
+a:focus-visible, button:focus-visible, input:focus-visible, main:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+main:focus { outline: none; }
+.skip { position: absolute; left: -9999px; top: 0; }
+.skip:focus { left: 1rem; top: 1rem; background: var(--surface); padding: 0.5rem 1rem; z-index: 1; }
+.site-header, main, .site-footer, .draft { max-width: 46rem; margin: 0 auto; padding-left: 1rem; padding-right: 1rem; }
+.site-header { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; padding-top: 1rem; padding-bottom: 1rem; }
+.brand { font-weight: 700; font-size: 1.25rem; text-decoration: none; color: var(--fg); }
+nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
+nav a[aria-current="page"] { font-weight: 700; text-decoration: none; color: var(--fg); }
+.draft { background: var(--draft-bg); color: var(--draft-fg); border-radius: 0.5rem; padding-top: 0.75rem; padding-bottom: 0.75rem; }
+main { padding-top: 1rem; padding-bottom: 2rem; }
+h1 { font-size: 1.75rem; line-height: 1.25; margin: 1rem 0 1rem; }
+h2 { font-size: 1.3rem; line-height: 1.3; margin: 2rem 0 0.75rem; }
+h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+.lead { font-size: 1.1rem; }
+.meta { color: var(--muted); }
+mark.pending { background: var(--mark-bg); color: var(--mark-fg); padding: 0 0.2em; border-radius: 0.2em; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.95rem; }
+th, td { border: 1px solid var(--border); padding: 0.5rem; text-align: left; vertical-align: top; }
+th { background: var(--surface); }
+code, .code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; overflow-wrap: anywhere; }
+.delete-form { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1rem; margin: 1.5rem 0 0.5rem; }
+.delete-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.delete-form legend { font-weight: 700; font-size: 1.1rem; padding: 0; margin-bottom: 0.75rem; }
+.delete-form label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+.delete-form input { width: 100%; font: inherit; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 1.1rem; padding: 0.6rem; border: 2px solid var(--border); border-radius: 0.5rem; background: var(--bg); color: var(--fg); text-transform: uppercase; }
+.delete-form input[aria-invalid="true"] { border-color: var(--danger); }
+.hint { color: var(--muted); font-size: 0.95rem; }
+button { font: inherit; font-weight: 600; min-height: 2.75rem; padding: 0.5rem 1.25rem; border-radius: 0.5rem; border: 2px solid var(--accent); background: var(--accent); color: var(--accent-fg); cursor: pointer; }
+button:disabled { opacity: 0.6; cursor: progress; }
+button.danger { background: var(--danger); border-color: var(--danger); color: var(--accent-fg); }
+button.secondary { background: transparent; color: var(--fg); border-color: var(--border); }
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.status { min-height: 1.6em; font-weight: 600; }
+.status[data-kind="error"] { color: var(--danger); }
+.status[data-kind="ok"] { color: var(--ok); }
+.notice { border-left: 4px solid var(--accent); padding-left: 0.75rem; }
+.site-footer { border-top: 1px solid var(--border); padding-top: 1rem; padding-bottom: 2rem; color: var(--muted); font-size: 0.95rem; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

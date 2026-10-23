@@ -61,6 +61,17 @@ export const WEB_CSP = [
   'upgrade-insecure-requests',
 ].join('; ');
 
+/** Archivo de configuración de despliegue que lee la web (no está en web/site/: lo escribe este stack). */
+export const WEB_RUNTIME_CONFIG_FILE = 'config.json';
+
+/**
+ * Configuración de despliegue de la web: la base de la API del borrado por web. Vacía = mismo origen, porque
+ * esta distribución reenvía /v1/account/delete-* a la API (y la CSP solo permite connect-src 'self').
+ */
+export function webRuntimeConfig(_config: AfConfig): { readonly apiBase: string } {
+  return { apiBase: '' };
+}
+
 /** Reescribe /ruta/ y /ruta a /ruta/index.html (las páginas de F1-3 van por carpeta de idioma). */
 const INDEX_REWRITE = `function handler(event) {
   var request = event.request;
@@ -192,6 +203,7 @@ export class WebStack extends Stack {
       destinationBucket: site,
       sources: [
         Source.asset(WEB_SITE_DIR),
+        Source.jsonData(WEB_RUNTIME_CONFIG_FILE, webRuntimeConfig(config)),
         Source.data(
           'robots.txt',
           config.isProd ? 'User-agent: *\nAllow: /\n' : 'User-agent: *\nDisallow: /\n',
