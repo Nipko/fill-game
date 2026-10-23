@@ -312,6 +312,11 @@ namespace AF.UI
         /// <summary>Lo que el Mercado hace cada fotograma (lo llama <see cref="MarketRunner"/>). Sin asignaciones mientras nada cambia.</summary>
         internal void TickMarket(float dtMs)
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             OfferScheduler? offers = _offers;
             LevelFlow? flow = _flow;
             if (offers == null || flow == null)

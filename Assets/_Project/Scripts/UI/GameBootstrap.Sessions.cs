@@ -177,6 +177,11 @@ namespace AF.UI
         /// </summary>
         internal void SessionsPaused(bool paused)
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             SessionTracker? sessions = _sessions;
             NotificationService? notifications = _notifications;
 
@@ -221,6 +226,11 @@ namespace AF.UI
         /// </summary>
         internal void TickSessions()
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             if (_sessions == null)
             {
                 return;

@@ -1031,7 +1031,8 @@ namespace AF.UI
                 return false;
             }
 
-            // «Eliminar cuenta y datos» (B8), encima de Ajustes: Atrás lo cierra sin borrar y deja Ajustes abierta.
+            // «Eliminar cuenta y datos» (B8), encima de Ajustes: Atrás lo cierra sin borrar y deja Ajustes abierta; con «Eliminando…»
+            // o la confirmación a la vista no hace nada (CancelDeleteAccount da false y BackBlocked, el háptico de Atrás bloqueado).
             if (DeleteAccountOpen)
             {
                 return CancelDeleteAccount();
@@ -1822,6 +1823,15 @@ namespace AF.UI
                 return;
             }
 
+            // «Eliminar cuenta y datos»: los puntos de espera y, con la cuenta ya borrada, la confirmación hasta la recarga (con el
+            // perfil borrado no avanza nada más; Atrás no hace nada).
+            if (TickAccount(Time.unscaledDeltaTime * 1000f))
+            {
+                _backPresses = 0;
+                TickA11y(Time.unscaledDeltaTime * 1000f);
+                return;
+            }
+
             TickBackend(Time.unscaledDeltaTime * 1000f); // F3-5: la cola de verificación de compras, cada pocos segundos
             TickA11y(Time.unscaledDeltaTime * 1000f); // B9: el lector de pantalla (solo con TalkBack) y el Reto
 
@@ -1891,6 +1901,11 @@ namespace AF.UI
 
         private void OnApplicationPause(bool paused)
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             TelemetryPause(paused); // la sesión de la analítica: nueva tras ≥ 30 min fuera (B7; D-033, Q-M4)
             if (paused)
             {
@@ -2184,6 +2199,11 @@ namespace AF.UI
 
         private void OnApplicationQuit()
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             PersistNow("cierre");
         }
 

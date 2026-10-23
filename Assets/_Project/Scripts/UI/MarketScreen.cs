@@ -428,7 +428,7 @@ namespace AF.UI
             PurchaseNoteKind noteKind = _deps.Notes?.Of(row.Id) ?? PurchaseNoteKind.None;
             string? purchaseNote = MarketText.PurchaseNote(noteKind);
             view.Note.text = purchaseNote ?? (!skin && row.Id == StoreCatalog.Starter && row.Number > 0 ? MarketText.StarterLeft(row.Number) : string.Empty);
-            view.Note.color = noteKind == PurchaseNoteKind.Pending ? (Color)Palette.FamilyWood.Base : (Color)Palette.UiRedWarning;
+            view.Note.color = noteKind == PurchaseNoteKind.Failed ? (Color)Palette.UiRedWarning : (Color)Palette.FamilyWood.Base;
             Sprite? icon = IconOf(row.Id, skin);
             view.Icon.sprite = icon;
             view.Icon.color = skin ? CuiaSkin.For(row.Id).Rim : Color.white;
@@ -456,7 +456,8 @@ namespace AF.UI
                     break;
                 default:
                     view.CtaLabel.text = _deps.Store.PriceOf(row.Id).ToString();
-                    UiBuilder.SetEnabled(view.Cta.Button, storeOn && row.Action == MarketAction.Buy);
+                    // Mientras una compra se confirma («Confirmando…»), ningún precio responde: no se abre otra (IsPurchasing).
+                    UiBuilder.SetEnabled(view.Cta.Button, storeOn && row.Action == MarketAction.Buy && !_deps.Store.IsPurchasing);
                     break;
             }
         }

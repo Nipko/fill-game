@@ -117,6 +117,48 @@ pudo eliminar» y no se borra nada más. Sonda: `AF_STATE af_account_delete` con
 **Falta, con Functions y App Check:** `deleteAccount` en el servidor, el ID de jugador visible en Ajustes (para la vía web) y el envío de
 `af_account_delete` a la analítica.
 
+### 6.1 La espera (prueba del dueño del 2026-10-23, rama `tanda5/borrado-espera`)
+
+«Está tosco, sin mostrar nada si cargando o procesando»: `POST /v1/account/delete` tarda varios segundos. Ahora:
+
+- **Mientras el servidor borra** (`AccountDeleteInFlight`; paso `Deleting` de `DeleteAccountDialog`): «Eliminando tu cuenta y tus datos…»
+  con tres puntos de espera (`WaitDots`, una vuelta de 1.200 ms [P]; quietos y encendidos con Reducir movimiento), «Eliminar» y la X
+  desactivados, un segundo toque que no pide otro borrado y el Atrás de Android ignorado (`DeleteAccountBusy`; `BackBlocked` da el
+  háptico de Atrás bloqueado). TalkBack lo anuncia.
+- **Al terminar bien** (paso `Done`): lo local se borra y se ve «Tu cuenta y tus datos se eliminaron.» en una tarjeta sin cabecera ni
+  botones durante 1.800 ms [P]; luego la tarjeta se funde y el velo se oscurece en 300 ms [P] (× `anim_reduce_motion_factor` con Reducir
+  movimiento) y se recarga la escena como primera ejecución. TalkBack lo anuncia. Lo que garantiza el código desde el borrado local
+  hasta que la escena se va (`AccountDeleted`, que ya no vuelve a false):
+  - **en la raíz:** `ProfileSaveBatch.Delete()` deja el lote cerrado (`Closed`): descarta todo `Save` posterior, también por
+    `Durable` (la cartera y `ProfileSessionStore`), el cierre de un lote abierto antes del borrado y `FlushSync`, así que nada de
+    esta escena vuelve a crear `profile.json` (`SaveBatchTests.AfterDelete_*`);
+  - **sin llamadas ni trabajo:** `Update` de `GameBootstrap` solo avanza la confirmación (`TickAccount`, sin `TickBackend` ni la cola
+    de verificación), y no hacen nada `OnApplicationPause` y `OnApplicationQuit` (también `TelemetryPause`), `SessionsPaused`,
+    `LogbookPause`, `ResumeBackend`, `RestoreLedgerNow`, `PushUiResumed` y los `Tick*` de los runners (`TickSessions`,
+    `TickLogbook`, `TickMarket`, `TickMeta`, `TickDaily`, `TickSkipBanner`, `TickStreakProbe`). Así, Inicio y la vuelta con la
+    confirmación a la vista no escriben el perfil, no reprograman avisos y no llaman al backend ni a Play
+    (`DeleteAccountWaitTests.DuringTheConfirmation_PauseAndResume_NeitherWriteTheProfileNorCallTheServer`);
+  - **no cubierto:** `PlayerPrefs` que escriba otra pieza de esta escena y que no pase por esos puntos (no se encontró ninguna) y las
+    respuestas de red que ya estaban en vuelo antes del borrado: no escriben el perfil, porque el lote está cerrado y `_saveBatch` es
+    null, pero sus registros pueden salir.
+- **Al fallar:** «No se pudo eliminar. Inténtalo de nuevo.» y el botón dice «Reintentar» (antes, «Eliminar»); la X sigue cerrando sin
+  borrar. TalkBack anuncia el fallo.
+- **Otras esperas de red revisadas:**
+  - la verificación de una compra en el Mercado y en Aguas estancadas: dice «Confirmando…», como pide 08 §10.3 (antes decía «Pendiente
+    de confirmar» también mientras se preguntaba), y en el Mercado ningún precio responde mientras (`IsPurchasing`); si el servidor no
+    responde, «Pendiente de confirmar» como antes. TalkBack lo anuncia;
+  - la restauración al arrancar (`restoreLedger` y `Resume`): va en segundo plano y no deja nada quieto ni bloquea la UI; lo que acredita
+    aparece en el saldo. Sin cambio;
+  - el código de borrado en Ajustes (`GetAccountCode`): su línea sale vacía hasta que llega, sin bloquear Ajustes. Sin cambio; si se
+    quiere, una línea «Obteniendo el código…» es una tarea pequeña aparte;
+  - la pantalla de arranque no espera a la red (se corta al terminar la carga) y no lleva texto (06 §2.1).
+- Textos nuevos (`strings.csv`, es-419, en y pt-BR, `borrador`): `delete_account_deleting`, `delete_account_done`, `delete_account_retry`
+  e `iap_verifying` (el texto de 08 §10.3). Capturas: `DeleteAccountSnapshotTests` (`[Explicit]`, con gráficos), en
+  `Logs/snapshots/<idioma>/delete_account_0N_*.png` al 100 y al 130 % y `Logs/snapshots/es-419/market_verifying.png`.
+- Tests: `DeleteAccountWaitTests` (PlayMode, con un servidor falso con retardo: espera, botones, Atrás, TalkBack, confirmación, fundido,
+  reintento, Reducir movimiento y encaje al 130 % en los tres idiomas), `BackendF35Tests.Market_WhileTheServerVerifies_SaysConfirming_AndNoPriceAnswers`,
+  `PurchaseNotesTests.WhileTheServerAnswers_TheLivePurchaseSaysConfirming` y `WaitDotsTests` (EditMode).
+
 ## 7. Preguntas para el dueño (con la recomendada aplicada)
 
 | Id | Pregunta | Opciones | Recomendada |

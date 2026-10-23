@@ -58,6 +58,7 @@ namespace AF.GameFlow
         private readonly ProfileWriter? _writer;
         private int _depth;
         private bool _durable;
+        private bool _closed;
         private Profile? _pending;
 
         // El último perfil entregado al escritor: si su escritura falla, vuelve a estar pendiente.
@@ -91,6 +92,13 @@ namespace AF.GameFlow
 
         /// <summary>Hay un lote abierto.</summary>
         public bool InBatch => _depth > 0;
+
+        /// <summary>
+        /// El perfil se borró (<see cref="Delete"/>): el lote queda cerrado para siempre y descarta todo guardado posterior, venga
+        /// de donde venga (la sesión al pasar a segundo plano, la cartera, un lote que se cierra después), para que nada vuelva a
+        /// crear <c>profile.json</c> con el perfil borrado («Eliminar cuenta y datos», 08 §11).
+        /// </summary>
+        public bool Closed => _closed;
 
         /// <summary>
         /// Hay cambios que no se han entregado a ninguna escritura: lote abierto con cambios, o escritura fallida (también la del
@@ -166,6 +174,11 @@ namespace AF.GameFlow
                 throw new ArgumentNullException(nameof(profile));
             }
 
+            if (_closed)
+            {
+                return; // perfil borrado: no se vuelve a escribir
+            }
+
             CollectWriterFailure();
             if (_depth > 0)
             {
@@ -192,8 +205,10 @@ namespace AF.GameFlow
         }
 
         /// <inheritdoc />
+        /// <remarks>Cierra el lote (<see cref="Closed"/>): desde aquí, todo guardado se descarta.</remarks>
         public void Delete()
         {
+            _closed = true;
             _pending = null;
             _handedOff = null;
             if (_writer != null)
@@ -223,6 +238,11 @@ namespace AF.GameFlow
         /// </summary>
         public bool FlushSync(int timeoutMs)
         {
+            if (_closed)
+            {
+                return true; // perfil borrado: nada que escribir
+            }
+
             CollectWriterFailure();
             if (_depth > 0)
             {
@@ -268,6 +288,12 @@ namespace AF.GameFlow
 
             bool durable = _durable;
             _durable = false;
+            if (_closed)
+            {
+                _pending = null; // un lote abierto antes del borrado no escribe al cerrarse
+                return;
+            }
+
             CollectWriterFailure();
             if (durable)
             {

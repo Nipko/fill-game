@@ -29,6 +29,12 @@ namespace AF.UI
     /// eliminar» [P]. Sin borrado remoto (banda &lt; 13, o un build sin backend: nada se mandó a ningún servidor) solo se borra lo
     /// local. Ajustes no enseña el UID: enseña el código de borrado para la web de <c>IBackendClient.GetAccountCode</c> (Q-B13-21:
     /// aleatorio, distinto del UID y rotatorio; <c>GameBootstrap.Backend.cs</c>).</item>
+    /// <item>La espera (prueba del dueño del 2026-10-23: «sin mostrar nada si cargando o procesando»): mientras el servidor
+    /// borra, el diálogo dice «Eliminando tu cuenta y tus datos…» con los puntos de espera (<see cref="WaitDots"/>, quietos con
+    /// Reducir movimiento), los botones desactivados y el Atrás de Android bloqueado (<see cref="DeleteAccountBusy"/>); TalkBack lo
+    /// anuncia. Al terminar, «Tu cuenta y tus datos se eliminaron.» durante <see cref="DeleteDoneHoldMs"/> y un fundido de
+    /// <see cref="DeleteFadeMs"/> (× <c>anim_reduce_motion_factor</c> con Reducir movimiento) antes de la recarga
+    /// (<see cref="TickAccount"/>). Tras un fallo, «No se pudo eliminar» con «Reintentar», sin cerrar el diálogo.</item>
     /// <item>Sonda (solo en desarrollo): <c>AF_STATE af_account_delete</c> con <c>requested</c>, <c>confirmed</c>, <c>done</c>
     /// o <c>failed</c> (08 §8.2), y el <c>AF_LAYOUT delete_account</c> del diálogo.</item>
     /// </list>
@@ -37,6 +43,21 @@ namespace AF.UI
     {
         private DeleteAccountDialog? _deleteAccountDialog;
         private ICloudSave? _cloudSave;
+        private float _deleteDoneMs = -1f;
+        private bool _accountWiped;
+        private bool _restartAsked;
+
+        /// <summary>Lo que se ve «Tu cuenta y tus datos se eliminaron.» antes del fundido (ms) [P]: lo justo para leer una línea.</summary>
+        public const float DeleteDoneHoldMs = 1800f;
+
+        /// <summary>Fundido de la confirmación al velo antes de la recarga (ms) [P].</summary>
+        public const float DeleteFadeMs = 300f;
+
+        /// <summary>El fundido final en vigor (ms): <see cref="DeleteFadeMs"/>, × <c>anim_reduce_motion_factor</c> con Reducir movimiento.</summary>
+        internal float DeleteFadeMsNow => ReduceMotionNow ? DeleteFadeMs * (float)(_rcConfigs?.A11y ?? A11yConfig.Defaults).AnimReduceMotionFactor : DeleteFadeMs;
+
+        /// <summary>Sustituye <see cref="DeleteDoneHoldMs"/> en los tests (capturas); <see cref="ResetAccountOverrides"/> lo limpia.</summary>
+        internal static float? DeleteDoneHoldMsOverride { get; set; }
 
         /// <summary>Nube para los tests (gana a la falsa sin sesión); <see cref="ResetAccountOverrides"/> la limpia.</summary>
         internal static ICloudSave? CloudSaveOverride { get; set; }
@@ -59,6 +80,7 @@ namespace AF.UI
             CloudSaveOverride = null;
             FailAccountDeleteForTests = false;
             WipePlayerPrefsForTests = null;
+            DeleteDoneHoldMsOverride = null;
             AnalyticsResetOverride = null;
             ResetBackendOverrides();
         }
@@ -91,6 +113,22 @@ namespace AF.UI
 
         /// <summary>El diálogo «Eliminar cuenta y datos» está abierto.</summary>
         public bool DeleteAccountOpen => _deleteAccountDialog != null && _deleteAccountDialog.Visible;
+
+        /// <summary>
+        /// El borrado espera al servidor o ya terminó (la confirmación antes de la recarga): ni la X ni el Atrás de Android cierran
+        /// el diálogo y sus botones no responden.
+        /// </summary>
+        public bool DeleteAccountBusy => AccountDeleteInFlight || _accountWiped || (_deleteAccountDialog != null && _deleteAccountDialog.Busy);
+
+        /// <summary>
+        /// Los datos ya se borraron (desde el borrado local hasta que la escena se va; no vuelve a false): se ve la confirmación y la
+        /// escena se recarga al acabar (<see cref="TickAccount"/>). Mientras, nada de esta escena escribe el perfil, llama al
+        /// servidor ni avanza: cortan <c>OnApplicationPause</c> y <c>OnApplicationQuit</c>, <c>SessionsPaused</c>,
+        /// <c>LogbookPause</c>, <c>ResumeBackend</c>, <c>RestoreLedgerNow</c>, <c>PushUiResumed</c> y los <c>Tick*</c> de los
+        /// runners (sesiones, Bitácora, Mercado, meta, Reto, Salto y Crecida); y el lote del perfil queda cerrado
+        /// (<see cref="ProfileSaveBatch.Closed"/>), que descarta cualquier guardado que aún llegue.
+        /// </summary>
+        public bool AccountDeleted => _accountWiped;
 
         /// <summary>
         /// Crea el diálogo encima de Ajustes y conecta su fila. False, sin crear nada, si Ajustes aún no existe; una segunda llamada
@@ -150,11 +188,14 @@ namespace AF.UI
             return true;
         }
 
-        /// <summary>X, «Conservar mis datos» o Atrás de Android: cierra el diálogo sin borrar y deja Ajustes como estaba.</summary>
+        /// <summary>
+        /// X, «Conservar mis datos» o Atrás de Android: cierra el diálogo sin borrar y deja Ajustes como estaba. False, sin cerrar
+        /// nada, mientras el borrado espera al servidor o ya terminó (<see cref="DeleteAccountBusy"/>).
+        /// </summary>
         public bool CancelDeleteAccount()
         {
             DeleteAccountDialog? dialog = _deleteAccountDialog;
-            if (dialog == null || !dialog.Visible)
+            if (dialog == null || !dialog.Visible || DeleteAccountBusy)
             {
                 return false;
             }
@@ -164,20 +205,26 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// «Eliminar» del paso 2: borra los datos del cliente y vuelve al estado de primera ejecución (recarga la escena). Si el
-        /// borrado local falla, sigue en el paso 2 con «No se pudo eliminar» y no recarga. False si el paso 2 no está abierto.
+        /// «Eliminar» (o «Reintentar») del paso 2: pide el borrado al servidor con «Eliminando…» a la vista, borra los datos del
+        /// cliente, enseña la confirmación y vuelve al estado de primera ejecución (recarga la escena). Si algo falla, sigue en el
+        /// paso 2 con «No se pudo eliminar» y «Reintentar», y no recarga. False si el paso 2 no está abierto.
         /// </summary>
         public bool ConfirmDeleteAccount()
         {
             DeleteAccountDialog? dialog = _deleteAccountDialog;
-            if (dialog == null || dialog.Step != DeleteAccountStep.Confirm)
+            if (dialog == null)
             {
                 return false;
             }
 
             if (AccountDeleteInFlight)
             {
-                return true; // ya se pidió al servidor: se espera su respuesta
+                return true; // ya se pidió al servidor: se espera su respuesta (un segundo toque no pide otro)
+            }
+
+            if (dialog.Step != DeleteAccountStep.Confirm)
+            {
+                return false;
             }
 
             _probe?.AccountDelete("confirmed");
@@ -189,6 +236,9 @@ namespace AF.UI
             }
 
             AccountDeleteInFlight = true;
+            dialog.ShowDeleting(ReduceMotionNow);
+            AnnounceAccount(AccountText.Deleting);
+            EmitDeleteAccountLayout();
             server(ok =>
             {
                 AccountDeleteInFlight = false;
@@ -205,6 +255,7 @@ namespace AF.UI
                     if (dialog.Visible)
                     {
                         dialog.ShowFailure();
+                        AnnounceAccount(AccountText.Failed);
                         EmitDeleteAccountLayout();
                     }
 
@@ -226,15 +277,80 @@ namespace AF.UI
                 if (dialog.Visible)
                 {
                     dialog.ShowFailure();
+                    AnnounceAccount(AccountText.Failed);
                     EmitDeleteAccountLayout();
                 }
 
                 return;
             }
 
+            _accountWiped = true; // desde aquí nada de esta escena escribe ni llama al servidor (AccountDeleted)
             _probe?.AccountDelete("done");
-            dialog.Hide();
-            RestartAsFirstRun();
+            if (!dialog.Visible)
+            {
+                RestartAsFirstRun(false); // el diálogo ya no se ve: nada que confirmar
+                return;
+            }
+
+            // La confirmación breve, y la recarga cuando acaba (TickAccount): no un salto directo a la primera ejecución.
+            dialog.ShowDone();
+            AnnounceAccount(AccountText.Done);
+            EmitDeleteAccountLayout();
+            _deleteDoneMs = 0f;
+        }
+
+        /// <summary>
+        /// Cada fotograma: los puntos de espera y, con la cuenta ya borrada, la confirmación (<see cref="DeleteDoneHoldMs"/>), el
+        /// fundido y la recarga. True mientras se ve la confirmación: el resto del arranque no avanza (el perfil ya no existe y
+        /// nada debe volver a escribirlo ni llamar al servidor).
+        /// </summary>
+        internal bool TickAccount(float dtMs)
+        {
+            DeleteAccountDialog? dialog = _deleteAccountDialog;
+            if (dialog == null)
+            {
+                return false;
+            }
+
+            dialog.Tick(dtMs);
+            if (!_accountWiped)
+            {
+                return false;
+            }
+
+            if (_restartAsked || _deleteDoneMs < 0f)
+            {
+                return true; // la recarga ya se pidió (llega el fotograma siguiente): nada más de esta escena
+            }
+
+            _deleteDoneMs += Mathf.Max(0f, dtMs);
+            float hold = DeleteDoneHoldMsOverride ?? DeleteDoneHoldMs;
+            float fade = DeleteFadeMsNow;
+            if (_deleteDoneMs < hold)
+            {
+                return true;
+            }
+
+            float t = fade > 0f ? (_deleteDoneMs - hold) / fade : 1f;
+            dialog.SetFade(t);
+            if (t >= 1f)
+            {
+                _restartAsked = true;
+                RestartAsFirstRun(true);
+            }
+
+            return true;
+        }
+
+        // TalkBack: el estado del borrado («Eliminando…», la confirmación o el fallo) y un recorrido nuevo de la pantalla.
+        private void AnnounceAccount(string text)
+        {
+            A11yService? a11y = _a11y;
+            if (a11y != null)
+            {
+                a11y.Announce(text);
+                a11y.Invalidate();
+            }
         }
 
         // Parte del cliente de 08 §11: perfil, PlayerPrefs y nube. Primero lo local: si falla, no se borra nada (tampoco la nube).
@@ -300,14 +416,20 @@ namespace AF.UI
             return true;
         }
 
-        // Como RebuildUi, pero sin llevar el perfil de la sesión: el arranque siguiente es un arranque en frío sin perfil.
-        private void RestartAsFirstRun()
+        // Como RebuildUi, pero sin llevar el perfil de la sesión: el arranque siguiente es un arranque en frío sin perfil. Con
+        // covered (la confirmación ya fundida en el velo), Ajustes no se cierra antes: se iría el velo y el inicio asomaría un
+        // fotograma antes de la recarga; la escena entera se va igual.
+        private void RestartAsFirstRun(bool covered)
         {
             s_rebuildToLobby = false;
             s_rebuildProfile = null;
             s_rebuildStore = null;
             s_rebuildReopenSettings = false;
-            _settingsScreen?.Hide();
+            if (!covered)
+            {
+                _settingsScreen?.Hide();
+            }
+
             enabled = false; // nada más de este arranque: la escena se va
             Scene scene = gameObject.scene;
             if (scene.buildIndex >= 0)

@@ -289,6 +289,11 @@ namespace AF.UI
         /// </summary>
         public void TickLogbook(float dtMs)
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             LoginCalendarService? service = _logbook;
             LogbookScreen? screen = _logbookScreen;
             if (service == null || screen == null || _logbookClock == null)
@@ -347,6 +352,11 @@ namespace AF.UI
         /// <summary>La app pasa a segundo plano (true) o vuelve (false): la sesión de la cola de takeovers (Q-M4 (a)).</summary>
         public void LogbookPause(bool paused)
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             if (_takeovers == null || _logbookClock == null)
             {
                 return;

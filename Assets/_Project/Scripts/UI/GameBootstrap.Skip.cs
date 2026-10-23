@@ -179,6 +179,11 @@ namespace AF.UI
         /// </summary>
         internal void TickSkipBanner()
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             SkipBanner? banner = _skipBanner;
             LevelFlow? flow = _flow;
             GameScreen? screen = _screen;

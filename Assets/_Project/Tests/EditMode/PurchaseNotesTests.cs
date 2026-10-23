@@ -58,8 +58,36 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void WhileTheServerAnswers_TheLivePurchaseSaysConfirming()
+        {
+            // 08 §10.3: «estado "verifying"; UI muestra "Confirmando…" (≤3 s)»; sin respuesta, pasa a «Pendiente de confirmar».
+            (VerifiedStoreService store, FakeBackendClient backend, _) = NewStore();
+            var notes = new PurchaseNotes();
+            store.VerificationChanged += notes.Track;
+            backend.HoldVerifyResponses = true;
+            store.Purchase(new PurchaseRequest("af_coins_2"), _ => { });
+            Assert.That(store.IsPurchasing, Is.True);
+            Assert.That(notes.Of("af_coins_2"), Is.EqualTo(PurchaseNoteKind.Verifying));
+            Assert.That(notes.Of(StoreCatalog.Handful, StoreCatalog.Rescue), Is.EqualTo(PurchaseNoteKind.Verifying), "el modal la ve");
+            backend.ReleaseVerifyResponses();
+            Assert.That(notes.Of("af_coins_2"), Is.EqualTo(PurchaseNoteKind.None), "acreditada: sin nota");
+            Assert.That(store.IsPurchasing, Is.False);
+
+            backend.HoldVerifyResponses = false;
+            backend.FailNext(new BackendError(BackendErrorKind.Network));
+            store.Purchase(new PurchaseRequest(StoreCatalog.Rescue, PurchaseContext.Stuck, 40), _ => { });
+            Assert.That(notes.Of(StoreCatalog.Rescue), Is.EqualTo(PurchaseNoteKind.Pending), "sin respuesta: pendiente");
+            backend.HoldVerifyResponses = true;
+            store.Purchase(new PurchaseRequest("af_coins_2"), _ => { });
+            Assert.That(notes.Of(StoreCatalog.Handful, StoreCatalog.Rescue), Is.EqualTo(PurchaseNoteKind.Verifying),
+                "lo que se confirma ahora pesa más que lo pendiente");
+        }
+
+        [Test]
         public void EveryNote_HasItsText()
         {
+            Assert.That(MarketText.PurchaseNote(PurchaseNoteKind.Verifying), Is.EqualTo(MarketText.PurchaseVerifying));
+            Assert.That(MarketText.Keys.PurchaseVerifying, Is.EqualTo("iap_verifying"));
             Assert.That(MarketText.PurchaseNote(PurchaseNoteKind.None), Is.Null);
             Assert.That(MarketText.PurchaseNote(PurchaseNoteKind.Pending), Is.EqualTo(MarketText.PurchasePending));
             Assert.That(MarketText.PurchaseNote(PurchaseNoteKind.Failed), Is.EqualTo(MarketText.PurchaseFailed));

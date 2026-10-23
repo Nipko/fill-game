@@ -42,6 +42,15 @@ namespace AF.UI
             /// <summary>«No se pudo eliminar. Inténtalo de nuevo.»: si el borrado local falla [P].</summary>
             public const string Failed = "delete_account_failed";
 
+            /// <summary>«Reintentar»: el botón de madera tras un fallo, que vuelve a pedir el borrado (idempotente) [P].</summary>
+            public const string Retry = "delete_account_retry";
+
+            /// <summary>«Eliminando tu cuenta y tus datos…»: mientras el servidor borra la cuenta (08 §11), con los puntos de espera [P].</summary>
+            public const string Deleting = "delete_account_deleting";
+
+            /// <summary>«Tu cuenta y tus datos se eliminaron.»: la confirmación breve antes de volver a la primera ejecución [P].</summary>
+            public const string Done = "delete_account_done";
+
             /// <summary>
             /// «Código para borrar tu cuenta en la web: {code}» (F3-5; 08 §11; Q-B13-21) [P]: en Ajustes, encima de «Eliminar cuenta y
             /// datos», en lugar del UID. <c>{code}</c> = los 26 caracteres del código (Base32 de Crockford), que no se traducen.
@@ -78,6 +87,15 @@ namespace AF.UI
 
         /// <summary>«No se pudo eliminar. Inténtalo de nuevo.»</summary>
         public static string Failed => Loc.T(Keys.Failed);
+
+        /// <summary>«Reintentar».</summary>
+        public static string Retry => Loc.T(Keys.Retry);
+
+        /// <summary>«Eliminando tu cuenta y tus datos…».</summary>
+        public static string Deleting => Loc.T(Keys.Deleting);
+
+        /// <summary>«Tu cuenta y tus datos se eliminaron.».</summary>
+        public static string Done => Loc.T(Keys.Done);
 
         /// <summary>«Código para borrar tu cuenta en la web: {code}».</summary>
         public static string Code(string code) => Loc.T(Keys.Code, LocArgs.Of("code", CodeGroups(code ?? string.Empty)));

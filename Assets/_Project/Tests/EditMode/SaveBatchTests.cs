@@ -72,6 +72,66 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void AfterDelete_TheBatchIsClosed_AndNoSaveWritesTheDeletedProfileAgain()
+        {
+            // «Eliminar cuenta y datos» (08 §11): tras borrar, nada vuelve a crear profile.json (la sesión al pasar a segundo plano,
+            // la cartera por Durable, un lote abierto antes del borrado que se cierra después, FlushSync).
+            var disk = new RecordingProfileStore();
+            var batch = new ProfileSaveBatch(disk);
+            Profile profile = Wallet.NewProfile(new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5)));
+            batch.Save(profile);
+            Assert.That(disk.Snapshots.Count, Is.EqualTo(1));
+            Assert.That(batch.Closed, Is.False);
+
+            ProfileSaveScope open = batch.Begin();
+            profile.Wallet.Seeds = 5;
+            batch.Save(profile);
+            batch.Delete();
+            Assert.That(batch.Closed, Is.True);
+            Assert.That(disk.Snapshots, Is.Empty, "borrado");
+            open.Dispose();
+            Assert.That(disk.Snapshots, Is.Empty, "el lote abierto antes del borrado no escribe al cerrarse");
+
+            batch.Save(profile);
+            batch.Durable.Save(profile);
+            using (batch.Begin())
+            {
+                batch.Save(profile);
+            }
+
+            Assert.That(batch.FlushSync(50), Is.True, "nada que escribir");
+            Assert.That(batch.PendingSave, Is.False);
+            Assert.That(disk.Snapshots, Is.Empty, "ningún guardado posterior escribe");
+            Assert.That(batch.WriteCount, Is.EqualTo(1), "solo el de antes del borrado");
+        }
+
+        [Test]
+        public void AfterDelete_WithTheWriter_NothingReachesTheDisk()
+        {
+            var disk = new ThreadedDisk();
+            var batch = new ProfileSaveBatch(disk);
+            Profile profile = Wallet.NewProfile(new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5)));
+            using (batch.Begin())
+            {
+                batch.Save(profile);
+            }
+
+            Assert.That(batch.FlushSync(WaitMs), Is.True);
+            Assert.That(disk.Count, Is.EqualTo(1));
+            batch.Delete();
+            Assert.That(disk.Count, Is.EqualTo(0));
+            using (batch.Begin())
+            {
+                profile.Wallet.Seeds = 7;
+                batch.Save(profile);
+            }
+
+            batch.Durable.Save(profile);
+            Assert.That(batch.FlushSync(WaitMs), Is.True);
+            Assert.That(disk.Count, Is.EqualTo(0), "ni en segundo plano ni en síncrono");
+        }
+
+        [Test]
         public void Batch_AFailedWrite_StaysPending_AndFlushRetriesIt()
         {
             var disk = new RecordingProfileStore();

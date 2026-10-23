@@ -148,6 +148,11 @@ namespace AF.UI
         /// </summary>
         public int TickStreakProbe()
         {
+            if (AccountDeleted)
+            {
+                return 0; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             StreakService? service = _streakService;
             LevelFlow? flow = _flow;
             if (!StreakProbeEnabled || service == null || flow == null || _streakClock == null)

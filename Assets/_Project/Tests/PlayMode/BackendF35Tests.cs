@@ -29,6 +29,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap.ResetMarketOverrides();
             GameBootstrap.ResetCloudOverrides(); // también los del backend y la banda de edad
             GameBootstrap.ResetTelemetryOverrides();
+            GameBootstrap.A11yHostOverride = null;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -114,6 +115,40 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.FakeBilling!.Consumed, Is.Empty, "ni se consume (Play la reembolsa)");
             market.Close();
             Assert.That(boot.Services!.PurchaseNotes.Of("af_coins_2"), Is.EqualTo(PurchaseNoteKind.None), "el aviso es de una vez");
+        }
+
+        [UnityTest]
+        public IEnumerator Market_WhileTheServerVerifies_SaysConfirming_AndNoPriceAnswers()
+        {
+            // 08 §10.3: «estado "verifying"; UI muestra "Confirmando…" (≤3 s)». El backend falso guarda la respuesta hasta soltarla,
+            // como el servidor real mientras tarda (prueba del dueño del 2026-10-23: las esperas de red, visibles).
+            var host = new FakeScreenReaderHost(true);
+            GameBootstrap.A11yHostOverride = host;
+            yield return LoadLobby(new MemoryProfileStore(ProfileAt(26)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            boot.TickMarket(16f);
+            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
+            MarketScreen market = boot.Market!;
+            int row = RowOf(market, "af_coins_2");
+            int other = RowOf(market, "af_coins_3");
+            boot.FakeBackend!.HoldVerifyResponses = true;
+
+            Assert.That(market.PressRow(row), Is.True);
+            boot.TickMarket(16f); // la nota cambió: el Mercado se rehace
+            Assert.That(boot.Store!.IsPurchasing, Is.True, "Play cobró y se pregunta al servidor");
+            Assert.That(market.RowNoteText(row), Is.EqualTo(MarketText.PurchaseVerifying));
+            Assert.That(boot.Services!.PurchaseNotes.Of("af_coins_2"), Is.EqualTo(PurchaseNoteKind.Verifying));
+            Assert.That(market.RowButton(other).GetComponent<ReliefButton>().Interactable, Is.False, "ningún precio responde mientras");
+            Assert.That(market.RowButton(row).GetComponent<ReliefButton>().Interactable, Is.False);
+            Assert.That(market.PressRow(other), Is.False, "no se abre otra compra");
+            Assert.That(host.Announcements, Does.Contain(MarketText.PurchaseVerifying), "TalkBack lo anuncia");
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(0));
+
+            boot.FakeBackend.ReleaseVerifyResponses();
+            boot.TickMarket(16f);
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(1000), "acreditada al verificarse");
+            Assert.That(market.RowNoteText(row), Is.Empty, "sin nota");
+            Assert.That(market.RowButton(other).GetComponent<ReliefButton>().Interactable, Is.True, "los precios vuelven");
         }
 
         [UnityTest]

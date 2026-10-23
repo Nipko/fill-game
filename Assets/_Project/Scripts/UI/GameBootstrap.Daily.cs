@@ -206,6 +206,11 @@ namespace AF.UI
         /// </summary>
         public void TickDaily(float dtMs)
         {
+            if (AccountDeleted)
+            {
+                return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
             DailyChallengeScreen? screen = _dailyScreen;
             DailyChallengeCard? card = _dailyCard;
             if (screen == null || card == null)

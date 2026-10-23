@@ -144,6 +144,11 @@ namespace AF.UI
                 return true;
             }
 
+            if (DeleteAccountBusy)
+            {
+                return true; // «Eliminando…» o la confirmación del borrado: Atrás no lo cierra a medias
+            }
+
             if (_app == null || _app.Screen != AppScreen.Level || _flow == null)
             {
                 return false;
