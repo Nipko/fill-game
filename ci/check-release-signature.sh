@@ -14,7 +14,9 @@
 #   ANDROID_KEYALIAS_NAME  alias de la clave de subida
 #
 # Que comprueba en cada artefacto:
-#   1. jarsigner -verify termina en "jar verified." (firma v1/JAR integra; los .aab solo llevan esa).
+#   1. jarsigner -verify termina en "jar verified." (firma v1/JAR integra; los .aab solo llevan esa) y no avisa de
+#      "unsigned entries" (entradas anadidas despues de firmar). No se usa -strict: una clave de subida es
+#      autofirmada y -strict la rechazaria por la cadena de certificados.
 #   2. Hay exactamente un firmante y su SHA-256 coincide con el del certificado del alias del keystore.
 #   3. Ningun firmante es "CN=Android Debug" (la clave de depuracion de Unity/Gradle).
 #
@@ -74,6 +76,11 @@ check_artifact() {
     verify="$("${JS[@]}" -verify "$file" 2>&1)"
     if ! printf '%s\n' "$verify" | grep -q '^jar verified\.'; then
         echo "FALLO: $file: jarsigner no lo verifica (sin firma o firma rota): $(printf '%s' "$verify" | head -n 1)"
+        return 1
+    fi
+    if printf '%s
+' "$verify" | grep -qi 'unsigned entries'; then
+        echo "FALLO: $file: lleva entradas sin firmar (anadidas despues de firmar)."
         return 1
     fi
     certs="$("${KT[@]}" -printcert -jarfile "$file" 2>&1)"
@@ -137,6 +144,10 @@ self_test() {
     echo "hola" > "$dir/a.txt"
     (cd "$dir" && jar cf unsigned.aab a.txt && cp unsigned.aab good.aab && cp unsigned.aab other.aab && cp unsigned.aab debug.aab)
     "${JS[@]}" -keystore "$dir/upload.p12" -storepass "$pass" "$dir/good.aab" subida > /dev/null 2>&1
+    # Firmado y despues con una entrada anadida sin firmar.
+    cp "$dir/good.aab" "$dir/tampered.aab"
+    echo "extra" > "$dir/b.txt"
+    (cd "$dir" && jar uf tampered.aab b.txt)
     "${JS[@]}" -keystore "$dir/other.p12" -storepass "$pass" "$dir/other.aab" otra > /dev/null 2>&1
     "${JS[@]}" -keystore "$dir/debug.p12" -storepass "$pass" "$dir/debug.aab" androiddebugkey > /dev/null 2>&1
 
@@ -158,6 +169,7 @@ self_test() {
     expect 0 "firmado con la de subida" "${ok_env[@]}" bash "$0" "$dir/good.aab"
     expect 0 "--keystore-only" "${ok_env[@]}" bash "$0" --keystore-only
     expect 1 "sin firma" "${ok_env[@]}" bash "$0" "$dir/unsigned.aab"
+    expect 1 "entrada sin firmar anadida" "${ok_env[@]}" bash "$0" "$dir/tampered.aab"
     expect 1 "otra clave" "${ok_env[@]}" bash "$0" "$dir/other.aab"
     expect 1 "clave de depuracion" "${ok_env[@]}" bash "$0" "$dir/debug.aab"
     expect 1 "uno bueno y uno malo" "${ok_env[@]}" bash "$0" "$dir/good.aab" "$dir/other.aab"
