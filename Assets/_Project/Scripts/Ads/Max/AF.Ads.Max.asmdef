@@ -1,0 +1,18 @@
+{
+  "name": "AF.Ads.Max",
+  "rootNamespace": "AF.Ads.Max",
+  "references": [
+    "AF.Ads",
+    "AF.Platform",
+    "MaxSdk.Scripts"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

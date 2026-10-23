@@ -1688,7 +1688,7 @@ namespace AF.UI
             ISimulatedPurchasePresenter purchasePresenter = new BatchedPurchasePresenter(
                 LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art)), batch);
             _ads = AdController.Create(
-                WrapAds(WrapConsentAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()))), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
+                WrapAds(WrapConsentAds(CreateAdProvider(adPresenter, profile, capsClock))), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
             _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
             // F3-5: la compra verificada (F3-3) con el cliente del backend de este build (GameBootstrap.Backend.cs); la hoja «Compra
             // simulada» es la de la tienda de la plataforma simulada (FakeBillingClient) sin Play real (D-040).

@@ -1,0 +1,19 @@
+{
+  "name": "AF.Ads.Max.Editor",
+  "rootNamespace": "AF.Ads.Max.Editor",
+  "references": [
+    "MaxSdk.Scripts",
+    "MaxSdk.Scripts.IntegrationManager.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

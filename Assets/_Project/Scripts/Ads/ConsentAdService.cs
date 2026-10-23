@@ -7,13 +7,16 @@ namespace AF.Ads
     /// <summary>
     /// Los anuncios detrás del consentimiento y la edad (bloque B12; 08 §2.3: <c>Ads.InitAsync(profile.consent, age_band)</c>,
     /// «MAX arranca solo tras consentir»; 08 §7: TFCD con &lt;13, <c>npa</c> sin consentimiento o con 13-17 y
-    /// <c>maxAdContentRating</c> = G en todas las bandas). Envuelve al proveedor (hoy <see cref="FakeAdService"/>; MAX después):
+    /// <c>maxAdContentRating</c> = G en todas las bandas). Envuelve al proveedor (<see cref="FakeAdService"/> en el editor, los tests y
+    /// los builds sin la configuración de MAX; <see cref="MaxAdService"/> en el teléfono, D-042):
     /// hasta <see cref="Apply"/> con una decisión, no hay anuncio cargado (<see cref="IsReady"/> = false y <see cref="Show"/> da
     /// <see cref="AdOutcome.NoFill"/>), igual que un MAX sin inicializar. Los flags que recibiría MAX quedan en
-    /// <see cref="ChildDirected"/>, <see cref="NonPersonalized"/> y <see cref="MaxAdContentRating"/> (el adaptador real los pasará
-    /// con la API que exponga su versión [NV]). Hilo principal.
+    /// <see cref="ChildDirected"/>, <see cref="NonPersonalized"/> y <see cref="MaxAdContentRating"/>; si el proveedor es
+    /// <see cref="IAdConsentTarget"/> (MAX), recibe además cada decisión como <see cref="AdConsentSettings"/>: así MAX no se inicia
+    /// antes de consentir ni nunca con &lt;13. Si el proveedor informa de impresiones (<see cref="IAdImpressionSource"/>), se reenvían.
+    /// Hilo principal.
     /// </summary>
-    public sealed class ConsentAdService : IAdService
+    public sealed class ConsentAdService : IAdService, IAdImpressionSource
     {
         private readonly IAdService _inner;
 
@@ -25,6 +28,26 @@ namespace AF.Ads
 
         /// <summary>El proveedor envuelto.</summary>
         public IAdService Inner => _inner;
+
+        /// <inheritdoc />
+        public event Action<AdImpression>? Impression
+        {
+            add
+            {
+                if (_inner is IAdImpressionSource source)
+                {
+                    source.Impression += value;
+                }
+            }
+
+            remove
+            {
+                if (_inner is IAdImpressionSource source)
+                {
+                    source.Impression -= value;
+                }
+            }
+        }
 
         /// <summary>«MAX» inicializado: hay una decisión de consentimiento y edad que permite jugar.</summary>
         public bool Initialized { get; private set; }
@@ -67,6 +90,10 @@ namespace AF.Ads
             MaxAdContentRating = flags.MaxAdContentRating;
             Initialized = flags.Decided && !flags.Blocked;
             Applies++;
+            if (_inner is IAdConsentTarget target)
+            {
+                target.ApplyConsent(AdConsentSettings.From(flags));
+            }
         }
 
         /// <summary>
@@ -82,6 +109,11 @@ namespace AF.Ads
             }
 
             PrivacyOptionsRequests++;
+            if (_inner is IAdConsentTarget target)
+            {
+                target.ShowPrivacyOptions();
+            }
+
             return true;
         }
 
