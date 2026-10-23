@@ -7,7 +7,9 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 // Android Resolver Dependencies Start
     implementation 'com.android.billingclient:billing:9.0.0' // Assets/_Project/Plugins/Editor/AfBillingDependencies.xml:10
+    implementation 'com.applovin:applovin-sdk:13.6.4' // Packages/com.applovin.mediation.ads/AppLovin/Editor/Dependencies.xml:4
     implementation 'com.google.android.gms:play-services-base:18.10.1' // Packages/com.google.firebase.app/Firebase/Editor/AppDependencies.xml:20
+    implementation 'com.google.android.ump:user-messaging-platform:4.0.0' // Assets/MaxSdk/AppLovin/Editor/Dependencies.xml:4
     implementation 'com.google.firebase:firebase-analytics:23.2.0' // Packages/com.google.firebase.analytics/Firebase/Editor/AnalyticsDependencies.xml:16
     implementation 'com.google.firebase:firebase-analytics-unity:13.17.0' // Packages/com.google.firebase.analytics/Firebase/Editor/AnalyticsDependencies.xml:21
     implementation 'com.google.firebase:firebase-appcheck:19.4.1' // Packages/com.google.firebase.app-check/Firebase/Editor/AppCheckDependencies.xml:16
