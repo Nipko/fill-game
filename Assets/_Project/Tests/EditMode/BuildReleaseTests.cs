@@ -8,7 +8,7 @@ using NUnit.Framework;
 namespace AF.Tests.EditMode
 {
     /// <summary>
-    /// Build de release sin firma (bloque B10 de la tanda 5; 08 §12.1 y §13.1 #1; CLAUDE.md, regla dura 6): argumentos,
+    /// Build de release (bloque B10 de la tanda 5 y paso s32; 08 §12.1 y §13.1 #1 y #3; CLAUDE.md, regla dura 6): argumentos, firma,
     /// identidad (el ID provisional nunca llega a un release), rutas de salida, los Player Settings fijados (Managed Stripping
     /// High, 08 §5.4; D-033, Q-T6) y el <c>link.xml</c>. Sin builds: solo funciones puras y los ajustes del proyecto.
     /// </summary>
@@ -84,6 +84,116 @@ namespace AF.Tests.EditMode
             Assert.That(BuildRelease.OutputPath(ci, true), Is.EqualTo("build/Android/Android.apk"));
             Assert.That(BuildRelease.OutputPath(new BuildRelease.Options { CustomBuildPath = "build/Android/" }, false),
                 Is.EqualTo("build/Android/release.aab"));
+        }
+
+        private static Dictionary<string, string?> SigningEnv(string? path = "/root/af-upload.keystore")
+        {
+            return new Dictionary<string, string?>
+            {
+                [BuildRelease.KeystoreNameEnv] = path,
+                [BuildRelease.KeystorePassEnv] = "pass-de-prueba",
+                [BuildRelease.KeyaliasNameEnv] = "subida",
+                [BuildRelease.KeyaliasPassEnv] = "-empieza-por-guion",
+            };
+        }
+
+        private static BuildRelease.Options ParseEnv(Dictionary<string, string?> env, params string[] args)
+        {
+            string? error = BuildRelease.ParseArgsWithEnv(args, name => env.TryGetValue(name, out string? v) ? v : null,
+                out BuildRelease.Options? options);
+            Assert.That(error, Is.Null);
+            return options!;
+        }
+
+        [Test]
+        public void ReadsTheSigningFromTheEnvironment()
+        {
+            BuildRelease.Options o = ParseEnv(SigningEnv(), "-afApplicationId", "com.estudio.juego", "-afRequireSigning");
+            Assert.That(o.RequireSigning, Is.True);
+            Assert.That(o.KeystorePath, Is.EqualTo("/root/af-upload.keystore"));
+            Assert.That(o.KeystorePass, Is.EqualTo("pass-de-prueba"));
+            Assert.That(o.KeyaliasName, Is.EqualTo("subida"));
+            Assert.That(o.KeyaliasPass, Is.EqualTo("-empieza-por-guion"));
+        }
+
+        [Test]
+        public void TheSigningArgumentsOfGameCiAreTheFallback_EvenEmptyOrWithADash()
+        {
+            // game-ci pasa siempre los cuatro, vacíos si no hay firma (job build-android de ci.yml).
+            BuildRelease.Options none = ParseEnv(new Dictionary<string, string?>(),
+                "-androidKeystoreName", "", "-androidKeystorePass", "", "-androidKeyaliasName", "", "-androidKeyaliasPass", "",
+                "-afApplicationId", "com.estudio.juego");
+            Assert.That(none.ApplicationId, Is.EqualTo("com.estudio.juego"));
+            Assert.That(BuildRelease.CheckSigning(none, _ => true, out BuildRelease.Signing? s0), Is.Null);
+            Assert.That(s0, Is.Null, "sin firma: clave de depuración");
+
+            BuildRelease.Options args = ParseEnv(new Dictionary<string, string?> { [BuildRelease.KeystorePassEnv] = "del-entorno" },
+                "-androidKeystoreName", "k.keystore", "-androidKeystorePass", "del-argumento",
+                "-androidKeyaliasName", "subida", "-androidKeyaliasPass", "-guion");
+            Assert.That(args.KeystorePath, Is.EqualTo("k.keystore"));
+            Assert.That(args.KeystorePass, Is.EqualTo("del-entorno"), "el entorno manda sobre el argumento");
+            Assert.That(args.KeyaliasPass, Is.EqualTo("-guion"));
+        }
+
+        [Test]
+        public void TheSigningIsCompleteOrAnError()
+        {
+            BuildRelease.Options full = ParseEnv(SigningEnv(), "-afApplicationId", "com.estudio.juego", "-afRequireSigning");
+            Assert.That(BuildRelease.CheckSigning(full, _ => true, out BuildRelease.Signing? signing), Is.Null);
+            Assert.That(signing, Is.Not.Null);
+            Assert.That(signing!.KeyaliasName, Is.EqualTo("subida"));
+
+            Assert.That(BuildRelease.CheckSigning(full, _ => false, out _), Is.Not.Null, "keystore inexistente");
+
+            var required = new BuildRelease.Options { ApplicationId = "com.estudio.juego", RequireSigning = true };
+            Assert.That(BuildRelease.CheckSigning(required, _ => true, out _), Is.Not.Null, "-afRequireSigning sin firma");
+
+            Dictionary<string, string?> partial = SigningEnv();
+            partial[BuildRelease.KeyaliasPassEnv] = "";
+            string? error = BuildRelease.CheckSigning(ParseEnv(partial), _ => true, out _);
+            Assert.That(error, Is.Not.Null, "firma a medias");
+            Assert.That(error, Does.Contain(BuildRelease.KeyaliasPassEnv));
+            Assert.That(error, Does.Not.Contain("pass-de-prueba"), "los errores nunca llevan una contraseña");
+
+            Assert.That(BuildRelease.CheckSigning(ParseEnv(SigningEnv(), "-afRehearsal"), _ => true, out _), Is.Not.Null,
+                "un ensayo nunca va firmado con la clave de subida");
+        }
+
+        [Test]
+        public void ParsesTheVersionName()
+        {
+            Assert.That(Parse(null, "-afVersionName", "1.0.0").VersionName, Is.EqualTo("1.0.0"));
+            Assert.That(Parse(null, "-afVersionName", "12.3.45").VersionName, Is.EqualTo("12.3.45"));
+            foreach (string bad in new[] { "1.0", "1.0.0.0", "01.0.0", "1.a.0", "1..0", "v1.0.0", "1.0.0-rc1", "12345.0.0" })
+            {
+                Assert.That(BuildRelease.ParseArgs(new[] { "-afVersionName", bad }, null, out _), Is.Not.Null, bad);
+            }
+        }
+
+        [Test]
+        public void ApplyingTheSigningIsRestoredAndLeavesTheProjectWithoutKeystore()
+        {
+            BuildRelease.SigningSettings before = BuildRelease.SigningSettings.Capture();
+            BuildRelease.SigningSettings previous = BuildRelease.ApplySigning(
+                new BuildRelease.Signing("Temp/af-prueba.keystore", "pass-de-prueba", "subida", "pass-de-alias"));
+            try
+            {
+                Assert.That(UnityEditor.PlayerSettings.Android.useCustomKeystore, Is.True);
+                Assert.That(UnityEditor.PlayerSettings.Android.keystoreName, Does.EndWith("Temp/af-prueba.keystore"));
+                Assert.That(UnityEditor.PlayerSettings.Android.keyaliasName, Is.EqualTo("subida"));
+            }
+            finally
+            {
+                previous.Restore();
+            }
+
+            BuildRelease.SigningSettings after = BuildRelease.SigningSettings.Capture();
+            Assert.That(after.UseCustomKeystore, Is.EqualTo(before.UseCustomKeystore));
+            Assert.That(after.KeystoreName, Is.EqualTo(before.KeystoreName));
+            Assert.That(after.KeystorePass, Is.EqualTo(before.KeystorePass));
+            Assert.That(after.KeyaliasName, Is.EqualTo(before.KeyaliasName));
+            Assert.That(after.KeyaliasPass, Is.EqualTo(before.KeyaliasPass));
+            Assert.That(ProjectSetup.Validate(), Is.Empty, "useCustomKeystore vuelve a false");
         }
 
         [Test]

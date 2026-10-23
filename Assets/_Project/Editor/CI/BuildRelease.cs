@@ -13,11 +13,22 @@ using Debug = UnityEngine.Debug;
 namespace AF.EditorTools
 {
     /// <summary>
-    /// Build de release Android SIN FIRMA de release (bloque B10 de la tanda 5; 08 §12.1 etapa 3 y §5.4): AAB (y, con
+    /// Build de release Android (bloque B10 de la tanda 5 y paso s32; 08 §12.1 etapa 3 y §5.4): AAB (y, con
     /// <c>-afApk</c>, también un APK) sin Development Build, IL2CPP ARM64, Managed Stripping High con
     /// <c>Assets/Plugins/link.xml</c> y Strip Engine Code, con las escenas habilitadas de Build Settings (que deben incluir
-    /// <c>Assets/_Project/Scenes/Game.unity</c>). Firma con la clave de depuración de Unity: nunca toca keystores ni secretos
-    /// (CLAUDE.md, regla dura 5); la firma de subida es del dueño. Nunca se sube a Google Play (regla dura 6).
+    /// <c>Assets/_Project/Scenes/Game.unity</c>). Nunca se sube a Google Play (regla dura 6).
+    ///
+    /// Firma (paso s32; 08 §12.1 etapa 3 y §13.1 #3; <c>docs/dev/release.md</c>):
+    ///   - Sin firma configurada, Unity firma con su clave de depuración (job <c>build-android</c> de <c>ci.yml</c>).
+    ///   - Con firma, la clave de subida llega por las variables de entorno <c>ANDROID_KEYSTORE_NAME</c> (ruta del keystore,
+    ///     fuera del repositorio), <c>ANDROID_KEYSTORE_PASS</c>, <c>ANDROID_KEYALIAS_NAME</c> y <c>ANDROID_KEYALIAS_PASS</c>,
+    ///     las que game-ci/unity-builder pasa al contenedor; si una falta o está vacía, vale el argumento homónimo
+    ///     (<c>-androidKeystoreName</c>, etc.) que game-ci añade a la línea de comandos. El método no crea ni lee el keystore
+    ///     (solo comprueba que existe), no escribe las contraseñas en el log y, al terminar, deja los Player Settings de la
+    ///     firma como estaban: las contraseñas no se serializan en <c>ProjectSettings/</c>, y la ruta y el alias se
+    ///     restauran, así que <c>ProjectSettings/</c> sigue sin keystore propio (<see cref="ProjectSetup"/>).
+    ///   - <c>-afRequireSigning</c> (workflow <c>release.yml</c>) exige la firma completa: sin ella el build no empieza.
+    ///   - La firma va solo con un release: un ensayo con firma, o una firma a medias, es un error.
     ///
     /// Identidad del build (regla dura 6; 08 §13.1 #1):
     ///   - Release: <c>-afApplicationId &lt;id&gt;</c> (o la variable de entorno <c>AF_RELEASE_APPLICATION_ID</c>), distinto
@@ -50,7 +61,10 @@ namespace AF.EditorTools
     ///   6  compuerta de release de los textos (<see cref="LocReleaseGate"/>; 08 §4.7)
     ///   7  identidad inválida: sin <c>-afApplicationId</c> ni <c>-afRehearsal</c>, el ID provisional o con "amazon" en un
     ///      release, un ID con formato inválido, o <c>-afApplicationId</c> junto con <c>-afRehearsal</c>
-    ///   8  argumentos incorrectos (<c>-androidVersionCode</c> no es un entero positivo)
+    ///   8  argumentos incorrectos (<c>-androidVersionCode</c> no es un entero positivo, <c>-afVersionName</c> no es
+    ///      MAYOR.MENOR.PARCHE)
+    ///   9  firma inválida: <c>-afRequireSigning</c> sin firma completa, firma a medias, keystore inexistente o firma en un
+    ///      ensayo
     /// </summary>
     public static class BuildRelease
     {
@@ -63,6 +77,18 @@ namespace AF.EditorTools
         /// <summary>Variable de entorno alternativa a <c>-afApplicationId</c>.</summary>
         public const string ApplicationIdEnv = "AF_RELEASE_APPLICATION_ID";
 
+        /// <summary>Ruta del keystore de subida (variable que game-ci/unity-builder pasa al contenedor).</summary>
+        public const string KeystoreNameEnv = "ANDROID_KEYSTORE_NAME";
+
+        /// <summary>Contraseña del keystore.</summary>
+        public const string KeystorePassEnv = "ANDROID_KEYSTORE_PASS";
+
+        /// <summary>Alias de la clave de subida.</summary>
+        public const string KeyaliasNameEnv = "ANDROID_KEYALIAS_NAME";
+
+        /// <summary>Contraseña de la clave de subida.</summary>
+        public const string KeyaliasPassEnv = "ANDROID_KEYALIAS_PASS";
+
         private const string LogPrefix = "[AF.BuildRelease] ";
 
         private const int ExitOk = 0;
@@ -73,6 +99,7 @@ namespace AF.EditorTools
         private const int ExitLocGate = 6;
         private const int ExitIdentity = 7;
         private const int ExitArgs = 8;
+        private const int ExitSigning = 9;
 
         /// <summary>Opciones leídas de la línea de comandos.</summary>
         internal sealed class Options
@@ -82,6 +109,29 @@ namespace AF.EditorTools
             public bool Apk;
             public string? CustomBuildPath;
             public int VersionCode;
+            public string? VersionName;
+            public bool RequireSigning;
+            public string? KeystorePath;
+            public string? KeystorePass;
+            public string? KeyaliasName;
+            public string? KeyaliasPass;
+        }
+
+        /// <summary>Firma completa y comprobada (ver <see cref="CheckSigning"/>).</summary>
+        internal sealed class Signing
+        {
+            public Signing(string keystorePath, string keystorePass, string keyaliasName, string keyaliasPass)
+            {
+                KeystorePath = keystorePath;
+                KeystorePass = keystorePass;
+                KeyaliasName = keyaliasName;
+                KeyaliasPass = keyaliasPass;
+            }
+
+            public string KeystorePath { get; }
+            public string KeystorePass { get; }
+            public string KeyaliasName { get; }
+            public string KeyaliasPass { get; }
         }
 
         [MenuItem("Amazon Fill/CI/Ensayo de release Android (rehearsal.aab + apk)")]
@@ -94,7 +144,7 @@ namespace AF.EditorTools
         public static void BuildAndroid()
         {
             Options? options;
-            string? error = ParseArgs(Environment.GetCommandLineArgs(), Environment.GetEnvironmentVariable(ApplicationIdEnv), out options);
+            string? error = ParseArgsWithEnv(Environment.GetCommandLineArgs(), Environment.GetEnvironmentVariable, out options);
             if (error != null || options == null)
             {
                 Debug.LogError(LogPrefix + "argumentos incorrectos: " + error);
@@ -138,12 +188,21 @@ namespace AF.EditorTools
             }
         }
 
-        /// <summary>
-        /// Lee <c>-afApplicationId &lt;id&gt;</c>, <c>-afRehearsal</c>, <c>-afApk</c>, <c>-customBuildPath &lt;ruta&gt;</c> y
-        /// <c>-androidVersionCode &lt;n&gt;</c>. El ID de <paramref name="envApplicationId"/> solo se usa si no hay
-        /// <c>-afApplicationId</c>. Devuelve el error, o null.
-        /// </summary>
+        /// <summary>Como <see cref="ParseArgsWithEnv"/>, con solo <see cref="ApplicationIdEnv"/> en el entorno.</summary>
         internal static string? ParseArgs(string[] args, string? envApplicationId, out Options? options)
+        {
+            return ParseArgsWithEnv(args, name => name == ApplicationIdEnv ? envApplicationId : null, out options);
+        }
+
+        /// <summary>
+        /// Lee <c>-afApplicationId &lt;id&gt;</c>, <c>-afRehearsal</c>, <c>-afApk</c>, <c>-afRequireSigning</c>,
+        /// <c>-afVersionName &lt;M.m.p&gt;</c>, <c>-customBuildPath &lt;ruta&gt;</c>, <c>-androidVersionCode &lt;n&gt;</c> y los
+        /// de la firma de game-ci (<c>-androidKeystoreName</c>, <c>-androidKeystorePass</c>, <c>-androidKeyaliasName</c>,
+        /// <c>-androidKeyaliasPass</c>; su valor puede ir vacío o empezar por '-'). El ID de <see cref="ApplicationIdEnv"/>
+        /// solo se usa si no hay <c>-afApplicationId</c>; en la firma mandan las variables de entorno no vacías y los
+        /// argumentos son el respaldo. Devuelve el error, o null; el error nunca lleva una contraseña.
+        /// </summary>
+        internal static string? ParseArgsWithEnv(string[] args, Func<string, string?> env, out Options? options)
         {
             var o = new Options();
             options = null;
@@ -158,7 +217,36 @@ namespace AF.EditorTools
                 {
                     o.Apk = true;
                 }
+                else if (string.Equals(a, "-afRequireSigning", StringComparison.Ordinal))
+                {
+                    o.RequireSigning = true;
+                }
+                else if (string.Equals(a, "-androidKeystoreName", StringComparison.Ordinal)
+                    || string.Equals(a, "-androidKeystorePass", StringComparison.Ordinal)
+                    || string.Equals(a, "-androidKeyaliasName", StringComparison.Ordinal)
+                    || string.Equals(a, "-androidKeyaliasPass", StringComparison.Ordinal))
+                {
+                    // game-ci pasa siempre estos cuatro, vacíos si no hay firma: el valor se toma tal cual.
+                    string value = i + 1 < args.Length ? args[++i] : string.Empty;
+                    if (a == "-androidKeystoreName")
+                    {
+                        o.KeystorePath = value;
+                    }
+                    else if (a == "-androidKeystorePass")
+                    {
+                        o.KeystorePass = value;
+                    }
+                    else if (a == "-androidKeyaliasName")
+                    {
+                        o.KeyaliasName = value;
+                    }
+                    else
+                    {
+                        o.KeyaliasPass = value;
+                    }
+                }
                 else if (string.Equals(a, "-afApplicationId", StringComparison.Ordinal)
+                    || string.Equals(a, "-afVersionName", StringComparison.Ordinal)
                     || string.Equals(a, "-customBuildPath", StringComparison.Ordinal)
                     || string.Equals(a, "-androidVersionCode", StringComparison.Ordinal))
                 {
@@ -176,6 +264,15 @@ namespace AF.EditorTools
                     {
                         o.CustomBuildPath = value;
                     }
+                    else if (a == "-afVersionName")
+                    {
+                        if (!IsValidVersionName(value))
+                        {
+                            return "-afVersionName '" + value + "' no es MAYOR.MENOR.PARCHE (p. ej. 1.0.0)";
+                        }
+
+                        o.VersionName = value;
+                    }
                     else if (!int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out o.VersionCode) || o.VersionCode <= 0)
                     {
                         return "-androidVersionCode '" + value + "' no es un entero positivo";
@@ -183,13 +280,199 @@ namespace AF.EditorTools
                 }
             }
 
+            string? envApplicationId = env(ApplicationIdEnv);
             if (string.IsNullOrEmpty(o.ApplicationId) && !string.IsNullOrEmpty(envApplicationId))
             {
                 o.ApplicationId = envApplicationId!.Trim();
             }
 
+            o.KeystorePath = FromEnv(env, KeystoreNameEnv, o.KeystorePath);
+            o.KeystorePass = FromEnv(env, KeystorePassEnv, o.KeystorePass);
+            o.KeyaliasName = FromEnv(env, KeyaliasNameEnv, o.KeyaliasName);
+            o.KeyaliasPass = FromEnv(env, KeyaliasPassEnv, o.KeyaliasPass);
+
             options = o;
             return null;
+        }
+
+        private static string? FromEnv(Func<string, string?> env, string name, string? fallback)
+        {
+            string? value = env(name);
+            return string.IsNullOrEmpty(value) ? fallback : value;
+        }
+
+        /// <summary>MAYOR.MENOR.PARCHE: números de 1 a 4 cifras, sin ceros a la izquierda (salvo el propio 0).</summary>
+        internal static bool IsValidVersionName(string value)
+        {
+            string[] parts = value.Split('.');
+            if (parts.Length != 3)
+            {
+                return false;
+            }
+
+            foreach (string part in parts)
+            {
+                if (part.Length == 0 || part.Length > 4 || (part.Length > 1 && part[0] == '0'))
+                {
+                    return false;
+                }
+
+                foreach (char c in part)
+                {
+                    if (c < '0' || c > '9')
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Comprueba la firma (paso s32). Devuelve el error, o null; <paramref name="signing"/> queda null si el build va con
+        /// la clave de depuración. Los mensajes nombran las variables que faltan, nunca sus valores.
+        /// </summary>
+        internal static string? CheckSigning(Options o, Func<string, bool> fileExists, out Signing? signing)
+        {
+            signing = null;
+            var missing = new List<string>();
+            int present = 0;
+            CountPart(o.KeystorePath, KeystoreNameEnv, missing, ref present);
+            CountPart(o.KeystorePass, KeystorePassEnv, missing, ref present);
+            CountPart(o.KeyaliasName, KeyaliasNameEnv, missing, ref present);
+            CountPart(o.KeyaliasPass, KeyaliasPassEnv, missing, ref present);
+
+            if (present == 0)
+            {
+                return o.RequireSigning ? "-afRequireSigning sin firma: faltan " + string.Join(", ", missing) : null;
+            }
+
+            if (o.Rehearsal)
+            {
+                return "un ensayo (-afRehearsal) nunca va firmado con la clave de subida";
+            }
+
+            if (missing.Count > 0)
+            {
+                return "firma a medias: faltan " + string.Join(", ", missing);
+            }
+
+            if (!fileExists(o.KeystorePath!))
+            {
+                return "no existe el keystore indicado en " + KeystoreNameEnv;
+            }
+
+            signing = new Signing(o.KeystorePath!, o.KeystorePass!, o.KeyaliasName!, o.KeyaliasPass!);
+            return null;
+        }
+
+        private static void CountPart(string? value, string name, List<string> missing, ref int present)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                missing.Add(name);
+            }
+            else
+            {
+                present++;
+            }
+        }
+
+        /// <summary>
+        /// Ajustes de firma de los Player Settings, para restaurarlos tras el build. La ruta y el alias se guardan y se
+        /// restauran con su valor serializado en bruto (<c>AndroidKeystoreName</c> y <c>AndroidKeyaliasName</c> de
+        /// <c>ProjectSettings.asset</c>) por <see cref="SerializedObject"/>: el setter de
+        /// <c>PlayerSettings.Android.keystoreName</c> convierte "" en "{inproject}: " y dejaría un cambio en
+        /// <c>ProjectSettings/</c>. Las contraseñas no se serializan nunca.
+        /// </summary>
+        internal readonly struct SigningSettings
+        {
+            private const string KeystoreNameProperty = "AndroidKeystoreName";
+            private const string KeyaliasNameProperty = "AndroidKeyaliasName";
+
+            public SigningSettings(bool useCustomKeystore, string keystoreName, string keystorePass, string keyaliasName, string keyaliasPass)
+            {
+                UseCustomKeystore = useCustomKeystore;
+                KeystoreName = keystoreName;
+                KeystorePass = keystorePass;
+                KeyaliasName = keyaliasName;
+                KeyaliasPass = keyaliasPass;
+            }
+
+            public bool UseCustomKeystore { get; }
+
+            /// <summary>Valor serializado en bruto de <c>AndroidKeystoreName</c>.</summary>
+            public string KeystoreName { get; }
+
+            public string KeystorePass { get; }
+
+            /// <summary>Valor serializado en bruto de <c>AndroidKeyaliasName</c>.</summary>
+            public string KeyaliasName { get; }
+
+            public string KeyaliasPass { get; }
+
+            public static SigningSettings Capture()
+            {
+                SerializedObject so = PlayerSettingsObject();
+                return new SigningSettings(
+                    PlayerSettings.Android.useCustomKeystore,
+                    RawString(so, KeystoreNameProperty),
+                    PlayerSettings.Android.keystorePass ?? string.Empty,
+                    RawString(so, KeyaliasNameProperty),
+                    PlayerSettings.Android.keyaliasPass ?? string.Empty);
+            }
+
+            public void Restore()
+            {
+                PlayerSettings.Android.useCustomKeystore = UseCustomKeystore;
+                PlayerSettings.Android.keystorePass = KeystorePass;
+                PlayerSettings.Android.keyaliasPass = KeyaliasPass;
+                SerializedObject so = PlayerSettingsObject();
+                so.Update();
+                RawProperty(so, KeystoreNameProperty).stringValue = KeystoreName;
+                RawProperty(so, KeyaliasNameProperty).stringValue = KeyaliasName;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            private static SerializedObject PlayerSettingsObject()
+            {
+                UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset");
+                if (assets.Length == 0 || assets[0] == null)
+                {
+                    throw new InvalidOperationException("no se pudo cargar ProjectSettings/ProjectSettings.asset");
+                }
+
+                return new SerializedObject(assets[0]);
+            }
+
+            private static SerializedProperty RawProperty(SerializedObject so, string name)
+            {
+                SerializedProperty? property = so.FindProperty(name);
+                if (property == null || property.propertyType != SerializedPropertyType.String)
+                {
+                    throw new InvalidOperationException("PlayerSettings sin la propiedad de texto " + name);
+                }
+
+                return property;
+            }
+
+            private static string RawString(SerializedObject so, string name)
+            {
+                return RawProperty(so, name).stringValue ?? string.Empty;
+            }
+        }
+
+        /// <summary>Pone la clave de subida en los Player Settings (en memoria, durante el build) y devuelve los anteriores.</summary>
+        internal static SigningSettings ApplySigning(Signing signing)
+        {
+            SigningSettings previous = SigningSettings.Capture();
+            PlayerSettings.Android.useCustomKeystore = true;
+            PlayerSettings.Android.keystoreName = Path.GetFullPath(signing.KeystorePath).Replace('\\', '/');
+            PlayerSettings.Android.keystorePass = signing.KeystorePass;
+            PlayerSettings.Android.keyaliasName = signing.KeyaliasName;
+            PlayerSettings.Android.keyaliasPass = signing.KeyaliasPass;
+            return previous;
         }
 
         /// <summary>
@@ -292,6 +575,13 @@ namespace AF.EditorTools
                 return ExitIdentity;
             }
 
+            string? signingError = CheckSigning(o, File.Exists, out Signing? signing);
+            if (signingError != null)
+            {
+                Debug.LogError(LogPrefix + signingError + ".");
+                return ExitSigning;
+            }
+
             if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Android, BuildTarget.Android))
             {
                 Debug.LogError(LogPrefix + "este Editor no tiene el módulo Android Build Support.");
@@ -346,9 +636,21 @@ namespace AF.EditorTools
             string previousId = PlayerSettings.GetApplicationIdentifier(android);
             string previousName = PlayerSettings.productName;
             int previousVersionCode = PlayerSettings.Android.bundleVersionCode;
+            string previousVersionName = PlayerSettings.bundleVersion;
             bool previousAppBundle = EditorUserBuildSettings.buildAppBundle;
+            SigningSettings? previousSigning = null;
             try
             {
+                if (signing != null)
+                {
+                    previousSigning = ApplySigning(signing);
+                }
+
+                if (!string.IsNullOrEmpty(o.VersionName))
+                {
+                    PlayerSettings.bundleVersion = o.VersionName;
+                }
+
                 if (!o.Rehearsal)
                 {
                     PlayerSettings.SetApplicationIdentifier(android, applicationId);
@@ -360,8 +662,11 @@ namespace AF.EditorTools
                     PlayerSettings.Android.bundleVersionCode = o.VersionCode;
                 }
 
-                Debug.Log(LogPrefix + (o.Rehearsal ? "ENSAYO (identidad de prueba). " : "RELEASE sin firma. ")
-                    + ProjectSetup.Describe() + ", versionCode=" + PlayerSettings.Android.bundleVersionCode
+                string kind = o.Rehearsal ? "ENSAYO (identidad de prueba). "
+                    : signing != null ? "RELEASE firmado con la clave de subida. " : "RELEASE sin firma (clave de depuracion). ";
+                Debug.Log(LogPrefix + kind
+                    + ProjectSetup.Describe() + ", versionName=" + PlayerSettings.bundleVersion
+                    + ", versionCode=" + PlayerSettings.Android.bundleVersionCode
                     + ", escenas=" + string.Join(",", scenes));
 
                 bool ok = BuildOne(scenes, OutputPath(o, false), true);
@@ -374,6 +679,8 @@ namespace AF.EditorTools
             }
             finally
             {
+                previousSigning?.Restore();
+                PlayerSettings.bundleVersion = previousVersionName;
                 EditorUserBuildSettings.buildAppBundle = previousAppBundle;
                 PlayerSettings.SetApplicationIdentifier(android, previousId);
                 PlayerSettings.productName = previousName;
