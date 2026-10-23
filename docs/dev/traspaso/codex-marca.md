@@ -20,7 +20,7 @@ Fecha: 2026-10-23. Lo escribió el integrador (Claude, en el escritorio). El due
 - `CLAUDE.md`, en «Humanos» (abogado de marcas) y la regla dura 6.
 - **Datos nuevos del dueño (2026-10-23):**
   - **Dominio:** compró `tintalu.com`, que está en Cloudflare.
-  - **Desarrollador:** «Parallext» (parallext.com) figurará como desarrollador. Todavía está por aclarar su relación con AUTOMATION AI S A S, la empresa titular de la cuenta de Play.
+  - **Desarrollador y responsable:** el desarrollador, y el titular previsto de la marca, es **Parallext, LLC** (parallext.com, EE. UU.), según D-041. Ya no es AUTOMATION AI S A S.
 
 ## 3. Qué investigar
 
@@ -44,7 +44,7 @@ Busca en cada registro oficial **TINTALÚ, TINTALU, TINTAL\*, TINTA LU\*, TINTAL
    - si existen los usuarios `@tintalu` / `tintalugame` en Instagram, TikTok, YouTube, X y Facebook.
 
    Solo mira; **no compres ni registres nada**.
-9. **Madrid:** confirma con la fuente oficial si Colombia es miembro del Protocolo de Madrid. Con eso decides si la solicitud base en Colombia puede extenderse a BR, MX y US, y estima tasas oficiales con fuente.
+9. **Madrid:** con Parallext, LLC como titular, la solicitud base iría en la USPTO. Confirma con las fuentes oficiales cómo se extendería por Madrid a BR, MX y CO (y si Perú y Ecuador entran por esa vía), y estima las tasas oficiales con fuente: la base en la USPTO por clase y cada país designado.
 
 ## 4. Qué entregar
 

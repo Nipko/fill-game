@@ -3657,3 +3657,23 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - Q-BILL-5 aplicada: default de 48 h y rango de 48-72 (Remote Config puede volver a subirlo).
   - Si la consulta de productos más reciente falla, el plugin se queda sin productos, como C#.
   - Pendiente menor: en `AfBilling.java`, el fallo síncrono de `queryProductDetailsAsync` no vacía el mapa, mientras que el asíncrono sí. Sin riesgo de dinero, porque C# se queda sin Play al recibir ERROR.
+
+## D-041 · Parallext, LLC como desarrollador y responsable; dominio tintalu.com
+
+- **Fecha:** 2026-10-23. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat:
+  - «listo ya tengo el dominio tintalu.com en cloudflare para que iniciemos la construcción de las pagina, politicas y demas datos. El desarrollador de Tintalu es Parallext.com»;
+  - «dejamos los datos de parallext, LLC con los datos de ella».
+- **Decisión:**
+  - **Desarrollador y responsable:** el desarrollador público y el responsable del tratamiento en la política de privacidad, los términos, la página de borrado y la web es **Parallext, LLC** (parallext.com), con sus datos. Ya no es AUTOMATION AI S A S.
+  - **Dominio:** `tintalu.com`, comprado por el dueño y gestionado en Cloudflare. La web se construye ya (`infra/web/site`) y se despliega en la URL de CloudFront de dev. Conectar el dominio es un paso aparte que decide el dueño: lo público con la marca espera al dictamen (D-034, Q-AWS-9) mientras el dueño no diga otra cosa.
+- **Datos de Parallext, LLC que faltan** (van como `[[DATO DEL DUEÑO]]` hasta que lleguen):
+  - estado de constitución;
+  - domicilio;
+  - correo de contacto y de privacidad;
+  - persona o cargo de protección de datos (LGPD);
+  - representante en la UE o en Brasil, si el abogado lo pide.
+- **Consecuencias que revisa el dueño:**
+  - **Cuenta de Google Play:** está a nombre de AUTOMATION AI S A S (organización, Colombia). Si el desarrollador y vendedor es Parallext, LLC, la app debería publicarse desde una cuenta de Parallext, LLC: una cuenta nueva de organización o una transferencia de la app, que hoy es sencilla porque la app no existe (D-034). Lo decide el dueño, con el abogado si hace falta.
+  - **Marca:** el titular previsto de la solicitud pasa a ser Parallext, LLC (EE. UU.). La vía de Madrid partiría de una solicitud base en la USPTO, no en Colombia. Encargo de Codex actualizado (`docs/dev/traspaso/codex-marca.md`).
+  - **`applicationId` definitivo:** recomendado `com.parallext.tintalu`. Se fija solo tras el dictamen (regla dura 6).
