@@ -463,16 +463,17 @@ namespace AF.EditorTools
             }
         }
 
-        /// <summary>Pone la clave de subida en los Player Settings (en memoria, durante el build) y devuelve los anteriores.</summary>
-        internal static SigningSettings ApplySigning(Signing signing)
+        /// <summary>
+        /// Pone la clave de subida en los Player Settings (en memoria, durante el build). Quien llama guarda antes el estado
+        /// con <see cref="SigningSettings.Capture"/> y lo restaura en un <c>finally</c> que envuelve también esta llamada.
+        /// </summary>
+        internal static void ApplySigning(Signing signing)
         {
-            SigningSettings previous = SigningSettings.Capture();
             PlayerSettings.Android.useCustomKeystore = true;
             PlayerSettings.Android.keystoreName = Path.GetFullPath(signing.KeystorePath).Replace('\\', '/');
             PlayerSettings.Android.keystorePass = signing.KeystorePass;
             PlayerSettings.Android.keyaliasName = signing.KeyaliasName;
             PlayerSettings.Android.keyaliasPass = signing.KeyaliasPass;
-            return previous;
         }
 
         /// <summary>
@@ -638,12 +639,12 @@ namespace AF.EditorTools
             int previousVersionCode = PlayerSettings.Android.bundleVersionCode;
             string previousVersionName = PlayerSettings.bundleVersion;
             bool previousAppBundle = EditorUserBuildSettings.buildAppBundle;
-            SigningSettings? previousSigning = null;
+            SigningSettings previousSigning = SigningSettings.Capture();
             try
             {
                 if (signing != null)
                 {
-                    previousSigning = ApplySigning(signing);
+                    ApplySigning(signing);
                 }
 
                 if (!string.IsNullOrEmpty(o.VersionName))
@@ -679,7 +680,10 @@ namespace AF.EditorTools
             }
             finally
             {
-                previousSigning?.Restore();
+                if (signing != null)
+                {
+                    previousSigning.Restore();
+                }
                 PlayerSettings.bundleVersion = previousVersionName;
                 EditorUserBuildSettings.buildAppBundle = previousAppBundle;
                 PlayerSettings.SetApplicationIdentifier(android, previousId);

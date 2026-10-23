@@ -174,17 +174,17 @@ namespace AF.Tests.EditMode
         public void ApplyingTheSigningIsRestoredAndLeavesTheProjectWithoutKeystore()
         {
             BuildRelease.SigningSettings before = BuildRelease.SigningSettings.Capture();
-            BuildRelease.SigningSettings previous = BuildRelease.ApplySigning(
-                new BuildRelease.Signing("Temp/af-prueba.keystore", "pass-de-prueba", "subida", "pass-de-alias"));
             try
             {
+                BuildRelease.ApplySigning(
+                    new BuildRelease.Signing("Temp/af-prueba.keystore", "pass-de-prueba", "subida", "pass-de-alias"));
                 Assert.That(UnityEditor.PlayerSettings.Android.useCustomKeystore, Is.True);
                 Assert.That(UnityEditor.PlayerSettings.Android.keystoreName, Does.EndWith("Temp/af-prueba.keystore"));
                 Assert.That(UnityEditor.PlayerSettings.Android.keyaliasName, Is.EqualTo("subida"));
             }
             finally
             {
-                previous.Restore();
+                before.Restore();
             }
 
             BuildRelease.SigningSettings after = BuildRelease.SigningSettings.Capture();
