@@ -1,21 +1,15 @@
-# app-ads.txt de Tintalú · BORRADOR del bloque B13 (2026-10-20). NO PUBLICAR ASI.
+# app-ads.txt de Tintalú · ya no vive aquí. NO PUBLICAR ESTE ARCHIVO.
 #
-# Donde va: en la raiz del sitio web del desarrollador que figure en la ficha de Play,
-#   https://[PENDIENTE: dueño — dominio canonico, propuesto tintalu.com]/app-ads.txt
-#   (08 §13.1 #2 y #23). Se rellena tras publicar (08 §13.1 #23).
-# Que lleva: las lineas de MAX, AdMob, Unity Ads, Meta y Mintegral (08 §13.1 #2; 08 §7, fila 1).
-# Formato de cada linea (IAB app-ads.txt):
-#   <dominio del sistema de anuncios>, <ID de la cuenta del editor>, <DIRECT|RESELLER>[, <ID de la autoridad de certificacion>]
+# La copia que se publica es la de la web: infra/web/src/static/app-ads.txt
+# (desarrollador: Parallext, LLC; D-041), que la web sirve en la raíz del sitio,
+# https://tintalu.com/app-ads.txt, cuando el dueño conecte el dominio (D-041).
+# Se edita allí; este archivo solo apunta a ella para no tener dos versiones.
 #
-# De donde salen los datos: NO se escriben a mano ni se inventan. AppLovin MAX da la lista
-# completa y al dia (sus lineas y las de las redes que media) en su panel, cuando exista la
-# cuenta del dueño (Q-B13-16). Los dominios de abajo son los habituales de cada red [NV];
-# los IDs y los ID de certificacion los da cada panel.
+# Lo que sigue pendiente (lo dice la propia plantilla de la web):
+# - los IDs de AppLovin MAX y de las redes que media (AdMob, Unity Ads, Meta Audience
+#   Network y Mintegral) los da el panel de MAX cuando exista la cuenta del dueño
+#   (Q-B13-16 (a), decidida el 2026-10-20); no se escriben a mano ni se inventan;
+# - hoy el juego no muestra anuncios: las líneas se descomentan al integrar D-042
+#   (MAX con UMP) y tener los IDs reales; se rellena tras publicar (08 §13.1 #23).
 #
-# Lineas previstas (todas pendientes del dueño; se descomentan al tener los IDs):
-# applovin.com, [PENDIENTE: dueño — ID de cuenta de AppLovin], DIRECT, [PENDIENTE: dueño]
-# google.com, pub-[PENDIENTE: dueño — ID de editor de AdMob], DIRECT, [PENDIENTE: dueño]
-# unity.com, [PENDIENTE: dueño — ID de organizacion de Unity Ads], DIRECT, [PENDIENTE: dueño]
-# facebook.com, [PENDIENTE: dueño — ID de Meta Audience Network], DIRECT, [PENDIENTE: dueño]
-# mintegral.com, [PENDIENTE: dueño — ID de Mintegral], DIRECT, [PENDIENTE: dueño]
-# (+ las lineas RESELLER que indique el panel de MAX)
+# Historia: el borrador de B13 sigue en git (git show 964b64fb:docs/store-listing/app-ads.txt).
