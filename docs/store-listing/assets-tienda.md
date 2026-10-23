@@ -17,13 +17,13 @@ Las medidas de Google Play que no están en el GDD van marcadas [NV]: el artista
 
 ## 1. Reglas comunes (07 §10, §1.3; D-003)
 
-- **Dirección visual D-003:** vidrio con brillos, madera tallada, hojas y luz de juego; **sin papel, gouache ni acuarela**. 07 §10.2 dice «texto corto superpuesto en papel marfil»: choca con D-003 (pregunta Q-B13-5; recomendado: placa de madera clara o de vidrio del UI kit).
+- **Dirección visual D-003:** vidrio con brillos, madera tallada, hojas y luz de juego; **sin papel, gouache ni acuarela**. 07 §10.2 dice «texto corto superpuesto en papel marfil»: choca con D-003. **Decidido (Q-B13-5 (a), 2026-10-20):** placa de madera clara o de vidrio del UI kit.
 - **El icono y las capturas no llevan el nombre** «Tintalú»; la marca solo va en el logotipo del vídeo (07 §10).
 - **Prohibido (trade dress de los líderes, 07 §1.3; D-003):** gatos, caldero, oro biselado, gemas, cintas rojas, calavera, silueta de frasco con labio; Capi fijo en el centro inferior con un objeto; la sonrisa o la flecha de Amazon y el naranja #FF9900 sobre negro (07 §10.1).
 - **Ficha:** sin «Best», «#1», «Free», emojis ni insignias en el icono (07 §10; glosario §1.1).
 - **Cultura (07 §8.1):** sin personas, aldeas identificables, símbolos étnicos ni pueblos; checklist del asset de 07 §8.2 (¿personas o símbolos? ¿decoración propia? ¿lugar de la cuenca o con rótulo? ¿palabras permitidas? ¿lo vio el asesor?).
 - **Textos:** con Baloo 2 o Nunito (OFL; 07 §7.1, D-003), contraste ≥ 4,5:1 (D-003), «Tintalú» siempre con tilde (glosario §1.2), sin mayúsculas sostenidas.
-- **Entrega:** PNG o PSD por Git LFS (`CLAUDE.md`, «Humanos»; `.gitattributes`). Carpeta propuesta: `docs/store-listing/assets/` (Q-B13-15). Los agentes solo los integran.
+- **Entrega:** PNG o PSD por Git LFS (`CLAUDE.md`, «Humanos»; `.gitattributes`). Carpeta: `docs/store-listing/assets/<idioma>/`, fuera de `Assets/` para que no entren en el build (Q-B13-15 (a), decidida el 2026-10-20). Los agentes solo los integran.
 
 ## 2. Icono de la app
 
@@ -61,15 +61,15 @@ Las medidas de Google Play que no están en el GDD van marcadas [NV]: el artista
 | # | Qué muestra (07 §10.2) | es-419 | en | pt-BR | Depende de |
 |---|---|---|---|---|---|
 | 1 | Gameplay real en Manaos: una cuia vertiendo Açaí con el Encuentro de las Aguas detrás | Ordena el agua del Amazonas | Sort the waters of the Amazon | Classifique as águas da Amazônia | Fondo de Manaos final; asesor |
-| 2 | Tablero del Estuario con 5 cuias, iconos de fruta visibles | 14 frutas, 14 colores | 14 fruits, 14 colors | 14 frutas, 14 cores | Fondo del Estuario; patrones activados; texto pendiente de Q-B13-23 |
+| 2 | Tablero del Estuario con 5 cuias, iconos de fruta visibles | 14 colores de frutas y ríos | 14 colors from fruit and rivers | 14 cores de frutas e rios | Fondo del Estuario; patrones activados; texto de Q-B13-23 (a), decidida el 2026-10-20 |
 | 3 | Llenar y teñir a mitad (frutas cayendo) | Mira cómo se tiñe el río | Watch the river take color | Veja o rio ganhar cor | Miquitos finales (pendientes del asesor; glosario §3.3) |
-| 4 | Mapa del río con la forma real de la cuenca, el río de vidrio a medio llenar, la canoa con la bandera izada y las paradas (D-013) | Remonta el Amazonas hasta donde nace | Follow the Amazon to its source [P] | Suba o Amazonas até onde ele nasce [P] | Arte final del Mapa (ola 8); EN y PT, propuesta B13 (Q-B13-6) |
+| 4 | Mapa del río con la forma real de la cuenca, el río de vidrio a medio llenar, la canoa con la bandera izada y las paradas (D-013) | Remonta el Amazonas hasta donde nace | Follow the Amazon to its source [P] | Suba o Amazonas até onde ele nasce [P] | Arte final del Mapa (ola 8); EN y PT, la propuesta de B13 hasta el revisor nativo (Q-B13-6 (a)) |
 | 5 | Nivel Difícil con el badge de la rana dardo y una Marea usada en el bloqueo | Difícil de verdad, justo siempre | Honest hard levels | Difícil de verdade, sempre justo | Badge final |
 | 6 | Patrones de fruta activados, con simulación de daltonismo lado a lado | Patrones para todos los ojos | Patterns for every eye | Padrões para todos os olhos | La simulación lado a lado es un montaje: rotularla como simulación [P] |
 | 7 | TiTino en su rama celebrando; al fondo, Capi trayendo una cuia y Rosa saltando (D-013) | TiTino te acompaña | Meet TiTino | TiTino te acompanha | Condiciones de D-016 |
 | 8 | Reto del río + Bitácora del río + Canasta abierta con su contenido visible | Juega sin wifi, vuelve cada día | Play offline, come back daily | Jogue offline, volte todo dia | Bitácora «1 de 3» (D-033) y Canasta en el juego |
 
-Longitud del texto superpuesto: ≤ 36 caracteres en las tres lenguas [P], el mismo límite que las fichas: el texto canónico más largo es el de la captura 4 en ES, «Remonta el Amazonas hasta donde nace» (36); en PT-BR, «Suba o Amazonas até onde ele nasce» (34). La captura 2 («14 frutas, 14 colores») tiene una pregunta abierta: Q-B13-23.
+Longitud del texto superpuesto: ≤ 36 caracteres en las tres lenguas [P], el mismo límite que las fichas: el texto canónico más largo es el de la captura 4 en ES, «Remonta el Amazonas hasta donde nace» (36); en PT-BR, «Suba o Amazonas até onde ele nasce» (34). La captura 2 usa el texto de Q-B13-23 (a): «14 colores de frutas y ríos» (27), «14 colors from fruit and rivers» (31), «14 cores de frutas e rios» (25).
 
 ## 5. Vídeo de la ficha (07 §10.3)
 
