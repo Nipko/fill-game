@@ -3653,3 +3653,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-BILL-5 · `sec_purchase_deferred_ack_h`:** la recomendada es bajarlo de 72 a 48 h en 08 §9 y regenerar los defaults. Con 72 h, el reconocimiento local puede llegar tarde, en el mismo plazo en que Play reembolsa. Se aplica en una tarea aparte (regla «si tienen recomendada, vamos con esa»). **Aplicada en `tanda5/bill-restos`:** 08 §9 dice 48, los defaults regenerados y `VerificationQueueConfig` compila 48; el rango sigue en 48-72.
 - **Sin probar:** la compra real por JNI en un teléfono, con el modo de ensayo de `iap.md` §3. Hace falta antes de cualquier release, con los productos `af_*` dados de alta en Play Console (D-034).
 
+- **Del integrador (2026-10-23), al integrar `tanda5/bill-restos`:**
+  - Q-BILL-5 aplicada: default de 48 h y rango de 48-72 (Remote Config puede volver a subirlo).
+  - Si la consulta de productos más reciente falla, el plugin se queda sin productos, como C#.
+  - Pendiente menor: en `AfBilling.java`, el fallo síncrono de `queryProductDetailsAsync` no vacía el mapa, mientras que el asíncrono sí. Sin riesgo de dinero, porque C# se queda sin Play al recibir ERROR.

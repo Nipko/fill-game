@@ -164,7 +164,7 @@ Como referencia, el GDD estimaba Firestore + Functions en 150-300 USD al mes (09
 
 ## 7. Cambios en el cliente Unity
 
-- **`AF.Backend`**, asmdef nuevo sin motor en `Assets/_Project/Scripts/Backend/`, que depende solo de `AF.Platform` y usan IAP, Save y RemoteConfig (08 §2.2). Contiene `IBackendClient` (`VerifyPurchase`, `RestoreLedger` con los tokens y los nonces confirmados, `GetAccountCode`, `DeleteAccount`), los DTO del contrato v1, reintentos con backoff y la cola de 72 h (08 §10.3), `FakeBackendClient` y las interfaces `IAuthTokenProvider`, `IIntegrityTokenProvider` e `IHttpTransport` con sus implementaciones falsas.
+- **`AF.Backend`**, asmdef nuevo sin motor en `Assets/_Project/Scripts/Backend/`, que depende solo de `AF.Platform` y usan IAP, Save y RemoteConfig (08 §2.2). Contiene `IBackendClient` (`VerifyPurchase`, `RestoreLedger` con los tokens y los nonces confirmados, `GetAccountCode`, `DeleteAccount`), los DTO del contrato v1, reintentos con backoff y la cola de 48 h (72 h hasta Q-BILL-5, D-040) (08 §10.3), `FakeBackendClient` y las interfaces `IAuthTokenProvider`, `IIntegrityTokenProvider` e `IHttpTransport` con sus implementaciones falsas.
 - **`AF.Backend.Unity`:** transporte con `UnityWebRequest`, sin paquete nuevo; pasa la cabecera `Date` a `IServerDate` (08 §10.1).
 - **HTTPS en lugar del SDK de Functions:** `FirebaseFunctions` sale de la lista de módulos (08 §15.3 #2).
 - **Tokens:** ID token con `FirebaseUser.TokenAsync(false)` (módulo Auth, ya aprobado). Integridad: (a) App Check `GetLimitedUseAppCheckTokenAsync` [NV en Unity 13.17.0], sin paquete nuevo; (b) la biblioteca Play Integrity para Unity (`com.google.play.integrity`, versión [NV]): **paquete nuevo, necesita aprobación**.
@@ -238,7 +238,7 @@ Todas de `sdk-integrator`, en `infra/functions/**`, `infra/lib/**`, `infra/contr
 |---|---|---|---|---|
 | F3-1 `AF.Backend` sin motor | sdk-integrator | `Scripts/Backend/**` | F2-2 | Interfaces, DTO, reintentos y el falso; tests EditMode que (de)serializan `infra/contracts/v1/examples/*.json`; asmdef sin motor |
 | F3-2 Transporte y `Date` | sdk-integrator | `Scripts/Backend/Unity/**`, `Scripts/Platform/**` | F3-1 | `UnityWebRequest` tras `IHttpTransport`; `Date` alimenta a `IServerDate`; sin UID en logs |
-| F3-3 Compra verificada | sdk-integrator | `Scripts/IAP/**` | F3-1 | Estados `verifying`, `ok`, `pending`, `duplicate` y error; cola de 72 h; `applied_purchases`; con 400 (cancelada, anulada o segundo `af_starter`) no concede **ni consume** la transacción (consumir también reconoce y Play ya no la reembolsaría) |
+| F3-3 Compra verificada | sdk-integrator | `Scripts/IAP/**` | F3-1 | Estados `verifying`, `ok`, `pending`, `duplicate` y error; cola de 48 h (72 h hasta Q-BILL-5, D-040); `applied_purchases`; con 400 (cancelada, anulada o segundo `af_starter`) no concede **ni consume** la transacción (consumir también reconoce y Play ya no la reembolsaría) |
 | F3-4 Confirmar o revocar SSV | unity-gameplay-dev | `Scripts/Economy/**`, `Tests/` | F3-1, B8 | Revocación tras `sec_ssv_grace_h` sin bajar de 0; `fraud_flag` |
 | F3-5 Ajustes: código y borrado | unity-gameplay-dev | `Scripts/UI/Settings*`, textos | F3-1, B8 | Enseña el código; el borrado llama al backend y luego al local; banda < 13 probada |
 | F3-6 Proveedores reales de tokens | sdk-integrator | `Scripts/Backend/**`, `Scripts/Save/**` | SDK de Firebase aprobado, `INTERNET`, Q-AWS-4 | Reales solo en `UNITY_ANDROID && !UNITY_EDITOR`; el Play Mode sigue con los falsos |
