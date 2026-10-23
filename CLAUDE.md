@@ -32,10 +32,10 @@ La raíz **es** el proyecto Unity; Unity solo importa `Assets/` y `Packages/`.
   - `Data/Loc/`: tablas de textos `strings.csv`, `facts.csv` y `glossary.csv` (08 §4.7, contrato 32; reglas en `.claude/rules/localizacion.md`);
   - `Data/Content/`: calendarios de contenido, como `frutas_del_rio_v1.json` (08 §4.6, contrato 31);
   - `Data/Map/`: `river_map_v1.json` y `river_stops_v1.json` (08 §4.5, contratos 29 y 30), generados por `tools/river-map/`: no los edites a mano.
-- `scripts/`: `unity-compile.ps1`, `unity-test.ps1`, `unity-build.ps1`. `ci/`: `size-gate.ps1`, `check-16kb.sh`, `check-manifest.ps1`, `check-release-classes.ps1`, `check-no-unity-iap.ps1`.
+- `scripts/`: `unity-compile.ps1`, `unity-test.ps1`, `unity-build.ps1`. `ci/`: `size-gate.ps1`, `check-16kb.sh`, `check-manifest.ps1`, `check-release-classes.ps1`, `check-no-unity-iap.ps1`, `release-preflight.sh` y `check-release-signature.sh` (estos dos, del release firmado; `--self-test`). `.github/workflows/`: `ci.yml` (s30), `infra.yml` y `release.yml` (s32: release firmado a mano, sin subir a Play; secretos y variable del dueño en `docs/dev/release.md`).
 - `.claude/`: `agents/` (7 subagentes), `rules/` (reglas por ruta), `skills/` (`unity-cli`, `unity-pipeline`), `settings.json` (permisos aprobados por el dueño el 2026-10-06; el 2026-10-09 pasó todas las reglas «ask» a «allow» para trabajar sin avisos: solo quedan las «deny». Las reglas duras de este archivo siguen valiendo aunque nada pida confirmación).
 - **Pendiente (no crear a mano):**
-  - `.github/workflows/`: s30 y s32;
+  - del dueño para s32: la clave de subida y los secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASS`, `ANDROID_KEYALIAS_NAME` y `ANDROID_KEYALIAS_PASS`, y, tras el dictamen, la variable `AF_RELEASE_APPLICATION_ID` (`docs/dev/release.md`);
   - `infra/`: backend en AWS (D-035; CDK v2 en TypeScript, las 5 funciones con DynamoDB, la web y el CDN), según `docs/dev/plan-backend-aws.md`. Los agentes solo validan sin credenciales (`npm ci`, lint, typecheck, tests, `cdk synth`); despliega el dueño. Firebase se queda con Auth anónimo, Analytics, Crashlytics y Remote Config.
 - Estructura de `Assets/_Project/`: GDD 08 §3, con `Scripts/Core` y `Scripts/Solver` sustituidos por el paquete.
 
