@@ -22,6 +22,20 @@ namespace AF.RemoteConfig
     }
 
     /// <summary>
+    /// Un proveedor que descarga de verdad y lleva la hora de su última descarga (Firebase Remote Config): el arranque le pide
+    /// valores nuevos con <see cref="RemoteConfigService.FetchIfDue"/> (08 §2.3), salvo con la banda &lt;13 guardada, que no
+    /// descarga nada (B12; 08 §7). El falso de siempre no lo implementa: no descarga.
+    /// </summary>
+    public interface IFetchingRemoteConfigBackend : IRemoteConfigBackend
+    {
+        /// <summary>Hora de la última descarga correcta, o null.</summary>
+        DateTime? LastFetchUtc { get; }
+
+        /// <summary>Anota la hora de una descarga correcta (la da el reloj del juego).</summary>
+        void MarkFetched(DateTime nowUtc);
+    }
+
+    /// <summary>
     /// Remote Config del cliente (08 §2.2 <c>AF.RemoteConfig</c>; §9): <b>defaults compilados</b>
     /// (<see cref="RemoteConfigDefaults.Compiled"/>), caché, acceso tipado (<see cref="Get{T}"/>), congelación de valores al
     /// abrir cada pantalla (<see cref="Freeze"/>; 04 §10.2), <c>rc_variant</c> (<see cref="Variant"/>) y origen

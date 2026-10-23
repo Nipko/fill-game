@@ -253,6 +253,33 @@ namespace AF.Analytics.Tests
         }
 
         [Test]
+        public void CrashReporting_TheLastRequestWins_WhenFirebaseAnswers()
+        {
+            // B12 (08 §7): un encendido que esperaba a Firebase no gana a un apagado posterior, y al revés.
+            var intent = new AF.Analytics.Firebase.CrashReportingIntent();
+            Assert.That(intent.Wanted, Is.False, "apagado al empezar, como el manifiesto");
+            intent.Request(true);
+            intent.Request(false);
+            Assert.That(intent.WhenBooted(true), Is.EqualTo(AF.Analytics.Firebase.CrashReportingAction.DisableInSdk));
+            intent.Request(true);
+            Assert.That(intent.WhenBooted(true), Is.EqualTo(AF.Analytics.Firebase.CrashReportingAction.EnableInSdk));
+        }
+
+        [Test]
+        public void CrashReporting_StopWithoutFirebase_GoesNative_AndAFailedBootStillTurnsItOff()
+        {
+            var intent = new AF.Analytics.Firebase.CrashReportingIntent();
+            intent.Request(false);
+            Assert.That(intent.OnStop(firebaseBootRequested: false), Is.EqualTo(AF.Analytics.Firebase.CrashReportingAction.DisableNative),
+                "arranque con <13 guardado: sin arrancar Firebase ni App Check");
+            Assert.That(intent.OnStop(firebaseBootRequested: true), Is.EqualTo(AF.Analytics.Firebase.CrashReportingAction.None), "espera a Firebase");
+            Assert.That(intent.WhenBooted(false), Is.EqualTo(AF.Analytics.Firebase.CrashReportingAction.DisableNative),
+                "Firebase no disponible: se apaga igualmente en el SDK de Android");
+            intent.Request(true);
+            Assert.That(intent.WhenBooted(false), Is.EqualTo(AF.Analytics.Firebase.CrashReportingAction.None), "sin Firebase no se puede encender");
+        }
+
+        [Test]
         public void TheLogcatLine_HasItsOwnPrefix_NotAfState()
         {
             var e = AnalyticsEvent.Create("af_settings_change").Add("key", "sound").Add("value", "off");

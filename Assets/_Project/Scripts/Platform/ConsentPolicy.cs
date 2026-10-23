@@ -123,6 +123,17 @@ namespace AF.Platform
         }
 
         /// <summary>
+        /// El arranque puede encender los servicios que recogen o descargan antes de la pantalla de edad: Crashlytics, la descarga
+        /// de Remote Config, el sumidero de Firebase Analytics (apagado hasta el consentimiento) y la nube. Sin banda guardada
+        /// (primer arranque), 13-17 y 18+, sí, como siempre (08 §2.3); con la banda &lt;13 guardada, nada en ningún momento del
+        /// arranque: se lee del perfil antes de iniciar ningún SDK (B12; 08 §7 y §13.1 #11; 05 §7).
+        /// </summary>
+        public static bool StartsDataServicesAtBoot(ConsentRecord? record)
+        {
+            return !IsBlocked(record);
+        }
+
+        /// <summary>
         /// Los flags de <paramref name="record"/> con <paramref name="config"/>. Con <paramref name="currentProfile"/> (el perfil legal
         /// del país de ahora), una decisión de otro perfil cuenta como sin decidir hasta volver a preguntar (Q-B12-15); sin país
         /// (<paramref name="countryKnown"/> = false), los anuncios nunca son personalizados ni los decide UMP (Q-T3 (a), Q-B12-13).

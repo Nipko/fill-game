@@ -8,6 +8,7 @@ using AF.Analytics.Firebase;
 using AF.IAP;
 using AF.Platform;
 using AF.RemoteConfig.Binding;
+using AF.Save;
 using UnityEngine;
 
 namespace AF.UI
@@ -84,6 +85,26 @@ namespace AF.UI
             SimCountryOverride = null;
         }
 
+        // false con la banda <13 guardada (StartsDataServicesAtBoot): el arranque no enciende Crashlytics, no descarga Remote Config,
+        // no crea el sumidero de Firebase Analytics ni fusiona con la nube. Se decide con el perfil leído, antes de iniciar ningún SDK.
+        private bool _dataServicesAtBoot = true;
+
+        /// <summary>
+        /// El arranque puede encender lo que recoge o descarga (Crashlytics, la descarga de Remote Config, Firebase Analytics y la
+        /// nube): sin banda guardada, 13-17 y 18+, sí; con &lt;13 guardado, no (B12; 08 §7). Sin el consentimiento en marcha (los tests de
+        /// siempre), sí. Lee <see cref="ConsentStoreOverride"/> si lo hay, como <see cref="BlockedAtBoot"/>.
+        /// </summary>
+        private static bool DataServicesAllowedAtBoot(Profile profile)
+        {
+            if (!ConsentEnabled)
+            {
+                return true;
+            }
+
+            ConsentRecord? record = ConsentStoreOverride != null ? ConsentStoreOverride.Load() : profile.Consent;
+            return ConsentPolicy.StartsDataServicesAtBoot(record);
+        }
+
         /// <summary>
         /// Con la banda &lt;13 guardada en <paramref name="store"/>, corta la pantalla de arranque y enseña el bloqueo; devuelve true
         /// y quien arranca se para. Necesita el arte (<c>_art</c>) y los textos.
@@ -152,7 +173,9 @@ namespace AF.UI
         }
 
         // Banda < 13 (08 §7): la analítica nunca se enciende (la recogida a false también en Firebase, que la recuerda entre
-        // arranques) y Crashlytics se apaga de forma explícita, porque IsCrashlyticsCollectionEnabled también persiste.
+        // arranques) y Crashlytics se apaga de forma explícita, porque IsCrashlyticsCollectionEnabled también persiste. En el arranque
+        // con <13 guardado no hay sumidero de Firebase (no se toca Analytics) y CrashReporting.Stop lo apaga sin arrancar el Firebase
+        // de C# ni App Check (lo nunca encendido sigue apagado y lo que dejara encendido un arranque anterior se corrige).
         private void Under13Firebase()
         {
             _analytics?.SetCollectionEnabled(false);
