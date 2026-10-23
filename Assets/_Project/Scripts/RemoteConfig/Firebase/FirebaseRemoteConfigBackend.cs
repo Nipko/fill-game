@@ -25,7 +25,7 @@ namespace AF.RemoteConfig.Firebase
     /// </list>
     /// Solo desde el hilo principal.
     /// </summary>
-    public sealed class FirebaseRemoteConfigBackend : IRemoteConfigBackend
+    public sealed class FirebaseRemoteConfigBackend : IFetchingRemoteConfigBackend
     {
         private readonly RemoteConfigDefaults _defaults;
         private readonly string _cachePath;

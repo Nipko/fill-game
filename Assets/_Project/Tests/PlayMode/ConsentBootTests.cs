@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections;
+using AF.Backend;
 using AF.Economy;
 using AF.GameFlow;
 using AF.IAP;
@@ -38,6 +39,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap.ResetConsentOverrides();
             GameBootstrap.ResetSessionOverrides();
             GameBootstrap.ResetTelemetryOverrides();
+            GameBootstrap.ResetCloudOverrides(); // la nube, la cuenta y el backend
         }
 
         private static Profile ProfileWith(ConsentRecord? consent, int nextLevel = 4)
@@ -253,8 +255,111 @@ namespace AF.Tests.PlayMode
                 () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked,
                 "el arranque bloqueado tras elegir <13");
             Assert.That(sink.Calls, Has.No.Member(true), "con < 13 la recogida nunca se enciende");
-            Assert.That(crash, Does.Contain(false), "Crashlytics apagado al bloquear");
-            Assert.That(crash[crash.Count - 1], Is.False, "y apagado en el arranque bloqueado, tras el Start del arranque");
+            Assert.That(crash, Is.EqualTo(new[] { true, false, false }),
+                "el primer arranque (sin edad) lo enciende, al declarar < 13 se apaga y el arranque bloqueado no lo enciende: solo lo apaga");
+        }
+
+        [UnityTest]
+        public IEnumerator Under13Saved_TheBootNeverStartsCrashlytics_NorFetchesRemoteConfig_NorTouchesCloudOrBackend()
+        {
+            // B12 (08 §7 y §13.1 #11; 05 §7): con la banda < 13 ya guardada, la banda se lee del perfil antes de iniciar ningún SDK.
+            // Crashlytics nunca se enciende (ni un fotograma), Remote Config se queda con la caché o los defaults sin descargar, y no
+            // se tocan Firebase Analytics, la nube, Auth, App Check, Play Billing ni el backend.
+            var crash = new System.Collections.Generic.List<bool>();
+            var rc = new CountingFetchBackend();
+            var cloud = new FakeCloudSave();
+            var backend = new FakeBackendClient();
+            var sink = new CollectionSink();
+            GameBootstrap.CrashReportingOverride = on => crash.Add(on);
+            GameBootstrap.RemoteConfigBackendOverride = rc;
+            GameBootstrap.CloudSaveOverride = cloud;
+            GameBootstrap.BackendClientOverride = backend;
+            GameBootstrap.AnalyticsSinkOverride = sink;
+            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, false, false, AgeBand.Under13)));
+
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ConsentBlocked, Is.True);
+            Assert.That(boot.ConsentView!.View, Is.EqualTo(ConsentView.Blocked));
+            Assert.That(crash, Has.No.Member(true), "Crashlytics nunca se enciende con < 13 guardado");
+            Assert.That(crash, Is.EqualTo(new[] { false }), "solo se apaga de forma explícita (lo que dejara encendido otro arranque)");
+            Assert.That(rc.Fetches, Is.EqualTo(0), "sin descarga de Remote Config");
+            Assert.That(boot.Rc, Is.Not.Null, "Remote Config con la caché o los defaults compilados");
+            Assert.That(cloud.LoadCount + cloud.SaveCount, Is.EqualTo(0), "sin nube");
+            Assert.That(boot.BootCloudSync, Is.Null);
+            Assert.That(backend.Calls, Is.Empty, "sin backend (ni Auth ni App Check, que solo piden sus llamadas)");
+            Assert.That(boot.Store, Is.Null, "sin tienda ni Play Billing");
+            Assert.That(boot.Ads, Is.Null);
+            Assert.That(sink.Calls, Has.No.Member(true), "la analítica nunca se enciende");
+            Assert.That(boot.App, Is.Null, "no se crea sesión de juego");
+        }
+
+        [UnityTest]
+        public IEnumerator TeenSaved_TheBootStartsCrashlytics_AndFetchesRemoteConfig_AsBefore()
+        {
+            yield return Over13SavedBoot(AgeBand.Teen);
+        }
+
+        [UnityTest]
+        public IEnumerator AdultSaved_TheBootStartsCrashlytics_AndFetchesRemoteConfig_AsBefore()
+        {
+            yield return Over13SavedBoot(AgeBand.Adult);
+        }
+
+        private static IEnumerator Over13SavedBoot(AgeBand band)
+        {
+            // Con 13-17 y 18+ guardados, el arranque de siempre (08 §2.3): Crashlytics encendido, Remote Config descargando y la nube.
+            var crash = new System.Collections.Generic.List<bool>();
+            var rc = new CountingFetchBackend();
+            var cloud = new FakeCloudSave();
+            GameBootstrap.CrashReportingOverride = on => crash.Add(on);
+            GameBootstrap.RemoteConfigBackendOverride = rc;
+            GameBootstrap.CloudSaveOverride = cloud;
+            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, false, false, band)));
+
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ConsentBlocked, Is.False);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(crash, Is.EqualTo(new[] { true }), "08 §2.3: Crashlytics en el arranque");
+            Assert.That(rc.Fetches, Is.EqualTo(1), "Remote Config descarga para el arranque siguiente");
+            Assert.That(cloud.LoadCount, Is.GreaterThan(0), "la nube, como siempre (B8)");
+            Assert.That(boot.Store, Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator FirstRun_WithoutAge_StartsCrashlytics_AndFetchesRemoteConfig_AsBefore()
+        {
+            // Sin banda todavía: como hoy (sin UID), hasta que se declara la edad.
+            var crash = new System.Collections.Generic.List<bool>();
+            var rc = new CountingFetchBackend();
+            GameBootstrap.CrashReportingOverride = on => crash.Add(on);
+            GameBootstrap.RemoteConfigBackendOverride = rc;
+            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ConsentView!.View, Is.EqualTo(ConsentView.Age));
+            Assert.That(crash, Is.EqualTo(new[] { true }));
+            Assert.That(rc.Fetches, Is.EqualTo(1));
+        }
+
+        // Un Remote Config que descarga (como Firebase): cuenta las descargas y responde sin valores.
+        private sealed class CountingFetchBackend : AF.RemoteConfig.IFetchingRemoteConfigBackend
+        {
+            public int Fetches;
+
+            public System.Collections.Generic.IReadOnlyDictionary<string, string>? Cached => null;
+
+            public DateTime? LastFetchUtc => null;
+
+            public void MarkFetched(DateTime nowUtc)
+            {
+            }
+
+            public void Fetch(Action<System.Collections.Generic.IReadOnlyDictionary<string, string>?> onDone)
+            {
+                Fetches++;
+                onDone?.Invoke(null);
+            }
         }
 
         private sealed class CollectionSink : AF.Analytics.IAnalyticsSink, AF.Analytics.ICollectionAwareSink

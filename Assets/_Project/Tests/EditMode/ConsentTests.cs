@@ -186,6 +186,21 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void DataServicesAtBoot_OnlyWithoutTheUnder13BandSaved()
+        {
+            // B12 (08 §7 y §13.1 #11): con < 13 guardado, el arranque no enciende Crashlytics ni descarga Remote Config (ni toca
+            // Firebase Analytics ni la nube) en ningún momento; sin banda (primer arranque), 13-17 y 18+, como siempre (08 §2.3).
+            Assert.That(ConsentPolicy.StartsDataServicesAtBoot(null), Is.True, "primer arranque, sin edad todavía");
+            Assert.That(ConsentPolicy.StartsDataServicesAtBoot(Record(AgeBand.Unknown)), Is.True);
+            Assert.That(ConsentPolicy.StartsDataServicesAtBoot(Record(AgeBand.Teen)), Is.True);
+            Assert.That(ConsentPolicy.StartsDataServicesAtBoot(Record(AgeBand.Adult)), Is.True);
+            Assert.That(ConsentPolicy.StartsDataServicesAtBoot(Record(AgeBand.Adult, version: 0)), Is.True, "textos nuevos: se vuelve a preguntar");
+            Assert.That(ConsentPolicy.StartsDataServicesAtBoot(Record(AgeBand.Under13)), Is.False);
+            Assert.That(ConsentPolicy.StartsDataServicesAtBoot(Record(AgeBand.Under13, analytics: false, ads: false, version: 0)), Is.False,
+                "el bloqueo es definitivo (Q-B12-3)");
+        }
+
+        [Test]
         public void Teen_IsNpa_WithoutPersonalRc_AndWithTheDoubleConfirmation()
         {
             ConsentFlags f = ConsentPolicy.Flags(Record(AgeBand.Teen, analytics: true, ads: true), ConsentConfig.Defaults);

@@ -1557,17 +1557,9 @@ namespace AF.UI
                 yield return null; // el río y el logotipo, a la vista antes de cargar
             }
 
-            // Remote Config antes del catálogo: mech_enabled.*, level_overrides (con la reserva) y lvl_label_override se aplican al crearlo.
+            // El perfil, antes de iniciar ningún SDK (B12; 08 §7): con la banda <13 guardada no se enciende Crashlytics, no se
+            // descarga Remote Config, no se toca Firebase Analytics ni la nube (ConsentPolicy.StartsDataServicesAtBoot).
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
-            SetUpRemoteConfig(clock);
-            LevelCatalog? catalog = LoadCatalog();
-            if (catalog == null)
-            {
-                CutSplash();
-                enabled = false;
-                yield break;
-            }
-
             string profileDirectory = LaunchOptions.ProfileDirectoryOverride ?? Application.persistentDataPath;
 
             // Tras elegir idioma en Ajustes, la escena se recargó (RebuildUi): se vuelve al inicio con el perfil de la sesión, tal
@@ -1610,13 +1602,30 @@ namespace AF.UI
                     store.TrySave(profile); // extra af_max_level de los builds de desarrollo [P] (M3.3)
                 }
 
-                // B8 (GameBootstrap.Cloud.cs): la firma del perfil y la fusión con la nube, antes de crear ningún servicio.
-                profile = SyncProfileAtBoot(profile, store, IsLocked(_profileStatus));
+                // B8 (GameBootstrap.Cloud.cs): la firma del perfil y la fusión con la nube, antes de crear ningún servicio. Con <13
+                // guardado, sin nube (B12).
+                _dataServicesAtBoot = DataServicesAllowedAtBoot(profile);
+                if (_dataServicesAtBoot)
+                {
+                    profile = SyncProfileAtBoot(profile, store, IsLocked(_profileStatus));
+                }
             }
 
+            _dataServicesAtBoot = DataServicesAllowedAtBoot(profile);
             bool locked = IsLocked(_profileStatus);
             _profile = profile;
             _profileStore = store;
+
+            // Remote Config antes del catálogo: mech_enabled.*, level_overrides (con la reserva) y lvl_label_override se aplican al
+            // crearlo. Con <13 guardado, la caché local o los defaults compilados, sin descargar (GameBootstrap.Telemetry.cs).
+            SetUpRemoteConfig(clock);
+            LevelCatalog? catalog = LoadCatalog();
+            if (catalog == null)
+            {
+                CutSplash();
+                enabled = false;
+                yield break;
+            }
 
             // Textos (D-018; tareas L2b y L3): con el perfil leído y antes de construir ninguna pantalla. Desarrollo (af_lang) >
             // settings.language > teléfono > en, con el respaldo es-419, y las cifras con la región del teléfono.

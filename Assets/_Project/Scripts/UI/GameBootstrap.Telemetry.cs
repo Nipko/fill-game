@@ -92,9 +92,10 @@ namespace AF.UI
             IRemoteConfigBackend rcBackend = RemoteConfigBackendOverride ?? RemoteConfigBackends.CreateDefault(RemoteConfigDefaults.Compiled);
             _rc = new RemoteConfigService(null, rcBackend);
             _rc.ActivateCached(); // 08 §2.3: RC.LoadDefaults(); RC.ActivateCached(); RC.FetchAsync(min_interval=12h)
-            if (rcBackend is FirebaseRemoteConfigBackend firebaseRc)
+            if (_dataServicesAtBoot && rcBackend is IFetchingRemoteConfigBackend firebaseRc)
             {
-                // No bloquea; lo descargado se aplica en el arranque siguiente (las cifras no cambian a mitad de sesión).
+                // No bloquea; lo descargado se aplica en el arranque siguiente (las cifras no cambian a mitad de sesión). Con la banda
+                // <13 guardada no se descarga nada (B12; 08 §7): la caché local o los defaults compilados.
                 DateTime fetchAt = clock.UtcNow;
                 _rc.FetchIfDue(fetchAt, firebaseRc.LastFetchUtc, ok =>
                 {
@@ -123,12 +124,16 @@ namespace AF.UI
             };
 
             SetUpRemoteConfig(clock); // ya hecho al principio de Start; aquí solo si alguien llama sin él
-            SetCrashReporting(true); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono. <13: BlockedAtBoot lo apaga (B12)
+            if (_dataServicesAtBoot)
+            {
+                SetCrashReporting(true); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono. Con <13 guardado, nunca (B12)
+            }
             s_session ??= new SessionTracker(clock.UtcNow);
             _analytics = new AnalyticsService(_events, new CommonSource(this));
             _events.Subscribe<LevelStarted>(OnLevelStartedLabel); // af_label_shown, tras level_start (cierre de B11)
             _analytics.AddSink(new LogcatAnalyticsSink());
-            IAnalyticsSink? firebaseSink = FirebaseAnalyticsSink.TryCreate(); // null en el editor y sin google-services.json
+            // null en el editor y sin google-services.json; con <13 guardado, ni se crea (no se toca Firebase Analytics; B12)
+            IAnalyticsSink? firebaseSink = _dataServicesAtBoot ? FirebaseAnalyticsSink.TryCreate() : null;
             if (firebaseSink != null)
             {
                 _analytics.AddSink(firebaseSink); // apagado hasta el consentimiento (AddSink le pasa CollectionEnabled = false)

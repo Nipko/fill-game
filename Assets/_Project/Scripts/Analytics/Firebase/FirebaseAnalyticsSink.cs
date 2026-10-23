@@ -168,9 +168,15 @@ namespace AF.Analytics.Firebase
     /// Crashlytics (F3-6; 08 §2.3: <c>Crashlytics.Enable()</c>, diagnóstico; pregunta abierta 6 de 08). El manifiesto lo deja
     /// apagado (<c>firebase_crashlytics_collection_enabled = false</c>) para que lo encienda el arranque, en el código, y se pueda
     /// cortar por banda de edad o consentimiento sin otro build. Sin <c>SetUserId</c>: los informes no llevan el UID.
+    /// <para>
+    /// Lo que se aplica al estar Firebase listo es siempre la <b>última</b> petición (<see cref="Start"/> o <see cref="Stop"/>), no
+    /// cada una en su orden: un <see cref="Start"/> que espera a Firebase no puede encenderlo después de un <see cref="Stop"/>.
+    /// </para>
     /// </summary>
     public static class CrashReporting
     {
+        private static bool s_wanted;
+
         /// <summary>Lo enciende cuando Firebase está listo. False si este build no tiene Crashlytics (editor o sin configuración).</summary>
         public static bool Start()
         {
@@ -179,21 +185,18 @@ namespace AF.Analytics.Firebase
                 return false;
             }
 
+            s_wanted = true;
 #if UNITY_ANDROID && !UNITY_EDITOR
-            FirebaseBoot.WhenReady(ok =>
-            {
-                if (ok)
-                {
-                    global::Firebase.Crashlytics.Crashlytics.IsCrashlyticsCollectionEnabled = true;
-                }
-            });
+            FirebaseBoot.WhenReady(ApplyWanted);
 #endif
             return true;
         }
 
         /// <summary>
-        /// Lo apaga de forma explícita (B12, banda &lt; 13; 08 §7): <c>IsCrashlyticsCollectionEnabled = false</c>, que persiste entre
-        /// arranques, así que un <see cref="Start"/> anterior queda anulado. False si este build no tiene Crashlytics.
+        /// Lo apaga de forma explícita (B12, banda &lt; 13; 08 §7): <c>setCrashlyticsCollectionEnabled(false)</c>, que persiste entre
+        /// arranques, así que un <see cref="Start"/> anterior queda anulado. Si el arranque de Firebase en C# no se ha pedido (el arranque
+        /// con la banda &lt; 13 guardada), no lo arranca (ni App Check): lo apaga en el SDK de Android, que ya inició el proceso
+        /// (<c>FirebaseInitProvider</c>), y borra los informes sin enviar. False si este build no tiene Crashlytics.
         /// </summary>
         public static bool Stop()
         {
@@ -202,16 +205,47 @@ namespace AF.Analytics.Firebase
                 return false;
             }
 
+            s_wanted = false;
 #if UNITY_ANDROID && !UNITY_EDITOR
-            FirebaseBoot.WhenReady(ok =>
+            if (FirebaseBoot.State == FirebaseBootState.NotStarted || FirebaseBoot.State == FirebaseBootState.Unavailable)
             {
-                if (ok)
-                {
-                    global::Firebase.Crashlytics.Crashlytics.IsCrashlyticsCollectionEnabled = false;
-                }
-            });
+                StopNative();
+            }
+            else
+            {
+                FirebaseBoot.WhenReady(ApplyWanted);
+            }
 #endif
             return true;
         }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private static void ApplyWanted(bool ok)
+        {
+            if (ok)
+            {
+                global::Firebase.Crashlytics.Crashlytics.IsCrashlyticsCollectionEnabled = s_wanted;
+            }
+        }
+
+        // FirebaseCrashlytics de Android sin pasar por el Firebase de C#: la recogida apagada (persiste) y los informes que hubiera
+        // en el disco, borrados para que nunca salgan. Sin FirebaseApp (no hay FirebaseInitProvider) Crashlytics no corre: nada que hacer.
+        private static void StopNative()
+        {
+            try
+            {
+                using (var crashlytics = new UnityEngine.AndroidJavaClass("com.google.firebase.crashlytics.FirebaseCrashlytics"))
+                using (UnityEngine.AndroidJavaObject instance = crashlytics.CallStatic<UnityEngine.AndroidJavaObject>("getInstance"))
+                {
+                    instance.Call("setCrashlyticsCollectionEnabled", false);
+                    instance.Call("deleteUnsentReports");
+                }
+            }
+            catch (System.Exception)
+            {
+                // Sin FirebaseApp o sin la clase: Crashlytics no está corriendo en este proceso.
+            }
+        }
+#endif
     }
 }
