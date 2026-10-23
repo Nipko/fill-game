@@ -3677,3 +3677,14 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - **Cuenta de Google Play:** está a nombre de AUTOMATION AI S A S (organización, Colombia). Si el desarrollador y vendedor es Parallext, LLC, la app debería publicarse desde una cuenta de Parallext, LLC: una cuenta nueva de organización o una transferencia de la app, que hoy es sencilla porque la app no existe (D-034). Lo decide el dueño, con el abogado si hace falta.
   - **Marca:** el titular previsto de la solicitud pasa a ser Parallext, LLC (EE. UU.). La vía de Madrid partiría de una solicitud base en la USPTO, no en Colombia. Encargo de Codex actualizado (`docs/dev/traspaso/codex-marca.md`).
   - **`applicationId` definitivo:** recomendado `com.parallext.tintalu`. Se fija solo tras el dictamen (regla dura 6).
+
+### D-033, añadido del 2026-10-23: con la banda <13 ya guardada, el arranque no inicia ningún SDK
+
+- **Estado:** integrado con `tanda5/menor13-arranque`, con revisión APROBADO tras corregir la privacidad de la web. Lo hallado al redactar la política: con `<13` guardado, Crashlytics se encendía un instante en cada arranque y Remote Config se descargaba.
+- **Decisión** (recomendada del carril, por la regla del dueño):
+  - el perfil se lee antes que cualquier SDK;
+  - con `<13` guardado no hay Crashlytics a `true`, descarga de Remote Config (caché o defaults), Firebase en C#, nube, backend, tienda ni anuncios;
+  - Crashlytics se apaga también por JNI y se borran los informes sin enviar;
+  - el primer arranque, 13-17 y 18+ siguen igual.
+- **Anotado** en 08 §2.3 y §13.1 #11, en la privacidad de la web y en `docs/dev/firebase-cliente.md` §4 bis.
+- **Sin probar** en un teléfono con Firebase real.
