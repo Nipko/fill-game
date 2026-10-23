@@ -1040,7 +1040,7 @@ namespace AF.UI
             _fingerScoop = -1;
             if (lesson == FingerLesson.HojaKey && IndexOfMechanic(session.Current, MechanicType.Hoja) < 0)
             {
-                return; // el estreno de la Hoja sin hoja en el tablero (mech_enabled.hoja apagada): sin dedo (DC7)
+                return; // el estreno de la Hoja sin hoja en el tablero (mech_enabled_hoja apagada): sin dedo (DC7)
             }
 
             if (lesson == FingerLesson.TinajaScoop)
@@ -1049,7 +1049,7 @@ namespace AF.UI
                 _fingerScoop = IndexOfMechanic(session.Current, MechanicType.Cucharon);
                 if (_fingerTinaja < 0 || _fingerScoop < 0)
                 {
-                    return; // sin la pareja colgada (mech_enabled.tinaja apagada): sin dedo (DC7)
+                    return; // sin la pareja colgada (mech_enabled_tinaja apagada): sin dedo (DC7)
                 }
 
             }

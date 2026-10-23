@@ -227,9 +227,52 @@ En cada una va **aplicada la recomendada**, por la regla del dueño (D-040): «s
 
 - **Q-IAP-1** (telemetría de compras a Unity): **decidida, (c)**. Este bloque la ejecuta: sin Unity IAP no hay telemetría de compras a Unity ni búsqueda en su catálogo remoto (`StoreOverrideReverseLookupService`). `ci/check-no-unity-iap.ps1` lo vigila en cada build.
 - **Q-IAP-2** (`deferred_ack` de consumibles): **se reabre y se aplica como pedía Q-F3-3 3**: reconocer sin consumir (§1.2). Lo dice el parche de 08 §10.1 y §10.3.
-- **Q-IAP-3, Q-IAP-4 y Q-IAP-5:** siguen como estaban (D-040, añadido de Q-IAP-n).
+- **Q-IAP-3 y Q-IAP-5:** siguen como estaban (D-040, añadido de Q-IAP-n).
+- **Q-IAP-4** (no consumibles con otro UID): **resuelta en el backend con la recomendada (a)**, §4.3.
 - **Q-IAP-6** (paquetes de Unity IAP): la aprobación **se retira** (D-040, añadido de Q-IAP-1); salen con `BILL-manifest.diff`.
 - **Q-IAP-7** (`BillingMode.json`): sale con su carpeta en `BILL-manifest.diff`.
+
+### 4.3 Q-IAP-4 · No consumibles con otro UID: **resuelta en el backend** (tanda 5, `tanda5/iap4-backend`)
+
+Lo que pasaba: al reinstalar sin recuperar el UID (sin Play Games o sin su guardado), Play devuelve a la misma cuenta de Google sus no consumibles (`af_noads`, `af_skin_m02`-`m04`) con el `obfuscatedAccountId` del UID viejo. `verifyPurchase` respondía 409 (token de otro UID), el cliente no lo acreditaba nunca y repetía el 409 en cada arranque.
+
+**Aplicada la recomendada (a)**, en `infra/functions/verify-purchase/handler.ts` (`reassignNonConsumable`), **sin cambios de contrato** (las respuestas son las de siempre: `duplicate`, `ok`, 409 y 429):
+
+| Caso | Respuesta | Libro mayor |
+|---|---|---|
+| Fila de otro UID (o anonimizada por un borrado) de un **no consumible**, en `ok`, del mismo SKU; Play la da como comprada (`purchaseState` 0) y con `obfuscatedAccountId` | `duplicate` (sin `grant`: se concedió una vez, al primer UID) | La fila pasa al UID nuevo (`uid`); se conservan `order_id`, `ts`, `verified_at`, `country`; se apuntan `reassign_seq`, `reassign_count`, `reassigned_at` y `reassign_log` (`{at, kind}`, sin UID ni hash). Si tenía dueño, en la misma transacción, una **fila sombra** `<token_hash>#prev#<n>` con el UID anterior (`shadow_of`, apuntada en `shadow_keys` de la principal) |
+| Lo mismo, pero el `obfuscatedAccountId` es **el UID que la pide** (vuelve al que compró) | `duplicate` | Igual (con sombra del UID que la tenía), sin gastar cupo ni reiniciar la espera (`kind: owner`) |
+| **Sin fila**: no consumible comprado con otro UID que nunca llegó a verificarse (se compró sin red y se reinstaló) | `ok` con `grant` | Se escribe a nombre del UID que la pide; cuenta como la primera reasignación (`kind: claim`) |
+| Consumible o `af_starter` de otro UID, fila `voided`, lápida, cancelada o desconocida en Play, sin cuenta ofuscada, otro SKU, pendiente de pago | Como antes: 409 (la lápida, 400) | Sin cambios |
+| Más de **5** reasignaciones del token [P] (`REASSIGN_MAX_PER_TOKEN`) o menos de **24 h** desde la anterior [P] (`REASSIGN_COOLDOWN_S`) | 409 | Sin cambios |
+| Más de **4** reasignaciones al día del mismo UID [P] (`REASSIGN_DAILY_PER_UID`, los 4 no consumibles del catálogo) | 429 `rate_limited` con `retry_after_s` | Sin cambios |
+
+- **Por qué basta el token:** el servidor no puede ver la cuenta de Google. Play solo entrega el `purchaseToken` (en `queryPurchasesAsync`) a la cuenta de Google que compró; el `obfuscatedAccountId` dice con qué UID se compró, no quién lo pide. Así que la regla es: si el token es válido y el `obfuscatedAccountId` es otro UID, quien lo presenta desde la app auténtica (App Check) tiene la cuenta de Google que compró, salvo que lo haya robado. Las mitigaciones de abajo acotan ese «salvo».
+- **Idempotencia:** la escritura es un `Update` condicional (mismo dueño y mismo `reassign_seq` que se leyó, `state = ok`, sin lápida) en una transacción con la comprobación de cuenta no borrada del UID nuevo, el cupo diario (se mira antes y se gasta dentro de la transacción: si se cancela, no se gasta) y, si había dueño, el `Put` de la sombra y la comprobación de que ese UID no se está borrando (si se está borrando, 409: al acabar, la fila queda anonimizada y se reasigna sin sombra). Repetir la petición desde el UID nuevo responde `duplicate` por la vía normal (la fila ya es suya), sin llamar a Play ni gastar cupo. Dos peticiones a la vez: una reasigna y la otra relee y responde `duplicate` (mismo UID) o 409 (otro UID).
+- **El dispositivo viejo** (si sigue instalado con el UID viejo) conserva el derecho mientras la compra esté vigente: `restoreLedger` ya no se la devuelve como `ok` (el derecho ya no es suyo: su sombra vigente no sale) y el cliente solo retira lo que sale como `voided`, no lo que deja de salir (`LedgerRestore`).
+- **Reembolsos:** el job de anuladas marca `voided` la fila principal por `token_hash` y, con ella, las sombras de `shadow_keys` (siempre, aunque la principal ya lo estuviera). `restoreLedger` devuelve la anulación al UID nuevo (la principal) y a cada UID anterior (su sombra, con el `token_hash` real, una vez por token): los dos la retiran. Sin esto, comprar en A, abrir en B con otro UID y pedir el reembolso dejaba el derecho y las semillas en A.
+- **Borrado de cuenta:** las sombras llevan el `uid` y salen en `by_uid`, así que `deleteAccount` las anonimiza como las demás filas.
+- **Métricas** (EMF, `AF/Backend`): `PurchaseReassigned` (dimensión `Kind`: `other`, `anonymized`, `owner`, `claim`) y `PurchaseReassignLimit` (tope o espera). Sin alarma por ahora [P].
+
+**Amenaza (08 §10.1, «Compra falsa o recibo reutilizado») y mitigación.** Quien consiga el `purchaseToken` de un no consumible ajeno (el propio comprador que lo extrae de su teléfono rooteado y lo comparte, o un registro filtrado) podría pedir el derecho con su UID. Capas, de fuera a dentro:
+1. **App Check de uso limitado** (ya exigido en `verifyPurchase`): el token tiene que llegar desde la app auténtica en un dispositivo que pasa Play Integrity; el cliente solo verifica lo que le devuelve la consulta de Play del propio teléfono, así que inyectar un token ajeno exige una app modificada o un dispositivo manipulado.
+2. **Tope por token** (5 [P], sin contar las vueltas al comprador) y **espera de 24 h** [P] entre dos: un token compartido sirve, como mucho, a 5 UID en total y a uno por día. Un Sin anuncios compartido en un foro no se convierte en Sin anuncios para todos.
+3. **Tope por UID** (4 al día [P]): un UID que junta tokens ajenos se para en el quinto.
+4. **El comprador siempre gana:** el UID del `obfuscatedAccountId` recupera la fila cuando la pide, sin cupo ni espera.
+5. **Solo derechos, nunca dinero nuevo:** se responde `duplicate` (sin `grant`); los consumibles y `af_starter` siguen en 409; lo anulado o reembolsado no se mueve, y un reembolso posterior se retira en todos los UID que la tuvieron (sombras). El servidor nunca guarda ni registra el token ni el UID en claro (los logs llevan `uid_hash`; el historial de la fila, solo `{at, kind}`).
+
+Residual: con un token robado y la app auténtica en un dispositivo íntegro, el ladrón puede quedarse el derecho hasta que el comprador lo pida (y el comprador sin su UID original ya no es «el comprador» para el servidor: sigue sujeto a los topes, como cualquiera). Precio: un Sin anuncios o una skin. Se ve en `PurchaseReassignLimit`.
+
+**Lo que conviene cambiar en el cliente** (sugerencias para el escritorio; esta rama no toca `Assets/`):
+- **Dejar de reintentar el 409 en cada arranque.** Tras la reasignación, el 409 de un no consumible solo queda para los topes y los casos que no se reasignan; aun así, cada arranque gastaría un token de App Check, una llamada a Play y una de las 30 verificaciones por hora del UID. Propuesta [P]: si `verifyPurchase` responde 409 a un no consumible que llegó por restauración (la consulta de Play, no la hoja), anotar su `token_hash` con la fecha y no volver a enviarlo hasta pasados 7 días o hasta otra versión de la app; nunca consumirlo ni reconocerlo (ya es así).
+- **429 de la reasignación:** sin cambios; la cola ya reintenta con `retry_after_s`.
+- **`duplicate` de una restauración:** el cliente acredita el contenido del catálogo si el `token_hash` no está en `applied_purchases`. En una reinstalación sin perfil eso incluye las semillas de regalo de Sin anuncios (500) y de las skins (300), que el jugador había perdido con el perfil; con los topes, hasta 6 veces por token (el comprador y 5 UID más). Ver la pregunta Q-IAP-4-1.
+
+**Preguntas** (va aplicada la recomendada):
+- **Q-IAP-4-1 · Semillas de regalo al restaurar con otro UID.** (a) **recomendada, aplicada:** como cualquier `duplicate`, el cliente acredita el contenido del catálogo si el `token_hash` no está en `applied_purchases` (el jugador perdió esas semillas con el perfil; acotado por los topes); (b) en una restauración, solo el derecho (`no_ads`, la skin), sin semillas: cambio del cliente.
+- **Q-IAP-4-2 · Cifras de los topes** [P]: 5 reasignaciones por token, 24 h entre dos y 4 por UID y día. (a) **recomendada, aplicada:** esas; (b) otras (las constantes están en el handler; no son de Remote Config porque las lee el servidor).
+- **Q-IAP-4-3 · Filas anonimizadas** (el dueño de la fila borró su cuenta y Play le sigue devolviendo la compra). (a) **recomendada, aplicada:** se reasignan como las demás (Google sigue dando la compra a esa cuenta; el borrado quitó los datos, no lo pagado); (b) 409 para siempre.
+- **Q-IAP-4-4 · 08 §10.3:** **aplicada**. El pseudocódigo lleva la excepción del no consumible reasignado (aprobada en D-040), con la sombra del UID anterior.
 
 ---
 
@@ -300,7 +343,7 @@ y en la cabecera del workflow, junto a `check-release-classes`, la compuerta nue
 - **`duplicate` de una compra de esta misma instalación**: la analítica lo cuenta como restauración y no como ingreso. Raro.
 - **`deferred_ack` que Play no hizo**: se vuelve a pedir en cada `Resume` (arranque y vuelta a primer plano). Si el jugador se queda horas en el juego sin salir y sin red justo en el plazo, el siguiente intento llega al volver; con `sec_purchase_deferred_ack_h` en 48 (Q-BILL-5) quedan 24 h de margen frente a los 3 días de Play; si Remote Config lo sube a 72, el margen vuelve a ser casi nulo (08 §9).
 - **Compuerta de release sin Play Billing**: el workflow de release debe pasar `-RequireBilling` a `ci/check-manifest.ps1` y llamar a `ci/check-no-unity-iap.ps1` (enganche de §6).
-- **Restauración y 409** (Q-IAP-4); **monedas** (Q-IAP-3).
+- **Restauración con otro UID** (Q-IAP-4, resuelta en el backend, §4.3): el ladrón de un token de no consumible que use la app auténtica en un dispositivo íntegro puede quedarse el derecho, como mucho en 5 UID por token; un reembolso posterior se retira en todos los UID que la tuvieron (sombras), pero mientras está vigente el dispositivo viejo conserva el derecho y las semillas de regalo se pueden acreditar hasta 6 veces por token; el cliente sigue reenviando un 409 en cada arranque hasta que se cambie (§4.3). **Monedas** (Q-IAP-3).
 - **Hoja huérfana con un pago lento**: si el servicio se cae con la hoja abierta y, al volver a primer plano, la reconexión pedida responde antes que la respuesta de la hoja (pago lento, 3-D Secure), la hoja falla y el cobro llega después y se acredita una vez sin el contexto de la hoja. El jugador ve un fallo de algo que sí pagó; no hay doble crédito.
 - **Esperar a la reconexión antes de abrir la hoja** (hasta 5 s): si el jugador sale de la app en ese hueco, Android puede no mostrar la hoja y no llegar respuesta; la tienda queda «comprando» hasta recargar la escena. Muy raro (servicio caído y salir en esos segundos).
 - **Tienda sin Play hasta volver a primer plano**: tras un `Disconnected` (desconexión con algo en vuelo, o la hoja que no se abre con `SERVICE_DISCONNECTED` tras esperar la reconexión), `PlayBillingClient` no vende hasta el siguiente `Refresh`, que hoy solo llama `ResumeBackend` al volver a primer plano. Sugerencia para el escritorio: llamar también a `Refresh` al abrir el Mercado.

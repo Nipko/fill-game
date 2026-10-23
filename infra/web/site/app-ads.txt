@@ -1,5 +1,5 @@
 # app-ads.txt de Tintalú (desarrollador: Parallext, LLC; D-041). PLANTILLA: todavía no declara ningún vendedor.
-# Fuente: docs/store-listing/app-ads.txt (B13); 08 §13.1 #2 y #23. Se publica en la raíz del sitio web del
+# Fuente: este archivo de la web (infra/web/src/static/app-ads.txt); docs/store-listing/app-ads.txt solo apunta aquí. 08 §13.1 #2 y #23. Se publica en la raíz del sitio web del
 # desarrollador que figure en la ficha de Play. Formato IAB de cada línea:
 #   <dominio del sistema de anuncios>, <ID de la cuenta del editor>, <DIRECT|RESELLER>[, <ID de la autoridad de certificación>]
 #

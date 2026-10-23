@@ -16,7 +16,7 @@ namespace AF.Tests.EditMode
     /// La reserva del 20 % en el cliente (D-033, añadido «la reserva del 20 %», Q-B11-7 a; 03 §17; D-020, pregunta 31 b): los
     /// paquetes de reserva publicados (<c>reserva_03_v1</c> … <c>reserva_09_v1</c>, <c>kind</c> = <c>reserve</c>,
     /// <c>pack_schema</c> 4), que el catálogo nunca toma como campaña y que <c>level_overrides</c> puede pedir para su slot, y
-    /// las claves de Remote Config del catálogo (<see cref="RcLevelBinder"/>: <c>mech_enabled.*</c> y <c>level_overrides</c>).
+    /// las claves de Remote Config del catálogo (<see cref="RcLevelBinder"/>: <c>mech_enabled_*</c> y <c>level_overrides</c>).
     /// </summary>
     public sealed class ReservePackTests
     {
@@ -190,8 +190,8 @@ namespace AF.Tests.EditMode
             Assert.That(RcLevelBinder.LevelOverridesJson(defaults.Freeze()), Is.EqualTo("{}"));
 
             var backend = new FakeRemoteConfigBackend()
-                .Set("mech_enabled.matapi", "false")
-                .Set("mech_enabled.tinaja", "false")
+                .Set("mech_enabled_matapi", "false")
+                .Set("mech_enabled_tinaja", "false")
                 .Set("level_overrides", "{\"63\":\"m03_v1_n0063_r1\"}");
             var rc = new RemoteConfigService(null, backend);
             rc.Activate(backend.Remote);

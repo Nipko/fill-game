@@ -3708,6 +3708,15 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
   Hasta entonces, los builds van con la implementación falsa o en modo de prueba, y las claves y los IDs reales se cargan fuera del repositorio.
 
+### D-042, añadido del 2026-10-23: dependencias de Play Games 2.3.0
+
+- **Estado:** aplicado con la recomendada del carril `tanda5/sdk-pgs`, por la regla del dueño «si tienen recomendada, vamos con esa». **El dueño puede cambiarlo.**
+- **El paquete:** el plugin oficial solo se publica como `GooglePlayGamesPlugin-2.3.0.unitypackage` (sha256 `1b0ecc5e2fd5437e1c26863f63367f5c983452afc4eeae8a1e5dcaa07b9e7518`). Se versiona su carpeta `com.google.play.games/` tal cual, como un `.tgz` en `Packages/playgames/` (Git LFS), sin el EDM4U 1.2.182 que trae, porque ya está el 1.2.189 de Firebase.
+- **Dependencias:**
+  - **`com.google.android.gms:play-services-games-v2:22.1.0`** entra como dependencia obligatoria del plugin aprobado. No declara permisos. Añade `PlayGamesInitProvider`, dos actividades y un bloque `<queries>`.
+  - **`com.google.android.gms:play-services-nearby:18.5.0` no entra.** Es Nearby Connections, que el juego no usa, y trae un servicio exportado de Exposure Notifications. Se excluye en `mainTemplate.gradle`, fuera de la zona de EDM4U, y se comprueba que no aparece en el manifiesto.
+- **El blob de Saved Games:** se queda en los 800 KB de 08 §11 (`CloudSaveNames.MaxBlobBytes`). Queda como pregunta la discrepancia con 08 §7 #5, que habla de 3 MB por partida y 800 KB de portada.
+
 ### D-042, añadido del 2026-10-23: MAX integrado sin adaptadores; lo que espera al dueño
 
 - **Estado:** integrado en `tanda5/sdk-max` por el integrador de SDK, **sin adaptadores**, pendiente de revisión. Nota: `docs/dev/anuncios-max.md`.
@@ -3721,3 +3730,15 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - **Q-MAX-6 · UMP con 13-17 en el EEE, el Reino Unido y Suiza:** la automatización enseña el mensaje de UMP a todos al iniciar MAX. Aplicado, por orden del integrador tras la revisión: **(b) con 13-17 y el perfil `ump`, MAX no se inicia** (sin anuncios), como recomendada provisional hasta que hablen el dueño y el abogado. Alternativa: (a) iniciarlo con `npa` y aceptar que UMP enseñe su mensaje.
 - **Tras la revisión (mismo día):** `BuildDev` y `BuildRelease` se paran si `AppLovinSettings.asset` lleva una clave o el Quality Service encendido; un release sin configuración no tiene anuncios (`UnavailableAdService`); margen para la recompensa que llega tras el cierre y al volver de segundo plano; `SetUserId` de MAX es global y así se dice en la web y en Data Safety.
 - **Pendiente del dueño:** cuenta de AppLovin y AdMob, clave y unidades (`Assets/_LocalSecrets/applovin-max.json` o secretos del CI), mensaje de UMP en AdMob, contenido máximo G en las consolas, URL S2S del SSV en MAX.
+
+## D-043 · Las claves de Remote Config con punto pasan a guion bajo
+
+- **Fecha:** 2026-10-23. Registrada por el integrador.
+- **Estado:** aprobado por el dueño en el chat. A la propuesta de renombrar las 20 claves con punto, que Firebase no admite, respondió: «hagamos la correciones».
+- **Decisión:** en 08 §9, en el cliente y en los defaults generados:
+  - `mech_enabled.<id>` pasa a `mech_enabled_<id>`;
+  - `mech_debut_level.<id>` pasa a `mech_debut_level_<id>`.
+
+  Así entran en la plantilla de Remote Config y los interruptores de cada mecánica se pueden accionar desde la consola.
+- **Sin cambio de comportamiento:** los valores siguen siendo los mismos, y un valor remoto con el nombre viejo no existe, porque nunca se publicó.
+- **Encargo:** carril `tanda5/rc-plantilla` (Q-RC-1).

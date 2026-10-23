@@ -21,6 +21,10 @@ export const MAX_PURCHASES = 1000;
 const BATCH_GET_MAX = 100;
 const BATCH_RETRIES = 3;
 
+/**
+ * Q-IAP-4: una compra reasignada a otro UID deja al anterior una fila sombra (`shadow_of` = token_hash real). El
+ * derecho ya no es suyo, así que solo se le devuelve si está anulada (el cliente lo retira); vigente, no sale.
+ */
 interface PurchaseRow {
   token_hash: string;
   sku: string;
@@ -40,13 +44,30 @@ async function purchasesOf(ddb: DynamoDBDocumentClient, table: string, uid: stri
         KeyConditionExpression: '#u = :u',
         ExpressionAttributeNames: { '#u': 'uid', '#s': 'state', '#t': 'ts' },
         ExpressionAttributeValues: { ':u': uid },
-        ProjectionExpression: 'token_hash, sku, #s, #t, voided_at',
+        ProjectionExpression: 'token_hash, sku, #s, #t, voided_at, shadow_of',
         ExclusiveStartKey: start,
         Limit: MAX_PURCHASES,
       }),
     );
     for (const it of (out.Items ?? []) as Array<Record<string, unknown>>) {
       if (rows.length >= MAX_PURCHASES) break;
+      const shadowOf = typeof it.shadow_of === 'string' ? it.shadow_of : undefined;
+      if (shadowOf !== undefined) {
+        // Sombra: solo anulada, y una vez por token (la principal o una sombra anterior pueden ya estar).
+        if (it.state === 'voided' && !rows.some((r) => r.token_hash === shadowOf)) {
+          rows.push({
+            token_hash: shadowOf,
+            sku: String(it.sku),
+            state: 'voided',
+            ts: Number(it.ts),
+            ...(typeof it.voided_at === 'number' ? { voided_at: it.voided_at } : {}),
+          });
+        }
+        continue;
+      }
+      // La principal manda sobre una sombra del mismo token ya añadida (el UID volvió a tenerla).
+      const prev = rows.findIndex((r) => r.token_hash === String(it.token_hash));
+      if (prev >= 0) rows.splice(prev, 1);
       rows.push({
         token_hash: String(it.token_hash),
         sku: String(it.sku),

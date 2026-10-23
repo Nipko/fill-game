@@ -1617,7 +1617,7 @@ namespace AF.UI
             _profile = profile;
             _profileStore = store;
 
-            // Remote Config antes del catálogo: mech_enabled.*, level_overrides (con la reserva) y lvl_label_override se aplican al
+            // Remote Config antes del catálogo: mech_enabled_*, level_overrides (con la reserva) y lvl_label_override se aplican al
             // crearlo. Con <13 guardado, la caché local o los defaults compilados, sin descargar (GameBootstrap.Telemetry.cs).
             SetUpRemoteConfig(clock);
             LevelCatalog? catalog = LoadCatalog();
@@ -2100,7 +2100,7 @@ namespace AF.UI
                     return null;
                 }
 
-                // Kill switch de mecánicas (KS1; D-020, pregunta 31 b): mech_enabled.* (defaults de GameConfig, Remote Config y
+                // Kill switch de mecánicas (KS1; D-020, pregunta 31 b): mech_enabled_* (defaults de GameConfig, Remote Config y
                 // af_mech_off en desarrollo) y level_overrides (Remote Config o la fuente local), con los ids buscados en los
                 // paquetes de campaña y en los de reserva (D-033, Q-B11-7 a; GameBootstrap.Reserve.cs).
                 MechanicSwitches switches = ResolveCatalogSwitches();
