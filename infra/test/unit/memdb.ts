@@ -49,15 +49,44 @@ export function transactionCanceled(codes: string[]): Error {
 
 type TxItem = {
   Put?: { TableName: string; Item: Item; ConditionExpression?: string; ExpressionAttributeValues?: Item };
-  Update?: { TableName: string; Key: Item; UpdateExpression: string; ConditionExpression?: string; ExpressionAttributeValues?: Item };
+  Update?: {
+    TableName: string;
+    Key: Item;
+    UpdateExpression: string;
+    ConditionExpression?: string;
+    ExpressionAttributeNames?: Record<string, string>;
+    ExpressionAttributeValues?: Item;
+  };
   ConditionCheck?: { TableName: string; Key: Item; ConditionExpression: string; ExpressionAttributeValues?: Item };
 };
 
+/**
+ * Conjunción de condiciones sobre el ítem (la reasignación de Q-IAP-4): cada término es `attribute_not_exists(x)`
+ * o `x = :v`, con `x` un atributo o un alias `#n`. El ítem debe existir.
+ */
+function andConditionHolds(cond: string, cur: Item | undefined, names: Record<string, string> | undefined, values: Item | undefined): boolean {
+  if (!cur) return false;
+  const attr = (x: string): string => (x.startsWith('#') ? (names?.[x] ?? x) : x);
+  return cond.split(' AND ').every((term) => {
+    const ne = /^attribute_not_exists\(([#a-z_]+)\)$/.exec(term);
+    if (ne) return cur[attr(ne[1])] === undefined;
+    const eq = /^([#a-z_]+) = (:[a-z0-9_]+)$/.exec(term);
+    if (eq) return cur[attr(eq[1])] === values?.[eq[2]];
+    throw new Error(`Término no soportado en MemDb: ${term}`);
+  });
+}
+
 /** Las condiciones que usan las transacciones de las Lambdas (y solo esas). */
-function txConditionHolds(cond: string | undefined, cur: Item | undefined, values: Item | undefined): boolean {
+function txConditionHolds(
+  cond: string | undefined,
+  cur: Item | undefined,
+  values: Item | undefined,
+  names?: Record<string, string>,
+): boolean {
   if (cond === undefined) return true;
   if (cond === 'attribute_not_exists(#k) OR #t <= :now') return !cur || Number(cur.ttl) <= Number(values?.[':now']);
   if (cond === 'token_hash = :th') return cur?.token_hash === values?.[':th'];
+  if (cond.includes(' AND ') && !cond.includes(' OR ')) return andConditionHolds(cond, cur, names, values);
   if (/^attribute_not_exists\([#a-z_]+\)$/.test(cond)) return !cur;
   throw new Error(`Condición no soportada en MemDb: ${cond}`);
 }
@@ -191,12 +220,28 @@ export class MemDb {
         const id = `${op.TableName}/${String(key[PK[op.TableName]])}`;
         if (seen.has(id)) throw Object.assign(new Error(`Dos operaciones sobre ${id}`), { name: 'ValidationException' });
         seen.add(id);
-        return txConditionHolds(op.ConditionExpression, this.get(op.TableName, key), op.ExpressionAttributeValues) ? 'None' : 'ConditionalCheckFailed';
+        const names = (op as { ExpressionAttributeNames?: Record<string, string> }).ExpressionAttributeNames;
+        return txConditionHolds(op.ConditionExpression, this.get(op.TableName, key), op.ExpressionAttributeValues, names)
+          ? 'None'
+          : 'ConditionalCheckFailed';
       });
       if (codes.some((c) => c !== 'None')) throw transactionCanceled(codes);
       for (const it of i.TransactItems) {
         if (it.Put) this.put(it.Put.TableName, it.Put.Item);
-        if (it.Update) {
+        if (it.Update?.UpdateExpression.startsWith('SET #u = :new, reassign_seq = :seq1, ')) {
+          // Reasignación de Q-IAP-4: nuevo dueño, secuencia, historial y, si cuenta, contador y marca temporal.
+          const v = it.Update.ExpressionAttributeValues ?? {};
+          const cur = { ...(this.get(it.Update.TableName, it.Update.Key) ?? {}) };
+          const next: Item = {
+            ...cur,
+            uid: v[':new'],
+            reassign_seq: v[':seq1'],
+            reassign_log: [...((cur.reassign_log as unknown[] | undefined) ?? []), ...(v[':entry'] as unknown[])],
+          };
+          if (':cnt' in v) next.reassign_count = v[':cnt'];
+          if (':at' in v) next.reassigned_at = v[':at'];
+          this.put(it.Update.TableName, next);
+        } else if (it.Update) {
           if (it.Update.UpdateExpression !== 'REMOVE #t SET created_at = :now') throw new Error(`Update de transacción no soportado: ${it.Update.UpdateExpression}`);
           const cur = { ...(this.get(it.Update.TableName, it.Update.Key) ?? {}) };
           delete cur.ttl;
