@@ -66,7 +66,7 @@ Se añaden a la sección 3.1, solo cuando MAX y Play Games estén integrados en 
 | Actividad en la app · interacciones (con los anuncios) | MAX y adaptadores | Sí | **Sí** | Publicidad | No [E] | — |
 | Información y rendimiento de la app · diagnóstico | MAX y adaptadores | Sí | **Sí** | Publicidad; análisis de fraude | No [E] | — |
 | Información personal · ID de usuario | Backend en AWS: los nonces de las recompensas de video (SSV de MAX, con el UID) | Sí | No | Prevención de fraude | Sí (solo quien ve videos opcionales) | Recompensas 30 días (08 §13.3) |
-| Información personal · ID de usuario | Play Games (ID de jugador) | Sí | No | Funcionalidad (guardado en la nube) | `[PENDIENTE: integrador de D-042]` [E]: depende de si el inicio de sesión silencioso cuenta como opcional | Con `<13`, sin inicio de sesión de Play Games (08 §13.1 #11) |
+| Información personal · ID de usuario | Play Games (su ID de jugador de Play Games, que no es el código de cuenta de Ajustes) | Sí | No | Funcionalidad (guardado en la nube) | `[PENDIENTE: integrador de D-042]` [E]: depende de si el inicio de sesión silencioso cuenta como opcional | Con `<13`, sin inicio de sesión de Play Games (08 §13.1 #11) |
 | Actividad en la app · otras acciones (partida guardada) [NV categoría] | Play Games Saved Games (snapshot `af_main`) | Sí | No | Funcionalidad | Igual que la fila anterior | Lo borra el cliente al eliminar la cuenta; el jugador puede además borrar su perfil de Play Games (08 §13.3; Q-B13-22) |
 
 **UMP (Google User Messaging Platform)**, dentro de MAX: solo para el perfil legal `ump` (EEE, Reino Unido y Suiza); guarda la decisión en el teléfono [E]. 08 §13.3 no tiene fila propia para UMP: se cubre con la de MAX hasta que el integrador de D-042 confirme con la guía de Google si trata algo más.
@@ -86,7 +86,7 @@ Nombre, correo, dirección, teléfono, mensajes, fotos, vídeos, audio, archivos
 | Google Play Billing Library 9.0.0 (plugin propio) | En el juego | Historial de compras; UID como `obfuscatedAccountId`; registros de diagnóstico de la biblioteca a Google (Q-BILL-2) [E]. Sin terceros |
 | Unity Mobile Notifications 2.4.3 | En el juego | Nada |
 | AppLovin MAX 8.6.6 + UMP + AdMob, Unity Ads, Meta Audience Network, Mintegral | **Al integrar D-042** | Ubicación aproximada, interacciones con anuncios, diagnóstico e ID de publicidad; compartidos con las redes |
-| Play Games 2.3.0 (Saved Games) | **Al integrar D-042** | ID de jugador y partida guardada; funcionalidad |
+| Play Games 2.3.0 (Saved Games) | **Al integrar D-042** | ID de jugador de Play Games y partida guardada; funcionalidad |
 | Runtime de Unity 6000.3 (módulo `com.unity.modules.unityanalytics`, Engine Diagnostics) | En el build | **Sin comprobar** (Q-B13-9 y el «pendiente aparte» de D-040): build-release comprueba que no envía nada en release; si envía, lleva fila |
 | ~~Unity IAP 5.4.4 y Unity Authentication~~ | **Ya no está** (D-040, Q-IAP-1) | Nada. Historia: Q-B13-20 |
 
