@@ -3688,3 +3688,22 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - el primer arranque, 13-17 y 18+ siguen igual.
 - **Anotado** en 08 §2.3 y §13.1 #11, en la privacidad de la web y en `docs/dev/firebase-cliente.md` §4 bis.
 - **Sin probar** en un teléfono con Firebase real.
+
+## D-042 · Integración de AppLovin MAX (con UMP y adaptadores) y de Play Games (Saved Games)
+
+- **Fecha:** 2026-10-23. Registrada por el integrador.
+- **Estado:** aprobado por el dueño en el chat. A la propuesta «5. Anuncios: AppLovin MAX con UMP y sus adaptadores; 6. Guardado en la nube: Play Games 2.3.0», respondió: «2. Vamos con los dos.»
+- **Decisión:** se integran, detrás de sus interfaces (`AF.Ads`, `AF.Save`/`ICloudSave`), con las implementaciones falsas en el editor y en los tests:
+  - **AppLovin MAX Unity Plugin 8.6.6** (SDK Android 13.6.4), con la automatización de Google UMP y los adaptadores Google (AdMob), Unity Ads, Meta Audience Network y Mintegral, según el plan de instalación y 08 §7 #1-#2 y §13.1 #2. **Sin el plugin Google Mobile Ads.**
+  - **Play Games plugin for Unity 2.3.0** (PGS v2), con inicio de sesión silencioso y Saved Games (08 §7 #5 y §11).
+- **Condiciones** (regla dura 4):
+  - las versiones exactas de los adaptadores, y cualquier dependencia que traigan, se anotan como añadido de D-042 con la aprobación del dueño antes de integrarlas;
+  - **cada permiso Android nuevo se pregunta aparte.** Por ejemplo, `com.google.android.gms.permission.AD_ID`, que D-039 quitó «hasta MAX», o los de Privacy Sandbox. Ninguno entra sin un sí expreso;
+  - con `<13`, nada de esto arranca (D-033, añadido del 2026-10-23);
+  - con 13-17, anuncios no personalizados y contenido G (08 §2.3);
+  - con el consentimiento de anuncios en «no», no hay personalización.
+- **Bloqueos que no impiden integrar el código:**
+  - las cuentas de AppLovin y AdMob, la clave del SDK de MAX y las unidades de anuncio son del dueño;
+  - Play Games necesita la app en Play Console (D-034, a la espera del dictamen).
+
+  Hasta entonces, los builds van con la implementación falsa o en modo de prueba, y las claves y los IDs reales se cargan fuera del repositorio.
