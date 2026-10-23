@@ -111,7 +111,7 @@ namespace AF.Ads
             PrivacyOptionsRequests++;
             if (_inner is IAdConsentTarget target)
             {
-                target.ShowPrivacyOptions();
+                return target.ShowPrivacyOptions(); // MAX: false si no hay CMP o aún no se inició
             }
 
             return true;

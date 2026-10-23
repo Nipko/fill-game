@@ -9,7 +9,9 @@ namespace AF.Ads
     /// calculado sin motor a partir de <see cref="ConsentFlags"/>:
     /// <list type="bullet">
     /// <item><see cref="MayInitialize"/>: solo con una decisión vigente y sin el bloqueo de &lt;13 («MAX arranca solo tras consentir»;
-    /// con &lt;13, nunca).</item>
+    /// con &lt;13, nunca). Tampoco con 13-17 y el perfil <c>ump</c> (EEE, Reino Unido y Suiza): la automatización de UMP de MAX
+    /// enseñaría su mensaje de consentimiento a un menor, así que hasta que decidan el dueño y el abogado, sin anuncios
+    /// (Q-MAX-6 (b), recomendada provisional, D-042).</item>
     /// <item><see cref="HasUserConsent"/> y <see cref="DoNotSell"/>: los dos flags de privacidad que expone MAX 13
     /// (<c>MaxSdk.SetHasUserConsent</c> y <c>MaxSdk.SetDoNotSell</c>). Con <c>npa</c> (sin consentimiento de anuncios personalizados,
     /// 13-17 con <c>biz_under18_no_personalization</c> o sin país), false y true. Con el perfil <c>ump</c> de 18+, null: los decide el
@@ -75,6 +77,11 @@ namespace AF.Ads
                 return NotDecided;
             }
 
+            if (flags.Band == AgeBand.Teen && string.Equals(flags.Profile, LegalProfiles.Ump, StringComparison.Ordinal))
+            {
+                return new AdConsentSettings(false, false, false, true, flags.MaxAdContentRating, false); // Q-MAX-6 (b)
+            }
+
             if (flags.AdsByUmp)
             {
                 return new AdConsentSettings(true, false, null, null, flags.MaxAdContentRating, true);
@@ -83,6 +90,16 @@ namespace AF.Ads
             bool personalized = flags.AdsPersonalized;
             return new AdConsentSettings(true, false, personalized, !personalized, flags.MaxAdContentRating, false);
         }
+    }
+
+    /// <summary>Un proveedor de anuncios con trabajo por fotograma y al volver de segundo plano (MAX: los márgenes de cierre).</summary>
+    public interface IAdTicker
+    {
+        /// <summary>Cada fotograma.</summary>
+        void Tick();
+
+        /// <summary>La app vuelve de segundo plano.</summary>
+        void OnResume();
     }
 
     /// <summary>

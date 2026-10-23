@@ -129,13 +129,125 @@ namespace AF.Ads.Tests
         }
 
         [Test]
-        public void UmpProfile_Teen_StaysNonPersonalized()
+        public void UmpProfile_Teen_NeverInitializes_QMax6b()
         {
             var rig = new Rig();
-            rig.Decide(AgeBand.Teen, ads: true, profile: LegalProfiles.Ump);
+            rig.Decide(AgeBand.Teen, ads: true, profile: LegalProfiles.Ump, initialize: false);
 
-            Assert.That(rig.Port.HasUserConsent, Is.False);
-            Assert.That(rig.Port.DoNotSell, Is.True);
+            Assert.That(rig.Port.Initializations, Is.EqualTo(0), "Q-MAX-6 (b): con 13-17 y UMP, sin MAX (no se enseña UMP a un menor)");
+            Assert.That(rig.Port.Calls, Is.Empty);
+            Assert.That(rig.Max.Consent!.MayInitialize, Is.False);
+            Assert.That(rig.Max.Consent.ChildDirected, Is.False);
+            Assert.That(rig.Consent.IsReady(AdPlacement.Hint), Is.False);
+            AdOutcome? outcome = null;
+            rig.Consent.Show(AdPlacement.Hint, o => outcome = o);
+            Assert.That(outcome, Is.EqualTo(AdOutcome.NoFill));
+        }
+
+        [Test]
+        public void UmpProfile_Teen_EvenWithoutTheUnder18Switch_NeverInitializes()
+        {
+            var config = ConsentConfig.Defaults;
+            config.BizUnder18NoPersonalization = false;
+            ConsentFlags flags = ConsentPolicy.Flags(new ConsentRecord(LegalProfiles.Ump, 1, At, true, true, AgeBand.Teen), config);
+            Assert.That(flags.AdsByUmp, Is.True, "sin el interruptor, 13-17 con UMP como 18+");
+
+            Assert.That(AdConsentSettings.From(flags).MayInitialize, Is.False);
+        }
+
+        [Test]
+        public void LateReward_WithinTheGrace_IsRewarded()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Loaded);
+
+            AdOutcome? outcome = null;
+            rig.Consent.Show(AdPlacement.Hint, o => outcome = o);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Hidden);
+            rig.Max.Tick();
+            Assert.That(outcome, Is.Null, "espera la recompensa RewardGrace");
+
+            rig.Clock.Advance(TimeSpan.FromSeconds(1));
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.RewardReceived);
+            Assert.That(outcome, Is.EqualTo(AdOutcome.Rewarded));
+        }
+
+        [Test]
+        public void NoRewardAfterTheGrace_IsSkipped()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Loaded);
+
+            AdOutcome? outcome = null;
+            rig.Consent.Show(AdPlacement.Hint, o => outcome = o);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Hidden);
+            rig.Clock.Advance(MaxAdService.RewardGrace);
+            rig.Max.Tick();
+            Assert.That(outcome, Is.EqualTo(AdOutcome.Skipped));
+
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.RewardReceived); // demasiado tarde: no hay anuncio pendiente
+            Assert.That(outcome, Is.EqualTo(AdOutcome.Skipped));
+        }
+
+        [Test]
+        public void DuplicatedHidden_GrantsOnlyOnce()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Loaded);
+
+            int rewarded = 0;
+            rig.Consent.Show(AdPlacement.Hint, o => { if (o == AdOutcome.Rewarded) rewarded++; });
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.RewardReceived);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Hidden);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Hidden);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.RewardReceived);
+            rig.Clock.Advance(TimeSpan.FromSeconds(10));
+            rig.Max.Tick();
+
+            Assert.That(rewarded, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ResumeWithoutTheCloseCallback_ReleasesTheAd()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Loaded);
+
+            AdOutcome? outcome = null;
+            rig.Consent.Show(AdPlacement.Hint, o => outcome = o);
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.RewardReceived);
+            rig.Max.OnResume();
+            rig.Max.Tick();
+            Assert.That(outcome, Is.Null, "MAX aún puede avisar");
+
+            rig.Clock.Advance(MaxAdService.ResumeGrace);
+            rig.Max.Tick();
+            Assert.That(outcome, Is.EqualTo(AdOutcome.Rewarded), "la recompensa ya había llegado");
+            Assert.That(rig.Consent.IsShowing, Is.False);
+
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Hidden); // el cierre tardío no cuenta otra vez
+            Assert.That(outcome, Is.EqualTo(AdOutcome.Rewarded));
+        }
+
+        [Test]
+        public void ResumeWithoutReward_IsSkipped_AndResumeWithoutAnAd_DoesNothing()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Max.OnResume();
+            rig.Max.Tick();
+            rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Loaded);
+
+            AdOutcome? outcome = null;
+            rig.Consent.Show(AdPlacement.Hint, o => outcome = o);
+            rig.Max.OnResume();
+            rig.Clock.Advance(MaxAdService.ResumeGrace);
+            rig.Max.Tick();
+            Assert.That(outcome, Is.EqualTo(AdOutcome.Skipped));
         }
 
         [Test]
@@ -254,6 +366,8 @@ namespace AF.Ads.Tests
             AdOutcome? outcome = null;
             rig.Consent.Show(AdPlacement.Hint, o => outcome = o);
             rig.Port.Raise(MaxAdKind.Rewarded, MaxAdEvent.Hidden);
+            rig.Clock.Advance(MaxAdService.RewardGrace); // el margen por si la recompensa llega tarde
+            rig.Max.Tick();
 
             Assert.That(outcome, Is.EqualTo(AdOutcome.Skipped));
         }
@@ -332,6 +446,9 @@ namespace AF.Ads.Tests
             ump.Decide(AgeBand.Adult, ads: false, profile: LegalProfiles.Ump);
             Assert.That(ump.Consent.ShowPrivacyOptions(), Is.True);
             Assert.That(ump.Port.Calls, Does.Contain("cmp"));
+
+            ump.Port.HasCmp = false;
+            Assert.That(ump.Consent.ShowPrivacyOptions(), Is.False, "devuelve lo que diga el proveedor");
         }
 
         [Test]

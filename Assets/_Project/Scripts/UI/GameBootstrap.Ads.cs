@@ -22,11 +22,28 @@ namespace AF.UI
         /// <summary>Tests: el proveedor de anuncios (p. ej. <see cref="MaxAdService"/> sobre <see cref="FakeMaxSdkPort"/>); gana a todo.</summary>
         internal static Func<Profile, IClock, IAdService>? AdProviderOverride { get; set; }
 
+        // MAX: los márgenes de cierre (recompensa tardía y vuelta de segundo plano); null con el simulado.
+        private IAdTicker? _adTicker;
+
+        /// <summary>Cada fotograma: los márgenes de cierre de MAX (sin asignaciones mientras no toca).</summary>
+        private void TickAds()
+        {
+            _adTicker?.Tick();
+        }
+
+        /// <summary>La app vuelve de segundo plano: MAX suelta un anuncio que se quedó sin su cierre.</summary>
+        private void ResumeAds()
+        {
+            _adTicker?.OnResume();
+        }
+
         private IAdService CreateAdProvider(ISimulatedAdPresenter presenter, Profile profile, IClock clock)
         {
             if (AdProviderOverride != null)
             {
-                return AdProviderOverride(profile, clock);
+                IAdService overridden = AdProviderOverride(profile, clock);
+                _adTicker = overridden as IAdTicker;
+                return overridden;
             }
 
             if (LaunchOptions.AdPresenterOverride == null)
@@ -42,6 +59,7 @@ namespace AF.UI
 #endif
                 if (real != null)
                 {
+                    _adTicker = real as IAdTicker;
                     return real;
                 }
             }

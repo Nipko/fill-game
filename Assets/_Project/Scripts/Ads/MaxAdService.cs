@@ -99,8 +99,20 @@ namespace AF.Ads
     /// </list>
     /// Las reglas de cadencia y topes siguen en <see cref="AdPolicy"/>. Hilo principal.
     /// </summary>
-    public sealed class MaxAdService : IAdService, IAdConsentTarget, IAdImpressionSource, IMaxSdkListener
+    public sealed class MaxAdService : IAdService, IAdConsentTarget, IAdImpressionSource, IMaxSdkListener, IAdTicker
     {
+        /// <summary>
+        /// Margen para un <c>OnAdReceivedRewardEvent</c> que llega después de <c>OnAdHiddenEvent</c> (el orden no está garantizado)
+        /// [P]: pasado este tiempo sin recompensa, el recompensado acaba como <see cref="AdOutcome.Skipped"/>.
+        /// </summary>
+        public static readonly TimeSpan RewardGrace = TimeSpan.FromSeconds(1.5);
+
+        /// <summary>
+        /// Margen tras volver de segundo plano con un anuncio aún pendiente de su cierre [P]: si MAX no avisa en este tiempo, se
+        /// suelta el anuncio para que el juego no se quede esperando (con la recompensa solo si llegó).
+        /// </summary>
+        public static readonly TimeSpan ResumeGrace = TimeSpan.FromSeconds(3);
+
         /// <summary>Primera espera tras un fallo de carga.</summary>
         public static readonly TimeSpan FirstRetry = TimeSpan.FromSeconds(2);
 
@@ -122,6 +134,8 @@ namespace AF.Ads
         private Action<AdOutcome>? _pending;
         private MaxAdKind _pendingKind;
         private bool _rewardReceived;
+        private DateTime? _hiddenAt;
+        private DateTime? _resumedAt;
 
         /// <summary>Crea el servicio sobre <paramref name="port"/>, sin tocarlo.</summary>
         /// <param name="port">El SDK (real o falso).</param>
@@ -169,9 +183,10 @@ namespace AF.Ads
             _allowed = settings.MayInitialize;
             if (!settings.MayInitialize)
             {
-                if (_initRequested && settings.ChildDirected)
+                if (_initRequested)
                 {
-                    // Edad corregida a <13 con MAX ya iniciado (no se puede apagar): sin personalización y sin anuncios desde ahora.
+                    // Edad corregida (a <13, o a 13-17 con UMP) con MAX ya iniciado, que no se puede apagar: sin personalización y sin
+                    // anuncios desde ahora.
                     _port.SetHasUserConsent(false);
                     _port.SetDoNotSell(true);
                 }
@@ -266,6 +281,8 @@ namespace AF.Ads
             _pending = onDone;
             _pendingKind = kind;
             _rewardReceived = false;
+            _hiddenAt = null;
+            _resumedAt = null;
             Unit(kind).Loaded = false;
             _port.Show(kind, placement.ToId(), customData);
         }
@@ -303,6 +320,10 @@ namespace AF.Ads
                     if (_pending != null && _pendingKind == kind)
                     {
                         _rewardReceived = true;
+                        if (_hiddenAt.HasValue)
+                        {
+                            Finish(kind, AdOutcome.Rewarded); // llegó tarde, dentro del margen
+                        }
                     }
 
                     break;
@@ -312,7 +333,24 @@ namespace AF.Ads
                     break;
 
                 case MaxAdEvent.Hidden:
-                    Finish(kind, kind == MaxAdKind.Interstitial ? AdOutcome.Shown : _rewardReceived ? AdOutcome.Rewarded : AdOutcome.Skipped);
+                    if (_pending == null || _pendingKind != kind || _hiddenAt.HasValue)
+                    {
+                        break; // un cierre repetido no cuenta dos veces
+                    }
+
+                    if (kind == MaxAdKind.Interstitial)
+                    {
+                        Finish(kind, AdOutcome.Shown);
+                    }
+                    else if (_rewardReceived)
+                    {
+                        Finish(kind, AdOutcome.Rewarded);
+                    }
+                    else
+                    {
+                        _hiddenAt = _clock.UtcNow; // espera la recompensa RewardGrace (Tick)
+                    }
+
                     break;
             }
         }
@@ -324,6 +362,40 @@ namespace AF.Ads
                 ? AdPlacement.InterstitialPostLevel
                 : LastRewardPlacement ?? AdPlacement.DoubleHarvest;
             Impression?.Invoke(new AdImpression(networkName, placement, revenue));
+        }
+
+        /// <inheritdoc />
+        public void OnResume()
+        {
+            if (_pending != null)
+            {
+                _resumedAt = _clock.UtcNow;
+            }
+        }
+
+        /// <summary>
+        /// Cada fotograma (sin asignaciones mientras no toca): cierra el recompensado que se cerró sin recompensa pasado
+        /// <see cref="RewardGrace"/> y suelta el anuncio que sigue pendiente pasado <see cref="ResumeGrace"/> tras volver de segundo plano.
+        /// </summary>
+        public void Tick()
+        {
+            if (_pending == null)
+            {
+                return;
+            }
+
+            DateTime now = _clock.UtcNow;
+            if (_hiddenAt.HasValue && now - _hiddenAt.Value >= RewardGrace)
+            {
+                Finish(_pendingKind, AdOutcome.Skipped);
+                return;
+            }
+
+            if (_resumedAt.HasValue && now - _resumedAt.Value >= ResumeGrace)
+            {
+                MaxAdKind kind = _pendingKind;
+                Finish(kind, kind == MaxAdKind.Interstitial ? AdOutcome.Shown : _rewardReceived ? AdOutcome.Rewarded : AdOutcome.Skipped);
+            }
         }
 
         /// <summary>Espera tras <paramref name="failures"/> fallos seguidos: 2, 4, 8 … hasta 64 s.</summary>
@@ -387,6 +459,8 @@ namespace AF.Ads
             Action<AdOutcome> done = _pending;
             _pending = null;
             _rewardReceived = false;
+            _hiddenAt = null;
+            _resumedAt = null;
             if (_allowed)
             {
                 EnsureLoads(); // el siguiente, ya

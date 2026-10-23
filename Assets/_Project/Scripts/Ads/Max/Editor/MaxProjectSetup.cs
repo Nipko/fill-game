@@ -57,27 +57,56 @@ namespace AF.Ads.Max.Editor
             Debug.Log(LogPrefix + "OK. Quality Service apagado, clave vacia en el repositorio, flujo de UMP encendido.");
         }
 
-        /// <summary>Null si los ajustes son los de D-042; si no, qué falla.</summary>
+        /// <summary>Null si los ajustes del proyecto son los de D-042; si no, qué falla.</summary>
         public static string? Validate()
         {
             AppLovinSettings settings = AppLovinSettings.Instance;
-            if (settings.QualityServiceEnabled)
-            {
-                return "Quality Service encendido.";
-            }
-
-            if (!string.IsNullOrEmpty(settings.SdkKey))
-            {
-                return "AppLovinSettings lleva una clave del SDK: debe ir fuera del repositorio.";
-            }
-
             AppLovinInternalSettings internalSettings = AppLovinInternalSettings.Instance;
-            if (!internalSettings.ConsentFlowEnabled || internalSettings.ConsentFlowPrivacyPolicyUrl != PrivacyPolicyUrl)
+            return Validate(settings.QualityServiceEnabled, settings.SdkKey, internalSettings.ConsentFlowEnabled,
+                internalSettings.ConsentFlowPrivacyPolicyUrl);
+        }
+
+        /// <summary>
+        /// La regla, sin tocar los archivos: Quality Service apagado, <b>ninguna clave del SDK en <c>AppLovinSettings.asset</c></b> (la clave
+        /// solo entra en el build, por <see cref="MaxBuildConfig"/>; nunca se escribe en el Integration Manager) y el flujo de UMP
+        /// encendido con la URL de la política.
+        /// </summary>
+        public static string? Validate(bool qualityServiceEnabled, string? sdkKey, bool consentFlowEnabled, string? privacyPolicyUrl)
+        {
+            if (!string.IsNullOrEmpty(sdkKey))
+            {
+                return "AppLovinSettings.asset lleva una clave del SDK: no se escribe en el Integration Manager; va en "
+                    + "Assets/_LocalSecrets/applovin-max.json o en AF_MAX_SDK_KEY.";
+            }
+
+            if (qualityServiceEnabled)
+            {
+                return "Quality Service encendido (manda la clave a safedk.com en cada build).";
+            }
+
+            if (!consentFlowEnabled || privacyPolicyUrl != PrivacyPolicyUrl)
             {
                 return "flujo de consentimiento (UMP) apagado o sin la URL de la politica.";
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Compuerta de <c>BuildDev</c> y <c>BuildRelease</c>: false (y el error en el log, sin la clave) si los ajustes de MAX no son los
+        /// de D-042; el build se para con el código de «ajustes distintos de los fijados».
+        /// </summary>
+        public static bool CheckForBuild(string logPrefix)
+        {
+            string? problem = Validate();
+            if (problem == null)
+            {
+                return true;
+            }
+
+            Debug.LogError(logPrefix + "ajustes de AppLovin MAX distintos de los fijados: " + problem
+                + " Ejecuta AF.Ads.Max.Editor.MaxProjectSetup.Apply.");
+            return false;
         }
     }
 
