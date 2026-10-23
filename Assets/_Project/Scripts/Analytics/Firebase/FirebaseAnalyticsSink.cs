@@ -175,7 +175,7 @@ namespace AF.Analytics.Firebase
     /// </summary>
     public static class CrashReporting
     {
-        private static bool s_wanted;
+        private static readonly CrashReportingIntent s_intent = new CrashReportingIntent();
 
         /// <summary>Lo enciende cuando Firebase está listo. False si este build no tiene Crashlytics (editor o sin configuración).</summary>
         public static bool Start()
@@ -185,7 +185,7 @@ namespace AF.Analytics.Firebase
                 return false;
             }
 
-            s_wanted = true;
+            s_intent.Request(true);
 #if UNITY_ANDROID && !UNITY_EDITOR
             FirebaseBoot.WhenReady(ApplyWanted);
 #endif
@@ -196,7 +196,8 @@ namespace AF.Analytics.Firebase
         /// Lo apaga de forma explícita (B12, banda &lt; 13; 08 §7): <c>setCrashlyticsCollectionEnabled(false)</c>, que persiste entre
         /// arranques, así que un <see cref="Start"/> anterior queda anulado. Si el arranque de Firebase en C# no se ha pedido (el arranque
         /// con la banda &lt; 13 guardada), no lo arranca (ni App Check): lo apaga en el SDK de Android, que ya inició el proceso
-        /// (<c>FirebaseInitProvider</c>), y borra los informes sin enviar. False si este build no tiene Crashlytics.
+        /// (<c>FirebaseInitProvider</c>), y borra los informes sin enviar; lo mismo si Firebase no llega a estar listo
+        /// (<see cref="FirebaseBootState.Unavailable"/>). False si este build no tiene Crashlytics.
         /// </summary>
         public static bool Stop()
         {
@@ -205,15 +206,15 @@ namespace AF.Analytics.Firebase
                 return false;
             }
 
-            s_wanted = false;
+            s_intent.Request(false);
 #if UNITY_ANDROID && !UNITY_EDITOR
-            if (FirebaseBoot.State == FirebaseBootState.NotStarted || FirebaseBoot.State == FirebaseBootState.Unavailable)
+            if (s_intent.OnStop(FirebaseBoot.State != FirebaseBootState.NotStarted) == CrashReportingAction.DisableNative)
             {
                 StopNative();
             }
             else
             {
-                FirebaseBoot.WhenReady(ApplyWanted);
+                FirebaseBoot.WhenReady(ApplyWanted); // Unavailable responde en el acto con false: StopNative
             }
 #endif
             return true;
@@ -222,9 +223,17 @@ namespace AF.Analytics.Firebase
 #if UNITY_ANDROID && !UNITY_EDITOR
         private static void ApplyWanted(bool ok)
         {
-            if (ok)
+            switch (s_intent.WhenBooted(ok))
             {
-                global::Firebase.Crashlytics.Crashlytics.IsCrashlyticsCollectionEnabled = s_wanted;
+                case CrashReportingAction.EnableInSdk:
+                    global::Firebase.Crashlytics.Crashlytics.IsCrashlyticsCollectionEnabled = true;
+                    break;
+                case CrashReportingAction.DisableInSdk:
+                    global::Firebase.Crashlytics.Crashlytics.IsCrashlyticsCollectionEnabled = false;
+                    break;
+                case CrashReportingAction.DisableNative:
+                    StopNative(); // el Firebase de C# no está disponible: apagado igualmente en el SDK de Android
+                    break;
             }
         }
 
@@ -247,5 +256,61 @@ namespace AF.Analytics.Firebase
             }
         }
 #endif
+    }
+
+    /// <summary>Qué hacer con Crashlytics (<see cref="CrashReportingIntent"/>).</summary>
+    public enum CrashReportingAction
+    {
+        /// <summary>Nada (o esperar a que Firebase responda).</summary>
+        None = 0,
+
+        /// <summary>Encenderlo con el SDK de C# (Firebase listo).</summary>
+        EnableInSdk = 1,
+
+        /// <summary>Apagarlo con el SDK de C# (Firebase listo).</summary>
+        DisableInSdk = 2,
+
+        /// <summary>Apagarlo en el SDK de Android, sin el Firebase de C# (no pedido o no disponible), y borrar lo no enviado.</summary>
+        DisableNative = 3,
+    }
+
+    /// <summary>
+    /// La decisión de <see cref="CrashReporting"/>, sin SDK: <b>la última petición manda</b>. Lo que se aplica cuando Firebase responde
+    /// es la última de <see cref="Request"/>, no cada una en su orden: un encendido que esperaba a Firebase no gana a un apagado
+    /// posterior, y un apagado no se pierde aunque Firebase falle.
+    /// </summary>
+    public sealed class CrashReportingIntent
+    {
+        /// <summary>La última petición: true encendido, false apagado (al empezar, apagado, como el manifiesto).</summary>
+        public bool Wanted { get; private set; }
+
+        /// <summary>Anota una petición; manda sobre las anteriores.</summary>
+        public void Request(bool on)
+        {
+            Wanted = on;
+        }
+
+        /// <summary>
+        /// Al pedir el apagado: sin el arranque de Firebase pedido (<paramref name="firebaseBootRequested"/> = false), apagarlo ya en el
+        /// SDK de Android, sin arrancar Firebase ni App Check; si no, esperar a que Firebase responda (<see cref="WhenBooted"/>).
+        /// </summary>
+        public CrashReportingAction OnStop(bool firebaseBootRequested)
+        {
+            return firebaseBootRequested ? CrashReportingAction.None : CrashReportingAction.DisableNative;
+        }
+
+        /// <summary>
+        /// Cuando Firebase responde: listo, la última petición con el SDK de C#; sin Firebase, solo el apagado (en el SDK de Android),
+        /// porque encender no es posible.
+        /// </summary>
+        public CrashReportingAction WhenBooted(bool firebaseReady)
+        {
+            if (firebaseReady)
+            {
+                return Wanted ? CrashReportingAction.EnableInSdk : CrashReportingAction.DisableInSdk;
+            }
+
+            return Wanted ? CrashReportingAction.None : CrashReportingAction.DisableNative;
+        }
     }
 }

@@ -1611,7 +1611,7 @@ namespace AF.UI
                 }
             }
 
-            _dataServicesAtBoot = DataServicesAllowedAtBoot(profile);
+            _dataServicesAtBoot = DataServicesAllowedAtBoot(profile); // otra vez, tras la fusión con la nube (o con el perfil de la reconstrucción)
             bool locked = IsLocked(_profileStatus);
             _profile = profile;
             _profileStore = store;
