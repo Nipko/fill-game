@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   {
-    ignores: ['node_modules/**', 'cdk.out/**', '**/*.d.ts'],
+    ignores: ['node_modules/**', 'cdk.out/**', '**/*.d.ts', 'web/site/**'],
   },
   ...tseslint.configs.recommendedTypeChecked,
   {

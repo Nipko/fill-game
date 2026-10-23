@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Excluir sua conta · Tintalú</title>
+  <meta name="description" content="Como excluir sua conta do Tintalú e os dados dela, no jogo ou por esta página.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="/assets/site.css">
+  <link rel="alternate" hreflang="es-419" href="/tintalu/eliminar-cuenta/">
+  <link rel="alternate" hreflang="en" href="/tintalu/en/delete-account/">
+  <link rel="alternate" hreflang="pt-BR" href="/tintalu/pt-br/excluir-conta/">
+  <script src="/assets/delete-account.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Pular para o conteúdo</a>
+  <header class="site-header">
+    <a class="brand" href="/pt-br/">Tintalú</a>
+    <nav class="lang" aria-label="Idioma">
+      <ul>
+      <li><a href="/tintalu/eliminar-cuenta/" hreflang="es-419" lang="es-419">Español</a></li>
+      <li><a href="/tintalu/en/delete-account/" hreflang="en" lang="en">English</a></li>
+      <li><a href="/tintalu/pt-br/excluir-conta/" hreflang="pt-BR" lang="pt-BR" aria-current="page">Português</a></li>
+      </ul>
+    </nav>
+  </header>
+  <div class="draft" role="note"><strong>RASCUNHO: requer revisão do advogado.</strong> Este texto ainda não é definitivo. Os dados entre colchetes duplos estão pendentes.</div>
+  <main id="main" tabindex="-1">
+<h1>Excluir sua conta do Tintalú</h1>
+<p class="lead">Você pode excluir sua conta do Tintalú e os dados associados a qualquer momento, sem custo. O Tintalú é um jogo da Parallext, LLC.</p>
+
+<h2 id="app">No jogo (o jeito mais rápido)</h2>
+<ol>
+  <li>Abra o Tintalú e entre em Configurações.</li>
+  <li>Toque em «Excluir conta e dados».</li>
+  <li>Confirme duas vezes.</li>
+</ol>
+<p>Assim também são apagados o jogo salvo e os outros dados do jogo guardados no seu celular.</p>
+
+<h2 id="web">Por esta página</h2>
+<p>Se o jogo não estiver mais instalado ou se você preferir fazer aqui, precisa do <strong>código da sua conta</strong>. Ele aparece em Tintalú › Configurações, na linha «Código para excluir sua conta na web». Tem 26 letras e números em grupos separados por hifens, por exemplo <code>3HZ7-M2Q9-XK4T-8VB1-NC6D-RF0-WPE</code> (é só um exemplo).</p>
+<ol>
+  <li>Digite seu código e toque em «Continuar».</li>
+  <li>Confira o código e confirme com «Sim, excluir» nos 5 minutos seguintes.</li>
+</ol>
+<form id="delete-form" class="delete-form" novalidate hidden data-msg-invalid="Esse código não é válido. Confira em Configurações: ele tem 26 letras e números." data-msg-sending="Um momento…" data-msg-not-found="Não encontramos esse código. Confira se é o último que aparece em Configurações." data-msg-expired="A confirmação expirou. Digite seu código de novo." data-msg-rate-limited="Muitas tentativas. Tente de novo em {minutes} min." data-msg-unavailable="Não foi possível concluir agora. Tente mais tarde." data-msg-config="Esta página não está configurada corretamente. Exclua sua conta no jogo ou tente mais tarde." data-msg-cancelled="Nada foi excluído." data-msg-done="Pronto. Sua conta foi excluída.">
+  <fieldset id="delete-step-code">
+    <legend>Excluir com o código da sua conta</legend>
+    <label for="account-code">Código da conta</label>
+    <input id="account-code" name="code" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="64" required aria-describedby="account-code-hint delete-status">
+    <p id="account-code-hint" class="hint">Ele aparece em Tintalú › Configurações, em “Código para excluir sua conta na web”. Você pode digitá-lo com ou sem hifens.</p>
+    <button id="delete-submit" type="submit">Continuar</button>
+  </fieldset>
+  <fieldset id="delete-step-confirm" hidden>
+    <legend>Tem certeza de que quer excluir sua conta?</legend>
+    <p>Sua conta e seus dados na nuvem serão apagados. Não dá para desfazer e as compras não são reembolsadas.</p>
+    <p>Código: <strong id="delete-confirm-code" class="code"></strong></p>
+    <div class="actions">
+      <button id="delete-yes" type="button" class="danger">Sim, excluir</button>
+      <button id="delete-no" type="button" class="secondary">Cancelar</button>
+    </div>
+  </fieldset>
+</form>
+<p id="delete-status" class="status" role="status" aria-live="polite" tabindex="-1"></p>
+<noscript><p class="notice">O formulário precisa de JavaScript. Se não puder ativá-lo, exclua sua conta no jogo (Configurações › “Excluir conta e dados”).</p></noscript>
+<p>Use o último código que você viu em Configurações: quando o jogo pede um novo (por exemplo, ao reinstalá-lo), o anterior deixa de valer. Nunca pediremos este código por e-mail nem por telefone.</p>
+
+<h2 id="borra">O que é excluído</h2>
+<ul>
+  <li>Sua conta anônima, inclusive no Firebase Authentication.</li>
+  <li>Seus dados no nosso servidor: a verificação de integridade, o código da sua conta e o vínculo entre suas compras e sua conta.</li>
+  <li>Pelo jogo, também seu progresso, suas sementes, seus reforços e suas configurações guardados no celular.</li>
+</ul>
+<p>Se você excluir a conta por esta página, os dados do jogo que ficarem no seu celular não podem ser apagados daqui: eles somem ao desinstalar o jogo. <mark class="pending">[[ABOGADO: texto sobre los datos del teléfono cuando el borrado llega por la web (Q-B13-22)]]</mark></p>
+
+<h2 id="conserva">O que é mantido</h2>
+<p>O histórico de compras, <strong>sem nenhum dado que identifique você</strong>, por <mark class="pending">[[ABOGADO: plazo fiscal]]</mark> por obrigações fiscais. As compras <strong>não são reembolsadas</strong> e não podem ser recuperadas. Os dados de análise não estão ligados à sua conta e são apagados sozinhos conforme o prazo de retenção.</p>
+
+<h2 id="tarda">Quanto tempo leva</h2>
+<p>Na hora: quando você vê «Pronto. Sua conta foi excluída.», a exclusão já foi feita.</p>
+
+<h2 id="sin-codigo">Se você não tem o código</h2>
+<p>Se o jogo estiver instalado, abra-o com conexão à internet e entre em Configurações: o código aparece ali, ou você pode excluir a conta diretamente. Se você não tem mais o jogo, escreva para <mark class="pending">[[DATO DEL DUEÑO: correo de privacidad]]</mark>.</p>
+<p>Mais informações na nossa <a href="/pt-br/privacidade/">política de privacidade</a>.</p>
+  </main>
+  <footer class="site-footer">
+    <nav aria-label="Páginas do site">
+      <ul>
+      <li><a href="/pt-br/">Tintalú</a></li>
+      <li><a href="/pt-br/privacidade/">Política de privacidade</a></li>
+      <li><a href="/pt-br/termos/">Termos de uso</a></li>
+      <li><a href="/tintalu/pt-br/excluir-conta/" aria-current="page">Excluir sua conta</a></li>
+      <li><a href="/pt-br/creditos/">Créditos e licenças</a></li>
+      </ul>
+    </nav>
+    <p>Tintalú é um jogo da Parallext, LLC.</p>
+    <p>Jogo independente inspirado na bacia amazônica; sem relação com a Amazon.com, Inc.</p>
+  </footer>
+</body>
+</html>

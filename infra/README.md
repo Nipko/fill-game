@@ -11,11 +11,11 @@ Ninguna cuenta, correo, clave ni secreto vive en este repositorio: lo que identi
 | `Af<Env>Global` | us-east-1 | AWS Budgets (10 USD en dev, 50 en prod; avisos al 50, 80 y 100 %) y, solo con dominio, el certificado de ACM de CloudFront |
 | `Af<Env>Data` | sa-east-1 | 6 tablas de DynamoDB (`af-<env>-purchases`, `rewards`, `integrity`, `account_codes`, `rate_limits`, `jobs`): on-demand, cifradas, PITR; en prod, protección contra borrado y retención |
 | `Af<Env>Api` | sa-east-1 | HTTP API con autorizador JWT de Firebase Auth, rutas `/v1/...` del contrato, 5 Lambdas (Node 24, arm64; F2-3 a F2-8), límites por ruta, 3 secretos de relleno, job diario a las 03:00 UTC con DLQ |
-| `Af<Env>Web` | sa-east-1 | Web estática: S3 privado + CloudFront con OAC, cabeceras de seguridad, `noindex` en dev, página de marcador de posición y `app-ads.txt` provisional; reenvía `/v1/account/delete-*` a la API (borrado por web, mismo origen) |
+| `Af<Env>Web` | sa-east-1 | Web estática: S3 privado + CloudFront con OAC, cabeceras de seguridad, `noindex` en dev, la web pública de Tintalú en es-419, en y pt-BR (portada, privacidad, términos, eliminación de cuenta y créditos, en borrador), `config.json` de despliegue y `app-ads.txt` de plantilla; reenvía `/v1/account/delete-*` a la API (borrado por web, mismo origen) |
 | `Af<Env>Cdn` | sa-east-1 | Contenido remoto: bucket `af-<env>-content-<cuenta>` tras CloudFront; `packs/*` inmutables (1 año), `catalog.json` y el resto 5 minutos; sin listado ni CORS |
 | `Af<Env>Ops` | sa-east-1 | Alarmas (errores y throttles de Lambda, 5xx de la API, fallo del job, throttles de DynamoDB, cuota de integridad al 70 %) con aviso por SNS al correo |
 
-Otros directorios: `functions/` (código de las Lambdas), `contracts/v1/` (contrato de la API: fuente única, Q-AWS-12; `index.json` fija rutas, autorización y límites), `web/site/` (web estática), `test/` (unitarios, de contrato y de stacks).
+Otros directorios: `functions/` (código de las Lambdas), `contracts/v1/` (contrato de la API: fuente única, Q-AWS-12; `index.json` fija rutas, autorización y límites), `web/` (web pública: fuentes en `web/src/`, generador `web/build.ts` y salida `web/site/`; ver «Web pública»), `test/` (unitarios, de contrato y de stacks).
 
 ## Qué hacen las funciones (F2-3 a F2-8)
 
@@ -45,6 +45,7 @@ npm ci
 npm run lint
 npm run typecheck
 npm test
+npm run web:check        # web/site al día con web/build.ts
 npx cdk synth -c env=dev
 npx cdk synth -c env=prod -c firebaseAppIds=1:123456789:android:0123456789abcdef   # id de mentira para validar
 ```
@@ -62,6 +63,40 @@ npx cdk synth -c env=prod -c firebaseAppIds=1:123456789:android:0123456789abcdef
 | `firebaseAppIds` | En prod, **sí** (en dev, no) | `1:<número>:android:<hash>` (varios, separados por comas) | El token de App Check solo vale para esas apps de Firebase (Q-AWS-4). En prod la síntesis falla sin él (F2c): así solo las apps Android registradas emiten tokens válidos, no cualquier app del proyecto (web, iOS o una de pruebas). Además, la Lambda falla cerrada (500) si en prod le falta la lista. Se copia de la consola de Firebase (Configuración del proyecto → Tus apps → ID de la app); es público, no es un secreto |
 | `packageName` | En prod, **sí** para comprar | applicationId de la app | Paquete para la Google Play Developer API. En dev vale por defecto el provisional `com.amazonfill.dev`; en prod no tiene valor por defecto, solo se pasa **tras el dictamen de marca** y la síntesis rechaza el provisional (regla 6 de `CLAUDE.md`). Sin él, verifyPurchase y el job responden 500 (fallan cerrados) |
 | `domain` + `hostedZoneId` | No (los dos o ninguno) | dominio y zona de Route 53 | Web en `<dominio>` y `www.`, CDN en `cdn.`, API en `api.`; **solo prod y solo tras el dictamen de marca** (Q-AWS-9) |
+
+## Web pública (`web/`, D-041)
+
+Web estática de Tintalú, del desarrollador **Parallext, LLC** (D-041), en es-419, en y pt-BR. Sin rastreadores, sin cookies, sin fuentes ni scripts de terceros: la CSP del stack Web (`WEB_CSP` en `lib/web-stack.ts`) solo permite el mismo origen y los tests lo comprueban. Los textos legales son **borrador** hasta el abogado (D-033, añadido del 2026-10-22, punto 7); en y pt-BR, traducción con IA pendiente del revisor nativo.
+
+| Página | es-419 | en | pt-BR |
+|---|---|---|---|
+| Portada | `/` | `/en/` | `/pt-br/` |
+| Privacidad | `/privacidad/` | `/en/privacy/` | `/pt-br/privacidade/` |
+| Términos | `/terminos/` | `/en/terms/` | `/pt-br/termos/` |
+| Eliminación de cuenta (08 §11) | `/tintalu/eliminar-cuenta/` | `/tintalu/en/delete-account/` | `/tintalu/pt-br/excluir-conta/` |
+| Créditos y licencias | `/creditos/` | `/en/credits/` | `/pt-br/creditos/` |
+
+Más `/app-ads.txt` (plantilla, todo comentado hasta tener los IDs de MAX) y `/assets/` (hoja de estilo y el script del borrado).
+
+- **Cómo se edita:** los textos están en `web/src/content/<idioma>/<página>.html` y en `web/src/site.ts` (rutas, títulos, plantilla y textos del formulario); el script del borrado, en `web/src/browser/` (TypeScript que esbuild empaqueta sin dependencias). Después, `npm run web:build` regenera `web/site/` (**generado: no se edita a mano**) y `npm run web:check` comprueba que está al día (también lo hace `npm test`).
+- **Marcadores:** `[[DATO DEL DUEÑO: …]]` (datos de Parallext, LLC que faltan) y `[[ABOGADO: …]]` (lo decide el abogado); la web los resalta. Se sustituyen en `web/src/content/` y se regenera.
+- **Borrado por web:** el formulario normaliza el código (mayúsculas, sin espacios ni guiones, I y L → 1, O → 0; `common.schema.json`) y llama a `POST /v1/account/delete-request` y después a `/v1/account/delete-confirm` (contrato v1; sin sesión ni App Check). La base de la API sale de `/config.json`, que escribe este stack al desplegar (`webRuntimeConfig`): vacía, porque CloudFront reenvía `/v1/account/delete-*` a la API desde el mismo origen.
+- **Desplegar en dev:** lo hace el dueño con el `cdk deploy` de la guía de abajo (o solo `npx cdk deploy AfDevWeb -c env=dev -c account=<id-cuenta-dev> --profile af-dev`); la URL es la salida `WebUrl` (`https://<id>.cloudfront.net`). La caché es de 5 minutos: los cambios se ven solos en ese tiempo. En dev la web no se indexa (`X-Robots-Tag` y `robots.txt`).
+- **Sin página 404 propia:** una ruta que no existe devuelve el 403 de S3. No se usan las respuestas de error personalizadas de CloudFront porque se aplicarían también a `/v1/account/delete-*` y taparían el 404 `code_not_found` de la API.
+
+### Conectar `tintalu.com` (pasos del dueño, cuando lo decida)
+
+**No está hecho ni se hace sin decisión del dueño:** lo público con la marca espera al dictamen (D-034, Q-AWS-9; D-041). El dominio está en **Cloudflare**, y el CDK de hoy solo sabe conectar un dominio con zona de **Route 53** (`-c domain` + `-c hostedZoneId`), así que antes hace falta elegir una vía:
+
+1. **Opción A, DNS en Cloudflare (recomendada [P]: sin coste nuevo de AWS).** Necesita un cambio de CDK previo (lo hace un agente cuando el dueño lo pida): admitir un dominio sin zona de Route 53, con el certificado de ACM validado por DNS fuera de AWS y sin registros `Route53::RecordSet`. Después, el dueño:
+   1. Despliega `AfProdGlobal`: crea el certificado de ACM en **us-east-1** (CloudFront solo usa certificados de esa región) para `tintalu.com` y `www.tintalu.com` (y `cdn.` si la CDN va en el dominio). La consola de ACM enseña un **CNAME de validación** por nombre.
+   2. En Cloudflare › DNS, crea esos CNAME de validación tal cual, **sin proxy** (nube gris), y espera a que ACM marque el certificado como «Emitido». No los borres: ACM los usa para renovar.
+   3. Despliega `AfProdWeb`: la distribución de CloudFront queda con los nombres alternativos (`tintalu.com`, `www.tintalu.com`) y el certificado. Copia su dominio `xxxx.cloudfront.net` (salida `WebUrl`).
+   4. En Cloudflare › DNS: `tintalu.com` CNAME → `xxxx.cloudfront.net` (Cloudflare lo aplana en el apex) y `www` CNAME → el mismo, los dos **sin proxy** (nube gris) para que CloudFront sirva el certificado y las cabeceras de seguridad.
+   5. Comprueba `https://tintalu.com/tintalu/eliminar-cuenta` y que `robots.txt` permite indexar en prod.
+2. **Opción B, delegar el DNS a Route 53.** Crea una zona alojada `tintalu.com` en la cuenta de prod (coste mensual de la zona), cambia en Cloudflare los servidores de nombres (NS) del dominio por los de Route 53 y despliega con `-c domain=tintalu.com -c hostedZoneId=<id de la zona>`: el CDK de hoy ya crea el certificado, los alias y los registros A/AAAA. Cloudflare deja de servir el DNS.
+
+En las dos: la web pública con dominio va en **prod** (en dev se queda en `*.cloudfront.net`), y el CDK de hoy también pone `cdn.<dominio>` en el certificado. Tras conectar el dominio, la URL de eliminación de cuenta (`https://tintalu.com/tintalu/eliminar-cuenta`) y la de la política son las que van a Play Console (08 §13.1 #2 y #7).
 
 ## Guía del dueño: desplegar dev
 
@@ -134,7 +169,7 @@ En dev (y solo en dev: un test de stacks lo comprueba) las funciones llevan `AF_
 
 ### 6. Comprobación rápida
 
-- `WebUrl` muestra «Sitio en preparación»; `WebUrl/app-ads.txt` y `WebUrl/robots.txt` (que en dev prohíbe indexar) existen.
+- `WebUrl` muestra la portada de Tintalú; `WebUrl/tintalu/eliminar-cuenta`, `WebUrl/config.json` (`{"apiBase":""}`), `WebUrl/app-ads.txt` y `WebUrl/robots.txt` (que en dev prohíbe indexar) existen. En la página de borrado, un código con formato válido que no existe responde «No encontramos ese código» (la API devuelve 404 `code_not_found`).
 - `curl -i "<ApiUrl>/v1/ssv"` → `400` (`bad_request`, faltan los parámetros) y con parámetros pero sin firma buena → `403` (`bad_signature`); `curl -i -X POST <ApiUrl>/v1/purchases/verify` sin token → `401`.
 - Con un ID token de un usuario anónimo de dev: `POST /v1/account/code` devuelve un código; `POST /v1/ledger/restore` con `{"pending_nonces":[]}` devuelve listas vacías; `POST /v1/purchases/verify` con `X-Firebase-AppCheck: fake-ok-1` y `{"token":"fake-ok-1","sku":"af_coins_2"}` devuelve `ok` y, repetido (con otro `fake-ok-…`), `duplicate`.
 - `curl -i <CdnUrl>/catalog.json` → `403` hasta que se suba un catálogo (no hay listado).

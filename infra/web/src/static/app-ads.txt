@@ -1,0 +1,15 @@
+# app-ads.txt de Tintalú (desarrollador: Parallext, LLC; D-041). PLANTILLA: todavía no declara ningún vendedor.
+# Fuente: docs/store-listing/app-ads.txt (B13); 08 §13.1 #2 y #23. Se publica en la raíz del sitio web del
+# desarrollador que figure en la ficha de Play. Formato IAB de cada línea:
+#   <dominio del sistema de anuncios>, <ID de la cuenta del editor>, <DIRECT|RESELLER>[, <ID de la autoridad de certificación>]
+#
+# Los IDs NO se escriben a mano ni se inventan: el panel de AppLovin MAX da la lista completa y al día (sus líneas
+# y las de las redes que media) cuando exista la cuenta del dueño (Q-B13-16). Los dominios de abajo son los
+# habituales de cada red [NV]. Hoy el juego no muestra anuncios: estas líneas se descomentan con los IDs reales.
+#
+# applovin.com, [[DATO DEL DUEÑO: ID de cuenta de AppLovin]], DIRECT, [[DATO DEL DUEÑO: ID de certificación]]
+# google.com, pub-[[DATO DEL DUEÑO: ID de editor de AdMob]], DIRECT, [[DATO DEL DUEÑO: ID de certificación]]
+# unity.com, [[DATO DEL DUEÑO: ID de organización de Unity Ads]], DIRECT
+# facebook.com, [[DATO DEL DUEÑO: ID de Meta Audience Network]], DIRECT
+# mintegral.com, [[DATO DEL DUEÑO: ID de Mintegral]], DIRECT
+# (+ las líneas RESELLER que indique el panel de MAX)
