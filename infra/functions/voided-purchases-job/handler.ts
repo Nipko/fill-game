@@ -7,6 +7,9 @@
 // lápida `voided` sin uid (PutItem condicional si no existe): verifyPurchase responde 400 a ese token y no concede.
 // La lápida no tiene uid, así que no sale en restoreLedger ni en el borrado de cuenta; se conserva como el libro
 // mayor (sin TTL).
+// Q-IAP-4: si la compra se reasignó a otro UID, la fila principal lista en `shadow_keys` las filas sombra de los
+// UID que la tuvieron antes; también se marcan `voided` (siempre, aunque la principal ya lo estuviera: así un
+// reintento tras un fallo a medias las completa), para que restoreLedger se lo retire también al UID anterior.
 import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { tokenHash } from '../shared/crypto.ts';
@@ -62,6 +65,7 @@ export function createHandler(getDeps: () => VoidedJobDeps): () => Promise<JobRe
     let pages = 0;
     let voided = 0;
     let tombstones = 0;
+    let shadows = 0;
     let pageToken: string | undefined;
     do {
       if (pages >= MAX_PAGES) throw new Error(`voidedPurchasesJob: más de ${MAX_PAGES} páginas; sin avanzar el checkpoint.`);
@@ -115,14 +119,28 @@ export function createHandler(getDeps: () => VoidedJobDeps): () => Promise<JobRe
           return false;
         }
       };
+      // Q-IAP-4: marca las sombras de la fila principal (se leen después de marcarla: una reasignación exige
+      // `state = ok`, así que ya no puede añadir otra).
+      const markShadows = async (th: string, v: Item): Promise<void> => {
+        const main = (
+          await deps.ddb.send(new GetCommand({ TableName: purchasesTable, Key: { token_hash: th }, ConsistentRead: true }))
+        ).Item as { shadow_keys?: unknown } | undefined;
+        const keys = Array.isArray(main?.shadow_keys) ? main.shadow_keys.filter((k): k is string => typeof k === 'string') : [];
+        for (const k of keys) if (await markExisting(k, v)) shadows++;
+      };
       // Resultado de una anulación: 'voided' (fila marcada), 'tombstone' (lápida nueva) o 'none' (ya estaba).
       const markOne = async (v: Item): Promise<'voided' | 'tombstone' | 'none'> => {
         const th = tokenHash(v.purchaseToken);
-        if (await markExisting(th, v)) return 'voided';
-        if (await putTombstone(th, v)) return 'tombstone';
-        // La fila existe: o ya estaba anulada (o es una lápida), o verifyPurchase la escribió entre los dos pasos.
-        // Un último intento la marca en el segundo caso.
-        return (await markExisting(th, v)) ? 'voided' : 'none';
+        const marked = async (): Promise<'voided' | 'tombstone' | 'none'> => {
+          if (await markExisting(th, v)) return 'voided';
+          if (await putTombstone(th, v)) return 'tombstone';
+          // La fila existe: o ya estaba anulada (o es una lápida), o verifyPurchase la escribió entre los dos pasos.
+          // Un último intento la marca en el segundo caso.
+          return (await markExisting(th, v)) ? 'voided' : 'none';
+        };
+        const r = await marked();
+        if (r !== 'tombstone') await markShadows(th, v);
+        return r;
       };
       // En tandas de UPDATE_CONCURRENCY para que 1.000 anulaciones por página quepan en el tiempo del job.
       for (let i = 0; i < page.items.length; i += UPDATE_CONCURRENCY) {
@@ -136,7 +154,7 @@ export function createHandler(getDeps: () => VoidedJobDeps): () => Promise<JobRe
     await deps.ddb.send(
       new PutCommand({ TableName: jobsTable, Item: { job: JOB_ID, cursor_ms: endMs, updated_at: endMs } }),
     );
-    log.info('voided_job_ok', { pages, voided, tombstones, start_ms: startMs, cursor_ms: endMs });
+    log.info('voided_job_ok', { pages, voided, tombstones, shadows, start_ms: startMs, cursor_ms: endMs });
     return { status: 'ok', pages, voided, tombstones, cursor_ms: endMs };
   };
 }

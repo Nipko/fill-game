@@ -780,8 +780,12 @@ Cliente:  Play Billing → onPurchasesUpdated(PURCHASED) → estado "verifying";
               # HTTPS a POST /v1/purchases/verify en AWS (D-035): ID token de Firebase Auth + token de App Check de uso limitado
 Servidor: tope de 30 verificaciones por uid y hora [P]
           if el libro mayor ya tiene el token: del uid → {status:"duplicate"}; de otro uid → 409; lápida voided → 400
+              # excepción (D-040, Q-IAP-4 (a)): no consumible en ok, mismo SKU, Play lo da como comprado y con cuenta
+              # ofuscada → se reasigna al uid que lo pide → {status:"duplicate"}; el uid anterior queda en una fila
+              # sombra que el job marca voided y restoreLedger le devuelve solo anulada; topes [P]: 5 por token (volver
+              # al uid de la cuenta ofuscada no cuenta), 24 h entre dos (409) y 4 por uid y día (429)
           purchases.products.get(packageName, sku, token)        # el libro mayor no guarda precio ni moneda: products.get no los da
-          if cuenta ofuscada de otro uid → 409
+          if cuenta ofuscada de otro uid → 409 (salvo un no consumible comprado que nadie verificó: se anota a este uid → ok, con los mismos topes; Q-IAP-4)
           if purchaseState == PENDING → {status:"pending"} (no conceder)
           if cancelada o inexistente → 400 (no conceder)
           if af_starter y la cuenta ya lo tiene por otra compra → 400 sin acknowledge (Play la reembolsa a los 3 días)
