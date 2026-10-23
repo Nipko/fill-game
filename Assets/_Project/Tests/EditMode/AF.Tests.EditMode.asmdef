@@ -18,6 +18,7 @@
     "AF.Ads",
     "AF.IAP",
     "AF.EditorTools",
+    "AF.Ads.Max.Editor",
     "AF.Localization",
     "AF.Audio",
     "AF.Audio.Unity",

@@ -54,7 +54,8 @@ namespace AF.EditorTools
     ///
     /// Códigos de salida (solo en batchmode):
     ///   0  build construido
-    ///   2  los Player Settings no son los fijados (ejecuta antes ProjectSetup.ApplyAndroidDefaults)
+    ///   2  los Player Settings no son los fijados (ejecuta antes ProjectSetup.ApplyAndroidDefaults) o los ajustes de AppLovin MAX
+    ///      llevan una clave del SDK o Quality Service (ejecuta AF.Ads.Max.Editor.MaxProjectSetup.Apply; D-042)
     ///   3  falta el módulo Android o no se pudo cambiar la plataforma activa
     ///   4  falló el build o hubo una excepción (lee el log)
     ///   5  Build Settings no incluye Assets/_Project/Scenes/Game.unity
@@ -607,6 +608,12 @@ namespace AF.EditorTools
             {
                 Debug.LogError(LogPrefix + "Player Settings distintos de los fijados: " + string.Join("; ", problems)
                     + ". Ejecuta AF.EditorTools.ProjectSetup.ApplyAndroidDefaults.");
+                return ExitSettings;
+            }
+
+            // D-042: ninguna clave de MAX en AppLovinSettings.asset y Quality Service apagado (docs/dev/anuncios-max.md §3).
+            if (!AF.Ads.Max.Editor.MaxProjectSetup.CheckForBuild(LogPrefix))
+            {
                 return ExitSettings;
             }
 

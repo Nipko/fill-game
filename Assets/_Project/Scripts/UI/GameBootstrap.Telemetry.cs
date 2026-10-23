@@ -147,7 +147,11 @@ namespace AF.UI
 
         private IAdService WrapAds(IAdService inner)
         {
-            return _analytics != null ? new AnalyticsAdService(inner, _analytics) : inner;
+            // ad_impression (ILR de MAX, D-042) mientras ads_ilr_to_firebase (08 §9) esté encendido.
+            RemoteConfigService? rc = _rc;
+            return _analytics != null
+                ? new AnalyticsAdService(inner, _analytics, () => rc == null || !rc.TryGet("ads_ilr_to_firebase", out bool ilr) || ilr)
+                : inner;
         }
 
         private IStoreService WrapStore(IStoreService inner)

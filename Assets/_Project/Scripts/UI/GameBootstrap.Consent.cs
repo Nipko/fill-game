@@ -83,6 +83,7 @@ namespace AF.UI
             CrashReportingOverride = null;
             AnalyticsResetOverride = null;
             SimCountryOverride = null;
+            AdProviderOverride = null; // D-042: el proveedor de anuncios de los tests
         }
 
         // false con la banda <13 guardada (StartsDataServicesAtBoot): el arranque no enciende Crashlytics, no descarga Remote Config,
