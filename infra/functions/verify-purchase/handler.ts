@@ -26,14 +26,14 @@ import { sha256hex, tokenHash as hashToken } from '../shared/crypto.ts';
 import { cancellationCodes, epochS, isConditionalCheckFailed } from '../shared/ddb.ts';
 import type { Env } from '../shared/env.ts';
 import { requireEnv } from '../shared/env.ts';
-import { HttpError, badRequest } from '../shared/errors.ts';
+import { HttpError, badRequest, rateLimited } from '../shared/errors.ts';
 import type { HttpEvent, HttpHandler } from '../shared/http.ts';
 import { header, json, jsonBody, requireUid, withErrors } from '../shared/http.ts';
 import type { IntegrityVerifier } from '../shared/integrity.ts';
 import { INTEGRITY_HEADER, requireIntegrity } from '../shared/integrity.ts';
 import { log, metric, uidHash } from '../shared/log.ts';
 import type { PlayApi, ProductPurchase } from '../shared/playApi.ts';
-import { enforce, isDeleted, notDeletedCheck } from '../shared/rateLimit.ts';
+import { enforce, isDeleted, notDeletedCheck, peekQuota, quotaTxUpdate, windowOf } from '../shared/rateLimit.ts';
 import { lazy, realDdb, realIntegrityVerifier, realPlayApi } from '../shared/runtime.ts';
 import { parseVerifyPurchase } from '../shared/validate.ts';
 
@@ -58,6 +58,15 @@ interface LedgerItem {
   readonly reassign_count?: number;
   /** Q-IAP-4: epoch ms de la última reasignación que contó (para la espera entre dos). */
   readonly reassigned_at?: number;
+  readonly ts?: number;
+}
+
+/**
+ * Q-IAP-4: clave de la fila sombra que guarda, para el UID que tenía la compra antes de la reasignación `n`, que
+ * la tuvo (`shadow_of` = token_hash de la principal). La lee restoreLedger y la marca voidedPurchasesJob.
+ */
+export function shadowKeyOf(tokenHashValue: string, n: number): string {
+  return `${tokenHashValue}#prev#${n}`;
 }
 
 /** Entrada del historial de reasignaciones de una fila (sin UID ni hash: solo cuándo y de qué tipo). */
@@ -155,18 +164,33 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
       throw otherUser();
     };
 
-    /** Tope por UID y día de las reasignaciones que cuentan (429 rate_limited, como el resto de límites). */
-    const enforceReassignQuota = (): Promise<void> =>
-      enforce(deps.ddb, rateLimitsTable, `reassign#${uidHash(uid)}`, REASSIGN_DAILY_PER_UID, 86_400, deps.now());
+    const quotaKey = `reassign#${uidHash(uid)}`;
+    /**
+     * Cupo por UID y día de las reasignaciones que cuentan (429 rate_limited, como el resto de límites). Se mira
+     * antes (sin gastarlo) y se gasta dentro de la transacción que reasigna: si se cancela, no se gasta.
+     */
+    const checkReassignQuota = async (): Promise<void> => {
+      const q = await peekQuota(deps.ddb, rateLimitsTable, quotaKey, REASSIGN_DAILY_PER_UID, 86_400, deps.now());
+      if (!q.allowed) throw rateLimited(q.retryAfterS);
+    };
+    const quotaExhausted = (): HttpError => rateLimited(windowOf(quotaKey, 86_400, deps.now()).endS - epochS(deps.now()));
 
     /**
      * Q-IAP-4: la fila es de otro UID (o está anonimizada). Solo un no consumible, `ok` en el libro mayor, del mismo
      * SKU, que Play da como comprado con una cuenta ofuscada conocida, pasa al UID que la pide; todo lo demás sigue
      * en 409, como antes. Si Play dice que la compró este UID, vuelve sin gastar cupo; si no, gasta una de las
      * REASSIGN_MAX_PER_TOKEN, exige REASSIGN_COOLDOWN_S desde la anterior y una de las REASSIGN_DAILY_PER_UID.
-     * La escritura es condicional (mismo dueño y mismo `reassign_seq` que se leyó) y va en transacción con la
-     * comprobación de cuenta no borrada: dos peticiones a la vez → una reasigna y la otra ve el resultado.
-     * Responde `duplicate` (sin `grant`): la compra ya se concedió una vez, al UID que la verificó primero.
+     * Todo en una transacción:
+     *   - la fila principal cambia de dueño (condicional: mismo dueño y mismo `reassign_seq` que se leyó, `ok`);
+     *   - la comprobación de que el UID nuevo no está borrado;
+     *   - el cupo diario del UID nuevo (solo si cuenta);
+     *   - si había dueño, una **fila sombra** `<token_hash>#prev#<n>` con el UID anterior (`shadow_of` = token_hash)
+     *     y la comprobación de que ese UID no se está borrando. El job de anuladas marca `voided` también las
+     *     sombras, y restoreLedger se las da al UID anterior solo cuando están anuladas: así un reembolso posterior
+     *     se retira también en el dispositivo viejo (si no, comprar en A, reasignar a B y reembolsar dejaría el
+     *     derecho en A).
+     * Dos peticiones a la vez → una reasigna y la otra ve el resultado. Responde `duplicate` (sin `grant`): la
+     * compra ya se concedió una vez, al UID que la verificó primero.
      */
     const reassignNonConsumable = async (item: LedgerItem): Promise<ReturnType<typeof json>> => {
       const rf = { ...fields, anonymized: item.uid === undefined };
@@ -193,11 +217,12 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
           metric('PurchaseReassignLimit', envName);
           throw otherUser();
         }
-        await enforceReassignQuota();
+        await checkReassignQuota();
       }
       const seq = item.reassign_seq ?? 0;
       const kind: ReassignLogEntry['kind'] = owner ? 'owner' : item.uid === undefined ? 'anonymized' : 'other';
       const entry: ReassignLogEntry = { at: nowMs, kind };
+      const shadowKey = item.uid === undefined ? undefined : shadowKeyOf(th, seq + 1);
       const values: Record<string, unknown> = { ':new': uid, ':ok': 'ok', ':seq1': seq + 1, ':entry': [entry], ':empty': [] };
       const sets = ['#u = :new', 'reassign_seq = :seq1', 'reassign_log = list_append(if_not_exists(reassign_log, :empty), :entry)'];
       if (!owner) {
@@ -205,6 +230,10 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
         sets.push('reassign_count = :cnt', 'reassigned_at = :at');
         values[':cnt'] = count + 1;
         values[':at'] = nowMs;
+      }
+      if (shadowKey) {
+        sets.push('shadow_keys = list_append(if_not_exists(shadow_keys, :empty), :shadow)');
+        values[':shadow'] = [shadowKey];
       }
       const conditions = ['#s = :ok', 'attribute_not_exists(tombstone)'];
       if (item.uid === undefined) conditions.push('attribute_not_exists(#u)');
@@ -217,25 +246,43 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
         conditions.push('reassign_seq = :seq');
         values[':seq'] = seq;
       }
+      const tx: NonNullable<ConstructorParameters<typeof TransactWriteCommand>[0]['TransactItems']> = [
+        {
+          Update: {
+            TableName: purchasesTable,
+            Key: { token_hash: th },
+            // Se conservan order_id, ts, verified_at, country…: solo cambia el dueño y se apunta el historial.
+            UpdateExpression: `SET ${sets.join(', ')}`,
+            ConditionExpression: conditions.join(' AND '),
+            ExpressionAttributeNames: { '#u': 'uid', '#s': 'state' },
+            ExpressionAttributeValues: values,
+          },
+        },
+        notDeletedCheck(rateLimitsTable, uidHash(uid), nowMs),
+      ];
+      const quotaIdx = owner ? -1 : tx.push(quotaTxUpdate(rateLimitsTable, quotaKey, REASSIGN_DAILY_PER_UID, 86_400, nowMs)) - 1;
+      let oldDeletedIdx = -1;
+      if (shadowKey && item.uid !== undefined) {
+        tx.push({
+          Put: {
+            TableName: purchasesTable,
+            Item: {
+              token_hash: shadowKey,
+              shadow_of: th,
+              uid: item.uid,
+              sku: item.sku,
+              ts: item.ts,
+              state: 'ok',
+              reassigned_away_at: nowMs,
+            },
+            ConditionExpression: 'attribute_not_exists(token_hash)',
+          },
+        });
+        // Sin sombra a nombre de un UID que se está borrando (su borrado ya no la vería).
+        oldDeletedIdx = tx.push(notDeletedCheck(rateLimitsTable, uidHash(item.uid), nowMs)) - 1;
+      }
       try {
-        await deps.ddb.send(
-          new TransactWriteCommand({
-            TransactItems: [
-              {
-                Update: {
-                  TableName: purchasesTable,
-                  Key: { token_hash: th },
-                  // Se conservan order_id, ts, verified_at, country…: solo cambia el dueño y se apunta el historial.
-                  UpdateExpression: `SET ${sets.join(', ')}`,
-                  ConditionExpression: conditions.join(' AND '),
-                  ExpressionAttributeNames: { '#u': 'uid', '#s': 'state' },
-                  ExpressionAttributeValues: values,
-                },
-              },
-              notDeletedCheck(rateLimitsTable, uidHash(uid), nowMs),
-            ],
-          }),
-        );
+        await deps.ddb.send(new TransactWriteCommand({ TransactItems: tx }));
       } catch (e) {
         const codes = cancellationCodes(e);
         if (!codes) throw e;
@@ -249,7 +296,9 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
           log.info('purchase_duplicate', { ...fields, reassign_race: true });
           return json(200, { status: 'duplicate', token_hash: th });
         }
-        log.warn('purchase_reassign_race_lost', rf);
+        if (quotaIdx >= 0 && codes[quotaIdx] === 'ConditionalCheckFailed') throw quotaExhausted();
+        // El UID anterior se está borrando: cuando acabe, la fila quedará anonimizada y se podrá reasignar.
+        log.warn(oldDeletedIdx >= 0 && codes[oldDeletedIdx] === 'ConditionalCheckFailed' ? 'purchase_reassign_old_deleting' : 'purchase_reassign_race_lost', rf);
         throw otherUser();
       }
       log.warn('purchase_reassigned', { ...rf, kind, count: owner ? count : count + 1 });
@@ -279,7 +328,7 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
         throw otherUser();
       }
       claim = true;
-      await enforceReassignQuota();
+      await checkReassignQuota();
     }
     if (p.state === 'pending') {
       log.info('purchase_pending', fields);
@@ -363,6 +412,9 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
                   },
                 ]
               : []),
+            // Q-IAP-4: reclamar una compra que nadie verificó gasta el cupo diario de reasignaciones (índice 2: un
+            // no consumible nunca lleva la marca `once`).
+            ...(claim ? [quotaTxUpdate(rateLimitsTable, quotaKey, REASSIGN_DAILY_PER_UID, 86_400, nowMs)] : []),
           ],
         }),
       );
@@ -380,6 +432,9 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
       if (winner) return answerExisting(winner);
       // 3) La reserva de este token caducó (más de ONCE_RESERVATION_S entre reservar y escribir) y otro token
       //    del mismo UID la tomó: esta compra ya está reconocida y no se concede. Riesgo residual documentado.
+      // 4) Q-IAP-4: el cupo diario se agotó entre mirarlo y escribir (otra reasignación a la vez). La compra ya
+      //    está reconocida y nadie la tiene: el reintento la reclama cuando haya cupo.
+      if (claim && codes[2] === 'ConditionalCheckFailed') throw quotaExhausted();
       if (once && codes[2] === 'ConditionalCheckFailed') {
         log.warn('purchase_once_repeat', { ...fields, race: true });
         metric('OncePerAccountRepeat', envName);

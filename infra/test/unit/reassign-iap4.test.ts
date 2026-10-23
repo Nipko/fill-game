@@ -3,15 +3,20 @@
 // demás (consumibles, anuladas, sin cuenta ofuscada, otro SKU) sigue en 409. DynamoDB en memoria, sin red.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sha256hex } from '../../functions/shared/crypto.ts';
+import type { FirebaseAdmin } from '../../functions/shared/firebaseAdmin.ts';
 import type { IntegrityVerifier } from '../../functions/shared/integrity.ts';
 import { uidHash } from '../../functions/shared/log.ts';
-import type { PlayApi, ProductPurchase } from '../../functions/shared/playApi.ts';
-import { deletedKey } from '../../functions/shared/rateLimit.ts';
+import type { PlayApi, ProductPurchase, VoidedPage } from '../../functions/shared/playApi.ts';
+import { deletedKey, windowOf } from '../../functions/shared/rateLimit.ts';
+import { createHandler as deleteHandler } from '../../functions/delete-account/handler.ts';
+import { createHandler as restoreHandler } from '../../functions/restore-ledger/handler.ts';
+import { createHandler as voidedHandler } from '../../functions/voided-purchases-job/handler.ts';
 import {
   REASSIGN_COOLDOWN_S,
   REASSIGN_DAILY_PER_UID,
   REASSIGN_MAX_PER_TOKEN,
   createHandler,
+  shadowKeyOf,
 } from '../../functions/verify-purchase/handler.ts';
 import { validator } from '../contract/ajv.ts';
 import { NOW, OTHER_UID, UID, httpEvent, res } from './fixtures.ts';
@@ -22,6 +27,7 @@ const TOKEN = 'tok.noads-reinstall-1';
 const TH = sha256hex(TOKEN);
 const OLD_UID = 'OldUid00000000000000000000aa';
 const okResponse = validator('verify-purchase.response.schema.json');
+const restoreResponse = validator('restore-ledger.response.schema.json');
 const errResponse = validator('error.schema.json');
 const okIntegrity: IntegrityVerifier = { variant: 'app-check', verify: () => Promise.resolve({ ok: true }) };
 const DAY = 86_400_000;
@@ -47,7 +53,8 @@ class Play implements PlayApi {
     this.acks.push(token);
     return Promise.resolve();
   };
-  listVoided = vi.fn();
+  voided: VoidedPage = { items: [] };
+  listVoided = (): Promise<VoidedPage> => Promise.resolve(this.voided);
 }
 
 describe('verifyPurchase · reasignación de no consumibles (Q-IAP-4)', () => {
@@ -87,6 +94,15 @@ describe('verifyPurchase · reasignación de no consumibles (Q-IAP-4)', () => {
       ...over,
     });
   const row = (token = TOKEN) => db.get(TABLES.AF_TABLE_PURCHASES, { token_hash: sha256hex(token) });
+  const shadow = (n: number, token = TOKEN) => db.get(TABLES.AF_TABLE_PURCHASES, { token_hash: shadowKeyOf(sha256hex(token), n) });
+  const restore = async (uid: string) => {
+    const r = res(await restoreHandler(() => ({ ddb: db.client, env: TABLES }))(httpEvent({ routeKey: 'POST /v1/ledger/restore', body: { pending_nonces: [] }, uid })));
+    expect(restoreResponse(r.body), JSON.stringify(restoreResponse.errors)).toBe(true);
+    return r.body.purchases as Array<Record<string, unknown>>;
+  };
+  const runJob = () => voidedHandler(() => ({ ddb: db.client, play, env: TABLES, now: () => now }))();
+  const quotaCount = (uid: string): number =>
+    Number(db.get(TABLES.AF_TABLE_RATE_LIMITS, { key: windowOf(`reassign#${uidHash(uid)}`, 86_400, now).key })?.count ?? 0);
 
   it('no consumible de otro UID que Play da como comprado por esa cuenta → duplicate y la fila pasa al UID nuevo', async () => {
     seed();
@@ -109,7 +125,19 @@ describe('verifyPurchase · reasignación de no consumibles (Q-IAP-4)', () => {
     });
     expect(JSON.stringify(row()!.reassign_log)).not.toContain(OLD_UID);
     expect(play.acks).toEqual([]); // ya estaba reconocida
-    expect(db.items(TABLES.AF_TABLE_PURCHASES)).toHaveLength(1);
+    // Sombra para el UID anterior: misma compra, su uid, apuntada en la principal.
+    expect(shadow(1)).toEqual({
+      token_hash: shadowKeyOf(TH, 1),
+      shadow_of: TH,
+      uid: OLD_UID,
+      sku: 'af_noads',
+      ts: NOW - 10 * DAY,
+      state: 'ok',
+      reassigned_away_at: NOW,
+    });
+    expect(row()!.shadow_keys).toEqual([shadowKeyOf(TH, 1)]);
+    expect(db.items(TABLES.AF_TABLE_PURCHASES)).toHaveLength(2);
+    expect(quotaCount(UID)).toBe(1);
   });
 
   it('las skins también; la cuenta ofuscada puede venir como SHA-256 del UID', async () => {
@@ -133,6 +161,7 @@ describe('verifyPurchase · reasignación de no consumibles (Q-IAP-4)', () => {
     expect((await call(UID, { token: 'starter', sku: 'af_starter' })).status).toBe(409);
     expect((await call(UID, { token: 'coins-new', sku: 'af_coins_3' })).status).toBe(409);
     expect(db.items(TABLES.AF_TABLE_PURCHASES)).toHaveLength(2);
+    expect(quotaCount(UID)).toBe(0);
   });
 
   it('anulada: en el libro mayor (voided), lápida o cancelada en Play → no se reasigna', async () => {
@@ -175,6 +204,8 @@ describe('verifyPurchase · reasignación de no consumibles (Q-IAP-4)', () => {
     expect(play.gets).toBe(gets);
     expect(row()).toMatchObject({ uid: UID, reassign_seq: 1, reassign_count: 1, reassigned_at: NOW });
     expect(row()!.reassign_log).toHaveLength(1);
+    expect(db.items(TABLES.AF_TABLE_PURCHASES)).toHaveLength(2);
+    expect(quotaCount(UID)).toBe(0); // la ventana del día siguiente no se tocó
   });
 
   it('carrera: dos peticiones a la vez del UID nuevo → las dos duplicate y una sola reasignación', async () => {
@@ -185,6 +216,8 @@ describe('verifyPurchase · reasignación de no consumibles (Q-IAP-4)', () => {
     const out = (await Promise.all([h(ev(1)), h(ev(2))])).map(res);
     expect(out.map((o) => o.body.status)).toEqual(['duplicate', 'duplicate']);
     expect(row()).toMatchObject({ uid: UID, reassign_seq: 1, reassign_count: 1 });
+    // La transacción que perdió no gastó cupo.
+    expect(quotaCount(UID)).toBe(1);
   });
 
   it('carrera entre dos UID nuevos → uno se la lleva y el otro recibe 409', async () => {
@@ -231,6 +264,29 @@ describe('verifyPurchase · reasignación de no consumibles (Q-IAP-4)', () => {
       reassigned_at: NOW,
     });
     expect(row()!.reassign_log).toEqual([{ at: NOW, kind: 'owner' }]);
+    // Sombra para el UID que la tenía, como en cualquier reasignación.
+    expect(shadow(REASSIGN_MAX_PER_TOKEN + 1)).toMatchObject({ uid: UID, shadow_of: TH, state: 'ok' });
+    expect(quotaCount(OLD_UID)).toBe(0);
+  });
+
+  it('el comprador vuelve a una fila anonimizada dentro de la espera: sin espera ni cupo', async () => {
+    seed({ uid: undefined, reassign_seq: 2, reassign_count: 2, reassigned_at: NOW - 1000 });
+    expect((await call(OLD_UID)).body.status).toBe('duplicate');
+    expect(row()).toMatchObject({ uid: OLD_UID, reassign_count: 2, reassigned_at: NOW - 1000, reassign_seq: 3 });
+    expect(row()!.shadow_keys).toBeUndefined(); // anonimizada: no hay UID anterior a quien avisar
+    expect(quotaCount(OLD_UID)).toBe(0);
+  });
+
+  it('fila anonimizada con el tope gastado, o dentro de las 24 h de espera → 409', async () => {
+    seed({ uid: undefined, reassign_seq: REASSIGN_MAX_PER_TOKEN, reassign_count: REASSIGN_MAX_PER_TOKEN, reassigned_at: NOW - 30 * DAY });
+    const r = await call(UID);
+    expect(r.status).toBe(409);
+    expect(r.body).toMatchObject({ error: { code: 'token_belongs_to_other_user' } });
+    expect(row()!.uid).toBeUndefined();
+    seed({ uid: undefined, reassign_seq: 1, reassign_count: 1, reassigned_at: NOW - REASSIGN_COOLDOWN_S * 1000 + 1 }, 'cool');
+    expect((await call(UID, { token: 'cool', sku: 'af_noads' })).status).toBe(409);
+    expect(row('cool')!.uid).toBeUndefined();
+    expect(quotaCount(UID)).toBe(0);
   });
 
   it(`límite por UID: como mucho ${REASSIGN_DAILY_PER_UID} reasignaciones al día → 429`, async () => {
@@ -263,6 +319,26 @@ describe('verifyPurchase · reasignación de no consumibles (Q-IAP-4)', () => {
     expect(row()).toMatchObject({ uid: OLD_UID });
   });
 
+  it('reclamar una compra sin fila con el cupo del día gastado → 429 sin escribir ni gastar más', async () => {
+    const tokens = Array.from({ length: REASSIGN_DAILY_PER_UID }, (_, i) => `claimed-${i}`);
+    for (const t of tokens) expect((await call(UID, { token: t, sku: 'af_noads' })).body.status).toBe('ok');
+    expect(quotaCount(UID)).toBe(REASSIGN_DAILY_PER_UID);
+    const r = await call(UID, { token: 'one-more', sku: 'af_noads' });
+    expect(r.status).toBe(429);
+    expect(r.body).toMatchObject({ error: { code: 'rate_limited' } });
+    expect(row('one-more')).toBeUndefined();
+    expect(quotaCount(UID)).toBe(REASSIGN_DAILY_PER_UID);
+  });
+
+  it('el UID anterior se está borrando → 409, sin sombra ni cupo gastado; borrado ya, la fila anonimizada se reasigna', async () => {
+    seed();
+    db.put(TABLES.AF_TABLE_RATE_LIMITS, { key: deletedKey(uidHash(OLD_UID)), ttl: Math.floor(NOW / 1000) + 3600 });
+    expect((await call(UID)).status).toBe(409);
+    expect(row()).toMatchObject({ uid: OLD_UID });
+    expect(shadow(1)).toBeUndefined();
+    expect(quotaCount(UID)).toBe(0);
+  });
+
   it('sin fila (comprado con otro UID y nunca verificado) → ok con grant a este UID, contando como reasignación', async () => {
     play.purchase = { ...play.purchase!, acknowledged: false };
     const r = await call(UID, { token: 'unverified', sku: 'af_noads' });
@@ -282,12 +358,59 @@ describe('verifyPurchase · reasignación de no consumibles (Q-IAP-4)', () => {
     expect(db.items(TABLES.AF_TABLE_PURCHASES)).toHaveLength(0);
   });
 
-  it('restoreLedger: tras la reasignación, la compra sale en el UID nuevo y no en el viejo (índice by_uid)', async () => {
+  it('reembolso tras reasignar: el job marca la principal y la sombra; restoreLedger da voided al UID nuevo y al viejo', async () => {
+    seed();
+    expect((await call(UID)).body.status).toBe('duplicate');
+    // Antes del reembolso: el UID nuevo la tiene ok; el viejo no la ve (el derecho ya no es suyo).
+    expect(await restore(UID)).toEqual([{ token_hash: TH, sku: 'af_noads', state: 'ok', ts: NOW - 10 * DAY }]);
+    expect(await restore(OLD_UID)).toEqual([]);
+
+    play.voided = { items: [{ purchaseToken: TOKEN, voidedTimeMs: NOW + 1000, voidedReason: 1, voidedSource: 0 }] };
+    now += DAY;
+    expect(await runJob()).toMatchObject({ voided: 1, tombstones: 0 });
+    expect(row()).toMatchObject({ state: 'voided', voided_at: NOW + 1000 });
+    expect(shadow(1)).toMatchObject({ state: 'voided', voided_at: NOW + 1000, uid: OLD_UID });
+
+    const voided = { token_hash: TH, sku: 'af_noads', state: 'voided', ts: NOW - 10 * DAY, voided_at: NOW + 1000 };
+    expect(await restore(UID)).toEqual([voided]);
+    expect(await restore(OLD_UID)).toEqual([voided]);
+    // Repetir el job no cambia nada; una anulada no se vuelve a reasignar.
+    expect(await runJob()).toMatchObject({ voided: 0 });
+    expect((await call(OTHER_UID)).status).toBe(409);
+  });
+
+  it('varias reasignaciones y vuelta al comprador: cada UID anterior ve la anulación una sola vez', async () => {
+    seed();
+    const MID = 'MidUid0000000000000000000000';
+    expect((await call(UID)).body.status).toBe('duplicate'); // OLD → UID (sombra 1 de OLD)
+    now += REASSIGN_COOLDOWN_S * 1000;
+    expect((await call(MID)).body.status).toBe('duplicate'); // UID → MID (sombra 2 de UID)
+    expect((await call(OLD_UID)).body.status).toBe('duplicate'); // MID → OLD, el comprador (sombra 3 de MID)
+    expect(row()!.shadow_keys).toEqual([1, 2, 3].map((k) => shadowKeyOf(TH, k)));
+    // OLD tiene la principal y una sombra: sale una vez, como ok.
+    expect(await restore(OLD_UID)).toEqual([{ token_hash: TH, sku: 'af_noads', state: 'ok', ts: NOW - 10 * DAY }]);
+    play.voided = { items: [{ purchaseToken: TOKEN, voidedTimeMs: now }] };
+    await runJob();
+    for (const u of [OLD_UID, UID, MID]) expect(await restore(u), u).toEqual([expect.objectContaining({ token_hash: TH, state: 'voided' })]);
+  });
+
+  it('deleteAccount anonimiza también las sombras del UID borrado', async () => {
     seed();
     await call(UID);
-    const byUid = (u: string) => db.items(TABLES.AF_TABLE_PURCHASES).filter((it) => it.uid === u);
-    expect(byUid(UID)).toHaveLength(1);
-    expect(byUid(OLD_UID)).toHaveLength(0);
+    const out = res(
+      await deleteHandler(() => ({
+        ddb: db.client,
+        firebase: { deleteUser: () => Promise.resolve({ existed: true }) } satisfies FirebaseAdmin,
+        integrity: okIntegrity,
+        env: { ...TABLES, AF_ENV: 'dev' },
+        now: () => now,
+        random: (k: number) => Buffer.alloc(k, 7),
+      }))(httpEvent({ routeKey: 'POST /v1/account/delete', body: { confirm: true }, uid: OLD_UID, headers: { 'x-firebase-appcheck': 'del1' } })),
+    );
+    expect(out.status).toBe(200);
+    expect(shadow(1)).not.toHaveProperty('uid');
+    expect(shadow(1)).toMatchObject({ shadow_of: TH, anonymized_at: now });
+    expect(row()).toMatchObject({ uid: UID });
   });
 
   it('los logs no llevan UID ni token', async () => {

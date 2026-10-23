@@ -60,35 +60,90 @@ type TxItem = {
   ConditionCheck?: { TableName: string; Key: Item; ConditionExpression: string; ExpressionAttributeValues?: Item };
 };
 
-/**
- * Conjunción de condiciones sobre el ítem (la reasignación de Q-IAP-4): cada término es `attribute_not_exists(x)`
- * o `x = :v`, con `x` un atributo o un alias `#n`. El ítem debe existir.
- */
-function andConditionHolds(cond: string, cur: Item | undefined, names: Record<string, string> | undefined, values: Item | undefined): boolean {
-  if (!cur) return false;
-  const attr = (x: string): string => (x.startsWith('#') ? (names?.[x] ?? x) : x);
-  return cond.split(' AND ').every((term) => {
-    const ne = /^attribute_not_exists\(([#a-z_]+)\)$/.exec(term);
-    if (ne) return cur[attr(ne[1])] === undefined;
-    const eq = /^([#a-z_]+) = (:[a-z0-9_]+)$/.exec(term);
-    if (eq) return cur[attr(eq[1])] === values?.[eq[2]];
-    throw new Error(`Término no soportado en MemDb: ${term}`);
-  });
+type Names = Record<string, string> | undefined;
+
+const attrName = (x: string, names: Names): string => (x.startsWith('#') ? (names?.[x] ?? x) : x);
+
+/** Parte `s` por las comas que no están dentro de paréntesis. */
+function splitTop(s: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let cur = '';
+  for (const ch of s) {
+    if (ch === '(') depth++;
+    if (ch === ')') depth--;
+    if (ch === ',' && depth === 0) {
+      out.push(cur.trim());
+      cur = '';
+    } else cur += ch;
+  }
+  if (cur.trim() !== '') out.push(cur.trim());
+  return out;
 }
 
-/** Las condiciones que usan las transacciones de las Lambdas (y solo esas). */
-function txConditionHolds(
-  cond: string | undefined,
-  cur: Item | undefined,
-  values: Item | undefined,
-  names?: Record<string, string>,
-): boolean {
+/**
+ * Condiciones de DynamoDB que usan las Lambdas en transacciones: `OR` de `AND` de términos `attribute_exists(x)`,
+ * `attribute_not_exists(x)` y `x <op> :v` (=, <>, <, <=), con `x` un atributo o un alias `#n`. Un ítem que no
+ * existe no tiene atributos. Lo que no entiende, lanza (el test falla en vez de aprobar por error).
+ */
+function conditionHolds(cond: string | undefined, cur: Item | undefined, names: Names, values: Item | undefined): boolean {
   if (cond === undefined) return true;
-  if (cond === 'attribute_not_exists(#k) OR #t <= :now') return !cur || Number(cur.ttl) <= Number(values?.[':now']);
-  if (cond === 'token_hash = :th') return cur?.token_hash === values?.[':th'];
-  if (cond.includes(' AND ') && !cond.includes(' OR ')) return andConditionHolds(cond, cur, names, values);
-  if (/^attribute_not_exists\([#a-z_]+\)$/.test(cond)) return !cur;
-  throw new Error(`Condición no soportada en MemDb: ${cond}`);
+  const it = cur ?? {};
+  const term = (t: string): boolean => {
+    const fn = /^(attribute_exists|attribute_not_exists)\(([#A-Za-z_]+)\)$/.exec(t);
+    if (fn) return (it[attrName(fn[2], names)] !== undefined) === (fn[1] === 'attribute_exists');
+    const cmp = /^([#A-Za-z_]+) (=|<>|<=|<) (:[A-Za-z0-9_]+)$/.exec(t);
+    if (!cmp) throw new Error(`Término no soportado en MemDb: ${t}`);
+    const a = it[attrName(cmp[1], names)];
+    const b = values?.[cmp[3]];
+    if (cmp[2] === '=') return a === b;
+    if (cmp[2] === '<>') return a !== b;
+    if (a === undefined) return false;
+    return cmp[2] === '<' ? Number(a) < Number(b) : Number(a) <= Number(b);
+  };
+  return cond.split(' OR ').some((alt) => alt.split(' AND ').every((t) => term(t.trim())));
+}
+
+/**
+ * Aplica una UpdateExpression (SET, ADD, REMOVE) a una copia del ítem: valores `:v`, `if_not_exists(x, :v)` y
+ * `list_append(a, b)`. Lo que no entiende, lanza.
+ */
+function applyUpdate(cur: Item, expr: string, names: Names, values: Item | undefined): Item {
+  const next: Item = structuredClone(cur);
+  const value = (raw: string): unknown => {
+    const v = raw.trim();
+    if (v.startsWith(':')) {
+      if (!(v in (values ?? {}))) throw new Error(`Valor sin definir: ${v}`);
+      return values?.[v];
+    }
+    const call = /^(if_not_exists|list_append)\((.*)\)$/.exec(v);
+    if (call) {
+      const [a, b] = splitTop(call[2]);
+      if (call[1] === 'if_not_exists') {
+        const x = next[attrName(a, names)];
+        return x !== undefined ? x : value(b);
+      }
+      return [...(value(a) as unknown[]), ...(value(b) as unknown[])];
+    }
+    if (/^[#A-Za-z_]+$/.test(v)) return next[attrName(v, names)];
+    throw new Error(`Valor no soportado en MemDb: ${v}`);
+  };
+  const marks = [...expr.matchAll(/\b(SET|ADD|REMOVE)\s+/g)];
+  if (marks.length === 0 || marks[0].index !== 0) throw new Error(`UpdateExpression no soportada en MemDb: ${expr}`);
+  marks.forEach((m, i) => {
+    const body = expr.slice(m.index + m[0].length, i + 1 < marks.length ? marks[i + 1].index : undefined);
+    for (const clause of splitTop(body)) {
+      if (m[1] === 'REMOVE') delete next[attrName(clause, names)];
+      else if (m[1] === 'ADD') {
+        const [path, v] = clause.split(/\s+/);
+        next[attrName(path, names)] = Number(next[attrName(path, names)] ?? 0) + Number(value(v));
+      } else {
+        const eq = clause.indexOf('=');
+        next[attrName(clause.slice(0, eq).trim(), names)] = value(clause.slice(eq + 1));
+      }
+    }
+  });
+  return next;
 }
 
 /**
@@ -221,31 +276,19 @@ export class MemDb {
         if (seen.has(id)) throw Object.assign(new Error(`Dos operaciones sobre ${id}`), { name: 'ValidationException' });
         seen.add(id);
         const names = (op as { ExpressionAttributeNames?: Record<string, string> }).ExpressionAttributeNames;
-        return txConditionHolds(op.ConditionExpression, this.get(op.TableName, key), op.ExpressionAttributeValues, names)
+        return conditionHolds(op.ConditionExpression, this.get(op.TableName, key), names, op.ExpressionAttributeValues)
           ? 'None'
           : 'ConditionalCheckFailed';
       });
       if (codes.some((c) => c !== 'None')) throw transactionCanceled(codes);
       for (const it of i.TransactItems) {
         if (it.Put) this.put(it.Put.TableName, it.Put.Item);
-        if (it.Update?.UpdateExpression.startsWith('SET #u = :new, reassign_seq = :seq1, ')) {
-          // Reasignación de Q-IAP-4: nuevo dueño, secuencia, historial y, si cuenta, contador y marca temporal.
-          const v = it.Update.ExpressionAttributeValues ?? {};
-          const cur = { ...(this.get(it.Update.TableName, it.Update.Key) ?? {}) };
-          const next: Item = {
-            ...cur,
-            uid: v[':new'],
-            reassign_seq: v[':seq1'],
-            reassign_log: [...((cur.reassign_log as unknown[] | undefined) ?? []), ...(v[':entry'] as unknown[])],
-          };
-          if (':cnt' in v) next.reassign_count = v[':cnt'];
-          if (':at' in v) next.reassigned_at = v[':at'];
-          this.put(it.Update.TableName, next);
-        } else if (it.Update) {
-          if (it.Update.UpdateExpression !== 'REMOVE #t SET created_at = :now') throw new Error(`Update de transacción no soportado: ${it.Update.UpdateExpression}`);
-          const cur = { ...(this.get(it.Update.TableName, it.Update.Key) ?? {}) };
-          delete cur.ttl;
-          this.put(it.Update.TableName, { ...cur, created_at: it.Update.ExpressionAttributeValues?.[':now'] });
+        if (it.Update) {
+          // Cualquier UpdateExpression que entienda applyUpdate (reasignación de Q-IAP-4, cupos, marca `once`).
+          const u = it.Update;
+          const pk = PK[u.TableName];
+          const cur = this.get(u.TableName, u.Key) ?? { [pk]: u.Key[pk] };
+          this.put(u.TableName, applyUpdate(cur, u.UpdateExpression, u.ExpressionAttributeNames, u.ExpressionAttributeValues));
         }
       }
       return Promise.resolve({});
