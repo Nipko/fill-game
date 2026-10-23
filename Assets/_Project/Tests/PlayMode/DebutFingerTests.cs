@@ -542,7 +542,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator HojaDebutWithoutALeafOnTheBoard_HasNoFinger()
         {
-            // Lo que deja un nivel con el estreno de la Hoja y sin hoja en el tablero (mech_enabled.hoja apagada): el 42 del
+            // Lo que deja un nivel con el estreno de la Hoja y sin hoja en el tablero (mech_enabled_hoja apagada): el 42 del
             // paquete del mundo 3 con intro_mechanic «hoja».
             string json = WithIntroMechanic(ReadPack("Assets/_Project/Data/Levels/mundo_03_v1.json"), HojaLevel - 1, "hoja");
             yield return LoadDebutWithoutItsMechanic(json, HojaLevel - 1);
@@ -557,7 +557,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator TinajaDebutWithoutThePair_HasNoFinger()
         {
-            // Lo que deja un nivel con el estreno de la Tinaja y sin la pareja colgada (mech_enabled.tinaja apagada): el 322 del
+            // Lo que deja un nivel con el estreno de la Tinaja y sin la pareja colgada (mech_enabled_tinaja apagada): el 322 del
             // paquete de la «a» con intro_mechanic «tinaja».
             int level = TinajaTutorial.DebutLevel - 1;
             string json = WithIntroMechanic(Tinaja323EndToEndTests.VariantAPackJson(), level, TinajaTutorial.IntroMechanic);

@@ -36,7 +36,7 @@ Formato `af-rc-defaults/1` [P]: `{"format", "source", "generator", "params": {cl
 "pending_templates"}`, con las claves en el orden de 08 §9, 2 espacios, UTF-8 sin BOM y LF (`.claude/rules/data-json.md`).
 Tipos: `int`, `float`, `bool`, `string`, `json` (`enum` → string; `map país→…` → json).
 
-Cómo se leen las filas: las claves son lo que va entre comillas invertidas en la primera celda (`x.{a,b}` → `x.a`, `x.b`;
+Cómo se leen las filas: las claves son lo que va entre comillas invertidas en la primera celda (`x_{a,b}` → `x_a`, `x_b`, y `x.{a,b}` → `x.a`, `x.b`;
 `x_<s>` (`a`, `b`) → `x_a`, `x_b`; `_trail` sustituye el último tramo de la clave anterior); tipos y defaults se reparten por
 « / »; del default se quitan negritas, comillas y un comentario final entre paréntesis («false (1.1: true)» → false).
 
@@ -49,7 +49,7 @@ esa celda, el generador falla y pide revisarla, en vez de adivinar.
 | `biz_legal_profile_by_country` | `{"BR":"br_lgpd_eca",…,"EEE":"ump","UK":"ump","CH":"ump","*":"default"}` | idem; `EEE`, `UK` y `CH` tal cual los escribe 08 [P] |
 | `biz_ua_paid_enabled_by_country` / `biz_ua_test_active`: «todos false / false» | `{"*":false}` / `false` | idem |
 | `biz_kpi_targets` / `biz_kpi_alert_thresholds`: «01 §KPIs / 09 tabla 6.1» | `null` + `pending` | remiten a otra tabla (Q-B7-6) |
-| `mech_debut_level.{…}`: «chica 14, alta 27, …» | un int por mecánica | lista «etiqueta valor» |
+| `mech_debut_level_{…}`: «chica 14, alta 27, …» | un int por mecánica | lista «etiqueta valor» |
 | `ads_rv_cap_<placement>`: «double_harvest 5 · undo_refill 4 · …» | `ads_rv_cap_double_harvest` = 5… | los placements salen del default |
 | `ads_rv_cooldown_s_<placement>`: «60 (extra_canoe 90)» | 60 en los seis placements de la fila anterior; 90 en `extra_canoe` | [P] (Q-B7-5); coincide con `AdsConfig` |
 | `eco_calendar_table_v1`: «tabla 05 §2.3 (…)» | `null` + `pending` | Q-B7-6 |
@@ -248,23 +248,28 @@ tipos, que cada valor es el default de `RemoteConfigDefaults.json`, que no hay c
 la API. Cada vez que cambie 08 §9 se regeneran las dos (con `rc_defaults.py`) y se vuelven a publicar (§9.4).
 
 - **Valores:** exactamente los defaults compilados, escritos como el cliente se los da a Firebase
-  (`FirebaseRemoteConfigBackend.DefaultsFor`): `int` y `float` → `NUMBER` (un float entero va sin «.0», como el «R» de .NET),
+  (`FirebaseRemoteConfigBackend.DefaultsFor`): `int` y `float` → `NUMBER` (un float entero va sin «.0», como el «R» de .NET, y
+  nunca con exponente: `0.00001`, no `1E-05`),
   `bool` → `BOOLEAN` (`true`/`false`), `string` (y `enum`) → `STRING`, `json` (y `map país→…`) → `JSON` compacto. El cliente
   trata un valor remoto igual al default como si no hubiera llegado: **publicar la plantilla no cambia el comportamiento**.
 - **Descripción:** «Rango 08 §9: <rango>. <uso>» de la fila, cortada a 256 caracteres. Es la chuleta para editar en la consola.
-- **Quedan fuera (226 de 252 parámetros van en la plantilla):**
-  - las 6 claves sin valor literal en 08 §9 (`biz_kpi_targets`, `biz_kpi_alert_thresholds`, `eco_calendar_table_v1`,
-    `eco_calendar_table_v2`, `league_prizes`, `regatta_prizes`; Q-B7-6): no hay valor que publicar;
-  - las 20 claves con punto (`mech_enabled.*` y `mech_debut_level.*`): Remote Config solo admite claves de letras inglesas,
-    cifras y «_» que empiezan por letra o «_». Siguen con su default compilado y **no se pueden cambiar desde la consola**
-    (tampoco el interruptor de corte de cada mecánica) hasta que 08 §9 les dé un nombre válido (pregunta Q-RC-1 del informe).
-  - La herramienta las nombra en cada ejecución.
+- **Quedan fuera (246 de 252 parámetros van en la plantilla)** las 6 claves sin valor literal en 08 §9 (`biz_kpi_targets`,
+  `biz_kpi_alert_thresholds`, `eco_calendar_table_v1`, `eco_calendar_table_v2`, `league_prizes`, `regatta_prizes`; Q-B7-6):
+  no hay valor que publicar. La herramienta las nombra en cada ejecución.
+- **Nombres de clave:** Remote Config solo admite letras inglesas, cifras y «_», empezando por letra o «_», hasta 256
+  caracteres. Por eso D-043 renombró `mech_enabled.<id>` y `mech_debut_level.<id>` a `mech_enabled_<id>` y
+  `mech_debut_level_<id>`: los interruptores de corte de cada mecánica ya se pueden accionar desde la consola. Si 08 §9 volviera
+  a tener una clave no admitida, `rc_template.py` la dejaría fuera (y la nombraría), y el cliente tampoco se la daría a Firebase
+  (`FirebaseRemoteConfigBackend.IsValidKey`, el mismo criterio).
+- **Prueba cruzada:** `FirebaseRemoteConfigBackendTests` (EditMode) lee `remote_config_template_dev.json` y la compara, valor a
+  valor, con `DefaultsFor`.
 
 ### 9.2 Desarrollo (`fill-dev-e75a2`): importar en la consola
 
-1. Regenera y comprueba: `py -3.14 tools/remote-config/rc_template.py --check` («identico (226 parámetros; …)»).
-2. Consola de Firebase → proyecto `fill-dev-e75a2` → **Remote Config**. Si ya hay parámetros o condiciones, descarga antes una
-   copia: menú ⋮ → **Descargar el archivo de configuración actual** (*Download current config file*).
+1. Regenera y comprueba: `py -3.14 tools/remote-config/rc_template.py --check` («identico (246 parámetros; …)»).
+2. Consola de Firebase → proyecto `fill-dev-e75a2` → **Remote Config**. Descarga **siempre** antes una copia de lo publicado
+   (aunque creas que está vacío), y guárdala fuera del repositorio con la fecha: menú ⋮ → **Descargar el archivo de
+   configuración actual** (*Download current config file*).
 3. Menú ⋮ → **Publicar desde un archivo** (*Publish from a file*) → elige `tools/out/remote_config_template_dev.json` →
    revisa el resumen → **Publicar**. Ojo: **sustituye la plantilla entera**, incluidas las condiciones y los valores
    condicionales que hubiera en la consola.

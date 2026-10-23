@@ -12,7 +12,7 @@ namespace AF.UI
     /// <summary>
     /// La reserva del 20 % en el arranque (D-033, añadido «la reserva del 20 %», Q-B11-7 a; 03 §17; D-020, pregunta 31 b): los
     /// paquetes de reserva de la escena (<c>reserva_03_v1</c> … <c>reserva_09_v1</c>, <c>kind</c> = <c>reserve</c>) y las claves
-    /// de Remote Config del catálogo, <c>mech_enabled.*</c> y <c>level_overrides</c> (<see cref="RcLevelBinder"/>), que se leen
+    /// de Remote Config del catálogo, <c>mech_enabled_*</c> y <c>level_overrides</c> (<see cref="RcLevelBinder"/>), que se leen
     /// antes de crear el catálogo. Los tableros de reserva nunca son niveles de campaña: solo se buscan al resolver
     /// <c>level_overrides</c>, y solo si la tabla trae alguna entrada (sin entradas no se lee ningún paquete de reserva).
     /// </summary>
@@ -42,7 +42,7 @@ namespace AF.UI
             reserveLevelPacks = copy;
         }
 
-        // mech_enabled.* del catálogo: los defaults compilados (GameConfig) combinados con los de Remote Config (la sesión ya lo
+        // mech_enabled_* del catálogo: los defaults compilados (GameConfig) combinados con los de Remote Config (la sesión ya lo
         // tiene activado: SetUpRemoteConfig) y, en desarrollo, con af_mech_off.
         private MechanicSwitches ResolveCatalogSwitches()
         {

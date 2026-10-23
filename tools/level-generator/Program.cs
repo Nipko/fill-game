@@ -117,7 +117,7 @@ const string Usage = """
     --reserve: la reserva del 20 % (D-033, anadido "la reserva del 20 %", Q-B11-7 a; 03 sec. 17; D-020, pregunta 31 b):
       por cada pack de campana publicado (de la especificacion --spec y su variante, la publicada por defecto), un pack
       <carpeta>/reserva_{mm}_v1.json (af-level/1, kind reserve, pack_schema 4) con, para los niveles que usan una mecanica
-      con kill switch (mech_enabled.*, 08 sec. 9), otro tablero del mismo slot sin mecanicas, en la ventana del slot y con
+      con kill switch (mech_enabled_*, 08 sec. 9), otro tablero del mismo slot sin mecanicas, en la ventana del slot y con
       alivio desde el 31, hasta el 20 % de los niveles del mundo, en el orden por rondas de los kill switches de 08 sec. 9
       (cada mecanica toma su primer nivel aun sin elegir). Ids m{mm}_v1_n{nnnn}_r1, semillas amazonfill:v1:m{mm}:v1:n{nnnn}:r1
       y replaces = el id del slot. Un mundo sin mecanicas con kill switch no tiene pack. Con --check no escribe: falla si

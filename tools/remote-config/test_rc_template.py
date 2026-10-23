@@ -134,16 +134,27 @@ class RcTemplateTests(unittest.TestCase):
         doc["parameters"]["mech_enabled.hoja"] = {"defaultValue": {"value": "true"}, "description": "", "valueType": "BOOLEAN"}
         doc["parameters"]["rc_schema"]["defaultValue"]["value"] = "1,5"
         doc["parameters"]["level_overrides"]["defaultValue"]["value"] = "{sin comillas: 1}"
+        doc["parameters"]["perf_sample_rate"]["defaultValue"]["value"] = "5e-2"
         doc["version"] = {"versionNumber": "1"}
         found = rc_template.problems(doc)
-        self.assertEqual(len(found), 4, found)
-        self.assertTrue(any(re.search("mech_enabled.hoja", f) for f in found))
+        self.assertEqual(len(found), 5, found)
+        self.assertTrue(any(re.search(r"mech_enabled\.hoja", f) for f in found))
 
-    def test_dotted_keys_are_the_only_invalid_ones(self):
+    def test_d043_every_key_is_valid_for_firebase(self):
+        # D-043: las claves con punto pasaron a guion bajo; ya no queda ninguna fuera por el nombre.
         _, _, invalid = rc_template.generate(_gdd_text())
-        self.assertTrue(invalid)
-        for key in invalid:
-            self.assertRegex(key, r"^(mech_enabled|mech_debut_level)\.[a-z]+$")
+        self.assertEqual(invalid, [])
+        params = _template()["parameters"]
+        for mech in ("hoja", "matapi", "liana", "remolino", "barro", "lluvia", "brote", "pirana", "tinaja"):
+            self.assertEqual(params["mech_enabled_" + mech]["valueType"], "BOOLEAN", mech)
+            self.assertEqual(params["mech_debut_level_" + mech]["valueType"], "NUMBER", mech)
+        self.assertEqual(params["mech_debut_level_chica"]["defaultValue"]["value"], "14")
+        self.assertEqual(len(params), 246)
+
+    def test_numbers_never_use_an_exponent(self):
+        for key, p in _template()["parameters"].items():
+            if p["valueType"] == "NUMBER":
+                self.assertNotRegex(p["defaultValue"]["value"], "[eE]", key)
 
 
 if __name__ == "__main__":

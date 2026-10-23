@@ -43,7 +43,7 @@ namespace AF.Levels
     /// <para><see cref="LevelOffset"/> (solo builds de desarrollo, extra <c>af_level_offset</c> [P], tarea B1-5) desplaza el
     /// número de campaña: con 30, el nivel 31 se juega con el tablero del nivel 1 del paquete. Sirve para probar las
     /// compuertas de 11, 22 y 31 con los tableros del tutorial. En producción vale 0.</para>
-    /// <para>Kill switch de mecánicas (tarea KS1; D-020, pregunta 31 b; 08 §2.2 y §9): con <c>mech_enabled.&lt;id&gt;</c> =
+    /// <para>Kill switch de mecánicas (tarea KS1; D-020, pregunta 31 b; 08 §2.2 y §9): con <c>mech_enabled_&lt;id&gt;</c> =
     /// false (<see cref="MechanicSwitches"/>), un nivel cuyo tablero base usa esa mecánica se sustituye al crear el catálogo por
     /// su entrada de <see cref="LevelOverrides"/> (<c>level_overrides</c>), si la hay y no usa a su vez una mecánica apagada. Si
     /// no la hay, se sirve el publicado y, la primera vez que se carga (<see cref="Serve"/>), se escribe un aviso [P]: el

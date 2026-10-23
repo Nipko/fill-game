@@ -267,6 +267,146 @@
       "description": "Rango 08 §9: 5-12. Confirmación de Volver a la orilla y umbral de fallo blando",
       "valueType": "NUMBER"
     },
+    "mech_enabled_hoja": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_matapi": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_liana": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_remolino": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_barro": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_lluvia": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_brote": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_pirana": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_enabled_tinaja": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Kill switch por mecánica (D-007 añade matapi; D-019, tinaja). En la 1.0, con false, los niveles que la usan se sustituyen con level_overrides, y el formato de respaldo por slot se fija con el build de la 1.1 (02 §9.2, regla 3; pregunta 31…",
+      "valueType": "BOOLEAN"
+    },
+    "mech_debut_level_chica": {
+      "defaultValue": {
+        "value": "14"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_alta": {
+      "defaultValue": {
+        "value": "27"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_hoja": {
+      "defaultValue": {
+        "value": "43"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_matapi": {
+      "defaultValue": {
+        "value": "63"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_liana": {
+      "defaultValue": {
+        "value": "83"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_remolino": {
+      "defaultValue": {
+        "value": "103"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_barro": {
+      "defaultValue": {
+        "value": "123"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_lluvia": {
+      "defaultValue": {
+        "value": "143"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_brote": {
+      "defaultValue": {
+        "value": "163"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_pirana": {
+      "defaultValue": {
+        "value": "183"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
+    "mech_debut_level_tinaja": {
+      "defaultValue": {
+        "value": "323"
+      },
+      "description": "Rango 08 §9: —. Copia exacta de la lista única de 02 §9.1 (incidencia 1; contrato 1 con D-007 y D-019): 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 P…",
+      "valueType": "NUMBER"
+    },
     "lluvia_k_pours": {
       "defaultValue": {
         "value": "3"

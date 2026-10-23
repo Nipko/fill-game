@@ -792,7 +792,7 @@ los rechazos (también `--until` a mitad de ciclo o fuera de las especificacione
 
 ## La reserva del 20 % (`--reserve`; D-033, añadido «la reserva del 20 %», Q-B11-7 (a))
 
-El seguro del kill switch `mech_enabled.<id>` (08 §9; D-020, pregunta 31 b) desde la 1.0: un pack de reserva por mundo
+El seguro del kill switch `mech_enabled_<id>` (08 §9; D-020, pregunta 31 b) desde la 1.0: un pack de reserva por mundo
 (`reserva_{mm}_v1.json`, `kind` = `reserve`, `pack_schema` 4; 03 §10 y §17; 08 §4.1) con, para los niveles del pack de campaña
 publicado que usan una mecánica con kill switch, otro tablero del mismo slot sin mecánicas, en la ventana del slot, con
 `replaces` = el id del slot, id `m{mm}_v1_n{nnnn}_r1` y semilla `amazonfill:v1:m{mm}:v1:n{nnnn}:r1`. El cliente solo los usa

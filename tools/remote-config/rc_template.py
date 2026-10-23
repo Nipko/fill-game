@@ -15,14 +15,16 @@ proyecto tenga el suyo y un valor por entorno, si algún día 08 §9 lo pide, no
 
 Cada valor es el default compilado escrito como lo escribe el cliente al dárselo a Firebase
 (FirebaseRemoteConfigBackend.DefaultsFor → RcValue.ToRemoteString): publicar la plantilla no cambia el comportamiento.
-- int → NUMBER en decimal; float → NUMBER con el formato «R» de .NET (1.0 → "1", 0.05 → "0.05"); bool → BOOLEAN
+- int → NUMBER en decimal; float → NUMBER con el formato «R» de .NET (1.0 → "1", 0.05 → "0.05"), pero siempre en
+  notación posicional, sin exponente (1e-05 → "0.00001"; .NET daría "1E-05": el mismo número); bool → BOOLEAN
   "true"/"false"; string → STRING tal cual; json → JSON compacto, sin espacios y con el orden de 08 §9.
 - No van (y el script dice cuáles):
   - las claves sin valor literal en 08 §9 ("default": null y "pending" en RemoteConfigDefaults.json): no hay valor que
     publicar, y el cliente tampoco se las da a Firebase como default;
   - las claves que Remote Config no admite: Firebase solo acepta claves de letras inglesas, cifras y «_», que empiezan por
-    letra o «_», de hasta 256 caracteres; las `mech_enabled.*` y `mech_debut_level.*` de 08 §9 llevan un punto. Siguen con
-    su default compilado y no se pueden cambiar desde la consola hasta que 08 §9 les dé un nombre válido.
+    letra o «_», de hasta 256 caracteres. Desde D-043 (las `mech_enabled.*` y `mech_debut_level.*` pasaron a
+    `mech_enabled_*` y `mech_debut_level_*`) no hay ninguna; el cliente aplica el mismo criterio
+    (FirebaseRemoteConfigBackend.IsValidKey).
 - La descripción es «Rango 08 §9: <rango>. <uso>» de la fila, sin marcas de Markdown y cortada a 256 caracteres.
 
 Uso (desde la raíz del repositorio):
@@ -38,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from decimal import Decimal
 import re
 import sys
 from pathlib import Path
@@ -80,10 +83,14 @@ def remote_string(type_: str, value) -> str:
         f = float(value)
         if f != f or f in (float("inf"), float("-inf")):
             raise ValueError("float no finito: %r" % (value,))
-        # .NET «R» (Number.ToString("R")) da el redondeo más corto, como repr, pero sin «.0» en los enteros.
-        if f.is_integer() and abs(f) < 1e15:
+        # .NET «R» (Number.ToString("R")) da el redondeo más corto, como repr, pero sin «.0» en los enteros. Sin exponente
+        # nunca: los mismos dígitos en notación posicional (Remote Config y la consola, mejor sin «e»).
+        if f.is_integer():
             return str(int(f))
-        return repr(f)
+        text = repr(f)
+        if "e" in text or "E" in text:
+            text = format(Decimal(text), "f")
+        return text
     if type_ == "bool":
         if not isinstance(value, bool):
             raise ValueError("bool esperado: %r" % (value,))
@@ -161,7 +168,7 @@ def problems(template) -> list:
         total += len(v)
         if len(p["description"]) > MAX_DESCRIPTION_LEN:
             out.append("%s: descripción de %d caracteres" % (key, len(p["description"])))
-        if t == "NUMBER" and not re.fullmatch(r"-?\d+(\.\d+)?([eE][-+]?\d+)?", v):
+        if t == "NUMBER" and not re.fullmatch(r"-?\d+(\.\d+)?", v):
             out.append("%s: «%s» no es un NUMBER" % (key, v))
         elif t == "BOOLEAN" and v not in ("true", "false"):
             out.append("%s: «%s» no es un BOOLEAN" % (key, v))
@@ -201,6 +208,8 @@ def self_test(gdd_path: Path = rc_defaults.GDD_08) -> int:
     check("int", remote_string("int", 300) == "300")
     check("float entero como .NET R", remote_string("float", 1.0) == "1" and remote_string("float", 2.0) == "2")
     check("float decimal", remote_string("float", 0.05) == "0.05" and remote_string("float", 0.4) == "0.4")
+    check("float sin exponente", remote_string("float", 1e-05) == "0.00001" and remote_string("float", 1e20) == "100000000000000000000"
+          and remote_string("float", 1.5e-7) == "0.00000015")
     check("bool", remote_string("bool", False) == "false")
     check("cadena vacía", remote_string("string", "") == "")
     check("json compacto", remote_string("json", {"a": [1, 2.5], "b": "ñ"}) == '{"a":[1,2.5],"b":"ñ"}')
@@ -221,8 +230,9 @@ def self_test(gdd_path: Path = rc_defaults.GDD_08) -> int:
         "n": {"defaultValue": {"value": "uno"}, "description": "", "valueType": "NUMBER"},
         "j": {"defaultValue": {"value": "{"}, "description": "", "valueType": "JSON"},
         "b": {"defaultValue": {"value": "True"}, "description": "", "valueType": "BOOLEAN"},
+        "e": {"defaultValue": {"value": "1e-05"}, "description": "", "valueType": "NUMBER"},
     }, "parameterGroups": {}}
-    check("problemas detectados", len(problems(bad)) == 4)
+    check("problemas detectados (también el exponente)", len(problems(bad)) == 5)
 
     texts, pending, invalid = generate(gdd_path.read_text(encoding="utf-8"))
     check("dev = prod", texts["dev"] == texts["prod"])
@@ -232,7 +242,8 @@ def self_test(gdd_path: Path = rc_defaults.GDD_08) -> int:
     check("rc_schema primero", next(iter(params)) == "rc_schema")
     check("extra_canoe 90", params.get("ads_rv_cooldown_s_extra_canoe", {}).get("defaultValue") == {"value": "90"})
     check("pendientes fuera", "eco_calendar_table_v1" in pending and "eco_calendar_table_v1" not in params)
-    check("claves con punto fuera", "mech_enabled.hoja" in invalid and not any("." in k for k in params))
+    check("D-043: sin claves no admitidas", invalid == [] and "mech_enabled_hoja" in params
+          and params["mech_debut_level_tinaja"]["defaultValue"] == {"value": "323"})
     check("LF y salto final", "\r" not in texts["dev"] and texts["dev"].endswith("}\n"))
 
     if failures:
