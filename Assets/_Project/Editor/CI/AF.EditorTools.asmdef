@@ -6,7 +6,8 @@
     "AF.Presentation",
     "AF.Localization",
     "AF.Audio",
-    "AF.Audio.Unity"
+    "AF.Audio.Unity",
+    "AF.Ads.Max.Editor"
   ],
   "includePlatforms": [
     "Editor"
