@@ -24,7 +24,12 @@ Los fija `AF.Ads.Max.Editor.MaxProjectSetup.Apply` (menú «Amazon Fill/CI/Aplic
 
 ## 3. Clave del SDK y unidades de anuncio (fuera del repositorio)
 
-Regla dura 5. Las pone el build, no el código ni el repositorio:
+Regla dura 5. Las pone el build, no el código ni el repositorio. **La clave nunca se escribe en el Integration Manager de AppLovin** (ni en `AppLovinSettings.asset`): ese archivo está versionado. Lo vigilan:
+
+- `MaxProjectSetup.CheckForBuild`, que llaman `BuildDev` y `BuildRelease` antes de construir: si `AppLovinSettings.asset` lleva una `sdkKey` o el Quality Service encendido, el build se para con el código 2 («ajustes distintos de los fijados»), sin escribir la clave en el log;
+- los tests EditMode `MaxProjectSetupTests` (`MaxProjectSetup.Validate()` es null; el `.asset` versionado tiene `sdkKey` vacía y `qualityServiceEnabled: 0`).
+
+Dónde va la clave:
 
 - **Local:** `Assets/_LocalSecrets/applovin-max.json` (carpeta ignorada por git, como `google-services.json`), que coloca el dueño:
   ```json
@@ -34,7 +39,7 @@ Regla dura 5. Las pone el build, no el código ni el repositorio:
 - `MaxBuildConfig` (`IPostGenerateGradleAndroidProject`, después del de AppLovin) escribe la clave en `res/raw/applovin_settings.json` del proyecto de Gradle y las unidades en `res/values/af_max_config.xml` (`af_max_configured`, `af_max_rewarded_unit`, `af_max_interstitial_unit`). Nunca las escribe en el log.
 - Una unidad de recompensados para las seis ubicaciones `rv_*` y una de intersticiales para `interstitial_post_level`: el ID de la ubicación del juego va como `placement` de MAX.
 
-**Sin configuración:** el build de desarrollo y el editor siguen con los anuncios simulados (`FakeAdService`, D-008); un release, sin anuncios (`UnavailableAdService`: los botones de video se ocultan y no hay intersticial). El arranque escribe en logcat `[AF.Ads] proveedor: max|not_configured|config_unreadable`.
+**Sin configuración:** el build de desarrollo y el editor siguen con los anuncios simulados (`FakeAdService`, D-008); un release, sin anuncios (`UnavailableAdService`: los botones de video se ocultan y no hay intersticial). La decisión es la función pura `MaxAdProvider.Choose`, probada en `AdProviderChoiceTests`. El arranque escribe en logcat `[AF.Ads] proveedor: max|not_configured|config_unreadable`.
 
 ## 4. Código
 
@@ -54,19 +59,22 @@ Las reglas de cadencia, topes y cooldowns siguen en `AdPolicy` (05 §6; 08 §9).
 |---|---|
 | Sin decisión (pantalla de edad o de consentimiento abierta, textos nuevos, otro perfil legal) | Nada: ni `InitializeSdk` ni ninguna otra llamada |
 | `<13` (en el arranque o al corregir la edad) | Nunca se inicia. Con la banda guardada, el arranque se para en `BlockedAtBoot` antes de crear los anuncios. Si se corrige a `<13` con MAX ya iniciado, `SetHasUserConsent(false)`, `SetDoNotSell(true)` y no se carga ni se muestra nada más (la escena se recarga bloqueada) |
-| 13-17 | `SetHasUserConsent(false)` y `SetDoNotSell(true)` **antes** de `InitializeSdk` (`npa`), también en el EEE con `biz_under18_no_personalization` |
+| 13-17 fuera del EEE/UK/CH | `SetHasUserConsent(false)` y `SetDoNotSell(true)` **antes** de `InitializeSdk` (`npa`, con `biz_under18_no_personalization`) |
+| 13-17 con el perfil `ump` (EEE, Reino Unido, Suiza) | **MAX no se inicia** (Q-MAX-6 (b), recomendada provisional hasta que hablen el dueño y el abogado): la automatización de UMP enseñaría su mensaje de consentimiento a un menor. También con `biz_under18_no_personalization` apagado, que por lo demás trataría a 13-17 como 18+ y le aplicaría el perfil `ump`. Si la edad se corrige a 13-17 con MAX ya iniciado, `npa` y ningún anuncio más |
 | 18+ que acepta «Anuncios personalizados» | `SetHasUserConsent(true)`, `SetDoNotSell(false)` y después `InitializeSdk` |
 | 18+ que no acepta o sin país | `SetHasUserConsent(false)`, `SetDoNotSell(true)` |
 | Perfil `ump` (EEE, Reino Unido, Suiza) con 18+ | No se fijan: `InitializeSdk` enseña el mensaje de UMP (automatización de MAX) y sus cadenas TCF v2 deciden. Ajustes › Privacidad › opciones de anuncios llama a `MaxSdk.CmpService.ShowCmpForExistingUser` |
 
 - **Contenido G (D-029):** MAX 13 no tiene API para el contenido máximo. Se fija en las consolas: en AdMob, «Contenido máximo de los anuncios» = G para la app; en el resto de redes, su equivalente (acción del dueño, [NV] por red). Vale para todas las bandas.
 - **TFCD:** MAX 13 quitó `SetIsAgeRestrictedUser`; con `<13` simplemente no se inicia [NV].
-- **Riesgo:** con el perfil `ump` y 13-17, UMP enseña su mensaje al iniciar aunque el juego fuerce `npa` (no se puede apagar por usuario: la automatización es del build).
+- **Por qué Q-MAX-6 (b):** con el perfil `ump` y 13-17, UMP enseñaría su mensaje al iniciar aunque el juego forzara `npa` (no se puede apagar por usuario: la automatización es del build). Hasta la decisión, esos jugadores no ven anuncios (los botones de video se ocultan).
 
 ## 6. SSV y concesión (08 §10.2; D-035)
 
 - Antes de cada recompensado: `SetUserId(UID)` con el UID de Firebase Auth anónimo si existe (`FirebaseAuthUid.Current`; sin Firebase, no se manda y el SSV no podrá confirmar) y `ShowRewardedAd(unidad, placement, custom_data)` con `custom_data = placement|nonce` (UUID v4 en minúsculas; el contrato `infra/contracts/v1/rewarded-ssv` y `parseSsvQuery`).
 - `AdOutcome.Rewarded` sale con `OnAdReceivedRewardEvent` al cerrar el anuncio: es la **concesión provisional** de 08 §10.2, como la del simulado. El servidor la confirma con `/v1/ssv` y `restoreLedger`.
+- **Orden de los callbacks:** si `OnAdReceivedRewardEvent` llega después de `OnAdHiddenEvent`, se espera `MaxAdService.RewardGrace` (1,5 s [P]); sin recompensa, `Skipped`. Un `Hidden` repetido o una recompensa tras el cierre no conceden dos veces. Al volver de segundo plano con un anuncio aún pendiente, si MAX no avisa en `ResumeGrace` (3 s [P]), se suelta (con la recompensa solo si llegó). Los márgenes corren en `GameBootstrap.TickAds`, cada fotograma, sin asignaciones mientras no toca.
+- **`SetUserId` es global en MAX:** desde el primer recompensado, el UID acompaña a todas las peticiones de MAX, no solo al SSV [NV: qué envía AppLovin en cada petición; lo revisa el abogado]. Está así en la web y en 08 §13.3.
 - **Pendiente (F3-4, `unity-gameplay-dev`):** registrar cada concesión con su nonce (`LocalRevocation.RegisterProvisional`, que hoy nadie llama) para que `restoreLedger` la confirme o la revoque a las 24 h. Se activa cuando el SSV esté configurado en el panel de MAX; si no, todo se revocaría. `MaxAdService.LastRewardNonce` y `LastRewardPlacement` dan el nonce de la última concesión.
 - El dueño configura en el panel de MAX la URL S2S de `/v1/ssv` y la clave en Secrets Manager (`AF_SECRET_MAX_SSV`; `infra/README.md`).
 
