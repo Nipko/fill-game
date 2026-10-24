@@ -83,6 +83,7 @@ namespace AF.UI
             DeleteDoneHoldMsOverride = null;
             AnalyticsResetOverride = null;
             ResetBackendOverrides();
+            ResetCloudSessionOverrides();
         }
 
         /// <summary>
@@ -148,7 +149,7 @@ namespace AF.UI
                 return false;
             }
 
-            _cloudSave ??= CloudSaveOverride ?? FakeCloudSave.WithoutSession();
+            EnsureCloudSession(); // D-042 (GameBootstrap.CloudSession.cs)
             _deleteAccountDialog = new DeleteAccountDialog(settings.OverlayRoot, _art, () => ContinueDeleteAccount(), () => ConfirmDeleteAccount(), () => CancelDeleteAccount());
             settings.DeleteAccountPressed = () => OpenDeleteAccount();
             ReportBootIntegrity();
@@ -359,6 +360,12 @@ namespace AF.UI
         private bool DeleteAccountData(out string? error)
         {
             error = null;
+
+            // D-042: la marca de borrado pendiente de la nube, antes de borrar nada (si la app se cierra a mitad, el arranque siguiente
+            // borra af_main igual); se vuelve a poner tras borrar PlayerPrefs, que la borra. Si el borrado local falla, vuelve a como estaba.
+            ICloudSaveFlags cloudFlags = EnsureCloudSession().Flags;
+            bool wasPending = cloudFlags.DeletePending;
+            cloudFlags.DeletePending = true;
             try
             {
                 if (FailAccountDeleteForTests)
@@ -379,11 +386,13 @@ namespace AF.UI
             catch (IOException e)
             {
                 error = e.Message;
+                cloudFlags.DeletePending = wasPending;
                 return false;
             }
             catch (UnauthorizedAccessException e)
             {
                 error = e.Message;
+                cloudFlags.DeletePending = wasPending;
                 return false;
             }
 
@@ -401,17 +410,16 @@ namespace AF.UI
 
             ResetAnalyticsData(); // F3-6 (08 §13.3): resetAnalyticsData() de Firebase, con un ID de instancia nuevo
 
-            ICloudSave? cloud = _cloudSave;
-            if (cloud != null && cloud.HasSession)
+            // D-042: la marca de borrado pendiente otra vez (PlayerPrefs.DeleteAll la borró), el borrado de af_main si hay sesión y la
+            // sesión de nube cerrada: nada más se sube. El arranque siguiente comprueba que el snapshot quedó vacío (CloudErase).
+            _cloudLateRemote = null;
+            EnsureCloudSession().EraseForAccountDelete(result =>
             {
-                cloud.Delete(result =>
+                if (result != CloudWriteResult.Ok && result != CloudWriteResult.NoSession)
                 {
-                    if (result != CloudWriteResult.Ok)
-                    {
-                        Debug.LogWarning(LogPrefix + "no se pudo borrar el snapshot " + CloudSaveNames.Snapshot + " de la nube: " + result);
-                    }
-                });
-            }
+                    Debug.LogWarning(LogPrefix + "no se pudo borrar el snapshot " + CloudSaveNames.Snapshot + " de la nube: " + result + " (se reintenta al arrancar)");
+                }
+            });
 
             return true;
         }
@@ -425,6 +433,7 @@ namespace AF.UI
             s_rebuildProfile = null;
             s_rebuildStore = null;
             s_rebuildReopenSettings = false;
+            s_rebuildCloud = null; // D-042: la primera ejecución empieza con una nube nueva (la marca de borrado pendiente sigue)
             if (!covered)
             {
                 _settingsScreen?.Hide();

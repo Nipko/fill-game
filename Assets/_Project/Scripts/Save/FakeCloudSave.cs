@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 
 namespace AF.Save
 {
@@ -7,10 +8,13 @@ namespace AF.Save
     /// <see cref="ICloudSave"/> en memoria, para el editor y los tests (08 §2.1 principio 6; bloque B8): sin red ni SDK. Guarda una
     /// copia de los bytes (no la referencia), responde en el acto y deja simular la falta de sesión (<see cref="HasSession"/>) y un
     /// fallo del servicio (<see cref="FailNext"/>). En la 1.0 sin Play Games el juego la usa sin sesión
-    /// (<see cref="WithoutSession"/>): nada sube ni baja.
+    /// (<see cref="WithoutSession"/>): nada sube ni baja. Con <see cref="Deferred"/>, las respuestas esperan a <see cref="Flush"/>,
+    /// como las de Play Games (D-042: el arranque y la fusión que llega tarde); <see cref="NeedsResync"/> simula la subida pendiente
+    /// de #3379.
     /// </summary>
-    public sealed class FakeCloudSave : ICloudSave
+    public sealed class FakeCloudSave : ICloudSave, ICloudResync
     {
+        private readonly List<Action> _pending = new List<Action>();
         private byte[]? _blob;
 
         /// <summary>Crea la nube con sesión y, si se da, con <paramref name="initial"/> ya subido.</summary>
@@ -44,6 +48,42 @@ namespace AF.Save
         /// <summary>Borrados hechos con éxito.</summary>
         public int DeleteCount { get; private set; }
 
+        /// <summary>Las respuestas no llegan en el acto: esperan a <see cref="Flush"/> (como la red).</summary>
+        public bool Deferred { get; set; }
+
+        /// <summary>Respuestas en espera (con <see cref="Deferred"/>).</summary>
+        public int PendingCalls => _pending.Count;
+
+        /// <inheritdoc />
+        /// <remarks>Una subida que sale bien lo apaga, como la real con red.</remarks>
+        public bool NeedsResync { get; set; }
+
+        /// <summary>Entrega las respuestas en espera, en orden (también las que pidan esas respuestas). Devuelve cuántas.</summary>
+        public int Flush()
+        {
+            int n = 0;
+            while (_pending.Count > 0)
+            {
+                Action next = _pending[0];
+                _pending.RemoveAt(0);
+                next();
+                n++;
+            }
+
+            return n;
+        }
+
+        private void Respond(Action action)
+        {
+            if (Deferred)
+            {
+                _pending.Add(action);
+                return;
+            }
+
+            action();
+        }
+
         /// <inheritdoc />
         public void Load(Action<CloudLoadResult> done)
         {
@@ -53,19 +93,22 @@ namespace AF.Save
             }
 
             LoadCount++;
-            if (!HasSession)
+            Respond(() =>
             {
-                done(new CloudLoadResult(CloudLoadStatus.NoSession));
-                return;
-            }
+                if (!HasSession)
+                {
+                    done(new CloudLoadResult(CloudLoadStatus.NoSession));
+                    return;
+                }
 
-            if (TakeFailure())
-            {
-                done(new CloudLoadResult(CloudLoadStatus.Failed, error: "fallo simulado"));
-                return;
-            }
+                if (TakeFailure())
+                {
+                    done(new CloudLoadResult(CloudLoadStatus.Failed, error: "fallo simulado"));
+                    return;
+                }
 
-            done(_blob == null ? new CloudLoadResult(CloudLoadStatus.NotFound) : new CloudLoadResult(CloudLoadStatus.Loaded, (byte[])_blob.Clone()));
+                done(_blob == null ? new CloudLoadResult(CloudLoadStatus.NotFound) : new CloudLoadResult(CloudLoadStatus.Loaded, (byte[])_blob.Clone()));
+            });
         }
 
         /// <inheritdoc />
@@ -81,27 +124,32 @@ namespace AF.Save
                 throw new ArgumentNullException(nameof(done));
             }
 
-            if (!HasSession)
+            byte[] copy = (byte[])blob.Clone();
+            Respond(() =>
             {
-                done(CloudWriteResult.NoSession);
-                return;
-            }
+                if (!HasSession)
+                {
+                    done(CloudWriteResult.NoSession);
+                    return;
+                }
 
-            if (TakeFailure())
-            {
-                done(CloudWriteResult.Failed);
-                return;
-            }
+                if (TakeFailure())
+                {
+                    done(CloudWriteResult.Failed);
+                    return;
+                }
 
-            if (blob.Length > CloudSaveNames.MaxBlobBytes)
-            {
-                done(CloudWriteResult.TooLarge);
-                return;
-            }
+                if (copy.Length > CloudSaveNames.MaxBlobBytes)
+                {
+                    done(CloudWriteResult.TooLarge);
+                    return;
+                }
 
-            _blob = (byte[])blob.Clone();
-            SaveCount++;
-            done(CloudWriteResult.Ok);
+                _blob = copy;
+                SaveCount++;
+                NeedsResync = false;
+                done(CloudWriteResult.Ok);
+            });
         }
 
         /// <inheritdoc />
@@ -112,21 +160,24 @@ namespace AF.Save
                 throw new ArgumentNullException(nameof(done));
             }
 
-            if (!HasSession)
+            Respond(() =>
             {
-                done(CloudWriteResult.NoSession);
-                return;
-            }
+                if (!HasSession)
+                {
+                    done(CloudWriteResult.NoSession);
+                    return;
+                }
 
-            if (TakeFailure())
-            {
-                done(CloudWriteResult.Failed);
-                return;
-            }
+                if (TakeFailure())
+                {
+                    done(CloudWriteResult.Failed);
+                    return;
+                }
 
-            _blob = null;
-            DeleteCount++;
-            done(CloudWriteResult.Ok);
+                _blob = null;
+                DeleteCount++;
+                done(CloudWriteResult.Ok);
+            });
         }
 
         private bool TakeFailure()
