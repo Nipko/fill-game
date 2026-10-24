@@ -188,7 +188,19 @@ namespace AF.UI
         private void ShowSkinToast(SkinUnlock unlock)
         {
             string name = UiText.SkinName(unlock.SkinId);
-            if (name.Length == 0 || _art == null)
+            if (name.Length == 0)
+            {
+                return;
+            }
+
+            ShowMetaToast(UiText.SkinEquippedToast(name));
+        }
+
+        // El aviso de arriba, en su lienzo (sobre el Mercado, las tarjetas de oferta y el nivel): el de skin o el de la tienda no
+        // disponible. Uno solo a la vez: el último sustituye al que estuviera a la vista.
+        private void ShowMetaToast(string text)
+        {
+            if (_art == null || text.Length == 0)
             {
                 return;
             }
@@ -200,9 +212,34 @@ namespace AF.UI
             }
 
             _metaCanvas.Measure();
-            string text = UiText.SkinEquippedToast(name);
             _skinToast!.Show(text, Mathf.Max(2500f, NoticeTiming.ReadMs(text)));
             PlaceSkinToast();
+        }
+
+        /// <summary>Veces que salió el aviso «Las compras no están disponibles ahora» tras una compra (tests).</summary>
+        internal int StoreUnavailableNoticeCount { get; private set; }
+
+        /// <summary>
+        /// Una compra acabó en <see cref="AF.IAP.PurchaseStatus.StoreUnavailable"/> (<see cref="UnavailableNoticeStoreService"/>): el
+        /// aviso breve «Las compras no están disponibles ahora» (<c>market_store_unavailable</c>) arriba, en lugar del silencio (prueba
+        /// del 2026-10-23, observación 1). Escribe <c>AF_STATE store_unavailable_notice</c>.
+        /// </summary>
+        private void ShowStoreUnavailableNotice()
+        {
+            if (AccountDeleted)
+            {
+                return;
+            }
+
+            StoreUnavailableNoticeCount++;
+            ShowMetaToast(MarketText.StoreUnavailable);
+            MarketProbe("store_unavailable_notice", null);
+        }
+
+        // Tienda: el aviso de la tienda no disponible tras una compra que no se pudo hacer.
+        private AF.IAP.IStoreService WrapNoticeStore(AF.IAP.IStoreService inner)
+        {
+            return new UnavailableNoticeStoreService(inner, ShowStoreUnavailableNotice);
         }
 
         private void PlaceSkinToast()

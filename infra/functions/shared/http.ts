@@ -13,6 +13,7 @@ export type ErrorCode =
   | 'token_belongs_to_other_user'
   | 'bad_signature'
   | 'code_not_found'
+  | 'country_unknown'
   | 'request_expired'
   | 'rate_limited'
   | 'not_implemented'

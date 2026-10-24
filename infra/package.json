@@ -10,10 +10,12 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p web/src/browser/tsconfig.json",
-    "test": "vitest run",
+    "test": "node tools/league-levels.ts --check && vitest run",
     "synth": "cdk synth",
     "web:build": "node web/build.ts",
-    "web:check": "node web/build.ts --check"
+    "web:check": "node web/build.ts --check",
+    "league:levels": "node tools/league-levels.ts",
+    "league:check": "node tools/league-levels.ts --check"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "3.1146.0",

@@ -81,10 +81,10 @@ describe.each([
     expect(apis[0][1].CorsConfiguration).toBeUndefined();
   });
 
-  it('5 Lambdas Node 24 arm64 con log group de 30 días', () => {
+  it('7 Lambdas Node 24 arm64 con log group de 30 días', () => {
     const fns = resourcesOfType(json, 'AWS::Lambda::Function');
     expect(fns.map(([, p]) => p.FunctionName).sort()).toEqual(
-      ['delete-account', 'restore-ledger', 'rewarded-ssv', 'verify-purchase', 'voided-purchases-job'].map((n) => `af-${envName}-${n}`),
+      ['delete-account', 'league-board', 'league-wins', 'restore-ledger', 'rewarded-ssv', 'verify-purchase', 'voided-purchases-job'].map((n) => `af-${envName}-${n}`),
     );
     for (const [, p] of fns) {
       expect(p.Runtime).toBe('nodejs24.x');
@@ -95,7 +95,7 @@ describe.each([
   });
 
   it(`verificador falso de Play ${envName === 'prod' ? 'ausente' : 'presente'}`, () => {
-    const withFake = ['delete-account', 'verify-purchase', 'voided-purchases-job'].map((n) => `af-${envName}-${n}`);
+    const withFake = ['delete-account', 'verify-purchase', 'voided-purchases-job', 'league-wins', 'league-board'].map((n) => `af-${envName}-${n}`);
     for (const [, p] of resourcesOfType(json, 'AWS::Lambda::Function')) {
       const vars = ((p.Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
       if (envName === 'prod' || !withFake.includes(p.FunctionName as string)) expect(vars).not.toHaveProperty('AF_FAKE_PLAY_VERIFIER');
@@ -118,7 +118,7 @@ describe.each([
 
   it('IAM mínimo: roles sin políticas gestionadas ni comodines', () => {
     const roles = resourcesOfType(json, 'AWS::IAM::Role').filter(([id]) => !id.startsWith('SchedulerRole'));
-    expect(roles).toHaveLength(5);
+    expect(roles).toHaveLength(7);
     for (const [, p] of roles) expect(p.ManagedPolicyArns).toBeUndefined();
     for (const [id, p] of resourcesOfType(json, 'AWS::IAM::Policy')) {
       for (const s of (p.PolicyDocument as { Statement: Statement[] }).Statement) {
@@ -133,7 +133,7 @@ describe.each([
   it('cada función solo tiene lo suyo: acciones exactas por tabla, índice y secreto (F2-3 a F2-8)', () => {
     const expected: Record<string, Record<string, string[]>> = {
       VerifyPurchase: {
-        Purchases: ['dynamodb:GetItem', 'dynamodb:PutItem'],
+        Purchases: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
         Integrity: ['dynamodb:GetItem', 'dynamodb:PutItem'],
         RateLimits: ['dynamodb:ConditionCheckItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
         'secret:PlayServiceAccount': ['secretsmanager:GetSecretValue'],
@@ -148,6 +148,10 @@ describe.each([
         'secret:MaxSsvKey': ['secretsmanager:GetSecretValue'],
       },
       DeleteAccount: {
+        LeaguePlayers: ['dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:DeleteItem'],
+        LeagueBoard: ['dynamodb:DeleteItem'],
+        LeagueHistogram: ['dynamodb:UpdateItem'],
+        LeagueNames: ['dynamodb:GetItem', 'dynamodb:DeleteItem'],
         'Purchases/by_uid': ['dynamodb:Query'],
         Purchases: ['dynamodb:UpdateItem'],
         'Rewards/by_uid': ['dynamodb:Query'],
@@ -159,9 +163,25 @@ describe.each([
         'secret:FirebaseAdmin': ['secretsmanager:GetSecretValue'],
       },
       VoidedPurchasesJob: {
-        Purchases: ['dynamodb:PutItem', 'dynamodb:UpdateItem'],
+        Purchases: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
         Jobs: ['dynamodb:GetItem', 'dynamodb:PutItem'],
         'secret:PlayServiceAccount': ['secretsmanager:GetSecretValue'],
+      },
+      LeagueWins: {
+        RateLimits: ['dynamodb:GetItem','dynamodb:PutItem','dynamodb:ConditionCheckItem'],
+        Integrity: ['dynamodb:GetItem','dynamodb:PutItem'],
+        LeagueNames: ['dynamodb:GetItem','dynamodb:PutItem'],
+        LeaguePlayers: ['dynamodb:GetItem','dynamodb:PutItem'],
+        LeagueBoard: ['dynamodb:PutItem','dynamodb:DeleteItem'],
+        LeagueHistogram: ['dynamodb:UpdateItem'],
+      },
+      LeagueBoard: {
+        RateLimits: ['dynamodb:GetItem','dynamodb:PutItem','dynamodb:ConditionCheckItem'],
+        Integrity: ['dynamodb:GetItem','dynamodb:PutItem'],
+        LeagueNames: ['dynamodb:GetItem','dynamodb:PutItem'],
+        LeaguePlayers: ['dynamodb:GetItem'],
+        LeagueBoard: ['dynamodb:Query'],
+        LeagueHistogram: ['dynamodb:Query'],
       },
     };
     for (const [fn, want] of Object.entries(expected)) {
@@ -188,7 +208,7 @@ describe.each([
   it(`App Check: ${envName === 'prod' ? 'las Lambdas con integridad solo admiten las apps de -c firebaseAppIds' : 'sin lista de apps en dev'}`, () => {
     for (const [, p] of resourcesOfType(json, 'AWS::Lambda::Function')) {
       const vars = ((p.Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
-      const usesIntegrity = ['verify-purchase', 'delete-account'].some((n) => p.FunctionName === `af-${envName}-${n}`);
+      const usesIntegrity = ['verify-purchase', 'delete-account', 'league-board', 'league-wins'].some((n) => p.FunctionName === `af-${envName}-${n}`);
       if (envName === 'prod' && usesIntegrity) expect(vars.AF_APPCHECK_APP_IDS).toBe(TEST_APP_ID);
       else expect(vars).not.toHaveProperty('AF_APPCHECK_APP_IDS');
     }

@@ -53,8 +53,8 @@ Se quedan en la 1.2 (06 §6): la cubeta semanal de 50, los tiers, los premios de
 Entran en `infra/contracts/v1` con sus esquemas, sus ejemplos y su entrada en `index.json`, como los demás. Llevan el mismo autorizador: el ID token de Firebase Auth anónimo y el token de App Check (D-035).
 - `POST /v1/league/wins`, petición `league-wins.request.schema.json`:
   ```json
-  { "wins": [ { "win_id": "c:57", "kind": "campaign", "level": 57, "won_at": "2026-10-26T15:04:05Z" },
-              { "win_id": "d:2026-10-26", "kind": "daily", "day": "2026-10-26", "won_at": "2026-10-26T16:00:00Z" } ],
+  { "wins": [ { "win_id": "c:57", "kind": "campaign", "level": 57, "won_at": "2026-10-23T15:04:05Z" },
+              { "win_id": "d:2026-10-23", "kind": "daily", "day": "2026-10-23", "won_at": "2026-10-23T16:00:00Z" } ],
     "max_level": 58, "region": "CO" }
   ```
   - Hasta 50 victorias por petición: la cola sin conexión manda en lotes.
@@ -62,7 +62,7 @@ Entran en `infra/contracts/v1` con sus esquemas, sus ejemplos y su entrada en `i
   - `region` es la región del teléfono (ISO 3166-1 alfa-2), el respaldo de §3.3.
 - **Respuesta 200**, `league-wins.response.schema.json`:
   ```json
-  { "week": "2026-W43", "points": 140, "accepted": ["c:57"], "rejected": [ { "win_id": "d:2026-10-26", "reason": "duplicate" } ],
+  { "week": "2026-W43", "points": 140, "accepted": ["c:57"], "rejected": [ { "win_id": "d:2026-10-23", "reason": "duplicate" } ],
     "name_key": "league_name_capybara", "name_num": 4821, "country": "CO" }
   ```
   `reason` puede ser `duplicate`, `rate_limited`, `unreachable_level`, `outside_week` o `invalid`.
@@ -81,12 +81,20 @@ Entran en `infra/contracts/v1` con sus esquemas, sus ejemplos y su entrada en `i
 ### 3.2 Puntos e integridad (06 §6, «Antifraude»)
 
 - **El cliente nunca manda puntos:** el servidor los calcula con una tabla `level → dificultad` generada desde los packs (`Assets/_Project/Data/Levels`), con una herramienta versionada, nunca escrita a mano. La tabla se publica con el backend.
+- **Formato de `win_id`:** `c:{level}` para la campaña y `d:{day}` para el Reto (AAAA-MM-DD). Un `win_id` que no case con su `kind` y su `level` o `day` sale `invalid`.
+- **Cada victoria se juzga por separado:** una mala da `invalid` (o su `reason`) solo a ella, nunca un 400 a todo el lote. Una `region` vacía, en minúsculas o desconocida se trata como desconocida, no como error. Un `level` que no está en la tabla (contenido futuro) sale `invalid`, sin tope fijo de 700 en el esquema.
+- **Orden:** el servidor ordena las victorias de campaña del lote por nivel antes de evaluarlas.
 - **Rechazos:**
-  - más de 40 victorias por hora;
-  - un `level` mayor que `max_level`;
-  - saltos imposibles: un nivel por encima del mayor visto más 1, salvo con el Salto del Boto (D-008), que sí se acepta;
-  - fechas fuera de la semana o del futuro.
-- **Los marcados** (`flagged`) siguen sumando para sí, pero se ocultan del top de los demás. Sin castigo automático.
+  - más de 40 victorias en una hora (ventana móvil por `won_at`): `rate_limited`;
+  - un `level` mayor que `max_level`: `unreachable_level`;
+  - fechas fuera de la semana o con más de **5 minutos** de futuro (margen de reloj): `outside_week`;
+  - un nivel por debajo del desbloqueo de la Liga: `invalid`.
+- **Avance de referencia (revisión del 2026-10-24):** el servidor guarda el nivel más alto visto del jugador.
+  - La primera victoria lo fija.
+  - **Avanza con toda victoria de campaña bien formada,** aceptada o rechazada por cualquier motivo. Hoy es solo informativo: ninguna regla de rechazo lo lee.
+  - Un salto de +1 es normal, y de +2 si el nivel omitido es `skippable` (Salto del Boto, D-008).
+  - **Un hueco mayor no se rechaza ni marca:** la referencia se repone a ese nivel, como con la primera victoria, y la victoria cuenta. Una victoria puede no llegar nunca (cola perdida al reinstalar, la Liga apagada, una semana pasada sin red), y el progreso lo decide el cliente: no hay prueba de juego en el servidor (D-046).
+- **Sin marca automática en la 1.0:** ningún rechazo marca la cuenta. `flagged` existe para marcar a mano (operación). Las cuentas marcadas siguen sumando para sí, pero se ocultan del top de los demás.
 - **Borrado de cuenta:** `deleteAccount` borra también todo lo de la Liga de ese `uid`, incluido el seudónimo.
 
 ### 3.3 País
@@ -109,6 +117,7 @@ Entran en `infra/contracts/v1` con sus esquemas, sus ejemplos y su entrada en `i
   - `LeagueRules`: semana, puntos por dificultad (solo para la línea de la victoria, porque el servidor manda) y desbloqueo;
   - `LeagueQueue`: la cola de victorias, persistida en el perfil, que sobrevive sin conexión y manda en lotes;
   - `ILeagueApi`, con implementación falsa para el editor y los tests.
+  - Las respuestas `accepted` y `rejected` se casan con la cola **por `win_id`**, nunca por posición: el servidor procesa las victorias de campaña en orden de nivel.
 - **`AF.Backend`:** el cliente HTTP real de §3.1, con el autorizador de siempre.
 - **UI:** el botón del inicio, la pantalla de la Liga, la línea de la victoria y la fila del país en Ajustes. Textos en `strings.csv` en los tres idiomas, con `context` y `max_chars`. Los nombres de animal `league_name_*` nacen `pendiente_asesor`.
 - **Banderas:** dibujadas por código como el resto del arte provisional. Siempre con el nombre del país al lado; la bandera nunca va sola.
