@@ -158,9 +158,12 @@ LightingData.asset     binary
 LightingData.asset     binary
 
 # Excepción: archivos que un plugin reescribe en cada build con el fin de línea de la plataforma (Environment.NewLine: CRLF en
-# Windows, LF en Linux). GPGSProjectSettings.Save (Play Games 2.3.0) escribe GooglePlayGameSettings.txt con StreamWriter.WriteLine.
+# Windows, LF en Linux). GPGSProjectSettings.Save (Play Games 2.3.0) escribe GooglePlayGameSettings.txt con StreamWriter.WriteLine,
+# y el resolvedor de Android de EDM4U 1.2.189, AndroidResolverDependencies.xml (comprobado con un build de desarrollo en Windows:
+# solo cambia el fin de línea).
 # Con eol=lf, el CRLF de Windows deja el archivo como modificado tras cada build; con eol=crlf pasaría lo mismo en el CI Linux.
 # `text !eol`: en el repositorio, LF; en el árbol de trabajo, el fin de línea nativo (core.eol; CRLF en Windows con
 # core.autocrlf=true o native, LF en Linux), el mismo que escribe el plugin, así que el build no deja el árbol sucio en ninguno.
 # Prueba del 2026-10-23, observación 2. No se editan a mano (regla dura 3).
 /ProjectSettings/GooglePlayGameSettings.txt  text !eol
+/ProjectSettings/AndroidResolverDependencies.xml  text !eol
