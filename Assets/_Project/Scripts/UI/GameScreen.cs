@@ -2857,6 +2857,7 @@ namespace AF.UI
             UiBuilder.Place(_harvestSeed.rectTransform, mid - 2f, 6f, 32f, 32f);
             UiBuilder.Place(_harvestValue.rectTransform, mid + 34f, 0f, mid - 50f, VictoryHarvestDp);
             y += VictoryHarvestDp + VictoryHarvestGapDp(compact);
+            y += LayoutLeagueLine(y, panelW, compact); // D-046: «+{n} puntos de Liga» (GameScreen.League.cs)
 
             // Las barras del panel único (D-033, punto 10): Crecida y Canasta, entre la Cosecha y la Cosecha doble (GameScreen.Streak.cs).
             _victoryBars.Barless = _victoryBarsYield; // en el hito de TiTino que las cede, sin filas (B1b-Q10 (c))

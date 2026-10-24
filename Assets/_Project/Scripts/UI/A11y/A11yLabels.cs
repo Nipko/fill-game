@@ -32,6 +32,35 @@ namespace AF.UI
             Table.Add(go, new Entry(label ?? throw new ArgumentNullException(nameof(label)), selected));
         }
 
+        /// <summary>
+        /// Registra lo que el lector lee para un texto suelto en lugar de su texto (D-046: la fila de la Liga se lee entera,
+        /// «Puesto 3: Jaguar 1203, Colombia, 980 puntos», en un elemento; las demás celdas se callan con una etiqueta «»).
+        /// </summary>
+        public static void SetText(Component text, Func<string> label)
+        {
+            if (text == null)
+            {
+                throw new ArgumentNullException(nameof(text));
+            }
+
+            GameObject go = text.gameObject;
+            Table.Remove(go);
+            Table.Add(go, new Entry(label ?? throw new ArgumentNullException(nameof(label)), null, true));
+        }
+
+        /// <summary>La lectura registrada con <see cref="SetText"/> para el texto <paramref name="go"/>; false si no hay.</summary>
+        public static bool TryGetTextReading(GameObject go, out string label)
+        {
+            label = string.Empty;
+            if (go == null || !Table.TryGetValue(go, out Entry entry) || !entry.ReadsText)
+            {
+                return false;
+            }
+
+            label = entry.Label() ?? string.Empty;
+            return true;
+        }
+
         /// <summary>Quita la etiqueta registrada para el objeto de <paramref name="target"/>.</summary>
         public static void Remove(Component target)
         {
@@ -64,11 +93,15 @@ namespace AF.UI
 
         private sealed class Entry
         {
-            public Entry(Func<string> label, Func<bool>? selected)
+            public Entry(Func<string> label, Func<bool>? selected, bool readsText = false)
             {
                 Label = label;
                 Selected = selected;
+                ReadsText = readsText;
             }
+
+            /// <summary>Registrada con <see cref="SetText"/>: sustituye a lo que dice un texto suelto.</summary>
+            public bool ReadsText { get; }
 
             public Func<string> Label { get; }
 

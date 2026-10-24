@@ -139,6 +139,39 @@ namespace AF.UI
         public const string IntentExtraFakeStore = "af_fake_store";
 
         /// <summary>
+        /// Extra de intent (booleano) de los builds de desarrollo (D-046; liga.md §1: «en los builds de desarrollo se enciende con un extra
+        /// de la sonda»): con <c>--ez af_league true</c>, la Liga del río se enciende aunque <c>live_league_enabled</c> esté apagada.
+        /// Sigue haciendo falta el desbloqueo (<c>live_league_unlock_level</c>; con <c>af_max_level</c> se llega antes). Logcat lo dice
+        /// con <c>AF_LEAGUE</c>. Nunca se lee en release (<see cref="ResolveLeagueEnabled(bool)"/>).
+        /// </summary>
+        public const string IntentExtraLeague = "af_league";
+
+        /// <summary>
+        /// Extra de intent (booleano) de los builds de desarrollo (D-046): con <c>--ez af_league_fake true</c>, la Liga usa la API falsa
+        /// con datos de muestra (top 100, país CO, puntos que suben con cada victoria), sin red, para capturas y pruebas en el teléfono
+        /// antes de que el backend esté desplegado. No enciende la Liga: va con <c>af_league</c>. Nunca se lee en release.
+        /// </summary>
+        public const string IntentExtraLeagueFake = "af_league_fake";
+
+        /// <summary><c>af_league</c> forzado por un test; null = el extra. Fuera de desarrollo no cuenta.</summary>
+        public static bool? LeagueEnabledOverride { get; set; }
+
+        /// <summary><c>af_league_fake</c> forzado por un test; null = el extra. Fuera de desarrollo no cuenta.</summary>
+        public static bool? LeagueFakeOverride { get; set; }
+
+        /// <summary>La Liga se enciende por la sonda (<c>af_league</c>): solo en desarrollo.</summary>
+        public static bool ResolveLeagueEnabled(bool development)
+        {
+            return development && (LeagueEnabledOverride ?? ReadIntentBool(IntentExtraLeague));
+        }
+
+        /// <summary>La Liga usa la API falsa con datos (<c>af_league_fake</c>): solo en desarrollo.</summary>
+        public static bool ResolveLeagueFake(bool development)
+        {
+            return development && (LeagueFakeOverride ?? ReadIntentBool(IntentExtraLeagueFake));
+        }
+
+        /// <summary>
         /// <c>af_fake_store</c> forzado por un test (true = tienda simulada con el backend falso); null = el extra. Solo tests; fuera
         /// de desarrollo no cuenta (<see cref="ResolveFakeStore(bool)"/>).
         /// </summary>
@@ -334,6 +367,8 @@ namespace AF.UI
             DevMaxLevelOverride = null;
             DevRejectOverride = null;
             FakeStoreOverride = null;
+            LeagueEnabledOverride = null;
+            LeagueFakeOverride = null;
         }
 
         /// <summary>

@@ -310,6 +310,8 @@ namespace AF.UI
             {
                 RestoreLedgerNow();
             }
+
+            ResumeLeague(); // D-046: la cola de la Liga que no salió (GameBootstrap.League.cs)
         }
 
         /// <summary>Pide <c>restoreLedger</c> y aplica su respuesta en una escritura del perfil. False si no se pidió (en vuelo o apagado).</summary>

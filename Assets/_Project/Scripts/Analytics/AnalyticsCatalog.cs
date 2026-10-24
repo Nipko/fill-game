@@ -127,6 +127,9 @@ namespace AF.Analytics
             E("af_event_join", "event_id", "n"),
             E("af_event_milestone", "event_id", "n"),
             E("af_event_claim", "event_id", "n"),
+            E("af_league_open", "scope"), // D-046: Liga del río de la 1.0
+            E("af_league_wins_sent", "count", "accepted", "rejected"),
+            E("af_league_unavailable", "reason"),
             E("af_league_rank", "week", "bucket_rank", "tier"),
             E("af_world_enter", "world", "days_since_install", "pack_ready"),
             E("af_ad_request", "placement", "format", "result", "ms", "network"),

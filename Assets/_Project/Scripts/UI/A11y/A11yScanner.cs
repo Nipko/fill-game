@@ -384,7 +384,9 @@ namespace AF.UI
 
             if (graphic is TextMeshProUGUI text && Shown(text) && !Silenced(text))
             {
-                Add(new A11yItem("txt_" + text.GetInstanceID(), text.text.Trim(), AccessibilityRole.StaticText, text.rectTransform, null), text.rectTransform);
+                // D-046: un texto con su lectura registrada (A11yLabels.SetText, la fila de la Liga) se lee con ella.
+                string reading = A11yLabels.TryGetTextReading(text.gameObject, out string custom) && custom.Length > 0 ? custom : text.text.Trim();
+                Add(new A11yItem("txt_" + text.GetInstanceID(), reading, AccessibilityRole.StaticText, text.rectTransform, null), text.rectTransform);
             }
 
             ScrollRect? list = t.GetComponent<ScrollRect>();

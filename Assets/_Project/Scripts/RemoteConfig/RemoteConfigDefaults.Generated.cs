@@ -963,10 +963,6 @@ namespace AF.RemoteConfig
       ""type"": ""int"",
       ""default"": 10
     },
-    ""live_unlock_level_league"": {
-      ""type"": ""int"",
-      ""default"": 41
-    },
     ""live_unlock_level_trail"": {
       ""type"": ""int"",
       ""default"": 41
@@ -982,6 +978,18 @@ namespace AF.RemoteConfig
     ""live_unlock_level_village"": {
       ""type"": ""int"",
       ""default"": 31
+    },
+    ""live_league_enabled"": {
+      ""type"": ""bool"",
+      ""default"": false
+    },
+    ""live_league_unlock_level"": {
+      ""type"": ""int"",
+      ""default"": 41
+    },
+    ""live_league_cache_minutes"": {
+      ""type"": ""int"",
+      ""default"": 10
     },
     ""live_daily_challenge_reward"": {
       ""type"": ""json"",

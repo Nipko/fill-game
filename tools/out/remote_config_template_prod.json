@@ -1513,39 +1513,53 @@
       "description": "Rango 08 §9: 8-12. Desbloquea Reto del río, Bitácora, Mapa del río, Canasta y Mercado",
       "valueType": "NUMBER"
     },
-    "live_unlock_level_league": {
-      "defaultValue": {
-        "value": "41"
-      },
-      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0",
-      "valueType": "NUMBER"
-    },
     "live_unlock_level_trail": {
       "defaultValue": {
         "value": "41"
       },
-      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0",
+      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0 (el de la Liga del río pasa a live_league_unlock_level, D-046)",
       "valueType": "NUMBER"
     },
     "live_unlock_level_regatta": {
       "defaultValue": {
         "value": "51"
       },
-      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0",
+      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0 (el de la Liga del río pasa a live_league_unlock_level, D-046)",
       "valueType": "NUMBER"
     },
     "live_unlock_level_meeting": {
       "defaultValue": {
         "value": "61"
       },
-      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0",
+      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0 (el de la Liga del río pasa a live_league_unlock_level, D-046)",
       "valueType": "NUMBER"
     },
     "live_unlock_level_village": {
       "defaultValue": {
         "value": "31"
       },
-      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0",
+      "description": "Rango 08 §9: —. Desbloqueos de 1.2 y 2.0 (el de la Liga del río pasa a live_league_unlock_level, D-046)",
+      "valueType": "NUMBER"
+    },
+    "live_league_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rango 08 §9: —. Liga del río de la 1.0 recortada (D-046; docs/dev/liga.md §5): el botón «Liga» del inicio, la pantalla, la cola de victorias y sus llamadas a /v1/league/*. Apagada hasta que haya backend en prod; en desarrollo se enciende con el extra af_l…",
+      "valueType": "BOOLEAN"
+    },
+    "live_league_unlock_level": {
+      "defaultValue": {
+        "value": "41"
+      },
+      "description": "Rango 08 §9: 31-61. La Liga del río aparece al ganar este nivel (06 §6; D-046); sustituye a live_unlock_level_league",
+      "valueType": "NUMBER"
+    },
+    "live_league_cache_minutes": {
+      "defaultValue": {
+        "value": "10"
+      },
+      "description": "Rango 08 §9: 1-60. [P] Minutos que vale la clasificación descargada de cada ámbito (Global y País) antes de volver a pedirla al abrir la Liga (D-046)",
       "valueType": "NUMBER"
     },
     "live_daily_challenge_reward": {

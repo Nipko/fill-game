@@ -33,6 +33,20 @@ namespace AF.Backend
         void DeleteAccount(Action<BackendResult<DeleteAccountResponse>> onDone);
     }
 
+    /// <summary>
+    /// La Liga del río por la API v1 (D-046; <c>docs/dev/liga.md</c> §3.1). La implementa <see cref="HttpBackendClient"/>; en el editor
+    /// y los tests, la Liga usa su API falsa de <c>AF.LiveOps</c> (<c>FakeLeagueApi</c>). Como <see cref="IBackendClient"/>, cada método
+    /// llama a <c>onDone</c> exactamente una vez, en el hilo principal.
+    /// </summary>
+    public interface ILeagueBackend
+    {
+        /// <summary><c>POST /v1/league/wins</c>, con integridad.</summary>
+        void SendLeagueWins(LeagueWinsRequestDto request, Action<BackendResult<LeagueWinsResponseDto>> onDone);
+
+        /// <summary><c>GET /v1/league?scope=</c> (<paramref name="scope"/>: <c>global</c> o <c>country</c>), con integridad.</summary>
+        void GetLeagueBoard(string scope, Action<BackendResult<LeagueBoardResponseDto>> onDone);
+    }
+
     /// <summary>Una operación de la API v1 tal como la fija <c>infra/contracts/v1/index.json</c>.</summary>
     public sealed class BackendOperation
     {
@@ -54,6 +68,19 @@ namespace AF.Backend
 
         /// <summary>Las que usa la app (todas con <c>auth: firebase</c>).</summary>
         public static readonly BackendOperation[] AppOperations = { VerifyPurchase, RestoreLedger, GetAccountCode, DeleteAccount };
+
+        /// <summary>
+        /// <c>POST /v1/league/wins</c> (D-046; <c>docs/dev/liga.md</c> §3.1): con el mismo autorizador (ID token y App Check). Aún no
+        /// está en <c>index.json</c> (lo añade el backend con sus esquemas), por eso va aparte de <see cref="AppOperations"/>; el
+        /// nombre de la operación es [P].
+        /// </summary>
+        public static readonly BackendOperation LeagueWins = new BackendOperation("leagueWins", "POST", "/v1/league/wins", true);
+
+        /// <summary><c>GET /v1/league?scope=global|country</c> (D-046; liga.md §3.1), como <see cref="LeagueWins"/>.</summary>
+        public static readonly BackendOperation LeagueBoard = new BackendOperation("leagueBoard", "GET", "/v1/league", true);
+
+        /// <summary>Las de la Liga (D-046), hasta que entren en <c>index.json</c>.</summary>
+        public static readonly BackendOperation[] LeagueOperations = { LeagueWins, LeagueBoard };
 
         /// <summary>Nombre de <c>operation</c> en <c>index.json</c>.</summary>
         public string Name { get; }

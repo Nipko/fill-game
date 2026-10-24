@@ -593,6 +593,9 @@ namespace AF.Tests.EditMode
             // (B11-loc.diff): los pinta AF.UI.TutorialTipsText.
             keys.AddRange(TutorialTipsText.AllKeys);
 
+            // D-046: la Liga del río (botón, pantalla, línea de la victoria, Ajustes, TalkBack, animales y países): AF.UI.LeagueText.
+            keys.AddRange(LeagueText.AllKeys);
+
             return keys;
         }
 

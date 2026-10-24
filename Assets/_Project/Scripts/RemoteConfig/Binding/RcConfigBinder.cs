@@ -189,6 +189,14 @@ namespace AF.RemoteConfig.Binding
             OptionalTxt<LoginCalendarConfig>("eco_calendar_table_v2", (c, text) => c.EcoCalendarTableV2 = CalendarTable(text, c.EcoCalendarLockedBoosterSeeds)),
         };
 
+        // D-046: la Liga del río de la 1.0 (docs/dev/liga.md §5).
+        private static readonly Entry<LeagueConfig>[] LeagueEntries =
+        {
+            B<LeagueConfig>("live_league_enabled", (c, v) => c.LiveLeagueEnabled = v),
+            I<LeagueConfig>("live_league_unlock_level", (c, v) => c.LiveLeagueUnlockLevel = v),
+            I<LeagueConfig>("live_league_cache_minutes", (c, v) => c.LiveLeagueCacheMinutes = v),
+        };
+
         /// <summary>Las claves que lee cada clase, en orden (para los tests de cobertura).</summary>
         public static IReadOnlyDictionary<Type, IReadOnlyList<string>> BoundKeys { get; } = new Dictionary<Type, IReadOnlyList<string>>
         {
@@ -205,6 +213,7 @@ namespace AF.RemoteConfig.Binding
             { typeof(RevocationConfig), KeysOf(RevocationEntries) },
             { typeof(TakeoverConfig), KeysOf(TakeoverEntries) },
             { typeof(LoginCalendarConfig), KeysOf(LoginCalendarEntries) },
+            { typeof(LeagueConfig), KeysOf(LeagueEntries) },
             { typeof(ConsentConfig), ConsentConfigBinder.Keys }, // B12: su lector propio (ConsentConfigBinder)
             { typeof(A11yConfig), A11yConfigBinder.Keys }, // B9: su lector propio (A11yConfigBinder)
         };
@@ -235,6 +244,7 @@ namespace AF.RemoteConfig.Binding
             RevocationConfig revocation = Fill(new RevocationConfig(), RevocationEntries, rc, errors, c => c.Validate(), () => RevocationConfig.Defaults);
             TakeoverConfig takeovers = Fill(new TakeoverConfig(), TakeoverEntries, rc, errors, c => c.Validate(), () => TakeoverConfig.Defaults);
             LoginCalendarConfig calendar = Fill(new LoginCalendarConfig(), LoginCalendarEntries, rc, errors, c => c.Validate(), () => LoginCalendarConfig.Defaults);
+            LeagueConfig league = Fill(new LeagueConfig(), LeagueEntries, rc, errors, c => c.Validate(), () => LeagueConfig.Defaults); // D-046
             ConsentConfig consent = ConsentConfigBinder.Bind(rc, errors);
             A11yConfig a11y = A11yConfigBinder.Bind(rc, errors); // B9
 
@@ -258,6 +268,7 @@ namespace AF.RemoteConfig.Binding
                 Revocation = revocation,
                 Takeovers = takeovers,
                 LoginCalendar = calendar,
+                League = league,
                 BackendSwitch = new RcBackendSwitch(rc),
                 Consent = consent,
                 DragPourEnabled = RcGameplayBinder.DragPourEnabled(rc, errors), // B11: C10 (RcGameplayBinder)
@@ -540,6 +551,9 @@ namespace AF.RemoteConfig.Binding
 
         /// <summary>Bitácora del río (B4).</summary>
         public LoginCalendarConfig LoginCalendar { get; internal set; } = LoginCalendarConfig.Defaults;
+
+        /// <summary>Liga del río de la 1.0 (D-046): interruptor, desbloqueo y vigencia de la caché.</summary>
+        public LeagueConfig League { get; internal set; } = LeagueConfig.Defaults;
 
         /// <summary><c>drag_pour_enabled</c> (C10, el arrastre; 08 §9; B11; <see cref="RcGameplayBinder"/>).</summary>
         public bool DragPourEnabled { get; internal set; } = AF.GameFlow.DragPour.EnabledDefault;
