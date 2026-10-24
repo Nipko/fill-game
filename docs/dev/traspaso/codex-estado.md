@@ -1,5 +1,16 @@
 # Estado de Codex: web, empresas y arte
 
+## Liga del río — textos legales, 24-10-2026
+
+Encargo `codex-liga.md` §4: completado en esta rama, sin tocar `docs/dev/liga.md`. Commit de contenido **`6804dbca`**. Política es-419/en/pt-BR: UID y victorias/fechas para calcular puntos, seudónimo automático y exposición pública de seudónimo/bandera/puntos, origen del país (respaldo de región del teléfono en la implementación inicial), país semanal, retención, borrado de cuenta y exclusión de <13. Se ajustó la frase anterior sobre contenido de otros jugadores para que no contradiga la clasificación. Datos públicos frente al UID interno diferenciados; sin afirmar anonimato jurídico.
+
+Fila de Seguridad de los datos añadida a `docs/store-listing/data-safety.md`: acciones de juego, país aproximado [NV] e identificadores. Visibilidad a otros usuarios y clasificación final de «compartidos» pendientes del abogado. Nuevos textos con `[[ABOGADO: revisar]]`; no se cerraron marcadores ni se publicaron políticas definitivas.
+
+Comprobaciones ejecutadas en `infra/`: `npm ci` correcto (una vulnerabilidad alta heredada), `npm run web:build` (19 archivos), `npm run web:check`, `npm run lint`, `npm run typecheck` y `npm test` (**312 pruebas / 18 archivos**), correctos. Sitio regenerado en esta rama, sin despliegue web. Backend aparte en **`codex/liga`, `04c5917c`**, con su diff y estado de dev en la versión de este documento de esa rama. El integrador debe conservar ambas entregas al fusionar.
+
+## Registro anterior de web, empresas y arte
+
+
 23-10-2026 · Rama `codex/web-marca`, worktree propio. Base de integración comprobada: `35147396` (`origin/integracion-fase1-fase2`); pull fast-forward sin cambios. No se modifica el checkout principal.
 
 ## Decisiones del dueño que prevalecen sobre el encargo anterior
