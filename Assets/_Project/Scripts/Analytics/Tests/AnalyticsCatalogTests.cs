@@ -114,6 +114,8 @@ namespace AF.Analytics.Tests
         {
             Dictionary<string, string> rows = Rows(Section(Chapter("08-arquitectura-tecnica-publicacion.md"), "### 8.2 Tabla de eventos", "\n## 9. "));
             Assert.That(ValuesOf(rows["af_settings_change"], "key"), Is.EqualTo(AnalyticsCatalog.SettingsChangeKeys));
+            Assert.That(ValuesOf(rows["af_settings_change"], "source"), Is.EqualTo(AnalyticsCatalog.SettingsChangeSources), "D-046, punto 2");
+            Assert.That(AnalyticsCatalog.Find("af_settings_change")!.Allows("source"), Is.True);
             Assert.That(ValuesOf(rows["af_push_prompt"], "origin"), Is.EqualTo(AnalyticsCatalog.PushPromptOrigins));
             Assert.That(AnalyticsCatalog.Find("af_push_prompt")!.Allows("origin"), Is.True);
         }

@@ -17,7 +17,7 @@ namespace AF.UI
     /// en la barra de abajo, a la izquierda de «Inicio», simétrico al del Mapa [P]. Glifo provisional (la semilla) hasta el «puesto de
     /// Ver-o-Peso» de 07 §5 (arte del artista).</description></item>
     /// <item><description><b>Cántaro</b> (05 §4.1: «icono en el HUD desde el nivel 20»): en la esquina de arriba a la derecha, bajo
-    /// Ajustes [P] (Q-B5-7), donde no tapa los saldos, la ventanita de casa de TiTino ni su píldora (06 §4.7; D-016), con lo que
+    /// Ajustes [P] (Q-B5-7) y, desde D-046, bajo los botones de Música y Sonido que cuelgan del engranaje, donde no tapa los saldos, la ventanita de casa de TiTino ni su píldora (06 §4.7; D-016), con lo que
     /// guarda; a 3.000, «¡Lleno!» con un punto. Un toque abre su tarjeta (05 §5: «≥ 1.000 y toque en el icono»).</description></item>
     /// </list>
     /// Con el enganche de <c>LobbyScreen</c> pasarían a su barra y a su cabecera. Sin asignaciones mientras nada cambia.

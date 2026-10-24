@@ -17,7 +17,8 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><description>arriba, Semillas, Canoas «n/5» con el cronómetro mm:ss de la próxima (solo desde el 31,
     /// <c>rescue_min_level</c>; con Canoas infinitas, ∞ y el tiempo que queda) y Ajustes, que abre su pantalla
-    /// (<see cref="SettingsScreen"/>; tarea L3);</description></item>
+    /// (<see cref="SettingsScreen"/>; tarea L3), con Música y Sonido de un toque en columna debajo (D-046, punto 2;
+    /// <see cref="AudioToggles"/>);</description></item>
     /// <item><description>en el centro, el Estuario (panorama, muelle y follaje del nivel) y el botón grande «Jugar · Nivel {n}»
     /// con su centro al 60 % del alto (06 §4.7), con la etiqueta de D-009 encima cuando el nivel la lleva (propuesta §c.1;
     /// 07 §7.7; <see cref="DifficultyChip"/>): Difícil, chip ámbar con la rana dardo y la cinta «×3»; Muy difícil, chip índigo
@@ -119,6 +120,7 @@ namespace AF.UI
         // con ella (LayoutCanoesContent).
         private readonly float _canoesTextScale;
         private readonly ReliefParts _settings;
+        private readonly AudioToggles _audio;
 
         private readonly ReliefParts _play;
         private readonly TextMeshProUGUI _playLabel;
@@ -253,6 +255,9 @@ namespace AF.UI
             Image gear = UiBuilder.Image("Icon", _settings.Face, art.IconGear, Color.white);
             UiBuilder.Place(gear.rectTransform, 7f, 7f, 26f, 26f);
             _settings.Relief.Bind(_settings.Face, _settings.Base, _settings.FaceImage, art.DiscWood, gear, art.IconGearDisabled, null);
+
+            // Música y Sonido con un toque (D-046, punto 2; 07 §9.4): en columna bajo el engranaje, junto a él.
+            _audio = new AudioToggles(top, art);
 
             // ---- Pestañas abajo: solo «Inicio» [P] mientras Mercado, Mapa del río, Reto del río y Bitácora no existan. ----
             _tabBar = UiBuilder.Sliced("TabBar", _root, art.WoodPlate, Color.white);
@@ -489,6 +494,31 @@ namespace AF.UI
 
         /// <summary>Botón de Ajustes: abre <see cref="SettingsScreen"/> (tarea L3).</summary>
         public Button SettingsButton => _settings.Button;
+
+        /// <summary>Botones de un toque Música y Sonido, en columna bajo el engranaje (D-046, punto 2).</summary>
+        internal AudioToggles Audio => _audio;
+
+        /// <summary>
+        /// Toque en Música o Sonido del inicio: la clave y el valor pedido. Lo fija <see cref="GameBootstrap"/>, que lo guarda por el
+        /// mismo camino que Ajustes y devuelve lo guardado con <see cref="MarkAudio"/>.
+        /// </summary>
+        public Action<string, bool>? AudioToggled
+        {
+            get => _audio.Toggled;
+            set => _audio.Toggled = value;
+        }
+
+        /// <summary>Lo guardado en <c>settings.music</c> y <c>settings.sound</c>, a los botones del inicio.</summary>
+        public void MarkAudio(bool music, bool sound)
+        {
+            _audio.Mark(music, sound);
+        }
+
+        /// <summary>
+        /// Lo que el Cántaro del Mercado tiene encima en la esquina (<see cref="MarketLobbyIcons"/>): desde D-046, el botón de Sonido,
+        /// el último de la columna que cuelga del engranaje.
+        /// </summary>
+        public RectTransform PiggyAnchorRect => _audio.SoundRect;
 
         /// <summary>
         /// Botón Volver de la superposición: en Sin canoas, su X, que vuelve al inicio (desde B11 su enlace de abajo es «Volver al
@@ -958,6 +988,13 @@ namespace AF.UI
             LayoutCanoesContent();
             UiBuilder.Place((RectTransform)_settings.Button.transform, w - 8f - MinTouchDp, topY, MinTouchDp, MinTouchDp);
 
+            // Música y Sonido (D-046) [P]: en columna bajo el engranaje, alineados con él. El Cántaro (MarketLobbyIcons) cuelga de
+            // ellos, y la ventanita de casa, su píldora y las notas de TiTino no pasan de su borde izquierdo.
+            float audioX = w - 8f - MinTouchDp;
+            float audioTop = topY + TopRowHeight + AudioToggles.GapDp;
+            _audio.PlaceColumn(audioX, audioTop);
+            float audioBottom = audioTop + AudioToggles.ColumnHeightDp;
+
             // Botón central y chip.
             float playW = PlayWidth(w);
             UiBuilder.Place((RectTransform)_play.Button.transform, (w - playW) * 0.5f, _playTop, playW, PlayTouchHeight);
@@ -965,12 +1002,15 @@ namespace AF.UI
             LayoutRemaining();
 
             // Ventanita de casa (M2.1): a la izquierda, bajo los saldos [P]; la píldora de la distancia, a su derecha.
-            _home.Place(SideGutterDp, topY + TopRowHeight + HomeWindowGapDp, w - SideGutterDp);
+            _home.Place(SideGutterDp, topY + TopRowHeight + HomeWindowGapDp, audioX - HomeWindowGapDp);
 
             // Widget de la Crecida (B1b) [P]: en la franja derecha que dejan la tarjeta del Reto (296 dp centrada) y «Jugar», bajo la
             // ventanita de casa con su píldora debajo (lo más que mide) y sobre el chip de la etiqueta.
             float widgetTop = topY + TopRowHeight + HomeWindowGapDp + HomeWindow.SizeDp + HomeWindow.PillStackGapDp + HomeWindow.PillHeightDp + HomeWindowGapDp;
             float widgetBottom = _playTop - ChipGapDp - DifficultyChip.HeightDp;
+
+            // Y bajo el sitio del Cántaro, que cuelga de los botones de Música y Sonido (D-046) en la misma esquina.
+            widgetTop = Mathf.Max(widgetTop, audioBottom + MarketLobbyIcons.PiggyGapDp + MarketLobbyIcons.PiggyHeightDp + HomeWindowGapDp);
             _streakWidget.Place(w - StreakWidgetRightDp - StreakWidget.WidthDp, widgetTop, Mathf.Max(48f, widgetBottom - widgetTop));
 
             // Pestañas: la barra cubre hasta el borde inferior (y la zona de gestos); «Inicio» sobresale 12 dp.
@@ -1153,6 +1193,11 @@ namespace AF.UI
 
                 ids.Add("settings");
                 rects.Add((RectTransform)_settings.Button.transform);
+                var audioIds = new System.Collections.Generic.List<string>(2);
+                var audioRects = new System.Collections.Generic.List<RectTransform>(2);
+                _audio.VisibleButtons(audioIds, audioRects, string.Empty);
+                ids.AddRange(audioIds);
+                rects.AddRange(audioRects);
                 if (_mapTab.Button.gameObject.activeSelf)
                 {
                     ids.Add("map_tab");

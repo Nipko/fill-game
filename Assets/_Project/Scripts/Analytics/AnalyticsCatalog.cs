@@ -61,6 +61,12 @@ namespace AF.Analytics
             "patterns", "sound", "music", "haptics", "language", "consent", "sloth_messages", "push", "reduce_motion", "high_contrast",
         };
 
+        /// <summary>
+        /// Valores de <c>source</c> de <c>af_settings_change</c> (08 §8.2, en su orden; D-046, punto 2): de dónde llega el cambio de
+        /// <c>sound</c> o <c>music</c>, la fila de Ajustes o los botones de un toque de la pausa y del inicio.
+        /// </summary>
+        public static readonly IReadOnlyList<string> SettingsChangeSources = new[] { "settings", "pause", "home" };
+
         /// <summary>Valores de <c>origin</c> de <c>af_push_prompt</c> (08 §8.2; B6-Q17): el primer pre-prompt, el segundo o Ajustes.</summary>
         public static readonly IReadOnlyList<string> PushPromptOrigins = new[] { "first", "second", "settings" };
 
@@ -138,7 +144,7 @@ namespace AF.Analytics
             E("purchase", "transaction_id", "value", "currency", "items", "context"),
             E("af_entitlement_restored", "type", "count"),
             E("af_shop_view", "tab", "from"),
-            E("af_settings_change", "key", "value"),
+            E("af_settings_change", "key", "value", "source"),
             E("af_account_delete", "step", "source"),
             E("af_save_sync", "result", "bytes", "ms"),
             E("af_level_load", "ms", "from_cache", "pack_id"),

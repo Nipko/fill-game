@@ -57,9 +57,22 @@ namespace AF.UI
         /// <summary>
         /// Ajustes › Sonido, Música o Vibración (07 §9.4; tarea AU1): guarda <paramref name="on"/> en <c>settings.sound</c>,
         /// <c>music</c> o <c>haptics</c> según <paramref name="key"/> (<see cref="SettingsScreen.SoundId"/>…) y lo aplica al momento
-        /// (lo que suena se calla). La sonda escribe <c>settings_change</c> con esa clave (08 §8.2, <c>af_settings_change</c>).
+        /// (lo que suena se calla). La sonda escribe <c>settings_change</c> con esa clave (08 §8.2, <c>af_settings_change</c>) y
+        /// <c>source</c> = <c>settings</c>.
         /// </summary>
         public bool ChooseAudio(string key, bool on)
+        {
+            return ChooseAudio(key, on, AudioQuickSettings.SourceSettings);
+        }
+
+        /// <summary>
+        /// Sonido o Música desde <paramref name="source"/> (<c>settings</c>, las filas de Ajustes; <c>pause</c> o <c>home</c>, los
+        /// botones de un toque de la pausa y del inicio; D-046, punto 2): el mismo camino que las filas (mismo campo de
+        /// <c>settings</c>, guardado y aplicado en el acto), y después Ajustes, la pausa y el inicio enseñan lo guardado. La Vibración
+        /// solo desde Ajustes (<see cref="AudioQuickSettings.Allowed"/>). La sonda escribe <c>settings_change</c> con
+        /// <c>source</c>.
+        /// </summary>
+        public bool ChooseAudio(string key, bool on, string source)
         {
             Profile? profile = _profile;
             if (profile == null)
@@ -68,23 +81,9 @@ namespace AF.UI
             }
 
             SettingsData s = profile.Settings;
-            bool changed;
-            switch (key)
+            if (!AudioQuickSettings.Apply(s, key, on, source, out bool changed))
             {
-                case SettingsScreen.SoundId:
-                    changed = s.Sound != on;
-                    s.Sound = on;
-                    break;
-                case SettingsScreen.MusicId:
-                    changed = s.Music != on;
-                    s.Music = on;
-                    break;
-                case SettingsScreen.HapticsId:
-                    changed = s.Haptics != on;
-                    s.Haptics = on;
-                    break;
-                default:
-                    return false;
+                return false;
             }
 
             if (changed)
@@ -93,9 +92,48 @@ namespace AF.UI
             }
 
             AudioCues.Configure(s.Sound, s.Music, s.Haptics);
-            _settingsScreen?.MarkAudio(s.Sound, s.Music, s.Haptics);
-            _probe?.SettingsChange(key, on ? "true" : "false", null);
+            SyncAudioToggles(s);
+            _probe?.SettingsChange(key, on ? "true" : "false", null, source);
             return true;
+        }
+
+        // D-046, punto 2: los botones de un toque de la pausa (la del nivel y, al abrirse, la del Reto) y del inicio, con lo
+        // guardado; se llama en el arranque, tras crear las pantallas.
+        private void SetUpAudioToggles()
+        {
+            if (_screen != null)
+            {
+                _screen.AudioToggled = (key, on) => ChooseAudio(key, on, AudioQuickSettings.SourcePause);
+            }
+
+            if (_lobby != null)
+            {
+                _lobby.AudioToggled = (key, on) => ChooseAudio(key, on, AudioQuickSettings.SourceHome);
+            }
+
+            if (_profile != null)
+            {
+                SyncAudioToggles(_profile.Settings);
+            }
+        }
+
+        // La pausa del Reto se crea al abrirse (DailyChallengeScreen.Prepare): sus botones, con el mismo camino y lo guardado.
+        private void PrepareDailyAudio(GameScreen view)
+        {
+            view.AudioToggled = (key, on) => ChooseAudio(key, on, AudioQuickSettings.SourcePause);
+            if (_profile != null)
+            {
+                view.MarkAudio(_profile.Settings.Music, _profile.Settings.Sound);
+            }
+        }
+
+        // Lo guardado, a todo lo que lo enseña: las filas de Ajustes y los botones de la pausa y del inicio (siempre coinciden).
+        private void SyncAudioToggles(SettingsData s)
+        {
+            _settingsScreen?.MarkAudio(s.Sound, s.Music, s.Haptics);
+            _lobby?.MarkAudio(s.Music, s.Sound);
+            _screen?.MarkAudio(s.Music, s.Sound);
+            _dailyScreen?.View?.MarkAudio(s.Music, s.Sound);
         }
 
         // Cambio de pantalla (tarea AU2): fuera del nivel (inicio, «El río sigue creciendo», Sin canoas) suena el tema de menú y no
