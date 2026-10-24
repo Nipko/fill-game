@@ -446,8 +446,8 @@ namespace AF.Tests.PlayMode
             var ids = new List<string>();
             var rects = new List<RectTransform>();
             view.Pause.VisibleButtons(ids, rects);
-            Assert.That(ids, Is.EqualTo(new[] { "resume", "pause_map", "pause_restart", "quit" }));
-            for (int i = 1; i < rects.Count; i++)
+            Assert.That(ids, Is.EqualTo(new[] { "resume", "pause_map", "pause_restart", "quit", "pause_music", "pause_sound" }), "con Música y Sonido junto a la X (D-046)");
+            for (int i = 1; i < 4; i++) // la columna de botones; Música y Sonido van arriba, junto a la X (D-046)
             {
                 float above = -rects[i - 1].anchoredPosition.y + rects[i - 1].sizeDelta.y;
                 Assert.That(-rects[i].anchoredPosition.y, Is.GreaterThanOrEqualTo(above - 0.5f), ids[i] + " bajo " + ids[i - 1]);

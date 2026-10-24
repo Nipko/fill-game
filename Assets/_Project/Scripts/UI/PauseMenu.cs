@@ -170,7 +170,6 @@ namespace AF.UI
 
         public void VisibleButtons(List<string> ids, List<RectTransform> rects)
         {
-            _audio.VisibleButtons(ids, rects, "pause_");
             ids.Add("resume");
             rects.Add((RectTransform)_resume.Button.transform);
             if (_map.Button.gameObject.activeSelf)
@@ -193,6 +192,7 @@ namespace AF.UI
 
             ids.Add("quit");
             rects.Add((RectTransform)_quit.Button.transform);
+            _audio.VisibleButtons(ids, rects, "pause_"); // D-046: Música y Sonido, al final para no mover los ids de siempre
         }
     }
 }
