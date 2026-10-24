@@ -9,7 +9,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 ## 2026-10-24 · T6 · Carril 2: sitio para la tropa con 3 filas (`spark/t6-tropa-3filas`): HECHA con las decisiones del dueño (Q-T6T-3 y Q-T6T-4, 2026-10-24) · verificación completa (un fallo ajeno, por la fecha) · pendiente de la revisión del integrador
 
 - **Encargo:** `spark-audio-tablero.md`, carril 2 (puntos 1-7); D-046, punto 3. Rama desde `origin/integracion-fase1-fase2` en `3ab273f9`. Sin empujar (lo empuja el integrador).
-- **Commits:** `55318941` (franja de la tropa con 3 filas; el suelo sin bajar, pendiente de Q-T6T-3), `257cc921` (las decisiones del dueño del 2026-10-24: franja de 56 dp, suelo bajado 20 dp y avisos en la franja) y el de la revisión del integrador (ver al final de esta entrada).
+- **Commits:** `55318941` (franja de la tropa con 3 filas; el suelo sin bajar, pendiente de Q-T6T-3), `257cc921` (las decisiones del dueño del 2026-10-24: franja de 56 dp, suelo bajado 20 dp y avisos en la franja) `875a8d4d` (la revisión del integrador: 07 §4.1 y §7.4, zona táctil, espera del aviso, globo de Pista, pregunta 68) y este, que solo apunta los hashes.
 - **Decisiones del dueño (2026-10-24, en el chat):**
   - **Q-T6T-3 → «Bajar y mover avisos»:** con 3 filas el suelo baja 20 dp [P] (el panel a 11,5 dp de la bandeja); las burbujas «Te faltan {n}» y el aviso del tablero que ya no caben debajo van a la franja de arriba, sin pisar el panel ni la tropa y legibles al 130 % y en en-XA.
   - **Q-T6T-4 → «Franja de 56 dp»:** la franja de la rama pasa a 56 dp [P]; la tropa, a su tamaño, ya no entra en la fila del HUD (el test exige los 0,5 dp de `IntroTests`; la prueba explícita `…StrictlyOffTheHud_KnownIssue` desaparece: ahora es la prueba normal).
