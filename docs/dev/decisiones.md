@@ -691,7 +691,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
   | 3 | 1 | 64 × 179,2 (u = 32) |
   | 5 | 1 | 47,04 × 131,7 |
   | 6-8 | 2 | 48 × 134,4 |
-  | 11-15 | 3 | 46,9 × 131,3 (Magic Sort con 13-14 botellas: 45 × 138) |
+  | 11-15 | 3 | 46,9 × 131,3 (Magic Sort con 13-14 botellas: 45 × 138); **matizada por D-046:** 41,6 × 116,5 con la franja de la tropa |
   | 16 | 3 | 39,2 × 109,8 |
 
   - A 360 × 800 dp, con 3 filas: 48 dp con T = 11-12 y 47,04 dp con T = 13-15.
@@ -3818,7 +3818,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
      Matiza D-006 (tamaño con 3 filas), D-021 (la tropa lateral pasa a respaldo) y la excepción de D-028 (la fila 1 ya no entra en el HUD). Cambia 02 §5 y 07 §7.4.
 
      **Añadido del 2026-10-24 (respuestas del dueño en el chat a las preguntas del carril 2 del Spark, `spark/t6-tropa-3filas`):**
-     - **Q-T6T-3 → «Bajar y mover avisos»:** con 3 filas el suelo baja 20 dp [P] y el panel queda a 11,5 dp [P] de la bandeja; las burbujas «Te faltan {n}», el aviso del tablero y el globo de Pista que ya no caben debajo van a la franja de la tropa, sobre el panel (02 §5).
+     - **Q-T6T-3 → «Bajar y mover avisos»:** con 3 filas el suelo baja 20 dp [P] y el panel queda a 11,5 dp [P] de la bandeja; las burbujas «Te faltan {n}» y el aviso del tablero que ya no caben debajo van a la franja (y, por extensión del integrador, el globo de Pista: aplicación de Q-T6T-3 [P], no dicho literalmente por el dueño) de la tropa, sobre el panel (02 §5).
      - **Q-T6T-4 → «Franja de 56 dp»:** la franja de la rama mide 56 dp [P] (con 44, el tamaño de 07 §6.4 dejaba la tropa rozar la fila del HUD); la tropa, a su tamaño, ya no entra en ella.
      - **Cifras medidas a 360 × 780:** franja de 56 dp, panel en y = 144-648,5 (11,5 dp sobre la bandeja), cuia de 41,6 × 116,5 dp con 11-15 cuias (antes 46,9 × 131,3). Donde la franja no cabe sin bajar de 28 dp (16:9 (360 × 640 dp; con 3 filas la franja cabe desde unos 666 dp de alto) y la Cuia alta de 6 en lienzos de menos de 750 dp de alto), el tablero de 3 filas es el de antes.
      - Quedan para el dueño, con la recomendada aplicada: Q-T6T-2, Q-T6T-6, Q-T6T-7 y el riesgo Q-T6T-5 (GDD.md §6.3, pregunta 68).

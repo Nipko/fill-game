@@ -6,7 +6,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
-## 2026-10-24 · T6 · Carril 2: sitio para la tropa con 3 filas (`spark/t6-tropa-3filas`): HECHA con las decisiones del dueño (Q-T6T-3 y Q-T6T-4, 2026-10-24) · verificación completa (un fallo ajeno, por la fecha) · pendiente de la revisión del integrador
+## 2026-10-24 · T6 · Carril 2: sitio para la tropa con 3 filas (`spark/t6-tropa-3filas`): HECHA con las decisiones del dueño (Q-T6T-3 y Q-T6T-4, 2026-10-24) · verificación completa (un fallo ajeno, por la fecha) · code-reviewer APROBADO · lista para integrar
 
 - **Encargo:** `spark-audio-tablero.md`, carril 2 (puntos 1-7); D-046, punto 3. Rama desde `origin/integracion-fase1-fase2` en `3ab273f9`. Sin empujar (lo empuja el integrador).
 - **Commits:** `55318941` (franja de la tropa con 3 filas; el suelo sin bajar, pendiente de Q-T6T-3), `257cc921` (las decisiones del dueño del 2026-10-24: franja de 56 dp, suelo bajado 20 dp y avisos en la franja) `875a8d4d` (la revisión del integrador: 07 §4.1 y §7.4, zona táctil, espera del aviso, globo de Pista, pregunta 68) y este, que solo apunta los hashes.
@@ -39,6 +39,9 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   - antes de la revisión, PlayMode (`-TimeoutSec 7200`, 46 min): **2.011 (1.721 pasan + 289 omitidos), 1 fallo ajeno al carril**: `PlayGamesCloudBootTests.ALateCloud_WithAWinWhileWaiting_KeepsTheWin_AndNeverUploadsTheUnmergedLocal`, que también falla solo y depende de la fecha (su `T0` es el 2026-10-23 15:00 UTC y la nube gana por `economy_ts` = T0 + 1 día, que ya ha pasado); el carril no toca Save ni la nube. En la vuelta anterior (antes de las decisiones del dueño) PlayMode dio 2.008 sin fallos.
   - Capturas: las 254 explícitas, antes y después: 157 de tableros de 3 filas cambian como se espera; las 5 que fallan ya fallaban en la línea base.
 - **Teléfono (punto 7):** sin teléfono en el Spark (`adb devices` vacío): pendiente del escritorio con un nivel de 14-16 cuias.
+- **Revisión:** subagente code-reviewer, dos rondas. 1.ª: CAMBIOS NECESARIOS (07 §4.1 y §7.4 con las cifras viejas, sin test del aviso que espera a la tropa, y Q-T6T-2, 6 y 7 escritas como regla firme en 02 §5), atendidos en `875a8d4d` (con el globo de Pista en la franja como aplicación de Q-T6T-3 [P] y la pregunta 68 de GDD.md §6.3). 2.ª: **APROBADO**; sus sugerencias de documentación (resumen de `Toast.MinHeightDp`, el globo de Pista marcado como extensión en D-046, la nota en D-006 y «< 750» aquí) van en el último commit, sin cambios de código. Queda como sugerencia comprobar en `ThreeRows_TheTouchZones_…` que el lienzo de 720 px se aplicó.
+- **Decisiones del dueño (2026-10-24, en el chat):** Q-T6T-3 «Bajar y mover avisos» y Q-T6T-4 «Franja de 56 dp». Pendientes: la pregunta 68 (Q-T6T-2, 6 y 7, recomendadas aplicadas con [P]; Q-T6T-2 se aparta de la letra de D-006) y el riesgo Q-T6T-5.
+- **Teléfono (punto 7):** sin teléfono en el Spark (`adb devices` vacío); queda para el escritorio un nivel de 14-16 cuias en el primer intento.
 - **Riesgos:** `PlayGamesCloudBootTests.ALateCloud_…` falla por la fecha (tarea aparte; no se toca aquí); la primera activación de los brillos del río en la franja asigna (Unity); las cuias de 3 filas son un 11 % más estrechas que antes a 360 × 780 (las ranuras táctiles no cambian); la suite de PlayMode pasa de 50 a ≈ 55 min: hay que lanzarla con `-TimeoutSec 7200`.
 
 ---
