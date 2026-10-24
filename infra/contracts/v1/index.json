@@ -320,6 +320,105 @@
         ]
       },
       "source": "08 §11 (vía web, confirmación en dos pasos); plan F2-8: token de confirmación de 5 minutos."
+    },
+    {
+      "operation": "leagueWins",
+      "function": "league-wins",
+      "method": "POST",
+      "path": "/v1/league/wins",
+      "auth": "firebase",
+      "integrity": true,
+      "throttle": "default",
+      "requestIn": "body",
+      "request": "league-wins.request.schema.json",
+      "response": "league-wins.response.schema.json",
+      "examples": {
+        "request": [
+          "league-wins.request.json",
+          "league-wins.request.mixed.json"
+        ],
+        "response": [
+          "league-wins.response.json",
+          "league-wins.response.mixed.json"
+        ],
+        "invalidRequest": [
+          "league-wins.request.invalid-too-many.json"
+        ]
+      },
+      "errors": {
+        "400": [
+          "bad_request"
+        ],
+        "401": [
+          "unauthorized"
+        ],
+        "403": [
+          "integrity_failed"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ],
+        "502": [
+          "upstream_error"
+        ],
+        "503": [
+          "upstream_error"
+        ],
+        "500": [
+          "internal_error"
+        ]
+      }
+    },
+    {
+      "operation": "leagueBoard",
+      "function": "league-board",
+      "method": "GET",
+      "path": "/v1/league",
+      "auth": "firebase",
+      "integrity": true,
+      "throttle": "default",
+      "requestIn": "query",
+      "request": null,
+      "response": "league-board.response.schema.json",
+      "examples": {
+        "request": [],
+        "response": [
+          "league-board.response.json"
+        ],
+        "invalidRequest": []
+      },
+      "errors": {
+        "400": [
+          "bad_request"
+        ],
+        "401": [
+          "unauthorized"
+        ],
+        "403": [
+          "integrity_failed"
+        ],
+        "404": [
+          "country_unknown"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ],
+        "502": [
+          "upstream_error"
+        ],
+        "503": [
+          "upstream_error"
+        ],
+        "500": [
+          "internal_error"
+        ]
+      }
     }
   ],
   "jobs": [

@@ -64,11 +64,19 @@ namespace AF.UI
         /// <summary>El cliente del backend para los tests (gana a <see cref="BackendModeOverride"/>).</summary>
         internal static IBackendClient? BackendClientOverride { get; set; }
 
+        /// <summary>
+        /// El puerto de Play para los tests: con él, la tienda de Play de verdad (<see cref="PlayBillingClient"/> y
+        /// <see cref="BillingReadyStoreService"/>) sobre ese puerto, con cualquier backend (null: Play solo en el teléfono con el backend
+        /// real). El test la arranca con <see cref="PlayBilling"/> (sin UID de Firebase no arranca sola).
+        /// </summary>
+        internal static IPlayStorePort? PlayStorePortOverride { get; set; }
+
         /// <summary>Limpia los ganchos de test del backend.</summary>
         internal static void ResetBackendOverrides()
         {
             BackendModeOverride = null;
             BackendClientOverride = null;
+            PlayStorePortOverride = null;
             AgeUnder13Override = null;
         }
 
@@ -120,7 +128,10 @@ namespace AF.UI
             // verifica cada compra; con el backend falso (editor, desarrollo sin google-services.json o con af_fake_store, solo en
             // DEVELOPMENT_BUILD), la tienda simulada de siempre.
             IBillingClient billing;
-            _playBilling = client is HttpBackendClient ? PlayBillingFactory.TryCreate(ledger.Catalog, LaunchOptions.DefaultStoreCurrency) : null;
+            IPlayStorePort? portOverride = PlayStorePortOverride;
+            _playBilling = portOverride != null
+                ? new PlayBillingClient(portOverride, ledger.Catalog, LaunchOptions.DefaultStoreCurrency)
+                : client is HttpBackendClient ? PlayBillingFactory.TryCreate(ledger.Catalog, LaunchOptions.DefaultStoreCurrency) : null;
             if (_playBilling != null)
             {
                 _fakeBilling = null;
@@ -310,6 +321,8 @@ namespace AF.UI
             {
                 RestoreLedgerNow();
             }
+
+            ResumeLeague(); // D-046: la cola de la Liga que no salió (GameBootstrap.League.cs)
         }
 
         /// <summary>Pide <c>restoreLedger</c> y aplica su respuesta en una escritura del perfil. False si no se pidió (en vuelo o apagado).</summary>

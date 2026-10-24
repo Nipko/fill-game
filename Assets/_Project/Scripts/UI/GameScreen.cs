@@ -632,6 +632,7 @@ namespace AF.UI
             _pauseButton.Relief.Bind(_pauseButton.Face, _pauseButton.Base, _pauseButton.FaceImage, art.DiscWood, pauseIcon, null, null);
             _walletBar = new WalletBar(_topLayer, art);
             _pause = new PauseMenu(_root, art, OnResume, OnPauseMap, OnPauseRestart, OnPauseQuit, OnPauseSkip);
+            _pause.Audio.Toggled = OnPauseAudio; // D-046, punto 2: Música y Sonido junto a la X
             _confirm = new QuitConfirm(_root, art, OnConfirm, OnConfirmCancel, OnConfirmUndo);
             _banner = new Toast("RiverLowered", _root, art, 18f);
             _toast = new Toast("Toast", _noticeLayer, art, 15f);
@@ -1983,6 +1984,7 @@ namespace AF.UI
             }
 
             flow.ClearSelection();
+            _pause.AudioOffered = AudioToggled != null;
             _pause.Show(flow.CanRestart, PauseMapOffered, _canvasW, _canvasH, flow.SkipOffer);
             EmitPauseLayout();
         }
@@ -2029,6 +2031,25 @@ namespace AF.UI
         private void OnResume()
         {
             _pause.Hide();
+        }
+
+        /// <summary>
+        /// Toque en Música o Sonido de la pausa (D-046, punto 2; 02 §5): la clave (<see cref="SettingsScreen.MusicId"/> o
+        /// <see cref="SettingsScreen.SoundId"/>) y el valor pedido. Lo fija <see cref="GameBootstrap"/>, que lo guarda por el mismo
+        /// camino que Ajustes y devuelve lo guardado con <see cref="MarkAudio"/>; sin él (tests de la pantalla sola), la pausa no
+        /// enseña los botones.
+        /// </summary>
+        internal System.Action<string, bool>? AudioToggled { get; set; }
+
+        /// <summary>Lo guardado en <c>settings.music</c> y <c>settings.sound</c>, a los botones de la pausa.</summary>
+        internal void MarkAudio(bool music, bool sound)
+        {
+            _pause.Audio.Mark(music, sound);
+        }
+
+        private void OnPauseAudio(string key, bool on)
+        {
+            AudioToggled?.Invoke(key, on);
         }
 
         // Pausa › «Salto del Boto» (04 §2.6; bloque B3): la confirmación de GameBootstrap.Skip.cs, que cierra la pausa.
@@ -2857,6 +2878,7 @@ namespace AF.UI
             UiBuilder.Place(_harvestSeed.rectTransform, mid - 2f, 6f, 32f, 32f);
             UiBuilder.Place(_harvestValue.rectTransform, mid + 34f, 0f, mid - 50f, VictoryHarvestDp);
             y += VictoryHarvestDp + VictoryHarvestGapDp(compact);
+            y += LayoutLeagueLine(y, panelW, compact); // D-046: «+{n} puntos de Liga» (GameScreen.League.cs)
 
             // Las barras del panel único (D-033, punto 10): Crecida y Canasta, entre la Cosecha y la Cosecha doble (GameScreen.Streak.cs).
             _victoryBars.Barless = _victoryBarsYield; // en el hito de TiTino que las cede, sin filas (B1b-Q10 (c))

@@ -1,0 +1,29 @@
+{
+  "wins": [
+    {
+      "win_id": "c:42",
+      "kind": "campaign",
+      "level": 42,
+      "won_at": "2026-10-23T19:59:00.000Z"
+    },
+    null,
+    {
+      "win_id": "bad",
+      "kind": "campaign"
+    },
+    {
+      "win_id": "c:701",
+      "kind": "campaign",
+      "level": 701,
+      "won_at": "2026-10-23T19:59:00.000Z"
+    },
+    {
+      "win_id": "c:41",
+      "kind": "campaign",
+      "level": 41,
+      "won_at": "2026-10-23T19:59:00.000Z"
+    }
+  ],
+  "max_level": 1000,
+  "region": null
+}

@@ -17,7 +17,8 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><description>arriba, Semillas, Canoas «n/5» con el cronómetro mm:ss de la próxima (solo desde el 31,
     /// <c>rescue_min_level</c>; con Canoas infinitas, ∞ y el tiempo que queda) y Ajustes, que abre su pantalla
-    /// (<see cref="SettingsScreen"/>; tarea L3);</description></item>
+    /// (<see cref="SettingsScreen"/>; tarea L3), con Música y Sonido de un toque en columna debajo (D-046, punto 2;
+    /// <see cref="AudioToggles"/>);</description></item>
     /// <item><description>en el centro, el Estuario (panorama, muelle y follaje del nivel) y el botón grande «Jugar · Nivel {n}»
     /// con su centro al 60 % del alto (06 §4.7), con la etiqueta de D-009 encima cuando el nivel la lleva (propuesta §c.1;
     /// 07 §7.7; <see cref="DifficultyChip"/>): Difícil, chip ámbar con la rana dardo y la cinta «×3»; Muy difícil, chip índigo
@@ -119,6 +120,10 @@ namespace AF.UI
         // con ella (LayoutCanoesContent).
         private readonly float _canoesTextScale;
         private readonly ReliefParts _settings;
+        private readonly AudioToggles _audio;
+        private readonly RectTransform _piggySlot;
+        private float _piggyLeft;
+        private float _soundTop;
 
         private readonly ReliefParts _play;
         private readonly TextMeshProUGUI _playLabel;
@@ -253,6 +258,10 @@ namespace AF.UI
             Image gear = UiBuilder.Image("Icon", _settings.Face, art.IconGear, Color.white);
             UiBuilder.Place(gear.rectTransform, 7f, 7f, 26f, 26f);
             _settings.Relief.Bind(_settings.Face, _settings.Base, _settings.FaceImage, art.DiscWood, gear, art.IconGearDisabled, null);
+
+            // Música y Sonido con un toque (D-046, punto 2; 07 §9.4): en columna bajo el engranaje, junto a él.
+            _audio = new AudioToggles(top, art);
+            _piggySlot = UiBuilder.Rect("PiggySlot", top); // sin gráficos: solo el sitio del Cántaro (MarketLobbyIcons)
 
             // ---- Pestañas abajo: solo «Inicio» [P] mientras Mercado, Mapa del río, Reto del río y Bitácora no existan. ----
             _tabBar = UiBuilder.Sliced("TabBar", _root, art.WoodPlate, Color.white);
@@ -489,6 +498,31 @@ namespace AF.UI
 
         /// <summary>Botón de Ajustes: abre <see cref="SettingsScreen"/> (tarea L3).</summary>
         public Button SettingsButton => _settings.Button;
+
+        /// <summary>Botones de un toque Música y Sonido, en columna bajo el engranaje (D-046, punto 2).</summary>
+        internal AudioToggles Audio => _audio;
+
+        /// <summary>
+        /// Toque en Música o Sonido del inicio: la clave y el valor pedido. Lo fija <see cref="GameBootstrap"/>, que lo guarda por el
+        /// mismo camino que Ajustes y devuelve lo guardado con <see cref="MarkAudio"/>.
+        /// </summary>
+        public Action<string, bool>? AudioToggled
+        {
+            get => _audio.Toggled;
+            set => _audio.Toggled = value;
+        }
+
+        /// <summary>Lo guardado en <c>settings.music</c> y <c>settings.sound</c>, a los botones del inicio.</summary>
+        public void MarkAudio(bool music, bool sound)
+        {
+            _audio.Mark(music, sound);
+        }
+
+        /// <summary>
+        /// El sitio del Cántaro del Mercado (<see cref="MarketLobbyIcons"/>, que se pone encima), desde D-046 (Q-T6A-2): a la izquierda
+        /// del botón de Sonido, centrado en su alto o, si la píldora de casa baja más (dos líneas al 130 %), justo debajo de ella.
+        /// </summary>
+        public RectTransform PiggyAnchorRect => _piggySlot;
 
         /// <summary>
         /// Botón Volver de la superposición: en Sin canoas, su X, que vuelve al inicio (desde B11 su enlace de abajo es «Volver al
@@ -953,10 +987,18 @@ namespace AF.UI
             UiBuilder.Place(_seeds, 16f, topY + 4f, 112f, 40f);
             UiBuilder.Place(_seedsIcon.rectTransform, -8f, 1f, 38f, 38f);
             UiBuilder.Place(_seedsText.rectTransform, 30f, 0f, 74f, 40f);
-            UiBuilder.Place((RectTransform)_canoes.transform, 140f, topY, 128f, TopRowHeight);
+            // A 320 dp el engranaje (w − 56) pisaba 4 dp de Canoas: Canoas se arrima a Semillas lo justo, 4 dp antes del engranaje.
+            UiBuilder.Place((RectTransform)_canoes.transform, Mathf.Min(140f, w - 8f - MinTouchDp - 4f - 128f), topY, 128f, TopRowHeight);
             UiBuilder.Place(_canoesIcon.rectTransform, -8f, 11f, 48f, 28f);
             LayoutCanoesContent();
             UiBuilder.Place((RectTransform)_settings.Button.transform, w - 8f - MinTouchDp, topY, MinTouchDp, MinTouchDp);
+
+            // Música y Sonido (D-046) [P]: en columna bajo el engranaje, alineados con él. El Cántaro (MarketLobbyIcons) va a la
+            // izquierda de Sonido (Q-T6A-2); la píldora de casa no pasa de la columna y las notas de TiTino, del sitio del Cántaro.
+            float audioX = w - 8f - MinTouchDp;
+            float audioTop = topY + TopRowHeight + AudioToggles.GapDp;
+            _audio.PlaceColumn(audioX, audioTop);
+            float audioBottom = audioTop + AudioToggles.ColumnHeightDp;
 
             // Botón central y chip.
             float playW = PlayWidth(w);
@@ -965,12 +1007,19 @@ namespace AF.UI
             LayoutRemaining();
 
             // Ventanita de casa (M2.1): a la izquierda, bajo los saldos [P]; la píldora de la distancia, a su derecha.
-            _home.Place(SideGutterDp, topY + TopRowHeight + HomeWindowGapDp, w - SideGutterDp);
+            float piggyLeft = audioX - MarketLobbyIcons.PiggyGapDp - MarketLobbyIcons.PiggyWidthDp;
+            _piggyLeft = piggyLeft;
+            _soundTop = audioTop + AudioToggles.TouchDp + AudioToggles.GapDp;
+            _home.Place(SideGutterDp, topY + TopRowHeight + HomeWindowGapDp, audioX - HomeWindowGapDp, piggyLeft - HomeWindowGapDp);
+            PlacePiggySlot();
 
             // Widget de la Crecida (B1b) [P]: en la franja derecha que dejan la tarjeta del Reto (296 dp centrada) y «Jugar», bajo la
             // ventanita de casa con su píldora debajo (lo más que mide) y sobre el chip de la etiqueta.
             float widgetTop = topY + TopRowHeight + HomeWindowGapDp + HomeWindow.SizeDp + HomeWindow.PillStackGapDp + HomeWindow.PillHeightDp + HomeWindowGapDp;
             float widgetBottom = _playTop - ChipGapDp - DifficultyChip.HeightDp;
+
+            // Y bajo la columna de Música y Sonido (D-046), que cae en la misma franja derecha.
+            widgetTop = Mathf.Max(widgetTop, audioBottom + HomeWindowGapDp);
             _streakWidget.Place(w - StreakWidgetRightDp - StreakWidget.WidthDp, widgetTop, Mathf.Max(48f, widgetBottom - widgetTop));
 
             // Pestañas: la barra cubre hasta el borde inferior (y la zona de gestos); «Inicio» sobresale 12 dp.
@@ -1092,6 +1141,20 @@ namespace AF.UI
 
             bool hideHome = _shown == AppScreen.NoCanoes || _commerceOpen;
             _home.Apply(_currentStop, hideHome);
+            PlacePiggySlot(); // la píldora pudo cambiar de texto (y de líneas) con la parada
+        }
+
+        // El sitio del Cántaro (D-046; Q-T6A-2): a la izquierda de Sonido, centrado en su alto, y nunca encima de la píldora de casa.
+        private void PlacePiggySlot()
+        {
+            float y = _soundTop + ((AudioToggles.TouchDp - MarketLobbyIcons.PiggyHeightDp) * 0.5f);
+            float pill = _home.PillBottomDp;
+            if (pill > 0f)
+            {
+                y = Mathf.Max(y, pill + AudioToggles.GapDp);
+            }
+
+            UiBuilder.Place(_piggySlot, _piggyLeft, y, MarketLobbyIcons.PiggyWidthDp, MarketLobbyIcons.PiggyHeightDp);
         }
 
         // «Faltan…» centrado bajo «Jugar», en una placa de madera a la medida del texto y nunca más ancha que el botón (la columna
@@ -1153,6 +1216,7 @@ namespace AF.UI
 
                 ids.Add("settings");
                 rects.Add((RectTransform)_settings.Button.transform);
+                _audio.VisibleButtons(ids, rects, string.Empty);
                 if (_mapTab.Button.gameObject.activeSelf)
                 {
                     ids.Add("map_tab");

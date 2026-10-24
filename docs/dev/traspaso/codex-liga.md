@@ -71,3 +71,35 @@ En `docs/dev/traspaso/codex-estado.md`:
 - las preguntas, con la recomendada aplicada.
 
 Empuja `codex/liga`. El escritorio la revisa e integra.
+
+## Revisión 1 (2026-10-24): cambios necesarios
+
+El code-reviewer revisó `codex/liga` en `9c54e88b`. Están bien el contrato, la concurrencia, el borrado, el país, la seguridad, el IAM y los 337 tests. Queda **un bloqueante**, y el integrador fijó la regla en `docs/dev/liga.md` §3.2 (revisión del 2026-10-24; léela entera).
+
+1. **B1 (bloqueante), [infra/functions/league/rules.ts:61, :80; service.ts:92]:**
+   - el avance de referencia (`alias.highest`) solo sube con las victorias aceptadas;
+   - una victoria perdida o rechazada abre un hueco, y desde entonces todo sale `unreachable_level` y la cuenta queda `flagged` para siempre;
+   - los casos reproducidos: el paso de semana sin red, la 41.ª victoria de una hora, la Liga apagada, una reinstalación y un reloj adelantado.
+
+   **Corrección:**
+   - la referencia avanza con toda victoria de campaña bien formada, aceptada o rechazada;
+   - un hueco mayor de lo normal repone la referencia y la victoria cuenta;
+   - `unreachable_level` solo con `level > max_level`.
+
+   Tests de regresión de esos casos.
+2. **Sin marca automática:** quita la marca por `rate_limited` y por `unreachable_level`. `flagged` queda solo para marcar a mano.
+3. **S1:** 5 minutos de margen para el futuro (`rules.ts:55`).
+4. **S2:**
+   - cada victoria se juzga por separado (`invalid` para ella, nunca un 400 al lote por un elemento);
+   - `region` mala, vacía o null, como desconocida;
+   - sin tope de 700 en `level` y `max_level`: un nivel que no está en la tabla sale `invalid`.
+
+   Ajusta el esquema de petición, porque así lo dice ahora §3.2. La forma de la petición y de la respuesta no cambia.
+5. **S3:** un nivel por debajo del desbloqueo da `invalid`, sin marca.
+6. **S4:** ordena por nivel las victorias de campaña del lote antes de evaluarlas.
+7. **S5:** en 08 §2.4, matiza que la Liga recortada va en la 1.0 (D-046).
+
+**Después:**
+- la verificación de siempre;
+- el `cdk diff` de dev, solo de AfDevApi si no cambia nada más; el dueño lo aprueba y lo despliegas;
+- regístralo en `codex-estado.md` y empuja `codex/liga`.

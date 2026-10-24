@@ -114,6 +114,8 @@ namespace AF.Analytics.Tests
         {
             Dictionary<string, string> rows = Rows(Section(Chapter("08-arquitectura-tecnica-publicacion.md"), "### 8.2 Tabla de eventos", "\n## 9. "));
             Assert.That(ValuesOf(rows["af_settings_change"], "key"), Is.EqualTo(AnalyticsCatalog.SettingsChangeKeys));
+            Assert.That(ValuesOf(rows["af_settings_change"], "source"), Is.EqualTo(AnalyticsCatalog.SettingsChangeSources), "D-046, punto 2");
+            Assert.That(AnalyticsCatalog.Find("af_settings_change")!.Allows("source"), Is.True);
             Assert.That(ValuesOf(rows["af_push_prompt"], "origin"), Is.EqualTo(AnalyticsCatalog.PushPromptOrigins));
             Assert.That(AnalyticsCatalog.Find("af_push_prompt")!.Allows("origin"), Is.True);
         }
@@ -149,6 +151,22 @@ namespace AF.Analytics.Tests
             gddNames.Sort(StringComparer.Ordinal);
             catalogNames.Sort(StringComparer.Ordinal);
             Assert.That(catalogNames, Is.EqualTo(gddNames), "ni un evento de más ni de menos");
+        }
+
+        [Test]
+        public void TheLeagueEvents_OfD046_AreInTheCatalog_WithoutPseudonymOrCountry()
+        {
+            // D-046 (docs/dev/liga.md §5): nunca llevan seudónimo ni país, solo claves.
+            AssertParams("af_league_open", "scope");
+            AssertParams("af_league_wins_sent", "count", "accepted", "rejected");
+            AssertParams("af_league_unavailable", "reason");
+        }
+
+        private static void AssertParams(string name, params string[] expected)
+        {
+            CatalogEntry? entry = AnalyticsCatalog.Find(name);
+            Assert.That(entry, Is.Not.Null, name);
+            Assert.That(entry!.Params, Is.EqualTo(expected), name);
         }
 
         [Test]

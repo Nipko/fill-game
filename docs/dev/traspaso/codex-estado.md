@@ -352,3 +352,120 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - Madrid: Colombia miembro desde 29-08-2012, fuente WIPO. Base CO puede servir para BR/MX/US si titular, vínculo habilitante y base cumplen requisitos. Tasas WIPO consultadas: 2.339 CHF para 9/41 sin color, 2.589 con color; excluyen base, transmisión SIC y honorarios. Importe SIC actual [NV], PDF intentado 403. Recalcular al presentar; relación Parallext / LLC / SAS pendiente de abogado y dueño.
 - `marca.md` modificado únicamente en §4 y §9: tintalu.com comprado en Cloudflare según dueño; secundarios aplazados, .app/.games sin objeto RDAP y .co/.com.br sin disponibilidad verificable. No se alteraron riesgos canónicos, decisión del nombre, planes B ni compuerta de publicación.
 - Recomendación preliminar: mantener Tintalú como candidato condicionado al dictamen, llevando al abogado el nuevo Ball Sort y los antecedentes oficiales. Brasil y Madrid pendientes impiden una conclusión global de disponibilidad. Integrador: conservar los [NV], no convertirlos en ceros, y entregar al abogado las preguntas del informe. Sin solicitudes, pagos, compras, cuentas o publicaciones; solo los tres documentos autorizados, sin código, Assets/, infra/ ni CLAUDE.md.
+
+
+---
+
+# Liga del río — entrega backend D-046, 24-10-2026
+
+Rama `codex/liga`, worktree propio `C:/Users/USER/.codex/worktrees/liga/fill-game`. `git pull origin integracion-fase1-fase2`: base `3ab273f9`, al día; no se cambió el checkout principal. Implementación: **`04c5917c`**. Textos legales: **`6804dbca`**, exclusivamente en `codex/web-marca` (pull con merge de la integración completado allí).
+
+## Implementado
+
+- Esquemas, ejemplos y entradas del contrato v1 para `leagueWins` y `leagueBoard`; `country_unknown` en errores. **`docs/dev/liga.md` no cambia.** Tabla generada de los 700 niveles de tutorial/mundos publicados, con SHA-256 de fuentes normalizadas a LF, generador versionado y `--check` también en `npm test`; reservas excluidas.
+- Dos Lambdas Node 24 arm64, JWT de Firebase y el App Check común en ambas. Cuatro tablas DynamoDB bajo demanda con cifrado/PITR; TTL semanal = fin de semana + 14 días. Jugador por UID/semana, top exacto por ámbito y clave ordenada, histograma por tramo de 100 puntos, seudónimo y reserva de pareja única.
+- Puntos/deduplicación/país/top/histograma actualizados atómicamente, con CAS y comprobación de cuenta no borrada. Ventana móvil por `won_at`, incluye borde del lunes y lotes offline desordenados. Marcados conservan y suman puntos propios, ocultos del top. `deleteAccount` elimina todas las semanas retenidas, sus filas públicas, seudónimo y reserva; lecturas fuertes, sin dependencia de GSI. Pruebas de concurrencia y de dos borrados que no eliminan una pareja reasignada.
+- Ops pasa de 19 a 27 alarmas. No se añaden servidores, NAT, VPC, ElastiCache ni capacidad aprovisionada. Las alarmas sí tienen coste recurrente: 12 métricas nuevas facturadas, aprox. 1,62 USD/mes sin franquicia.
+- Documentación: 08 §2.4/§11 e `infra/README.md`; decisiones, limitaciones y coste en `infra/LEAGUE.md`.
+
+## Criterios y preguntas resueltas
+
+- **País aplicado:** respaldo `region` validado ISO 3166-1. No se añadió CloudFront; se ignora `CloudFront-Viewer-Country` en el endpoint directo para no confiar en una cabecera falsificable. Desconocido → null/solo Global. Se conserva la base del cliente: **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**.
+- **Salto del Boto:** el dueño aprobó en el chat usar la primera victoria de campaña como referencia inicial y, después, admitir un nivel omitido (+2) cuando ese nivel es skippable; saltos mayores se rechazan. Sin campos nuevos ni verificación del pago del Salto. La referencia inicial/fechas/región vienen del cliente: App Check no demuestra la resolución del tablero.
+- **Percentil aplicado:** tramos de 100 puntos y centro del tramo para empates fuera del top [P técnico]; no hay Scan de jugadores. Empate en top: instante de aceptación de los puntos en el servidor, UID interno solo para igualdad de milisegundos. Las claves públicas no incluyen UID.
+- **Espacio de seudónimos:** 24 × 9.000 parejas (1000–9999); colisión resuelta por reserva transaccional y reintentos acotados. Por encima de 216.000 cuentas con seudónimo activo se necesita ampliar el contrato; no reutilizar parejas activas.
+- El ejemplo de victorias de `liga.md` usa 26-10 con etiqueta W43, aunque el cambio de lunes 12 UTC ya descrito corresponde a W44. Se aplicó la regla semanal del texto; los ejemplos JSON entregados usan 23-10/W43 coherentes. Recomendación al integrador: corregir solo la fecha/etiqueta del ejemplo en el canon.
+
+## Verificación ejecutada
+
+Desde `infra/`: `npm ci` correcto (una vulnerabilidad alta heredada; no se actualizaron dependencias); `npm run lint`, `npm run typecheck`, `npm test` **334 pruebas / 19 archivos**, `npm run web:check` y `npm run league:check`, correctos. Synth de dev y synth de prod con `-c domain=tintalu.com -c firebaseAppIds=1:123456789:android:0123456789abcdef`, correctos; cdk-nag pasa en los tests. Los synth sin correo de ejemplo avisan que no notifican: el **diff real** conserva el correo ya desplegado, sin publicarlo. Sin cambios Unity ni ejecución de sus builds/tests.
+
+## Diff real y despliegue
+
+La sesión SSO de `af-dev` se renovó con el dueño. Contextos reales recuperados del despliegue, sin leer valores de secretos: Firebase dev `fill-dev-e75a2`, apps admitidas, paquete y alertas conservados; cuenta/correo solo en archivos temporales fuera del repositorio.
+
+`cdk diff AfDevData AfDevApi AfDevOps --strict --no-change-set --exclusively` con esos contextos: correcto, **tres pilas con cambios**, sin eliminaciones. CLI del paquete ejecutada como `node node_modules/aws-cdk/bin/cdk` para pasar los argumentos de contexto sin la interpretación de `npx`. Diff completo redactado: [liga-dev-diff.txt](liga-dev-diff.txt), sin cuenta, correo ni su forma incrustada en el logical ID. Ensamblado congelado fuera del repo; inventario en [liga-dev-assembly.sha256.json](liga-dev-assembly.sha256.json), digest **2a71b060644b915330b29d2adc0de190dcade79f5420c7d3e141239745ae1df6**.
+
+El diff incluye además las actualizaciones de compras **Q-IAP-4 ya presentes en la base y todavía ausentes de dev**, comprobadas contra los sourcemaps de las cuatro Lambdas existentes (descargados a un temporal privado). Se reempaquetan las cinco existentes. Se corrigieron dos permisos imprescindibles que faltaban en CDK: `verifyPurchase` necesita UpdateItem en purchases para reasignar no consumibles, y `voidedPurchasesJob` GetItem para leer las sombras antes de anularlas. Las aserciones IAM cubren ambos; no se añaden permisos sobre otras tablas o secretos. Hay correcciones de caracteres en descripciones y metadata respecto al despliegue antiguo; no cambian valores de Secrets Manager, rutas previas, destinatario de alertas ni la hora del job.
+
+**Estado actualizado, 24-10-2026:** el dueño dio su sí explícito al diff de Data/Api/Ops y se desplegó el ensamblado aprobado. Las tres pilas quedaron en UPDATE_COMPLETE; ver comprobaciones y corrección posterior al final de este informe. No se desplegaron Global/Web/Cdn ni prod. No se han proporcionado tokens de prueba.
+
+## Coste
+
+Estimación incremental en São Paulo para 100 victorias/mes en 20 lotes y 60 lecturas de tablero por jugador/mes: **aprox. 3 USD/mes con 1.000 jugadores y 137 USD/mes con 100.000**. Margen orientativo 5/200 USD, no límite de gasto. Incluye alarmas, unidades transaccionales, salida, logs, almacenamiento y PITR; sin créditos/impuestos/Firebase/backend previo. Más actividad o filas mayores cambia el coste. Fuentes, tarifas regionales y fórmulas en `infra/LEAGUE.md`. No se cambió el presupuesto existente de dev.
+
+
+## Despliegue y comprobaciones reales — 24-10-2026
+
+Autorización literal del dueño: «Sí, desplegar esas tres pilas en dev». Antes de desplegar se verificaron los 58 archivos del ensamblado aprobado contra sus hashes y la cuenta de `af-dev` contra la del diff. Comando equivalente ejecutado con la CLI local: `cdk deploy AfDevData AfDevApi AfDevOps --app <ensamblado aprobado fuera del repo> --exclusively --require-approval never --profile af-dev`; la aprobación de CDK se omite únicamente porque el dueño ya revisó y aprobó ese ensamblado concreto.
+
+Resultado: **exit 0**, Data/Api/Ops en **UPDATE_COMPLETE**. Las cuatro tablas de Liga están ACTIVE, PAY_PER_REQUEST, SSE y PITR ENABLED; TTL ENABLED en jugadores, top e histograma y DISABLED en seudónimos, como corresponde. **27 alarmas en OK**, ocho de Liga. Simulación IAM de los roles reales: `verifyPurchase` UpdateItem y `voidedPurchasesJob` GetItem sobre purchases, ambos **allowed**.
+
+Base conservada: **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**. Comprobado con `curl.exe` sin credenciales:
+
+- `POST /v1/league/wins` → **401**.
+- `GET /v1/league?scope=global` → **401**.
+- `GET /v1/league?scope=country` → **401**.
+
+La prueba autenticada de envío/Global/País queda pendiente de un token de prueba facilitado por el dueño fuera del repo; no se inventó una sesión ni se imprimieron tokens. El cliente y `live_league_enabled` los integra el escritorio. No hay cambios de URL para `BackendEndpoints`.
+
+El diff estricto posterior con el ensamblado original confirma Data sin diferencias; Api/Ops todavía muestran diferencias de representación Unicode en descripciones/metadata (`?` frente a caracteres acentuados). No declarar diff estricto vacío. Las comprobaciones de ejecución, permisos y alarmas anteriores pasaron; no se cambiaron valores de secretos ni se repitió el deploy para modificar descripciones.
+
+## Corrección posterior desplegada — fecha del Reto y borde semanal
+
+Al revisar el cruce de medianoche se detectó que el código inicial añadía una igualdad no prevista entre la fecha local de inicio del Reto y la fecha UTC de victoria. Podía rechazar victorias legítimas (06 §4.1, R-Q3). Se corrigió con regresiones; además, la consulta de semana anterior se aplica aunque el lote de la primera hora del lunes llegue el viernes, y un ID diario del borde no se cobra otra vez en la semana siguiente.
+
+Commits de corrección: **`eb52e32e`** y **`85109b38`**. Lint, tipos, **337 pruebas / 19 archivos**, tabla generada, web:check y synth de prod con dominio/AppIds de ejemplo, correctos. Contrato `docs/dev/liga.md` sin cambios.
+
+[Resumen y propuesta de actualización](liga-dev-calendario-revision.md), [diff estricto completo redactado](liga-dev-calendario-diff.txt) e [inventario del ensamblado](liga-dev-calendario-assembly.sha256.json), digest **e0f3b1f5dc97c6c24cbdd9eb8c01d381c69de328dd620092798314ae8ee28821**. Comparando ambos ensamblados: Data y Ops idénticos; Api solo cambia Code.S3Key y aws:asset:path de LeagueWins, LeagueBoard y DeleteAccount. No hay nuevos recursos, IAM ni coste fijo. **Corrección aprobada y desplegada únicamente en AfDevApi**, con el sí literal del dueño: «Sí, actualizar AfDevApi». El primer despliegue y esta corrección están activos y comprobados.
+
+
+## Cierre de despliegue — corrección aplicada, 24-10-2026
+
+Se verificaron todos los archivos del segundo ensamblado contra su inventario (digest `e0f3b1f5dc97c6c24cbdd9eb8c01d381c69de328dd620092798314ae8ee28821`) y que la sesión `af-dev` correspondía a la cuenta del diff. Con la aprobación explícita anterior se ejecutó, mediante la CLI local, `cdk deploy AfDevApi --app <segundo ensamblado aprobado fuera del repo> --exclusively --require-approval never --profile af-dev`. **Exit 0; AfDevApi UPDATE_COMPLETE.** Este segundo comando no desplegó Data, Ops ni otras pilas.
+
+Comprobaciones posteriores:
+
+- `league-wins`, `league-board` y `delete-account`: **State Active / LastUpdateStatus Successful**. Se descargaron sus ZIP a un temporal privado y se compararon todos sus archivos, incluido el sourcemap, con las carpetas de assets del ensamblado aprobado: **idénticos byte por byte**. No se imprimieron URL firmadas ni tokens.
+- `curl.exe` sin token: **401** en POST `/v1/league/wins`, GET `/v1/league?scope=global` y GET `/v1/league?scope=country`.
+- **27 alarmas OK** tras la corrección. Las tablas/TTL/PITR y los permisos Q-IAP-4 ya verificados en el primer despliegue se conservan.
+- URL base final, sin cambio: **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**.
+
+Estado final de este encargo: backend y corrección **desplegados en dev con sus dos aprobaciones**, código y registros empujados en `codex/liga`; privacidad/Seguridad de los datos y sitio regenerado en `codex/web-marca`. Verificación de código: **337 pruebas**, lint, tipos, tabla generada y synth dev/prod correctos, como se registró antes del despliegue. No se volvió a ejecutar la batería por cambios posteriores que solo documentan el resultado.
+
+Pendiente externo: integrar el cliente y habilitar su sonda de dev; envío/lectura autenticados si el dueño facilita un token de prueba por vía privada (no se ha proporcionado). La web no se desplegó y los marcadores `[[ABOGADO: revisar]]` siguen pendientes de revisión. No se modificó `docs/dev/liga.md`, prod, el interruptor de producción, DNS ni cuentas de Play.
+
+
+## Liga — Revisión 1 del 24-10-2026 (estado actual)
+
+Esta sección prevalece sobre el criterio histórico de +1/+2 y marca automática descrito más arriba. `git pull origin integracion-fase1-fase2` aplicado en el worktree propio de `codex/liga`, merge `2b47b0f5`; contiene `03332703`. Código: **`c143f075`**.
+
+Aplicados B1 y S1–S5: referencia persistida también con campañas bien formadas rechazadas; huecos aceptados; `unreachable_level` solo por level > max_level; ningún rechazo marca; cinco minutos de margen inclusive dentro de la semana; validación individual y región desconocida tolerante; sin tope fijo de 700 en el esquema; niveles desconocidos/anteriores al desbloqueo invalid; campañas ordenadas por nivel. Se conservan marcas existentes, sin borrarlas automáticamente. Se documenta la Liga recortada en la 1.0 en 08 §2.4. `docs/dev/liga.md` permanece idéntico a la base del integrador.
+
+Sobre válido + elemento malo devuelve 200 y su rechazo individual, sin perder los vecinos. Si falta un win_id de texto, se representa como cadena vacía en rejected (el esquema de respuesta ya lo admite). Ejemplos mixtos versionados y comprobados por HTTP + AJV. No cambian nombres de campos/rutas ni la fuente de puntos. La referencia no verifica progreso ni pago del Salto del Boto.
+
+Verificación: `npm ci` correcto (una vulnerabilidad alta heredada, sin actualizar dependencias); lint, typecheck, **361 pruebas / 20 archivos**, catálogo generado `--check`, `web:check`, synth dev y prod con dominio/AppIds de ejemplo, correctos. Las 24 pruebas añadidas cubren las cinco regresiones pedidas y los límites de reloj, elementos individuales, orden, persistencia y marca manual.
+
+[Resumen para revisar](liga-dev-revision1-revision.md), [diff real redactado](liga-dev-revision1-diff.txt) e [inventario congelado](liga-dev-revision1-assembly.sha256.json), digest `e265c58a270471863cc03bc4d8fdd767c3f8f86aa16e7ecd9508151ece13a09c` (58 archivos). `cdk diff AfDevApi --strict --no-change-set --exclusively` con contexto real: exit 0, una pila con diferencias. Comparando ensamblados, Data/Ops idénticos; Api solo cambia los paquetes de LeagueWins, LeagueBoard y DeleteAccount (en borrado solo el sourcemap). Sin recursos, permisos IAM ni coste fijo nuevos. El diff estricto incluye las diferencias Unicode de descripciones/metadata ya observadas; no son cambios de secretos ni permisos.
+
+**Aprobado y desplegado exclusivamente AfDevApi desde este ensamblado.** El dueño dio el sí específico para esta revisión: «Sí, desplegar únicamente AfDevApi». Código y diff ya estaban empujados en `b6829409`. Comprobaciones reales del despliegue al final de esta sección.
+
+URL dev sin cambios: **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**. Coste incremental del cambio: sin infraestructura adicional; se conservan las estimaciones de `infra/LEAGUE.md`. País: respaldo region ISO; sin CloudFront nuevo. No se modifica el cliente, prod, DNS, Play ni el interruptor. No se ha facilitado token de prueba para envío/lecturas autenticados.
+
+
+### Revisión 1 — cierre de despliegue y comprobaciones, 24-10-2026
+
+Autorización literal del dueño: **«Sí, desplegar únicamente AfDevApi»**. Antes del comando se verificaron los **58 archivos** del ensamblado contra el inventario aprobado, digest `e265c58a270471863cc03bc4d8fdd767c3f8f86aa16e7ecd9508151ece13a09c`, y que `af-dev` seguía en la cuenta del diff. No se regeneró otro ensamblado ni se incorporaron cambios de código después de la aprobación.
+
+Comando ejecutado con la CLI local, equivalente a `cdk deploy AfDevApi --app <revision1-assembly fuera del repo> --exclusively --require-approval never --profile af-dev`. El modo sin confirmación interactiva de CDK se usó con el sí explícito anterior. **Exit 0; AfDevApi UPDATE_COMPLETE.** Solo se desplegó AfDevApi; Data/Ops y las demás pilas no se desplegaron.
+
+Comprobación real posterior:
+
+- `af-dev-league-wins`, `af-dev-league-board` y `af-dev-delete-account`: **State Active / LastUpdateStatus Successful**. Sus ZIP activos se descargaron a un temporal privado y se compararon todos los archivos, incluidos los sourcemaps, con el ensamblado aprobado: **idénticos byte por byte**.
+- **27 alarmas af-dev en OK**.
+- `curl.exe` sin token: POST `/v1/league/wins` → **401**; GET `/v1/league?scope=global` → **401**; GET `/v1/league?scope=country` → **401**.
+- La salida ApiUrl y las comprobaciones conservan **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**; el cliente no necesita cambiar BackendEndpoints.
+
+Estado final de la revisión 1: B1 y S1–S5 aplicados, **361 pruebas / 20 archivos**, lint/tipos/catálogo/web/synth dev y prod correctos, diff aprobado, ensamblado desplegado y comprobado. Commits de código `c143f075` y de diff/informe `b6829409`; este cierre se versiona y empuja también en `codex/liga`. No hubo cambios de código posteriores que justifiquen repetir la batería por esta actualización documental.
+
+Límite de verificación: **no se ha ejecutado envío/lectura autenticados**, porque el dueño no ha facilitado un token de prueba. No se imprimieron credenciales, valores de secretos ni URL firmadas. Permanecen las diferencias Unicode de descripciones/metadata ya documentadas en el diff; no se afirma que el diff estricto esté vacío. El cliente y el interruptor de Liga siguen a cargo del integrador; no se habilitó prod, no se cambió DNS ni se publicó en Play.

@@ -957,6 +957,7 @@ namespace AF.UI
             ShowAccountCode(); // F3-5: el código de borrado para la web en lugar del UID (Q-B13-21; GameBootstrap.Backend.cs)
             RefreshConsentRows(); // B12: «Privacidad y datos» y «Corregir mi edad» (GameBootstrap.Consent.cs)
             RefreshPushRow(); // «Avisos» (06 §8.1; GameBootstrap.PushUi.cs)
+            ShowLeagueCountry(); // D-046: «País en la Liga: {país}» (GameBootstrap.League.cs)
             _skipNextDelta = true;
             return true;
         }
@@ -1022,6 +1023,12 @@ namespace AF.UI
             // Mercado y tarjeta de oferta (B5): Atrás cierra la tarjeta como «Ahora no» (también encima de la victoria) y el Mercado
             // como su X. Con la hoja de compra delante no llega aquí (arriba).
             if (PressMarketBack())
+            {
+                return true;
+            }
+
+            // La Liga del río (D-046), sobre el inicio: Atrás la cierra como su X.
+            if (CloseLeague())
             {
                 return true;
             }
@@ -1706,7 +1713,7 @@ namespace AF.UI
             _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
             // F3-5: la compra verificada (F3-3) con el cliente del backend de este build (GameBootstrap.Backend.cs); la hoja «Compra
             // simulada» es la de la tienda de la plataforma simulada (FakeBillingClient) sin Play real (D-040).
-            _store = WrapStore(WrapCloudStore(WrapConsentStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch)))); // B12: flags de edad; D-042: subida tras cada compra (bajo la analítica, que va fuera)
+            _store = WrapStore(WrapNoticeStore(WrapCloudStore(WrapConsentStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch))))); // B12: flags de edad; D-042: subida tras cada compra (bajo la analítica, que va fuera); el aviso de la tienda no disponible
             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
 
@@ -1739,6 +1746,7 @@ namespace AF.UI
             _mapScreen.L10BubbleSaid = () => _screen?.SlothSession.RecordMapIntro(); // el saludo del inicio se aplaza (D-028, 60 b)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
+            SetUpAudioToggles(); // D-046, punto 2: Música y Sonido con un toque en la pausa y el inicio (GameBootstrap.Audio.cs)
             _settingsScreen.IdleHintToggled = on => ChooseIdleHint(on); // MO3: Pista por inactividad
             BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
             SetUpAccount(); // B8: «Eliminar cuenta y datos» en Ajustes, en dos pasos (GameBootstrap.Account.cs)
@@ -1778,6 +1786,7 @@ namespace AF.UI
             SetUpA11y(); // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y el lector de pantalla
             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
             SetUpConsent(clock, consentStore); // B12: cifras, país y perfil legal, flujo y pantalla (GameBootstrap.Consent.cs)
+            SetUpLeague(); // D-046 (GameBootstrap.League.cs): la Liga del río, tras la edad y el consentimiento (nada con <13 ni sin contestar)
             ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;

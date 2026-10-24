@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/league-board.response.schema.json",
+  "title": "league-board.response",
+  "description": "docs/dev/liga.md §3.1; D-046. País desconocido: null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "week",
+    "starts_at",
+    "ends_at",
+    "scope",
+    "country",
+    "updated_at",
+    "top",
+    "me"
+  ],
+  "properties": {
+    "week": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-W[0-9]{2}$"
+    },
+    "starts_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,3})?Z$"
+    },
+    "ends_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,3})?Z$"
+    },
+    "scope": {
+      "enum": [
+        "global",
+        "country"
+      ]
+    },
+    "country": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z]{2}$"
+    },
+    "updated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,3})?Z$"
+    },
+    "top": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rank",
+          "name_key",
+          "name_num",
+          "country",
+          "points"
+        ],
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "name_key": {
+            "type": "string",
+            "enum": [
+              "league_name_capybara",
+              "league_name_jaguar",
+              "league_name_toucan",
+              "league_name_macaw",
+              "league_name_boto",
+              "league_name_sloth",
+              "league_name_tapir",
+              "league_name_otter",
+              "league_name_manatee",
+              "league_name_turtle",
+              "league_name_howler",
+              "league_name_squirrel_monkey",
+              "league_name_caiman",
+              "league_name_anaconda",
+              "league_name_dart_frog",
+              "league_name_morpho",
+              "league_name_hummingbird",
+              "league_name_heron",
+              "league_name_kingfisher",
+              "league_name_anteater",
+              "league_name_armadillo",
+              "league_name_ocelot",
+              "league_name_coati",
+              "league_name_arapaima"
+            ]
+          },
+          "name_num": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 9999
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[A-Z]{2}$"
+          },
+          "points": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 999999
+          }
+        }
+      }
+    },
+    "me": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "points",
+        "rank",
+        "percentile",
+        "name_key",
+        "name_num",
+        "country"
+      ],
+      "properties": {
+        "points": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999
+        },
+        "rank": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 100
+        },
+        "percentile": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 100
+        },
+        "name_key": {
+          "type": "string",
+          "enum": [
+            "league_name_capybara",
+            "league_name_jaguar",
+            "league_name_toucan",
+            "league_name_macaw",
+            "league_name_boto",
+            "league_name_sloth",
+            "league_name_tapir",
+            "league_name_otter",
+            "league_name_manatee",
+            "league_name_turtle",
+            "league_name_howler",
+            "league_name_squirrel_monkey",
+            "league_name_caiman",
+            "league_name_anaconda",
+            "league_name_dart_frog",
+            "league_name_morpho",
+            "league_name_hummingbird",
+            "league_name_heron",
+            "league_name_kingfisher",
+            "league_name_anteater",
+            "league_name_armadillo",
+            "league_name_ocelot",
+            "league_name_coati",
+            "league_name_arapaima"
+          ]
+        },
+        "name_num": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 9999
+        },
+        "country": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{2}$"
+        }
+      }
+    }
+  }
+}

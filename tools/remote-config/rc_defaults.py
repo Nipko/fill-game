@@ -19,7 +19,7 @@ Opciones: --gdd <ruta de 08>, --out-json <ruta>, --out-cs <ruta>.
 Cómo se lee cada fila (| `clave` / `clave2` | tipo / tipo2 | default / default2 | rango | dueño | uso |):
 - las claves son lo que va entre comillas invertidas en la primera celda; `x_{a,b}` da x_a y x_b (y `x.{a,b}`, x.a y x.b); una plantilla
   `x_<algo>` seguida de sufijos (`a`, `b`) da x_a y x_b; un sufijo que empieza por «_» (`_trail`) sustituye el último
-  tramo de la primera clave (live_unlock_level_league → live_unlock_level_trail);
+  tramo de la primera clave (live_unlock_level_trail → live_unlock_level_regatta);
 - el tipo y el default se reparten por « / »: uno solo vale para todas las claves de la fila; si no, uno por clave;
 - del default se quitan las negritas, las comillas invertidas, las comillas de los extremos y un comentario final entre
   paréntesis («false (1.1: true)» → false; «0 (off)» → 0);

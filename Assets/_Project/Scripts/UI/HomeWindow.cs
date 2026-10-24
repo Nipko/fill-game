@@ -98,6 +98,7 @@ namespace AF.UI
         private bool _provisional;
         private bool _pillBelow;
         private Rect _bounds;
+        private float _pillBottom;
 
         /// <summary>
         /// Crea la ventanita (oculta) bajo <paramref name="parent"/> con TiTino dentro (la del inicio; <see cref="HomeSloth"/>, TI6c):
@@ -186,6 +187,12 @@ namespace AF.UI
 
         /// <summary>Alto de la ventanita con su píldora (dp): el marco y, con <see cref="PillBelow"/> y píldora, el hueco y la píldora.</summary>
         public float HeightDp => _pillBelow && _label.text.Length > 0 ? SizeDp + PillStackGapDp + PillHeightDp : SizeDp;
+
+        /// <summary>
+        /// Borde de abajo de la píldora a la derecha del marco (dp del padre, y hacia abajo), tal como se colocó; 0 sin texto. Con
+        /// el texto en dos líneas baja más que el marco centrado: el inicio pone el Cántaro debajo (D-046).
+        /// </summary>
+        public float PillBottomDp => _pillBottom;
 
         /// <summary>Caja del marco y la píldora juntos, en coordenadas del padre (dp, y hacia abajo), tal como se colocaron.</summary>
         public Rect Bounds => _bounds;
@@ -295,6 +302,15 @@ namespace AF.UI
         /// </summary>
         public void Place(float x, float yTop, float maxRight)
         {
+            Place(x, yTop, maxRight, maxRight);
+        }
+
+        /// <summary>
+        /// Como <see cref="Place(float, float, float)"/>, pero el bocadillo y la tarjeta del Dato de TiTino (<see cref="HomeSloth"/>) no
+        /// pasan de <paramref name="noteMaxRight"/> (el inicio con D-046: no llegan al Cántaro, a la izquierda de Sonido).
+        /// </summary>
+        public void Place(float x, float yTop, float maxRight, float noteMaxRight)
+        {
             _x = x;
             _y = yTop;
             _maxRight = maxRight;
@@ -304,7 +320,7 @@ namespace AF.UI
             // El retrato cuelga bajo la rama de la embaúba: apoyado en el borde de abajo del hueco.
             UiBuilder.Place(_portrait.rectTransform, inset, SizeDp - ProceduralArt.HomeWindowBorderDp - PortraitDp, PortraitDp, PortraitDp);
             PlacePill();
-            _sloth?.Layout(x, yTop, maxRight);
+            _sloth?.Layout(x, yTop, noteMaxRight);
         }
 
         private void Build(RiverStop? stop)
@@ -357,9 +373,30 @@ namespace AF.UI
             }
 
             float left = _x + SizeDp + PillGapDp;
+            float avail = Mathf.Max(0f, _maxRight - left);
             float width = text <= 0f ? 0f : text + (2f * PillPadDp);
-            width = Mathf.Max(0f, Mathf.Min(width, _maxRight - left));
-            UiBuilder.Place(_pill, left, _y + ((SizeDp - PillHeightDp) * 0.5f), width, PillHeightDp);
+            float height = PillHeightDp;
+            bool wrap = width > avail;
+            TextWrappingModes mode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+            if (_label.textWrappingMode != mode)
+            {
+                _label.textWrappingMode = mode;
+            }
+
+            if (wrap)
+            {
+                // No cabe en una línea (un idioma largo con el texto al 130 %, o un lienzo estrecho): el texto, sin encogerse por
+                // debajo de su cuerpo (02 §12), va en dos líneas y la píldora crece a lo alto, sin pasar del alto del marco.
+                // Arriba, a ras del marco, para dejar debajo el sitio del Cántaro (D-046).
+                width = avail;
+                float textH = Mathf.Ceil(UiBuilder.MinTextHeight(_label, Mathf.Max(1f, width - (2f * PillMinPadDp))));
+                height = Mathf.Min(SizeDp, Mathf.Max(PillHeightDp, textH + 2f));
+            }
+
+            _label.margin = wrap ? new Vector4(PillMinPadDp, 0f, PillMinPadDp, 0f) : Vector4.zero;
+            float pillTop = wrap ? _y : _y + ((SizeDp - height) * 0.5f);
+            UiBuilder.Place(_pill, left, pillTop, width, height);
+            _pillBottom = width > 0f ? pillTop + height : 0f;
             _bounds = new Rect(_x, _y, SizeDp + (width > 0f ? PillGapDp + width : 0f), SizeDp);
             if (_tap != null)
             {

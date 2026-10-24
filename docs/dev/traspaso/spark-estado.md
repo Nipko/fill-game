@@ -6,6 +6,35 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-24 · Integración de T6 carril 1 (escritorio)
+
+- Fusionada en `integracion-fase1-fase2` (`666045d0`) sobre la Liga (`73823f7b`), sin conflictos de texto; code-reviewer del escritorio: APROBADO, sin choques con la Liga (el botón «Liga» va abajo a la izquierda y la columna de audio arriba a la derecha).
+- Verificación en el escritorio (x64): dotnet build 0 avisos; dotnet test 1.002 (996 + 6); `validate_schema.py` 116/116; `apply_translations.py --check` OK; `rc_defaults.py --check` idéntico (254); compila; EditMode 4.505 (4.502 + 3); build de desarrollo OK (`dev.apk` 72,8 MB; `check-manifest -Mode dev`, `check-16kb` y `check-no-unity-iap` OK).
+- PlayMode completo: 2.032, 1 fallo, `Home_FitsWithoutOverlaps…(640)`. El test no esperaba a que acabara el saludo de TiTino, que a 360 × 640 aparta la tarjeta del Reto: dependía de la hora. Arreglado en el test (espera el saludo) y añadido `Home_WithTheLeagueOn_TheLeagueButtonFitsWithoutOverlaps` (640/800/320 al 100 y al 130 %, con el botón «Liga» en la lista de no-solape). `AudioQuickTogglesTests` repetido: 22/22. Total: 2.038 (1.748 + 290).
+
+---
+
+## 2026-10-24 · T6 carril 1 · Música y Sonido con un toque (`spark/t6-audio-directo`): HECHA · verificación completa VERDE · code-reviewer APROBADO · lista para integrar
+
+- **Encargo:** `spark-audio-tablero.md`, carril 1 (D-046, punto 2). Rama desde `origin/integracion-fase1-fase2` en `3ab273f9`.
+- **Commits:** `6aa9d6cd` (la funcionalidad, GDD y tests), `2040bfd5` (ids de AF_LAYOUT de la pausa al final; `MapEntriesTests`) y `5a8601b3` (revisión: el Cántaro fuera de la tarjeta del Reto, el inicio a 320 dp, la píldora en dos líneas y el Dato de TiTino).
+- **Qué hace:** `AudioToggles` (discos de madera de 40 dp en 48, nota y altavoz por código en `ProceduralArt.Audio`, tachados si están apagados; TalkBack «Música: activada»…). En la pausa, arriba junto a la X (la tarjeta pasa de 300 a 328 dp [P] para que el título quepa). En el inicio, en columna bajo el engranaje (`LobbyScreen`, no `HomeWindow`: Q-T6A-1). `GameBootstrap.ChooseAudio(key, on, source)` con `AudioQuickSettings`: mismo campo que Ajustes, en el acto, y Ajustes, la pausa (también la del Reto) y el inicio enseñan lo mismo. Vibración solo en Ajustes.
+- **Disposición del inicio** (dp, x/y de la esquina de arriba a la izquierda, medida en `AudioQuickTogglesTests`):
+  - 360 × 640: Ajustes 304,40; Música 304,92; Sonido 304,144; Cántaro 240,140 (56 × 56); tarjeta del Reto 32,204 (296 × 100); Crecida 330,200; Canoas 140,40; ventanita 16,96; píldora 78,112.
+  - 360 × 800: lo mismo, con la tarjeta del Reto en 32,300.
+  - 320 dp: Ajustes 264,40; Música 264,92; Sonido 264,144; Cántaro 200,140; tarjeta del Reto 12,225; Crecida 290,200; Canoas 132,40 (antes 140, bajo el engranaje); al 130 %, la píldora va en dos líneas (78,96, 178 × 45) y el Cántaro baja a y 145.
+  - El Dato de TiTino no pasa del Cántaro; si el saludo o el Dato cruzan la tarjeta del Reto (360 × 640 al 130 %), la tarjeta se aparta mientras se ven.
+- **Analítica:** `source ∈ {settings, pause, home}` en 08 §8.2 y `AnalyticsCatalog` (con test); la sonda `AF_STATE settings_change` lo escribe; 08 §8.2 dice que el audio aún solo sale por la sonda.
+- **Textos:** `a11y_music_on/off` y `a11y_sound_on/off` en es, en y pt-BR (`borrador`, con `context` y `max_chars`).
+- **GDD:** 02 §5, 07 §9.4 y 08 §8.2, con D-046.
+- **Verificación** en `5a8601b3` (ARM64, 64 GB, Python 3.14): dotnet build 0 avisos; dotnet test 1.002 (996 + 6); `validate_schema.py` 116/116; `apply_translations.py --check` OK; compila; EditMode **4.453** (4.450 + 3; línea base 4.447); PlayMode **2.012** (1.725 + 287 omitidos; línea base 1.994). Una pasada de PlayMode quedó sin veredicto al llegar a los 3.600 s mientras corría en paralelo la de `spark-t6-tropa`; repetida con `-TimeoutSec 7200`: 2.829 s, verde.
+- **Revisión:** subagente code-reviewer, dos rondas. 1.ª: CAMBIOS NECESARIOS (bloqueante: a 360 × 640 el Cántaro, colgado de Sonido, pisaba la esquina y el sello de la tarjeta del Reto; sugerencias: pausa y píldora a 320 dp al 130 %, Dato de TiTino, listas en `EmitLayout`, nota en 08 §8.2), todo atendido en `5a8601b3`. 2.ª: **APROBADO**; da por aceptables la exclusión del par Crecida–tarjeta del Reto a 320 dp (anterior a la rama) y ocultar la tarjeta bajo la nota de TiTino (02 §12; `TickDaily` ya la ocultaba en casos parecidos). Pide al integrador repetir PlayMode al integrar, regenerar las capturas `[Explicit]` de la pausa y el inicio antes de la prueba visual y ver en el teléfono a 360 × 640 cómo se aparta la tarjeta con el saludo.
+- **Commit de estado:** `f0fc2dab` y el de esta línea.
+- **Preguntas:** Q-T6A-1 (el inicio es `LobbyScreen`, el encargo decía `HomeWindow.cs`; aplicada: `LobbyScreen`); Q-T6A-2 (la columna bajo el engranaje y el Cántaro a la izquierda de Sonido, no de Música: a la altura de Música pisaría la píldora de casa; si la píldora va en dos líneas, el Cántaro baja hasta ella); Q-T6A-3 (`af_settings_change` de audio sigue solo en la sonda, como desde Ajustes; aplicada: sin envío nuevo a la analítica real, anotado en 08 §8.2).
+- **Riesgos:** a 320 dp la Crecida (x 290-316) y la tarjeta del Reto (x 12-308) ya se cruzaban antes de D-046 (el test lo excluye y lo dice); la tarjeta del Reto se oculta mientras una nota de TiTino la cruza (comportamiento nuevo en pantallas bajas); el integrador debe casar la columna con el botón «Liga»; el solape Crecida–tarjeta del Reto a 320 dp pide una tarea propia; `ProjectSettings/GooglePlayGameSettings.txt` sale modificado en el worktree solo por finales de línea de Unity y no se commitea.
+
+---
+
 ## 2026-10-22 · T5-BILLING · Plugin propio de Play Billing 9.0.0 en lugar de Unity IAP (`spark/t5-billing`): HECHA · verificación completa VERDE (rama y rama + parches) · lista para integrar
 
 - **Encargo:** `spark-reto-del-rio.md` §15; D-040 y su añadido de Q-IAP-1 (2026-10-22): `com.android.billingclient:billing` **9.0.0** directo, el permiso `com.android.vending.BILLING` (ya aprobado) y quitar Unity IAP y sus tres dependencias de Unity Services. Nota: `docs/dev/iap.md` (reescrita).

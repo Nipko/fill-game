@@ -22,7 +22,7 @@ namespace AF.Backend
     /// </list>
     /// No escribe nada en los logs: los errores vuelven en <see cref="BackendResult{T}"/> sin tokens, UID ni URL.
     /// </summary>
-    public sealed class HttpBackendClient : IBackendClient
+    public sealed class HttpBackendClient : IBackendClient, ILeagueBackend
     {
         /// <summary>Tiempo máximo de cada intento [P].</summary>
         public const int DefaultTimeoutSeconds = 15;
@@ -110,10 +110,28 @@ namespace AF.Backend
             Start(BackendOperation.DeleteAccount, DeleteAccountRequest.Confirmed.ToJson(), DeleteAccountResponse.TryParse, onDone);
         }
 
+        /// <summary><c>POST /v1/league/wins</c> (D-046; liga.md §3.1), con integridad.</summary>
+        public void SendLeagueWins(LeagueWinsRequestDto request, Action<BackendResult<LeagueWinsResponseDto>> onDone)
+        {
+            string body = (request ?? throw new ArgumentNullException(nameof(request))).ToJson();
+            Start(BackendOperation.LeagueWins, body, LeagueWinsResponseDto.TryParse, onDone);
+        }
+
+        /// <summary><c>GET /v1/league?scope=global|country</c> (D-046; liga.md §3.1), con integridad.</summary>
+        public void GetLeagueBoard(string scope, Action<BackendResult<LeagueBoardResponseDto>> onDone)
+        {
+            if (scope != "global" && scope != "country")
+            {
+                throw new ArgumentException("scope es global o country.", nameof(scope));
+            }
+
+            Start(BackendOperation.LeagueBoard, null, LeagueBoardResponseDto.TryParse, onDone, "?scope=" + scope);
+        }
+
         private delegate bool Parser<T>(string? json, out T? value, out string? error)
             where T : class;
 
-        private void Start<T>(BackendOperation op, string? body, Parser<T> parse, Action<BackendResult<T>> onDone)
+        private void Start<T>(BackendOperation op, string? body, Parser<T> parse, Action<BackendResult<T>> onDone, string? query = null)
             where T : class
         {
             if (onDone == null)
@@ -121,7 +139,7 @@ namespace AF.Backend
                 throw new ArgumentNullException(nameof(onDone));
             }
 
-            new Call<T>(this, op, body, parse, onDone).Attempt(forceRefresh: false);
+            new Call<T>(this, op, body, parse, onDone, query).Attempt(forceRefresh: false);
         }
 
         /// <summary>Una llamada con sus intentos.</summary>
@@ -133,12 +151,14 @@ namespace AF.Backend
             private readonly string? _body;
             private readonly Parser<T> _parse;
             private readonly Action<BackendResult<T>> _onDone;
+            private readonly string? _query;
             private int _failedAttempts;
             private bool _refreshedAuth;
             private bool _done;
 
-            public Call(HttpBackendClient owner, BackendOperation op, string? body, Parser<T> parse, Action<BackendResult<T>> onDone)
+            public Call(HttpBackendClient owner, BackendOperation op, string? body, Parser<T> parse, Action<BackendResult<T>> onDone, string? query)
             {
+                _query = query;
                 _owner = owner;
                 _op = op;
                 _body = body;
@@ -225,7 +245,7 @@ namespace AF.Backend
                     headers.Add(new KeyValuePair<string, string>("X-Firebase-AppCheck", integrityToken));
                 }
 
-                var request = new HttpRequestData(_op.Method, _owner._baseUrl + _op.Path, headers, _body, _owner._timeoutSeconds);
+                var request = new HttpRequestData(_op.Method, _owner._baseUrl + _op.Path + (_query ?? string.Empty), headers, _body, _owner._timeoutSeconds);
                 try
                 {
                     _owner._transport.Send(request, OnResponse);

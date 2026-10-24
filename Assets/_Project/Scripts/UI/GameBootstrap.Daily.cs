@@ -48,6 +48,8 @@ namespace AF.UI
         private IClock? _dailyClock;
         private DateTime _dailyCardDate;
         private bool _dailyCardShown;
+        private readonly Vector3[] _noteCorners = new Vector3[4];
+        private readonly Vector3[] _cardCorners = new Vector3[4];
         private float _dailyCardW;
         private float _dailyCardH;
 
@@ -220,7 +222,8 @@ namespace AF.UI
 
             screen.Tick(dtMs);
             bool lobby = !screen.IsOpen && _app != null && _app.Screen == AppScreen.Lobby && _lobby != null && _lobby.Visible
-                && !_lobby.OverlayVisible && !HomeWindowCovered && (_settingsScreen == null || !_settingsScreen.Visible);
+                && !_lobby.OverlayVisible && !HomeWindowCovered && (_settingsScreen == null || !_settingsScreen.Visible)
+                && !SlothNoteOverDailyCard(card);
             bool dateChanged = _dailyClock != null && _dailyClock.LocalDate() != _dailyCardDate;
             if (lobby && (!_dailyCardShown || dateChanged))
             {
@@ -233,6 +236,29 @@ namespace AF.UI
 
             _dailyCardShown = lobby;
             card.SetShown(lobby);
+        }
+
+        // Revisión de D-046: el saludo o el Dato de TiTino, bajo la ventanita de casa, llegan en pantallas bajas (360 × 640) o al
+        // 130 % hasta la tarjeta del Reto, que va en un lienzo por encima y los tapaba. Mientras una nota la cruza, la tarjeta se
+        // oculta (sin asignaciones: esquinas en arrays guardados).
+        private bool SlothNoteOverDailyCard(DailyChallengeCard card)
+        {
+            HomeSloth? sloth = _lobby?.HomeWindow.Sloth;
+            if (sloth == null)
+            {
+                return false;
+            }
+
+            RectTransform? note = sloth.FactCardShown ? sloth.FactCardRect : (sloth.BubbleShown ? sloth.BubbleRect : null);
+            if (note == null)
+            {
+                return false;
+            }
+
+            note.GetWorldCorners(_noteCorners);
+            card.Root.GetWorldCorners(_cardCorners);
+            return _noteCorners[0].x < _cardCorners[2].x && _noteCorners[2].x > _cardCorners[0].x
+                && _noteCorners[0].y < _cardCorners[1].y && _noteCorners[1].y > _cardCorners[0].y;
         }
 
         /// <summary>Recalcula la tarjeta (estado, fecha, banda y racha) y la coloca.</summary>

@@ -171,6 +171,9 @@ namespace AF.LiveOps
             return resumable != null ? pool.FindById(resumable.BoardId) : TodaySlot(maxLevel).Board(pool);
         }
 
+        /// <summary>La fecha (<c>yyyy-MM-dd</c>) de la partida en curso, sea del día que sea, o null (D-046: el <c>win_id</c> del Reto en la Liga).</summary>
+        public string? InProgressDateKey => _store.Load().InProgress?.DateKey;
+
         /// <summary>Partida empezada hoy que se puede reanudar (R-Q4), o null.</summary>
         public DailyPlayInProgress? Resumable
         {

@@ -30,7 +30,8 @@
             "rate_limited",
             "not_implemented",
             "upstream_error",
-            "internal_error"
+            "internal_error",
+            "country_unknown"
           ]
         },
         "message": {

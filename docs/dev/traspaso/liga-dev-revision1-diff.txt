@@ -1,0 +1,283 @@
+AI agent detected
+Bundling asset AfDevApi/VerifyPurchase/Function/Code/Stage...
+
+  ...528bbf1da1110d00f6a2d4c3d488b7d8d881bc676dd21-building\index.mjs  391.4kb
+  ...bf1da1110d00f6a2d4c3d488b7d8d881bc676dd21-building\index.mjs.map    1.7mb
+
+Done in 127ms
+Bundling asset AfDevApi/RestoreLedger/Function/Code/Stage...
+
+  ...c28ed1afd3048fbaeb7ce517045d54c49d8f23e11d4cd-building\index.mjs  332.5kb
+  ...d1afd3048fbaeb7ce517045d54c49d8f23e11d4cd-building\index.mjs.map    1.5mb
+
+Done in 129ms
+Bundling asset AfDevApi/RewardedSsv/Function/Code/Stage...
+
+  ...1c7f92c85df3344bd3d845529cb586d38100c1e18cf67-building\index.mjs  350.4kb
+  ...92c85df3344bd3d845529cb586d38100c1e18cf67-building\index.mjs.map    1.6mb
+
+Done in 130ms
+Bundling asset AfDevApi/DeleteAccount/Function/Code/Stage...
+
+  ...f90db4b7fea3e610cddbf5fb302551dc106239a6a03fb-building\index.mjs  391.3kb
+  ...b4b7fea3e610cddbf5fb302551dc106239a6a03fb-building\index.mjs.map    1.7mb
+
+Done in 134ms
+Bundling asset AfDevApi/VoidedPurchasesJob/Function/Code/Stage...
+
+  ...3d6aca01f6695db37939f9470752be7fc85073e94d8e8-building\index.mjs  364.5kb
+  ...ca01f6695db37939f9470752be7fc85073e94d8e8-building\index.mjs.map    1.6mb
+
+Done in 126ms
+Bundling asset AfDevApi/LeagueWins/Function/Code/Stage...
+
+  ...5c69abb0f9a083774830c9bb849d6c4a63724d8e847d0-building\index.mjs  398.0kb
+  ...abb0f9a083774830c9bb849d6c4a63724d8e847d0-building\index.mjs.map    1.7mb
+
+Done in 127ms
+Bundling asset AfDevApi/LeagueBoard/Function/Code/Stage...
+
+  ...e15c0b8298d930cf81735dea1a8871b1eb89d2d7da756-building\index.mjs  398.0kb
+  ...0b8298d930cf81735dea1a8871b1eb89d2d7da756-building\index.mjs.map    1.7mb
+
+Done in 134ms
+Stack AfDevApi (aws://[cuenta]/sa-east-1)
+Resources
+[~] AWS::SecretsManager::Secret PlayServiceAccount PlayServiceAccount0E7CE907
+ ├─ [~] Description
+ │   ├─ [-] Cuenta de servicio de Google Play Developer API. Lo carga el due?o con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ │   └─ [+] Cuenta de servicio de Google Play Developer API. Lo carga el dueño con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SMG4",
+                [-]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotaci?n autom?tica desde AWS; la rota el due?o a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [+]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [ ]   }
+                [ ] ]
+[~] AWS::SecretsManager::Secret FirebaseAdmin FirebaseAdmin72D52ACC
+ ├─ [~] Description
+ │   ├─ [-] Cuenta de servicio de Firebase Admin. Lo carga el due?o con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ │   └─ [+] Cuenta de servicio de Firebase Admin. Lo carga el dueño con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SMG4",
+                [-]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotaci?n autom?tica desde AWS; la rota el due?o a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [+]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [ ]   }
+                [ ] ]
+[~] AWS::SecretsManager::Secret MaxSsvKey MaxSsvKey6D86F61E
+ ├─ [~] Description
+ │   ├─ [-] Clave de los callbacks S2S de AppLovin MAX. Lo carga el due?o con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ │   └─ [+] Clave de los callbacks S2S de AppLovin MAX. Lo carga el dueño con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SMG4",
+                [-]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotaci?n autom?tica desde AWS; la rota el due?o a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [+]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Function VerifyPurchase/Function VerifyPurchaseFunctionF211D62B
+ └─ [~] Description
+     ├─ [-] verifyPurchase (08 ?10.3): verifica la compra en Play y la anota en el libro mayor.
+     └─ [+] verifyPurchase (08 §10.3): verifica la compra en Play y la anota en el libro mayor.
+[~] AWS::Lambda::Function RestoreLedger/Function RestoreLedgerFunction9F3ACC24
+ └─ [~] Description
+     ├─ [-] restoreLedger (08 ?11): libro mayor del UID y nonces de SSV confirmados.
+     └─ [+] restoreLedger (08 §11): libro mayor del UID y nonces de SSV confirmados.
+[~] AWS::Lambda::Function RewardedSsv/Function RewardedSsvFunction7A834AD4
+ └─ [~] Description
+     ├─ [-] rewardedSsv (08 ?10.2): callback S2S de MAX; anota el nonce de la recompensa.
+     └─ [+] rewardedSsv (08 §10.2): callback S2S de MAX; anota el nonce de la recompensa.
+[~] AWS::Lambda::Function DeleteAccount/Function DeleteAccountFunction50EF2EBA
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] 399521e739319fb1297cc5a902909ecd664f2abf913af3b544f5474a0199471f.zip
+ │       └─ [+] 5034d4b6e6ea238d2e918e0fa90a2ac9443fc00f7794070e34fbbf4c06223ca5.zip
+ ├─ [~] Description
+ │   ├─ [-] deleteAccount (08 ?11): borrado por app y por web con c?digo (Q-B13-21).
+ │   └─ [+] deleteAccount (08 §11): borrado por app y por web con código (Q-B13-21).
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.399521e739319fb1297cc5a902909ecd664f2abf913af3b544f5474a0199471f
+         └─ [+] asset.5034d4b6e6ea238d2e918e0fa90a2ac9443fc00f7794070e34fbbf4c06223ca5
+[~] AWS::Lambda::Function VoidedPurchasesJob/Function VoidedPurchasesJobFunction12EF4135
+ └─ [~] Description
+     ├─ [-] voidedPurchasesJob (08 ?10.1): marca voided las compras anuladas en Play.
+     └─ [+] voidedPurchasesJob (08 §10.1): marca voided las compras anuladas en Play.
+[~] AWS::Lambda::Function LeagueWins/Function LeagueWinsFunction03C155AC
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] 90b7f221cb23441276c0d8cfeadb5fdbac2dea560b75c941a1024a6842f69e3a.zip
+ │       └─ [+] f0f887082c1ad203bf52d0ae6da5e202f87ce1c6d4583279fb94e5441e9a4104.zip
+ ├─ [~] Description
+ │   ├─ [-] league-wins: Liga del r?o (D-046; docs/dev/liga.md).
+ │   └─ [+] league-wins: Liga del río (D-046; docs/dev/liga.md).
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.90b7f221cb23441276c0d8cfeadb5fdbac2dea560b75c941a1024a6842f69e3a
+         └─ [+] asset.f0f887082c1ad203bf52d0ae6da5e202f87ce1c6d4583279fb94e5441e9a4104
+[~] AWS::Lambda::Function LeagueBoard/Function LeagueBoardFunction622B45C1
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] cf90fffeaeecf4a1654ba624e0dffc9dc3f147280fcd858dba5125445f6de6ee.zip
+ │       └─ [+] 044318894bb2f9b11a9ff9c61201926c3274f4a0324ff08f26fde6468dd4575e.zip
+ ├─ [~] Description
+ │   ├─ [-] league-board: Liga del r?o (D-046; docs/dev/liga.md).
+ │   └─ [+] league-board: Liga del río (D-046; docs/dev/liga.md).
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.cf90fffeaeecf4a1654ba624e0dffc9dc3f147280fcd858dba5125445f6de6ee
+         └─ [+] asset.044318894bb2f9b11a9ff9c61201926c3274f4a0324ff08f26fde6468dd4575e
+[~] AWS::ApiGatewayV2::Integration Api/GET--v1--ssv/rewarded-ssv-integration ApiGETv1ssvrewardedssvintegration8E9D3D11
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/GET--v1--ssv/rewarded-ssv-integration-Permission ApiGETv1ssvrewardedssvintegrationPermission540ED930
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/GET--v1--ssv ApiGETv1ssv66374AEE
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/POST--v1--ssv/rewarded-ssv-integration-Permission ApiPOSTv1ssvrewardedssvintegrationPermission2830DFD1
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/POST--v1--ssv ApiPOSTv1ssv47EE0F06
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/POST--v1--account--delete-request/delete-account-integration-Permission ApiPOSTv1accountdeleterequestdeleteaccountintegrationPermissionD5A72EF0
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/POST--v1--account--delete-request ApiPOSTv1accountdeleterequest4C0D8503
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/POST--v1--account--delete-confirm/delete-account-integration-Permission ApiPOSTv1accountdeleteconfirmdeleteaccountintegrationPermissionD61620F2
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/POST--v1--account--delete-confirm ApiPOSTv1accountdeleteconfirm135680F5
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Scheduler::Schedule VoidedJobSchedule VoidedJobScheduleB340AB2A
+ └─ [~] Description
+     ├─ [-] voidedPurchasesJob diario (08 ?10.1).
+     └─ [+] voidedPurchasesJob diario (08 §10.1).
+[~] AWS::IAM::Role SchedulerRoleForTarget-9f5cec SchedulerRoleForTarget9f5cecAE2D3FF4
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-IAM5[Resource::<VoidedPurchasesJobFunction12EF4135.Arn>:*]",
+                [-]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comod?n cubre sus versiones y alias)."
+                [+]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comodín cubre sus versiones y alias)."
+                [ ]   }
+                [ ] ]
+[~] AWS::IAM::Policy SchedulerRoleForTarget-9f5cec/DefaultPolicy SchedulerRoleForTarget9f5cecDefaultPolicy57FBA4D4
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-IAM5[Resource::<VoidedPurchasesJobFunction12EF4135.Arn>:*]",
+                [-]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comod?n cubre sus versiones y alias)."
+                [+]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comodín cubre sus versiones y alias)."
+                [ ]   }
+                [ ] ]
+
+
+
+✨  Number of stacks with differences: 1
+

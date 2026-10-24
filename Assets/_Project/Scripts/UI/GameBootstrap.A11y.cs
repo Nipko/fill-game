@@ -132,6 +132,7 @@ namespace AF.UI
             // Lo resuelto en el arranque o en Ajustes, el mismo que la campaña (no se vuelve a leer el teléfono a medias).
             flow.ReduceMotion = _reduceMotionNow;
             ApplyA11y(view, _rcConfigs?.A11y ?? A11yConfig.Defaults, profile);
+            PrepareDailyAudio(view); // D-046, punto 2: Música y Sonido en su pausa (GameBootstrap.Audio.cs)
         }
 
         // Al destruir la escena: quita lo publicado para TalkBack, cuyas acciones apuntan a esta escena.

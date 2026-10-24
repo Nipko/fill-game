@@ -1,0 +1,433 @@
+AI agent detected
+Bundling asset AfDevApi/VerifyPurchase/Function/Code/Stage...
+
+  ...92d1c13fee8d7f1040577a4990689b26f8b58d6c422ab-building\index.mjs  391.4kb
+  ...c13fee8d7f1040577a4990689b26f8b58d6c422ab-building\index.mjs.map    1.7mb
+
+Done in 136ms
+Bundling asset AfDevApi/RestoreLedger/Function/Code/Stage...
+
+  ...5821f1767f4895f982d9bd749928654bf73ad1f0dd14b-building\index.mjs  332.5kb
+  ...f1767f4895f982d9bd749928654bf73ad1f0dd14b-building\index.mjs.map    1.5mb
+
+Done in 147ms
+Bundling asset AfDevApi/RewardedSsv/Function/Code/Stage...
+
+  ...b179f3befa28cb29cae0c93a2c72e6141fa0767c36d24-building\index.mjs  350.4kb
+  ...f3befa28cb29cae0c93a2c72e6141fa0767c36d24-building\index.mjs.map    1.6mb
+
+Done in 128ms
+Bundling asset AfDevApi/DeleteAccount/Function/Code/Stage...
+
+  ...f42d11abf357fa998d1eff3bb3231518f06e60a0bc65a-building\index.mjs  391.3kb
+  ...11abf357fa998d1eff3bb3231518f06e60a0bc65a-building\index.mjs.map    1.7mb
+
+Done in 131ms
+Bundling asset AfDevApi/VoidedPurchasesJob/Function/Code/Stage...
+
+  ...63f0cf36ebb58aac111a1e560da339cfe861c50b99da9-building\index.mjs  364.5kb
+  ...cf36ebb58aac111a1e560da339cfe861c50b99da9-building\index.mjs.map    1.6mb
+
+Done in 136ms
+Bundling asset AfDevApi/LeagueWins/Function/Code/Stage...
+
+  ...a5f2f42c8951f52859e5f86750b8503478666ea148105-building\index.mjs  397.9kb
+  ...f42c8951f52859e5f86750b8503478666ea148105-building\index.mjs.map    1.7mb
+
+Done in 150ms
+Bundling asset AfDevApi/LeagueBoard/Function/Code/Stage...
+
+  ...f91af501340962ffe9689a3978a57eafee3fa1edcf0e5-building\index.mjs  397.9kb
+  ...f501340962ffe9689a3978a57eafee3fa1edcf0e5-building\index.mjs.map    1.7mb
+
+Done in 136ms
+Stack AfDevData (aws://[cuenta]/sa-east-1)
+There were no differences
+
+Stack AfDevApi (aws://[cuenta]/sa-east-1)
+Resources
+[~] AWS::SecretsManager::Secret PlayServiceAccount PlayServiceAccount0E7CE907
+ ├─ [~] Description
+ │   ├─ [-] Cuenta de servicio de Google Play Developer API. Lo carga el due?o con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ │   └─ [+] Cuenta de servicio de Google Play Developer API. Lo carga el dueño con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SMG4",
+                [-]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotaci?n autom?tica desde AWS; la rota el due?o a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [+]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [ ]   }
+                [ ] ]
+[~] AWS::SecretsManager::Secret FirebaseAdmin FirebaseAdmin72D52ACC
+ ├─ [~] Description
+ │   ├─ [-] Cuenta de servicio de Firebase Admin. Lo carga el due?o con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ │   └─ [+] Cuenta de servicio de Firebase Admin. Lo carga el dueño con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SMG4",
+                [-]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotaci?n autom?tica desde AWS; la rota el due?o a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [+]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [ ]   }
+                [ ] ]
+[~] AWS::SecretsManager::Secret MaxSsvKey MaxSsvKey6D86F61E
+ ├─ [~] Description
+ │   ├─ [-] Clave de los callbacks S2S de AppLovin MAX. Lo carga el due?o con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ │   └─ [+] Clave de los callbacks S2S de AppLovin MAX. Lo carga el dueño con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SMG4",
+                [-]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotaci?n autom?tica desde AWS; la rota el due?o a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [+]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Function VerifyPurchase/Function VerifyPurchaseFunctionF211D62B
+ └─ [~] Description
+     ├─ [-] verifyPurchase (08 ?10.3): verifica la compra en Play y la anota en el libro mayor.
+     └─ [+] verifyPurchase (08 §10.3): verifica la compra en Play y la anota en el libro mayor.
+[~] AWS::Lambda::Function RestoreLedger/Function RestoreLedgerFunction9F3ACC24
+ └─ [~] Description
+     ├─ [-] restoreLedger (08 ?11): libro mayor del UID y nonces de SSV confirmados.
+     └─ [+] restoreLedger (08 §11): libro mayor del UID y nonces de SSV confirmados.
+[~] AWS::Lambda::Function RewardedSsv/Function RewardedSsvFunction7A834AD4
+ └─ [~] Description
+     ├─ [-] rewardedSsv (08 ?10.2): callback S2S de MAX; anota el nonce de la recompensa.
+     └─ [+] rewardedSsv (08 §10.2): callback S2S de MAX; anota el nonce de la recompensa.
+[~] AWS::Lambda::Function DeleteAccount/Function DeleteAccountFunction50EF2EBA
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] 407418ad0f0696fb37af0dc6daa896f521f1128049b37f49b035a5a50ea95129.zip
+ │       └─ [+] 399521e739319fb1297cc5a902909ecd664f2abf913af3b544f5474a0199471f.zip
+ ├─ [~] Description
+ │   ├─ [-] deleteAccount (08 ?11): borrado por app y por web con c?digo (Q-B13-21).
+ │   └─ [+] deleteAccount (08 §11): borrado por app y por web con código (Q-B13-21).
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.407418ad0f0696fb37af0dc6daa896f521f1128049b37f49b035a5a50ea95129
+         └─ [+] asset.399521e739319fb1297cc5a902909ecd664f2abf913af3b544f5474a0199471f
+[~] AWS::Lambda::Function VoidedPurchasesJob/Function VoidedPurchasesJobFunction12EF4135
+ └─ [~] Description
+     ├─ [-] voidedPurchasesJob (08 ?10.1): marca voided las compras anuladas en Play.
+     └─ [+] voidedPurchasesJob (08 §10.1): marca voided las compras anuladas en Play.
+[~] AWS::Lambda::Function LeagueWins/Function LeagueWinsFunction03C155AC
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] 762bfad8aa16ec0b37d4eaaa1359182288444b76e2194917dbfe466b65742f86.zip
+ │       └─ [+] 90b7f221cb23441276c0d8cfeadb5fdbac2dea560b75c941a1024a6842f69e3a.zip
+ ├─ [~] Description
+ │   ├─ [-] league-wins: Liga del r?o (D-046; docs/dev/liga.md).
+ │   └─ [+] league-wins: Liga del río (D-046; docs/dev/liga.md).
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.762bfad8aa16ec0b37d4eaaa1359182288444b76e2194917dbfe466b65742f86
+         └─ [+] asset.90b7f221cb23441276c0d8cfeadb5fdbac2dea560b75c941a1024a6842f69e3a
+[~] AWS::Lambda::Function LeagueBoard/Function LeagueBoardFunction622B45C1
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] 321aa806b60727b334d1a674e354f783cb10e1b8d38db1e726a26dc2ee632f5b.zip
+ │       └─ [+] cf90fffeaeecf4a1654ba624e0dffc9dc3f147280fcd858dba5125445f6de6ee.zip
+ ├─ [~] Description
+ │   ├─ [-] league-board: Liga del r?o (D-046; docs/dev/liga.md).
+ │   └─ [+] league-board: Liga del río (D-046; docs/dev/liga.md).
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.321aa806b60727b334d1a674e354f783cb10e1b8d38db1e726a26dc2ee632f5b
+         └─ [+] asset.cf90fffeaeecf4a1654ba624e0dffc9dc3f147280fcd858dba5125445f6de6ee
+[~] AWS::ApiGatewayV2::Integration Api/GET--v1--ssv/rewarded-ssv-integration ApiGETv1ssvrewardedssvintegration8E9D3D11
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/GET--v1--ssv/rewarded-ssv-integration-Permission ApiGETv1ssvrewardedssvintegrationPermission540ED930
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/GET--v1--ssv ApiGETv1ssv66374AEE
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/POST--v1--ssv/rewarded-ssv-integration-Permission ApiPOSTv1ssvrewardedssvintegrationPermission2830DFD1
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/POST--v1--ssv ApiPOSTv1ssv47EE0F06
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/POST--v1--account--delete-request/delete-account-integration-Permission ApiPOSTv1accountdeleterequestdeleteaccountintegrationPermissionD5A72EF0
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/POST--v1--account--delete-request ApiPOSTv1accountdeleterequest4C0D8503
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/POST--v1--account--delete-confirm/delete-account-integration-Permission ApiPOSTv1accountdeleteconfirmdeleteaccountintegrationPermissionD61620F2
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/POST--v1--account--delete-confirm ApiPOSTv1accountdeleteconfirm135680F5
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Scheduler::Schedule VoidedJobSchedule VoidedJobScheduleB340AB2A
+ └─ [~] Description
+     ├─ [-] voidedPurchasesJob diario (08 ?10.1).
+     └─ [+] voidedPurchasesJob diario (08 §10.1).
+[~] AWS::IAM::Role SchedulerRoleForTarget-9f5cec SchedulerRoleForTarget9f5cecAE2D3FF4
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-IAM5[Resource::<VoidedPurchasesJobFunction12EF4135.Arn>:*]",
+                [-]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comod?n cubre sus versiones y alias)."
+                [+]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comodín cubre sus versiones y alias)."
+                [ ]   }
+                [ ] ]
+[~] AWS::IAM::Policy SchedulerRoleForTarget-9f5cec/DefaultPolicy SchedulerRoleForTarget9f5cecDefaultPolicy57FBA4D4
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-IAM5[Resource::<VoidedPurchasesJobFunction12EF4135.Arn>:*]",
+                [-]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comod?n cubre sus versiones y alias)."
+                [+]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comodín cubre sus versiones y alias)."
+                [ ]   }
+                [ ] ]
+
+
+Stack AfDevOps (aws://[cuenta]/sa-east-1)
+Resources
+[~] AWS::SNS::Topic AlarmTopic AlarmTopicD01E77F9
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SNS2",
+                [-]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta m?s que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [+]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta más que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [ ]   }
+                [ ] ]
+[~] AWS::SNS::TopicPolicy AlarmTopic/Policy AlarmTopicPolicy309DB5F8
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SNS2",
+                [-]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta m?s que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [+]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta más que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [ ]   }
+                [ ] ]
+[~] AWS::SNS::Subscription AlarmTopic/[correo] AlarmTopic[suscriptor]2EE5AD6C
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SNS2",
+                [-]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta m?s que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [+]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta más que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [ ]   }
+                [ ] ]
+[~] AWS::CloudWatch::Alarm VerifyPurchaseErrors VerifyPurchaseErrorsF654955C
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de verify-purchase (plan ?2).
+     └─ [+] Errores de verify-purchase (plan §2).
+[~] AWS::CloudWatch::Alarm VerifyPurchaseThrottles VerifyPurchaseThrottles040B5BA6
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de verify-purchase (plan ?2).
+     └─ [+] Throttles de verify-purchase (plan §2).
+[~] AWS::CloudWatch::Alarm RestoreLedgerErrors RestoreLedgerErrors5343956B
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de restore-ledger (plan ?2).
+     └─ [+] Errores de restore-ledger (plan §2).
+[~] AWS::CloudWatch::Alarm RestoreLedgerThrottles RestoreLedgerThrottlesB6A81EF6
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de restore-ledger (plan ?2).
+     └─ [+] Throttles de restore-ledger (plan §2).
+[~] AWS::CloudWatch::Alarm RewardedSsvErrors RewardedSsvErrorsF59B9246
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de rewarded-ssv (plan ?2).
+     └─ [+] Errores de rewarded-ssv (plan §2).
+[~] AWS::CloudWatch::Alarm RewardedSsvThrottles RewardedSsvThrottles2EC9B172
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de rewarded-ssv (plan ?2).
+     └─ [+] Throttles de rewarded-ssv (plan §2).
+[~] AWS::CloudWatch::Alarm DeleteAccountErrors DeleteAccountErrorsD51D120C
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de delete-account (plan ?2).
+     └─ [+] Errores de delete-account (plan §2).
+[~] AWS::CloudWatch::Alarm DeleteAccountThrottles DeleteAccountThrottles0FF727DE
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de delete-account (plan ?2).
+     └─ [+] Throttles de delete-account (plan §2).
+[~] AWS::CloudWatch::Alarm VoidedPurchasesJobErrors VoidedPurchasesJobErrorsD399CBBB
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de voided-purchases-job (plan ?2).
+     └─ [+] Errores de voided-purchases-job (plan §2).
+[~] AWS::CloudWatch::Alarm VoidedPurchasesJobThrottles VoidedPurchasesJobThrottlesE53CAAAD
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de voided-purchases-job (plan ?2).
+     └─ [+] Throttles de voided-purchases-job (plan §2).
+[~] AWS::CloudWatch::Alarm LeagueWinsErrors LeagueWinsErrors4062A99F
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de league-wins (plan ?2).
+     └─ [+] Errores de league-wins (plan §2).
+[~] AWS::CloudWatch::Alarm LeagueWinsThrottles LeagueWinsThrottles8E40316E
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de league-wins (plan ?2).
+     └─ [+] Throttles de league-wins (plan §2).
+[~] AWS::CloudWatch::Alarm LeagueBoardErrors LeagueBoardErrors9AB16BC1
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de league-board (plan ?2).
+     └─ [+] Errores de league-board (plan §2).
+[~] AWS::CloudWatch::Alarm LeagueBoardThrottles LeagueBoardThrottles0125C0C7
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de league-board (plan ?2).
+     └─ [+] Throttles de league-board (plan §2).
+[~] AWS::CloudWatch::Alarm Api5xx Api5xx3D9EE91A
+ └─ [~] AlarmDescription
+     ├─ [-] 5xx de la HTTP API (plan ?2).
+     └─ [+] 5xx de la HTTP API (plan §2).
+[~] AWS::CloudWatch::Alarm VoidedJobFailed VoidedJobFailed870B25B2
+ └─ [~] AlarmDescription
+     ├─ [-] voidedPurchasesJob agot? los reintentos y su evento est? en la DLQ (plan ?2).
+     └─ [+] voidedPurchasesJob agotó los reintentos y su evento está en la DLQ (plan §2).
+[~] AWS::CloudWatch::Alarm PurchasesThrottles PurchasesThrottles4C51330A
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en purchases (plan ?2).
+     └─ [+] Throttles de DynamoDB en purchases (plan §2).
+[~] AWS::CloudWatch::Alarm RewardsThrottles RewardsThrottles4D3CD0E4
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en rewards (plan ?2).
+     └─ [+] Throttles de DynamoDB en rewards (plan §2).
+[~] AWS::CloudWatch::Alarm IntegrityThrottles IntegrityThrottlesAD62457E
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en integrity (plan ?2).
+     └─ [+] Throttles de DynamoDB en integrity (plan §2).
+[~] AWS::CloudWatch::Alarm AccountCodesThrottles AccountCodesThrottles37C8EE33
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en accountCodes (plan ?2).
+     └─ [+] Throttles de DynamoDB en accountCodes (plan §2).
+[~] AWS::CloudWatch::Alarm RateLimitsThrottles RateLimitsThrottles48EE7BB4
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en rateLimits (plan ?2).
+     └─ [+] Throttles de DynamoDB en rateLimits (plan §2).
+[~] AWS::CloudWatch::Alarm JobsThrottles JobsThrottlesB4DE2D0B
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en jobs (plan ?2).
+     └─ [+] Throttles de DynamoDB en jobs (plan §2).
+[~] AWS::CloudWatch::Alarm LeaguePlayersThrottles LeaguePlayersThrottles12DAAB9D
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en leaguePlayers (plan ?2).
+     └─ [+] Throttles de DynamoDB en leaguePlayers (plan §2).
+[~] AWS::CloudWatch::Alarm LeagueBoardTableThrottles LeagueBoardTableThrottles43887BE1
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en leagueBoard (plan ?2).
+     └─ [+] Throttles de DynamoDB en leagueBoard (plan §2).
+[~] AWS::CloudWatch::Alarm LeagueHistogramThrottles LeagueHistogramThrottles4A78E9E4
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en leagueHistogram (plan ?2).
+     └─ [+] Throttles de DynamoDB en leagueHistogram (plan §2).
+[~] AWS::CloudWatch::Alarm LeagueNamesThrottles LeagueNamesThrottlesD45DDFAF
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en leagueNames (plan ?2).
+     └─ [+] Throttles de DynamoDB en leagueNames (plan §2).
+[~] AWS::CloudWatch::Alarm IntegrityQuota IntegrityQuota7644FAAC
+ └─ [~] AlarmDescription
+     ├─ [-] Comprobaciones de integridad del d?a por encima del 70 % de la cuota gratuita (10.000/d?a).
+     └─ [+] Comprobaciones de integridad del día por encima del 70 % de la cuota gratuita (10.000/día).
+
+
+
+✨  Number of stacks with differences: 2

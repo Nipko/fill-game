@@ -314,6 +314,7 @@ namespace AF.UI
         {
             float ribbon = WorstRibbonDp(level >= VictoryCompactMargins);
             float above = VictoryHarvestTopDp + (ribbon - RibbonHeightDp) + VictoryHarvestDp + VictoryHarvestGapDp(level)
+                + LeagueLineDp(level) // D-046: la línea de la Liga (GameScreen.League.cs)
                 + WorstBarsDp(level) // las barras de la Crecida y la Canasta más altas posibles (D-033, punto 10; GameScreen.Streak.cs)
                 + ModalKit.HeightOf(_double) + 2f + (_labelsBuilt ? NextChipRowFor(level) : 0f);
             float below = level >= VictoryCompactRow

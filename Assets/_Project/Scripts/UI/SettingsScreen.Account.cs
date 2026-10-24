@@ -28,6 +28,7 @@ namespace AF.UI
         private Button? _deleteAccount;
         private TextMeshProUGUI? _deleteAccountLabel;
         private TextMeshProUGUI? _accountCode;
+        private TextMeshProUGUI? _leagueCountry;
 
         /// <summary>Hueco de «Eliminar cuenta y datos» (null hasta <see cref="BuildAccount"/>).</summary>
         public RectTransform? AccountSlot { get; private set; }
@@ -69,6 +70,34 @@ namespace AF.UI
             }
         }
 
+        /// <summary>«País en la Liga: {país}» (D-046), o null si no se ve.</summary>
+        public string? LeagueCountryText => _leagueCountry != null && _leagueCountry.gameObject.activeSelf ? _leagueCountry.text : null;
+
+        /// <summary>
+        /// Pone la fila «País en la Liga: {país}» (D-046; liga.md §1: sin poder cambiarlo en la 1.0), ya compuesta con
+        /// <c>LeagueText</c>, o la quita con null (sin Liga o sin país). Con Ajustes abierta, la rehace.
+        /// </summary>
+        public void SetLeagueCountry(string? text)
+        {
+            if (_leagueCountry == null)
+            {
+                return;
+            }
+
+            bool shown = !string.IsNullOrEmpty(text);
+            if (shown == _leagueCountry.gameObject.activeSelf && string.Equals(_leagueCountry.text, text ?? string.Empty, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _leagueCountry.text = text ?? string.Empty;
+            _leagueCountry.gameObject.SetActive(shown);
+            if (Visible)
+            {
+                Layout();
+            }
+        }
+
         /// <summary>Raíz del lienzo propio de Ajustes: el diálogo de dos pasos va encima, dentro del mismo lienzo.</summary>
         public RectTransform OverlayRoot => _canvas.Root;
 
@@ -81,6 +110,10 @@ namespace AF.UI
             }
 
             AccountSlot = UiBuilder.Rect("AccountSlot", _content);
+            _leagueCountry = UiBuilder.Label("LeagueCountry", AccountSlot, TextStyle.Body, string.Empty, 14f, Palette.FamilyWood.Base, TextAlignmentOptions.Left);
+            _leagueCountry.textWrappingMode = TextWrappingModes.Normal;
+            UiBuilder.AutoSize(_leagueCountry, MinTextSp, 14f);
+            _leagueCountry.gameObject.SetActive(false);
             _accountCode = UiBuilder.Label("AccountCode", AccountSlot, TextStyle.Body, string.Empty, 14f, Palette.FamilyWood.Base, TextAlignmentOptions.Left);
             _accountCode.textWrappingMode = TextWrappingModes.Normal;
             UiBuilder.AutoSize(_accountCode, MinTextSp, 14f);
@@ -102,6 +135,18 @@ namespace AF.UI
             }
 
             _deleteAccountLabel.fontSizeMax = 16f * s;
+            float leagueH = 0f;
+            if (_leagueCountry != null && _leagueCountry.gameObject.activeSelf)
+            {
+                // D-046: «País en la Liga: {país}», encima del código, en las líneas que pida con la escala de texto.
+                _leagueCountry.fontSizeMax = 14f * s;
+                _leagueCountry.fontSizeMin = Mathf.Max(MinTextSp, UiBuilder.MinTextSp * s);
+                leagueH = Mathf.Ceil(Mathf.Max(20f * s, UiBuilder.MinTextHeight(_leagueCountry, inner))) + 4f;
+                UiBuilder.Place(_leagueCountry.rectTransform, 0f, 0f, inner, leagueH - 4f);
+                _rowTops.Add(y);
+                _rowHeights.Add(leagueH);
+            }
+
             float codeH = 0f;
             if (_accountCode != null && _accountCode.gameObject.activeSelf)
             {
@@ -111,11 +156,12 @@ namespace AF.UI
                 _accountCode.fontSizeMax = 14f * s;
                 _accountCode.fontSizeMin = Mathf.Max(MinTextSp, UiBuilder.MinTextSp * s);
                 codeH = Mathf.Ceil(Mathf.Max(20f * s, UiBuilder.MinTextHeight(_accountCode, inner))) + 4f;
-                UiBuilder.Place(_accountCode.rectTransform, 0f, 0f, inner, codeH - 4f);
-                _rowTops.Add(y);
+                UiBuilder.Place(_accountCode.rectTransform, 0f, leagueH, inner, codeH - 4f);
+                _rowTops.Add(y + leagueH);
                 _rowHeights.Add(codeH);
             }
 
+            codeH += leagueH;
             UiBuilder.Place(AccountSlot, 16f, y, inner, codeH + rowH);
             UiBuilder.Place((RectTransform)_deleteAccount.transform, 0f, codeH, inner, rowH);
             _rowTops.Add(y + codeH);

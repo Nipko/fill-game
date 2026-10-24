@@ -18,17 +18,24 @@ namespace AF.UI
     /// <para>«Mapa del río» (<c>river_map</c>, glosario §7.1; D-013, punto 7; 04 §5.2) abre el Mapa encima del nivel en pausa, con
     /// «Volver al nivel» en lugar de «Jugar»: no es salir del nivel, así que no gasta canoa ni cuenta como fallo. Sale con el
     /// Mapa en la escena y desde <c>max_level</c> ≥ 10, como la pestaña del inicio (D-008: oculto hasta el 10) [P].</para>
+    /// <para>Música y Sonido (D-046, punto 2; 02 §5; 07 §9.4): dos botones redondos con icono arriba, junto a la X
+    /// (<see cref="AudioToggles"/>), que se apagan o encienden con un toque y guardan lo mismo que las filas de Ajustes; la
+    /// Vibración se queda en Ajustes.</para>
     /// <para>«Salto del Boto» (bloque B3; 04 §2.6: «el icono de Rosa aparece también en el menú de pausa»): con Rosa y su precio,
     /// solo si la opción se ofrece (<c>LevelFlow.SkipOffer</c>), en gris sin saldo; un toque abre la confirmación.</para>
     /// </summary>
     internal sealed class PauseMenu
     {
+        /// <summary>Ancho máximo de la tarjeta con Música y Sonido arriba (dp) [P]; sin ellos, 300 como siempre.</summary>
+        public const float AudioWidthDp = 328f;
+
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
         private readonly RectTransform _panel;
         private readonly Image _surface;
         private readonly Image _header;
         private readonly ReliefParts _close;
+        private readonly AudioToggles _audio;
         private readonly ReliefParts _resume;
         private readonly ReliefParts _map;
         private readonly ReliefParts _skip;
@@ -46,6 +53,8 @@ namespace AF.UI
             _panel = ModalKit.Card("Panel", _root, art, out _surface);
             ModalKit.Header(_panel, art, UiText.Pause, out _header);
             _close = ModalKit.Close("CloseButton", _panel, art, onResume);
+            _audio = new AudioToggles(_panel, art); // D-046, punto 2: Música y Sonido, junto a la X
+            _audio.SetVisible(false);
             _resume = ModalKit.Cta("ResumeButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.KeepPlaying, 21f, onResume, out _);
             _map = ModalKit.Cta("MapButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RiverMap, 18f, onMap, out _);
             _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, onSkip ?? (() => { }), out _skipLabel);
@@ -64,6 +73,15 @@ namespace AF.UI
         public RectTransform Root => _root;
 
         public Button ResumeButton => _resume.Button;
+
+        /// <summary>Botones de un toque Música y Sonido, arriba junto a la X (D-046, punto 2; 02 §5).</summary>
+        internal AudioToggles Audio => _audio;
+
+        /// <summary>
+        /// La pausa enseña Música y Sonido (quien la abre tiene dónde guardarlos: <c>GameScreen.AudioToggled</c>). Se lee en
+        /// <see cref="Show"/>.
+        /// </summary>
+        internal bool AudioOffered { get; set; }
 
         /// <summary>«Mapa del río» (tarea M4.3): solo se ve si <see cref="Show"/> lo pidió.</summary>
         public Button MapButton => _map.Button;
@@ -90,11 +108,25 @@ namespace AF.UI
         public void Show(bool canRestart, bool canMap, float canvasW, float canvasH, SkipOffer skip = default)
         {
             _root.gameObject.SetActive(true);
-            float width = Mathf.Min(300f, canvasW - 48f);
+
+            // Con Música y Sonido en la fila de arriba (D-046), la tarjeta se ensancha [P] para que el título siga cabiendo.
+            bool audio = AudioOffered;
+            float width = audio ? Mathf.Min(AudioWidthDp, canvasW - 32f) : Mathf.Min(300f, canvasW - 48f);
             float inner = width - 32f;
             float y = 16f;
-            UiBuilder.Place(_header.rectTransform, 16f, y, inner - 52f, 40f);
-            UiBuilder.Place((RectTransform)_close.Button.transform, width - 16f - ModalKit.CloseDp, y - 4f, ModalKit.CloseDp, ModalKit.CloseDp);
+            float closeX = width - 16f - ModalKit.CloseDp;
+            float headerW = inner - 52f;
+            _audio.SetVisible(audio);
+            if (audio)
+            {
+                // Título · Música · Sonido · X, con 4 dp entre cada uno, todos a la altura de la X.
+                float audioX = closeX - AudioToggles.GapDp - AudioToggles.RowWidthDp;
+                _audio.PlaceRow(audioX, y - 4f);
+                headerW = audioX - AudioToggles.GapDp - 16f;
+            }
+
+            UiBuilder.Place(_header.rectTransform, 16f, y, headerW, 40f);
+            UiBuilder.Place((RectTransform)_close.Button.transform, closeX, y - 4f, ModalKit.CloseDp, ModalKit.CloseDp);
             y += 56f;
             ModalKit.Place(_resume, 16f, y, inner);
             y += ModalKit.HeightOf(_resume) + 10f;
@@ -160,6 +192,7 @@ namespace AF.UI
 
             ids.Add("quit");
             rects.Add((RectTransform)_quit.Button.transform);
+            _audio.VisibleButtons(ids, rects, "pause_"); // D-046: Música y Sonido, al final para no mover los ids de siempre
         }
     }
 }

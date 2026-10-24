@@ -146,6 +146,9 @@ namespace AF.UI
         /// </summary>
         public Action<LevelFlow, GameScreen>? Prepare { get; set; }
 
+        /// <summary>Se ganó el Reto del día <c>yyyy-MM-dd</c> (D-046: la Liga apunta <c>d:&lt;día&gt;</c>). Lo fija <c>GameBootstrap</c>.</summary>
+        public Action<string>? DayWon { get; set; }
+
         /// <summary>Almacén de la partida abierta (R-Q4), o null.</summary>
         public DailyLevelStateStore? StateStore => _stateStore;
 
@@ -623,7 +626,13 @@ namespace AF.UI
                     _won = true;
                     try
                     {
+                        string? day = _service.InProgressDateKey; // D-046: la fecha de inicio de la partida (R-Q3), antes de cerrarla
                         LastClaimOutcome = _service.ClaimWin();
+                        if (day != null)
+                        {
+                            DayWon?.Invoke(day);
+                        }
+
                         DailyClaimReport claim = _service.Rules.LastClaim;
                         LastClaim = claim;
                         ProbeWin(claim);
