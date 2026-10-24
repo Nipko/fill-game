@@ -19,6 +19,7 @@ export interface Built {
   readonly app: App;
   readonly config: AfConfig;
   readonly stacks: AfStacks;
+  /** Plantillas de los stacks que existen (con webOnly, solo global y web). */
   readonly t: Record<keyof AfStacks, Template>;
 }
 
@@ -39,7 +40,9 @@ export function build(context: Record<string, string>, opts: { bundle?: boolean 
   const config = loadConfig(app.node);
   const stacks = buildApp(app, config, { nag: false });
   const t = Object.fromEntries(
-    (Object.entries(stacks) as Array<[string, Stack]>).map(([k, s]) => [k, Template.fromStack(s)]),
+    (Object.entries(stacks) as Array<[string, Stack | undefined]>)
+      .filter((e): e is [string, Stack] => e[1] !== undefined)
+      .map(([k, s]) => [k, Template.fromStack(s)]),
   ) as Record<keyof AfStacks, Template>;
   const built = { app, config, stacks, t };
   cache.set(key, built);
@@ -49,13 +52,33 @@ export function build(context: Record<string, string>, opts: { bundle?: boolean 
 export const DEV = { env: 'dev' } as const;
 /** Id de app Android de Firebase de mentira (formato de 08 §15.3; no es una app real). Prod lo exige (F2c). */
 export const TEST_APP_ID = '1:123456789:android:0123456789abcdef';
-export const PROD = { env: 'prod', firebaseAppIds: TEST_APP_ID } as const;
+/** Prod sin dominio: solo con noDomain=true (D-044). */
+export const PROD = { env: 'prod', firebaseAppIds: TEST_APP_ID, noDomain: 'true' } as const;
 export const PROD_DOMAIN = {
   env: 'prod',
   firebaseAppIds: TEST_APP_ID,
   account: DOC_ACCOUNT,
   domain: 'example.com',
   hostedZoneId: 'Z0123456789ABCDEFGHIJ',
+  alertEmail: 'alerts@example.com',
+} as const;
+
+/** Prod con dominio en un DNS externo (Cloudflare, D-044): sin zona de Route 53. */
+export const PROD_EXTERNAL_DNS = {
+  env: 'prod',
+  firebaseAppIds: TEST_APP_ID,
+  account: DOC_ACCOUNT,
+  domain: 'example.com',
+  alertEmail: 'alerts@example.com',
+} as const;
+/** Lo mismo con cdn. y api. pedidos expresamente. */
+export const PROD_EXTERNAL_DNS_EXTRAS = { ...PROD_EXTERNAL_DNS, domainExtras: 'cdn,api' } as const;
+/** Solo la web en prod con DNS externo (D-044): sin firebaseAppIds, sin Data, Api, Cdn ni Ops. */
+export const PROD_WEB_ONLY = {
+  env: 'prod',
+  webOnly: 'true',
+  account: DOC_ACCOUNT,
+  domain: 'example.com',
   alertEmail: 'alerts@example.com',
 } as const;
 

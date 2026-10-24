@@ -1,9 +1,10 @@
 // Script de la página de eliminación de cuenta (08 §11). Sin dependencias ni terceros; los textos salen de los
 // atributos data-msg-* del formulario, que el generador escribe en cada idioma. La base de la API sale de
-// /config.json, que escribe el stack Web al desplegar (nunca fija en el HTML).
+// /config.json, que escribe el stack Web al desplegar (nunca fija en el HTML). Sin API (modo solo web, D-044),
+// config.json lo desactiva: se muestra el aviso #delete-soon y el formulario no aparece ni envía nada.
 import { formatAccountCode, isValidAccountCode, normalizeAccountCode } from './account-code.ts';
-import type { FlowError } from './delete-flow.ts';
-import { confirmDeletion, requestDeletion, resolveApiBase } from './delete-flow.ts';
+import type { FlowError, WebDeleteConfig } from './delete-flow.ts';
+import { confirmDeletion, requestDeletion, resolveWebConfig } from './delete-flow.ts';
 
 type MsgKey = 'invalid' | 'sending' | 'notFound' | 'expired' | 'rateLimited' | 'unavailable' | 'config' | 'cancelled' | 'done';
 
@@ -13,17 +14,23 @@ function byId<T extends HTMLElement>(id: string): T {
   return el as T;
 }
 
-async function loadApiBase(): Promise<string | null> {
+async function loadWebConfig(): Promise<WebDeleteConfig> {
   try {
     const res = await fetch('/config.json', { cache: 'no-store', credentials: 'omit' });
-    if (!res.ok) return null;
-    return resolveApiBase((await res.json()) as unknown);
+    if (!res.ok) return { kind: 'invalid' };
+    return resolveWebConfig((await res.json()) as unknown);
   } catch {
-    return null;
+    return { kind: 'invalid' };
   }
 }
 
+async function loadApiBase(): Promise<string | null> {
+  const config = await loadWebConfig();
+  return config.kind === 'enabled' ? config.apiBase : null;
+}
+
 function init(): void {
+  const soon = byId<HTMLElement>('delete-soon');
   const form = byId<HTMLFormElement>('delete-form');
   const input = byId<HTMLInputElement>('account-code');
   const submit = byId<HTMLButtonElement>('delete-submit');
@@ -142,7 +149,17 @@ function init(): void {
     })();
   });
 
-  form.hidden = false;
+  void (async () => {
+    const config = await loadWebConfig();
+    if (config.kind === 'disabled') {
+      // Sin API: solo el aviso (borrar desde el juego o por correo). El formulario sigue oculto.
+      soon.hidden = false;
+      return;
+    }
+    // Activo, o config.json ilegible: el formulario aparece y, si no hay base, avisa al enviar.
+    if (config.kind === 'enabled') apiBase = config.apiBase;
+    form.hidden = false;
+  })();
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

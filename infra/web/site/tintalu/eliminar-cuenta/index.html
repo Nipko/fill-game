@@ -8,9 +8,11 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="/assets/site.css">
+  <link rel="canonical" href="/tintalu/eliminar-cuenta/">
   <link rel="alternate" hreflang="es-419" href="/tintalu/eliminar-cuenta/">
   <link rel="alternate" hreflang="en" href="/tintalu/en/delete-account/">
   <link rel="alternate" hreflang="pt-BR" href="/tintalu/pt-br/excluir-conta/">
+  <link rel="alternate" hreflang="x-default" href="/tintalu/eliminar-cuenta/">
   <script src="/assets/delete-account.js" defer></script>
 </head>
 <body>
@@ -44,6 +46,9 @@
   <li>Escribe tu código y toca «Continuar».</li>
   <li>Revisa el código y confirma con «Sí, eliminar» en los 5 minutos siguientes.</li>
 </ol>
+<div id="delete-soon" class="notice" hidden>
+  <p>El borrado desde esta página estará disponible pronto. Mientras tanto, borra tu cuenta desde el juego (Ajustes › «Eliminar cuenta y datos») o escríbenos a <mark class="pending">[[DATO DEL DUEÑO: correo de privacidad]]</mark> y lo hacemos por ti.</p>
+</div>
 <form id="delete-form" class="delete-form" method="post" novalidate hidden data-msg-invalid="Ese código no es válido. Revísalo en Ajustes: tiene 26 letras y números." data-msg-sending="Un momento…" data-msg-not-found="No encontramos ese código. Revisa que sea el último que ves en Ajustes." data-msg-expired="La confirmación caducó. Vuelve a escribir tu código." data-msg-rate-limited="Demasiados intentos. Prueba de nuevo dentro de {minutes} min." data-msg-unavailable="No se pudo completar ahora. Inténtalo más tarde." data-msg-config="Esta página no está bien configurada. Borra tu cuenta desde el juego o inténtalo más tarde." data-msg-cancelled="No se eliminó nada." data-msg-done="Listo. Tu cuenta se eliminó.">
   <fieldset id="delete-step-code">
     <legend>Eliminar con tu código de cuenta</legend>

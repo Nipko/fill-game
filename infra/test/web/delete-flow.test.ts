@@ -9,6 +9,7 @@ import {
   confirmDeletion,
   requestDeletion,
   resolveApiBase,
+  resolveWebConfig,
 } from '../../web/src/browser/delete-flow.ts';
 import { validator } from '../contract/ajv.ts';
 
@@ -35,9 +36,11 @@ function fakeFetch(status: number, body: unknown, headers: Record<string, string
   return { fn, calls };
 }
 
+const DEV_CONFIG = loadConfig({ tryGetContext: (k) => (k === 'env' ? 'dev' : undefined) });
+
 describe('resolveApiBase', () => {
   it('acepta la configuración que despliega el stack Web (mismo origen)', () => {
-    expect(resolveApiBase(webRuntimeConfig(loadConfig({ tryGetContext: (k) => (k === 'env' ? 'dev' : undefined) })))).toBe('');
+    expect(resolveApiBase(webRuntimeConfig(DEV_CONFIG, true))).toBe('');
   });
 
   it('solo admite el mismo origen', () => {
@@ -47,6 +50,26 @@ describe('resolveApiBase', () => {
     }
     expect(resolveApiBase(null)).toBeNull();
     expect(resolveApiBase('x')).toBeNull();
+  });
+});
+
+describe('resolveWebConfig (formulario con y sin API)', () => {
+  it('con API, el borrado por web está activo y va al mismo origen', () => {
+    expect(webRuntimeConfig(DEV_CONFIG, true)).toEqual({ deleteEnabled: true, apiBase: '' });
+    expect(resolveWebConfig(webRuntimeConfig(DEV_CONFIG, true))).toEqual({ kind: 'enabled', apiBase: '' });
+  });
+
+  it('sin API (solo web), desactivado: la página enseña el aviso y no envía nada', () => {
+    expect(webRuntimeConfig(DEV_CONFIG, false)).toEqual({ deleteEnabled: false });
+    expect(resolveWebConfig(webRuntimeConfig(DEV_CONFIG, false))).toEqual({ kind: 'disabled' });
+    // Aunque traiga una base, deleteEnabled: false manda.
+    expect(resolveWebConfig({ deleteEnabled: false, apiBase: '' })).toEqual({ kind: 'disabled' });
+  });
+
+  it('cualquier otra cosa no es válida (ni activa ni el aviso)', () => {
+    for (const bad of [null, 'x', 3, {}, { apiBase: '' }, { deleteEnabled: 'false' }, { deleteEnabled: true }, { deleteEnabled: true, apiBase: 'https://evil.example' }]) {
+      expect(resolveWebConfig(bad), JSON.stringify(bad)).toEqual({ kind: 'invalid' });
+    }
   });
 });
 

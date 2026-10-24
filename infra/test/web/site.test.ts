@@ -3,7 +3,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { MARKER_RE, OUT_DIR, diffSite, fileForPath, renderSite } from '../../web/build.ts';
+import { MARKER_RE, OUT_DIR, diffSite, fileForPath, renderSite, robotsTxt } from '../../web/build.ts';
 import type { Lang, PageDef } from '../../web/src/site.ts';
 import { LANGS, PAGES, UI } from '../../web/src/site.ts';
 import { WEB_RUNTIME_CONFIG_FILE } from '../../lib/web-stack.ts';
@@ -228,6 +228,74 @@ describe('web/site', () => {
       expect(doc, lang).toMatch(/role="status" aria-live="polite"/);
       expect(doc, lang).toContain('<noscript>');
     }
+  });
+
+  it('la página de borrado trae el aviso de «disponible pronto» oculto, con la vía del juego y el correo de privacidad', () => {
+    const page = PAGES.find((p) => p.id === 'delete');
+    if (!page) throw new Error('sin página de borrado');
+    for (const lang of LANGS) {
+      const doc = html(page, lang);
+      const soon = /<div id="delete-soon" class="notice" hidden>\s*<p>([\s\S]*?)<\/p>\s*<\/div>/.exec(doc)?.[1];
+      expect(soon, lang).toBeDefined();
+      expect(soon, lang).toContain('<mark class="pending">[[DATO DEL DUEÑO: correo de privacidad]]</mark>');
+      expect(decode(soon ?? ''), lang).toContain(lang === 'es-419' ? 'Eliminar cuenta y datos' : lang === 'en' ? 'Delete account and data' : 'Excluir conta e dados');
+      // El aviso va antes del formulario y los dos empiezan ocultos: el script enseña uno u otro.
+      expect(doc.indexOf('id="delete-soon"'), lang).toBeLessThan(doc.indexOf('id="delete-form"'));
+      expect(doc, lang).toMatch(/<form id="delete-form"[^>]*\shidden/);
+    }
+    expect(new Set(LANGS.map((l) => UI[l].deleteForm.soon)).size).toBe(LANGS.length);
+    const js = site.get('assets/delete-account.js') ?? '';
+    expect(js).toContain('delete-soon');
+    expect(js).toContain('deleteEnabled');
+  });
+
+  it('sin dominio: canonical y hreflang relativos (con x-default) y robots.txt sin indexar', () => {
+    for (const page of PAGES) {
+      for (const lang of LANGS) {
+        const doc = html(page, lang);
+        expect(doc).toContain(`<link rel="canonical" href="${page.path[lang]}">`);
+        expect(doc).toContain(`<link rel="alternate" hreflang="x-default" href="${page.path['es-419']}">`);
+        expect(doc.match(/rel="canonical"/g)).toHaveLength(1);
+      }
+    }
+    expect(site.get('robots.txt')).toBe('User-agent: *\nDisallow: /\n');
+    expect(robotsTxt()).toBe('User-agent: *\nDisallow: /\n');
+  });
+
+  it('con dominio: canonical y hreflang absolutos; robots.txt deja indexar solo si es indexable (prod)', () => {
+    const origin = 'https://example.com';
+    const prod = renderSite({ origin, indexable: true });
+    const devWithDomain = renderSite({ origin });
+    expect(prod.get('robots.txt')).toBe('User-agent: *\nAllow: /\n');
+    expect(devWithDomain.get('robots.txt')).toBe('User-agent: *\nDisallow: /\n');
+    for (const page of PAGES) {
+      for (const lang of LANGS) {
+        const doc = prod.get(fileForPath(page.path[lang])) ?? '';
+        expect(doc).toContain(`<link rel="canonical" href="${origin}${page.path[lang]}">`);
+        for (const l of LANGS) expect(doc).toContain(`<link rel="alternate" hreflang="${l}" href="${origin}${page.path[l]}">`);
+        expect(doc).toContain(`<link rel="alternate" hreflang="x-default" href="${origin}${page.path['es-419']}">`);
+        // Los enlaces de navegación siguen siendo relativos (funcionan igual en www. y en *.cloudfront.net).
+        expect(doc).toContain(`<a href="${page.path[lang]}"`);
+      }
+    }
+  });
+
+  it('las variantes con dominio son el mismo sitio: solo cambian las URL de canonical y hreflang y robots.txt', () => {
+    const origin = 'https://example.com';
+    const prod = renderSite({ origin, indexable: true });
+    expect([...prod.keys()].sort()).toEqual([...site.keys()].sort());
+    for (const [f, content] of site) {
+      if (f === 'robots.txt') continue;
+      const relative = (prod.get(f) ?? '').replace(/(<link rel="(?:canonical|alternate)"[^>]*href=")https:\/\/example\.com/g, '$1');
+      expect(relative, f).toBe(content);
+    }
+  });
+
+  it('rechaza un origen no válido y que se indexe sin dominio', () => {
+    for (const bad of ['http://example.com', 'https://example.com/', 'example.com', 'https://ex ample.com']) {
+      expect(() => renderSite({ origin: bad }), bad).toThrow(/Origen/);
+    }
+    expect(() => renderSite({ indexable: true })).toThrow(/indexable/);
   });
 
   it('app-ads.txt es una plantilla: solo comentarios hasta tener los IDs reales', () => {

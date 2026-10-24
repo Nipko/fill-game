@@ -44,6 +44,14 @@
     if (!/^[A-Za-z0-9/_-]+$/.test(base)) return null;
     return base;
   }
+  function resolveWebConfig(config) {
+    if (typeof config !== "object" || config === null) return { kind: "invalid" };
+    const enabled = config.deleteEnabled;
+    if (enabled === false) return { kind: "disabled" };
+    if (enabled !== true) return { kind: "invalid" };
+    const apiBase = resolveApiBase(config);
+    return apiBase === null ? { kind: "invalid" } : { kind: "enabled", apiBase };
+  }
   async function post(fetchFn, url, body) {
     try {
       return await fetchFn(url, {
@@ -116,16 +124,21 @@
     if (!el) throw new Error(`Falta #${id}`);
     return el;
   }
-  async function loadApiBase() {
+  async function loadWebConfig() {
     try {
       const res = await fetch("/config.json", { cache: "no-store", credentials: "omit" });
-      if (!res.ok) return null;
-      return resolveApiBase(await res.json());
+      if (!res.ok) return { kind: "invalid" };
+      return resolveWebConfig(await res.json());
     } catch {
-      return null;
+      return { kind: "invalid" };
     }
   }
+  async function loadApiBase() {
+    const config = await loadWebConfig();
+    return config.kind === "enabled" ? config.apiBase : null;
+  }
   function init() {
+    const soon = byId("delete-soon");
     const form = byId("delete-form");
     const input = byId("account-code");
     const submit = byId("delete-submit");
@@ -237,7 +250,15 @@
         showStep("code");
       })();
     });
-    form.hidden = false;
+    void (async () => {
+      const config = await loadWebConfig();
+      if (config.kind === "disabled") {
+        soon.hidden = false;
+        return;
+      }
+      if (config.kind === "enabled") apiBase = config.apiBase;
+      form.hidden = false;
+    })();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
