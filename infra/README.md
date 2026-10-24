@@ -49,6 +49,7 @@ npm test
 npm run web:check        # web/site al día con web/build.ts
 npx cdk synth -c env=dev
 npx cdk synth -c env=prod -c firebaseAppIds=1:123456789:android:0123456789abcdef   # id de mentira para validar
+npx cdk synth -c env=prod -c domain=tintalu.com -c webOnly=true                      # solo la web de prod con DNS externo (D-044)
 ```
 
 `cdk synth` aplica **cdk-nag** (AwsSolutions) como plugin de validación: cualquier hallazgo sin reconocer hace fallar la síntesis. Cada excepción está reconocida en el código con su motivo (`ack(...)` en `lib/`). La síntesis no hace búsquedas en la cuenta (`fromLookup` está prohibido) y `cdk.json` desactiva la telemetría, los avisos y el informe de versión de la CLI.
@@ -63,7 +64,10 @@ npx cdk synth -c env=prod -c firebaseAppIds=1:123456789:android:0123456789abcdef
 | `firebaseProjectId` | No | `amazon-fill-dev` | Emisor y audiencia del JWT de Firebase Auth y audiencia del token de App Check; por defecto `amazon-fill-dev` / `amazon-fill-prod` (08 §15.3) |
 | `firebaseAppIds` | En prod, **sí** (en dev, no) | `1:<número>:android:<hash>` (varios, separados por comas) | El token de App Check solo vale para esas apps de Firebase (Q-AWS-4). En prod la síntesis falla sin él (F2c): así solo las apps Android registradas emiten tokens válidos, no cualquier app del proyecto (web, iOS o una de pruebas). Además, la Lambda falla cerrada (500) si en prod le falta la lista. Se copia de la consola de Firebase (Configuración del proyecto → Tus apps → ID de la app); es público, no es un secreto |
 | `packageName` | En prod, **sí** para comprar | applicationId de la app | Paquete para la Google Play Developer API. En dev vale por defecto el provisional `com.amazonfill.dev`; en prod no tiene valor por defecto, solo se pasa **tras el dictamen de marca** y la síntesis rechaza el provisional (regla 6 de `CLAUDE.md`). Sin él, verifyPurchase y el job responden 500 (fallan cerrados) |
-| `domain` + `hostedZoneId` | No (los dos o ninguno) | dominio y zona de Route 53 | Web en `<dominio>` y `www.`, CDN en `cdn.`, API en `api.`; **solo prod y solo tras el dictamen de marca** (Q-AWS-9) |
+| `domain` | No | `tintalu.com` | Web en `<dominio>` y `www.` (en prod; D-044 la publica ya). Sin `hostedZoneId`, el DNS es **externo** (Cloudflare): certificados de ACM validados por CNAME que crea el dueño y ningún registro DNS en AWS; las salidas dicen qué crear. Con dominio, canonical y hreflang absolutos; solo prod con dominio se indexa |
+| `hostedZoneId` | No (solo con `domain`) | id de zona de Route 53 | DNS en Route 53 (opción B): el CDK crea la validación y los alias A/AAAA, y pone también `cdn.` y `api.` en el dominio |
+| `domainExtras` | No (solo con `domain` y sin `hostedZoneId`) | `cdn`, `api` o `cdn,api` | Con DNS externo, `cdn.<dominio>` en la CDN o `api.<dominio>` en la API (cada uno con su certificado y su salida de CNAME). Por defecto, ninguno |
+| `webOnly` | No | `true` | Solo `<Prefijo>Global` y `<Prefijo>Web`, sin `Data`, `Api`, `Cdn` ni `Ops` (D-044). No exige `firebaseAppIds` y no admite `hostedZoneId` ni `domainExtras`. Sin API, el borrado por web queda desactivado (`config.json`) y la página da la vía del juego y el correo |
 
 ## Web pública (`web/`, D-041)
 
@@ -81,23 +85,61 @@ Más `/app-ads.txt` (plantilla, todo comentado hasta tener los IDs de MAX) y `/a
 
 - **Cómo se edita:** los textos están en `web/src/content/<idioma>/<página>.html` y en `web/src/site.ts` (rutas, títulos, plantilla y textos del formulario); el script del borrado, en `web/src/browser/` (TypeScript que esbuild empaqueta sin dependencias). Después, `npm run web:build` regenera `web/site/` (**generado: no se edita a mano**) y `npm run web:check` comprueba que está al día (también lo hace `npm test`).
 - **Marcadores:** `[[DATO DEL DUEÑO: …]]` (datos de Parallext, LLC que faltan) y `[[ABOGADO: …]]` (lo decide el abogado); la web los resalta. Se sustituyen en `web/src/content/` y se regenera.
-- **Borrado por web:** el formulario normaliza el código (mayúsculas, sin espacios ni guiones, I y L → 1, O → 0; `common.schema.json`) y llama a `POST /v1/account/delete-request` y después a `/v1/account/delete-confirm` (contrato v1; sin sesión ni App Check). La base de la API sale de `/config.json`, que escribe este stack al desplegar (`webRuntimeConfig`): vacía, porque CloudFront reenvía `/v1/account/delete-*` a la API desde el mismo origen.
+- **Borrado por web:** el formulario normaliza el código (mayúsculas, sin espacios ni guiones, I y L → 1, O → 0; `common.schema.json`) y llama a `POST /v1/account/delete-request` y después a `/v1/account/delete-confirm` (contrato v1; sin sesión ni App Check). El estado sale de `/config.json`, que escribe este stack al desplegar (`webRuntimeConfig`): con la API, `{"deleteEnabled": true, "apiBase": ""}` (base vacía, porque CloudFront reenvía `/v1/account/delete-*` a la API desde el mismo origen); sin ella (`webOnly`), `{"deleteEnabled": false}`, y la página muestra en su lugar que el borrado por web estará disponible pronto, con la vía del juego y el correo de privacidad, sin enviar nada.
+- **SEO por entorno:** `web/site/` es la variante sin dominio (canonical y hreflang relativos, `robots.txt` con `Disallow: /`). Con `-c domain`, el stack Web genera al sintetizar la variante con dominio desde el mismo generador (`renderSite({ origin, indexable })`, `lib/web-site.ts`): canonical y hreflang absolutos (`https://<dominio>/…`, con `x-default`) y, solo en prod, `robots.txt` con `Allow: /` y sin `X-Robots-Tag`. No hay una segunda copia del sitio en el repositorio.
 - **Desplegar en dev:** lo hace el dueño con el `cdk deploy` de la guía de abajo (o solo `npx cdk deploy AfDevWeb -c env=dev -c account=<id-cuenta-dev> --profile af-dev`); la URL es la salida `WebUrl` (`https://<id>.cloudfront.net`). La caché es de 5 minutos: los cambios se ven solos en ese tiempo. En dev la web no se indexa (`X-Robots-Tag` y `robots.txt`).
 - **Sin página 404 propia:** una ruta que no existe devuelve el 403 de S3. No se usan las respuestas de error personalizadas de CloudFront porque se aplicarían también a `/v1/account/delete-*` y taparían el 404 `code_not_found` de la API.
 
-### Conectar `tintalu.com` (pasos del dueño, cuando lo decida)
+### Conectar `tintalu.com` (D-044: opción A, DNS en Cloudflare)
 
-**No está hecho ni se hace sin decisión del dueño:** lo público con la marca espera al dictamen (D-034, Q-AWS-9; D-041). El dominio está en **Cloudflare**, y el CDK de hoy solo sabe conectar un dominio con zona de **Route 53** (`-c domain` + `-c hostedZoneId`), así que antes hace falta elegir una vía:
+El dueño decidió publicar ya la web en `tintalu.com` (D-044), sin esperar al dictamen de marca; Play Console y el `applicationId` definitivo **siguen esperando**. El DNS se queda en **Cloudflare**: el certificado de ACM se valida por CNAME fuera de AWS y el CDK **no crea ningún registro DNS** en AWS. Como todavía no hay backend de prod, se despliega **solo la web** (`-c webOnly=true`: `AfProdGlobal` y `AfProdWeb`, sin `AfProdData`, `AfProdApi`, `AfProdCdn` ni `AfProdOps`). Lo ejecutan Codex y el dueño en el equipo del dueño, con su sesión de AWS (ningún agente de Claude despliega). Todo desde `infra/`, con `npm ci` hecho. En los comandos, `<prod>` es el id de 12 dígitos de la cuenta de prod y `<correo>` el del dueño.
 
-1. **Opción A, DNS en Cloudflare (recomendada [P]: sin coste nuevo de AWS).** Necesita un cambio de CDK previo (lo hace un agente cuando el dueño lo pida): admitir un dominio sin zona de Route 53, con el certificado de ACM validado por DNS fuera de AWS y sin registros `Route53::RecordSet`. Después, el dueño:
-   1. Despliega `AfProdGlobal`: crea el certificado de ACM en **us-east-1** (CloudFront solo usa certificados de esa región) para `tintalu.com` y `www.tintalu.com` (y `cdn.` si la CDN va en el dominio). La consola de ACM enseña un **CNAME de validación** por nombre.
-   2. En Cloudflare › DNS, crea esos CNAME de validación tal cual, **sin proxy** (nube gris), y espera a que ACM marque el certificado como «Emitido». No los borres: ACM los usa para renovar.
-   3. Despliega `AfProdWeb`: la distribución de CloudFront queda con los nombres alternativos (`tintalu.com`, `www.tintalu.com`) y el certificado. Copia su dominio `xxxx.cloudfront.net` (salida `WebUrl`).
-   4. En Cloudflare › DNS: `tintalu.com` CNAME → `xxxx.cloudfront.net` (Cloudflare lo aplana en el apex) y `www` CNAME → el mismo, los dos **sin proxy** (nube gris) para que CloudFront sirva el certificado y las cabeceras de seguridad.
-   5. Comprueba `https://tintalu.com/tintalu/eliminar-cuenta` y que `robots.txt` permite indexar en prod.
-2. **Opción B, delegar el DNS a Route 53.** Crea una zona alojada `tintalu.com` en la cuenta de prod (coste mensual de la zona), cambia en Cloudflare los servidores de nombres (NS) del dominio por los de Route 53 y despliega con `-c domain=tintalu.com -c hostedZoneId=<id de la zona>`: el CDK de hoy ya crea el certificado, los alias y los registros A/AAAA. Cloudflare deja de servir el DNS.
+1. **Acceso y bootstrap de prod (una vez).** Perfil SSO de la cuenta de prod y bootstrap en las dos regiones (la web va en sa-east-1 y su certificado en us-east-1, que es la única región cuyos certificados usa CloudFront):
+   ```
+   aws configure sso --profile af-prod
+   aws sso login --profile af-prod
+   npx cdk bootstrap aws://<prod>/sa-east-1 aws://<prod>/us-east-1 --profile af-prod
+   ```
+2. **Revisar.** Debe listar solo `AfProdGlobal` y `AfProdWeb`, sin ningún `AWS::Route53::*`:
+   ```
+   npx cdk ls   -c env=prod -c domain=tintalu.com -c webOnly=true
+   npx cdk diff AfProdGlobal AfProdWeb -c env=prod -c account=<prod> -c domain=tintalu.com -c webOnly=true -c alertEmail=<correo> --profile af-prod
+   ```
+3. **Desplegar.** Los mismos contextos en este comando y en todos los siguientes (si se quita `-c domain`, CloudFront pierde el dominio):
+   ```
+   npx cdk deploy AfProdGlobal AfProdWeb -c env=prod -c account=<prod> -c domain=tintalu.com -c webOnly=true -c alertEmail=<correo> --profile af-prod
+   ```
+   `cdk deploy` enseña los cambios de IAM y pide confirmación. `AfProdGlobal` se queda **esperando** con el certificado en «Pendiente de validación» hasta el paso 4: no lo canceles.
+4. **CNAME de validación (mientras espera).** Léelos en la consola de ACM (región **us-east-1** › Certificados › `tintalu.com` › Dominios: un nombre y un valor por `tintalu.com` y `www.tintalu.com`), en los eventos del stack («Content of DNS Record is: …») o con:
+   ```
+   aws acm list-certificates --region us-east-1 --certificate-statuses PENDING_VALIDATION --profile af-prod
+   aws acm describe-certificate --region us-east-1 --certificate-arn <arn> --query "Certificate.DomainValidationOptions[].ResourceRecord" --profile af-prod
+   ```
+   En Cloudflare › `tintalu.com` › DNS › Registros, crea cada uno: tipo **CNAME**, nombre = el `_xxxx.tintalu.com` (o `_xxxx.www.tintalu.com`) de ACM, destino = el `_yyyy.acm-validations.aws.`, **Proxy: «Solo DNS» (nube gris)**. ACM emite el certificado en minutos y el despliegue sigue solo con `AfProdWeb`. **No borres nunca esos CNAME:** ACM los usa para renovar.
+5. **Apuntar el dominio.** Al terminar, la salida `AfProdWeb.WebDnsRecords` da los dos registros (y `WebUrl`, el `https://xxxx.cloudfront.net`). En Cloudflare › DNS, borra cualquier registro A, AAAA o CNAME previo de `tintalu.com` y de `www` y crea:
+   - `tintalu.com` (nombre `@`) CNAME → `xxxx.cloudfront.net` (Cloudflare lo aplana en el apex), **Solo DNS**;
+   - `www` CNAME → `xxxx.cloudfront.net`, **Solo DNS**.
 
-En las dos: la web pública con dominio va en **prod** (en dev se queda en `*.cloudfront.net`), y el CDK de hoy también pone `cdn.<dominio>` en el certificado. Tras conectar el dominio, la URL de eliminación de cuenta (`https://tintalu.com/tintalu/eliminar-cuenta`) y la de la política son las que van a Play Console (08 §13.1 #2 y #7).
+   Sin proxy, para que CloudFront sirva su certificado, TLS 1.2 y las cabeceras de seguridad (con la nube naranja Cloudflare las taparía y haría su propio TLS).
+6. **Comprobar** (esperar unos minutos a que propague el DNS):
+   ```
+   nslookup tintalu.com                                   # IP de CloudFront, no de Cloudflare
+   curl -sI https://tintalu.com/                          # 200, strict-transport-security y sin x-robots-tag
+   curl -sI https://www.tintalu.com/tintalu/eliminar-cuenta/
+   curl -s  https://tintalu.com/robots.txt                # User-agent: * / Allow: /
+   curl -s  https://tintalu.com/config.json               # {"deleteEnabled":false}
+   ```
+   Y en el navegador: `https://tintalu.com/tintalu/eliminar-cuenta/` muestra que el borrado desde la web estará disponible pronto, con la vía del juego y el correo de privacidad, sin formulario; el código fuente de las páginas lleva `canonical` y `hreflang` con `https://tintalu.com/…`. Los cambios de la web se ven solos en 5 minutos (caché).
+7. **Activar el borrado por web cuando exista la API de prod.** No se toca la web: al desplegar el entorno completo **sin** `webOnly`, el stack Web añade la ruta `/v1/account/delete-*` hacia la API y `config.json` pasa a `{"deleteEnabled":true,"apiBase":""}`, con lo que la página enseña el formulario. Con los secretos y el resto de pasos de «Prod», abajo:
+   ```
+   npx cdk diff   --all -c env=prod -c account=<prod> -c domain=tintalu.com -c firebaseAppIds=<id de la app Android de prod> -c alertEmail=<correo> --profile af-prod
+   npx cdk deploy --all -c env=prod -c account=<prod> -c domain=tintalu.com -c firebaseAppIds=<id de la app Android de prod> -c alertEmail=<correo> --profile af-prod
+   ```
+   El certificado de la web no cambia (mismo recurso en los dos modos). La CDN queda en `xxxx.cloudfront.net` y la API en `execute-api`; para `cdn.tintalu.com` o `api.tintalu.com`, añade `-c domainExtras=cdn,api`: cada uno crea su certificado (CNAME de validación como en el paso 4) y una salida (`CdnDnsRecord`, `ApiDnsRecord`) con el CNAME que va en Cloudflare, también sin proxy. Comprueba después que `curl -s https://tintalu.com/config.json` devuelve `"deleteEnabled":true`.
+
+**Opción B (no elegida), delegar el DNS a Route 53:** zona alojada `tintalu.com` en la cuenta de prod (coste mensual), NS de Cloudflare cambiados por los de Route 53 y `-c domain=tintalu.com -c hostedZoneId=<id de la zona>`, sin `webOnly`: el CDK crea el certificado compartido (con `cdn.`), su validación, los alias A/AAAA de la web y la CDN y `api.<dominio>`.
+
+Tras conectar el dominio, la URL de eliminación de cuenta (`https://tintalu.com/tintalu/eliminar-cuenta`) y la de la política son las que irán a Play Console (08 §13.1 #2 y #7) cuando haya dictamen.
 
 ## Guía del dueño: desplegar dev
 
@@ -181,7 +223,7 @@ En dev (y solo en dev: un test de stacks lo comprueba) las funciones llevan `AF_
 
 ## Prod
 
-Igual que dev con `-c env=prod`, el perfil `af-prod` y la cuenta de prod. En prod las tablas, los buckets, los secretos y los logs se **retienen** al borrar el stack, y `Data` y `Api` tienen protección contra la terminación. El dominio (`-c domain=… -c hostedZoneId=…`) y la web pública solo **tras el dictamen de marca** (D-034, Q-AWS-9; plan F5). El verificador falso de Play no existe en prod (un test lo comprueba). Para que las compras funcionen en prod hace falta `-c packageName=<applicationId definitivo>`, que solo existe tras el dictamen de marca. La síntesis de prod exige `-c firebaseAppIds=<id de la app Android de prod>` (sin él falla con un mensaje que lo pide):
+Igual que dev con `-c env=prod`, el perfil `af-prod` y la cuenta de prod. En prod las tablas, los buckets, los secretos y los logs se **retienen** al borrar el stack, y `Data` y `Api` tienen protección contra la terminación. La web pública en `tintalu.com` se publica ya (D-044, solo web: «Conectar `tintalu.com`» arriba); Play Console y el `applicationId` definitivo siguen esperando al dictamen de marca. El verificador falso de Play no existe en prod (un test lo comprueba). Para que las compras funcionen en prod hace falta `-c packageName=<applicationId definitivo>`, que solo existe tras el dictamen de marca. La síntesis de prod exige `-c firebaseAppIds=<id de la app Android de prod>` (sin él falla con un mensaje que lo pide):
 ```
 npx cdk synth -c env=prod -c firebaseAppIds=1:<número>:android:<hash>
 ```

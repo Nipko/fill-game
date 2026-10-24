@@ -5,6 +5,12 @@
 //   node web/build.ts           escribe web/site/ (borra lo que ya no genera)
 //   node web/build.ts --check   código 1 si web/site/ no coincide con lo generado
 //
+// web/site/ es la variante sin dominio (dev y prod en *.cloudfront.net): enlaces canonical y hreflang relativos y un
+// robots.txt que no deja indexar. Con dominio, el stack Web llama a renderSite({ origin, indexable }) al sintetizar
+// (lib/web-site.ts): el mismo generador y las mismas fuentes, con canonical y hreflang absolutos y, solo en prod con
+// dominio, un robots.txt que deja indexar. Las dos variantes solo difieren en esas URL y en robots.txt (lo prueba
+// test/web/site.test.ts).
+//
 // Marcadores en los fragmentos:
 //   {{page:<id>}}          ruta de esa página en el mismo idioma
 //   {{delete-form}}        formulario del borrado por web, con los textos del idioma
@@ -21,6 +27,30 @@ export const SRC_DIR = path.join(WEB_DIR, 'src');
 export const OUT_DIR = path.join(WEB_DIR, 'site');
 
 export const MARKER_RE = /\[\[(DATO DEL DUEÑO|ABOGADO): [^\]]+\]\]/g;
+
+/** Opciones de despliegue del sitio (las pone el stack Web según el entorno y el dominio). */
+export interface SiteOptions {
+  /** Origen público, `https://<dominio>`: canonical y hreflang absolutos. Sin él, rutas relativas. */
+  readonly origin?: string;
+  /** robots.txt deja indexar. Solo con origen (prod con dominio). */
+  readonly indexable?: boolean;
+}
+
+const ORIGIN_RE = /^https:\/\/([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+
+function checkOptions(opts: SiteOptions): void {
+  if (opts.origin !== undefined && !ORIGIN_RE.test(opts.origin)) {
+    throw new Error(`Origen no válido para la web: ${opts.origin} (se espera https://<dominio>, sin barra final).`);
+  }
+  if (opts.indexable && opts.origin === undefined) {
+    throw new Error('Solo se indexa con dominio: indexable exige origin.');
+  }
+}
+
+/** robots.txt: indexar solo con `indexable`; si no, nada. */
+export function robotsTxt(opts: SiteOptions = {}): string {
+  return opts.indexable ? 'User-agent: *\nAllow: /\n' : 'User-agent: *\nDisallow: /\n';
+}
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -40,7 +70,11 @@ function deleteForm(lang: Lang): string {
   const data = Object.entries(t.msg)
     .map(([k, v]) => ` data-msg-${k.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase())}="${escapeHtml(v)}"`)
     .join('');
-  return `<form id="delete-form" class="delete-form" method="post" novalidate hidden${data}>
+  // El aviso y el formulario empiezan ocultos: el script muestra uno u otro según /config.json (sin API, el aviso).
+  return `<div id="delete-soon" class="notice" hidden>
+  <p>${escapeHtml(t.soon)}</p>
+</div>
+<form id="delete-form" class="delete-form" method="post" novalidate hidden${data}>
   <fieldset id="delete-step-code">
     <legend>${escapeHtml(t.legend)}</legend>
     <label for="account-code">${escapeHtml(t.label)}</label>
@@ -74,12 +108,16 @@ function renderContent(page: PageDef, lang: Lang): string {
   return html.replace(MARKER_RE, (m) => `<mark class="pending">${m}</mark>`);
 }
 
-function renderPage(page: PageDef, lang: Lang): string {
+function renderPage(page: PageDef, lang: Lang, opts: SiteOptions): string {
   const ui = UI[lang];
   const title = page.id === 'home' ? page.title[lang] : `${page.title[lang]} · Tintalú`;
-  const alternates = LANGS.map(
-    (l) => `  <link rel="alternate" hreflang="${l}" href="${page.path[l]}">`,
-  ).join('\n');
+  // canonical y hreflang: absolutos con dominio (los buscadores los prefieren así), relativos sin él.
+  const url = (p: string): string => (opts.origin ?? '') + p;
+  const alternates = [
+    `  <link rel="canonical" href="${url(page.path[lang])}">`,
+    ...LANGS.map((l) => `  <link rel="alternate" hreflang="${l}" href="${url(page.path[l])}">`),
+    `  <link rel="alternate" hreflang="x-default" href="${url(page.path[LANGS[0]])}">`,
+  ].join('\n');
   const langNav = LANGS.map((l) => {
     const current = l === lang ? ' aria-current="page"' : '';
     return `      <li><a href="${page.path[l]}" hreflang="${l}" lang="${l}"${current}>${escapeHtml(UI[l].langName)}</a></li>`;
@@ -147,19 +185,21 @@ function bundleScript(): string {
   return banner + result.outputFiles[0].text.replace(/\r\n/g, '\n');
 }
 
-/** Toda la web: ruta relativa dentro de web/site/ → contenido. */
-export function renderSite(): Map<string, string> {
+/** Toda la web: ruta relativa dentro de web/site/ → contenido. Sin opciones, la variante de web/site/. */
+export function renderSite(opts: SiteOptions = {}): Map<string, string> {
+  checkOptions(opts);
   const out = new Map<string, string>();
   for (const page of PAGES) {
     for (const lang of LANGS) {
       const file = fileForPath(page.path[lang]);
       if (out.has(file)) throw new Error(`Ruta repetida: ${file}`);
-      out.set(file, renderPage(page, lang));
+      out.set(file, renderPage(page, lang, opts));
     }
   }
   out.set('assets/site.css', readSrc('static', 'site.css'));
   out.set('assets/delete-account.js', bundleScript());
   out.set('app-ads.txt', readSrc('static', 'app-ads.txt'));
+  out.set('robots.txt', robotsTxt(opts));
   return out;
 }
 
@@ -187,20 +227,25 @@ export function diffSite(site = renderSite()): string[] {
   return problems;
 }
 
-function writeSite(): void {
-  const site = renderSite();
-  for (const f of listFiles(OUT_DIR)) if (!site.has(f)) rmSync(path.join(OUT_DIR, f));
+/** Escribe un sitio generado en `dir` (borra lo que sobra y las carpetas vacías). */
+export function writeSiteTo(dir: string, site: Map<string, string>): void {
+  for (const f of listFiles(dir)) if (!site.has(f)) rmSync(path.join(dir, f));
   for (const [f, content] of site) {
-    const full = path.join(OUT_DIR, f);
+    const full = path.join(dir, f);
     mkdirSync(path.dirname(full), { recursive: true });
     writeFileSync(full, content, 'utf8');
   }
   // Carpetas vacías que quedaron tras borrar páginas.
-  const prune = (dir: string): void => {
-    for (const e of readdirSync(dir, { withFileTypes: true })) if (e.isDirectory()) prune(path.join(dir, e.name));
-    if (dir !== OUT_DIR && readdirSync(dir).length === 0) rmSync(dir, { recursive: true });
+  const prune = (d: string): void => {
+    for (const e of readdirSync(d, { withFileTypes: true })) if (e.isDirectory()) prune(path.join(d, e.name));
+    if (d !== dir && readdirSync(d).length === 0) rmSync(d, { recursive: true });
   };
-  prune(OUT_DIR);
+  prune(dir);
+}
+
+function writeSite(): void {
+  const site = renderSite();
+  writeSiteTo(OUT_DIR, site);
   console.log(`web/site: ${site.size} archivos`);
 }
 

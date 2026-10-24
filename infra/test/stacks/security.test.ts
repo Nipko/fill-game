@@ -1,12 +1,25 @@
 // Reglas transversales: cdk-nag sin hallazgos, nada público, ninguna cuenta ni secreto en las plantillas.
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { describe, expect, it } from 'vitest';
-import { allTemplates, build, DEV, PROD, PROD_DOMAIN, resourcesOfType } from '../helpers.ts';
+import {
+  allTemplates,
+  build,
+  DEV,
+  PROD,
+  PROD_DOMAIN,
+  PROD_EXTERNAL_DNS,
+  PROD_EXTERNAL_DNS_EXTRAS,
+  PROD_WEB_ONLY,
+  resourcesOfType,
+} from '../helpers.ts';
 
 describe.each([
   ['dev', DEV],
   ['prod', PROD],
   ['prod con dominio', PROD_DOMAIN],
+  ['prod con DNS externo', PROD_EXTERNAL_DNS],
+  ['prod con DNS externo, cdn. y api.', PROD_EXTERNAL_DNS_EXTRAS],
+  ['prod solo web', PROD_WEB_ONLY],
 ])('seguridad (%s)', (_name, ctx) => {
   const b = build(ctx);
 
@@ -70,7 +83,7 @@ describe('sin cuentas ni secretos en las plantillas', () => {
   });
 
   it('ningún valor de secreto en claro', () => {
-    for (const ctx of [DEV, PROD, PROD_DOMAIN]) {
+    for (const ctx of [DEV, PROD, PROD_DOMAIN, PROD_EXTERNAL_DNS_EXTRAS, PROD_WEB_ONLY]) {
       for (const { name, json } of allTemplates(build(ctx))) {
         const text = JSON.stringify(json);
         expect(text, name).not.toMatch(/"SecretString"|BEGIN PRIVATE KEY|private_key/);
@@ -80,7 +93,7 @@ describe('sin cuentas ni secretos en las plantillas', () => {
 
   it('la cuenta del contexto solo se usa en el modo con dominio', () => {
     const b = build(PROD_DOMAIN);
-    expect(b.stacks.api.account).toBe('123456789012');
-    expect(build(DEV).stacks.api.account).toMatch(/^\$\{Token/);
+    expect(b.stacks.api?.account).toBe('123456789012');
+    expect(build(DEV).stacks.api?.account).toMatch(/^\$\{Token/);
   });
 });

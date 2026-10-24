@@ -7,11 +7,21 @@
 export type EnvName = 'dev' | 'prod';
 
 export interface DomainConfig {
-  /** Dominio raíz de la web (p. ej. el canónico tras el dictamen de marca). La CDN va en `cdn.<dominio>` y la API en `api.<dominio>`. */
+  /** Dominio raíz de la web (`<dominio>` y `www.<dominio>`). La CDN puede ir en `cdn.<dominio>` y la API en `api.<dominio>`. */
   readonly name: string;
-  /** Id de la zona alojada de Route 53 (sin `fromLookup`: se pasa por contexto). */
-  readonly hostedZoneId: string;
+  /**
+   * Id de la zona alojada de Route 53 (sin `fromLookup`: se pasa por contexto). Sin él, el DNS es **externo**
+   * (p. ej. Cloudflare, D-044): certificados validados por CNAME que crea el dueño y ningún registro DNS en AWS.
+   */
+  readonly hostedZoneId?: string;
+  /** `cdn.<dominio>` en la CDN. Con Route 53, siempre; con DNS externo, solo con `-c domainExtras=cdn`. */
+  readonly cdn: boolean;
+  /** `api.<dominio>` en la API. Con Route 53, siempre; con DNS externo, solo con `-c domainExtras=api`. */
+  readonly api: boolean;
 }
+
+/** Nombres extra que admite `-c domainExtras` con DNS externo. */
+export const DOMAIN_EXTRAS = ['cdn', 'api'] as const;
 
 export interface ThrottleConfig {
   readonly rateLimit: number;
@@ -33,6 +43,11 @@ export interface AfConfig {
   readonly account?: string;
   /** Dominio propio, opcional (Q-AWS-9: en dev, los dominios de AWS). */
   readonly domain?: DomainConfig;
+  /**
+   * Solo la web (D-044): monta únicamente `<Prefijo>Global` y `<Prefijo>Web`, sin Data, Api, Cdn ni Ops, para publicar
+   * la web antes de que exista el resto del backend. Sin API, el borrado por web queda desactivado (`config.json`).
+   */
+  readonly webOnly: boolean;
   /** Id del proyecto de Firebase: emisor y audiencia del JWT de Firebase Auth. */
   readonly firebaseProjectId: string;
   /**
@@ -85,6 +100,13 @@ export interface ContextReader {
   tryGetContext(key: string): unknown;
 }
 
+function bool(ctx: ContextReader, key: string): boolean {
+  const v = ctx.tryGetContext(key);
+  if (v === undefined || v === null || v === '' || v === false || v === 'false') return false;
+  if (v === true || v === 'true') return true;
+  throw new Error(`El contexto "${key}" debe ser true o false.`);
+}
+
 function str(ctx: ContextReader, key: string): string | undefined {
   const v = ctx.tryGetContext(key);
   if (v === undefined || v === null || v === '') return undefined;
@@ -96,7 +118,9 @@ function str(ctx: ContextReader, key: string): string | undefined {
  * Lee la configuración del entorno desde el contexto de CDK.
  *
  * Contexto admitido: `env` (obligatorio: dev | prod), `account`, `alertEmail`, `firebaseProjectId`,
- * `firebaseAppIds` (separados por comas; obligatorio en prod), `packageName`, `domain` y `hostedZoneId` (los dos o ninguno).
+ * `firebaseAppIds` (separados por comas; obligatorio en prod salvo con `webOnly`), `packageName`, `domain`,
+ * `hostedZoneId` (solo con `domain`: DNS en Route 53; sin él, DNS externo), `domainExtras` (`cdn`, `api`; solo con
+ * DNS externo) y `webOnly` (true: solo los stacks de la web).
  */
 export function loadConfig(ctx: ContextReader): AfConfig {
   const envRaw = str(ctx, 'env');
@@ -105,6 +129,7 @@ export function loadConfig(ctx: ContextReader): AfConfig {
   }
   const envName: EnvName = envRaw;
   const isProd = envName === 'prod';
+  const webOnly = bool(ctx, 'webOnly');
 
   const account = str(ctx, 'account');
   if (account !== undefined && !ACCOUNT_RE.test(account)) {
@@ -125,7 +150,7 @@ export function loadConfig(ctx: ContextReader): AfConfig {
   for (const a of firebaseAppIds) {
     if (!FIREBASE_APP_ID_RE.test(a)) throw new Error('El contexto "firebaseAppIds" debe ser una lista de ids de app Android de Firebase.');
   }
-  if (isProd && firebaseAppIds.length === 0) {
+  if (isProd && firebaseAppIds.length === 0 && !webOnly) {
     // Sin la lista, cualquier app del proyecto de Firebase (p. ej. una web o una de pruebas) emitiría tokens de
     // App Check válidos para la API de prod.
     throw new Error('En prod falta el contexto "firebaseAppIds": los ids de las apps Android de Firebase (`1:<número>:android:<hash>`).');
@@ -141,14 +166,30 @@ export function loadConfig(ctx: ContextReader): AfConfig {
 
   const domainName = str(ctx, 'domain')?.toLowerCase();
   const hostedZoneId = str(ctx, 'hostedZoneId');
+  const extrasRaw = (str(ctx, 'domainExtras') ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
   let domain: DomainConfig | undefined;
-  if (domainName !== undefined || hostedZoneId !== undefined) {
-    if (domainName === undefined || hostedZoneId === undefined) {
-      throw new Error('El dominio necesita los dos contextos: "domain" y "hostedZoneId".');
-    }
+  if (domainName === undefined) {
+    if (hostedZoneId !== undefined) throw new Error('El contexto "hostedZoneId" necesita también "domain".');
+    if (extrasRaw.length > 0) throw new Error('El contexto "domainExtras" necesita también "domain".');
+  } else {
     if (!DOMAIN_RE.test(domainName)) throw new Error('El contexto "domain" no es un dominio válido.');
-    if (!ZONE_RE.test(hostedZoneId)) throw new Error('El contexto "hostedZoneId" no es un id de zona de Route 53.');
-    domain = { name: domainName, hostedZoneId };
+    for (const e of extrasRaw) {
+      if (!(DOMAIN_EXTRAS as readonly string[]).includes(e)) {
+        throw new Error(`El contexto "domainExtras" solo admite ${DOMAIN_EXTRAS.join(' y ')} (separados por comas).`);
+      }
+    }
+    if (hostedZoneId !== undefined) {
+      // Route 53: la vía de siempre, con la web, cdn. y api. en el dominio.
+      if (!ZONE_RE.test(hostedZoneId)) throw new Error('El contexto "hostedZoneId" no es un id de zona de Route 53.');
+      if (extrasRaw.length > 0) throw new Error('Con "hostedZoneId" (Route 53) cdn. y api. van siempre en el dominio: quita "domainExtras".');
+      domain = { name: domainName, hostedZoneId, cdn: true, api: true };
+    } else {
+      // DNS externo (Cloudflare, D-044): solo la web, salvo que se pidan cdn. o api.
+      domain = { name: domainName, cdn: extrasRaw.includes('cdn'), api: extrasRaw.includes('api') };
+    }
+    if (webOnly && (hostedZoneId !== undefined || domain.cdn || domain.api)) {
+      throw new Error('Con "webOnly" no hay CDN ni API: usa el dominio con DNS externo y sin "domainExtras".');
+    }
   }
 
   // El verificador falso de Play solo existe en dev (plan §4); un test de stacks lo comprueba en prod.
@@ -163,6 +204,7 @@ export function loadConfig(ctx: ContextReader): AfConfig {
     globalRegion: 'us-east-1',
     account,
     domain,
+    webOnly,
     firebaseProjectId,
     firebaseAppIds,
     packageName,

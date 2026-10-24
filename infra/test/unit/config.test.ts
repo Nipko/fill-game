@@ -44,12 +44,35 @@ describe('loadConfig', () => {
     expect(loadConfig(ctx({ env: 'dev', firebaseProjectId: 'otro-proyecto-1' })).firebaseProjectId).toBe('otro-proyecto-1');
   });
 
-  it('el dominio necesita también la zona', () => {
-    expect(() => loadConfig(ctx({ env: 'prod', domain: 'example.com' }))).toThrow(/hostedZoneId/);
+  it('dominio con zona de Route 53: la vía de siempre, con cdn. y api.', () => {
     expect(() => loadConfig(ctx({ env: 'prod', hostedZoneId: 'Z0123456789ABCDEFGHIJ' }))).toThrow(/domain/);
     expect(() => loadConfig(ctx({ env: 'prod', domain: 'no valido', hostedZoneId: 'Z0123456789ABCDEFGHIJ' }))).toThrow(/dominio/);
+    expect(() => loadConfig(ctx({ env: 'prod', domain: 'example.com', hostedZoneId: 'nozone' }))).toThrow(/zona/);
     const c = loadConfig(ctx({ env: 'prod', domain: 'Example.com', hostedZoneId: 'Z0123456789ABCDEFGHIJ' }));
-    expect(c.domain).toEqual({ name: 'example.com', hostedZoneId: 'Z0123456789ABCDEFGHIJ' });
+    expect(c.domain).toEqual({ name: 'example.com', hostedZoneId: 'Z0123456789ABCDEFGHIJ', cdn: true, api: true });
+    expect(() => loadConfig(ctx({ env: 'prod', domain: 'example.com', hostedZoneId: 'Z0123456789ABCDEFGHIJ', domainExtras: 'cdn' }))).toThrow(/domainExtras/);
+  });
+
+  it('dominio sin zona: DNS externo (D-044), solo la web salvo que se pidan cdn. o api.', () => {
+    const c = loadConfig(ctx({ env: 'prod', domain: 'Example.com' }));
+    expect(c.domain).toEqual({ name: 'example.com', cdn: false, api: false });
+    expect(loadConfig(ctx({ env: 'prod', domain: 'example.com', domainExtras: 'cdn' })).domain).toEqual({ name: 'example.com', cdn: true, api: false });
+    expect(loadConfig(ctx({ env: 'prod', domain: 'example.com', domainExtras: 'api, CDN' })).domain).toEqual({ name: 'example.com', cdn: true, api: true });
+    expect(() => loadConfig(ctx({ env: 'prod', domain: 'example.com', domainExtras: 'www' }))).toThrow(/domainExtras/);
+    expect(() => loadConfig(ctx({ env: 'prod', domainExtras: 'cdn' }))).toThrow(/domain/);
+    expect(() => loadConfig(ctx({ env: 'prod', domain: 'no valido' }))).toThrow(/dominio/);
+  });
+
+  it('webOnly: solo la web, sin firebaseAppIds en prod y sin CDN ni API en el dominio', () => {
+    expect(loadConfig(ctx({ env: 'prod' })).webOnly).toBe(false);
+    const c = loadConfig(ctx({ env: 'prod', webOnly: 'true', firebaseAppIds: undefined, domain: 'example.com' }));
+    expect(c.webOnly).toBe(true);
+    expect(c.firebaseAppIds).toEqual([]);
+    expect(loadConfig(ctx({ env: 'dev', webOnly: true })).webOnly).toBe(true);
+    expect(loadConfig(ctx({ env: 'prod', webOnly: 'false' })).webOnly).toBe(false);
+    expect(() => loadConfig(ctx({ env: 'prod', webOnly: 'si' }))).toThrow(/true o false/);
+    expect(() => loadConfig(ctx({ env: 'prod', webOnly: 'true', domain: 'example.com', domainExtras: 'cdn' }))).toThrow(/webOnly/);
+    expect(() => loadConfig(ctx({ env: 'prod', webOnly: 'true', domain: 'example.com', hostedZoneId: 'Z0123456789ABCDEFGHIJ' }))).toThrow(/webOnly/);
   });
 
   it('paquete de Play: provisional en dev, solo por contexto en prod y nunca el provisional (regla 6)', () => {

@@ -1,6 +1,6 @@
 // F2-2 · api-stack: HTTP API con autorizador JWT de Firebase, rutas /v1/... del contrato v1,
 // las 5 Lambdas de esqueleto (501), límites por ruta, secretos vacíos y el job diario.
-import { CfnOutput, Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
+import { CfnOutput, Duration, Fn, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import type { StackProps } from 'aws-cdk-lib';
 import { AccessLogFormat } from 'aws-cdk-lib/aws-apigateway';
 import type {
@@ -29,6 +29,7 @@ import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { Queue, QueueEncryption } from 'aws-cdk-lib/aws-sqs';
 import type { Construct } from 'constructs';
 import type { AfConfig } from './config.ts';
+import { externalDnsOutputs } from './global-stack.ts';
 import type { FunctionName } from './contract.ts';
 import { loadContractIndex, routeKey } from './contract.ts';
 import { AfFunction } from './constructs/af-function.ts';
@@ -290,15 +291,18 @@ export class ApiStack extends Stack {
     this.apiEndpoint = `https://${this.api.apiId}.execute-api.${this.region}.${this.urlSuffix}`;
     new CfnOutput(this, 'ApiUrl', { description: 'URL base de la API v1 (execute-api).', value: this.apiEndpoint });
 
-    // ---- Dominio propio de la API (solo con config.domain): api.<dominio> ----
-    if (config.domain) {
-      const zone = HostedZone.fromHostedZoneAttributes(this, 'Zone', {
-        hostedZoneId: config.domain.hostedZoneId,
-        zoneName: config.domain.name,
-      });
+    // ---- Dominio propio de la API (con Route 53, siempre; con DNS externo, solo con domainExtras=api) ----
+    if (config.domain?.api) {
+      const zone = config.domain.hostedZoneId === undefined
+        ? undefined
+        : HostedZone.fromHostedZoneAttributes(this, 'Zone', {
+            hostedZoneId: config.domain.hostedZoneId,
+            zoneName: config.domain.name,
+          });
       const apiDomain = `api.${config.domain.name}`;
       const cert = new Certificate(this, 'ApiCertificate', {
         domainName: apiDomain,
+        // Sin zona (DNS externo), CDK no crea registros: el dueño crea el CNAME de validación.
         validation: CertificateValidation.fromDns(zone),
       });
       const domainName = new DomainName(this, 'ApiDomain', {
@@ -307,11 +311,19 @@ export class ApiStack extends Stack {
         securityPolicy: SecurityPolicy.TLS_1_2,
       });
       new ApiMapping(this, 'ApiMapping', { api: this.api, domainName, stage: this.stage });
-      const target = RecordTarget.fromAlias(
-        new ApiGatewayv2DomainProperties(domainName.regionalDomainName, domainName.regionalHostedZoneId),
-      );
-      new ARecord(this, 'ApiAlias', { zone, recordName: apiDomain, target });
-      new AaaaRecord(this, 'ApiAliasV6', { zone, recordName: apiDomain, target });
+      if (zone) {
+        const target = RecordTarget.fromAlias(
+          new ApiGatewayv2DomainProperties(domainName.regionalDomainName, domainName.regionalHostedZoneId),
+        );
+        new ARecord(this, 'ApiAlias', { zone, recordName: apiDomain, target });
+        new AaaaRecord(this, 'ApiAliasV6', { zone, recordName: apiDomain, target });
+      } else {
+        externalDnsOutputs(this, 'Api', cert, [apiDomain]);
+        new CfnOutput(this, 'ApiDnsRecord', {
+          description: `Registro del DNS externo para ${apiDomain} (sin proxy).`,
+          value: Fn.join('', [`${apiDomain} CNAME `, domainName.regionalDomainName]),
+        });
+      }
     }
 
     // ---- Job diario: EventBridge Scheduler a las 03:00 UTC con reintentos y DLQ (plan §2) ----

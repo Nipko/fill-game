@@ -1,9 +1,11 @@
 // F1-2 · web-stack: web estática en S3 privado + CloudFront con OAC, TLS 1.2+, cabeceras de seguridad
-// y noindex en dev. Dominio y ACM solo con config.domain (Q-AWS-9). Las rutas del borrado por web
-// (/v1/account/delete-*) pasan por esta misma distribución hacia la API: mismo origen y sin CORS.
-import { CfnOutput, Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
+// y noindex salvo en prod con dominio. Dominio y ACM solo con config.domain (Q-AWS-9; con DNS externo, D-044).
+// Las rutas del borrado por web (/v1/account/delete-*) pasan por esta misma distribución hacia la API: mismo origen
+// y sin CORS. Sin API (modo solo web, D-044) no hay esa ruta y config.json desactiva el formulario.
+import { CfnOutput, Duration, Fn, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import type { StackProps } from 'aws-cdk-lib';
 import type { ICertificate } from 'aws-cdk-lib/aws-certificatemanager';
+import type { BehaviorOptions } from 'aws-cdk-lib/aws-cloudfront';
 import {
   AllowedMethods,
   CachePolicy,
@@ -36,12 +38,12 @@ import type { Construct } from 'constructs';
 import type { AfConfig } from './config.ts';
 import { AccessLogsBucket, privateBucket } from './constructs/private-bucket.ts';
 import { ack } from './nag.ts';
-import { WEB_SITE_DIR } from './paths.ts';
+import { deployableSiteDir, isIndexable } from './web-site.ts';
 
 export interface WebStackProps extends StackProps {
   readonly config: AfConfig;
-  /** Id de la HTTP API, para enrutar /v1/account/delete-* desde la web. */
-  readonly apiId: string;
+  /** Id de la HTTP API, para enrutar /v1/account/delete-* desde la web. Sin él (solo web), el borrado web está desactivado. */
+  readonly apiId?: string;
   /** Certificado de us-east-1 (GlobalStack), solo con dominio. */
   readonly certificate?: ICertificate;
 }
@@ -64,12 +66,19 @@ export const WEB_CSP = [
 /** Archivo de configuración de despliegue que lee la web (no está en web/site/: lo escribe este stack). */
 export const WEB_RUNTIME_CONFIG_FILE = 'config.json';
 
+/** Configuración de despliegue que lee el script del borrado (`/config.json`). */
+export type WebRuntimeConfig =
+  | { readonly deleteEnabled: true; readonly apiBase: string }
+  | { readonly deleteEnabled: false };
+
 /**
- * Configuración de despliegue de la web: la base de la API del borrado por web. Vacía = mismo origen, porque
- * esta distribución reenvía /v1/account/delete-* a la API (y la CSP solo permite connect-src 'self').
+ * Configuración de despliegue de la web. Con API, el borrado por web está activo y la base es vacía = mismo origen,
+ * porque esta distribución reenvía /v1/account/delete-* a la API (y la CSP solo permite connect-src 'self'). Sin API
+ * (modo solo web, D-044), desactivado: la página dice que estará disponible pronto y no envía nada. Al desplegar la
+ * web con la API (sin `webOnly`), se activa sola.
  */
-export function webRuntimeConfig(_config: AfConfig): { readonly apiBase: string } {
-  return { apiBase: '' };
+export function webRuntimeConfig(_config: AfConfig, hasApi: boolean): WebRuntimeConfig {
+  return hasApi ? { deleteEnabled: true, apiBase: '' } : { deleteEnabled: false };
 }
 
 /** Reescribe /ruta/ y /ruta a /ruta/index.html (las páginas de F1-3 van por carpeta de idioma). */
@@ -121,8 +130,8 @@ export class WebStack extends Stack {
         customHeaders: [
           { header: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()', override: true },
           { header: 'Cross-Origin-Opener-Policy', value: 'same-origin', override: true },
-          // dev no se indexa nunca (F1-2); prod sí, cuando haya dominio y dictamen.
-          ...(config.isProd ? [] : [{ header: 'X-Robots-Tag', value: 'noindex, nofollow', override: true }]),
+          // Solo se indexa prod con dominio (D-044); dev y prod en *.cloudfront.net, nunca (F1-2).
+          ...(isIndexable(config) ? [] : [{ header: 'X-Robots-Tag', value: 'noindex, nofollow', override: true }]),
         ],
       },
     });
@@ -134,21 +143,34 @@ export class WebStack extends Stack {
       code: FunctionCode.fromInline(INDEX_REWRITE),
     });
 
-    const apiOrigin = new HttpOrigin(`${props.apiId}.execute-api.${config.region}.${this.urlSuffix}`, {
-      protocolPolicy: OriginProtocolPolicy.HTTPS_ONLY,
-      originSslProtocols: [OriginSslPolicy.TLS_V1_2],
-    });
+    // Ruta del borrado por web hacia la API, solo si hay API (sin ella, modo solo web: D-044).
+    const apiBehaviors: Record<string, BehaviorOptions> = {};
+    if (props.apiId !== undefined) {
+      const apiOrigin = new HttpOrigin(`${props.apiId}.execute-api.${config.region}.${this.urlSuffix}`, {
+        protocolPolicy: OriginProtocolPolicy.HTTPS_ONLY,
+        originSslProtocols: [OriginSslPolicy.TLS_V1_2],
+      });
 
-    // Solo lo que necesita el borrado por web: el cuerpo JSON. Sin Host, cookies, query ni
-    // CloudFront-Viewer-Address: la API también es accesible directamente y esa cabecera se podría
-    // falsificar, así que no sirve para limitar por IP (pregunta abierta del informe de F2-2).
-    const apiRequestPolicy = new OriginRequestPolicy(this, 'ApiOriginRequest', {
-      originRequestPolicyName: `${config.prefix}-web-api`,
-      comment: 'Borrado por web hacia la API (F1-2).',
-      headerBehavior: OriginRequestHeaderBehavior.allowList('Content-Type'),
-      cookieBehavior: OriginRequestCookieBehavior.none(),
-      queryStringBehavior: OriginRequestQueryStringBehavior.none(),
-    });
+      // Solo lo que necesita el borrado por web: el cuerpo JSON. Sin Host, cookies, query ni
+      // CloudFront-Viewer-Address: la API también es accesible directamente y esa cabecera se podría
+      // falsificar, así que no sirve para limitar por IP (pregunta abierta del informe de F2-2).
+      const apiRequestPolicy = new OriginRequestPolicy(this, 'ApiOriginRequest', {
+        originRequestPolicyName: `${config.prefix}-web-api`,
+        comment: 'Borrado por web hacia la API (F1-2).',
+        headerBehavior: OriginRequestHeaderBehavior.allowList('Content-Type'),
+        cookieBehavior: OriginRequestCookieBehavior.none(),
+        queryStringBehavior: OriginRequestQueryStringBehavior.none(),
+      });
+      apiBehaviors['/v1/account/delete-*'] = {
+        origin: apiOrigin,
+        viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
+        allowedMethods: AllowedMethods.ALLOW_ALL,
+        cachePolicy: CachePolicy.CACHING_DISABLED,
+        originRequestPolicy: apiRequestPolicy,
+        responseHeadersPolicy: headers,
+        compress: true,
+      };
+    }
 
     const domainNames = config.domain ? [config.domain.name, `www.${config.domain.name}`] : undefined;
 
@@ -174,17 +196,7 @@ export class WebStack extends Stack {
         compress: true,
         functionAssociations: [{ function: indexRewrite, eventType: FunctionEventType.VIEWER_REQUEST }],
       },
-      additionalBehaviors: {
-        '/v1/account/delete-*': {
-          origin: apiOrigin,
-          viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
-          allowedMethods: AllowedMethods.ALLOW_ALL,
-          cachePolicy: CachePolicy.CACHING_DISABLED,
-          originRequestPolicy: apiRequestPolicy,
-          responseHeadersPolicy: headers,
-          compress: true,
-        },
-      },
+      additionalBehaviors: apiBehaviors,
     });
     ack(this.distribution, 'AwsSolutions-CFR1', 'Juego global (Latinoamérica primero): sin restricción geográfica.');
     ack(this.distribution, 'AwsSolutions-CFR2', 'Sin WAF en la 1.0 (Q-AWS-10): límites de API Gateway y en DynamoDB; WAF solo si hay abuso.');
@@ -202,12 +214,9 @@ export class WebStack extends Stack {
     const deployment = new BucketDeployment(this, 'SiteDeployment', {
       destinationBucket: site,
       sources: [
-        Source.asset(WEB_SITE_DIR),
-        Source.jsonData(WEB_RUNTIME_CONFIG_FILE, webRuntimeConfig(config)),
-        Source.data(
-          'robots.txt',
-          config.isProd ? 'User-agent: *\nAllow: /\n' : 'User-agent: *\nDisallow: /\n',
-        ),
+        // robots.txt, canonical y hreflang salen del generador según el entorno y el dominio (lib/web-site.ts).
+        Source.asset(deployableSiteDir(config)),
+        Source.jsonData(WEB_RUNTIME_CONFIG_FILE, webRuntimeConfig(config, props.apiId !== undefined)),
       ],
       prune: true,
       // Sin invalidación (evita dar a la Lambda permisos de CloudFront sobre `*`): con max-age de
@@ -218,7 +227,7 @@ export class WebStack extends Stack {
     });
     acknowledgeBucketDeployment(this, deployment, site, config);
 
-    if (config.domain) {
+    if (config.domain?.hostedZoneId !== undefined) {
       const zone = HostedZone.fromHostedZoneAttributes(this, 'Zone', {
         hostedZoneId: config.domain.hostedZoneId,
         zoneName: config.domain.name,
@@ -229,6 +238,17 @@ export class WebStack extends Stack {
         new ARecord(this, `Alias${suffix}`, { zone, recordName: name, target });
         new AaaaRecord(this, `Alias${suffix}V6`, { zone, recordName: name, target });
       }
+    } else if (config.domain) {
+      // DNS externo (Cloudflare, D-044): ningún registro en AWS; el dueño crea estos dos CNAME sin proxy.
+      new CfnOutput(this, 'WebDnsRecords', {
+        description: 'Registros del DNS externo para la web (CNAME sin proxy; en el apex, CNAME aplanado).',
+        value: Fn.join('', [
+          `${config.domain.name} CNAME `,
+          this.distribution.distributionDomainName,
+          ` ; www.${config.domain.name} CNAME `,
+          this.distribution.distributionDomainName,
+        ]),
+      });
     }
   }
 }
