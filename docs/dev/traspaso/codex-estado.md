@@ -8,6 +8,8 @@ Fila de Seguridad de los datos añadida a `docs/store-listing/data-safety.md`: a
 
 Comprobaciones ejecutadas en `infra/`: `npm ci` correcto (una vulnerabilidad alta heredada), `npm run web:build` (19 archivos), `npm run web:check`, `npm run lint`, `npm run typecheck` y `npm test` (**312 pruebas / 18 archivos**), correctos. Sitio regenerado en esta rama, sin despliegue web. Backend aparte en **`codex/liga`, `04c5917c`**, con su diff y estado de dev en la versión de este documento de esa rama. El integrador debe conservar ambas entregas al fusionar.
 
+Backend de Liga: despliegue de Data/Api/Ops aprobado por el dueño y completado en dev el 24-10-2026; las tres pilas UPDATE_COMPLETE, 27 alarmas OK y rutas de Liga 401 sin token. URL conservada: https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com. El registro completo y una corrección posterior de calendario/offline pendiente de segundo sí están en `codex/liga`, en su `codex-estado.md`. Esta rama no desplegó la web ni habilitó el interruptor del cliente.
+
 ## Registro anterior de web, empresas y arte
 
 
