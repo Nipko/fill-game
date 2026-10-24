@@ -27,6 +27,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            BoardLayout.TroopBandOffForTests = false;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -156,13 +157,15 @@ namespace AF.Tests.PlayMode
         public IEnumerator LoadingAnotherLevel_Restarting_OrResuming_DuringTheRest_RemovesTheTroopAtOnce()
         {
             GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
+            // El nivel N + 1 sin tropa: el de 16 cuias con el tablero de antes de D-046 (sin la franja de la rama, dosel).
+            BoardLayout.TroopBandOffForTests = true;
             yield return PlayModeHelpers.LoadGameWithPack(TwoLevelPack(), 3, new MemoryProgressStore(3, 2));
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
             LevelFlow flow = boot.Flow!;
             GameScreen view = boot.View!;
 
-            // Nivel N + 1 sin tropa (16 cuias en 3 filas: dosel).
+            // Nivel N + 1 sin tropa (16 cuias en 3 filas, sin franja: dosel).
             RestAt(boot, 3, 600);
             flow.Load(4);
             Assert.That(view.Troop.Active, Is.False, "cargar el nivel siguiente la retira en el mismo fotograma");
@@ -480,7 +483,8 @@ namespace AF.Tests.PlayMode
         }
 
         // Paquete del mundo 1 con dos niveles: el 3 con el tablero del nivel 7 de PlayModeHelpers.Level7BoardPack (tropa del mono
-        // ardilla) y el 4 con el de 16 cuias de SixteenCuiaPack, en 3 filas (sin franja para la rama: dosel).
+        // ardilla) y el 4 con el de 16 cuias de SixteenCuiaPack, en 3 filas (con TroopBandOffForTests, sin franja para la rama:
+        // dosel; desde D-046, con la franja, la tropa iría en su rama).
         private static string TwoLevelPack()
         {
             string[] seven = { "acai", "aguaje", "tapereba", "guanabana", "bacaba" };

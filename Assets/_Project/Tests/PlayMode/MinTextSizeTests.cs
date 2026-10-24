@@ -59,6 +59,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            BoardLayout.TroopBandOffForTests = false;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -583,6 +584,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Level135_ThreeRows_TheRescueNotice_BesideTheChipAt100_CoversItWholeAt130_AtLeast12sp([Values(100, 130)] int percent)
         {
+            // Con el tablero de 3 filas de antes de D-046 (sin la franja de la tropa ni el suelo bajado; TroopBandOffForTests):
+            // lo que se mide aquí es el respaldo donde la franja no cabe (16:9). Con la franja, ThreeRowBandNoticeTests.
+            BoardLayout.TroopBandOffForTests = true;
             // El 135 con las 300 semillas justas: Aguas estancadas por un camino de vertidos útiles y el rescate de verdad (12
             // cuias; sin semillas, las dos burbujas). «¡Una cuia más!» va encima de las burbujas sin taparlas y nunca tapa las
             // cuias ni deja a medias la ficha «?×1» (pregunta 47, (1), ratificada: «junto a ella o la tapa entera»; el

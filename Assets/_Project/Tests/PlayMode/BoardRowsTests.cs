@@ -44,8 +44,8 @@ namespace AF.Tests.PlayMode
             BoardLayoutResult layout = view.Layout!;
             Assert.That(layout.Rows, Is.EqualTo(3));
             Assert.That(layout.PerRow, Is.EqualTo(new[] { 5, 4, 4 }));
-            Assert.That(layout.CuiaWidth, Is.EqualTo(46.9f).Within(0.05f));
-            Assert.That(layout.CuiaHeight, Is.EqualTo(131.3f).Within(0.1f));
+            Assert.That(layout.CuiaWidth, Is.EqualTo(41.61f).Within(0.05f), "con la franja de la tropa y el suelo bajado (D-046; antes 46,9)");
+            Assert.That(layout.CuiaHeight, Is.EqualTo(116.5f).Within(0.1f), "antes 131,3");
 
             // Las vistas usan ese tamaño: u = ancho / 2 y alto de 5,60 u.
             for (int i = 0; i < view.Views.Length; i++)

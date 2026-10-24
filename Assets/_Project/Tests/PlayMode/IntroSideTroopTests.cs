@@ -31,9 +31,19 @@ namespace AF.Tests.PlayMode
         /// <summary>720 × 1600 px (360 × 800 dp), con 32 dp de cutout y 16 de gestos.</summary>
         internal static readonly Vector4 Screen720 = new Vector4(720f, 1600f, 64f, 32f);
 
+        // Desde D-046 (punto 3) estos lienzos dejan la franja de la tropa con 3 filas y la tropa va en su rama
+        // (IntroThreeRowBranchTests); la tropa lateral queda de respaldo donde no cabe la franja. Estas pruebas miden ese respaldo
+        // con el tablero de antes de D-046 en los mismos lienzos (BoardLayout.TroopBandOffForTests).
+        [SetUp]
+        public void SetUpWithoutTroopBand()
+        {
+            BoardLayout.TroopBandOffForTests = true;
+        }
+
         [TearDown]
         public void TearDown()
         {
+            BoardLayout.TroopBandOffForTests = false;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -745,7 +755,7 @@ namespace AF.Tests.PlayMode
             return frames;
         }
 
-        private static Rect CuiaRect(CuiaView v)
+        internal static Rect CuiaRect(CuiaView v)
         {
             float w = v.Unit * CuiaGeometry.WidthU;
             float h = v.HeightU * v.Unit;
@@ -753,7 +763,7 @@ namespace AF.Tests.PlayMode
             return Rect.MinMaxRect(foot.x - (w * 0.5f), -foot.y - h, foot.x + (w * 0.5f), -foot.y);
         }
 
-        private static float Distance(Rect a, Rect b)
+        internal static float Distance(Rect a, Rect b)
         {
             float dx = Mathf.Max(0f, Mathf.Max(a.xMin - b.xMax, b.xMin - a.xMax));
             float dy = Mathf.Max(0f, Mathf.Max(a.yMin - b.yMax, b.yMin - a.yMax));

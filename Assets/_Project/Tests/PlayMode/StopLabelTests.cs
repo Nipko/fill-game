@@ -49,6 +49,8 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            BoardLayout.TroopBandOffForTests = false;
+            AF.Presentation.AmbientLayer.Frozen = false;
             GameScreen.StopLabelsOverride = null;
             GameScreen.StopLabelSpotsOverride = GameScreen.StopLabelSpot.All;
             GameScreen.SimulatedScreen = null;
@@ -850,6 +852,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Level131_ACuiaAlreadyLiftedWhenItsTurnComes_HidesItAtOnce()
         {
+            // Con el tablero de 3 filas de antes de D-046 (sin la franja de la tropa ni el suelo bajado; TroopBandOffForTests):
+            // lo que se mide aquí es el respaldo donde la franja no cabe (16:9). Con la franja, ThreeRowBandNoticeTests.
+            BoardLayout.TroopBandOffForTests = true;
             var probes = new List<string>();
             Application.LogCallback capture = CaptureProbes(probes, "stop_label");
             Application.logMessageReceived += capture;
@@ -903,6 +908,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Level171_OnTheDock_AMissingBubbleUnderItHidesIt()
         {
+            // Con el tablero de 3 filas de antes de D-046 (sin la franja de la tropa ni el suelo bajado; TroopBandOffForTests):
+            // lo que se mide aquí es el respaldo donde la franja no cabe (16:9). Con la franja, ThreeRowBandNoticeTests.
+            BoardLayout.TroopBandOffForTests = true;
             var probes = new List<string>();
             Application.LogCallback capture = CaptureProbes(probes, "stop_label_off");
             Application.logMessageReceived += capture;
@@ -960,6 +968,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Level171_NoRoomAnywhere_ItDoesNotShow()
         {
+            // Con el tablero de 3 filas de antes de D-046 (sin la franja de la tropa ni el suelo bajado; TroopBandOffForTests):
+            // lo que se mide aquí es el respaldo donde la franja no cabe (16:9). Con la franja, ThreeRowBandNoticeTests.
+            BoardLayout.TroopBandOffForTests = true;
             var probes = new List<string>();
             Application.LogCallback capture = CaptureProbes(probes, "stop_label");
             Application.logMessageReceived += capture;
@@ -1021,11 +1032,15 @@ namespace AF.Tests.PlayMode
         public IEnumerator Level171_NoAllocationsPerFrame_WithThePlateOnTheDock()
         {
             GameScreen.StopLabelSpotsOverride = GameScreen.StopLabelSpot.Dock;
+            BoardLayout.TroopBandOffForTests = true; // el muelle, con el tablero de antes (con el suelo bajado de D-046 no cabe)
             yield return NoAllocationsWithThePlate(171, "dock");
         }
 
         private static IEnumerator NoAllocationsWithThePlate(int level, string mode)
         {
+            // El ambiente, quieto: desde D-046 (punto 3) estos niveles de 3 filas dejan la franja de la tropa sobre el panel y por
+            // ella pasan los brillos del río, cuya primera activación (la de cada Image, en Unity) asigna; no es lo que se mide.
+            AF.Presentation.AmbientLayer.Frozen = true;
             yield return Load(level);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;

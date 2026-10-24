@@ -54,6 +54,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            BoardLayout.TroopBandOffForTests = false;
             GameScreen.SimulatedScreen = null;
             GameScreen.DifficultyLightEnabled = true;
             LaunchOptions.Reset();
@@ -188,6 +189,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Hud_Level106_MurkyChip()
         {
+            // La banda pegada bajo la placa con 3 filas: desde D-046 (punto 3), solo donde no cabe la franja de la tropa (16:9);
+            // aquí, con el tablero de antes en el mismo lienzo. Con la franja, Hud_ThreeRows_WithTheTroopBand_GoFull.
+            BoardLayout.TroopBandOffForTests = true; // el tablero de 3 filas de antes de D-046 (sin la franja de la tropa), el respaldo
             yield return HudSetup.LoadPlaying(106);
             GameScreen view = GameBootstrap.Current!.View!;
             Assert.That(GameBootstrap.Current.Flow!.Level.IsMurky, Is.True);
@@ -220,6 +224,7 @@ namespace AF.Tests.PlayMode
         {
             // Revisión de T09: del 106 (pegado bajo la placa) se pasa con Siguiente al 107 (normal, sin «?» ni contador) en la
             // misma GameScreen. La forma de la banda y la sonda AF_STATE hud_label dicen «none», no la del nivel anterior.
+            BoardLayout.TroopBandOffForTests = true; // el tablero de 3 filas de antes de D-046 (sin la franja de la tropa), el respaldo
             yield return HudSetup.LoadPlaying(106);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -534,6 +539,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator Layout_NoOverlap_360x640_ThreeRows()
         {
             // 360 × 780, nivel 200 (Muy difícil con la Piraña y 11 cuias): 3 filas, pegado bajo la placa con el contador.
+            BoardLayout.TroopBandOffForTests = true; // el tablero de 3 filas de antes de D-046 (sin la franja de la tropa), el respaldo
             yield return HudSetup.LoadPlaying(200);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -664,6 +670,7 @@ namespace AF.Tests.PlayMode
             // un evento posterior al Tick de la vista (aquí, «Salir» confirmado: fallo duro y Nivel fallido): WalletBar dibuja la
             // columna que le da LayoutWalletBar (con LabelsWalletColumn), así que ya está así antes de pintar ese fotograma. Al
             // reintentar, se compacta otra vez.
+            BoardLayout.TroopBandOffForTests = true; // el tablero de 3 filas de antes de D-046 (sin la franja de la tropa), el respaldo
             yield return HudSetup.LoadPlaying(200);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -691,6 +698,7 @@ namespace AF.Tests.PlayMode
         {
             // Revisión de T09: en el 194 (normal, Lluvia en la cuia 1 de la fila 1, 3 filas a 360 × 780) el contador no tapa la
             // nube, ni en reposo ni con la cuia elevada al seleccionarla (16 dp más arriba): va a la izquierda de su cielo.
+            BoardLayout.TroopBandOffForTests = true; // el tablero de 3 filas de antes de D-046 (sin la franja de la tropa), el respaldo
             yield return HudSetup.LoadPlaying(194);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -773,7 +781,7 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(labeled, Is.GreaterThanOrEqualTo(40), "niveles Difícil o Muy difícil entre el 40 y el 200");
-            Assert.That(tucked, Is.GreaterThanOrEqualTo(20), "con la banda pegada bajo la placa (3 filas) a 360 × 780");
+            Assert.That(tucked, Is.EqualTo(0), "D-046: con la franja de la tropa, ningún nivel de 3 filas lleva la banda pegada bajo la placa a 360 × 780");
             Assert.That(counters, Is.GreaterThanOrEqualTo(15), "niveles con contador entre el 143 y el 200");
             Assert.That(murkyLevels, Is.EquivalentTo(new[] { 100, 106, 115, 135, 155, 175, 195 }), "los de Aguas turbias de T09 §2");
         }

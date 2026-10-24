@@ -84,6 +84,15 @@ namespace AF.UI
         /// vidrio de la cuia de más a la izquierda.
         /// </summary>
         public float ContentLeft { get; internal set; }
+
+        /// <summary>
+        /// Con 3 filas, el tablero deja libre sobre el panel la franja de la rama de la tropa (D-046, punto 3):
+        /// <see cref="PanelY"/> ≥ <c>boardTop</c> + <see cref="BoardLayout.TroopBandDp"/>, con el suelo
+        /// <see cref="BoardLayout.ThreeRowFloorDropDp"/> más abajo. Falso con 1 o 2 filas y con 3 filas cuando la franja no cabe
+        /// sin bajar la cuia de <see cref="BoardLayout.MinCuiaWidth"/>: entonces el layout es el de antes de D-046 (el panel puede
+        /// recortarse bajo el HUD, D-028) y la intro vuelve a la tropa lateral o al dosel (D-021).
+        /// </summary>
+        public bool TroopBand { get; internal set; }
     }
 
     /// <summary>
@@ -110,6 +119,13 @@ namespace AF.UI
     /// Alrededor del bloque va el panel del tablero, <see cref="PanelMargin"/> (22 dp) por abajo y por arriba en todos los
     /// tableros, y 8 dp desde los bordes del ancho útil. No hay techo del vertido ni hueco reservado para él (D-006): el
     /// origen se dibuja delante de todo mientras vierte.
+    /// <para>Con 3 filas (D-046, punto 3; matiza D-006 y la excepción de D-028): arriba se reserva la franja de la rama de la
+    /// tropa, <see cref="TroopBandDp"/> entre <c>boardTop</c> y el panel, y el suelo del tablero baja
+    /// <see cref="ThreeRowFloorDropDp"/>, encogiendo las cuias lo justo (41,61 dp a 360 × 780; Q-T6T-3 y Q-T6T-4, decididas por el
+    /// dueño el 2026-10-24). Ni la fila 1 ni su cielo entran en el
+    /// HUD. Si así la cuia bajaría de <see cref="MinCuiaWidth"/> (que con la
+    /// Cuia alta es también el mínimo de u = 14 dp de 07 §4.5), el layout de 3 filas es el de antes
+    /// (<see cref="BoardLayoutResult.TroopBand"/> falso). Con 1 o 2 filas nada cambia.</para>
     /// </summary>
     public static class BoardLayout
     {
@@ -196,6 +212,27 @@ namespace AF.UI
         public const int MaxTwoRowWithAdded = 14;
 
         /// <summary>
+        /// Con 3 filas, cuánto baja el suelo del tablero (dp) [P] (D-046, punto 3; Q-T6T-3, decidida por el dueño el 2026-10-24:
+        /// «Bajar y mover avisos»): de <c>boardBottom</c> (bandeja − 40) a bandeja − 20, con el panel a (bandeja − 20) − 13,5 + 22 =
+        /// bandeja − 11,5 cuando las cuias encogen por el alto. Las burbujas «Te faltan {n}» y el aviso del tablero que ya no caben
+        /// entre el panel y la bandeja van a la franja de la tropa, sobre el panel (<c>GameScreen</c> y <c>BoosterTray</c>).
+        /// </summary>
+        public const float ThreeRowFloorDropDp = 20f;
+
+        /// <summary>
+        /// Con 3 filas, franja libre entre <c>boardTop</c> (pie del HUD) y el panel para la rama de la tropa (dp) [P] (D-046,
+        /// punto 3; Q-T6T-4, decidida por el dueño el 2026-10-24: «Franja de 56 dp»). Con la franja justa de 44 dp de D-010
+        /// (<c>IntroChoreography.BranchMinBandDp</c>), el tamaño de 07 §6.4 dejaba la tropa rozar la fila del HUD.
+        /// </summary>
+        public const float TroopBandDp = 56f;
+
+        /// <summary>
+        /// Solo tests: sin la franja de la tropa con 3 filas, para medir en lienzos altos el respaldo de antes de D-046 (la tropa
+        /// lateral de D-021). Nunca se cambia fuera de los tests.
+        /// </summary>
+        internal static bool TroopBandOffForTests { get; set; }
+
+        /// <summary>
         /// Tope del ancho de la cuia para T = <paramref name="count"/> cuias del tablero en pantalla, incluidas Cuia extra y
         /// Cuia de rescate (02 R1): 64 dp con T ≤ 3, 56 con T = 4-5 y 48 con T ≥ 6 (D-004; 02 §5). Si T cambia a mitad de
         /// nivel, el ancho se recalcula con el T nuevo (02 §4.1, re-layout de 300 ms); las filas, no (D-006).
@@ -231,6 +268,8 @@ namespace AF.UI
 
             float cap = MaxCuiaWidthFor(generatedCount);
             float two = CuiaWidthFor(2, (generatedCount + 1) / 2, cap, heightU, canvasWidth, boardTop, boardBottom);
+            // Con la zona de antes de D-046 (sin la franja de la tropa): la franja encoge las cuias de 3 filas, pero no cambia
+            // cuántas filas lleva un nivel (D-046, punto 3: «con 3 filas las cuias encogen lo justo»; Q-T6T-2).
             float three = CuiaWidthFor(3, (generatedCount + 2) / 3, cap, heightU, canvasWidth, boardTop, boardBottom);
             return three > two + 0.01f ? 3 : 2;
         }
@@ -360,12 +399,19 @@ namespace AF.UI
 
             float width = Math.Min(canvasWidth, MaxBoardWidth);
             float slot = (width - SideMargins) / maxPerRow;
-            float cuiaW = CuiaWidthFor(rows, maxPerRow, MaxCuiaWidthFor(count), heightU, canvasWidth, boardTop, boardBottom);
+            // Con 3 filas, la zona del bloque deja arriba la franja de la tropa y baja el suelo, si cabe (D-046, punto 3).
+            bool band = false;
+            float zoneTop = boardTop;
+            float zoneBottom = boardBottom;
+            float cuiaW = rows == 3
+                ? ThreeRowCuiaWidth(maxPerRow, MaxCuiaWidthFor(count), heightU, canvasWidth, boardTop, boardBottom, out band, out zoneTop, out zoneBottom)
+                : CuiaWidthFor(rows, maxPerRow, MaxCuiaWidthFor(count), heightU, canvasWidth, boardTop, boardBottom);
             float blockH = BlockHeight(rows, cuiaW, heightU);
             float cuiaH = heightU * (cuiaW / 2f);
             float block = Lift + blockH + ShelfDrop; // B de la guía 3.2
-            float slack = (boardBottom - boardTop) - block;
-            float blockTop = boardTop + (slack / 2f); // centrado (D-003): fin del anclaje inferior
+            float slack = (zoneBottom - zoneTop) - block;
+            float blockTop = zoneTop + (slack / 2f); // centrado (D-003): fin del anclaje inferior
+            result.TroopBand = band;
             result.SlotWidth = slot;
             result.CuiaWidth = cuiaW;
             result.CuiaHeight = cuiaH;
@@ -451,9 +497,10 @@ namespace AF.UI
 
             // Panel (guía 3.2): 8 dp desde el ancho útil (≤ 480) y 22 dp bajo y sobre el bloque en todos los tableros (D-006
             // retira el margen de 36 dp de una fila, que solo existía por el techo del vertido); si sube por encima de
-            // boardTop − 8 se recorta (el marco pasa bajo el HUD). Nunca se encoge una cuia por el marco.
+            // boardTop − 8 se recorta (el marco pasa bajo el HUD). Nunca se encoge una cuia por el marco. Con la franja de la
+            // tropa (D-046), nunca por encima de boardTop + TroopBandDp (el máximo solo absorbe el redondeo del ajuste).
             float panelX = ((canvasWidth - width) / 2f) + PanelSide;
-            float panelTop = Math.Max(blockTop - PanelMargin, boardTop - 8f);
+            float panelTop = Math.Max(blockTop - PanelMargin, band ? boardTop + TroopBandDp : boardTop - 8f);
             float panelBottom = result.BlockBottom + PanelMargin;
             result.PanelX = panelX;
             result.PanelY = panelTop;
@@ -558,6 +605,32 @@ namespace AF.UI
             {
                 perRow[2] = generated - best0 - best1;
             }
+        }
+
+        // Ancho de la cuia con 3 filas de como mucho perRow cuias (D-046, punto 3): en la zona con la franja de la tropa arriba
+        // (el panel, 22 dp sobre el bloque y su media holgura de 13,5, en boardTop + TroopBandDp) y el suelo bajado
+        // ThreeRowFloorDropDp; si ahí el bloque no cabe ni con la cuia de MinCuiaWidth, la zona y el ancho de antes (band falso).
+        private static float ThreeRowCuiaWidth(int perRow, float cap, float heightU, float canvasWidth, float boardTop, float boardBottom, out bool band, out float zoneTop, out float zoneBottom)
+        {
+            if (!TroopBandOffForTests)
+            {
+                float top = boardTop + TroopBandDp + PanelMargin - (0.5f * MinBlockSlack);
+                float bottom = boardBottom + ThreeRowFloorDropDp;
+                float cuiaW = CuiaWidthFor(3, perRow, cap, heightU, canvasWidth, top, bottom);
+                float available = (bottom - top) - MinBlockSlack - Lift - ShelfDrop;
+                if (BlockHeight(3, cuiaW, heightU) <= available + 0.01f)
+                {
+                    band = true;
+                    zoneTop = top;
+                    zoneBottom = bottom;
+                    return cuiaW;
+                }
+            }
+
+            band = false;
+            zoneTop = boardTop;
+            zoneBottom = boardBottom;
+            return CuiaWidthFor(3, perRow, cap, heightU, canvasWidth, boardTop, boardBottom);
         }
 
         // Ancho de la cuia con rows filas de como mucho perRow cuias: clamp(0,70 × ranura, 28, tope) y, si el bloque no
