@@ -16,4 +16,4 @@ Comparados los JSON del ensamblado aprobado y el nuevo: **Data y Ops son idénti
 
 El [diff estricto frente a AWS](liga-dev-calendario-diff.txt) también muestra diferencias repetidas de representación de caracteres en descripciones/metadata de recursos ya existentes. No son cambios de sus valores de secretos, permisos o destinatarios. No se propone volver a desplegar Ops por esas diferencias cosméticas. Los hashes del nuevo ensamblado están en [liga-dev-calendario-assembly.sha256.json](liga-dev-calendario-assembly.sha256.json).
 
-**Acción propuesta:** desplegar únicamente `AfDevApi` desde el nuevo ensamblado, tras el sí del dueño que exige el encargo. El primer despliegue permanece activo; esta corrección todavía no está aplicada.
+**Acción aplicada, 24-10-2026:** el dueño aprobó «Sí, actualizar AfDevApi». Se desplegó únicamente Api desde el ensamblado inventariado: exit 0, UPDATE_COMPLETE. Los tres paquetes Lambda activos se compararon byte por byte con los aprobados: idénticos. Las rutas sin token responden 401 y las 27 alarmas están OK. Resultado y límites de la prueba autenticada en `codex-estado.md`.

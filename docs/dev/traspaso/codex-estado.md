@@ -342,10 +342,26 @@ La prueba autenticada de envío/Global/País queda pendiente de un token de prue
 
 El diff estricto posterior con el ensamblado original confirma Data sin diferencias; Api/Ops todavía muestran diferencias de representación Unicode en descripciones/metadata (`?` frente a caracteres acentuados). No declarar diff estricto vacío. Las comprobaciones de ejecución, permisos y alarmas anteriores pasaron; no se cambiaron valores de secretos ni se repitió el deploy para modificar descripciones.
 
-## Corrección posterior preparada — fecha del Reto y borde semanal
+## Corrección posterior desplegada — fecha del Reto y borde semanal
 
 Al revisar el cruce de medianoche se detectó que el código inicial añadía una igualdad no prevista entre la fecha local de inicio del Reto y la fecha UTC de victoria. Podía rechazar victorias legítimas (06 §4.1, R-Q3). Se corrigió con regresiones; además, la consulta de semana anterior se aplica aunque el lote de la primera hora del lunes llegue el viernes, y un ID diario del borde no se cobra otra vez en la semana siguiente.
 
 Commits de corrección: **`eb52e32e`** y **`85109b38`**. Lint, tipos, **337 pruebas / 19 archivos**, tabla generada, web:check y synth de prod con dominio/AppIds de ejemplo, correctos. Contrato `docs/dev/liga.md` sin cambios.
 
-[Resumen y propuesta de actualización](liga-dev-calendario-revision.md), [diff estricto completo redactado](liga-dev-calendario-diff.txt) e [inventario del ensamblado](liga-dev-calendario-assembly.sha256.json), digest **e0f3b1f5dc97c6c24cbdd9eb8c01d381c69de328dd620092798314ae8ee28821**. Comparando ambos ensamblados: Data y Ops idénticos; Api solo cambia Code.S3Key y aws:asset:path de LeagueWins, LeagueBoard y DeleteAccount. No hay nuevos recursos, IAM ni coste fijo. **Pendiente del sí del dueño para desplegar esta corrección únicamente en AfDevApi.** El primer despliegue está activo y comprobado; la corrección aún no está aplicada.
+[Resumen y propuesta de actualización](liga-dev-calendario-revision.md), [diff estricto completo redactado](liga-dev-calendario-diff.txt) e [inventario del ensamblado](liga-dev-calendario-assembly.sha256.json), digest **e0f3b1f5dc97c6c24cbdd9eb8c01d381c69de328dd620092798314ae8ee28821**. Comparando ambos ensamblados: Data y Ops idénticos; Api solo cambia Code.S3Key y aws:asset:path de LeagueWins, LeagueBoard y DeleteAccount. No hay nuevos recursos, IAM ni coste fijo. **Corrección aprobada y desplegada únicamente en AfDevApi**, con el sí literal del dueño: «Sí, actualizar AfDevApi». El primer despliegue y esta corrección están activos y comprobados.
+
+
+## Cierre de despliegue — corrección aplicada, 24-10-2026
+
+Se verificaron todos los archivos del segundo ensamblado contra su inventario (digest `e0f3b1f5dc97c6c24cbdd9eb8c01d381c69de328dd620092798314ae8ee28821`) y que la sesión `af-dev` correspondía a la cuenta del diff. Con la aprobación explícita anterior se ejecutó, mediante la CLI local, `cdk deploy AfDevApi --app <segundo ensamblado aprobado fuera del repo> --exclusively --require-approval never --profile af-dev`. **Exit 0; AfDevApi UPDATE_COMPLETE.** Este segundo comando no desplegó Data, Ops ni otras pilas.
+
+Comprobaciones posteriores:
+
+- `league-wins`, `league-board` y `delete-account`: **State Active / LastUpdateStatus Successful**. Se descargaron sus ZIP a un temporal privado y se compararon todos sus archivos, incluido el sourcemap, con las carpetas de assets del ensamblado aprobado: **idénticos byte por byte**. No se imprimieron URL firmadas ni tokens.
+- `curl.exe` sin token: **401** en POST `/v1/league/wins`, GET `/v1/league?scope=global` y GET `/v1/league?scope=country`.
+- **27 alarmas OK** tras la corrección. Las tablas/TTL/PITR y los permisos Q-IAP-4 ya verificados en el primer despliegue se conservan.
+- URL base final, sin cambio: **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**.
+
+Estado final de este encargo: backend y corrección **desplegados en dev con sus dos aprobaciones**, código y registros empujados en `codex/liga`; privacidad/Seguridad de los datos y sitio regenerado en `codex/web-marca`. Verificación de código: **337 pruebas**, lint, tipos, tabla generada y synth dev/prod correctos, como se registró antes del despliegue. No se volvió a ejecutar la batería por cambios posteriores que solo documentan el resultado.
+
+Pendiente externo: integrar el cliente y habilitar su sonda de dev; envío/lectura autenticados si el dueño facilita un token de prueba por vía privada (no se ha proporcionado). La web no se desplegó y los marcadores `[[ABOGADO: revisar]]` siguen pendientes de revisión. No se modificó `docs/dev/liga.md`, prod, el interruptor de producción, DNS ni cuentas de Play.
