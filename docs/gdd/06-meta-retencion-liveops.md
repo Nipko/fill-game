@@ -344,20 +344,23 @@ El paquete de niveles se descarga por Addressables al anunciarse (fast-follow) p
 
 Fuente: research/06 C6.1-C6.3 [V]/[E]. Regla de diseño offline: progreso en cliente con reconciliación "última escritura gana" por campo y máximo para contadores; valor económico concedido o confirmado en servidor (research/06 C6 [V]).
 
-## 6. Liga del río (`league`, v1.2)
+## 6. Liga del río (`league`: 1.0 recortada, D-046; completa en 1.2)
+
+**En la 1.0, recortada (D-046, 2026-10-23; especificación y contrato en `docs/dev/liga.md`):** solo las vistas **País** y **Global** con puntos semanales (lunes 12:00 UTC a lunes 12:00 UTC, sin archivo): el top 100, la posición exacta si el jugador está en él y, si no, su percentil («Estás en el {p} % mejor»). Seudónimo automático (un animal de una lista fija de 24 y 4 cifras, sin texto libre ni edición en la 1.0); el país sale de CloudFront o, si no, de la región del teléfono y se fija para la semana; banderas por código, siempre con el nombre del país. Desbloqueo al ganar el 41 (`live_league_unlock_level`) y botón «Liga» en el inicio; la línea «+{n} puntos de Liga» en la victoria [P]; los puntos de la tabla de abajo, una vez por semana cada nivel de campaña y una por día el Reto, calculados en el servidor. Cola de victorias en el perfil y clasificación en caché con su hora (`live_league_cache_minutes`). Con <13, nada. El backend va en **AWS** (D-035), sin Unity Leaderboards ni Cloud Code; el interruptor `live_league_enabled` queda apagado hasta que haya backend en prod. Las filas marcadas **(1.2)** de la tabla no entran en la 1.0.
+
 
 | Parámetro | Valor [P] | Nota |
 |---|---|---|
 | Desbloqueo | Nivel 41 | Magic Sort L39 (research/magic-sort/b §5.1 [V]) |
-| Ciclo | Semanal; reset lunes 12:00 UTC (07:00 Bogotá/Lima, 09:00 Brasilia) mediante `ResetConfig` cron; archivo de la semana anterior con `Archive` | research/06 C6.1 [V] |
-| Tres vistas | **Semanal**: mi cubeta de 50 jugadores de la misma banda de progreso (`BucketSize` 50) · **País**: top 100 + mi posición en el leaderboard del país de la cuenta de Play (banderas de los países amazónicos destacadas) · **Global**: top 100 + mi posición | research/09 §Qué copiar 13 [V] |
+| Ciclo | Semanal; reset lunes 12:00 UTC (07:00 Bogotá/Lima, 09:00 Brasilia) mediante `ResetConfig` cron; archivo de la semana anterior con `Archive` (1.2: en la 1.0, el reset en AWS y sin archivo, D-046) | research/06 C6.1 [V] |
+| Tres vistas | **Semanal** (1.2): mi cubeta de 50 jugadores de la misma banda de progreso (`BucketSize` 50) · **País**: top 100 + mi posición en el leaderboard del país de la cuenta de Play (banderas de los países amazónicos destacadas) · **Global**: top 100 + mi posición | research/09 §Qué copiar 13 [V] |
 | Puntos | Victoria normal 10 · Difícil 20 · Muy difícil 30 · Reto del río 20 · nivel de Travesía 10; `UpdateType` aggregate | — |
-| Antifraude | Puntuación escrita solo desde Cloud Code con App Check (Play Integrity); rechaza >40 victorias/hora, niveles no alcanzables y saltos de nivel; jugadores marcados se ocultan de las vistas | research/06 C6.1 [V] |
-| Tiers (`TieringConfig` por rango) | Oro 1-3 · Plata 4-10 · Bronce 11-25 · Participante 26-50 con ≥50 puntos | — |
-| Premios (cubeta semanal) | Oro: 1.000 semillas + Canoas infinitas 1 h + marco "Liga" (1.º además Cuia extra ×2) · Plata: 500 + 30 min · Bronce: 250 · Participante: 100 | Oro ≥ 1,2 × rescate (regla 5.1) |
-| País y Global | Solo cosmético: marco "Mejor del país" / "Mejor del río" para el top 10 semanal; sin semillas (evita incentivar granjas de cuentas) | — |
-| Offline | Puntos encolados y enviados al reconectar; ranking cacheado con marca temporal; premio reclamable 48 h tras el cierre | research/06 C6.1 [E] |
-| Riesgo | Unity Leaderboards es "gratis por tiempo limitado"; alternativa PGS Leaderboards sin cubetas | research/06 C6.1 [V]/[NV] |
+| Antifraude | Puntuación escrita solo en el servidor con App Check (Play Integrity; en la 1.0, la API en AWS, D-046); rechaza >40 victorias/hora, niveles no alcanzables y saltos de nivel (el Salto del Boto se acepta); jugadores marcados se ocultan de las vistas de los demás | research/06 C6.1 [V] · liga.md §3.2 |
+| Tiers (`TieringConfig` por rango) (1.2) | Oro 1-3 · Plata 4-10 · Bronce 11-25 · Participante 26-50 con ≥50 puntos | — |
+| Premios (cubeta semanal) (1.2) | Oro: 1.000 semillas + Canoas infinitas 1 h + marco "Liga" (1.º además Cuia extra ×2) · Plata: 500 + 30 min · Bronce: 250 · Participante: 100 | Oro ≥ 1,2 × rescate (regla 5.1) |
+| País y Global | Solo cosmético; sin semillas (evita incentivar granjas de cuentas). En la 1.0, solo la clasificación (D-046); el marco "Mejor del país" / "Mejor del río" para el top 10 semanal, en la 1.2 | — |
+| Offline | Puntos encolados y enviados al reconectar (en la 1.0, la cola `league.pending[]` del perfil, en lotes de ≤ 50 e idempotente por `win_id`, 08 §4.3); ranking cacheado con marca temporal («Actualizado hace {tiempo}»); premio reclamable 48 h tras el cierre (1.2) | research/06 C6.1 [E] · liga.md §4 |
+| Riesgo | Unity Leaderboards es "gratis por tiempo limitado"; alternativa PGS Leaderboards sin cubetas. Con D-035 y D-046 la Liga va en AWS desde la 1.0, sin Unity Leaderboards | research/06 C6.1 [V]/[NV] |
 
 El diseño "competición + logro personal" (todos los participantes con ≥50 puntos cobran algo) sigue la tendencia que research/05 §3 [V] describe para que nadie termine la semana sin premio.
 
@@ -502,7 +505,8 @@ Herramientas: Firebase Analytics con exportación a BigQuery (plan Blaze) y un p
 | `live_unlock_level_daily` | Nivel que desbloquea Reto del río, Bitácora, Mapa del río, Canasta y Mercado (2.3, 3) |
 | `streak_unlock_level` | Debut de la Crecida y la Hoja escudo (3, 4.3) |
 | `rescue_min_level` | Canoas, Cuia de rescate y Salto del Boto (3); dueño 04 |
-| `live_unlock_level_league` / `_trail` / `_regatta` / `_meeting` / `_village` | Desbloqueos de 1.2 y 2.0 (3, 5, 6, 7) |
+| `live_unlock_level_trail` / `_regatta` / `_meeting` / `_village` | Desbloqueos de 1.2 y 2.0 (3, 5, 7) |
+| `live_league_enabled` / `live_league_unlock_level` / `live_league_cache_minutes` | Liga del río de la 1.0 (6; D-046) |
 | `eco_starter_first_show` | Primera tarjeta de Mochila de inicio: "L12_or_session2" (2.1, 3); dueño 05 |
 | `push_preprompt_session` / `push_preprompt_min_level` / `push_quiet_hours` / `push_daily_cap_d0_d7` / `push_weekly_cap_lapsed` | Sesión y nivel ya superado del pre-prompt (primera victoria de la 2.ª sesión con el 10 superado, 8.1), horas silenciosas y topes de envío (8.1-8.2); todas las notificaciones son locales en 1.0 |
 | `daily_overrides` / `live_daily_offset` / `lvl_daily_bracket_levels` | Sustituciones fechadas, desplazamiento del índice y umbrales de banda del Reto del río (4.1); los umbrales son de 03 §16 |

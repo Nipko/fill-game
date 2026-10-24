@@ -398,6 +398,7 @@ namespace AF.UI
 
             // Desde aquí nada vuelve a escribir el perfil: el cierre de la escena (PersistNow) no encuentra lote.
             _saveBatch = null;
+            WipeLeague(); // D-046: la cola y la caché de la Liga, fuera también de memoria (GameBootstrap.League.cs)
             if (WipePlayerPrefsForTests != null)
             {
                 WipePlayerPrefsForTests();

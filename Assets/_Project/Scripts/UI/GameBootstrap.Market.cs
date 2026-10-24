@@ -644,7 +644,8 @@ namespace AF.UI
         {
             return _app != null && _app.Screen == AppScreen.Lobby && _lobby != null && _lobby.Visible && !_lobby.OverlayVisible
                 && !HomeWindowCovered && !MarketCommerceOpen && (_settingsScreen == null || !_settingsScreen.Visible)
-                && (_dailyScreen == null || !_dailyScreen.IsOpen) && (_lockedNotice == null || !_lockedNotice.Visible) && !FruitSheetOpen;
+                && (_dailyScreen == null || !_dailyScreen.IsOpen) && (_lockedNotice == null || !_lockedNotice.Visible) && !FruitSheetOpen
+                && !LeagueOpen; // D-046: la pantalla de la Liga tapa el inicio
         }
 
         // La victoria de campaña sin nada encima (ni el Mapa, ni la ficha de una fruta, ni un anuncio o la hoja de compra, ni otra

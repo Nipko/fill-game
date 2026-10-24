@@ -152,6 +152,22 @@ namespace AF.Analytics.Tests
         }
 
         [Test]
+        public void TheLeagueEvents_OfD046_AreInTheCatalog_WithoutPseudonymOrCountry()
+        {
+            // D-046 (docs/dev/liga.md §5): nunca llevan seudónimo ni país, solo claves.
+            AssertParams("af_league_open", "scope");
+            AssertParams("af_league_wins_sent", "count", "accepted", "rejected");
+            AssertParams("af_league_unavailable", "reason");
+        }
+
+        private static void AssertParams(string name, params string[] expected)
+        {
+            CatalogEntry? entry = AnalyticsCatalog.Find(name);
+            Assert.That(entry, Is.Not.Null, name);
+            Assert.That(entry!.Params, Is.EqualTo(expected), name);
+        }
+
+        [Test]
         public void NoEvent_HasMoreThan10SpecificParams()
         {
             foreach (CatalogEntry e in AnalyticsCatalog.All)

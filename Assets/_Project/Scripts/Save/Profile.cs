@@ -167,6 +167,16 @@ namespace AF.Save
         /// </summary>
         public string? PurchaseQueue { get; set; }
 
+        /// <summary>
+        /// <c>league</c> [P] (D-046; 08 §4.3; <c>docs/dev/liga.md</c> §4): la Liga del río del dispositivo, como el JSON que escribe
+        /// <c>AF.LiveOps.LeagueRecordJson</c> (<c>{week, pending[], counted[], me, cache}</c>), o null si nunca se guardó (entonces la clave
+        /// falta). Es la cola de victorias sin enviar y la última clasificación descargada: caché, nunca fuente de verdad (los puntos
+        /// los da el servidor). AF.Save no la interpreta; si no es un objeto, se descarta. Como <see cref="PurchaseQueue"/>, es solo
+        /// del dispositivo: no se firma, no sube a la nube y la fusión se queda con la local (<c>CloudMerge.SharedJson</c>). El borrado
+        /// de cuenta la borra con el perfil. Entra sin migrar: aún no se ha publicado.
+        /// </summary>
+        public string? League { get; set; }
+
         /// <summary>¿Está <paramref name="tokenHash"/> en <see cref="AppliedPurchases"/>?</summary>
         public bool HasAppliedPurchase(string tokenHash)
         {

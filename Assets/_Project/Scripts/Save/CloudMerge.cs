@@ -210,7 +210,8 @@ namespace AF.Save
         /// teléfono);</item>
         /// <item><c>consent</c> (D-042: 08 §7, «la banda declarada vive solo en el dispositivo»; Q-B12-8: la fusión ya se quedaba con
         /// la del dispositivo, y con Play Games no sube a Google);</item>
-        /// <item><c>account_code</c> (D-042: el código de borrado es del dispositivo, D-035 añadido de F3-5; no sube a Google).</item>
+        /// <item><c>account_code</c> (D-042: el código de borrado es del dispositivo, D-035 añadido de F3-5; no sube a Google);</item>
+        /// <item><c>league</c> (D-046 [P]: la cola de victorias y la caché de la Liga; el servidor es idempotente por <c>win_id</c>).</item>
         /// </list>
         /// </summary>
         public static string SharedJson(Profile profile)
@@ -223,9 +224,11 @@ namespace AF.Save
             string? queue = profile.PurchaseQueue;
             ConsentRecord? consent = profile.Consent;
             string? code = profile.AccountCode;
+            string? league = profile.League;
             profile.PurchaseQueue = null;
             profile.Consent = null;
             profile.AccountCode = null;
+            profile.League = null;
             try
             {
                 return ProfileJson.Serialize(profile);
@@ -235,6 +238,7 @@ namespace AF.Save
                 profile.PurchaseQueue = queue;
                 profile.Consent = consent;
                 profile.AccountCode = code;
+                profile.League = league;
             }
         }
 
@@ -245,7 +249,9 @@ namespace AF.Save
         internal static string LegacySharedJson(Profile profile)
         {
             string? queue = profile.PurchaseQueue;
+            string? league = profile.League;
             profile.PurchaseQueue = null;
+            profile.League = null; // D-046: no existía antes de D-042, así que no cambia lo firmado entonces
             try
             {
                 return ProfileJson.Serialize(profile);
@@ -253,6 +259,7 @@ namespace AF.Save
             finally
             {
                 profile.PurchaseQueue = queue;
+                profile.League = league;
             }
         }
 
@@ -261,6 +268,7 @@ namespace AF.Save
         private static Profile WithLocalQueue(Profile merged, Profile local)
         {
             merged.PurchaseQueue = local.PurchaseQueue;
+            merged.League = local.League; // D-046: la cola y la caché de la Liga son del dispositivo
             merged.Consent = local.Consent;
             merged.AccountCode = local.AccountCode;
             return merged;

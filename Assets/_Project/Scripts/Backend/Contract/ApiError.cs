@@ -20,6 +20,9 @@ namespace AF.Backend.Contract
         NotImplemented,
         UpstreamError,
         InternalError,
+
+        /// <summary><c>country_unknown</c>: <c>GET /v1/league?scope=country</c> sin país (404; D-046).</summary>
+        CountryUnknown,
     }
 
     /// <summary>
@@ -77,6 +80,7 @@ namespace AF.Backend.Contract
                 case ApiErrorCode.NotImplemented: return "not_implemented";
                 case ApiErrorCode.UpstreamError: return "upstream_error";
                 case ApiErrorCode.InternalError: return "internal_error";
+                case ApiErrorCode.CountryUnknown: return "country_unknown";
                 default: throw new ArgumentOutOfRangeException(nameof(code));
             }
         }
@@ -97,6 +101,7 @@ namespace AF.Backend.Contract
                 case "not_implemented": return ApiErrorCode.NotImplemented;
                 case "upstream_error": return ApiErrorCode.UpstreamError;
                 case "internal_error": return ApiErrorCode.InternalError;
+                case "country_unknown": return ApiErrorCode.CountryUnknown;
                 default: return ApiErrorCode.Unknown;
             }
         }

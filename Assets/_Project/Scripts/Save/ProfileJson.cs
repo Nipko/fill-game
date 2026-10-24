@@ -204,6 +204,11 @@ namespace AF.Save
                 root.Set("purchase_queue", PurchaseQueueNode(p.PurchaseQueue)); // F3-3 [P]: falta si nunca se guardó
             }
 
+            if (p.League != null)
+            {
+                root.Set("league", LeagueNode(p.League)); // D-046 [P]: falta si nunca se guardó; solo del dispositivo
+            }
+
             JsonNode entitlements = JsonNode.NewObject();
             entitlements.Set("no_ads", JsonNode.FromBool(p.Entitlements.NoAds));
             entitlements.Set("starter_bought", JsonNode.FromBool(p.Entitlements.StarterBought));
@@ -467,6 +472,10 @@ namespace AF.Save
             JsonNode? queue = TolerantSection(root, "purchase_queue");
             p.PurchaseQueue = queue == null ? null : JsonText.Write(queue);
 
+            // league (D-046 [P]): AF.Save no la interpreta; si no es un objeto, se descarta (es cola y caché de la Liga, nunca dinero).
+            JsonNode? league = TolerantSection(root, "league");
+            p.League = league == null ? null : JsonText.Write(league);
+
             JsonNode? entitlements = Section(root, "entitlements");
             if (entitlements != null)
             {
@@ -535,6 +544,37 @@ namespace AF.Save
             p.DailyChallenge = dailyChallenge == null ? null : ReadDailyChallenge(dailyChallenge);
             ReadB8(root, p);
             return p;
+        }
+
+        // league (D-046 [P]): el texto ya analizado de la última vez (el perfil se escribe tras cada vertido y la Liga cambia poco).
+        // El par texto-nodo va en un objeto inmutable, para leerlo entero aunque escriban varios hilos.
+        private static LeagueParsed? s_league;
+
+        private sealed class LeagueParsed
+        {
+            public LeagueParsed(string text, JsonNode node)
+            {
+                Text = text;
+                Node = node;
+            }
+
+            public string Text { get; }
+
+            public JsonNode Node { get; }
+        }
+
+        // league (D-046 [P]): como purchase_queue, el JSON como objeto anidado; si el texto no es un objeto JSON, se descarta.
+        private static JsonNode LeagueNode(string json)
+        {
+            LeagueParsed? last = s_league;
+            if (last != null && string.Equals(last.Text, json, StringComparison.Ordinal))
+            {
+                return last.Node;
+            }
+
+            JsonNode node = PurchaseQueueNode(json);
+            s_league = new LeagueParsed(json, node);
+            return node;
         }
 
         // purchase_queue (F3-3 [P]): el JSON de la cola como objeto anidado; si el texto no es un objeto JSON, se descarta.

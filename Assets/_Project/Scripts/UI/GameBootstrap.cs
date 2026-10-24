@@ -957,6 +957,7 @@ namespace AF.UI
             ShowAccountCode(); // F3-5: el código de borrado para la web en lugar del UID (Q-B13-21; GameBootstrap.Backend.cs)
             RefreshConsentRows(); // B12: «Privacidad y datos» y «Corregir mi edad» (GameBootstrap.Consent.cs)
             RefreshPushRow(); // «Avisos» (06 §8.1; GameBootstrap.PushUi.cs)
+            ShowLeagueCountry(); // D-046: «País en la Liga: {país}» (GameBootstrap.League.cs)
             _skipNextDelta = true;
             return true;
         }
@@ -1022,6 +1023,12 @@ namespace AF.UI
             // Mercado y tarjeta de oferta (B5): Atrás cierra la tarjeta como «Ahora no» (también encima de la victoria) y el Mercado
             // como su X. Con la hoja de compra delante no llega aquí (arriba).
             if (PressMarketBack())
+            {
+                return true;
+            }
+
+            // La Liga del río (D-046), sobre el inicio: Atrás la cierra como su X.
+            if (CloseLeague())
             {
                 return true;
             }
@@ -1778,6 +1785,7 @@ namespace AF.UI
             SetUpA11y(); // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y el lector de pantalla
             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
             SetUpConsent(clock, consentStore); // B12: cifras, país y perfil legal, flujo y pantalla (GameBootstrap.Consent.cs)
+            SetUpLeague(); // D-046 (GameBootstrap.League.cs): la Liga del río, tras la edad y el consentimiento (nada con <13 ni sin contestar)
             ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
