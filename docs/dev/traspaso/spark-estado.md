@@ -6,6 +6,14 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-24 · Integración de T6 carril 1 (escritorio)
+
+- Fusionada en `integracion-fase1-fase2` (`666045d0`) sobre la Liga (`73823f7b`), sin conflictos de texto; code-reviewer del escritorio: APROBADO, sin choques con la Liga (el botón «Liga» va abajo a la izquierda y la columna de audio arriba a la derecha).
+- Verificación en el escritorio (x64): dotnet build 0 avisos; dotnet test 1.002 (996 + 6); `validate_schema.py` 116/116; `apply_translations.py --check` OK; `rc_defaults.py --check` idéntico (254); compila; EditMode 4.505 (4.502 + 3); build de desarrollo OK (`dev.apk` 72,8 MB; `check-manifest -Mode dev`, `check-16kb` y `check-no-unity-iap` OK).
+- PlayMode completo: 2.032, 1 fallo, `Home_FitsWithoutOverlaps…(640)`. El test no esperaba a que acabara el saludo de TiTino, que a 360 × 640 aparta la tarjeta del Reto: dependía de la hora. Arreglado en el test (espera el saludo) y añadido `Home_WithTheLeagueOn_TheLeagueButtonFitsWithoutOverlaps` (640/800/320 al 100 y al 130 %, con el botón «Liga» en la lista de no-solape). `AudioQuickTogglesTests` repetido: 22/22. Total: 2.038 (1.748 + 290).
+
+---
+
 ## 2026-10-24 · T6 carril 1 · Música y Sonido con un toque (`spark/t6-audio-directo`): HECHA · verificación completa VERDE · code-reviewer APROBADO · lista para integrar
 
 - **Encargo:** `spark-audio-tablero.md`, carril 1 (D-046, punto 2). Rama desde `origin/integracion-fase1-fase2` en `3ab273f9`.

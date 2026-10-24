@@ -175,6 +175,12 @@ namespace AF.Tests.PlayMode
             yield return LoadRichLobby();
             GameBootstrap boot = GameBootstrap.Current!;
             LobbyScreen lobby = boot.Lobby!;
+            // El saludo de TiTino, si sale, cruza a 360 × 640 la tarjeta del Reto y la aparta mientras se ve: se espera a que acabe.
+            HomeSloth sloth = lobby.HomeWindow.Sloth!;
+            Tick(sloth, 400);
+            Tick(sloth, (int)sloth.BubbleDurationMs + 300);
+            boot.TickDaily(16f);
+            Canvas.ForceUpdateCanvases();
             Assert.That(boot.MarketIcons!.PiggyShown, Is.True, where + ": condición del test, el Cántaro a la vista (≥ 20)");
             Assert.That(boot.DailyCard != null && boot.DailyCard.Visible, Is.True, where + ": condición del test, la tarjeta del Reto (≥ 10)");
             Assert.That(lobby.CanoesShown && lobby.HomeWindow.PillShown, Is.True, where + ": condición del test, Canoas y la píldora");
@@ -182,6 +188,39 @@ namespace AF.Tests.PlayMode
             List<KeyValuePair<string, Rect>> named = Named(boot);
             Debug.Log("AF_AUDIO_QUICK " + where + ": " + string.Join(", ", named.ConvertAll(n => n.Key + " " + n.Value)));
             AssertNoOverlaps(named, lobby.CanvasWidth, where);
+        }
+
+        // Integración con la Liga (D-046, punto 1): el botón «Liga», abajo a la izquierda, tampoco pisa nada, al 100 % y al 130 %.
+        [UnityTest]
+        public IEnumerator Home_WithTheLeagueOn_TheLeagueButtonFitsWithoutOverlaps([ValueSource(nameof(Screens))] int screen, [Values(1f, 1.3f)] float fontScale)
+        {
+            string where = Use(screen) + " · Liga al " + Mathf.RoundToInt(fontScale * 100f) + " %";
+            LaunchOptions.FontScaleOverride = fontScale;
+            var clock = new ManualClock(new System.DateTime(2026, 10, 16, 15, 0, 0, System.DateTimeKind.Utc));
+            GameBootstrap.LeagueApiOverride = new AF.LiveOps.FakeLeagueApi(clock);
+            GameBootstrap.LeagueClockOverride = clock;
+            GameBootstrap.LeagueConfigOverride = new AF.LiveOps.LeagueConfig { LiveLeagueEnabled = true };
+            try
+            {
+                yield return LoadRichLobby();
+                GameBootstrap boot = GameBootstrap.Current!;
+                LobbyScreen lobby = boot.Lobby!;
+                HomeSloth sloth = lobby.HomeWindow.Sloth!;
+                Tick(sloth, 400);
+                Tick(sloth, (int)sloth.BubbleDurationMs + 300);
+                boot.TickLeague(16f);
+                boot.TickDaily(16f);
+                Canvas.ForceUpdateCanvases();
+                Assert.That(boot.LeagueButton != null && boot.LeagueButton.Shown, Is.True, where + ": condición del test, el botón «Liga» (≥ 41)");
+
+                List<KeyValuePair<string, Rect>> named = Named(boot);
+                Debug.Log("AF_AUDIO_QUICK_LEAGUE " + where + ": " + string.Join(", ", named.ConvertAll(n => n.Key + " " + n.Value)));
+                AssertNoOverlaps(named, lobby.CanvasWidth, where);
+            }
+            finally
+            {
+                GameBootstrap.ResetLeagueOverrides();
+            }
         }
 
         [UnityTest]
@@ -319,6 +358,12 @@ namespace AF.Tests.PlayMode
             if (icons != null && icons.PiggyShown)
             {
                 named.Add(new KeyValuePair<string, Rect>("cántaro", CanvasRect(icons.PiggyRect, root)));
+            }
+
+            LeagueLobbyButton? league = boot.LeagueButton;
+            if (league != null && league.Shown)
+            {
+                named.Add(new KeyValuePair<string, Rect>("liga", CanvasRect(league.Rect, root)));
             }
 
             if (boot.DailyCard != null && boot.DailyCard.Visible)
