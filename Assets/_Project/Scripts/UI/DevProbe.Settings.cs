@@ -73,17 +73,20 @@ namespace AF.UI
         /// Escribe <c>AF_STATE settings_change</c> (clave y valor; con <c>patterns</c>, <paramref name="patternsOn"/> = el
         /// interruptor aplicado al nivel cargado, o null sin nivel, y la opacidad del shader).
         /// </summary>
-        public void SettingsChange(string key, string value, bool? patternsOn)
+        public void SettingsChange(string key, string value, bool? patternsOn, string? source = null)
         {
-            string? line = FormatSettingsChange(key, value, patternsOn);
+            string? line = FormatSettingsChange(key, value, patternsOn, source);
             if (line != null)
             {
                 Write(line);
             }
         }
 
-        /// <summary>Texto de la línea <c>AF_STATE settings_change</c>; null si la sonda no escribe.</summary>
-        public string? FormatSettingsChange(string key, string value, bool? patternsOn)
+        /// <summary>
+        /// Texto de la línea <c>AF_STATE settings_change</c>; null si la sonda no escribe. Con <paramref name="source"/>, de dónde
+        /// llega el cambio de Sonido o Música (<c>settings</c>, <c>pause</c> o <c>home</c>; D-046, punto 2; 08 §8.2).
+        /// </summary>
+        public string? FormatSettingsChange(string key, string value, bool? patternsOn, string? source = null)
         {
             if (!Enabled)
             {
@@ -101,6 +104,11 @@ namespace AF.UI
                 sb.Append(",\"on\":").Append(patternsOn.HasValue ? (patternsOn.Value ? "true" : "false") : "null");
                 sb.Append(",\"opacity\":");
                 AppendUnit2(sb, LiquidGraphic.ShaderPatternOpacity);
+            }
+
+            if (source != null)
+            {
+                sb.Append(",\"source\":\"").Append(source).Append('"');
             }
 
             sb.Append('}');

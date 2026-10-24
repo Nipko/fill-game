@@ -1746,6 +1746,7 @@ namespace AF.UI
             _mapScreen.L10BubbleSaid = () => _screen?.SlothSession.RecordMapIntro(); // el saludo del inicio se aplaza (D-028, 60 b)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
+            SetUpAudioToggles(); // D-046, punto 2: Música y Sonido con un toque en la pausa y el inicio (GameBootstrap.Audio.cs)
             _settingsScreen.IdleHintToggled = on => ChooseIdleHint(on); // MO3: Pista por inactividad
             BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
             SetUpAccount(); // B8: «Eliminar cuenta y datos» en Ajustes, en dos pasos (GameBootstrap.Account.cs)

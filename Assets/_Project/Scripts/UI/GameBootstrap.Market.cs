@@ -681,7 +681,7 @@ namespace AF.UI
             bool piggyShown = lobby && OfferReady() && piggy.VisibleAt(max + 1); // sin tienda no hay Cántaro que comprar (D-008)
             int seeds = piggy.Seeds;
             bool full = piggy.IsFull;
-            var settings = (RectTransform)_lobby.SettingsButton.transform;
+            RectTransform settings = _lobby.PiggyAnchorRect; // el Cántaro, bajo Ajustes y los botones de Música y Sonido (D-046)
             bool measured = lobby && (icons.Remeasure() | icons.TargetsMoved(_lobby.HomeTabRect, settings));
             if (lobby == _iconsShown && market == _iconsMarket && piggyShown == _iconsPiggy && seeds == _iconsPiggySeeds && full == _iconsPiggyFull && !measured)
             {

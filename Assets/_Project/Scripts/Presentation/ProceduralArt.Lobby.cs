@@ -52,6 +52,7 @@ namespace AF.Presentation
             IconGear = BuildIconGear(Palette.Cream, Palette.FamilyWood.Edge, "icon_gear");
             IconGearDisabled = BuildIconGear(Palette.DisabledGlyph, Color.clear, "icon_gear_disabled");
             IconInfinite = BuildIconInfinite();
+            BuildAudioIcons(); // D-046, punto 2: Música y Sonido con un toque (ProceduralArt.Audio.cs)
         }
 
         private Sprite BuildIconSeed()
