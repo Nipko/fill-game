@@ -178,6 +178,39 @@ namespace AF.Save.Tests
         }
 
         [Test]
+        public void APlayConflict_AfterCloseOrStop_KeepsTheOriginalBytes_WithoutMergingOrSigning()
+        {
+            // Revisión de D-042: con la nube cerrada (cuenta borrada o <13), el SDK aún escribe lo que devuelva la resolución
+            // del conflicto; debe ser la versión original sin tocar, nunca una fusión re-firmada con el perfil de esta sesión.
+            foreach (bool viaSession in new[] { false, true })
+            {
+                var port = new FakePort();
+                var flags = new MemoryCloudSaveFlags();
+                PlayGamesCloudSave cloud = SignedIn(port, flags);
+                byte[] original = Blob(AtLevel(10, 500));
+                byte[] originalCopy = (byte[])original.Clone();
+                port.Conflict = (original, Blob(AtLevel(40, 7)));
+                port.HoldOpen = true;
+                CloudLoadResult? load = null;
+                cloud.Load(r => load = r);
+                Assert.That(load, Is.Null, "el Open sigue en vuelo");
+                if (viaSession)
+                {
+                    new CloudSession(cloud, flags, Phone).Stop();
+                }
+                else
+                {
+                    cloud.Close();
+                }
+
+                Assert.That(cloud.Closed, Is.True);
+                port.ReleaseOpen();
+                Assert.That(port.Data, Is.EqualTo(originalCopy), "los bytes elegidos son los de original, sin cambios");
+                Assert.That(port.Commits, Is.EqualTo(0));
+            }
+        }
+
+        [Test]
         public void AConflictWithAnUnreadableVersion_KeepsTheReadableOne()
         {
             byte[] good = Blob(AtLevel(9, 2));
@@ -483,10 +516,34 @@ namespace AF.Save.Tests
                 done(true);
             }
 
+            /// <summary>Retiene la respuesta del próximo <c>Open</c> hasta <see cref="ReleaseOpen"/> (un Open en vuelo).</summary>
+            public bool HoldOpen { get; set; }
+
+            private Action? _heldOpen;
+
+            public void ReleaseOpen()
+            {
+                Action? held = _heldOpen;
+                _heldOpen = null;
+                held?.Invoke();
+            }
+
             public void Open(string name, SnapshotConflictResolver resolve, Action<SavedGamesStatus, ISavedGamesSnapshot?> done)
             {
                 Calls.Add("open");
                 LastName = name;
+                if (HoldOpen)
+                {
+                    HoldOpen = false;
+                    _heldOpen = () => Answer(resolve, done);
+                    return;
+                }
+
+                Answer(resolve, done);
+            }
+
+            private void Answer(SnapshotConflictResolver resolve, Action<SavedGamesStatus, ISavedGamesSnapshot?> done)
+            {
                 SavedGamesStatus status = NextOpen;
                 NextOpen = SavedGamesStatus.Ok;
                 if (status != SavedGamesStatus.Ok)

@@ -223,6 +223,13 @@ namespace AF.Save
 
         private byte[] ResolveConflict(byte[] original, byte[] unmerged)
         {
+            // Cerrada (cuenta borrada o <13 declarado): el SDK escribe lo que se elija, así que se devuelve la versión original
+            // tal cual, sin fusionar ni volver a firmar; nada del perfil de esta sesión llega a Saved Games (revisión de D-042).
+            if (Closed)
+            {
+                return original;
+            }
+
             return CloudSync.ResolveSnapshotConflict(original, unmerged, _device);
         }
 

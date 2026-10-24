@@ -152,6 +152,8 @@ En el editor y en los tests, en memoria (`MemoryCloudSaveFlags`; `GameBootstrap.
   2. pide el borrado de `af_main` si hay sesión;
   3. **cierra** la sesión de nube (`Closed`): ninguna subida más, como el lote del perfil.
 
+  Si una subida (`Commit`) ya estaba en vuelo cuando se pide el `Delete`, que llegue antes o después depende del orden en que el SDK atienda las dos peticiones; si el `Commit` queda detrás, el snapshot conserva datos y lo vuelve a borrar `CloudErase` en el arranque siguiente con sesión.
+
   El plugin no avisa del resultado de `delete`, así que el arranque siguiente lo comprueba antes de fusionar (`CloudErase`):
   - snapshot vacío: limpia la marca y sigue;
   - con datos: lo vuelve a borrar y esta sesión no fusiona ni sube nada;
@@ -159,7 +161,7 @@ En el editor y en los tests, en memoria (`MemoryCloudSaveFlags`; `GameBootstrap.
 
   Así, una cuenta borrada sin red no vuelve de la nube.
 - **Borrado por la web:** no puede borrar Saved Games, que está en la cuenta de Google del jugador. Lo dicen la política de privacidad y 08 §13.3; lo revisa el abogado (§11, Q-PGS-3).
-- **`<13` declarado en Ajustes con la nube en marcha** (revisión de D-042): `CloudSession.Stop()` deja la sesión `Closed` (sin marca de borrado) y cierra `PlayGamesCloudSave`; lo que llegue después no fusiona, no escribe (`WriteGate`) y no recarga (`OnCloudStarted` lo ignora con `ConsentBlocked`).
+- **`<13` declarado en Ajustes con la nube en marcha** (revisión de D-042): `CloudSession.Stop()` deja la sesión `Closed` (sin marca de borrado) y cierra `PlayGamesCloudSave`; lo que llegue después no fusiona, no escribe (`WriteGate`) y no recarga (`OnCloudStarted` lo ignora con `ConsentBlocked`). Un conflicto de Play que salte en un `Open` ya en vuelo se resuelve con la versión `original` tal cual, sin fusionar ni volver a firmar (`PlayGamesCloudSave.ResolveConflict` con `Closed`): el SDK la vuelve a escribir, pero nada del perfil de esta sesión llega a Saved Games.
 
 ## 7. Privacidad (08 §13.3)
 
