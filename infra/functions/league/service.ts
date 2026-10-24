@@ -81,8 +81,10 @@ export async function submit(deps: LeagueDeps, uid: string, req: Request) {
     const alias = await read<Alias>(deps,t.names,{uid});
     if (!alias) throw unauthorized();
     const old = await read<Player>(deps,t.players,{uid,week:week.week});
-    const previous = now < week.start + 3600_000 ? await read<Player>(deps,t.players,{uid,week:weekOf(week.start-1).week}) : undefined;
-    const result = evaluate(old,req,uid,now,alias.highest,previous?.wins.filter(w=>w.at>week.start-3600_000));
+    // También si el lote llega días después: won_at puede ser de la primera hora del lunes.
+    // Las fechas locales de Reto que cruzan el lunes no pueden cobrarse en dos semanas.
+    const previous = await read<Player>(deps,t.players,{uid,week:weekOf(week.start-1).week});
+    const result = evaluate(old,req,uid,now,alias.highest,previous?.wins);
     const next = result.next;
     try {
       await deps.ddb.send(new TransactWriteCommand({ TransactItems:[

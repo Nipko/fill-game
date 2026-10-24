@@ -108,6 +108,24 @@ describe('Liga: transacciones, top y borrado',()=>{
     expect((await board(deps,UID,'country')).top).toHaveLength(1);
     expect(db.items(TABLES.AF_TABLE_LEAGUE_HISTOGRAM).map(i=>i.count)).toEqual([1,1]);
   });
+  it('una fecha local de Reto no se cobra de nuevo al cruzar la semana UTC',async()=>{
+    const sunday=Date.parse('2026-10-25T14:00:00Z');
+    const win: Win={win_id:'d:2026-10-26',kind:'daily',day:'2026-10-26',won_at:new Date(sunday).toISOString()};
+    expect((await submit({...deps,now:()=>sunday},UID,request([win]))).points).toBe(20);
+    const monday=Date.parse('2026-10-26T13:00:00Z');
+    const friday=Date.parse('2026-10-30T20:00:00Z');
+    const result=await submit({...deps,now:()=>friday},UID,request([{...win,won_at:new Date(monday).toISOString()}]));
+    expect(result.points).toBe(0);
+    expect(result.rejected).toEqual([{win_id:win.win_id,reason:'duplicate'}]);
+  });
+  it('el límite horario del lunes también se cumple si el lote offline llega el viernes',async()=>{
+    const before=Date.parse('2026-10-26T11:55:00Z');
+    const wins=Array.from({length:40},(_,i)=>campaign(41+i,before-600000+i*10000));
+    expect((await submit({...deps,now:()=>before},UID,request(wins))).accepted).toHaveLength(40);
+    const friday=Date.parse('2026-10-30T20:00:00Z');
+    const result=await submit({...deps,now:()=>friday},UID,request([campaign(81,Date.parse('2026-10-26T12:05:00Z'))]));
+    expect(result.rejected).toEqual([{win_id:'c:81',reason:'rate_limited'}]);
+  });
   it('sin puntos, país desconocido y cabecera de país falsificada ignorada',async()=>{
     const view = await board(deps,UID,'global');
     expect(view.me).toMatchObject({points:0,rank:null,percentile:null});

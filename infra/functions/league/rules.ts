@@ -57,11 +57,11 @@ export function evaluate(old: Player | undefined, req: Request, uid: string, now
     // Sin offset en el contrato, admitir las fechas que pueden solaparse con la semana,
     // incluido el día previo por huso/cambio de medianoche; impedir días remotos o futuros.
     else if (day !== undefined && (day < Date.parse(new Date(week.start).toISOString().slice(0,10)) - 86400_000 || day > Date.parse(new Date(at).toISOString().slice(0,10)) + 86400_000)) reason = 'outside_week';
-    else if (next.wins.some(w => w.id === win.win_id)) reason = 'duplicate';
+    else if (next.wins.some(w => w.id === win.win_id) || (win.kind === 'daily' && previous.some(w => w.id === win.win_id))) reason = 'duplicate';
     else if (req.max_level < 41 || (win.kind === 'campaign' && (win.level! < 41 || win.level! > req.max_level || (max > 0 && win.level! > max + 2) || (max > 0 && win.level === max + 2 && !table[max + 1]?.skippable)))) reason = 'unreachable_level';
     else {
       // Ventana móvil real sobre won_at, también con lotes offline desordenados.
-      const times = [...previous, ...next.wins, { id: win.win_id, at }].map(w => w.at).sort((a,b) => a-b);
+      const times = [...previous.filter(w=>w.at>week.start-3600_000), ...next.wins, { id: win.win_id, at }].map(w => w.at).sort((a,b) => a-b);
       let left = 0;
       for (let right = 0; right < times.length; right++) {
         while (times[right] - times[left] >= 3600_000) left++;
