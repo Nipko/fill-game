@@ -3817,3 +3817,12 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - **Spark:** los puntos 2 y 3 (`docs/dev/traspaso/spark-audio-tablero.md`);
   - **Codex:** el backend de la Liga, su despliegue en dev con el dueño y los textos legales (`docs/dev/traspaso/codex-liga.md`);
   - **escritorio:** el cliente de la Liga y la integración.
+
+### D-046, añadido del 2026-10-24: el Mercado sin precios de Play (prueba en el teléfono del 23, observación 1)
+
+- **Estado:** aprobado por el dueño en el chat. Su respuesta, en inglés: «I approve the change to Scripts/IAP/: hide the Market without Play prices and show the notice. Keep the existing text and leave the rows without a price for another task.» Cubre el cambio en `Assets/_Project/Scripts/IAP/` que pide `.claude/rules/sdk.md`.
+- **Decisión:**
+  - El Mercado y todo lo que vende se comportan como «tienda no disponible» mientras ningún SKU tenga precio de Play.
+  - Si una compra acaba en `StoreUnavailable`, sale el aviso que ya existe, `market_store_unavailable`.
+  - Las filas sin precio de Play, cuando otros SKU sí lo tienen, quedan para otra tarea.
+- **Carril:** `tanda6/fx-telefono-max`, aprobado por el code-reviewer.
