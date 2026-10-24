@@ -13,6 +13,7 @@
     "AF.LiveOps",
     "AF.Boosters",
     "AF.Ads",
+    "AF.Ads.Max",
     "AF.IAP",
     "AF.Localization",
     "AF.Audio",

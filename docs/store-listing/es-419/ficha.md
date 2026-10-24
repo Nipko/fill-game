@@ -1,6 +1,6 @@
 # Ficha de Google Play · es-419 (idioma predeterminado) · BORRADOR
 
-- **Estado:** borrador del bloque B13 de la tanda 5 (2026-10-20). Nada de esto se publica hasta tener el dictamen de marca (08 §13.1 #1; `docs/legal/marca.md`) y la revisión del dueño.
+- **Estado:** borrador del bloque B13 de la tanda 5 (2026-10-20), puesto al día el 2026-10-23 (Parallext, LLC, D-041; web en `infra/web/`; anuncios condicionados a D-042; Q-B13-n decididas el 2026-10-20). Nada de esto se publica hasta tener el dictamen de marca (08 §13.1 #1; `docs/legal/marca.md`) y la revisión del dueño.
 - **Fuentes:** glosario §1.3 (título y descripción corta, canon), 08 §13.1 #5 (límites y la línea de independencia), 07 §10 (capturas y vídeo), 01 §1-§2 (qué se promete), glosario §5, §7 y §8-§9 (nombres).
 - **Reglas de redacción:** español latino neutro con tuteo; sin «Best», «#1», «Free», mayúsculas sostenidas ni emojis (glosario §1.1); «Tintalú» siempre con tilde; ningún identificador ni nombre propio con la cadena «amazon» (la palabra solo aparece de forma descriptiva y en la línea de independencia, que exige 08 §13.1 #5).
 - **Marcas:** `[PENDIENTE: dueño]`, `[PENDIENTE: abogado]`; **pendiente de revisión** = lo cultural (fauna, lugares, comodines con nombre de fauna o tupí), que revisa el asesor cultural (07 §8.2, fila «Ficha de tienda y creativos de UA»). Las preguntas abiertas están en `../README.md`.
@@ -10,13 +10,15 @@
 | Campo | Valor | Origen |
 |---|---|---|
 | Nombre de la app (≤ 30) | **Tintalú: Ordenar Agua** (21) | glosario §1.3; 08 §13.1 #1 |
-| Nombre del desarrollador | `[PENDIENTE: dueño]` (sin ninguna forma de «Amazon») | 08 §13.1 #1; glosario §1.3 |
-| `applicationId` | `[PENDIENTE: dueño]` (`com.<estudio>.tintalu`, se fija tras el dictamen) | 08 §13.1 #1 |
+| Nombre del desarrollador | **Parallext, LLC** (parallext.com) | D-041 |
+| `applicationId` | `[PENDIENTE: dueño]`: recomendado `com.parallext.tintalu`; se fija solo tras el dictamen de marca | D-041; 08 §13.1 #1; `CLAUDE.md`, regla 6 |
+| Cuenta de Play Console | `[PENDIENTE: dueño]`: hoy está a nombre de AUTOMATION AI S A S; con Parallext, LLC como desarrollador, cuenta nueva de Parallext o transferencia de la app | D-041, «Consecuencias» |
 | Tipo · categoría | Juego · Puzle | 08 §13.1 #1 |
-| Precio | Gratis, con anuncios y compras integradas | 08 §13.1 #1 y #8 |
-| Correo de contacto | `[PENDIENTE: dueño]` | Pregunta Q-B13-3 |
-| Sitio web | `[PENDIENTE: dueño]` (canónico propuesto: `tintalu.com` [P]) | 08 §13.1 #2 |
-| Política de privacidad | `[PENDIENTE: dueño]` (borrador: `../privacidad.md`) | 08 §13.1 #7 |
+| Precio | Gratis, con compras integradas; **con anuncios solo cuando D-042 (MAX) esté en el build** que se publique | 08 §13.1 #1 y #8; D-042 |
+| Correo de contacto | `[PENDIENTE: dueño]` (dato de Parallext, LLC que falta en D-041; Q-B13-3 (a): buzón del dominio canónico) | D-041; Q-B13-3 |
+| Sitio web | `https://tintalu.com/` (dominio del dueño en Cloudflare, **aún sin conectar** a la web: D-041). La web ya existe en `infra/web/` | D-041 |
+| Política de privacidad | `https://tintalu.com/privacidad/` (fuente: `infra/web/src/content/es-419/privacy.html`) | D-041; 08 §13.1 #7 |
+| Eliminación de cuenta | `https://tintalu.com/tintalu/eliminar-cuenta/` (fuente: `infra/web/src/content/es-419/delete.html`) | 08 §11; Q-B13-1 (a) |
 
 ## 2. Descripción corta (≤ 80)
 
@@ -75,7 +77,9 @@ Tintalú es gratis, con anuncios y compras opcionales. Puedes quitar los anuncio
 Juego independiente inspirado en la cuenca amazónica; sin relación con Amazon.com, Inc.
 ```
 
-Recuento: `../README.md` §2 (Unicode NFC). La línea del asesor cultural va solo con su consentimiento (Q-B13-12). Notas de contenido:
+Recuento: `../README.md` §2 (Unicode NFC). La línea del asesor cultural va solo con su consentimiento (Q-B13-12 (a)). Notas de contenido:
+- **Anuncios y videos (D-042):** «Los videos opcionales […] necesitan internet», «con anuncios» y «Puedes quitar los anuncios entre niveles con «Sin anuncios»» solo valen si el build que se publica lleva MAX. Hoy el juego no muestra anuncios (privacidad de la web, sección 2). Si la 1.0 saliera sin MAX, se quitan esas frases y se cambia «con anuncios y compras opcionales» por «con compras opcionales».
+- **Sin promesas que el juego no cumpla:** cada frase de la descripción se comprueba con la build final antes de enviar (comodines, Reto del río, Bitácora, Canasta, Crecida, patrones de fruta, Datos del río, Frutas del río y juego sin conexión). No se nombra ningún producto de compra ni un precio: los da Google Play.
 - Los subtítulos van en tipo oración («Cómo se juega»), sin mayúsculas sostenidas (glosario §1.1). Play no admite negritas ni encabezados en la descripción [NV]: un subtítulo es solo una línea propia.
 - «Nueve mundos de cinco países» y la Luciérnaga dependen del alcance de la 1.0 (mundos 1-9; glosario §8): se comprueban con la build final.
 - No se promete el número de niveles ni el peso de descarga hasta la build de release (Q-B13-7, Q-B13-8).
@@ -96,12 +100,12 @@ Sin género («te da la bienvenida», nunca «¡Bienvenido!»), como `map_countr
 
 ## 6. Textos de las 8 capturas (07 §10.2)
 
-El arte y la composición están en `../assets-tienda.md`. Texto corto superpuesto, ≤ 36 caracteres [P]: el del texto canónico más largo (la captura 4 en ES, 36). La captura 2 tiene una pregunta abierta (Q-B13-23).
+El arte y la composición están en `../assets-tienda.md`. Texto corto superpuesto, ≤ 36 caracteres [P]: el del texto canónico más largo (la captura 4 en ES, 36), sobre una placa de madera clara o de vidrio del UI kit de D-003 (Q-B13-5 (a)).
 
 | # | Texto ES-419 | Estado |
 |---|---|---|
 | 1 | Ordena el agua del Amazonas | canon 07 §10.2 · pendiente de revisión |
-| 2 | 14 frutas, 14 colores | canon 07 §10.2 · Q-B13-23 |
+| 2 | 14 colores de frutas y ríos | Q-B13-23 (a), decidida el 2026-10-20 (sustituye a «14 frutas, 14 colores» de 07 §10.2; el integrador corrige 07 §10.2) |
 | 3 | Mira cómo se tiñe el río | canon 07 §10.2 |
 | 4 | Remonta el Amazonas hasta donde nace | canon 07 §10.2 [P] · pendiente de revisión |
 | 5 | Difícil de verdad, justo siempre | canon 07 §10.2 |
@@ -111,5 +115,5 @@ El arte y la composición están en `../assets-tienda.md`. Texto corto superpues
 
 ## 7. Fichas personalizadas (08 §13.1 #6)
 
-- **México (es-419, ficha por país):** misma ficha; si Play ofrece OXXO en México al lanzar, una línea al final de la descripción: «Paga tus compras también en efectivo con OXXO, donde Google Play lo ofrezca.» `[PENDIENTE: dueño]` comprobar en Play Console antes de escribirla (Q-B13-17).
+- **México (es-419, ficha por país):** misma ficha; si Play ofrece OXXO en México al lanzar, una línea al final de la descripción: «Paga tus compras también en efectivo con OXXO, donde Google Play lo ofrezca.» `[PENDIENTE: dueño]` comprobar en Play Console antes de escribirla (Q-B13-17 (a)).
 - Colombia y Perú: sin ficha propia en la 1.0 [P].

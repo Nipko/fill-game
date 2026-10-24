@@ -17,7 +17,7 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// Kill switch de mecánicas en el cliente (tarea KS1; D-020, pregunta 31 b; 08 §2.2, §4.4 y §9): los defaults
-    /// <c>mech_enabled.*</c> de <see cref="GameConfig"/>, la tabla <c>level_overrides</c> (<see cref="LevelOverrides"/>), la
+    /// <c>mech_enabled_*</c> de <see cref="GameConfig"/>, la tabla <c>level_overrides</c> (<see cref="LevelOverrides"/>), la
     /// sustitución de <see cref="LevelCatalog"/> (con todo encendido ningún nivel cambia; con una mecánica apagada, el override o
     /// el publicado con aviso) y el extra de desarrollo <c>af_mech_off</c>. Cargar un nivel no asigna memoria.
     /// </summary>
@@ -40,10 +40,10 @@ namespace AF.Tests.EditMode
             {
                 var mechanic = (MechanicSwitch)i;
                 Assert.That(MechanicSwitches.IdOf(mechanic), Is.EqualTo(expected[i]));
-                Assert.That(MechanicSwitches.KeyOf(mechanic), Is.EqualTo("mech_enabled." + expected[i]));
+                Assert.That(MechanicSwitches.KeyOf(mechanic), Is.EqualTo("mech_enabled_" + expected[i]));
                 Assert.That(MechanicSwitches.TryParse(expected[i], out MechanicSwitch parsed), Is.True);
                 Assert.That(parsed, Is.EqualTo(mechanic));
-                Assert.That(MechanicSwitches.TryParse(" mech_enabled." + expected[i] + " ", out parsed), Is.True, "clave completa");
+                Assert.That(MechanicSwitches.TryParse(" mech_enabled_" + expected[i] + " ", out parsed), Is.True, "clave completa");
                 Assert.That(parsed, Is.EqualTo(mechanic));
                 Assert.That(GameConfig.MechEnabled.IsEnabled(mechanic), Is.True, "default de 08 §9: true");
             }
@@ -59,7 +59,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void OffList_TurnsOffTheKnownIds_AndReturnsTheUnknownOnes()
         {
-            MechanicSwitches off = MechanicSwitches.AllOn.WithOffList("hoja, pirana,,mech_enabled.tinaja,foo, Barro", out string? unknown);
+            MechanicSwitches off = MechanicSwitches.AllOn.WithOffList("hoja, pirana,,mech_enabled_tinaja,foo, Barro", out string? unknown);
             Assert.That(off.IsEnabled(MechanicSwitch.Hoja), Is.False);
             Assert.That(off.IsEnabled(MechanicSwitch.Pirana), Is.False);
             Assert.That(off.IsEnabled(MechanicSwitch.Tinaja), Is.False);
@@ -81,7 +81,7 @@ namespace AF.Tests.EditMode
 
             LaunchOptions.MechOffOverride = "matapi,nada";
             LogAssert.Expect(LogType.Warning, new Regex("af_mech_off: mecánicas desconocidas \\(\"nada\"\\)"));
-            LogAssert.Expect(LogType.Warning, new Regex("mech_enabled apagadas: mech_enabled\\.matapi"));
+            LogAssert.Expect(LogType.Warning, new Regex("mech_enabled apagadas: mech_enabled_matapi"));
             MechanicSwitches switches = LaunchOptions.ResolveMechSwitches();
             Assert.That(switches.IsEnabled(MechanicSwitch.Matapi), Is.False);
             Assert.That(switches.OffMask, Is.EqualTo(1 << (int)MechanicSwitch.Matapi));
@@ -223,7 +223,7 @@ namespace AF.Tests.EditMode
             Assert.That(catalog.Serve(other), Is.SameAs(plain.Find(other)));
             Assert.That(catalog.Serve(other), Is.SameAs(plain.Find(other)));
             Assert.That(warnings.Count, Is.EqualTo(1), "un aviso por nivel");
-            Assert.That(warnings[0], Does.StartWith("nivel " + other.ToString(CultureInfo.InvariantCulture) + " (" + plain.Find(other)!.Id + "): usa mech_enabled.hoja = false"));
+            Assert.That(warnings[0], Does.StartWith("nivel " + other.ToString(CultureInfo.InvariantCulture) + " (" + plain.Find(other)!.Id + "): usa mech_enabled_hoja = false"));
             Assert.That(warnings[0], Does.Contain("no tiene override en level_overrides"));
             Assert.That(warnings[0], Does.Contain("[P]"));
 
@@ -258,7 +258,7 @@ namespace AF.Tests.EditMode
             Assert.That(catalog.Serve(hoja), Is.SameAs(plain.Find(hoja)), "el override también usa una mecánica apagada");
             Assert.That(catalog.IsOverridden(hoja), Is.False);
             Assert.That(warnings.Count, Is.EqualTo(1));
-            Assert.That(warnings[0], Does.Contain("su override " + plain.Find(matapi)!.Id + " también usa mech_enabled.matapi = false"));
+            Assert.That(warnings[0], Does.Contain("su override " + plain.Find(matapi)!.Id + " también usa mech_enabled_matapi = false"));
             Assert.That(catalog.Switches, Is.EqualTo(switches));
         }
 
@@ -296,7 +296,7 @@ namespace AF.Tests.EditMode
             Assert.That(Contains(wrong.FallbackLevels, slot), Is.True, "sin override: el publicado con aviso");
             Assert.That(wrong.Serve(slot), Is.SameAs(plain.Find(debut)));
             Assert.That(warnings.Count, Is.EqualTo(1));
-            Assert.That(warnings[0], Does.StartWith("nivel " + slot.ToString(CultureInfo.InvariantCulture) + " (" + plain.Find(debut)!.Id + "): usa mech_enabled.hoja = false"));
+            Assert.That(warnings[0], Does.StartWith("nivel " + slot.ToString(CultureInfo.InvariantCulture) + " (" + plain.Find(debut)!.Id + "): usa mech_enabled_hoja = false"));
         }
 
         [Test]
@@ -330,7 +330,7 @@ namespace AF.Tests.EditMode
             Assert.That(flow.LevelNumber, Is.EqualTo(debut));
             Assert.That(flow.Level, Is.SameAs(plain.Find(debut)), "sin override: el tablero publicado");
             Assert.That(warnings.Count, Is.EqualTo(1), "la carga del nivel escribe el aviso");
-            Assert.That(warnings[0], Does.Contain("usa mech_enabled.matapi = false"));
+            Assert.That(warnings[0], Does.Contain("usa mech_enabled_matapi = false"));
 
             flow.Load(debut);
             Assert.That(flow.Level, Is.SameAs(plain.Find(debut)));
@@ -370,7 +370,7 @@ namespace AF.Tests.EditMode
             Assert.That(again.Resume(saved), Is.True);
             Assert.That(again.Level, Is.SameAs(plain.Find(debut)), "sin override: el tablero publicado");
             Assert.That(warnings.Count, Is.EqualTo(1), "reanudar escribe el aviso");
-            Assert.That(warnings[0], Does.Contain("usa mech_enabled.matapi = false"));
+            Assert.That(warnings[0], Does.Contain("usa mech_enabled_matapi = false"));
 
             again.Load(debut);
             Assert.That(warnings.Count, Is.EqualTo(1), "cargar el nivel tras reanudarlo no repite el aviso");

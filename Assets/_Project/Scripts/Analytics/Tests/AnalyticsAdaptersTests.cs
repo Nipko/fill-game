@@ -39,6 +39,29 @@ namespace AF.Analytics.Tests
         }
 
         [Test]
+        public void MaxImpressions_AreAdImpression_UnlessIlrIsOff()
+        {
+            (AnalyticsService analytics, FakeAnalyticsSink sink) = NewAnalytics();
+            var port = new FakeMaxSdkPort();
+            var max = new MaxAdService(port, new ManualClock(new DateTime(2026, 10, 23, 0, 0, 0, DateTimeKind.Utc)), () => null, () => 1);
+            bool ilr = true;
+            var ads = new AnalyticsAdService(new ConsentAdService(max), analytics, () => ilr);
+            port.Listener = max;
+            port.RaiseRevenue(MaxAdKind.Interstitial, "AppLovin", 0.5);
+
+            Assert.That(sink.Names, Is.EqualTo(new[] { "ad_impression" }));
+            Assert.That(sink.Events[0].Find("ad_platform")!.Value.Text, Is.EqualTo("appLovin"));
+            Assert.That(sink.Events[0].Find("ad_unit_name")!.Value.Text, Is.EqualTo("interstitial_post_level"));
+            Assert.That(analytics.Violations, Is.Empty);
+
+            sink.Clear();
+            ilr = false; // ads_ilr_to_firebase
+            port.RaiseRevenue(MaxAdKind.Interstitial, "AppLovin", 0.5);
+            Assert.That(sink.Names, Is.Empty);
+            GC.KeepAlive(ads);
+        }
+
+        [Test]
         public void NoFill_AndAnInterstitial_AndABlockedAd()
         {
             (AnalyticsService analytics, FakeAnalyticsSink sink) = NewAnalytics();

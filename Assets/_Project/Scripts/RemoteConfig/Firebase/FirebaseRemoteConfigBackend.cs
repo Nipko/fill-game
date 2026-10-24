@@ -106,7 +106,38 @@ namespace AF.RemoteConfig.Firebase
             onDone?.Invoke(values);
         }
 
-        /// <summary>Los defaults compilados como los quiere Firebase (clave → texto); las claves sin valor (tablas) no van.</summary>
+        /// <summary>Longitud máxima de una clave de Remote Config (límite de Firebase).</summary>
+        public const int MaxKeyLength = 256;
+
+        /// <summary>
+        /// Si Firebase Remote Config admite <paramref name="key"/> como nombre de parámetro: letras inglesas, cifras y «_», empezando
+        /// por letra o «_», hasta <see cref="MaxKeyLength"/> caracteres. El mismo criterio que <c>valid_key</c> de
+        /// <c>tools/remote-config/rc_template.py</c> (D-043).
+        /// </summary>
+        public static bool IsValidKey(string? key)
+        {
+            if (string.IsNullOrEmpty(key) || key!.Length > MaxKeyLength)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < key.Length; i++)
+            {
+                char c = key[i];
+                bool letter = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+                if (!letter && (i == 0 || c < '0' || c > '9'))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Los defaults compilados como los quiere Firebase (clave → texto); no van las claves sin valor (tablas) ni las que
+        /// Firebase no admite como nombre (<see cref="IsValidKey"/>; desde D-043 no hay ninguna en 08 §9).
+        /// </summary>
         public static Dictionary<string, object> DefaultsFor(RemoteConfigDefaults defaults)
         {
             var result = new Dictionary<string, object>(StringComparer.Ordinal);
@@ -114,7 +145,7 @@ namespace AF.RemoteConfig.Firebase
             for (int i = 0; i < all.Count; i++)
             {
                 RcParam p = all[i];
-                if (p.Default.HasValue)
+                if (p.Default.HasValue && IsValidKey(p.Key))
                 {
                     result[p.Key] = p.Default.Value.ToRemoteString();
                 }

@@ -17,7 +17,7 @@ Uso (desde la raíz del repositorio):
 Opciones: --gdd <ruta de 08>, --out-json <ruta>, --out-cs <ruta>.
 
 Cómo se lee cada fila (| `clave` / `clave2` | tipo / tipo2 | default / default2 | rango | dueño | uso |):
-- las claves son lo que va entre comillas invertidas en la primera celda; `x.{a,b}` da x.a y x.b; una plantilla
+- las claves son lo que va entre comillas invertidas en la primera celda; `x_{a,b}` da x_a y x_b (y `x.{a,b}`, x.a y x.b); una plantilla
   `x_<algo>` seguida de sufijos (`a`, `b`) da x_a y x_b; un sufijo que empieza por «_» (`_trail`) sustituye el último
   tramo de la primera clave (live_unlock_level_league → live_unlock_level_trail);
 - el tipo y el default se reparten por « / »: uno solo vale para todas las claves de la fila; si no, uno por clave;
@@ -104,7 +104,7 @@ def _interp_mech_debut(keys, types, cell):
     pairs = dict(_labelled(cell, ", "))
     out = []
     for k in keys:
-        label = k.split(".", 1)[1]
+        label = k[len("mech_debut_level_"):]
         if label not in pairs:
             raise GddError("mech_debut_level: falta «%s» en el default" % label)
         out.append((k, "int", pairs[label], None))
@@ -153,7 +153,7 @@ INTERPRETATIONS = {
         _interp_legal_profile),
     "biz_ua_paid_enabled_by_country": ("map país→bool / bool", "todos false / false", _interp_ua_paid),
     "biz_kpi_targets": ("json", "01 §KPIs / 09 tabla 6.1", _interp_pending_all),
-    "mech_debut_level.{chica,alta,hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja}": ("int",
+    "mech_debut_level_{chica,alta,hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja}": ("int",
         "chica 14, alta 27, hoja 43, matapi 63, liana 83, remolino 103, barro 123, lluvia 143, brote 163, pirana 183, tinaja 323",
         _interp_mech_debut),
     "ads_rv_cap_<placement>": ("int",
@@ -189,6 +189,11 @@ def section_9(text: str) -> str:
 
 def table_rows(section: str):
     """Filas de la tabla: [(primera celda, tipo, default)] en el orden de 08 §9."""
+    return [cells[:3] for cells in table_rows_full(section)]
+
+
+def table_rows_full(section: str):
+    """Filas de la tabla con sus seis celdas: [(clave, tipo, default, rango, dueño, uso)] en el orden de 08 §9."""
     rows = []
     stray = []
     for line in section.split("\n"):
@@ -202,7 +207,7 @@ def table_rows(section: str):
         cells = line.split("|")
         if len(cells) != 8:
             raise GddError("fila con %d celdas (se esperan 6): %s" % (len(cells) - 2, line[:80]))
-        rows.append((cells[1].strip(), cells[2].strip(), cells[3].strip()))
+        rows.append(tuple(c.strip() for c in cells[1:7]))
     if stray:
         raise GddError("%d filas de 08 §9 no empiezan por una clave entre comillas invertidas: %s" % (len(stray), " | ".join(stray)))
     if len(rows) < 100:
@@ -215,11 +220,11 @@ def expand_keys(cell: str):
     if not items:
         raise GddError("sin claves: %s" % cell)
     first = items[0]
-    brace = re.fullmatch(r"([a-z0-9_]+)\.\{([a-z0-9_,]+)\}", first)
+    brace = re.fullmatch(r"([a-z0-9_]+?)([._])\{([a-z0-9_,]+)\}", first)
     if brace:
         if len(items) != 1:
             raise GddError("clave con llaves y más claves: %s" % cell)
-        return [brace.group(1) + "." + s for s in brace.group(2).split(",")], first
+        return [brace.group(1) + brace.group(2) + s for s in brace.group(3).split(",")], first
     template = re.search(r"<[^>]+>", first)
     if template:
         # Los sufijos son lo que va entre comillas invertidas dentro del paréntesis que sigue a la plantilla
@@ -297,9 +302,15 @@ def convert(raw: str, type_: str, key: str):
 
 def read_params(gdd_text: str):
     """[(clave, tipo, default, pending)] en el orden de 08 §9. pending es el texto de la celda si no hay valor literal."""
-    params = []
+    return [p for _, rows in read_param_rows(gdd_text) for p in rows]
+
+
+def read_param_rows(gdd_text: str):
+    """Por cada fila de 08 §9, en su orden: (sus seis celdas, [(clave, tipo, default, pending)] que salen de ella)."""
+    out = []
     seen = set()
-    for key_cell, type_cell, default_cell in table_rows(section_9(gdd_text)):
+    for cells in table_rows_full(section_9(gdd_text)):
+        key_cell, type_cell, default_cell = cells[:3]
         keys, first = expand_keys(key_cell)
         types = _types(type_cell)
         if first in INTERPRETATIONS:
@@ -333,8 +344,8 @@ def read_params(gdd_text: str):
             if row[0] in seen:
                 raise GddError("clave repetida en 08 §9: %s" % row[0])
             seen.add(row[0])
-            params.append(row)
-    return params
+        out.append((cells, rows))
+    return out
 
 
 # --------------------------------------------------------------------------------------------------------------------
@@ -414,6 +425,7 @@ def self_test(gdd_path: Path = GDD_08) -> int:
     p = dict((k, (t, d, pe)) for k, t, d, pe in read_params(doc(
         "| `a_x` / `a_y` | int / bool | 3 / **false** (1.1: true) | — | 08 | x |\n"
         "| `m.{p,q}` | bool | true | — | 02 | x |\n"
+        "| `g_{p,q}` | int | 2 | — | 02 | x |\n"
         "| `f_<s>` (`one`, `two`) | bool | true | — | 09 | x |\n"
         "| `u_league` / `_trail` | int | 41 / 51 | — | 06 | x |\n"
         "| `j` | json `{a: b}` | `{\"h\":0.75}` | — | 03 | x |\n"
@@ -422,6 +434,7 @@ def self_test(gdd_path: Path = GDD_08) -> int:
         "| `fl` | float | 0.40 | — | 07 | x |\n")))
     check("dos claves y dos tipos", p["a_x"] == ("int", 3, None) and p["a_y"] == ("bool", False, None))
     check("llaves", p["m.p"] == ("bool", True, None) and "m.q" in p)
+    check("llaves con _", p["g_p"] == ("int", 2, None) and "g_q" in p and "g_{p,q}" not in p)
     check("plantilla", "f_one" in p and "f_two" in p and "f_<s>" not in p)
     check("sufijo con _", p["u_trail"] == ("int", 51, None) and p["u_league"][1] == 41)
     check("json", p["j"] == ("json", {"h": 0.75}, None))
@@ -457,7 +470,7 @@ def self_test(gdd_path: Path = GDD_08) -> int:
     d = dict((k, (t, v, pe)) for k, t, v, pe in real)
     check("cooldown de extra_canoe", d["ads_rv_cooldown_s_extra_canoe"][1] == 90 and d["ads_rv_cooldown_s_hint"][1] == 60)
     check("cap de daily_chest", d["ads_rv_cap_daily_chest"][1] == 1)
-    check("tinaja 323", d["mech_debut_level.tinaja"][1] == 323)
+    check("tinaja 323", d["mech_debut_level_tinaja"][1] == 323)
     check("pendiente con texto", d["eco_calendar_table_v1"][1] is None and d["eco_calendar_table_v1"][2].startswith("tabla 05"))
     check("biz_feature_lives", d["biz_feature_lives"] == ("bool", True, None))
     check("ni una plantilla en las claves", not any("<" in k or "{" in k for k in keys))

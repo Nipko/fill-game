@@ -25,12 +25,12 @@ export async function hit(
   nowMs: number,
 ): Promise<RateLimitResult> {
   const nowS = epochS(nowMs);
-  const window = Math.floor(nowS / windowS);
-  const windowEnd = (window + 1) * windowS;
+  const w = windowOf(key, windowS, nowMs);
+  const windowEnd = w.endS;
   const out = await ddb.send(
     new UpdateCommand({
       TableName: table,
-      Key: { key: `${key}#${windowS}#${window}` },
+      Key: { key: w.key },
       UpdateExpression: 'ADD #c :one SET #t = if_not_exists(#t, :ttl)',
       ExpressionAttributeNames: { '#c': 'count', '#t': 'ttl' },
       ExpressionAttributeValues: { ':one': 1, ':ttl': windowEnd + 60 },
@@ -39,6 +39,48 @@ export async function hit(
   );
   const count = Number((out.Attributes as { count?: number } | undefined)?.count ?? 1);
   return { allowed: count <= limit, count, retryAfterS: Math.max(1, windowEnd - nowS) };
+}
+
+/** Clave del contador de `key` en la ventana fija de `windowS` segundos que contiene `nowMs`, y el fin de la ventana. */
+export function windowOf(key: string, windowS: number, nowMs: number): { key: string; endS: number } {
+  const window = Math.floor(epochS(nowMs) / windowS);
+  return { key: `${key}#${windowS}#${window}`, endS: (window + 1) * windowS };
+}
+
+/**
+ * Lee, sin gastarlo, si queda cupo de `key` en la ventana actual. Para los cupos que se gastan dentro de una
+ * transacción (`quotaTxUpdate`): se mira antes de hacer nada irreversible y se gasta solo si la escritura sale.
+ */
+export async function peekQuota(
+  ddb: DynamoDBDocumentClient,
+  table: string,
+  key: string,
+  limit: number,
+  windowS: number,
+  nowMs: number,
+): Promise<RateLimitResult> {
+  const w = windowOf(key, windowS, nowMs);
+  const out = await ddb.send(new GetCommand({ TableName: table, Key: { key: w.key }, ConsistentRead: true }));
+  const count = Number((out.Item as { count?: number } | undefined)?.count ?? 0);
+  return { allowed: count < limit, count, retryAfterS: Math.max(1, w.endS - epochS(nowMs)) };
+}
+
+/**
+ * Elemento Update de un TransactWriteItems que gasta una unidad del cupo de `key` solo si queda (`count < limit`):
+ * si la transacción se cancela, el cupo no se gasta.
+ */
+export function quotaTxUpdate(table: string, key: string, limit: number, windowS: number, nowMs: number) {
+  const w = windowOf(key, windowS, nowMs);
+  return {
+    Update: {
+      TableName: table,
+      Key: { key: w.key },
+      UpdateExpression: 'ADD #c :one SET #t = if_not_exists(#t, :ttl)',
+      ConditionExpression: 'attribute_not_exists(#c) OR #c < :lim',
+      ExpressionAttributeNames: { '#c': 'count', '#t': 'ttl' },
+      ExpressionAttributeValues: { ':one': 1, ':ttl': w.endS + 60, ':lim': limit },
+    },
+  };
 }
 
 /** Como `hit`, pero lanza 429 rate_limited con retry_after_s si se pasa del límite. */

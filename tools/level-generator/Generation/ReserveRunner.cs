@@ -1,6 +1,6 @@
 // --reserve: la reserva del 20 % (D-033, añadido «la reserva del 20 %», Q-B11-7 (a); 03 §17; D-020, pregunta 31 b).
 // Un pack de reserva por mundo (reserva_{mm}_v1.json, kind reserve, pack_schema 4): para los niveles del pack de campaña
-// publicado que usan una mecánica con kill switch (mech_enabled.*, 08 §9), otro tablero del mismo slot sin mecánicas y en la
+// publicado que usan una mecánica con kill switch (mech_enabled_*, 08 §9), otro tablero del mismo slot sin mecánicas y en la
 // ventana del slot, con id m{mm}_v1_n{nnnn}_r1, semilla amazonfill:v1:m{mm}:v1:n{nnnn}:r1 y replaces = el id de campaña del
 // slot. Como mucho el 20 % de los niveles del mundo (redondeo hacia abajo [P]). El cliente solo lo usa desde level_overrides.
 //   - Orden [P] («los primeros que necesita el kill switch»): por rondas sobre los kill switches en el orden de 08 §9 (hoja,
@@ -56,7 +56,7 @@ internal static class ReserveRunner
     /// <summary>Candidatos válidos que se prueban por ronda con el alivio (el alivio es caro: A* de cada −1 color).</summary>
     public const int ReliefTriesPerRound = 3;
 
-    /// <summary>Kill switches de 08 §9 (<c>mech_enabled.*</c>), en el orden de la tabla: el orden de las rondas.</summary>
+    /// <summary>Kill switches de 08 §9 (<c>mech_enabled_*</c>), en el orden de la tabla: el orden de las rondas.</summary>
     public static readonly string[] Switches = ["hoja", "matapi", "liana", "remolino", "barro", "lluvia", "brote", "pirana", "tinaja"];
 
     /// <summary>Tableros de reserva como mucho en el mundo: el 20 % de sus niveles, hacia abajo [P].</summary>
@@ -541,7 +541,7 @@ internal static class ReserveRunner
         W(F($"Generado por `dotnet run --project tools/level-generator -c Release -- --reserve {packs} --spec {specPath.Replace('\\', '/')}{variantArg} --out {outDir.Replace('\\', '/')} --report {reportPath.Replace('\\', '/')}`: no se edita a mano."));
         W(F($"QA: `dotnet run --project tools/level-qa -c Release -- --reserve <reserva_NN_v1.json> --campaign <mundo_NN_v1.json> --spec {specPath.Replace('\\', '/')}{variantArg}`."));
         W();
-        W("Fuente: D-033, añadido «la reserva del 20 %» (Q-B11-7 (a)); 03 §17; D-020 (pregunta 31 b). Un pack por mundo (`kind` = `reserve`, `pack_schema` 4) con, para los niveles que usan una mecánica con kill switch (`mech_enabled.*`, 08 §9), otro tablero del mismo slot sin mecánicas y en su ventana, hasta el 20 % de los niveles del mundo. El cliente solo los usa desde `level_overrides`.");
+        W("Fuente: D-033, añadido «la reserva del 20 %» (Q-B11-7 (a)); 03 §17; D-020 (pregunta 31 b). Un pack por mundo (`kind` = `reserve`, `pack_schema` 4) con, para los niveles que usan una mecánica con kill switch (`mech_enabled_*`, 08 §9), otro tablero del mismo slot sin mecánicas y en su ventana, hasta el 20 % de los niveles del mundo. El cliente solo los usa desde `level_overrides`.");
         W();
         W("Reglas [P] de esta herramienta: orden por rondas sobre los kill switches de 08 §9 (cada mecánica toma su primer nivel aún sin elegir); tablero con la celda sin mecánicas (ni Aguas turbias) y con sus capacidades; entre los candidatos en la ventana con el par en el objetivo del rango ±30 %, el de la misma etiqueta que el publicado y el `bot_fail` más cercano; alivio desde el 31; sin `D` (no entra en el pool del rango).");
         W();

@@ -1,6 +1,6 @@
 # Ficha de Google Play · en · BORRADOR
 
-- **Estado:** borrador del bloque B13 (2026-10-20). El título, la descripción corta y los textos de las capturas 1-3 y 5-8 son canon (glosario §1.3; 07 §10.2). **El resto es traducción con IA de la ficha es-419, pendiente del revisor nativo** (como la tarea T2 del glosario §12). Nada se publica antes del dictamen de marca.
+- **Estado:** borrador del bloque B13 (2026-10-20), puesto al día el 2026-10-23 (Parallext, LLC, D-041; nombres EN de D-033, puntos 3, 4 y 8; anuncios condicionados a D-042). El título, la descripción corta y los textos de las capturas 1-3 y 5-8 son canon (glosario §1.3; 07 §10.2). **El resto es traducción con IA de la ficha es-419, pendiente del revisor nativo** (como la tarea T2 del glosario §12). Nada se publica antes del dictamen de marca.
 - Mismas reglas, marcas y fuentes que `../es-419/ficha.md`. Inglés en imperativo (glosario §10). Los nombres de comodines y sistemas son los EN del glosario §5, §7.1, §10 y §12; lo cultural, **pendiente de revisión** del asesor.
 
 ## 1. Datos de la app
@@ -8,7 +8,11 @@
 | Campo | Valor | Origen |
 |---|---|---|
 | App name (≤ 30) | **Tintalú: Water Sort Puzzle** (26) | glosario §1.3 |
-| Desarrollador, `applicationId`, correo, web, política | Los de `../es-419/ficha.md` §1 (`[PENDIENTE: dueño]`) | 08 §13.1 |
+| Developer | **Parallext, LLC** (parallext.com) | D-041 |
+| `applicationId`, correo, cuenta de Play Console | Los de `../es-419/ficha.md` §1 | D-041; 08 §13.1 |
+| Website | `https://tintalu.com/` (aún sin conectar: D-041) | D-041 |
+| Privacy policy | `https://tintalu.com/en/privacy/` (fuente: `infra/web/src/content/en/privacy.html`) | D-041; 08 §13.1 #7 |
+| Account deletion | `https://tintalu.com/tintalu/en/delete-account/` (fuente: `infra/web/src/content/en/delete.html`) | 08 §11; Q-B13-1 (a) |
 
 ## 2. Short description (≤ 80)
 
@@ -55,7 +59,7 @@ For every eye
 Turn on fruit patterns: each color has its own design, so you never rely on color alone.
 
 Learn as you play
-Every stop on the Map brings a River fact, and the fruit fact sheets tell where each color comes from. In Settings, the About section lists the source of every fact.
+Every stop on the Map brings a River fact, and River Fruits tells where each color comes from. In Settings, About the Amazon lists the source of every fact.
 
 Play offline
 The campaign works without a connection. Optional videos and purchases need internet.
@@ -69,7 +73,8 @@ Independent game inspired by the Amazon basin; not affiliated with Amazon.com, I
 
 Notas:
 - **Taperebá** sale como «hog plum», su nombre EN del glosario §9; los demás tintes citados conservan su nombre (glosario §9).
-- «Frutas del río» (`fact_sheet_title`) y «Sobre la Amazonía» (`settings_about_amazon`) no tienen EN en el glosario §10 («pendiente del traductor»): aquí van descritos sin nombre propio («the fruit fact sheets», «the About section»). Cuando el traductor fije su EN, se cambian.
+- «Frutas del río» (`fact_sheet_title`) y «Sobre la Amazonía» (`settings_about_amazon`) van con su EN de la UI: «River Fruits» y «About the Amazon» (D-033, añadido del 2026-10-22, puntos 3 y 4; glosario §10). «River boosters» usa «Boosters», el nombre EN del conjunto de comodines (punto 8; glosario §5).
+- **Anuncios y videos (D-042):** «Optional videos […] need internet», «with ads» y «Remove the ads between levels with No ads» solo valen si el build que se publica lleva MAX; si no, se quitan, como en `../es-419/ficha.md` §3.
 - **Pendiente de revisión** (asesor): Morpho, Pororoca, Firefly, Boto Leap (no se cita), TiTino, Capi, Rosa, «river dolphin» por boto (glosario §12, `fauna.river_dolphin`), «Estuary».
 - `[PENDIENTE: abogado]`: la línea de independencia en inglés es traducción propuesta [P] de la de 08 §13.1 #5.
 
@@ -88,9 +93,9 @@ Welcome to the river. The first version of Tintalú: travel upriver through nine
 | # | Texto EN | Estado |
 |---|---|---|
 | 1 | Sort the waters of the Amazon | canon 07 §10.2 · pendiente de revisión |
-| 2 | 14 fruits, 14 colors | canon 07 §10.2 · Q-B13-23 |
+| 2 | 14 colors from fruit and rivers | Q-B13-23 (a), decidida el 2026-10-20 |
 | 3 | Watch the river take color | canon 07 §10.2 |
-| 4 | Follow the Amazon to its source | **propuesta [P] de B13** (07 §10.2: «pendiente del traductor»); Q-B13-6 |
+| 4 | Follow the Amazon to its source | Q-B13-6 (a), decidida el 2026-10-20: la propuesta de B13 hasta el revisor nativo |
 | 5 | Honest hard levels | canon 07 §10.2 |
 | 6 | Patterns for every eye | canon 07 §10.2 |
 | 7 | Meet TiTino | canon 07 §10.2 [P] · pendiente de revisión |

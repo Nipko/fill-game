@@ -129,7 +129,7 @@ Balsa sin Canoas infinitas), D-028 (P5: el dedo guía es una ayuda explícita co
 
 ### 1.8 La reserva del 20 % para `level_overrides` (03 §17): **parada**
 - 03 §17, «Generación 1.0: 1.040 niveles (vuelta 1) + 20 % reserva»; 03 §15: un nivel en alarma «se sustituye por otro del pool
-  del mismo slot vía `level_overrides`»; D-020: en la 1.0, con `mech_enabled.<id>` = false, los niveles se sustituyen con
+  del mismo slot vía `level_overrides`»; D-020: en la 1.0, con `mech_enabled_<id>` = false, los niveles se sustituyen con
   `level_overrides`. Hoy no hay ningún nivel de reserva publicado al que un `level_overrides` pueda apuntar.
   *Actualización del 2026-10-21:* decidida la (a) (D-033, añadido «la reserva del 20 %») y hecha en `tanda5/reserva-20`:
   `pack_schema` 4 con `kind` = `reserve` y `replaces`, y los packs `reserva_03_v1` … `reserva_09_v1` (03 §17).

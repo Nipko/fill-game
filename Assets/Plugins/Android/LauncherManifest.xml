@@ -8,6 +8,12 @@
     hasta que lleguen los anuncios de MAX. D-039, anadido del 2026-10-21: tambien ACCESS_ADSERVICES_ATTRIBUTION y
     ACCESS_ADSERVICES_AD_ID (Privacy Sandbox de anuncios, de Firebase Analytics) y READ_GSERVICES (de reCAPTCHA, que arrastra
     Firebase Auth; el acceso anonimo no lo usa). Lo comprueba ci/check-manifest.ps1 (ninguno esta en su lista blanca).
+  - D-042 (AppLovin MAX 8.6.6, SDK Android 13.6.4): AD_ID tambien lo declara applovin-sdk y sigue quitado hasta que el dueno
+    lo decida; se quitan ademas com.android.vending.CHECK_LICENSE y android.permission.ACCESS_WIFI_STATE (Open Measurement),
+    que declara applovin-sdk, pendientes de la decision del dueno (docs/dev/anuncios-max.md sec. 8). Tambien se quita el
+    proveedor com.applovin.sdk.AppLovinInitProvider: arranca codigo de AppLovin al iniciar el proceso (lee el ID de publicidad
+    y el App Set ID en un hilo) antes del consentimiento (08 sec. 2.3: MAX solo tras consentir); MAX se inicia desde
+    MaxSdk.InitializeSdk tras la decision de edad y consentimiento.
   - 08 sec. 2.3 y sec. 7 (consentimiento antes que nada): Firebase Analytics arranca sin recoger nada, sin almacenamiento de
     analitica ni de anuncios y sin ID de publicidad; AF.Analytics.Firebase.FirebaseAnalyticsSink lo enciende con el consentimiento.
     Crashlytics arranca apagado y lo enciende el codigo en el arranque (AF.Analytics.Firebase.CrashReporting).
@@ -31,6 +37,8 @@
     <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove"/>
     <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove"/>
     <uses-permission android:name="com.google.android.providers.gsf.permission.READ_GSERVICES" tools:node="remove"/>
+    <uses-permission android:name="com.android.vending.CHECK_LICENSE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" tools:node="remove"/>
 
     <application android:label="@string/app_name"
                  android:icon="@mipmap/app_icon">
@@ -44,5 +52,6 @@
         <provider android:name="com.google.android.gms.games.provider.PlayGamesInitProvider"
                   android:authorities="${applicationId}.playgamesinitprovider"
                   tools:node="remove"/>
+        <provider android:name="com.applovin.sdk.AppLovinInitProvider" tools:node="remove"/>
     </application>
 </manifest>

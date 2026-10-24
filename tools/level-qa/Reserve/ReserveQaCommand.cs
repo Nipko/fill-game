@@ -23,7 +23,7 @@ internal static class ReserveQaCommand
     [
         ("QA-RES-HEADER", "pack_schema 4, kind reserve, pack_id reserva_{mm}_v1 del mundo del pack de campana (contrato 21)"),
         ("QA-RES-SLOT", "replaces = el id de campana del mismo level y mundo, presente en el pack de campana; id = replaces + _r1; seed = la del slot + :r1"),
-        ("QA-RES-MECH", "el sustituido usa una mecanica con kill switch (mech_enabled.*, 08 sec. 9); el de reserva no lleva ninguna mecanica ni Barro (tampoco su alivio), ni ocultas ni intro_mechanic [P]"),
+        ("QA-RES-MECH", "el sustituido usa una mecanica con kill switch (mech_enabled_*, 08 sec. 9); el de reserva no lleva ninguna mecanica ni Barro (tampoco su alivio), ni ocultas ni intro_mechanic [P]"),
         ("QA-RES-WINDOW", "bot_fail en la ventana del slot, etiqueta permitida en el slot y band del slot (03 sec. 12; D-009)"),
         ("QA-RES-COUNT", "como mucho el 20 % de los niveles del mundo; aviso si hay menos que min(tope, niveles con mecanica)"),
         ("QA-RES-D", "sin difficulty.D (la reserva no entra en el pool del rango, 03 sec. 7)"),

@@ -3707,3 +3707,52 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - Play Games necesita la app en Play Console (D-034, a la espera del dictamen).
 
   Hasta entonces, los builds van con la implementación falsa o en modo de prueba, y las claves y los IDs reales se cargan fuera del repositorio.
+
+### D-042, añadido del 2026-10-23: dependencias de Play Games 2.3.0
+
+- **Estado:** aplicado con la recomendada del carril `tanda5/sdk-pgs`, por la regla del dueño «si tienen recomendada, vamos con esa». **El dueño puede cambiarlo.**
+- **El paquete:** el plugin oficial solo se publica como `GooglePlayGamesPlugin-2.3.0.unitypackage` (sha256 `1b0ecc5e2fd5437e1c26863f63367f5c983452afc4eeae8a1e5dcaa07b9e7518`). Se versiona su carpeta `com.google.play.games/` tal cual, como un `.tgz` en `Packages/playgames/` (Git LFS), sin el EDM4U 1.2.182 que trae, porque ya está el 1.2.189 de Firebase.
+- **Dependencias:**
+  - **`com.google.android.gms:play-services-games-v2:22.1.0`** entra como dependencia obligatoria del plugin aprobado. No declara permisos. Añade `PlayGamesInitProvider`, dos actividades y un bloque `<queries>`.
+  - **`com.google.android.gms:play-services-nearby:18.5.0` no entra.** Es Nearby Connections, que el juego no usa, y trae un servicio exportado de Exposure Notifications. Se excluye en `mainTemplate.gradle`, fuera de la zona de EDM4U, y se comprueba que no aparece en el manifiesto.
+- **El blob de Saved Games:** se queda en los 800 KB de 08 §11 (`CloudSaveNames.MaxBlobBytes`). Queda como pregunta la discrepancia con 08 §7 #5, que habla de 3 MB por partida y 800 KB de portada.
+
+### D-042, añadido del 2026-10-23: MAX integrado sin adaptadores; lo que espera al dueño
+
+- **Estado:** integrado en `tanda5/sdk-max` por el integrador de SDK, **sin adaptadores**, pendiente de revisión. Nota: `docs/dev/anuncios-max.md`.
+- **Qué entra:** AppLovin MAX Unity Plugin **8.6.6** (`com.applovin.mediation.ads`, SDK Android `com.applovin:applovin-sdk:13.6.4`) del registro UPM oficial de AppLovin, `.tgz` en `Packages/applovin/` con Git LFS, SHA-256 `908332af8989b8a239d1c470daf70f0925ea2cd0f72f94748bbbc4c7d228d1d4`; y `com.google.android.ump:user-messaging-platform:4.0.0`, que el plugin añade al encender su automatización de UMP (la que aprobó D-042). Quality Service apagado. Clave del SDK y unidades fuera del repositorio. Sin el plugin Google Mobile Ads.
+- **Preguntas, con la recomendada ya aplicada:**
+  - **Q-MAX-1 · Permisos que declara `applovin-sdk`:** `com.google.android.gms.permission.AD_ID`, `com.android.vending.CHECK_LICENSE` y `android.permission.ACCESS_WIFI_STATE`. Aplicado: (a) los tres quitados con `tools:node="remove"`, como D-039. Alternativas: (b) aprobar `AD_ID` (mejor eCPM en Android 13+; Data Safety declara el ID de publicidad) y seguir sin los otros dos; (c) aprobar los tres.
+  - **Q-MAX-2 · Proveedor `AppLovinInitProvider`:** corre al iniciar el proceso y lee el ID de publicidad y el App Set ID antes del consentimiento. Aplicado: (a) quitado; MAX solo arranca con `InitializeSdk` tras consentir. [NV en el teléfono]
+  - **Q-MAX-3 · Adaptadores:** la lista con versiones de `docs/dev/anuncios-max.md` §7 (Google 25.5.0.0, Unity Ads 4.21.0.1, Meta 6.22.0.1, Mintegral 17.1.91.0). Aplicado: ninguno hasta el sí del dueño.
+  - **Q-MAX-4 · URL del mensaje de UMP:** `https://tintalu.com/privacidad/` y `/terminos/` [P], aunque el dominio aún no es público (Q-AWS-9). Aplicado: esas.
+  - **Q-MAX-5 · Concesión con SSV:** el canon (08 §10.2) concede provisional al recibir la recompensa y la confirma o revoca el servidor. Aplicado: `AdOutcome.Rewarded` con `OnAdReceivedRewardEvent` y `custom_data = placement|nonce`; registrar el nonce con `LocalRevocation.RegisterProvisional` queda para F3-4 (`unity-gameplay-dev`) cuando el SSV esté configurado en el panel de MAX.
+  - **Q-MAX-6 · UMP con 13-17 en el EEE, el Reino Unido y Suiza:** la automatización enseña el mensaje de UMP a todos al iniciar MAX. Aplicado, por orden del integrador tras la revisión: **(b) con 13-17 y el perfil `ump`, MAX no se inicia** (sin anuncios), como recomendada provisional hasta que hablen el dueño y el abogado. Alternativa: (a) iniciarlo con `npa` y aceptar que UMP enseñe su mensaje.
+- **Tras la revisión (mismo día):** `BuildDev` y `BuildRelease` se paran si `AppLovinSettings.asset` lleva una clave o el Quality Service encendido; un release sin configuración no tiene anuncios (`UnavailableAdService`); margen para la recompensa que llega tras el cierre y al volver de segundo plano; `SetUserId` de MAX es global y así se dice en la web y en Data Safety.
+- **Pendiente del dueño:** cuenta de AppLovin y AdMob, clave y unidades (`Assets/_LocalSecrets/applovin-max.json` o secretos del CI), mensaje de UMP en AdMob, contenido máximo G en las consolas, URL S2S del SSV en MAX.
+
+## D-043 · Las claves de Remote Config con punto pasan a guion bajo
+
+- **Fecha:** 2026-10-23. Registrada por el integrador.
+- **Estado:** aprobado por el dueño en el chat. A la propuesta de renombrar las 20 claves con punto, que Firebase no admite, respondió: «hagamos la correciones».
+- **Decisión:** en 08 §9, en el cliente y en los defaults generados:
+  - `mech_enabled.<id>` pasa a `mech_enabled_<id>`;
+  - `mech_debut_level.<id>` pasa a `mech_debut_level_<id>`.
+
+  Así entran en la plantilla de Remote Config y los interruptores de cada mecánica se pueden accionar desde la consola.
+- **Sin cambio de comportamiento:** los valores siguen siendo los mismos, y un valor remoto con el nombre viejo no existe, porque nunca se publicó.
+- **Encargo:** carril `tanda5/rc-plantilla` (Q-RC-1).
+
+## D-044 · Publicar ya la web en tintalu.com; Codex publica, completa los datos y lleva el logo y la marca
+
+- **Fecha:** 2026-10-23. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat: «la pagina web y el resto del contenido ya esta, esta publicada? sino pasala a codex que se encargue de publicar y completar todo con respecto a eso, como tambien el logo de la app y lo que falta con la marca».
+- **Decisión:**
+  - **La web se publica ahora en `tintalu.com`**, sin esperar al dictamen de marca, por decisión expresa del dueño. Esto levanta para la web la espera de D-034, Q-AWS-9 y D-041. **Play Console** y el **`applicationId` definitivo** siguen esperando al dictamen.
+  - **DNS:** se usa la opción A de `infra/README.md`. El DNS se queda en Cloudflare, con certificado de ACM en us-east-1 validado por CNAME.
+  - **Prod:** la web pública va en el entorno de prod, con los stacks de web y CDN.
+  - **Reparto del trabajo:**
+    - el cambio de CDK lo hace el equipo de Claude (carril `tanda5/web-dominio`);
+    - el despliegue, el DNS y los datos del dueño los hace Codex con el dueño (`docs/dev/traspaso/codex-web-marca.md`).
+  - **Logo y marca:** Codex prepara el encargo del icono (07 §10.1) y lo que falta de la marca: completar la investigación en INPI y WIPO, y el paquete para el abogado.
+- **Riesgo aceptado por el dueño:** usar «Tintalú» en público antes del dictamen.

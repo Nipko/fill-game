@@ -1630,7 +1630,7 @@ namespace AF.UI
             _profile = profile;
             _profileStore = store;
 
-            // Remote Config antes del catálogo: mech_enabled.*, level_overrides (con la reserva) y lvl_label_override se aplican al
+            // Remote Config antes del catálogo: mech_enabled_*, level_overrides (con la reserva) y lvl_label_override se aplican al
             // crearlo. Con <13 guardado, la caché local o los defaults compilados, sin descargar (GameBootstrap.Telemetry.cs).
             SetUpRemoteConfig(clock);
             LevelCatalog? catalog = LoadCatalog();
@@ -1702,7 +1702,7 @@ namespace AF.UI
             ISimulatedPurchasePresenter purchasePresenter = new BatchedPurchasePresenter(
                 LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art)), batch);
             _ads = AdController.Create(
-                WrapAds(WrapConsentAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()))), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
+                WrapAds(WrapConsentAds(CreateAdProvider(adPresenter, profile, capsClock))), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
             _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
             // F3-5: la compra verificada (F3-3) con el cliente del backend de este build (GameBootstrap.Backend.cs); la hoja «Compra
             // simulada» es la de la tienda de la plataforma simulada (FakeBillingClient) sin Play real (D-040).
@@ -1861,6 +1861,7 @@ namespace AF.UI
             }
 
             TickBackend(Time.unscaledDeltaTime * 1000f); // F3-5: la cola de verificación de compras, cada pocos segundos
+            TickAds(); // D-042: los márgenes de cierre de MAX
             TickA11y(Time.unscaledDeltaTime * 1000f); // B9: el lector de pantalla (solo con TalkBack) y el Reto
 
             float dt = Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs);
@@ -1944,6 +1945,7 @@ namespace AF.UI
 
             RetryCloud(); // D-042: la fusión que no llegó (sin red) o la subida pendiente de #3379
             ResumeBackend(true); // F3-5: lo que Play cobró mientras tanto vuelve como compra sin terminar (08 §10.3)
+            ResumeAds(); // D-042: un anuncio de MAX sin su cierre se suelta tras un margen
             PushUiResumed(); // «Avisos»: de vuelta de los ajustes del teléfono (GameBootstrap.PushUi.cs)
 
             // 02 §14: al volver de segundo plano la vista salta al modelo sin animar (también la luciérnaga en vuelo: la cuia
@@ -2119,7 +2121,7 @@ namespace AF.UI
                     return null;
                 }
 
-                // Kill switch de mecánicas (KS1; D-020, pregunta 31 b): mech_enabled.* (defaults de GameConfig, Remote Config y
+                // Kill switch de mecánicas (KS1; D-020, pregunta 31 b): mech_enabled_* (defaults de GameConfig, Remote Config y
                 // af_mech_off en desarrollo) y level_overrides (Remote Config o la fuente local), con los ids buscados en los
                 // paquetes de campaña y en los de reserva (D-033, Q-B11-7 a; GameBootstrap.Reserve.cs).
                 MechanicSwitches switches = ResolveCatalogSwitches();
