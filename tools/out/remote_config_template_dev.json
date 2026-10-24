@@ -1552,7 +1552,7 @@
       "defaultValue": {
         "value": "41"
       },
-      "description": "Rango 08 §9: 31-61. La Liga del río aparece al ganar este nivel (06 §6; D-046); sustituye a live_unlock_level_league",
+      "description": "Rango 08 §9: 41-41. La Liga del río aparece al ganar este nivel (06 §6; D-046); sustituye a live_unlock_level_league. Fijo en 41: el servidor no suma por debajo, así que cambiarlo exige cambiar también el backend (infra/functions/league/rules.ts)",
       "valueType": "NUMBER"
     },
     "live_league_cache_minutes": {
