@@ -334,10 +334,12 @@
       "response": "league-wins.response.schema.json",
       "examples": {
         "request": [
-          "league-wins.request.json"
+          "league-wins.request.json",
+          "league-wins.request.mixed.json"
         ],
         "response": [
-          "league-wins.response.json"
+          "league-wins.response.json",
+          "league-wins.response.mixed.json"
         ],
         "invalidRequest": [
           "league-wins.request.invalid-too-many.json"

@@ -32,17 +32,18 @@ describe('Liga: reglas',()=>{
     expect(evaluate(undefined,request([campaign(46)]),UID,now,0).next.points).toBe(20);
     expect(evaluate(undefined,request([campaign(60)]),UID,now,0).next.points).toBe(30);
   });
-  it('primer envío establece referencia; salto de un nivel y saltos imposibles',()=>{
+  it('primer envío y huecos reponen referencia; solo level > max_level es inalcanzable',()=>{
     const first = evaluate(undefined,request([campaign(57)]),UID,now,0);
     const next = evaluate(first.next,request([campaign(59),campaign(64)]),UID,now,57);
-    expect(next.accepted).toEqual(['c:59']);
-    expect(next.rejected).toEqual([{win_id:'c:64',reason:'unreachable_level'}]);
-    expect(next.next.flagged).toBe(true);
+    expect(next.accepted).toEqual(['c:59','c:64']);
+    expect(next.rejected).toEqual([]);
+    expect(next.highest).toBe(64);
+    expect(next.next.flagged).toBe(false);
     expect(evaluate(undefined,{wins:[campaign(57)],max_level:56},UID,now,0).rejected[0].reason).toBe('unreachable_level');
     expect(evaluate(undefined,request([campaign(40)]),UID,now,0).accepted).toEqual([]);
   });
   it('fechas fuera de semana, futuro e ID inconsistente',()=>{
-    const result = evaluate(undefined,request([campaign(41,weekOf(now).start-1),campaign(42,now+1),{...campaign(43),win_id:'c:99'}]),UID,now,0);
+    const result = evaluate(undefined,request([campaign(41,weekOf(now).start-1),campaign(42,now+300001),{...campaign(43),win_id:'c:99'}]),UID,now,0);
     expect(result.rejected.map(r=>r.reason)).toEqual(['outside_week','outside_week','invalid']);
   });
   it('el límite horario cruza el lunes aunque los puntos se reinicien',()=>{
@@ -157,13 +158,15 @@ describe('Liga: transacciones, top y borrado',()=>{
     expect(view.me.rank).toBeNull();
     expect(view.me.percentile).toBe(50);
   });
-  it('flagged sigue sumando para sí y se retira de top/histograma',async()=>{
+  it('flagged manual se conserva y suma para sí sin aparecer en top/histograma',async()=>{
+    await aliasOf(deps,UID);
+    db.put(TABLES.AF_TABLE_LEAGUE_PLAYERS,{uid:UID,week:weekOf(now).week,points:0,country:null,wins:[],flagged:true,reached:0,rev:0,ttl:Math.floor((weekOf(now).end+14*86400_000)/1000)});
     await submit(deps,UID,request([campaign(41)]));
-    await submit(deps,UID,request([campaign(50)]));
     const own = await submit(deps,UID,request([campaign(42)]));
     expect(own.points).toBe(20);
     expect((await board(deps,UID,'global')).top).toEqual([]);
-    expect(db.items(TABLES.AF_TABLE_LEAGUE_HISTOGRAM).map(i=>i.count)).toEqual([0,0]);
+    expect(db.items(TABLES.AF_TABLE_LEAGUE_HISTOGRAM)).toEqual([]);
+    expect(db.get(TABLES.AF_TABLE_LEAGUE_PLAYERS,{uid:UID,week:weekOf(now).week})?.flagged).toBe(true);
   });
   it('concurrencia reintenta desde estado fresco sin sumar dos veces',async()=>{
     await aliasOf(deps,UID);

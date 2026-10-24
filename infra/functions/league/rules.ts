@@ -18,7 +18,7 @@ export function weekOf(ms: number) {
   return { week: `${year}-W${String(Math.round((start - firstMonday) / (7 * 86400_000)) + 1).padStart(2, '0')}`, start, end: start + 7 * 86400_000 };
 }
 export type Win = { win_id: string; kind: string; level?: number; day?: string; won_at: string };
-export type Request = { wins: Win[]; max_level: number; region?: string };
+export type Request = { wins: unknown[]; max_level: number; region?: unknown };
 export type Rejection = { win_id: string; reason: 'duplicate' | 'rate_limited' | 'unreachable_level' | 'outside_week' | 'invalid' };
 export type Seen = { id: string; at: number };
 function calendarDay(day: string | undefined): number | undefined {
@@ -31,34 +31,44 @@ export interface Player {
   flagged: boolean; reached: number; rev: number; ttl: number;
 }
 export function parseRequest(raw: Record<string, unknown>): Request {
-  if (Object.keys(raw).some(k => !['wins','max_level','region'].includes(k)) || !Number.isInteger(raw.max_level) || Number(raw.max_level) < 0 || Number(raw.max_level) > 700 || !Array.isArray(raw.wins) || raw.wins.length < 1 || raw.wins.length > 50 || (raw.region !== undefined && (typeof raw.region !== 'string' || !/^[A-Z]{2}$/.test(raw.region)))) throw badRequest('Petición de Liga no válida.');
-  for (const item of raw.wins as unknown[]) {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) throw badRequest('Victoria no válida.');
-    const w = item as Record<string, unknown>;
-    if (Object.keys(w).some(k => !['win_id','kind','level','day','won_at'].includes(k)) || typeof w.win_id !== 'string' || w.win_id.length < 1 || w.win_id.length > 40 || typeof w.won_at !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(w.won_at) || !Number.isFinite(Date.parse(w.won_at)) || (w.kind !== 'campaign' && w.kind !== 'daily') || (w.kind === 'campaign' && (!Number.isInteger(w.level) || Number(w.level) < 1 || Number(w.level) > 700 || w.day !== undefined)) || (w.kind === 'daily' && (typeof w.day !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(w.day) || w.level !== undefined))) throw badRequest('Victoria no válida.');
-  }
+  // Solo el sobre invalida el lote; sus elementos se juzgan individualmente.
+  if (Object.keys(raw).some(k => !['wins','max_level','region'].includes(k)) || !Number.isInteger(raw.max_level) || Number(raw.max_level) < 0 || !Array.isArray(raw.wins) || raw.wins.length < 1 || raw.wins.length > 50) throw badRequest('Petición de Liga no válida.');
   return raw as Request;
+}
+function parseWin(item: unknown): Win | undefined {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return undefined;
+  const w = item as Record<string, unknown>;
+  if (Object.keys(w).some(k => !['win_id','kind','level','day','won_at'].includes(k)) || typeof w.win_id !== 'string' || w.win_id.length < 1 || w.win_id.length > 40 || typeof w.won_at !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(w.won_at) || !Number.isFinite(Date.parse(w.won_at)) || calendarDay(w.won_at.slice(0,10)) === undefined) return undefined;
+  if (w.kind === 'campaign' && typeof w.level === 'number' && Number.isSafeInteger(w.level) && Number(w.level) >= 1 && w.day === undefined && w.win_id === `c:${w.level}`) return w as Win;
+  if (w.kind === 'daily' && typeof w.day === 'string' && /^\d{4}-\d\d-\d\d$/.test(w.day) && calendarDay(w.day) !== undefined && w.level === undefined && w.win_id === `d:${w.day}`) return w as Win;
+  return undefined;
 }
 export function evaluate(old: Player | undefined, req: Request, uid: string, now: number, highest: number, previous: Seen[] = []) {
   const week = weekOf(now);
   const next: Player = old ? structuredClone(old) : { uid, week: week.week, points: 0, country: null, wins: [], flagged: false, reached: 0, rev: 0, ttl: Math.floor((week.end + 14 * 86400_000) / 1000) };
   const accepted: string[] = [], rejected: Rejection[] = [];
   const table = catalog.levels as Record<string, { points: number; skippable: boolean }>;
-  // Primera victoria de una cuenta existente establece el avance inicial; aprobado por el dueño.
-  let max = highest;
-  for (const win of req.wins) {
+  // Ordenar las campañas entre sus posiciones; conservar el orden/posición de los Retos.
+  const items = req.wins.map(item => ({ win: parseWin(item), id: item && typeof item === 'object' && 'win_id' in item && typeof item.win_id === 'string' ? item.win_id : '' }));
+  const campaigns = items.filter(item => item.win?.kind === 'campaign').sort((a,b) => a.win!.level! - b.win!.level!);
+  let cursor = 0, max = highest;
+  for (const item of items) {
+    const { win, id } = item.win?.kind === 'campaign' ? campaigns[cursor++] : item;
+    if (!win) { rejected.push({win_id:id,reason:'invalid'}); continue; }
+    // Referencia informativa, nunca prueba de juego: también persiste los rechazos.
+    if (win.kind === 'campaign') max = Math.max(max, win.level!);
     let reason: Rejection['reason'] | undefined;
     const at = Date.parse(win.won_at);
     const day = win.kind === 'daily' ? calendarDay(win.day) : undefined;
-    const expected = win.kind === 'campaign' ? `c:${win.level}` : `d:${win.day}`;
-    if (win.win_id !== expected || (win.kind === 'daily' && day === undefined)) reason = 'invalid';
-    else if (at < week.start || at >= week.end || at > now) reason = 'outside_week';
+    if (win.kind === 'campaign' && (!Object.hasOwn(table,win.level!) || win.level! < 41)) reason = 'invalid';
+    else if (win.kind === 'campaign' && win.level! > req.max_level) reason = 'unreachable_level';
+    else if (req.max_level < 41) reason = 'invalid';
+    else if (at < week.start || at >= week.end || at > now + 300_000) reason = 'outside_week';
     // El Reto usa la fecha LOCAL de inicio (06 §4.1; R-Q3), no la fecha UTC de won_at.
     // Sin offset en el contrato, admitir las fechas que pueden solaparse con la semana,
     // incluido el día previo por huso/cambio de medianoche; impedir días remotos o futuros.
     else if (day !== undefined && (day < Date.parse(new Date(week.start).toISOString().slice(0,10)) - 86400_000 || day > Date.parse(new Date(at).toISOString().slice(0,10)) + 86400_000)) reason = 'outside_week';
     else if (next.wins.some(w => w.id === win.win_id) || (win.kind === 'daily' && previous.some(w => w.id === win.win_id))) reason = 'duplicate';
-    else if (req.max_level < 41 || (win.kind === 'campaign' && (win.level! < 41 || win.level! > req.max_level || (max > 0 && win.level! > max + 2) || (max > 0 && win.level === max + 2 && !table[max + 1]?.skippable)))) reason = 'unreachable_level';
     else {
       // Ventana móvil real sobre won_at, también con lotes offline desordenados.
       const times = [...previous.filter(w=>w.at>week.start-3600_000), ...next.wins, { id: win.win_id, at }].map(w => w.at).sort((a,b) => a-b);
@@ -70,14 +80,12 @@ export function evaluate(old: Player | undefined, req: Request, uid: string, now
     }
     if (reason) {
       rejected.push({ win_id: win.win_id, reason });
-      if (reason === 'rate_limited' || reason === 'unreachable_level') next.flagged = true;
       continue;
     }
     if (next.wins.length === 0) next.country = countryOf(req.region);
     next.wins.push({ id: win.win_id, at });
     next.points += win.kind === 'daily' ? 20 : table[win.level!].points;
     next.reached = now;
-    if (win.kind === 'campaign') max = Math.max(max, win.level!);
     accepted.push(win.win_id);
   }
   next.rev++;

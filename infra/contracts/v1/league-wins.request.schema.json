@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.invalid/af/v1/league-wins.request.schema.json",
   "title": "league-wins.request",
-  "description": "docs/dev/liga.md §3.1; D-046. País desconocido: null.",
+  "description": "docs/dev/liga.md §3.1–3.2, revisión 2026-10-24. Solo el sobre produce 400; cada victoria se juzga por separado.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -14,76 +14,16 @@
       "type": "array",
       "maxItems": 50,
       "items": {
-        "oneOf": [
-          {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "win_id",
-              "won_at",
-              "kind",
-              "level"
-            ],
-            "properties": {
-              "win_id": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 40
-              },
-              "won_at": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,3})?Z$"
-              },
-              "kind": {
-                "const": "campaign"
-              },
-              "level": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 700
-              }
-            }
-          },
-          {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "win_id",
-              "won_at",
-              "kind",
-              "day"
-            ],
-            "properties": {
-              "win_id": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 40
-              },
-              "won_at": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,3})?Z$"
-              },
-              "kind": {
-                "const": "daily"
-              },
-              "day": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d\\d-\\d\\d$"
-              }
-            }
-          }
-        ]
+        "description": "Cada elemento se valida individualmente: victoria de campaña (win_id c:n, kind campaign, level entero positivo, won_at UTC) o Reto (win_id d:fecha, kind daily, day fecha local, won_at UTC). Un elemento mal formado devuelve invalid; si no tiene win_id de texto se devuelve la cadena vacía."
       },
       "minItems": 1
     },
     "max_level": {
       "type": "integer",
-      "minimum": 0,
-      "maximum": 700
+      "minimum": 0
     },
     "region": {
-      "type": "string",
-      "pattern": "^[A-Z]{2}$"
+      "description": "ISO 3166-1 alpha-2 mayúsculo si se conoce; cualquier otro valor se trata como país desconocido."
     }
   }
 }
