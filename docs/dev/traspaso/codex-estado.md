@@ -379,6 +379,24 @@ Verificación: `npm ci` correcto (una vulnerabilidad alta heredada, sin actualiz
 
 [Resumen para revisar](liga-dev-revision1-revision.md), [diff real redactado](liga-dev-revision1-diff.txt) e [inventario congelado](liga-dev-revision1-assembly.sha256.json), digest `e265c58a270471863cc03bc4d8fdd767c3f8f86aa16e7ecd9508151ece13a09c` (58 archivos). `cdk diff AfDevApi --strict --no-change-set --exclusively` con contexto real: exit 0, una pila con diferencias. Comparando ensamblados, Data/Ops idénticos; Api solo cambia los paquetes de LeagueWins, LeagueBoard y DeleteAccount (en borrado solo el sourcemap). Sin recursos, permisos IAM ni coste fijo nuevos. El diff estricto incluye las diferencias Unicode de descripciones/metadata ya observadas; no son cambios de secretos ni permisos.
 
-**Pendiente de aprobación del dueño para desplegar exclusivamente AfDevApi desde este ensamblado. Esta revisión aún no está desplegada.** Se pedirá el sí después de preparar y empujar código/diff/informe. La aprobación de despliegues anteriores no se reutiliza para esta revisión. Tras el sí se registrará el resultado real aquí.
+**Aprobado y desplegado exclusivamente AfDevApi desde este ensamblado.** El dueño dio el sí específico para esta revisión: «Sí, desplegar únicamente AfDevApi». Código y diff ya estaban empujados en `b6829409`. Comprobaciones reales del despliegue al final de esta sección.
 
 URL dev sin cambios: **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**. Coste incremental del cambio: sin infraestructura adicional; se conservan las estimaciones de `infra/LEAGUE.md`. País: respaldo region ISO; sin CloudFront nuevo. No se modifica el cliente, prod, DNS, Play ni el interruptor. No se ha facilitado token de prueba para envío/lecturas autenticados.
+
+
+### Revisión 1 — cierre de despliegue y comprobaciones, 24-10-2026
+
+Autorización literal del dueño: **«Sí, desplegar únicamente AfDevApi»**. Antes del comando se verificaron los **58 archivos** del ensamblado contra el inventario aprobado, digest `e265c58a270471863cc03bc4d8fdd767c3f8f86aa16e7ecd9508151ece13a09c`, y que `af-dev` seguía en la cuenta del diff. No se regeneró otro ensamblado ni se incorporaron cambios de código después de la aprobación.
+
+Comando ejecutado con la CLI local, equivalente a `cdk deploy AfDevApi --app <revision1-assembly fuera del repo> --exclusively --require-approval never --profile af-dev`. El modo sin confirmación interactiva de CDK se usó con el sí explícito anterior. **Exit 0; AfDevApi UPDATE_COMPLETE.** Solo se desplegó AfDevApi; Data/Ops y las demás pilas no se desplegaron.
+
+Comprobación real posterior:
+
+- `af-dev-league-wins`, `af-dev-league-board` y `af-dev-delete-account`: **State Active / LastUpdateStatus Successful**. Sus ZIP activos se descargaron a un temporal privado y se compararon todos los archivos, incluidos los sourcemaps, con el ensamblado aprobado: **idénticos byte por byte**.
+- **27 alarmas af-dev en OK**.
+- `curl.exe` sin token: POST `/v1/league/wins` → **401**; GET `/v1/league?scope=global` → **401**; GET `/v1/league?scope=country` → **401**.
+- La salida ApiUrl y las comprobaciones conservan **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**; el cliente no necesita cambiar BackendEndpoints.
+
+Estado final de la revisión 1: B1 y S1–S5 aplicados, **361 pruebas / 20 archivos**, lint/tipos/catálogo/web/synth dev y prod correctos, diff aprobado, ensamblado desplegado y comprobado. Commits de código `c143f075` y de diff/informe `b6829409`; este cierre se versiona y empuja también en `codex/liga`. No hubo cambios de código posteriores que justifiquen repetir la batería por esta actualización documental.
+
+Límite de verificación: **no se ha ejecutado envío/lectura autenticados**, porque el dueño no ha facilitado un token de prueba. No se imprimieron credenciales, valores de secretos ni URL firmadas. Permanecen las diferencias Unicode de descripciones/metadata ya documentadas en el diff; no se afirma que el diff estricto esté vacío. El cliente y el interruptor de Liga siguen a cargo del integrador; no se habilitó prod, no se cambió DNS ni se publicó en Play.
