@@ -3784,3 +3784,36 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
   Codex lleva la web y el icono de la ficha (`docs/dev/traspaso/codex-web-marca.md`, «Actualización del 23-10-2026»).
 - **Nota:** la estructura de publicación con Parallext, LLC y AUTOMATION AI S.A.S, que se propuso en el chat, todavía no está decidida. Cuando se decida, se registrará con el siguiente número libre.
+
+## D-046 · Liga del río en la 1.0 (País y Global), controles directos de audio y sitio para la tropa con 3 filas
+
+- **Fecha:** 2026-10-23. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat. Primero pidió: «unos controles directos para la musica y el sonido para apagarlos o prenderlo», «cuando tenemos muchas cuias quedan muy arriba y grandes lo que hace que no se vean los monitos, podemos dejarlas un poquito mas pequeñas o aprovechar un poco mejor la parte de abajo» y «una clasificación global y por paises que sepa como va uno». Después, a la propuesta del integrador: «agreguemos la liga como recomendas inicialmente pero pasemosla para esta primera versión y los demas recomendado».
+- **Decisión:**
+  1. **Liga del río en la 1.0, recortada:**
+     - solo las vistas **Global** y **País**, con puntos semanales: el top 100, la posición exacta si el jugador está en él y, si no, el percentil;
+     - **seudónimo automático** (animal y 4 cifras), sin texto libre;
+     - el **país** sale de CloudFront o, si no, de la región del teléfono;
+     - desbloqueo en el 41;
+     - interruptor `live_league_enabled`, apagado hasta que haya backend en prod;
+     - backend en **AWS** (D-035), sin Unity Leaderboards ni Cloud Code.
+
+     La cubeta de 50, los tiers y los premios se quedan en la 1.2. Especificación y contrato en `docs/dev/liga.md`; cambia 06 §6, 08 §8.2, §9 y §11, 09 y GDD.md §2.
+  2. **Música y Sonido con un toque:**
+     - dos botones con icono (nota y altavoz) arriba en el menú de pausa y en el inicio, junto al engranaje de Ajustes;
+     - guardan en el mismo sitio que las filas de Ajustes (`settings.music` y `settings.sound`), así que siempre coinciden;
+     - la Vibración se queda solo en Ajustes;
+     - nada en la barra de juego.
+
+     Cambia 02 §5 (contenido de la pausa) y 07 §9.4.
+  3. **Sitio para la tropa con 3 filas:**
+     - el suelo del tablero baja unos 20 dp, aprovechando el margen sobre la bandeja y dejando unos 12 dp hasta ella;
+     - con 3 filas las cuias encogen lo justo, unos 44 dp en lugar de 47 a 360 × 780, para abrir una franja de unos 44 dp sobre el panel;
+     - la tropa sale en la rama en todos los niveles de 3 filas, en el primer intento, en lugar de la tropa lateral 1 de cada 3 (D-021) y del dosel;
+     - los tableros de 10 cuias o menos no cambian.
+
+     Matiza D-006 (tamaño con 3 filas), D-021 (la tropa lateral pasa a respaldo) y la excepción de D-028 (la fila 1 ya no entra en el HUD). Cambia 02 §5 y 07 §7.4.
+- **Reparto (pedido por el dueño: «manda en paralelo lo mas que se pueda», «encarga a codex algo grande», «envia a spark algun carril o dos para solucionar el espacio»):**
+  - **Spark:** los puntos 2 y 3 (`docs/dev/traspaso/spark-audio-tablero.md`);
+  - **Codex:** el backend de la Liga, su despliegue en dev con el dueño y los textos legales (`docs/dev/traspaso/codex-liga.md`);
+  - **escritorio:** el cliente de la Liga y la integración.
