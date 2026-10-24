@@ -254,13 +254,21 @@ namespace AF.Backend.Contract
             var r = new ObjectReader(node, "leagueWins.response", strict);
             string week = r.RequiredString("week", LeagueContract.IsWeek);
             int points = (int)r.RequiredInteger("points", 0, int.MaxValue);
-            List<string> accepted = r.StringSet(r.RequiredArray("accepted", LeagueContract.MaxWins), "accepted", LeagueContract.IsWinId);
+            // accepted y rejected se casan con la cola por win_id, nunca por posición (liga.md §3.1, revisión del 2026-10-24); el
+            // esquema real solo pide cadenas: un win_id que no es de la cola (o "" de un elemento mal formado) no rompe la respuesta.
+            JsonNode acceptedNode = r.RequiredArray("accepted", LeagueContract.MaxWins);
+            var accepted = new List<string>(acceptedNode.Items.Count);
+            for (int i = 0; i < acceptedNode.Items.Count; i++)
+            {
+                accepted.Add(r.AsString(acceptedNode.Items[i], "accepted", null));
+            }
+
             JsonNode rejectedNode = r.RequiredArray("rejected", LeagueContract.MaxWins);
             var rejected = new List<KeyValuePair<string, string>>(rejectedNode.Items.Count);
             for (int i = 0; i < rejectedNode.Items.Count; i++)
             {
                 var x = new ObjectReader(rejectedNode.Items[i], "leagueWins.response.rejected", strict);
-                string id = x.RequiredString("win_id", LeagueContract.IsWinId);
+                string id = x.RequiredString("win_id");
                 // Un motivo que este cliente no conoce no rompe la respuesta (lo que importa es que sale de la cola).
                 string reason = x.RequiredString("reason", strict ? LeagueContract.IsRejectReason : (Func<string?, bool>?)null);
                 x.End();

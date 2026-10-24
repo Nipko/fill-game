@@ -16,12 +16,12 @@ namespace AF.Backend.Tests
     {
         // liga.md §3.1, tal cual.
         internal const string WinsRequestExample =
-            "{ \"wins\": [ { \"win_id\": \"c:57\", \"kind\": \"campaign\", \"level\": 57, \"won_at\": \"2026-10-26T15:04:05Z\" },\n"
-            + "            { \"win_id\": \"d:2026-10-26\", \"kind\": \"daily\", \"day\": \"2026-10-26\", \"won_at\": \"2026-10-26T16:00:00Z\" } ],\n"
+            "{ \"wins\": [ { \"win_id\": \"c:57\", \"kind\": \"campaign\", \"level\": 57, \"won_at\": \"2026-10-23T15:04:05Z\" },\n"
+            + "            { \"win_id\": \"d:2026-10-23\", \"kind\": \"daily\", \"day\": \"2026-10-23\", \"won_at\": \"2026-10-23T16:00:00Z\" } ],\n"
             + "  \"max_level\": 58, \"region\": \"CO\" }";
 
         internal const string WinsResponseExample =
-            "{ \"week\": \"2026-W43\", \"points\": 140, \"accepted\": [\"c:57\"], \"rejected\": [ { \"win_id\": \"d:2026-10-26\", \"reason\": \"duplicate\" } ],\n"
+            "{ \"week\": \"2026-W43\", \"points\": 140, \"accepted\": [\"c:57\"], \"rejected\": [ { \"win_id\": \"d:2026-10-23\", \"reason\": \"duplicate\" } ],\n"
             + "  \"name_key\": \"league_name_capybara\", \"name_num\": 4821, \"country\": \"CO\" }";
 
         internal const string BoardResponseExample =
@@ -39,15 +39,15 @@ namespace AF.Backend.Tests
             Assert.That(req!.Wins.Count, Is.EqualTo(2));
             Assert.That(req.Wins[0].WinId, Is.EqualTo("c:57"));
             Assert.That(req.Wins[0].Level, Is.EqualTo(57));
-            Assert.That(req.Wins[1].Day, Is.EqualTo("2026-10-26"));
-            Assert.That(req.Wins[1].WonAt, Is.EqualTo(new DateTime(2026, 10, 26, 16, 0, 0, DateTimeKind.Utc)));
+            Assert.That(req.Wins[1].Day, Is.EqualTo("2026-10-23"));
+            Assert.That(req.Wins[1].WonAt, Is.EqualTo(new DateTime(2026, 10, 23, 16, 0, 0, DateTimeKind.Utc)));
             Assert.That(req.MaxLevel, Is.EqualTo(58));
             Assert.That(req.Region, Is.EqualTo("CO"));
 
             string json = req.ToJson();
             Assert.That(json, Is.EqualTo(
-                "{\"wins\":[{\"win_id\":\"c:57\",\"kind\":\"campaign\",\"level\":57,\"won_at\":\"2026-10-26T15:04:05Z\"},"
-                + "{\"win_id\":\"d:2026-10-26\",\"kind\":\"daily\",\"day\":\"2026-10-26\",\"won_at\":\"2026-10-26T16:00:00Z\"}],"
+                "{\"wins\":[{\"win_id\":\"c:57\",\"kind\":\"campaign\",\"level\":57,\"won_at\":\"2026-10-23T15:04:05Z\"},"
+                + "{\"win_id\":\"d:2026-10-23\",\"kind\":\"daily\",\"day\":\"2026-10-23\",\"won_at\":\"2026-10-23T16:00:00Z\"}],"
                 + "\"max_level\":58,\"region\":\"CO\"}"));
             Assert.That(LeagueWinsRequestDto.TryParse(json, out _, out error), Is.True, error);
         }
@@ -57,10 +57,10 @@ namespace AF.Backend.Tests
         {
             Assert.That(LeagueWinsRequestDto.TryParse("{\"wins\":[],\"max_level\":1}", out _, out _), Is.False, "sin victorias");
             Assert.That(LeagueWinsRequestDto.TryParse(
-                "{\"wins\":[{\"win_id\":\"c:1\",\"kind\":\"campaign\",\"level\":1,\"won_at\":\"2026-10-26T15:04:05Z\",\"points\":10}],\"max_level\":1}", out _, out _),
+                "{\"wins\":[{\"win_id\":\"c:1\",\"kind\":\"campaign\",\"level\":1,\"won_at\":\"2026-10-23T15:04:05Z\",\"points\":10}],\"max_level\":1}", out _, out _),
                 Is.False, "el cliente nunca manda puntos (liga.md §3.2)");
             Assert.That(LeagueWinsRequestDto.TryParse(
-                "{\"wins\":[{\"win_id\":\"x:1\",\"kind\":\"campaign\",\"level\":1,\"won_at\":\"2026-10-26T15:04:05Z\"}],\"max_level\":1}", out _, out _), Is.False);
+                "{\"wins\":[{\"win_id\":\"x:1\",\"kind\":\"campaign\",\"level\":1,\"won_at\":\"2026-10-23T15:04:05Z\"}],\"max_level\":1}", out _, out _), Is.False);
             Assert.Throws<ArgumentException>(() => new LeagueWinsRequestDto(new LeagueWinDto[51], 1, null), "como mucho 50");
             Assert.Throws<ArgumentException>(() => new LeagueWinDto("c:5", "daily", 5, null, DateTime.UtcNow));
         }
@@ -79,7 +79,7 @@ namespace AF.Backend.Tests
             Assert.That(wins!.Week, Is.EqualTo("2026-W43"));
             Assert.That(wins.Points, Is.EqualTo(140));
             Assert.That(wins.Accepted, Is.EqualTo(new[] { "c:57" }));
-            Assert.That(wins.Rejected[0].Key, Is.EqualTo("d:2026-10-26"));
+            Assert.That(wins.Rejected[0].Key, Is.EqualTo("d:2026-10-23"));
             Assert.That(wins.Rejected[0].Value, Is.EqualTo("duplicate"));
             Assert.That(wins.NameKey, Is.EqualTo("league_name_capybara"));
             Assert.That(wins.NameNum, Is.EqualTo(4821));
@@ -109,6 +109,23 @@ namespace AF.Backend.Tests
             Assert.That(LeagueBoardResponseDto.TryParse(BoardResponseExample.Replace("\"percentile\": 12", "\"percentile\": 101"), out _, out _), Is.False);
             Assert.That(LeagueBoardResponseDto.TryParse(BoardResponseExample.Replace("2026-W43", "W43"), out _, out _), Is.False);
             Assert.That(LeagueWinsResponseDto.TryParse("{}", out _, out _), Is.False);
+        }
+
+        // infra/contracts/v1/examples/league-wins.response.mixed.json (integrado el 2026-10-24), tal cual.
+        internal const string WinsResponseMixedExample =
+            "{ \"week\": \"2026-W43\", \"points\": 20, \"accepted\": [ \"c:41\", \"c:42\" ],\n"
+            + "  \"rejected\": [ { \"win_id\": \"\", \"reason\": \"invalid\" }, { \"win_id\": \"bad\", \"reason\": \"invalid\" }, { \"win_id\": \"c:701\", \"reason\": \"invalid\" } ],\n"
+            + "  \"name_key\": \"league_name_capybara\", \"name_num\": 1000, \"country\": null }";
+
+        [Test]
+        public void TheMixedResponse_WithAnEmptyWinId_Parses()
+        {
+            // Un elemento mal formado vuelve en rejected con win_id "" (liga.md §3.1): no rompe la respuesta.
+            Assert.That(LeagueWinsResponseDto.TryParseStrict(WinsResponseMixedExample, out LeagueWinsResponseDto? dto, out string? error), Is.True, error);
+            Assert.That(dto!.Accepted, Is.EqualTo(new[] { "c:41", "c:42" }));
+            Assert.That(dto.Rejected.Count, Is.EqualTo(3));
+            Assert.That(dto.Rejected[0].Key, Is.Empty);
+            Assert.That(dto.Country, Is.Null);
         }
 
         [Test]

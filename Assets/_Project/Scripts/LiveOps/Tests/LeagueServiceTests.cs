@@ -80,6 +80,28 @@ namespace AF.LiveOps.Tests
         }
 
         [Test]
+        public void Queue_MatchesTheAnswerByWinId_NeverByPosition()
+        {
+            // liga.md §3.1 (revisión del 2026-10-24): el servidor procesa las campañas por nivel, así que el orden de accepted no es el
+            // de la petición, y un elemento mal formado vuelve con win_id "".
+            var record = new LeagueRecord();
+            DateTime now = _clock.UtcNow;
+            LeagueQueue.Roll(record, now);
+            LeagueQueue.Enqueue(record, LeagueWin.Campaign(42, now));
+            LeagueQueue.Enqueue(record, LeagueWin.Campaign(41, now));
+            LeagueQueue.Enqueue(record, LeagueWin.Campaign(701, now));
+            LeagueQueue.Enqueue(record, LeagueWin.Campaign(43, now));
+            List<LeagueWin> batch = LeagueQueue.NextBatch(record);
+            var result = new LeagueWinsResult("2026-W43", 20, new[] { "c:41", "c:42" },
+                new[] { new LeagueRejection(string.Empty, "invalid"), new LeagueRejection("bad", "invalid"), new LeagueRejection("c:701", "invalid") },
+                "league_name_capybara", 1000, null);
+            Assert.That(LeagueQueue.Apply(record, batch, result), Is.EqualTo(3));
+            Assert.That(record.Pending.Count, Is.EqualTo(1));
+            Assert.That(record.Pending[0].WinId, Is.EqualTo("c:43"), "lo que el servidor no nombra se queda");
+            Assert.That(record.MeCountry, Is.Null);
+        }
+
+        [Test]
         public void Record_RoundTripsThroughTheProfileJson_AndIsTolerant()
         {
             DateTime now = _clock.UtcNow;

@@ -136,7 +136,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void TheRealApiAdapter_MapsTheContractExamples()
         {
-            const string wins = "{ \"week\": \"2026-W43\", \"points\": 140, \"accepted\": [\"c:57\"], \"rejected\": [ { \"win_id\": \"d:2026-10-26\", \"reason\": \"duplicate\" } ], \"name_key\": \"league_name_capybara\", \"name_num\": 4821, \"country\": \"CO\" }";
+            const string wins = "{ \"week\": \"2026-W43\", \"points\": 140, \"accepted\": [\"c:57\"], \"rejected\": [ { \"win_id\": \"d:2026-10-23\", \"reason\": \"duplicate\" } ], \"name_key\": \"league_name_capybara\", \"name_num\": 4821, \"country\": \"CO\" }";
             Assert.That(LeagueWinsResponseDto.TryParse(wins, out LeagueWinsResponseDto? dto, out _), Is.True);
             LeagueWinsResult result = LeagueBackendApi.FromDto(dto!);
             Assert.That(result.Accepted, Is.EqualTo(new[] { "c:57" }));
@@ -145,12 +145,12 @@ namespace AF.Tests.EditMode
 
             var request = new LeagueWinsRequest(new[]
             {
-                LeagueWin.Campaign(57, new DateTime(2026, 10, 26, 15, 4, 5, DateTimeKind.Utc)),
-                LeagueWin.Daily("2026-10-26", new DateTime(2026, 10, 26, 16, 0, 0, DateTimeKind.Utc)),
+                LeagueWin.Campaign(57, new DateTime(2026, 10, 23, 15, 4, 5, DateTimeKind.Utc)),
+                LeagueWin.Daily("2026-10-23", new DateTime(2026, 10, 23, 16, 0, 0, DateTimeKind.Utc)),
             }, 58, "co");
             Assert.That(LeagueBackendApi.ToDto(request).ToJson(), Is.EqualTo(
-                "{\"wins\":[{\"win_id\":\"c:57\",\"kind\":\"campaign\",\"level\":57,\"won_at\":\"2026-10-26T15:04:05Z\"},"
-                + "{\"win_id\":\"d:2026-10-26\",\"kind\":\"daily\",\"day\":\"2026-10-26\",\"won_at\":\"2026-10-26T16:00:00Z\"}],\"max_level\":58,\"region\":\"CO\"}"),
+                "{\"wins\":[{\"win_id\":\"c:57\",\"kind\":\"campaign\",\"level\":57,\"won_at\":\"2026-10-23T15:04:05Z\"},"
+                + "{\"win_id\":\"d:2026-10-23\",\"kind\":\"daily\",\"day\":\"2026-10-23\",\"won_at\":\"2026-10-23T16:00:00Z\"}],\"max_level\":58,\"region\":\"CO\"}"),
                 "la petición de ejemplo de liga.md §3.1");
 
             Assert.That(LeagueBackendApi.FailureOf(BackendError.Network("x"), false), Is.EqualTo(LeagueFailure.Offline));
