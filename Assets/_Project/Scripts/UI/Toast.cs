@@ -228,6 +228,17 @@ namespace AF.UI
         /// sus líneas y <see cref="MinPadDp"/> arriba y abajo, y como mucho <see cref="PreferredHeightDp"/>. Mide solo si cambia
         /// el texto o el ancho.
         /// </summary>
+        /// <summary>
+        /// Lo menos que puede medir la placa, de su ancho de siempre, con el texto de ahora encogido hasta su mínimo (12 sp, 02 §12)
+        /// y <see cref="MinPadDp"/> arriba y abajo: por debajo, el texto ya no cabe legible (D-046; GameScreen.PlaceToastInTroopBand).
+        /// Mide solo si cambia el texto o el ancho (con <see cref="PreferredHeightDp"/>): sin asignaciones por fotograma.
+        /// </summary>
+        public float LegibleHeightDp(float canvasW)
+        {
+            PreferredHeightDp(canvasW); // mide (y guarda) el texto a su mínimo solo si cambia el texto o el ancho
+            return _preferredHeight - (2f * PadDp) + (2f * MinPadDp);
+        }
+
         public float MinHeightDp(float canvasW)
         {
             return Mathf.Min(PreferredHeightDp(canvasW), Mathf.Ceil(TextHeight(FullWidthDp(canvasW))) + (2f * MinPadDp));

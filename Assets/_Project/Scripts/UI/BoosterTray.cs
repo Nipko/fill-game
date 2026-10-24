@@ -222,6 +222,7 @@ namespace AF.UI
         private Action? _onHint;
         private Action? _onShuffle;
         private Slot? _tipSlot;
+        private bool _tipInBand;
         private int _key = int.MinValue;
         private int _revealKey = int.MinValue;
         private int _refreshRepaints;
@@ -383,6 +384,9 @@ namespace AF.UI
 
         /// <summary>Globo de Pista (tests de solapes).</summary>
         public RectTransform HintTooltipRect => _tip;
+
+        /// <summary>El globo de Pista va a la franja de la tropa, sobre el panel (D-046; Q-T6T-3; tests).</summary>
+        public bool HintTooltipInBand => _tipInBand && _tip.gameObject.activeSelf;
 
         /// <summary>Texto del globo de Pista (tests de tamaño: ≥ 12 sp).</summary>
         public TextMeshProUGUI HintTooltipLabel => _tipText;
@@ -649,15 +653,17 @@ namespace AF.UI
         /// mientras el aviso del tablero no cabe en la franja con ellas (GameScreen.PlaceToast). Solo recoloca si cambia algo; sin
         /// asignaciones.
         /// </summary>
-        public void SetMissingRoom(float floorDp, float bandBottomDp, bool held, bool hiddenInBand)
+        public void SetMissingRoom(float floorDp, float bandBottomDp, bool held, bool hiddenInBand, float bandTopDp = float.NaN)
         {
-            if (SameOrNaN(floorDp, _room.Floor) && SameOrNaN(bandBottomDp, _room.BandBottom) && held == _room.Held && hiddenInBand == _room.HiddenInBand)
+            if (SameOrNaN(floorDp, _room.Floor) && SameOrNaN(bandBottomDp, _room.BandBottom) && SameOrNaN(bandTopDp, _room.BandTop)
+                && held == _room.Held && hiddenInBand == _room.HiddenInBand)
             {
                 return;
             }
 
             _room.Floor = floorDp;
             _room.BandBottom = bandBottomDp;
+            _room.BandTop = bandTopDp;
             _room.Held = held;
             _room.HiddenInBand = hiddenInBand;
             LayoutMissing();
@@ -839,6 +845,20 @@ namespace AF.UI
             if (!float.IsPositiveInfinity(bubbles))
             {
                 bottom = Mathf.Min(bottom, bubbles - MissingNeighborGapDp);
+            }
+
+            // Con 3 filas y el suelo bajado (D-046, punto 3), si pisaría el panel, a la franja de la tropa, como las burbujas
+            // (aplicación de Q-T6T-3, decidida por el dueño el 2026-10-24) [P]: sobre el panel y, si caben, sobre las burbujas de
+            // la franja; si con ellas no cabe bajo la fila del HUD, delante de ellas, sobre el panel. Sin franja, como siempre.
+            _tipInBand = false;
+            if (!float.IsNaN(_room.Floor) && !float.IsNaN(_room.BandBottom) && bottom - h < _room.Floor)
+            {
+                _tipInBand = true;
+                bottom = _room.BandBottom - MissingPanelClearDp;
+                if (TryGetMissingBandTop(out float band) && (float.IsNaN(_room.BandTop) || band - MissingNeighborGapDp - h >= _room.BandTop))
+                {
+                    bottom = Mathf.Min(bottom, band - MissingNeighborGapDp);
+                }
             }
 
             UiBuilder.Place(_tip, x, bottom - h, w, h);
@@ -1462,6 +1482,7 @@ namespace AF.UI
         {
             public float Floor = float.NaN;
             public float BandBottom = float.NaN;
+            public float BandTop = float.NaN;
             public bool Held;
             public bool HiddenInBand;
         }

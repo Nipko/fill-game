@@ -199,7 +199,7 @@ namespace AF.UI
         private FaunaSpecies? _sightingPending;
         private float _sightingDockBottom = float.NaN; // borde de abajo de la placa de la tarjeta sobre el muelle; NaN si no
         private bool _toastHidesBandBubbles; // el aviso ocupa la franja de la tropa entera: sus burbujas, después (D-046; Q-T6T-3)
-        private float _hudBandBubbleTop = float.MaxValue; // lo alto de las burbujas «Te faltan {n}» en la franja (o MaxValue)
+        private float _hudBandBubbleTop = float.MaxValue; // lo alto de las burbujas de la franja, sin _boardShift (o MaxValue)
         private readonly FruitNewCard _fruitNew; // «Fruta nueva» (tarea F5); la crea el constructor de GameScreen
         private float _fruitNewDockBottom = float.NaN; // como _sightingDockBottom, para la tarjeta «Fruta nueva»
         private int _fruitNewLevel; // nivel cuya tarjeta «Fruta nueva» ya entró en la cola en esta visita (0: ninguno)
@@ -387,10 +387,10 @@ namespace AF.UI
             else
             {
                 float floor = l.PanelBottom - _boardShift + BoosterTray.MissingPanelClearDp;
-                _tray.SetMissingRoom(floor, l.PanelY - _boardShift, _intro.TroopVisible, _toastHidesBandBubbles);
+                _tray.SetMissingRoom(floor, l.PanelY - _boardShift, _intro.TroopVisible, _toastHidesBandBubbles, BoardTop);
                 if (_tray.TryGetMissingBandTop(out float top))
                 {
-                    bubbles = top;
+                    bubbles = top + _boardShift; // en el sistema del layout, sin el desplazamiento del tablero (como PanelEdgeDp)
                 }
             }
 
@@ -445,6 +445,12 @@ namespace AF.UI
                 {
                     hide = true; // no caben las dos cosas: el aviso, entero, y las burbujas de la franja, después
                 }
+            }
+
+            if (bottom - top < _toast.LegibleHeightDp(_canvasW))
+            {
+                _toastHidesBandBubbles = false;
+                return false; // ni en la franja entera cabe legible (su texto a 12 sp): abajo, como siempre
             }
 
             _toastHidesBandBubbles = hide;
