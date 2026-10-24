@@ -6,6 +6,36 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-24 · T6 · Carril 2: sitio para la tropa con 3 filas (`spark/t6-tropa-3filas`): HECHA salvo el suelo (Q-T6T-3) · verificación completa sin fallos · revisión: CAMBIOS NECESARIOS (GDD 02 §4.2 y 07 §6.4, corregidos) y decisiones del dueño Q-T6T-2/3/4
+
+- **Encargo:** `spark-audio-tablero.md`, carril 2 (puntos 1-7); D-046, punto 3. Rama desde `origin/integracion-fase1-fase2` en `3ab273f9`. Sin empujar (lo empuja el integrador).
+- **Qué hace:**
+  - `BoardLayout` (AF.UI): con 3 filas reserva la franja de la rama, `TroopBandDp` = 44 dp [P] entre `boardTop` y el panel, encogiendo las cuias lo justo; `BoardLayoutResult.TroopBand` lo dice. Ni la fila 1 elevada ni su cielo entran ya en el HUD. Si la franja no cabe sin bajar la cuia de `MinCuiaWidth` (28 dp; con la Cuia alta, u ≥ 14 dp de 07 §4.5), el layout de 3 filas es exactamente el de antes. La franja no cambia cuántas filas lleva un nivel (Q-T6T-2) y los tableros de 1 y 2 filas no cambian.
+  - `GameScreen.SideTroopFor`: con la franja, la tropa va en su rama (primer intento); la tropa lateral de D-021 queda de respaldo donde no hay franja (16:9).
+  - `ThreeRowFloorDropDp` (bajar el suelo) existe pero vale **0**: ver Q-T6T-3.
+  - `BoardLayout.TroopBandOffForTests` (solo tests): mide el respaldo de antes en lienzos altos (tropa lateral, HUD compacto, excepción de D-028).
+- **Cifras medidas** (dp; boardTop 88):
+  - 360 × 780: franja 44; panel 132-628,5 con 11-15 cuias (31,5 hasta la bandeja, como antes); cuia 40,66 (antes 46,9), 16 cuias 39,2 (manda el ancho; panel 138,1-622,4); Cuia alta de 5 y Tinaja 34,5 (antes 39,8); Cuia alta de 6 30,0 (antes 34,6).
+  - 360 × 800: cuia 43,0; Cuia alta de 5 y Tinaja 36,5; de 6 31,7.
+  - 360 × 640 y 320 × 640: sin franja (con ella bajaría a 26,4 dp): el layout de antes (30,24 dp; con la Cuia alta, 28) y la tropa lateral o el dosel. 320 × 780: franja, 41,4 dp con 5 por fila.
+  - Paquetes 1-700 a 360 × 780 y 800: los 582 niveles de 3 filas (11 con Cuia alta), todos con la franja; la cuia más estrecha, 34,5 dp. En 16:9, 281 de 3 filas, ninguno con franja.
+- **Tests:** `BoardLayoutTests` (+ franja con 11-16, Cuia alta y Tinaja; el respaldo en 360 × 640, 320 dp y 360 × 720 con la Cuia alta de 6; las filas no cambian en ningún lienzo; ≤ 10 cuias idénticos a una referencia escrita aparte), `IntroChoreographyTests` (rama con 3 filas a 780 y 800; dosel en 16:9), `IntroSideTroopScheduleTests` (todos los niveles de 3 filas de 1-700 con franja a 780 y 800, ninguno en 16:9), `IntroThreeRowBranchTests` (PlayMode, nuevo: el 86 y el 143 a 1080 y 720 px en la rama, franja ≥ 44, ≥ 8 dp de toda cuia, nada dentro del panel, el reintento en dosel; en 16:9, el 240 y el 335 sin franja y sin rama) y `IntroThreeRowBranchSnapshotTests` (capturas `t6t_*`, explícitas). Los tests del HUD compacto, la excepción de D-028, la tropa lateral y el muelle se quedan midiendo el respaldo con `TroopBandOffForTests`; los demás, con sus cifras nuevas.
+- **Capturas:** las 254 capturas explícitas, antes y después: 149 de tableros de 3 filas cambian como se espera (franja sobre el panel, banda del HUD entera, tropa en la rama); las de 1-2 filas solo difieren en el ruido de siempre (brillos, polen). Revisadas una a una las representativas (`a1_07_l135_3_filas*`, `92f`, `18b`, `48*`, `61b`, `tj3_14`, `f5_09`, `01e_intro_16_*`, `victory_view_l131_end`, `t6t_*`). Las 5 que fallan (`Fx15…`, `SlothFail…`, `TutorialMorpho…`, `UndoTip…`, `CaptureLobby`) fallan igual en la línea base.
+- **Preguntas** (la recomendada aplicada):
+  - **Q-T6T-1** D-046 pide bajar `GameScreen.BoardBottom`, pero también que los tableros de ≤ 10 cuias no cambien: el cambio va en `BoardLayout` y solo con 3 filas (aplicada).
+  - **Q-T6T-2** (para el dueño: se aparta de la letra de D-006, «la que dé la cuia más ancha») con 11-12 cuias, la franja haría que la Tinaja y la Cuia alta de 5 pasaran de 3 a 2 filas a 360 × 780; la regla de filas compara con el tablero de antes, así que ningún nivel cambia de filas (aplicada).
+  - **Q-T6T-3** (para el dueño) bajar el suelo 20 dp (panel a 11,5 dp de la bandeja) choca con reglas ratificadas: la burbuja «Te faltan {n}» en dos líneas (29,5 dp sobre la bandeja) pisa 18 dp del panel y el aviso «¡Una cuia más!» del 135 se queda sin sitio legible (texto a 12 sp desbordado; D-011 punto 2; pregunta 47 de D-022; A1); 7 tests de PlayMode lo marcaban (`BoosterTrayTests`, `MinTextSizeTests` ×2, `PhoneFixesTests` ×2 y el muelle de `StopLabelTests` ×2). Recomendada aplicada: **no bajar el suelo todavía** (`ThreeRowFloorDropDp` = 0; cuia 40,7 en lugar de 43,0). Alternativa: bajarlo y mover el aviso a la franja sobre el panel cuando no quepa (cambia 02 §12 y la pregunta 47).
+  - **Q-T6T-4** (para el dueño) con la franja justa de 44 dp, el tamaño de 07 §6.4, `min(tam_dp, franja − 10)`, deja la tropa rozar la fila del HUD: 0,5 dp en el 86 y 3,6 dp en el 143 al salir por la esquina de la derecha, bajo Reiniciar. Recomendada: franja de 56 dp (≈ 1,4 dp menos de cuia) o tamaño `franja − 16` en 07 §6.4 (miquitos de 28 dp con la franja de 44). Aplicado: nada; el test tolera 6 dp (la subida de la rama hacia las esquinas) y una prueba explícita, `…StrictlyOffTheHud_KnownIssue`, lo deja escrito.
+  - **Q-T6T-5** (riesgo) con la banda del HUD entera, en-XA a dos líneas: la píldora Reiniciar pisa el contador de Lluvia/Piraña bajo ella (`RestartPill_360_KnownIssues`, explícita, ya fallaba por otra causa). Con es, en y pt-BR no pasa.
+- **Verificación** (Spark, ARM64, 64 GB; `-Architecture arm64`), en el worktree con el código final:
+  - línea base antes de tocar nada: EditMode **4.447 (4.444 + 3 omitidos)** y PlayMode **1.994 (1.709 + 285 omitidos)**, sin fallos;
+  - `dotnet build dotnet/AmazonFill.slnx -warnaserror`: 0 avisos; `dotnet test`: 1.002 (996 + 6), sin fallos; `validate_schema.py`: 116/116;
+  - `unity-compile.ps1`: compila; EditMode **4.477 (4.474 + 3)**, sin fallos (+30); PlayMode **2.008 (1.715 + 293 omitidos)**, sin fallos (+14: 6 de `IntroThreeRowBranchTests` y 8 explícitos nuevos); la suite pasa de 50 a 52 min, así que el límite de 3.600 s del script ya no basta: con `-TimeoutSec 5400`.
+- **Teléfono (punto 7):** sin teléfono en el Spark (`adb devices` vacío): pendiente del escritorio con un nivel de 14-16 cuias.
+- **Riesgos:** las cuias de 3 filas son un 13 % más estrechas que antes a 360 × 780 (las ranuras táctiles no cambian); los brillos del río pasan por la franja y su primera activación asigna (en `PhoneFixesTests` se congela el ambiente; lo mismo pasa ya con 1-2 filas).
+
+---
+
 ## 2026-10-22 · T5-BILLING · Plugin propio de Play Billing 9.0.0 en lugar de Unity IAP (`spark/t5-billing`): HECHA · verificación completa VERDE (rama y rama + parches) · lista para integrar
 
 - **Encargo:** `spark-reto-del-rio.md` §15; D-040 y su añadido de Q-IAP-1 (2026-10-22): `com.android.billingclient:billing` **9.0.0** directo, el permiso `com.android.vending.BILLING` (ya aprobado) y quitar Unity IAP y sus tres dependencias de Unity Services. Nota: `docs/dev/iap.md` (reescrita).

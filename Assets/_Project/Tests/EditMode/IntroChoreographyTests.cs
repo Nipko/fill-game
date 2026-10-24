@@ -414,11 +414,28 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void ThreeRows_WithTheTroopBand_GoOnTheBranch([Values(13, 16)] int cuias, [Values(780f, 800f)] float height)
+        {
+            // D-046, punto 3: con 3 filas el tablero deja 44 dp sobre el panel y la tropa va en su rama, como con 1 y 2 filas.
+            var plan = new IntroChoreography();
+            IntroInput input = Input(cuias, height, 1400f, IntroPerch.Branch);
+            Assert.That(input.Rows, Is.EqualTo(3));
+            Assert.That(input.PanelTop - input.HudBottom, Is.GreaterThanOrEqualTo(IntroChoreography.BranchMinBandDp));
+            plan.Plan(input);
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch), cuias + " cuias a 360 × " + height);
+            Assert.That(plan.MonkeyCount, Is.GreaterThan(0));
+            Assert.That(plan.BodyDp, Is.GreaterThanOrEqualTo(IntroChoreography.MinMonkeyDp));
+            Assert.That(plan.BranchY, Is.LessThan(input.PanelTop), "la rama, sobre el panel");
+            Assert.That(plan.BranchY, Is.GreaterThan(input.HudBottom), "y bajo el HUD");
+        }
+
+        [Test]
         public void ThreeRows_OrNarrowBand_FallBackToCanopy()
         {
+            // En 16:9 (360 × 640) no cabe la franja de la tropa con 3 filas (D-046: el layout de antes), y la rama tampoco.
             var plan = new IntroChoreography();
-            plan.Plan(Input(16, 780f, 1400f, IntroPerch.Branch));
-            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Canopy), "con 3 filas la franja mide < 44 dp");
+            plan.Plan(Input(16, 640f, 1400f, IntroPerch.Branch));
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Canopy), "con 3 filas en 16:9 la franja mide < 44 dp");
             Assert.That(plan.MonkeyCount, Is.EqualTo(0));
             for (int k = 0; k < plan.FruitCount; k++)
             {

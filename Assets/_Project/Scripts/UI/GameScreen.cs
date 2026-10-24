@@ -2221,8 +2221,9 @@ namespace AF.UI
             bool art = candidate != null && FaunaArtAvailable(candidate, false);
             FaunaSpecies? species = IntroCast.Resolve(Fauna, flow.Level.World, flow.LevelNumber, isShort ? 2 : 1, art);
             _introSpecies = species;
-            // Con 3 filas, la tropa lateral en los niveles que le tocan (D-021; IntroSideSchedule); si no cabe, el planificador
-            // vuelve a la regla de D-010 (rama con franja ≥ 44 dp; si no, dosel).
+            // Con 3 filas, la tropa va en su rama sobre la franja que deja el tablero (D-046, punto 3; BoardLayoutResult.TroopBand).
+            // Si el lienzo no da esa franja, la tropa lateral en los niveles que le tocan (D-021, ya solo de respaldo;
+            // IntroSideSchedule); si tampoco cabe, el planificador vuelve a la regla de D-010 (rama con franja ≥ 44 dp; si no, dosel).
             input.Perch = species == null ? IntroPerch.Canopy : (SideTroopFor(flow, isShort) ? IntroPerch.Side : IntroPerch.Branch);
             if (species != null)
             {
@@ -2241,12 +2242,13 @@ namespace AF.UI
             _intro.Start(_views, flow.Session.Current, water, durationMs);
         }
 
-        // D-021: ¿va este intento con la tropa lateral? Solo en primer intento, con el tablero en 3 filas y según el ordinal del
-        // nivel entre los de 3 filas de su tramo (IntroSideSchedule), con la misma regla de filas del tablero en este lienzo.
+        // D-021: ¿va este intento con la tropa lateral? Solo en primer intento, con el tablero en 3 filas sin la franja de la
+        // tropa (D-046, punto 3: con ella, la rama) y según el ordinal del nivel entre los de 3 filas de su tramo
+        // (IntroSideSchedule), con la misma regla de filas del tablero en este lienzo.
         private bool SideTroopFor(LevelFlow flow, bool retry)
         {
             BoardLayoutResult? l = _layout;
-            if (retry || l == null || l.Rows != 3)
+            if (retry || l == null || l.Rows != 3 || l.TroopBand)
             {
                 return false;
             }
@@ -2734,6 +2736,8 @@ namespace AF.UI
             _restartLabel.rectTransform.offsetMax = new Vector2(two ? -pad : 0f, 0f);
         }
 
+        // Suelo nominal del tablero (bandeja − 40). Con 3 filas, BoardLayout deja la franja de la tropa sobre el panel si cabe y
+        // baja el suelo ThreeRowFloorDropDp (hoy 0: Q-T6T-3) (D-046, punto 3); con 1 y 2 filas, nada cambia.
         private float BoardBottom => TrayTop - 40f;
 
         private void LayoutScene()

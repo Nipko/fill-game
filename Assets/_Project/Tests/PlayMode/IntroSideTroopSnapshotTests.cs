@@ -27,9 +27,19 @@ namespace AF.Tests.PlayMode
         private int _width;
         private int _height;
 
+        // Desde D-046 (punto 3) estos lienzos dejan la franja de la tropa con 3 filas y la tropa va en su rama
+        // (IntroThreeRowBranchTests); la tropa lateral queda de respaldo donde no cabe la franja. Estas pruebas miden ese respaldo
+        // con el tablero de antes de D-046 en los mismos lienzos (BoardLayout.TroopBandOffForTests).
+        [SetUp]
+        public void SetUpWithoutTroopBand()
+        {
+            BoardLayout.TroopBandOffForTests = true;
+        }
+
         [TearDown]
         public void TearDown()
         {
+            BoardLayout.TroopBandOffForTests = false;
             GameScreen.SimulatedScreen = null;
             AmbientLayer.Frozen = false;
             LaunchOptions.Reset();
