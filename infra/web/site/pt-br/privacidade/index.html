@@ -77,11 +77,14 @@
 <p><strong>Notificações:</strong> os avisos do jogo (por exemplo, «O Desafio do Rio está pronto») são locais: seu celular os programa e nenhum dado é enviado para eles. Só são pedidos se você tocar na opção de aviso ou ativá-los em Configurações, e você pode desligá-los em Configurações ou no Android.</p>
 <p><strong>País:</strong> para saber quais regras de privacidade aplicar, usamos o país do seu chip (SIM) ou, se não houver, a região do seu celular, sem enviar isso a nenhum servidor. Se não for possível saber, aplicamos o tratamento mais rigoroso.</p>
 
+<h3>Liga do rio</h3>
+<p>Se você tem 13 anos ou mais e participa da Liga, nosso servidor recebe seu identificador anônimo, as vitórias e suas datas, o progresso na campanha e a região do celular. Calcula os pontos da semana e atribui um pseudônimo automático, sem texto livre. Outros jogadores podem ver esse <strong>pseudônimo, a bandeira do país e os pontos semanais</strong> nas classificações Global e País; não veem seu identificador de conta. O país pode vir da conexão ou, como alternativa, da região do celular; a implementação inicial usa essa região. Ele fica fixo com a primeira vitória aceita de cada semana. Não pedimos localização precisa. <strong>Menores de 13 anos não têm Liga</strong> nem enviam esses dados. <mark class="pending">[[ABOGADO: revisar]]</mark></p>
+
 <h2 id="no-hacemos">4. O que não fazemos</h2>
 <ul>
   <li>Não pedimos nem guardamos seu nome, e-mail, telefone, endereço, fotos, contatos, mensagens nem sua localização precisa.</li>
   <li>Não vendemos seus dados pessoais. <mark class="pending">[[ABOGADO: redacción de «no vender ni compartir» según las leyes estatales de EE. UU.]]</mark></li>
-  <li>Não há chat nem conteúdo de outros jogadores.</li>
+  <li>Não há chat nem texto livre de outros jogadores; a Liga mostra os dados limitados explicados na seção 3.</li>
   <li>Não há compras aleatórias: você vê antes o que compra ou ganha.</li>
 </ul>
 
@@ -106,6 +109,7 @@
   <li><strong>A AppLovin</strong> (anúncios) recebe os dados da seção 3 para mostrar e medir os anúncios e evitar fraudes, conforme a própria política de privacidade. <mark class="pending">[[ABOGADO: rol de AppLovin (tercero o encargado) y redacción de «compartir» con fines publicitarios]]</mark></li>
   <li><strong>O Google Play</strong> processa seus pagamentos conforme os próprios termos e a própria política de privacidade.</li>
   <li><strong>Autoridades:</strong> só quando a lei nos obrigar.</li>
+  <li><strong>Outros jogadores da Liga:</strong> veem o pseudônimo automático, o país representado por sua bandeira e os pontos semanais das linhas públicas. <mark class="pending">[[ABOGADO: revisar]]</mark></li>
 </ul>
 <p>Links para as políticas desses fornecedores: <mark class="pending">[[DATO DEL DUEÑO: enlaces a las políticas de Google, Firebase y AWS que se citarán]]</mark>.</p>
 
@@ -127,6 +131,7 @@
     <tr><td>Análises</td><td><mark class="pending">[[DATO DEL DUEÑO: retención configurada en Google Analytics para Firebase]]</mark></td></tr>
     <tr><td>Jogo salvo, faixa de idade e consentimento</td><td>No seu celular, até você excluir a conta ou desinstalar o jogo</td></tr>
     <tr><td>Cópia do jogo salvo no Google Play Games</td><td>Até você excluir a conta pelo jogo (veja <a href="#borrado">Excluir sua conta e seus dados</a>) ou apagar os dados do jogo no app Play Games</td></tr>
+      <tr><td>Liga: vitórias, pontos, país semanal e classificações</td><td>Expiração programada para cerca de três semanas após o início da semana; a exclusão técnica pode terminar depois. São apagados ao excluir a conta. O pseudônimo é mantido enquanto a conta existir. <mark class="pending">[[ABOGADO: revisar]]</mark></td></tr>
   </tbody>
 </table>
 </div>
@@ -151,6 +156,8 @@
 </ol>
 <p>São apagados sua conta anônima, seus dados no nosso servidor e o usuário do Firebase Authentication. O livro de compras é mantido, <strong>sem o seu identificador</strong>, por obrigação fiscal (seção 9). Durante 2 horas guardamos também uma marca de conta excluída, com o seu identificador só como hash, para que nada volte a ser gravado em nome da conta excluída. As compras não são reembolsadas.</p>
 <p><strong>A cópia no Google Play Games:</strong> o jogo pede para apagá-la ao excluir a conta e confere se foi apagada (e, se precisar, apaga de novo) na próxima vez que você abrir o jogo com o Play Games e com 13 anos ou mais. Se você não abrir o jogo de novo, ou excluir a conta pela web (que não chega à sua conta do Google), apague-a você mesmo no app Play Games (Configurações › excluir os dados deste jogo). <mark class="pending">[[ABOGADO: revisar]]</mark></p>
+
+<p>A exclusão da conta também apaga seu pseudônimo e seus dados da Liga, incluindo as linhas de classificação que ainda guardamos. Os histogramas de pontuação não identificam jogadores. <mark class="pending">[[ABOGADO: revisar]]</mark></p>
 
 <h2 id="seguridad">12. Segurança</h2>
 <p>Os dados viajam criptografados (HTTPS) e são guardados criptografados no nosso servidor. Os recursos que dão valor (compras e exclusão pelo app) exigem a verificação de integridade. O jogo não guarda chaves secretas no celular, e nossos registros não guardam seu UID em claro nem seus comprovantes de compra.</p>

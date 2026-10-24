@@ -106,3 +106,15 @@ Nombre, correo, dirección, teléfono, mensajes, fotos, vídeos, audio, archivos
 - build-release: Q-B13-9 (que el runtime de Unity no envía nada en release).
 - El integrador de D-042: la guía de Data Safety de MAX, de cada adaptador, de UMP y de Play Games en su versión fijada, fila por fila (los [E] de la sección 3.2), y la decisión del dueño sobre `AD_ID`.
 - **Rehacer el formulario con el build real de la 1.0**, no con este borrador.
+
+## Liga del río — D-046 (preparación del lanzamiento)
+
+[[ABOGADO: revisar]]. Aplicar estas filas cuando la Liga se integre y se habilite; el interruptor permanece apagado por defecto. No declarar una función desplegada solo por disponer de este borrador.
+
+| Tipo de dato del formulario [NV] | Recogida / visibilidad | Finalidad y eliminación |
+|---|---|---|
+| Actividad en la app: otras acciones (victorias, fechas y puntos semanales de la Liga) | Recogidos por el backend AWS, vinculados al UID anónimo. Los puntos y el seudónimo automático aparecen a otros jugadores en la clasificación. [[ABOGADO: revisar]] | Clasificación, progreso e integridad. Sin publicidad ni analítica adicional de estos datos; borrar con la cuenta. Datos semanales con TTL de unas tres semanas desde el inicio de la semana; eliminación técnica posterior. [[ABOGADO: revisar]] |
+| Ubicación aproximada: país [NV, confirmar clasificación por región del teléfono] | País de conexión o región del teléfono como respaldo; la implementación inicial utiliza la región validada ISO 3166-1. Se fija con la primera victoria aceptada de la semana y se muestra como bandera y nombre de país. Sin GPS ni permisos nuevos. [[ABOGADO: revisar]] | Liga por país; mismo borrado y retención semanal. La región enviada para la Liga es distinta del país del perfil legal que se calcula localmente. [[ABOGADO: revisar]] |
+| Identificadores de usuario: UID y seudónimo automático | UID para asignar la puntuación, seudónimo animal + cuatro cifras sin texto libre; otros jugadores solo ven el seudónimo, bandera y puntos, nunca el UID. [[ABOGADO: revisar]] | Funcionamiento y prevención de duplicados/abuso; seudónimo y reserva eliminados con la cuenta. [[ABOGADO: revisar]] |
+
+Con menos de 13 años no hay Liga ni envíos al backend. Para 13–17 y 18+ la exposición es la misma. El abogado debe confirmar cómo declarar en Play la visibilidad a otros usuarios y si aplica una excepción de transferencia iniciada por el usuario; no marcar automáticamente «no compartidos». Todo usa HTTPS y AWS con el tratamiento de proveedores descrito en la política. [[ABOGADO: revisar]]

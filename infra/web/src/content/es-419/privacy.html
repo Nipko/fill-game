@@ -47,11 +47,14 @@
 <p><strong>Notificaciones:</strong> los avisos del juego (por ejemplo, «el Reto del río está listo») son locales: los programa tu teléfono y no se envía ningún dato para ellos. Solo se piden si tocas «Avísame» o los activas en Ajustes, y puedes apagarlos en Ajustes o en Android.</p>
 <p><strong>País:</strong> para saber qué reglas de privacidad aplicar usamos el país de tu tarjeta SIM o, si no lo hay, la región de tu teléfono, sin enviarlo a ningún servidor. Si no se puede saber, aplicamos el tratamiento más estricto.</p>
 
+<h3>Liga del río</h3>
+<p>Si tienes 13 años o más y participas en la Liga, nuestro servidor recibe tu identificador anónimo, las victorias y sus fechas, el avance de campaña y la región de tu teléfono. Calcula los puntos de la semana y asigna un seudónimo automático, sin texto libre. Otros jugadores pueden ver ese <strong>seudónimo, la bandera del país y los puntos semanales</strong> en las clasificaciones Global y País; no ven tu identificador de cuenta. El país puede obtenerse de la conexión o, como respaldo, de la región del teléfono; la implementación inicial usa esta región. Se fija con la primera victoria aceptada de cada semana. No pedimos ubicación precisa. <strong>Con menos de 13 años no hay Liga</strong> ni envío de estos datos. [[ABOGADO: revisar]]</p>
+
 <h2 id="no-hacemos">4. Qué no hacemos</h2>
 <ul>
   <li>No pedimos ni guardamos tu nombre, correo, teléfono, dirección, fotos, contactos, mensajes ni tu ubicación precisa.</li>
   <li>No vendemos tus datos personales. [[ABOGADO: redacción de «no vender ni compartir» según las leyes estatales de EE. UU.]]</li>
-  <li>No hay chat ni contenido de otros jugadores.</li>
+  <li>No hay chat ni texto libre de otros jugadores; la Liga muestra los datos limitados que explicamos en la sección 3.</li>
   <li>No hay compras al azar: lo que compras o ganas se ve antes.</li>
 </ul>
 
@@ -76,6 +79,7 @@
   <li><strong>AppLovin</strong> (anuncios) recibe los datos de la sección 3 para mostrar y medir los anuncios y evitar fraudes, según su propia política de privacidad. [[ABOGADO: rol de AppLovin (tercero o encargado) y redacción de «compartir» con fines publicitarios]]</li>
   <li><strong>Google Play</strong> procesa tus pagos según sus propias condiciones y su política de privacidad.</li>
   <li><strong>Autoridades:</strong> solo cuando la ley nos obligue.</li>
+  <li><strong>Otros jugadores de la Liga:</strong> ven el seudónimo automático, el país representado por su bandera y los puntos semanales de las filas públicas. [[ABOGADO: revisar]]</li>
 </ul>
 <p>Enlaces a las políticas de esos proveedores: [[DATO DEL DUEÑO: enlaces a las políticas de Google, Firebase y AWS que se citarán]].</p>
 
@@ -97,6 +101,7 @@
     <tr><td>Analítica</td><td>[[DATO DEL DUEÑO: retención configurada en Google Analytics para Firebase]]</td></tr>
     <tr><td>Partida, banda de edad y consentimiento</td><td>En tu teléfono, hasta que borres la cuenta o desinstales el juego</td></tr>
     <tr><td>Copia de la partida en Google Play Juegos</td><td>Hasta que borres la cuenta desde el juego (ver <a href="#borrado">Borrar tu cuenta y tus datos</a>) o borres los datos del juego en la app Play Juegos</td></tr>
+      <tr><td>Liga: victorias, puntos, país semanal y clasificaciones</td><td>Caducidad programada a unas tres semanas desde el inicio de la semana; la eliminación técnica puede completarse después. Se borran al eliminar la cuenta. El seudónimo se conserva mientras exista la cuenta. [[ABOGADO: revisar]]</td></tr>
   </tbody>
 </table>
 </div>
@@ -121,6 +126,8 @@
 </ol>
 <p>Se borran tu cuenta anónima, tus datos en nuestro servidor y el usuario de Firebase Authentication. Se conserva el libro de compras, <strong>sin tu identificador</strong>, por obligación fiscal (sección 9). Durante 2 horas guardamos además una marca de cuenta borrada, con tu identificador solo como hash, para que nada vuelva a escribirse a nombre de la cuenta borrada. Las compras no se reembolsan.</p>
 <p><strong>La copia en Google Play Juegos:</strong> el juego pide borrarla al eliminar la cuenta y comprueba que se borró (y, si hace falta, la vuelve a borrar) la próxima vez que lo abras con Play Juegos y con 13 años o más. Si no vuelves a abrir el juego, o eliminas la cuenta desde la web (que no puede llegar a tu cuenta de Google), bórrala tú desde la app Play Juegos (Ajustes › eliminar los datos de este juego). [[ABOGADO: revisar]]</p>
+
+<p>El borrado de cuenta también elimina tu seudónimo y tus datos de la Liga, incluidas las filas de clasificación que todavía conservemos. Los histogramas de puntuación no identifican a jugadores. [[ABOGADO: revisar]]</p>
 
 <h2 id="seguridad">12. Seguridad</h2>
 <p>Los datos viajan cifrados (HTTPS) y se guardan cifrados en nuestro servidor. Las funciones que dan valor (compras y borrado desde la app) exigen la verificación de integridad. El juego no guarda claves secretas en el teléfono, y nuestros registros no guardan tu UID en claro ni tus comprobantes de compra.</p>
