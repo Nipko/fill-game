@@ -133,7 +133,8 @@ Tintalú 1.0 se define por una lista cerrada de 31 sistemas "dentro" y 24 "fuera
 | Aguas turbias · Bonus (tarjeta con premio doble) | 1.1 | El modo ya existe en 1.0 en la ruta; la tarjeta bonus requiere Reto del río maduro (cap. 06 §3) |
 | Mochila de regreso 1,99 · sumidero cosmético por Semillas | 1.1 | Cap. 06 §9 y cap. 05 pregunta 2 |
 | Pase Expedición 6,99 | 1.2 | dir. 14 |
-| Liga del río, Travesía, Temporada de lluvias | 1.2 | glosario §7.2; la Liga requiere Unity Leaderboards + Cloud Code (research/06 C6.1 [V]) |
+| Liga del río: País y Global con puntos semanales, seudónimo automático y top 100 | **1.0, recortada** (D-046, 2026-10-23; `docs/dev/liga.md`), con `live_league_enabled` apagado hasta que haya backend en prod | Lo pidió el dueño; backend en AWS (D-035), sin Unity Leaderboards ni Cloud Code |
+| Liga del río completa (cubeta semanal de 50, tiers, premios, marcos, archivo de semanas, editar seudónimo y país), Travesía, Temporada de lluvias | 1.2 | glosario §7.2; cap. 06 §6 |
 | Regata, Encuentro de las Aguas | 1.2 en B; **1.3 en A** (sección 3.2: la capacidad de 1 programador tras el soft launch solo cubre los P1) | glosario §7.2; Regata requiere Leaderboards con cubetas |
 | Río sin fin | 1.2 (pool) → 1.2.x (generador en cliente); en A, 1.3 | dir. 17 · research/02 C4.3 [E] |
 | Libro mayor y guardado multiplataforma (en AWS desde D-035, no en Firestore) | 1.2 en B; 1.3 en A | research/06 C6 (decisión Firestore vs PGS); D-035 |
@@ -226,7 +227,7 @@ Prioridad P1 = entra en la versión salvo bloqueo; P2 = entra si hay capacidad; 
 | Pri. | Ítem | Evidencia | Esfuerzo A / B | Backend |
 |---|---|---|---|---|
 | P1 | Pase Expedición 6,99 (14 días, compra única, no suscripción) | Pases 6,99-9,99 estándar hybridcasual (research/04 §3.2 [V]); efectivo no soporta suscripción (research/08 §5.3 [V]) | 2 / 1,5 | Derechos en AWS (D-035) |
-| P1 | Liga del río (semanal / país / global) sobre Unity Leaderboards + Cloud Code | 3 leaderboards del líder (research/09 §Qué copiar 13 [V]); gratis "por tiempo limitado" (research/06 C6.2 [V/NV]) | 2,5 / 1,5 | Leaderboards, Cloud Code, Scheduler (con D-035 la 1.2 va a AWS; si Unity Leaderboards y Cloud Code se mantienen o se sustituyen queda por decidir) |
+| P1 | Liga del río (semanal / país / global) sobre Unity Leaderboards + Cloud Code | 3 leaderboards del líder (research/09 §Qué copiar 13 [V]); gratis "por tiempo limitado" (research/06 C6.2 [V/NV]) | 2,5 / 1,5 | Leaderboards, Cloud Code, Scheduler (con D-035 la 1.2 va a AWS; con D-046, País y Global ya en la 1.0 sobre la API en AWS, sin Unity Leaderboards ni Cloud Code: queda la cubeta semanal) |
 | P1 | Travesía (10-15 niveles con una regla alterada, sin ranking) | Evento no competitivo (research/09 §Mejorar [V]) | 1,5 / 1 | Remote Config + Addressables |
 | P1 | Temporada de lluvias (4 días, Cosecha doble sin anuncio) | Estacional barato: LUT + flag | 0,5 / 0,5 | Remote Config |
 | P2 | Regata (48 h, ≤20 jugadores por cubeta, sin bots) · **1.3 en A** | Carreras en el 68 % de los casual (research/05 §3 [V]) | 2 / 1,5 | Leaderboards `BucketSize` 20 |
