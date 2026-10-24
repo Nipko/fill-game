@@ -6,17 +6,22 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
-## 2026-10-24 · T6 carril 1 · Música y Sonido con un toque (`spark/t6-audio-directo`): HECHA · verificación completa VERDE · pendiente de code-reviewer
+## 2026-10-24 · T6 carril 1 · Música y Sonido con un toque (`spark/t6-audio-directo`): HECHA · verificación completa VERDE · 2.ª ronda de code-reviewer pendiente
 
 - **Encargo:** `spark-audio-tablero.md`, carril 1 (D-046, punto 2). Rama desde `origin/integracion-fase1-fase2` en `3ab273f9`.
-- **Commits:** `6aa9d6cd` (la funcionalidad, GDD y tests) y `2040bfd5` (ids de AF_LAYOUT de la pausa al final; `MapEntriesTests`).
-- **Qué hace:** `AudioToggles` (discos de madera de 40 dp en 48, nota y altavoz por código en `ProceduralArt.Audio`, tachados si están apagados; TalkBack «Música: activada»…). En la pausa, arriba junto a la X (la tarjeta pasa de 300 a 328 dp [P] para que el título quepa). En el inicio, en columna bajo el engranaje (`LobbyScreen`, no `HomeWindow`: ver Q-T6A-1); el Cántaro cuelga ahora del botón de Sonido, la Crecida empieza bajo su sitio y la ventanita de casa y TiTino no pasan de la columna. `GameBootstrap.ChooseAudio(key, on, source)` con `AudioQuickSettings`: mismo campo que Ajustes, en el acto, y Ajustes, la pausa (también la del Reto) y el inicio enseñan lo mismo. Vibración solo en Ajustes.
-- **Analítica:** `source ∈ {settings, pause, home}` en 08 §8.2 y `AnalyticsCatalog` (con test); la sonda `AF_STATE settings_change` lo escribe.
+- **Commits:** `6aa9d6cd` (la funcionalidad, GDD y tests), `2040bfd5` (ids de AF_LAYOUT de la pausa al final; `MapEntriesTests`) y `5a8601b3` (revisión: el Cántaro fuera de la tarjeta del Reto, el inicio a 320 dp, la píldora en dos líneas y el Dato de TiTino).
+- **Qué hace:** `AudioToggles` (discos de madera de 40 dp en 48, nota y altavoz por código en `ProceduralArt.Audio`, tachados si están apagados; TalkBack «Música: activada»…). En la pausa, arriba junto a la X (la tarjeta pasa de 300 a 328 dp [P] para que el título quepa). En el inicio, en columna bajo el engranaje (`LobbyScreen`, no `HomeWindow`: Q-T6A-1). `GameBootstrap.ChooseAudio(key, on, source)` con `AudioQuickSettings`: mismo campo que Ajustes, en el acto, y Ajustes, la pausa (también la del Reto) y el inicio enseñan lo mismo. Vibración solo en Ajustes.
+- **Disposición del inicio** (dp, x/y de la esquina de arriba a la izquierda, medida en `AudioQuickTogglesTests`):
+  - 360 × 640: Ajustes 304,40; Música 304,92; Sonido 304,144; Cántaro 240,140 (56 × 56); tarjeta del Reto 32,204 (296 × 100); Crecida 330,200; Canoas 140,40; ventanita 16,96; píldora 78,112.
+  - 360 × 800: lo mismo, con la tarjeta del Reto en 32,300.
+  - 320 dp: Ajustes 264,40; Música 264,92; Sonido 264,144; Cántaro 200,140; tarjeta del Reto 12,225; Crecida 290,200; Canoas 132,40 (antes 140, bajo el engranaje); al 130 %, la píldora va en dos líneas (78,96, 178 × 45) y el Cántaro baja a y 145.
+  - El Dato de TiTino no pasa del Cántaro; si el saludo o el Dato cruzan la tarjeta del Reto (360 × 640 al 130 %), la tarjeta se aparta mientras se ven.
+- **Analítica:** `source ∈ {settings, pause, home}` en 08 §8.2 y `AnalyticsCatalog` (con test); la sonda `AF_STATE settings_change` lo escribe; 08 §8.2 dice que el audio aún solo sale por la sonda.
 - **Textos:** `a11y_music_on/off` y `a11y_sound_on/off` en es, en y pt-BR (`borrador`, con `context` y `max_chars`).
 - **GDD:** 02 §5, 07 §9.4 y 08 §8.2, con D-046.
-- **Verificación** (ARM64, 64 GB, Python 3.14): dotnet build 0 avisos; dotnet test 1.002 (996 + 6); `validate_schema.py` 116/116; `apply_translations.py --check` OK; compila; EditMode **4.453** (4.450 + 3; línea base 4.447); PlayMode **2.002** (1.715 + 287 omitidos; línea base 1.994).
-- **Preguntas:** Q-T6A-1 (el inicio es `LobbyScreen`, el encargo decía `HomeWindow.cs`; aplicada: `LobbyScreen`); Q-T6A-2 (dónde va la columna y qué se mueve: aplicada la columna bajo el engranaje y el Cántaro debajo); Q-T6A-3 (`af_settings_change` de audio sigue solo en la sonda, como desde Ajustes; aplicada: sin envío nuevo a la analítica real).
-- **Riesgos:** en 360 × 640 con la tarjeta del Reto a la vista, el Cántaro (y 200-256) roza la esquina derecha de la tarjeta (y ≥ 204); a 320 dp, la píldora de casa en pt-BR puede quedar recortada por el tope nuevo; el integrador debe casar la columna con el botón «Liga».
+- **Verificación** en `5a8601b3` (ARM64, 64 GB, Python 3.14): dotnet build 0 avisos; dotnet test 1.002 (996 + 6); `validate_schema.py` 116/116; `apply_translations.py --check` OK; compila; EditMode **4.453** (4.450 + 3; línea base 4.447); PlayMode **2.012** (1.725 + 287 omitidos; línea base 1.994). Una pasada de PlayMode quedó sin veredicto al llegar a los 3.600 s mientras corría en paralelo la de `spark-t6-tropa`; repetida con `-TimeoutSec 7200`: 2.829 s, verde.
+- **Preguntas:** Q-T6A-1 (el inicio es `LobbyScreen`, el encargo decía `HomeWindow.cs`; aplicada: `LobbyScreen`); Q-T6A-2 (la columna bajo el engranaje y el Cántaro a la izquierda de Sonido, no de Música: a la altura de Música pisaría la píldora de casa; si la píldora va en dos líneas, el Cántaro baja hasta ella); Q-T6A-3 (`af_settings_change` de audio sigue solo en la sonda, como desde Ajustes; aplicada: sin envío nuevo a la analítica real, anotado en 08 §8.2).
+- **Riesgos:** a 320 dp la Crecida (x 290-316) y la tarjeta del Reto (x 12-308) ya se cruzaban antes de D-046 (el test lo excluye y lo dice); la tarjeta del Reto se oculta mientras una nota de TiTino la cruza (comportamiento nuevo en pantallas bajas); el integrador debe casar la columna con el botón «Liga».
 
 ---
 
