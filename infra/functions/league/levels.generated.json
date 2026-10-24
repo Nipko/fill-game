@@ -1,0 +1,3515 @@
+{
+  "sources": {
+    "tutorial_v0.json": "438e03dc74009dd33d9134d56eb3b876d9f2a69a62dda7f0261179e2cedfff0a",
+    "mundo_02_v1.json": "5d399bc222e1bf383c5015db6cabd77d4c0b0b50972bba31cf18a24192903283",
+    "mundo_03_v1.json": "93605222f55f8aedcabb02497d1069b014db9ef2771b6ad15011341929cf0533",
+    "mundo_04_v1.json": "2d7a9b3b5968c3dfa45e081e223f3058e1d9c59efcabf632d15a45ab57520917",
+    "mundo_05_v1.json": "e0ef6d7c7a14284a1b5f59d70665df7c81e4af265aba798ca43a410f30e6bd96",
+    "mundo_06_v1.json": "beb83f41bb42a297246963083b27574f90469c263da943aa0be3edfc7b9b98d6",
+    "mundo_07_v1.json": "779a830acdea3ff83d5803cb3f9fe3d2ef5cf419b2b1a4bf34733c331cd211fe",
+    "mundo_08_v1.json": "5fe84fcb7f762581cc61ae4011fa5af902274f110fb7d2c71b204ac03235b799",
+    "mundo_09_v1.json": "a40f04d5a6d4b8ac50b5f1e5ed8a22a0d44dba805d8902f01c415a762e7ead4e"
+  },
+  "levels": {
+    "1": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "2": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "3": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "4": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "5": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "6": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "7": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "8": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "9": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "10": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "11": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "12": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "13": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "14": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "15": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "16": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "17": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "18": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "19": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "20": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "21": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "22": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "23": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "24": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "25": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "26": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "27": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "28": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "29": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "30": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "31": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "32": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "33": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "34": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "35": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "36": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "37": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "38": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "39": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "40": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "41": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "42": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "43": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "44": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "45": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "46": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "47": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "48": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "49": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "50": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "51": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "52": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "53": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "54": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "55": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "56": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "57": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "58": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "59": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "60": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "61": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "62": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "63": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "64": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "65": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "66": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "67": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "68": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "69": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "70": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "71": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "72": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "73": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "74": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "75": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "76": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "77": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "78": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "79": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "80": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "81": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "82": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "83": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "84": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "85": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "86": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "87": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "88": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "89": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "90": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "91": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "92": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "93": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "94": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "95": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "96": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "97": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "98": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "99": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "100": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": false
+    },
+    "101": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "102": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "103": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "104": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "105": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "106": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "107": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "108": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "109": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "110": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "111": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "112": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "113": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "114": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "115": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "116": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "117": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "118": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "119": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "120": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "121": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "122": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "123": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "124": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "125": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "126": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "127": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "128": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "129": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "130": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "131": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "132": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "133": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "134": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "135": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "136": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "137": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "138": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "139": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "140": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "141": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "142": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "143": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "144": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "145": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "146": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "147": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "148": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "149": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "150": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "151": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "152": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "153": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "154": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "155": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "156": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "157": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "158": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "159": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "160": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "161": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "162": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "163": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "164": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "165": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "166": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "167": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "168": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "169": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "170": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "171": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "172": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "173": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "174": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "175": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "176": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "177": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "178": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "179": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "180": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "181": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "182": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "183": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "184": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "185": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "186": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "187": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "188": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "189": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "190": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "191": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "192": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "193": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "194": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "195": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "196": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "197": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "198": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "199": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "200": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "201": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "202": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "203": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "204": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "205": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "206": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "207": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "208": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "209": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "210": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "211": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "212": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "213": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "214": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "215": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "216": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "217": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "218": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "219": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "220": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "221": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "222": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "223": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "224": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "225": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "226": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "227": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "228": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "229": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "230": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "231": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "232": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "233": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "234": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "235": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "236": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "237": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "238": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "239": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "240": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "241": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "242": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "243": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "244": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "245": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "246": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "247": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "248": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "249": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "250": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "251": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "252": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "253": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "254": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "255": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "256": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "257": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "258": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "259": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "260": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "261": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "262": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "263": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "264": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "265": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "266": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "267": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "268": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "269": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "270": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "271": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "272": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "273": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "274": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "275": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "276": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "277": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "278": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "279": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "280": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "281": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "282": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "283": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "284": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "285": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "286": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "287": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "288": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "289": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "290": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "291": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "292": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "293": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "294": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "295": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "296": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "297": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "298": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "299": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "300": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "301": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "302": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "303": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "304": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "305": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "306": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "307": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "308": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "309": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "310": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "311": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "312": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "313": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "314": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "315": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "316": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "317": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "318": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "319": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "320": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "321": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "322": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "323": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "324": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "325": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "326": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "327": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "328": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "329": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "330": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "331": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "332": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "333": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "334": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "335": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "336": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "337": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "338": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "339": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "340": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "341": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "342": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "343": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "344": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "345": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "346": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "347": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "348": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "349": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "350": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "351": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "352": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "353": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "354": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "355": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "356": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "357": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "358": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "359": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "360": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "361": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "362": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "363": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "364": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "365": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "366": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "367": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "368": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "369": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "370": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "371": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "372": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "373": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "374": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "375": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "376": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "377": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "378": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "379": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "380": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "381": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "382": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "383": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "384": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "385": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "386": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "387": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "388": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "389": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "390": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "391": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "392": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "393": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "394": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "395": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "396": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "397": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "398": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "399": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "400": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "401": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "402": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "403": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": false
+    },
+    "404": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "405": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "406": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "407": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "408": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "409": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "410": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "411": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "412": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "413": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "414": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "415": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "416": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "417": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "418": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "419": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "420": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "421": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "422": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "423": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "424": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "425": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "426": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "427": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "428": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "429": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "430": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "431": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "432": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "433": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "434": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "435": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "436": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "437": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "438": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "439": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "440": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "441": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "442": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "443": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "444": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "445": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "446": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "447": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "448": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "449": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "450": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "451": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "452": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "453": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "454": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "455": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "456": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "457": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "458": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "459": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "460": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "461": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "462": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "463": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "464": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "465": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "466": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "467": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "468": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "469": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "470": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "471": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "472": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "473": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "474": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "475": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "476": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "477": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "478": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "479": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "480": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "481": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "482": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "483": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "484": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "485": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "486": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "487": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "488": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "489": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "490": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "491": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "492": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "493": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "494": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "495": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "496": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "497": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "498": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "499": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "500": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "501": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "502": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "503": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "504": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "505": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "506": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "507": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "508": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "509": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "510": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "511": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "512": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "513": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "514": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "515": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "516": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "517": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "518": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "519": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "520": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "521": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "522": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "523": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "524": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "525": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "526": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "527": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "528": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "529": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "530": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "531": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "532": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "533": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "534": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "535": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "536": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "537": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "538": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "539": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "540": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "541": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "542": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "543": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "544": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "545": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "546": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "547": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "548": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "549": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "550": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "551": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "552": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "553": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "554": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "555": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "556": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "557": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "558": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "559": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "560": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "561": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "562": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "563": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "564": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "565": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "566": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "567": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "568": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "569": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "570": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "571": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "572": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "573": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "574": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "575": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "576": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "577": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "578": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "579": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "580": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "581": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "582": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "583": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "584": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "585": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "586": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "587": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "588": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "589": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "590": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "591": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "592": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "593": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "594": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "595": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "596": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "597": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "598": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "599": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "600": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "601": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "602": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "603": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "604": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "605": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "606": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "607": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "608": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "609": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "610": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "611": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "612": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "613": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "614": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "615": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "616": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "617": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "618": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "619": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "620": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "621": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "622": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "623": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "624": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "625": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "626": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "627": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "628": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "629": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "630": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "631": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "632": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "633": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "634": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "635": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "636": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "637": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "638": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "639": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "640": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "641": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "642": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "643": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "644": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "645": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "646": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "647": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "648": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "649": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "650": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "651": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "652": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "653": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "654": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "655": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "656": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "657": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "658": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "659": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "660": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "661": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "662": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "663": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "664": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "665": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "666": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "667": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "668": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "669": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "670": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "671": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "672": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "673": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "674": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "675": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "676": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "677": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "678": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "679": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "680": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    },
+    "681": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "682": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "683": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "684": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "685": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "686": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "687": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "688": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "689": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "690": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "691": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "692": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "693": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "694": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "695": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "696": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "697": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "698": {
+      "difficulty": "hard",
+      "points": 20,
+      "skippable": true
+    },
+    "699": {
+      "difficulty": "normal",
+      "points": 10,
+      "skippable": true
+    },
+    "700": {
+      "difficulty": "very_hard",
+      "points": 30,
+      "skippable": true
+    }
+  }
+}

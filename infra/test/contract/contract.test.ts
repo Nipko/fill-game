@@ -32,11 +32,11 @@ describe('contrato v1: esquemas', () => {
     expect([...cited].sort()).toEqual(SCHEMA_FILES);
   });
 
-  it('las rutas son únicas, van bajo /v1/ y cubren las 5 funciones', () => {
+  it('las rutas son únicas, van bajo /v1/ y cubren las 7 funciones', () => {
     const keys = index.operations.map(routeKey);
     expect(new Set(keys).size).toBe(keys.length);
     const fns = new Set([...index.operations.map((o) => o.function), ...index.jobs.map((j) => j.function)]);
-    expect([...fns].sort()).toEqual(['delete-account', 'restore-ledger', 'rewarded-ssv', 'verify-purchase', 'voided-purchases-job']);
+    expect([...fns].sort()).toEqual(['delete-account', 'league-board', 'league-wins', 'restore-ledger', 'rewarded-ssv', 'verify-purchase', 'voided-purchases-job']);
   });
 
   it('integridad solo con Firebase Auth, y nunca en restoreLedger (plan F2-5)', () => {

@@ -11,10 +11,12 @@ import {
   parseVerifyPurchase,
 } from '../../functions/shared/validate.ts';
 import { CATALOG } from '../../functions/shared/catalog.ts';
+import { parseRequest } from '../../functions/league/rules.ts';
 import { loadContractIndex } from '../../lib/contract.ts';
 import { readExample, validator } from './ajv.ts';
 
 const PARSERS: Record<string, (body: Record<string, unknown>) => unknown> = {
+  leagueWins: parseRequest,
   verifyPurchase: parseVerifyPurchase,
   restoreLedger: parseRestoreLedger,
   rewardedSsv: (b) => parseSsvQuery(b as Record<string, string>),

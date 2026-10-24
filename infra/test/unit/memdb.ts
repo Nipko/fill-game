@@ -22,6 +22,10 @@ export const TABLES = {
   AF_TABLE_ACCOUNT_CODES: 'af-test-account_codes',
   AF_TABLE_RATE_LIMITS: 'af-test-rate_limits',
   AF_TABLE_JOBS: 'af-test-jobs',
+  AF_TABLE_LEAGUE_PLAYERS: 'af-test-league_players',
+  AF_TABLE_LEAGUE_BOARD: 'af-test-league_board',
+  AF_TABLE_LEAGUE_HISTOGRAM: 'af-test-league_histogram',
+  AF_TABLE_LEAGUE_NAMES: 'af-test-league_names',
 } as const;
 
 const PK: Record<string, string> = {
@@ -31,7 +35,13 @@ const PK: Record<string, string> = {
   [TABLES.AF_TABLE_ACCOUNT_CODES]: 'code_hash',
   [TABLES.AF_TABLE_RATE_LIMITS]: 'key',
   [TABLES.AF_TABLE_JOBS]: 'job',
+  [TABLES.AF_TABLE_LEAGUE_PLAYERS]: 'uid',
+  [TABLES.AF_TABLE_LEAGUE_BOARD]: 'scope',
+  [TABLES.AF_TABLE_LEAGUE_HISTOGRAM]: 'scope',
+  [TABLES.AF_TABLE_LEAGUE_NAMES]: 'uid',
 };
+const SORT: Record<string,string> = { [TABLES.AF_TABLE_LEAGUE_PLAYERS]:'week', [TABLES.AF_TABLE_LEAGUE_BOARD]:'sort', [TABLES.AF_TABLE_LEAGUE_HISTOGRAM]:'bucket' };
+const keyOf = (table: string, item: Item) => String(item[PK[table]]) + (SORT[table] ? `|${String(item[SORT[table]])}` : '');
 
 export function conditionalFailed(): Error {
   const e = new Error('The conditional request failed');
@@ -48,6 +58,7 @@ export function transactionCanceled(codes: string[]): Error {
 }
 
 type TxItem = {
+  Delete?: { TableName: string; Key: Item; ConditionExpression?: string; ExpressionAttributeValues?: Item };
   Put?: { TableName: string; Item: Item; ConditionExpression?: string; ExpressionAttributeValues?: Item };
   Update?: {
     TableName: string;
@@ -203,8 +214,7 @@ export class MemDb {
     m.on(PutCommand).callsFake((i: { TableName: string; Item: Item; ConditionExpression?: string }) => {
       guard('Put', i.TableName);
         checkAliases(i);
-      const pk = PK[i.TableName];
-      const key = String(i.Item[pk]);
+      const key = keyOf(i.TableName,i.Item);
       const t = this.table(i.TableName);
       if (i.ConditionExpression?.startsWith('attribute_not_exists') && t.has(key)) throw conditionalFailed();
       t.set(key, structuredClone(i.Item));
@@ -215,7 +225,7 @@ export class MemDb {
         guard('Delete', i.TableName);
         checkAliases(i);
         const t = this.table(i.TableName);
-        const key = String(i.Key[PK[i.TableName]]);
+        const key = keyOf(i.TableName,i.Key);
         const cur = t.get(key);
         if (i.ConditionExpression && cur && cur.uid !== i.ExpressionAttributeValues?.[':u']) throw conditionalFailed();
         t.delete(key);
@@ -228,7 +238,7 @@ export class MemDb {
         checkAliases(i);
         const t = this.table(i.TableName);
         const pk = PK[i.TableName];
-        const key = String(i.Key[pk]);
+        const key = keyOf(i.TableName,i.Key);
         const cur = t.get(key);
         const v = i.ExpressionAttributeValues;
         if (i.UpdateExpression.startsWith('ADD #c')) {
@@ -264,15 +274,15 @@ export class MemDb {
     m.on(TransactWriteCommand).callsFake((i: { TransactItems: TxItem[] }) => {
       // La tabla del primer elemento identifica la transacción (libro mayor, rewards, códigos o integrity).
       const first = i.TransactItems[0];
-      guard('TransactWrite', (first?.Put ?? first?.Update ?? first?.ConditionCheck)?.TableName);
+      guard('TransactWrite', (first?.Put ?? first?.Update ?? first?.Delete ?? first?.ConditionCheck)?.TableName);
       const seen = new Set<string>();
       const codes = i.TransactItems.map((it) => {
-        const op = it.Put ?? it.Update ?? it.ConditionCheck;
+        const op = it.Put ?? it.Update ?? it.Delete ?? it.ConditionCheck;
         if (!op) throw new Error('MemDb: solo Put, Update y ConditionCheck en transacciones');
         checkAliases(op);
-        const key = it.Put ? { [PK[op.TableName]]: it.Put.Item[PK[op.TableName]] } : (op as { Key: Item }).Key;
+        const key = it.Put ? it.Put.Item : (op as { Key: Item }).Key;
         // DynamoDB rechaza dos operaciones sobre el mismo ítem en una transacción.
-        const id = `${op.TableName}/${String(key[PK[op.TableName]])}`;
+        const id = `${op.TableName}/${keyOf(op.TableName,key)}`;
         if (seen.has(id)) throw Object.assign(new Error(`Dos operaciones sobre ${id}`), { name: 'ValidationException' });
         seen.add(id);
         const names = (op as { ExpressionAttributeNames?: Record<string, string> }).ExpressionAttributeNames;
@@ -283,21 +293,29 @@ export class MemDb {
       if (codes.some((c) => c !== 'None')) throw transactionCanceled(codes);
       for (const it of i.TransactItems) {
         if (it.Put) this.put(it.Put.TableName, it.Put.Item);
+        if (it.Delete) this.table(it.Delete.TableName).delete(keyOf(it.Delete.TableName,it.Delete.Key));
         if (it.Update) {
           // Cualquier UpdateExpression que entienda applyUpdate (reasignación de Q-IAP-4, cupos, marca `once`).
           const u = it.Update;
-          const pk = PK[u.TableName];
-          const cur = this.get(u.TableName, u.Key) ?? { [pk]: u.Key[pk] };
+          const cur = this.get(u.TableName, u.Key) ?? { ...u.Key };
           this.put(u.TableName, applyUpdate(cur, u.UpdateExpression, u.ExpressionAttributeNames, u.ExpressionAttributeValues));
         }
       }
       return Promise.resolve({});
     });
     m.on(QueryCommand).callsFake(
-      (i: { TableName: string; IndexName?: string; ExpressionAttributeValues: Item }) => {
+      (i: { TableName: string; IndexName?: string; ExpressionAttributeValues: Item; Limit?: number; ExclusiveStartKey?: Item }) => {
         guard('Query', i.TableName);
         checkAliases(i);
-        if (i.IndexName !== 'by_uid') throw new Error('MemDb solo consulta by_uid');
+        if (!i.IndexName && i.TableName.includes('league_')) {
+          const values = Object.values(i.ExpressionAttributeValues);
+          const pk = PK[i.TableName], sort = SORT[i.TableName];
+          const all = this.items(i.TableName).filter(it=>it[pk]===values[0]).sort((a,b)=>sort==='bucket'?Number(a[sort])-Number(b[sort]):String(a[sort]).localeCompare(String(b[sort])));
+          const offset = i.ExclusiveStartKey ? all.findIndex(it=>keyOf(i.TableName,it)===keyOf(i.TableName,i.ExclusiveStartKey!))+1 : 0;
+          const items = all.slice(offset,offset+(i.Limit??all.length));
+          return Promise.resolve({Items:structuredClone(items)});
+        }
+        if (i.IndexName !== 'by_uid') throw new Error('MemDb solo consulta by_uid o Liga');
         const pk = PK[i.TableName];
         const items = [...this.table(i.TableName).values()]
           .filter((it) => it.uid === i.ExpressionAttributeValues[':u'] && !this.hiddenFromIndexOnce.delete(String(it[pk])))
@@ -313,7 +331,7 @@ export class MemDb {
       for (const [table, req] of Object.entries(i.RequestItems)) {
         Responses[table] = [];
         for (const k of req.Keys) {
-          const key = String(k[PK[table]]);
+          const key = keyOf(table,k);
           if (this.unprocessedOnce.delete(key)) {
             (UnprocessedKeys[table] ??= { Keys: [] }).Keys.push(k);
             continue;
@@ -336,11 +354,11 @@ export class MemDb {
   }
 
   get(table: string, key: Item): Item | undefined {
-    return this.table(table).get(String(key[PK[table]]));
+    return this.table(table).get(keyOf(table,key));
   }
 
   put(table: string, item: Item): void {
-    this.table(table).set(String(item[PK[table]]), structuredClone(item));
+    this.table(table).set(keyOf(table,item), structuredClone(item));
   }
 
   items(table: string): Item[] {

@@ -1,0 +1,25 @@
+{
+  "week": "2026-W43",
+  "points": 20,
+  "accepted": [
+    "c:41",
+    "c:42"
+  ],
+  "rejected": [
+    {
+      "win_id": "",
+      "reason": "invalid"
+    },
+    {
+      "win_id": "bad",
+      "reason": "invalid"
+    },
+    {
+      "win_id": "c:701",
+      "reason": "invalid"
+    }
+  ],
+  "name_key": "league_name_capybara",
+  "name_num": 1000,
+  "country": null
+}

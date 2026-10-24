@@ -102,7 +102,7 @@ export class OpsStack extends Stack {
           statistic: 'Sum',
         });
       alarm(
-        `${pascal}Throttles`,
+        `${pascal}${key === 'leagueBoard' ? 'Table' : ''}Throttles`,
         `Throttles de DynamoDB en ${key} (plan §2).`,
         new MathExpression({
           expression: 'FILL(r, 0) + FILL(w, 0)',

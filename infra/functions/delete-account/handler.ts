@@ -30,6 +30,7 @@ import { log, metric, uidHash } from '../shared/log.ts';
 import { enforce, isDeleted, markDeleted, notDeletedCheck } from '../shared/rateLimit.ts';
 import { lazy, realDdb, realFirebaseAdmin, realIntegrityVerifier } from '../shared/runtime.ts';
 import { parseAccountDelete, parseDeleteConfirm, parseDeleteRequest } from '../shared/validate.ts';
+import { eraseLeague } from '../league/service.ts';
 
 export interface DeleteAccountDeps {
   readonly ddb: DynamoDBDocumentClient;
@@ -156,6 +157,8 @@ export async function eraseAccount(deps: DeleteAccountDeps, t: Tables, uid: stri
   const nowMs = deps.now();
   // Primero la marca de cuenta borrada: el ID token sigue valiendo hasta 1 h y no debe volver a crear nada.
   await markDeleted(ddb, t.rateLimits, uidHash(uid), nowMs);
+
+  await eraseLeague(deps, uid);
 
   const first = await sweep(deps, t, uid, nowMs);
 
