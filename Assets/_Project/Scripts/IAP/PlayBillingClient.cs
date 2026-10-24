@@ -219,7 +219,8 @@ namespace AF.IAP
 
         /// <summary>
         /// Al volver a primer plano: si no hay Play, vuelve a intentarlo; si la hay, consulta otra vez las compras (lo que Play cobró
-        /// mientras tanto). Si la consulta falla, queda sin Play hasta el próximo intento.
+        /// mientras tanto) y, si aún no tiene ningún precio de la tienda, antes vuelve a pedir los productos. Si la consulta falla, queda
+        /// sin Play hasta el próximo intento.
         /// </summary>
         public void Refresh()
         {
@@ -235,6 +236,15 @@ namespace AF.IAP
             }
 
             int generation = _generation;
+            if (_prices.Count == 0)
+            {
+                // Conectada pero sin ningún precio de la tienda (la app aún no está en Play Console): la tienda no está disponible
+                // (BillingReadyStoreService). Se vuelven a pedir los productos, que después consultan las compras, para que el Mercado
+                // aparezca en la misma sesión si los precios llegan (prueba del 2026-10-23, observación 1).
+                _port.FetchProducts(Definitions(), products => OnProducts(generation, products));
+                return;
+            }
+
             FetchPurchases(ok =>
             {
                 if (!ok && generation == _generation && State == PlayBillingState.Ready)
