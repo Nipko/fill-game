@@ -91,7 +91,7 @@ Entran en `infra/contracts/v1` con sus esquemas, sus ejemplos y su entrada en `i
   - un nivel por debajo del desbloqueo de la Liga: `invalid`.
 - **Avance de referencia (revisión del 2026-10-24):** el servidor guarda el nivel más alto visto del jugador.
   - La primera victoria lo fija.
-  - **Avanza con toda victoria de campaña bien formada,** sea aceptada o rechazada por `duplicate`, `rate_limited` u `outside_week`.
+  - **Avanza con toda victoria de campaña bien formada,** aceptada o rechazada por cualquier motivo. Hoy es solo informativo: ninguna regla de rechazo lo lee.
   - Un salto de +1 es normal, y de +2 si el nivel omitido es `skippable` (Salto del Boto, D-008).
   - **Un hueco mayor no se rechaza ni marca:** la referencia se repone a ese nivel, como con la primera victoria, y la victoria cuenta. Una victoria puede no llegar nunca (cola perdida al reinstalar, la Liga apagada, una semana pasada sin red), y el progreso lo decide el cliente: no hay prueba de juego en el servidor (D-046).
 - **Sin marca automática en la 1.0:** ningún rechazo marca la cuenta. `flagged` existe para marcar a mano (operación). Las cuentas marcadas siguen sumando para sí, pero se ocultan del top de los demás.
@@ -117,6 +117,7 @@ Entran en `infra/contracts/v1` con sus esquemas, sus ejemplos y su entrada en `i
   - `LeagueRules`: semana, puntos por dificultad (solo para la línea de la victoria, porque el servidor manda) y desbloqueo;
   - `LeagueQueue`: la cola de victorias, persistida en el perfil, que sobrevive sin conexión y manda en lotes;
   - `ILeagueApi`, con implementación falsa para el editor y los tests.
+  - Las respuestas `accepted` y `rejected` se casan con la cola **por `win_id`**, nunca por posición: el servidor procesa las victorias de campaña en orden de nivel.
 - **`AF.Backend`:** el cliente HTTP real de §3.1, con el autorizador de siempre.
 - **UI:** el botón del inicio, la pantalla de la Liga, la línea de la victoria y la fila del país en Ajustes. Textos en `strings.csv` en los tres idiomas, con `context` y `max_chars`. Los nombres de animal `league_name_*` nacen `pendiente_asesor`.
 - **Banderas:** dibujadas por código como el resto del arte provisional. Siempre con el nombre del país al lado; la bandera nunca va sola.
