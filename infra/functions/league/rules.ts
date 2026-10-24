@@ -21,6 +21,11 @@ export type Win = { win_id: string; kind: string; level?: number; day?: string; 
 export type Request = { wins: Win[]; max_level: number; region?: string };
 export type Rejection = { win_id: string; reason: 'duplicate' | 'rate_limited' | 'unreachable_level' | 'outside_week' | 'invalid' };
 export type Seen = { id: string; at: number };
+function calendarDay(day: string | undefined): number | undefined {
+  if (!day) return undefined;
+  const ms = Date.parse(`${day}T00:00:00Z`);
+  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0,10) === day ? ms : undefined;
+}
 export interface Player {
   uid: string; week: string; points: number; country: string | null; wins: Seen[];
   flagged: boolean; reached: number; rev: number; ttl: number;
@@ -44,9 +49,14 @@ export function evaluate(old: Player | undefined, req: Request, uid: string, now
   for (const win of req.wins) {
     let reason: Rejection['reason'] | undefined;
     const at = Date.parse(win.won_at);
+    const day = win.kind === 'daily' ? calendarDay(win.day) : undefined;
     const expected = win.kind === 'campaign' ? `c:${win.level}` : `d:${win.day}`;
-    if (win.win_id !== expected || (win.kind === 'daily' && win.day !== win.won_at.slice(0, 10))) reason = 'invalid';
+    if (win.win_id !== expected || (win.kind === 'daily' && day === undefined)) reason = 'invalid';
     else if (at < week.start || at >= week.end || at > now) reason = 'outside_week';
+    // El Reto usa la fecha LOCAL de inicio (06 §4.1; R-Q3), no la fecha UTC de won_at.
+    // Sin offset en el contrato, admitir las fechas que pueden solaparse con la semana,
+    // incluido el día previo por huso/cambio de medianoche; impedir días remotos o futuros.
+    else if (day !== undefined && (day < Date.parse(new Date(week.start).toISOString().slice(0,10)) - 86400_000 || day > Date.parse(new Date(at).toISOString().slice(0,10)) + 86400_000)) reason = 'outside_week';
     else if (next.wins.some(w => w.id === win.win_id)) reason = 'duplicate';
     else if (req.max_level < 41 || (win.kind === 'campaign' && (win.level! < 41 || win.level! > req.max_level || (max > 0 && win.level! > max + 2) || (max > 0 && win.level === max + 2 && !table[max + 1]?.skippable)))) reason = 'unreachable_level';
     else {

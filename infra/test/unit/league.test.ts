@@ -52,6 +52,23 @@ describe('Liga: reglas',()=>{
     expect(result.rejected[0].reason).toBe('rate_limited');
     expect(result.next.points).toBe(0);
   });
+  it('Reto: fecha local de inicio, cruce de medianoche y una sola recompensa por día',()=>{
+    const stamp = Date.parse('2026-10-24T06:00:00Z');
+    const win: Win = {win_id:'d:2026-10-23',kind:'daily',day:'2026-10-23',won_at:new Date(stamp).toISOString()};
+    const first = evaluate(undefined,request([win,win]),UID,stamp,41);
+    expect(first.accepted).toEqual(['d:2026-10-23']);
+    expect(first.next.points).toBe(20);
+    expect(first.rejected[0].reason).toBe('duplicate');
+    // UTC+14: el día local puede ser el siguiente al de won_at UTC.
+    expect(evaluate(undefined,request([{...win,day:'2026-10-24',win_id:'d:2026-10-24',won_at:'2026-10-23T18:00:00Z'}]),UID,stamp,41).accepted).toHaveLength(1);
+    // La fecha de inicio local del domingo puede ganar tras el cambio semanal UTC del lunes.
+    const monday = Date.parse('2026-10-26T12:01:00Z');
+    expect(evaluate(undefined,request([{...win,day:'2026-10-25',win_id:'d:2026-10-25',won_at:new Date(monday).toISOString()}]),UID,monday,41).accepted).toHaveLength(1);
+    for(const [day,reason] of [['2026-02-30','invalid'],['2026-01-01','outside_week'],['2026-10-30','outside_week']]) {
+      const result = evaluate(undefined,request([{...win,day,win_id:`d:${day}`}]),UID,stamp,41);
+      expect(result.rejected[0].reason).toBe(reason);
+    }
+  });
   it('40/hora móvil: lotes offline y desordenados no evaden el límite',()=>{
     const wins = Array.from({length:41},(_,i)=>campaign(41+i,now-50*60000+i*30000));
     const result = evaluate(undefined,request(wins),UID,now,0);
