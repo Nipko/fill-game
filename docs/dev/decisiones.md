@@ -3826,3 +3826,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - Si una compra acaba en `StoreUnavailable`, sale el aviso que ya existe, `market_store_unavailable`.
   - Las filas sin precio de Play, cuando otros SKU sí lo tienen, quedan para otra tarea.
 - **Carril:** `tanda6/fx-telefono-max`, aprobado por el code-reviewer.
+
+### D-046, añadido del 2026-10-24: el cliente de la Liga en `Scripts/Backend/`
+
+- **Estado:** aprobado por el dueño en el chat: «Apruebo el cambio en Scripts/Backend/ del cliente de la Liga (los endpoints /v1/league con el autorizador de siempre). Intégralo.» Cubre el visto bueno que pide `.claude/rules/sdk.md`.
+- **Lo que entra:** el cliente de la Liga del río de la 1.0 (`tanda6/liga-cliente`, aprobado por el code-reviewer en dos vueltas) contra el backend de Codex (`codex/liga`, ya integrado y desplegado en dev). Con las decisiones del integrador:
+  - desbloqueo fijo en 41 (`live_league_unlock_level` 41-41 en 08 §9, igual que el servidor);
+  - «Otro país» para un país sin fila;
+  - la Liga bloqueada sin la edad contestada y con <13.
+
+  El integrador acepta las ediciones del GDD de la rama (06 §6, 08 §2.2, §4.3, §8.2 y §9, 09, GDD.md §2 y glosario), que siguen D-046 y `docs/dev/liga.md`.
