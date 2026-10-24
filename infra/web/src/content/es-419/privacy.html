@@ -37,7 +37,8 @@
     <tr><td>Tus compras: el producto, el estado, la fecha y el comprobante de compra. Google Play recibe tu UID anónimo como identificador de cuenta ofuscado</td><td>Google Play Billing, que procesa el pago; nuestro servidor verifica la compra</td><td>Entregarte lo que compras, evitar fraudes y cumplir obligaciones fiscales</td><td>[[ABOGADO: base legal (contrato y obligación legal)]]</td></tr>
     <tr><td>Registros de diagnóstico de la biblioteca de compras</td><td>La biblioteca de Google Play Billing los envía a Google por su cuenta</td><td>Funcionamiento de Google Play Billing</td><td>[[ABOGADO: revisar el contenido y la base legal (Q-BILL-2)]]</td></tr>
     <tr><td>En nuestro servidor: tu UID, el libro de tus compras (con el comprobante guardado solo como huella cifrada, «hash»), el resultado de la verificación de integridad, el código de borrado (solo su hash) y la dirección IP en los registros de acceso, también los de las visitas a esta web</td><td>Nuestro backend en Amazon Web Services, región de São Paulo (Brasil)</td><td>Verificar compras, restaurarlas si cambias de teléfono, prevenir fraudes y atender el borrado de tu cuenta</td><td>[[ABOGADO: base legal]]</td></tr>
-    <tr><td>Tu partida (progreso, semillas, comodines y ajustes), tu banda de edad y tus decisiones de consentimiento (fecha, versión del texto, país y decisión)</td><td>El juego, <strong>solo en tu teléfono</strong>. Excepción: si aceptas la analítica, tu banda de edad y tus decisiones de consentimiento (con la versión del texto y el perfil legal de tu país) también se envían a Google Analytics para Firebase</td><td>Que sigas donde lo dejaste y aplicar el tratamiento que corresponde a tu edad y tu país; con la analítica aceptada, medir cómo se usa la pantalla de consentimiento</td><td>[[ABOGADO: base legal]]</td></tr>
+    <tr><td>Tu partida (progreso, semillas, comodines y ajustes), tu banda de edad y tus decisiones de consentimiento (fecha, versión del texto, país y decisión)</td><td>El juego, en tu teléfono (una copia de la partida puede ir a Google Play Juegos: la fila siguiente). La banda de edad y el consentimiento, <strong>solo en tu teléfono</strong>. Excepción: si aceptas la analítica, tu banda de edad y tus decisiones de consentimiento (con la versión del texto y el perfil legal de tu país) también se envían a Google Analytics para Firebase</td><td>Que sigas donde lo dejaste y aplicar el tratamiento que corresponde a tu edad y tu país; con la analítica aceptada, medir cómo se usa la pantalla de consentimiento</td><td>[[ABOGADO: base legal]]</td></tr>
+    <tr><td>Una copia de tu partida (progreso, semillas, comodines y ajustes; <strong>sin</strong> tu banda de edad, tu consentimiento ni tu código de borrado) y tu identificador de jugador de Google Play Juegos, que gestiona Google: el juego no lo guarda ni lo envía a nuestro servidor</td><td>Google Play Juegos (partidas guardadas), con tu cuenta de Google, solo si declaraste 13 años o más; el juego inicia sesión sin pedirte nada si ya usas Play Juegos en el teléfono</td><td>Recuperar tu partida si cambias de teléfono o reinstalas el juego</td><td>[[ABOGADO: base legal (ejecución del servicio)]]</td></tr>
   </tbody>
 </table>
 </div>
@@ -58,21 +59,20 @@
 <p>Antes de que lleguen estas funciones actualizaremos esta política y, cuando la ley lo pida, te pediremos el consentimiento:</p>
 <ul>
   <li><strong>Más redes de anuncios</strong> a través de AppLovin MAX (Google AdMob, Unity Ads, Meta Audience Network y Mintegral). Hoy los anuncios solo vienen de AppLovin.</li>
-  <li><strong>Guardado en la nube con Google Play Juegos</strong>.</li>
 </ul>
 
 <h2 id="menores">6. Edad y menores</h2>
 <ul>
   <li>Tintalú es para mayores de 13 años y no participa en el programa Familias de Google Play.</li>
   <li>La primera vez que abres el juego te preguntamos tu edad con una pantalla neutral, en tres bandas: menos de 13, de 13 a 17 y 18 o más. La respuesta se guarda en tu teléfono (si aceptas la analítica, también se envía a Google Analytics para Firebase, como dice la sección 3) y puedes corregirla una vez desde Ajustes.</li>
-  <li><strong>Menos de 13:</strong> el juego se bloquea y te pide que lo instale un adulto. Los informes de fallos de Crashlytics se apagan al declarar la edad. Desde entonces, cada vez que abres el juego no se enciende Crashlytics ni se descarga la configuración de Firebase Remote Config (el juego usa la que ya tiene); la analítica nunca se activa; no se usa la cuenta anónima ni nuestro servidor, no se pueden hacer compras y los anuncios nunca se inician.</li>
+  <li><strong>Menos de 13:</strong> el juego se bloquea y te pide que lo instale un adulto. Los informes de fallos de Crashlytics se apagan al declarar la edad. Desde entonces, cada vez que abres el juego no se enciende Crashlytics ni se descarga la configuración de Firebase Remote Config (el juego usa la que ya tiene); la analítica nunca se activa; no se usa la cuenta anónima, Google Play Juegos ni nuestro servidor, no se pueden hacer compras y los anuncios nunca se inician.</li>
   <li><strong>De 13 a 17:</strong> los anuncios son no personalizados [[ABOGADO: confirmar que se mantiene la regla de no personalizar a menores de 18 (biz_under18_no_personalization)]] y en el Espacio Económico Europeo, el Reino Unido y Suiza no hay anuncios. En todas las edades pedimos a las redes anuncios aptos para todo público (G), según lo que permita la configuración de cada una [[DATO DEL DUEÑO: contenido máximo G configurado en cada red de anuncios]]. Las compras piden una confirmación doble en el juego y la autenticación de Google Play. [[ABOGADO: tratamiento de adolescentes por país (LGPD art. 14 y ECA Digital en Brasil)]]</li>
   <li>Si crees que un menor de 13 años usó el juego, escríbenos a [[DATO DEL DUEÑO: correo de privacidad]] y borraremos sus datos.</li>
 </ul>
 
 <h2 id="compartir">7. Con quién compartimos datos</h2>
 <ul>
-  <li><strong>Proveedores que trabajan para nosotros</strong> (encargados del tratamiento): Google (Firebase, Google Play Billing y Google Play Integrity) y Amazon Web Services (nuestro servidor). Tratan los datos para prestarnos su servicio.</li>
+  <li><strong>Proveedores que trabajan para nosotros</strong> (encargados del tratamiento): Google (Firebase, Google Play Billing, Google Play Integrity y Google Play Juegos) y Amazon Web Services (nuestro servidor). Tratan los datos para prestarnos su servicio.</li>
   <li><strong>AppLovin</strong> (anuncios) recibe los datos de la sección 3 para mostrar y medir los anuncios y evitar fraudes, según su propia política de privacidad. [[ABOGADO: rol de AppLovin (tercero o encargado) y redacción de «compartir» con fines publicitarios]]</li>
   <li><strong>Google Play</strong> procesa tus pagos según sus propias condiciones y su política de privacidad.</li>
   <li><strong>Autoridades:</strong> solo cuando la ley nos obligue.</li>
@@ -96,6 +96,7 @@
     <tr><td>Informes de fallos</td><td>90 días</td></tr>
     <tr><td>Analítica</td><td>[[DATO DEL DUEÑO: retención configurada en Google Analytics para Firebase]]</td></tr>
     <tr><td>Partida, banda de edad y consentimiento</td><td>En tu teléfono, hasta que borres la cuenta o desinstales el juego</td></tr>
+    <tr><td>Copia de la partida en Google Play Juegos</td><td>Hasta que borres la cuenta desde el juego (ver <a href="#borrado">Borrar tu cuenta y tus datos</a>) o borres los datos del juego en la app Play Juegos</td></tr>
   </tbody>
 </table>
 </div>
@@ -115,10 +116,11 @@
 <h2 id="borrado">11. Borrar tu cuenta y tus datos</h2>
 <p>Hay dos caminos con el mismo resultado:</p>
 <ol>
-  <li><strong>En el juego:</strong> Ajustes › «Eliminar cuenta y datos», con dos confirmaciones. También borra los datos del juego de tu teléfono.</li>
+  <li><strong>En el juego:</strong> Ajustes › «Eliminar cuenta y datos», con dos confirmaciones. También borra los datos del juego de tu teléfono y pide borrar la copia de tu partida en Google Play Juegos.</li>
   <li><strong>En la web:</strong> en <a href="{{page:delete}}">la página de eliminación de cuenta</a>, con el código que ves en Ajustes.</li>
 </ol>
 <p>Se borran tu cuenta anónima, tus datos en nuestro servidor y el usuario de Firebase Authentication. Se conserva el libro de compras, <strong>sin tu identificador</strong>, por obligación fiscal (sección 9). Durante 2 horas guardamos además una marca de cuenta borrada, con tu identificador solo como hash, para que nada vuelva a escribirse a nombre de la cuenta borrada. Las compras no se reembolsan.</p>
+<p><strong>La copia en Google Play Juegos:</strong> el juego pide borrarla al eliminar la cuenta y comprueba que se borró (y, si hace falta, la vuelve a borrar) la próxima vez que lo abras con Play Juegos y con 13 años o más. Si no vuelves a abrir el juego, o eliminas la cuenta desde la web (que no puede llegar a tu cuenta de Google), bórrala tú desde la app Play Juegos (Ajustes › eliminar los datos de este juego). [[ABOGADO: revisar]]</p>
 
 <h2 id="seguridad">12. Seguridad</h2>
 <p>Los datos viajan cifrados (HTTPS) y se guardan cifrados en nuestro servidor. Las funciones que dan valor (compras y borrado desde la app) exigen la verificación de integridad. El juego no guarda claves secretas en el teléfono, y nuestros registros no guardan tu UID en claro ni tus comprobantes de compra.</p>

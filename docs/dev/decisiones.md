@@ -3756,3 +3756,64 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
     - el despliegue, el DNS y los datos del dueño los hace Codex con el dueño (`docs/dev/traspaso/codex-web-marca.md`).
   - **Logo y marca:** Codex prepara el encargo del icono (07 §10.1) y lo que falta de la marca: completar la investigación en INPI y WIPO, y el paquete para el abogado.
 - **Riesgo aceptado por el dueño:** usar «Tintalú» en público antes del dictamen.
+
+## D-045 · Identidad oficial v2 de Tintalú: «El río que se tiñe»
+
+- **Fecha:** 2026-10-23. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat. Pidió una versión propia: «la idea era que fuera el rio amazonas con su color caracteristico y la cuia vertia y se pinta rio abajo del color que vierte». Después corrigió dos cosas: la cuia «cierra en corte lineal» y el líquido no podía verterse «infinito». Al final eligió: «Sí, la B sustituye a la v1 de Codex».
+- **Decisión:**
+  - **La identidad oficial es la v2** (`docs/art/marca-oficial/v2/`, propuesta B). **Sustituye a la v1 de Codex** (`docs/art/marca-oficial/v1/` en la rama `codex/web-marca`), que queda como historial y no se integra como oficial.
+  - **El concepto:** un río del Amazonas en su agua blanca (#B08A5A, glosario §9) corre de izquierda a derecha. Una cuia de vidrio vierte açaí (#6A2C91), y el río se tiñe **desde el impacto, río abajo**; río arriba sigue en su color. Fondo azul petróleo con la selva de la orilla y dos palmeras de açaí en silueta. Sin texto dentro del icono.
+  - **Fiel al juego:**
+    - la silueta de la cuia sale de `CuiaGeometry.cs` (fondo plano, pie y borde de fibra);
+    - la inclinación y el líquido siguen D-006: quedan 2,6 de 3 dosis, el líquido queda horizontal y el chorro es finito y se adelgaza al caer;
+    - las dosis llevan sus patrones de daltonismo;
+    - el logo con el nombre usa Baloo 2 ExtraBold, la tipografía del juego.
+  - **Piezas:**
+    - el icono maestro: 1024 y Play 512;
+    - Android: adaptativo (fondo y primer plano a 432 px, con el primer plano dentro de la zona segura), monocromo para el icono temático y clásico de 48 a 192;
+    - el logo horizontal y vertical sobre fondo claro y oscuro.
+
+    Todo se genera con `generar.py`, `exportar.py` y `hoja.py`, solo con la biblioteca estándar y Chrome sin interfaz.
+  - **07 §10.1** se actualiza: el concepto A elegido cambia el fondo (de oliva a petróleo) y el río (de banda blanca al agua blanca que se tiñe río abajo).
+- **Procedencia:** vectorial, generado por código por el agente integrador, no por IA de imagen. El acabado final puede encargarse al artista sobre esta composición.
+- **Pendiente:**
+  - las apariencias oscura y tintada de iOS y su catálogo de Xcode;
+  - integrar el icono en Unity (Player Settings, adaptativo y monocromo) y en la web (favicon y logo);
+  - probarlo en un teléfono.
+
+  Codex lleva la web y el icono de la ficha (`docs/dev/traspaso/codex-web-marca.md`, «Actualización del 23-10-2026»).
+- **Nota:** la estructura de publicación con Parallext, LLC y AUTOMATION AI S.A.S, que se propuso en el chat, todavía no está decidida. Cuando se decida, se registrará con el siguiente número libre.
+
+## D-046 · Liga del río en la 1.0 (País y Global), controles directos de audio y sitio para la tropa con 3 filas
+
+- **Fecha:** 2026-10-23. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat. Primero pidió: «unos controles directos para la musica y el sonido para apagarlos o prenderlo», «cuando tenemos muchas cuias quedan muy arriba y grandes lo que hace que no se vean los monitos, podemos dejarlas un poquito mas pequeñas o aprovechar un poco mejor la parte de abajo» y «una clasificación global y por paises que sepa como va uno». Después, a la propuesta del integrador: «agreguemos la liga como recomendas inicialmente pero pasemosla para esta primera versión y los demas recomendado».
+- **Decisión:**
+  1. **Liga del río en la 1.0, recortada:**
+     - solo las vistas **Global** y **País**, con puntos semanales: el top 100, la posición exacta si el jugador está en él y, si no, el percentil;
+     - **seudónimo automático** (animal y 4 cifras), sin texto libre;
+     - el **país** sale de CloudFront o, si no, de la región del teléfono;
+     - desbloqueo en el 41;
+     - interruptor `live_league_enabled`, apagado hasta que haya backend en prod;
+     - backend en **AWS** (D-035), sin Unity Leaderboards ni Cloud Code.
+
+     La cubeta de 50, los tiers y los premios se quedan en la 1.2. Especificación y contrato en `docs/dev/liga.md`; cambia 06 §6, 08 §8.2, §9 y §11, 09 y GDD.md §2.
+  2. **Música y Sonido con un toque:**
+     - dos botones con icono (nota y altavoz) arriba en el menú de pausa y en el inicio, junto al engranaje de Ajustes;
+     - guardan en el mismo sitio que las filas de Ajustes (`settings.music` y `settings.sound`), así que siempre coinciden;
+     - la Vibración se queda solo en Ajustes;
+     - nada en la barra de juego.
+
+     Cambia 02 §5 (contenido de la pausa) y 07 §9.4.
+  3. **Sitio para la tropa con 3 filas:**
+     - el suelo del tablero baja unos 20 dp, aprovechando el margen sobre la bandeja y dejando unos 12 dp hasta ella;
+     - con 3 filas las cuias encogen lo justo, unos 44 dp en lugar de 47 a 360 × 780, para abrir una franja de unos 44 dp sobre el panel;
+     - la tropa sale en la rama en todos los niveles de 3 filas, en el primer intento, en lugar de la tropa lateral 1 de cada 3 (D-021) y del dosel;
+     - los tableros de 10 cuias o menos no cambian.
+
+     Matiza D-006 (tamaño con 3 filas), D-021 (la tropa lateral pasa a respaldo) y la excepción de D-028 (la fila 1 ya no entra en el HUD). Cambia 02 §5 y 07 §7.4.
+- **Reparto (pedido por el dueño: «manda en paralelo lo mas que se pueda», «encarga a codex algo grande», «envia a spark algun carril o dos para solucionar el espacio»):**
+  - **Spark:** los puntos 2 y 3 (`docs/dev/traspaso/spark-audio-tablero.md`);
+  - **Codex:** el backend de la Liga, su despliegue en dev con el dueño y los textos legales (`docs/dev/traspaso/codex-liga.md`);
+  - **escritorio:** el cliente de la Liga y la integración.

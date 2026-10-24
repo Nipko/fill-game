@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using AF.Platform;
 
 namespace AF.Save
 {
@@ -192,7 +193,7 @@ namespace AF.Save
                 MergeDeviceFields(merged, loser, local);
             }
 
-            string mergedJson = ProfileJson.Serialize(merged); // sin purchase_queue: la copia sale de SharedJson
+            string mergedJson = SharedJson(merged); // lo que se compara es lo que se comparte (sin lo del dispositivo; D-042)
             return new CloudMergeResult(
                 WithLocalQueue(merged, local),
                 winner,
@@ -202,9 +203,15 @@ namespace AF.Save
         }
 
         /// <summary>
-        /// El perfil como se comparte con la nube: sin <c>purchase_queue</c> (F3-3 [P]; D-035, añadido de F3-3: la cola de
-        /// verificación es solo del dispositivo, porque sus compras sin terminar las vuelve a dar la tienda de ese teléfono). No
-        /// cambia <paramref name="profile"/> (la quita y la devuelve).
+        /// El perfil como se comparte con la nube, sin lo que es solo del dispositivo (no cambia <paramref name="profile"/>: lo
+        /// quita y lo devuelve):
+        /// <list type="bullet">
+        /// <item><c>purchase_queue</c> (F3-3 [P]; D-035, añadido de F3-3: sus compras sin terminar las vuelve a dar la tienda de ese
+        /// teléfono);</item>
+        /// <item><c>consent</c> (D-042: 08 §7, «la banda declarada vive solo en el dispositivo»; Q-B12-8: la fusión ya se quedaba con
+        /// la del dispositivo, y con Play Games no sube a Google);</item>
+        /// <item><c>account_code</c> (D-042: el código de borrado es del dispositivo, D-035 añadido de F3-5; no sube a Google).</item>
+        /// </list>
         /// </summary>
         public static string SharedJson(Profile profile)
         {
@@ -213,6 +220,30 @@ namespace AF.Save
                 throw new ArgumentNullException(nameof(profile));
             }
 
+            string? queue = profile.PurchaseQueue;
+            ConsentRecord? consent = profile.Consent;
+            string? code = profile.AccountCode;
+            profile.PurchaseQueue = null;
+            profile.Consent = null;
+            profile.AccountCode = null;
+            try
+            {
+                return ProfileJson.Serialize(profile);
+            }
+            finally
+            {
+                profile.PurchaseQueue = queue;
+                profile.Consent = consent;
+                profile.AccountCode = code;
+            }
+        }
+
+        /// <summary>
+        /// Lo que firmaban las versiones anteriores a D-042 (sin <c>purchase_queue</c>, con <c>consent</c> y <c>account_code</c>): solo
+        /// para comprobar perfiles firmados antes (<see cref="ProfileIntegrity.Verify"/>).
+        /// </summary>
+        internal static string LegacySharedJson(Profile profile)
+        {
             string? queue = profile.PurchaseQueue;
             profile.PurchaseQueue = null;
             try
@@ -225,10 +256,13 @@ namespace AF.Save
             }
         }
 
-        // purchase_queue: siempre la del dispositivo, gane quien gane (D-035, añadido de F3-3).
+        // purchase_queue, consent y account_code: siempre los del dispositivo, gane quien gane (D-035, añadidos de F3-3 y F3-5;
+        // Q-B12-8; D-042: no viajan en el blob).
         private static Profile WithLocalQueue(Profile merged, Profile local)
         {
             merged.PurchaseQueue = local.PurchaseQueue;
+            merged.Consent = local.Consent;
+            merged.AccountCode = local.AccountCode;
             return merged;
         }
 

@@ -67,7 +67,10 @@ el fusionado y se guarda. Con el perfil en solo lectura (08 §4.4) no se fusiona
 
 ## 3. Integridad (`integrity.hmac`)
 
-- **Lo firmado:** el JSON del perfil (`ProfileJson.Serialize`, determinista) con `integrity.hmac` = null. Las claves nuevas se omiten en su
+- **Lo firmado:** el JSON del perfil (`ProfileJson.Serialize`, determinista) con `integrity.hmac` = null, sin lo que es solo del dispositivo
+  (`CloudMerge.SharedJson`): `purchase_queue` (F3-3) y, desde D-042, `consent` (con la banda de edad) y `account_code`, que no suben a la
+  nube; editarlos a mano no rompe la firma (no dan valor económico, y la fusión ya se queda con los del dispositivo). Un perfil firmado
+  antes de D-042, con esos dos campos dentro de lo firmado, sigue valiendo hasta su próxima escritura (`ProfileIntegrity.Verify`). Las claves nuevas se omiten en su
   default, así un perfil anterior a B8 se escribe igual que antes.
 - **La clave:** SHA-256 de una sal pública + `integrity.device_first`, que es la huella (SHA-256 con sal, 32 hexadecimales) del id del
   instalación que creó el perfil (un id aleatorio, `af_install_id` en PlayerPrefs; nunca un identificador del dispositivo). Al restaurar en otro teléfono,
@@ -185,9 +188,10 @@ Preguntas de otros bloques que este cierra:
 
 - Aplicar los parches en orden (§9), con `B8-loc.diff` para los textos (en vez de copiar `B8-strings.csv` a mano).
 - Con B6 ya integrado: `CloudMerge` no fusiona `settings.push` ni `stats.last_seen_at` / `last_win_at` (se quedan los del ganador). B6 propone `last_seen_at` y `last_win_at` por máximo y `pre_prompt_shown` / `second_prompt_shown` por «o», con `granted` del dispositivo [P]: pendiente de decidir (Q-B8-11).
-- Con Play Games (dueño): un marcador persistente de «borrado pendiente» que se procese antes de `CloudSync.AtStartup` (si el `Delete`
+- ~~Con Play Games (dueño): un marcador persistente de «borrado pendiente» que se procese antes de `CloudSync.AtStartup` (si el `Delete`
   de la nube falla, el arranque siguiente descargaría la cuenta borrada); la implementación real de `ICloudSave` y las subidas periódicas (cada `save_cloud_interval_levels` niveles,
-  tras cada compra y al pasar a segundo plano), con `CloudSync.Upload`; esperar el `Load` asíncrono en el arranque.
+  tras cada compra y al pasar a segundo plano), con `CloudSync.Upload`; esperar el `Load` asíncrono en el arranque.~~ Hecho con D-042
+  (rama `tanda5/sdk-pgs`): `CloudErase`, `PlayGamesCloudSave`, `CloudSession` y `GameBootstrap.CloudSession.cs`; ver `docs/dev/play-games.md`.
 - Con Functions: `restoreLedger` → `LocalRevocation.ApplyLedger`; `rewardedSsv` → `RegisterProvisional`/`Confirm`/`ExpireStale`;
   `deleteAccount`; `IServerDate` real con la cabecera `Date`.
 - B7: enlazar `RevocationConfig.SecSsvGraceH` con Remote Config (`sec_ssv_grace_h`) y llevar `af_save_sync` y `af_account_delete` a la

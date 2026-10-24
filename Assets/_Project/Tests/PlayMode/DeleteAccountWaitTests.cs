@@ -336,6 +336,9 @@ namespace AF.Tests.PlayMode
             Assert.That(Loc.Locale, Is.EqualTo(locale));
             DeleteAccountDialog dialog = boot.DeleteAccountView!;
             var problems = new List<string>();
+            Assert.That(dialog.CloudNoteText, Is.EqualTo(AccountText.CloudNote), "D-042: la nota de Google Play Juegos en el paso 2");
+            Assert.That(AccountText.CloudNote, Is.Not.Empty);
+            Fits(dialog, boot.SettingsView!.CanvasHeight, "paso 2", problems);
 
             boot.ConfirmDeleteAccount();
             yield return null;

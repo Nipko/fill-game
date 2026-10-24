@@ -36,6 +36,26 @@ export function resolveApiBase(config: unknown): string | null {
   return base;
 }
 
+/** Estado del borrado por web según /config.json. */
+export type WebDeleteConfig =
+  | { readonly kind: 'enabled'; readonly apiBase: string }
+  | { readonly kind: 'disabled' }
+  | { readonly kind: 'invalid' };
+
+/**
+ * Lee /config.json: `deleteEnabled: false` (modo solo web, sin API de prod: D-044) desactiva el borrado y la página
+ * enseña el aviso de «disponible pronto» sin enviar nada; `deleteEnabled: true` con una base válida lo activa.
+ * Cualquier otra cosa no es válida (el formulario avisa al enviar de que la página no está bien configurada).
+ */
+export function resolveWebConfig(config: unknown): WebDeleteConfig {
+  if (typeof config !== 'object' || config === null) return { kind: 'invalid' };
+  const enabled = (config as { deleteEnabled?: unknown }).deleteEnabled;
+  if (enabled === false) return { kind: 'disabled' };
+  if (enabled !== true) return { kind: 'invalid' };
+  const apiBase = resolveApiBase(config);
+  return apiBase === null ? { kind: 'invalid' } : { kind: 'enabled', apiBase };
+}
+
 async function post(fetchFn: FetchFn, url: string, body: unknown): Promise<Response | null> {
   try {
     return await fetchFn(url, {

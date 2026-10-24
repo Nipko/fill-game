@@ -61,6 +61,6 @@ describe('global-stack (us-east-1)', () => {
     const dev = build(DEV);
     expect(dev.stacks.global.region).toBe('us-east-1');
     dev.t.global.resourceCountIs('AWS::CertificateManager::Certificate', 0);
-    for (const k of ['data', 'api', 'web', 'cdn', 'ops'] as const) expect(dev.stacks[k].region).toBe('sa-east-1');
+    for (const k of ['data', 'api', 'web', 'cdn', 'ops'] as const) expect(dev.stacks[k]?.region).toBe('sa-east-1');
   });
 });

@@ -8,9 +8,11 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="/assets/site.css">
+  <link rel="canonical" href="/en/privacy/">
   <link rel="alternate" hreflang="es-419" href="/privacidad/">
   <link rel="alternate" hreflang="en" href="/en/privacy/">
   <link rel="alternate" hreflang="pt-BR" href="/pt-br/privacidade/">
+  <link rel="alternate" hreflang="x-default" href="/privacidad/">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -65,7 +67,8 @@
     <tr><td>Your purchases: product, status, date and purchase receipt. Google Play receives your anonymous UID as an obfuscated account identifier</td><td>Google Play Billing, which processes the payment; our server verifies the purchase</td><td>Deliver what you buy, prevent fraud and meet tax obligations</td><td><mark class="pending">[[ABOGADO: base legal (contrato y obligación legal)]]</mark></td></tr>
     <tr><td>Diagnostic logs of the purchase library</td><td>The Google Play Billing library sends them to Google on its own</td><td>Operation of Google Play Billing</td><td><mark class="pending">[[ABOGADO: revisar el contenido y la base legal (Q-BILL-2)]]</mark></td></tr>
     <tr><td>On our server: your UID, your purchase ledger (with the receipt stored only as a cryptographic fingerprint, a “hash”), the integrity check result, the deletion code (only its hash) and the IP address in the access logs, including those of visits to this website</td><td>Our backend on Amazon Web Services, São Paulo region (Brazil)</td><td>Verify purchases, restore them if you change phones, prevent fraud and handle the deletion of your account</td><td><mark class="pending">[[ABOGADO: base legal]]</mark></td></tr>
-    <tr><td>Your saved game (progress, seeds, boosters and settings), your age range and your consent choices (date, text version, country and choice)</td><td>The game, <strong>only on your phone</strong>. Exception: if you accept analytics, your age range and your consent choices (with the text version and your country’s legal profile) are also sent to Google Analytics for Firebase</td><td>Let you continue where you left off and apply the treatment that fits your age and country; with analytics accepted, measure how the consent screen is used</td><td><mark class="pending">[[ABOGADO: base legal]]</mark></td></tr>
+    <tr><td>Your saved game (progress, seeds, boosters and settings), your age range and your consent choices (date, text version, country and choice)</td><td>The game, on your phone (a copy of your saved game can go to Google Play Games: see the next row). Your age range and consent stay <strong>only on your phone</strong>. Exception: if you accept analytics, your age range and your consent choices (with the text version and your country’s legal profile) are also sent to Google Analytics for Firebase</td><td>Let you continue where you left off and apply the treatment that fits your age and country; with analytics accepted, measure how the consent screen is used</td><td><mark class="pending">[[ABOGADO: base legal]]</mark></td></tr>
+    <tr><td>A copy of your saved game (progress, seeds, boosters and settings; <strong>without</strong> your age range, your consent or your deletion code) and your Google Play Games player ID, which Google manages: the game neither stores it nor sends it to our server</td><td>Google Play Games (saved games), with your Google account, only if you stated you are 13 or older; the game signs in without asking if you already use Play Games on the phone</td><td>Recover your game if you change phones or reinstall the game</td><td><mark class="pending">[[ABOGADO: base legal (ejecución del servicio)]]</mark></td></tr>
   </tbody>
 </table>
 </div>
@@ -86,21 +89,20 @@
 <p>Before these features arrive, we will update this policy and, where the law requires it, ask for your consent:</p>
 <ul>
   <li><strong>More ad networks</strong> through AppLovin MAX (Google AdMob, Unity Ads, Meta Audience Network and Mintegral). Today ads only come from AppLovin.</li>
-  <li><strong>Cloud saves with Google Play Games</strong>.</li>
 </ul>
 
 <h2 id="menores">6. Age and minors</h2>
 <ul>
   <li>Tintalú is for people aged 13 and over and is not part of the Google Play Families program.</li>
   <li>The first time you open the game we ask your age on a neutral screen, in three ranges: under 13, 13 to 17, and 18 or older. The answer is stored on your phone (if you accept analytics, it is also sent to Google Analytics for Firebase, as section 3 explains) and you can correct it once in Settings.</li>
-  <li><strong>Under 13:</strong> the game is locked and asks you to have an adult install it. Crashlytics crash reports are turned off when you state your age. From then on, each time you open the game Crashlytics is not turned on and the Firebase Remote Config configuration is not downloaded (the game uses the one it already has); analytics is never turned on; neither the anonymous account nor our server is used, purchases are not possible and ads never start.</li>
+  <li><strong>Under 13:</strong> the game is locked and asks you to have an adult install it. Crashlytics crash reports are turned off when you state your age. From then on, each time you open the game Crashlytics is not turned on and the Firebase Remote Config configuration is not downloaded (the game uses the one it already has); analytics is never turned on; neither the anonymous account, Google Play Games nor our server is used, purchases are not possible and ads never start.</li>
   <li><strong>13 to 17:</strong> ads are non-personalized <mark class="pending">[[ABOGADO: confirmar que se mantiene la regla de no personalizar a menores de 18 (biz_under18_no_personalization)]]</mark>, and in the European Economic Area, the United Kingdom and Switzerland there are no ads. For all ages we ask the networks for ads suitable for all audiences (G), as far as each network’s settings allow <mark class="pending">[[DATO DEL DUEÑO: contenido máximo G configurado en cada red de anuncios]]</mark>. Purchases require a double confirmation in the game and Google Play authentication. <mark class="pending">[[ABOGADO: tratamiento de adolescentes por país (LGPD art. 14 y ECA Digital en Brasil)]]</mark></li>
   <li>If you think a child under 13 used the game, write to <mark class="pending">[[DATO DEL DUEÑO: correo de privacidad]]</mark> and we will delete their data.</li>
 </ul>
 
 <h2 id="compartir">7. Who we share data with</h2>
 <ul>
-  <li><strong>Providers working for us</strong> (processors): Google (Firebase, Google Play Billing and Google Play Integrity) and Amazon Web Services (our server). They process the data to provide their service to us.</li>
+  <li><strong>Providers working for us</strong> (processors): Google (Firebase, Google Play Billing, Google Play Integrity and Google Play Games) and Amazon Web Services (our server). They process the data to provide their service to us.</li>
   <li><strong>AppLovin</strong> (ads) receives the data in section 3 to show and measure ads and prevent fraud, under its own privacy policy. <mark class="pending">[[ABOGADO: rol de AppLovin (tercero o encargado) y redacción de «compartir» con fines publicitarios]]</mark></li>
   <li><strong>Google Play</strong> processes your payments under its own terms and privacy policy.</li>
   <li><strong>Authorities:</strong> only when the law requires us to.</li>
@@ -124,6 +126,7 @@
     <tr><td>Crash reports</td><td>90 days</td></tr>
     <tr><td>Analytics</td><td><mark class="pending">[[DATO DEL DUEÑO: retención configurada en Google Analytics para Firebase]]</mark></td></tr>
     <tr><td>Saved game, age range and consent</td><td>On your phone, until you delete the account or uninstall the game</td></tr>
+    <tr><td>Copy of the saved game in Google Play Games</td><td>Until you delete the account from the game (see <a href="#borrado">Deleting your account and data</a>) or delete the game’s data in the Play Games app</td></tr>
   </tbody>
 </table>
 </div>
@@ -143,10 +146,11 @@
 <h2 id="borrado">11. Deleting your account and data</h2>
 <p>There are two ways, with the same result:</p>
 <ol>
-  <li><strong>In the game:</strong> Settings › “Delete account and data”, with two confirmations. It also deletes the game data on your phone.</li>
+  <li><strong>In the game:</strong> Settings › “Delete account and data”, with two confirmations. It also deletes the game data on your phone and asks for the copy of your saved game in Google Play Games to be deleted.</li>
   <li><strong>On the web:</strong> on <a href="/tintalu/en/delete-account/">the account deletion page</a>, with the code shown in Settings.</li>
 </ol>
 <p>Your anonymous account, your data on our server and your Firebase Authentication user are deleted. The purchase ledger is kept, <strong>without your identifier</strong>, for tax purposes (section 9). For 2 hours we also keep a deleted-account mark, with your identifier only as a hash, so that nothing is written again in the name of the deleted account. Purchases are not refunded.</p>
+<p><strong>The copy in Google Play Games:</strong> the game asks for it to be deleted when you delete the account, and checks that it was deleted (deleting it again if needed) the next time you open the game with Play Games, if you are 13 or older. If you don’t open the game again, or you delete the account from the web (which cannot reach your Google account), delete it yourself from the Play Games app (Settings › delete this game’s data). <mark class="pending">[[ABOGADO: revisar]]</mark></p>
 
 <h2 id="seguridad">12. Security</h2>
 <p>Data travels encrypted (HTTPS) and is stored encrypted on our server. Features that grant value (purchases and in-app deletion) require the integrity check. The game doesn’t keep secret keys on the phone, and our logs don’t store your UID in clear text or your purchase receipts.</p>

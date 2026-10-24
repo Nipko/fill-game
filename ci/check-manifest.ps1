@@ -38,6 +38,10 @@
                              siempre el provisional).
       6. Retroceso predictivo (08 sec. 13.1 #4): informa de android:enableOnBackInvokedCallback;
          con -RequirePredictiveBack falla si no es true.
+      6 bis. Componentes prohibidos (D-042, anadido: play-services-nearby no entra): ningun nombre del manifiesto
+         empieza por un prefijo de $ForbiddenComponentPrefixes (hoy com.google.android.gms.nearby., p. ej. el servicio
+         exportado de Exposure Notifications que trae play-services-nearby 18.5.0 con el plugin de Play Games 2.3.0;
+         lo excluye Assets/Plugins/Android/mainTemplate.gradle; docs/dev/play-games.md).
       7. IL2CPP ARM64 (.claude/rules/ci.md): las bibliotecas nativas del artefacto (lib/<abi>/ en el APK,
          base/lib/<abi>/ en el AAB) son solo de arm64-v8a y entre ellas esta libil2cpp.so.
 
@@ -95,6 +99,8 @@ $NotificationsNotApproved = @('android.permission.SCHEDULE_EXACT_ALARM', 'androi
     'android.permission.RECEIVE_BOOT_COMPLETED', 'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS')
 $WakeLockPermission = 'android.permission.WAKE_LOCK'   # aprobado: D-039 (Firebase Analytics)
 $InstallReferrerPermission = 'com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE'   # aprobado: D-039, anadido del 2026-10-21 (Install Referrer de Play)
+# D-042, anadido (2026-10-23): play-services-nearby (Nearby Connections y Exposure Notifications) no entra con el plugin de Play Games.
+$ForbiddenComponentPrefixes = @('com.google.android.gms.nearby.')
 $BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission, $NotificationsPermission, $BillingPermission)
 
 function Stop-WithCode {
@@ -116,6 +122,7 @@ function New-Model {
         HasApplication = $false
         Abis           = $null    # ABI con bibliotecas nativas; $null = sin comprobar (autotest de solo manifiesto)
         HasIl2cpp      = $false
+        Raw            = ''       # texto del volcado, para los componentes prohibidos (6 bis)
     }
 }
 
@@ -127,6 +134,7 @@ function ConvertFrom-ManifestXml([string]$Text) {
     $root = $doc.DocumentElement
     if (-not $root -or $root.LocalName -ne 'manifest') { throw 'el XML no tiene <manifest> como raiz' }
     $m = New-Model
+    $m.Raw = $Text
     $m.Package = $root.GetAttribute('package')
     foreach ($node in $root.ChildNodes) {
         if ($node.NodeType -ne [System.Xml.XmlNodeType]::Element) { continue }
@@ -159,6 +167,7 @@ function ConvertFrom-ManifestXml([string]$Text) {
 # Cada linea "E: <elemento>" abre un elemento y las "A: <atributo>=<valor>" con dos espacios mas son suyas.
 function ConvertFrom-Aapt2Tree([string]$Text) {
     $m = New-Model
+    $m.Raw = $Text
     $stack = [System.Collections.Generic.List[object]]::new()   # pares (indentacion, elemento)
     $meta = $null
     foreach ($raw in ($Text -split "`r?`n")) {
@@ -286,6 +295,10 @@ function Test-Manifest($M, [string]$Prof, [int]$Target, [int]$Min, [string[]]$Ex
         }
     }
 
+    foreach ($prefix in $ForbiddenComponentPrefixes) {
+        if ("$($M.Raw)".Contains($prefix)) { $fail.Add("componente prohibido en el manifiesto: '$prefix*' (D-042, anadido: play-services-nearby no entra; exclusion en mainTemplate.gradle)") }
+    }
+
     if ($null -ne $M.Abis) {
         $abiText = if ($M.Abis.Count -gt 0) { $M.Abis -join ',' } else { '(ninguna)' }
         if ($M.Abis.Count -ne 1 -or $M.Abis[0] -ne 'arm64-v8a') { $fail.Add("ABI nativas: $abiText (esperado solo arm64-v8a)") }
@@ -382,6 +395,8 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'aapt2: BILLING sin version de PBL (D-040)';   Fmt = 'tree'; Text = $okTree.Replace('"android.permission.VIBRATE"', '"' + $BillingPermission + '"'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'aapt2: permiso RECORD_AUDIO';                 Fmt = 'tree'; Text = $okTree.Replace('"android.permission.VIBRATE"', '"android.permission.RECORD_AUDIO"'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'aapt2: targetSdk 37 con -TargetSdk 36';       Fmt = 'tree'; Text = $okTree.Replace('(0x01010270)=36', '(0x01010270)=37'); Prof = 'dev'; Fails = 1 }
+        @{ Name = 'xml: servicio de Nearby prohibido (D-042)';  Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<service android:name="com.google.android.gms.nearby.exposurenotification.WakeUpService" android:exported="true"/><activity android:name="x">'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'aapt2: servicio de Nearby prohibido (D-042)'; Fmt = 'tree'; Text = $okTree.Replace('"unity.splash-mode" (Raw: "unity.splash-mode")', '"com.google.android.gms.nearby.exposurenotification.WakeUpService" (Raw: "x")'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'aapt2: appCategory 3';                        Fmt = 'tree'; Text = $okTree.Replace('(0x01010545)=0', '(0x01010545)=3'); Prof = 'dev'; Fails = 1 }
     )
     $arm = @('base/lib/arm64-v8a/libil2cpp.so', 'base/lib/arm64-v8a/libunity.so', 'base/dex/classes.dex')

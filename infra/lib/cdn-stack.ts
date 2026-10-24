@@ -97,16 +97,18 @@ export class CdnStack extends Stack {
     const catalogHeaders = headersPolicy('Catalog', `public, max-age=${CATALOG_TTL.toSeconds()}`);
 
     const origin = S3BucketOrigin.withOriginAccessControl(content);
-    const domainNames = config.domain ? [`cdn.${config.domain.name}`] : undefined;
+    // cdn.<dominio>: con Route 53, siempre; con DNS externo, solo con domainExtras=cdn (D-044).
+    const cdnName = config.domain?.cdn ? `cdn.${config.domain.name}` : undefined;
+    const domainNames = cdnName ? [cdnName] : undefined;
 
     this.distribution = new Distribution(this, 'Distribution', {
       comment: `${config.prefix} cdn`,
       httpVersion: HttpVersion.HTTP2_AND_3,
       priceClass: PriceClass.PRICE_CLASS_ALL,
       // Solo tiene efecto con certificado propio (con el de *.cloudfront.net la política es fija).
-      minimumProtocolVersion: config.domain ? SecurityPolicyProtocol.TLS_V1_2_2021 : undefined,
+      minimumProtocolVersion: cdnName ? SecurityPolicyProtocol.TLS_V1_2_2021 : undefined,
       domainNames,
-      certificate: props.certificate,
+      certificate: cdnName ? props.certificate : undefined,
       enableLogging: true,
       logBucket: logs,
       logFilePrefix: 'cloudfront/cdn/',
@@ -140,21 +142,26 @@ export class CdnStack extends Stack {
     });
     ack(this.distribution, 'AwsSolutions-CFR1', 'Contenido del juego para todos los países: sin restricción geográfica.');
     ack(this.distribution, 'AwsSolutions-CFR2', 'Contenido público de solo lectura, sin WAF en la 1.0 (Q-AWS-10).');
-    if (!config.domain) {
-      ack(this.distribution, 'AwsSolutions-CFR4', 'Sin dominio propio (Q-AWS-9) se usa el certificado *.cloudfront.net, que no admite fijar TLS 1.2; con config.domain se aplica TLSv1.2_2021.');
+    if (!cdnName) {
+      ack(this.distribution, 'AwsSolutions-CFR4', 'Sin cdn.<dominio> (Q-AWS-9; con DNS externo solo con domainExtras=cdn) se usa el certificado *.cloudfront.net, que no admite fijar TLS 1.2; con cdn.<dominio> se aplica TLSv1.2_2021.');
     }
 
     new CfnOutput(this, 'CdnUrl', { description: 'URL de la CDN (CloudFront).', value: `https://${this.distribution.distributionDomainName}` });
     new CfnOutput(this, 'ContentBucketName', { description: 'Bucket donde se suben packs/ y catalog.json.', value: content.bucketName });
 
-    if (config.domain) {
+    if (cdnName && config.domain?.hostedZoneId !== undefined) {
       const zone = HostedZone.fromHostedZoneAttributes(this, 'Zone', {
         hostedZoneId: config.domain.hostedZoneId,
         zoneName: config.domain.name,
       });
       const target = RecordTarget.fromAlias(new CloudFrontTarget(this.distribution));
-      new ARecord(this, 'Alias', { zone, recordName: `cdn.${config.domain.name}`, target });
-      new AaaaRecord(this, 'AliasV6', { zone, recordName: `cdn.${config.domain.name}`, target });
+      new ARecord(this, 'Alias', { zone, recordName: cdnName, target });
+      new AaaaRecord(this, 'AliasV6', { zone, recordName: cdnName, target });
+    } else if (cdnName) {
+      new CfnOutput(this, 'CdnDnsRecord', {
+        description: `Registro del DNS externo para ${cdnName} (sin proxy).`,
+        value: `${cdnName} CNAME ${this.distribution.distributionDomainName}`,
+      });
     }
   }
 }

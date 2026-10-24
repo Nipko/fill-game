@@ -1,0 +1,18 @@
+// Icono de la app (identidad v2, D-045; docs/art/marca-oficial/v2). Solo recursos, sin código.
+// Unity 6000.3 no tiene capa monocroma en su icono adaptativo, y hace falta para los iconos temáticos de Android 13+.
+// Por eso el icono va aquí, con los recursos estándar de Android, y Assets/Plugins/Android/LauncherManifest.xml apunta a
+// @mipmap/af_launcher. Las PNG las genera docs/art/marca-oficial/v2/exportar.py --android-res: no se editan a mano.
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.amazonfill.icon'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    lint {
+        abortOnError false
+    }
+}

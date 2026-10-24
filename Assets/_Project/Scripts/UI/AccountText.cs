@@ -51,6 +51,9 @@ namespace AF.UI
             /// <summary>«Tu cuenta y tus datos se eliminaron.»: la confirmación breve antes de volver a la primera ejecución [P].</summary>
             public const string Done = "delete_account_done";
 
+            /// <summary>Paso 2: cuándo se borra la copia de Google Play Juegos (D-042).</summary>
+            public const string CloudNote = "delete_account_cloud_note";
+
             /// <summary>
             /// «Código para borrar tu cuenta en la web: {code}» (F3-5; 08 §11; Q-B13-21) [P]: en Ajustes, encima de «Eliminar cuenta y
             /// datos», en lugar del UID. <c>{code}</c> = los 26 caracteres del código (Base32 de Crockford), que no se traducen.
@@ -96,6 +99,9 @@ namespace AF.UI
 
         /// <summary>«Tu cuenta y tus datos se eliminaron.».</summary>
         public static string Done => Loc.T(Keys.Done);
+
+        /// <summary>Paso 2: «La copia en Google Play Juegos…» (D-042; 08 §11).</summary>
+        public static string CloudNote => Loc.T(Keys.CloudNote);
 
         /// <summary>«Código para borrar tu cuenta en la web: {code}».</summary>
         public static string Code(string code) => Loc.T(Keys.Code, LocArgs.Of("code", CodeGroups(code ?? string.Empty)));

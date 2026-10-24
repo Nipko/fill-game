@@ -33,7 +33,8 @@
     "AF.RemoteConfig.Firebase",
     "AF.Platform.Notifications",
     "AF.IAP.PlayBilling",
-    "AF.Backend.Firebase"
+    "AF.Backend.Firebase",
+    "AF.Save.PlayGames"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

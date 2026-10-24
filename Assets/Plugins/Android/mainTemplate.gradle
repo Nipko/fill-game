@@ -9,6 +9,8 @@ dependencies {
     implementation 'com.android.billingclient:billing:9.0.0' // Assets/_Project/Plugins/Editor/AfBillingDependencies.xml:10
     implementation 'com.applovin:applovin-sdk:13.6.4' // Packages/com.applovin.mediation.ads/AppLovin/Editor/Dependencies.xml:4
     implementation 'com.google.android.gms:play-services-base:18.10.1' // Packages/com.google.firebase.app/Firebase/Editor/AppDependencies.xml:20
+    implementation 'com.google.android.gms:play-services-games-v2:22.1.0' // Packages/com.google.play.games/Editor/GooglePlayGamesPluginDependencies.xml:9
+    implementation 'com.google.android.gms:play-services-nearby:18.5.0' // Packages/com.google.play.games/Editor/GooglePlayGamesPluginDependencies.xml:14
     implementation 'com.google.android.ump:user-messaging-platform:4.0.0' // Assets/MaxSdk/AppLovin/Editor/Dependencies.xml:4
     implementation 'com.google.firebase:firebase-analytics:23.2.0' // Packages/com.google.firebase.analytics/Firebase/Editor/AnalyticsDependencies.xml:16
     implementation 'com.google.firebase:firebase-analytics-unity:13.17.0' // Packages/com.google.firebase.analytics/Firebase/Editor/AnalyticsDependencies.xml:21
@@ -39,6 +41,14 @@ android {
   }
 }
 // Android Resolver Exclusions End
+// AF D-042 Play Games: play-services-nearby no entra (anadido de D-042; docs/dev/play-games.md). Lo declara
+// GooglePlayGamesPluginDependencies.xml del plugin 2.3.0 y EDM4U lo escribe arriba: aqui se quita la dependencia
+// declarada y cualquier llegada transitiva. Lo vigila ci/check-manifest.ps1 (componentes com.google.android.gms.nearby.).
+configurations.configureEach { c ->
+    c.withDependencies { deps -> deps.removeIf { it.group == 'com.google.android.gms' && it.name == 'play-services-nearby' } }
+    c.exclude group: 'com.google.android.gms', module: 'play-services-nearby'
+}
+// AF D-042 Play Games: fin
 android {
     namespace "com.unity3d.player"
     ndkPath "**NDKPATH**"

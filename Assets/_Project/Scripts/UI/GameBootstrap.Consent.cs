@@ -293,6 +293,7 @@ namespace AF.UI
             _consentScreen?.Hide();
             ProbeConsent();
             StartPlayBilling(false); // D-040: con la edad ya decidida (y no < 13), Play puede conectarse
+            StartCloudAfterConsent(flow.Flags.PlayGamesAllowed); // D-042: primer arranque, Play Games tras declarar la edad (no < 13)
         }
 
         // <13 (en el arranque o al corregir la edad en Ajustes): el bloqueo a la vista y la escena se recarga, como al cambiar de idioma
@@ -301,6 +302,7 @@ namespace AF.UI
         private void BlockSession()
         {
             ConsentBlocked = true;
+            StopCloudForBlock(); // D-042: sin Play Games con < 13
             Under13Firebase(); // F3-6 (ApplyConsentFlags ya apagó la analítica; Crashlytics, aquí)
             CancelNotificationsForBlock(); // Q-M5: los avisos locales programados en otra salida, fuera (08 §7)
             _consentScreen?.ShowBlocked();

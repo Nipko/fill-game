@@ -55,6 +55,7 @@ namespace AF.UI
         private readonly TextMeshProUGUI _title;
         private readonly ReliefParts _close;
         private readonly TextMeshProUGUI _body;
+        private readonly TextMeshProUGUI _note;
         private readonly TextMeshProUGUI _warning;
         private readonly ReliefParts _keep;
         private readonly ReliefParts _advance;
@@ -88,6 +89,7 @@ namespace AF.UI
             _title = ModalKit.Header(_panel, art, string.Empty, out _header);
             _close = ModalKit.Close("CloseButton", _panel, art, onCancel);
             _body = ModalKit.Line("Body", _panel, string.Empty, 17f, Palette.FamilyWood.Base);
+            _note = ModalKit.Line("CloudNote", _panel, string.Empty, 14f, Palette.FamilyWood.Base);
             _warning = ModalKit.Line("Warning", _panel, string.Empty, 16f, Palette.UiRedWarning);
             _keep = ModalKit.Cta("KeepButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, AccountText.Keep, 20f, onCancel, out _);
             _advance = ModalKit.Cta("AdvanceButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 18f,
@@ -113,6 +115,9 @@ namespace AF.UI
 
         /// <summary>Línea principal a la vista.</summary>
         public string BodyText => _body.text;
+
+        /// <summary>La nota de Google Play Juegos del paso 2 (D-042), o null si no se ve.</summary>
+        public string? CloudNoteText => _note.gameObject.activeSelf ? _note.text : null;
 
         /// <summary>Línea en rojo (el aviso de las compras o el fallo), o null si no se ve.</summary>
         public string? WarningText => _warning.gameObject.activeSelf ? _warning.text : null;
@@ -241,6 +246,10 @@ namespace AF.UI
             _body.text = body;
             _warning.text = warning ?? string.Empty;
             _warning.gameObject.SetActive(warning != null);
+            // D-042: en el paso 2, cuándo se borra la copia de Google Play Juegos (y que se puede borrar desde Play Juegos).
+            bool note = step == DeleteAccountStep.Confirm;
+            _note.text = note ? AccountText.CloudNote : string.Empty;
+            _note.gameObject.SetActive(note);
             _advanceLabel.text = advance;
             bool busy = step == DeleteAccountStep.Deleting;
             bool done = step == DeleteAccountStep.Done;
@@ -267,6 +276,10 @@ namespace AF.UI
             }
 
             y += ModalKit.PlaceLine(_body, 16f, y, inner, 48f) + 8f;
+            if (note)
+            {
+                y += ModalKit.PlaceLine(_note, 16f, y, inner, 40f) + 8f;
+            }
             if (warning != null)
             {
                 y += ModalKit.PlaceLine(_warning, 16f, y, inner, 24f) + 10f;

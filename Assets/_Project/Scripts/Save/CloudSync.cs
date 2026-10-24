@@ -10,8 +10,9 @@ namespace AF.Save
     public sealed class CloudSyncReport
     {
         internal CloudSyncReport(bool ran, CloudSyncResult result, CloudMergeReason? reason, Profile profile, bool replaced,
-            IntegrityStatus localIntegrity, IntegrityStatus? cloudIntegrity, CloudWriteResult? upload, int bytes, string? error)
+            IntegrityStatus localIntegrity, IntegrityStatus? cloudIntegrity, CloudWriteResult? upload, int bytes, string? error, Profile? remote = null)
         {
+            Remote = remote;
             Ran = ran;
             Result = result;
             Reason = reason;
@@ -50,6 +51,12 @@ namespace AF.Save
 
         /// <summary>Bytes del blob subido o leído (<c>af_save_sync.bytes</c>).</summary>
         public int Bytes { get; }
+
+        /// <summary>
+        /// El perfil leído de la nube (migrado al esquema actual), o null si no había o no se pudo leer. Sirve para volver a fusionar
+        /// con el perfil vivo si la respuesta llega tarde y el local cambió mientras (D-042; <c>GameBootstrap.TickCloud</c>).
+        /// </summary>
+        public Profile? Remote { get; }
 
         /// <summary>Qué falló (nube caída, blob ilegible o de una versión más nueva), o null.</summary>
         public string? Error { get; }
@@ -137,14 +144,17 @@ namespace AF.Save
                 CloudMergeResult merge = CloudMerge.Resolve(
                     local, remote, ProfileIntegrity.IsCoherent(localStatus), remoteIntegrity.HasValue && ProfileIntegrity.IsCoherent(remoteIntegrity.Value));
                 Profile result = merge.LocalChanged ? merge.Merged : local;
-                if (!merge.CloudChanged)
+                // #3379 (D-042): la última subida puede no constar en la nube (sin red o fallida): se vuelve a subir aunque la
+                // fusión no lo pida.
+                bool resync = cloud is ICloudResync pending && pending.NeedsResync;
+                if (!merge.CloudChanged && !resync)
                 {
-                    done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, null, readBytes, null));
+                    done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, null, readBytes, null, remote));
                     return;
                 }
 
                 Upload(result, cloud, device, (write, bytes) =>
-                    done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, write, bytes, null)));
+                    done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, write, bytes, null, remote)));
             });
         }
 
@@ -169,6 +179,70 @@ namespace AF.Save
             ProfileIntegrity.Sign(profile, device);
             byte[] blob = Encoding.UTF8.GetBytes(CloudMerge.SharedJson(profile)); // sin purchase_queue: solo local (F3-3)
             cloud.Save(blob, write => done(write, blob.Length));
+        }
+
+        /// <summary>
+        /// Conflicto de Saved Games (D-042; 08 §11, «Conflicto»: resolución manual): Play guarda dos versiones de <c>af_main</c> y
+        /// hay que elegir los bytes que quedan. Se leen las dos como perfiles y se fusionan con <see cref="CloudMerge.Resolve"/> (la
+        /// <paramref name="original"/> hace de «local»; la fusión de verdad con el local llega después, en <see cref="AtStartup"/>).
+        /// Si una es de un esquema más nuevo que esta app, queda esa tal cual (si lo son las dos, la <paramref name="original"/>);
+        /// si una no se puede leer, queda la otra tal cual; si ninguna, la <paramref name="original"/>. El resultado se firma con <paramref name="device"/> si cambió.
+        /// </summary>
+        public static byte[] ResolveSnapshotConflict(byte[] original, byte[] unmerged, IDeviceIdentity device)
+        {
+            if (original == null)
+            {
+                throw new ArgumentNullException(nameof(original));
+            }
+
+            if (unmerged == null)
+            {
+                throw new ArgumentNullException(nameof(unmerged));
+            }
+
+            if (device == null)
+            {
+                throw new ArgumentNullException(nameof(device));
+            }
+
+            BlobRead readA = ReadBlob(original, out Profile? a, out bool migratedA, out _);
+            BlobRead readB = ReadBlob(unmerged, out Profile? b, out bool migratedB, out _);
+
+            // Una versión de un esquema más nuevo que esta app (otro teléfono ya actualizado) no se pisa ni se fusiona: se queda tal
+            // cual (08 §4.4, como en AtStartup); si lo son las dos, la original.
+            if (readA == BlobRead.TooNew)
+            {
+                return (byte[])original.Clone();
+            }
+
+            if (readB == BlobRead.TooNew)
+            {
+                return (byte[])unmerged.Clone();
+            }
+
+            bool okA = readA == BlobRead.Ok && a != null;
+            bool okB = readB == BlobRead.Ok && b != null;
+            if (!okA)
+            {
+                return okB ? (byte[])unmerged.Clone() : (byte[])original.Clone();
+            }
+
+            if (!okB)
+            {
+                return (byte[])original.Clone();
+            }
+
+            bool coherentA = migratedA || ProfileIntegrity.IsCoherent(ProfileIntegrity.Verify(a!));
+            bool coherentB = migratedB || ProfileIntegrity.IsCoherent(ProfileIntegrity.Verify(b!));
+            CloudMergeResult merge = CloudMerge.Resolve(a!, b, coherentA, coherentB);
+            if (!merge.LocalChanged)
+            {
+                return (byte[])original.Clone();
+            }
+
+            Profile merged = merge.Merged;
+            ProfileIntegrity.Sign(merged, device);
+            return Encoding.UTF8.GetBytes(CloudMerge.SharedJson(merged));
         }
 
         private enum BlobRead

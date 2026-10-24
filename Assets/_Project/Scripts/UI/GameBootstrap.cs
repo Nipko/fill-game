@@ -1385,15 +1385,20 @@ namespace AF.UI
         /// extras de la cartera (<c>af_seeds</c> y <c>af_canoes</c>): volver al inicio no es un arranque en frío. Si Ajustes estaba
         /// abierta, se vuelve a abrir sobre el inicio (FXT).
         /// </summary>
-        private void RebuildUi()
+        private void RebuildUi(bool persist = true)
         {
             s_rebuildToLobby = _profile != null;
+            s_rebuildCloud = _cloudSession; // D-042: la nube de la sesión, ya fusionada, sigue en la escena siguiente
             s_rebuildProfile = _profile;
             s_rebuildStatus = _profileStatus;
             s_rebuildStore = _profileStore;
             s_rebuildReopenSettings = _profile != null && _settingsScreen != null && _settingsScreen.Visible;
             _settingsScreen?.Hide(); // sin settings_closed: el arranque siguiente la vuelve a abrir en el idioma nuevo
-            PersistNow("idioma");
+            if (persist)
+            {
+                PersistNow("idioma");
+            }
+
             enabled = false; // nada más de este arranque: la escena se va
             Scene scene = gameObject.scene;
             if (scene.buildIndex >= 0)
@@ -1579,6 +1584,8 @@ namespace AF.UI
             s_rebuildToLobby = false;
             s_rebuildProfile = null;
             s_rebuildStore = null;
+            _cloudSession = rebuilt ? s_rebuildCloud : null; // D-042: la nube de la sesión sigue tras la recarga (ya fusionada)
+            s_rebuildCloud = null;
             IProfileStore store = rebuilt ? carriedStore! : (LaunchOptions.ProfileStoreOverride ?? new LocalProfileStore(profileDirectory));
             Profile profile;
             bool firstRun;
@@ -1609,6 +1616,12 @@ namespace AF.UI
                 if (_dataServicesAtBoot)
                 {
                     profile = SyncProfileAtBoot(profile, store, IsLocked(_profileStatus));
+                    if (CloudBootPending)
+                    {
+                        yield return WaitCloudAtBoot(); // D-042: Play Games responde en segundo plano; la falsa, en el acto (sin fotogramas de más)
+                    }
+
+                    profile = EndCloudBootWindow(profile);
                 }
             }
 
@@ -1642,6 +1655,7 @@ namespace AF.UI
             var batch = new ProfileSaveBatch(SigningStore(store)); // B8: cada escritura lleva integrity.hmac (08 §4.3)
             _saveBatch = batch;
             SetUpTelemetry(clock); // Remote Config, bus y analítica antes de la cartera (B7; GameBootstrap.Telemetry.cs)
+            ConnectCloud(); // D-042: cada save_cloud_interval_levels victorias, una subida (GameBootstrap.CloudSession.cs)
             IClock capsClock = CreateCapsClock(clock); // B8: anti-reloj de canoas y topes diarios (08 §10.1; 04 §7.1)
             _wallet = new Wallet(profile, batch.Durable, capsClock, _rcConfigs?.Economy);
             // La cartera, al bus y con biz_feature_lives nada más crearse: lo que gane o gaste el arranque (el Regalo de regreso
@@ -1692,7 +1706,7 @@ namespace AF.UI
             _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
             // F3-5: la compra verificada (F3-3) con el cliente del backend de este build (GameBootstrap.Backend.cs); la hoja «Compra
             // simulada» es la de la tienda de la plataforma simulada (FakeBillingClient) sin Play real (D-040).
-            _store = WrapStore(WrapConsentStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch))); // B12: flags de edad
+            _store = WrapStore(WrapCloudStore(WrapConsentStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch)))); // B12: flags de edad; D-042: subida tras cada compra (bajo la analítica, que va fuera)
             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
 
@@ -1841,6 +1855,11 @@ namespace AF.UI
                 return;
             }
 
+            if (TickCloud())
+            {
+                return; // D-042: la nube llegó tarde con otro perfil: la escena se recarga con él
+            }
+
             TickBackend(Time.unscaledDeltaTime * 1000f); // F3-5: la cola de verificación de compras, cada pocos segundos
             TickAds(); // D-042: los márgenes de cierre de MAX
             TickA11y(Time.unscaledDeltaTime * 1000f); // B9: el lector de pantalla (solo con TalkBack) y el Reto
@@ -1920,9 +1939,11 @@ namespace AF.UI
             if (paused)
             {
                 PersistNow("segundo plano");
+                UploadCloud(); // D-042 (08 §11): al pasar a segundo plano, una subida a Saved Games
                 return;
             }
 
+            RetryCloud(); // D-042: la fusión que no llegó (sin red) o la subida pendiente de #3379
             ResumeBackend(true); // F3-5: lo que Play cobró mientras tanto vuelve como compra sin terminar (08 §10.3)
             ResumeAds(); // D-042: un anuncio de MAX sin su cierre se suelta tras un margen
             PushUiResumed(); // «Avisos»: de vuelta de los ajustes del teléfono (GameBootstrap.PushUi.cs)
