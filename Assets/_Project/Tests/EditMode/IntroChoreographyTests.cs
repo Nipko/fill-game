@@ -416,7 +416,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void ThreeRows_WithTheTroopBand_GoOnTheBranch([Values(13, 16)] int cuias, [Values(780f, 800f)] float height)
         {
-            // D-046, punto 3: con 3 filas el tablero deja 44 dp sobre el panel y la tropa va en su rama, como con 1 y 2 filas.
+            // D-046, punto 3: con 3 filas el tablero deja 56 dp sobre el panel (Q-T6T-4) y la tropa va en su rama, como con 1 y 2 filas.
             var plan = new IntroChoreography();
             IntroInput input = Input(cuias, height, 1400f, IntroPerch.Branch);
             Assert.That(input.Rows, Is.EqualTo(3));

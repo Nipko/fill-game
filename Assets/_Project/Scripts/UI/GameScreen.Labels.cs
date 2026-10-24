@@ -386,6 +386,18 @@ namespace AF.UI
             }
         }
 
+        // Las burbujas «Te faltan {n}» de la franja de la tropa cambiaron de alto (D-046; Q-T6T-3): la banda de etiquetas no las
+        // pisa (LayoutHudLabels).
+        private void RelayoutHudLabelsForBubbles()
+        {
+            if (_labelsBuilt)
+            {
+                LayoutDifficultyFrame();
+                LayoutHudLabels();
+                KeepWalletOffPanel();
+            }
+        }
+
         partial void LabelsLayoutBoard()
         {
             if (_labelsBuilt)
@@ -659,7 +671,9 @@ namespace AF.UI
             BoardLayoutResult? l = _layout;
             if (l != null && _views.Length > 0)
             {
-                edge = PanelEdgeDp(l);
+                // Con 3 filas y la franja de la tropa, las burbujas «Te faltan {n}» que van a ella cuentan como el canto: la banda
+                // no las pisa (compacta o pegada bajo la placa si hace falta; D-046, punto 3; Q-T6T-3).
+                edge = Mathf.Min(PanelEdgeDp(l), _hudBandBubbleTop);
                 float u = l.CuiaWidth * 0.5f;
                 int n = Mathf.Min(_views.Length, l.RowOf.Length);
                 for (int i = 0; i < n; i++)

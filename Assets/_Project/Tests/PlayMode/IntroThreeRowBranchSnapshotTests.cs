@@ -12,7 +12,7 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Capturas de revisión de la tropa en su rama con 3 filas (D-046, punto 3; tarea T6 · tropa; <c>[Explicit]</c>, no forman
     /// parte de la suite): el primer nivel de 3 filas de los mundos 4 (el 86, churuco) y 5 (el 143, huapo colorado), con la
-    /// intro corta (800 ms) que ve el jugador, con la tropa sentada en la rama sobre la franja de 44 dp, y ya en juego, a
+    /// intro corta (800 ms) que ve el jugador, con la tropa sentada en la rama sobre la franja de 56 dp, y ya en juego, a
     /// 1080 × 2340 px (360 × 780 dp) y 720 × 1600 px (360 × 800 dp): <c>t6t_&lt;nivel&gt;_rama_&lt;ancho&gt;</c> y
     /// <c>t6t_&lt;nivel&gt;_juego_&lt;ancho&gt;</c>. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.IntroThreeRowBranchSnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en

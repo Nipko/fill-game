@@ -159,7 +159,7 @@ namespace AF.Tests.EditMode
 
         /// <summary>
         /// D-046, punto 3: en todos los niveles de 3 filas de los paquetes 1-700, a 360 × 780 y a 360 × 800 dp, el tablero deja la
-        /// franja de la rama (≥ 44 dp entre el HUD y el panel) con la cuia ≥ 28 dp, con sus capacidades reales (Cuia alta) y la
+        /// franja de la rama (56 dp entre el HUD y el panel) con la cuia ≥ 28 dp, con sus capacidades reales (Cuia alta) y la
         /// pareja de la Tinaja en su fila; así la tropa va en su rama en el primer intento y la tropa lateral (D-021) solo queda
         /// de respaldo. En 16:9 (360 × 640) no cabe en ninguno y vuelve el comportamiento de antes.
         /// </summary>

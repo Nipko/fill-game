@@ -13,20 +13,14 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Sitio para la tropa con 3 filas (D-046, punto 3) en la escena real: el primer nivel de 3 filas de los mundos 4 (el 86,
     /// churuco) y 5 (el 143, huapo colorado), a 1080 × 2340 px (360 × 780 dp) y 720 × 1600 px (360 × 800 dp), deja una franja
-    /// ≥ 44 dp entre el HUD y el panel, el panel a ≥ 31,5 dp de la bandeja como antes (Q-T6T-3) y la tropa en su rama en el primer intento (no la
-    /// tropa lateral de D-021, que queda de respaldo), en las dos versiones; nada de la tropa sobre el HUD ni dentro del panel,
-    /// salvo el roce con el borde del HUD de Q-T6T-4, y ≥ 8 dp de toda cuia en todos los fotogramas muestreados; el reintento, en dosel (D-010). En 16:9 (1080 × 1920 px,
-    /// 360 × 640 dp) no cabe la franja: el tablero de 3 filas es el de antes y la intro no va en la rama.
+    /// de 56 dp entre el HUD y el panel (Q-T6T-4), el suelo 20 dp más abajo con el panel a 11,5 dp de la bandeja (Q-T6T-3) y la
+    /// tropa en su rama en el primer intento (no la tropa lateral de D-021, que queda de respaldo), en las dos versiones; nada de
+    /// la tropa sobre el HUD (con la misma tolerancia de 0,5 dp que <c>IntroTests</c>) ni dentro del panel, y ≥ 8 dp de toda cuia
+    /// en todos los fotogramas muestreados; el reintento, en dosel (D-010). En 16:9 (1080 × 1920 px, 360 × 640 dp) no cabe la
+    /// franja: el tablero de 3 filas es el de antes y la intro no va en la rama.
     /// </summary>
     public sealed class IntroThreeRowBranchTests
     {
-        /// <summary>
-        /// Lo que la tropa puede entrar en la fila del HUD con la franja justa de 44 dp (Q-T6T-4): como mucho la subida de la rama
-        /// hacia las esquinas (6 dp), por donde entra y sale. Medido: 0,5 dp en el 86 y 3,6 dp en el 143 (al salir por la esquina
-        /// de la derecha, bajo Reiniciar), a 1080 y 720 px.
-        /// </summary>
-        private const float HudTouchDp = 6f;
-
         /// <summary>1080 × 1920 px (360 × 640 dp, 16:9).</summary>
         internal static readonly Vector4 Screen16x9 = new Vector4(1080f, 1920f, 96f, 48f);
 
@@ -40,25 +34,6 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator FirstThreeRowLevelOfWorlds4And5_GoesOnTheBranch_ClearOfHudPanelAndCuias([Values(86, 143)] int level, [Values(1080, 720)] int widthPx)
         {
-            return Branch(level, widthPx, HudTouchDp);
-        }
-
-        /// <summary>
-        /// Lo mismo sin tolerancia sobre el HUD (Q-T6T-4; <c>[Explicit]</c>: hoy falla). Con la franja justa de 44 dp, el tamaño de
-        /// 07 §6.4, <c>min(tam_dp, franja − 10)</c>, deja la cabeza de un miquito sentado a 0,3 dp del borde del HUD, y sus gestos
-        /// la meten en él (0,5 dp en el 86; 3,6 dp en el 143 al salir por la esquina de la derecha, bajo Reiniciar); con el tablero de prueba de 16 cuias del mundo 1 (mono ardilla), al entrar
-        /// por la punta de la rama, que sube hacia las esquinas, hasta ≈ 5 dp en el borde de la pantalla. Pasará cuando el dueño
-        /// decida la holgura (la regla de 07 §6.4 o una franja mayor).
-        /// </summary>
-        [UnityTest]
-        [Explicit("Q-T6T-4: la tropa roza el HUD con la franja justa de 44 dp (D-046).")]
-        public IEnumerator FirstThreeRowLevel_Branch_StrictlyOffTheHud_KnownIssue([Values(86, 143)] int level, [Values(1080, 720)] int widthPx)
-        {
-            return Branch(level, widthPx, 0.5f);
-        }
-
-        private static IEnumerator Branch(int level, int widthPx, float hudTolerance)
-        {
             GameScreen.SimulatedScreen = widthPx == 1080 ? IntroSideTroopTests.Screen1080 : IntroSideTroopTests.Screen720;
             yield return IntroSideTroopTests.LoadLevel(level);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -69,8 +44,8 @@ namespace AF.Tests.PlayMode
             Assert.That(l.TroopBand, Is.True, "la franja de la tropa (D-046)");
             float hudBottom = view.HudBottomDp;
             float trayTop = view.TrayTopDp;
-            Assert.That(l.PanelY - hudBottom, Is.GreaterThanOrEqualTo(IntroChoreography.BranchMinBandDp), "franja ≥ 44 dp");
-            Assert.That(trayTop - l.PanelBottom, Is.GreaterThanOrEqualTo(31.5f - BoardLayout.ThreeRowFloorDropDp - 0.01f), "≥ 31,5 dp hasta la bandeja (menos lo que baje el suelo)");
+            Assert.That(l.PanelY - hudBottom, Is.EqualTo(BoardLayout.TroopBandDp).Within(0.01f), "franja de 56 dp (Q-T6T-4)");
+            Assert.That(trayTop - l.PanelBottom, Is.EqualTo(11.5f).Within(0.01f), "11,5 dp hasta la bandeja (Q-T6T-3)");
             Assert.That(l.CuiaWidth, Is.GreaterThanOrEqualTo(BoardLayout.MinCuiaWidth));
             for (int i = 0; i < view.Views.Length; i++)
             {
@@ -110,10 +85,8 @@ namespace AF.Tests.PlayMode
 
                         seen++;
                         string where = what + ", t " + t + ", " + r;
-                        // Con la franja justa de 44 dp, el tamaño de 07 §6.4 deja la tropa rozar el borde del HUD (Q-T6T-4; ver
-                        // FirstThreeRowLevel_Branch_StrictlyOffTheHud_KnownIssue): se tolera HudTouchDp.
                         worstHud = Mathf.Max(worstHud, hudBottom - r.yMin);
-                        Assert.That(r.yMin, Is.GreaterThanOrEqualTo(hudBottom - hudTolerance), "nada sobre el HUD: " + where);
+                        Assert.That(r.yMin, Is.GreaterThanOrEqualTo(hudBottom - 0.5f), "nada sobre el HUD: " + where);
                         Assert.That(r.yMax, Is.LessThanOrEqualTo(panelTop + 0.5f), "nada dentro del panel: " + where);
                         for (int i = 0; i < view.Views.Length; i++)
                         {

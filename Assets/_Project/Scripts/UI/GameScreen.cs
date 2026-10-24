@@ -2737,7 +2737,7 @@ namespace AF.UI
         }
 
         // Suelo nominal del tablero (bandeja − 40). Con 3 filas, BoardLayout deja la franja de la tropa sobre el panel si cabe y
-        // baja el suelo ThreeRowFloorDropDp (hoy 0: Q-T6T-3) (D-046, punto 3); con 1 y 2 filas, nada cambia.
+        // baja el suelo ThreeRowFloorDropDp (20 dp; D-046, punto 3; Q-T6T-3 y Q-T6T-4); con 1 y 2 filas, nada cambia.
         private float BoardBottom => TrayTop - 40f;
 
         private void LayoutScene()

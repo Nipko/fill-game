@@ -920,7 +920,17 @@ namespace AF.Tests.PlayMode
         {
             Canvas.ForceUpdateCanvases();
             Rect plate = VictorySetup.CanvasRect(notice, (RectTransform)view.Canvas.transform);
-            float panelBottom = view.Layout!.PanelBottom;
+            BoardLayoutResult l = view.Layout!;
+            float panelBottom = l.PanelBottom;
+            if (l.TroopBand && plate.yMax <= l.PanelY)
+            {
+                // Con 3 filas y el suelo bajado (D-046; Q-T6T-3), la que no cabe bajo el panel va a la franja de la tropa: sobre el
+                // panel con 2 dp de aire y bajo la fila del HUD.
+                Assert.That(l.PanelY - plate.yMax, Is.GreaterThanOrEqualTo(BoosterTray.MissingPanelClearDp - 0.01f), what + ": en la franja, sobre el panel");
+                Assert.That(plate.yMin, Is.GreaterThanOrEqualTo(view.HudBottomDp - 0.01f), what + ": en la franja, bajo la fila del HUD");
+                return;
+            }
+
             Assert.That(plate.yMin - panelBottom, Is.GreaterThanOrEqualTo(2f - 0.01f), what + ": por debajo del tablero (su panel acaba en " + panelBottom + " dp y la placa empieza en " + plate.yMin + " dp)");
         }
 

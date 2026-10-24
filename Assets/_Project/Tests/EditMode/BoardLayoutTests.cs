@@ -112,29 +112,30 @@ namespace AF.Tests.EditMode
             }
         }
 
-        [TestCase(11, 40.655f, 113.834f)] // D-046, punto 3: antes 46,9 × 131,3 (sin la franja de la tropa)
-        [TestCase(12, 40.655f, 113.834f)]
-        [TestCase(13, 40.655f, 113.834f)] // Magic Sort con 13-14 botellas: 45 × 138 dp en nuestra escala
-        [TestCase(14, 40.655f, 113.834f)]
-        [TestCase(15, 40.655f, 113.834f)]
+        [TestCase(11, 41.607f, 116.5f)] // D-046, punto 3: antes 46,9 × 131,3 (sin la franja de la tropa)
+        [TestCase(12, 41.607f, 116.5f)]
+        [TestCase(13, 41.607f, 116.5f)] // Magic Sort con 13-14 botellas: 45 × 138 dp en nuestra escala
+        [TestCase(14, 41.607f, 116.5f)]
+        [TestCase(15, 41.607f, 116.5f)]
         [TestCase(16, 39.2f, 109.76f)] // 6/5/5: ranura de 56 (manda el ancho, como antes)
         public void ThreeRows_From11Cuias_At360x780(int count, float width, float height)
         {
             // D-006 y D-046: 3 filas desde 11 cuias; el bloque cabe entre boardTop + 44 + 22 (la franja de la tropa y el margen
-            // del panel) y el suelo, menos su media holgura de 13,5: 2 × (479,5 − 27 − 31 − 80) / (3 × 5,6) = 40,66.
+            // del panel) y el suelo bajado 20 dp, menos su media holgura de 13,5: 2 × (487,5 − 27 − 31 − 80) / (3 × 5,6) = 41,61
+            // (franja de 56 dp, Q-T6T-4; suelo, Q-T6T-3).
             BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom);
             Assert.That(r.Rows, Is.EqualTo(3));
             Assert.That(r.TroopBand, Is.True);
             Assert.That(r.CuiaWidth, Is.EqualTo(width).Within(0.01f));
             Assert.That(r.CuiaHeight, Is.EqualTo(height).Within(0.01f));
-            Assert.That(r.BlockBottom - r.BlockTop, Is.LessThanOrEqualTo(Bottom + BoardLayout.ThreeRowFloorDropDp - (Top + 66f) - 13.5f + 0.01f));
+            Assert.That(r.BlockBottom - r.BlockTop, Is.LessThanOrEqualTo(Bottom + BoardLayout.ThreeRowFloorDropDp - (Top + BoardLayout.TroopBandDp + BoardLayout.PanelMargin) - 13.5f + 0.01f));
         }
 
-        [TestCase(11, 43.036f)] // D-046: antes 48 y 47,04
-        [TestCase(12, 43.036f)]
-        [TestCase(13, 43.036f)]
-        [TestCase(14, 43.036f)]
-        [TestCase(15, 43.036f)]
+        [TestCase(11, 43.988f)] // D-046: antes 48 y 47,04
+        [TestCase(12, 43.988f)]
+        [TestCase(13, 43.988f)]
+        [TestCase(14, 43.988f)]
+        [TestCase(15, 43.988f)]
         public void ThreeRows_At360x800(int count, float width)
         {
             BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom800);
@@ -167,7 +168,7 @@ namespace AF.Tests.EditMode
 
             BoardLayoutResult thirteen = BoardLayout.Compute(14, 13, H4, 360f, Top, Bottom);
             Assert.That(Split(thirteen), Is.EqualTo("5/4/5"));
-            Assert.That(thirteen.CuiaWidth, Is.EqualTo(40.655f).Within(0.01f), "con la franja de la tropa (D-046)");
+            Assert.That(thirteen.CuiaWidth, Is.EqualTo(41.607f).Within(0.01f), "con la franja de la tropa (D-046)");
 
             BoardLayoutResult fourteen = BoardLayout.Compute(16, 14, H4, 360f, Top, Bottom);
             Assert.That(Split(fourteen), Is.EqualTo("5/5/6"));
@@ -298,25 +299,25 @@ namespace AF.Tests.EditMode
             }
         }
 
-        // D-046, punto 3: con 3 filas, la franja de la tropa (44 dp entre el HUD y el panel) y el suelo ThreeRowFloorDropDp más
-        // abajo (hoy 0, Q-T6T-3: el panel, a ≥ 31,5 dp de la bandeja, como antes), encogiendo las cuias lo justo; también con la Cuia alta (de 5 y de 6 dosis) y con
+        // D-046, punto 3: con 3 filas, la franja de la tropa (56 dp entre el HUD y el panel, Q-T6T-4) y el suelo ThreeRowFloorDropDp más
+        // abajo (20 dp, Q-T6T-3: el panel, a ≥ 11,5 dp de la bandeja), encogiendo las cuias lo justo; también con la Cuia alta (de 5 y de 6 dosis) y con
         // la Tinaja (como mucho 12 cuias, la altura de la Cuia alta de 5), nunca por debajo de MinCuiaWidth (u ≥ 14 dp, 07 §4.5).
         // Ni la fila 1 elevada ni su cielo entran en el HUD (se retira esa parte de la excepción de D-028).
-        [TestCase(11, 4, -1, Bottom, 40.655f)]
-        [TestCase(13, 4, -1, Bottom, 40.655f)]
-        [TestCase(14, 4, -1, Bottom, 40.655f)]
-        [TestCase(15, 4, -1, Bottom, 40.655f)]
+        [TestCase(11, 4, -1, Bottom, 41.607f)]
+        [TestCase(13, 4, -1, Bottom, 41.607f)]
+        [TestCase(14, 4, -1, Bottom, 41.607f)]
+        [TestCase(15, 4, -1, Bottom, 41.607f)]
         [TestCase(16, 4, -1, Bottom, 39.2f)]
-        [TestCase(13, 5, -1, Bottom, 34.495f)] // Cuia alta de 5 (6,60 u): antes 39,8
-        [TestCase(16, 5, -1, Bottom, 34.495f)]
-        [TestCase(13, 6, -1, Bottom, 29.956f)] // Cuia alta de 6 (7,60 u): antes 34,6
-        [TestCase(16, 6, -1, Bottom, 29.956f)]
-        [TestCase(11, 5, 3, Bottom, 34.495f)] // Tinaja (6,60 u) con 11 y 12 cuias
-        [TestCase(12, 5, 6, Bottom, 34.495f)]
-        [TestCase(13, 4, -1, Bottom800, 43.036f)]
+        [TestCase(13, 5, -1, Bottom, 35.303f)] // Cuia alta de 5 (6,60 u): antes 39,8
+        [TestCase(16, 5, -1, Bottom, 35.303f)]
+        [TestCase(13, 6, -1, Bottom, 30.658f)] // Cuia alta de 6 (7,60 u): antes 34,6
+        [TestCase(16, 6, -1, Bottom, 30.658f)]
+        [TestCase(11, 5, 3, Bottom, 35.303f)] // Tinaja (6,60 u) con 11 y 12 cuias
+        [TestCase(12, 5, 6, Bottom, 35.303f)]
+        [TestCase(13, 4, -1, Bottom800, 43.988f)]
         [TestCase(16, 4, -1, Bottom800, 39.2f)]
-        [TestCase(14, 6, -1, Bottom800, 31.711f)]
-        [TestCase(12, 5, 4, Bottom800, 36.515f)]
+        [TestCase(14, 6, -1, Bottom800, 32.412f)]
+        [TestCase(12, 5, 4, Bottom800, 37.323f)]
         public void ThreeRows_ReserveTheTroopBand_AndLowerTheFloor(int count, int capacity, int pairStart, float bottom, float width)
         {
             float heightU = CuiaGeometry.HeightU(capacity);
@@ -331,7 +332,7 @@ namespace AF.Tests.EditMode
             Assert.That(r.BlockTop, Is.GreaterThanOrEqualTo(r.PanelY + FrameDp + 8f - 0.01f), at + ": la fila 1 elevada, ≥ 8 dp bajo el marco");
             Assert.That(r.BlockTop, Is.GreaterThan(Top), at + ": ni la fila 1 ni su cielo en el HUD");
             float trayTop = bottom + 40f;
-            Assert.That(trayTop - r.PanelBottom, Is.GreaterThanOrEqualTo(40f - BoardLayout.ThreeRowFloorDropDp - 8.5f - 0.01f), at + ": hasta la bandeja, ≥ 31,5 dp menos lo que baja el suelo");
+            Assert.That(trayTop - r.PanelBottom, Is.GreaterThanOrEqualTo(40f - BoardLayout.ThreeRowFloorDropDp - 8.5f - 0.01f), at + ": ≥ 11,5 dp hasta la bandeja");
             Assert.That(r.FootY[count - 1], Is.LessThanOrEqualTo(bottom + BoardLayout.ThreeRowFloorDropDp - BoardLayout.ShelfDrop + 0.01f), at);
             if (pairStart >= 0)
             {
@@ -340,16 +341,17 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void ThreeRows_At360x780_TheBandIs44_AndThePanelBottomStaysWhereItWas()
+        public void ThreeRows_At360x780_TheBandIs56_AndThePanelEnds11_5dpAboveTheTray()
         {
-            // Las cifras de 02 §5 y 07 §7.4 [P] (D-046; Q-T6T-3): panel en 132-628,5 dp con 13-15 cuias: franja de 44 dp sobre
-            // el panel y, abajo, 31,5 dp hasta la bandeja (en 660), como antes de D-046 (ThreeRowFloorDropDp = 0).
-            Assert.That(BoardLayout.ThreeRowFloorDropDp, Is.EqualTo(0f), "Q-T6T-3: el suelo no baja hasta que lo decida el dueño");
+            // Las cifras de 02 §5 y 07 §7.4 [P] (D-046; Q-T6T-3 y Q-T6T-4, decididas por el dueño el 2026-10-24): panel en
+            // 144-648,5 dp con 13-15 cuias: franja de 56 dp sobre el panel, suelo en 640 (bandeja − 20) y 11,5 dp hasta la bandeja.
+            Assert.That(BoardLayout.TroopBandDp, Is.EqualTo(56f));
+            Assert.That(BoardLayout.ThreeRowFloorDropDp, Is.EqualTo(20f));
             BoardLayoutResult r = BoardLayout.Compute(14, H4, 360f, Top, Bottom);
-            Assert.That(r.PanelY, Is.EqualTo(132f).Within(0.01f));
-            Assert.That(r.PanelBottom, Is.EqualTo(628.5f).Within(0.01f));
-            Assert.That(r.BlockTop, Is.EqualTo(154f).Within(0.01f));
-            Assert.That(r.BlockBottom, Is.EqualTo(606.5f).Within(0.01f));
+            Assert.That(r.PanelY, Is.EqualTo(144f).Within(0.01f));
+            Assert.That(r.PanelBottom, Is.EqualTo(648.5f).Within(0.01f));
+            Assert.That(r.BlockTop, Is.EqualTo(166f).Within(0.01f));
+            Assert.That(r.BlockBottom, Is.EqualTo(626.5f).Within(0.01f));
         }
 
         // Donde no cabe la franja sin bajar la cuia de 28 dp (16:9 a 360 × 640 y la Cuia alta de 6 en lienzos bajos), el layout de 3
@@ -360,7 +362,7 @@ namespace AF.Tests.EditMode
         [TestCase(360f, Bottom640, 13, 5)]
         [TestCase(360f, Bottom640, 16, 6)]
         [TestCase(320f, Bottom640, 16, 4)]
-        [TestCase(360f, 560f, 16, 6)] // 360 × 720 con la Cuia alta de 6: 26,4 dp con la franja
+        [TestCase(360f, 560f, 16, 6)] // 360 × 720 con la Cuia alta de 6: 25,4 dp con la franja
         public void ThreeRows_WithoutRoomForTheBand_KeepTheLayoutOfBefore(float width, float bottom, int count, int capacity)
         {
             float heightU = CuiaGeometry.HeightU(capacity);
@@ -555,7 +557,7 @@ namespace AF.Tests.EditMode
         public void Block_IsCentredInTheBoardArea(int count, bool tall)
         {
             // VA-01 (D-003; guía 3.2): el hueco de arriba y el de abajo difieren ≤ 2 dp. Fin del anclaje inferior. Con 3 filas
-            // (D-046), en la zona que deja la franja de la tropa: de boardTop + 52,5 al suelo (más ThreeRowFloorDropDp, hoy 0; Q-T6T-3).
+            // (D-046), en la zona que deja la franja de la tropa: de boardTop + 64,5 al suelo bajado 20 dp (Q-T6T-3 y Q-T6T-4).
             BoardLayoutResult r = BoardLayout.Compute(count, tall ? H5 : H4, 360f, Top, Bottom);
             float zoneTop = r.TroopBand ? Top + BoardLayout.TroopBandDp + BoardLayout.PanelMargin - (0.5f * BoardLayout.MinBlockSlack) : Top;
             float zoneBottom = r.TroopBand ? Bottom + BoardLayout.ThreeRowFloorDropDp : Bottom;
@@ -578,9 +580,9 @@ namespace AF.Tests.EditMode
         [TestCase(4, 238.1f, 469.9f)] // 4 cuias de 56 dp (D-004)
         [TestCase(5, 250.64f, 457.36f)] // niveles 2, 3 y 6 (5 cuias de 47 dp)
         [TestCase(6, 162.1f, 545.9f)] // niveles 4 y 5 (dos filas de 3, 48 dp)
-        [TestCase(11, 132f, 628.5f)] // 3 filas (D-046): franja de 44 dp sobre el panel; abajo, como antes (antes 80-628,5; Q-T6T-3)
-        [TestCase(14, 132f, 628.5f)]
-        [TestCase(16, 138.11f, 622.39f)] // 3 filas (6/5/5), centrado en la zona (antes 111,86-596,14)
+        [TestCase(11, 144f, 648.5f)] // 3 filas (D-046): franja de 56 dp sobre el panel y 11,5 dp hasta la bandeja (antes 80-628,5)
+        [TestCase(14, 144f, 648.5f)]
+        [TestCase(16, 154.11f, 638.39f)] // 3 filas (6/5/5), centrado en la zona (antes 111,86-596,14)
         public void Panel_MatchesTheMeasuredCasesOfTheGuide_At360x780(int count, float top, float bottom)
         {
             BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom);
@@ -590,9 +592,9 @@ namespace AF.Tests.EditMode
             Assert.That(r.PanelBottom, Is.EqualTo(bottom).Within(0.05f));
 
             // VA-15: ni el HUD ni la bandeja se solapan con el panel; desde D-046 nunca pasa bajo el HUD a 360 × 780, y con 3
-            // filas deja la franja de la tropa; abajo, ≥ 31,5 dp hasta la bandeja, como antes (Q-T6T-3).
+            // filas deja la franja de la tropa; abajo, ≥ 11,5 dp hasta la bandeja (Q-T6T-3).
             Assert.That(r.PanelY, Is.GreaterThanOrEqualTo(Top));
-            Assert.That(r.PanelBottom, Is.LessThanOrEqualTo(Bottom + 40f - 31.5f + 0.01f));
+            Assert.That(r.PanelBottom, Is.LessThanOrEqualTo(Bottom + 40f - 11.5f + 0.01f));
             if (r.Rows == 3)
             {
                 Assert.That(r.PanelY - Top, Is.GreaterThanOrEqualTo(BoardLayout.TroopBandDp - 0.01f));
@@ -648,10 +650,10 @@ namespace AF.Tests.EditMode
         [TestCase(7, 2, 48f)]
         [TestCase(11, 2, 48f)] // 6/5: 0,70 × 76 = 53,2 → 48; en 3 filas el alto la bajaría a 46,9
         [TestCase(12, 2, 48f)]
-        [TestCase(13, 3, 40.655f)] // 2 filas de 7: 45,6; 3 filas: 48 → 43,04 por el alto con la franja de la tropa (D-046)
-        [TestCase(14, 3, 40.655f)]
-        [TestCase(15, 3, 40.655f)]
-        [TestCase(16, 3, 40.655f)]
+        [TestCase(13, 3, 41.607f)] // 2 filas de 7: 45,6; 3 filas: 48 → 41,61 por el alto con la franja de la tropa (D-046)
+        [TestCase(14, 3, 41.607f)]
+        [TestCase(15, 3, 41.607f)]
+        [TestCase(16, 3, 41.607f)]
         public void Tablets_CapTheCuiaByT(int count, int rows, float width)
         {
             // 600 dp de ancho: tablero de 480 dp centrado y la cuia no supera tope(T) (02 §5; D-004; D-006).

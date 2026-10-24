@@ -120,8 +120,9 @@ namespace AF.UI
     /// tableros, y 8 dp desde los bordes del ancho útil. No hay techo del vertido ni hueco reservado para él (D-006): el
     /// origen se dibuja delante de todo mientras vierte.
     /// <para>Con 3 filas (D-046, punto 3; matiza D-006 y la excepción de D-028): arriba se reserva la franja de la rama de la
-    /// tropa, <see cref="TroopBandDp"/> entre <c>boardTop</c> y el panel, encogiendo las cuias lo justo (40,66 dp a 360 × 780),
-    /// y el suelo del tablero baja <see cref="ThreeRowFloorDropDp"/> (hoy 0: Q-T6T-3). Ni la fila 1 ni su cielo entran en el
+    /// tropa, <see cref="TroopBandDp"/> entre <c>boardTop</c> y el panel, y el suelo del tablero baja
+    /// <see cref="ThreeRowFloorDropDp"/>, encogiendo las cuias lo justo (41,61 dp a 360 × 780; Q-T6T-3 y Q-T6T-4, decididas por el
+    /// dueño el 2026-10-24). Ni la fila 1 ni su cielo entran en el
     /// HUD. Si así la cuia bajaría de <see cref="MinCuiaWidth"/> (que con la
     /// Cuia alta es también el mínimo de u = 14 dp de 07 §4.5), el layout de 3 filas es el de antes
     /// (<see cref="BoardLayoutResult.TroopBand"/> falso). Con 1 o 2 filas nada cambia.</para>
@@ -211,20 +212,19 @@ namespace AF.UI
         public const int MaxTwoRowWithAdded = 14;
 
         /// <summary>
-        /// Con 3 filas, cuánto baja el suelo del tablero (dp) [P]. D-046 (punto 3) pide «unos 20 dp», con el panel a unos 12 dp de
-        /// la bandeja ((bandeja − 20) − 13,5 + 22 = bandeja − 11,5). Hoy va a 0, con el panel a 31,5 dp de la bandeja como antes
-        /// (Q-T6T-3, la recomendada aplicada, pendiente del dueño): ese margen es el que usan la burbuja «Te faltan {n}» en dos
-        /// líneas (29,5 dp sobre la bandeja, 02 §5) y el aviso «¡Una cuia más!» junto a las fichas de la última repisa (D-022,
-        /// pregunta 47; A1); con 20 dp la burbuja pisa 18 dp del panel y el aviso del 135 se queda sin sitio legible (D-011,
-        /// punto 2). Con 20 aquí, el layout baja el suelo sin más cambios.
+        /// Con 3 filas, cuánto baja el suelo del tablero (dp) [P] (D-046, punto 3; Q-T6T-3, decidida por el dueño el 2026-10-24:
+        /// «Bajar y mover avisos»): de <c>boardBottom</c> (bandeja − 40) a bandeja − 20, con el panel a (bandeja − 20) − 13,5 + 22 =
+        /// bandeja − 11,5 cuando las cuias encogen por el alto. Las burbujas «Te faltan {n}» y el aviso del tablero que ya no caben
+        /// entre el panel y la bandeja van a la franja de la tropa, sobre el panel (<c>GameScreen</c> y <c>BoosterTray</c>).
         /// </summary>
-        public const float ThreeRowFloorDropDp = 0f;
+        public const float ThreeRowFloorDropDp = 20f;
 
         /// <summary>
         /// Con 3 filas, franja libre entre <c>boardTop</c> (pie del HUD) y el panel para la rama de la tropa (dp) [P] (D-046,
-        /// punto 3; la franja mínima de la rama de D-010, <c>IntroChoreography.BranchMinBandDp</c>).
+        /// punto 3; Q-T6T-4, decidida por el dueño el 2026-10-24: «Franja de 56 dp»). Con la franja justa de 44 dp de D-010
+        /// (<c>IntroChoreography.BranchMinBandDp</c>), el tamaño de 07 §6.4 dejaba la tropa rozar la fila del HUD.
         /// </summary>
-        public const float TroopBandDp = 44f;
+        public const float TroopBandDp = 56f;
 
         /// <summary>
         /// Solo tests: sin la franja de la tropa con 3 filas, para medir en lienzos altos el respaldo de antes de D-046 (la tropa

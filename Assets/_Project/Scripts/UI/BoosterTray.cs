@@ -211,6 +211,7 @@ namespace AF.UI
         private readonly Slot _reveal;
         private readonly Slot[] _order;
         private readonly Slot[] _activeBuf = new Slot[5];
+        private readonly MissingRoom _room = new MissingRoom();
         private readonly RectTransform _tip;
         private readonly TextMeshProUGUI _tipText;
         private readonly char[] _buf = new char[24];
@@ -258,6 +259,10 @@ namespace AF.UI
             _reveal = new Slot("RevealButton", hud, art, art.IconFirefly, art.IconFireflyDisabled, UiText.RevealLabel, () => _onReveal?.Invoke());
             _reveal.SetActive(false);
             _order = new[] { _undo, _extra, _hint, _shuffle, _reveal }; // 07 §7.4: Marea, Cuia extra, Pista, Pororoca (B2) y Revelar
+            for (int i = 0; i < _order.Length; i++)
+            {
+                _order[i].Room = _room;
+            }
 
             // Globo de Pista sin hint_supported (04 §2.3 b): placa clara con texto de tinta, sobre la ranura; no captura toques.
             _tip = UiBuilder.Rect("HintTooltip", hud);
@@ -604,6 +609,7 @@ namespace AF.UI
         /// </summary>
         public bool TryGetMissingTop(out float top)
         {
+            // Las que van a la franja de la tropa (SetMissingRoom) no están bajo el tablero: no cuentan aquí (TryGetMissingBandTop).
             top = float.PositiveInfinity;
             _undo.MinMissingTop(ref top);
             _extra.MinMissingTop(ref top);
@@ -616,6 +622,59 @@ namespace AF.UI
             }
 
             return !float.IsPositiveInfinity(top);
+        }
+
+        /// <summary>
+        /// Borde de arriba (dp desde arriba del lienzo) de la burbuja «Te faltan {n}» más alta de las que van a la franja de la
+        /// tropa, sobre el panel (<see cref="SetMissingRoom"/>), se dibujen o no ahora. False si no hay ninguna. Sin asignaciones.
+        /// </summary>
+        public bool TryGetMissingBandTop(out float top)
+        {
+            top = float.PositiveInfinity;
+            for (int i = 0; i < _order.Length; i++)
+            {
+                _order[i].MinMissingBandTop(ref top);
+            }
+
+            return !float.IsPositiveInfinity(top);
+        }
+
+        /// <summary>
+        /// Dónde caben las burbujas «Te faltan {n}» (D-046, punto 3; Q-T6T-3, decidida por el dueño el 2026-10-24: «Bajar y mover
+        /// avisos»). <paramref name="floorDp"/>: lo más alto que puede llegar una burbuja sobre su ranura sin pisar el panel del
+        /// tablero (NaN: sin límite, como siempre). <paramref name="bandBottomDp"/>: con 3 filas y la franja de la tropa, el borde
+        /// de arriba del panel; la burbuja que no cabe bajo el panel va a la franja, sobre su ranura a lo ancho y con su borde de
+        /// abajo <see cref="MissingPanelClearDp"/> sobre el panel (NaN: sin franja, como siempre). <paramref name="held"/>: mientras
+        /// la tropa está en la franja, las de la franja no se dibujan (no la pisan). <paramref name="hiddenInBand"/>: tampoco
+        /// mientras el aviso del tablero no cabe en la franja con ellas (GameScreen.PlaceToast). Solo recoloca si cambia algo; sin
+        /// asignaciones.
+        /// </summary>
+        public void SetMissingRoom(float floorDp, float bandBottomDp, bool held, bool hiddenInBand)
+        {
+            if (SameOrNaN(floorDp, _room.Floor) && SameOrNaN(bandBottomDp, _room.BandBottom) && held == _room.Held && hiddenInBand == _room.HiddenInBand)
+            {
+                return;
+            }
+
+            _room.Floor = floorDp;
+            _room.BandBottom = bandBottomDp;
+            _room.Held = held;
+            _room.HiddenInBand = hiddenInBand;
+            LayoutMissing();
+        }
+
+        /// <summary>Aire entre una burbuja «Te faltan {n}» y el panel del tablero, debajo o en la franja (dp) [P].</summary>
+        public const float MissingPanelClearDp = 2f;
+
+        /// <summary>Alguna burbuja «Te faltan {n}» de la franja de la tropa se dibuja ahora (tests).</summary>
+        public bool AnyMissingInBandDrawn => _undo.MissingInBandDrawn || _extra.MissingInBandDrawn || _hint.MissingInBandDrawn || _shuffle.MissingInBandDrawn || _reveal.MissingInBandDrawn;
+
+        /// <summary>Alguna burbuja «Te faltan {n}» va a la franja de la tropa (tests).</summary>
+        public bool AnyMissingInBand => _undo.MissingInBand || _extra.MissingInBand || _hint.MissingInBand || _shuffle.MissingInBand || _reveal.MissingInBand;
+
+        private static bool SameOrNaN(float a, float b)
+        {
+            return float.IsNaN(a) ? float.IsNaN(b) : Mathf.Approximately(a, b);
         }
 
         public void Bind(LevelFlow flow, GameServices? services)
@@ -1398,6 +1457,15 @@ namespace AF.UI
         // Una ranura de 64 dp (guía 3.6; más ancha si su etiqueta o la de otra no cabe: tarea L4): botón de la familia Agua con glifo y etiqueta funcional, badge arriba a la derecha
         // (cupo en blanco o «+3» con video), badge ámbar «+N» del stock arriba a la izquierda, etiqueta de precio montada sobre
         // el borde inferior (como Magic Sort, ficha §2.3) y «Te faltan {n}» encima de la ranura sin saldo.
+        // Dónde caben las burbujas: lo comparten todas las ranuras (SetMissingRoom).
+        private sealed class MissingRoom
+        {
+            public float Floor = float.NaN;
+            public float BandBottom = float.NaN;
+            public bool Held;
+            public bool HiddenInBand;
+        }
+
         private sealed class Slot
         {
             /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas que también lo enseñen, con la ranura de 64 dp (dp).</summary>
@@ -1478,6 +1546,7 @@ namespace AF.UI
             private bool _visible = true;
             private float _x;
             private float _y;
+            private bool _inBand;
             private float _missingW = MissingWideDp;
             private float _w = SlotDp;
             private float _gap = GapDp;
@@ -1664,14 +1733,32 @@ namespace AF.UI
                 }
             }
 
-            // El borde de arriba de su aviso «Te faltan {n}», si se ve y está más alto que top (dp desde arriba).
+            // El borde de arriba de su aviso «Te faltan {n}», si se ve bajo el tablero y está más alto que top (dp desde arriba).
             public void MinMissingTop(ref float top)
             {
-                if (_missing.gameObject.activeInHierarchy)
+                if (_missing.gameObject.activeInHierarchy && !_inBand)
                 {
                     top = Mathf.Min(top, -_missing.anchoredPosition.y);
                 }
             }
+
+            // Lo mismo para el que va a la franja de la tropa, se dibuje o no ahora (la tropa o el aviso del tablero).
+            public void MinMissingBandTop(ref float top)
+            {
+                if (_missing.gameObject.activeInHierarchy && _inBand)
+                {
+                    top = Mathf.Min(top, -_missing.anchoredPosition.y);
+                }
+            }
+
+            /// <summary>Lo que comparten las ranuras: dónde caben las burbujas (BoosterTray.SetMissingRoom).</summary>
+            public MissingRoom? Room { get; set; }
+
+            /// <summary>Su burbuja, a la vista, va a la franja de la tropa (no cabe bajo el panel).</summary>
+            public bool MissingInBand => _inBand && _missing.gameObject.activeInHierarchy;
+
+            /// <summary>Y se dibuja ahora (ni la tropa ni el aviso del tablero ocupan la franja).</summary>
+            public bool MissingInBandDrawn => MissingInBand && _missingBody.gameObject.activeSelf;
 
             public void SetActive(bool active)
             {
@@ -1853,7 +1940,26 @@ namespace AF.UI
 
                 float h = (twoLines ? MissingTwoLinesDp : MissingOneLineDp) * _scale;
                 float gap = (twoLines ? MissingTwoLinesGapDp : MissingGapDp) * _scale;
-                UiBuilder.Place(_missing, _x + ((_w - widthDp) * 0.5f), _y - gap - h, widthDp, h);
+                float top = _y - gap - h;
+
+                // Con 3 filas y el suelo bajado (D-046; Q-T6T-3), si pisaría el panel, a la franja de la tropa, sobre el panel (el
+                // latido crece hacia arriba desde su borde de abajo: tampoco lo pisa). Mientras la tropa está ahí o el aviso del
+                // tablero ocupa la franja, no se dibuja.
+                MissingRoom? room = Room;
+                _inBand = room != null && !float.IsNaN(room.Floor) && !float.IsNaN(room.BandBottom) && top < room.Floor;
+                bool draw = true;
+                if (_inBand)
+                {
+                    top = room!.BandBottom - MissingPanelClearDp - h;
+                    draw = !room.Held && !room.HiddenInBand;
+                }
+
+                if (_missingBody.gameObject.activeSelf != draw)
+                {
+                    _missingBody.gameObject.SetActive(draw);
+                }
+
+                UiBuilder.Place(_missing, _x + ((_w - widthDp) * 0.5f), top, widthDp, h);
 
                 // Lo más que crece a lo ancho en el latido: con una vecina (la burbuja estrecha), sin acercarse a ella más de
                 // MissingPulseClearDp (con 2 dp de aire entre las dos, nada: solo late hacia arriba).

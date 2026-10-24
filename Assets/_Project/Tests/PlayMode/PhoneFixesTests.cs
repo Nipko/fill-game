@@ -64,6 +64,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            BoardLayout.TroopBandOffForTests = false;
             _rig?.Dispose();
             _rig = null;
             AmbientLayer.Frozen = false;
@@ -182,6 +183,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Toast_DoesNotCoverTheMissingBubbles_ThreeRows_Level135()
         {
+            // Con el tablero de 3 filas de antes de D-046 (sin la franja de la tropa ni el suelo bajado; TroopBandOffForTests):
+            // lo que se mide aquí es el respaldo donde la franja no cabe (16:9). Con la franja, ThreeRowBandNoticeTests.
+            BoardLayout.TroopBandOffForTests = true;
             // El 135 (3 filas) sin semillas ni video: «Te faltan 150» y «Te faltan 120», en dos líneas (las dos ranuras vecinas),
             // como en el teléfono.
             yield return LoadWithBubbles(135, 0, 0);
@@ -328,6 +332,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Toast_AfterTheRealRescue_ThreeRows_BesideTheChipIn135_CoversTheWholeChipIn115()
         {
+            // Con el tablero de 3 filas de antes de D-046 (sin la franja de la tropa ni el suelo bajado; TroopBandOffForTests):
+            // lo que se mide aquí es el respaldo donde la franja no cabe (16:9). Con la franja, ThreeRowBandNoticeTests.
+            BoardLayout.TroopBandOffForTests = true;
             // El 135 con las 300 semillas justas: Aguas estancadas por un camino de vertidos útiles y el rescate comprado de verdad
             // (12 cuias, 4/4/4; sin semillas, las dos burbujas). La ficha «?×1» queda bajo la primera cuia de la fila de abajo y
             // «¡Una cuia más! Sigue desde aquí», ajustado a su texto, cabe a su derecha: no tapa ninguna ficha ni las cuias, solo la
