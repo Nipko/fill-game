@@ -17,7 +17,7 @@ namespace AF.UI
     /// en la barra de abajo, a la izquierda de «Inicio», simétrico al del Mapa [P]. Glifo provisional (la semilla) hasta el «puesto de
     /// Ver-o-Peso» de 07 §5 (arte del artista).</description></item>
     /// <item><description><b>Cántaro</b> (05 §4.1: «icono en el HUD desde el nivel 20»): en la esquina de arriba a la derecha, bajo
-    /// Ajustes [P] (Q-B5-7) y, desde D-046, bajo los botones de Música y Sonido que cuelgan del engranaje, donde no tapa los saldos, la ventanita de casa de TiTino ni su píldora (06 §4.7; D-016), con lo que
+    /// Ajustes [P] (Q-B5-7); desde D-046, en el sitio que le guarda el inicio, a la izquierda del botón de Sonido (Q-T6A-2), donde no tapa los saldos, la ventanita de casa de TiTino ni su píldora (06 §4.7; D-016), con lo que
     /// guarda; a 3.000, «¡Lleno!» con un punto. Un toque abre su tarjeta (05 §5: «≥ 1.000 y toque en el icono»).</description></item>
     /// </list>
     /// Con el enganche de <c>LobbyScreen</c> pasarían a su barra y a su cabecera. Sin asignaciones mientras nada cambia.
@@ -111,7 +111,8 @@ namespace AF.UI
 
         /// <summary>
         /// Enseña u oculta las dos entradas y las coloca junto a <paramref name="homeTab"/> y <paramref name="settings"/> del inicio
-        /// (sus rectángulos en pantalla). El Cántaro dice <paramref name="piggySeeds"/> o, lleno, «¡Lleno!» con el punto.
+        /// (sus rectángulos en pantalla; <paramref name="settings"/> es, desde D-046, el sitio del Cántaro que guarda el inicio, a la
+        /// izquierda del botón de Sonido: el Cántaro se pone encima). El Cántaro dice <paramref name="piggySeeds"/> o, lleno, «¡Lleno!» con el punto.
         /// </summary>
         public void Sync(bool market, bool piggy, int piggySeeds, bool piggyFull, RectTransform? homeTab, RectTransform? settings)
         {
@@ -139,8 +140,10 @@ namespace AF.UI
                 return;
             }
 
-            ToCanvas(settings!, out _, out float settingsTop, out float settingsHeight, out float right);
-            UiBuilder.Place((RectTransform)_piggy.transform, right - PiggyWidthDp, settingsTop + settingsHeight + PiggyGapDp, PiggyWidthDp, PiggyHeightDp);
+            // En el sitio que le guarda el inicio (D-046; LobbyScreen.PiggyAnchorRect) [P]: a la izquierda de Sonido, bajo la píldora de
+            // casa y por encima de la tarjeta del Reto.
+            ToCanvas(settings!, out float slotLeft, out float slotTop, out _, out _);
+            UiBuilder.Place((RectTransform)_piggy.transform, slotLeft, slotTop, PiggyWidthDp, PiggyHeightDp);
             int full = piggyFull ? 1 : 0;
             if (piggySeeds != _piggySeedsShown || full != _piggyFullShown)
             {

@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using AF.Audio;
 using AF.GameFlow;
+using AF.IAP;
+using AF.Platform;
 using AF.Save;
 using AF.UI;
 using NUnit.Framework;
@@ -34,6 +36,7 @@ namespace AF.Tests.PlayMode
         {
             LaunchOptions.Reset();
             GameScreen.SimulatedScreen = null;
+            GameScreen.SimulatedPxPerDp = null;
             GameBootstrap.A11yHostOverride = null;
             AudioCues.Override = null;
             AudioCues.Install(null);
@@ -84,8 +87,18 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Pause_At130_TheTitleStillFits_NextToMusicSoundAndTheX([Values(false, true)] bool pseudo)
+        public IEnumerator Pause_At130_TheTitleStillFits_NextToMusicSoundAndTheX([Values(false, true)] bool pseudo, [Values(360, 320)] int width)
         {
+            if (width == 320)
+            {
+                GameScreen.SimulatedScreen = Canvas320Tests.Screen320;
+                GameScreen.SimulatedPxPerDp = Canvas320Tests.Density;
+            }
+            else
+            {
+                GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
+            }
+
             LaunchOptions.FontScaleOverride = 1.3f;
             if (pseudo)
             {
@@ -102,7 +115,8 @@ namespace AF.Tests.PlayMode
             PauseMenu pause = view.Pause;
             AssertPauseTopRow(pause);
             var title = pause.Root.Find("Panel/HeaderPlate/Title").GetComponent<TMPro.TextMeshProUGUI>();
-            string where = pseudo ? "en-XA al 130 %" : "es-419 al 130 %";
+            string where = (pseudo ? "en-XA al 130 %" : "es-419 al 130 %") + " a " + width + " dp";
+            Assert.That(view.CanvasWidth, Is.EqualTo((float)width).Within(0.5f), where);
             Assert.That(title.fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f), where + ": el título no baja del mínimo");
             Assert.That(UiBuilder.MinTextWidth(title), Is.LessThanOrEqualTo(title.rectTransform.rect.width + 0.5f), where + ": «" + title.text + "» cabe junto a Música, Sonido y la X");
         }
@@ -151,64 +165,197 @@ namespace AF.Tests.PlayMode
             Assert.That(lobby.Audio.SoundSprite, Is.SameAs(boot.Art!.IconSoundOff), "el Sonido sigue tachado");
         }
 
+        // Las tres pantallas de la revisión: 360 × 640 dp (16:9) y 360 × 800 dp (20:9) a 3 px/dp, y 320 × 675 dp a 2,25 px/dp.
+        private static readonly int[] Screens = { 640, 800, 320 };
+
         [UnityTest]
-        public IEnumerator Home_FitsWithoutOverlaps_At360x640_And360x800_WithTheCanoes()
+        public IEnumerator Home_FitsWithoutOverlaps_WithTheDailyCardThePiggyAndTheCanoes([ValueSource(nameof(Screens))] int screen)
         {
-            var store = new MemoryProfileStore(SettingsScreenTests.ProfileAt(58));
-            foreach (Vector2Int size in new[] { new Vector2Int(1080, 1920), new Vector2Int(1080, 2400) })
+            string where = Use(screen);
+            yield return LoadRichLobby();
+            GameBootstrap boot = GameBootstrap.Current!;
+            LobbyScreen lobby = boot.Lobby!;
+            Assert.That(boot.MarketIcons!.PiggyShown, Is.True, where + ": condición del test, el Cántaro a la vista (≥ 20)");
+            Assert.That(boot.DailyCard != null && boot.DailyCard.Visible, Is.True, where + ": condición del test, la tarjeta del Reto (≥ 10)");
+            Assert.That(lobby.CanoesShown && lobby.HomeWindow.PillShown, Is.True, where + ": condición del test, Canoas y la píldora");
+
+            List<KeyValuePair<string, Rect>> named = Named(boot);
+            Debug.Log("AF_AUDIO_QUICK " + where + ": " + string.Join(", ", named.ConvertAll(n => n.Key + " " + n.Value)));
+            AssertNoOverlaps(named, lobby.CanvasWidth, where);
+        }
+
+        [UnityTest]
+        public IEnumerator Home_At130_ThePillFits_AndTiTinosFactCardStaysClear([ValueSource(nameof(Screens))] int screen, [Values("es-419", "pt-BR")] string language)
+        {
+            string where = Use(screen) + " · " + language + " al 130 %";
+            LaunchOptions.FontScaleOverride = 1.3f;
+            LaunchOptions.LanguageOverride = language;
+            LaunchOptions.ClockOverride = new ManualClock(new System.DateTime(2026, 10, 16, 15, 0, 0, System.DateTimeKind.Utc));
+            yield return LoadRichLobby();
+            GameBootstrap boot = GameBootstrap.Current!;
+            LobbyScreen lobby = boot.Lobby!;
+            var root = (RectTransform)lobby.Canvas.transform;
+
+            // La píldora de casa: su texto, entero dentro de la placa y nunca por debajo de 12 sp.
+            Assert.That(lobby.HomeWindow.PillShown, Is.True, where);
+            var pillLabel = lobby.HomeWindow.PillRect.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+            Assert.That(pillLabel.fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f), where + ": la píldora no baja de 12 sp");
+            Rect pill = lobby.HomeWindow.PillRect.rect;
+            bool oneLine = UiBuilder.MinTextWidth(pillLabel) <= pill.width + 0.5f;
+            bool twoLines = UiBuilder.MinTextHeight(pillLabel, pill.width - (2f * HomeWindow.PillMinPadDp)) <= pill.height + 0.5f;
+            Debug.Log("AF_AUDIO_QUICK_PILL " + where + ": «" + pillLabel.text + "» " + CanvasRect(lobby.HomeWindow.PillRect, root) + (oneLine ? " en una línea" : " en dos líneas"));
+            Assert.That(oneLine || (twoLines && pillLabel.textWrappingMode == TMPro.TextWrappingModes.Normal), Is.True, where + ": «" + pillLabel.text + "» cabe en la píldora (en una línea o, si no, en dos)");
+            Assert.That(pill.height, Is.LessThanOrEqualTo(HomeWindow.SizeDp + 0.5f), where + ": la píldora no pasa del alto del marco");
+            AssertNoOverlaps(Named(boot), lobby.CanvasWidth, where);
+
+            // El Dato de TiTino (tras el saludo, un toque): ni la tarjeta del Reto, ni «Jugar», ni Música, Sonido o el Cántaro. Solo en
+            // es-419: un texto largo sin traducir no se muestra (D-018, Q10-A), y hoy el Dato del perezoso no tiene pt-BR.
+            if (language != "es-419")
             {
-                GameScreen.SimulatedScreen = new Vector4(size.x, size.y, 96f, 48f);
-                yield return PlayModeHelpers.LoadApp(store);
-                GameBootstrap boot = GameBootstrap.Current!;
-                yield return null;
-                Canvas.ForceUpdateCanvases();
-                LobbyScreen lobby = boot.Lobby!;
-                string where = size.x + " × " + size.y;
-                var root = (RectTransform)lobby.Canvas.transform;
-                var named = new List<KeyValuePair<string, Rect>>
-                {
-                    new KeyValuePair<string, Rect>("semillas", CanvasRect(lobby.SeedsRect, root)),
-                    new KeyValuePair<string, Rect>("ajustes", CanvasRect((RectTransform)lobby.SettingsButton.transform, root)),
-                    new KeyValuePair<string, Rect>("música", CanvasRect(lobby.Audio.MusicRect, root)),
-                    new KeyValuePair<string, Rect>("sonido", CanvasRect(lobby.Audio.SoundRect, root)),
-                    new KeyValuePair<string, Rect>("jugar", CanvasRect((RectTransform)lobby.PlayButton.transform, root)),
-                    new KeyValuePair<string, Rect>("inicio", CanvasRect(lobby.HomeTabRect, root)),
-                };
-                if (lobby.CanoesShown)
-                {
-                    named.Add(new KeyValuePair<string, Rect>("canoas", CanvasRect((RectTransform)lobby.CanoesButton.transform, root)));
-                }
+                yield break;
+            }
 
-                if (lobby.HomeWindow.Visible)
-                {
-                    named.Add(new KeyValuePair<string, Rect>("ventanita", CanvasRect(lobby.HomeWindow.Root, root)));
-                }
+            HomeSloth sloth = lobby.HomeWindow.Sloth!;
+            Tick(sloth, 400);
+            Tick(sloth, (int)sloth.BubbleDurationMs + 300);
+            Assert.That(sloth.Tap(), Is.True, where);
+            Tick(sloth, 400);
+            boot.TickDaily(16f); // la tarjeta del Reto mira si una nota de TiTino la cruza
+            Canvas.ForceUpdateCanvases();
+            Assert.That(sloth.FactCardShown, Is.True, where + ": condición del test, el Dato a la vista");
+            Rect card = CanvasRect(sloth.FactCardRect, root);
+            if (boot.DailyCard != null)
+            {
+                bool crosses = Shrunk(card).Overlaps(Shrunk(CanvasRect(boot.DailyCard.Root, root)));
+                Assert.That(crosses && boot.DailyCard.Visible, Is.False, where + ": si el Dato llega a la tarjeta del Reto, la tarjeta se aparta mientras se ve");
+                Tick(sloth, 20000);
+                boot.TickDaily(16f);
+                Assert.That(sloth.FactCardShown, Is.False, where + ": el Dato se va");
+                Assert.That(boot.DailyCard.Visible, Is.True, where + ": y la tarjeta del Reto vuelve");
+            }
 
-                if (lobby.HomeWindow.PillShown)
-                {
-                    named.Add(new KeyValuePair<string, Rect>("píldora de casa", CanvasRect(lobby.HomeWindow.PillRect, root)));
-                }
+            var clear = new List<KeyValuePair<string, Rect>>
+            {
+                new KeyValuePair<string, Rect>("jugar", CanvasRect((RectTransform)lobby.PlayButton.transform, root)),
+                new KeyValuePair<string, Rect>("música", CanvasRect(lobby.Audio.MusicRect, root)),
+                new KeyValuePair<string, Rect>("sonido", CanvasRect(lobby.Audio.SoundRect, root)),
+                new KeyValuePair<string, Rect>("cántaro", CanvasRect(boot.MarketIcons!.PiggyRect, root)),
+            };
+            Debug.Log("AF_AUDIO_QUICK_FACT " + where + ": dato " + card + ", " + string.Join(", ", clear.ConvertAll(n => n.Key + " " + n.Value)));
+            foreach (KeyValuePair<string, Rect> other in clear)
+            {
+                Assert.That(Shrunk(card).Overlaps(Shrunk(other.Value)), Is.False, where + ": el Dato de TiTino " + card + " tapa " + other.Key + " " + other.Value);
+            }
+        }
 
-                MarketLobbyIcons? icons = boot.MarketIcons;
-                if (icons != null && icons.PiggyShown)
-                {
-                    named.Add(new KeyValuePair<string, Rect>("cántaro", CanvasRect(icons.PiggyRect, root)));
-                }
+        // Pone la pantalla simulada de screen (640, 800 o 320) y dice cuál es.
+        private static string Use(int screen)
+        {
+            if (screen == 320)
+            {
+                GameScreen.SimulatedScreen = Canvas320Tests.Screen320;
+                GameScreen.SimulatedPxPerDp = Canvas320Tests.Density;
+                return "320 dp";
+            }
 
-                if (lobby.StreakWidget.Visible)
-                {
-                    named.Add(new KeyValuePair<string, Rect>("crecida", CanvasRect(lobby.StreakWidget.Root, root)));
-                }
+            GameScreen.SimulatedScreen = new Vector4(1080f, screen * 3f, 96f, 48f);
+            return "360 × " + screen;
+        }
 
-                Debug.Log("AF_AUDIO_QUICK " + where + ": " + string.Join(", ", named.ConvertAll(n => n.Key + " " + n.Value)));
-                for (int i = 0; i < named.Count; i++)
+        // El inicio del 58 con canoas en marcha, semillas y la tienda lista: Canoas, el Cántaro, la tarjeta del Reto y la píldora.
+        private static IEnumerator LoadRichLobby()
+        {
+            Profile profile = SettingsScreenTests.ProfileAt(58);
+            profile.Wallet.Canoes.Count = 3;
+            profile.Wallet.Canoes.NextRegenAt = System.DateTime.UtcNow + System.TimeSpan.FromMinutes(10);
+            profile.Wallet.Seeds = 12345;
+            LaunchOptions.PurchasePresenterOverride = new ImmediatePurchasePresenter();
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.SetUpMarket(), Is.True);
+            yield return null;
+            boot.TickMarket(16f);
+            Canvas.ForceUpdateCanvases();
+        }
+
+        private static void Tick(HomeSloth sloth, int ms)
+        {
+            for (int t = 0; t < ms; t += 16)
+            {
+                sloth.Tick(16f);
+            }
+        }
+
+        // Lo que se ve en el inicio y no puede pisarse (columna de audio, Cántaro, tarjeta del Reto, Crecida, ventanita, Canoas…).
+        private static List<KeyValuePair<string, Rect>> Named(GameBootstrap boot)
+        {
+            LobbyScreen lobby = boot.Lobby!;
+            var root = (RectTransform)lobby.Canvas.transform;
+            var named = new List<KeyValuePair<string, Rect>>
+            {
+                new KeyValuePair<string, Rect>("semillas", CanvasRect(lobby.SeedsRect, root)),
+                new KeyValuePair<string, Rect>("ajustes", CanvasRect((RectTransform)lobby.SettingsButton.transform, root)),
+                new KeyValuePair<string, Rect>("música", CanvasRect(lobby.Audio.MusicRect, root)),
+                new KeyValuePair<string, Rect>("sonido", CanvasRect(lobby.Audio.SoundRect, root)),
+                new KeyValuePair<string, Rect>("jugar", CanvasRect((RectTransform)lobby.PlayButton.transform, root)),
+                new KeyValuePair<string, Rect>("inicio", CanvasRect(lobby.HomeTabRect, root)),
+            };
+            if (lobby.CanoesShown)
+            {
+                named.Add(new KeyValuePair<string, Rect>("canoas", CanvasRect((RectTransform)lobby.CanoesButton.transform, root)));
+            }
+
+            if (lobby.HomeWindow.Visible)
+            {
+                named.Add(new KeyValuePair<string, Rect>("ventanita", CanvasRect(lobby.HomeWindow.Root, root)));
+            }
+
+            if (lobby.HomeWindow.PillShown)
+            {
+                named.Add(new KeyValuePair<string, Rect>("píldora de casa", CanvasRect(lobby.HomeWindow.PillRect, root)));
+            }
+
+            MarketLobbyIcons? icons = boot.MarketIcons;
+            if (icons != null && icons.PiggyShown)
+            {
+                named.Add(new KeyValuePair<string, Rect>("cántaro", CanvasRect(icons.PiggyRect, root)));
+            }
+
+            if (boot.DailyCard != null && boot.DailyCard.Visible)
+            {
+                named.Add(new KeyValuePair<string, Rect>("tarjeta del Reto", CanvasRect(boot.DailyCard.Root, root)));
+            }
+
+            if (lobby.StreakWidget.Visible)
+            {
+                named.Add(new KeyValuePair<string, Rect>("crecida", CanvasRect(lobby.StreakWidget.Root, root)));
+            }
+
+            return named;
+        }
+
+        // Anterior a D-046 y fuera de su alcance: a 320 dp, la tarjeta del Reto (296 dp centrada, x 12-308) y la Crecida (pegada al
+        // borde, x 290-316) ya se cruzaban antes de este cambio (la Crecida empezaba en y 196 y la tarjeta en 225). Anotado como
+        // riesgo para el integrador en spark-estado.md.
+        private static bool KnownAt320(string a, string b)
+        {
+            return (a == "tarjeta del Reto" && b == "crecida") || (a == "crecida" && b == "tarjeta del Reto");
+        }
+
+        private static void AssertNoOverlaps(List<KeyValuePair<string, Rect>> named, float width, string where)
+        {
+            for (int i = 0; i < named.Count; i++)
+            {
+                Rect r = named[i].Value;
+                Assert.That(r.xMin >= -0.5f && r.xMax <= width + 0.5f, Is.True, where + ": " + named[i].Key + " dentro de la pantalla");
+                for (int j = i + 1; j < named.Count; j++)
                 {
-                    Rect r = named[i].Value;
-                    Assert.That(r.xMin >= -0.5f && r.xMax <= lobby.CanvasWidth + 0.5f, Is.True, where + ": " + named[i].Key + " dentro de la pantalla");
-                    for (int j = i + 1; j < named.Count; j++)
+                    if (width < 359f && KnownAt320(named[i].Key, named[j].Key))
                     {
-                        Assert.That(Shrunk(named[i].Value).Overlaps(Shrunk(named[j].Value)), Is.False, where + ": " + named[i].Key + " y " + named[j].Key + " se solapan");
+                        continue;
                     }
+
+                    Assert.That(Shrunk(named[i].Value).Overlaps(Shrunk(named[j].Value)), Is.False, where + ": " + named[i].Key + " " + named[i].Value + " y " + named[j].Key + " " + named[j].Value + " se solapan");
                 }
             }
         }
