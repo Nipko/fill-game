@@ -40,6 +40,23 @@ Si el texto del dueño cambia el sentido de algo técnico, **no lo cambies**: an
 
 ## 3. Logo / icono de la app
 
+> **Actualización del 23-10-2026 (D-045): la identidad oficial es la v2, «El río que se tiñe»** (`docs/art/marca-oficial/v2/`, ya en `integracion-fase1-fase2`). **Sustituye a tu v1** (`docs/art/marca-oficial/v1/`), que queda como historial.
+>
+> **Qué hacer:**
+> 1. Haz `git pull` de `origin/integracion-fase1-fase2` en tu rama `codex/web-marca` y resuelve los conflictos. El carril de la web en `tintalu.com` (`tanda5/web-dominio`) ya está integrado y toca las mismas páginas de `infra/web/site/`. Regenera con `npm run web:build`, nunca a mano.
+> 2. **La v1:**
+>    - déjala en `docs/art/marca-oficial/v1/` con una nota al principio de su README: «Sustituida por la v2 (D-045); historial, no usar»;
+>    - quita las menciones que la presentan como oficial: `docs/store-listing/assets-tienda.md`, `docs/art/encargo-icono.md` y tu `codex-estado.md`.
+> 3. **Web:**
+>    - el favicon, el apple-touch-icon y el logo de la cabecera salen de la v2: `out/png/` y `out/logo-*.svg`. Los tamaños pequeños de la web (16, 32 y 180) se añaden en `docs/art/marca-oficial/v2/exportar.py`, no a mano;
+>    - con las dos marcas pendientes de la web (`[[...]]`): no escribas «®» ni hables de marca registrada.
+> 4. **Ficha:** el icono de Play es `out/png/google-play-512.png` y el gráfico de funciones lo puede componer el artista con el logo horizontal. **No toques `Assets/`:** el icono del juego lo integra el equipo de Claude.
+> 5. **No regeneres la v2 con IA de imagen.** Es vectorial y se genera por código desde la geometría y la fuente del juego. Si hace falta un cambio, pídelo al integrador o edita `generar.py`.
+>
+> **Antes de publicar la web,** resuelve con el dueño la frase «Administramos el juego desde Colombia» de la privacidad y los términos. Puede tener efecto fiscal (sede efectiva de administración): recomiendo quitarla hasta que lo vea el contador.
+>
+> La estructura de publicación (Parallext, LLC y AUTOMATION AI S.A.S) todavía no está registrada. Cuando el dueño la decida, llevará el siguiente número libre (D-045 ya es el logo).
+
 - **Fuentes:** 07 §10.1 (cuatro conceptos; el recomendado es «A. Cuia que vierte»), 07 §10 y 08 §13.1 #5, `docs/store-listing/assets-tienda.md` y `docs/art/` (dirección visual D-003, «Selva brillante premium»).
 - **Qué entregar** en `docs/art/encargo-icono.md`, nuevo:
   - el encargo del icono para el artista: tamaños de Play (512 × 512, icono adaptativo con primer plano y fondo, máscaras), qué evitar (las reglas de Play, nada «atractivo para niños» en exceso: 08 §13.1 #11) y los cuatro conceptos con el recomendado;

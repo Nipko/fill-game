@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+  <linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#226A6A"/><stop offset="0.5" stop-color="#14444A"/><stop offset="1" stop-color="#0A2A2E"/>
+  </linearGradient>
+  <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="#5FB3A6" stop-opacity="0.45"/><stop offset="1" stop-color="#5FB3A6" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="aguaBlanca" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8F6B3F"/><stop offset="0.25" stop-color="#B08A5A"/><stop offset="1" stop-color="#C29C6A"/>
+  </linearGradient>
+  <linearGradient id="aguaAcai" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#4E1F6E"/><stop offset="0.25" stop-color="#6A2C91"/><stop offset="1" stop-color="#7E3AAE"/>
+  </linearGradient>
+  <linearGradient id="chorro" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#6A2C91"/><stop offset="1" stop-color="#8E44C4"/>
+  </linearGradient>
+  <linearGradient id="vidrio" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.18"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.02"/>
+  </linearGradient>
+  <pattern id="puntos" width="34" height="34" patternUnits="userSpaceOnUse"><circle cx="17" cy="17" r="8" fill="#B88400" opacity="0.45"/></pattern>
+  <pattern id="escamas" width="30" height="22" patternUnits="userSpaceOnUse"><path d="M0 22 A15 15 0 0 1 30 22" fill="none" stroke="#B4520A" stroke-width="4" opacity="0.5"/></pattern>
+  <pattern id="rombos" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M17 7 L27 17 L17 27 L7 17 Z" fill="#4A1C68" opacity="0.55"/></pattern>
+  <pattern id="trenza" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="16" height="16" fill="#C98A45"/><rect width="8" height="16" fill="#8E5A2B"/></pattern>
+</defs>
+  <g transform="translate(512 512) scale(0.86) translate(-512 -512)"><rect x="-600" y="-600" width="2224" height="2224" fill="url(#cielo)"/>
+  <ellipse cx="430" cy="380" rx="420" ry="300" fill="url(#halo)"/>
+  <!-- Selva de la orilla de enfrente, con dos palmeras de açaí -->
+  <path d="M 150 600 Q 145 495 132 390" stroke="#0E4232" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M 132 390 Q 83 351 43 412" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 132 390 Q 95 308 65 386" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 132 390 Q 128 308 125 386" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 132 390 Q 161 298 184 380" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 132 390 Q 179 344 218 408" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 132 390 Q 96 402 66 443" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 132 390 Q 169 396 200 440" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 905 600 Q 912 475 927 350" stroke="#0E4232" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M 927 350 Q 878 311 838 372" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 927 350 Q 890 268 860 346" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 927 350 Q 923 268 920 346" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 927 350 Q 956 258 980 340" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 927 350 Q 974 304 1013 368" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 927 350 Q 891 362 861 403" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M 927 350 Q 964 356 995 400" stroke="#0E4232" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M -600 650 L -600 560 C -500 520 -440 540 -400 556 C -390 500 -330 492 -290 530 C -260 508 -200 506 -160 536 C -130 516 -70 492 -30 530 C 0 500 60 506 100 536 C 130 508 190 492 230 530 C 260 516 320 506 360 536 C 390 500 450 492 490 530 C 520 508 580 506 620 536 C 650 516 710 492 750 530 C 780 500 840 506 880 536 C 910 508 970 492 1010 530 C 1040 516 1100 506 1140 536 C 1170 500 1230 492 1270 530 C 1300 508 1360 506 1400 536 C 1430 516 1490 492 1530 530 C 1560 500 1620 506 1660 536 L 1700 650 Z" fill="#0E4232"/>
+  <path d="M -600 670 L -600 604 C -300 576 0 600 200 596 C 420 580 600 604 800 596 C 1000 580 1300 600 1700 596 L 1700 670 Z" fill="#26603A"/>
+  <!-- Río arriba: agua blanca del Amazonas -->
+  <path d="M -600 624 C 250 590 560 650 1700 600 L 1700 905 C 700 935 300 860 -600 900 Z" fill="url(#aguaBlanca)"/>
+  <path d="M -600 728 C 260 696 520 742 1100 708" fill="none" stroke="#D8BA8A" stroke-width="30" opacity="0.4" stroke-linecap="round"/>
+  <!-- Río abajo, desde el impacto: el açaí se abre con la corriente hasta llenar el cauce -->
+  <path d="M 540 646 C 640 640 800 616 1700 600 L 1700 905 C 900 912 780 880 712 800 C 660 738 600 690 540 668 Z" fill="#8A4FA8" opacity="0.5"/>
+  <path d="M 566 650 C 660 644 810 620 1700 602 L 1700 905 C 920 908 810 870 748 796 C 694 734 628 690 566 664 Z" fill="url(#aguaAcai)"/>
+  <path d="M 720 706 C 840 694 960 692 1600 680" fill="none" stroke="#A866DA" stroke-width="26" opacity="0.45" stroke-linecap="round"/>
+  <g fill="none" stroke-linecap="round" stroke-width="9">
+    <path d="M 70 780 q 24 -14 48 0 q 24 14 48 0" stroke="#E6CB9E" opacity="0.8"/>
+    <path d="M 270 822 q 20 -12 40 0 q 20 12 40 0" stroke="#E6CB9E" opacity="0.7"/>
+    <path d="M 150 862 q 18 -10 36 0" stroke="#E6CB9E" opacity="0.6"/>
+    <path d="M 430 764 q 20 -12 40 0 q 20 12 40 0" stroke="#E6CB9E" opacity="0.6"/>
+    <path d="M 820 770 q 24 -14 48 0 q 24 14 48 0" stroke="#CDA0F0" opacity="0.8"/>
+    <path d="M 900 852 q 20 -12 40 0 q 20 12 40 0" stroke="#CDA0F0" opacity="0.7"/>
+    <path d="M 700 662 q 18 -10 36 0" stroke="#CDA0F0" opacity="0.6"/>
+  </g>
+  <!-- Orilla cercana -->
+  <path d="M -600 1700 L -600 885 C 300 850 700 925 1700 885 L 1700 1700 Z" fill="#0E4232"/>
+  <path d="M -600 908 C 300 872 700 946 1700 906" fill="none" stroke="#26603A" stroke-width="22"/></g>
+</svg>

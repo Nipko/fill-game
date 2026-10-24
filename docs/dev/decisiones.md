@@ -3756,3 +3756,31 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
     - el despliegue, el DNS y los datos del dueño los hace Codex con el dueño (`docs/dev/traspaso/codex-web-marca.md`).
   - **Logo y marca:** Codex prepara el encargo del icono (07 §10.1) y lo que falta de la marca: completar la investigación en INPI y WIPO, y el paquete para el abogado.
 - **Riesgo aceptado por el dueño:** usar «Tintalú» en público antes del dictamen.
+
+## D-045 · Identidad oficial v2 de Tintalú: «El río que se tiñe»
+
+- **Fecha:** 2026-10-23. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat. Pidió una versión propia: «la idea era que fuera el rio amazonas con su color caracteristico y la cuia vertia y se pinta rio abajo del color que vierte». Después corrigió dos cosas: la cuia «cierra en corte lineal» y el líquido no podía verterse «infinito». Al final eligió: «Sí, la B sustituye a la v1 de Codex».
+- **Decisión:**
+  - **La identidad oficial es la v2** (`docs/art/marca-oficial/v2/`, propuesta B). **Sustituye a la v1 de Codex** (`docs/art/marca-oficial/v1/` en la rama `codex/web-marca`), que queda como historial y no se integra como oficial.
+  - **El concepto:** un río del Amazonas en su agua blanca (#B08A5A, glosario §9) corre de izquierda a derecha. Una cuia de vidrio vierte açaí (#6A2C91), y el río se tiñe **desde el impacto, río abajo**; río arriba sigue en su color. Fondo azul petróleo con la selva de la orilla y dos palmeras de açaí en silueta. Sin texto dentro del icono.
+  - **Fiel al juego:**
+    - la silueta de la cuia sale de `CuiaGeometry.cs` (fondo plano, pie y borde de fibra);
+    - la inclinación y el líquido siguen D-006: quedan 2,6 de 3 dosis, el líquido queda horizontal y el chorro es finito y se adelgaza al caer;
+    - las dosis llevan sus patrones de daltonismo;
+    - el logo con el nombre usa Baloo 2 ExtraBold, la tipografía del juego.
+  - **Piezas:**
+    - el icono maestro: 1024 y Play 512;
+    - Android: adaptativo (fondo y primer plano a 432 px, con el primer plano dentro de la zona segura), monocromo para el icono temático y clásico de 48 a 192;
+    - el logo horizontal y vertical sobre fondo claro y oscuro.
+
+    Todo se genera con `generar.py`, `exportar.py` y `hoja.py`, solo con la biblioteca estándar y Chrome sin interfaz.
+  - **07 §10.1** se actualiza: el concepto A elegido cambia el fondo (de oliva a petróleo) y el río (de banda blanca al agua blanca que se tiñe río abajo).
+- **Procedencia:** vectorial, generado por código por el agente integrador, no por IA de imagen. El acabado final puede encargarse al artista sobre esta composición.
+- **Pendiente:**
+  - las apariencias oscura y tintada de iOS y su catálogo de Xcode;
+  - integrar el icono en Unity (Player Settings, adaptativo y monocromo) y en la web (favicon y logo);
+  - probarlo en un teléfono.
+
+  Codex lleva la web y el icono de la ficha (`docs/dev/traspaso/codex-web-marca.md`, «Actualización del 23-10-2026»).
+- **Nota:** la estructura de publicación con Parallext, LLC y AUTOMATION AI S.A.S, que se propuso en el chat, todavía no está decidida. Cuando se decida, se registrará con el siguiente número libre.
