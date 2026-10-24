@@ -319,8 +319,33 @@ La sesión SSO de `af-dev` se renovó con el dueño. Contextos reales recuperado
 
 El diff incluye además las actualizaciones de compras **Q-IAP-4 ya presentes en la base y todavía ausentes de dev**, comprobadas contra los sourcemaps de las cuatro Lambdas existentes (descargados a un temporal privado). Se reempaquetan las cinco existentes. Se corrigieron dos permisos imprescindibles que faltaban en CDK: `verifyPurchase` necesita UpdateItem en purchases para reasignar no consumibles, y `voidedPurchasesJob` GetItem para leer las sombras antes de anularlas. Las aserciones IAM cubren ambos; no se añaden permisos sobre otras tablas o secretos. Hay correcciones de caracteres en descripciones y metadata respecto al despliegue antiguo; no cambian valores de Secrets Manager, rutas previas, destinatario de alertas ni la hora del job.
 
-**Estado al preparar este informe:** diff presentado al dueño; pendiente de su sí explícito antes de `cdk deploy`, como exige `codex-liga.md` §3. El ensamblado presentado es el que se debe desplegar; volver a revisar si cambia. No se despliegan Global/Web/Cdn ni prod. Después: comprobar 401 en ambos endpoints sin token y, solo si el dueño facilita tokens por vía privada, envío + Global/País. No se han proporcionado tokens de prueba.
+**Estado actualizado, 24-10-2026:** el dueño dio su sí explícito al diff de Data/Api/Ops y se desplegó el ensamblado aprobado. Las tres pilas quedaron en UPDATE_COMPLETE; ver comprobaciones y corrección posterior al final de este informe. No se desplegaron Global/Web/Cdn ni prod. No se han proporcionado tokens de prueba.
 
 ## Coste
 
 Estimación incremental en São Paulo para 100 victorias/mes en 20 lotes y 60 lecturas de tablero por jugador/mes: **aprox. 3 USD/mes con 1.000 jugadores y 137 USD/mes con 100.000**. Margen orientativo 5/200 USD, no límite de gasto. Incluye alarmas, unidades transaccionales, salida, logs, almacenamiento y PITR; sin créditos/impuestos/Firebase/backend previo. Más actividad o filas mayores cambia el coste. Fuentes, tarifas regionales y fórmulas en `infra/LEAGUE.md`. No se cambió el presupuesto existente de dev.
+
+
+## Despliegue y comprobaciones reales — 24-10-2026
+
+Autorización literal del dueño: «Sí, desplegar esas tres pilas en dev». Antes de desplegar se verificaron los 58 archivos del ensamblado aprobado contra sus hashes y la cuenta de `af-dev` contra la del diff. Comando equivalente ejecutado con la CLI local: `cdk deploy AfDevData AfDevApi AfDevOps --app <ensamblado aprobado fuera del repo> --exclusively --require-approval never --profile af-dev`; la aprobación de CDK se omite únicamente porque el dueño ya revisó y aprobó ese ensamblado concreto.
+
+Resultado: **exit 0**, Data/Api/Ops en **UPDATE_COMPLETE**. Las cuatro tablas de Liga están ACTIVE, PAY_PER_REQUEST, SSE y PITR ENABLED; TTL ENABLED en jugadores, top e histograma y DISABLED en seudónimos, como corresponde. **27 alarmas en OK**, ocho de Liga. Simulación IAM de los roles reales: `verifyPurchase` UpdateItem y `voidedPurchasesJob` GetItem sobre purchases, ambos **allowed**.
+
+Base conservada: **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**. Comprobado con `curl.exe` sin credenciales:
+
+- `POST /v1/league/wins` → **401**.
+- `GET /v1/league?scope=global` → **401**.
+- `GET /v1/league?scope=country` → **401**.
+
+La prueba autenticada de envío/Global/País queda pendiente de un token de prueba facilitado por el dueño fuera del repo; no se inventó una sesión ni se imprimieron tokens. El cliente y `live_league_enabled` los integra el escritorio. No hay cambios de URL para `BackendEndpoints`.
+
+El diff estricto posterior con el ensamblado original confirma Data sin diferencias; Api/Ops todavía muestran diferencias de representación Unicode en descripciones/metadata (`?` frente a caracteres acentuados). No declarar diff estricto vacío. Las comprobaciones de ejecución, permisos y alarmas anteriores pasaron; no se cambiaron valores de secretos ni se repitió el deploy para modificar descripciones.
+
+## Corrección posterior preparada — fecha del Reto y borde semanal
+
+Al revisar el cruce de medianoche se detectó que el código inicial añadía una igualdad no prevista entre la fecha local de inicio del Reto y la fecha UTC de victoria. Podía rechazar victorias legítimas (06 §4.1, R-Q3). Se corrigió con regresiones; además, la consulta de semana anterior se aplica aunque el lote de la primera hora del lunes llegue el viernes, y un ID diario del borde no se cobra otra vez en la semana siguiente.
+
+Commits de corrección: **`eb52e32e`** y **`85109b38`**. Lint, tipos, **337 pruebas / 19 archivos**, tabla generada, web:check y synth de prod con dominio/AppIds de ejemplo, correctos. Contrato `docs/dev/liga.md` sin cambios.
+
+[Resumen y propuesta de actualización](liga-dev-calendario-revision.md), [diff estricto completo redactado](liga-dev-calendario-diff.txt) e [inventario del ensamblado](liga-dev-calendario-assembly.sha256.json), digest **e0f3b1f5dc97c6c24cbdd9eb8c01d381c69de328dd620092798314ae8ee28821**. Comparando ambos ensamblados: Data y Ops idénticos; Api solo cambia Code.S3Key y aws:asset:path de LeagueWins, LeagueBoard y DeleteAccount. No hay nuevos recursos, IAM ni coste fijo. **Pendiente del sí del dueño para desplegar esta corrección únicamente en AfDevApi.** El primer despliegue está activo y comprobado; la corrección aún no está aplicada.

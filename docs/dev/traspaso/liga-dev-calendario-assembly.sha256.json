@@ -1,0 +1,238 @@
+{
+  "backendCommit": "85109b38",
+  "files": [
+    {
+      "path": "AfDevApi.assets.json",
+      "sha256": "135782606e4c831f3c94a02655d55bdde958481c709ac2d46759fd18de0cc5eb"
+    },
+    {
+      "path": "AfDevApi.metadata.json",
+      "sha256": "d8c943ac67ce8b86209c0b482cb7041e15eead1efe7ea3c94f0e32a5a1db9c5b"
+    },
+    {
+      "path": "AfDevApi.template.json",
+      "sha256": "5792c2daca19988c75e6c448e00e2828505bedfa5402af968435e67c220e78b4"
+    },
+    {
+      "path": "AfDevCdn.assets.json",
+      "sha256": "43b97978d10e6476807d2f5da02af52b8ba787580b3041346a026e9f9f960ac9"
+    },
+    {
+      "path": "AfDevCdn.metadata.json",
+      "sha256": "569f642963ef6651585326a781ec37af2312c7be825aa36479bf9bc9ff9ace2e"
+    },
+    {
+      "path": "AfDevCdn.template.json",
+      "sha256": "2a64910cc338f36ff5a93dda3d71d3c922e144689a0f3752e29a17307e4238ff"
+    },
+    {
+      "path": "AfDevData.assets.json",
+      "sha256": "7a50ea16c84d08a4e7e895f06993483cfc9e6e58ec9f6b773034be58def253c4"
+    },
+    {
+      "path": "AfDevData.metadata.json",
+      "sha256": "039c97147d3fcaaa0974f016d12e09faedc4bce111e671828827280fd0ddec23"
+    },
+    {
+      "path": "AfDevData.template.json",
+      "sha256": "ead62b22e3c6591a7966e99c06c8c8e8e6f38136f4f9f04b48ad6b10aa3352ed"
+    },
+    {
+      "path": "AfDevGlobal.assets.json",
+      "sha256": "a598a9c3e411cc408488441fb6c5de24a8f168e7084104854b86d251c498f424"
+    },
+    {
+      "path": "AfDevGlobal.metadata.json",
+      "sha256": "eb11805cc1ad8ed729ba78edf263fbfb98a938be2f4314154f0106dc564bfcfb"
+    },
+    {
+      "path": "AfDevGlobal.template.json",
+      "sha256": "037bb91a3d32664babac099a578b965e16b4b1a10bacee1cadb68a3730328059"
+    },
+    {
+      "path": "AfDevOps.assets.json",
+      "sha256": "693c570a61409790abbf87d186fb49032de7b6bcf712a2d0d7bf9d4466de2257"
+    },
+    {
+      "path": "AfDevOps.metadata.json",
+      "sha256": "a3587dd470dd83ee66590c3f42bc7e92ed8b1ff6f4cec9ed606a27c2aa3c7f41"
+    },
+    {
+      "path": "AfDevOps.template.json",
+      "sha256": "bf13a9002cde9975f8ce680423e93a243ea576d9e2f03fe834d2066582e8b49b"
+    },
+    {
+      "path": "AfDevWeb.assets.json",
+      "sha256": "158cb99c4dcb8f1c66ea650daef5b159ca03d19d8367b14971b2e21d853acdca"
+    },
+    {
+      "path": "AfDevWeb.metadata.json",
+      "sha256": "617e1f24e5ff73cf2c4b739c9d789a8c6904062b6d786fcc5e4b1f9c30f8dcd1"
+    },
+    {
+      "path": "AfDevWeb.template.json",
+      "sha256": "8718e80795e25b01d25ffc6b2f450efc6ed147bbe8985429185bd45a19ed520b"
+    },
+    {
+      "path": "asset.00614e385c50d071c51ba5a7c1db1be223f8bf577e127d773b4a594d03fdf1e1/index.mjs",
+      "sha256": "9bed5b9197ea7ed7805d41ff707b0c0599b7697dc76ae841d29b456e05450bbd"
+    },
+    {
+      "path": "asset.00614e385c50d071c51ba5a7c1db1be223f8bf577e127d773b4a594d03fdf1e1/index.mjs.map",
+      "sha256": "2cc40abaed1452e0112f3bca53f0aea78c05cc82fdd7f46018dd1bea696ce7ce"
+    },
+    {
+      "path": "asset.123be9412fa018f5e8d58e5a1975000e8004baf3d8e9ec345b92cd1e19d3680d/index.mjs",
+      "sha256": "671a785667c35dc3037b1851f03e26b888e20e29df3d16156b71b82591b7523f"
+    },
+    {
+      "path": "asset.123be9412fa018f5e8d58e5a1975000e8004baf3d8e9ec345b92cd1e19d3680d/index.mjs.map",
+      "sha256": "f3c65dcb92b77e84367752eceac83452a8803b918a282f511d68a73e85a2d113"
+    },
+    {
+      "path": "asset.35328da138f26fbd9160297abc9a2522d93dbf75878cd5114a9c050419fc1ce0/index.py",
+      "sha256": "c0801ce163330b3c3a42d928a257563d130337d928c3daf638fe0f0929bb2e38"
+    },
+    {
+      "path": "asset.399521e739319fb1297cc5a902909ecd664f2abf913af3b544f5474a0199471f/index.mjs",
+      "sha256": "b756fd3edeb09ed28f555a132786824284b0c11b5466b717196ad8fe028406c5"
+    },
+    {
+      "path": "asset.399521e739319fb1297cc5a902909ecd664f2abf913af3b544f5474a0199471f/index.mjs.map",
+      "sha256": "386da15cebfdf17c931914524ed63fa087e4ec5ae96da972abcc3572b4d27c3a"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/app-ads.txt",
+      "sha256": "af1618b91ce872358f6dd7511e524775a0cb692047771cb3838c9bf7df939860"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/assets/delete-account.js",
+      "sha256": "0b30e0790df5131d69ba6cbb0724737d3df442308abd3f934ee517e94d05b738"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/assets/site.css",
+      "sha256": "b1450280aacd6f9a9412fd1631cc015cc04afb6becce71d82ab8a23be8e34a3a"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/creditos/index.html",
+      "sha256": "33cea20da2622e6a065c4c3db3903bdc3ec569c29e344d7de416fc00b713f3cb"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/en/credits/index.html",
+      "sha256": "43f2161fd64e7b314affb299789d273a7ad2495f85ba12938062d83158fbae11"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/en/index.html",
+      "sha256": "1026669e9ceabc166fb9b9d092211d234cb4451098ef576b9c81b2b9f61cd9e0"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/en/privacy/index.html",
+      "sha256": "74119ff903f30f577c052f93d6abd23c69f2105ede54c008ba93b1434dcab394"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/en/terms/index.html",
+      "sha256": "fedddb801f581b6d596bc0566d05f1eac0f5b4fdbe93512b425cc6fdd4c851a1"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/index.html",
+      "sha256": "c8a095944cf1b466cf2e62198b6757af89b4ad9c6c3356700324efdc968f509e"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/privacidad/index.html",
+      "sha256": "37e190379d938d20c012fa3a9b4571b842af043482763235cd984aa5539b8cba"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/pt-br/creditos/index.html",
+      "sha256": "97cf823b7f67aca5c0207f49a1a246be527aed87d4125295951fd409bd046f03"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/pt-br/index.html",
+      "sha256": "cf44264e805d754ad68c29dfcfd90ee58ff696025470c8889a170d46d4daa582"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/pt-br/privacidade/index.html",
+      "sha256": "fb38cef5539936dadffe92c54ef66645b6f33020df218810b84fc528dfa17640"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/pt-br/termos/index.html",
+      "sha256": "7df88eb3b544cfa2526a174b203ad69a6ea991c3bb2c4483183a8fa72cf5fa6c"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/robots.txt",
+      "sha256": "331ea9090db0c9f6f597bd9840fd5b171830f6e0b3ba1cb24dfa91f0c95aedc1"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/terminos/index.html",
+      "sha256": "7ffe3029c5b6513469739a9d4d302b8dfbf3dbeb56c31cd6fd7faae281df4cf9"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/tintalu/eliminar-cuenta/index.html",
+      "sha256": "f5efdbb3002016f680e520767c8c9047f623c9747bd779a2b6ced40f40283937"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/tintalu/en/delete-account/index.html",
+      "sha256": "4e3296650c21fb98d15f1ee77f38da43d76824a3e3399eed0ea302ab1b366a31"
+    },
+    {
+      "path": "asset.81fc699845048e0b1bef9019c7a611212c6132a6173b20c794a87cf25ef39e0b/tintalu/pt-br/excluir-conta/index.html",
+      "sha256": "347464f759359bacb8f916addd1f9d82340e0704c48029c6f9d2d7de6a1afd7c"
+    },
+    {
+      "path": "asset.90b7f221cb23441276c0d8cfeadb5fdbac2dea560b75c941a1024a6842f69e3a/index.mjs",
+      "sha256": "41f96642257c46ce3e2915fa23443c96d3629219a86ebd62e33067dd7df78056"
+    },
+    {
+      "path": "asset.90b7f221cb23441276c0d8cfeadb5fdbac2dea560b75c941a1024a6842f69e3a/index.mjs.map",
+      "sha256": "20db17f50d53c2b8ab5ebb7eebdc8c2d83ea9603e7c59f6065beb8ddc1636e07"
+    },
+    {
+      "path": "asset.98f62bef9320f8c0a0a7be21d7c746f069131f196f51ffe3008a6bb730b368ec.zip",
+      "sha256": "a50d5225673b37be97302ae9094308bf4f5085a325d502950adf11fbe35245e7"
+    },
+    {
+      "path": "asset.bd22d29c068a26a126d6bb0d9ad5566ffd09917f13dfaf6e0c36ff322fe8e0bc/index.mjs",
+      "sha256": "7b97091b502f1b92f920f42e492b35271a713df8d9dad675fd85012d09844d91"
+    },
+    {
+      "path": "asset.bd22d29c068a26a126d6bb0d9ad5566ffd09917f13dfaf6e0c36ff322fe8e0bc/index.mjs.map",
+      "sha256": "9912d64417de105b549536733340bfbdbe2961dbdbe220c3e42a339cf2e37dee"
+    },
+    {
+      "path": "asset.cf90fffeaeecf4a1654ba624e0dffc9dc3f147280fcd858dba5125445f6de6ee/index.mjs",
+      "sha256": "532016a6a386547f66a30670477abf51fc65a993b592e41bd7e7c3442808babf"
+    },
+    {
+      "path": "asset.cf90fffeaeecf4a1654ba624e0dffc9dc3f147280fcd858dba5125445f6de6ee/index.mjs.map",
+      "sha256": "38c226d80b24e43f5386968795046670967256a1050eb89451a2af8597b77ff7"
+    },
+    {
+      "path": "asset.dbd21938062d39c6bc2680d9c1984d39d34db5b9cc87890c16aefd3e9b3b65b8/index.mjs",
+      "sha256": "9d0decd5df0b7df2011b62dd6ca1b1ee6b3707f811a3814dab34ad23c2d198a3"
+    },
+    {
+      "path": "asset.dbd21938062d39c6bc2680d9c1984d39d34db5b9cc87890c16aefd3e9b3b65b8/index.mjs.map",
+      "sha256": "725b4d7700f0cd77d074e62180281dbd5217fd9c29e6b4d0f22f33cf7daad9f2"
+    },
+    {
+      "path": "asset.f5aa3111271a2fcddb69ea388a622826f71bc3d67559848fe0f70b705a27ac5c/config.json",
+      "sha256": "25d00673590127caff90653307292ffb1d89cbb81cd0e6bc05f54854fd0d7f32"
+    },
+    {
+      "path": "cdk.out",
+      "sha256": "2801c31b9ddf660f597e3c9d9ba2a9505ac144717ede055f34dc916602a35b25"
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "a94a2914140a05247ce061d97a8595e4669fb39cce1e00df3f9f1bec30e5e09e"
+    },
+    {
+      "path": "tree.json",
+      "sha256": "9f66af6a3d5ca0d3aa74426443734fa64c7821939bfaa1e3712b082c0d25fe75"
+    },
+    {
+      "path": "validation-report.json",
+      "sha256": "ba990d19514a4d3818b0d9e46e6662257238d206389b9aa4ada378f1d1fb00c6"
+    }
+  ],
+  "digest": "e0f3b1f5dc97c6c24cbdd9eb8c01d381c69de328dd620092798314ae8ee28821"
+}
