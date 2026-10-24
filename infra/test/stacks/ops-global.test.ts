@@ -6,8 +6,8 @@ describe('ops-stack', () => {
     const { t } = build(DEV);
     const json = t.ops.toJSON() as Record<string, unknown>;
     const alarms = resourcesOfType(json, 'AWS::CloudWatch::Alarm');
-    // 5 funciones × (errores + throttles) + 5xx + DLQ + 6 tablas + integridad = 19
-    expect(alarms).toHaveLength(19);
+    // 7 funciones × (errores + throttles) + 5xx + DLQ + 10 tablas + integridad = 27
+    expect(alarms).toHaveLength(27);
     for (const [, p] of alarms) {
       expect((p.AlarmActions as unknown[]).length).toBe(1);
       expect(p.TreatMissingData).toBe('notBreaching');

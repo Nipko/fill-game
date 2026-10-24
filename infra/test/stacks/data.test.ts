@@ -2,8 +2,8 @@ import { Match } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
 import { build, DEV, PROD, resourcesOfType } from '../helpers.ts';
 
-const TABLES = ['purchases', 'rewards', 'integrity', 'account_codes', 'rate_limits', 'jobs'];
-const WITH_TTL = ['rewards', 'integrity', 'account_codes', 'rate_limits'];
+const TABLES = ['purchases', 'rewards', 'integrity', 'account_codes', 'rate_limits', 'jobs', 'league_players', 'league_board', 'league_histogram', 'league_names'];
+const WITH_TTL = ['rewards', 'integrity', 'account_codes', 'rate_limits', 'league_players', 'league_board', 'league_histogram'];
 const WITH_BY_UID = ['purchases', 'rewards', 'account_codes'];
 
 describe.each([
@@ -14,7 +14,7 @@ describe.each([
   const isProd = envName === 'prod';
   const tables = resourcesOfType(t.data.toJSON(), 'AWS::DynamoDB::GlobalTable');
 
-  it('crea las 6 tablas con el prefijo af-<env>-', () => {
+  it('crea las 10 tablas con el prefijo af-<env>-', () => {
     const names = tables.map(([, p]) => p.TableName as string).sort();
     expect(names).toEqual(TABLES.map((n) => `af-${envName}-${n}`).sort());
   });

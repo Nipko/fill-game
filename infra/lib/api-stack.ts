@@ -115,7 +115,8 @@ export class ApiStack extends Stack {
         ...appCheckEnv,
       },
     });
-    verifyPurchase.grantTable(tables.purchases, [...DDB_GET, ...DDB_PUT]);
+    // Q-IAP-4 ya integrado: reasignación condicional de no consumibles, además del alta original.
+    verifyPurchase.grantTable(tables.purchases, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
     verifyPurchase.grantTable(tables.integrity, [...DDB_GET, ...DDB_PUT]);
     // Anti-replay del token de integridad, límite por UID, marca de cuenta borrada (también como ConditionCheck en
     // la transacción del libro mayor) y marca once_per_account (F2c).
@@ -157,6 +158,10 @@ export class ApiStack extends Stack {
           INTEGRITY: tables.integrity,
           ACCOUNT_CODES: tables.accountCodes,
           RATE_LIMITS: tables.rateLimits,
+          LEAGUE_PLAYERS: tables.leaguePlayers,
+          LEAGUE_BOARD: tables.leagueBoard,
+          LEAGUE_HISTOGRAM: tables.leagueHistogram,
+          LEAGUE_NAMES: tables.leagueNames,
         }),
         ...secretEnv({ FIREBASE_ADMIN: this.secrets.firebaseAdmin }),
         ...appCheckEnv,
@@ -173,6 +178,10 @@ export class ApiStack extends Stack {
     // once_per_account del UID (F2c).
     deleteAccount.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE, ...DDB_DELETE, ...DDB_CONDITION_CHECK]);
     deleteAccount.grantSecret(this.secrets.firebaseAdmin);
+    deleteAccount.grantTable(tables.leaguePlayers, [...DDB_GET, ...DDB_QUERY, ...DDB_DELETE]);
+    deleteAccount.grantTable(tables.leagueBoard, DDB_DELETE);
+    deleteAccount.grantTable(tables.leagueHistogram, DDB_UPDATE);
+    deleteAccount.grantTable(tables.leagueNames, [...DDB_GET, ...DDB_DELETE]);
 
     const voidedJob = new AfFunction(this, 'VoidedPurchasesJob', {
       config,
@@ -187,15 +196,34 @@ export class ApiStack extends Stack {
       },
     });
     // UpdateItem para marcar voided; PutItem condicional para la lápida de los tokens aún sin verificar (F2c).
-    voidedJob.grantTable(tables.purchases, [...DDB_PUT, ...DDB_UPDATE]);
+    // Q-IAP-4: lee shadow_keys de la principal antes de anular las sombras.
+    voidedJob.grantTable(tables.purchases, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
     voidedJob.grantTable(tables.jobs, [...DDB_GET, ...DDB_PUT]);
     voidedJob.grantSecret(this.secrets.playServiceAccount);
+    const leagueEnv = tableEnv({ LEAGUE_PLAYERS: tables.leaguePlayers, LEAGUE_BOARD: tables.leagueBoard, LEAGUE_HISTOGRAM: tables.leagueHistogram, LEAGUE_NAMES: tables.leagueNames, INTEGRITY: tables.integrity, RATE_LIMITS: tables.rateLimits });
+    const leagueFunction = (id: string, name: 'league-wins' | 'league-board'): AfFunction => {
+      const f = new AfFunction(this, id, { config, name, usesPlayVerifier: true, description: `${name}: Liga del río (D-046; docs/dev/liga.md).`, environment: { ...leagueEnv, ...appCheckEnv } });
+      f.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_CONDITION_CHECK]);
+      f.grantTable(tables.integrity, [...DDB_GET, ...DDB_PUT]);
+      f.grantTable(tables.leagueNames, [...DDB_GET, ...DDB_PUT]);
+      return f;
+    };
+    const leagueWins = leagueFunction('LeagueWins', 'league-wins');
+    leagueWins.grantTable(tables.leaguePlayers, [...DDB_GET, ...DDB_PUT]);
+    leagueWins.grantTable(tables.leagueBoard, [...DDB_PUT, ...DDB_DELETE]);
+    leagueWins.grantTable(tables.leagueHistogram, DDB_UPDATE);
+    const leagueBoard = leagueFunction('LeagueBoard', 'league-board');
+    leagueBoard.grantTable(tables.leaguePlayers, DDB_GET);
+    leagueBoard.grantTable(tables.leagueBoard, DDB_QUERY);
+    leagueBoard.grantTable(tables.leagueHistogram, DDB_QUERY);
     this.functions = {
       'verify-purchase': verifyPurchase,
       'restore-ledger': restoreLedger,
       'rewarded-ssv': rewardedSsv,
       'delete-account': deleteAccount,
       'voided-purchases-job': voidedJob,
+      'league-wins': leagueWins,
+      'league-board': leagueBoard,
     };
 
     // ---- HTTP API ----

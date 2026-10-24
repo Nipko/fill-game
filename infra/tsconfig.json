@@ -19,6 +19,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["bin/**/*.ts", "lib/**/*.ts", "functions/**/*.ts", "test/**/*.ts", "web/*.ts", "web/src/*.ts", "vitest.config.ts"],
+  "include": ["bin/**/*.ts", "lib/**/*.ts", "functions/**/*.ts", "tools/**/*.ts", "test/**/*.ts", "web/*.ts", "web/src/*.ts", "vitest.config.ts"],
   "exclude": ["node_modules", "cdk.out"]
 }

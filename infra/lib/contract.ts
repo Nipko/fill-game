@@ -9,6 +9,8 @@ export const FUNCTION_NAMES = [
   'rewarded-ssv',
   'delete-account',
   'voided-purchases-job',
+  'league-wins',
+  'league-board',
 ] as const;
 export type FunctionName = (typeof FUNCTION_NAMES)[number];
 

@@ -24,6 +24,10 @@ export interface AfTables {
   readonly rateLimits: TableV2;
   /** Checkpoints de los jobs: PK job. */
   readonly jobs: TableV2;
+  readonly leaguePlayers: TableV2;
+  readonly leagueBoard: TableV2;
+  readonly leagueHistogram: TableV2;
+  readonly leagueNames: TableV2;
 }
 
 /** Nombre del índice por UID, común a purchases, rewards y account_codes. */
@@ -41,11 +45,12 @@ export class DataStack extends Stack {
     const table = (
       name: string,
       partitionKey: string,
-      opts: { ttl?: boolean; gsi?: GlobalSecondaryIndexPropsV2[] } = {},
+      opts: { ttl?: boolean; gsi?: GlobalSecondaryIndexPropsV2[]; sort?: { name: string; type: AttributeType } } = {},
     ): TableV2 =>
       new TableV2(this, name.replace(/(^|_)(\w)/g, (_m, _s: string, c: string) => c.toUpperCase()), {
         tableName: `${config.prefix}-${name}`,
         partitionKey: { name: partitionKey, type: AttributeType.STRING },
+        sortKey: opts.sort,
         billing: Billing.onDemand(),
         encryption: TableEncryptionV2.awsManagedKey(),
         pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
@@ -73,6 +78,10 @@ export class DataStack extends Stack {
       }),
       rateLimits: table('rate_limits', 'key', { ttl: true }),
       jobs: table('jobs', 'job'),
+      leaguePlayers: table('league_players', 'uid', { ttl: true, sort: { name: 'week', type: AttributeType.STRING } }),
+      leagueBoard: table('league_board', 'scope', { ttl: true, sort: { name: 'sort', type: AttributeType.STRING } }),
+      leagueHistogram: table('league_histogram', 'scope', { ttl: true, sort: { name: 'bucket', type: AttributeType.NUMBER } }),
+      leagueNames: table('league_names', 'uid'),
     };
   }
 }

@@ -9,8 +9,8 @@ Ninguna cuenta, correo, clave ni secreto vive en este repositorio: lo que identi
 | Stack | Región | Contenido |
 |---|---|---|
 | `Af<Env>Global` | us-east-1 | AWS Budgets (10 USD en dev, 50 en prod; avisos al 50, 80 y 100 %) y, solo con dominio, el certificado de ACM de CloudFront |
-| `Af<Env>Data` | sa-east-1 | 6 tablas de DynamoDB (`af-<env>-purchases`, `rewards`, `integrity`, `account_codes`, `rate_limits`, `jobs`): on-demand, cifradas, PITR; en prod, protección contra borrado y retención |
-| `Af<Env>Api` | sa-east-1 | HTTP API con autorizador JWT de Firebase Auth, rutas `/v1/...` del contrato, 5 Lambdas (Node 24, arm64; F2-3 a F2-8), límites por ruta, 3 secretos de relleno, job diario a las 03:00 UTC con DLQ |
+| `Af<Env>Data` | sa-east-1 | 10 tablas de DynamoDB (`af-<env>-purchases`, `rewards`, `integrity`, `account_codes`, `rate_limits`, `jobs`, `league_players`, `league_board`, `league_histogram`, `league_names`): on-demand, cifradas, PITR; en prod, protección contra borrado y retención |
+| `Af<Env>Api` | sa-east-1 | HTTP API con autorizador JWT de Firebase Auth, rutas `/v1/...` del contrato, 7 Lambdas (Node 24, arm64; F2-3 a F2-8), límites por ruta, 3 secretos de relleno, job diario a las 03:00 UTC con DLQ |
 | `Af<Env>Web` | sa-east-1 | Web estática: S3 privado + CloudFront con OAC, cabeceras de seguridad, `noindex` en dev, la web pública de Tintalú en es-419, en y pt-BR (portada, privacidad, términos, eliminación de cuenta y créditos, en borrador), `config.json` de despliegue y `app-ads.txt` de plantilla; reenvía `/v1/account/delete-*` a la API (borrado por web, mismo origen) |
 | `Af<Env>Cdn` | sa-east-1 | Contenido remoto: bucket `af-<env>-content-<cuenta>` tras CloudFront; `packs/*` inmutables (1 año), `catalog.json` y el resto 5 minutos; sin listado ni CORS |
 | `Af<Env>Ops` | sa-east-1 | Alarmas (errores y throttles de Lambda, 5xx de la API, fallo del job, throttles de DynamoDB, cuota de integridad al 70 %) con aviso por SNS al correo |
@@ -234,3 +234,18 @@ npx cdk synth -c env=prod -c domain=tintalu.com -c firebaseAppIds=1:<número>:an
 ```
 
 Las referencias entre stacks son débiles (`Fn::GetStackOutput`, el valor por defecto de esta versión de CDK): CloudFormation no impide borrar `Data` o `Api` aunque otros stacks los usen. En prod lo frenan la retención y la protección contra la terminación; aun así, borra en orden inverso (`Ops`, `Cdn`, `Web`, `Api`, `Data`, `Global`).
+
+## Liga del río — D-046
+
+Backend Global/País de la 1.0, contrato sin cambios de `docs/dev/liga.md`; detalles operativos y estimación en [LEAGUE.md](LEAGUE.md). Dos funciones adicionales Node 24 arm64 (`league-wins`, `league-board`), ambas con JWT Firebase y App Check, y cuatro tablas cifradas bajo demanda. API: `POST /v1/league/wins` y `GET /v1/league?scope=global|country`. `deleteAccount` limpia la Liga; Ops añade errores/throttles de las funciones y throttles de las tablas. Sin VPC/NAT ni caché provisionada; las alarmas sí tienen coste mensual.
+
+Tabla de dificultad desde tutorial/mundos publicados 1–700, nunca reservas ni escritura manual:
+
+```sh
+npm run league:levels
+npm run league:check
+```
+
+`npm test` comprueba esa tabla antes de Vitest. No cambiar `levels.generated.json` a mano. El tutorial sin etiqueta es Normal, igual que `LevelPackReader`; no puntúa antes del 41. País: en este despliegue se usa `region` validado, sin añadir CloudFront a la Liga. No aceptar una cabecera `CloudFront-Viewer-Country` en el endpoint directo. Las URL base del cliente se conservan.
+
+Para diff/despliegue, preservar **todos los contextos reales del dev existente**, incluidos `firebaseProjectId`, `firebaseAppIds`, `packageName`, `account` y `alertEmail`, con `--profile af-dev`. No usar valores de ejemplo contra el entorno real. Revisar `cdk diff AfDevData AfDevApi AfDevOps --no-change-set` con esos contextos, obtener el sí del dueño y desplegar esas tres pilas desde el mismo ensamblado revisado. No desplegar Web/Cdn/Global por este cambio. Comprobar 401 sin token en los dos endpoints; con tokens de prueba proporcionados por el dueño, enviar una victoria y leer Global y País. Los tokens no se escriben en el repo ni en el chat. La activación de `live_league_enabled` y el cliente Unity los lleva el integrador.

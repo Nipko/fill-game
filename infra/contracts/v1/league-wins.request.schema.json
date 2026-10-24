@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/league-wins.request.schema.json",
+  "title": "league-wins.request",
+  "description": "docs/dev/liga.md §3.1; D-046. País desconocido: null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "wins",
+    "max_level"
+  ],
+  "properties": {
+    "wins": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "win_id",
+              "won_at",
+              "kind",
+              "level"
+            ],
+            "properties": {
+              "win_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "won_at": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,3})?Z$"
+              },
+              "kind": {
+                "const": "campaign"
+              },
+              "level": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 700
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "win_id",
+              "won_at",
+              "kind",
+              "day"
+            ],
+            "properties": {
+              "win_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "won_at": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,3})?Z$"
+              },
+              "kind": {
+                "const": "daily"
+              },
+              "day": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d\\d-\\d\\d$"
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 1
+    },
+    "max_level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 700
+    },
+    "region": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    }
+  }
+}
