@@ -48,8 +48,8 @@ npm run typecheck
 npm test
 npm run web:check        # web/site al día con web/build.ts
 npx cdk synth -c env=dev
-npx cdk synth -c env=prod -c firebaseAppIds=1:123456789:android:0123456789abcdef   # id de mentira para validar
-npx cdk synth -c env=prod -c domain=tintalu.com -c webOnly=true                      # solo la web de prod con DNS externo (D-044)
+npx cdk synth -c env=prod -c domain=tintalu.com -c firebaseAppIds=1:123456789:android:0123456789abcdef   # id de mentira para validar
+npx cdk synth -c env=prod -c domain=tintalu.com -c webOnly=true                                         # solo la web de prod con DNS externo (D-044)
 ```
 
 `cdk synth` aplica **cdk-nag** (AwsSolutions) como plugin de validación: cualquier hallazgo sin reconocer hace fallar la síntesis. Cada excepción está reconocida en el código con su motivo (`ack(...)` en `lib/`). La síntesis no hace búsquedas en la cuenta (`fromLookup` está prohibido) y `cdk.json` desactiva la telemetría, los avisos y el informe de versión de la CLI.
@@ -67,6 +67,7 @@ npx cdk synth -c env=prod -c domain=tintalu.com -c webOnly=true                 
 | `domain` | No | `tintalu.com` | Web en `<dominio>` y `www.` (en prod; D-044 la publica ya). Sin `hostedZoneId`, el DNS es **externo** (Cloudflare): certificados de ACM validados por CNAME que crea el dueño y ningún registro DNS en AWS; las salidas dicen qué crear. Con dominio, canonical y hreflang absolutos; solo prod con dominio se indexa |
 | `hostedZoneId` | No (solo con `domain`) | id de zona de Route 53 | DNS en Route 53 (opción B): el CDK crea la validación y los alias A/AAAA, y pone también `cdn.` y `api.` en el dominio |
 | `domainExtras` | No (solo con `domain` y sin `hostedZoneId`) | `cdn`, `api` o `cdn,api` | Con DNS externo, `cdn.<dominio>` en la CDN o `api.<dominio>` en la API (cada uno con su certificado y su salida de CNAME). Por defecto, ninguno |
+| `noDomain` | Solo para prod sin dominio a propósito | `true` | Desde D-044, prod **exige** `-c domain` y la síntesis falla sin él: un despliegue de prod sin dominio quitaría los alias de CloudFront y borraría el certificado de la web, y `tintalu.com` caería. `noDomain=true` lo permite a sabiendas (no admite `domain`) |
 | `webOnly` | No | `true` | Solo `<Prefijo>Global` y `<Prefijo>Web`, sin `Data`, `Api`, `Cdn` ni `Ops` (D-044). No exige `firebaseAppIds` y no admite `hostedZoneId` ni `domainExtras`. Sin API, el borrado por web queda desactivado (`config.json`) y la página da la vía del juego y el correo |
 
 ## Web pública (`web/`, D-041)
@@ -115,12 +116,14 @@ El dueño decidió publicar ya la web en `tintalu.com` (D-044), sin esperar al d
    aws acm list-certificates --region us-east-1 --certificate-statuses PENDING_VALIDATION --profile af-prod
    aws acm describe-certificate --region us-east-1 --certificate-arn <arn> --query "Certificate.DomainValidationOptions[].ResourceRecord" --profile af-prod
    ```
-   En Cloudflare › `tintalu.com` › DNS › Registros, crea cada uno: tipo **CNAME**, nombre = el `_xxxx.tintalu.com` (o `_xxxx.www.tintalu.com`) de ACM, destino = el `_yyyy.acm-validations.aws.`, **Proxy: «Solo DNS» (nube gris)**. ACM emite el certificado en minutos y el despliegue sigue solo con `AfProdWeb`. **No borres nunca esos CNAME:** ACM los usa para renovar.
+   En Cloudflare › `tintalu.com` › DNS › Registros, crea cada uno: tipo **CNAME**, nombre = el `_xxxx.tintalu.com` (o `_xxxx.www.tintalu.com`) de ACM, destino = el `_yyyy.acm-validations.aws.`, **Proxy: «Solo DNS» (nube gris)**. Si la zona tiene registros **CAA**, deben incluir `amazon.com` (si no, ACM no puede emitir). ACM emite el certificado en minutos y el despliegue sigue solo con `AfProdWeb`. **No borres nunca esos CNAME:** ACM los usa para renovar.
 5. **Apuntar el dominio.** Al terminar, la salida `AfProdWeb.WebDnsRecords` da los dos registros (y `WebUrl`, el `https://xxxx.cloudfront.net`). En Cloudflare › DNS, borra cualquier registro A, AAAA o CNAME previo de `tintalu.com` y de `www` y crea:
    - `tintalu.com` (nombre `@`) CNAME → `xxxx.cloudfront.net` (Cloudflare lo aplana en el apex), **Solo DNS**;
    - `www` CNAME → `xxxx.cloudfront.net`, **Solo DNS**.
 
-   Sin proxy, para que CloudFront sirva su certificado, TLS 1.2 y las cabeceras de seguridad (con la nube naranja Cloudflare las taparía y haría su propio TLS).
+   Sin proxy, para que CloudFront sirva su certificado, TLS 1.2 y las cabeceras de seguridad (con la nube naranja Cloudflare las taparía y haría su propio TLS). Si algún día se activa el proxy, el modo SSL/TLS de Cloudflare tiene que ser **«Full (strict)»** (con «Flexible» iría a CloudFront por HTTP y entraría en bucle con la redirección a HTTPS); lo recomendado sigue siendo «Solo DNS».
+
+   **HSTS con `includeSubDomains`:** la web envía `Strict-Transport-Security` con `includeSubDomains` (2 años), así que los navegadores que la visiten exigirán HTTPS en **cualquier** subdominio de `tintalu.com`. Todo subdominio que se cree (correo web, `blog.`, etc.) tiene que servir HTTPS con un certificado válido.
 6. **Comprobar** (esperar unos minutos a que propague el DNS):
    ```
    nslookup tintalu.com                                   # IP de CloudFront, no de Cloudflare
@@ -130,6 +133,8 @@ El dueño decidió publicar ya la web en `tintalu.com` (D-044), sin esperar al d
    curl -s  https://tintalu.com/config.json               # {"deleteEnabled":false}
    ```
    Y en el navegador: `https://tintalu.com/tintalu/eliminar-cuenta/` muestra que el borrado desde la web estará disponible pronto, con la vía del juego y el correo de privacidad, sin formulario; el código fuente de las páginas lleva `canonical` y `hreflang` con `https://tintalu.com/…`. Los cambios de la web se ven solos en 5 minutos (caché).
+
+   **Correo de privacidad del aviso:** el marcador `[[DATO DEL DUEÑO: correo de privacidad]]` del aviso «disponible pronto» no está en `web/src/content/`, sino en `web/src/site.ts` (campo `soon` de los textos del formulario, uno por idioma: líneas 150, 184 y 218). Se sustituye ahí, `npm run web:build` y se vuelve a desplegar con el comando del paso 3. **Play Console exige un medio de borrado que funcione:** mientras ese correo sea un marcador (y sin la API de prod), la URL de eliminación de cuenta no sirve para Play.
 7. **Activar el borrado por web cuando exista la API de prod.** No se toca la web: al desplegar el entorno completo **sin** `webOnly`, el stack Web añade la ruta `/v1/account/delete-*` hacia la API y `config.json` pasa a `{"deleteEnabled":true,"apiBase":""}`, con lo que la página enseña el formulario. Con los secretos y el resto de pasos de «Prod», abajo:
    ```
    npx cdk diff   --all -c env=prod -c account=<prod> -c domain=tintalu.com -c firebaseAppIds=<id de la app Android de prod> -c alertEmail=<correo> --profile af-prod
@@ -212,7 +217,7 @@ En dev (y solo en dev: un test de stacks lo comprueba) las funciones llevan `AF_
 
 ### 6. Comprobación rápida
 
-- `WebUrl` muestra la portada de Tintalú; `WebUrl/tintalu/eliminar-cuenta`, `WebUrl/config.json` (`{"apiBase":""}`), `WebUrl/app-ads.txt` y `WebUrl/robots.txt` (que en dev prohíbe indexar) existen. En la página de borrado, un código con formato válido que no existe responde «No encontramos ese código» (la API devuelve 404 `code_not_found`).
+- `WebUrl` muestra la portada de Tintalú; `WebUrl/tintalu/eliminar-cuenta`, `WebUrl/config.json` (`{"deleteEnabled":true,"apiBase":""}`), `WebUrl/app-ads.txt` y `WebUrl/robots.txt` (que en dev prohíbe indexar) existen. En la página de borrado, un código con formato válido que no existe responde «No encontramos ese código» (la API devuelve 404 `code_not_found`).
 - `curl -i "<ApiUrl>/v1/ssv"` → `400` (`bad_request`, faltan los parámetros) y con parámetros pero sin firma buena → `403` (`bad_signature`); `curl -i -X POST <ApiUrl>/v1/purchases/verify` sin token → `401`.
 - Con un ID token de un usuario anónimo de dev: `POST /v1/account/code` devuelve un código; `POST /v1/ledger/restore` con `{"pending_nonces":[]}` devuelve listas vacías; `POST /v1/purchases/verify` con `X-Firebase-AppCheck: fake-ok-1` y `{"token":"fake-ok-1","sku":"af_coins_2"}` devuelve `ok` y, repetido (con otro `fake-ok-…`), `duplicate`.
 - `curl -i <CdnUrl>/catalog.json` → `403` hasta que se suba un catálogo (no hay listado).
@@ -223,9 +228,9 @@ En dev (y solo en dev: un test de stacks lo comprueba) las funciones llevan `AF_
 
 ## Prod
 
-Igual que dev con `-c env=prod`, el perfil `af-prod` y la cuenta de prod. En prod las tablas, los buckets, los secretos y los logs se **retienen** al borrar el stack, y `Data` y `Api` tienen protección contra la terminación. La web pública en `tintalu.com` se publica ya (D-044, solo web: «Conectar `tintalu.com`» arriba); Play Console y el `applicationId` definitivo siguen esperando al dictamen de marca. El verificador falso de Play no existe en prod (un test lo comprueba). Para que las compras funcionen en prod hace falta `-c packageName=<applicationId definitivo>`, que solo existe tras el dictamen de marca. La síntesis de prod exige `-c firebaseAppIds=<id de la app Android de prod>` (sin él falla con un mensaje que lo pide):
+Igual que dev con `-c env=prod`, el perfil `af-prod`, la cuenta de prod y **siempre `-c domain=tintalu.com`**: desde D-044 todos los comandos de prod (`synth`, `diff`, `deploy`, `destroy`) lo llevan. Sin él la síntesis de prod falla a propósito; si se forzara con `-c noDomain=true`, el despliegue quitaría los alias `tintalu.com` y `www.` de CloudFront e intentaría borrar el certificado de ACM en uso, y la web caería. En prod las tablas, los buckets, los secretos y los logs se **retienen** al borrar el stack, y `Data` y `Api` tienen protección contra la terminación. La web pública en `tintalu.com` se publica ya (D-044, solo web: «Conectar `tintalu.com`» arriba); Play Console y el `applicationId` definitivo siguen esperando al dictamen de marca. El verificador falso de Play no existe en prod (un test lo comprueba). Para que las compras funcionen en prod hace falta `-c packageName=<applicationId definitivo>`, que solo existe tras el dictamen de marca. La síntesis de prod exige `-c firebaseAppIds=<id de la app Android de prod>` (sin él falla con un mensaje que lo pide):
 ```
-npx cdk synth -c env=prod -c firebaseAppIds=1:<número>:android:<hash>
+npx cdk synth -c env=prod -c domain=tintalu.com -c firebaseAppIds=1:<número>:android:<hash>
 ```
 
 Las referencias entre stacks son débiles (`Fn::GetStackOutput`, el valor por defecto de esta versión de CDK): CloudFormation no impide borrar `Data` o `Api` aunque otros stacks los usen. En prod lo frenan la retención y la protección contra la terminación; aun así, borra en orden inverso (`Ops`, `Cdn`, `Web`, `Api`, `Data`, `Global`).

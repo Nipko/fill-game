@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../../lib/config.ts';
 
 const APP = '1:123456789:android:0123456789abcdef';
-// En prod el contexto firebaseAppIds es obligatorio (F2c): los ctx de prod lo llevan salvo que se diga otra cosa.
+// En prod el contexto firebaseAppIds es obligatorio (F2c) y, sin domain, noDomain (D-044): los ctx de prod los llevan
+// salvo que se diga otra cosa.
 const ctx = (values: Record<string, unknown>) => {
-  const v = values.env === 'prod' && !('firebaseAppIds' in values) ? { firebaseAppIds: APP, ...values } : values;
+  let v = values.env === 'prod' && !('firebaseAppIds' in values) ? { firebaseAppIds: APP, ...values } : values;
+  if (v.env === 'prod' && !('domain' in v) && !('noDomain' in v)) v = { noDomain: 'true', ...v };
   return { tryGetContext: (k: string) => v[k] };
 };
 
@@ -73,6 +75,17 @@ describe('loadConfig', () => {
     expect(() => loadConfig(ctx({ env: 'prod', webOnly: 'si' }))).toThrow(/true o false/);
     expect(() => loadConfig(ctx({ env: 'prod', webOnly: 'true', domain: 'example.com', domainExtras: 'cdn' }))).toThrow(/webOnly/);
     expect(() => loadConfig(ctx({ env: 'prod', webOnly: 'true', domain: 'example.com', hostedZoneId: 'Z0123456789ABCDEFGHIJ' }))).toThrow(/webOnly/);
+  });
+
+  it('prod sin dominio falla salvo con noDomain=true (D-044: no quitar tintalu.com por olvido)', () => {
+    expect(() => loadConfig(ctx({ env: 'prod', noDomain: undefined }))).toThrow(/prod falta el contexto "domain".*noDomain=true/);
+    expect(() => loadConfig(ctx({ env: 'prod', webOnly: 'true', firebaseAppIds: undefined, noDomain: undefined }))).toThrow(/"domain"/);
+    expect(loadConfig(ctx({ env: 'prod', noDomain: 'true' })).domain).toBeUndefined();
+    expect(loadConfig(ctx({ env: 'prod', domain: 'tintalu.com' })).domain?.name).toBe('tintalu.com');
+    expect(() => loadConfig(ctx({ env: 'prod', domain: 'tintalu.com', noDomain: 'true' }))).toThrow(/noDomain/);
+    expect(() => loadConfig(ctx({ env: 'prod', noDomain: 'si' }))).toThrow(/true o false/);
+    // dev no lo exige.
+    expect(loadConfig(ctx({ env: 'dev' })).domain).toBeUndefined();
   });
 
   it('paquete de Play: provisional en dev, solo por contexto en prod y nunca el provisional (regla 6)', () => {

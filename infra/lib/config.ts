@@ -120,7 +120,8 @@ function str(ctx: ContextReader, key: string): string | undefined {
  * Contexto admitido: `env` (obligatorio: dev | prod), `account`, `alertEmail`, `firebaseProjectId`,
  * `firebaseAppIds` (separados por comas; obligatorio en prod salvo con `webOnly`), `packageName`, `domain`,
  * `hostedZoneId` (solo con `domain`: DNS en Route 53; sin él, DNS externo), `domainExtras` (`cdn`, `api`; solo con
- * DNS externo) y `webOnly` (true: solo los stacks de la web).
+ * DNS externo), `webOnly` (true: solo los stacks de la web) y `noDomain` (true: prod sin dominio a propósito; sin él,
+ * prod exige `domain`, D-044).
  */
 export function loadConfig(ctx: ContextReader): AfConfig {
   const envRaw = str(ctx, 'env');
@@ -191,6 +192,17 @@ export function loadConfig(ctx: ContextReader): AfConfig {
       throw new Error('Con "webOnly" no hay CDN ni API: usa el dominio con DNS externo y sin "domainExtras".');
     }
   }
+
+  // Barrera de D-044: desde que tintalu.com está publicado en prod, un despliegue de prod sin -c domain quitaría los
+  // alias de CloudFront y borraría el certificado en uso (la web caería). Prod sin dominio solo con -c noDomain=true.
+  const noDomain = bool(ctx, 'noDomain');
+  if (isProd && domain === undefined && !noDomain) {
+    throw new Error(
+      'En prod falta el contexto "domain" (p. ej. -c domain=tintalu.com, D-044): sin él, el despliegue quita el dominio de ' +
+        'la web y borra su certificado. Para sintetizar prod sin dominio a propósito, añade -c noDomain=true.',
+    );
+  }
+  if (noDomain && domain !== undefined) throw new Error('El contexto "noDomain" no admite también "domain".');
 
   // El verificador falso de Play solo existe en dev (plan §4); un test de stacks lo comprueba en prod.
   const fakePlayVerifier = !isProd;

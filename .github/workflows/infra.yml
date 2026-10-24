@@ -80,5 +80,9 @@ jobs:
         run: npm run synth -- --all --quiet -c env=dev
 
       # Desde F2c, prod exige -c firebaseAppIds; el CI sintetiza con un id de app de ejemplo, que no es real.
+      # Desde D-044, prod exige también -c domain (tintalu.com, DNS externo).
       - name: synth prod (cdk-nag)
-        run: npm run synth -- --all --quiet -c env=prod -c firebaseAppIds=1:123456789:android:0123456789abcdef
+        run: npm run synth -- --all --quiet -c env=prod -c domain=tintalu.com -c firebaseAppIds=1:123456789:android:0123456789abcdef
+
+      - name: synth prod solo web (cdk-nag)
+        run: npm run synth -- --all --quiet -c env=prod -c domain=tintalu.com -c webOnly=true

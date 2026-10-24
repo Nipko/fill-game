@@ -52,7 +52,8 @@ export function build(context: Record<string, string>, opts: { bundle?: boolean 
 export const DEV = { env: 'dev' } as const;
 /** Id de app Android de Firebase de mentira (formato de 08 §15.3; no es una app real). Prod lo exige (F2c). */
 export const TEST_APP_ID = '1:123456789:android:0123456789abcdef';
-export const PROD = { env: 'prod', firebaseAppIds: TEST_APP_ID } as const;
+/** Prod sin dominio: solo con noDomain=true (D-044). */
+export const PROD = { env: 'prod', firebaseAppIds: TEST_APP_ID, noDomain: 'true' } as const;
 export const PROD_DOMAIN = {
   env: 'prod',
   firebaseAppIds: TEST_APP_ID,
