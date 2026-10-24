@@ -365,3 +365,20 @@ Comprobaciones posteriores:
 Estado final de este encargo: backend y corrección **desplegados en dev con sus dos aprobaciones**, código y registros empujados en `codex/liga`; privacidad/Seguridad de los datos y sitio regenerado en `codex/web-marca`. Verificación de código: **337 pruebas**, lint, tipos, tabla generada y synth dev/prod correctos, como se registró antes del despliegue. No se volvió a ejecutar la batería por cambios posteriores que solo documentan el resultado.
 
 Pendiente externo: integrar el cliente y habilitar su sonda de dev; envío/lectura autenticados si el dueño facilita un token de prueba por vía privada (no se ha proporcionado). La web no se desplegó y los marcadores `[[ABOGADO: revisar]]` siguen pendientes de revisión. No se modificó `docs/dev/liga.md`, prod, el interruptor de producción, DNS ni cuentas de Play.
+
+
+## Liga — Revisión 1 del 24-10-2026 (estado actual)
+
+Esta sección prevalece sobre el criterio histórico de +1/+2 y marca automática descrito más arriba. `git pull origin integracion-fase1-fase2` aplicado en el worktree propio de `codex/liga`, merge `2b47b0f5`; contiene `03332703`. Código: **`c143f075`**.
+
+Aplicados B1 y S1–S5: referencia persistida también con campañas bien formadas rechazadas; huecos aceptados; `unreachable_level` solo por level > max_level; ningún rechazo marca; cinco minutos de margen inclusive dentro de la semana; validación individual y región desconocida tolerante; sin tope fijo de 700 en el esquema; niveles desconocidos/anteriores al desbloqueo invalid; campañas ordenadas por nivel. Se conservan marcas existentes, sin borrarlas automáticamente. Se documenta la Liga recortada en la 1.0 en 08 §2.4. `docs/dev/liga.md` permanece idéntico a la base del integrador.
+
+Sobre válido + elemento malo devuelve 200 y su rechazo individual, sin perder los vecinos. Si falta un win_id de texto, se representa como cadena vacía en rejected (el esquema de respuesta ya lo admite). Ejemplos mixtos versionados y comprobados por HTTP + AJV. No cambian nombres de campos/rutas ni la fuente de puntos. La referencia no verifica progreso ni pago del Salto del Boto.
+
+Verificación: `npm ci` correcto (una vulnerabilidad alta heredada, sin actualizar dependencias); lint, typecheck, **361 pruebas / 20 archivos**, catálogo generado `--check`, `web:check`, synth dev y prod con dominio/AppIds de ejemplo, correctos. Las 24 pruebas añadidas cubren las cinco regresiones pedidas y los límites de reloj, elementos individuales, orden, persistencia y marca manual.
+
+[Resumen para revisar](liga-dev-revision1-revision.md), [diff real redactado](liga-dev-revision1-diff.txt) e [inventario congelado](liga-dev-revision1-assembly.sha256.json), digest `e265c58a270471863cc03bc4d8fdd767c3f8f86aa16e7ecd9508151ece13a09c` (58 archivos). `cdk diff AfDevApi --strict --no-change-set --exclusively` con contexto real: exit 0, una pila con diferencias. Comparando ensamblados, Data/Ops idénticos; Api solo cambia los paquetes de LeagueWins, LeagueBoard y DeleteAccount (en borrado solo el sourcemap). Sin recursos, permisos IAM ni coste fijo nuevos. El diff estricto incluye las diferencias Unicode de descripciones/metadata ya observadas; no son cambios de secretos ni permisos.
+
+**Pendiente de aprobación del dueño para desplegar exclusivamente AfDevApi desde este ensamblado. Esta revisión aún no está desplegada.** Se pedirá el sí después de preparar y empujar código/diff/informe. La aprobación de despliegues anteriores no se reutiliza para esta revisión. Tras el sí se registrará el resultado real aquí.
+
+URL dev sin cambios: **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**. Coste incremental del cambio: sin infraestructura adicional; se conservan las estimaciones de `infra/LEAGUE.md`. País: respaldo region ISO; sin CloudFront nuevo. No se modifica el cliente, prod, DNS, Play ni el interruptor. No se ha facilitado token de prueba para envío/lecturas autenticados.
