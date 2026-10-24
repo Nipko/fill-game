@@ -469,6 +469,26 @@ namespace AF.IAP.Tests
         }
 
         [Test]
+        public void PlayConnected_WithoutAnyStorePrice_TheStoreIsUnavailable_UntilARefreshBringsThePrices()
+        {
+            // Prueba del 2026-10-23, observación 1: la app aún no está en Play Console (Play conecta, pero sin productos).
+            Session s = NewSession();
+            Session cold = s.Reopen(start: false);
+            cold.Port.Prices.Clear();
+            cold.Billing.Start();
+
+            Assert.That(cold.Billing.IsReady, Is.True, "Play conectada");
+            Assert.That(cold.Ready.IsAvailable, Is.False, "sin ningún precio de la tienda no hay Mercado");
+            Assert.That(cold.TryBuy(cold.Ready)!.Status, Is.EqualTo(PurchaseStatus.StoreUnavailable));
+            Assert.That(cold.Port.Purchases, Is.Empty);
+
+            cold.Port.PriceAll(cold.Ledger.Catalog); // los productos se publican en Play Console
+            cold.Billing.Refresh(); // al volver a primer plano: se vuelven a pedir los productos
+            Assert.That(cold.Ready.IsAvailable, Is.True, "el Mercado aparece en la misma sesión");
+            Assert.That(cold.Buy("af_coins_2").IsPurchased, Is.True);
+        }
+
+        [Test]
         public void Under13_NoPurchases_AndPlayNeverOpens()
         {
             Session s = NewSession();
