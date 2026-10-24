@@ -1,6 +1,9 @@
 """Exporta a PNG los SVG de ./out con Chrome sin interfaz (transparencia conservada). Solo biblioteca estándar.
 
 Uso: python exportar.py   (antes: python generar.py)
+     python exportar.py --android-res <carpeta res>   además, las capas del icono adaptativo por densidad
+       (drawable-{m,h,xh,xxh,xxxh}dpi/af_launcher_{background,foreground,monochrome}.png: 108 dp a 1×-4×), para
+       Assets/_Project/Plugins/Android/AfIcon.androidlib/src/main/res.
 """
 import os
 import subprocess
@@ -32,19 +35,35 @@ for f in sorted(os.listdir(OUT)):
         TRABAJOS.append((f, f.replace(".svg", ".png"), int(w), int(h)))
 
 
+DENSIDADES = {"mdpi": 108, "hdpi": 162, "xhdpi": 216, "xxhdpi": 324, "xxxhdpi": 432}
+CAPAS = {"background": "adaptativo-fondo.svg", "foreground": "adaptativo-frente.svg", "monochrome": "adaptativo-monocromo.svg"}
+
+
 def main():
     if CHROME is None:
         print("FALLO: no encuentro Chrome ni Edge")
         return 2
     os.makedirs(PNG, exist_ok=True)
+    trabajos = [(svg, os.path.join(PNG, png), w, h) for svg, png, w, h in TRABAJOS]
+    if len(sys.argv) == 3 and sys.argv[1] == "--android-res":
+        for dens, px in DENSIDADES.items():
+            carpeta = os.path.join(sys.argv[2], f"drawable-{dens}")
+            os.makedirs(carpeta, exist_ok=True)
+            for capa, svg in CAPAS.items():
+                trabajos.append((svg, os.path.join(carpeta, f"af_launcher_{capa}.png"), px, px))
+    elif len(sys.argv) > 1:
+        print(__doc__)
+        return 2
     tmp = tempfile.mkdtemp(prefix="tintalu-export-")
-    for svg, png, w, h in TRABAJOS:
+    for svg, dst, w, h in trabajos:
+        png = os.path.relpath(dst, HERE)
         html = os.path.join(tmp, "p.html")
         src = "file:///" + os.path.join(OUT, svg).replace("\\", "/")
         open(html, "w", encoding="utf-8").write(
             f'<!doctype html><html><body style="margin:0;background:transparent">'
             f'<img src="{src}" style="display:block;width:{w}px;height:{h}px"></body></html>')
-        dst = os.path.join(PNG, png)
+        if os.path.exists(dst):
+            os.remove(dst)
         r = subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars",
                             "--default-background-color=00000000", f"--window-size={w},{h}",
                             "--allow-file-access-from-files", f"--screenshot={dst}", "file:///" + html.replace("\\", "/")],

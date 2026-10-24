@@ -21,6 +21,9 @@
     y PGS v2 intenta iniciar sesion solo, antes de saber la edad: con <13 no debe arrancar (D-033, anadido del 2026-10-23;
     08 sec. 2.3 y 7). El plugin de Unity llama a PlayGamesSdk.initialize al crear su cliente, y AF.Save.PlayGames solo lo crea
     con 13-17 o 18+ y con el APP_ID configurado (docs/dev/play-games.md sec. 6).
+  - D-045 (identidad v2): el icono es @mipmap/af_launcher, de Assets/_Project/Plugins/Android/AfIcon.androidlib (adaptativo
+    con fondo y primer plano y, en Android 13+, la capa monocroma de los iconos tematicos, que el icono de Unity no tiene).
+    El mismo recurso sirve de roundIcon: la mascara la pone el lanzador.
 -->
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -41,7 +44,8 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" tools:node="remove"/>
 
     <application android:label="@string/app_name"
-                 android:icon="@mipmap/app_icon">
+                 android:icon="@mipmap/af_launcher"
+                 android:roundIcon="@mipmap/af_launcher">
         <meta-data android:name="firebase_analytics_collection_enabled" android:value="false"/>
         <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false"/>
         <meta-data android:name="google_analytics_default_allow_analytics_storage" android:value="false"/>

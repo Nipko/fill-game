@@ -27,6 +27,7 @@ python hoja.py        # out/hoja-revision.html (la captura out/hoja-revision.png
 `bocetos/a-meandro.svg` es la versión A descartada, guardada como referencia.
 
 ## Pendiente
-- Integrarla en Unity (Player Settings: icono, adaptativo y monocromo) y en la web (favicon, apple-touch-icon y logo); la web la lleva Codex (`docs/dev/traspaso/codex-web-marca.md`).
+- **Unity: integrada** (2026-10-23) en `Assets/_Project/Plugins/Android/AfIcon.androidlib`, porque Unity 6000.3 no tiene capa monocroma. Lleva `mipmap-anydpi-v26` y `-v33` (este, con la monocroma) y las capas por densidad, que genera `python exportar.py --android-res <AfIcon.androidlib/src/main/res>`. `Assets/Plugins/Android/LauncherManifest.xml` apunta `android:icon` y `roundIcon` a `@mipmap/af_launcher`.
+- La web (favicon, apple-touch-icon y logo) la lleva Codex (`docs/dev/traspaso/codex-web-marca.md`).
 - No hay versión oscura ni tintada de iOS ni catálogo de Xcode; se hacen cuando se elija.
 - Probar en un teléfono el icono adaptativo y el temático.
