@@ -4,7 +4,9 @@ using System.Collections;
 using System.Collections.Generic;
 using AF.Analytics;
 using AF.Economy;
+using AF.Core.Rules;
 using AF.GameFlow;
+using AF.Solver.Search;
 using AF.LiveOps;
 using AF.Localization;
 using AF.Platform;
@@ -46,6 +48,9 @@ namespace AF.Tests.PlayMode
             GameBootstrap.ResetBackendOverrides();
             GameBootstrap.ResetTelemetryOverrides();
             GameBootstrap.ResetMarketOverrides();
+            GameBootstrap.ResetDailyOverrides();
+            GameBootstrap.ResetAccountOverrides();
+            GameBootstrap.WipePlayerPrefsForTests = null;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -167,6 +172,9 @@ namespace AF.Tests.PlayMode
             Assert.That(screen.MeShown, Is.False);
             Assert.That(sink.Last("af_league_unavailable")!.Find("reason")!.Value.Text, Is.EqualTo("offline"));
             boot.CloseLeague();
+            Assert.That(boot.OpenLeague(), Is.True);
+            boot.CloseLeague();
+            Assert.That(CountOf(sink, "af_league_unavailable"), Is.EqualTo(1), "el mismo motivo no se repite en cada reintento");
 
             _api.Offline = false;
             Assert.That(boot.OpenLeague(), Is.True);
@@ -236,6 +244,109 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View!.LeagueLineShown, Is.False);
             Assert.That(boot.View.LeagueLineRect == null || !boot.View.LeagueLineRect.gameObject.activeSelf, Is.True);
             Assert.That(_api.WinsCalls, Is.EqualTo(0));
+        }
+
+        [UnityTest]
+        public IEnumerator DailyWin_WithTheLeagueOn_QueuesTheDayWinId()
+        {
+            // El Reto del río ganado (liga.md §1: 20 puntos, una vez por día): d:<fecha de inicio de la partida> en la cola.
+            TimeSpan bogota = TimeSpan.FromHours(-5);
+            var clock = new ManualClock(new DateTime(2026, 10, 19, 15, 0, 0, DateTimeKind.Utc), bogota); // lunes 10:00 en Bogotá, ya en la W43
+            _api = new FakeLeagueApi(clock) { Offline = true };
+            GameBootstrap.LeagueApiOverride = _api;
+            GameBootstrap.LeagueClockOverride = clock;
+            LaunchOptions.ClockOverride = clock;
+            GameBootstrap.DailyPoolOverride = DailyPlayTestPool.Full;
+            GameBootstrap.DailyStoreOverride = new InMemoryDailyChallengeStore();
+            Profile profile = Wallet.NewProfile(clock);
+            profile.Progress.MaxLevel = 45;
+            profile.Progress.NextLevel = 46;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            Assert.That(boot.SetUpDaily(), Is.True);
+            boot.DailyRunner!.enabled = false;
+            Assert.That(boot.League!.Active, Is.True);
+            boot.DailyCard!.Button.onClick.Invoke();
+            DailyChallengeScreen daily = boot.DailyScreen!;
+            LevelFlow flow = daily.Flow!;
+            daily.Actions.TapAnywhere();
+            StepDaily(boot, () => flow.Phase == FlowPhase.Playing && flow.AcceptsBoardInput, "fin de la intro del Reto");
+            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
+            Assert.That(solution.IsSolved, Is.True);
+            for (int i = 0; i < solution.MoveCount; i++)
+            {
+                Pour move = solution.GetMove(i);
+                StepDaily(boot, () => flow.AcceptsBoardInput, "tablero listo");
+                daily.Actions.TapCuia(move.Source);
+                daily.Actions.TapCuia(move.Target);
+            }
+
+            StepDaily(boot, () => daily.Won, "victoria del Reto");
+            LeagueRecord record = boot.League.Record;
+            Assert.That(record.Pending.Count, Is.EqualTo(1), "sin red, en la cola");
+            Assert.That(record.Pending[0].WinId, Is.EqualTo("d:2026-10-19"));
+            Assert.That(record.Pending[0].Kind, Is.EqualTo(LeagueWinKind.Daily));
+            Assert.That(boot.Profile!.League, Does.Contain("d:2026-10-19"), "y en el perfil");
+        }
+
+        [UnityTest]
+        public IEnumerator DeleteAccount_EmptiesTheQueueTheCacheAndTheProfileBlock()
+        {
+            int wipes = 0;
+            GameBootstrap.WipePlayerPrefsForTests = () => wipes++;
+            var store = new MemoryProfileStore(ProfileAt(57));
+            yield return PlayModeHelpers.LoadApp(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            boot.GetComponent<LeagueRunner>().enabled = false;
+            LeagueService league = boot.League!;
+            Assert.That(league.RequestBoard(LeagueScope.Global), Is.True);
+            _api.Offline = true;
+            league.RecordCampaignWin(57, RewardTier.Normal);
+            Assert.That(league.PendingCount, Is.EqualTo(1));
+            Assert.That(league.Cached(LeagueScope.Global), Is.Not.Null);
+            Assert.That(boot.Profile!.League, Is.Not.Null);
+            Profile profile = boot.Profile;
+
+            Assert.That(boot.PressSettings(), Is.True);
+            Assert.That(boot.OpenDeleteAccount(), Is.True);
+            Assert.That(boot.ContinueDeleteAccount(), Is.True);
+            Assert.That(boot.ConfirmDeleteAccount(), Is.True);
+            Assert.That(boot.AccountDeleted, Is.True);
+            Assert.That(league.PendingCount, Is.EqualTo(0), "la cola");
+            Assert.That(league.Cached(LeagueScope.Global), Is.Null, "la caché");
+            Assert.That(profile.League, Is.Null, "el bloque league del perfil");
+            Assert.That(store.Json, Is.Null, "y el perfil del disco");
+            int calls = _api.WinsCalls;
+            Assert.That(league.Flush(), Is.False, "nada más se envía");
+            Assert.That(_api.WinsCalls, Is.EqualTo(calls));
+            yield return PlayModeHelpers.WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current != boot && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                "arranque en frío tras eliminar la cuenta");
+        }
+
+        private static int CountOf(FakeAnalyticsSink sink, string name)
+        {
+            int n = 0;
+            foreach (AnalyticsEvent e in sink.Events)
+            {
+                if (e.Name == name)
+                {
+                    n++;
+                }
+            }
+
+            return n;
+        }
+
+        private static void StepDaily(GameBootstrap boot, Func<bool> done, string what)
+        {
+            for (int t = 0; t < 20000 && !done(); t += PlayModeHelpers.FrameMs)
+            {
+                boot.TickDaily(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(done(), Is.True, "tiempo agotado: " + what);
         }
 
         [UnityTest]

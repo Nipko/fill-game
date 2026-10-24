@@ -161,6 +161,17 @@ namespace AF.LiveOps.Tests
         }
 
         [Test]
+        public void Service_NeverGivesPointsBelow41_EvenWithAnotherUnlock()
+        {
+            _config.LiveLeagueUnlockLevel = 30; // un valor remoto que no vale (Validate lo rechaza): aun así, nada por debajo del 41
+            _maxLevel = 40;
+            LeagueService league = Service();
+            Assert.That(league.Active, Is.True);
+            Assert.That(league.RecordCampaignWin(35, RewardTier.Normal), Is.EqualTo(0));
+            Assert.That(_api.WinsCalls, Is.EqualTo(0));
+        }
+
+        [Test]
         public void Service_GivesThePointsOfTheLine_AndSendsTheWin()
         {
             _maxLevel = 41;

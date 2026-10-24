@@ -54,6 +54,9 @@ namespace AF.Backend.Tests
             ["account-delete-confirm.request.schema.json"] = Codec.Of<DeleteConfirmRequest>(DeleteConfirmRequest.TryParse, v => v.ToJson()),
             ["voided-purchases-job.input.schema.json"] = Codec.Of<VoidedPurchasesJobInput>(VoidedPurchasesJobInput.TryParseStrict, v => v.ToJson()),
             ["voided-purchases-job.output.schema.json"] = Codec.Of<VoidedPurchasesJobOutput>(VoidedPurchasesJobOutput.TryParseStrict, v => v.ToJson()),
+            ["league-wins.request.schema.json"] = Codec.Of<LeagueWinsRequestDto>(LeagueWinsRequestDto.TryParse, v => v.ToJson()),
+            ["league-wins.response.schema.json"] = Codec.Of<LeagueWinsResponseDto>(LeagueWinsResponseDto.TryParseStrict, v => v.ToJson()),
+            ["league-board.response.schema.json"] = Codec.Of<LeagueBoardResponseDto>(LeagueBoardResponseDto.TryParseStrict, v => v.ToJson()),
             ["error.schema.json"] = Codec.Of<ApiError>(ApiError.TryParseStrict, v => v.ToJson()),
         };
 
@@ -176,7 +179,7 @@ namespace AF.Backend.Tests
             }
 
             Assert.That(accepted, Is.Empty, "ejemplos inválidos que el cliente acepta");
-            Assert.That(checkedCount, Is.EqualTo(6));
+            Assert.That(checkedCount, Is.EqualTo(7), "con league-wins.request.invalid-too-many (D-046)");
         }
 
         [Test]

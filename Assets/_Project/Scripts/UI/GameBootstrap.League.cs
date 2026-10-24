@@ -39,6 +39,7 @@ namespace AF.UI
         private IClock? _leagueClock;
         private float _leagueRetryMs;
         private bool _leagueButtonShown;
+        private LeagueFailure? _leagueLastFailure;
 
         /// <summary>API de la Liga para los tests (gana a todas).</summary>
         internal static ILeagueApi? LeagueApiOverride { get; set; }
@@ -70,6 +71,20 @@ namespace AF.UI
         /// <summary>La Liga existe ahora para este jugador (botón, cola y red).</summary>
         public bool LeagueActive => _league != null && _league.Active;
 
+        /// <summary>
+        /// La Liga puede actuar ahora: con la edad ya contestada (como Play Billing en <c>GameBootstrap.Backend.cs</c>: con el
+        /// consentimiento activo y sin registro, nada), nunca con la banda &lt; 13 (D-033: sin red ni SDK) y con el perfil escribible.
+        /// </summary>
+        private bool LeagueAllowed()
+        {
+            if (AgeUnder13Override ?? PlayerUnder13())
+            {
+                return false;
+            }
+
+            return !(ConsentEnabled && _consentFlow?.Record == null) && !ProfileLocked && !AccountDeleted;
+        }
+
         private void SetUpLeague()
         {
             Profile? profile = _profile;
@@ -94,7 +109,7 @@ namespace AF.UI
             _league = new LeagueService(store, api, clock, config,
                 () => _progress?.MaxLevel ?? 0,
                 () => LeagueRules.NormalizeRegion(ConsentCountryCode),
-                () => !(AgeUnder13Override ?? PlayerUnder13()) && !ProfileLocked && !AccountDeleted);
+                () => LeagueAllowed());
             _league.WinsSent += OnLeagueWinsSent;
             _league.Unavailable += OnLeagueUnavailable;
             _league.BoardChanged += OnLeagueBoardChanged;
@@ -287,6 +302,7 @@ namespace AF.UI
 
         private void OnLeagueWinsSent(LeagueSendReport report)
         {
+            _leagueLastFailure = null;
             _analytics?.Log(AnalyticsEvent.Create("af_league_wins_sent").Add("count", report.Count).Add("accepted", report.Accepted)
                 .Add("rejected", report.Rejected)); // 08 §8.2 (D-046)
             if (DevProbe.Enabled)
@@ -303,6 +319,13 @@ namespace AF.UI
 
         private void OnLeagueUnavailable(LeagueFailure failure)
         {
+            // Solo cuando cambia el motivo: un reintento sin red no repite af_league_unavailable (vuelve a valer tras una respuesta buena).
+            if (_leagueLastFailure == failure)
+            {
+                return;
+            }
+
+            _leagueLastFailure = failure;
             _analytics?.Log(AnalyticsEvent.Create("af_league_unavailable").Add("reason", LeagueIds.Of(failure))); // 08 §8.2 (D-046)
             if (DevProbe.Enabled)
             {
@@ -312,6 +335,11 @@ namespace AF.UI
 
         private void OnLeagueBoardChanged(LeagueScope scope)
         {
+            if (_league != null && _league.LastFailure(scope) == null)
+            {
+                _leagueLastFailure = null; // llegó una clasificación: el próximo fallo se vuelve a contar
+            }
+
             LeagueScreen? screen = _leagueScreen;
             if (screen != null && screen.Visible)
             {

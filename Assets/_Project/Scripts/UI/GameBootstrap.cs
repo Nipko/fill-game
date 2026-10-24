@@ -1782,10 +1782,10 @@ namespace AF.UI
             SetUpLogbook(); // Bitácora del río y cola de takeovers (B4-3; GameBootstrap.Logbook.cs): tarjeta, libreta y takeover
             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
             SetUpMarket(); // B5 (GameBootstrap.Market.cs): el Mercado, las ofertas y el Cántaro, con las sesiones de B6
-            SetUpLeague(); // D-046 (GameBootstrap.League.cs): la Liga del río, su botón del inicio, su cola y su pantalla
             SetUpA11y(); // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y el lector de pantalla
             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
             SetUpConsent(clock, consentStore); // B12: cifras, país y perfil legal, flujo y pantalla (GameBootstrap.Consent.cs)
+            SetUpLeague(); // D-046 (GameBootstrap.League.cs): la Liga del río, tras la edad y el consentimiento (nada con <13 ni sin contestar)
             ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;

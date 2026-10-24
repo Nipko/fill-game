@@ -59,6 +59,7 @@ namespace AF.Tests.EditMode
         {
             var keys = new List<string>(UiKeys());
             keys.AddRange(LeagueRules.NameKeys);
+            keys.Add(LeagueText.CountryOtherKey);
             foreach (string code in LeagueText.NamedCountries)
             {
                 keys.Add(LeagueText.CountryKey(code));
@@ -85,6 +86,19 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void TheCountries_ArePendingTheCulturalAdvisor()
+        {
+            // Lugares (localizacion.md: lo cultural nace pendiente_asesor), también «Otro país».
+            foreach (string code in LeagueText.NamedCountries)
+            {
+                Assert.That(Loc.StatusOf(LeagueText.CountryKey(code), "es-419"), Is.EqualTo(LocStatus.PendingAdvisor), code);
+            }
+
+            Assert.That(Loc.StatusOf(LeagueText.CountryOtherKey, "es-419"), Is.EqualTo(LocStatus.PendingAdvisor));
+            Assert.That(LeagueText.NamedCountries.Length, Is.EqualTo(21));
+        }
+
+        [Test]
         public void ThePseudonym_IsTheAnimalAndItsDigits_OrPlayerN()
         {
             Assert.That(LeagueText.Player("league_name_capybara", 4821), Is.EqualTo("Capibara 4821"), "sin separador de miles");
@@ -99,7 +113,7 @@ namespace AF.Tests.EditMode
         {
             Assert.That(LeagueText.Country("CO"), Is.EqualTo("Colombia"));
             Assert.That(LeagueText.Country("BR"), Is.EqualTo("Brasil"));
-            Assert.That(LeagueText.Country("JP"), Is.EqualTo("JP"), "sin fila, el código ISO (placa neutra)");
+            Assert.That(LeagueText.Country("JP"), Is.EqualTo("Otro país"), "sin fila, «Otro país» (el código ISO va en la placa neutra)");
             Assert.That(LeagueText.CountryKey("GF"), Is.EqualTo("league_country_gf"));
             foreach (string flag in LeagueText.FlagCountries)
             {

@@ -143,6 +143,8 @@ namespace AF.LiveOps.Tests
         {
             LeagueConfig.Defaults.Validate();
             Assert.Throws<InvalidOperationException>(() => new LeagueConfig { LiveLeagueUnlockLevel = 0 }.Validate());
+            Assert.Throws<InvalidOperationException>(() => new LeagueConfig { LiveLeagueUnlockLevel = 31 }.Validate(), "fijo en 41: el servidor no suma por debajo");
+            Assert.That(LeagueRules.ServerUnlockLevel, Is.EqualTo(41));
             Assert.Throws<InvalidOperationException>(() => new LeagueConfig { LiveLeagueCacheMinutes = -1 }.Validate());
         }
     }

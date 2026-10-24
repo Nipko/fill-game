@@ -19,7 +19,10 @@ namespace AF.LiveOps
         [RemoteConfigKey("live_league_enabled")]
         public bool LiveLeagueEnabled { get; set; }
 
-        /// <summary><c>live_league_unlock_level</c>: la Liga aparece al ganar este nivel (06 §6; liga.md §1).</summary>
+        /// <summary>
+        /// <c>live_league_unlock_level</c>: la Liga aparece al ganar este nivel (06 §6; liga.md §1). Fijo en 41 (08 §9, rango 41-41): el
+        /// servidor no suma por debajo (<see cref="LeagueRules.ServerUnlockLevel"/>); cambiarlo exige cambiar también el backend.
+        /// </summary>
         [RemoteConfigKey("live_league_unlock_level")]
         public int LiveLeagueUnlockLevel { get; set; } = 41;
 
@@ -31,9 +34,9 @@ namespace AF.LiveOps
         /// <exception cref="InvalidOperationException">Algún valor está fuera de lo admisible.</exception>
         public void Validate()
         {
-            if (LiveLeagueUnlockLevel < 1)
+            if (LiveLeagueUnlockLevel != LeagueRules.ServerUnlockLevel)
             {
-                throw new InvalidOperationException("LeagueConfig: live_league_unlock_level debe ser al menos 1.");
+                throw new InvalidOperationException("LeagueConfig: live_league_unlock_level es fijo en 41 (08 §9; el backend no suma por debajo).");
             }
 
             if (LiveLeagueCacheMinutes < 0 || LiveLeagueCacheMinutes > 24 * 60)

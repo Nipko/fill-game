@@ -3,39 +3,25 @@ using System;
 using AF.Backend.Auth;
 using AF.Backend.Contract;
 using AF.Backend.Http;
-using AF.Platform;
 using NUnit.Framework;
 
 namespace AF.Backend.Tests
 {
     /// <summary>
-    /// La Liga del río (D-046) en <c>AF.Backend</c>: los JSON de ejemplo de <c>docs/dev/liga.md</c> §3.1 (copiados aquí porque los
-    /// esquemas de <c>infra/contracts/v1</c> los añade el backend) y <see cref="HttpBackendClient"/> con sus dos rutas.
+    /// La Liga del río (D-046) en <c>AF.Backend</c>, con los ejemplos de <c>infra/contracts/v1/examples</c> (leídos del repositorio,
+    /// como el resto de F3-1; la ida y vuelta de todos la hace <c>ContractExamplesTests</c>) y <see cref="HttpBackendClient"/> con sus
+    /// dos rutas.
     /// </summary>
     public sealed class LeagueContractTests
     {
-        // liga.md §3.1, tal cual.
-        internal const string WinsRequestExample =
-            "{ \"wins\": [ { \"win_id\": \"c:57\", \"kind\": \"campaign\", \"level\": 57, \"won_at\": \"2026-10-23T15:04:05Z\" },\n"
-            + "            { \"win_id\": \"d:2026-10-23\", \"kind\": \"daily\", \"day\": \"2026-10-23\", \"won_at\": \"2026-10-23T16:00:00Z\" } ],\n"
-            + "  \"max_level\": 58, \"region\": \"CO\" }";
-
-        internal const string WinsResponseExample =
-            "{ \"week\": \"2026-W43\", \"points\": 140, \"accepted\": [\"c:57\"], \"rejected\": [ { \"win_id\": \"d:2026-10-23\", \"reason\": \"duplicate\" } ],\n"
-            + "  \"name_key\": \"league_name_capybara\", \"name_num\": 4821, \"country\": \"CO\" }";
-
-        internal const string BoardResponseExample =
-            "{ \"week\": \"2026-W43\", \"starts_at\": \"2026-10-19T12:00:00Z\", \"ends_at\": \"2026-10-26T12:00:00Z\", \"scope\": \"country\", \"country\": \"CO\",\n"
-            + "  \"updated_at\": \"2026-10-23T20:00:00Z\",\n"
-            + "  \"top\": [ { \"rank\": 1, \"name_key\": \"league_name_jaguar\", \"name_num\": 1203, \"country\": \"CO\", \"points\": 980 } ],\n"
-            + "  \"me\": { \"points\": 140, \"rank\": null, \"percentile\": 12, \"name_key\": \"league_name_capybara\", \"name_num\": 4821, \"country\": \"CO\" } }";
-
         private const string BaseUrl = "https://api.example.test/dev";
 
+        private static string Example(string name) => BackendTestFiles.ReadExample(name);
+
         [Test]
-        public void TheRequestExample_ParsesStrictly_AndRoundTrips()
+        public void TheRequestExample_ParsesStrictly_AndIsWhatTheClientWrites()
         {
-            Assert.That(LeagueWinsRequestDto.TryParse(WinsRequestExample, out LeagueWinsRequestDto? req, out string? error), Is.True, error);
+            Assert.That(LeagueWinsRequestDto.TryParseStrict(Example("league-wins.request.json"), out LeagueWinsRequestDto? req, out string? error), Is.True, error);
             Assert.That(req!.Wins.Count, Is.EqualTo(2));
             Assert.That(req.Wins[0].WinId, Is.EqualTo("c:57"));
             Assert.That(req.Wins[0].Level, Is.EqualTo(57));
@@ -44,23 +30,38 @@ namespace AF.Backend.Tests
             Assert.That(req.MaxLevel, Is.EqualTo(58));
             Assert.That(req.Region, Is.EqualTo("CO"));
 
-            string json = req.ToJson();
-            Assert.That(json, Is.EqualTo(
-                "{\"wins\":[{\"win_id\":\"c:57\",\"kind\":\"campaign\",\"level\":57,\"won_at\":\"2026-10-23T15:04:05Z\"},"
-                + "{\"win_id\":\"d:2026-10-23\",\"kind\":\"daily\",\"day\":\"2026-10-23\",\"won_at\":\"2026-10-23T16:00:00Z\"}],"
-                + "\"max_level\":58,\"region\":\"CO\"}"));
-            Assert.That(LeagueWinsRequestDto.TryParse(json, out _, out error), Is.True, error);
+            // El cliente escribe lo mismo desde sus tipos.
+            var built = new LeagueWinsRequestDto(new[]
+            {
+                new LeagueWinDto("c:57", "campaign", 57, null, new DateTime(2026, 10, 23, 15, 4, 5, DateTimeKind.Utc)),
+                new LeagueWinDto("d:2026-10-23", "daily", null, "2026-10-23", new DateTime(2026, 10, 23, 16, 0, 0, DateTimeKind.Utc)),
+            }, 58, "CO");
+            Assert.That(JsonEqual(built.ToJson(), Example("league-wins.request.json")), Is.True, built.ToJson());
         }
 
         [Test]
-        public void TheRequest_RejectsWhatTheContractForbids()
+        public void TheMixedRequest_IsValidForTheSchema_ButNotWhatTheClientWrites()
         {
-            Assert.That(LeagueWinsRequestDto.TryParse("{\"wins\":[],\"max_level\":1}", out _, out _), Is.False, "sin victorias");
-            Assert.That(LeagueWinsRequestDto.TryParse(
+            // Solo el sobre da 400: un elemento null, otro sin campos y el 701 van como invalid en la respuesta (liga.md §3.2).
+            string mixed = Example("league-wins.request.mixed.json");
+            Assert.That(LeagueWinsRequestDto.TryParse(mixed, out LeagueWinsRequestDto? req, out string? error), Is.True, error);
+            Assert.That(req!.ItemCount, Is.EqualTo(5));
+            Assert.That(req.Wins.Count, Is.EqualTo(3), "c:42, c:701 y c:41 están bien formadas");
+            Assert.That(req.Region, Is.Null, "region null: país desconocido");
+            Assert.That(LeagueWinsRequestDto.TryParseStrict(mixed, out _, out _), Is.False, "el cliente nunca manda elementos mal formados");
+            Assert.That(LeagueWinsRequestDto.TryParse(Example("league-wins.request.invalid-too-many.json"), out _, out _), Is.False, "más de 50");
+        }
+
+        [Test]
+        public void TheStrictRequest_RejectsWhatTheClientNeverWrites()
+        {
+            Assert.That(LeagueWinsRequestDto.TryParseStrict("{\"wins\":[],\"max_level\":1}", out _, out _), Is.False, "sin victorias");
+            Assert.That(LeagueWinsRequestDto.TryParseStrict(
                 "{\"wins\":[{\"win_id\":\"c:1\",\"kind\":\"campaign\",\"level\":1,\"won_at\":\"2026-10-23T15:04:05Z\",\"points\":10}],\"max_level\":1}", out _, out _),
                 Is.False, "el cliente nunca manda puntos (liga.md §3.2)");
-            Assert.That(LeagueWinsRequestDto.TryParse(
-                "{\"wins\":[{\"win_id\":\"x:1\",\"kind\":\"campaign\",\"level\":1,\"won_at\":\"2026-10-23T15:04:05Z\"}],\"max_level\":1}", out _, out _), Is.False);
+            Assert.That(LeagueWinsRequestDto.TryParseStrict(
+                "{\"wins\":[{\"win_id\":\"c:1\",\"kind\":\"campaign\",\"level\":1,\"won_at\":\"2026-10-23T15:04:05Z\"}],\"max_level\":1,\"region\":\"col\"}", out _, out _), Is.False);
+            Assert.That(LeagueWinsRequestDto.TryParse("{\"wins\":[{}],\"max_level\":1,\"extra\":1}", out _, out _), Is.False, "el sobre no admite claves nuevas");
             Assert.Throws<ArgumentException>(() => new LeagueWinsRequestDto(new LeagueWinDto[51], 1, null), "como mucho 50");
             Assert.Throws<ArgumentException>(() => new LeagueWinDto("c:5", "daily", 5, null, DateTime.UtcNow));
         }
@@ -75,57 +76,52 @@ namespace AF.Backend.Tests
         [Test]
         public void TheResponseExamples_Parse()
         {
-            Assert.That(LeagueWinsResponseDto.TryParseStrict(WinsResponseExample, out LeagueWinsResponseDto? wins, out string? error), Is.True, error);
+            Assert.That(LeagueWinsResponseDto.TryParseStrict(Example("league-wins.response.json"), out LeagueWinsResponseDto? wins, out string? error), Is.True, error);
             Assert.That(wins!.Week, Is.EqualTo("2026-W43"));
             Assert.That(wins.Points, Is.EqualTo(140));
             Assert.That(wins.Accepted, Is.EqualTo(new[] { "c:57" }));
             Assert.That(wins.Rejected[0].Key, Is.EqualTo("d:2026-10-23"));
             Assert.That(wins.Rejected[0].Value, Is.EqualTo("duplicate"));
-            Assert.That(wins.NameKey, Is.EqualTo("league_name_capybara"));
             Assert.That(wins.NameNum, Is.EqualTo(4821));
             Assert.That(wins.Country, Is.EqualTo("CO"));
 
-            Assert.That(LeagueBoardResponseDto.TryParseStrict(BoardResponseExample, out LeagueBoardResponseDto? board, out error), Is.True, error);
+            Assert.That(LeagueBoardResponseDto.TryParseStrict(Example("league-board.response.json"), out LeagueBoardResponseDto? board, out error), Is.True, error);
             Assert.That(board!.Scope, Is.EqualTo("country"));
             Assert.That(board.StartsAt, Is.EqualTo(new DateTime(2026, 10, 19, 12, 0, 0, DateTimeKind.Utc)));
-            Assert.That(board.Top.Count, Is.EqualTo(1));
             Assert.That(board.Top[0].Points, Is.EqualTo(980));
             Assert.That(board.MeRank, Is.Null);
             Assert.That(board.MePercentile, Is.EqualTo(12));
         }
 
         [Test]
-        public void TheResponses_AreTolerant_WithNewFieldsAndNulls_ButNotWithBrokenOnes()
-        {
-            string withExtra = WinsResponseExample.Replace("\"country\": \"CO\" }", "\"country\": null, \"flagged\": false }");
-            Assert.That(LeagueWinsResponseDto.TryParse(withExtra, out LeagueWinsResponseDto? wins, out string? error), Is.True, error);
-            Assert.That(wins!.Country, Is.Null);
-            Assert.That(LeagueWinsResponseDto.TryParseStrict(withExtra, out _, out _), Is.False, "estricto: sin claves nuevas");
-
-            string noPoints = BoardResponseExample.Replace("\"points\": 140, \"rank\": null, \"percentile\": 12", "\"points\": 0, \"rank\": null, \"percentile\": null");
-            Assert.That(LeagueBoardResponseDto.TryParse(noPoints, out LeagueBoardResponseDto? board, out error), Is.True, error);
-            Assert.That(board!.MePercentile, Is.Null);
-
-            Assert.That(LeagueBoardResponseDto.TryParse(BoardResponseExample.Replace("\"percentile\": 12", "\"percentile\": 101"), out _, out _), Is.False);
-            Assert.That(LeagueBoardResponseDto.TryParse(BoardResponseExample.Replace("2026-W43", "W43"), out _, out _), Is.False);
-            Assert.That(LeagueWinsResponseDto.TryParse("{}", out _, out _), Is.False);
-        }
-
-        // infra/contracts/v1/examples/league-wins.response.mixed.json (integrado el 2026-10-24), tal cual.
-        internal const string WinsResponseMixedExample =
-            "{ \"week\": \"2026-W43\", \"points\": 20, \"accepted\": [ \"c:41\", \"c:42\" ],\n"
-            + "  \"rejected\": [ { \"win_id\": \"\", \"reason\": \"invalid\" }, { \"win_id\": \"bad\", \"reason\": \"invalid\" }, { \"win_id\": \"c:701\", \"reason\": \"invalid\" } ],\n"
-            + "  \"name_key\": \"league_name_capybara\", \"name_num\": 1000, \"country\": null }";
-
-        [Test]
         public void TheMixedResponse_WithAnEmptyWinId_Parses()
         {
-            // Un elemento mal formado vuelve en rejected con win_id "" (liga.md §3.1): no rompe la respuesta.
-            Assert.That(LeagueWinsResponseDto.TryParseStrict(WinsResponseMixedExample, out LeagueWinsResponseDto? dto, out string? error), Is.True, error);
+            // Un elemento mal formado vuelve en rejected con win_id «» (liga.md §3.1): no rompe la respuesta.
+            Assert.That(LeagueWinsResponseDto.TryParseStrict(Example("league-wins.response.mixed.json"), out LeagueWinsResponseDto? dto, out string? error), Is.True, error);
             Assert.That(dto!.Accepted, Is.EqualTo(new[] { "c:41", "c:42" }));
             Assert.That(dto.Rejected.Count, Is.EqualTo(3));
             Assert.That(dto.Rejected[0].Key, Is.Empty);
             Assert.That(dto.Country, Is.Null);
+            Assert.That(LeagueWinsResponseDto.TryParse(Example("league-wins.response.mixed.json"), out _, out error), Is.True, error);
+        }
+
+        [Test]
+        public void TheStrictReading_HasTheSchemaLimits_AndTheTolerantOneDoesNot()
+        {
+            string wins = Example("league-wins.response.json");
+            Assert.That(LeagueWinsResponseDto.TryParseStrict(wins.Replace("4821", "999"), out _, out _), Is.False, "name_num ≥ 1000");
+            Assert.That(LeagueWinsResponseDto.TryParseStrict(wins.Replace("\"points\": 140", "\"points\": 1000000"), out _, out _), Is.False, "points ≤ 999.999");
+            Assert.That(LeagueWinsResponseDto.TryParseStrict(wins.Replace("league_name_capybara", "league_name_quetzal"), out _, out _), Is.False, "uno de los 24");
+            Assert.That(LeagueWinsResponseDto.TryParse(wins.Replace("league_name_capybara", "league_name_quetzal"), out _, out string? error), Is.True,
+                "el cliente tolera un animal más nuevo («Jugador {n}»): " + error);
+
+            string board = Example("league-board.response.json");
+            Assert.That(LeagueBoardResponseDto.TryParseStrict(board.Replace("\"rank\": 1,", "\"rank\": 101,"), out _, out _), Is.False, "rank ≤ 100");
+            Assert.That(LeagueBoardResponseDto.TryParseStrict(board.Replace("\"points\": 980", "\"points\": 0"), out _, out _), Is.False, "top[].points ≥ 1");
+            Assert.That(LeagueBoardResponseDto.TryParseStrict(board.Replace("\"percentile\": 12", "\"percentile\": 101"), out _, out _), Is.False);
+            Assert.That(LeagueBoardResponseDto.TryParseStrict(board.Replace("1203", "120"), out _, out _), Is.False, "name_num ≥ 1000");
+            Assert.That(LeagueBoardResponseDto.TryParse(board.Replace("2026-W43", "W43"), out _, out _), Is.False);
+            Assert.That(LeagueWinsResponseDto.TryParse("{}", out _, out _), Is.False);
         }
 
         [Test]
@@ -133,10 +129,9 @@ namespace AF.Backend.Tests
         {
             var http = new FakeHttpTransport();
             var auth = new FakeAuthTokenProvider();
-            var integrity = new FakeIntegrityTokenProvider();
-            var client = new HttpBackendClient(BaseUrl, http, auth, integrity, new ManualBackendScheduler());
-            http.Enqueue(200, WinsResponseExample);
-            Assert.That(LeagueWinsRequestDto.TryParse(WinsRequestExample, out LeagueWinsRequestDto? req, out _), Is.True);
+            var client = new HttpBackendClient(BaseUrl, http, auth, new FakeIntegrityTokenProvider(), new ManualBackendScheduler());
+            http.Enqueue(200, Example("league-wins.response.json"));
+            Assert.That(LeagueWinsRequestDto.TryParseStrict(Example("league-wins.request.json"), out LeagueWinsRequestDto? req, out _), Is.True);
             BackendResult<LeagueWinsResponseDto>? result = null;
             client.SendLeagueWins(req!, r => result = r);
 
@@ -146,7 +141,7 @@ namespace AF.Backend.Tests
             Assert.That(sent.Url, Is.EqualTo(BaseUrl + "/v1/league/wins"));
             Assert.That(sent.GetHeader("Authorization"), Is.EqualTo("Bearer " + auth.CurrentToken));
             Assert.That(sent.GetHeader("X-Firebase-AppCheck"), Is.Not.Null.And.Not.Empty, "el mismo autorizador: App Check (liga.md §3.1)");
-            Assert.That(LeagueWinsRequestDto.TryParse(sent.Body, out _, out string? error), Is.True, error);
+            Assert.That(LeagueWinsRequestDto.TryParseStrict(sent.Body, out _, out string? error), Is.True, error);
         }
 
         [Test]
@@ -154,7 +149,7 @@ namespace AF.Backend.Tests
         {
             var http = new FakeHttpTransport();
             var client = new HttpBackendClient(BaseUrl, http, new FakeAuthTokenProvider(), new FakeIntegrityTokenProvider(), new ManualBackendScheduler());
-            http.Enqueue(200, BoardResponseExample);
+            http.Enqueue(200, Example("league-board.response.json"));
             BackendResult<LeagueBoardResponseDto>? result = null;
             client.GetLeagueBoard("country", r => result = r);
 
@@ -177,16 +172,19 @@ namespace AF.Backend.Tests
             client.GetLeagueBoard("country", r => result = r);
             Assert.That(result!.IsOk, Is.False);
             Assert.That(result.Error!.HttpStatus, Is.EqualTo(404));
+            Assert.That(result.Error.Code, Is.EqualTo(ApiErrorCode.CountryUnknown));
         }
 
         [Test]
-        public void TheLeagueOperations_AreKeptApartFromTheIndexOnes()
+        public void TheLeagueOperations_AreAppOperations()
         {
             Assert.That(BackendOperation.LeagueWins.Path, Is.EqualTo("/v1/league/wins"));
             Assert.That(BackendOperation.LeagueBoard.Method, Is.EqualTo("GET"));
-            Assert.That(BackendOperation.LeagueWins.RequiresIntegrity && BackendOperation.LeagueBoard.RequiresIntegrity, Is.True);
-            Assert.That(Array.IndexOf(BackendOperation.AppOperations, BackendOperation.LeagueWins), Is.EqualTo(-1),
-                "entran en AppOperations cuando el backend las añada a index.json");
+            Assert.That(Array.IndexOf(BackendOperation.AppOperations, BackendOperation.LeagueWins), Is.GreaterThanOrEqualTo(0));
+            Assert.That(Array.IndexOf(BackendOperation.AppOperations, BackendOperation.LeagueBoard), Is.GreaterThanOrEqualTo(0));
         }
+
+        private static bool JsonEqual(string a, string b) =>
+            AF.Backend.Json.JsonNode.StructurallyEqual(AF.Backend.Json.BackendJson.Parse(a), AF.Backend.Json.BackendJson.Parse(b));
     }
 }

@@ -116,7 +116,7 @@ namespace AF.UI
                 case BackendErrorKind.NotConfigured:
                     return LeagueFailure.NotConfigured;
                 default:
-                    return country && error.HttpStatus == 404 ? LeagueFailure.CountryUnknown : LeagueFailure.Server;
+                    return country && (error.Code == ApiErrorCode.CountryUnknown || error.HttpStatus == 404) ? LeagueFailure.CountryUnknown : LeagueFailure.Server;
             }
         }
     }

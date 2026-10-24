@@ -104,7 +104,7 @@ namespace AF.LiveOps
         /// </summary>
         public int RecordCampaignWin(int level, RewardTier tier)
         {
-            if (level < Config.LiveLeagueUnlockLevel || !Active)
+            if (level < Math.Max(LeagueRules.ServerUnlockLevel, Config.LiveLeagueUnlockLevel) || !Active)
             {
                 return 0;
             }

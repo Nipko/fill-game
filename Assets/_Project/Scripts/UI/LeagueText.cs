@@ -9,7 +9,8 @@ namespace AF.UI
     /// <summary>
     /// Textos de la Liga del río (D-046; <c>docs/dev/liga.md</c> §1): solo claves de <c>strings.csv</c> con sus marcadores con nombre.
     /// El seudónimo llega como clave de animal (<c>league_name_*</c>) y cifras; una clave que este cliente no conoce se pinta como
-    /// «Jugador {n}». El país, por su código ISO con <c>league_country_xx</c>; un país sin fila en la tabla se nombra con su código.
+    /// «Jugador {n}». El país, por su código ISO con <c>league_country_xx</c>; un país sin fila en la tabla es «Otro país»
+    /// (<c>league_country_other</c>) y su código ISO, que no se traduce, solo va en la placa neutra de la bandera.
     /// </summary>
     public static class LeagueText
     {
@@ -40,6 +41,9 @@ namespace AF.UI
         public const string TimeNowKey = "league_time_now";
         public const string CountryPrefix = "league_country_";
 
+        /// <summary>«Otro país»: el nombre de un país sin fila en la tabla, junto a la placa neutra con su código ISO.</summary>
+        public const string CountryOtherKey = "league_country_other";
+
         /// <summary>Los países con bandera dibujada (los amazónicos y los mercados principales; liga.md §4).</summary>
         public static readonly string[] FlagCountries = { "BR", "CO", "PE", "VE", "EC", "BO", "GY", "SR", "MX", "US", "AR", "CL" };
 
@@ -58,7 +62,7 @@ namespace AF.UI
                 {
                     ButtonKey, TitleKey, TabGlobalKey, WeekKey, EndsInKey, UpdatedAgoKey, OfflineKey, LoadingKey, EmptyWeekKey, YouKey,
                     PercentileKey, NoPointsKey, VictoryPointsKey, SettingsCountryKey, PlayerNameKey, PlayerFallbackKey, RowA11yKey,
-                    RowPlayerKey, MeRankA11yKey, MePercentileA11yKey, PointsKey, TimeDaysKey, TimeHoursKey, TimeMinutesKey, TimeNowKey,
+                    RowPlayerKey, MeRankA11yKey, MePercentileA11yKey, PointsKey, TimeDaysKey, TimeHoursKey, TimeMinutesKey, TimeNowKey, CountryOtherKey,
                 };
                 keys.AddRange(LeagueRules.NameKeys);
                 for (int i = 0; i < NamedCountries.Length; i++)
@@ -102,7 +106,7 @@ namespace AF.UI
         public static string Country(string code)
         {
             string key = CountryKey(code);
-            return Loc.Has(key) ? Loc.T(key) : code;
+            return Loc.Has(key) ? Loc.T(key) : Loc.T(CountryOtherKey); // el código ISO, que no se traduce, solo va en la placa
         }
 
         /// <summary><c>league_country_xx</c> de <paramref name="code"/> (en minúsculas por la forma de las claves; no es texto visible).</summary>

@@ -31,6 +31,12 @@ namespace AF.LiveOps
         /// <summary>Reto del río ganado (06 §6).</summary>
         public const int PointsDaily = 20;
 
+        /// <summary>
+        /// El nivel de desbloqueo que fija el servidor (<c>infra/functions/league/rules.ts</c>): por debajo, ninguna victoria suma y el
+        /// cliente nunca enseña «+{n} puntos de Liga». <c>live_league_unlock_level</c> queda fijo en este valor (08 §9, rango 41-41).
+        /// </summary>
+        public const int ServerUnlockLevel = 41;
+
         /// <summary>Victorias por petición como mucho (liga.md §3.1).</summary>
         public const int MaxBatch = 50;
 
