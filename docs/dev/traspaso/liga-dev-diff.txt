@@ -1,0 +1,702 @@
+AI agent detected
+Bundling asset AfDevApi/VerifyPurchase/Function/Code/Stage...
+
+  ...705143b38bdd3190178074e384d3f68b9ff57bbfc11d0-building\index.mjs  391.4kb
+  ...43b38bdd3190178074e384d3f68b9ff57bbfc11d0-building\index.mjs.map    1.7mb
+
+Done in 124ms
+Bundling asset AfDevApi/RestoreLedger/Function/Code/Stage...
+
+  ...5a62e2c5d555bc3b65d8e3e68f32cc02e07a52a428a03-building\index.mjs  332.5kb
+  ...e2c5d555bc3b65d8e3e68f32cc02e07a52a428a03-building\index.mjs.map    1.5mb
+
+Done in 126ms
+Bundling asset AfDevApi/RewardedSsv/Function/Code/Stage...
+
+  ...6e71b52aeeb3d1783c988b9181c7cab3ec7431c1810e1-building\index.mjs  350.4kb
+  ...b52aeeb3d1783c988b9181c7cab3ec7431c1810e1-building\index.mjs.map    1.6mb
+
+Done in 167ms
+Bundling asset AfDevApi/DeleteAccount/Function/Code/Stage...
+
+  ...910299449d654e845ad9f6175f53648410204b857952c-building\index.mjs  391.3kb
+  ...99449d654e845ad9f6175f53648410204b857952c-building\index.mjs.map    1.7mb
+
+Done in 144ms
+Bundling asset AfDevApi/VoidedPurchasesJob/Function/Code/Stage...
+
+  ...795763d5a9cdd4a38fa23ee01f668e2bebc3619787347-building\index.mjs  364.5kb
+  ...63d5a9cdd4a38fa23ee01f668e2bebc3619787347-building\index.mjs.map    1.6mb
+
+Done in 132ms
+Bundling asset AfDevApi/LeagueWins/Function/Code/Stage...
+
+  ...846e5137bb6384b290a87335b62d5364f0c4c69a723e6-building\index.mjs  397.6kb
+  ...5137bb6384b290a87335b62d5364f0c4c69a723e6-building\index.mjs.map    1.7mb
+
+Done in 127ms
+Bundling asset AfDevApi/LeagueBoard/Function/Code/Stage...
+
+  ...b9fa78c871110a7287d2b32b3a8e961cc0f177c68b48b-building\index.mjs  397.6kb
+  ...78c871110a7287d2b32b3a8e961cc0f177c68b48b-building\index.mjs.map    1.7mb
+
+Done in 124ms
+Stack AfDevData (aws://[cuenta]/sa-east-1)
+Resources
+[+] AWS::DynamoDB::GlobalTable LeaguePlayers LeaguePlayersEB63B216
+[+] AWS::DynamoDB::GlobalTable LeagueBoard LeagueBoard36C68375
+[+] AWS::DynamoDB::GlobalTable LeagueHistogram LeagueHistogramD17106B0
+[+] AWS::DynamoDB::GlobalTable LeagueNames LeagueNamesB34BE912
+
+Outputs
+[+] Output Publish/Output{"Fn::GetAtt":["LeagueHistogramD17106B0","Arn"]} PublishOutputFnGetAttLeagueHistogramD17106B0Arn0E62CF1D: {"Value":{"Fn::GetAtt":["LeagueHistogramD17106B0","Arn"]}}
+[+] Output Publish/Output{"Fn::GetAtt":["LeagueBoard36C68375","Arn"]} PublishOutputFnGetAttLeagueBoard36C68375ArnAD21C6E4: {"Value":{"Fn::GetAtt":["LeagueBoard36C68375","Arn"]}}
+[+] Output Publish/Output{"Fn::GetAtt":["LeaguePlayersEB63B216","Arn"]} PublishOutputFnGetAttLeaguePlayersEB63B216Arn6B43BA7B: {"Value":{"Fn::GetAtt":["LeaguePlayersEB63B216","Arn"]}}
+[+] Output Publish/Output{"Fn::GetAtt":["LeagueNamesB34BE912","Arn"]} PublishOutputFnGetAttLeagueNamesB34BE912Arn16D53639: {"Value":{"Fn::GetAtt":["LeagueNamesB34BE912","Arn"]}}
+[+] Output Publish/Output{"Ref":"LeaguePlayersEB63B216"} PublishOutputRefLeaguePlayersEB63B2165B2A488E: {"Value":{"Ref":"LeaguePlayersEB63B216"}}
+[+] Output Publish/Output{"Ref":"LeagueBoard36C68375"} PublishOutputRefLeagueBoard36C68375A46D71DD: {"Value":{"Ref":"LeagueBoard36C68375"}}
+[+] Output Publish/Output{"Ref":"LeagueHistogramD17106B0"} PublishOutputRefLeagueHistogramD17106B0D87BEA73: {"Value":{"Ref":"LeagueHistogramD17106B0"}}
+[+] Output Publish/Output{"Ref":"LeagueNamesB34BE912"} PublishOutputRefLeagueNamesB34BE91298FFE2B1: {"Value":{"Ref":"LeagueNamesB34BE912"}}
+
+
+Stack AfDevApi (aws://[cuenta]/sa-east-1)
+IAM Statement Changes
+┌───┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬────────┬─────────────────────────────┬──────────────────────────────────┬───────────────────────────────────────────────────────────────────────────────────────────┐
+│   │ Resource                                                                                                                                     │ Effect │ Action                      │ Principal                        │ Condition                                                                                 │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ ${LeagueBoard/Function.Arn}                                                                                                                  │ Allow  │ lambda:InvokeFunction       │ Service:apigateway.amazonaws.com │ "ArnLike": {                                                                              │
+│   │                                                                                                                                              │        │                             │                                  │   "AWS:SourceArn": "arn:aws:execute-api:sa-east-1:[cuenta]:${Api}/*/*/v1/league"      │
+│   │                                                                                                                                              │        │                             │                                  │ }                                                                                         │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ ${LeagueBoard/Logs.Arn}                                                                                                                      │ Allow  │ logs:CreateLogStream        │ AWS:${LeagueBoard/Role}          │                                                                                           │
+│   │                                                                                                                                              │        │ logs:PutLogEvents           │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ ${LeagueBoard/Role.Arn}                                                                                                                      │ Allow  │ sts:AssumeRole              │ Service:lambda.amazonaws.com     │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ ${LeagueWins/Function.Arn}                                                                                                                   │ Allow  │ lambda:InvokeFunction       │ Service:apigateway.amazonaws.com │ "ArnLike": {                                                                              │
+│   │                                                                                                                                              │        │                             │                                  │   "AWS:SourceArn": "arn:aws:execute-api:sa-east-1:[cuenta]:${Api}/*/*/v1/league/wins" │
+│   │                                                                                                                                              │        │                             │                                  │ }                                                                                         │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ ${LeagueWins/Logs.Arn}                                                                                                                       │ Allow  │ logs:CreateLogStream        │ AWS:${LeagueWins/Role}           │                                                                                           │
+│   │                                                                                                                                              │        │ logs:PutLogEvents           │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ ${LeagueWins/Role.Arn}                                                                                                                       │ Allow  │ sts:AssumeRole              │ Service:lambda.amazonaws.com     │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttIntegrity9CC96F4AArnBF7AD506"}}       │ Allow  │ dynamodb:GetItem            │ AWS:${VerifyPurchase/Role}       │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:PutItem            │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttIntegrity9CC96F4AArnBF7AD506"}}       │ Allow  │ dynamodb:GetItem            │ AWS:${LeagueBoard/Role}          │                                                                                           │
+│   │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeagueNamesB34BE912Arn16D53639"}}     │        │ dynamodb:PutItem            │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttIntegrity9CC96F4AArnBF7AD506"}}       │ Allow  │ dynamodb:GetItem            │ AWS:${LeagueWins/Role}           │                                                                                           │
+│   │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeagueNamesB34BE912Arn16D53639"}}     │        │ dynamodb:PutItem            │                                  │                                                                                           │
+│   │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeaguePlayersEB63B216Arn6B43BA7B"}}   │        │                             │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ - │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttIntegrity9CC96F4AArnBF7AD506"}}       │ Allow  │ dynamodb:GetItem            │ AWS:${VerifyPurchase/Role}       │                                                                                           │
+│   │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttPurchasesEF13D839Arn5DAFDFD0"}}       │        │ dynamodb:PutItem            │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeagueBoard36C68375ArnAD21C6E4"}}     │ Allow  │ dynamodb:DeleteItem         │ AWS:${LeagueWins/Role}           │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:PutItem            │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeagueBoard36C68375ArnAD21C6E4"}}     │ Allow  │ dynamodb:Query              │ AWS:${LeagueBoard/Role}          │                                                                                           │
+│   │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeagueHistogramD17106B0Arn0E62CF1D"}} │        │                             │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeagueBoard36C68375ArnAD21C6E4"}}     │ Allow  │ dynamodb:DeleteItem         │ AWS:${DeleteAccount/Role}        │                                                                                           │
+│   │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttRewards6B646C61Arn85C3A785"}}         │        │                             │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeagueHistogramD17106B0Arn0E62CF1D"}} │ Allow  │ dynamodb:UpdateItem         │ AWS:${LeagueWins/Role}           │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeagueHistogramD17106B0Arn0E62CF1D"}} │ Allow  │ dynamodb:UpdateItem         │ AWS:${DeleteAccount/Role}        │                                                                                           │
+│   │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttPurchasesEF13D839Arn5DAFDFD0"}}       │        │                             │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeagueNamesB34BE912Arn16D53639"}}     │ Allow  │ dynamodb:DeleteItem         │ AWS:${DeleteAccount/Role}        │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:GetItem            │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeaguePlayersEB63B216Arn6B43BA7B"}}   │ Allow  │ dynamodb:DeleteItem         │ AWS:${DeleteAccount/Role}        │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:GetItem            │                                  │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:Query              │                                  │                                                                                           │
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttLeaguePlayersEB63B216Arn6B43BA7B"}}   │ Allow  │ dynamodb:GetItem            │ AWS:${LeagueBoard/Role}          │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttPurchasesEF13D839Arn5DAFDFD0"}}       │ Allow  │ dynamodb:GetItem            │ AWS:${VerifyPurchase/Role}       │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:PutItem            │                                  │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:UpdateItem         │                                  │                                                                                           │
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttPurchasesEF13D839Arn5DAFDFD0"}}       │ Allow  │ dynamodb:GetItem            │ AWS:${VoidedPurchasesJob/Role}   │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:PutItem            │                                  │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:UpdateItem         │                                  │                                                                                           │
+│ - │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttPurchasesEF13D839Arn5DAFDFD0"}}       │ Allow  │ dynamodb:UpdateItem         │ AWS:${DeleteAccount/Role}        │                                                                                           │
+│ - │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttPurchasesEF13D839Arn5DAFDFD0"}}       │ Allow  │ dynamodb:PutItem            │ AWS:${VoidedPurchasesJob/Role}   │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:UpdateItem         │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttRateLimits2BA5B3CCArn62E16DA6"}}      │ Allow  │ dynamodb:ConditionCheckItem │ AWS:${LeagueWins/Role}           │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:GetItem            │                                  │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:PutItem            │                                  │                                                                                           │
+│ + │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttRateLimits2BA5B3CCArn62E16DA6"}}      │ Allow  │ dynamodb:ConditionCheckItem │ AWS:${LeagueBoard/Role}          │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:GetItem            │                                  │                                                                                           │
+│   │                                                                                                                                              │        │ dynamodb:PutItem            │                                  │                                                                                           │
+├───┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────┼──────────────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ - │ {"Fn::GetStackOutput":{"StackName":"AfDevData","Region":"sa-east-1","OutputName":"PublishOutputFnGetAttRewards6B646C61Arn85C3A785"}}         │ Allow  │ dynamodb:DeleteItem         │ AWS:${DeleteAccount/Role}        │                                                                                           │
+└───┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴────────┴─────────────────────────────┴──────────────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────────┘
+(NOTE: There may be security-related changes not in this list. See https://github.com/aws/aws-cdk/issues/1299)
+
+Resources
+[+] AWS::Logs::LogGroup LeagueWins/Logs LeagueWinsLogs5EAC0AE6
+[+] AWS::IAM::Role LeagueWins/Role LeagueWinsRole2686E952
+[+] AWS::IAM::Policy LeagueWins/Role/DefaultPolicy LeagueWinsRoleDefaultPolicy80BAF0DF
+[+] AWS::Lambda::Function LeagueWins/Function LeagueWinsFunction03C155AC
+[+] AWS::Logs::LogGroup LeagueBoard/Logs LeagueBoardLogs419B0E1B
+[+] AWS::IAM::Role LeagueBoard/Role LeagueBoardRole3C98EFC0
+[+] AWS::IAM::Policy LeagueBoard/Role/DefaultPolicy LeagueBoardRoleDefaultPolicy4B2780C0
+[+] AWS::Lambda::Function LeagueBoard/Function LeagueBoardFunction622B45C1
+[+] AWS::ApiGatewayV2::Integration Api/POST--v1--league--wins/league-wins-integration ApiPOSTv1leaguewinsleaguewinsintegrationF6DBF9A1
+[+] AWS::Lambda::Permission Api/POST--v1--league--wins/league-wins-integration-Permission ApiPOSTv1leaguewinsleaguewinsintegrationPermission62A000AE
+[+] AWS::ApiGatewayV2::Route Api/POST--v1--league--wins ApiPOSTv1leaguewins9A6FD27F
+[+] AWS::ApiGatewayV2::Integration Api/GET--v1--league/league-board-integration ApiGETv1leagueleagueboardintegration2067C12A
+[+] AWS::Lambda::Permission Api/GET--v1--league/league-board-integration-Permission ApiGETv1leagueleagueboardintegrationPermissionE11F7D98
+[+] AWS::ApiGatewayV2::Route Api/GET--v1--league ApiGETv1league887E8482
+[~] AWS::SecretsManager::Secret PlayServiceAccount PlayServiceAccount0E7CE907
+ ├─ [~] Description
+ │   ├─ [-] Cuenta de servicio de Google Play Developer API. Lo carga el due?o con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ │   └─ [+] Cuenta de servicio de Google Play Developer API. Lo carga el dueño con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SMG4",
+                [-]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotaci?n autom?tica desde AWS; la rota el due?o a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [+]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [ ]   }
+                [ ] ]
+[~] AWS::SecretsManager::Secret FirebaseAdmin FirebaseAdmin72D52ACC
+ ├─ [~] Description
+ │   ├─ [-] Cuenta de servicio de Firebase Admin. Lo carga el due?o con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ │   └─ [+] Cuenta de servicio de Firebase Admin. Lo carga el dueño con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SMG4",
+                [-]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotaci?n autom?tica desde AWS; la rota el due?o a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [+]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [ ]   }
+                [ ] ]
+[~] AWS::SecretsManager::Secret MaxSsvKey MaxSsvKey6D86F61E
+ ├─ [~] Description
+ │   ├─ [-] Clave de los callbacks S2S de AppLovin MAX. Lo carga el due?o con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ │   └─ [+] Clave de los callbacks S2S de AppLovin MAX. Lo carga el dueño con put-secret-value; hasta entonces guarda un relleno aleatorio.
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SMG4",
+                [-]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotaci?n autom?tica desde AWS; la rota el due?o a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [+]     "reason": "Clave externa (Google, Firebase o AppLovin) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7)."
+                [ ]   }
+                [ ] ]
+[~] AWS::IAM::Policy VerifyPurchase/Role/DefaultPolicy VerifyPurchaseRoleDefaultPolicyB9319583
+ └─ [~] PolicyDocument
+     └─ [~] .Statement:
+         └─ @@ -15,25 +15,31 @@
+            [ ] {
+            [ ]   "Action": [
+            [ ]     "dynamodb:GetItem",
+            [+]     "dynamodb:PutItem",
+            [+]     "dynamodb:UpdateItem"
+            [+]   ],
+            [+]   "Effect": "Allow",
+            [+]   "Resource": {
+            [+]     "Fn::GetStackOutput": {
+            [+]       "StackName": "AfDevData",
+            [+]       "Region": "sa-east-1",
+            [+]       "OutputName": "PublishOutputFnGetAttPurchasesEF13D839Arn5DAFDFD0"
+            [+]     }
+            [+]   }
+            [+] },
+            [+] {
+            [+]   "Action": [
+            [+]     "dynamodb:GetItem",
+            [ ]     "dynamodb:PutItem"
+            [ ]   ],
+            [ ]   "Effect": "Allow",
+            [-]   "Resource": [
+            [-]     {
+            [-]       "Fn::GetStackOutput": {
+            [-]         "StackName": "AfDevData",
+            [-]         "Region": "sa-east-1",
+            [-]         "OutputName": "PublishOutputFnGetAttIntegrity9CC96F4AArnBF7AD506"
+            [-]       }
+            [-]     },
+            [-]     {
+            [-]       "Fn::GetStackOutput": {
+            [-]         "StackName": "AfDevData",
+            [-]         "Region": "sa-east-1",
+            [-]         "OutputName": "PublishOutputFnGetAttPurchasesEF13D839Arn5DAFDFD0"
+            [-]       }
+            [+]   "Resource": {
+            [+]     "Fn::GetStackOutput": {
+            [+]       "StackName": "AfDevData",
+            [+]       "Region": "sa-east-1",
+            [+]       "OutputName": "PublishOutputFnGetAttIntegrity9CC96F4AArnBF7AD506"
+            [ ]     }
+            [-]   ]
+            [+]   }
+            [ ] },
+            [ ] {
+            [ ]   "Action": [
+[~] AWS::Lambda::Function VerifyPurchase/Function VerifyPurchaseFunctionF211D62B
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] 9e33e2b5ea9890822019d76478497d241d6783987bf69716f3aebe406da1989b.zip
+ │       └─ [+] 00614e385c50d071c51ba5a7c1db1be223f8bf577e127d773b4a594d03fdf1e1.zip
+ ├─ [~] Description
+ │   ├─ [-] verifyPurchase (08 ?10.3): verifica la compra en Play y la anota en el libro mayor.
+ │   └─ [+] verifyPurchase (08 §10.3): verifica la compra en Play y la anota en el libro mayor.
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.9e33e2b5ea9890822019d76478497d241d6783987bf69716f3aebe406da1989b
+         └─ [+] asset.00614e385c50d071c51ba5a7c1db1be223f8bf577e127d773b4a594d03fdf1e1
+[~] AWS::Lambda::Function RestoreLedger/Function RestoreLedgerFunction9F3ACC24
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] 6c9080d03a2bfd32683b2a694f7be54e939e219b7eb876232117cdc8bed0bc67.zip
+ │       └─ [+] dbd21938062d39c6bc2680d9c1984d39d34db5b9cc87890c16aefd3e9b3b65b8.zip
+ ├─ [~] Description
+ │   ├─ [-] restoreLedger (08 ?11): libro mayor del UID y nonces de SSV confirmados.
+ │   └─ [+] restoreLedger (08 §11): libro mayor del UID y nonces de SSV confirmados.
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.6c9080d03a2bfd32683b2a694f7be54e939e219b7eb876232117cdc8bed0bc67
+         └─ [+] asset.dbd21938062d39c6bc2680d9c1984d39d34db5b9cc87890c16aefd3e9b3b65b8
+[~] AWS::Lambda::Function RewardedSsv/Function RewardedSsvFunction7A834AD4
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] d8e805d4ca4ad051df89fa52cc111300d6aed0be092f3a65c1a19023dfc32bce.zip
+ │       └─ [+] 123be9412fa018f5e8d58e5a1975000e8004baf3d8e9ec345b92cd1e19d3680d.zip
+ ├─ [~] Description
+ │   ├─ [-] rewardedSsv (08 ?10.2): callback S2S de MAX; anota el nonce de la recompensa.
+ │   └─ [+] rewardedSsv (08 §10.2): callback S2S de MAX; anota el nonce de la recompensa.
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.d8e805d4ca4ad051df89fa52cc111300d6aed0be092f3a65c1a19023dfc32bce
+         └─ [+] asset.123be9412fa018f5e8d58e5a1975000e8004baf3d8e9ec345b92cd1e19d3680d
+[~] AWS::IAM::Policy DeleteAccount/Role/DefaultPolicy DeleteAccountRoleDefaultPolicy535EE5E0
+ └─ [~] PolicyDocument
+     └─ [~] .Statement:
+         └─ @@ -66,24 +66,42 @@
+            [ ] {
+            [ ]   "Action": "dynamodb:UpdateItem",
+            [ ]   "Effect": "Allow",
+            [-]   "Resource": {
+            [-]     "Fn::GetStackOutput": {
+            [-]       "StackName": "AfDevData",
+            [-]       "Region": "sa-east-1",
+            [-]       "OutputName": "PublishOutputFnGetAttPurchasesEF13D839Arn5DAFDFD0"
+            [+]   "Resource": [
+            [+]     {
+            [+]       "Fn::GetStackOutput": {
+            [+]         "StackName": "AfDevData",
+            [+]         "Region": "sa-east-1",
+            [+]         "OutputName": "PublishOutputFnGetAttLeagueHistogramD17106B0Arn0E62CF1D"
+            [+]       }
+            [+]     },
+            [+]     {
+            [+]       "Fn::GetStackOutput": {
+            [+]         "StackName": "AfDevData",
+            [+]         "Region": "sa-east-1",
+            [+]         "OutputName": "PublishOutputFnGetAttPurchasesEF13D839Arn5DAFDFD0"
+            [+]       }
+            [ ]     }
+            [-]   }
+            [+]   ]
+            [ ] },
+            [ ] {
+            [ ]   "Action": "dynamodb:DeleteItem",
+            [ ]   "Effect": "Allow",
+            [-]   "Resource": {
+            [-]     "Fn::GetStackOutput": {
+            [-]       "StackName": "AfDevData",
+            [-]       "Region": "sa-east-1",
+            [-]       "OutputName": "PublishOutputFnGetAttRewards6B646C61Arn85C3A785"
+            [+]   "Resource": [
+            [+]     {
+            [+]       "Fn::GetStackOutput": {
+            [+]         "StackName": "AfDevData",
+            [+]         "Region": "sa-east-1",
+            [+]         "OutputName": "PublishOutputFnGetAttLeagueBoard36C68375ArnAD21C6E4"
+            [+]       }
+            [+]     },
+            [+]     {
+            [+]       "Fn::GetStackOutput": {
+            [+]         "StackName": "AfDevData",
+            [+]         "Region": "sa-east-1",
+            [+]         "OutputName": "PublishOutputFnGetAttRewards6B646C61Arn85C3A785"
+            [+]       }
+            [ ]     }
+            [-]   }
+            [+]   ]
+            [ ] },
+            [ ] {
+            [ ]   "Action": [
+            @@ -132,5 +150,34 @@
+            [ ]     "Resource": {
+            [ ]       "Ref": "FirebaseAdmin72D52ACC"
+            [ ]     }
+            [+]   },
+            [+]   {
+            [+]     "Action": [
+            [+]       "dynamodb:DeleteItem",
+            [+]       "dynamodb:GetItem",
+            [+]       "dynamodb:Query"
+            [+]     ],
+            [+]     "Effect": "Allow",
+            [+]     "Resource": {
+            [+]       "Fn::GetStackOutput": {
+            [+]         "StackName": "AfDevData",
+            [+]         "Region": "sa-east-1",
+            [+]         "OutputName": "PublishOutputFnGetAttLeaguePlayersEB63B216Arn6B43BA7B"
+            [+]       }
+            [+]     }
+            [+]   },
+            [+]   {
+            [+]     "Action": [
+            [+]       "dynamodb:DeleteItem",
+            [+]       "dynamodb:GetItem"
+            [+]     ],
+            [+]     "Effect": "Allow",
+            [+]     "Resource": {
+            [+]       "Fn::GetStackOutput": {
+            [+]         "StackName": "AfDevData",
+            [+]         "Region": "sa-east-1",
+            [+]         "OutputName": "PublishOutputFnGetAttLeagueNamesB34BE912Arn16D53639"
+            [+]       }
+            [+]     }
+            [ ]   }
+            [ ] ]
+[~] AWS::Lambda::Function DeleteAccount/Function DeleteAccountFunction50EF2EBA
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] e4bd6900f2910c296fef9ec0e44571548442b150f86cd444da026a767dce78c7.zip
+ │       └─ [+] 407418ad0f0696fb37af0dc6daa896f521f1128049b37f49b035a5a50ea95129.zip
+ ├─ [~] Description
+ │   ├─ [-] deleteAccount (08 ?11): borrado por app y por web con c?digo (Q-B13-21).
+ │   └─ [+] deleteAccount (08 §11): borrado por app y por web con código (Q-B13-21).
+ ├─ [~] Environment
+ │   └─ [~] .Variables:
+ │       ├─ [+] Added: .AF_TABLE_LEAGUE_BOARD
+ │       ├─ [+] Added: .AF_TABLE_LEAGUE_HISTOGRAM
+ │       ├─ [+] Added: .AF_TABLE_LEAGUE_NAMES
+ │       └─ [+] Added: .AF_TABLE_LEAGUE_PLAYERS
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.e4bd6900f2910c296fef9ec0e44571548442b150f86cd444da026a767dce78c7
+         └─ [+] asset.407418ad0f0696fb37af0dc6daa896f521f1128049b37f49b035a5a50ea95129
+[~] AWS::IAM::Policy VoidedPurchasesJob/Role/DefaultPolicy VoidedPurchasesJobRoleDefaultPolicy192BD137
+ └─ [~] PolicyDocument
+     └─ [~] .Statement:
+         └─ @@ -14,6 +14,7 @@
+            [ ] },
+            [ ] {
+            [ ]   "Action": [
+            [+]     "dynamodb:GetItem",
+            [ ]     "dynamodb:PutItem",
+            [ ]     "dynamodb:UpdateItem"
+            [ ]   ],
+[~] AWS::Lambda::Function VoidedPurchasesJob/Function VoidedPurchasesJobFunction12EF4135
+ ├─ [~] Code
+ │   └─ [~] .S3Key:
+ │       ├─ [-] bf5e2046ddfe030e5ae9c7f404ee147010424fcc5c28d6409d3b44c8963e1018.zip
+ │       └─ [+] bd22d29c068a26a126d6bb0d9ad5566ffd09917f13dfaf6e0c36ff322fe8e0bc.zip
+ ├─ [~] Description
+ │   ├─ [-] voidedPurchasesJob (08 ?10.1): marca voided las compras anuladas en Play.
+ │   └─ [+] voidedPurchasesJob (08 §10.1): marca voided las compras anuladas en Play.
+ └─ [~] Metadata
+     └─ [~] .aws:asset:path:
+         ├─ [-] asset.bf5e2046ddfe030e5ae9c7f404ee147010424fcc5c28d6409d3b44c8963e1018
+         └─ [+] asset.bd22d29c068a26a126d6bb0d9ad5566ffd09917f13dfaf6e0c36ff322fe8e0bc
+[~] AWS::ApiGatewayV2::Integration Api/GET--v1--ssv/rewarded-ssv-integration ApiGETv1ssvrewardedssvintegration8E9D3D11
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/GET--v1--ssv/rewarded-ssv-integration-Permission ApiGETv1ssvrewardedssvintegrationPermission540ED930
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/GET--v1--ssv ApiGETv1ssv66374AEE
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/POST--v1--ssv/rewarded-ssv-integration-Permission ApiPOSTv1ssvrewardedssvintegrationPermission2830DFD1
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/POST--v1--ssv ApiPOSTv1ssv47EE0F06
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 ?10.1; F2-6)."
+                [+]     "reason": "Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/POST--v1--account--delete-request/delete-account-integration-Permission ApiPOSTv1accountdeleterequestdeleteaccountintegrationPermissionD5A72EF0
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/POST--v1--account--delete-request ApiPOSTv1accountdeleterequest4C0D8503
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::Lambda::Permission Api/POST--v1--account--delete-confirm/delete-account-integration-Permission ApiPOSTv1accountdeleteconfirmdeleteaccountintegrationPermissionD61620F2
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Route Api/POST--v1--account--delete-confirm ApiPOSTv1accountdeleteconfirm135680F5
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-APIG4",
+                [-]     "reason": "Borrado por web (08 ?11): el usuario no tiene sesi?n; lo protege el c?digo aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el l?mite por ruta de API Gateway y el contador por hash de c?digo en rate_limits (Q-B13-21; F2-8)."
+                [+]     "reason": "Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8)."
+                [ ]   }
+                [ ] ]
+[~] AWS::ApiGatewayV2::Stage DefaultStage DefaultStageEE28A986
+ └─ [~] DependsOn
+     └─ @@ -1,9 +1,11 @@
+        [ ] [
+        [+]   "ApiGETv1league887E8482",
+        [ ]   "ApiGETv1ssv66374AEE",
+        [ ]   "ApiPOSTv1accountcode0D4D29AC",
+        [ ]   "ApiPOSTv1accountdelete7F7281C1",
+        [ ]   "ApiPOSTv1accountdeleteconfirm135680F5",
+        [ ]   "ApiPOSTv1accountdeleterequest4C0D8503",
+        [+]   "ApiPOSTv1leaguewins9A6FD27F",
+        [ ]   "ApiPOSTv1ledgerrestore618BBCA7",
+        [ ]   "ApiPOSTv1purchasesverifyABFF573B",
+        [ ]   "ApiPOSTv1ssv47EE0F06"
+[~] AWS::Scheduler::Schedule VoidedJobSchedule VoidedJobScheduleB340AB2A
+ └─ [~] Description
+     ├─ [-] voidedPurchasesJob diario (08 ?10.1).
+     └─ [+] voidedPurchasesJob diario (08 §10.1).
+[~] AWS::IAM::Role SchedulerRoleForTarget-9f5cec SchedulerRoleForTarget9f5cecAE2D3FF4
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-IAM5[Resource::<VoidedPurchasesJobFunction12EF4135.Arn>:*]",
+                [-]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comod?n cubre sus versiones y alias)."
+                [+]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comodín cubre sus versiones y alias)."
+                [ ]   }
+                [ ] ]
+[~] AWS::IAM::Policy SchedulerRoleForTarget-9f5cec/DefaultPolicy SchedulerRoleForTarget9f5cecDefaultPolicy57FBA4D4
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-IAM5[Resource::<VoidedPurchasesJobFunction12EF4135.Arn>:*]",
+                [-]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comod?n cubre sus versiones y alias)."
+                [+]     "reason": "Rol del Scheduler generado por aws-cdk-lib: solo invoca voidedPurchasesJob (el comodín cubre sus versiones y alias)."
+                [ ]   }
+                [ ] ]
+
+Outputs
+[+] Output Publish/Output{"Ref":"LeagueWinsFunction03C155AC"} PublishOutputRefLeagueWinsFunction03C155AC7592126F: {"Value":{"Ref":"LeagueWinsFunction03C155AC"}}
+[+] Output Publish/Output{"Ref":"LeagueBoardFunction622B45C1"} PublishOutputRefLeagueBoardFunction622B45C1DD5BB642: {"Value":{"Ref":"LeagueBoardFunction622B45C1"}}
+
+
+Stack AfDevOps (aws://[cuenta]/sa-east-1)
+Resources
+[+] AWS::CloudWatch::Alarm LeagueWinsErrors LeagueWinsErrors4062A99F
+[+] AWS::CloudWatch::Alarm LeagueWinsThrottles LeagueWinsThrottles8E40316E
+[+] AWS::CloudWatch::Alarm LeagueBoardErrors LeagueBoardErrors9AB16BC1
+[+] AWS::CloudWatch::Alarm LeagueBoardThrottles LeagueBoardThrottles0125C0C7
+[+] AWS::CloudWatch::Alarm LeaguePlayersThrottles LeaguePlayersThrottles12DAAB9D
+[+] AWS::CloudWatch::Alarm LeagueBoardTableThrottles LeagueBoardTableThrottles43887BE1
+[+] AWS::CloudWatch::Alarm LeagueHistogramThrottles LeagueHistogramThrottles4A78E9E4
+[+] AWS::CloudWatch::Alarm LeagueNamesThrottles LeagueNamesThrottlesD45DDFAF
+[~] AWS::SNS::Topic AlarmTopic AlarmTopicD01E77F9
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SNS2",
+                [-]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta m?s que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [+]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta más que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [ ]   }
+                [ ] ]
+[~] AWS::SNS::TopicPolicy AlarmTopic/Policy AlarmTopicPolicy309DB5F8
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SNS2",
+                [-]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta m?s que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [+]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta más que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [ ]   }
+                [ ] ]
+[~] AWS::SNS::Subscription AlarmTopic/[correo] AlarmTopic[suscriptor]2EE5AD6C
+ └─ [~] Metadata
+     └─ [~] .cdk_nag:
+         └─ [~] .rules_to_suppress:
+             └─ @@ -1,6 +1,6 @@
+                [ ] [
+                [ ]   {
+                [ ]     "id": "AwsSolutions-SNS2",
+                [-]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta m?s que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [+]     "reason": "CloudWatch no puede publicar en un tema cifrado con la clave gestionada aws/sns y una CMK cuesta más que el riesgo: los avisos no llevan datos personales, solo el nombre de la alarma."
+                [ ]   }
+                [ ] ]
+[~] AWS::CloudWatch::Alarm VerifyPurchaseErrors VerifyPurchaseErrorsF654955C
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de verify-purchase (plan ?2).
+     └─ [+] Errores de verify-purchase (plan §2).
+[~] AWS::CloudWatch::Alarm VerifyPurchaseThrottles VerifyPurchaseThrottles040B5BA6
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de verify-purchase (plan ?2).
+     └─ [+] Throttles de verify-purchase (plan §2).
+[~] AWS::CloudWatch::Alarm RestoreLedgerErrors RestoreLedgerErrors5343956B
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de restore-ledger (plan ?2).
+     └─ [+] Errores de restore-ledger (plan §2).
+[~] AWS::CloudWatch::Alarm RestoreLedgerThrottles RestoreLedgerThrottlesB6A81EF6
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de restore-ledger (plan ?2).
+     └─ [+] Throttles de restore-ledger (plan §2).
+[~] AWS::CloudWatch::Alarm RewardedSsvErrors RewardedSsvErrorsF59B9246
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de rewarded-ssv (plan ?2).
+     └─ [+] Errores de rewarded-ssv (plan §2).
+[~] AWS::CloudWatch::Alarm RewardedSsvThrottles RewardedSsvThrottles2EC9B172
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de rewarded-ssv (plan ?2).
+     └─ [+] Throttles de rewarded-ssv (plan §2).
+[~] AWS::CloudWatch::Alarm DeleteAccountErrors DeleteAccountErrorsD51D120C
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de delete-account (plan ?2).
+     └─ [+] Errores de delete-account (plan §2).
+[~] AWS::CloudWatch::Alarm DeleteAccountThrottles DeleteAccountThrottles0FF727DE
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de delete-account (plan ?2).
+     └─ [+] Throttles de delete-account (plan §2).
+[~] AWS::CloudWatch::Alarm VoidedPurchasesJobErrors VoidedPurchasesJobErrorsD399CBBB
+ └─ [~] AlarmDescription
+     ├─ [-] Errores de voided-purchases-job (plan ?2).
+     └─ [+] Errores de voided-purchases-job (plan §2).
+[~] AWS::CloudWatch::Alarm VoidedPurchasesJobThrottles VoidedPurchasesJobThrottlesE53CAAAD
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de voided-purchases-job (plan ?2).
+     └─ [+] Throttles de voided-purchases-job (plan §2).
+[~] AWS::CloudWatch::Alarm Api5xx Api5xx3D9EE91A
+ └─ [~] AlarmDescription
+     ├─ [-] 5xx de la HTTP API (plan ?2).
+     └─ [+] 5xx de la HTTP API (plan §2).
+[~] AWS::CloudWatch::Alarm VoidedJobFailed VoidedJobFailed870B25B2
+ └─ [~] AlarmDescription
+     ├─ [-] voidedPurchasesJob agot? los reintentos y su evento est? en la DLQ (plan ?2).
+     └─ [+] voidedPurchasesJob agotó los reintentos y su evento está en la DLQ (plan §2).
+[~] AWS::CloudWatch::Alarm PurchasesThrottles PurchasesThrottles4C51330A
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en purchases (plan ?2).
+     └─ [+] Throttles de DynamoDB en purchases (plan §2).
+[~] AWS::CloudWatch::Alarm RewardsThrottles RewardsThrottles4D3CD0E4
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en rewards (plan ?2).
+     └─ [+] Throttles de DynamoDB en rewards (plan §2).
+[~] AWS::CloudWatch::Alarm IntegrityThrottles IntegrityThrottlesAD62457E
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en integrity (plan ?2).
+     └─ [+] Throttles de DynamoDB en integrity (plan §2).
+[~] AWS::CloudWatch::Alarm AccountCodesThrottles AccountCodesThrottles37C8EE33
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en accountCodes (plan ?2).
+     └─ [+] Throttles de DynamoDB en accountCodes (plan §2).
+[~] AWS::CloudWatch::Alarm RateLimitsThrottles RateLimitsThrottles48EE7BB4
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en rateLimits (plan ?2).
+     └─ [+] Throttles de DynamoDB en rateLimits (plan §2).
+[~] AWS::CloudWatch::Alarm JobsThrottles JobsThrottlesB4DE2D0B
+ └─ [~] AlarmDescription
+     ├─ [-] Throttles de DynamoDB en jobs (plan ?2).
+     └─ [+] Throttles de DynamoDB en jobs (plan §2).
+[~] AWS::CloudWatch::Alarm IntegrityQuota IntegrityQuota7644FAAC
+ └─ [~] AlarmDescription
+     ├─ [-] Comprobaciones de integridad del d?a por encima del 70 % de la cuota gratuita (10.000/d?a).
+     └─ [+] Comprobaciones de integridad del día por encima del 70 % de la cuota gratuita (10.000/día).
+
+
+
+✨  Number of stacks with differences: 3

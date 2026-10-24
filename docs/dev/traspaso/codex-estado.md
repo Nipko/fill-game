@@ -283,3 +283,44 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - Madrid: Colombia miembro desde 29-08-2012, fuente WIPO. Base CO puede servir para BR/MX/US si titular, vínculo habilitante y base cumplen requisitos. Tasas WIPO consultadas: 2.339 CHF para 9/41 sin color, 2.589 con color; excluyen base, transmisión SIC y honorarios. Importe SIC actual [NV], PDF intentado 403. Recalcular al presentar; relación Parallext / LLC / SAS pendiente de abogado y dueño.
 - `marca.md` modificado únicamente en §4 y §9: tintalu.com comprado en Cloudflare según dueño; secundarios aplazados, .app/.games sin objeto RDAP y .co/.com.br sin disponibilidad verificable. No se alteraron riesgos canónicos, decisión del nombre, planes B ni compuerta de publicación.
 - Recomendación preliminar: mantener Tintalú como candidato condicionado al dictamen, llevando al abogado el nuevo Ball Sort y los antecedentes oficiales. Brasil y Madrid pendientes impiden una conclusión global de disponibilidad. Integrador: conservar los [NV], no convertirlos en ceros, y entregar al abogado las preguntas del informe. Sin solicitudes, pagos, compras, cuentas o publicaciones; solo los tres documentos autorizados, sin código, Assets/, infra/ ni CLAUDE.md.
+
+
+---
+
+# Liga del río — entrega backend D-046, 24-10-2026
+
+Rama `codex/liga`, worktree propio `C:/Users/USER/.codex/worktrees/liga/fill-game`. `git pull origin integracion-fase1-fase2`: base `3ab273f9`, al día; no se cambió el checkout principal. Implementación: **`04c5917c`**. Textos legales: **`6804dbca`**, exclusivamente en `codex/web-marca` (pull con merge de la integración completado allí).
+
+## Implementado
+
+- Esquemas, ejemplos y entradas del contrato v1 para `leagueWins` y `leagueBoard`; `country_unknown` en errores. **`docs/dev/liga.md` no cambia.** Tabla generada de los 700 niveles de tutorial/mundos publicados, con SHA-256 de fuentes normalizadas a LF, generador versionado y `--check` también en `npm test`; reservas excluidas.
+- Dos Lambdas Node 24 arm64, JWT de Firebase y el App Check común en ambas. Cuatro tablas DynamoDB bajo demanda con cifrado/PITR; TTL semanal = fin de semana + 14 días. Jugador por UID/semana, top exacto por ámbito y clave ordenada, histograma por tramo de 100 puntos, seudónimo y reserva de pareja única.
+- Puntos/deduplicación/país/top/histograma actualizados atómicamente, con CAS y comprobación de cuenta no borrada. Ventana móvil por `won_at`, incluye borde del lunes y lotes offline desordenados. Marcados conservan y suman puntos propios, ocultos del top. `deleteAccount` elimina todas las semanas retenidas, sus filas públicas, seudónimo y reserva; lecturas fuertes, sin dependencia de GSI. Pruebas de concurrencia y de dos borrados que no eliminan una pareja reasignada.
+- Ops pasa de 19 a 27 alarmas. No se añaden servidores, NAT, VPC, ElastiCache ni capacidad aprovisionada. Las alarmas sí tienen coste recurrente: 12 métricas nuevas facturadas, aprox. 1,62 USD/mes sin franquicia.
+- Documentación: 08 §2.4/§11 e `infra/README.md`; decisiones, limitaciones y coste en `infra/LEAGUE.md`.
+
+## Criterios y preguntas resueltas
+
+- **País aplicado:** respaldo `region` validado ISO 3166-1. No se añadió CloudFront; se ignora `CloudFront-Viewer-Country` en el endpoint directo para no confiar en una cabecera falsificable. Desconocido → null/solo Global. Se conserva la base del cliente: **https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com**.
+- **Salto del Boto:** el dueño aprobó en el chat usar la primera victoria de campaña como referencia inicial y, después, admitir un nivel omitido (+2) cuando ese nivel es skippable; saltos mayores se rechazan. Sin campos nuevos ni verificación del pago del Salto. La referencia inicial/fechas/región vienen del cliente: App Check no demuestra la resolución del tablero.
+- **Percentil aplicado:** tramos de 100 puntos y centro del tramo para empates fuera del top [P técnico]; no hay Scan de jugadores. Empate en top: instante de aceptación de los puntos en el servidor, UID interno solo para igualdad de milisegundos. Las claves públicas no incluyen UID.
+- **Espacio de seudónimos:** 24 × 9.000 parejas (1000–9999); colisión resuelta por reserva transaccional y reintentos acotados. Por encima de 216.000 cuentas con seudónimo activo se necesita ampliar el contrato; no reutilizar parejas activas.
+- El ejemplo de victorias de `liga.md` usa 26-10 con etiqueta W43, aunque el cambio de lunes 12 UTC ya descrito corresponde a W44. Se aplicó la regla semanal del texto; los ejemplos JSON entregados usan 23-10/W43 coherentes. Recomendación al integrador: corregir solo la fecha/etiqueta del ejemplo en el canon.
+
+## Verificación ejecutada
+
+Desde `infra/`: `npm ci` correcto (una vulnerabilidad alta heredada; no se actualizaron dependencias); `npm run lint`, `npm run typecheck`, `npm test` **334 pruebas / 19 archivos**, `npm run web:check` y `npm run league:check`, correctos. Synth de dev y synth de prod con `-c domain=tintalu.com -c firebaseAppIds=1:123456789:android:0123456789abcdef`, correctos; cdk-nag pasa en los tests. Los synth sin correo de ejemplo avisan que no notifican: el **diff real** conserva el correo ya desplegado, sin publicarlo. Sin cambios Unity ni ejecución de sus builds/tests.
+
+## Diff real y despliegue
+
+La sesión SSO de `af-dev` se renovó con el dueño. Contextos reales recuperados del despliegue, sin leer valores de secretos: Firebase dev `fill-dev-e75a2`, apps admitidas, paquete y alertas conservados; cuenta/correo solo en archivos temporales fuera del repositorio.
+
+`cdk diff AfDevData AfDevApi AfDevOps --strict --no-change-set --exclusively` con esos contextos: correcto, **tres pilas con cambios**, sin eliminaciones. CLI del paquete ejecutada como `node node_modules/aws-cdk/bin/cdk` para pasar los argumentos de contexto sin la interpretación de `npx`. Diff completo redactado: [liga-dev-diff.txt](liga-dev-diff.txt), sin cuenta, correo ni su forma incrustada en el logical ID. Ensamblado congelado fuera del repo; inventario en [liga-dev-assembly.sha256.json](liga-dev-assembly.sha256.json), digest **2a71b060644b915330b29d2adc0de190dcade79f5420c7d3e141239745ae1df6**.
+
+El diff incluye además las actualizaciones de compras **Q-IAP-4 ya presentes en la base y todavía ausentes de dev**, comprobadas contra los sourcemaps de las cuatro Lambdas existentes (descargados a un temporal privado). Se reempaquetan las cinco existentes. Se corrigieron dos permisos imprescindibles que faltaban en CDK: `verifyPurchase` necesita UpdateItem en purchases para reasignar no consumibles, y `voidedPurchasesJob` GetItem para leer las sombras antes de anularlas. Las aserciones IAM cubren ambos; no se añaden permisos sobre otras tablas o secretos. Hay correcciones de caracteres en descripciones y metadata respecto al despliegue antiguo; no cambian valores de Secrets Manager, rutas previas, destinatario de alertas ni la hora del job.
+
+**Estado al preparar este informe:** diff presentado al dueño; pendiente de su sí explícito antes de `cdk deploy`, como exige `codex-liga.md` §3. El ensamblado presentado es el que se debe desplegar; volver a revisar si cambia. No se despliegan Global/Web/Cdn ni prod. Después: comprobar 401 en ambos endpoints sin token y, solo si el dueño facilita tokens por vía privada, envío + Global/País. No se han proporcionado tokens de prueba.
+
+## Coste
+
+Estimación incremental en São Paulo para 100 victorias/mes en 20 lotes y 60 lecturas de tablero por jugador/mes: **aprox. 3 USD/mes con 1.000 jugadores y 137 USD/mes con 100.000**. Margen orientativo 5/200 USD, no límite de gasto. Incluye alarmas, unidades transaccionales, salida, logs, almacenamiento y PITR; sin créditos/impuestos/Firebase/backend previo. Más actividad o filas mayores cambia el coste. Fuentes, tarifas regionales y fórmulas en `infra/LEAGUE.md`. No se cambió el presupuesto existente de dev.
