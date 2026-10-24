@@ -6,7 +6,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
-## 2026-10-24 · T6 carril 1 · Música y Sonido con un toque (`spark/t6-audio-directo`): HECHA · verificación completa VERDE · 2.ª ronda de code-reviewer pendiente
+## 2026-10-24 · T6 carril 1 · Música y Sonido con un toque (`spark/t6-audio-directo`): HECHA · verificación completa VERDE · code-reviewer APROBADO · lista para integrar
 
 - **Encargo:** `spark-audio-tablero.md`, carril 1 (D-046, punto 2). Rama desde `origin/integracion-fase1-fase2` en `3ab273f9`.
 - **Commits:** `6aa9d6cd` (la funcionalidad, GDD y tests), `2040bfd5` (ids de AF_LAYOUT de la pausa al final; `MapEntriesTests`) y `5a8601b3` (revisión: el Cántaro fuera de la tarjeta del Reto, el inicio a 320 dp, la píldora en dos líneas y el Dato de TiTino).
@@ -20,8 +20,10 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 - **Textos:** `a11y_music_on/off` y `a11y_sound_on/off` en es, en y pt-BR (`borrador`, con `context` y `max_chars`).
 - **GDD:** 02 §5, 07 §9.4 y 08 §8.2, con D-046.
 - **Verificación** en `5a8601b3` (ARM64, 64 GB, Python 3.14): dotnet build 0 avisos; dotnet test 1.002 (996 + 6); `validate_schema.py` 116/116; `apply_translations.py --check` OK; compila; EditMode **4.453** (4.450 + 3; línea base 4.447); PlayMode **2.012** (1.725 + 287 omitidos; línea base 1.994). Una pasada de PlayMode quedó sin veredicto al llegar a los 3.600 s mientras corría en paralelo la de `spark-t6-tropa`; repetida con `-TimeoutSec 7200`: 2.829 s, verde.
+- **Revisión:** subagente code-reviewer, dos rondas. 1.ª: CAMBIOS NECESARIOS (bloqueante: a 360 × 640 el Cántaro, colgado de Sonido, pisaba la esquina y el sello de la tarjeta del Reto; sugerencias: pausa y píldora a 320 dp al 130 %, Dato de TiTino, listas en `EmitLayout`, nota en 08 §8.2), todo atendido en `5a8601b3`. 2.ª: **APROBADO**; da por aceptables la exclusión del par Crecida–tarjeta del Reto a 320 dp (anterior a la rama) y ocultar la tarjeta bajo la nota de TiTino (02 §12; `TickDaily` ya la ocultaba en casos parecidos). Pide al integrador repetir PlayMode al integrar, regenerar las capturas `[Explicit]` de la pausa y el inicio antes de la prueba visual y ver en el teléfono a 360 × 640 cómo se aparta la tarjeta con el saludo.
+- **Commit de estado:** `f0fc2dab` y el de esta línea.
 - **Preguntas:** Q-T6A-1 (el inicio es `LobbyScreen`, el encargo decía `HomeWindow.cs`; aplicada: `LobbyScreen`); Q-T6A-2 (la columna bajo el engranaje y el Cántaro a la izquierda de Sonido, no de Música: a la altura de Música pisaría la píldora de casa; si la píldora va en dos líneas, el Cántaro baja hasta ella); Q-T6A-3 (`af_settings_change` de audio sigue solo en la sonda, como desde Ajustes; aplicada: sin envío nuevo a la analítica real, anotado en 08 §8.2).
-- **Riesgos:** a 320 dp la Crecida (x 290-316) y la tarjeta del Reto (x 12-308) ya se cruzaban antes de D-046 (el test lo excluye y lo dice); la tarjeta del Reto se oculta mientras una nota de TiTino la cruza (comportamiento nuevo en pantallas bajas); el integrador debe casar la columna con el botón «Liga».
+- **Riesgos:** a 320 dp la Crecida (x 290-316) y la tarjeta del Reto (x 12-308) ya se cruzaban antes de D-046 (el test lo excluye y lo dice); la tarjeta del Reto se oculta mientras una nota de TiTino la cruza (comportamiento nuevo en pantallas bajas); el integrador debe casar la columna con el botón «Liga»; el solape Crecida–tarjeta del Reto a 320 dp pide una tarea propia; `ProjectSettings/GooglePlayGameSettings.txt` sale modificado en el worktree solo por finales de línea de Unity y no se commitea.
 
 ---
 
