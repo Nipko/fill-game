@@ -1870,7 +1870,7 @@ namespace AF.UI
             }
 
             TickBackend(Time.unscaledDeltaTime * 1000f); // F3-5: la cola de verificación de compras, cada pocos segundos
-            TickAds(); // D-042: los márgenes de cierre de MAX
+            TickAds(); // D-049: los avisos de Google Mobile Ads y los márgenes de cierre (D-042)
             TickA11y(Time.unscaledDeltaTime * 1000f); // B9: el lector de pantalla (solo con TalkBack) y el Reto
 
             float dt = Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs);
@@ -1954,7 +1954,7 @@ namespace AF.UI
 
             RetryCloud(); // D-042: la fusión que no llegó (sin red) o la subida pendiente de #3379
             ResumeBackend(true); // F3-5: lo que Play cobró mientras tanto vuelve como compra sin terminar (08 §10.3)
-            ResumeAds(); // D-042: un anuncio de MAX sin su cierre se suelta tras un margen
+            ResumeAds(); // D-049 (y D-042): un anuncio sin su cierre se suelta tras un margen; UMP sin resolver se reintenta
             PushUiResumed(); // «Avisos»: de vuelta de los ajustes del teléfono (GameBootstrap.PushUi.cs)
 
             // 02 §14: al volver de segundo plano la vista salta al modelo sin animar (también la luciérnaga en vuelo: la cuia

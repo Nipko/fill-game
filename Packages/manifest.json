@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "com.applovin.mediation.ads": "file:applovin/com.applovin.mediation.ads-8.6.6.tgz",
+    "com.google.ads.mobile": "file:googleads/com.google.ads.mobile-11.5.0.tgz",
     "com.google.external-dependency-manager": "file:firebase/com.google.external-dependency-manager-1.2.189.tgz",
     "com.google.firebase.analytics": "file:firebase/com.google.firebase.analytics-13.17.0.tgz",
     "com.google.firebase.app": "file:firebase/com.google.firebase.app-13.17.0.tgz",

@@ -167,11 +167,14 @@ namespace AF.Ads.Tests
             string testsDir = Path.GetFullPath(Path.Combine(AdsDir, "Tests")) + Path.DirectorySeparatorChar;
             // D-042: AF.Ads.Max (Max/) es el ensamblado aparte, con motor, que habla con el SDK de MAX; AF.Ads sigue sin motor.
             string maxDir = Path.GetFullPath(Path.Combine(AdsDir, "Max")) + Path.DirectorySeparatorChar;
+            // D-049: AF.Ads.Google (Google/) es el otro ensamblado con motor, el de Google Mobile Ads.
+            string googleDir = Path.GetFullPath(Path.Combine(AdsDir, "Google")) + Path.DirectorySeparatorChar;
             int files = 0;
             foreach (string file in Directory.GetFiles(AdsDir, "*.cs", SearchOption.AllDirectories))
             {
                 string full = Path.GetFullPath(file);
-                if (full.StartsWith(testsDir, StringComparison.OrdinalIgnoreCase) || full.StartsWith(maxDir, StringComparison.OrdinalIgnoreCase))
+                if (full.StartsWith(testsDir, StringComparison.OrdinalIgnoreCase) || full.StartsWith(maxDir, StringComparison.OrdinalIgnoreCase)
+                    || full.StartsWith(googleDir, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }

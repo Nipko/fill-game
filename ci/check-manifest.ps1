@@ -19,8 +19,10 @@
          Application.internetReachability para el comun net de la analitica, 08 sec. 8.1).
          android.permission.WAKE_LOCK y com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE los
          aprobo el dueno en D-039 y su anadido del 2026-10-21 (los trae Firebase Analytics, play-services-measurement;
-         el segundo es el Install Referrer de Play). AD_ID, ACCESS_ADSERVICES_ATTRIBUTION, ACCESS_ADSERVICES_AD_ID y
-         READ_GSERVICES se quitan en Assets/Plugins/Android/LauncherManifest.xml y siguen fuera de la lista blanca.
+         el segundo es el Install Referrer de Play). com.google.android.gms.permission.AD_ID lo aprobo el dueno en
+         D-049, anadido del 2026-10-25 (anuncios de AdMob con Google Mobile Ads 11.5.0). ACCESS_ADSERVICES_ATTRIBUTION,
+         ACCESS_ADSERVICES_AD_ID, ACCESS_ADSERVICES_TOPICS, READ_GSERVICES, ACCESS_WIFI_STATE, CHECK_LICENSE y
+         FOREGROUND_SERVICE se quitan en Assets/Plugins/Android/LauncherManifest.xml y siguen fuera de la lista blanca.
          android.permission.POST_NOTIFICATIONS lo aprobo el dueno en D-033 (Q-M5) y su anadido del 2026-10-21,
          con el paquete com.unity.mobile.notifications 2.4.3 (lo declara su manifiesto, Android 13+). Las alarmas
          son inexactas: SCHEDULE_EXACT_ALARM, USE_EXACT_ALARM, RECEIVE_BOOT_COMPLETED y
@@ -99,9 +101,10 @@ $NotificationsNotApproved = @('android.permission.SCHEDULE_EXACT_ALARM', 'androi
     'android.permission.RECEIVE_BOOT_COMPLETED', 'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS')
 $WakeLockPermission = 'android.permission.WAKE_LOCK'   # aprobado: D-039 (Firebase Analytics)
 $InstallReferrerPermission = 'com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE'   # aprobado: D-039, anadido del 2026-10-21 (Install Referrer de Play)
+$AdIdPermission = 'com.google.android.gms.permission.AD_ID'   # aprobado: D-049, anadido del 2026-10-25 (anuncios de AdMob)
 # D-042, anadido (2026-10-23): play-services-nearby (Nearby Connections y Exposure Notifications) no entra con el plugin de Play Games.
 $ForbiddenComponentPrefixes = @('com.google.android.gms.nearby.')
-$BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission, $NotificationsPermission, $BillingPermission)
+$BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission, $NotificationsPermission, $BillingPermission, $AdIdPermission)
 
 function Stop-WithCode {
     param([int]$Code, [string]$Message)
@@ -362,7 +365,10 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'xml: BILLING aprobado (D-040) con PBL 9';     Fmt = 'xml'; Text = $okXml.Replace('android:value="8.0.0"', 'android:value="9.0.0"'); Prof = 'release'; Fails = 0; Billing = $true }
         @{ Name = 'xml: BILLING como sdk-23 (D-040)';            Fmt = 'xml'; Text = $okXml.Replace('<uses-permission android:name="com.android.vending.BILLING"/>', '<uses-permission-sdk-23 android:name="com.android.vending.BILLING"/>'); Prof = 'release'; Fails = 0 }
         @{ Name = 'xml: otro permiso de la tienda sigue fuera';  Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'com.android.vending.CHECK_LICENSE'); Prof = 'release'; Fails = 1 }
-        @{ Name = 'xml: AD_ID sigue fuera (D-039)';              Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'com.google.android.gms.permission.AD_ID'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: AD_ID aprobado (D-049)';                 Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'com.google.android.gms.permission.AD_ID'); Prof = 'release'; Fails = 0 }
+        @{ Name = 'aapt2: AD_ID aprobado (D-049)';               Fmt = 'tree'; Text = $okTree.Replace('"android.permission.VIBRATE"', '"com.google.android.gms.permission.AD_ID"'); Prof = 'dev'; Fails = 0 }
+        @{ Name = 'xml: ACCESS_ADSERVICES_TOPICS fuera (D-049)'; Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.ACCESS_ADSERVICES_TOPICS'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: FOREGROUND_SERVICE fuera (D-049)';       Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.FOREGROUND_SERVICE'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: ACCESS_ADSERVICES_AD_ID sigue fuera';    Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.ACCESS_ADSERVICES_AD_ID'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: ACCESS_ADSERVICES_ATTRIBUTION fuera';    Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.ACCESS_ADSERVICES_ATTRIBUTION'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: READ_GSERVICES sigue fuera';             Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'com.google.android.providers.gsf.permission.READ_GSERVICES'); Prof = 'release'; Fails = 1 }

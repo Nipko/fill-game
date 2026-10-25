@@ -26,10 +26,11 @@ namespace AF.Ads
     public sealed class AdConsentSettings
     {
         /// <summary>Sin decisión: no se inicia.</summary>
-        public static readonly AdConsentSettings NotDecided = new AdConsentSettings(false, false, false, true, ConsentFlags.MaxAdContentRatingG, false);
+        public static readonly AdConsentSettings NotDecided = new AdConsentSettings(false, false, false, true, ConsentFlags.MaxAdContentRatingG, false, false);
 
-        private AdConsentSettings(bool mayInitialize, bool childDirected, bool? hasUserConsent, bool? doNotSell, string rating, bool umpDecides)
+        private AdConsentSettings(bool mayInitialize, bool childDirected, bool? hasUserConsent, bool? doNotSell, string rating, bool umpDecides, bool teen)
         {
+            Teen = teen;
             MayInitialize = mayInitialize;
             ChildDirected = childDirected;
             HasUserConsent = hasUserConsent;
@@ -59,6 +60,12 @@ namespace AF.Ads
         /// <summary>Perfil <c>ump</c> con 18+: la personalización la decide el mensaje de UMP.</summary>
         public bool UmpDecides { get; }
 
+        /// <summary>
+        /// Banda 13-17 (D-049): Google Mobile Ads marca la petición y el formulario de UMP como de un menor de la edad de
+        /// consentimiento (<c>TagForUnderAgeOfConsent</c>), además de <c>npa</c>.
+        /// </summary>
+        public bool Teen { get; }
+
         /// <summary>Lo que corresponde a <paramref name="flags"/>.</summary>
         public static AdConsentSettings From(ConsentFlags flags)
         {
@@ -69,7 +76,7 @@ namespace AF.Ads
 
             if (flags.Blocked)
             {
-                return new AdConsentSettings(false, true, false, true, flags.MaxAdContentRating, false);
+                return new AdConsentSettings(false, true, false, true, flags.MaxAdContentRating, false, false);
             }
 
             if (!flags.Decided)
@@ -79,16 +86,16 @@ namespace AF.Ads
 
             if (flags.Band == AgeBand.Teen && string.Equals(flags.Profile, LegalProfiles.Ump, StringComparison.Ordinal))
             {
-                return new AdConsentSettings(false, false, false, true, flags.MaxAdContentRating, false); // Q-MAX-6 (b)
+                return new AdConsentSettings(false, false, false, true, flags.MaxAdContentRating, false, true); // Q-MAX-6 (b)
             }
 
             if (flags.AdsByUmp)
             {
-                return new AdConsentSettings(true, false, null, null, flags.MaxAdContentRating, true);
+                return new AdConsentSettings(true, false, null, null, flags.MaxAdContentRating, true, false);
             }
 
             bool personalized = flags.AdsPersonalized;
-            return new AdConsentSettings(true, false, personalized, !personalized, flags.MaxAdContentRating, false);
+            return new AdConsentSettings(true, false, personalized, !personalized, flags.MaxAdContentRating, false, flags.Band == AgeBand.Teen);
         }
     }
 

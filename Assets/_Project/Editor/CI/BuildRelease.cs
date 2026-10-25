@@ -56,6 +56,7 @@ namespace AF.EditorTools
     ///   0  build construido
     ///   2  los Player Settings no son los fijados (ejecuta antes ProjectSetup.ApplyAndroidDefaults) o los ajustes de AppLovin MAX
     ///      llevan una clave del SDK o Quality Service (ejecuta AF.Ads.Max.Editor.MaxProjectSetup.Apply; D-042)
+    ///      o los de Google Mobile Ads no tienen el App ID de AdMob y no se pudieron aplicar (AF.Ads.Google.Editor.GoogleAdsProjectSetup; D-049)
     ///   3  falta el módulo Android o no se pudo cambiar la plataforma activa
     ///   4  falló el build o hubo una excepción (lee el log)
     ///   5  Build Settings no incluye Assets/_Project/Scenes/Game.unity
@@ -613,6 +614,12 @@ namespace AF.EditorTools
 
             // D-042: ninguna clave de MAX en AppLovinSettings.asset y Quality Service apagado (docs/dev/anuncios-max.md §3).
             if (!AF.Ads.Max.Editor.MaxProjectSetup.CheckForBuild(LogPrefix))
+            {
+                return ExitSettings;
+            }
+
+            // D-049: el App ID de AdMob en GoogleMobileAdsSettings.asset (si falta, se aplica; nunca un build con el App ID vacío).
+            if (!AF.Ads.Google.Editor.GoogleAdsProjectSetup.CheckForBuild(LogPrefix))
             {
                 return ExitSettings;
             }

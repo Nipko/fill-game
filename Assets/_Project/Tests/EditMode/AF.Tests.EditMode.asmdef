@@ -19,6 +19,7 @@
     "AF.IAP",
     "AF.EditorTools",
     "AF.Ads.Max.Editor",
+    "AF.Ads.Google.Editor",
     "AF.Localization",
     "AF.Audio",
     "AF.Audio.Unity",

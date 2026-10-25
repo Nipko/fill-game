@@ -1,6 +1,6 @@
 # Anuncios con AppLovin MAX (D-042)
 
-> **D-049 (2026-10-25):** AppLovin no acepta cuentas nuevas de editor, así que los anuncios irán con **AdMob directo** (plugin Google Mobile Ads), con el SSV de AdMob y Unity Ads como primera red adicional. MAX queda integrado pero sin servir anuncios. Esta nota describe MAX hasta que el carril de AdMob la reescriba; la cuenta de AdMob ya configurada está en §10.
+> **D-049 (2026-10-25):** AppLovin no acepta cuentas nuevas de editor, así que los anuncios irán con **AdMob directo** (plugin Google Mobile Ads), con el SSV de AdMob y Unity Ads como primera red adicional. MAX queda integrado pero sin servir anuncios y, desde el carril `tanda6/sdk-gma`, con su flujo de UMP apagado (§2). **La integración de AdMob está en `docs/dev/anuncios-admob.md`**; esta nota queda como referencia de MAX. La cuenta de AdMob ya configurada está en §10.
 
 Estado: 2026-10-23, rama `tanda5/sdk-max`. Decisión: D-042 (integración de MAX con UMP y adaptadores). GDD: 08 §2.2 (`AF.Ads`), §2.3, §7 #1-#2, §8.2 (eventos de anuncios), §9 (`ads_*`, `biz_*`), §10.1-§10.2 (SSV) y §13.3; 05 §6-§7; D-033 B12 (consentimiento); D-035 (SSV en AWS). Integra el MAX **sin adaptadores**: los adaptadores esperan la aprobación del dueño (§7).
 

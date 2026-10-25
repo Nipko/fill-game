@@ -53,24 +53,31 @@ namespace AF.Ads
     }
 
     /// <summary>
-    /// Una impresión pagada (ILR de MAX) para el evento recomendado de Firebase <c>ad_impression</c> (08 §8.2; <c>ads_ilr_to_firebase</c>):
+    /// Una impresión pagada (ILR de MAX u <c>OnAdPaid</c> de Google Mobile Ads, D-049) para el evento recomendado de Firebase <c>ad_impression</c> (08 §8.2; <c>ads_ilr_to_firebase</c>):
     /// <c>ad_platform</c>, <c>ad_source</c>, <c>ad_format</c>, <c>ad_unit_name</c>, <c>value</c> y <c>currency</c>. Sin identificadores.
     /// </summary>
     public sealed class AdImpression
     {
-        /// <summary>Crea la impresión.</summary>
-        public AdImpression(string adSource, AdPlacement placement, double value, string currency = "USD")
+        /// <summary><c>ad_platform</c> de AppLovin MAX (D-042).</summary>
+        public const string PlatformAppLovin = "appLovin";
+
+        /// <summary><c>ad_platform</c> de Google Mobile Ads (AdMob directo, D-049).</summary>
+        public const string PlatformAdMob = "AdMob";
+
+        /// <summary>Crea la impresión (<paramref name="platform"/>: <see cref="PlatformAppLovin"/> por defecto, o <see cref="PlatformAdMob"/>).</summary>
+        public AdImpression(string adSource, AdPlacement placement, double value, string currency = "USD", string platform = PlatformAppLovin)
         {
+            AdPlatform = string.IsNullOrEmpty(platform) ? PlatformAppLovin : platform;
             AdSource = adSource ?? string.Empty;
             Placement = placement;
             Value = value;
             Currency = currency ?? "USD";
         }
 
-        /// <summary><c>ad_platform</c>: siempre <c>appLovin</c>.</summary>
-        public string AdPlatform => "appLovin";
+        /// <summary><c>ad_platform</c>: <c>appLovin</c> (MAX) o <c>AdMob</c> (Google Mobile Ads, D-049).</summary>
+        public string AdPlatform { get; }
 
-        /// <summary><c>ad_source</c>: la red que sirvió el anuncio (el <c>NetworkName</c> de MAX).</summary>
+        /// <summary><c>ad_source</c>: la red que sirvió el anuncio (el <c>NetworkName</c> de MAX o el <c>AdSourceName</c> de Google).</summary>
         public string AdSource { get; }
 
         /// <summary>La ubicación del juego (<c>ad_unit_name</c> = su ID).</summary>
@@ -82,7 +89,7 @@ namespace AF.Ads
         /// <summary><c>value</c>: ingreso estimado de la impresión.</summary>
         public double Value { get; }
 
-        /// <summary><c>currency</c>: MAX informa en USD.</summary>
+        /// <summary><c>currency</c>: MAX informa en USD; Google, en la moneda de su <c>AdValue</c>.</summary>
         public string Currency { get; }
     }
 
