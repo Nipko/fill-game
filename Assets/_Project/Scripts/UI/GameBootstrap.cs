@@ -66,6 +66,11 @@ namespace AF.UI
     /// terminar la carga se corta y arranca <see cref="AppFlow"/>; solo en la primera apertura con TiTino se espera a que su
     /// gesto lleve 1,0 s a la vista, si cabe en el objetivo de 20 s del primer toque (<see cref="BootSplashTiming"/>). La sonda
     /// <c>AF_STATE boot</c> (<see cref="BootInfo"/>) lo mide, con el primer toque del jugador.</para>
+    /// <para>Intro de la marca (D-051, punto 3; <see cref="BrandIntro"/>): va encima de la pantalla de arranque desde su primer
+    /// fotograma, sobre el petróleo de la pantalla del sistema; arranca su animación (o, con Reducir movimiento, su último
+    /// fotograma) en cuanto se lee el perfil y se quita al terminar la carga, sin esperar a que acabe: nunca alarga el arranque.
+    /// Después sigue lo de siempre (el segundo de <c>sloth_wake</c> de la primera apertura, si toca). La sonda
+    /// <c>AF_STATE brand_intro</c> (<see cref="IntroInfo"/>) dice cuánto duró y si se cortó.</para>
     /// </summary>
     [DisallowMultipleComponent]
     public sealed partial class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
@@ -158,6 +163,7 @@ namespace AF.UI
         private DevProbe? _probe;
         private BootSplash? _splash;
         private BootReport? _bootReport;
+        private BrandIntroReport? _introReport;
         private double _bootOrigin;
         private ProfileLockedNotice? _lockedNotice;
         private ProfileLoadStatus _profileStatus = ProfileLoadStatus.NotFound;
@@ -192,6 +198,12 @@ namespace AF.UI
         /// y en los arranques sin ella.
         /// </summary>
         public BootReport? BootInfo => _bootReport;
+
+        /// <summary>
+        /// Lo que se vio de la intro de la marca (sonda <c>AF_STATE brand_intro</c>; D-051, punto 3): null hasta quitarla y en los
+        /// arranques sin ella.
+        /// </summary>
+        public BrandIntroReport? IntroInfo => _introReport;
 
         /// <summary>Flujo del nivel (null hasta <c>Start</c>).</summary>
         public LevelFlow? Flow => _flow;
@@ -1566,7 +1578,8 @@ namespace AF.UI
         {
             if (!s_rebuildToLobby && BootSplash.Enabled)
             {
-                _splash = new BootSplash(transform, BootSplash.SlothExpected); // ya compuesta con o sin TiTino: el logotipo no salta
+                // Ya compuesta con o sin TiTino (el logotipo no salta) y con la intro de la marca encima (D-051, punto 3).
+                _splash = new BootSplash(transform, BootSplash.SlothExpected, withIntro: BrandIntro.Enabled);
                 yield return null; // el río y el logotipo, a la vista antes de cargar
             }
 
@@ -1606,6 +1619,7 @@ namespace AF.UI
             {
                 bool migrateLegacy = LaunchOptions.ProfileStoreOverride == null && LaunchOptions.ProfileDirectoryOverride == null;
                 profile = LoadProfile(store, clock, migrateLegacy, out firstRun, out _profileStatus);
+                _splash?.BeginIntro(ResolveReduceMotion(profile)); // D-051: la intro anima (o queda quieta) desde que se sabe; no espera a nada
                 VerifyBootProfile(profile); // B8 (GameBootstrap.Cloud.cs): la firma tal como se leyó, antes de los extras de desarrollo
                 if (LaunchOptions.ApplyDevWallet(profile, clock))
                 {
@@ -2331,6 +2345,7 @@ namespace AF.UI
         {
             BootSplash splash = _splash!;
             long loadMs = splash.AgeMs;
+            ReportIntro(splash.EndIntro()); // D-051: la intro se quita ya, al terminar la carga, vaya por donde vaya
             long sinceStartup = SinceStartupMs();
             bool wake = splash.SlothVisible && splash.Sloth!.Pose == SlothPoseId.Wake;
             long need = BootSplashTiming.NeedMs(firstOpen, wake, (long)splash.SlothClockMs);
@@ -2365,11 +2380,28 @@ namespace AF.UI
             _probe?.Boot(_bootReport);
         }
 
+        // Deja lo que se vio de la intro de la marca y la sonda AF_STATE brand_intro (D-051; una vez: End devuelve null después).
+        private void ReportIntro(BrandIntroReport? report)
+        {
+            if (report == null)
+            {
+                return;
+            }
+
+            _introReport = report;
+            _probe?.BrandIntro(report);
+        }
+
         // Tope de tiempo real por encima de la espera calculada (fotogramas lentos) [P].
         private const int HoldGuardMs = 250;
 
         private void CutSplash()
         {
+            if (_splash != null)
+            {
+                ReportIntro(_splash.EndIntro()); // un arranque que se para antes (catálogo roto, <13) también la anota
+            }
+
             _splash?.Dispose();
             _splash = null;
         }
