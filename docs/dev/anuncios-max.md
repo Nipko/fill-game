@@ -125,7 +125,27 @@ Fila de AppLovin MAX en 08 §13.3 al día. La web (`infra/web/src/content/*/priv
 ## 10. Lo que hace el dueño
 
 1. Cuenta de AppLovin, la app `com.amazonfill.dev` (pruebas) y, tras el dictamen, la definitiva; la clave del SDK y dos unidades (recompensado e intersticial) de Android en `Assets/_LocalSecrets/applovin-max.json` o en los secretos del CI.
-2. AdMob › Privacidad y mensajes: el mensaje del RGPD (UMP) para la app; y «Contenido máximo» = G.
+2. AdMob › Privacidad y mensajes: el mensaje del RGPD (UMP) para la app; y «Contenido máximo» = G. **Hecho el 2026-10-25** (cobra AUTOMATION AI S.A.S con el perfil de pagos de Play; añadido de D-048). Ninguno de estos datos es secreto:
+
+   | Dato | Valor |
+   |---|---|
+   | ID de editor | `pub-2916158449453694` |
+   | App ID (Android, «Tintalú», sin tienda vinculada) | `ca-app-pub-2916158449453694~9925643748` |
+   | Bloque recompensado `Tintalu Rewarded MAX` (sin SSV de AdMob) | `ca-app-pub-2916158449453694/2877105387` |
+   | Bloque intersticial `Tintalu Interstitial MAX` (sin ofertas de socios) | `ca-app-pub-2916158449453694/7187673451` |
+
+   - **Mensaje del RGPD** «Tintalú RGPD»:
+     - en español, inglés y portugués;
+     - botones Consentir, Gestionar opciones y No consentir, este en todos los países;
+     - sin el «Cerrar» que no da consentimiento;
+     - socios publicitarios: la lista de uso habitual (198, con Google y AppLovin Corp.).
+   - **Mensaje de los estados de EE. UU.:** en inglés y español (es-419).
+   - **Clasificación del contenido:** G.
+   - **Sin mediación en AdMob:** media MAX.
+   - **Pendiente:**
+     - vincular la tienda cuando la app esté en Play;
+     - la línea de AdMob en `app-ads.txt` (`google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0`), que se publica con la de AppLovin;
+     - el App ID en el juego y los bloques en MAX, con la integración del adaptador de AdMob (§7).
 3. Panel de MAX: la URL S2S del SSV (`/v1/ssv` de la API de dev) y su clave en Secrets Manager.
 4. Decidir los permisos de §8 y la lista de adaptadores de §7.
 5. Probar en el teléfono con unidades de prueba (modo de prueba de MAX, dispositivo de prueba en el panel), nunca con clics propios en anuncios reales.

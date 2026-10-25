@@ -3882,6 +3882,16 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Matiza D-041** («ya no es AUTOMATION AI S A S»): sigue valiendo para el responsable de los datos y el desarrollador, no para la editora en Play.
 - **Cómo revertir:** con una decisión nueva del dueño.
 
+### D-048, añadido del 2026-10-25: los ingresos de AdMob, a AUTOMATION AI S.A.S
+
+- **Estado:** hecho por el dueño en AdMob: «en admob asocie el perfil de pagos de play google osea la S.A.S».
+- **Qué cambia:** los ingresos de anuncios de **AdMob** los cobra **AUTOMATION AI S.A.S**, con el mismo perfil de pagos de Google que Play, como los de Play. La cuenta de AdMob (App ID `ca-app-pub-2916158449453694~9925643748`, editor `pub-2916158449453694`) queda configurada como dice `docs/dev/anuncios-max.md` §10.
+- **Abierto:** la titular de la cuenta de **AppLovin MAX** (por coherencia, la misma S.A.S, con el formulario fiscal W-8BEN-E). La decide el dueño al crearla.
+- **Para el contador y el abogado** (`[[ABOGADO]]`):
+  - la retención de EE. UU. sobre lo que paguen las redes a una empresa colombiana (Colombia no tiene convenio fiscal con EE. UU.);
+  - que la licencia de Parallext a la editora (pendiente de arriba) cubra también los ingresos de anuncios.
+- Parallext sigue siendo la responsable de los datos (D-048); el consentimiento de UMP y la lista de socios de AdMob se configuraron sin cambio por esto.
+
 ### D-044, añadido del 2026-10-25: la web pública en tintalu.com, desplegada
 
 - **Estado:** hecho por el escritorio con la sesión de AWS del dueño y su sí al `cdk diff` («Sí: haz el bootstrap de CDK en sa-east-1 y us-east-1 y despliega AfProdGlobal y AfProdWeb con ese diff.»). El dueño creó los registros en Cloudflare.
