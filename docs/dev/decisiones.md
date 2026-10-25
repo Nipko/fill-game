@@ -2302,7 +2302,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 13. **P-M2:** diez claves de UI del Mapa [P] en el glosario §10, pendientes del traductor y del asesor: `map_view_world`, `map_view_basin`, `map_label_andes`, `map_label_atlantic`, `map_back_to_level`, `map_open`, `map_card_other_fact`, `map_card_source`, `map_facts_count` y `map_l10_intro`. «Andes ↑» y «Océano Atlántico ↓» se pintan en Baloo 2, que tiene las flechas; el ✓ de la pregunta del mundo es un icono procedural, porque ninguna de las dos familias lo tiene.
 14. **P-M3, provisional:** en los hitos de T6-A, la llegada lleva su dato en todos los `10k` (`ArrivalEverywhere`) solo mientras no exista la caja de TiTino. Al fusionar su tarea (TI6a), el valor por defecto pasa a `SlothHito`, porque T6-A está decidida (D-013, punto 15; D-016, punto 5), y la 45 también (D-022).
 15. **P-M4:** si en la victoria del 10 se pulsa Inicio o se cierra la app, la secuencia del Mapa del 10 (06 §2.3) sale una vez al entrar al inicio, con `max_level` ≥ 10 y `progress.map_seen_level` < 10. No hace falta estado nuevo.
-16. **P-M5:** el arte provisional del Mapa (las siluetas de héroe, las banderas simplificadas y el retrato y la ventanita procedurales de TiTino) solo sale en el Editor y en los builds de desarrollo (`MapArtRule`, como `FaunaArtRule`). En release no se pinta hasta que exista su PNG, y nunca va en la ficha, las capturas ni la UA.
+16. **P-M5 (retirada por D-052, 2026-10-25: el arte por código es el final y sale en release):** el arte provisional del Mapa (las siluetas de héroe, las banderas simplificadas y el retrato y la ventanita procedurales de TiTino) solo sale en el Editor y en los builds de desarrollo (`MapArtRule`, como `FaunaArtRule`). En release no se pinta hasta que exista su PNG, y nunca va en la ficha, las capturas ni la UA.
 17. **P-M6:** el 31 lleva el rótulo del lugar, por la cola de avisos y después de su presentación de hito (el tutorial de 02 §13 es 1-12).
 18. **P-M7:** la placa «{país} te da la bienvenida» (`map_country_welcome`) va en la franja de la victoria del 80 y del 140, antes de la placa del dato; el banner del 81 y del 141 solo iza la bandera.
 19. **P-M8:** el guía del Mapa se deduce del mundo (el bufeo boliviano en los mundos 7 y 8) y el relevo ocurre en el punto de paso `teotonio` del tramo, sin campo nuevo en el contrato 30.
@@ -3980,4 +3980,16 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   2. **Pantalla del sistema** (Android 12+, la pone el sistema y no se quita): el icono v2 sobre el **fondo petróleo de la marca** (D-045), para que empalme con el juego.
   3. **Intro propia de 1 segundo como mucho:** el logo de Tintalú con la gota que tiñe el río (identidad v2), dibujada por código. Se muestra **mientras el juego carga**, nunca como espera añadida: si la carga acaba antes, se corta sin esperar. Con Reducir movimiento sale quieta, y ningún toque se pierde.
 - **Carril:** `tanda6/arranque-marca`.
+- **Cómo revertir:** con una decisión nueva del dueño.
+
+## D-052 · El arte por código es el final: se retira P-M5
+
+- **Fecha:** 2026-10-25. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat, al aprobar el inicio nuevo (D-050): «retiro P-M5: el arte por código es el final y sale en release».
+- **Contexto:** P-M5 de D-023 (`MapArtRule`) y la regla hermana de la fauna (`FaunaArtRule`, guion de la intro §4.3 y §11) solo dejaban salir el arte provisional por código en el Editor y en los builds de desarrollo, a la espera de los PNG de un artista. Con D-050 el dueño hace de artista y el arte por código es el definitivo, así que en release se habrían quedado fuera TiTino (inicio, arranque y Mapa), las siluetas de héroe del Mapa, las banderas, la ventanita de casa, la tinaja, el cucharón y los miquitos.
+- **Decisión:**
+  1. **Se retira P-M5** (punto 16 de D-023) y la exigencia de PNG de la fauna: el arte por código sale en todos los builds, release incluido.
+  2. **La ranura de `ArtSlots` sigue mandando:** si algún día llega un PNG, sustituye al dibujo por código. Las ranuras no desaparecen.
+  3. **Se puede usar en la ficha, las capturas y la UA**, porque es el arte final.
+- **Carril:** `tanda6/arte-release`.
 - **Cómo revertir:** con una decisión nueva del dueño.
