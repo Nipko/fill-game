@@ -129,18 +129,17 @@ namespace AF.Tests.PlayMode
             SnapshotKit.SaveTop(dir, name, heightPx);
             if (tap)
             {
-                Assert.That(sloth.FactCardShown, Is.True, name + ": el dato, en su tarjeta");
-                Assert.That(sloth.BubbleShown, Is.False, name + ": nunca en el bocadillo");
+                Assert.That(sloth.BubbleShown, Is.True, name + ": el toque trae un mensaje (D-050: el dato, en el bocadillo)");
             }
 
             SaveCrop(dir, name + "_crop");
             SaveWindowZoom(dir, name + "_window", lobby);
             Debug.Log("AF_HOME_SLOTH " + name + ": " + hour + ":00, pose " + SlothRig.IdOf(sloth.Pose) + ", saludo "
                 + (sloth.LastGreeting.Key ?? (sloth.LastGreeting.Greeting ? "(solo gesto)" : "-")) + ", bocadillo «" + sloth.BubbleText
-                + "», tarjeta «" + sloth.FactCardText + "», texto al " + Mathf.RoundToInt(textScale * 100f) + " %");
+                + "» (" + sloth.Note + "), texto al " + Mathf.RoundToInt(textScale * 100f) + " %");
         }
 
-        // La ventanita (con 4 dp de margen), ampliada × 4 sin suavizar: la garra de sloth_wave contra el canto de arriba del hueco.
+        // TiTino en su rama (su caja, con 4 dp de margen; D-050), ampliado × 2 sin suavizar.
         private static void SaveWindowZoom(string dir, string name, LobbyScreen lobby)
         {
             var full = new Texture2D(2, 2, TextureFormat.RGB24, false);
@@ -152,11 +151,11 @@ namespace AF.Tests.PlayMode
             Vector3 topLeft = root.InverseTransformPoint(corners[1]);
             float pxPerDp = full.width / lobby.CanvasWidth;
             const float marginDp = 4f;
-            int side = Mathf.RoundToInt((HomeWindow.SizeDp + (2f * marginDp)) * pxPerDp);
+            int side = Mathf.RoundToInt((Mathf.Max(lobby.HomeWindow.Root.rect.width, lobby.HomeWindow.Root.rect.height) + (2f * marginDp)) * pxPerDp);
             int x0 = Mathf.Clamp(Mathf.RoundToInt((topLeft.x - bounds.xMin - marginDp) * pxPerDp), 0, full.width - side);
             int yTop = Mathf.Clamp(Mathf.RoundToInt((bounds.yMax - topLeft.y - marginDp) * pxPerDp), 0, full.height - side);
             Color[] src = full.GetPixels(x0, full.height - yTop - side, side, side);
-            const int zoom = 4;
+            const int zoom = 2;
             var big = new Texture2D(side * zoom, side * zoom, TextureFormat.RGB24, false);
             var dst = new Color[side * zoom * side * zoom];
             for (int y = 0; y < side * zoom; y++)

@@ -1,111 +1,89 @@
 #nullable enable
 using System;
 using AF.Presentation;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace AF.UI
 {
     /// <summary>
-    /// El botón «Liga» del inicio (D-046; liga.md §1: «un botón "Liga" en el inicio, desde el 41, con su icono»), en un lienzo propio
-    /// encima del inicio (como <see cref="MarketLobbyIcons"/>, sin tocar <see cref="LobbyScreen"/>). Va abajo a la izquierda, sobre la
-    /// barra de pestañas y a la altura de «Inicio» menos su hueco [P]: el engranaje y la fila de arriba quedan para Ajustes y los
-    /// botones de audio (D-046, punto 2), y la columna de la derecha para el Cántaro y la Crecida. Madera con el icono (un podio de
-    /// tres escalones, por código) y el texto «Liga». Sin asignaciones mientras nada cambia.
+    /// La tarjeta «Liga» del muelle del inicio (D-050, punto 6; D-046; liga.md §1: «un botón "Liga" en el inicio, desde el 41, con su
+    /// icono»), una <see cref="DockCard"/> en un lienzo propio encima del inicio (como <see cref="MarketLobbyIcons"/>): el podio
+    /// sobre el disco índigo, «Liga» y, si el jugador está en el top 100 de la semana, «Puesto {n}» (<c>home_card_league_rank</c>).
+    /// Solo con la Liga activa; va en la fila de las tarjetas del día, tras el Reto y la Bitácora (la coloca
+    /// <c>GameBootstrap.PlaceDayCards</c>). Sin asignaciones mientras nada cambia.
     /// </summary>
     internal sealed class LeagueLobbyButton
     {
         /// <summary>Orden del lienzo: el de las entradas del Mercado (6).</summary>
         public const int SortingOrder = 6;
 
-        /// <summary>Ancho del botón (dp) al 100 % [P].</summary>
-        public const float WidthDp = 104f;
-
-        /// <summary>Alto del botón (dp): el área táctil mínima (07 §7.8).</summary>
-        public const float HeightDp = 48f;
-
-        /// <summary>Margen izquierdo (dp), el del inicio.</summary>
-        public const float LeftDp = 16f;
-
-        /// <summary>Hueco entre el botón y el borde de arriba de «Inicio» (dp) [P].</summary>
-        public const float GapAboveHomeDp = 10f;
-
-        private const float LabelSp = 16f;
-
         private readonly OverlayCanvas _canvas;
-        private readonly ReliefParts _button;
-        private readonly TextMeshProUGUI _label;
-        private readonly RectTransform _icon;
-        private readonly Vector3[] _corners = new Vector3[4];
-        private Vector3 _homeSeen;
+        private readonly DockCard _card;
+        private int _rank = -2;
 
         public LeagueLobbyButton(Transform host, ProceduralArt art, Action onPress)
         {
             _canvas = new OverlayCanvas("LeagueButtonCanvas", host, SortingOrder);
-            _button = UiBuilder.Relief("LeagueTab", _canvas.Root, art.CtaWood, onPress);
-            _icon = UiBuilder.Rect("Icon", _button.Face);
-            Step(0f, 0.45f, 0.33f, 0.55f, Palette.FamilyWood.Light);
-            Step(0.33f, 0f, 0.34f, 1f, Palette.Cream);
-            Step(0.67f, 0.3f, 0.33f, 0.7f, Palette.FamilyWood.Light);
-            _label = UiBuilder.Label("Label", _button.Face, TextStyle.PillWood, LeagueText.Button, LabelSp, Palette.Cream, TextAlignmentOptions.MidlineLeft);
-            _button.Relief.Bind(_button.Face, _button.Base, _button.FaceImage, art.CtaWood, null, null, null);
-            _button.Button.gameObject.SetActive(false);
+            _card = new DockCard(_canvas.Root, art, "LeagueTab", art.CardIconLeague, onPress);
+            SetRank(null);
+            A11yLabels.Set(_card.Button, () => UiText.HomeCardA11y(LeagueText.Button, _card.State.text));
         }
 
         public Canvas Canvas => _canvas.Canvas;
 
-        public Button Button => _button.Button;
+        /// <summary>Lienzo propio (dp de la pantalla, como el del inicio).</summary>
+        internal OverlayCanvas Overlay => _canvas;
 
-        public RectTransform Rect => (RectTransform)_button.Button.transform;
+        public Button Button => _card.Button;
 
-        public bool Shown => _button.Button.gameObject.activeSelf;
+        public RectTransform Rect => _card.Root;
 
-        public string Label => _label.text;
+        public bool Shown => _card.Visible;
 
-        /// <summary>Enseña u oculta el botón y lo coloca sobre <paramref name="homeTab"/> (el «Inicio» del inicio, en pantalla).</summary>
-        public void Sync(bool shown, RectTransform? homeTab)
+        /// <summary>Título («Liga»).</summary>
+        public string Label => _card.Title.text;
+
+        /// <summary>Segunda línea («Puesto {n}» o vacía).</summary>
+        public string RankText => _card.State.text;
+
+        /// <summary>La tarjeta del muelle (tests de desbordes).</summary>
+        internal DockCard Card => _card;
+
+        /// <summary>
+        /// El puesto del jugador en la semana (null fuera del top 100 o sin clasificación): «Puesto {n}» bajo «Liga». Solo asigna
+        /// texto si cambia.
+        /// </summary>
+        public bool SetRank(int? rank)
         {
-            _canvas.Measure();
-            bool show = shown && homeTab != null;
-            if (_button.Button.gameObject.activeSelf != show)
-            {
-                _button.Button.gameObject.SetActive(show);
-            }
-
-            if (!show)
-            {
-                return;
-            }
-
-            homeTab!.GetWorldCorners(_corners);
-            Rect root = _canvas.Root.rect;
-            Vector3 topLeft = _canvas.Root.InverseTransformPoint(_corners[1]);
-            float homeTop = root.yMax - topLeft.y;
-            float s = Mathf.Max(1f, UiBuilder.TextScale);
-            _label.fontSize = LabelSp * s;
-            float textW = Mathf.Ceil(UiBuilder.MinTextWidth(_label));
-            float iconDp = 24f;
-            float w = Mathf.Max(WidthDp, 14f + iconDp + 8f + textW + 14f);
-            float h = Mathf.Max(HeightDp, Mathf.Round((LabelSp * s) + 24f));
-            UiBuilder.Place(Rect, LeftDp, homeTop - GapAboveHomeDp - h, w, h);
-            float face = ModalKit.FaceHeightOf(_button);
-            UiBuilder.Place(_icon, 14f, (face - iconDp) * 0.5f, iconDp, iconDp);
-            UiBuilder.Place(_label.rectTransform, 14f + iconDp + 8f, 0f, textW + 4f, face);
-        }
-
-        /// <summary>«Inicio» se movió en pantalla desde la última vez (la escala del inicio se aplica en su primer fotograma).</summary>
-        public bool TargetMoved(RectTransform? homeTab)
-        {
-            if (homeTab == null)
+            int r = rank.HasValue && rank.Value > 0 ? rank.Value : -1;
+            if (r == _rank)
             {
                 return false;
             }
 
-            homeTab.GetWorldCorners(_corners);
-            bool moved = _corners[1] != _homeSeen;
-            _homeSeen = _corners[1];
-            return moved;
+            _rank = r;
+            _card.SetTexts(LeagueText.Button, r > 0 ? UiText.HomeCardLeagueRank(r) : string.Empty, Palette.LeafShine);
+            return true;
+        }
+
+        /// <summary>Alto que pide la tarjeta a <paramref name="width"/> dp con sus textos.</summary>
+        public float HeightFor(float width) => _card.HeightFor(width);
+
+        /// <summary>Coloca la tarjeta en (<paramref name="x"/>, <paramref name="y"/>) dp con <paramref name="w"/> × <paramref name="h"/>.</summary>
+        public void Place(float x, float y, float w, float h)
+        {
+            _card.Place(x, y, w, h);
+        }
+
+        /// <summary>Sin la línea del puesto (<see cref="DockCard.SetCompact"/>).</summary>
+        public void SetCompact(bool on) => _card.SetCompact(on);
+
+        /// <summary>Enseña la tarjeta.</summary>
+        public void Show()
+        {
+            _canvas.Measure();
+            _card.SetShown(true);
         }
 
         /// <summary>Vuelve a medir la pantalla; true si cambió.</summary>
@@ -113,22 +91,7 @@ namespace AF.UI
 
         public void Hide()
         {
-            if (_button.Button.gameObject.activeSelf)
-            {
-                _button.Button.gameObject.SetActive(false);
-            }
-        }
-
-        // Un escalón del podio en fracciones del icono (x, y desde arriba, ancho, alto).
-        private void Step(float x, float y, float w, float h, Color color)
-        {
-            Image img = UiBuilder.Image("Step", _icon, null, color);
-            RectTransform rt = img.rectTransform;
-            rt.anchorMin = new Vector2(x, 1f - y - h);
-            rt.anchorMax = new Vector2(x + w, 1f - y);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.offsetMin = new Vector2(0.5f, 0f);
-            rt.offsetMax = new Vector2(-0.5f, 0f);
+            _card.SetShown(false);
         }
     }
 }

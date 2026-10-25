@@ -268,7 +268,7 @@ namespace AF.Tests.PlayMode
             Assert.That(map.L10WithBubble, Is.False, when + ": el Mapa sin bocadillo de TiTino");
             Assert.That(map.L10BubbleShown, Is.False, when);
             Assert.That(sloth.BubbleShown, Is.False, when + ": sin saludo en la ventanita");
-            Assert.That(sloth.FactCardShown, Is.False, when + ": sin Dato del perezoso");
+            Assert.That(sloth.Note, Is.EqualTo(HomeSloth.HomeNote.None), when + ": sin mensajes de TiTino");
             Assert.That(sloth.GreetingDecisions, Is.EqualTo(greetings), when + ": el saludo del día no se decide");
             Assert.That(session.LinesThisSession, Is.EqualTo(lines), when + ": ninguna frase más de TiTino");
         }

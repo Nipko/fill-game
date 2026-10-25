@@ -264,7 +264,9 @@ namespace AF.Tests.PlayMode
             daily.Calendar.HomeButton.onClick.Invoke();
             Step(boot, Frame);
             Assert.That(boot.DailyCard!.State, Is.EqualTo(DailyCardState.PendingValidation));
-            Assert.That(boot.DailyCard.StateText, Is.EqualTo("Pendiente de validar"));
+            Assert.That(boot.DailyCard.StateText, Is.EqualTo("Pendiente"), "D-050: la forma corta en la tarjeta del muelle (home_card_daily_pending)");
+            Assert.That(A11yLabels.TryGet(boot.DailyCard.Button.gameObject, out string spoken, out _), Is.True);
+            StringAssert.Contains("Pendiente de validar", spoken, "TalkBack lee la larga");
             Assert.That(boot.DailyCard.StampShown, Is.True);
         }
 

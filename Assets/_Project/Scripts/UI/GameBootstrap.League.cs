@@ -340,6 +340,11 @@ namespace AF.UI
                 _leagueLastFailure = null; // llegó una clasificación: el próximo fallo se vuelve a contar
             }
 
+            if (scope == LeagueScope.Global)
+            {
+                RefreshLeagueRank(); // «Puesto {n}» de la tarjeta del muelle (D-050)
+            }
+
             LeagueScreen? screen = _leagueScreen;
             if (screen != null && screen.Visible)
             {
@@ -427,20 +432,23 @@ namespace AF.UI
             }
 
             bool show = LobbyClear() && !LeagueOpen && league.Active;
-            bool moved = show && (button.Remeasure() | button.TargetMoved(_lobby.HomeTabRect));
+            bool moved = show && button.Remeasure();
             if (show == _leagueButtonShown && !moved)
             {
                 return;
             }
 
             _leagueButtonShown = show;
+            _dayCardsDirty = true;
             if (!show)
             {
                 button.Hide();
                 return;
             }
 
-            button.Sync(true, _lobby.HomeTabRect);
+            RefreshLeagueRank();
+            button.Show();
+            PlaceDayCards(); // en la fila de las tarjetas del día del muelle, tras el Reto y la Bitácora (D-050, punto 6)
             if (DevProbe.Enabled && _probe != null)
             {
                 _probe.Layout("lobby_league", 0, null, new[] { "league_tab" }, new[] { button.Rect });

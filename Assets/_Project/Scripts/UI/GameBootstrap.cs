@@ -1934,6 +1934,7 @@ namespace AF.UI
                 _app.RefreshNoCanoes();
                 _lobby?.SetCommerceOpen(HomeWindowCovered); // ni en pantallas de pago (M2.1; D-013, punto 6) ni bajo el Mapa (M4.2)
                 _lobby?.Tick(dt);
+                PlaceDayCards(); // la fila de las tarjetas del día sigue al muelle si el inicio se rehízo (D-050; sin asignaciones si no)
                 return;
             }
 

@@ -86,8 +86,11 @@ namespace AF.UI
         private readonly TextMeshProUGUI _label;
         private readonly Button? _tap;
         private readonly HomeSloth? _sloth;
+        private readonly bool _scene;
 
         private RiverStop? _stop;
+        private float _branchY;
+        private float _rigDp = SceneRigMaxDp;
         private bool _hasStop;
         private bool _artReady;
         private float _x;
@@ -107,7 +110,54 @@ namespace AF.UI
         public HomeWindow(Transform parent, ProceduralArt art)
             : this(parent, art, null)
         {
+            // D-050: en el inicio, sin marco ni ventanita. TiTino cuelga grande de su rama (la pinta el inicio) y la caja de esta
+            // clase es la suya; la distancia a casa (la píldora de antes) la dice TiTino en su bocadillo (HomeSloth.HomeNote.Home).
+            _scene = true;
+            _window.enabled = false;
             _sloth = new HomeSloth(this, parent, art);
+        }
+
+        /// <summary>Ancho de la caja de TiTino en el inicio (dp; D-050): el rig grande colgado y sus garras.</summary>
+        public const float SceneWidthDp = 100f;
+
+        /// <summary>Lo que la caja de TiTino sube por encima de la línea de la rama (dp): tumbado o en ovillo, encima de ella.</summary>
+        public const float SceneAboveDp = 46f;
+
+        /// <summary>Lo que la caja de TiTino baja por debajo de su rig colgado (dp).</summary>
+        public const float SceneBelowDp = 8f;
+
+        /// <summary>Tamaño S de TiTino en el inicio, como mucho (dp; D-050: «unos 90-110 dp de alto»).</summary>
+        public const float SceneRigMaxDp = 92f;
+
+        /// <summary>Tamaño S de TiTino en el inicio, como poco (dp), en las pantallas bajas (16:9).</summary>
+        public const float SceneRigMinDp = 76f;
+
+        /// <summary>La ventanita es la del inicio (D-050): sin marco, con TiTino grande de su rama.</summary>
+        public bool SceneMode => _scene;
+
+        /// <summary>Línea de la rama de TiTino en el inicio (dp del padre, y hacia abajo).</summary>
+        public float BranchLineDp => _branchY;
+
+        /// <summary>Tamaño S de TiTino en el inicio (dp).</summary>
+        public float SceneRigDp => _rigDp;
+
+        /// <summary>
+        /// Coloca a TiTino en el inicio (D-050): su caja con la esquina izquierda en <paramref name="x"/> y la línea de la rama en
+        /// <paramref name="branchY"/>, de tamaño S <paramref name="rigDp"/>; el bocadillo, a su derecha, sin pasar de
+        /// <paramref name="noteMaxRight"/> ni de <paramref name="noteMaxBottom"/>. Solo en la del inicio.
+        /// </summary>
+        public void PlaceScene(float x, float branchY, float rigDp, float noteMaxRight, float noteMaxBottom)
+        {
+            _x = x;
+            _branchY = branchY;
+            _rigDp = Mathf.Clamp(rigDp, SceneRigMinDp, SceneRigMaxDp);
+            _y = branchY - SceneAboveDp;
+            float h = SceneAboveDp + _rigDp + SceneBelowDp;
+            UiBuilder.Place(_root, x, _y, SceneWidthDp, h);
+            float portrait = Mathf.Min(SceneWidthDp, _rigDp);
+            UiBuilder.Place(_portrait.rectTransform, (SceneWidthDp - portrait) * 0.5f, SceneAboveDp, portrait, portrait);
+            _bounds = new Rect(x, _y, SceneWidthDp, h);
+            _sloth?.LayoutScene(x, _y, SceneWidthDp, h, SceneAboveDp, _rigDp, noteMaxRight, noteMaxBottom);
         }
 
         /// <summary>
@@ -263,7 +313,8 @@ namespace AF.UI
                 _root.gameObject.SetActive(on);
             }
 
-            bool pill = on && _stop != null && HasPill(_stop);
+            // D-050: en el inicio, la distancia a casa la dice TiTino en su bocadillo (HomeSloth.HomeNote.Home), sin píldora.
+            bool pill = on && !_scene && _stop != null && HasPill(_stop);
             if (_pill.gameObject.activeSelf != pill)
             {
                 _pill.gameObject.SetActive(pill);
@@ -320,7 +371,6 @@ namespace AF.UI
             // El retrato cuelga bajo la rama de la embaúba: apoyado en el borde de abajo del hueco.
             UiBuilder.Place(_portrait.rectTransform, inset, SizeDp - ProceduralArt.HomeWindowBorderDp - PortraitDp, PortraitDp, PortraitDp);
             PlacePill();
-            _sloth?.Layout(x, yTop, noteMaxRight);
         }
 
         private void Build(RiverStop? stop)
@@ -337,6 +387,20 @@ namespace AF.UI
             bool provisional = MapArtRule.ShowProvisional;
             _portraitPng = portraitPng;
             _provisional = provisional;
+            if (_scene)
+            {
+                // D-050: sin marco. TiTino (su rig o, sin él, su retrato) sale con la regla de P-M5 de su retrato.
+                _artReady = MapArtRule.CanShow(provisional, portraitPng != null);
+                if (_artReady)
+                {
+                    _portrait.sprite = _art.SlothPortrait(_asleep, portraitPng, provisional);
+                    _artReady = _portrait.sprite != null;
+                }
+
+                _label.text = HasPill(stop) ? UiText.MapHomeDistance(DisplayKm(stop.KmHome)) : string.Empty;
+                return;
+            }
+
             _artReady = CanShow(provisional, windowPng != null, portraitPng != null);
             if (_artReady)
             {

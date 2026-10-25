@@ -11,39 +11,35 @@ using UnityEngine.UI;
 namespace AF.UI
 {
     /// <summary>
-    /// Pantalla de inicio (Lobby, GDD 06 §4.7; D-008 punto 6; tarea B1-6) construida por código, con la composición de
-    /// Magic Sort (ficha §7.1: saldos arriba, botón central grande, pestañas abajo) y sin su trade dress (07 §1.3; D-003:
-    /// madera, hoja y agua; ni oro biselado, ni gemas, ni gatos):
-    /// <list type="bullet">
-    /// <item><description>arriba, Semillas, Canoas «n/5» con el cronómetro mm:ss de la próxima (solo desde el 31,
-    /// <c>rescue_min_level</c>; con Canoas infinitas, ∞ y el tiempo que queda) y Ajustes, que abre su pantalla
-    /// (<see cref="SettingsScreen"/>; tarea L3), con Música y Sonido de un toque en columna debajo (D-046, punto 2;
-    /// <see cref="AudioToggles"/>);</description></item>
-    /// <item><description>en el centro, el Estuario (panorama, muelle y follaje del nivel) y el botón grande «Jugar · Nivel {n}»
-    /// con su centro al 60 % del alto (06 §4.7), con la etiqueta de D-009 encima cuando el nivel la lleva (propuesta §c.1;
-    /// 07 §7.7; <see cref="DifficultyChip"/>): Difícil, chip ámbar con la rana dardo y la cinta «×3»; Muy difícil, chip índigo
-    /// con el jaguar, «×4» y el botón en variante nocturna [P];</description></item>
-    /// <item><description>abajo, la barra de pestañas con «Inicio» [P] y, desde <c>max_level</c> ≥ 10, el icono del Mapa del
-    /// río a su derecha (06 §4.7; D-008; tarea M3.3), con un punto si hay una llegada sin ver (<c>map_seen_level</c>); Mercado,
-    /// Reto del río y Bitácora quedan ocultos hasta que existan (D-008).</description></item>
+    /// Pantalla de inicio (Lobby, GDD 06 §4.7; D-008 punto 6; tarea B1-6) construida por código con la composición «el muelle del
+    /// río» (D-050), que conserva la de Magic Sort (ficha §7.1: saldos arriba, botón central grande, pestañas abajo) sin su trade
+    /// dress (07 §1.3; D-003: madera, hoja, agua y luz de juego; ni oro biselado, ni gemas, ni gatos). De arriba abajo:
+    /// <list type="number">
+    /// <item><description><b>Cielo y vegetación</b> con la barra de arriba: Semillas, Canoas «n/5» con el cronómetro mm:ss de la
+    /// próxima (solo desde el 31, <c>rescue_min_level</c>; con Canoas infinitas, ∞ y el tiempo que queda) y Ajustes, que abre su
+    /// pantalla (<see cref="SettingsScreen"/>; tarea L3), con Música y Sonido de un toque en columna debajo (D-046, punto 2;
+    /// <see cref="AudioToggles"/>).</description></item>
+    /// <item><description><b>TiTino grande</b> colgado de su rama, que entra desde la vegetación de arriba a la izquierda
+    /// (<see cref="ProceduralArt.HomeBranch"/>; <see cref="HomeWindow"/> en su modo del inicio y <see cref="HomeSloth"/>), con su
+    /// pose por la hora y el bocadillo que rota (D-050, punto 1).</description></item>
+    /// <item><description><b>El río vivo</b> (<see cref="HomeRiver"/>) sobre la banda de agua del mundo de la parada de «Jugar»
+    /// (<see cref="StopBackdrop"/>): reflejos, ondas, nenúfares, un pez y un ave (punto 2).</description></item>
+    /// <item><description><b>La travesía</b> (<see cref="HomeVoyage"/>): la canoa de Capi con Rosa por la ruta punteada hacia el
+    /// poste de la próxima parada, con su nombre y «Faltan {n} niveles»; tocarla abre el Mapa del río (punto 3).</description></item>
+    /// <item><description><b>La Crecida</b> como poste de nivel clavado en el agua a la derecha (<see cref="StreakWidget"/>; 25+;
+    /// punto 4).</description></item>
+    /// <item><description><b>El muelle</b>: el chip de D-009 encima de «Jugar · Nivel {n}» (centro al 60 % del alto, 06 §4.7; sin
+    /// cambiar de tamaño ni de función: D-008), el Cántaro como tinaja de barro apoyada en el muelle a la izquierda (el sitio que
+    /// le guarda <see cref="PiggyAnchorRect"/>; <see cref="MarketLobbyIcons"/>) y la fila de tarjetas del día bajo «Jugar»
+    /// (<see cref="DayCardSlot"/>: Reto del río, Bitácora y Liga; las coloca <see cref="GameBootstrap"/>). Sin tarjetas (antes del
+    /// 10), la caja de cuias de Capi en su sitio (punto 6).</description></item>
+    /// <item><description>Abajo, la barra de pestañas con «Inicio» [P] y, desde <c>max_level</c> ≥ 10, el icono del Mapa del río a
+    /// su derecha (06 §4.7; D-008; tarea M3.3), con un punto si hay una llegada sin ver (<c>map_seen_level</c>).</description></item>
     /// </list>
     /// Encima, cuando toca, «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3, con sus opciones desde B2-3:
-    /// <see cref="NoCanoesPanel"/>). Lienzo de 360 dp de ancho y al menos 640 de alto. Los contadores se actualizan solo al cambiar
-    /// y sin asignar memoria (08 §5.4).
-    /// <para>Mapa del río en el inicio (D-013, punto 6, Q17-A; 06 §4.7; tarea M2.1), con el catálogo de paradas que le pasa
-    /// <see cref="GameBootstrap"/> (<see cref="RiverStops"/>; sin él, todo como antes):</para>
-    /// <list type="bullet">
-    /// <item><description><b>el sitio</b>: su propio <see cref="AF.Presentation.StopBackdrop"/> con la parada de «Jugar»
-    /// (<see cref="RiverStopCatalog.StopOf"/> de <see cref="AppFlow.PlayLevel"/>; el mismo fondo que el tablero de ese nivel,
-    /// <see cref="GameScreen.StopForLevel"/>; en el fin de contenido sin parada para ese nivel, la del último publicado,
-    /// <see cref="StopLevel"/>), con su luz sobre el panorama y corte directo al cambiar de nivel;</description></item>
-    /// <item><description><b>«Faltan {n} niveles para {lugar}»</b> (<c>map_stop_remaining</c>, con el plural de la tabla) bajo
-    /// «Jugar», en Nunito Bold de <see cref="StopRemainingSp"/> sp sobre madera, hacia la parada siguiente; se arma solo al
-    /// cambiar de nivel y no sale con el fin de contenido, con Sin canoas ni si esa parada no está en el catálogo;</description></item>
-    /// <item><description><b>la ventanita de casa</b> (<see cref="HomeWindow"/>): el único sitio de TiTino en el inicio, a la
-    /// izquierda bajo los saldos [P], sin tapar Ajustes, los saldos ni «Jugar»; se oculta con Sin canoas y con la hoja de compra o
-    /// una oferta delante (<see cref="SetCommerceOpen"/>; propuesta del personaje g.2 y d.11).</description></item>
-    /// </list>
+    /// <see cref="NoCanoesPanel"/>). Lienzo de 360 dp de ancho (320 en los teléfonos de ese ancho) y al menos 640 de alto. Los
+    /// contadores se actualizan solo al cambiar y nada asigna memoria por fotograma (08 §5.4). Sin el catálogo de paradas, el inicio
+    /// sin fondo de parada, sin travesía y sin TiTino.
     /// </summary>
     public sealed class LobbyScreen
     {
@@ -59,6 +55,24 @@ namespace AF.UI
         /// <summary>Lado mínimo de un control (07 §1.2 y §7.8).</summary>
         public const float MinTouchDp = 48f;
 
+        /// <summary>Cuerpo (sp) del nombre de la próxima parada en su letrero (M2.1; D-050), en Nunito Bold.</summary>
+        public const float StopRemainingSp = HomeVoyage.NameSp;
+
+        /// <summary>Borde izquierdo de la caja de TiTino (dp).</summary>
+        public const float TitinoLeftDp = 12f;
+
+        /// <summary>Margen de la fila de tarjetas del día a cada lado (dp).</summary>
+        public const float CardGutterDp = 16f;
+
+        /// <summary>Hueco entre dos tarjetas del día (dp).</summary>
+        public const float CardGapDp = 10f;
+
+        /// <summary>Ancho de una tarjeta del día cuando hay dos, como mucho (dp): centradas.</summary>
+        public const float CardMaxWidthDp = 150f;
+
+        /// <summary>Hueco entre «Jugar» y el disco del icono de las tarjetas, que asoma por encima de ellas (dp).</summary>
+        public const float CardTopGapDp = 4f;
+
         private const float TopRowHeight = 48f;
 
         // Tamaño del cronómetro de la próxima canoa (sp).
@@ -73,18 +87,6 @@ namespace AF.UI
         private const float MapTabDotDp = 14f;
         private const float OverlayPanelHeight = 236f;
         private const float MaxHorizonDp = 200f;
-        private const float RiverPropsMinBandDp = 56f;
-        private const float RemainingGapDp = 8f;
-        private const float RemainingPadDp = 12f;
-        private const float RemainingLineDp = 28f;
-        private const float HomeWindowGapDp = 8f;
-        private const float SideGutterDp = 16f;
-
-        // Del widget de la Crecida al borde derecho (dp) [P]: la tarjeta del Reto llega a w − 32, así que el widget va en w − 30 … w − 4.
-        private const float StreakWidgetRightDp = 4f;
-
-        /// <summary>Cuerpo (sp) de «Faltan {n} niveles para {lugar}» bajo «Jugar» (M2.1), en Nunito Bold.</summary>
-        public const float StopRemainingSp = 14f;
 
         private readonly ProceduralArt _art;
         private readonly DevProbe _probe;
@@ -99,12 +101,14 @@ namespace AF.UI
 
         private readonly Image _skyFill;
         private readonly Image _panorama;
-        private readonly Image _heron;
-        private readonly Image[] _lilyPads = new Image[3];
         private readonly Image _dock;
+        private readonly Image _crate;
+        private readonly Image _branch;
         private readonly Image[] _foliage = new Image[4];
         private readonly Image _scrim;
         private readonly StopBackdrop _stopBackdrop;
+        private readonly HomeRiver _river;
+        private readonly HomeVoyage _voyage;
 
         private readonly RectTransform _seeds;
         private readonly Image _seedsIcon;
@@ -122,8 +126,6 @@ namespace AF.UI
         private readonly ReliefParts _settings;
         private readonly AudioToggles _audio;
         private readonly RectTransform _piggySlot;
-        private float _piggyLeft;
-        private float _soundTop;
 
         private readonly ReliefParts _play;
         private readonly TextMeshProUGUI _playLabel;
@@ -147,17 +149,22 @@ namespace AF.UI
         private readonly TextMeshProUGUI _overlayBody;
         private readonly ReliefParts _back;
         private readonly NoCanoesPanel _noCanoes;
-        private readonly RectTransform _remaining;
-        private readonly TextMeshProUGUI _remainingLabel;
         private readonly HomeWindow _home;
         private readonly StreakWidget _streakWidget;
         private GameServices? _services;
         private RiverStopCatalog? _riverStops;
         private SeasonTable? _seasons;
         private RiverStop? _currentStop;
+        private string _remainingText = string.Empty;
         private bool _remainingReady;
+        private bool _voyageReady;
         private bool _commerceOpen;
+        private bool _reduceMotion;
         private int _stopLevelShown = -1;
+        private int _dayCardCount;
+        private int _layoutVersion;
+        private bool _signCovered;
+        private bool _canoeCovered;
 
         private readonly char[] _buf = new char[24];
 
@@ -206,26 +213,32 @@ namespace AF.UI
             _scaler.referencePixelsPerUnit = 100f;
             _root = (RectTransform)canvasGo.transform;
 
-            // ---- Escena: el Estuario del nivel (panorama, garza, vitórias-régias, muelle y follaje; D-003). ----
+            // ---- Escena: el panorama, la parada de «Jugar», el río vivo, el muelle, la rama de TiTino y el follaje (D-003; D-050). ----
             RectTransform scene = UiBuilder.Rect("Scene", _root);
             Image baseFill = UiBuilder.Image("BaseFill", scene, null, Palette.RiverFar);
             UiBuilder.Stretch(baseFill.rectTransform);
             _skyFill = UiBuilder.Image("SkyFill", scene, null, Palette.SkyTop);
             _panorama = UiBuilder.Image("Panorama", scene, art.Panorama, Color.white);
 
-            // Fondo de la parada de «Jugar» (M2.1): como en el tablero, delante del panorama y detrás de la garza.
+            // Fondo de la parada de «Jugar» (M2.1): como en el tablero, delante del panorama; encima, el río vivo (D-050, punto 2).
             _stopBackdrop = new StopBackdrop(scene, art);
-            _heron = UiBuilder.Image("Heron", scene, art.Heron, Color.white);
-            for (int i = 0; i < _lilyPads.Length; i++)
-            {
-                _lilyPads[i] = UiBuilder.Image("LilyPad" + i, scene, art.LilyPad, Color.white);
-            }
+            _river = new HomeRiver(scene, art);
 
             _dock = UiBuilder.Image("Dock", scene, art.Dock, Color.white);
+            _crate = UiBuilder.Image("CuiaCrate", scene, art.DockCrate, Color.white);
+            _crate.preserveAspect = true;
+            _crate.gameObject.SetActive(false);
+
+            // La rama de TiTino sale de debajo del follaje de arriba a la izquierda (D-050, punto 1).
+            _branch = UiBuilder.Image("TitinoBranch", scene, art.HomeBranch, Color.white);
             _foliage[0] = UiBuilder.Image("FoliageTL", scene, art.FoliageTopLeft, Color.white);
             _foliage[1] = UiBuilder.Image("FoliageTR", scene, art.FoliageTopRight, Color.white);
             _foliage[2] = UiBuilder.Image("FoliageBL", scene, art.FoliageBottomLeft, Color.white);
             _foliage[3] = UiBuilder.Image("FoliageBR", scene, art.FoliageBottomRight, Color.white);
+
+            // ---- La travesía (D-050, punto 3) y la Crecida en el agua (punto 4): delante del decorado, debajo de TiTino. ----
+            _voyage = new HomeVoyage(_root, art, () => actions.OpenRiverMap(MapOpenSource.Lobby));
+            _streakWidget = new StreakWidget(_root, art);
 
             // ---- Cabecera: Semillas, Canoas (31+) y Ajustes (ficha §7.1: saldos arriba). ----
             RectTransform top = UiBuilder.Rect("Top", _root);
@@ -261,9 +274,9 @@ namespace AF.UI
 
             // Música y Sonido con un toque (D-046, punto 2; 07 §9.4): en columna bajo el engranaje, junto a él.
             _audio = new AudioToggles(top, art);
-            _piggySlot = UiBuilder.Rect("PiggySlot", top); // sin gráficos: solo el sitio del Cántaro (MarketLobbyIcons)
+            _piggySlot = UiBuilder.Rect("PiggySlot", _root); // sin gráficos: solo el sitio del Cántaro en el muelle (MarketLobbyIcons)
 
-            // ---- Pestañas abajo: solo «Inicio» [P] mientras Mercado, Mapa del río, Reto del río y Bitácora no existan. ----
+            // ---- Pestañas abajo: «Inicio» [P] y, desde el 10, el Mapa del río a su derecha. ----
             _tabBar = UiBuilder.Sliced("TabBar", _root, art.WoodPlate, Color.white);
             _homeTab = UiBuilder.Rect("HomeTab", _root);
             if (art.CtaWood.Base != null)
@@ -310,17 +323,8 @@ namespace AF.UI
             UiBuilder.AutoSize(_playLabel, 22f, 30f);
             _play.Relief.Bind(_play.Face, _play.Base, _play.FaceImage, art.CtaLeafLarge, null, null, _playLabel);
 
-            // ---- «Faltan {n} niveles para {lugar}» bajo «Jugar» y la ventanita de casa de TiTino (M2.1), sin toques. ----
-            _remaining = UiBuilder.Rect("StopRemaining", _root);
-            Image remainingPlate = UiBuilder.Sliced("Plate", _remaining, art.WoodPlate, Color.white);
-            UiBuilder.Stretch(remainingPlate.rectTransform);
-            _remainingLabel = UiBuilder.Label("Label", _remaining, TextStyle.PlainBold, string.Empty, StopRemainingSp, Palette.Cream, TextAlignmentOptions.Center);
-            _remainingLabel.textWrappingMode = TextWrappingModes.Normal;
-            _remaining.gameObject.SetActive(false);
+            // ---- TiTino grande en su rama, con su bocadillo encima de todo lo de la escena (D-050, punto 1). ----
             _home = new HomeWindow(_root, art);
-
-            // ---- Widget de la Crecida (06 §4.3 y §4.7, desde el 25; tarea B1b): a la derecha, silencioso y sin toques. ----
-            _streakWidget = new StreakWidget(_root, art);
 
             // ---- Superposición: «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3), con el inicio atenuado detrás. ----
             _overlay = UiBuilder.Rect("Overlay", _root);
@@ -365,8 +369,8 @@ namespace AF.UI
         internal NoCanoesPanel NoCanoes => _noCanoes;
 
         /// <summary>
-        /// Paradas del Mapa del río (<c>af-river-stops/1</c>; M2.1). Null = sin el archivo o inválido: el inicio de siempre, sin
-        /// fondo de parada, sin «Faltan…» y sin ventanita. Al cambiarlo, el inicio se rehace en el siguiente fotograma.
+        /// Paradas del Mapa del río (<c>af-river-stops/1</c>; M2.1). Null = sin el archivo o inválido: el inicio sin fondo de parada,
+        /// sin travesía y sin TiTino. Al cambiarlo, el inicio se rehace en el siguiente fotograma.
         /// </summary>
         public RiverStopCatalog? RiverStops
         {
@@ -396,29 +400,56 @@ namespace AF.UI
         /// <summary>Fondo de la parada del inicio (tests y capturas).</summary>
         internal StopBackdrop StopBackdrop => _stopBackdrop;
 
+        /// <summary>El río vivo (tests y capturas).</summary>
+        internal HomeRiver River => _river;
+
+        /// <summary>La travesía de la canoa de Capi hacia la próxima parada (tests y capturas).</summary>
+        internal HomeVoyage Voyage => _voyage;
+
+        /// <summary>La rama de TiTino (tests y capturas).</summary>
+        internal Image Branch => _branch;
+
+        /// <summary>La caja de cuias del muelle sin tarjetas (tests y capturas).</summary>
+        internal Image Crate => _crate;
+
         /// <summary>Tinte del panorama: la luz de la parada (blanco = como antes; tests).</summary>
         internal Color PanoramaTint => _panorama.color;
 
-        /// <summary>Ventanita de casa de TiTino (tests y capturas).</summary>
+        /// <summary>TiTino en el inicio, en su rama (tests y capturas): <see cref="HomeWindow"/> en su modo del inicio.</summary>
         internal HomeWindow HomeWindow => _home;
 
-        /// <summary>«Faltan {n} niveles para {lugar}» se ve.</summary>
-        public bool StopRemainingShown => _remaining.gameObject.activeSelf;
+        /// <summary>El letrero de la próxima parada (nombre y «Faltan {n} niveles») se ve (D-050, punto 3).</summary>
+        public bool StopRemainingShown => _voyage.Visible && _voyage.SignShown;
 
-        /// <summary>Texto de «Faltan {n} niveles para {lugar}» (el último armado; vacío sin parada siguiente).</summary>
-        public string StopRemainingText => _remainingLabel.text;
+        /// <summary>«Faltan {n} niveles para {lugar}»: la línea entera de la parada (la que lee TalkBack en la canoa y el poste).</summary>
+        public string StopRemainingText => _remainingText;
 
-        /// <summary>Caja de «Faltan {n} niveles para {lugar}».</summary>
-        public RectTransform StopRemainingRect => _remaining;
+        /// <summary>Caja del letrero de la próxima parada.</summary>
+        public RectTransform StopRemainingRect => _voyage.SignRect;
 
-        /// <summary>Texto de «Faltan…» (tests: tamaño y fuente).</summary>
-        internal TextMeshProUGUI StopRemainingLabel => _remainingLabel;
+        /// <summary>Nombre de la próxima parada en su letrero (tests: tamaño y fuente).</summary>
+        internal TextMeshProUGUI StopRemainingLabel => _voyage.NameLabel;
 
         /// <summary>
         /// Hay una pantalla de pago delante del inicio (la hoja de compra, un anuncio o una oferta; propuesta del personaje g.2,
-        /// regla 9, y d.11): la ventanita de casa se oculta mientras dure. Lo avisa <see cref="GameBootstrap"/>.
+        /// regla 9, y d.11): TiTino se oculta mientras dure. Lo avisa <see cref="GameBootstrap"/>.
         /// </summary>
         public bool CommerceOpen => _commerceOpen;
+
+        /// <summary>
+        /// Reducir movimiento (07 §7.8; lo fija <see cref="GameBootstrap"/>): el río, la canoa y Rosa, quietos (D-050). TiTino lo lee
+        /// él mismo.
+        /// </summary>
+        public bool ReduceMotion
+        {
+            get => _reduceMotion;
+            set
+            {
+                _reduceMotion = value;
+                _river.SetReduceMotion(value);
+                _voyage.SetReduceMotion(value);
+            }
+        }
 
         /// <summary>Ancho del lienzo en dp.</summary>
         public float CanvasWidth => _canvasW;
@@ -445,6 +476,81 @@ namespace AF.UI
         public string PlayLabel => _playLabel.text;
 
         /// <summary>
+        /// Cuántas veces se maquetó el inicio (sube al cambiar la pantalla): quien coloca algo en sus sitios (las tarjetas del día)
+        /// sabe así que tiene que volver a colocarlo.
+        /// </summary>
+        public int LayoutVersion => _layoutVersion;
+
+        /// <summary>
+        /// Tarjetas del día que hay en el muelle (D-050, punto 6; las coloca <see cref="GameBootstrap"/>): sin ninguna (antes del
+        /// 10), la caja de cuias de Capi ocupa el muelle bajo «Jugar».
+        /// </summary>
+        public int DayCardCount
+        {
+            get => _dayCardCount;
+            set
+            {
+                int n = Mathf.Clamp(value, 0, 3);
+                if (n == _dayCardCount)
+                {
+                    return;
+                }
+
+                _dayCardCount = n;
+                PlaceCrate();
+            }
+        }
+
+        /// <summary>
+        /// Ancho de cada tarjeta del día con <paramref name="count"/> en la fila (dp): con 3, a partes iguales entre los márgenes de
+        /// <see cref="CardGutterDp"/>; con 1 o 2, como mucho <see cref="CardMaxWidthDp"/>, centradas.
+        /// </summary>
+        public float DayCardWidth(int count)
+        {
+            int n = Mathf.Clamp(count, 1, 3);
+            float even = (_canvasW - (2f * CardGutter(n)) - ((n - 1) * CardGap(n))) / n;
+            return n >= 3 ? Mathf.Floor(even) : Mathf.Min(CardMaxWidthDp, Mathf.Floor(even));
+        }
+
+        /// <summary>
+        /// Sitio de la tarjeta del día número <paramref name="index"/> de <paramref name="count"/> (dp del lienzo, y hacia abajo),
+        /// de <paramref name="height"/> dp de alto: la fila centrada bajo «Jugar», con el disco del icono que asoma por encima a
+        /// <see cref="CardTopGapDp"/> de él.
+        /// </summary>
+        public Rect DayCardSlot(int index, int count, float height)
+        {
+            int n = Mathf.Clamp(count, 1, 3);
+            float w = DayCardWidth(n);
+            float gap = CardGap(n);
+            float total = (n * w) + ((n - 1) * gap);
+            float left = Mathf.Round((_canvasW - total) * 0.5f);
+            float top = _playTop + PlayTouchHeight + CardTopGapDp + DockCard.IconOverhangDp;
+            return new Rect(left + (Mathf.Clamp(index, 0, n - 1) * (w + gap)), top, w, height);
+        }
+
+        // Con 3 tarjetas, margen y hueco más justos para que una palabra larga del título («Challenge» al 130 % en 320 dp) quepa.
+        private static float CardGutter(int n) => n >= 3 ? CardGutterTightDp : CardGutterDp;
+
+        /// <summary>Margen a cada lado de la fila con 3 tarjetas (dp).</summary>
+        public const float CardGutterTightDp = 12f;
+
+        private static float CardGap(int n) => n >= 3 ? 8f : CardGapDp;
+
+        /// <summary>
+        /// Alto que tiene la fila de tarjetas del día (dp): de su borde de arriba hasta 4 dp por encima de las pestañas (de «Inicio» y
+        /// los iconos, que sobresalen 12 dp de la barra). Si las tarjetas piden más, <see cref="GameBootstrap"/> las compacta.
+        /// </summary>
+        public float DayCardMaxHeight
+        {
+            get
+            {
+                float top = _playTop + PlayTouchHeight + CardTopGapDp + DockCard.IconOverhangDp;
+                float tabs = _canvasH - _safeBottom - TabBarHeight - 12f;
+                return Mathf.Max(LobbyScreen.MinTouchDp, tabs - 4f - top);
+            }
+        }
+
+        /// <summary>
         /// El Reto del río está desbloqueado (lo da <c>GameBootstrap</c> al crearlo: en el build, con su interruptor y desde
         /// <c>live_unlock_level_daily</c>); null o false = sin Reto. Decide el botón Jugar tras acabar el contenido (D-032,
         /// punto 6; <see cref="PlayModeFor"/>).
@@ -453,12 +559,12 @@ namespace AF.UI
 
         /// <summary>
         /// Estado de la Crecida para el nivel de «Jugar» (lo da <c>GameBootstrap.SetUpStreak</c> con <c>StreakService.Peek</c>);
-        /// null o sin <see cref="StreakSnapshot.Active"/> = sin widget (06 §4.7: «widget de Crecida (25+)»). Lee el almacén: se llama
+        /// null o sin <see cref="StreakSnapshot.Active"/> = sin poste (06 §4.7: «widget de Crecida (25+)»). Lee el almacén: se llama
         /// al mostrar el inicio y al cambiar el nivel de «Jugar», nunca por fotograma (tarea B1b).
         /// </summary>
         public Func<int, StreakSnapshot?>? StreakPeek { get; set; }
 
-        /// <summary>El widget de la Crecida (tests y capturas).</summary>
+        /// <summary>El poste de la Crecida (tests y capturas).</summary>
         internal StreakWidget StreakWidget => _streakWidget;
 
         /// <summary>Lo que dice y hace el botón Jugar ahora (<see cref="PlayModeFor"/>).</summary>
@@ -519,8 +625,8 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// El sitio del Cántaro del Mercado (<see cref="MarketLobbyIcons"/>, que se pone encima), desde D-046 (Q-T6A-2): a la izquierda
-        /// del botón de Sonido, centrado en su alto o, si la píldora de casa baja más (dos líneas al 130 %), justo debajo de ella.
+        /// El sitio del Cántaro del Mercado (<see cref="MarketLobbyIcons"/>, que se pone encima): desde D-050, la tinaja de barro
+        /// apoyada en el muelle a la izquierda, entre el agua y «Jugar», sin pisar el chip de la etiqueta.
         /// </summary>
         public RectTransform PiggyAnchorRect => _piggySlot;
 
@@ -537,8 +643,8 @@ namespace AF.UI
         public RectTransform HomeTabRect => _homeTab;
 
         /// <summary>
-        /// La escena trae el Mapa del río (su geometría y las paradas; tarea M3.3): sin él, la pestaña del Mapa no sale nunca. Lo
-        /// fija <see cref="GameBootstrap"/>.
+        /// La escena trae el Mapa del río (su geometría y las paradas; tarea M3.3): sin él, la pestaña del Mapa no sale nunca y la
+        /// canoa no se toca. Lo fija <see cref="GameBootstrap"/>.
         /// </summary>
         public bool RiverMapAvailable
         {
@@ -615,8 +721,8 @@ namespace AF.UI
         /// <summary>
         /// Pares texto / fondo de la pantalla de inicio y su superposición, para la comprobación de contraste ≥ 4,5:1
         /// (07 §1.2 y §7.8): contadores sobre madera oscura, botón Jugar y Volver sobre hoja, Jugar nocturno (marfil sobre
-        /// índigo), pestaña sobre madera, el texto de la superposición sobre la madera clara y, al final, el chip y su cinta
-        /// (<see cref="DifficultyChip.ContrastPairs"/>: tinta sobre ámbar, marfil sobre índigo y crema sobre el agua de la cinta).
+        /// índigo), pestaña sobre madera, el texto de la superposición sobre la madera clara, el letrero de la parada y las tarjetas
+        /// del día del muelle (D-050) y, al final, el chip y su cinta (<see cref="DifficultyChip.ContrastPairs"/>).
         /// </summary>
         public static (string Name, Color Text, Color Background)[] ContrastPairs()
         {
@@ -630,8 +736,12 @@ namespace AF.UI
                 ("pestaña Inicio", (Color)Palette.Cream, Palette.FamilyWood.Base),
                 ("pestaña Inicio (fondo de la cara)", (Color)Palette.Cream, Palette.FamilyWood.Deep),
                 ("texto de la superposición", Palette.FamilyWood.Base, (Color)Palette.PanelLightLow),
-                ("faltan N (stop_remaining)", (Color)Palette.Cream, (Color)Palette.WoodDark),
-                ("ventanita: casa a unos N km", (Color)Palette.Cream, (Color)Palette.WoodDark),
+                ("letrero de la parada: nombre", (Color)Palette.Cream, (Color)Palette.WoodDark),
+                ("letrero de la parada: faltan N niveles", (Color)Palette.UiInk, (Color)Palette.PanelLight),
+                ("tarjeta del día: título", (Color)Palette.Cream, (Color)Palette.WoodDark),
+                ("tarjeta del día: estado verde", (Color)Palette.LeafShine, (Color)Palette.WoodDark),
+                ("tarjeta del día: estado fibra", (Color)Palette.FiberLight, (Color)Palette.WoodDark),
+                ("tarjeta del día: cifra", (Color)Palette.UiInk, (Color)Palette.PanelLight),
             };
             (string Name, Color Text, Color Background)[] chip = DifficultyChip.ContrastPairs();
             var all = new (string Name, Color Text, Color Background)[own.Length + chip.Length];
@@ -648,8 +758,8 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Avisa de que hay (o ya no hay) una pantalla de pago delante del inicio: la hoja de compra, un anuncio o una oferta. La
-        /// ventanita de casa no sale en ellas (D-013, punto 6; propuesta del personaje g.2, regla 9, y d.11). Sin asignar memoria.
+        /// Avisa de que hay (o ya no hay) una pantalla de pago delante del inicio: la hoja de compra, un anuncio o una oferta. TiTino
+        /// no sale en ellas (D-013, punto 6; propuesta del personaje g.2, regla 9, y d.11). Sin asignar memoria.
         /// </summary>
         public void SetCommerceOpen(bool open)
         {
@@ -707,7 +817,10 @@ namespace AF.UI
             EmitLayout();
         }
 
-        /// <summary>Avanza la pantalla <paramref name="dtMs"/> milisegundos: métricas de pantalla, contadores y cronómetros.</summary>
+        /// <summary>
+        /// Avanza la pantalla <paramref name="dtMs"/> milisegundos: métricas de pantalla, contadores, cronómetros, el río vivo y la
+        /// canoa (sin asignaciones).
+        /// </summary>
         public void Tick(float dtMs)
         {
             if (!_canvas.gameObject.activeSelf)
@@ -723,6 +836,43 @@ namespace AF.UI
             }
 
             Refresh();
+            _river.Tick(dtMs);
+            _voyage.Tick(dtMs);
+            UpdateVoyageCover();
+        }
+
+        // Mientras el bocadillo de TiTino crece hasta la travesía (un mensaje largo, al 130 % o en una pantalla baja), lo que tapa
+        // (el letrero o la canoa) se aparta y vuelve cuando el bocadillo se va: nada se pisa (como hacía la tarjeta del Reto con la
+        // nota de TiTino, revisión de D-046). Sin asignaciones: lee las cajas tal como se colocaron.
+        private void UpdateVoyageCover()
+        {
+            HomeSloth? sloth = _home.Sloth;
+            bool sign = false;
+            bool canoe = false;
+            if (sloth != null && sloth.BubbleShown && _voyageReady)
+            {
+                Rect bubble = TopLeftRect(sloth.BubbleRect);
+                bubble.xMin -= HomeSloth.BubbleRimDp;
+                bubble.xMax += HomeSloth.BubbleRimDp;
+                bubble.yMax += HomeSloth.BubbleRimDp + 2f;
+                sign = bubble.Overlaps(TopLeftRect(_voyage.SignRect));
+                canoe = bubble.Overlaps(_voyage.CanoeBounds);
+            }
+
+            if (sign != _signCovered || canoe != _canoeCovered)
+            {
+                _signCovered = sign;
+                _canoeCovered = canoe;
+                _voyage.SetCovered(sign, canoe);
+            }
+        }
+
+        // Caja de un hijo del lienzo colocado con UiBuilder.Place (ancla y pivote arriba a la izquierda), en dp y con la y hacia abajo.
+        private static Rect TopLeftRect(RectTransform rt)
+        {
+            Vector2 pos = rt.anchoredPosition;
+            Vector2 size = rt.sizeDelta;
+            return new Rect(pos.x - (rt.pivot.x * size.x), -pos.y - ((1f - rt.pivot.y) * size.y), size.x, size.y);
         }
 
         private void ForceRefresh()
@@ -761,7 +911,7 @@ namespace AF.UI
             {
                 _stopLevelShown = level;
                 ApplyStop(app, level);
-                RefreshStreak(); // otro nivel de «Jugar»: el widget puede aparecer (el 25) o cambiar
+                RefreshStreak(); // otro nivel de «Jugar»: el poste puede aparecer (el 25) o cambiar
             }
 
             string label = app.PlayLevelLabel;
@@ -788,7 +938,8 @@ namespace AF.UI
         }
 
         // Pestaña del Mapa del río (M3.3): solo en el inicio sin superposición, con el Mapa en la escena y desde max_level ≥ 10; el
-        // punto, si hay una llegada sin ver. Enteros del progreso, sin asignar memoria; solo cambia la UI cuando cambia algo.
+        // punto, si hay una llegada sin ver. La canoa y la parada de la travesía se tocan con la misma regla (D-050, punto 3).
+        // Enteros del progreso, sin asignar memoria; solo cambia la UI cuando cambia algo.
         private void RefreshMapTab()
         {
             IMapProgress? progress = _services?.MapProgress;
@@ -800,6 +951,7 @@ namespace AF.UI
             {
                 _mapTabShown = showFlag;
                 _mapTab.Button.gameObject.SetActive(show);
+                _voyage.SetInteractive(show);
             }
 
             int dotFlag = dot ? 1 : 0;
@@ -810,7 +962,7 @@ namespace AF.UI
             }
         }
 
-        // Widget de la Crecida (B1b): solo en el inicio sin superposición y con la Crecida activa en el nivel de «Jugar».
+        // Poste de la Crecida (B1b; D-050, punto 4): solo en el inicio sin superposición y con la Crecida activa en el nivel de «Jugar».
         private void RefreshStreak()
         {
             AppFlow? app = _app;
@@ -892,6 +1044,7 @@ namespace AF.UI
             _chip.Set(label, DifficultyChip.MultiplierFor(config, label));
             ApplyPlayVariant(label == LevelDefinition.LabelVeryHard);
             LayoutChip();
+            PlacePiggySlot(); // el Cántaro no pisa el chip, que cambia de ancho con la etiqueta
         }
 
         // Variante nocturna [P] de «Jugar · Nivel {n}» (07 §7.7; propuesta §c.1): la cara y el canto índigo de
@@ -963,19 +1116,12 @@ namespace AF.UI
             Sprite? dock = _dock.sprite;
             float aspectH = dock != null ? w * (dock.rect.height / dock.rect.width) : w;
             UiBuilder.Place(_dock.rectTransform, 0f, dockTop, w, Mathf.Max(aspectH, h - dockTop));
-            bool props = beam - horizon >= RiverPropsMinBandDp;
-            _heron.gameObject.SetActive(props);
-            if (props)
-            {
-                PlaceAt(_heron.rectTransform, 34f * k, horizon + (5.4f * k), 22f * k, 31f * k, new Vector2(0.5f, 0f));
-            }
 
-            PlaceLilyPad(0, props, 54f * k, horizon + (30f * k), 34f * k, beam);
-            PlaceLilyPad(1, props, 314f * k, horizon + (22f * k), 26f * k, beam);
-            PlaceLilyPad(2, props, 86f * k, horizon + (47f * k), 24f * k, beam);
-
-            // Fondo de la parada (M2.1): sin tablero, con la banda de agua hasta la viga del muelle, como en el tablero.
+            // Fondo de la parada (M2.1): sin tablero, con la banda de agua hasta la viga del muelle, como en el tablero; encima, el río
+            // vivo con la columna del sol del panorama (D-050, punto 2).
             _stopBackdrop.Layout(w, horizon, _playTop, false, beam + 8f);
+            _river.Layout(w, horizon, beam, ProceduralArt.PanoramaSunXDp * k);
+            _river.SetVisible(true);
             PlaceAt(_foliage[0].rectTransform, -20f, 0f, 160f, 160f, new Vector2(0f, 1f));
             PlaceAt(_foliage[1].rectTransform, w + 20f, 0f, 160f, 160f, new Vector2(1f, 1f));
             float bottom = ProceduralArt.BottomFoliageDp;
@@ -993,8 +1139,7 @@ namespace AF.UI
             LayoutCanoesContent();
             UiBuilder.Place((RectTransform)_settings.Button.transform, w - 8f - MinTouchDp, topY, MinTouchDp, MinTouchDp);
 
-            // Música y Sonido (D-046) [P]: en columna bajo el engranaje, alineados con él. El Cántaro (MarketLobbyIcons) va a la
-            // izquierda de Sonido (Q-T6A-2); la píldora de casa no pasa de la columna y las notas de TiTino, del sitio del Cántaro.
+            // Música y Sonido (D-046) [P]: en columna bajo el engranaje, alineados con él.
             float audioX = w - 8f - MinTouchDp;
             float audioTop = topY + TopRowHeight + AudioToggles.GapDp;
             _audio.PlaceColumn(audioX, audioTop);
@@ -1004,24 +1149,37 @@ namespace AF.UI
             float playW = PlayWidth(w);
             UiBuilder.Place((RectTransform)_play.Button.transform, (w - playW) * 0.5f, _playTop, playW, PlayTouchHeight);
             LayoutChip();
-            LayoutRemaining();
 
-            // Ventanita de casa (M2.1): a la izquierda, bajo los saldos [P]; la píldora de la distancia, a su derecha.
-            float piggyLeft = audioX - MarketLobbyIcons.PiggyGapDp - MarketLobbyIcons.PiggyWidthDp;
-            _piggyLeft = piggyLeft;
-            _soundTop = audioTop + AudioToggles.TouchDp + AudioToggles.GapDp;
-            _home.Place(SideGutterDp, topY + TopRowHeight + HomeWindowGapDp, audioX - HomeWindowGapDp, piggyLeft - HomeWindowGapDp);
+            // TiTino (D-050, punto 1): su caja bajo los saldos, a la izquierda, con la rama que sale del follaje; tamaño S de 76 a 92 dp
+            // según el alto (en 16:9, más pequeño). El bocadillo, a su derecha, sin pasar de la columna de Música y Sonido ni del
+            // muelle (si llega a la travesía, la travesía se aparta mientras dure: UpdateVoyageCover).
+            float rig = Mathf.Clamp(Mathf.Round(h * 0.118f), HomeWindow.SceneRigMinDp, HomeWindow.SceneRigMaxDp);
+            float boxTop = topY + TopRowHeight + 4f;
+            float branchY = boxTop + HomeWindow.SceneAboveDp;
+            float grabX = TitinoLeftDp + (HomeWindow.SceneWidthDp * 0.5f);
+            UiBuilder.Place(_branch.rectTransform, 0f, branchY - ProceduralArt.HomeBranchLineAt(grabX), ProceduralArt.HomeBranchWidthDp, ProceduralArt.HomeBranchHeightDp);
+            _home.PlaceScene(TitinoLeftDp, branchY, rig, audioX - 8f, beam - 8f);
+            float titinoBottom = branchY + rig + HomeWindow.SceneBelowDp;
+
+            // La Crecida (D-050, punto 4): el poste a la derecha, en el agua, bajo la columna de Música y Sonido y hasta la viga.
+            float crecX = w - 16f - StreakWidget.WidthDp;
+            float crecBottom = beam - StreakWidget.FootDp - 6f;
+            float crecTop = Mathf.Max(Mathf.Max(audioBottom + 12f, horizon + 8f), crecBottom - StreakWidget.MaxHeightDp);
+            _streakWidget.Place(crecX, crecTop, Mathf.Max(52f, crecBottom - crecTop));
+
+            // La travesía (D-050, punto 3): la ruta sale de la izquierda, más lejos (bajo TiTino), y acaba delante, en el poste de la
+            // parada, a 16 dp de la viga; el letrero, en lo alto del poste, sin llegar a TiTino, a Música y Sonido ni a la Crecida.
+            float depth = beam - horizon;
+            var foot = new Vector2(Mathf.Round(0.62f * w), beam - 16f);
+            float startY = Mathf.Clamp(foot.y - (0.42f * depth), titinoBottom + 20f, foot.y - 20f);
+            var start = new Vector2(Mathf.Round(0.12f * w), startY);
+            float signMin = TitinoLeftDp + HomeWindow.SceneWidthDp + 6f;
+            float signMax = Mathf.Min(crecX - 8f, audioX - 6f);
+            _voyage.Layout(start, foot, signMin, signMax, k);
+
+            // El muelle: el Cántaro a la izquierda y, sin tarjetas, la caja de cuias.
             PlacePiggySlot();
-
-            // Widget de la Crecida (B1b) [P]: en la franja derecha que dejan la tarjeta del Reto (296 dp centrada; más estrecha en
-            // lienzos de menos de 360 dp, hasta w − 32: DailyChallengeCard.WidthFor) y «Jugar», bajo la
-            // ventanita de casa con su píldora debajo (lo más que mide) y sobre el chip de la etiqueta.
-            float widgetTop = topY + TopRowHeight + HomeWindowGapDp + HomeWindow.SizeDp + HomeWindow.PillStackGapDp + HomeWindow.PillHeightDp + HomeWindowGapDp;
-            float widgetBottom = _playTop - ChipGapDp - DifficultyChip.HeightDp;
-
-            // Y bajo la columna de Música y Sonido (D-046), que cae en la misma franja derecha.
-            widgetTop = Mathf.Max(widgetTop, audioBottom + HomeWindowGapDp);
-            _streakWidget.Place(w - StreakWidgetRightDp - StreakWidget.WidthDp, widgetTop, Mathf.Max(48f, widgetBottom - widgetTop));
+            PlaceCrate();
 
             // Pestañas: la barra cubre hasta el borde inferior (y la zona de gestos); «Inicio» sobresale 12 dp.
             UiBuilder.Place(_tabBar.rectTransform, -8f, tabTop, w + 16f, h - tabTop + 12f);
@@ -1041,9 +1199,10 @@ namespace AF.UI
             UiBuilder.Place(_overlayHeader.rectTransform, 16f, 16f, inner, 40f);
             UiBuilder.Place(_overlayBody.rectTransform, 16f, 66f, inner, 66f);
             UiBuilder.Place((RectTransform)_back.Button.transform, 16f, 148f, inner, 64f);
+            _layoutVersion++;
         }
 
-        // Ancho de «Jugar» en un lienzo de w dp: también el tope de la placa de «Faltan…».
+        // Ancho de «Jugar» en un lienzo de w dp.
         private static float PlayWidth(float w)
         {
             return Mathf.Min(PlayMaxWidth, w - 64f);
@@ -1054,8 +1213,8 @@ namespace AF.UI
             // «n/5» arriba y el cronómetro debajo mientras corre; con las canoas llenas, «5/5» centrado (ficha §4.5). Con la
             // escala de texto (tarea L4; 02 §12: los contenedores crecen), las dos líneas crecen con ella y la placa de 40 dp
             // crece lo que haga falta a lo alto, por igual arriba y abajo de su centro (al 130 %, ceil(37 × 1,3 + 3) = 52 dp:
-            // crece 6 dp por cada lado y asoma 2 dp por encima y por debajo de la fila de 48, dentro del hueco de 8 dp hasta la
-            // ventanita de casa). La escala es la que se guardó al crear los textos, no se deduce de su tamaño.
+            // crece 6 dp por cada lado y asoma 2 dp por encima y por debajo de la fila de 48, dentro del hueco de 4 dp hasta TiTino).
+            // La escala es la que se guardó al crear los textos, no se deduce de su tamaño.
             bool timer = _canoesTimer.gameObject.activeSelf;
             float s = _canoesTextScale;
             float plateH = timer ? Mathf.Max(40f, Mathf.Ceil((37f * s) + 3f)) : 40f;
@@ -1086,11 +1245,64 @@ namespace AF.UI
             _chip.PlaceCentered(_canvasW * 0.5f, _playTop - ChipGapDp - DifficultyChip.PillBottomDp);
         }
 
+        // El sitio del Cántaro (D-050, punto 6): la tinaja de pie en el muelle, a la izquierda, con la base 2 dp por encima de «Jugar»;
+        // si el chip de la etiqueta llega hasta ahí, se arrima al borde y, si ni así cabe, sube por encima del chip.
+        private void PlacePiggySlot()
+        {
+            float pw = MarketLobbyIcons.PiggyWidthDp;
+            float ph = MarketLobbyIcons.PiggyHeightDp;
+            float x = 14f;
+            float y = _playTop - 2f - ph;
+            if (_chip.Visible)
+            {
+                float chipLeft = (_canvasW - _chip.Width) * 0.5f;
+                x = Mathf.Max(6f, Mathf.Min(x, chipLeft - 6f - pw));
+                float chipTop = _playTop - ChipGapDp - DifficultyChip.PillBottomDp - 4f;
+                if (x + pw > chipLeft - 2f)
+                {
+                    y = Mathf.Min(y, chipTop - ph);
+                }
+            }
+
+            UiBuilder.Place(_piggySlot, x, y, pw, ph);
+        }
+
+        // La caja de cuias de Capi (D-050, punto 6): solo con el muelle sin tarjetas (antes del 10), centrada bajo «Jugar», sin
+        // llegar a las pestañas.
+        private void PlaceCrate()
+        {
+            bool on = _dayCardCount == 0;
+            if (_crate.gameObject.activeSelf != on)
+            {
+                _crate.gameObject.SetActive(on);
+            }
+
+            if (!on)
+            {
+                return;
+            }
+
+            float k = Mathf.Min(1f, _canvasW / ReferenceWidth);
+            float cw = ProceduralArt.DockCrateWidthDp * k;
+            float ch = ProceduralArt.DockCrateHeightDp * k;
+            float tabTop = _canvasH - _safeBottom - TabBarHeight - 12f;
+            float top = _playTop + PlayTouchHeight + 18f;
+            float room = tabTop - 8f - top;
+            if (room < ch)
+            {
+                float s = Mathf.Max(0.6f, room / ch);
+                cw *= s;
+                ch *= s;
+            }
+
+            UiBuilder.Place(_crate.rectTransform, (_canvasW - cw) * 0.5f, top, cw, ch);
+        }
+
         // La parada de «Jugar» (M2.1), solo al cambiar de nivel o de catálogo: el fondo (corte directo; con ui_bg_per_stop =
-        // false, la gran parada del mundo, como el tablero), la luz sobre el panorama, «Faltan…» hacia la parada siguiente y la
-        // ventanita con la parada actual. Fuera de 1..1.000 o sin catálogo, nada: el inicio de siempre. En el fin de contenido,
-        // si el nivel de «Jugar» no tiene parada en los datos del Mapa (el 701 con las paradas 0-69), la del último nivel
-        // publicado (06 §4: fondo de la parada actual y TiTino en la ventanita; StopLevel).
+        // false, la gran parada del mundo, como el tablero), la luz sobre el panorama, el agua del río vivo, la travesía hacia la
+        // parada siguiente y TiTino con la parada actual. Fuera de 1..1.000 o sin catálogo, nada: el inicio sin parada. En el fin de
+        // contenido, si el nivel de «Jugar» no tiene parada en los datos del Mapa (el 701 con las paradas 0-69), la del último
+        // nivel publicado (06 §4: fondo de la parada actual; StopLevel).
         private void ApplyStop(AppFlow app, int level)
         {
             RiverStopCatalog? stops = _riverStops;
@@ -1102,14 +1314,19 @@ namespace AF.UI
             Season season = stopLevel >= 1 && stopLevel <= WorldTable.LastLevel ? GameScreen.SeasonFor(_seasons, stopLevel) : Season.None;
             _stopBackdrop.Apply(backdrop, def != null ? def.WaterBase : app.Catalog.WaterBase, false, 0f, season);
             ApplyStopLut();
+            _river.SetWater(_stopBackdrop.Stop != null ? _stopBackdrop.SeasonWaterColor : Palette.RiverDeep);
 
-            // «Faltan N»: hacia la parada siguiente del catálogo o, tras la última, hacia la naciente (FX13), con su nombre en el
-            // idioma (en release, un nombre sin el visto bueno del asesor es «» y la línea no sale). Con la parada prestada del
-            // último nivel publicado (el 701 en el fin de contenido), no hay «Faltan…».
+            // «Faltan N niveles» y el nombre de la parada siguiente del catálogo o, tras la última, de la naciente (FX13), en el idioma
+            // (en release, un nombre sin el visto bueno del asesor es «» y el letrero no sale). Con la parada prestada del último
+            // nivel publicado (el 701 en el fin de contenido), sin letrero.
             string place = _currentStop != null && stopLevel == level ? UiText.NextPlaceName(stops!, _currentStop) : string.Empty;
             _remainingReady = place.Length > 0;
-            _remainingLabel.text = _remainingReady ? UiText.MapStopRemaining(RiverJourney.LevelsLeft(level), place) : string.Empty;
-            LayoutRemaining();
+            int journeyLevel = Mathf.Clamp(level, 1, WorldTable.LastLevel); // el fin de contenido puede ir más allá del 1.000
+            int left = RiverJourney.LevelsLeft(journeyLevel);
+            _remainingText = _remainingReady ? UiText.MapStopRemaining(left, place) : string.Empty;
+            string guide = RiverJourney.GuideFor(WorldTable.WorldOf(Mathf.Clamp(level, 1, WorldTable.LastLevel)));
+            _voyage.Apply(place, left, _remainingText, HomeVoyage.ProgressOf(journeyLevel), guide);
+            _voyageReady = _currentStop != null;
             ApplyStopVisibility();
         }
 
@@ -1128,54 +1345,15 @@ namespace AF.UI
             return lastPublished;
         }
 
-        // Qué se ve del Mapa en el inicio según la pantalla: «Faltan…» no sale con el fin de contenido ni con Sin canoas; la
-        // ventanita, tampoco con Sin canoas ni con una pantalla de pago delante (SetCommerceOpen).
+        // Qué se ve del Mapa en el inicio según la pantalla: la travesía, solo en el inicio, con un nivel publicado y sin el bocadillo
+        // de TiTino encima; TiTino, tampoco con Sin canoas ni con una pantalla de pago delante (SetCommerceOpen).
         private void ApplyStopVisibility()
         {
             bool lobby = _shown == AppScreen.Lobby;
             bool available = _app == null || _app.PlayLevelAvailable;
-            bool remaining = lobby && available && _remainingReady;
-            if (_remaining.gameObject.activeSelf != remaining)
-            {
-                _remaining.gameObject.SetActive(remaining);
-            }
-
+            _voyage.SetVisible(lobby && available && _voyageReady);
             bool hideHome = _shown == AppScreen.NoCanoes || _commerceOpen;
             _home.Apply(_currentStop, hideHome);
-            PlacePiggySlot(); // la píldora pudo cambiar de texto (y de líneas) con la parada
-        }
-
-        // El sitio del Cántaro (D-046; Q-T6A-2): a la izquierda de Sonido, centrado en su alto, y nunca encima de la píldora de casa.
-        private void PlacePiggySlot()
-        {
-            float y = _soundTop + ((AudioToggles.TouchDp - MarketLobbyIcons.PiggyHeightDp) * 0.5f);
-            float pill = _home.PillBottomDp;
-            if (pill > 0f)
-            {
-                y = Mathf.Max(y, pill + AudioToggles.GapDp);
-            }
-
-            UiBuilder.Place(_piggySlot, _piggyLeft, y, MarketLobbyIcons.PiggyWidthDp, MarketLobbyIcons.PiggyHeightDp);
-        }
-
-        // «Faltan…» centrado bajo «Jugar», en una placa de madera a la medida del texto y nunca más ancha que el botón (la columna
-        // que marca «Jugar»); si no cabe en una línea, en dos (su caja crece; 02 §12). Se mide al colocar, nunca por fotograma.
-        private void LayoutRemaining()
-        {
-            float w = _canvasW;
-            float maxW = PlayWidth(w);
-            float textW = string.IsNullOrEmpty(_remainingLabel.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextWidth(_remainingLabel));
-            float boxW = Mathf.Min(maxW, textW + (2f * RemainingPadDp));
-            float innerW = boxW - (2f * RemainingPadDp);
-            float boxH = RemainingLineDp;
-            if (textW > innerW + 0.5f)
-            {
-                boxH = Mathf.Max(boxH, Mathf.Ceil(UiBuilder.MinTextHeight(_remainingLabel, innerW)) + 8f);
-            }
-
-            float top = _playTop + PlayTouchHeight + RemainingGapDp;
-            UiBuilder.Place(_remaining, (w - boxW) * 0.5f, top, boxW, boxH);
-            UiBuilder.Place(_remainingLabel.rectTransform, RemainingPadDp, 0f, innerW, boxH);
         }
 
         // La luz de la parada y de la temporada (SE2) sobre el panorama y el cielo que lo completa (blanco = como antes), como en
@@ -1206,9 +1384,10 @@ namespace AF.UI
             int level = _app.PlayLevel;
             if (_shown == AppScreen.Lobby)
             {
-                // Los botones y, si se ven, «Faltan…» (stop_remaining) y la ventanita de casa (home_window) de M2.1, sin toques.
-                var ids = new System.Collections.Generic.List<string>(6) { "play" };
-                var rects = new System.Collections.Generic.List<RectTransform>(6) { (RectTransform)_play.Button.transform };
+                // Los botones y lo que se ve del inicio: el letrero de la parada (stop_remaining), TiTino (home_window, y su toque,
+                // titino), la canoa y la parada que abren el Mapa (voyage_canoe y voyage_stop) y la Crecida (crecida).
+                var ids = new System.Collections.Generic.List<string>(12) { "play" };
+                var rects = new System.Collections.Generic.List<RectTransform>(12) { (RectTransform)_play.Button.transform };
                 if (_canoes.gameObject.activeSelf)
                 {
                     ids.Add("canoes");
@@ -1224,16 +1403,43 @@ namespace AF.UI
                     rects.Add(MapTabRect);
                 }
 
-                if (_remaining.gameObject.activeSelf)
+                if (StopRemainingShown)
                 {
                     ids.Add("stop_remaining");
-                    rects.Add(_remaining);
+                    rects.Add(_voyage.SignRect);
+                }
+
+                if (_voyage.Interactive)
+                {
+                    if (_voyage.CanoeButton.gameObject.activeSelf)
+                    {
+                        ids.Add("voyage_canoe");
+                        rects.Add((RectTransform)_voyage.CanoeButton.transform);
+                    }
+
+                    if (_voyage.StopButton.gameObject.activeSelf)
+                    {
+                        ids.Add("voyage_stop");
+                        rects.Add((RectTransform)_voyage.StopButton.transform);
+                    }
                 }
 
                 if (_home.Visible)
                 {
                     ids.Add("home_window");
                     rects.Add(_home.Root);
+                    HomeSloth? sloth = _home.Sloth;
+                    if (sloth != null && sloth.TapButton.gameObject.activeSelf)
+                    {
+                        ids.Add("titino");
+                        rects.Add(sloth.TapRect);
+                    }
+                }
+
+                if (_streakWidget.Visible)
+                {
+                    ids.Add("crecida");
+                    rects.Add(_streakWidget.Root);
                 }
 
                 _probe.Layout("lobby", level, null, ids.ToArray(), rects.ToArray());
@@ -1248,17 +1454,6 @@ namespace AF.UI
             else
             {
                 _probe.Layout(AppScreenNames.Of(_shown), level, null, new[] { "back" }, new[] { (RectTransform)_back.Button.transform });
-            }
-        }
-
-        private void PlaceLilyPad(int i, bool props, float x, float y, float width, float limit)
-        {
-            float height = width / 3f;
-            bool on = props && y + (height * 0.5f) <= limit - 8f;
-            _lilyPads[i].gameObject.SetActive(on);
-            if (on)
-            {
-                PlaceAt(_lilyPads[i].rectTransform, x, y, width, height, new Vector2(0.5f, 0.5f));
             }
         }
 

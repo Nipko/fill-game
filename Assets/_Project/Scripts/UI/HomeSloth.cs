@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using AF.GameFlow;
 using AF.Platform;
 using AF.Presentation;
@@ -11,56 +12,42 @@ using UnityEngine.UI;
 namespace AF.UI
 {
     /// <summary>
-    /// TiTino en la ventanita de casa del inicio (tarea TI6c; propuesta de TiTino d.7 y paso 6c de (i); D-013, Q17-A: en el
-    /// inicio, solo en la ventanita; D-016, punto 5; 07 §5.4 y §6.5, poses <c>sloth_*</c>). Vive dentro del marco de
-    /// <see cref="HomeWindow"/> (el de la pantalla de inicio; la del Mapa del río no lo lleva):
+    /// TiTino en el inicio (D-050, punto 1, «el muelle del río»; antes, tarea TI6c en la ventanita de casa; propuesta de TiTino
+    /// d.7; D-016, punto 5; 07 §5.4 y §6.5, poses <c>sloth_*</c>): grande, colgado de su rama arriba a la izquierda (la caja de
+    /// <see cref="HomeWindow"/> en su modo del inicio), con un bocadillo pegado a él que rota mensajes.
     /// <list type="bullet">
     /// <item><b>Pose por la hora local</b> (<see cref="BasePoseFor"/>, del <see cref="IClock"/> del juego): de día,
-    /// <c>sloth_idle</c> o, en las horas de sol, <c>sloth_sunbathe</c>; de noche, <c>sloth_sleep</c>. Se mira cada
+    /// <c>sloth_idle</c> o, en las horas de sol, <c>sloth_sunbathe</c>; de noche (20-6), <c>sloth_sleep</c>. Se mira cada
     /// <see cref="PoseCheckMs"/> ms: si la hora cambia con el inicio abierto, cambia la pose.</item>
-    /// <item><b>Saludos</b> (<see cref="SlothLines.ForHome"/>): al volver tras ≥ 3 días, el de regreso; en la primera
-    /// apertura dentro de la franja de 06:00 a 12:00 (D-030, pregunta 17 b: abrir a las 05:30 no lo gasta), el de la
-    /// mañana; como mucho uno al día entre los dos (<c>sloth.last_greeting_date</c>), con <c>sloth_wave</c> y, si hay voz,
-    /// su frase en el bocadillo. Se decide una vez por visita al inicio, cuando la ventanita se ve con el inicio delante
-    /// (<see cref="AppScreen.Lobby"/>; con «El río sigue creciendo» abierto, espera a que se cierre para no gastar el
-    /// saludo del día detrás del modal); en cada visita se apunta <c>sloth.last_seen_date</c> y se guarda el perfil si algo
-    /// cambió. Justo después del bocadillo del Mapa del 10 (D-028, pregunta 60 b), el saludo que tocaba no sale ni se gasta
-    /// y esa visita no apunta nada: queda para la visita siguiente al inicio. Durante <c>sloth_wave</c>, el rig baja hasta
-    /// <see cref="WaveDropDp"/> dp para que el marco no corte la garra que saluda. Colgado, se agarra a la rama pintada de
-    /// la embaúba de la ventanita y la rama del rig no se pinta (si no, se verían dos ramas y una bajaría con él); tumbado
-    /// o en ovillo, sobre la rama del rig, más abajo.</item>
-    /// <item><b>Toque</b> (<see cref="Tap"/>): <c>sloth_look</c> y, como mucho una vez por sesión, un «Dato del perezoso»
-    /// (<see cref="UiText.SlothFact"/>: en release, solo los aprobados por el asesor). Tocarlo no lo cuida ni da premios (d.7).
-    /// El dato sale en su <b>tarjeta</b>, nunca en el bocadillo (D-013, punto 6: «su bocadillo (≤ 50 caracteres) queda para sus
-    /// frases propias»; propuesta de TiTino g.3: la tarjeta que sale al tocarlo en el inicio, con datos de ≤ 90 caracteres):
-    /// una placa de la familia de la del Dato del río (<see cref="ArrivalStrip"/>: esquinas de 10 dp, borde de 1 dp #E3D3B0 y
-    /// fondo claro) con el retrato de TiTino a la izquierda y el dato a 14 sp.</item>
-    /// <item><b>Nunca</b> con Sin canoas, la hoja de compra ni una oferta (lo oculta <see cref="HomeWindow.Apply"/>): el rig, el
-    /// área táctil, el bocadillo y la tarjeta se van con la ventanita. Los dos salen debajo del marco (el bocadillo con el pico
-    /// hacia TiTino y una sombra de 1 dp que lo separa del decorado): por debajo de los saldos, de Ajustes y de la píldora de
-    /// la distancia, y por encima de «Jugar» y de su chip.</item>
+    /// <item><b>Saludo</b> (<see cref="SlothLines.ForHome"/>): al volver tras ≥ 3 días, el de regreso; en la primera apertura de la
+    /// franja de 06:00 a 12:00 (D-030, pregunta 17 b), el de la mañana; como mucho uno al día entre los dos
+    /// (<c>sloth.last_greeting_date</c>), con <c>sloth_wave</c> y su frase en el bocadillo. Se decide una vez por visita al inicio,
+    /// con el inicio delante (<see cref="AppScreen.Lobby"/>); en cada visita se apunta <c>sloth.last_seen_date</c>. Justo después
+    /// del bocadillo del Mapa del 10 (D-028, pregunta 60 b), el saludo no sale ni se gasta.</item>
+    /// <item><b>El bocadillo que rota</b> (D-050, punto 1): tras el saludo (o sin él), cada <see cref="RotationGapMs"/> ms, uno de
+    /// estos, con su tiempo de lectura (D-011): «hoy hay Reto nuevo» si el Reto de hoy está sin jugar, lo que falta para la
+    /// próxima Canasta, «Casa · a unos {km} km» (la información de la ventanita de casa de antes), el Dato del perezoso de hoy
+    /// (<see cref="UiText.SlothFact"/>: en release, solo los aprobados por el asesor) y, antes del nivel 10 o si no hay nada más
+    /// que contar, que anima a jugar. Nunca promociona compras ni señala el Cántaro (D-013, Q10-A). El bocadillo crece hacia abajo
+    /// hasta el muelle; si llega a la travesía, el inicio aparta lo tapado mientras dure. Un mensaje que no cabe se salta.</item>
+    /// <item><b>Toque</b> (<see cref="Tap"/>): <c>sloth_look</c> y el mensaje siguiente al momento (el Dato del día, si aún no salió).
+    /// Tocarlo no lo cuida ni da premios (d.7).</item>
+    /// <item><b>Nunca</b> con Sin canoas, la hoja de compra ni una oferta (lo oculta <see cref="HomeWindow.Apply"/>).</item>
     /// </list>
-    /// <para>Con <c>settings.sloth_messages</c> apagado, solo gestos (sin frase ni dato); con <c>ui_sloth_enabled</c> apagado, nada:
-    /// la ventanita queda con su retrato quieto. Sin el arte del rig (<see cref="ProceduralArt.SlothRigArt()"/>; release sin el PNG
-    /// final), el retrato de M1.5 hace de TiTino: cierra los ojos de noche y no hace gestos, pero el saludo y el dato salen igual.</para>
-    /// <para>Lo que necesita del juego (el reloj, la sesión de TiTino, el <c>sloth</c> del perfil y su guardado, los ajustes, el
-    /// nivel de «Jugar» y Reducir movimiento) lo toma del <see cref="GameBootstrap"/> del que cuelga el inicio la primera vez que
-    /// se ve (<see cref="Bind"/> lo fija a mano). El reloj es el del juego (<see cref="LaunchOptions.ClockOverride"/> en los tests).
-    /// Avanza solo con el inicio a la vista (un componente en el lienzo del inicio); nada asigna memoria por fotograma, tampoco
-    /// mientras el arranque del juego aún no ha terminado (solo al enlazarse, una vez).</para>
+    /// <para>Con <c>settings.sloth_messages</c> apagado, solo gestos (sin bocadillo); con <c>ui_sloth_enabled</c> apagado, nada: TiTino
+    /// queda quieto. Sin el arte del rig (release sin el PNG final), el retrato hace de TiTino.</para>
+    /// <para>Avanza solo con el inicio a la vista (un componente en el lienzo del inicio); nada asigna memoria por fotograma: los textos
+    /// de la rotación se arman una vez por visita y cada mensaje se coloca al salir.</para>
     /// </summary>
     internal sealed class HomeSloth
     {
-        /// <summary>Tamaño S de TiTino en la ventanita (dp) [P]: cabe colgado o tumbado en el hueco de 46 dp del marco de 56.</summary>
-        public const float RigSizeDp = 30f;
-
         /// <summary>Hora local desde la que es de noche y TiTino duerme (20:00) [P].</summary>
         public const int NightFromHour = 20;
 
         /// <summary>Hora local en la que deja de ser de noche (06:00, la del saludo de la mañana) [P].</summary>
         public const int NightToHour = SlothLines.MorningFromHour;
 
-        /// <summary>Primera hora local de sol, en la que toma el sol en la copa (10:00) [P].</summary>
+        /// <summary>Primera hora local de sol, en la que toma el sol en la rama (10:00) [P].</summary>
         public const int SunFromHour = 10;
 
         /// <summary>Hora local en la que deja de tomar el sol, sin incluirla (16:00) [P].</summary>
@@ -70,47 +57,19 @@ namespace AF.UI
         public const float PoseCheckMs = 1000f;
 
         /// <summary>
-        /// Línea de la rama de TiTino colgado, desde arriba del marco (dp) [P]: sobre la rama pintada de la embaúba de la ventanita,
-        /// de la que se agarra (la rama del rig no se pinta mientras cuelga).
-        /// </summary>
-        public const float HangBranchDp = 12f;
-
-        /// <summary>Línea de la rama de TiTino tumbado o en ovillo, desde arriba del marco (dp) [P]: una rama más baja.</summary>
-        public const float LieBranchDp = 40f;
-
-        /// <summary>
-        /// Lo que baja el rig, como mucho, durante <c>sloth_wave</c> (dp) [P]: la rama efectiva a 16 dp, para que la garra levantada
-        /// quede ≥ 3 dp por debajo del canto de arriba del hueco (con 12 dp, el marco la cortaba). Entra y sale con el gesto
-        /// (<see cref="WaveDrop"/>); con Reducir movimiento (pose quieta, sin la garra levantada), nada.
+        /// Lo que baja el rig, como mucho, durante <c>sloth_wave</c> (dp) [P]: el saludo se nota en todo el cuerpo. Entra y sale con
+        /// el gesto (<see cref="WaveDrop"/>); con Reducir movimiento, nada.
         /// </summary>
         public const float WaveDropDp = 4f;
 
-        /// <summary>
-        /// Hueco entre el canto de abajo del marco y el pico del bocadillo (dp) [P]: corto, para que el pico salga del marco y no
-        /// de lo que el decorado ponga debajo (la garza de la orilla, a 360 × 640 dp).
-        /// </summary>
-        public const float BubbleGapDp = 6f;
+        /// <summary>Hueco entre la caja de TiTino y la punta del pico del bocadillo (dp) [P].</summary>
+        public const float BubbleGapDp = 2f;
 
-        /// <summary>
-        /// Centro del pico, desde el canto izquierdo del marco (dp) [P]: bajo la garra de delante de TiTino (la que saluda), a la
-        /// derecha del centro, lejos de la garza del decorado, que a 360 × 640 dp queda bajo la mitad izquierda del marco.
-        /// </summary>
-        public const float TailXDp = 40f;
-
-        /// <summary>Sombra del pico del bocadillo (dp) [P]: 1 dp de #000 al 15 %, que lo separa de lo blanco del decorado.</summary>
+        /// <summary>Sombra del pico del bocadillo (dp) [P]: 1 dp de #000 al 15 %, que lo separa de lo claro del decorado.</summary>
         public const float TailShadowDp = 1f;
 
-        /// <summary>
-        /// Hueco entre el canto de abajo del marco y la tarjeta del Dato del perezoso (dp) [P]: corto, para que la tarjeta tape lo
-        /// que el decorado pone justo debajo del marco (la garza de la orilla, a 360 × 640 dp) y no asome suelto entre los dos.
-        /// </summary>
-        public const float FactCardGapDp = 2f;
-
-        /// <summary>Texto de la tarjeta del dato (sp): el de la placa del Dato del río (<see cref="VictoryLineSlot.TextSp"/>).</summary>
-        public const float FactCardTextSp = VictoryLineSlot.TextSp;
-
-        /// <summary>Ancho máximo del bocadillo (dp) [P]; como mucho, hasta el margen derecho que da <see cref="HomeWindow.Place"/>.</summary>
-        public const float BubbleMaxWidthDp = 260f;
+        /// <summary>Ancho máximo del bocadillo (dp) [P]; como mucho, hasta el margen derecho que da el inicio.</summary>
+        public const float BubbleMaxWidthDp = 230f;
 
         /// <summary>Texto del bocadillo (sp; 02 §6: 14 sp, el de la victoria), con la escala de texto de 02 §12.</summary>
         public const float BubbleTextSp = 14f;
@@ -127,12 +86,24 @@ namespace AF.UI
         /// <summary>Fundido de entrada y de salida del bocadillo (sin él con Reducir movimiento) [P].</summary>
         public const float BubbleFadeMs = 150f;
 
+        /// <summary>Pausa entre un mensaje y el siguiente de la rotación (ms) [P].</summary>
+        public const float RotationGapMs = 5000f;
+
+        /// <summary>Espera hasta el primer mensaje de la rotación cuando no hay saludo (ms) [P].</summary>
+        public const float FirstNoteDelayMs = 1200f;
+
         /// <summary>Paso más largo de un fotograma (ms): tras una pausa, el bocadillo no desaparece de golpe.</summary>
         public const float MaxStepMs = 100f;
+
+        /// <summary>Nivel desde el que hay Reto y Bitácora (y la Canasta de cada parada); antes, TiTino anima a jugar.</summary>
+        public const int NewsFromLevel = 10;
 
         // Pico del bocadillo hacia TiTino: un cuadrado girado 45° (dp), medio fuera del bocadillo.
         private const float TailDp = 12f;
         private const float TailOutDp = (TailDp + (2f * BubbleRimDp)) * 0.7072f;
+
+        // Altura del pico desde arriba del bocadillo (dp): a la altura de la cabeza de TiTino colgado.
+        private const float TailYDp = 22f;
 
         // Holgura del ancho ajustado al texto (dp): la de redondeo de TextMeshPro, para que no salte de línea.
         private const float FitSlackDp = 2f;
@@ -152,15 +123,11 @@ namespace AF.UI
         private readonly Image _tailRim;
         private readonly Image _tailPlate;
         private readonly TextMeshProUGUI _label;
-        private readonly RectTransform _card;
-        private readonly CanvasGroup _cardGroup;
-        private readonly Image _cardPortrait;
-        private readonly TextMeshProUGUI _cardLabel;
         private readonly Driver _driver;
+        private readonly List<HomeNote> _ring = new List<HomeNote>(6);
+        private readonly string[] _ringText = new string[6];
 
         private SlothRig? _rig;
-        private Image? _rigBranch;
-        private bool _rigBranchArt;
         private bool _rigMissing;
         private GameBootstrap? _boot;
         private bool _bootLooked;
@@ -174,6 +141,10 @@ namespace AF.UI
         private Func<int>? _nextLevel;
         private Func<bool>? _reduceMotion;
         private Func<bool>? _inLobby;
+        private Func<bool>? _dailyPending;
+        private Func<int>? _levelsToBasket;
+        private Func<bool>? _notesClear;
+        private bool _ringMessages;
         private Action? _save;
 
         private SlothPoseId _basePose = SlothPoseId.Idle;
@@ -182,28 +153,32 @@ namespace AF.UI
         private float _gestureEndMs;
         private float _poseCheckMs;
 
-        private NoteKind _noteKind;
+        private HomeNote _noteKind;
         private float _noteMs = -1f;
         private float _noteOutMs;
         private bool _noteReduceMotion;
+        private float _gapMs = -1f;
+        private int _ringNext;
+        private bool _ringBuilt;
         private float _x;
         private float _y;
+        private float _boxW = HomeWindow.SceneWidthDp;
+        private float _boxH = 130f;
+        private float _branchInBox = HomeWindow.SceneAboveDp;
+        private float _rigDp = HomeWindow.SceneRigMaxDp;
         private float _maxRight = LobbyScreen.ReferenceWidth;
+        private float _maxBottom = 1000f;
 
         /// <summary>
-        /// Crea a TiTino (sin rig hasta que la ventanita se vea) dentro del marco de <paramref name="home"/>, con su área táctil y su
-        /// bocadillo (ocultos) bajo <paramref name="parent"/>, el lienzo del inicio.
+        /// Crea a TiTino (sin rig hasta que se vea) en la caja de <paramref name="home"/>, con su área táctil y su bocadillo (ocultos)
+        /// bajo <paramref name="parent"/>, el lienzo del inicio.
         /// </summary>
         public HomeSloth(HomeWindow home, Transform parent, ProceduralArt art)
         {
             _home = home;
             _art = art;
-
-            // El hueco del marco, que recorta al rig: lo que se mueve nunca sale del marco.
             _hole = UiBuilder.Rect("SlothHole", home.Root);
-            _hole.gameObject.AddComponent<RectMask2D>();
-            float border = ProceduralArt.HomeWindowBorderDp;
-            UiBuilder.Place(_hole, border, border, HomeWindow.SizeDp - (2f * border), HomeWindow.SizeDp - (2f * border));
+            UiBuilder.Stretch(_hole);
 
             _tap = UiBuilder.BareButton("HomeSlothTap", parent, () => Tap());
             _tap.gameObject.SetActive(false);
@@ -231,26 +206,6 @@ namespace AF.UI
             _label.rectTransform.offsetMax = new Vector2(-BubblePadXDp, -BubblePadYDp);
             _bubble.gameObject.SetActive(false);
 
-            // La tarjeta del Dato del perezoso: la placa del Dato del río (ArrivalStrip), con el retrato y el dato.
-            _card = UiBuilder.Rect("HomeSlothFactCard", parent);
-            _cardGroup = _card.gameObject.AddComponent<CanvasGroup>();
-            _cardGroup.blocksRaycasts = false;
-            _cardGroup.interactable = false;
-            Image edge = UiBuilder.Sliced("Edge", _card, art.RoundedRect, ArrivalStrip.PlateEdge);
-            edge.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / ArrivalStrip.PlateRadiusDp;
-            UiBuilder.Stretch(edge.rectTransform);
-            Image back = UiBuilder.Sliced("Back", _card, art.RoundedRect, Palette.PanelLight);
-            back.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / (ArrivalStrip.PlateRadiusDp - 1f);
-            UiBuilder.Stretch(back.rectTransform);
-            back.rectTransform.offsetMin = new Vector2(1f, 1f);
-            back.rectTransform.offsetMax = new Vector2(-1f, -1f);
-            _cardPortrait = UiBuilder.Image("Portrait", _card, null, Color.white);
-            _cardPortrait.preserveAspect = true;
-            _cardLabel = UiBuilder.Label("Fact", _card, TextStyle.Body, string.Empty, FactCardTextSp, Palette.UiInk, TextAlignmentOptions.TopLeft);
-            _cardLabel.textWrappingMode = TextWrappingModes.Normal;
-            _cardLabel.enableAutoSizing = false;
-            _card.gameObject.SetActive(false);
-
             // El reloj del inicio: avanza mientras el lienzo del inicio está activo; activarlo abre una visita.
             var driverGo = new GameObject("HomeSloth", typeof(RectTransform));
             driverGo.transform.SetParent(parent, false);
@@ -262,12 +217,29 @@ namespace AF.UI
             }
         }
 
-        // Lo que dice TiTino ahora: el saludo, en el bocadillo; el Dato del perezoso, en su tarjeta. Nunca los dos a la vez.
-        private enum NoteKind : byte
+        /// <summary>Lo que dice TiTino en el bocadillo (D-050, punto 1).</summary>
+        public enum HomeNote : byte
         {
+            /// <summary>Nada.</summary>
             None = 0,
+
+            /// <summary>El saludo del día (de la mañana o de regreso).</summary>
             Greeting = 1,
-            Fact = 2,
+
+            /// <summary>«Hoy hay Reto del río nuevo» (<c>home_sloth_daily</c>).</summary>
+            Daily = 2,
+
+            /// <summary>Lo que falta para la próxima Canasta (<c>home_sloth_basket</c>).</summary>
+            Basket = 3,
+
+            /// <summary>El Dato del perezoso de hoy.</summary>
+            Fact = 4,
+
+            /// <summary>Que anima a jugar (<c>home_sloth_play</c>).</summary>
+            Play = 5,
+
+            /// <summary>Lo lejos que queda su casa: «Casa · a unos {km} km» (<c>map_home_distance</c>, la píldora de la ventanita de antes).</summary>
+            Home = 6,
         }
 
         /// <summary>
@@ -279,10 +251,10 @@ namespace AF.UI
         /// <summary><c>ui_sloth_enabled</c> (08 §9; <see cref="GameConfig.UiSlothEnabled"/>): apagado, TiTino no hace nada.</summary>
         public bool Enabled { get; set; } = GameConfig.UiSlothEnabled;
 
-        /// <summary>TiTino se ve en la ventanita (con el rig o, sin él, con el retrato).</summary>
+        /// <summary>TiTino se ve (con el rig o, sin él, con el retrato).</summary>
         public bool Shown => _shown;
 
-        /// <summary>El rig (null hasta que la ventanita se ve, o sin arte).</summary>
+        /// <summary>El rig (null hasta que TiTino se ve, o sin arte).</summary>
         public SlothRig? Rig => _rig;
 
         /// <summary>La pose que hace ahora (la de la hora o el gesto en curso).</summary>
@@ -300,11 +272,14 @@ namespace AF.UI
         /// <summary>Caja del área táctil.</summary>
         public RectTransform TapRect => (RectTransform)_tap.transform;
 
-        /// <summary>El bocadillo (solo el saludo del día) está a la vista (con alfa &gt; 0 o a punto de entrar).</summary>
-        public bool BubbleShown => _noteMs >= 0f && _noteKind == NoteKind.Greeting;
+        /// <summary>El bocadillo está a la vista (con alfa &gt; 0 o a punto de entrar), con cualquier mensaje.</summary>
+        public bool BubbleShown => _noteMs >= 0f && _noteKind != HomeNote.None;
 
-        /// <summary>El bocadillo lleva el saludo del día: el bocadillo solo lleva sus frases (D-013, punto 6).</summary>
-        public bool BubbleIsGreeting => BubbleShown;
+        /// <summary>El bocadillo lleva el saludo del día.</summary>
+        public bool BubbleIsGreeting => BubbleShown && _noteKind == HomeNote.Greeting;
+
+        /// <summary>Qué lleva el bocadillo (<see cref="HomeNote.None"/> sin bocadillo).</summary>
+        public HomeNote Note => BubbleShown ? _noteKind : HomeNote.None;
 
         /// <summary>Texto del bocadillo («» sin bocadillo).</summary>
         public string BubbleText => BubbleShown ? _label.text : string.Empty;
@@ -321,26 +296,11 @@ namespace AF.UI
         /// <summary>Milisegundos que dura el bocadillo de ahora (<see cref="NoticeTiming.ReadMs(string)"/>).</summary>
         public float BubbleDurationMs => BubbleShown ? _noteOutMs : 0f;
 
-        /// <summary>La tarjeta del Dato del perezoso está a la vista (con alfa &gt; 0 o a punto de entrar).</summary>
-        public bool FactCardShown => _noteMs >= 0f && _noteKind == NoteKind.Fact;
+        /// <summary>Lo que rota esta visita, en orden (tests).</summary>
+        public IReadOnlyList<HomeNote> Rotation => _ring;
 
-        /// <summary>Texto de la tarjeta («» sin tarjeta).</summary>
-        public string FactCardText => FactCardShown ? _cardLabel.text : string.Empty;
-
-        /// <summary>Opacidad de la tarjeta.</summary>
-        public float FactCardAlpha => FactCardShown ? _cardGroup.alpha : 0f;
-
-        /// <summary>Caja de la tarjeta, con su borde.</summary>
-        public RectTransform FactCardRect => _card;
-
-        /// <summary>Texto de la tarjeta (tests de desbordes).</summary>
-        public TextMeshProUGUI FactCardLabel => _cardLabel;
-
-        /// <summary>Retrato de TiTino de la tarjeta.</summary>
-        public Image FactCardPortrait => _cardPortrait;
-
-        /// <summary>Milisegundos que dura la tarjeta de ahora (<see cref="NoticeTiming.ReadMs(string)"/>).</summary>
-        public float FactCardDurationMs => FactCardShown ? _noteOutMs : 0f;
+        /// <summary>Tope de abajo del bocadillo que dio el inicio (dp; tests).</summary>
+        public float NoteMaxBottom => _maxBottom;
 
         /// <summary>Lo que se decidió en el último saludo del inicio (default antes del primero).</summary>
         public SlothLine LastGreeting { get; private set; }
@@ -348,7 +308,7 @@ namespace AF.UI
         /// <summary>Visitas al inicio en las que se decidió el saludo.</summary>
         public int GreetingDecisions { get; private set; }
 
-        /// <summary>Ya salió el Dato del perezoso en esta sesión (como mucho uno; d.7).</summary>
+        /// <summary>Ya salió el Dato del perezoso en esta sesión.</summary>
         public bool FactShownThisSession { get; private set; }
 
         /// <summary>Clave del último Dato del perezoso enseñado (null si aún ninguno).</summary>
@@ -398,14 +358,63 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Lo que entra en la rotación del bocadillo (D-050, punto 1), en orden: el Reto de hoy sin jugar, la Canasta (con
+        /// <paramref name="levelsToBasket"/> ≥ 1), la distancia a casa (con <paramref name="hasHome"/>: lejos de Belém), el Dato
+        /// del día (con <paramref name="hasFact"/>) y, antes del nivel <see cref="NewsFromLevel"/> (delante, sin Reto ni Canasta) o
+        /// si no hay nada más, que anima a jugar. Sin mensajes, nada.
+        /// </summary>
+        public static void RotationFor(bool messages, int nextLevel, bool dailyPending, int levelsToBasket, bool hasFact, bool hasHome, List<HomeNote> ring)
+        {
+            ring.Clear();
+            if (!messages)
+            {
+                return;
+            }
+
+            bool early = nextLevel < NewsFromLevel;
+            if (early)
+            {
+                ring.Add(HomeNote.Play);
+            }
+
+            if (dailyPending && !early)
+            {
+                ring.Add(HomeNote.Daily);
+            }
+
+            if (levelsToBasket >= 1 && !early)
+            {
+                ring.Add(HomeNote.Basket);
+            }
+
+            if (hasHome)
+            {
+                ring.Add(HomeNote.Home);
+            }
+
+            if (hasFact)
+            {
+                ring.Add(HomeNote.Fact);
+            }
+
+            if (ring.Count == 0)
+            {
+                ring.Add(HomeNote.Play);
+            }
+        }
+
+        /// <summary>
         /// Fija a mano lo que TiTino necesita del juego (si no, lo toma del <see cref="GameBootstrap"/> del que cuelga):
         /// <paramref name="clock"/>, la sesión de TiTino (<paramref name="session"/>), el <c>sloth</c> del perfil
         /// (<paramref name="data"/>) y cómo guardarlo (<paramref name="save"/>), <c>settings.sloth_messages</c>
         /// (<paramref name="messages"/>), el nivel de «Jugar» (<paramref name="nextLevel"/>), Reducir movimiento
-        /// (<paramref name="reduceMotion"/>) y si el inicio es la pantalla de ahora (<paramref name="inLobby"/>).
+        /// (<paramref name="reduceMotion"/>), si el inicio es la pantalla de ahora (<paramref name="inLobby"/>) y, para la rotación,
+        /// si el Reto de hoy está sin jugar (<paramref name="dailyPending"/>) y los niveles que faltan para la próxima Canasta
+        /// (<paramref name="levelsToBasket"/>, −1 sin Canasta).
         /// </summary>
         public void Bind(IClock clock, SlothSession session, SlothData data, Action? save, Func<bool> messages, Func<int> nextLevel,
-            Func<bool> reduceMotion, Func<bool> inLobby)
+            Func<bool> reduceMotion, Func<bool> inLobby, Func<bool>? dailyPending = null, Func<int>? levelsToBasket = null,
+            Func<bool>? notesClear = null)
         {
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _session = session ?? throw new ArgumentNullException(nameof(session));
@@ -415,34 +424,56 @@ namespace AF.UI
             _nextLevel = nextLevel ?? throw new ArgumentNullException(nameof(nextLevel));
             _reduceMotion = reduceMotion ?? throw new ArgumentNullException(nameof(reduceMotion));
             _inLobby = inLobby ?? throw new ArgumentNullException(nameof(inLobby));
+            _dailyPending = dailyPending;
+            _notesClear = notesClear;
+            _levelsToBasket = levelsToBasket;
             _bound = true;
         }
 
         /// <summary>
-        /// Coloca el área táctil sobre el marco (con su esquina en <paramref name="x"/>, <paramref name="yTop"/> dp) y el bocadillo
-        /// o la tarjeta debajo, sin pasar de <paramref name="maxRight"/>.
+        /// Coloca a TiTino en su caja (esquina en <paramref name="x"/>, <paramref name="yTop"/>; <paramref name="boxW"/> ×
+        /// <paramref name="boxH"/> dp, con la línea de la rama a <paramref name="branchInBox"/> dp de arriba y el tamaño S
+        /// <paramref name="rigDp"/>), su área táctil encima y el bocadillo a su derecha, sin pasar de <paramref name="maxRight"/> ni
+        /// de <paramref name="maxBottom"/>.
         /// </summary>
-        public void Layout(float x, float yTop, float maxRight)
+        public void LayoutScene(float x, float yTop, float boxW, float boxH, float branchInBox, float rigDp, float maxRight, float maxBottom)
         {
             _x = x;
             _y = yTop;
+            _boxW = boxW;
+            _boxH = boxH;
+            _branchInBox = branchInBox;
             _maxRight = maxRight;
-            float side = Mathf.Max(HomeWindow.SizeDp, HomeWindow.MinTapDp);
-            float inset = (HomeWindow.SizeDp - side) * 0.5f;
-            UiBuilder.Place(TapRect, x + inset, yTop + inset, side, side);
-            if (BubbleShown)
+            _maxBottom = maxBottom;
+            if (!Mathf.Approximately(rigDp, _rigDp))
             {
-                PlaceBubble();
+                _rigDp = rigDp;
+                if (_rig != null)
+                {
+                    _rig.SetArt(_rig.Art, _rigDp);
+                    if (_shown)
+                    {
+                        ApplyBasePose();
+                    }
+                }
             }
-            else if (FactCardShown)
+
+            UiBuilder.Place(TapRect, x, yTop, Mathf.Max(HomeWindow.MinTapDp, boxW), Mathf.Max(HomeWindow.MinTapDp, boxH));
+            if (BubbleShown && !PlaceBubble())
             {
-                PlaceCard();
+                HideNote(); // ya no cabe (otra pantalla, otra escala): fuera, y la rotación sigue
+                _gapMs = 0f;
+            }
+
+            if (_rig != null && _shown)
+            {
+                PlaceRig(Pose);
             }
         }
 
         /// <summary>
-        /// La ventanita se ve (<paramref name="on"/>) o se oculta (Sin canoas, una pantalla de pago, sin parada o sin arte): con
-        /// ella, el rig, el área táctil y el bocadillo o la tarjeta, que se pierden si estaban a la vista.
+        /// TiTino se ve (<paramref name="on"/>) o se oculta (Sin canoas, una pantalla de pago, sin parada o sin arte): con él, el
+        /// rig, el área táctil y el bocadillo, que se pierde si estaba a la vista.
         /// </summary>
         public void SetShown(bool on)
         {
@@ -467,7 +498,7 @@ namespace AF.UI
 
             if (!Enabled)
             {
-                // ui_sloth_enabled apagado: la ventanita con su retrato quieto, sin rig ni toque.
+                // ui_sloth_enabled apagado: TiTino quieto (el retrato), sin rig ni toque.
                 _rig?.SetVisible(false);
                 _home.PortraitImage.enabled = true;
                 return;
@@ -481,22 +512,26 @@ namespace AF.UI
             ApplyBasePose();
         }
 
-        /// <summary>Empieza una visita al inicio: el saludo del día se decide en cuanto TiTino se vea.</summary>
+        /// <summary>Empieza una visita al inicio: el saludo del día y la rotación se deciden en cuanto TiTino se vea.</summary>
         public void BeginVisit()
         {
             _visitPending = true;
+            _ringBuilt = false;
+            _gapMs = -1f;
         }
 
-        /// <summary>Acaba la visita al inicio (se va a un nivel): el bocadillo o la tarjeta se pierden.</summary>
+        /// <summary>Acaba la visita al inicio (se va a un nivel): el bocadillo se pierde.</summary>
         public void EndVisit()
         {
             _visitPending = false;
+            _ringBuilt = false;
+            _gapMs = -1f;
             HideNote();
         }
 
         /// <summary>
-        /// Toque en TiTino (d.7): <c>sloth_look</c> y, si aún no salió en esta sesión y hay voz, el Dato del perezoso de hoy en su
-        /// tarjeta con el retrato (nunca en el bocadillo: D-013, punto 6). false si TiTino no se ve o está apagado.
+        /// Toque en TiTino (d.7): <c>sloth_look</c> y, con sus mensajes encendidos, el mensaje siguiente al momento (el Dato del día
+        /// si aún no salió en esta sesión). false si TiTino no se ve o está apagado.
         /// </summary>
         public bool Tap()
         {
@@ -507,30 +542,29 @@ namespace AF.UI
 
             Taps++;
             PlayGesture(SlothPoseId.Look, SlothRig.LookMs);
-            if (FactShownThisSession || !Resolve() || !_messages!())
+            if (!Resolve() || !_messages!())
             {
                 return true;
             }
 
-            string today = _clock!.LocalDateKey();
-            SlothLines.TryDayNumber(today, out int day);
-            string text = FactFor(day, out string? key);
-            Sprite? portrait = text.Length > 0 ? _art.SlothPortrait(false) : null;
-            if (portrait == null)
+            EnsureRing();
+            if (!FactShownThisSession)
             {
-                return true; // en release, sin datos aprobados (o sin el retrato final): solo el gesto
+                int fact = _ring.IndexOf(HomeNote.Fact);
+                if (fact >= 0 && TryShowRing(fact))
+                {
+                    return true;
+                }
             }
 
-            FactShownThisSession = true;
-            FactKey = key;
-            _cardPortrait.sprite = portrait;
-            ShowNote(text, NoteKind.Fact);
+            ShowNextInRing();
             return true;
         }
 
         /// <summary>
-        /// Avanza <paramref name="dtMs"/> ms: decide el saludo de la visita en cuanto TiTino se ve, mira la hora para la pose,
-        /// acaba los gestos y lleva el bocadillo. Sin asignaciones (salvo el saludo, una vez por visita).
+        /// Avanza <paramref name="dtMs"/> ms: decide el saludo de la visita en cuanto TiTino se ve, mira la hora para la pose, acaba
+        /// los gestos, lleva el bocadillo y la rotación. Sin asignaciones (salvo el saludo y los textos de la rotación, una vez por
+        /// visita, y al colocar cada mensaje).
         /// </summary>
         public void Tick(float dtMs)
         {
@@ -544,6 +578,11 @@ namespace AF.UI
             {
                 _visitPending = false;
                 Greet();
+                EnsureRing();
+                if (!BubbleShown)
+                {
+                    _gapMs = RotationGapMs - FirstNoteDelayMs;
+                }
             }
 
             if (_gestureMs >= 0f)
@@ -580,6 +619,7 @@ namespace AF.UI
             }
 
             TickNote(dtMs);
+            TickRotation(dtMs);
         }
 
         // El saludo de la visita (d.7; SlothLines.ForHome): una vez por visita, con lo guardado en sloth. La frase solo se dice si
@@ -644,8 +684,144 @@ namespace AF.UI
 
             if (speaks)
             {
-                ShowNote(text, NoteKind.Greeting);
+                ShowNote(text, HomeNote.Greeting);
             }
+        }
+
+        // Los mensajes que rotan esta visita, con sus textos (una vez por visita: asigna cadenas).
+        private void EnsureRing()
+        {
+            if (_ringBuilt || !Resolve())
+            {
+                return;
+            }
+
+            _ringBuilt = true;
+            _ringMessages = _messages!();
+            string today = _clock!.LocalDateKey();
+            SlothLines.TryDayNumber(today, out int day);
+            string fact = FactFor(day, out string? factKey);
+            int level = _nextLevel!();
+            bool daily = _dailyPending != null && _dailyPending();
+            int basket = _levelsToBasket != null ? _levelsToBasket() : -1;
+            string home = _home.DistanceText;
+            RotationFor(_messages!(), level, daily, basket, fact.Length > 0, home.Length > 0, _ring);
+            for (int i = 0; i < _ring.Count; i++)
+            {
+                switch (_ring[i])
+                {
+                    case HomeNote.Daily:
+                        _ringText[i] = UiText.HomeSlothDaily;
+                        break;
+                    case HomeNote.Basket:
+                        _ringText[i] = UiText.HomeSlothBasket(basket);
+                        break;
+                    case HomeNote.Fact:
+                        _ringText[i] = fact;
+                        break;
+                    case HomeNote.Home:
+                        _ringText[i] = home;
+                        break;
+                    default:
+                        _ringText[i] = UiText.HomeSlothPlay;
+                        break;
+                }
+            }
+
+            _pendingFactKey = factKey;
+            _ringNext = 0;
+        }
+
+        private string? _pendingFactKey;
+
+        // La rotación: tras cada mensaje (o sin él), RotationGapMs de pausa y el siguiente que quepa; solo con el inicio delante.
+        /// <summary>Solo tests: estado de la rotación (pausa en ms, −1 parada; anillo; visita pendiente).</summary>
+        internal string RotationStateForTests => "gap=" + _gapMs + " ring=" + _ring.Count + " built=" + _ringBuilt + " pending=" + _visitPending + " inLobby=" + (_inLobby == null ? "-" : _inLobby().ToString()) + " clear=" + (_notesClear == null ? "-" : _notesClear().ToString());
+
+        private void TickRotation(float dtMs)
+        {
+            if (!_ringBuilt || _messages == null)
+            {
+                return;
+            }
+
+            // «Mensajes de TiTino» se cambia en Ajustes, encima del inicio y sin cerrar la visita: apagado, el bocadillo se va y la
+            // rotación para; encendido otra vez, la rotación se rehace (una vez, al cambiar) y sigue tras una pausa.
+            bool messages = _messages();
+            if (messages != _ringMessages)
+            {
+                _ringBuilt = false;
+                EnsureRing();
+                if (!messages)
+                {
+                    HideNote();
+                }
+
+                _gapMs = 0f;
+                return;
+            }
+
+            if (_gapMs < 0f || BubbleShown || _ring.Count == 0)
+            {
+                return;
+            }
+
+            // La pausa solo corre con el inicio delante y despejado (sin Ajustes, el Mercado, el Reto ni una oferta encima): los
+            // mensajes no se gastan sin verse.
+            if ((_inLobby != null && !_inLobby()) || (_notesClear != null && !_notesClear()))
+            {
+                return;
+            }
+
+            _gapMs += dtMs;
+            if (_gapMs >= RotationGapMs)
+            {
+                ShowNextInRing();
+            }
+        }
+
+        private void ShowNextInRing()
+        {
+            int count = _ring.Count;
+            for (int tries = 0; tries < count; tries++)
+            {
+                int i = _ringNext % count;
+                _ringNext = (_ringNext + 1) % count;
+                if (TryShowRing(i))
+                {
+                    return;
+                }
+            }
+
+            _gapMs = 0f; // nada cabe ahora: se vuelve a intentar tras otra pausa
+        }
+
+        private bool TryShowRing(int index)
+        {
+            if (index < 0 || index >= _ring.Count || string.IsNullOrEmpty(_ringText[index]))
+            {
+                return false;
+            }
+
+            HomeNote kind = _ring[index];
+            if (kind == HomeNote.Fact && FactShownThisSession)
+            {
+                return false; // D-016, punto 5, y 07 §6.5: como mucho un Dato del perezoso por sesión
+            }
+
+            if (!ShowNote(_ringText[index], kind))
+            {
+                return false;
+            }
+
+            if (kind == HomeNote.Fact)
+            {
+                FactShownThisSession = true;
+                FactKey = _pendingFactKey;
+            }
+
+            _ringNext = (index + 1) % _ring.Count;
+            return true;
         }
 
         // Lo que necesita del juego: lo fijado con Bind o, la primera vez que hace falta, lo del GameBootstrap del que cuelga el
@@ -695,11 +871,11 @@ namespace AF.UI
         {
             Profile profile = boot.Profile!;
             AppFlow app = boot.App!;
-            // Solo con el inicio delante: con «El río sigue creciendo» (ContentEnd), el velo y el modal tapan la ventanita y el
-            // saludo del día (como mucho 1; D-016, punto 5) se gastaría sin verse. Se decide al cerrarlo, en la misma visita.
+            // Solo con el inicio delante: con «El río sigue creciendo» (ContentEnd), el velo y el modal tapan a TiTino y el saludo
+            // del día (como mucho 1; D-016, punto 5) se gastaría sin verse. Se decide al cerrarlo, en la misma visita.
             Bind(LaunchOptions.ClockOverride ?? SystemClock.Instance, boot.View!.SlothSession, profile.Sloth, () => SaveProfile(boot),
                 () => profile.Settings.SlothMessages, () => app.PlayLevel, () => boot.Flow != null && boot.Flow.ReduceMotion,
-                () => app.Screen == AppScreen.Lobby);
+                () => app.Screen == AppScreen.Lobby, () => boot.HomeDailyPending, () => boot.HomeLevelsToBasket, () => boot.HomeNotesClear);
         }
 
         // Guarda el perfil por el lote del juego (en segundo plano con el perfil en disco). Con el perfil en solo lectura (08 §4.4),
@@ -714,7 +890,7 @@ namespace AF.UI
             }
         }
 
-        // El rig, la primera vez que TiTino se ve; sin arte (release sin el PNG final), el retrato del marco hace de TiTino.
+        // El rig, la primera vez que TiTino se ve; sin arte (release sin el PNG final), el retrato hace de TiTino.
         private void EnsureRig()
         {
             if (_rig != null || _rigMissing)
@@ -723,22 +899,17 @@ namespace AF.UI
             }
 
             SlothArt? art = _art.SlothRigArt();
-            _rig = art != null ? SlothRig.Create(_hole, art, RigSizeDp) : null;
+            _rig = art != null ? SlothRig.Create(_hole, art, _rigDp) : null;
             _rigMissing = _rig == null;
             if (_rig != null)
             {
-                // La rama del rig (su pieza «Branch»): solo se pinta con TiTino tumbado o en ovillo (PlaceRig).
-                Transform branch = _rig.Root.Find("Branch");
-                _rigBranch = branch != null ? branch.GetComponent<Image>() : null;
-                _rigBranchArt = _rigBranch != null && _rigBranch.enabled;
+                // La rama de TiTino la pinta el inicio (ProceduralArt.HomeBranch): la del rig no se pinta nunca.
+                _rig.BranchImage.enabled = false;
             }
         }
 
-        /// <summary>
-        /// La rama del rig se pinta: solo con TiTino tumbado o en ovillo (<c>sloth_sunbathe</c>, <c>sloth_sleep</c>), sobre la
-        /// rama de abajo; colgado, se agarra a la rama pintada de la ventanita. false sin rig.
-        /// </summary>
-        public bool RigBranchShown => _rigBranch != null && _rigBranch.enabled;
+        /// <summary>La rama del rig se pinta (nunca en el inicio: la rama es la del decorado, D-050).</summary>
+        public bool RigBranchShown => _rig != null && _rig.BranchImage.enabled;
 
         private bool ReduceMotionNow => _reduceMotion != null && _reduceMotion();
 
@@ -755,6 +926,7 @@ namespace AF.UI
             _home.PortraitImage.enabled = false;
             PlaceRig(_basePose);
             _rig.Play(_basePose, ReduceMotionNow);
+            _rig.BranchImage.enabled = false;
         }
 
         private void PlayGesture(SlothPoseId pose, float ms)
@@ -769,29 +941,20 @@ namespace AF.UI
 
             PlaceRig(pose);
             _rig.Play(pose, ReduceMotionNow);
+            _rig.BranchImage.enabled = false;
         }
 
-        // Colgado, de la rama pintada de la embaúba, sin pintar la del rig (si no, se verían dos ramas, y durante sloth_wave una
-        // bajaría con él); tumbado o en ovillo, sobre la rama del rig, más baja: entero dentro del hueco. Durante sloth_wave, el
-        // rig baja con la garra (WaveDrop) para que el marco no la corte; las otras garras siguen agarradas a la rama pintada
-        // (gruesa y más baja hacia la izquierda), como mucho por su canto de abajo.
+        // En la línea de la rama del decorado, en el centro de la caja: colgado, debajo de ella; tumbado o en ovillo, encima. Durante
+        // sloth_wave, el rig baja un poco con la garra (WaveDrop).
         private void PlaceRig(SlothPoseId pose)
         {
-            float border = ProceduralArt.HomeWindowBorderDp;
-            bool lying = pose == SlothPoseId.Sunbathe || pose == SlothPoseId.Sleep;
-            bool branchOn = lying && _rigBranchArt;
-            if (_rigBranch != null && _rigBranch.enabled != branchOn)
-            {
-                _rigBranch.enabled = branchOn;
-            }
-
-            float y = (lying ? LieBranchDp : HangBranchDp) - border;
+            float y = _branchInBox;
             if (pose == SlothPoseId.Wave && _gestureMs >= 0f && !_rig!.ReduceMotion)
             {
                 y += WaveDrop(_gestureMs);
             }
 
-            _rig!.Place((HomeWindow.SizeDp * 0.5f) - border, y);
+            _rig!.Place(_boxW * 0.5f, y);
         }
 
         /// <summary>
@@ -809,42 +972,36 @@ namespace AF.UI
             return WaveDropDp * Mathf.Clamp01(1.6f * Mathf.Sin(Mathf.PI * ms / SlothRig.WaveMs));
         }
 
-        // El saludo, en el bocadillo; el dato, en su tarjeta: uno solo a la vista, con su tiempo de lectura (D-011).
-        private void ShowNote(string text, NoteKind kind)
+        // Un mensaje en el bocadillo, con su tiempo de lectura (D-011). false si no cabe (y no se enseña).
+        private bool ShowNote(string text, HomeNote kind)
         {
             HideNote();
+            _label.text = text;
+            if (!PlaceBubble())
+            {
+                return false;
+            }
+
             _noteKind = kind;
             _noteMs = 0f;
+            _gapMs = -1f;
             _noteOutMs = NoticeTiming.ReadMs(text);
             _noteReduceMotion = ReduceMotionNow;
-            float alpha = _noteReduceMotion ? 1f : 0f;
-            if (kind == NoteKind.Fact)
-            {
-                _cardLabel.text = text;
-                _cardGroup.alpha = alpha;
-                _card.gameObject.SetActive(true);
-                PlaceCard();
-            }
-            else
-            {
-                _label.text = text;
-                _bubbleGroup.alpha = alpha;
-                _bubble.gameObject.SetActive(true);
-                PlaceBubble();
-            }
+            _bubbleGroup.alpha = _noteReduceMotion ? 1f : 0f;
+            _bubble.gameObject.SetActive(true);
+            return true;
         }
 
         private void HideNote()
         {
-            if (_noteMs < 0f && !_bubble.gameObject.activeSelf && !_card.gameObject.activeSelf)
+            if (_noteMs < 0f && !_bubble.gameObject.activeSelf)
             {
                 return;
             }
 
             _noteMs = -1f;
-            _noteKind = NoteKind.None;
+            _noteKind = HomeNote.None;
             _bubble.gameObject.SetActive(false);
-            _card.gameObject.SetActive(false);
         }
 
         private void TickNote(float dtMs)
@@ -858,6 +1015,7 @@ namespace AF.UI
             if (_noteMs >= _noteOutMs + (_noteReduceMotion ? 0f : BubbleFadeMs))
             {
                 HideNote();
+                _gapMs = 0f; // empieza la pausa hasta el siguiente de la rotación
                 return;
             }
 
@@ -869,16 +1027,15 @@ namespace AF.UI
                 alpha = Mathf.Min(fadeIn, fadeOut);
             }
 
-            CanvasGroup group = _noteKind == NoteKind.Fact ? _cardGroup : _bubbleGroup;
-            if (!Mathf.Approximately(group.alpha, alpha))
+            if (!Mathf.Approximately(_bubbleGroup.alpha, alpha))
             {
-                group.alpha = alpha;
+                _bubbleGroup.alpha = alpha;
             }
         }
 
         // Ancho y alto del texto de label en como mucho inner dp: ajustado al texto si cabe en una línea y, si no, el ancho más
-        // estrecho con las mismas líneas (quedan parejas y sin una palabra sola en la última, como el bocadillo de la victoria). El
-        // salto lo decide el ancho, nunca un salto añadido. Solo al colocar, nunca por fotograma.
+        // estrecho con las mismas líneas (quedan parejas, como el bocadillo de la victoria). El salto lo decide el ancho, nunca un
+        // salto añadido. Solo al colocar, nunca por fotograma.
         private static void FitText(TextMeshProUGUI label, float inner, out float textWidth, out float textHeight)
         {
             string text = label.text;
@@ -909,52 +1066,43 @@ namespace AF.UI
             textWidth = Mathf.Min(inner, hi + FitSlackDp);
         }
 
-        // Debajo del marco, alineado a su izquierda, con el pico arriba hacia TiTino (y su sombra de 1 dp): el texto a 14 sp con la
-        // escala de texto, ajustado (FitText); crece hacia abajo (02 §12). Solo al enseñarlo o al recolocar el inicio.
-        private void PlaceBubble()
+        // A la derecha de TiTino, con el pico a la izquierda hacia su cabeza (y su sombra de 1 dp): el texto a 14 sp con la escala de
+        // texto, ajustado (FitText), que crece hacia abajo (02 §12) hasta el tope que dio el inicio. false si no cabe.
+        private bool PlaceBubble()
         {
-            float left = _x;
-            float top = _y + HomeWindow.SizeDp + BubbleGapDp + TailOutDp;
-            float maxWidth = Mathf.Max((2f * BubblePadXDp) + 24f, Mathf.Min(BubbleMaxWidthDp, _maxRight - BubbleRimDp - left));
+            float left = _x + _boxW + BubbleGapDp + TailOutDp;
+            float top = _y + Mathf.Max(4f, _branchInBox - 10f);
+            float maxWidth = Mathf.Min(BubbleMaxWidthDp, _maxRight - BubbleRimDp - left);
+            if (maxWidth < (2f * BubblePadXDp) + 40f)
+            {
+                return false;
+            }
+
             FitText(_label, maxWidth - (2f * BubblePadXDp), out float textWidth, out float textHeight);
             float width = Mathf.Ceil(textWidth + (2f * BubblePadXDp));
             float height = Mathf.Ceil(textHeight + (2f * BubblePadYDp));
-            width = Mathf.Max(width, HomeWindow.SizeDp);
+            width = Mathf.Max(width, 56f);
+            if (top + height + BubbleRimDp > _maxBottom)
+            {
+                return false;
+            }
+
             UiBuilder.Place(_bubble, left, top, width, height);
-            float tailX = TailXDp; // bajo la garra de delante, a la derecha del centro del marco
-            PlaceTail(_tailShadow.rectTransform, tailX, TailDp + (2f * BubbleRimDp) + (2f * TailShadowDp));
-            PlaceTail(_tailRim.rectTransform, tailX, TailDp + (2f * BubbleRimDp));
-            PlaceTail(_tailPlate.rectTransform, tailX, TailDp);
+            float tailY = Mathf.Min(TailYDp, height * 0.5f);
+            PlaceTail(_tailShadow.rectTransform, tailY, TailDp + (2f * BubbleRimDp) + (2f * TailShadowDp));
+            PlaceTail(_tailRim.rectTransform, tailY, TailDp + (2f * BubbleRimDp));
+            PlaceTail(_tailPlate.rectTransform, tailY, TailDp);
+            return true;
         }
 
-        // La tarjeta del dato, debajo del marco, alineada a su izquierda y como mucho hasta el margen derecho: el retrato arriba a la
-        // izquierda con el relleno de la placa del Dato del río, y el texto a su derecha (FitText), centrado en el alto del
-        // retrato si es más bajo. Crece hacia abajo con el texto (02 §12). Solo al enseñarla o al recolocar el inicio.
-        private void PlaceCard()
-        {
-            const float pad = ArrivalStrip.PlatePadDp;
-            const float portrait = ArrivalStrip.PortraitDp;
-            const float chrome = pad + portrait + ArrivalStrip.PortraitGapDp + ArrivalStrip.PlateRightPadDp;
-            float left = _x;
-            float top = _y + HomeWindow.SizeDp + FactCardGapDp;
-            float inner = Mathf.Max(24f, _maxRight - left - chrome);
-            FitText(_cardLabel, inner, out float textWidth, out float textHeight);
-            textWidth = Mathf.Min(inner, Mathf.Ceil(textWidth));
-            textHeight = Mathf.Ceil(textHeight);
-            float contentH = Mathf.Max(portrait, textHeight);
-            UiBuilder.Place(_card, left, top, chrome + textWidth, contentH + (2f * pad));
-            UiBuilder.Place(_cardPortrait.rectTransform, pad, pad, portrait, portrait);
-            float textTop = pad + Mathf.Floor((contentH - textHeight) * 0.5f);
-            UiBuilder.Place(_cardLabel.rectTransform, pad + portrait + ArrivalStrip.PortraitGapDp, textTop, textWidth, textHeight);
-        }
-
-        private static void PlaceTail(RectTransform rt, float x, float size)
+        // El pico en el canto izquierdo del bocadillo, a y dp de arriba, girado 45°.
+        private static void PlaceTail(RectTransform rt, float y, float size)
         {
             rt.anchorMin = new Vector2(0f, 1f);
             rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(size, size);
-            rt.anchoredPosition = new Vector2(x, 0f);
+            rt.anchoredPosition = new Vector2(0f, -y);
             rt.localRotation = Quaternion.Euler(0f, 0f, 45f);
         }
 

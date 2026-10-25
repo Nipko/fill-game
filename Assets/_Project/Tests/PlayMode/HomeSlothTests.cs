@@ -20,22 +20,21 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 namespace AF.Tests.PlayMode
 {
     /// <summary>
-    /// TiTino en la ventanita del inicio, en la escena <c>Game</c> real y con un <see cref="ManualClock"/> (tarea TI6c; propuesta de
-    /// TiTino d.7 y paso 6c; D-013, Q17-A; D-016, punto 5):
+    /// TiTino en el inicio «el muelle del río» (D-050, punto 1; antes, la ventanita de TI6c), en la escena <c>Game</c> real y con un
+    /// <see cref="ManualClock"/> (propuesta de TiTino d.7; D-016, punto 5):
     /// <list type="bullet">
     /// <item>la pose sigue la hora local: de noche <c>sloth_sleep</c>, al sol <c>sloth_sunbathe</c> y el resto del día
     /// <c>sloth_idle</c>, también con un desfase horario y cuando la hora cambia con el inicio abierto;</item>
     /// <item>los saludos (de regreso tras ≥ 3 días y el de la mañana): como mucho uno al día entre los dos, con <c>sloth.*</c>
     /// guardado en el perfil, que sobrevive a cerrar y abrir el juego; con «El río sigue creciendo» delante, el saludo espera a
-    /// que se cierre; durante <c>sloth_wave</c>, la garra queda ≥ 3 dp por debajo del marco;</item>
-    /// <item>el toque: <c>sloth_look</c> y, como mucho uno por sesión, el Dato del perezoso en su tarjeta con el retrato (nunca en
-    /// el bocadillo, que es para sus frases de ≤ 50 caracteres: D-013, punto 6); tocarlo no cambia el perfil;</item>
+    /// que se cierre; durante <c>sloth_wave</c>, la garra no sube a los saldos;</item>
+    /// <item>el bocadillo rota: la distancia a casa, la Canasta, el dato del día (y antes del 10, animar a jugar), nunca compras;
+    /// el toque: <c>sloth_look</c> y el mensaje siguiente (el dato, primero); tocarlo no cambia el perfil;</item>
     /// <item>con los mensajes apagados, solo gestos; en release, solo textos aprobados; con <c>ui_sloth_enabled</c> apagado,
     /// nada;</item>
-    /// <item>oculto con Sin canoas y con la hoja de compra; el bocadillo, la tarjeta y el área táctil no tapan «Jugar», los saldos
-    /// ni Ajustes a 360 × 640 ni a 360 × 780 dp, al 100 % ni al 130 %;</item>
-    /// <item>colgado, de la rama pintada de la ventanita (la rama del rig no se pinta ni baja con él al saludar); tumbado o en
-    /// ovillo, sobre la rama del rig;</item>
+    /// <item>oculto con Sin canoas y con la hoja de compra; el bocadillo y el área táctil no tapan «Jugar», los saldos, Ajustes,
+    /// Música ni Sonido a 360 × 640 ni a 360 × 780 dp, al 100 % ni al 130 %, y la travesía se aparta si el bocadillo la alcanza;</item>
+    /// <item>cuelga de la rama del decorado, que sale del follaje (la del rig no se pinta nunca);</item>
     /// <item>sin asignaciones por fotograma, tampoco mientras el juego arranca.</item>
     /// </list>
     /// </summary>
@@ -43,6 +42,7 @@ namespace AF.Tests.PlayMode
     {
         private static readonly DateTime Day0 = new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc);
         private const string Today = "2026-10-15";
+        private const string Nbsp = " ";
 
         [SetUp]
         public void SetUp()
@@ -86,19 +86,19 @@ namespace AF.Tests.PlayMode
             Assert.That(home.PortraitImage.enabled, NUnit.Framework.Is.False, "con el rig, el retrato no se pinta");
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Sleep), "22:00: duerme");
             Assert.That(sloth.Rig.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Sleep));
-            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.True, "en ovillo, sobre la rama del rig");
+            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.False, "en ovillo, sobre la rama del decorado (D-050): la del rig no se pinta");
             Assert.That(sloth.LastGreeting.Greeting, NUnit.Framework.Is.False, "de noche y sin días fuera: sin saludo");
 
             clock.Set(Day0.AddDays(1).AddHours(12));
             Step(sloth, 1100);
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Sunbathe), "12:00 con el inicio abierto: al sol");
             Assert.That(sloth.Rig.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Sunbathe));
-            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.True, "tumbado, sobre la rama del rig");
+            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.False, "tumbado, sobre la rama del decorado");
 
             clock.Set(Day0.AddDays(1).AddHours(17));
             Step(sloth, 1100);
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Idle), "17:00: en reposo");
-            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.False, "colgado, de la rama pintada: la del rig no se pinta");
+            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.False, "colgado, de la rama del decorado");
             Assert.That(sloth.GreetingDecisions, NUnit.Framework.Is.EqualTo(1), "el saludo se decide una vez por visita");
 
             // Hora local, no UTC: las 14:00 UTC son las 09:00 con un desfase de −5 h (Colombia, Perú).
@@ -127,7 +127,7 @@ namespace AF.Tests.PlayMode
             Assert.That(sloth.BubbleText, NUnit.Framework.Is.EqualTo(Loc.T("sloth_line_return_04")));
             Assert.That(sloth.BubbleDurationMs, NUnit.Framework.Is.EqualTo((float)NoticeTiming.ReadMs(sloth.BubbleText)), "D-011");
             Assert.That(sloth.BubbleText.Length, NUnit.Framework.Is.LessThanOrEqualTo(50), "su bocadillo, ≤ 50 caracteres en ES (07 §6.5; D-013)");
-            Assert.That(sloth.FactCardShown, NUnit.Framework.Is.False);
+            Assert.That(sloth.Note, NUnit.Framework.Is.EqualTo(HomeSloth.HomeNote.Greeting), "primero, el saludo");
 
             Profile saved = Saved(store);
             Assert.That(saved.Sloth.LastGreetingDate, NUnit.Framework.Is.EqualTo(Today), "sloth.last_greeting_date, guardado");
@@ -211,7 +211,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Tap_LooksAndShowsAtMostOneSlothFactPerSession_WithoutTouchingTheProfile()
+        public IEnumerator Tap_LooksAndBringsTheNextNote_TheFactOfTheDayFirst_WithoutTouchingTheProfile()
         {
             ManualClock clock = At(0, 15);
             var store = new MemoryProfileStore(ProfileAt(58, clock));
@@ -221,6 +221,7 @@ namespace AF.Tests.PlayMode
             Assert.That(sloth.LastGreeting.Greeting, NUnit.Framework.Is.False);
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Sunbathe), "15:00: al sol");
             Assert.That(sloth.TapButton.gameObject.activeInHierarchy, NUnit.Framework.Is.True);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, "sin saludo, el primer mensaje espera un poco");
             int saves = store.SaveCount;
 
             sloth.TapButton.onClick.Invoke();
@@ -229,39 +230,173 @@ namespace AF.Tests.PlayMode
             Assert.That(sloth.FactShownThisSession, NUnit.Framework.Is.True);
             Assert.That(sloth.FactKey, NUnit.Framework.Is.Not.Null);
             Assert.That(SlothLines.SlothFactKeys, Does.Contain(sloth.FactKey), "un dato de g.3");
-            Assert.That(sloth.FactCardShown, NUnit.Framework.Is.True, "el dato, en su tarjeta");
-            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, "nunca en el bocadillo (D-013, punto 6: el bocadillo es para sus frases)");
-            Assert.That(sloth.FactCardText, NUnit.Framework.Is.EqualTo(Loc.Fact(sloth.FactKey!)));
-            Assert.That(sloth.FactCardText.Length, NUnit.Framework.Is.GreaterThan(0));
-            Assert.That(sloth.FactCardPortrait.sprite, NUnit.Framework.Is.Not.Null, "con el retrato de TiTino");
-            Assert.That(sloth.FactCardPortrait.sprite, NUnit.Framework.Is.SameAs(GameBootstrap.Current!.Lobby!.HomeWindow.PortraitSprite), "el retrato de M1.5, con los ojos abiertos");
-            Assert.That(sloth.FactCardDurationMs, NUnit.Framework.Is.EqualTo((float)NoticeTiming.ReadMs(sloth.FactCardText)), "D-011");
-            string firstKey = sloth.FactKey!;
+            Assert.That(sloth.Note, NUnit.Framework.Is.EqualTo(HomeSloth.HomeNote.Fact), "D-050, punto 1: el dato del día, en el bocadillo");
+            Assert.That(sloth.BubbleText, NUnit.Framework.Is.EqualTo(Loc.Fact(sloth.FactKey!)));
+            Assert.That(sloth.BubbleDurationMs, NUnit.Framework.Is.EqualTo((float)NoticeTiming.ReadMs(sloth.BubbleText)), "D-011");
 
             Step(sloth, (int)SlothRig.LookMs + 50);
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Sunbathe), "vuelve a la pose de la hora");
-            Step(sloth, (int)sloth.FactCardDurationMs + 300);
-            Assert.That(sloth.FactCardShown, NUnit.Framework.Is.False);
-            Assert.That(sloth.FactCardRect.gameObject.activeSelf, NUnit.Framework.Is.False, "la tarjeta se va tras su tiempo de lectura");
+            Step(sloth, (int)sloth.BubbleDurationMs + 300);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False);
+            Assert.That(sloth.BubbleRect.gameObject.activeSelf, NUnit.Framework.Is.False, "el bocadillo se va tras su tiempo de lectura");
 
+            // Otro toque: el mensaje siguiente de la rotación, que ya no es el dato.
             sloth.TapButton.onClick.Invoke();
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Look), "cada toque, sloth_look");
-            Assert.That(sloth.FactCardShown, NUnit.Framework.Is.False, "como mucho un dato por sesión");
-            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False);
-            Assert.That(sloth.FactKey, NUnit.Framework.Is.EqualTo(firstKey));
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.True);
+            Assert.That(sloth.Note, NUnit.Framework.Is.Not.EqualTo(HomeSloth.HomeNote.Fact));
+            Assert.That(sloth.Note, NUnit.Framework.Is.Not.EqualTo(HomeSloth.HomeNote.Greeting));
             Assert.That(sloth.Taps, NUnit.Framework.Is.EqualTo(2));
             Step(sloth, 2000);
             Assert.That(store.SaveCount, NUnit.Framework.Is.EqualTo(saves), "tocarlo no cuida ni premia: el perfil no cambia");
 
-            // Otra sesión: otro dato.
+            // Otra sesión: el dato vuelve a salir al tocarlo.
             yield return Load(store, clock);
             sloth = Sloth();
             sloth.Tick(16f);
             Assert.That(sloth.FactShownThisSession, NUnit.Framework.Is.False);
             sloth.TapButton.onClick.Invoke();
-            Assert.That(sloth.FactCardShown, NUnit.Framework.Is.True, "una sesión nueva, un dato nuevo");
+            Assert.That(sloth.Note, NUnit.Framework.Is.EqualTo(HomeSloth.HomeNote.Fact), "una sesión nueva, el dato");
         }
 
+        [UnityTest]
+        public IEnumerator Rotation_TellsTheDistanceHome_TheBasketTheFact_AndBefore10EncouragesToPlay_NeverPurchases()
+        {
+            ManualClock clock = At(0, 15);
+            yield return Load(new MemoryProfileStore(ProfileAt(58, clock)), clock);
+            HomeSloth sloth = Sloth();
+            sloth.Tick(16f);
+            IReadOnlyList<HomeSloth.HomeNote> ring = sloth.Rotation;
+            Assert.That(ring, Has.Member(HomeSloth.HomeNote.Home), "D-050: «Casa · a unos 1.480 km», la información de la ventanita de antes");
+            Assert.That(ring, Has.Member(HomeSloth.HomeNote.Basket), "la Canasta de Anavilhanas (61), a 3 niveles");
+            Assert.That(ring, Has.Member(HomeSloth.HomeNote.Fact));
+            Assert.That(ring, Has.No.Member(HomeSloth.HomeNote.Play), "con noticias, no hace falta animar");
+
+            // Sin saludo: el primer mensaje llega a FirstNoteDelayMs, y tras él, otro a RotationGapMs.
+            Step(sloth, (int)HomeSloth.FirstNoteDelayMs + 32);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.True, "el primero de la rotación");
+            var seen = new List<HomeSloth.HomeNote>();
+            var texts = new List<string>();
+            for (int i = 0; i < ring.Count; i++)
+            {
+                Assert.That(sloth.BubbleShown, NUnit.Framework.Is.True, "mensaje " + i);
+                seen.Add(sloth.Note);
+                texts.Add(sloth.BubbleText);
+                Step(sloth, (int)sloth.BubbleDurationMs + (int)HomeSloth.BubbleFadeMs + (int)HomeSloth.RotationGapMs + 64);
+            }
+
+            Assert.That(seen, NUnit.Framework.Is.EquivalentTo(ring), "todos los de la rotación, por turno");
+            Assert.That(texts, Does.Contain("Casa · a unos 1.480" + Nbsp + "km"));
+            Assert.That(texts, Does.Contain("Faltan 3 niveles para tu próxima Canasta"));
+            foreach (string text in texts)
+            {
+                Assert.That(text, Does.Not.Contain("Cántaro").And.Not.Contain("tienda").And.Not.Contain("comprar"), "D-013, Q10-A: nunca promociona compras");
+            }
+
+            // Antes del 10, anima a jugar (sin Reto, ni Bitácora, ni Canasta).
+            var list = new List<HomeSloth.HomeNote>();
+            HomeSloth.RotationFor(true, 4, true, 7, true, true, list);
+            Assert.That(list[0], NUnit.Framework.Is.EqualTo(HomeSloth.HomeNote.Play));
+            Assert.That(list, Has.No.Member(HomeSloth.HomeNote.Daily).And.No.Member(HomeSloth.HomeNote.Basket));
+            HomeSloth.RotationFor(true, 30, true, 1, false, false, list);
+            Assert.That(list, NUnit.Framework.Is.EqualTo(new[] { HomeSloth.HomeNote.Daily, HomeSloth.HomeNote.Basket }), "el Reto de hoy y la Canasta");
+            HomeSloth.RotationFor(false, 30, true, 1, true, true, list);
+            Assert.That(list, NUnit.Framework.Is.Empty, "sin los mensajes de TiTino, nada");
+        }
+        [UnityTest]
+        public IEnumerator Rotation_ShowsTheSlothFact_AtMostOncePerSession()
+        {
+            ManualClock clock = At(0, 15);
+            yield return Load(new MemoryProfileStore(ProfileAt(58, clock)), clock);
+            HomeSloth sloth = Sloth();
+            sloth.Tick(16f);
+            int count = sloth.Rotation.Count;
+            Assert.That(sloth.Rotation, Has.Member(HomeSloth.HomeNote.Fact), "premisa: hay dato de hoy");
+            Step(sloth, (int)HomeSloth.FirstNoteDelayMs + 32);
+            int facts = 0;
+            int shown = 0;
+            for (int i = 0; i < (3 * count) + 2; i++)
+            {
+                if (sloth.BubbleShown)
+                {
+                    shown++;
+                    facts += sloth.Note == HomeSloth.HomeNote.Fact ? 1 : 0;
+                    Step(sloth, (int)sloth.BubbleDurationMs + (int)HomeSloth.BubbleFadeMs + 64);
+                }
+
+                Step(sloth, (int)HomeSloth.RotationGapMs + 64);
+            }
+
+            Assert.That(shown, NUnit.Framework.Is.GreaterThan(2 * count), "tres vueltas de la rotación");
+            Assert.That(facts, NUnit.Framework.Is.EqualTo(1), "D-016, punto 5, y 07 §6.5: como mucho un Dato del perezoso por sesión");
+            Assert.That(sloth.FactShownThisSession, NUnit.Framework.Is.True);
+            sloth.Tap();
+            Assert.That(sloth.Note, NUnit.Framework.Is.Not.EqualTo(HomeSloth.HomeNote.Fact), "ni al tocarlo, una vez visto");
+        }
+
+        [UnityTest]
+        public IEnumerator Rotation_StopsWhenTiTinosMessagesAreSwitchedOff_AndComesBackWhenOn()
+        {
+            ManualClock clock = At(0, 15);
+            yield return Load(new MemoryProfileStore(ProfileAt(58, clock)), clock);
+            GameBootstrap boot = GameBootstrap.Current!;
+            HomeSloth sloth = Sloth();
+            sloth.Tick(16f);
+            Step(sloth, (int)HomeSloth.FirstNoteDelayMs + 32);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.True, "premisa: la rotación en marcha");
+
+            // Ajustes se abre encima del inicio sin cerrar la visita: apagar los mensajes quita el bocadillo y para la rotación.
+            Assert.That(boot.ChooseSlothMessages(false), NUnit.Framework.Is.True);
+            sloth.Tick(16f);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, "D-050: respeta el ajuste de mensajes de TiTino");
+            for (int t = 0; t < 3 * (int)HomeSloth.RotationGapMs; t += 16)
+            {
+                sloth.Tick(16f);
+                Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, t + " ms: sin mensajes");
+            }
+
+            Assert.That(sloth.Tap(), NUnit.Framework.Is.True);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, "el toque solo hace el gesto");
+
+            // Encendidos otra vez, la rotación vuelve tras una pausa.
+            Assert.That(boot.ChooseSlothMessages(true), NUnit.Framework.Is.True);
+            Step(sloth, (int)HomeSloth.RotationGapMs + 200);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.True, "vuelve con los mensajes encendidos");
+        }
+
+        [UnityTest]
+        public IEnumerator Rotation_WaitsWhileSettingsCoverTheLobby()
+        {
+            ManualClock clock = At(0, 15);
+            yield return Load(new MemoryProfileStore(ProfileAt(58, clock)), clock);
+            GameBootstrap boot = GameBootstrap.Current!;
+            HomeSloth sloth = Sloth();
+            sloth.Tick(16f);
+            Assert.That(boot.PressSettings(), NUnit.Framework.Is.True);
+            yield return null;
+            for (int t = 0; t < 2 * (int)HomeSloth.RotationGapMs; t += 16)
+            {
+                sloth.Tick(16f);
+            }
+
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, "con Ajustes encima, los mensajes no se gastan sin verse");
+            Assert.That(boot.CloseSettings(), NUnit.Framework.Is.True);
+            for (int i = 0; i < 60 && boot.SettingsView != null && boot.SettingsView.Visible; i++)
+            {
+                yield return null; // Ajustes se va con su fundido
+            }
+
+            // El juego también mueve a TiTino en cada fotograma: el mensaje puede salir (y hasta irse) mientras Ajustes se funde; basta
+            // con que salga uno en la pausa de la rotación.
+            bool shown = sloth.BubbleShown;
+            for (int t = 0; !shown && t < (int)HomeSloth.RotationGapMs + 200; t += 16)
+            {
+                sloth.Tick(16f);
+                shown = sloth.BubbleShown;
+            }
+
+            Assert.That(shown, NUnit.Framework.Is.True, "con el inicio despejado, la rotación sigue: " + sloth.RotationStateForTests);
+        }
         [Test]
         public void FactFor_RotatesByDay_ThroughTheElevenSlothFacts()
         {
@@ -300,7 +435,7 @@ namespace AF.Tests.PlayMode
             Step(sloth, 1000);
             Assert.That(sloth.Tap(), NUnit.Framework.Is.True);
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Look));
-            Assert.That(sloth.FactCardShown, NUnit.Framework.Is.False, "sin dato");
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, "sin mensaje");
             Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False);
             Assert.That(sloth.FactShownThisSession, NUnit.Framework.Is.False);
         }
@@ -329,8 +464,7 @@ namespace AF.Tests.PlayMode
 
                 Assert.That(sloth.Tap(), NUnit.Framework.Is.True);
                 Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Look));
-                Assert.That(sloth.FactCardShown, NUnit.Framework.Is.False, "en release, solo los datos aprobados");
-                Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False);
+                Assert.That(sloth.Note, NUnit.Framework.Is.Not.EqualTo(HomeSloth.HomeNote.Fact), "en release, solo los datos aprobados");
                 Assert.That(sloth.FactShownThisSession, NUnit.Framework.Is.False, "no gasta el dato de la sesión");
             }
             finally
@@ -387,7 +521,7 @@ namespace AF.Tests.PlayMode
 
             // La hoja «Compra simulada» delante del inicio (g.2, regla 9).
             sloth.Tap();
-            Assert.That(sloth.FactCardShown, NUnit.Framework.Is.True);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.True);
             StoreSheet sheet = boot.StoreSheetView!;
             boot.Store!.Purchase(new PurchaseRequest(StoreCatalog.NoAds), r => { });
             Assert.That(sheet.Visible, NUnit.Framework.Is.True);
@@ -396,7 +530,7 @@ namespace AF.Tests.PlayMode
             sheet.CancelButton.onClick.Invoke();
             yield return null;
             Assert.That(sloth.Shown, NUnit.Framework.Is.True);
-            Assert.That(sloth.FactCardShown, NUnit.Framework.Is.False, "el dato se perdió con la hoja: no vuelve");
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, "el mensaje se perdió con la hoja: no vuelve");
         }
 
         [UnityTest]
@@ -454,7 +588,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Wave_TheRaisedClawKeepsThreeDpBelowTheTopOfTheHole()
+        public IEnumerator Wave_TheRaisedClawStaysUnderTheBalances_AndHangsFromTheSceneBranch()
         {
             ManualClock clock = At(0, 8);
             yield return Load(new MemoryProfileStore(ProfileAt(58, clock)), clock);
@@ -462,9 +596,10 @@ namespace AF.Tests.PlayMode
             HomeSloth sloth = lobby.HomeWindow.Sloth!;
             sloth.Tick(16f);
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Wave));
-            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.False, "colgado, de la rama pintada: la del rig no baja con él");
-            Rect window = CanvasRect(lobby.HomeWindow.Root, lobby);
-            float holeTop = window.yMin + ProceduralArt.HomeWindowBorderDp;
+            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.False, "colgado, de la rama del decorado (D-050): la del rig no se pinta");
+            Assert.That(lobby.Branch.gameObject.activeInHierarchy, NUnit.Framework.Is.True, "la rama de TiTino, que sale del follaje");
+            Assert.That(sloth.Rig!.Size, NUnit.Framework.Is.InRange(HomeWindow.SceneRigMinDp, HomeWindow.SceneRigMaxDp), "TiTino grande: 76-92 dp (D-050)");
+            float balances = Mathf.Max(CanvasRect(lobby.SeedsRect, lobby).yMax, CanvasRect((RectTransform)lobby.SettingsButton.transform, lobby).yMax);
             float closest = float.MaxValue;
             var trace = new System.Text.StringBuilder();
             for (int t = 0; t <= (int)SlothRig.WaveMs; t += 16)
@@ -477,8 +612,8 @@ namespace AF.Tests.PlayMode
                         continue; // el cuerpo de TiTino (las hojas no salen al saludar)
                     }
 
-                    Assert.That(piece.name, NUnit.Framework.Is.Not.EqualTo("Branch"), t + " ms: colgado, sin la rama del rig");
-                    float gap = CanvasRect(piece.rectTransform, lobby).yMin - holeTop;
+                    Assert.That(piece.name, NUnit.Framework.Is.Not.EqualTo("Branch"), t + " ms: sin la rama del rig");
+                    float gap = CanvasRect(piece.rectTransform, lobby).yMin - balances;
                     if (gap < closest)
                     {
                         closest = gap;
@@ -489,8 +624,8 @@ namespace AF.Tests.PlayMode
                 sloth.Tick(16f);
             }
 
-            Debug.Log("AF_HOME_SLOTH sloth_wave: lo más alto del rig, a " + closest.ToString("0.00") + " dp del canto de arriba del hueco (" + trace + ")");
-            Assert.That(closest, NUnit.Framework.Is.GreaterThanOrEqualTo(3f), "la garra que saluda, ≥ 3 dp por debajo del marco");
+            Debug.Log("AF_HOME_SLOTH sloth_wave: lo más alto del rig, a " + closest.ToString("0.00") + " dp bajo los saldos (" + trace + ")");
+            Assert.That(closest, NUnit.Framework.Is.GreaterThanOrEqualTo(0f), "la garra que saluda no sube a los saldos ni a Ajustes");
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Idle), "tras el saludo, la pose de las 08:00");
 
             // La bajada del saludo, en cada fotograma, sin asignaciones (otra apertura, otro día: otro saludo).
@@ -514,9 +649,9 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator BubbleCardAndTouch_NeverCoverPlayBalancesOrSettings_At360x640And360x780_At100And130Percent()
+        public IEnumerator BubbleAndTouch_NeverCoverPlayBalancesSettingsOrTheVoyage_At360x640And360x780_At100And130Percent()
         {
-            // El día con el dato más largo de g.3 (rota por días): el peor caso de la tarjeta; antes, el saludo en el bocadillo.
+            // El día con el dato más largo de g.3 (rota por días): el peor caso del bocadillo; antes, el saludo de la mañana.
             int longestOffset = 0;
             int longest = -1;
             for (int offset = 0; offset < 11; offset++)
@@ -547,78 +682,72 @@ namespace AF.Tests.PlayMode
                     string where = size.x + " × " + size.y + " al " + Mathf.RoundToInt(scale * 100f) + " %";
                     sloth.Tick(16f);
                     Step(sloth, 400);
+                    lobby.Tick(16f);
                     Canvas.ForceUpdateCanvases();
                     Assert.That(sloth.BubbleIsGreeting, NUnit.Framework.Is.True, where + ": el saludo de la mañana");
+                    AssertBubble(lobby, sloth, where + " · saludo");
 
-                    Rect bubble = Grow(CanvasRect(sloth.BubbleRect, lobby), HomeSloth.BubbleRimDp);
-                    Rect tail = CanvasRect(sloth.BubbleRect.Find("TailShadow") as RectTransform ?? sloth.BubbleRect, lobby);
-                    Rect tap = CanvasRect(sloth.TapRect, lobby);
-                    Rect window = CanvasRect(lobby.HomeWindow.Root, lobby);
-                    Assert.That(tap.width, NUnit.Framework.Is.GreaterThanOrEqualTo(HomeWindow.MinTapDp - 0.01f), where + ": toque de ≥ 48 dp");
-                    Assert.That(tap.height, NUnit.Framework.Is.GreaterThanOrEqualTo(HomeWindow.MinTapDp - 0.01f), where);
-                    Assert.That(tap.Contains(window.center), NUnit.Framework.Is.True, where + ": el toque, sobre el marco");
-                    Assert.That(tail.yMin, NUnit.Framework.Is.GreaterThanOrEqualTo(window.yMax + HomeSloth.BubbleGapDp - (1.4143f * HomeSloth.TailShadowDp) - 0.5f), where + ": el pico (con su sombra), bajo el marco");
-                    Assert.That(bubble.xMax, NUnit.Framework.Is.LessThanOrEqualTo(lobby.CanvasWidth - 15.5f), where + ": dentro del margen");
-
-                    List<KeyValuePair<string, Rect>> others = Others(lobby);
-                    Debug.Log("AF_HOME_SLOTH " + where + ": bocadillo " + bubble + ", toque " + tap + ", jugar " + others[2].Value);
-                    foreach (KeyValuePair<string, Rect> other in others)
-                    {
-                        Assert.That(Shrunk(bubble).Overlaps(Shrunk(other.Value)), NUnit.Framework.Is.False, where + ": el bocadillo tapa " + other.Key);
-                        Assert.That(Shrunk(tap).Overlaps(Shrunk(other.Value)), NUnit.Framework.Is.False, where + ": el toque de TiTino tapa " + other.Key);
-                    }
-
-                    // El texto cabe entero a su tamaño (nunca por debajo de 12 sp) y nada del bocadillo ni del rig recibe toques.
-                    Assert.That(sloth.BubbleLabel.fontSize, NUnit.Framework.Is.EqualTo(HomeSloth.BubbleTextSp * UiBuilder.TextScale).Within(0.01f), where);
-                    float inner = sloth.BubbleRect.rect.width - (2f * HomeSloth.BubblePadXDp);
-                    Assert.That(UiBuilder.MinTextHeight(sloth.BubbleLabel, inner), NUnit.Framework.Is.LessThanOrEqualTo(sloth.BubbleRect.rect.height - (2f * HomeSloth.BubblePadYDp) + 0.5f), where);
-                    foreach (Graphic g in sloth.BubbleRect.GetComponentsInChildren<Graphic>(true))
-                    {
-                        Assert.That(g.raycastTarget, NUnit.Framework.Is.False, where + ": " + g.name);
-                    }
-
-                    foreach (Graphic g in lobby.HomeWindow.Root.GetComponentsInChildren<Graphic>(true))
-                    {
-                        Assert.That(g.raycastTarget, NUnit.Framework.Is.False, where + ": " + g.name + " (el toque es el área de TiTino)");
-                    }
-
-                    // Se va el saludo y llega el toque: el dato más largo, en su tarjeta.
+                    // Se va el saludo y llega el toque: el dato más largo, en el mismo bocadillo (D-050), si cabe.
                     Step(sloth, (int)sloth.BubbleDurationMs + 300);
+                    lobby.Tick(16f);
                     Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, where);
+                    Assert.That(lobby.StopRemainingShown, NUnit.Framework.Is.True, where + ": sin bocadillo, la travesía vuelve");
                     Assert.That(sloth.Tap(), NUnit.Framework.Is.True);
                     Step(sloth, 400);
+                    lobby.Tick(16f);
                     Canvas.ForceUpdateCanvases();
-                    Assert.That(sloth.FactCardShown, NUnit.Framework.Is.True, where);
-                    Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, where + ": el dato nunca en el bocadillo");
-                    Assert.That(sloth.FactCardText.Length, NUnit.Framework.Is.EqualTo(longest), where + ": el dato más largo");
-
-                    Rect card = CanvasRect(sloth.FactCardRect, lobby);
-                    Rect portrait = CanvasRect(sloth.FactCardPortrait.rectTransform, lobby);
-                    Rect label = CanvasRect(sloth.FactCardLabel.rectTransform, lobby);
-                    Assert.That(card.yMin, NUnit.Framework.Is.GreaterThanOrEqualTo(window.yMax + HomeSloth.FactCardGapDp - 0.5f), where + ": la tarjeta, bajo el marco");
-                    Assert.That(card.xMin, NUnit.Framework.Is.EqualTo(window.xMin).Within(0.5f), where + ": alineada con el marco");
-                    Assert.That(card.xMax, NUnit.Framework.Is.LessThanOrEqualTo(lobby.CanvasWidth - 15.5f), where + ": dentro del margen");
-                    Assert.That(portrait.width, NUnit.Framework.Is.EqualTo(ArrivalStrip.PortraitDp).Within(0.5f), where + ": el retrato de la placa del Dato del río");
-                    Assert.That(Inside(card, portrait), NUnit.Framework.Is.True, where + ": el retrato, dentro de la tarjeta");
-                    Assert.That(Inside(card, label), NUnit.Framework.Is.True, where + ": el texto, dentro de la tarjeta");
-                    Assert.That(portrait.Overlaps(Shrunk(label)), NUnit.Framework.Is.False, where + ": el texto, a la derecha del retrato");
-                    Debug.Log("AF_HOME_SLOTH " + where + ": tarjeta " + card + ", texto " + label + ", jugar " + others[2].Value);
-                    foreach (KeyValuePair<string, Rect> other in Others(lobby))
+                    Assert.That(sloth.BubbleShown, NUnit.Framework.Is.True, where + ": el toque trae un mensaje");
+                    if (sloth.Note == HomeSloth.HomeNote.Fact)
                     {
-                        Assert.That(Shrunk(card).Overlaps(Shrunk(other.Value)), NUnit.Framework.Is.False, where + ": la tarjeta tapa " + other.Key);
+                        Assert.That(sloth.BubbleText.Length, NUnit.Framework.Is.EqualTo(longest), where + ": el dato más largo");
                     }
 
-                    Assert.That(sloth.FactCardLabel.fontSize, NUnit.Framework.Is.EqualTo(HomeSloth.FactCardTextSp * UiBuilder.TextScale).Within(0.01f), where);
-                    Assert.That(UiBuilder.MinTextHeight(sloth.FactCardLabel, label.width), NUnit.Framework.Is.LessThanOrEqualTo(label.height + 0.5f), where + ": el dato cabe entero");
-                    foreach (Graphic g in sloth.FactCardRect.GetComponentsInChildren<Graphic>(true))
-                    {
-                        Assert.That(g.raycastTarget, NUnit.Framework.Is.False, where + ": " + g.name);
-                    }
+                    AssertBubble(lobby, sloth, where + " · " + sloth.Note);
                 }
             }
         }
 
-        // «Jugar», los saldos, Ajustes y lo demás del inicio que TiTino nunca tapa.
+        // El bocadillo: a la derecha de TiTino con el pico hacia él, dentro de la pantalla, sin tapar «Jugar», los saldos, Ajustes,
+        // Música, Sonido ni las pestañas, y con la travesía apartada si la alcanza; su texto, entero a 14 sp (con la escala) y sin
+        // toques. El toque de TiTino, de ≥ 48 dp y sobre él.
+        private static void AssertBubble(LobbyScreen lobby, HomeSloth sloth, string where)
+        {
+            Rect bubble = Grow(CanvasRect(sloth.BubbleRect, lobby), HomeSloth.BubbleRimDp);
+            Rect tap = CanvasRect(sloth.TapRect, lobby);
+            Rect box = CanvasRect(lobby.HomeWindow.Root, lobby);
+            Assert.That(tap.width, NUnit.Framework.Is.GreaterThanOrEqualTo(HomeWindow.MinTapDp - 0.01f), where + ": toque de ≥ 48 dp");
+            Assert.That(tap.height, NUnit.Framework.Is.GreaterThanOrEqualTo(HomeWindow.MinTapDp - 0.01f), where);
+            Assert.That(tap.Contains(box.center), NUnit.Framework.Is.True, where + ": el toque, sobre TiTino");
+            Assert.That(bubble.xMin, NUnit.Framework.Is.GreaterThanOrEqualTo(box.xMax - 0.5f), where + ": el bocadillo, a la derecha de TiTino");
+            Assert.That(bubble.xMax, NUnit.Framework.Is.LessThanOrEqualTo(CanvasRect(lobby.Audio.MusicRect, lobby).xMin + 0.5f), where + ": sin llegar a Música y Sonido");
+            List<KeyValuePair<string, Rect>> others = Others(lobby);
+            Debug.Log("AF_HOME_SLOTH " + where + ": bocadillo " + bubble + ", toque " + tap + ", jugar " + others[2].Value);
+            foreach (KeyValuePair<string, Rect> other in others)
+            {
+                Assert.That(Shrunk(bubble).Overlaps(Shrunk(other.Value)), NUnit.Framework.Is.False, where + ": el bocadillo tapa " + other.Key);
+                Assert.That(Shrunk(tap).Overlaps(Shrunk(other.Value)), NUnit.Framework.Is.False, where + ": el toque de TiTino tapa " + other.Key);
+            }
+
+            if (lobby.StopRemainingShown)
+            {
+                Assert.That(Shrunk(bubble).Overlaps(Shrunk(CanvasRect(lobby.StopRemainingRect, lobby))), NUnit.Framework.Is.False, where + ": el bocadillo tapa el letrero de la parada");
+            }
+
+            Assert.That(sloth.BubbleLabel.fontSize, NUnit.Framework.Is.EqualTo(HomeSloth.BubbleTextSp * UiBuilder.TextScale).Within(0.01f), where);
+            float inner = sloth.BubbleRect.rect.width - (2f * HomeSloth.BubblePadXDp);
+            Assert.That(UiBuilder.MinTextHeight(sloth.BubbleLabel, inner), NUnit.Framework.Is.LessThanOrEqualTo(sloth.BubbleRect.rect.height - (2f * HomeSloth.BubblePadYDp) + 0.5f), where + ": el texto, entero");
+            foreach (Graphic g in sloth.BubbleRect.GetComponentsInChildren<Graphic>(true))
+            {
+                Assert.That(g.raycastTarget, NUnit.Framework.Is.False, where + ": " + g.name);
+            }
+
+            foreach (Graphic g in lobby.HomeWindow.Root.GetComponentsInChildren<Graphic>(true))
+            {
+                Assert.That(g.raycastTarget, NUnit.Framework.Is.False, where + ": " + g.name + " (el toque es el área de TiTino)");
+            }
+        }
+
+        // «Jugar», los saldos, Ajustes, Música y Sonido y lo demás del inicio que TiTino nunca tapa.
         private static List<KeyValuePair<string, Rect>> Others(LobbyScreen lobby)
         {
             var others = new List<KeyValuePair<string, Rect>>
@@ -627,7 +756,8 @@ namespace AF.Tests.PlayMode
                 new KeyValuePair<string, Rect>("ajustes", CanvasRect((RectTransform)lobby.SettingsButton.transform, lobby)),
                 new KeyValuePair<string, Rect>("jugar", CanvasRect((RectTransform)lobby.PlayButton.transform, lobby)),
                 new KeyValuePair<string, Rect>("inicio", CanvasRect(lobby.HomeTabRect, lobby)),
-                new KeyValuePair<string, Rect>("píldora de casa", CanvasRect(lobby.HomeWindow.PillRect, lobby)),
+                new KeyValuePair<string, Rect>("música", CanvasRect(lobby.Audio.MusicRect, lobby)),
+                new KeyValuePair<string, Rect>("sonido", CanvasRect(lobby.Audio.SoundRect, lobby)),
             };
             if (lobby.CanoesShown)
             {
@@ -639,22 +769,17 @@ namespace AF.Tests.PlayMode
                 others.Add(new KeyValuePair<string, Rect>("chip", CanvasRect(lobby.ChipRect, lobby)));
             }
 
-            if (lobby.StopRemainingShown)
-            {
-                others.Add(new KeyValuePair<string, Rect>("faltan", CanvasRect(lobby.StopRemainingRect, lobby)));
-            }
-
             if (lobby.MapTabButton.gameObject.activeInHierarchy)
             {
                 others.Add(new KeyValuePair<string, Rect>("mapa", CanvasRect(lobby.MapTabRect, lobby)));
             }
 
-            return others;
-        }
+            if (lobby.StreakWidget.Visible)
+            {
+                others.Add(new KeyValuePair<string, Rect>("crecida", CanvasRect(lobby.StreakWidget.Root, lobby)));
+            }
 
-        private static bool Inside(Rect outer, Rect inner)
-        {
-            return inner.xMin >= outer.xMin - 0.5f && inner.xMax <= outer.xMax + 0.5f && inner.yMin >= outer.yMin - 0.5f && inner.yMax <= outer.yMax + 0.5f;
+            return others;
         }
 
         [UnityTest]
@@ -669,7 +794,7 @@ namespace AF.Tests.PlayMode
             // pase la primera vez por cada camino no cuenta.
             sloth.Tap();
             Step(sloth, 2600);
-            Assert.That(sloth.FactCardShown, NUnit.Framework.Is.True, "el dato sigue a la vista");
+            Assert.That(sloth.Note, NUnit.Framework.Is.EqualTo(HomeSloth.HomeNote.Fact), "el dato sigue a la vista");
 
             void Run80()
             {
@@ -732,8 +857,7 @@ namespace AF.Tests.PlayMode
             Assert.That(sloth.Shown, NUnit.Framework.Is.False, what);
             Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, what + ": sin bocadillo");
             Assert.That(sloth.BubbleRect.gameObject.activeInHierarchy, NUnit.Framework.Is.False, what);
-            Assert.That(sloth.FactCardShown, NUnit.Framework.Is.False, what + ": sin tarjeta del dato");
-            Assert.That(sloth.FactCardRect.gameObject.activeInHierarchy, NUnit.Framework.Is.False, what);
+            Assert.That(sloth.Note, NUnit.Framework.Is.EqualTo(HomeSloth.HomeNote.None), what + ": sin mensaje");
             Assert.That(sloth.TapButton.gameObject.activeInHierarchy, NUnit.Framework.Is.False, what + ": sin toque");
             Assert.That(sloth.Rig == null || !sloth.Rig.Root.gameObject.activeInHierarchy, NUnit.Framework.Is.True, what + ": sin TiTino");
             Assert.That(sloth.Tap(), NUnit.Framework.Is.False, what);

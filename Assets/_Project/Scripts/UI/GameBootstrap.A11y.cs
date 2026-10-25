@@ -168,6 +168,11 @@ namespace AF.UI
                 _flow.ReduceMotion = _reduceMotionNow;
             }
 
+            if (_lobby != null)
+            {
+                _lobby.ReduceMotion = _reduceMotionNow; // D-050: el río vivo y la canoa del inicio, quietos
+            }
+
             ApplyA11y(_screen, config, profile);
             if (_dailyScreen?.Flow != null)
             {

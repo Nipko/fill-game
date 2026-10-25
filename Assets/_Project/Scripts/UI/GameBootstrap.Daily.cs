@@ -34,9 +34,6 @@ namespace AF.UI
         /// <summary>Orden del lienzo de la tarjeta del Reto: encima del inicio (0) y por debajo de Ajustes (40).</summary>
         public const int DailyCardSortingOrder = 5;
 
-        /// <summary>Hueco entre la tarjeta y el botón «Jugar» (dp) [P].</summary>
-        public const float DailyCardAbovePlayDp = 48f;
-
         [SerializeField]
         private TextAsset? dailyPool;
 
@@ -48,11 +45,6 @@ namespace AF.UI
         private IClock? _dailyClock;
         private DateTime _dailyCardDate;
         private bool _dailyCardShown;
-        private readonly Vector3[] _noteCorners = new Vector3[4];
-        private readonly Vector3[] _cardCorners = new Vector3[4];
-        private float _dailyCardW;
-        private float _dailyCardH;
-        private float _dailyCardHeight;
 
         /// <summary>
         /// Último día del Reto cerrado sin victoria (<see cref="DailyChallengeService.DayEnded"/>: el <c>fail</c> del día, una vez y
@@ -223,8 +215,7 @@ namespace AF.UI
 
             screen.Tick(dtMs);
             bool lobby = !screen.IsOpen && _app != null && _app.Screen == AppScreen.Lobby && _lobby != null && _lobby.Visible
-                && !_lobby.OverlayVisible && !HomeWindowCovered && (_settingsScreen == null || !_settingsScreen.Visible)
-                && !SlothNoteOverDailyCard(card);
+                && !_lobby.OverlayVisible && !HomeWindowCovered && (_settingsScreen == null || !_settingsScreen.Visible);
             bool dateChanged = _dailyClock != null && _dailyClock.LocalDate() != _dailyCardDate;
             if (lobby && (!_dailyCardShown || dateChanged))
             {
@@ -237,29 +228,6 @@ namespace AF.UI
 
             _dailyCardShown = lobby;
             card.SetShown(lobby);
-        }
-
-        // Revisión de D-046: el saludo o el Dato de TiTino, bajo la ventanita de casa, llegan en pantallas bajas (360 × 640) o al
-        // 130 % hasta la tarjeta del Reto, que va en un lienzo por encima y los tapaba. Mientras una nota la cruza, la tarjeta se
-        // oculta (sin asignaciones: esquinas en arrays guardados).
-        private bool SlothNoteOverDailyCard(DailyChallengeCard card)
-        {
-            HomeSloth? sloth = _lobby?.HomeWindow.Sloth;
-            if (sloth == null)
-            {
-                return false;
-            }
-
-            RectTransform? note = sloth.FactCardShown ? sloth.FactCardRect : (sloth.BubbleShown ? sloth.BubbleRect : null);
-            if (note == null)
-            {
-                return false;
-            }
-
-            note.GetWorldCorners(_noteCorners);
-            card.Root.GetWorldCorners(_cardCorners);
-            return _noteCorners[0].x < _cardCorners[2].x && _noteCorners[2].x > _cardCorners[0].x
-                && _noteCorners[0].y < _cardCorners[1].y && _noteCorners[1].y > _cardCorners[0].y;
         }
 
         /// <summary>Recalcula la tarjeta (estado, fecha, banda y racha) y la coloca.</summary>
@@ -436,34 +404,11 @@ namespace AF.UI
             RefreshDailyCard();
         }
 
+        // La del Reto va en la fila de las tarjetas del día del muelle (D-050, punto 6): la coloca PlaceDayCards con las demás.
         private void PlaceDailyCard()
         {
-            if (_dailyCard == null || _dailyCardCanvas == null)
-            {
-                return;
-            }
-
-            float w = _dailyCardCanvas.Width;
-            float h = _dailyCardCanvas.Height;
-            float cardH = _dailyCard.Height;
-            if (Mathf.Approximately(w, _dailyCardW) && Mathf.Approximately(h, _dailyCardH) && Mathf.Approximately(cardH, _dailyCardHeight) && _dailyCard.Root.sizeDelta.x > 0f)
-            {
-                return;
-            }
-
-            bool grew = !Mathf.Approximately(cardH, _dailyCardHeight);
-            _dailyCardW = w;
-            _dailyCardH = h;
-            _dailyCardHeight = cardH;
-            if (grew)
-            {
-                PlaceLogbookCard(); // la de la Bitácora va encima de la del Reto, que creció o encogió con sus textos
-            }
-
-            // El borde de abajo, fijo; si sus textos piden más alto (DailyChallengeCard.Height), crece hacia arriba.
-            float y = (h * LobbyScreen.PlayCenterFraction) - DailyCardAbovePlayDp - cardH - 32f;
-            // A lo ancho, sin pisar la franja de la Crecida de la derecha (a 320 dp, 272 dp desde x = 16; DailyChallengeCard.WidthFor).
-            _dailyCard.Place(DailyChallengeCard.LeftFor(w), Mathf.Max(96f, y), DailyChallengeCard.WidthFor(w));
+            _dayCardsDirty = true;
+            PlaceDayCards();
         }
 
         private DailyPool? LoadDailyPool()

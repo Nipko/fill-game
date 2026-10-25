@@ -131,6 +131,12 @@ UiText.Harvest	Cosecha
 UiText.HintLabel	Pista
 UiText.HintUnsupported	La morpho no conoce este tramo todavía
 UiText.Home	Inicio
+UiText.HomeCardDailyPending	Pendiente
+UiText.HomeCardLogbook	Bitácora
+UiText.HomeCardLogbookPlay	Juega un nivel
+UiText.HomeCardLogbookReady	¡Premio de hoy!
+UiText.HomeSlothDaily	¡Hoy hay Reto del río nuevo!
+UiText.HomeSlothPlay	¿Jugamos? Te miro desde mi rama.
 UiText.KeepPlaying	Seguir jugando
 UiText.Language	Idioma
 UiText.LevelComplete	¡Nivel completado!
