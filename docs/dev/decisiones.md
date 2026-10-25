@@ -3904,3 +3904,32 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **DNS en Cloudflare, todo «Solo DNS»:** los dos CNAME de validación de ACM (se quedan: renuevan el certificado), `tintalu.com` y `www` en CNAME a la distribución de CloudFront, y los MX, SPF y DKIM de Email Routing, que no se tocan.
 - **Comprobado el 2026-10-25:** `https://tintalu.com` y `https://www.tintalu.com` dan 200 en la portada, la privacidad, los términos y el borrado de cuenta; el certificado cubre los dos nombres; HTTP redirige a HTTPS (301); HSTS, CSP y `X-Frame-Options` activas.
 - **Siguiente despliegue de la web:** el mismo `cdk deploy AfProdGlobal AfProdWeb` con los mismos contextos (sin `-c domain` CloudFront perdería el dominio).
+
+## D-049 · Anuncios con AdMob directo (Google Mobile Ads) en lugar de AppLovin MAX, que no acepta cuentas nuevas
+
+- **Fecha:** 2026-10-25. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat: «si vamos con la opción 1» y, al plan de redes, «si».
+- **Motivo:** al registrarse (a nombre de Parallext, LLC; añadido de D-048), AppLovin respondió: «We're currently not accepting new publisher accounts». Sin cuenta no hay clave del SDK ni unidades, así que MAX (D-042) no puede servir anuncios.
+- **Decisión:**
+  1. **Mediador: AdMob**, con el plugin **Google Mobile Ads para Unity**. Entra en lugar de MAX y retira, para los anuncios, el «sin plugin GMA» del plan de instalación y de 08 §7 #2.
+     - La cuenta de AdMob ya está configurada: App ID, bloques, mensaje del RGPD, mensaje de EE. UU. y clasificación G (`anuncios-max.md` §10).
+     - Cobra AUTOMATION AI S.A.S (añadido de D-048).
+  2. **Consentimiento:** el UMP de Google, el mismo que ya se pedía con MAX. Sigue sin arrancar nada de anuncios antes de la edad y el consentimiento, y nada con <13 (08 §2.3; D-033 B12).
+  3. **Recompensas verificadas:** el SSV de AdMob contra la API de AWS (`/v1/ssv`, D-035), en lugar del S2S de MAX.
+  4. **Redes adicionales, como socios de mediación de AdMob,** una por una, cada una con su cuenta y su adaptador:
+     - **Unity Ads**, la primera: el dueño crea la cuenta ya;
+     - **Meta Audience Network** y **Mintegral**, tras publicar, porque piden la app en la tienda o revisión manual;
+     - las demás, según los ingresos.
+  5. **MAX queda guardado** detrás de la interfaz de `AF.Ads`, sin servir anuncios. Si AppLovin abre cuentas, el dueño decide si volver a MAX o añadir AppLovin como red dentro de AdMob. El dueño puede volver a pedir el alta a AppLovin, sin depender de ello.
+- **Lo que sigue necesitando la aprobación del dueño** (regla 4):
+  - la **versión exacta** del plugin de Google Mobile Ads, que propone el carril de integración con lo que trae por Gradle;
+  - cada adaptador de red, con su versión;
+  - los permisos `AD_ID` y `ACCESS_WIFI_STATE` (y `CHECK_LICENSE`, que se recomienda dejar fuera), pendientes de `anuncios-max.md` §8.
+- **Pierde:** la demanda propia de AppLovin mientras no haya cuenta, sin cifra propia [E].
+- **Toca después** (el carril de integración):
+  - 08 §2.2, §7 #2, §10.2 y §13.3;
+  - `anuncios-max.md`, que pasa a describir AdMob;
+  - Data Safety;
+  - la política (Google como socio de anuncios en lugar de AppLovin);
+  - `app-ads.txt`, con la línea de AdMob y luego la de cada red.
+- **Cómo revertir:** con una decisión nueva del dueño, por ejemplo si AppLovin acepta la cuenta.

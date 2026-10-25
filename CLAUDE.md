@@ -9,7 +9,7 @@ Puzzle móvil de ordenar agua (*water-sort*) con temática amazónica, **Android
    - `docs/gdd/08-arquitectura-tecnica-publicacion.md` §9: **única** tabla de Remote Config con defaults;
    - `schemas/af-level-1.schema.json`: **única** copia del formato de nivel `af-level/1` (ejemplo canónico en 08 §4.1);
    - `tools/out/econ_*.md`: toda cifra [sim].
-3. **Plan de instalación aprobado** (`docs/setup/plan-instalacion.md`, 2026-10-06): versiones y cambios aceptados al GDD (.NET 10, núcleo en `Packages/com.amazonfill.core/`, CI con `UNITY_EMAIL` + `UNITY_PASSWORD`, Firebase 13.17.0, IAP 5.4.4 (sustituido el 2026-10-22 por Play Billing Library 9.0.0 con un plugin propio: D-040, añadido de Q-IAP-1), sin plugin GMA, target API 36). Prevalece sobre las versiones antiguas de 08 hasta que se edite el GDD.
+3. **Plan de instalación aprobado** (`docs/setup/plan-instalacion.md`, 2026-10-06): versiones y cambios aceptados al GDD (.NET 10, núcleo en `Packages/com.amazonfill.core/`, CI con `UNITY_EMAIL` + `UNITY_PASSWORD`, Firebase 13.17.0, IAP 5.4.4 (sustituido el 2026-10-22 por Play Billing Library 9.0.0 con un plugin propio: D-040, añadido de Q-IAP-1), sin plugin GMA (retirado para los anuncios por D-049: AdMob directo con Google Mobile Ads, porque AppLovin no acepta cuentas nuevas), target API 36). Prevalece sobre las versiones antiguas de 08 hasta que se edite el GDD.
 4. Material de apoyo, no canon: `docs/setup/research/a-f` y `docs/research/`.
 
 ## Stack fijado (cambiarlo exige decisión del dueño)
