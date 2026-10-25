@@ -175,10 +175,11 @@ namespace AF.Tests.PlayMode
             yield return LoadRichLobby();
             GameBootstrap boot = GameBootstrap.Current!;
             LobbyScreen lobby = boot.Lobby!;
-            // El saludo de TiTino, si sale, cruza a 360 × 640 la tarjeta del Reto y la aparta mientras se ve: se espera a que acabe.
+            // El saludo de TiTino, si sale, llega a 360 × 640 a la travesía y la aparta mientras se ve (D-050): se espera a que acabe.
             HomeSloth sloth = lobby.HomeWindow.Sloth!;
             Tick(sloth, 400);
             Tick(sloth, (int)sloth.BubbleDurationMs + 300);
+            GameBootstrap.Current!.Lobby!.Tick(16f); // un fotograma del inicio: la travesía vuelve sin el bocadillo encima
             boot.TickDaily(16f);
             Canvas.ForceUpdateCanvases();
             Assert.That(boot.MarketIcons!.PiggyShown, Is.True, where + ": condición del test, el Cántaro a la vista (≥ 20)");
@@ -208,6 +209,7 @@ namespace AF.Tests.PlayMode
                 HomeSloth sloth = lobby.HomeWindow.Sloth!;
                 Tick(sloth, 400);
                 Tick(sloth, (int)sloth.BubbleDurationMs + 300);
+                GameBootstrap.Current!.Lobby!.Tick(16f); // un fotograma del inicio: la travesía vuelve sin el bocadillo encima
                 boot.TickLeague(16f);
                 boot.TickDaily(16f);
                 Canvas.ForceUpdateCanvases();

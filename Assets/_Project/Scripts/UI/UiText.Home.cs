@@ -61,10 +61,10 @@ namespace AF.UI
             return state.Length == 0 ? title : Format(Keys.HomeCardA11y, LocArgs.Of("title", title).And("state", state));
         }
 
-        /// <summary>TalkBack de la tarjeta del Reto (<c>home_card_daily_a11y</c>): título con la fecha, estado y sellos.</summary>
-        public static string HomeCardDailyA11y(string title, string state, int stamps, int total)
+        /// <summary>TalkBack de la tarjeta del Reto (<c>home_card_daily_a11y</c>): título con la fecha, estado y racha de 7.</summary>
+        public static string HomeCardDailyA11y(string title, string state, int streak)
         {
-            return Format(Keys.HomeCardDailyA11y, LocArgs.Of("title", title).And("state", state).AndDigits("n", NonNegative(stamps)).AndDigits("total", NonNegative(total)));
+            return Format(Keys.HomeCardDailyA11y, LocArgs.Of("title", title).And("state", state).AndDigits("n", NonNegative(streak)));
         }
 
         /// <summary>TalkBack del poste de la Crecida (<c>home_crecida_a11y</c> o, con la Hoja escudo, <c>home_crecida_shield_a11y</c>).</summary>

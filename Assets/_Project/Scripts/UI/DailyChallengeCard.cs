@@ -15,8 +15,8 @@ namespace AF.UI
     /// y la racha «{n}/7» en la píldora de la esquina (<see cref="DailyChallengeRules.StreakShown"/>); con el día sellado, el sello
     /// verde hoja sobre el disco (<see cref="DailyStampCalendar.StampColor"/>; nunca rojo, guía v2 §7). Oculta (D-008) no se ve
     /// ni recibe toques. Un toque llama a quien la creó con el estado que tenía (jugar o seguir abre la partida; sellado o
-    /// pendiente, el calendario del mes [P]). TalkBack la lee entera, con la fecha: «Reto del río · {fecha}: Jugar. Sellos: 0 de
-    /// 7» (<c>home_card_daily_a11y</c>). <see cref="Refresh"/> asigna textos (no por fotograma).
+    /// pendiente, el calendario del mes [P]). TalkBack la lee entera, con la fecha: «Reto del río · {fecha}: Jugar. Racha: 0 de 7
+    /// días» (<c>home_card_daily_a11y</c>). <see cref="Refresh"/> asigna textos (no por fotograma).
     /// </summary>
     public sealed class DailyChallengeCard
     {
@@ -49,7 +49,7 @@ namespace AF.UI
                 _waves[i] = UiBuilder.Image("Wave" + (i + 1), _card.IconExtras, WaveSprite(), Palette.Cream);
             }
 
-            A11yLabels.Set(_card.Button, () => UiText.HomeCardDailyA11y(_titleFull, DailyText.State(_shown), _streakShown, DailyChallengeRules.StreakLength));
+            A11yLabels.Set(_card.Button, () => UiText.HomeCardDailyA11y(_titleFull, DailyText.State(_shown), _streakShown));
         }
 
         /// <summary>Raíz de la tarjeta (para colocarla).</summary>

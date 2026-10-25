@@ -189,7 +189,7 @@ namespace AF.Tests.PlayMode
             Assert.That(canoe, Is.Not.Null, "la canoa y la parada, con la línea entera de la parada y lo que hacen");
             Assert.That(canoe!.Role, Is.EqualTo(UnityEngine.Accessibility.AccessibilityRole.Button));
             DailyChallengeCard daily = boot.DailyCard!;
-            Assert.That(host.Find(daily.TitleText + ": Jugar. Sellos: 0 de 7"), Is.Not.Null, "la tarjeta del Reto, con la fecha y los sellos");
+            Assert.That(host.Find(daily.TitleText + ": Jugar. Racha: 0 de 7 días"), Is.Not.Null, "la tarjeta del Reto, con la fecha y la racha");
             if (boot.Lobby.StreakWidget.Visible)
             {
                 bool crecida = false;

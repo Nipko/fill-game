@@ -1145,12 +1145,14 @@ namespace AF.UI
             _streakWidget.Place(crecX, crecTop, Mathf.Max(52f, crecBottom - crecTop));
 
             // La travesía (D-050, punto 3): la ruta sale de la izquierda, más lejos (bajo TiTino), y acaba delante, en el poste de la
-            // parada, a 16 dp de la viga; el letrero cuelga del poste a su derecha, sin llegar a la Crecida.
+            // parada, a 16 dp de la viga; el letrero, en lo alto del poste, sin llegar a TiTino, a Música y Sonido ni a la Crecida.
             float depth = beam - horizon;
-            var foot = new Vector2(Mathf.Round(0.43f * w), beam - 16f);
+            var foot = new Vector2(Mathf.Round(0.62f * w), beam - 16f);
             float startY = Mathf.Clamp(foot.y - (0.42f * depth), titinoBottom + 20f, foot.y - 20f);
             var start = new Vector2(Mathf.Round(0.12f * w), startY);
-            _voyage.Layout(start, foot, crecX - 8f, k);
+            float signMin = TitinoLeftDp + HomeWindow.SceneWidthDp + 6f;
+            float signMax = Mathf.Min(crecX - 8f, audioX - 6f);
+            _voyage.Layout(start, foot, signMin, signMax, k);
 
             // El muelle: el Cántaro a la izquierda y, sin tarjetas, la caja de cuias.
             PlacePiggySlot();

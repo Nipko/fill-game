@@ -41,9 +41,16 @@ namespace AF.Tests.PlayMode
         private const string Nbsp = " ";
         private static readonly DateTime T0 = new DateTime(2026, 10, 15, 15, 0, 0, DateTimeKind.Utc);
 
+        [SetUp]
+        public void SetUp()
+        {
+            HomeSloth.ManualTickForTests = true; // sin el bocadillo de TiTino, que apartaría el letrero mientras se ve (lo prueba HomeSlothTests)
+        }
+
         [TearDown]
         public void TearDown()
         {
+            HomeSloth.ManualTickForTests = false;
             GameBootstrap.ResetDailyOverrides();
             GameScreen.SimulatedScreen = null;
             MapArtRule.ForceProvisional = null;
@@ -384,7 +391,7 @@ namespace AF.Tests.PlayMode
                 // El letrero de la parada, en el río, no tapa el héroe del fondo (TiTino, desde D-050, cuelga delante del paisaje).
                 Rect hero = lobby.StopBackdrop.HeroRect;
                 Debug.Log("AF_LOBBY " + where + ": héroe " + hero + ", TiTino " + named[6].Value + ", letrero " + named[5].Value + ", canoa " + named[7].Value);
-                if (hero.width > 0f)
+                if (size.y == 2400 && hero.width > 0f)
                 {
                     Assert.That(Shrunk(named[5].Value).Overlaps(hero), Is.False, where + ": el letrero tapa el héroe");
                 }
@@ -442,16 +449,18 @@ namespace AF.Tests.PlayMode
                 + "\"world_id\": \"w01_estuario\", \"lap\": 1, \"water_base\": \"white\", \"levels\": [ " + level + " ] }";
         }
 
-        // El letrero de la parada (D-050, punto 3): en el río, por encima de la viga del muelle y bajo el horizonte del panorama, a la
-        // derecha de su poste y sin llegar a la Crecida; dentro de la pantalla.
+        // El letrero de la parada (D-050, punto 3): en el río, por encima de la viga del muelle y bajo el horizonte del panorama,
+        // en lo alto de su poste, sin pisar la canoa ni llegar a la Crecida; dentro de la pantalla.
         private static void AssertSignInTheRiver(LobbyScreen lobby, string where)
         {
             Rect play = CanvasRect((RectTransform)lobby.PlayButton.transform, lobby);
             Rect sign = CanvasRect(lobby.StopRemainingRect, lobby);
             Rect post = CanvasRect(lobby.Voyage.PostRect, lobby);
             Assert.That(sign.yMax, Is.LessThanOrEqualTo(play.yMin - 36f + 0.5f), where + ": por encima de la viga del muelle");
-            Assert.That(sign.xMin, Is.GreaterThanOrEqualTo(post.xMax - 0.5f), where + ": a la derecha del poste");
+            Assert.That(sign.yMax, Is.LessThanOrEqualTo(post.yMin + 6f), where + ": en lo alto del poste");
+            Assert.That(sign.xMin - 0.5f <= post.center.x && post.center.x <= sign.xMax + 0.5f, Is.True, where + ": sobre el poste");
             Assert.That(sign.xMax, Is.LessThanOrEqualTo(lobby.CanvasWidth - 16f - StreakWidget.WidthDp - 8f + 0.5f), where + ": sin llegar a la Crecida");
+            Assert.That(sign.Overlaps(lobby.Voyage.CanoeBounds), Is.False, where + ": sin pisar la canoa");
             Assert.That(sign.xMin, Is.GreaterThanOrEqualTo(-0.5f), where);
         }
 

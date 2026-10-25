@@ -86,6 +86,11 @@ namespace AF.UI
             _art = art;
             _root = UiBuilder.Rect("HomeVoyage", parent);
             UiBuilder.Stretch(_root);
+            // Canvas anidado propio (como el río): el vaivén de la canoa y de Rosa no rehace el resto del inicio; con su raycaster,
+            // para que la canoa y la parada se toquen.
+            Canvas nested = _root.gameObject.AddComponent<Canvas>();
+            nested.additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord1 | AdditionalCanvasShaderChannels.Normal | AdditionalCanvasShaderChannels.Tangent;
+            _root.gameObject.AddComponent<GraphicRaycaster>();
             for (int i = 0; i < RouteDots; i++)
             {
                 _dots[i] = Piece("RouteDot" + i, art.Disc, new Color(Palette.Cream.r, Palette.Cream.g, Palette.Cream.b, 0.9f));
@@ -292,23 +297,25 @@ namespace AF.UI
 
         /// <summary>
         /// Coloca la ruta de <paramref name="start"/> (la salida, a la izquierda y más lejos) al pie del poste (<paramref name="foot"/>,
-        /// delante, en el agua), con el letrero colgado del poste a su derecha, de como mucho hasta <paramref name="maxX"/>;
-        /// <paramref name="k"/> es el ancho del lienzo / 360. Solo al maquetar.
+        /// delante, en el agua), con el letrero en lo alto del poste, centrado sobre él y entre <paramref name="minX"/> y
+        /// <paramref name="maxX"/>; <paramref name="k"/> es el ancho del lienzo / 360. Solo al maquetar.
         /// </summary>
-        public void Layout(Vector2 start, Vector2 foot, float maxX, float k)
+        public void Layout(Vector2 start, Vector2 foot, float minX, float maxX, float k)
         {
             _start = start;
             _foot = foot;
             _k = k;
             _laidOut = true;
+            _minX = minX;
             _maxX = maxX;
             Relayout();
         }
 
+        private float _minX;
         private float _maxX = 360f;
 
-        /// <summary>Lo que el letrero se aparta del poste (dp).</summary>
-        public const float SignGapDp = 3f;
+        /// <summary>Ancho del letrero, como mucho (dp a 360 de ancho).</summary>
+        public const float SignMaxWidthDp = 180f;
 
         // El letrero a lo ancho de su texto, como mucho maxW: el nombre en una línea si cabe (si no, en las que pida) y la píldora
         // debajo.
@@ -326,42 +333,48 @@ namespace AF.UI
             h = SignPadY + nameH + (pillH > 0f ? 3f + pillH : 0f) + SignPadY + 2f;
         }
 
+        /// <summary>
+        /// Alto del poste (dp): lo bastante para que la canoa llegue a su pie por debajo del letrero de lo alto (el alto de la canoa
+        /// junto a la parada y 14 dp de aire).
+        /// </summary>
+        public float PostHeight => Mathf.Max(ProceduralArt.StopPostHeightDp, (ProceduralArt.MapCanoeHeightDp * CanoeScale) + 26f) * _k;
+
         private void Relayout()
         {
             float k = _k;
-            // La ruta sube un poco por el medio, como si remontara la corriente.
-            _control = new Vector2((_start.x + _foot.x) * 0.5f, Mathf.Min(_start.y, _foot.y) + ((_foot.y - _start.y) * 0.1f));
+            // La ruta baja un poco por el medio (más cerca), por debajo del letrero de lo alto del poste.
+            _control = new Vector2((_start.x + _foot.x) * 0.5f, ((_start.y + _foot.y) * 0.5f) + (6f * k));
 
-            // El poste, del alto del letrero que lleva colgado (y nunca menos que su dibujo), con su anillo de agua; el letrero, a su
-            // derecha, con el borde de abajo a 12 dp del agua.
+            // El poste, más alto que la canoa, con su anillo de agua; el letrero en lo alto, centrado sobre él (lo que dejen minX y
+            // maxX), con su borde de abajo 4 dp por debajo de la punta.
             float postW = ProceduralArt.StopPostWidthDp * k;
+            float postH = PostHeight;
             _post.gameObject.SetActive(_hasNext);
             _postRing.gameObject.SetActive(_hasNext);
             _sign.gameObject.SetActive(_hasNext && !_signCovered);
             if (_hasNext)
             {
-                float signLeft = _foot.x + (postW * 0.5f) + SignGapDp;
-                SignSize(_maxX - signLeft, out float w, out float h, out float nameH, out float pillW, out float pillH);
-                float signBottom = _foot.y - (12f * k);
-                float postH = Mathf.Max(ProceduralArt.StopPostHeightDp * k, h + (12f * k) + 10f);
+                float half = Mathf.Min(_foot.x - _minX, _maxX - _foot.x);
+                float maxW = Mathf.Min(SignMaxWidthDp * k, Mathf.Max(2f * half, _maxX - _minX));
+                SignSize(maxW, out float w, out float h, out float nameH, out float pillW, out float pillH);
+                float signBottom = _foot.y - postH + 4f;
+                float x = Mathf.Clamp(_foot.x - (w * 0.5f), _minX, Mathf.Max(_minX, _maxX - w));
                 _post.rectTransform.pivot = new Vector2(0.5f, 0f);
                 Place(_post.rectTransform, _foot.x, _foot.y, postW, postH);
                 Center(_postRing.rectTransform, _foot.x, _foot.y - (1f * k), 28f * k, 7f * k);
-                _signRect = new Rect(signLeft, signBottom - h, w, h);
+                _signRect = new Rect(x, signBottom - h, w, h);
                 UiBuilder.Place(_sign, _signRect.x, _signRect.y, w, h);
                 UiBuilder.Place(_name.rectTransform, SignPadX, SignPadY, w - (2f * SignPadX), nameH);
                 _pill.gameObject.SetActive(pillH > 0f);
                 UiBuilder.Place(_pill, (w - pillW) * 0.5f, SignPadY + nameH + 3f, pillW, pillH);
                 UiBuilder.Place(_levels.rectTransform, PillPadX, 0f, pillW - (2f * PillPadX), pillH);
 
-                // El toque de la parada: el poste y su letrero, con 48 dp como mínimo.
-                float tapLeft = _foot.x - Mathf.Max(postW, 16f);
-                float tapRight = _signRect.xMax;
-                float tapTop = Mathf.Min(_signRect.y, _foot.y - postH);
+                // El toque de la parada: el letrero y el poste, con 48 dp como mínimo.
+                float tapW = Mathf.Max(MinTouchDp, w);
+                float tapTop = _signRect.y;
                 float tapH = Mathf.Max(MinTouchDp, _foot.y - tapTop);
-                UiBuilder.Place((RectTransform)_stopTap.transform, tapLeft, tapTop, Mathf.Max(MinTouchDp, tapRight - tapLeft), tapH);
+                UiBuilder.Place((RectTransform)_stopTap.transform, _signRect.center.x - (tapW * 0.5f), tapTop, tapW, tapH);
             }
-
             // Ruta: los puntos de delante de la canoa, hasta el poste.
             for (int i = 0; i < RouteDots; i++)
             {
