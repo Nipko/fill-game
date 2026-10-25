@@ -23,8 +23,20 @@ namespace AF.UI
     /// </summary>
     public sealed class DailyChallengeCard
     {
-        /// <summary>Ancho de la tarjeta (dp).</summary>
+        /// <summary>Ancho de la tarjeta (dp) en un lienzo de 360 dp o más.</summary>
         public const float WidthDp = 296f;
+
+        /// <summary>
+        /// Franja de la derecha que la tarjeta deja libre (dp) [P]: la del widget de la Crecida del inicio (<c>LobbyScreen</c>, de
+        /// w − 30 a w − 4) y 2 dp de aire. A 360 dp la tarjeta, centrada, ya llega justo a w − 32.
+        /// </summary>
+        public const float RightClearDp = 32f;
+
+        /// <summary>Margen izquierdo mínimo de la tarjeta (dp) [P]: el de la ventanita de casa y los saldos del inicio.</summary>
+        public const float LeftGutterDp = 16f;
+
+        /// <summary>Ancho mínimo de la tarjeta (dp): el de un lienzo de 320 dp, el más estrecho (Q-B11-5 (a)).</summary>
+        public const float MinWidthDp = 320f - LeftGutterDp - RightClearDp;
 
         /// <summary>
         /// Alto de la tarjeta (dp; el área táctil es la tarjeta entera, ≥ 48 dp, 07 §7.8): 100 para que el título y el estado
@@ -49,8 +61,20 @@ namespace AF.UI
         private readonly Image _bandPlate;
         private readonly Image[] _waves = new Image[MaxWaves];
         private readonly Image _stamp;
+        private readonly Image _surface;
+        private readonly ProceduralArt _art;
         private DailyCardState _shown = DailyCardState.Hidden;
         private int _band;
+        private float _width = WidthDp;
+        private float _plateDp = 56f;
+        private float _height = HeightDp;
+        private float _sizedW = WidthDp;
+        private float _sizedH = HeightDp;
+        private float _x;
+        private float _y;
+
+        // Lado de la placa de la banda en una tarjeta estrecha (dp) [P].
+        private const float NarrowPlateDp = 44f;
 
         /// <summary>Construye la tarjeta (oculta) bajo <paramref name="parent"/>.</summary>
         public DailyChallengeCard(Transform parent, ProceduralArt art, Action<DailyCardState> onTap)
@@ -61,11 +85,11 @@ namespace AF.UI
             }
 
             _onTap = onTap ?? throw new ArgumentNullException(nameof(onTap));
-            _root = ModalKit.Card("DailyChallengeCard", parent, art, out Image surface);
-            ModalKit.Size(_root, surface, art, 0f, 0f, WidthDp, HeightDp);
+            _art = art;
+            _root = ModalKit.Card("DailyChallengeCard", parent, art, out _surface);
+            ModalKit.Size(_root, _surface, art, 0f, 0f, WidthDp, HeightDp);
 
             _bandPlate = UiBuilder.Image("BandPlate", _root, art.RoundedRect, Palette.WaterClear);
-            UiBuilder.Place(_bandPlate.rectTransform, 14f, (HeightDp - 56f) * 0.5f, 56f, 56f);
             for (int i = 0; i < MaxWaves; i++)
             {
                 _waves[i] = UiBuilder.Image("Wave" + (i + 1), _bandPlate.transform, WaveSprite(), Palette.Cream);
@@ -74,25 +98,22 @@ namespace AF.UI
             _title = UiBuilder.Label("Title", _root, TextStyle.PlainBold, string.Empty, 17f, Palette.UiInk, TextAlignmentOptions.MidlineLeft);
             // El título no pasa por debajo del sello (esquina superior derecha, StampSlotDp): revisión de R11 (en-XA). Hasta dos
             // líneas: «Reto del río · {fecha}» largo (en-XA al 130 %, 360 × 640) baja de línea en vez de salirse (revisión de R12).
-            UiBuilder.Place(_title.rectTransform, 80f, 8f, WidthDp - StampSlotDp - 80f, 44f);
             _title.textWrappingMode = TextWrappingModes.Normal;
             UiBuilder.AutoSize(_title, UiBuilder.MinTextSp, 17f);
             _state = UiBuilder.Label("State", _root, TextStyle.PlainBold, string.Empty, 15f, Palette.UiGreenButton, TextAlignmentOptions.MidlineLeft);
             // Hasta dos líneas: un estado largo (Pendiente de validar en en-XA) baja de línea en vez de pisar la racha (R11).
-            UiBuilder.Place(_state.rectTransform, 80f, 56f, 132f, 36f);
             _state.textWrappingMode = TextWrappingModes.Normal;
             UiBuilder.AutoSize(_state, UiBuilder.MinTextSp, 15f);
             _streak = UiBuilder.Label("Streak", _root, TextStyle.PlainBold, string.Empty, 15f, Palette.UiWood, TextAlignmentOptions.MidlineRight);
-            UiBuilder.Place(_streak.rectTransform, 212f, 61f, 52f, 26f);
             UiBuilder.AutoSize(_streak, UiBuilder.MinTextSp, 15f);
 
             _stamp = UiBuilder.Image("Stamp", _root, art.Disc, DailyStampCalendar.StampColor);
-            UiBuilder.Place(_stamp.rectTransform, WidthDp - 40f, 8f, 28f, 28f);
             Image ring = UiBuilder.Image("Ring", _stamp.transform, art.Ring, Palette.Cream);
             UiBuilder.Stretch(ring.rectTransform);
 
             _button = UiBuilder.BareButton("Tap", _root, OnTap);
             UiBuilder.Stretch((RectTransform)_button.transform);
+            LayoutInner();
             _root.gameObject.SetActive(false);
         }
 
@@ -181,10 +202,93 @@ namespace AF.UI
             return s_wave;
         }
 
-        /// <summary>Coloca la tarjeta con su esquina superior izquierda en (<paramref name="x"/>, <paramref name="y"/>) dp.</summary>
+        /// <summary>Ancho con el que está colocada (dp; <see cref="WidthFor"/>).</summary>
+        public float Width => _width;
+
+        /// <summary>
+        /// Ancho de la tarjeta en un lienzo de <paramref name="canvasW"/> dp: <see cref="WidthDp"/> centrada mientras deja libre la
+        /// franja de la Crecida (<see cref="RightClearDp"/>); en lienzos más estrechos (320 dp: 272), lo que queda entre
+        /// <see cref="LeftGutterDp"/> y esa franja. A 320 dp, centrada a 296 dp (x 12-308), pisaba el widget de la Crecida
+        /// (x 290-316) [P].
+        /// </summary>
+        public static float WidthFor(float canvasW)
+        {
+            return Mathf.Clamp(canvasW - LeftGutterDp - RightClearDp, MinWidthDp, WidthDp);
+        }
+
+        /// <summary>Borde izquierdo de la tarjeta (dp) en un lienzo de <paramref name="canvasW"/> dp (ver <see cref="WidthFor"/>).</summary>
+        public static float LeftFor(float canvasW)
+        {
+            float width = WidthFor(canvasW);
+            return Mathf.Min((canvasW - width) * 0.5f, canvasW - RightClearDp - width);
+        }
+
+        /// <summary>Coloca la tarjeta con su esquina superior izquierda en (<paramref name="x"/>, <paramref name="y"/>) dp, a <see cref="WidthDp"/>.</summary>
         public void Place(float x, float y)
         {
-            UiBuilder.Place(_root, x, y, WidthDp, HeightDp);
+            Place(x, y, WidthDp);
+        }
+
+        /// <summary>
+        /// Alto de la tarjeta (dp): <see cref="HeightDp"/> o, si el título y el estado no caben en dos líneas cada uno a su mínimo
+        /// (en-XA al 130 % con «Pendiente de validar»), lo que necesiten (02 §12: los contenedores crecen) [P]. Quien la coloca
+        /// deja fijo su borde de abajo y la hace crecer hacia arriba.
+        /// </summary>
+        public float Height => _height;
+
+        /// <summary>Coloca la tarjeta con su esquina superior izquierda en (<paramref name="x"/>, <paramref name="y"/>) dp y <paramref name="width"/> dp de ancho.</summary>
+        public void Place(float x, float y, float width)
+        {
+            if (!Mathf.Approximately(width, _width))
+            {
+                _width = width;
+                LayoutInner();
+            }
+
+            _x = x;
+            _y = y;
+            if (!Mathf.Approximately(_width, _sizedW) || !Mathf.Approximately(_height, _sizedH))
+            {
+                _sizedW = _width;
+                _sizedH = _height;
+                ModalKit.Size(_root, _surface, _art, x, y, _width, _height);
+                return;
+            }
+
+            UiBuilder.Place(_root, x, y, _width, _height);
+        }
+
+        // Lo de dentro, a lo ancho de la tarjeta: la placa de la banda a la izquierda, el título hasta el sello (StampSlotDp), la racha
+        // pegada a la derecha, a 32 dp del borde, y el estado entre la placa y la racha. A 296 dp, placa de 56, texto desde 80 y
+        // racha de 52 (estado de 132 dp). Más estrecha (320 dp: 272), la placa baja a 44 dp, el texto empieza en 64 y la racha
+        // mide 40, así que el estado conserva sus 132 dp y «Pendiente de validar» cabe al 130 % como a 360 dp [P].
+        private void LayoutInner()
+        {
+            float w = _width;
+            bool narrow = w < WidthDp - 0.5f;
+            float plate = narrow ? NarrowPlateDp : 56f;
+            float plateX = narrow ? 12f : 14f;
+            float textX = narrow ? 64f : 80f;
+            float streakW = narrow ? 40f : 52f;
+            // El título (44 dp) y el estado (36 dp) crecen lo que necesite su texto a su mínimo (02 §12: los contenedores crecen;
+            // «Pendiente de validar» en dos líneas al 130 % pide ~42 dp) y la tarjeta con ellos, desde los 100 dp de siempre.
+            float titleW = w - StampSlotDp - textX;
+            float stateW = w - 32f - streakW - textX;
+            float titleH = Mathf.Max(44f, Mathf.Ceil(UiBuilder.MinTextHeight(_title, titleW)));
+            float stateH = Mathf.Max(36f, Mathf.Ceil(UiBuilder.MinTextHeight(_state, stateW)));
+            _height = Mathf.Max(HeightDp, 8f + titleH + 4f + stateH + 4f);
+            float h = _height;
+            UiBuilder.Place(_bandPlate.rectTransform, plateX, (h - plate) * 0.5f, plate, plate);
+            _plateDp = plate;
+            if (_band > 0)
+            {
+                PlaceWaves(_band);
+            }
+
+            UiBuilder.Place(_title.rectTransform, textX, 8f, titleW, titleH);
+            UiBuilder.Place(_state.rectTransform, textX, 8f + titleH + 4f, stateW, stateH);
+            UiBuilder.Place(_streak.rectTransform, w - 32f - streakW, h - 39f, streakW, 26f);
+            UiBuilder.Place(_stamp.rectTransform, w - 40f, 8f, 28f, 28f);
         }
 
         /// <summary>
@@ -230,10 +334,20 @@ namespace AF.UI
             _streak.text = DailyText.Streak(service.Rules.StreakShown(), DailyChallengeRules.StreakLength);
             bool stamped = state == DailyCardState.Sealed || state == DailyCardState.PendingValidation;
             _stamp.gameObject.SetActive(stamped);
+            LayoutInner(); // el alto del estado depende de su texto
             Color stampColor = DailyStampCalendar.StampColor;
             _stamp.color = state == DailyCardState.PendingValidation ? new Color(stampColor.r, stampColor.g, stampColor.b, 0.45f) : stampColor;
             _root.gameObject.SetActive(true);
             return state;
+        }
+
+        /// <summary>Solo tests: pone el texto de <paramref name="state"/> en la línea de estado y recoloca, como <see cref="Refresh"/>.</summary>
+        internal void ShowStateTextForTests(DailyCardState state)
+        {
+            _state.text = DailyText.State(state);
+            float bottom = _y + _height;
+            LayoutInner();
+            Place(_x, bottom - _height, _width);
         }
 
         /// <summary>Oculta la tarjeta sin cambiar su estado (p. ej. con una partida del Reto abierta o un modal encima).</summary>
@@ -246,20 +360,22 @@ namespace AF.UI
             }
         }
 
-        // Olas apiladas y centradas en la placa de 56 dp: 1 → centro; 2 y 3 → separadas 12 dp.
+        // Olas apiladas y centradas en la placa (de 56 dp: 40 × 13, separadas 12 dp; en la de 44, a escala): 1 → centro; 2 y 3 → apiladas.
         private void PlaceWaves(int count)
         {
-            const float waveW = 40f;
-            const float waveH = 13f;
-            const float gap = 12f;
-            float top = (56f - (waveH + (gap * (count - 1)))) * 0.5f;
+            float k = _plateDp / 56f;
+            float waveW = 40f * k;
+            float waveH = 13f * k;
+            float gap = 12f * k;
+            float left = (_plateDp - waveW) * 0.5f;
+            float top = (_plateDp - (waveH + (gap * (count - 1)))) * 0.5f;
             for (int i = 0; i < _waves.Length; i++)
             {
                 bool on = i < count;
                 _waves[i].gameObject.SetActive(on);
                 if (on)
                 {
-                    UiBuilder.Place(_waves[i].rectTransform, 8f, top + (gap * i), waveW, waveH);
+                    UiBuilder.Place(_waves[i].rectTransform, left, top + (gap * i), waveW, waveH);
                 }
             }
         }

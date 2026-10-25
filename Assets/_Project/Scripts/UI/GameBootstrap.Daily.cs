@@ -52,6 +52,7 @@ namespace AF.UI
         private readonly Vector3[] _cardCorners = new Vector3[4];
         private float _dailyCardW;
         private float _dailyCardH;
+        private float _dailyCardHeight;
 
         /// <summary>
         /// Último día del Reto cerrado sin victoria (<see cref="DailyChallengeService.DayEnded"/>: el <c>fail</c> del día, una vez y
@@ -444,15 +445,25 @@ namespace AF.UI
 
             float w = _dailyCardCanvas.Width;
             float h = _dailyCardCanvas.Height;
-            if (Mathf.Approximately(w, _dailyCardW) && Mathf.Approximately(h, _dailyCardH) && _dailyCard.Root.sizeDelta.x > 0f)
+            float cardH = _dailyCard.Height;
+            if (Mathf.Approximately(w, _dailyCardW) && Mathf.Approximately(h, _dailyCardH) && Mathf.Approximately(cardH, _dailyCardHeight) && _dailyCard.Root.sizeDelta.x > 0f)
             {
                 return;
             }
 
+            bool grew = !Mathf.Approximately(cardH, _dailyCardHeight);
             _dailyCardW = w;
             _dailyCardH = h;
-            float y = (h * LobbyScreen.PlayCenterFraction) - DailyCardAbovePlayDp - DailyChallengeCard.HeightDp - 32f;
-            _dailyCard.Place((w - DailyChallengeCard.WidthDp) * 0.5f, Mathf.Max(96f, y));
+            _dailyCardHeight = cardH;
+            if (grew)
+            {
+                PlaceLogbookCard(); // la de la Bitácora va encima de la del Reto, que creció o encogió con sus textos
+            }
+
+            // El borde de abajo, fijo; si sus textos piden más alto (DailyChallengeCard.Height), crece hacia arriba.
+            float y = (h * LobbyScreen.PlayCenterFraction) - DailyCardAbovePlayDp - cardH - 32f;
+            // A lo ancho, sin pisar la franja de la Crecida de la derecha (a 320 dp, 272 dp desde x = 16; DailyChallengeCard.WidthFor).
+            _dailyCard.Place(DailyChallengeCard.LeftFor(w), Mathf.Max(96f, y), DailyChallengeCard.WidthFor(w));
         }
 
         private DailyPool? LoadDailyPool()

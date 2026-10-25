@@ -402,8 +402,13 @@ namespace AF.UI
 
             ModalKit.Place(_home, 36f, y, PanelW - 72f);
             y += ModalKit.HeightOf(_home) + 22f;
+            // Centrado en el lienzo, pero dentro de los márgenes de la zona segura (B10; 08 §13.1 #4): nunca más arriba de 48 dp
+            // ni de la zona segura de arriba + 8, ni con «Volver al inicio» bajo la barra de navegación o de gestos (zona segura de
+            // abajo + 8). Si el panel no cabe entre los dos, manda el de arriba.
             float x = (_canvas.Width - PanelW) * 0.5f;
-            float top = Mathf.Max(48f, (_canvas.Height - y) * 0.5f);
+            float minTop = Mathf.Max(48f, Mathf.Max(GameScreen.MinSafeTop, _canvas.SafeTop) + 8f);
+            float maxBottom = _canvas.Height - Mathf.Max(GameScreen.MinSafeBottom, _canvas.SafeBottom) - 8f;
+            float top = Mathf.Max(minTop, Mathf.Min((_canvas.Height - y) * 0.5f, maxBottom - y));
             ModalKit.Size(_panel, _surface, _art, x, top, PanelW, y);
         }
     }

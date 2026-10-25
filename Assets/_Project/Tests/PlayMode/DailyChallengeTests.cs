@@ -185,6 +185,64 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.RefreshDailyCard(), Is.EqualTo(DailyCardState.Play));
         }
 
+        /// <summary>
+        /// Safe area (auditoría B10; 08 §13.1 #4; T6, carril B, punto 3): con una barra de gestos de 220 px (73,3 dp) abajo y un
+        /// recorte de 120 px (40 dp) arriba, el calendario de sellos tras ganar el Reto queda entero entre las dos zonas seguras,
+        /// con «Volver al inicio» (y la Cosecha doble, si sale) sobre la barra, a 360 × 780 y en 16:9.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Calendar_WithAGestureBar_StaysInsideTheSafeArea([Values(2340, 1920, 1600)] int heightPx)
+        {
+            // 1600 px (a 2,5 px/dp, 432 × 640 dp) con 250 px (100 dp) de barra: la cota de abajo actúa y sube el panel, que
+            // centrado («Volver al inicio» y la Cosecha doble) caería sobre la barra.
+            bool low = heightPx == 1600;
+            var screen = low ? new Vector4(1080f, heightPx, 96f, 250f) : new Vector4(1080f, heightPx, 120f, 220f);
+            GameScreen.SimulatedScreen = screen;
+            yield return Boot();
+            GameBootstrap boot = GameBootstrap.Current!;
+            HomeSloth sloth = boot.Lobby!.HomeWindow.Sloth!; // en 16:9 su saludo cruza la tarjeta y la aparta mientras se ve
+            for (int t = 0; t < 400; t += Frame)
+            {
+                sloth.Tick(Frame);
+            }
+
+            for (int t = 0, end = (int)sloth.BubbleDurationMs + 300; t < end; t += Frame)
+            {
+                sloth.Tick(Frame);
+            }
+
+            Step(boot, Frame);
+            Assert.That(boot.PressDailyCard(), Is.True);
+            DailyChallengeScreen daily = boot.DailyScreen!;
+            Win(boot, daily);
+            StepUntil(boot, () => daily.Calendar.Visible, 20000, "calendario de sellos");
+            daily.Calendar.Settle();
+            Step(boot, Frame);
+            Canvas.ForceUpdateCanvases();
+
+            DailyStampCalendar calendar = daily.Calendar;
+            string where = "el calendario a 1080 × " + heightPx + " px con " + (low ? 250 : 220) + " px de barra";
+            SafeAreaOverlayTests.Margins(calendar.Canvas, screen, out float safeTop, out float safeBottom, out float canvasH);
+            Rect panel = StopCardTests.CanvasRect((RectTransform)calendar.Canvas.transform.Find("CalendarPanel"), calendar.Canvas);
+            Rect home = StopCardTests.CanvasRect((RectTransform)calendar.HomeButton.transform, calendar.Canvas);
+            Debug.Log("AF_SAFE_CALENDAR " + where + ": zona segura " + safeTop.ToString("0.0") + " / " + safeBottom.ToString("0.0") + " dp; panel " + panel + ", Volver " + home);
+            Assert.That(panel.yMin, Is.GreaterThanOrEqualTo(safeTop + 8f - 0.05f), where + ": el panel, bajo la zona segura de arriba");
+            Assert.That(panel.yMax, Is.LessThanOrEqualTo(canvasH - safeBottom - 8f + 0.05f), where + ": el panel, sobre la barra");
+            Assert.That(home.yMax, Is.LessThanOrEqualTo(canvasH - safeBottom + 0.05f), where + ": «Volver al inicio», sobre la barra");
+            if (low)
+            {
+                Assert.That(calendar.DoubleHarvestShown, Is.True, where + ": condición del test, con la Cosecha doble");
+                Assert.That(panel.yMin, Is.LessThan(((canvasH - panel.height) * 0.5f) - 0.5f), where + ": más arriba que centrado");
+                Assert.That(panel.yMax, Is.EqualTo(canvasH - safeBottom - 8f).Within(0.05f), where + ": sobre la barra + 8");
+            }
+
+            if (calendar.DoubleHarvestShown)
+            {
+                Rect twice = StopCardTests.CanvasRect((RectTransform)calendar.DoubleHarvestButton.transform, calendar.Canvas);
+                Assert.That(twice.yMax, Is.LessThanOrEqualTo(canvasH - safeBottom + 0.05f), where + ": la Cosecha doble, sobre la barra");
+            }
+        }
+
         [UnityTest]
         public IEnumerator Card_PendingValidation_WhenTheClockDriftsOnline()
         {

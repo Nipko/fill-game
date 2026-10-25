@@ -740,8 +740,12 @@ namespace AF.UI
             else
             {
                 // El contador a la derecha de la banda (x ≈ W − 8 − ancho) fuera del cielo; el grupo, centrado bajo la insignia y
-                // a ≥ HudCounterGapDp del contador.
-                float right = _canvasW - HudCounterRightDp;
+                // a ≥ HudCounterGapDp del contador. Si la píldora «Reiniciar» baja hasta la banda (su etiqueta en dos líneas: en-XA,
+                // o un idioma largo al 130 %), el contador va a su izquierda, a RestartPillGapDp, en lugar de quedar debajo
+                // (Q-T6T-5, pregunta 68 de GDD.md §6.3) [P].
+                float right = counter
+                    ? CounterRightLimit(_canvasW, counterY, _restartPillTwoLines, RestartPillBottomDp, RestartPillLeftEdgeDp)
+                    : _canvasW - HudCounterRightDp;
                 counterX = right - counterW;
                 if (counter && FitSpan(counterW, counterX, 8f, right, blocked, skyLeft, skyRight, out float cx))
                 {
@@ -784,6 +788,37 @@ namespace AF.UI
                 KeepWalletOffPanel(); // la columna de la cabecera se compacta (o vuelve) para dejarle sitio debajo
             }
         }
+
+        /// <summary>
+        /// Hasta dónde llega por la derecha el contador de la banda de etiquetas (dp desde la izquierda) con la banda en
+        /// <paramref name="counterTop"/>: <c>W − HudCounterRightDp</c>, salvo que la píldora «Reiniciar» vaya en dos líneas
+        /// (<paramref name="pillTwoLines"/>) y su borde de abajo (<paramref name="pillBottom"/>) baje hasta la banda; entonces, a
+        /// <see cref="RestartPillGapDp"/> de su borde izquierdo (<paramref name="pillLeft"/>; Q-T6T-5, pregunta 68 de GDD.md
+        /// §6.3) [P]. Con la píldora en una línea (hasta TopRowY + 48) nada cambia, tampoco con la banda compacta en TopRowY + 48.
+        /// </summary>
+        internal static float CounterRightLimit(float canvasW, float counterTop, bool pillTwoLines, float pillBottom, float pillLeft)
+        {
+            float right = canvasW - HudCounterRightDp;
+            if (pillTwoLines && pillBottom + HudLabelsClearDp > counterTop)
+            {
+                right = Mathf.Min(right, pillLeft - RestartPillGapDp);
+            }
+
+            return right;
+        }
+
+        // Borde de abajo de la píldora «Reiniciar» (dp desde arriba del lienzo): TopRowY + 48 con una línea; más con dos (L4).
+        private float RestartPillBottomDp
+        {
+            get
+            {
+                RectTransform pill = _restartPill.rectTransform;
+                return TopRowY - pill.anchoredPosition.y + pill.sizeDelta.y;
+            }
+        }
+
+        // Borde izquierdo de la píldora «Reiniciar» (dp desde la izquierda del lienzo; su área va en x = W − 68).
+        private float RestartPillLeftEdgeDp => _canvasW - 8f - 60f + _restartPill.rectTransform.anchoredPosition.x;
 
         // Pegado bajo la placa, el grupo y el contador no caben juntos (el 160 en 16:9: «Muy difícil» y la Lluvia con sus dos
         // gotitas, y ni la banda normal ni la compacta caben sobre el marco): el grupo, solo bajo la placa, y el contador a la

@@ -71,6 +71,7 @@ namespace AF.UI
         private bool _logbookCardShown;
         private float _logbookCardW;
         private float _logbookCardH;
+        private float _logbookDailyH = DailyChallengeCard.HeightDp;
 
         /// <summary>Almacén de la Bitácora para los tests (gana a <see cref="LogbookStoreFactory"/>).</summary>
         internal static ILoginCalendarStore? LogbookStoreOverride { get; set; }
@@ -552,19 +553,21 @@ namespace AF.UI
 
             float w = _logbookCardCanvas.Width;
             float h = _logbookCardCanvas.Height;
-            if (Mathf.Approximately(w, _logbookCardW) && Mathf.Approximately(h, _logbookCardH))
+            float dailyH = _dailyCard != null ? _dailyCard.Height : DailyChallengeCard.HeightDp; // crece con sus textos
+            if (Mathf.Approximately(w, _logbookCardW) && Mathf.Approximately(h, _logbookCardH) && Mathf.Approximately(dailyH, _logbookDailyH))
             {
                 return;
             }
 
             _logbookCardW = w;
             _logbookCardH = h;
+            _logbookDailyH = dailyH;
 
             // Encima de la tarjeta del Reto (la misma cuenta que PlaceDailyCard) [P]; sin ella, en su sitio.
-            float daily = Mathf.Max(96f, (h * LobbyScreen.PlayCenterFraction) - DailyCardAbovePlayDp - DailyChallengeCard.HeightDp - 32f);
+            float daily = Mathf.Max(96f, (h * LobbyScreen.PlayCenterFraction) - DailyCardAbovePlayDp - dailyH - 32f);
             bool dailyShown = _dailyCard != null && _dailyCard.State != DailyCardState.Hidden;
-            float y = dailyShown ? daily - LogbookCardGapDp - LogbookCard.HeightDp : daily + DailyChallengeCard.HeightDp - LogbookCard.HeightDp;
-            _logbookCard.Place((w - LogbookCard.WidthDp) * 0.5f, Mathf.Max(72f, y));
+            float y = dailyShown ? daily - LogbookCardGapDp - LogbookCard.HeightDp : daily + dailyH - LogbookCard.HeightDp;
+            _logbookCard.Place(DailyChallengeCard.LeftFor(w), Mathf.Max(72f, y), DailyChallengeCard.WidthFor(w)); // la columna de la del Reto
         }
     }
 }

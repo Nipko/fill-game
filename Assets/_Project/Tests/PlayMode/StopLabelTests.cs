@@ -50,7 +50,6 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             BoardLayout.TroopBandOffForTests = false;
-            AF.Presentation.AmbientLayer.Frozen = false;
             GameScreen.StopLabelsOverride = null;
             GameScreen.StopLabelSpotsOverride = GameScreen.StopLabelSpot.All;
             GameScreen.SimulatedScreen = null;
@@ -1038,9 +1037,9 @@ namespace AF.Tests.PlayMode
 
         private static IEnumerator NoAllocationsWithThePlate(int level, string mode)
         {
-            // El ambiente, quieto: desde D-046 (punto 3) estos niveles de 3 filas dejan la franja de la tropa sobre el panel y por
-            // ella pasan los brillos del río, cuya primera activación (la de cada Image, en Unity) asigna; no es lo que se mide.
-            AF.Presentation.AmbientLayer.Frozen = true;
+            // Con el ambiente en marcha: desde D-046 (punto 3) estos niveles de 3 filas dejan la franja de la tropa sobre el panel y
+            // por ella pasan los brillos del río, siempre activos y ocultos con el recorte de su CanvasRenderer, sin asignar al
+            // nacer (AmbientLayer.Show; T6, carril B, punto 4).
             yield return Load(level);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;

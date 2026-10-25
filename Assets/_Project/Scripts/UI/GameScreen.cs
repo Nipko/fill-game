@@ -230,6 +230,7 @@ namespace AF.UI
         private readonly Image _restartPill;
         private readonly TextMeshProUGUI _restartLabel;
         private float _restartPillLeft = float.NaN; // LayoutRestartPill (tarea FX5)
+        private bool _restartPillTwoLines; // la etiqueta de Reiniciar va en dos líneas y la píldora crece hacia abajo (L4)
         private readonly BoosterTray _tray;
         private readonly RectTransform _liftFront;
         private readonly RectTransform _ambientNearParent;
@@ -2751,6 +2752,7 @@ namespace AF.UI
 
         private void SetRestartPillLines(bool two, float pad = RestartPillPadDp)
         {
+            _restartPillTwoLines = two;
             _restartLabel.textWrappingMode = two ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
             _restartLabel.lineSpacing = two ? -20f : 0f;
             _restartLabel.rectTransform.offsetMin = new Vector2(two ? pad : 0f, 1f);

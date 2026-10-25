@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Globalization;
 using System.IO;
+using AF.Core.Mechanics;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Localization;
@@ -361,7 +362,8 @@ namespace AF.Tests.PlayMode
             yield return null;
 
             // Al 130 %, en el lienzo de 438,9 × 640 dp (DC3), la píldora en dos líneas roza (0,6 dp) el sitio al que sube la cuia
-            // de arriba al seleccionarla: el mismo pendiente que RestartPill_360_KnownIssues. Sin ese margen, nada se cruza.
+            // de arriba al seleccionarla, como antes a 360 dp (RestartPill_360_At130_ClearsTheLiftedCuia, que allí ya no roza).
+            // Sin ese margen, nada se cruza.
             LongLabelSetup.AssertRestart(view, scale, percent == 100 ? 1 : 2, percent == 100);
         }
 
@@ -380,7 +382,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.CanvasWidth, Is.EqualTo(360f).Within(0.5f), "lienzo de 360 dp de ancho");
 
             // Al 130 %, «[Réíñíçíár» no cabe en el área: la píldora crece y estrecha la columna del saldo, sin partir la palabra
-            // (tarea FX5). Lo que sube la cuia al seleccionarla, aparte (RestartPill_360_KnownIssues).
+            // (tarea FX5). Lo que sube la cuia al seleccionarla, aparte (RestartPill_360_At130_ClearsTheLiftedCuia).
             LongLabelSetup.AssertRestart(view, scale, 2, false);
             LongLabelSetup.AssertSlot(view, tray.UndoLabel, tray.UndoGlyph, scale, 2, "Marea");
             if (percent == 130)
@@ -404,8 +406,7 @@ namespace AF.Tests.PlayMode
             // arriba; HudLabelTests): la píldora en dos líneas crece hacia abajo sin tapar las cuias (ni su sitio al subir) ni el
             // contador y las etiquetas de la banda pegada bajo la placa.
             // Desde D-046 (punto 3) el panel solo pasa bajo el HUD donde no cabe la franja de la tropa (16:9): aquí, con el tablero
-            // de antes en el mismo lienzo. Con la franja, la banda va entera y el contador bajo Reiniciar, que en en-XA a dos líneas
-            // lo pisa (Q-T6T-5, riesgo anotado para el integrador).
+            // de antes en el mismo lienzo. Con la franja, la banda va entera: EnXA_360_Restart_ThreeRowsWithTheTroopBand_Counter.
             float scale = percent / 100f;
             BoardLayout.TroopBandOffForTests = true;
             try
@@ -419,6 +420,59 @@ namespace AF.Tests.PlayMode
             {
                 BoardLayout.TroopBandOffForTests = false;
             }
+        }
+
+        /// <summary>
+        /// Q-T6T-5 (pregunta 68 de GDD.md §6.3; T6, carril B, punto 2): con la franja de la tropa (D-046, punto 3) la banda de las
+        /// etiquetas va entera, en TopRowY + 50, y el contador de la Lluvia (el 194) o de la Piraña (el 200) iba a la derecha,
+        /// bajo Reiniciar. En en-XA la píldora va en dos líneas y baja hasta la banda: lo pisaba. Ahora el contador va a la
+        /// izquierda de la píldora, a RestartPillGapDp; la etiqueta, a 12 sp (× escala) o más, al 100 % y al 130 %.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EnXA_360_Restart_ThreeRowsWithTheTroopBand_Counter([Values(194, 200)] int level, [Values(100, 130)] int percent)
+        {
+            float scale = percent / 100f;
+            yield return LongLabelSetup.LoadLevel(level, LocLocale.Pseudo, scale, HudLabelTests.Screen780);
+            GameScreen view = GameBootstrap.Current!.View!;
+            string where = "el " + level + " en en-XA al " + percent + " %";
+            Assert.That(view.Layout!.Rows, Is.EqualTo(3), where + ": 3 filas a 360 × 780");
+            Assert.That(view.Layout.TroopBand, Is.True, where + ": con la franja de la tropa");
+            HudCounterChip counter = view.HudCounter;
+            Assert.That(counter.Visible, Is.True, where + ": el contador");
+            Assert.That(counter.Type, Is.EqualTo(level == 194 ? MechanicType.Lluvia : MechanicType.Pirana), where);
+            Assert.That(view.RestartLabel.textInfo.lineCount, Is.EqualTo(2), where + ": condición del test, Reiniciar en dos líneas");
+
+            Rect pill = LongLabelSetup.DpRect(view.RestartPillRect, view.Hud);
+            Rect chip = LongLabelSetup.DpRect(counter.Root, view.Hud);
+            Debug.Log("AF_QT6T5 " + where + ": píldora " + pill + ", contador " + chip + ", banda " + view.HudLabelsMode);
+            Assert.That(pill.Overlaps(chip), Is.False, where + ": la píldora " + pill + " no pisa el contador " + chip);
+            Assert.That(chip.xMax, Is.LessThanOrEqualTo(pill.xMin - GameScreen.RestartPillGapDp + 0.5f), where + ": el contador, a la izquierda de la píldora");
+            Assert.That(counter.Text.Length, Is.GreaterThan(0), where);
+            TextMeshProUGUI digits = counter.ValueRect.GetComponent<TextMeshProUGUI>();
+            Assert.That(digits.fontSize, Is.GreaterThanOrEqualTo(12f - 0.01f), where + ": la cifra del contador, 12 sp o más");
+            LongLabelSetup.AssertRestart(view, scale, 2, false);
+        }
+
+        /// <summary>
+        /// Revisión de Q-T6T-5: en es-419 «Reiniciar» cabe en una línea y el contador de la Lluvia (194) o de la Piraña (200) sigue
+        /// a la derecha de la banda, en x = W − 8 − ancho, también con la banda compacta (al 130 %, en TopRowY + 48-50).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Es419_360_ThreeRowsWithTheTroopBand_CounterStaysRight([Values(194, 200)] int level, [Values(100, 130)] int percent)
+        {
+            float scale = percent / 100f;
+            yield return LongLabelSetup.LoadLevel(level, LocLocale.SourceLocale, scale, HudLabelTests.Screen780);
+            GameScreen view = GameBootstrap.Current!.View!;
+            string where = "el " + level + " en es-419 al " + percent + " %";
+            Assert.That(view.Layout!.TroopBand, Is.True, where + ": con la franja de la tropa");
+            Assert.That(view.RestartLabel.textInfo.lineCount, Is.EqualTo(1), where + ": condición del test, Reiniciar en una línea");
+            HudCounterChip counter = view.HudCounter;
+            Assert.That(counter.Visible, Is.True, where);
+            Rect pill = LongLabelSetup.DpRect(view.RestartPillRect, view.Hud);
+            Rect chip = LongLabelSetup.DpRect(counter.Root, view.Hud);
+            Debug.Log("AF_QT6T5_ES " + where + ": píldora " + pill + ", contador " + chip + ", banda " + view.HudLabelsMode);
+            Assert.That(chip.xMax, Is.EqualTo(view.CanvasWidth - GameScreen.HudCounterRightDp).Within(1f), where + ": el contador, en W − 8 − ancho");
+            Assert.That(pill.Overlaps(chip), Is.False, where);
         }
 
         [UnityTest]
@@ -571,17 +625,14 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// Lo que la píldora «Reiniciar» no resuelve a 360 dp de ancho sin rediseño (revisión de L4; pendiente del dueño, ver la
-        /// entrega de L4): en los tableros de 3 filas la píldora en dos líneas («[Réíñíçíár ···]» en en-XA) baja hasta el sitio
-        /// al que sube la cuia de arriba a la derecha al seleccionarla. Las palabras partidas («Reinici / ar» en es-419 al 130 %)
-        /// ya no pasan: la píldora crece y estrecha la columna del saldo (tarea FX5); con el 100 (2 filas) y en es-419, este test
-        /// pasa. Se deja escrito (explícito: con en-XA en el 200, hoy falla) para cuando el dueño decida. Desde D-046 (punto 3) el
-        /// 200 lleva la franja de la tropa y la banda de etiquetas entera: la píldora en dos líneas pisa el contador de la Piraña,
-        /// bajo Reiniciar (Q-T6T-5), en lugar de la cuia.
+        /// La píldora «Reiniciar» a 360 dp al 130 %, con lo que sube la cuia al seleccionarla (revisión de L4): en los tableros de
+        /// 3 filas la píldora en dos líneas («[Réíñíçíár ···]» en en-XA) bajaba hasta el sitio al que sube la cuia de arriba a la
+        /// derecha. Las palabras partidas («Reinici / ar» en es-419 al 130 %) ya no pasan (tarea FX5). Desde D-046 (punto 3) el
+        /// 200 lleva la franja de la tropa (las cuias, más abajo) y, desde T6 (carril B, Q-T6T-5), el contador de la Piraña va a la
+        /// izquierda de la píldora en lugar de debajo: pasa en los cuatro casos y deja de ser explícito.
         /// </summary>
         [UnityTest]
-        [Explicit("Pendiente del dueño (revisión de L4): la píldora Reiniciar en dos líneas a 360 dp en 3 filas; hoy falla con en-XA en el 200.")]
-        public IEnumerator RestartPill_360_KnownIssues([Values("en-XA", "es-419")] string locale, [Values(100, 200)] int level)
+        public IEnumerator RestartPill_360_At130_ClearsTheLiftedCuia([Values("en-XA", "es-419")] string locale, [Values(100, 200)] int level)
         {
             yield return LongLabelSetup.LoadLevel(level, locale, 1.3f, HudLabelTests.Screen780);
             LongLabelSetup.AssertRestart(GameBootstrap.Current!.View!, 1.3f, GameBootstrap.Current!.View!.RestartLabel.textInfo.lineCount, true);

@@ -287,6 +287,71 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        // T6, carril B, punto 1 (02 §5 y §12): a 320 dp la tarjeta del Reto (296 dp centrada, x 12-308) pisaba la Crecida (x 290-316).
+        // Ahora mide 272 dp, de x = 16 a w − 32, y deja libre la franja de la Crecida; sus textos caben, a 12 sp o más, también con
+        // los estados más largos («Pendiente de validar», «Seguir») y en en-XA al 130 %. A 360 dp, la de siempre (296 centrada).
+        [UnityTest]
+        public IEnumerator Home_At320_TheDailyCardLeavesTheCrecidaClear_AndItsTextsFit([Values("es-419", "en-XA")] string language, [Values(1f, 1.3f)] float fontScale)
+        {
+            string where = Use(320) + " · " + language + " al " + Mathf.RoundToInt(fontScale * 100f) + " %";
+            LaunchOptions.FontScaleOverride = fontScale;
+            LaunchOptions.LanguageOverride = language;
+            yield return LoadRichLobby();
+            GameBootstrap boot = GameBootstrap.Current!;
+            LobbyScreen lobby = boot.Lobby!;
+            HomeSloth sloth = lobby.HomeWindow.Sloth!;
+            Tick(sloth, 400);
+            Tick(sloth, (int)sloth.BubbleDurationMs + 300);
+            boot.TickDaily(16f);
+            Canvas.ForceUpdateCanvases();
+            DailyChallengeCard card = boot.DailyCard!;
+            Assert.That(card.Visible, Is.True, where + ": condición del test, la tarjeta del Reto");
+            Assert.That(lobby.StreakWidget.Visible, Is.True, where + ": condición del test, la Crecida (≥ 25)");
+            var root = (RectTransform)lobby.Canvas.transform;
+            Rect rect = CanvasRect(card.Root, root);
+            Rect crecida = CanvasRect(lobby.StreakWidget.Root, root);
+            Debug.Log("AF_DAILY_320 " + where + ": tarjeta " + rect + ", crecida " + crecida);
+            Assert.That(lobby.CanvasWidth, Is.EqualTo(320f).Within(0.5f), where);
+            Assert.That(rect.width, Is.EqualTo(DailyChallengeCard.MinWidthDp).Within(0.5f), where + ": 272 dp de ancho");
+            Assert.That(rect.xMin, Is.EqualTo(DailyChallengeCard.LeftGutterDp).Within(0.5f), where + ": desde x = 16");
+            Assert.That(rect.xMax, Is.LessThanOrEqualTo(crecida.xMin - 1.5f), where + ": a 2 dp de la Crecida");
+
+            // Los textos de la tarjeta, con el estado de hoy y con los dos más largos, puestos a mano.
+            var inventory = new LocInventory(language, fontScale);
+            foreach (AF.LiveOps.DailyCardState shown in new[] { card.State, AF.LiveOps.DailyCardState.PendingValidation, AF.LiveOps.DailyCardState.InProgress })
+            {
+                card.ShowStateTextForTests(shown);
+                Canvas.ForceUpdateCanvases();
+                Debug.Log("AF_DAILY_320_CARD " + where + " · " + shown + ": " + CanvasRect(card.Root, root) + " (alto " + card.Height + ")");
+                AssertNoOverlaps(Named(boot), lobby.CanvasWidth, where + " · " + shown);
+                foreach (TMPro.TextMeshProUGUI t in card.Root.GetComponentsInChildren<TMPro.TextMeshProUGUI>(false))
+                {
+                    if (t.text.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    string problems = inventory.ProblemsOf(t);
+                    Debug.Log("AF_DAILY_320_FIT " + where + ": " + t.name + " «" + t.text + "» " + t.fontSize.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " sp en " + t.rectTransform.rect.width.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " dp");
+                    Assert.That(t.fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f), where + ": " + t.name + " no baja de 12 sp");
+                    Assert.That(problems, Is.Empty, where + ": " + t.name + " «" + t.text + "» cabe en la tarjeta");
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Home_At360_TheDailyCardKeepsItsWidth()
+        {
+            Use(800);
+            yield return LoadRichLobby();
+            GameBootstrap boot = GameBootstrap.Current!;
+            boot.TickDaily(16f);
+            Canvas.ForceUpdateCanvases();
+            Rect rect = CanvasRect(boot.DailyCard!.Root, (RectTransform)boot.Lobby!.Canvas.transform);
+            Assert.That(rect.width, Is.EqualTo(DailyChallengeCard.WidthDp).Within(0.5f), "296 dp a 360 dp de ancho");
+            Assert.That(rect.center.x, Is.EqualTo(180f).Within(0.5f), "centrada");
+        }
+
         // Pone la pantalla simulada de screen (640, 800 o 320) y dice cuál es.
         private static string Use(int screen)
         {
@@ -302,7 +367,7 @@ namespace AF.Tests.PlayMode
         }
 
         // El inicio del 58 con canoas en marcha, semillas y la tienda lista: Canoas, el Cántaro, la tarjeta del Reto y la píldora.
-        private static IEnumerator LoadRichLobby()
+        internal static IEnumerator LoadRichLobby()
         {
             Profile profile = SettingsScreenTests.ProfileAt(58);
             profile.Wallet.Canoes.Count = 3;
@@ -318,7 +383,7 @@ namespace AF.Tests.PlayMode
             Canvas.ForceUpdateCanvases();
         }
 
-        private static void Tick(HomeSloth sloth, int ms)
+        internal static void Tick(HomeSloth sloth, int ms)
         {
             for (int t = 0; t < ms; t += 16)
             {
@@ -372,20 +437,17 @@ namespace AF.Tests.PlayMode
                 named.Add(new KeyValuePair<string, Rect>("tarjeta del Reto", CanvasRect(boot.DailyCard.Root, root)));
             }
 
+            if (boot.LogbookCard != null && boot.LogbookCard.Visible)
+            {
+                named.Add(new KeyValuePair<string, Rect>("tarjeta de la Bitácora", CanvasRect(boot.LogbookCard.Root, root)));
+            }
+
             if (lobby.StreakWidget.Visible)
             {
                 named.Add(new KeyValuePair<string, Rect>("crecida", CanvasRect(lobby.StreakWidget.Root, root)));
             }
 
             return named;
-        }
-
-        // Anterior a D-046 y fuera de su alcance: a 320 dp, la tarjeta del Reto (296 dp centrada, x 12-308) y la Crecida (pegada al
-        // borde, x 290-316) ya se cruzaban antes de este cambio (la Crecida empezaba en y 196 y la tarjeta en 225). Anotado como
-        // riesgo para el integrador en spark-estado.md.
-        private static bool KnownAt320(string a, string b)
-        {
-            return (a == "tarjeta del Reto" && b == "crecida") || (a == "crecida" && b == "tarjeta del Reto");
         }
 
         private static void AssertNoOverlaps(List<KeyValuePair<string, Rect>> named, float width, string where)
@@ -396,11 +458,6 @@ namespace AF.Tests.PlayMode
                 Assert.That(r.xMin >= -0.5f && r.xMax <= width + 0.5f, Is.True, where + ": " + named[i].Key + " dentro de la pantalla");
                 for (int j = i + 1; j < named.Count; j++)
                 {
-                    if (width < 359f && KnownAt320(named[i].Key, named[j].Key))
-                    {
-                        continue;
-                    }
-
                     Assert.That(Shrunk(named[i].Value).Overlaps(Shrunk(named[j].Value)), Is.False, where + ": " + named[i].Key + " " + named[i].Value + " y " + named[j].Key + " " + named[j].Value + " se solapan");
                 }
             }
