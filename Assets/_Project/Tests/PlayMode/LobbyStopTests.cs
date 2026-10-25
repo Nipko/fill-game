@@ -24,14 +24,16 @@ namespace AF.Tests.PlayMode
     /// personaje g.2 y d.11):
     /// <list type="bullet">
     /// <item>el fondo es el de la parada de «Jugar» (en el 58, Manaos), el mismo que el del tablero de ese nivel;</item>
-    /// <item>«Faltan {n} niveles para {lugar}» bajo «Jugar», en Nunito Bold de 14 sp, correcto en el 51, el 58, el 60 y el 195
-    /// (hacia Mazán, la parada 20; M4.5a), y oculto con el fin de contenido, sin parada siguiente en el catálogo (uno de prueba
-    /// que acaba en la 19) y con Sin canoas;</item>
-    /// <item>la ventanita de casa: «a unos 1.480 km» en Manaos, sin píldora en Belém, oculta con Sin canoas, con la hoja de
-    /// compra delante y con el anuncio simulado delante, y sin toques;</item>
-    /// <item>sin catálogo, el inicio de siempre;</item>
-    /// <item>sin solapes a 360 × 640 ni a 360 × 800 dp (y, a 360 × 800, sin tapar el héroe del fondo);</item>
-    /// <item>la línea <c>AF_LAYOUT</c> del inicio con <c>stop_remaining</c> y <c>home_window</c>.</item>
+    /// <item>la próxima parada en el letrero del poste del río (D-050, punto 3): su nombre en Nunito Bold de 14 sp y «Faltan {n}
+    /// niveles» debajo, con la línea entera «Faltan {n} niveles para {lugar}» (la que lee TalkBack) correcta en el 51, el 58, el
+    /// 60 y el 195 (hacia Mazán, la parada 20; M4.5a), y oculto con el fin de contenido, sin parada siguiente en el catálogo (uno
+    /// de prueba que acaba en la 19) y con Sin canoas;</item>
+    /// <item>TiTino (antes, la ventanita de casa): «Casa · a unos 1.480 km» en Manaos, que dice en su bocadillo (D-050), nada en
+    /// Belém, oculto con Sin canoas, con la hoja de compra delante y con el anuncio simulado delante, y sin más toque que el suyo;</item>
+    /// <item>sin catálogo, el inicio sin parada (sin travesía ni TiTino);</item>
+    /// <item>sin solapes a 360 × 640 ni a 360 × 800 dp (y, a 360 × 800, el letrero sin tapar el héroe del fondo);</item>
+    /// <item>la línea <c>AF_LAYOUT</c> del inicio con <c>stop_remaining</c>, <c>home_window</c>, <c>titino</c>, la canoa y la
+    /// parada que abren el Mapa (<c>voyage_canoe</c>, <c>voyage_stop</c>).</item>
     /// </list>
     /// </summary>
     public sealed class LobbyStopTests
@@ -103,11 +105,11 @@ namespace AF.Tests.PlayMode
                 }
 
                 Assert.That(label.raycastTarget, Is.False);
-                Rect play = CanvasRect((RectTransform)lobby.PlayButton.transform, lobby);
-                Rect remaining = CanvasRect(lobby.StopRemainingRect, lobby);
-                Assert.That(remaining.yMin, Is.GreaterThanOrEqualTo(play.yMax - 0.5f), "bajo «Jugar»");
-                Assert.That(remaining.center.x, Is.EqualTo(play.center.x).Within(1f), "centrado con «Jugar»");
-                Assert.That(remaining.width, Is.LessThanOrEqualTo(play.width + 0.5f), "nunca más ancha que «Jugar»");
+                Assert.That(label.text, Is.EqualTo("Anavilhanas"), "nivel " + level + ": el nombre, en el letrero");
+                string levels = level == 60 ? "Falta 1 nivel" : "Faltan " + (61 - level) + " niveles";
+                Assert.That(lobby.Voyage.LevelsLabel.text, Is.EqualTo(levels), "nivel " + level + ": la píldora con el plural de la tabla");
+                AssertSignInTheRiver(lobby, "nivel " + level);
+                Assert.That(lobby.Voyage.Progress, Is.EqualTo(HomeVoyage.ProgressOf(level)).Within(0.001f), "la canoa en su fracción del tramo");
             }
         }
 
@@ -127,16 +129,11 @@ namespace AF.Tests.PlayMode
             Assert.That(label.enableAutoSizing, Is.False);
             Assert.That(label.fontSize, Is.EqualTo(LobbyScreen.StopRemainingSp * UiBuilder.TextScale).Within(0.01f));
 
-            Rect play = CanvasRect((RectTransform)lobby.PlayButton.transform, lobby);
-            Rect remaining = CanvasRect(lobby.StopRemainingRect, lobby);
-            Assert.That(remaining.width, Is.LessThanOrEqualTo(play.width + 0.5f), "la columna de «Jugar»");
-            Assert.That(remaining.center.x, Is.EqualTo(play.center.x).Within(1f));
-            Assert.That(remaining.yMin, Is.GreaterThanOrEqualTo(play.yMax - 0.5f));
-
+            AssertSignInTheRiver(lobby, "Floresta Nacional do Tapajós");
             label.ForceMeshUpdate();
-            Assert.That(label.textInfo.lineCount, Is.EqualTo(2), "en dos líneas");
+            Assert.That(label.textInfo.lineCount, Is.GreaterThanOrEqualTo(2), "en dos líneas o más, sin encogerse");
             Assert.That(label.isTextOverflowing, Is.False, "entero");
-            Assert.That(label.preferredHeight, Is.LessThanOrEqualTo(lobby.StopRemainingRect.rect.height + 0.5f), "dentro de la placa");
+            Assert.That(label.preferredHeight, Is.LessThanOrEqualTo(label.rectTransform.rect.height + 0.5f), "dentro de su sitio en el letrero");
         }
 
         [UnityTest]
@@ -210,10 +207,13 @@ namespace AF.Tests.PlayMode
             LobbyScreen lobby = GameBootstrap.Current!.Lobby!;
             yield return null;
             HomeWindow home = lobby.HomeWindow;
-            Assert.That(home.Visible, Is.True, "Q17-A: TiTino en la ventanita de casa");
+            Assert.That(home.Visible, Is.True, "D-050: TiTino en su rama");
             Assert.That(home.Stop!.Id, Is.EqualTo("manaos"));
-            Assert.That(home.PillShown, Is.True);
+            Assert.That(home.PillShown, Is.False, "D-050: sin píldora; la distancia la dice TiTino en su bocadillo");
             Assert.That(home.DistanceText, Is.EqualTo("Casa · a unos 1.480" + Nbsp + "km"));
+            HomeSloth sloth = home.Sloth!;
+            sloth.Tick(16f);
+            Assert.That(sloth.Rotation, Has.Member(HomeSloth.HomeNote.Home), "la información de la ventanita de antes, en la rotación");
             Assert.That(home.PortraitSprite, Is.Not.Null);
             foreach (Graphic g in home.Root.GetComponentsInChildren<Graphic>(true))
             {
@@ -228,8 +228,10 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(1)));
             lobby = GameBootstrap.Current!.Lobby!;
             yield return null;
-            Assert.That(lobby.HomeWindow.Visible, Is.True, "en Belém, la ventanita");
-            Assert.That(lobby.HomeWindow.PillShown, Is.False, "en casa: sin píldora [P]");
+            Assert.That(lobby.HomeWindow.Visible, Is.True, "en Belém, TiTino");
+            Assert.That(lobby.HomeWindow.DistanceText, Is.Empty, "en casa: sin distancia [P]");
+            lobby.HomeWindow.Sloth!.Tick(16f);
+            Assert.That(lobby.HomeWindow.Sloth.Rotation, Has.No.Member(HomeSloth.HomeNote.Home));
             Assert.That(lobby.StopRemainingText, Is.EqualTo("Faltan 10 niveles para Santarém"));
         }
 
@@ -331,7 +333,6 @@ namespace AF.Tests.PlayMode
                 Canvas.ForceUpdateCanvases();
                 string where = size.x + " × " + size.y;
                 Assert.That(lobby.HomeWindow.Visible, Is.True, where);
-                Assert.That(lobby.HomeWindow.PillShown, Is.True, where);
                 Assert.That(lobby.StopRemainingShown, Is.True, where);
                 Assert.That(lobby.CanoesShown, Is.True, where);
 
@@ -342,10 +343,17 @@ namespace AF.Tests.PlayMode
                     new KeyValuePair<string, Rect>("ajustes", CanvasRect((RectTransform)lobby.SettingsButton.transform, lobby)),
                     new KeyValuePair<string, Rect>("jugar", CanvasRect((RectTransform)lobby.PlayButton.transform, lobby)),
                     new KeyValuePair<string, Rect>("inicio", CanvasRect(lobby.HomeTabRect, lobby)),
-                    new KeyValuePair<string, Rect>("faltan", CanvasRect(lobby.StopRemainingRect, lobby)),
-                    new KeyValuePair<string, Rect>("ventanita", CanvasRect(lobby.HomeWindow.Root, lobby)),
-                    new KeyValuePair<string, Rect>("píldora de casa", CanvasRect(lobby.HomeWindow.PillRect, lobby)),
+                    new KeyValuePair<string, Rect>("letrero", CanvasRect(lobby.StopRemainingRect, lobby)),
+                    new KeyValuePair<string, Rect>("TiTino", CanvasRect(lobby.HomeWindow.Root, lobby)),
+                    new KeyValuePair<string, Rect>("canoa", lobby.Voyage.CanoeBounds),
+                    new KeyValuePair<string, Rect>("música", CanvasRect(lobby.Audio.MusicRect, lobby)),
+                    new KeyValuePair<string, Rect>("sonido", CanvasRect(lobby.Audio.SoundRect, lobby)),
                 };
+                if (lobby.StreakWidget.Visible)
+                {
+                    named.Add(new KeyValuePair<string, Rect>("crecida", CanvasRect(lobby.StreakWidget.Root, lobby)));
+                }
+
                 if (lobby.ChipShown)
                 {
                     named.Add(new KeyValuePair<string, Rect>("chip", CanvasRect(lobby.ChipRect, lobby)));
@@ -366,17 +374,19 @@ namespace AF.Tests.PlayMode
                     }
                 }
 
-                // El texto de «Faltan…» y el de la píldora caben en su caja y no bajan de 12 sp.
-                Assert.That(lobby.StopRemainingLabel.fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f), where);
-                Assert.That(UiBuilder.MinTextWidth(lobby.StopRemainingLabel), Is.LessThanOrEqualTo(lobby.StopRemainingRect.rect.width + 0.5f), where);
-
-                // A 360 × 800 dp (20:9, los teléfonos de hoy), la ventanita y su píldora no tapan el héroe del fondo.
-                Rect hero = lobby.StopBackdrop.HeroRect;
-                Debug.Log("AF_LOBBY " + where + ": héroe " + hero + ", ventanita " + named[6].Value + ", píldora " + named[7].Value + ", faltan " + named[5].Value);
-                if (size.y == 2400 && hero.width > 0f)
+                // Los textos del letrero caben en su caja y no bajan de 12 sp.
+                foreach (TextMeshProUGUI t in lobby.StopRemainingRect.GetComponentsInChildren<TextMeshProUGUI>(false))
                 {
-                    Assert.That(Shrunk(named[6].Value).Overlaps(hero), Is.False, where + ": la ventanita tapa el héroe");
-                    Assert.That(Shrunk(named[7].Value).Overlaps(hero), Is.False, where + ": la píldora tapa el héroe");
+                    Assert.That(t.fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f), where + ": " + t.name);
+                    Assert.That(UiBuilder.MinTextHeight(t, t.rectTransform.rect.width), Is.LessThanOrEqualTo(t.rectTransform.rect.height + 0.5f), where + ": " + t.name + " entero");
+                }
+
+                // El letrero de la parada, en el río, no tapa el héroe del fondo (TiTino, desde D-050, cuelga delante del paisaje).
+                Rect hero = lobby.StopBackdrop.HeroRect;
+                Debug.Log("AF_LOBBY " + where + ": héroe " + hero + ", TiTino " + named[6].Value + ", letrero " + named[5].Value + ", canoa " + named[7].Value);
+                if (hero.width > 0f)
+                {
+                    Assert.That(Shrunk(named[5].Value).Overlaps(hero), Is.False, where + ": el letrero tapa el héroe");
                 }
             }
         }
@@ -393,6 +403,10 @@ namespace AF.Tests.PlayMode
             string[] ids = AfLayoutLog.ButtonIds(line!);
             Assert.That(ids, Does.Contain("stop_remaining"));
             Assert.That(ids, Does.Contain("home_window"));
+            Assert.That(ids, Does.Contain("titino"), "D-050: el toque de TiTino");
+            Assert.That(ids, Does.Contain("voyage_canoe"), "D-050: la canoa abre el Mapa");
+            Assert.That(ids, Does.Contain("voyage_stop"), "D-050: la parada abre el Mapa");
+            Assert.That(AfLayoutLog.Button(line!, "voyage_canoe")!.Value, Is.EqualTo(AfLayoutLog.Published((RectTransform)lobby.Voyage.CanoeButton.transform)));
             Assert.That(AfLayoutLog.Button(line!, "home_window")!.Value, Is.EqualTo(AfLayoutLog.Published(lobby.HomeWindow.Root)));
             Assert.That(AfLayoutLog.Button(line!, "stop_remaining")!.Value, Is.EqualTo(AfLayoutLog.Published(lobby.StopRemainingRect)));
         }
@@ -426,6 +440,19 @@ namespace AF.Tests.PlayMode
                 + "\"difficulty\": { \"label\": \"normal\", \"par\": 3 }, \"relief\": [] }";
             return "{ \"subset_of\": \"af-level/1\", \"pack_id\": \"test_content_end\", \"kind\": \"campaign\", \"world\": 1, "
                 + "\"world_id\": \"w01_estuario\", \"lap\": 1, \"water_base\": \"white\", \"levels\": [ " + level + " ] }";
+        }
+
+        // El letrero de la parada (D-050, punto 3): en el río, por encima de la viga del muelle y bajo el horizonte del panorama, a la
+        // derecha de su poste y sin llegar a la Crecida; dentro de la pantalla.
+        private static void AssertSignInTheRiver(LobbyScreen lobby, string where)
+        {
+            Rect play = CanvasRect((RectTransform)lobby.PlayButton.transform, lobby);
+            Rect sign = CanvasRect(lobby.StopRemainingRect, lobby);
+            Rect post = CanvasRect(lobby.Voyage.PostRect, lobby);
+            Assert.That(sign.yMax, Is.LessThanOrEqualTo(play.yMin - 36f + 0.5f), where + ": por encima de la viga del muelle");
+            Assert.That(sign.xMin, Is.GreaterThanOrEqualTo(post.xMax - 0.5f), where + ": a la derecha del poste");
+            Assert.That(sign.xMax, Is.LessThanOrEqualTo(lobby.CanvasWidth - 16f - StreakWidget.WidthDp - 8f + 0.5f), where + ": sin llegar a la Crecida");
+            Assert.That(sign.xMin, Is.GreaterThanOrEqualTo(-0.5f), where);
         }
 
         // Medio dp menos por lado: dos cajas que solo se tocan no se solapan.

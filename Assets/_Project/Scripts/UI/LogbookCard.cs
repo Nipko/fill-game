@@ -2,41 +2,28 @@
 using System;
 using AF.LiveOps;
 using AF.Presentation;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace AF.UI
 {
     /// <summary>
-    /// Tarjeta de la Bitácora del río en el inicio (B4; 06 §4.2 «Pantalla»: «El icono del lobby muestra un punto si hay casilla
-    /// pendiente»; 06 §4.7: «tarjetas Reto del río y Bitácora»; 06 §2.3, pantalla 4: «Bitácora (sellada hoy)»). Título, una línea
-    /// de estado y el <b>punto</b> (el mismo de la pestaña del Mapa: disco heliconia con borde crema) cuando la casilla de hoy se
-    /// puede sellar. Oculta mientras la Bitácora no existe para el jugador (D-008: antes de <c>live_unlock_level_daily</c> o con
-    /// <c>biz_feature_login_calendar</c> apagado). Tocarla abre la libreta. Gráficos provisionales por código; los textos, de
-    /// <see cref="LogbookText"/>.
+    /// Tarjeta de la Bitácora del río en el muelle del inicio (D-050, punto 6; B4; 06 §4.2 «Pantalla»: «El icono del lobby muestra
+    /// un punto si hay casilla pendiente»; 06 §4.7: «tarjetas Reto del río y Bitácora»; 06 §2.3, pantalla 4: «Bitácora (sellada
+    /// hoy)»), una <see cref="DockCard"/>: la libreta sobre el disco ámbar, «Bitácora» y una línea de estado corta (premio de hoy,
+    /// sellada hoy o juega un nivel) con el <b>punto</b> (el de la pestaña del Mapa: disco heliconia con borde crema) cuando la
+    /// casilla de hoy se puede sellar. Oculta mientras la Bitácora no existe para el jugador (D-008: antes de
+    /// <c>live_unlock_level_daily</c> o con <c>biz_feature_login_calendar</c> apagado). Tocarla abre la libreta. TalkBack la lee
+    /// con el nombre entero y el estado largo (<c>home_card_a11y</c>).
     /// </summary>
     public sealed class LogbookCard
     {
-        /// <summary>Ancho (dp) en un lienzo de 360 dp o más, el de la tarjeta del Reto (en lienzos más estrechos, <see cref="DailyChallengeCard.WidthFor"/>).</summary>
-        public const float WidthDp = DailyChallengeCard.WidthDp;
-
-        /// <summary>Alto (dp) [P].</summary>
-        public const float HeightDp = 60f;
-
         /// <summary>Diámetro del punto (dp), el de la pestaña del Mapa.</summary>
-        public const float DotDp = 14f;
+        public const float DotDp = DockCard.DotDp;
 
-        private readonly RectTransform _root;
-        private readonly TextMeshProUGUI _title;
-        private readonly TextMeshProUGUI _state;
-        private readonly RectTransform _dot;
-        private readonly Button _button;
+        private readonly DockCard _card;
         private readonly Action _onTap;
-        private readonly Image _surface;
-        private readonly ProceduralArt _art;
         private LoginCalendarState _shown = LoginCalendarState.Hidden;
-        private float _width = WidthDp;
 
         /// <summary>Construye la tarjeta (oculta) bajo <paramref name="parent"/>.</summary>
         public LogbookCard(Transform parent, ProceduralArt art, Action onTap)
@@ -47,83 +34,47 @@ namespace AF.UI
             }
 
             _onTap = onTap ?? throw new ArgumentNullException(nameof(onTap));
-            _art = art;
-            _root = ModalKit.Card("LogbookCard", parent, art, out _surface);
-            ModalKit.Size(_root, _surface, art, 0f, 0f, WidthDp, HeightDp);
-
-            Image book = UiBuilder.Image("Book", _root, art.RoundedRect, Palette.UiAmber);
-            UiBuilder.Place(book.rectTransform, 14f, 10f, 40f, 40f);
-            Image page = UiBuilder.Image("Page", book.transform, art.RoundedRect, Palette.UiPaper);
-            UiBuilder.Place(page.rectTransform, 6f, 6f, 28f, 28f);
-
-            _title = UiBuilder.Label("Title", _root, TextStyle.PlainBold, string.Empty, 16f, Palette.UiInk, TextAlignmentOptions.MidlineLeft);
-            UiBuilder.AutoSize(_title, UiBuilder.MinTextSp, 16f);
-            _state = UiBuilder.Label("State", _root, TextStyle.PlainBold, string.Empty, 14f, Palette.UiGreenButton, TextAlignmentOptions.MidlineLeft);
-            UiBuilder.AutoSize(_state, UiBuilder.MinTextSp, 14f);
-
-            _dot = UiBuilder.Rect("ReadyDot", _root);
-            Image rim = UiBuilder.Image("Rim", _dot, art.Disc, Palette.Cream);
-            UiBuilder.Stretch(rim.rectTransform);
-            Image dot = UiBuilder.Image("Dot", _dot, art.Disc, Palette.Heliconia);
-            UiBuilder.Place(dot.rectTransform, 2f, 2f, DotDp - 4f, DotDp - 4f);
-            _dot.gameObject.SetActive(false);
-
-            _button = UiBuilder.BareButton("Tap", _root, OnTap);
-            UiBuilder.Stretch((RectTransform)_button.transform);
-            LayoutInner();
-            _root.gameObject.SetActive(false);
+            _card = new DockCard(parent, art, "LogbookCard", art.CardIconLogbook, OnTap);
+            A11yLabels.Set(_card.Button, () => UiText.HomeCardA11y(LogbookText.Title, LogbookText.Plain(StateKey(_shown))));
         }
 
         /// <summary>Raíz (para colocarla).</summary>
-        public RectTransform Root => _root;
+        public RectTransform Root => _card.Root;
 
         /// <summary>Área táctil (la tarjeta entera).</summary>
-        public Button Button => _button;
+        public Button Button => _card.Button;
 
         /// <summary>Se ve.</summary>
-        public bool Visible => _root.gameObject.activeSelf;
+        public bool Visible => _card.Visible;
 
         /// <summary>Estado que muestra.</summary>
         public LoginCalendarState State => _shown;
 
         /// <summary>Se ve el punto (casilla de hoy pendiente).</summary>
-        public bool DotShown => _dot.gameObject.activeSelf;
+        public bool DotShown => _card.DotShown;
 
-        /// <summary>Título.</summary>
-        public string TitleText => _title.text;
+        /// <summary>Título que se ve («Bitácora»).</summary>
+        public string TitleText => _card.Title.text;
 
-        /// <summary>Línea de estado.</summary>
-        public string StateText => _state.text;
+        /// <summary>Línea de estado que se ve.</summary>
+        public string StateText => _card.State.text;
 
-        /// <summary>Coloca la tarjeta con su esquina superior izquierda en (<paramref name="x"/>, <paramref name="y"/>) dp.</summary>
-        public void Place(float x, float y)
-        {
-            Place(x, y, WidthDp);
-        }
-
-        /// <summary>Coloca la tarjeta en (<paramref name="x"/>, <paramref name="y"/>) dp con <paramref name="width"/> dp de ancho (el de la del Reto).</summary>
-        public void Place(float x, float y, float width)
-        {
-            if (!Mathf.Approximately(width, _width))
-            {
-                _width = width;
-                ModalKit.Size(_root, _surface, _art, x, y, width, HeightDp);
-                LayoutInner();
-                return;
-            }
-
-            UiBuilder.Place(_root, x, y, width, HeightDp);
-        }
+        /// <summary>La tarjeta del muelle (tests de desbordes).</summary>
+        internal DockCard Card => _card;
 
         /// <summary>Ancho con el que está colocada (dp).</summary>
-        public float Width => _width;
+        public float Width => _card.Width;
 
-        private void LayoutInner()
+        /// <summary>Alto con el que está colocada (dp).</summary>
+        public float Height => _card.Height;
+
+        /// <summary>Alto que pide la tarjeta a <paramref name="width"/> dp con sus textos.</summary>
+        public float HeightFor(float width) => _card.HeightFor(width);
+
+        /// <summary>Coloca la tarjeta en (<paramref name="x"/>, <paramref name="y"/>) dp con <paramref name="w"/> × <paramref name="h"/>.</summary>
+        public void Place(float x, float y, float w, float h)
         {
-            float w = _width;
-            UiBuilder.Place(_title.rectTransform, 66f, 6f, w - 66f - 36f, 26f);
-            UiBuilder.Place(_state.rectTransform, 66f, 30f, w - 66f - 36f, 24f);
-            UiBuilder.Place(_dot, w - DotDp - 12f, 10f, DotDp, DotDp);
+            _card.Place(x, y, w, h);
         }
 
         /// <summary>
@@ -135,27 +86,40 @@ namespace AF.UI
             _shown = state;
             if (state == LoginCalendarState.Hidden)
             {
-                _root.gameObject.SetActive(false);
+                _card.SetShown(false);
                 return;
             }
 
-            _title.text = LogbookText.Title;
-            _state.text = LogbookText.Plain(StateKey(state));
-            _dot.gameObject.SetActive(state == LoginCalendarState.Ready);
-            _root.gameObject.SetActive(true);
+            string text;
+            Color color;
+            switch (state)
+            {
+                case LoginCalendarState.Ready:
+                    text = UiText.HomeCardLogbookReady;
+                    color = Palette.LeafShine;
+                    break;
+                case LoginCalendarState.Sealed:
+                    text = LogbookText.Plain(LogbookText.Keys.CardSealed);
+                    color = Palette.Cream;
+                    break;
+                default:
+                    text = UiText.HomeCardLogbookPlay;
+                    color = Palette.FiberLight;
+                    break;
+            }
+
+            _card.SetTexts(UiText.HomeCardLogbook, text, color);
+            _card.SetDot(state == LoginCalendarState.Ready);
+            _card.SetShown(true);
         }
 
         /// <summary>Oculta la tarjeta sin cambiar su estado (con algo encima del inicio).</summary>
         public void SetShown(bool shown)
         {
-            bool visible = shown && _shown != LoginCalendarState.Hidden;
-            if (_root.gameObject.activeSelf != visible)
-            {
-                _root.gameObject.SetActive(visible);
-            }
+            _card.SetShown(shown && _shown != LoginCalendarState.Hidden);
         }
 
-        /// <summary>Clave de la línea de estado de <paramref name="state"/>.</summary>
+        /// <summary>Clave de la línea de estado larga de <paramref name="state"/> (la que lee TalkBack).</summary>
         public static string StateKey(LoginCalendarState state)
         {
             switch (state)

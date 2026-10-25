@@ -36,9 +36,6 @@ namespace AF.UI
         /// <summary>Orden del lienzo de la tarjeta de la Bitácora: el de la del Reto (encima del inicio, debajo de Ajustes).</summary>
         public const int LogbookCardSortingOrder = DailyCardSortingOrder;
 
-        /// <summary>Hueco entre la tarjeta de la Bitácora y la del Reto (dp) [P].</summary>
-        public const float LogbookCardGapDp = 8f;
-
         /// <summary>
         /// Nivel desde el que la Bitácora puede dar una Luciérnaga: el default de <c>lvl_murky_from_level</c> = 100 (08 §9), el
         /// estreno de Aguas turbias, donde se regala la primera (04 §2.5). Antes, la Luciérnaga se sustituye (D-033, punto 3;
@@ -69,9 +66,6 @@ namespace AF.UI
         private bool _skipLobbyTakeover;
         private bool _logbookFailed;
         private bool _logbookCardShown;
-        private float _logbookCardW;
-        private float _logbookCardH;
-        private float _logbookDailyH = DailyChallengeCard.HeightDp;
 
         /// <summary>Almacén de la Bitácora para los tests (gana a <see cref="LogbookStoreFactory"/>).</summary>
         internal static ILoginCalendarStore? LogbookStoreOverride { get; set; }
@@ -379,7 +373,6 @@ namespace AF.UI
             LoginCalendarState state = LogbookState;
             _logbookCard?.Refresh(state);
             _logbookCardCanvas?.Measure();
-            _logbookCardW = 0f;
             PlaceLogbookCard();
             return state;
         }
@@ -544,30 +537,11 @@ namespace AF.UI
             return WorldTable.WorldOf(level);
         }
 
+        // La de la Bitácora va en la fila de las tarjetas del día del muelle (D-050, punto 6), tras la del Reto: PlaceDayCards.
         private void PlaceLogbookCard()
         {
-            if (_logbookCard == null || _logbookCardCanvas == null)
-            {
-                return;
-            }
-
-            float w = _logbookCardCanvas.Width;
-            float h = _logbookCardCanvas.Height;
-            float dailyH = _dailyCard != null ? _dailyCard.Height : DailyChallengeCard.HeightDp; // crece con sus textos
-            if (Mathf.Approximately(w, _logbookCardW) && Mathf.Approximately(h, _logbookCardH) && Mathf.Approximately(dailyH, _logbookDailyH))
-            {
-                return;
-            }
-
-            _logbookCardW = w;
-            _logbookCardH = h;
-            _logbookDailyH = dailyH;
-
-            // Encima de la tarjeta del Reto (la misma cuenta que PlaceDailyCard) [P]; sin ella, en su sitio.
-            float daily = Mathf.Max(96f, (h * LobbyScreen.PlayCenterFraction) - DailyCardAbovePlayDp - dailyH - 32f);
-            bool dailyShown = _dailyCard != null && _dailyCard.State != DailyCardState.Hidden;
-            float y = dailyShown ? daily - LogbookCardGapDp - LogbookCard.HeightDp : daily + dailyH - LogbookCard.HeightDp;
-            _logbookCard.Place(DailyChallengeCard.LeftFor(w), Mathf.Max(72f, y), DailyChallengeCard.WidthFor(w)); // la columna de la del Reto
+            _dayCardsDirty = true;
+            PlaceDayCards();
         }
     }
 }

@@ -360,10 +360,9 @@ namespace AF.Tests.PlayMode
             Assert.That(w.xMax, Is.LessThanOrEqualTo(lobby.CanvasWidth + 0.01f));
             Assert.That(w.Overlaps(play), Is.False, "no pisa «Jugar»");
             Assert.That(w.yMin, Is.GreaterThan(lobby.SafeTop + 48f), "bajo la cabecera");
-            if (boot.DailyCard != null && boot.DailyCard.Root.gameObject.activeInHierarchy)
-            {
-                Assert.That(w.xMin, Is.GreaterThanOrEqualTo((lobby.CanvasWidth + DailyChallengeCard.WidthDp) * 0.5f), "a la derecha de la tarjeta del Reto");
-            }
+            Assert.That(w.yMax, Is.LessThanOrEqualTo(play.yMin - 36f + 0.5f), "D-050: el poste, en el agua, por encima de la viga del muelle");
+            Assert.That(widget.CountText, Is.EqualTo("3"), "la cifra en su placa");
+            Assert.That(widget.MarksLit, Is.EqualTo(1), "el hito 3, encendido");
         }
 
         [UnityTest]

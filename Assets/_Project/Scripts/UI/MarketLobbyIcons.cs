@@ -16,9 +16,10 @@ namespace AF.UI
     /// <item><description><b>Icono del Mercado</b> (06 §4.7: «iconos Mercado / Mapa del río», sin texto; desde <c>max_level</c> ≥ 10):
     /// en la barra de abajo, a la izquierda de «Inicio», simétrico al del Mapa [P]. Glifo provisional (la semilla) hasta el «puesto de
     /// Ver-o-Peso» de 07 §5 (arte del artista).</description></item>
-    /// <item><description><b>Cántaro</b> (05 §4.1: «icono en el HUD desde el nivel 20»): en la esquina de arriba a la derecha, bajo
-    /// Ajustes [P] (Q-B5-7); desde D-046, en el sitio que le guarda el inicio, a la izquierda del botón de Sonido (Q-T6A-2), donde no tapa los saldos, la ventanita de casa de TiTino ni su píldora (06 §4.7; D-016), con lo que
-    /// guarda; a 3.000, «¡Lleno!» con un punto. Un toque abre su tarjeta (05 §5: «≥ 1.000 y toque en el icono»).</description></item>
+    /// <item><description><b>Cántaro</b> (05 §4.1: «icono en el HUD desde el nivel 20»): desde D-050, una tinaja de barro
+    /// (<see cref="ProceduralArt.DockJar"/>) apoyada en el muelle del inicio, a la izquierda, en el sitio que le guarda el inicio
+    /// (<see cref="LobbyScreen.PiggyAnchorRect"/>), con lo que guarda en su placa a los pies; a 3.000, «¡Lleno!» con un punto. Un
+    /// toque abre su tarjeta (05 §5: «≥ 1.000 y toque en el icono»).</description></item>
     /// </list>
     /// Con el enganche de <c>LobbyScreen</c> pasarían a su barra y a su cabecera. Sin asignaciones mientras nada cambia.
     /// </summary>
@@ -36,11 +37,11 @@ namespace AF.UI
         /// <summary>Área táctil mínima (07 §7.8): el icono baja hasta tener 48 dp, como el del Mapa (M3.3).</summary>
         public const float MinTouchDp = 48f;
 
-        /// <summary>Ancho del Cántaro (dp) [P]: el disco y la cifra debajo.</summary>
-        public const float PiggyWidthDp = 56f;
+        /// <summary>Ancho del Cántaro (dp) [P]: la tinaja de barro apoyada en el muelle y la placa de la cifra (D-050, punto 6).</summary>
+        public const float PiggyWidthDp = 64f;
 
-        /// <summary>Alto del Cántaro (dp) [P]: más que el área táctil mínima (07 §7.8).</summary>
-        public const float PiggyHeightDp = 56f;
+        /// <summary>Alto del Cántaro (dp) [P]: la tinaja y, a sus pies, la cifra; más que el área táctil mínima (07 §7.8).</summary>
+        public const float PiggyHeightDp = 74f;
 
         /// <summary>Hueco entre Ajustes y el Cántaro (dp) [P].</summary>
         public const float PiggyGapDp = 8f;
@@ -68,20 +69,23 @@ namespace AF.UI
             _market.Button.gameObject.SetActive(false);
 
             _piggy = UiBuilder.BareButton("PiggyChip", _canvas.Root, onPiggy);
+            // D-050: la tinaja de barro (ProceduralArt.DockJar) apoyada en el muelle y, a sus pies, la placa de madera con lo que guarda.
+            _piggyJar = UiBuilder.Image("Jar", _piggy.transform, art.DockJar, Color.white);
+            _piggyJar.preserveAspect = true;
+            UiBuilder.Place(_piggyJar.rectTransform, (PiggyWidthDp - ProceduralArt.DockJarWidthDp) * 0.5f, 0f, ProceduralArt.DockJarWidthDp, ProceduralArt.DockJarHeightDp);
+            float s = Mathf.Max(1f, UiBuilder.TextScale);
+            float plateH = Mathf.Ceil(20f * s);
             Image plate = UiBuilder.Sliced("Plate", _piggy.transform, art.WoodPlate, Color.white);
-            UiBuilder.Stretch(plate.rectTransform);
-            _piggyJar = UiBuilder.Image("Jar", _piggy.transform, art.Disc, Palette.TinajaClay);
-            UiBuilder.Place(_piggyJar.rectTransform, (PiggyWidthDp - 28f) * 0.5f, 4f, 28f, 28f);
-            Image seed = UiBuilder.Image("Seed", _piggyJar.transform, art.IconSeed, Color.white);
-            seed.preserveAspect = true;
-            UiBuilder.Place(seed.rectTransform, 5f, 5f, 18f, 18f);
-            _piggyLabel = UiBuilder.Label("Seeds", _piggy.transform, TextStyle.PillWood, string.Empty, 13f, Palette.Cream, TextAlignmentOptions.Center);
-            UiBuilder.Place(_piggyLabel.rectTransform, 2f, 33f, PiggyWidthDp - 4f, 20f);
+            UiBuilder.Place(plate.rectTransform, 0f, PiggyHeightDp - plateH, PiggyWidthDp, plateH);
+            _piggyLabel = UiBuilder.Label("Seeds", plate.transform, TextStyle.PillWood, string.Empty, 13f, Palette.Cream, TextAlignmentOptions.Center);
+            UiBuilder.Stretch(_piggyLabel.rectTransform);
+            _piggyLabel.rectTransform.offsetMin = new Vector2(4f, 0f);
+            _piggyLabel.rectTransform.offsetMax = new Vector2(-4f, 0f);
             UiBuilder.AutoSize(_piggyLabel, UiBuilder.MinTextSp, 13f);
             _piggyDot = UiBuilder.Rect("FullDot", _piggy.transform);
             Image dot = UiBuilder.Image("Dot", _piggyDot, art.Disc, Palette.Heliconia);
             UiBuilder.Stretch(dot.rectTransform);
-            UiBuilder.Place(_piggyDot, PiggyWidthDp - 12f, -2f, 14f, 14f);
+            UiBuilder.Place(_piggyDot, PiggyWidthDp - 16f, 2f, 14f, 14f);
             _piggyDot.gameObject.SetActive(false);
             _piggy.gameObject.SetActive(false);
         }
@@ -140,8 +144,8 @@ namespace AF.UI
                 return;
             }
 
-            // En el sitio que le guarda el inicio (D-046; LobbyScreen.PiggyAnchorRect) [P]: a la izquierda de Sonido, bajo la píldora de
-            // casa y por encima de la tarjeta del Reto.
+            // En el sitio que le guarda el inicio (LobbyScreen.PiggyAnchorRect): desde D-050, la tinaja de barro apoyada en el muelle, a la
+            // izquierda, entre el agua y «Jugar».
             ToCanvas(settings!, out float slotLeft, out float slotTop, out _, out _);
             UiBuilder.Place((RectTransform)_piggy.transform, slotLeft, slotTop, PiggyWidthDp, PiggyHeightDp);
             int full = piggyFull ? 1 : 0;

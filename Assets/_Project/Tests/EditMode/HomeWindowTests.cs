@@ -135,25 +135,26 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Window_ShowsTheStop_HidesOnRequest_AndNothingTakesTouches()
+        public void HomeScene_ShowsTheStop_HidesOnRequest_AndNothingTakesTouches()
         {
             MapArtRule.ForceProvisional = true;
             _host = new GameObject("Host", typeof(RectTransform), typeof(Canvas));
             var home = new HomeWindow(_host.transform, _art);
-            home.Place(16f, 96f, 344f);
+            Assert.That(home.SceneMode, Is.True, "la del inicio: TiTino en su rama (D-050)");
+            home.PlaceScene(12f, 140f, 92f, 296f, 380f);
             Assert.That(home.Visible, Is.False, "nace oculta");
 
             RiverStop manaos = Stops.StopOf(58)!;
             home.Apply(manaos, false);
             Assert.That(home.Visible, Is.True);
-            Assert.That(home.PillShown, Is.True);
+            Assert.That(home.PillShown, Is.False, "D-050: sin píldora; la distancia la dice TiTino en su bocadillo");
             Assert.That(home.DistanceText, Is.EqualTo("Casa · a unos 1.480" + Nbsp + "km"));
-            Assert.That(home.WindowSprite, Is.Not.Null);
-            Assert.That(home.PortraitSprite, Is.Not.Null, "el retrato de M1.5");
-            Assert.That(home.Root.rect.width, Is.EqualTo(HomeWindow.SizeDp).Within(0.01f));
-            Assert.That(home.Root.rect.height, Is.EqualTo(HomeWindow.SizeDp).Within(0.01f));
-            Assert.That(home.PillRect.anchoredPosition.x, Is.GreaterThanOrEqualTo(16f + HomeWindow.SizeDp), "la píldora, a la derecha del marco");
-            Assert.That(home.PillRect.anchoredPosition.x + home.PillRect.sizeDelta.x, Is.LessThanOrEqualTo(344f + 0.01f));
+            Assert.That(home.WindowSprite, Is.Null, "sin marco: TiTino cuelga de la rama del decorado");
+            Assert.That(home.PortraitSprite, Is.Not.Null, "el retrato de M1.5, por si no hay rig");
+            Assert.That(home.Root.rect.width, Is.EqualTo(HomeWindow.SceneWidthDp).Within(0.01f));
+            Assert.That(home.Root.rect.height, Is.EqualTo(HomeWindow.SceneAboveDp + 92f + HomeWindow.SceneBelowDp).Within(0.01f));
+            Assert.That(home.BranchLineDp, Is.EqualTo(140f));
+            Assert.That(home.SceneRigDp, Is.EqualTo(92f));
 
             foreach (Graphic g in _host.GetComponentsInChildren<Graphic>(true))
             {
@@ -170,8 +171,8 @@ namespace AF.Tests.EditMode
             Assert.That(home.PillShown, Is.False);
 
             home.Apply(Stops.At(0), false);
-            Assert.That(home.Visible, Is.True, "en Belém, la ventanita");
-            Assert.That(home.PillShown, Is.False, "sin píldora");
+            Assert.That(home.Visible, Is.True, "en Belém, TiTino");
+            Assert.That(home.DistanceText, Is.Empty, "en casa, sin distancia");
 
             home.Apply(null, false);
             Assert.That(home.Visible, Is.False, "sin parada, nada");
@@ -184,7 +185,7 @@ namespace AF.Tests.EditMode
             MapArtRule.ForceProvisional = false;
             _host = new GameObject("Host", typeof(RectTransform), typeof(Canvas));
             var home = new HomeWindow(_host.transform, _art);
-            home.Place(16f, 96f, 344f);
+            home.PlaceScene(12f, 140f, 92f, 296f, 380f);
             home.Apply(Stops.StopOf(58), false);
             Assert.That(home.Visible, Is.False, "P-M5: el provisional no sale en release");
             Assert.That(home.PillShown, Is.False);
