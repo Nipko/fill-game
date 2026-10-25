@@ -6,7 +6,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
-## 2026-10-24 · T6 · Carril A: tests que no dependen de la hora, capturas al día y una suite más rápida (`spark/t6-tests-fiables`): HECHA · verificación completa sin fallos (EditMode completa con el código final) · code-reviewer: CAMBIOS NECESARIOS atendidos en `ce0b7d9f`, pendiente de la 2.ª ronda · Q-T6F-1 pendiente del dueño o del integrador
+## 2026-10-24 · T6 · Carril A: tests que no dependen de la hora, capturas al día y una suite más rápida (`spark/t6-tests-fiables`): HECHA · verificación completa sin fallos (EditMode completa con el código final) · code-reviewer: APROBADO (2.ª ronda, tras los CAMBIOS NECESARIOS atendidos en `ce0b7d9f`) · Q-T6F-1 pendiente del dueño o del integrador
 
 - **Encargo:** `spark-calidad-pulido.md`, carril A (puntos 1-6). Rama desde `origin/integracion-fase1-fase2` en `645d1856`. Sin empujar.
 - **Commits:** `4084c012` (las cinco capturas que fallaban), `9d1be13c` (reloj fijo, guarda —ya con su descripción partida para no denunciarse a sí misma— y velocidad), `319d44f3` (el saludo de TiTino en las capturas del Reto a 640 y el muelle forzado del 12 en 16:9; su mensaje dice también lo de la guarda, pero ese arreglo va en `9d1be13c`), `40a9d5a7` (esta entrada) y `ce0b7d9f` (revisión: `[OneTimeTearDown]` que libera el arte de `ConsentScreenTests`, `DailyTeaserCardTests` y `LogbookScreenTests`; `ReadData` vacía su caché sin el gancho; la guarda mira también `Packages/com.amazonfill.core/Tests`; el comentario de `Shot` en su sitio), más el de estas correcciones.
