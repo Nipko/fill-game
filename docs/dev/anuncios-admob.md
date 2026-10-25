@@ -21,7 +21,7 @@ Los fija `AF.Ads.Google.Editor.GoogleAdsProjectSetup.Apply` (menú «Amazon Fill
 
 `BuildDev` y `BuildRelease` llaman a `GoogleAdsProjectSetup.CheckForBuild` antes de construir: si el asset no está como debe, lo aplica; si aun así falla, el build se para con el código 2. Así ningún build sale con el App ID vacío (sin él, el plugin para el build, y `MobileAdsInitProvider` cerraría la app al arrancar). Lo prueban los tests EditMode `GoogleAdsProjectSetupTests`.
 
-**MAX:** `MaxProjectSetup.Apply` deja ahora el flujo de términos y privacidad de MAX con la automatización de UMP **apagado** (`ProjectSettings/AppLovinInternalSettings.json`), para que solo haya un aviso de consentimiento (el de Google). Con eso el preproceso de MAX deja de pedir UMP en `Assets/MaxSdk/AppLovin/Editor/Dependencies.xml`; la UMP 4.0.0 llega ahora por el plugin de Google. MAX sigue sin clave, así que no sirve anuncios (`not_configured`).
+**MAX:** `MaxProjectSetup.Apply` deja ahora el flujo de términos y privacidad de MAX con la automatización de UMP **apagado** (`ProjectSettings/AppLovinInternalSettings.json`), para que solo haya un aviso de consentimiento (el de Google). Con eso el preproceso de MAX deja de pedir UMP en `Assets/MaxSdk/AppLovin/Editor/Dependencies.xml`; la UMP 4.0.0 llega ahora por el plugin de Google. MAX sigue sin clave, así que no sirve anuncios (`not_configured`). Al apagar el flujo, el propio plugin de MAX vacía también los textos de ATT de iOS de ese JSON (`userTrackingUsageDescription*`): no afecta a Android.
 
 ## 3. Bloques de anuncios
 
@@ -62,6 +62,7 @@ Las reglas de cadencia, topes, esperas e intersticiales siguen en `AdPolicy` (05
 | 18+ que acepta | Sin `npa` |
 | Perfil `ump` con 18+ | Sin `npa`: deciden las cadenas TCF del mensaje de UMP. Ajustes › Privacidad › opciones de anuncios llama a `ConsentForm.ShowPrivacyOptionsForm` si UMP lo pide (`PrivacyOptionsRequirementStatus.Required`) |
 
+- **Edad corregida después de UMP** (18+ → 13-17 en Ajustes): se reenvía `SetRequestConfiguration` con `TagForUnderAgeOfConsent`, se descarta el anuncio ya cargado y se recarga con `npa=1`; UMP no se vuelve a pedir (fuera del perfil `ump` manda nuestra pantalla, y con el perfil `ump` 13-17 no tiene anuncios).
 - El mensaje de UMP solo aparece donde AdMob lo tiene publicado: el del RGPD (EEE, Reino Unido, Suiza) y el de los estados de EE. UU. En Brasil, Colombia, Perú y México manda nuestra pantalla (08 §7).
 - **Contenido G (D-029):** por código (`MaxAdContentRating.G`) y en la consola de AdMob («Contenido máximo» = G, ya hecho).
 - `MobileAdsInitProvider` (initOrder 100) se queda: en 25.4.0 solo valida el App ID (sin red ni ID de publicidad; propuesta §4). `DELAY_APP_MEASUREMENT_INIT` = true como refuerzo.

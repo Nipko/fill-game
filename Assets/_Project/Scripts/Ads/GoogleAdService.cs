@@ -291,7 +291,7 @@ namespace AF.Ads
         /// <inheritdoc />
         public bool ShowPrivacyOptions()
         {
-            return ConsentRequested && !_consentInFlight && _port.PrivacyOptionsRequired && _port.ShowPrivacyOptionsForm();
+            return _allowed && ConsentRequested && !_consentInFlight && _port.PrivacyOptionsRequired && _port.ShowPrivacyOptionsForm();
         }
 
         /// <inheritdoc />

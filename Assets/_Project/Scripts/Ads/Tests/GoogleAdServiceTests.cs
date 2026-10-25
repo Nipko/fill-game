@@ -189,10 +189,100 @@ namespace AF.Ads.Tests
             var rig = new Rig();
             rig.Decide(AgeBand.Adult, ads: true);
 
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
+
             rig.Consent.Apply(FlagsFor(AgeBand.Teen, ads: true));
 
             Assert.That(rig.Port.Calls, Does.Contain("config:tfua=true"));
             Assert.That(rig.Port.Initializations, Is.EqualTo(1), "Initialize una sola vez por proceso");
+            Assert.That(rig.Port.ConsentRequests, Is.EqualTo(1), "UMP no se vuelve a pedir (13-17 fuera de ump va con npa)");
+            Assert.That(rig.Port.Calls[rig.Port.Calls.Count - 1], Is.EqualTo("load:rewarded:npa=true"), "el anuncio de adulto se descarta");
+        }
+
+        [Test]
+        public void AgeCorrectedToUnder13_WhileUmpIsInFlight_NeverInitializes()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true, resolveUmp: false, initialize: false);
+            int calls = rig.Port.Calls.Count;
+
+            rig.Consent.Apply(FlagsFor(AgeBand.Under13, ads: false));
+            rig.Port.ResolveConsent(true);
+            rig.Google.OnResume();
+
+            Assert.That(rig.Port.Initializations, Is.EqualTo(0), "con <13 nunca MobileAds.Initialize (08 §2.3; D-033 B12)");
+            Assert.That(rig.Port.Calls.Count, Is.EqualTo(calls), "ninguna llamada más al SDK");
+            Assert.That(rig.Port.ConsentRequests, Is.EqualTo(1), "ni se vuelve a pedir UMP");
+        }
+
+        [Test]
+        public void Undecided_WhileUmpIsInFlight_NeverInitializes()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true, resolveUmp: false, initialize: false);
+
+            rig.Consent.Apply(ConsentPolicy.Undecided);
+            rig.Port.ResolveConsent(true);
+
+            Assert.That(rig.Port.Initializations, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Resume_RewardedStillOpen_WaitsTheGrace_ThenRewardedIfTheRewardArrived()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
+            var outcomes = new List<AdOutcome>();
+            rig.Consent.Show(AdPlacement.Hint, outcomes.Add);
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.RewardReceived);
+
+            rig.Google.OnResume();
+            rig.Clock.Advance(TimeSpan.FromSeconds(2));
+            rig.Google.Tick();
+            Assert.That(outcomes, Is.Empty, "dentro de ResumeGrace sigue pendiente");
+
+            rig.Clock.Advance(TimeSpan.FromSeconds(1));
+            rig.Google.Tick();
+            Assert.That(outcomes, Is.EqualTo(new List<AdOutcome> { AdOutcome.Rewarded }));
+
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Closed); // el cierre tardío no da un segundo resultado
+            rig.Clock.Advance(TimeSpan.FromSeconds(10));
+            rig.Google.Tick();
+            Assert.That(outcomes.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Resume_RewardedWithoutReward_IsSkipped_AfterTheGrace()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
+            AdOutcome? outcome = null;
+            rig.Consent.Show(AdPlacement.Hint, o => outcome = o);
+
+            rig.Google.OnResume();
+            rig.Clock.Advance(GoogleAdService.ResumeGrace);
+            rig.Google.Tick();
+
+            Assert.That(outcome, Is.EqualTo(AdOutcome.Skipped));
+        }
+
+        [Test]
+        public void Resume_InterstitialStillOpen_IsShown_AfterTheGrace()
+        {
+            var rig = new Rig { NextLevel = 30 };
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Port.Raise(GmaAdKind.Interstitial, GmaAdEvent.Loaded);
+            var outcomes = new List<AdOutcome>();
+            rig.Consent.Show(AdPlacement.InterstitialPostLevel, outcomes.Add);
+
+            rig.Google.OnResume();
+            rig.Clock.Advance(GoogleAdService.ResumeGrace);
+            rig.Google.Tick();
+            rig.Port.Raise(GmaAdKind.Interstitial, GmaAdEvent.Closed);
+
+            Assert.That(outcomes, Is.EqualTo(new List<AdOutcome> { AdOutcome.Shown }));
         }
 
         [Test]
