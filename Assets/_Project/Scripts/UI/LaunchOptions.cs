@@ -239,6 +239,14 @@ namespace AF.UI
         public static string? LevelPackJsonOverride { get; set; }
 
         /// <summary>
+        /// Solo tests (T6, carril A): true reutiliza los datos de la escena ya leídos en una carga anterior si su texto no cambió
+        /// (<c>GameBootstrap.ReadData</c>: los paquetes de niveles, con sus 700 tableros, y el pool del Reto, con 2.187): leerlos y
+        /// validarlos cuesta en cada carga y la suite de PlayMode carga la escena unas 2.000 veces. Null (el juego): se leen en cada carga, como siempre. Lo pone <c>PlayModeHelpers</c> y
+        /// <see cref="Reset"/> lo limpia.
+        /// </summary>
+        public static bool? ReuseDataReadsOverride { get; set; }
+
+        /// <summary>
         /// Pantalla «Anuncio simulado» que sustituye a <see cref="AdOverlay"/> (tests: <see cref="ImmediateAdPresenter"/> cierra
         /// al instante sin esperar los 3-5 s).
         /// </summary>
@@ -348,6 +356,7 @@ namespace AF.UI
             ClockOverride = null;
             LevelOffsetOverride = null;
             LevelPackJsonOverride = null;
+            ReuseDataReadsOverride = null;
             DevelopmentBuildOverride = null;
             LevelCardsOverride = null;
             BannerArtSyncOverride = null;

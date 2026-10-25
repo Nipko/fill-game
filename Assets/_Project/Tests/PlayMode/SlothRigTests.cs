@@ -32,6 +32,10 @@ namespace AF.Tests.PlayMode
 
         private static float s_sink;
 
+        // El arte procedural cuesta unos 3 s por instancia: uno para todo el fixture (T6, carril A), creado con
+        // ArtSlots.ForceProcedural como lo pone SetUp. Los tests que miden lo que se crea (ThePieces_AreLazy…,
+        // NotADevelopmentBuild… y ThePartsPng_Rules…) usan uno nuevo (Fresh) que TearDown libera.
+        private static ProceduralArt? s_art;
         private ProceduralArt _art = null!;
         private GameObject? _canvasGo;
         private RectTransform _space = null!;
@@ -45,7 +49,7 @@ namespace AF.Tests.PlayMode
         {
             MapArtRule.ForceProvisional = null;
             ArtSlots.ForceProcedural = true; // sin los PNG del equipo: lo que sale es el provisional (o nada)
-            _art = new ProceduralArt("white");
+            _art = s_art ??= new ProceduralArt("white");
             _canvasGo = new GameObject("SlothRigTestCanvas", typeof(RectTransform), typeof(Canvas));
             _canvasGo.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
             var layer = new GameObject("Layer", typeof(RectTransform));
@@ -61,7 +65,11 @@ namespace AF.Tests.PlayMode
         {
             MapArtRule.ForceProvisional = null;
             ArtSlots.ForceProcedural = false;
-            _art.Dispose();
+            if (!ReferenceEquals(_art, s_art))
+            {
+                _art.Dispose();
+            }
+
             if (_canvasGo != null)
             {
                 Object.Destroy(_canvasGo);
@@ -86,6 +94,20 @@ namespace AF.Tests.PlayMode
             {
                 Object.Destroy(_branchTexture);
             }
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            s_art?.Dispose();
+            s_art = null;
+        }
+
+        // Un arte nuevo para el test que mide lo que se crea (TearDown lo libera).
+        private ProceduralArt Fresh()
+        {
+            _art = new ProceduralArt("white");
+            return _art;
         }
 
         [Test]
@@ -322,6 +344,7 @@ namespace AF.Tests.PlayMode
         [Test]
         public void ThePieces_AreLazy_NothingIsCreatedUntilAsked()
         {
+            Fresh();
             Assert.That(_art.SlothRigArtBuilt, Is.False, "el constructor no crea el rig");
             Assert.That(_art.SlothBranchBuilt, Is.False, "ni la rama");
             int objects = SceneRectTransforms();
@@ -360,6 +383,7 @@ namespace AF.Tests.PlayMode
         [Test]
         public void NotADevelopmentBuild_WithoutThePng_TheSlothDoesNotAppear()
         {
+            Fresh();
             int children = _space.childCount;
             MapArtRule.ForceProvisional = false; // como en release
             Assert.That(_art.SlothRigArt(), Is.Null, "release sin arte final: nada (07 §6.4)");
@@ -385,6 +409,7 @@ namespace AF.Tests.PlayMode
         [Test]
         public void ThePartsPng_Rules_AndThenTheProvisionalIsNeverCreated()
         {
+            Fresh();
             Sprite png = MakePng();
             Assert.That(_art.SlothRigArt(png, null, false), Is.Null, "release con las piezas y sin la rama: no sale (c.4; 07 §6.4)");
             Assert.That(_art.SlothRigArtBuilt, Is.False, "y no se crea nada");

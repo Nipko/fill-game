@@ -474,7 +474,7 @@ namespace AF.UI
 
             try
             {
-                return DailyPoolReader.Read(dailyPool.text);
+                return ReadData<DailyPool>(dailyPool, DailyPoolReader.Read);
             }
             catch (Exception e) when (e is LevelFormatException || e is FormatException || e is ArgumentException)
             {

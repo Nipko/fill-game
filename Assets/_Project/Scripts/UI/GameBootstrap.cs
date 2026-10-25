@@ -2120,7 +2120,7 @@ namespace AF.UI
                     IReadOnlyList<TextAsset> assets = LevelPackAssets;
                     for (int i = 0; i < assets.Count; i++)
                     {
-                        packs.Add(LevelPackReader.Read(assets[i].text));
+                        packs.Add(ReadData<LevelPack>(assets[i], LevelPackReader.Read));
                     }
                 }
 
@@ -2175,6 +2175,34 @@ namespace AF.UI
                 Debug.LogError(LogPrefix + "el paquete de niveles no es válido: " + e.Message);
                 return null;
             }
+        }
+
+        // Los datos ya leídos de la escena, por TextAsset y con su texto (solo con LaunchOptions.ReuseDataReadsOverride: los tests).
+        private static readonly Dictionary<TextAsset, KeyValuePair<string, object>> s_dataReads = new Dictionary<TextAsset, KeyValuePair<string, object>>();
+
+        // Lee un TextAsset de datos de la escena (los paquetes de niveles, el pool del Reto). En el juego, siempre: cada carga de la
+        // escena lo lee y lo valida. En los tests con LaunchOptions.ReuseDataReadsOverride (T6, carril A), lo ya leído de ese
+        // TextAsset si su texto es el mismo: LevelPack y DailyPool son inmutables, y lo que se construye con ellos (el catálogo con
+        // sus overrides, interruptores y desplazamiento; el servicio del Reto) se rehace en cada carga.
+        private static T ReadData<T>(TextAsset asset, Func<string, T> read)
+            where T : class
+        {
+            string text = asset.text;
+            if (LaunchOptions.ReuseDataReadsOverride != true)
+            {
+                s_dataReads.Clear(); // sin el gancho no se guarda nada (ni lo de una pasada de tests anterior)
+                return read(text);
+            }
+
+            if (s_dataReads.TryGetValue(asset, out KeyValuePair<string, object> done) && done.Value is T same
+                && string.Equals(done.Key, text, StringComparison.Ordinal))
+            {
+                return same;
+            }
+
+            T data = read(text);
+            s_dataReads[asset] = new KeyValuePair<string, object>(text, data);
+            return data;
         }
 
         // 08 §2.3: profile = Save.LoadLocal() ?? Profile.New(). La primera vez (no había perfil ni progreso de v0) se entra

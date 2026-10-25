@@ -101,8 +101,9 @@ namespace AF.Tests.PlayMode
         {
             // Más de 7 días sin sesión (live_comeback_gift.days, 06 §8.3): el arranque en frío paga el Regalo de regreso en
             // SetUpSessions, antes de ConnectTelemetry; la cartera ya está en el bus desde que se crea (revisión de B7).
-            Profile profile = Wallet.NewProfile(SystemClock.Instance);
-            profile.Stats.LastSeenAt = System.DateTime.UtcNow.AddDays(-8);
+            TestClock clock = TestClock.Install(); // el reloj del juego: los 8 días se cuentan con él, no con el del sistema
+            Profile profile = Wallet.NewProfile(clock);
+            profile.Stats.LastSeenAt = clock.UtcNow.AddDays(-8);
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
             yield return PlayModeHelpers.LoadGame(3, new MemoryProgressStore(3, 2));
             GameBootstrap boot = GameBootstrap.Current!;

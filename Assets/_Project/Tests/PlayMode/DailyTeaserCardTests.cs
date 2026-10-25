@@ -21,6 +21,11 @@ namespace AF.Tests.PlayMode
     /// </summary>
     public sealed class DailyTeaserCardTests
     {
+        // El arte procedural cuesta unos 3 s por instancia: uno para todo el fixture (T6, carril A); las pantallas solo leen
+        // sus sprites.
+        private static ProceduralArt? s_art;
+        private static ProceduralArt Art => s_art ??= new ProceduralArt("white");
+
         private const float CanvasW = 360f;
         private GameObject? _host;
         private RectTransform _layer = null!;
@@ -32,7 +37,14 @@ namespace AF.Tests.PlayMode
             Loc.Configure(DailyTestTables.Catalog(), LocLocale.SourceLocale, true);
             _host = new GameObject("TeaserHost", typeof(RectTransform));
             _layer = UiBuilder.Rect("VictoryOverlay", _host.transform);
-            _card = new DailyTeaserCard(_layer, new ProceduralArt("white"));
+            _card = new DailyTeaserCard(_layer, Art);
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            s_art?.Dispose(); // la recarga de dominio está apagada: el arte del fixture no sobrevive a la sesión de Play
+            s_art = null;
         }
 
         [TearDown]

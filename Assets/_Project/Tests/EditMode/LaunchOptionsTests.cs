@@ -94,6 +94,16 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Reset_ClearsTheReuseDataReadsOverride()
+        {
+            // Gancho solo de tests (T6, carril A: los datos de la escena leídos una vez por pasada): null en el juego y tras Reset.
+            Assert.That(LaunchOptions.ReuseDataReadsOverride, Is.Null);
+            LaunchOptions.ReuseDataReadsOverride = true;
+            LaunchOptions.Reset();
+            Assert.That(LaunchOptions.ReuseDataReadsOverride, Is.Null);
+        }
+
+        [Test]
         public void IntentExtras_AreNotReadOutsideAndroid()
         {
             Assert.That(LaunchOptions.ReadIntentLevel(), Is.EqualTo(0));
