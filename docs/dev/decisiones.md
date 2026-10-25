@@ -3970,3 +3970,14 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Aprobación del resultado:** antes de integrar, el dueño ve capturas del juego real.
 - **Carril:** `tanda6/inicio-muelle`.
 - **Cómo revertir:** con una decisión nueva del dueño.
+
+## D-051 · Sin la pantalla «Made with Unity»; arranque con la marca
+
+- **Fecha:** 2026-10-25. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat, a la propuesta del integrador: «si hagamoslo».
+- **Decisión:**
+  1. **Se quita la pantalla de Unity** (`PlayerSettings.SplashScreen.show` = false). Es opcional en todos los planes desde Unity 6. Se cambia en `AF.EditorTools.ProjectSetup` (método versionado; regla 3), y la comprobación de Player Settings del build de humo lo exige.
+  2. **Pantalla del sistema** (Android 12+, la pone el sistema y no se quita): el icono v2 sobre el **fondo petróleo de la marca** (D-045), para que empalme con el juego.
+  3. **Intro propia de 1 segundo como mucho:** el logo de Tintalú con la gota que tiñe el río (identidad v2), dibujada por código. Se muestra **mientras el juego carga**, nunca como espera añadida: si la carga acaba antes, se corta sin esperar. Con Reducir movimiento sale quieta, y ningún toque se pierde.
+- **Carril:** `tanda6/arranque-marca`.
+- **Cómo revertir:** con una decisión nueva del dueño.
