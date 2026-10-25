@@ -182,7 +182,8 @@ namespace AF.Tests.PlayMode
         public IEnumerator ALateCloud_WithAWinWhileWaiting_KeepsTheWin_AndNeverUploadsTheUnmergedLocal()
         {
             Profile remote = ProfileAt(26, 50);
-            remote.EconomyTs = T0.AddDays(1);
+            // El arranque marca economy_ts con el reloj de verdad: la nube va un día por delante de hoy (con T0 fijo dejó de ganar el 24-10).
+            remote.EconomyTs = DateTime.UtcNow.AddDays(1);
             var cloud = new FakeCloudSave(Blob(remote)) { Deferred = true };
             GameBootstrap.CloudSaveOverride = cloud;
             GameBootstrap.CloudBootWaitMsOverride = 0f;
