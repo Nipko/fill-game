@@ -150,7 +150,7 @@ describe('web/site', () => {
       for (const m of all) expect(m, f).toMatch(/^\[\[(DATO DEL DUEÑO|ABOGADO): [^\]]+\]\]$/);
       expect(doc.split('<mark class="pending">[[').length - 1, f).toBe(all.length);
       expect(doc, f).not.toMatch(/\[PENDIENTE|TODO|FIXME|\{\{/);
-      expect(doc, f).not.toMatch(/AUTOMATION AI/i);
+      // AUTOMATION AI S.A.S es la editora prevista; su nombre ya no es un resto de D-041.
     }
   });
 
@@ -163,7 +163,7 @@ describe('web/site', () => {
     for (const f of HTML_FILES) {
       const doc = site.get(f) ?? '';
       for (const ref of [...attrs(doc, 'href'), ...attrs(doc, 'src')]) {
-        if (/^https?:/.test(ref)) continue;
+        if (/^(https?|mailto):/.test(ref)) continue;
         const [p, frag] = ref.split('#');
         if (p === '') {
           expect(ids(doc).has(frag), `${f}: #${frag}`).toBe(true);

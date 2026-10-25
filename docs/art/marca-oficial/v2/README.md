@@ -12,6 +12,8 @@
 | Uso | Archivo |
 |---|---|
 | Icono maestro (iOS, Play) | `icono-1024.svg`, `png/app-store-1024.png`, `png/google-play-512.png` |
+| Favicon y web de iOS | `png/favicon-16.png`, `png/favicon-32.png`, `png/apple-touch-icon.png` (180 × 180) |
+| Gráfico de funciones provisional | `feature-graphic.svg`, `png/feature-graphic.png` (1024 × 500); logotipo horizontal y río teñido, generado con las piezas de esta identidad |
 | Android adaptativo, 108 dp a 4× | `png/android-fondo-432.png` y `png/android-frente-432.png` (el primer plano llega a 32,1 dp del centro; zona segura de 33 dp) |
 | Android temático (13+) | `png/android-monocromo-432.png`: una sola tinta; el río teñido va lleno y el de agua blanca, solo con sus orillas |
 | Android clásico | `png/legacy-48 … 192.png` |
@@ -28,6 +30,6 @@ python hoja.py        # out/hoja-revision.html (la captura out/hoja-revision.png
 
 ## Pendiente
 - **Unity: integrada** (2026-10-23) en `Assets/_Project/Plugins/Android/AfIcon.androidlib`, porque Unity 6000.3 no tiene capa monocroma. Lleva `mipmap-anydpi-v26` y `-v33` (este, con la monocroma) y las capas por densidad, que genera `python exportar.py --android-res <AfIcon.androidlib/src/main/res>`. `Assets/Plugins/Android/LauncherManifest.xml` apunta `android:icon` y `roundIcon` a `@mipmap/af_launcher`.
-- La web (favicon, apple-touch-icon y logo) la lleva Codex (`docs/dev/traspaso/codex-web-marca.md`).
+- La web usa los favicons, el apple-touch-icon y los logos claro/oscuro derivados de estos archivos. El gráfico de funciones es provisional; no es una aprobación del nombre para publicación.
 - No hay versión oscura ni tintada de iOS ni catálogo de Xcode; se hacen cuando se elija.
 - Probar en un teléfono el icono adaptativo y el temático.

@@ -1,0 +1,282 @@
+[
+  {
+    "path": ".gitattributes",
+    "bytes": 135,
+    "sha256": "63b5dbe36e2878f15be9ae1cd25aeff4647728e70032db22efd847e57c40bb2a"
+  },
+  {
+    "path": "README.md",
+    "bytes": 7588,
+    "sha256": "43993ce19e2ec0afd8fa613c817d40bd678057e4721b68ed6ccd99a489f3357a"
+  },
+  {
+    "path": "android/layers/background-432.png",
+    "bytes": 3933,
+    "sha256": "a6df1b71742905f2bd9e4d2341bf3a497800d166643b32502bb47e771e71dfed"
+  },
+  {
+    "path": "android/layers/composite-432-preview.png",
+    "bytes": 65058,
+    "sha256": "3369993c958617724d3b24e58507a2ef7143f5a2c4956b4a0fd515916afdf536"
+  },
+  {
+    "path": "android/layers/foreground-432.png",
+    "bytes": 64783,
+    "sha256": "b247cc2ab9945c920f2faa9725b12602943ebd2c69f471ff69885088e70862b5"
+  },
+  {
+    "path": "android/layers/monochrome-432.png",
+    "bytes": 26282,
+    "sha256": "ae35412e226ebcc57796fe338d9055a50ed15ea0917e16318a2c092fedeae5cf"
+  },
+  {
+    "path": "android/manifest-snippet.xml",
+    "bytes": 118,
+    "sha256": "0abb15522dfe2dc5a6651a6f4c7f582f90c7b6bbc9da23d4745be3f1c13c6cce"
+  },
+  {
+    "path": "android/res/drawable-hdpi/ic_launcher_foreground.png",
+    "bytes": 12310,
+    "sha256": "3178af12df16ae35dabbc1f7363db2394d4ace46262ba55ec9d0694b5f90396a"
+  },
+  {
+    "path": "android/res/drawable-hdpi/ic_launcher_monochrome.png",
+    "bytes": 6096,
+    "sha256": "dd2a7fe50c5d06464e045c9d525525d994d26a4e97f3780efebc67f6bf09e9cb"
+  },
+  {
+    "path": "android/res/drawable-mdpi/ic_launcher_foreground.png",
+    "bytes": 6469,
+    "sha256": "9e2a175c62b075f38eb830704844ed3e3bdcde0ddfee597e7e4c49012ebcc0fc"
+  },
+  {
+    "path": "android/res/drawable-mdpi/ic_launcher_monochrome.png",
+    "bytes": 3543,
+    "sha256": "eb89d94f613f00d4bbba336fb46c64b878973479e63313a71c2f1729270978bc"
+  },
+  {
+    "path": "android/res/drawable-xhdpi/ic_launcher_foreground.png",
+    "bytes": 19811,
+    "sha256": "c20520ab6af422a203b8f440e0e00085e2f200ae3e56a8c7b1beb56e73b80a7b"
+  },
+  {
+    "path": "android/res/drawable-xhdpi/ic_launcher_monochrome.png",
+    "bytes": 8924,
+    "sha256": "88d77874f6d54df93eabfd9b2fdc3695864cb1aacbd0e510d6d3edb9bf6fe73a"
+  },
+  {
+    "path": "android/res/drawable-xxhdpi/ic_launcher_foreground.png",
+    "bytes": 40642,
+    "sha256": "c9ed47f2cfd4ee43681ceeae39137ff249a97153ddf880875db7a574b8e97704"
+  },
+  {
+    "path": "android/res/drawable-xxhdpi/ic_launcher_monochrome.png",
+    "bytes": 18842,
+    "sha256": "f3dee804f6a6dc13c95b6deecc267b0a300869eaed31b0f372d09b0afebebd00"
+  },
+  {
+    "path": "android/res/drawable-xxxhdpi/ic_launcher_foreground.png",
+    "bytes": 65168,
+    "sha256": "09cd95a78b79778e7baf4b60cd62a866e69f18bcebf4249ab00a8328fbe7bac4"
+  },
+  {
+    "path": "android/res/drawable-xxxhdpi/ic_launcher_monochrome.png",
+    "bytes": 25692,
+    "sha256": "8e57928439984ac63cfbc8f1ba8a91dfd89902e2769db210593ed08c6e18068f"
+  },
+  {
+    "path": "android/res/mipmap-anydpi-v26/ic_launcher.xml",
+    "bytes": 266,
+    "sha256": "dfe8d39ecc5035b615774796a0f031d234bea9eef612d1cbf2881ac1da55d604"
+  },
+  {
+    "path": "android/res/mipmap-anydpi-v33/ic_launcher.xml",
+    "bytes": 335,
+    "sha256": "e08219d7e00e4b15f64ec414fcd36853e61277a2008fe923cb6010a0d13dddf0"
+  },
+  {
+    "path": "android/res/mipmap-hdpi/ic_launcher.png",
+    "bytes": 13254,
+    "sha256": "d816d9d3cbbe780974dc35d1c2b1c434203a005ee3efe192181f83bf7cf0c459"
+  },
+  {
+    "path": "android/res/mipmap-mdpi/ic_launcher.png",
+    "bytes": 6776,
+    "sha256": "3626bdcddca0f7f14aaac66e7d31ea04da59a32ffd87d58c358af2aa5870a8ff"
+  },
+  {
+    "path": "android/res/mipmap-xhdpi/ic_launcher.png",
+    "bytes": 21999,
+    "sha256": "fc68d768f959415342df3b8901fd5516ba9e2da4c47628f950ab0be4d0541ed1"
+  },
+  {
+    "path": "android/res/mipmap-xxhdpi/ic_launcher.png",
+    "bytes": 44666,
+    "sha256": "1b72e78f273708ec784fd09c7898caab756b8fdcca55863884088c7f7218121c"
+  },
+  {
+    "path": "android/res/mipmap-xxxhdpi/ic_launcher.png",
+    "bytes": 74645,
+    "sha256": "e9f676ab77a74a5e4cda3e4c084946a8a8848eeb6b5ea2e4b5423ebfceb30c2c"
+  },
+  {
+    "path": "android/res/values/colors.xml",
+    "bytes": 115,
+    "sha256": "daf809cf4ee7187f516b770836bc06b53be928f5173a85fe9caa7a7ea75370b9"
+  },
+  {
+    "path": "export.mjs",
+    "bytes": 12485,
+    "sha256": "2598e2ce6b883c15a967d2f6d7aae9c92cf2971ce69da133cd74adaaf76828b6"
+  },
+  {
+    "path": "ios/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+    "bytes": 1675434,
+    "sha256": "f1a2bef64774189242139d4519fde46981a9b01518c72a0e7b81c2d41fc15ce9"
+  },
+  {
+    "path": "ios/Assets.xcassets/AppIcon.appiconset/AppIcon-dark-1024.png",
+    "bytes": 953050,
+    "sha256": "6dd9018307f1f886fc348be654256b53159e62e2de653c68278183ebbd63c71d"
+  },
+  {
+    "path": "ios/Assets.xcassets/AppIcon.appiconset/AppIcon-tinted-1024.png",
+    "bytes": 599841,
+    "sha256": "6d73d140d1bef4d6f41349594bc8cbaf16179818039fb9601f3da8f4b0c82629"
+  },
+  {
+    "path": "ios/Assets.xcassets/AppIcon.appiconset/Contents.json",
+    "bytes": 714,
+    "sha256": "b3d9e89621c5be08cb9367195fc6ddd14dfa5a3321cd7b5912065ba5ede3b93e"
+  },
+  {
+    "path": "ios/Assets.xcassets/Contents.json",
+    "bytes": 60,
+    "sha256": "f5fb0e1f3a8142892ed092efb5955c1c2cc537003a89ad7bbdb9dade7fe8985f"
+  },
+  {
+    "path": "licenses/OFL-Baloo2.txt",
+    "bytes": 4383,
+    "sha256": "a15158d76445b1892b82387a50d92e9c6adbe1eff04a46c8fc414a6308cd6e38"
+  },
+  {
+    "path": "logo/tintalu-horizontal-fondo-claro.png",
+    "bytes": 221380,
+    "sha256": "86ff5a1a60c79078c6b94ad8900ddf902080b8966dabefa3d1c8dc4cbbf92806"
+  },
+  {
+    "path": "logo/tintalu-horizontal-fondo-oscuro.png",
+    "bytes": 220878,
+    "sha256": "0ef794b1f12fec5d3aeec2ffd8b10c2c95a869f6079b6823823afd7432133dd4"
+  },
+  {
+    "path": "logo/tintalu-vertical-fondo-claro.png",
+    "bytes": 744383,
+    "sha256": "08228d9c3921b4cc2143e4539ba6f2e522efa1bb6b9e0f31fd91927242438084"
+  },
+  {
+    "path": "logo/tintalu-vertical-fondo-oscuro.png",
+    "bytes": 744115,
+    "sha256": "9e4a10177de056894948aa938b3e42df7f80c8edb9be5525fbfe6a3170f4e242"
+  },
+  {
+    "path": "preview/identidad-y-recortes.png",
+    "bytes": 386108,
+    "sha256": "54c7f097b5e47929164166fc943be8deba2f13f5b5038e0270d1b12bc955cf66"
+  },
+  {
+    "path": "preview/ios-240.png",
+    "bytes": 109185,
+    "sha256": "404bee2920cdaac9ae9f3ee009637c19412e1e82cc91437fe6e928601183dfe5"
+  },
+  {
+    "path": "prompts.md",
+    "bytes": 5196,
+    "sha256": "80d4aff29148cf518dfbec12995fc886edd9aad75fa7bb938336a4b858e992d8"
+  },
+  {
+    "path": "social/avatar-1024.png",
+    "bytes": 1816700,
+    "sha256": "41623deb3c1f4f97832992616850effc0c2fab36e7950f731651e1e82756d20c"
+  },
+  {
+    "path": "source/tintalu-master-aprobado.png",
+    "bytes": 1740584,
+    "sha256": "77fa6266c6d1de25905a37bc1c75a1f50731a5a8776fe4b5f2a24ca86b17b47a"
+  },
+  {
+    "path": "source/tintalu-monocromo.png",
+    "bytes": 615307,
+    "sha256": "0caa998c3a805e1327d0107e015389cc219031d18f6fad747c784cdfcaf1950f"
+  },
+  {
+    "path": "source/tintalu-simbolo-transparente.png",
+    "bytes": 1014432,
+    "sha256": "49cbaa5cbb9cd01d3e9985d62931ece79a4425561908f60a820b73c8acd239bd"
+  },
+  {
+    "path": "store/app-store-1024.png",
+    "bytes": 1675434,
+    "sha256": "f1a2bef64774189242139d4519fde46981a9b01518c72a0e7b81c2d41fc15ce9"
+  },
+  {
+    "path": "store/google-play-512.png",
+    "bytes": 474413,
+    "sha256": "045143fa7f392db464e95fd3a8d36df2258e440890b62e53e6f288e4caf7ad12"
+  },
+  {
+    "path": "validation.json",
+    "bytes": 651,
+    "sha256": "f3857203886037ec16b4333679117f28c96c499985a764555fc471c4ba973303"
+  },
+  {
+    "path": "web/favicon.ico",
+    "bytes": 11665,
+    "sha256": "a320186dd7bb9cf83b0d1de2246acc7763cced41c363544a0199db22523ff85c"
+  },
+  {
+    "path": "web/head-snippet.html",
+    "bytes": 317,
+    "sha256": "73d72c913017c9a4b86910af0e85cbdd9c05c4df6479d26aafd035dfaf6a938b"
+  },
+  {
+    "path": "web/icon-16.png",
+    "bytes": 1309,
+    "sha256": "99346dd4792b04a2a89a90aee01cf1df66525efff1e8ee8edfd330820daa7f49"
+  },
+  {
+    "path": "web/icon-180.png",
+    "bytes": 66128,
+    "sha256": "60bb3bdbb659969123fd19593ac73f44ccec83888e618c7e54185bce4ea09d89"
+  },
+  {
+    "path": "web/icon-192.png",
+    "bytes": 74645,
+    "sha256": "e9f676ab77a74a5e4cda3e4c084946a8a8848eeb6b5ea2e4b5423ebfceb30c2c"
+  },
+  {
+    "path": "web/icon-32.png",
+    "bytes": 3526,
+    "sha256": "16a396a8e82e8c423423b97c7ec147df1919b591af30048f003391c661d5c279"
+  },
+  {
+    "path": "web/icon-48.png",
+    "bytes": 6776,
+    "sha256": "3626bdcddca0f7f14aaac66e7d31ea04da59a32ffd87d58c358af2aa5870a8ff"
+  },
+  {
+    "path": "web/icon-512.png",
+    "bytes": 474413,
+    "sha256": "045143fa7f392db464e95fd3a8d36df2258e440890b62e53e6f288e4caf7ad12"
+  },
+  {
+    "path": "web/icon-96.png",
+    "bytes": 21999,
+    "sha256": "fc68d768f959415342df3b8901fd5516ba9e2da4c47628f950ab0be4d0541ed1"
+  },
+  {
+    "path": "web/site.webmanifest",
+    "bytes": 427,
+    "sha256": "4925c374d2acfb2a275064310af10217c823f2d96ad2c6abc8fc21826e87debf"
+  }
+]

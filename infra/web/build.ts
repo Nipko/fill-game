@@ -25,6 +25,12 @@ import { LANGS, PAGE_IDS, PAGES, UI, pagePath } from './src/site.ts';
 export const WEB_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const SRC_DIR = path.join(WEB_DIR, 'src');
 export const OUT_DIR = path.join(WEB_DIR, 'site');
+const BRAND_OUT_DIR = path.join(WEB_DIR, '..', '..', 'docs', 'art', 'marca-oficial', 'v2', 'out');
+const BINARY_SITE_ASSETS = new Set([
+  'assets/favicon-16.png',
+  'assets/favicon-32.png',
+  'assets/apple-touch-icon.png',
+]);
 
 export const MARKER_RE = /\[\[(DATO DEL DUEÑO|ABOGADO): [^\]]+\]\]/g;
 
@@ -58,6 +64,14 @@ function escapeHtml(s: string): string {
 
 function readSrc(...parts: string[]): string {
   return readFileSync(path.join(SRC_DIR, ...parts), 'utf8').replace(/\r\n/g, '\n');
+}
+
+function readBrandSvg(file: string): string {
+  return readFileSync(path.join(BRAND_OUT_DIR, file), 'utf8').replace(/\r\n/g, '\n');
+}
+
+function readBrandPngBase64(file: string): string {
+  return readFileSync(path.join(BRAND_OUT_DIR, 'png', file)).toString('base64');
 }
 
 /** Archivo de salida de una ruta con barra final: /a/b/ → a/b/index.html. */
@@ -139,13 +153,21 @@ function renderPage(page: PageDef, lang: Lang, opts: SiteOptions): string {
   <meta name="description" content="${escapeHtml(page.description[lang])}">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="color-scheme" content="light dark">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
   <link rel="stylesheet" href="/assets/site.css">
 ${alternates}${script}
 </head>
 <body>
   <a class="skip" href="#main">${escapeHtml(ui.skip)}</a>
   <header class="site-header">
-    <a class="brand" href="${pagePath('home', lang)}">Tintalú</a>
+    <a class="brand" href="${pagePath('home', lang)}">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="/assets/brand/logo-horizontal-oscuro.svg">
+        <img src="/assets/brand/logo-horizontal-claro.svg" alt="Tintalú" width="142" height="40">
+      </picture>
+    </a>
     <nav class="lang" aria-label="${escapeHtml(ui.langNav)}">
       <ul>
 ${langNav}
@@ -198,6 +220,11 @@ export function renderSite(opts: SiteOptions = {}): Map<string, string> {
   }
   out.set('assets/site.css', readSrc('static', 'site.css'));
   out.set('assets/delete-account.js', bundleScript());
+  out.set('assets/favicon-16.png', readBrandPngBase64('favicon-16.png'));
+  out.set('assets/favicon-32.png', readBrandPngBase64('favicon-32.png'));
+  out.set('assets/apple-touch-icon.png', readBrandPngBase64('apple-touch-icon.png'));
+  out.set('assets/brand/logo-horizontal-claro.svg', readBrandSvg('logo-horizontal-claro.svg'));
+  out.set('assets/brand/logo-horizontal-oscuro.svg', readBrandSvg('logo-horizontal-oscuro.svg'));
   out.set('app-ads.txt', readSrc('static', 'app-ads.txt'));
   out.set('robots.txt', robotsTxt(opts));
   return out;
@@ -222,7 +249,12 @@ export function diffSite(site = renderSite()): string[] {
   for (const [f, content] of site) {
     const full = path.join(OUT_DIR, f);
     if (!existsSync(full)) problems.push(`falta ${f}`);
-    else if (readFileSync(full, 'utf8').replace(/\r\n/g, '\n') !== content) problems.push(`distinto ${f}`);
+    else {
+      const actual = BINARY_SITE_ASSETS.has(f)
+        ? readFileSync(full).toString('base64')
+        : readFileSync(full, 'utf8').replace(/\r\n/g, '\n');
+      if (actual !== content) problems.push(`distinto ${f}`);
+    }
   }
   return problems;
 }
@@ -233,7 +265,8 @@ export function writeSiteTo(dir: string, site: Map<string, string>): void {
   for (const [f, content] of site) {
     const full = path.join(dir, f);
     mkdirSync(path.dirname(full), { recursive: true });
-    writeFileSync(full, content, 'utf8');
+    if (BINARY_SITE_ASSETS.has(f)) writeFileSync(full, Buffer.from(content, 'base64'));
+    else writeFileSync(full, content, 'utf8');
   }
   // Carpetas vacías que quedaron tras borrar páginas.
   const prune = (d: string): void => {

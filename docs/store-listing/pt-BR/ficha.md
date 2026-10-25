@@ -1,6 +1,6 @@
 # Ficha de Google Play · pt-BR · BORRADOR
 
-- **Estado:** borrador del bloque B13 (2026-10-20), puesto al día el 2026-10-23 (Parallext, LLC, D-041; nombres PT de D-033, puntos 3, 4 y 8; anuncios condicionados a D-042). El título, la descripción corta y los textos de las capturas 1-3 y 5-8 son canon (glosario §1.3; 07 §10.2). **El resto es traducción con IA de la ficha es-419, pendiente del revisor nativo.** Nada se publica antes del dictamen de marca (y, en Brasil, del abogado brasileño: 09, fase 5).
+- **Estado:** rascunho da ficha 1.0, atualizado em 24-10-2026 (Parallext, LLC como estúdio; AUTOMATION AI S.A.S como editora prevista, D-041; Liga do Rio conforme D-046). A identidade visual vigente é a v2 (D-045); o registro da marca foi adiado. Nada será publicado sem revisão do responsável, parecer jurídico e conferência da build e das opções de produção. O restante é tradução com IA da ficha es-419, pendente de revisor nativo.
 - Mismas reglas, marcas y fuentes que `../es-419/ficha.md`. Portugués con «você» (glosario §10). Nombres PT del glosario §5, §7.1, §9, §10 y §12; lo cultural, **pendiente de revisión** del asesor.
 
 ## 1. Datos de la app
@@ -51,6 +51,7 @@ Todo dia, uma novidade
 - Diário do Rio: carimbe uma página por dia e escolha o seu prêmio.
 - Cesta: a cada 10 níveis, grátis e com o conteúdo à vista. Nada de caixas-surpresa.
 - Enchente: emende vitórias para o rio subir.
+- Liga do Rio: a partir do nível 41, some pontos por semana e consulte as classificações global e do seu país. Outros jogadores poderão ver seu pseudônimo automático, a bandeira do país e seus pontos. [[ABOGADO: revisar]]
 
 Quem vai com você
 TiTino, um bicho-preguiça que vive na sua árvore onde o rio encontra o mar, torce por você de casa. Capi, a capivara, traz cuias e rema a canoa. E Rosa, a boto, leva você rio acima.
@@ -72,6 +73,7 @@ Jogo independente inspirado na bacia amazônica; sem relação com a Amazon.com,
 ```
 
 Notas:
+- **Liga do Rio:** precisa de internet, é liberada no nível 41 e só deve constar se a build e a configuração de produção a habilitarem. Conferir a descrição e os avisos de privacidade com essa build antes do envio.
 - **Aguaje** sale como «buriti», su nombre PT del glosario §9; **camu camu** como «camu-camu».
 - «Nível», como la UI (`level_n` = «Nível {n}», glosario §10). «Fase» es la forma habitual del género en PT-BR [P]: si el revisor nativo la prefiere para la ficha, se cambia en las tres frases.
 - «Reforços» / «Reforços do rio» por «comodines»: el nombre PT del conjunto (D-033, añadido del 2026-10-22, punto 8; glosario §5).

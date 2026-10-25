@@ -6,7 +6,7 @@
 - **Nombres de categorías y tipos:** los del formulario de Play tal como los conoce este borrador [NV]; el dueño los contrasta con el formulario vigente. Las filas [E] se cierran con la guía de Data Safety de cada SDK en su versión fijada.
 - **Ningún formulario se envía con el build de hoy:** no hay app en Play Console hasta el dictamen de marca (D-034; `CLAUDE.md`, regla 6). Este documento prepara la 1.0.
 
-## 1. Qué lleva hoy el build (2026-10-23)
+## 1. Qué lleva hoy el build (2026-10-24)
 
 | Componente | Estado hoy | Evidencia |
 |---|---|---|
@@ -27,7 +27,7 @@
 
 | Pregunta del formulario [NV] | Respuesta hoy | Al integrar D-042 | Fuente |
 |---|---|---|---|
-| ¿La app recoge o comparte alguno de los tipos de datos de usuario obligatorios? | **Sí** (recoge; no comparte) | **Sí** (recoge y **comparte** con las redes de anuncios) | Sección 3 |
+| ¿La app recoge o comparte alguno de los tipos de datos de usuario obligatorios? | **Sí** (recoge; si la Liga está habilitada en el release, también muestra a otros jugadores los datos indicados en su sección) | **Sí** (recoge y **comparte** con las redes de anuncios, además de la Liga si está activa) | Sección 3 |
 | ¿Todos los datos recogidos se encriptan en tránsito? | **Sí**: HTTPS de Firebase, Play Billing y la API de AWS | Sí (HTTPS de los SDK de anuncios y de Play Games) [E] | 08 §13.1 #12; privacidad de la web, sección 12 |
 | ¿Ofreces una forma de pedir la eliminación de los datos? | **Sí: en la app** (Ajustes › «Eliminar cuenta y datos», dos confirmaciones) **y en la web** (página de borrado, con el **código de cuenta** de Ajustes) | Igual; el cliente borra además el snapshot `af_main` de Saved Games | 08 §11; §13.1 #7 y #12; `infra/web/src/content/*/delete.html` |
 | URL de eliminación de cuenta | `https://tintalu.com/tintalu/eliminar-cuenta/` (Q-B13-1 (a); rutas en `infra/web/src/site.ts`). **El dominio aún no está conectado** (D-041): hoy la web solo se sirve en la URL de CloudFront de dev | — | D-041; 08 §11 |
@@ -37,7 +37,7 @@
 
 ## 3. Tipos de datos
 
-**Recogido** = sale del teléfono hacia Parallext, LLC o un SDK. **Compartido** = se transfiere a un tercero que no trata los datos por cuenta de Parallext, LLC; según la definición de Play, lo que trata un proveedor por nuestra cuenta (Google en Firebase, AWS) no cuenta como compartido [NV]. Ningún dato es efímero salvo donde se dice. Con la banda `<13` guardada no se recoge **nada** de esta tabla (sección 1).
+**Recogido** = sale del teléfono hacia Parallext, LLC o un SDK. **Compartido** = se transfiere a un tercero que no trata los datos por cuenta de Parallext, LLC; el proveedor de servicio que actúa siguiendo instrucciones no cuenta como compartido, y la guía de Play contempla otras excepciones condicionadas a la acción, divulgación y consentimiento del usuario [NV]. Por la visibilidad de la Liga a otros jugadores, el borrador recomienda declarar como compartidos los campos públicos hasta que el abogado confirme la categoría y cualquier excepción. [Guía oficial de Seguridad de los datos](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en). Ningún dato es efímero salvo donde se dice. Con la banda `<13` guardada no se recoge **nada** de esta tabla (sección 1).
 
 ### 3.1 Hoy
 
@@ -106,3 +106,15 @@ Nombre, correo, dirección, teléfono, mensajes, fotos, vídeos, audio, archivos
 - build-release: Q-B13-9 (que el runtime de Unity no envía nada en release).
 - El integrador de D-042: la guía de Data Safety de MAX, de cada adaptador, de UMP y de Play Games en su versión fijada, fila por fila (los [E] de la sección 3.2), y la decisión del dueño sobre `AD_ID`.
 - **Rehacer el formulario con el build real de la 1.0**, no con este borrador.
+
+## Liga del río — D-046 (función prevista para la 1.0)
+
+El alcance de producto incluye la Liga en la 1.0. El backend está desplegado solo en dev y `live_league_enabled` tiene valor predeterminado `false`; la función aún no está habilitada en producción. Para el formulario de Play del release, incluir estas filas si la build permite Liga y la configuración de producción la activa. Contrastar la build y la configuración antes del envío. [[ABOGADO: revisar]]
+
+| Tipo de dato del formulario [NV] | Recogida / visibilidad | Finalidad y eliminación |
+|---|---|---|
+| Actividad en la app: otras acciones (victorias, fechas y puntos semanales de la Liga) | El backend AWS recibe victorias y fechas ligadas al UID. La clasificación pública muestra a otros jugadores el seudónimo, la bandera y los puntos semanales. **Compartido: sí, provisionalmente, por su visibilidad a otros jugadores.** [[ABOGADO: revisar categoría y posible excepción]] | Clasificación, progreso e integridad; no se usan para publicidad ni analítica adicional. Se eliminan al borrar la cuenta. Las filas semanales expiran por TTL al final de la semana más 14 días (aprox. tres semanas); eliminación técnica posterior. [[ABOGADO: revisar]] |
+| Ubicación aproximada: país [NV, confirmar categoría del formulario] | El backend usa primero el país de conexión de CloudFront y, si no está disponible, la región del teléfono validada como ISO 3166-1. Queda fijado con la primera victoria aceptada de la semana. El país/ bandera aparece en la clasificación; no se usa GPS ni se pide permiso de ubicación. **Compartido: sí, provisionalmente, como país visible a otros jugadores.** [[ABOGADO: revisar]] | Permitir la clasificación por país. Se elimina con la cuenta y con la retención semanal descrita arriba. Esta región de Liga no es el país calculado localmente para el perfil legal. [[ABOGADO: revisar]] |
+| Identificadores de usuario: UID y seudónimo automático | UID para atribuir victorias; seudónimo animal + cuatro cifras, sin texto libre. El UID no se muestra. En el tablero otros jugadores ven el seudónimo junto con bandera y puntos. **Compartido: sí para el seudónimo público; no para el UID interno.** [[ABOGADO: revisar categoría y posible excepción]] | Funcionamiento y prevención de duplicados/abuso. Borrar cuenta elimina puntuaciones, seudónimo y reserva de pareja del jugador. [[ABOGADO: revisar]] |
+
+Con menos de 13 años no se muestra la Liga ni se envían victorias o región para ella. Para 13–17 y 18+ la exposición en el tablero es la misma. La recomendación provisional es declarar como compartidos los campos que ven otros jugadores; el abogado debe confirmar su clasificación y si se cumple una excepción de transferencia iniciada por el usuario. No marcar «no compartidos» automáticamente. Todo usa HTTPS y AWS, descrito como proveedor en la política. [[ABOGADO: revisar]]

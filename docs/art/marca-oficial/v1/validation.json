@@ -1,0 +1,25 @@
+{
+  "masterSha256": "77fa6266c6d1de25905a37bc1c75a1f50731a5a8776fe4b5f2a24ca86b17b47a",
+  "play": {
+    "width": 512,
+    "height": 512,
+    "channels": 4,
+    "bytes": 474413,
+    "space": "srgb"
+  },
+  "ios": {
+    "width": 1024,
+    "height": 1024,
+    "channels": 3,
+    "hasAlpha": false,
+    "appearances": 3
+  },
+  "android": {
+    "layerPx": 432,
+    "layerDp": 108,
+    "safeContentRadiusPx": 128,
+    "foregroundScale": 0.18123604261435028,
+    "monochromeScale": 0.18454132957345304
+  },
+  "validated": "Formatos, alpha, tamaño Play, referencias de catálogo y generación determinista. Pendiente build de Xcode/Unity y prueba física."
+}

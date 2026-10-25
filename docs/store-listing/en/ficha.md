@@ -1,6 +1,6 @@
 # Ficha de Google Play · en · BORRADOR
 
-- **Estado:** borrador del bloque B13 (2026-10-20), puesto al día el 2026-10-23 (Parallext, LLC, D-041; nombres EN de D-033, puntos 3, 4 y 8; anuncios condicionados a D-042). El título, la descripción corta y los textos de las capturas 1-3 y 5-8 son canon (glosario §1.3; 07 §10.2). **El resto es traducción con IA de la ficha es-419, pendiente del revisor nativo** (como la tarea T2 del glosario §12). Nada se publica antes del dictamen de marca.
+- **Estado:** borrador de la ficha 1.0, actualizado el 2026-10-24 (Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora prevista, D-041; River League per D-046). La identidad visual vigente es v2 (D-045); el registro del signo está aplazado. Nada se publica sin revisión del dueño, dictamen jurídico y comprobación del build y de las opciones de producción. El resto es traducción con IA de la ficha es-419, pendiente del revisor nativo.
 - Mismas reglas, marcas y fuentes que `../es-419/ficha.md`. Inglés en imperativo (glosario §10). Los nombres de comodines y sistemas son los EN del glosario §5, §7.1, §10 y §12; lo cultural, **pendiente de revisión** del asesor.
 
 ## 1. Datos de la app
@@ -51,6 +51,7 @@ Something new every day
 - River Logbook: stamp a page a day and pick your reward.
 - Basket: every 10 levels, free, with its contents in plain sight. No surprise boxes.
 - Rising River: chain wins to make the river rise.
+- River League: from level 41, earn weekly points and view the global and country rankings. Other players can see your automatic pseudonym, country flag and points. [[ABOGADO: revisar]]
 
 Who comes along
 TiTino, a sloth who lives in his tree where the river meets the sea, cheers you on from home. Capi the capybara brings you cuias and paddles the canoe. Rosa the river dolphin takes you upriver.
@@ -75,6 +76,7 @@ Notas:
 - **Taperebá** sale como «hog plum», su nombre EN del glosario §9; los demás tintes citados conservan su nombre (glosario §9).
 - «Frutas del río» (`fact_sheet_title`) y «Sobre la Amazonía» (`settings_about_amazon`) van con su EN de la UI: «River Fruits» y «About the Amazon» (D-033, añadido del 2026-10-22, puntos 3 y 4; glosario §10). «River boosters» usa «Boosters», el nombre EN del conjunto de comodines (punto 8; glosario §5).
 - **Anuncios y videos (D-042):** «Optional videos […] need internet», «with ads» y «Remove the ads between levels with No ads» solo valen si el build que se publica lleva MAX; si no, se quitan, como en `../es-419/ficha.md` §3.
+- **River League:** the feature requires internet, unlocks at level 41, and belongs in the listing only if the release build and production configuration enable it. Confirm the description and privacy disclosures against that build before submission.
 - **Pendiente de revisión** (asesor): Morpho, Pororoca, Firefly, Boto Leap (no se cita), TiTino, Capi, Rosa, «river dolphin» por boto (glosario §12, `fauna.river_dolphin`), «Estuary».
 - `[PENDIENTE: abogado]`: la línea de independencia en inglés es traducción propuesta [P] de la de 08 §13.1 #5.
 
