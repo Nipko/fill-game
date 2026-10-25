@@ -3882,14 +3882,19 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Matiza D-041** («ya no es AUTOMATION AI S A S»): sigue valiendo para el responsable de los datos y el desarrollador, no para la editora en Play.
 - **Cómo revertir:** con una decisión nueva del dueño.
 
-### D-048, añadido del 2026-10-25: los ingresos de AdMob, a AUTOMATION AI S.A.S
+### D-048, añadido del 2026-10-25: AdMob cobra la S.A.S y AppLovin, Parallext
 
 - **Estado:** hecho por el dueño en AdMob: «en admob asocie el perfil de pagos de play google osea la S.A.S».
 - **Qué cambia:** los ingresos de anuncios de **AdMob** los cobra **AUTOMATION AI S.A.S**, con el mismo perfil de pagos de Google que Play, como los de Play. La cuenta de AdMob (App ID `ca-app-pub-2916158449453694~9925643748`, editor `pub-2916158449453694`) queda configurada como dice `docs/dev/anuncios-max.md` §10.
-- **Abierto:** la titular de la cuenta de **AppLovin MAX** (por coherencia, la misma S.A.S, con el formulario fiscal W-8BEN-E). La decide el dueño al crearla.
+- **AppLovin MAX, a nombre de Parallext, LLC** (el dueño, en el chat: «parallext»):
+  - la cuenta de AppLovin y lo que pague AppLovin (su red y las que liquide por ella) los cobra **Parallext, LLC**;
+  - lo de AdMob sigue yendo a la S.A.S, porque con MAX cada red paga a su propia cuenta;
+  - necesita una cuenta bancaria de la LLC en EE. UU.;
+  - el formulario fiscal (W-9 de la LLC o W-8BEN del dueño, si la LLC es de un solo socio extranjero y no se considera entidad aparte) lo confirma el contador **antes** de rellenarlo.
 - **Para el contador y el abogado** (`[[ABOGADO]]`):
   - la retención de EE. UU. sobre lo que paguen las redes a una empresa colombiana (Colombia no tiene convenio fiscal con EE. UU.);
-  - que la licencia de Parallext a la editora (pendiente de arriba) cubra también los ingresos de anuncios.
+  - que la licencia de Parallext a la editora (pendiente de arriba) cubra también los ingresos de anuncios, con el reparto: AdMob a la S.A.S y AppLovin a Parallext;
+  - las declaraciones anuales de la LLC (formulario 5472), ya con ingresos.
 - Parallext sigue siendo la responsable de los datos (D-048); el consentimiento de UMP y la lista de socios de AdMob se configuraron sin cambio por esto.
 
 ### D-044, añadido del 2026-10-25: la web pública en tintalu.com, desplegada
