@@ -1013,7 +1013,8 @@ namespace AF.UI
             _home.Place(SideGutterDp, topY + TopRowHeight + HomeWindowGapDp, audioX - HomeWindowGapDp, piggyLeft - HomeWindowGapDp);
             PlacePiggySlot();
 
-            // Widget de la Crecida (B1b) [P]: en la franja derecha que dejan la tarjeta del Reto (296 dp centrada) y «Jugar», bajo la
+            // Widget de la Crecida (B1b) [P]: en la franja derecha que dejan la tarjeta del Reto (296 dp centrada; más estrecha en
+            // lienzos de menos de 360 dp, hasta w − 32: DailyChallengeCard.WidthFor) y «Jugar», bajo la
             // ventanita de casa con su píldora debajo (lo más que mide) y sobre el chip de la etiqueta.
             float widgetTop = topY + TopRowHeight + HomeWindowGapDp + HomeWindow.SizeDp + HomeWindow.PillStackGapDp + HomeWindow.PillHeightDp + HomeWindowGapDp;
             float widgetBottom = _playTop - ChipGapDp - DifficultyChip.HeightDp;

@@ -18,7 +18,7 @@ namespace AF.UI
     /// </summary>
     public sealed class LogbookCard
     {
-        /// <summary>Ancho (dp), el de la tarjeta del Reto.</summary>
+        /// <summary>Ancho (dp) en un lienzo de 360 dp o más, el de la tarjeta del Reto (en lienzos más estrechos, <see cref="DailyChallengeCard.WidthFor"/>).</summary>
         public const float WidthDp = DailyChallengeCard.WidthDp;
 
         /// <summary>Alto (dp) [P].</summary>
@@ -33,7 +33,10 @@ namespace AF.UI
         private readonly RectTransform _dot;
         private readonly Button _button;
         private readonly Action _onTap;
+        private readonly Image _surface;
+        private readonly ProceduralArt _art;
         private LoginCalendarState _shown = LoginCalendarState.Hidden;
+        private float _width = WidthDp;
 
         /// <summary>Construye la tarjeta (oculta) bajo <paramref name="parent"/>.</summary>
         public LogbookCard(Transform parent, ProceduralArt art, Action onTap)
@@ -44,8 +47,9 @@ namespace AF.UI
             }
 
             _onTap = onTap ?? throw new ArgumentNullException(nameof(onTap));
-            _root = ModalKit.Card("LogbookCard", parent, art, out Image surface);
-            ModalKit.Size(_root, surface, art, 0f, 0f, WidthDp, HeightDp);
+            _art = art;
+            _root = ModalKit.Card("LogbookCard", parent, art, out _surface);
+            ModalKit.Size(_root, _surface, art, 0f, 0f, WidthDp, HeightDp);
 
             Image book = UiBuilder.Image("Book", _root, art.RoundedRect, Palette.UiAmber);
             UiBuilder.Place(book.rectTransform, 14f, 10f, 40f, 40f);
@@ -53,10 +57,8 @@ namespace AF.UI
             UiBuilder.Place(page.rectTransform, 6f, 6f, 28f, 28f);
 
             _title = UiBuilder.Label("Title", _root, TextStyle.PlainBold, string.Empty, 16f, Palette.UiInk, TextAlignmentOptions.MidlineLeft);
-            UiBuilder.Place(_title.rectTransform, 66f, 6f, WidthDp - 66f - 36f, 26f);
             UiBuilder.AutoSize(_title, UiBuilder.MinTextSp, 16f);
             _state = UiBuilder.Label("State", _root, TextStyle.PlainBold, string.Empty, 14f, Palette.UiGreenButton, TextAlignmentOptions.MidlineLeft);
-            UiBuilder.Place(_state.rectTransform, 66f, 30f, WidthDp - 66f - 36f, 24f);
             UiBuilder.AutoSize(_state, UiBuilder.MinTextSp, 14f);
 
             _dot = UiBuilder.Rect("ReadyDot", _root);
@@ -64,11 +66,11 @@ namespace AF.UI
             UiBuilder.Stretch(rim.rectTransform);
             Image dot = UiBuilder.Image("Dot", _dot, art.Disc, Palette.Heliconia);
             UiBuilder.Place(dot.rectTransform, 2f, 2f, DotDp - 4f, DotDp - 4f);
-            UiBuilder.Place(_dot, WidthDp - DotDp - 12f, 10f, DotDp, DotDp);
             _dot.gameObject.SetActive(false);
 
             _button = UiBuilder.BareButton("Tap", _root, OnTap);
             UiBuilder.Stretch((RectTransform)_button.transform);
+            LayoutInner();
             _root.gameObject.SetActive(false);
         }
 
@@ -96,7 +98,32 @@ namespace AF.UI
         /// <summary>Coloca la tarjeta con su esquina superior izquierda en (<paramref name="x"/>, <paramref name="y"/>) dp.</summary>
         public void Place(float x, float y)
         {
-            UiBuilder.Place(_root, x, y, WidthDp, HeightDp);
+            Place(x, y, WidthDp);
+        }
+
+        /// <summary>Coloca la tarjeta en (<paramref name="x"/>, <paramref name="y"/>) dp con <paramref name="width"/> dp de ancho (el de la del Reto).</summary>
+        public void Place(float x, float y, float width)
+        {
+            if (!Mathf.Approximately(width, _width))
+            {
+                _width = width;
+                ModalKit.Size(_root, _surface, _art, x, y, width, HeightDp);
+                LayoutInner();
+                return;
+            }
+
+            UiBuilder.Place(_root, x, y, width, HeightDp);
+        }
+
+        /// <summary>Ancho con el que está colocada (dp).</summary>
+        public float Width => _width;
+
+        private void LayoutInner()
+        {
+            float w = _width;
+            UiBuilder.Place(_title.rectTransform, 66f, 6f, w - 66f - 36f, 26f);
+            UiBuilder.Place(_state.rectTransform, 66f, 30f, w - 66f - 36f, 24f);
+            UiBuilder.Place(_dot, w - DotDp - 12f, 10f, DotDp, DotDp);
         }
 
         /// <summary>
