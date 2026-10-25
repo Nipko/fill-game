@@ -14,7 +14,7 @@ namespace AF.Tests.PlayMode
     /// Capturas de revisión del viaje de mundo dentro del banner (D-013, punto 7; Q4-D; tarea M3.6), con el catálogo y los datos
     /// del Mapa reales y la pantalla simulada de <see cref="SnapshotKit"/> (360 × 780 dp): el 41 a mitad del tramo (69t) y en el
     /// Encuentro (69t2), el 81 con la bandera de Colombia a medio izar (69t3) y en Leticia (69t4), el 141 en Iquitos con la del
-    /// Perú (69t5) y a 130 % (69t6), el 81 como en release, sin bandera simplificada (69t7), el 141 con Reducir movimiento a
+    /// Perú (69t5) y a 130 % (69t6), el 81 sin arte por código (forzado), sin bandera simplificada (69t7), el 141 con Reducir movimiento a
     /// mitad del fundido de 150 ms (69t8) y, con el catálogo de prueba de <see cref="WorldBannerTravelTests"/> (el 41 llega a una
     /// gran parada del mundo 7 por un tramo que pasa por «teotonio»; P-M8), el relevo del guía a mitad (69t9) y al llegar (69t10).
     /// El arte va en el acto (<see cref="CardSetup.Load"/>): instantes exactos. Necesitan
@@ -55,9 +55,9 @@ namespace AF.Tests.PlayMode
             yield return Capture(dir, 141, 4200f, 1f, "69t5_travel_l141_end");
             yield return Capture(dir, 141, 4200f, 1.3f, "69t6_travel_l141_130");
 
-            // Como en release (MapArtRule falso): la canoa llega sin bandera simplificada.
+            // Sin arte por código (MapArtRule forzado a falso; desde D-052 sale en todos los builds): la canoa llega sin bandera simplificada.
             MapArtRule.ForceProvisional = false;
-            yield return Capture(dir, 81, 4200f, 1f, "69t7_travel_l81_release");
+            yield return Capture(dir, 81, 4200f, 1f, "69t7_travel_l81_sin_arte");
             MapArtRule.ForceProvisional = null;
 
             // Reducir movimiento: el estado final, a mitad del fundido de 150 ms.

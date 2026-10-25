@@ -44,7 +44,7 @@ namespace AF.Tests.PlayMode
         [SetUp]
         public void SetUp()
         {
-            MapArtRule.ForceProvisional = true; // el arte provisional de P-M5, como en el Editor y en desarrollo
+            MapArtRule.ForceProvisional = true; // el arte por código (D-052: en todos los builds)
         }
 
         [TearDown]
@@ -475,16 +475,29 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Release_WithoutFinalArt_NoHouseNoWindow_NoSimplifiedFlags()
+        public IEnumerator InRelease_WithoutPng_TheHouseTheWindowAndTheSimplifiedFlags()
         {
-            MapArtRule.ForceProvisional = false;
+            MapArtRule.ForceProvisional = null; // la regla real: la misma en release (D-052)
+            Assert.That(MapArtRule.ShowProvisionalIn(false, false), Is.True, "release");
+            Assert.That(ArtSlots.Find(ProceduralArt.MapHomeSlot), Is.Null, "sin el PNG de map_home");
             yield return OpenApp(59);
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
-            Assert.That(map.HomeShown, Is.False, "P-M5: sin map_home, nada");
+            Assert.That(map.HomeShown, Is.True, "D-052: la casa por código también en release");
+            Assert.That(map.HomeWindowShown, Is.True);
+            Assert.That(map.StopMarkerCount, Is.EqualTo(8));
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutCodeArt_NoHouseNoWindow_NoSimplifiedFlags()
+        {
+            MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
+            yield return OpenApp(59);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Assert.That(map.HomeShown, Is.False, "sin arte por código ni map_home, nada");
             Assert.That(map.HomeWindowShown, Is.False);
             Assert.That(map.CanoeFlagCount, Is.EqualTo(0), "sin la bandera oficial no sale la simplificada");
             Assert.That(map.Mast!.gameObject.activeSelf, Is.False, "ni el mástil");
-            Assert.That(map.StopMarkerCount, Is.EqualTo(8), "las mini cuias y las balizas no son arte de P-M5");
+            Assert.That(map.StopMarkerCount, Is.EqualTo(8), "las mini cuias y las balizas no dependen de MapArtRule");
             Assert.That(map.GuideShown, Is.True);
         }
 

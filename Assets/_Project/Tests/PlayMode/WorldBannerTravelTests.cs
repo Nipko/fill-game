@@ -29,8 +29,8 @@ namespace AF.Tests.PlayMode
     /// cuenta el Mapa del 10), ni ninguno con <c>ui_map_autopen</c> = <c>l10</c>; el primer toque completa el viaje y el siguiente
     /// cierra el banner; «Ver mapa» abre el Mapa encima del banner (<see cref="MapOpenSource.WorldChange"/>) y al cerrarlo vuelve
     /// a él; el guía se releva en Teotônio con un catálogo de prueba (P-M8); con Reducir movimiento, el final con un fundido de
-    /// 150 ms; sin datos, el banner de siempre; en release (<see cref="MapArtRule"/> falso), sin bandera simplificada y con la
-    /// oficial siempre; con el respaldo de 800 ms del arte, el viaje sigue sin el guía; el arte pedido antes con el viaje cuadra
+    /// 150 ms; sin datos, el banner de siempre; sin arte por código (<see cref="MapArtRule"/> forzado a falso; desde D-052 sale en
+    /// todos los builds), sin bandera simplificada y con la oficial siempre; con el respaldo de 800 ms del arte, el viaje sigue sin el guía; el arte pedido antes con el viaje cuadra
     /// con el banner que se abre; sin asignaciones mientras viaja; y las mallas, en ≤ 8 ms. Salvo el del arte pedido antes, el
     /// arte del banner va en el acto (<see cref="CardSetup.Load"/>).
     /// </summary>
@@ -489,9 +489,10 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Travel_Release_NoSimplifiedFlag_TheOfficialPngAlways()
+        public IEnumerator Travel_WithoutCodeArt_NoSimplifiedFlag_TheOfficialPngAlways()
         {
-            // En release (MapArtRule falso) no sale la bandera simplificada: la canoa viaja sin ella (y el viaje, sin el izado).
+            // Sin arte por código (MapArtRule forzado a falso; D-052 lo saca en todos los builds) no sale la bandera simplificada:
+            // la canoa viaja sin ella (y el viaje, sin el izado).
             MapArtRule.ForceProvisional = false;
             yield return CardSetup.Load(81);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -510,8 +511,9 @@ namespace AF.Tests.PlayMode
             Sprite official = Sprite.Create(tex, new Rect(0, 0, 48, 33), new Vector2(0f, 0.5f));
             try
             {
-                Assert.That(art.MapFlagFor("CO", official, false), Is.SameAs(official), "la oficial, también en release");
-                Assert.That(art.MapFlagFor("CO", null, false), Is.Null, "en release, sin la simplificada");
+                Assert.That(art.MapFlagFor("CO", official, false), Is.SameAs(official), "la oficial, también sin arte por código");
+                Assert.That(art.MapFlagFor("CO", null, false), Is.Null, "sin arte por código, sin la simplificada");
+                Assert.That(art.MapFlagFor("CO", null, MapArtRule.ShowProvisionalIn(false, false)), Is.Not.Null, "en release, la simplificada (D-052)");
                 Assert.That(art.MapFlagFor("VE", null, true), Is.Null, "sin simplificada de Venezuela");
                 foreach (string iso in ProceduralArt.SimplifiedFlags)
                 {

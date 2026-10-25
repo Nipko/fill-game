@@ -26,7 +26,7 @@ namespace AF.Tests.PlayMode
     /// las bandas de las capas reveladas y, vacía, boca abajo; su cuia con el poste del jirau y el asa; el jirau bajo las dos
     /// ranuras. La tinaja <b>nunca se pinta como turbia</b>: ni el pardo #8A7B6A, ni el «?», ni la insignia «?×n», tampoco al
     /// revelar ni durante la intro. El arte provisional (cuerpo, jirau, poste y asa) sale con <see cref="MapArtRule"/>, y la boca
-    /// y las bandas, solo con el cuerpo; en release, del overlay solo sale el chip «×n», en el hombro del vidrio. En el banco de
+    /// y las bandas, solo con el cuerpo; sin él, del overlay solo sale el chip «×n», en el hombro del vidrio (forzado: desde D-052 el arte sale en todos los builds). En el banco de
     /// <see cref="MechanicTestKit"/> con el 323 del paquete de muestra (su cuia en la 1 y la tinaja en la 2) y, en la escena,
     /// la pareja en la misma fila (02 §5) también cuando el reparto de D-006 la partiría.
     /// </summary>
@@ -333,7 +333,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator MapArtRule_GatesTheProvisionalArt_NotTheState()
         {
             yield return null;
-            MapArtRule.ForceProvisional = false; // como en release sin el arte del artista
+            MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
             BoardState board = Board323();
             _rig = new MechanicTestKit.Rig(Art, board);
             var tin = (TinajaOverlay)_rig.Views[TinajaIndex].OverlayOf(MechanicType.Tinaja)!;
@@ -861,9 +861,9 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Release_WithoutTheArt_TheRowKeepsTheUniformSlots_02_5()
+        public IEnumerator WithoutTheArt_TheRowKeepsTheUniformSlots_02_5()
         {
-            // En release, hasta el arte, no hay vasija ni poste: la fila de la pareja no se aprieta y el marco no se adelgaza por
+            // Sin el arte por código (forzado; D-052 lo saca en todos los builds) no hay vasija ni poste: la fila de la pareja no se aprieta y el marco no se adelgaza por
             // piezas que no se dibujan (02 §5; 07 §4.1: ranura = ancho útil / cuias de la fila más larga). El corte entre filas sí
             // se mueve para que la pareja vaya junta.
             int[][] pairs = { new[] { 1, 2 }, new[] { 4, 5 } };

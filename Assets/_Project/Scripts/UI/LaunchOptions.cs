@@ -259,11 +259,11 @@ namespace AF.UI
         public static FakeAdFill? AdFillOverride { get; set; }
 
         /// <summary>
-        /// Simula un build de release (false) o de desarrollo (true) para la compuerta del arte de fauna
-        /// (<c>GameScreen.FaunaArtAvailable</c>, guion de la intro §4.3 y §11); null = <c>Debug.isDebugBuild</c>. Solo tests:
-        /// nada más lo lee.
+        /// Fuerza el miquito por código en la compuerta del arte de fauna (<c>GameScreen.FaunaArtAvailable</c>, guion de la
+        /// intro §4.3 y §11): false = sin él, para recorrer el camino «sin arte» (dosel y sin tarjeta); null =
+        /// <c>MapArtRule.ShowProvisional</c>, que lo deja salir en todos los builds (D-052). Solo tests: nada más lo lee.
         /// </summary>
-        public static bool? DevelopmentBuildOverride { get; set; }
+        public static bool? FaunaCodeArtOverride { get; set; }
 
         /// <summary>
         /// Tarjeta previa de 1 toque (LEVEL_CARD, 02 §10) encendida (true) o apagada (false) por un test; null =
@@ -357,7 +357,7 @@ namespace AF.UI
             LevelOffsetOverride = null;
             LevelPackJsonOverride = null;
             ReuseDataReadsOverride = null;
-            DevelopmentBuildOverride = null;
+            FaunaCodeArtOverride = null;
             LevelCardsOverride = null;
             BannerArtSyncOverride = null;
             BannerArtFaultOverride = null;

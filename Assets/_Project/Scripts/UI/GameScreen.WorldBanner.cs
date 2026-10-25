@@ -55,8 +55,8 @@ namespace AF.UI
     /// nunca el 11, que lo cuenta el Mapa del 10, ni con <c>ui_map_autopen</c> = <c>l10</c>) y si hay datos del Mapa con el
     /// tramo de la gran parada (<see cref="BannerTravel.For"/>; sin ellos, el banner de siempre). Bajo la cabecera, la pregunta
     /// del mundo y la franja del Mapa (<see cref="BannerTravelStrip"/>): la canoa recorre el tramo en ≤ 4 s, los nombres de
-    /// paso salen sin pararse, la bandera se iza en 800 ms si cambia de país (la simplificada solo con <c>MapArtRule</c>; en
-    /// release, solo la oficial) y el guía se releva en Teotônio si cambia (P-M8). Bajo el lugar, «Ver mapa»
+    /// paso salen sin pararse, la bandera se iza en 800 ms si cambia de país (la oficial si existe; si no, la simplificada por
+    /// código, con <c>MapArtRule</c>, también en release: D-052) y el guía se releva en Teotônio si cambia (P-M8). Bajo el lugar, «Ver mapa»
     /// (<c>map_open</c>): <see cref="IGameActions.OpenRiverMap"/> con <see cref="MapOpenSource.WorldChange"/>, encima del banner,
     /// que sigue ahí al cerrarlo. El primer toque completa el viaje y el siguiente cierra el banner, como siempre; con Reducir
     /// movimiento, el estado final con un fundido de 150 ms. La geometría del Mapa se lee la primera vez que hace falta

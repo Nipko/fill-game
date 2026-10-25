@@ -17,8 +17,8 @@ namespace AF.Presentation
     /// rama genérica sin especie reconocible (o la que proponga el asesor): solo cambia el dibujo del árbol, no el marco, el
     /// retrato ni la ranura.</para>
     /// <para>El PNG de la ranura <see cref="HomeWindowSlot"/> (<c>map_home_window</c>, glosario §11) manda y se pinta en 9 cortes:
-    /// es la ventanita entera, marco y embaúba [P]. Sin él, la provisional solo sale con <see cref="MapArtRule.ShowProvisional"/>
-    /// (P-M5: Editor y desarrollo); en release, nada (<see cref="HomeWindowFor"/> da null).</para>
+    /// es la ventanita entera, marco y embaúba [P]. Sin él, la de código sale con <see cref="MapArtRule.ShowProvisional"/>, en
+    /// todos los builds, release incluido (D-052); solo si un test la apaga, nada (<see cref="HomeWindowFor"/> da null).</para>
     /// <para>Perezosa: se crea la primera vez que se pide (<see cref="HomeWindowBuilt"/>), nunca al construir
     /// <see cref="ProceduralArt"/>. Tras <see cref="Dispose"/> se vuelve a generar (el == de Unity).</para>
     /// <para>Paleta [P] de esta tarea: corteza clara de <i>Cecropia</i> #D9D3C3 con anillos #9C927F, haz #4E7D3A y envés
@@ -56,8 +56,8 @@ namespace AF.Presentation
         public bool HomeWindowBuilt => _homeWindow != null;
 
         /// <summary>
-        /// La ventanita que se pinta: el PNG de <see cref="HomeWindowSlot"/> si existe; si no, la provisional con
-        /// <see cref="MapArtRule.ShowProvisional"/>; si no (release sin arte final), null.
+        /// La ventanita que se pinta: el PNG de <see cref="HomeWindowSlot"/> si existe; si no, la de código con
+        /// <see cref="MapArtRule.ShowProvisional"/> (en todos los builds, D-052); si no, null.
         /// </summary>
         public Sprite? HomeWindow => HomeWindowFor(ArtSlots.Find(HomeWindowSlot), MapArtRule.ShowProvisional);
 

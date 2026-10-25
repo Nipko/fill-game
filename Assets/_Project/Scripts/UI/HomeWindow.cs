@@ -25,8 +25,8 @@ namespace AF.UI
     /// de ≥ 48 dp sobre el marco y la píldora (<see cref="TapButton"/>) que lleva la vista a la casa, en Guajará; el retrato
     /// cierra los ojos cuando TiTino dormita (<see cref="SetAsleep"/>, <c>sloth_sleep</c> a los 30 s sin toques); y la píldora
     /// va debajo del marco, alineada a la izquierda (<see cref="PillBelow"/>), para no cruzar la zona de juego del Mapa.</item>
-    /// <item>Arte provisional de P-M5 (<see cref="MapArtRule"/>): sin los PNG de <c>map_home_window</c> y del retrato, solo sale
-    /// en el Editor y en desarrollo (<see cref="CanShow"/>); en release, nada hasta que exista su arte.</item>
+    /// <item>Arte por código (<see cref="MapArtRule"/>; D-052, que retira P-M5): sin los PNG de <c>map_home_window</c> y del
+    /// retrato, se dibuja por código en todos los builds, release incluido (<see cref="CanShow"/>); si llegan los PNG, mandan.</item>
     /// <item>La embaúba está pendiente del asesor cultural (propuesta de TiTino g.2, punto 1; encargo del Mapa, fila 11): si la
     /// desaconseja, el árbol de la ventanita pasa a una rama genérica sin especie reconocible (o la que proponga el asesor), sin
     /// tocar esta clase (<see cref="ProceduralArt.HomeWindow"/>).</item>
@@ -286,8 +286,8 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// La regla de P-M5 para la ventanita entera: el marco y el retrato pueden salir (cada uno, con su PNG final o con el
-        /// provisional permitido; <see cref="MapArtRule.CanShow"/>).
+        /// La regla del arte (<see cref="MapArtRule"/>; D-052) para la ventanita entera: el marco y el retrato pueden salir (cada uno, con su PNG final o con el
+        /// arte por código permitido; <see cref="MapArtRule.CanShow"/>).
         /// </summary>
         public static bool CanShow(bool showProvisional, bool windowPng, bool portraitPng)
         {
@@ -389,7 +389,7 @@ namespace AF.UI
             _provisional = provisional;
             if (_scene)
             {
-                // D-050: sin marco. TiTino (su rig o, sin él, su retrato) sale con la regla de P-M5 de su retrato.
+                // D-050: sin marco. TiTino (su rig o, sin él, su retrato) sale con la regla del arte de su retrato (D-052).
                 _artReady = MapArtRule.CanShow(provisional, portraitPng != null);
                 if (_artReady)
                 {

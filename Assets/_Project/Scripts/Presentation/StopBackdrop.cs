@@ -31,8 +31,8 @@ namespace AF.Presentation
     /// <see cref="HeroWidthDp"/> × <see cref="HeroHeightDp"/> dp con el pie en el horizonte (≤ 48 dp por encima y ≤ 32 por debajo)
     /// y su reflejo volteado al <see cref="ReflectionAlpha"/> en la línea del agua, que se apaga con la profundidad
     /// (<see cref="StopReflectionFade"/>, VA-21) y va recortado a <see cref="ReflectionDp"/> dp; sin PNG, la silueta
-    /// de <see cref="StopShapes"/>, solo con <see cref="MapArtRule.ShowProvisional"/> (en release, sin héroe). Las piezas del
-    /// kit (<c>kit:&lt;pieza&gt;</c>: la baliza y la orilla de Nauta) van igual, como silueta provisional.</item>
+    /// de <see cref="StopShapes"/>, con <see cref="MapArtRule.ShowProvisional"/> (en todos los builds, D-052). Las piezas del
+    /// kit (<c>kit:&lt;pieza&gt;</c>: la baliza y la orilla de Nauta) van igual, como silueta por código.</item>
     /// </list>
     /// <see cref="LutColor"/> es la luz de la parada (solo <c>dusk</c> y <c>dawn</c>) por la LUT de la temporada del ciclo
     /// (<see cref="SeasonLutOf"/>: aguas altas o bajas, de la tabla del cliente; D-009, punto 6; pregunta 32 b, D-020; 07 §2.1;

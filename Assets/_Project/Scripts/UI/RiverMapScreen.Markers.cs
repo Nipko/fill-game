@@ -16,9 +16,9 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><description><b>La canoa de Capi con sus banderas</b>: en el mástil de popa, las banderas de cortesía izadas hasta
     /// ahora (el <c>flag_raise</c> de cada parada alcanzada, sin repetir, la más reciente arriba: BR desde Belém, CO desde el 80 y PE
-    /// desde el 140; propuesta §7: «las izadas se guardan en la lista de la canoa»; <see cref="CanoeFlags"/>). Solo banderas
-    /// oficiales o, en el Editor y en desarrollo, las simplificadas (<see cref="ProceduralArt.MapFlag"/>, P-M5); sin ninguna, sin
-    /// mástil. La proa mira hacia donde va.</description></item>
+    /// desde el 140; propuesta §7: «las izadas se guardan en la lista de la canoa»; <see cref="CanoeFlags"/>). Banderas
+    /// oficiales o, sin ellas, las simplificadas por código (<see cref="ProceduralArt.MapFlag"/>, en todos los builds: D-052); sin
+    /// ninguna, sin mástil. La proa mira hacia donde va.</description></item>
     /// <item><description><b>El guía</b> (<see cref="RiverJourney.GuideFor"/>; P-M8): Rosa nada <see cref="GuideLeadDp"/> dp por
     /// delante de la canoa por la ruta (y, en la parada, por la ruta siguiente); en los mundos 7 y 8, el bufeo boliviano
     /// (<see cref="ProceduralArt.MapBufeo"/>), con el relevo en los rápidos de Teotônio (<see cref="GuideAt"/>).</description></item>
@@ -42,7 +42,7 @@ namespace AF.UI
     /// El encuadre se corre lo justo para que no quede a menos de <see cref="HomeWindowCuiaGapDp"/> dp de una mini cuia, ni una mini
     /// cuia a menos de <see cref="FixedOverlayGapDp"/> dp de los rótulos de orientación o de «Volver a la canoa»; una placa de
     /// mundo futuro que ni así queda libre se pone al otro lado del punto de su mundo (<see cref="ResolvePlates"/>). Arte
-    /// provisional de P-M5: en release, sin su PNG, ni casa ni ventanita. Con «Norte arriba» (M4.4) la cuenca entera se ve: sin
+    /// por código: sin su PNG, la casa y la ventanita se dibujan también en release (D-052). Con «Norte arriba» (M4.4) la cuenca entera se ve: sin
     /// ventanita.</description></item>
     /// <item><description><b>Rosa salta con sus parientes en Tarapoto</b> (tarea M4.4; D-013, punto 6; 06 §4.5 y 07 §6.2;
     /// propuesta del Mapa §2.1: «120: Rosa salta con sus parientes en Tarapoto», y §6.1): al llegar la canoa a la parada
@@ -594,7 +594,7 @@ namespace AF.UI
         /// <summary>Última parada tocada (−1 si ninguna desde que se abrió).</summary>
         public int LastTappedStop => _lastTappedStop;
 
-        /// <summary>La casa de TiTino se pinta (con su arte: en release, solo con los PNG finales).</summary>
+        /// <summary>La casa de TiTino se pinta (con su arte: el PNG final o el de código, también en release, D-052).</summary>
         public bool HomeShown => _houseShown;
 
         /// <summary>Dónde está la casa (Guajará), en unidades del marco.</summary>
@@ -1882,7 +1882,7 @@ namespace AF.UI
             }
         }
 
-        // La casa: el arte de map_home (P-M5) y el perezoso de su rig, colgado de la rama; sin cualquiera de los dos, nada.
+        // La casa: el arte de map_home (su PNG o el de código, D-052) y el perezoso de su rig, colgado de la rama; sin cualquiera de los dos, nada.
         private void BuildHouse(RiverMap map)
         {
             _homeMap = PlacePoint(map, map.Home);

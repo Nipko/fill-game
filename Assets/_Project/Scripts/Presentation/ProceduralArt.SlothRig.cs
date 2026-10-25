@@ -119,11 +119,11 @@ namespace AF.Presentation
     /// con su PNG no se crea nada provisional. Celdas [P] de esta tarea, por fila desde arriba: cabeza, torso de frente,
     /// extremidad (un cuarto de ancho) y párpado (tres cuartos de ancho por un cuarto de alto, arriba); en la segunda fila, la
     /// hoja y el torso de espaldas (el lomo con el espéculo). La garganta parda va en lo alto del torso de frente, bajo la
-    /// barbilla, y no en la cabeza: así no gira con ella. Sin PNG, el provisional solo sale con
-    /// <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo; 07 §6.4, como los miquitos): en release, nada.</para>
+    /// barbilla, y no en la cabeza: así no gira con ella. Sin PNG, el de código sale con
+    /// <see cref="MapArtRule.ShowProvisional"/>, en todos los builds, release incluido (D-052; como los miquitos).</para>
     /// <para>La rama es otra ranura, <see cref="SlothBranchSlot"/> (1024 × 256, c.7), con su propio provisional, y la regla vale
-    /// para el conjunto (c.4: su rama entra con él; nunca cuelga de un botón, de una cuia ni de una tarjeta): en release, el
-    /// perezoso solo sale con los dos PNG, el de las piezas y el de la rama. Cada llamada a
+    /// para el conjunto (c.4: su rama entra con él; nunca cuelga de un botón, de una cuia ni de una tarjeta): sin el arte
+    /// por código (solo si un test lo apaga), el perezoso solo sale con los dos PNG, el de las piezas y el de la rama. Cada llamada a
     /// <see cref="SlothRigArt(Sprite, Sprite, bool)"/> entrega su propio <see cref="SlothArt"/> con su rama: las piezas se
     /// comparten, pero la rama de una compuerta nunca cambia la de otra.</para>
     /// <para><b>La embaúba (la hoja que cae al celebrar y la rama) está pendiente del asesor cultural</b> (propuesta de TiTino
@@ -193,9 +193,9 @@ namespace AF.Presentation
 
         /// <summary>
         /// Las piezas del rig que se pintan, con su rama: las del PNG de <see cref="SlothPartsSlot"/> si existe; si no, las
-        /// provisionales con <see cref="MapArtRule.ShowProvisional"/>; y la rama de <see cref="SlothBranchSlot"/> o, con la
-        /// compuerta abierta, la provisional. Si falta cualquiera de las dos en release (sin arte final), null: el perezoso no
-        /// aparece.
+        /// de código con <see cref="MapArtRule.ShowProvisional"/> (en todos los builds, D-052); y la rama de
+        /// <see cref="SlothBranchSlot"/> o, con el arte por código, la suya. Si falta cualquiera de las dos (solo si un test apaga
+        /// el arte por código), null: el perezoso no aparece.
         /// </summary>
         public SlothArt? SlothRigArt()
         {

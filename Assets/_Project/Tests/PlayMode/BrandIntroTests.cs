@@ -209,7 +209,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator ColdStart_TheIntroEndsWithTheLoad_NoAddedWait()
         {
             BootSplash.EnabledOverride = true;
-            MapArtRule.ForceProvisional = false; // sin TiTino: nada más que esperar tras la carga
+            MapArtRule.ForceProvisional = false; // sin TiTino (forzado; D-052 lo saca en todos los builds): nada más que esperar tras la carga
             ArtSlots.ForceProcedural = true;
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore());
             GameBootstrap boot = GameBootstrap.Current!;
@@ -243,7 +243,7 @@ namespace AF.Tests.PlayMode
         {
             BootSplash.EnabledOverride = true;
             BrandIntro.EnabledOverride = false;
-            MapArtRule.ForceProvisional = false;
+            MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
             ArtSlots.ForceProcedural = true;
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore());
             GameBootstrap boot = GameBootstrap.Current!;

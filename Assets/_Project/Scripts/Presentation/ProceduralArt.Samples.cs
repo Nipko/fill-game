@@ -23,7 +23,7 @@ namespace AF.Presentation
     /// Muestrario pinta ese vidrio translúcido en su lugar (no se puede sacar la silueta de un PNG).</item>
     /// </list>
     /// <para>Las ranuras mandan, con el mismo patrón que <see cref="MapMiniCuiaFor"/> y <see cref="MapCanoeFor"/>: con su PNG no se
-    /// crea el provisional. Ninguna es arte provisional de P-M5 (<see cref="MapArtRule"/>): son piezas de UI del Mapa.</para>
+    /// crea el provisional. Ninguna depende de <see cref="MapArtRule"/>: son piezas de UI del Mapa.</para>
     /// <para>Perezosas: nada se crea al construir <see cref="ProceduralArt"/>, solo la primera vez que se piden
     /// (<see cref="SamplesArtBuilt"/>); tras <see cref="Dispose"/> se vuelven a generar (el == de Unity).</para>
     /// </summary>

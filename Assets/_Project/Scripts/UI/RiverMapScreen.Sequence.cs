@@ -24,7 +24,7 @@ namespace AF.UI
     /// copa de su embaúba con el pico hacia él y, como TiTino cuelga bajo la rama, un tallo del pico que baja por delante de la
     /// copa hasta <see cref="L10BubbleStemGapDp"/> dp de su coronilla (<see cref="SpeechBubble"/>; revisión de M4.2: que se vea
     /// quién habla), lo que pide su lectura (<see cref="NoticeTiming.ReadMs(string)"/>). Sin
-    /// voz, solo el gesto (<see cref="PresentOnlyMs"/>); sin su arte (release, P-M5), nada. Si el bocadillo sale, lo avisa
+    /// voz, solo el gesto (<see cref="PresentOnlyMs"/>); sin su arte (solo si un test lo apaga; desde D-052 sale en todos los builds), nada. Si el bocadillo sale, lo avisa
     /// (<see cref="L10BubbleSaid"/>): no gasta ninguna frase de la sesión de TiTino, pero cuenta como pantalla en la que habló y
     /// el saludo del día del inicio que la sigue se aplaza (D-028, pregunta 60 b).</description></item>
     /// <item><description><b>La placa del Dato del río 1</b> (el <c>arrival_fact</c> de la parada 1,

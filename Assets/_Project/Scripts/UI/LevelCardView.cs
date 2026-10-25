@@ -53,7 +53,7 @@ namespace AF.UI
     /// y parada a la que se llega al ganarlo (<see cref="HitoStopFor"/>: <c>RiverStopCatalog.ArrivalOnWin(L)</c>), una fila
     /// nueva abajo, tras una raya: la silueta del sitio en una ventanita de vidrio de <see cref="HitoSilhouetteWidthDp"/> ×
     /// <see cref="HitoSilhouetteHeightDp"/> dp [P] con marco de madera (el cielo y el agua del sitio, y su héroe: el PNG de su
-    /// ranura o, solo con <see cref="MapArtRule"/>, la silueta provisional de <see cref="StopShapes"/>; el Encuentro, que no
+    /// ranura o, con <see cref="MapArtRule"/> (en todos los builds, D-052), la silueta por código de <see cref="StopShapes"/>; el Encuentro, que no
     /// tiene héroe, con su pieza por código de las dos aguas; el héroe, ampliado <see cref="HitoHeroZoom"/> veces y recortado por
     /// el vidrio) y «Si lo superas, llegas a {lugar}» (<c>map_hito_preview</c>) en Nunito Bold y tinta, a 14 sp si cabe en
     /// <see cref="MaxHitoLines"/> líneas a 100 % y si no a 12, nunca menos; la fila no pasa del ancho de su raya. Sin nombre
@@ -1169,8 +1169,8 @@ namespace AF.UI
         }
 
         // Prepara la fila del hito hacia stop (null = sin fila): el texto (sin nombre del lugar en el idioma, sin fila) y la
-        // ventanita (el PNG del héroe si existe; si no, la pieza por código de las dos aguas o, solo con MapArtRule, la silueta
-        // provisional; sin nada de eso, la línea va sola). La malla se construye aquí, una vez por tarjeta.
+        // ventanita (el PNG del héroe si existe; si no, la pieza por código de las dos aguas o, con MapArtRule (en todos los builds,
+        // D-052), la silueta por código; sin nada de eso, la línea va sola). La malla se construye aquí, una vez por tarjeta.
         private void ShowHito(RiverStop? stop, string water, Season season)
         {
             _hitoStop = stop;

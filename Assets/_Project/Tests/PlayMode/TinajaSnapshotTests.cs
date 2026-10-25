@@ -26,7 +26,7 @@ namespace AF.Tests.PlayMode
     /// sacar: la boca de lulo, «×2» y su cuia con el jenipapo), <c>tj2_05_l323_marea_banda</c> (Marea: la boca de jenipapo y la
     /// banda de luz del lulo, revelado, a su altura), <c>tj2_06_l323_bandas</c> (todo revelado, como tras la Luciérnaga: dos
     /// bandas), <c>tj2_07_l323_vacia</c> (la suelta: la tinaja vacía boca abajo sobre el jirau y su cuia suelta),
-    /// <c>tj2_08_l323_release</c> (como en release, sin el arte provisional: el vidrio con la cima y el lulo revelado en su
+    /// <c>tj2_08_l323_sin_arte</c> (sin el arte por código, forzado; desde D-052 sale en todos los builds: el vidrio con la cima y el lulo revelado en su
     /// líquido, las ocultas del barro y nunca turbias, y solo el chip en el hombro del vidrio: sin boca, sin bandas ni iconos
     /// dobles) y <c>tj2_09_l323_pareja_corte</c> (la pareja en la 4 y la 5, donde el reparto 5/5 de D-006 las partiría: van
     /// juntas, 6/4, con la fila apretada para que la vasija y el jirau no lleguen al marco ni salgan de la repisa). Sirven para mirar a 47-48 dp la vasija (más alta que ancha, lisa, sin «?» ni
@@ -98,11 +98,11 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 50);
             Save(dir, "tj2_07_l323_vacia", boot);
 
-            MapArtRule.ForceProvisional = false;
+            MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
             tv.ShowContent(flow.Session.Current[Tinaja], false);
             cv.ShowContent(flow.Session.Current[Cucharon], false);
             PlayModeHelpers.Step(boot, 50);
-            Save(dir, "tj2_08_l323_release", boot);
+            Save(dir, "tj2_08_l323_sin_arte", boot);
             MapArtRule.ForceProvisional = true;
         }
 

@@ -125,10 +125,10 @@ namespace AF.Presentation
     /// hacia la cámara (c.5, puntos 7 y 8). Sin raycast: nunca bloquea un toque.
     /// </summary>
     /// <remarks>
-    /// <para>Solo en desarrollo: sin el PNG de <see cref="ProceduralArt.SlothPartsSlot"/> o sin el de su rama
-    /// (<see cref="ProceduralArt.SlothBranchSlot"/>: nunca cuelga de nada, c.4), <see cref="ProceduralArt.SlothRigArt()"/>
-    /// devuelve null fuera del Editor y de los builds de desarrollo (<see cref="MapArtRule"/>; 07 §6.4) y <see cref="Create"/> no
-    /// crea nada. Perezoso: nada existe hasta que alguien lo pide.</para>
+    /// <para>En todos los builds, release incluido (D-052): sin el PNG de <see cref="ProceduralArt.SlothPartsSlot"/> o sin
+    /// el de su rama (<see cref="ProceduralArt.SlothBranchSlot"/>: nunca cuelga de nada, c.4) se dibuja por código; solo si un
+    /// test apaga ese arte (<see cref="MapArtRule"/>), <see cref="ProceduralArt.SlothRigArt()"/> devuelve null y
+    /// <see cref="Create"/> no crea nada. Perezoso: nada existe hasta que alguien lo pide.</para>
     /// <para>Con Reducir movimiento (07 §7.8; c.6), cada pose se sustituye por su fotograma de reposo, quieto, con un fundido de
     /// entrada de <see cref="ReducedMotionFadeMs"/> ms, y sin hojas.</para>
     /// <para>Ningún método por fotograma asigna memoria.</para>

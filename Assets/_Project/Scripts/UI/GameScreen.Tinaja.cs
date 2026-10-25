@@ -36,8 +36,8 @@ namespace AF.UI
 
         /// <summary>
         /// La tinaja que se pasa al layout para hacer sitio a su vasija y al poste de su cuia: <see cref="TinajaIndex"/> solo si
-        /// esas piezas se dibujan (el arte provisional, <see cref="MapArtRule.ShowProvisional"/>: Editor y desarrollo hasta los PNG
-        /// del artista); si no, −1. En release, sin el arte, la tinaja se ve como vidrio y no hay vasija ni poste: su fila no se
+        /// esas piezas se dibujan (el arte por código, <see cref="MapArtRule.ShowProvisional"/>: en todos los builds, release
+        /// incluido, D-052); si no, −1. Sin ese arte (solo si un test lo apaga), la tinaja se ve como vidrio y no hay vasija ni poste: su fila no se
         /// aprieta y el marco no se adelgaza por piezas que no se ven, así que el tablero sigue el reparto uniforme de 02 §5 y
         /// 07 §4.1 (ranura = ancho útil / cuias de la fila más larga). El corte entre filas para que la pareja vaya junta se mueve
         /// siempre (lo hace <c>_tinajaPair</c>).

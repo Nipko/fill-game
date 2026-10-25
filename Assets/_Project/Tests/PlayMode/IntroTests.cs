@@ -22,7 +22,7 @@ namespace AF.Tests.PlayMode
     /// panel con 3, 7 y 16 cuias en 20:9 (360 × 780 dp) y 16:9 (360 × 640 dp desde DC3), en los tres
     /// modelos, y el agua nunca tapa la rama bajo los miquitos (labio &lt; rama &lt; tropa); seleccionar o verter no cambia
     /// nada de la tropa; 0 B por fotograma en todas las rutas; la onda del menisco, función solo del tiempo; la ruta de
-    /// Reducir movimiento; la compuerta del arte de release; y la tarjeta «¡Miquito a la vista!» del nivel 5 (guion §4.5, A15
+    /// Reducir movimiento; la compuerta del arte (D-052: el miquito por código, también en release); y la tarjeta «¡Miquito a la vista!» del nivel 5 (guion §4.5, A15
     /// sin la persistencia).
     /// </summary>
     public sealed class IntroTests
@@ -977,15 +977,15 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// Guion §4.3 y §11: en un build de release sin el arte final de la especie, ni la tropa sale en la intro (dosel) ni la
-        /// tarjeta «¡Miquito a la vista!» con el miquito provisional por código. Con la misma regla (<c>FaunaArtAvailable</c>), en
-        /// desarrollo sí salen las dos.
+        /// Guion §4.3 y §11 con D-052: sin ningún arte de la especie (ni el miquito por código, apagado aquí, ni los PNG), ni la
+        /// tropa sale en la intro (dosel) ni la tarjeta «¡Miquito a la vista!». Con la regla real (<c>FaunaArtAvailable</c> sin
+        /// forzar, que en release es la misma: <c>MapArtRule.ShowProvisionalIn(false, false)</c>), salen las dos sin PNG.
         /// </summary>
         [UnityTest]
-        public IEnumerator WithoutFinalArt_InARelease_NeitherTheTroopNorTheCardAppear()
+        public IEnumerator WithoutAnyArt_NeitherTheTroopNorTheCardAppear_WithTheCodeMiquitoBothDoWithoutPng()
         {
             GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
-            LaunchOptions.DevelopmentBuildOverride = false;
+            LaunchOptions.FaunaCodeArtOverride = false;
             yield return PlayModeHelpers.LoadGame(4, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
@@ -995,7 +995,7 @@ namespace AF.Tests.PlayMode
 
             boot.Flow!.Load(5); // el nivel de la tarjeta del mono ardilla
             AF.Levels.FaunaSpecies squirrel = view.Fauna!.ForLevel(5)!;
-            Assert.That(GameScreen.FaunaArtAvailable(squirrel, false), Is.False, "release sin fauna_saimiri_collinsi_partes");
+            Assert.That(GameScreen.FaunaArtAvailable(squirrel, false), Is.False, "sin miquito por código ni fauna_saimiri_collinsi_partes");
             Assert.That(GameScreen.FaunaArtAvailable(squirrel, true), Is.False);
             Assert.That(view.IntroSpecies, Is.Null, "sin arte: dosel");
             Assert.That(view.Intro.Plan.Perch, Is.EqualTo(IntroPerch.Canopy));
@@ -1008,10 +1008,14 @@ namespace AF.Tests.PlayMode
 
             PlayModeHelpers.TickExact(boot, 400);
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
-            AssertNoSightingCard(boot, "sin tarjeta con el miquito provisional");
+            AssertNoSightingCard(boot, "sin tarjeta sin arte");
 
-            // La misma regla en desarrollo: la tropa provisional y la tarjeta.
-            LaunchOptions.DevelopmentBuildOverride = true;
+            // La regla real (D-052): el miquito por código sale en cualquier build, sin PNG: la tropa y la tarjeta.
+            LaunchOptions.FaunaCodeArtOverride = null;
+            Assert.That(ArtSlots.Find(squirrel.PartsSlot), Is.Null, "sin PNG de partes");
+            Assert.That(MapArtRule.ShowProvisionalIn(false, false), Is.True, "release");
+            Assert.That(GameScreen.FaunaArtAvailable(squirrel, false), Is.True);
+            Assert.That(GameScreen.FaunaArtAvailable(squirrel, true), Is.True);
             boot.Flow.Load(5);
             Assert.That(view.IntroSpecies, Is.Not.Null);
             Assert.That(view.Troop.Active, Is.True);

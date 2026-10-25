@@ -403,7 +403,7 @@ namespace AF.UI
         /// <summary>Desplazamiento vertical de lo que se enseña dentro de la ranura (dp; el aire se reparte arriba y abajo).</summary>
         public float OffsetDp => _offY;
 
-        /// <summary>El retrato de TiTino (null en release sin su PNG).</summary>
+        /// <summary>El retrato de TiTino (null solo sin su PNG y con el arte por código apagado en un test; D-052).</summary>
         public Image? Portrait => _portrait;
 
         /// <summary>Etiquetas de la placa (tests de recortes).</summary>

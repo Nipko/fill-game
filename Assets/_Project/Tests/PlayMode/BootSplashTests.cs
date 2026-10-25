@@ -22,8 +22,8 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item>la regla de la espera (<see cref="BootSplashTiming"/>): solo en la primera apertura con <c>sloth_wake</c>, lo que
     /// falte para 1,0 s, y solo si el primer toque sigue cabiendo en 20 s;</item>
-    /// <item>la pantalla no lleva texto (ni un componente de texto) y solo su fondo recibe toques; sin el arte final (release),
-    /// sin TiTino;</item>
+    /// <item>la pantalla no lleva texto (ni un componente de texto) y solo su fondo recibe toques; sin arte de TiTino (ni el
+    /// dibujo por código, que sale en todos los builds por D-052, ni sus PNG), sin TiTino;</item>
     /// <item>en la escena <c>Game</c>: la primera apertura enseña <c>sloth_wake</c> al menos 1,0 s con la app aún en el arranque
     /// (la intro del nivel 1 no corre detrás) y después entra en el nivel 1; las demás aperturas, <c>sloth_idle</c>, sin espera
     /// añadida; sin el arte, ni TiTino ni espera; la reconstrucción por idioma no la vuelve a enseñar;</item>
@@ -80,7 +80,7 @@ namespace AF.Tests.PlayMode
             Assert.That(BootSplashTiming.HoldMs(true, true, 3000, 2400), Is.EqualTo(0));
             Assert.That(BootSplashTiming.HoldMs(false, true, 2000, 0), Is.EqualTo(0), "las demás aperturas no añaden espera");
             Assert.That(BootSplashTiming.HoldMs(false, false, 2000, 0), Is.EqualTo(0));
-            Assert.That(BootSplashTiming.HoldMs(true, false, 2000, 0), Is.EqualTo(0), "sin TiTino a la vista (release), sin espera");
+            Assert.That(BootSplashTiming.HoldMs(true, false, 2000, 0), Is.EqualTo(0), "sin TiTino a la vista, sin espera");
         }
 
         [Test]
@@ -134,7 +134,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Splash_LaterOpens_Idle_AndReleaseWithoutArt_NoSloth()
+        public IEnumerator Splash_LaterOpens_Idle_InRelease_TheCodeSloth_AndWithoutAnyArt_NoSloth()
         {
             MapArtRule.ForceProvisional = true;
             ArtSlots.ForceProcedural = true;
@@ -143,14 +143,22 @@ namespace AF.Tests.PlayMode
             Assert.That(idle.Sloth!.Pose, Is.EqualTo(SlothPoseId.Idle), "las demás aperturas: sloth_idle");
             idle.Dispose();
 
-            MapArtRule.ForceProvisional = false;
+            // La regla real (D-052): en release, sin PNG, TiTino por código sale igual.
+            MapArtRule.ForceProvisional = null;
+            Assert.That(MapArtRule.ShowProvisionalIn(false, false), Is.True, "release");
             BootSplash release = NewSplash();
-            Assert.That(_art.SlothRigArt(), Is.Null, "release sin el arte final");
-            Assert.That(release.ShowSloth(_art.SlothRigArt(), true, false), Is.False, "MapArtRule: sin arte final, sin TiTino");
-            Assert.That(release.SlothVisible, Is.False);
-            Assert.That(release.SlothClockMs, Is.EqualTo(0f));
-            Assert.That(release.Sloth, Is.Null, "no se crea ningún objeto del rig");
+            Assert.That(release.ShowSloth(_art.SlothRigArt(), true, false), Is.True, "release sin PNG: TiTino por código");
+            Assert.That(release.SlothVisible, Is.True);
             release.Dispose();
+
+            MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
+            BootSplash none = NewSplash();
+            Assert.That(_art.SlothRigArt(), Is.Null, "sin arte por código ni PNG");
+            Assert.That(none.ShowSloth(_art.SlothRigArt(), true, false), Is.False, "MapArtRule: sin arte, sin TiTino");
+            Assert.That(none.SlothVisible, Is.False);
+            Assert.That(none.SlothClockMs, Is.EqualTo(0f));
+            Assert.That(none.Sloth, Is.Null, "no se crea ningún objeto del rig");
+            none.Dispose();
             yield return null;
         }
 
@@ -197,7 +205,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Composition_WithoutSloth_TheLogoTakesTheSky([Values(780, 640)] int screen)
         {
-            MapArtRule.ForceProvisional = false; // release sin el arte final
+            MapArtRule.ForceProvisional = false; // sin arte de TiTino (forzado: hoy sale en todos los builds, D-052)
             ArtSlots.ForceProcedural = true;
             GameScreen.SimulatedScreen = screen == 640 ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
             BootSplash splash = NewSplash();
@@ -297,17 +305,17 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ReleaseWithoutArt_FirstOpen_NoSloth_NoWait()
+        public IEnumerator WithoutAnyArt_FirstOpen_NoSloth_NoWait()
         {
             BootSplash.EnabledOverride = true;
-            MapArtRule.ForceProvisional = false;
+            MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
             ArtSlots.ForceProcedural = true;
             Watch();
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore());
             GameBootstrap boot = GameBootstrap.Current!;
 
-            Assert.That(_watcher!.SawSplash, Is.True, "el río y el logotipo salen también en release");
-            Assert.That(_watcher.SawAnySloth, Is.False, "MapArtRule: sin arte final, sin TiTino");
+            Assert.That(_watcher!.SawSplash, Is.True, "el río y el logotipo salen también sin TiTino");
+            Assert.That(_watcher.SawAnySloth, Is.False, "MapArtRule: sin arte, sin TiTino");
             Assert.That(_watcher.FramesAfterLoad, Is.EqualTo(0), "sin TiTino, ni un fotograma de la pantalla tras la carga");
             BootReport report = boot.BootInfo!;
             Assert.That(report.FirstOpen, Is.True);

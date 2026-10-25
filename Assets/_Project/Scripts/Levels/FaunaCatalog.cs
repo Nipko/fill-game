@@ -364,23 +364,25 @@ namespace AF.Levels
     }
 
     /// <summary>
-    /// Compuerta del arte de una especie (guion de la intro §4.3 y §11): la única regla de «hay arte», pura y comprobable. En un
-    /// build de desarrollo basta el miquito provisional por código; fuera de él, la tropa exige el PNG <c>fauna_&lt;id&gt;_partes</c>
-    /// y la tarjeta «¡Miquito a la vista!» exige además el PNG <c>fauna_&lt;id&gt;_retrato</c> (ni el soft launch ni el vídeo con
-    /// miquitos provisionales, §11). Sin arte: dosel en la intro y sin tarjeta, nunca la especie de otro mundo.
+    /// Compuerta del arte de una especie (guion de la intro §4.3 y §11; D-052, que retira la exigencia de PNG): la única regla
+    /// de «hay arte», pura y comprobable. El miquito por código es el arte final y vale en todos los builds, release incluido
+    /// (<paramref name="codeArt"/>, el <c>MapArtRule.ShowProvisional</c> de la capa Unity: siempre true salvo en un test que lo
+    /// fuerce a false); sin él, la tropa exige el PNG <c>fauna_&lt;id&gt;_partes</c> y la tarjeta «¡Miquito a la vista!» exige
+    /// además el PNG <c>fauna_&lt;id&gt;_retrato</c>. Si llegan esos PNG, mandan sobre el dibujo. Sin arte: dosel en la intro y
+    /// sin tarjeta, nunca la especie de otro mundo.
     /// </summary>
     public static class FaunaArtRule
     {
-        /// <summary>La tropa de la especie puede salir en la intro.</summary>
-        public static bool TroopArt(bool developmentBuild, bool partsPng)
+        /// <summary>La tropa de la especie puede salir en la intro: con el miquito por código o con su PNG de partes.</summary>
+        public static bool TroopArt(bool codeArt, bool partsPng)
         {
-            return developmentBuild || partsPng;
+            return codeArt || partsPng;
         }
 
-        /// <summary>La tarjeta de la especie puede salir: la regla de la tropa y, fuera de desarrollo, también el retrato.</summary>
-        public static bool CardArt(bool developmentBuild, bool partsPng, bool portraitPng)
+        /// <summary>La tarjeta de la especie puede salir: la regla de la tropa y, sin el miquito por código, también el retrato.</summary>
+        public static bool CardArt(bool codeArt, bool partsPng, bool portraitPng)
         {
-            return TroopArt(developmentBuild, partsPng) && (developmentBuild || portraitPng);
+            return TroopArt(codeArt, partsPng) && (codeArt || portraitPng);
         }
     }
 
@@ -391,8 +393,8 @@ namespace AF.Levels
         /// Especie de la intro del nivel <paramref name="level"/> del mundo <paramref name="world"/>, o null (modo dosel) si: no
         /// hay catálogo; el nivel está en <c>sin_fauna</c> (mundo 13); es un reintento (<paramref name="attempt"/> &gt; 1); no hay
         /// especie para el tramo; la especie del tramo no vive en ese mundo (nunca la de otro mundo: barrera de los ríos); o
-        /// falta su arte (<paramref name="artAvailable"/> = false, con <see cref="FaunaArtRule"/>: en un build de release sin el
-        /// PNG final; en desarrollo, el miquito provisional por código cuenta como disponible).
+        /// falta su arte (<paramref name="artAvailable"/> = false, con <see cref="FaunaArtRule"/>: el miquito por código cuenta como
+        /// disponible en todos los builds, D-052, así que solo falta si un test lo apaga y no hay PNG).
         /// </summary>
         public static FaunaSpecies? Resolve(FaunaCatalog? catalog, int world, int level, int attempt, bool artAvailable)
         {
