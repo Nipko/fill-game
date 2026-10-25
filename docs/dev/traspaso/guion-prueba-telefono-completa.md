@@ -32,6 +32,83 @@ Lo escribió el integrador (escritorio) el 2026-10-25, a petición del dueño: *
 
 Aquí entra todo.
 
+## Encargo de la jornada 2 (escritorio, 2026-10-25)
+
+La jornada 1 (`pruebas-telefono-2026-10-25-completa.md`) cubrió los bloques 0, 1, 2, 6, buena parte del 3 y el punto 4.9. Sus observaciones están respondidas al final de esa hoja, y el guion ya está corregido con ellas. Esta jornada **vuelve a empezar por el bloque 0** sobre la integración nueva y luego sigue con lo pendiente.
+
+**Punto de partida:** `integracion-fase1-fase2` en `7815342d` o posterior.
+
+**Lo que entró después de la jornada 1 y nunca se ha visto en el teléfono:**
+- **D-049: anuncios de AdMob directo** con Google Mobile Ads 11.5.0 (`adb977a4`). Ya no son anuncios simulados. Con `com.amazonfill.dev` salen **siempre los bloques de prueba de Google**, con la etiqueta «Test Ad». Detalle en `docs/dev/anuncios-admob.md`.
+- **D-051: arranque con la marca** (`a26e7d9f`): sin la pantalla «Made with Unity», la pantalla del sistema con el icono sobre el petróleo `#14444A` y la intro de la gota de açaí (650 ms como mucho, solo mientras carga).
+- **D-050: el inicio nuevo, «el muelle del río»** (`689943fb`). Lo describe la fila Lobby de 06 §4.7, y sus ids están en `prototipo-v0.md` (línea `lobby` y `lobby_cards`).
+- **D-052: el arte por código sale también en release** (`5c3d5392`): TiTino, la casa y la ventanita, las siluetas de héroe del Mapa, las banderas simplificadas, la tinaja, el cucharón y los miquitos. Antes, en release, no se pintaban.
+
+### Orden de la jornada 2
+
+1. **Bloque 0 entero**, con el `dev.apk` y el `rehearsal.apk` nuevos (`-Apk`). Anota los tamaños: si el AAB del ensayo crece mucho respecto a los 55,94 MB, es por Google Mobile Ads; compáralo con el tope de 80.
+2. **Bloque N1, «Lo nuevo»** (abajo), con el `dev.apk`.
+3. **Bloque N2, «D-052 en el ensayo de release»** (abajo), con el `rehearsal.apk`. Desinstala antes el de desarrollo si comparten paquete.
+4. **Los pendientes de la jornada 1:**
+   - los 3 puntos sin probar del bloque 3;
+   - el bloque 4 entero, salvo el 4.9;
+   - los bloques 5 y 7 a 23, en orden.
+
+   En el bloque 9, los anuncios son ahora **de prueba de Google**, no simulados. Mira los cambios en N1.4. Con `--ei af_ads_fill 0/1` el build de desarrollo sigue usando el simulado, útil para el punto 4 del bloque 9 y para el jugador automático.
+5. **Hoja nueva:** `docs/dev/traspaso/pruebas-telefono-<fecha>-completa-j2.md`, con el mismo formato. Commit y push al final de la jornada con el mensaje «Añade la prueba completa en el teléfono (jornada 2)», solo la hoja. Si la jornada no da para todo, se commitea lo hecho y la jornada 3 sigue donde quedó.
+
+### N1. Lo nuevo, con el `dev.apk` (≈ 2 h)
+
+1. **Arranque (D-051):**
+   - Arranca en frío 5 veces (`adb shell am force-stop` y lanzar). En ninguna sale «Made with Unity». La pantalla del sistema muestra el icono v2 sobre el petróleo y empalma sin destello blanco ni negro. Después viene la intro de la gota, y luego el inicio o la pantalla de edad.
+   - Por cada arranque, la línea `AF_STATE` `brand_intro`: `intro_ms` coincide con `load_ms` de `boot` (la intro nunca alarga la carga), y `anim_ms` es 650. Anota `intro_ms`, `cut` y `frames`.
+   - Con Reducir movimiento (el dueño lo enciende en Accesibilidad): la intro sale quieta (`reduce_motion` true).
+   - Un toque durante la intro no se pierde ni hace nada raro.
+   - Primera apertura con perfil limpio (`pm clear`): TiTino despierta (`sloth_wake`) después de que se quite la intro.
+2. **El inicio, «el muelle del río» (D-050).** Mira la línea `lobby` de `AF_LAYOUT` y haz una captura de cada caso:
+   - **TiTino colgado de su rama** (`home_window`, `titino`):
+     - el bocadillo cambia cada ~5 s entre el saludo, «¡Hoy hay Reto del río nuevo!», lo que falta para la Canasta, la distancia a casa y el dato del día;
+     - nunca habla de compras;
+     - al tocarlo sale `sloth_look` y el mensaje siguiente;
+     - de noche (bloque 15, con la hora cambiada) duerme.
+   - **El río:** el color del agua cambia con el mundo; se ven nenúfares, un pez que salta, un ave y ondas. Prueba con `--ei af_max_level` 4, 58 y 140, y alguno de los mundos 10-13.
+   - **La canoa de Capi con Rosa y el poste de la próxima parada** (`voyage_canoe`, `voyage_stop`, `stop_remaining`, con «Faltan n niveles»):
+     - solo desde el nivel 10;
+     - tocar la canoa o el letrero abre el Mapa (`af_map_open` con `source` `lobby`);
+     - el bocadillo puede apartarlos unos segundos, y está aceptado.
+   - **La Crecida como poste de nivel** (`crecida`), desde el 25, con la racha y los hitos.
+   - **El muelle:**
+     - «Jugar»;
+     - el Cántaro como tinaja de barro (`piggy_chip`);
+     - las tarjetas del día (`lobby_cards`): `daily_card` con la fecha y 0/7, `logbook_card` y `league_card` si la Liga está activa;
+     - **antes del nivel 10**, una caja de cuias en lugar de tarjetas.
+   - **Sin canoas, la hoja de la tienda o una oferta encima:** ni la travesía ni TiTino salen.
+   - **Letra al 130 %** (`--ef af_font_scale 1.3`) y, en el bloque 16, en 16:9: las tarjetas pueden perder la fecha y la línea de estado (aceptado), pero TalkBack sigue diciéndolas. Nada se solapa sin remedio.
+   - Idiomas `en` y `pt` (`af_lang`): ningún texto cortado ni `[clave]`.
+3. **Volver al inicio desde un nivel, la victoria y el Mapa** varias veces seguidas: ningún parpadeo, ningún salto de la canoa ni del bocadillo, y 0 `E/Unity`.
+4. **Anuncios de prueba de Google (D-049).** Sustituye la parte de vídeos e intersticiales del bloque 9:
+   - Al arrancar, logcat dice `[AF.Ads] proveedor: google (bloques de prueba); max: not_configured`. Si dice «produccion», es **bloqueante**: para y avisa.
+   - Con perfil 18+ en Colombia no sale el mensaje de UMP (manda nuestra pantalla). Anota si sale.
+   - Cosecha doble (victoria del 11) y los demás vídeos con premio: el anuncio de prueba de Google («Test Ad») se ve entero y luego se cierra. Se dan el premio una vez y las líneas `af_ad_request`, `af_ad_shown` y `af_ad_reward`. Si lo cierras antes de tiempo, no hay premio.
+   - Intersticial a partir del 22, con la cadencia del bloque 2.3 y en los mismos sitios prohibidos.
+   - **Sin red** (modo avión, con el sí del dueño): los botones de vídeo se apagan o desaparecen con su motivo; el juego no se cuelga y al volver la red se recuperan.
+   - **Perfil <13** (`pm clear` y edad <13): logcat no muestra ninguna línea del SDK de Google Ads ni de UMP.
+   - **Nunca toques un anuncio para abrir el anunciante.** Aunque sean de prueba, la regla de la cuenta es no hacer clics propios.
+5. **D-052 en desarrollo:** los niveles con tinaja (`--ei af_level 323`) y con cucharón, el Mapa con sus siluetas y banderas, y la intro de los miquitos se siguen viendo igual que en la jornada 1. Es lo mismo que antes; aquí solo se confirma que no se rompió nada.
+
+### N2. D-052 en el ensayo de release, con el `rehearsal.apk` (≈ 45 min)
+
+El ensayo no es un build de desarrollo: no hay sondas `AF_*` ni extras de `LaunchOptions`. Todo va por capturas y a mano, y **es la prueba de que en release se ve el arte por código**.
+1. **Arranque:** sin «Made with Unity», con la pantalla del sistema en petróleo, la intro de la gota y TiTino despertando en la primera apertura. Antes de D-052 no salía en release.
+2. **El inicio:** TiTino colgado de su rama con su bocadillo, el río, el muelle y la caja de cuias (antes del 10).
+3. **Juega a mano del 1 al 10:**
+   - la tropa de miquitos en la intro de los niveles que la tienen, con su tarjeta «¡Miquito a la vista!» la primera vez;
+   - TiTino en los tutoriales (1-3 y 6) y Capi en el 8;
+   - la tarjeta de nivel con la silueta de la parada;
+   - el primer Mapa en el 10, con la casa de TiTino, la ventanita, las siluetas de héroe y las banderas.
+4. **Ningún hueco donde debería haber arte:** rectángulos vacíos, colores planos o una parada sin silueta. Cada uno es una observación **alta**, con su captura.
+5. **Anuncios en el ensayo:** con el ID provisional también salen bloques de prueba (`GoogleAdUnits`). Si sale un anuncio sin la etiqueta «Test Ad», es **bloqueante**: para y avisa.
+
 ## Reglas de la prueba
 
 - **Orden:** sigue los bloques en orden. Entre bloques puede pasar un día; la hoja se escribe a medida y se commitea al final de cada jornada. Así, si se corta, el escritorio ya tiene lo hecho.
