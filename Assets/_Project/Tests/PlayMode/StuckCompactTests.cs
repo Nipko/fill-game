@@ -101,6 +101,41 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
+        /// Safe area (auditoría B10; 08 §13.1 #4; T6, carril B, punto 3): en 16:9 con el texto al 130 % y una barra de gestos de
+        /// 48 dp (144 px a 3 px/dp) abajo, la rama B (el panel más alto: Puñado y Balsa) del 31 y del 640, en es-419 y en-XA: el
+        /// panel compacto, entero entre las dos zonas seguras y anclado sobre la de abajo, y el tablero a su tamaño y bajo el
+        /// HUD. Lo que el panel tapa de las cuias se registra: es el límite aceptado en D-032 (añadido del 2026-10-20).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Stuck_16x9_At130_WithAGestureBar_InsideTheSafeArea([Values(31, 640)] int level, [Values("es-419", "en-XA")] string locale)
+        {
+            Use(GestureBar640, 130, locale);
+            yield return level == 640 ? Load640("B") : Load31("B");
+            GameScreen view = GameBootstrap.Current!.View!;
+            string where = "el " + level + ", rama B, 360 × 640 con 48 dp de barra de gestos, al 130 % en " + locale;
+            AssertBranch(view, "B", where);
+            Assert.That(view.CardSafeBottom, Is.EqualTo(48f).Within(0.05f), where + ": condición del test, la zona segura de abajo");
+            Assert.That(view.Stuck.Compact, Is.True, where + ": va compacta");
+            CoveredDp(view, where);
+            AssertInsideSafeArea(view, where);
+            AssertPanelOnTheSafeArea(view, where);
+            AssertBoardUnderTheHud(view, where);
+            var ids = new List<string>();
+            var rects = new List<RectTransform>();
+            view.Stuck.VisibleButtons(ids, rects);
+            var root = (RectTransform)view.Canvas.transform;
+            for (int i = 0; i < rects.Count; i++)
+            {
+                Rect r = VictorySetup.CanvasRect(rects[i], root);
+                Assert.That(r.yMax, Is.LessThanOrEqualTo(view.CardCanvasHeight - view.CardSafeBottom + 0.05f), where + ": " + ids[i] + " " + r + " sobre la barra de gestos");
+                Assert.That(r.yMin, Is.GreaterThanOrEqualTo(view.SafeTopDp - 0.05f), where + ": " + ids[i] + " bajo la zona segura de arriba");
+            }
+        }
+
+        // 16:9 (1080 × 1920 px a 3 px/dp) con la zona segura de arriba de siempre (96 px) y una barra de gestos de 144 px (48 dp).
+        internal static readonly Vector4 GestureBar640 = new Vector4(1080f, 1920f, 96f, 144f);
+
+        /// <summary>
         /// Con Aguas estancadas abierto, al pasar de 360 × 780 a 360 × 640 (y a otra zona segura) el panel se rearma en la
         /// disposición compacta con el alto de un modal recién abierto en ese lienzo, en su sitio sobre la zona segura, y el
         /// tablero vuelve a subir lo justo; al volver a 360 × 780, la disposición de siempre (GameScreen.ApplyScreenMetrics;

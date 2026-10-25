@@ -66,11 +66,17 @@ namespace AF.UI
             _placement.text = UiText.SimulatedAdLabel(ad.Placement.ToId(), ad.Format == AdFormat.Rewarded);
             float w = _canvas.Width;
             float h = _canvas.Height;
-            UiBuilder.Place(_title.rectTransform, 16f, (h * 0.30f) - 20f, w - 32f, 40f);
-            UiBuilder.Place(_placement.rectTransform, 16f, (h * 0.30f) + 26f, w - 32f, 24f);
-            UiBuilder.Place(_countdown.rectTransform, 16f, (h * 0.45f) - 40f, w - 32f, 80f);
+
+            // En proporción al alto, pero dentro de los márgenes de la zona segura (B10; 08 §13.1 #4): el rótulo, bajo la zona
+            // segura de arriba + 8, y «Cerrar», sobre la barra de navegación o de gestos (zona segura de abajo + 8).
+            float top = Mathf.Max(GameScreen.MinSafeTop, _canvas.SafeTop) + 8f;
+            float bottom = h - Mathf.Max(GameScreen.MinSafeBottom, _canvas.SafeBottom) - 8f;
+            float titleY = Mathf.Max(top, (h * 0.30f) - 20f);
+            UiBuilder.Place(_title.rectTransform, 16f, titleY, w - 32f, 40f);
+            UiBuilder.Place(_placement.rectTransform, 16f, titleY + 46f, w - 32f, 24f);
+            UiBuilder.Place(_countdown.rectTransform, 16f, Mathf.Max(titleY + 74f, (h * 0.45f) - 40f), w - 32f, 80f);
             float cw = Mathf.Min(220f, w - 64f);
-            ModalKit.Place(_close, (w - cw) * 0.5f, h * 0.68f, cw);
+            ModalKit.Place(_close, (w - cw) * 0.5f, Mathf.Min(h * 0.68f, bottom - ModalKit.HeightOf(_close)), cw);
             Tick(0f);
         }
 
