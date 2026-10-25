@@ -3881,3 +3881,11 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Pendiente para el abogado** (`[[ABOGADO]]`): la licencia de Parallext a la editora (el DDA §11.1 de Google exige que quien publica tenga derecho a monetizar por cuenta propia), los datos a los que accede la editora y su papel en la política.
 - **Matiza D-041** («ya no es AUTOMATION AI S A S»): sigue valiendo para el responsable de los datos y el desarrollador, no para la editora en Play.
 - **Cómo revertir:** con una decisión nueva del dueño.
+
+### D-044, añadido del 2026-10-25: la web pública en tintalu.com, desplegada
+
+- **Estado:** hecho por el escritorio con la sesión de AWS del dueño y su sí al `cdk diff` («Sí: haz el bootstrap de CDK en sa-east-1 y us-east-1 y despliega AfProdGlobal y AfProdWeb con ese diff.»). El dueño creó los registros en Cloudflare.
+- **Qué hay:** bootstrap de CDK en prod (sa-east-1 y us-east-1); `AfProdGlobal` (certificado de ACM de `tintalu.com` y `www`, emitido; aviso de presupuesto de 50 USD/mes a `support@tintalu.com`) y `AfProdWeb` (S3 + CloudFront, `-c webOnly=true`), con los contextos de `infra/README.md` «Conectar `tintalu.com`» y `alertEmail=support@tintalu.com`.
+- **DNS en Cloudflare, todo «Solo DNS»:** los dos CNAME de validación de ACM (se quedan: renuevan el certificado), `tintalu.com` y `www` en CNAME a la distribución de CloudFront, y los MX, SPF y DKIM de Email Routing, que no se tocan.
+- **Comprobado el 2026-10-25:** `https://tintalu.com` y `https://www.tintalu.com` dan 200 en la portada, la privacidad, los términos y el borrado de cuenta; el certificado cubre los dos nombres; HTTP redirige a HTTPS (301); HSTS, CSP y `X-Frame-Options` activas.
+- **Siguiente despliegue de la web:** el mismo `cdk deploy AfProdGlobal AfProdWeb` con los mismos contextos (sin `-c domain` CloudFront perdería el dominio).
