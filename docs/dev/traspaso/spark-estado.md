@@ -6,6 +6,13 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-25 · Integración de T6, carriles A y B (escritorio)
+
+- **Fusionados** en `integracion-fase1-fase2`: `spark/t6-tests-fiables` (f1cdb634) y `spark/t6-pulido-pantalla` (c6b2f078), junto con `codex/web-marca` (7e09ab38). Conflicto solo en este archivo: se dejaron las dos entradas.
+- **Q-T6F-1:** el integrador acepta el gancho `LaunchOptions.ReuseDataReadsOverride` y `GameBootstrap.ReadData` (solo actúa en tests; el code-reviewer comprobó que con null el juego hace lo mismo que antes). Queda como menor un test propio de la caché.
+- **code-reviewer:** A y B correctos; los dos bloqueantes eran de la web de Codex (logo y AUTOMATION AI), resueltos en el escritorio (D-048).
+- **Verificación** (x86_64): build 0; dotnet test 1.002 (996 + 6 omitidos); esquema 116/116; loc y RC idénticos (254 claves); compila; EditMode 4.538 (4.535 + 3 omitidos), 0 fallos; PlayMode 2.100 (1.806 + 294 omitidos), 0 fallos, **1.792 s (30 min, antes 36-55)**; build de desarrollo OK; infra: typecheck, lint, web:check y 361 tests.
+
 ## 2026-10-24 · T6 · Carril A: tests que no dependen de la hora, capturas al día y una suite más rápida (`spark/t6-tests-fiables`): HECHA · verificación completa sin fallos (EditMode completa con el código final) · code-reviewer: APROBADO (2.ª ronda, tras los CAMBIOS NECESARIOS atendidos en `ce0b7d9f`) · Q-T6F-1 pendiente del dueño o del integrador
 
 - **Encargo:** `spark-calidad-pulido.md`, carril A (puntos 1-6). Rama desde `origin/integracion-fase1-fase2` en `645d1856`. Sin empujar.
