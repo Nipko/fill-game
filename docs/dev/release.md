@@ -23,7 +23,7 @@ Los dos jobs de `release.yml` declaran `environment: release`. Es la barrera que
 | Environment `release` | Secreto | `ANDROID_KEYSTORE_PASS` | Contraseña del keystore | Ídem |
 | Environment `release` | Secreto | `ANDROID_KEYALIAS_NAME` | Alias de la clave de subida (recomendado `tintalu-upload`) | Ídem |
 | Environment `release` | Secreto | `ANDROID_KEYALIAS_PASS` | Contraseña de la clave (con PKCS12, la misma que la del keystore) | Ídem |
-| Repositorio (pestaña *Variables*; no es secreta) | Variable | `AF_RELEASE_APPLICATION_ID` | El `applicationId` definitivo; recomendado `com.parallext.tintalu` (D-041) | Cuando el dueño confirme el ID (D-047 retiró la espera al dictamen) |
+| Repositorio (pestaña *Variables*; no es secreta) | Variable | `AF_RELEASE_APPLICATION_ID` | **`com.parallext.tintalu`** (D-047, confirmado por el dueño el 2026-10-25) | Ya puede crearse (D-047 retiró la espera al dictamen) |
 
 Los cuatro `ANDROID_*` **no** se crean como secretos del repositorio, solo en el Environment. Si GitHub no tiene el Environment `release`, lo crea vacío en la primera ejecución; el job `preflight` fallaría entonces con 5 (faltan los secretos), sin llegar a Unity.
 

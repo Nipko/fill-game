@@ -2,7 +2,7 @@
 
 Fecha: 2026-10-20. Lo reúne el integrador a partir de `docs/legal/marca.md`, `docs/dev/plan-tanda5.md` §3, `docs/dev/traspaso/README.md` (sección 6, paso 4), `docs/gdd/08-arquitectura-tecnica-publicacion.md` §13 y las decisiones D-033 a D-036. Ordenado por lo que más bloquea. Marca cada casilla al hacerla y anota la fecha.
 
-La tanda 5 puede avanzar con implementaciones falsas de los SDK. Según D-034, **los borradores de publicación pueden prepararse ya** (`docs/dev/traspaso/codex-publicacion.md`); crear la app en Play Console y fijar el `applicationId` definitivo ya no esperan al dictamen (D-047, 2026-10-25: sin dictamen ni registro por ahora); solo falta que el dueño confirme el ID. Este documento no confirma el avance de otros agentes.
+La tanda 5 puede avanzar con implementaciones falsas de los SDK. Según D-034, **los borradores de publicación pueden prepararse ya** (`docs/dev/traspaso/codex-publicacion.md`); crear la app en Play Console y fijar el `applicationId` definitivo ya no esperan al dictamen (D-047, 2026-10-25: sin dictamen ni registro por ahora); el ID es `com.parallext.tintalu`. Este documento no confirma el avance de otros agentes.
 
 ## Resumen para revisar juntos
 
@@ -17,7 +17,7 @@ La tanda 5 puede avanzar con implementaciones falsas de los SDK. Según D-034, *
 
 | Bloque | Lo que necesitamos de ti | Lo que pueden preparar los agentes | Detalle |
 |---|---|---|---|
-| Marca e identidad | Sin dictamen ni registro por ahora (D-047); confirmar el `applicationId` | Reunir antecedentes y preguntas para el abogado | §1 |
+| Marca e identidad | Sin dictamen ni registro por ahora (D-047); `applicationId` `com.parallext.tintalu` | Reunir antecedentes y preguntas para el abogado | §1 |
 | Presencia pública | Comprar dominio principal, reservar usuarios y aportar datos legales; alojamiento AWS ya decidido | Preparar web y textos con campos pendientes | §2 |
 | Plataforma | Cuenta empresarial y perfil comercial creados; banco en revisión; INTERNET aprobado; quedan SDK, firma y configuración de servicios | Medir el build y preparar propuestas de integración y CI | §3 |
 | Arte e idiomas | Gestionar artista, asesor cultural y revisión nativa | Consolidar encargos y material de revisión; integrar entregas | §4–§5 |
@@ -39,7 +39,7 @@ Estas propuestas organizan el trabajo; **no cambian requisitos ni decisiones del
 
 | Decisión | Propuesta de trabajo | Estado |
 |---|---|---|
-| Nombre del estudio y entidad publicadora | El dueño elige continuar con AUTOMATION AI S A S, Colombia. Nombre público actual: Automation AI; conservarlo o cambiarlo sigue por confirmar. El `applicationId` definitivo espera al dictamen de marca | Entidad y país decididos; nombre público por confirmar |
+| Nombre del estudio y entidad publicadora | El dueño elige continuar con AUTOMATION AI S A S, Colombia. Nombre público actual: Automation AI; conservarlo o cambiarlo sigue por confirmar. Desde D-041 el desarrollador y responsable es Parallext, LLC; el `applicationId` definitivo es `com.parallext.tintalu` (D-047) | Entidad y país decididos; nombre público por confirmar |
 | Dictamen de marca | Confirmar si ya lo estás gestionando; los antecedentes están en `docs/legal/marca.md` | Pendiente |
 | SDK de §3 | Revisar las aprobaciones de la integración prevista. El permiso `INTERNET` ya fue aprobado por separado el 2026-10-20 (D-036); no implica aprobación de SDK | SDK pendientes; permiso resuelto |
 | Arte, asesor e idiomas | Confirmar si ya tienes profesionales o contactos; los agentes pueden consolidar primero los encargos existentes | Pendiente |
@@ -54,7 +54,7 @@ Estas propuestas organizan el trabajo; **no cambian requisitos ni decisiones del
 |---|---|---|---|---|
 | [—] | Contratar al abogado de marcas (aplazado por D-047: el registro, cuando haya resultados o si aparece un conflicto) | (1) Búsqueda en el INPI de Brasil de TINTALÚ, TINTALU, TINTAL\* y TINTA LU\* en las clases 9, 28 y 41 (y la 2: en Brasil «tinta» es pintura); dictamen de registrabilidad. Unos R$ 500-1.500 [E], 1-2 semanas. (2) Dictamen en México frente a EL TINTAL (IMPI reg. 2586508, clase 41) y TINTALAIRE. (3) Estrategia frente a TINTA en EE. UU. | `docs/legal/marca.md` §2 y §5 | Todo lo siguiente |
 | [—] | Recibir el dictamen (no se pide, D-047) | Cubre también «TiTino». Si sale favorable, se fija el `applicationId`; si no, planes B (`marca.md` §1.3) | `marca.md` §6 | Crear la app en Play Console (D-034), la pista interna y el build de release |
-| [ ] | Decidir el nombre del estudio y su país | Es el `<estudio>` de `com.<estudio>.tintalu`, que no cambia tras la primera subida y es público. Sin ninguna forma de «Amazon». El país decide dónde se presenta la marca | 08 §13.1 #1; `marca.md` §3 | `applicationId`, nombre de desarrollador, solicitud base |
+| [x] | Decidir el nombre del estudio y su país (Parallext, D-041; `com.parallext.tintalu`, D-047) | Es el `<estudio>` de `com.<estudio>.tintalu`, que no cambia tras la primera subida y es público. Sin ninguna forma de «Amazon». El país decide dónde se presenta la marca | 08 §13.1 #1; `marca.md` §3 | `applicationId`, nombre de desarrollador, solicitud base |
 | [ ] | Presentar la solicitud de marca | Solicitud base en las clases 9 y 41 en el país del estudio (y, si es miembro del sistema de Madrid, presupuesto para CO, MX, BR y US) | `marca.md` §3 y §5 | Protección del nombre |
 
 ---
@@ -155,7 +155,7 @@ Todo el arte de hoy es provisional, hecho por código. Los encargos ya están es
 
 ## Orden sugerido (propuesta para revisar)
 
-1. **Primero:** confirmar el `applicationId` definitivo (recomendado `com.parallext.tintalu`); el dictamen ya no se pide (D-047). Entidad y país resueltos: AUTOMATION AI S A S, Colombia. La cuenta empresarial y el perfil comercial ya están creados; el banco está en revisión. El dueño adquirirá solo el dominio principal por ahora.
+1. **Hecho (D-047):** `applicationId` `com.parallext.tintalu`; el dictamen ya no se pide. Entidad y país resueltos: AUTOMATION AI S A S, Colombia. La cuenta empresarial y el perfil comercial ya están creados; el banco está en revisión. El dueño adquirirá solo el dominio principal por ahora.
 2. **Mientras llega el dictamen:** preparar los borradores de publicación (D-034), preparar la web en AWS (D-035) y organizar los encargos de arte, asesoría y pruebas. Revisar las aprobaciones restantes de SDK con el equipo y pedirle una propuesta medida para el tamaño del AAB; INTERNET ya aprobado (D-036).
-3. **Con el ID confirmado** (D-047, sin dictamen): fijar el `applicationId` definitivo y crear la app en Play Console. Crear las cuentas de servicios según las dependencias de cada integración.
+3. **Con el ID ya fijado** (`com.parallext.tintalu`, D-047): crear la app en Play Console y la variable `AF_RELEASE_APPLICATION_ID`. Crear las cuentas de servicios según las dependencias de cada integración.
 4. **Antes de la prueba cerrada:** completar web y revisión legal, arte y revisiones de contenido, curación y QA, firma y secretos del CI. Las compras defensivas, la 1.1 y las decisiones de negocio se revisan en su fase, sin darlas por canceladas.
