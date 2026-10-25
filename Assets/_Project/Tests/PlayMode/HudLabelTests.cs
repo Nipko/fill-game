@@ -272,6 +272,28 @@ namespace AF.Tests.PlayMode
         }
 
         [Test]
+        public void CounterRightLimit_OnlyMovesLeftOfATwoLineRestartPill()
+        {
+            // Revisión de Q-T6T-5 (T6, carril B): a 360 dp en es-419 la píldora «Reiniciar» va en una línea (TopRowY + 32 a + 48,
+            // x = W − 68 a W − 8) y, con la banda compacta en TopRowY + 48 o + 49 (BandTopFor), el contador sigue en W − 8 − ancho.
+            const float row = 40f;
+            const float w = 360f;
+            const float pillLeft = w - 68f;
+            float oneLineBottom = row + 48f;
+            foreach (float bandTop in new[] { 88f, 89f, 90f })
+            {
+                float right = GameScreen.CounterRightLimit(w, bandTop, false, oneLineBottom, pillLeft);
+                Assert.That(right, Is.EqualTo(w - GameScreen.HudCounterRightDp), "una línea, banda en " + bandTop + ": el contador en W − 8 − ancho");
+            }
+
+            // En dos líneas (en-XA: TopRowY + 32 a + 64), a su izquierda, a RestartPillGapDp.
+            float twoLineBottom = row + 64f;
+            Assert.That(GameScreen.CounterRightLimit(w, 90f, true, twoLineBottom, 292f), Is.EqualTo(292f - GameScreen.RestartPillGapDp));
+            Assert.That(GameScreen.CounterRightLimit(w, 88f, true, twoLineBottom, 280f), Is.EqualTo(280f - GameScreen.RestartPillGapDp));
+            Assert.That(GameScreen.CounterRightLimit(w, 130f, true, twoLineBottom, 280f), Is.EqualTo(w - GameScreen.HudCounterRightDp), "si la banda va más abajo, nada cambia");
+        }
+
+        [Test]
         public void ModeFor_NeedsRoomAboveTheVisibleEdgeOfTheBoard()
         {
             // Revisión de T09: la variante compacta en TopRowY + 50 (CompactBelow) tiene que quedar por encima del canto de arriba

@@ -453,6 +453,28 @@ namespace AF.Tests.PlayMode
             LongLabelSetup.AssertRestart(view, scale, 2, false);
         }
 
+        /// <summary>
+        /// Revisión de Q-T6T-5: en es-419 «Reiniciar» cabe en una línea y el contador de la Lluvia (194) o de la Piraña (200) sigue
+        /// a la derecha de la banda, en x = W − 8 − ancho, también con la banda compacta (al 130 %, en TopRowY + 48-50).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Es419_360_ThreeRowsWithTheTroopBand_CounterStaysRight([Values(194, 200)] int level, [Values(100, 130)] int percent)
+        {
+            float scale = percent / 100f;
+            yield return LongLabelSetup.LoadLevel(level, LocLocale.SourceLocale, scale, HudLabelTests.Screen780);
+            GameScreen view = GameBootstrap.Current!.View!;
+            string where = "el " + level + " en es-419 al " + percent + " %";
+            Assert.That(view.Layout!.TroopBand, Is.True, where + ": con la franja de la tropa");
+            Assert.That(view.RestartLabel.textInfo.lineCount, Is.EqualTo(1), where + ": condición del test, Reiniciar en una línea");
+            HudCounterChip counter = view.HudCounter;
+            Assert.That(counter.Visible, Is.True, where);
+            Rect pill = LongLabelSetup.DpRect(view.RestartPillRect, view.Hud);
+            Rect chip = LongLabelSetup.DpRect(counter.Root, view.Hud);
+            Debug.Log("AF_QT6T5_ES " + where + ": píldora " + pill + ", contador " + chip + ", banda " + view.HudLabelsMode);
+            Assert.That(chip.xMax, Is.EqualTo(view.CanvasWidth - GameScreen.HudCounterRightDp).Within(1f), where + ": el contador, en W − 8 − ancho");
+            Assert.That(pill.Overlaps(chip), Is.False, where);
+        }
+
         [UnityTest]
         public IEnumerator EnXA_Victory_RibbonTitle([Values(100, 130)] int percent)
         {

@@ -743,11 +743,9 @@ namespace AF.UI
                 // a ≥ HudCounterGapDp del contador. Si la píldora «Reiniciar» baja hasta la banda (su etiqueta en dos líneas: en-XA,
                 // o un idioma largo al 130 %), el contador va a su izquierda, a RestartPillGapDp, en lugar de quedar debajo
                 // (Q-T6T-5, pregunta 68 de GDD.md §6.3) [P].
-                float right = _canvasW - HudCounterRightDp;
-                if (counter && RestartPillBottomDp + HudLabelsClearDp > counterY)
-                {
-                    right = Mathf.Min(right, RestartPillLeftEdgeDp - RestartPillGapDp);
-                }
+                float right = counter
+                    ? CounterRightLimit(_canvasW, counterY, _restartPillTwoLines, RestartPillBottomDp, RestartPillLeftEdgeDp)
+                    : _canvasW - HudCounterRightDp;
                 counterX = right - counterW;
                 if (counter && FitSpan(counterW, counterX, 8f, right, blocked, skyLeft, skyRight, out float cx))
                 {
@@ -789,6 +787,24 @@ namespace AF.UI
                 _hudCounterBesideWallet = beside;
                 KeepWalletOffPanel(); // la columna de la cabecera se compacta (o vuelve) para dejarle sitio debajo
             }
+        }
+
+        /// <summary>
+        /// Hasta dónde llega por la derecha el contador de la banda de etiquetas (dp desde la izquierda) con la banda en
+        /// <paramref name="counterTop"/>: <c>W − HudCounterRightDp</c>, salvo que la píldora «Reiniciar» vaya en dos líneas
+        /// (<paramref name="pillTwoLines"/>) y su borde de abajo (<paramref name="pillBottom"/>) baje hasta la banda; entonces, a
+        /// <see cref="RestartPillGapDp"/> de su borde izquierdo (<paramref name="pillLeft"/>; Q-T6T-5, pregunta 68 de GDD.md
+        /// §6.3) [P]. Con la píldora en una línea (hasta TopRowY + 48) nada cambia, tampoco con la banda compacta en TopRowY + 48.
+        /// </summary>
+        internal static float CounterRightLimit(float canvasW, float counterTop, bool pillTwoLines, float pillBottom, float pillLeft)
+        {
+            float right = canvasW - HudCounterRightDp;
+            if (pillTwoLines && pillBottom + HudLabelsClearDp > counterTop)
+            {
+                right = Mathf.Min(right, pillLeft - RestartPillGapDp);
+            }
+
+            return right;
         }
 
         // Borde de abajo de la píldora «Reiniciar» (dp desde arriba del lienzo): TopRowY + 48 con una línea; más con dos (L4).
