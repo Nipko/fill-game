@@ -15,8 +15,9 @@ namespace AF.Ads.Max.Editor
     /// Gradle de AppLovin manda la clave del SDK a <c>api2.safedk.com</c> en cada build, instrumenta la app y puede romper el build con
     /// AGP 9, 08 §7 #1) y la clave del SDK <b>vacía</b> (la pone <see cref="MaxBuildConfig"/> en el build desde fuera del repositorio).</item>
     /// <item><c>ProjectSettings/AppLovinInternalSettings.json</c> (JSON del plugin): el flujo de términos y privacidad de MAX con la
-    /// automatización de Google UMP (08 §7 #2) encendido, con las URL de la política y los términos de la web [P], sin la alerta previa
-    /// de términos en el RGPD y sin geografía de depuración.</item>
+    /// automatización de Google UMP <b>apagado</b> desde D-049 (los anuncios van con AdMob directo y su UMP, y no debe haber dos avisos
+    /// de consentimiento; MAX queda instalado sin servir), con las URL de la política y los términos de la web [P] por si vuelve, sin
+    /// la alerta previa de términos en el RGPD y sin geografía de depuración.</item>
     /// </list>
     /// Escribe <c>[AF.MaxProjectSetup] OK</c> al terminar.
     /// </summary>
@@ -41,7 +42,7 @@ namespace AF.Ads.Max.Editor
             AssetDatabase.SaveAssets();
 
             AppLovinInternalSettings internalSettings = AppLovinInternalSettings.Instance;
-            internalSettings.ConsentFlowEnabled = true;
+            internalSettings.ConsentFlowEnabled = false; // D-049: un solo UMP, el de Google Mobile Ads
             internalSettings.ConsentFlowPrivacyPolicyUrl = PrivacyPolicyUrl;
             internalSettings.ConsentFlowTermsOfServiceUrl = TermsOfServiceUrl;
             internalSettings.ShouldShowTermsAndPrivacyPolicyAlertInGDPR = false;
@@ -54,10 +55,10 @@ namespace AF.Ads.Max.Editor
                 throw new InvalidOperationException(LogPrefix + problem);
             }
 
-            Debug.Log(LogPrefix + "OK. Quality Service apagado, clave vacia en el repositorio, flujo de UMP encendido.");
+            Debug.Log(LogPrefix + "OK. Quality Service apagado, clave vacia en el repositorio, flujo de UMP de MAX apagado (D-049).");
         }
 
-        /// <summary>Null si los ajustes del proyecto son los de D-042; si no, qué falla.</summary>
+        /// <summary>Null si los ajustes del proyecto son los de D-042 con el cambio de D-049; si no, qué falla.</summary>
         public static string? Validate()
         {
             AppLovinSettings settings = AppLovinSettings.Instance;
@@ -68,8 +69,8 @@ namespace AF.Ads.Max.Editor
 
         /// <summary>
         /// La regla, sin tocar los archivos: Quality Service apagado, <b>ninguna clave del SDK en <c>AppLovinSettings.asset</c></b> (la clave
-        /// solo entra en el build, por <see cref="MaxBuildConfig"/>; nunca se escribe en el Integration Manager) y el flujo de UMP
-        /// encendido con la URL de la política.
+        /// solo entra en el build, por <see cref="MaxBuildConfig"/>; nunca se escribe en el Integration Manager) y el flujo de UMP de
+        /// MAX apagado (D-049: el UMP es el de Google Mobile Ads), con la URL de la política guardada.
         /// </summary>
         public static string? Validate(bool qualityServiceEnabled, string? sdkKey, bool consentFlowEnabled, string? privacyPolicyUrl)
         {
@@ -84,9 +85,14 @@ namespace AF.Ads.Max.Editor
                 return "Quality Service encendido (manda la clave a safedk.com en cada build).";
             }
 
-            if (!consentFlowEnabled || privacyPolicyUrl != PrivacyPolicyUrl)
+            if (consentFlowEnabled)
             {
-                return "flujo de consentimiento (UMP) apagado o sin la URL de la politica.";
+                return "flujo de consentimiento (UMP) de MAX encendido: con D-049 el UMP es el de Google Mobile Ads (dos avisos).";
+            }
+
+            if (privacyPolicyUrl != PrivacyPolicyUrl)
+            {
+                return "sin la URL de la politica en el flujo de MAX.";
             }
 
             return null;

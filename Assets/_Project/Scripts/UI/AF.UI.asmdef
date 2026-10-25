@@ -14,6 +14,7 @@
     "AF.Boosters",
     "AF.Ads",
     "AF.Ads.Max",
+    "AF.Ads.Google",
     "AF.IAP",
     "AF.Localization",
     "AF.Audio",

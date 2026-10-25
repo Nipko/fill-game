@@ -7,7 +7,7 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// Ninguna clave de MAX en el repositorio (D-042; regla dura 5): los ajustes versionados del plugin son los de
-    /// <see cref="MaxProjectSetup"/> (sin clave, sin Quality Service, con UMP) y <c>BuildDev</c> y <c>BuildRelease</c> se paran si no.
+    /// <see cref="MaxProjectSetup"/> (sin clave, sin Quality Service y, desde D-049, sin su UMP) y <c>BuildDev</c> y <c>BuildRelease</c> se paran si no.
     /// </summary>
     public sealed class MaxProjectSetupTests
     {
@@ -29,12 +29,12 @@ namespace AF.Tests.EditMode
         public void AKeyOrTheQualityService_FailTheRule()
         {
             const string url = MaxProjectSetup.PrivacyPolicyUrl;
-            Assert.That(MaxProjectSetup.Validate(false, "", true, url), Is.Null);
-            Assert.That(MaxProjectSetup.Validate(false, null, true, url), Is.Null);
-            Assert.That(MaxProjectSetup.Validate(false, "abc", true, url), Does.Contain("clave"));
-            Assert.That(MaxProjectSetup.Validate(true, "", true, url), Does.Contain("Quality Service"));
-            Assert.That(MaxProjectSetup.Validate(false, "", false, url), Is.Not.Null);
-            Assert.That(MaxProjectSetup.Validate(false, "", true, "https://example.com/"), Is.Not.Null);
+            Assert.That(MaxProjectSetup.Validate(false, "", false, url), Is.Null);
+            Assert.That(MaxProjectSetup.Validate(false, null, false, url), Is.Null);
+            Assert.That(MaxProjectSetup.Validate(false, "abc", false, url), Does.Contain("clave"));
+            Assert.That(MaxProjectSetup.Validate(true, "", false, url), Does.Contain("Quality Service"));
+            Assert.That(MaxProjectSetup.Validate(false, "", true, url), Does.Contain("D-049"), "con AdMob directo, el UMP de MAX va apagado");
+            Assert.That(MaxProjectSetup.Validate(false, "", false, "https://example.com/"), Is.Not.Null);
         }
 
         [Test]
