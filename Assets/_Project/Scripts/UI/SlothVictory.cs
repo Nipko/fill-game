@@ -618,7 +618,7 @@ namespace AF.UI
 
         /// <summary>
         /// Crea el rig la primera vez que hace falta, con la regla del arte (MapArtRule, D-052; sin arte, nunca: false). Crea el
-        /// atlas provisional la primera vez (en el Editor y en desarrollo).
+        /// atlas por código la primera vez (en todos los builds).
         /// </summary>
         public bool EnsureArt()
         {

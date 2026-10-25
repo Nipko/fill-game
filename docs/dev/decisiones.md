@@ -3991,5 +3991,6 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   1. **Se retira P-M5** (punto 16 de D-023) y la exigencia de PNG de la fauna: el arte por código sale en todos los builds, release incluido.
   2. **La ranura de `ArtSlots` sigue mandando:** si algún día llega un PNG, sustituye al dibujo por código. Las ranuras no desaparecen.
   3. **Se puede usar en la ficha, las capturas y la UA**, porque es el arte final.
+- **Riesgo anotado:** las banderas simplificadas por código (Brasil, Colombia, Perú, Ecuador y Bolivia, sin escudos) salen ahora en release y en la ficha sin la revisión del abogado, aplazado por D-047; la embaúba y los nombres de fauna siguen pendientes del asesor cultural.
 - **Carril:** `tanda6/arte-release`.
 - **Cómo revertir:** con una decisión nueva del dueño.

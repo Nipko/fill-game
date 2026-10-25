@@ -2238,7 +2238,7 @@ namespace AF.UI
             input.TrayTop = TrayTop;
             input.CanvasWidth = _canvasW;
             input.Seed = flow.LevelNumber;
-            // En release, sin su arte final: dosel, nunca la especie de otro mundo (guion §4.3); la regla, en FaunaArtAvailable.
+            // Sin ningún arte (ni el miquito por código ni el PNG): dosel, nunca la especie de otro mundo (guion §4.3; D-052); la regla, en FaunaArtAvailable.
             FaunaSpecies? candidate = Fauna?.ForLevel(flow.LevelNumber);
             bool art = candidate != null && FaunaArtAvailable(candidate, false);
             FaunaSpecies? species = IntroCast.Resolve(Fauna, flow.Level.World, flow.LevelNumber, isShort ? 2 : 1, art);
