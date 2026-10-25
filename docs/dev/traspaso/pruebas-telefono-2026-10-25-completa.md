@@ -213,3 +213,19 @@ Con `af_level`, leyendo las sondas `AF_STATE` (`b03/*_logcat.txt`).
 7. **Baja. El guion da «40 en Normal»** como premio de victoria; el juego da 20, que es lo de 08 §9 (`eco_reward_normal` = 20). Hay que corregir el guion.
 8. **Baja. La memoria del juego ronda los 600-650 MB de PSS** en el SM-S938B durante una sesión larga. Es estable, pero alta para un puzle 2D; en un teléfono de 3-4 GB (clase A) conviene medirla.
 9. **Informativa. El teléfono estuvo en «No molestar»** (`zen_mode` 1) hasta las ~04:20. Con él, el juego no emite efectos ni las sondas `sfx` y `haptic`: por eso 0 `sfx` en los bloques 0-2 y 6. El dueño lo quitó y desde entonces salen. El bloque 23 (audio) se hará sin «No molestar».
+
+## Respuesta del escritorio a la jornada 1 (2026-10-25)
+
+1. **Textos que pararían un release (1.087):** no es un fallo, es la compuerta de D-018 (`LocReleaseGate`).
+   - Con el ID definitivo, un release se para mientras haya:
+     - texto cultural sin `aprobado_es`: 263 cadenas de `strings.csv` y 820 de `facts.csv` en `pendiente_asesor`;
+     - traducciones en inglés o portugués sin `revisado_nativo`: todas están en `traducido`.
+   - Es el pendiente humano del asesor cultural y de la revisión nativa (puntos 6 y 8 de la ronda del dueño). **Bloquea el primer release:** se lleva al dueño como decisión.
+2. **El ensayo sin APK:** error del guion. Falta `-Apk` (`unity-build.ps1 -Method Release -Rehearsal -Apk` deja `rehearsal.aab` y `rehearsal.apk`). Corregido en el guion.
+3. **`GooglePlayGameSettings.txt` modificado:** el `.gitattributes` de `6914b06f` (`text !eol`) solo actúa cuando el archivo se vuelve a sacar del repositorio. El guion explica cómo hacerlo una vez (renormalizar y `checkout`).
+4. **Confirmación de Volver a la orilla:** es correcta (D-008). Anotada en el guion.
+5. **El dedo del 8:** por diseño. Espera a que se vaya el aviso de Capi y no sale con otro aviso a la vista (`GameScreen.TutorialTips`). Con la cuia usada a los ~6 s, no llegó a salir. Corregido en el guion: hay que esperar al aviso.
+6. **Sin tutorial en el 18 y el 22:** por diseño. La lista única de estrenos (02 §9.1) solo tiene la Cuia chica en el 14 y la Cuia alta en el 27. Las de 1 y 3 son la misma Cuia chica con otra capacidad, y el texto del tutorial («solo guarda dos dosis») no les valdría. Corregido en el guion.
+7. **«40 en Normal»:** error del guion; son 20 (`eco_reward_normal`). Corregido.
+8. **Memoria de 600-650 MB de PSS:** se abre un análisis en el escritorio (audio, texturas generadas por código y cachés) para bajarla antes de medir en un teléfono de gama baja.
+9. **«No molestar»:** anotado. Para el bloque 23, sin él.

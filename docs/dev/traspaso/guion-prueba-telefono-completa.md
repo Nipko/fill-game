@@ -59,6 +59,8 @@ Aquí entra todo.
   Cada excepción es una observación, con su traza.
 - **Sondas:** `AF_LAYOUT`, `AF_STATE`, `AF_EVENT` y `AF_PERF`, descritas en `docs/dev/prototipo-v0.md`. Para tocar, usa la última línea `AF_LAYOUT` de la pantalla que está a la vista.
 - **Jugador automático:** el de las pruebas anteriores, con la solución A* y en modo `run`. Para los bloques de pérdida y de uso, **juega a mano** o con vertidos malos a propósito: el jugador automático nunca se bloquea.
+- **Reiniciar con vertidos hechos** pide confirmación («¿Volver a la orilla?», con Seguir jugando / Deshacer · Marea / Volver a la orilla): tenlo en cuenta en el jugador automático.
+- **`GooglePlayGameSettings.txt` modificado tras un build:** si `git diff ProjectSettings/GooglePlayGameSettings.txt` no muestra cambios de contenido, ejecuta una vez `git add --renormalize ProjectSettings/GooglePlayGameSettings.txt` y `git checkout -- ProjectSettings/GooglePlayGameSettings.txt`: el árbol de trabajo pasa al fin de línea nativo que fija `.gitattributes` (`text !eol`, de `6914b06f`) y deja de salir.
 - **Actividad:** `com.amazonfill.dev/com.unity3d.player.UnityPlayerGameActivity`. Los extras (`af_level`, `af_max_level`, `af_lang`, `af_font_scale`, `af_fake_store`, `af_league`, `af_league_fake`, `af_dev_push`, `af_dev_reject`, `af_mech_off`, `af_ads_fill`, `af_seeds`, `af_canoes`, `af_rules_pour_mode`) están en `LaunchOptions.cs` y en `prototipo-v0.md`. Úsalos para llegar rápido a cada caso, pero haz **al menos un recorrido natural** (bloque 2).
 
 ## 0. Preparación y builds (≈ 1 h 30 min)
@@ -81,7 +83,7 @@ Aquí entra todo.
    - El build deja `ProjectSettings/GooglePlayGameSettings.txt` cambiado solo en los finales de línea: descártalo. Si no aparece, es que el arreglo de `6914b06f` funciona; anótalo.
 3. **Build de ensayo de release** (sin firmar con la clave de subida, que no existe todavía):
    ```
-   pwsh -NoProfile -File scripts/unity-build.ps1 -Method Release -Rehearsal
+   pwsh -NoProfile -File scripts/unity-build.ps1 -Method Release -Rehearsal -Apk
    ```
    Sobre el AAB y el APK que deja, en `Builds/Android/`:
    ```
@@ -115,7 +117,7 @@ Con el perfil limpio y **a mano**, como un jugador nuevo. El dueño mira la pant
    - **3:** el tooltip de Marea tras un vertido que no acerca. Marea ilimitada hasta el 10.
    - **6:** el tooltip «Reiniciar es gratis…» encima de Aguas estancadas, con el pico sobre «Volver a la orilla (gratis)».
    - **7:** la tarjeta del Reto del río ~1 s después de la victoria, bajo TiTino, sin que la tape.
-   - **8:** la Cuia extra regalada, con el dedo sobre «+1 cuia». Úsala y comprueba que el tablero se recoloca con N + 1 cuias.
+   - **8:** la Cuia extra regalada, con el dedo sobre «+1 cuia». El dedo espera a que se vaya el aviso de Capi (no sale con otro aviso a la vista): no la uses antes. Úsala y comprueba que el tablero se recoloca con N + 1 cuias.
    - **10:** la secuencia de la victoria (06 §2.3, cuatro pantallas como mucho, cada una se cierra con un toque): Canasta (+50), Bitácora con tres premios (elige uno y se sella), «Seguir» abre el Mapa del río (`source: l10`) y vuelta al inicio con «Bitácora · Sellada hoy».
 5. **Niveles 11 y 12:**
    - **11:** banner del mundo 2, Tapajós (`world_banner`, con su arte, y `wait_ms` ≈ 0 si se pidió en la victoria del 10). Cosecha doble con el tooltip, sin tapar «Cosecha +20»; vídeo simulado y +20.
@@ -139,7 +141,7 @@ Sigue con el perfil del bloque 1, sin `af_max_level`: es la prueba de que el pro
    - TiTino en la victoria si cabe;
    - las semillas: `earn_virtual_currency` con la cantidad de 05.
 3. **Hitos del camino**, con una captura de cada uno:
-   - **14:** Cuia chica de 2. **18:** de 1. **22:** de 3. Tutorial de una pantalla en el estreno (02 §8).
+   - **14:** Cuia chica de 2, con su tutorial de una pantalla (estreno de 02 §8). **18:** de 1. **22:** de 3. Estas dos no son estrenos (la lista única de 02 §9.1 solo tiene el 14 y el 27), así que salen sin tutorial.
    - **20:** primera Canasta con comodín y el Cántaro visible.
    - **22 en adelante:** intersticial simulado tras la victoria: 1 cada 3 niveles, ≥ 150 s desde el anterior, nunca en un reintento ni tras rendirse. Anota cada intersticial con su nivel y su hora.
    - **25:** tarjeta de la Crecida y la barra. Gana 3, 6 y 10 seguidos y anota los hitos (`streak_milestone` 3 = +300, 6 = cofre, 10 = Cuia extra y río crecido).
@@ -322,7 +324,7 @@ Con el jugador automático, perfil con `af_max_level` alto y `af_level` en cada 
 
 1. **Saldo:**
    - cada ganancia y cada gasto de semillas sale en el HUD y en `earn_virtual_currency` o `spend_virtual_currency`, con su cantidad;
-   - premios de victoria: 40 en Normal, 60 en Difícil y 80 en Muy difícil, o lo que diga 05;
+   - premios de victoria: 20 en Normal, 60 en Difícil y 80 en Muy difícil (`eco_reward_*` de 08 §9), dobles con el río crecido;
    - el saldo nunca baja de 0 ni cambia al reabrir la app.
 2. **Mercado sin tienda (nuevo, `6914b06f`):** con el build normal, con Firebase y Play Billing reales, la app no está en Play Console.
    - El icono del Mercado y el Cántaro **ocultos** en el inicio.
