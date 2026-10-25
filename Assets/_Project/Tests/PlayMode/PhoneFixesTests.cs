@@ -67,7 +67,6 @@ namespace AF.Tests.PlayMode
             BoardLayout.TroopBandOffForTests = false;
             _rig?.Dispose();
             _rig = null;
-            AmbientLayer.Frozen = false;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -250,10 +249,9 @@ namespace AF.Tests.PlayMode
             // Pregunta 48 (b) (D-022; tarea A1): Revelar sin stock, saldo ni video en el 135 (3 filas, las dos burbujas en dos
             // líneas) no saca ningún aviso del tablero (antes, «Te faltan 120 semillas» por la cola, que repetía la burbuja y
             // tapaba la repisa de abajo). Responde la burbuja «Te faltan 120» de la ranura: un latido, sin pisar la burbuja
-            // vecina, y los colores de la etiqueta de precio sin saldo, que vuelven después. Sin cobrar y sin asignaciones. El
-            // ambiente, quieto: desde D-046 (punto 3) el 135 deja la franja de la tropa sobre el panel y por ella pasan los brillos del
-            // río, cuya primera activación (la de cada Image, en Unity) asigna; no es lo que se mide aquí.
-            AmbientLayer.Frozen = true;
+            // vecina, y los colores de la etiqueta de precio sin saldo, que vuelven después. Sin cobrar y sin asignaciones, con el
+            // ambiente en marcha: desde D-046 (punto 3) el 135 deja la franja de la tropa sobre el panel y por ella pasan los brillos
+            // del río, precalentados al cargar (AmbientLayer.Prewarm; T6, carril B, punto 4).
             yield return LoadWithBubbles(135, 0, 0);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;

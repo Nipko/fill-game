@@ -117,6 +117,11 @@ namespace AF.Tests.PlayMode
                 Image[] images = view.Ambient.Near.GetComponentsInChildren<Image>(false);
                 for (int i = 0; i < images.Length; i++)
                 {
+                    if (images[i].canvasRenderer.cull)
+                    {
+                        continue; // mota oculta: recortada y transparente, sin activar ni desactivar (AmbientLayer, T6 carril B)
+                    }
+
                     // Posición en dp desde arriba a la izquierda del lienzo.
                     Vector3 local = canvas.InverseTransformPoint(images[i].rectTransform.position);
                     Rect canvasRect = ((RectTransform)canvas).rect;

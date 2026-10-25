@@ -84,12 +84,14 @@ namespace AF.Presentation
             {
                 _glints[i] = NewImage(_far, "RiverGlint" + i, art.GlintStreak, additive);
                 _glints[i].rectTransform.sizeDelta = new Vector2(6f, 2f);
+                Keep(_glints[i]);
                 _glintAge[i] = -1f;
             }
 
             for (int i = 0; i < PollenCount; i++)
             {
                 _pollen[i] = NewImage(_near, "Pollen" + i, art.Glow, additive);
+                Keep(_pollen[i]);
                 _pollenAge[i] = -1f;
             }
         }
@@ -212,12 +214,12 @@ namespace AF.Presentation
                 int n = 0;
                 for (int i = 0; i < PollenCount; i++)
                 {
-                    n += _pollen[i].gameObject.activeSelf ? 1 : 0;
+                    n += _pollen[i].canvasRenderer.cull ? 0 : 1;
                 }
 
                 for (int i = 0; i < GlintCount; i++)
                 {
-                    n += _glints[i].gameObject.activeSelf ? 1 : 0;
+                    n += _glints[i].canvasRenderer.cull ? 0 : 1;
                 }
 
                 return n;
@@ -264,13 +266,13 @@ namespace AF.Presentation
                 for (int i = 0; i < PollenCount; i++)
                 {
                     _pollenAge[i] = -1f;
-                    SetActive(_pollen[i], false);
+                    Show(_pollen[i], false);
                 }
 
                 for (int i = 0; i < GlintCount; i++)
                 {
                     _glintAge[i] = -1f;
-                    SetActive(_glints[i], false);
+                    Show(_glints[i], false);
                 }
             }
         }
@@ -308,7 +310,7 @@ namespace AF.Presentation
                 if (_pollenAge[i] >= _pollenLife[i])
                 {
                     _pollenAge[i] = -1f;
-                    SetActive(_pollen[i], false);
+                    Show(_pollen[i], false);
                     continue;
                 }
 
@@ -316,7 +318,7 @@ namespace AF.Presentation
                 if (InsidePanel(_pollenPos[i], 6f))
                 {
                     _pollenAge[i] = -1f; // nunca dentro del panel
-                    SetActive(_pollen[i], false);
+                    Show(_pollen[i], false);
                     continue;
                 }
 
@@ -339,7 +341,7 @@ namespace AF.Presentation
                 if (_glintAge[i] >= _glintLife[i])
                 {
                     _glintAge[i] = -1f;
-                    SetActive(_glints[i], false);
+                    Show(_glints[i], false);
                     continue;
                 }
 
@@ -407,7 +409,7 @@ namespace AF.Presentation
                 _pollenAlpha[i] = Mathf.Lerp(0.3f, 0.6f, Next());
                 float s = Mathf.Lerp(2f, 4f, Next()) * 2.5f; // el halo es mayor que la mota (2-4 dp de núcleo)
                 _pollen[i].rectTransform.sizeDelta = new Vector2(s, s);
-                SetActive(_pollen[i], true);
+                Show(_pollen[i], true);
                 ApplyPollen(i);
                 return;
             }
@@ -434,7 +436,7 @@ namespace AF.Presentation
             _glintLife[i] = Mathf.Lerp(0.8f, 1.4f, Next());
             _glintAge[i] = _glintLife[i] * startT;
             _glintPos[i] = p;
-            SetActive(_glints[i], true);
+            Show(_glints[i], true);
             ApplyGlint(i);
         }
 
@@ -487,11 +489,27 @@ namespace AF.Presentation
             return img;
         }
 
-        private static void SetActive(Image img, bool on)
+        // Las motas y los destellos quedan siempre activos y habilitados, y se ocultan con el recorte de su CanvasRenderer (cull)
+        // y alfa 0: activar su GameObject asignaba memoria cada vez que nacía uno (medido en el Editor: 1-2 asignaciones por mota
+        // o destello), y desde D-046 (punto 3) la franja de la tropa hace nacer destellos y motas en mitad de la medida de
+        // asignaciones de los niveles de 3 filas (T6, carril B, punto 4).
+        private static void Keep(Image img)
         {
-            if (img.gameObject.activeSelf != on)
+            img.color = Color.clear;
+            img.canvasRenderer.cull = true;
+            img.gameObject.SetActive(true);
+        }
+
+        // Muestra u oculta una mota o un destello sin activar ni habilitar nada (Keep): oculto, recortado y transparente.
+        private static void Show(Image img, bool on)
+        {
+            if (img.canvasRenderer.cull == on)
             {
-                img.gameObject.SetActive(on);
+                img.canvasRenderer.cull = !on;
+                if (!on)
+                {
+                    img.color = Color.clear;
+                }
             }
         }
 
