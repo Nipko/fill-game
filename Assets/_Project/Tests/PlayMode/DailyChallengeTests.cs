@@ -191,9 +191,12 @@ namespace AF.Tests.PlayMode
         /// con «Volver al inicio» (y la Cosecha doble, si sale) sobre la barra, a 360 × 780 y en 16:9.
         /// </summary>
         [UnityTest]
-        public IEnumerator Calendar_WithAGestureBar_StaysInsideTheSafeArea([Values(2340, 1920)] int heightPx)
+        public IEnumerator Calendar_WithAGestureBar_StaysInsideTheSafeArea([Values(2340, 1920, 1600)] int heightPx)
         {
-            var screen = new Vector4(1080f, heightPx, 120f, 220f);
+            // 1600 px (a 2,5 px/dp, 432 × 640 dp) con 250 px (100 dp) de barra: la cota de abajo actúa y sube el panel, que
+            // centrado («Volver al inicio» y la Cosecha doble) caería sobre la barra.
+            bool low = heightPx == 1600;
+            var screen = low ? new Vector4(1080f, heightPx, 96f, 250f) : new Vector4(1080f, heightPx, 120f, 220f);
             GameScreen.SimulatedScreen = screen;
             yield return Boot();
             GameBootstrap boot = GameBootstrap.Current!;
@@ -218,7 +221,7 @@ namespace AF.Tests.PlayMode
             Canvas.ForceUpdateCanvases();
 
             DailyStampCalendar calendar = daily.Calendar;
-            string where = "el calendario a 1080 × " + heightPx + " px con 220 px de barra";
+            string where = "el calendario a 1080 × " + heightPx + " px con " + (low ? 250 : 220) + " px de barra";
             SafeAreaOverlayTests.Margins(calendar.Canvas, screen, out float safeTop, out float safeBottom, out float canvasH);
             Rect panel = StopCardTests.CanvasRect((RectTransform)calendar.Canvas.transform.Find("CalendarPanel"), calendar.Canvas);
             Rect home = StopCardTests.CanvasRect((RectTransform)calendar.HomeButton.transform, calendar.Canvas);
@@ -226,6 +229,13 @@ namespace AF.Tests.PlayMode
             Assert.That(panel.yMin, Is.GreaterThanOrEqualTo(safeTop + 8f - 0.05f), where + ": el panel, bajo la zona segura de arriba");
             Assert.That(panel.yMax, Is.LessThanOrEqualTo(canvasH - safeBottom - 8f + 0.05f), where + ": el panel, sobre la barra");
             Assert.That(home.yMax, Is.LessThanOrEqualTo(canvasH - safeBottom + 0.05f), where + ": «Volver al inicio», sobre la barra");
+            if (low)
+            {
+                Assert.That(calendar.DoubleHarvestShown, Is.True, where + ": condición del test, con la Cosecha doble");
+                Assert.That(panel.yMin, Is.LessThan(((canvasH - panel.height) * 0.5f) - 0.5f), where + ": más arriba que centrado");
+                Assert.That(panel.yMax, Is.EqualTo(canvasH - safeBottom - 8f).Within(0.05f), where + ": sobre la barra + 8");
+            }
+
             if (calendar.DoubleHarvestShown)
             {
                 Rect twice = StopCardTests.CanvasRect((RectTransform)calendar.DoubleHarvestButton.transform, calendar.Canvas);

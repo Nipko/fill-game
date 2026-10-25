@@ -106,6 +106,46 @@ namespace AF.Tests.PlayMode
             Assert.That(outcome.HasValue, Is.True, "se cierra una vez");
         }
 
+        /// <summary>
+        /// Las cotas de la zona segura de AdOverlay actúan de verdad (revisión del integrador): con un recorte de arriba de 660 px
+        /// (220 dp) el rótulo baja de su sitio proporcional (30 % del alto − 20) a la zona segura + 8; en un lienzo bajo (1080 ×
+        /// 1600 px: a 2,5 px/dp, 432 × 640 dp) con 450 px (180 dp) de barra, «Cerrar» sube de su 68 % a la zona
+        /// segura de abajo + 8.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AdOverlay_WithLargeInsets_TheBoundsMoveTitleAndClose([Values("top", "bottom")] string edge)
+        {
+            Vector4 screen = edge == "top" ? new Vector4(1080f, 2340f, 660f, 48f) : new Vector4(1080f, 1600f, 96f, 450f);
+            GameScreen.SimulatedScreen = screen;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(30)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            AdOverlay overlay = boot.AdOverlayView!;
+            var ads = new FakeAdService(overlay);
+            ads.Show(AdPlacement.DoubleHarvest, _ => { });
+            Canvas.ForceUpdateCanvases();
+
+            Margins(overlay.Canvas, screen, out float safeTop, out float safeBottom, out float canvasH);
+            Rect title = StopCardTests.CanvasRect((RectTransform)overlay.Canvas.transform.Find("Title"), overlay.Canvas);
+            Rect close = StopCardTests.CanvasRect((RectTransform)overlay.CloseButton.transform, overlay.Canvas);
+            string where = "el anuncio con " + (edge == "top" ? "660 px de recorte arriba" : "450 px de barra en 1080 × 1600 px");
+            Debug.Log("AF_SAFE_AD_BOUND " + where + ": lienzo de " + canvasH.ToString("0.0") + " dp, zona segura " + safeTop.ToString("0.0") + " / "
+                + safeBottom.ToString("0.0") + " dp; rótulo " + title + ", Cerrar " + close);
+            if (edge == "top")
+            {
+                Assert.That(title.yMin, Is.GreaterThan((canvasH * 0.30f) - 20f + 0.5f), where + ": el rótulo, más abajo que su sitio proporcional");
+                Assert.That(title.yMin, Is.EqualTo(safeTop + 8f).Within(0.05f), where + ": en la zona segura + 8");
+            }
+            else
+            {
+                Assert.That(close.yMin, Is.LessThan((canvasH * 0.68f) - 0.5f), where + ": «Cerrar», más arriba que su sitio proporcional");
+                Assert.That(close.yMax, Is.EqualTo(canvasH - safeBottom - 8f).Within(0.05f), where + ": sobre la barra + 8");
+                Assert.That(close.yMin, Is.GreaterThan(title.yMax), where + ": bajo el rótulo");
+            }
+
+            overlay.Tick(4000f);
+            overlay.CloseButton.onClick.Invoke();
+        }
+
         // Márgenes de la zona segura de la pantalla simulada en dp del lienzo (arriba y abajo) y alto del lienzo, con la escala
         // de la pantalla de nivel (la de OverlayCanvas; el rect de un lienzo superpuesto sigue a la ventana del Editor, no a la
         // pantalla simulada, así que las posiciones se miden desde arriba).
