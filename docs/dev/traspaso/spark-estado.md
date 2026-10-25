@@ -6,6 +6,15 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-24 · Integración de T6 carril 2 (escritorio)
+
+- Fusionada en `integracion-fase1-fase2` (`4c67ee85`) sobre la Liga y el audio (`ddcfa7de`); solo chocó este archivo (las dos entradas, conservadas). code-reviewer del escritorio: APROBADO, sin choques con la Liga (la línea de puntos va dentro del panel de victoria, sin la cola de avisos) ni con la pausa de Música y Sonido.
+- El riesgo `PlayGamesCloudBootTests.ALateCloud_…` (fallo por la fecha) queda resuelto: `economy_ts` de la nube relativo a hoy, en un commit aparte.
+- Verificación en el escritorio (x64): dotnet build 0 avisos; dotnet test 1.002 (996 + 6); `validate_schema.py` 116/116; `apply_translations.py --check` OK; `rc_defaults.py --check` idéntico (254); compila; EditMode 4.535 (4.532 + 3); PlayMode 2.064 (1.770 + 294), sin fallos, 36 min; build de desarrollo OK con `check-manifest -Mode dev`, `check-16kb` y `check-no-unity-iap` OK.
+- Queda el punto 7 (en el teléfono, un nivel de 14-16 cuias en el primer intento) y la pregunta 68 de GDD.md §6.3.
+
+---
+
 ## 2026-10-24 · T6 · Carril 2: sitio para la tropa con 3 filas (`spark/t6-tropa-3filas`): HECHA con las decisiones del dueño (Q-T6T-3 y Q-T6T-4, 2026-10-24) · verificación completa (un fallo ajeno, por la fecha) · code-reviewer APROBADO · lista para integrar
 
 - **Encargo:** `spark-audio-tablero.md`, carril 2 (puntos 1-7); D-046, punto 3. Rama desde `origin/integracion-fase1-fase2` en `3ab273f9`. Sin empujar (lo empuja el integrador).
