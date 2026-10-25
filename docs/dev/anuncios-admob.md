@@ -111,12 +111,14 @@ Sin bajadas de versión ni choques: las incidencias del plugin con AGP 9 (#4157 
 - Proveedores: `com.google.android.gms.ads.MobileAdsInitProvider` (initOrder 100), `com.google.firebase.provider.FirebaseInitProvider` (initOrder 100) y `androidx.startup.InitializationProvider` (sin initOrder) con `WorkManagerInitializer`, `EmojiCompatInitializer`, `ProcessLifecycleInitializer` y `ProfileInstallerInitializer`.
 - `meta-data`: `com.google.android.gms.ads.APPLICATION_ID` = el App ID de §2, `OPTIMIZE_INITIALIZATION` y `OPTIMIZE_AD_LOADING` = true, `DELAY_APP_MEASUREMENT_INIT` = true. `uses-library` opcionales `android.ext.adservices` y `org.apache.http.legacy`.
 
-**Compuertas (2026-10-25, escritorio x64):** ver la tabla de §9 del informe del carril; el plugin y su árbol no traen bibliotecas nativas (19 bibliotecas de 64 bits, todas alineadas a 16 KB, igual que antes).
+**Compuertas (2026-10-25, escritorio x64, `unity-build.ps1 -Method Dev` y `-Method Release -Rehearsal`):** el plugin y su árbol no traen bibliotecas nativas (19 bibliotecas de 64 bits, todas alineadas a 16 KB, igual que antes). El ensayo de release lleva el mismo manifiesto (con `debuggable=false`).
 
 | Artefacto | Tamaño | `check-manifest -Mode dev` | `check-release-classes` | `check-no-unity-iap` | `check-16kb` | `size-gate` |
 |---|---|---|---|---|---|---|
 | `dev.apk` | 76.011.517 B (72,49 MiB) | OK | lleva `firebase-appcheck-debug` (esperado en desarrollo) | OK | OK (19) | — |
-| `rehearsal.aab` | (ver §8 bis) | | | | | |
+| `rehearsal.aab` | 59.035.955 B (59,04 MB) | OK | OK (4 `.dex`, 28.679 clases) | OK | OK (19) | OK (≤ 80 MB; sin `bundletool`, solo el archivo) |
+
+- **Peso de Google Mobile Ads:** unos **+3,1 MB** en el AAB del ensayo (55,94 MB antes, en `integracion-fase1-fase2`) y +3,2 MB en `dev.apk` (~72,8 MB antes); unas 9.000 clases más en el `.dex` del release. MAX sigue dentro (2-3 MB) aunque no sirva.
 
 ## 9. Data Safety y política
 
