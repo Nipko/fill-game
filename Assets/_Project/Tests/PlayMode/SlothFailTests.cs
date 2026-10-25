@@ -478,8 +478,8 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View!.Failed.Visible, Is.True);
         }
 
-        // Espera al aviso de TiTino como WaitForNotice, sin exigirlo: true si sale.
-        private static bool NoticeShows(GameBootstrap boot)
+        // Espera al aviso de TiTino como WaitForNotice, sin exigirlo: true si sale (también lo usa SlothFailSnapshotTests).
+        internal static bool NoticeShows(GameBootstrap boot)
         {
             GameScreen view = boot.View!;
             for (int t = 0; t < 6000 && !view.SlothNoticeVisible; t += PlayModeHelpers.FrameMs)

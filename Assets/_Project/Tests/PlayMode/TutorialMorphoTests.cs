@@ -199,7 +199,7 @@ namespace AF.Tests.PlayMode
         // 16:9 desde DC3 (360 × 640 dp; D-028): en el 12 (2 filas) la franja mide 4,1 dp y el muelle no da para la tarjeta, así que
         // la instrucción sale como aviso de texto (el tutorial no se pierde; GameScreen.Cards.cs, sonda «toast»). True si salió así
         // (y lo comprueba); false si salió TiTino. Pendiente del dueño (open issue de DC3).
-        private static bool AsToastIn16x9(GameBootstrap boot, string at)
+        internal static bool AsToastIn16x9(GameBootstrap boot, string at)
         {
             GameScreen view = boot.View!;
             for (int t = 0; t < 6000 && !view.TutorialSlothVisible && view.ToastText == null; t += PlayModeHelpers.FrameMs)
@@ -469,7 +469,8 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Capturas de la presentación de Morpho en el 12 (tarea TU1b; 04 §2.3; 02 §13), en <c>Logs/snapshots/es-419/</c>:
     /// <c>tu1b_l12_{640|780}_{100|130}</c>, con TiTino en el sitio de 02 §13 y D-016 (T5-B; la franja del panorama si mide ≥ 64
-    /// dp y, si no, el muelle), y <c>tu1b_l12_dock_{640|780}_{100|130}</c>, con la franja forzada por debajo de 64 dp: sobre el
+    /// dp y, si no, el muelle; a 640, 16:9 desde DC3, TiTino no cabe y la captura enseña la instrucción como aviso de texto, como
+    /// mide <c>NoIntersection_640And780_100And130_AndNoTouches</c>), y <c>tu1b_l12_dock_{640|780}_{100|130}</c>, con la franja forzada por debajo de 64 dp: sobre el
     /// muelle, con su cola sobre el botón Pista (insignia «+3»). Cada captura comprueba los solapes y escribe una línea <c>AF_TUTORIAL</c>. Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.TutorialMorphoSnapshotTests</c> sin <c>-nographics</c>).
     /// </summary>
@@ -503,23 +504,35 @@ namespace AF.Tests.PlayMode
                     string suffix = (small ? "640" : "780") + "_" + (scale > 1.01f ? "130" : "100");
                     string dir = Prepare(small, scale);
                     yield return TutorialMorphoTests.Load(new MemoryProfileStore(FunnelSetup.Profile(500)));
-                    yield return Capture(GameBootstrap.Current!, dir, "tu1b_l12_" + suffix, false);
+                    yield return Capture(GameBootstrap.Current!, dir, "tu1b_l12_" + suffix, false, small);
                     Release();
 
                     // La otra rama de 02 §13, con la franja forzada por debajo de 64 dp: sobre el muelle, con la cola sobre Pista.
                     dir = Prepare(small, scale);
                     GameScreen.TutorialBandOverrideDp = 40f;
                     yield return TutorialMorphoTests.Load(new MemoryProfileStore(FunnelSetup.Profile(500)));
-                    yield return Capture(GameBootstrap.Current!, dir, "tu1b_l12_dock_" + suffix, true);
+                    yield return Capture(GameBootstrap.Current!, dir, "tu1b_l12_dock_" + suffix, true, small);
                     GameScreen.TutorialBandOverrideDp = null;
                     Release();
                 }
             }
         }
 
-        private static IEnumerator Capture(GameBootstrap boot, string dir, string name, bool forcedDock)
+        private static IEnumerator Capture(GameBootstrap boot, string dir, string name, bool forcedDock, bool small)
         {
             GameScreen view = boot.View!;
+            if (small && !forcedDock && TutorialMorphoTests.AsToastIn16x9(boot, name))
+            {
+                // 16:9 (D-028): sin sitio para TiTino, la instrucción sale como aviso de texto (NoIntersection_640And780_…): la
+                // captura enseña ese aviso, con el mismo nombre.
+                SnapshotKit.Attach(boot);
+                PlayModeHelpers.Step(boot, 300);
+                Debug.Log("AF_TUTORIAL " + name + ": sin sitio para TiTino, aviso de texto «" + view.ToastText + "», " + view.LastTutorialProbe);
+                yield return SnapshotKit.Wait(0.2f);
+                SnapshotKit.Save(dir, name);
+                yield break;
+            }
+
             SlothNoticeCard card = TutorialSlothTests.WaitForInstruction(boot, name);
             SnapshotKit.Attach(boot);
             PlayModeHelpers.Step(boot, 600); // el gesto sloth_present termina de entrar (0,6 s)

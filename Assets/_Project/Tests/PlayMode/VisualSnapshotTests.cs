@@ -38,6 +38,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             LaunchOptions.Reset();
+            GameBootstrap.ResetDailyOverrides();
             SnapshotKit.Release();
         }
 
@@ -520,7 +521,7 @@ namespace AF.Tests.PlayMode
         /// Sort (ficha §7.1; <c>Logs/device/magicsort/analisis/det_ms/d_000070.jpg</c> y <c>d_011780.jpg</c>):
         /// <c>10_lobby</c> (nivel 4 guardado, 1.240 semillas, sin canoas antes del 31), <c>10b_lobby_l31</c> (con
         /// <c>af_level_offset</c> = 30: canoas 3/5 con cronómetro), <c>10c_content_end</c> («El río sigue creciendo» tras el
-        /// 300, el último nivel del catálogo desde C1a), <c>10d_no_canoes</c> (Sin canoas en el 31, con el cronómetro) y
+        /// 700, el último nivel del catálogo, sin el Reto en el build), <c>10d_no_canoes</c> (Sin canoas en el 31, con el cronómetro) y
         /// <c>10e_victory_home</c> (victoria con «Inicio»).
         /// </summary>
         [UnityTest]
@@ -564,17 +565,22 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Save(dir, "10d_no_canoes");
 
             LaunchOptions.LevelOffsetOverride = null;
-            Profile p301 = Wallet.NewProfile(clock);
-            p301.Progress.NextLevel = 301;
-            p301.Progress.MaxLevel = 300;
-            p301.Wallet.Seeds = 300;
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p301));
+            // Fin del contenido: con los 700 niveles publicados ya no es el 301, sino el 701 (Fx16bTests.LoadAfter700), y sin el
+            // Reto en el build (D-008), que tras el 700 se quedaría el botón Jugar.
+            GameBootstrap.DailyPoolDisabledOverride = true;
+            Profile p701 = Wallet.NewProfile(clock);
+            p701.Progress.NextLevel = 701;
+            p701.Progress.MaxLevel = 700;
+            p701.Progress.MapSeenLevel = 700;
+            p701.Wallet.Seeds = 300;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p701));
             boot = GameBootstrap.Current!;
             SnapshotKit.AttachLobby(boot);
             Assert.That(boot.PressPlay(), Is.True);
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.ContentEnd));
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, "10c_content_end");
+            GameBootstrap.ResetDailyOverrides();
 
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;

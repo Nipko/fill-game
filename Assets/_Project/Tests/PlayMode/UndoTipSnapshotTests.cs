@@ -15,7 +15,8 @@ namespace AF.Tests.PlayMode
     /// Capturas del respaldo del tooltip de Marea en el 5 (tarea DC23; D-030, pregunta 15 (b); 02 §13: «o al inicio del nivel 5
     /// si no ocurrió»), en <c>Logs/snapshots/es-419/</c>: <c>dc23_l5_{780|640}_{100|130}</c>, el tooltip a la vista tras la
     /// intro del 5 con un perfil que no lo vio en el 3, con la cola de la tarjeta de TiTino señalando el botón de Marea. Cada
-    /// captura comprueba los solapes (<see cref="TutorialSlothTests.AssertClear"/>) y escribe una línea <c>AF_TUTORIAL</c>.
+    /// captura comprueba los solapes (<see cref="TutorialSlothTests.AssertClear"/>) y escribe una línea <c>AF_TUTORIAL</c>. A 640
+    /// (16:9 desde DC3, D-028) TiTino no cabe y la captura enseña el tooltip como aviso de texto.
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.UndoTipSnapshotTests</c>
     /// sin <c>-nographics</c>).
     /// </summary>
@@ -54,6 +55,20 @@ namespace AF.Tests.PlayMode
                     PlayModeHelpers.Step(boot, 50);
 
                     GameScreen view = boot.View!;
+                    if (small && TutorialMorphoTests.AsToastIn16x9(boot, name))
+                    {
+                        // 16:9 desde DC3 (D-028): sin sitio para TiTino, el tooltip sale como aviso de texto (como el de Morpho en
+                        // el 12): la captura enseña ese aviso, con el mismo nombre.
+                        SnapshotKit.Attach(boot);
+                        PlayModeHelpers.Step(boot, 300);
+                        Debug.Log("AF_TUTORIAL " + name + ": sin sitio para TiTino, aviso de texto «" + view.ToastText + "», " + view.LastTutorialProbe);
+                        yield return SnapshotKit.Wait(0.2f);
+                        SnapshotKit.Save(dir, name);
+                        SnapshotKit.Release();
+                        LaunchOptions.Reset();
+                        continue;
+                    }
+
                     SlothNoticeCard card = TutorialSlothTests.WaitForInstruction(boot, name);
                     SnapshotKit.Attach(boot);
                     PlayModeHelpers.Step(boot, 600); // el gesto sloth_present termina de entrar (0,6 s)

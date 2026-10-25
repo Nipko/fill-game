@@ -19,9 +19,9 @@ namespace AF.Tests.PlayMode
     /// teléfono): el Mapa del fin de contenido al abrir (la canoa en Tambo), a medio viaje y al llegar a la naciente;</description></item>
     /// <item><description><c>fx15_rio_sigue_creciendo</c> y <c>fx15_inicio_tras_700</c>: la pantalla de debajo al cerrar el
     /// Mapa y el inicio después, con «Jugar · Nivel 701» (observación 2: pregunta para el dueño, sin cambios);</description></item>
-    /// <item><description><c>fx15_l2_al_empezar</c>: el 2 con perfil limpio, 6 s después de la intro (la instrucción de TiTino ya se fue) y sin
-    /// dedo guía (por diseño: sale tras el primer vertido que deja la lección posible; las capturas con el dedo son las
-    /// <c>dc6_l2_*</c> de <see cref="TutorialFingerSnapshotTests"/>);</description></item>
+    /// <item><description><c>fx15_l2_al_empezar</c>: el 2 con perfil limpio, 6 s después de la intro (la instrucción de TiTino ya se fue),
+    /// con el dedo guía en el vertido que abre el hueco de 2 (B11, Q-B11-1; antes de B11 el dedo esperaba a ese vertido y la captura
+    /// salía sin él; las del dedo sobre la racha son las <c>dc6_l2_*</c> de <see cref="TutorialFingerSnapshotTests"/>);</description></item>
     /// <item><description><c>fx15_tarjeta_manaos</c>: la tarjeta de Manaos con el miquito del tramo y el nombre de su fila,
     /// «sauim-de-coleira» (pendiente del asesor).</description></item>
     /// </list>
@@ -124,8 +124,14 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Attach(boot);
             PlayModeHelpers.Step(boot, 6000);
             Assert.That(view.IntroTroopVisible, Is.False);
-            Assert.That(view.TutorialFingerVisible, Is.False, "por diseño: el tablero inicial del 2, lleno, no deja la lección");
-            Assert.That(view.TutorialFingerArmed, Is.True, "espera al primer vertido que la deja posible");
+            // Desde B11 (Q-B11-1) el tablero inicial del 2, lleno, ya no deja el dedo esperando: señala antes el vertido que abre el
+            // hueco de 2 (TutorialFingerTests.Level2_PointsFirstAtThePourThatOpensTheLesson_…). La captura enseña ese dedo.
+            for (int t = 0; t < 4000 && !view.TutorialFingerVisible; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs); // el dedo va en bucle: la captura, con él a la vista
+            }
+
+            Assert.That(view.TutorialFingerVisible, Is.True, "B11 (Q-B11-1): el dedo señala el vertido que abre la lección");
             yield return SnapshotKit.Wait(0.2f);
             SnapshotKit.Save(dir, "fx15_l2_al_empezar");
         }
