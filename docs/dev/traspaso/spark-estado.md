@@ -6,7 +6,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
-## 2026-10-24 · T6 · Carril B: solapes y safe area pendientes (`spark/t6-pulido-pantalla`): HECHA · verificación completa sin fallos · code-reviewer: CAMBIOS NECESARIOS, atendidos (pendiente de la segunda ronda, la lanza el integrador)
+## 2026-10-24 · T6 · Carril B: solapes y safe area pendientes (`spark/t6-pulido-pantalla`): HECHA · verificación completa sin fallos · code-reviewer: APROBADO (2.ª ronda, tras los CAMBIOS NECESARIOS atendidos en `198ca31c`, `31eb486d` y `d432d4ee`)
 
 - **Encargo:** `spark-calidad-pulido.md`, carril B (puntos 1-6). Rama desde `origin/integracion-fase1-fase2` en `645d1856`. Sin empujar.
 - **Commits:** `a9ee1e87` (tarjeta del Reto a 320 dp), `470624f8` (Q-T6T-5), `e8316103` (safe area del anuncio y del calendario, con tests), `f78e6dcd` (brillos y polen del río sin activar GameObjects), `8e60aa1e` (esta entrada); tras la revisión, `198ca31c` (Q-T6T-5 solo con Reiniciar en dos líneas), `31eb486d` (tests en que actúan las cotas de zona segura), `d432d4ee` (la Bitácora se recoloca cuando crece la tarjeta del Reto, comentarios y Q-T6P-1/3 en GDD.md) y el que pone al día esta entrada.
