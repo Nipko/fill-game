@@ -22,20 +22,20 @@ namespace AF.Tests.EditMode
         [Test]
         public void ANewProfile_IsTheFirstRun()
         {
-            Assert.That(GameBootstrap.StartsAsFirstRun(true, false, false, Fresh()), Is.True);
-            Assert.That(GameBootstrap.StartsAsFirstRun(true, false, true, Fresh()), Is.True);
+            Assert.That(GameBootstrap.StartsAsFirstRun(true, false, false, false, Fresh()), Is.True);
+            Assert.That(GameBootstrap.StartsAsFirstRun(true, false, false, true, Fresh()), Is.True);
         }
 
         [Test]
         public void ASavedProfileNeverStarted_AskedForTheConsent_IsTheFirstRun()
         {
-            Assert.That(GameBootstrap.StartsAsFirstRun(false, false, true, Fresh()), Is.True, "cerrada en la edad y vuelta a abrir");
+            Assert.That(GameBootstrap.StartsAsFirstRun(false, false, false, true, Fresh()), Is.True, "cerrada en la edad y vuelta a abrir");
         }
 
         [Test]
         public void ASavedProfile_WithoutTheConsentScreen_GoesToTheLobby()
         {
-            Assert.That(GameBootstrap.StartsAsFirstRun(false, false, false, Fresh()), Is.False, "ya pasó la pantalla previa al nivel 1");
+            Assert.That(GameBootstrap.StartsAsFirstRun(false, false, false, false, Fresh()), Is.False, "ya pasó la pantalla previa al nivel 1");
         }
 
         [Test]
@@ -44,17 +44,26 @@ namespace AF.Tests.EditMode
             Profile progressed = Fresh();
             progressed.Progress.NextLevel = 4;
             progressed.Progress.MaxLevel = 3;
-            Assert.That(GameBootstrap.StartsAsFirstRun(false, false, true, progressed), Is.False);
+            Assert.That(GameBootstrap.StartsAsFirstRun(false, false, false, true, progressed), Is.False);
 
             Profile withLevel = Fresh();
             withLevel.LevelState = new LevelStateData();
-            Assert.That(GameBootstrap.StartsAsFirstRun(false, false, true, withLevel), Is.False);
+            Assert.That(GameBootstrap.StartsAsFirstRun(false, false, false, true, withLevel), Is.False);
+        }
+
+        [Test]
+        public void ALockedProfile_AskedForTheConsentEveryBoot_GoesToTheLobby()
+        {
+            // 08 §4.4: TooNew o MigrationFailed dan un perfil en blanco que no se guarda (firstRun false); el consentimiento no queda
+            // guardado y la pantalla sale en cada arranque. Sigue al inicio, bajo el aviso del perfil, como antes.
+            Assert.That(GameBootstrap.StartsAsFirstRun(false, false, true, true, Fresh()), Is.False);
+            Assert.That(GameBootstrap.StartsAsFirstRun(false, false, true, false, Fresh()), Is.False);
         }
 
         [Test]
         public void AfterARebuild_Never()
         {
-            Assert.That(GameBootstrap.StartsAsFirstRun(true, true, true, Fresh()), Is.False);
+            Assert.That(GameBootstrap.StartsAsFirstRun(true, true, false, true, Fresh()), Is.False);
         }
     }
 }

@@ -187,6 +187,7 @@ La app aún no existe en Play Console (D-034). Cuando el dueño la cree, en este
    - Cerrar la app justo tras pagar (antes de «Confirmando…»): al reabrir, crédito una vez.
    - Modo avión tras pagar: queda en la cola; al volver la red, crédito una vez.
    - **`deferred_ack`**: con el backend de dev apagado (`biz_backend_enabled = false` en Remote Config de dev) y `sec_purchase_deferred_ack_h` en su mínimo, comprar un consumible y esperar el plazo. En Play Console › Pedidos el pedido sale reconocido y sin reembolso; la app no acredita nada. Al encender el backend, crédito una vez y después el consumo.
+     - Ojo con este caso en una **instalación nueva**: con `biz_backend_enabled = false` no hay UID anónimo, Play no se conecta y el Mercado queda **oculto** (sin precios de la tienda; D-046, añadido del 2026-10-24, y prueba del 2026-10-25, jornada 2, observación 4). El «no disponible» de F3-5 (el Mercado se abre para decirlo) solo lo ve quien ya tenía UID y precios de Play antes de apagarlo.
    - Sin anuncios y reinstalar con la misma cuenta y el mismo UID: vuelve una vez (restauración).
    - Banda 13-17: la segunda confirmación con el precio de la tienda antes de la hoja de Play, y Play pide su autenticación de compras según los ajustes de la cuenta.
    - Banda `<13`: el Mercado no vende y Play no se conecta.

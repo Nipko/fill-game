@@ -1835,7 +1835,7 @@ namespace AF.UI
             {
                 // 02 §14: con un nivel en curso guardado se reabre tal cual (sin intro, con su modal), sin cobrar nada. Tras la
                 // reconstrucción por idioma, el inicio (se venía de él: el nivel que se dejó ya no está en curso).
-                _app.Start(StartsAsFirstRun(firstRun, rebuilt, consentAsked, _profile ?? profile), profile.LevelState);
+                _app.Start(StartsAsFirstRun(firstRun, rebuilt, locked, consentAsked, _profile ?? profile), profile.LevelState);
             }
 
             if (reopenSettings)
@@ -2268,9 +2268,11 @@ namespace AF.UI
         /// estrenar (siguiente nivel 1, sin máximo ni nivel guardado): la primera apertura guarda el perfil al momento
         /// (<see cref="LoadProfile"/>), así que, si la app se cerró en la pantalla de edad y se vuelve a abrir, el perfil ya existe pero el
         /// jugador nunca pasó la pantalla previa al nivel 1 (prueba del 2026-10-25, jornada 2: tras cinco arranques en frío, la edad y el
-        /// consentimiento llevaban al inicio). Tras una reconstrucción de la escena, nunca (se venía del inicio).
+        /// consentimiento llevaban al inicio). Tras una reconstrucción de la escena, nunca (se venía del inicio). Con el perfil en solo
+        /// lectura (08 §4.4: <c>TooNew</c> o <c>MigrationFailed</c>), tampoco por la segunda vía: el perfil en blanco de la sesión no
+        /// guarda el consentimiento y la pantalla sale en cada arranque, que debe seguir yendo al inicio bajo el aviso del perfil.
         /// </summary>
-        internal static bool StartsAsFirstRun(bool firstRun, bool rebuilt, bool consentAsked, Profile profile)
+        internal static bool StartsAsFirstRun(bool firstRun, bool rebuilt, bool locked, bool consentAsked, Profile profile)
         {
             if (rebuilt)
             {
@@ -2282,7 +2284,7 @@ namespace AF.UI
                 return true;
             }
 
-            return consentAsked && profile.LevelState == null && profile.Progress.MaxLevel <= 0 && profile.Progress.NextLevel <= 1;
+            return !locked && consentAsked && profile.LevelState == null && profile.Progress.MaxLevel <= 0 && profile.Progress.NextLevel <= 1;
         }
 
         private static bool IsLocked(ProfileLoadStatus status)
