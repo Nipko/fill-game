@@ -20,6 +20,10 @@ CHROME = next((p for p in (r"C:\Program Files\Google\Chrome\Application\chrome.e
 TRABAJOS = [
     ("icono-1024.svg", "app-store-1024.png", 1024, 1024),
     ("icono-1024.svg", "google-play-512.png", 512, 512),
+    ("icono-1024.svg", "favicon-16.png", 16, 16),
+    ("icono-1024.svg", "favicon-32.png", 32, 32),
+    ("icono-1024.svg", "apple-touch-icon.png", 180, 180),
+    ("feature-graphic.svg", "feature-graphic.png", 1024, 500),
     ("adaptativo-fondo.svg", "android-fondo-432.png", 432, 432),
     ("adaptativo-frente.svg", "android-frente-432.png", 432, 432),
     ("adaptativo-monocromo.svg", "android-monocromo-432.png", 432, 432),

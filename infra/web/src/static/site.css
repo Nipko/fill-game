@@ -42,7 +42,8 @@ main:focus { outline: none; }
 .skip:focus { left: 1rem; top: 1rem; background: var(--surface); padding: 0.5rem 1rem; z-index: 1; }
 .site-header, main, .site-footer, .draft { max-width: 46rem; margin: 0 auto; padding-left: 1rem; padding-right: 1rem; }
 .site-header { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; padding-top: 1rem; padding-bottom: 1rem; }
-.brand { font-weight: 700; font-size: 1.25rem; text-decoration: none; color: var(--fg); }
+.brand { display: inline-flex; align-items: center; text-decoration: none; line-height: 0; }
+.brand img { display: block; width: 8.875rem; height: auto; max-width: min(42vw, 11rem); }
 nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
 nav a[aria-current="page"] { font-weight: 700; text-decoration: none; color: var(--fg); }
 .draft { background: var(--draft-bg); color: var(--draft-fg); border-radius: 0.5rem; padding-top: 0.75rem; padding-bottom: 0.75rem; }

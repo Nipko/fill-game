@@ -1,6 +1,6 @@
 # Ficha de Google Play · es-419 (idioma predeterminado) · BORRADOR
 
-- **Estado:** borrador del bloque B13 de la tanda 5 (2026-10-20), puesto al día el 2026-10-23 (Parallext, LLC, D-041; web en `infra/web/`; anuncios condicionados a D-042; Q-B13-n decididas el 2026-10-20). Nada de esto se publica hasta tener el dictamen de marca (08 §13.1 #1; `docs/legal/marca.md`) y la revisión del dueño.
+- **Estado:** borrador de la ficha 1.0, actualizado el 2026-10-24 (Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora prevista, D-041; Liga según D-046). La identidad visual vigente es v2 (D-045); el registro del signo está aplazado. Nada se publica sin revisión del dueño, dictamen jurídico y comprobación del build y de sus opciones de producción.
 - **Fuentes:** glosario §1.3 (título y descripción corta, canon), 08 §13.1 #5 (límites y la línea de independencia), 07 §10 (capturas y vídeo), 01 §1-§2 (qué se promete), glosario §5, §7 y §8-§9 (nombres).
 - **Reglas de redacción:** español latino neutro con tuteo; sin «Best», «#1», «Free», mayúsculas sostenidas ni emojis (glosario §1.1); «Tintalú» siempre con tilde; ningún identificador ni nombre propio con la cadena «amazon» (la palabra solo aparece de forma descriptiva y en la línea de independencia, que exige 08 §13.1 #5).
 - **Marcas:** `[PENDIENTE: dueño]`, `[PENDIENTE: abogado]`; **pendiente de revisión** = lo cultural (fauna, lugares, comodines con nombre de fauna o tupí), que revisa el asesor cultural (07 §8.2, fila «Ficha de tienda y creativos de UA»). Las preguntas abiertas están en `../README.md`.
@@ -57,6 +57,7 @@ Cada día, algo nuevo
 - Bitácora del río: sella una página al día y elige tu premio.
 - Canasta: cada 10 niveles, gratis y con su contenido a la vista. Nada de cajas sorpresa.
 - Crecida: encadena victorias para que suba el río.
+- Liga del río: desde el nivel 41, suma puntos cada semana y consulta las clasificaciones global y de tu país. Otros jugadores verán tu seudónimo automático, la bandera y los puntos. [[ABOGADO: revisar]]
 
 Quién te acompaña
 TiTino, un perezoso que vive en su árbol donde el río entra al mar, te anima desde casa. Capi, la capibara, te trae cuias y rema la canoa. Rosa, la boto, te lleva río arriba.
@@ -79,7 +80,7 @@ Juego independiente inspirado en la cuenca amazónica; sin relación con Amazon.
 
 Recuento: `../README.md` §2 (Unicode NFC). La línea del asesor cultural va solo con su consentimiento (Q-B13-12 (a)). Notas de contenido:
 - **Anuncios y videos (D-042):** «Los videos opcionales […] necesitan internet», «con anuncios» y «Puedes quitar los anuncios entre niveles con «Sin anuncios»» solo valen si el build que se publica lleva MAX. Hoy el juego no muestra anuncios (privacidad de la web, sección 2). Si la 1.0 saliera sin MAX, se quitan esas frases y se cambia «con anuncios y compras opcionales» por «con compras opcionales».
-- **Sin promesas que el juego no cumpla:** cada frase de la descripción se comprueba con la build final antes de enviar (comodines, Reto del río, Bitácora, Canasta, Crecida, patrones de fruta, Datos del río, Frutas del río y juego sin conexión). No se nombra ningún producto de compra ni un precio: los da Google Play.
+- **Sin promesas que el juego no cumpla:** cada frase de la descripción se comprueba con la build final antes de enviar (comodines, Reto del río, Bitácora, Canasta, Crecida, Liga, patrones de fruta, Datos del río, Frutas del río y juego sin conexión). La Liga requiere internet, desbloquea en el 41 y solo debe anunciarse si el build y la configuración de producción la habilitan. No se nombra ningún producto de compra ni un precio: los da Google Play.
 - Los subtítulos van en tipo oración («Cómo se juega»), sin mayúsculas sostenidas (glosario §1.1). Play no admite negritas ni encabezados en la descripción [NV]: un subtítulo es solo una línea propia.
 - «Nueve mundos de cinco países» y la Luciérnaga dependen del alcance de la 1.0 (mundos 1-9; glosario §8): se comprueban con la build final.
 - No se promete el número de niveles ni el peso de descarga hasta la build de release (Q-B13-7, Q-B13-8).

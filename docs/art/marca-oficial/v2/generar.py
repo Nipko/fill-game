@@ -478,6 +478,18 @@ def icono_en(x, y, size, rid):
             f'<g transform="translate({x} {y}) scale({s:.5f})"><g clip-path="url(#{rid})">{fondo()}\n{frente()}</g></g>')
 
 
+def grafico_funciones(font):
+    """Banner provisional de Play: icono y nombre, compuestos con las mismas piezas del logo horizontal."""
+    d, _ = texto_a_path(font, "Tintalú", 0, 0, 180, track=-0.005)
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" width="1024" height="500">
+{DEFS}
+  <rect width="1024" height="500" fill="url(#cielo)"/>
+  {icono_en(28, 70, 360, "feature-rio")}
+  <path d="{d}" fill="{MARFIL_TXT}" transform="translate(410 294)"/>
+</svg>
+'''
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     w = lambda name, body: open(os.path.join(OUT, name), "w", encoding="utf-8").write(body)
@@ -500,6 +512,7 @@ def main():
           f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -20 {Wv + 40:.0f} 740" width="{Wv + 40:.0f}" height="740">\n'
           f'{DEFS}\n{icono_en((Wv - 420) / 2, 0, 420, "r2")}\n'
           f'<path d="{d}" fill="{color}" transform="translate({(Wv - tw) / 2:.1f} 680)"/>\n</svg>\n')
+    w("feature-graphic.svg", grafico_funciones(font))
     print("inclinación", round(math.degrees(V["r"]), 1), "grados; SVG en", OUT)
 
 

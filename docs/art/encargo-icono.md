@@ -1,6 +1,8 @@
 # Tintalú: dirección y encargo del icono
 
-23-10-2026 · **Identidad oficial v1 aprobada por el dueño:** una cuia de vidrio que vierte púrpura al río ámbar, con un meandro adicional al fondo. Dosis transversales fieles al juego; el río cambia de color solo desde el vertimiento aguas abajo. El paquete de [marca oficial v1](marca-oficial/v1/README.md) contiene el maestro aprobado, logotipos y exportaciones Android, iOS y web. Preparado y verificado localmente; integración en la app pendiente. Registro de marca aplazado, sin ®.
+> **Actualización 24-10-2026 (D-045):** la identidad oficial vigente es la v2, «El río que se tiñe», generada por código desde la geometría y los colores del juego. La [v1](marca-oficial/v1/README.md) queda solo como historial. Este encargo conserva las alternativas y criterios originales; no presenta la v1 como actual.
+
+23-10-2026 · En ese momento se aprobó la identidad v1: una cuia de vidrio que vierte púrpura al río ámbar, con un meandro adicional al fondo. La decisión D-045 la sustituyó al día siguiente por la composición vectorial de la [marca oficial v2](marca-oficial/v2/README.md). El registro de marca está aplazado; no se afirma protección ni registro.
 
 Los apartados 1–4 conservan el encargo y alternativas históricos; la selección y entrega actuales prevalecen sobre sus propuestas de comparar conceptos o encargar el original a un artista. No se acredita revisión cultural ni exclusividad jurídica.
 
@@ -39,6 +41,6 @@ Evitar texto promocional, rankings, ofertas o insignias falsas; sonrisa/flecha d
 
 ## 5. Entrega vigente y próximo paso
 
-La evolución posterior sustituyó las dos cuias y las palmas por una sola cuia alargada y un río con meandro sobre azul petróleo. El dueño aprobó el último dibujo como oficial y pidió versión iOS. `marca-oficial/v1/` conserva el original sin modificación, procedencia/prompts, logo con Baloo 2, iconos de tiendas, catálogo Xcode normal/oscuro/tintado, recursos adaptativos/monocromos Android y favicons. Incluye lámina de tamaños y máscaras, manifiesto SHA-256 y exportador reproducible. No hay PSD ni vector original; no afirmar lo contrario.
+La evolución posterior aprobó primero la v1 y luego la sustituyó por la v2: una cuia que vierte açaí sobre el agua blanca del Amazonas y tiñe el río desde el impacto, aguas abajo. `marca-oficial/v2/` contiene los SVG generados por código, el logo horizontal/vertical y las exportaciones Android, iOS y web. El PNG de Google Play es `out/png/google-play-512.png`; no se toca `Assets/` desde este encargo.
 
-Siguiente paso del integrador: asignar iconos en Unity y web, incorporar el catálogo iOS al exportar a Xcode y comprobar builds y dispositivos. No se tocó `Assets/`, no se cambió el applicationId ni se publicó en tiendas.
+Siguiente paso del integrador: comprobar builds y dispositivos y encargar el acabado artístico final si se decide. No se toca `Assets/`, no se cambia el applicationId ni se publica en tiendas desde este documento.

@@ -1,5 +1,15 @@
 # Estado de Codex: web, empresas y arte
 
+## Identidad v2, web y ficha de Play — 24-10-2026
+
+Encargo `codex-web-marca.md` §§3 y 6. En `codex/web-marca` se incorporó `integracion-fase1-fase2` con pulls terminados en **`6605f3d3`** y **`495efb14`**. D-045 v2, «El río que se tiñe», reemplaza a v1; la carpeta v1 queda preservada con nota de historial. Se actualizaron `assets-tienda.md` y `encargo-icono.md` para apuntar al arte vigente y registrar el banner como provisional.
+
+La v2 genera `favicon-16.png`, `favicon-32.png`, `apple-touch-icon.png` y `feature-graphic.svg/png` desde la misma geometría y tipografía. El banner mide 1024 × 500 y combina el símbolo con el nombre; su uso en tienda espera el arte final y la revisión jurídica. El render de web toma los iconos y los logos horizontales claro/oscuro de esa salida, y se regeneró el sitio (`npm run web:build`, 24 archivos); `npm run web:check` pasó.
+
+Las fichas es-419, en y pt-BR incluyen la Liga del río desde el nivel 41, con puntos semanales y aviso de que se ven el seudónimo, la bandera y los puntos. El borrador de Seguridad de los datos detalla UID interno, región, exposición pública, borrado y exclusión de menores de 13. Se recomienda contestar «Sí» a interacción de usuarios si la Liga está activa, y revisar el alcance exacto del formulario IARC y la clasificación de datos compartidos con el abogado. En todas las fichas quedan marcadores legales y la condición de revisar la build/configuración antes del envío; el registro de la marca sigue aplazado.
+
+Verificación de límites y arte: título, descripciones corta/larga dentro de 30/80/4000 caracteres; PNG del banner 1024 × 500 opaco; los demás SVG/PNG v2 existentes no cambiaron al regenerar. `npm run web:build` y `npm run web:check` correctos. No se desplegó la web ni se envió nada a Play Console; no se tocó Unity, los stacks ni DNS. Pendientes: revisión jurídica de la ficha/Data Safety/IARC, validación del release con Liga habilitada y arte final del banner.
+
 ## Liga del río — textos legales, 24-10-2026
 
 Encargo `codex-liga.md` §4: completado en esta rama, sin tocar `docs/dev/liga.md`. Commit de contenido **`6804dbca`**. Política es-419/en/pt-BR: UID y victorias/fechas para calcular puntos, seudónimo automático y exposición pública de seudónimo/bandera/puntos, origen del país (respaldo de región del teléfono en la implementación inicial), país semanal, retención, borrado de cuenta y exclusión de <13. Se ajustó la frase anterior sobre contenido de otros jugadores para que no contradiga la clasificación. Datos públicos frente al UID interno diferenciados; sin afirmar anonimato jurídico.
@@ -10,7 +20,7 @@ Comprobaciones ejecutadas en `infra/`: `npm ci` correcto (una vulnerabilidad alt
 
 Backend de Liga: despliegue de Data/Api/Ops aprobado por el dueño y completado en dev el 24-10-2026; las tres pilas UPDATE_COMPLETE, 27 alarmas OK y rutas de Liga 401 sin token. URL conservada: https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com. La corrección posterior de calendario/offline también fue aprobada y desplegada únicamente en Api: UPDATE_COMPLETE, paquetes activos idénticos a los aprobados, 401 sin token y 27 alarmas OK. El registro completo está en `codex/liga`, en su `codex-estado.md` (código de corrección `eb52e32e` / `85109b38`, 337 pruebas correctas). La prueba autenticada espera un token de prueba privado del dueño, no proporcionado. Esta rama no desplegó la web ni habilitó el interruptor del cliente.
 
-## Registro anterior de web, empresas y arte
+## Snapshot anterior a integrar la v2 — 23-10-2026
 
 
 23-10-2026 · Rama `codex/web-marca`, worktree propio. Base de integración comprobada: `35147396` (`origin/integracion-fase1-fase2`); pull fast-forward sin cambios. No se modifica el checkout principal.
@@ -22,9 +32,9 @@ Backend de Liga: despliegue de Data/Api/Ops aprobado por el dueño y completado 
 - `support@parallext.com` es **solo soporte**. Habrá otro buzón de privacidad; dirección pendiente.
 - Objetivo de disponibilidad mundial; no equivale a una revisión jurídica mundial ya completada.
 - Registro de marca y sus gastos **aplazados** hasta tracción/versiones posteriores. No continuar solicitudes, selección de despachos de registro ni presupuesto Madrid en este encargo.
-- Identidad oficial aprobada: una cuia alargada que vierte púrpura sobre río ámbar con meandro adicional; dosis transversales como en el juego. La elección final sustituye los primeros bocetos de dos cuias y TiTino. El dueño pidió también versión iOS.
+- En el snapshot del 23-10 se trataba la v1 como identidad vigente: una cuia alargada que vierte púrpura sobre río ámbar con meandro adicional. D-045 reemplazó esa selección por la v2 el 23-10; véase el informe actualizado al principio de este documento.
 
-No se inventó una aprobación de D-045. El integrador debe reflejar estas decisiones en el canon. El aplazamiento del registro no resuelve expresamente el requisito anterior de dictamen antes del applicationId/subida a Play (D-034/regla 6); queda por reconciliar antes de esa acción, sin impedir preparar la web.
+Este snapshot todavía no había incorporado D-045 ni los cambios de identidad que constan arriba. El aplazamiento del registro no resuelve el requisito anterior de dictamen antes del applicationId/subida a Play (D-034/regla 6); sigue pendiente reconciliar antes de esa acción, sin impedir preparar la web.
 
 ## Entrega
 
@@ -32,12 +42,12 @@ No se inventó una aprobación de D-045. El integrador debe reflejar estas decis
 - `docs/legal/acuerdo-publicacion-borrador.md`: bases de licencia y anexos, sin inventar remuneración ni facultades; no listo para firma.
 - `docs/legal/paquete-abogado.md`: revisión pendiente de operación, privacidad y consumo; preguntas técnicas y correo preparado, no enviado. La búsqueda de marca sigue parcial.
 - `docs/legal/inventario-web.md`: marcadores restantes de datos/revisión en web y ficha. No se eliminaron marcadores legales sin resolverlos.
-- `docs/art/marca-oficial/v1/`: maestro aprobado sin modificar, logo horizontal/vertical, Play 512, App Store 1024, catálogo iOS normal/oscuro/tintado, Android adaptativo/monocromo y legacy, favicons, procedencia, guía y exportador. `docs/art/encargo-icono.md` señala esta selección vigente y conserva las alternativas históricas.
+- En ese snapshot, `docs/art/marca-oficial/v1/` se consideraba la selección vigente. D-045 la reemplazó por `docs/art/marca-oficial/v2/`; la v1 se mantiene únicamente como historial. El catálogo iOS y las exportaciones anteriores siguen archivados sin alteración.
 - Web en español, inglés y portugués: Wyoming y dirección de correspondencia de la LLC, operación desde Colombia, S.A.S como editora prevista y soporte confirmado. Privacidad conserva su buzón pendiente. Fuentes y salida generada incluidas.
 
 Los tres PDF se extrajeron y revisaron visualmente, incluidas páginas escaneadas. La extracción detallada queda en `Logs/legal-review/datos-empresas.md`, **ignorada por Git**, junto a renders locales. No se incluyen EIN, NIT, documentos personales, firmas ni originales en el commit. Los documentos aportados no prueban todas las facultades vigentes ni los datos actuales de las cuentas de plataforma.
 
-La identidad oficial v1 está preparada en el repositorio; PNG bajo Git LFS. Se revisaron visualmente miniaturas y recortes, y se comprobaron dimensiones, canales, peso Play y referencias del catálogo. El original se conserva por SHA-256. No se integró en Assets/web ni se ejecutó Xcode, Unity o prueba física para estos iconos. Las capas transparentes y monocromas son derivados con ImageGen; tamaños y composiciones tipográficas se exportan de forma determinista. No se entregan PSD, vector ni proyecto Icon Composer.
+En el snapshot del 23-10, la v1 estaba preparada pero no integrada en Assets/web; la v2 la sustituyó después. La verificación histórica de PNG, iOS y Android descrita en ese registro corresponde solo a v1 y no se atribuye a la v2.
 
 ## Verificación y alcance
 
@@ -55,7 +65,7 @@ Se amplió mínimamente el alcance original a dos líneas de `infra/test/web/sit
 1. Dirección y puesta en servicio del correo de privacidad; encargado/contactos adicionales cuando correspondan.
 2. Facultades vigentes, cadena de derechos, términos económicos y firma de licencia; revisión contable de ambas entidades.
 3. Resolver marcadores legales y datos operativos: retención Analytics real, SDK/ads y seller IDs, créditos, fechas y versiones. El canon indica `consent_text_version = 1` inicial; coordinar la versión final con Remote Config, sin afirmar que se verificó producción.
-4. Integrar el paquete visual oficial v1 en Unity/web/Xcode y comprobarlo en builds/dispositivos; el concepto y las exportaciones ya están resueltos. Capturas, gráfico de tienda y vídeo siguen siendo piezas independientes.
+4. En el snapshot del 23-10 quedaba integrar v1 en Unity/web/Xcode; ese pendiente quedó sustituido por la v2 de D-045. La comprobación de builds/dispositivos y la entrega final del gráfico/capturas/vídeo siguen siendo tareas separadas.
 5. Integración real del cambio Cloudflare/web-only. En la base comprobada, `infra/README.md` aún describe el cambio pendiente y no ofrece el procedimiento nuevo. La mera existencia/ascendencia de `tanda5/web-dominio` no demuestra que su implementación esté integrada.
 
 **No se desplegó, no se hizo bootstrap, no se cambió DNS y no se generó gasto.** Tras integrar infraestructura y cerrar contenido publicable: preparar el diff de los stacks web prod, presentarlo al dueño y seguir la aprobación concreta del encargo antes de deploy/DNS. No publicar como definitivas las políticas con marcadores pendientes.

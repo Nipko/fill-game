@@ -1,6 +1,6 @@
 # Encargo de arte: assets de la tienda (icono, gráfico, capturas y vídeo) · BORRADOR
 
-> **Actualización del icono, 23-10-2026:** el dueño aprobó la identidad oficial de una cuia vertiendo al río y encargó sus exportaciones, incluida iOS. La selección vigente y archivos están en [marca oficial v1](../art/marca-oficial/v1/README.md). Sus entregas y procedencia sustituyen las alternativas y el encargo humano del icono de este borrador. El resto de piezas de tienda conserva sus pendientes; la aprobación visual no acredita un dictamen jurídico ni la publicación de la app.
+> **Identidad visual D-045 (24-10-2026):** la v2, «El río que se tiñe», es la identidad oficial vigente; la [v1](../art/marca-oficial/v1/README.md) queda como historial. El icono de Play sale de `docs/art/marca-oficial/v2/out/png/google-play-512.png`. El gráfico de funciones provisional se genera por código desde la misma v2 (`out/png/feature-graphic.png`); el arte final queda para el artista y el uso del nombre espera revisión jurídica. La aprobación visual no acredita registro de marca ni autoriza publicar la app.
 
 Fecha: 2026-10-20 · Autor: equipo Spark (agente; tanda 5, bloque B13) · Para: el dueño, que lo envía al artista 2D freelance, y el asesor cultural (07 §8.2, fila «Ficha de tienda y creativos de UA») · Estado: **borrador; no se envía hasta que el dueño lo revise.**
 
@@ -39,7 +39,7 @@ Las medidas de Google Play que no están en el GDD van marcadas [NV]: el artista
 
 | Concepto | Qué dibujar | Estado |
 |---|---|---|
-| **A. Cuia que vierte** (recomendado) | Cuia de vidrio inclinada que vierte un chorro de Açaí #6A2C91 sobre una banda de río blanca; dentro, 3 dosis: Aguaje #EF7D1A, Taperebá #F2B705, Açaí; fondo oliva desaturado | Listo para bocetar. Con D-003 (colores saturados), el «oliva desaturado» de 07 §10.1 puede subir de saturación: se decide en el boceto con el dueño [P] |
+| **A. Cuia que vierte** | Cuia inclinada fiel a `CuiaGeometry.cs`, con las dosis del juego; vierte açaí #6A2C91 sobre el agua blanca del Amazonas #B08A5A, que se tiñe desde el impacto río abajo. | Concepto sustituido por la identidad oficial v2, generada por código en `docs/art/marca-oficial/v2/`; se conserva aquí como antecedente. |
 | B. Capi con cuia | Capi de frente con una cuia de 4 tintes; fondo ámbar suave | Alternativa de experimento; Capi, pendiente de marca y asesor (glosario §3.1) |
 | C. Encuentro de las Aguas | Dos aguas en diagonal (ámbar-té #522500 y beige #B08A5A) que no se mezclan, con una cuia de perfil con dos dosis | Alternativa de experimento. El ámbar-té es el de D-029 (07 §2.1; `direccion-visual-v2.md`, revisión 11) |
 | D. TiTino en su rama [P] | TiTino cuelga de su rama sobre una cuia que vierte, cara de frente con el antifaz, legible a 48 px | Solo con arte final y las condiciones de D-016 (sección 0) |
@@ -49,9 +49,10 @@ Las medidas de Google Play que no están en el GDD van marcadas [NV]: el artista
 | Especificación | Valor |
 |---|---|
 | Medida | **1024 × 500 px** (07 §10; 08 §13.1 #5), JPEG o PNG de 24 bits sin transparencia [NV] |
-| Contenido | El concepto A del icono, ampliado, con el Encuentro de las Aguas detrás (07 §10.2) |
-| Texto | Ninguno [P] (07 §10 no pide texto; Play puede taparlo con el botón del vídeo [NV]) |
-| Zona segura | Lo importante, en el centro; Play recorta y superpone en algunos sitios [NV] |
+| Contenido | Composición horizontal de la identidad v2: icono con cuia y río teñido más el logotipo horizontal generado desde Baloo 2. Salida editable SVG y PNG opaco en `docs/art/marca-oficial/v2/out/feature-graphic.svg` y `out/png/feature-graphic.png`. |
+| Texto | Solo el nombre «Tintalú», integrado en el logotipo. Gráfico provisional generado por código; el artista debe entregar el definitivo. |
+| Estado | **Provisional.** No usar en tienda hasta la revisión jurídica del nombre y la entrega/validación del arte final. No implica que el signo esté registrado. |
+| Zona segura | El icono y el nombre quedan dentro del área central; contrastar el recorte y la superposición de Play antes de sustituir por la pieza final [NV]. |
 
 ## 4. Capturas (8 por idioma × 3 idiomas = 24)
 
@@ -97,10 +98,12 @@ Las versiones del descriptor y del cierre en EN y PT-BR son propuesta [P] de B13
 | Pieza | Cantidad | Medida |
 |---|---|---|
 | Icono final (concepto elegido) + adaptativo | 1 + 2 capas | 512 × 512 px; 108 × 108 dp |
-| Conceptos de icono para el experimento (B, C) | 2 | 512 × 512 px |
-| Gráfico de funciones | 1 | 1024 × 500 px |
+| Alternativas históricas del icono (B, C) | 2 | 512 × 512 px |
+| Gráfico de funciones provisional, generado desde la v2 | 1 | 1024 × 500 px |
 | Capturas | 8 × 3 idiomas = 24 | 1080 × 1920 px |
 | Vídeo | 2 orientaciones (+ corte de 15 s) | 1080 × 1920 y 1920 × 1080 |
 | Logotipo «Tintalú» | 1 (con variantes claro/oscuro) | Vectorial [P] |
 
 Estimación: 8 días-persona [P] (07 §11, fila «Tienda»), sin contar los conceptos del experimento ni el logotipo.
+
+El icono v2 y el logo horizontal/vertical son derivados reproducibles. El gráfico de funciones generado por código sirve solo como referencia provisional; faltan la entrega final del artista y la revisión jurídica previa a su uso.

@@ -1,5 +1,7 @@
 # Tintalú — identidad oficial v1
 
+> **Sustituida por la v2 (D-045); historial, no usar.** Se conserva sin modificar como registro de la decisión anterior. La identidad vigente está en [marca oficial v2](../v2/README.md).
+
 **Aprobada por el dueño el 23-10-2026.** Su instrucción: «listo eso, cuadremos todo para el logo oficial sea ese, los iconos y demas», seguida de «version para ios». Esta elección sustituye los bocetos anteriores de cuencos, dos cuias y TiTino como emblema principal. Se conserva el último icono con meandro y río más intenso, no la variante previa de río casi recto.
 
 ## Archivos principales
