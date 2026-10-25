@@ -231,7 +231,6 @@ namespace AF.Tests.PlayMode
             Assert.That(offDp, Is.LessThan(0.5f), "el sello que cae está centrado en su casilla");
         }
 
-        // Captura y registra los textos visibles de la pieza que se revisa que no caben en su caja (AF_FIT).
         // El lunes a las 10:00 TiTino da el saludo de la mañana; a 360 × 640 cruza la tarjeta del Reto y la aparta mientras se ve
         // (D-046, punto 2; como AudioQuickTogglesTests.Home_FitsWithoutOverlaps…): se espera a que acabe.
         private static void WaitForTheGreeting(GameBootstrap boot)
@@ -256,6 +255,7 @@ namespace AF.Tests.PlayMode
             Canvas.ForceUpdateCanvases();
         }
 
+        // Captura y registra los textos visibles de la pieza que se revisa que no caben en su caja (AF_FIT).
         private IEnumerator Shot(string name, Transform focus)
         {
             yield return SnapshotKit.Wait(0.2f);

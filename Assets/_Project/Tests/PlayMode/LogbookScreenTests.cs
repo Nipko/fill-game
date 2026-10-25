@@ -50,6 +50,13 @@ namespace AF.Tests.PlayMode
             _screen = new LogbookScreen(_host.transform, Art, c => _chosen.Add(c), () => _closed++);
         }
 
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            s_art?.Dispose(); // la recarga de dominio está apagada: el arte del fixture no sobrevive a la sesión de Play
+            s_art = null;
+        }
+
         [TearDown]
         public void TearDown()
         {

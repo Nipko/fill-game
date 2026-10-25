@@ -2190,6 +2190,7 @@ namespace AF.UI
             string text = asset.text;
             if (LaunchOptions.ReuseDataReadsOverride != true)
             {
+                s_dataReads.Clear(); // sin el gancho no se guarda nada (ni lo de una pasada de tests anterior)
                 return read(text);
             }
 

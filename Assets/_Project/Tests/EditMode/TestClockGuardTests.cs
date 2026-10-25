@@ -14,7 +14,8 @@ namespace AF.Tests.EditMode
     /// usan un reloj fijo: <c>ManualClock</c>, el <c>TestClock</c> de PlayMode (el que pone <c>PlayModeHelpers</c> si el test no puso
     /// otro), <c>LaunchOptions.ClockOverride</c>, <c>GameBootstrap.LeagueClockOverride</c>…, o fechas relativas a ese reloj. Para
     /// medir esperas reales, <c>Stopwatch</c> o <c>Time.realtimeSinceStartup</c>, que no dependen de la fecha.
-    /// Mira <c>Assets/_Project/Tests/**</c> y las carpetas <c>Tests</c> de <c>Assets/_Project/Scripts/**</c>.
+    /// Mira <c>Assets/_Project/Tests/**</c>, las carpetas <c>Tests</c> de <c>Assets/_Project/Scripts/**</c> y
+    /// <c>Packages/com.amazonfill.core/Tests/**</c>.
     /// </summary>
     public sealed class TestClockGuardTests
     {
@@ -41,6 +42,10 @@ namespace AF.Tests.EditMode
         };
 
         private static string ProjectDir => Path.Combine(Application.dataPath, "_Project");
+
+        private static string RepoDir => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+
+        private static string CoreTestsDir => Path.Combine(RepoDir, "Packages", "com.amazonfill.core", "Tests");
 
         [Test]
         public void NoTest_ReadsTheSystemClock_OutsideTheAllowList()
@@ -99,6 +104,8 @@ namespace AF.Tests.EditMode
             Assert.That(relatives, Has.Member("Tests/EditMode/TestClockGuardTests.cs"));
             Assert.That(relatives, Has.Member("Tests/PlayMode/PlayModeHelpers.cs"));
             Assert.That(relatives, Has.Member("Scripts/Save/Tests/ClockTests.cs"));
+            Assert.That(relatives.Exists(r => r.StartsWith("Packages/com.amazonfill.core/Tests/", StringComparison.Ordinal)), Is.True,
+                "los tests compartidos del núcleo");
             Assert.That(relatives.Exists(r => r.StartsWith("Scripts/", StringComparison.Ordinal) && !r.Contains("/Tests/")), Is.False,
                 "solo carpetas de tests");
         }
@@ -117,13 +124,23 @@ namespace AF.Tests.EditMode
                     yield return file;
                 }
             }
+
+            // Los tests compartidos del núcleo (AF.Core y AF.Solver), que también corren en EditMode.
+            foreach (string file in Directory.GetFiles(CoreTestsDir, "*.cs", SearchOption.AllDirectories))
+            {
+                yield return file;
+            }
         }
 
+        // Relativa a Assets/_Project (los de Assets) o a la raíz del repositorio (los del núcleo, «Packages/…»), con '/'.
         private static string Relative(string file)
         {
             string full = Path.GetFullPath(file);
-            string root = Path.GetFullPath(ProjectDir) + Path.DirectorySeparatorChar;
-            return (full.StartsWith(root, StringComparison.OrdinalIgnoreCase) ? full.Substring(root.Length) : full).Replace('\\', '/');
+            string project = Path.GetFullPath(ProjectDir) + Path.DirectorySeparatorChar;
+            string repo = RepoDir + Path.DirectorySeparatorChar;
+            string relative = full.StartsWith(project, StringComparison.OrdinalIgnoreCase) ? full.Substring(project.Length)
+                : full.StartsWith(repo, StringComparison.OrdinalIgnoreCase) ? full.Substring(repo.Length) : full;
+            return relative.Replace('\\', '/');
         }
     }
 }
