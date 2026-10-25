@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generado por docs/art/marca-oficial/v2/exportar.py (D-051, punto 2): no se edita a mano. -->
+<resources>
+    <color name="af_brand_petroleum">#14444A</color>
+    <style name="AfLaunchTheme" parent="BaseUnityGameActivityTheme">
+        <item name="android:windowBackground">@color/af_brand_petroleum</item>
+    </style>
+</resources>

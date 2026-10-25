@@ -70,6 +70,20 @@ namespace AF.EditorTools
         /// </summary>
         public const bool PredictiveBack = false;
 
+        /// <summary>
+        /// Pantalla «Made with Unity» quitada (D-051, punto 1: opcional en todos los planes desde Unity 6). Sin ella tampoco sale
+        /// el logo de Unity. La intro de la marca la dibuja el juego (<c>AF.UI.BrandIntro</c>).
+        /// </summary>
+        public const bool ShowUnitySplash = false;
+
+        /// <summary>
+        /// Fondo petróleo de la marca (D-045 y D-051, punto 2): <c>#14444A</c>, el tono medio del cielo del icono v2
+        /// (<c>docs/art/marca-oficial/v2/generar.py</c>, degradado «cielo»). Es el mismo de la pantalla del sistema de Android 12+
+        /// (<c>af_brand_petroleum</c> en <c>AfIcon.androidlib</c>, que genera <c>exportar.py --android-xml</c>) y de la intro.
+        /// Unity lo usa además como fondo de su pantalla y como <c>staticSplashScreenBackgroundColor</c> de su tema.
+        /// </summary>
+        public static readonly Color32 BrandPetroleum = new Color32(0x14, 0x44, 0x4A, 0xFF);
+
         const string LogPrefix = "[AF.ProjectSetup] ";
 
         [MenuItem("Amazon Fill/CI/Aplicar ajustes Android (dev)")]
@@ -108,6 +122,11 @@ namespace AF.EditorTools
             PlayerSettings.SetManagedStrippingLevel(android, StrippingLevel);
             PlayerSettings.stripEngineCode = true;
             PlayerSettings.Android.predictiveBackSupport = PredictiveBack;
+
+            // D-051, punto 1: sin la pantalla de Unity ni su logo; el fondo, el petróleo de la marca.
+            PlayerSettings.SplashScreen.show = ShowUnitySplash;
+            PlayerSettings.SplashScreen.showUnityLogo = ShowUnitySplash;
+            PlayerSettings.SplashScreen.backgroundColor = BrandPetroleum;
 
             // Sin firma de release: Unity firma con la clave de depuración. El keystore lo gestiona el dueño.
             PlayerSettings.Android.useCustomKeystore = false;
@@ -151,6 +170,9 @@ namespace AF.EditorTools
             Check(problems, "stripEngineCode", PlayerSettings.stripEngineCode, true);
             Check(problems, "predictiveBackSupport", PlayerSettings.Android.predictiveBackSupport, PredictiveBack);
             Check(problems, "useCustomKeystore", PlayerSettings.Android.useCustomKeystore, false);
+            Check(problems, "splashScreen.show", PlayerSettings.SplashScreen.show, ShowUnitySplash);
+            Check(problems, "splashScreen.showUnityLogo", PlayerSettings.SplashScreen.showUnityLogo, ShowUnitySplash);
+            Check(problems, "splashScreen.backgroundColor", (Color32)PlayerSettings.SplashScreen.backgroundColor, BrandPetroleum);
             return problems;
         }
 
@@ -171,7 +193,9 @@ namespace AF.EditorTools
                 + ", stripEngineCode=" + PlayerSettings.stripEngineCode
                 + ", retrocesoPredictivo=" + PlayerSettings.Android.predictiveBackSupport
                 + ", aab=" + EditorUserBuildSettings.buildAppBundle
-                + ", keystorePropio=" + PlayerSettings.Android.useCustomKeystore;
+                + ", keystorePropio=" + PlayerSettings.Android.useCustomKeystore
+                + ", pantallaUnity=" + PlayerSettings.SplashScreen.show
+                + ", logoUnity=" + PlayerSettings.SplashScreen.showUnityLogo;
         }
 
         static void Check<T>(List<string> problems, string name, T actual, T expected)
