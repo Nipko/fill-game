@@ -147,7 +147,7 @@ export const UI: Record<Lang, UiText> = {
       confirmYes: 'Sí, eliminar',
       confirmNo: 'Cancelar',
       noscript: 'El formulario necesita JavaScript. Si no puedes activarlo, borra tu cuenta desde el juego (Ajustes › «Eliminar cuenta y datos»).',
-      soon: 'El borrado desde esta página estará disponible pronto. Mientras tanto, borra tu cuenta desde el juego (Ajustes › «Eliminar cuenta y datos») o escríbenos a [[DATO DEL DUEÑO: correo de privacidad]] y lo hacemos por ti.',
+      soon: 'El borrado desde esta página estará disponible pronto. Mientras tanto, borra tu cuenta desde el juego (Ajustes › «Eliminar cuenta y datos») o escríbenos a privacy@tintalu.com y lo hacemos por ti.',
       msg: {
         invalid: 'Ese código no es válido. Revísalo en Ajustes: tiene 26 letras y números.',
         sending: 'Un momento…',
@@ -181,7 +181,7 @@ export const UI: Record<Lang, UiText> = {
       confirmYes: 'Yes, delete',
       confirmNo: 'Cancel',
       noscript: 'The form needs JavaScript. If you can’t turn it on, delete your account in the game (Settings › “Delete account and data”).',
-      soon: 'Deleting your account from this page will be available soon. In the meantime, delete it in the game (Settings › “Delete account and data”) or write to us at [[DATO DEL DUEÑO: correo de privacidad]] and we’ll do it for you.',
+      soon: 'Deleting your account from this page will be available soon. In the meantime, delete it in the game (Settings › “Delete account and data”) or write to us at privacy@tintalu.com and we’ll do it for you.',
       msg: {
         invalid: 'That code isn’t valid. Check it in Settings: it has 26 letters and numbers.',
         sending: 'One moment…',
@@ -215,7 +215,7 @@ export const UI: Record<Lang, UiText> = {
       confirmYes: 'Sim, excluir',
       confirmNo: 'Cancelar',
       noscript: 'O formulário precisa de JavaScript. Se não puder ativá-lo, exclua sua conta no jogo (Configurações › “Excluir conta e dados”).',
-      soon: 'A exclusão por esta página estará disponível em breve. Enquanto isso, exclua sua conta no jogo (Configurações › “Excluir conta e dados”) ou escreva para [[DATO DEL DUEÑO: correo de privacidad]] e nós fazemos isso por você.',
+      soon: 'A exclusão por esta página estará disponível em breve. Enquanto isso, exclua sua conta no jogo (Configurações › “Excluir conta e dados”) ou escreva para privacy@tintalu.com e nós fazemos isso por você.',
       msg: {
         invalid: 'Esse código não é válido. Confira em Configurações: ele tem 26 letras e números.',
         sending: 'Um momento…',

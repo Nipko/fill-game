@@ -19,6 +19,6 @@
 
 ## Lo que sigue pendiente (lo marca la propia web)
 
-- `[[DATO DEL DUEÑO]]`: estado de constitución y domicilio de Parallext, LLC; correo de contacto y de privacidad; persona o cargo de protección de datos (LGPD); representante, si el abogado lo pide; versión y fecha de entrada en vigor; retención de Analytics (Q-B13-19).
+- Resueltos (D-041, añadido del 2026-10-25): Parallext, LLC de Wyoming con domicilio en Orlando, `support@tintalu.com`, `privacy@tintalu.com`, encargado Nir Levin Bermúdez Perea y sin representante en la UE (`[[ABOGADO]]`). Siguen como `[[DATO DEL DUEÑO]]`: versión y fecha de entrada en vigor y retención de Analytics (Q-B13-19).
 - `[[ABOGADO]]`: bases legales por finalidad, transferencias internacionales, plazo fiscal, plazos de respuesta, adolescentes (LGPD art. 14, ECA Digital) y los registros de diagnóstico de Play Billing (Q-BILL-2).
 - **Al integrar D-042** (MAX con UMP y Play Games): pasar los anuncios y el guardado en la nube de «Lo que todavía no está en el juego» a la tabla de datos, a la vez que `data-safety.md` y 08 §13.3.

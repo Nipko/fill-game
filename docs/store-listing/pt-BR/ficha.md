@@ -1,6 +1,6 @@
 # Ficha de Google Play · pt-BR · BORRADOR
 
-- **Estado:** rascunho da ficha 1.0, atualizado em 24-10-2026 (Parallext, LLC como estúdio; AUTOMATION AI S.A.S como editora prevista, D-041; Liga do Rio conforme D-046). A identidade visual vigente é a v2 (D-045); o registro da marca foi adiado. Nada será publicado sem revisão do responsável, parecer jurídico e conferência da build e das opções de produção. O restante é tradução com IA da ficha es-419, pendente de revisor nativo.
+- **Estado:** rascunho da ficha 1.0, atualizado em 24-10-2026 (Parallext, LLC como estúdio; AUTOMATION AI S.A.S como editora no Google Play, D-048; Liga do Rio conforme D-046). A identidade visual vigente é a v2 (D-045); sem parecer nem registro de marca por enquanto (D-047). Nada será publicado sem revisão do responsável, revisão jurídica dos textos e conferência da build e das opções de produção. O restante é tradução com IA da ficha es-419, pendente de revisor nativo.
 - Mismas reglas, marcas y fuentes que `../es-419/ficha.md`. Portugués con «você» (glosario §10). Nombres PT del glosario §5, §7.1, §9, §10 y §12; lo cultural, **pendiente de revisión** del asesor.
 
 ## 1. Datos de la app
@@ -11,7 +11,7 @@
 | Desenvolvedor | **Parallext, LLC** (parallext.com) | D-041 |
 | `applicationId`, correo, cuenta de Play Console | Los de `../es-419/ficha.md` §1 | D-041; 08 §13.1 |
 | Site | `https://tintalu.com/` (aún sin conectar: D-041) | D-041 |
-| Política de privacidade | `https://tintalu.com/pt-br/privacidade/` (fuente: `infra/web/src/content/pt-BR/privacy.html`, con encarregado y canal LGPD aún `[[DATO DEL DUEÑO]]`) | D-041; 08 §13.1 #2 y #7 |
+| Política de privacidade | `https://tintalu.com/pt-br/privacidade/` (fuente: `infra/web/src/content/pt-BR/privacy.html`, con encarregado Nir Levin Bermúdez Perea y canal LGPD privacy@tintalu.com, D-041, añadido del 2026-10-25) | D-041; 08 §13.1 #2 y #7 |
 | Exclusão de conta | `https://tintalu.com/tintalu/pt-br/excluir-conta/` (fuente: `infra/web/src/content/pt-BR/delete.html`) | 08 §11; Q-B13-1 (a) |
 
 ## 2. Descrição curta (≤ 80)

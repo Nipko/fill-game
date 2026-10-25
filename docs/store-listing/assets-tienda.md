@@ -12,7 +12,7 @@ Las medidas de Google Play que no están en el GDD van marcadas [NV]: el artista
 
 | Condición | Por qué | Quién |
 |---|---|---|
-| Dictamen de marca de «Tintalú» | El nombre solo aparece en el título de la ficha y en el logotipo del vídeo (07 §10); sin dictamen no se diseña el logotipo final | Abogado de marcas; `docs/legal/marca.md` |
+| Marca de «Tintalú» | Sin dictamen ni registro por ahora (D-047); el logotipo v2 (D-045) vale para la tienda | Dueño; `docs/legal/marca.md` |
 | Búsqueda figurativa del logotipo | Sin parecido con las apps «Tinta» de la App Store (07 §10) | Abogado, cuando el logotipo esté diseñado |
 | Las dos condiciones de TiTino (D-016): visto bueno del asesor a la especie y al árbol, y búsqueda de marca de «TiTino» en marcha | La captura 7, el plano final del vídeo y el concepto D del icono lo usan | Asesor y abogado (`docs/art/encargo-titino-frutas-tinaja.md`, recuadro) |
 | Gameplay real con el arte final del mundo 1-3 | Las capturas son **gameplay real** (07 §10.2): no se pintan pantallas que el juego no tenga | Artista + integración en el juego |
@@ -51,7 +51,7 @@ Las medidas de Google Play que no están en el GDD van marcadas [NV]: el artista
 | Medida | **1024 × 500 px** (07 §10; 08 §13.1 #5), JPEG o PNG de 24 bits sin transparencia [NV] |
 | Contenido | Composición horizontal de la identidad v2: icono con cuia y río teñido más el logotipo horizontal generado desde Baloo 2. Salida editable SVG y PNG opaco en `docs/art/marca-oficial/v2/out/feature-graphic.svg` y `out/png/feature-graphic.png`. |
 | Texto | Solo el nombre «Tintalú», integrado en el logotipo. Gráfico provisional generado por código; el artista debe entregar el definitivo. |
-| Estado | **Provisional.** No usar en tienda hasta la revisión jurídica del nombre y la entrega/validación del arte final. No implica que el signo esté registrado. |
+| Estado | **Provisional.** No usar en tienda hasta la entrega y validación del arte final (la marca ya no espera al dictamen, D-047). No implica que el signo esté registrado. |
 | Zona segura | El icono y el nombre quedan dentro del área central; contrastar el recorte y la superposición de Play antes de sustituir por la pieza final [NV]. |
 
 ## 4. Capturas (8 por idioma × 3 idiomas = 24)
@@ -106,4 +106,4 @@ Las versiones del descriptor y del cierre en EN y PT-BR son propuesta [P] de B13
 
 Estimación: 8 días-persona [P] (07 §11, fila «Tienda»), sin contar los conceptos del experimento ni el logotipo.
 
-El icono v2 y el logo horizontal/vertical son derivados reproducibles. El gráfico de funciones generado por código sirve solo como referencia provisional; faltan la entrega final del artista y la revisión jurídica previa a su uso.
+El icono v2 y el logo horizontal/vertical son derivados reproducibles. El gráfico de funciones generado por código sirve solo como referencia provisional; falta la entrega final del artista.

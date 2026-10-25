@@ -113,3 +113,27 @@ Esto va después de la v2 (sección 3), en la misma rama `codex/web-marca` y con
    - Márcalo como provisional en `assets-tienda.md`: el definitivo lo hace el artista, y el nombre espera al dictamen.
    - No uses IA de imagen.
 5. **Regenera el sitio** (`npm run web:build`), pasa `npm run web:check`, anota todo en `codex-estado.md` y empuja.
+
+## 7. Actualización del 25-10-2026: datos del responsable, correos de tintalu.com, D-047 y el dominio
+
+> **25-10-2026: el dueño pasó esta sección entera al escritorio (Claude)**, incluidos el despliegue de la web de prod y la conexión de `tintalu.com` por la CLI con su sesión de AWS. **Codex no la hace.** Queda aquí como lista de lo que se hizo; el estado está en `docs/dev/traspaso/README.md` y en los commits del escritorio.
+
+Va después de la sección 6, en la misma rama `codex/web-marca` (créala de nuevo desde `origin/integracion-fase1-fase2`: la sección 6 ya está integrada) y con las reglas de la sección 5.
+
+1. **Datos del responsable** (D-041, añadido del 25-10-2026, en `docs/dev/decisiones.md`): rellena todos los `[[DATO DEL DUEÑO: …]]` de `infra/web/src/content/**`, `docs/legal/**` y `docs/store-listing/**`:
+   - Parallext, LLC, constituida en Wyoming; 7345 W Sand Lake Rd, Ste 210, Office 2812, Orlando, FL 32819, Estados Unidos;
+   - privacidad: `privacy@tintalu.com`; soporte y contacto general: `support@tintalu.com`;
+   - encargado de protección de datos (LGPD): Nir Levin Bermúdez Perea, `privacy@tintalu.com`;
+   - representante en la UE: ninguno mientras el juego no se dirija a la UE (art. 27 del RGPD), con `[[ABOGADO: revisar]]`.
+2. **Correos:** cambia `support@parallext.com` por `support@tintalu.com` en la web, la ficha (es-419, en, pt-BR) y los textos legales. Deja `parallext.com` como web del desarrollador. No toques `Assets/` (si la app muestra un correo, anótalo en `codex-estado.md` para el escritorio).
+3. **D-047** (final de `decisiones.md`): sin dictamen ni registro de marca, y `applicationId` definitivo `com.parallext.tintalu`. Quita de la ficha, la guía de Play Console y `docs/legal/**` lo que diga que algo espera al dictamen; pon el ID donde haga falta. `paquete-abogado.md` se queda como está, para el registro futuro.
+4. **Conectar `tintalu.com`** con el procedimiento de `infra/README.md` («Conectar `tintalu.com`», opción A, DNS en Cloudflare):
+   - antes de cada `cdk deploy` de los stacks de la web de prod, enseña el `cdk diff` al dueño y espera su sí;
+   - los CNAME de validación de ACM y los registros del apex y `www` los crea el dueño en Cloudflare (o tú con su sí), en «Solo DNS»;
+   - comprueba al final `https://tintalu.com` y `https://www.tintalu.com` (certificado, cabeceras y las páginas de privacidad, términos y borrado de cuenta en los tres idiomas) y anota las URL públicas en `codex-estado.md` y en `docs/store-listing/README.md`.
+5. **D-048** (final de `decisiones.md`): Parallext, LLC desarrolla y es responsable de los datos; AUTOMATION AI S.A.S publica en Google Play y cobra. Pasa la frase de la web y de las fichas de «prevista» a afirmación cuando el dueño cree la app, sin decir que el contrato está firmado; deja el `[[ABOGADO]]` de la relación entre las dos. El escritorio restauró la guarda del test: AUTOMATION AI solo puede salir como editora y junto a Parallext, LLC. No vuelvas a quitarla, y no toques `infra/test/**` ni `infra/web/build.ts` sin decirlo antes en `codex-estado.md`.
+6. **Arreglos de la revisión del 25-10:**
+   - textos que aún esperan al dictamen: `docs/store-listing/{es-419,en,pt-BR}/ficha.md` (líneas 3 y 14), `data-safety.md:7`, `assets-tienda.md` (15, 54 y 109), `docs/store-listing/README.md` (54 y 105) y `docs/legal/estructura-publicacion.md:59`;
+   - `support@parallext.com` en `infra/web/src/content/*/home.html` y `privacy.html` y en `estructura-publicacion.md` (punto 2);
+   - LFS: los favicon y el apple-touch-icon de `infra/web/site/assets/` están en LFS y `infra.yml` hace checkout sin LFS; propón (sin aplicarlo) una de dos: un test que compruebe la firma PNG cuando estén descargados o sacarlos de LFS en `.gitattributes` (esto último lo aprueba el dueño).
+7. **Regenera el sitio** (`npm run web:build`), pasa `npm run web:check` y los tests de `infra/test/web`, anota todo en `codex-estado.md` y empuja.

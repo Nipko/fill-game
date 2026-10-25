@@ -4,7 +4,7 @@
 - **Fuentes, en este orden:** 08 §13.3 (una fila por SDK, «[E, a confirmar con la guía de cada SDK]»), que manda; la política de privacidad pública de la web (`infra/web/src/content/es-419/privacy.html`, fuente de verdad de los textos legales); `docs/dev/firebase-cliente.md` (§1, §4 bis y §5); `docs/dev/iap.md` (§1.3 y §4.1, Q-BILL-2); 08 §2.3, §10 y §11; 05 §7.
 - **Dos columnas de tiempo:** «**hoy**» es lo que recoge el build de `integracion-fase1-fase2` a 2026-10-23; «**al integrar D-042**» es lo que se añade con AppLovin MAX (con UMP y sus adaptadores) y Play Games 2.3.0. Hasta que D-042 se integre, lo segundo **todavía no está en el juego** y no se declara.
 - **Nombres de categorías y tipos:** los del formulario de Play tal como los conoce este borrador [NV]; el dueño los contrasta con el formulario vigente. Las filas [E] se cierran con la guía de Data Safety de cada SDK en su versión fijada.
-- **Ningún formulario se envía con el build de hoy:** no hay app en Play Console hasta el dictamen de marca (D-034; `CLAUDE.md`, regla 6). Este documento prepara la 1.0.
+- **Ningún formulario se envía con el build de hoy:** la app aún no está creada en Play Console; ya no espera al dictamen (D-047) y la crea el dueño con AUTOMATION AI S.A.S como editora (D-048). Este documento prepara la 1.0.
 
 ## 1. Qué lleva hoy el build (2026-10-24)
 

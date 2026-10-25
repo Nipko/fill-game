@@ -3858,3 +3858,26 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - Sigue igual: los agentes no suben nada a Google Play con ningún `applicationId` (regla dura 6, regla operativa); publica el dueño. `com.amazonfill.dev` sigue siendo provisional y el CI no lo deja llegar a release.
 - **Qué cambia:** regla dura 6 y estado de la marca en `CLAUDE.md`; 08 §13.1 #1 (nota de D-047); `docs/dev/pendientes-del-dueno.md` §1 y orden sugerido; `docs/dev/release.md` (la variable `AF_RELEASE_APPLICATION_ID` y Play App Signing ya no esperan al dictamen). `docs/legal/paquete-abogado.md` queda guardado para el registro.
 - **Cómo revertir:** con una decisión nueva del dueño.
+
+### D-041, añadido del 2026-10-25: datos de Parallext, LLC y correos de tintalu.com
+
+- **Estado:** datos dados por el dueño en el chat (punto 2 de las acciones humanas pendientes).
+- **Datos:**
+  - **Responsable:** Parallext, LLC, sociedad constituida en **Wyoming** (EE. UU.).
+  - **Domicilio:** 7345 W Sand Lake Rd, Ste 210, Office 2812, Orlando, FL 32819, Estados Unidos.
+  - **Correos:** soporte `support@tintalu.com` y privacidad `privacy@tintalu.com`, ya activos con Email Routing de Cloudflare. Sustituyen a `support@parallext.com` en la web, los textos legales y la ficha.
+  - **Encargado de protección de datos (LGPD, Brasil):** Nir Levin Bermúdez Perea, con `privacy@tintalu.com`. El dueño acepta que su nombre salga en la política pública.
+  - **Representante:** el dueño pidió «colocarlo si no hay problema». En Brasil la LGPD solo exige el encargado (ya es él). En la UE el representante del art. 27 del RGPD tiene que estar establecido en la UE, así que no puede ser él: **sin representante en la UE** mientras el juego no se dirija a la UE. `[[ABOGADO: revisar]]` cuando se contrate.
+  - **Dominio:** conectar `tintalu.com` a la web de prod ya (D-044, `infra/README.md` «Conectar `tintalu.com`»); lo hace Codex con el dueño, con su sí a cada despliegue y cambio de DNS.
+
+## D-048 · Parallext desarrolla y responde de los datos; AUTOMATION AI S.A.S publica en Google Play y cobra
+
+- **Fecha:** 2026-10-25. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat: «Sí: Parallext desarrolla y es responsable de los datos; AUTOMATION AI S.A.S publica en Play y cobra. Regístralo.» Lo había adelantado a Codex el 23-10 (`docs/legal/estructura-publicacion.md` §1 y §3).
+- **Decisión:**
+  - **PARALLEXT, LLC** (Wyoming; D-041 y su añadido del 25-10): estudio, desarrollador público y **responsable del tratamiento** de los datos del juego (Firebase, AWS, soporte y borrados).
+  - **AUTOMATION AI S.A.S** (Bogotá, Colombia): **editora en Google Play** con la cuenta de desarrollador ya verificada (2026-10-20) y **beneficiaria de los cobros** de Play.
+  - La web, la política y los términos nombran a las dos con sus funciones (`estructura-publicacion.md` §4); el test `infra/test/web/site.test.ts` exige que AUTOMATION AI solo salga como editora y junto a Parallext, LLC.
+- **Pendiente para el abogado** (`[[ABOGADO]]`): la licencia de Parallext a la editora (el DDA §11.1 de Google exige que quien publica tenga derecho a monetizar por cuenta propia), los datos a los que accede la editora y su papel en la política.
+- **Matiza D-041** («ya no es AUTOMATION AI S A S»): sigue valiendo para el responsable de los datos y el desarrollador, no para la editora en Play.
+- **Cómo revertir:** con una decisión nueva del dueño.

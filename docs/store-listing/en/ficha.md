@@ -1,6 +1,6 @@
 # Ficha de Google Play · en · BORRADOR
 
-- **Estado:** borrador de la ficha 1.0, actualizado el 2026-10-24 (Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora prevista, D-041; River League per D-046). La identidad visual vigente es v2 (D-045); el registro del signo está aplazado. Nada se publica sin revisión del dueño, dictamen jurídico y comprobación del build y de las opciones de producción. El resto es traducción con IA de la ficha es-419, pendiente del revisor nativo.
+- **Estado:** borrador de la ficha 1.0, actualizado el 2026-10-24 (Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora en Google Play, D-048; River League per D-046). La identidad visual vigente es v2 (D-045); sin dictamen ni registro de marca por ahora (D-047). Nada se publica sin revisión del dueño, la revisión legal de los textos y comprobación del build y de las opciones de producción. El resto es traducción con IA de la ficha es-419, pendiente del revisor nativo.
 - Mismas reglas, marcas y fuentes que `../es-419/ficha.md`. Inglés en imperativo (glosario §10). Los nombres de comodines y sistemas son los EN del glosario §5, §7.1, §10 y §12; lo cultural, **pendiente de revisión** del asesor.
 
 ## 1. Datos de la app

@@ -167,3 +167,10 @@ LightingData.asset     binary
 # Prueba del 2026-10-23, observación 2. No se editan a mano (regla dura 3).
 /ProjectSettings/GooglePlayGameSettings.txt  text !eol
 /ProjectSettings/AndroidResolverDependencies.xml  text !eol
+
+# Iconos de la web (D-045, identidad v2): fuera de LFS, en la web generada y en su origen. El CI de infra
+# hace checkout sin LFS (`web:check` compararía punteros) y un despliegue no debe publicar un puntero como imagen.
+infra/web/site/assets/*.png                             -filter binary
+docs/art/marca-oficial/v2/out/png/favicon-16.png        -filter binary
+docs/art/marca-oficial/v2/out/png/favicon-32.png        -filter binary
+docs/art/marca-oficial/v2/out/png/apple-touch-icon.png  -filter binary

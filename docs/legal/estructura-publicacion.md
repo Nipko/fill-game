@@ -56,7 +56,7 @@ La entidad de Play **o el nombre de la app** debe constar en la política según
 3. Acordar contraprestación, territorios, duración y salida en la licencia; revisar tratamiento contable/fiscal con el contador, especialmente por dirección efectiva desde Colombia. No deducir residencia fiscal ni obligaciones de la sola constitución en Wyoming.
 4. Revisar privacidad por finalidad, adolescentes, datos de SDK, transferencias, retención y borrado. El deseo de distribución mundial amplía la revisión más allá de CO/BR/MX/PE/US; no anunciar conformidad global sin esa revisión.
 5. Completar datos operativos de anuncios, Analytics, política, términos y créditos. Véase inventario y paquete legal.
-6. Resolver con el integrador la diferencia entre **registro aplazado** y el antiguo requisito de **dictamen previo al applicationId/subida a Play** (D-034 y regla 6). No interpretar automáticamente el aplazamiento de tasas como eliminación de todas las compuertas de publicación. No afecta a preparar ni publicar la web bajo D-044, una vez listo su contenido.
+6. **Resuelto por D-047 (2026-10-25):** sin dictamen ni registro; el `applicationId` es `com.parallext.tintalu`. Texto anterior: resolver con el integrador la diferencia entre **registro aplazado** y el antiguo requisito de **dictamen previo al applicationId/subida a Play** (D-034 y regla 6). No interpretar automáticamente el aplazamiento de tasas como eliminación de todas las compuertas de publicación. No afecta a preparar ni publicar la web bajo D-044, una vez listo su contenido.
 
 ## 6. Transferencia futura, opcional
 

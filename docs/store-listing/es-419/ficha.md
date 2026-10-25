@@ -1,6 +1,6 @@
 # Ficha de Google Play · es-419 (idioma predeterminado) · BORRADOR
 
-- **Estado:** borrador de la ficha 1.0, actualizado el 2026-10-24 (Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora prevista, D-041; Liga según D-046). La identidad visual vigente es v2 (D-045); el registro del signo está aplazado. Nada se publica sin revisión del dueño, dictamen jurídico y comprobación del build y de sus opciones de producción.
+- **Estado:** borrador de la ficha 1.0, actualizado el 2026-10-24 (Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora en Google Play, D-048; Liga según D-046). La identidad visual vigente es v2 (D-045); sin dictamen ni registro de marca por ahora (D-047). Nada se publica sin revisión del dueño, la revisión legal de los textos y comprobación del build y de sus opciones de producción.
 - **Fuentes:** glosario §1.3 (título y descripción corta, canon), 08 §13.1 #5 (límites y la línea de independencia), 07 §10 (capturas y vídeo), 01 §1-§2 (qué se promete), glosario §5, §7 y §8-§9 (nombres).
 - **Reglas de redacción:** español latino neutro con tuteo; sin «Best», «#1», «Free», mayúsculas sostenidas ni emojis (glosario §1.1); «Tintalú» siempre con tilde; ningún identificador ni nombre propio con la cadena «amazon» (la palabra solo aparece de forma descriptiva y en la línea de independencia, que exige 08 §13.1 #5).
 - **Marcas:** `[PENDIENTE: dueño]`, `[PENDIENTE: abogado]`; **pendiente de revisión** = lo cultural (fauna, lugares, comodines con nombre de fauna o tupí), que revisa el asesor cultural (07 §8.2, fila «Ficha de tienda y creativos de UA»). Las preguntas abiertas están en `../README.md`.
@@ -11,7 +11,7 @@
 |---|---|---|
 | Nombre de la app (≤ 30) | **Tintalú: Ordenar Agua** (21) | glosario §1.3; 08 §13.1 #1 |
 | Nombre del desarrollador | **Parallext, LLC** (parallext.com) | D-041 |
-| `applicationId` | `[PENDIENTE: dueño]`: recomendado `com.parallext.tintalu`; se fija solo tras el dictamen de marca | D-041; 08 §13.1 #1; `CLAUDE.md`, regla 6 |
+| `applicationId` | **`com.parallext.tintalu`** (confirmado por el dueño el 2026-10-25; inmutable tras la primera subida) | D-047; 08 §13.1 #1; `CLAUDE.md`, regla 6 |
 | Cuenta de Play Console | `[PENDIENTE: dueño]`: hoy está a nombre de AUTOMATION AI S A S; con Parallext, LLC como desarrollador, cuenta nueva de Parallext o transferencia de la app | D-041, «Consecuencias» |
 | Tipo · categoría | Juego · Puzle | 08 §13.1 #1 |
 | Precio | Gratis, con compras integradas; **con anuncios solo cuando D-042 (MAX) esté en el build** que se publique | 08 §13.1 #1 y #8; D-042 |

@@ -46,12 +46,12 @@ Medidas de nuevo el 2026-10-23, tras poner en EN y PT-BR los nombres de D-033 (p
 
 | Id | Pregunta | Decidido (a) | Qué falta | Quién |
 |---|---|---|---|---|
-| Q-B13-3 | Correo de contacto, de privacidad y del DPO («encarregado») | Buzones del dominio canónico (soporte y privacidad separados) y un DPO designado por el abogado | Los datos de Parallext, LLC que D-041 lista como faltantes (correos y persona o cargo de protección de datos). La web los muestra como `[[DATO DEL DUEÑO]]` | Dueño; abogado |
+| Q-B13-3 | Correo de contacto, de privacidad y del DPO («encarregado») | Buzones del dominio canónico (soporte y privacidad separados) y un DPO designado por el abogado | Los datos de Parallext, LLC que D-041 lista como faltantes (correos y persona o cargo de protección de datos). **Resuelto (D-041, añadido del 2026-10-25):** `support@tintalu.com`, `privacy@tintalu.com` y encarregado Nir Levin Bermúdez Perea | Dueño |
 | Q-B13-4 | Idiomas de la política de privacidad | El abogado aprueba es-419 y después se traduce | La web ya tiene EN y PT-BR traducidos con IA, como **borrador** (igual que los textos legales del juego, D-033, añadido del 2026-10-22, punto 7). Falta que el abogado apruebe es-419 y revise las traducciones antes del lanzamiento en esos idiomas | Abogado |
 | Q-B13-9 | El manifiesto incluye `com.unity.modules.unityanalytics` | build-release comprueba que Unity Analytics y Cloud Diagnostics están apagados en release, y Data Safety no lleva fila de Unity | Sin hacer. Es el mismo «pendiente aparte» de D-040 (qué envía el runtime de Unity 6.3 en un build Android). `data-safety.md` §4 deja la fila «sin comprobar» | build-release |
 | Q-B13-12 | Línea del asesor cultural en la descripción larga | Con su nombre, solo con su consentimiento por escrito | El asesor y su consentimiento | Dueño |
 | Q-B13-16 | Líneas de `app-ads.txt` | Copiarlas del panel de AppLovin MAX | La cuenta de MAX y la integración de D-042; hoy la plantilla de la web no declara ningún vendedor | Dueño |
-| Q-B13-17 | Pix (Brasil) y OXXO (México) en las fichas por país | Solo tras comprobar en Play Console que se ofrecen al lanzar | La app en Play Console, que espera al dictamen (D-034) | Dueño |
+| Q-B13-17 | Pix (Brasil) y OXXO (México) en las fichas por país | Solo tras comprobar en Play Console que se ofrecen al lanzar | La app en Play Console (ya sin dictamen, D-047) | Dueño |
 | Q-B13-19 | Retención de Firebase Analytics | La mínima que permita el panel, por minimización | Configurarla en el proyecto de Firebase de prod y anotarla en la web (privacidad, sección 9, hoy `[[DATO DEL DUEÑO]]`) | Dueño |
 | Q-B13-22 | Partida de Play Games y datos del teléfono cuando el borrado llega por la web | Decir que se borran la próxima vez que se abre el juego y que el jugador puede borrar su perfil de Play Games | La web deja el texto como `[[ABOGADO]]`, y Play Games aún no está en el juego (D-042): el texto se completa al integrarlo | Abogado; integrador de D-042 |
 | Q-B13-24 [nueva; pendiente del sí del dueño y del abogado] | Data Safety: la dirección IP que guardan 30 días los registros de acceso del backend y de la web (08 §13.3, fila «Backend propio»; privacidad de la web, sección 9) | **(a) recomendada, aplicada en el borrador:** no se declara como un tipo aparte, porque solo sirve para seguridad y no se deriva ninguna ubicación; lo confirma el abogado; (b) declararla como «Ubicación aproximada» | El abogado | Abogado |
@@ -102,4 +102,4 @@ Ya tienen dueño fuera de este bloque y no se repiten aquí: Crashlytics y Analy
 - No crea cuentas, dominios, hosting, formularios ni `functions/` (`deleteAccount`), ni toca Play Console.
 - No hace arte: el encargo es para el artista; los creativos de UA (07 §10.4) quedan fuera.
 - No escribe textos legales: viven en la web (`infra/web/src/content/*`), que hizo el equipo de Claude (D-041).
-- No fija el `applicationId` (se fija tras el dictamen; recomendado `com.parallext.tintalu`, D-041). El desarrollador ya está fijado: Parallext, LLC (D-041).
+- El `applicationId` es `com.parallext.tintalu` (D-047). El desarrollador ya está fijado: Parallext, LLC (D-041).

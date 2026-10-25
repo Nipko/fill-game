@@ -22,5 +22,5 @@ El formulario en dos pasos lo hacen `infra/web/src/browser/delete-flow.ts` y `ac
 ## Lo que sigue pendiente (lo marca la propia web)
 
 - `[[ABOGADO]]`: el texto sobre los datos del teléfono cuando el borrado llega por la web (Q-B13-22) y el plazo fiscal del libro de compras.
-- `[[DATO DEL DUEÑO]]`: correo de privacidad.
+- Correo de privacidad: `privacy@tintalu.com` (D-041, añadido del 2026-10-25).
 - **Al integrar D-042:** añadir la partida de Play Games (snapshot `af_main`), que el cliente borra la próxima vez que se abre el juego, y que el jugador puede borrar su perfil de Play Games (Q-B13-22 (a)).

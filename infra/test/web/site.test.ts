@@ -26,7 +26,7 @@ function html(page: PageDef, lang: Lang): string {
   return content;
 }
 
-function attrs(doc: string, attr: 'href' | 'src'): string[] {
+function attrs(doc: string, attr: 'href' | 'src' | 'srcset'): string[] {
   return [...doc.matchAll(new RegExp(`\\s${attr}="([^"]*)"`, 'g'))].map((m) => m[1]);
 }
 
@@ -150,7 +150,11 @@ describe('web/site', () => {
       for (const m of all) expect(m, f).toMatch(/^\[\[(DATO DEL DUEÑO|ABOGADO): [^\]]+\]\]$/);
       expect(doc.split('<mark class="pending">[[').length - 1, f).toBe(all.length);
       expect(doc, f).not.toMatch(/\[PENDIENTE|TODO|FIXME|\{\{/);
-      // AUTOMATION AI S.A.S es la editora prevista; su nombre ya no es un resto de D-041.
+      // D-048: AUTOMATION AI S.A.S solo aparece como editora en Google Play, siempre junto al desarrollador y responsable.
+      if (/AUTOMATION AI/i.test(doc)) {
+        expect(doc, f).toMatch(/Parallext, LLC/);
+        expect(doc, f).toMatch(/AUTOMATION AI S\.A\.S<\/strong>/);
+      }
     }
   });
 
@@ -185,13 +189,16 @@ describe('web/site', () => {
     const externalLinks = new Set<string>();
     for (const f of HTML_FILES) {
       const doc = site.get(f) ?? '';
-      for (const s of attrs(doc, 'src')) expect(s, f).toMatch(/^\/assets\/[a-z-]+\.js$/);
+      // Scripts propios y el logo de la marca (SVG del mismo origen, identidad v2); nada más.
+      for (const s of attrs(doc, 'src')) expect(s, f).toMatch(/^\/assets\/([a-z-]+\.js|brand\/[a-z0-9-]+\.svg)$/);
+      for (const s of attrs(doc, 'srcset')) expect(s, f).toMatch(/^\/assets\/brand\/[a-z0-9-]+\.svg$/);
+      for (const m of doc.matchAll(/<(img|source)\b[^>]*>/g)) expect(m[0], f).toMatch(/(src|srcset)="\/assets\/brand\/[a-z0-9-]+\.svg"/);
       for (const m of doc.matchAll(/<link\b[^>]*>/g)) {
         const href = /href="([^"]*)"/.exec(m[0])?.[1] ?? '';
         expect(href.startsWith('/') && !href.startsWith('//'), `${f}: ${m[0]}`).toBe(true);
       }
       expect(doc, f).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>/); // ningún script en línea
-      expect(doc, f).not.toMatch(/<(style|iframe|img|object|embed|video|audio|source|base)\b/);
+      expect(doc, f).not.toMatch(/<(style|iframe|object|embed|video|audio|base)\b/);
       expect(doc, f).not.toMatch(/\sstyle="|\son[a-z]+="|javascript:/i);
       expect(doc, f).not.toMatch(/googletagmanager|google-analytics|gtag\(|facebook\.net|fonts\.googleapis|cdn\./i);
       for (const m of doc.matchAll(/<a\b[^>]*href="(https?:[^"]*)"[^>]*>/g)) {
@@ -237,7 +244,7 @@ describe('web/site', () => {
       const doc = html(page, lang);
       const soon = /<div id="delete-soon" class="notice" hidden>\s*<p>([\s\S]*?)<\/p>\s*<\/div>/.exec(doc)?.[1];
       expect(soon, lang).toBeDefined();
-      expect(soon, lang).toContain('<mark class="pending">[[DATO DEL DUEÑO: correo de privacidad]]</mark>');
+      expect(soon, lang).toContain('privacy@tintalu.com'); // D-041, añadido del 2026-10-25
       expect(decode(soon ?? ''), lang).toContain(lang === 'es-419' ? 'Eliminar cuenta y datos' : lang === 'en' ? 'Delete account and data' : 'Excluir conta e dados');
       // El aviso va antes del formulario y los dos empiezan ocultos: el script enseña uno u otro.
       expect(doc.indexOf('id="delete-soon"'), lang).toBeLessThan(doc.indexOf('id="delete-form"'));
