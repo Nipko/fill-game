@@ -13,7 +13,8 @@ Capturas y logcat en el portátil: `Logs/device/completa/<bloque>/` y `Logs/devi
 | 2. Recorrido natural (13-60) | cumple, con 2 observaciones | 6, 7 |
 | 4. Comodines | solo el 4.9 (Música y Sonido): cumple; el resto, pendiente | |
 | 6. Muestra amplia (1-200 y 201-700) | cumple | 8 |
-| 3, 5, 7-23 | pendientes (jornadas 2 y siguientes) | |
+| 3. Núcleo: tablero, vertido y gestos | cumple; quedan 3 puntos sin probar | 9 |
+| 5, 7-23 | pendientes (jornadas 2 y siguientes) | |
 
 ## Verificación (bloque 0)
 
@@ -152,6 +153,55 @@ Con el perfil del bloque 1, sin `af_max_level`. El jugador automático gana cada
 
    La memoria no crece sin parar: oscila entre 590 y 645 MB (observación 8).
 
+## Bloque 3. Núcleo del juego: tablero, vertido y gestos: cumple
+
+Con `af_level`, leyendo las sondas `AF_STATE` (`b03/*_logcat.txt`).
+
+1. **Vertido por tramo (D-005), en el 2** (`[4,8,4,4] [3,3,3,4] [3,8,8,8] [] []`):
+   - 0 → 3 vierte dos dosis en una vacía (`move [0,3,2]`);
+   - 2 → 0 vierte 2 de una racha de 3 en un hueco de 2 y deja 1 (`[3,8]`);
+   - el ilegal 1 → 0 (4 sobre 8) cambia la selección a la 0 (C5).
+   - Con `af_dev_reject 1`, el toque en una vacía da `reject`. La sacudida no se pudo ver sin vídeo, y `sfx_illegal` no salió porque el teléfono estaba en «No molestar» (observación 9).
+2. **Selección:** tocar el origen lo eleva (`select`) y tocarlo otra vez lo baja (`deselect`). Tocar una vacía sin nada elegido da `reject` (C2).
+3. **Gestos:**
+   - **toques muy rápidos:** unos 100 toques a ~10 por segundo sobre las 7 cuias del 7 dan 66 `select`, 12 `pour` y 78 `sfx`, sin excepciones ni bloqueos. Arrastrar, soltar en el fondo y mantener pulsado se vieron el 2026-10-22;
+   - **sin probar:** dos dedos a la vez, que `adb input` no puede.
+4. **Modo `single`:** con `af_rules_pour_mode single`, en el 5, el vertido 0 → 4 mueve una sola dosis (`amount 1`) de un par de 8.
+5. **Disposición del tablero** (`AF_LAYOUT`, a 420 dpi; capturas `b03-disposicion-<nivel>.png`):
+
+   | Nivel | Cuias | Filas | Zona táctil |
+   |---|---|---|---|
+   | 1 | 3 | 3 | 128 × 242 dp |
+   | 2 | 5 | 5 | 77 × 187 dp |
+   | 7 | 7 | 4 / 3 | 96 × 190 dp |
+   | 11 | 8 | 4 / 4 | 96 × 190 dp |
+   | 22 | 9 | 4 / 5 | 77 × 187 dp |
+   | 63 | 10 | 5 / 5 | 77 × 187 dp |
+   | 86 | 11 | 4 / 4 / 3 | 96 × 170 dp |
+   | 123 | 12 | 4 / 4 / 4 | 96 × 170 dp |
+   | 160 | 10 | 5 / 5 | 77 × 241 dp (cuia alta) |
+   | 240 | 13 | 5 / 4 / 4 | 77 × 170 dp |
+   | 335, 343, 600, 700 | 14 | 5 / 5 / 4 | 77 × 170 dp |
+
+   - Ninguna cuia queda fuera de la pantalla y las filas siguen D-006 (3 filas desde 11).
+   - `AF_LAYOUT` da la zona táctil, no el ancho del vidrio, así que el tope de D-004 (64 / 56 / 48 dp) no se puede medir con la sonda.
+   - En el 160, con Lluvia, «Mix» sale en gris.
+   - **Sin probar:**
+     - la tropa en su franja de 56 dp (en las capturas a 1,5 s del inicio no se ve; queda para la revisión del dueño);
+     - 15 y 16 cuias (bloque 7).
+6. **Patrones de fruta** (Ajustes › Fruit patterns):
+
+   | Ajuste | Nivel 30 | Nivel 41 |
+   |---|---|---|
+   | Always | `on` true, 0,20 | `on` true, 0,20 |
+   | Never | `on` false, 0,15 | `on` false, 0,15 |
+   | Automatic | apagado | encendido |
+
+   - Al terminar se dejó en Automático.
+   - **Sin probar** que se aplique «al nivel abierto»: Ajustes solo se abre desde el inicio.
+   - En el inicio, «Never» queda por debajo del borde de Ajustes con los 5 idiomas; hay que desplazar para verlo. Está bien, solo se anota.
+7. **Pista por inactividad:** con el ajuste encendido, a los ~12 s sin tocar en el 15 sale `idle_hint` `pulse` (`from: 5`); con el ajuste apagado, ninguna en 16 s. Se dejó encendida.
+
 ## Observaciones
 
 1. **Media. Textos que pararían un release.** El build de ensayo avisa: «`[AF.LocReleaseGate]` … Problemas de textos que pararían un build de release: 1087». Con `com.amazonfill.dev` no bloquea, pero con la identidad definitiva sí.
@@ -162,3 +212,4 @@ Con el perfil del bloque 1, sin `af_max_level`. El jugador automático gana cada
 6. **Media. Sin tutorial de estreno en el 18 (Cuia de 1) ni en el 22 (Cuia de 3).** Las cuias aparecen (`caps` 1 y 3), pero sin tarjeta previa ni `tutorial`; el guion y 02 §8 piden un tutorial de una pantalla en cada estreno.
 7. **Baja. El guion da «40 en Normal»** como premio de victoria; el juego da 20, que es lo de 08 §9 (`eco_reward_normal` = 20). Hay que corregir el guion.
 8. **Baja. La memoria del juego ronda los 600-650 MB de PSS** en el SM-S938B durante una sesión larga. Es estable, pero alta para un puzle 2D; en un teléfono de 3-4 GB (clase A) conviene medirla.
+9. **Informativa. El teléfono estuvo en «No molestar»** (`zen_mode` 1) hasta las ~04:20. Con él, el juego no emite efectos ni las sondas `sfx` y `haptic`: por eso 0 `sfx` en los bloques 0-2 y 6. El dueño lo quitó y desde entonces salen. El bloque 23 (audio) se hará sin «No molestar».
