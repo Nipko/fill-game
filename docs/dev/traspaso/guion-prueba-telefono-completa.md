@@ -548,6 +548,11 @@ Con `adb shell wm size` y `wm density`, anotando los valores de antes y **resete
 
 ## 19. Rendimiento, memoria, batería y temperatura (≈ 1 h 30 min, casi sin vigilancia)
 
+0. **Desglose de memoria (lo pide el análisis del escritorio de la jornada 1, observación 8):** en los niveles 75 y 200 de la sesión larga, guarda **entero** `adb shell dumpsys meminfo -d com.amazonfill.dev` (no solo el TOTAL PSS) en `Logs/device/completa/b19/meminfo-<nivel>-<variante>.txt`. Anota en la hoja Java Heap, Native Heap, Code, Graphics, Private Other y System, y del detalle `.so mmap`, `.dex mmap`, `GL mtrack`, `EGL mtrack` y `Unknown`. Repítelo en tres variantes para aislar las causas:
+   - el `dev.apk` con 18+ (anuncios de prueba de Google, si ya lleva AdMob);
+   - el mismo `dev.apk` con un perfil <13 (ningún SDK de anuncios arranca);
+   - el `rehearsal.apk` (sin modo Development) con 18+.
+   Referencia: 08 §5.4 fija RSS ≤ 400 MB, texturas ≤ 120 MB y heap gestionado ≤ 60 MB.
 1. **Sesión larga:** 60 min seguidos de juego (jugador automático más ratos a mano). Cada 15 min, anota:
    - `dumpsys meminfo` (`TOTAL PSS`);
    - `dumpsys battery` (nivel y temperatura);

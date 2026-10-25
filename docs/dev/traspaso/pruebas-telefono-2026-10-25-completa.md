@@ -229,3 +229,15 @@ Con `af_level`, leyendo las sondas `AF_STATE` (`b03/*_logcat.txt`).
 7. **«40 en Normal»:** error del guion; son 20 (`eco_reward_normal`). Corregido.
 8. **Memoria de 600-650 MB de PSS:** se abre un análisis en el escritorio (audio, texturas generadas por código y cachés) para bajarla antes de medir en un teléfono de gama baja.
 9. **«No molestar»:** anotado. Para el bloque 23, sin él.
+
+### Observación 8, análisis de la memoria (escritorio)
+- **Lo que dice el código:** no hay fugas por nivel (las cachés están acotadas), y el audio no es la causa: todo cabe en ~17 MB en Vorbis.
+- **Lo grande parece fijo:** el código mapeado de un build Development con 5 SDK, los búferes de pantalla con HDR (la cámara no lo necesita) y el pico del heap al arrancar (el pool del Reto, los packs y el arte por código), que IL2CPP no devuelve.
+- **Sin el desglose de `dumpsys meminfo -d` no se puede repartir:** el bloque 19 del guion lo pide ahora en tres variantes (18+, <13 y el ensayo).
+- **Medidas candidatas,** para cuando se fusione el inicio nuevo (tocan los mismos archivos):
+  - la sonda `AF_PERF mem`;
+  - quitar el HDR;
+  - reutilizar el búfer de `PixelCanvas`;
+  - leer el pool del Reto al abrirlo;
+  - las fuentes no legibles;
+  - quizá sacar MAX del build (decisión del dueño).
