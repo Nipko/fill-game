@@ -3933,3 +3933,18 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - la política (Google como socio de anuncios en lugar de AppLovin);
   - `app-ads.txt`, con la línea de AdMob y luego la de cada red.
 - **Cómo revertir:** con una decisión nueva del dueño, por ejemplo si AppLovin acepta la cuenta.
+
+### D-049, añadido del 2026-10-25: aprobada la versión de Google Mobile Ads y sus permisos
+
+- **Estado:** aprobado por el dueño en el chat, sobre `docs/dev/anuncios-gma-propuesta.md`: «Apruebo Google Mobile Ads 11.5.0 con play-services-ads 25.4.0, UMP 4.0.0, work-runtime 2.7.0 y hsdp 2.0.1; AD_ID activado; ACCESS_WIFI_STATE, CHECK_LICENSE, FOREGROUND_SERVICE, RECEIVE_BOOT_COMPLETED y ACCESS_ADSERVICES_TOPICS fuera; MobileAdsInitProvider se queda y MAX sin su UMP. Lanza el carril.»
+- **Aprobado:**
+  - el plugin `com.google.ads.mobile` **11.5.0** de OpenUPM (SHA-256 `54aa0d8e…cbb13b`), con `file:` en `Packages/`;
+  - `play-services-ads` **25.4.0**, UMP **4.0.0**, `androidx.work:work-runtime` **2.7.0** y `com.google.android.play:hsdp` **2.0.1**, con las demás dependencias de primer nivel de la propuesta, en las versiones que resuelva Gradle;
+  - el permiso **`AD_ID`**, activado (se declara en Play Console y Data Safety);
+  - `MobileAdsInitProvider` se queda (solo valida el App ID);
+  - MAX sigue instalado, con su flujo de UMP apagado.
+- **Fuera** (con `tools:node="remove"` cuando los traiga una dependencia):
+  - `ACCESS_WIFI_STATE`, `CHECK_LICENSE`, `FOREGROUND_SERVICE`, `RECEIVE_BOOT_COMPLETED` y `ACCESS_ADSERVICES_TOPICS`;
+  - `ACCESS_ADSERVICES_AD_ID` y `ATTRIBUTION`, que ya se quitan.
+- **No aprobado todavía:** Unity Ads (3.21.1), a la espera de la cuenta.
+- **Carril:** `tanda6/sdk-gma`.
