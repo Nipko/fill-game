@@ -65,7 +65,13 @@ namespace AF.Tests.EditMode
             StringAssert.Contains("<item name=\"android:windowSplashScreenAnimatedIcon\">@mipmap/af_launcher</item>", v31, "el icono adaptativo v2 (D-045)");
             Assert.That(File.Exists(Res + "mipmap-anydpi-v26/af_launcher.xml"), Is.True);
 
-            string launcher = File.ReadAllText("Assets/Plugins/Android/LauncherManifest.xml");
+            const string manifest = "Assets/Plugins/Android/LauncherManifest.xml";
+            foreach (string xml in new[] { manifest, Res + "values/af_splash.xml", Res + "values-v31/af_splash.xml" })
+            {
+                Assert.DoesNotThrow(() => new System.Xml.XmlDocument().Load(xml), xml + ": XML válido (un «--» en un comentario rompe el build)");
+            }
+
+            string launcher = File.ReadAllText(manifest);
             StringAssert.Contains("<activity android:name=\"com.unity3d.player.UnityPlayerGameActivity\"", launcher);
             StringAssert.Contains("android:theme=\"@style/AfLaunchTheme\"", launcher);
             StringAssert.Contains("tools:replace=\"android:theme\"", launcher);
