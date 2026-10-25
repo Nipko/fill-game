@@ -74,6 +74,8 @@ namespace AF.UI
         private static readonly Color AcaiMid = Palette.Hex(0x6A2C91);
         private static readonly Color AcaiLow = Palette.Hex(0x7E3AAE);
         private static readonly Color RippleColor = Palette.Hex(0xEBD5F8);
+        private static readonly Color WaterWave = Palette.Hex(0xE6CB9E);
+        private static readonly Color AcaiWave = Palette.Hex(0xCDA0F0);
 
         // Medidas, en fracciones del ancho E del emblema [P]: el río, la selva sobre él, el halo, la gota y las ondas.
         private const float EmblemMaxDp = 300f;
@@ -104,6 +106,9 @@ namespace AF.UI
         private float _dropX;
         private float _dropStartY;
         private float _dropEndY;
+        private float _riverH;
+        private float _tintFullW;
+        private float _tintFill;
         private bool _begun;
         private bool _reduceMotion;
         private bool _ended;
@@ -138,11 +143,8 @@ namespace AF.UI
             UiBuilder.Stretch(_background.rectTransform);
             _halo = UiBuilder.Image("Halo", _root, halo, HaloColor);
             _jungle = UiBuilder.Image("Jungle", _root, Own(0, Treeline(256, 64)), Jungle);
-            _river = UiBuilder.Image("River", _root, Own(1, Band(256, 32, WaterTop, WaterMid, WaterLow, 0f)), Color.white);
-            _tint = UiBuilder.Image("Tint", _root, Own(2, Band(256, 32, AcaiTop, AcaiMid, AcaiLow, ImpactU)), Color.white);
-            _tint.type = Image.Type.Filled;
-            _tint.fillMethod = Image.FillMethod.Horizontal;
-            _tint.fillOrigin = (int)Image.OriginHorizontal.Left;
+            _river = UiBuilder.Image("River", _root, Own(1, Band(256, 48, WaterTop, WaterMid, WaterLow, WaterWave, false)), Color.white);
+            _tint = UiBuilder.Image("Tint", _root, Own(2, Band(160, 48, AcaiTop, AcaiMid, AcaiLow, AcaiWave, true)), Color.white);
             _ripple = UiBuilder.Image("Ripple", _root, Own(3, Ring(128, 40)), RippleColor);
             _drop = UiBuilder.Image("Drop", _root, drop, Color.white);
             Layout(_width, _height);
@@ -173,7 +175,7 @@ namespace AF.UI
         public long AgeMs => (long)((Time.realtimeSinceStartupAsDouble - _origin) * 1000.0);
 
         /// <summary>Lo teñido del río (relleno de la capa de açaí, de <see cref="ImpactU"/> a 1).</summary>
-        public float TintFill => _tint.fillAmount;
+        public float TintFill => _tintFill;
 
         /// <summary>Opacidad de la gota (1 mientras cae; 0 tras el impacto).</summary>
         public float DropAlpha => _drop.color.a;
@@ -237,7 +239,10 @@ namespace AF.UI
             UiBuilder.Place(_halo.rectTransform, (width - halo) * 0.5f, cy - (halo * 0.55f), halo, halo);
             UiBuilder.Place(_jungle.rectTransform, left, riverTop - (e * JungleH) + 2f, e, e * JungleH);
             UiBuilder.Place(_river.rectTransform, left, riverTop, e, riverH);
-            UiBuilder.Place(_tint.rectTransform, left, riverTop, e, riverH);
+            // El açaí, desde el impacto hasta el final del río: crece en ancho río abajo (Apply), con su frente suave.
+            _riverH = riverH;
+            _tintFullW = (1f - ImpactU) * e;
+            UiBuilder.Place(_tint.rectTransform, left + (ImpactU * e), riverTop, _tintFullW, riverH);
 
             // La gota cae sobre el agua en ImpactU; las ondas, centradas en el impacto (un poco por debajo de la orilla de arriba).
             float d = e * DropSize;
@@ -320,11 +325,13 @@ namespace AF.UI
             float ripple = t <= FallMs ? -1f : Mathf.Clamp01((t - FallMs) / (RippleEndMs - FallMs));
             float scale = ripple < 0f ? 0.4f : 0.4f + (0.8f * ripple);
             _ripple.rectTransform.localScale = new Vector3(scale, scale, 1f);
-            _ripple.color = new Color(RippleColor.r, RippleColor.g, RippleColor.b, ripple < 0f ? 0f : 0.9f * (1f - ripple));
+            _ripple.color = new Color(RippleColor.r, RippleColor.g, RippleColor.b, ripple < 0f ? 0f : 1f - (ripple * ripple));
 
             float spread = t <= FallMs ? 0f : Mathf.Clamp01((t - FallMs) / (AnimMs - FallMs));
             float eased = 1f - ((1f - spread) * (1f - spread));
-            _tint.fillAmount = spread <= 0f ? 0f : ImpactU + ((1f - ImpactU) * eased);
+            _tintFill = spread <= 0f ? 0f : ImpactU + ((1f - ImpactU) * eased);
+            _tint.rectTransform.sizeDelta = new Vector2(_tintFullW * eased, _riverH);
+            _tint.color = new Color(1f, 1f, 1f, spread <= 0f ? 0f : 1f);
         }
 
         private float CurrentMs()
@@ -351,32 +358,50 @@ namespace AF.UI
             };
         }
 
-        // Fundido de los extremos del río y de la selva: el río entra y sale del fondo, de izquierda a derecha.
+        // Fundido de los extremos de la selva: entra y sale del fondo, de izquierda a derecha.
         private static float EndFade(float u)
         {
             return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(u / 0.12f)) * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((1f - u) / 0.12f));
         }
 
-        // Banda del río: degradado vertical (arriba top, en medio mid, abajo low) y extremos fundidos. Con startU > 0 (la capa de
-        // açaí), transparente a la izquierda de startU, con 1 px de borde suave: el tinte empieza en el impacto.
-        private static Texture2D Band(int w, int h, Color top, Color mid, Color low, float startU)
+        // Banda del río: degradado vertical (arriba top, en medio mid, abajo low), con dos ondas claras (wave, como las del icono) y
+        // los extremos fundidos. La del açaí (tint) cubre del impacto al final del río: su frente izquierdo es suave y ondulado (el
+        // tinte entra en el agua blanca) y su extremo derecho se funde como el del río.
+        private static Texture2D Band(int w, int h, Color top, Color mid, Color low, Color wave, bool tint)
         {
-            Texture2D tex = NewTexture(w, h, startU > 0f ? "AF_IntroTint" : "AF_IntroRiver");
+            Texture2D tex = NewTexture(w, h, tint ? "AF_IntroTint" : "AF_IntroRiver");
             var px = new Color32[w * h];
-            float startPx = startU * w;
+            float rightFade = tint ? 0.12f / (1f - ImpactU) : 0.12f;
             for (int y = 0; y < h; y++)
             {
                 float v = 1f - (y / (float)(h - 1)); // 0 arriba, 1 abajo
-                Color c = v < 0.25f ? Color.Lerp(top, mid, v / 0.25f) : Color.Lerp(mid, low, (v - 0.25f) / 0.75f);
+                Color body = v < 0.25f ? Color.Lerp(top, mid, v / 0.25f) : Color.Lerp(mid, low, (v - 0.25f) / 0.75f);
                 for (int x = 0; x < w; x++)
                 {
                     float u = (x + 0.5f) / w;
-                    float a = EndFade(u);
-                    if (startU > 0f)
+                    float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((1f - u) / rightFade));
+                    if (tint)
                     {
-                        a *= Mathf.Clamp01(x + 0.5f - startPx + 0.5f);
+                        float front = 0.03f + (0.03f * Mathf.Sin(v * 9f)); // frente ondulado
+                        a *= Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((u - front) / 0.10f));
+                    }
+                    else
+                    {
+                        a *= Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(u / 0.12f));
                     }
 
+                    // Dos ondas: trazos finos que ondulan a lo largo del río, a tramos.
+                    float waves = 0f;
+                    for (int k = 0; k < 2; k++)
+                    {
+                        float v0 = k == 0 ? 0.42f : 0.72f;
+                        float line = v0 + (0.06f * Mathf.Sin((u * 6.283f * (tint ? 2.5f : 4f)) + (k * 1.7f)));
+                        float stroke = Mathf.Clamp01(1f - (Mathf.Abs(v - line) * h / 1.6f));
+                        float segment = Mathf.Clamp01((Mathf.Sin((u * 6.283f * (tint ? 1.5f : 2.5f)) + (k * 2.3f)) * 3f) - 1f);
+                        waves = Mathf.Max(waves, stroke * segment);
+                    }
+
+                    Color c = Color.Lerp(body, wave, 0.65f * waves);
                     px[(y * w) + x] = new Color(c.r, c.g, c.b, a);
                 }
             }
@@ -430,7 +455,7 @@ namespace AF.UI
                     float dx = ((x + 0.5f) / w) - 0.5f;
                     float dy = ((y + 0.5f) / h) - 0.5f;
                     float r = Mathf.Sqrt((dx * dx) + (dy * dy * (w / (float)h) * (w / (float)h))) * 2f; // 1 en el borde de la caja
-                    float a = Mathf.Clamp01(1f - (Mathf.Abs(r - 0.85f) / 0.10f));
+                    float a = Mathf.Clamp01(1f - (Mathf.Abs(r - 0.82f) / 0.16f));
                     px[(y * w) + x] = new Color32(255, 255, 255, (byte)(a * 255f));
                 }
             }
