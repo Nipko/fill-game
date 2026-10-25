@@ -28,6 +28,9 @@ namespace AF.Tests.EditMode
         // 360 × 800 dp (720 × 1600 px): el tablero baja hasta 640.
         private const float BoardBottom800 = 640f;
 
+        // 360 × 640 dp (16:9): 480.
+        private const float BoardBottom640 = 480f;
+
         private static readonly int[] ExpectedSide =
         {
             86, 95, 104, 107, 111, 115, 118, 124, 127, 132, 136, 139, 143, 147, 150, 153, 156, 159, 165, 168, 171, 174, 179, 185,
@@ -152,6 +155,74 @@ namespace AF.Tests.EditMode
             Assert.That(forward, Is.EqualTo(ExpectedSide));
             Assert.That(backward, Is.EqualTo(forward), "función del número de nivel: no depende del orden en que se juega");
             Assert.That(tall, Is.EqualTo(forward), "720 × 1600 px (360 × 800 dp): los mismos niveles");
+        }
+
+        /// <summary>
+        /// D-046, punto 3: en todos los niveles de 3 filas de los paquetes 1-700, a 360 × 780 y a 360 × 800 dp, el tablero deja la
+        /// franja de la rama (56 dp entre el HUD y el panel) con la cuia ≥ 28 dp, con sus capacidades reales (Cuia alta) y la
+        /// pareja de la Tinaja en su fila; así la tropa va en su rama en el primer intento y la tropa lateral (D-021) solo queda
+        /// de respaldo. En 16:9 (360 × 640) no cabe en ninguno y vuelve el comportamiento de antes.
+        /// </summary>
+        [Test]
+        public void RealPacks_EveryThreeRowLevel_LeavesTheTroopBand_At360x780And800_AndNoneIn16x9()
+        {
+            LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
+            int three780 = 0;
+            int three640 = 0;
+            int tall = 0;
+            int tinaja = 0;
+            float narrowest = float.MaxValue;
+            for (int level = catalog.FirstLevel; level <= catalog.LastLevel; level++)
+            {
+                LevelDefinition? def = catalog.Find(level);
+                if (def == null)
+                {
+                    continue;
+                }
+
+                float heightU = 0f;
+                for (int i = 0; i < def.CuiaCount; i++)
+                {
+                    heightU = Mathf.Max(heightU, CuiaGeometry.HeightU(def.CapacityOf(i)));
+                }
+
+                int pair = BoardLayout.TinajaPairStart(def.CreateBoard());
+                foreach (float bottom in new[] { BoardBottom780, BoardBottom800 })
+                {
+                    BoardLayoutResult l = BoardLayout.Compute(def.CuiaCount, def.CuiaCount, heightU, Width, BoardTop, bottom, pair);
+                    Assert.That(l.Rows == 3, Is.EqualTo(GameScreen.HasThreeRows(def, Width, BoardTop, bottom)), "nivel " + level);
+                    if (l.Rows != 3)
+                    {
+                        Assert.That(l.TroopBand, Is.False, "nivel " + level + ": con 1 o 2 filas, nada cambia");
+                        continue;
+                    }
+
+                    string at = "nivel " + level + " (" + def.CuiaCount + " cuias, " + heightU + " u), boardBottom " + bottom;
+                    Assert.That(l.TroopBand, Is.True, at + ": la franja de la tropa");
+                    Assert.That(l.PanelY - BoardTop, Is.GreaterThanOrEqualTo(IntroChoreography.BranchMinBandDp), at);
+                    Assert.That(l.CuiaWidth, Is.GreaterThanOrEqualTo(BoardLayout.MinCuiaWidth), at);
+                    narrowest = Mathf.Min(narrowest, l.CuiaWidth);
+                    if (bottom == BoardBottom780)
+                    {
+                        three780++;
+                        tall += heightU > CuiaGeometry.HeightU(4) + 0.001f ? 1 : 0;
+                        tinaja += pair >= 0 ? 1 : 0;
+                    }
+                }
+
+                BoardLayoutResult short16x9 = BoardLayout.Compute(def.CuiaCount, def.CuiaCount, heightU, Width, BoardTop, BoardBottom640, pair);
+                if (short16x9.Rows == 3)
+                {
+                    three640++;
+                    Assert.That(short16x9.TroopBand, Is.False, "nivel " + level + " en 16:9: sin franja, como antes");
+                }
+            }
+
+            Debug.Log("AF_TROOP_BAND niveles de 3 filas a 360 × 780: " + three780 + " (con Cuia alta: " + tall + "; con Tinaja: " + tinaja
+                + "), todos con la franja; cuia más estrecha " + narrowest.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                + " dp; en 16:9, " + three640 + " de 3 filas, ninguno con la franja");
+            Assert.That(three780, Is.GreaterThan(82), "más que los 82 del 86-200");
+            Assert.That(three640, Is.GreaterThan(0));
         }
 
         [Test]

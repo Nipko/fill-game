@@ -198,6 +198,8 @@ namespace AF.UI
         private int _noticeCount;
         private FaunaSpecies? _sightingPending;
         private float _sightingDockBottom = float.NaN; // borde de abajo de la placa de la tarjeta sobre el muelle; NaN si no
+        private bool _toastHidesBandBubbles; // el aviso ocupa la franja de la tropa entera: sus burbujas, después (D-046; Q-T6T-3)
+        private float _hudBandBubbleTop = float.MaxValue; // lo alto de las burbujas de la franja, sin _boardShift (o MaxValue)
         private readonly FruitNewCard _fruitNew; // «Fruta nueva» (tarea F5); la crea el constructor de GameScreen
         private float _fruitNewDockBottom = float.NaN; // como _sightingDockBottom, para la tarjeta «Fruta nueva»
         private int _fruitNewLevel; // nivel cuya tarjeta «Fruta nueva» ya entró en la cola en esta visita (0: ninguno)
@@ -311,11 +313,21 @@ namespace AF.UI
         // (KeepSightingClearOfBubbles).
         private void PlaceToast(bool force)
         {
+            UpdateMissingRoom();
             KeepSightingClearOfBubbles();
             if (!_toast.Visible)
             {
+                _toastHidesBandBubbles = false;
                 return;
             }
+
+            if (PlaceToastInTroopBand(force))
+            {
+                UpdateMissingRoom();
+                return;
+            }
+
+            _toastHidesBandBubbles = false;
 
             float bottom = TrayTop - NoticeAboveTrayDp;
             if (_tray.TryGetMissingTop(out float bubbleTop))
@@ -360,6 +372,106 @@ namespace AF.UI
                 _toast.PlaceAt(left, top, width, height);
             }
         }
+
+        // Con 3 filas y el suelo bajado (D-046, punto 3; Q-T6T-3, decidida por el dueño el 2026-10-24: «Bajar y mover avisos»)
+        // [P]: las burbujas «Te faltan {n}» que pisarían el panel van a la franja de la tropa, sobre el panel, y no se dibujan
+        // mientras la tropa está en ella (ni mientras el aviso del tablero la necesita entera). Sin la franja, como siempre.
+        private void UpdateMissingRoom()
+        {
+            BoardLayoutResult? l = _layout;
+            float bubbles = float.MaxValue;
+            if (l == null || !l.TroopBand || _views.Length == 0)
+            {
+                _tray.SetMissingRoom(float.NaN, float.NaN, false, false);
+            }
+            else
+            {
+                float floor = l.PanelBottom - _boardShift + BoosterTray.MissingPanelClearDp;
+                _tray.SetMissingRoom(floor, l.PanelY - _boardShift, _intro.TroopVisible, _toastHidesBandBubbles, BoardTop);
+                if (_tray.TryGetMissingBandTop(out float top))
+                {
+                    bubbles = top + _boardShift; // en el sistema del layout, sin el desplazamiento del tablero (como PanelEdgeDp)
+                }
+            }
+
+            // Las etiquetas de la banda del HUD (dificultad, «?» y contador) van en la misma franja: no pisan esas burbujas
+            // (LayoutHudLabels las cuenta como el canto del panel). Solo se recolocan si cambia lo alto de las burbujas.
+            if (!Mathf.Approximately(bubbles, _hudBandBubbleTop))
+            {
+                _hudBandBubbleTop = bubbles;
+                RelayoutHudLabelsForBubbles();
+            }
+        }
+
+        // El aviso del tablero en la franja de la tropa (D-046, punto 3; Q-T6T-3) [P], cuando con 3 filas y la franja no cabe
+        // entre el tablero y la bandeja ni a su alto mínimo (sin encoger su texto de 15 sp): de su ancho de siempre, centrado,
+        // entre el pie de la fila del HUD y el panel (NoticeBoardGapDp de aire a cada lado, con su canto) y, si las burbujas
+        // «Te faltan {n}» están en la franja, por encima de ellas (NoticeBubbleGapDp). Si con ellas no cabe a su alto mínimo,
+        // las burbujas de la franja no se dibujan mientras se ve (como la tropa) y el aviso usa la franja entera. Así no pisa
+        // el panel, ni las burbujas, ni la tropa (espera a que se vaya: PumpNotices). Tapa, mientras dura, las etiquetas de la
+        // banda del HUD que caen en la franja. False si no hay franja o si cabe abajo (la colocación de siempre).
+        private bool PlaceToastInTroopBand(bool force)
+        {
+            BoardLayoutResult? l = _layout;
+            if (l == null || !l.TroopBand || _views.Length == 0)
+            {
+                return false;
+            }
+
+            float below = TrayTop - NoticeAboveTrayDp;
+            if (_tray.TryGetMissingTop(out float bubbleTop))
+            {
+                below = Mathf.Min(below, bubbleTop - NoticeBubbleGapDp - Toast.EdgeDp);
+            }
+
+            float min = _toast.MinHeightDp(_canvasW);
+            float floor = BoardContentBottom();
+            if (below - (floor + NoticeBoardGapDp) >= min)
+            {
+                return false; // cabe abajo: la colocación de siempre
+            }
+
+            float top = BoardTop + NoticeBoardGapDp;
+            float bottom = l.PanelY - _boardShift - NoticeBoardGapDp - Toast.EdgeDp;
+            bool hide = false;
+            if (_tray.TryGetMissingBandTop(out float bandBubbles))
+            {
+                float above = bandBubbles - NoticeBubbleGapDp - Toast.EdgeDp;
+                if (above - top >= min)
+                {
+                    bottom = above;
+                }
+                else
+                {
+                    hide = true; // no caben las dos cosas: el aviso, entero, y las burbujas de la franja, después
+                }
+            }
+
+            if (bottom - top < _toast.LegibleHeightDp(_canvasW))
+            {
+                _toastHidesBandBubbles = false;
+                return false; // ni en la franja entera cabe legible (su texto a 12 sp): abajo, como siempre
+            }
+
+            _toastHidesBandBubbles = hide;
+            float height = Mathf.Max(0f, Mathf.Min(_toast.PreferredHeightDp(_canvasW), bottom - top));
+            float width = Toast.FullWidthDp(_canvasW);
+            float left = (_canvasW - width) * 0.5f;
+            float y = top + Mathf.Floor((bottom - top - height) * 0.5f);
+            if (force || float.IsNaN(_toast.Top) || Mathf.Abs(y - _toast.Top) > 0.01f || Mathf.Abs(height - _toast.Height) > 0.01f
+                || Mathf.Abs(left - _toast.Left) > 0.01f || Mathf.Abs(width - _toast.Width) > 0.01f)
+            {
+                _toast.PlaceAt(left, y, width, height);
+            }
+
+            return true;
+        }
+
+        /// <summary>El aviso del tablero está en la franja de la tropa, sobre el panel (D-046; Q-T6T-3; tests).</summary>
+        internal bool ToastInTroopBand => _toast.Visible && _layout != null && _layout.TroopBand && _toast.Top < _layout.PanelY - _boardShift;
+
+        /// <summary>Las burbujas «Te faltan {n}» de la franja no se dibujan porque el aviso la ocupa entera (tests).</summary>
+        internal bool ToastHidesBandBubbles => _toastHidesBandBubbles;
 
         // El aviso que llega a la repisa de la última fila (ver la clase): ajustado a su texto en el tramo más ancho sin fichas,
         // lo más centrado posible; si no cabe, de su ancho de siempre y con su borde de arriba sobre las fichas que alcanza, para
@@ -632,6 +744,13 @@ namespace AF.UI
                 ref Notice head = ref _notices[_noticeHead];
                 bool slothCard = head.Kind == NoticeKind.Sloth || head.Kind == NoticeKind.Tutorial;
                 if ((head.Kind == NoticeKind.StopLabel || head.Kind == NoticeKind.FruitNew || slothCard) && _intro.TroopVisible)
+                {
+                    return;
+                }
+
+                // Con 3 filas y la franja de la tropa, el aviso del tablero puede ir a la franja (PlaceToastInTroopBand): espera a
+                // que la tropa se vaya, como las tarjetas (D-046, punto 3; Q-T6T-3).
+                if (head.Kind == NoticeKind.Text && _intro.TroopVisible && _layout != null && _layout.TroopBand)
                 {
                     return;
                 }

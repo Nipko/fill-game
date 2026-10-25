@@ -242,7 +242,7 @@ namespace AF.Tests.PlayMode
         /// la onda activa a 300 y 1.100 ms):
         /// <c>01_intro_l7_*</c> a 0, 50, 150, 300, 700, 1.100 y 1.400 ms (larga, rama con el mono ardilla; 0-150: el río crece
         /// antes que nada, A3); <c>01c_intro_l1_*</c> a 0, 50, 150, 300, 900 y 1.300; <c>01d_intro_short_l7_*</c> a 200,
-        /// 500 y 700 (corta: desde D-011 la tropa entra trepando y suelta); <c>01e_intro_16_0500</c> (16 cuias en 3 filas: dosel, una fruta por cuia). Hojas
+        /// 500 y 700 (corta: desde D-011 la tropa entra trepando y suelta); <c>01e_intro_16_0500</c> (16 cuias en 3 filas: desde D-046, punto 3, con la tropa en su rama sobre la franja de 56 dp; antes, dosel). Hojas
         /// cada 100 ms (<c>21_sheet_&lt;tablero&gt;_&lt;versión&gt;_&lt;ms&gt;</c>) de la larga y la corta con 3, 7 y 13 cuias, y del
         /// reintento (dosel) del nivel 7. Galería de especies (<c>22_species_&lt;id&gt;</c>): el tablero del nivel 7 en un nivel de
         /// cada tramo del catálogo, corta a 300 ms; y <c>23_sighting_l5</c>, la tarjeta «¡Miquito a la vista!». Cada hoja escribe

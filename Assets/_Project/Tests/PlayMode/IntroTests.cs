@@ -32,6 +32,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            BoardLayout.TroopBandOffForTests = false;
             GameScreen.SimulatedScreen = null;
             AmbientLayer.Frozen = false;
             LaunchOptions.Reset();
@@ -213,14 +214,15 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Troop_KeepsClearOfCuiasHudAndPanel_InTheThreeModels([Values(2340, 1920)] int screenHeightPx)
         {
-            // 20:9 (360 × 780 dp) y 16:9 (360 × 640 dp desde DC3; 02 §5). En 16:9 los tableros que no dejan entre el HUD y el panel
+            // 20:9 (360 × 780 dp) y 16:9 (360 × 640 dp desde DC3; 02 §5). El de 16 cuias, con el tablero de antes de D-046 (sin
+            // la franja de la tropa: dosel); la rama con 3 filas, en IntroThreeRowBranchTests. En 16:9 los tableros que no dejan entre el HUD y el panel
             // la franja de la rama (BranchMinBandDp) van con el dosel, y la tropa que cuelga, con menos de 64 dp, en fila: la regla
             // de D-010 («pantallas de 640 dp sin franja», 02 §5, fila de la intro), no una excepción del test.
             GameScreen.SimulatedScreen = new Vector4(1080f, screenHeightPx, 96f, 48f);
             var cases = new (string Pack, int Level, IntroPerch Perch, TroopModel Model)[]
             {
                 (string.Empty, 1, IntroPerch.Branch, TroopModel.Row), (string.Empty, 7, IntroPerch.Branch, TroopModel.Row),
-                (PlayModeHelpers.SixteenCuiaPack(), 1, IntroPerch.Canopy, TroopModel.Row),
+                (PlayModeHelpers.SixteenCuiaPack(), 1, IntroPerch.Canopy, TroopModel.Row), // 3 filas sin la franja de D-046: dosel
                 (PlayModeHelpers.Level7BoardPack(2, "w02_tapajos", "clear", 13), 13, IntroPerch.Branch, TroopModel.Hang), // cuelga
                 (PlayModeHelpers.Level7BoardPack(5, "w05_loreto", "white", 142), 142, IntroPerch.Branch, TroopModel.Shake), // sacude
                 (PlayModeHelpers.Level7BoardPack(4, "w04_trapecio", "white", 82), 82, IntroPerch.Branch, TroopModel.Hang), // cuelga de la cola
@@ -233,6 +235,7 @@ namespace AF.Tests.PlayMode
             foreach ((string pack, int level, IntroPerch perch, TroopModel model) in cases)
             {
                 LaunchOptions.Reset();
+                BoardLayout.TroopBandOffForTests = perch == IntroPerch.Canopy;
                 if (pack.Length > 0)
                 {
                     yield return PlayModeHelpers.LoadGameWithPack(pack, level, new MemoryProgressStore());
@@ -386,6 +389,7 @@ namespace AF.Tests.PlayMode
                 case "dosel_16_larga":
                     pack = PlayModeHelpers.SixteenCuiaPack();
                     level = 1;
+                    BoardLayout.TroopBandOffForTests = true; // 16 cuias sin la franja de la tropa (D-046): el dosel
                     break;
                 case "reintento_dosel_l7":
                     duration = 800;

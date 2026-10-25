@@ -36,6 +36,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            BoardLayout.TroopBandOffForTests = false;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -236,7 +237,9 @@ namespace AF.Tests.PlayMode
             // Captura 48c (revisión de T09): en el 194 (3 filas a 360 × 780) la Lluvia está en la fila 1 y su cielo (los 32 dp sobre
             // la boca, con la nube) entra en la fila del HUD al elevarla, donde la insignia «Nivel 194» lo tapaba. Mientras está
             // elevada, la cuia se dibuja delante del HUD (detrás de la capa de vertido y de la pausa); al bajar, vuelve a su sitio
-            // en el tablero, entre las capas de mecánicas.
+            // en el tablero, entre las capas de mecánicas. Desde D-046 (punto 3) eso solo pasa donde no cabe la franja de la tropa
+            // (16:9); aquí, con el tablero de antes en el mismo lienzo.
+            BoardLayout.TroopBandOffForTests = true; // el tablero de 3 filas de antes de D-046 (sin la franja de la tropa), el respaldo
             yield return HudSetup.LoadPlaying(194);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;

@@ -46,6 +46,7 @@ namespace AF.Tests.PlayMode
         {
             GameScreen.StopLabelsOverride = null;
             GameScreen.StopLabelSpotsOverride = GameScreen.StopLabelSpot.All;
+            BoardLayout.TroopBandOffForTests = false;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             SnapshotKit.Release();
@@ -67,8 +68,12 @@ namespace AF.Tests.PlayMode
             yield return Capture(dir, 191, "18e_stop_label_l191", "plate");
             yield return Capture(dir, 131, "18g_stop_label_l131_elevada", "plate", true);
             yield return Capture(dir, 191, "18h_stop_label_l191_elevada", "plate", true);
+            // El sitio de reserva sobre el muelle: desde D-046 (punto 3; Q-T6T-3) el panel de 3 filas llega a 11,5 dp de la bandeja
+            // y ahí ya no cabe, así que se captura con el tablero de antes (sin la franja de la tropa) para seguir viendo ese camino.
             GameScreen.StopLabelSpotsOverride = GameScreen.StopLabelSpot.Dock;
+            BoardLayout.TroopBandOffForTests = true;
             yield return Capture(dir, 171, "18f_stop_label_l171_muelle", "dock");
+            BoardLayout.TroopBandOffForTests = false;
             Assert.That(File.Exists(Path.Combine(dir, "18f_stop_label_l171_muelle.png")), Is.True);
             Assert.That(File.Exists(Path.Combine(dir, "18h_stop_label_l191_elevada.png")), Is.True);
         }

@@ -403,11 +403,22 @@ namespace AF.Tests.PlayMode
             // El 200 a 360 × 780 (Muy difícil, 11 cuias en 3 filas: el panel pasa bajo la fila del HUD y la fila 1 empieza más
             // arriba; HudLabelTests): la píldora en dos líneas crece hacia abajo sin tapar las cuias (ni su sitio al subir) ni el
             // contador y las etiquetas de la banda pegada bajo la placa.
+            // Desde D-046 (punto 3) el panel solo pasa bajo el HUD donde no cabe la franja de la tropa (16:9): aquí, con el tablero
+            // de antes en el mismo lienzo. Con la franja, la banda va entera y el contador bajo Reiniciar, que en en-XA a dos líneas
+            // lo pisa (Q-T6T-5, riesgo anotado para el integrador).
             float scale = percent / 100f;
-            yield return LongLabelSetup.LoadLevel(200, LocLocale.Pseudo, scale, HudLabelTests.Screen780);
-            GameScreen view = GameBootstrap.Current!.View!;
-            Assert.That(view.Layout!.Rows, Is.EqualTo(3), "11 cuias: 3 filas a 360 × 780");
-            LongLabelSetup.AssertRestart(view, scale, 2, false);
+            BoardLayout.TroopBandOffForTests = true;
+            try
+            {
+                yield return LongLabelSetup.LoadLevel(200, LocLocale.Pseudo, scale, HudLabelTests.Screen780);
+                GameScreen view = GameBootstrap.Current!.View!;
+                Assert.That(view.Layout!.Rows, Is.EqualTo(3), "11 cuias: 3 filas a 360 × 780");
+                LongLabelSetup.AssertRestart(view, scale, 2, false);
+            }
+            finally
+            {
+                BoardLayout.TroopBandOffForTests = false;
+            }
         }
 
         [UnityTest]
@@ -564,7 +575,9 @@ namespace AF.Tests.PlayMode
         /// entrega de L4): en los tableros de 3 filas la píldora en dos líneas («[Réíñíçíár ···]» en en-XA) baja hasta el sitio
         /// al que sube la cuia de arriba a la derecha al seleccionarla. Las palabras partidas («Reinici / ar» en es-419 al 130 %)
         /// ya no pasan: la píldora crece y estrecha la columna del saldo (tarea FX5); con el 100 (2 filas) y en es-419, este test
-        /// pasa. Se deja escrito (explícito: con en-XA en el 200, hoy falla) para cuando el dueño decida.
+        /// pasa. Se deja escrito (explícito: con en-XA en el 200, hoy falla) para cuando el dueño decida. Desde D-046 (punto 3) el
+        /// 200 lleva la franja de la tropa y la banda de etiquetas entera: la píldora en dos líneas pisa el contador de la Piraña,
+        /// bajo Reiniciar (Q-T6T-5), en lugar de la cuia.
         /// </summary>
         [UnityTest]
         [Explicit("Pendiente del dueño (revisión de L4): la píldora Reiniciar en dos líneas a 360 dp en 3 filas; hoy falla con en-XA en el 200.")]

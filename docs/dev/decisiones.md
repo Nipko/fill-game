@@ -691,7 +691,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
   | 3 | 1 | 64 × 179,2 (u = 32) |
   | 5 | 1 | 47,04 × 131,7 |
   | 6-8 | 2 | 48 × 134,4 |
-  | 11-15 | 3 | 46,9 × 131,3 (Magic Sort con 13-14 botellas: 45 × 138) |
+  | 11-15 | 3 | 46,9 × 131,3 (Magic Sort con 13-14 botellas: 45 × 138); **matizada por D-046:** 41,6 × 116,5 con la franja de la tropa |
   | 16 | 3 | 39,2 × 109,8 |
 
   - A 360 × 800 dp, con 3 filas: 48 dp con T = 11-12 y 47,04 dp con T = 13-15.
@@ -2125,6 +2125,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 ## D-021 · Miquitos por los lados en los tableros de 3 filas, alternando
 
 - **Fecha:** 2026-10-14.
+- **Matizada por D-046 (punto 3, 2026-10-23):** con 3 filas el tablero deja una franja de 56 dp sobre el panel (Q-T6T-4, decidida por el dueño el 2026-10-24) y la tropa sale en su rama en todos los niveles de 3 filas, en el primer intento; la tropa lateral de esta decisión (y el dosel) queda solo de respaldo donde esa franja no cabe sin bajar la cuia de 28 dp (16:9, 360 × 640 dp, y la Cuia alta de 6 en lienzos bajos). Implementado en la rama `spark/t6-tropa-3filas` (`BoardLayoutResult.TroopBand`).
 - **Estado:** decidida por el dueño. La frecuencia y las restricciones son [P] de este registro y las puede ajustar el dueño. **Implementada en la rama, pendiente de la prueba en el teléfono** (tanda 4, TL1, rama `tanda4/o2-unity-b`):
   - `IntroPerch.Side` en `IntroChoreography`, `TroopLayer` y `MonkeyRig` (pose `Climb`); la frecuencia en `IntroSideSchedule` (`SideEveryN` = 3 [P]) con el ordinal del nivel entre los de 3 filas de su tramo (`GameScreen.ThreeRowOrdinal`, con la regla de filas del tablero);
   - con los paquetes 1-200 a 360 × 780 dp: 82 niveles de 3 filas en el 86-200, 28 con la tropa lateral (los primeros de los mundos 4 y 5: el 86 y el 143) y 54 en dosel;
@@ -2174,6 +2175,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 ## D-022 · Respuestas del 2026-10-14 a las preguntas 45, 47-50 y 51 de `docs/GDD.md` §6.3
 
+- **Matizada por D-046 (punto 3) y su Q-T6T-3 (decidida por el dueño el 2026-10-24: «Bajar y mover avisos»):** con 3 filas, la franja de la tropa y el suelo bajado 20 dp, el aviso del tablero que ya no cabe entre el panel y la bandeja va a la franja sobre el panel (legible, D-011 punto 2), y las burbujas «Te faltan {n}» que pisarían el panel, también; el compromiso de la pregunta 47 (junto a la ficha o tapándola entera) sigue donde no hay franja (16:9).
 - **Fecha:** 2026-10-14. Registrada el 2026-10-14 (T58).
 - **Estado:** decidida por el dueño.
   - Preguntas 45 y 47-50: para todo lo pendiente, el dueño tiene dicho «Sí, aplica las recomendadas también» (2026-10-13), y lo aplicó a las preguntas del plan de la tanda 4 el 2026-10-14. Gana la recomendación de cada fila. La 45 venía del 2026-10-13 (D-013) y las 47-50, del 2026-10-14 (tanda 3 y registro de D-016 a D-019).
@@ -2556,6 +2558,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 ## D-028 · Respuestas del 2026-10-19 a las preguntas 19, 22-24, 53, 54, 57, 60, 61 (con P5) y 65 de `docs/GDD.md` §6.3
 
 - **Fecha:** 2026-10-19. Registrada el 2026-10-19 (DC1, tanda 4, ola 7).
+- **Matizada por D-046 (punto 3, 2026-10-23):** de la excepción de la pregunta 22 se retira la parte de la fila 1: con 3 filas el tablero deja la franja de la tropa (56 dp) entre el HUD y el panel, así que ni la fila 1 elevada ni su cielo entran en el HUD. Sigue valiendo solo donde esa franja no cabe (16:9 y la Cuia alta de 6 en lienzos bajos), con el tablero de antes. Con la franja y el suelo bajado 20 dp (Q-T6T-3, decidida por el dueño el 2026-10-24: «Bajar y mover avisos»), el aviso «Te faltan {n}» y el aviso del tablero que ya no caben bajo el panel van a la franja; la bajada del canal del Remolino sigue como excepción.
 - **Estado:** decidida por el dueño en el chat, literal: «Acepto la opción recomendada en las preguntas 19, 22, 23, 24, 53, 54, 57, 60 y 61 (con P5) del GDD §6.3 y en las dos de M5.1; abre los carriles que salgan, de forma segura. El espacio del AAB y el permiso INTERNET los decido aparte.»
   - Gana la recomendación de cada fila de `docs/GDD.md` §6.3, tal como estaba escrita el 2026-10-19 (D3). «Con P5» cierra también la pregunta P5 de este registro (§5, D-002) con su recomendación: sí.
   - **«Las dos de M5.1»** se registran como la pregunta 65 (la geometría de producción del Mapa frente al canon), la que M5.1 dejó para el dueño con recomendación (notas de M5.1 en `tools/river-map/README.md`, `cdff504`), en sus tres partes: 1 (d), 2 (a) y 3 (a). Es la lectura del plan de la ola 7 (DC1). Las «Paradas en una confluencia [P]» de M5.1 son otra cosa (punto 2 de la pregunta 66) y no entran.
@@ -3813,6 +3816,12 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
      - los tableros de 10 cuias o menos no cambian.
 
      Matiza D-006 (tamaño con 3 filas), D-021 (la tropa lateral pasa a respaldo) y la excepción de D-028 (la fila 1 ya no entra en el HUD). Cambia 02 §5 y 07 §7.4.
+
+     **Añadido del 2026-10-24 (respuestas del dueño en el chat a las preguntas del carril 2 del Spark, `spark/t6-tropa-3filas`):**
+     - **Q-T6T-3 → «Bajar y mover avisos»:** con 3 filas el suelo baja 20 dp [P] y el panel queda a 11,5 dp [P] de la bandeja; las burbujas «Te faltan {n}» y el aviso del tablero que ya no caben debajo van a la franja (y, por extensión del integrador, el globo de Pista: aplicación de Q-T6T-3 [P], no dicho literalmente por el dueño) de la tropa, sobre el panel (02 §5).
+     - **Q-T6T-4 → «Franja de 56 dp»:** la franja de la rama mide 56 dp [P] (con 44, el tamaño de 07 §6.4 dejaba la tropa rozar la fila del HUD); la tropa, a su tamaño, ya no entra en ella.
+     - **Cifras medidas a 360 × 780:** franja de 56 dp, panel en y = 144-648,5 (11,5 dp sobre la bandeja), cuia de 41,6 × 116,5 dp con 11-15 cuias (antes 46,9 × 131,3). Donde la franja no cabe sin bajar de 28 dp (16:9 (360 × 640 dp; con 3 filas la franja cabe desde unos 666 dp de alto) y la Cuia alta de 6 en lienzos de menos de 750 dp de alto), el tablero de 3 filas es el de antes.
+     - Quedan para el dueño, con la recomendada aplicada: Q-T6T-2, Q-T6T-6, Q-T6T-7 y el riesgo Q-T6T-5 (GDD.md §6.3, pregunta 68).
 - **Reparto (pedido por el dueño: «manda en paralelo lo mas que se pueda», «encarga a codex algo grande», «envia a spark algun carril o dos para solucionar el espacio»):**
   - **Spark:** los puntos 2 y 3 (`docs/dev/traspaso/spark-audio-tablero.md`);
   - **Codex:** el backend de la Liga, su despliegue en dev con el dueño y los textos legales (`docs/dev/traspaso/codex-liga.md`);

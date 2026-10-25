@@ -8,7 +8,10 @@ namespace AF.Presentation
     /// <summary>Dónde están los miquitos en «Llenar y teñir» (guion §7.1).</summary>
     public enum IntroPerch
     {
-        /// <summary>Sin tropa: el follaje se sacude y cada fruta cae desde detrás del HUD (3 filas, reintentos, mundo 13…).</summary>
+        /// <summary>
+        /// Sin tropa: el follaje se sacude y cada fruta cae desde detrás del HUD (reintentos, mundo 13…, y 3 filas sin la franja
+        /// de la tropa de D-046, como en 16:9).
+        /// </summary>
         Canopy = 0,
 
         /// <summary>La tropa de la especie del tramo, en su rama sobre el panel (franja ≥ 44 dp y primer intento).</summary>

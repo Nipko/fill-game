@@ -90,7 +90,8 @@ namespace AF.Tests.PlayMode
             // última fila y por encima de la bandeja, o no sale si no cabe. Ningún nivel_tarjeta del catálogo tiene hoy 3 filas,
             // así que se mira con un tablero de prueba en el 142 (mundo 5). A 360 × 780 dp (2026-10-12) no cabe en ninguno de
             // los dos: el panel acaba en 628,5 dp con 11 cuias y en 596,1 dp con 16, y la tarjeta (60 dp, 4 dp bajo el panel)
-            // tiene que acabar ≤ 8 dp sobre la bandeja (660 dp).
+            // tiene que acabar ≤ 8 dp sobre la bandeja (660 dp). Desde D-046 (punto 3), con la franja de 56 dp y el suelo bajado: con
+            // 11 cuias tampoco cabe (franja de 56 y panel a 648,5); con 16 manda el ancho y la franja mide 66: va en ella.
             yield return CaptureSightingOnThreeRows(dir, 11, "a2_02d_sighting_rows3_11");
             yield return CaptureSightingOnThreeRows(dir, 16, "a2_02e_sighting_rows3_16");
             LaunchOptions.LevelPackJsonOverride = null;
@@ -332,10 +333,19 @@ namespace AF.Tests.PlayMode
             float hudBottom = view.Intro.Input.HudBottom;
             float panelTop = view.Intro.Input.PanelTop;
             float panelBottom = view.Intro.Input.PanelBottom;
-            Assert.That(panelTop - hudBottom, Is.LessThan(64f), name + ": con 3 filas la franja mide < 64 dp");
+            // Desde D-046 (punto 3; Q-T6T-4) la franja mide 56 dp con las cuias que encogen por el alto y algo más cuando manda el
+            // ancho (66 dp con 16 cuias a 360 × 780): ahí, con ≥ 64 dp, la tarjeta va a la franja, como con 1 y 2 filas.
+            float band = panelTop - hudBottom;
             Assert.That(view.SightingPending, Is.False, name + ": la tropa ya se fue");
             string suffix;
-            if (view.Sighting.Visible)
+            if (view.Sighting.Visible && band >= GameScreen.SightingBandDp)
+            {
+                float top = -view.Sighting.Root.anchoredPosition.y;
+                Assert.That(top, Is.GreaterThanOrEqualTo(hudBottom - 0.01f), name + ": en la franja, bajo la fila del HUD");
+                PlayModeHelpers.Step(boot, 400);
+                suffix = "_band";
+            }
+            else if (view.Sighting.Visible)
             {
                 RectTransform root = view.Sighting.Root;
                 float top = -root.anchoredPosition.y;

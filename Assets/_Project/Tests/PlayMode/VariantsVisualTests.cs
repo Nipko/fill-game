@@ -470,7 +470,9 @@ namespace AF.Tests.PlayMode
                 "≥ 4 dp bajo el marco (D-003)");
             for (int side = -1; side <= 1; side += 2)
             {
-                Assert.That((two.WrapOuterU(side) - two.CorkHalfWidthU) * u, Is.InRange(3f, 4.5f), "la hoja sobresale 3-4 dp del capullo: " + side);
+                // 3-4 dp con la cuia de 46,9 dp (u = 23,5) de la revisión de VA1b; escala con u: con la franja de la tropa de D-046
+                // (punto 3) la cuia de 3 filas mide 40,7 dp (u = 20,3) y sobresale 2,9 dp.
+                Assert.That((two.WrapOuterU(side) - two.CorkHalfWidthU) * u, Is.InRange(2.5f, 4.5f), "la hoja sobresale 3-4 dp del capullo: " + side);
             }
 
             AssertCardIsNotSkipped(boot, index);
@@ -514,7 +516,9 @@ namespace AF.Tests.PlayMode
             Canvas.ForceUpdateCanvases();
             Rect panel130 = VictorySetup.CanvasRect(card.Panel, (RectTransform)view.Canvas.transform);
             Assert.That(panel130.yMax, Is.LessThanOrEqualTo(florTop - LevelCardView.DebutClearDp + 0.5f), "130 %: tampoco");
-            Assert.That(panel130.yMax, Is.EqualTo(bottom100).Within(1f), "anclada por abajo: crece hacia arriba");
+            // Anclada por abajo: crece hacia arriba; desde D-046 (punto 3) el panel empieza bajo la franja de la tropa y, al 130 %,
+            // la tarjeta llega a su borde de arriba y baja unos dp, sin tapar la Flor (arriba).
+            Assert.That(panel130.yMax, Is.InRange(bottom100 - 1f, florTop - LevelCardView.DebutClearDp + 0.5f), "anclada por abajo: crece hacia arriba");
             CardSetup.AssertPanelOnScreen(view);
             CardSetup.AssertInsidePanel(view);
             view.CardFontScale = 1f;

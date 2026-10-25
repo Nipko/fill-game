@@ -52,6 +52,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            BoardLayout.TroopBandOffForTests = false;
             _rig?.Dispose();
             _rig = null;
             MapArtRule.ForceProvisional = null;
@@ -553,6 +554,9 @@ namespace AF.Tests.PlayMode
             // En cada fotograma de sacar, lo más alto de su cuia (el vidrio girado y el asa) queda bajo el techo de GameScreen. Con
             // la pantalla de un teléfono de 360 × 780 dp (la de las capturas): la de batchmode es otra y el techo queda lejos.
             GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
+            // El caso del arreglo es el de la fila 1 pegada al HUD: desde D-046 (punto 3) solo sin la franja de la tropa (16:9);
+            // aquí, con el tablero de antes en el mismo lienzo.
+            BoardLayout.TroopBandOffForTests = true; // el tablero de 3 filas de antes de D-046 (sin la franja de la tropa), el respaldo
             yield return PlayModeHelpers.LoadGameWithPack(TinajaStepsSnapshotTests.Pack323ThreeRows(), 323, new MemoryProgressStore(323, 322));
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
