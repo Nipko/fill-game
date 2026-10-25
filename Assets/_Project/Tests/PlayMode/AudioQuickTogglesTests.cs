@@ -306,7 +306,8 @@ namespace AF.Tests.PlayMode
         {
             Profile profile = SettingsScreenTests.ProfileAt(58);
             profile.Wallet.Canoes.Count = 3;
-            profile.Wallet.Canoes.NextRegenAt = System.DateTime.UtcNow + System.TimeSpan.FromMinutes(10);
+            PlayModeHelpers.NoRealClockUnlessSet(); // el cronómetro, a 10 min del reloj del juego, no del sistema (T6, carril A)
+            profile.Wallet.Canoes.NextRegenAt = LaunchOptions.ClockOverride!.UtcNow + System.TimeSpan.FromMinutes(10);
             profile.Wallet.Seeds = 12345;
             LaunchOptions.PurchasePresenterOverride = new ImmediatePurchasePresenter();
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));

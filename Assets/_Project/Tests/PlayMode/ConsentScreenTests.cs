@@ -19,6 +19,11 @@ namespace AF.Tests.PlayMode
     /// </summary>
     public sealed class ConsentScreenTests
     {
+        // El arte procedural cuesta unos 3 s por instancia: uno para todo el fixture (T6, carril A); las pantallas solo leen
+        // sus sprites.
+        private static ProceduralArt? s_art;
+        private static ProceduralArt Art => s_art ??= new ProceduralArt("white");
+
         private GameObject? _host;
         private ConsentScreen _screen = null!;
 
@@ -26,7 +31,7 @@ namespace AF.Tests.PlayMode
         public void SetUp()
         {
             _host = new GameObject("ConsentHost", typeof(RectTransform));
-            _screen = new ConsentScreen(_host.transform, new ProceduralArt("white"));
+            _screen = new ConsentScreen(_host.transform, Art);
         }
 
         [TearDown]

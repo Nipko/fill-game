@@ -287,6 +287,28 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
+        /// Pone el <see cref="TestClock"/> (2026-10-24, 10:00 en Bogotá, que avanza con el tiempo real) en
+        /// <see cref="LaunchOptions.ClockOverride"/> si el test no puso otro reloj (T6, carril A): ningún test arranca la escena con
+        /// el reloj del sistema, así que la hora y el día a los que se ejecuta (saludo y poses de TiTino, Dato del día, Reto, Liga,
+        /// canoas, economy_ts) no cambian lo que pasa. <see cref="LaunchOptions.Reset"/> lo vuelve a null.
+        /// </summary>
+        public static void NoRealClockUnlessSet()
+        {
+            if (LaunchOptions.ClockOverride == null)
+            {
+                LaunchOptions.ClockOverride = new TestClock();
+                if (!s_testClockLogged)
+                {
+                    s_testClockLogged = true; // una vez por pasada: el log dice con qué ancla corrió (la de 12 h, punto 6)
+                    Debug.Log("AF_TEST_CLOCK ancla " + TestClock.Anchor.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)
+                        + " UTC, desfase " + TestClock.Shift.TotalHours.ToString(System.Globalization.CultureInfo.InvariantCulture) + " h");
+                }
+            }
+        }
+
+        private static bool s_testClockLogged;
+
+        /// <summary>
         /// Apaga el viaje de mundo del banner (M3.6) si el test no lo fijó (<see cref="GameScreen.BannerTravelOverride"/> = null):
         /// los tests que no tratan de él abren el banner del 41, el 81 o el 141 como antes de que existiera (el de D-012, que un
         /// toque cierra). Los que lo prueban (<c>WorldBannerTravelTests</c>) lo encienden y lo vuelven a null en su TearDown.
@@ -316,6 +338,16 @@ namespace AF.Tests.PlayMode
             if (BootSplash.EnabledOverride == null)
             {
                 BootSplash.EnabledOverride = false;
+            }
+
+            NoRealClockUnlessSet();
+
+            // Los paquetes de niveles y el pool del Reto se leen y validan una vez por pasada (T6, carril A: se pagaban en cada carga
+            // de la escena) salvo que el test diga otra cosa (LaunchOptions.ReuseDataReadsOverride = false); el catálogo y el
+            // servicio del Reto se rehacen en cada carga.
+            if (LaunchOptions.ReuseDataReadsOverride == null)
+            {
+                LaunchOptions.ReuseDataReadsOverride = true;
             }
 
             // Sin la edad ni el consentimiento (B12) salvo que el test los encienda (GameBootstrap.ConsentEnabledOverride = true;

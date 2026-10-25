@@ -278,6 +278,19 @@ namespace AF.Tests.PlayMode
                                 continue; // aún en el follaje, fuera de la pantalla
                             }
 
+                            // Las mismas comprobaciones de siempre; el mensaje y el Assert, solo si alguna falla (T6, carril A: el
+                            // texto y las restricciones de NUnit en cada pieza, instante y cuia hacían de este test uno de los más lentos).
+                            bool clear = r.yMin >= hudBottom - 0.5f && r.yMax <= panelTop + 0.5f;
+                            for (int i = 0; clear && i < view.Views.Length; i++)
+                            {
+                                clear = Distance(r, CuiaRect(view.Views[i])) >= 8f;
+                            }
+
+                            if (clear)
+                            {
+                                continue;
+                            }
+
                             string where = "nivel " + level + ", T " + duration + ", t " + t + ", " + r;
                             Assert.That(r.yMin, Is.GreaterThanOrEqualTo(hudBottom - 0.5f), "nada sobre los botones del HUD: " + where);
                             Assert.That(r.yMax, Is.LessThanOrEqualTo(panelTop + 0.5f), "nada dentro del panel: " + where);
@@ -771,6 +784,7 @@ namespace AF.Tests.PlayMode
             var quads = new List<Vector2[]>();
             var all = new List<Graphic>();
             var troop = new List<Graphic>();
+            var troopSet = new HashSet<Graphic>(); // Contains en O(1): con la lista, cada instante miraba cada gráfico contra toda la tropa
             foreach ((string pack, int level) in cases)
             {
                 LaunchOptions.Reset();
@@ -805,6 +819,8 @@ namespace AF.Tests.PlayMode
                     troop.Clear();
                     view.Intro.CollectGraphics(all);
                     view.Troop.CollectGraphics(troop);
+                    troopSet.Clear();
+                    troopSet.UnionWith(troop);
                     int from = duration == 1400 ? 300 : 0;
                     int to = duration == 1400 ? 850 : 550;
                     for (int t = from; t <= to; t += 25)
@@ -814,7 +830,7 @@ namespace AF.Tests.PlayMode
                         quads.Clear();
                         foreach (Graphic g in all)
                         {
-                            bool water = !troop.Contains(g) && (g is WaterStripGraphic || g is StreamGraphic || g.transform.IsChildOf(view.Troop.WaterSlot));
+                            bool water = !troopSet.Contains(g) && (g is WaterStripGraphic || g is StreamGraphic || g.transform.IsChildOf(view.Troop.WaterSlot));
                             if (water && Shown(g) && order[g.transform] > branchOrder)
                             {
                                 quads.Add(CanvasQuad(g, canvas));

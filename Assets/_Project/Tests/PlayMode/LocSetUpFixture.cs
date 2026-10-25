@@ -3,6 +3,7 @@ using System.Globalization;
 using AF.Localization;
 using AF.UI;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace AF.Tests.PlayMode
 {
@@ -24,6 +25,7 @@ namespace AF.Tests.PlayMode
         private CultureInfo? _uiCulture;
         private CultureInfo? _threadCulture;
         private CultureInfo? _threadUiCulture;
+        private StackTraceLogType _logTrace = StackTraceLogType.ScriptOnly;
 
         /// <summary>
         /// Catálogo leído de las tablas del proyecto (vacío antes del <c>[OneTimeSetUp]</c>). Solo se lee del disco en el Editor
@@ -60,6 +62,12 @@ namespace AF.Tests.PlayMode
             CultureInfo.DefaultThreadCurrentCulture = forced;
             CultureInfo.DefaultThreadCurrentUICulture = forced;
 
+            // Sin la pila en los Debug.Log (AF_STATE, AF_PERF, AF_LAYOUT…: unos 90.000 por pasada), como en el teléfono de
+            // desarrollo (DevProbe.Initialize): ningún test lee la pila de un Log y la suite va más rápida (T6, carril A). Los avisos
+            // y los errores la conservan.
+            _logTrace = Application.GetStackTraceLogType(LogType.Log);
+            Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
+
             LaunchOptions.Reset();
 #if UNITY_EDITOR
             Catalog = LocTables.FromProjectFiles();
@@ -72,6 +80,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             LaunchOptions.Reset();
+            Application.SetStackTraceLogType(LogType.Log, _logTrace);
             Loc.Reset();
             CultureInfo.CurrentCulture = _culture ?? CultureInfo.InvariantCulture;
             CultureInfo.CurrentUICulture = _uiCulture ?? CultureInfo.InvariantCulture;

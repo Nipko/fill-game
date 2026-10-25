@@ -22,6 +22,11 @@ namespace AF.Tests.PlayMode
     /// </summary>
     public sealed class LogbookScreenTests
     {
+        // El arte procedural cuesta unos 3 s por instancia: uno para todo el fixture (T6, carril A); las pantallas solo leen
+        // sus sprites.
+        private static ProceduralArt? s_art;
+        private static ProceduralArt Art => s_art ??= new ProceduralArt("white");
+
         private static readonly TimeSpan Bogota = TimeSpan.FromHours(-5);
 
         private GameObject? _host;
@@ -42,7 +47,7 @@ namespace AF.Tests.PlayMode
             _service = new LoginCalendarService(new InMemoryLoginCalendarStore(), _wallet, _clock, 10);
             _chosen.Clear();
             _closed = 0;
-            _screen = new LogbookScreen(_host.transform, new ProceduralArt("white"), c => _chosen.Add(c), () => _closed++);
+            _screen = new LogbookScreen(_host.transform, Art, c => _chosen.Add(c), () => _closed++);
         }
 
         [TearDown]
@@ -206,7 +211,7 @@ namespace AF.Tests.PlayMode
         [Test]
         public void TheCard_ShowsTheDotOnlyWithAPagePending()
         {
-            var card = new LogbookCard(_host!.transform, new ProceduralArt("white"), () => { });
+            var card = new LogbookCard(_host!.transform, Art, () => { });
             card.Refresh(LoginCalendarState.Hidden);
             Assert.That(card.Visible, Is.False, "D-008: oculta mientras no existe");
             card.Refresh(LoginCalendarState.Waiting);

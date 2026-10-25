@@ -131,10 +131,11 @@ namespace AF.Tests.PlayMode
             // rehace con el perfil vivo al aplicarla: la compra (más nueva aún) no se pierde, y mientras no se sube el local sin fusionar.
             var held = new HeldPurchasePresenter();
             LaunchOptions.PurchasePresenterOverride = held;
-            // economy_ts sale del reloj del teléfono (el de verdad), y el arranque ya lo marca: la nube va unos segundos por delante
-            // de ese arranque (gana al llegar) y la compra se acredita después (gana al aplicar la fusión).
+            // economy_ts sale del reloj del teléfono (el del juego, aquí el TestClock), y el arranque ya lo marca: la nube va unos
+            // segundos por delante de ese arranque (gana al llegar) y la compra se acredita después (gana al aplicar la fusión).
+            TestClock clock = TestClock.Install();
             Profile remote = ProfileAt(26, 50);
-            DateTime cloudTs = DateTime.UtcNow.AddSeconds(8);
+            DateTime cloudTs = clock.UtcNow.AddSeconds(8);
             remote.EconomyTs = cloudTs;
             Profile local = ProfileAt(26, 0);
             var cloud = new FakeCloudSave(Blob(remote)) { Deferred = true };
@@ -153,10 +154,9 @@ namespace AF.Tests.PlayMode
             yield return null;
             Assert.That(GameBootstrap.Current, Is.SameAs(boot), "con una compra en vuelo no se recarga");
 
-            while (DateTime.UtcNow <= cloudTs.AddSeconds(1))
-            {
-                yield return null; // la compra, ya más nueva que la nube
-            }
+            clock.Advance(cloudTs.AddSeconds(1) - clock.UtcNow); // la compra, ya más nueva que la nube (sin esperar 9 s)
+            yield return null;
+            yield return null;
 
             Assert.That(GameBootstrap.Current, Is.SameAs(boot), "con la compra en vuelo sigue sin recargar");
             held.Close(true);
@@ -182,8 +182,9 @@ namespace AF.Tests.PlayMode
         public IEnumerator ALateCloud_WithAWinWhileWaiting_KeepsTheWin_AndNeverUploadsTheUnmergedLocal()
         {
             Profile remote = ProfileAt(26, 50);
-            // El arranque marca economy_ts con el reloj de verdad: la nube va un día por delante de hoy (con T0 fijo dejó de ganar el 24-10).
-            remote.EconomyTs = DateTime.UtcNow.AddDays(1);
+            // El arranque marca economy_ts con el reloj del juego (el TestClock): la nube va un día por delante (con T0 fijo y el reloj
+            // del sistema dejó de ganar el 24-10).
+            remote.EconomyTs = TestClock.Install().UtcNow.AddDays(1);
             var cloud = new FakeCloudSave(Blob(remote)) { Deferred = true };
             GameBootstrap.CloudSaveOverride = cloud;
             GameBootstrap.CloudBootWaitMsOverride = 0f;
