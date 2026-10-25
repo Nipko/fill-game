@@ -143,6 +143,8 @@ namespace AF.UI
         private Func<bool>? _inLobby;
         private Func<bool>? _dailyPending;
         private Func<int>? _levelsToBasket;
+        private Func<bool>? _notesClear;
+        private bool _ringMessages;
         private Action? _save;
 
         private SlothPoseId _basePose = SlothPoseId.Idle;
@@ -411,7 +413,8 @@ namespace AF.UI
         /// (<paramref name="levelsToBasket"/>, −1 sin Canasta).
         /// </summary>
         public void Bind(IClock clock, SlothSession session, SlothData data, Action? save, Func<bool> messages, Func<int> nextLevel,
-            Func<bool> reduceMotion, Func<bool> inLobby, Func<bool>? dailyPending = null, Func<int>? levelsToBasket = null)
+            Func<bool> reduceMotion, Func<bool> inLobby, Func<bool>? dailyPending = null, Func<int>? levelsToBasket = null,
+            Func<bool>? notesClear = null)
         {
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _session = session ?? throw new ArgumentNullException(nameof(session));
@@ -422,6 +425,7 @@ namespace AF.UI
             _reduceMotion = reduceMotion ?? throw new ArgumentNullException(nameof(reduceMotion));
             _inLobby = inLobby ?? throw new ArgumentNullException(nameof(inLobby));
             _dailyPending = dailyPending;
+            _notesClear = notesClear;
             _levelsToBasket = levelsToBasket;
             _bound = true;
         }
@@ -693,6 +697,7 @@ namespace AF.UI
             }
 
             _ringBuilt = true;
+            _ringMessages = _messages!();
             string today = _clock!.LocalDateKey();
             SlothLines.TryDayNumber(today, out int day);
             string fact = FactFor(day, out string? factKey);
@@ -730,14 +735,40 @@ namespace AF.UI
         private string? _pendingFactKey;
 
         // La rotación: tras cada mensaje (o sin él), RotationGapMs de pausa y el siguiente que quepa; solo con el inicio delante.
+        /// <summary>Solo tests: estado de la rotación (pausa en ms, −1 parada; anillo; visita pendiente).</summary>
+        internal string RotationStateForTests => "gap=" + _gapMs + " ring=" + _ring.Count + " built=" + _ringBuilt + " pending=" + _visitPending + " inLobby=" + (_inLobby == null ? "-" : _inLobby().ToString()) + " clear=" + (_notesClear == null ? "-" : _notesClear().ToString());
+
         private void TickRotation(float dtMs)
         {
-            if (_gapMs < 0f || BubbleShown || !_ringBuilt || _ring.Count == 0)
+            if (!_ringBuilt || _messages == null)
             {
                 return;
             }
 
-            if (_inLobby != null && !_inLobby())
+            // «Mensajes de TiTino» se cambia en Ajustes, encima del inicio y sin cerrar la visita: apagado, el bocadillo se va y la
+            // rotación para; encendido otra vez, la rotación se rehace (una vez, al cambiar) y sigue tras una pausa.
+            bool messages = _messages();
+            if (messages != _ringMessages)
+            {
+                _ringBuilt = false;
+                EnsureRing();
+                if (!messages)
+                {
+                    HideNote();
+                }
+
+                _gapMs = 0f;
+                return;
+            }
+
+            if (_gapMs < 0f || BubbleShown || _ring.Count == 0)
+            {
+                return;
+            }
+
+            // La pausa solo corre con el inicio delante y despejado (sin Ajustes, el Mercado, el Reto ni una oferta encima): los
+            // mensajes no se gastan sin verse.
+            if ((_inLobby != null && !_inLobby()) || (_notesClear != null && !_notesClear()))
             {
                 return;
             }
@@ -773,6 +804,11 @@ namespace AF.UI
             }
 
             HomeNote kind = _ring[index];
+            if (kind == HomeNote.Fact && FactShownThisSession)
+            {
+                return false; // D-016, punto 5, y 07 §6.5: como mucho un Dato del perezoso por sesión
+            }
+
             if (!ShowNote(_ringText[index], kind))
             {
                 return false;
@@ -839,7 +875,7 @@ namespace AF.UI
             // del día (como mucho 1; D-016, punto 5) se gastaría sin verse. Se decide al cerrarlo, en la misma visita.
             Bind(LaunchOptions.ClockOverride ?? SystemClock.Instance, boot.View!.SlothSession, profile.Sloth, () => SaveProfile(boot),
                 () => profile.Settings.SlothMessages, () => app.PlayLevel, () => boot.Flow != null && boot.Flow.ReduceMotion,
-                () => app.Screen == AppScreen.Lobby, () => boot.HomeDailyPending, () => boot.HomeLevelsToBasket);
+                () => app.Screen == AppScreen.Lobby, () => boot.HomeDailyPending, () => boot.HomeLevelsToBasket, () => boot.HomeNotesClear);
         }
 
         // Guarda el perfil por el lote del juego (en segundo plano con el perfil en disco). Con el perfil en solo lectura (08 §4.4),

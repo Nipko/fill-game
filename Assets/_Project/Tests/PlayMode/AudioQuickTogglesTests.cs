@@ -38,6 +38,8 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedScreen = null;
             GameScreen.SimulatedPxPerDp = null;
             GameBootstrap.A11yHostOverride = null;
+            GameBootstrap.ResetLogbookOverrides();
+            GameBootstrap.LogbookOverride = null; // la deja apagada para los demás tests (PlayModeHelpers.NoLogbookUnlessSet)
             AudioCues.Override = null;
             AudioCues.Install(null);
         }
@@ -296,12 +298,13 @@ namespace AF.Tests.PlayMode
             Canvas.ForceUpdateCanvases();
             DailyChallengeCard card = boot.DailyCard!;
             Assert.That(card.Visible, Is.True, where + ": condición del test, la tarjeta del Reto");
+            Assert.That(lobby.StreakWidget.Visible, Is.True, where + ": condición del test, la Crecida (≥ 25)");
             var root = (RectTransform)lobby.Canvas.transform;
             Assert.That(lobby.CanvasWidth, Is.EqualTo(320f).Within(0.5f), where);
             Rect play = CanvasRect((RectTransform)lobby.PlayButton.transform, root);
             Rect rect = CanvasRect(card.Root, root);
             Assert.That(rect.yMin - DockCard.IconOverhangDp, Is.GreaterThanOrEqualTo(play.yMax - 0.5f), where + ": la fila, bajo «Jugar»");
-            Assert.That(rect.xMin, Is.GreaterThanOrEqualTo(LobbyScreen.CardGutterDp - 0.5f), where);
+            Assert.That(rect.xMin, Is.GreaterThanOrEqualTo(LobbyScreen.CardGutterTightDp - 0.5f), where);
 
             // Los textos de la tarjeta, con el estado de hoy y con los dos más largos, puestos a mano.
             var inventory = new LocInventory(language, fontScale);
@@ -332,6 +335,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator Home_At360_TheDayCards_AreCentered_AndAsTallAsEachOther()
         {
             Use(800);
+            HomeDockTests.UseLogbook();
             yield return LoadRichLobby();
             GameBootstrap boot = GameBootstrap.Current!;
             boot.TickDaily(16f);
@@ -349,7 +353,7 @@ namespace AF.Tests.PlayMode
                 cards.Add(CanvasRect(boot.LogbookCard.Root, root));
             }
 
-            Assert.That(cards.Count, Is.GreaterThanOrEqualTo(1), "condición del test, al menos la tarjeta del Reto");
+            Assert.That(cards.Count, Is.EqualTo(2), "condición del test, las tarjetas del Reto y de la Bitácora");
             float left = float.MaxValue;
             float right = float.MinValue;
             foreach (Rect r in cards)

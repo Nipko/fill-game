@@ -41,6 +41,8 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             HomeSloth.ManualTickForTests = false;
+            GameBootstrap.ResetLogbookOverrides();
+            GameBootstrap.LogbookOverride = null; // la deja apagada para los demás tests (PlayModeHelpers.NoLogbookUnlessSet)
             GameBootstrap.ResetLeagueOverrides();
             GameBootstrap.A11yHostOverride = null;
             LaunchOptions.Reset();
@@ -177,9 +179,11 @@ namespace AF.Tests.PlayMode
             var host = new FakeScreenReaderHost(true);
             GameBootstrap.A11yHostOverride = host;
             HomeSloth.ManualTickForTests = true;
+            UseLogbook();
             yield return AudioQuickTogglesTests.LoadRichLobby();
             GameBootstrap boot = GameBootstrap.Current!;
             boot.TickDaily(16f);
+            boot.TickLogbook(16f);
             yield return null;
             var service = new A11yService(host);
             service.Refresh();
@@ -190,16 +194,15 @@ namespace AF.Tests.PlayMode
             Assert.That(canoe!.Role, Is.EqualTo(UnityEngine.Accessibility.AccessibilityRole.Button));
             DailyChallengeCard daily = boot.DailyCard!;
             Assert.That(host.Find(daily.TitleText + ": Jugar. Racha: 0 de 7 días"), Is.Not.Null, "la tarjeta del Reto, con la fecha y la racha");
-            if (boot.Lobby.StreakWidget.Visible)
+            Assert.That(host.Find("Bitácora del río: Juega un nivel para sellar"), Is.Not.Null, "la tarjeta de la Bitácora, con el nombre y el estado largos");
+            Assert.That(boot.Lobby.StreakWidget.Visible, Is.True, "condición del test, la Crecida (58)");
+            bool crecida = false;
+            foreach (A11yItem item in host.Items)
             {
-                bool crecida = false;
-                foreach (A11yItem item in host.Items)
-                {
-                    crecida |= item.Label.StartsWith("Crecida: ", StringComparison.Ordinal) && item.Label.Contains(" de 10");
-                }
-
-                Assert.That(crecida, Is.True, "el poste de la Crecida: «Crecida: {n} de 10»");
+                crecida |= item.Label.StartsWith("Crecida: ", StringComparison.Ordinal) && item.Label.Contains(" de 10");
             }
+
+            Assert.That(crecida, Is.True, "el poste de la Crecida: «Crecida: {n} de 10»");
         }
 
         [UnityTest]
@@ -232,6 +235,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap.LeagueApiOverride = new AF.LiveOps.FakeLeagueApi(clock);
             GameBootstrap.LeagueClockOverride = clock;
             GameBootstrap.LeagueConfigOverride = new AF.LiveOps.LeagueConfig { LiveLeagueEnabled = true };
+            UseLogbook(); // las tres tarjetas del día: el caso más estrecho de D-050
             yield return AudioQuickTogglesTests.LoadRichLobby();
             GameBootstrap boot = GameBootstrap.Current!;
             boot.TickLeague(16f);
@@ -240,8 +244,11 @@ namespace AF.Tests.PlayMode
             LobbyScreen lobby = boot.Lobby!;
             lobby.Tick(16f);
             Canvas.ForceUpdateCanvases();
-            Assert.That(boot.DailyCard!.Visible && boot.LeagueButton!.Shown && lobby.StopRemainingShown && lobby.CanoesShown, Is.True,
-                where + ": condición del test, el Reto, la Liga, la travesía y Canoas a la vista");
+            Assert.That(boot.DailyCard!.Visible && boot.LeagueButton!.Shown && boot.LogbookCard!.Visible, Is.True, where + ": condición del test, las tres tarjetas del día");
+            Assert.That(lobby.DayCardCount, Is.EqualTo(3), where);
+            Assert.That(lobby.StopRemainingShown && lobby.CanoesShown && lobby.StreakWidget.Visible && lobby.HomeWindow.Visible, Is.True,
+                where + ": condición del test, la travesía, Canoas, la Crecida y TiTino a la vista");
+            Assert.That(boot.MarketIcons!.PiggyShown, Is.True, where + ": condición del test, el Cántaro en el muelle");
 
             var root = (RectTransform)lobby.Canvas.transform;
             List<KeyValuePair<string, Rect>> named = Named(boot, root);
@@ -264,11 +271,7 @@ namespace AF.Tests.PlayMode
             texts.AddRange(lobby.StopRemainingRect.GetComponentsInChildren<TMPro.TextMeshProUGUI>(false));
             texts.AddRange(boot.DailyCard.Root.GetComponentsInChildren<TMPro.TextMeshProUGUI>(false));
             texts.AddRange(boot.LeagueButton.Rect.GetComponentsInChildren<TMPro.TextMeshProUGUI>(false));
-            if (boot.LogbookCard != null && boot.LogbookCard.Visible)
-            {
-                texts.AddRange(boot.LogbookCard.Root.GetComponentsInChildren<TMPro.TextMeshProUGUI>(false));
-            }
-
+            texts.AddRange(boot.LogbookCard.Root.GetComponentsInChildren<TMPro.TextMeshProUGUI>(false));
             texts.AddRange(lobby.StreakWidget.Root.GetComponentsInChildren<TMPro.TextMeshProUGUI>(false));
             foreach (TMPro.TextMeshProUGUI t in texts)
             {
@@ -280,6 +283,14 @@ namespace AF.Tests.PlayMode
                 Assert.That(t.fontSize, Is.GreaterThanOrEqualTo((UiBuilder.MinTextSp * scale) - 0.01f), where + ": " + t.name + " «" + t.text + "» no baja de 12 sp × escala");
                 Assert.That(inventory.ProblemsOf(t), Is.Empty, where + ": " + t.name + " «" + t.text + "» cabe");
             }
+        }
+
+        // La Bitácora del río encendida (los tests la apagan por defecto: PlayModeHelpers) y sin jugar hoy: su tarjeta dice «Juega un
+        // nivel» y no hay takeover que abra la libreta encima.
+        internal static void UseLogbook()
+        {
+            GameBootstrap.LogbookOverride = true;
+            GameBootstrap.LogbookStoreOverride = new AF.LiveOps.InMemoryLoginCalendarStore(new AF.LiveOps.LoginCalendarRecord { PlayedDate = null });
         }
 
         // Lo que se ve en el inicio y no puede pisarse.

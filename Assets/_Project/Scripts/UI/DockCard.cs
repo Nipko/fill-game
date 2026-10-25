@@ -23,7 +23,7 @@ namespace AF.UI
         public const float IconDp = ProceduralArt.CardIconDp;
 
         /// <summary>Lo que el disco del icono asoma por encima de la placa (dp).</summary>
-        public const float IconOverhangDp = 14f;
+        public const float IconOverhangDp = 12f;
 
         /// <summary>Cuerpo del título (sp), en Nunito ExtraBold con contorno de madera.</summary>
         public const float TitleSp = 13f;
@@ -36,6 +36,9 @@ namespace AF.UI
 
         /// <summary>Margen del texto a cada lado (dp).</summary>
         public const float PadXDp = 7f;
+
+        /// <summary>Aire bajo el texto, dentro de la placa (dp).</summary>
+        public const float BottomPadDp = 6f;
 
         /// <summary>Diámetro del punto de aviso (dp), el de la pestaña del Mapa.</summary>
         public const float DotDp = 14f;
@@ -53,6 +56,7 @@ namespace AF.UI
         private readonly Image _stamp;
         private float _w = 104f;
         private float _h = 80f;
+        private bool _compact;
 
         public DockCard(Transform parent, ProceduralArt art, string name, Sprite icon, Action onTap)
         {
@@ -136,10 +140,27 @@ namespace AF.UI
         {
             _title.text = title;
             _state.text = state;
-            _state.gameObject.SetActive(state.Length > 0);
+            _state.gameObject.SetActive(state.Length > 0 && !_compact);
             if (_state.color != stateColor)
             {
                 _state.color = stateColor;
+            }
+        }
+
+        /// <summary>
+        /// Compacta: sin la línea de estado (la fila de tarjetas no cabe entre «Jugar» y las pestañas: 16:9 con el texto grande). El
+        /// estado sigue en el icono (el sello, el punto) y en lo que lee TalkBack.
+        /// </summary>
+        public bool Compact => _compact;
+
+        /// <summary>Quita o devuelve la línea de estado (<see cref="Compact"/>).</summary>
+        public void SetCompact(bool on)
+        {
+            _compact = on;
+            bool state = !on && _state.text.Length > 0;
+            if (_state.gameObject.activeSelf != state)
+            {
+                _state.gameObject.SetActive(state);
             }
         }
 
@@ -183,10 +204,17 @@ namespace AF.UI
         /// </summary>
         public float HeightFor(float width)
         {
-            float inner = Mathf.Max(20f, width - (2f * PadXDp));
+            float inner = Inner(width);
             float titleH = string.IsNullOrEmpty(_title.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextHeight(_title, inner));
-            float stateH = string.IsNullOrEmpty(_state.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextHeight(_state, inner));
-            return TopPad() + titleH + (stateH > 0f ? 1f + stateH : 0f) + 8f;
+            float stateH = string.IsNullOrEmpty(_state.text) || _compact ? 0f : Mathf.Ceil(UiBuilder.MinTextHeight(_state, inner));
+            return TopPad() + titleH + (stateH > 0f ? 1f + stateH : 0f) + BottomPadDp;
+        }
+
+        // Ancho del texto: con la tarjeta estrecha (3 en 320 dp), margen de 4 dp en lugar de 7.
+        private static float Inner(float w)
+        {
+            float pad = w < 100f ? 4f : PadXDp;
+            return Mathf.Max(20f, w - (2f * pad));
         }
 
         // Lo que ocupa dentro de la placa el disco del icono, más 2 dp de aire.
@@ -202,13 +230,14 @@ namespace AF.UI
             _h = h;
             UiBuilder.Place(_root, x, y, w, h);
             UiBuilder.Place(_icon.rectTransform, (w - IconDp) * 0.5f, -IconOverhangDp, IconDp, IconDp);
-            float inner = Mathf.Max(20f, w - (2f * PadXDp));
+            float inner = Inner(w);
             float titleH = string.IsNullOrEmpty(_title.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextHeight(_title, inner));
-            float stateH = string.IsNullOrEmpty(_state.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextHeight(_state, inner));
+            float stateH = string.IsNullOrEmpty(_state.text) || _compact ? 0f : Mathf.Ceil(UiBuilder.MinTextHeight(_state, inner));
             float content = titleH + (stateH > 0f ? 1f + stateH : 0f);
-            float top = TopPad() + Mathf.Max(0f, Mathf.Floor((h - TopPad() - 8f - content) * 0.5f));
-            UiBuilder.Place(_title.rectTransform, PadXDp, top, inner, titleH);
-            UiBuilder.Place(_state.rectTransform, PadXDp, top + titleH + 1f, inner, stateH);
+            float top = TopPad() + Mathf.Max(0f, Mathf.Floor((h - TopPad() - BottomPadDp - content) * 0.5f));
+            float padX = (w - inner) * 0.5f;
+            UiBuilder.Place(_title.rectTransform, padX, top, inner, titleH);
+            UiBuilder.Place(_state.rectTransform, padX, top + titleH + 1f, inner, stateH);
             float s = Mathf.Max(1f, UiBuilder.TextScale);
             float badgeH = Mathf.Ceil(18f * s);
             float badgeW = Mathf.Max(badgeH + 6f, Mathf.Ceil(UiBuilder.MinTextWidth(_badgeText)) + 10f);

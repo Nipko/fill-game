@@ -10,7 +10,7 @@ namespace AF.UI
 {
     /// <summary>
     /// Tarjeta «Reto del río» del muelle del inicio (D-050, punto 6; tarea R9; 06 §4.1 «Pantalla»; 06 §4.7; nota §8), una
-    /// <see cref="DockCard"/>: el disco de agua clara con 1-3 olas (la banda del tablero de hoy), «Reto del río», el estado según
+    /// <see cref="DockCard"/>: el disco de agua clara con 1-3 olas (la banda del tablero de hoy), «Reto del río · {fecha corta}» (06 §4.1; si no cabe en una línea, en dos), el estado según
     /// <see cref="DailyChallengeService.CardState"/> (Jugar, Seguir, Sellado o Pendiente, la forma corta de «Pendiente de validar»)
     /// y la racha «{n}/7» en la píldora de la esquina (<see cref="DailyChallengeRules.StreakShown"/>); con el día sellado, el sello
     /// verde hoja sobre el disco (<see cref="DailyStampCalendar.StampColor"/>; nunca rojo, guía v2 §7). Oculta (D-008) no se ve
@@ -33,6 +33,7 @@ namespace AF.UI
         private string _titleFull = string.Empty;
         private string _streak = string.Empty;
         private int _streakShown;
+        private bool _dated = true;
 
         /// <summary>Construye la tarjeta (oculta) bajo <paramref name="parent"/>.</summary>
         public DailyChallengeCard(Transform parent, ProceduralArt art, Action<DailyCardState> onTap)
@@ -88,11 +89,8 @@ namespace AF.UI
         /// <summary>Se ve el sello (Sellado o Pendiente de validar).</summary>
         public bool StampShown => _card.StampShown;
 
-        /// <summary>Título entero, con la fecha («Reto del río · {fecha corta}»), el que lee TalkBack.</summary>
-        public string TitleText => _titleFull;
-
-        /// <summary>Título que se ve en la tarjeta («Reto del río»).</summary>
-        public string VisibleTitle => _card.Title.text;
+        /// <summary>Título, con la fecha («Reto del río · {fecha corta}»; 06 §4.1): el que se ve, en hasta dos líneas, y lee TalkBack.</summary>
+        public string TitleText => _card.Title.text;
 
         /// <summary>Texto del estado.</summary>
         public string StateText => _card.State.text;
@@ -206,8 +204,32 @@ namespace AF.UI
             string text = state == DailyCardState.PendingValidation ? UiText.HomeCardDailyPending : DailyText.State(state);
             Color color = state == DailyCardState.Sealed ? Palette.Cream
                 : (state == DailyCardState.PendingValidation ? Palette.FiberLight : Palette.LeafShine);
-            _card.SetTexts(DailyText.Title, text, color);
+            _card.SetTexts(_dated ? _titleFull : DailyText.Title, text, color);
         }
+
+        /// <summary>
+        /// Con la fecha en el título («Reto del río · {fecha corta}», 06 §4.1) o, si la fila de tarjetas no cabe, sin ella («Reto del
+        /// río»; la fecha sigue en lo que lee TalkBack). Solo asigna texto si cambia.
+        /// </summary>
+        public void SetDated(bool dated)
+        {
+            if (dated == _dated)
+            {
+                return;
+            }
+
+            _dated = dated;
+            if (_shown != DailyCardState.Hidden)
+            {
+                ShowState(_shown);
+            }
+        }
+
+        /// <summary>El título lleva la fecha (<see cref="SetDated"/>).</summary>
+        public bool Dated => _dated;
+
+        /// <summary>Sin la línea de estado (<see cref="DockCard.SetCompact"/>): el sello del icono la dice.</summary>
+        public void SetCompact(bool on) => _card.SetCompact(on);
 
         /// <summary>Solo tests: pone el texto de <paramref name="state"/> en la línea de estado, como <see cref="Refresh"/>.</summary>
         internal void ShowStateTextForTests(DailyCardState state)

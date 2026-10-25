@@ -103,7 +103,7 @@ namespace AF.UI
             _wakeB = Piece("WakeB", art.RiverRipple, new Color(1f, 1f, 1f, 0.35f));
             _canoe = Piece("Canoe", art.MapCanoe, Color.white);
             _canoe.preserveAspect = true;
-            _guide = Piece("Guide", art.Rosa, Color.white); // delante de la canoa, junto a la proa
+            _guide = Piece("Guide", null, Color.white); // delante de la canoa, junto a la proa; Rosa o el bufeo, al enseñarla (Apply)
             _guide.preserveAspect = true;
 
             _sign = UiBuilder.Rect("StopSign", _root);
@@ -192,7 +192,7 @@ namespace AF.UI
         /// </summary>
         public static float ProgressOf(int playLevel)
         {
-            int left = RiverJourney.LevelsLeft(Mathf.Max(1, playLevel));
+            int left = RiverJourney.LevelsLeft(Mathf.Clamp(playLevel, 1, AF.Levels.WorldTable.LastLevel));
             return Mathf.Clamp01(1f - (left / (float)AF.Levels.RiverStopCatalog.LevelsPerStop));
         }
 
@@ -496,7 +496,7 @@ namespace AF.UI
             return (u * u * _start) + (2f * u * t * _control) + (t * t * _foot);
         }
 
-        private Image Piece(string name, Sprite sprite, Color color)
+        private Image Piece(string name, Sprite? sprite, Color color)
         {
             Image img = UiBuilder.Image(name, _root, sprite, color);
             RectTransform rt = img.rectTransform;

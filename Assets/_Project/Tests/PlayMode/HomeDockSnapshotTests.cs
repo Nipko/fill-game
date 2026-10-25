@@ -19,8 +19,8 @@ namespace AF.Tests.PlayMode
     /// (1080 × 2340 px, 360 × 780 dp) y el juego real, en <c>Logs/snapshots/&lt;locale&gt;/dock_*.png</c>:
     /// <list type="bullet">
     /// <item><c>dock_01_l4</c>: el 4, antes del Reto (sin tarjetas: la caja de cuias), TiTino animando a jugar;</item>
-    /// <item><c>dock_02_l31</c>: el 31 por la mañana, con Canoas, el saludo de TiTino y las tarjetas del Reto y la Bitácora;</item>
-    /// <item><c>dock_03_l58_liga</c>: el 58 (Difícil) con la Liga activa (tres tarjetas), la Crecida, el Cántaro y la travesía hacia
+    /// <item><c>dock_02_l31</c>: el 31 por la mañana, con Canoas, el saludo de TiTino colgado y las tarjetas del Reto y la Bitácora;</item>
+    /// <item><c>dock_03_l58_liga</c>: el 58 (Difícil) con la Liga activa (tres tarjetas: Reto, Bitácora y Liga), la Crecida, el Cántaro y la travesía hacia
     /// Anavilhanas;</item>
     /// <item><c>dock_04_l140</c>: el 140, otro mundo y otra agua;</item>
     /// <item><c>dock_05_night</c>: el 58 a las 22:00, TiTino dormido;</item>
@@ -47,6 +47,8 @@ namespace AF.Tests.PlayMode
         {
             HomeSloth.ManualTickForTests = false;
             GameBootstrap.ResetLeagueOverrides();
+            GameBootstrap.ResetLogbookOverrides();
+            GameBootstrap.LogbookOverride = null; // la deja apagada para los demás tests (PlayModeHelpers.NoLogbookUnlessSet)
             LaunchOptions.Reset();
             GameScreen.SimulatedScreen = null;
             GameScreen.SimulatedPxPerDp = null;
@@ -100,6 +102,12 @@ namespace AF.Tests.PlayMode
             }
 
             GameBootstrap.StreakStoreOverride = streakWins > 0 ? StreakStore(streakWins, clock) : null;
+            GameBootstrap.ResetLogbookOverrides();
+            GameBootstrap.LogbookOverride = null; // la deja apagada para los demás tests (PlayModeHelpers.NoLogbookUnlessSet)
+            if (nextLevel >= 10)
+            {
+                HomeDockTests.UseLogbook(); // la tarjeta de la Bitácora (los tests la apagan por defecto)
+            }
             Profile profile = Wallet.NewProfile(clock);
             profile.Progress.NextLevel = nextLevel;
             profile.Progress.MaxLevel = nextLevel - 1;

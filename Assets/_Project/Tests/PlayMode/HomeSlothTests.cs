@@ -303,6 +303,100 @@ namespace AF.Tests.PlayMode
             HomeSloth.RotationFor(false, 30, true, 1, true, true, list);
             Assert.That(list, NUnit.Framework.Is.Empty, "sin los mensajes de TiTino, nada");
         }
+        [UnityTest]
+        public IEnumerator Rotation_ShowsTheSlothFact_AtMostOncePerSession()
+        {
+            ManualClock clock = At(0, 15);
+            yield return Load(new MemoryProfileStore(ProfileAt(58, clock)), clock);
+            HomeSloth sloth = Sloth();
+            sloth.Tick(16f);
+            int count = sloth.Rotation.Count;
+            Assert.That(sloth.Rotation, Has.Member(HomeSloth.HomeNote.Fact), "premisa: hay dato de hoy");
+            Step(sloth, (int)HomeSloth.FirstNoteDelayMs + 32);
+            int facts = 0;
+            int shown = 0;
+            for (int i = 0; i < (3 * count) + 2; i++)
+            {
+                if (sloth.BubbleShown)
+                {
+                    shown++;
+                    facts += sloth.Note == HomeSloth.HomeNote.Fact ? 1 : 0;
+                    Step(sloth, (int)sloth.BubbleDurationMs + (int)HomeSloth.BubbleFadeMs + 64);
+                }
+
+                Step(sloth, (int)HomeSloth.RotationGapMs + 64);
+            }
+
+            Assert.That(shown, NUnit.Framework.Is.GreaterThan(2 * count), "tres vueltas de la rotación");
+            Assert.That(facts, NUnit.Framework.Is.EqualTo(1), "D-016, punto 5, y 07 §6.5: como mucho un Dato del perezoso por sesión");
+            Assert.That(sloth.FactShownThisSession, NUnit.Framework.Is.True);
+            sloth.Tap();
+            Assert.That(sloth.Note, NUnit.Framework.Is.Not.EqualTo(HomeSloth.HomeNote.Fact), "ni al tocarlo, una vez visto");
+        }
+
+        [UnityTest]
+        public IEnumerator Rotation_StopsWhenTiTinosMessagesAreSwitchedOff_AndComesBackWhenOn()
+        {
+            ManualClock clock = At(0, 15);
+            yield return Load(new MemoryProfileStore(ProfileAt(58, clock)), clock);
+            GameBootstrap boot = GameBootstrap.Current!;
+            HomeSloth sloth = Sloth();
+            sloth.Tick(16f);
+            Step(sloth, (int)HomeSloth.FirstNoteDelayMs + 32);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.True, "premisa: la rotación en marcha");
+
+            // Ajustes se abre encima del inicio sin cerrar la visita: apagar los mensajes quita el bocadillo y para la rotación.
+            Assert.That(boot.ChooseSlothMessages(false), NUnit.Framework.Is.True);
+            sloth.Tick(16f);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, "D-050: respeta el ajuste de mensajes de TiTino");
+            for (int t = 0; t < 3 * (int)HomeSloth.RotationGapMs; t += 16)
+            {
+                sloth.Tick(16f);
+                Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, t + " ms: sin mensajes");
+            }
+
+            Assert.That(sloth.Tap(), NUnit.Framework.Is.True);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, "el toque solo hace el gesto");
+
+            // Encendidos otra vez, la rotación vuelve tras una pausa.
+            Assert.That(boot.ChooseSlothMessages(true), NUnit.Framework.Is.True);
+            Step(sloth, (int)HomeSloth.RotationGapMs + 200);
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.True, "vuelve con los mensajes encendidos");
+        }
+
+        [UnityTest]
+        public IEnumerator Rotation_WaitsWhileSettingsCoverTheLobby()
+        {
+            ManualClock clock = At(0, 15);
+            yield return Load(new MemoryProfileStore(ProfileAt(58, clock)), clock);
+            GameBootstrap boot = GameBootstrap.Current!;
+            HomeSloth sloth = Sloth();
+            sloth.Tick(16f);
+            Assert.That(boot.PressSettings(), NUnit.Framework.Is.True);
+            yield return null;
+            for (int t = 0; t < 2 * (int)HomeSloth.RotationGapMs; t += 16)
+            {
+                sloth.Tick(16f);
+            }
+
+            Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False, "con Ajustes encima, los mensajes no se gastan sin verse");
+            Assert.That(boot.CloseSettings(), NUnit.Framework.Is.True);
+            for (int i = 0; i < 60 && boot.SettingsView != null && boot.SettingsView.Visible; i++)
+            {
+                yield return null; // Ajustes se va con su fundido
+            }
+
+            // El juego también mueve a TiTino en cada fotograma: el mensaje puede salir (y hasta irse) mientras Ajustes se funde; basta
+            // con que salga uno en la pausa de la rotación.
+            bool shown = sloth.BubbleShown;
+            for (int t = 0; !shown && t < (int)HomeSloth.RotationGapMs + 200; t += 16)
+            {
+                sloth.Tick(16f);
+                shown = sloth.BubbleShown;
+            }
+
+            Assert.That(shown, NUnit.Framework.Is.True, "con el inicio despejado, la rotación sigue: " + sloth.RotationStateForTests);
+        }
         [Test]
         public void FactFor_RotatesByDay_ThroughTheElevenSlothFacts()
         {

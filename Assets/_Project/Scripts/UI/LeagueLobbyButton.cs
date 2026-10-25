@@ -76,6 +76,9 @@ namespace AF.UI
             _card.Place(x, y, w, h);
         }
 
+        /// <summary>Sin la línea del puesto (<see cref="DockCard.SetCompact"/>).</summary>
+        public void SetCompact(bool on) => _card.SetCompact(on);
+
         /// <summary>Enseña la tarjeta.</summary>
         public void Show()
         {

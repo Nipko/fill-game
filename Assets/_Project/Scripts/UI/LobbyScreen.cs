@@ -71,7 +71,7 @@ namespace AF.UI
         public const float CardMaxWidthDp = 150f;
 
         /// <summary>Hueco entre «Jugar» y el disco del icono de las tarjetas, que asoma por encima de ellas (dp).</summary>
-        public const float CardTopGapDp = 6f;
+        public const float CardTopGapDp = 4f;
 
         private const float TopRowHeight = 48f;
 
@@ -508,7 +508,7 @@ namespace AF.UI
         public float DayCardWidth(int count)
         {
             int n = Mathf.Clamp(count, 1, 3);
-            float even = (_canvasW - (2f * CardGutterDp) - ((n - 1) * CardGapDp)) / n;
+            float even = (_canvasW - (2f * CardGutter(n)) - ((n - 1) * CardGap(n))) / n;
             return n >= 3 ? Mathf.Floor(even) : Mathf.Min(CardMaxWidthDp, Mathf.Floor(even));
         }
 
@@ -521,10 +521,33 @@ namespace AF.UI
         {
             int n = Mathf.Clamp(count, 1, 3);
             float w = DayCardWidth(n);
-            float total = (n * w) + ((n - 1) * CardGapDp);
+            float gap = CardGap(n);
+            float total = (n * w) + ((n - 1) * gap);
             float left = Mathf.Round((_canvasW - total) * 0.5f);
             float top = _playTop + PlayTouchHeight + CardTopGapDp + DockCard.IconOverhangDp;
-            return new Rect(left + (Mathf.Clamp(index, 0, n - 1) * (w + CardGapDp)), top, w, height);
+            return new Rect(left + (Mathf.Clamp(index, 0, n - 1) * (w + gap)), top, w, height);
+        }
+
+        // Con 3 tarjetas, margen y hueco más justos para que una palabra larga del título («Challenge» al 130 % en 320 dp) quepa.
+        private static float CardGutter(int n) => n >= 3 ? CardGutterTightDp : CardGutterDp;
+
+        /// <summary>Margen a cada lado de la fila con 3 tarjetas (dp).</summary>
+        public const float CardGutterTightDp = 12f;
+
+        private static float CardGap(int n) => n >= 3 ? 8f : CardGapDp;
+
+        /// <summary>
+        /// Alto que tiene la fila de tarjetas del día (dp): de su borde de arriba hasta 4 dp por encima de las pestañas (de «Inicio» y
+        /// los iconos, que sobresalen 12 dp de la barra). Si las tarjetas piden más, <see cref="GameBootstrap"/> las compacta.
+        /// </summary>
+        public float DayCardMaxHeight
+        {
+            get
+            {
+                float top = _playTop + PlayTouchHeight + CardTopGapDp + DockCard.IconOverhangDp;
+                float tabs = _canvasH - _safeBottom - TabBarHeight - 12f;
+                return Mathf.Max(LobbyScreen.MinTouchDp, tabs - 4f - top);
+            }
         }
 
         /// <summary>
@@ -1298,10 +1321,11 @@ namespace AF.UI
             // nivel publicado (el 701 en el fin de contenido), sin letrero.
             string place = _currentStop != null && stopLevel == level ? UiText.NextPlaceName(stops!, _currentStop) : string.Empty;
             _remainingReady = place.Length > 0;
-            int left = RiverJourney.LevelsLeft(Mathf.Max(1, level));
+            int journeyLevel = Mathf.Clamp(level, 1, WorldTable.LastLevel); // el fin de contenido puede ir más allá del 1.000
+            int left = RiverJourney.LevelsLeft(journeyLevel);
             _remainingText = _remainingReady ? UiText.MapStopRemaining(left, place) : string.Empty;
             string guide = RiverJourney.GuideFor(WorldTable.WorldOf(Mathf.Clamp(level, 1, WorldTable.LastLevel)));
-            _voyage.Apply(place, left, _remainingText, HomeVoyage.ProgressOf(level), guide);
+            _voyage.Apply(place, left, _remainingText, HomeVoyage.ProgressOf(journeyLevel), guide);
             _voyageReady = _currentStop != null;
             ApplyStopVisibility();
         }

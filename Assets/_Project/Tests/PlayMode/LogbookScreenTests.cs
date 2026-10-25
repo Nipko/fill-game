@@ -224,11 +224,11 @@ namespace AF.Tests.PlayMode
             card.Refresh(LoginCalendarState.Waiting);
             Assert.That(card.Visible, Is.True);
             Assert.That(card.DotShown, Is.False);
-            Assert.That(card.TitleText, Is.EqualTo("Bitácora del río"));
-            Assert.That(card.StateText, Is.EqualTo("Juega un nivel para sellar"));
+            Assert.That(card.TitleText, Is.EqualTo("Bitácora"), "D-050: la forma corta en la tarjeta del muelle (home_card_logbook)");
+            Assert.That(card.StateText, Is.EqualTo("Juega un nivel"), "la forma corta de logbook_card_play");
             card.Refresh(LoginCalendarState.Ready);
             Assert.That(card.DotShown, Is.True, "06 §4.2: un punto si hay casilla pendiente");
-            Assert.That(card.StateText, Is.EqualTo("Sella la página de hoy"));
+            Assert.That(card.StateText, Is.EqualTo("¡Premio de hoy!"), "D-050: «premio de hoy»");
             card.Refresh(LoginCalendarState.Sealed);
             Assert.That(card.DotShown, Is.False);
             Assert.That(card.StateText, Is.EqualTo("Sellada hoy"), "06 §2.3, pantalla 4");

@@ -113,6 +113,9 @@ namespace AF.UI
             _card.SetShown(true);
         }
 
+        /// <summary>Sin la línea de estado (<see cref="DockCard.SetCompact"/>): el punto del icono dice si hay página por sellar.</summary>
+        public void SetCompact(bool on) => _card.SetCompact(on);
+
         /// <summary>Oculta la tarjeta sin cambiar su estado (con algo encima del inicio).</summary>
         public void SetShown(bool shown)
         {

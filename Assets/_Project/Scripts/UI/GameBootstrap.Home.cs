@@ -28,6 +28,12 @@ namespace AF.UI
             && _dailyService.CardState(_progress.MaxLevel) == DailyCardState.Play;
 
         /// <summary>
+        /// El inicio está delante y despejado (sin Ajustes, el Mercado, el Reto, la Liga, una oferta ni el Mapa encima): solo entonces
+        /// corre la pausa entre los mensajes de TiTino, para que no se gasten sin verse.
+        /// </summary>
+        internal bool HomeNotesClear => LobbyClear();
+
+        /// <summary>
         /// Niveles que faltan para la próxima Canasta (la de la parada siguiente, 06 §4.4 y §4.5), contando el de «Jugar»; −1 sin
         /// Canasta (antes de su desbloqueo o tras el fin de contenido).
         /// </summary>
@@ -83,21 +89,24 @@ namespace AF.UI
                 return;
             }
 
+            // Todas del mismo alto, el de la que más pide; si la fila no cabe entre «Jugar» y las pestañas (16:9 con el texto grande),
+            // primero el Reto sin la fecha en el título (06 §4.1: la sigue leyendo TalkBack) y, si ni así, sin la línea de estado en
+            // ninguna (el sello y el punto del icono la dicen) [P].
             float w = lobby.DayCardWidth(n);
-            float h = 0f;
-            if (daily)
+            float max = lobby.DayCardMaxHeight;
+            _dailyCard?.SetDated(true);
+            SetDayCardsCompact(false);
+            float h = DayCardsHeight(daily, logbook, league, w);
+            if (h > max && daily)
             {
-                h = Mathf.Max(h, _dailyCard!.HeightFor(w));
+                _dailyCard!.SetDated(false);
+                h = DayCardsHeight(daily, logbook, league, w);
             }
 
-            if (logbook)
+            if (h > max)
             {
-                h = Mathf.Max(h, _logbookCard!.HeightFor(w));
-            }
-
-            if (league)
-            {
-                h = Mathf.Max(h, _leagueButton!.HeightFor(w));
+                SetDayCardsCompact(true);
+                h = DayCardsHeight(daily, logbook, league, w);
             }
 
             h = Mathf.Max(h, LobbyScreen.MinTouchDp);
@@ -145,6 +154,35 @@ namespace AF.UI
 
                 _probe.Layout("lobby_cards", 0, null, ids.ToArray(), rects.ToArray());
             }
+        }
+
+        // El alto que pide la fila: el de la tarjeta que más pide a ese ancho.
+        private float DayCardsHeight(bool daily, bool logbook, bool league, float w)
+        {
+            float h = 0f;
+            if (daily)
+            {
+                h = Mathf.Max(h, _dailyCard!.HeightFor(w));
+            }
+
+            if (logbook)
+            {
+                h = Mathf.Max(h, _logbookCard!.HeightFor(w));
+            }
+
+            if (league)
+            {
+                h = Mathf.Max(h, _leagueButton!.HeightFor(w));
+            }
+
+            return h;
+        }
+
+        private void SetDayCardsCompact(bool on)
+        {
+            _dailyCard?.SetCompact(on);
+            _logbookCard?.SetCompact(on);
+            _leagueButton?.SetCompact(on);
         }
 
         /// <summary>Solo tests: vuelve a colocar las tarjetas del día aunque nada haya cambiado (tras poner un texto a mano).</summary>
