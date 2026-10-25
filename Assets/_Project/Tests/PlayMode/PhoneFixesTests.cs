@@ -251,7 +251,8 @@ namespace AF.Tests.PlayMode
             // tapaba la repisa de abajo). Responde la burbuja «Te faltan 120» de la ranura: un latido, sin pisar la burbuja
             // vecina, y los colores de la etiqueta de precio sin saldo, que vuelven después. Sin cobrar y sin asignaciones, con el
             // ambiente en marcha: desde D-046 (punto 3) el 135 deja la franja de la tropa sobre el panel y por ella pasan los brillos
-            // del río, precalentados al cargar (AmbientLayer.Prewarm; T6, carril B, punto 4).
+            // del río, siempre activos y ocultos con el recorte de su CanvasRenderer, sin asignar al nacer (AmbientLayer.Show;
+            // T6, carril B, punto 4).
             yield return LoadWithBubbles(135, 0, 0);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;

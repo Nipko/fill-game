@@ -451,9 +451,14 @@ namespace AF.UI
                 return;
             }
 
+            bool grew = !Mathf.Approximately(cardH, _dailyCardHeight);
             _dailyCardW = w;
             _dailyCardH = h;
             _dailyCardHeight = cardH;
+            if (grew)
+            {
+                PlaceLogbookCard(); // la de la Bitácora va encima de la del Reto, que creció o encogió con sus textos
+            }
 
             // El borde de abajo, fijo; si sus textos piden más alto (DailyChallengeCard.Height), crece hacia arriba.
             float y = (h * LobbyScreen.PlayCenterFraction) - DailyCardAbovePlayDp - cardH - 32f;
