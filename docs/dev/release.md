@@ -23,7 +23,7 @@ Los dos jobs de `release.yml` declaran `environment: release`. Es la barrera que
 | Environment `release` | Secreto | `ANDROID_KEYSTORE_PASS` | Contraseña del keystore | Ídem |
 | Environment `release` | Secreto | `ANDROID_KEYALIAS_NAME` | Alias de la clave de subida (recomendado `tintalu-upload`) | Ídem |
 | Environment `release` | Secreto | `ANDROID_KEYALIAS_PASS` | Contraseña de la clave (con PKCS12, la misma que la del keystore) | Ídem |
-| Repositorio (pestaña *Variables*; no es secreta) | Variable | `AF_RELEASE_APPLICATION_ID` | El `applicationId` definitivo; recomendado `com.parallext.tintalu` (D-041) | **Solo tras el dictamen de marca** (D-034; regla dura 6) |
+| Repositorio (pestaña *Variables*; no es secreta) | Variable | `AF_RELEASE_APPLICATION_ID` | El `applicationId` definitivo; recomendado `com.parallext.tintalu` (D-041) | Cuando el dueño confirme el ID (D-047 retiró la espera al dictamen) |
 
 Los cuatro `ANDROID_*` **no** se crean como secretos del repositorio, solo en el Environment. Si GitHub no tiene el Environment `release`, lo crea vacío en la primera ejecución; el job `preflight` fallaría entonces con 5 (faltan los secretos), sin llegar a Unity.
 
@@ -53,7 +53,7 @@ Pega el valor en el secreto y vacía el portapapeles. No lo guardes en un archiv
 
 ## 3. Play App Signing (08 §13.1 #3)
 
-1. Al crear la app en Play Console (solo tras el dictamen), deja activado **Play App Signing** con la clave de firma de la app **generada por Google**: es la opción recomendada.
+1. Al crear la app en Play Console (ya sin esperar al dictamen, D-047), deja activado **Play App Signing** con la clave de firma de la app **generada por Google**: es la opción recomendada.
 2. La primera subida de un AAB firmado con tu clave de subida registra esa clave como clave de subida.
 3. En **Integridad de la app › Firma de apps** aparecen dos certificados:
    - el de firma de la app, que va a Firebase (SHA-1 y SHA-256 de la app Android de prod), a Play Games Services (credencial OAuth) y a App Check (08 §13.1 #16 y #18);
