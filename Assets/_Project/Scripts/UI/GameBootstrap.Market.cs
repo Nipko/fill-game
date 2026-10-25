@@ -260,10 +260,38 @@ namespace AF.UI
             && _progress.MaxLevel >= MarketModel.FromMaxLevel;
 
         /// <summary>
-        /// La tienda está encendida (<c>biz_iap_enabled</c>) pero no vende porque no hay backend con el que verificar (F3-5: apagado con
-        /// <c>biz_backend_enabled</c>, o un build sin backend): el Mercado se abre y lo dice («Las compras no están disponibles ahora»).
+        /// La tienda está encendida (<c>biz_iap_enabled</c>) y tiene precios de la tienda, pero no vende porque el backend del build está
+        /// apagado con <c>biz_backend_enabled</c> (F3-5): el Mercado se abre y lo dice («Las compras no están disponibles ahora»). Sin
+        /// precios de la tienda no se abre (D-046, añadido del 2026-10-24: «hide the Market without Play prices»): ni con Play conectada
+        /// sin productos, ni en un build sin backend (release sin URL, <c>UnavailableBackendClient</c>), donde Play ni se conecta
+        /// y la tienda simulada solo tiene los precios de respaldo de 05 §4.2 (prueba del 2026-10-25, jornada 2, observación 4: el
+        /// ensayo de release enseñaba el icono del Mercado).
         /// </summary>
-        internal bool StoreDownForBackend => _verifiedStore != null && _storeLedger != null && _storeLedger.Config.BizIapEnabled && !BackendReady;
+        internal bool StoreDownForBackend => _verifiedStore != null && _storeLedger != null && _storeLedger.Config.BizIapEnabled && !BackendReady
+            && _backendSwitch != null && _backendSwitch.HasBackend && PlatformHasPrices();
+
+        // ¿La tienda de la plataforma tiene algún precio? Con Play, algún SKU del catálogo con su precio; con la tienda simulada (editor y
+        // desarrollo, con un backend del build), sí. Recorre la lista por índice: sin asignaciones por fotograma.
+        private bool PlatformHasPrices()
+        {
+            PlayBillingClient? play = _playBilling;
+            StoreLedger? ledger = _storeLedger;
+            if (play == null || ledger == null)
+            {
+                return play == null && _fakeBilling != null;
+            }
+
+            IReadOnlyList<StoreProduct> products = ledger.Catalog.Products;
+            for (int i = 0; i < products.Count; i++)
+            {
+                if (play.CanSell(products[i].Sku))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// Toque en el Cántaro del inicio (05 §5: «≥ 1.000 y toque en el icono»): su tarjeta, con el botón activo desde

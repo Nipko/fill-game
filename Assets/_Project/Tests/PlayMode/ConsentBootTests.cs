@@ -90,6 +90,45 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator FirstRun_ClosedOnTheAgeScreen_AndReopened_StillGoesToLevel1()
+        {
+            // Prueba del 2026-10-25, jornada 2: la primera apertura guarda el perfil al momento; si la app se cierra en la pantalla de
+            // edad y se vuelve a abrir (los cinco arranques en frío de N1.1), el perfil ya existe, pero el jugador nunca pasó la pantalla
+            // previa al nivel 1: tras la edad y el consentimiento, el nivel 1, no el inicio (06 §2.1, regla 3, y §2.2).
+            var store = new MemoryProfileStore();
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            Assert.That(GameBootstrap.Current!.ConsentView!.View, Is.EqualTo(ConsentView.Age));
+            Assert.That(store.Load().Profile, Is.Not.Null, "la primera apertura ya guardó el perfil");
+
+            yield return PlayModeHelpers.LoadAppWithConsent(store); // la app se cerró en la edad y se vuelve a abrir
+            GameBootstrap boot = GameBootstrap.Current!;
+            ConsentScreen view = boot.ConsentView!;
+            Assert.That(view.View, Is.EqualTo(ConsentView.Age), "la edad sigue sin contestar");
+            view.AgeButton(AgeBand.Adult).onClick.Invoke();
+            yield return null;
+            view.AcceptAllButton.onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(() => boot.App!.Screen != AppScreen.Boot, "la primera pantalla tras el consentimiento");
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level), "el nivel 1, como la primera vez");
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator APlayerWithProgress_AskedForTheConsent_StillGoesToTheLobby()
+        {
+            // Un perfil con progreso que aún no contestó (anterior a B12): la pantalla y después el inicio, como siempre.
+            var store = new MemoryProfileStore(ProfileWith(null));
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            ConsentScreen view = boot.ConsentView!;
+            Assert.That(view.Visible, Is.True);
+            view.AgeButton(AgeBand.Adult).onClick.Invoke();
+            yield return null;
+            view.AcceptAllButton.onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(() => boot.App!.Screen != AppScreen.Boot, "la primera pantalla tras el consentimiento");
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+        }
+
+        [UnityTest]
         public IEnumerator Under13_Blocks_AndTheNextBootStaysBlocked_WithoutBuildingTheGame()
         {
             var store = new MemoryProfileStore();

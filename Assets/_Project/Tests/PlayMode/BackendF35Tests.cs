@@ -152,22 +152,23 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator WithoutABackend_TheMarketDoesNotSell_AndSaysSo()
+        public IEnumerator WithoutABackend_TheMarketDoesNotSell_AndIsHidden()
         {
-            // Release sin URL (BackendEndpoints vacías): UnavailableBackendClient. La tienda no vende: no podría acreditar nada.
+            // Release sin URL (BackendEndpoints vacías): UnavailableBackendClient, el camino del ensayo de release (BuildRelease
+            // -afRehearsal). La tienda no vende (no podría acreditar nada) y, sin precios de Play, el inicio no enseña el Mercado ni el
+            // Cántaro (D-046, añadido del 2026-10-24; prueba del 2026-10-25, jornada 2, observación 4: el ensayo enseñaba el icono).
             GameBootstrap.BackendModeOverride = BackendMode.Unavailable;
             yield return LoadLobby(new MemoryProfileStore(ProfileAt(26)));
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.Backend, Is.InstanceOf<UnavailableBackendClient>());
+            Assert.That(boot.PlayBilling, Is.Null, "sin backend, Play ni se conecta");
             Assert.That(boot.Store!.IsAvailable, Is.False);
-            Assert.That(boot.MarketAvailable, Is.True, "el Mercado se abre para decirlo");
+            Assert.That(boot.StoreDownForBackend, Is.False, "sin precios de la tienda");
+            Assert.That(boot.MarketAvailable, Is.False);
             boot.TickMarket(16f);
-            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
-            MarketScreen market = boot.Market!;
-            Assert.That(market.StatusText, Is.EqualTo(MarketText.StoreUnavailable));
-            int row = RowOf(market, "af_coins_2");
-            Assert.That(market.RowButton(row).GetComponent<ReliefButton>().Interactable, Is.False);
-            Assert.That(market.PressRow(row), Is.False);
+            Assert.That(boot.MarketIcons!.MarketShown, Is.False, "el inicio sin el icono del Mercado");
+            Assert.That(boot.MarketIcons.PiggyShown, Is.False, "ni el Cántaro");
+            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.False);
             Assert.That(boot.ServerAccountDelete, Is.Null, "sin backend, el borrado es solo local");
             Assert.That(boot.FakeBilling!.Requests, Is.Empty, "Play no abrió ninguna compra");
         }

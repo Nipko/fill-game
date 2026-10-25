@@ -76,6 +76,37 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator BackendSwitchedOff_WithoutAnyPrice_TheLobbyHasNoMarket()
+        {
+            // biz_backend_enabled apagado y Play sin productos: sin precios de la tienda, tampoco hay Mercado que diga «no disponible»
+            // (D-046, añadido del 2026-10-24; prueba del 2026-10-25, jornada 2, observación 4).
+            GameBootstrap.RemoteConfigBackendOverride = new AF.RemoteConfig.FakeRemoteConfigBackend().Set("biz_backend_enabled", "false").StoreFetched();
+            yield return LoadLobby(new InstantPlayPort());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.BackendReady, Is.False);
+            Assert.That(boot.StoreDownForBackend, Is.False);
+            Assert.That(boot.MarketAvailable, Is.False);
+            Assert.That(boot.MarketIcons!.MarketShown, Is.False);
+            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator BackendSwitchedOff_WithPlayPrices_TheMarketOpensToSaySo()
+        {
+            // F3-5: con precios de Play y el backend apagado, el Mercado se abre y dice «Las compras no están disponibles ahora».
+            GameBootstrap.RemoteConfigBackendOverride = new AF.RemoteConfig.FakeRemoteConfigBackend().Set("biz_backend_enabled", "false").StoreFetched();
+            var port = new InstantPlayPort();
+            port.Price(StoreCatalog.Handful, "COP", 3900000000L);
+            yield return LoadLobby(port);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Store!.IsAvailable, Is.False, "no vende sin backend");
+            Assert.That(boot.StoreDownForBackend, Is.True);
+            Assert.That(boot.MarketIcons!.MarketShown, Is.True);
+            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
+            Assert.That(boot.Market!.StatusText, Is.EqualTo(MarketText.StoreUnavailable));
+        }
+
+        [UnityTest]
         public IEnumerator ABuyThatEndsStoreUnavailable_ShowsTheNotice()
         {
             var port = new InstantPlayPort();

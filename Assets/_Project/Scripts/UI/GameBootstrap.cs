@@ -1816,7 +1816,8 @@ namespace AF.UI
 
             // B12 (08 §2.3): la edad y el consentimiento, y sus flags a la analítica, los anuncios y la tienda, siempre antes de
             // GameFlow.Go. Sin pantalla que enseñar no hay ningún yield. Con <13, la app no arranca.
-            if (StartConsentAtBoot())
+            bool consentAsked = StartConsentAtBoot();
+            if (consentAsked)
             {
                 yield return WaitConsentAtBoot();
             }
@@ -1834,7 +1835,7 @@ namespace AF.UI
             {
                 // 02 §14: con un nivel en curso guardado se reabre tal cual (sin intro, con su modal), sin cobrar nada. Tras la
                 // reconstrucción por idioma, el inicio (se venía de él: el nivel que se dejó ya no está en curso).
-                _app.Start(firstRun && !rebuilt, profile.LevelState);
+                _app.Start(StartsAsFirstRun(firstRun, rebuilt, locked, consentAsked, _profile ?? profile), profile.LevelState);
             }
 
             if (reopenSettings)
@@ -2259,6 +2260,31 @@ namespace AF.UI
             }
 
             return profile;
+        }
+
+        /// <summary>
+        /// ¿Arranca como la primera vez (06 §2.1, regla 3, y §2.2: tras la edad y el consentimiento, la carga del nivel 1)? Sí con un perfil
+        /// que no existía al arrancar, y también cuando este arranque tuvo que preguntar la edad o el consentimiento sobre un perfil sin
+        /// estrenar (siguiente nivel 1, sin máximo ni nivel guardado): la primera apertura guarda el perfil al momento
+        /// (<see cref="LoadProfile"/>), así que, si la app se cerró en la pantalla de edad y se vuelve a abrir, el perfil ya existe pero el
+        /// jugador nunca pasó la pantalla previa al nivel 1 (prueba del 2026-10-25, jornada 2: tras cinco arranques en frío, la edad y el
+        /// consentimiento llevaban al inicio). Tras una reconstrucción de la escena, nunca (se venía del inicio). Con el perfil en solo
+        /// lectura (08 §4.4: <c>TooNew</c> o <c>MigrationFailed</c>), tampoco por la segunda vía: el perfil en blanco de la sesión no
+        /// guarda el consentimiento y la pantalla sale en cada arranque, que debe seguir yendo al inicio bajo el aviso del perfil.
+        /// </summary>
+        internal static bool StartsAsFirstRun(bool firstRun, bool rebuilt, bool locked, bool consentAsked, Profile profile)
+        {
+            if (rebuilt)
+            {
+                return false;
+            }
+
+            if (firstRun)
+            {
+                return true;
+            }
+
+            return !locked && consentAsked && profile.LevelState == null && profile.Progress.MaxLevel <= 0 && profile.Progress.NextLevel <= 1;
         }
 
         private static bool IsLocked(ProfileLoadStatus status)
