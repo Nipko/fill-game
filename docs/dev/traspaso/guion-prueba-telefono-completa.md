@@ -70,11 +70,12 @@ La jornada 1 (`pruebas-telefono-2026-10-25-completa.md`) cubrió los bloques 0, 
      - el bocadillo cambia cada ~5 s entre el saludo, «¡Hoy hay Reto del río nuevo!», lo que falta para la Canasta, la distancia a casa y el dato del día;
      - nunca habla de compras;
      - al tocarlo sale `sloth_look` y el mensaje siguiente;
+     - **antes del nivel 10** solo tiene el mensaje que anima a jugar, así que tocarlo lo repite (por diseño: 06 §4.7, fila Lobby, D-050);
      - de noche (bloque 15, con la hora cambiada) duerme.
    - **El río:** el color del agua cambia con el mundo; se ven nenúfares, un pez que salta, un ave y ondas. Prueba con `--ei af_max_level` 4, 58 y 140, y alguno de los mundos 10-13.
    - **La canoa de Capi con Rosa y el poste de la próxima parada** (`voyage_canoe`, `voyage_stop`, `stop_remaining`, con «Faltan n niveles»):
-     - solo desde el nivel 10;
-     - tocar la canoa o el letrero abre el Mapa (`af_map_open` con `source` `lobby`);
+     - **antes del nivel 10** la canoa y el poste con «Faltan n niveles» se dibujan, pero no se pueden tocar (sin `voyage_canoe` en la línea `lobby`); es por diseño (06 §4.7, fila Lobby, D-050);
+     - solo desde el nivel 10, tocar la canoa o el letrero abre el Mapa (`af_map_open` con `source` `lobby`);
      - el bocadillo puede apartarlos unos segundos, y está aceptado.
    - **La Crecida como poste de nivel** (`crecida`), desde el 25, con la racha y los hitos.
    - **El muelle:**
