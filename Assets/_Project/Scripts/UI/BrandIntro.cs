@@ -65,32 +65,38 @@ namespace AF.UI
 
         // Colores de la identidad v2 (docs/art/marca-oficial/v2/generar.py): halo, selva de la orilla, agua blanca del Amazonas
         // (#B08A5A, glosario §9) y açaí (#6A2C91), con los extremos de sus degradados, y las ondas del impacto.
-        private static readonly Color HaloColor = new Color(0x5F / 255f, 0xB3 / 255f, 0xA6 / 255f, 0.45f);
-        private static readonly Color Jungle = Palette.Hex(0x0E4232);
-        private static readonly Color WaterTop = Palette.Hex(0x8F6B3F);
-        private static readonly Color WaterMid = Palette.Hex(0xB08A5A);
-        private static readonly Color WaterLow = Palette.Hex(0xC29C6A);
-        private static readonly Color AcaiTop = Palette.Hex(0x4E1F6E);
-        private static readonly Color AcaiMid = Palette.Hex(0x6A2C91);
-        private static readonly Color AcaiLow = Palette.Hex(0x7E3AAE);
+        // La pantalla de arranque usa los mismos (añadido de D-051): su emblema es el último fotograma de la intro.
+        internal static readonly Color HaloColor = new Color(0x5F / 255f, 0xB3 / 255f, 0xA6 / 255f, 0.45f);
+        internal static readonly Color Jungle = Palette.Hex(0x0E4232);
+        internal static readonly Color WaterTop = Palette.Hex(0x8F6B3F);
+        internal static readonly Color WaterMid = Palette.Hex(0xB08A5A);
+        internal static readonly Color WaterLow = Palette.Hex(0xC29C6A);
+        internal static readonly Color AcaiTop = Palette.Hex(0x4E1F6E);
+        internal static readonly Color AcaiMid = Palette.Hex(0x6A2C91);
+        internal static readonly Color AcaiLow = Palette.Hex(0x7E3AAE);
         private static readonly Color RippleColor = Palette.Hex(0xEBD5F8);
-        private static readonly Color WaterWave = Palette.Hex(0xE6CB9E);
-        private static readonly Color AcaiWave = Palette.Hex(0xCDA0F0);
+        internal static readonly Color WaterWave = Palette.Hex(0xE6CB9E);
+        internal static readonly Color AcaiWave = Palette.Hex(0xCDA0F0);
+
+        // La gota de açaí (la de la intro; antes, también la del logotipo provisional de la pantalla de arranque).
+        private static readonly Color DropLight = Palette.Hex(0x9B5CC4);
+        private static readonly Color DropDeep = Palette.Hex(0x4A1C68);
+        private static readonly Color DropInk = Palette.Hex(0x2E0F44);
 
         // Medidas, en fracciones del ancho E del emblema [P]: el río, la selva sobre él, el halo, la gota y las ondas.
         private const float EmblemMaxDp = 300f;
         private const float EmblemMarginDp = 40f;
         private const float CenterY = 0.42f;
-        private const float RiverH = 0.16f;
-        private const float JungleH = 0.20f;
+        internal const float RiverH = 0.16f;
+        internal const float JungleH = 0.20f;
         private const float HaloSize = 1.45f;
         private const float DropSize = 0.24f;
         private const float DropStartAbove = 0.42f;
         private const float RippleW = 0.36f;
         private const float RippleH = 0.10f;
 
-        private readonly Texture2D?[] _textures = new Texture2D?[4];
-        private readonly Sprite?[] _sprites = new Sprite?[4];
+        private readonly Texture2D?[] _textures = new Texture2D?[2];
+        private readonly Sprite?[] _sprites = new Sprite?[2];
         private readonly RectTransform _root;
         private readonly Image _background;
         private readonly Image _halo;
@@ -128,10 +134,11 @@ namespace AF.UI
         /// <summary>
         /// Crea la intro, ya a la vista en su primer fotograma, dentro de <paramref name="parent"/> (la pantalla de arranque). Su reloj
         /// cuenta desde <paramref name="origin"/> (<see cref="Time.realtimeSinceStartupAsDouble"/> de cuando se creó la pantalla: el
-        /// mismo origen que <c>load_ms</c>). La gota de açaí y el halo son los de la pantalla de arranque (<paramref name="drop"/> y
-        /// <paramref name="halo"/>, suyos: los destruye ella), para no pintar dos veces las mismas texturas antes del primer fotograma.
+        /// mismo origen que <c>load_ms</c>). El halo, la selva, el río y el açaí son los del emblema de la pantalla de arranque
+        /// (suyos: los destruye ella; añadido de D-051), que es el último fotograma de esta intro: así empalman sin salto y no se
+        /// pintan dos veces las mismas texturas antes del primer fotograma. La gota y las ondas son de la intro.
         /// </summary>
-        internal BrandIntro(Transform parent, double origin, Sprite drop, Sprite halo)
+        internal BrandIntro(Transform parent, double origin, Sprite halo, Sprite jungle, Sprite river, Sprite tint)
         {
             _origin = origin;
             var go = new GameObject("BrandIntro", typeof(RectTransform));
@@ -142,11 +149,11 @@ namespace AF.UI
             _background = UiBuilder.Image("Petroleum", _root, null, Petroleum);
             UiBuilder.Stretch(_background.rectTransform);
             _halo = UiBuilder.Image("Halo", _root, halo, HaloColor);
-            _jungle = UiBuilder.Image("Jungle", _root, Own(0, Treeline(256, 64)), Jungle);
-            _river = UiBuilder.Image("River", _root, Own(1, Band(256, 48, WaterTop, WaterMid, WaterLow, WaterWave, false)), Color.white);
-            _tint = UiBuilder.Image("Tint", _root, Own(2, Band(160, 48, AcaiTop, AcaiMid, AcaiLow, AcaiWave, true)), Color.white);
-            _ripple = UiBuilder.Image("Ripple", _root, Own(3, Ring(128, 40)), RippleColor);
-            _drop = UiBuilder.Image("Drop", _root, drop, Color.white);
+            _jungle = UiBuilder.Image("Jungle", _root, jungle, Jungle);
+            _river = UiBuilder.Image("River", _root, river, Color.white);
+            _tint = UiBuilder.Image("Tint", _root, tint, Color.white);
+            _ripple = UiBuilder.Image("Ripple", _root, Own(0, Ring(128, 40)), RippleColor);
+            _drop = UiBuilder.Image("Drop", _root, Own(1, Drop(256)), Color.white);
             Layout(_width, _height);
         }
 
@@ -229,20 +236,13 @@ namespace AF.UI
         {
             _width = width;
             _height = height;
-            float e = Mathf.Min(width - (2f * EmblemMarginDp), EmblemMaxDp);
+            EmblemGeometry(width, height, out float left, out float e, out float riverTop);
             _emblem = e;
-            float left = (width - e) * 0.5f;
-            float cy = Mathf.Round(CenterY * height);
-            float riverTop = cy;
             float riverH = e * RiverH;
-            float halo = e * HaloSize;
-            UiBuilder.Place(_halo.rectTransform, (width - halo) * 0.5f, cy - (halo * 0.55f), halo, halo);
-            UiBuilder.Place(_jungle.rectTransform, left, riverTop - (e * JungleH) + 2f, e, e * JungleH);
-            UiBuilder.Place(_river.rectTransform, left, riverTop, e, riverH);
+            PlaceEmblem(_halo.rectTransform, _jungle.rectTransform, _river.rectTransform, _tint.rectTransform, width, height);
             // El açaí, desde el impacto hasta el final del río: crece en ancho río abajo (Apply), con su frente suave.
             _riverH = riverH;
             _tintFullW = (1f - ImpactU) * e;
-            UiBuilder.Place(_tint.rectTransform, left + (ImpactU * e), riverTop, _tintFullW, riverH);
 
             // La gota cae sobre el agua en ImpactU; las ondas, centradas en el impacto (un poco por debajo de la orilla de arriba).
             float d = e * DropSize;
@@ -258,6 +258,33 @@ namespace AF.UI
             _ripple.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             _ripple.rectTransform.anchoredPosition = new Vector2(impactX, -impactY);
             Apply(_clockMs);
+        }
+
+        /// <summary>
+        /// Medidas del emblema en un lienzo de <paramref name="width"/> × <paramref name="height"/> dp: su borde izquierdo
+        /// (<paramref name="left"/>), su ancho E (<paramref name="e"/>) y la orilla de arriba del río (<paramref name="riverTop"/>,
+        /// dp desde arriba). Las comparten la intro y la pantalla de arranque (añadido de D-051), para que empalmen.
+        /// </summary>
+        internal static void EmblemGeometry(float width, float height, out float left, out float e, out float riverTop)
+        {
+            e = Mathf.Min(width - (2f * EmblemMarginDp), EmblemMaxDp);
+            left = (width - e) * 0.5f;
+            riverTop = Mathf.Round(CenterY * height);
+        }
+
+        /// <summary>
+        /// Coloca el halo, la selva, el río y el açaí del emblema (este, teñido entero: el último fotograma) para un lienzo de
+        /// <paramref name="width"/> × <paramref name="height"/> dp. Lo usan la intro y la pantalla de arranque.
+        /// </summary>
+        internal static void PlaceEmblem(RectTransform halo, RectTransform jungle, RectTransform river, RectTransform tint, float width, float height)
+        {
+            EmblemGeometry(width, height, out float left, out float e, out float riverTop);
+            float riverH = e * RiverH;
+            float h = e * HaloSize;
+            UiBuilder.Place(halo, (width - h) * 0.5f, riverTop - (h * 0.55f), h, h);
+            UiBuilder.Place(jungle, left, riverTop - (e * JungleH) + 2f, e, e * JungleH);
+            UiBuilder.Place(river, left, riverTop, e, riverH);
+            UiBuilder.Place(tint, left + (ImpactU * e), riverTop, (1f - ImpactU) * e, riverH);
         }
 
         /// <summary>
@@ -367,7 +394,7 @@ namespace AF.UI
         // Banda del río: degradado vertical (arriba top, en medio mid, abajo low), con dos ondas claras (wave, como las del icono) y
         // los extremos fundidos. La del açaí (tint) cubre del impacto al final del río: su frente izquierdo es suave y ondulado (el
         // tinte entra en el agua blanca) y su extremo derecho se funde como el del río.
-        private static Texture2D Band(int w, int h, Color top, Color mid, Color low, Color wave, bool tint)
+        internal static Texture2D Band(int w, int h, Color top, Color mid, Color low, Color wave, bool tint)
         {
             Texture2D tex = NewTexture(w, h, tint ? "AF_IntroTint" : "AF_IntroRiver");
             var px = new Color32[w * h];
@@ -413,7 +440,7 @@ namespace AF.UI
 
         // Selva de la orilla de enfrente (blanca, se tiñe con el color de la Image): copas redondeadas y dos palmeras de açaí más
         // altas, con 1 px de suavizado y los extremos fundidos.
-        private static Texture2D Treeline(int w, int h)
+        internal static Texture2D Treeline(int w, int h)
         {
             Texture2D tex = NewTexture(w, h, "AF_IntroJungle");
             var px = new Color32[w * h];
@@ -463,6 +490,94 @@ namespace AF.UI
             tex.SetPixels32(px);
             tex.Apply(false, true);
             return tex;
+        }
+
+        // La gota de açaí (u, v en 0..1, v hacia arriba): un círculo abajo y su punta arriba, con un brillo arriba a la izquierda y
+        // un contorno oscuro. Suavizado con 2 × 2 muestras por píxel.
+        private static Texture2D Drop(int size)
+        {
+            Texture2D tex = NewTexture(size, size, "AF_IntroDrop");
+            var px = new Color32[size * size];
+            var c = new Vector2(0.5f, 0.38f);
+            const float r = 0.30f;
+            var tip = new Vector2(0.5f, 0.97f);
+            Vector2 axis = (tip - c).normalized;
+            float beta = Mathf.Acos(r / (tip - c).magnitude);
+            Vector2 left = c + (r * Rotate(axis, beta));
+            Vector2 right = c + (r * Rotate(axis, -beta));
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    Color sum = Color.clear;
+                    for (int s = 0; s < 4; s++)
+                    {
+                        var p = new Vector2((x + 0.25f + (0.5f * (s & 1))) / size, (y + 0.25f + (0.5f * (s >> 1))) / size);
+
+                        // Distancia al borde de la gota (> 0 dentro): la mayor de la del círculo y la del triángulo de la punta.
+                        float inCircle = r - (p - c).magnitude;
+                        float inTip = InTriangle(p, tip, left, right) ? EdgeDistance(p, tip, left, right) : -1f;
+                        float inside = Mathf.Max(inCircle, inTip);
+                        if (inside < 0f)
+                        {
+                            continue;
+                        }
+
+                        float shade = Mathf.Clamp01(((p.x - 0.30f) * 0.9f) + ((0.75f - p.y) * 0.6f));
+                        Color col = Color.Lerp(DropLight, DropDeep, shade);
+                        float shine = Mathf.Clamp01(1f - new Vector2((p.x - 0.38f) / 0.06f, (p.y - 0.47f) / 0.10f).magnitude);
+                        col = Color.Lerp(col, Color.white, 0.75f * Mathf.SmoothStep(0f, 1f, shine));
+                        if (inside < 0.018f)
+                        {
+                            col = Color.Lerp(col, DropInk, 0.85f);
+                        }
+
+                        sum += new Color(col.r, col.g, col.b, 1f);
+                    }
+
+                    Color avg = sum * 0.25f;
+                    px[(y * size) + x] = avg.a <= 0f ? new Color32(0, 0, 0, 0) : (Color32)new Color(avg.r / avg.a, avg.g / avg.a, avg.b / avg.a, avg.a);
+                }
+            }
+
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            return tex;
+        }
+
+        private static Vector2 Rotate(Vector2 v, float radians)
+        {
+            float cos = Mathf.Cos(radians);
+            float sin = Mathf.Sin(radians);
+            return new Vector2((cos * v.x) - (sin * v.y), (sin * v.x) + (cos * v.y));
+        }
+
+        private static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+        {
+            float d1 = Cross(p, a, b);
+            float d2 = Cross(p, b, c);
+            float d3 = Cross(p, c, a);
+            bool neg = d1 < 0f || d2 < 0f || d3 < 0f;
+            bool pos = d1 > 0f || d2 > 0f || d3 > 0f;
+            return !(neg && pos);
+        }
+
+        // Distancia a los dos lados largos del triángulo de la punta (tip-left y tip-right).
+        private static float EdgeDistance(Vector2 p, Vector2 tip, Vector2 left, Vector2 right)
+        {
+            return Mathf.Min(SegmentDistance(p, tip, left), SegmentDistance(p, tip, right));
+        }
+
+        private static float SegmentDistance(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 ab = b - a;
+            float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+            return (p - (a + (t * ab))).magnitude;
+        }
+
+        private static float Cross(Vector2 p, Vector2 a, Vector2 b)
+        {
+            return ((p.x - b.x) * (a.y - b.y)) - ((a.x - b.x) * (p.y - b.y));
         }
     }
 }

@@ -1700,7 +1700,7 @@ namespace AF.UI
                 // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
                 // de la victoria) o sin su arte final (release), no sale y no hay espera. Con Reducir movimiento (B9; 02 §12, fila
                 // «Mensajes de TiTino»), pose quieta y fundido.
-                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: ResolveReduceMotion(profile)))
+                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), _art.HomeBranch, firstRun, reduceMotion: ResolveReduceMotion(profile)))
                 {
                     yield return null; // TiTino, a la vista mientras se construye el resto
                 }

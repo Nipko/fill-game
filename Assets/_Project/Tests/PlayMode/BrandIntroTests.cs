@@ -62,7 +62,7 @@ namespace AF.Tests.PlayMode
             ArtSlots.ForceProcedural = true;
             GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp
             BootSplash splash = NewSplash();
-            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), true, false), Is.True);
+            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), _art.HomeBranch, true, false), Is.True);
             yield return null;
 
             BrandIntro intro = splash.Intro!;
@@ -175,13 +175,78 @@ namespace AF.Tests.PlayMode
             ArtSlots.ForceProcedural = true;
             BootSplash splash = NewSplash();
             splash.BeginIntro(false);
-            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), true, false), Is.True);
+            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), _art.HomeBranch, true, false), Is.True);
             splash.Tick(400f);
             Assert.That(splash.SlothClockMs, Is.EqualTo(0f), "bajo la intro, el gesto de TiTino no avanza (su segundo se verá entero)");
             splash.EndIntro();
             splash.Tick(400f);
             Assert.That(splash.SlothClockMs, Is.EqualTo(400f).Within(0.01f));
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator TheSplash_IsTheIntrosLastFrame_TheWorldFadesIn_WithoutAJump([Values(false, true)] bool reduceMotion)
+        {
+            MapArtRule.ForceProvisional = true;
+            ArtSlots.ForceProcedural = true;
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            BootSplash splash = NewSplash();
+            splash.BeginIntro(reduceMotion);
+            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), _art.HomeBranch, true, reduceMotion), Is.True);
+            BrandIntro intro = splash.Intro!;
+            intro.Seek(BrandIntro.AnimMs);
+            splash.Tick(16f);
+
+            // Bajo la intro, el mundo no se hace (en las aperturas que no esperan, nunca se llega a hacer).
+            Assert.That(splash.SceneBuilt, Is.False);
+            Assert.That(splash.Reveal, Is.EqualTo(0f));
+
+            // El emblema de la pantalla de arranque es el último fotograma de la intro: las mismas piezas, en el mismo sitio y del
+            // mismo color, sobre el mismo petróleo.
+            foreach (string piece in new[] { "Halo", "Jungle", "River", "Tint" })
+            {
+                Image a = intro.Root.Find(piece).GetComponent<Image>();
+                Image b = splash.Root.Find(piece).GetComponent<Image>();
+                Assert.That(b.sprite, Is.SameAs(a.sprite), piece + ": la misma textura");
+                Assert.That(b.color, Is.EqualTo(a.color), piece + ": el mismo color");
+                Assert.That(b.rectTransform.anchoredPosition, Is.EqualTo(a.rectTransform.anchoredPosition), piece + ": en el mismo sitio");
+                Assert.That(b.rectTransform.sizeDelta.x, Is.EqualTo(a.rectTransform.sizeDelta.x).Within(0.001f), piece + ": del mismo ancho");
+                Assert.That(b.rectTransform.sizeDelta.y, Is.EqualTo(a.rectTransform.sizeDelta.y).Within(0.001f), piece + ": del mismo alto");
+            }
+
+            Image sky = splash.Root.Find("Sky").GetComponent<Image>();
+            Assert.That((Color32)sky.color, Is.EqualTo(BrandIntro.Petroleum), "el mismo petróleo de la intro");
+
+            // Al quitarse, el mundo entra fundiéndose (de golpe con Reducir movimiento), sin mover el emblema.
+            Assert.That(splash.EndIntro(), Is.Not.Null);
+            splash.Tick(16f);
+            Assert.That(splash.SceneBuilt, Is.True, "el mundo se hace en el primer fotograma tras la intro");
+            Assert.That(splash.Wordmark!.sprite, Is.Not.Null);
+            if (reduceMotion)
+            {
+                Assert.That(splash.Reveal, Is.EqualTo(1f), "con Reducir movimiento, sin fundido");
+            }
+            else
+            {
+                Assert.That(splash.Reveal, Is.EqualTo(0f), "empieza invisible: nada salta");
+                splash.Tick(BootSplash.RevealMs * 0.5f);
+                Assert.That(splash.Reveal, Is.InRange(0.2f, 0.8f));
+                splash.Tick(BootSplash.RevealMs);
+                Assert.That(splash.Reveal, Is.EqualTo(1f));
+            }
+
+            Assert.That(splash.SlothClockMs, Is.GreaterThan(0f), "el gesto de TiTino arranca al quitarse la intro");
+            yield return null;
+
+            // Ya entero, el arranque no asigna memoria por fotograma (TiTino, las luciérnagas).
+            splash.Tick(16f);
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 120; i++)
+            {
+                splash.Tick(16f);
+            }
+
+            Assert.That(GC.GetAllocatedBytesForCurrentThread() - before, Is.EqualTo(0L), "sin asignaciones por fotograma (08 §5.4)");
         }
 
         [UnityTest]

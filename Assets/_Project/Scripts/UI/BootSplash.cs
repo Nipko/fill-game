@@ -61,32 +61,36 @@ namespace AF.UI
 
     /// <summary>
     /// Pantalla de arranque (06 §2.2: «Splash de 1 pantalla (río + logotipo) con TiTino colgado de su embaúba»; D-016, T2-A;
-    /// propuesta de TiTino d.3 y paso 6d; tarea TI6d), construida por código en su propio lienzo, por encima de todo, y
-    /// <b>sin texto</b> (06 §2.1, regla 3: ni un componente de texto).
+    /// tarea TI6d), rehecha con la marca v2 a petición del dueño (añadido de D-051, 2026-10-25; D-045 «El río que se tiñe»), en su
+    /// propio lienzo, por encima de todo, y <b>sin texto</b> (06 §2.1, regla 3: ni un componente de texto; el nombre es un dibujo).
+    /// Es el último fotograma de la intro de la marca (<see cref="BrandIntro"/>) hecho mundo:
     /// <list type="bullet">
-    /// <item>El río al alba (cielo, dos líneas de selva y el agua blanca del estuario, con el reflejo de la selva, la orilla, el
-    /// reflejo del sol y sus brillos) y, arriba, el logotipo provisional: una gota de tinte de açaí que cae en una cuia (07 §10:
-    /// «una gota o pincelada de tinte»), sin letras. Con el PNG de la ranura <see cref="LogoSlot"/> (el logotipo del artista, que
-    /// trae su nombre como dibujo), ese PNG sustituye a la gota y a la cuia.</item>
-    /// <item>TiTino (<see cref="SlothRig"/>; propuesta c.4: 140-180 dp en el arranque) colgado de su rama, que entra desde el
-    /// borde derecho bajo el logotipo: <c>sloth_wake</c> en la primera apertura y <c>sloth_idle</c> en las demás
-    /// (<see cref="ShowSloth"/>). Su tamaño sale del aire que queda entre la rama y la copa de la selva
-    /// (<see cref="SlothFitDp"/>: hasta <see cref="SlothSizeDp"/>), para que nunca se monte sobre la selva ni toque el río. Sale en
-    /// todos los builds, release incluido (su dibujo por código o sus PNG: <see cref="MapArtRule"/>, D-052), y nunca con
-    /// <c>ui_sloth_enabled</c> apagado
-    /// (<see cref="SlothEnabled"/>): entonces la pantalla sale sin TiTino y el logotipo baja al centro óptico del cielo, con un
-    /// halo mayor.</item>
-    /// <item>En las pantallas bajas (alto &lt; <see cref="TallAspect"/> × ancho, como 16:9) la composición se aprieta: el
-    /// logotipo sube y el horizonte baja.</item>
+    /// <item>El <b>emblema</b> de la intro, en su sitio y con sus mismas piezas (<see cref="BrandIntro.PlaceEmblem"/>): el petróleo
+    /// de la marca con su halo, la selva de la orilla de enfrente y el río blanco teñido de açaí desde el impacto, río abajo. Al
+    /// quitarse la intro no se mueve ni cambia de color nada de eso.</item>
+    /// <item>El <b>mundo</b> alrededor, que aparece al desvanecerse un velo con el petróleo y el halo de la intro
+    /// (<see cref="RevealMs"/>; de golpe con Reducir movimiento): la selva y el río teñido siguen a lo ancho hasta los bordes, con
+    /// palmeras de açaí en silueta como las del icono; la orilla de acá, con
+    /// su follaje en silueta en las esquinas de abajo y unas luciérnagas; y, bajo el río, el <b>nombre del logo</b>
+    /// (<see cref="BrandWordmark"/>: Baloo 2 ExtraBold en marfil, como el logo «oscuro» de la v2), nítido a cualquier densidad.</item>
+    /// <item><b>TiTino</b> (<see cref="SlothRig"/>; propuesta c.4: 140-180 dp en el arranque) colgado de su rama del inicio
+    /// (<see cref="ProceduralArt.HomeBranch"/>, D-050: la misma rama con hojas que sale de la izquierda), sobre el cielo y encima de
+    /// la selva: <c>sloth_wake</c> en la primera apertura y <c>sloth_idle</c> en las demás (<see cref="ShowSloth"/>). Su tamaño sale
+    /// del aire entre la zona segura y la copa de la selva (<see cref="SlothFitDp"/>), para que nunca se monte sobre ella. Sale en
+    /// todos los builds (su dibujo por código o sus PNG: <see cref="MapArtRule"/>, D-052), y nunca con <c>ui_sloth_enabled</c>
+    /// apagado (<see cref="SlothEnabled"/>): entonces la pantalla sale igual, sin TiTino ni su rama.</item>
+    /// <item>Pantallas bajas (alto &lt; <see cref="TallAspect"/> × ancho, como 16:9): el nombre se acerca al río y TiTino encoge
+    /// hasta lo que quepa.</item>
     /// <item>Cuánto dura lo decide <see cref="BootSplashTiming"/> (GameBootstrap): se corta al terminar la carga, salvo el
     /// segundo de <c>sloth_wake</c> de la primera apertura si cabe en el objetivo de 20 s.</item>
     /// </list>
-    /// Con <see cref="BrandIntro"/> (D-051, punto 3; <c>withIntro</c>, lo que hace GameBootstrap), la intro de la marca va encima de
-    /// todo mientras el juego carga y se quita al terminar la carga (<see cref="EndIntro"/>); mientras se ve, el gesto de TiTino no
-    /// avanza (su reloj se queda en 0), para que su segundo de <c>sloth_wake</c> se vea entero después.
+    /// Con la intro (<c>withIntro</c>, lo que hace GameBootstrap), la intro va encima de todo mientras el juego carga y se quita al
+    /// terminar la carga (<see cref="EndIntro"/>); mientras se ve, el gesto de TiTino no avanza (su reloj se queda en 0), para que
+    /// su segundo de <c>sloth_wake</c> se vea entero después, y el mundo no se pinta: sus texturas se hacen en el primer fotograma
+    /// tras quitarse la intro (en las aperturas que no esperan, la pantalla se corta antes y nunca se hacen).
     /// El fondo traga los toques mientras se ve (aún no hay nada que tocar). Las texturas son suyas y se destruyen con
-    /// <see cref="Dispose"/>; las piezas de TiTino son de <see cref="ProceduralArt"/> y no se tocan. Nada asigna memoria por
-    /// fotograma.
+    /// <see cref="Dispose"/>; las piezas de TiTino y su rama son de <see cref="ProceduralArt"/> y no se tocan. Nada asigna memoria
+    /// por fotograma.
     /// </summary>
     public sealed class BootSplash : IDisposable
     {
@@ -105,83 +109,81 @@ namespace AF.UI
         /// </summary>
         public const float SlothDropS = 0.90f;
 
-        /// <summary>Aire mínimo entre el fondo de TiTino y la copa de la selva cercana (dp) [P].</summary>
+        /// <summary>Aire mínimo entre el fondo de TiTino y la copa de la selva (dp) [P].</summary>
         public const float SlothClearDp = 16f;
 
         /// <summary>Proporción alto/ancho por debajo de la cual la pantalla es baja (16:9 = 1,78; 20:9 = 2,22) [P].</summary>
         public const float TallAspect = 2.0f;
 
-        /// <summary>Copa de la selva lejana por encima del horizonte (dp).</summary>
-        public const float FarCanopyDp = 58f;
+        /// <summary>Lo que tarda el mundo en entrar al quitarse la intro (ms; 0 con Reducir movimiento) [P].</summary>
+        public const float RevealMs = 300f;
 
-        /// <summary>Copa de la selva cercana por encima del horizonte (dp).</summary>
-        public const float NearCanopyDp = 36f;
+        /// <summary>Escala de la rama del inicio en el arranque, donde TiTino es mayor (inicio: 76-92 dp; aquí, 140-160) [P].</summary>
+        public const float BranchScale = 1.3f;
 
-        /// <summary>Ranura del logotipo final (sin el nombre de la marca en el identificador; CLAUDE.md, glosario §11) [P].</summary>
-        public const string LogoSlot = "ui_logo";
+        /// <summary>Ancho máximo de la caja del nombre (dp) [P].</summary>
+        public const float WordmarkMaxDp = 296f;
 
-        // Proporciones de la composición (del alto del lienzo) [P]: el centro del logotipo con TiTino debajo y sin él (el centro
-        // óptico del cielo), y la línea del horizonte; en las pantallas bajas, *Short.
-        private const float LogoCenterY = 0.25f;
-        private const float LogoCenterYShort = 0.22f;
-        private const float LogoAloneY = 0.36f;
-        private const float LogoAloneYShort = 0.34f;
-        private const float HorizonY = 0.64f;
-        private const float HorizonYShort = 0.68f;
+        // Medidas en dp [P]: margen lateral del nombre, su distancia al río (pantalla alta y baja), lo alto de la rama sobre la zona
+        // segura, el aire entre TiTino y la selva cuando sobra sitio, el lado del follaje de las esquinas y las luciérnagas.
+        private const float WordmarkMarginDp = 32f;
+        private const float WordmarkGapDp = 44f;
+        private const float WordmarkGapShortDp = 28f;
+        private const float BranchTopDp = 36f;
+        private const float SlothGapDp = 30f;
+        private const float FoliageDp = 224f;
+        private const float HedgeDp = 96f;
+        private const float BankLineDp = 4f;
+        private const float FireflyGlowDp = 26f;
+        private const float FireflyCoreDp = 5f;
 
-        // Medidas en dp [P]: la gota, la cuia, el halo (con TiTino y sin él) y el logotipo final.
-        private const float DropDp = 112f;
-        private const float BowlWidthDp = 150f;
-        private const float BowlHeightDp = 75f;
-        private const float GlowDp = 236f;
-        private const float GlowAloneDp = 300f;
-        private const float LogoPngWidthDp = 280f;
+        // Las luciérnagas: x (fracción del ancho) e y (fracción de la orilla de acá, del río al borde de abajo; las negativas, dp
+        // sobre la copa de la selva), con su fase [P].
+        private static readonly float[] FireflyX = { 0.16f, 0.83f, 0.38f, 0.70f, 0.90f, 0.06f };
+        private static readonly float[] FireflyY = { 0.52f, 0.46f, 0.74f, 0.83f, -34f, 0.66f };
+        private static readonly float[] FireflyPhase = { 0f, 1.9f, 3.7f, 0.8f, 2.6f, 4.4f };
 
-        // La rama de TiTino, por debajo del centro del logotipo.
-        private const float BranchBelowLogoDp = 116f;
-
-        // El agua [P]: la orilla (alto en dp), el reflejo de la selva (alto en dp) y el del sol (ancho y alto en dp).
-        private const float ShoreDp = 3f;
-        private const float TreeReflectionDp = 70f;
-        private const float SunPathWidthDp = 56f;
-        private const float SunPathHeightDp = 160f;
-
-        // Los tres brillos del agua: bajo el horizonte (dp), centro (fracción del ancho), ancho y alto (dp) [P].
-        private const float GlintHeightDp = 5f;
-        private static readonly float[] GlintY = { 34f, 82f, 146f };
-        private static readonly float[] GlintX = { 0.18f, 0.52f, 0.30f };
-        private static readonly float[] GlintW = { 96f, 150f, 70f };
-
-        private static readonly Color DropLight = Palette.Hex(0x9B5CC4);
-        private static readonly Color DropDeep = Palette.Hex(0x4A1C68);
-        private static readonly Color DropInk = Palette.Hex(0x2E0F44);
-        private static readonly Color BowlLight = Palette.Hex(0xD8B07A);
-        private static readonly Color BowlDeep = Palette.Hex(0x8A5A32);
-        private static readonly Color BowlRim = Palette.Hex(0xEFD2A0);
-        private static readonly Color BowlInk = Palette.Hex(0x5A3820);
-
-        // El contorno de la cuia (px de su imagen de 256 px; ≈ 2 dp a 150 dp, el mismo trazo que el de la gota) [P].
-        private const float BowlOutlinePx = 3.5f;
+        // El nombre: marfil del logo «oscuro» de la v2 (generar.py, MARFIL_TXT #F4EEDF), con un poco de luz arriba, y su sombra.
+        private static readonly Color WordmarkTop = Palette.Hex(0xFFF8EA);
+        private static readonly Color WordmarkBottom = Palette.Hex(0xEBDDC2);
+        private static readonly Color WordmarkShadow = new Color(0x04 / 255f, 0x18 / 255f, 0x18 / 255f, 0.55f);
 
         private readonly OverlayCanvas _canvas;
-        private readonly Texture2D?[] _textures = new Texture2D?[8];
-        private readonly Sprite?[] _sprites = new Sprite?[8];
+        private readonly Texture2D?[] _textures = new Texture2D?[13];
+        private readonly Sprite?[] _sprites = new Sprite?[13];
         private readonly Image _sky;
-        private readonly Image _farTrees;
-        private readonly Image _nearTrees;
+        private readonly Image _halo;
+        private readonly Image _jungle;
         private readonly Image _river;
-        private readonly Image _treeReflection;
-        private readonly Image _sunPath;
-        private readonly Image _shore;
-        private readonly Image[] _glints = new Image[3];
-        private readonly Image _glow;
-        private readonly Image _drop;
-        private readonly Image _bowl;
-        private readonly Image? _logoPng;
+        private readonly Image _tint;
+        private readonly RectTransform _back;
+        private readonly RectTransform _front;
+        private readonly CanvasGroup _veil;
+        private readonly Image _veilHalo;
         private readonly double _createdAt;
         private readonly BrandIntro? _intro;
+        private Image? _palmLeft;
+        private Image? _palmRight;
+        private Image? _farJungle;
+        private Image? _farRiver;
+        private Image? _farTint;
+        private Image? _ground;
+        private Image? _bankLine;
+        private Image? _hedge;
+        private Image? _foliageLeft;
+        private Image? _foliageRight;
+        private Image? _wordmark;
+        private Image[]? _fireflyGlow;
+        private Image[]? _fireflyCore;
+        private Image? _branch;
+        private Vector4 _wordmarkPadPx;
+        private float _wordmarkScale;
         private SlothRig? _sloth;
         private bool _withSloth;
+        private bool _sceneBuilt;
+        private bool _reduceMotion;
+        private float _revealMs = -1f;
+        private float _clockMs;
         private bool _disposed;
 
         /// <summary>
@@ -205,8 +207,7 @@ namespace AF.UI
 
         /// <summary>
         /// Se espera a TiTino en la pantalla (<see cref="SlothEnabled"/> y su arte: el de código, en todos los builds (D-052), o
-        /// los dos PNG finales, las piezas y la rama; la regla de <see cref="ProceduralArt.SlothRigArt()"/>). Con esto la pantalla
-        /// nace ya compuesta con o sin él y el logotipo no salta cuando TiTino entra.
+        /// los dos PNG finales, las piezas y la rama; la regla de <see cref="ProceduralArt.SlothRigArt()"/>).
         /// </summary>
         public static bool SlothExpected =>
             SlothEnabled
@@ -220,10 +221,10 @@ namespace AF.UI
         public static long TestStartupOffsetMs { get; set; }
 
         /// <summary>
-        /// Crea la pantalla, ya a la vista, en un lienzo propio dentro de <paramref name="host"/>, compuesta para TiTino
-        /// (<paramref name="withSloth"/>: el logotipo arriba y su rama debajo) o sin él (el logotipo en el centro óptico del cielo).
-        /// Si <see cref="ShowSloth"/> no puede ponerlo, se recompone sin él. Con <paramref name="withIntro"/>, la intro de la marca
-        /// (<see cref="BrandIntro"/>) encima de todo, en su primer fotograma hasta <see cref="BeginIntro"/>.
+        /// Crea la pantalla, ya a la vista, en un lienzo propio dentro de <paramref name="host"/>, esperando a TiTino
+        /// (<paramref name="withSloth"/>) o sin él. Con <paramref name="withIntro"/>, la intro de la marca (<see cref="BrandIntro"/>)
+        /// encima de todo, en su primer fotograma hasta <see cref="BeginIntro"/>; el mundo, sin pintar hasta que se quite. Sin
+        /// intro, la pantalla nace entera.
         /// </summary>
         public BootSplash(Transform host, bool withSloth = true, bool withIntro = false)
         {
@@ -232,51 +233,43 @@ namespace AF.UI
             _canvas = new OverlayCanvas("BootSplashCanvas", host, SortingOrder);
             RectTransform root = _canvas.Root;
 
-            // El río arranca más oscuro que su reflejo puro para no confundirse con el cielo del alba justo encima.
-            Color riverTop = Color.Lerp(Palette.RiverReflect, Palette.RiverBase, 0.35f);
-            Sprite sky = Own(0, VerticalGradient(128, Palette.SkyHorizon, Palette.SkyMid, Palette.SkyTop));
-            Sprite trees = Own(1, Treeline(256, 128));
-            Sprite river = Own(2, VerticalGradient(64, Palette.RiverDeep, Palette.RiverBase, riverTop));
-            Sprite glint = Own(3, SoftCapsule(64, 8));
-            Sprite glow = Own(4, SoftDisc(128));
-            Sprite reflection = Own(7, TreelineReflection(256, 128, FarCanopyDp + 6f, TreeReflectionDp));
+            // Las piezas del emblema: las de la intro, que las comparte (su último fotograma es este emblema).
+            Sprite halo = Own(0, SoftDisc(128));
+            Sprite jungle = Own(1, BrandIntro.Treeline(256, 64));
+            Sprite river = Own(2, BrandIntro.Band(256, 48, BrandIntro.WaterTop, BrandIntro.WaterMid, BrandIntro.WaterLow, BrandIntro.WaterWave, false));
+            Sprite tint = Own(3, BrandIntro.Band(160, 48, BrandIntro.AcaiTop, BrandIntro.AcaiMid, BrandIntro.AcaiLow, BrandIntro.AcaiWave, true));
 
             UiBuilder.Stretch(UiBuilder.Image("TouchBlocker", root, null, Color.clear, raycast: true).rectTransform); // traga los toques: aún no hay nada que tocar
-            _sky = UiBuilder.Image("Sky", root, sky, Color.white);
-            _farTrees = UiBuilder.Image("FarTrees", root, trees, Palette.FarShore);
-            _nearTrees = UiBuilder.Image("NearTrees", root, trees, Palette.JungleMid);
-            _nearTrees.rectTransform.localScale = new Vector3(-1f, 1f, 1f); // la misma silueta al revés: otra línea de copas
+            _sky = UiBuilder.Image("Sky", root, null, BrandIntro.Petroleum);
+            UiBuilder.Stretch(_sky.rectTransform);
+            _halo = UiBuilder.Image("Halo", root, halo, BrandIntro.HaloColor);
+            _back = Group("WorldBack", root);
+            _front = Group("WorldFront", root);
+
+            // El velo: el petróleo y el halo de la intro, por encima del mundo y por debajo del emblema. Mientras está opaco, la
+            // pantalla es el último fotograma de la intro; al quitarse la intro se desvanece y deja ver el mundo, sin tocar el
+            // emblema ni mezclar piezas que se solapan (TiTino, el follaje) a medio fundido.
+            RectTransform veil = Group("Veil", root);
+            _veil = veil.gameObject.AddComponent<CanvasGroup>();
+            _veil.blocksRaycasts = false;
+            _veil.interactable = false;
+            UiBuilder.Stretch(UiBuilder.Image("VeilSky", veil, null, BrandIntro.Petroleum).rectTransform);
+            _veilHalo = UiBuilder.Image("VeilHalo", veil, halo, BrandIntro.HaloColor);
+
+            _jungle = UiBuilder.Image("Jungle", root, jungle, BrandIntro.Jungle);
             _river = UiBuilder.Image("River", root, river, Color.white);
-
-            // La selva reflejada en el agua, verde y apagada hacia abajo; el reflejo del sol bajo el halo del logotipo; los
-            // brillos; y la línea clara de la orilla. Juntos dicen «agua» con una ojeada (D-003: luz de juego), con la paleta del
-            // río del juego.
-            Color mirrored = Color.Lerp(Palette.JungleMid, Palette.RiverDeep, 0.25f);
-            _treeReflection = UiBuilder.Image("TreeReflection", root, reflection, new Color(mirrored.r, mirrored.g, mirrored.b, 0.65f));
-            _sunPath = UiBuilder.Image("SunPath", root, glow, new Color(Palette.Sun.r, Palette.Sun.g, Palette.Sun.b, 0.40f));
-            for (int i = 0; i < _glints.Length; i++)
-            {
-                _glints[i] = UiBuilder.Image("Glint" + i, root, glint, new Color(Palette.WaterLine.r, Palette.WaterLine.g, Palette.WaterLine.b, 0.75f));
-            }
-
-            _shore = UiBuilder.Image("Shore", root, null, new Color(Palette.WaterLine.r, Palette.WaterLine.g, Palette.WaterLine.b, 0.8f));
-
-            _glow = UiBuilder.Image("Glow", root, glow, new Color(Palette.Sun.r, Palette.Sun.g, Palette.Sun.b, 0.6f));
-            Sprite? logoPng = ArtSlots.Find(LogoSlot);
-            if (logoPng != null)
-            {
-                _logoPng = UiBuilder.Image("Logo", root, logoPng, Color.white);
-                _logoPng.preserveAspect = true;
-            }
-
-            _bowl = UiBuilder.Image("LogoBowl", root, Own(5, Bowl(256, 128)), Color.white);
-            Sprite drop = Own(6, Drop(256));
-            _drop = UiBuilder.Image("LogoDrop", root, drop, Color.white);
-            _bowl.enabled = logoPng == null;
-            _drop.enabled = logoPng == null;
+            _tint = UiBuilder.Image("Tint", root, tint, Color.white);
             if (withIntro)
             {
-                _intro = new BrandIntro(root, _createdAt, drop, glow); // la última: por encima de todo; el mismo reloj, la misma gota y el mismo halo
+                _intro = new BrandIntro(root, _createdAt, halo, jungle, river, tint); // la última: por encima de todo; el mismo reloj
+                _back.gameObject.SetActive(false);
+                _front.gameObject.SetActive(false);
+                SetReveal(0f);
+            }
+            else
+            {
+                EnsureScene();
+                SetReveal(1f);
             }
 
             Layout();
@@ -306,57 +299,97 @@ namespace AF.UI
         /// <summary>Desde que se creó la pantalla (ms de tiempo real).</summary>
         public long AgeMs => (long)((Time.realtimeSinceStartupAsDouble - _createdAt) * 1000.0);
 
-        /// <summary>La composición deja sitio a TiTino (el logotipo arriba); false: el logotipo solo, en el centro del cielo.</summary>
+        /// <summary>La pantalla espera a TiTino o lo tiene; false: sin TiTino ni su rama (el resto, igual).</summary>
         public bool ComposedForSloth => _withSloth;
 
         /// <summary>La pantalla es baja (alto &lt; <see cref="TallAspect"/> × ancho, como 16:9).</summary>
         public bool ShortScreen => _canvas.Height < TallAspect * _canvas.Width;
 
-        /// <summary>Línea del horizonte, entre la selva y el río (dp desde arriba).</summary>
-        public float HorizonDp => Mathf.Round((ShortScreen ? HorizonYShort : HorizonY) * _canvas.Height);
+        /// <summary>El mundo alrededor del emblema ya está hecho (sus texturas).</summary>
+        public bool SceneBuilt => _sceneBuilt;
 
-        /// <summary>Centro del logotipo (dp desde arriba).</summary>
-        public float LogoCenterDp =>
-            (_withSloth ? (ShortScreen ? LogoCenterYShort : LogoCenterY) : (ShortScreen ? LogoAloneYShort : LogoAloneY)) * _canvas.Height;
+        /// <summary>Cuánto ha entrado el mundo (0 bajo la intro, 1 entero).</summary>
+        public float Reveal => 1f - _veil.alpha;
 
-        /// <summary>Lado del halo del logotipo (dp): mayor sin TiTino, para llenar el cielo.</summary>
-        public float GlowSizeDp => _withSloth ? GlowDp : GlowAloneDp;
+        /// <summary>Lo alto de la caja de la selva del emblema (dp desde arriba): TiTino cuelga por encima.</summary>
+        public float CanopyDp
+        {
+            get
+            {
+                BrandIntro.EmblemGeometry(_canvas.Width, _canvas.Height, out _, out float e, out float riverTop);
+                return riverTop - (e * BrandIntro.JungleH) + 2f;
+            }
+        }
+
+        /// <summary>La orilla de abajo del río (dp desde arriba), donde empieza la orilla de acá.</summary>
+        public float RiverBottomDp
+        {
+            get
+            {
+                BrandIntro.EmblemGeometry(_canvas.Width, _canvas.Height, out _, out float e, out float riverTop);
+                return riverTop + (e * BrandIntro.RiverH);
+            }
+        }
+
+        /// <summary>La caja de los contornos del nombre (dp, desde arriba a la izquierda), sin el margen de su sombra.</summary>
+        public Rect WordmarkBox
+        {
+            get
+            {
+                float w = Mathf.Min(_canvas.Width - (2f * WordmarkMarginDp), WordmarkMaxDp);
+                float h = w * BrandWordmark.Aspect;
+                float top = RiverBottomDp + (ShortScreen ? WordmarkGapShortDp : WordmarkGapDp);
+                return new Rect((_canvas.Width - w) * 0.5f, top, w, h);
+            }
+        }
+
+        /// <summary>El nombre, si ya está hecho (tests y capturas).</summary>
+        public Image? Wordmark => _wordmark;
+
+        /// <summary>La rama del inicio de la que cuelga TiTino (null sin TiTino o sin rama).</summary>
+        public Image? Branch => _branch;
 
         /// <summary>
         /// Tamaño S de TiTino en esta pantalla (dp): el que deja <see cref="SlothClearDp"/> de aire entre su fondo
-        /// (<see cref="SlothDropS"/> bajo la rama) y la copa de la selva cercana, entre <see cref="SlothMinDp"/> y
-        /// <see cref="SlothSizeDp"/>.
+        /// (<see cref="SlothDropS"/> bajo la rama) y la copa de la selva con la rama lo más alta que deja la zona segura, entre
+        /// <see cref="SlothMinDp"/> y <see cref="SlothSizeDp"/>.
         /// </summary>
         public float SlothFitDp
         {
             get
             {
-                float room = HorizonDp - NearCanopyDp - SlothClearDp - BranchLineDp;
+                float room = CanopyDp - SlothClearDp - BranchMinDp;
                 return Mathf.Clamp(room / SlothDropS, SlothMinDp, SlothSizeDp);
             }
         }
 
-        /// <summary>Línea de la rama de TiTino en el lienzo (dp, x desde la izquierda e y desde arriba).</summary>
+        /// <summary>
+        /// Dónde se agarra TiTino a la rama (dp, x desde la izquierda e y desde arriba): a la izquierda, como en el inicio, y con
+        /// <see cref="SlothGapDp"/> de aire sobre la selva cuando sobra sitio.
+        /// </summary>
         public Vector2 BranchAnchor
         {
             get
             {
                 float s = _sloth?.Size ?? SlothFitDp;
-                return new Vector2(_canvas.Width - (0.75f * s), BranchLineDp);
+                float y = Mathf.Max(BranchMinDp, CanopyDp - SlothGapDp - (SlothDropS * s));
+                float x = Mathf.Round(Mathf.Max((0.5f * s) + 14f, 0.36f * _canvas.Width));
+                return new Vector2(x, Mathf.Round(y));
             }
         }
 
         /// <summary>Todo lo que se pinta (tests: ningún componente de texto, ningún raycast salvo el fondo).</summary>
         public RectTransform Root => _canvas.Root;
 
-        private float BranchLineDp => LogoCenterDp + BranchBelowLogoDp;
+        private float BranchMinDp => _canvas.SafeTop + BranchTopDp;
 
         /// <summary>
-        /// Pone a TiTino colgado de su rama con <c>sloth_wake</c> (<paramref name="firstOpen"/>) o <c>sloth_idle</c>, al tamaño que
-        /// cabe (<see cref="SlothFitDp"/>). Sin piezas (<paramref name="art"/> null: release sin el arte final,
-        /// <see cref="ProceduralArt.SlothRigArt()"/>) no crea nada, recompone la pantalla sin él y devuelve false.
+        /// Pone a TiTino colgado de <paramref name="branch"/> (la rama del inicio, <see cref="ProceduralArt.HomeBranch"/>; sin ella,
+        /// la de su rig) con <c>sloth_wake</c> (<paramref name="firstOpen"/>) o <c>sloth_idle</c>, al tamaño que cabe
+        /// (<see cref="SlothFitDp"/>). Sin piezas (<paramref name="art"/> null: <see cref="ProceduralArt.SlothRigArt()"/>) no crea
+        /// nada, queda sin TiTino y devuelve false.
         /// </summary>
-        public bool ShowSloth(SlothArt? art, bool firstOpen, bool reduceMotion)
+        public bool ShowSloth(SlothArt? art, Sprite? branch, bool firstOpen, bool reduceMotion)
         {
             if (_disposed || _sloth != null)
             {
@@ -364,7 +397,8 @@ namespace AF.UI
             }
 
             _withSloth = true;
-            _sloth = SlothRig.Create(_canvas.Root, art, SlothFitDp);
+            _reduceMotion = reduceMotion;
+            _sloth = SlothRig.Create(_front, art, SlothFitDp);
             if (_sloth == null)
             {
                 _withSloth = false;
@@ -372,19 +406,27 @@ namespace AF.UI
                 return false;
             }
 
+            if (branch != null)
+            {
+                _branch = UiBuilder.Image("TitinoBranch", _front, branch, Color.white);
+                _branch.transform.SetSiblingIndex(_sloth.Root.GetSiblingIndex()); // detrás de TiTino
+                _sloth.BranchImage.enabled = false; // la rama es la del inicio (D-050), no la de su rig
+            }
+
             Layout();
             _sloth.Play(firstOpen ? SlothPoseId.Wake : SlothPoseId.Idle, reduceMotion);
-            if (_intro != null)
+            if (branch != null)
             {
-                _intro.Root.SetAsLastSibling(); // la intro sigue por encima de TiTino
+                _sloth.BranchImage.enabled = false;
             }
 
             return true;
         }
 
         /// <summary>
-        /// Un fotograma: con la intro a la vista, la intro (con el tiempo real) y TiTino quieto; sin ella, la pose de TiTino avanza
-        /// <paramref name="dtMs"/> ms. Rehace la composición si cambió la pantalla. Sin asignaciones.
+        /// Un fotograma: con la intro a la vista, la intro (con el tiempo real) y TiTino quieto; sin ella, el mundo entra (la
+        /// primera vez se hacen sus texturas), la pose de TiTino avanza <paramref name="dtMs"/> ms y las luciérnagas laten. Rehace
+        /// la composición si cambió la pantalla. Sin asignaciones salvo la primera vez tras la intro.
         /// </summary>
         public void Tick(float dtMs)
         {
@@ -404,6 +446,21 @@ namespace AF.UI
                 return;
             }
 
+            if (!_sceneBuilt)
+            {
+                EnsureScene();
+                Layout();
+                _revealMs = _reduceMotion ? RevealMs : 0f;
+                SetReveal(_reduceMotion ? 1f : 0f);
+            }
+            else if (_revealMs >= 0f && _revealMs < RevealMs)
+            {
+                _revealMs = Mathf.Min(RevealMs, _revealMs + dtMs);
+                SetReveal(Ease(_revealMs / RevealMs));
+            }
+
+            _clockMs += dtMs;
+            Pulse();
             _sloth?.Tick(dtMs);
         }
 
@@ -412,6 +469,7 @@ namespace AF.UI
         {
             if (!_disposed)
             {
+                _reduceMotion = reduceMotion;
                 _intro?.Begin(reduceMotion);
             }
         }
@@ -426,6 +484,27 @@ namespace AF.UI
         public void Seek(float ms)
         {
             _sloth?.Seek(ms);
+        }
+
+        /// <summary>
+        /// Deja el mundo a los <paramref name="ms"/> ms de su entrada (capturas deterministas): lo hace si aún no está, sin
+        /// tocar la intro.
+        /// </summary>
+        public void SeekReveal(float ms)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (!_sceneBuilt)
+            {
+                EnsureScene();
+                Layout();
+            }
+
+            _revealMs = Mathf.Clamp(ms, 0f, RevealMs);
+            SetReveal(Ease(_revealMs / RevealMs));
         }
 
         /// <summary>Corta la pantalla y libera lo suyo (el lienzo y sus texturas).</summary>
@@ -446,56 +525,145 @@ namespace AF.UI
 
             for (int i = 0; i < _textures.Length; i++)
             {
-                if (_sprites[i] != null)
-                {
-                    UnityEngine.Object.Destroy(_sprites[i]);
-                    _sprites[i] = null;
-                }
-
-                if (_textures[i] != null)
-                {
-                    UnityEngine.Object.Destroy(_textures[i]);
-                    _textures[i] = null;
-                }
+                DestroyOwned(i);
             }
         }
 
-        // Composición en dp (origen arriba a la izquierda): cielo y río a sangre, la selva sobre el horizonte y su reflejo bajo
-        // la orilla, el reflejo del sol bajo el logotipo, el logotipo con su halo y TiTino colgado bajo él, con la rama desde el
-        // borde derecho y a su tamaño (SlothFitDp).
+        // Hace el mundo alrededor del emblema: sus texturas y sus imágenes, detrás del emblema (selva, palmeras y río a lo ancho)
+        // y delante (la orilla de acá, las luciérnagas, el follaje y el nombre). TiTino y su rama van también delante, al final.
+        private void EnsureScene()
+        {
+            if (_sceneBuilt)
+            {
+                return;
+            }
+
+            _sceneBuilt = true;
+            _back.gameObject.SetActive(true);
+            _front.gameObject.SetActive(true);
+            Sprite palm = Own(4, BootSplashArt.Palm(160, 288), new Vector2(0.5f, 0f));
+            Sprite treeline = Own(5, BootSplashArt.Treeline(512, 64));
+            Sprite river = Own(6, BootSplashArt.RiverBand(192, 48, BrandIntro.WaterTop, BrandIntro.WaterMid, BrandIntro.WaterLow, BrandIntro.WaterWave, false, 1));
+            Sprite tint = Own(7, BootSplashArt.RiverBand(256, 48, BrandIntro.AcaiTop, BrandIntro.AcaiMid, BrandIntro.AcaiLow, BrandIntro.AcaiWave, true, 2));
+            Sprite ground = Own(8, BootSplashArt.Ground(128));
+            Sprite foliage = Own(9, BootSplashArt.CornerFoliage(FoliageDp, ProceduralArt.UiPxPerDp));
+            Sprite hedge = Own(11, BootSplashArt.Hedge(360f, HedgeDp, 2.5f));
+            Sprite glow = _sprites[0]!;
+
+            Color far = BrandIntro.Jungle;
+            _palmLeft = UiBuilder.Image("PalmLeft", _back, palm, far);
+            _palmRight = UiBuilder.Image("PalmRight", _back, palm, far);
+            _farJungle = UiBuilder.Image("FarJungle", _back, treeline, far);
+            _farRiver = UiBuilder.Image("FarRiver", _back, river, Color.white);
+
+            // El teñido a lo ancho va entre el agua y el açaí del emblema: tapa el fundido del agua en el extremo derecho del
+            // emblema (que si no clarea el açaí) y queda bajo el frente del tinte. Entra con el mundo (su alfa, SetReveal).
+            _farTint = UiBuilder.Image("FarTint", _canvas.Root, tint, Color.white);
+            _farTint.transform.SetSiblingIndex(_tint.transform.GetSiblingIndex());
+
+            _ground = UiBuilder.Image("Ground", _front, ground, Color.white);
+            _bankLine = UiBuilder.Image("BankLine", _front, null, BootSplashArt.BankLine);
+            _fireflyGlow = new Image[FireflyX.Length];
+            _fireflyCore = new Image[FireflyX.Length];
+            for (int i = 0; i < FireflyX.Length; i++)
+            {
+                _fireflyGlow[i] = UiBuilder.Image("FireflyGlow" + i, _front, glow, ProceduralArt.FireflyLight);
+                _fireflyCore[i] = UiBuilder.Image("Firefly" + i, _front, glow, ProceduralArt.FireflyCore);
+            }
+
+            _hedge = UiBuilder.Image("Hedge", _front, hedge, Color.white);
+            _foliageLeft = UiBuilder.Image("FoliageLeft", _front, foliage, Color.white);
+            _foliageRight = UiBuilder.Image("FoliageRight", _front, foliage, Color.white);
+            _wordmark = UiBuilder.Image("Wordmark", _front, null, Color.white);
+            if (_sloth != null)
+            {
+                // TiTino (y su rama) se crearon antes que el mundo: por encima de todo lo del mundo.
+                _branch?.transform.SetAsLastSibling();
+                _sloth.Root.SetAsLastSibling();
+            }
+
+            Pulse();
+        }
+
+        // Rasteriza el nombre a la escala de la pantalla (otra vez solo si cambia).
+        private void RenderWordmark(Rect box)
+        {
+            if (_wordmark == null)
+            {
+                return;
+            }
+
+            float scale = Mathf.Max(1f, _canvas.Scale);
+            if (_wordmark.sprite == null || Mathf.Abs(scale - _wordmarkScale) > 0.01f)
+            {
+                _wordmarkScale = scale;
+                DestroyOwned(10);
+                int widthPx = Mathf.RoundToInt(box.width * scale);
+                Texture2D tex = BrandWordmark.Render(widthPx, WordmarkTop, WordmarkBottom, WordmarkShadow, 2.5f * scale, 1.6f * scale, out _wordmarkPadPx);
+                _wordmark.sprite = Own(10, tex);
+            }
+
+            float k = 1f / _wordmarkScale;
+            UiBuilder.Place(
+                _wordmark.rectTransform,
+                box.x - (_wordmarkPadPx.x * k),
+                box.y - (_wordmarkPadPx.y * k),
+                box.width + ((_wordmarkPadPx.x + _wordmarkPadPx.z) * k),
+                box.height + ((_wordmarkPadPx.y + _wordmarkPadPx.w) * k));
+        }
+
+        // Composición en dp (origen arriba a la izquierda): el emblema de la intro en su sitio; detrás, la selva, las palmeras y el
+        // río a lo ancho; delante, la orilla de acá con el follaje, las luciérnagas y el nombre bajo el río; y TiTino colgado de
+        // la rama del inicio a la izquierda, sobre la selva.
         private void Layout()
         {
             float w = _canvas.Width;
             float h = _canvas.Height;
-            float horizon = HorizonDp;
-            float shoreY = horizon + 6f;
-            UiBuilder.Place(_sky.rectTransform, 0f, 0f, w, horizon + 2f);
-            UiBuilder.Place(_farTrees.rectTransform, 0f, horizon - FarCanopyDp, w, FarCanopyDp + 6f);
-            UiBuilder.Place(_nearTrees.rectTransform, 0f, horizon - NearCanopyDp, w, NearCanopyDp + 8f);
-            _nearTrees.rectTransform.pivot = new Vector2(0.5f, 1f);
-            _nearTrees.rectTransform.anchoredPosition = new Vector2(w * 0.5f, -(horizon - NearCanopyDp));
-            UiBuilder.Place(_river.rectTransform, 0f, shoreY, w, h - shoreY);
-            UiBuilder.Place(_treeReflection.rectTransform, 0f, shoreY, w, TreeReflectionDp);
-            for (int i = 0; i < _glints.Length; i++)
-            {
-                UiBuilder.Place(_glints[i].rectTransform, (GlintX[i] * w) - (GlintW[i] * 0.5f) + 40f, horizon + GlintY[i], GlintW[i], GlintHeightDp);
-            }
-
-            UiBuilder.Place(_shore.rectTransform, 0f, shoreY, w, ShoreDp);
-
-            float cx = w * 0.5f;
-            float cy = LogoCenterDp;
-            float glow = GlowSizeDp;
-            UiBuilder.Place(_sunPath.rectTransform, cx - (SunPathWidthDp * 0.5f), shoreY, SunPathWidthDp, SunPathHeightDp);
-            UiBuilder.Place(_glow.rectTransform, cx - (glow * 0.5f), cy - (glow * 0.5f), glow, glow);
-            UiBuilder.Place(_drop.rectTransform, cx - (DropDp * 0.5f), cy - 80f, DropDp, DropDp);
-            UiBuilder.Place(_bowl.rectTransform, cx - (BowlWidthDp * 0.5f), cy + 14f, BowlWidthDp, BowlHeightDp);
-            if (_logoPng != null)
-            {
-                UiBuilder.Place(_logoPng.rectTransform, cx - (LogoPngWidthDp * 0.5f), cy - (LogoPngWidthDp * 0.32f), LogoPngWidthDp, LogoPngWidthDp * 0.64f);
-            }
-
+            BrandIntro.PlaceEmblem(_halo.rectTransform, _jungle.rectTransform, _river.rectTransform, _tint.rectTransform, w, h);
+            RectTransform halo = _halo.rectTransform;
+            UiBuilder.Place(_veilHalo.rectTransform, halo.anchoredPosition.x, -halo.anchoredPosition.y, halo.sizeDelta.x, halo.sizeDelta.y);
             _intro?.Layout(w, h);
+            BrandIntro.EmblemGeometry(w, h, out float left, out float e, out float riverTop);
+            float riverH = e * BrandIntro.RiverH;
+            float riverBottom = riverTop + riverH;
+            float jungleTop = riverTop - (e * BrandIntro.JungleH) + 2f;
+
+            if (_sceneBuilt)
+            {
+                // Detrás: la selva sigue a lo ancho (apenas más baja que la del emblema, que manda), las palmeras asoman por los
+                // lados y el río blanco y el teñido van de borde a borde, con el frente del tinte en el mismo impacto.
+                float jungleH = e * BrandIntro.JungleH;
+                UiBuilder.Place(_farJungle!.rectTransform, 0f, jungleTop + (jungleH * 0.04f), w, (jungleH * 0.96f) + 2f);
+                float palmH = Mathf.Round(e * 0.50f);
+                float palmW = palmH * (160f / 288f);
+                PlacePalm(_palmLeft!, -palmW * 0.18f, riverTop + 2f, palmW * 0.82f, palmH * 0.82f, -1f);
+                PlacePalm(_palmRight!, w - (palmW * 0.62f), riverTop + 2f, palmW, palmH, 1f);
+                float impactX = left + (BrandIntro.ImpactU * e);
+                UiBuilder.Place(_farRiver!.rectTransform, 0f, riverTop, impactX + 24f, riverH);
+                float tintFrom = impactX + (0.16f * (1f - BrandIntro.ImpactU) * e); // pasado el frente del tinte del emblema
+                UiBuilder.Place(_farTint!.rectTransform, tintFrom, riverTop, w - tintFrom, riverH);
+
+                // Delante: la orilla de acá, con su línea clara, del río al borde de abajo.
+                UiBuilder.Place(_ground!.rectTransform, 0f, riverBottom - 1f, w, h - riverBottom + 1f);
+                UiBuilder.Place(_bankLine!.rectTransform, 0f, riverBottom - 1f, w, BankLineDp);
+                UiBuilder.Place(_hedge!.rectTransform, 0f, h - HedgeDp, w, HedgeDp);
+                float fol = Mathf.Min(Mathf.Min(FoliageDp, w * 0.62f), h - WordmarkBox.yMax - 12f); // sin tocar el nombre
+                UiBuilder.Place(_foliageLeft!.rectTransform, -6f, h - fol + 4f, fol, fol);
+                RectTransform right = _foliageRight!.rectTransform; // la misma, volteada desde su centro
+                UiBuilder.Place(right, w + 6f - fol, h - fol + 4f, fol, fol);
+                right.pivot = new Vector2(0.5f, 1f);
+                right.anchoredPosition = new Vector2(w + 6f - (fol * 0.5f), -(h - fol + 4f));
+                right.localScale = new Vector3(-1f, 1f, 1f);
+                for (int i = 0; i < _fireflyGlow!.Length; i++)
+                {
+                    float fx = FireflyX[i] * w;
+                    float fy = FireflyY[i] < 0f ? jungleTop + FireflyY[i] : riverBottom + (FireflyY[i] * (h - riverBottom));
+                    UiBuilder.Place(_fireflyGlow[i].rectTransform, fx - (FireflyGlowDp * 0.5f), fy - (FireflyGlowDp * 0.5f), FireflyGlowDp, FireflyGlowDp);
+                    UiBuilder.Place(_fireflyCore![i].rectTransform, fx - (FireflyCoreDp * 0.5f), fy - (FireflyCoreDp * 0.5f), FireflyCoreDp, FireflyCoreDp);
+                }
+
+                RenderWordmark(WordmarkBox);
+            }
 
             if (_sloth != null)
             {
@@ -508,124 +676,108 @@ namespace AF.UI
 
                 Vector2 anchor = BranchAnchor;
                 _sloth.Place(anchor.x, anchor.y);
+                if (_branch != null)
+                {
+                    // La rama del inicio, desde el borde izquierdo, con su línea media en el agarre de TiTino.
+                    float bw = ProceduralArt.HomeBranchWidthDp * BranchScale;
+                    float bh = ProceduralArt.HomeBranchHeightDp * BranchScale;
+                    float line = ProceduralArt.HomeBranchLineAt(anchor.x / BranchScale) * BranchScale;
+                    UiBuilder.Place(_branch.rectTransform, 0f, anchor.y - line, bw, bh);
+                }
             }
+        }
+
+        // Una palmera con el pie en (x, yFoot) dp, de w × h dp; facing −1 la voltea.
+        private static void PlacePalm(Image palm, float x, float yFoot, float w, float h, float facing)
+        {
+            RectTransform rt = palm.rectTransform;
+            UiBuilder.Place(rt, x, yFoot - h, w, h);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(x + (w * 0.5f), -(yFoot - h));
+            rt.localScale = new Vector3(facing, 1f, 1f);
+        }
+
+        // Las luciérnagas laten despacio (quietas con Reducir movimiento). Sin asignaciones.
+        private void Pulse()
+        {
+            if (_fireflyGlow == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _fireflyGlow.Length; i++)
+            {
+                float beat = _reduceMotion ? 0.7f : 0.55f + (0.45f * Mathf.Sin((_clockMs * 0.0021f) + FireflyPhase[i]));
+                Color g = ProceduralArt.FireflyLight;
+                _fireflyGlow[i].color = new Color(g.r, g.g, g.b, 0.42f * beat);
+                Color c = ProceduralArt.FireflyCore;
+                _fireflyCore![i].color = new Color(c.r, c.g, c.b, 0.55f + (0.45f * beat));
+            }
+        }
+
+        private void SetReveal(float alpha)
+        {
+            _veil.alpha = 1f - alpha;
+            _veil.gameObject.SetActive(alpha < 1f);
+            if (_farTint != null)
+            {
+                _farTint.color = new Color(1f, 1f, 1f, alpha);
+            }
+        }
+
+        private static float Ease(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return t * t * (3f - (2f * t));
+        }
+
+        private static RectTransform Group(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            UiBuilder.Stretch(rt);
+            return rt;
         }
 
         private Sprite Own(int slot, Texture2D tex)
         {
+            return Own(slot, tex, new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite Own(int slot, Texture2D tex, Vector2 pivot)
+        {
             _textures[slot] = tex;
-            Sprite sprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+            Sprite sprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), pivot, 100f);
             sprite.name = tex.name;
             _sprites[slot] = sprite;
             return sprite;
         }
 
-        private static Texture2D NewTexture(int w, int h, string name)
+        private void DestroyOwned(int slot)
         {
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            if (_sprites[slot] != null)
             {
-                name = name,
+                UnityEngine.Object.Destroy(_sprites[slot]);
+                _sprites[slot] = null;
+            }
+
+            if (_textures[slot] != null)
+            {
+                UnityEngine.Object.Destroy(_textures[slot]);
+                _textures[slot] = null;
+            }
+        }
+
+        // Disco blanco que se apaga hacia el borde (el halo del emblema y las luciérnagas).
+        private static Texture2D SoftDisc(int size)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "AF_BootGlow",
                 wrapMode = TextureWrapMode.Clamp,
                 filterMode = FilterMode.Bilinear,
             };
-            return tex;
-        }
-
-        // Degradado vertical de abajo (bottom) a arriba (top), pasando por mid en la mitad.
-        private static Texture2D VerticalGradient(int h, Color bottom, Color mid, Color top)
-        {
-            Texture2D tex = NewTexture(1, h, "AF_BootGradient");
-            var px = new Color32[h];
-            for (int y = 0; y < h; y++)
-            {
-                float t = y / (float)(h - 1);
-                px[y] = t < 0.5f ? Color.Lerp(bottom, mid, t * 2f) : Color.Lerp(mid, top, (t - 0.5f) * 2f);
-            }
-
-            tex.SetPixels32(px);
-            tex.Apply(false, true);
-            return tex;
-        }
-
-        // Línea de copas (blanca, se tiñe con el color de la Image; TreeTop), con 1 px de suavizado en el borde.
-        private static Texture2D Treeline(int w, int h)
-        {
-            Texture2D tex = NewTexture(w, h, "AF_BootTreeline");
-            var px = new Color32[w * h];
-            for (int x = 0; x < w; x++)
-            {
-                float edge = TreeTop(x) * (h - 1);
-                for (int y = 0; y < h; y++)
-                {
-                    float a = Mathf.Clamp01(edge - y + 0.5f);
-                    px[(y * w) + x] = new Color32(255, 255, 255, (byte)(a * 255f));
-                }
-            }
-
-            tex.SetPixels32(px);
-            tex.Apply(false, true);
-            return tex;
-        }
-
-        // Alto de la línea de copas en la columna x (fracción del alto de la imagen, desde abajo): copas redondeadas (|sen|) de
-        // dos tamaños.
-        private static float TreeTop(int x)
-        {
-            float u = x;
-            return Mathf.Clamp01(0.50f + (0.22f * Mathf.Abs(Mathf.Sin(u * 0.045f))) + (0.12f * Mathf.Abs(Mathf.Sin((u * 0.11f) + 0.7f))));
-        }
-
-        // La selva lejana reflejada en el agua (blanca, se tiñe con el color de la Image): la línea de copas de Treeline boca abajo
-        // desde el borde de arriba (la orilla), a la escala de la selva (silhouetteDp de alto en su imagen, heightDp en la del
-        // reflejo), que se apaga hacia abajo como (1 − d)².
-        private static Texture2D TreelineReflection(int w, int h, float silhouetteDp, float heightDp)
-        {
-            Texture2D tex = NewTexture(w, h, "AF_BootTreeReflection");
-            var px = new Color32[w * h];
-            float scale = silhouetteDp / heightDp;
-            for (int x = 0; x < w; x++)
-            {
-                float edge = TreeTop(x) * scale * (h - 1);
-                for (int y = 0; y < h; y++)
-                {
-                    float d = h - 1 - y; // desde la orilla, hacia abajo
-                    float a = Mathf.Clamp01(edge - d + 0.5f);
-                    float fade = 1f - (d / (h - 1));
-                    px[(y * w) + x] = new Color32(255, 255, 255, (byte)(a * fade * fade * 255f));
-                }
-            }
-
-            tex.SetPixels32(px);
-            tex.Apply(false, true);
-            return tex;
-        }
-
-        // Cápsula horizontal blanca de borde suave (los brillos del agua).
-        private static Texture2D SoftCapsule(int w, int h)
-        {
-            Texture2D tex = NewTexture(w, h, "AF_BootGlint");
-            var px = new Color32[w * h];
-            float r = h * 0.5f;
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    float cx = Mathf.Clamp(x + 0.5f, r, w - r);
-                    float d = new Vector2(x + 0.5f - cx, y + 0.5f - r).magnitude / r;
-                    float a = Mathf.Clamp01(1f - d);
-                    px[(y * w) + x] = new Color32(255, 255, 255, (byte)(a * a * 255f));
-                }
-            }
-
-            tex.SetPixels32(px);
-            tex.Apply(false, true);
-            return tex;
-        }
-
-        // Disco blanco que se apaga hacia el borde (el halo del logotipo).
-        private static Texture2D SoftDisc(int size)
-        {
-            Texture2D tex = NewTexture(size, size, "AF_BootGlow");
             var px = new Color32[size * size];
             float r = size * 0.5f;
             for (int y = 0; y < size; y++)
@@ -641,185 +793,6 @@ namespace AF.UI
             tex.SetPixels32(px);
             tex.Apply(false, true);
             return tex;
-        }
-
-        // La gota de tinte de açaí (u, v en 0..1, v hacia arriba): un círculo abajo y su punta arriba, con un brillo arriba a la
-        // izquierda y un contorno oscuro. Suavizado con 2 × 2 muestras por píxel.
-        private static Texture2D Drop(int size)
-        {
-            Texture2D tex = NewTexture(size, size, "AF_BootDrop");
-            var px = new Color32[size * size];
-            var c = new Vector2(0.5f, 0.38f);
-            const float r = 0.30f;
-            var tip = new Vector2(0.5f, 0.97f);
-            Vector2 axis = (tip - c).normalized;
-            float beta = Mathf.Acos(r / (tip - c).magnitude);
-            Vector2 left = c + (r * Rotate(axis, beta));
-            Vector2 right = c + (r * Rotate(axis, -beta));
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    Color sum = Color.clear;
-                    for (int s = 0; s < 4; s++)
-                    {
-                        var p = new Vector2((x + 0.25f + (0.5f * (s & 1))) / size, (y + 0.25f + (0.5f * (s >> 1))) / size);
-
-                        // Distancia al borde de la gota (> 0 dentro): la mayor de la del círculo y la del triángulo de la punta.
-                        float inCircle = r - (p - c).magnitude;
-                        float inTip = InTriangle(p, tip, left, right) ? EdgeDistance(p, tip, left, right) : -1f;
-                        float inside = Mathf.Max(inCircle, inTip);
-                        if (inside < 0f)
-                        {
-                            continue;
-                        }
-
-                        float shade = Mathf.Clamp01(((p.x - 0.30f) * 0.9f) + ((0.75f - p.y) * 0.6f));
-                        Color col = Color.Lerp(DropLight, DropDeep, shade);
-                        float shine = Mathf.Clamp01(1f - new Vector2((p.x - 0.38f) / 0.06f, (p.y - 0.47f) / 0.10f).magnitude);
-                        col = Color.Lerp(col, Color.white, 0.75f * Mathf.SmoothStep(0f, 1f, shine));
-                        if (inside < 0.018f)
-                        {
-                            col = Color.Lerp(col, DropInk, 0.85f);
-                        }
-
-                        sum += new Color(col.r, col.g, col.b, 1f);
-                    }
-
-                    px[(y * size) + x] = Premultiplied(sum * 0.25f);
-                }
-            }
-
-            tex.SetPixels32(px);
-            tex.Apply(false, true);
-            return tex;
-        }
-
-        // La cuia: media elipse de madera con su borde claro y la superficie de açaí arriba, con un contorno oscuro como el de la
-        // gota (BowlOutlinePx). Suavizado con 2 × 2 muestras.
-        private static Texture2D Bowl(int w, int h)
-        {
-            Texture2D tex = NewTexture(w, h, "AF_BootBowl");
-            var px = new Color32[w * h];
-            const float lip = 0.80f;
-            Color acai = Palette.Tint(8);
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    Color sum = Color.clear;
-                    for (int s = 0; s < 4; s++)
-                    {
-                        float u = (x + 0.25f + (0.5f * (s & 1))) / w;
-                        float v = (y + 0.25f + (0.5f * (s >> 1))) / h;
-                        float du = (u - 0.5f) / 0.49f;
-                        float body = (du * du) + Sq((v - lip) / 0.78f);
-                        float rimOuter = (du * du) + Sq((v - lip) / 0.19f);
-                        float surface = Sq((u - 0.5f) / 0.43f) + Sq((v - lip) / 0.13f);
-                        Color col;
-                        if (surface <= 1f)
-                        {
-                            col = Color.Lerp(acai, DropLight, Mathf.Clamp01((v - lip + 0.13f) / 0.26f) * 0.6f);
-                        }
-                        else if (rimOuter <= 1f)
-                        {
-                            col = BowlRim;
-                        }
-                        else if (v <= lip && body <= 1f)
-                        {
-                            float shade = Mathf.Clamp01((Mathf.Abs(u - 0.42f) * 1.4f) + ((lip - v) * 0.5f));
-                            col = Color.Lerp(BowlLight, BowlDeep, shade);
-                        }
-                        else
-                        {
-                            continue;
-                        }
-
-                        // Distancia al borde de fuera (px; > 0 dentro): la mayor de la del borde y la de la mitad de abajo del cuerpo.
-                        float dx = (u - 0.5f) * w;
-                        float dy = (v - lip) * h;
-                        float inRim = EllipseInsidePx(dx, dy, 0.49f * w, 0.19f * h);
-                        float inBody = v <= lip ? EllipseInsidePx(dx, dy, 0.49f * w, 0.78f * h) : -1f;
-                        if (Mathf.Max(inRim, inBody) < BowlOutlinePx)
-                        {
-                            col = Color.Lerp(col, BowlInk, 0.85f);
-                        }
-
-                        sum += new Color(col.r, col.g, col.b, 1f);
-                    }
-
-                    px[(y * w) + x] = Premultiplied(sum * 0.25f);
-                }
-            }
-
-            tex.SetPixels32(px);
-            tex.Apply(false, true);
-            return tex;
-        }
-
-        // Distancia aproximada (px; > 0 dentro) de (dx, dy) al borde de la elipse de semiejes a y b centrada en el origen, por el
-        // gradiente: (1 − F) / |∇F| con F = √((dx/a)² + (dy/b)²). Lejos del borde (F < 0,5) da un valor grande.
-        private static float EllipseInsidePx(float dx, float dy, float a, float b)
-        {
-            float f = Mathf.Sqrt(Sq(dx / a) + Sq(dy / b));
-            if (f < 0.5f)
-            {
-                return float.MaxValue;
-            }
-
-            float g = Mathf.Sqrt(Sq(dx / (a * a)) + Sq(dy / (b * b)));
-            return (1f - f) * f / g;
-        }
-
-        // La media de las muestras viene premultiplicada: se divide el color por la cobertura.
-        private static Color32 Premultiplied(Color avg)
-        {
-            if (avg.a <= 0f)
-            {
-                return new Color32(0, 0, 0, 0);
-            }
-
-            return new Color(avg.r / avg.a, avg.g / avg.a, avg.b / avg.a, avg.a);
-        }
-
-        private static float Sq(float v)
-        {
-            return v * v;
-        }
-
-        private static Vector2 Rotate(Vector2 v, float radians)
-        {
-            float cos = Mathf.Cos(radians);
-            float sin = Mathf.Sin(radians);
-            return new Vector2((cos * v.x) - (sin * v.y), (sin * v.x) + (cos * v.y));
-        }
-
-        private static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
-        {
-            float d1 = Cross(p, a, b);
-            float d2 = Cross(p, b, c);
-            float d3 = Cross(p, c, a);
-            bool neg = d1 < 0f || d2 < 0f || d3 < 0f;
-            bool pos = d1 > 0f || d2 > 0f || d3 > 0f;
-            return !(neg && pos);
-        }
-
-        // Distancia a los dos lados largos del triángulo de la punta (tip-left y tip-right).
-        private static float EdgeDistance(Vector2 p, Vector2 tip, Vector2 left, Vector2 right)
-        {
-            return Mathf.Min(SegmentDistance(p, tip, left), SegmentDistance(p, tip, right));
-        }
-
-        private static float SegmentDistance(Vector2 p, Vector2 a, Vector2 b)
-        {
-            Vector2 ab = b - a;
-            float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
-            return (p - (a + (t * ab))).magnitude;
-        }
-
-        private static float Cross(Vector2 p, Vector2 a, Vector2 b)
-        {
-            return ((p.x - b.x) * (a.y - b.y)) - ((a.x - b.x) * (p.y - b.y));
         }
     }
 }

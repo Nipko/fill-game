@@ -3982,6 +3982,18 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Carril:** `tanda6/arranque-marca`.
 - **Cómo revertir:** con una decisión nueva del dueño.
 
+### D-051, añadido del 2026-10-25: la pantalla de arranque con la marca v2
+
+- **Estado:** pedido por el dueño (que hace de artista: D-050, D-052) el 2026-10-25: la pantalla de arranque seguía con el logotipo provisional (la gota morada sobre una cuia de madera, en un cielo de atardecer, con TiTino colgado de un palo gris) y «no dice nada y no es la marca».
+- **Decisión:** la pantalla de arranque (`BootSplash`, 06 §2.2, D-016) se rehace como el **último fotograma de la intro de la marca hecho mundo**, coherente con la identidad v2 (D-045) y con el inicio «el muelle del río» (D-050):
+  1. **El emblema de la intro**, en su sitio y con sus mismas piezas (las comparten: `BrandIntro.PlaceEmblem`): el petróleo #14444A con su halo, la selva de la orilla de enfrente y el río blanco teñido de açaí desde el impacto, río abajo. Al quitarse la intro no se mueve ni cambia de color nada de eso.
+  2. **El mundo alrededor:** la selva y el río teñido siguen a lo ancho, con palmeras de açaí en silueta como las del icono; la orilla de acá (la selva oscura del icono, que baja al petróleo hondo #0A2A2E) con follaje en silueta en las esquinas y luciérnagas que laten; entra con un velo de petróleo que se desvanece en 300 ms [P] al quitarse la intro (de golpe con Reducir movimiento). Sus texturas se hacen en el primer fotograma tras la intro: en las aperturas que no esperan, la pantalla se corta antes y no cuestan nada.
+  3. **El nombre del logo**, «Tintalú» en Baloo 2 ExtraBold en marfil (el logo «oscuro» de la v2), bajo el río. Se **dibuja por código**: `docs/art/marca-oficial/v2/exportar.py --unity-wordmark <archivo> [--check]` genera los contornos del logo (los de `generar.py`: cuerpo 300, espaciado −0,005) en `Assets/_Project/Scripts/Presentation/BrandWordmark.Generated.cs`, y `BrandWordmark` los rasteriza al tamaño real de la pantalla: nítido a cualquier densidad, sin PNG, sin LFS y sin el catálogo de arte. Es un dibujo, no un texto (06 §2.1, regla 3: ni un componente de texto). La ranura `ui_logo`, que nunca llegó a estar en `ArtSlots`, se retira con el logotipo provisional de la gota y la cuia de madera.
+  4. **TiTino** cuelga de **la rama del inicio** (`ProceduralArt.HomeBranch`, D-050, a 1,3× [P]), que entra desde la izquierda como allí, en lugar de la rama gris de su rig; a 140-160 dp (propuesta c.4), con `sloth_wake` en la primera apertura y `sloth_idle` en las demás, sin montarse nunca sobre la selva. Sin TiTino (`ui_sloth_enabled` apagado o sin su arte), la pantalla sale igual, sin él ni su rama.
+- **Sin cambios:** los tiempos (`load_ms`, `hold_ms`, el segundo de `sloth_wake` solo en la primera apertura y desde que se quita la intro), las sondas `AF_STATE boot` y `brand_intro`, el orden del lienzo (90), la zona segura, la intro (D-051, punto 3) y que el arte por código sale en todos los builds (D-052).
+- **Carril:** `tanda6/arranque-v2`.
+- **Cómo revertir:** con una decisión nueva del dueño.
+
 ## D-052 · El arte por código es el final: se retira P-M5
 
 - **Fecha:** 2026-10-25. Registrada por el integrador.

@@ -24,12 +24,14 @@
 ```
 python generar.py     # SVG; solo biblioteca estándar (lee la fuente TTF del juego)
 python exportar.py    # PNG con Chrome o Edge sin interfaz
+python exportar.py --unity-wordmark <BrandWordmark.Generated.cs> [--check]   # el nombre para el juego, sin Chrome
 python hoja.py        # out/hoja-revision.html (la captura out/hoja-revision.png se hace con Chrome sin interfaz)
 ```
 `bocetos/a-meandro.svg` es la versión A descartada, guardada como referencia.
 
 ## Pendiente
 - **Unity: integrada** (2026-10-23) en `Assets/_Project/Plugins/Android/AfIcon.androidlib`, porque Unity 6000.3 no tiene capa monocroma. Lleva `mipmap-anydpi-v26` y `-v33` (este, con la monocroma) y las capas por densidad, que genera `python exportar.py --android-res <AfIcon.androidlib/src/main/res>`. `Assets/Plugins/Android/LauncherManifest.xml` apunta `android:icon` y `roundIcon` a `@mipmap/af_launcher`.
+- **Pantalla de arranque del juego: integrada** (2026-10-25, añadido de D-051). El nombre del logo no va como PNG: `python exportar.py --unity-wordmark ../../../../Assets/_Project/Scripts/Presentation/BrandWordmark.Generated.cs` (sin Chrome; con `--check` solo compara) escribe los contornos de «Tintalú» aplanados como datos de C#, y el juego los rasteriza nítidos a cualquier densidad (`BrandWordmark`). El emblema (el río que se tiñe) es el de la intro, por código (`BrandIntro`).
 - La web usa los favicons, el apple-touch-icon y los logos claro/oscuro derivados de estos archivos. El gráfico de funciones es provisional; no es una aprobación del nombre para publicación.
 - No hay versión oscura ni tintada de iOS ni catálogo de Xcode; se hacen cuando se elija.
 - Probar en un teléfono el icono adaptativo y el temático.

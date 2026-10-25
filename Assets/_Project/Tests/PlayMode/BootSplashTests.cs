@@ -30,8 +30,9 @@ namespace AF.Tests.PlayMode
     /// <item>la sonda <c>AF_STATE boot</c> con <c>first_open</c>, <c>splash_ms</c> y <c>first_touch_ms</c>, que se rellena con
     /// el primer toque en el nivel 1; si el segundo de <c>sloth_wake</c> no cabe en los 20 s, se corta sin esperar y la sonda lo
     /// anota (<c>"wake_fits":false</c>); con <c>ui_sloth_enabled</c> apagado, ni TiTino ni espera;</item>
-    /// <item>la composición: TiTino nunca se monta sobre la selva (16:9 y 19,5:9) y, sin él, el logotipo baja al centro del cielo
-    /// con un halo que no toca la copa de la selva.</item>
+    /// <item>la composición con la marca v2 (añadido de D-051): TiTino cuelga de la rama del inicio (D-050) desde la izquierda y
+    /// nunca se monta sobre la selva (16:9 y 19,5:9); el nombre del logo, rasterizado a la escala de la pantalla, va bajo el río y
+    /// no se mueve sin TiTino.</item>
     /// </list>
     /// </summary>
     public sealed class BootSplashTests
@@ -103,7 +104,7 @@ namespace AF.Tests.PlayMode
             ArtSlots.ForceProcedural = true;
             GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp
             BootSplash splash = NewSplash();
-            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), true, false), Is.True);
+            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), _art.HomeBranch, true, false), Is.True);
             yield return null;
 
             Assert.That(splash.Root.GetComponentsInChildren<TMP_Text>(true), Is.Empty, "06 §2.1, regla 3: sin texto");
@@ -121,9 +122,14 @@ namespace AF.Tests.PlayMode
             Assert.That(splash.Sloth!.Pose, Is.EqualTo(SlothPoseId.Wake), "primera apertura: sloth_wake");
             Assert.That(splash.Sloth.Size, Is.InRange(140f, 180f), "propuesta de TiTino c.4: 140-180 dp en el arranque");
 
-            // La rama entra desde el borde derecho, bajo el logotipo (su rama entra con él, c.4).
+            // Cuelga de la rama del inicio (D-050), que entra desde el borde izquierdo como allí; la rama gris de su rig no sale.
             Vector2 anchor = splash.BranchAnchor;
-            Assert.That(anchor.x + (0.75f * splash.Sloth.Size), Is.EqualTo(360f).Within(0.5f));
+            Assert.That(splash.Branch, Is.Not.Null, "la rama del inicio, con sus hojas");
+            Assert.That(splash.Branch!.sprite, Is.SameAs(_art.HomeBranch));
+            Assert.That(splash.Branch.rectTransform.anchoredPosition.x, Is.EqualTo(0f), "desde el borde izquierdo, como en el inicio");
+            Assert.That(splash.Sloth.BranchImage.enabled, Is.False, "la rama del rig no se pinta");
+            Assert.That(anchor.x, Is.LessThan(180f), "TiTino, a la izquierda, como en el inicio");
+            Assert.That(splash.Branch.transform.GetSiblingIndex(), Is.LessThan(splash.Sloth.Root.GetSiblingIndex()), "la rama, detrás de TiTino");
 
             splash.Tick(400f);
             Assert.That(splash.SlothClockMs, Is.EqualTo(400f).Within(0.01f));
@@ -139,7 +145,7 @@ namespace AF.Tests.PlayMode
             MapArtRule.ForceProvisional = true;
             ArtSlots.ForceProcedural = true;
             BootSplash idle = NewSplash();
-            Assert.That(idle.ShowSloth(_art!.SlothRigArt(), false, false), Is.True);
+            Assert.That(idle.ShowSloth(_art!.SlothRigArt(), _art.HomeBranch, false, false), Is.True);
             Assert.That(idle.Sloth!.Pose, Is.EqualTo(SlothPoseId.Idle), "las demás aperturas: sloth_idle");
             idle.Dispose();
 
@@ -147,14 +153,14 @@ namespace AF.Tests.PlayMode
             MapArtRule.ForceProvisional = null;
             Assert.That(MapArtRule.ShowProvisionalIn(false, false), Is.True, "release");
             BootSplash release = NewSplash();
-            Assert.That(release.ShowSloth(_art.SlothRigArt(), true, false), Is.True, "release sin PNG: TiTino por código");
+            Assert.That(release.ShowSloth(_art.SlothRigArt(), _art.HomeBranch, true, false), Is.True, "release sin PNG: TiTino por código");
             Assert.That(release.SlothVisible, Is.True);
             release.Dispose();
 
             MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
             BootSplash none = NewSplash();
             Assert.That(_art.SlothRigArt(), Is.Null, "sin arte por código ni PNG");
-            Assert.That(none.ShowSloth(_art.SlothRigArt(), true, false), Is.False, "MapArtRule: sin arte, sin TiTino");
+            Assert.That(none.ShowSloth(_art.SlothRigArt(), _art.HomeBranch, true, false), Is.False, "MapArtRule: sin arte, sin TiTino");
             Assert.That(none.SlothVisible, Is.False);
             Assert.That(none.SlothClockMs, Is.EqualTo(0f));
             Assert.That(none.Sloth, Is.Null, "no se crea ningún objeto del rig");
@@ -171,15 +177,15 @@ namespace AF.Tests.PlayMode
             foreach (bool firstOpen in new[] { true, false })
             {
                 BootSplash splash = NewSplash();
-                Assert.That(splash.ShowSloth(_art!.SlothRigArt(), firstOpen, false), Is.True);
+                Assert.That(splash.ShowSloth(_art!.SlothRigArt(), _art.HomeBranch, firstOpen, false), Is.True);
                 Assert.That(splash.ComposedForSloth, Is.True);
                 Assert.That(splash.ShortScreen, Is.EqualTo(screen == 640));
                 Assert.That(splash.Sloth!.Size, Is.InRange(140f, BootSplash.SlothSizeDp), "propuesta de TiTino c.4: 140-180 dp en el arranque");
                 Assert.That(splash.Sloth.Size, Is.EqualTo(splash.SlothFitDp).Within(0.01f));
 
                 // Todo el gesto (sloth_wake y su reposo, o sloth_idle con un giro de cabeza): el fondo de TiTino, por encima de la
-                // copa de la selva cercana con aire, y la rama, por debajo de la cuia del logotipo.
-                float canopy = splash.HorizonDp - BootSplash.NearCanopyDp;
+                // copa de la selva con aire, y la rama, dentro de la pantalla por arriba.
+                float canopy = splash.CanopyDp;
                 var rects = new List<Rect>();
                 float lowest = float.MinValue;
                 for (float ms = 0f; ms <= 12000f; ms += 100f)
@@ -195,7 +201,8 @@ namespace AF.Tests.PlayMode
                 }
 
                 Assert.That(lowest, Is.LessThanOrEqualTo(canopy - 12f), "TiTino cuelga sobre la selva, sin montarse en ella (" + screen + ", " + (firstOpen ? "wake" : "idle") + ")");
-                Assert.That(splash.BranchAnchor.y, Is.GreaterThan(splash.LogoCenterDp + 89f), "la rama, por debajo de la cuia del logotipo");
+                Assert.That(-splash.Branch!.rectTransform.anchoredPosition.y, Is.GreaterThanOrEqualTo(0f), "la rama entera en la pantalla");
+                Assert.That(splash.BranchAnchor.y, Is.GreaterThanOrEqualTo(32f + 36f - 0.5f), "la rama, bajo la zona segura");
                 splash.Dispose();
             }
 
@@ -203,26 +210,46 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Composition_WithoutSloth_TheLogoTakesTheSky([Values(780, 640)] int screen)
+        public IEnumerator Composition_TheBrandWorld_TheWordmarkUnderTheRiver_SameWithoutSloth([Values(780, 640)] int screen)
         {
-            MapArtRule.ForceProvisional = false; // sin arte de TiTino (forzado: hoy sale en todos los builds, D-052)
+            MapArtRule.ForceProvisional = true;
             ArtSlots.ForceProcedural = true;
             GameScreen.SimulatedScreen = screen == 640 ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
-            BootSplash splash = NewSplash();
-            Assert.That(splash.ComposedForSloth, Is.True, "compuesta para TiTino hasta saber si sale");
-            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), true, false), Is.False);
-            Assert.That(splash.ComposedForSloth, Is.False, "sin TiTino se recompone: el logotipo, solo");
             float h = screen == 640 ? 640f : 780f;
-            Assert.That(splash.LogoCenterDp, Is.EqualTo((screen == 640 ? 0.34f : 0.36f) * h).Within(0.01f), "el centro óptico del cielo");
-            Assert.That(splash.GlowSizeDp, Is.EqualTo(300f));
-            Assert.That(splash.LogoCenterDp + (splash.GlowSizeDp * 0.5f), Is.LessThan(splash.HorizonDp - BootSplash.FarCanopyDp), "el halo no toca la copa de la selva");
-            splash.Dispose();
+            BootSplash splash = NewSplash();
+            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), _art.HomeBranch, true, false), Is.True);
 
-            // Ya sin TiTino desde el principio (lo que hace GameBootstrap con BootSplash.SlothExpected = false): lo mismo.
+            // Sin intro, la pantalla nace entera: el mundo hecho y a la vista, con el nombre del logo bajo el río.
+            Assert.That(splash.SceneBuilt, Is.True);
+            Assert.That(splash.Reveal, Is.EqualTo(1f));
+            Image wordmark = splash.Wordmark!;
+            Assert.That(wordmark, Is.Not.Null);
+            Assert.That(wordmark.sprite, Is.Not.Null, "el nombre, rasterizado por código (BrandWordmark)");
+            Rect box = splash.WordmarkBox;
+            Assert.That(box.width, Is.EqualTo(BootSplash.WordmarkMaxDp).Within(0.01f));
+            Assert.That(box.height, Is.EqualTo(box.width * BrandWordmark.Aspect).Within(0.01f));
+            Assert.That(box.center.x, Is.EqualTo(180f).Within(0.01f), "centrado");
+            Assert.That(box.yMin, Is.GreaterThan(splash.RiverBottomDp + 16f), "bajo el río");
+            Assert.That(box.yMax, Is.LessThan(h - 176f), "por encima del follaje de las esquinas");
+            Assert.That(wordmark.sprite.texture.width, Is.GreaterThanOrEqualTo(Mathf.RoundToInt(box.width * 3f)), "a la escala de la pantalla (3 px por dp): nítido");
+            Assert.That(splash.CanopyDp, Is.LessThan(splash.RiverBottomDp));
+
+            // Sin TiTino desde el principio (BootSplash.SlothExpected = false), o porque no hay su arte: lo mismo, sin TiTino ni rama.
             var alone = new BootSplash(_host!.transform, withSloth: false);
             Assert.That(alone.ComposedForSloth, Is.False);
-            Assert.That(alone.LogoCenterDp, Is.EqualTo((screen == 640 ? 0.34f : 0.36f) * h).Within(0.01f));
+            Assert.That(alone.Branch, Is.Null);
+            Assert.That(alone.WordmarkBox, Is.EqualTo(box), "el nombre no se mueve sin TiTino");
             alone.Dispose();
+            splash.Dispose();
+
+            MapArtRule.ForceProvisional = false; // sin arte de TiTino (forzado: hoy sale en todos los builds, D-052)
+            BootSplash none = NewSplash();
+            Assert.That(none.ComposedForSloth, Is.True, "esperando a TiTino hasta saber si sale");
+            Assert.That(none.ShowSloth(_art.SlothRigArt(), _art.HomeBranch, true, false), Is.False);
+            Assert.That(none.ComposedForSloth, Is.False);
+            Assert.That(none.Branch, Is.Null, "sin TiTino, sin rama");
+            Assert.That(none.WordmarkBox, Is.EqualTo(box));
+            none.Dispose();
             yield return null;
         }
 
