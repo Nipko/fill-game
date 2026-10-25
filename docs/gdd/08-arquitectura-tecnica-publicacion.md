@@ -596,7 +596,7 @@ Consentimiento: UMP cubre solo EEE/Reino Unido/Suiza y estados de EE. UU. (resea
 | `af_world_enter` | `world`, `days_since_install`, `pack_ready (bool)` | Primer nivel de cada mundo | Velocidad de viaje; PAD a tiempo |
 | `af_ad_request` | `placement`, `format ∈ {rewarded, interstitial}`, `result ∈ {filled, no_fill, error}`, `ms`, `network` | Carga de anuncio | Fill rate por país (cap. 05) |
 | `af_ad_shown` | `placement`, `format`, `gap_since_last_s`, `levels_since_last`, `session_count`, `day_count` | Impresión mostrada | Cumplimiento de cadencia (dirección 13) |
-| `ad_impression` (Firebase, desde ILR de MAX o, con D-049, `OnAdPaid` de Google Mobile Ads con `ad_platform` = `AdMob`) | `ad_platform`, `ad_source`, `ad_format`, `ad_unit_name`, `value`, `currency` | Cada impresión | ARPDAU de anuncios por país (cap. 05 §9; research/06 §3 [V]) |
+| `ad_impression` (Firebase, desde ILR de MAX o, con D-049, OnAdPaid de Google Mobile Ads con ad_platform AdMob) | `ad_platform`, `ad_source`, `ad_format`, `ad_unit_name`, `value`, `currency` | Cada impresión | ARPDAU de anuncios por país (cap. 05 §9; research/06 §3 [V]) |
 | `af_ad_reward` | `placement`, `granted ∈ {provisional, confirmed, revoked}`, `latency_s` | Concesión y SSV | "Rewarded que no paga" = 0 (research/09 §Anuncios [V]) |
 | `af_iap_offer_shown` | `sku`, `context ∈ {stuck, no_canoes, shop, starter_window, noads_prompt, piggy}`, `price_local`, `currency` | Oferta visible | Conversión por contexto (cap. 05) |
 | `af_iap_result` | `sku`, `result ∈ {ok, cancel, pending, failed, verify_failed, deferred_ack}`, `context`, `ms` | Fin del flujo de compra | Embudo de compra; fallos de verificación |

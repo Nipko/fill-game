@@ -196,6 +196,35 @@ namespace AF.Ads.Tests
         }
 
         [Test]
+        public void SwitchToNpa_DiscardsThePersonalizedAd_AndReloadsWithNpa()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
+            Assert.That(rig.Consent.IsReady(AdPlacement.Hint), Is.True);
+
+            rig.Consent.Apply(FlagsFor(AgeBand.Adult, ads: false)); // Ajustes: retira los anuncios personalizados
+
+            Assert.That(rig.Consent.IsReady(AdPlacement.Hint), Is.False, "el anuncio personalizado ya cargado no se muestra");
+            Assert.That(rig.Port.Calls, Does.Contain("load:rewarded:npa=true"));
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
+            Assert.That(rig.Consent.IsReady(AdPlacement.Hint), Is.True);
+        }
+
+        [Test]
+        public void SwitchToNpa_WhileLoading_DropsTheInFlightAd()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true); // carga personalizada en curso
+
+            rig.Consent.Apply(FlagsFor(AgeBand.Adult, ads: false));
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded); // llega la personalizada
+
+            Assert.That(rig.Consent.IsReady(AdPlacement.Hint), Is.False);
+            Assert.That(rig.Port.Calls[rig.Port.Calls.Count - 1], Is.EqualTo("load:rewarded:npa=true"), "se pide otra con npa");
+        }
+
+        [Test]
         public void Rewarded_SetsSsv_UserIdAndCustomData_AndRewardsOnce()
         {
             var rig = new Rig();

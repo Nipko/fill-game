@@ -258,6 +258,14 @@ namespace AF.Ads
                 return; // sin decisión, <13 o 13-17 con UMP (Q-MAX-6 (b)): ni una llamada más al SDK; si ya estaba iniciado, nada se carga ni se muestra
             }
 
+            if (settings.NonPersonalized && !_nonPersonalized)
+            {
+                // Pasa a npa (p. ej. retira el consentimiento en Ajustes o corrige la edad a 13-17): lo ya cargado se pidió
+                // personalizado y no se muestra; se vuelve a cargar con npa=1.
+                Discard(_rewarded);
+                Discard(_interstitial);
+            }
+
             _nonPersonalized = settings.NonPersonalized;
             if (_underAgeApplied != settings.Teen)
             {
@@ -296,7 +304,8 @@ namespace AF.Ads
             }
 
             EnsureLoads();
-            return _pending == null && _port.IsReady(KindOf(placement));
+            GmaAdKind kind = KindOf(placement);
+            return _pending == null && Unit(kind).Loaded && _port.IsReady(kind);
         }
 
         /// <inheritdoc />
@@ -314,7 +323,7 @@ namespace AF.Ads
                 return;
             }
 
-            if (!Initialized || !_allowed || !_port.IsReady(kind))
+            if (!Initialized || !_allowed || !Unit(kind).Loaded || !_port.IsReady(kind))
             {
                 if (Initialized && _allowed)
                 {
@@ -375,13 +384,15 @@ namespace AF.Ads
             {
                 case GmaAdEvent.Loaded:
                     unit.Loading = false;
-                    unit.Loaded = true;
+                    unit.Loaded = !unit.Stale; // pedido antes de pasar a npa: no vale, se vuelve a cargar
+                    unit.Stale = false;
                     unit.Failures = 0;
                     break;
 
                 case GmaAdEvent.LoadFailed:
                     unit.Loading = false;
                     unit.Loaded = false;
+                    unit.Stale = false;
                     unit.Failures++;
                     unit.RetryAt = _clock.UtcNow + MaxAdService.Backoff(unit.Failures);
                     break;
@@ -559,6 +570,12 @@ namespace AF.Ads
             done(outcome);
         }
 
+        private static void Discard(UnitState unit)
+        {
+            unit.Loaded = false;
+            unit.Stale = unit.Loading;
+        }
+
         private UnitState Unit(GmaAdKind kind) => kind == GmaAdKind.Rewarded ? _rewarded : _interstitial;
 
         private static GmaAdKind KindOf(AdPlacement placement) => placement.IsRewarded() ? GmaAdKind.Rewarded : GmaAdKind.Interstitial;
@@ -567,6 +584,7 @@ namespace AF.Ads
         {
             public bool Loading;
             public bool Loaded;
+            public bool Stale;
             public int Failures;
             public DateTime RetryAt;
         }

@@ -14,10 +14,11 @@
 | Backend propio en AWS, `sa-east-1` (São Paulo) | **Integrado** (D-035): verificación de compras, restauración del libro mayor, código de borrado y borrado de cuenta | 08 §13.3, fila «Backend propio»; `infra/contracts/v1` |
 | Google Play Billing Library 9.0.0, con el plugin propio `AfBilling.androidlib` | **Integrado** (D-040, añadido de Q-IAP-1). **Unity IAP ya no está:** se quitó con sus dependencias de Unity Services y su telemetría de compras a Unity | `docs/dev/iap.md` §1; `ci/check-no-unity-iap.ps1` |
 | Unity Mobile Notifications 2.4.3 | Integrado: avisos locales, nada sale del teléfono | 08 §13.3 |
-| AppLovin MAX 8.6.6 + UMP + adaptadores (AdMob, Unity Ads, Meta Audience Network, Mintegral) | **Todavía no en el juego** (D-042, en integración) | D-042 |
+| **Google Mobile Ads 11.5.0 (AdMob directo) + UMP 4.0.0** | **Integrado en `tanda6/sdk-gma` (D-049, 2026-10-25)**: anuncios de AdMob tras la edad, nuestro consentimiento y UMP; nunca con `<13`; permiso `AD_ID` activado. Sin redes de mediación todavía | `docs/dev/anuncios-admob.md` |
+| AppLovin MAX 8.6.6 | Instalado **sin servir anuncios** y con su UMP apagado (D-049): no se inicializa, no recoge nada | `docs/dev/anuncios-max.md` |
 | Play Games 2.3.0 (inicio de sesión silencioso y Saved Games) | **Todavía no en el juego** (D-042, en integración) | D-042 |
 
-**Permisos del manifiesto fusionado hoy** (lista blanca de `ci/check-manifest.ps1`): `INTERNET` (D-036), `ACCESS_NETWORK_STATE` (D-037), `VIBRATE`, `WAKE_LOCK` y `BIND_GET_INSTALL_REFERRER_SERVICE` (Firebase Analytics, D-039), `POST_NOTIFICATIONS` (D-033, Q-M5) y `com.android.vending.BILLING` (D-040). Sin ubicación. `AD_ID`, `ACCESS_ADSERVICES_AD_ID` y `ACCESS_ADSERVICES_ATTRIBUTION` se quitan del manifiesto (D-039) hasta MAX, y con D-042 cada permiso nuevo se pregunta aparte.
+**Permisos del manifiesto fusionado hoy** (lista blanca de `ci/check-manifest.ps1`): `INTERNET` (D-036), `ACCESS_NETWORK_STATE` (D-037), `VIBRATE`, `WAKE_LOCK` y `BIND_GET_INSTALL_REFERRER_SERVICE` (Firebase Analytics, D-039), `POST_NOTIFICATIONS` (D-033, Q-M5) y `com.android.vending.BILLING` (D-040). Sin ubicación. Con D-049 (rama `tanda6/sdk-gma`) se añade **`com.google.android.gms.permission.AD_ID`** para los anuncios de AdMob (Firebase Analytics sigue sin leerlo); `ACCESS_ADSERVICES_*`, `ACCESS_WIFI_STATE`, `CHECK_LICENSE`, `FOREGROUND_SERVICE` y `RECEIVE_BOOT_COMPLETED` siguen fuera.
 
 **Banda `<13` guardada** (D-033, añadido del 2026-10-23; `firebase-cliente.md` §4 bis): el arranque no inicia ningún SDK. Ni Crashlytics (se apaga por JNI y se borran los informes sin enviar), ni la descarga de Remote Config, ni Firebase en C#, Auth, App Check, Analytics, el backend, la tienda, las notificaciones ni, con D-042, los anuncios o Play Games. En el **primer arranque**, antes de la pantalla de edad, sí funcionan Crashlytics y la descarga de Remote Config (privacidad de la web, sección 3).
 
@@ -55,21 +56,21 @@
 
 **Partida:** se queda **solo en el teléfono** (`profile.json`, `profile.bak` y `PlayerPrefs`); hoy no hay guardado en la nube. No se declara porque no sale del dispositivo. La banda de edad y el consentimiento también se guardan en el teléfono, pero **sí salen** con la analítica aceptada (fila «Actividad en la app · interacciones»).
 
-### 3.2 Al integrar D-042 (todavía no en el juego)
+### 3.2 Anuncios (D-049: Google AdMob directo) y Play Games (D-042)
 
-Se añaden a la sección 3.1, solo cuando MAX y Play Games estén integrados en el build que se envía:
+Se añaden a la sección 3.1 cuando el build que se envía los lleve. **Con D-049 los anuncios son de Google Mobile Ads (AdMob directo)**, no de MAX: donde abajo dice «MAX y adaptadores» léase «Google Mobile Ads (AdMob) y, cuando entren, las redes de su mediación»:
 
 | Categoría · tipo [NV] | Quién lo recoge | Recogido | Compartido | Finalidad | ¿Opcional? | Notas |
 |---|---|---|---|---|---|---|
 | Ubicación · aproximada | MAX y sus adaptadores (por la IP) | Sí [E] | **Sí** (redes de la mediación) | Publicidad; prevención de fraude | No [E] | El juego no pide ningún permiso de ubicación |
-| ID de dispositivo u otros · ID de publicidad | MAX y adaptadores | Sí, **solo si el dueño aprueba `AD_ID`** (D-042: cada permiso se pregunta aparte) | **Sí** | Publicidad; prevención de fraude | Sí (el jugador lo reinicia o lo borra en Android) | Sin vínculo con el UID (08 §13.3). 13-17: anuncios no personalizados (`npa`) y `maxAdContentRating = G`; sin consentimiento de anuncios, no personalizados |
+| ID de dispositivo u otros · ID de publicidad | Google Mobile Ads (AdMob) | **Sí: `AD_ID` aprobado y activado (D-049, añadido del 2026-10-25)**; también el App Set ID | **Sí** | Publicidad; prevención de fraude | Sí (el jugador lo reinicia o lo borra en Android) | Sin vínculo con el UID (08 §13.3). 13-17: anuncios no personalizados (`npa`) y `maxAdContentRating = G`; sin consentimiento de anuncios, no personalizados |
 | Actividad en la app · interacciones (con los anuncios) | MAX y adaptadores | Sí | **Sí** | Publicidad | No [E] | — |
 | Información y rendimiento de la app · diagnóstico | MAX y adaptadores | Sí | **Sí** | Publicidad; análisis de fraude | No [E] | — |
-| Información personal · ID de usuario | Backend en AWS: los nonces de las recompensas de video (SSV de MAX, con el UID) | Sí | No | Prevención de fraude | Sí (solo quien ve videos opcionales) | Recompensas 30 días (08 §13.3) |
+| Información personal · ID de usuario | Backend en AWS: los nonces de las recompensas de video (SSV de AdMob con D-049, con el UID como `user_id`; la verificación del servidor está pendiente) | Sí | No | Prevención de fraude | Sí (solo quien ve videos opcionales) | Recompensas 30 días (08 §13.3) |
 | Información personal · ID de usuario | Play Games (su ID de jugador de Play Games, que no es el código de cuenta de Ajustes) | Sí | No | Funcionalidad (guardado en la nube) | `[PENDIENTE: integrador de D-042]` [E]: depende de si el inicio de sesión silencioso cuenta como opcional | Con `<13`, sin inicio de sesión de Play Games (08 §13.1 #11) |
 | Actividad en la app · otras acciones (partida guardada) [NV categoría] | Play Games Saved Games (snapshot `af_main`) | Sí | No | Funcionalidad | Igual que la fila anterior | Lo borra el cliente al eliminar la cuenta; el jugador puede además borrar su perfil de Play Games (08 §13.3; Q-B13-22) |
 
-**UMP (Google User Messaging Platform)**, dentro de MAX: solo para el perfil legal `ump` (EEE, Reino Unido y Suiza); guarda la decisión en el teléfono [E]. 08 §13.3 no tiene fila propia para UMP: se cubre con la de MAX hasta que el integrador de D-042 confirme con la guía de Google si trata algo más.
+**UMP (Google User Messaging Platform) 4.0.0**, con el plugin de Google (D-049): mensaje del RGPD (EEE, Reino Unido y Suiza) y de los estados de EE. UU.; guarda la decisión en el teléfono [E]. Se cubre con la fila de Google Mobile Ads de 08 §13.3.
 
 ### 3.3 No se recoge
 
@@ -85,7 +86,8 @@ Nombre, correo, dirección, teléfono, mensajes, fotos, vídeos, audio, archivos
 | Backend propio (AWS, `sa-east-1`) | En el juego | UID, libro mayor (token como hash), veredicto de integridad, código de borrado (como hash), IP en los registros 30 días; con D-042, nonces de recompensa |
 | Google Play Billing Library 9.0.0 (plugin propio) | En el juego | Historial de compras; UID como `obfuscatedAccountId`; registros de diagnóstico de la biblioteca a Google (Q-BILL-2) [E]. Sin terceros |
 | Unity Mobile Notifications 2.4.3 | En el juego | Nada |
-| AppLovin MAX 8.6.6 + UMP + AdMob, Unity Ads, Meta Audience Network, Mintegral | **Al integrar D-042** | Ubicación aproximada, interacciones con anuncios, diagnóstico e ID de publicidad; compartidos con las redes |
+| Google Mobile Ads 11.5.0 + UMP 4.0.0 (AdMob directo) | **D-049, rama `tanda6/sdk-gma`** | Ubicación aproximada (IP), interacciones con anuncios, diagnóstico e ID de publicidad; compartidos con Google (y las redes de su mediación cuando entren) |
+| AppLovin MAX 8.6.6 | Instalado sin servir (D-049) | Nada mientras no se inicialice |
 | Play Games 2.3.0 (Saved Games) | **Al integrar D-042** | ID de jugador de Play Games y partida guardada; funcionalidad |
 | Runtime de Unity 6000.3 (módulo `com.unity.modules.unityanalytics`, Engine Diagnostics) | En el build | **Sin comprobar** (Q-B13-9 y el «pendiente aparte» de D-040): build-release comprueba que no envía nada en release; si envía, lleva fila |
 | ~~Unity IAP 5.4.4 y Unity Authentication~~ | **Ya no está** (D-040, Q-IAP-1) | Nada. Historia: Q-B13-20 |
@@ -104,7 +106,7 @@ Nombre, correo, dirección, teléfono, mensajes, fotos, vídeos, audio, archivos
 - `[PENDIENTE: abogado]`: el plazo fiscal del libro mayor sin el UID (08 §11); la dirección IP de los registros (sección 3.1); los registros de diagnóstico de Play Billing (Q-BILL-2).
 - `[PENDIENTE: dueño]`: conectar `tintalu.com` (D-041) para que las URL de la política y del borrado sean públicas; la retención de Firebase Analytics, con la mínima del panel (Q-B13-19 (a)).
 - build-release: Q-B13-9 (que el runtime de Unity no envía nada en release).
-- El integrador de D-042: la guía de Data Safety de MAX, de cada adaptador, de UMP y de Play Games en su versión fijada, fila por fila (los [E] de la sección 3.2), y la decisión del dueño sobre `AD_ID`.
+- La guía de Data Safety de Google Mobile Ads 25.4.0 y UMP 4.0.0 (D-049), de cada red de mediación que entre y de Play Games en su versión fijada, fila por fila (los [E] de la sección 3.2). `AD_ID`: aprobado (D-049, añadido); se declara en Play Console.
 - **Rehacer el formulario con el build real de la 1.0**, no con este borrador.
 
 ## Liga del río — D-046 (función prevista para la 1.0)
