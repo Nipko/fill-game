@@ -3948,3 +3948,25 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - `ACCESS_ADSERVICES_AD_ID` y `ATTRIBUTION`, que ya se quitan.
 - **No aprobado todavía:** Unity Ads (3.21.1), a la espera de la cuenta.
 - **Carril:** `tanda6/sdk-gma`.
+
+## D-050 · Inicio nuevo: «el muelle del río»
+
+- **Fecha:** 2026-10-25. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat. Tras ver el inicio («esta muy pobre, titino con una gota morada... no dice nada»), pidió «el artista seremos nosotros yo apruebo y sere ese entregamos algo listo para sacar encargate completo nada de espacios». Aprobó la maqueta del integrador: «Sí, apruebo la dirección del muelle del río; impleméntala completa y pásame capturas.»
+- **Decisión:** el inicio (06 §4.7, fila Lobby) pasa a la composición «el muelle del río», sin cambiar la de D-008 (saldos arriba, botón central grande y pestañas abajo):
+  1. **TiTino grande colgado de su rama** arriba a la izquierda, con un bocadillo que cambia: el saludo según la hora, el Reto pendiente, el dato del día o lo que falta para la Canasta. Respeta el ajuste de mensajes de TiTino y nunca promociona compras (D-013, Q10-A).
+  2. **El río vivo** en lugar de la franja café plana: agua con reflejos, nenúfares y fauna que se mueve.
+  3. **La canoa de Capi con Rosa** avanzando por una ruta hacia la **próxima parada** rotulada, con «faltan N niveles». Al tocarla se abre el Mapa del río.
+  4. **La Crecida** como un poste de nivel en el agua, en lugar de la barra fina.
+  5. **El muelle de madera** con «Jugar · Nivel N», el chip de dificultad y el **Cántaro** como tinaja de barro apoyada en el muelle.
+  6. **Las tarjetas del día** en el muelle: Reto del río, Bitácora y Liga (si está activa).
+  - Arriba se quedan los saldos, las canoas, Ajustes, Música y Sonido (D-046), y abajo las pestañas.
+- **Arte:** el dueño hace de artista y aprueba. Todo el arte va **por código** (como el resto del juego), terminado y sin huecos para un artista externo. Si después quiere un acabado ilustrado en alguna pieza, se encarga aparte.
+- **Condiciones:**
+  - cabe a 360 × 780, en 16:9, a 320 dp y al 130 %, en es-419, en, pt-BR y en-XA;
+  - con Reducir movimiento, todo queda quieto;
+  - sin asignaciones por fotograma;
+  - los textos nuevos van en `strings.csv` en los tres idiomas como borrador, y los nombres culturales siguen pendientes del asesor.
+- **Aprobación del resultado:** antes de integrar, el dueño ve capturas del juego real.
+- **Carril:** `tanda6/inicio-muelle`.
+- **Cómo revertir:** con una decisión nueva del dueño.
