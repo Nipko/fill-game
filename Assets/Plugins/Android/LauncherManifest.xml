@@ -32,6 +32,10 @@
   - D-045 (identidad v2): el icono es @mipmap/af_launcher, de Assets/_Project/Plugins/Android/AfIcon.androidlib (adaptativo
     con fondo y primer plano y, en Android 13+, la capa monocroma de los iconos tematicos, que el icono de Unity no tiene).
     El mismo recurso sirve de roundIcon: la mascara la pone el lanzador.
+  - D-051, punto 2 (pantalla del sistema de Android 12+): la actividad de Unity usa @style/AfLaunchTheme, de AfIcon.androidlib
+    (lo genera docs/art/marca-oficial/v2/exportar.py con la opcion android-xml): el tema de Unity (BaseUnityGameActivityTheme) con el icono
+    adaptativo v2 sobre el petroleo de la marca, en lugar del icono transparente de Unity, y el mismo petroleo de fondo de
+    ventana hasta el primer fotograma del juego.
 -->
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -68,5 +72,8 @@
                   android:authorities="${applicationId}.playgamesinitprovider"
                   tools:node="remove"/>
         <provider android:name="com.applovin.sdk.AppLovinInitProvider" tools:node="remove"/>
+        <activity android:name="com.unity3d.player.UnityPlayerGameActivity"
+                  android:theme="@style/AfLaunchTheme"
+                  tools:replace="android:theme"/>
     </application>
 </manifest>

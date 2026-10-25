@@ -80,6 +80,9 @@ namespace AF.UI
     /// <item>Cuánto dura lo decide <see cref="BootSplashTiming"/> (GameBootstrap): se corta al terminar la carga, salvo el
     /// segundo de <c>sloth_wake</c> de la primera apertura si cabe en el objetivo de 20 s.</item>
     /// </list>
+    /// Con <see cref="BrandIntro"/> (D-051, punto 3; <c>withIntro</c>, lo que hace GameBootstrap), la intro de la marca va encima de
+    /// todo mientras el juego carga y se quita al terminar la carga (<see cref="EndIntro"/>); mientras se ve, el gesto de TiTino no
+    /// avanza (su reloj se queda en 0), para que su segundo de <c>sloth_wake</c> se vea entero después.
     /// El fondo traga los toques mientras se ve (aún no hay nada que tocar). Las texturas son suyas y se destruyen con
     /// <see cref="Dispose"/>; las piezas de TiTino son de <see cref="ProceduralArt"/> y no se tocan. Nada asigna memoria por
     /// fotograma.
@@ -175,6 +178,7 @@ namespace AF.UI
         private readonly Image _bowl;
         private readonly Image? _logoPng;
         private readonly double _createdAt;
+        private readonly BrandIntro? _intro;
         private SlothRig? _sloth;
         private bool _withSloth;
         private bool _disposed;
@@ -217,9 +221,10 @@ namespace AF.UI
         /// <summary>
         /// Crea la pantalla, ya a la vista, en un lienzo propio dentro de <paramref name="host"/>, compuesta para TiTino
         /// (<paramref name="withSloth"/>: el logotipo arriba y su rama debajo) o sin él (el logotipo en el centro óptico del cielo).
-        /// Si <see cref="ShowSloth"/> no puede ponerlo, se recompone sin él.
+        /// Si <see cref="ShowSloth"/> no puede ponerlo, se recompone sin él. Con <paramref name="withIntro"/>, la intro de la marca
+        /// (<see cref="BrandIntro"/>) encima de todo, en su primer fotograma hasta <see cref="BeginIntro"/>.
         /// </summary>
-        public BootSplash(Transform host, bool withSloth = true)
+        public BootSplash(Transform host, bool withSloth = true, bool withIntro = false)
         {
             _createdAt = Time.realtimeSinceStartupAsDouble;
             _withSloth = withSloth;
@@ -264,9 +269,15 @@ namespace AF.UI
             }
 
             _bowl = UiBuilder.Image("LogoBowl", root, Own(5, Bowl(256, 128)), Color.white);
-            _drop = UiBuilder.Image("LogoDrop", root, Own(6, Drop(256)), Color.white);
+            Sprite drop = Own(6, Drop(256));
+            _drop = UiBuilder.Image("LogoDrop", root, drop, Color.white);
             _bowl.enabled = logoPng == null;
             _drop.enabled = logoPng == null;
+            if (withIntro)
+            {
+                _intro = new BrandIntro(root, _createdAt, drop, glow); // la última: por encima de todo; el mismo reloj, la misma gota y el mismo halo
+            }
+
             Layout();
         }
 
@@ -275,6 +286,12 @@ namespace AF.UI
 
         /// <summary>La pantalla está a la vista.</summary>
         public bool Visible => !_disposed && _canvas.Canvas.gameObject.activeSelf;
+
+        /// <summary>La intro de la marca (null sin ella); sigue aquí tras <see cref="EndIntro"/>, ya fuera de la vista.</summary>
+        public BrandIntro? Intro => _intro;
+
+        /// <summary>La intro de la marca está a la vista (tapa el resto de la pantalla).</summary>
+        public bool IntroVisible => _intro != null && _intro.Visible;
 
         /// <summary>TiTino en la pantalla (null hasta <see cref="ShowSloth"/>, o sin su arte).</summary>
         public SlothRig? Sloth => _sloth;
@@ -356,10 +373,18 @@ namespace AF.UI
 
             Layout();
             _sloth.Play(firstOpen ? SlothPoseId.Wake : SlothPoseId.Idle, reduceMotion);
+            if (_intro != null)
+            {
+                _intro.Root.SetAsLastSibling(); // la intro sigue por encima de TiTino
+            }
+
             return true;
         }
 
-        /// <summary>Avanza la pose de TiTino <paramref name="dtMs"/> ms (y rehace la composición si cambió la pantalla).</summary>
+        /// <summary>
+        /// Un fotograma: con la intro a la vista, la intro (con el tiempo real) y TiTino quieto; sin ella, la pose de TiTino avanza
+        /// <paramref name="dtMs"/> ms. Rehace la composición si cambió la pantalla. Sin asignaciones.
+        /// </summary>
         public void Tick(float dtMs)
         {
             if (_disposed)
@@ -372,7 +397,28 @@ namespace AF.UI
                 Layout();
             }
 
+            if (_intro != null && _intro.Visible)
+            {
+                _intro.Tick();
+                return;
+            }
+
             _sloth?.Tick(dtMs);
+        }
+
+        /// <summary>Arranca la animación de la intro, con Reducir movimiento ya resuelto (no hace nada sin intro).</summary>
+        public void BeginIntro(bool reduceMotion)
+        {
+            if (!_disposed)
+            {
+                _intro?.Begin(reduceMotion);
+            }
+        }
+
+        /// <summary>Quita la intro al terminar la carga y devuelve lo que se vio (null sin intro o si ya se quitó).</summary>
+        public BrandIntroReport? EndIntro()
+        {
+            return _intro?.End();
         }
 
         /// <summary>Lleva la pose de TiTino al instante <paramref name="ms"/> (capturas deterministas).</summary>
@@ -391,6 +437,7 @@ namespace AF.UI
 
             _disposed = true;
             _sloth = null;
+            _intro?.Dispose();
             if (_canvas.Canvas != null)
             {
                 UnityEngine.Object.Destroy(_canvas.Canvas.gameObject);
@@ -446,6 +493,8 @@ namespace AF.UI
             {
                 UiBuilder.Place(_logoPng.rectTransform, cx - (LogoPngWidthDp * 0.5f), cy - (LogoPngWidthDp * 0.32f), LogoPngWidthDp, LogoPngWidthDp * 0.64f);
             }
+
+            _intro?.Layout(w, h);
 
             if (_sloth != null)
             {
