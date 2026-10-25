@@ -249,6 +249,14 @@ namespace AF.Tests.PlayMode
             Assert.That(lobby.StopRemainingShown && lobby.CanoesShown && lobby.StreakWidget.Visible && lobby.HomeWindow.Visible, Is.True,
                 where + ": condición del test, la travesía, Canoas, la Crecida y TiTino a la vista");
             Assert.That(boot.MarketIcons!.PiggyShown, Is.True, where + ": condición del test, el Cántaro en el muelle");
+            if (screen == 780 && scale < 1.01f)
+            {
+                // El plan B de la fila (sin fecha, sin estado) solo cuando no cabe: en el teléfono de referencia al 100 %, nunca.
+                Assert.That(boot.DailyCard.Dated && !boot.DailyCard.Card.Compact && !boot.LogbookCard.Card.Compact && !boot.LeagueButton.Card.Compact,
+                    Is.True, where + ": el Reto con su fecha y las tres con su línea de estado");
+                Assert.That(boot.DailyCard.TitleText, Does.Contain("16"), where + ": la fecha corta en el título del Reto (06 §4.1)");
+            }
+
 
             var root = (RectTransform)lobby.Canvas.transform;
             List<KeyValuePair<string, Rect>> named = Named(boot, root);
