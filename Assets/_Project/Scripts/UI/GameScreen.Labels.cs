@@ -740,8 +740,14 @@ namespace AF.UI
             else
             {
                 // El contador a la derecha de la banda (x ≈ W − 8 − ancho) fuera del cielo; el grupo, centrado bajo la insignia y
-                // a ≥ HudCounterGapDp del contador.
+                // a ≥ HudCounterGapDp del contador. Si la píldora «Reiniciar» baja hasta la banda (su etiqueta en dos líneas: en-XA,
+                // o un idioma largo al 130 %), el contador va a su izquierda, a RestartPillGapDp, en lugar de quedar debajo
+                // (Q-T6T-5, pregunta 68 de GDD.md §6.3) [P].
                 float right = _canvasW - HudCounterRightDp;
+                if (counter && RestartPillBottomDp + HudLabelsClearDp > counterY)
+                {
+                    right = Mathf.Min(right, RestartPillLeftEdgeDp - RestartPillGapDp);
+                }
                 counterX = right - counterW;
                 if (counter && FitSpan(counterW, counterX, 8f, right, blocked, skyLeft, skyRight, out float cx))
                 {
@@ -784,6 +790,19 @@ namespace AF.UI
                 KeepWalletOffPanel(); // la columna de la cabecera se compacta (o vuelve) para dejarle sitio debajo
             }
         }
+
+        // Borde de abajo de la píldora «Reiniciar» (dp desde arriba del lienzo): TopRowY + 48 con una línea; más con dos (L4).
+        private float RestartPillBottomDp
+        {
+            get
+            {
+                RectTransform pill = _restartPill.rectTransform;
+                return TopRowY - pill.anchoredPosition.y + pill.sizeDelta.y;
+            }
+        }
+
+        // Borde izquierdo de la píldora «Reiniciar» (dp desde la izquierda del lienzo; su área va en x = W − 68).
+        private float RestartPillLeftEdgeDp => _canvasW - 8f - 60f + _restartPill.rectTransform.anchoredPosition.x;
 
         // Pegado bajo la placa, el grupo y el contador no caben juntos (el 160 en 16:9: «Muy difícil» y la Lluvia con sus dos
         // gotitas, y ni la banda normal ni la compacta caben sobre el marco): el grupo, solo bajo la placa, y el contador a la
