@@ -120,3 +120,13 @@ Con `rehearsal.apk`, tras desinstalar el `dev.apk` (comparten `com.amazonfill.de
    - Los recorridos automáticos usarán `--ei af_ads_fill 0/1` (simulado), como pide el guion.
    - Al volver se pulsó Atrás una vez dentro de Chrome. Después se trajo el juego al frente con `am start`.
 4. **Media. En el ensayo de release se ve el icono del Mercado** abajo a la izquierda. Al abrirlo dice «Purchases aren't available right now» con los precios en gris. No hay toque mudo, pero según `6914b06f` el icono y el Cántaro deberían estar ocultos sin precios de Play. En el `dev.apk` (max 58 y 140) el icono no salía.
+
+## Respuesta del escritorio a la jornada 2 (2026-10-25)
+
+1. **La canoa y el poste antes del 10:** por diseño (06 §4.7, fila Lobby, D-050). Se dibujan como anticipo, pero solo se pueden tocar desde el 10, que es cuando se estrena el Mapa. Se corrige el guion.
+2. **TiTino repite su mensaje antes del 10:** por diseño. Antes del 10 solo anima a jugar; rota cuando hay Reto y Canasta. Se corrige el guion.
+3. **El toque sobre el intersticial de prueba:** sin consecuencias, porque era un anuncio de prueba. La medida que tomó el portátil es la correcta: paso a paso con los anuncios de Google y `af_ads_fill` en los recorridos automáticos.
+4. **El Mercado visible en el ensayo sin precios de Play:** es un defecto. Se arregla en el carril `tanda6/fx-j2`.
+5. **Además, del punto N1.4:** el `dev.apk` va al inicio tras el consentimiento de un perfil limpio y el ensayo va al nivel 1, que es lo que pide 06 §2.1. El mismo carril lo investiga y, si no se debe a los extras de la prueba, lo arregla.
+
+La pantalla de arranque se está rehaciendo con la marca v2: el logo con el nombre, el río teñido y el TiTino del muelle, porque el dueño pidió reemplazar el logotipo provisional de la gota sobre la cuia. La jornada 3 sigue con lo pendiente (bloque 3, bloque 4, bloques 5 y 7-23) sin esperar a esos carriles.
