@@ -95,7 +95,9 @@ namespace AF.Tests.PlayMode
             yield return Boot(MaxLevel);
             GameBootstrap boot = GameBootstrap.Current!;
             DailyChallengeCard card = boot.DailyCard!;
+            WaitForTheGreeting(boot);
             Assert.That(card.State, Is.EqualTo(DailyCardState.Play));
+            Assert.That(card.Visible, Is.True, "la tarjeta, a la vista tras el saludo");
             yield return Shot("r11_01_card_play", card.Root);
 
             Assert.That(boot.PressDailyCard(), Is.True);
@@ -142,6 +144,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap.DailyServerOverride = FakeServerDate.Online(TimeSpan.FromHours(48));
             yield return Boot(MaxLevel);
             boot = GameBootstrap.Current!;
+            WaitForTheGreeting(boot);
             Assert.That(boot.PressDailyCard(), Is.True);
             daily = boot.DailyScreen!;
             SnapshotKit.AttachOverlay(daily.View!.Canvas);
@@ -167,6 +170,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap.DailyStoreOverride = new InMemoryDailyChallengeStore(streak);
             yield return Boot(MaxLevel);
             boot = GameBootstrap.Current!;
+            WaitForTheGreeting(boot);
             Assert.That(boot.PressDailyCard(), Is.True);
             daily = boot.DailyScreen!;
             SnapshotKit.AttachOverlay(daily.View!.Canvas);
@@ -228,6 +232,30 @@ namespace AF.Tests.PlayMode
         }
 
         // Captura y registra los textos visibles de la pieza que se revisa que no caben en su caja (AF_FIT).
+        // El lunes a las 10:00 TiTino da el saludo de la mañana; a 360 × 640 cruza la tarjeta del Reto y la aparta mientras se ve
+        // (D-046, punto 2; como AudioQuickTogglesTests.Home_FitsWithoutOverlaps…): se espera a que acabe.
+        private static void WaitForTheGreeting(GameBootstrap boot)
+        {
+            HomeSloth? sloth = boot.Lobby?.HomeWindow.Sloth;
+            if (sloth == null)
+            {
+                return;
+            }
+
+            for (int t = 0; t < 400; t += 16)
+            {
+                sloth.Tick(16f);
+            }
+
+            for (int t = 0; t < (int)sloth.BubbleDurationMs + 300; t += 16)
+            {
+                sloth.Tick(16f);
+            }
+
+            boot.TickDaily(16f);
+            Canvas.ForceUpdateCanvases();
+        }
+
         private IEnumerator Shot(string name, Transform focus)
         {
             yield return SnapshotKit.Wait(0.2f);

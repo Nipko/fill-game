@@ -521,7 +521,7 @@ namespace AF.Tests.PlayMode
         private static IEnumerator Capture(GameBootstrap boot, string dir, string name, bool forcedDock, bool small)
         {
             GameScreen view = boot.View!;
-            if (small && !forcedDock && TutorialMorphoTests.AsToastIn16x9(boot, name))
+            if (small && TutorialMorphoTests.AsToastIn16x9(boot, name))
             {
                 // 16:9 (D-028): sin sitio para TiTino, la instrucción sale como aviso de texto (NoIntersection_640And780_…): la
                 // captura enseña ese aviso, con el mismo nombre.
