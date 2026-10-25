@@ -18,9 +18,9 @@ namespace AF.Presentation
     /// <see cref="PacayaSamiria"/> (también al alba). Las dos líneas entre aguas (Santarém y el Encuentro) son piezas por código ya
     /// definitivas y no llevan silueta. <see cref="GenericCity"/>, <see cref="GenericNature"/> y <see cref="GenericWater"/> quedan
     /// solo para un héroe o una pieza del kit sin forma propia (201-1.000).
-    /// <para>Son arte provisional: solo salen con <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo) y sirven para
-    /// validar VA-20 antes de encargar los héroes (direccion-visual-v2 §9; la hoja <c>02f_board_stops_sheet</c> de las 20
-    /// composiciones); nunca en la ficha, las capturas de la tienda ni la UA.</para>
+    /// <para>Son arte por código final: salen con <see cref="MapArtRule.ShowProvisional"/>, en todos los builds, release
+    /// incluido, y se pueden usar en la ficha, las capturas de la tienda y la UA (D-052, que retira P-M5). Si llega el PNG del
+    /// héroe, manda (direccion-visual-v2 §9; la hoja <c>02f_board_stops_sheet</c> de las 20 composiciones).</para>
     /// <para>Cada forma es una lista de primitivas en dp con el pie del héroe en el origen: x de −120 a 120 (240 dp de ancho) e y
     /// hacia arriba desde el horizonte, como mucho <see cref="MaxAboveDp"/> por encima y <see cref="MaxBelowDp"/> por debajo
     /// (07 §2.1: héroe de ≈ 240 × 80 dp, 48 sobre el horizonte y 32 de orilla). Todas caben enteras en los

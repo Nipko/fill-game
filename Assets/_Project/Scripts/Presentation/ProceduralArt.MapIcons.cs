@@ -18,7 +18,7 @@ namespace AF.Presentation
     /// </summary>
     /// <remarks>
     /// <para>Las ranuras mandan: <c>map_minicuia</c> (96 × 160, el vidrio) y <c>map_canoe</c> (el bucle de Capi remando). Con su PNG
-    /// no se crea el provisional. Ninguna de las dos es arte provisional de P-M5 (<see cref="MapArtRule"/>): Capi ya sale por
+    /// no se crea el provisional. Ninguna de las dos depende de <see cref="MapArtRule"/>: Capi ya sale por
     /// código en el banner de mundo, y la mini cuia es la cuia del juego en pequeño.</para>
     /// <para>Perezosas: nada se crea al construir <see cref="ProceduralArt"/>, solo la primera vez que se piden
     /// (<see cref="MapIconsBuilt"/>). Tras <see cref="Dispose"/> se vuelven a generar (el == de Unity).</para>

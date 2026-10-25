@@ -17,11 +17,13 @@ namespace AF.Presentation
     /// 3.4).
     /// </summary>
     /// <remarks>
-    /// <para><b>Compuerta</b> (<see cref="MapArtRule"/>, como el arte provisional del Mapa y de TiTino): las piezas que son arte
-    /// (cuerpo, jirau, poste y asa) solo salen con <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo). Sus ranuras de
+    /// <para><b>Regla del arte</b> (<see cref="MapArtRule"/>, como el arte por código del Mapa y de TiTino): las piezas que son
+    /// arte (cuerpo, jirau, poste y asa) salen con <see cref="MapArtRule.ShowProvisional"/>, en todos los builds, release
+    /// incluido (D-052). Sus ranuras de
     /// PNG aún no tienen nombre en el glosario §11 (encargo de arte, sección 5, pendiente 1: «ningún PNG lleva un nombre
-    /// inventado»), así que en release no se pinta ninguna hasta que lleguen. La boca (con su brillo y su icono) y las bandas
-    /// están hechas para la silueta de la vasija y salen solo con el cuerpo provisional. En release, sin el cuerpo, del overlay
+    /// inventado»), así que hoy siempre se pinta el dibujo por código. La boca (con su brillo y su icono) y las bandas están
+    /// hechas para la silueta de la vasija y salen solo con el cuerpo. Sin el cuerpo (solo si un test apaga el arte por
+    /// código), del overlay
     /// solo sale el chip «×n», en el hombro del vidrio (<c>TinajaOverlay.GlassChipCenterU</c>); la cima y las capas reveladas
     /// se ven en el líquido del vidrio (<c>TinajaOverlay</c>, <c>CuiaView</c>).</para>
     /// <para><b>Color</b> (direccion-visual-v2 §2.4, regla 1; 07 §3, regla 6): el barro (<see cref="Palette.TinajaClay"/>), la

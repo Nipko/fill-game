@@ -62,7 +62,7 @@ namespace AF.UI
     /// <see cref="ContentEndMapOverride"/>. Si la app deja la pantalla de debajo por otro camino, el Mapa se cierra antes.</para>
     /// <para>Pantalla de arranque (06 §2.2; D-016, T2-A; tarea TI6d; <see cref="BootSplash"/>): en cada arranque en frío, el río y
     /// el logotipo salen en el primer fotograma, antes de cargar nada, y TiTino entra en su embaúba en cuanto hay perfil y arte
-    /// (<c>sloth_wake</c> en la primera apertura, <c>sloth_idle</c> en las demás; sin su arte final, en release, no sale). Al
+    /// (<c>sloth_wake</c> en la primera apertura, <c>sloth_idle</c> en las demás; su arte por código sale en todos los builds, D-052). Al
     /// terminar la carga se corta y arranca <see cref="AppFlow"/>; solo en la primera apertura con TiTino se espera a que su
     /// gesto lleve 1,0 s a la vista, si cabe en el objetivo de 20 s del primer toque (<see cref="BootSplashTiming"/>). La sonda
     /// <c>AF_STATE boot</c> (<see cref="BootInfo"/>) lo mide, con el primer toque del jugador.</para>

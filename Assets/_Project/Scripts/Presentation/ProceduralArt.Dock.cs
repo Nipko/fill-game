@@ -6,7 +6,7 @@ namespace AF.Presentation
     /// <summary>
     /// Piezas por código del inicio «el muelle del río» (D-050; 06 §4.7, fila Lobby; dirección «Selva brillante premium», D-003:
     /// madera, vidrio y luz de juego, sin papel ni acuarela). Son el arte final del inicio (D-050: el dueño hace de artista y todo
-    /// va por código), no provisionales de P-M5: salen también en release.
+    /// va por código), y salen en todos los builds, release incluido (D-052, que retira P-M5).
     /// <list type="bullet">
     /// <item><see cref="HomeBranch"/>: la rama de la que cuelga TiTino, que entra desde la vegetación de arriba a la izquierda,
     /// con musgo, hojas genéricas (sin especie reconocible: nada que revisar con el asesor) y un bejuco.</item>

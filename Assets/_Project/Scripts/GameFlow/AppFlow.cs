@@ -51,8 +51,8 @@ namespace AF.GameFlow
     /// motor. La pantalla (río y logotipo, sin texto: 06 §2.1, regla 3) se ve mientras carga el juego y se corta cuando termina
     /// la carga, con una sola excepción: en la primera apertura, si TiTino está a la vista con <c>sloth_wake</c>, la pantalla
     /// espera a que su gesto lleve <see cref="WakeMinVisibleMs"/> ms a la vista, siempre que el primer toque en el nivel 1 siga
-    /// cabiendo en <see cref="FirstTouchTargetMs"/> (09 §6). En las demás aperturas (<c>sloth_idle</c>), y sin TiTino (release
-    /// sin su arte final: <c>MapArtRule</c>), no se añade ninguna espera.
+    /// cabiendo en <see cref="FirstTouchTargetMs"/> (09 §6). En las demás aperturas (<c>sloth_idle</c>), y sin TiTino (con
+    /// <c>ui_sloth_enabled</c> apagado, o sin arte: <c>MapArtRule</c>), no se añade ninguna espera.
     /// <para>El primer toque llega, como pronto, cuando se corta la pantalla: la espera cabe si el tiempo desde el arranque, más
     /// la espera, más <see cref="PlayerReserveMs"/> (la intro del nivel 1 y unos segundos para que el jugador toque) no pasa de
     /// <see cref="FirstTouchTargetMs"/>. Si no cabe, TiTino puede no verse entero: se anota para el dueño (sonda

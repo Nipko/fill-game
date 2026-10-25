@@ -15,7 +15,7 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><c>first_open</c>: no había perfil; <c>splash_ms</c>: tiempo a la vista de la pantalla; <c>load_ms</c>: lo que tardó
     /// la carga con la pantalla delante; <c>splash_end_ms</c>: el corte, desde que arranca Unity.</item>
-    /// <item><c>sloth</c>: la pose de TiTino (<c>sloth_wake</c> o <c>sloth_idle</c>; null sin su arte, en release);
+    /// <item><c>sloth</c>: la pose de TiTino (<c>sloth_wake</c> o <c>sloth_idle</c>; null sin TiTino);
     /// <c>sloth_ms</c>: lo que se vio de su pose; <c>hold_ms</c>: la espera añadida (0 salvo en la primera apertura con
     /// TiTino); <c>wake_fits</c>: false si hacía falta esperar y no cabía en los 20 s (se anota para el dueño).</item>
     /// </list>

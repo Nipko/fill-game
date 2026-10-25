@@ -14,8 +14,8 @@ namespace AF.Presentation
     /// </summary>
     /// <remarks>
     /// <para>El PNG de la ranura <see cref="SlothPortraitSlot"/> (512 × 512, del artista) manda: con él no se crea nada y vale
-    /// para los ojos abiertos y cerrados. Sin él, el provisional solo sale con <see cref="MapArtRule.ShowProvisional"/> (P-M5:
-    /// Editor y desarrollo); en release, nada.</para>
+    /// para los ojos abiertos y cerrados. Sin él, el de código sale con <see cref="MapArtRule.ShowProvisional"/>, en todos los
+    /// builds, release incluido (D-052).</para>
     /// <para>Perezoso: las dos texturas se crean la primera vez que se piden (<see cref="SlothPortraitBuilt"/>), nunca al
     /// construir <see cref="ProceduralArt"/>. Tras <see cref="Dispose"/> se vuelven a generar (el == de Unity).</para>
     /// <para>Paleta orientativa [P] de la propuesta del personaje (c.4); la garganta parda (#6E5440) es [P] de esta tarea.</para>
@@ -60,8 +60,8 @@ namespace AF.Presentation
         public bool SlothPortraitBuilt => _slothOpen != null || _slothClosed != null;
 
         /// <summary>
-        /// El retrato que se pinta: el PNG de <see cref="SlothPortraitSlot"/> si existe; si no, el provisional con
-        /// <see cref="MapArtRule.ShowProvisional"/>; si no (release sin arte final), null.
+        /// El retrato que se pinta: el PNG de <see cref="SlothPortraitSlot"/> si existe; si no, el de código con
+        /// <see cref="MapArtRule.ShowProvisional"/> (en todos los builds, D-052); si no, null.
         /// </summary>
         public Sprite? SlothPortrait(bool eyesClosed)
         {

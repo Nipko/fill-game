@@ -12,10 +12,10 @@ using UnityEngine.UI;
 namespace AF.Tests.EditMode
 {
     /// <summary>
-    /// Ventanita de casa de TiTino en el inicio (tarea M2.1; D-013, punto 6, Q17-A; propuesta del Mapa §2.2 y §6.1; P-M5): los km
+    /// Ventanita de casa de TiTino en el inicio (tarea M2.1; D-013, punto 6, Q17-A; propuesta del Mapa §2.2 y §6.1; D-052): los km
     /// de la píldora redondeados a la decena [P] («a unos 1.480 km» en Manaos) con el separador de la región y el espacio duro
-    /// antes de «km», sin píldora en Belém (n = 0) [P], la regla del arte provisional (el PNG manda; sin él, solo en el Editor y
-    /// en desarrollo), la ventanita procedural perezosa de 56 × 56 dp, y que nada de la ventanita recibe toques salvo el área de
+    /// antes de «km», sin píldora en Belém (n = 0) [P], la regla del arte por código (el PNG manda; sin él, el dibujo en todos los
+    /// builds, release incluido), la ventanita procedural perezosa de 56 × 56 dp, y que nada de la ventanita recibe toques salvo el área de
     /// TiTino (TI6c).
     /// </summary>
     public sealed class HomeWindowTests
@@ -96,10 +96,11 @@ namespace AF.Tests.EditMode
         [Test]
         public void CanShow_FollowsMapArtRule_ForTheFrameAndThePortrait()
         {
-            Assert.That(HomeWindow.CanShow(true, false, false), Is.True, "Editor y desarrollo: el provisional");
-            Assert.That(HomeWindow.CanShow(false, true, true), Is.True, "release con los dos PNG finales");
-            Assert.That(HomeWindow.CanShow(false, true, false), Is.False, "release sin el retrato final: nada");
-            Assert.That(HomeWindow.CanShow(false, false, true), Is.False, "release sin la ventanita final: nada");
+            Assert.That(HomeWindow.CanShow(true, false, false), Is.True, "el arte por código");
+            Assert.That(HomeWindow.CanShow(MapArtRule.ShowProvisionalIn(false, false), false, false), Is.True, "release sin PNG: el dibujo (D-052)");
+            Assert.That(HomeWindow.CanShow(false, true, true), Is.True, "con los dos PNG finales");
+            Assert.That(HomeWindow.CanShow(false, true, false), Is.False, "sin arte por código (forzado) ni el retrato final: nada");
+            Assert.That(HomeWindow.CanShow(false, false, true), Is.False, "sin arte por código (forzado) ni la ventanita final: nada");
             Assert.That(HomeWindow.CanShow(false, false, false), Is.False);
         }
 
@@ -107,7 +108,7 @@ namespace AF.Tests.EditMode
         public void ProceduralWindow_IsLazy_56dp_WithANineSliceBorder_AndThePngWins()
         {
             Assert.That(_art.HomeWindowBuilt, Is.False, "el constructor no crea la ventanita");
-            Assert.That(_art.HomeWindowFor(null, false), Is.Null, "release sin PNG: nada");
+            Assert.That(_art.HomeWindowFor(null, false), Is.Null, "sin arte por código (forzado) ni PNG: nada");
             Assert.That(_art.HomeWindowBuilt, Is.False, "ni la crea");
 
             Sprite window = _art.HomeWindowFor(null, true)!;
@@ -124,7 +125,7 @@ namespace AF.Tests.EditMode
             Sprite png = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f));
             try
             {
-                Assert.That(_art.HomeWindowFor(png, false), Is.SameAs(png), "el PNG de map_home_window manda, también en release");
+                Assert.That(_art.HomeWindowFor(png, false), Is.SameAs(png), "el PNG de map_home_window manda, también sin arte por código");
                 Assert.That(_art.HomeWindowFor(png, true), Is.SameAs(png));
             }
             finally
@@ -179,15 +180,15 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Window_InReleaseWithoutFinalArt_StaysHidden()
+        public void Window_WithoutCodeArtOrFinalArt_StaysHidden()
         {
             Assume.That(ArtSlots.Find(ProceduralArt.HomeWindowSlot), Is.Null, "sin el PNG final de la ventanita");
-            MapArtRule.ForceProvisional = false;
+            MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds (D-052)
             _host = new GameObject("Host", typeof(RectTransform), typeof(Canvas));
             var home = new HomeWindow(_host.transform, _art);
             home.PlaceScene(12f, 140f, 92f, 296f, 380f);
             home.Apply(Stops.StopOf(58), false);
-            Assert.That(home.Visible, Is.False, "P-M5: el provisional no sale en release");
+            Assert.That(home.Visible, Is.False, "sin arte por código ni PNG, nada");
             Assert.That(home.PillShown, Is.False);
             Assert.That(_art.HomeWindowBuilt, Is.False, "ni se crea");
         }

@@ -70,7 +70,7 @@ namespace AF.UI
     /// pegada a la bandeja si cabe (aunque la franja mida ≥ 64 dp: prioridad de 04 §2.1 [P], pregunta para el dueño), con el
     /// retrato hacia el botón y una cola cuya punta queda en el eje del botón de Marea, a <see cref="TutorialTailUndoAirDp"/> dp
     /// de su marco; en 1-10 Marea es ilimitada, así que su primer uso no descuenta.
-    /// Sin TiTino (<c>ui_sloth_enabled</c> apagado o, en release,
+    /// Sin TiTino (<c>ui_sloth_enabled</c> apagado o, solo en un test,
     /// sin su arte) o si la tarjeta no cabe, la instrucción sale como aviso de texto (<c>_toast</c>): el tutorial no se pierde [P]. El ajuste «Mensajes de TiTino» no la quita: es la instrucción del
     /// tutorial, no una frase de su banco [P]. El 8 sigue siendo de Capi (su aviso de la Cuia extra). En el 12 (tarea TU1b; 04
     /// §2.3; 06 §2.2) TiTino presenta Morpho tras la intro, «¿Atascado? La morpho conoce el río», en el sitio de las demás

@@ -166,9 +166,9 @@ Ruta: `Assets/_Project/Data/Fauna/miquitos_v0.json`. No es Remote Config: ajusta
 - **Resolución pura** `IntroCast.Resolve(mundo, nivel, intento, arteDisponible)`. Devuelve la especie cuyo tramo contiene el nivel, o «dosel» si:
   - el tramo está en `sin_fauna`;
   - es un reintento (sección 7.1);
-  - en un build que no es de desarrollo, la especie no tiene su arte final.
+  - no hay arte de la especie (ni su PNG ni el miquito por código).
 
-  En builds de desarrollo, una especie sin PNG usa el miquito provisional por código (sección 11). **Nunca** se usa la especie de otro mundo.
+  Con D-052 (2026-10-25) el miquito por código de la sección 11 es el arte final y vale en todos los builds, release incluido, así que una especie sin PNG lo usa también en release; si llegan sus PNG, mandan. **Nunca** se usa la especie de otro mundo.
 
 ### 4.4 Tres modelos de suelta en lugar de nueve gestos [P]
 
@@ -431,7 +431,7 @@ Todo en Canvas anidados propios, con `raycastTarget = false`, generado una vez y
 | Miquito provisional | 36-40 dp (churuco y maquisapa: 56-64, recortados a franja − 10); contorno de 2 px de tinta al 80 % | Un rig recortable por esqueleto (A-D) con 6-8 piezas generadas en `PixelCanvas` (elipses de torso y cabeza, máscara o cara según el rasgo, extremidades en cápsula y cola en tira Bézier de 8 segmentos) con los 6 colores del catálogo. Poses por código: reposo (escala Y 1,00 ↔ 1,02 cada 1,6 s; parpadeo de 120 ms), viaje (balanceo de ±2 dp a 8 Hz; extremidades ±25°), suelta (brazo −40° → +20° en 100 ms) y colgado |
 | Follaje que se sacude (dosel) | ±6° en 150 ms | El balanceo de las esquinas que ya existe, con una amplitud mayor |
 
-Con esto se prueban la coreografía, los tiempos y los dos modos antes del arte final. **El vídeo de la tienda y el soft launch no se graban con los miquitos provisionales.**
+Con esto se prueban la coreografía, los tiempos y los dos modos antes del arte final. Con D-052 (2026-10-25) este miquito por código es el arte final: sale en release y se puede usar en el vídeo de la tienda y el soft launch.
 
 ## 12. Lista para el artista (PNG por Git LFS; estilo D-003)
 
@@ -504,7 +504,7 @@ Banner de mundo (antes de la intro, canon) → intro → después, como mucho un
 | A10 | Rendimiento | En clase A: media ≥ 58 fps durante la intro, ningún fotograma de más de 33 ms, CPU de efectos ≤ 1 ms, GPU ≤ 6 ms, 0 B asignados por fotograma tras `Start`, `Start` ≤ 2 ms, generación de la especie ≤ 10 ms | Profiler por USB (pendiente de dispositivo); en el Editor, las asignaciones y los tiempos de CPU |
 | A11 | Lectura (personas) | 5 personas que no conocen el juego ven las capturas o el vídeo de los niveles 1 y 7: ≥ 4 de 5 dicen que el agua «sale del río» y que el color lo pone «la fruta» o «los monos». Con 16 cuias: ≥ 3 de 5 | Prueba de pasillo |
 | A12 | Determinismo | El mismo nivel produce el mismo calendario, byte a byte | EditMode |
-| A13 | Especies | El catálogo valida (ids únicos; tramos sin solapes ni huecos en 1-1.000; `nivel_tarjeta` dentro del tramo; colores válidos); `IntroCast` devuelve dosel en el mundo 13, en reintentos y sin arte en un build de release, y nunca la especie de otro mundo | EditMode |
+| A13 | Especies | El catálogo valida (ids únicos; tramos sin solapes ni huecos en 1-1.000; `nivel_tarjeta` dentro del tramo; colores válidos); `IntroCast` devuelve dosel en el mundo 13, en reintentos y sin ningún arte (D-052: el miquito por código cuenta como arte en todos los builds), y nunca la especie de otro mundo | EditMode |
 | A14 | Capturas | Nuevas capturas deterministas: `01_intro_l7` a 300, 700, 1.100 y 1.400 ms; `01c_intro_l1` a 300, 900 y 1.300; `01d_intro_short_l7` a 200, 500 y 700; `01e_intro_16` (dosel) a 500. Un enganche de depuración fija el tiempo de la intro para capturar | PlayMode (`VisualSnapshotTests`) |
 | A15 | Tarjeta | Aparece en el nivel libre correcto cuando la tropa se ha ido, dura por lectura (3-7 s [P]; D-011), no captura toques y no tapa cuias ni botones; `af_fauna_sighted` se registra una vez por especie | PlayMode (cuando se apruebe) |
 

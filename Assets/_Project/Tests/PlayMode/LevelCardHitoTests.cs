@@ -215,10 +215,10 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Release_WithoutProvisional_TheLineGoesAlone_ButTheEncuentroKeepsItsWaters()
+        public IEnumerator WithoutCodeArt_TheLineGoesAlone_ButTheEncuentroKeepsItsWaters()
         {
-            // P-M5 (MapArtRule): en release, sin el PNG del héroe, la silueta provisional no sale; la línea sí, sola y centrada. La
-            // pieza por código de las dos aguas del Encuentro ya es definitiva.
+            // Sin arte por código (MapArtRule forzado: desde D-052 la silueta sale en todos los builds) y sin el PNG del héroe, la
+            // silueta no sale; la línea sí, sola y centrada. La pieza por código de las dos aguas del Encuentro sale siempre.
             MapArtRule.ForceProvisional = false;
             yield return CardSetup.Load(60);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -239,7 +239,7 @@ namespace AF.Tests.PlayMode
             Assert.That(card.HitoSilhouette, Is.EqualTo(LevelCardView.HitoSilhouetteCode));
             Assert.That(card.HitoWindowRect, Is.Not.Null);
 
-            // Con el PNG del héroe en su ranura, el PNG manda siempre, también en release.
+            // Con el PNG del héroe en su ranura, el PNG manda siempre, también sin arte por código.
             Sprite png = view.CardArt.IconSeed;
             StopBackdrop.HeroSpriteOverride = hero => hero == "bg_hero_anavilhanas" ? png : null;
             try

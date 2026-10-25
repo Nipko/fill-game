@@ -24,9 +24,9 @@ namespace AF.Presentation
     /// <remarks>
     /// <para>Las ranuras mandan: <c>map_beacon</c> (del atlas de UI; con el PNG, la apagada es el mismo dibujo con
     /// <see cref="BeaconUnlitTint"/>) y <c>map_home</c> (256²). Con su PNG no se crea el provisional.</para>
-    /// <para><b>Compuerta de P-M5</b> (<see cref="MapArtRule"/>): la casa es arte provisional de TiTino, como su retrato y su
-    /// ventanita, así que sin el PNG de <c>map_home</c> solo sale en el Editor y en desarrollo (<see cref="MapHomeFor"/> da null en
-    /// release). La baliza no lo es (como la mini cuia y la boya, es una pieza de la UI del Mapa): sale siempre.</para>
+    /// <para><b>Regla del arte</b> (<see cref="MapArtRule"/>; D-052): la casa es arte por código de TiTino, como su retrato y
+    /// su ventanita, y sin el PNG de <c>map_home</c> sale en todos los builds, release incluido (<see cref="MapHomeFor"/> solo da
+    /// null si un test apaga el arte por código). La baliza no lo es (como la mini cuia y la boya, es una pieza de la UI del Mapa): sale siempre.</para>
     /// <para>La embaúba está pendiente del asesor cultural (propuesta de TiTino g.2, punto 1; encargo del Mapa, fila 11): si la
     /// desaconseja, solo cambia este dibujo (una rama genérica), no la ranura ni quien la usa. Nada de hojas quemadas ni ceniza;
     /// nunca la sumaúma ni la lupuna.</para>
@@ -141,8 +141,8 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// La casa de TiTino que se pinta: el PNG de <see cref="MapHomeSlot"/> si existe; si no, la provisional con
-        /// <see cref="MapArtRule.ShowProvisional"/>; si no (release sin arte final), null.
+        /// La casa de TiTino que se pinta: el PNG de <see cref="MapHomeSlot"/> si existe; si no, la de código con
+        /// <see cref="MapArtRule.ShowProvisional"/> (en todos los builds, D-052); si no, null.
         /// </summary>
         public Sprite? MapHome => MapHomeFor(ArtSlots.Find(MapHomeSlot), MapArtRule.ShowProvisional);
 

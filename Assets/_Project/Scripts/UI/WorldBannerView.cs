@@ -565,8 +565,8 @@ namespace AF.UI
 
         /// <summary>
         /// Bandera que iza la canoa del viaje abierto (ISO2 de <c>flag_raise</c>), solo si se pinta: con su PNG oficial o, con
-        /// <see cref="MapArtRule"/>, la simplificada (<see cref="ProceduralArt.MapFlag"/>); null si no hay (o en release sin
-        /// el PNG).
+        /// <see cref="MapArtRule"/>, la simplificada (<see cref="ProceduralArt.MapFlag"/>); null si no hay (un país sin simplificada,
+        /// o el arte por código apagado en un test).
         /// </summary>
         public string? TravelFlag => Travel != null && _strip.FlagSprite != null ? Travel.Flag : null;
 
@@ -2036,7 +2036,7 @@ namespace AF.UI
         /// <summary>La canoa mira a la derecha (1) o a la izquierda (−1).</summary>
         public int CanoeFacing => _canoeFacing;
 
-        /// <summary>Bandera de la popa (sin sprite si no hay bandera que izar o en release sin el PNG oficial).</summary>
+        /// <summary>Bandera de la popa (sin sprite si no hay bandera que izar, ni oficial ni simplificada).</summary>
         public Image Flag => _flag;
 
         /// <summary>Mástil de la popa.</summary>

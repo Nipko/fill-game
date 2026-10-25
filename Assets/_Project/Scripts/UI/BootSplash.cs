@@ -71,8 +71,9 @@ namespace AF.UI
     /// <item>TiTino (<see cref="SlothRig"/>; propuesta c.4: 140-180 dp en el arranque) colgado de su rama, que entra desde el
     /// borde derecho bajo el logotipo: <c>sloth_wake</c> en la primera apertura y <c>sloth_idle</c> en las demás
     /// (<see cref="ShowSloth"/>). Su tamaño sale del aire que queda entre la rama y la copa de la selva
-    /// (<see cref="SlothFitDp"/>: hasta <see cref="SlothSizeDp"/>), para que nunca se monte sobre la selva ni toque el río. Sin el
-    /// arte final, solo en el Editor y en desarrollo (<see cref="MapArtRule"/>), y nunca con <c>ui_sloth_enabled</c> apagado
+    /// (<see cref="SlothFitDp"/>: hasta <see cref="SlothSizeDp"/>), para que nunca se monte sobre la selva ni toque el río. Sale en
+    /// todos los builds, release incluido (su dibujo por código o sus PNG: <see cref="MapArtRule"/>, D-052), y nunca con
+    /// <c>ui_sloth_enabled</c> apagado
     /// (<see cref="SlothEnabled"/>): entonces la pantalla sale sin TiTino y el logotipo baja al centro óptico del cielo, con un
     /// halo mayor.</item>
     /// <item>En las pantallas bajas (alto &lt; <see cref="TallAspect"/> × ancho, como 16:9) la composición se aprieta: el
@@ -203,7 +204,7 @@ namespace AF.UI
         public static bool SlothEnabled => SlothEnabledOverride ?? GameConfig.UiSlothEnabled;
 
         /// <summary>
-        /// Se espera a TiTino en la pantalla (<see cref="SlothEnabled"/> y su arte: el provisional, en el Editor y en desarrollo, o
+        /// Se espera a TiTino en la pantalla (<see cref="SlothEnabled"/> y su arte: el de código, en todos los builds (D-052), o
         /// los dos PNG finales, las piezas y la rama; la regla de <see cref="ProceduralArt.SlothRigArt()"/>). Con esto la pantalla
         /// nace ya compuesta con o sin él y el logotipo no salta cuando TiTino entra.
         /// </summary>

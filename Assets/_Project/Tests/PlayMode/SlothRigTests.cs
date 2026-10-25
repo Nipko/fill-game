@@ -381,12 +381,12 @@ namespace AF.Tests.PlayMode
         }
 
         [Test]
-        public void NotADevelopmentBuild_WithoutThePng_TheSlothDoesNotAppear()
+        public void WithoutCodeArtOrThePng_TheSlothDoesNotAppear_AndInReleaseTheCodeOneDoes()
         {
             Fresh();
             int children = _space.childCount;
-            MapArtRule.ForceProvisional = false; // como en release
-            Assert.That(_art.SlothRigArt(), Is.Null, "release sin arte final: nada (07 §6.4)");
+            MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
+            Assert.That(_art.SlothRigArt(), Is.Null, "sin arte por código ni PNG: nada (07 §6.4)");
             Assert.That(_art.SlothRigArt(null, null, false), Is.Null);
             Assert.That(_art.SlothRigArt(MakePng(), null, false), Is.Null, "con las piezas y sin la rama, tampoco: nunca cuelga de nada (c.4)");
             Assert.That(_art.SlothRigArt(null, MakeBranchPng(), false), Is.Null, "ni con la rama y sin las piezas");
@@ -395,9 +395,10 @@ namespace AF.Tests.PlayMode
             Assert.That(SlothRig.Create(_space, _art.SlothRigArt(), 72f), Is.Null, "ni el rig");
             Assert.That(_space.childCount, Is.EqualTo(children), "ni ningún objeto");
 
-            MapArtRule.ForceProvisional = true; // como en desarrollo
+            MapArtRule.ForceProvisional = null; // la regla real, la misma en release (D-052)
             SlothArt? dev = _art.SlothRigArt();
-            Assert.That(dev, Is.Not.Null, "en desarrollo, el provisional");
+            Assert.That(MapArtRule.ShowProvisionalIn(false, false), Is.True, "release");
+            Assert.That(dev, Is.Not.Null, "en release, sin PNG, el dibujo por código");
             Assert.That(dev!.Branch, Is.Not.Null, "con su rama");
 
             var rig = new SlothRig(_space);
@@ -411,12 +412,12 @@ namespace AF.Tests.PlayMode
         {
             Fresh();
             Sprite png = MakePng();
-            Assert.That(_art.SlothRigArt(png, null, false), Is.Null, "release con las piezas y sin la rama: no sale (c.4; 07 §6.4)");
+            Assert.That(_art.SlothRigArt(png, null, false), Is.Null, "sin arte por código, con las piezas y sin la rama: no sale (c.4; 07 §6.4)");
             Assert.That(_art.SlothRigArtBuilt, Is.False, "y no se crea nada");
             Assert.That(_art.SlothBranchBuilt, Is.False);
             Sprite branchPng = MakeBranchPng();
             SlothArt? painted = _art.SlothRigArt(png, branchPng, false);
-            Assert.That(painted, Is.Not.Null, "con los dos PNG sale también en release");
+            Assert.That(painted, Is.Not.Null, "con los dos PNG sale también sin arte por código");
             Assert.That(painted!.Painted, Is.True);
             Assert.That(painted.Head.texture, Is.SameAs(png.texture));
             Assert.That(painted.Head.rect, Is.EqualTo(new Rect(0f, 768f, 256f, 256f)), "celda de la cabeza: arriba a la izquierda");

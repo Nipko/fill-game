@@ -11,11 +11,11 @@ namespace AF.Presentation
     /// símbolos nacionales lo revisa el abogado [NV].
     /// </summary>
     /// <remarks>
-    /// <para><b>Compuerta de release</b> (P-M5 de D-023; <see cref="MapArtRule"/>): la ranura <c>map_flag_&lt;iso2&gt;</c>
+    /// <para><b>Regla del arte</b> (D-052, que retira P-M5 de D-023; <see cref="MapArtRule"/>): la ranura <c>map_flag_&lt;iso2&gt;</c>
     /// (<see cref="ArtSlots.MapFlagPrefix"/>, dos letras minúsculas) manda siempre: es la bandera oficial que entrega el artista
-    /// con el visto bueno del abogado. Sin ese PNG, la <b>simplificada</b> por código solo sale con
-    /// <see cref="MapArtRule.ShowProvisional"/> (Editor y builds de desarrollo); en release, ninguna (<see cref="MapFlagFor"/> da
-    /// null) y la canoa viaja sin bandera.</para>
+    /// con el visto bueno del abogado. Sin ese PNG, la <b>simplificada</b> por código sale con
+    /// <see cref="MapArtRule.ShowProvisional"/>, en todos los builds, release incluido; sin ella (un país sin simplificada, o un
+    /// test que apaga el arte por código) <see cref="MapFlagFor"/> da null y la canoa viaja sin bandera.</para>
     /// <para>Simplificadas, provisionales y sin escudos [P] (<see cref="SimplifiedFlags"/>): Brasil (el campo verde, el rombo
     /// amarillo y el disco azul, sin la banda ni las estrellas), Colombia (amarillo, azul y rojo, 2:1:1), Perú (la de uso civil,
     /// rojo, blanco y rojo), Ecuador (los colores de Colombia con un disco dorado en el centro en lugar del escudo, para no
@@ -108,8 +108,8 @@ namespace AF.Presentation
 
         /// <summary>
         /// Bandera de <paramref name="iso2"/> para la canoa: su PNG oficial (<see cref="MapFlagSlot"/>) si existe; si no, la
-        /// simplificada solo con <see cref="MapArtRule.ShowProvisional"/>; si no (release sin arte oficial, o un país sin
-        /// simplificada), null.
+        /// simplificada con <see cref="MapArtRule.ShowProvisional"/> (en todos los builds, D-052); si no (un país sin simplificada,
+        /// o el arte por código apagado en un test), null.
         /// </summary>
         public Sprite? MapFlag(string iso2)
         {

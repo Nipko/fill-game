@@ -12,8 +12,8 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// Fondo de la parada (tarea M1.4; D-013, punto 9; 07 §2.1; propuesta del Mapa §10.2-§10.6): el héroe de cada parada (la
-    /// silueta de respaldo por n, las piezas por código y las del kit), la compuerta del provisional (<see cref="MapArtRule"/>:
-    /// sin silueta en release, el PNG final manda siempre), VA-23 (la banda del primer plano con el agua base del mundo en las 20
+    /// silueta de respaldo por n, las piezas por código y las del kit), la regla del arte por código (<see cref="MapArtRule"/>:
+    /// la silueta también en release, D-052; el PNG final manda siempre), VA-23 (la banda del primer plano con el agua base del mundo en las 20
     /// paradas), VA-03 (el cielo tras la luz de la parada), los altos (≤ 48 dp sobre el horizonte y el reflejo ≤ 44 dp), la luz
     /// solo en <c>dusk</c> y <c>dawn</c>, el fundido y el corte, que nada reciba toques, el coste de componer y que
     /// <see cref="StopBackdrop.Tick"/> no asigne memoria.
@@ -131,9 +131,9 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void AsInRelease_NoSilhouette_ButTheCodePiecesAndTheWater()
+        public void WithoutCodeArt_NoSilhouette_ButTheCodePiecesAndTheWater()
         {
-            MapArtRule.ForceProvisional = false;
+            MapArtRule.ForceProvisional = false; // forzado: hoy la silueta sale en todos los builds (D-052)
             for (int n = 0; n < Stops.Count; n++)
             {
                 Show(n);
@@ -148,7 +148,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void ThePngOfTheSlot_WinsEvenInRelease_WithItsReflection()
+        public void ThePngOfTheSlot_WinsEvenWithoutCodeArt_WithItsReflection()
         {
             MapArtRule.ForceProvisional = false;
             _pngTexture = new Texture2D(720, 240, TextureFormat.RGBA32, false);
@@ -1023,7 +1023,7 @@ namespace AF.Tests.EditMode
             MapArtRule.ForceProvisional = false;
             _b.Apply(null, "white", false, 0f);
             Show(9);
-            Assert.That(_b.HeroId, Is.Null, "en release, sin PNG, no se pinta ninguno");
+            Assert.That(_b.HeroId, Is.Null, "sin arte por código (forzado) ni PNG, no se pinta ninguno");
         }
     }
 }

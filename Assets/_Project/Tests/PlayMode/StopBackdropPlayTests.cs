@@ -311,13 +311,13 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator AsInRelease_NoSilhouette_InABoardOfThreeRows()
+        public IEnumerator WithoutCodeArt_NoSilhouette_InABoardOfThreeRows()
         {
-            MapArtRule.ForceProvisional = false;
+            MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
             yield return HudSetup.LoadAtIntro(151);
             GameScreen view = GameBootstrap.Current!.View!;
             Assert.That(view.StopBackdrop.Stop!.N, Is.EqualTo(15));
-            Assert.That(view.StopBackdrop.HeroSource, Is.EqualTo(StopBackdrop.HeroNone), "sin PNG, nada en release");
+            Assert.That(view.StopBackdrop.HeroSource, Is.EqualTo(StopBackdrop.HeroNone), "sin arte por código ni PNG, nada");
             Assert.That(view.StopBackdrop.ShapeGraphic.IsEmpty, Is.True);
             Assert.That(view.StopBackdrop.BandGraphic.IsEmpty, Is.False, "el agua del mundo sí");
             HudSetup.SkipIntro(GameBootstrap.Current!); // los errores del log harían fallar el test: con 3 filas no hay ninguno

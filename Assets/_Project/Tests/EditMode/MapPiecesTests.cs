@@ -6,8 +6,9 @@ using UnityEngine;
 namespace AF.Tests.EditMode
 {
     /// <summary>
-    /// Piezas provisionales del Mapa del río (tarea M1.5; P-M5 de D-023; propuesta del Mapa §12, piezas 7 y 9; propuesta del
-    /// personaje c.4-c.7): <see cref="MapArtRule"/> (el provisional solo en el Editor y en desarrollo, forzable en los tests), el
+    /// Piezas por código del Mapa del río (tarea M1.5; D-052, que retira P-M5 de D-023; propuesta del Mapa §12, piezas 7 y 9;
+    /// propuesta del personaje c.4-c.7): <see cref="MapArtRule"/> (el arte por código en todos los builds, release incluido,
+    /// forzable en los tests), el
     /// retrato del perezoso con los ojos abiertos y cerrados, la mini cuia y la canoa de Capi. Comprueba que son perezosas (nada
     /// se crea al construir <see cref="ProceduralArt"/>), sus tamaños, que el PNG de la ranura manda (y entonces el provisional no
     /// se crea) y que la canoa del Mapa no es <see cref="ProceduralArt.IconCanoe"/>.
@@ -42,29 +43,32 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void MapArtRule_ProvisionalOnlyInTheEditorOrADevelopmentBuild()
+        public void MapArtRule_CodeArtInEveryBuild_ReleaseIncluded()
         {
             Assert.That(MapArtRule.ShowProvisionalIn(true, false), Is.True, "Editor");
             Assert.That(MapArtRule.ShowProvisionalIn(false, true), Is.True, "build de desarrollo");
             Assert.That(MapArtRule.ShowProvisionalIn(true, true), Is.True);
-            Assert.That(MapArtRule.ShowProvisionalIn(false, false), Is.False, "release: nada hasta que exista el PNG");
-            Assert.That(MapArtRule.CanShow(false, true), Is.True, "con su PNG final sale también en release");
+            Assert.That(MapArtRule.ShowProvisionalIn(false, false), Is.True, "release: el arte por código es el final (D-052)");
+            Assert.That(MapArtRule.CanShow(MapArtRule.ShowProvisionalIn(false, false), false), Is.True, "release sin PNG: sale");
+            Assert.That(MapArtRule.CanShow(false, true), Is.True, "con su PNG final sale siempre");
             Assert.That(MapArtRule.CanShow(true, false), Is.True);
-            Assert.That(MapArtRule.CanShow(false, false), Is.False);
+            Assert.That(MapArtRule.CanShow(false, false), Is.False, "sin arte por código (forzado) ni PNG: nada");
         }
 
         [Test]
-        public void MapArtRule_CanBeForcedInTests_AndOtherwiseFollowsTheEditor()
+        public void MapArtRule_CanBeForcedInTests_AndOtherwiseFollowsTheRule()
         {
-            Assert.That(MapArtRule.ShowProvisional, Is.True, "los tests corren en el Editor");
+            Assert.That(MapArtRule.ShowProvisional, Is.True, "sin forzar, la regla: siempre");
             MapArtRule.ForceProvisional = false;
-            Assert.That(MapArtRule.ShowProvisional, Is.False, "como en release");
+            Assert.That(MapArtRule.ShowProvisional, Is.False, "forzado sin arte por código");
             Sprite? png = ArtSlots.Find(ProceduralArt.SlothPortraitSlot);
-            Assert.That(_art.SlothPortrait(false), Is.SameAs(png), "como en release: solo el PNG final, o nada");
+            Assert.That(_art.SlothPortrait(false), Is.SameAs(png), "sin arte por código: solo el PNG final, o nada");
             Assert.That(_art.SlothPortraitBuilt, Is.False);
             MapArtRule.ForceProvisional = true;
             Assert.That(MapArtRule.ShowProvisional, Is.True);
-            Assert.That(_art.SlothPortrait(false), Is.Not.Null, "como en desarrollo: el PNG o el provisional");
+            Assert.That(_art.SlothPortrait(false), Is.Not.Null, "con arte por código: el PNG o el dibujo");
+            MapArtRule.ForceProvisional = null;
+            Assert.That(_art.SlothPortrait(false), Is.Not.Null, "sin forzar (como en release): el PNG o el dibujo");
         }
 
         [Test]
@@ -113,15 +117,16 @@ namespace AF.Tests.EditMode
             Sprite png = MakePng();
 
             Assert.That(_art.SlothPortrait(false, png, true), Is.SameAs(png));
-            Assert.That(_art.SlothPortrait(true, png, false), Is.SameAs(png), "el PNG vale para los ojos cerrados y también en release");
+            Assert.That(_art.SlothPortrait(true, png, false), Is.SameAs(png), "el PNG vale para los ojos cerrados y también sin arte por código");
             Assert.That(_art.MapMiniCuiaFor(png), Is.SameAs(png));
             Assert.That(_art.MapCanoeFor(png), Is.SameAs(png));
             Assert.That(_art.SlothPortraitBuilt, Is.False, "con el PNG, el retrato provisional no se crea");
             Assert.That(_art.MapIconsBuilt, Is.False, "con el PNG, la mini cuia y la canoa provisionales no se crean");
 
-            Assert.That(_art.SlothPortrait(false, null, false), Is.Null, "release sin PNG: nada (P-M5)");
+            Assert.That(_art.SlothPortrait(false, null, false), Is.Null, "sin arte por código (forzado) ni PNG: nada");
             Assert.That(_art.SlothPortraitBuilt, Is.False);
-            Assert.That(_art.SlothPortrait(false, null, true), Is.SameAs(_art.SlothPortraitProcedural(false)), "Editor o desarrollo: el provisional");
+            bool release = MapArtRule.ShowProvisionalIn(false, false);
+            Assert.That(_art.SlothPortrait(false, null, release), Is.SameAs(_art.SlothPortraitProcedural(false)), "release sin PNG: el dibujo (D-052)");
         }
 
         [Test]

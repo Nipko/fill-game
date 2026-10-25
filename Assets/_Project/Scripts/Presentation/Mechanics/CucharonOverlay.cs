@@ -23,8 +23,8 @@ namespace AF.Presentation.Mechanics
     /// <para><b>La suelta</b> (b.2 regla 8; R10 f): cuando la tinaja se vacía, su cuia pasa a ser una Cuia chica normal
     /// (<c>Cuia.WithoutMechanic</c>) y todo el overlay se oculta; Marea la vuelve a colgar. La animación de la suelta (su cuia
     /// baja del jirau) es su paso <see cref="MechanicStepKind.Unhook"/> (TJ3), a la vez que la tinaja se tumba.</para>
-    /// <para><b>Arte</b> (<see cref="MapArtRule"/>): poste, gancho y asa son arte provisional y solo salen con
-    /// <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo) hasta los PNG del artista. Nada cambia al seleccionar
+    /// <para><b>Arte</b> (<see cref="MapArtRule"/>): poste, gancho y asa son arte por código y salen con
+    /// <see cref="MapArtRule.ShowProvisional"/>, en todos los builds, release incluido (D-052). Nada cambia al seleccionar
     /// (D-002): al elevarse, el asa sube con su cuia y se separa del gancho, como al descolgarla. Sin asignaciones en
     /// <see cref="Show"/> ni en <see cref="OnBoardLayout"/>.</para>
     /// </remarks>

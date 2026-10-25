@@ -240,7 +240,7 @@ namespace AF.UI
         public float BottomLimitDp => _bottomLimit;
 
         /// <summary>
-        /// Crea el rig de TiTino la primera vez que hace falta, con la regla del arte (sin arte final en release, nunca: false).
+        /// Crea el rig de TiTino la primera vez que hace falta, con la regla del arte (MapArtRule, D-052; sin arte, nunca: false).
         /// </summary>
         public bool EnsureSlothArt()
         {

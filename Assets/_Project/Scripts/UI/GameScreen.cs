@@ -2202,7 +2202,7 @@ namespace AF.UI
         }
 
         // «Llenar y teñir» (guion de la intro §7): geometría del panel, del marco, de las repisas y del HUD, y la especie del tramo
-        // (o el dosel: reintento, mundo 13, sin arte en release, franja < 44 dp). Reducir movimiento lo decide el flujo.
+        // (o el dosel: reintento, mundo 13, sin arte, franja < 44 dp). Reducir movimiento lo decide el flujo.
         private void StartIntro(LevelFlow flow, int durationMs, bool isShort)
         {
             StartIntro(flow, durationMs, isShort, !isShort && !flow.ReduceMotion && flow.LevelNumber < GameConfig.AnimTintFastFromLevel);
@@ -2238,7 +2238,7 @@ namespace AF.UI
             input.TrayTop = TrayTop;
             input.CanvasWidth = _canvasW;
             input.Seed = flow.LevelNumber;
-            // En release, sin su arte final: dosel, nunca la especie de otro mundo (guion §4.3); la regla, en FaunaArtAvailable.
+            // Sin ningún arte (ni el miquito por código ni el PNG): dosel, nunca la especie de otro mundo (guion §4.3; D-052); la regla, en FaunaArtAvailable.
             FaunaSpecies? candidate = Fauna?.ForLevel(flow.LevelNumber);
             bool art = candidate != null && FaunaArtAvailable(candidate, false);
             FaunaSpecies? species = IntroCast.Resolve(Fauna, flow.Level.World, flow.LevelNumber, isShort ? 2 : 1, art);
@@ -2333,17 +2333,18 @@ namespace AF.UI
 
         /// <summary>
         /// Compuerta del arte de una especie (guion de la intro §4.3 y §11), la misma para la intro y para la tarjeta
-        /// (<see cref="FaunaArtRule"/>): en un build de desarrollo vale el miquito provisional por código; fuera de él, la tropa
-        /// exige el PNG <c>fauna_&lt;id&gt;_partes</c> y la tarjeta (<paramref name="forCard"/>), además, <c>fauna_&lt;id&gt;_retrato</c>.
-        /// El build es <c>Debug.isDebugBuild</c> salvo <see cref="LaunchOptions.DevelopmentBuildOverride"/> (tests).
+        /// (<see cref="FaunaArtRule"/>): el miquito por código es el arte final y vale en todos los builds, release incluido
+        /// (D-052: <see cref="MapArtRule.ShowProvisional"/>, salvo <see cref="LaunchOptions.FaunaCodeArtOverride"/> en los tests);
+        /// sin él, la tropa exige el PNG <c>fauna_&lt;id&gt;_partes</c> y la tarjeta (<paramref name="forCard"/>), además,
+        /// <c>fauna_&lt;id&gt;_retrato</c>.
         /// </summary>
         internal static bool FaunaArtAvailable(FaunaSpecies species, bool forCard)
         {
-            bool development = LaunchOptions.DevelopmentBuildOverride ?? Debug.isDebugBuild;
+            bool codeArt = LaunchOptions.FaunaCodeArtOverride ?? MapArtRule.ShowProvisional;
             bool parts = ArtSlots.Find(species.PartsSlot) != null;
             return forCard
-                ? FaunaArtRule.CardArt(development, parts, ArtSlots.Find(species.PortraitSlot) != null)
-                : FaunaArtRule.TroopArt(development, parts);
+                ? FaunaArtRule.CardArt(codeArt, parts, ArtSlots.Find(species.PortraitSlot) != null)
+                : FaunaArtRule.TroopArt(codeArt, parts);
         }
 
         /// <summary>

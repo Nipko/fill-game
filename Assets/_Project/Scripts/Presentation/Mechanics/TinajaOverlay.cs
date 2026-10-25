@@ -20,10 +20,10 @@ namespace AF.Presentation.Mechanics
     /// (<see cref="Palette.TinajaClay"/>), sin tinte, sin el pardo #8A7B6A y sin «?» (<c>CuiaView.ShowContent</c>), y
     /// <see cref="MurkyMarks"/> no pone la insignia «?×n» ni anima su revelado. Lo oculto no se ve por ningún lado: ni su color,
     /// ni su orden, ni qué frutas guarda (Q-Ti5: <c>ui_tinaja_show_contents</c> = false; no hay vista de contenidos).</para>
-    /// <para><b>Arte</b> (<see cref="MapArtRule"/>): el cuerpo y el jirau son arte provisional y solo salen con
-    /// <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo) hasta que lleguen los PNG del artista. La boca (con su
-    /// brillo y su icono) y las bandas están hechas para la silueta de la vasija: salen solo con ella. Sin el cuerpo (release
-    /// hasta el arte) se ve el vidrio, con la cima y las capas reveladas en su líquido y las ocultas del barro (<c>CuiaView</c>),
+    /// <para><b>Arte</b> (<see cref="MapArtRule"/>): el cuerpo y el jirau son arte por código y salen con
+    /// <see cref="MapArtRule.ShowProvisional"/>, en todos los builds, release incluido (D-052). La boca (con su
+    /// brillo y su icono) y las bandas están hechas para la silueta de la vasija: salen solo con ella. Sin el cuerpo (solo si un test
+    /// apaga el arte por código) se ve el vidrio, con la cima y las capas reveladas en su líquido y las ocultas del barro (<c>CuiaView</c>),
     /// y solo el chip «×n», en el hombro del vidrio (<see cref="GlassChipCenterU"/>). Mientras el cuerpo está a la vista, la
     /// vista oculta el vidrio de la cuia (<c>CuiaView</c>): la vasija no se lee metida en una botella, tampoco boca abajo.</para>
     /// <para><b>Su cuia</b> (<see cref="CucharonOverlay"/>) va en la ranura contigua de la misma fila (02 §5; <c>BoardLayout</c>).
@@ -317,7 +317,7 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Tinaja;
 
-        /// <summary>El cuerpo de barro (arte provisional, con <see cref="MapArtRule.ShowProvisional"/>) está a la vista.</summary>
+        /// <summary>El cuerpo de barro (arte por código, con <see cref="MapArtRule.ShowProvisional"/>) está a la vista.</summary>
         public bool BodyVisible => _body.gameObject.activeSelf;
 
         /// <summary>La vasija está boca abajo (vacía, sobre el jirau).</summary>
@@ -1097,7 +1097,7 @@ namespace AF.Presentation.Mechanics
         /// <paramref name="shown"/> (el estado mostrado, con el tinte real de cada capa) se encienden como bandas de arriba abajo,
         /// en <see cref="FireflyMs"/> × <paramref name="speedFactor"/>. Con Reducir movimiento, sin luz: las bandas a la vez en un
         /// fundido de <see cref="ReducedFadeMs"/>. Devuelve la duración (ms, con el factor), o 0 si no hay nada que enseñar (sin
-        /// el cuerpo de la vasija, en release hasta el arte, el vidrio enseña lo revelado al pintarse; sin capas ocultas bajo la
+        /// el cuerpo de la vasija, si un test apaga el arte por código, el vidrio enseña lo revelado al pintarse; sin capas ocultas bajo la
         /// boca). Nunca pinta el pardo ni el «?» (contrato 27). Al terminar, las bandas quedan encendidas y la pantalla pinta lo
         /// revelado. Sin asignaciones.
         /// </summary>

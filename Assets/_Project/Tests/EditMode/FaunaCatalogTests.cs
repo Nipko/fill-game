@@ -124,25 +124,25 @@ namespace AF.Tests.EditMode
 
             Assert.That(IntroCast.Resolve(catalog, 13, 970, 1, true), Is.Null, "mundo 13: dosel");
             Assert.That(IntroCast.Resolve(catalog, 1, 7, 2, true), Is.Null, "reintento: dosel");
-            Assert.That(IntroCast.Resolve(catalog, 1, 7, 1, false), Is.Null, "sin arte en release: dosel");
+            Assert.That(IntroCast.Resolve(catalog, 1, 7, 1, false), Is.Null, "sin arte: dosel");
             Assert.That(IntroCast.Resolve(null, 1, 7, 1, true), Is.Null, "sin catálogo: dosel");
             Assert.That(IntroCast.Resolve(catalog, 1, 31, 1, true), Is.Null, "nunca la especie de otro mundo (barrera de los ríos)");
             Assert.That(IntroCast.Resolve(catalog, 2, 5, 1, true), Is.Null, "nunca la especie de otro mundo");
         }
 
         /// <summary>
-        /// La única regla del arte (guion §4.3 y §11): en desarrollo basta el miquito provisional; fuera de él, la tropa exige
-        /// el PNG <c>_partes</c> y la tarjeta además el <c>_retrato</c>.
+        /// La única regla del arte (guion §4.3 y §11; D-052): basta el miquito por código, que sale en todos los builds; sin él
+        /// (solo si se fuerza), la tropa exige el PNG <c>_partes</c> y la tarjeta además el <c>_retrato</c>.
         /// </summary>
         [Test]
-        public void ArtRule_DevelopmentBuildOrTheFinalPngs()
+        public void ArtRule_TheCodeMiquitoOrTheFinalPngs()
         {
-            Assert.That(FaunaArtRule.TroopArt(true, false), Is.True, "desarrollo: el miquito provisional por código");
-            Assert.That(FaunaArtRule.TroopArt(false, false), Is.False, "release sin _partes: dosel");
+            Assert.That(FaunaArtRule.TroopArt(true, false), Is.True, "el miquito por código, sin PNG (también en release, D-052)");
+            Assert.That(FaunaArtRule.TroopArt(false, false), Is.False, "sin miquito por código ni _partes: dosel");
             Assert.That(FaunaArtRule.TroopArt(false, true), Is.True);
-            Assert.That(FaunaArtRule.CardArt(true, false, false), Is.True);
-            Assert.That(FaunaArtRule.CardArt(false, true, false), Is.False, "release sin _retrato: sin tarjeta");
-            Assert.That(FaunaArtRule.CardArt(false, false, true), Is.False, "release sin _partes: tampoco tarjeta");
+            Assert.That(FaunaArtRule.CardArt(true, false, false), Is.True, "la tarjeta con el miquito por código, sin PNG");
+            Assert.That(FaunaArtRule.CardArt(false, true, false), Is.False, "sin miquito por código ni _retrato: sin tarjeta");
+            Assert.That(FaunaArtRule.CardArt(false, false, true), Is.False, "sin miquito por código ni _partes: tampoco tarjeta");
             Assert.That(FaunaArtRule.CardArt(false, true, true), Is.True);
         }
 

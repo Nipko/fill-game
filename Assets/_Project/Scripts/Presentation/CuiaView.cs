@@ -570,7 +570,7 @@ namespace AF.Presentation
         }
 
         // Dosis oculta de la Tinaja: el barro de su vasija, mate, sin tinte, sin patrón y sin icono (la tapa el cuerpo de la
-        // vasija, TinajaOverlay; sin su arte, en release, se ve barro y nunca la fruta).
+        // vasija, TinajaOverlay; sin su arte, si un test lo apaga, se ve barro y nunca la fruta).
         private void PaintTinajaHiddenDose(int k)
         {
             Color clay = Palette.HiddenDose(true);
