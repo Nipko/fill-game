@@ -21,7 +21,7 @@ namespace AF.Presentation
     public sealed partial class ProceduralArt
     {
         /// <summary>Versión del arte procedural: forma parte de la clave de la caché en disco (guía 4.9).</summary>
-        public const string ArtVersion = "v2.2.1";
+        public const string ArtVersion = "v2.2.2"; // v2.2.2: sin la línea borrada en la punta de las hojas lanceoladas (D-051)
 
         // Respaldo de escena a 2,25 px/dp (el panorama, 810 × 1215 px) y follaje a 3 px/dp (revisión visual del 2026-10-07:
         // a 1,5 y 2 px/dp las orillas y las frondas salían en escalera al ampliarse en el teléfono, a 3 px/dp).
@@ -148,6 +148,9 @@ namespace AF.Presentation
             {
                 Save(dir, corner == 0 ? "foliage_tl" : corner == 1 ? "foliage_tr" : corner == 2 ? "foliage_bl" : "foliage_br", BuildFoliageCanvas(corner));
             }
+
+            Save(dir, "branch_end_foliage", BuildBranchEndFoliageCanvas());
+            Save(dir, "petal", BuildPetalCanvas());
         }
 
         private static void Save(string dir, string name, PixelCanvas pc)
@@ -1057,7 +1060,7 @@ namespace AF.Presentation
         /// <summary>Lado del follaje de las esquinas inferiores (dp).</summary>
         public const float BottomFoliageDp = 170f;
 
-        private static PixelCanvas BuildFoliageCanvas(int corner)
+        internal static PixelCanvas BuildFoliageCanvas(int corner)
         {
             int size = Mathf.RoundToInt((corner < 2 ? TopFoliageDp : BottomFoliageDp) * FoliagePxPerDp);
             var pc = new PixelCanvas(size, size);
@@ -1174,6 +1177,12 @@ namespace AF.Presentation
 
         private Sprite BuildBranchEndFoliage()
         {
+            return MakeSprite(BuildBranchEndFoliageCanvas(), "branch_end_foliage", new Vector2(BranchEndFoliagePivotX, 0f), Vector4.zero, FoliagePxPerDp);
+        }
+
+        // El manojo en su lienzo, aparte para exportarlo a revisión (ExportSceneFallbacks).
+        internal static PixelCanvas BuildBranchEndFoliageCanvas()
+        {
             const float k = FoliagePxPerDp;
             int w = Mathf.RoundToInt(BranchEndFoliageWidthDp * k);
             int h = Mathf.RoundToInt(BranchEndFoliageHeightDp * k);
@@ -1190,7 +1199,7 @@ namespace AF.Presentation
                 DrawLeaf(pc, basePx, dir, l.Length * k, l.Width * k, l.Bend, shape, dark, Palette.LeafLight, k, 211 + (i * 13));
             }
 
-            return MakeSprite(pc, "branch_end_foliage", new Vector2(BranchEndFoliagePivotX, 0f), Vector4.zero, k);
+            return pc;
         }
 
         private static LeafSpec[] TopLeaves(bool right)
@@ -1257,19 +1266,54 @@ namespace AF.Presentation
             return new Vector2(dx, dy).normalized;
         }
 
-        private static float LeafWidthAt(LeafShape shape, float u)
+        // Medio ancho relativo de la hoja (0..1) a la fracción u del largo. El seno se acota a >= 0 en las tres formas: en float,
+        // sin(π) es un negativo diminuto (−8,7e-8), y en la punta (u >= 1, o un u^p que redondea a 1) la potencia fraccionaria
+        // de ese negativo daba NaN en las lanceoladas y en bráctea (añadido de D-051 del 2026-10-25). Un u que no es un número
+        // cuenta como fuera de la hoja (ancho 0).
+        internal static float LeafWidthAt(LeafShape shape, float u)
         {
-            u = Mathf.Clamp01(u);
+            if (!(u > 0f))
+            {
+                return 0f;
+            }
+
+            u = Mathf.Min(u, 1f);
             switch (shape)
             {
                 case LeafShape.Lanceolate:
-                    return Mathf.Pow(Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.85f)), 1.15f);
+                    return Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.85f))), 1.15f);
                 case LeafShape.Bract:
-                    return Mathf.Pow(Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.6f)), 0.7f);
+                    return Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.6f))), 0.7f);
                 default:
                     float s = Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.72f));
                     return Mathf.Pow(Mathf.Max(0f, s), 0.75f) * (u < 0.08f ? 0.6f + (5f * u) : 1f);
             }
+        }
+
+        // Una hoja se dibuja solo con base, dirección, largo, ancho, curva y escala finitos, largo y ancho positivos y dirección
+        // no nula: con una forma degenerada no se pinta nada (una división por un largo nulo o un NaN en la cuenta de un
+        // píxel borraría lo pintado antes al mezclarse).
+        private static bool LeafIsDrawable(Vector2 basePx, Vector2 dir, float length, float width, float bend, float k)
+        {
+            return Finite(basePx.x) && Finite(basePx.y) && Finite(dir.x) && Finite(dir.y) && dir.sqrMagnitude > 1e-12f
+                && Finite(length) && length > 0f && Finite(width) && width > 0f && Finite(bend) && Finite(k);
+        }
+
+        private static bool Finite(float v)
+        {
+            return !float.IsNaN(v) && !float.IsInfinity(v);
+        }
+
+        // Guarda de cada píxel de las hojas: solo se mezcla un color finito con una cobertura finita y positiva (la
+        // comparación negada también descarta NaN), así un valor que no es un número nunca llega al lienzo.
+        private static void BlendLeafPixel(PixelCanvas pc, int x, int y, Color c, float cov)
+        {
+            if (!(cov > 0f) || !Finite(cov) || !Finite(c.r) || !Finite(c.g) || !Finite(c.b) || !Finite(c.a))
+            {
+                return;
+            }
+
+            pc.Blend(x, y, c, cov);
         }
 
         /// <summary>
@@ -1278,6 +1322,11 @@ namespace AF.Presentation
         /// </summary>
         internal static void DrawLeaf(PixelCanvas pc, Vector2 basePx, Vector2 dir, float length, float width, float bend, LeafShape shape, Color dark, Color light, float k, int seed)
         {
+            if (!LeafIsDrawable(basePx, dir, length, width, bend, k))
+            {
+                return;
+            }
+
             Vector2 n = new Vector2(-dir.y, dir.x);
             var lightDir = new Vector2(-0.6f, 0.8f);
             float lightSide = Mathf.Sign(Vector2.Dot(n, lightDir));
@@ -1311,7 +1360,7 @@ namespace AF.Presentation
                     // Borde suavizado de 1,5 px (revisión visual del 2026-10-07: sin escalones en hojas y foliolos).
                     float d = Mathf.Abs(across) - hw;
                     float cov = PixelCanvas.SoftCoverage(d, 1.5f) * Mathf.Clamp01((u + 0.02f) * length) * Mathf.Clamp01((1.02f - u) * length);
-                    if (cov <= 0f)
+                    if (!(cov > 0f))
                     {
                         continue;
                     }
@@ -1327,7 +1376,7 @@ namespace AF.Presentation
                     if (!wide)
                     {
                         c.a = 1f;
-                        pc.Blend(x, y, c, cov);
+                        BlendLeafPixel(pc, x, y, c, cov);
                         continue;
                     }
 
@@ -1354,13 +1403,18 @@ namespace AF.Presentation
                     }
 
                     c.a = 1f;
-                    pc.Blend(x, y, c, cov);
+                    BlendLeafPixel(pc, x, y, c, cov);
                 }
             }
         }
 
-        private static void DrawLeafShadow(PixelCanvas pc, Vector2 basePx, Vector2 dir, float length, float width, float bend, LeafShape shape, float k)
+        internal static void DrawLeafShadow(PixelCanvas pc, Vector2 basePx, Vector2 dir, float length, float width, float bend, LeafShape shape, float k)
         {
+            if (!LeafIsDrawable(basePx, dir, length, width, bend, k))
+            {
+                return;
+            }
+
             Vector2 n = new Vector2(-dir.y, dir.x);
             float half = width * 0.5f;
             float bendPx = bend * length;
@@ -1385,7 +1439,7 @@ namespace AF.Presentation
 
                     float across = Vector2.Dot(rel, n) - (bendPx * u * u);
                     float d = Mathf.Abs(across) - (half * LeafWidthAt(shape, u));
-                    pc.Blend(x, y, shadow, PixelCanvas.SoftCoverage(d, soft));
+                    BlendLeafPixel(pc, x, y, shadow, PixelCanvas.SoftCoverage(d, soft));
                 }
             }
         }
@@ -1595,8 +1649,13 @@ namespace AF.Presentation
             pc.FillCapsule(basePx.x, basePx.y, basePx.x + (dir.x * length * 0.85f), basePx.y + (dir.y * length * 0.85f), 0.35f * k, ColorMath.Darken(wood, 0.45f));
         }
 
-        private static void DrawLeafShape(PixelCanvas pc, Vector2 basePx, Vector2 dir, float length, float width, Color c, float alpha)
+        internal static void DrawLeafShape(PixelCanvas pc, Vector2 basePx, Vector2 dir, float length, float width, Color c, float alpha)
         {
+            if (!LeafIsDrawable(basePx, dir, length, width, 0f, 1f))
+            {
+                return;
+            }
+
             Vector2 n = new Vector2(-dir.y, dir.x);
             int r = Mathf.CeilToInt(length + width);
             for (int y = Mathf.FloorToInt(basePx.y) - r; y <= Mathf.CeilToInt(basePx.y) + r; y++)
@@ -1611,7 +1670,7 @@ namespace AF.Presentation
                     }
 
                     float d = Mathf.Abs(Vector2.Dot(rel, n)) - (width * 0.5f * LeafWidthAt(LeafShape.Ovate, u));
-                    pc.Blend(x, y, ColorMath.WithAlpha(c, alpha), PixelCanvas.Coverage(d));
+                    BlendLeafPixel(pc, x, y, ColorMath.WithAlpha(c, alpha), PixelCanvas.Coverage(d));
                 }
             }
         }

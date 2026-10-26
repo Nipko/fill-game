@@ -205,7 +205,7 @@ namespace AF.Presentation
             {
                 for (int x = 0; x < pc.Width; x++)
                 {
-                    if (pc.Get(x, y).a < 0.5f)
+                    if (!(pc.Get(x, y).a >= 0.5f)) // un alfa que no es un número no cuenta como opaco
                     {
                         continue;
                     }

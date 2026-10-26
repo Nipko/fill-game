@@ -934,9 +934,15 @@ namespace AF.Presentation
 
         private Sprite BuildPetal()
         {
+            return MakeSprite(BuildPetalCanvas(), "petal", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // Pétalo de heliconia (bráctea): lienzo aparte para exportarlo a revisión (ExportSceneFallbacks).
+        internal static PixelCanvas BuildPetalCanvas()
+        {
             var pc = new PixelCanvas(24, 40);
             DrawLeaf(pc, new Vector2(12f, 2f), new Vector2(0f, 1f), 36f, 18f, 0.10f, LeafShape.Bract, Palette.Heliconia, Hex(0xFF8A3D), 0.5f, 2);
-            return MakeSprite(pc, "petal", new Vector2(0.5f, 0.5f), Vector4.zero);
+            return pc;
         }
 
         private Sprite BuildContactShadow()

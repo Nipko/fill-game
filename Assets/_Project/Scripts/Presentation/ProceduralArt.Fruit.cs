@@ -158,7 +158,7 @@ namespace AF.Presentation
             return sprites;
         }
 
-        private static PixelCanvas BuildFruitAtlasCanvas()
+        internal static PixelCanvas BuildFruitAtlasCanvas()
         {
             var pc = new PixelCanvas(FruitAtlasWidth, FruitAtlasHeight);
             for (int tint = 1; tint <= 14; tint++)

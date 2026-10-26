@@ -367,9 +367,11 @@ namespace AF.Tests.PlayMode
         public IEnumerator HojaOpen_EveryKeyStaysUnderTheCap()
         {
             // Con cualquiera de las 14 llaves, en reposo y en todo el paso, ni el medallón ni la fruta girada pasan de KeyTopMaxU
-            // sobre lo alto de la cuia. Las frutas que más suben con el giro son el lulo (el cáliz llega al borde de su celda; es
-            // la llave del 198, con la Hoja en la fila 1 de un tablero de 3 filas) y la hoja del Río Negro (la del 92, en la fila
-            // 2): con ellas la llave entera baja hasta el tope.
+            // sobre lo alto de la cuia. La fruta que más sube con el giro es el lulo (el cáliz llega al borde de su celda; es la
+            // llave del 198, con la Hoja en la fila 1 de un tablero de 3 filas): con ella la llave entera baja hasta el tope.
+            // La hoja del Río Negro (la llave del 92) también llegaba al tope, pero solo por el NaN que DrawLeaf dejaba en la punta
+            // de las hojas lanceoladas: una banda de píxeles NaN a lo ancho de la caja de la hoja que TiltedTop contaba como
+            // opacos. Corregido (añadido de D-051), la hoja girada no sube más que el medallón y la llave queda en su sitio.
             yield return null;
             var line = new StringBuilder("Lo más alto de la llave sobre la boca (u, en reposo / en el paso):");
             for (int key = 1; key <= 14; key++)
@@ -382,6 +384,11 @@ namespace AF.Tests.PlayMode
                 HojaOverlay leaf = HojaOf(_rig.Views[0]);
                 Assert.That(leaf.ShownKey, Is.EqualTo(key));
                 float rest = Mathf.Max(leaf.KeyTopAboveLipU, leaf.FruitTopAboveLipU);
+                if (key == RioNegro)
+                {
+                    Assert.That(leaf.FruitTopAboveLipU, Is.LessThanOrEqualTo(leaf.KeyTopAboveLipU + 1e-4f), "llave 14: la hoja del Río Negro no sube más que el medallón");
+                }
+
                 float max = rest;
                 _rig.Pour(before, 1, 0, out _);
                 RunUntil(_rig, () => _rig.Animator.Steps.IsRunning(MechanicStepKind.Open, 0), 3000);
@@ -396,7 +403,7 @@ namespace AF.Tests.PlayMode
                 }
 
                 Assert.That(max, Is.LessThanOrEqualTo(HojaOverlay.KeyTopMaxU + 1e-4f), "llave " + key + ": no pasa del tope");
-                if (key == Lulo || key == RioNegro)
+                if (key == Lulo)
                 {
                     Assert.That(max, Is.EqualTo(HojaOverlay.KeyTopMaxU).Within(1e-3f), "llave " + key + ": llega al tope, la llave baja por la fruta");
                 }

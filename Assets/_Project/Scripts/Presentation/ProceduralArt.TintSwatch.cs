@@ -162,7 +162,7 @@ namespace AF.Presentation
         }
 
         // Suma la luminancia del píxel ponderada por su alfa. Salta los transparentes y los que no son números (las hojas de
-        // DrawLeaf dejan alguno fuera de su silueta: sin ellos, una sola NaN anulaba la media del taperebá y del Río Negro).
+        // DrawLeaf dejaban alguno en la punta hasta el añadido de D-051; se mantiene la guarda: una sola NaN anularía la media).
         private static void AddLuminance(Color c, ref float sumY, ref float sumA)
         {
             float y = ColorMath.RelativeLuminance(c);

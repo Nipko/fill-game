@@ -178,7 +178,7 @@ namespace AF.Presentation
                 bool under = i == 0 || i == lobes - 1;
                 Color dark = under ? ColorMath.Darken(EmbaubaLeafUnder, 0.18f) : ColorMath.Darken(EmbaubaLeaf, 0.2f);
                 Color light = under ? EmbaubaLeafUnder : ColorMath.Lighten(EmbaubaLeaf, 0.18f);
-                // Ovate y estrecha, no Lanceolate: la forma Lanceolate de DrawLeaf da NaN en la punta (u = 1: sin(π) < 0 en float).
+                // Ovate y estrecha, no Lanceolate (elegida cuando la Lanceolate de DrawLeaf daba NaN en la punta; ya corregido, D-051).
                 DrawLeaf(pc, new Vector2(cx, cy), dir, len, len * 0.32f, 0.05f * t, LeafShape.Ovate, dark, light, k, seed + i);
             }
 
