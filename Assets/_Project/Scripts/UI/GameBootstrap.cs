@@ -2353,7 +2353,9 @@ namespace AF.UI
             int hold = BootSplashTiming.HoldMs(firstOpen, wake, sinceStartup, (long)splash.SlothClockMs);
             if (hold > 0)
             {
-                splash.PrepareWorld(); // el mundo del arranque, antes de medir la espera: su coste no se come el segundo de TiTino
+                // El mundo del arranque, antes de medir la espera; el Tick siguiente no avanza (su tiempo es el de hacerlo), así que
+                // ni el gesto de TiTino ni el fundido se lo comen: el segundo de sloth_wake cuenta desde que empieza el fundido.
+                splash.PrepareWorld();
 
                 // Hasta que el gesto lleve su segundo a la vista (reloj de la pose, el que ve el jugador), con un tope de tiempo
                 // real por si los fotogramas van lentos.

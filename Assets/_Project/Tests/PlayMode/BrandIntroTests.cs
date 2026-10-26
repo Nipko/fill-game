@@ -182,6 +182,8 @@ namespace AF.Tests.PlayMode
             Assert.That(splash.SlothClockMs, Is.EqualTo(0f), "bajo la intro, el gesto de TiTino no avanza (su segundo se verá entero)");
             splash.EndIntro();
             splash.Tick(400f);
+            Assert.That(splash.SlothClockMs, Is.EqualTo(0f), "el fotograma en que se hace el mundo no cuenta");
+            splash.Tick(400f);
             Assert.That(splash.SlothClockMs, Is.EqualTo(400f).Within(0.01f));
             yield return null;
         }
@@ -247,6 +249,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(splash.Reveal, Is.EqualTo(1f));
             }
 
+            splash.Tick(16f);
             Assert.That(splash.SlothClockMs, Is.GreaterThan(0f), "el gesto de TiTino arranca al quitarse la intro");
             yield return null;
 

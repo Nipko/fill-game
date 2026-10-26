@@ -30,8 +30,8 @@ namespace AF.Tests.PlayMode
     /// <item>la sonda <c>AF_STATE boot</c> con <c>first_open</c>, <c>splash_ms</c> y <c>first_touch_ms</c>, que se rellena con
     /// el primer toque en el nivel 1; si el segundo de <c>sloth_wake</c> no cabe en los 20 s, se corta sin esperar y la sonda lo
     /// anota (<c>"wake_fits":false</c>); con <c>ui_sloth_enabled</c> apagado, ni TiTino ni espera;</item>
-    /// <item>la composición con la marca v2 (añadido de D-051): TiTino cuelga de la rama del inicio (D-050) desde la izquierda y
-    /// nunca se monta sobre la selva (16:9 y 19,5:9); el nombre del logo, rasterizado a la escala de la pantalla, va bajo el río y
+    /// <item>la composición con la marca v2 (añadido de D-051): TiTino cuelga de la rama del inicio (D-050), volteada desde la
+    /// derecha, en el cielo: nunca tapa la selva del horizonte, sus palmeras, la cuia ni el chorro (16:9 y 19,5:9); el nombre del logo, rasterizado a la escala de la pantalla, va bajo el río y
     /// no se mueve sin TiTino.</item>
     /// </list>
     /// </summary>
@@ -205,6 +205,22 @@ namespace AF.Tests.PlayMode
                 }
 
                 Assert.That(lowest, Is.LessThanOrEqualTo(canopy - 12f), "TiTino cuelga en el cielo, sin tapar el río ni la cuia (" + screen + ", " + (firstOpen ? "wake" : "idle") + ")");
+
+                // Ni las palmeras del horizonte: en todo el gesto, ninguna pieza de TiTino toca sus cajas.
+                Rect[] palms = splash.PalmRects;
+                for (float ms = 0f; ms <= 12000f; ms += 250f)
+                {
+                    splash.Seek(ms);
+                    rects.Clear();
+                    splash.Sloth.CollectRects(splash.Root, rects);
+                    foreach (Rect r in rects)
+                    {
+                        foreach (Rect palm in palms)
+                        {
+                            Assert.That(r.Overlaps(palm), Is.False, "TiTino no tapa las palmeras (" + screen + ", " + ms + " ms)");
+                        }
+                    }
+                }
                 Assert.That(-splash.Branch!.rectTransform.anchoredPosition.y, Is.GreaterThanOrEqualTo(0f), "la rama entera en la pantalla");
                 Assert.That(splash.BranchAnchor.y, Is.GreaterThanOrEqualTo(32f + 36f - 0.5f), "la rama, bajo la zona segura");
                 splash.Dispose();
@@ -257,6 +273,131 @@ namespace AF.Tests.PlayMode
             Assert.That(none.WordmarkBox, Is.EqualTo(box));
             none.Dispose();
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator PrepareWorld_TheNextTickDoesNotAdvance_ThenItRunsNormally()
+        {
+            // El tiempo que cuesta hacer el mundo llega en el Tick siguiente: no se cuenta (ni para el gesto ni para el fundido).
+            MapArtRule.ForceProvisional = true;
+            ArtSlots.ForceProcedural = true;
+            BootSplash splash = NewIntroSplash();
+            splash.BeginIntro(false);
+            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), _art.HomeBranch, true, false), Is.True);
+            splash.EndIntro();
+            splash.PrepareWorld();
+            Assert.That(splash.SceneBuilt, Is.True);
+            splash.Tick(100f);
+            Assert.That(splash.SlothClockMs, Is.EqualTo(0f), "el Tick tras PrepareWorld no avanza el gesto");
+            Assert.That(splash.Reveal, Is.EqualTo(0f), "ni el fundido");
+            splash.Tick(100f);
+            Assert.That(splash.SlothClockMs, Is.EqualTo(100f).Within(0.01f), "el siguiente, normal");
+            Assert.That(splash.Reveal, Is.GreaterThan(0f));
+            splash.Dispose();
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Dispose_DestroysEveryTextureOfTheSplashAndTheIntro()
+        {
+            MapArtRule.ForceProvisional = true;
+            ArtSlots.ForceProcedural = true;
+            BootSplash splash = NewIntroSplash();
+            splash.BeginIntro(false);
+            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), _art.HomeBranch, true, false), Is.True);
+            splash.EndIntro();
+            splash.PrepareWorld();
+            splash.Tick(16f);
+            var owned = OwnTextures(splash);
+            Assert.That(owned.Count, Is.GreaterThanOrEqualTo(BrandRiverScene.ChunkCount + 6), "la escena, el nombre, el primer plano y el halo");
+            splash.Dispose();
+            yield return null;
+            foreach (Texture t in owned)
+            {
+                Assert.That(t == null, Is.True, "destruida: " + (t != null ? t.name : string.Empty));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ScreenChange_RebuildsTheScene_SharedWithTheIntro_AndDestroysTheOld()
+        {
+            MapArtRule.ForceProvisional = true;
+            ArtSlots.ForceProcedural = true;
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            BootSplash splash = NewIntroSplash();
+            splash.BeginIntro(false);
+            yield return null;
+            var before = OwnTextures(splash);
+            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
+            splash.Tick(16f);
+            foreach (string piece in ScenePieces())
+            {
+                Image mine = splash.Root.Find(piece).GetComponent<Image>();
+                Image intro = splash.Intro!.Root.Find(piece).GetComponent<Image>();
+                Assert.That(mine.sprite, Is.Not.Null, piece);
+                Assert.That(intro.sprite, Is.SameAs(mine.sprite), piece + ": la intro y la pantalla, la misma pieza nueva");
+            }
+
+            yield return null;
+            int destroyed = 0;
+            foreach (Texture t in before)
+            {
+                if (t == null)
+                {
+                    destroyed++;
+                }
+            }
+
+            Assert.That(destroyed, Is.GreaterThanOrEqualTo(BrandRiverScene.ChunkCount + 5), "las piezas viejas de la escena, destruidas");
+            splash.Dispose();
+        }
+
+        // Las piezas de la escena que comparten la pantalla y la intro.
+        private static List<string> ScenePieces()
+        {
+            var pieces = new List<string> { "EmblemBase", "EmblemIsland", "EmblemImpact", "EmblemStream", "EmblemCuia" };
+            for (int k = 0; k < BrandRiverScene.ChunkCount; k++)
+            {
+                pieces.Add("EmblemAcai" + k);
+            }
+
+            return pieces;
+        }
+
+        // Las texturas que son de la pantalla (y de la intro): todas las de sus imágenes menos las de TiTino y su rama, que son de
+        // ProceduralArt.
+        private static List<Texture> OwnTextures(BootSplash splash)
+        {
+            var result = new List<Texture>();
+            foreach (Image img in splash.Root.GetComponentsInChildren<Image>(true))
+            {
+                if (img.sprite == null || img == splash.Branch || (splash.Sloth != null && img.transform.IsChildOf(splash.Sloth.Root)))
+                {
+                    continue;
+                }
+
+                if (!result.Contains(img.sprite.texture))
+                {
+                    result.Add(img.sprite.texture);
+                }
+            }
+
+            return result;
+        }
+
+        private BootSplash NewIntroSplash()
+        {
+            if (_host == null)
+            {
+                _host = new GameObject("BootSplashTestHost");
+            }
+
+            if (_art == null)
+            {
+                _art = new ProceduralArt("white");
+            }
+
+            return new BootSplash(_host.transform, withSloth: true, withIntro: true);
         }
 
         [UnityTest]

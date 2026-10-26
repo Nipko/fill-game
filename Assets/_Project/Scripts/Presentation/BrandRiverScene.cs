@@ -28,6 +28,11 @@ namespace AF.Presentation
         private static readonly float[] CtrlV = { -0.02f, 0.06f, 0.16f, 0.27f, 0.38f, 0.50f, 0.63f, 0.75f, 0.88f, 1.04f };
 
         private const int Samples = 260;
+
+        // Las palmeras de açaí del icono en el perfil del horizonte: cuál, dónde (fracción del ancho) y de qué alto (dp) [P].
+        private static readonly int[] PalmGroup = { BrandEmblem.PalmA, BrandEmblem.PalmB, BrandEmblem.PalmA };
+        private static readonly float[] PalmX = { 0.09f, 0.27f, 0.95f };
+        private static readonly float[] PalmHeightDp = { 56f, 42f, 34f };
         private const float Perspective = 1.3f;
         private const float HorizonAt = 0.30f;
         private const float HorizonAtShort = 0.36f;
@@ -155,6 +160,21 @@ namespace AF.Presentation
         /// <summary>Lo más alto de la selva del horizonte (dp desde arriba).</summary>
         public float SkylineDp => HorizonY - CrownRadius(0f) - 1f;
 
+        /// <summary>Las cajas de las palmeras del horizonte (dp, desde arriba a la izquierda).</summary>
+        public Rect[] PalmRects()
+        {
+            var rects = new Rect[PalmGroup.Length];
+            for (int p = 0; p < PalmGroup.Length; p++)
+            {
+                Rect b = BrandEmblem.GroupBounds(PalmGroup[p]);
+                float s = PalmHeightDp[p] / Mathf.Max(1f, b.height);
+                float x = Width * PalmX[p];
+                rects[p] = new Rect(x - (b.center.x * s) + (b.xMin * s), HorizonY + 3f - PalmHeightDp[p], b.width * s, PalmHeightDp[p]);
+            }
+
+            return rects;
+        }
+
         /// <summary>La ventana de la base: la selva, el río blanco, las playas, las palmeras y las ondas (dp).</summary>
         public Rect BaseWindow => Rect.MinMaxRect(0f, HorizonY - 70f, Width, Height);
 
@@ -206,9 +226,11 @@ namespace AF.Presentation
             // La selva: el suelo (de la bruma del horizonte al verde hondo de cerca), con matas sueltas y poco contraste; el perfil
             // del horizonte, con las palmeras de açaí del icono detrás.
             canvas.FillBand(HorizonY - 1f, Height, VectorCanvas.Paint.Vertical(LandTop, LandLow, HorizonY, Height));
-            DrawPalm(canvas, BrandEmblem.PalmA, Width * 0.09f, HorizonY + 3f, 56f);
-            DrawPalm(canvas, BrandEmblem.PalmB, Width * 0.27f, HorizonY + 3f, 42f);
-            DrawPalm(canvas, BrandEmblem.PalmA, Width * 0.95f, HorizonY + 3f, 34f);
+            for (int p = 0; p < PalmGroup.Length; p++)
+            {
+                DrawPalm(canvas, PalmGroup[p], Width * PalmX[p], HorizonY + 3f, PalmHeightDp[p]);
+            }
+
             DrawLand(canvas);
 
             // El cauce, como en la propuesta A del icono: la selva de la orilla (una franja verde con su borde de copas), la línea

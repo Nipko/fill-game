@@ -6,8 +6,8 @@ namespace AF.Presentation
     /// <summary>
     /// Piezas por código de la pantalla de arranque con la marca v2 (añadido de D-051, 2026-10-25; D-045 «El río que se tiñe»;
     /// D-003 «Selva brillante premium»): lo que hay alrededor del emblema (<c>BrandEmblem</c>), con la paleta del icono v2
-    /// (<c>docs/art/marca-oficial/v2/generar.py</c>): el follaje y el matorral en silueta del primer plano. Arte final por código (D-050, D-052): sale en todos los builds. Cada llamada crea una textura nueva, que
-    /// es de quien la pide.
+    /// (<c>docs/art/marca-oficial/v2/generar.py</c>): el follaje y el matorral en silueta del primer plano. Arte final por código
+    /// (D-050, D-052): sale en todos los builds. Cada llamada crea una textura nueva, que es de quien la pide.
     /// </summary>
     public static class BootSplashArt
     {
@@ -73,13 +73,13 @@ namespace AF.Presentation
             }
         }
 
-        // Una hoja desde (x, y) dp. Solo ovadas: las lanceoladas de ProceduralArt.DrawLeaf dan NaN en la punta (el seno de π es un
-        // negativo diminuto) y ese NaN borra una línea de lo pintado antes en la misma textura., con el ángulo deg (0 = derecha, 90 = arriba), largo y ancho en dp.
+        // Una hoja desde (x, y) dp, con el ángulo deg (0 = derecha, 90 = arriba), largo y ancho en dp. Solo ovadas: las lanceoladas
+        // de ProceduralArt.DrawLeaf dan NaN en la punta (el seno de π es un negativo diminuto) y ese NaN borra una línea de lo
+        // pintado antes en la misma textura.
         private static void Leaf(PixelCanvas pc, float k, float x, float y, float deg, float length, float width, float bend, LeafShape shape, Color dark, Color light, int seed)
         {
             float a = deg * Mathf.Deg2Rad;
             ProceduralArt.DrawLeaf(pc, new Vector2(x * k, y * k), new Vector2(Mathf.Cos(a), Mathf.Sin(a)), length * k, width * k, bend, shape, dark, light, k, seed);
         }
-
     }
 }

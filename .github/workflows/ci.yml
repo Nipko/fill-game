@@ -2,7 +2,8 @@
 # Aprobado por el dueno en D-033 (Q-T5: lo crea build-release, sin secretos propios, y el dueno aprueba el merge;
 # Q-T7: cobertura >= 80 % con coverlet solo en dotnet test). Reglas: .claude/rules/ci.md.
 #
-#   core          cada PR y main: dotnet build -warnaserror, dotnet test y tools/validate_schema.py. Sin Unity ni
+#   core          cada PR y main: dotnet build -warnaserror, dotnet test, tools/validate_schema.py y el arte de la marca
+#                 del arranque al dia (exportar.py --unity-emblem/--unity-wordmark --check). Sin Unity ni
 #                 licencia (unos 3-5 min).
 #   coverage      cobertura >= 80 % de lineas sobre AF.Core y AF.Solver (coverlet.msbuild), en main y en los PR que
 #                 tocan el nucleo o dotnet/: instrumentado, dotnet test tarda unas 13 veces mas (19 min frente a 1,5 en
@@ -79,6 +80,17 @@ jobs:
 
       - name: validate_schema no cambia el ejemplo de 08 sec. 4.1
         run: git diff --exit-code -- tools/out/schema_example_08_4_1.json
+
+      # Arte de la marca del arranque (anadido de D-051): el emblema y el nombre que dibuja el juego salen de generar.py; un
+      # cambio de la identidad sin regenerarlos no pasa. El nombre necesita la fuente del juego (LFS: solo ese archivo).
+      - name: fuente del logo (LFS, un archivo)
+        run: git lfs pull --include="Assets/_Project/Art/Fonts/Baloo2-ExtraBold.ttf"
+
+      - name: emblema de la marca al dia (exportar.py --unity-emblem --check)
+        run: python docs/art/marca-oficial/v2/exportar.py --unity-emblem Assets/_Project/Scripts/Presentation/BrandEmblem.Generated.cs --check
+
+      - name: nombre del logo al dia (exportar.py --unity-wordmark --check)
+        run: python docs/art/marca-oficial/v2/exportar.py --unity-wordmark Assets/_Project/Scripts/Presentation/BrandWordmark.Generated.cs --check
 
   coverage:
     name: cobertura (>= 80 % en AF.Core y AF.Solver)

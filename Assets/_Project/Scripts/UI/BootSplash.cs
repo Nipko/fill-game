@@ -185,6 +185,7 @@ namespace AF.UI
         private bool _sceneBuilt;
         private bool _reduceMotion;
         private float _revealMs = -1f;
+        private bool _skipNextDelta;
         private float _clockMs;
         private bool _disposed;
 
@@ -333,6 +334,9 @@ namespace AF.UI
         /// <summary>El rectángulo del chorro (dp, desde arriba a la izquierda).</summary>
         public Rect StreamRect => _emblem.DpRect(BrandEmblemArt.Stream);
 
+        /// <summary>Las cajas de las palmeras del horizonte (dp, desde arriba a la izquierda).</summary>
+        public Rect[] PalmRects => _emblem.Scene.PalmRects();
+
         /// <summary>El punto del río donde cae el chorro (dp).</summary>
         public Vector2 ImpactPoint => _emblem.Scene.Impact;
 
@@ -455,7 +459,16 @@ namespace AF.UI
             {
                 PrepareWorld();
             }
-            else if (_revealMs >= 0f && _revealMs < RevealMs)
+
+            // El fotograma en que se hizo el mundo (o el siguiente a PrepareWorld) trae en su tiempo lo que costó hacerlo: no se
+            // cuenta, ni para el gesto de TiTino ni para el fundido. El segundo de sloth_wake cuenta desde que empieza el fundido.
+            if (_skipNextDelta)
+            {
+                _skipNextDelta = false;
+                dtMs = 0f;
+            }
+
+            if (_revealMs >= 0f && _revealMs < RevealMs)
             {
                 _revealMs = Mathf.Min(RevealMs, _revealMs + dtMs);
                 SetReveal(Ease(_revealMs / RevealMs));
@@ -469,7 +482,8 @@ namespace AF.UI
         /// <summary>
         /// Hace el mundo ya quitada la intro, con el velo aún opaco (la pantalla sigue siendo el último fotograma de la intro), para
         /// que su coste no se coma el segundo de <c>sloth_wake</c>: GameBootstrap lo llama cuando va a esperar, antes de medir la
-        /// espera. Si no se llama, lo hace el primer <see cref="Tick"/> tras la intro. No hace nada con la intro a la vista ni dos veces.
+        /// espera. Si no se llama, lo hace el primer <see cref="Tick"/> tras la intro. El <see cref="Tick"/> siguiente no avanza nada
+        /// (su tiempo es el de hacer el mundo). No hace nada con la intro a la vista ni dos veces.
         /// </summary>
         public void PrepareWorld()
         {
@@ -482,6 +496,7 @@ namespace AF.UI
             Layout();
             _revealMs = _reduceMotion ? RevealMs : 0f;
             SetReveal(_reduceMotion ? 1f : 0f);
+            _skipNextDelta = true;
         }
 
         /// <summary>Arranca la animación de la intro, con Reducir movimiento ya resuelto (no hace nada sin intro).</summary>
@@ -616,7 +631,6 @@ namespace AF.UI
             {
                 BrandEmblemArt old = _emblem;
                 _emblem = BrandEmblemArt.Create(w, h, _canvas.Scale);
-                _intro?.Layout(_emblem);
                 old.Dispose();
             }
 
