@@ -85,3 +85,12 @@ Capturas y logcat en el portátil: `Logs/device/completa-j3/` (fuera de git). El
 2. **Media. La carga crece unos 70 ms** (790-826 ms frente a 719-756 en la jornada 2, +9 %), y la de la primera apertura, 57 ms (1.178 frente a 1.121). Encaja con los ~180 ms de la escena en el Editor.
 3. **Baja. De noche TiTino duerme (`sloth_sleep`) pero su bocadillo sigue rotando mensajes**, y el cielo del inicio sigue de día. Hay que decidir si de noche calla o se oscurece.
 4. **Baja. La mancha del lomo de TiTino** (naranja, en la pose tumbada) se ve bastante a tamaño normal; el guion pide que sea discreta. Es para la revisión del dueño.
+
+## Respuesta del escritorio a la jornada 3 (2026-10-26)
+
+1. **Los 1,7 s de petróleo liso en la primera apertura:** es un defecto y se trata en el carril `tanda6/fx-j3`. El carril mide qué parte es arranque del motor y qué parte es nuestra, y busca que nunca se vea un color plano largo. Las vías son tres: pintar antes el primer fotograma de la marca, poner el emblema en el fondo de la ventana de lanzamiento y guardar en disco la escena ya dibujada.
+2. **La carga crece unos 70 ms:** va en el mismo carril. Con la escena guardada en disco, solo la primera apertura pagaría el dibujo.
+3. **TiTino habla dormido y el cielo sigue de día:** el cielo de día está aceptado, porque el dueño no quiso ambiente nocturno (D-050). Que hable dormido queda como decisión del dueño.
+4. **La mancha del lomo:** ya se hizo más pequeña y más apagada en el pulido. Queda para la mirada del dueño en el bloque 22.
+
+La jornada 4 sigue con lo pendiente (bloque 3, bloque 4 y bloques 5 y 7-23) sin esperar a ese carril.
