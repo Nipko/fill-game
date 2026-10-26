@@ -179,6 +179,15 @@ namespace AF.Tests.EditMode
             AssertFinite(ProceduralArt.BuildFruitAtlasCanvas(), "atlas de frutas");
         }
 
+        [Test]
+        public void HojaPalm_HasNoNonFinitePixels()
+        {
+            // La hoja de palma de la Hoja (cerrada y abierta): en la última muestra (t = 1) sin(π) es un negativo diminuto y su
+            // potencia fraccionaria daba NaN en el medio ancho y en el envés de la punta.
+            AssertFinite(ProceduralArt.BuildHojaPalmCanvas(), "hoja de palma cerrada");
+            AssertFinite(ProceduralArt.DrawHojaFlat(), "hoja de palma abierta");
+        }
+
         private static void AssertWidth(LeafShape shape, float u)
         {
             float w = ProceduralArt.LeafWidthAt(shape, u);

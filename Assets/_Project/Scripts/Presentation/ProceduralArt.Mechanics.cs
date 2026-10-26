@@ -591,7 +591,7 @@ namespace AF.Presentation
                 {
                     float t = i / (float)steps;
                     Vector2 p = Quad(a, c, b, t);
-                    float w = halfWidth * Mathf.Pow(Mathf.Sin(Mathf.PI * t), 0.75f);
+                    float w = halfWidth * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * t)), 0.75f);
                     if (pass == 0)
                     {
                         pc.FillCircle(p.x, p.y - (w * 0.22f), w, fold);
@@ -610,7 +610,7 @@ namespace AF.Presentation
                 Vector2 p = Quad(a, c, b, t);
                 Vector2 tangent = (Quad(a, c, b, Mathf.Min(1f, t + 0.01f)) - Quad(a, c, b, Mathf.Max(0f, t - 0.01f))).normalized;
                 var normal = new Vector2(-tangent.y, tangent.x);
-                float w = halfWidth * Mathf.Pow(Mathf.Sin(Mathf.PI * t), 0.75f);
+                float w = halfWidth * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * t)), 0.75f);
                 Vector2 up = p + (normal * w * 0.8f) + (tangent * w * 0.35f);
                 Vector2 down = p - (normal * w * 0.9f) + (tangent * w * 0.35f);
                 pc.FillCapsule(p.x, p.y, up.x, up.y, 0.7f * k, crease);

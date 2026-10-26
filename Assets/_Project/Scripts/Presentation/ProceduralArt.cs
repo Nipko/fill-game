@@ -911,7 +911,7 @@ namespace AF.Presentation
                 for (int x = 0; x < w; x++)
                 {
                     float t = (y + 0.5f) / h; // 0 abajo (cálamo), 1 punta
-                    float half = 10.5f * Mathf.Pow(Mathf.Sin(Mathf.PI * Mathf.Clamp01((t - 0.12f) / 0.88f)), 0.7f);
+                    float half = 10.5f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * Mathf.Clamp01((t - 0.12f) / 0.88f))), 0.7f);
                     float off = (x + 0.5f) - 12f;
                     float edge = (Mathf.Abs(off) - half);
                     float cov = t > 0.12f ? PixelCanvas.Coverage(edge) : 0f;
