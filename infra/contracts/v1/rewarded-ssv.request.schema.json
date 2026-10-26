@@ -1,35 +1,62 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.invalid/af/v1/rewarded-ssv.request.schema.json",
-  "title": "rewardedSsv: parámetros de la query del callback S2S",
-  "description": "08 §10.1 y §10.2: MAX llama con user_id = UID y custom_data = placement|nonce. La firma va en event_id y event_token: la Lambda (F2-6) los exige y comprueba event_token = hex(SHA-256(event_id + clave S2S)) [NV: formato de MAX, functions/rewarded-ssv/maxSignature.ts]; sin ellos responde 403 bad_signature. Se admiten parámetros extra de texto porque los fija la URL configurada en el panel de MAX (infra/README.md).",
+  "title": "rewardedSsv: parámetros de la query del callback SSV de AdMob",
+  "description": "08 §10.1 y §10.2; D-049: AdMob llama con GET con user_id = UID y custom_data = placement|nonce (los fija el cliente con ServerSideVerificationOptions; sin UID no van) y, al final y en este orden, signature y key_id. La Lambda verifica la firma ECDSA P-256 / SHA-256 sobre la consulta cruda hasta antes de &signature= con la clave pública de Google del key_id (functions/rewarded-ssv/admobSignature.ts); sin firma válida responde 403 bad_signature. Después, solo acepta los bloques recompensados propios del entorno (ad_unit en la lista blanca AF_ADMOB_AD_UNITS, -c admobRewardedAdUnits): las claves de Google son las mismas para todos los editores. Un ad_unit ajeno o ausente, o la falta de user_id o custom_data (recompensado sin UID, prueba de la URL desde la consola), responde 200 ignored sin escribir ni gastar cupo. Se admiten parámetros extra de texto por si AdMob añade alguno.",
   "type": "object",
   "required": [
-    "user_id",
-    "custom_data"
+    "transaction_id",
+    "timestamp",
+    "signature",
+    "key_id"
   ],
   "properties": {
-    "user_id": {
-      "$ref": "common.schema.json#/$defs/firebaseUid"
+    "ad_network": {
+      "description": "Id de la red que sirvió el anuncio (en AdMob, un número).",
+      "type": "string",
+      "maxLength": 64
+    },
+    "ad_unit": {
+      "description": "Bloque de anuncios: su número (2877105387) o, por si llegara así, el id completo (ca-app-pub-<editor>/<número>). Solo valen los de la lista blanca del entorno; ajeno o ausente → 200 ignored.",
+      "type": "string",
+      "maxLength": 64
     },
     "custom_data": {
       "description": "placement|nonce (08 §10.1).",
       "type": "string",
       "pattern": "^[a-z0-9_]{1,40}\\|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
     },
-    "network": {
+    "reward_amount": {
       "type": "string",
-      "maxLength": 64
+      "maxLength": 32
     },
-    "event_id": {
-      "description": "Macro {EVENT_ID} de MAX: id único del evento de recompensa [NV].",
+    "reward_item": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "timestamp": {
+      "description": "Momento de la recompensa, epoch en ms. Más de 24 h atrás o más de 10 min en el futuro → 400 request_expired.",
+      "type": "string",
+      "pattern": "^[0-9]{1,16}$"
+    },
+    "transaction_id": {
+      "description": "Id único de la recompensa: queda atado a un único (user_id, nonce); otro par con el mismo id → 403.",
       "type": "string",
       "pattern": "^[A-Za-z0-9._:-]{1,256}$"
     },
-    "event_token": {
-      "description": "Macro {EVENT_TOKEN} de MAX: SHA-256 en hexadecimal de event_id + clave S2S [NV].",
+    "user_id": {
+      "description": "UID de Firebase Auth. Si falta (o falta custom_data), 200 ignored.",
+      "$ref": "common.schema.json#/$defs/firebaseUid"
+    },
+    "signature": {
+      "description": "Firma ECDSA en DER, base64url; penúltimo parámetro.",
       "type": "string",
-      "pattern": "^[0-9a-fA-F]{64}$"
+      "pattern": "^[A-Za-z0-9_-]{16,512}={0,2}$"
+    },
+    "key_id": {
+      "description": "Id de la clave pública de verifier-keys.json; último parámetro.",
+      "type": "string",
+      "pattern": "^[0-9]{1,20}$"
     }
   },
   "additionalProperties": {

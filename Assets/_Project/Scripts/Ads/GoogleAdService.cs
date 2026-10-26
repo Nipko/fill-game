@@ -91,8 +91,9 @@ namespace AF.Ads
         bool IsReady(GmaAdKind kind);
 
         /// <summary>
-        /// Muestra el anuncio de <paramref name="kind"/>. En los recompensados, antes fija <c>ServerSideVerificationOptions</c> con
-        /// <paramref name="userId"/> (si no es null) y <paramref name="customData"/> (08 §10.2).
+        /// Muestra el anuncio de <paramref name="kind"/>. En los recompensados con <paramref name="customData"/>, antes fija
+        /// <c>ServerSideVerificationOptions</c> con <paramref name="userId"/> y <paramref name="customData"/> (08 §10.2; D-049). Sin
+        /// <paramref name="customData"/> (null: sin UID, sin backend) no fija nada.
         /// </summary>
         void Show(GmaAdKind kind, string? userId, string? customData);
 
@@ -171,8 +172,10 @@ namespace AF.Ads
     /// <item><b>No personalizados:</b> con <c>npa</c> de nuestra pantalla (13-17, sin consentimiento de anuncios personalizados o sin
     /// país), cada petición lleva <c>npa=1</c>. Con el perfil <c>ump</c> de 18+ deciden las cadenas TCF de UMP.</item>
     /// <item><b>Precarga según el nivel</b> y reintentos con espera exponencial, como con MAX (<see cref="MaxAdService"/>).</item>
-    /// <item><b>SSV (08 §10.2):</b> antes de cada recompensado, <c>ServerSideVerificationOptions</c> con <c>user_id</c> = UID de
-    /// Firebase Auth (si lo hay) y <c>custom_data = placement|nonce</c> (<see cref="AdRewardCustomData"/>). <see cref="AdOutcome.Rewarded"/>
+    /// <item><b>SSV (08 §10.2; D-049):</b> antes de cada recompensado, si hay UID de Firebase Auth, <c>ServerSideVerificationOptions</c>
+    /// con <c>user_id</c> = ese UID (el mismo que valida el JWT de <c>restoreLedger</c>) y <c>custom_data = placement|nonce</c>
+    /// (<see cref="AdRewardCustomData"/>); AdMob los devuelve firmados a <c>/v1/ssv</c>, que anota el nonce para ese UID. Sin UID
+    /// (sin backend) no se fija nada ni hay nonce: la recompensa sigue como hoy, solo provisional. <see cref="AdOutcome.Rewarded"/>
     /// es la concesión provisional; la confirma el servidor (<c>restoreLedger</c>).</item>
     /// <item><b>Ingresos:</b> cada <c>OnAdPaid</c> sale por <see cref="Impression"/> (<c>ad_impression</c> con <c>ad_platform</c> = AdMob).</item>
     /// </list>
@@ -239,7 +242,7 @@ namespace AF.Ads
         /// <summary>Los últimos ajustes aplicados (null antes de la primera decisión).</summary>
         public AdConsentSettings? Consent { get; private set; }
 
-        /// <summary>El nonce del último recompensado pedido (null si aún no hubo).</summary>
+        /// <summary>El nonce del último recompensado pedido con SSV (null si aún no hubo o si se mostró sin UID, sin SSV).</summary>
         public string? LastRewardNonce { get; private set; }
 
         /// <summary>La ubicación del último recompensado pedido.</summary>
@@ -339,10 +342,16 @@ namespace AF.Ads
             if (kind == GmaAdKind.Rewarded)
             {
                 string? uid = _uid();
-                userId = string.IsNullOrEmpty(uid) ? null : uid;
-                string nonce = _newNonce();
-                customData = AdRewardCustomData.Format(placement, nonce);
-                LastRewardNonce = nonce;
+                LastRewardNonce = null;
+                if (!string.IsNullOrEmpty(uid))
+                {
+                    // Solo con UID: el servidor ata el nonce a ese UID; sin él, el callback no casaría con restoreLedger.
+                    string nonce = _newNonce();
+                    userId = uid;
+                    customData = AdRewardCustomData.Format(placement, nonce);
+                    LastRewardNonce = nonce;
+                }
+
                 LastRewardPlacement = placement;
             }
 

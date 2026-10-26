@@ -3,7 +3,7 @@
 // por si alguien los pasa por error.
 import { createHash } from 'node:crypto';
 
-const FORBIDDEN = /^(uid|user_id|token|purchase_token|purchasetoken|code|request_token|authorization|x-firebase-appcheck|private_key|key|secret|event_token|assertion|access_token|ip)$/i;
+const FORBIDDEN = /^(uid|user_id|token|purchase_token|purchasetoken|code|request_token|authorization|x-firebase-appcheck|private_key|key|secret|event_token|signature|assertion|access_token|ip)$/i;
 
 type Fields = Record<string, unknown>;
 

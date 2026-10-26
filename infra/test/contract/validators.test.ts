@@ -7,6 +7,7 @@ import {
   parseDeleteConfirm,
   parseDeleteRequest,
   parseRestoreLedger,
+  hasSsvIdentity,
   parseSsvQuery,
   parseVerifyPurchase,
 } from '../../functions/shared/validate.ts';
@@ -19,8 +20,9 @@ const PARSERS: Record<string, (body: Record<string, unknown>) => unknown> = {
   leagueWins: parseRequest,
   verifyPurchase: parseVerifyPurchase,
   restoreLedger: parseRestoreLedger,
-  rewardedSsv: (b) => parseSsvQuery(b as Record<string, string>),
-  rewardedSsvPost: (b) => parseSsvQuery(b as Record<string, string>),
+  // Como el handler: sin user_id o custom_data el callback es válido y se responde ignored sin leer más.
+  rewardedSsv: (b) => (hasSsvIdentity(b as Record<string, string>) ? parseSsvQuery(b as Record<string, string>) : 'ignored'),
+  rewardedSsvPost: (b) => (hasSsvIdentity(b as Record<string, string>) ? parseSsvQuery(b as Record<string, string>) : 'ignored'),
   deleteAccount: parseAccountDelete,
   deleteRequest: parseDeleteRequest,
   deleteConfirm: parseDeleteConfirm,

@@ -36,8 +36,7 @@ namespace AF.Backend.Contract
         private static readonly Regex AccountCodeRe = new Regex(@"\A[0-7][0-9A-HJKMNP-TV-Z]{25}\z", Options);
         private static readonly Regex RequestTokenRe = new Regex(@"\A[A-Za-z0-9_-]{43}\z", Options);
         private static readonly Regex ItemIdRe = new Regex(@"\A[a-z0-9_]{1,40}\z", Options);
-        private static readonly Regex EventIdRe = new Regex(@"\A[A-Za-z0-9._:-]{1,256}\z", Options);
-        private static readonly Regex EventTokenRe = new Regex(@"\A[0-9a-fA-F]{64}\z", Options);
+        private static readonly Regex TransactionIdRe = new Regex(@"\A[A-Za-z0-9._:-]{1,256}\z", Options);
         private static readonly Regex CustomDataRe = new Regex(
             @"\A[a-z0-9_]{1,40}\|[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z", Options);
 
@@ -82,9 +81,8 @@ namespace AF.Backend.Contract
         public static bool IsObfuscatedAccountId(string? value) =>
             value != null && value.Length >= 1 && value.Length <= ObfuscatedAccountIdMaxLength;
 
-        internal static bool IsEventId(string? value) => value != null && EventIdRe.IsMatch(value);
-
-        internal static bool IsEventToken(string? value) => value != null && EventTokenRe.IsMatch(value);
+        /// <summary><c>transaction_id</c> del SSV de AdMob (D-049).</summary>
+        internal static bool IsTransactionId(string? value) => value != null && TransactionIdRe.IsMatch(value);
 
         internal static bool IsCustomData(string? value) => value != null && CustomDataRe.IsMatch(value);
 

@@ -339,16 +339,60 @@ namespace AF.Ads.Tests
         }
 
         [Test]
-        public void Rewarded_WithoutUid_GoesWithoutUserId()
+        public void Rewarded_WithoutUid_SetsNoSsv_AndStillRewardsProvisionally()
         {
             var rig = new Rig { Uid = null };
             rig.Decide(AgeBand.Adult, ads: true);
             rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
 
-            rig.Consent.Show(AdPlacement.Hint, _ => { });
+            var outcomes = new List<AdOutcome>();
+            rig.Consent.Show(AdPlacement.Hint, outcomes.Add);
 
             Assert.That(rig.Port.Calls, Does.Contain("show:rewarded:nouser"));
+            Assert.That(rig.Port.LastUserId, Is.Null, "sin UID no va user_id");
+            Assert.That(rig.Port.LastCustomData, Is.Null, "sin UID no se fija SSV (D-049)");
+            Assert.That(rig.Google.LastRewardNonce, Is.Null, "sin SSV no hay nonce que confirmar");
+            Assert.That(rig.Google.LastRewardPlacement, Is.EqualTo(AdPlacement.Hint));
+
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.RewardReceived);
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Closed);
+
+            Assert.That(outcomes, Is.EqualTo(new List<AdOutcome> { AdOutcome.Rewarded }), "el premio sigue como hoy (provisional)");
+        }
+
+        [Test]
+        public void Rewarded_EmptyUid_IsLikeNoUid()
+        {
+            var rig = new Rig { Uid = string.Empty };
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
+
+            rig.Consent.Show(AdPlacement.Hint, _ => { });
+
             Assert.That(rig.Port.LastUserId, Is.Null);
+            Assert.That(rig.Port.LastCustomData, Is.Null);
+        }
+
+        [Test]
+        public void Rewarded_UidThatArrivesLater_IsUsedOnTheNextShow()
+        {
+            var rig = new Rig { Uid = null };
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
+            rig.Consent.Show(AdPlacement.Hint, _ => { });
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.RewardReceived);
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Closed);
+            Assert.That(rig.Port.LastCustomData, Is.Null);
+
+            rig.Uid = "kT3x9QeVb2Rz8LmN4pWs7YcA1dF5";
+            rig.Clock.Advance(TimeSpan.FromMinutes(10));
+            rig.Google.Tick();
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
+            rig.Consent.Show(AdPlacement.Hint, _ => { });
+
+            Assert.That(rig.Port.LastUserId, Is.EqualTo("kT3x9QeVb2Rz8LmN4pWs7YcA1dF5"), "el UID se lee en cada recompensado");
+            Assert.That(rig.Port.LastCustomData, Is.EqualTo("rv_hint|" + Nonce));
+            Assert.That(rig.Google.LastRewardNonce, Is.EqualTo(Nonce));
         }
 
         [Test]

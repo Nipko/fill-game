@@ -78,7 +78,7 @@ Las reglas de cadencia, topes y cooldowns siguen en `AdPolicy` (05 §6; 08 §9).
 - **Orden de los callbacks:** si `OnAdReceivedRewardEvent` llega después de `OnAdHiddenEvent`, se espera `MaxAdService.RewardGrace` (1,5 s [P]); sin recompensa, `Skipped`. Un `Hidden` repetido o una recompensa tras el cierre no conceden dos veces. Al volver de segundo plano con un anuncio aún pendiente, si MAX no avisa en `ResumeGrace` (3 s [P]), se suelta (con la recompensa solo si llegó). Los márgenes corren en `GameBootstrap.TickAds`, cada fotograma, sin asignaciones mientras no toca.
 - **`SetUserId` es global en MAX:** desde el primer recompensado, el UID acompaña a todas las peticiones de MAX, no solo al SSV [NV: qué envía AppLovin en cada petición; lo revisa el abogado]. Está así en la web y en 08 §13.3.
 - **Pendiente (F3-4, `unity-gameplay-dev`):** registrar cada concesión con su nonce (`LocalRevocation.RegisterProvisional`, que hoy nadie llama) para que `restoreLedger` la confirme o la revoque a las 24 h. Se activa cuando el SSV esté configurado en el panel de MAX; si no, todo se revocaría. `MaxAdService.LastRewardNonce` y `LastRewardPlacement` dan el nonce de la última concesión.
-- El dueño configura en el panel de MAX la URL S2S de `/v1/ssv` y la clave en Secrets Manager (`AF_SECRET_MAX_SSV`; `infra/README.md`).
+- ~~El dueño configura en el panel de MAX la URL S2S de `/v1/ssv` y la clave en Secrets Manager (`AF_SECRET_MAX_SSV`; `infra/README.md`).~~ **Retirado por D-049:** `/v1/ssv` verifica ahora el SSV de AdMob (firma ECDSA de Google, sin secreto); el secreto `af-<env>/max-ssv-key` y `maxSignature.ts` ya no existen (`docs/dev/anuncios-admob.md` §6). Si MAX volviera a servir, haría falta otra vez su verificación.
 
 ## 7. Adaptadores (pendientes de aprobación)
 
@@ -148,6 +148,6 @@ Fila de AppLovin MAX en 08 §13.3 al día. La web (`infra/web/src/content/*/priv
      - vincular la tienda cuando la app esté en Play;
      - la línea de AdMob en `app-ads.txt` (`google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0`), que se publica con la de AppLovin;
      - el App ID en el juego y los bloques en MAX, con la integración del adaptador de AdMob (§7).
-3. Panel de MAX: la URL S2S del SSV (`/v1/ssv` de la API de dev) y su clave en Secrets Manager.
+3. ~~Panel de MAX: la URL S2S del SSV (`/v1/ssv` de la API de dev) y su clave en Secrets Manager.~~ Ya no aplica (D-049): el SSV es el de AdMob (`infra/README.md` §5 bis).
 4. Decidir los permisos de §8 y la lista de adaptadores de §7.
 5. Probar en el teléfono con unidades de prueba (modo de prueba de MAX, dispositivo de prueba en el panel), nunca con clics propios en anuncios reales.

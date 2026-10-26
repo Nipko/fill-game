@@ -18,7 +18,7 @@ function labelOf(resource: unknown): string {
   const text = JSON.stringify(resource);
   const table = /PublishOutputFnGetAtt([A-Za-z]+?)[0-9A-F]{8}Arn/.exec(text);
   if (table) return text.includes('/index/by_uid') ? `${table[1]}/by_uid` : table[1];
-  const secret = /"Ref":"(PlayServiceAccount|FirebaseAdmin|MaxSsvKey)[0-9A-F]{8}"/.exec(text);
+  const secret = /"Ref":"(PlayServiceAccount|FirebaseAdmin)[0-9A-F]{8}"/.exec(text);
   if (secret) return `secret:${secret[1]}`;
   if (/Logs[0-9A-F]{8}/.test(text)) return 'logs';
   return text;
@@ -105,10 +105,16 @@ describe.each([
     expect(JSON.stringify(json).includes('AF_FAKE_PLAY_VERIFIER')).toBe(envName !== 'prod');
   });
 
-  it('tres secretos sin valor en la plantilla', () => {
+  it('rewardedSsv recibe la lista blanca de bloques de AdMob del entorno (D-049)', () => {
+    const fn = resourcesOfType(json, 'AWS::Lambda::Function').find(([, p]) => p.FunctionName === `af-${envName}-rewarded-ssv`);
+    const vars = ((fn?.[1].Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
+    expect(vars.AF_ADMOB_AD_UNITS).toBe(envName === 'prod' ? '2877105387' : '2877105387,5224354917');
+  });
+
+  it('dos secretos sin valor en la plantilla (sin el de MAX: el SSV de AdMob usa claves públicas, D-049)', () => {
     const secrets = resourcesOfType(json, 'AWS::SecretsManager::Secret');
     expect(secrets.map(([, p]) => p.Name).sort()).toEqual(
-      ['firebase-admin-service-account', 'max-ssv-key', 'play-service-account'].map((n) => `af-${envName}/${n}`),
+      ['firebase-admin-service-account', 'play-service-account'].map((n) => `af-${envName}/${n}`),
     );
     for (const [, p] of secrets) {
       expect(p.SecretString).toBeUndefined();
@@ -145,7 +151,6 @@ describe.each([
       RewardedSsv: {
         Rewards: ['dynamodb:PutItem'],
         RateLimits: ['dynamodb:ConditionCheckItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
-        'secret:MaxSsvKey': ['secretsmanager:GetSecretValue'],
       },
       DeleteAccount: {
         LeaguePlayers: ['dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:DeleteItem'],

@@ -113,13 +113,11 @@ namespace AF.Ads.Google
                     return;
                 }
 
-                var ssv = new ServerSideVerificationOptions { CustomData = customData ?? string.Empty };
-                if (userId != null)
+                // SSV de AdMob (08 §10.2; D-049): solo con UID y nonce; sin ellos no se fija nada (el callback llegaría vacío).
+                if (customData != null && userId != null)
                 {
-                    ssv.UserId = userId;
+                    ad.SetServerSideVerificationOptions(new ServerSideVerificationOptions { UserId = userId, CustomData = customData });
                 }
-
-                ad.SetServerSideVerificationOptions(ssv);
                 ad.Show(_ => Enqueue(() => Listener?.OnAdEvent(GmaAdKind.Rewarded, GmaAdEvent.RewardReceived)));
             }
             else

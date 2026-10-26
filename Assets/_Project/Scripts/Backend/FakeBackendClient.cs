@@ -113,7 +113,8 @@ namespace AF.Backend
         public void ClearPending(string token) => _pendingTokens.Remove(token);
 
         /// <summary>
-        /// Simula el callback S2S de MAX (<c>/v1/ssv</c>): confirma el nonce. Un nonce repetido devuelve <c>duplicate</c>.
+        /// Simula el callback SSV de AdMob (<c>/v1/ssv</c>, D-049): confirma el nonce. Un nonce repetido devuelve <c>duplicate</c>;
+        /// sin identidad, <c>ignored</c> (la lista blanca de <c>ad_unit</c> y la firma solo las comprueba la Lambda).
         /// </summary>
         public SsvResponse ReceiveSsv(SsvCallback callback)
         {
@@ -122,7 +123,12 @@ namespace AF.Backend
                 throw new ArgumentNullException(nameof(callback));
             }
 
-            return _confirmedNonces.Add(callback.Nonce) ? SsvResponse.Ok : SsvResponse.Duplicate;
+            if (!callback.HasIdentity)
+            {
+                return SsvResponse.Ignored; // sin user_id o custom_data, como la Lambda: nada que anotar
+            }
+
+            return _confirmedNonces.Add(callback.Nonce!) ? SsvResponse.Ok : SsvResponse.Duplicate;
         }
 
         /// <summary>

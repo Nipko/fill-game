@@ -3,7 +3,10 @@
 import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import { SignJWT, createLocalJWKSet, exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import type { CryptoKey as JoseKey, JWTVerifyGetKey } from 'jose';
+import { generateKeyPairSync, sign } from 'node:crypto';
+import type { KeyObject } from 'node:crypto';
 import type { HttpEvent } from '../../functions/shared/http.ts';
+import type { VerifierKeySource } from '../../functions/rewarded-ssv/admobSignature.ts';
 import type { SecretSource } from '../../functions/shared/secrets.ts';
 
 export const UID = 'kT3x9QeVb2Rz8LmN4pWs7YcA1dF5';
@@ -17,13 +20,15 @@ export function httpEvent(opts: {
   uid?: string;
   headers?: Record<string, string>;
   query?: Record<string, string>;
+  /** Consulta cruda tal cual llega (si falta, se arma con `query`). */
+  rawQuery?: string;
 }): HttpEvent {
   const [method, path] = opts.routeKey.split(' ');
   return {
     version: '2.0',
     routeKey: opts.routeKey,
     rawPath: path,
-    rawQueryString: new URLSearchParams(opts.query ?? {}).toString(),
+    rawQueryString: opts.rawQuery ?? new URLSearchParams(opts.query ?? {}).toString(),
     headers: opts.headers ?? {},
     queryStringParameters: opts.query,
     isBase64Encoded: false,
@@ -142,4 +147,47 @@ export async function appCheckIssuer(projectId = 'amazon-fill-dev', projectNumbe
       .sign(over.foreignKey ? other.privateKey : privateKey);
   };
   return { keySet, sign, projectId, projectNumber };
+}
+
+/**
+ * Firmante del SSV de AdMob de prueba: un par EC P-256 generado en el test (nunca una clave real). `query` arma la consulta
+ * como AdMob (los parámetros en el orden dado, `signature` y `key_id` al final) y firma con ECDSA/SHA-256 (DER, base64url)
+ * todo lo anterior a `&signature=`. `keys` sirve la clave pública por `keyId`; `pem` y `keysJson` imitan verifier-keys.json.
+ */
+export function admobSigner(keyId = '3335741209') {
+  const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  const pem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
+  const signRaw = (message: string, key: KeyObject = privateKey): string =>
+    sign('sha256', Buffer.from(message, 'utf8'), { key, dsaEncoding: 'der' }).toString('base64url');
+  const message = (params: Array<[string, string]>): string => new URLSearchParams(params).toString();
+  const query = (params: Array<[string, string]>, opts: { keyId?: string; key?: KeyObject } = {}): string => {
+    const m = message(params);
+    return `${m}&signature=${signRaw(m, opts.key)}&key_id=${opts.keyId ?? keyId}`;
+  };
+  const known = new Map<string, KeyObject>([[keyId, publicKey]]);
+  const keys: VerifierKeySource & { lookups: string[] } = {
+    lookups: [],
+    get(id: string) {
+      this.lookups.push(id);
+      return Promise.resolve(known.get(id));
+    },
+  };
+  const keysJson = (extra: Array<{ keyId: number; pem: string }> = []) => ({ keys: [{ keyId: Number(keyId), pem, base64: '' }, ...extra] });
+  return { keyId, privateKey, publicKey, pem, signRaw, message, query, keys, keysJson };
+}
+
+/** Parámetros de un callback SSV de AdMob como los manda Google (orden alfabético), sin firma. */
+export function admobParams(over: Record<string, string | undefined> = {}, now = NOW): Array<[string, string]> {
+  const base: Record<string, string | undefined> = {
+    ad_network: '5450213213286189855',
+    ad_unit: '2877105387',
+    custom_data: 'rescue|6f1c2a4e-8b3d-4f5a-9c7e-1d2b3a4c5e6f',
+    reward_amount: '1',
+    reward_item: 'Reward',
+    timestamp: String(now),
+    transaction_id: 'tx-1',
+    user_id: UID,
+    ...over,
+  };
+  return Object.entries(base).filter((e): e is [string, string] => e[1] !== undefined);
 }

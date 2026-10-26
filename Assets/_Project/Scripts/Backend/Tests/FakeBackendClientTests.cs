@@ -71,6 +71,7 @@ namespace AF.Backend.Tests
             var fake = new FakeBackendClient();
             Assert.That(fake.ReceiveSsv(new SsvCallback("kT3x9QeVb2Rz8LmN4pWs7YcA1dF5", "rescue", Nonce1)).IsDuplicate, Is.False);
             Assert.That(fake.ReceiveSsv(new SsvCallback("kT3x9QeVb2Rz8LmN4pWs7YcA1dF5", "rescue", Nonce1)).IsDuplicate, Is.True);
+            Assert.That(fake.ReceiveSsv(SsvCallback.WithoutIdentity("tx-1")).IsIgnored, Is.True, "sin user_id ni custom_data: ignored (D-049)");
 
             RestoreLedgerResponse r = Sync<RestoreLedgerResponse>(cb => fake.RestoreLedger(new RestoreLedgerRequest(new[] { Nonce1, Nonce2 }), cb));
             Assert.That(r.ConfirmedNonces, Is.EqualTo(new[] { Nonce1 }));

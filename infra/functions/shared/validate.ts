@@ -79,13 +79,44 @@ export interface SsvParams {
   readonly uid: string;
   readonly placement: string;
   readonly nonce: string;
+  /** `ad_network` de AdMob (id de la red que sirvió el anuncio). */
   readonly network?: string;
-  /** Parámetros de la firma de MAX ([NV]; rewarded-ssv/maxSignature.ts). */
-  readonly eventId?: string;
-  readonly eventToken?: string;
+  /** `transaction_id` de AdMob: id único de la recompensa, de un solo uso (sustituye al `event_id` de MAX). */
+  readonly transactionId: string;
+  /** `timestamp` de AdMob: epoch en ms de la recompensa. */
+  readonly timestampMs: number;
 }
 
-/** Parámetros de la query del callback de MAX (rewarded-ssv.request.schema.json). */
+const TRANSACTION_ID_RE = /^[A-Za-z0-9._:-]{1,256}$/;
+/** `ad_unit`: el número del bloque o, por si llegara así, el id completo `ca-app-pub-<editor>/<número>`. */
+const AD_UNIT_RE = /^(?:ca-app-pub-\d{1,20}\/)?(\d{1,20})$/;
+
+/** Número del bloque de AdMob de un `ad_unit` (en cualquiera de las dos formas), o undefined si no tiene forma de bloque. */
+export function adUnitNumber(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return AD_UNIT_RE.exec(value)?.[1];
+}
+
+/** Lista blanca de bloques (`AF_ADMOB_AD_UNITS`, separados por comas) reducida a sus números. */
+export function parseAdUnitList(raw: string): Set<string> {
+  const out = new Set<string>();
+  for (const part of raw.split(',')) {
+    const n = adUnitNumber(part.trim());
+    if (n) out.add(n);
+  }
+  return out;
+}
+const TIMESTAMP_RE = /^[0-9]{1,16}$/;
+
+/**
+ * ¿Trae el callback los datos que fija el cliente (`user_id` y `custom_data`)? Sin ellos (un recompensado mostrado sin UID,
+ * o la prueba de la URL de la consola de AdMob) no hay nada que anotar.
+ */
+export function hasSsvIdentity(q: Record<string, string | undefined>): boolean {
+  return !!q.user_id && !!q.custom_data;
+}
+
+/** Parámetros del callback SSV de AdMob ya verificados (rewarded-ssv.request.schema.json; D-049). */
 export function parseSsvQuery(q: Record<string, string | undefined>): SsvParams {
   for (const [k, v] of Object.entries(q)) {
     if (v !== undefined && v.length > 2048) throw badRequest(`Parámetro demasiado largo: ${k.slice(0, 40)}.`);
@@ -96,6 +127,15 @@ export function parseSsvQuery(q: Record<string, string | undefined>): SsvParams 
   const placement = sep >= 0 ? cd.slice(0, sep) : '';
   const nonce = sep >= 0 ? cd.slice(sep + 1) : '';
   if (!PATTERNS.placement.test(placement) || !PATTERNS.nonce.test(nonce)) throw badRequest('custom_data no válido.');
-  if (q.network !== undefined && q.network.length > 64) throw badRequest('network no válido.');
-  return { uid: q.user_id, placement, nonce, network: q.network, eventId: q.event_id, eventToken: q.event_token };
+  if (q.ad_network !== undefined && q.ad_network.length > 64) throw badRequest('ad_network no válido.');
+  if (!matches(q.transaction_id, TRANSACTION_ID_RE)) throw badRequest('transaction_id no válido.');
+  if (!matches(q.timestamp, TIMESTAMP_RE)) throw badRequest('timestamp no válido.');
+  return {
+    uid: q.user_id,
+    placement,
+    nonce,
+    network: q.ad_network,
+    transactionId: q.transaction_id,
+    timestampMs: Number(q.timestamp),
+  };
 }

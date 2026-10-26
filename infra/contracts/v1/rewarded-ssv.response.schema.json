@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.invalid/af/v1/rewarded-ssv.response.schema.json",
   "title": "rewardedSsv: respuesta 200",
-  "description": "Un nonce repetido devuelve 200 con duplicate (idempotente; plan F2-6) para que MAX no reintente.",
+  "description": "Un nonce repetido (o una cuenta borrada) devuelve 200 con duplicate sin escribir (idempotente; plan F2-6). Un callback con firma válida pero sin user_id o custom_data (recompensado mostrado sin UID, o la prueba de la URL desde la consola de AdMob) devuelve 200 con ignored sin escribir (D-049).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,7 +12,8 @@
     "status": {
       "enum": [
         "ok",
-        "duplicate"
+        "duplicate",
+        "ignored"
       ]
     }
   }

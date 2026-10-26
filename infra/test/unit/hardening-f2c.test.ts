@@ -15,11 +15,10 @@ import { realIntegrityVerifier } from '../../functions/shared/runtime.ts';
 import { createHandler as deleteHandler } from '../../functions/delete-account/handler.ts';
 import { createHandler as restoreHandler } from '../../functions/restore-ledger/handler.ts';
 import { createHandler as ssvHandler } from '../../functions/rewarded-ssv/handler.ts';
-import { expectedEventToken } from '../../functions/rewarded-ssv/maxSignature.ts';
 import { ONCE_RESERVATION_S, createHandler as verifyHandler } from '../../functions/verify-purchase/handler.ts';
 import { createHandler as voidedHandler } from '../../functions/voided-purchases-job/handler.ts';
 import { validator } from '../contract/ajv.ts';
-import { MapSecrets, NOW, OTHER_UID, UID, httpEvent, res } from './fixtures.ts';
+import { NOW, OTHER_UID, UID, admobParams, admobSigner, httpEvent, res } from './fixtures.ts';
 import { MemDb, TABLES, transactionCanceled } from './memdb.ts';
 
 const errResponse = validator('error.schema.json');
@@ -255,15 +254,11 @@ describe('F2c-4 · carreras del borrado', () => {
   });
 
   it('rewardedSsv: la marca de borrado llega entre isDeleted y la escritura → 200 sin fila en rewards', async () => {
-    const secrets = new MapSecrets();
-    secrets.values.set('arn:max', 'clave');
+    const signer = admobSigner();
     db.hookNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_REWARDS, fn: markDeletedNow };
     const r = res(
-      await ssvHandler(() => ({ ddb: db.client, secrets, env: { ...TABLES, AF_SECRET_MAX_SSV: 'arn:max' }, now: () => NOW }))(
-        httpEvent({
-          routeKey: 'GET /v1/ssv',
-          query: { user_id: UID, custom_data: `rescue|${N1}`, event_id: 'ev', event_token: expectedEventToken('ev', 'clave') },
-        }),
+      await ssvHandler(() => ({ ddb: db.client, keys: signer.keys, env: { ...TABLES, AF_ADMOB_AD_UNITS: '2877105387' }, now: () => NOW }))(
+        httpEvent({ routeKey: 'GET /v1/ssv', rawQuery: signer.query(admobParams({ custom_data: `rescue|${N1}` })) }),
       ),
     );
     expect(r.status).toBe(200);
