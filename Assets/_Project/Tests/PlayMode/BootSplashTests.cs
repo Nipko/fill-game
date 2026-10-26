@@ -47,6 +47,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             BootSplash.EnabledOverride = null;
+            BrandIntro.EnabledOverride = null;
             BootSplash.SlothEnabledOverride = null;
             BootSplash.TestStartupOffsetMs = 0;
             GameScreen.SimulatedScreen = null;
@@ -424,6 +425,13 @@ namespace AF.Tests.PlayMode
             Assert.That(report.SplashMs, Is.GreaterThanOrEqualTo(report.LoadMs + report.HoldMs - 1));
             Assert.That(report.FirstTouchMs, Is.EqualTo(-1L), "aún no ha tocado");
 
+            // Añadido de D-051 del 2026-10-26: la intro entera (unos 2,5 s) y, después, el segundo de sloth_wake; el primer toque en
+            // el nivel 1 sigue muy por debajo de los 20 s (06 §2.2, 09 §6).
+            BrandIntroReport intro = boot.IntroInfo!;
+            Assert.That(intro.IntroMs, Is.GreaterThanOrEqualTo((long)BrandIntro.AnimMs));
+            Assert.That(report.SplashMs, Is.GreaterThanOrEqualTo(intro.IntroMs + BootSplashTiming.WakeMinVisibleMs - 50), "TiTino, después de la intro");
+            Assert.That(report.SplashEndMs, Is.LessThan(20000L - 10000L), "con margen para la edad, el consentimiento y la intro del nivel");
+
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level), "primera apertura: directamente el nivel 1");
             Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(1));
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro).Or.EqualTo(FlowPhase.Loading), "la intro empieza ahora, tras la pantalla");
@@ -455,6 +463,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator LaterOpen_Idle_NoAddedWait_ThenTheLobby()
         {
             BootSplash.EnabledOverride = true;
+            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera su 2,5 s (BrandIntroTests)
             MapArtRule.ForceProvisional = true;
             Watch();
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(4)));
@@ -482,6 +491,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator WithoutAnyArt_FirstOpen_NoSloth_NoWait()
         {
             BootSplash.EnabledOverride = true;
+            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera su 2,5 s (BrandIntroTests)
             MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
             ArtSlots.ForceProcedural = true;
             Watch();
@@ -505,6 +515,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator FirstOpen_WakeDoesNotFitInTwentySeconds_CutsWithoutWaiting_AndNotesIt()
         {
             BootSplash.EnabledOverride = true;
+            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera su 2,5 s (BrandIntroTests)
             MapArtRule.ForceProvisional = true;
             BootSplash.TestStartupOffsetMs = 15000; // la carga termina pasados los 15 s: el segundo ya no cabe (09 §6)
             Watch();
@@ -537,6 +548,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator SlothSwitchedOff_FirstOpen_NoSloth_NoWait()
         {
             BootSplash.EnabledOverride = true;
+            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera su 2,5 s (BrandIntroTests)
             BootSplash.SlothEnabledOverride = false; // ui_sloth_enabled apagado en remoto (08 §9; D-016)
             MapArtRule.ForceProvisional = true; // aunque haya arte
             Assert.That(BootSplash.SlothExpected, Is.False);

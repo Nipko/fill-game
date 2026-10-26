@@ -2,6 +2,7 @@
 using System;
 using AF.GameFlow;
 using AF.Presentation;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -62,7 +63,9 @@ namespace AF.UI
     /// <summary>
     /// Pantalla de arranque (06 §2.2: «Splash de 1 pantalla (río + logotipo) con TiTino colgado de su embaúba»; D-016, T2-A;
     /// tarea TI6d), rehecha con la marca v2 a petición del dueño (añadido de D-051, 2026-10-25; D-045 «El río que se tiñe»), en su
-    /// propio lienzo, por encima de todo, y <b>sin texto</b> (06 §2.1, regla 3: ni un componente de texto; el nombre es un dibujo).
+    /// propio lienzo, por encima de todo, y <b>sin texto</b> (06 §2.1, regla 3: ni un componente de texto; el nombre es un dibujo),
+    /// salvo «Cargando…» (clave <c>boot_loading</c>, con <see cref="WaitDots"/>), que solo sale si la carga dura más que la intro
+    /// entera (añadido de D-051 del 2026-10-26).
     /// Es el último fotograma de la intro de la marca (<see cref="BrandIntro"/>) con su mundo alrededor:
     /// <list type="bullet">
     /// <item><b>El Amazonas que se tiñe</b> (<see cref="BrandEmblemArt"/>, <see cref="BrandRiverScene"/>): el río de agua blanca
@@ -134,6 +137,8 @@ namespace AF.UI
         // rama sobre la zona segura, el aire entre TiTino y el horizonte cuando sobra sitio, el follaje de las esquinas (lado máximo
         // y aire con el nombre), el matorral y las luciérnagas.
         private const float WordmarkMarginDp = 32f;
+        private const float LoadingSp = 15f;
+        private const float LoadingGapDp = 14f;
         private const float WordmarkGapDp = 16f;
         private const float WordmarkGapShortDp = 10f;
         private const float BranchTopDp = 36f;
@@ -177,6 +182,12 @@ namespace AF.UI
         private Image? _foreground;
         private float _foregroundKey;
         private Image? _wordmark;
+        private float _wordmarkFloor;
+        private string? _loadingText;
+        private TextMeshProUGUI? _loadingLabel;
+        private WaitDots? _loadingDots;
+        private double _loadingSince = -1.0;
+        private long _loadingMs;
         private Image[]? _fireflyGlow;
         private Image[]? _fireflyCore;
         private Image? _branch;
@@ -456,6 +467,17 @@ namespace AF.UI
             if (_intro != null && _intro.Visible)
             {
                 _intro.Tick();
+                if (_wordmark == null && (_intro.ClockMs >= BrandIntro.WordmarkFromMs - 400f || _intro.ReduceMotion))
+                {
+                    EnsureWordmark(); // si GameBootstrap no lo hizo antes en un hueco de la carga
+                }
+
+                UpdateWordmarkAlpha();
+                if (_intro.Done)
+                {
+                    ShowLoading(dtMs); // la intro se vio entera y la carga sigue
+                }
+
                 return;
             }
 
@@ -479,6 +501,7 @@ namespace AF.UI
             }
 
             _clockMs += dtMs;
+            UpdateWordmarkAlpha();
             Pulse();
             _sloth?.Tick(dtMs);
         }
@@ -510,17 +533,26 @@ namespace AF.UI
             {
                 _reduceMotion = reduceMotion;
                 _intro?.Begin(reduceMotion);
+                if (reduceMotion && _intro != null)
+                {
+                    EnsureWordmark(); // quieta y entera: con el nombre desde ya
+                }
             }
         }
 
         /// <summary>Quita la intro al terminar la carga y devuelve lo que se vio (null sin intro o si ya se quitó).</summary>
         public BrandIntroReport? EndIntro()
         {
+            float wordmark = _intro != null && _intro.Visible ? _intro.WordmarkAlpha : 0f;
             BrandIntroReport? report = _intro?.End();
             if (report != null)
             {
+                HideLoading();
+                _wordmarkFloor = wordmark; // el nombre no se apaga al quitarse la intro: sigue como estaba
+                UpdateWordmarkAlpha();
                 report.EmblemMs = _firstEmblemMs;
                 report.EmblemCache = _firstEmblemCache;
+                report.LoadingMs = _loadingMs;
             }
 
             return report;
@@ -531,6 +563,12 @@ namespace AF.UI
         /// bloques de la carga solo mientras tanto (jornada 3 de D-051); con Reducir movimiento o ya en su último fotograma, ninguno.
         /// </summary>
         public bool IntroAnimating => !_disposed && _intro != null && _intro.Animating;
+
+        /// <summary>
+        /// La intro sigue a la vista y aún no se vio entera (<see cref="BrandIntro.Done"/>): el arranque la espera al terminar la carga
+        /// (añadido de D-051 del 2026-10-26). False sin intro.
+        /// </summary>
+        public bool IntroPending => !_disposed && _intro != null && _intro.Visible && !_intro.Done;
 
         /// <summary>Lleva la intro al instante de ahora, sin contar fotograma (justo antes de dejar pintar uno; <see cref="BrandIntro.Refresh"/>).</summary>
         public void RefreshIntro()
@@ -621,8 +659,128 @@ namespace AF.UI
                 _fireflyCore[i] = UiBuilder.Image("Firefly" + i, _over, glow, ProceduralArt.FireflyCore);
             }
 
-            _wordmark = UiBuilder.Image("Wordmark", _over, null, Color.white);
+            EnsureWordmark();
             Pulse();
+        }
+
+        /// <summary>
+        /// Hace el nombre «Tintalú» si aún no está (añadido de D-051 del 2026-10-26: la intro acaba con el emblema y el nombre, así
+        /// que va por encima de la intro y entra con su reloj, <see cref="BrandIntro.WordmarkAlpha"/>). GameBootstrap lo pide en un
+        /// hueco de la carga para que su coste no caiga en mitad de la animación; si no, lo hace el primer <see cref="Tick"/> que lo
+        /// necesita.
+        /// </summary>
+        public void PrepareWordmark()
+        {
+            if (!_disposed)
+            {
+                EnsureWordmark();
+            }
+        }
+
+        private void EnsureWordmark()
+        {
+            if (_wordmark != null)
+            {
+                return;
+            }
+
+            _wordmark = UiBuilder.Image("Wordmark", _canvas.Root, null, Color.white);
+            _wordmark.transform.SetAsLastSibling(); // por encima de la intro y del primer plano
+            RenderWordmark(WordmarkBox);
+            UpdateWordmarkAlpha();
+        }
+
+        // El nombre: con la intro a la vista, el de su reloj; después, el que tenía al quitarse o el de la entrada del mundo.
+        private void UpdateWordmarkAlpha()
+        {
+            if (_wordmark == null)
+            {
+                return;
+            }
+
+            float a = IntroVisible ? _intro!.WordmarkAlpha : Mathf.Max(_wordmarkFloor, Reveal);
+            if (Mathf.Abs(_wordmark.color.a - a) > 0.0001f)
+            {
+                _wordmark.color = new Color(1f, 1f, 1f, a);
+            }
+        }
+
+        /// <summary>
+        /// El texto de «Cargando…» (clave <c>boot_loading</c>, ya en el idioma del jugador): GameBootstrap lo da en cuanto hay textos.
+        /// Sin él, la pantalla no enseña nada aunque la carga se alargue.
+        /// </summary>
+        public void SetLoadingText(string text)
+        {
+            _loadingText = text;
+            if (_loadingLabel != null)
+            {
+                _loadingLabel.text = text;
+            }
+        }
+
+        /// <summary>«Cargando…» está a la vista (la intro se vio entera y la carga sigue).</summary>
+        public bool LoadingVisible => _loadingLabel != null && _loadingLabel.gameObject.activeSelf;
+
+        /// <summary>«Cargando…» (null hasta que sale por primera vez; tests y capturas).</summary>
+        public TextMeshProUGUI? LoadingLabel => _loadingLabel;
+
+        /// <summary>Los puntos de espera de «Cargando…» (null hasta que sale).</summary>
+        internal WaitDots? LoadingDots => _loadingDots;
+
+        // Con la intro ya vista entera y la carga aún en marcha: «Cargando…» bajo el nombre, con sus puntos (quietos con Reducir
+        // movimiento). Se crea la primera vez.
+        private void ShowLoading(float dtMs)
+        {
+            if (_loadingText == null)
+            {
+                return;
+            }
+
+            if (_loadingLabel == null)
+            {
+                _loadingLabel = UiBuilder.Label("Loading", _canvas.Root, TextStyle.PlainBold, _loadingText, LoadingSp, WordmarkBottom, TextAlignmentOptions.Center);
+                _loadingLabel.raycastTarget = false;
+                _loadingLabel.gameObject.SetActive(false);
+                _loadingDots = new WaitDots("LoadingDots", _canvas.Root, _sprites[0]!, WordmarkBottom);
+            }
+
+            if (!_loadingLabel.gameObject.activeSelf)
+            {
+                _loadingLabel.gameObject.SetActive(true);
+                _loadingLabel.transform.SetAsLastSibling();
+                _loadingDots!.Root.SetAsLastSibling();
+                _loadingSince = Time.realtimeSinceStartupAsDouble;
+                PlaceLoading();
+            }
+
+            _loadingDots!.Tick(dtMs);
+        }
+
+        private void HideLoading()
+        {
+            if (_loadingLabel != null && _loadingLabel.gameObject.activeSelf)
+            {
+                _loadingLabel.gameObject.SetActive(false);
+                _loadingDots!.Hide();
+                _loadingMs += (long)((Time.realtimeSinceStartupAsDouble - _loadingSince) * 1000.0);
+                _loadingSince = -1.0;
+            }
+        }
+
+        // «Cargando…» y sus puntos, centrados bajo el nombre.
+        private void PlaceLoading()
+        {
+            if (_loadingLabel == null || !_loadingLabel.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            Rect box = WordmarkBox;
+            float w = Mathf.Min(_canvas.Width - (2f * WordmarkMarginDp), WordmarkMaxDp);
+            float y = box.yMax + LoadingGapDp;
+            float h = LoadingSp * UiBuilder.TextScale * 1.5f;
+            UiBuilder.Place(_loadingLabel.rectTransform, (_canvas.Width - w) * 0.5f, y, w, h);
+            _loadingDots!.Show((_canvas.Width - WaitDots.WidthDp) * 0.5f, y + h + 6f, _reduceMotion);
         }
 
         // Rasteriza el nombre a la escala de la pantalla (otra vez solo si cambia).
@@ -671,10 +829,15 @@ namespace AF.UI
             UiBuilder.Place(_veilHalo.rectTransform, halo.anchoredPosition.x, -halo.anchoredPosition.y, halo.sizeDelta.x, halo.sizeDelta.y);
             _intro?.Layout(_emblem);
 
+            if (_wordmark != null)
+            {
+                RenderWordmark(WordmarkBox);
+                PlaceLoading();
+            }
+
             if (_sceneBuilt)
             {
                 Rect box = WordmarkBox;
-                RenderWordmark(box);
 
                 // El primer plano (el matorral y el follaje de las esquinas, de una pieza), tan alto como deja el nombre.
                 float fol = Mathf.Clamp(h - box.yMax - FoliageGapDp, 120f, Mathf.Min(FoliageDp, w * 0.64f));
@@ -743,6 +906,7 @@ namespace AF.UI
             _veil.alpha = 1f - alpha;
             _veil.gameObject.SetActive(alpha < 1f);
             _overGroup.alpha = alpha;
+            UpdateWordmarkAlpha();
         }
 
         private static float Ease(float t)

@@ -1671,6 +1671,7 @@ namespace AF.UI
             }
 
             MarkBootStep(StepCatalog);
+            _splash?.PrepareWordmark(); // el nombre de la intro, en un hueco de la carga y no en mitad de la animación
             if (IntroFrameDue())
             {
                 yield return null;
@@ -1681,6 +1682,7 @@ namespace AF.UI
             _deviceLocale = LaunchOptions.DeviceLocaleOverride ?? AndroidDeviceLocale.ForPlatform();
             _deviceTag = _deviceLocale.LanguageTag ?? string.Empty;
             LocResolution locale = SetUpTexts(profile.Settings.Language, _deviceTag);
+            _splash?.SetLoadingText(Loc.T(BootLoadingKey)); // «Cargando…», por si la carga dura más que la intro (añadido de D-051 del 2026-10-26)
             StampProfileIdentity(profile, firstRun, locale, _deviceTag); // B8: first_app_version, country_first y locale (08 §4.3)
 
             // Cartera, progreso, nivel en curso, anuncios y tienda guardan el mismo perfil por el lote: dentro de una acción del
@@ -1772,6 +1774,12 @@ namespace AF.UI
             _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
             Seasons = LoadSeasons(seasonTable); // tabla de temporada del cliente (pregunta 32 b; SE2)
             _screen.Seasons = Seasons; // la LUT de aguas altas o bajas del fondo del tablero
+            MarkBootStep(StepGame);
+            if (IntroFrameDue())
+            {
+                yield return null; // la pantalla del juego, oculta y sin enlazar: el flujo aún no existe (Update no hace nada)
+            }
+
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
             _lobby.RiverStops = RiverStops; // el sitio, «Faltan N» y la ventanita de casa en el inicio (M2.1)
             _lobby.Seasons = Seasons; // la LUT de temporada del fondo del inicio, como el tablero (SE2)
@@ -2395,12 +2403,23 @@ namespace AF.UI
 
         // Fin de la carga con la pantalla de arranque delante (tarea TI6d): en la primera apertura con TiTino a la vista
         // (sloth_wake), se espera a que su gesto lleve BootSplashTiming.WakeMinVisibleMs a la vista si cabe en el objetivo de
-        // 20 s; en las demás, y sin TiTino, se corta ya (no se añade espera). Deja el informe y la sonda AF_STATE boot.
+        // 20 s; en las demás, y sin TiTino, se corta ya (no se añade espera). Antes, la intro de la marca se ve entera (añadido de
+        // D-051 del 2026-10-26): si la carga acabó antes, se espera a que termine. Deja el informe y la sonda AF_STATE boot.
         private IEnumerator FinishSplash(bool firstOpen)
         {
             BootSplash splash = _splash!;
             long loadMs = splash.AgeMs;
-            ReportIntro(splash.EndIntro()); // D-051: la intro se quita ya, al terminar la carga, vaya por donde vaya
+
+            // Añadido de D-051 del 2026-10-26: la intro se ve entera y a su ritmo aunque la carga acabe antes (es la marca); si la
+            // carga duró más, ya está en su último fotograma con «Cargando…» y se quita ahora.
+            bool waited = false;
+            while (_splash != null && splash.IntroPending)
+            {
+                waited = true;
+                yield return null;
+            }
+
+            ReportIntro(splash.EndIntro());
             long sinceStartup = SinceStartupMs();
             bool wake = splash.SlothVisible && splash.Sloth!.Pose == SlothPoseId.Wake;
             long need = BootSplashTiming.NeedMs(firstOpen, wake, (long)splash.SlothClockMs);
@@ -2422,7 +2441,7 @@ namespace AF.UI
 
             // El reloj se lee una sola vez al cortar. Sin espera, el corte es el fin de la carga: hold_ms = 0 y splash_ms = load_ms
             // por construcción, aunque el reloj real haya pasado de milisegundo entre dos lecturas.
-            long endMs = hold > 0 ? splash.AgeMs : loadMs;
+            long endMs = hold > 0 || waited ? splash.AgeMs : loadMs;
             long endSinceStartup = hold > 0 ? SinceStartupMs() : sinceStartup;
             _bootReport = new BootReport
             {

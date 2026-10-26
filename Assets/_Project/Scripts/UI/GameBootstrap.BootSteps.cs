@@ -8,10 +8,12 @@ namespace AF.UI
     /// <summary>
     /// La carga con la intro de la marca a la vista (jornada 3 de la prueba completa, 2026-10-26; añadido de D-051):
     /// <list type="bullet">
-    /// <item><b>Fotogramas para la intro:</b> entre los bloques de la carga, mientras la intro anima
-    /// (<see cref="BootSplash.IntroAnimating"/>), se deja pintar un fotograma con la intro al instante de ahora
-    /// (<see cref="IntroFrameDue"/>): antes solo llegaban a pintarse 2-3 y la animación no se veía moverse. Con Reducir movimiento,
-    /// con la animación ya en su último fotograma o sin intro, ninguno: no alarga nada que no se vea.</item>
+    /// <item><b>Fotogramas para la intro:</b> entre los bloques de la carga, mientras la intro está a la vista
+    /// (<see cref="BootSplash.IntroVisible"/>), se deja pintar un fotograma con la intro al instante de ahora
+    /// (<see cref="IntroFrameDue"/>): antes solo llegaban a pintarse 2-3 y la animación no se veía moverse. Desde el añadido de D-051
+    /// del 2026-10-26 la intro se ve entera (unos 2,5 s) aunque la carga acabe antes, así que repartirla no alarga el arranque. Los
+    /// huecos van donde el estado es seguro: antes de crear las pantallas que aún no están enlazadas (Update no hace nada hasta que
+    /// existe el flujo).</item>
     /// <item><b>La sonda <c>AF_PERF boot_steps</c></b> (solo en desarrollo): desde que se creó la pantalla, cuándo acabó cada bloque
     /// de la carga, qué costó la escena de la marca y si salió de la caché, cuándo arrancó Unity el Awake y la pantalla, y cuándo se
     /// pintó su primer fotograma. Sirve para separar en el teléfono el arranque del motor (antes del Awake, no depende del juego)
@@ -26,11 +28,15 @@ namespace AF.UI
         private const int StepServices = 2;
         private const int StepSloth = 3;
         private const int StepAds = 4;
-        private const int StepScreens = 5;
-        private const int StepSystems = 6;
-        private static readonly string[] BootStepNames = { "profile", "catalog", "services", "sloth", "ads", "screens", "systems" };
+        private const int StepGame = 5;
+        private const int StepScreens = 6;
+        private const int StepSystems = 7;
+        private static readonly string[] BootStepNames = { "profile", "catalog", "services", "sloth", "ads", "game", "screens", "systems" };
 
-        private readonly long[] _bootSteps = { -1, -1, -1, -1, -1, -1, -1 };
+        /// <summary>Clave de «Cargando…» bajo el nombre, si la carga dura más que la intro (añadido de D-051 del 2026-10-26).</summary>
+        internal const string BootLoadingKey = UiText.Keys.BootLoading;
+
+        private readonly long[] _bootSteps = { -1, -1, -1, -1, -1, -1, -1, -1 };
         private long _awakeMs = -1;
         private long _splashStartMs = -1;
         private int _introYields;
@@ -53,11 +59,12 @@ namespace AF.UI
             }
         }
 
-        // ¿Toca dejar pintar un fotograma para la intro? Solo mientras anima; entonces la lleva al instante de ahora (su Tick de
-        // este fotograma fue antes del bloque) y cuenta el fotograma.
+        // ¿Toca dejar pintar un fotograma para la intro? Mientras está a la vista (añadido de D-051 del 2026-10-26: se ve entera,
+        // así que repartir la carga no alarga nada y la animación va fluida; después, los puntos de «Cargando…»); entonces la lleva
+        // al instante de ahora (su Tick de este fotograma fue antes del bloque) y cuenta el fotograma.
         private bool IntroFrameDue()
         {
-            if (_splash == null || !_splash.IntroAnimating)
+            if (_splash == null || !_splash.IntroVisible)
             {
                 return false;
             }
@@ -112,6 +119,20 @@ namespace AF.UI
         internal static string CacheId(BrandEmblemCacheResult cache)
         {
             return cache == BrandEmblemCacheResult.Hit ? "hit" : cache == BrandEmblemCacheResult.Miss ? "miss" : "off";
+        }
+    }
+
+    /// <summary>La clave de «Cargando…» de la pantalla de arranque (parcial de <see cref="UiText"/>).</summary>
+    public static partial class UiText
+    {
+        /// <summary>Parcial de <see cref="Keys"/>.</summary>
+        public static partial class Keys
+        {
+            /// <summary>
+            /// <c>boot_loading</c>: «Cargando…» bajo el nombre de la pantalla de arranque, si la carga dura más que la intro de la marca
+            /// (añadido de D-051 del 2026-10-26; <see cref="BootSplash.SetLoadingText"/>).
+            /// </summary>
+            public const string BootLoading = "boot_loading";
         }
     }
 }
