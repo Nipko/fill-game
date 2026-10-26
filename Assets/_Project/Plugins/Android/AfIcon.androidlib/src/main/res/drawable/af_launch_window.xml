@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generado por docs/art/marca-oficial/v2/exportar.py (D-051, punto 2; jornada 3): no se edita a mano.
+     Fondo de la ventana hasta el primer fotograma del juego: el icono v2 centrado sobre el petroleo, recortado en un circulo
+     de 160 dp como en la pantalla del sistema de Android 12+. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/af_brand_petroleum"/>
+    <item android:width="240dp" android:height="240dp" android:gravity="center"
+          android:drawable="@drawable/af_launcher_background"/>
+    <item android:width="240dp" android:height="240dp" android:gravity="center"
+          android:drawable="@drawable/af_launcher_foreground"/>
+    <item android:width="340dp" android:height="340dp" android:gravity="center">
+        <shape android:shape="ring" android:innerRadius="80dp" android:thickness="90dp"
+               android:useLevel="false">
+            <solid android:color="@color/af_brand_petroleum"/>
+        </shape>
+    </item>
+</layer-list>

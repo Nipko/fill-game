@@ -54,7 +54,29 @@ namespace AF.Tests.EditMode
             string values = File.ReadAllText(Res + "values/af_splash.xml");
             StringAssert.Contains("<color name=\"af_brand_petroleum\">#14444A</color>", values);
             StringAssert.Contains("<style name=\"AfLaunchTheme\" parent=\"BaseUnityGameActivityTheme\">", values);
-            StringAssert.Contains("<item name=\"android:windowBackground\">@color/af_brand_petroleum</item>", values);
+            StringAssert.Contains("<item name=\"android:windowBackground\">@drawable/af_launch_window</item>", values);
+        }
+
+        [Test]
+        public void TheWindowBackground_UntilTheFirstFrame_IsTheIconOnThePetroleum_NotAFlatColour()
+        {
+            // Jornada 3 de D-051 (observación 1): mientras arranca el motor, la ventana enseña el icono centrado, recortado en el
+            // círculo de 160 dp de la pantalla del sistema, sobre el petróleo; nunca un petróleo liso.
+            string v31 = File.ReadAllText(Res + "values-v31/af_splash.xml");
+            StringAssert.Contains("<item name=\"android:windowBackground\">@drawable/af_launch_window</item>", v31);
+            string window = File.ReadAllText(Res + "drawable/af_launch_window.xml");
+            Assert.DoesNotThrow(() => new System.Xml.XmlDocument().LoadXml(window), "XML válido");
+            StringAssert.Contains("<item android:drawable=\"@color/af_brand_petroleum\"/>", window);
+            StringAssert.Contains("android:drawable=\"@drawable/af_launcher_background\"", window);
+            StringAssert.Contains("android:drawable=\"@drawable/af_launcher_foreground\"", window);
+            StringAssert.Contains("android:width=\"240dp\" android:height=\"240dp\" android:gravity=\"center\"", window);
+            StringAssert.Contains("android:shape=\"ring\" android:innerRadius=\"80dp\" android:thickness=\"90dp\"", window);
+            StringAssert.Contains("android:useLevel=\"false\"", window, "sin él, el anillo no se pinta");
+            foreach (string dpi in new[] { "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi" })
+            {
+                Assert.That(File.Exists(Res + "drawable-" + dpi + "/af_launcher_background.png"), Is.True, dpi);
+                Assert.That(File.Exists(Res + "drawable-" + dpi + "/af_launcher_foreground.png"), Is.True, dpi);
+            }
         }
 
         [Test]
@@ -66,7 +88,7 @@ namespace AF.Tests.EditMode
             Assert.That(File.Exists(Res + "mipmap-anydpi-v26/af_launcher.xml"), Is.True);
 
             const string manifest = "Assets/Plugins/Android/LauncherManifest.xml";
-            foreach (string xml in new[] { manifest, Res + "values/af_splash.xml", Res + "values-v31/af_splash.xml" })
+            foreach (string xml in new[] { manifest, Res + "values/af_splash.xml", Res + "values-v31/af_splash.xml", Res + "drawable/af_launch_window.xml" })
             {
                 Assert.DoesNotThrow(() => new System.Xml.XmlDocument().Load(xml), xml + ": XML válido (un «--» en un comentario rompe el build)");
             }

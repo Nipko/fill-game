@@ -4011,6 +4011,20 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Carril:** `tanda6/arranque-v2`.
 - **Cómo revertir:** con una decisión nueva del dueño.
 
+### D-051, añadido del 2026-10-26: la intro de la marca se ve entera, unos 2,5 s, en cada arranque en frío
+
+- **Estado:** decidido por el dueño en el chat el 2026-10-26, tras la jornada 3 de la prueba completa en el teléfono: «cuando abro el juego la animación es muy rápida, debemos dejarla más tiempo para apreciarla; también cuando se cierra la app y se vuelve a abrir no aparece la animación, debemos dejarla: es la marca, debe durar unos segundos, y si algo mientras decimos cargando o loading…». **Sustituye** la regla de D-051 (punto 3) y de su añadido del 2026-10-25 «la intro nunca alarga la carga y se corta al terminar».
+- **Decisión** [P]:
+  1. **En cada arranque en frío** (la primera apertura y siempre que la app se cierra y se vuelve a abrir), la intro se ve **entera y a su ritmo**: la cuia vierte, el chorro cae al agua (520 ms), salen los aros (hasta 1.250 ms), el açaí tiñe el Amazonas río abajo (hasta 1.800 ms), entra el nombre «Tintalú» bajo la cuia (1.650-2.000 ms) y se sostiene el emblema hasta **2.500 ms** (`BrandIntro.AnimMs`). Nunca se corta porque la carga acabe antes: el arranque la espera.
+  2. **La carga va por debajo, repartida en fotogramas** (huecos seguros entre sus bloques: tras el perfil, el catálogo, TiTino, los anuncios y la pantalla del juego), para que la intro vaya fluida. Si la intro ya se vio entera y la carga sigue, sale **«Cargando…»** (clave `boot_loading`, es-419, en y pt-BR) con tres puntos de espera bajo el nombre, hasta que acabe; si la carga acaba antes, no se ve.
+  3. **Al volver de segundo plano** (la app no se cerró) no se repite: no hay arranque en frío ni se recarga nada.
+  4. **Reducir movimiento:** la escena entera, con el nombre, sale quieta y se sostiene 1 s (o lo que dure la carga, si es más).
+  5. El segundo de `sloth_wake` de TiTino en la primera apertura sigue **después** de la intro, como hasta ahora; con la intro, el primer toque en el nivel 1 sigue muy por debajo de los 20 s (06 §2.2, 09 §6: en el teléfono, unos 2 s de arranque del motor + 2,5 s de intro + 1 s de TiTino).
+  6. Sigue lo de la jornada 3 para la observación 1 (**nunca un petróleo liso largo** antes de la marca): el fondo de la ventana de lanzamiento lleva el icono v2 centrado, recortado en el círculo de 160 dp de la pantalla del sistema, hasta el primer fotograma del juego (`drawable/af_launch_window.xml`, generado por `exportar.py --android-xml`); el reloj de la intro cuenta desde su primer fotograma; y la escena rasterizada se guarda en una caché de disco (`BrandEmblemCache`, en `temporaryCachePath`, con clave por lienzo, densidad, huella de los datos generados y `buildGUID`) para que desde la segunda apertura se lea en vez de dibujarse (en el Editor: 180 ms dibujarla, 32 ms leerla).
+- **Sondas:** `AF_STATE brand_intro` con `anim_ms` 2.500, `cut` false (true solo si el arranque se para antes), `loading_ms` (lo que se vio «Cargando…»), y, de la jornada 3, `first_frame_ms`, `start_ms`, `emblem_ms`, `emblem_cache` y `yields`; `AF_STATE boot` con `hold_ms` que incluye la espera a la intro; y `AF_PERF boot_steps` con los bloques de la carga (`docs/dev/prototipo-v0.md`).
+- **Carril:** `tanda6/fx-j3`.
+- **Cómo revertir:** con una decisión nueva del dueño.
+
 ## D-052 · El arte por código es el final: se retira P-M5
 
 - **Fecha:** 2026-10-25. Registrada por el integrador.

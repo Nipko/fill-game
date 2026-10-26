@@ -29,6 +29,10 @@ namespace AF.Presentation
 
         private const int Samples = 260;
 
+        // Ojo: cambiar cualquier constante o color de dibujo de esta clase (el eje, las anchuras, las palmeras, la paleta) o cómo se
+        // pinta exige subir ArtVersion, para que la caché de disco de la escena (BrandEmblemCache) no sirva píxeles viejos en el
+        // Editor ni en un build con el mismo buildGUID.
+
         // Las palmeras de açaí del icono en el perfil del horizonte: cuál, dónde (fracción del ancho) y de qué alto (dp) [P].
         private static readonly int[] PalmGroup = { BrandEmblem.PalmA, BrandEmblem.PalmB, BrandEmblem.PalmA };
         private static readonly float[] PalmX = { 0.09f, 0.27f, 0.95f };
@@ -419,6 +423,103 @@ namespace AF.Presentation
         public static void ReleaseBuffers()
         {
             VectorCanvas.ReleasePool();
+        }
+
+        /// <summary>
+        /// Versión del dibujo de la escena por código (el río, la selva, la isla, los tramos del açaí): se sube a mano al cambiar
+        /// cómo se pinta, para que la caché de disco (<c>BrandEmblemCache</c>, jornada 3 de D-051) no sirva píxeles viejos en el
+        /// Editor ni en un build con el mismo <c>buildGUID</c> [P].
+        /// </summary>
+        public const int ArtVersion = 1;
+
+        /// <summary>
+        /// Con true, cada pieza que se rasteriza guarda sus píxeles para <see cref="TakeLastPixels"/> (la caché de disco de la escena,
+        /// jornada 3 de D-051). Solo en el hilo principal; quien lo enciende lo apaga.
+        /// </summary>
+        public static bool KeepPixels
+        {
+            get => VectorCanvas.KeepPixels;
+            set => VectorCanvas.KeepPixels = value;
+        }
+
+        /// <summary>Los píxeles (RGBA32, de abajo arriba, los de la textura) de la última pieza rasterizada con <see cref="KeepPixels"/>.</summary>
+        public static Color32[]? TakeLastPixels()
+        {
+            return VectorCanvas.TakeLastPixels();
+        }
+
+        private static ulong s_dataHash;
+
+        /// <summary>
+        /// Huella (FNV-1a de 64 bits) de los datos generados del emblema (<c>BrandEmblem.Generated.cs</c>, de
+        /// <c>exportar.py --unity-emblem</c>) y de <see cref="ArtVersion"/>: cambia si cambian los datos o el dibujo, y con ella la
+        /// clave de la caché de disco. Se calcula una vez.
+        /// </summary>
+        public static ulong DataHash
+        {
+            get
+            {
+                if (s_dataHash == 0UL)
+                {
+                    ulong h = 14695981039346656037UL;
+                    h = Mix(h, ArtVersion);
+                    h = Mix(h, BrandEmblem.LayerCount);
+                    h = MixAll(h, BrandEmblem.LayerGroup);
+                    h = MixAll(h, BrandEmblem.LayerClip);
+                    h = MixAll(h, BrandEmblem.LayerFirstContour);
+                    h = MixAll(h, BrandEmblem.LayerContourCount);
+                    h = MixAll(h, BrandEmblem.ContourEnds);
+                    h = MixAll(h, BrandEmblem.LayerOpacity);
+                    h = MixAll(h, BrandEmblem.LayerGradientY0);
+                    h = MixAll(h, BrandEmblem.LayerGradientY1);
+                    h = MixAll(h, BrandEmblem.LayerStops);
+                    h = MixAll(h, BrandEmblem.Points);
+                    for (int i = 0; i < BrandEmblem.LayerColors.Length; i++)
+                    {
+                        h = Mix(h, unchecked((int)BrandEmblem.LayerColors[i]));
+                    }
+
+                    s_dataHash = h == 0UL ? 1UL : h;
+                }
+
+                return s_dataHash;
+            }
+        }
+
+        private static ulong MixAll(ulong h, int[] values)
+        {
+            h = Mix(h, values.Length);
+            for (int i = 0; i < values.Length; i++)
+            {
+                h = Mix(h, values[i]);
+            }
+
+            return h;
+        }
+
+        private static ulong MixAll(ulong h, float[] values)
+        {
+            h = Mix(h, values.Length);
+            for (int i = 0; i < values.Length; i++)
+            {
+                h = Mix(h, System.BitConverter.SingleToInt32Bits(values[i]));
+            }
+
+            return h;
+        }
+
+        private static ulong Mix(ulong h, int v)
+        {
+            unchecked
+            {
+                for (int b = 0; b < 4; b++)
+                {
+                    h ^= (byte)(v >> (8 * b));
+                    h *= 1099511628211UL;
+                }
+            }
+
+            return h;
         }
 
         /// <summary>Rasteriza una pieza del icono (impacto, chorro o cuia) en su sitio sobre el río.</summary>

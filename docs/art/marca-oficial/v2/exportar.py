@@ -5,8 +5,9 @@ Uso: python exportar.py   (antes: python generar.py)
        (drawable-{m,h,xh,xxh,xxxh}dpi/af_launcher_{background,foreground,monochrome}.png: 108 dp a 1×-4×), para
        Assets/_Project/Plugins/Android/AfIcon.androidlib/src/main/res; escribe también los XML de --android-xml.
      python exportar.py --android-xml <carpeta res> [--check]   solo los XML de la pantalla del sistema (D-051, punto 2), sin
-       Chrome: values/af_splash.xml (el petróleo y el tema de arranque) y values-v31/af_splash.xml (la pantalla de Android 12+:
-       el icono adaptativo sobre el petróleo). Con --check no escribe nada: compara y sale con 1 si difieren.
+       Chrome: values/af_splash.xml (el petróleo y el tema de arranque), values-v31/af_splash.xml (la pantalla de Android 12+:
+       el icono adaptativo sobre el petróleo) y drawable/af_launch_window.xml (el fondo de la ventana hasta el primer fotograma
+       del juego: el mismo icono, centrado, sobre el petróleo). Con --check no escribe nada: compara y sale con 1 si difieren.
      python exportar.py --unity-wordmark <archivo .cs> [--check]   solo el nombre del logo para la pantalla de arranque del
        juego (añadido de D-051), sin Chrome: los contornos de «Tintalú» en Baloo 2 ExtraBold (los del logo, generar.py:
        cuerpo 300 y espaciado -0,005), aplanados en polilíneas, como datos de C# para
@@ -63,14 +64,39 @@ PETROLEO = "#14444A"
 
 # Recursos de la pantalla del sistema (D-051, punto 2). AfLaunchTheme hereda el tema de Unity (BaseUnityGameActivityTheme, de
 # unityLibrary; solo se resuelve al enlazar el lanzador) y Assets/Plugins/Android/LauncherManifest.xml se lo pone a la actividad.
-# windowBackground: el petróleo también antes de Android 12 y tras la pantalla del sistema, hasta el primer fotograma del juego.
+# windowBackground: hasta el primer fotograma del juego (antes de Android 12 y tras la pantalla del sistema), el mismo icono
+# centrado sobre el petróleo (jornada 3 de la prueba completa, 2026-10-26, observación 1: se veían ~1,7 s de petróleo liso
+# mientras arranca el motor de Unity). Para empalmar con la pantalla de Android 12+ (icono con fondo: capas de 240 dp en un
+# círculo de 160 dp), las dos capas del icono adaptativo van a 240 dp y un anillo de petróleo las recorta en un círculo de
+# 160 dp, la misma máscara que pone el sistema [P].
+ICONO_CIRCULO_DP = 160
+ICONO_CAPAS_DP = 240
+ANILLO_DP = 90  # de 80 dp de radio a 170: tapa las esquinas de las capas (120 × raíz de 2 = 170 dp)
 SPLASH_XML = {
+    os.path.join("drawable", "af_launch_window.xml"): f"""<?xml version="1.0" encoding="utf-8"?>
+<!-- Generado por docs/art/marca-oficial/v2/exportar.py (D-051, punto 2; jornada 3): no se edita a mano.
+     Fondo de la ventana hasta el primer fotograma del juego: el icono v2 centrado sobre el petroleo, recortado en un circulo
+     de {ICONO_CIRCULO_DP} dp como en la pantalla del sistema de Android 12+. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/af_brand_petroleum"/>
+    <item android:width="{ICONO_CAPAS_DP}dp" android:height="{ICONO_CAPAS_DP}dp" android:gravity="center"
+          android:drawable="@drawable/af_launcher_background"/>
+    <item android:width="{ICONO_CAPAS_DP}dp" android:height="{ICONO_CAPAS_DP}dp" android:gravity="center"
+          android:drawable="@drawable/af_launcher_foreground"/>
+    <item android:width="{2 * (ICONO_CIRCULO_DP // 2 + ANILLO_DP)}dp" android:height="{2 * (ICONO_CIRCULO_DP // 2 + ANILLO_DP)}dp" android:gravity="center">
+        <shape android:shape="ring" android:innerRadius="{ICONO_CIRCULO_DP // 2}dp" android:thickness="{ANILLO_DP}dp"
+               android:useLevel="false">
+            <solid android:color="@color/af_brand_petroleum"/>
+        </shape>
+    </item>
+</layer-list>
+""",
     os.path.join("values", "af_splash.xml"): f"""<?xml version="1.0" encoding="utf-8"?>
 <!-- Generado por docs/art/marca-oficial/v2/exportar.py (D-051, punto 2): no se edita a mano. -->
 <resources>
     <color name="af_brand_petroleum">{PETROLEO}</color>
     <style name="AfLaunchTheme" parent="BaseUnityGameActivityTheme">
-        <item name="android:windowBackground">@color/af_brand_petroleum</item>
+        <item name="android:windowBackground">@drawable/af_launch_window</item>
     </style>
 </resources>
 """,
@@ -79,7 +105,7 @@ SPLASH_XML = {
      Android 12+: el icono adaptativo v2 (la mascara redonda la pone el sistema) sobre el petroleo de la marca, sin animacion. -->
 <resources>
     <style name="AfLaunchTheme" parent="BaseUnityGameActivityTheme">
-        <item name="android:windowBackground">@color/af_brand_petroleum</item>
+        <item name="android:windowBackground">@drawable/af_launch_window</item>
         <item name="android:windowSplashScreenBackground">@color/af_brand_petroleum</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/af_launcher</item>
         <item name="android:windowSplashScreenAnimationDuration">0</item>

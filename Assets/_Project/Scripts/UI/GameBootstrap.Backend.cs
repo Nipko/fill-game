@@ -339,6 +339,8 @@ namespace AF.UI
                 return false;
             }
 
+            NoteRestoreLedger(); // tests: nunca antes de SetUpConsent (GameBootstrap.BootSteps.cs)
+
             ProfileSaveScope scope = Saves(); // la respuesta del cliente falso llega dentro; la real, en su propio lote
             bool asked;
             try

@@ -14,8 +14,17 @@ namespace AF.UI
         /// <summary>Hasta dónde llegó la animación (ms de su reloj, como mucho <see cref="BrandIntro.AnimMs"/>; <c>shown_ms</c>).</summary>
         public long ShownMs { get; internal set; }
 
-        /// <summary>La carga terminó antes que la animación y se cortó a medias (<c>cut</c>; false con Reducir movimiento).</summary>
+        /// <summary>
+        /// Se quitó antes de verse entera (<c>cut</c>): desde el añadido de D-051 del 2026-10-26 solo pasa si el arranque se para antes
+        /// (catálogo roto, banda &lt;13); en un arranque normal, siempre false (false también con Reducir movimiento).
+        /// </summary>
         public bool Cut { get; internal set; }
+
+        /// <summary>Lo que se vio «Cargando…» bajo el nombre, porque la carga duró más que la intro (ms; <c>loading_ms</c>; 0 si no salió).</summary>
+        public long LoadingMs { get; internal set; }
+
+        /// <summary>La espera a la intro tras la carga llegó a su tope de seguridad y se quitó antes (<c>wait_capped</c>; no debería).</summary>
+        public bool WaitCapped { get; internal set; }
 
         /// <summary>Fotogramas que llegaron a pintarse con la intro a la vista (<c>frames</c>).</summary>
         public int Frames { get; internal set; }
@@ -25,6 +34,24 @@ namespace AF.UI
 
         /// <summary>La animación llegó a empezar (se supo si había Reducir movimiento); false si el arranque se paró antes.</summary>
         public bool Begun { get; internal set; }
+
+        /// <summary>De la creación de la pantalla a su primer fotograma a la vista (ms reales; -1 si no llegó; <c>first_frame_ms</c>).</summary>
+        public long FirstFrameMs { get; internal set; } = -1;
+
+        /// <summary>
+        /// Desde que arrancó Unity hasta que se creó la pantalla de arranque (ms; <c>start_ms</c>): en el teléfono, el arranque del
+        /// motor que no depende del juego (salvo lo poco del Awake). Lo pone GameBootstrap; -1 sin él.
+        /// </summary>
+        public long StartMs { get; internal set; } = -1;
+
+        /// <summary>Lo que costó tener la escena de la marca (ms; dibujarla o leerla de la caché; <c>emblem_ms</c>).</summary>
+        public long EmblemMs { get; internal set; }
+
+        /// <summary>De dónde salió la escena (<c>emblem_cache</c>: <c>off</c>, <c>miss</c> o <c>hit</c>).</summary>
+        public BrandEmblemCacheResult EmblemCache { get; internal set; }
+
+        /// <summary>Fotogramas que GameBootstrap dejó pintar entre bloques de la carga para que la intro se viera moverse (<c>yields</c>).</summary>
+        public int Yields { get; internal set; }
     }
 
     /// <summary>
@@ -37,26 +64,43 @@ namespace AF.UI
     /// arranque (<see cref="BrandEmblemArt"/>, colocadas igual: <see cref="BrandEmblemImages"/>): su último fotograma es esa
     /// pantalla sin el mundo de alrededor.
     /// <list type="bullet">
-    /// <item>Va en la pantalla de arranque (<see cref="BootSplash"/>), por encima de todo lo suyo, y solo mientras el juego carga:
-    /// nunca añade espera. Al terminar la carga se corta (<see cref="End"/>) aunque la animación vaya a medias; si la carga dura más
-    /// que la animación (<see cref="AnimMs"/>, menos de 1 s), se queda en su último fotograma, quieta.</item>
-    /// <item>Su reloj es el tiempo real desde que se creó, sin tope por fotograma: la carga va en bloques síncronos largos y cada
-    /// fotograma que llega a pintarse enseña el instante que toca. Hasta <see cref="Begin"/> (cuando se sabe si hay Reducir
-    /// movimiento, con el perfil leído) sale en su primer fotograma; con Reducir movimiento, en el último, sin moverse.</item>
+    /// <item>Va en la pantalla de arranque (<see cref="BootSplash"/>), por encima de todo lo suyo, en cada arranque en frío
+    /// (añadido de D-051 del 2026-10-26, que sustituye a «nunca alarga la carga»): se ve <b>entera y a su ritmo</b>
+    /// (<see cref="AnimMs"/>, unos 2,5 s: el chorro cae, salen los aros, el açaí tiñe el río hasta <see cref="MotionMs"/> y entra
+    /// el nombre «Tintalú», <see cref="WordmarkAlpha"/>, que se sostiene), y el arranque la espera aunque la carga acabe antes
+    /// (<see cref="Done"/>). Si la carga dura más, se queda en su último fotograma y la pantalla de arranque enseña «Cargando…»
+    /// bajo el nombre hasta que acabe. Con Reducir movimiento sale quieta, entera, y se sostiene <see cref="ReduceMotionHoldMs"/>
+    /// (o lo que dure la carga). <see cref="End"/> la quita.</item>
     /// <item>No recibe toques (el fondo de la pantalla de arranque ya los traga: aún no hay nada que tocar) y no asigna memoria por
     /// fotograma. No tiene texturas propias: las de la escena son de la pantalla de arranque.</item>
     /// </list>
     /// </summary>
     public sealed class BrandIntro
     {
-        /// <summary>Duración de la animación (ms): el chorro, el impacto y el tinte río abajo (D-051: 1 s como mucho) [P].</summary>
-        public const int AnimMs = 650;
+        /// <summary>
+        /// Duración entera de la intro (ms; <c>anim_ms</c>): anima hasta <see cref="MotionMs"/>, entra el nombre y sostiene el
+        /// emblema con «Tintalú» hasta aquí. Añadido de D-051 del 2026-10-26 (el dueño: «es la marca, debe durar unos segundos»):
+        /// unos 2,5 s [P], y nunca se corta antes porque la carga acabe.
+        /// </summary>
+        public const int AnimMs = 2500;
+
+        /// <summary>Fin del movimiento: el açaí llega al primer plano (ms) [P].</summary>
+        public const int MotionMs = 1800;
 
         /// <summary>Fin del chorro: llega de la boca de la cuia al río (ms) [P].</summary>
-        public const int FallMs = 260;
+        public const int FallMs = 520;
 
         /// <summary>Fin de los aros del impacto (ms) [P].</summary>
-        public const int RippleEndMs = 560;
+        public const int RippleEndMs = 1250;
+
+        /// <summary>El nombre «Tintalú» entra bajo la cuia desde aquí (ms) [P].</summary>
+        public const int WordmarkFromMs = 1650;
+
+        /// <summary>Lo que tarda el nombre en entrar (ms) [P].</summary>
+        public const int WordmarkFadeMs = 350;
+
+        /// <summary>Con Reducir movimiento, la escena entera sale quieta y se sostiene esto (ms; o lo que dure la carga) [P].</summary>
+        public const int ReduceMotionHoldMs = 1000;
 
         /// <summary>
         /// Petróleo de la marca (D-045; D-051, punto 2): #14444A, el tono medio del cielo del icono v2. Lo repiten
@@ -70,13 +114,15 @@ namespace AF.UI
         private readonly RectTransform _root;
         private readonly Image _background;
         private readonly BrandEmblemImages _images;
-        private readonly double _origin;
+        private readonly double _createdAt;
+        private double _origin = -1.0;
         private float _tintFill;
         private bool _begun;
         private bool _reduceMotion;
         private bool _ended;
         private bool _seeked;
         private float _clockMs;
+        private float _wordmarkAlpha;
         private int _frames;
 
         /// <summary>
@@ -89,13 +135,14 @@ namespace AF.UI
         public static bool Enabled => EnabledOverride ?? true;
 
         /// <summary>
-        /// Crea la intro, ya a la vista en su primer fotograma, dentro de <paramref name="parent"/> (la pantalla de arranque). Su reloj
-        /// cuenta desde <paramref name="origin"/> (<see cref="Time.realtimeSinceStartupAsDouble"/> de cuando se creó la pantalla: el
-        /// mismo origen que <c>load_ms</c>). El halo y las piezas del emblema (<paramref name="art"/>) son de la pantalla de arranque.
+        /// Crea la intro, ya a la vista en su primer fotograma, dentro de <paramref name="parent"/> (la pantalla de arranque).
+        /// <paramref name="createdAt"/> (<see cref="Time.realtimeSinceStartupAsDouble"/> de cuando se creó la pantalla: el mismo
+        /// origen que <c>load_ms</c>) es el de <c>intro_ms</c>; el reloj de la animación cuenta desde su primer fotograma a la vista.
+        /// El halo y las piezas del emblema (<paramref name="art"/>) son de la pantalla de arranque.
         /// </summary>
-        internal BrandIntro(Transform parent, double origin, Sprite halo, BrandEmblemArt art)
+        internal BrandIntro(Transform parent, double createdAt, Sprite halo, BrandEmblemArt art)
         {
-            _origin = origin;
+            _createdAt = createdAt;
             var go = new GameObject("BrandIntro", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             _root = (RectTransform)go.transform;
@@ -133,7 +180,42 @@ namespace AF.UI
         public int Frames => _frames;
 
         /// <summary>Desde que se creó (ms reales).</summary>
-        public long AgeMs => (long)((Time.realtimeSinceStartupAsDouble - _origin) * 1000.0);
+        public long AgeMs => (long)((Time.realtimeSinceStartupAsDouble - _createdAt) * 1000.0);
+
+        /// <summary>De la creación a su primer fotograma a la vista (ms reales; -1 si aún no llegó; <c>first_frame_ms</c>).</summary>
+        public long FirstFrameMs => _origin < 0.0 ? -1L : (long)((_origin - _createdAt) * 1000.0);
+
+        /// <summary>
+        /// La animación está corriendo y aún no llegó a su último fotograma: cada fotograma pintado enseña algo nuevo (false antes de
+        /// <see cref="Begin"/>, con Reducir movimiento, al acabar, al quitarse y en las capturas con <see cref="Seek"/>).
+        /// </summary>
+        public bool Animating => !_ended && _begun && !_reduceMotion && !_seeked && _clockMs < AnimMs;
+
+        /// <summary>
+        /// La intro ya se vio entera (añadido de D-051 del 2026-10-26): su reloj llegó a <see cref="AnimMs"/> o, con Reducir
+        /// movimiento, lleva <see cref="ReduceMotionHoldMs"/> quieta desde su primer fotograma. Hasta entonces el arranque la espera
+        /// aunque la carga haya acabado; false antes de <see cref="Begin"/>.
+        /// </summary>
+        public bool Done
+        {
+            get
+            {
+                if (!_begun)
+                {
+                    return false;
+                }
+
+                if (_reduceMotion)
+                {
+                    return _origin >= 0.0 && (Time.realtimeSinceStartupAsDouble - _origin) * 1000.0 >= ReduceMotionHoldMs;
+                }
+
+                return _clockMs >= AnimMs;
+            }
+        }
+
+        /// <summary>Lo que se ve del nombre «Tintalú» (0 a 1): entra al final del movimiento; entero con Reducir movimiento.</summary>
+        public float WordmarkAlpha => _wordmarkAlpha;
 
         /// <summary>Lo teñido del río: por dónde va el açaí río abajo desde el impacto (0 sin teñir, 1 hasta el primer plano).</summary>
         public float TintFill => _tintFill;
@@ -157,6 +239,18 @@ namespace AF.UI
             Apply(reduceMotion ? AnimMs : CurrentMs());
         }
 
+        /// <summary>
+        /// Lleva la animación al instante de ahora sin contar un fotograma: GameBootstrap la llama justo antes de dejar pintar uno
+        /// entre dos bloques de la carga (el <see cref="Tick"/> de ese fotograma fue antes del bloque). Sin asignaciones.
+        /// </summary>
+        public void Refresh()
+        {
+            if (Animating)
+            {
+                Apply(CurrentMs());
+            }
+        }
+
         /// <summary>Un fotograma: avanza el reloj con el tiempo real (sin asignaciones). Quieta antes de <see cref="Begin"/>, con Reducir movimiento y tras el final.</summary>
         public void Tick()
         {
@@ -166,6 +260,11 @@ namespace AF.UI
             }
 
             _frames++;
+            if (_origin < 0.0)
+            {
+                _origin = Time.realtimeSinceStartupAsDouble; // su primer fotograma a la vista: aquí empieza su reloj
+            }
+
             if (!_begun || _reduceMotion || _seeked || _clockMs >= AnimMs)
             {
                 return;
@@ -205,6 +304,7 @@ namespace AF.UI
                 ShownMs = (long)_clockMs,
                 Cut = _begun && !_reduceMotion && _clockMs < AnimMs,
                 Frames = _frames,
+                FirstFrameMs = FirstFrameMs,
                 ReduceMotion = _reduceMotion,
                 Begun = _begun,
             };
@@ -230,6 +330,8 @@ namespace AF.UI
         private void Apply(float ms)
         {
             float t = Mathf.Clamp(ms, 0f, AnimMs);
+            float w = Mathf.Clamp01((t - WordmarkFromMs) / WordmarkFadeMs);
+            _wordmarkAlpha = w * w * (3f - (2f * w));
             _clockMs = t;
             float pour = Mathf.Clamp01(t / FallMs);
             _images.Stream.fillAmount = 1f - ((1f - pour) * (1f - pour));
@@ -241,7 +343,7 @@ namespace AF.UI
 
             // El frente del açaí recorre los tramos río abajo: cada tramo, opaco y con su frente en lengua, se enciende entero al
             // llegar el frente (nunca a medias: ni velos ni cortes rectos).
-            float spread = t <= FallMs ? 0f : Mathf.Clamp01((t - FallMs) / (AnimMs - FallMs));
+            float spread = t <= FallMs ? 0f : Mathf.Clamp01((t - FallMs) / (MotionMs - FallMs));
             float eased = 1f - Mathf.Pow(1f - spread, 1.6f);
             _tintFill = eased;
             Image[] acai = _images.Acai;
@@ -253,9 +355,16 @@ namespace AF.UI
             }
         }
 
+        // Del primer fotograma a ahora (ms); si aún no se pintó ninguno (Begin antes del primer Tick), el reloj empieza aquí.
         private float CurrentMs()
         {
-            return (float)((Time.realtimeSinceStartupAsDouble - _origin) * 1000.0);
+            double now = Time.realtimeSinceStartupAsDouble;
+            if (_origin < 0.0)
+            {
+                _origin = now;
+            }
+
+            return (float)((now - _origin) * 1000.0);
         }
     }
 }
