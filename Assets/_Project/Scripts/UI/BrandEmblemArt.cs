@@ -40,9 +40,9 @@ namespace AF.UI
         private readonly Rect[] _rects = new Rect[Count];
         private readonly float _pxPerDp;
 
-        // El paisaje (la selva, el río y la isla) se rasteriza a 2 px por dp como mucho: es blando por naturaleza y así su coste
+        // El paisaje (la selva, el río y la isla) se rasteriza a 1,75 px por dp como mucho: es blando por naturaleza y así su coste
         // antes del primer fotograma queda acotado; la cuia, el chorro y los aros, a la densidad de la pantalla [P].
-        private const float LandMaxPxPerDp = 2f;
+        private const float LandMaxPxPerDp = 1.75f;
 
         private BrandEmblemArt(float width, float height, float pxPerDp)
         {
@@ -50,19 +50,30 @@ namespace AF.UI
             Height = height;
             _pxPerDp = pxPerDp;
             float land = Mathf.Min(pxPerDp, LandMaxPxPerDp);
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             Scene = new BrandRiverScene(width, height);
+            long tScene = clock.ElapsedMilliseconds;
             Build(Base, Scene.BaseWindow, Scene.RenderBase, land);
+            long tBase = clock.ElapsedMilliseconds;
             for (int k = 0; k < BrandRiverScene.ChunkCount; k++)
             {
                 int chunk = k;
                 Build(AcaiFirst + k, Scene.ChunkWindow(k), ppd => Scene.RenderChunk(chunk, ppd), land);
             }
 
+            long tAcai = clock.ElapsedMilliseconds;
             Build(Island, Scene.IslandWindow, Scene.RenderIsland, land);
             Build(Impact, Scene.DataWindow(BrandEmblem.Impact), ppd => Scene.RenderData(BrandEmblem.Impact, ppd), pxPerDp);
             Build(Stream, Scene.DataWindow(BrandEmblem.Stream), ppd => Scene.RenderData(BrandEmblem.Stream, ppd), pxPerDp);
+            long tSmall = clock.ElapsedMilliseconds;
             Build(Cuia, Scene.DataWindow(BrandEmblem.Cuia), ppd => Scene.RenderData(BrandEmblem.Cuia, ppd), pxPerDp);
+            long tCuia = clock.ElapsedMilliseconds;
+            BrandRiverScene.ReleaseBuffers();
+            LastTimings = "escena " + tScene + " ms, base " + (tBase - tScene) + ", açaí " + (tAcai - tBase) + ", isla/aros/chorro " + (tSmall - tAcai) + ", cuia " + (tCuia - tSmall) + ", total " + tCuia;
         }
+
+        /// <summary>Lo que costó hacer la última escena, por piezas (capturas y pruebas de rendimiento).</summary>
+        public static string LastTimings { get; private set; } = string.Empty;
 
         /// <summary>La escena (geometría del río y de la cuia).</summary>
         public BrandRiverScene Scene { get; }

@@ -6,19 +6,20 @@ namespace AF.Presentation
 {
     /// <summary>
     /// Relleno de polígonos en CPU para el arte vectorial de la marca (el nombre y el emblema v2; añadido de D-051): regla no nula,
-    /// 5 submuestras por fila y cobertura exacta en horizontal. Solo en la construcción de texturas, nunca por fotograma.
+    /// 4 submuestras por fila y cobertura exacta en horizontal. Solo en la construcción de texturas, nunca por fotograma.
     /// </summary>
     internal static class VectorFill
     {
-        private const int SubRows = 5;
+        private const int SubRows = 4;
 
         /// <summary>
         /// Cobertura (0-1) de los contornos <paramref name="firstContour"/> … + <paramref name="contourCount"/> de
         /// <paramref name="points"/> (pares x, y; <paramref name="ends"/>: índice, en puntos, donde termina cada contorno), con
         /// px = <paramref name="ox"/> + x · <paramref name="s"/> y py = <paramref name="oy"/> + y · <paramref name="s"/>, en una
-        /// máscara de <paramref name="w"/> × <paramref name="h"/> con las filas de arriba abajo.
+        /// máscara de <paramref name="w"/> × <paramref name="h"/> con las filas de arriba abajo. Con <paramref name="buffer"/> de sitio
+        /// suficiente, la máscara va en él (se limpia antes): sin basura por relleno.
         /// </summary>
-        public static float[] Coverage(float[] points, int[] ends, int firstContour, int contourCount, float s, float ox, float oy, int w, int h)
+        public static float[] Coverage(float[] points, int[] ends, int firstContour, int contourCount, float s, float ox, float oy, int w, int h, float[]? buffer = null)
         {
             int start = firstContour == 0 ? 0 : ends[firstContour - 1];
             int last = ends[firstContour + contourCount - 1];
@@ -65,7 +66,17 @@ namespace AF.Presentation
             }
 
             Array.Sort(keys, order);
-            var mask = new float[w * h];
+            float[] mask;
+            if (buffer != null && buffer.Length >= w * h)
+            {
+                mask = buffer;
+                Array.Clear(mask, 0, w * h);
+            }
+            else
+            {
+                mask = new float[w * h];
+            }
+
             var acc = new float[w + 1];
             var active = new int[Mathf.Max(1, count)];
             var xs = new float[Mathf.Max(1, count)];
@@ -94,17 +105,33 @@ namespace AF.Presentation
                             continue;
                         }
 
-                        float x = ex0[e] + ((y - ey0[e]) * (ex1[e] - ex0[e]) / (ey1[e] - ey0[e]));
-                        int k = hits++;
-                        while (k > 0 && xs[k - 1] > x)
-                        {
-                            xs[k] = xs[k - 1];
-                            ds[k] = ds[k - 1];
-                            k--;
-                        }
+                        xs[hits] = ex0[e] + ((y - ey0[e]) * (ex1[e] - ex0[e]) / (ey1[e] - ey0[e]));
+                        ds[hits] = dir[e];
+                        hits++;
+                    }
 
-                        xs[k] = x;
-                        ds[k] = dir[e];
+                    // Por x: inserción con pocos cortes y ordenación rápida con muchos (las copas de la selva dan cientos por fila).
+                    if (hits > 24)
+                    {
+                        Array.Sort(xs, ds, 0, hits);
+                    }
+                    else
+                    {
+                        for (int q = 1; q < hits; q++)
+                        {
+                            float xq = xs[q];
+                            int dq = ds[q];
+                            int k = q;
+                            while (k > 0 && xs[k - 1] > xq)
+                            {
+                                xs[k] = xs[k - 1];
+                                ds[k] = ds[k - 1];
+                                k--;
+                            }
+
+                            xs[k] = xq;
+                            ds[k] = dq;
+                        }
                     }
 
                     int winding = 0;

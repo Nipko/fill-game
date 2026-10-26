@@ -18,7 +18,7 @@ namespace AF.Presentation
     public sealed class BrandRiverScene
     {
         /// <summary>Tramos del açaí río abajo (la intro los enciende en orden) [P].</summary>
-        public const int ChunkCount = 7;
+        public const int ChunkCount = 10;
 
         /// <summary>Dónde vierte la cuia, a lo largo del río (0 en el horizonte, 1 abajo del todo) [P].</summary>
         public const float ImpactV = 0.36f;
@@ -33,6 +33,7 @@ namespace AF.Presentation
         private const float HorizonAtShort = 0.36f;
         private const float FarHalfWidthDp = 4f;
         private const float NearWidthShare = 0.42f;
+        private const float NearWidthShareShort = 0.36f; // en 16:9 el cauce es más corto y sus curvas, más cerradas
         private const float CuiaWidthShare = 0.40f;
         private const float CuiaMaxWidthDp = 152f;
 
@@ -157,11 +158,10 @@ namespace AF.Presentation
         /// <summary>La ventana de la base: la selva, el río blanco, las playas, las palmeras y las ondas (dp).</summary>
         public Rect BaseWindow => Rect.MinMaxRect(0f, HorizonY - 70f, Width, Height);
 
-        /// <summary>La ventana del tramo <paramref name="k"/> del açaí (dp).</summary>
+        /// <summary>La ventana del tramo <paramref name="k"/> del açaí (dp), de su borde de atrás a la punta de su frente.</summary>
         public Rect ChunkWindow(int k)
         {
-            int i0 = _chunkStart[k];
-            int i1 = Mathf.Min(Samples - 1, _chunkStart[k + 1] + 2 + TailOf(k));
+            ChunkSpan(k, out int i0, out int i1);
             float xMin = float.MaxValue;
             float xMax = float.MinValue;
             float yMin = float.MaxValue;
@@ -230,37 +230,139 @@ namespace AF.Presentation
             return canvas.ToTexture("AF_RiverBase");
         }
 
-        /// <summary>Rasteriza el tramo <paramref name="k"/> del açaí a <paramref name="pxPerDp"/>.</summary>
+        /// <summary>
+        /// Rasteriza el tramo <paramref name="k"/> del açaí a <paramref name="pxPerDp"/>: del frente del tramo anterior (un poco
+        /// antes: el siguiente tapa al anterior sin costuras) a su propio frente, una lengua que avanza más por el centro que por las
+        /// orillas, con el borde ondulado. Cada tramo es opaco: la intro los enciende de golpe, uno tras otro, y el frente avanza.
+        /// </summary>
         public Texture2D RenderChunk(int k, float pxPerDp)
         {
             Rect win = ChunkWindow(k);
             var canvas = new VectorCanvas(win, pxPerDp);
-            int i0 = _chunkStart[k];
-            int i1 = Mathf.Min(Samples - 1, _chunkStart[k + 1] + 2); // se solapan un poco: sin costuras
             var poly = new PolyBuilder();
-            var acai = new VectorCanvas.Paint(AcaiTop, AcaiMid, AcaiLow, 0f, 0.25f, 1f, Impact.y, Height, 1f);
-            AddBand(poly, i0, i1, i => _half[i] * Ramp(i, 0.035f), i => _half[i] * Ramp(i, 0.035f));
+            AddChunk(poly, k, 1f, 2f);
             poly.Fill(canvas, VectorCanvas.Paint.Solid(AcaiRim, 0.45f));
-            AddBand(poly, i0, i1, i => _half[i] * 0.975f * Ramp(i, 0.035f), i => _half[i] * 0.975f * Ramp(i, 0.035f));
-            poly.Fill(canvas, acai);
 
-            // El frente fundido: el açaí sigue río abajo dentro del tramo siguiente y se desvanece (de arriba abajo, como baja el río).
-            int tail = TailOf(k);
-            if (tail > 0)
+            // El açaí, con el borde de atrás algo más atrás que el del ribete (que así queda tapado: sin costuras entre tramos).
+            AddChunk(poly, k, 0.975f, 3f);
+            poly.Take(out float[] clipPts, out int[] clipEnds);
+            canvas.Fill(clipPts, clipEnds, 0, clipEnds.Length, 1f, 0f, 0f, new VectorCanvas.Paint(AcaiTop, AcaiMid, AcaiLow, 0f, 0.25f, 1f, Impact.y, Height, 1f));
+
+            // La luz del centro y las ondas son las de todo el açaí, recortadas por el tramo: siguen sin cortes de un tramo a otro.
+            AddBand(poly, _impactIndex, Samples - 1, i => _half[i] * 0.22f * Ramp(i, 0.10f), i => _half[i] * 0.02f * Ramp(i, 0.10f));
+            poly.Fill(canvas, VectorCanvas.Paint.Solid(AcaiLight, 0.28f), clipPts, clipEnds);
+            AddWaves(poly, VOf(_impactIndex) + 0.03f, 1f, 0.75f, 37);
+            poly.Fill(canvas, VectorCanvas.Paint.Solid(AcaiWave, 0.75f), clipPts, clipEnds);
+            return canvas.ToTexture("AF_RiverAcai" + k);
+        }
+
+        // Dónde va el frente del tramo k a lo ancho del cauce (c = 1 en la orilla izquierda de la corriente, −1 en la derecha), en
+        // muestras (fraccionarias): una lengua, más adelantada en el centro, con el borde ondulado; el del último tramo, al final
+        // del río; el de antes del primero, en el impacto.
+        private float FrontIndex(int k, float c)
+        {
+            if (k < 0)
             {
-                int b = Mathf.Min(Samples - 1, i1 + tail);
-                Color solid = AcaiMid;
-                var fade = new VectorCanvas.Paint(solid, new Color(solid.r, solid.g, solid.b, 0.45f), new Color(solid.r, solid.g, solid.b, 0f),
-                    0f, 0.45f, 1f, _y[i1 - 1], _y[b], 1f);
-                AddBand(poly, i1 - 1, b, i => _half[i] * 0.975f, i => _half[i] * 0.975f);
-                poly.Fill(canvas, fade);
+                return _impactIndex - 1;
             }
 
-            AddBand(poly, i0, i1, i => _half[i] * 0.22f * Ramp(i, 0.10f), i => _half[i] * 0.02f * Ramp(i, 0.10f));
-            poly.Fill(canvas, VectorCanvas.Paint.Solid(AcaiLight, 0.28f));
-            AddWaves(poly, VOf(i0) + 0.02f, VOf(_chunkStart[k + 1]), 0.75f, 37 + k);
-            poly.Fill(canvas, VectorCanvas.Paint.Solid(AcaiWave, 0.75f));
-            return canvas.ToTexture("AF_RiverAcai" + k);
+            if (k >= ChunkCount - 1)
+            {
+                return Samples - 1;
+            }
+
+            float len = Mathf.Max(1f, _chunkStart[k + 1] - _chunkStart[k]);
+            float tongue = len * 0.6f * ((0.45f - (c * c)) + (0.10f * Mathf.Sin((c * 6.3f) + (k * 1.7f))) + (0.05f * Mathf.Sin((c * 15f) + (k * 3.1f))));
+            return Mathf.Clamp(_chunkStart[k + 1] + tongue, _impactIndex, Samples - 1);
+        }
+
+        // Las muestras que toca el tramo k (con su borde de atrás y la punta de su frente).
+        private void ChunkSpan(int k, out int i0, out int i1)
+        {
+            float lo = float.MaxValue;
+            float hi = float.MinValue;
+            for (int s = 0; s <= 16; s++)
+            {
+                float c = -1f + (s / 8f);
+                lo = Mathf.Min(lo, FrontIndex(k - 1, c) - 3f);
+                hi = Mathf.Max(hi, FrontIndex(k, c) + 1f);
+            }
+
+            i0 = Mathf.Clamp(Mathf.FloorToInt(lo), 0, Samples - 1);
+            i1 = Mathf.Clamp(Mathf.CeilToInt(hi), 0, Samples - 1);
+        }
+
+        // El contorno del tramo k a <paramref name="share"/> del ancho del agua: la orilla izquierda, el frente (de izquierda a
+        // derecha), la orilla derecha de vuelta y el borde de atrás (el frente del tramo anterior, dos muestras antes).
+        private void AddChunk(PolyBuilder poly, int k, float share, float back)
+        {
+            poly.Begin();
+            float backL = BackIndex(k, 1f, back);
+            float frontL = FrontIndex(k, 1f);
+            AddEdge(poly, backL, frontL, 1f, share);
+            const int m = 28;
+            for (int s = 1; s < m; s++)
+            {
+                float c = 1f - (2f * s / m);
+                ChunkPoint(poly, FrontIndex(k, c), c, share);
+            }
+
+            float frontR = FrontIndex(k, -1f);
+            float backR = BackIndex(k, -1f, back);
+            AddEdge(poly, frontR, backR, -1f, share);
+            for (int s = 1; s < m; s++)
+            {
+                float c = -1f + (2f * s / m);
+                ChunkPoint(poly, BackIndex(k, c, back), c, share);
+            }
+
+            poly.End();
+        }
+
+        // El borde de atrás del tramo k: el frente del anterior, <paramref name="back"/> muestras antes, y siempre detrás del
+        // frente propio (el contorno nunca se cruza).
+        private float BackIndex(int k, float c, float back)
+        {
+            return Mathf.Min(FrontIndex(k - 1, c) - back, FrontIndex(k, c) - 0.5f);
+        }
+
+        // Una orilla del tramo, de la muestra (fraccionaria) from a to, en el lado c (±1).
+        private void AddEdge(PolyBuilder poly, float from, float to, float c, float share)
+        {
+            ChunkPoint(poly, from, c, share);
+            if (to > from)
+            {
+                for (int i = Mathf.CeilToInt(from); i < to; i++)
+                {
+                    ChunkPoint(poly, i, c, share);
+                }
+            }
+            else
+            {
+                for (int i = Mathf.FloorToInt(from); i > to; i--)
+                {
+                    ChunkPoint(poly, i, c, share);
+                }
+            }
+
+            ChunkPoint(poly, to, c, share);
+        }
+
+        // El punto del cauce en la muestra (fraccionaria) fi, a c (−1 a 1) del ancho del agua, con el abanico del impacto.
+        private void ChunkPoint(PolyBuilder poly, float fi, float c, float share)
+        {
+            fi = Mathf.Clamp(fi, 0f, Samples - 1);
+            int a = Mathf.FloorToInt(fi);
+            int b = Mathf.Min(Samples - 1, a + 1);
+            float t = fi - a;
+            float x = Mathf.Lerp(_x[a], _x[b], t);
+            float y = Mathf.Lerp(_y[a], _y[b], t);
+            float nx = Mathf.Lerp(_nx[a], _nx[b], t);
+            float ny = Mathf.Lerp(_ny[a], _ny[b], t);
+            float sgn = c >= 0f ? 1f : -1f;
+            float ramp = Mathf.Lerp(Ramp(a, 0.035f), Ramp(b, 0.035f), t);
+            float off = InsideBend(Mathf.Lerp(_curv[a], _curv[b], t), Mathf.Lerp(_half[a], _half[b], t) * share * Mathf.Abs(c) * ramp, sgn);
+            poly.Point(x + (nx * off * sgn), y + (ny * off * sgn));
         }
 
         /// <summary>Rasteriza la isla (arena, selva y dos copas), por encima del açaí.</summary>
@@ -291,6 +393,12 @@ namespace AF.Presentation
             return canvas.ToTexture("AF_RiverIsland");
         }
 
+        /// <summary>Suelta los búferes de dibujo compartidos (al acabar de hacer la escena).</summary>
+        public static void ReleaseBuffers()
+        {
+            VectorCanvas.ReleasePool();
+        }
+
         /// <summary>Rasteriza una pieza del icono (impacto, chorro o cuia) en su sitio sobre el río.</summary>
         public Texture2D RenderData(int group, float pxPerDp)
         {
@@ -312,7 +420,8 @@ namespace AF.Presentation
                 _x[i] = u * Width;
                 _y[i] = YOfV(v);
                 float vv = Mathf.Clamp01(v);
-                _half[i] = FarHalfWidthDp + (((NearWidthShare * Width) - FarHalfWidthDp) * Mathf.Pow(vv, 1.15f));
+                float near = ShortScreen ? NearWidthShareShort : NearWidthShare;
+                _half[i] = FarHalfWidthDp + (((near * Width) - FarHalfWidthDp) * Mathf.Pow(vv, 1.15f));
                 _edge[i] = 0.8f + (2.6f * vv);
             }
 
@@ -344,6 +453,7 @@ namespace AF.Presentation
                 raw[i] = ((dTx * _nx[i]) + (dTy * _ny[i])) / ds;
             }
 
+            var smooth = new float[Samples];
             for (int i = 0; i < Samples; i++)
             {
                 float sum = 0f;
@@ -357,15 +467,103 @@ namespace AF.Presentation
                     }
                 }
 
-                float k = sum / n;
-                float strength = Mathf.Clamp01(Mathf.Abs(k) * _half[i] * 3.0f);
-                float beach = _half[i] * 0.24f * Mathf.SmoothStep(0.15f, 0.95f, strength);
-                float radius = 1f / Mathf.Max(1e-4f, Mathf.Abs(k));
-                beach = Mathf.Min(beach, Mathf.Max(0f, (radius - _half[i]) * 0.45f));
-                _beachL[i] = k > 0f ? beach : 0f;
-                _beachR[i] = k < 0f ? beach : 0f;
-                _curv[i] = k;
+                smooth[i] = sum / n;
+
+                // La curvatura local, suavizada en ±8 muestras: la que dobla de verdad la orilla interior.
+                float local = 0f;
+                int m = 0;
+                for (int j = Mathf.Max(0, i - 8); j <= Mathf.Min(Samples - 1, i + 8); j++)
+                {
+                    local += raw[j];
+                    m++;
+                }
+
+                _curv[i] = local / m;
             }
+
+            // El río nunca más ancho que el 70 % del radio de su curva: la orilla interior no se pliega ni hace ganchos. El tope va
+            // por su mínimo en ±8 muestras y luego suavizado en ±8: en la curva queda el tope y fuera se recupera sin quiebros.
+            var capped = new float[Samples];
+            for (int i = 0; i < Samples; i++)
+            {
+                capped[i] = Mathf.Min(_half[i], 0.7f / Mathf.Max(1e-4f, Mathf.Abs(_curv[i])));
+            }
+
+            var lowest = new float[Samples];
+            for (int i = 0; i < Samples; i++)
+            {
+                float lo = float.MaxValue;
+                for (int j = Mathf.Max(0, i - 8); j <= Mathf.Min(Samples - 1, i + 8); j++)
+                {
+                    lo = Mathf.Min(lo, capped[j]);
+                }
+
+                lowest[i] = lo;
+            }
+
+            for (int i = 0; i < Samples; i++)
+            {
+                float sum = 0f;
+                int n = 0;
+                for (int j = Mathf.Max(0, i - 8); j <= Mathf.Min(Samples - 1, i + 8); j++)
+                {
+                    sum += lowest[j];
+                    n++;
+                }
+
+                _half[i] = Mathf.Min(_half[i], sum / n);
+            }
+
+            // Un banco de arena por curva cerrada, en su interior: una media luna pegada a la orilla, que crece y mengua con suavidad
+            // (seno) a lo largo de la curva y nunca pasa de lo que deja su radio.
+            int ra = 0;
+            while (ra < Samples)
+            {
+                float sign = Mathf.Sign(smooth[ra]);
+                if (Strength(smooth, ra) < 0.2f || sign == 0f)
+                {
+                    ra++;
+                    continue;
+                }
+
+                int rb = ra;
+                int peak = ra;
+                while (rb + 1 < Samples && Mathf.Sign(smooth[rb + 1]) == sign && Strength(smooth, rb + 1) >= 0.2f)
+                {
+                    rb++;
+                    if (Strength(smooth, rb) > Strength(smooth, peak))
+                    {
+                        peak = rb;
+                    }
+                }
+
+                int ext = Mathf.Max(2, (rb - ra) / 3);
+                int a0 = Mathf.Max(0, ra - ext);
+                int b0 = Mathf.Min(Samples - 1, rb + ext);
+                float radius = 1f / Mathf.Max(1e-4f, Mathf.Abs(smooth[peak]));
+                float most = Mathf.Min(_half[peak] * 0.22f * Mathf.SmoothStep(0.2f, 1f, Strength(smooth, peak)), Mathf.Max(0f, (radius - _half[peak]) * 0.4f));
+                for (int i = a0; i <= b0; i++)
+                {
+                    float t = (i - a0) / (float)Mathf.Max(1, b0 - a0);
+                    float wdt = most * Mathf.Pow(Mathf.Sin(Mathf.PI * t), 1.4f) * (_half[i] / Mathf.Max(1e-3f, _half[peak]));
+                    if (sign > 0f)
+                    {
+                        _beachL[i] = Mathf.Max(_beachL[i], wdt);
+                    }
+                    else
+                    {
+                        _beachR[i] = Mathf.Max(_beachR[i], wdt);
+                    }
+                }
+
+                ra = rb + 1;
+            }
+        }
+
+        // Lo cerrada que es la curva en i respecto del ancho del río (0 recta, 1 muy cerrada).
+        private float Strength(float[] curvature, int i)
+        {
+            return Mathf.Clamp01(Mathf.Abs(curvature[i]) * _half[i] * 3.0f);
         }
 
         private static float CatmullRom(float[] p, int seg, float t)
@@ -407,17 +605,6 @@ namespace AF.Presentation
             return best;
         }
 
-        // Muestras del frente fundido del tramo k (dentro del tramo siguiente); 0 en el último.
-        private int TailOf(int k)
-        {
-            if (k >= ChunkCount - 1)
-            {
-                return 0;
-            }
-
-            return Mathf.Max(2, (_chunkStart[k + 2 > ChunkCount ? ChunkCount : k + 2] - _chunkStart[k + 1]) / 2);
-        }
-
         // El açaí se abre desde el impacto: 0 en él y 1 a <paramref name="reach"/> de v río abajo.
         private float Ramp(int i, float reach)
         {
@@ -431,20 +618,26 @@ namespace AF.Presentation
         // hasta el 60 % queda igual y de ahí en adelante se frena con suavidad, sin quiebros.
         private float InsideBend(int i, float offset, float side)
         {
-            float k = _curv[i] * side;
+            return InsideBend(_curv[i], offset, side);
+        }
+
+        // Lo mismo con la curvatura dada (interpolada entre muestras: sin escalones en los bordes de los tramos).
+        private static float InsideBend(float curvature, float offset, float side)
+        {
+            float k = curvature * side;
             if (k <= 1e-4f)
             {
                 return offset;
             }
 
             float radius = 1f / k;
-            float knee = 0.6f * radius;
+            float knee = 0.8f * radius; // el agua ya va limitada al 70 % del radio: solo se frenan las franjas de la orilla
             if (offset <= knee)
             {
                 return offset;
             }
 
-            float room = 0.3f * radius;
+            float room = 0.15f * radius;
             float extra = offset - knee;
             return knee + (room * extra / (room + extra));
         }
@@ -557,6 +750,8 @@ namespace AF.Presentation
             float span = Height + 40f - HorizonY;
             float y = HorizonY + 14f;
             int row = 0;
+            int band = 0;
+            const int bands = 4;
             while (y < Height + 40f)
             {
                 float f = Mathf.Clamp01((y - HorizonY) / span);
@@ -582,11 +777,20 @@ namespace AF.Presentation
                     col++;
                 }
 
-                shadow.Fill(canvas, VectorCanvas.Paint.Solid(Color.Lerp(CrownShadowFar, CrownShadowNear, f), 0.55f));
-                body.Fill(canvas, VectorCanvas.Paint.Solid(Color.Lerp(CrownBodyFar, CrownBodyNear, f), 0.75f));
-                light.Fill(canvas, VectorCanvas.Paint.Solid(Color.Lerp(CrownLightFar, CrownLightNear, f), 0.18f));
                 y += r * 1.05f;
                 row++;
+
+                // Las matas van por bandas de profundidad (las de cerca, encima): pocas pasadas sobre todo el ancho.
+                float fNext = Mathf.Clamp01((y - HorizonY) / span);
+                int bandNext = Mathf.Min(bands - 1, (int)(fNext * bands));
+                if (bandNext != band || y >= Height + 40f)
+                {
+                    float fm = (band + 0.5f) / bands;
+                    shadow.Fill(canvas, VectorCanvas.Paint.Solid(Color.Lerp(CrownShadowFar, CrownShadowNear, fm), 0.55f));
+                    body.Fill(canvas, VectorCanvas.Paint.Solid(Color.Lerp(CrownBodyFar, CrownBodyNear, fm), 0.75f));
+                    light.Fill(canvas, VectorCanvas.Paint.Solid(Color.Lerp(CrownLightFar, CrownLightNear, fm), 0.18f));
+                    band = bandNext;
+                }
             }
         }
 
@@ -682,7 +886,7 @@ namespace AF.Presentation
 
             public void Circle(float cx, float cy, float r)
             {
-                int n = Mathf.Clamp(Mathf.RoundToInt(r * 1.6f), 10, 28);
+                int n = Mathf.Clamp(Mathf.RoundToInt(r * 1.1f), 10, 20);
                 for (int k = 0; k < n; k++)
                 {
                     float a = 2f * Mathf.PI * k / n;
@@ -720,13 +924,29 @@ namespace AF.Presentation
                 End();
             }
 
-            public void Fill(VectorCanvas canvas, in VectorCanvas.Paint paint)
+            public void Fill(VectorCanvas canvas, in VectorCanvas.Paint paint, float[]? clipPts = null, int[]? clipEnds = null)
             {
                 if (_ends.Count > 0)
                 {
-                    canvas.Fill(_pts.ToArray(), _ends.ToArray(), 0, _ends.Count, 1f, 0f, 0f, paint);
+                    if (clipPts != null && clipEnds != null)
+                    {
+                        canvas.Fill(_pts.ToArray(), _ends.ToArray(), 0, _ends.Count, 1f, 0f, 0f, paint, clipPts, clipEnds, 0, clipEnds.Length);
+                    }
+                    else
+                    {
+                        canvas.Fill(_pts.ToArray(), _ends.ToArray(), 0, _ends.Count, 1f, 0f, 0f, paint);
+                    }
                 }
 
+                _pts.Clear();
+                _ends.Clear();
+            }
+
+            // Se lleva los contornos (para recortar con ellos) y deja el constructor vacío.
+            public void Take(out float[] pts, out int[] ends)
+            {
+                pts = _pts.ToArray();
+                ends = _ends.ToArray();
                 _pts.Clear();
                 _ends.Clear();
             }

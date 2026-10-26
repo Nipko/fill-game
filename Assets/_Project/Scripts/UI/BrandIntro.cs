@@ -239,16 +239,17 @@ namespace AF.UI
             _images.Impact.rectTransform.localScale = new Vector3(rs, rs, 1f);
             _images.Impact.color = new Color(1f, 1f, 1f, ripple < 0f ? 0f : Mathf.Clamp01(ripple * 2.5f));
 
-            // El frente del açaí recorre los tramos río abajo; cada tramo se enciende al pasar el frente.
+            // El frente del açaí recorre los tramos río abajo: cada tramo, opaco y con su frente en lengua, se enciende entero al
+            // llegar el frente (nunca a medias: ni velos ni cortes rectos).
             float spread = t <= FallMs ? 0f : Mathf.Clamp01((t - FallMs) / (AnimMs - FallMs));
-            float eased = 1f - ((1f - spread) * (1f - spread));
+            float eased = 1f - Mathf.Pow(1f - spread, 1.6f);
             _tintFill = eased;
             Image[] acai = _images.Acai;
             float front = eased * acai.Length;
             for (int k = 0; k < acai.Length; k++)
             {
-                float a = spread <= 0f ? 0f : Mathf.Clamp01((front - k) * 3f);
-                acai[k].color = new Color(1f, 1f, 1f, eased >= 1f ? 1f : a);
+                bool lit = spread > 0f && (front > k || eased >= 1f);
+                acai[k].color = new Color(1f, 1f, 1f, lit ? 1f : 0f);
             }
         }
 

@@ -141,6 +141,7 @@ namespace AF.UI
         private const float FoliageDp = 232f;
         private const float FoliageGapDp = 4f;
         private const float HedgeDp = 96f;
+        private const float ForegroundPxPerDp = 2.5f;
         private const float FireflyGlowDp = 26f;
         private const float FireflyCoreDp = 5f;
 
@@ -171,10 +172,8 @@ namespace AF.UI
         private readonly double _createdAt;
         private readonly BrandIntro? _intro;
         private BrandEmblemArt _emblem;
-        private Image? _wordmarkGlow;
-        private Image? _hedge;
-        private Image? _foliageLeft;
-        private Image? _foliageRight;
+        private Image? _foreground;
+        private float _foregroundKey;
         private Image? _wordmark;
         private Image[]? _fireflyGlow;
         private Image[]? _fireflyCore;
@@ -279,6 +278,9 @@ namespace AF.UI
 
             Layout();
         }
+
+        /// <summary>Lo que costó dibujar la última escena de la marca, por piezas (capturas y pruebas de rendimiento).</summary>
+        public static string EmblemTimings => BrandEmblemArt.LastTimings;
 
         /// <summary>Lienzo propio (capturas de prueba).</summary>
         public Canvas Canvas => _canvas.Canvas;
@@ -561,13 +563,9 @@ namespace AF.UI
             _sceneBuilt = true;
             _front.gameObject.SetActive(true);
             _over.gameObject.SetActive(true);
-            Sprite foliage = Own(2, BootSplashArt.CornerFoliage(FoliageDp, ProceduralArt.UiPxPerDp));
-            Sprite hedge = Own(3, BootSplashArt.Hedge(360f, HedgeDp, 2.5f));
             Sprite glow = _sprites[0]!;
 
-            _hedge = UiBuilder.Image("Hedge", _over, hedge, Color.white);
-            _foliageLeft = UiBuilder.Image("FoliageLeft", _over, foliage, Color.white);
-            _foliageRight = UiBuilder.Image("FoliageRight", _over, foliage, Color.white);
+            _foreground = UiBuilder.Image("Foreground", _over, null, Color.white);
             _fireflyGlow = new Image[FireflyX.Length];
             _fireflyCore = new Image[FireflyX.Length];
             for (int i = 0; i < FireflyX.Length; i++)
@@ -576,7 +574,6 @@ namespace AF.UI
                 _fireflyCore[i] = UiBuilder.Image("Firefly" + i, _over, glow, ProceduralArt.FireflyCore);
             }
 
-            _wordmarkGlow = UiBuilder.Image("WordmarkShade", _over, glow, WordmarkShade);
             _wordmark = UiBuilder.Image("Wordmark", _over, null, Color.white);
             Pulse();
         }
@@ -595,7 +592,7 @@ namespace AF.UI
                 _wordmarkScale = scale;
                 DestroyOwned(4);
                 int widthPx = Mathf.RoundToInt(box.width * scale);
-                Texture2D tex = BrandWordmark.Render(widthPx, WordmarkTop, WordmarkBottom, WordmarkShadow, 2.5f * scale, 1.6f * scale, out _wordmarkPadPx);
+                Texture2D tex = BrandWordmark.Render(widthPx, WordmarkTop, WordmarkBottom, WordmarkShadow, 2.5f * scale, 1.6f * scale, WordmarkShade, 1.30f, 2.6f, out _wordmarkPadPx);
                 _wordmark.sprite = Own(4, tex);
             }
 
@@ -632,20 +629,18 @@ namespace AF.UI
             {
                 Rect box = WordmarkBox;
                 RenderWordmark(box);
-                float shadeW = box.width * 1.30f;
-                float shadeH = box.height * 2.6f;
-                UiBuilder.Place(_wordmarkGlow!.rectTransform, box.center.x - (shadeW * 0.5f), box.center.y - (shadeH * 0.5f), shadeW, shadeH);
 
-                // El follaje de las esquinas, tan grande como deja el nombre, con el matorral a lo ancho del pie.
+                // El primer plano (el matorral y el follaje de las esquinas, de una pieza), tan alto como deja el nombre.
                 float fol = Mathf.Clamp(h - box.yMax - FoliageGapDp, 120f, Mathf.Min(FoliageDp, w * 0.64f));
-                float hedge = Mathf.Min(HedgeDp, fol * 0.5f);
-                UiBuilder.Place(_hedge!.rectTransform, 0f, h - hedge, w, hedge);
-                UiBuilder.Place(_foliageLeft!.rectTransform, -6f, h - fol + 4f, fol, fol);
-                RectTransform right = _foliageRight!.rectTransform; // la misma, volteada desde su centro
-                UiBuilder.Place(right, w + 6f - fol, h - fol + 4f, fol, fol);
-                right.pivot = new Vector2(0.5f, 1f);
-                right.anchoredPosition = new Vector2(w + 6f - (fol * 0.5f), -(h - fol + 4f));
-                right.localScale = new Vector3(-1f, 1f, 1f);
+                float fgW = w + 12f;
+                if (_foreground!.sprite == null || Mathf.Abs((fol * 10000f) + fgW - _foregroundKey) > 0.01f)
+                {
+                    _foregroundKey = (fol * 10000f) + fgW;
+                    DestroyOwned(2);
+                    _foreground.sprite = Own(2, BootSplashArt.Foreground(fgW, fol, Mathf.Min(HedgeDp, fol * 0.5f), ForegroundPxPerDp));
+                }
+
+                UiBuilder.Place(_foreground.rectTransform, -6f, h - fol + 4f, fgW, fol);
                 for (int i = 0; i < _fireflyGlow!.Length; i++)
                 {
                     float fx = FireflyX[i] * w;

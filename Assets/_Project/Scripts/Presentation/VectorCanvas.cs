@@ -16,6 +16,8 @@ namespace AF.Presentation
         private readonly float[] _g;
         private readonly float[] _b;
         private readonly float[] _a;
+        private readonly float[] _cover;
+        private readonly float[] _clip;
 
         /// <summary>Lienzo para la ventana <paramref name="windowDp"/> (dp) a <paramref name="pxPerDp"/> px por dp.</summary>
         public VectorCanvas(Rect windowDp, float pxPerDp)
@@ -25,10 +27,42 @@ namespace AF.Presentation
             WidthPx = Mathf.Max(1, Mathf.CeilToInt(windowDp.width * pxPerDp));
             HeightPx = Mathf.Max(1, Mathf.CeilToInt(windowDp.height * pxPerDp));
             int n = WidthPx * HeightPx;
-            _r = new float[n];
-            _g = new float[n];
-            _b = new float[n];
-            _a = new float[n];
+            _r = Pooled(ref s_r, n, true);
+            _g = Pooled(ref s_g, n, true);
+            _b = Pooled(ref s_b, n, true);
+            _a = Pooled(ref s_a, n, true);
+            _cover = Pooled(ref s_cover, n, false);
+            _clip = Pooled(ref s_clip, n, false);
+        }
+
+        // Búferes compartidos entre lienzos (uno a la vez, en el hilo principal): sin basura por pieza, que en el arranque cuesta.
+        private static float[]? s_r;
+        private static float[]? s_g;
+        private static float[]? s_b;
+        private static float[]? s_a;
+        private static float[]? s_cover;
+        private static float[]? s_clip;
+
+        private static float[] Pooled(ref float[]? pool, int n, bool clear)
+        {
+            if (pool == null || pool.Length < n)
+            {
+                pool = new float[n];
+                return pool;
+            }
+
+            if (clear)
+            {
+                System.Array.Clear(pool, 0, n);
+            }
+
+            return pool;
+        }
+
+        /// <summary>Suelta los búferes compartidos (tras hacer la escena: no se quedan en memoria).</summary>
+        public static void ReleasePool()
+        {
+            s_r = s_g = s_b = s_a = s_cover = s_clip = null;
         }
 
         /// <summary>Ancho en píxeles.</summary>
@@ -91,9 +125,9 @@ namespace AF.Presentation
             float sp = s * _ppd;
             float ox = ((tx - _window.xMin) * _ppd) - x0;
             float oy = ((ty - _window.yMin) * _ppd) - y0;
-            float[] cov = VectorFill.Coverage(pts, ends, first, count, sp, ox, oy, rw, rh);
+            float[] cov = VectorFill.Coverage(pts, ends, first, count, sp, ox, oy, rw, rh, _cover);
             float[]? clip = clipPts != null && clipEnds != null
-                ? VectorFill.Coverage(clipPts, clipEnds, clipFirst, clipCount, sp, ox, oy, rw, rh)
+                ? VectorFill.Coverage(clipPts, clipEnds, clipFirst, clipCount, sp, ox, oy, rw, rh, _clip)
                 : null;
             float span = Mathf.Max(1e-3f, paint.GradientY1 - paint.GradientY0);
             for (int row = 0; row < rh; row++)
@@ -157,21 +191,24 @@ namespace AF.Presentation
                 for (int x = 0; x < w; x++)
                 {
                     float al = _a[src + x];
-                    if (al <= 0f)
+                    if (al <= 0.001f)
                     {
-                        px[dst + x] = new Color32(0, 0, 0, 0);
-                        continue;
+                        continue; // ya es (0, 0, 0, 0)
                     }
 
-                    var c = new Color(_r[src + x] / al, _g[src + x] / al, _b[src + x] / al, al);
+                    // Directo a bytes (sin Color intermedio): del premultiplicado al color, con su alfa.
+                    float inv = 255f / al;
+                    float fa = al;
                     if (fadeRightPx > 0f)
                     {
-                        c.a *= Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((w - x - 0.5f) / fadeRightPx));
+                        fa *= Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((w - x - 0.5f) / fadeRightPx));
                     }
 
-                    px[dst + x] = c;
+                    px[dst + x] = new Color32(ToByte(_r[src + x] * inv), ToByte(_g[src + x] * inv), ToByte(_b[src + x] * inv), ToByte(fa * 255f));
                 }
             }
+
+            BleedEdges(px, w, h);
 
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
             {
@@ -182,6 +219,55 @@ namespace AF.Presentation
             tex.SetPixels32(px);
             tex.Apply(false, true);
             return tex;
+        }
+
+        private static byte ToByte(float v)
+        {
+            return v >= 255f ? (byte)255 : (v <= 0f ? (byte)0 : (byte)(v + 0.5f));
+        }
+
+        // Los píxeles transparentes junto a la figura toman el color de su vecino opaco (con alfa 0): el filtrado bilineal no mezcla
+        // el borde con negro y no salen líneas oscuras en los bordes suavizados (entre tramos del açaí, por ejemplo). Una pasada:
+        // basta con un píxel.
+        private static void BleedEdges(Color32[] px, int w, int h)
+        {
+            for (int y = 0; y < h; y++)
+            {
+                int row = y * w;
+                for (int x = 0; x < w; x++)
+                {
+                    int i = row + x;
+                    Color32 p = px[i];
+                    if (p.a != 0 || (p.r | p.g | p.b) != 0)
+                    {
+                        continue;
+                    }
+
+                    int j = -1;
+                    if (x > 0 && px[i - 1].a > 0)
+                    {
+                        j = i - 1;
+                    }
+                    else if (x < w - 1 && px[i + 1].a > 0)
+                    {
+                        j = i + 1;
+                    }
+                    else if (y > 0 && px[i - w].a > 0)
+                    {
+                        j = i - w;
+                    }
+                    else if (y < h - 1 && px[i + w].a > 0)
+                    {
+                        j = i + w;
+                    }
+
+                    if (j >= 0)
+                    {
+                        Color32 n = px[j];
+                        px[i] = new Color32(n.r, n.g, n.b, 0);
+                    }
+                }
+            }
         }
 
         private void Blend(int i, Color c, float k)

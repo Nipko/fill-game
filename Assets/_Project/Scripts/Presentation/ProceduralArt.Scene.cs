@@ -1259,13 +1259,15 @@ namespace AF.Presentation
 
         private static float LeafWidthAt(LeafShape shape, float u)
         {
+            // En la punta (u = 1) el seno da un negativo diminuto (−8,7e−8) y su potencia sería NaN: un NaN en la cobertura borra
+            // una línea entera a lo ancho de la hoja en todo lo pintado antes (añadido de D-051). Por eso, Max(0, …).
             u = Mathf.Clamp01(u);
             switch (shape)
             {
                 case LeafShape.Lanceolate:
-                    return Mathf.Pow(Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.85f)), 1.15f);
+                    return Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.85f))), 1.15f);
                 case LeafShape.Bract:
-                    return Mathf.Pow(Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.6f)), 0.7f);
+                    return Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.6f))), 0.7f);
                 default:
                     float s = Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.72f));
                     return Mathf.Pow(Mathf.Max(0f, s), 0.75f) * (u < 0.08f ? 0.6f + (5f * u) : 1f);

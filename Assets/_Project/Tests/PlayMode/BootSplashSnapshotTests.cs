@@ -83,7 +83,7 @@ namespace AF.Tests.PlayMode
                 _splash?.Dispose();
                 double t0 = Time.realtimeSinceStartupAsDouble;
                 _splash = new BootSplash(_host!.transform, withSloth: true, withIntro: true);
-                Debug.Log("AF_SPLASH crear con la intro (emblema incluido): " + ((Time.realtimeSinceStartupAsDouble - t0) * 1000.0).ToString("F0") + " ms");
+                Debug.Log("AF_SPLASH crear con la intro (emblema incluido): " + ((Time.realtimeSinceStartupAsDouble - t0) * 1000.0).ToString("F0") + " ms (" + BootSplash.EmblemTimings + ")");
                 _splash.BeginIntro(false);
                 _splash.ShowSloth(_art!.SlothRigArt(), _art.HomeBranch, true, false);
                 SnapshotKit.AttachOverlay(_splash.Canvas);
