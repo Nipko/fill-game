@@ -2,6 +2,8 @@
 
 2026-10-26 · Encargo para un agente de Gemini (o para una persona) que produzca la música. Lo pide el dueño, con sus palabras: «crear otra melodía un poco más tipo río Amazonas, la que suena de fondo, dado que la actual se parece mucho a la alarma predeterminada de los Samsung, suena a despertador».
 
+> **En espera (2026-10-26):** la fase A de Gemini (rama `spark/musica-v2`, `68d88eec`; pasa el comprobador, 6 de 6) **no convenció al dueño** tras escucharla, y él la deja en espera. No se integra; el juego sigue con la música de la entrega 1. No lanzar la fase B hasta nueva decisión.
+
 Este documento **sustituye solo la dirección musical** (el carácter y el estilo) del lecho de cada mundo y del tema de menú. Todo lo técnico sigue igual y manda:
 - `docs/audio/encargo-sonidos.md`: §4 (formato), §5 (reglas para el teléfono), §8 (estructura de la música y lo prohibido) y §9 (licencias y manifiesto);
 - `docs/audio/especificacion-sonidos.json`: nombres de archivo, duraciones y sonoridad de cada pieza;
