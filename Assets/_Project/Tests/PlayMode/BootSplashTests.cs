@@ -186,7 +186,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(splash.Sloth.Size, Is.EqualTo(splash.SlothFitDp).Within(0.01f));
 
                 // Todo el gesto (sloth_wake y su reposo, o sloth_idle con un giro de cabeza): el fondo de TiTino, por encima de la
-                // emblema con aire (nunca tapa la cuia, el chorro ni las palmeras), y la rama, dentro de la pantalla por arriba.
+                // horizonte con aire (nunca tapa la selva del horizonte, la cuia ni el chorro), y la rama, dentro de la pantalla.
                 float canopy = splash.CanopyDp;
                 Assert.That(canopy, Is.LessThanOrEqualTo(splash.CuiaRect.yMin));
                 Assert.That(canopy, Is.LessThanOrEqualTo(splash.StreamRect.yMin));
@@ -204,7 +204,7 @@ namespace AF.Tests.PlayMode
                     }
                 }
 
-                Assert.That(lowest, Is.LessThanOrEqualTo(canopy - 12f), "TiTino cuelga sobre el emblema, sin tapar la cuia (" + screen + ", " + (firstOpen ? "wake" : "idle") + ")");
+                Assert.That(lowest, Is.LessThanOrEqualTo(canopy - 12f), "TiTino cuelga en el cielo, sin tapar el río ni la cuia (" + screen + ", " + (firstOpen ? "wake" : "idle") + ")");
                 Assert.That(-splash.Branch!.rectTransform.anchoredPosition.y, Is.GreaterThanOrEqualTo(0f), "la rama entera en la pantalla");
                 Assert.That(splash.BranchAnchor.y, Is.GreaterThanOrEqualTo(32f + 36f - 0.5f), "la rama, bajo la zona segura");
                 splash.Dispose();
@@ -233,7 +233,8 @@ namespace AF.Tests.PlayMode
             Assert.That(box.width, Is.EqualTo(screen == 640 ? BootSplash.WordmarkMaxShortDp : BootSplash.WordmarkMaxDp).Within(0.01f));
             Assert.That(box.height, Is.EqualTo(box.width * BrandWordmark.Aspect).Within(0.01f));
             Assert.That(box.center.x, Is.EqualTo(180f).Within(0.01f), "centrado");
-            Assert.That(box.yMin, Is.InRange(splash.EmblemBottomDp, splash.EmblemBottomDp + 12f), "pegado al emblema, como en el logo vertical");
+            Assert.That(box.yMin, Is.InRange(splash.ImpactBottomDp, splash.ImpactBottomDp + 20f), "justo bajo la cuia y los aros");
+            Assert.That(splash.ImpactPoint.y, Is.GreaterThan(splash.HorizonDp), "la cuia vierte en el río, bajo el horizonte");
             Assert.That(box.yMax, Is.LessThan(h - 120f), "sitio para el follaje de las esquinas");
             Assert.That(wordmark.sprite.texture.width, Is.GreaterThanOrEqualTo(Mathf.RoundToInt(box.width * 3f)), "a la escala de la pantalla (3 px por dp): nítido");
             Assert.That(splash.CanopyDp, Is.LessThan(splash.CuiaRect.yMax));

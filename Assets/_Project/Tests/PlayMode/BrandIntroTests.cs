@@ -205,7 +205,13 @@ namespace AF.Tests.PlayMode
 
             // El emblema de la pantalla de arranque es el último fotograma de la intro: las mismas piezas, en el mismo sitio y del
             // mismo color, sobre el mismo petróleo.
-            foreach (string piece in new[] { "Halo", "EmblemBase", "EmblemAcai", "EmblemImpact", "EmblemStream", "EmblemCuia" })
+            var pieces = new System.Collections.Generic.List<string> { "Halo", "EmblemBase", "EmblemIsland", "EmblemImpact", "EmblemStream", "EmblemCuia" };
+            for (int k = 0; k < BrandRiverScene.ChunkCount; k++)
+            {
+                pieces.Add("EmblemAcai" + k);
+            }
+
+            foreach (string piece in pieces)
             {
                 Image a = intro.Root.Find(piece).GetComponent<Image>();
                 Image b = splash.Root.Find(piece).GetComponent<Image>();

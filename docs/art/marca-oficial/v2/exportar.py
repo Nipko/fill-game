@@ -13,7 +13,7 @@ Uso: python exportar.py   (antes: python generar.py)
        Assets/_Project/Scripts/Presentation/BrandWordmark.Generated.cs; el juego los rasteriza nítidos a cualquier densidad.
        Con --check no escribe nada: compara y sale con 1 si difiere.
      python exportar.py --unity-emblem <archivo .cs> [--check]   el emblema v2 para la intro y la pantalla de arranque del juego
-       (añadido de D-051), sin Chrome: el SVG de generar.py (selva, río, açaí, orilla, chorro, impacto y la cuia con sus dosis)
+       (añadido de D-051), sin Chrome: del SVG de generar.py, la cuia con sus dosis, el chorro, los aros y las palmeras
        en capas de polígonos (emblema_unity.py), para Assets/_Project/Scripts/Presentation/BrandEmblem.Generated.cs.
        Con --check no escribe nada: compara y sale con 1 si difiere.
 Códigos: 0 hecho (o idéntico con --check) · 1 fallo o diferencia · 2 argumentos o sin Chrome.

@@ -7,8 +7,9 @@ opacidad y, en las tramas (puntos, escamas, rombos y trenza), la capa a la que s
 polígonos (cuadriláteros por tramo y discos en las juntas y los cabos redondos). El juego los rasteriza nítidos a cualquier
 densidad (BrandEmblem). Lo usa exportar.py --unity-emblem.
 
-Grupos (lo que el juego anima por separado): 0 base (palmeras, selva, franja, río blanco y sus ondas), 1 açaí (el teñido y sus
-ondas), 2 orilla de acá, 3 impacto (aros y gotitas), 4 chorro, 5 cuia.
+Grupos (lo que el juego coloca o anima por separado): 3 impacto (aros y gotitas), 4 chorro, 5 cuia, 6 y 7 las dos palmeras de
+açaí del icono. Del fondo del icono solo se llevan las palmeras: el río con meandros, la selva y las orillas los compone el juego
+para la pantalla vertical (BrandRiverScene; 0-2 quedan sin uso).
 """
 import math
 import os
@@ -20,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import generar  # noqa: E402
 
-BASE, ACAI, BANK, IMPACT, STREAM, CUIA = range(6)
+BASE, ACAI, BANK, IMPACT, STREAM, CUIA, PALM_A, PALM_B = range(8)
 
 # Degradados de generar.py (DEFS): paradas (desplazamiento, #RRGGBB, opacidad).
 GRADIENTES = {
@@ -221,6 +222,7 @@ def capas():
     """Lista de capas: dict(grupo, clip, opacidad, paradas[(o, '#RRGGBB', a)], gy0, gy1, polis)."""
     out = []
     ultimo_relleno = {}
+    palmas = [0]
 
     def nueva(grupo, polis, paradas, opacidad, clip=-1, gcaja=None):
         polis = [p for p in polis if len(p) >= 3]
@@ -257,13 +259,15 @@ def capas():
         else:
             return
         subs = [([(x + dx, y + dy) for x, y in p], c) for p, c in subs]
-        sec = seccion
-        if seccion == "fondo" and fill == "#0E4232" and el.attrib.get("d", "").startswith("M -600 1700"):
-            sec = "orilla"
-        if seccion == "fondo" and stroke == "#26603A" and el.attrib.get("d", "").startswith("M -600 908"):
-            grupo = BANK
+        if seccion == "fondo":
+            # Del fondo del icono solo se llevan las dos palmeras de açaí (8 trazos cada una): el río, la selva y las orillas los
+            # compone el juego para la pantalla vertical (el río con meandros, añadido de D-051).
+            if stroke != "#0E4232" or fill not in (None, "none"):
+                return
+            palmas[0] += 1
+            grupo = PALM_A if palmas[0] <= 8 else PALM_B
         else:
-            grupo = grupo_de(fill, stroke, sec)
+            grupo = grupo_de(fill, stroke, seccion)
         clave = el.attrib.get("d", "")
         if fill not in (None, "none"):
             polis = [p for p, _ in subs]

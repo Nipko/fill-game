@@ -28,12 +28,14 @@ namespace AF.UI
     }
 
     /// <summary>
-    /// Intro de la marca (D-051, punto 3): el emblema de Tintalú de la identidad v2 (D-045, «El río que se tiñe»), dibujado por
-    /// código sobre el petróleo de la marca, el mismo fondo de la pantalla del sistema de Android 12+ (D-051, punto 2), para que
-    /// empalmen. Con su añadido (2026-10-25): la cuia de vidrio del icono (Taperebá, Aguaje y Açaí, inclinada según D-006) vierte
-    /// el chorro en parábola sobre el río blanco; al llegar, salen los aros del impacto y el açaí se abre río abajo desde el
-    /// impacto (la composición del icono, sin texto: 06 §2.1, regla 3, en el arranque). Las piezas son las de la pantalla de
-    /// arranque (<see cref="BrandEmblemArt"/>): su último fotograma es el emblema de esa pantalla.
+    /// Intro de la marca (D-051, punto 3): «El río que se tiñe» de la identidad v2 (D-045), dibujado por código sobre el petróleo de
+    /// la marca, el mismo fondo de la pantalla del sistema de Android 12+ (D-051, punto 2), para que empalmen. Con su añadido
+    /// (2026-10-25, a petición del dueño): el Amazonas con meandros, del horizonte al primer plano, entre la selva
+    /// (<see cref="BrandRiverScene"/>); la cuia de vidrio del icono (Taperebá, Aguaje y Açaí, inclinada según D-006) vierte el
+    /// chorro en parábola sobre un punto del río; al llegar, salen los aros del impacto y el açaí tiñe el cauce río abajo, siguiendo
+    /// los meandros, hasta el primer plano (sin texto: 06 §2.1, regla 3, en el arranque). Las piezas son las de la pantalla de
+    /// arranque (<see cref="BrandEmblemArt"/>, colocadas igual: <see cref="BrandEmblemImages"/>): su último fotograma es esa
+    /// pantalla sin el mundo de alrededor.
     /// <list type="bullet">
     /// <item>Va en la pantalla de arranque (<see cref="BootSplash"/>), por encima de todo lo suyo, y solo mientras el juego carga:
     /// nunca añade espera. Al terminar la carga se corta (<see cref="End"/>) aunque la animación vaya a medias; si la carga dura más
@@ -42,7 +44,7 @@ namespace AF.UI
     /// fotograma que llega a pintarse enseña el instante que toca. Hasta <see cref="Begin"/> (cuando se sabe si hay Reducir
     /// movimiento, con el perfil leído) sale en su primer fotograma; con Reducir movimiento, en el último, sin moverse.</item>
     /// <item>No recibe toques (el fondo de la pantalla de arranque ya los traga: aún no hay nada que tocar) y no asigna memoria por
-    /// fotograma. No tiene texturas propias: las del emblema son de la pantalla de arranque.</item>
+    /// fotograma. No tiene texturas propias: las de la escena son de la pantalla de arranque.</item>
     /// </list>
     /// </summary>
     public sealed class BrandIntro
@@ -65,21 +67,10 @@ namespace AF.UI
         /// <summary>Halo del icono v2 (#5FB3A6 al 45 %); la pantalla de arranque usa el mismo.</summary>
         internal static readonly Color HaloColor = new Color(0x5F / 255f, 0xB3 / 255f, 0xA6 / 255f, 0.45f);
 
-        // El halo: centro (unidades del icono) y lado (unidades) [P].
-        private const float HaloCenterX = 512f;
-        private const float HaloCenterY = 540f;
-        private const float HaloUnits = 1150f;
-
         private readonly RectTransform _root;
         private readonly Image _background;
-        private readonly Image _halo;
-        private readonly Image _base;
-        private readonly Image _acai;
-        private readonly Image _impact;
-        private readonly Image _stream;
-        private readonly Image _cuia;
+        private readonly BrandEmblemImages _images;
         private readonly double _origin;
-        private BrandEmblemArt _art;
         private float _tintFill;
         private bool _begun;
         private bool _reduceMotion;
@@ -105,7 +96,6 @@ namespace AF.UI
         internal BrandIntro(Transform parent, double origin, Sprite halo, BrandEmblemArt art)
         {
             _origin = origin;
-            _art = art;
             var go = new GameObject("BrandIntro", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             _root = (RectTransform)go.transform;
@@ -113,15 +103,11 @@ namespace AF.UI
 
             _background = UiBuilder.Image("Petroleum", _root, null, Petroleum);
             UiBuilder.Stretch(_background.rectTransform);
-            _halo = UiBuilder.Image("Halo", _root, halo, HaloColor);
-            _base = UiBuilder.Image("EmblemBase", _root, null, Color.white);
-            _acai = UiBuilder.Image("EmblemAcai", _root, null, Color.white);
-            _impact = UiBuilder.Image("EmblemImpact", _root, null, Color.white);
-            _stream = UiBuilder.Image("EmblemStream", _root, null, Color.white);
-            _stream.type = Image.Type.Filled;
-            _stream.fillMethod = Image.FillMethod.Vertical;
-            _stream.fillOrigin = (int)Image.OriginVertical.Top;
-            _cuia = UiBuilder.Image("EmblemCuia", _root, null, Color.white);
+            _images = BrandEmblemImages.Create(_root, halo);
+            Image stream = _images.Stream;
+            stream.type = Image.Type.Filled;
+            stream.fillMethod = Image.FillMethod.Vertical;
+            stream.fillOrigin = (int)Image.OriginVertical.Top;
             Layout(art);
         }
 
@@ -149,11 +135,11 @@ namespace AF.UI
         /// <summary>Desde que se creó (ms reales).</summary>
         public long AgeMs => (long)((Time.realtimeSinceStartupAsDouble - _origin) * 1000.0);
 
-        /// <summary>Lo teñido del río: cuánto se ha abierto el açaí desde el impacto (0 sin teñir, 1 hasta llenar el cauce).</summary>
+        /// <summary>Lo teñido del río: por dónde va el açaí río abajo desde el impacto (0 sin teñir, 1 hasta el primer plano).</summary>
         public float TintFill => _tintFill;
 
         /// <summary>Lo que lleva el chorro de la boca de la cuia al río (0 aún dentro, 1 en el agua).</summary>
-        public float StreamFill => _stream.fillAmount;
+        public float StreamFill => _images.Stream.fillAmount;
 
         /// <summary>
         /// Arranca la animación, con lo que se sabe ya del perfil: con <paramref name="reduceMotion"/>, salta a su último fotograma y
@@ -196,28 +182,11 @@ namespace AF.UI
             Apply(ms);
         }
 
-        /// <summary>Rehace la composición con el emblema <paramref name="art"/> (otra pantalla: la pantalla de arranque lo rehízo).</summary>
+        /// <summary>Rehace la composición con la escena <paramref name="art"/> (otra pantalla: la pantalla de arranque la rehízo).</summary>
         internal void Layout(BrandEmblemArt art)
         {
-            _art = art;
-            PlaceEmblem(_halo, _base, _acai, _impact, _stream, _cuia, art);
+            _images.Place(art);
             Apply(_clockMs);
-        }
-
-        /// <summary>
-        /// Coloca el halo y las piezas del emblema <paramref name="art"/>: el açaí y el impacto con el pivote en el impacto, para que
-        /// se abran desde él. Lo usan la intro y la pantalla de arranque (añadido de D-051): por eso empalman sin salto.
-        /// </summary>
-        internal static void PlaceEmblem(Image halo, Image emblemBase, Image acai, Image impact, Image stream, Image cuia, BrandEmblemArt art)
-        {
-            float side = HaloUnits * art.Scale;
-            UiBuilder.Place(halo.rectTransform, art.X(HaloCenterX) - (side * 0.5f), art.Y(HaloCenterY) - (side * 0.5f), side, side);
-            var hit = new Vector2(BrandEmblem.ImpactX, BrandEmblem.ImpactY);
-            art.Place(emblemBase, BrandEmblem.Base);
-            art.Place(acai, BrandEmblem.Acai, hit);
-            art.Place(impact, BrandEmblem.Impact, hit);
-            art.Place(stream, BrandEmblem.Stream);
-            art.Place(cuia, BrandEmblem.Cuia);
         }
 
         /// <summary>
@@ -255,26 +224,32 @@ namespace AF.UI
 
         /// <summary>
         /// Estado de la animación en <paramref name="ms"/> (sin asignaciones): el chorro baja de la boca de la cuia hasta el agua
-        /// (<see cref="FallMs"/>); entonces salen los aros (hasta <see cref="RippleEndMs"/>) y el açaí se abre desde el impacto, río
-        /// abajo y frenando, hasta llenar el cauce (<see cref="AnimMs"/>). Después, quieta: el emblema del icono.
+        /// (<see cref="FallMs"/>); entonces salen los aros (hasta <see cref="RippleEndMs"/>) y el açaí avanza por el cauce, tramo a
+        /// tramo y frenando, hasta el primer plano (<see cref="AnimMs"/>). Después, quieta: la escena entera.
         /// </summary>
         private void Apply(float ms)
         {
             float t = Mathf.Clamp(ms, 0f, AnimMs);
             _clockMs = t;
             float pour = Mathf.Clamp01(t / FallMs);
-            _stream.fillAmount = 1f - ((1f - pour) * (1f - pour));
+            _images.Stream.fillAmount = 1f - ((1f - pour) * (1f - pour));
 
             float ripple = t <= FallMs ? -1f : Mathf.Clamp01((t - FallMs) / (float)(RippleEndMs - FallMs));
             float rs = ripple < 0f ? 0.3f : 0.3f + (0.7f * (1f - ((1f - ripple) * (1f - ripple))));
-            _impact.rectTransform.localScale = new Vector3(rs, rs, 1f);
-            _impact.color = new Color(1f, 1f, 1f, ripple < 0f ? 0f : Mathf.Clamp01(ripple * 2.5f));
+            _images.Impact.rectTransform.localScale = new Vector3(rs, rs, 1f);
+            _images.Impact.color = new Color(1f, 1f, 1f, ripple < 0f ? 0f : Mathf.Clamp01(ripple * 2.5f));
 
+            // El frente del açaí recorre los tramos río abajo; cada tramo se enciende al pasar el frente.
             float spread = t <= FallMs ? 0f : Mathf.Clamp01((t - FallMs) / (AnimMs - FallMs));
             float eased = 1f - ((1f - spread) * (1f - spread));
             _tintFill = eased;
-            _acai.rectTransform.localScale = new Vector3(0.06f + (0.94f * eased), 0.35f + (0.65f * eased), 1f);
-            _acai.color = new Color(1f, 1f, 1f, spread <= 0f ? 0f : Mathf.Clamp01(spread * 4f));
+            Image[] acai = _images.Acai;
+            float front = eased * acai.Length;
+            for (int k = 0; k < acai.Length; k++)
+            {
+                float a = spread <= 0f ? 0f : Mathf.Clamp01((front - k) * 3f);
+                acai[k].color = new Color(1f, 1f, 1f, eased >= 1f ? 1f : a);
+            }
         }
 
         private float CurrentMs()

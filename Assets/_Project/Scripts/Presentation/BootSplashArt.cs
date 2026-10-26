@@ -6,34 +6,11 @@ namespace AF.Presentation
     /// <summary>
     /// Piezas por código de la pantalla de arranque con la marca v2 (añadido de D-051, 2026-10-25; D-045 «El río que se tiñe»;
     /// D-003 «Selva brillante premium»): lo que hay alrededor del emblema (<c>BrandEmblem</c>), con la paleta del icono v2
-    /// (<c>docs/art/marca-oficial/v2/generar.py</c>): el suelo de la orilla de acá, que sigue al del icono, y su follaje y su
-    /// matorral en silueta. Arte final por código (D-050, D-052): sale en todos los builds. Cada llamada crea una textura nueva, que
+    /// (<c>docs/art/marca-oficial/v2/generar.py</c>): el follaje y el matorral en silueta del primer plano. Arte final por código (D-050, D-052): sale en todos los builds. Cada llamada crea una textura nueva, que
     /// es de quien la pide.
     /// </summary>
     public static class BootSplashArt
     {
-        /// <summary>La orilla de acá, arriba (la misma selva oscura del icono).</summary>
-        public static readonly Color GroundTop = Palette.Hex(0x0E4232);
-
-        /// <summary>La orilla de acá, abajo: el petróleo hondo del icono (#0A2A2E).</summary>
-        public static readonly Color GroundBottom = Palette.Hex(0x0A2A2E);
-
-        /// <summary>La orilla de acá: degradado vertical de <see cref="GroundTop"/> (arriba) a <see cref="GroundBottom"/> (abajo).</summary>
-        public static Texture2D Ground(int h)
-        {
-            Texture2D tex = NewTexture(1, h, "AF_BootGround");
-            var px = new Color32[h];
-            for (int y = 0; y < h; y++)
-            {
-                float t = 1f - (y / (float)(h - 1)); // 0 arriba, 1 abajo
-                px[y] = Color.Lerp(GroundTop, GroundBottom, Mathf.SmoothStep(0f, 1f, t));
-            }
-
-            tex.SetPixels32(px);
-            tex.Apply(false, true);
-            return tex;
-        }
-
         /// <summary>
         /// Follaje en silueta de la esquina de abajo a la izquierda (la de la derecha es la misma volteada): hojas anchas y
         /// lanceoladas que suben desde la esquina, en verdes de noche apenas encendidos por arriba, sin especie reconocible.
