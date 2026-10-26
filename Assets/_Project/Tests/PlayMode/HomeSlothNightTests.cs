@@ -22,7 +22,7 @@ namespace AF.Tests.PlayMode
     /// «De noche TiTino duerme callado (solo un Zzz); si lo toco, se despierta un momento y dice su mensaje.»), en la escena
     /// <c>Game</c> real y con un <see cref="ManualClock"/>:
     /// <list type="bullet">
-    /// <item>de noche, dormido: sin bocadillo ni saludo (el de regreso no se dice ni se gasta), con el «Zzz» junto a la cabeza, que
+    /// <item>de noche, dormido: sin bocadillo ni saludo (el de regreso no se dice ni se gasta: sale en la primera visita de día), con el «Zzz» junto a la cabeza, que
     /// no tapa la travesía, el letrero ni lo demás del inicio; TalkBack dice que duerme;</item>
     /// <item>al tocarlo: <c>sloth_wake</c>, el mensaje siguiente de la rotación (el Dato del día primero) y, cuando se va, otra vez
     /// dormido con el «Zzz»; la rotación no vuelve sola;</item>
@@ -119,7 +119,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator AtNight_TheGreetingIsNotSaid_NorSpent_ButTheVisitCounts()
+        public IEnumerator AtNight_TheReturnGreetingIsNotSaid_NorSpent_AndComesOnTheFirstDayVisit()
         {
             ManualClock clock = At(0, 22);
             Profile profile = ProfileAt(58, clock);
@@ -135,7 +135,26 @@ namespace AF.Tests.PlayMode
             Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False);
             Profile saved = store.Load().Profile!;
             Assert.That(saved.Sloth.LastGreetingDate, NUnit.Framework.Is.Null, "el saludo del día no se gasta");
-            Assert.That(saved.Sloth.LastSeenDate, NUnit.Framework.Is.EqualTo(Today), "la visita cuenta");
+            Assert.That(saved.Sloth.LastSeenDate, NUnit.Framework.Is.EqualTo("2026-10-11"), "ni la visita se apunta: el regreso queda para el día");
+
+            // La primera visita de día (al día siguiente, a las 15:00, fuera del saludo de la mañana): el de regreso.
+            clock.Set(Day0.AddDays(1).AddHours(15));
+            yield return Load(store, clock);
+            sloth = Sloth();
+            sloth.Tick(16f);
+            Assert.That(sloth.LastGreeting.Greeting, NUnit.Framework.Is.True, "de día, el saludo de regreso");
+            Assert.That(sloth.LastGreeting.Moment, NUnit.Framework.Is.EqualTo(SlothMoment.Return));
+            Assert.That(sloth.LastGreeting.Gesture, NUnit.Framework.Is.EqualTo(SlothGesture.Wave));
+            Assert.That(sloth.BubbleIsGreeting, NUnit.Framework.Is.True);
+            saved = store.Load().Profile!;
+            Assert.That(saved.Sloth.LastGreetingDate, NUnit.Framework.Is.EqualTo("2026-10-16"));
+            Assert.That(saved.Sloth.LastSeenDate, NUnit.Framework.Is.EqualTo("2026-10-16"));
+
+            // De noche sin saludo pendiente (menos de 3 días fuera), la visita sí se apunta.
+            clock.Set(Day0.AddDays(2).AddHours(22));
+            yield return Load(store, clock);
+            Sloth().Tick(16f);
+            Assert.That(store.Load().Profile!.Sloth.LastSeenDate, NUnit.Framework.Is.EqualTo("2026-10-17"), "una visita de noche normal cuenta");
         }
 
         [UnityTest]

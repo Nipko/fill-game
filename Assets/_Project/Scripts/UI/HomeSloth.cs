@@ -34,7 +34,8 @@ namespace AF.UI
     /// Tocarlo no lo cuida ni da premios (d.7).</item>
     /// <item><b>De noche duerme callado</b> (añadido de D-050 del 2026-10-26: «De noche TiTino duerme callado (solo un Zzz); si lo
     /// toco, se despierta un momento y dice su mensaje»): con <c>sloth_sleep</c> no rota el bocadillo ni saluda (el saludo de la
-    /// visita no se dice ni se gasta, aunque la visita cuenta para <c>sloth.last_seen_date</c>), y junto a su cabeza sube un «Zzz»
+    /// visita no se dice ni se gasta: si tocaba el de regreso, la visita no se apunta en <c>sloth.last_seen_date</c> y el saludo
+    /// sale en la primera visita de día), y junto a su cabeza sube un «Zzz»
     /// dibujado (<see cref="HomeSlothZzz"/>; quieto con Reducir movimiento). Al tocarlo se despierta (<c>sloth_wake</c>, después
     /// <c>sloth_idle</c>), dice el mensaje siguiente de la rotación con las reglas del día y, cuando el mensaje se va (y como
     /// mínimo <see cref="NightAwakeMs"/> ms), vuelve a dormirse. Con <c>settings.sloth_messages</c> apagado, se despierta y se
@@ -818,9 +819,10 @@ namespace AF.UI
             SlothLine line = SlothLines.ForHome(in context);
             string text = string.Empty;
 
-            // De noche duerme callado (añadido de D-050 del 2026-10-26): ni gesto ni frase, y el saludo no se gasta (la visita sí
-            // cuenta para last_seen_date) [P].
+            // De noche duerme callado (añadido de D-050 del 2026-10-26): ni gesto ni frase, y el saludo no se gasta. Si tocaba el de
+            // regreso, tampoco se apunta la visita en last_seen_date: sale en la primera visita de día [P].
             bool night = BasePoseFor(hour) == SlothPoseId.Sleep;
+            bool keepReturn = night && line.Greeting;
             bool speaks = !night && line.Speaks && UiText.TrySlothLine(in line, out text);
             SlothLine shown = speaks
                 ? line
@@ -832,7 +834,7 @@ namespace AF.UI
             // El sloth del perfil, aunque la sesión lleve el suyo: la última apertura, el saludo del día y la frase vista. Con el
             // saludo aplazado tras el bocadillo del Mapa del 10 (D-028, pregunta 60 b), nada: el saludo queda para la visita
             // siguiente (si aquí se apuntara la apertura de hoy, el de la mañana ya no tocaría).
-            if (!shown.Deferred)
+            if (!shown.Deferred && !keepReturn)
             {
                 data.LastSeenDate = today;
             }
