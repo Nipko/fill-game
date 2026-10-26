@@ -430,7 +430,7 @@ namespace AF.Presentation
         /// cómo se pinta, para que la caché de disco (<c>BrandEmblemCache</c>, jornada 3 de D-051) no sirva píxeles viejos en el
         /// Editor ni en un build con el mismo <c>buildGUID</c> [P].
         /// </summary>
-        public const int ArtVersion = 1;
+        public const int ArtVersion = 2; // 2: sin el NaN del extremo de los bancos de arena (sin(π) < 0 en float)
 
         /// <summary>
         /// Con true, cada pieza que se rasteriza guarda sus píxeles para <see cref="TakeLastPixels"/> (la caché de disco de la escena,
@@ -668,7 +668,7 @@ namespace AF.Presentation
                 for (int i = a0; i <= b0; i++)
                 {
                     float t = (i - a0) / (float)Mathf.Max(1, b0 - a0);
-                    float wdt = most * Mathf.Pow(Mathf.Sin(Mathf.PI * t), 1.4f) * (_half[i] / Mathf.Max(1e-3f, _half[peak]));
+                    float wdt = most * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * t)), 1.4f) * (_half[i] / Mathf.Max(1e-3f, _half[peak]));
                     if (sign > 0f)
                     {
                         _beachL[i] = Mathf.Max(_beachL[i], wdt);

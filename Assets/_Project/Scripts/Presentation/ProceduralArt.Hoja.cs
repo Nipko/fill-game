@@ -155,6 +155,12 @@ namespace AF.Presentation
 
         private Sprite BuildHojaPalm()
         {
+            return MakeSprite(BuildHojaPalmCanvas(), "mech_hoja_palm", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // La hoja de palma cerrada en su lienzo (aparte para los tests y la exportación a revisión).
+        internal static PixelCanvas BuildHojaPalmCanvas()
+        {
             const float k = MechanicPxPerU / 96f;
             int w = Mathf.RoundToInt(HojaPalmWidthU * MechanicPxPerU);
             int h = Mathf.RoundToInt(HojaPalmHeightU * MechanicPxPerU);
@@ -164,7 +170,7 @@ namespace AF.Presentation
             float half = 0.31f * MechanicPxPerU;
             float fold = (HojaPalmMidribU - HojaPalmLowU) * MechanicPxPerU - half;
             DrawHojaPalm(pc, w * 0.5f, HojaPalmMidribU * MechanicPxPerU, w - (8f * k), 0.34f * MechanicPxPerU, 2.2f, half, fold, 4, true, k);
-            return MakeSprite(pc, "mech_hoja_palm", new Vector2(0.5f, 0.5f), Vector4.zero);
+            return pc;
         }
 
         private Sprite BuildHojaFlat()
@@ -205,7 +211,7 @@ namespace AF.Presentation
             {
                 for (int x = 0; x < pc.Width; x++)
                 {
-                    if (pc.Get(x, y).a < 0.5f)
+                    if (!(pc.Get(x, y).a >= 0.5f)) // un alfa que no es un número no cuenta como opaco
                     {
                         continue;
                     }
@@ -243,7 +249,7 @@ namespace AF.Presentation
         }
 
         // La hoja ya abierta: casi recta, con las puntas apenas caídas.
-        private static PixelCanvas DrawHojaFlat()
+        internal static PixelCanvas DrawHojaFlat()
         {
             const float k = MechanicPxPerU / 96f;
             int w = Mathf.RoundToInt(HojaFlatWidthU * MechanicPxPerU);
@@ -322,7 +328,7 @@ namespace AF.Presentation
                 float slope = -droop * droopPow * Mathf.Pow(Mathf.Max(am, 1e-4f), droopPow - 1f) * Mathf.Sign(m) * 2f; // dy/dt
                 tan[i] = new Vector2(length, slope).normalized;
                 nrm[i] = new Vector2(-tan[i].y, tan[i].x); // a la izquierda del avance: arriba
-                float s = Mathf.Sin(Mathf.PI * t);
+                float s = Mathf.Max(0f, Mathf.Sin(Mathf.PI * t)); // en t = 1, sin(π) es un negativo diminuto: su potencia daba NaN
                 float taper = Mathf.Pow(Mathf.Clamp01(Mathf.Min(t, 1f - t) / tipFraction), 0.85f);
                 wid[i] = halfWidth * Mathf.Pow(s, 0.3f) * taper;
                 fol[i] = fold * Mathf.Pow(s, 1.2f) * taper;

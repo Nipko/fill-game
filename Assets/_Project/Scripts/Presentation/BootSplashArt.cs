@@ -73,9 +73,9 @@ namespace AF.Presentation
             }
         }
 
-        // Una hoja desde (x, y) dp, con el ángulo deg (0 = derecha, 90 = arriba), largo y ancho en dp. Solo ovadas: las lanceoladas
-        // de ProceduralArt.DrawLeaf dan NaN en la punta (el seno de π es un negativo diminuto) y ese NaN borra una línea de lo
-        // pintado antes en la misma textura.
+        // Una hoja desde (x, y) dp, con el ángulo deg (0 = derecha, 90 = arriba), largo y ancho en dp. Solo ovadas: se eligieron
+        // cuando las lanceoladas de ProceduralArt.DrawLeaf daban NaN en la punta y borraban una línea de lo pintado antes
+        // (corregido en el añadido de D-051; LeafDrawingTests). Se quedan ovadas: el dibujo del arranque ya está aprobado así.
         private static void Leaf(PixelCanvas pc, float k, float x, float y, float deg, float length, float width, float bend, LeafShape shape, Color dark, Color light, int seed)
         {
             float a = deg * Mathf.Deg2Rad;
