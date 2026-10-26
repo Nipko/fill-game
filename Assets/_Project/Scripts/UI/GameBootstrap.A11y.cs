@@ -87,6 +87,11 @@ namespace AF.UI
                 _screen.A11y = _a11y;
             }
 
+            if (_mapScreen != null)
+            {
+                _mapScreen.A11y = _a11y; // D-053: TalkBack anuncia la llegada de la canoa en el Mapa con viaje
+            }
+
             if (_settingsScreen != null)
             {
                 _settingsScreen.A11yToggled = (id, on) => ChooseA11y(id, on);

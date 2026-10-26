@@ -22,7 +22,8 @@ namespace AF.UI
     /// ms), se iza su bandera y se enciende la baliza si cierra el mundo; cada llegada escribe <c>AF_STATE stop_arrive</c> con
     /// <c>view</c> = <c>map</c> (<c>af_stop_arrive</c>, 08 §8.2);</item>
     /// <item>un toque en cualquier sitio del Mapa lo completa en el acto (las llegadas que faltaban, con <c>skipped</c>); cerrarlo
-    /// a medias, también. Con Reducir movimiento (07 §7.8; propuesta del Mapa §4.2), sin viaje ni llenado animado: el estado final
+    /// a medias, también. En un Mapa con viaje (D-053: el del 10, «Ver mapa» de la victoria y el fin de contenido), no: el toque
+    /// lo recibe el área del viaje, que como mucho lo acelera, y la canoa sale tras una anticipación (RiverMapScreen.Journey.cs). Con Reducir movimiento (07 §7.8; propuesta del Mapa §4.2), sin viaje ni llenado animado: el estado final
     /// aparece con un fundido de <see cref="MapConfig.ReducedMotionFadeMs"/> ms en lo que cambió desde lo visto (el frente del
     /// río con sus boyas, las banderas izadas, el agua de las mini cuias de las llegadas y las balizas encendidas); el tramo que
     /// ya pasó al lleno del cauce no tiene malla propia y aparece sin fundido [P];</item>
@@ -38,6 +39,7 @@ namespace AF.UI
         private const string JourneyByTouch = "touch";
         private const string JourneyByClose = "close";
         private const string JourneyByReduce = "reduce";
+        private const string JourneyByResume = "resume";
 
         private bool _catchUp;
         private int _catchFrom;
@@ -45,6 +47,8 @@ namespace AF.UI
         private int _catchSeen;
         private int _catchStep;
         private float _catchMs;
+        private float _catchHoldMs; // D-053: la anticipación antes de remar (RiverMapScreen.Journey.cs)
+        private float _catchSpeed = 1f; // D-053: un toque durante el viaje lo acelera un poco
         private int _catchArrivals;
         private bool _lastCatchArrivalSkipped;
         private int _lastCatchArrivalLevel;
@@ -106,6 +110,8 @@ namespace AF.UI
             EndReducedFade();
             _catchUp = false;
             _catchMs = 0f;
+            _catchHoldMs = 0f;
+            _catchSpeed = 1f;
             _catchArrivals = 0;
             _lastCatchArrivalSkipped = false;
             _lastCatchArrivalLevel = 0;
@@ -168,7 +174,20 @@ namespace AF.UI
             }
 
             animating = true;
-            _catchMs += dtMs;
+            if (_catchHoldMs > 0f)
+            {
+                // D-053: la canoa se prepara (se balancea y el tramo nuevo late) y sale enseguida; lo que sobra del fotograma ya rema.
+                _catchHoldMs -= dtMs;
+                if (_catchHoldMs > 0f)
+                {
+                    return;
+                }
+
+                dtMs = -_catchHoldMs;
+                _catchHoldMs = 0f;
+            }
+
+            _catchMs += dtMs * _catchSpeed;
             float x = _catchFrom + (_catchMs / MapConfig.CatchUpPerBuoyMs);
             int level = Mathf.Min(_catchTo, Mathf.FloorToInt(x));
             while (_catchStep < level)
@@ -192,6 +211,23 @@ namespace AF.UI
             {
                 FinishCatchUp(true, JourneyByClose); // cerrado a medias: lo que faltaba, como saltado
             }
+        }
+
+        /// <summary>
+        /// Vuelve de segundo plano con «ponerse al día» en marcha (02 §14: la vista salta al modelo sin animar): lo completa en el
+        /// acto, con las llegadas que faltaban como saltadas, y en un Mapa con viaje habilita sus botones (D-053). True si había
+        /// algo que completar.
+        /// </summary>
+        internal bool CatchUpResume()
+        {
+            EndReducedFade();
+            if (!_catchUp)
+            {
+                return false;
+            }
+
+            FinishCatchUp(true, JourneyByResume);
+            return true;
         }
 
         /// <summary>
@@ -264,6 +300,7 @@ namespace AF.UI
             }
 
             MoveCanoe(_catchTo);
+            JourneyArrived(by); // D-053: la canoa llegó; «Jugar» y «←» se habilitan (RiverMapScreen.Journey.cs)
         }
 
         // Reducir movimiento: lo que cambió de «from» a «to» y ya está pintado entra de 0 a 1 en ReducedMotionFadeMs: el frente del
@@ -402,8 +439,9 @@ namespace AF.UI
             return level > _catchSeen && level >= RiverStopCatalog.LevelsPerStop && level % RiverStopCatalog.LevelsPerStop == 0;
         }
 
-        // FX15: AF_STATE map_journey del viaje del fin de contenido (solo de él; DevProbe.MapJourney), para comprobar en el
-        // teléfono por logcat que la canoa hizo el viaje Tambo → naciente: dura 1,5 s y en capturas cada 2 s no se ve.
+        // FX15: AF_STATE map_journey del viaje del tramo repetido (el del fin de contenido y, con D-053, el de «Ver mapa» de la
+        // victoria; DevProbe.MapJourney), para comprobar en el teléfono por logcat que la canoa hizo el viaje: dura 1,5 s y en
+        // capturas cada 2 s no se ve.
         private void ProbeJourney(string phase, string by)
         {
             if (_modesReplayFrom < 0 || !DevProbe.Enabled)
@@ -411,7 +449,7 @@ namespace AF.UI
                 return;
             }
 
-            _probe.MapJourney(phase, _catchFrom, _catchTo, CatchUpDurationMs, phase == "start" ? 0f : _catchMs, by);
+            _probe.MapJourney(_source, phase, _catchFrom, _catchTo, CatchUpDurationMs, phase == "start" ? 0f : _catchMs, by);
         }
 
         // af_stop_arrive con view = map (08 §8.2): solo con parada en el catálogo.

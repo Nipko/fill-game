@@ -1751,6 +1751,7 @@ namespace AF.UI
             _lobby.Seasons = Seasons; // la LUT de temporada del fondo del inicio, como el tablero (SE2)
             _lobby.RiverMapAvailable = RiverMapAvailable; // la pestaña del Mapa del río, desde max_level ≥ 10 (M3.3)
             _mapScreen = new RiverMapScreen(transform, _art, _probe, () => CloseRiverMap(), () => PressMapPlay());
+            _mapScreen.A11y = _a11y; // D-053 (si el lector ya está; si no, lo pone SetUpA11y)
             _mapScreen.Fauna = Fauna; // el miquito del tramo en la tarjeta de la parada (M4.1)
             _mapScreen.FruitSeries = FruitFacts?.Catalog; // la fruta de la serie en la tarjeta de la parada (D-022; M4.1)
             _mapScreen.Seasons = Seasons; // la LUT de temporada en la tarjeta de la parada, como el fondo (07 §2.1; FX8)
@@ -1972,6 +1973,9 @@ namespace AF.UI
             ResumeBackend(true); // F3-5: lo que Play cobró mientras tanto vuelve como compra sin terminar (08 §10.3)
             ResumeAds(); // D-049 (y D-042): un anuncio sin su cierre se suelta tras un margen; UMP sin resolver se reintenta
             PushUiResumed(); // «Avisos»: de vuelta de los ajustes del teléfono (GameBootstrap.PushUi.cs)
+
+            // 02 §14 y D-053: el viaje del Mapa (o «ponerse al día») salta al final; con viaje, entran «Jugar» y «←».
+            _mapScreen?.ResumeFromBackground();
 
             // 02 §14: al volver de segundo plano la vista salta al modelo sin animar (también la luciérnaga en vuelo: la cuia
             // queda revelada) y la selección se limpia.

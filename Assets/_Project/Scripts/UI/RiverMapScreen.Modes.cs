@@ -17,7 +17,8 @@ namespace AF.UI
     /// ni canoa, ni Crecida, ni <c>fails_level</c>, ni cambio de fase (04 §5.2, fila del Mapa desde la pausa; D-023).</description></item>
     /// <item><description><b>Victoria</b> (<see cref="MapOpenSource.Victory"/>, «Ver mapa» de la victoria del <c>10k</c>): encima
     /// de la victoria, que sigue debajo; «Jugar» pasa a «Volver» (<c>back</c>, glosario §10) [P] y vuelve a ella. «Siguiente» y
-    /// AD_GATE no cambian.</description></item>
+    /// AD_GATE no cambian. Desde D-053, con el viaje del tramo recién ganado, como el fin de contenido (<see cref="LastLegStart"/>:
+    /// del 10 al 20 en la victoria del 20), aunque la franja ya anotara la llegada (sin <c>stop_arrive</c> nuevo).</description></item>
     /// <item><description><b>Fin de contenido</b> (<see cref="MapOpenSource.ContentEnd"/>, 06 §9: «la canoa llega al último tramo
     /// publicado»): antes de «El río sigue creciendo», el Mapa con <b>el viaje del último tramo publicado</b>: «ponerse al día»
     /// (M3.5) arranca, como pronto, al principio de ese tramo (<see cref="LastLegStart"/>: con <c>max_level</c> 300, desde el
@@ -50,13 +51,23 @@ namespace AF.UI
         /// El Mapa se abrió al acabarse el contenido y hace el viaje del último tramo publicado: «ponerse al día» arranca, como
         /// pronto, en <see cref="ContentEndJourneyFromLevel"/>.
         /// </summary>
-        public bool ContentEndJourney => _modesReplayFrom >= 0;
+        public bool ContentEndJourney => _modesReplayFrom >= 0 && _source == MapOpenSource.ContentEnd;
 
         /// <summary>Nivel desde el que arranca el viaje del fin de contenido (<see cref="LastLegStart"/>), o −1 sin él.</summary>
-        public int ContentEndJourneyFromLevel => _modesReplayFrom;
+        public int ContentEndJourneyFromLevel => ContentEndJourney ? _modesReplayFrom : -1;
 
         /// <summary>Lo que dura el viaje del fin de contenido (ms): el de «ponerse al día»; 0 sin él.</summary>
-        public int ContentEndJourneyMs => _modesReplayFrom >= 0 ? CatchUpDurationMs : 0;
+        public int ContentEndJourneyMs => ContentEndJourney ? CatchUpDurationMs : 0;
+
+        /// <summary>
+        /// El Mapa repite el viaje del tramo recién ganado aunque ya se hubiera visto (D-053): el del fin de contenido y el de «Ver
+        /// mapa» en la victoria del <c>10k</c>, cuya franja ya anotó la llegada como vista. Arranca, como pronto, en
+        /// <see cref="ReplayJourneyFromLevel"/>.
+        /// </summary>
+        public bool ReplayJourney => _modesReplayFrom >= 0;
+
+        /// <summary>Nivel desde el que arranca el viaje repetido (<see cref="LastLegStart"/>), o −1 sin él.</summary>
+        public int ReplayJourneyFromLevel => _modesReplayFrom;
 
         /// <summary>
         /// Principio del tramo que acaba en <paramref name="maxLevel"/> (el último publicado al acabarse el contenido): el
@@ -121,8 +132,10 @@ namespace AF.UI
                     break;
             }
 
+            // D-053 (petición del dueño del 2026-10-26): «Ver mapa» en la victoria del 10k también hace el viaje del tramo que se
+            // acaba de ganar (la franja ya anotó la llegada como vista, así que sin esto la canoa no se movía: «no pasa nada»).
             IMapProgress? progress = _progress;
-            if (source == MapOpenSource.ContentEnd && progress != null)
+            if ((source == MapOpenSource.ContentEnd || source == MapOpenSource.Victory) && progress != null)
             {
                 int max = Mathf.Clamp(progress.MaxLevel, 0, WorldTable.LastLevel);
                 if (max >= RiverStopCatalog.LevelsPerStop)

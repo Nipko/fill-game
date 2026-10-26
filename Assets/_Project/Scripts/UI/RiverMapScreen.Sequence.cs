@@ -33,6 +33,10 @@ namespace AF.UI
     /// 1 a 10 y llena el Xingu al pasar su boca. La placa se queda lo que pide su lectura. Sin el visto bueno del asesor, en
     /// release (<see cref="Loc.Fact(string)"/> da ""), no hay placa.</description></item>
     /// </list>
+    /// <para><b>D-053 (petición del dueño del 2026-10-26):</b> la canoa ya no espera a que TiTino acabe: sale tras la anticipación
+    /// del viaje (<see cref="JourneyLeadMs"/>) mientras el bocadillo sigue, y «Jugar · Nivel 11» y «←» no están hasta que llega a
+    /// Santarém (RiverMapScreen.Journey.cs); un toque con la canoa de viaje no salta nada (lo recibe el área del viaje, que como
+    /// mucho lo acelera). Lo que sigue vale desde la llegada.</para>
     /// <para><b>Se puede saltar:</b> mientras dura, un área táctil sobre toda la pantalla del Mapa (<c>map_l10_skip</c> en
     /// <c>AF_LAYOUT</c>) la completa con un toque: la canoa llega en el acto (las llegadas, con <c>skipped</c>), el bocadillo y la
     /// placa se van y quedan «Jugar · Nivel 11» y «←». Cerrar el Mapa a medias (Atrás de Android) también la completa. Al acabar,
@@ -133,6 +137,7 @@ namespace AF.UI
         private float _seqMs;
         private float _seqOutMs = -1f;
         private int _seqTripFromMs;
+        private int _seqPlateFromMs;
         private int _seqEndMs;
         private string _seqBubbleText = string.Empty;
         private string? _seqFactKey;
@@ -202,8 +207,14 @@ namespace AF.UI
         /// <summary>Lo que dura la secuencia (ms; ≤ <see cref="MapConfig.L10MapMaxMs"/>), una vez empezada.</summary>
         public int L10SequenceDurationMs => _seqEndMs;
 
-        /// <summary>Cuándo deja TiTino de hablar y sale la canoa con la placa del dato (ms desde el principio).</summary>
+        /// <summary>
+        /// Cuándo sale la canoa (ms desde el principio): tras la anticipación de <see cref="JourneyLeadMs"/> ms, mientras TiTino se
+        /// presenta (D-053: antes esperaba a que acabara el bocadillo, unos 3,2 s sin que nada se moviera); 0 sin viaje.
+        /// </summary>
         public int L10TripFromMs => _seqTripFromMs;
+
+        /// <summary>Cuándo deja TiTino de hablar y entra la placa del dato (ms desde el principio).</summary>
+        public int L10PlateFromMs => _seqPlateFromMs;
 
         /// <summary>El área táctil que salta la secuencia.</summary>
         public Button? L10SkipButton => _seqSkip;
@@ -251,8 +262,24 @@ namespace AF.UI
         internal bool L10DestinationLifted => _seqDestMoved;
 
         /// <summary>
-        /// Salta la secuencia del Mapa del 10 (el toque en cualquier sitio): la canoa llega en el acto, el bocadillo y la placa se
-        /// van y queda el Mapa con «Jugar · Nivel 11» y «←». False si no estaba en marcha.
+        /// El toque en cualquier sitio del Mapa durante la secuencia (D-053): con la canoa aún de viaje no la salta (lo recibe antes
+        /// el área del viaje, <see cref="TapJourney"/>, que como mucho la acelera); con la canoa ya en Santarém, salta lo que queda
+        /// (<see cref="SkipL10Sequence"/>). True si hizo algo.
+        /// </summary>
+        public bool TapL10Sequence()
+        {
+            if (JourneyLocked)
+            {
+                return TapJourney();
+            }
+
+            return SkipL10Sequence();
+        }
+
+        /// <summary>
+        /// Completa la secuencia del Mapa del 10 en el acto (el código: el cierre a medias, los tests; el toque pasa por
+        /// <see cref="TapL10Sequence"/>): la canoa llega en el acto, el bocadillo y la placa se van y queda el Mapa con «Jugar ·
+        /// Nivel 11» y «←». False si no estaba en marcha.
         /// </summary>
         public bool SkipL10Sequence()
         {
@@ -270,7 +297,7 @@ namespace AF.UI
         partial void SequenceBuild(RectTransform root, RectTransform dynamicLayer)
         {
             _seqLayer = UiBuilder.Rect("L10Sequence", root);
-            _seqSkip = UiBuilder.BareButton("L10Skip", _seqLayer, () => SkipL10Sequence());
+            _seqSkip = UiBuilder.BareButton("L10Skip", _seqLayer, () => TapL10Sequence());
             UiBuilder.Stretch((RectTransform)_seqSkip.transform);
 
             _seqPlate = UiBuilder.Rect("L10FactPlate", _seqLayer);
@@ -381,32 +408,27 @@ namespace AF.UI
                 FaceL10Sloth(_seqFacing); // sin cambios, no toca nada
             }
 
-            // Mientras TiTino se presenta, «ponerse al día» espera quieto en Belém: su reloj vuelve a cero y la canoa a su sitio
-            // (en un fotograma no llega a encender una boya: 100 ms como mucho frente a 150 por boya).
-            if (_seqMs < _seqTripFromMs && _catchUp)
-            {
-                _catchMs = 0f;
-                MoveCanoe(_catchFrom);
-            }
+            // D-053: «ponerse al día» ya no espera a que TiTino acabe de hablar: la canoa sale tras la anticipación del viaje
+            // (JourneyLeadMs, RiverMapScreen.Journey.cs) mientras el bocadillo sigue a la vista.
 
             // El bocadillo: entra, se queda lo que pide su lectura y se va antes de que salga la canoa.
             if (_seqWithBubble && _seqBubble != null)
             {
                 float a = 0f;
-                if (_seqMs < _seqTripFromMs)
+                if (_seqMs < _seqPlateFromMs)
                 {
                     float fadeIn = reduce ? 1f : Mathf.Clamp01(_seqMs / L10BubbleFadeMs);
-                    float fadeOut = reduce ? 1f : Mathf.Clamp01((_seqTripFromMs - _seqMs) / L10BubbleFadeMs);
+                    float fadeOut = reduce ? 1f : Mathf.Clamp01((_seqPlateFromMs - _seqMs) / L10BubbleFadeMs);
                     a = Mathf.Min(fadeIn, fadeOut);
                 }
 
                 _seqBubble.SetAlpha(a);
             }
 
-            // La placa del dato, con la canoa: entra con su fundido y el retrato con su rebote (sloth_present provisional).
-            if (_seqWithPlate && _seqPlate != null && _seqMs >= _seqTripFromMs)
+            // La placa del dato, tras el bocadillo: entra con su fundido y el retrato con su rebote (sloth_present provisional).
+            if (_seqWithPlate && _seqPlate != null && _seqMs >= _seqPlateFromMs)
             {
-                float since = _seqMs - _seqTripFromMs;
+                float since = _seqMs - _seqPlateFromMs;
                 _seqPlateShownMs = since;
                 if (!_seqPlate.gameObject.activeSelf)
                 {
@@ -433,7 +455,7 @@ namespace AF.UI
 
         partial void SequenceLayoutIds(List<string> ids, List<RectTransform> rects)
         {
-            if (_seqActive && _seqSkip != null)
+            if (_seqActive && _seqSkip != null && !JourneyLocked)
             {
                 ids.Add("map_l10_skip");
                 rects.Add((RectTransform)_seqSkip.transform);
@@ -472,13 +494,16 @@ namespace AF.UI
             _seqWithBubble = titino && voice && _homeInView && _seqBubbleText.Length > 0;
             _seqWithPlate = _seqFactText.Length > 0;
 
-            // Tiempos [P]: el bocadillo lo que pide su lectura (o el gesto solo); después, la placa lo que pide la suya y, a la vez,
-            // el viaje de la canoa, que acaba con un respiro. Todo dentro de L10MapMaxMs (06 §2.3: ≤ 10 s).
+            // Tiempos [P]: el bocadillo lo que pide su lectura (o el gesto solo) y, después, la placa lo que pide la suya. El viaje
+            // de la canoa ya no espera al bocadillo (D-053, petición del dueño del 2026-10-26: «por unos instantes no parece que pase
+            // algo»): sale tras la anticipación (JourneyLeadMs) y acaba con un respiro. Todo dentro de L10MapMaxMs (06 §2.3: ≤ 10 s).
             int talk = _seqWithBubble ? NoticeTiming.ReadMs(_seqBubbleText) : (titino ? PresentOnlyMs : 0);
             int read = _seqWithPlate ? NoticeTiming.ReadMs(_seqFactText) : 0;
-            int trip = _catchUp ? CatchUpDurationMs + L10TripTailMs : 0;
-            _seqEndMs = Mathf.Min(MapConfig.L10MapMaxMs, talk + Mathf.Max(read, Mathf.Max(trip, L10TripTailMs)));
-            _seqTripFromMs = Mathf.Min(talk, _seqEndMs);
+            int lead = _catchUp ? JourneyLeadMs : 0;
+            int trip = _catchUp ? lead + CatchUpDurationMs + L10TripTailMs : 0;
+            _seqEndMs = Mathf.Min(MapConfig.L10MapMaxMs, Mathf.Max(talk + Mathf.Max(read, L10TripTailMs), trip));
+            _seqTripFromMs = Mathf.Min(lead, _seqEndMs);
+            _seqPlateFromMs = Mathf.Min(talk, _seqEndMs);
 
             if (titino)
             {
@@ -556,7 +581,7 @@ namespace AF.UI
         // estuvo a la vista.
         private void ReportL10Fact()
         {
-            if (_seqFactReported || !_seqWithPlate || _seqFactKey == null || _seqMs < _seqTripFromMs)
+            if (_seqFactReported || !_seqWithPlate || _seqFactKey == null || _seqMs < _seqPlateFromMs)
             {
                 return;
             }
@@ -577,6 +602,7 @@ namespace AF.UI
             _seqPlaceDirty = false;
             _seqMs = 0f;
             _seqTripFromMs = 0;
+            _seqPlateFromMs = 0;
             _seqEndMs = 0;
             _seqWithBubble = false;
             _seqWithPlate = false;

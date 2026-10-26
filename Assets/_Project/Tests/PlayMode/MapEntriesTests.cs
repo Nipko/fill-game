@@ -414,7 +414,8 @@ namespace AF.Tests.PlayMode
                 if (ms == closeAt)
                 {
                     map.Tick(PlayModeHelpers.FrameMs);
-                    map.PlayButton.onClick.Invoke();
+                    Assert.That(map.JourneyLocked, Is.True, "D-053: «Ver mapa» repite el viaje del tramo; «Volver» espera");
+                    Assert.That(boot.PressAndroidBack(), Is.True, "el Atrás de Android cierra el Mapa también durante el viaje");
                     Assert.That(map.Visible, Is.False);
                     Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "de vuelta a la victoria");
                 }

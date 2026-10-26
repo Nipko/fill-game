@@ -178,24 +178,38 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Línea <c>AF_STATE map_journey</c> del viaje del fin de contenido (tarea FX15; M4.3 y FX13; no es un evento de 08 §8.2,
-        /// solo una sonda de desarrollo para comprobar en el teléfono, sin vídeo, que la canoa hizo el viaje Tambo → naciente):
-        /// <paramref name="phase"/> <c>start</c> al abrir el Mapa y <c>end</c> al acabar, con <paramref name="by"/> <c>time</c>
-        /// (llegó sola), <c>touch</c> (un toque lo completó), <c>close</c> (se cerró a medias) o <c>reduce</c> (Reducir movimiento:
-        /// sin viaje, el fundido); <c>from</c> y <c>to</c>, los niveles del tramo; <c>ms</c>, lo que dura; <c>elapsed_ms</c>, lo que
-        /// llevaba al acabar (0 al empezar).
+        /// Línea <c>AF_STATE map_journey</c> del viaje del tramo (tarea FX15, para el del fin de contenido; D-053 la extiende al de
+        /// «Ver mapa» de la victoria, con <c>source</c> <c>victory</c>; M4.3 y FX13; no es un evento de 08 §8.2, solo una sonda de
+        /// desarrollo para comprobar en el teléfono, sin vídeo, que la canoa hizo el viaje): <paramref name="phase"/> <c>start</c>
+        /// al abrir el Mapa y <c>end</c> al acabar, con <paramref name="by"/> <c>time</c> (llegó sola), <c>touch</c> (lo completó
+        /// el código: el salto del Mapa del 10 ya con la canoa en marcha no llega aquí, D-053), <c>close</c> (se cerró a medias, el
+        /// Atrás de Android), <c>resume</c> (volvió de segundo plano: salta al final, 02 §14) o <c>reduce</c> (Reducir
+        /// movimiento: sin viaje, el fundido); <c>from</c> y <c>to</c>, los niveles del tramo; <c>ms</c>, lo que dura;
+        /// <c>elapsed_ms</c>, lo que llevaba al acabar (0 al empezar).
         /// </summary>
         public void MapJourney(string phase, int from, int to, int ms, float elapsedMs, string by)
         {
-            string? line = FormatMapJourney(phase, from, to, ms, elapsedMs, by);
+            MapJourney(MapOpenSource.ContentEnd, phase, from, to, ms, elapsedMs, by);
+        }
+
+        /// <summary><see cref="MapJourney(string, int, int, int, float, string)"/> con el <c>source</c> del Mapa (D-053).</summary>
+        public void MapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by)
+        {
+            string? line = FormatMapJourney(source, phase, from, to, ms, elapsedMs, by);
             if (line != null)
             {
                 Write(line);
             }
         }
 
-        /// <summary>Texto de la línea <c>AF_STATE map_journey</c>; null si la sonda no escribe.</summary>
+        /// <summary>Texto de la línea <c>AF_STATE map_journey</c> del fin de contenido; null si la sonda no escribe.</summary>
         public string? FormatMapJourney(string phase, int from, int to, int ms, float elapsedMs, string by)
+        {
+            return FormatMapJourney(MapOpenSource.ContentEnd, phase, from, to, ms, elapsedMs, by);
+        }
+
+        /// <summary>Texto de la línea <c>AF_STATE map_journey</c> con su <c>source</c>; null si la sonda no escribe.</summary>
+        public string? FormatMapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by)
         {
             if (!Enabled)
             {
@@ -206,7 +220,7 @@ namespace AF.UI
             sb.Clear();
             sb.Append("AF_STATE {\"event\":\"map_journey\"");
             AppendTime(sb);
-            sb.Append(",\"source\":\"").Append(MapSourceName(MapOpenSource.ContentEnd)).Append('"');
+            sb.Append(",\"source\":\"").Append(MapSourceName(source)).Append('"');
             sb.Append(",\"phase\":\"").Append(phase).Append('"');
             sb.Append(",\"from\":").Append(from.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"to\":").Append(to.ToString(CultureInfo.InvariantCulture));
@@ -222,6 +236,44 @@ namespace AF.UI
                 sb.Append('"').Append(by).Append('"');
             }
 
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Línea <c>AF_STATE map_play_ready</c> (D-053; no es un evento de 08 §8.2, solo una sonda de desarrollo): en un Mapa que se
+        /// abre con viaje (el del 10, «Ver mapa» de la victoria y el fin de contenido), «Jugar» (o «Volver») y «←» se habilitan al
+        /// llegar la canoa. <c>to</c>, el nivel al que llegó; <c>first_move_ms</c>, cuándo empezó a moverse (desde que se abrió;
+        /// −1 si no llegó a moverse); <c>ready_ms</c>, cuándo se habilitaron; <c>taps</c>, los toques que lo aceleraron; <c>by</c>,
+        /// como en <c>map_journey</c> (<c>time</c>, <c>touch</c> o <c>resume</c>).
+        /// </summary>
+        public void MapPlayReady(MapOpenSource source, int to, int firstMoveMs, int readyMs, int taps, string by)
+        {
+            string? line = FormatMapPlayReady(source, to, firstMoveMs, readyMs, taps, by);
+            if (line != null)
+            {
+                Write(line);
+            }
+        }
+
+        /// <summary>Texto de la línea <c>AF_STATE map_play_ready</c>; null si la sonda no escribe.</summary>
+        public string? FormatMapPlayReady(MapOpenSource source, int to, int firstMoveMs, int readyMs, int taps, string by)
+        {
+            if (!Enabled)
+            {
+                return null;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"map_play_ready\"");
+            AppendTime(sb);
+            sb.Append(",\"source\":\"").Append(MapSourceName(source)).Append('"');
+            sb.Append(",\"to\":").Append(to.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"first_move_ms\":").Append(firstMoveMs.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"ready_ms\":").Append(readyMs.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"taps\":").Append(taps.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"by\":\"").Append(by).Append('"');
             sb.Append('}');
             return sb.ToString();
         }
