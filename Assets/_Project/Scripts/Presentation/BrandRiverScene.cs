@@ -29,6 +29,10 @@ namespace AF.Presentation
 
         private const int Samples = 260;
 
+        // Ojo: cambiar cualquier constante o color de dibujo de esta clase (el eje, las anchuras, las palmeras, la paleta) o cómo se
+        // pinta exige subir ArtVersion, para que la caché de disco de la escena (BrandEmblemCache) no sirva píxeles viejos en el
+        // Editor ni en un build con el mismo buildGUID.
+
         // Las palmeras de açaí del icono en el perfil del horizonte: cuál, dónde (fracción del ancho) y de qué alto (dp) [P].
         private static readonly int[] PalmGroup = { BrandEmblem.PalmA, BrandEmblem.PalmB, BrandEmblem.PalmA };
         private static readonly float[] PalmX = { 0.09f, 0.27f, 0.95f };

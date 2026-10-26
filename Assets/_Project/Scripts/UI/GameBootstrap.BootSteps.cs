@@ -38,6 +38,36 @@ namespace AF.UI
 
         private readonly long[] _bootSteps = { -1, -1, -1, -1, -1, -1, -1, -1 };
         private long _awakeMs = -1;
+        private bool _bootInProgress;
+        private bool _consentSetUp;
+        private bool _introWaitCapped;
+
+        /// <summary>
+        /// Tope de seguridad de la espera a la intro tras la carga (ms desde que acaba la carga): <see cref="BrandIntro.AnimMs"/> + 2 s.
+        /// Si se llega (fotogramas parados, reloj raro), la intro se quita y la sonda lo anota (<c>wait_capped</c>).
+        /// </summary>
+        internal const int IntroWaitCapMs = BrandIntro.AnimMs + 2000;
+
+        /// <summary>
+        /// Costura de los tests: se llama en cada hueco de la carga en que se deja pintar un fotograma para la intro, con el bloque
+        /// que acaba de terminar (<see cref="BootStepCount"/>), justo antes del <c>yield</c>. Null fuera de ellos (y lo vuelven a null).
+        /// </summary>
+        internal static System.Action<GameBootstrap, int>? IntroFrameHookForTests { get; set; }
+
+        /// <summary>El arranque aún no terminó (hasta <c>ResumeBackend(false)</c>): <c>OnApplicationPause(false)</c> no reanuda nada.</summary>
+        internal bool BootInProgress => _bootInProgress;
+
+        /// <summary>Llamadas a <c>restoreLedger</c> antes de <c>SetUpConsent</c> (08 §2.3 y §10.3: deben ser 0; tests).</summary>
+        internal int RestoreLedgerBeforeConsent { get; private set; }
+
+        // RestoreLedgerNow lo anota si llega antes de SetUpConsent (no debería: los tests lo comprueban).
+        private void NoteRestoreLedger()
+        {
+            if (!_consentSetUp)
+            {
+                RestoreLedgerBeforeConsent++;
+            }
+        }
         private long _splashStartMs = -1;
         private int _introYields;
 
@@ -62,7 +92,7 @@ namespace AF.UI
         // ¿Toca dejar pintar un fotograma para la intro? Mientras está a la vista (añadido de D-051 del 2026-10-26: se ve entera,
         // así que repartir la carga no alarga nada y la animación va fluida; después, los puntos de «Cargando…»); entonces la lleva
         // al instante de ahora (su Tick de este fotograma fue antes del bloque) y cuenta el fotograma.
-        private bool IntroFrameDue()
+        private bool IntroFrameDue(int step)
         {
             if (_splash == null || !_splash.IntroVisible)
             {
@@ -71,6 +101,7 @@ namespace AF.UI
 
             _splash.RefreshIntro();
             _introYields++;
+            IntroFrameHookForTests?.Invoke(this, step);
             return true;
         }
 
@@ -79,6 +110,7 @@ namespace AF.UI
         {
             report.StartMs = _splashStartMs;
             report.Yields = _introYields;
+            report.WaitCapped = _introWaitCapped;
         }
 
         // AF_PERF boot_steps (solo en desarrollo), al cortar la pantalla de arranque.

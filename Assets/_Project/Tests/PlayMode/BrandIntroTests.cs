@@ -36,6 +36,7 @@ namespace AF.Tests.PlayMode
             ArtSlots.ForceProcedural = false;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
+            GameBootstrap.IntroFrameHookForTests = null;
             _art?.Dispose();
             _art = null;
             if (_host != null)
@@ -407,7 +408,7 @@ namespace AF.Tests.PlayMode
             StringAssert.Contains("\"first_frame_ms\":" + intro.FirstFrameMs, line);
             StringAssert.Contains("\"emblem_cache\":\"off\"", line, "en el Editor, sin caché de disco");
             StringAssert.Contains("\"yields\":" + intro.Yields, line);
-            StringAssert.Contains("\"loading_ms\":0}", line);
+            StringAssert.Contains("\"loading_ms\":0,\"wait_capped\":false}", line);
             StringAssert.Contains("\"cut\":false", line);
 
             // Jornada 3 de D-051: la intro se ve moverse (la carga deja pintar fotogramas entre sus bloques mientras anima), su
@@ -490,6 +491,62 @@ namespace AF.Tests.PlayMode
             intro.Seek(BrandIntro.AnimMs);
             Assert.That(splash.IntroAnimating, Is.False, "en su último fotograma ya no pide fotogramas");
             yield return null;
+        }
+
+        // Inicio y volver con el arranque a medias, en cada hueco de la carga que deja pintar la intro: OnApplicationPause(false) no
+        // reanuda nada (ni la nube, ni la tienda, ni restoreLedger antes de SetUpConsent: 08 §2.3 y §10.3), y el arranque acaba igual.
+        [UnityTest]
+        public IEnumerator PauseAndResume_InEveryLoadGap_TheBootEndsTheSame([Values(0, 1, 4, 5)] int step, [Values(true, false)] bool firstOpen)
+        {
+            BootSplash.EnabledOverride = true;
+            MapArtRule.ForceProvisional = false;
+            ArtSlots.ForceProcedural = true;
+            int hits = 0;
+            bool inProgressAtGap = false;
+            GameBootstrap.IntroFrameHookForTests = (b, at) =>
+            {
+                if (at != step)
+                {
+                    return;
+                }
+
+                hits++;
+                inProgressAtGap = b.BootInProgress;
+                b.SendMessage("OnApplicationPause", true);
+                b.SendMessage("OnApplicationPause", false);
+            };
+            try
+            {
+                yield return PlayModeHelpers.LoadApp(firstOpen ? new MemoryProfileStore() : new MemoryProfileStore(SettingsScreenTests.ProfileAt(4)));
+            }
+            finally
+            {
+                GameBootstrap.IntroFrameHookForTests = null;
+            }
+
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(hits, Is.EqualTo(1), "el hueco " + step + " llegó una vez");
+            Assert.That(inProgressAtGap, Is.True, "en el hueco, el arranque está a medias");
+            Assert.That(boot.BootInProgress, Is.False, "y después termina");
+            Assert.That(boot.RestoreLedgerBeforeConsent, Is.EqualTo(0), "restoreLedger nunca antes de SetUpConsent");
+            BootReport report = boot.BootInfo!;
+            Assert.That(report, Is.Not.Null);
+            Assert.That(report.FirstOpen, Is.EqualTo(firstOpen));
+            Assert.That(report.SlothPose, Is.Null, "sin TiTino (forzado)");
+            BrandIntroReport intro = boot.IntroInfo!;
+            Assert.That(intro.Cut, Is.False, "la pausa no estropea la intro");
+            Assert.That(intro.WaitCapped, Is.False);
+            Assert.That(intro.ShownMs, Is.EqualTo((long)BrandIntro.AnimMs));
+            Assert.That(boot.Splash, Is.Null);
+            Assert.That(boot.App!.Screen, Is.EqualTo(firstOpen ? AppScreen.Level : AppScreen.Lobby), "el nivel 1 o el inicio, como siempre");
+        }
+
+        [Test]
+        public void TheIntroWait_HasASafetyCap()
+        {
+            Assert.That(GameBootstrap.IntroWaitCapMs, Is.EqualTo(BrandIntro.AnimMs + 2000));
+            var report = new BrandIntroReport { WaitCapped = true };
+            StringAssert.Contains("\"wait_capped\":true", new DevProbe().FormatBrandIntro(report)!);
         }
 
         [UnityTest]

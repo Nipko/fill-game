@@ -1577,6 +1577,7 @@ namespace AF.UI
         // por los tests: BootSplash.EnabledOverride) no hay ningún yield: todo ocurre en esta llamada, como antes.
         private IEnumerator Start()
         {
+            _bootInProgress = true; // hasta ResumeBackend(false): la reanudación de OnApplicationPause espera (GameBootstrap.BootSteps.cs)
             if (!s_rebuildToLobby && BootSplash.Enabled)
             {
                 // Ya compuesta con o sin TiTino (el logotipo no salta) y con la intro de la marca encima (D-051, punto 3).
@@ -1649,7 +1650,7 @@ namespace AF.UI
             }
 
             MarkBootStep(StepProfile);
-            if (IntroFrameDue())
+            if (IntroFrameDue(StepProfile))
             {
                 yield return null; // jornada 3 de D-051: la intro se ve moverse entre bloques de la carga (GameBootstrap.BootSteps.cs)
             }
@@ -1672,7 +1673,7 @@ namespace AF.UI
 
             MarkBootStep(StepCatalog);
             _splash?.PrepareWordmark(); // el nombre de la intro, en un hueco de la carga y no en mitad de la animación
-            if (IntroFrameDue())
+            if (IntroFrameDue(StepCatalog))
             {
                 yield return null;
             }
@@ -1754,7 +1755,7 @@ namespace AF.UI
 
             // Antes de crear las pantallas (que aún no están enlazadas al flujo), el último fotograma para la intro (jornada 3 de D-051).
             MarkBootStep(StepAds);
-            if (IntroFrameDue())
+            if (IntroFrameDue(StepAds))
             {
                 yield return null;
             }
@@ -1775,7 +1776,7 @@ namespace AF.UI
             Seasons = LoadSeasons(seasonTable); // tabla de temporada del cliente (pregunta 32 b; SE2)
             _screen.Seasons = Seasons; // la LUT de aguas altas o bajas del fondo del tablero
             MarkBootStep(StepGame);
-            if (IntroFrameDue())
+            if (IntroFrameDue(StepGame))
             {
                 yield return null; // la pantalla del juego, oculta y sin enlazar: el flujo aún no existe (Update no hace nada)
             }
@@ -1835,8 +1836,10 @@ namespace AF.UI
             SetUpA11y(); // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y el lector de pantalla
             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
             SetUpConsent(clock, consentStore); // B12: cifras, país y perfil legal, flujo y pantalla (GameBootstrap.Consent.cs)
+            _consentSetUp = true;
             SetUpLeague(); // D-046 (GameBootstrap.League.cs): la Liga del río, tras la edad y el consentimiento (nada con <13 ni sin contestar)
             ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
+            _bootInProgress = false; // desde aquí, volver de segundo plano reanuda lo de siempre
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
             if (requested <= 0 && !rebuilt)
@@ -2000,7 +2003,20 @@ namespace AF.UI
             if (paused)
             {
                 PersistNow("segundo plano");
-                UploadCloud(); // D-042 (08 §11): al pasar a segundo plano, una subida a Saved Games
+                if (!_bootInProgress)
+                {
+                    UploadCloud(); // D-042 (08 §11): al pasar a segundo plano, una subida a Saved Games
+                }
+
+                return;
+            }
+
+            // Con el arranque a medias (Inicio y volver durante la intro de la marca, entre dos bloques de la carga), nada de lo de
+            // reanudar: la nube, la tienda, restoreLedger, los anuncios y los avisos aún no están o los hace el propio arranque
+            // después, en el orden de 08 §2.3 y §10.3 (SetUpConsent, ConnectTelemetry y ResumeBackend(false)). La intro y
+            // «Cargando…» siguen con el tiempo real.
+            if (_bootInProgress)
+            {
                 return;
             }
 
@@ -2413,8 +2429,15 @@ namespace AF.UI
             // Añadido de D-051 del 2026-10-26: la intro se ve entera y a su ritmo aunque la carga acabe antes (es la marca); si la
             // carga duró más, ya está en su último fotograma con «Cargando…» y se quita ahora.
             bool waited = false;
+            double introCap = Time.realtimeSinceStartupAsDouble + (IntroWaitCapMs / 1000.0);
             while (_splash != null && splash.IntroPending)
             {
+                if (Time.realtimeSinceStartupAsDouble >= introCap)
+                {
+                    _introWaitCapped = true; // tope de seguridad: la sonda lo anota (wait_capped)
+                    break;
+                }
+
                 waited = true;
                 yield return null;
             }

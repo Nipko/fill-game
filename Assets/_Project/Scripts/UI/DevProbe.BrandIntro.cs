@@ -7,7 +7,7 @@ namespace AF.UI
     /// <summary>
     /// Sonda de la intro de la marca (D-051, punto 3; <see cref="BrandIntro"/>), solo en desarrollo:
     /// <c>AF_STATE {"event":"brand_intro","t":…,"intro_ms":2540,"anim_ms":2500,"shown_ms":2500,"cut":false,"frames":150,
-    /// "reduce_motion":false,"begun":true,"first_frame_ms":40,"start_ms":1450,"emblem_ms":12,"emblem_cache":"hit","yields":5,"loading_ms":0}</c>
+    /// "reduce_motion":false,"begun":true,"first_frame_ms":40,"start_ms":1450,"emblem_ms":12,"emblem_cache":"hit","yields":5,"loading_ms":0,"wait_capped":false}</c>
     /// al quitarse: al terminar la carga, si la intro ya se vio entera, o al acabar la intro.
     /// <list type="bullet">
     /// <item><c>intro_ms</c>: tiempo a la vista (ms reales, desde la creación de la pantalla de arranque, el origen de
@@ -23,7 +23,8 @@ namespace AF.UI
     /// en el Editor); <c>yields</c>, los fotogramas que la carga dejó pintar para que la intro se viera moverse.</item>
     /// <item>Añadido de D-051 del 2026-10-26: la intro se ve entera (<c>anim_ms</c> 2.500 [P]) aunque la carga acabe antes, así que
     /// <c>intro_ms</c> ≥ <c>anim_ms</c> y <c>cut</c> es false (solo es true si el arranque se paró antes); <c>loading_ms</c>, lo que
-    /// se vio «Cargando…» bajo el nombre porque la carga duró más que la intro (0 si no salió).</item>
+    /// se vio «Cargando…» bajo el nombre porque la carga duró más que la intro (0 si no salió); <c>wait_capped</c>, la espera a la
+    /// intro llegó a su tope de seguridad (<c>anim_ms</c> + 2 s tras la carga) y se quitó antes (no debería pasar).</item>
     /// </list>
     /// </summary>
     public sealed partial class DevProbe
@@ -63,6 +64,7 @@ namespace AF.UI
             sb.Append(",\"emblem_cache\":\"").Append(GameBootstrap.CacheId(report.EmblemCache)).Append('"');
             sb.Append(",\"yields\":").Append(report.Yields.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"loading_ms\":").Append(report.LoadingMs.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"wait_capped\":").Append(report.WaitCapped ? "true" : "false");
             sb.Append('}');
             return sb.ToString();
         }

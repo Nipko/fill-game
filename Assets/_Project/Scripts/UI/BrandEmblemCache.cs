@@ -206,10 +206,12 @@ namespace AF.UI
 
                 if (File.Exists(path))
                 {
-                    File.Delete(path);
+                    File.Replace(tmp, path, null); // sobre el destino, sin un instante sin archivo
                 }
-
-                File.Move(tmp, path);
+                else
+                {
+                    File.Move(tmp, path);
+                }
             }
             catch (Exception e)
             {

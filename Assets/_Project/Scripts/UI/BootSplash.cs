@@ -559,8 +559,9 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// La intro está a la vista y animando (<see cref="BrandIntro.Animating"/>): GameBootstrap deja pintar un fotograma entre los
-        /// bloques de la carga solo mientras tanto (jornada 3 de D-051); con Reducir movimiento o ya en su último fotograma, ninguno.
+        /// La intro está a la vista y animando (<see cref="BrandIntro.Animating"/>; false con Reducir movimiento o ya en su último
+        /// fotograma). GameBootstrap no lo usa para repartir la carga: deja pintar un fotograma entre bloques mientras la intro está a
+        /// la vista (<see cref="IntroVisible"/>), también en su último fotograma y con «Cargando…» (añadido de D-051 del 2026-10-26).
         /// </summary>
         public bool IntroAnimating => !_disposed && _intro != null && _intro.Animating;
 

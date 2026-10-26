@@ -23,6 +23,9 @@ namespace AF.UI
         /// <summary>Lo que se vio «Cargando…» bajo el nombre, porque la carga duró más que la intro (ms; <c>loading_ms</c>; 0 si no salió).</summary>
         public long LoadingMs { get; internal set; }
 
+        /// <summary>La espera a la intro tras la carga llegó a su tope de seguridad y se quitó antes (<c>wait_capped</c>; no debería).</summary>
+        public bool WaitCapped { get; internal set; }
+
         /// <summary>Fotogramas que llegaron a pintarse con la intro a la vista (<c>frames</c>).</summary>
         public int Frames { get; internal set; }
 
