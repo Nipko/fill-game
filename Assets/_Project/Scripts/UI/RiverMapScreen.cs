@@ -328,7 +328,13 @@ namespace AF.UI
 
             // ---- Cabecera de madera: ← y la pregunta del mundo, con su ✓ al responderse. ----
             _headerPlate = UiBuilder.Sliced("HeaderPlate", _root, art.WoodPlate, Color.white);
-            _back = UiBuilder.Relief("BackButton", _headerPlate.transform, art.DiscWood, () => onClose());
+            _back = UiBuilder.Relief("BackButton", _headerPlate.transform, art.DiscWood, () =>
+            {
+                if (!_journeyLock)
+                {
+                    onClose(); // D-053: durante el viaje no está ni responde (RiverMapScreen.Journey.cs)
+                }
+            });
             RectTransform backVisual = (RectTransform)_back.Face.parent;
             backVisual.anchorMin = new Vector2(0.5f, 1f);
             backVisual.anchorMax = new Vector2(0.5f, 1f);
@@ -359,13 +365,20 @@ namespace AF.UI
             _samplesSlot.gameObject.SetActive(false);
             SamplesBuild(_samplesSlot);
 
-            _play = UiBuilder.Relief("PlayButton", _root, art.CtaLeafLarge, () => onPlay());
+            _play = UiBuilder.Relief("PlayButton", _root, art.CtaLeafLarge, () =>
+            {
+                if (!_journeyLock)
+                {
+                    onPlay(); // D-053: durante el viaje no está ni responde (RiverMapScreen.Journey.cs)
+                }
+            });
             _playLabel = UiBuilder.Label("Label", _play.Face, TextStyle.CtaLeaf, UiText.PlayLevel(1), 30f, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.PlaceCtaLabel(_playLabel.rectTransform, art.CtaLeafLarge);
             UiBuilder.AutoSize(_playLabel, 22f, 30f);
             _play.Relief.Bind(_play.Face, _play.Base, _play.FaceImage, art.CtaLeafLarge, null, null, _playLabel);
 
             SequenceBuild(_root, _dynamicLayer);
+            JourneyBuild(_root);
             NorthUpBuild((RectTransform)_frame.transform);
             ApplyScreenMetrics();
             _canvas.Canvas.gameObject.SetActive(false);
@@ -684,6 +697,7 @@ namespace AF.UI
             SamplesOpen(progress);
             ApplyScreenMetrics();
             ApplyView(view);
+            JourneyOpen(source); // D-053: con viaje, «Jugar» y «←» esperan a que la canoa llegue
             EmitLayout();
         }
 
@@ -705,6 +719,7 @@ namespace AF.UI
 
             SamplesClose();
             SequenceClose();
+            JourneyClose();
             NorthUpClose();
 
             _dragging = false;
@@ -805,6 +820,7 @@ namespace AF.UI
             CatchUpTick(dtMs, ref animating);
             SequenceTick(dtMs, ref animating);
             NorthUpTick(dtMs, ref animating);
+            JourneyTick(dtMs, ref animating); // tras «ponerse al día» y «Norte arriba»: el balanceo, sobre la canoa ya colocada
             if (_activeMs > 0f)
             {
                 _activeMs -= dtMs;
@@ -1447,6 +1463,13 @@ namespace AF.UI
                 return;
             }
 
+            if (_journeyLock && _journeyTouch != null)
+            {
+                // D-053: durante el viaje solo responde el área que lo acelera; «Jugar» y «←» salen al llegar la canoa.
+                _probe.Layout("river_map", _playLevel, null, new[] { "map_journey" }, new[] { (RectTransform)_journeyTouch.transform });
+                return;
+            }
+
             var ids = new List<string>(8) { "back", "view_world", "view_basin", "play" };
             var rects = new List<RectTransform>(8)
             {
@@ -1652,6 +1675,15 @@ namespace AF.UI
 
         /// <summary>M4.4: «Norte arriba» al construir la pantalla (una vez): el botón <c>map_north_up</c> en el marco de la zona del mapa.</summary>
         partial void NorthUpBuild(RectTransform frame);
+
+        // D-053: el Mapa que se abre con viaje (RiverMapScreen.Journey.cs).
+        partial void JourneyBuild(RectTransform root);
+
+        partial void JourneyOpen(MapOpenSource source);
+
+        partial void JourneyTick(float dtMs, ref bool animating);
+
+        partial void JourneyClose();
 
         /// <summary>M4.4: al abrir, sin giro (<see cref="Open"/> ya puso <c>_northUp</c> a false).</summary>
         partial void NorthUpOpen();

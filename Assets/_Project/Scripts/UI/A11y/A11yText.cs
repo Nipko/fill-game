@@ -33,7 +33,7 @@ namespace AF.UI
             Keys.Cuia, Keys.CuiaFull, Keys.CuiaEmpty, Keys.List, Keys.Murky, Keys.Mud, Keys.Tinaja, Keys.TinajaEmpty,
             Keys.Cucharon, Keys.CucharonFull, Keys.CucharonEmpty, Keys.Selected, Keys.ButtonRemaining, Keys.NamesJoin,
             Keys.SettingsReduceMotion, Keys.SettingsHighContrast, Keys.FruitUnnamed, Keys.Close, Keys.TapToContinue,
-            Keys.CuiaMechanic,
+            Keys.CuiaMechanic, Keys.MapJourney,
         };
 
         /// <summary>
@@ -161,6 +161,9 @@ namespace AF.UI
         /// <summary>Etiqueta del lector de un velo que se toca para seguir (tarjeta previa, banner del mundo) [P]: «Continuar».</summary>
         public static string TapToContinue => Loc.T(Keys.TapToContinue);
 
+        /// <summary>Etiqueta del lector del área que cubre el Mapa mientras la canoa sube el tramo (D-053) [P].</summary>
+        public static string MapJourney => Loc.T(Keys.MapJourney);
+
         /// <summary>Fila de Ajustes «Reducir movimiento» (07 §7.8).</summary>
         public static string SettingsReduceMotion => Loc.T(Keys.SettingsReduceMotion);
 
@@ -202,6 +205,9 @@ namespace AF.UI
 
             /// <summary>«Continuar», un velo que se toca para seguir [P].</summary>
             public const string TapToContinue = "a11y_tap_to_continue";
+
+            /// <summary>«Capi va río arriba. Toca para ir más rápido.», el área del Mapa durante el viaje [P] (D-053).</summary>
+            public const string MapJourney = "a11y_map_journey";
 
             /// <summary>«fruta», una fruta cuyo nombre aún no se puede enseñar [P] (Q-B9-7).</summary>
             public const string FruitUnnamed = "a11y_fruit_unnamed";

@@ -77,9 +77,16 @@ namespace AF.Tests.PlayMode
             Assert.That(map.View, Is.EqualTo(MapView.Basin), "06 §2.3: la cuenca, con el estuario lleno");
             Assert.That(map.L10SequenceActive, Is.True);
             Assert.That(map.PlayLabel, Is.EqualTo(UiText.PlayLevel(11)));
-            Assert.That(map.L10SkipButton!.gameObject.activeInHierarchy, Is.True, "un toque la salta");
+            Assert.That(map.L10SkipButton!.gameObject.activeInHierarchy, Is.True, "el área de la secuencia");
 
-            // TiTino se presenta: sloth_present y su bocadillo; la canoa espera en Belém.
+            // D-053: con el viaje en marcha, ni «Jugar · Nivel 11» ni «←»; los toques los recibe el área del viaje.
+            Assert.That(map.JourneyOpened, Is.True);
+            Assert.That(map.JourneyLocked, Is.True);
+            Assert.That(map.PlayShown, Is.False, "«Jugar» espera a que Capi llegue");
+            Assert.That(map.BackShown, Is.False);
+            Assert.That(map.JourneyTouchArea!.gameObject.activeInHierarchy, Is.True);
+
+            // TiTino se presenta: sloth_present y su bocadillo; la canoa sale enseguida (D-053), sin esperar a que acabe.
             Tick(map, 16);
             Assert.That(map.HomeShown, Is.True, "la casa de TiTino con el arte provisional");
             Assert.That(map.HomeSloth!.Pose, Is.EqualTo(SlothPoseId.Present));
@@ -88,30 +95,41 @@ namespace AF.Tests.PlayMode
             Assert.That(map.L10HomeCurrentScale, Is.EqualTo(RiverMapScreen.L10HomeScale).Within(1e-4f), "y se queda a su tamaño de la secuencia");
             Assert.That(map.L10WithBubble, Is.True);
             Assert.That(map.L10BubbleText, Is.EqualTo("Yo vivo aquí, donde el río entra al mar."), "map_l10_intro (06 §2.3; P-M2)");
-            Assert.That(map.L10TripFromMs, Is.EqualTo(NoticeTiming.ReadMs(map.L10BubbleText)), "lo que pide su lectura");
+            Assert.That(map.L10PlateFromMs, Is.EqualTo(NoticeTiming.ReadMs(map.L10BubbleText)), "el bocadillo, lo que pide su lectura");
+            Assert.That(map.L10TripFromMs, Is.EqualTo(RiverMapScreen.JourneyLeadMs), "la canoa no espera al bocadillo (D-053)");
+            Assert.That(map.JourneyFirstMoveMs, Is.GreaterThan(0f).And.LessThanOrEqualTo(300f), "se mueve en ≤ 300 ms");
             Tick(map, 1000);
             Assert.That(map.L10BubbleShown, Is.True);
             Assert.That(map.L10FactShown, Is.False, "el dato, después del bocadillo");
-            Assert.That(map.CatchingUp, Is.True, "«ponerse al día» espera a que TiTino acabe");
-            Assert.That(map.CatchUpElapsedMs, Is.LessThan(MapConfig.CatchUpPerBuoyMs), "la canoa sigue en Belém");
+            Assert.That(map.CatchingUp, Is.True, "la canoa sube mientras TiTino habla");
+            Assert.That(map.CatchUpElapsedMs, Is.GreaterThan(MapConfig.CatchUpPerBuoyMs), "ya pasó de Belém");
+            Assert.That(map.PlayShown, Is.False);
             AssertBubblePointsAtTiTino(map);
 
-            // La placa del Dato del río 1 con el retrato, y la canoa sube a Santarém.
-            Tick(map, map.L10TripFromMs - 1000 + 300);
+            // La canoa llega a Santarém: «Jugar · Nivel 11» y «←» entran (el bocadillo sigue).
+            Tick(map, map.CatchUpDurationMs);
+            Assert.That(map.CatchingUp, Is.False);
+            Assert.That(map.JourneyLocked, Is.False);
+            Assert.That(map.JourneyEndedBy, Is.EqualTo("time"));
+            Assert.That(map.PlayShown, Is.True);
+            Assert.That(map.BackShown, Is.True);
+            Assert.That(map.L10SequenceActive, Is.True, "la secuencia sigue con TiTino y el dato");
+
+            // La placa del Dato del río 1 con el retrato.
+            Tick(map, map.L10PlateFromMs + 300 - (int)map.L10SequenceElapsedMs);
             Assert.That(map.L10BubbleShown, Is.False);
             Assert.That(map.L10FactShown, Is.True);
             Assert.That(map.L10FactKey, Is.EqualTo("map.stop.estuario.dato_03"), "el arrival_fact de la parada 1 (08 §4.5)");
             Assert.That(map.L10FactText, Is.EqualTo(Loc.Fact("map.stop.estuario.dato_03")));
             Assert.That(map.L10FactText, Is.Not.Empty);
             Assert.That(map.L10Portrait!.gameObject.activeSelf, Is.True, "con el retrato de TiTino");
-            Assert.That(map.CatchUpElapsedMs, Is.GreaterThan(0f), "la canoa ya sale");
             Assert.That(map.CatchUpFromLevel, Is.EqualTo(0));
             Assert.That(map.CatchUpToLevel, Is.EqualTo(10));
 
             // Acaba sola, dentro de los 10 s: la canoa llegó, lo visto pasa al 10 y el Mapa se queda con «Jugar · Nivel 11».
             int duration = map.L10SequenceDurationMs;
             Assert.That(duration, Is.LessThanOrEqualTo(MapConfig.L10MapMaxMs));
-            Assert.That(duration, Is.GreaterThanOrEqualTo(map.L10TripFromMs + NoticeTiming.ReadMs(map.L10FactText)), "la placa, lo que pide su lectura");
+            Assert.That(duration, Is.GreaterThanOrEqualTo(map.L10PlateFromMs + NoticeTiming.ReadMs(map.L10FactText)), "la placa, lo que pide su lectura");
             Tick(map, duration);
             Assert.That(map.L10SequenceActive, Is.False);
             Assert.That(map.L10SequenceDone, Is.True);
@@ -151,13 +169,24 @@ namespace AF.Tests.PlayMode
             Assert.That(map.L10SequenceActive, Is.True);
             Tick(map, 500);
 
-            // Un toque la salta: la canoa llega en el acto (la llegada, saltada) y lo visto pasa al 10.
+            // D-053: un toque con la canoa de viaje no la salta (como mucho, la acelera).
+            map.JourneyTouchArea!.onClick.Invoke();
             map.L10SkipButton!.onClick.Invoke();
+            Assert.That(map.L10SequenceActive, Is.True, "el toque no se salta el viaje");
+            Assert.That(map.CatchingUp, Is.True);
+            Assert.That(map.JourneyTaps, Is.EqualTo(2));
+            Assert.That(map.PlayShown, Is.False);
+            Tick(map, map.CatchUpDurationMs);
+            Assert.That(map.CatchingUp, Is.False, "acelerado, llega antes");
+            Assert.That(map.PlayShown, Is.True);
+
+            // Con la canoa ya en Santarém, un toque salta lo que queda y lo visto pasa al 10.
+            map.L10SkipButton.onClick.Invoke();
             Assert.That(map.L10SequenceActive, Is.False);
             Assert.That(map.L10SequenceSkipped, Is.True);
             Assert.That(map.CatchingUp, Is.False);
             Assert.That(map.CatchUpArrivals, Is.EqualTo(1));
-            Assert.That(map.LastCatchUpArrivalSkipped, Is.True);
+            Assert.That(map.LastCatchUpArrivalSkipped, Is.False, "la llegada se vio entera");
             Assert.That(map.HomeSloth!.Pose, Is.EqualTo(SlothPoseId.Idle));
             Assert.That(progress.MapSeenLevel, Is.EqualTo(10));
             Assert.That(map.SkipL10Sequence(), Is.False, "ya no está en marcha");
@@ -251,7 +280,7 @@ namespace AF.Tests.PlayMode
             Assert.That(map.HomeSloth!.Pose, Is.EqualTo(SlothPoseId.Present), "el gesto, sin voz");
             Assert.That(map.L10WithBubble, Is.False);
             Assert.That(map.L10BubbleText, Is.Empty);
-            Assert.That(map.L10TripFromMs, Is.EqualTo(RiverMapScreen.PresentOnlyMs));
+            Assert.That(map.L10PlateFromMs, Is.EqualTo(RiverMapScreen.PresentOnlyMs));
             Tick(map, 500);
             Assert.That(map.L10BubbleShown, Is.False);
             Tick(map, RiverMapScreen.PresentOnlyMs);
@@ -367,7 +396,7 @@ namespace AF.Tests.PlayMode
                 PlayModeHelpers.TakeClock(boot);
                 RiverMapScreen map = boot.RiverMapView!;
                 Tick(map, 16);
-                Tick(map, map.L10TripFromMs + 1000);
+                Tick(map, map.L10PlateFromMs + 1000);
                 Assert.That(map.L10FactShown, Is.True);
                 Assert.That(map.SkipL10Sequence(), Is.True);
             }
@@ -416,7 +445,7 @@ namespace AF.Tests.PlayMode
                     Assert.That(map.L10Bubble.Label.isTextOverflowing, Is.False, what);
                     AssertBubblePointsAtTiTino(map);
 
-                    Tick(map, map.L10TripFromMs);
+                    Tick(map, map.L10PlateFromMs);
                     Assert.That(map.L10FactShown, Is.True, what);
                     Rect plate = VictorySetup.CanvasRect(map.L10Plate!, root);
                     AssertInside(plate, view, "placa, " + what);
@@ -479,40 +508,23 @@ namespace AF.Tests.PlayMode
             Rect dest = VictorySetup.CanvasRect(destination, root);
             Assert.That(dest.yMin, Is.GreaterThanOrEqualTo(view.yMin - 0.5f), "sin salir de la vista");
 
-            // Con la placa del dato y la canoa de viaje: las placas de mundo se van (salvo la del destino) y ningún rótulo queda a
-            // medio tapar por ella.
-            Tick(map, map.L10TripFromMs - 400 + 600);
+            // La canoa llega a Santarém (D-053: sube mientras TiTino habla), la gran parada del mundo 2: «ponerse al día» quita su
+            // silueta (ya no es un mundo futuro) y su placa pasa a otro mundo, que se trata como las demás.
+            Tick(map, map.CatchUpDurationMs);
+            Assert.That(map.CatchingUp, Is.False);
+            Assert.That(map.L10DestinationPlate, Is.Null, "el mundo 2 ya no es futuro");
+
+            // Con la placa del dato: las placas de mundo se van y ningún rótulo queda a medio tapar por ella.
+            Tick(map, map.L10PlateFromMs + 600 - (int)map.L10SequenceElapsedMs);
             Assert.That(map.L10FactShown, Is.True);
-            Assert.That(map.CatchingUp, Is.True, "la canoa aún no llegó a Santarém");
-            Assert.That(map.L10DestinationPlate, Is.SameAs(destination));
             foreach (RectTransform plate in map.SilhouettePlates())
             {
                 CanvasGroup g = plate.GetComponent<CanvasGroup>();
-                if (plate == destination)
-                {
-                    AssertWhole(plate, "placa del destino, con la placa del dato");
-                    continue;
-                }
-
                 Assert.That(g != null && g.alpha <= 0.001f, Is.True, plate.name + ": fuera mientras se ve la placa del dato");
             }
 
             AssertNoLabelHalfCovered(map, root, VictorySetup.CanvasRect(map.L10Plate!, root), "placa del dato");
             Assert.That(northUp.alpha, Is.EqualTo(0f));
-
-            // La canoa llega a Santarém, la gran parada del mundo 2: «ponerse al día» quita su silueta (ya no es un mundo futuro) y
-            // su placa pasa a otro mundo, que se trata como las demás.
-            Tick(map, map.CatchUpDurationMs);
-            Assert.That(map.CatchingUp, Is.False);
-            Assert.That(map.L10DestinationPlate, Is.Null, "el mundo 2 ya no es futuro");
-            if (map.L10FactShown)
-            {
-                foreach (RectTransform plate in map.SilhouettePlates())
-                {
-                    CanvasGroup g = plate.GetComponent<CanvasGroup>();
-                    Assert.That(g != null && g.alpha <= 0.001f, Is.True, plate.name + ": fuera mientras se ve la placa del dato");
-                }
-            }
 
             // Al acabar, todo vuelve: la casa a su tamaño y mirando como siempre, los rótulos y «Norte arriba».
             Tick(map, map.L10SequenceDurationMs);
@@ -710,7 +722,7 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Save(dir, "17_map_l10");
             Log("17_map_l10", map);
 
-            Level10MapTests.Tick(map, map.L10TripFromMs - 1200 + map.CatchUpDurationMs + 600);
+            Level10MapTests.Tick(map, map.L10PlateFromMs + 600 - (int)map.L10SequenceElapsedMs);
             yield return SnapshotKit.Wait(0.2f);
             SnapshotKit.Save(dir, "17b_map_l10_dato");
             Log("17b_map_l10_dato", map);

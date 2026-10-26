@@ -112,9 +112,12 @@ namespace AF.Tests.PlayMode
                 Assert.That(journey, Is.GreaterThan(0));
                 Assert.That(journey, Is.LessThanOrEqualTo(MapConfig.AnimMapWorldMs), "tope de anim_map_world_ms (08 §9)");
 
+                Assert.That(map.PlayShown, Is.False, "D-053: «Volver» espera a que la canoa llegue");
                 Tick(map, journey / 2);
                 Assert.That(map.CatchingUp, Is.True, "a medio tramo");
+                Assert.That(map.JourneyFirstMoveMs, Is.GreaterThan(0f).And.LessThanOrEqualTo(300f), "D-053: se mueve en ≤ 300 ms");
                 Tick(map, journey);
+                Assert.That(map.PlayShown, Is.True, "llegó: «Volver» y «←»");
                 Assert.That(map.CatchingUp, Is.False, "llegó, dentro del tope");
                 Assert.That(map.CatchUpCompletedByTouch, Is.False);
                 Assert.That(map.CatchUpElapsedMs, Is.LessThanOrEqualTo(MapConfig.AnimMapWorldMs));
@@ -174,7 +177,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator TheJourney_ATouchCompletesIt_AndVolverLeavesTheScreen()
+        public IEnumerator TheJourney_ATouchDoesNotSkipIt_VolverComesWhenTheCanoeArrives_AndLeavesTheScreen()
         {
             yield return FactLineTests.Win(700);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -182,11 +185,21 @@ namespace AF.Tests.PlayMode
             NextToContentEnd(boot);
             Assert.That(map.Visible, Is.True);
             Assert.That(map.CatchingUp, Is.True);
+            Assert.That(map.JourneyLocked, Is.True, "D-053: «Volver» espera a que la canoa llegue");
+            Assert.That(map.PlayShown, Is.False);
             Tick(map, 300);
-            Assert.That(map.CatchUpTouch(), Is.True, "un toque lo completa");
+
+            // Un toque no lo salta (D-053): como mucho, lo acelera; «Volver» y «←» siguen sin responder.
+            Assert.That(map.TapJourney(), Is.True);
+            Assert.That(map.CatchingUp, Is.True, "el toque no se salta el viaje");
+            map.PlayButton.onClick.Invoke();
+            map.BackButton.onClick.Invoke();
+            Assert.That(map.Visible, Is.True, "sin «Volver» ni «←» durante el viaje");
+            Tick(map, map.ContentEndJourneyMs);
             Assert.That(map.CatchingUp, Is.False);
-            Assert.That(map.CatchUpCompletedByTouch, Is.True);
-            Assert.That(map.CatchUpArrivals, Is.EqualTo(0), "tampoco al completarlo");
+            Assert.That(map.CatchUpCompletedByTouch, Is.False, "llegó sola, acelerada");
+            Assert.That(map.CatchUpArrivals, Is.EqualTo(0), "tampoco al acelerarlo");
+            Assert.That(map.PlayShown, Is.True);
 
             map.PlayButton.onClick.Invoke();
             Assert.That(map.Visible, Is.False, "«Volver» cierra el Mapa");
