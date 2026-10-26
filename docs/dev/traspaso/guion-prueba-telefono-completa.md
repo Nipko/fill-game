@@ -32,6 +32,69 @@ Lo escribió el integrador (escritorio) el 2026-10-25, a petición del dueño: *
 
 Aquí entra todo.
 
+## Encargo de la jornada 4 (escritorio, 2026-10-26)
+
+La jornada 3 (`pruebas-telefono-2026-10-26-completa-j3.md`) cubrió el bloque 0 y N3. Sus observaciones están respondidas al final de esa hoja. Esta jornada empieza otra vez por el bloque 0 sobre la integración nueva, comprueba lo que entró y sigue con lo pendiente.
+
+**Punto de partida:** `integracion-fase1-fase2` en `2ec9bdba` o posterior.
+
+**Lo que entró después de la jornada 3 y nunca se ha visto en el teléfono:**
+- **La intro de la marca entera** (`76bfd06f`; añadido de D-051 del 2026-10-26, decisión del dueño):
+  - unos 2,5 s en cada arranque en frío, sin cortarse aunque la carga acabe antes;
+  - «Cargando…» si la carga dura más;
+  - no se repite al volver de segundo plano;
+  - con Reducir movimiento sale quieta 1 s;
+  - para las observaciones 1 y 2 de la jornada 3: el icono v2 en el fondo de la ventana de lanzamiento (sin petróleo liso), la escena guardada en disco a partir de la segunda apertura y la carga repartida en fotogramas para que la intro anime.
+- **TiTino de noche** (`b76914b3`; añadido de D-050): de 20 a 6 duerme callado con un «Zzz». Al tocarlo se despierta, dice su mensaje y se vuelve a dormir. El saludo de regreso se guarda para la primera visita de día.
+- **El viaje de Capi en el Mapa** (`1f0b981d`; D-053), en el Mapa del 10, en «Ver mapa» de la victoria de cada parada y en el fin de contenido:
+  - la canoa se mueve desde el primer instante y sale a los 250 ms;
+  - «Jugar»/«Volver» y «←» no aparecen hasta que Capi llega;
+  - el toque acelera el viaje, no lo salta;
+  - Atrás cierra el Mapa.
+
+### Orden de la jornada 4
+
+1. **Bloque 0 entero**, con el `dev.apk` y el `rehearsal.apk` nuevos (`-Apk`). Anota los tamaños: en la jornada 3 eran 76,07 MB, 59,10 MB y 64,62 MB.
+2. **Bloque N4, «Lo nuevo de la jornada 4»** (abajo).
+3. **Los pendientes:**
+   - los 3 puntos sin probar del bloque 3;
+   - el bloque 4 entero, salvo el 4.9;
+   - los bloques 5 y 7 a 23, en orden, con lo que quedó de N1: Reducir movimiento del sistema, la mañana y el mediodía del inicio (bloque 15), el 16:9 (bloque 16) y los anuncios sin red o cerrados antes de tiempo (bloque 9).
+4. **Hoja nueva:** `docs/dev/traspaso/pruebas-telefono-<fecha>-completa-j4.md`, con el mismo formato. Al final de la jornada, commit y push con el mensaje «Añade la prueba completa en el teléfono (jornada 4)», solo la hoja. Si la jornada no da para todo, se commitea lo hecho y la jornada 5 sigue donde quedó.
+5. **Anuncios de Google:** paso a paso, con una captura antes de cada toque. Los recorridos automáticos, con `--ei af_ads_fill 0/1`.
+
+### N4. Lo nuevo de la jornada 4 (≈ 2 h)
+
+1. **La intro entera, con el `dev.apk`:**
+   - **Primera apertura** con perfil limpio (`pm clear`), con ráfaga de capturas (`screencap` cada ~110 ms):
+     - entre la pantalla del sistema y la escena **se ve el icono centrado sobre el petróleo, no un petróleo liso**; el icono no salta de tamaño ni de sitio;
+     - la intro **se ve moverse entera**: la cuia vierte, los aros, el açaí tiñe el río con meandros, entra «Tintalú» y el emblema se sostiene;
+     - si sale «Cargando…», cuánto dura;
+     - después TiTino despierta al menos 1 s y llega la pantalla de edad.
+   - **Cinco arranques en frío** (`force-stop` y lanzar). De cada `AF_STATE brand_intro`, anota `intro_ms`, `shown_ms` (~2.500), `cut` (false), `frames` (decenas), `first_frame_ms`, `start_ms`, `emblem_ms`, `emblem_cache` (`miss` la primera vez y `hit` las demás), `yields`, `loading_ms` y `wait_capped` (siempre false). Anota también la línea `AF_PERF boot_steps` (`awake_ms`, `start_ms` y los bloques) y el `TotalTime` de `am start -W`. Con eso se sabe cuánto es arranque del motor y cuánto es nuestro.
+   - **`load_ms` frente a los 790-826 ms de la jornada 3:** con la caché debería bajar.
+   - **Al volver de segundo plano** (Inicio y volver) la intro **no** se repite; al cerrar la app y volver a abrirla, **sí**.
+   - **Pausa a mitad:** en una primera apertura, pulsa Inicio durante la intro, vuelve y comprueba que llega al nivel 1 sin errores ni `E/Unity`.
+   - **Reducir movimiento** (lo enciende el dueño): la escena sale quieta y se sostiene ~1 s.
+   - **Tamaño de la caché:** `adb shell du -sh /data/data/com.amazonfill.dev/cache` (o `run-as`), que da unos 8-9 MB.
+   - **Primera apertura completa:** el primer toque en el nivel 1 por debajo de 20 s.
+2. **TiTino de noche** (con la hora cambiada a las 22:00, con el sí del dueño; después, otra vez la hora automática):
+   - en el inicio, dormido en la rama con el «Zzz» subiendo y **sin bocadillo** (`AF_STATE titino_sleep` con `asleep` true y `"titino_asleep":true` en la línea `AF_LAYOUT lobby`);
+   - al tocarlo, se despierta, dice un mensaje y a los ~4 s vuelve a dormirse con el «Zzz»;
+   - con los mensajes de TiTino apagados en Ajustes, se despierta y se duerme sin hablar;
+   - con TalkBack, dice «TiTino duerme»;
+   - el saludo de regreso: con `last_seen_date` de hace 4 o más días, entrar de noche no saluda, y la primera visita de día sí lo hace;
+   - de paso, la mañana (el saludo) y el mediodía (tomando el sol: tumbado, con la cabeza unida al cuerpo), que quedaron pendientes.
+3. **El viaje de Capi en el Mapa:**
+   - **Mapa del 10** (perfil limpio, jugando del 1 al 10): desde el primer instante, la canoa se balancea, la parada de destino late y suena el remo; Capi sale enseguida (`AF_STATE map_play_ready` con `first_move_ms` de unos 260); «Jugar · Nivel 11» y «←» **no se ven** hasta que llega a Santarém; después entran con un rebote.
+   - **Un toque durante el viaje** lo acelera y no lo salta. **Atrás** cierra el Mapa sin dejarte atascado.
+   - **«Ver mapa» en la victoria del 20** (o de cualquier `10k`): la canoa repite el viaje del tramo ganado y «Volver» sale al llegar. En logcat, un solo `stop_arrive`, `map_open` y `map_close`.
+   - **Segundo plano a mitad del viaje:** al volver, el viaje termina y salen los botones (`by: resume`).
+   - **Con TalkBack:** durante el viaje dice «Capi va río arriba. Toca para ir más rápido.» y al llegar anuncia el lugar y el botón.
+   - **Desde la pestaña o la pausa**, el Mapa se abre como antes, con el botón desde el principio.
+   - Capturas del principio, de la mitad y de la llegada.
+4. **El ensayo de release (`rehearsal.apk`):** la intro entera, el icono en la ventana y el viaje del Mapa del 10 se ven igual que en desarrollo.
+
 ## Encargo de la jornada 3 (escritorio, 2026-10-26)
 
 La jornada 2 (`pruebas-telefono-2026-10-25-completa-j2.md`) cubrió el bloque 0, N1 y N2. Sus observaciones están respondidas al final de esa hoja. Esta jornada empieza otra vez por el bloque 0 sobre la integración nueva, comprueba lo que entró y sigue con lo pendiente.
