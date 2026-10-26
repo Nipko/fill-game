@@ -23,7 +23,7 @@ Otros directorios: `functions/` (código de las Lambdas), `contracts/v1/` (contr
 |---|---|---|
 | verifyPurchase | `POST /v1/purchases/verify` (JWT + integridad) | 30 por UID y hora [P]; `products.get` en Play; `pending` no concede; cancelada o inexistente → 400; cuenta ofuscada de otro UID → 409; token con lápida `voided` (anulado antes de verificarse) → 400 sin llamar a Play; `af_starter` (`once_per_account`): antes del `acknowledge` reserva la marca `once#` 15 minutos (`UpdateItem` condicional); si otro token de la cuenta ya la tiene, 400 **sin** `acknowledge` (Play la reembolsa a los 3 días; el cliente no debe consumir esa transacción); `acknowledge` si falta; transacción en `purchases` con `PutItem` condicional (dos peticiones con el mismo token: una `ok`, la otra `duplicate`; token de otro UID → 409), la comprobación de cuenta no borrada (si el borrado empezó entretanto → 401) y el paso de la reserva `once#` a marca permanente (sin `ttl`). Solo `ok` lleva `grant` (catálogo en `functions/shared/catalog.ts`, espejo de 05 §4.1 con los defaults de 08 §9). **Q-IAP-4:** un **no consumible** (`af_noads`, `af_skin_m02`-`m04`) de otro UID o anonimizado, en `ok`, del mismo SKU, que Play da como comprado y con cuenta ofuscada, pasa al UID que lo pide (`Update` condicional en transacción con la marca de cuenta borrada, el cupo diario y, si tenía dueño, una fila sombra `<token_hash>#prev#<n>` con el UID anterior, `shadow_of` y apuntada en `shadow_keys`; historial `reassign_*` sin identificadores) y responde `duplicate`; sin fila, `ok`. Topes [P]: 5 por token (volver al UID de la cuenta ofuscada no cuenta), 24 h entre dos (409) y 4 por UID y día (429; el cupo solo se gasta si la escritura sale). Detalle en `docs/dev/iap.md` §4.3 |
 | restoreLedger | `POST /v1/ledger/restore` (JWT) | Compras del UID por `by_uid` con su estado y los nonces pendientes que `rewards` tiene confirmados para ese UID. Las sombras de Q-IAP-4 (compras reasignadas a otro UID) solo salen si están `voided`, con el `token_hash` real y una vez por token |
-| rewardedSsv | `GET`/`POST /v1/ssv` (firma de MAX) | Firma [NV] → cada `event_id` queda atado a un único (UID, nonce): otro UID u otro nonce con la misma firma → 403 → límite de 100 por UID y día [P] (los reintentos de MAX no gastan cupo) → `PutItem` condicional en `rewards` (TTL 30 días), en transacción con la comprobación de cuenta no borrada; nonce repetido o cuenta borrada → 200 `duplicate` sin escribir |
+| rewardedSsv | `GET`/`POST /v1/ssv` (SSV de AdMob, D-049) | Firma ECDSA P-256/SHA-256 de Google sobre la consulta cruda hasta `&signature=`, con la clave pública del `key_id` (`verifier-keys.json` de gstatic, en caché ≤ 24 h; un `key_id` desconocido la refresca una vez, como mucho una por minuto) → sin `user_id` o `custom_data`, 200 `ignored` sin escribir → `timestamp` de más de 24 h o de más de 10 min en el futuro → 400 `request_expired` → cada `transaction_id` queda atado a un único (UID, nonce): otro UID u otro nonce → 403 → límite de 100 por UID y día [P] (las repeticiones no gastan cupo) → `PutItem` condicional en `rewards` (TTL 30 días), en transacción con la comprobación de cuenta no borrada; nonce repetido o cuenta borrada → 200 `duplicate` sin escribir. Sin las claves de Google → 502 |
 | voidedPurchasesJob | Scheduler, 03:00 UTC | `voidedpurchases.list` desde el checkpoint de `jobs` (con 24 h de solapamiento [P], como mucho 30 días atrás), marca `voided` en `purchases` (también las filas anonimizadas y, de una compra reasignada, las sombras de `shadow_keys`); si el token aún no está, deja una lápida `voided` sin `uid` (`tombstone: true`, `PutItem` condicional) para que `verifyPurchase` no lo conceda; solo entonces avanza el checkpoint; un fallo lanza (reintentos y DLQ) |
 | deleteAccount | `POST /v1/account/code`, `/delete`, `/delete-request`, `/delete-confirm` | Código de 128 bits que rota (solo su hash; 10 al día por UID [P]); borrado por app con integridad; por web, código → token de 5 minutos (5 solicitudes por código y hora [P]) → borrado. El borrado es idempotente: primero una marca de cuenta borrada de 2 h en `rate_limits` (el ID token sigue valiendo hasta 1 h y, con ella, ni `/code` ni `verify` vuelven a escribir a nombre del UID), luego `rewards`, anonimiza `purchases` (quita `uid`), `integrity` y las marcas `once#`, el usuario de Firebase Auth, una **segunda pasada** de lo mismo (lo escrito justo antes de la marca que el GSI aún no enseñaba) y, al final, `account_codes`. `verify`, el SSV y `/code` escriben en una transacción que exige que no haya marca, así que nada se escribe a nombre del UID después de ella. La caché de `integrity` también se escribe en transacción con la marca |
 
@@ -82,7 +82,7 @@ Web estática de Tintalú, del desarrollador **Parallext, LLC** (D-041), en es-4
 | Eliminación de cuenta (08 §11) | `/tintalu/eliminar-cuenta/` | `/tintalu/en/delete-account/` | `/tintalu/pt-br/excluir-conta/` |
 | Créditos y licencias | `/creditos/` | `/en/credits/` | `/pt-br/creditos/` |
 
-Más `/app-ads.txt` (plantilla, todo comentado hasta tener los IDs de MAX) y `/assets/` (hoja de estilo y el script del borrado).
+Más `/app-ads.txt` (la línea de AdMob, D-049; las demás redes, comentadas hasta sumarlas a la mediación de AdMob) y `/assets/` (hoja de estilo y el script del borrado).
 
 - **Cómo se edita:** los textos están en `web/src/content/<idioma>/<página>.html` y en `web/src/site.ts` (rutas, títulos, plantilla y textos del formulario); el script del borrado, en `web/src/browser/` (TypeScript que esbuild empaqueta sin dependencias). Después, `npm run web:build` regenera `web/site/` (**generado: no se edita a mano**) y `npm run web:check` comprueba que está al día (también lo hace `npm test`).
 - **Marcadores:** `[[DATO DEL DUEÑO: …]]` (datos de Parallext, LLC que faltan) y `[[ABOGADO: …]]` (lo decide el abogado); la web los resalta. Se sustituyen en `web/src/content/` y se regenera.
@@ -184,11 +184,10 @@ npx cdk deploy --all -c env=dev -c account=<id-cuenta-dev> -c alertEmail=<tu-cor
 
 ### 5. Cargar los secretos
 
-El CDK crea tres secretos con un relleno aleatorio; mientras lleven el relleno, las funciones que los usan fallan cerradas (500 o 403) y no conceden nada. Cárgalos tú **desde un archivo fuera del repositorio** (nunca los pegues en el chat ni los guardes en `fill-game/`):
+El CDK crea dos secretos con un relleno aleatorio (el SSV de AdMob no necesita secreto: verifica con las claves públicas de Google); mientras lleven el relleno, las funciones que los usan fallan cerradas (500 o 403) y no conceden nada. Cárgalos tú **desde un archivo fuera del repositorio** (nunca los pegues en el chat ni los guardes en `fill-game/`):
 ```
 aws secretsmanager put-secret-value --profile af-dev --region sa-east-1 --secret-id af-dev/play-service-account          --secret-string file://<ruta-fuera-del-repo>/play.json
 aws secretsmanager put-secret-value --profile af-dev --region sa-east-1 --secret-id af-dev/firebase-admin-service-account --secret-string file://<ruta-fuera-del-repo>/firebase-admin.json
-aws secretsmanager put-secret-value --profile af-dev --region sa-east-1 --secret-id af-dev/max-ssv-key                    --secret-string file://<ruta-fuera-del-repo>/max-ssv.txt
 ```
 Borra los archivos locales al terminar.
 
@@ -196,17 +195,21 @@ Borra los archivos locales al terminar.
 |---|---|---|---|
 | `af-<env>/play-service-account` | La clave JSON tal cual la descarga Google Cloud (`"type": "service_account"`, `client_email` acabado en `.iam.gserviceaccount.com`, `private_key` PKCS#8). Su `token_uri` se ignora: el canje va siempre a `https://oauth2.googleapis.com/token` | verifyPurchase y voidedPurchasesJob (ámbito `androidpublisher`) | En Play Console, la cuenta de servicio invitada con «Ver información financiera» y «Gestionar pedidos y suscripciones» solo de esta app; la Google Play Android Developer API activada en su proyecto |
 | `af-<env>/firebase-admin-service-account` | La clave JSON de una cuenta de servicio del proyecto de Firebase del entorno, mismo formato | deleteAccount (ámbito `identitytoolkit`, `accounts:delete`) | Un rol que solo borre usuarios de Auth (p. ej. «Firebase Authentication Admin»); no hace falta Firebase Admin completo. La Identity Toolkit API activada |
-| `af-<env>/max-ssv-key` | Texto plano: la clave S2S de recompensas de la cuenta de AppLovin MAX (se recortan espacios y saltos de línea) | rewardedSsv | — |
 
-Las claves se rotan en Google Cloud y en MAX y se vuelven a cargar igual; las Lambdas guardan el valor en caché como mucho 5 minutos. La federación sin claves (WIF) queda para la 1.1 (Q-AWS-7).
+Las claves se rotan en Google Cloud y se vuelven a cargar igual; las Lambdas guardan el valor en caché como mucho 5 minutos. La federación sin claves (WIF) queda para la 1.1 (Q-AWS-7).
 
-### 5 bis. Callback de recompensas en MAX
+### 5 bis. Verificación en el servidor (SSV) de AdMob (D-049)
 
-En el panel de MAX, en la URL de los callbacks S2S de recompensas, pon (con `<ApiUrl>` la salida del stack):
+Cuando la API esté desplegada, en la consola de AdMob, en **cada bloque recompensado de producción** (hoy uno, `ca-app-pub-2916158449453694/2877105387`; `docs/dev/anuncios-admob.md` §3), abre la configuración avanzada, activa **«Verificación del lado del servidor»** y pon como URL de devolución de llamada:
 ```
-<ApiUrl>/v1/ssv?user_id={USER_ID}&custom_data={CUSTOM_DATA}&event_id={EVENT_ID}&event_token={EVENT_TOKEN}&network={NETWORK_NAME}
+<ApiUrl>/v1/ssv
 ```
-**[NV]** Se supone que MAX calcula `{EVENT_TOKEN}` = SHA-256 en hexadecimal de `{EVENT_ID}` seguido de la clave S2S (lo comprueba `functions/rewarded-ssv/maxSignature.ts`). Si la documentación de MAX dice otra cosa, se cambia solo esa función. El cliente pone `SetUserId(UID)` y `customData = placement|nonce` (08 §10.2).
+con `<ApiUrl>` la salida `ApiUrl` del stack de prod (`https://<id>.execute-api.<región>.amazonaws.com`) o, si despliegas con `-c domainExtras=api`, `https://api.[[DATO DEL DUEÑO: dominio de la API]]`. Sin parámetros: AdMob añade los suyos (`ad_network`, `ad_unit`, `custom_data`, `reward_amount`, `reward_item`, `timestamp`, `transaction_id`, `user_id`, `signature` y `key_id`). Los bloques de prueba de Google de los builds de desarrollo no llaman a nuestra URL.
+
+- **Antes de activarlo:** que la API de prod responda (`curl -i "<ApiUrl>/v1/ssv"` → `403 bad_signature`). La prueba de la URL que hace la consola, si llega firmada pero sin `user_id`/`custom_data`, recibe `200 {"status":"ignored"}`. **[NV]** No está comprobado qué manda exactamente esa prueba: si la consola dice que la URL no responde bien, mira el log `ssv_bad_signature` / `ssv_ignored` de la Lambda (sin datos personales) y avisa.
+- El cliente pone `UserId` = UID de Firebase Auth anónimo y `CustomData` = `placement|nonce` en `ServerSideVerificationOptions` antes de cada recompensado (08 §10.2); sin UID no fija nada y la recompensa sigue solo provisional.
+- La firma se comprueba sobre la consulta **tal cual llega** a API Gateway (`rawQueryString`): no pongas delante ningún proxy que reescriba la consulta.
+- No hay secreto que cargar ni rotar: Google rota sus claves y la Lambda las descarga de `https://www.gstatic.com/admob/reward/verifier-keys.json` (salida HTTPS normal; las Lambdas no van en VPC).
 
 ### 5 ter. Verificador falso en dev
 
@@ -218,7 +221,7 @@ En dev (y solo en dev: un test de stacks lo comprueba) las funciones llevan `AF_
 ### 6. Comprobación rápida
 
 - `WebUrl` muestra la portada de Tintalú; `WebUrl/tintalu/eliminar-cuenta`, `WebUrl/config.json` (`{"deleteEnabled":true,"apiBase":""}`), `WebUrl/app-ads.txt` y `WebUrl/robots.txt` (que en dev prohíbe indexar) existen. En la página de borrado, un código con formato válido que no existe responde «No encontramos ese código» (la API devuelve 404 `code_not_found`).
-- `curl -i "<ApiUrl>/v1/ssv"` → `400` (`bad_request`, faltan los parámetros) y con parámetros pero sin firma buena → `403` (`bad_signature`); `curl -i -X POST <ApiUrl>/v1/purchases/verify` sin token → `401`.
+- `curl -i "<ApiUrl>/v1/ssv"` → `403` (`bad_signature`: sin consulta firmada por AdMob no se mira nada más); `curl -i -X POST <ApiUrl>/v1/purchases/verify` sin token → `401`.
 - Con un ID token de un usuario anónimo de dev: `POST /v1/account/code` devuelve un código; `POST /v1/ledger/restore` con `{"pending_nonces":[]}` devuelve listas vacías; `POST /v1/purchases/verify` con `X-Firebase-AppCheck: fake-ok-1` y `{"token":"fake-ok-1","sku":"af_coins_2"}` devuelve `ok` y, repetido (con otro `fake-ok-…`), `duplicate`.
 - `curl -i <CdnUrl>/catalog.json` → `403` hasta que se suba un catálogo (no hay listado).
 

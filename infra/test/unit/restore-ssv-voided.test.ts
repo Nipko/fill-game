@@ -1,14 +1,12 @@
-// restoreLedger (F2-5), rewardedSsv (F2-6) y voidedPurchasesJob (F2-7), con DynamoDB en memoria y Play/MAX falsos.
+// restoreLedger (F2-5) y voidedPurchasesJob (F2-7), con DynamoDB en memoria y Play falso.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sha256hex } from '../../functions/shared/crypto.ts';
 import { UpstreamError } from '../../functions/shared/errors.ts';
 import type { PlayApi, VoidedPage } from '../../functions/shared/playApi.ts';
 import { createHandler as restoreHandler } from '../../functions/restore-ledger/handler.ts';
-import { createHandler as ssvHandler, SSV_DAILY_LIMIT } from '../../functions/rewarded-ssv/handler.ts';
-import { expectedEventToken, verifyMaxCallback } from '../../functions/rewarded-ssv/maxSignature.ts';
 import { JOB_ID, MAX_LOOKBACK_MS, OVERLAP_MS, createHandler as voidedHandler } from '../../functions/voided-purchases-job/handler.ts';
 import { validator } from '../contract/ajv.ts';
-import { MapSecrets, NOW, OTHER_UID, UID, httpEvent, res } from './fixtures.ts';
+import { NOW, OTHER_UID, UID, httpEvent, res } from './fixtures.ts';
 import { MemDb, TABLES } from './memdb.ts';
 
 const N1 = '6f1c2a4e-8b3d-4f5a-9c7e-1d2b3a4c5e6f';
@@ -78,97 +76,7 @@ describe('restoreLedger', () => {
   });
 });
 
-describe('rewardedSsv', () => {
-  const KEY = 'clave-s2s-de-prueba';
-  const v = validator('rewarded-ssv.response.schema.json');
-  const secrets = new MapSecrets();
-  secrets.values.set('arn:max', `${KEY}\n`);
-  const env = { ...TABLES, AF_SECRET_MAX_SSV: 'arn:max' };
-  let now = NOW;
-  const h = () => ssvHandler(() => ({ ddb: db.client, secrets, env, now: () => now }));
-  const q = (over: Record<string, string> = {}, eventId = 'ev-1') => ({
-    user_id: UID,
-    custom_data: `rescue|${N1}`,
-    network: 'AppLovin',
-    event_id: eventId,
-    event_token: expectedEventToken(eventId, KEY),
-    ...over,
-  });
-  const call = async (query: Record<string, string>, method: 'GET' | 'POST' = 'GET') =>
-    res(await h()(httpEvent({ routeKey: `${method} /v1/ssv`, query })));
-
-  it('firma buena: anota rewards/{nonce} con TTL de 30 días y responde ok', async () => {
-    const r = await call(q());
-    expect(r).toMatchObject({ status: 200, body: { status: 'ok' } });
-    expect(v(r.body)).toBe(true);
-    expect(db.get(TABLES.AF_TABLE_REWARDS, { nonce: N1 })).toMatchObject({
-      uid: UID,
-      placement: 'rescue',
-      network: 'AppLovin',
-      ts: NOW,
-      ttl: Math.floor(NOW / 1000) + 30 * 86400,
-    });
-  });
-
-  it('nonce repetido → 200 duplicate sin reescribir (idempotente), también por POST', async () => {
-    await call(q());
-    const before = structuredClone(db.get(TABLES.AF_TABLE_REWARDS, { nonce: N1 }));
-    now = NOW + 5000;
-    const r = await call(q({}, 'ev-2'), 'POST');
-    expect(r.body).toEqual({ status: 'duplicate' });
-    expect(v(r.body)).toBe(true);
-    expect(db.get(TABLES.AF_TABLE_REWARDS, { nonce: N1 })).toEqual(before);
-    // Ni siquiera otro UID puede quedarse con un nonce ya anotado.
-    expect((await call(q({ user_id: OTHER_UID }, 'ev-3'))).body).toEqual({ status: 'duplicate' });
-    expect(db.get(TABLES.AF_TABLE_REWARDS, { nonce: N1 })?.uid).toBe(UID);
-    now = NOW;
-  });
-
-  it('firma mala, ausente o con otra clave → 403 bad_signature sin escribir ni gastar cupo', async () => {
-    for (const query of [
-      q({ event_token: 'f'.repeat(64) }),
-      q({ event_token: expectedEventToken('ev-1', 'otra-clave') }),
-      { user_id: UID, custom_data: `rescue|${N1}` },
-      q({ event_id: 'ev 1' }),
-    ]) {
-      const r = await call(query);
-      expect(r.status).toBe(403);
-      expect(r.body).toMatchObject({ error: { code: 'bad_signature' } });
-    }
-    expect(db.items(TABLES.AF_TABLE_REWARDS)).toHaveLength(0);
-    expect(db.items(TABLES.AF_TABLE_RATE_LIMITS)).toHaveLength(0);
-  });
-
-  it('el secreto de relleno no firma nada que no se haya firmado con él', () => {
-    expect(verifyMaxCallback('ev', expectedEventToken('ev', KEY), '')).toBe(false);
-    expect(verifyMaxCallback('ev', expectedEventToken('ev', KEY).toUpperCase(), KEY)).toBe(true);
-    expect(verifyMaxCallback(undefined, 'x', KEY)).toBe(false);
-  });
-
-  it('parámetros mal formados → 400 (custom_data, user_id)', async () => {
-    expect((await call(q({ custom_data: 'rescue' }))).status).toBe(400);
-    expect((await call(q({ custom_data: `rescue|nonce` }))).status).toBe(400);
-    expect((await call(q({ user_id: 'no válido!' }))).status).toBe(400);
-    expect((await call({})).status).toBe(400);
-  });
-
-  it(`límite de ${SSV_DAILY_LIMIT} recompensas por UID y día → 429 con retry_after_s`, async () => {
-    for (let i = 0; i < SSV_DAILY_LIMIT; i++) {
-      const nonce = `6f1c2a4e-8b3d-4f5a-9c7e-${i.toString(16).padStart(12, '0')}`;
-      expect((await call(q({ custom_data: `rescue|${nonce}` }, `e${i}`))).status).toBe(200);
-    }
-    const r = await call(q({ custom_data: `rescue|${N2}` }, 'e-last'));
-    expect(r.status).toBe(429);
-    expect(r.body).toMatchObject({ error: { code: 'rate_limited' } });
-    expect(validator('error.schema.json')(r.body)).toBe(true);
-    expect(db.get(TABLES.AF_TABLE_REWARDS, { nonce: N2 })).toBeUndefined();
-  });
-
-  it('error de DynamoDB → 500 (MAX reintenta)', async () => {
-    db.failNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_REWARDS, error: new Error('boom') };
-    expect((await call(q())).status).toBe(500);
-  });
-});
+// rewardedSsv (SSV de AdMob, D-049): test/unit/rewarded-ssv-admob.test.ts.
 
 class VoidedPlay implements PlayApi {
   pages: VoidedPage[] = [];

@@ -113,7 +113,7 @@ namespace AF.Backend
         public void ClearPending(string token) => _pendingTokens.Remove(token);
 
         /// <summary>
-        /// Simula el callback S2S de MAX (<c>/v1/ssv</c>): confirma el nonce. Un nonce repetido devuelve <c>duplicate</c>.
+        /// Simula el callback SSV de AdMob (<c>/v1/ssv</c>, D-049): confirma el nonce. Un nonce repetido devuelve <c>duplicate</c>.
         /// </summary>
         public SsvResponse ReceiveSsv(SsvCallback callback)
         {

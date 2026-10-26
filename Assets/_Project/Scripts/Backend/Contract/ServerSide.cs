@@ -6,9 +6,10 @@ using AF.Backend.Json;
 namespace AF.Backend.Contract
 {
     /// <summary>
-    /// Parámetros del callback S2S de MAX a <c>/v1/ssv</c> (<c>rewarded-ssv.request.schema.json</c>; 08 §10.1-§10.2). El cliente
-    /// nunca lo envía: lo usan los tests de contrato y <see cref="FakeBackendClient"/> para simular que MAX confirmó un nonce.
-    /// Admite parámetros extra de texto (los fija la URL del panel de MAX).
+    /// Parámetros del callback SSV de AdMob a <c>/v1/ssv</c> (<c>rewarded-ssv.request.schema.json</c>; 08 §10.1-§10.2; D-049). El
+    /// cliente nunca lo envía: lo usan los tests de contrato y <see cref="FakeBackendClient"/> para simular que AdMob confirmó un
+    /// nonce. La firma (<c>signature</c>, <c>key_id</c>) y el resto de parámetros de AdMob van como extras de texto: aquí no se
+    /// verifica nada (lo hace la Lambda).
     /// </summary>
     public sealed class SsvCallback
     {
@@ -19,9 +20,8 @@ namespace AF.Backend.Contract
             string userId,
             string placement,
             string nonce,
-            string? network = null,
-            string? eventId = null,
-            string? eventToken = null,
+            string? transactionId = null,
+            string? adNetwork = null,
             IReadOnlyList<KeyValuePair<string, string>>? extras = null)
         {
             if (!ContractRules.IsFirebaseUid(userId))
@@ -34,19 +34,14 @@ namespace AF.Backend.Contract
                 throw new ArgumentException("custom_data fuera del contrato.", nameof(nonce));
             }
 
-            if (network != null && network.Length > 64)
+            if (transactionId != null && !ContractRules.IsTransactionId(transactionId))
             {
-                throw new ArgumentException("network de más de 64 caracteres.", nameof(network));
+                throw new ArgumentException("transaction_id fuera del contrato.", nameof(transactionId));
             }
 
-            if (eventId != null && !ContractRules.IsEventId(eventId))
+            if (adNetwork != null && adNetwork.Length > 64)
             {
-                throw new ArgumentException("event_id fuera del contrato.", nameof(eventId));
-            }
-
-            if (eventToken != null && !ContractRules.IsEventToken(eventToken))
-            {
-                throw new ArgumentException("event_token fuera del contrato.", nameof(eventToken));
+                throw new ArgumentException("ad_network de más de 64 caracteres.", nameof(adNetwork));
             }
 
             var copy = new List<KeyValuePair<string, string>>();
@@ -67,9 +62,8 @@ namespace AF.Backend.Contract
             UserId = userId;
             Placement = placement!;
             Nonce = nonce!;
-            Network = network;
-            EventId = eventId;
-            EventToken = eventToken;
+            TransactionId = transactionId;
+            AdNetwork = adNetwork;
             Extras = copy;
         }
 
@@ -83,12 +77,13 @@ namespace AF.Backend.Contract
         /// <summary><c>custom_data</c> = <c>placement|nonce</c>.</summary>
         public string CustomData => Placement + "|" + Nonce;
 
-        public string? Network { get; }
+        /// <summary><c>transaction_id</c>: id único de la recompensa en AdMob.</summary>
+        public string? TransactionId { get; }
 
-        public string? EventId { get; }
+        /// <summary><c>ad_network</c>: id de la red que sirvió el anuncio.</summary>
+        public string? AdNetwork { get; }
 
-        public string? EventToken { get; }
-
+        /// <summary>El resto de parámetros (<c>ad_unit</c>, <c>reward_amount</c>, <c>timestamp</c>, <c>signature</c>, <c>key_id</c>…).</summary>
         public IReadOnlyList<KeyValuePair<string, string>> Extras { get; }
 
         public string ToJson()
@@ -96,19 +91,14 @@ namespace AF.Backend.Contract
             JsonNode node = JsonNode.NewObject()
                 .Set("user_id", JsonNode.FromString(UserId))
                 .Set("custom_data", JsonNode.FromString(CustomData));
-            if (Network != null)
+            if (TransactionId != null)
             {
-                node.Set("network", JsonNode.FromString(Network));
+                node.Set("transaction_id", JsonNode.FromString(TransactionId));
             }
 
-            if (EventId != null)
+            if (AdNetwork != null)
             {
-                node.Set("event_id", JsonNode.FromString(EventId));
-            }
-
-            if (EventToken != null)
-            {
-                node.Set("event_token", JsonNode.FromString(EventToken));
+                node.Set("ad_network", JsonNode.FromString(AdNetwork));
             }
 
             for (int i = 0; i < Extras.Count; i++)
@@ -127,9 +117,8 @@ namespace AF.Backend.Contract
             var r = new ObjectReader(node, "rewardedSsv.request", strict: false);
             string userId = r.RequiredString("user_id", ContractRules.IsFirebaseUid);
             string customData = r.RequiredString("custom_data", ContractRules.IsCustomData);
-            string? network = r.OptionalString("network", n => n != null && n.Length <= 64);
-            string? eventId = r.OptionalString("event_id", ContractRules.IsEventId);
-            string? eventToken = r.OptionalString("event_token", ContractRules.IsEventToken);
+            string? transactionId = r.OptionalString("transaction_id", ContractRules.IsTransactionId);
+            string? adNetwork = r.OptionalString("ad_network", n => n != null && n.Length <= 64);
             var extras = new List<KeyValuePair<string, string>>();
             IReadOnlyList<KeyValuePair<string, JsonNode>> rest = r.UnreadMembers();
             for (int i = 0; i < rest.Count; i++)
@@ -139,30 +128,39 @@ namespace AF.Backend.Contract
             }
 
             int bar = customData.IndexOf('|');
-            return new SsvCallback(userId, customData.Substring(0, bar), customData.Substring(bar + 1), network, eventId, eventToken, extras);
+            return new SsvCallback(userId, customData.Substring(0, bar), customData.Substring(bar + 1), transactionId, adNetwork, extras);
         }
 
         private static bool IsKnownKey(string key)
         {
-            return key == "user_id" || key == "custom_data" || key == "network" || key == "event_id" || key == "event_token";
+            return key == "user_id" || key == "custom_data" || key == "transaction_id" || key == "ad_network";
         }
     }
 
-    /// <summary>Estado de la respuesta del SSV: <c>ok</c> o <c>duplicate</c> (nonce repetido, idempotente).</summary>
+    /// <summary>
+    /// Estado de la respuesta del SSV: <c>ok</c>, <c>duplicate</c> (nonce repetido o cuenta borrada, sin escribir) o
+    /// <c>ignored</c> (firma válida sin <c>user_id</c> o <c>custom_data</c>, sin escribir; D-049).
+    /// </summary>
     public sealed class SsvResponse
     {
-        public static readonly SsvResponse Ok = new SsvResponse(false);
+        public static readonly SsvResponse Ok = new SsvResponse("ok");
 
-        public static readonly SsvResponse Duplicate = new SsvResponse(true);
+        public static readonly SsvResponse Duplicate = new SsvResponse("duplicate");
 
-        private SsvResponse(bool duplicate)
+        public static readonly SsvResponse Ignored = new SsvResponse("ignored");
+
+        private readonly string _status;
+
+        private SsvResponse(string status)
         {
-            IsDuplicate = duplicate;
+            _status = status;
         }
 
-        public bool IsDuplicate { get; }
+        public bool IsDuplicate => _status == "duplicate";
 
-        public string ToJson() => BackendJson.Write(JsonNode.NewObject().Set("status", JsonNode.FromString(IsDuplicate ? "duplicate" : "ok")));
+        public bool IsIgnored => _status == "ignored";
+
+        public string ToJson() => BackendJson.Write(JsonNode.NewObject().Set("status", JsonNode.FromString(_status)));
 
         public static bool TryParseStrict(string? json, out SsvResponse? value, out string? error) =>
             ContractRules.TryRead(json, Read, out value, out error);
@@ -172,17 +170,17 @@ namespace AF.Backend.Contract
             var r = new ObjectReader(node, "rewardedSsv.response", strict: true);
             string status = r.RequiredString("status");
             r.End();
-            if (status == "ok")
+            switch (status)
             {
-                return Ok;
+                case "ok":
+                    return Ok;
+                case "duplicate":
+                    return Duplicate;
+                case "ignored":
+                    return Ignored;
+                default:
+                    throw new ContractException("rewardedSsv.response: 'status' desconocido.");
             }
-
-            if (status == "duplicate")
-            {
-                return Duplicate;
-            }
-
-            throw new ContractException("rewardedSsv.response: 'status' desconocido.");
         }
     }
 

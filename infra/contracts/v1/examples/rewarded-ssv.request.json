@@ -1,7 +1,12 @@
 {
-  "user_id": "kT3x9QeVb2Rz8LmN4pWs7YcA1dF5",
+  "ad_network": "5450213213286189855",
+  "ad_unit": "2877105387",
   "custom_data": "rescue|6f1c2a4e-8b3d-4f5a-9c7e-1d2b3a4c5e6f",
-  "network": "applovin",
-  "event_id": "ev-0123456789abcdef",
-  "event_token": "4782c286a2dd45cdaa4a5dd8173fbb4f148a2c04d04c63e82501c155b8b6c544"
+  "reward_amount": "1",
+  "reward_item": "Reward",
+  "timestamp": "1792540800000",
+  "transaction_id": "8d2f7a1c4b9e6f30a5d1c7e2b4f8a903",
+  "user_id": "kT3x9QeVb2Rz8LmN4pWs7YcA1dF5",
+  "signature": "MEUCIQCLJS_s4ia_sN06HqzeW7Wc3nhZi4RlW3qV0oO-6AIYdQIgGJEh-rzKreO-paNDbSCzWGMtmgJHYYW9k2_icM9LFMY",
+  "key_id": "3335741209"
 }

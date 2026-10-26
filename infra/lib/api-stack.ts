@@ -48,8 +48,6 @@ export interface AfSecrets {
   readonly playServiceAccount: Secret;
   /** Clave JSON de la cuenta de servicio de Firebase Admin, para borrar el usuario de Auth (08 §11). */
   readonly firebaseAdmin: Secret;
-  /** Clave de los callbacks S2S de MAX (08 §10.1) [NV: formato]. */
-  readonly maxSsvKey: Secret;
 }
 
 const DDB_GET = ['dynamodb:GetItem'];
@@ -82,13 +80,12 @@ export class ApiStack extends Stack {
         description: `${description} Lo carga el dueño con put-secret-value; hasta entonces guarda un relleno aleatorio.`,
         removalPolicy: config.isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
       });
-      ack(s, 'AwsSolutions-SMG4', 'Clave externa (Google, Firebase o AppLovin) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7).');
+      ack(s, 'AwsSolutions-SMG4', 'Clave externa (Google o Firebase) que no admite rotación automática desde AWS; la rota el dueño a mano y WIF la sustituye en la 1.1 (Q-AWS-7).');
       return s;
     };
     this.secrets = {
       playServiceAccount: secret('PlayServiceAccount', 'play-service-account', 'Cuenta de servicio de Google Play Developer API.'),
       firebaseAdmin: secret('FirebaseAdmin', 'firebase-admin-service-account', 'Cuenta de servicio de Firebase Admin.'),
-      maxSsvKey: secret('MaxSsvKey', 'max-ssv-key', 'Clave de los callbacks S2S de AppLovin MAX.'),
     };
 
     // ---- Funciones (una por pieza de 08 §2.4) con permisos mínimos: cada acción, solo sobre su tabla o índice ----
@@ -135,16 +132,14 @@ export class ApiStack extends Stack {
     const rewardedSsv = new AfFunction(this, 'RewardedSsv', {
       config,
       name: 'rewarded-ssv',
-      description: 'rewardedSsv (08 §10.2): callback S2S de MAX; anota el nonce de la recompensa.',
-      environment: {
-        ...tableEnv({ REWARDS: tables.rewards, RATE_LIMITS: tables.rateLimits }),
-        ...secretEnv({ MAX_SSV: this.secrets.maxSsvKey }),
-      },
+      description: 'rewardedSsv (08 §10.2; D-049): SSV de AdMob con firma ECDSA; anota el nonce de la recompensa.',
+      // Sin secretos: la firma se comprueba con las claves públicas de Google (gstatic.com, HTTPS de salida; las Lambdas no
+      // van en VPC, así que no hace falta nada más).
+      environment: tableEnv({ REWARDS: tables.rewards, RATE_LIMITS: tables.rateLimits }),
     });
     rewardedSsv.grantTable(tables.rewards, DDB_PUT);
-    // Límite por UID, event_id de un solo uso y marca de cuenta borrada (ConditionCheck, F2c).
+    // Límite por UID, transaction_id de un solo uso y marca de cuenta borrada (ConditionCheck, F2c).
     rewardedSsv.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE, ...DDB_CONDITION_CHECK]);
-    rewardedSsv.grantSecret(this.secrets.maxSsvKey);
 
     const deleteAccount = new AfFunction(this, 'DeleteAccount', {
       config,
@@ -297,7 +292,7 @@ export class ApiStack extends Stack {
             r,
             'AwsSolutions-APIG4',
             op.function === 'rewarded-ssv'
-              ? 'Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6).'
+              ? 'Callback servidor a servidor del SSV de AdMob: no lleva token de Firebase; se autentica con la firma ECDSA de Google en la Lambda (08 §10.1; F2-6; D-049).'
               : 'Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8).',
           );
         }

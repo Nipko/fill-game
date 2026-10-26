@@ -1,4 +1,4 @@
-// Arreglos de la revisión de seguridad: event_id de MAX de un solo uso, marca de cuenta borrada, límite por UID
+// Arreglos de la revisión de seguridad: transaction_id del SSV (antes event_id de MAX) de un solo uso, marca de cuenta borrada, límite por UID
 // en verifyPurchase, límite de delete-confirm y cantidad solo en consumibles.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CATALOG, grantFor } from '../../functions/shared/catalog.ts';
@@ -9,9 +9,8 @@ import { DELETED_MARK_TTL_S, markDeleted } from '../../functions/shared/rateLimi
 import { uidHash } from '../../functions/shared/log.ts';
 import { LIMITS, createHandler as deleteHandler } from '../../functions/delete-account/handler.ts';
 import { SSV_DAILY_LIMIT, createHandler as ssvHandler } from '../../functions/rewarded-ssv/handler.ts';
-import { expectedEventToken } from '../../functions/rewarded-ssv/maxSignature.ts';
 import { VERIFY_HOURLY_LIMIT, createHandler as verifyHandler } from '../../functions/verify-purchase/handler.ts';
-import { MapSecrets, NOW, OTHER_UID, UID, httpEvent, res } from './fixtures.ts';
+import { NOW, OTHER_UID, UID, admobParams, admobSigner, httpEvent, res } from './fixtures.ts';
 import { MemDb, TABLES } from './memdb.ts';
 
 const N1 = '6f1c2a4e-8b3d-4f5a-9c7e-1d2b3a4c5e6f';
@@ -33,16 +32,15 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('rewardedSsv: event_id de un solo uso', () => {
-  const KEY = 'clave';
-  const secrets = new MapSecrets();
-  secrets.values.set('arn:max', KEY);
+describe('rewardedSsv: transaction_id de un solo uso', () => {
+  const signer = admobSigner();
+  // La repetición de AdMob trae el mismo timestamp (el de la recompensa), aunque llegue más tarde.
   const call = async (uid: string, nonce: string, eventId: string) =>
     res(
-      await ssvHandler(() => ({ ddb: db.client, secrets, env: { ...TABLES, AF_SECRET_MAX_SSV: 'arn:max' }, now: () => now }))(
+      await ssvHandler(() => ({ ddb: db.client, keys: signer.keys, env: TABLES, now: () => now }))(
         httpEvent({
           routeKey: 'GET /v1/ssv',
-          query: { user_id: uid, custom_data: `rescue|${nonce}`, event_id: eventId, event_token: expectedEventToken(eventId, KEY) },
+          rawQuery: signer.query(admobParams({ user_id: uid, custom_data: `rescue|${nonce}`, transaction_id: eventId, timestamp: String(now) })),
         }),
       ),
     );
@@ -56,7 +54,7 @@ describe('rewardedSsv: event_id de un solo uso', () => {
     expect(db.get(TABLES.AF_TABLE_REWARDS, { nonce: N2 })).toBeUndefined();
   });
 
-  it('el reintento de MAX con los mismos valores responde duplicate y no gasta cupo', async () => {
+  it('la repetición con los mismos valores responde duplicate y no gasta cupo', async () => {
     await call(UID, N1, 'ev-1');
     const counter = () => db.items(TABLES.AF_TABLE_RATE_LIMITS).find((i) => String(i.key).startsWith('ssv#'))?.count;
     expect(counter()).toBe(1);
@@ -73,7 +71,7 @@ describe('rewardedSsv: event_id de un solo uso', () => {
     expect((await call(UID, N2, 'e-tope')).status).toBe(429);
     expect((await call(UID, N2, 'e-tope')).status).toBe(429);
     expect(db.get(TABLES.AF_TABLE_REWARDS, { nonce: N2 })).toBeUndefined();
-    // Al día siguiente, el reintento de MAX sí pasa.
+    // Al día siguiente, la repetición sí pasa.
     now = NOW + 86_400_000;
     expect((await call(UID, N2, 'e-tope')).body).toEqual({ status: 'ok' });
   });

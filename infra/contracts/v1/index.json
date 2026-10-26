@@ -113,7 +113,8 @@
         ],
         "response": [
           "rewarded-ssv.response.ok.json",
-          "rewarded-ssv.response.duplicate.json"
+          "rewarded-ssv.response.duplicate.json",
+          "rewarded-ssv.response.ignored.json"
         ],
         "invalidRequest": [
           "rewarded-ssv.request.invalid-custom-data.json"
@@ -121,7 +122,8 @@
       },
       "errors": {
         "400": [
-          "bad_request"
+          "bad_request",
+          "request_expired"
         ],
         "403": [
           "bad_signature"
@@ -131,9 +133,12 @@
         ],
         "501": [
           "not_implemented"
+        ],
+        "502": [
+          "upstream_error"
         ]
       },
-      "source": "08 §10.1 y §10.2; plan §1 (SSV) y F2-6. Llamada servidor a servidor de MAX: el formato exacto de su callback y de su firma está [NV] (F0-R); por eso el esquema admite parámetros extra. También se acepta POST con los mismos parámetros en la query (08 §10.2 dice POST)."
+      "source": "08 §10.1 y §10.2; plan §1 (SSV) y F2-6; D-049. Callback SSV de AdMob (GET) firmado con ECDSA por Google: la firma cubre la consulta cruda hasta antes de &signature=; el esquema admite parámetros extra por si AdMob añade alguno. También se acepta POST con los mismos parámetros en la query (08 §10.2)."
     },
     {
       "operation": "rewardedSsvPost",
@@ -157,7 +162,8 @@
       },
       "errors": {
         "400": [
-          "bad_request"
+          "bad_request",
+          "request_expired"
         ],
         "403": [
           "bad_signature"
@@ -167,6 +173,9 @@
         ],
         "501": [
           "not_implemented"
+        ],
+        "502": [
+          "upstream_error"
         ]
       },
       "source": "08 §10.2 (POST /v1/ssv); misma función que rewardedSsv"
