@@ -131,7 +131,7 @@ namespace AF.Presentation
     /// condición 1). Si la desaconseja, la alternativa prevista es una rama genérica sin especie reconocible (o la que proponga
     /// el asesor), como en la ventanita de casa de M1.5 (ProceduralArt.Home.cs): solo cambian <c>DrawSlothLeafCell</c>,
     /// <c>DrawEmbaubaBranch</c> y la ranura de la rama, no el rig. Nada de hojas quemadas ni ceniza.</para>
-    /// <para>Perezoso: el atlas de 1024 × 1024 (con mipmaps) y la rama se crean la primera vez que se piden (<see cref="SlothRigArtBuilt"/>,
+    /// <para>Perezoso: el atlas de 1024 × 512 (con mipmaps) y la rama se crean la primera vez que se piden (<see cref="SlothRigArtBuilt"/>,
     /// <see cref="SlothBranchBuilt"/>), nunca al construir <see cref="ProceduralArt"/>; tras <see cref="Dispose"/> se vuelven
     /// a generar.</para>
     /// <para>Paleta orientativa [P] de c.4 (la del retrato de M1.5: <see cref="SlothFur"/>, <see cref="SlothAlgae"/>,
@@ -154,8 +154,9 @@ namespace AF.Presentation
         public const string SlothBranchSlot = "arbol_embauba";
 
         /// <summary>
-        /// Lado del atlas provisional de las piezas (px): celdas de 256 px, la plantilla del PNG del artista (1024 × 1024), con
-        /// mipmaps para que se vea nítido de la ventanita (≈ 48 dp) al arranque (≈ 160 dp). El dibujo se hace en unidades de la
+        /// Ancho del atlas provisional de las piezas (px): celdas de 256 px, las de la plantilla del PNG del artista (1024 × 1024);
+        /// el provisional solo lleva las dos filas que usa (1024 × 512), con mipmaps para que se vea nítido de la ventanita
+        /// (≈ 48 dp) al arranque (≈ 160 dp). El dibujo se hace en unidades de la
         /// celda de 128 (<see cref="SlothCellPx"/>) y se pinta a <see cref="SlothK"/> px por unidad.
         /// </summary>
         public const int SlothAtlasPx = 1024;
@@ -181,7 +182,7 @@ namespace AF.Presentation
         public static readonly Vector2 SlothSpeculumCenterUv = new Vector2(0.5f, 78f / SlothCellPx);
 
         /// <summary>Ancho y alto del espéculo en la pieza del lomo, en fracción de la pieza.</summary>
-        public static readonly Vector2 SlothSpeculumSizeUv = new Vector2(18f / SlothCellPx, 34f / SlothCellPx);
+        public static readonly Vector2 SlothSpeculumSizeUv = new Vector2(13f / SlothCellPx, 26f / SlothCellPx);
 
         // Espéculo del macho (c.4) y garras de hueso claro (c.4), con su base más oscura y su punta casi marfil.
         private static readonly Color SlothSpeculum = Palette.Hex(0xE39A3B);
@@ -268,16 +269,21 @@ namespace AF.Presentation
 
             Stopwatch watch = Stopwatch.StartNew();
             var art = new SlothArt();
-            var pc = new PixelCanvas(SlothAtlasPx, SlothAtlasPx);
+            // Solo las dos filas de celdas que se usan (la mitad de alto que la plantilla: la mitad de memoria); las celdas
+            // salen de abajo arriba desde el borde superior, como en el PNG. Cada pieza va en su celda, sin tocar las demás:
+            // se pintan a la vez en varios hilos (funciones puras, sin estado compartido), con el mismo resultado.
             const int c = SlothAtlasPx / 4;
+            const int h = 2 * c;
             const float k = SlothK;
-            int top = SlothAtlasPx - c;
-            DrawSlothHeadAt(pc, c * 0.5f, top + (c * 0.5f), k, false, 0, top, c, SlothAtlasPx);
-            DrawSlothTorso(pc, c, top, k, false);
-            DrawSlothTorso(pc, c, top - c, k, true);
-            DrawSlothLimb(pc, 2 * c, top, k);
-            DrawSlothEyelid(pc, 3 * c, SlothAtlasPx - (c / 4), k);
-            DrawSlothLeafCell(pc, 0, top - c, k);
+            var pc = new PixelCanvas(SlothAtlasPx, h);
+            int top = h - c;
+            System.Threading.Tasks.Parallel.Invoke(
+                () => DrawSlothHeadAt(pc, c * 0.5f, top + (c * 0.5f), k, false, 0, top, c, h),
+                () => DrawSlothTorso(pc, c, top, k, false),
+                () => DrawSlothTorso(pc, c, top - c, k, true),
+                () => DrawSlothLimb(pc, 2 * c, top, k),
+                () => DrawSlothEyelid(pc, 3 * c, h - (c / 4), k),
+                () => DrawSlothLeafCell(pc, 0, top - c, k));
             Texture2D tex = pc.ToTexture("fauna_bradypus_variegatus_provisional", mipmaps: true);
             _owned.Add(tex);
             AssignSlothCells(art, tex);
@@ -475,7 +481,7 @@ namespace AF.Presentation
         // Manchas de algas (0..1, baja frecuencia): el matiz verdoso va a parches, nunca en raya.
         private static float SlothAlgaePatch(float ux, float uy, int seed)
         {
-            return Mathf.Clamp01(0.35f + (1.3f * (ArtNoise.Fbm2(ux * 0.055f, uy * 0.055f, seed) - 0.5f)));
+            return Mathf.Clamp01(0.35f + (1.5f * (ArtNoise.Value2(ux * 0.06f, uy * 0.06f, seed) - 0.5f)));
         }
 
         // Bandas oscuras de los ojos del perezoso de tres dedos: nacen junto al hocico, envuelven el ojo y se afinan hacia la
@@ -723,8 +729,11 @@ namespace AF.Presentation
             SlothTones algae = Tones(Color.Lerp(SlothFur, SlothAlgae, 0.75f), 0.34f, 0.16f);
             SlothTones throat = Tones(SlothThroat, 0.3f, 0.14f);
             Color belly = ColorMath.Lighten(SlothFur, 0.1f);
-            Color specDark = ColorMath.Darken(SlothSpeculum, 0.16f);
-            Color specLight = ColorMath.Lighten(SlothSpeculum, 0.14f);
+            // El espéculo, apagado y fundido con el pelo: una marca del pelaje, no un ojo (pulido del 2026-10-25).
+            Color specBase = Color.Lerp(SlothSpeculum, SlothFur, 0.42f);
+            Color specDark = ColorMath.Darken(specBase, 0.14f);
+            Color specLight = ColorMath.Lighten(specBase, 0.08f);
+            Color specStripe = ColorMath.Darken(SlothMask, 0.1f);
             float specX = (SlothSpeculumCenterUv.x * SlothCellPx) - 64f;
             float specY = (SlothSpeculumCenterUv.y * SlothCellPx) - 64f;
             float specRx = SlothSpeculumSizeUv.x * SlothCellPx * 0.5f;
@@ -786,8 +795,8 @@ namespace AF.Presentation
                         continue;
                     }
 
-                    float spec = EllipseDp(ux, uy, specX, specY, specRx, specRy) + (1.2f * (ArtNoise.Value2(ux * 0.5f, uy * 0.2f, 47) - 0.5f));
-                    float specCov = PixelCanvas.SoftCoverage(spec * k, 1.8f * k);
+                    float spec = EllipseDp(ux, uy, specX, specY, specRx, specRy) + (2.4f * (ArtNoise.Value2(ux * 0.45f, uy * 0.16f, 47) - 0.5f));
+                    float specCov = PixelCanvas.SoftCoverage(spec * k, 4f * k) * 0.85f;
                     if (specCov > 0f)
                     {
                         Color sc = Color.Lerp(specDark, specLight, Mathf.Clamp01(0.5f - (0.05f * (ux - specX)) + (0.025f * (uy - specY))));
@@ -801,33 +810,43 @@ namespace AF.Presentation
 
                     // La raya negra del espéculo, a lo largo de la columna, afinada en las puntas.
                     float stripe = Mathf.Min(
-                        SlothTaper(ux, uy, specX, specY - 12f, 0.8f, specX, specY, 1.9f),
-                        SlothTaper(ux, uy, specX, specY, 1.9f, specX, specY + 12f, 0.8f));
-                    float stripeCov = PixelCanvas.SoftCoverage(stripe * k, 0.9f * k);
+                        SlothTaper(ux, uy, specX, specY - 9f, 0.5f, specX, specY, 1.2f),
+                        SlothTaper(ux, uy, specX, specY, 1.2f, specX, specY + 9f, 0.5f));
+                    float stripeCov = PixelCanvas.SoftCoverage(stripe * k, 1.6f * k) * 0.7f;
                     if (stripeCov > 0f)
                     {
-                        pc.Blend(x, y, SlothInk, stripeCov);
+                        pc.Blend(x, y, specStripe, stripeCov);
                     }
                 }
             }
         }
 
-        // Radio de la extremidad (unidades) a la altura uy desde abajo: del hombro (12,6) a la muñeca (9,4), afinándose con una
-        // curva suave; la mitad (28-100) es la parte que estira el 9-slice.
+        // Radio de la extremidad (unidades) a la altura uy desde abajo: el hombro (12,4), el brazo que se afina hasta el codo
+        // (10,4 a 66), el antebrazo que se ensancha (11,4 a 48) y la muñeca (9,2 a 28); la mitad (28-100) es la parte que estira
+        // el 9-slice, que en las poses colgadas casi no estira (el codo queda a media extremidad).
         private static float SlothLimbRadius(float uy)
         {
             if (uy >= 100f)
             {
-                return 12.6f;
+                return 12.4f;
             }
 
             if (uy <= 28f)
             {
-                return 9.4f;
+                return 9.2f;
             }
 
-            float t = (uy - 28f) / 72f;
-            return Mathf.Lerp(9.4f, 12.6f, t) + (0.5f * Mathf.Sin(Mathf.PI * t));
+            if (uy >= 66f)
+            {
+                return Mathf.Lerp(10.4f, 12.4f, SlothSmooth(66f, 100f, uy));
+            }
+
+            if (uy >= 48f)
+            {
+                return Mathf.Lerp(11.4f, 10.4f, SlothSmooth(48f, 66f, uy));
+            }
+
+            return Mathf.Lerp(9.2f, 11.4f, SlothSmooth(28f, 48f, uy));
         }
 
         // Extremidad (de arriba, el hombro o la cadera, hacia abajo): forma orgánica que se afina hacia la muñeca, con pelo en la
@@ -852,7 +871,7 @@ namespace AF.Presentation
                     float arm;
                     if (uy > 112.5f)
                     {
-                        arm = Mathf.Sqrt((ux * ux) + ((uy - 112.5f) * (uy - 112.5f))) - 12.6f;
+                        arm = Mathf.Sqrt((ux * ux) + ((uy - 112.5f) * (uy - 112.5f))) - 12.4f;
                     }
                     else
                     {
@@ -863,7 +882,8 @@ namespace AF.Presentation
                     {
                         float f = (uy / 6.5f) + (ux < 0f ? 0.3f : 0.75f);
                         float t = 1f - Mathf.Abs((2f * (f - Mathf.Floor(f))) - 1f);
-                        arm -= 0.9f * t * t * SlothSmooth(22f, 30f, uy);
+                        float elbow = 1f + (0.9f * Mathf.Clamp01(1f - (Mathf.Abs(uy - 64f) / 12f))); // mechones más largos en el codo
+                        arm -= 0.9f * elbow * t * t * SlothSmooth(22f, 30f, uy);
                     }
 
                     float pawD = EllipseDp(ux, uy, 0f, 19f, 11f, 9.5f);
@@ -887,6 +907,10 @@ namespace AF.Presentation
                     float algaeAmount = 0.26f * SlothAlgaePatch(ux * 2f, uy * 0.8f, 19) * SlothSmooth(30f, 46f, uy);
                     Color col = Color.Lerp(Shade(fur, diffuse), Shade(algae, diffuse), algaeAmount);
                     col = Color.Lerp(col, Shade(paw, diffuse), SlothSmooth(28f, 16f, uy));
+                    float crease = Mathf.Clamp01(1f - (Mathf.Abs(uy - 62f) / 5f)) * 0.07f; // el pliegue del codo
+                    col.r *= 1f - crease;
+                    col.g *= 1f - crease;
+                    col.b *= 1f - crease;
                     float m = 1f + (0.15f * strand);
                     col.r *= m;
                     col.g *= m;
@@ -994,70 +1018,63 @@ namespace AF.Presentation
         {
             float w = pc.Width / k; // en unidades: 512
             const float r = 18f;
-            const int steps = 48;
-            for (int pass = 0; pass < 2; pass++)
-            {
-                float px = 14f;
-                float py = BranchY(px, w);
-                for (int i = 1; i <= steps; i++)
-                {
-                    float qx = 14f + ((w - 28f) * i / steps);
-                    float qy = BranchY(qx, w);
-                    if (pass == 0)
-                    {
-                        pc.FillCapsule(px * k, py * k, qx * k, qy * k, (r + SlothInkPx) * k, new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 1f));
-                    }
-                    else
-                    {
-                        pc.FillCapsule(px * k, py * k, qx * k, qy * k, r * k, EmbaubaBark);
-                    }
-
-                    px = qx;
-                    py = qy;
-                }
-            }
-
-            // Volumen y veta: cada píxel de la corteza se sombrea por su altura en el cilindro (v = −1 abajo, 1 arriba).
+            Color ink = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 1f);
             Color shadow = ColorMath.Darken(EmbaubaBark, 0.3f);
             Color light = ColorMath.Lighten(EmbaubaBark, 0.1f);
-            for (int y = 0; y < pc.Height; y++)
+            float aa = 1f / k;
+
+            // Una sola pasada por las filas de la rama: distancia al eje (los extremos, redondos), contorno, corteza con su
+            // volumen de cilindro (v = −1 abajo, 1 arriba), veta y brillo.
+            int y0 = Mathf.Max(0, Mathf.FloorToInt((64f - r - SlothInkPx - 1f) * k));
+            int y1 = Mathf.Min(pc.Height, Mathf.CeilToInt((70f + r + SlothInkPx + 1f) * k));
+            for (int y = y0; y < y1; y++)
             {
                 for (int x = 0; x < pc.Width; x++)
                 {
-                    Color o = pc.Get(x, y);
-                    if (o.a <= 0f)
-                    {
-                        continue;
-                    }
-
                     float ux = (x + 0.5f) / k;
                     float uy = (y + 0.5f) / k;
-                    float v = (uy - BranchY(ux, w)) / r;
-                    float inside = Mathf.Clamp01((1f - Mathf.Abs(v)) * r * k * 0.5f);
-                    if (inside <= 0f)
+                    float ax = Mathf.Clamp(ux, 14f, w - 14f);
+                    float dx = ux - ax;
+                    float dy = uy - BranchY(ax, w);
+                    float d = Mathf.Sqrt((dx * dx) + (dy * dy)) - r;
+                    if (d > SlothInkPx + aa)
                     {
                         continue;
                     }
 
+                    pc.Blend(x, y, ink, PixelCanvas.Coverage((d - SlothInkPx) * k));
+                    float cov = PixelCanvas.Coverage(d * k);
+                    if (cov <= 0f)
+                    {
+                        continue;
+                    }
+
+                    float v = Mathf.Clamp(dy / r, -1f, 1f);
                     float diffuse = Mathf.Clamp01(0.55f + (0.55f * v) - (0.35f * v * v));
                     Color c = diffuse < 0.6f ? Color.Lerp(shadow, EmbaubaBark, diffuse / 0.6f) : Color.Lerp(EmbaubaBark, light, (diffuse - 0.6f) / 0.4f);
-                    float grain = (ArtNoise.Value2(ux * 0.05f, uy * 0.6f, 71) - 0.5f) * 0.12f;
-                    float m = 1f + grain;
+                    float m = 1f + ((ArtNoise.Value2(ux * 0.05f, uy * 0.6f, 71) - 0.5f) * 0.12f);
                     c.r *= m;
                     c.g *= m;
                     c.b *= m;
-                    float hl = Mathf.Clamp01(1f - (Mathf.Abs(v - 0.5f) / 0.14f)) * 0.35f;
-                    c = Color.Lerp(c, Color.white, hl);
-                    c.a = 1f;
-                    pc.Set(x, y, Color.Lerp(o, c, inside));
-                }
-            }
+                    c = Color.Lerp(c, Color.white, Mathf.Clamp01(1f - (Mathf.Abs(v - 0.5f) / 0.14f)) * 0.35f);
 
-            for (float x = 62f; x < w - 40f; x += 72f)
-            {
-                float y = BranchY(x, w);
-                pc.StrokeArc((x - 30f) * k, y * k, 31f * k, 1.6f * k, -34f, 34f, ColorMath.WithAlpha(EmbaubaRing, 0.85f));
-                pc.StrokeArc((x - 29f) * k, y * k, 31f * k, 1f * k, -30f, 30f, ColorMath.WithAlpha(ColorMath.Lighten(EmbaubaBark, 0.12f), 0.7f));
+                    // Anillos de las cicatrices de las hojas cada 72 unidades: un arco oscuro con su filo claro detrás,
+                    // curvados como el cilindro.
+                    float ring = Mathf.Round((ux - 62f) / 72f);
+                    float rx = 62f + (ring * 72f);
+                    if (ring >= 0f && rx < w - 40f && Mathf.Abs(v) < 0.92f)
+                    {
+                        float bend = 31f - Mathf.Sqrt(Mathf.Max(0f, (31f * 31f) - (dy * dy)));
+                        float off = ux - (rx - bend);
+                        float dark = Mathf.Clamp01(1f - (Mathf.Abs(off) / 0.9f)) * 0.85f;
+                        float lit = Mathf.Clamp01(1f - (Mathf.Abs(off - 1.4f) / 0.6f)) * 0.7f;
+                        c = Color.Lerp(c, EmbaubaRing, dark);
+                        c = Color.Lerp(c, light, lit);
+                    }
+
+                    c.a = 1f;
+                    pc.Blend(x, y, c, cov);
+                }
             }
         }
 

@@ -151,8 +151,14 @@ namespace AF.Tests.PlayMode
             RectTransform layer = Prepare(780, out string dir);
             Background(layer, 0f, 0f, WidthDp, 330f, Palette.JungleLight);
             Background(layer, 0f, 330f, WidthDp, 450f, Palette.Panel.Top);
-            SlothArt art = _art!.SlothRigArt()!;
-            Debug.Log("AF_SLOTH atlas " + ProceduralArt.SlothAtlasPx + " px en " + _art.SlothArtMs.ToString("0.0") + " ms");
+            _art!.SlothRigArtProcedural();
+            double atlasMs = _art.SlothArtMs;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            _art.SlothBranchProcedural();
+            watch.Stop();
+            SlothArt art = _art.SlothRigArt()!;
+            Debug.Log("AF_SLOTH atlas " + art.Head.texture.width + " x " + art.Head.texture.height + " px en " + atlasMs.ToString("0.0")
+                + " ms; rama " + art.Branch!.texture.width + " x " + art.Branch.texture.height + " px en " + watch.Elapsed.TotalMilliseconds.ToString("0.0") + " ms");
             SlothRig big = SlothRig.Create(layer, art, 200f)!;
             big.Place(118f, 40f);
             big.Play(SlothPoseId.Idle, false);

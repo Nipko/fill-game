@@ -719,7 +719,8 @@ namespace AF.Presentation
 
         // Colgado boca abajo bajo su rama y abrazado a ella (c.5, punto 7): las dos manos y los dos pies agarrados a la rama, el
         // cuerpo debajo, de frente, con la cabeza entre los brazos; los brazos por dentro y las piernas por fuera. Respira con
-        // breathe (1,00 ↔ 1,02).
+        // breathe (1,00 ↔ 1,02). Las caderas, a media altura del torso (−0,65 S; antes −0,72): las patas algo más cortas
+        // (pulido del 2026-10-25).
         private static SlothPose Hang(float breathe)
         {
             return new SlothPose
@@ -731,9 +732,9 @@ namespace AF.Presentation
                 BackArmTo = BackGrip,
                 FrontArmFrom = new Vector2(0.15f, -0.40f),
                 FrontArmTo = FrontGrip,
-                BackLegFrom = new Vector2(-0.20f, -0.72f),
+                BackLegFrom = new Vector2(-0.21f, -0.65f),
                 BackLegTo = BackFoot,
-                FrontLegFrom = new Vector2(0.20f, -0.72f),
+                FrontLegFrom = new Vector2(0.21f, -0.65f),
                 FrontLegTo = FrontFoot,
                 BodySpin = 1f,
                 BodyPivot = BackGrip,
@@ -885,7 +886,8 @@ namespace AF.Presentation
         // sloth_sunbathe: tumbado boca arriba sobre la rama, la cabeza inclinada y apoyada en ella, y los ojos cerrados; un brazo
         // y una pierna cuelgan por delante de la rama y los otros descansan sobre la barriga, dentro del contorno del torso (x de
         // −0,24 a 0,32 e y de 0 a 0,50), con las garras incluidas: el brazo cruzado en la mitad baja y la pierna recogida en la
-        // alta, hacia el pecho. Nada sobresale por encima.
+        // alta, hacia el pecho. Nada sobresale por encima. La cabeza, apoyada en la rama y sobre el pecho (solapa el borde del
+        // torso 0,17 S y tapa el hombro: se une al cuerpo sin junta; pulido del 2026-10-25, antes en (−0,36; 0,20)).
         private static SlothPose Sunbathe(float breathe)
         {
             return new SlothPose
@@ -893,7 +895,7 @@ namespace AF.Presentation
                 TorsoCenter = new Vector2(0.04f, 0.25f),
                 TorsoSize = new Vector2(0.50f * breathe, 0.56f),
                 TorsoAngle = 90f,
-                HeadCenter = new Vector2(-0.36f, 0.20f),
+                HeadCenter = new Vector2(-0.25f, 0.15f),
                 HeadAngle = 45f,
                 EyesClosed = true,
                 BackArmFrom = new Vector2(-0.16f, 0.20f),
@@ -912,7 +914,8 @@ namespace AF.Presentation
 
         // sloth_sleep: hecho un ovillo sobre la rama, de espaldas (el lomo con el espéculo a la vista, arriba a la izquierda), con
         // la cabeza metida abajo a la derecha, apoyada en la rama, y los ojos cerrados. El brazo de detrás va bajo el torso hasta
-        // la rama (solo asoma la garra) y el de delante, detrás de la cabeza; los pies, agarrados a la rama.
+        // la rama (solo asoma la garra) y el de delante, detrás de la cabeza; los pies, agarrados a la rama. La cabeza, metida
+        // contra el pecho del ovillo (solapa el torso; pulido del 2026-10-25, antes a 0,20 y 0,13).
         private static SlothPose Sleep(float breathe)
         {
             return new SlothPose
@@ -921,7 +924,7 @@ namespace AF.Presentation
                 TorsoSize = new Vector2(0.56f, 0.52f * breathe),
                 TorsoAngle = -10f,
                 TorsoBack = true,
-                HeadCenter = new Vector2(0.20f, 0.13f),
+                HeadCenter = new Vector2(0.15f, 0.14f),
                 HeadAngle = -30f,
                 EyesClosed = true,
                 BackArmFrom = new Vector2(-0.18f, 0.30f),
