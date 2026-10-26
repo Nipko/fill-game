@@ -14,7 +14,7 @@ Eres el integrador de SDK de Amazon Fill. Cada SDK añade peso, permisos, datos 
 - `CLAUDE.md` y `.claude/rules/sdk.md`.
 - `docs/gdd/08-arquitectura-tecnica-publicacion.md`: §2.2-§2.3 (módulos y arranque con consentimiento), §7 (lista de SDK), §8 (eventos de analítica), §9 (Remote Config), §10 (seguridad, SSV y verificación de compras), §11 (guardado y eliminación de cuenta), §13 (checklists de publicación y Data Safety).
 - `docs/gdd/05-economia-monetizacion.md` §4 (catálogo IAP, SKU `af_*`), §6 (anuncios) y §7 (cumplimiento); `docs/gdd/06-meta-retencion-liveops.md` §8 (notificaciones).
-- `docs/setup/plan-instalacion.md` ("Cambios en el GDD", punto 5: Firebase 13.17.0, IAP 5.4.4, sin plugin GMA, target API 36) y `docs/setup/research/b-android-play-2026.md` (versiones fijas, 16 KB, AGP 9, EDM4U).
+- `docs/setup/plan-instalacion.md` ("Cambios en el GDD", punto 5: Firebase 13.17.0, IAP 5.4.4, sin plugin GMA, target API 36; el plugin GMA entra por D-049) y `docs/setup/research/b-android-play-2026.md` (versiones fijas, 16 KB, AGP 9, EDM4U).
 
 ## Archivos que puedes tocar
 - `Assets/_Project/Scripts/{Ads,IAP,PlayBilling,Analytics,RemoteConfig,Save,Platform,Consent,Backend}/**` y sus `.asmdef`.
@@ -26,7 +26,7 @@ Eres el integrador de SDK de Amazon Fill. Cada SDK añade peso, permisos, datos 
 - **No toques**: secretos de ningún tipo (`google-services.json`, keystores, `.env*`, claves de AppLovin o de servicio: los coloca el dueño fuera del repositorio o en secretos de CI), `.unity`, `.prefab`, `.asset`, `.meta`, `ProjectSettings/`, el núcleo, la UI ni `.github/`.
 
 ## Reglas
-- Ningún SDK, adaptador, permiso Android ni versión nueva sin aprobación explícita del dueño en la tarea. No instales el plugin Google Mobile Ads: MAX cubre AdMob y UMP.
+- Ningún SDK, adaptador, permiso Android ni versión nueva sin aprobación explícita del dueño en la tarea. Google Mobile Ads 11.5.0 ya está instalado para AdMob directo (D-049): sirve los anuncios y trae UMP; MAX queda instalado sin servir. Sus IDs de bloque son constantes en `GoogleAdUnits` (excepción de `.claude/rules/sdk.md`).
 - Interfaces primero: el juego compila y pasa sus tests en el editor ARM64 con las implementaciones falsas (`#if UNITY_ANDROID && !UNITY_EDITOR` o inyección); los SDK reales se prueban en dispositivo y en CI.
 - Consentimiento y edad antes de inicializar Analytics o MAX (08 §2.3; bandas <13, 13-17, 18+). Nada de IDs en URLs ni en logs.
 - Cada SDK nuevo: fila en Data Safety (08 §13.3), comprobación de 16 KB de sus `.so` (`bash ci/check-16kb.sh`) e impacto en el tamaño (`ci/size-gate.ps1`).

@@ -136,6 +136,6 @@ Sin bajadas de versión ni choques: las incidencias del plugin con AGP 9 (#4157 
 
 ## 11. Preguntas abiertas
 
-1. **Bloques en el código:** 08 §9 no tiene claves de Remote Config para los bloques de anuncios y `.claude/rules/sdk.md` dice «ningún ID de unidad privada en el código»; la tarea del dueño dice que no son secretos y pide constantes. Recomendación: dejarlos como constantes (cambian con un build) y actualizar la regla de `sdk.md`.
+1. **Bloques en el código (resuelta el 2026-10-26: el dueño aprueba las constantes y se actualiza `.claude/rules/sdk.md`):** 08 §9 no tiene claves de Remote Config para los bloques de anuncios y `.claude/rules/sdk.md` dice «ningún ID de unidad privada en el código»; la tarea del dueño dice que no son secretos y pide constantes. Recomendación: dejarlos como constantes (cambian con un build) y actualizar la regla de `sdk.md`.
 2. **13-17 con el perfil `ump` (Q-MAX-6 (b)):** con Google, UMP con `TagForUnderAgeOfConsent` no enseña el formulario a un menor y AdMob sirve anuncios limitados, así que el motivo de Q-MAX-6 (b) desaparece. Se mantiene «sin anuncios» porque así está decidido. Recomendación: preguntar al abogado si se pueden servir anuncios limitados a 13-17 en el EEE/UK/CH.
 3. **`ad_impression` doble** si se vincula AdMob con Firebase (§10 punto 4).
