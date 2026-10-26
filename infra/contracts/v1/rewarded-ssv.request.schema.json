@@ -2,11 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.invalid/af/v1/rewarded-ssv.request.schema.json",
   "title": "rewardedSsv: parámetros de la query del callback SSV de AdMob",
-  "description": "08 §10.1 y §10.2; D-049: AdMob llama con GET con user_id = UID y custom_data = placement|nonce (los fija el cliente con ServerSideVerificationOptions) y, al final y en este orden, signature y key_id. La Lambda verifica la firma ECDSA P-256 / SHA-256 sobre la consulta cruda hasta antes de &signature= con la clave pública de Google del key_id (functions/rewarded-ssv/admobSignature.ts); sin firma válida responde 403 bad_signature. Sin user_id o custom_data (recompensado sin UID o prueba de la URL desde la consola) responde 200 ignored sin escribir. Se admiten parámetros extra de texto por si AdMob añade alguno.",
+  "description": "08 §10.1 y §10.2; D-049: AdMob llama con GET con user_id = UID y custom_data = placement|nonce (los fija el cliente con ServerSideVerificationOptions; sin UID no van) y, al final y en este orden, signature y key_id. La Lambda verifica la firma ECDSA P-256 / SHA-256 sobre la consulta cruda hasta antes de &signature= con la clave pública de Google del key_id (functions/rewarded-ssv/admobSignature.ts); sin firma válida responde 403 bad_signature. Después, solo acepta los bloques recompensados propios del entorno (ad_unit en la lista blanca AF_ADMOB_AD_UNITS, -c admobRewardedAdUnits): las claves de Google son las mismas para todos los editores. Un ad_unit ajeno o ausente, o la falta de user_id o custom_data (recompensado sin UID, prueba de la URL desde la consola), responde 200 ignored sin escribir ni gastar cupo. Se admiten parámetros extra de texto por si AdMob añade alguno.",
   "type": "object",
   "required": [
-    "user_id",
-    "custom_data",
     "transaction_id",
     "timestamp",
     "signature",
@@ -19,7 +17,7 @@
       "maxLength": 64
     },
     "ad_unit": {
-      "description": "Id numérico del bloque de anuncios.",
+      "description": "Bloque de anuncios: su número (2877105387) o, por si llegara así, el id completo (ca-app-pub-<editor>/<número>). Solo valen los de la lista blanca del entorno; ajeno o ausente → 200 ignored.",
       "type": "string",
       "maxLength": 64
     },
@@ -47,6 +45,7 @@
       "pattern": "^[A-Za-z0-9._:-]{1,256}$"
     },
     "user_id": {
+      "description": "UID de Firebase Auth. Si falta (o falta custom_data), 200 ignored.",
       "$ref": "common.schema.json#/$defs/firebaseUid"
     },
     "signature": {

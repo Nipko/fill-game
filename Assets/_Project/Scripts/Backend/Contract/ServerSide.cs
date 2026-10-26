@@ -8,14 +8,30 @@ namespace AF.Backend.Contract
     /// <summary>
     /// Parámetros del callback SSV de AdMob a <c>/v1/ssv</c> (<c>rewarded-ssv.request.schema.json</c>; 08 §10.1-§10.2; D-049). El
     /// cliente nunca lo envía: lo usan los tests de contrato y <see cref="FakeBackendClient"/> para simular que AdMob confirmó un
-    /// nonce. La firma (<c>signature</c>, <c>key_id</c>) y el resto de parámetros de AdMob van como extras de texto: aquí no se
-    /// verifica nada (lo hace la Lambda).
+    /// nonce.
+    /// <para>
+    /// <see cref="TryParse"/> sigue el esquema: exige <c>transaction_id</c>, <c>timestamp</c>, <c>signature</c> y <c>key_id</c> con
+    /// su formato, comprueba los demás campos conocidos (<c>ad_unit</c>, <c>ad_network</c>, <c>reward_amount</c>,
+    /// <c>reward_item</c>) y admite extras de texto. <c>user_id</c> y <c>custom_data</c> son opcionales: sin los dos no hay
+    /// identidad (<see cref="HasIdentity"/> = false) y el servidor responde <c>ignored</c>. Parcial a propósito: no verifica la
+    /// firma ni la lista blanca de <c>ad_unit</c> (eso es de la Lambda), y el constructor solo pide lo que necesita el falso.
+    /// </para>
     /// </summary>
     public sealed class SsvCallback
     {
         /// <summary>Longitud máxima de un parámetro extra.</summary>
         public const int MaxExtraLength = 2048;
 
+        private static readonly System.Text.RegularExpressions.Regex TimestampRe =
+            new System.Text.RegularExpressions.Regex(@"\A[0-9]{1,16}\z", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        private static readonly System.Text.RegularExpressions.Regex SignatureRe =
+            new System.Text.RegularExpressions.Regex(@"\A[A-Za-z0-9_-]{16,512}={0,2}\z", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        private static readonly System.Text.RegularExpressions.Regex KeyIdRe =
+            new System.Text.RegularExpressions.Regex(@"\A[0-9]{1,20}\z", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        /// <summary>Un callback con identidad (<c>user_id</c> y <c>custom_data</c>): el que confirma un nonce.</summary>
         public SsvCallback(
             string userId,
             string placement,
@@ -23,17 +39,22 @@ namespace AF.Backend.Contract
             string? transactionId = null,
             string? adNetwork = null,
             IReadOnlyList<KeyValuePair<string, string>>? extras = null)
+            : this(
+                RequireUid(userId),
+                RequireCustomData(placement, nonce),
+                transactionId,
+                adNetwork,
+                extras)
         {
-            if (!ContractRules.IsFirebaseUid(userId))
-            {
-                throw new ArgumentException("user_id fuera del contrato.", nameof(userId));
-            }
+        }
 
-            if (!ContractRules.IsCustomData((placement ?? string.Empty) + "|" + (nonce ?? string.Empty)))
-            {
-                throw new ArgumentException("custom_data fuera del contrato.", nameof(nonce));
-            }
-
+        private SsvCallback(
+            string? userId,
+            string? customData,
+            string? transactionId,
+            string? adNetwork,
+            IReadOnlyList<KeyValuePair<string, string>>? extras)
+        {
             if (transactionId != null && !ContractRules.IsTransactionId(transactionId))
             {
                 throw new ArgumentException("transaction_id fuera del contrato.", nameof(transactionId));
@@ -60,22 +81,38 @@ namespace AF.Backend.Contract
             }
 
             UserId = userId;
-            Placement = placement!;
-            Nonce = nonce!;
+            CustomData = customData;
+            if (customData != null)
+            {
+                int bar = customData.IndexOf('|');
+                Placement = customData.Substring(0, bar);
+                Nonce = customData.Substring(bar + 1);
+            }
+
             TransactionId = transactionId;
             AdNetwork = adNetwork;
             Extras = copy;
         }
 
-        /// <summary>UID de Firebase (<c>user_id</c>).</summary>
-        public string UserId { get; }
+        /// <summary>Un callback sin <c>user_id</c> ni <c>custom_data</c> (recompensado sin UID): el servidor responde <c>ignored</c>.</summary>
+        public static SsvCallback WithoutIdentity(
+            string? transactionId = null, string? adNetwork = null, IReadOnlyList<KeyValuePair<string, string>>? extras = null)
+        {
+            return new SsvCallback(null, null, transactionId, adNetwork, extras);
+        }
 
-        public string Placement { get; }
+        /// <summary>Trae <c>user_id</c> y <c>custom_data</c>, así que puede confirmar un nonce.</summary>
+        public bool HasIdentity => UserId != null && CustomData != null;
 
-        public string Nonce { get; }
+        /// <summary>UID de Firebase (<c>user_id</c>), o null si no vino.</summary>
+        public string? UserId { get; }
 
-        /// <summary><c>custom_data</c> = <c>placement|nonce</c>.</summary>
-        public string CustomData => Placement + "|" + Nonce;
+        /// <summary><c>custom_data</c> = <c>placement|nonce</c>, o null si no vino.</summary>
+        public string? CustomData { get; }
+
+        public string? Placement { get; }
+
+        public string? Nonce { get; }
 
         /// <summary><c>transaction_id</c>: id único de la recompensa en AdMob.</summary>
         public string? TransactionId { get; }
@@ -88,9 +125,17 @@ namespace AF.Backend.Contract
 
         public string ToJson()
         {
-            JsonNode node = JsonNode.NewObject()
-                .Set("user_id", JsonNode.FromString(UserId))
-                .Set("custom_data", JsonNode.FromString(CustomData));
+            JsonNode node = JsonNode.NewObject();
+            if (UserId != null)
+            {
+                node.Set("user_id", JsonNode.FromString(UserId));
+            }
+
+            if (CustomData != null)
+            {
+                node.Set("custom_data", JsonNode.FromString(CustomData));
+            }
+
             if (TransactionId != null)
             {
                 node.Set("transaction_id", JsonNode.FromString(TransactionId));
@@ -115,20 +160,74 @@ namespace AF.Backend.Contract
         internal static SsvCallback Read(JsonNode node)
         {
             var r = new ObjectReader(node, "rewardedSsv.request", strict: false);
-            string userId = r.RequiredString("user_id", ContractRules.IsFirebaseUid);
-            string customData = r.RequiredString("custom_data", ContractRules.IsCustomData);
-            string? transactionId = r.OptionalString("transaction_id", ContractRules.IsTransactionId);
+            string? userId = r.OptionalString("user_id", ContractRules.IsFirebaseUid);
+            string? customData = r.OptionalString("custom_data", ContractRules.IsCustomData);
+            string transactionId = r.RequiredString("transaction_id", ContractRules.IsTransactionId);
             string? adNetwork = r.OptionalString("ad_network", n => n != null && n.Length <= 64);
             var extras = new List<KeyValuePair<string, string>>();
             IReadOnlyList<KeyValuePair<string, JsonNode>> rest = r.UnreadMembers();
+            bool timestamp = false;
+            bool signature = false;
+            bool keyId = false;
             for (int i = 0; i < rest.Count; i++)
             {
-                extras.Add(new KeyValuePair<string, string>(
-                    rest[i].Key, r.AsString(rest[i].Value, rest[i].Key, v => v != null && v.Length <= MaxExtraLength)));
+                string key = rest[i].Key;
+                Func<string?, bool> valid = ExtraRule(key);
+                extras.Add(new KeyValuePair<string, string>(key, r.AsString(rest[i].Value, key, valid)));
+                timestamp |= key == "timestamp";
+                signature |= key == "signature";
+                keyId |= key == "key_id";
             }
 
-            int bar = customData.IndexOf('|');
-            return new SsvCallback(userId, customData.Substring(0, bar), customData.Substring(bar + 1), transactionId, adNetwork, extras);
+            if (!timestamp || !signature || !keyId)
+            {
+                throw new ContractException("rewardedSsv.request: faltan 'timestamp', 'signature' o 'key_id'.");
+            }
+
+            return new SsvCallback(userId, customData, transactionId, adNetwork, extras);
+        }
+
+        /// <summary>El formato del esquema para los campos conocidos que van como extras; para los demás, solo la longitud.</summary>
+        private static Func<string?, bool> ExtraRule(string key)
+        {
+            switch (key)
+            {
+                case "timestamp":
+                    return v => v != null && TimestampRe.IsMatch(v);
+                case "signature":
+                    return v => v != null && SignatureRe.IsMatch(v);
+                case "key_id":
+                    return v => v != null && KeyIdRe.IsMatch(v);
+                case "ad_unit":
+                    return v => v != null && v.Length <= 64;
+                case "reward_amount":
+                    return v => v != null && v.Length <= 32;
+                case "reward_item":
+                    return v => v != null && v.Length <= 256;
+                default:
+                    return v => v != null && v.Length <= MaxExtraLength;
+            }
+        }
+
+        private static string RequireUid(string userId)
+        {
+            if (!ContractRules.IsFirebaseUid(userId))
+            {
+                throw new ArgumentException("user_id fuera del contrato.", nameof(userId));
+            }
+
+            return userId;
+        }
+
+        private static string RequireCustomData(string placement, string nonce)
+        {
+            string customData = (placement ?? string.Empty) + "|" + (nonce ?? string.Empty);
+            if (!ContractRules.IsCustomData(customData))
+            {
+                throw new ArgumentException("custom_data fuera del contrato.", nameof(nonce));
+            }
+
+            return customData;
         }
 
         private static bool IsKnownKey(string key)

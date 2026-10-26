@@ -61,6 +61,12 @@ export interface AfConfig {
    * contexto (`-c packageName`) tras el dictamen de marca (regla 6 de CLAUDE.md) y nunca el provisional.
    */
   readonly packageName?: string;
+  /**
+   * Bloques recompensados de AdMob cuyo SSV acepta `/v1/ssv` (D-049), con el número del bloque (sin `ca-app-pub-…/`). Las
+   * claves de firma de Google son las mismas para todos los editores: sin esta lista, cualquiera podría apuntar su propio
+   * bloque a nuestra URL y confirmar nonces. Por defecto: prod, el bloque de producción; dev, además el de prueba de Google.
+   */
+  readonly admobRewardedAdUnits: readonly string[];
   /** Correo para alarmas y avisos de presupuesto, solo por contexto. */
   readonly alertEmail?: string;
   /** Presupuesto mensual en USD (Q-AWS-6). */
@@ -79,6 +85,15 @@ export interface AfConfig {
   readonly integrityDailyAlarm: number;
 }
 
+/**
+ * Bloques recompensados de AdMob por entorno (D-049; `docs/dev/anuncios-admob.md` §3; `GoogleAdUnits` del cliente). No son
+ * secretos. Prod: el bloque de producción. Dev: además el bloque recompensado de prueba de Google, para probar el SSV.
+ */
+export const ADMOB_REWARDED_AD_UNITS: Record<EnvName, readonly string[]> = {
+  dev: ['2877105387', '5224354917'],
+  prod: ['2877105387'],
+};
+
 /** Valores por defecto del proyecto de Firebase por entorno (08, cabecera y §15.3 #2). */
 const DEFAULT_FIREBASE_PROJECT: Record<EnvName, string> = {
   dev: 'amazon-fill-dev',
@@ -92,6 +107,8 @@ const ZONE_RE = /^Z[A-Z0-9]{5,32}$/;
 const FIREBASE_PROJECT_RE = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const FIREBASE_APP_ID_RE = /^1:\d{1,20}:android:[0-9a-f]{6,64}$/;
 const PACKAGE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
+/** Bloque de AdMob: el número (`2877105387`) o el id completo (`ca-app-pub-<editor>/<número>`), que se reduce al número. */
+const AD_UNIT_RE = /^(?:ca-app-pub-\d{1,20}\/)?(\d{1,20})$/;
 /** applicationId provisional de los builds de prueba (CLAUDE.md, regla 6): nunca en prod. */
 export const DEV_PACKAGE_NAME = 'com.amazonfill.dev';
 
@@ -120,8 +137,9 @@ function str(ctx: ContextReader, key: string): string | undefined {
  * Contexto admitido: `env` (obligatorio: dev | prod), `account`, `alertEmail`, `firebaseProjectId`,
  * `firebaseAppIds` (separados por comas; obligatorio en prod salvo con `webOnly`), `packageName`, `domain`,
  * `hostedZoneId` (solo con `domain`: DNS en Route 53; sin él, DNS externo), `domainExtras` (`cdn`, `api`; solo con
- * DNS externo), `webOnly` (true: solo los stacks de la web) y `noDomain` (true: prod sin dominio a propósito; sin él,
- * prod exige `domain`, D-044).
+ * DNS externo), `webOnly` (true: solo los stacks de la web), `noDomain` (true: prod sin dominio a propósito; sin él,
+ * prod exige `domain`, D-044) y `admobRewardedAdUnits` (bloques recompensados de AdMob del SSV, separados por comas; por
+ * defecto los de `ADMOB_REWARDED_AD_UNITS`).
  */
 export function loadConfig(ctx: ContextReader): AfConfig {
   const envRaw = str(ctx, 'env');
@@ -156,6 +174,16 @@ export function loadConfig(ctx: ContextReader): AfConfig {
     // App Check válidos para la API de prod.
     throw new Error('En prod falta el contexto "firebaseAppIds": los ids de las apps Android de Firebase (`1:<número>:android:<hash>`).');
   }
+
+  const adUnitsRaw = str(ctx, 'admobRewardedAdUnits');
+  const admobRewardedAdUnits = adUnitsRaw === undefined
+    ? [...ADMOB_REWARDED_AD_UNITS[envName]]
+    : adUnitsRaw.split(',').map((u) => u.trim()).filter(Boolean).map((u) => {
+        const m = AD_UNIT_RE.exec(u);
+        if (!m) throw new Error('El contexto "admobRewardedAdUnits" debe ser una lista de bloques de AdMob (número o ca-app-pub-<editor>/<número>).');
+        return m[1];
+      });
+  if (admobRewardedAdUnits.length === 0) throw new Error('El contexto "admobRewardedAdUnits" no puede quedar vacío.');
 
   const packageName = str(ctx, 'packageName') ?? (isProd ? undefined : DEV_PACKAGE_NAME);
   if (packageName !== undefined) {
@@ -220,6 +248,7 @@ export function loadConfig(ctx: ContextReader): AfConfig {
     firebaseProjectId,
     firebaseAppIds,
     packageName,
+    admobRewardedAdUnits: [...new Set(admobRewardedAdUnits)],
     alertEmail,
     budgetUsd: isProd ? 50 : 10,
     budgetThresholdsPct: [50, 80, 100],

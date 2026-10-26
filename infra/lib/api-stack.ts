@@ -135,7 +135,11 @@ export class ApiStack extends Stack {
       description: 'rewardedSsv (08 §10.2; D-049): SSV de AdMob con firma ECDSA; anota el nonce de la recompensa.',
       // Sin secretos: la firma se comprueba con las claves públicas de Google (gstatic.com, HTTPS de salida; las Lambdas no
       // van en VPC, así que no hace falta nada más).
-      environment: tableEnv({ REWARDS: tables.rewards, RATE_LIMITS: tables.rateLimits }),
+      environment: {
+        ...tableEnv({ REWARDS: tables.rewards, RATE_LIMITS: tables.rateLimits }),
+        // Bloques recompensados propios (lista blanca del ad_unit firmado; -c admobRewardedAdUnits, D-049).
+        AF_ADMOB_AD_UNITS: config.admobRewardedAdUnits.join(','),
+      },
     });
     rewardedSsv.grantTable(tables.rewards, DDB_PUT);
     // Límite por UID, transaction_id de un solo uso y marca de cuenta borrada (ConditionCheck, F2c).

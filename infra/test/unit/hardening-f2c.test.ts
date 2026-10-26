@@ -257,7 +257,7 @@ describe('F2c-4 · carreras del borrado', () => {
     const signer = admobSigner();
     db.hookNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_REWARDS, fn: markDeletedNow };
     const r = res(
-      await ssvHandler(() => ({ ddb: db.client, keys: signer.keys, env: TABLES, now: () => NOW }))(
+      await ssvHandler(() => ({ ddb: db.client, keys: signer.keys, env: { ...TABLES, AF_ADMOB_AD_UNITS: '2877105387' }, now: () => NOW }))(
         httpEvent({ routeKey: 'GET /v1/ssv', rawQuery: signer.query(admobParams({ custom_data: `rescue|${N1}` })) }),
       ),
     );

@@ -37,7 +37,7 @@ describe('rewardedSsv: transaction_id de un solo uso', () => {
   // La repetición de AdMob trae el mismo timestamp (el de la recompensa), aunque llegue más tarde.
   const call = async (uid: string, nonce: string, eventId: string) =>
     res(
-      await ssvHandler(() => ({ ddb: db.client, keys: signer.keys, env: TABLES, now: () => now }))(
+      await ssvHandler(() => ({ ddb: db.client, keys: signer.keys, env: { ...TABLES, AF_ADMOB_AD_UNITS: '2877105387' }, now: () => now }))(
         httpEvent({
           routeKey: 'GET /v1/ssv',
           rawQuery: signer.query(admobParams({ user_id: uid, custom_data: `rescue|${nonce}`, transaction_id: eventId, timestamp: String(now) })),

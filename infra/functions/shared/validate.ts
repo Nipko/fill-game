@@ -88,6 +88,24 @@ export interface SsvParams {
 }
 
 const TRANSACTION_ID_RE = /^[A-Za-z0-9._:-]{1,256}$/;
+/** `ad_unit`: el número del bloque o, por si llegara así, el id completo `ca-app-pub-<editor>/<número>`. */
+const AD_UNIT_RE = /^(?:ca-app-pub-\d{1,20}\/)?(\d{1,20})$/;
+
+/** Número del bloque de AdMob de un `ad_unit` (en cualquiera de las dos formas), o undefined si no tiene forma de bloque. */
+export function adUnitNumber(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return AD_UNIT_RE.exec(value)?.[1];
+}
+
+/** Lista blanca de bloques (`AF_ADMOB_AD_UNITS`, separados por comas) reducida a sus números. */
+export function parseAdUnitList(raw: string): Set<string> {
+  const out = new Set<string>();
+  for (const part of raw.split(',')) {
+    const n = adUnitNumber(part.trim());
+    if (n) out.add(n);
+  }
+  return out;
+}
 const TIMESTAMP_RE = /^[0-9]{1,16}$/;
 
 /**

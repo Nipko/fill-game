@@ -1,6 +1,6 @@
 // rewardedSsv con el SSV de AdMob (D-049; 08 §10.1-§10.2): firma ECDSA P-256/SHA-256 sobre la consulta cruda con un par
 // de claves generado en el test, caché de las claves de Google con un fetch falso (sin red), idempotencia, cuenta borrada,
-// plazo del timestamp y límite por UID.
+// plazo del timestamp, lista blanca de bloques (ad_unit), topes de tamaño y límite por UID.
 import { generateKeyPairSync } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -8,12 +8,19 @@ import {
   AdMobVerifierKeys,
   KEYS_MIN_REFRESH_MS,
   KEYS_TTL_MS,
+  MAX_KEYS_BYTES,
   parseVerifierKeys,
   splitSignedQuery,
   verifyAdMobSignature,
 } from '../../functions/rewarded-ssv/admobSignature.ts';
 import type { VerifierKeySource } from '../../functions/rewarded-ssv/admobSignature.ts';
-import { SSV_DAILY_LIMIT, SSV_MAX_AGE_MS, SSV_MAX_SKEW_MS, createHandler as ssvHandler } from '../../functions/rewarded-ssv/handler.ts';
+import {
+  MAX_QUERY_LENGTH,
+  SSV_DAILY_LIMIT,
+  SSV_MAX_AGE_MS,
+  SSV_MAX_SKEW_MS,
+  createHandler as ssvHandler,
+} from '../../functions/rewarded-ssv/handler.ts';
 import { UpstreamError } from '../../functions/shared/errors.ts';
 import { markDeleted } from '../../functions/shared/rateLimit.ts';
 import { uidHash } from '../../functions/shared/log.ts';
@@ -23,6 +30,8 @@ import { MemDb, TABLES } from './memdb.ts';
 
 const N1 = '6f1c2a4e-8b3d-4f5a-9c7e-1d2b3a4c5e6f';
 const N2 = '0a9b8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d';
+/** Lista blanca de dev: el bloque de producción y el de prueba de Google (lib/config.ts). */
+const SSV_ENV = { ...TABLES, AF_ADMOB_AD_UNITS: '2877105387,5224354917' };
 
 let db: MemDb;
 beforeEach(() => {
@@ -56,6 +65,17 @@ describe('admobSignature: consulta firmada', () => {
       'a=1',
       '',
     ]) expect(splitSignedQuery(bad), bad).toBeUndefined();
+  });
+
+  it('relleno de la firma: = o %3D (hasta dos) se aceptan y no cambian la firma; tres no', () => {
+    const raw = signer.query(admobParams());
+    const at = raw.indexOf('&key_id=');
+    for (const pad of ['=', '==', '%3D', '%3D%3D', '=%3D']) {
+      const s = splitSignedQuery(raw.slice(0, at) + pad + raw.slice(at));
+      expect(s, pad).toBeDefined();
+      expect(verifyAdMobSignature(s!.message, s!.signature, signer.publicKey), pad).toBe(true);
+    }
+    for (const pad of ['===', '%3D%3D%3D', '%3d']) expect(splitSignedQuery(raw.slice(0, at) + pad + raw.slice(at)), pad).toBeUndefined();
   });
 
   it('la firma cubre la consulta tal cual: reordenar, decodificar o cambiar un valor la invalida', () => {
@@ -150,6 +170,34 @@ describe('AdMobVerifierKeys: caché de las claves de Google', () => {
     expect(await cache.get('111')).toBeDefined();
   });
 
+  it('fallo de red o tiempo agotado del fetch → UpstreamError, sin aceptar ninguna clave', async () => {
+    for (const err of [new TypeError('fetch failed'), new DOMException('The operation timed out.', 'TimeoutError')]) {
+      const f = fakeFetch(() => Promise.reject(err));
+      const cache = new AdMobVerifierKeys({ fetchFn: f, now: () => now });
+      await expect(cache.get('111')).rejects.toBeInstanceOf(UpstreamError);
+      // Dentro de la espera mínima, sin caché válida, tampoco acepta nada (502, no undefined ni una clave).
+      await expect(cache.get('111')).rejects.toBeInstanceOf(UpstreamError);
+      expect(f.calls).toHaveLength(1);
+    }
+  });
+
+  it(`JSON de claves de más de ${MAX_KEYS_BYTES} bytes → UpstreamError, con o sin Content-Length`, async () => {
+    const big = JSON.stringify({ keys: [{ keyId: 111, pem: signer.pem }], relleno: 'x'.repeat(MAX_KEYS_BYTES) });
+    for (const route of [
+      () => new Response(big, { status: 200 }), // sin Content-Length: corta al leer
+      () => new Response(JSON.stringify(signer.keysJson()), { status: 200, headers: { 'content-length': String(MAX_KEYS_BYTES + 1) } }), // lo declara (el cuerpo sería válido)
+      // Multibyte: pocos caracteres, muchos bytes (el límite es en bytes, no en caracteres).
+      () => new Response(JSON.stringify({ keys: [{ keyId: 111, pem: signer.pem }], r: 'ñ'.repeat(MAX_KEYS_BYTES / 2 + 10) })),
+    ]) {
+      const cache = new AdMobVerifierKeys({ fetchFn: fakeFetch(route), now: () => now });
+      await expect(cache.get('111')).rejects.toBeInstanceOf(UpstreamError);
+    }
+    // Justo por debajo del límite sí vale.
+    const ok = JSON.stringify(signer.keysJson());
+    expect(Buffer.byteLength(ok)).toBeLessThan(MAX_KEYS_BYTES);
+    expect(await new AdMobVerifierKeys({ fetchFn: fakeFetch(() => new Response(ok)), now: () => now }).get('111')).toBeDefined();
+  });
+
   it('JSON roto o sin claves → UpstreamError', async () => {
     body = { nada: true };
     await expect(make().cache.get('111')).rejects.toBeInstanceOf(UpstreamError);
@@ -164,7 +212,7 @@ describe('rewardedSsv (AdMob)', () => {
     signer = admobSigner();
     now = NOW;
   });
-  const h = (keys: VerifierKeySource = signer.keys) => ssvHandler(() => ({ ddb: db.client, keys, env: TABLES, now: () => now }));
+  const h = (keys: VerifierKeySource = signer.keys) => ssvHandler(() => ({ ddb: db.client, keys, env: SSV_ENV, now: () => now }));
   const call = async (rawQuery: string, method: 'GET' | 'POST' = 'GET', keys: VerifierKeySource = signer.keys) =>
     res(await h(keys)(httpEvent({ routeKey: `${method} /v1/ssv`, rawQuery })));
   const signed = (over: Record<string, string | undefined> = {}) => signer.query(admobParams(over));
@@ -246,6 +294,41 @@ describe('rewardedSsv (AdMob)', () => {
       expect(v(r.body)).toBe(true);
     }
     expect(db.items(TABLES.AF_TABLE_REWARDS)).toHaveLength(0);
+    expect(db.items(TABLES.AF_TABLE_RATE_LIMITS)).toHaveLength(0);
+  });
+
+  it('ad_unit ajeno o ausente (bien firmado) → 200 ignored sin escribir ni gastar cupo', async () => {
+    for (const q of [signed({ ad_unit: '9999999999' }), signed({ ad_unit: undefined }), signed({ ad_unit: 'otro' })]) {
+      const r = await call(q);
+      expect(r).toMatchObject({ status: 200, body: { status: 'ignored' } });
+      expect(v(r.body)).toBe(true);
+    }
+    expect(db.items(TABLES.AF_TABLE_REWARDS)).toHaveLength(0);
+    expect(db.items(TABLES.AF_TABLE_RATE_LIMITS)).toHaveLength(0);
+  });
+
+  it('ad_unit propio: el número o el id completo; el de prueba de Google solo si está en la lista del entorno', async () => {
+    expect((await call(signed({ ad_unit: 'ca-app-pub-2916158449453694/2877105387' }))).body).toEqual({ status: 'ok' });
+    expect((await call(signed({ ad_unit: '5224354917', custom_data: `rescue|${N2}`, transaction_id: 'tx-2' }))).body).toEqual({ status: 'ok' });
+    // En prod la lista solo tiene el bloque de producción: el de prueba queda fuera.
+    const prod = ssvHandler(() => ({ ddb: db.client, keys: signer.keys, env: { ...TABLES, AF_ADMOB_AD_UNITS: '2877105387' }, now: () => now }));
+    const r = res(await prod(httpEvent({ routeKey: 'GET /v1/ssv', rawQuery: signed({ ad_unit: '5224354917', transaction_id: 'tx-3' }) })));
+    expect(r.body).toEqual({ status: 'ignored' });
+  });
+
+  it('sin la lista de bloques en el entorno → 500 (falla cerrada)', async () => {
+    const h2 = ssvHandler(() => ({ ddb: db.client, keys: signer.keys, env: TABLES, now: () => now }));
+    expect(res(await h2(httpEvent({ routeKey: 'GET /v1/ssv', rawQuery: signed() }))).status).toBe(500);
+    expect(db.items(TABLES.AF_TABLE_REWARDS)).toHaveLength(0);
+  });
+
+  it(`consulta de más de ${MAX_QUERY_LENGTH} caracteres → 400 sin pedir claves`, async () => {
+    const huge = signed({ reward_item: 'x'.repeat(MAX_QUERY_LENGTH) });
+    expect(huge.length).toBeGreaterThan(MAX_QUERY_LENGTH);
+    const r = await call(huge);
+    expect(r.status).toBe(400);
+    expect(r.body).toMatchObject({ error: { code: 'bad_request' } });
+    expect(signer.keys.lookups).toEqual([]);
     expect(db.items(TABLES.AF_TABLE_RATE_LIMITS)).toHaveLength(0);
   });
 

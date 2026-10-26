@@ -109,7 +109,8 @@
       "response": "rewarded-ssv.response.schema.json",
       "examples": {
         "request": [
-          "rewarded-ssv.request.json"
+          "rewarded-ssv.request.json",
+          "rewarded-ssv.request.ignored.json"
         ],
         "response": [
           "rewarded-ssv.response.ok.json",
@@ -138,7 +139,7 @@
           "upstream_error"
         ]
       },
-      "source": "08 §10.1 y §10.2; plan §1 (SSV) y F2-6; D-049. Callback SSV de AdMob (GET) firmado con ECDSA por Google: la firma cubre la consulta cruda hasta antes de &signature=; el esquema admite parámetros extra por si AdMob añade alguno. También se acepta POST con los mismos parámetros en la query (08 §10.2)."
+      "source": "08 §10.1 y §10.2; plan §1 (SSV) y F2-6; D-049. Callback SSV de AdMob (GET) firmado con ECDSA por Google: la firma cubre la consulta cruda hasta antes de &signature=; solo valen los bloques recompensados del entorno (ad_unit en la lista blanca); ajeno o ausente, o sin user_id o custom_data, 200 ignored (ejemplo rewarded-ssv.request.ignored.json). El esquema admite parámetros extra por si AdMob añade alguno. También se acepta POST con los mismos parámetros en la query (08 §10.2)."
     },
     {
       "operation": "rewardedSsvPost",
@@ -153,7 +154,8 @@
       "response": "rewarded-ssv.response.schema.json",
       "examples": {
         "request": [
-          "rewarded-ssv.request.json"
+          "rewarded-ssv.request.json",
+          "rewarded-ssv.request.ignored.json"
         ],
         "response": [
           "rewarded-ssv.response.ok.json"

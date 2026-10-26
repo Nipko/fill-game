@@ -21,8 +21,42 @@ export const KEYS_TTL_MS = 24 * 3600_000;
  * (un tercero con `key_id` inventados no convierte cada petición en una descarga).
  */
 export const KEYS_MIN_REFRESH_MS = 60_000;
-const FETCH_TIMEOUT_MS = 3000;
-const MAX_KEYS_BYTES = 65_536;
+/** Tiempo máximo de la descarga de las claves. */
+export const KEYS_FETCH_TIMEOUT_MS = 3000;
+/** Tamaño máximo del JSON de claves, en bytes (el real ocupa unos cientos). */
+export const MAX_KEYS_BYTES = 65_536;
+
+/**
+ * Lee el cuerpo con un límite en bytes: rechaza un `Content-Length` mayor sin leer nada y, sin él (o si miente), corta la
+ * lectura en cuanto se pasa del límite.
+ */
+async function readLimited(res: Response, maxBytes: number): Promise<string> {
+  const declared = res.headers.get('content-length');
+  if (declared !== null && /^\d+$/.test(declared) && Number(declared) > maxBytes) {
+    await res.body?.cancel().catch(() => undefined);
+    throw new UpstreamError('admob-keys', 'demasiado grande');
+  }
+  if (!res.body) return '';
+  const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    let part: Awaited<ReturnType<typeof reader.read>>;
+    try {
+      part = await reader.read();
+    } catch (e) {
+      throw new UpstreamError('admob-keys', e instanceof Error ? e.name : 'lectura');
+    }
+    if (part.done) break;
+    total += part.value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw new UpstreamError('admob-keys', 'demasiado grande');
+    }
+    chunks.push(part.value);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
 
 /** La parte firmada de la consulta, la firma (DER) y el `key_id`. */
 export interface SignedQuery {
@@ -128,13 +162,15 @@ export class AdMobVerifierKeys implements VerifierKeySource {
     this.lastAttempt = now;
     let res: Response;
     try {
-      res = await this.fetchFn(this.url, { method: 'GET', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+      res = await this.fetchFn(this.url, { method: 'GET', signal: AbortSignal.timeout(KEYS_FETCH_TIMEOUT_MS) });
     } catch (e) {
       throw new UpstreamError('admob-keys', e instanceof Error ? e.name : 'fetch');
     }
-    if (!res.ok) throw new UpstreamError('admob-keys', 'http', res.status);
-    const text = await res.text();
-    if (text.length > MAX_KEYS_BYTES) throw new UpstreamError('admob-keys', 'demasiado grande');
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      throw new UpstreamError('admob-keys', 'http', res.status);
+    }
+    const text = await readLimited(res, MAX_KEYS_BYTES);
     let json: unknown;
     try {
       json = JSON.parse(text);

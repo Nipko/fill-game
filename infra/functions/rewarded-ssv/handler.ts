@@ -16,7 +16,7 @@ import { sha256hex } from '../shared/crypto.ts';
 import { log, uidHash } from '../shared/log.ts';
 import { enforce, isDeleted, notDeletedCheck } from '../shared/rateLimit.ts';
 import { lazy, realDdb } from '../shared/runtime.ts';
-import { hasSsvIdentity, parseSsvQuery } from '../shared/validate.ts';
+import { adUnitNumber, hasSsvIdentity, parseAdUnitList, parseSsvQuery } from '../shared/validate.ts';
 import type { VerifierKeySource } from './admobSignature.ts';
 import { AdMobVerifierKeys, splitSignedQuery, verifyAdMobSignature } from './admobSignature.ts';
 
@@ -75,8 +75,17 @@ export function createHandler(getDeps: () => RewardedSsvDeps): HttpHandler {
       throw badSignature();
     }
 
-    // 2) Parámetros (solo los firmados). Sin user_id o custom_data no hay nada que anotar: 200 sin escribir.
+    // 2) Parámetros (solo los firmados).
     const q = signedParams(signed.message);
+    // Las claves de Google son las mismas para todos los editores: solo valen nuestros bloques recompensados (lista blanca
+    // del entorno, AF_ADMOB_AD_UNITS). Un bloque ajeno o sin ad_unit: 200 ignored, sin escribir ni gastar cupo.
+    const ownUnits = parseAdUnitList(requireEnv(deps.env, 'AF_ADMOB_AD_UNITS'));
+    const unit = adUnitNumber(q.ad_unit);
+    if (!unit || !ownUnits.has(unit)) {
+      log.warn('ssv_foreign_ad_unit', { ad_unit: unit ?? (q.ad_unit === undefined ? 'none' : 'malformed') });
+      return json(200, { status: 'ignored' });
+    }
+    // Sin user_id o custom_data no hay nada que anotar: 200 sin escribir.
     if (!hasSsvIdentity(q)) {
       log.info('ssv_ignored', { has_user: !!q.user_id, has_custom_data: !!q.custom_data });
       return json(200, { status: 'ignored' });

@@ -31,6 +31,15 @@ describe('loadConfig', () => {
     expect(c.logRetentionDays).toBe(30);
   });
 
+  it('bloques recompensados de AdMob del SSV: por defecto por entorno, por contexto en las dos formas', () => {
+    expect(loadConfig(ctx({ env: 'dev' })).admobRewardedAdUnits).toEqual(['2877105387', '5224354917']);
+    expect(loadConfig(ctx({ env: 'prod' })).admobRewardedAdUnits).toEqual(['2877105387']);
+    expect(loadConfig(ctx({ env: 'prod', admobRewardedAdUnits: 'ca-app-pub-2916158449453694/2877105387, 111,111' })).admobRewardedAdUnits)
+      .toEqual(['2877105387', '111']);
+    expect(() => loadConfig(ctx({ env: 'dev', admobRewardedAdUnits: 'abc' }))).toThrow(/admobRewardedAdUnits/);
+    expect(() => loadConfig(ctx({ env: 'dev', admobRewardedAdUnits: ' , ' }))).toThrow(/vacío/);
+  });
+
   it('prod: presupuesto 50 USD y nunca el verificador falso', () => {
     const c = loadConfig(ctx({ env: 'prod' }));
     expect(c.prefix).toBe('af-prod');
