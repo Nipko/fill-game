@@ -748,7 +748,7 @@ namespace AF.Tests.PlayMode
         }
 
         // «Jugar», los saldos, Ajustes, Música y Sonido y lo demás del inicio que TiTino nunca tapa.
-        private static List<KeyValuePair<string, Rect>> Others(LobbyScreen lobby)
+        internal static List<KeyValuePair<string, Rect>> Others(LobbyScreen lobby)
         {
             var others = new List<KeyValuePair<string, Rect>>
             {
@@ -912,12 +912,12 @@ namespace AF.Tests.PlayMode
             return Rect.MinMaxRect(r.xMin - d, r.yMin - d, r.xMax + d, r.yMax + d);
         }
 
-        private static Rect Shrunk(Rect r)
+        internal static Rect Shrunk(Rect r)
         {
             return Rect.MinMaxRect(r.xMin + 0.5f, r.yMin + 0.5f, r.xMax - 0.5f, r.yMax - 0.5f);
         }
 
-        private static Rect CanvasRect(RectTransform rt, LobbyScreen lobby)
+        internal static Rect CanvasRect(RectTransform rt, LobbyScreen lobby)
         {
             var root = (RectTransform)lobby.Canvas.transform;
             var corners = new Vector3[4];

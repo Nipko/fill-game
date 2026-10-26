@@ -186,6 +186,12 @@ namespace AF.Presentation
         /// <summary><c>sloth_look</c>: 1 s.</summary>
         public const float LookMs = 1000f;
 
+        /// <summary>
+        /// Centro de la cabeza en <c>sloth_sleep</c>, en unidades de S desde la línea de la rama (y hacia arriba): de él sale el «Zzz»
+        /// del inicio (añadido de D-050 del 2026-10-26).
+        /// </summary>
+        public static readonly Vector2 SleepHeadS = new Vector2(0.15f, 0.14f);
+
         /// <summary>Respiración lenta de <c>sloth_sunbathe</c> y <c>sloth_sleep</c>: 4 s [P].</summary>
         public const float RestLoopMs = 4000f;
 
@@ -924,7 +930,7 @@ namespace AF.Presentation
                 TorsoSize = new Vector2(0.56f, 0.52f * breathe),
                 TorsoAngle = -10f,
                 TorsoBack = true,
-                HeadCenter = new Vector2(0.15f, 0.14f),
+                HeadCenter = SleepHeadS,
                 HeadAngle = -30f,
                 EyesClosed = true,
                 BackArmFrom = new Vector2(-0.18f, 0.30f),

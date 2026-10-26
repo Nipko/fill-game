@@ -3971,6 +3971,19 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Carril:** `tanda6/inicio-muelle`.
 - **Cómo revertir:** con una decisión nueva del dueño.
 
+### D-050, añadido del 2026-10-26: de noche TiTino duerme callado
+
+- **Fecha:** 2026-10-26. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat, a la observación 3 de la jornada 3 de la prueba completa en el teléfono (`docs/dev/traspaso/pruebas-telefono-2026-10-26-completa-j3.md`: de noche TiTino dormía con `sloth_sleep` pero su bocadillo seguía rotando mensajes): «De noche TiTino duerme callado (solo un Zzz); si lo toco, se despierta un momento y dice su mensaje.»
+- **Decisión** (06 §4.7, fila Lobby; `HomeSloth`):
+  1. **De noche (20-6), mientras duerme:** sin bocadillo de mensajes ni saludo. El saludo de regreso no se dice ni se gasta: ni `sloth.last_greeting_date` ni `sloth.last_seen_date` cambian, así que sale en la primera visita de día [P]. Una visita de noche sin saludo pendiente sí se apunta en `sloth.last_seen_date`. En su lugar, un **«Zzz»** junto a la cabeza: tres zetas dibujadas por código (`HomeSlothZzz`, sin texto), que suben hacia la derecha y se desvanecen en un bucle de 3,6 s [P]. Con Reducir movimiento, quietas. No tapa la travesía, el letrero ni lo demás del inicio.
+  2. **Al tocarlo de noche:** se despierta (`sloth_wake`, después `sloth_idle`) y dice el mensaje siguiente de la rotación, con las mismas reglas que de día (primero el Dato del día; nunca compras; respeta `settings.sloth_messages`). Cuando el mensaje se va, y como mínimo a los 4 s [P], vuelve a dormirse con su «Zzz». La rotación no vuelve sola hasta que amanece. Con los mensajes apagados, se despierta y vuelve a dormirse sin mensaje.
+  3. **TalkBack:** dormido, lee «TiTino duerme» (`home_sloth_asleep_a11y`, borrador en es-419, en y pt-BR). De día, como antes.
+  4. **Sondas:** `AF_STATE titino_sleep` (con `asleep`, `cause` y `note`) y `titino_asleep` en la línea `AF_LAYOUT lobby` (`docs/dev/prototipo-v0.md`).
+- **Sin cambios:** el cielo del inicio sigue de día (D-050: el dueño no quiso ambiente nocturno), igual que la pose por la hora y lo que pasa de día.
+- **Carril:** `tanda6/titino-noche`.
+- **Cómo revertir:** con una decisión nueva del dueño.
+
 ## D-051 · Sin la pantalla «Made with Unity»; arranque con la marca
 
 - **Fecha:** 2026-10-25. Registrada por el integrador.

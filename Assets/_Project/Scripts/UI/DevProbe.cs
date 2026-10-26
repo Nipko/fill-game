@@ -727,8 +727,10 @@ namespace AF.UI
         /// puede ir sin botones; las excepciones al tope, en <see cref="LayoutLines"/>). Quien toca
         /// junta los botones de las <c>n</c> últimas líneas de la pantalla (de la parte 1 a la <c>n</c>). Una línea que cabe sale como
         /// siempre, sin <c>part</c> ni <c>parts</c>.
+        /// <para><paramref name="extraJson"/>: miembros JSON de la pantalla que van tras <c>sh</c> en cada línea (y en cada parte),
+        /// como <c>,"titino_asleep":true</c> del inicio (añadido de D-050 del 2026-10-26); null, ninguno.</para>
         /// </summary>
-        public void Layout(string screen, int level, CuiaView[]? cuias, string[] buttonIds, RectTransform[] buttons)
+        public void Layout(string screen, int level, CuiaView[]? cuias, string[] buttonIds, RectTransform[] buttons, string? extraJson = null)
         {
             if (!Enabled)
             {
@@ -742,6 +744,11 @@ namespace AF.UI
             sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"sw\":").Append(Screen.width.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"sh\":").Append(Screen.height.ToString(CultureInfo.InvariantCulture));
+            if (!string.IsNullOrEmpty(extraJson))
+            {
+                sb.Append(extraJson);
+            }
+
             string head = sb.ToString();
             sb.Clear();
             if (cuias != null)
