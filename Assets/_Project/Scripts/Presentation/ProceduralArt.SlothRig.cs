@@ -269,21 +269,8 @@ namespace AF.Presentation
 
             Stopwatch watch = Stopwatch.StartNew();
             var art = new SlothArt();
-            // Solo las dos filas de celdas que se usan (la mitad de alto que la plantilla: la mitad de memoria); las celdas
-            // salen de abajo arriba desde el borde superior, como en el PNG. Cada pieza va en su celda, sin tocar las demás:
-            // se pintan a la vez en varios hilos (funciones puras, sin estado compartido), con el mismo resultado.
-            const int c = SlothAtlasPx / 4;
-            const int h = 2 * c;
-            const float k = SlothK;
-            var pc = new PixelCanvas(SlothAtlasPx, h);
-            int top = h - c;
-            System.Threading.Tasks.Parallel.Invoke(
-                () => DrawSlothHeadAt(pc, c * 0.5f, top + (c * 0.5f), k, false, 0, top, c, h),
-                () => DrawSlothTorso(pc, c, top, k, false),
-                () => DrawSlothTorso(pc, c, top - c, k, true),
-                () => DrawSlothLimb(pc, 2 * c, top, k),
-                () => DrawSlothEyelid(pc, 3 * c, h - (c / 4), k),
-                () => DrawSlothLeafCell(pc, 0, top - c, k));
+            var pc = new PixelCanvas(SlothAtlasPx, SlothAtlasH);
+            PaintSlothAtlas(pc, true);
             Texture2D tex = pc.ToTexture("fauna_bradypus_variegatus_provisional", mipmaps: true);
             _owned.Add(tex);
             AssignSlothCells(art, tex);
@@ -291,6 +278,84 @@ namespace AF.Presentation
             watch.Stop();
             SlothArtMs = watch.Elapsed.TotalMilliseconds;
             return art;
+        }
+
+        // Alto del atlas provisional: solo las dos filas de celdas que se usan (la mitad de alto que la plantilla: la mitad de
+        // memoria); las celdas salen de abajo arriba desde el borde superior, como en el PNG.
+        internal const int SlothAtlasH = SlothAtlasPx / 2;
+
+        /// <summary>Piezas del atlas provisional: cabeza, torso de frente, torso de espaldas, extremidad, párpado y hoja.</summary>
+        internal const int SlothPieceCount = 6;
+
+        /// <summary>
+        /// La celda (px del atlas provisional, origen abajo) de la pieza <paramref name="piece"/> (orden de
+        /// <see cref="SlothPieceCount"/>): la pieza no pinta fuera de ella, y por eso las seis se pintan a la vez sin carrera.
+        /// </summary>
+        internal static RectInt SlothPieceCell(int piece)
+        {
+            const int c = SlothAtlasPx / 4;
+            const int top = SlothAtlasH - c;
+            switch (piece)
+            {
+                case 0:
+                    return new RectInt(0, top, c, c);
+                case 1:
+                    return new RectInt(c, top, c, c);
+                case 2:
+                    return new RectInt(c, top - c, c, c);
+                case 3:
+                    return new RectInt(2 * c, top, c / 4, c);
+                case 4:
+                    return new RectInt(3 * c, SlothAtlasH - (c / 4), (c * 3) / 4, c / 4);
+                default:
+                    return new RectInt(0, top - c, c, c);
+            }
+        }
+
+        /// <summary>Pinta la pieza <paramref name="piece"/> en su celda (<see cref="SlothPieceCell"/>) del lienzo del atlas.</summary>
+        internal static void DrawSlothPiece(PixelCanvas pc, int piece)
+        {
+            const float k = SlothK;
+            RectInt cell = SlothPieceCell(piece);
+            switch (piece)
+            {
+                case 0:
+                    DrawSlothHeadAt(pc, cell.x + (cell.width * 0.5f), cell.y + (cell.height * 0.5f), k, false, cell.x, cell.y, cell.xMax, cell.yMax);
+                    break;
+                case 1:
+                    DrawSlothTorso(pc, cell.x, cell.y, k, false);
+                    break;
+                case 2:
+                    DrawSlothTorso(pc, cell.x, cell.y, k, true);
+                    break;
+                case 3:
+                    DrawSlothLimb(pc, cell.x, cell.y, k);
+                    break;
+                case 4:
+                    DrawSlothEyelid(pc, cell.x, cell.y, k);
+                    break;
+                default:
+                    DrawSlothLeafCell(pc, cell.x, cell.y, k);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Pinta las seis piezas en el lienzo del atlas (<see cref="SlothAtlasPx"/> × <see cref="SlothAtlasH"/>); con
+        /// <paramref name="parallel"/>, a la vez en varios hilos (funciones puras, cada una en su celda): el mismo resultado.
+        /// </summary>
+        internal static void PaintSlothAtlas(PixelCanvas pc, bool parallel)
+        {
+            if (parallel)
+            {
+                System.Threading.Tasks.Parallel.For(0, SlothPieceCount, i => DrawSlothPiece(pc, i));
+                return;
+            }
+
+            for (int i = 0; i < SlothPieceCount; i++)
+            {
+                DrawSlothPiece(pc, i);
+            }
         }
 
         /// <summary>
