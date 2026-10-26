@@ -73,6 +73,9 @@ namespace AF.UI
             {
                 Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
             }
+
+            StartMemRecorders(); // AF_PERF mem (DevProbe.Memory.cs): los contadores ya miden en la primera muestra
+
         }
 
         /// <summary>

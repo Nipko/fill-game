@@ -211,17 +211,7 @@ namespace AF.Presentation
                 try
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                    Color32[] px = pc.ToColor32();
-                    var bytes = new byte[px.Length * 4];
-                    for (int i = 0; i < px.Length; i++)
-                    {
-                        bytes[(i * 4) + 0] = px[i].r;
-                        bytes[(i * 4) + 1] = px[i].g;
-                        bytes[(i * 4) + 2] = px[i].b;
-                        bytes[(i * 4) + 3] = px[i].a;
-                    }
-
-                    File.WriteAllBytes(path, bytes);
+                    File.WriteAllBytes(path, pc.ToRgba32Bytes()); // sin el Color32[] intermedio (memoria, 2026-10-26)
                 }
                 catch (Exception e)
                 {

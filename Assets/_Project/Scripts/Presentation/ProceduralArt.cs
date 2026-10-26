@@ -310,7 +310,7 @@ namespace AF.Presentation
                 wrapModeV = TextureWrapMode.Clamp,
                 hideFlags = HideFlags.DontSave,
             };
-            tex.SetPixels32(atlas.ToColor32());
+            tex.SetPixels32(atlas.TakeColor32());
             tex.Apply(false, true);
             _owned.Add(tex);
             return tex;

@@ -139,13 +139,13 @@ namespace AF.UI
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
             _dailyClock = clock;
             IDailyChallengeStore? store = DailyStoreOverride ?? DailyStoreFactory?.Invoke(profile, batch);
-            DailyPool? pool = LoadDailyPool();
+            DailyPoolSource pool = CreateDailyPoolSource(); // memoria (2026-10-26): el pool se lee al abrir el Reto, no aquí
             if (store == null)
             {
                 if (Debug.isDebugBuild)
                 {
                     store = new InMemoryDailyChallengeStore();
-                    if (pool != null)
+                    if (pool.InBuild)
                     {
                         Debug.LogWarning(LogPrefix + "Reto del río con el registro en memoria (sin DailyStoreFactory): se pierde al cerrar la app.");
                     }
@@ -153,7 +153,7 @@ namespace AF.UI
                 else
                 {
                     store = new InMemoryDailyChallengeStore();
-                    pool = null; // release sin DailyStoreFactory: sin registro en el perfil no se puede pagar una sola vez por fecha; la tarjeta, oculta
+                    pool = new DailyPoolSource((DailyPool?)null); // release sin DailyStoreFactory: sin registro en el perfil no se puede pagar una sola vez por fecha; la tarjeta, oculta
                 }
             }
 
@@ -162,7 +162,7 @@ namespace AF.UI
             Wallet dailyWallet = LevelFlow.CreateDailyWallet(profile, batch.Durable, _capsClock ?? clock, ActiveRcConfigs?.Economy); // B8: anti-reloj de canoas y topes; las reglas, con el del dispositivo
             ConnectWallet(dailyWallet); // earn/spend del Reto por el bus y biz_feature_lives (B7; GameBootstrap.Telemetry.cs)
             var rules = new DailyChallengeRules(store, dailyWallet, clock, server, config);
-            var service = new DailyChallengeService(store, rules, clock, config, pool);
+            var service = DailyChallengeService.WithPoolSource(store, rules, clock, config, pool);
             service.DayEnded += OnDailyDayEnded; // antes del primer DiscardStale: el fail del día que se cierra al abrir (R-Q15 a)
             service.DiscardStale();
             DevProbe.DailyEarn(rules.Reconcile().SeedsPaid); // R10: semillas de los cobros pendientes que se confirman al abrir
@@ -268,7 +268,7 @@ namespace AF.UI
         /// El Reto del río está en este build: <see cref="SetUpDaily"/> lo creó con un pool válido (E2 y E3). Sin él, ni la tarjeta
         /// del inicio, ni la presentación del 7 (<see cref="DailyTeaserCard"/>, E6), ni la línea de Sin canoas (E7): D-008.
         /// </summary>
-        public bool DailyInBuild => _dailyService?.Pool != null;
+        public bool DailyInBuild => _dailyService != null && _dailyService.HasPool;
 
         /// <summary>
         /// El Reto del río está desbloqueado: en el build (<see cref="DailyInBuild"/>), con su interruptor y desde
@@ -375,12 +375,25 @@ namespace AF.UI
                 case DailyCardState.InProgress:
                     _lobby.Show(AppScreen.Level); // el inicio se oculta mientras se juega el Reto; AppFlow sigue en el inicio
                     _dailyCard?.SetShown(false);
+                    int loads = _dailyService?.PoolSource.Loads ?? 0;
+                    long openStart = System.Diagnostics.Stopwatch.GetTimestamp();
                     if (screen.Open(_progress.MaxLevel))
                     {
+                        // AF_PERF mem daily: si esta apertura leyó el pool y lo que tardó la apertura entera (ms).
+                        bool read = _dailyService != null && _dailyService.PoolSource.Loads != loads;
+                        long openMs = (System.Diagnostics.Stopwatch.GetTimestamp() - openStart) * 1000L / System.Diagnostics.Stopwatch.Frequency;
+                        DevProbe.Mem("daily", 0, DevProbe.Enabled
+                            ? "\"pool_read\":" + (read ? "true" : "false") + ",\"open_ms\":" + openMs.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                            : null);
                         return true;
                     }
 
                     _lobby.Show(_app.Screen);
+
+                    // D-008: un pool que resulta no válido al leerlo aquí (perezoso desde 2026-10-26; en release el CI lo valida antes)
+                    // deja HasPool en false: la tarjeta se recalcula y queda oculta, como si el Reto no estuviera en el build.
+                    _dailyCardShown = false;
+                    RefreshDailyCard();
                     return false;
                 case DailyCardState.Sealed:
                 case DailyCardState.PendingValidation:
@@ -402,6 +415,18 @@ namespace AF.UI
 
             _dailyCardShown = false;
             RefreshDailyCard();
+            _dailyService?.ReleasePool(); // memoria (2026-10-26): los 2.187 tableros no se quedan hasta la siguiente partida
+        }
+
+        // El pool del Reto: el de los tests tal cual; el de la escena, leído al pedirlo (LoadDailyPool); sin pool, ninguno.
+        private DailyPoolSource CreateDailyPoolSource()
+        {
+            if (DailyPoolDisabledOverride || (DailyPoolOverride == null && dailyPool == null))
+            {
+                return new DailyPoolSource((DailyPool?)null);
+            }
+
+            return DailyPoolOverride != null ? new DailyPoolSource(DailyPoolOverride) : new DailyPoolSource(LoadDailyPool);
         }
 
         // La del Reto va en la fila de las tarjetas del día del muelle (D-050, punto 6): la coloca PlaceDayCards con las demás.

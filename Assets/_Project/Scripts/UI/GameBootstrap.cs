@@ -1116,6 +1116,7 @@ namespace AF.UI
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
+            DevProbe.Mem("map", play); // AF_PERF mem (DevProbe.Memory.cs)
             TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;
@@ -1577,6 +1578,7 @@ namespace AF.UI
         // por los tests: BootSplash.EnabledOverride) no hay ningún yield: todo ocurre en esta llamada, como antes.
         private IEnumerator Start()
         {
+            AF.Presentation.PixelBuffers.BeginPooling(); // memoria (2026-10-26): los lienzos del arranque comparten búferes hasta EndPooling
             _bootInProgress = true; // hasta ResumeBackend(false): la reanudación de OnApplicationPause espera (GameBootstrap.BootSteps.cs)
             if (!s_rebuildToLobby && BootSplash.Enabled)
             {
@@ -1667,6 +1669,7 @@ namespace AF.UI
             if (catalog == null)
             {
                 CutSplash();
+                AF.Presentation.PixelBuffers.EndPooling();
                 enabled = false;
                 yield break;
             }
@@ -1710,6 +1713,7 @@ namespace AF.UI
             var consentStore = new ProfileConsentStore(profile, batch.Durable);
             if (BlockedAtBoot(consentStore))
             {
+                AF.Presentation.PixelBuffers.EndPooling();
                 yield break;
             }
 
@@ -1849,6 +1853,7 @@ namespace AF.UI
             }
 
             MarkBootStep(StepSystems);
+            AF.Presentation.PixelBuffers.EndPooling(); // memoria (2026-10-26): los búferes de los lienzos del arranque no se quedan guardados
             if (_splash != null)
             {
                 yield return FinishSplash(firstRun); // fin de la carga: se corta, con el segundo de sloth_wake si toca y cabe

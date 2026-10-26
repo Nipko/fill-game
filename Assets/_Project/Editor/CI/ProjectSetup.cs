@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace AF.EditorTools
 {
@@ -84,6 +85,17 @@ namespace AF.EditorTools
         /// </summary>
         public static readonly Color32 BrandPetroleum = new Color32(0x14, 0x44, 0x4A, 0xFF);
 
+        /// <summary>
+        /// HDR del pipeline (URP) apagado (memoria, 2026-10-26; observación 8 de la prueba completa del 2026-10-25): el juego no usa
+        /// posproceso ni Bloom (el del 2D Renderer está prohibido, UUM-150232), así que el HDR solo obligaba a la cámara a pintar en
+        /// un búfer intermedio de pantalla completa antes de copiarlo a la pantalla. Se aplica a todos los assets de URP del proyecto
+        /// (el de Graphics y el de cada nivel de calidad) con su propiedad serializada <c>m_SupportsHDR</c>.
+        /// </summary>
+        public const bool PipelineHdr = false;
+
+        /// <summary>Propiedad serializada del HDR en el asset de URP (<c>UniversalRenderPipelineAsset.supportsHDR</c>).</summary>
+        internal const string HdrProperty = "m_SupportsHDR";
+
         const string LogPrefix = "[AF.ProjectSetup] ";
 
         [MenuItem("Amazon Fill/CI/Aplicar ajustes Android (dev)")]
@@ -127,6 +139,9 @@ namespace AF.EditorTools
             PlayerSettings.SplashScreen.show = ShowUnitySplash;
             PlayerSettings.SplashScreen.showUnityLogo = ShowUnitySplash;
             PlayerSettings.SplashScreen.backgroundColor = BrandPetroleum;
+
+            ApplyPipelineHdr(PipelineHdr);
+            FontSetup.SetAtlasReadability(false); // memoria (2026-10-26): los atlas de las fuentes, sin copia en CPU
 
             // Sin firma de release: Unity firma con la clave de depuración. El keystore lo gestiona el dueño.
             PlayerSettings.Android.useCustomKeystore = false;
@@ -173,6 +188,21 @@ namespace AF.EditorTools
             Check(problems, "splashScreen.show", PlayerSettings.SplashScreen.show, ShowUnitySplash);
             Check(problems, "splashScreen.showUnityLogo", PlayerSettings.SplashScreen.showUnityLogo, ShowUnitySplash);
             Check(problems, "splashScreen.backgroundColor", (Color32)PlayerSettings.SplashScreen.backgroundColor, BrandPetroleum);
+            foreach (RenderPipelineAsset asset in PipelineAssets())
+            {
+                bool? hdr = PipelineHdrOf(asset);
+                if (hdr != PipelineHdr)
+                {
+                    problems.Add("pipeline.supportsHDR(" + asset.name + ")=" + (hdr.HasValue ? hdr.Value.ToString() : "?") + " (esperado " + PipelineHdr + ")");
+                }
+            }
+
+            List<string> readableAtlases = FontSetup.ReadableAtlases();
+            if (readableAtlases.Count > 0)
+            {
+                problems.Add("fonts.atlasReadable=" + string.Join(",", readableAtlases) + " (esperado ninguno)");
+            }
+
             return problems;
         }
 
@@ -195,7 +225,79 @@ namespace AF.EditorTools
                 + ", aab=" + EditorUserBuildSettings.buildAppBundle
                 + ", keystorePropio=" + PlayerSettings.Android.useCustomKeystore
                 + ", pantallaUnity=" + PlayerSettings.SplashScreen.show
-                + ", logoUnity=" + PlayerSettings.SplashScreen.showUnityLogo;
+                + ", logoUnity=" + PlayerSettings.SplashScreen.showUnityLogo
+                + ", hdr=" + DescribeHdr();
+        }
+
+        /// <summary>
+        /// Los assets de pipeline que usa el proyecto, sin repetir: el de Graphics y el de cada nivel de calidad (todos son el mismo
+        /// <c>Assets/Settings/UniversalRP.asset</c> hoy).
+        /// </summary>
+        internal static List<RenderPipelineAsset> PipelineAssets()
+        {
+            var assets = new List<RenderPipelineAsset>();
+            AddPipeline(assets, GraphicsSettings.defaultRenderPipeline);
+            for (int i = 0; i < QualitySettings.count; i++)
+            {
+                AddPipeline(assets, QualitySettings.GetRenderPipelineAssetAt(i));
+            }
+
+            return assets;
+        }
+
+        /// <summary>El HDR del asset (<see cref="HdrProperty"/>), o null si no es un asset de URP.</summary>
+        internal static bool? PipelineHdrOf(RenderPipelineAsset asset)
+        {
+            SerializedProperty? hdr = new SerializedObject(asset).FindProperty(HdrProperty);
+            return hdr != null && hdr.propertyType == SerializedPropertyType.Boolean ? hdr.boolValue : (bool?)null;
+        }
+
+        // Pone el HDR de todos los assets de pipeline del proyecto (método versionado: nunca se edita el YAML a mano).
+        static void ApplyPipelineHdr(bool on)
+        {
+            List<RenderPipelineAsset> assets = PipelineAssets();
+            if (assets.Count == 0)
+            {
+                throw new InvalidOperationException(LogPrefix + "el proyecto no tiene asset de pipeline (URP) en Graphics ni en Quality.");
+            }
+
+            foreach (RenderPipelineAsset asset in assets)
+            {
+                var so = new SerializedObject(asset);
+                SerializedProperty? hdr = so.FindProperty(HdrProperty);
+                if (hdr == null || hdr.propertyType != SerializedPropertyType.Boolean)
+                {
+                    throw new InvalidOperationException(LogPrefix + asset.name + " no tiene " + HdrProperty + " (¿no es URP?).");
+                }
+
+                if (hdr.boolValue != on)
+                {
+                    Debug.Log(LogPrefix + asset.name + ": HDR " + hdr.boolValue + " -> " + on);
+                    hdr.boolValue = on;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    EditorUtility.SetDirty(asset);
+                }
+            }
+        }
+
+        static string DescribeHdr()
+        {
+            var parts = new List<string>();
+            foreach (RenderPipelineAsset asset in PipelineAssets())
+            {
+                bool? hdr = PipelineHdrOf(asset);
+                parts.Add(asset.name + ":" + (hdr.HasValue ? hdr.Value.ToString() : "?"));
+            }
+
+            return string.Join("/", parts);
+        }
+
+        static void AddPipeline(List<RenderPipelineAsset> assets, RenderPipelineAsset? asset)
+        {
+            if (asset != null && !assets.Contains(asset))
+            {
+                assets.Add(asset);
+            }
         }
 
         static void Check<T>(List<string> problems, string name, T actual, T expected)

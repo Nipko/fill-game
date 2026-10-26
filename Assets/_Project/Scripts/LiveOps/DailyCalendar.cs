@@ -178,13 +178,38 @@ namespace AF.LiveOps
                 throw new ArgumentNullException(nameof(clock));
             }
 
+            if (pool == null)
+            {
+                throw new ArgumentNullException(nameof(pool));
+            }
+
+            return Resolve(clock.LocalDate(), clock.LocalDateKey(), maxLevel, config, new DailyPoolSource(pool));
+        }
+
+        /// <summary>
+        /// Como <see cref="Today(IClock, int, DailyChallengeConfig, DailyPool)"/>, con el pool de <paramref name="pool"/>, que solo se
+        /// lee si <c>daily_overrides</c> pide una sustitución para hoy y esta banda (para comprobar que el id está en el pool): sin
+        /// sustitución, el slot no depende del contenido del pool.
+        /// </summary>
+        public static DailySlot Today(IClock clock, int maxLevel, DailyChallengeConfig config, DailyPoolSource pool)
+        {
+            if (clock == null)
+            {
+                throw new ArgumentNullException(nameof(clock));
+            }
+
             return Resolve(clock.LocalDate(), clock.LocalDateKey(), maxLevel, config, pool);
         }
 
         /// <summary>Slot de la fecha local <paramref name="localDate"/> (formatea su clave <c>yyyy-MM-dd</c>).</summary>
         public static DailySlot Resolve(DateTime localDate, int maxLevel, DailyChallengeConfig config, DailyPool pool)
         {
-            return Resolve(localDate.Date, ClockExtensions.FormatDateKey(localDate.Date), maxLevel, config, pool);
+            if (pool == null)
+            {
+                throw new ArgumentNullException(nameof(pool));
+            }
+
+            return Resolve(localDate.Date, ClockExtensions.FormatDateKey(localDate.Date), maxLevel, config, new DailyPoolSource(pool));
         }
 
         /// <summary>
@@ -193,7 +218,7 @@ namespace AF.LiveOps
         /// en <paramref name="pool"/> (<see cref="DailyPool.FindById"/>), se sirve ese tablero; si no (sin fecha, sin esa banda o con
         /// un id que el pool no tiene), el cálculo normal. Se admite un id de otra banda [P].
         /// </summary>
-        private static DailySlot Resolve(DateTime localDate, string dateKey, int maxLevel, DailyChallengeConfig config, DailyPool pool)
+        private static DailySlot Resolve(DateTime localDate, string dateKey, int maxLevel, DailyChallengeConfig config, DailyPoolSource pool)
         {
             if (dateKey == null)
             {
@@ -217,7 +242,7 @@ namespace AF.LiveOps
             if (config.DailyOverrides != null && config.DailyOverrides.TryGet(dateKey, band, out string id))
             {
                 requested = id;
-                if (pool.FindById(id) != null)
+                if (pool.Get()?.FindById(id) != null)
                 {
                     overrideId = id;
                 }

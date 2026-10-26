@@ -222,7 +222,12 @@ namespace AF.UI
                 return false;
             }
 
-            DailyPool pool = _service.Pool!;
+            DailyPool? pool = _service.Pool; // se lee aquí la primera vez (memoria, 2026-10-26: no en el arranque)
+            if (pool == null)
+            {
+                return false; // pool no válido (D-008): HasPool pasa a false y GameBootstrap.OpenDaily recalcula la tarjeta, que se oculta
+            }
+
             DailyPlayInProgress play = _service.Start(maxLevel);
             LevelDefinition board = pool.FindById(play.BoardId)
                 ?? throw new InvalidOperationException("El pool no trae el tablero " + play.BoardId + ".");

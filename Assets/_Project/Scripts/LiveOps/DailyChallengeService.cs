@@ -89,16 +89,34 @@ namespace AF.LiveOps
         private readonly IDailyChallengeStore _store;
         private readonly IClock _clock;
         private readonly DailyChallengeConfig _config;
+        private readonly DailyPoolSource _pool;
 
         /// <summary>Crea el servicio. <paramref name="pool"/> null = pool ausente o inválido: la tarjeta queda oculta.</summary>
         public DailyChallengeService(
             IDailyChallengeStore store, DailyChallengeRules rules, IClock clock, DailyChallengeConfig config, DailyPool? pool)
+            : this(store, rules, clock, config, new DailyPoolSource(pool))
+        {
+        }
+
+        /// <summary>
+        /// Crea el servicio con el pool de <paramref name="pool"/>, que puede leerse al pedirlo (memoria, 2026-10-26): la tarjeta solo
+        /// mira <see cref="HasPool"/>; el pool se lee al empezar la partida o al resolver una sustitución del día.
+        /// </summary>
+        public static DailyChallengeService WithPoolSource(
+            IDailyChallengeStore store, DailyChallengeRules rules, IClock clock, DailyChallengeConfig config, DailyPoolSource pool)
+        {
+            return new DailyChallengeService(store, rules, clock, config, pool);
+        }
+
+        // Privado: con el público de DailyPool, un null literal sería ambiguo.
+        private DailyChallengeService(
+            IDailyChallengeStore store, DailyChallengeRules rules, IClock clock, DailyChallengeConfig config, DailyPoolSource pool)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             Rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _config = config ?? throw new ArgumentNullException(nameof(config));
-            Pool = pool;
+            _pool = pool ?? throw new ArgumentNullException(nameof(pool));
         }
 
         /// <summary>Reglas del premio (racha mostrada, último cobro, reconciliación).</summary>
@@ -107,8 +125,23 @@ namespace AF.LiveOps
         /// <summary>Configuración del Reto (08 §9) con la que se creó el servicio.</summary>
         public DailyChallengeConfig Config => _config;
 
-        /// <summary>El pool, o null.</summary>
-        public DailyPool? Pool { get; }
+        /// <summary>El pool, o null; con un pool que se lee al pedirlo, lo lee (<see cref="DailyPoolSource.Get"/>).</summary>
+        public DailyPool? Pool => _pool.Get();
+
+        /// <summary>Hay pool (o lo habrá al leerlo), sin leerlo (<see cref="DailyPoolSource.InBuild"/>).</summary>
+        public bool HasPool => _pool.InBuild;
+
+        /// <summary>El pool está leído ahora mismo (sin leerlo).</summary>
+        public bool PoolLoaded => _pool.IsLoaded;
+
+        /// <summary>De dónde sale el pool (sonda y tests).</summary>
+        public DailyPoolSource PoolSource => _pool;
+
+        /// <summary>Suelta el pool si se lee al pedirlo (al cerrar el Reto: no se queda en memoria hasta la siguiente partida).</summary>
+        public void ReleasePool()
+        {
+            _pool.Release();
+        }
 
         /// <summary>
         /// Última partida descartada por cambio de día, o null. Puede no informar nada (<see cref="DailyPlayEnd.IsReported"/>).
@@ -124,7 +157,7 @@ namespace AF.LiveOps
         /// <summary>El Reto está disponible para un jugador de nivel máximo <paramref name="maxLevel"/> (nota §6, «Desbloqueo»).</summary>
         public bool IsAvailable(int maxLevel)
         {
-            return Pool != null && DailyCalendar.IsUnlocked(maxLevel, _config);
+            return _pool.InBuild && DailyCalendar.IsUnlocked(maxLevel, _config);
         }
 
         /// <summary>Estado de la tarjeta (nota §8), en orden: oculta, en curso, pendiente, sellada, jugar.</summary>
@@ -158,11 +191,18 @@ namespace AF.LiveOps
         /// <exception cref="InvalidOperationException">No hay pool.</exception>
         public DailySlot TodaySlot(int maxLevel)
         {
-            return DailyCalendar.Today(_clock, maxLevel, _config, RequirePool());
+            if (!_pool.InBuild)
+            {
+                throw new InvalidOperationException("No hay pool del Reto del río.");
+            }
+
+            return DailyCalendar.Today(_clock, maxLevel, _config, _pool); // solo lee el pool si hay sustitución del día
         }
 
         /// <summary>
         /// Tablero de hoy: el de la partida en curso de hoy si la hay (R-Q4), si no el del slot de hoy. Null si el pool no lo trae.
+        /// Lee el pool (<see cref="Pool"/>): entero la primera vez y otra vez tras <see cref="ReleasePool"/>. No se usa desde el inicio
+        /// ni desde la tarjeta (memoria, 2026-10-26: allí basta <see cref="TodaySlot"/>, que no lo lee sin sustitución).
         /// </summary>
         public LevelDefinition? TodayBoard(int maxLevel)
         {

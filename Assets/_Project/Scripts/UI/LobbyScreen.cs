@@ -818,6 +818,11 @@ namespace AF.UI
                 _probe.App(AppScreenNames.Of(screen), _app);
             }
 
+            if (screen == AppScreen.Lobby)
+            {
+                DevProbe.Mem("lobby"); // AF_PERF mem (DevProbe.Memory.cs): cada vez que se ve el inicio
+            }
+
             EmitLayout();
         }
 

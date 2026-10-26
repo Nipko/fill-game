@@ -998,6 +998,7 @@ namespace AF.UI
             _pressPreview = -1;
             _shownBoard = flow.Session.Current;
             _probe.State("load", flow, int.MinValue, null);
+            DevProbe.MemLevelLoaded(level); // AF_PERF mem: el primer nivel de la sesión y cada 10 (DevProbe.Memory.cs)
 
             // AF_LAYOUT level, después de los ganchos (T-A de la prueba del 2026-10-09): antes salía antes que ellos, sin
             // «+1 cuia» (la bandeja aún no se había refrescado) y con Marea en el centro de una bandeja de 1 ranura; la

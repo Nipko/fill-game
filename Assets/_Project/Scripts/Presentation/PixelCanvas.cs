@@ -10,13 +10,20 @@ namespace AF.Presentation
     /// </summary>
     internal sealed class PixelCanvas
     {
-        private readonly Color[] _px;
+        // Sin píxeles tras Release: cualquier uso posterior falla en el acto (IndexOutOfRange) en vez de pintar sobre otro lienzo.
+        private static readonly Color[] Released = new Color[0];
+
+        // Búfer del lienzo: alquilado a PixelBuffers si es grande (memoria, 2026-10-26), así que puede ser más largo que el lienzo;
+        // solo cuentan los _count primeros.
+        private Color[] _px;
+        private readonly int _count;
 
         public PixelCanvas(int width, int height)
         {
             Width = width;
             Height = height;
-            _px = new Color[width * height];
+            _count = width * height;
+            _px = PixelBuffers.Rent(_count);
         }
 
         public int Width { get; }
@@ -25,12 +32,22 @@ namespace AF.Presentation
 
         public Color Get(int x, int y)
         {
+            CheckBounds(x, y);
             return _px[(y * Width) + x];
         }
 
         public void Set(int x, int y, Color c)
         {
+            CheckBounds(x, y);
             _px[(y * Width) + x] = c;
+        }
+
+        // El búfer alquilado puede ser más largo que el lienzo: fuera del lienzo ya no siempre salta IndexOutOfRange. En el Editor y
+        // en desarrollo (UNITY_ASSERTIONS) se avisa; en release no cuesta nada.
+        [System.Diagnostics.Conditional("UNITY_ASSERTIONS")]
+        private void CheckBounds(int x, int y)
+        {
+            Debug.Assert((uint)x < (uint)Width && (uint)y < (uint)Height, "PixelCanvas: píxel fuera del lienzo");
         }
 
         /// <summary>Compone <paramref name="c"/> sobre el píxel con cobertura <paramref name="coverage"/> (0..1).</summary>
@@ -204,9 +221,10 @@ namespace AF.Presentation
         /// <summary>Rellena todo el lienzo con <paramref name="c"/>.</summary>
         public void Fill(Color c)
         {
-            for (int i = 0; i < _px.Length; i++)
+            Color[] px = _px;
+            for (int i = 0; i < _count; i++)
             {
-                _px[i] = c;
+                px[i] = c;
             }
         }
 
@@ -350,21 +368,65 @@ namespace AF.Presentation
             return 1f - (t * t * (3f - (2f * t)));
         }
 
-        /// <summary>Píxeles como <see cref="Color32"/> (caché en disco de las texturas generadas).</summary>
+        /// <summary>Píxeles como <see cref="Color32"/> (caché en disco de las texturas generadas). El lienzo sigue valiendo.</summary>
         public Color32[] ToColor32()
         {
-            var result = new Color32[_px.Length];
-            for (int i = 0; i < _px.Length; i++)
+            var result = new Color32[_count];
+            Color[] px = _px;
+            for (int i = 0; i < _count; i++)
             {
-                result[i] = _px[i];
+                result[i] = px[i];
             }
 
             return result;
         }
 
+        /// <summary>Como <see cref="ToColor32"/>, y suelta el búfer (<see cref="Release"/>): para el lienzo que ya no se usa.</summary>
+        public Color32[] TakeColor32()
+        {
+            Color32[] result = ToColor32();
+            Release();
+            return result;
+        }
+
+        /// <summary>Píxeles en RGBA32, 4 bytes por píxel (caché en disco), sin el arreglo de <see cref="Color32"/> intermedio.</summary>
+        public byte[] ToRgba32Bytes()
+        {
+            var bytes = new byte[_count * 4];
+            Color[] px = _px;
+            for (int i = 0; i < _count; i++)
+            {
+                Color32 c = px[i];
+                int k = i * 4;
+                bytes[k] = c.r;
+                bytes[k + 1] = c.g;
+                bytes[k + 2] = c.b;
+                bytes[k + 3] = c.a;
+            }
+
+            return bytes;
+        }
+
+        /// <summary>
+        /// Devuelve el búfer a <see cref="PixelBuffers"/> (memoria, 2026-10-26: los lienzos grandes del arranque reutilizan el
+        /// mismo en vez de dejar decenas de MB de basura que el heap de IL2CPP no devuelve). Después el lienzo no se puede usar.
+        /// Idempotente.
+        /// </summary>
+        public void Release()
+        {
+            Color[] px = _px;
+            _px = Released;
+            if (px.Length > 0)
+            {
+                PixelBuffers.Return(px);
+            }
+        }
+
         /// <summary>
         /// La textura del lienzo; con <paramref name="mipmaps"/>, con su cadena de mipmaps (trilineal), para las piezas que se
-        /// pintan a tamaños muy distintos (el rig del perezoso, de ≈ 48 a ≈ 160 dp) sin parpadeo al reducir.
+        /// pintan a tamaños muy distintos (el rig del perezoso, de ≈ 48 a ≈ 160 dp) sin parpadeo al reducir. Sube los píxeles sin
+        /// copia en CPU (<see cref="Texture2D.Apply(bool, bool)"/> con <c>makeNoLongerReadable</c>) y suelta el búfer
+        /// (<see cref="Release"/>): el lienzo ya no se puede usar después.
         /// </summary>
         public Texture2D ToTexture(string name, bool repeatX = false, bool repeatY = false, bool mipmaps = false)
         {
@@ -381,8 +443,12 @@ namespace AF.Presentation
                 tex.mipMapBias = -0.5f; // algo más nítido que el mip exacto: el contorno de tinta no se emborrona
             }
 
-            tex.SetPixels(_px);
+            // El búfer alquilado puede ser más largo que el lienzo: SetPixels por bloque solo lee Width × Height (la conversión nativa
+            // de siempre, sin ningún Color32[] intermedio).
+            tex.SetPixels(0, 0, Width, Height, _px);
+
             tex.Apply(mipmaps, true);
+            Release();
             return tex;
         }
 
