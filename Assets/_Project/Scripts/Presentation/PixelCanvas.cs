@@ -362,18 +362,27 @@ namespace AF.Presentation
             return result;
         }
 
-        public Texture2D ToTexture(string name, bool repeatX = false, bool repeatY = false)
+        /// <summary>
+        /// La textura del lienzo; con <paramref name="mipmaps"/>, con su cadena de mipmaps (trilineal), para las piezas que se
+        /// pintan a tamaños muy distintos (el rig del perezoso, de ≈ 48 a ≈ 160 dp) sin parpadeo al reducir.
+        /// </summary>
+        public Texture2D ToTexture(string name, bool repeatX = false, bool repeatY = false, bool mipmaps = false)
         {
-            var tex = new Texture2D(Width, Height, TextureFormat.RGBA32, false)
+            var tex = new Texture2D(Width, Height, TextureFormat.RGBA32, mipmaps)
             {
                 name = name,
-                filterMode = FilterMode.Bilinear,
+                filterMode = mipmaps ? FilterMode.Trilinear : FilterMode.Bilinear,
                 wrapModeU = repeatX ? TextureWrapMode.Repeat : TextureWrapMode.Clamp,
                 wrapModeV = repeatY ? TextureWrapMode.Repeat : TextureWrapMode.Clamp,
                 hideFlags = HideFlags.DontSave,
             };
+            if (mipmaps)
+            {
+                tex.mipMapBias = -0.5f; // algo más nítido que el mip exacto: el contorno de tinta no se emborrona
+            }
+
             tex.SetPixels(_px);
-            tex.Apply(false, true);
+            tex.Apply(mipmaps, true);
             return tex;
         }
 

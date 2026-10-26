@@ -139,6 +139,111 @@ namespace AF.Tests.PlayMode
             Save(dir, "ti4_sizes_" + heightDp);
         }
 
+        /// <summary>
+        /// <c>ti4_detalle</c> (petición del dueño del 2026-10-25, D-052): TiTino de cerca para revisar el dibujo (sloth_idle a
+        /// 200 dp sobre la selva clara, sloth_look a media vuelta y sloth_sleep a 150 dp sobre el panel) y el retrato de la placa y
+        /// de la ventanita (56 y 40 dp, ojos abiertos y cerrados) en las dos superficies; <c>ti4_atlas</c>: el atlas de piezas a
+        /// 340 dp sobre gris medio.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CaptureDetailAndPortrait()
+        {
+            RectTransform layer = Prepare(780, out string dir);
+            Background(layer, 0f, 0f, WidthDp, 330f, Palette.JungleLight);
+            Background(layer, 0f, 330f, WidthDp, 450f, Palette.Panel.Top);
+            _art!.SlothRigArtProcedural();
+            double atlasMs = _art.SlothArtMs;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            _art.SlothBranchProcedural();
+            watch.Stop();
+            SlothArt art = _art.SlothRigArt()!;
+            Debug.Log("AF_SLOTH atlas " + art.Head.texture.width + " x " + art.Head.texture.height + " px en " + atlasMs.ToString("0.0")
+                + " ms; rama " + art.Branch!.texture.width + " x " + art.Branch.texture.height + " px en " + watch.Elapsed.TotalMilliseconds.ToString("0.0") + " ms");
+            SlothRig big = SlothRig.Create(layer, art, 200f)!;
+            big.Place(118f, 40f);
+            big.Play(SlothPoseId.Idle, false);
+            SlothRig look = SlothRig.Create(layer, art, 110f)!;
+            look.Place(292f, 150f);
+            look.Play(SlothPoseId.Look, false);
+            look.Seek(500f);
+            SlothRig sleep = SlothRig.Create(layer, art, 150f)!;
+            sleep.Place(110f, 520f);
+            sleep.Play(SlothPoseId.Sleep, false);
+            SlothRig sun = SlothRig.Create(layer, art, 110f)!;
+            sun.Place(280f, 520f);
+            sun.Play(SlothPoseId.Sunbathe, false);
+            float[] sizes = { 56f, 40f };
+            for (int i = 0; i < 4; i++)
+            {
+                float side = sizes[i % 2];
+                bool closed = i >= 2;
+                Portrait(layer, _art.SlothPortrait(closed)!, 30f + (i * 80f), 600f, side);
+                Portrait(layer, _art.SlothPortrait(closed)!, 30f + (i * 80f), 680f, side, Palette.JungleLight);
+            }
+
+            yield return null;
+            Save(dir, "ti4_detalle");
+
+            layer.gameObject.SetActive(false);
+            var atlasGo = new GameObject("AtlasLayer", typeof(RectTransform));
+            atlasGo.transform.SetParent(_canvasGo!.transform, false);
+            var atlasLayer = (RectTransform)atlasGo.transform;
+            atlasLayer.anchorMin = Vector2.zero;
+            atlasLayer.anchorMax = Vector2.one;
+            atlasLayer.sizeDelta = Vector2.zero;
+            Background(atlasLayer, 0f, 0f, WidthDp, 780f, new Color(0.5f, 0.5f, 0.5f, 1f));
+            var go = new GameObject("Atlas", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+            go.transform.SetParent(atlasLayer, false);
+            RawImage raw = go.GetComponent<RawImage>();
+            raw.texture = art.Head.texture;
+            RectTransform rt = raw.rectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(10f, -10f);
+            rt.sizeDelta = new Vector2(340f, 340f);
+            var branchGo = new GameObject("Branch", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            branchGo.transform.SetParent(atlasLayer, false);
+            Image branch = branchGo.GetComponent<Image>();
+            branch.sprite = art.Branch;
+            RectTransform brt = branch.rectTransform;
+            brt.anchorMin = new Vector2(0f, 1f);
+            brt.anchorMax = new Vector2(0f, 1f);
+            brt.pivot = new Vector2(0f, 1f);
+            brt.anchoredPosition = new Vector2(10f, -370f);
+            brt.sizeDelta = new Vector2(340f, 85f);
+            yield return null;
+            Save(dir, "ti4_atlas");
+        }
+
+        private static void Portrait(RectTransform layer, Sprite sprite, float x, float yDown, float side, Color? back = null)
+        {
+            if (back.HasValue)
+            {
+                var bg = new GameObject("PortraitBack", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                bg.transform.SetParent(layer, false);
+                Image b = bg.GetComponent<Image>();
+                b.color = back.Value;
+                RectTransform brt = b.rectTransform;
+                brt.anchorMin = new Vector2(0f, 1f);
+                brt.anchorMax = new Vector2(0f, 1f);
+                brt.pivot = new Vector2(0f, 1f);
+                brt.anchoredPosition = new Vector2(x - 6f, -(yDown - 6f));
+                brt.sizeDelta = new Vector2(side + 12f, side + 12f);
+            }
+
+            var go = new GameObject("Portrait", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(layer, false);
+            Image img = go.GetComponent<Image>();
+            img.sprite = sprite;
+            RectTransform rt = img.rectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(x, -yDown);
+            rt.sizeDelta = new Vector2(side, side);
+        }
+
         // Lienzo de 360 × alto dp a 3 px/dp en la cámara de las capturas; devuelve la capa (origen arriba a la izquierda).
         private RectTransform Prepare(int heightDp, out string dir)
         {
