@@ -25,6 +25,8 @@ namespace AF.Tests.PlayMode
     /// <item><c>home_sloth_return</c>: el saludo de regreso tras 4 días fuera, a las 18:00 (360 × 780);</item>
     /// <item><c>home_sloth_sunbathe</c> (15:00), <c>home_sloth_idle</c> (17:00) y <c>home_sloth_sleep</c> (23:00), sin saludo
     /// (360 × 640);</item>
+    /// <item><c>home_sloth_night_asleep</c>: las 23:00, dormido y callado con el «Zzz» (360 × 780); <c>home_sloth_night_tap</c>:
+    /// lo mismo al tocarlo, despierto con su mensaje (añadido de D-050 del 2026-10-26);</item>
     /// <item><c>home_sloth_fact_130</c>: el toque con <c>sloth_look</c> y el Dato del perezoso más largo en su tarjeta con el
     /// retrato (nunca en el bocadillo), con el texto al 130 % (360 × 640).</item>
     /// </list>
@@ -68,6 +70,11 @@ namespace AF.Tests.PlayMode
             yield return Capture(dir, "home_sloth_sunbathe", 0, 15, "2026-10-15", false, 1f, 1500, 1920);
             yield return Capture(dir, "home_sloth_idle", 0, 17, "2026-10-15", false, 1f, 1500, 1920);
             yield return Capture(dir, "home_sloth_sleep", 0, 23, "2026-10-15", false, 1f, 1500, 1920);
+
+            // De noche (añadido de D-050 del 2026-10-26): dormido y callado, con el «Zzz» (360 × 780); y al tocarlo, despierto
+            // (sloth_wake, ya con los ojos abiertos) con el mensaje siguiente.
+            yield return Capture(dir, "home_sloth_night_asleep", 0, 23, "2026-10-15", false, 1f, 1500);
+            yield return Capture(dir, "home_sloth_night_tap", 0, 23, "2026-10-15", true, 1f, 1200);
 
             // El toque con el dato más largo de g.3, con el texto al 130 % y a 360 × 640.
             int longestOffset = 0;
@@ -136,7 +143,7 @@ namespace AF.Tests.PlayMode
             SaveWindowZoom(dir, name + "_window", lobby);
             Debug.Log("AF_HOME_SLOTH " + name + ": " + hour + ":00, pose " + SlothRig.IdOf(sloth.Pose) + ", saludo "
                 + (sloth.LastGreeting.Key ?? (sloth.LastGreeting.Greeting ? "(solo gesto)" : "-")) + ", bocadillo «" + sloth.BubbleText
-                + "» (" + sloth.Note + "), texto al " + Mathf.RoundToInt(textScale * 100f) + " %");
+                + "» (" + sloth.Note + "), dormido " + sloth.Asleep + ", Zzz " + sloth.ZzzShown + ", texto al " + Mathf.RoundToInt(textScale * 100f) + " %");
         }
 
         // TiTino en su rama (su caja, con 4 dp de margen; D-050), ampliado × 2 sin suavizar.

@@ -32,6 +32,13 @@ namespace AF.UI
     /// hasta el muelle; si llega a la travesía, el inicio aparta lo tapado mientras dure. Un mensaje que no cabe se salta.</item>
     /// <item><b>Toque</b> (<see cref="Tap"/>): <c>sloth_look</c> y el mensaje siguiente al momento (el Dato del día, si aún no salió).
     /// Tocarlo no lo cuida ni da premios (d.7).</item>
+    /// <item><b>De noche duerme callado</b> (añadido de D-050 del 2026-10-26: «De noche TiTino duerme callado (solo un Zzz); si lo
+    /// toco, se despierta un momento y dice su mensaje»): con <c>sloth_sleep</c> no rota el bocadillo ni saluda (el saludo de la
+    /// visita no se dice ni se gasta, aunque la visita cuenta para <c>sloth.last_seen_date</c>), y junto a su cabeza sube un «Zzz»
+    /// dibujado (<see cref="HomeSlothZzz"/>; quieto con Reducir movimiento). Al tocarlo se despierta (<c>sloth_wake</c>, después
+    /// <c>sloth_idle</c>), dice el mensaje siguiente de la rotación con las reglas del día y, cuando el mensaje se va (y como
+    /// mínimo <see cref="NightAwakeMs"/> ms), vuelve a dormirse. Con <c>settings.sloth_messages</c> apagado, se despierta y se
+    /// vuelve a dormir sin mensaje. TalkBack lee que duerme (<c>home_sloth_asleep_a11y</c>).</item>
     /// <item><b>Nunca</b> con Sin canoas, la hoja de compra ni una oferta (lo oculta <see cref="HomeWindow.Apply"/>).</item>
     /// </list>
     /// <para>Con <c>settings.sloth_messages</c> apagado, solo gestos (sin bocadillo); con <c>ui_sloth_enabled</c> apagado, nada: TiTino
@@ -98,6 +105,17 @@ namespace AF.UI
         /// <summary>Nivel desde el que hay Reto y Bitácora (y la Canasta de cada parada); antes, TiTino anima a jugar.</summary>
         public const int NewsFromLevel = 10;
 
+        /// <summary>
+        /// Lo que se queda despierto como mínimo al tocarlo de noche (ms) [P]: con su mensaje, hasta que el mensaje se va; sin él
+        /// (mensajes apagados), esto. Cabe entero <c>sloth_wake</c> (<see cref="SlothRig.WakeMs"/>).
+        /// </summary>
+        public const float NightAwakeMs = 4000f;
+
+        // Arranque del «Zzz» desde el centro de la cabeza dormida (dp; y hacia abajo) [P]: arriba a su derecha, hacia el cielo
+        // libre entre los saldos y la travesía, donde de día va el bocadillo.
+        private const float ZzzFromHeadXDp = 20f;
+        private const float ZzzFromHeadYDp = -10f;
+
         // Pico del bocadillo hacia TiTino: un cuadrado girado 45° (dp), medio fuera del bocadillo.
         private const float TailDp = 12f;
         private const float TailOutDp = (TailDp + (2f * BubbleRimDp)) * 0.7072f;
@@ -124,6 +142,7 @@ namespace AF.UI
         private readonly Image _tailPlate;
         private readonly TextMeshProUGUI _label;
         private readonly Driver _driver;
+        private readonly HomeSlothZzz _zzz;
         private readonly List<HomeNote> _ring = new List<HomeNote>(6);
         private readonly string[] _ringText = new string[6];
 
@@ -152,6 +171,8 @@ namespace AF.UI
         private float _gestureMs = -1f;
         private float _gestureEndMs;
         private float _poseCheckMs;
+        private float _awakeMs = -1f;
+        private bool _asleepReported;
 
         private HomeNote _noteKind;
         private float _noteMs = -1f;
@@ -206,6 +227,10 @@ namespace AF.UI
             _label.rectTransform.offsetMax = new Vector2(-BubblePadXDp, -BubblePadYDp);
             _bubble.gameObject.SetActive(false);
 
+            // El «Zzz» de la noche, encima de la escena como el bocadillo; TalkBack lee que duerme (de día, como siempre).
+            _zzz = new HomeSlothZzz(parent);
+            A11yLabels.Set(_tap, () => Asleep ? UiText.HomeSlothAsleepA11y : string.Empty);
+
             // El reloj del inicio: avanza mientras el lienzo del inicio está activo; activarlo abre una visita.
             var driverGo = new GameObject("HomeSloth", typeof(RectTransform));
             driverGo.transform.SetParent(parent, false);
@@ -257,13 +282,43 @@ namespace AF.UI
         /// <summary>El rig (null hasta que TiTino se ve, o sin arte).</summary>
         public SlothRig? Rig => _rig;
 
-        /// <summary>La pose que hace ahora (la de la hora o el gesto en curso).</summary>
-        public SlothPoseId Pose => _gestureMs >= 0f ? _gesture : _basePose;
+        /// <summary>
+        /// La pose que hace ahora (la de la hora, o <c>sloth_idle</c> mientras está despierto de noche, o el gesto en curso).
+        /// </summary>
+        public SlothPoseId Pose => _gestureMs >= 0f ? _gesture : RestPose;
+
+        /// <summary>
+        /// Duerme (añadido de D-050 del 2026-10-26): se ve, es de noche (<c>sloth_sleep</c>) y no lo han despertado. Callado, con
+        /// el «Zzz».
+        /// </summary>
+        public bool Asleep => _shown && Enabled && _basePose == SlothPoseId.Sleep && _awakeMs < 0f;
+
+        /// <summary>De noche, lo despertó un toque y aún no ha vuelto a dormirse.</summary>
+        public bool AwakeAtNight => _awakeMs >= 0f;
+
+        /// <summary>El «Zzz» está a la vista.</summary>
+        public bool ZzzShown => _zzz.Shown;
+
+        /// <summary>Raíz del «Zzz» (tests).</summary>
+        public RectTransform ZzzRect => _zzz.Root;
+
+        /// <summary>Caja que ocupa el «Zzz» en todo su bucle (dp del lienzo, y hacia abajo; tests).</summary>
+        public Rect ZzzBoundsDp => _zzz.BoundsDp;
+
+        /// <summary>
+        /// Avisa cuando TiTino se duerme o se despierta (<see cref="Asleep"/> cambia), con la causa: <c>shown</c> (aparece),
+        /// <c>hidden</c> (se oculta), <c>hour</c> (cambia la hora), <c>tap</c> (lo despierta un toque) o <c>sleep</c> (vuelve a
+        /// dormirse). Para las sondas del inicio; nunca por fotograma.
+        /// </summary>
+        public Action<bool, string>? AsleepChanged { get; set; }
+
+        // La pose de reposo: la de la hora o, despierto de noche tras un toque, sloth_idle.
+        private SlothPoseId RestPose => _awakeMs >= 0f && _basePose == SlothPoseId.Sleep ? SlothPoseId.Idle : _basePose;
 
         /// <summary>La pose de la hora (<see cref="BasePoseFor"/>), sin el gesto.</summary>
         public SlothPoseId BasePose => _basePose;
 
-        /// <summary>Hay un gesto en curso (<c>sloth_wave</c> o <c>sloth_look</c>).</summary>
+        /// <summary>Hay un gesto en curso (<c>sloth_wave</c>, <c>sloth_look</c> o, de noche, <c>sloth_wake</c>).</summary>
         public bool Gesturing => _gestureMs >= 0f;
 
         /// <summary>Área táctil de TiTino (activa solo con TiTino a la vista).</summary>
@@ -330,6 +385,21 @@ namespace AF.UI
             }
 
             return hour >= SunFromHour && hour < SunToHour ? SlothPoseId.Sunbathe : SlothPoseId.Idle;
+        }
+
+        /// <summary>Id de sonda de lo que dice el bocadillo (<c>none</c>, <c>greeting</c>, <c>daily</c>, <c>basket</c>, <c>fact</c>, <c>play</c> o <c>home</c>).</summary>
+        public static string NoteId(HomeNote note)
+        {
+            switch (note)
+            {
+                case HomeNote.Greeting: return "greeting";
+                case HomeNote.Daily: return "daily";
+                case HomeNote.Basket: return "basket";
+                case HomeNote.Fact: return "fact";
+                case HomeNote.Play: return "play";
+                case HomeNote.Home: return "home";
+                default: return "none";
+            }
         }
 
         /// <summary>
@@ -469,6 +539,8 @@ namespace AF.UI
             {
                 PlaceRig(Pose);
             }
+
+            PlaceZzz();
         }
 
         /// <summary>
@@ -489,10 +561,13 @@ namespace AF.UI
                 _tap.gameObject.SetActive(active);
             }
 
+            _awakeMs = -1f;
             if (!on)
             {
                 HideNote();
                 _rig?.SetVisible(false);
+                UpdateZzz(0f);
+                ReportAsleep("hidden");
                 return;
             }
 
@@ -510,6 +585,8 @@ namespace AF.UI
             _poseCheckMs = resolved ? 0f : PoseCheckMs; // sin el juego aún, la hora se mira en el siguiente paso
             _basePose = resolved ? BasePoseFor(_clock!.LocalNow().Hour) : SlothPoseId.Idle;
             ApplyBasePose();
+            UpdateZzz(0f);
+            ReportAsleep("shown");
         }
 
         /// <summary>Empieza una visita al inicio: el saludo del día y la rotación se deciden en cuanto TiTino se vea.</summary>
@@ -527,11 +604,16 @@ namespace AF.UI
             _ringBuilt = false;
             _gapMs = -1f;
             HideNote();
+            if (_awakeMs >= 0f)
+            {
+                FallAsleep(); // la próxima visita lo encuentra dormido
+            }
         }
 
         /// <summary>
         /// Toque en TiTino (d.7): <c>sloth_look</c> y, con sus mensajes encendidos, el mensaje siguiente al momento (el Dato del día
-        /// si aún no salió en esta sesión). false si TiTino no se ve o está apagado.
+        /// si aún no salió en esta sesión). Dormido (de noche), se despierta con <c>sloth_wake</c> y dice ese mensaje; vuelve a
+        /// dormirse cuando el mensaje se va (añadido de D-050 del 2026-10-26). false si TiTino no se ve o está apagado.
         /// </summary>
         public bool Tap()
         {
@@ -541,10 +623,30 @@ namespace AF.UI
             }
 
             Taps++;
-            PlayGesture(SlothPoseId.Look, SlothRig.LookMs);
+            if (Asleep)
+            {
+                _awakeMs = 0f;
+                ApplyBasePose(); // sin rig, el retrato abre los ojos
+                PlayGesture(SlothPoseId.Wake, SlothRig.WakeMs);
+            }
+            else
+            {
+                PlayGesture(SlothPoseId.Look, SlothRig.LookMs);
+            }
+
+            TapNote();
+            UpdateZzz(0f);
+            ReportAsleep("tap");
+            return true;
+        }
+
+        // El mensaje del toque, con los mensajes de TiTino encendidos: el Dato del día si aún no salió en esta sesión y, si no, el
+        // siguiente de la rotación.
+        private void TapNote()
+        {
             if (!Resolve() || !_messages!())
             {
-                return true;
+                return;
             }
 
             EnsureRing();
@@ -553,12 +655,65 @@ namespace AF.UI
                 int fact = _ring.IndexOf(HomeNote.Fact);
                 if (fact >= 0 && TryShowRing(fact))
                 {
-                    return true;
+                    return;
                 }
             }
 
             ShowNextInRing();
-            return true;
+        }
+
+        // Vuelve a dormirse tras despertarlo de noche: sloth_sleep y el «Zzz».
+        private void FallAsleep()
+        {
+            _awakeMs = -1f;
+            if (_shown && Enabled && _gestureMs < 0f)
+            {
+                ApplyBasePose();
+            }
+
+            UpdateZzz(0f);
+            ReportAsleep("sleep");
+        }
+
+        // Avisa del cambio de Asleep (nunca por fotograma: solo cuando cambia).
+        private void ReportAsleep(string cause)
+        {
+            bool asleep = Asleep;
+            if (asleep == _asleepReported)
+            {
+                return;
+            }
+
+            _asleepReported = asleep;
+            AsleepChanged?.Invoke(asleep, cause);
+        }
+
+        // El «Zzz»: solo dormido, con el rig (sin él no se sabe dónde está la cabeza) y sin bocadillo.
+        private void UpdateZzz(float dtMs)
+        {
+            bool reduce = ReduceMotionNow;
+            bool on = Asleep && _rig != null && !BubbleShown;
+            if (on != _zzz.Shown)
+            {
+                if (on)
+                {
+                    PlaceZzz();
+                }
+
+                _zzz.SetShown(on, reduce);
+            }
+            else if (on)
+            {
+                _zzz.Tick(dtMs, reduce);
+            }
+        }
+
+        // El arranque del «Zzz», junto a la cabeza de sloth_sleep (SlothRig.SleepHeadS, sobre la línea de la rama del decorado).
+        private void PlaceZzz()
+        {
+            float headX = _x + (_boxW * 0.5f) + (SlothRig.SleepHeadS.x * _rigDp);
+            float headY = _y + _branchInBox - (SlothRig.SleepHeadS.y * _rigDp);
+            _zzz.Place(headX + ZzzFromHeadXDp, headY + ZzzFromHeadYDp);
         }
 
         /// <summary>
@@ -612,7 +767,13 @@ namespace AF.UI
                         if (pose != _basePose)
                         {
                             _basePose = pose;
+                            if (pose != SlothPoseId.Sleep)
+                            {
+                                _awakeMs = -1f; // amaneció mientras estaba despierto: ya es de día
+                            }
+
                             ApplyBasePose();
+                            ReportAsleep("hour");
                         }
                     }
                 }
@@ -620,6 +781,19 @@ namespace AF.UI
 
             TickNote(dtMs);
             TickRotation(dtMs);
+
+            // Despierto de noche tras un toque: se vuelve a dormir cuando su mensaje se va (y el gesto acaba), como mínimo a los
+            // NightAwakeMs.
+            if (_awakeMs >= 0f)
+            {
+                _awakeMs += dtMs;
+                if (_awakeMs >= NightAwakeMs && !BubbleShown && _gestureMs < 0f)
+                {
+                    FallAsleep();
+                }
+            }
+
+            UpdateZzz(dtMs);
         }
 
         // El saludo de la visita (d.7; SlothLines.ForHome): una vez por visita, con lo guardado en sloth. La frase solo se dice si
@@ -643,10 +817,16 @@ namespace AF.UI
                 .WithHome(new SlothHomeFacts(today, hour, seenBefore, greetedBefore, _nextLevel!()));
             SlothLine line = SlothLines.ForHome(in context);
             string text = string.Empty;
-            bool speaks = line.Speaks && UiText.TrySlothLine(in line, out text);
+
+            // De noche duerme callado (añadido de D-050 del 2026-10-26): ni gesto ni frase, y el saludo no se gasta (la visita sí
+            // cuenta para last_seen_date) [P].
+            bool night = BasePoseFor(hour) == SlothPoseId.Sleep;
+            bool speaks = !night && line.Speaks && UiText.TrySlothLine(in line, out text);
             SlothLine shown = speaks
                 ? line
-                : new SlothLine(SlothScreen.Home, line.Gesture, line.Moment, SlothData.NoLine, null, 0, line.Greeting, line.Deferred);
+                : night
+                    ? new SlothLine(SlothScreen.Home, SlothGesture.None, line.Moment, SlothData.NoLine, null, 0, false, line.Deferred)
+                    : new SlothLine(SlothScreen.Home, line.Gesture, line.Moment, SlothData.NoLine, null, 0, line.Greeting, line.Deferred);
             session.Record(in shown, in context);
 
             // El sloth del perfil, aunque la sesión lleve el suyo: la última apertura, el saludo del día y la frase vista. Con el
@@ -761,7 +941,8 @@ namespace AF.UI
                 return;
             }
 
-            if (_gapMs < 0f || BubbleShown || _ring.Count == 0)
+            // De noche duerme callado (añadido de D-050 del 2026-10-26): la rotación espera a que amanezca; solo habla al tocarlo.
+            if (_gapMs < 0f || BubbleShown || _ring.Count == 0 || _basePose == SlothPoseId.Sleep)
             {
                 return;
             }
@@ -913,19 +1094,21 @@ namespace AF.UI
 
         private bool ReduceMotionNow => _reduceMotion != null && _reduceMotion();
 
-        // La pose de la hora: el rig (con el retrato oculto) o, sin rig, el retrato con los ojos cerrados de noche.
+        // La pose de la hora (o sloth_idle, despierto de noche): el rig (con el retrato oculto) o, sin rig, el retrato con los ojos
+        // cerrados mientras duerme.
         private void ApplyBasePose()
         {
+            SlothPoseId rest = RestPose;
             if (_rig == null)
             {
                 _home.PortraitImage.enabled = true;
-                _home.SetAsleep(_basePose == SlothPoseId.Sleep);
+                _home.SetAsleep(rest == SlothPoseId.Sleep);
                 return;
             }
 
             _home.PortraitImage.enabled = false;
-            PlaceRig(_basePose);
-            _rig.Play(_basePose, ReduceMotionNow);
+            PlaceRig(rest);
+            _rig.Play(rest, ReduceMotionNow);
             _rig.BranchImage.enabled = false;
         }
 

@@ -325,6 +325,10 @@ namespace AF.UI
 
             // ---- TiTino grande en su rama, con su bocadillo encima de todo lo de la escena (D-050, punto 1). ----
             _home = new HomeWindow(_root, art);
+            if (_home.Sloth != null)
+            {
+                _home.Sloth.AsleepChanged = OnSlothAsleepChanged; // sondas: titino_sleep y titino_asleep de AF_LAYOUT lobby
+            }
 
             // ---- Superposición: «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3), con el inicio atenuado detrás. ----
             _overlay = UiBuilder.Rect("Overlay", _root);
@@ -1374,6 +1378,21 @@ namespace AF.UI
             }
         }
 
+        // TiTino se duerme o se despierta (añadido de D-050 del 2026-10-26): AF_STATE titino_sleep con la causa y lo que dice al
+        // despertarse, y otra línea AF_LAYOUT lobby con titino_asleep. Solo al cambiar, nunca por fotograma.
+        private void OnSlothAsleepChanged(bool asleep, string cause)
+        {
+            if (!DevProbe.Enabled || !_canvas.gameObject.activeSelf || _shown != AppScreen.Lobby)
+            {
+                return;
+            }
+
+            HomeSloth? sloth = _home.Sloth;
+            string note = sloth != null ? HomeSloth.NoteId(sloth.Note) : "none";
+            _probe.Event("titino_sleep", "\"asleep\":" + (asleep ? "true" : "false") + ",\"cause\":\"" + cause + "\",\"note\":\"" + note + "\"");
+            EmitLayout();
+        }
+
         private void EmitLayout()
         {
             if (!DevProbe.Enabled || _app == null || !_canvas.gameObject.activeSelf)
@@ -1424,6 +1443,7 @@ namespace AF.UI
                     }
                 }
 
+                string? extra = null;
                 if (_home.Visible)
                 {
                     ids.Add("home_window");
@@ -1433,6 +1453,7 @@ namespace AF.UI
                     {
                         ids.Add("titino");
                         rects.Add(sloth.TapRect);
+                        extra = sloth.Asleep ? ",\"titino_asleep\":true" : ",\"titino_asleep\":false";
                     }
                 }
 
@@ -1442,7 +1463,7 @@ namespace AF.UI
                     rects.Add(_streakWidget.Root);
                 }
 
-                _probe.Layout("lobby", level, null, ids.ToArray(), rects.ToArray());
+                _probe.Layout("lobby", level, null, ids.ToArray(), rects.ToArray(), extra);
             }
             else if (_shown == AppScreen.NoCanoes)
             {

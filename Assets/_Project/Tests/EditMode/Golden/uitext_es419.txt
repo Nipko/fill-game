@@ -135,6 +135,7 @@ UiText.HomeCardDailyPending	Pendiente
 UiText.HomeCardLogbook	Bitácora
 UiText.HomeCardLogbookPlay	Juega un nivel
 UiText.HomeCardLogbookReady	¡Premio de hoy!
+UiText.HomeSlothAsleepA11y	TiTino duerme
 UiText.HomeSlothDaily	¡Hoy hay Reto del río nuevo!
 UiText.HomeSlothPlay	¿Jugamos? Te miro desde mi rama.
 UiText.KeepPlaying	Seguir jugando

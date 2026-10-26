@@ -37,6 +37,9 @@ namespace AF.UI
         /// <summary>Bocadillo de TiTino que anima a jugar (<c>home_sloth_play</c>).</summary>
         public static string HomeSlothPlay => Loc.T(Keys.HomeSlothPlay);
 
+        /// <summary>Lo que lee TalkBack en TiTino dormido, de noche en el inicio (<c>home_sloth_asleep_a11y</c>; añadido de D-050).</summary>
+        public static string HomeSlothAsleepA11y => Loc.T(Keys.HomeSlothAsleepA11y);
+
         /// <summary>Título de la tarjeta de la Bitácora en el muelle (<c>home_card_logbook</c>).</summary>
         public static string HomeCardLogbook => Loc.T(Keys.HomeCardLogbook);
 
@@ -89,6 +92,9 @@ namespace AF.UI
 
             /// <summary><c>home_sloth_play</c> [P] (D-050).</summary>
             public const string HomeSlothPlay = "home_sloth_play";
+
+            /// <summary><c>home_sloth_asleep_a11y</c> [P] (añadido de D-050 del 2026-10-26).</summary>
+            public const string HomeSlothAsleepA11y = "home_sloth_asleep_a11y";
 
             /// <summary><c>home_card_logbook</c> [P] (D-050).</summary>
             public const string HomeCardLogbook = "home_card_logbook";
