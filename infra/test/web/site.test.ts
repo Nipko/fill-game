@@ -206,8 +206,13 @@ describe('web/site', () => {
         expect(m[0], f).toMatch(/rel="noopener"/);
       }
     }
-    // Las únicas salidas son enlaces (no recursos) al sitio del desarrollador.
-    expect([...externalLinks]).toEqual(['https://parallext.com']);
+    // Las únicas salidas son enlaces (no recursos) al sitio del desarrollador y a las políticas de Google como socio de
+    // anuncios (AdMob, D-049).
+    expect([...externalLinks].sort()).toEqual([
+      'https://parallext.com',
+      'https://policies.google.com/privacy',
+      'https://policies.google.com/technologies/partner-sites',
+    ]);
     const css = site.get('assets/site.css') ?? '';
     expect(css).not.toMatch(/@import|url\(|@font-face/);
     const js = site.get('assets/delete-account.js') ?? '';
@@ -305,11 +310,12 @@ describe('web/site', () => {
     expect(() => renderSite({ indexable: true })).toThrow(/indexable/);
   });
 
-  it('app-ads.txt es una plantilla: solo comentarios hasta tener los IDs reales', () => {
+  it('app-ads.txt: solo la línea real de AdMob (D-049); las demás redes, comentadas hasta sumarlas a la mediación', () => {
     const ads = site.get('app-ads.txt') ?? '';
     const lines = ads.split('\n').filter((l) => l.trim() !== '');
-    expect(lines.length).toBeGreaterThan(0);
-    for (const l of lines) expect(l.startsWith('#'), l).toBe(true);
-    for (const network of ['applovin.com', 'google.com', 'unity.com', 'facebook.com', 'mintegral.com']) expect(ads).toContain(`# ${network}, `);
+    const active = lines.filter((l) => !l.startsWith('#'));
+    expect(active).toEqual(['google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0']);
+    for (const network of ['unity.com', 'facebook.com', 'mintegral.com']) expect(ads).toContain(`# ${network}, `);
+    expect(ads).not.toMatch(/^applovin\.com/m);
   });
 });
