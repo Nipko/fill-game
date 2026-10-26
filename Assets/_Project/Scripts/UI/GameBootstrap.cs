@@ -1541,6 +1541,7 @@ namespace AF.UI
         {
             Current = this;
             _bootOrigin = Application.isEditor ? Time.realtimeSinceStartupAsDouble : 0.0; // origen del arranque (TI6d): ver SinceStartupMs
+            _awakeMs = SinceStartupMs(); // AF_PERF boot_steps: en el teléfono, lo que tardó el motor en llegar aquí
             Application.targetFrameRate = 60; // 08 §5.4
             DevProbe.Initialize();
             EnsureEventSystem();
@@ -1579,6 +1580,7 @@ namespace AF.UI
             if (!s_rebuildToLobby && BootSplash.Enabled)
             {
                 // Ya compuesta con o sin TiTino (el logotipo no salta) y con la intro de la marca encima (D-051, punto 3).
+                _splashStartMs = SinceStartupMs();
                 _splash = new BootSplash(transform, BootSplash.SlothExpected, withIntro: BrandIntro.Enabled);
                 yield return null; // el río y el logotipo, a la vista antes de cargar
             }
@@ -1646,6 +1648,12 @@ namespace AF.UI
                 }
             }
 
+            MarkBootStep(StepProfile);
+            if (IntroFrameDue())
+            {
+                yield return null; // jornada 3 de D-051: la intro se ve moverse entre bloques de la carga (GameBootstrap.BootSteps.cs)
+            }
+
             _dataServicesAtBoot = DataServicesAllowedAtBoot(profile); // otra vez, tras la fusión con la nube (o con el perfil de la reconstrucción)
             bool locked = IsLocked(_profileStatus);
             _profile = profile;
@@ -1660,6 +1668,12 @@ namespace AF.UI
                 CutSplash();
                 enabled = false;
                 yield break;
+            }
+
+            MarkBootStep(StepCatalog);
+            if (IntroFrameDue())
+            {
+                yield return null;
             }
 
             // Textos (D-018; tareas L2b y L3): con el perfil leído y antes de construir ninguna pantalla. Desarrollo (af_lang) >
@@ -1695,6 +1709,8 @@ namespace AF.UI
             {
                 yield break;
             }
+
+            MarkBootStep(StepServices);
             if (_splash != null)
             {
                 // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
@@ -1702,9 +1718,12 @@ namespace AF.UI
                 // «Mensajes de TiTino»), pose quieta y fundido.
                 if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), _art.HomeBranch, firstRun, reduceMotion: ResolveReduceMotion(profile)))
                 {
+                    _splash.RefreshIntro(); // la intro, al instante de ahora en ese fotograma
                     yield return null; // TiTino, a la vista mientras se construye el resto
                 }
             }
+
+            MarkBootStep(StepSloth);
 
             InstallAudio(profile.Settings); // AU1: audio provisional por código y hápticos (GameBootstrap.Audio.cs)
             _probe.LocaleState(locale, _deviceLocale, _deviceTag);
@@ -1730,6 +1749,13 @@ namespace AF.UI
             _store = WrapStore(WrapNoticeStore(WrapCloudStore(WrapConsentStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch))))); // B12: flags de edad; D-042: subida tras cada compra (bajo la analítica, que va fuera); el aviso de la tienda no disponible
             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
+
+            // Antes de crear las pantallas (que aún no están enlazadas al flujo), el último fotograma para la intro (jornada 3 de D-051).
+            MarkBootStep(StepAds);
+            if (IntroFrameDue())
+            {
+                yield return null;
+            }
 
             _screen = new GameScreen(transform, _art, _probe, this);
             _screen.SetVisible(false);
@@ -1764,6 +1790,7 @@ namespace AF.UI
             _settingsScreen.IdleHintToggled = on => ChooseIdleHint(on); // MO3: Pista por inactividad
             BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
             SetUpAccount(); // B8: «Eliminar cuenta y datos» en Ajustes, en dos pasos (GameBootstrap.Account.cs)
+            MarkBootStep(StepScreens);
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
             _flow = new LevelFlow(
@@ -1809,6 +1836,7 @@ namespace AF.UI
                 requested = LaunchOptions.ReadIntentLevel();
             }
 
+            MarkBootStep(StepSystems);
             if (_splash != null)
             {
                 yield return FinishSplash(firstRun); // fin de la carga: se corta, con el segundo de sloth_wake si toca y cabe
@@ -2409,6 +2437,7 @@ namespace AF.UI
             };
             CutSplash();
             _probe?.Boot(_bootReport);
+            WriteBootSteps(_bootReport); // AF_PERF boot_steps (GameBootstrap.BootSteps.cs)
         }
 
         // Deja lo que se vio de la intro de la marca y la sonda AF_STATE brand_intro (D-051; una vez: End devuelve null después).
@@ -2419,6 +2448,7 @@ namespace AF.UI
                 return;
             }
 
+            StampIntroReport(report); // start_ms y yields (GameBootstrap.BootSteps.cs)
             _introReport = report;
             _probe?.BrandIntro(report);
         }

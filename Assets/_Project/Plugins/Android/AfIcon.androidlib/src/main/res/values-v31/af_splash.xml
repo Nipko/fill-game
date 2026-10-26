@@ -3,7 +3,7 @@
      Android 12+: el icono adaptativo v2 (la mascara redonda la pone el sistema) sobre el petroleo de la marca, sin animacion. -->
 <resources>
     <style name="AfLaunchTheme" parent="BaseUnityGameActivityTheme">
-        <item name="android:windowBackground">@color/af_brand_petroleum</item>
+        <item name="android:windowBackground">@drawable/af_launch_window</item>
         <item name="android:windowSplashScreenBackground">@color/af_brand_petroleum</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/af_launcher</item>
         <item name="android:windowSplashScreenAnimationDuration">0</item>

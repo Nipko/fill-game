@@ -171,6 +171,8 @@ namespace AF.UI
         private readonly Image _veilHalo;
         private readonly double _createdAt;
         private readonly BrandIntro? _intro;
+        private readonly long _firstEmblemMs;
+        private readonly BrandEmblemCacheResult _firstEmblemCache;
         private BrandEmblemArt _emblem;
         private Image? _foreground;
         private float _foregroundKey;
@@ -239,6 +241,8 @@ namespace AF.UI
             // La escena: sus piezas, a la escala de la pantalla, las comparte la intro (su último fotograma es esta escena).
             Sprite halo = Own(0, SoftDisc(128));
             _emblem = BrandEmblemArt.Create(_canvas.Width, _canvas.Height, _canvas.Scale);
+            _firstEmblemMs = _emblem.BuildMs;
+            _firstEmblemCache = _emblem.Cache;
 
             UiBuilder.Stretch(UiBuilder.Image("TouchBlocker", root, null, Color.clear, raycast: true).rectTransform); // traga los toques: aún no hay nada que tocar
             _sky = UiBuilder.Image("Sky", root, null, BrandIntro.Petroleum);
@@ -512,8 +516,36 @@ namespace AF.UI
         /// <summary>Quita la intro al terminar la carga y devuelve lo que se vio (null sin intro o si ya se quitó).</summary>
         public BrandIntroReport? EndIntro()
         {
-            return _intro?.End();
+            BrandIntroReport? report = _intro?.End();
+            if (report != null)
+            {
+                report.EmblemMs = _firstEmblemMs;
+                report.EmblemCache = _firstEmblemCache;
+            }
+
+            return report;
         }
+
+        /// <summary>
+        /// La intro está a la vista y animando (<see cref="BrandIntro.Animating"/>): GameBootstrap deja pintar un fotograma entre los
+        /// bloques de la carga solo mientras tanto (jornada 3 de D-051); con Reducir movimiento o ya en su último fotograma, ninguno.
+        /// </summary>
+        public bool IntroAnimating => !_disposed && _intro != null && _intro.Animating;
+
+        /// <summary>Lleva la intro al instante de ahora, sin contar fotograma (justo antes de dejar pintar uno; <see cref="BrandIntro.Refresh"/>).</summary>
+        public void RefreshIntro()
+        {
+            if (!_disposed)
+            {
+                _intro?.Refresh();
+            }
+        }
+
+        /// <summary>De dónde salió la escena de la marca al crear la pantalla (dibujada o de la caché de disco).</summary>
+        public BrandEmblemCacheResult EmblemCache => _firstEmblemCache;
+
+        /// <summary>Lo que costó tener la escena de la marca al crear la pantalla (ms).</summary>
+        public long EmblemMs => _firstEmblemMs;
 
         /// <summary>Lleva la pose de TiTino al instante <paramref name="ms"/> (capturas deterministas).</summary>
         public void Seek(float ms)

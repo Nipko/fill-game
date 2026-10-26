@@ -25,6 +25,24 @@ namespace AF.UI
 
         /// <summary>La animación llegó a empezar (se supo si había Reducir movimiento); false si el arranque se paró antes.</summary>
         public bool Begun { get; internal set; }
+
+        /// <summary>De la creación de la pantalla a su primer fotograma a la vista (ms reales; -1 si no llegó; <c>first_frame_ms</c>).</summary>
+        public long FirstFrameMs { get; internal set; } = -1;
+
+        /// <summary>
+        /// Desde que arrancó Unity hasta que se creó la pantalla de arranque (ms; <c>start_ms</c>): en el teléfono, el arranque del
+        /// motor que no depende del juego (salvo lo poco del Awake). Lo pone GameBootstrap; -1 sin él.
+        /// </summary>
+        public long StartMs { get; internal set; } = -1;
+
+        /// <summary>Lo que costó tener la escena de la marca (ms; dibujarla o leerla de la caché; <c>emblem_ms</c>).</summary>
+        public long EmblemMs { get; internal set; }
+
+        /// <summary>De dónde salió la escena (<c>emblem_cache</c>: <c>off</c>, <c>miss</c> o <c>hit</c>).</summary>
+        public BrandEmblemCacheResult EmblemCache { get; internal set; }
+
+        /// <summary>Fotogramas que GameBootstrap dejó pintar entre bloques de la carga para que la intro se viera moverse (<c>yields</c>).</summary>
+        public int Yields { get; internal set; }
     }
 
     /// <summary>
@@ -40,8 +58,11 @@ namespace AF.UI
     /// <item>Va en la pantalla de arranque (<see cref="BootSplash"/>), por encima de todo lo suyo, y solo mientras el juego carga:
     /// nunca añade espera. Al terminar la carga se corta (<see cref="End"/>) aunque la animación vaya a medias; si la carga dura más
     /// que la animación (<see cref="AnimMs"/>, menos de 1 s), se queda en su último fotograma, quieta.</item>
-    /// <item>Su reloj es el tiempo real desde que se creó, sin tope por fotograma: la carga va en bloques síncronos largos y cada
-    /// fotograma que llega a pintarse enseña el instante que toca. Hasta <see cref="Begin"/> (cuando se sabe si hay Reducir
+    /// <item>Su reloj es el tiempo real desde su primer fotograma a la vista (el primer <see cref="Tick"/>; jornada 3 de D-051:
+    /// antes contaba desde que se creó, y lo que costaba dibujar la escena se comía la animación antes de verse), sin tope por
+    /// fotograma: la carga va en bloques síncronos y cada fotograma que llega a pintarse enseña el instante que toca
+    /// (<see cref="Refresh"/>, justo antes de pintarse). Mientras anima (<see cref="Animating"/>), GameBootstrap deja pintar un
+    /// fotograma entre los bloques de la carga, para que se vea moverse. Hasta <see cref="Begin"/> (cuando se sabe si hay Reducir
     /// movimiento, con el perfil leído) sale en su primer fotograma; con Reducir movimiento, en el último, sin moverse.</item>
     /// <item>No recibe toques (el fondo de la pantalla de arranque ya los traga: aún no hay nada que tocar) y no asigna memoria por
     /// fotograma. No tiene texturas propias: las de la escena son de la pantalla de arranque.</item>
@@ -70,7 +91,8 @@ namespace AF.UI
         private readonly RectTransform _root;
         private readonly Image _background;
         private readonly BrandEmblemImages _images;
-        private readonly double _origin;
+        private readonly double _createdAt;
+        private double _origin = -1.0;
         private float _tintFill;
         private bool _begun;
         private bool _reduceMotion;
@@ -89,13 +111,14 @@ namespace AF.UI
         public static bool Enabled => EnabledOverride ?? true;
 
         /// <summary>
-        /// Crea la intro, ya a la vista en su primer fotograma, dentro de <paramref name="parent"/> (la pantalla de arranque). Su reloj
-        /// cuenta desde <paramref name="origin"/> (<see cref="Time.realtimeSinceStartupAsDouble"/> de cuando se creó la pantalla: el
-        /// mismo origen que <c>load_ms</c>). El halo y las piezas del emblema (<paramref name="art"/>) son de la pantalla de arranque.
+        /// Crea la intro, ya a la vista en su primer fotograma, dentro de <paramref name="parent"/> (la pantalla de arranque).
+        /// <paramref name="createdAt"/> (<see cref="Time.realtimeSinceStartupAsDouble"/> de cuando se creó la pantalla: el mismo
+        /// origen que <c>load_ms</c>) es el de <c>intro_ms</c>; el reloj de la animación cuenta desde su primer fotograma a la vista.
+        /// El halo y las piezas del emblema (<paramref name="art"/>) son de la pantalla de arranque.
         /// </summary>
-        internal BrandIntro(Transform parent, double origin, Sprite halo, BrandEmblemArt art)
+        internal BrandIntro(Transform parent, double createdAt, Sprite halo, BrandEmblemArt art)
         {
-            _origin = origin;
+            _createdAt = createdAt;
             var go = new GameObject("BrandIntro", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             _root = (RectTransform)go.transform;
@@ -133,7 +156,16 @@ namespace AF.UI
         public int Frames => _frames;
 
         /// <summary>Desde que se creó (ms reales).</summary>
-        public long AgeMs => (long)((Time.realtimeSinceStartupAsDouble - _origin) * 1000.0);
+        public long AgeMs => (long)((Time.realtimeSinceStartupAsDouble - _createdAt) * 1000.0);
+
+        /// <summary>De la creación a su primer fotograma a la vista (ms reales; -1 si aún no llegó; <c>first_frame_ms</c>).</summary>
+        public long FirstFrameMs => _origin < 0.0 ? -1L : (long)((_origin - _createdAt) * 1000.0);
+
+        /// <summary>
+        /// La animación está corriendo y aún no llegó a su último fotograma: cada fotograma pintado enseña algo nuevo (false antes de
+        /// <see cref="Begin"/>, con Reducir movimiento, al acabar, al quitarse y en las capturas con <see cref="Seek"/>).
+        /// </summary>
+        public bool Animating => !_ended && _begun && !_reduceMotion && !_seeked && _clockMs < AnimMs;
 
         /// <summary>Lo teñido del río: por dónde va el açaí río abajo desde el impacto (0 sin teñir, 1 hasta el primer plano).</summary>
         public float TintFill => _tintFill;
@@ -157,6 +189,18 @@ namespace AF.UI
             Apply(reduceMotion ? AnimMs : CurrentMs());
         }
 
+        /// <summary>
+        /// Lleva la animación al instante de ahora sin contar un fotograma: GameBootstrap la llama justo antes de dejar pintar uno
+        /// entre dos bloques de la carga (el <see cref="Tick"/> de ese fotograma fue antes del bloque). Sin asignaciones.
+        /// </summary>
+        public void Refresh()
+        {
+            if (Animating)
+            {
+                Apply(CurrentMs());
+            }
+        }
+
         /// <summary>Un fotograma: avanza el reloj con el tiempo real (sin asignaciones). Quieta antes de <see cref="Begin"/>, con Reducir movimiento y tras el final.</summary>
         public void Tick()
         {
@@ -166,6 +210,11 @@ namespace AF.UI
             }
 
             _frames++;
+            if (_origin < 0.0)
+            {
+                _origin = Time.realtimeSinceStartupAsDouble; // su primer fotograma a la vista: aquí empieza su reloj
+            }
+
             if (!_begun || _reduceMotion || _seeked || _clockMs >= AnimMs)
             {
                 return;
@@ -205,6 +254,7 @@ namespace AF.UI
                 ShownMs = (long)_clockMs,
                 Cut = _begun && !_reduceMotion && _clockMs < AnimMs,
                 Frames = _frames,
+                FirstFrameMs = FirstFrameMs,
                 ReduceMotion = _reduceMotion,
                 Begun = _begun,
             };
@@ -253,9 +303,16 @@ namespace AF.UI
             }
         }
 
+        // Del primer fotograma a ahora (ms); si aún no se pintó ninguno (Begin antes del primer Tick), el reloj empieza aquí.
         private float CurrentMs()
         {
-            return (float)((Time.realtimeSinceStartupAsDouble - _origin) * 1000.0);
+            double now = Time.realtimeSinceStartupAsDouble;
+            if (_origin < 0.0)
+            {
+                _origin = now;
+            }
+
+            return (float)((now - _origin) * 1000.0);
         }
     }
 }

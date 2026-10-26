@@ -53,27 +53,74 @@ namespace AF.UI
             var clock = System.Diagnostics.Stopwatch.StartNew();
             Scene = new BrandRiverScene(width, height);
             long tScene = clock.ElapsedMilliseconds;
-            Build(Base, Scene.BaseWindow, Scene.RenderBase, land);
-            long tBase = clock.ElapsedMilliseconds;
-            for (int k = 0; k < BrandRiverScene.ChunkCount; k++)
+
+            // Jornada 3 de D-051: desde la segunda apertura, las piezas se leen de la caché de disco en vez de dibujarse.
+            string? key = BrandEmblemCache.Active ? BrandEmblemCache.KeyFor(width, height, pxPerDp) : null;
+            if (key != null && BrandEmblemCache.TryLoad(key, _textures, _rects))
             {
-                int chunk = k;
-                Build(AcaiFirst + k, Scene.ChunkWindow(k), ppd => Scene.RenderChunk(chunk, ppd), land);
+                for (int i = 0; i < Count; i++)
+                {
+                    MakeSprite(i, _textures[i]!);
+                }
+
+                Cache = BrandEmblemCacheResult.Hit;
+                BuildMs = clock.ElapsedMilliseconds;
+                LastTimings = "escena " + tScene + " ms, caché " + (BuildMs - tScene) + ", total " + BuildMs;
+                return;
             }
 
-            long tAcai = clock.ElapsedMilliseconds;
-            Build(Island, Scene.IslandWindow, Scene.RenderIsland, land);
-            Build(Impact, Scene.DataWindow(BrandEmblem.Impact), ppd => Scene.RenderData(BrandEmblem.Impact, ppd), pxPerDp);
-            Build(Stream, Scene.DataWindow(BrandEmblem.Stream), ppd => Scene.RenderData(BrandEmblem.Stream, ppd), pxPerDp);
-            long tSmall = clock.ElapsedMilliseconds;
-            Build(Cuia, Scene.DataWindow(BrandEmblem.Cuia), ppd => Scene.RenderData(BrandEmblem.Cuia, ppd), pxPerDp);
-            long tCuia = clock.ElapsedMilliseconds;
+            Cache = key != null ? BrandEmblemCacheResult.Miss : BrandEmblemCacheResult.Off;
+            Color32[]?[]? pixels = key != null ? new Color32[]?[Count] : null;
+            BrandRiverScene.KeepPixels = pixels != null;
+            long tBase, tAcai, tSmall, tCuia;
+            try
+            {
+                Build(Base, Scene.BaseWindow, Scene.RenderBase, land, pixels);
+                tBase = clock.ElapsedMilliseconds;
+                for (int k = 0; k < BrandRiverScene.ChunkCount; k++)
+                {
+                    int chunk = k;
+                    Build(AcaiFirst + k, Scene.ChunkWindow(k), ppd => Scene.RenderChunk(chunk, ppd), land, pixels);
+                }
+
+                tAcai = clock.ElapsedMilliseconds;
+                Build(Island, Scene.IslandWindow, Scene.RenderIsland, land, pixels);
+                Build(Impact, Scene.DataWindow(BrandEmblem.Impact), ppd => Scene.RenderData(BrandEmblem.Impact, ppd), pxPerDp, pixels);
+                Build(Stream, Scene.DataWindow(BrandEmblem.Stream), ppd => Scene.RenderData(BrandEmblem.Stream, ppd), pxPerDp, pixels);
+                tSmall = clock.ElapsedMilliseconds;
+                Build(Cuia, Scene.DataWindow(BrandEmblem.Cuia), ppd => Scene.RenderData(BrandEmblem.Cuia, ppd), pxPerDp, pixels);
+                tCuia = clock.ElapsedMilliseconds;
+            }
+            finally
+            {
+                BrandRiverScene.KeepPixels = false;
+                BrandRiverScene.TakeLastPixels();
+            }
+
             BrandRiverScene.ReleaseBuffers();
+            if (pixels != null)
+            {
+                var sizes = new Vector2Int[Count];
+                for (int i = 0; i < Count; i++)
+                {
+                    sizes[i] = new Vector2Int(_textures[i]!.width, _textures[i]!.height);
+                }
+
+                BrandEmblemCache.SaveInBackground(key!, pixels, sizes, _rects); // en segundo plano: no alarga la carga
+            }
+
+            BuildMs = clock.ElapsedMilliseconds;
             LastTimings = "escena " + tScene + " ms, base " + (tBase - tScene) + ", açaí " + (tAcai - tBase) + ", isla/aros/chorro " + (tSmall - tAcai) + ", cuia " + (tCuia - tSmall) + ", total " + tCuia;
         }
 
-        /// <summary>Lo que costó hacer la última escena, por piezas (capturas y pruebas de rendimiento).</summary>
+        /// <summary>Lo que costó dibujar la última escena, por piezas (capturas y pruebas de rendimiento).</summary>
         public static string LastTimings { get; private set; } = string.Empty;
+
+        /// <summary>De dónde salieron las piezas: dibujadas (sin caché o sin acierto) o leídas de la caché de disco.</summary>
+        public BrandEmblemCacheResult Cache { get; }
+
+        /// <summary>Lo que costó tener las piezas (ms): dibujarlas o leerlas.</summary>
+        public long BuildMs { get; }
 
         /// <summary>La escena (geometría del río y de la cuia).</summary>
         public BrandRiverScene Scene { get; }
@@ -157,14 +204,37 @@ namespace AF.UI
             }
         }
 
-        private void Build(int piece, Rect window, Func<float, Texture2D> render, float pxPerDp)
+        private void Build(int piece, Rect window, Func<float, Texture2D> render, float pxPerDp, Color32[]?[]? pixels)
         {
             Texture2D tex = render(pxPerDp);
             _textures[piece] = tex;
             _rects[piece] = new Rect(window.x, window.y, tex.width / pxPerDp, tex.height / pxPerDp);
+            if (pixels != null)
+            {
+                pixels[piece] = BrandRiverScene.TakeLastPixels();
+            }
+
+            MakeSprite(piece, tex);
+        }
+
+        private void MakeSprite(int piece, Texture2D tex)
+        {
             Sprite sprite = UnityEngine.Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
             sprite.name = tex.name;
             _sprites[piece] = sprite;
         }
+    }
+
+    /// <summary>De dónde salió la escena de la marca (<see cref="BrandEmblemArt.Cache"/>; sonda <c>emblem_cache</c>).</summary>
+    public enum BrandEmblemCacheResult
+    {
+        /// <summary>Sin caché (el Editor): dibujada.</summary>
+        Off,
+
+        /// <summary>Con caché y sin acierto (primera apertura, otra pantalla, otros datos u otro build): dibujada y guardada.</summary>
+        Miss,
+
+        /// <summary>Leída de la caché de disco.</summary>
+        Hit,
     }
 }

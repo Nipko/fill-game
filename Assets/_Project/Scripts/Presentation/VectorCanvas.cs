@@ -218,7 +218,29 @@ namespace AF.Presentation
             };
             tex.SetPixels32(px);
             tex.Apply(false, true);
+            if (KeepPixels)
+            {
+                s_lastPixels = px; // la caché de disco de la escena de la marca guarda los mismos bytes (BrandEmblemCache)
+            }
+
             return tex;
+        }
+
+        /// <summary>
+        /// Con true, <see cref="ToTexture"/> guarda sus píxeles (los de la textura, de abajo arriba, RGBA32) para
+        /// <see cref="TakeLastPixels"/>: la caché de disco de la escena de la marca (jornada 3 de D-051). Solo en el hilo principal,
+        /// y quien lo enciende lo apaga.
+        /// </summary>
+        internal static bool KeepPixels { get; set; }
+
+        private static Color32[]? s_lastPixels;
+
+        /// <summary>Los píxeles de la última <see cref="ToTexture"/> con <see cref="KeepPixels"/> (null si no hay); los suelta.</summary>
+        internal static Color32[]? TakeLastPixels()
+        {
+            Color32[]? px = s_lastPixels;
+            s_lastPixels = null;
+            return px;
         }
 
         private static byte ToByte(float v)

@@ -3,6 +3,6 @@
 <resources>
     <color name="af_brand_petroleum">#14444A</color>
     <style name="AfLaunchTheme" parent="BaseUnityGameActivityTheme">
-        <item name="android:windowBackground">@color/af_brand_petroleum</item>
+        <item name="android:windowBackground">@drawable/af_launch_window</item>
     </style>
 </resources>

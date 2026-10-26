@@ -312,10 +312,87 @@ namespace AF.Tests.PlayMode
             StringAssert.Contains("\"anim_ms\":" + BrandIntro.AnimMs, line);
             StringAssert.Contains("\"cut\":" + (intro.Cut ? "true" : "false"), line);
             StringAssert.Contains("\"reduce_motion\":false", line);
+            StringAssert.Contains("\"first_frame_ms\":" + intro.FirstFrameMs, line);
+            StringAssert.Contains("\"emblem_cache\":\"off\"", line, "en el Editor, sin caché de disco");
+            StringAssert.Contains("\"yields\":" + intro.Yields, line);
+
+            // Jornada 3 de D-051: la intro se ve moverse (la carga deja pintar fotogramas entre sus bloques mientras anima), su
+            // reloj cuenta desde su primer fotograma y la sonda boot_steps reparte la carga por bloques, en orden.
+            Assert.That(intro.FirstFrameMs, Is.InRange(0L, intro.IntroMs), "el primer fotograma, dentro de la carga");
+            Assert.That(intro.StartMs, Is.GreaterThanOrEqualTo(0L));
+            Assert.That(intro.EmblemCache, Is.EqualTo(BrandEmblemCacheResult.Off));
+            Assert.That(intro.Yields, Is.GreaterThanOrEqualTo(1), "al menos un fotograma de más para la intro");
+            Assert.That(intro.Yields, Is.LessThanOrEqualTo(3), "como mucho uno por bloque");
+            Assert.That(intro.Frames, Is.GreaterThan(intro.Yields), "cada fotograma dejado se pinta");
+            Assert.That(boot.IntroYields, Is.EqualTo(intro.Yields));
+            long previous = 0;
+            for (int i = 0; i < GameBootstrap.BootStepCount; i++)
+            {
+                long at = boot.BootStepMs(i);
+                Assert.That(at, Is.GreaterThanOrEqualTo(previous), "bloque " + i + ": en orden");
+                previous = at;
+            }
+
+            Assert.That(previous, Is.LessThanOrEqualTo(report.LoadMs), "el último bloque acaba con la carga");
+            string steps = boot.FormatBootSteps(report);
+            StringAssert.StartsWith("AF_PERF {\"event\":\"boot_steps\",\"first_open\":true", steps);
+            StringAssert.Contains("\"load_ms\":" + report.LoadMs, steps);
+            StringAssert.Contains("\"emblem_cache\":\"off\"", steps);
+            StringAssert.Contains("\"yields\":" + intro.Yields + "}", steps);
 
             // El primer toque tras la intro llega al juego (nada se queda tragando toques).
             boot.TapAnywhere();
             Assert.That(report.FirstTouchMs, Is.GreaterThanOrEqualTo(report.SplashEndMs));
+        }
+
+        [UnityTest]
+        public IEnumerator ColdStart_WithReduceMotion_TheLoadLeavesNoExtraFrames()
+        {
+            BootSplash.EnabledOverride = true;
+            MapArtRule.ForceProvisional = false;
+            ArtSlots.ForceProcedural = true;
+            AF.Save.Profile reduced = SettingsScreenTests.ProfileAt(4);
+            reduced.Settings.ReduceMotion = AF.Save.ReduceMotionSetting.On;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(reduced));
+            BrandIntroReport intro = GameBootstrap.Current!.IntroInfo!;
+            Assert.That(intro.ReduceMotion, Is.True);
+            Assert.That(intro.Yields, Is.EqualTo(0), "quieta: ningún fotograma de más, nada que alargar");
+            Assert.That(intro.ShownMs, Is.EqualTo((long)BrandIntro.AnimMs));
+        }
+
+        [UnityTest]
+        public IEnumerator TheClock_StartsAtTheFirstFrame_NotWhileTheSceneIsBeingMade()
+        {
+            BootSplash splash = NewSplash();
+            BrandIntro intro = splash.Intro!;
+            Assert.That(intro.FirstFrameMs, Is.EqualTo(-1L), "aún sin pintar");
+
+            // Un hueco largo entre la creación y el primer fotograma (lo que cuesta dibujar la escena en la primera apertura).
+            double until = Time.realtimeSinceStartupAsDouble + 0.3;
+            while (Time.realtimeSinceStartupAsDouble < until)
+            {
+            }
+
+            splash.Tick(16f);
+            Assert.That(intro.FirstFrameMs, Is.GreaterThanOrEqualTo(290L));
+            splash.BeginIntro(false);
+            Assert.That(intro.ClockMs, Is.LessThan(100f), "el hueco no se come la animación: empieza en su primer fotograma");
+            Assert.That(intro.StreamFill, Is.LessThan(1f));
+            Assert.That(splash.IntroAnimating, Is.True);
+
+            // Refresh lleva la animación a ahora sin contar fotograma (GameBootstrap, antes de dejar pintar uno).
+            int frames = intro.Frames;
+            until = Time.realtimeSinceStartupAsDouble + 0.2;
+            while (Time.realtimeSinceStartupAsDouble < until)
+            {
+            }
+
+            splash.RefreshIntro();
+            Assert.That(intro.ClockMs, Is.GreaterThanOrEqualTo(190f));
+            Assert.That(intro.Frames, Is.EqualTo(frames));
+            intro.Seek(BrandIntro.AnimMs);
+            Assert.That(splash.IntroAnimating, Is.False, "en su último fotograma ya no pide fotogramas");
+            yield return null;
         }
 
         [UnityTest]
