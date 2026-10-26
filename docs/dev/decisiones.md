@@ -4055,3 +4055,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Sondas:** `AF_LAYOUT river_map` publica solo `map_journey` durante el viaje y `play` y `back` al llegar; `AF_STATE map_play_ready` (nueva) al habilitarse, con `first_move_ms`, `ready_ms`, `taps` y `by`; `AF_STATE map_journey` también con `source` `victory` (docs/dev/prototipo-v0.md).
 - **Cambia el GDD:** 06 §2.3 (fila 3: «hasta toque» pasa a «la canoa sube enseguida y "Jugar · Nivel 11" sale al llegar») y 06 §4.5 (Entradas).
 - **Cómo revertir:** con una decisión nueva del dueño; técnicamente, `RiverMapScreen.JourneySource` y las constantes `Journey*` de `RiverMapScreen.Journey.cs`.
+
+## D-054 · La revisión de los textos la hace Gemini (español cultural, inglés y portugués de Brasil)
+
+- **Fecha:** 2026-10-26. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat. Ante los 1.087 problemas de textos que paran el build de release (`LocReleaseGate`), dijo: «Pon el encargo a Gemini, que es mejor en idiomas».
+- **Decisión:**
+  1. La validación cultural del español (las filas `pendiente_asesor`) y la revisión del inglés y del portugués de Brasil (`traducido` → `revisado_nativo`), con la traducción de las filas de `facts.csv` que faltan, las hace un agente de Gemini. Encargo: `docs/dev/traspaso/gemini-revision-textos.md`.
+  2. Sustituye, para la 1.0, al asesor cultural humano y a la revisión nativa humana (D-018, Q5-A; D-022). El dueño revisa una muestra y las filas corregidas o dudosas antes de que pasen a `aprobado_es`; las dudosas se quedan en `pendiente_asesor` y no se muestran en release.
+- **Riesgo anotado:** es una revisión por IA, no humana. Un error cultural o de traducción puede llegar al jugador. Se puede volver a una revisión humana en una versión posterior sin cambiar el juego.
+- **Cómo revertir:** con una decisión nueva del dueño.
