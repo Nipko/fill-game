@@ -32,6 +32,76 @@ Lo escribió el integrador (escritorio) el 2026-10-25, a petición del dueño: *
 
 Aquí entra todo.
 
+## Encargo de la jornada 3 (escritorio, 2026-10-26)
+
+La jornada 2 (`pruebas-telefono-2026-10-25-completa-j2.md`) cubrió el bloque 0, N1 y N2. Sus observaciones están respondidas al final de esa hoja. Esta jornada empieza otra vez por el bloque 0 sobre la integración nueva, comprueba lo que entró y sigue con lo pendiente.
+
+**Punto de partida:** `integracion-fase1-fase2` en `9024fb39` o posterior.
+
+**Lo que entró después de la jornada 2 y nunca se ha visto en el teléfono:**
+- **Arreglos de la jornada 2** (`80bec2e8`):
+  - el Mercado queda oculto sin precios también en un build sin backend (observación 4: se veía en el ensayo);
+  - tras la edad y el consentimiento con un perfil sin estrenar, se va al nivel 1 aunque la app se cerrara en la pantalla de edad.
+- **TiTino pulido** (`3f8955a8`):
+  - pelaje con mechones, codos y tres garras;
+  - la cara con las bandas de los ojos;
+  - las poses tumbadas con la cabeza unida al cuerpo;
+  - su atlas a 1024 × 512, generado una vez y en paralelo.
+- **La pantalla de arranque con la marca v2** (`9a90eb8b`, añadido de D-051):
+  - la cuia de vidrio vierte açaí sobre el Amazonas con meandros y lo tiñe río abajo;
+  - el nombre «Tintalú»;
+  - TiTino a la derecha, en la rama del muelle.
+
+  La intro de la gota se sustituye por esa escena animada (650 ms como mucho) y el arranque es su último fotograma, con un fundido de 300 ms.
+
+### Orden de la jornada 3
+
+1. **Bloque 0 entero**, con el `dev.apk` y el `rehearsal.apk` nuevos (`-Apk`). Anota los tamaños: los de la jornada 2 eran 75,98 MB, 59,01 MB y 64,52 MB.
+2. **Bloque N3, «Lo nuevo de la jornada 3»** (abajo).
+3. **Los pendientes:**
+   - los 3 puntos sin probar del bloque 3;
+   - el bloque 4 entero, salvo el 4.9;
+   - los bloques 5 y 7 a 23, en orden.
+
+   Entre ellos, lo que quedó sin probar en N1:
+   - Reducir movimiento del sistema;
+   - la noche del inicio (bloque 15);
+   - el 16:9 (bloque 16);
+   - los anuncios sin red y cerrados antes de tiempo (bloque 9).
+4. **Hoja nueva:** `docs/dev/traspaso/pruebas-telefono-<fecha>-completa-j3.md`, con el mismo formato.
+   - Commit y push al final de la jornada con el mensaje «Añade la prueba completa en el teléfono (jornada 3)», solo con la hoja.
+   - Si no da para todo, se commitea lo hecho y la jornada 4 sigue donde quedó.
+5. **Anuncios de Google:** paso a paso, con una captura antes de cada toque. Los recorridos automáticos, con `--ei af_ads_fill 0/1` (incidente 3 de la jornada 2).
+
+### N3. Lo nuevo de la jornada 3 (≈ 1 h 30 min)
+
+1. **Arranque nuevo, con el `dev.apk`:**
+   - **Primera apertura** con perfil limpio (`pm clear`):
+     - la intro: la cuia vierte, salen los aros y el açaí avanza por el río con meandros;
+     - después el arranque completo: TiTino despierta en su rama a la derecha, «Tintalú» se lee nítido y no hay huecos ni líneas raras;
+     - capturas de la intro a mitad (si se puede cazar) y del arranque.
+   - **Cinco arranques en frío** (`force-stop` y lanzar). De cada `brand_intro` y `boot` anota `intro_ms`, `load_ms`, `shown_ms`, `cut` y `frames`. Compáralo con la jornada 2: `load_ms` era de 719-756 ms (1.121 en la primera apertura). **Mide cuánto ha crecido.** En el Editor la escena cuesta unos 180 ms antes del primer fotograma. Si en el teléfono la pantalla del sistema se nota claramente más larga, es una observación **alta**.
+   - En la primera apertura, `hold_ms` y `sloth_ms`: TiTino se ve al menos 1,0 s desde que empieza el fundido.
+   - **Memoria:** `adb shell dumpsys meminfo com.amazonfill.dev`, el PSS total en el inicio tras el arranque. Compáralo con los 600-650 MB de la jornada 1.
+   - **Reducir movimiento** (el dueño lo enciende): la intro sale quieta y el arranque entra sin fundido.
+2. **TiTino pulido** (capturas de cerca, con `adb exec-out screencap`):
+   - **El inicio:**
+     - de mañana, el saludo;
+     - a mediodía, tomando el sol: tumbado en la rama, con la cabeza unida al cuerpo;
+     - de noche, dormido (bloque 15, con la hora cambiada).
+   - **La victoria** (`--ei af_level` 40).
+   - **Los tutoriales:** su retrato en la banda de los niveles 1-3 y 6.
+   - **La ventanita del Mapa.**
+   - En cada sitio: sin bordes dentados ni borrosos, y la mancha del lomo discreta.
+   - **El primer momento en que sale TiTino** (el arranque o el inicio): ningún tirón visible.
+3. **Arreglos de la jornada 2:**
+   - **Mercado en el ensayo:** con el `rehearsal.apk`, ni el icono del Mercado ni el Cántaro en el inicio; ninguna pantalla «Purchases aren't available right now» al tocar ese sitio.
+   - **Nivel 1 tras cerrar en la edad,** con el `dev.apk` y también con el `rehearsal.apk`:
+     1. `pm clear`;
+     2. arrancar y, en la pantalla de edad, cerrar la app (`force-stop`);
+     3. volver a abrir;
+     4. contestar la edad y el consentimiento: **va al nivel 1**, no al inicio.
+4. **El ensayo de release (`rehearsal.apk`):** el arranque nuevo y TiTino pulido se ven igual que en desarrollo (D-052). Ningún hueco de arte.
 ## Encargo de la jornada 2 (escritorio, 2026-10-25)
 
 La jornada 1 (`pruebas-telefono-2026-10-25-completa.md`) cubrió los bloques 0, 1, 2, 6, buena parte del 3 y el punto 4.9. Sus observaciones están respondidas al final de esa hoja, y el guion ya está corregido con ellas. Esta jornada **vuelve a empezar por el bloque 0** sobre la integración nueva y luego sigue con lo pendiente.
