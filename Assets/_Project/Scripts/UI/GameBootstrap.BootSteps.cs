@@ -37,6 +37,10 @@ namespace AF.UI
         internal const string BootLoadingKey = UiText.Keys.BootLoading;
 
         private readonly long[] _bootSteps = { -1, -1, -1, -1, -1, -1, -1, -1 };
+
+        // Heap gestionado reservado y usado al acabar cada bloque (bytes; -1 sin marca): AF_PERF mem boot (DevProbe.Memory.cs).
+        private readonly long[] _bootStepHeap = { -1, -1, -1, -1, -1, -1, -1, -1 };
+        private readonly long[] _bootStepUsed = { -1, -1, -1, -1, -1, -1, -1, -1 };
         private long _awakeMs = -1;
         private bool _bootInProgress;
         private bool _consentSetUp;
@@ -77,6 +81,12 @@ namespace AF.UI
         /// <summary>Cuándo acabó cada bloque de la carga (ms desde que se creó la pantalla; -1 si no llegó; tests).</summary>
         internal long BootStepMs(int step) => _bootSteps[step];
 
+        /// <summary>Heap gestionado usado al acabar el bloque <paramref name="step"/> (bytes; -1 sin marca; AF_PERF mem boot, tests).</summary>
+        internal long BootStepUsed(int step) => _bootStepUsed[step];
+
+        /// <summary>Heap gestionado reservado al acabar el bloque <paramref name="step"/> (bytes; -1 sin marca).</summary>
+        internal long BootStepHeap(int step) => _bootStepHeap[step];
+
         /// <summary>Número de bloques de la carga con marca.</summary>
         internal static int BootStepCount => BootStepNames.Length;
 
@@ -86,6 +96,12 @@ namespace AF.UI
             if (_splash != null)
             {
                 _bootSteps[step] = _splash.AgeMs;
+            }
+
+            if (DevProbe.Enabled)
+            {
+                _bootStepHeap[step] = UnityEngine.Profiling.Profiler.GetMonoHeapSizeLong();
+                _bootStepUsed[step] = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong();
             }
         }
 
@@ -122,6 +138,7 @@ namespace AF.UI
             }
 
             Debug.Log(FormatBootSteps(boot));
+            DevProbe.Mem("boot", 0, DevProbe.FormatBootStepHeaps(_bootStepHeap, _bootStepUsed) + DevProbe.FormatCanvasStats());
         }
 
         /// <summary>La línea <c>AF_PERF boot_steps</c> del último arranque con pantalla (tests).</summary>

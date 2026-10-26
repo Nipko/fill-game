@@ -1116,6 +1116,7 @@ namespace AF.UI
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
+            DevProbe.Mem("map", play); // AF_PERF mem (DevProbe.Memory.cs)
             TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;
@@ -1849,6 +1850,7 @@ namespace AF.UI
             }
 
             MarkBootStep(StepSystems);
+            AF.Presentation.PixelBuffers.Trim(); // memoria (2026-10-26): los búferes de los lienzos del arranque no se quedan guardados
             if (_splash != null)
             {
                 yield return FinishSplash(firstRun); // fin de la carga: se corta, con el segundo de sloth_wake si toca y cabe

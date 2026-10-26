@@ -183,7 +183,17 @@ namespace AF.Presentation
         {
             int w = WidthPx;
             int h = HeightPx;
-            var px = new Color32[w * h];
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                name = name,
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+            };
+
+            // Por el búfer compartido de PixelBuffers (memoria, 2026-10-26: sin un Color32[] de toda la pieza por cada una), que no
+            // viene a cero: cada píxel se escribe.
+            int n = w * h;
+            Color32[] px = PixelBuffers.Staging(n);
             for (int row = 0; row < h; row++)
             {
                 int src = row * w;
@@ -193,7 +203,8 @@ namespace AF.Presentation
                     float al = _a[src + x];
                     if (al <= 0.001f)
                     {
-                        continue; // ya es (0, 0, 0, 0)
+                        px[dst + x] = default; // (0, 0, 0, 0)
+                        continue;
                     }
 
                     // Directo a bytes (sin Color intermedio): del premultiplicado al color, con su alfa.
@@ -209,20 +220,15 @@ namespace AF.Presentation
             }
 
             BleedEdges(px, w, h);
-
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
-            {
-                name = name,
-                wrapMode = TextureWrapMode.Clamp,
-                filterMode = FilterMode.Bilinear,
-            };
-            tex.SetPixels32(px);
-            tex.Apply(false, true);
+            Unity.Collections.NativeArray<Color32>.Copy(px, tex.GetPixelData<Color32>(0), n);
             if (KeepPixels)
             {
-                s_lastPixels = px; // la caché de disco de la escena de la marca guarda los mismos bytes (BrandEmblemCache)
+                var copy = new Color32[n]; // la caché de disco de la escena de la marca guarda los mismos bytes (BrandEmblemCache)
+                System.Array.Copy(px, copy, n);
+                s_lastPixels = copy;
             }
 
+            tex.Apply(false, true);
             return tex;
         }
 

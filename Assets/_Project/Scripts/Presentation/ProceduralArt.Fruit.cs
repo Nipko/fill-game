@@ -97,7 +97,7 @@ namespace AF.Presentation
         /// </summary>
         public static Color32[] FruitFlightPixels()
         {
-            return BuildFruitAtlasCanvas().ToColor32();
+            return BuildFruitAtlasCanvas().TakeColor32();
         }
 
         /// <summary>
@@ -109,7 +109,7 @@ namespace AF.Presentation
         {
             var art = new MonkeyArt(species.Id, species.Skeleton);
             FaunaPalette palette = pair && species.PairPalette != null ? species.PairPalette : species.Palette;
-            return BuildFaunaCanvas(species, art, palette).ToColor32();
+            return BuildFaunaCanvas(species, art, palette).TakeColor32();
         }
 
         /// <summary>Lado del atlas de piezas de cada especie (px).</summary>

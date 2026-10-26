@@ -1652,7 +1652,7 @@ namespace AF.Presentation
             {
                 Width = pc.Width;
                 Height = pc.Height;
-                Pixels = pc.ToColor32();
+                Pixels = pc.TakeColor32(); // el búfer del lienzo vuelve a PixelBuffers
             }
 
             public int Width { get; }

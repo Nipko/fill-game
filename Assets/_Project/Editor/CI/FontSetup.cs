@@ -331,7 +331,85 @@ namespace AF.EditorTools
                 return code;
             }
 
+            SetAtlasReadability(false); // memoria (2026-10-26): los atlas no se quedan legibles en CPU
             return TrimTmpDefaults();
+        }
+
+        /// <summary>
+        /// Los atlas de las fuentes del juego no se quedan legibles en CPU (memoria, 2026-10-26; informe
+        /// <c>docs/dev/memoria-2026-10-26.md</c>): son estáticos y TMP no lee sus píxeles, así que con <c>m_IsReadable</c> encendido
+        /// el build guardaba una copia de cada uno en la memoria del proceso además de la de la GPU (unos 4 MB los cinco). Cambia el
+        /// campo serializado de cada atlas (sub-asset de su font asset) y guarda. Idempotente; devuelve los atlas cambiados.
+        /// También lo aplica <c>ProjectSetup.ApplyAndroidDefaults</c>, y <c>ProjectSetup.Validate</c> lo exige.
+        /// </summary>
+        internal static int SetAtlasReadability(bool readable)
+        {
+            int changed = 0;
+            foreach (Texture2D atlas in GameAtlases())
+            {
+                var so = new SerializedObject(atlas);
+                SerializedProperty? prop = so.FindProperty(ReadableProperty);
+                if (prop == null || prop.boolValue == readable)
+                {
+                    continue;
+                }
+
+                prop.boolValue = readable;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(atlas);
+                changed++;
+                Debug.Log(LogPrefix + atlas.name + ": legible en CPU -> " + readable);
+            }
+
+            if (changed > 0)
+            {
+                AssetDatabase.SaveAssets();
+            }
+
+            return changed;
+        }
+
+        /// <summary>Los atlas de las fuentes del juego que siguen legibles en CPU (vacío si ninguno).</summary>
+        internal static List<string> ReadableAtlases()
+        {
+            var names = new List<string>();
+            foreach (Texture2D atlas in GameAtlases())
+            {
+                SerializedProperty? prop = new SerializedObject(atlas).FindProperty(ReadableProperty);
+                if (prop == null || prop.boolValue)
+                {
+                    names.Add(atlas.name);
+                }
+            }
+
+            return names;
+        }
+
+        // Campo serializado de Texture2D con «Read/Write».
+        private const string ReadableProperty = "m_IsReadable";
+
+        // Los atlas de los font assets del juego (OutputDir), en el orden de Fonts.
+        private static List<Texture2D> GameAtlases()
+        {
+            var atlases = new List<Texture2D>();
+            for (int i = 0; i < Fonts.Length; i++)
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(OutputDir + "/" + Fonts[i] + " SDF.asset");
+                if (asset == null || asset.atlasTextures == null)
+                {
+                    continue;
+                }
+
+                for (int k = 0; k < asset.atlasTextures.Length; k++)
+                {
+                    if (asset.atlasTextures[k] != null)
+                    {
+                        atlases.Add(asset.atlasTextures[k]);
+                    }
+                }
+            }
+
+            return atlases;
         }
 
         /// <summary>

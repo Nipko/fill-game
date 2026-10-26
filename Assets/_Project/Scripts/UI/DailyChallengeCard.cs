@@ -275,8 +275,7 @@ namespace AF.UI
 
             DailySlot? slot = null;
             string? board = null;
-            AF.Levels.DailyPool? pool = service.Pool;
-            if (state != DailyCardState.Hidden && pool != null)
+            if (state != DailyCardState.Hidden && service.HasPool)
             {
                 DailySlot today = service.TodaySlot(maxLevel);
                 DailyPlayInProgress? resumable = service.Resumable;
@@ -288,7 +287,11 @@ namespace AF.UI
                 else
                 {
                     slot = today;
-                    board = today.Board(pool)?.Id;
+
+                    // Sin leer el pool (memoria, 2026-10-26): sin sustitución, el tablero del slot es d{b}_n{nnnn} (el lector exige
+                    // ese id para su banda y su día); con ella, TodaySlot ya leyó el pool para comprobar el id.
+                    AF.Levels.DailyPool? pool = service.PoolLoaded ? service.Pool : null;
+                    board = pool != null ? today.Board(pool)?.Id : (today.IsOverride ? today.OverrideId : AF.Levels.DailyPool.IdOf(today.Band, today.Day));
                 }
             }
 

@@ -593,7 +593,7 @@ namespace AF.Presentation
         /// </summary>
         public static Color32[] ModalSurfacePixels(int widthDp, int heightDp)
         {
-            return PaintModalSurface(widthDp, heightDp).ToColor32();
+            return PaintModalSurface(widthDp, heightDp).TakeColor32();
         }
 
         /// <summary>
