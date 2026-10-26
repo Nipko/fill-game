@@ -24,12 +24,15 @@
 ```
 python generar.py     # SVG; solo biblioteca estándar (lee la fuente TTF del juego)
 python exportar.py    # PNG con Chrome o Edge sin interfaz
+python exportar.py --unity-wordmark <BrandWordmark.Generated.cs> [--check]   # el nombre para el juego, sin Chrome
+python exportar.py --unity-emblem <BrandEmblem.Generated.cs> [--check]       # el emblema para el juego, sin Chrome
 python hoja.py        # out/hoja-revision.html (la captura out/hoja-revision.png se hace con Chrome sin interfaz)
 ```
-`bocetos/a-meandro.svg` es la versión A descartada, guardada como referencia.
+`emblema_unity.py` lo usa `exportar.py --unity-emblem`. `bocetos/a-meandro.svg` es la versión A descartada, guardada como referencia.
 
 ## Pendiente
 - **Unity: integrada** (2026-10-23) en `Assets/_Project/Plugins/Android/AfIcon.androidlib`, porque Unity 6000.3 no tiene capa monocroma. Lleva `mipmap-anydpi-v26` y `-v33` (este, con la monocroma) y las capas por densidad, que genera `python exportar.py --android-res <AfIcon.androidlib/src/main/res>`. `Assets/Plugins/Android/LauncherManifest.xml` apunta `android:icon` y `roundIcon` a `@mipmap/af_launcher`.
+- **Intro y pantalla de arranque del juego: integradas** (2026-10-25, añadido de D-051), sin PNG. `python exportar.py --unity-emblem ../../../../Assets/_Project/Scripts/Presentation/BrandEmblem.Generated.cs` convierte la cuia, el chorro, los aros y las palmeras del icono (frente y fondo de `generar.py`) en capas de polígonos con sus colores, degradados, tramas y trazos (`emblema_unity.py`). `python exportar.py --unity-wordmark ../../../../Assets/_Project/Scripts/Presentation/BrandWordmark.Generated.cs` escribe los contornos de «Tintalú». Los dos van sin Chrome y, con `--check`, solo comparan. El juego compone a su alrededor el río con meandros para la pantalla vertical (`BrandRiverScene`) y lo dibuja todo nítido (`BrandEmblem`, `BrandWordmark`). Si cambia `generar.py`, hay que regenerarlos.
 - La web usa los favicons, el apple-touch-icon y los logos claro/oscuro derivados de estos archivos. El gráfico de funciones es provisional; no es una aprobación del nombre para publicación.
 - No hay versión oscura ni tintada de iOS ni catálogo de Xcode; se hacen cuando se elija.
 - Probar en un teléfono el icono adaptativo y el temático.

@@ -1700,7 +1700,7 @@ namespace AF.UI
                 // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
                 // de la victoria) o sin su arte final (release), no sale y no hay espera. Con Reducir movimiento (B9; 02 §12, fila
                 // «Mensajes de TiTino»), pose quieta y fundido.
-                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: ResolveReduceMotion(profile)))
+                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), _art.HomeBranch, firstRun, reduceMotion: ResolveReduceMotion(profile)))
                 {
                     yield return null; // TiTino, a la vista mientras se construye el resto
                 }
@@ -2379,6 +2379,10 @@ namespace AF.UI
             int hold = BootSplashTiming.HoldMs(firstOpen, wake, sinceStartup, (long)splash.SlothClockMs);
             if (hold > 0)
             {
+                // El mundo del arranque, antes de medir la espera; el Tick siguiente no avanza (su tiempo es el de hacerlo), así que
+                // ni el gesto de TiTino ni el fundido se lo comen: el segundo de sloth_wake cuenta desde que empieza el fundido.
+                splash.PrepareWorld();
+
                 // Hasta que el gesto lleve su segundo a la vista (reloj de la pose, el que ve el jugador), con un tope de tiempo
                 // real por si los fotogramas van lentos.
                 double until = Time.realtimeSinceStartupAsDouble + ((hold + HoldGuardMs) / 1000.0);

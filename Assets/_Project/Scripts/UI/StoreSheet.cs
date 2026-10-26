@@ -44,6 +44,9 @@ namespace AF.UI
 
         public float Height { get; private set; } = 780f;
 
+        /// <summary>Píxeles de la pantalla por unidad del lienzo (dp).</summary>
+        public float Scale { get; private set; } = 1f;
+
         /// <summary>Margen superior del safe area, en unidades del lienzo (08 §13.1 #4).</summary>
         public float SafeTop { get; private set; }
 
@@ -64,6 +67,7 @@ namespace AF.UI
             _safe = safe;
             float scale = GameScreen.CurrentCanvasScale(sw, sh); // la de la pantalla de nivel (Q-B11-5 (a))
             _scaler.scaleFactor = scale;
+            Scale = scale;
             Width = sw / scale;
             Height = sh / scale;
             SafeTop = Mathf.Max(0f, (sh - safe.yMax) / scale);
