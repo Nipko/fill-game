@@ -298,6 +298,7 @@ namespace AF.UI
         {
             _seqLayer = UiBuilder.Rect("L10Sequence", root);
             _seqSkip = UiBuilder.BareButton("L10Skip", _seqLayer, () => TapL10Sequence());
+            A11yLabels.Set(_seqSkip, () => A11yText.TapToContinue); // TalkBack: «Continuar» salta lo que queda (D-053)
             UiBuilder.Stretch((RectTransform)_seqSkip.transform);
 
             _seqPlate = UiBuilder.Rect("L10FactPlate", _seqLayer);

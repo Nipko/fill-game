@@ -77,6 +77,8 @@ namespace AF.UI
         private int _journeyTaps;
         private int _journeyPulse = -1;
         private string _journeyBy = string.Empty;
+        private int _playOrder = -1;
+        private int _headerOrder = -1;
 
         /// <summary>El lector de pantalla (TalkBack) para anunciar la llegada (D-053); lo pone <see cref="GameBootstrap"/>.</summary>
         internal A11yService? A11y { get; set; }
@@ -154,6 +156,7 @@ namespace AF.UI
         {
             _journeyTouch = UiBuilder.BareButton("JourneyTouch", root, () => TapJourney());
             UiBuilder.Stretch((RectTransform)_journeyTouch.transform);
+            A11yLabels.Set(_journeyTouch, () => A11yText.MapJourney); // TalkBack: qué pasa y qué hace el toque (D-053)
             _journeyTouch.gameObject.SetActive(false);
             _playGroup = Group(_play.Button.gameObject);
             _backGroup = Group(_back.Button.gameObject);
@@ -170,6 +173,9 @@ namespace AF.UI
             _journeyTaps = 0;
             _journeyPulse = -1;
             _journeyBy = string.Empty;
+            RestoreJourneyOrder();
+            _play.Button.gameObject.SetActive(true); // defensa: un viaje anterior que no acabó bien no deja los botones ocultos
+            _back.Button.gameObject.SetActive(true);
             ShowJourneyButtons(1f);
             if (_journeyTouch != null)
             {
@@ -241,7 +247,10 @@ namespace AF.UI
             _journeyInMs = -1f;
             SetJourneyPulse(1f);
             _journeyPulse = -1;
+            _play.Button.gameObject.SetActive(true);
+            _back.Button.gameObject.SetActive(true);
             ShowJourneyButtons(1f);
+            RestoreJourneyOrder();
             if (_journeyTouch != null)
             {
                 _journeyTouch.gameObject.SetActive(false);
@@ -281,13 +290,20 @@ namespace AF.UI
                 _seqPlaceDirty = true;
             }
 
-            // Encima del área que salta lo que queda del Mapa del 10 (la placa del dato): «Jugar · Nivel 11» y «←» responden ya.
-            _play.Button.transform.SetAsLastSibling();
-            _headerPlate.transform.SetAsLastSibling();
             if (by == JourneyByClose)
             {
                 ShowJourneyButtons(1f);
                 return;
+            }
+
+            // Encima del área que salta lo que queda del Mapa del 10 (la placa del dato): «Jugar · Nivel 11» y «←» responden ya.
+            // Solo el tiempo que dura esa secuencia: al cerrar (o al volver a abrir) vuelven a su sitio (RestoreJourneyOrder).
+            if (_seqActive && _playOrder < 0)
+            {
+                _playOrder = _play.Button.transform.GetSiblingIndex();
+                _headerOrder = _headerPlate.transform.GetSiblingIndex();
+                _play.Button.transform.SetAsLastSibling();
+                _headerPlate.transform.SetAsLastSibling();
             }
 
             bool reduce = ProgressReduceMotion;
@@ -405,6 +421,36 @@ namespace AF.UI
 
             _play.Face.parent.localScale = scale;
             _back.Face.parent.localScale = scale;
+        }
+
+        // «Jugar» y la cabecera vuelven a su orden de construcción, si la llegada en el Mapa del 10 los subió (primero el que estaba
+        // antes, para que los índices guardados sigan valiendo).
+        private void RestoreJourneyOrder()
+        {
+            if (_playOrder < 0 && _headerOrder < 0)
+            {
+                return;
+            }
+
+            if (_headerOrder >= 0 && (_playOrder < 0 || _headerOrder < _playOrder))
+            {
+                _headerPlate.transform.SetSiblingIndex(_headerOrder);
+                if (_playOrder >= 0)
+                {
+                    _play.Button.transform.SetSiblingIndex(_playOrder);
+                }
+            }
+            else
+            {
+                _play.Button.transform.SetSiblingIndex(_playOrder);
+                if (_headerOrder >= 0)
+                {
+                    _headerPlate.transform.SetSiblingIndex(_headerOrder);
+                }
+            }
+
+            _playOrder = -1;
+            _headerOrder = -1;
         }
 
         private static CanvasGroup Group(GameObject go)

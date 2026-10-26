@@ -30,6 +30,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameBootstrap.A11yHostOverride = null;
+            GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
         }
@@ -183,6 +184,111 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator VerMapa_TheVictoryStopArriveStaysOne_AndMapOpenAndCloseAreWrittenOnce()
+        {
+            var events = new List<string>();
+            void OnLog(string message, string stack, LogType type)
+            {
+                if (message.StartsWith("AF_STATE {\"event\":\"map_open\"", StringComparison.Ordinal)
+                    || message.StartsWith("AF_STATE {\"event\":\"map_close\"", StringComparison.Ordinal)
+                    || message.StartsWith("AF_STATE {\"event\":\"stop_arrive\"", StringComparison.Ordinal))
+                {
+                    events.Add(message);
+                }
+            }
+
+            Application.logMessageReceived += OnLog;
+            try
+            {
+                yield return OpenFromVictory20();
+                GameBootstrap boot = GameBootstrap.Current!;
+                RiverMapScreen map = boot.RiverMapView!;
+                GameScreen view = boot.View!;
+                Assert.That(view.StopArriveCount, Is.EqualTo(1), "la llegada de la franja, al tocar «Ver mapa»");
+
+                // El viaje entero, con un toque que lo acelera, y «Volver».
+                Level10MapTests.Tick(map, 300);
+                map.JourneyTouchArea!.onClick.Invoke();
+                Level10MapTests.Tick(map, map.CatchUpDurationMs + (int)RiverMapScreen.JourneyButtonInMs);
+                Assert.That(map.PlayShown, Is.True);
+                Assert.That(map.CatchUpArrivals, Is.EqualTo(0), "el viaje repetido no vuelve a llegar");
+                map.PlayButton.onClick.Invoke();
+                Assert.That(map.Visible, Is.False);
+                Assert.That(view.StopArriveCount, Is.EqualTo(1), "af_stop_arrive de la victoria, una sola vez");
+                Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.VictoryScreen));
+            }
+            finally
+            {
+                Application.logMessageReceived -= OnLog;
+            }
+
+            if (!DevProbe.Enabled)
+            {
+                Assert.That(events, Is.Empty);
+                yield break;
+            }
+
+            int opens = 0;
+            int closes = 0;
+            int arrives = 0;
+            foreach (string e in events)
+            {
+                opens += e.Contains("\"event\":\"map_open\"") ? 1 : 0;
+                closes += e.Contains("\"event\":\"map_close\"") ? 1 : 0;
+                arrives += e.Contains("\"event\":\"stop_arrive\"") ? 1 : 0;
+            }
+
+            string all = string.Join(" | ", events);
+            Assert.That(opens, Is.EqualTo(1), "map_open, una vez: " + all);
+            Assert.That(closes, Is.EqualTo(1), "map_close, una vez: " + all);
+            Assert.That(arrives, Is.EqualTo(1), "stop_arrive, solo el de la victoria: " + all);
+            StringAssert.Contains("\"view\":\"victory\"", events.Find(e => e.Contains("\"event\":\"stop_arrive\"")));
+            StringAssert.Contains("\"source\":\"victory\"", events.Find(e => e.Contains("\"event\":\"map_close\"")));
+        }
+
+        [UnityTest]
+        public IEnumerator ScreenResize_MidJourney_KeepsTheLock_AndTheCanoeArrives()
+        {
+            using var layout = new AfLayoutLog();
+            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
+            yield return OpenFromVictory20();
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Level10MapTests.Tick(map, RiverMapScreen.JourneyLeadMs + 400);
+            Assert.That(map.JourneyLocked, Is.True);
+            float before = map.CatchUpElapsedMs;
+
+            // Otra pantalla a mitad del viaje (360 × 640 dp; girar, ventana partida): el Mapa se recoloca sin soltar el bloqueo.
+            layout.Clear();
+            GameScreen.SimulatedScreen = new Vector4(1080f, 1920f, 72f, 48f);
+            Level10MapTests.Tick(map, PlayModeHelpers.FrameMs);
+            Assert.That(map.CanvasHeight, Is.LessThan(700f), "se aplicó la pantalla nueva");
+            Assert.That(map.JourneyLocked, Is.True, "el viaje sigue");
+            Assert.That(map.CatchingUp, Is.True);
+            Assert.That(map.CatchUpElapsedMs, Is.GreaterThanOrEqualTo(before), "sin volver atrás");
+            Assert.That(map.PlayShown, Is.False);
+            Assert.That(map.BackShown, Is.False);
+            var touch = (RectTransform)map.JourneyTouchArea!.transform;
+            var root = (RectTransform)map.Canvas.transform;
+            Assert.That(touch.rect.width, Is.EqualTo(root.rect.width).Within(0.5f), "el área del viaje cubre toda la pantalla");
+            Assert.That(touch.rect.height, Is.EqualTo(root.rect.height).Within(0.5f));
+            if (DevProbe.Enabled)
+            {
+                string line = layout.RequireLast("river_map", 21, "AF_LAYOUT al cambiar de pantalla");
+                Assert.That(AfLayoutLog.ButtonIds(line), Is.EqualTo(new[] { "map_journey" }), "durante el viaje, solo el área del viaje");
+            }
+
+            Level10MapTests.Tick(map, map.CatchUpDurationMs);
+            Assert.That(map.CatchingUp, Is.False);
+            Assert.That(map.JourneyLocked, Is.False);
+            Assert.That(map.PlayShown, Is.True, "llegó con la pantalla nueva");
+            if (DevProbe.Enabled)
+            {
+                string line = layout.RequireLast("river_map", 21, "AF_LAYOUT al llegar");
+                Assert.That(AfLayoutLog.ButtonIds(line), Does.Contain("play"));
+            }
+        }
+
+        [UnityTest]
         public IEnumerator TheButtonsEnterWithAFadeAndABounce()
         {
             yield return OpenFromVictory20();
@@ -244,13 +350,29 @@ namespace AF.Tests.PlayMode
             var host = new FakeScreenReaderHost(true);
             GameBootstrap.A11yHostOverride = host;
             yield return OpenFromVictory20();
-            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+
+            // Durante el viaje, el lector ve el área del viaje con su etiqueta, nunca un botón sin nombre.
+            boot.A11y!.Refresh();
+            Assert.That(host.Find(A11yText.MapJourney), Is.Not.Null, "«Capi va río arriba. Toca para ir más rápido.»");
+            Assert.That(A11yText.MapJourney, Is.EqualTo("Capi va río arriba. Toca para ir más rápido."));
+            // Lo publicado durante el viaje es solo el área, con su etiqueta: lo de debajo (el Mapa y la victoria) queda tapado.
+            // (Scanner.Unlabeled cuenta también lo que el área tapa al recorrer: 3 piezas de debajo, que no se publican.)
+            Assert.That(host.Items.Count, Is.EqualTo(1), "solo el área del viaje");
+            Assert.That(host.Items[0].Label, Is.EqualTo(A11yText.MapJourney));
+            Assert.That(A11yLabels.TryGet(map.JourneyTouchArea!.gameObject, out string areaLabel, out _), Is.True, "el área lleva etiqueta registrada");
+            Assert.That(areaLabel, Is.Not.Empty);
+            Assert.That(host.Find(map.PlayLabel), Is.Null, "«Volver» aún no está");
+
             Level10MapTests.Tick(map, RiverMapScreen.JourneyLeadMs + map.CatchUpDurationMs + PlayModeHelpers.FrameMs);
             Assert.That(map.PlayShown, Is.True);
+            boot.A11y.Refresh();
+            Assert.That(host.Find(map.PlayLabel), Is.Not.Null, "«Volver», en el recorrido del lector al llegar");
             Assert.That(host.Announcements.Count, Is.GreaterThan(0));
             string said = host.Announcements[host.Announcements.Count - 1];
             StringAssert.Contains(map.PlayLabel, said, "el botón que ya se puede tocar");
-            RiverStop stop = GameBootstrap.Current.RiverStops!.At(2)!;
+            RiverStop stop = boot.RiverStops!.At(2)!;
             string place = UiText.StopName(stop);
             if (place.Length > 0 && UiText.StopCountry(stop).Length > 0 && UiText.StopRiver(stop).Length > 0)
             {
