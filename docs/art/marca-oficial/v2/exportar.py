@@ -12,6 +12,10 @@ Uso: python exportar.py   (antes: python generar.py)
        cuerpo 300 y espaciado -0,005), aplanados en polilíneas, como datos de C# para
        Assets/_Project/Scripts/Presentation/BrandWordmark.Generated.cs; el juego los rasteriza nítidos a cualquier densidad.
        Con --check no escribe nada: compara y sale con 1 si difiere.
+     python exportar.py --unity-emblem <archivo .cs> [--check]   el emblema v2 para la intro y la pantalla de arranque del juego
+       (añadido de D-051), sin Chrome: el SVG de generar.py (selva, río, açaí, orilla, chorro, impacto y la cuia con sus dosis)
+       en capas de polígonos (emblema_unity.py), para Assets/_Project/Scripts/Presentation/BrandEmblem.Generated.cs.
+       Con --check no escribe nada: compara y sale con 1 si difiere.
 Códigos: 0 hecho (o idéntico con --check) · 1 fallo o diferencia · 2 argumentos o sin Chrome.
 """
 import math
@@ -207,8 +211,17 @@ namespace AF.Presentation
 """
 
 
+def unity_emblem(dst, check):
+    sys.path.insert(0, HERE)
+    import emblema_unity
+    return escribir(dst, emblema_unity.cs(), check)
+
+
 def unity_wordmark(dst, check):
-    texto = wordmark_cs()
+    return escribir(dst, wordmark_cs(), check)
+
+
+def escribir(dst, texto, check):
     actual = open(dst, encoding="utf-8", newline="").read() if os.path.exists(dst) else None
     if check:
         print("identico" if actual == texto else "DIFIERE", os.path.basename(dst))
@@ -222,6 +235,11 @@ def unity_wordmark(dst, check):
 
 
 def main():
+    if len(sys.argv) in (3, 4) and sys.argv[1] == "--unity-emblem":
+        if len(sys.argv) == 4 and sys.argv[3] != "--check":
+            print(__doc__)
+            return 2
+        return unity_emblem(sys.argv[2], len(sys.argv) == 4)
     if len(sys.argv) in (3, 4) and sys.argv[1] == "--unity-wordmark":
         if len(sys.argv) == 4 and sys.argv[3] != "--check":
             print(__doc__)

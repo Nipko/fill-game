@@ -63,31 +63,33 @@ namespace AF.UI
     /// Pantalla de arranque (06 §2.2: «Splash de 1 pantalla (río + logotipo) con TiTino colgado de su embaúba»; D-016, T2-A;
     /// tarea TI6d), rehecha con la marca v2 a petición del dueño (añadido de D-051, 2026-10-25; D-045 «El río que se tiñe»), en su
     /// propio lienzo, por encima de todo, y <b>sin texto</b> (06 §2.1, regla 3: ni un componente de texto; el nombre es un dibujo).
-    /// Es el último fotograma de la intro de la marca (<see cref="BrandIntro"/>) hecho mundo:
+    /// Es el último fotograma de la intro de la marca (<see cref="BrandIntro"/>) con su mundo alrededor:
     /// <list type="bullet">
-    /// <item>El <b>emblema</b> de la intro, en su sitio y con sus mismas piezas (<see cref="BrandIntro.PlaceEmblem"/>): el petróleo
-    /// de la marca con su halo, la selva de la orilla de enfrente y el río blanco teñido de açaí desde el impacto, río abajo. Al
-    /// quitarse la intro no se mueve ni cambia de color nada de eso.</item>
+    /// <item>El <b>emblema v2</b> (<see cref="BrandEmblemArt"/>, generado desde el SVG del icono): la selva con sus palmeras de açaí,
+    /// el río blanco con sus orillas en curva, la cuia de vidrio con Taperebá, Aguaje y Açaí inclinada según D-006, el chorro en
+    /// parábola, los aros del impacto y el açaí que se abre río abajo desde él. Son las mismas piezas de la intro, en el mismo sitio
+    /// (<see cref="BrandIntro.PlaceEmblem"/>): al quitarse la intro no se mueve ni cambia de color nada de eso.</item>
     /// <item>El <b>mundo</b> alrededor, que aparece al desvanecerse un velo con el petróleo y el halo de la intro
-    /// (<see cref="RevealMs"/>; de golpe con Reducir movimiento): la selva y el río teñido siguen a lo ancho hasta los bordes, con
-    /// palmeras de açaí en silueta como las del icono; la orilla de acá, con
-    /// su follaje en silueta en las esquinas de abajo y unas luciérnagas; y, bajo el río, el <b>nombre del logo</b>
-    /// (<see cref="BrandWordmark"/>: Baloo 2 ExtraBold en marfil, como el logo «oscuro» de la v2), nítido a cualquier densidad.</item>
+    /// (<see cref="RevealMs"/>; de golpe con Reducir movimiento): la orilla de acá del icono, que sigue hacia abajo en el suelo; el
+    /// <b>nombre del logo</b> pegado al emblema, como en el logo vertical (<see cref="BrandWordmark"/>: Baloo 2 ExtraBold en marfil,
+    /// como el logo «oscuro» de la v2), nítido a cualquier densidad; el follaje en silueta de las esquinas de abajo y unas
+    /// luciérnagas.</item>
     /// <item><b>TiTino</b> (<see cref="SlothRig"/>; propuesta c.4: 140-180 dp en el arranque) colgado de su rama del inicio
-    /// (<see cref="ProceduralArt.HomeBranch"/>, D-050: la misma rama con hojas que sale de la izquierda), sobre el cielo y encima de
-    /// la selva: <c>sloth_wake</c> en la primera apertura y <c>sloth_idle</c> en las demás (<see cref="ShowSloth"/>). Su tamaño sale
-    /// del aire entre la zona segura y la copa de la selva (<see cref="SlothFitDp"/>), para que nunca se monte sobre ella. Sale en
-    /// todos los builds (su dibujo por código o sus PNG: <see cref="MapArtRule"/>, D-052), y nunca con <c>ui_sloth_enabled</c>
-    /// apagado (<see cref="SlothEnabled"/>): entonces la pantalla sale igual, sin TiTino ni su rama.</item>
-    /// <item>Pantallas bajas (alto &lt; <see cref="TallAspect"/> × ancho, como 16:9): el nombre se acerca al río y TiTino encoge
-    /// hasta lo que quepa.</item>
+    /// (<see cref="ProceduralArt.HomeBranch"/>, D-050), que entra desde la derecha, por encima de todo el emblema (nunca tapa la cuia
+    /// ni el chorro): <c>sloth_wake</c> en la primera apertura y <c>sloth_idle</c> en las demás (<see cref="ShowSloth"/>). Su tamaño
+    /// sale del aire entre la zona segura y lo más alto del emblema (<see cref="SlothFitDp"/>). Sale en todos los builds (su dibujo
+    /// por código o sus PNG: <see cref="MapArtRule"/>, D-052), y nunca con <c>ui_sloth_enabled</c> apagado
+    /// (<see cref="SlothEnabled"/>): entonces la pantalla sale igual, sin TiTino ni su rama.</item>
+    /// <item>Pantallas bajas (alto &lt; <see cref="TallAspect"/> × ancho, como 16:9): el emblema encoge un poco y baja para que TiTino
+    /// quepa encima, y el nombre se estrecha.</item>
     /// <item>Cuánto dura lo decide <see cref="BootSplashTiming"/> (GameBootstrap): se corta al terminar la carga, salvo el
     /// segundo de <c>sloth_wake</c> de la primera apertura si cabe en el objetivo de 20 s.</item>
     /// </list>
     /// Con la intro (<c>withIntro</c>, lo que hace GameBootstrap), la intro va encima de todo mientras el juego carga y se quita al
     /// terminar la carga (<see cref="EndIntro"/>); mientras se ve, el gesto de TiTino no avanza (su reloj se queda en 0), para que
     /// su segundo de <c>sloth_wake</c> se vea entero después, y el mundo no se pinta: sus texturas se hacen en el primer fotograma
-    /// tras quitarse la intro (en las aperturas que no esperan, la pantalla se corta antes y nunca se hacen).
+    /// tras quitarse la intro (en las aperturas que no esperan, la pantalla se corta antes y nunca se hacen). Las del emblema se
+    /// hacen al crear la pantalla, porque la intro las enseña desde su primer fotograma.
     /// El fondo traga los toques mientras se ve (aún no hay nada que tocar). Las texturas son suyas y se destruyen con
     /// <see cref="Dispose"/>; las piezas de TiTino y su rama son de <see cref="ProceduralArt"/> y no se tocan. Nada asigna memoria
     /// por fotograma.
@@ -109,7 +111,7 @@ namespace AF.UI
         /// </summary>
         public const float SlothDropS = 0.90f;
 
-        /// <summary>Aire mínimo entre el fondo de TiTino y la copa de la selva (dp) [P].</summary>
+        /// <summary>Aire mínimo entre el fondo de TiTino y lo más alto del emblema (dp) [P].</summary>
         public const float SlothClearDp = 16f;
 
         /// <summary>Proporción alto/ancho por debajo de la cual la pantalla es baja (16:9 = 1,78; 20:9 = 2,22) [P].</summary>
@@ -124,23 +126,27 @@ namespace AF.UI
         /// <summary>Ancho máximo de la caja del nombre (dp) [P].</summary>
         public const float WordmarkMaxDp = 296f;
 
-        // Medidas en dp [P]: margen lateral del nombre, su distancia al río (pantalla alta y baja), lo alto de la rama sobre la zona
-        // segura, el aire entre TiTino y la selva cuando sobra sitio, el lado del follaje de las esquinas y las luciérnagas.
+        /// <summary>Ancho máximo de la caja del nombre en las pantallas bajas (dp) [P].</summary>
+        public const float WordmarkMaxShortDp = 264f;
+
+        // Medidas en dp [P]: margen lateral del nombre, su distancia a la orilla del emblema (pantalla alta y baja), lo alto de la
+        // rama sobre la zona segura, el aire entre TiTino y el emblema cuando sobra sitio, el follaje de las esquinas (lado máximo y
+        // aire con el nombre), el matorral y las luciérnagas.
         private const float WordmarkMarginDp = 32f;
-        private const float WordmarkGapDp = 44f;
-        private const float WordmarkGapShortDp = 28f;
+        private const float WordmarkGapDp = 10f;
+        private const float WordmarkGapShortDp = 6f;
         private const float BranchTopDp = 36f;
-        private const float SlothGapDp = 30f;
-        private const float FoliageDp = 224f;
+        private const float SlothGapDp = 20f;
+        private const float FoliageDp = 232f;
+        private const float FoliageGapDp = 4f;
         private const float HedgeDp = 96f;
-        private const float BankLineDp = 4f;
         private const float FireflyGlowDp = 26f;
         private const float FireflyCoreDp = 5f;
 
-        // Las luciérnagas: x (fracción del ancho) e y (fracción de la orilla de acá, del río al borde de abajo; las negativas, dp
-        // sobre la copa de la selva), con su fase [P].
-        private static readonly float[] FireflyX = { 0.16f, 0.83f, 0.38f, 0.70f, 0.90f, 0.06f };
-        private static readonly float[] FireflyY = { 0.52f, 0.46f, 0.74f, 0.83f, -34f, 0.66f };
+        // Las luciérnagas: x (fracción del ancho) e y (fracción del suelo, del nombre al borde de abajo; las negativas, dp sobre lo
+        // más alto del emblema), con su fase [P].
+        private static readonly float[] FireflyX = { 0.14f, 0.86f, 0.40f, 0.66f, 0.10f, 0.52f };
+        private static readonly float[] FireflyY = { 0.10f, 0.22f, 0.40f, 0.30f, -26f, 0.70f };
         private static readonly float[] FireflyPhase = { 0f, 1.9f, 3.7f, 0.8f, 2.6f, 4.4f };
 
         // El nombre: marfil del logo «oscuro» de la v2 (generar.py, MARFIL_TXT #F4EEDF), con un poco de luz arriba, y su sombra.
@@ -149,26 +155,23 @@ namespace AF.UI
         private static readonly Color WordmarkShadow = new Color(0x04 / 255f, 0x18 / 255f, 0x18 / 255f, 0.55f);
 
         private readonly OverlayCanvas _canvas;
-        private readonly Texture2D?[] _textures = new Texture2D?[13];
-        private readonly Sprite?[] _sprites = new Sprite?[13];
+        private readonly Texture2D?[] _textures = new Texture2D?[8];
+        private readonly Sprite?[] _sprites = new Sprite?[8];
         private readonly Image _sky;
         private readonly Image _halo;
-        private readonly Image _jungle;
-        private readonly Image _river;
-        private readonly Image _tint;
-        private readonly RectTransform _back;
+        private readonly Image _base;
+        private readonly Image _acai;
+        private readonly Image _bank;
+        private readonly Image _impact;
+        private readonly Image _stream;
+        private readonly Image _cuia;
         private readonly RectTransform _front;
         private readonly CanvasGroup _veil;
         private readonly Image _veilHalo;
         private readonly double _createdAt;
         private readonly BrandIntro? _intro;
-        private Image? _palmLeft;
-        private Image? _palmRight;
-        private Image? _farJungle;
-        private Image? _farRiver;
-        private Image? _farTint;
+        private BrandEmblemArt _emblem;
         private Image? _ground;
-        private Image? _bankLine;
         private Image? _hedge;
         private Image? _foliageLeft;
         private Image? _foliageRight;
@@ -233,17 +236,14 @@ namespace AF.UI
             _canvas = new OverlayCanvas("BootSplashCanvas", host, SortingOrder);
             RectTransform root = _canvas.Root;
 
-            // Las piezas del emblema: las de la intro, que las comparte (su último fotograma es este emblema).
+            // El emblema: sus piezas, a la escala de la pantalla, las comparte la intro (su último fotograma es este emblema).
             Sprite halo = Own(0, SoftDisc(128));
-            Sprite jungle = Own(1, BrandIntro.Treeline(256, 64));
-            Sprite river = Own(2, BrandIntro.Band(256, 48, BrandIntro.WaterTop, BrandIntro.WaterMid, BrandIntro.WaterLow, BrandIntro.WaterWave, false));
-            Sprite tint = Own(3, BrandIntro.Band(160, 48, BrandIntro.AcaiTop, BrandIntro.AcaiMid, BrandIntro.AcaiLow, BrandIntro.AcaiWave, true));
+            _emblem = BrandEmblemArt.Create(_canvas.Width, _canvas.Height, _canvas.Scale);
 
             UiBuilder.Stretch(UiBuilder.Image("TouchBlocker", root, null, Color.clear, raycast: true).rectTransform); // traga los toques: aún no hay nada que tocar
             _sky = UiBuilder.Image("Sky", root, null, BrandIntro.Petroleum);
             UiBuilder.Stretch(_sky.rectTransform);
             _halo = UiBuilder.Image("Halo", root, halo, BrandIntro.HaloColor);
-            _back = Group("WorldBack", root);
             _front = Group("WorldFront", root);
 
             // El velo: el petróleo y el halo de la intro, por encima del mundo y por debajo del emblema. Mientras está opaco, la
@@ -256,13 +256,18 @@ namespace AF.UI
             UiBuilder.Stretch(UiBuilder.Image("VeilSky", veil, null, BrandIntro.Petroleum).rectTransform);
             _veilHalo = UiBuilder.Image("VeilHalo", veil, halo, BrandIntro.HaloColor);
 
-            _jungle = UiBuilder.Image("Jungle", root, jungle, BrandIntro.Jungle);
-            _river = UiBuilder.Image("River", root, river, Color.white);
-            _tint = UiBuilder.Image("Tint", root, tint, Color.white);
+            // El emblema, en el orden del icono: la base, el açaí, la orilla de acá (que entra con el mundo: su alfa), el impacto,
+            // el chorro y la cuia.
+            _base = UiBuilder.Image("EmblemBase", root, null, Color.white);
+            _acai = UiBuilder.Image("EmblemAcai", root, null, Color.white);
+            _bank = UiBuilder.Image("EmblemBank", root, null, Color.white);
+            _bank.enabled = false;
+            _impact = UiBuilder.Image("EmblemImpact", root, null, Color.white);
+            _stream = UiBuilder.Image("EmblemStream", root, null, Color.white);
+            _cuia = UiBuilder.Image("EmblemCuia", root, null, Color.white);
             if (withIntro)
             {
-                _intro = new BrandIntro(root, _createdAt, halo, jungle, river, tint); // la última: por encima de todo; el mismo reloj
-                _back.gameObject.SetActive(false);
+                _intro = new BrandIntro(root, _createdAt, halo, _emblem); // la última: por encima de todo; el mismo reloj
                 _front.gameObject.SetActive(false);
                 SetReveal(0f);
             }
@@ -311,34 +316,26 @@ namespace AF.UI
         /// <summary>Cuánto ha entrado el mundo (0 bajo la intro, 1 entero).</summary>
         public float Reveal => 1f - _veil.alpha;
 
-        /// <summary>Lo alto de la caja de la selva del emblema (dp desde arriba): TiTino cuelga por encima.</summary>
-        public float CanopyDp
-        {
-            get
-            {
-                BrandIntro.EmblemGeometry(_canvas.Width, _canvas.Height, out _, out float e, out float riverTop);
-                return riverTop - (e * BrandIntro.JungleH) + 2f;
-            }
-        }
+        /// <summary>Lo más alto del emblema (dp desde arriba: las palmeras, la cuia y el chorro): TiTino cuelga por encima.</summary>
+        public float CanopyDp => _emblem.TopDp;
 
-        /// <summary>La orilla de abajo del río (dp desde arriba), donde empieza la orilla de acá.</summary>
-        public float RiverBottomDp
-        {
-            get
-            {
-                BrandIntro.EmblemGeometry(_canvas.Width, _canvas.Height, out _, out float e, out float riverTop);
-                return riverTop + (e * BrandIntro.RiverH);
-            }
-        }
+        /// <summary>Donde acaba la orilla de acá del emblema (dp desde arriba); debajo, el suelo y el nombre.</summary>
+        public float EmblemBottomDp => _emblem.BankBottomDp;
+
+        /// <summary>El rectángulo de la cuia (dp, desde arriba a la izquierda; con su sombra, su pie y su boca).</summary>
+        public Rect CuiaRect => _emblem.DpRect(BrandEmblem.Cuia);
+
+        /// <summary>El rectángulo del chorro (dp, desde arriba a la izquierda).</summary>
+        public Rect StreamRect => _emblem.DpRect(BrandEmblem.Stream);
 
         /// <summary>La caja de los contornos del nombre (dp, desde arriba a la izquierda), sin el margen de su sombra.</summary>
         public Rect WordmarkBox
         {
             get
             {
-                float w = Mathf.Min(_canvas.Width - (2f * WordmarkMarginDp), WordmarkMaxDp);
+                float w = Mathf.Min(_canvas.Width - (2f * WordmarkMarginDp), ShortScreen ? WordmarkMaxShortDp : WordmarkMaxDp);
                 float h = w * BrandWordmark.Aspect;
-                float top = RiverBottomDp + (ShortScreen ? WordmarkGapShortDp : WordmarkGapDp);
+                float top = EmblemBottomDp + (ShortScreen ? WordmarkGapShortDp : WordmarkGapDp);
                 return new Rect((_canvas.Width - w) * 0.5f, top, w, h);
             }
         }
@@ -364,8 +361,8 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Dónde se agarra TiTino a la rama (dp, x desde la izquierda e y desde arriba): a la izquierda, como en el inicio, y con
-        /// <see cref="SlothGapDp"/> de aire sobre la selva cuando sobra sitio.
+        /// Dónde se agarra TiTino a la rama (dp, x desde la izquierda e y desde arriba): a la derecha, sobre el açaí y lejos de la
+        /// cuia, y con <see cref="SlothGapDp"/> de aire sobre el emblema cuando sobra sitio.
         /// </summary>
         public Vector2 BranchAnchor
         {
@@ -373,7 +370,7 @@ namespace AF.UI
             {
                 float s = _sloth?.Size ?? SlothFitDp;
                 float y = Mathf.Max(BranchMinDp, CanopyDp - SlothGapDp - (SlothDropS * s));
-                float x = Mathf.Round(Mathf.Max((0.5f * s) + 14f, 0.36f * _canvas.Width));
+                float x = _canvas.Width - Mathf.Round(Mathf.Max((0.5f * s) + 14f, 0.30f * _canvas.Width));
                 return new Vector2(x, Mathf.Round(y));
             }
         }
@@ -384,8 +381,8 @@ namespace AF.UI
         private float BranchMinDp => _canvas.SafeTop + BranchTopDp;
 
         /// <summary>
-        /// Pone a TiTino colgado de <paramref name="branch"/> (la rama del inicio, <see cref="ProceduralArt.HomeBranch"/>; sin ella,
-        /// la de su rig) con <c>sloth_wake</c> (<paramref name="firstOpen"/>) o <c>sloth_idle</c>, al tamaño que cabe
+        /// Pone a TiTino colgado de <paramref name="branch"/> (la rama del inicio, <see cref="ProceduralArt.HomeBranch"/>, que entra
+        /// volteada desde el borde derecho; sin ella, la de su rig) con <c>sloth_wake</c> (<paramref name="firstOpen"/>) o <c>sloth_idle</c>, al tamaño que cabe
         /// (<see cref="SlothFitDp"/>). Sin piezas (<paramref name="art"/> null: <see cref="ProceduralArt.SlothRigArt()"/>) no crea
         /// nada, queda sin TiTino y devuelve false.
         /// </summary>
@@ -448,10 +445,7 @@ namespace AF.UI
 
             if (!_sceneBuilt)
             {
-                EnsureScene();
-                Layout();
-                _revealMs = _reduceMotion ? RevealMs : 0f;
-                SetReveal(_reduceMotion ? 1f : 0f);
+                PrepareWorld();
             }
             else if (_revealMs >= 0f && _revealMs < RevealMs)
             {
@@ -462,6 +456,24 @@ namespace AF.UI
             _clockMs += dtMs;
             Pulse();
             _sloth?.Tick(dtMs);
+        }
+
+        /// <summary>
+        /// Hace el mundo ya quitada la intro, con el velo aún opaco (la pantalla sigue siendo el último fotograma de la intro), para
+        /// que su coste no se coma el segundo de <c>sloth_wake</c>: GameBootstrap lo llama cuando va a esperar, antes de medir la
+        /// espera. Si no se llama, lo hace el primer <see cref="Tick"/> tras la intro. No hace nada con la intro a la vista ni dos veces.
+        /// </summary>
+        public void PrepareWorld()
+        {
+            if (_disposed || _sceneBuilt || IntroVisible)
+            {
+                return;
+            }
+
+            EnsureScene();
+            Layout();
+            _revealMs = _reduceMotion ? RevealMs : 0f;
+            SetReveal(_reduceMotion ? 1f : 0f);
         }
 
         /// <summary>Arranca la animación de la intro, con Reducir movimiento ya resuelto (no hace nada sin intro).</summary>
@@ -527,10 +539,12 @@ namespace AF.UI
             {
                 DestroyOwned(i);
             }
+
+            _emblem.Dispose();
         }
 
-        // Hace el mundo alrededor del emblema: sus texturas y sus imágenes, detrás del emblema (selva, palmeras y río a lo ancho)
-        // y delante (la orilla de acá, las luciérnagas, el follaje y el nombre). TiTino y su rama van también delante, al final.
+        // Hace el mundo alrededor del emblema: sus texturas y sus imágenes (el suelo, las luciérnagas, el matorral, el follaje y el
+        // nombre, bajo el velo) y la orilla de acá del emblema. TiTino y su rama van también bajo el velo, al final.
         private void EnsureScene()
         {
             if (_sceneBuilt)
@@ -539,30 +553,15 @@ namespace AF.UI
             }
 
             _sceneBuilt = true;
-            _back.gameObject.SetActive(true);
             _front.gameObject.SetActive(true);
-            Sprite palm = Own(4, BootSplashArt.Palm(160, 288), new Vector2(0.5f, 0f));
-            Sprite treeline = Own(5, BootSplashArt.Treeline(512, 64));
-            Sprite river = Own(6, BootSplashArt.RiverBand(192, 48, BrandIntro.WaterTop, BrandIntro.WaterMid, BrandIntro.WaterLow, BrandIntro.WaterWave, false, 1));
-            Sprite tint = Own(7, BootSplashArt.RiverBand(256, 48, BrandIntro.AcaiTop, BrandIntro.AcaiMid, BrandIntro.AcaiLow, BrandIntro.AcaiWave, true, 2));
-            Sprite ground = Own(8, BootSplashArt.Ground(128));
-            Sprite foliage = Own(9, BootSplashArt.CornerFoliage(FoliageDp, ProceduralArt.UiPxPerDp));
-            Sprite hedge = Own(11, BootSplashArt.Hedge(360f, HedgeDp, 2.5f));
+            _bank.enabled = true;
+            _emblem.EnsureBank();
+            Sprite ground = Own(1, BootSplashArt.Ground(128));
+            Sprite foliage = Own(2, BootSplashArt.CornerFoliage(FoliageDp, ProceduralArt.UiPxPerDp));
+            Sprite hedge = Own(3, BootSplashArt.Hedge(360f, HedgeDp, 2.5f));
             Sprite glow = _sprites[0]!;
 
-            Color far = BrandIntro.Jungle;
-            _palmLeft = UiBuilder.Image("PalmLeft", _back, palm, far);
-            _palmRight = UiBuilder.Image("PalmRight", _back, palm, far);
-            _farJungle = UiBuilder.Image("FarJungle", _back, treeline, far);
-            _farRiver = UiBuilder.Image("FarRiver", _back, river, Color.white);
-
-            // El teñido a lo ancho va entre el agua y el açaí del emblema: tapa el fundido del agua en el extremo derecho del
-            // emblema (que si no clarea el açaí) y queda bajo el frente del tinte. Entra con el mundo (su alfa, SetReveal).
-            _farTint = UiBuilder.Image("FarTint", _canvas.Root, tint, Color.white);
-            _farTint.transform.SetSiblingIndex(_tint.transform.GetSiblingIndex());
-
             _ground = UiBuilder.Image("Ground", _front, ground, Color.white);
-            _bankLine = UiBuilder.Image("BankLine", _front, null, BootSplashArt.BankLine);
             _fireflyGlow = new Image[FireflyX.Length];
             _fireflyCore = new Image[FireflyX.Length];
             for (int i = 0; i < FireflyX.Length; i++)
@@ -597,10 +596,10 @@ namespace AF.UI
             if (_wordmark.sprite == null || Mathf.Abs(scale - _wordmarkScale) > 0.01f)
             {
                 _wordmarkScale = scale;
-                DestroyOwned(10);
+                DestroyOwned(4);
                 int widthPx = Mathf.RoundToInt(box.width * scale);
                 Texture2D tex = BrandWordmark.Render(widthPx, WordmarkTop, WordmarkBottom, WordmarkShadow, 2.5f * scale, 1.6f * scale, out _wordmarkPadPx);
-                _wordmark.sprite = Own(10, tex);
+                _wordmark.sprite = Own(4, tex);
             }
 
             float k = 1f / _wordmarkScale;
@@ -612,42 +611,43 @@ namespace AF.UI
                 box.height + ((_wordmarkPadPx.y + _wordmarkPadPx.w) * k));
         }
 
-        // Composición en dp (origen arriba a la izquierda): el emblema de la intro en su sitio; detrás, la selva, las palmeras y el
-        // río a lo ancho; delante, la orilla de acá con el follaje, las luciérnagas y el nombre bajo el río; y TiTino colgado de
-        // la rama del inicio a la izquierda, sobre la selva.
+        // Composición en dp (origen arriba a la izquierda): el emblema de la intro en su sitio (rehecho si cambió la pantalla); bajo
+        // él, el suelo con el nombre pegado a la orilla, el matorral, el follaje de las esquinas y las luciérnagas; y TiTino colgado
+        // de la rama del inicio a la derecha, por encima del emblema.
         private void Layout()
         {
             float w = _canvas.Width;
             float h = _canvas.Height;
-            BrandIntro.PlaceEmblem(_halo.rectTransform, _jungle.rectTransform, _river.rectTransform, _tint.rectTransform, w, h);
+            if (!_emblem.Fits(w, h, _canvas.Scale))
+            {
+                BrandEmblemArt old = _emblem;
+                _emblem = BrandEmblemArt.Create(w, h, _canvas.Scale);
+                if (_sceneBuilt)
+                {
+                    _emblem.EnsureBank();
+                }
+
+                _intro?.Layout(_emblem);
+                old.Dispose();
+            }
+
+            BrandIntro.PlaceEmblem(_halo, _base, _acai, _impact, _stream, _cuia, _emblem);
             RectTransform halo = _halo.rectTransform;
             UiBuilder.Place(_veilHalo.rectTransform, halo.anchoredPosition.x, -halo.anchoredPosition.y, halo.sizeDelta.x, halo.sizeDelta.y);
-            _intro?.Layout(w, h);
-            BrandIntro.EmblemGeometry(w, h, out float left, out float e, out float riverTop);
-            float riverH = e * BrandIntro.RiverH;
-            float riverBottom = riverTop + riverH;
-            float jungleTop = riverTop - (e * BrandIntro.JungleH) + 2f;
+            _intro?.Layout(_emblem);
 
             if (_sceneBuilt)
             {
-                // Detrás: la selva sigue a lo ancho (apenas más baja que la del emblema, que manda), las palmeras asoman por los
-                // lados y el río blanco y el teñido van de borde a borde, con el frente del tinte en el mismo impacto.
-                float jungleH = e * BrandIntro.JungleH;
-                UiBuilder.Place(_farJungle!.rectTransform, 0f, jungleTop + (jungleH * 0.04f), w, (jungleH * 0.96f) + 2f);
-                float palmH = Mathf.Round(e * 0.50f);
-                float palmW = palmH * (160f / 288f);
-                PlacePalm(_palmLeft!, -palmW * 0.18f, riverTop + 2f, palmW * 0.82f, palmH * 0.82f, -1f);
-                PlacePalm(_palmRight!, w - (palmW * 0.62f), riverTop + 2f, palmW, palmH, 1f);
-                float impactX = left + (BrandIntro.ImpactU * e);
-                UiBuilder.Place(_farRiver!.rectTransform, 0f, riverTop, impactX + 24f, riverH);
-                float tintFrom = impactX + (0.16f * (1f - BrandIntro.ImpactU) * e); // pasado el frente del tinte del emblema
-                UiBuilder.Place(_farTint!.rectTransform, tintFrom, riverTop, w - tintFrom, riverH);
+                _emblem.Place(_bank, BrandEmblem.Bank);
+                float groundTop = EmblemBottomDp - 1f;
+                UiBuilder.Place(_ground!.rectTransform, 0f, groundTop, w, h - groundTop);
+                Rect box = WordmarkBox;
+                RenderWordmark(box);
 
-                // Delante: la orilla de acá, con su línea clara, del río al borde de abajo.
-                UiBuilder.Place(_ground!.rectTransform, 0f, riverBottom - 1f, w, h - riverBottom + 1f);
-                UiBuilder.Place(_bankLine!.rectTransform, 0f, riverBottom - 1f, w, BankLineDp);
-                UiBuilder.Place(_hedge!.rectTransform, 0f, h - HedgeDp, w, HedgeDp);
-                float fol = Mathf.Min(Mathf.Min(FoliageDp, w * 0.62f), h - WordmarkBox.yMax - 12f); // sin tocar el nombre
+                // El follaje de las esquinas, tan grande como deja el nombre, con el matorral a lo ancho del pie.
+                float fol = Mathf.Clamp(h - box.yMax - FoliageGapDp, 120f, Mathf.Min(FoliageDp, w * 0.64f));
+                float hedge = Mathf.Min(HedgeDp, fol * 0.5f);
+                UiBuilder.Place(_hedge!.rectTransform, 0f, h - hedge, w, hedge);
                 UiBuilder.Place(_foliageLeft!.rectTransform, -6f, h - fol + 4f, fol, fol);
                 RectTransform right = _foliageRight!.rectTransform; // la misma, volteada desde su centro
                 UiBuilder.Place(right, w + 6f - fol, h - fol + 4f, fol, fol);
@@ -657,12 +657,10 @@ namespace AF.UI
                 for (int i = 0; i < _fireflyGlow!.Length; i++)
                 {
                     float fx = FireflyX[i] * w;
-                    float fy = FireflyY[i] < 0f ? jungleTop + FireflyY[i] : riverBottom + (FireflyY[i] * (h - riverBottom));
+                    float fy = FireflyY[i] < 0f ? CanopyDp - FireflyY[i] : box.yMax + (FireflyY[i] * (h - box.yMax));
                     UiBuilder.Place(_fireflyGlow[i].rectTransform, fx - (FireflyGlowDp * 0.5f), fy - (FireflyGlowDp * 0.5f), FireflyGlowDp, FireflyGlowDp);
                     UiBuilder.Place(_fireflyCore![i].rectTransform, fx - (FireflyCoreDp * 0.5f), fy - (FireflyCoreDp * 0.5f), FireflyCoreDp, FireflyCoreDp);
                 }
-
-                RenderWordmark(WordmarkBox);
             }
 
             if (_sloth != null)
@@ -678,23 +676,15 @@ namespace AF.UI
                 _sloth.Place(anchor.x, anchor.y);
                 if (_branch != null)
                 {
-                    // La rama del inicio, desde el borde izquierdo, con su línea media en el agarre de TiTino.
+                    // La rama del inicio, volteada, desde el borde derecho, con su línea media en el agarre de TiTino.
                     float bw = ProceduralArt.HomeBranchWidthDp * BranchScale;
                     float bh = ProceduralArt.HomeBranchHeightDp * BranchScale;
-                    float line = ProceduralArt.HomeBranchLineAt(anchor.x / BranchScale) * BranchScale;
-                    UiBuilder.Place(_branch.rectTransform, 0f, anchor.y - line, bw, bh);
+                    float line = ProceduralArt.HomeBranchLineAt((w - anchor.x) / BranchScale) * BranchScale;
+                    RectTransform rt = _branch.rectTransform;
+                    UiBuilder.Place(rt, w, anchor.y - line, bw, bh);
+                    rt.localScale = new Vector3(-1f, 1f, 1f);
                 }
             }
-        }
-
-        // Una palmera con el pie en (x, yFoot) dp, de w × h dp; facing −1 la voltea.
-        private static void PlacePalm(Image palm, float x, float yFoot, float w, float h, float facing)
-        {
-            RectTransform rt = palm.rectTransform;
-            UiBuilder.Place(rt, x, yFoot - h, w, h);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(x + (w * 0.5f), -(yFoot - h));
-            rt.localScale = new Vector3(facing, 1f, 1f);
         }
 
         // Las luciérnagas laten despacio (quietas con Reducir movimiento). Sin asignaciones.
@@ -719,10 +709,7 @@ namespace AF.UI
         {
             _veil.alpha = 1f - alpha;
             _veil.gameObject.SetActive(alpha < 1f);
-            if (_farTint != null)
-            {
-                _farTint.color = new Color(1f, 1f, 1f, alpha);
-            }
+            _bank.color = new Color(1f, 1f, 1f, alpha);
         }
 
         private static float Ease(float t)

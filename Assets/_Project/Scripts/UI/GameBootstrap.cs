@@ -2353,6 +2353,8 @@ namespace AF.UI
             int hold = BootSplashTiming.HoldMs(firstOpen, wake, sinceStartup, (long)splash.SlothClockMs);
             if (hold > 0)
             {
+                splash.PrepareWorld(); // el mundo del arranque, antes de medir la espera: su coste no se come el segundo de TiTino
+
                 // Hasta que el gesto lleve su segundo a la vista (reloj de la pose, el que ve el jugador), con un tope de tiempo
                 // real por si los fotogramas van lentos.
                 double until = Time.realtimeSinceStartupAsDouble + ((hold + HoldGuardMs) / 1000.0);

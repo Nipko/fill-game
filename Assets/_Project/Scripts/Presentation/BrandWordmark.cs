@@ -8,15 +8,13 @@ namespace AF.Presentation
     /// El nombre del logo v2 (D-045, «El río que se tiñe»: Baloo 2 ExtraBold, convertida en trazados) para la pantalla de arranque
     /// (añadido de D-051, 2026-10-25). Los contornos los genera <c>docs/art/marca-oficial/v2/exportar.py --unity-wordmark</c> desde
     /// la misma fuente y con las mismas cifras que el logo (<see cref="Points"/>, en <c>BrandWordmark.Generated.cs</c>), y aquí se
-    /// rasterizan al tamaño real en píxeles de la pantalla (relleno de regla no nula, 5 submuestras por fila y cobertura exacta en
-    /// horizontal): nítido a cualquier densidad, sin PNG ni catálogo de arte. Es un dibujo, no un texto (06 §2.1, regla 3).
+    /// rasterizan al tamaño real en píxeles de la pantalla (<c>VectorFill</c>): nítido a cualquier densidad, sin PNG ni catálogo
+    /// de arte. Es un dibujo, no un texto (06 §2.1, regla 3).
     /// </summary>
     public static partial class BrandWordmark
     {
         /// <summary>Alto / ancho de la caja de los contornos.</summary>
         public const float Aspect = Height / Width;
-
-        private const int SubRows = 5;
 
         /// <summary>
         /// Rasteriza el nombre con <paramref name="widthPx"/> px de ancho de caja: relleno con degradado vertical de
@@ -89,163 +87,7 @@ namespace AF.Presentation
         /// </summary>
         internal static float[] Coverage(int w, int h, float s, float ox, float oy)
         {
-            // Las aristas no horizontales, ordenadas por su y más alta (la menor).
-            int n = Points.Length / 2;
-            var ex0 = new float[n];
-            var ey0 = new float[n];
-            var ex1 = new float[n];
-            var ey1 = new float[n];
-            var dir = new int[n];
-            int count = 0;
-            int start = 0;
-            for (int c = 0; c < ContourEnds.Length; c++)
-            {
-                int end = ContourEnds[c];
-                for (int i = start; i < end; i++)
-                {
-                    int j = i + 1 < end ? i + 1 : start;
-                    float ax = ox + (Points[2 * i] * s);
-                    float ay = oy + (Points[(2 * i) + 1] * s);
-                    float bx = ox + (Points[2 * j] * s);
-                    float by = oy + (Points[(2 * j) + 1] * s);
-                    if (ay == by)
-                    {
-                        continue;
-                    }
-
-                    // Siempre de arriba (y menor) abajo, con el sentido original en dir.
-                    bool down = by > ay;
-                    ex0[count] = down ? ax : bx;
-                    ey0[count] = down ? ay : by;
-                    ex1[count] = down ? bx : ax;
-                    ey1[count] = down ? by : ay;
-                    dir[count] = down ? 1 : -1;
-                    count++;
-                }
-
-                start = end;
-            }
-
-            var order = new int[count];
-            var keys = new float[count];
-            for (int i = 0; i < count; i++)
-            {
-                order[i] = i;
-                keys[i] = ey0[i];
-            }
-
-            Array.Sort(keys, order);
-
-            var mask = new float[w * h];
-            var acc = new float[w + 1];
-            var active = new int[count];
-            var xs = new float[count];
-            var ds = new int[count];
-            int activeCount = 0;
-            int next = 0;
-            const float weight = 1f / SubRows;
-            for (int row = 0; row < h; row++)
-            {
-                Array.Clear(acc, 0, acc.Length);
-                bool any = false;
-                for (int sub = 0; sub < SubRows; sub++)
-                {
-                    float y = row + ((sub + 0.5f) / SubRows);
-                    while (next < count && ey0[order[next]] <= y)
-                    {
-                        active[activeCount++] = order[next++];
-                    }
-
-                    int hits = 0;
-                    for (int a = 0; a < activeCount; a++)
-                    {
-                        int e = active[a];
-                        if (ey1[e] <= y)
-                        {
-                            active[a--] = active[--activeCount];
-                            continue;
-                        }
-
-                        if (ey0[e] > y)
-                        {
-                            continue;
-                        }
-
-                        float x = ex0[e] + ((y - ey0[e]) * (ex1[e] - ex0[e]) / (ey1[e] - ey0[e]));
-                        // Inserción ordenada por x.
-                        int k = hits++;
-                        while (k > 0 && xs[k - 1] > x)
-                        {
-                            xs[k] = xs[k - 1];
-                            ds[k] = ds[k - 1];
-                            k--;
-                        }
-
-                        xs[k] = x;
-                        ds[k] = dir[e];
-                    }
-
-                    int winding = 0;
-                    float spanStart = 0f;
-                    for (int k = 0; k < hits; k++)
-                    {
-                        int before = winding;
-                        winding += ds[k];
-                        if (before == 0 && winding != 0)
-                        {
-                            spanStart = xs[k];
-                        }
-                        else if (before != 0 && winding == 0)
-                        {
-                            AddSpan(acc, w, spanStart, xs[k], weight);
-                            any = true;
-                        }
-                    }
-                }
-
-                if (!any)
-                {
-                    continue;
-                }
-
-                int baseIndex = row * w;
-                for (int x = 0; x < w; x++)
-                {
-                    mask[baseIndex + x] = Mathf.Clamp01(acc[x]);
-                }
-            }
-
-            return mask;
-        }
-
-        // Suma weight × (lo que cubre [a, b) de cada píxel) a acc.
-        private static void AddSpan(float[] acc, int w, float a, float b, float weight)
-        {
-            a = Mathf.Clamp(a, 0f, w);
-            b = Mathf.Clamp(b, 0f, w);
-            if (b <= a)
-            {
-                return;
-            }
-
-            int ia = (int)a;
-            int ib = (int)b;
-            if (ia == ib)
-            {
-                acc[ia] += (b - a) * weight;
-                return;
-            }
-
-            acc[ia] += (ia + 1 - a) * weight;
-            for (int i = ia + 1; i < ib; i++)
-            {
-                acc[i] += weight;
-            }
-
-            if (ib < w)
-            {
-                acc[ib] += (b - ib) * weight;
-            }
+            return VectorFill.Coverage(Points, ContourEnds, 0, ContourEnds.Length, s, ox, oy, w, h);
         }
 
         // La máscara desplazada dy filas hacia abajo.

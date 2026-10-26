@@ -122,13 +122,15 @@ namespace AF.Tests.PlayMode
             Assert.That(splash.Sloth!.Pose, Is.EqualTo(SlothPoseId.Wake), "primera apertura: sloth_wake");
             Assert.That(splash.Sloth.Size, Is.InRange(140f, 180f), "propuesta de TiTino c.4: 140-180 dp en el arranque");
 
-            // Cuelga de la rama del inicio (D-050), que entra desde el borde izquierdo como allí; la rama gris de su rig no sale.
+            // Cuelga de la rama del inicio (D-050), volteada desde el borde derecho, sobre el açaí y lejos de la cuia; la rama gris
+            // de su rig no sale.
             Vector2 anchor = splash.BranchAnchor;
             Assert.That(splash.Branch, Is.Not.Null, "la rama del inicio, con sus hojas");
             Assert.That(splash.Branch!.sprite, Is.SameAs(_art.HomeBranch));
-            Assert.That(splash.Branch.rectTransform.anchoredPosition.x, Is.EqualTo(0f), "desde el borde izquierdo, como en el inicio");
+            Assert.That(splash.Branch.rectTransform.anchoredPosition.x, Is.EqualTo(360f), "desde el borde derecho");
+            Assert.That(splash.Branch.rectTransform.localScale.x, Is.EqualTo(-1f), "volteada");
             Assert.That(splash.Sloth.BranchImage.enabled, Is.False, "la rama del rig no se pinta");
-            Assert.That(anchor.x, Is.LessThan(180f), "TiTino, a la izquierda, como en el inicio");
+            Assert.That(anchor.x, Is.GreaterThan(180f), "TiTino, a la derecha (la cuia va a la izquierda)");
             Assert.That(splash.Branch.transform.GetSiblingIndex(), Is.LessThan(splash.Sloth.Root.GetSiblingIndex()), "la rama, detrás de TiTino");
 
             splash.Tick(400f);
@@ -184,8 +186,10 @@ namespace AF.Tests.PlayMode
                 Assert.That(splash.Sloth.Size, Is.EqualTo(splash.SlothFitDp).Within(0.01f));
 
                 // Todo el gesto (sloth_wake y su reposo, o sloth_idle con un giro de cabeza): el fondo de TiTino, por encima de la
-                // copa de la selva con aire, y la rama, dentro de la pantalla por arriba.
+                // emblema con aire (nunca tapa la cuia, el chorro ni las palmeras), y la rama, dentro de la pantalla por arriba.
                 float canopy = splash.CanopyDp;
+                Assert.That(canopy, Is.LessThanOrEqualTo(splash.CuiaRect.yMin));
+                Assert.That(canopy, Is.LessThanOrEqualTo(splash.StreamRect.yMin));
                 var rects = new List<Rect>();
                 float lowest = float.MinValue;
                 for (float ms = 0f; ms <= 12000f; ms += 100f)
@@ -200,7 +204,7 @@ namespace AF.Tests.PlayMode
                     }
                 }
 
-                Assert.That(lowest, Is.LessThanOrEqualTo(canopy - 12f), "TiTino cuelga sobre la selva, sin montarse en ella (" + screen + ", " + (firstOpen ? "wake" : "idle") + ")");
+                Assert.That(lowest, Is.LessThanOrEqualTo(canopy - 12f), "TiTino cuelga sobre el emblema, sin tapar la cuia (" + screen + ", " + (firstOpen ? "wake" : "idle") + ")");
                 Assert.That(-splash.Branch!.rectTransform.anchoredPosition.y, Is.GreaterThanOrEqualTo(0f), "la rama entera en la pantalla");
                 Assert.That(splash.BranchAnchor.y, Is.GreaterThanOrEqualTo(32f + 36f - 0.5f), "la rama, bajo la zona segura");
                 splash.Dispose();
@@ -226,13 +230,14 @@ namespace AF.Tests.PlayMode
             Assert.That(wordmark, Is.Not.Null);
             Assert.That(wordmark.sprite, Is.Not.Null, "el nombre, rasterizado por código (BrandWordmark)");
             Rect box = splash.WordmarkBox;
-            Assert.That(box.width, Is.EqualTo(BootSplash.WordmarkMaxDp).Within(0.01f));
+            Assert.That(box.width, Is.EqualTo(screen == 640 ? BootSplash.WordmarkMaxShortDp : BootSplash.WordmarkMaxDp).Within(0.01f));
             Assert.That(box.height, Is.EqualTo(box.width * BrandWordmark.Aspect).Within(0.01f));
             Assert.That(box.center.x, Is.EqualTo(180f).Within(0.01f), "centrado");
-            Assert.That(box.yMin, Is.GreaterThan(splash.RiverBottomDp + 16f), "bajo el río");
-            Assert.That(box.yMax, Is.LessThan(h - 176f), "por encima del follaje de las esquinas");
+            Assert.That(box.yMin, Is.InRange(splash.EmblemBottomDp, splash.EmblemBottomDp + 12f), "pegado al emblema, como en el logo vertical");
+            Assert.That(box.yMax, Is.LessThan(h - 120f), "sitio para el follaje de las esquinas");
             Assert.That(wordmark.sprite.texture.width, Is.GreaterThanOrEqualTo(Mathf.RoundToInt(box.width * 3f)), "a la escala de la pantalla (3 px por dp): nítido");
-            Assert.That(splash.CanopyDp, Is.LessThan(splash.RiverBottomDp));
+            Assert.That(splash.CanopyDp, Is.LessThan(splash.CuiaRect.yMax));
+            Assert.That(splash.CuiaRect.xMax, Is.LessThan(splash.BranchAnchor.x), "la cuia a la izquierda, TiTino a la derecha");
 
             // Sin TiTino desde el principio (BootSplash.SlothExpected = false), o porque no hay su arte: lo mismo, sin TiTino ni rama.
             var alone = new BootSplash(_host!.transform, withSloth: false);

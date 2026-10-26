@@ -11,7 +11,7 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Capturas de revisión de la intro de la marca (D-051, punto 3; <c>[Explicit]</c>, no forman parte de la suite), con la
     /// pantalla simulada de <see cref="SnapshotKit"/> a 360 × 780 dp (1080 × 2340 px) y en 16:9 (sufijo <c>_16x9</c>):
-    /// <c>d051_01_inicio</c> (el primer fotograma: la gota sobre el río), <c>d051_02_mitad</c> (a mitad: el açaí avanza río
+    /// <c>d051_01_inicio</c> (el primer fotograma: la cuia inclinada, con el chorro aún en la boca), <c>d051_02_mitad</c> (a mitad: el açaí avanza río
     /// abajo desde el impacto, con las ondas) y <c>d051_03_final</c> (el último fotograma, el estable, que es también el de
     /// Reducir movimiento). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.BrandIntroSnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/es-419/</c>.
