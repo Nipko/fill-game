@@ -225,7 +225,7 @@ namespace AF.UI
             DailyPool? pool = _service.Pool; // se lee aquí la primera vez (memoria, 2026-10-26: no en el arranque)
             if (pool == null)
             {
-                return false; // pool no válido: la tarjeta se oculta en el siguiente recálculo (HasPool pasa a false)
+                return false; // pool no válido (D-008): HasPool pasa a false y GameBootstrap.OpenDaily recalcula la tarjeta, que se oculta
             }
 
             DailyPlayInProgress play = _service.Start(maxLevel);

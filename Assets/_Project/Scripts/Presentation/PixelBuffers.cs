@@ -12,7 +12,9 @@ namespace AF.Presentation
     /// unos 110 MB de lienzos que se tiran en cuanto suben a la GPU; con IL2CPP el heap gestionado crece hasta el pico y no se
     /// devuelve al sistema. Aquí los lienzos de al menos <see cref="MinPooledPixels"/> píxeles alquilan un búfer que, al
     /// soltarse (<see cref="PixelCanvas.Release"/>, que hacen <see cref="PixelCanvas.ToTexture"/> y <c>MakeSprite</c>), sirve al
-    /// siguiente: el pico baja a lo que miden a la vez los lienzos vivos. Seguro entre hilos (los miquitos se pintan en otro).
+    /// siguiente: el pico baja a lo que miden a la vez los lienzos vivos. Solo se guardan durante el arranque
+    /// (<see cref="BeginPooling"/>-<see cref="EndPooling"/>, en <c>GameBootstrap</c>): después ningún búfer queda vivo. Seguro entre
+    /// hilos (los miquitos se pintan en otro).
     /// </summary>
     public static class PixelBuffers
     {
@@ -26,6 +28,27 @@ namespace AF.Presentation
         public const int MaxFree = 4;
 
         private static readonly object s_lock = new object();
+        private static volatile bool s_pooling = true;
+
+        /// <summary>
+        /// Se guardan búferes al soltarlos (solo durante el arranque: <see cref="BeginPooling"/> y <see cref="EndPooling"/>). Fuera de
+        /// él, <see cref="Return"/> no guarda nada: los lienzos grandes de después (modales, TiTino, el banner del mundo) se tiran como
+        /// siempre y su memoria vuelve al heap, en vez de quedarse un búfer vivo toda la sesión.
+        /// </summary>
+        public static bool Pooling => s_pooling;
+
+        /// <summary>Empieza a guardar búferes (al empezar el arranque, antes de la escena de la marca).</summary>
+        public static void BeginPooling()
+        {
+            s_pooling = true;
+        }
+
+        /// <summary>Deja de guardar búferes y suelta los libres (al acabar el arranque).</summary>
+        public static void EndPooling()
+        {
+            s_pooling = false;
+            Trim();
+        }
         private static readonly List<Color[]> s_free = new List<Color[]>(MaxFree + 1);
         private static long s_canvasBytes;
         private static long s_newBytes;
@@ -105,7 +128,7 @@ namespace AF.Presentation
         /// <summary>Guarda <paramref name="buffer"/> para otro lienzo (los pequeños no se guardan).</summary>
         internal static void Return(Color[] buffer)
         {
-            if (buffer == null || buffer.Length < MinPooledPixels)
+            if (buffer == null || buffer.Length < MinPooledPixels || !s_pooling)
             {
                 return;
             }
@@ -157,8 +180,8 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Suelta los búferes libres (al acabar el arranque, y al quitar la escena de la marca): su memoria queda para el resto del
-        /// juego en lugar de esperar a un lienzo que quizá no llegue.
+        /// Suelta los búferes libres y el de subida: su memoria queda para el resto del juego en lugar de esperar a un lienzo que quizá
+        /// no llegue (lo hace <see cref="EndPooling"/> al acabar el arranque).
         /// </summary>
         public static void Trim()
         {
@@ -173,6 +196,7 @@ namespace AF.Presentation
         /// <summary>Pone a cero las cuentas y suelta los libres (tests).</summary>
         internal static void ResetForTests()
         {
+            s_pooling = true;
             Trim();
             Interlocked.Exchange(ref s_canvasBytes, 0);
             Interlocked.Exchange(ref s_newBytes, 0);

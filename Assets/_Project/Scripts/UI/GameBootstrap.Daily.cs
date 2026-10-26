@@ -389,6 +389,11 @@ namespace AF.UI
                     }
 
                     _lobby.Show(_app.Screen);
+
+                    // D-008: un pool que resulta no válido al leerlo aquí (perezoso desde 2026-10-26; en release el CI lo valida antes)
+                    // deja HasPool en false: la tarjeta se recalcula y queda oculta, como si el Reto no estuviera en el build.
+                    _dailyCardShown = false;
+                    RefreshDailyCard();
                     return false;
                 case DailyCardState.Sealed:
                 case DailyCardState.PendingValidation:

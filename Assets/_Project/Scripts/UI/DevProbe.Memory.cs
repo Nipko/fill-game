@@ -44,7 +44,7 @@ namespace AF.UI
         private static ProfilerRecorder s_texRecorder;
         private static ProfilerRecorder s_texCountRecorder;
         private static bool s_memRecorders;
-        private static MemSample s_memPeak;
+        private static MemSample s_memPeak = MemSample.Missing;
         private static int s_memLastLevel = -1;
 
         /// <summary>Última línea <c>AF_PERF mem</c> escrita en el proceso (tests; null sin sonda).</summary>
@@ -126,7 +126,7 @@ namespace AF.UI
         /// <summary>Olvida los picos y el último nivel medido (tests y una escena nueva de los tests).</summary>
         internal static void ResetMem()
         {
-            s_memPeak = default;
+            s_memPeak = MemSample.Missing;
             s_memLastLevel = -1;
             LastMemLine = null;
         }
@@ -268,6 +268,9 @@ namespace AF.UI
 
         /// <summary>Texturas cargadas («Texture Count»; −1 si no existe).</summary>
         public long TextureCount { get; }
+
+        /// <summary>Sin ninguna muestra: todos los campos a −1 (un contador que nunca existe sale como <c>null</c> en el pico).</summary>
+        public static readonly MemSample Missing = new MemSample(-1, -1, -1, -1, -1, -1, -1, -1);
 
         /// <summary>El máximo campo a campo.</summary>
         public static MemSample Max(in MemSample a, in MemSample b)

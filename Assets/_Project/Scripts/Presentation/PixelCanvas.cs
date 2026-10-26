@@ -32,12 +32,22 @@ namespace AF.Presentation
 
         public Color Get(int x, int y)
         {
+            CheckBounds(x, y);
             return _px[(y * Width) + x];
         }
 
         public void Set(int x, int y, Color c)
         {
+            CheckBounds(x, y);
             _px[(y * Width) + x] = c;
+        }
+
+        // El búfer alquilado puede ser más largo que el lienzo: fuera del lienzo ya no siempre salta IndexOutOfRange. En el Editor y
+        // en desarrollo (UNITY_ASSERTIONS) se avisa; en release no cuesta nada.
+        [System.Diagnostics.Conditional("UNITY_ASSERTIONS")]
+        private void CheckBounds(int x, int y)
+        {
+            Debug.Assert((uint)x < (uint)Width && (uint)y < (uint)Height, "PixelCanvas: píxel fuera del lienzo");
         }
 
         /// <summary>Compone <paramref name="c"/> sobre el píxel con cobertura <paramref name="coverage"/> (0..1).</summary>

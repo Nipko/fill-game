@@ -135,6 +135,47 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
+        /// Pool perezoso roto (D-008; decisión del integrador del 2026-10-26: se descubre al abrir el Reto, en release lo valida el
+        /// CI): antes de tocar, la tarjeta se ve y el Reto está en el build; al tocarla no se abre, y tras un tick la tarjeta queda
+        /// oculta, sin Reto en el build ni en Sin canoas (y, como la presentación del 7 depende de <c>DailyInBuild</c>, sin ella).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator BrokenScenePool_FoundWhenTheDailyOpens_HidesTheCard()
+        {
+            var clock = new ManualClock(Utc(Monday), Bogota);
+            LaunchOptions.ClockOverride = clock;
+            GameBootstrap.DailyStoreOverride = new InMemoryDailyChallengeStore();
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(120)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.SetUpDaily(), Is.True);
+            boot.DailyRunner!.enabled = false;
+            TextAsset? scenePool = boot.DailyPoolAsset;
+            try
+            {
+                boot.ConfigureDailyPool(new TextAsset("{\"pack_schema\":2,\"kind\":\"daily\",\"levels\":[]"));
+                Assert.That(boot.RefreshDailyCard(), Is.EqualTo(DailyCardState.Play));
+                DailyChallengeCard card = boot.DailyCard!;
+                Assert.That(card.Visible, Is.True, "antes de tocarla, el pool aún no se ha leído");
+                Assert.That(boot.DailyInBuild, Is.True);
+
+                LogAssert.Expect(LogType.Error, new Regex("pool del Reto del río no válido"));
+                Assert.That(boot.PressDailyCard(), Is.False, "el pool no se puede leer: no se abre");
+                boot.TickDaily(PlayModeHelpers.FrameMs);
+
+                Assert.That(card.State, Is.EqualTo(DailyCardState.Hidden));
+                Assert.That(card.Visible, Is.False, "D-008: oculta, no muda");
+                Assert.That(boot.DailyInBuild, Is.False, "ni la presentación del 7 (GameScreen la pide con DailyInBuild)");
+                Assert.That(boot.NoCanoesDailyAvailable, Is.False, "ni la línea de Sin canoas");
+                Assert.That(boot.DailyScreen!.IsOpen, Is.False);
+                Assert.That(boot.Lobby!.Visible, Is.True, "el inicio vuelve");
+            }
+            finally
+            {
+                boot.ConfigureDailyPool(scenePool);
+            }
+        }
+
+        /// <summary>
         /// Cifras del Editor por momento (informe <c>docs/dev/memoria-2026-10-26.md</c>): una línea <c>AF_MEMTEST</c> por momento con
         /// la muestra tal cual y tras recoger la basura (lo vivo), y las líneas <c>AF_PERF mem</c> de la sonda. Manual: se lanza sola
         /// (<c>--filter AF.Tests.PlayMode.MemoryProbeTests.Measure_Moments</c>) en un Editor recién abierto, antes y después de cada

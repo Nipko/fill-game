@@ -201,6 +201,8 @@ namespace AF.LiveOps
 
         /// <summary>
         /// Tablero de hoy: el de la partida en curso de hoy si la hay (R-Q4), si no el del slot de hoy. Null si el pool no lo trae.
+        /// Lee el pool (<see cref="Pool"/>): entero la primera vez y otra vez tras <see cref="ReleasePool"/>. No se usa desde el inicio
+        /// ni desde la tarjeta (memoria, 2026-10-26: allí basta <see cref="TodaySlot"/>, que no lo lee sin sustitución).
         /// </summary>
         public LevelDefinition? TodayBoard(int maxLevel)
         {

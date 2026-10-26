@@ -104,6 +104,58 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void PixelCanvas_OnAReusedPaintedBuffer_PaintsTheSameAsOnANewOne()
+        {
+            PixelBuffers.ResetForTests();
+            var old = new PixelCanvas(400, 400);
+            old.Fill(new Color(0.9f, 0.1f, 0.3f, 1f));
+            old.Release();
+
+            var reused = new PixelCanvas(300, 300);
+            Assert.That(PixelBuffers.Reused, Is.EqualTo(1), "sale del búfer pintado de 400 × 400");
+            Paint(reused);
+            Color32[] got = reused.ToColor32();
+
+            PixelBuffers.EndPooling(); // sin búferes libres: el siguiente es nuevo
+            var fresh = new PixelCanvas(300, 300);
+            Assert.That(PixelBuffers.Reused, Is.EqualTo(1));
+            Paint(fresh);
+            Assert.That(got, Is.EqualTo(fresh.ToColor32()), "los mismos píxeles: nada del lienzo anterior se cuela");
+
+            Texture2D tex = reused.ToTexture("test_reused");
+            try
+            {
+                Assert.That(tex.width, Is.EqualTo(300));
+                Assert.That(tex.height, Is.EqualTo(300));
+                Assert.That(tex.isReadable, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [Test]
+        public void PixelBuffers_AfterEndPooling_KeepNothing()
+        {
+            PixelBuffers.ResetForTests();
+            PixelBuffers.EndPooling();
+            Assert.That(PixelBuffers.Pooling, Is.False);
+            new PixelCanvas(400, 400).Release();
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0), "después del arranque ningún búfer queda vivo");
+            PixelBuffers.BeginPooling();
+            new PixelCanvas(400, 400).Release();
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(400L * 400L * 16L));
+        }
+
+        private static void Paint(PixelCanvas pc)
+        {
+            pc.FillRoundedRect(10f, 20f, 280f, 250f, 18f, new Color(0.2f, 0.6f, 0.4f, 0.7f));
+            pc.FillCircle(150f, 150f, 60.5f, new Color(1f, 0.8f, 0.1f, 0.5f));
+            pc.FillEllipseSoft(90f, 200f, 40f, 25f, 6f, new Color(0f, 0f, 0f, 0.4f));
+        }
+
+        [Test]
         public void PixelBuffers_KeepAtMostMaxFree_DroppingTheSmallest()
         {
             PixelBuffers.ResetForTests();
