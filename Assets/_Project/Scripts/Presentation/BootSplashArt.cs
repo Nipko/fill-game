@@ -36,9 +36,9 @@ namespace AF.Presentation
             Color backLight = Palette.Hex(0x0F3D2E);
             Color frontDark = Palette.Hex(0x0B3427);
             Color frontLight = Palette.Hex(0x1D6343);
-            CornerLeaf(pc, k, widthDp, mirror, 0.02f * s, 0f, 80f, 0.95f * s, 0.20f * s, 0.10f, LeafShape.Lanceolate, backDark, backLight, 901);
+            CornerLeaf(pc, k, widthDp, mirror, 0.02f * s, 0f, 80f, 0.95f * s, 0.16f * s, 0.10f, LeafShape.Ovate, backDark, backLight, 901);
             CornerLeaf(pc, k, widthDp, mirror, 0.10f * s, 0f, 52f, 0.86f * s, 0.24f * s, -0.12f, LeafShape.Ovate, backDark, backLight, 902);
-            CornerLeaf(pc, k, widthDp, mirror, 0.04f * s, 0f, 24f, 0.80f * s, 0.20f * s, 0.10f, LeafShape.Lanceolate, backDark, backLight, 903);
+            CornerLeaf(pc, k, widthDp, mirror, 0.04f * s, 0f, 24f, 0.80f * s, 0.16f * s, 0.10f, LeafShape.Ovate, backDark, backLight, 903);
             CornerLeaf(pc, k, widthDp, mirror, 0.00f, 0f, 66f, 0.70f * s, 0.30f * s, -0.10f, LeafShape.Ovate, frontDark, frontLight, 911);
             CornerLeaf(pc, k, widthDp, mirror, 0.06f * s, 0f, 38f, 0.66f * s, 0.30f * s, 0.12f, LeafShape.Ovate, frontDark, frontLight, 912);
             CornerLeaf(pc, k, widthDp, mirror, 0.00f, 0.02f * s, 12f, 0.56f * s, 0.24f * s, -0.08f, LeafShape.Ovate, frontDark, frontLight, 913);
@@ -68,13 +68,13 @@ namespace AF.Presentation
                 float jitter = ArtNoise.Hash(i, 3, 917) - 0.5f;
                 float deg = 90f + (jitter * 70f) + ((u - 0.5f) * 30f);
                 float len = heightDp * (0.62f + (0.38f * ArtNoise.Hash(i, 5, 919)));
-                float wid = len * (0.30f + (0.10f * ArtNoise.Hash(i, 7, 921)));
-                LeafShape shape = (i % 3) == 1 ? LeafShape.Ovate : LeafShape.Lanceolate;
-                Leaf(pc, k, (u * widthDp) + (jitter * 8f), -2f, deg, len, wid, jitter * 0.3f, shape, dark, light, 930 + i);
+                float wid = len * ((i % 3) == 1 ? 0.30f : 0.22f) * (1f + (0.33f * ArtNoise.Hash(i, 7, 921)));
+                Leaf(pc, k, (u * widthDp) + (jitter * 8f), -2f, deg, len, wid, jitter * 0.3f, LeafShape.Ovate, dark, light, 930 + i);
             }
         }
 
-        // Una hoja desde (x, y) dp, con el ángulo deg (0 = derecha, 90 = arriba), largo y ancho en dp.
+        // Una hoja desde (x, y) dp. Solo ovadas: las lanceoladas de ProceduralArt.DrawLeaf dan NaN en la punta (el seno de π es un
+        // negativo diminuto) y ese NaN borra una línea de lo pintado antes en la misma textura., con el ángulo deg (0 = derecha, 90 = arriba), largo y ancho en dp.
         private static void Leaf(PixelCanvas pc, float k, float x, float y, float deg, float length, float width, float bend, LeafShape shape, Color dark, Color light, int seed)
         {
             float a = deg * Mathf.Deg2Rad;
