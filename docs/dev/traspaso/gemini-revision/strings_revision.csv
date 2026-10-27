@@ -533,7 +533,7 @@ world_w02_country,Brasil (Pará),Brazil (Pará),Brasil (Pará),revisado_nativo,r
 world_w02_name,Tapajós,Tapajós,Tapajós,revisado_nativo,revisado_nativo
 world_w02_river,Tapajós,Tapajós,Tapajós,revisado_nativo,revisado_nativo
 world_w03_country,Brasil (Amazonas),Brazil (Amazonas),Brasil (Amazonas),revisado_nativo,revisado_nativo
-world_w03_name,Manaos,Manaos,Manaos,revisado_nativo,revisado_nativo
+world_w03_name,Manaos,Manaus,Manaus,revisado_nativo,revisado_nativo
 world_w03_river,Negro + Solimões,Negro + Solimões,Negro + Solimões,revisado_nativo,revisado_nativo
 world_w04_country,Colombia,Colombia,Colômbia,revisado_nativo,revisado_nativo
 world_w04_name,Trapecio,Amazon Trapeze,Trapézio,revisado_nativo,revisado_nativo
@@ -557,7 +557,7 @@ world_w10_country,Venezuela / Brasil,Venezuela / Brazil,Venezuela / Brasil,revis
 world_w10_name,Alto Negro,Alto Negro,Alto Negro,revisado_nativo,revisado_nativo
 world_w10_river,"Negro, Casiquiare","Negro, Casiquiare","Negro, Casiquiare",revisado_nativo,revisado_nativo
 world_w11_country,Guyana / Surinam / Guayana Francesa,Guyana / Suriname / French Guiana,Guiana / Suriname / Guiana Francesa,revisado_nativo,revisado_nativo
-world_w11_name,Escudo de Guayana,Escudo de Guayana,Escudo de Guayana,revisado_nativo,revisado_nativo
+world_w11_name,Escudo de Guayana,Guiana Shield,Escudo das Guianas,revisado_nativo,revisado_nativo
 world_w11_river,"Takutu / Branco, Maroni","Takutu / Branco, Maroni","Takutu / Branco, Maroni",revisado_nativo,revisado_nativo
 world_w12_country,Venezuela / Colombia,Venezuela / Colombia,Venezuela / Colômbia,revisado_nativo,revisado_nativo
 world_w12_name,Invitados del Orinoco,Orinoco Neighbors,Vizinhos do Orinoco,revisado_nativo,revisado_nativo
