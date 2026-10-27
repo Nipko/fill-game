@@ -325,5 +325,77 @@ namespace AF.LiveOps.Tests
             Assert.That(board.Me.Rank, Is.Not.Null, "con 40 puntos entra en el top");
             Assert.That(board.Top.Count, Is.EqualTo(100));
         }
+
+        [Test]
+        public void Avatar_IsSentOnce_KeptOfflineAndOn404_AndDroppedOn400()
+        {
+            LeagueService service = Service();
+            var rejected = new List<int>();
+            service.AvatarRejected += i => rejected.Add(i);
+
+            Assert.That(service.SyncAvatar(7), Is.True);
+            Assert.That(_api.AvatarCalls, Is.EqualTo(1));
+            Assert.That(_api.MyAvatar, Is.EqualTo(7));
+            Assert.That(service.Record.AvatarSent, Is.EqualTo(7));
+            Assert.That(service.Record.AvatarPending, Is.Null);
+            Assert.That(service.SyncAvatar(7), Is.False, "el mismo índice ya confirmado no se vuelve a enviar");
+            Assert.That(_api.AvatarCalls, Is.EqualTo(1));
+
+            _api.Offline = true;
+            Assert.That(service.SyncAvatar(3), Is.True);
+            Assert.That(service.Record.AvatarPending, Is.EqualTo(3), "sin red: pendiente para la siguiente apertura");
+            _api.Offline = false;
+            _api.AvatarFailWith = LeagueFailure.Server; // un 404 de ruta o un 429
+            Assert.That(service.FlushAvatar(), Is.True);
+            Assert.That(service.Record.AvatarPending, Is.EqualTo(3));
+            Assert.That(rejected, Is.Empty);
+
+            _api.AvatarFailWith = LeagueFailure.Rejected; // 400
+            Assert.That(service.FlushAvatar(), Is.True);
+            Assert.That(service.Record.AvatarPending, Is.Null, "un índice que el servidor no admite se descarta");
+            Assert.That(rejected, Is.EqualTo(new[] { 3 }));
+            Assert.That(service.Record.AvatarSent, Is.EqualTo(7));
+
+            _api.AvatarFailWith = null;
+            Assert.That(service.SyncAvatar(3), Is.True);
+            Assert.That(service.Record.AvatarSent, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Avatar_WaitsForTheLeague_AndSurvivesARestart()
+        {
+            _allowed = false;
+            LeagueService service = Service();
+            Assert.That(service.SyncAvatar(12), Is.True);
+            Assert.That(_api.AvatarCalls, Is.EqualTo(0), "sin Liga activa, solo se apunta");
+            LeagueRecord back = LeagueRecordJson.Read(_store.LastJson);
+            Assert.That(back.AvatarPending, Is.EqualTo(12), "league.avatar_pending va en el bloque del dispositivo");
+            Assert.That(back.IsEmpty, Is.False);
+
+            _allowed = true;
+            Assert.That(service.FlushAvatar(), Is.True);
+            Assert.That(LeagueRecordJson.Read(_store.LastJson).AvatarSent, Is.EqualTo(12));
+            Assert.That(service.SyncAvatar(-1), Is.False);
+            Assert.That(service.SyncAvatar(64), Is.False);
+        }
+
+        [Test]
+        public void Avatar_InTheBoard_RoundTripsInTheCache()
+        {
+            _api.MyAvatar = 5;
+            LeagueService service = Service();
+            Assert.That(service.RequestBoard(LeagueScope.Global, force: true), Is.True);
+            LeagueBoard board = service.Cached(LeagueScope.Global)!.Board;
+            Assert.That(board.Top[0].Avatar, Is.EqualTo(FakeLeagueApi.SampleAvatar(0)));
+            Assert.That(board.Top[4].Avatar, Is.Null, "sin avatar: el disco neutro");
+            Assert.That(board.Me.Avatar, Is.EqualTo(5));
+            LeagueRecord back = LeagueRecordJson.Read(_store.LastJson);
+            LeagueBoard cached = back.CacheGlobal!.Board;
+            Assert.That(cached.Top[0].Avatar, Is.EqualTo(board.Top[0].Avatar));
+            Assert.That(cached.Top[4].Avatar, Is.Null);
+            Assert.That(cached.Top[23].Avatar, Is.EqualTo(40), "un índice que el cliente no conoce se guarda tal cual (0-63)");
+            Assert.That(cached.Me.Avatar, Is.EqualTo(5));
+            Assert.That(LeagueRecordJson.Write(back), Is.EqualTo(_store.LastJson), "ida y vuelta exacta");
+        }
     }
 }

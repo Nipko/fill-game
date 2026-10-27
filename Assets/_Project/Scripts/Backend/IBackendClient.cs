@@ -45,6 +45,9 @@ namespace AF.Backend
 
         /// <summary><c>GET /v1/league?scope=</c> (<paramref name="scope"/>: <c>global</c> o <c>country</c>), con integridad.</summary>
         void GetLeagueBoard(string scope, Action<BackendResult<LeagueBoardResponseDto>> onDone);
+
+        /// <summary><c>POST /v1/league/avatar</c> (D-056; avatares.md §4.4), con integridad.</summary>
+        void SetLeagueAvatar(LeagueAvatarRequestDto request, Action<BackendResult<LeagueAvatarResponseDto>> onDone);
     }
 
     /// <summary>Una operación de la API v1 tal como la fija <c>infra/contracts/v1/index.json</c>.</summary>
@@ -72,8 +75,11 @@ namespace AF.Backend
         /// <summary><c>GET /v1/league?scope=global|country</c> (D-046; liga.md §3.1), con integridad.</summary>
         public static readonly BackendOperation LeagueBoard = new BackendOperation("leagueBoard", "GET", "/v1/league", true);
 
+        /// <summary><c>POST /v1/league/avatar</c> (D-056; avatares.md §4.4), con integridad.</summary>
+        public static readonly BackendOperation LeagueAvatar = new BackendOperation("leagueAvatar", "POST", "/v1/league/avatar", true);
+
         /// <summary>Las que usa la app (todas con <c>auth: firebase</c>).</summary>
-        public static readonly BackendOperation[] AppOperations = { VerifyPurchase, RestoreLedger, GetAccountCode, DeleteAccount, LeagueWins, LeagueBoard };
+        public static readonly BackendOperation[] AppOperations = { VerifyPurchase, RestoreLedger, GetAccountCode, DeleteAccount, LeagueWins, LeagueBoard, LeagueAvatar };
 
         /// <summary>Nombre de <c>operation</c> en <c>index.json</c>.</summary>
         public string Name { get; }

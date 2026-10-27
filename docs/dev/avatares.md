@@ -346,7 +346,7 @@ Cambios:
    - **El servidor no valida contra la lista de 16, solo el rango:** un avatar nuevo de la 1.1 no exige desplegar el backend, igual que los niveles que no están en la tabla (liga.md §3.2).
    - Errores: 400 `bad_request` (fuera de rango o mal formado), 401, 403 `integrity_failed`, 429 `rate_limited` (más de 30 cambios en 24 h por UID [P]).
    - Si el UID aún no tiene seudónimo, **lo crea** (la misma función que `leagueWins`) y guarda el avatar con él, para que el jugador salga con su avatar desde su primera victoria.
-2. **`league-board.response`:** `top[].avatar` y `me.avatar`, opcionales, `integer` 0-63 o `null` (null = nunca eligió).
+2. **`league-board.response`:** `top[].avatar` y `me.avatar`, opcionales, `integer` 0-63 o `null` (null = nunca eligió). **El servidor omite el campo** cuando el jugador nunca eligió (`tanda6/avatares-liga-backend`): el cliente trata igual la falta y `null` (el disco neutro), y en su lectura tolerante un valor fuera de 0-63 también (un avatar de una versión más nueva).
 3. **`league-wins.response`:** `avatar`, opcional, el mismo tipo. La petición de victorias **no cambia** (`wins` sigue con `minItems` 1; el avatar no viaja con las victorias, para no mezclar un cambio de preferencia con la cola idempotente).
 4. **Ejemplos** nuevos en `examples/` (petición, respuesta, petición inválida fuera de rango) y su entrada en `index.json`. Los ejemplos de hoy siguen siendo válidos (el campo es opcional).
 

@@ -184,6 +184,49 @@ namespace AF.Backend.Tests
             Assert.That(Array.IndexOf(BackendOperation.AppOperations, BackendOperation.LeagueBoard), Is.GreaterThanOrEqualTo(0));
         }
 
+        [Test]
+        public void TheAvatar_IsReadFromBothResponses_AndAMissingOneIsNull()
+        {
+            Assert.That(LeagueBoardResponseDto.TryParse(Example("league-board.response.avatar.json"), out LeagueBoardResponseDto? board, out string? e1), Is.True, e1);
+            Assert.That(board!.Top[0].Avatar, Is.EqualTo(8));
+            Assert.That(board.Top[1].Avatar, Is.Null, "null = nunca eligió");
+            Assert.That(board.MeAvatar, Is.EqualTo(7));
+            Assert.That(LeagueBoardResponseDto.TryParse(Example("league-board.response.json"), out LeagueBoardResponseDto? old, out _), Is.True);
+            Assert.That(old!.Top[0].Avatar, Is.Null, "sin la clave (servidor anterior): igual que null");
+            Assert.That(old.MeAvatar, Is.Null);
+            Assert.That(LeagueWinsResponseDto.TryParse(Example("league-wins.response.avatar.json"), out LeagueWinsResponseDto? wins, out string? e2), Is.True, e2);
+            Assert.That(wins!.AvatarPresent, Is.True);
+
+            // La lectura tolerante del cliente no se rompe con un avatar fuera de rango (una versión más nueva): queda en null.
+            string json = Example("league-board.response.avatar.json").Replace("\"avatar\": 8", "\"avatar\": 99");
+            Assert.That(LeagueBoardResponseDto.TryParse(json, out LeagueBoardResponseDto? tolerant, out _), Is.True);
+            Assert.That(tolerant!.Top[0].Avatar, Is.Null);
+            Assert.That(LeagueBoardResponseDto.TryParseStrict(json, out _, out _), Is.False, "el esquema: 0-63");
+        }
+
+        [Test]
+        public void TheClient_PostsTheAvatar_WithIdTokenAndAppCheck()
+        {
+            var http = new FakeHttpTransport();
+            var auth = new FakeAuthTokenProvider();
+            var client = new HttpBackendClient(BaseUrl, http, auth, new FakeIntegrityTokenProvider(), new ManualBackendScheduler());
+            http.Enqueue(200, Example("league-avatar.response.json"));
+            BackendResult<LeagueAvatarResponseDto>? result = null;
+            client.SetLeagueAvatar(new LeagueAvatarRequestDto(7), r => result = r);
+
+            Assert.That(result!.IsOk, Is.True, result.ToString());
+            Assert.That(result.Value!.Avatar, Is.EqualTo(7));
+            HttpRequestData sent = http.Requests[0];
+            Assert.That(sent.Method, Is.EqualTo("POST"));
+            Assert.That(sent.Url, Is.EqualTo(BaseUrl + "/v1/league/avatar"));
+            Assert.That(sent.GetHeader("Authorization"), Is.EqualTo("Bearer " + auth.CurrentToken));
+            Assert.That(sent.GetHeader("X-Firebase-AppCheck"), Is.Not.Null.And.Not.Empty);
+            Assert.That(JsonEqual(sent.Body!, Example("league-avatar.request.json")), Is.True);
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LeagueAvatarRequestDto(64));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LeagueAvatarRequestDto(-1));
+            Assert.That(Array.IndexOf(BackendOperation.AppOperations, BackendOperation.LeagueAvatar), Is.GreaterThanOrEqualTo(0));
+        }
+
         private static bool JsonEqual(string a, string b) =>
             AF.Backend.Json.JsonNode.StructurallyEqual(AF.Backend.Json.BackendJson.Parse(a), AF.Backend.Json.BackendJson.Parse(b));
     }

@@ -463,6 +463,9 @@ namespace AF.UI
 
             public void GetBoard(LeagueScope scope, Action<LeagueResult<LeagueBoard>> onDone) =>
                 onDone(LeagueResult<LeagueBoard>.Fail(LeagueFailure.NotConfigured));
+
+            public void SetAvatar(int avatar, Action<LeagueResult<LeagueAvatarResult>> onDone) =>
+                onDone(LeagueResult<LeagueAvatarResult>.Fail(LeagueFailure.NotConfigured));
         }
     }
 }
