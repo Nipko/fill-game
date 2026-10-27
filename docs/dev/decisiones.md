@@ -4263,3 +4263,14 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **A cuidar en el cambio:**
   - en el monocromo y a 48 px, las orillas lejanas no deben convertirse en ruido; se simplifican si hace falta;
   - la cuia debe quedar dentro de la zona segura de 66 dp.
+
+### D-054, añadido del 2026-10-27: revisión 2 de Gemini, aprobada y aplicada
+
+- **Aprobación del dueño, en el chat:** «Apruebo los 9 cambios de la revisión 2 de Gemini y también el cambio de league_me_no_points a «Vença um nível para entrar na Liga». Aplícala e intégrala.»
+- **Entrega:** `docs/dev/traspaso/gemini-revision-2/`, del encargo `gemini-revision-textos-2.md`. Revisa las 27 claves nuevas (avatares e interruptor de informes de fallos):
+  - pasan a `revisado_nativo` en inglés y portugués de Brasil;
+  - cambian 9 celdas, 4 en inglés y 5 en portugués;
+  - el español no cambia.
+- **Fuera del encargo:** `league_me_no_points` en portugués pasa de «fase» a «nível». Se cambia también en la entrega 1, para que su `--check` siga cuadrando.
+- **Herramienta:** `apply_translations.py --review` admite ahora revisiones parciales, sin `revision_es.csv` o sin `facts_revision.csv`.
+- **Resultado:** no queda ninguna fila en `traducido`, así que la compuerta `LocReleaseGate` vuelve a quedar sin problemas en inglés y portugués de Brasil.

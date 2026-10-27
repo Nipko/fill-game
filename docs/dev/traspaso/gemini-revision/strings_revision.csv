@@ -184,7 +184,7 @@ league_country_ve,Venezuela,Venezuela,Venezuela,revisado_nativo,revisado_nativo
 league_empty_week,Aún nadie suma puntos esta semana,No points yet this week,Ninguém pontuou nesta semana ainda,revisado_nativo,revisado_nativo
 league_ends_in,Termina en {time},Ends in {time},Termina em {time},revisado_nativo,revisado_nativo
 league_loading,Cargando…,Loading…,Carregando…,revisado_nativo,revisado_nativo
-league_me_no_points,Gana un nivel para entrar en la Liga,Win a level to join the League,Vença uma fase para entrar na Liga,revisado_nativo,revisado_nativo
+league_me_no_points,Gana un nivel para entrar en la Liga,Win a level to join the League,Vença um nível para entrar na Liga,revisado_nativo,revisado_nativo
 league_me_percentile,Estás en el {p} % mejor,You're in the top {p}%,Você está entre os {p}% melhores,revisado_nativo,revisado_nativo
 league_me_percentile_a11y,"Tú, {player}: estás en el {p} % mejor, {n:plural:{} punto|{} puntos}","You, {player}: you're in the top {p}%, {n:plural:{} point|{} points}","Você, {player}: está entre os {p}% melhores, {n:plural:{} ponto|{} pontos}",revisado_nativo,revisado_nativo
 league_me_rank_a11y,"Tú, puesto {rank}: {player}, {n:plural:{} punto|{} puntos}","You, rank {rank}: {player}, {n:plural:{} point|{} points}","Você, posição {rank}: {player}, {n:plural:{} ponto|{} pontos}",revisado_nativo,revisado_nativo

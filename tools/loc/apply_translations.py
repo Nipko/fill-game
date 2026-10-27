@@ -517,10 +517,17 @@ def run_review(review_dir: Path, loc_dir: Path, check: bool, out=sys.stdout) -> 
     map_ok = stops.exists() and STOPS_MARKER in stops.read_text(encoding="utf-8")
     errors: list[str] = []
     try:
-        verdicts, errs = read_verdicts(decode((review_dir / REVIEW_VERDICTS).read_bytes(), REVIEW_VERDICTS), REVIEW_VERDICTS)
-        errors.extend(errs)
+        # Una revisión parcial (la 2, solo strings) puede venir sin revision_es.csv o sin facts_revision.csv.
+        verdicts: list[dict] = []
+        if (review_dir / REVIEW_VERDICTS).exists():
+            verdicts, errs = read_verdicts(decode((review_dir / REVIEW_VERDICTS).read_bytes(), REVIEW_VERDICTS), REVIEW_VERDICTS)
+            errors.extend(errs)
+        present = [name for name in REVIEW_FILES if (review_dir / name).exists()]
+        if not present:
+            print(f"ERROR {review_dir}: no hay ninguna de {', '.join(REVIEW_FILES)}", file=out)
+            return 2
         deliveries: dict[str, tuple[list[dict], str]] = {}
-        for name in REVIEW_FILES:
+        for name in present:
             rows, errs = read_translations(decode((review_dir / name).read_bytes(), name), name, review=True)
             errors.extend(errs)
             errors.extend(requirement_errors(name, repo))
