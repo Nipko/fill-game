@@ -29,17 +29,60 @@ namespace AF.RemoteConfig
       ""type"": ""string"",
       ""default"": ""self_declared""
     },
+    ""consent_digital_age_by_country"": {
+      ""type"": ""json"",
+      ""default"": {
+        ""*"": 13,
+        ""AT"": 14,
+        ""BE"": 13,
+        ""BG"": 14,
+        ""BR"": 18,
+        ""CA"": 14,
+        ""CH"": 16,
+        ""CO"": 18,
+        ""CY"": 14,
+        ""CZ"": 15,
+        ""DE"": 16,
+        ""DK"": 13,
+        ""EE"": 13,
+        ""ES"": 14,
+        ""FI"": 13,
+        ""FR"": 15,
+        ""GR"": 15,
+        ""HR"": 16,
+        ""HU"": 16,
+        ""IE"": 16,
+        ""IN"": 18,
+        ""IS"": 13,
+        ""IT"": 14,
+        ""JP"": 16,
+        ""KR"": 14,
+        ""LI"": 16,
+        ""LT"": 14,
+        ""LU"": 16,
+        ""LV"": 13,
+        ""MT"": 13,
+        ""MX"": 18,
+        ""NL"": 16,
+        ""NO"": 15,
+        ""PE"": 14,
+        ""PL"": 16,
+        ""PT"": 13,
+        ""RO"": 16,
+        ""SE"": 13,
+        ""SI"": 16,
+        ""SK"": 16,
+        ""UK"": 13
+      }
+    },
     ""biz_market_phase"": {
       ""type"": ""string"",
-      ""default"": ""closed_beta""
+      ""default"": ""global""
     },
     ""biz_country_enabled"": {
       ""type"": ""json"",
       ""default"": {
-        ""CO"": true,
-        ""PE"": true,
-        ""MX"": true,
-        ""*"": false
+        ""*"": true
       }
     },
     ""biz_min_app_version"": {

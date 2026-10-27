@@ -50,9 +50,16 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 
 ### 1.4 País y perfil legal (Q-T3 (a))
 
-1. País de la SIM: `TelephonyManager.getSimCountryIso()` por el JNI de Unity. Sin permiso: no necesita `READ_PHONE_STATE`. En `AndroidSimCountry`.
-2. Si no, la región del teléfono, la de `IDeviceLocale` (`es-CO` → CO; `es-419` no es un país).
-3. Si no, ningún país: el perfil es `default` **y** no se ofrecen anuncios personalizados (`npa` sin elección). Ese es «el tratamiento más estricto» de Q-T3 (a) [P] (Q-B12-13).
+**Orden de prioridad (D-057, P4 (a); `ConsentCountry.Resolve`):** SIM → cuenta de Google Play → región del teléfono → ninguno.
+
+1. País de la SIM: `TelephonyManager.getSimCountryIso()` por el JNI de Unity. Sin permiso: no necesita `READ_PHONE_STATE`. En `AndroidSimCountry`. Va primero porque es donde está la línea: la mejor señal de dónde vive el jugador, y la que ya usaba Q-T3 (a).
+2. **Si no, el país de la cuenta de Google Play (D-057).** `BillingClient.getBillingConfigAsync` → `BillingConfig.getCountryCode()`, de Play Billing Library 9.0.0 (ya aprobada en D-040: sin SDK, permiso ni paquete nuevo). Es el país donde el jugador paga y el que usa Play para la distribución. Cubre las tabletas sin SIM, que antes caían en la región del idioma (una tableta en Alemania con el teléfono en `en-US` quedaba como US, con el perfil `default`; ahora es DE, `ump`).
+   - El plugin lo pide con `queryBillingConfig` y solo devuelve el código (`AfBillingPluginTests` lo vigila); `NativePlayStorePort` lo expone por `IPlayAccountCountryPort`; `PlayBillingClient` lo pide una vez tras conectar (si falla, en la próxima conexión) y avisa `AccountCountryKnown`.
+   - **Cuándo vale:** Play Billing solo se conecta tras la pantalla de edad (y nunca con <13), pero el país legal se decide antes. Por eso `GameBootstrap` guarda el país en el dispositivo (`PlayerPrefsPlayAccountCountry`, clave `af_play_account_country` de `PlayerPrefs`; en el Editor, en memoria) y vale **desde el arranque siguiente**. En el primer arranque de un teléfono sin SIM manda la región, como antes.
+   - **Si el país cambia después de decidir:** el arranque siguiente resuelve el país con el de Play; si su perfil legal es otro, las finalidades se vuelven a pedir con la banda guardada (Q-B12-15). Si el perfil es el mismo pero cambia la edad de consentimiento digital (D-057, `consent_digital_age_by_country`), los flags se recalculan con el país de ahora y la analítica de 13-17 se apaga sin volver a preguntar.
+   - Es un país, no un identificador. No va a la nube. **Sí sale del teléfono** (D-057, añadido «decisiones de la revisión del código mundial», punto 1): el país legal resultante (SIM → Play → región) va como `region` de la Liga del río si el jugador participa (liga.md §3.3), y el `geo_tier` (T1/T3, que sale del país de Play o de la región; Q-E3 (a)) va agregado en la analítica con consentimiento. «Eliminar cuenta y datos» lo borra con `PlayerPrefs` y vuelve con la próxima conexión con Play.
+3. Si no, la región del teléfono, la de `IDeviceLocale` (`es-CO` → CO; `es-419` no es un país). Va la última de las tres porque es solo una preferencia de idioma.
+4. Si no, ningún país: el perfil es `default` **y** no se ofrecen anuncios personalizados (`npa` sin elección). Ese es «el tratamiento más estricto» de Q-T3 (a) [P] (Q-B12-13). Con D-057 (añadido «decisiones de la revisión del código mundial», punto 3), con 13-17 tampoco se ofrece la analítica.
 - El perfil sale de `biz_legal_profile_by_country`:
   - la entrada del país;
   - si no la hay, la de su grupo (`EEE` para los 30 del EEE; `UK` para `GB`);

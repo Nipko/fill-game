@@ -35,4 +35,10 @@ public interface AfBillingListener {
 
     /** Respuesta de {@link AfBilling#acknowledge(String)}. */
     void onAcknowledged(String token, int code);
+
+    /**
+     * Respuesta de {@link AfBilling#queryBillingConfig(int)}: el país de la cuenta de Play (ISO 3166-1 alfa-2, tal como lo da
+     * {@code BillingConfig.getCountryCode()}); null si {@code code} no es OK o Play no lo dio (D-057).
+     */
+    void onBillingConfig(int requestId, int code, String countryCode);
 }

@@ -42,6 +42,8 @@ namespace AF.IAP.PlayBilling
 
         public void Acknowledge(string token) => _plugin.Call("acknowledge", token);
 
+        public void QueryBillingConfig(int requestId) => _plugin.Call("queryBillingConfig", requestId);
+
         public void Dispose()
         {
             if (_disposed)
@@ -106,6 +108,9 @@ namespace AF.IAP.PlayBilling
 
         [Preserve]
         public void onAcknowledged(string? token, int code) => Dispatch("onAcknowledged", token, code);
+
+        [Preserve]
+        public void onBillingConfig(int requestId, int code, string? countryCode) => Dispatch("onBillingConfig", requestId, code, countryCode);
 
         private void Dispatch(string methodName, params object?[] args)
         {

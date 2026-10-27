@@ -288,7 +288,7 @@ El art. 4.5 de la Directiva 2019/882 exime a las **microempresas que prestan ser
 - Los datos que el sistema de pagos recoge para procesar la transacción **no los declara el desarrollador** [F56]: así se cierra Q-BILL-2 en Data Safety.
 - La IP de los registros solo se declara si se deriva una ubicación. **La Liga usa el país de la conexión de CloudFront** (`data-safety.md`, Liga), así que hay que declarar **«Ubicación aproximada»** para la Liga, como ya propone el borrador.
 - **Incoherencia detectada:** la política dice «la implementación inicial usa la región del teléfono» y `data-safety.md` dice «primero el país de conexión de CloudFront». El integrador comprueba el código y alinea los dos textos (§11, T-L12).
-- **Resuelto (T-L12, 2026-10-27):** la Liga **no** usa CloudFront. El cliente manda el país del perfil legal (SIM o, si no hay, la región del teléfono) y el servidor ignora `CloudFront-Viewer-Country` (`infra/LEAGUE.md`; `infra/functions/league/rules.ts`). La política y `data-safety.md` ya lo dicen así; la línea anterior sobre CloudFront no se aplica.
+- **Resuelto (T-L12, 2026-10-27):** la Liga **no** usa CloudFront. El cliente manda el país del perfil legal (SIM, después el país de la cuenta de Play y, si no hay, la región del teléfono; añadido de D-057 del 2026-10-27) y el servidor ignora `CloudFront-Viewer-Country` (`infra/LEAGUE.md`; `infra/functions/league/rules.ts`). La política y `data-safety.md` ya lo dicen así; la línea anterior sobre CloudFront no se aplica.
 
 ---
 

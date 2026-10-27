@@ -30,13 +30,14 @@ namespace AF.IAP.PlayBilling
     /// </list>
     /// Hilo principal de Unity (el puente real pasa ahí los avisos de Java). Nunca escribe el token ni el UID en los logs.
     /// </summary>
-    public sealed class NativePlayStorePort : IPlayStorePort, IBillingBridgeListener
+    public sealed class NativePlayStorePort : IPlayStorePort, IPlayAccountCountryPort, IBillingBridgeListener
     {
         private readonly IBillingBridge _bridge;
         private readonly Dictionary<string, PlayProductType> _types = new Dictionary<string, PlayProductType>(StringComparer.Ordinal);
         private readonly Dictionary<string, Known> _known = new Dictionary<string, Known>(StringComparer.Ordinal);
         private readonly List<Action<bool>> _connectWaiting = new List<Action<bool>>();
         private readonly Dictionary<int, Action<IReadOnlyList<PlayOrder>?>> _purchasesWaiting = new Dictionary<int, Action<IReadOnlyList<PlayOrder>?>>();
+        private readonly Dictionary<int, Action<string?>> _countryWaiting = new Dictionary<int, Action<string?>>();
         private Action<IReadOnlyList<PlayProductInfo>?>? _productsDone;
         private int _productsRequest;
         private int _nextRequest;
@@ -167,6 +168,38 @@ namespace AF.IAP.PlayBilling
             }
         }
 
+        /// <summary>
+        /// El país de la cuenta de Play (<c>getBillingConfigAsync</c>; D-057): el código tal como lo da Play, o null si falla, si se
+        /// desconecta o tras <see cref="Dispose"/>. No guarda nada.
+        /// </summary>
+        public void FetchAccountCountry(Action<string?> onDone)
+        {
+            if (onDone == null)
+            {
+                throw new ArgumentNullException(nameof(onDone));
+            }
+
+            if (_disposed)
+            {
+                onDone(null);
+                return;
+            }
+
+            int id = ++_nextRequest;
+            _countryWaiting[id] = onDone;
+            try
+            {
+                _bridge.QueryBillingConfig(id);
+            }
+            catch (Exception)
+            {
+                if (_countryWaiting.Remove(id))
+                {
+                    onDone(null);
+                }
+            }
+        }
+
         /// <inheritdoc />
         public void Purchase(string sku, string? obfuscatedAccountId)
         {
@@ -252,6 +285,7 @@ namespace AF.IAP.PlayBilling
             DeliverConnect(false);
             DeliverProducts(null);
             DeliverAllPurchases();
+            DeliverAllCountries();
             _known.Clear();
             try
             {
@@ -329,6 +363,7 @@ namespace AF.IAP.PlayBilling
             DeliverConnect(false);
             DeliverProducts(null);
             DeliverAllPurchases();
+            DeliverAllCountries(); // sin avisar Disconnected por esto solo: el país no es parte de la venta
             if (waiting && !_disposed)
             {
                 Disconnected?.Invoke();
@@ -354,6 +389,18 @@ namespace AF.IAP.PlayBilling
             }
 
             DeliverProducts(code == BillingCodes.Ok ? BillingRows.Products(rows) : null);
+        }
+
+        /// <inheritdoc />
+        void IBillingBridgeListener.OnBillingConfig(int requestId, int code, string? countryCode)
+        {
+            if (_disposed || !_countryWaiting.TryGetValue(requestId, out Action<string?>? done))
+            {
+                return;
+            }
+
+            _countryWaiting.Remove(requestId);
+            done(code == BillingCodes.Ok && !string.IsNullOrEmpty(countryCode) ? countryCode : null);
         }
 
         /// <inheritdoc />
@@ -583,6 +630,21 @@ namespace AF.IAP.PlayBilling
             _productsDone = null;
             _productsRequest = 0;
             done(products);
+        }
+
+        private void DeliverAllCountries()
+        {
+            if (_countryWaiting.Count == 0)
+            {
+                return;
+            }
+
+            var waiting = new List<Action<string?>>(_countryWaiting.Values);
+            _countryWaiting.Clear();
+            for (int i = 0; i < waiting.Count; i++)
+            {
+                waiting[i](null);
+            }
         }
 
         private void DeliverAllPurchases()

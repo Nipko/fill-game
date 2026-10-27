@@ -45,7 +45,7 @@ esa celda, el generador falla y pide revisarla, en vez de adivinar.
 
 | Celda (primera clave) | Se escribe | Nota |
 |---|---|---|
-| `biz_country_enabled`: «CO, PE, MX = true; resto false» | `{"CO":true,"PE":true,"MX":true,"*":false}` | «resto» = `"*"` [P] (Q-B7-4) |
+| `biz_country_enabled`: «CO, PE, MX = true; resto false» | `{"CO":true,"PE":true,"MX":true,"*":false}` | «resto» = `"*"` [P] (Q-B7-4). **D-057 (2026-10-27):** 08 §9 pasa a `{"*":true}` literal y la interpretación se retira |
 | `biz_legal_profile_by_country` | `{"BR":"br_lgpd_eca",…,"EEE":"ump","UK":"ump","CH":"ump","*":"default"}` | idem; `EEE`, `UK` y `CH` tal cual los escribe 08 [P] |
 | `biz_ua_paid_enabled_by_country` / `biz_ua_test_active`: «todos false / false» | `{"*":false}` / `false` | idem |
 | `biz_kpi_targets` / `biz_kpi_alert_thresholds`: «01 §KPIs / 09 tabla 6.1» | `null` + `pending` | remiten a otra tabla (Q-B7-6) |
@@ -253,7 +253,7 @@ la API. Cada vez que cambie 08 §9 se regeneran las dos (con `rc_defaults.py`) y
   `bool` → `BOOLEAN` (`true`/`false`), `string` (y `enum`) → `STRING`, `json` (y `map país→…`) → `JSON` compacto. El cliente
   trata un valor remoto igual al default como si no hubiera llegado: **publicar la plantilla no cambia el comportamiento**.
 - **Descripción:** «Rango 08 §9: <rango>. <uso>» de la fila, cortada a 256 caracteres. Es la chuleta para editar en la consola.
-- **Quedan fuera (248 de 254 parámetros van en la plantilla)** las 6 claves sin valor literal en 08 §9 (`biz_kpi_targets`,
+- **Quedan fuera (249 de 255 parámetros van en la plantilla; D-057 añadió `consent_digital_age_by_country`)** las 6 claves sin valor literal en 08 §9 (`biz_kpi_targets`,
   `biz_kpi_alert_thresholds`, `eco_calendar_table_v1`, `eco_calendar_table_v2`, `league_prizes`, `regatta_prizes`; Q-B7-6):
   no hay valor que publicar. La herramienta las nombra en cada ejecución.
 - **Nombres de clave:** Remote Config solo admite letras inglesas, cifras y «_», empezando por letra o «_», hasta 256
@@ -266,7 +266,7 @@ la API. Cada vez que cambie 08 §9 se regeneran las dos (con `rc_defaults.py`) y
 
 ### 9.2 Desarrollo (`fill-dev-e75a2`): importar en la consola
 
-1. Regenera y comprueba: `py -3.14 tools/remote-config/rc_template.py --check` («identico (248 parámetros; …)»).
+1. Regenera y comprueba: `py -3.14 tools/remote-config/rc_template.py --check` («identico (249 parámetros; …)»).
 2. Consola de Firebase → proyecto `fill-dev-e75a2` → **Remote Config**. Descarga **siempre** antes una copia de lo publicado
    (aunque creas que está vacío), y guárdala fuera del repositorio con la fecha: menú ⋮ → **Descargar el archivo de
    configuración actual** (*Download current config file*).

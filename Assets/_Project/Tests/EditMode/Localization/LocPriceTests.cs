@@ -43,6 +43,26 @@ namespace AF.Tests.EditMode
         [TestCase("JPY", 0)]
         [TestCase("KWD", 3)] // y las de tres decimales
         [TestCase("BHD", 3)]
+        [TestCase("KRW", 0)] // D-057: la tabla ISO 4217 para el lanzamiento mundial
+        [TestCase("VND", 0)]
+        [TestCase("ISK", 0)]
+        [TestCase("PYG", 0)]
+        [TestCase("UGX", 0)]
+        [TestCase("XAF", 0)]
+        [TestCase("XOF", 0)]
+        [TestCase("RWF", 0)]
+        [TestCase("IDR", 0)] // como las escribe Google Play [P]
+        [TestCase("HUF", 0)]
+        [TestCase("TWD", 0)]
+        [TestCase("JOD", 3)]
+        [TestCase("OMR", 3)]
+        [TestCase("TND", 3)]
+        [TestCase("IQD", 3)]
+        [TestCase("LYD", 3)]
+        [TestCase("INR", 2)]
+        [TestCase("TRY", 2)]
+        [TestCase("GBP", 2)]
+        [TestCase("ZZZ", 2)] // un código que ISO 4217 no tiene: 2
         public void Decimals_AreZeroInCopAndMxn_AndTwoInTheRest(string currency, int decimals)
         {
             Assert.That(LocPrice.DecimalsOf(currency), Is.EqualTo(decimals));
@@ -114,6 +134,11 @@ namespace AF.Tests.EditMode
         [TestCase("KWD", 1250000L, "en-US", 1250L, "KWD 1.250")] // Q-IAP-3: tres decimales
         [TestCase("BHD", 1999500L, "en-US", 2000L, "BHD 2.000")]
         [TestCase("BHD", 600000L, "en-US", 600L, "BHD 0.600")]
+        [TestCase("KRW", 6500000000L, "en-US", 6500L, "KRW 6,500")] // D-057: sin «.00»
+        [TestCase("IDR", 79000000000L, "en-US", 79000L, "IDR 79,000")]
+        [TestCase("VND", 49000000000L, "en-US", 49000L, "VND 49,000")]
+        [TestCase("HUF", 990500000L, "en-US", 991L, "HUF 991")]
+        [TestCase("JOD", 1250000L, "en-US", 1250L, "JOD 1.250")]
         public void FromPlayBillingMicros_ComposesWithTheSameFunction(string currency, long micros, string region, long minor, string expected)
         {
             Loc.Configure(LocSetUpFixture.Catalog, LocLocale.SourceLocale, true, region);

@@ -32,6 +32,8 @@ namespace AF.IAP.PlayBilling.Tests
             public void OnConsumed(string? token, int code) => Calls.Add("consumed " + (token ?? "null") + " " + code);
 
             public void OnAcknowledged(string? token, int code) => Calls.Add("acknowledged " + (token ?? "null") + " " + code);
+
+            public void OnBillingConfig(int requestId, int code, string? countryCode) => Calls.Add("config " + requestId + " " + code + " " + (countryCode ?? "null"));
         }
 
         private static (Recorder Target, List<Action> Queue) New() => (new Recorder(), new List<Action>());
@@ -60,6 +62,7 @@ namespace AF.IAP.PlayBilling.Tests
                 ("onLaunchFailed", new object?[] { "af_noads", 4 }),
                 ("onConsumed", new object?[] { "tok.1", 0 }),
                 ("onAcknowledged", new object?[] { "tok.2", 8 }),
+                ("onBillingConfig", new object?[] { 5, 0, "DE" }),
             };
 
             foreach ((string name, object?[] args) in calls)
@@ -72,7 +75,7 @@ namespace AF.IAP.PlayBilling.Tests
             Assert.That(target.Calls, Is.EqualTo(new[]
             {
                 "setup 0", "disconnected", "products 3 0 af_coins_2\tBRL\t1", "purchases 4 6 null", "updated 1 null",
-                "launch af_noads 4", "consumed tok.1 0", "acknowledged tok.2 8",
+                "launch af_noads 4", "consumed tok.1 0", "acknowledged tok.2 8", "config 5 0 DE",
             }));
         }
 
