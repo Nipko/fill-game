@@ -201,6 +201,20 @@ namespace AF.Presentation
         // (con un mínimo para que se lea), la boca y el ojo de juguete. Solo al pedirlo, en el hilo principal: ≈ 6.000 píxeles.
         private Sprite BuildMapBufeo()
         {
+            return MakeSprite(DrawMapBufeo(), "map_guide_bufeo", new Vector2(0.5f, 0f), Vector4.zero, UiPxPerDp);
+        }
+
+        /// <summary>Los píxeles del bufeo del Mapa (abajo a la izquierda primero) y su tamaño: la prueba de los márgenes.</summary>
+        internal static Color32[] MapBufeoPixels(out int width, out int height)
+        {
+            PixelCanvas pc = DrawMapBufeo();
+            width = pc.Width;
+            height = pc.Height;
+            return pc.TakeColor32();
+        }
+
+        private static PixelCanvas DrawMapBufeo()
+        {
             const float k = UiPxPerDp;
             int w = Mathf.RoundToInt(MapBufeoWidthDp * k);
             int h = Mathf.RoundToInt(MapBufeoWidthDp * RosaHeightDp / RosaWidthDp * k);
@@ -232,7 +246,7 @@ namespace AF.Presentation
 
             pc.FillCapsule(RosaMouthFrom.x * h, RosaMouthFrom.y * h, RosaMouthTo.x * h, RosaMouthTo.y * h, Mathf.Max(0.6f, 0.012f * h), ColorMath.WithAlpha(BufeoToy.Body.Outline, 0.55f));
             DrawToyEye(pc, RosaEyeAt.x * h, RosaEyeAt.y * h, Mathf.Max(1.1f, 0.0275f * h), BufeoIris);
-            return MakeSprite(pc, "map_guide_bufeo", new Vector2(0.5f, 0f), Vector4.zero, k);
+            return pc;
         }
 
         // El bufeo de juguete: los tonos de su paleta gris azulada, una vez (en su propia clase: se inicializan al pintarlo).

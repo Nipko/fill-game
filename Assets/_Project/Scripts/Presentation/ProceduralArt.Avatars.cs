@@ -572,15 +572,19 @@ namespace AF.Presentation
             float phx = Mathf.Max(1e-4f, (p.MaxX - p.MinX) * 0.5f);
             float phy = Mathf.Max(1e-4f, (p.MaxY - p.MinY) * 0.5f);
             float pillow = 0.45f * Mathf.Min(phx, phy);
+            // La tabla de la parte: creada al pedir la celda (EnsureAvatarLuts), así que pintar no asigna, y rellena la primera
+            // vez que se pinta. Los avatares se pintan en el hilo principal (el atlas y el retrato); aun así, Fill publica la
+            // tabla con una barrera (Volatile) y dos hilos que la rellenen a la vez escriben lo mismo.
             ToyLut? lut = null;
             if (!eye)
             {
-                lut = p.Lut ??= ToyLut.Create(AvLutSize); // ya creada al pedir la celda (EnsureAvatarLuts): no asigna al pintar
+                lut = p.Lut ??= ToyLut.Create(AvLutSize);
                 if (!lut.Ready)
                 {
                     lut.Fill(p.Toy, gloss);
                 }
             }
+
             for (int y = y0; y <= y1; y++)
             {
                 float uy = ((y + 0.5f) - f.Cy) * invK;

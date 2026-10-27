@@ -72,21 +72,24 @@ namespace AF.Presentation
         /// del melón, sobre el contorno; de ahí sale el soplo. Con la silueta de la fase 2 (D-058, el dueño el 2026-10-27: el
         /// cuerpo sin el arco), detrás del melón redondo.
         /// </summary>
-        public static readonly Vector2 RosaBlowhole = new Vector2(0.30f, 0.685f);
+        public static readonly Vector2 RosaBlowhole = new Vector2(0.30f, 0.745f);
 
         /// <summary>Lado del soplo de la exhalación (dp): el abanico de gotas nace en el centro de su canto de abajo.</summary>
         public const float RosaSprayDp = 30f;
 
         /// <summary>
         /// Centro del corte del cuerpo de Rosa con el agua (fracción del ancho del sprite) cuando asoma el 74 % de su alto
-        /// (<c>WorldBannerView.RosaAbove</c>): con la silueta de la fase 2, el vientre y el lomo entran en el agua entre 0,42 y
-        /// 0,85 del ancho (sobre el agua quedan la cabeza, el melón y el lomo con la quilla). Ahí va la espuma; la onda, más ancha,
-        /// tapa los extremos del corte.
+        /// (<c>WorldBannerView.RosaAbove</c>): con la silueta de la fase 2, la línea del agua corta el cuerpo cerca del pedúnculo
+        /// de la cola, entre 0,65 y 0,93 del ancho con su borde (sobre el agua queda todo lo demás, la pectoral incluida). Ahí va
+        /// la espuma, que tapa sola el corte entero, también en reposo (la onda y el soplo solo se ven al asomar).
         /// </summary>
-        public const float RosaCutCenter = 0.635f;
+        public const float RosaCutCenter = 0.79f;
 
-        /// <summary>Ancho del corte del cuerpo con el agua (fracción del ancho del sprite), con <see cref="RosaCutCenter"/>.</summary>
-        public const float RosaCutWidth = 0.435f;
+        /// <summary>
+        /// Ancho del corte del cuerpo con el agua (fracción del ancho del sprite), con <see cref="RosaCutCenter"/>: ≈ 30 dp, bajo los
+        /// <see cref="RosaFoamWidthDp"/> de la espuma con margen para sus puntas afinadas (lo comprueba <c>RosaWaterCutTests</c>).
+        /// </summary>
+        public const float RosaCutWidth = 0.29f;
 
         /// <summary>Ancho de la espuma que tapa el corte del cuerpo de Rosa con el agua (dp).</summary>
         public const float RosaFoamWidthDp = 40f;
@@ -999,11 +1002,14 @@ namespace AF.Presentation
         // pedúnculo de la cola (t = 0, abajo a la derecha) hasta la nuca (t = 1, arriba a la izquierda), con una curvatura suave
         // (el lomo algo convexo), en unidades del alto del sprite (x hasta W/H). El cuerpo sube unos 25° hacia la cabeza: nada
         // en la superficie (en el banner, la línea del agua deja fuera la cola) y en el Mapa se ve entero, con la cola dentro.
+        // Va 0,06 más arriba que en la primera entrega de la fase 2 (revisión): la línea del agua del banner (al 26 % del alto)
+        // corta el cuerpo cerca del pedúnculo, donde es estrecho, así que la espuma tapa el corte entero; y el lóbulo de abajo
+        // de la cola deja un margen transparente sobre el borde del sprite.
         private static Vector2 RosaSpine(float t)
         {
-            var p0 = new Vector2(1.34f, 0.21f);
-            var p1 = new Vector2(0.98f, 0.40f);
-            var p2 = new Vector2(0.50f, 0.52f);
+            var p0 = new Vector2(1.325f, 0.27f);
+            var p1 = new Vector2(0.98f, 0.46f);
+            var p2 = new Vector2(0.50f, 0.58f);
             float u = 1f - t;
             return (u * u * p0) + (2f * u * t * p1) + (t * t * p2);
         }
@@ -1042,12 +1048,12 @@ namespace AF.Presentation
             public static readonly Vector2 FlukeB;
             public static readonly Vector2 FlukeRotA;
             public static readonly Vector2 FlukeRotB;
-            public static readonly Vector2 PecAt = new Vector2(0.665f, 0.305f);
+            public static readonly Vector2 PecAt = new Vector2(0.665f, 0.365f);
             public static readonly Vector2 PecRot = Rot(-34f);
-            public static readonly Vector2 Melon = new Vector2(0.40f, 0.59f);
+            public static readonly Vector2 Melon = new Vector2(0.40f, 0.65f);
             public const float MelonR = 0.12f;
-            public static readonly Vector2 SnoutBase = new Vector2(0.33f, 0.545f);
-            public static readonly Vector2 SnoutTip = new Vector2(0.035f, 0.47f);
+            public static readonly Vector2 SnoutBase = new Vector2(0.33f, 0.605f);
+            public static readonly Vector2 SnoutTip = new Vector2(0.075f, 0.537f);
             public const float SnoutBaseR = 0.052f;
             public const float SnoutTipR = 0.03f;
 
@@ -1069,8 +1075,8 @@ namespace AF.Presentation
                 Vector2 back = (tail - RosaSpine(2f / RosaSpineSteps)).normalized; // hacia atrás, a lo largo del eje
                 var side = new Vector2(-back.y, back.x);
                 float ang = Mathf.Atan2(back.y, back.x) * Mathf.Rad2Deg;
-                FlukeA = tail + (back * 0.075f) + (side * 0.05f);
-                FlukeB = tail + (back * 0.075f) - (side * 0.05f);
+                FlukeA = tail + (back * 0.062f) + (side * 0.05f);
+                FlukeB = tail + (back * 0.062f) - (side * 0.05f);
                 FlukeRotA = Rot(ang + 40f);
                 FlukeRotB = Rot(ang - 40f);
             }
@@ -1139,8 +1145,8 @@ namespace AF.Presentation
             // La quilla dorsal baja sobre el lomo, la cola horizontal y la aleta pectoral; el melón redondo y el rostro largo y fino.
             float fin = SdEllipse(x, y, RosaShape.FinAt.x, RosaShape.FinAt.y, 0.15f, 0.032f, RosaShape.FinRot);
             float fluke = Smin(
-                SdEllipse(x, y, RosaShape.FlukeA.x, RosaShape.FlukeA.y, 0.078f, 0.025f, RosaShape.FlukeRotA),
-                SdEllipse(x, y, RosaShape.FlukeB.x, RosaShape.FlukeB.y, 0.078f, 0.025f, RosaShape.FlukeRotB),
+                SdEllipse(x, y, RosaShape.FlukeA.x, RosaShape.FlukeA.y, 0.072f, 0.024f, RosaShape.FlukeRotA),
+                SdEllipse(x, y, RosaShape.FlukeB.x, RosaShape.FlukeB.y, 0.072f, 0.024f, RosaShape.FlukeRotB),
                 0.02f);
             float pec = SdEllipse(x, y, RosaShape.PecAt.x, RosaShape.PecAt.y, 0.10f, 0.042f, RosaShape.PecRot);
             float limb = Mathf.Min(fluke, pec);
@@ -1172,9 +1178,18 @@ namespace AF.Presentation
         private const float RosaGloss = 0.9f;
 
         // La boca (de la punta del rostro a la comisura) y el ojo, en unidades del alto (Rosa y el bufeo).
-        private static readonly Vector2 RosaMouthFrom = new Vector2(0.07f, 0.462f);
-        private static readonly Vector2 RosaMouthTo = new Vector2(0.345f, 0.515f);
-        private static readonly Vector2 RosaEyeAt = new Vector2(0.39f, 0.552f);
+        private static readonly Vector2 RosaMouthFrom = new Vector2(0.10f, 0.526f);
+        private static readonly Vector2 RosaMouthTo = new Vector2(0.345f, 0.575f);
+        private static readonly Vector2 RosaEyeAt = new Vector2(0.39f, 0.612f);
+
+        /// <summary>Los píxeles de Rosa (abajo a la izquierda primero) y su tamaño: las pruebas del corte con el agua y de los márgenes.</summary>
+        internal static Color32[] RosaPixels(out int width, out int height)
+        {
+            PixelCanvas pc = DrawRosa();
+            width = pc.Width;
+            height = pc.Height;
+            return pc.TakeColor32();
+        }
 
         private static PixelCanvas DrawRosa()
         {
@@ -1248,7 +1263,7 @@ namespace AF.Presentation
 
             if (side == 0f)
             {
-                float under = Mathf.Clamp01((0.56f - y) / 0.12f);
+                float under = Mathf.Clamp01((0.62f - y) / 0.12f);
                 t = ToyTones.Lerp(t, belly, 0.55f * under * Mathf.Clamp01((0.5f - x) / 0.2f));
             }
 

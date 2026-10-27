@@ -475,7 +475,7 @@ namespace AF.Presentation
         }
 
         /// <summary>Está rellena (con <see cref="Fill"/>).</summary>
-        public bool Ready => _gloss >= 0f;
+        public bool Ready => System.Threading.Volatile.Read(ref _gloss) >= 0f;
 
         /// <summary>Una tabla vacía de <paramref name="size"/> celdas por eje (se rellena con <see cref="Fill"/>).</summary>
         public static ToyLut Create(int size)
@@ -561,7 +561,9 @@ namespace AF.Presentation
                 }
             }
 
-            _gloss = Mathf.Max(0f, gloss);
+            // La barrera publica los bytes antes de marcarla lista: otro hilo que vea Ready los ve rellenos (dos hilos que la
+            // rellenen a la vez escriben lo mismo).
+            System.Threading.Volatile.Write(ref _gloss, Mathf.Max(0f, gloss));
         }
 
         private static byte ToByte(float v)

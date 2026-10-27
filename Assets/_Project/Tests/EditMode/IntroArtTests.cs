@@ -396,6 +396,8 @@ namespace AF.Tests.EditMode
                         y1 = Mathf.Max(y1, y);
                     }
 
+                    // 0,03 y no 0,06: desde D-058 la cara roja va en tres tonos y su sombra pasa cerca del color del hocico; una
+                    // nariz pintada sería un parche de ese color exacto, así que basta con la tolerancia estrecha.
                     nose += Distance(c, Palette.Hex(uakari.Palette.Muzzle)) < 0.03f ? 1 : 0;
                     headHair += Hair(c, hair) ? 1 : 0;
                     amber += Amber(c) ? 1 : 0;

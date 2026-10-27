@@ -847,7 +847,7 @@ namespace AF.Presentation
         {
             int w = Mathf.RoundToInt(32f * k);
             int h = Mathf.RoundToInt(SlothCellPx * k);
-                        float aa = 1f / k;
+            float aa = 1f / k;
             for (int y = oy; y < oy + h; y++)
             {
                 for (int x = ox; x < ox + w; x++)

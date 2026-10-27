@@ -231,16 +231,47 @@ namespace AF.Tests.EditMode
             Assert.That(new Color(ToyShading.RimWarmR, ToyShading.RimWarmG, ToyShading.RimWarmB), Is.EqualTo(ToyShading.RimWarm));
             Assert.That(new Color(ToyShading.BounceR, ToyShading.BounceG, ToyShading.BounceB), Is.EqualTo(ToyShading.BounceCool));
 
-            // Y Shade es ShadeCore: la misma cuenta con vectores.
+            // Y ShadeCore es la cuenta de la guía §2-§3 hecha con las funciones públicas (Diffuse, ThreeTone, Rim, VarnishSharp y
+            // VarnishBroad), en normales de todo el hemisferio, con y sin oclusión ni barniz.
             ToyTones t = ToyShading.Tones(Fur);
-            Vector3 n = ToyShading.Normal(-0.3f, 0.4f);
-            Vector3 g = ToyShading.Normal(0.1f, -0.2f);
-            ToyShading.ShadeCore(t, n.x, n.y, n.z, 0.25f, 0.6f, g.x, g.y, g.z, out float r, out float gg, out float b);
-            Color c = ToyShading.Shade(t, n, 0.25f, 0.6f, g);
-            Assert.That(c.r, Is.EqualTo(r));
-            Assert.That(c.g, Is.EqualTo(gg));
-            Assert.That(c.b, Is.EqualTo(b));
-            Assert.That(c.a, Is.EqualTo(1f));
+            for (float ny = -1.1f; ny <= 1.1f; ny += 0.137f)
+            {
+                for (float nx = -1.1f; nx <= 1.1f; nx += 0.151f)
+                {
+                    foreach (float ao in new[] { 0f, 0.3f, 1f })
+                    {
+                        foreach (float gloss in new[] { 0f, 0.6f, 1f })
+                        {
+                            Vector3 n = ToyShading.Normal(nx, ny);
+                            Vector3 g = ToyShading.Normal(ny * 0.5f, nx * 0.5f);
+                            Color expected = Reference(t, n, ao, gloss, g);
+                            ToyShading.ShadeCore(t, n.x, n.y, n.z, ao, gloss, g.x, g.y, g.z, out float r, out float gg, out float b);
+                            string what = "n (" + nx + ", " + ny + "), ao " + ao + ", barniz " + gloss;
+                            Assert.That(r, Is.EqualTo(expected.r).Within(2e-5f), what);
+                            Assert.That(gg, Is.EqualTo(expected.g).Within(2e-5f), what);
+                            Assert.That(b, Is.EqualTo(expected.b).Within(2e-5f), what);
+                        }
+                    }
+                }
+            }
+
+            Color c = ToyShading.Shade(t, ToyShading.Normal(-0.3f, 0.4f), 0.25f, 0.6f);
+            Assert.That(c.a, Is.EqualTo(1f), "opaco");
+        }
+
+        // El sombreado de juguete escrito con las funciones públicas, paso a paso (la referencia de ShadeCore).
+        private static Color Reference(in ToyTones t, Vector3 n, float ao, float gloss, Vector3 g)
+        {
+            float d = ToyShading.Diffuse(n) * (1f - (0.35f * ao));
+            Color c = ToyShading.ThreeTone(t, d);
+            c = Color.Lerp(c, ToyShading.BounceCool, Mathf.Clamp01(-n.y) * (1f - d) * 0.2f);
+            c = Color.Lerp(c, Color.Lerp(t.Light, ToyShading.RimWarm, 0.55f), ToyShading.Rim(n) * 0.55f * (1f - ao));
+            float dark = 1f - (0.5f * ao);
+            c.r *= dark;
+            c.g *= dark;
+            c.b *= dark;
+            float s = Mathf.Clamp01(gloss * ((0.85f * ToyShading.VarnishSharp(g)) + (0.6f * ToyShading.VarnishBroad(g))) * (1f - ao));
+            return new Color(c.r + ((1f - c.r) * s), c.g + ((1f - c.g) * s), c.b + ((1f - c.b) * s), 1f);
         }
 
         [Test]
