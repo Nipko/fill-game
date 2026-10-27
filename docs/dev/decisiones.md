@@ -4229,3 +4229,20 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - sin permisos nuevos;
   - la biblioteca nativa alineada a 16 KB;
   - el AAB por debajo de 80 MB.
+
+## D-058 · Rediseño de los personajes: «3D cartoon», juguete brillante, por código
+
+- **Fecha:** 2026-10-27. Registrada por el integrador.
+- **Estado:** pedido por el dueño en el chat: «quiero que hagamos rediseño de los personajes, demosle mas estilo, como 3D cartoon, CGI estilizado, character y glozy toy aestethic, manda esa encargo a spark». A las tres preguntas respondió con las recomendadas: todos los personajes, por código en pseudo-3D y con un piloto primero.
+- **Decisión:**
+  1. TiTino, Capi, la fauna y los 16 avatares pasan a un acabado de personaje CGI estilizado de juguete brillante:
+     - volumen;
+     - luz principal arriba a la izquierda y luz de borde;
+     - brillo de barniz;
+     - ojos con reflejos;
+     - sin el contorno de tinta grueso.
+  2. **Se sigue dibujando por código (D-052):** sin modelos 3D, renders, IA de imágenes ni herramientas o paquetes nuevos. Se mantiene la dirección «Selva brillante premium» (D-003).
+  3. **Lo hace el Spark** (`docs/dev/traspaso/spark-personajes-3d.md`) en dos fases:
+     - un piloto: guía de estilo, TiTino, Capi, dos animales y capturas de antes y después, que **aprueba el dueño**;
+     - después, el resto.
+  4. **Sustituye** el «contorno de tinta de Capi» de los avatares (D-056 y `docs/dev/avatares.md`). Las APIs, los tamaños, los `ArtSlots` y los presupuestos de tiempo siguen igual.
