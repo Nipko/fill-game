@@ -97,7 +97,7 @@ namespace AF.Tests.EditMode
             ConsentConfig d = ConsentConfig.Defaults;
             Assert.That(c.ConsentTextVersion, Is.EqualTo(d.ConsentTextVersion).And.EqualTo(1));
             Assert.That(c.ConsentUnder13Policy, Is.EqualTo(d.ConsentUnder13Policy).And.EqualTo("block"));
-            Assert.That(c.ConsentAgeSignalSource, Is.EqualTo(d.ConsentAgeSignalSource).And.EqualTo("self_declared"));
+            Assert.That(c.ConsentAgeSignalSource, Is.EqualTo(d.ConsentAgeSignalSource).And.EqualTo("self_declared+play_age_signals"));
             Assert.That(c.BizUnder18NoPersonalization, Is.EqualTo(d.BizUnder18NoPersonalization).And.True);
             Assert.That(Sorted(c.BizLegalProfileByCountry), Is.EqualTo(Sorted(d.BizLegalProfileByCountry)));
         }

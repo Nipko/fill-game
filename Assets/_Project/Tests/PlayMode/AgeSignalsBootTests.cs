@@ -17,7 +17,7 @@ namespace AF.Tests.PlayMode
     /// Play Age Signals en la escena <c>Game</c> real con la señal falsa (T-L3, T-L4 y T-L5 de
     /// <c>docs/legal/investigacion-legal-mundial.md</c> §11; D-057 y su añadido del 2026-10-27): con la fuente
     /// <c>self_declared+play_age_signals</c>, una señal de 0-12 bloquea (también la escena recargada) sin guardar nada; una de 13-17
-    /// aplica lo de 13-17 aunque se declarara 18+, sin mandar la banda a la analítica; con el default <c>self_declared</c> no se pide.
+    /// aplica lo de 13-17 aunque se declarara 18+, sin mandar la banda a la analítica; con <c>self_declared</c> no se pide.
     /// </summary>
     public sealed class AgeSignalsBootTests
     {
@@ -124,8 +124,11 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator DefaultSource_NeverAsksForTheSignal()
+        public IEnumerator SelfDeclaredSource_NeverAsksForTheSignal()
         {
+            GameBootstrap.RemoteConfigBackendOverride = new FakeRemoteConfigBackend()
+                .Set("consent_age_signal_source", ConsentConfig.SourceSelfDeclared)
+                .StoreFetched();
             var signals = new FakeAgeSignals(AgeSignal.ForRange(0, 12));
             GameBootstrap.AgeSignalsOverride = signals;
             var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Adult)));
@@ -133,7 +136,7 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.LoadAppWithConsent(store);
             GameBootstrap boot = GameBootstrap.Current!;
 
-            Assert.That(signals.Requests, Is.EqualTo(0), "08 §9: con self_declared no se llama a Play Age Signals");
+            Assert.That(signals.Requests, Is.EqualTo(0), "con self_declared (desde Remote Config) no se llama a Play Age Signals");
             Assert.That(boot.ConsentBlocked, Is.False);
             Assert.That(boot.Consent!.Flags.Band, Is.EqualTo(AgeBand.Adult));
         }

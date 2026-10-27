@@ -20,6 +20,8 @@ namespace AF.Tests.EditMode
 
         private static ConsentConfig WithSignals() => new ConsentConfig { ConsentAgeSignalSource = ConsentConfig.SourceWithPlayAgeSignals };
 
+        private static ConsentConfig SelfDeclaredOnly() => new ConsentConfig { ConsentAgeSignalSource = ConsentConfig.SourceSelfDeclared };
+
         private static ConsentRecord Record(AgeBand band, bool analytics = true, bool ads = true)
         {
             return new ConsentRecord(LegalProfiles.Default, 1, T0, analytics, ads, band);
@@ -94,8 +96,9 @@ namespace AF.Tests.EditMode
         [Test]
         public void Enabled_OnlyWithTheSecondSourceOf08_9()
         {
-            Assert.That(AgeSignalPolicy.Enabled(ConsentConfig.Defaults), Is.False, "default de 08 §9: self_declared");
+            Assert.That(AgeSignalPolicy.Enabled(ConsentConfig.Defaults), Is.True, "default de 08 §9: self_declared+play_age_signals (D-057)");
             Assert.That(AgeSignalPolicy.Enabled(WithSignals()), Is.True);
+            Assert.That(AgeSignalPolicy.Enabled(SelfDeclaredOnly()), Is.False);
         }
 
         [TestCase(AgeBand.Adult, AgeBand.Unknown, AgeBand.Adult)]
@@ -166,7 +169,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void Flow_WithSelfDeclaredSource_IgnoresTheSignal()
         {
-            var flow = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(Record(AgeBand.Adult)), Clock(), LegalProfiles.Default);
+            var flow = new ConsentFlow(SelfDeclaredOnly(), new MemoryConsentStore(Record(AgeBand.Adult)), Clock(), LegalProfiles.Default);
 
             Assert.That(flow.ApplyAgeSignal(AgeSignal.ForRange(0, 12)), Is.False);
             Assert.That(flow.StartBoot(), Is.EqualTo(ConsentStep.Done));

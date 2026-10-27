@@ -72,7 +72,7 @@ Se añaden a la sección 3.1 cuando el build que se envía los lleve. **Con D-04
 
 **RDP (T-L5):** con 13-17 y el país legal `US`, cada petición de anuncios lleva `rdp=1` (tratamiento restringido de datos de Google), para que no cuente como «compartir» en las leyes de los estados de EE. UU. [F28]. Cambia la nota de la fila del ID de publicidad cuando el build lo lleve.
 
-**Play Age Signals (T-L3; D-057, añadido del 2026-10-27):** la señal de edad de Google Play se lee en el teléfono (con `consent_age_signal_source` = `self_declared+play_age_signals`), solo para dar una experiencia adecuada a la edad (bloqueo con 0-12, lo de 13-17 con 13-15 y 16-17); no se guarda en el perfil, no sale del teléfono por nuestra parte ni va a la analítica (T-L4). La propia API es de Google Play [E]: su fila (si la hay) sale de la guía de Data Safety de la biblioteca cuando entre la dependencia.
+**Play Age Signals (T-L3; D-057, añadido del 2026-10-27):** la señal de edad de Google Play se lee en el teléfono (con `consent_age_signal_source` = `self_declared+play_age_signals`), solo para dar una experiencia adecuada a la edad (bloqueo con 0-12, lo de 13-17 con 13-15 y 16-17); no se guarda en el perfil, no sale del teléfono por nuestra parte ni va a la analítica (T-L4). La propia API es de Google Play (`com.google.android.play:age-signals:0.0.4`, sin permisos) [E]: si su guía de Data Safety pide declarar algo, se añade su fila.
 
 **UMP (Google User Messaging Platform) 4.0.0**, con el plugin de Google (D-049): mensaje del RGPD (EEE, Reino Unido y Suiza) y de los estados de EE. UU.; guarda la decisión en el teléfono [E]. Se cubre con la fila de Google Mobile Ads de 08 §13.3.
 

@@ -24,9 +24,9 @@
     },
     "consent_age_signal_source": {
       "defaultValue": {
-        "value": "self_declared"
+        "value": "self_declared+play_age_signals"
       },
-      "description": "Rango 08 §9: self_declared · self_declared+play_age_signals. Fuente de la banda de edad: declaración en la pantalla neutral; la segunda opción añade Play Age Signals API (compuerta de la Fase 5, 09 §2.3; 05 §7)",
+      "description": "Rango 08 §9: self_declared · self_declared+play_age_signals. Fuente de la banda de edad: declaración en la pantalla neutral; la segunda opción añade Play Age Signals API 0.0.4 (T-L3; D-057, añadido del 2026-10-27; 05 §7): 0-12 bloquea, 13-15 y 16-17 son 1…",
       "valueType": "STRING"
     },
     "biz_market_phase": {

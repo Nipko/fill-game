@@ -7,7 +7,8 @@ namespace AF.UI
 {
     /// <summary>
     /// Play Age Signals en Android (T-L3; D-057 y su añadido del 2026-10-27): llama por JNI al puente propio
-    /// <c>com.amazonfill.agesignals.AfAgeSignals.request(activity, listener)</c>, que traduce la respuesta de la API al formato de
+    /// <c>com.amazonfill.agesignals.AfAgeSignals.request(context, listener)</c> (<c>AfAgeSignals.androidlib</c>, sobre
+    /// <c>com.google.android.play:age-signals:0.0.4</c>), que traduce la respuesta de la API al formato de
     /// <see cref="AgeSignal.Parse"/> (<c>adult</c>, <c>range:&lt;inferior&gt;[:&lt;superior&gt;]</c>, <c>none</c> o <c>error</c>) y la
     /// entrega en cualquier hilo. Vive en <c>AF.UI</c> porque necesita el motor, como <see cref="AndroidSimCountry"/>. En el editor y
     /// en cualquier otra plataforma, «sin señal»; si el puente no está o falla, <see cref="AgeSignal.Error"/>: en los dos casos manda la
@@ -15,7 +16,7 @@ namespace AF.UI
     /// </summary>
     public sealed class AndroidAgeSignals : IAgeSignals
     {
-        /// <summary>La clase Java del puente (<c>AfAgeSignals.androidlib</c>, pendiente de la coordenada Maven de la API).</summary>
+        /// <summary>La clase Java del puente (<c>Assets/_Project/Plugins/Android/AfAgeSignals.androidlib</c>).</summary>
         public const string BridgeClass = "com.amazonfill.agesignals.AfAgeSignals";
 
         private const string LogPrefix = "[AF.AndroidAgeSignals] ";
@@ -35,11 +36,10 @@ namespace AF.UI
 #if UNITY_ANDROID && !UNITY_EDITOR
             try
             {
-                using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-                using (AndroidJavaObject? activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
                 using (var bridge = new AndroidJavaClass(BridgeClass))
                 {
-                    bridge.CallStatic("request", activity, new Listener(this));
+                    // Como AF.IAP.PlayBilling (AfBilling): el contexto de la app; el puente usa getApplicationContext().
+                    bridge.CallStatic("request", UnityEngine.Android.AndroidApplication.currentContext, new Listener(this));
                 }
             }
             catch (Exception e)
