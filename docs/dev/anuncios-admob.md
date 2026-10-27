@@ -57,7 +57,7 @@ Las reglas de cadencia, topes, esperas e intersticiales siguen en `AdPolicy` (05
 | Decisión que permite anuncios | 1) `MobileAds.SetRequestConfiguration` (contenido máximo **G** siempre; con 13-17, `TagForUnderAgeOfConsent = True`); 2) UMP: `ConsentInformation.Update` (con `TagForUnderAgeOfConsent` con 13-17) y `ConsentForm.LoadAndShowConsentFormIfRequired`; 3) **solo si** `ConsentInformation.CanRequestAds()`, `MobileAds.Initialize`; 4) al avisar de que está listo, la precarga |
 | UMP no resuelve (sin red en la primera sesión) | Sin `Initialize`; se vuelve a preguntar al volver a la app (`OnResume`) |
 | 13-17 fuera del EEE/UK/CH | `TagForUnderAgeOfConsent` y cada petición con `npa=1` (`biz_under18_no_personalization`) |
-| 13-17 con el perfil `ump` (EEE, Reino Unido, Suiza) | **Sin anuncios** (Q-MAX-6 (b), recomendada provisional, como con MAX): ninguna llamada. Pregunta 2 de §11 |
+| 13-17 con el perfil `ump` (EEE, Reino Unido, Suiza) | **Sin anuncios** (Q-MAX-6 (b), confirmada por el dueño en D-055, punto 4): ninguna llamada. Pregunta 2 de §11 |
 | 18+ que no acepta «Anuncios personalizados», o sin país | `npa=1` en cada petición |
 | 18+ que acepta | Sin `npa` |
 | Perfil `ump` con 18+ | Sin `npa`: deciden las cadenas TCF del mensaje de UMP. Ajustes › Privacidad › opciones de anuncios llama a `ConsentForm.ShowPrivacyOptionsForm` si UMP lo pide (`PrivacyOptionsRequirementStatus.Required`) |
@@ -102,7 +102,7 @@ Sin bajadas de versión ni choques: las incidencias del plugin con AGP 9 (#4157 
 
 `Assets/Plugins/Android/LauncherManifest.xml` (máxima prioridad en la fusión):
 
-- **`AD_ID` activado** (ya no se quita; aprobado en el añadido de D-049). Firebase Analytics sigue sin leerlo (`google_analytics_adid_collection_enabled` = false).
+- **`AD_ID` activado** (ya no se quita; aprobado en el añadido de D-049 y confirmado en D-055, punto 3). El ID de publicidad solo personaliza con 18+ y el consentimiento de anuncios personalizados (o lo que decida UMP en el EEE/UK/CH); con 13-17, sin consentimiento o sin país, `npa=1` y, con 13-17, `TagForUnderAgeOfConsent`; con `<13` ningún SDK de anuncios; con 13-17 en el EEE/UK/CH, sin anuncios (§5; tests `GoogleAdServiceTests.AdvertisingId_PersonalizedOnlyForAdultsWhoConsent_D055` y `UmpProfile_AdultCorrectedToTeen_StopsLoadingAndShowing_D055`). Con `npa`, Google sigue pudiendo leer el ID para límites de frecuencia, informes agregados y fraude [NV]. Firebase Analytics sigue sin leerlo (`google_analytics_adid_collection_enabled` = false).
 - **Fuera** con `tools:node="remove"`: `ACCESS_WIFI_STATE` y `CHECK_LICENSE` (ya estaban), `FOREGROUND_SERVICE` y `RECEIVE_BOOT_COMPLETED` (de `work-runtime`), `ACCESS_ADSERVICES_TOPICS`, `ACCESS_ADSERVICES_AD_ID` y `ACCESS_ADSERVICES_ATTRIBUTION` (Privacy Sandbox), `READ_GSERVICES`. Siguen quitados `AppLovinInitProvider` y `PlayGamesInitProvider`.
 - `com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT` = true.
 - `ci/check-manifest.ps1` admite `AD_ID` en su lista blanca (autotest: 55 casos, con `AD_ID` aprobado y `ACCESS_ADSERVICES_TOPICS` y `FOREGROUND_SERVICE` rechazados); cualquier otro permiso sigue fallando.
@@ -138,5 +138,5 @@ Sin bajadas de versión ni choques: las incidencias del plugin con AGP 9 (#4157 
 ## 11. Preguntas abiertas
 
 1. **Bloques en el código (resuelta el 2026-10-26: el dueño aprueba las constantes y se actualiza `.claude/rules/sdk.md`):** 08 §9 no tiene claves de Remote Config para los bloques de anuncios y `.claude/rules/sdk.md` dice «ningún ID de unidad privada en el código»; la tarea del dueño dice que no son secretos y pide constantes. Recomendación: dejarlos como constantes (cambian con un build) y actualizar la regla de `sdk.md`.
-2. **13-17 con el perfil `ump` (Q-MAX-6 (b)):** con Google, UMP con `TagForUnderAgeOfConsent` no enseña el formulario a un menor y AdMob sirve anuncios limitados, así que el motivo de Q-MAX-6 (b) desaparece. Se mantiene «sin anuncios» porque así está decidido. Recomendación: preguntar al abogado si se pueden servir anuncios limitados a 13-17 en el EEE/UK/CH.
+2. **13-17 con el perfil `ump` (Q-MAX-6 (b); decidida por el dueño en D-055, punto 4: sin anuncios):** con Google, UMP con `TagForUnderAgeOfConsent` no enseña el formulario a un menor y AdMob sirve anuncios limitados, así que el motivo de Q-MAX-6 (b) desaparece. Se mantiene «sin anuncios» porque así está decidido. Recomendación: preguntar al abogado si se pueden servir anuncios limitados a 13-17 en el EEE/UK/CH.
 3. **`ad_impression` doble** si se vincula AdMob con Firebase (§10 punto 4).
