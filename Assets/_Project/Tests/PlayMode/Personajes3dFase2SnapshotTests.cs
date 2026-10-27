@@ -36,7 +36,8 @@ namespace AF.Tests.PlayMode
     /// <item><c>f2_06_victoria_avatar</c>: la victoria del 41 con el avatar en la línea de la Liga (24 dp);</item>
     /// <item><c>f2_07_liga</c>: la Liga con el avatar de cada fila (32 dp);</item>
     /// <item><c>f2_08_delfin</c>: el delfín de río (Rosa y el bufeo) en grande, en el banner con la onda, la espuma y el soplo, y
-    /// a su tamaño en el Mapa;</item>
+    /// a su tamaño en el Mapa (la onda, opaca y a escala 1: solo sale así al asomar);</item>
+    /// <item><c>f2_08b_delfin_reposo</c>: el banner en reposo, con solo la espuma sobre el corte (sin la onda ni el soplo);</item>
     /// <item>las escenas también con <c>_ac</c>: con Alto contraste encendido (B9).</item>
     /// </list>
     /// Todas a 360 dp (1080 px de ancho, 3 px/dp), con el texto al 100 % y en es-419. Necesitan gráficos: <c>unity test &lt;repo&gt;
@@ -267,6 +268,45 @@ namespace AF.Tests.PlayMode
 
             yield return null;
             SaveSheet("f2_08_delfin");
+        }
+
+        /// <summary>
+        /// El banner en reposo (revisión de la fase 2): Rosa con <see cref="WorldBannerView.RosaAbove"/> de su alto fuera del agua y
+        /// solo la espuma sobre el corte, sin la onda ni el soplo (en reposo los dos están a alfa 0), a 2 × y a 1 ×: la espuma
+        /// tiene que tapar el corte entero.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CaptureDolphinRest()
+        {
+            const float sheetH = 300f;
+            RectTransform layer = PrepareSheet((int)sheetH);
+            Background(layer, 0f, 0f, WidthDp, sheetH, Palette.Panel.Top);
+            Sprite rosa = _art!.Rosa;
+            Sprite foam = _art.RosaFoam;
+            float[] scales = { 2f, 1f };
+            float[] xs = { 20f, 250f };
+            float waterline = 200f;
+            for (int i = 0; i < 2; i++)
+            {
+                float k = scales[i];
+                float w = ProceduralArt.RosaWidthDp * k;
+                float h = ProceduralArt.RosaHeightDp * k;
+                Place(layer, rosa, xs[i], waterline - (WorldBannerView.RosaAbove * h), w, h);
+            }
+
+            Background(layer, 0f, waterline, WidthDp, sheetH - waterline, MapWater);
+            layer.GetChild(0).SetAsLastSibling(); // el agua tapa la parte de Rosa bajo la línea
+            for (int i = 0; i < 2; i++)
+            {
+                float k = scales[i];
+                float fw = ProceduralArt.RosaFoamWidthDp * k;
+                float fh = ProceduralArt.RosaFoamHeightDp * k;
+                float fx = xs[i] + (ProceduralArt.RosaCutCenter * ProceduralArt.RosaWidthDp * k);
+                Place(layer, foam, fx - (fw * 0.5f), waterline - (fh * 0.5f), fw, fh);
+            }
+
+            yield return null;
+            SaveSheet("f2_08b_delfin_reposo");
         }
 
         // El verde de tierra y el agua del Mapa (aproximados, para la lámina).
