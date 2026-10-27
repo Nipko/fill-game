@@ -4213,3 +4213,19 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 2. **Nombres de países de CLDR 47.0.** Se aceptan como fuente para la tabla de la Liga, con la misma excepción que las 21 filas de D-046 (`aprobado_es`/`revisado_nativo`, con la nota «Pendiente del asesor cultural»). El asesor revisará con prioridad los nombres con carga política: Taiwán, Palestina, Kosovo y Sáhara Occidental.
 3. **13-17 sin país conocido:** no se ofrece la analítica, que es el tratamiento más estricto. Sustituye el «sin país, `*`» de T-L1.
 4. **Lista T1 (T-M6):** se añaden Nueva Zelanda, Singapur, Hong Kong, Taiwán, Israel y los países del Golfo, como [P]. Se editan 04 §6.2 y 05 §6.3.
+
+### D-049, añadido del 2026-10-27: Unity Ads como red de mediación de AdMob
+
+- **Aprobación del dueño, en el chat:** «apruebo el adaptador 3.21.1». Es `com.google.ads.mobile.mediation.unity` 3.21.1, con el adaptador `com.google.ads.mediation:unity:4.20.1.0` y el SDK `com.unity3d.ads:unity-ads:4.20.1` (`docs/dev/anuncios-gma-propuesta.md` §7).
+- **Cuentas, configuradas con el dueño el 2026-10-27:**
+  - **Unity:** la organización 20067668703382 tiene el proyecto y la app «Tintalú» (Android, audiencia general, sin URL de tienda). El Game ID es 800412912 y los placements de bidding son `BP_Rewarded_Android` y `BP_Interstitial_Android`.
+  - **AdMob:** hay dos grupos de mediación con Unity Ads por licitación: «Tintalú Recompensado Android» (9122104719) y «Tintalú Intersticial Android» (3021919976). El dueño aceptó las condiciones de procesamiento de datos y el acuerdo de licitación.
+  - **Pendiente del dueño:**
+    - poner Parallext, LLC como nombre de la organización de Unity, con su dirección y los datos de cobro;
+    - añadir Unity Ads a los partners de los mensajes de RGPD y de EE. UU. en AdMob.
+- **Bloque recompensado corregido:** `…/2877105387` era de formato «Intersticial recompensado» y el juego lo cargaba como Recompensado. Se creó `…/1182085615` (Recompensado), que pasa a ser el bloque de producción.
+- **Condiciones de la integración:**
+  - quitar el inicializador automático de Unity Ads, para que nada arranque antes de la edad y el consentimiento;
+  - sin permisos nuevos;
+  - la biblioteca nativa alineada a 16 KB;
+  - el AAB por debajo de 80 MB.
