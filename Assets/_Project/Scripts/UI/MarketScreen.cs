@@ -148,6 +148,31 @@ namespace AF.UI
         /// <summary>Filas de la pestaña a la vista (tests).</summary>
         public IReadOnlyList<MarketRow> Rows => _model;
 
+        /// <summary>
+        /// La Mochila de inicio está entre las filas a la vista pero ya no está a la venta (su temporizador llegó a cero, se pasó el 20
+        /// o se compró): quien lleva el Mercado la quita con <see cref="Refresh"/> (T-L9; 05 §4.1). False con el Mercado cerrado.
+        /// </summary>
+        public bool StarterStale
+        {
+            get
+            {
+                if (!Visible)
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < _model.Count; i++)
+                {
+                    if (string.Equals(_model[i].Id, StoreCatalog.Starter, StringComparison.Ordinal))
+                    {
+                        return !_deps.Offers.StarterAvailable(_deps.MaxLevel());
+                    }
+                }
+
+                return false;
+            }
+        }
+
         /// <summary>Texto del saldo de semillas.</summary>
         public string SeedsText => _seeds.text;
 
@@ -404,6 +429,13 @@ namespace AF.UI
             IStoreService store = _deps.Store;
             if (!store.IsAvailable || _deps.PurchasesBlocked || store.IsPurchasing)
             {
+                return false;
+            }
+
+            if (string.Equals(sku, StoreCatalog.Starter, StringComparison.Ordinal) && !_deps.Offers.StarterAvailable(_deps.MaxLevel()))
+            {
+                // T-L9 (05 §4.1): con el temporizador a cero la Mochila ya no se vende, aunque su fila siguiera a la vista.
+                Refresh();
                 return false;
             }
 
