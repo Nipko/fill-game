@@ -333,9 +333,14 @@ namespace AF.Platform
                 ? Record.WithChoices(_profile, _config.ConsentTextVersion, now, analytics, adsPersonalized)
                 : new ConsentRecord(_profile, _config.ConsentTextVersion, now, analytics, adsPersonalized, Band);
             Save(record);
+            // Sin ninguna finalidad que elegir (13-17 en el EEE o donde la edad digital pasa de 13, D-057), el paso lo dice el botón: no
+            // es un rechazo si se pulsó «Aceptar todo» o «Guardar» (08 §8.2 no cambia: los mismos cuatro step) [P].
+            bool nothingOffered = !offersAnalytics && !offersAds;
             string step = Mode == ConsentFlowMode.Change
                 ? ConsentReport.Changed
-                : (analytics || adsPersonalized ? ConsentReport.Accepted : ConsentReport.Rejected);
+                : nothingOffered
+                    ? (answer == ConsentAnswer.RejectAll ? ConsentReport.Rejected : ConsentReport.Accepted)
+                    : (analytics || adsPersonalized ? ConsentReport.Accepted : ConsentReport.Rejected);
             Report(step, record.Profile, record.TextVersion, analytics, adsPersonalized, Band);
             return Go(ConsentStep.Done);
         }

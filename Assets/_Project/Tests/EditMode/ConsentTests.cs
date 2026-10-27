@@ -456,6 +456,47 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void TheFlow_WithNothingToChoose_ReportsTheButton_NotARejection()
+        {
+            // 13-17 en Alemania (UMP, sin anuncios ni analítica que elegir): «Aceptar todo» no es un rechazo (revisión de D-057).
+            var reports = new List<ConsentReport>();
+            var flow = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(), Clock(), LegalProfiles.Ump, true, "DE") { Reported = reports.Add };
+            flow.StartBoot();
+            flow.ChooseAge(AgeBand.Teen);
+            Assert.That(flow.OffersAdsChoice || flow.OffersAnalyticsChoice, Is.False);
+            flow.Choose(ConsentAnswer.AcceptAll);
+            Assert.That(reports[reports.Count - 1].Step, Is.EqualTo(ConsentReport.Accepted));
+            Assert.That(reports[reports.Count - 1].Analytics, Is.False);
+
+            var rejected = new List<ConsentReport>();
+            var flow2 = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(), Clock(), LegalProfiles.Ump, true, "DE") { Reported = rejected.Add };
+            flow2.StartBoot();
+            flow2.ChooseAge(AgeBand.Teen);
+            flow2.Choose(ConsentAnswer.RejectAll);
+            Assert.That(rejected[rejected.Count - 1].Step, Is.EqualTo(ConsentReport.Rejected));
+
+            // Con algo que elegir, como siempre: guardar sin marcar nada es un rechazo.
+            var adult = new List<ConsentReport>();
+            var flow3 = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(), Clock(), LegalProfiles.Co1581, true, "CO") { Reported = adult.Add };
+            flow3.StartBoot();
+            flow3.ChooseAge(AgeBand.Adult);
+            flow3.Choose(ConsentAnswer.Save);
+            Assert.That(adult[adult.Count - 1].Step, Is.EqualTo(ConsentReport.Rejected));
+        }
+
+        [Test]
+        public void BeginChange_ForATeenInGermany_StartsWithAnalyticsOff_EvenIfTheRecordSaysOn()
+        {
+            var store = new MemoryConsentStore(new ConsentRecord(LegalProfiles.Ump, 1, T0, true, false, AgeBand.Teen));
+            var flow = new ConsentFlow(ConsentConfig.Defaults, store, Clock(), LegalProfiles.Ump, true, "DE");
+            Assert.That(flow.StartBoot(), Is.EqualTo(ConsentStep.Done));
+            Assert.That(flow.BeginChange(), Is.EqualTo(ConsentStep.Choices));
+            Assert.That(flow.InitialAnalytics, Is.False, "lo que no se ofrece no sale marcado");
+            Assert.That(flow.OffersAnalyticsChoice, Is.False);
+            Assert.That(flow.Flags.AnalyticsEnabled, Is.False);
+        }
+
+        [Test]
         public void TheFlow_ForATeenInTheUnitedStates_StillOffersAnalytics()
         {
             var store = new MemoryConsentStore();

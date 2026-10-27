@@ -250,6 +250,24 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ASavedPlayCountry_WithAnotherLegalProfile_AsksForTheChoicesAgain()
+        {
+            // Revisión de D-057: una decisión con el perfil default (región en-US) y, guardado desde la conexión anterior con Play, el
+            // país DE: el arranque resuelve DE (ump) y vuelve a pedir las finalidades con la banda guardada (Q-B12-15).
+            GameBootstrap.SimCountryOverride = ManualSimCountry.None;
+            GameBootstrap.PlayAccountCountryOverride = new MemoryPlayAccountCountry("DE");
+            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("en-US");
+            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Default, 1, T0, true, true, AgeBand.Adult)));
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ConsentCountryCode, Is.EqualTo("DE"));
+            Assert.That(boot.ConsentCountrySource, Is.EqualTo(CountrySource.PlayAccount));
+            Assert.That(boot.ConsentView!.Visible, Is.True, "otro perfil legal: se vuelve a preguntar");
+            Assert.That(boot.ConsentView.View, Is.EqualTo(ConsentView.Choices), "solo las finalidades, con la banda guardada");
+            Assert.That(boot.Consent!.Flags.Decided, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator UnknownCountry_IsStrict_AndUmp_LeavesTheAdsToUmp()
         {
             GameBootstrap.SimCountryOverride = ManualSimCountry.None;
