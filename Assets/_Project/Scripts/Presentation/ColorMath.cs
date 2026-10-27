@@ -36,6 +36,21 @@ namespace AF.Presentation
             return r;
         }
 
+        /// <summary>
+        /// Cambia la luminosidad OKLab de <paramref name="c"/> en <paramref name="lightness"/> y su croma (a, b) en
+        /// <paramref name="chroma"/> (1,1 = +10 %), conservando el tono y el alfa.
+        /// </summary>
+        public static Color ScaleOkLightnessChroma(Color c, float lightness, float chroma)
+        {
+            Vector3 lab = ToOkLab(c);
+            lab.x *= lightness;
+            lab.y *= chroma;
+            lab.z *= chroma;
+            Color r = FromOkLab(lab);
+            r.a = c.a;
+            return r;
+        }
+
         /// <summary>Aclara un color hacia el blanco en la proporción <paramref name="amount"/> (conserva el alfa).</summary>
         public static Color Lighten(Color c, float amount)
         {

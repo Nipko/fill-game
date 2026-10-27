@@ -321,7 +321,7 @@ namespace AF.Tests.EditMode
             {
                 for (int x = 0; x < 128; x++)
                 {
-                    amber += Distance(px[(y * size) + x], Palette.Hex(0xC8902A)) < 0.06f ? 1 : 0;
+                    amber += Amber(px[(y * size) + x]) ? 1 : 0;
                 }
             }
 
@@ -396,9 +396,11 @@ namespace AF.Tests.EditMode
                         y1 = Mathf.Max(y1, y);
                     }
 
-                    nose += Distance(c, Palette.Hex(uakari.Palette.Muzzle)) < 0.06f ? 1 : 0;
-                    headHair += Distance(c, hair) < 0.06f ? 1 : 0;
-                    amber += Distance(c, Palette.Hex(0xC8902A)) < 0.06f ? 1 : 0;
+                    // 0,03 y no 0,06: desde D-058 la cara roja va en tres tonos y su sombra pasa cerca del color del hocico; una
+                    // nariz pintada sería un parche de ese color exacto, así que basta con la tolerancia estrecha.
+                    nose += Distance(c, Palette.Hex(uakari.Palette.Muzzle)) < 0.03f ? 1 : 0;
+                    headHair += Hair(c, hair) ? 1 : 0;
+                    amber += Amber(c) ? 1 : 0;
                 }
             }
 
@@ -413,7 +415,7 @@ namespace AF.Tests.EditMode
             {
                 for (int x = 128; x < 256; x++)
                 {
-                    torsoHair += Distance(px[(y * size) + x], hair) < 0.06f ? 1 : 0;
+                    torsoHair += Hair(px[(y * size) + x], hair) ? 1 : 0;
                 }
             }
 
@@ -455,6 +457,27 @@ namespace AF.Tests.EditMode
             {
                 art.Dispose();
             }
+        }
+
+        // Un píxel del iris ámbar (#C8902A): desde los personajes de juguete (D-058) el iris va en degradado (más oscuro arriba, más
+        // claro abajo), así que se mira la familia del color (el matiz ámbar, saturado y no oscuro), no un tono exacto.
+        private static bool Amber(Color c)
+        {
+            if (c.a < 0.5f)
+            {
+                return false;
+            }
+
+            Color.RGBToHSV(c, out float h, out float s, out float v);
+            return h >= 0.088f && h <= 0.13f && s >= 0.5f && v >= 0.35f;
+        }
+
+        // Un píxel del pelo largo rojizo: desde los personajes de juguete (D-058) el pelo va en tres tonos (sombra, medio y luz), así
+        // que cuenta cualquiera de los tres, como el color de antes.
+        private static bool Hair(Color c, Color hair)
+        {
+            ToyTones t = ToyShading.Tones(hair);
+            return c.a >= 0.5f && (Distance(c, hair) < 0.06f || Distance(c, t.Light) < 0.06f || Distance(c, t.Shadow) < 0.06f);
         }
 
         private static float Distance(Color a, Color b)

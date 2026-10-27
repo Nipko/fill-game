@@ -184,22 +184,13 @@ namespace AF.Presentation
         /// <summary>Ancho y alto del espéculo en la pieza del lomo, en fracción de la pieza.</summary>
         public static readonly Vector2 SlothSpeculumSizeUv = new Vector2(13f / SlothCellPx, 26f / SlothCellPx);
 
-        // Espéculo del macho (c.4) y garras de hueso claro (c.4), con su base más oscura y su punta casi marfil.
+        // Espéculo del macho (c.4) y garras de hueso claro (c.4), con su punta casi marfil.
         private static readonly Color SlothSpeculum = Palette.Hex(0xE39A3B);
         private static readonly Color SlothClaw = Palette.Hex(0xCDBFA3);
-        private static readonly Color SlothClawBase = Palette.Hex(0x8C7A5E);
         private static readonly Color SlothClawTip = Palette.Hex(0xF1E8D4);
-        private static readonly Color SlothClawInk = Palette.Hex(0x3A2C20);
 
-        // Luz de juego (D-003; dirección visual v2): desde arriba a la izquierda y algo de frente; la luz de borde cálida y el
-        // rebote fresco de la selva en el lado de la sombra.
-        private const float SlothLightX = -0.5f;
-        private const float SlothLightY = 0.62f;
-        private const float SlothLightZ = 0.6f;
-        private static readonly Color SlothRimLight = Palette.Hex(0xFFF0CF);
-        private static readonly Color SlothBounce = Palette.Hex(0x7FA597);
-        private static readonly Color SlothEye = Palette.Hex(0x160E09);
-        private static readonly Color SlothEyeWarm = Palette.Hex(0x6A4730);
+        // Iris pardo cálido de los ojos, rubor y boca (la luz de juego es la de ToyShading: D-003 y D-058).
+        internal static readonly Color SlothEyeWarm = Palette.Hex(0x6A4730);
         private static readonly Color SlothBlush = Palette.Hex(0xD98C76);
         private static readonly Color SlothMouth = Palette.Hex(0x3B2A1E);
 
@@ -417,91 +408,54 @@ namespace AF.Presentation
         private const float SlothEyeDxPx = 14.7f;
         private const float SlothEyeDyPx = 0.5f;
 
-        // Los tres tonos de un pelaje o de una piel (sombra, medio y luz), calculados una vez por pieza.
-        private struct SlothTones
+        // Acabado de juguete (D-058; docs/art/estilo-personajes-3d.md): los tonos de cada material, calculados una vez.
+        // Van en su propia clase para inicializarse la primera vez que se pintan, con los colores de las otras partes de
+        // ProceduralArt ya inicializados (el orden de los campos estáticos entre archivos parciales no está definido).
+        private static class SlothToy
         {
-            public Color Shadow;
-            public Color Mid;
-            public Color Light;
+            public static readonly ToyTones Fur = ToyShading.Tones(SlothFur);
+            public static readonly ToyTones Algae = ToyShading.Tones(Color.Lerp(SlothFur, SlothAlgae, 0.75f));
+            public static readonly ToyTones Belly = ToyShading.Tones(ColorMath.Lighten(SlothFur, 0.12f));
+            public static readonly ToyTones Throat = ToyShading.Tones(SlothThroat);
+            public static readonly ToyTones Face = ToyShading.Tones(SlothFace, 0.6f);
+            public static readonly ToyTones Mask = ToyShading.Tones(SlothMask, 0.8f);
+            public static readonly ToyTones Nose = ToyShading.Tones(Palette.Hex(0x3A2A20));
+            public static readonly ToyTones Limb = ToyShading.Tones(ColorMath.Darken(SlothFur, 0.04f));
+            public static readonly ToyTones Paw = ToyShading.Tones(ColorMath.Darken(SlothFur, 0.24f));
+            public static readonly ToyTones Spec = ToyShading.Tones(Color.Lerp(SlothSpeculum, SlothFur, 0.35f));
+            public static readonly ToyTones Claw = ToyShading.Tones(SlothClaw, 0.7f);
         }
 
-        private static SlothTones Tones(Color c, float dark, float light)
+        // Contorno fino coloreado (unidades de la celda de 128; D-058: sin la tinta gruesa): ≈ 1 px en pantalla a 64 dp.
+        private const float SlothEdgePx = 1.5f;
+
+        // Mechones de felpa (unidades): el ancho de un mechón, lo que inclinan la normal, lo que oscurece el surco y el brillo
+        // del pelaje. Ablandados en la fase 2 (P3D-2, el dueño el 2026-10-27): mechones más anchos y más bajos, que se leen como
+        // vinilo lacado y no como felpa grumosa, con más barniz; la cara, más lacada aún.
+        private const float SlothClumpU = 23f;
+        private const float SlothClumpTilt = 0.085f;
+        private const float SlothClumpGroove = 0.07f;
+        private const float SlothFurGloss = 0.42f;
+        private const float SlothFaceGloss = 0.72f;
+
+        // Ojos de juguete: 1,25 veces los de antes (5,1 → 6,4 unidades), dentro del antifaz [P]; iris pardo cálido.
+        private const float SlothEyeRadiusPx = 6.4f;
+
+        // El pelaje de felpa en un punto con normal aparente (nx, ny) de la pieza y tonos t: los mechones redondos en (cx, cy)
+        // (unidades) inclinan la normal y oscurecen el surco entre ellos; ao es la oclusión de las uniones (0..1).
+        private static Color SlothToyFur(in ToyTones t, float nx, float ny, float cx, float cy, int seed, float ao)
         {
-            return new SlothTones { Shadow = ColorMath.Darken(c, dark), Mid = c, Light = ColorMath.Lighten(c, light) };
+            float h = ToyShading.PlushClumps(cx, cy, SlothClumpU, seed, out float sx, out float sy);
+            Vector3 shape = ToyShading.Normal(nx, ny);
+            Vector3 n = ToyShading.Tilt(shape, sx, sy, SlothClumpTilt);
+            float groove = 1f - Mathf.Clamp01(h * 1.6f);
+            return ToyShading.Shade(t, n, Mathf.Clamp01(ao + (SlothClumpGroove * groove)), SlothFurGloss, shape);
         }
 
-        private static Color Shade(in SlothTones t, float diffuse)
+        // Los tonos del pelaje con el matiz de algas a parches (algae, 0..1).
+        private static ToyTones SlothFurTones(float algae)
         {
-            return diffuse < 0.55f ? Color.Lerp(t.Shadow, t.Mid, diffuse / 0.55f) : Color.Lerp(t.Mid, t.Light, (diffuse - 0.55f) / 0.45f);
-        }
-
-        // Luz difusa de una normal aparente (nx, ny en −1..1): la luz de juego de arriba a la izquierda.
-        private static float SlothDiffuse(float nx, float ny, out float nz)
-        {
-            float nn = Mathf.Clamp01((nx * nx) + (ny * ny));
-            nz = Mathf.Sqrt(1f - nn);
-            return Mathf.Clamp01((nx * SlothLightX) + (ny * SlothLightY) + (nz * SlothLightZ) + 0.08f);
-        }
-
-        // El pelaje con volumen: sombra propia y luz por la normal aparente, el matiz de las algas (algae, 0..1) mezclado con su
-        // propia luz, los mechones (strand, −1..1), la luz de borde cálida en el canto que mira a la luz y el rebote fresco en el
-        // de la sombra.
-        private static Color SlothFurColor(in SlothTones fur, in SlothTones algae, float nx, float ny, float strand, float algaeAmount)
-        {
-            float diffuse = SlothDiffuse(nx, ny, out float nz);
-            Color col = Shade(fur, diffuse);
-            if (algaeAmount > 0f)
-            {
-                col = Color.Lerp(col, Shade(algae, diffuse), Mathf.Clamp01(algaeAmount));
-            }
-
-            float m = 1f + (0.15f * strand);
-            col.r *= m;
-            col.g *= m;
-            col.b *= m;
-            float edge = 1f - nz;
-            float facing = ((nx * SlothLightX) + (ny * SlothLightY)) * 1.25f;
-            if (facing > 0f)
-            {
-                col = Color.Lerp(col, SlothRimLight, edge * edge * edge * Mathf.Clamp01(facing) * 0.6f);
-            }
-            else
-            {
-                col = Color.Lerp(col, SlothBounce, edge * edge * edge * Mathf.Clamp01(-facing) * 0.22f);
-            }
-
-            col.a = 1f;
-            return col;
-        }
-
-        // Mechones: vetas suaves en la dirección del pelo (along, de la raíz a la punta) y más estrechas a lo ancho (across), en
-        // unidades, ondeadas con un ruido lento para que no sean rectas: matas que se leen a 48 dp y pelos finos para los
-        // tamaños grandes, con poco contraste (pelo, no veta de madera ni tejas). lane y len son el ancho y el largo de una mata.
-        // −1..1.
-        private static float SlothStrand(float along, float across, int seed, float lane = 7f, float len = 15f)
-        {
-            float warp = (ArtNoise.Value2(across * 0.06f, along * 0.05f, seed + 3) - 0.5f) * 1.1f * lane;
-            float ax = (across + warp) / lane;
-            float ay = along / len;
-            float n1 = ArtNoise.Value2(ax * 1.5f, ay * 0.85f, seed) - 0.5f;
-            float n2 = ArtNoise.Value2(ax * 4f, ay * 2.4f, seed + 11) - 0.5f;
-            return Mathf.Clamp((n1 * 1.7f) + (n2 * 0.9f), -1f, 1f);
-        }
-
-        // Mechones que salen del centro de la cabeza (r, a en radianes): sin costura donde el ángulo da la vuelta (±π), que se
-        // funde con la vuelta anterior.
-        private static float SlothRadialStrand(float r, float a, int seed)
-        {
-            float across = Mathf.Max(r, 24f);
-            float s1 = SlothStrand(r, a * across, seed, 8f, 13f);
-            float w = 0.5f * SlothSmooth(Mathf.PI - 0.6f, Mathf.PI, Mathf.Abs(a));
-            if (w <= 0f)
-            {
-                return s1;
-            }
-
-            float a2 = a < 0f ? a + (2f * Mathf.PI) : a - (2f * Mathf.PI);
-            return Mathf.Lerp(s1, SlothStrand(r, a2 * across, seed, 8f, 13f), w);
+            return algae > 0f ? ToyTones.Lerp(SlothToy.Fur, SlothToy.Algae, Mathf.Clamp01(algae)) : SlothToy.Fur;
         }
 
         // Mechones del borde: n puntas por vuelta (ángulo a), de alto amp (cada una con su propio alto), puntiagudas y con el
@@ -560,32 +514,38 @@ namespace AF.Presentation
             return SlothSmoothMin(a, b, 2f);
         }
 
-        // Color de las bandas: más claras arriba, con su veta de pelo hacia la sien. Lo usan la cabeza y el párpado, idéntico.
-        private static Color SlothBandColor(float ux, float uy)
+        // Normal aparente de la cara (unidades respecto al centro de la cabeza): la máscara es una cúpula baja y el hocico corto
+        // abulta delante, fundido con ella. La usan la cara, las bandas de la cabeza y las del párpado: idénticas.
+        private static Vector3 SlothFaceNormal(float ux, float uy)
         {
-            float light = Mathf.Clamp01(0.45f + (0.06f * (uy - SlothEyeDyPx)) - (0.012f * Mathf.Abs(ux)));
-            Color col = Color.Lerp(ColorMath.Darken(SlothMask, 0.22f), ColorMath.Lighten(SlothMask, 0.1f), light);
-            float strand = SlothStrand(Mathf.Abs(ux), uy, 61, 3f, 8f);
-            float m = 1f + (0.1f * strand);
-            col.r *= m;
-            col.g *= m;
-            col.b *= m;
-            col.a = 1f;
-            return col;
+            Vector3 face = ToyShading.Normal(ux / 40f, (uy + 5f) / 38f);
+            float muzzleQ = Mathf.Sqrt(((ux * ux) / (20f * 20f)) + (((uy + 14f) * (uy + 14f)) / (14.5f * 14.5f)));
+            float w = 1f - SlothSmooth(0.75f, 1.15f, muzzleQ);
+            if (w <= 0f)
+            {
+                return face;
+            }
+
+            Vector3 muzzle = ToyShading.Normal(ux / 22f, (uy + 12f) / 16f);
+            return Vector3.Lerp(face, muzzle, w).normalized;
         }
 
-        // Pinta la cabeza de frente con centro (cx, cy) px y k px por unidad (la celda de 128), recortada a [x0, x1) × [y0, y1):
-        // borde de pelo en mechones con su copete, volumen con luz de juego, luz de borde y matiz de algas en la coronilla; la
-        // máscara clara con el pico de pelo de la frente y el flequillo; las bandas oscuras de los ojos; ojos con brillo
-        // (abiertos) o cerrados en arco; el hocico con su luz, la nariz ancha y brillante, y la sonrisa amable. La usan el rig
-        // (la pieza de la cabeza, ojos abiertos) y el retrato (abiertos o cerrados). Sin orejas redondas, labios ni dientes. La
-        // garganta parda no va aquí, sino en lo alto del torso de frente: así no gira con la cabeza.
+        // Color de las bandas de los ojos: el antifaz de juguete con la luz de la cara. Lo usan la cabeza y el párpado, idéntico.
+        private static Color SlothBandColor(float ux, float uy)
+        {
+            return ToyShading.Shade(SlothToy.Mask, SlothFaceNormal(ux, uy), 0f, 0.3f);
+        }
+
+        // Pinta la cabeza de frente con centro (cx, cy) px y k px por unidad (la celda de 128), recortada a [x0, x1) × [y0, y1),
+        // con el acabado de juguete (D-058): el borde de felpa en mechones redondos con su copete y un contorno fino del color
+        // del pelo; volumen de cúpula con la luz de juego, barniz suave, luz de borde cálida y el matiz de algas en la coronilla;
+        // la máscara clara con el pico de pelo de la frente y el flequillo, con su oclusión contra el pelo; las bandas oscuras de
+        // los ojos; ojos de juguete con el iris en degradado y dos reflejos (abiertos) o cerrados en arco; el hocico que abulta, la
+        // nariz lacada y la sonrisa amable. La usan el rig (la pieza de la cabeza, ojos abiertos) y el retrato (abiertos o
+        // cerrados). Sin orejas redondas, labios ni dientes. La garganta parda no va aquí, sino en lo alto del torso de frente:
+        // así no gira con la cabeza.
         private static void DrawSlothHeadAt(PixelCanvas pc, float cx, float cy, float k, bool eyesClosed, int x0, int y0, int x1, int y1)
         {
-            SlothTones fur = Tones(SlothFur, 0.36f, 0.2f);
-            SlothTones algae = Tones(Color.Lerp(SlothFur, SlothAlgae, 0.75f), 0.34f, 0.16f);
-            SlothTones face = Tones(SlothFace, 0.2f, 0.05f);
-            Color faceLight = ColorMath.Lighten(SlothFace, 0.07f);
             float reach = (SlothHeadRadiusPx + 10f) * k;
             int ax = Mathf.Max(x0, Mathf.FloorToInt(cx - reach));
             int bx = Mathf.Min(x1, Mathf.CeilToInt(cx + reach));
@@ -608,52 +568,50 @@ namespace AF.Presentation
                     float amp = 1.6f + (2.3f * Mathf.Clamp01(Mathf.Sin(a) + 0.25f)); // copete arriba, mejillas más cortas
                     float rr = 47.4f + SlothTuft(a, 13, amp, 0.35f, 31, out float valley);
                     float d = r - rr;
-                    if (d > SlothInkPx + aa)
+                    if (d > SlothEdgePx + aa)
                     {
                         continue;
                     }
 
-                    pc.Blend(x, y, SlothOutline, PixelCanvas.Coverage((d - SlothInkPx) * k));
+                    pc.Blend(x, y, SlothToy.Fur.Outline, PixelCanvas.Coverage((d - SlothEdgePx) * k));
                     float cov = PixelCanvas.Coverage(d * k);
                     if (cov <= 0f)
                     {
                         continue;
                     }
 
-                    float strand = SlothRadialStrand(r, a, 17);
-                    float algaeAmount = 0.34f * SlothSmooth(6f, 46f, uy) * SlothAlgaePatch(ux, uy, 5);
-                    Color col = SlothFurColor(fur, algae, ux / 54f, uy / 54f, strand, algaeAmount);
-                    float groove = valley * Mathf.Clamp01(1f - ((rr - r) / 9f)) * 0.3f;
-                    col.r *= 1f - groove;
-                    col.g *= 1f - groove;
-                    col.b *= 1f - groove;
-                    pc.Blend(x, y, col, cov);
-
                     // Máscara clara: la cara con el hocico corto, el pico de pelo de la frente y el flequillo dentado arriba.
                     float faceD = SlothSmoothMin(EllipseDp(ux, uy, 0f, -3f, 32.5f, 26.5f), EllipseDp(ux, uy, 0f, -14f, 20f, 14.5f), 6f);
                     faceD = Mathf.Max(faceD, -EllipseDp(ux, uy, 0f, 26f, 6.5f, 9.5f));
                     float fa = Mathf.Atan2(uy + 3f, ux);
                     faceD += ((0.9f * Mathf.Sin((fa * 17f) + 0.6f)) + (0.55f * Mathf.Sin((fa * 31f) + 2.1f))) * Mathf.Clamp01((uy + 16f) / 22f);
+
+                    // El pelo: oclusión en los surcos del borde y en el pelo que rodea la máscara (la cara queda hundida en él).
+                    float algaeAmount = 0.34f * SlothSmooth(6f, 46f, uy) * SlothAlgaePatch(ux, uy, 5);
+                    float ao = valley * Mathf.Clamp01(1f - ((rr - r) / 9f)) * 0.5f;
+                    if (faceD > 0f)
+                    {
+                        ao += 0.38f * (1f - Mathf.Clamp01(faceD / 5f));
+                    }
+
+                    Color col = SlothToyFur(SlothFurTones(algaeAmount), ux / 54f, uy / 54f, ux, uy, 17, ao);
+                    pc.Blend(x, y, col, cov);
+
                     float faceCov = PixelCanvas.SoftCoverage(faceD * k, 2.2f * k);
+                    float bandD = SlothBandDistance(ux, uy);
                     if (faceCov > 0f)
                     {
-                        float diffuse = SlothDiffuse(ux / 36f, (uy + 5f) / 34f, out _);
-                        Color f = Shade(face, diffuse);
-                        f = Color.Lerp(f, faceLight, PixelCanvas.SoftCoverage(EllipseDp(ux, uy, -2.5f, -7.5f, 10f, 6f) * k, 8f * k) * 0.6f);
-                        float fine = SlothRadialStrand(r, a, 23) * 0.05f;
-                        f.r *= 1f + fine;
-                        f.g *= 1f + fine;
-                        f.b *= 1f + fine;
-                        f.a = 1f;
+                        float bandAo = bandD > 0f ? 0.22f * (1f - Mathf.Clamp01(bandD / 3f)) : 0f;
+                        Color f = ToyShading.Shade(SlothToy.Face, SlothFaceNormal(ux, uy), bandAo, SlothFaceGloss);
                         pc.Blend(x, y, f, faceCov);
                         float blush = PixelCanvas.SoftCoverage(EllipseDp(Mathf.Abs(ux), uy, 19.5f, -11.5f, 5.5f, 3.4f) * k, 3.5f * k);
                         if (blush > 0f)
                         {
-                            pc.Blend(x, y, SlothBlush, blush * faceCov * 0.32f);
+                            pc.Blend(x, y, SlothBlush, blush * faceCov * 0.34f);
                         }
                     }
 
-                    float bandCov = PixelCanvas.SoftCoverage(SlothBandDistance(ux, uy) * k, 1.2f * k);
+                    float bandCov = PixelCanvas.SoftCoverage(bandD * k, 1.2f * k);
                     if (bandCov > 0f)
                     {
                         pc.Blend(x, y, SlothBandColor(ux, uy), bandCov);
@@ -671,10 +629,7 @@ namespace AF.Presentation
                 {
                     float ex = cx + (side * SlothEyeDxPx * k);
                     float ey = cy + ((SlothEyeDyPx + 0.3f) * k);
-                    pc.FillCircle(ex, ey, 5.1f * k, SlothEye);
-                    pc.FillEllipseSoft(ex + (0.4f * k), ey - (2f * k), 3f * k, 1.7f * k, 1.4f * k, ColorMath.WithAlpha(SlothEyeWarm, 0.7f));
-                    pc.FillCircle(ex - (1.6f * k), ey + (1.8f * k), 1.9f * k, new Color(1f, 1f, 1f, 0.97f));
-                    pc.FillCircle(ex + (1.8f * k), ey - (1.3f * k), 0.8f * k, new Color(1f, 1f, 1f, 0.75f));
+                    DrawToyEye(pc, ex, ey, SlothEyeRadiusPx * k, SlothEyeWarm);
                 }
             }
 
@@ -691,11 +646,9 @@ namespace AF.Presentation
             }
         }
 
-        // Nariz ancha y oscura (un óvalo con la parte baja más estrecha), más clara arriba a la izquierda, con las fosas y su brillo.
+        // Nariz ancha (un óvalo con la parte baja más estrecha) de vinilo lacado: cúpula con su brillo nítido y las fosas.
         private static void DrawSlothNose(PixelCanvas pc, float cx, float cy, float k)
         {
-            Color dark = Palette.Hex(0x1A120C);
-            Color lit = Palette.Hex(0x5A4536);
             int ax = Mathf.FloorToInt(cx - (10f * k));
             int bx = Mathf.CeilToInt(cx + (10f * k));
             int ay = Mathf.FloorToInt(cy - (18f * k));
@@ -713,8 +666,8 @@ namespace AF.Presentation
                         continue;
                     }
 
-                    Color c = Color.Lerp(dark, lit, Mathf.Clamp01(((uy + 13.5f) / 7f) - (ux * 0.05f)) * 0.75f);
-                    pc.Blend(x, y, c, cov);
+                    Vector3 n = ToyShading.Normal(ux / 8.2f, (uy + 11.4f) / 5.6f);
+                    pc.Blend(x, y, ToyShading.Shade(SlothToy.Nose, n, 0f, 1f), cov);
                 }
             }
 
@@ -722,8 +675,6 @@ namespace AF.Presentation
             {
                 pc.FillEllipseSoft(cx + (side * 2.8f * k), cy - (12.3f * k), 1.5f * k, 0.85f * k, 0.8f * k, Palette.Hex(0x0C0805));
             }
-
-            pc.FillEllipseSoft(cx - (2.4f * k), cy - (9.4f * k), 2.6f * k, 1.05f * k, 1.1f * k, new Color(1f, 1f, 1f, 0.55f));
         }
 
         // Ojos cerrados en arco sobre las bandas, con una pestaña corta hacia la sien: dormido, al sol y el parpadeo.
@@ -790,14 +741,6 @@ namespace AF.Presentation
             float cx = ox + (64f * k);
             float cy = oy + (64f * k);
             int size = Mathf.RoundToInt(SlothCellPx * k);
-            SlothTones fur = Tones(SlothFur, 0.36f, 0.2f);
-            SlothTones algae = Tones(Color.Lerp(SlothFur, SlothAlgae, 0.75f), 0.34f, 0.16f);
-            SlothTones throat = Tones(SlothThroat, 0.3f, 0.14f);
-            Color belly = ColorMath.Lighten(SlothFur, 0.1f);
-            // El espéculo, apagado y fundido con el pelo: una marca del pelaje, no un ojo (pulido del 2026-10-25).
-            Color specBase = Color.Lerp(SlothSpeculum, SlothFur, 0.42f);
-            Color specDark = ColorMath.Darken(specBase, 0.14f);
-            Color specLight = ColorMath.Lighten(specBase, 0.08f);
             Color specStripe = ColorMath.Darken(SlothMask, 0.1f);
             float specX = (SlothSpeculumCenterUv.x * SlothCellPx) - 64f;
             float specY = (SlothSpeculumCenterUv.y * SlothCellPx) - 64f;
@@ -811,12 +754,12 @@ namespace AF.Presentation
                     float ux = (x + 0.5f - cx) / k;
                     float uy = (y + 0.5f - cy) / k;
                     float d = SlothTorsoDistance(ux, uy, back, back ? 41 : 37, out float valley, out float bodyD);
-                    if (d > SlothInkPx + aa)
+                    if (d > SlothEdgePx + aa)
                     {
                         continue;
                     }
 
-                    pc.Blend(x, y, SlothOutline, PixelCanvas.Coverage((d - SlothInkPx) * k));
+                    pc.Blend(x, y, SlothToy.Fur.Outline, PixelCanvas.Coverage((d - SlothEdgePx) * k));
                     float cov = PixelCanvas.Coverage(d * k);
                     if (cov <= 0f)
                     {
@@ -825,36 +768,24 @@ namespace AF.Presentation
 
                     float nx = ux / 52f;
                     float ny = (uy - 6f) / 62f;
-                    float across = ux * (1f + (0.25f * Mathf.Clamp01(-uy / 50f)));
-                    float strand = SlothStrand(-uy, across, back ? 29 : 23, 8f, 16f);
                     float patch = SlothAlgaePatch(ux, uy, back ? 13 : 11);
                     float algaeAmount = back
                         ? (0.2f + (0.16f * SlothSmooth(-30f, 40f, uy))) * patch
                         : 0.24f * SlothSmooth(16f, 46f, Mathf.Abs(ux)) * SlothSmooth(-24f, 30f, uy) * patch;
-                    float diffuse = SlothDiffuse(nx, ny, out _);
-                    Color col = SlothFurColor(fur, algae, nx, ny, strand, algaeAmount);
+                    ToyTones t = SlothFurTones(algaeAmount);
                     if (!back)
                     {
-                        col = Color.Lerp(col, belly, PixelCanvas.SoftCoverage(EllipseDp(ux, uy, 3f, -12f, 26f, 32f) * k, 16f * k) * 0.35f * diffuse);
+                        // La panza algo más clara y la garganta parda arriba, bajo la barbilla, fundidas con el pelo.
+                        float belly = PixelCanvas.SoftCoverage(EllipseDp(ux, uy, 3f, -12f, 26f, 32f) * k, 16f * k) * 0.45f;
+                        t = ToyTones.Lerp(t, SlothToy.Belly, belly);
                         float throatD = EllipseDp(ux, uy, 0f, 28f, 20f, 13f) + (3f * (ArtNoise.Value2(ux * 0.3f, uy * 0.12f, 9) - 0.5f));
-                        float t = PixelCanvas.SoftCoverage(throatD * k, 7f * k) * 0.92f;
-                        if (t > 0f)
-                        {
-                            Color th = Shade(throat, diffuse);
-                            float m = 1f + (0.14f * strand);
-                            th.r *= m;
-                            th.g *= m;
-                            th.b *= m;
-                            col = Color.Lerp(col, th, t * 0.92f);
-                        }
+                        float th = PixelCanvas.SoftCoverage(throatD * k, 7f * k) * 0.85f;
+                        t = ToyTones.Lerp(t, SlothToy.Throat, th);
                     }
 
-                    float groove = valley * Mathf.Clamp01(1f - (-bodyD / 9f)) * 0.3f;
-                    col.r *= 1f - groove;
-                    col.g *= 1f - groove;
-                    col.b *= 1f - groove;
-                    col.a = 1f;
-                    pc.Blend(x, y, col, cov);
+                    // Oclusión: los surcos del borde y la unión con la cabeza (el cuello), arriba en el centro.
+                    float ao = (valley * Mathf.Clamp01(1f - (-bodyD / 9f)) * 0.5f) + (0.5f * ToyShading.ContactShadow(ux, uy - 50f, 34f, 20f));
+                    pc.Blend(x, y, SlothToyFur(t, nx, ny, ux, -uy, back ? 29 : 23, Mathf.Clamp01(ao)), cov);
                     if (!back)
                     {
                         continue;
@@ -864,13 +795,7 @@ namespace AF.Presentation
                     float specCov = PixelCanvas.SoftCoverage(spec * k, 4f * k) * 0.85f;
                     if (specCov > 0f)
                     {
-                        Color sc = Color.Lerp(specDark, specLight, Mathf.Clamp01(0.5f - (0.05f * (ux - specX)) + (0.025f * (uy - specY))));
-                        float m = 1f + (0.12f * strand);
-                        sc.r *= m;
-                        sc.g *= m;
-                        sc.b *= m;
-                        sc.a = 1f;
-                        pc.Blend(x, y, sc, specCov);
+                        pc.Blend(x, y, SlothToyFur(SlothToy.Spec, nx, ny, ux, -uy, 29, 0f), specCov);
                     }
 
                     // La raya negra del espéculo, a lo largo de la columna, afinada en las puntas.
@@ -922,9 +847,6 @@ namespace AF.Presentation
         {
             int w = Mathf.RoundToInt(32f * k);
             int h = Mathf.RoundToInt(SlothCellPx * k);
-            SlothTones fur = Tones(ColorMath.Darken(SlothFur, 0.04f), 0.34f, 0.18f);
-            SlothTones algae = Tones(Color.Lerp(SlothFur, SlothAlgae, 0.75f), 0.32f, 0.14f);
-            SlothTones paw = Tones(ColorMath.Darken(SlothFur, 0.26f), 0.3f, 0.12f);
             float aa = 1f / k;
             for (int y = oy; y < oy + h; y++)
             {
@@ -953,37 +875,35 @@ namespace AF.Presentation
 
                     float pawD = EllipseDp(ux, uy, 0f, 19f, 11f, 9.5f);
                     float d = SlothSmoothMin(arm, pawD, 3f);
-                    if (d > SlothInkPx + aa)
+                    if (d > SlothEdgePx + aa)
                     {
                         continue;
                     }
 
-                    pc.Blend(x, y, SlothOutline, PixelCanvas.Coverage((d - SlothInkPx) * k));
+                    pc.Blend(x, y, SlothToy.Fur.Outline, PixelCanvas.Coverage((d - SlothEdgePx) * k));
                     float cov = PixelCanvas.Coverage(d * k);
                     if (cov <= 0f)
                     {
                         continue;
                     }
 
-                    float nx = Mathf.Clamp(ux / (r + 1.5f), -1f, 1f);
-                    float round = Mathf.Sqrt(1f - (nx * nx));
-                    float diffuse = 0.18f + (0.82f * round);
-                    float strand = SlothStrand(SlothCellPx - uy, ux, 53, 6.5f, 13f);
+                    // Cilindro cuyo centro mira a la luz (la pieza gira en todas las poses: la luz no tiene lado), con los
+                    // mechones de felpa a lo largo del brazo, el matiz de algas a parches y la mano más oscura.
+                    float across = Mathf.Clamp(ux / (r + 1.5f), -1f, 1f);
                     float algaeAmount = 0.26f * SlothAlgaePatch(ux * 2f, uy * 0.8f, 19) * SlothSmooth(30f, 46f, uy);
-                    Color col = Color.Lerp(Shade(fur, diffuse), Shade(algae, diffuse), algaeAmount);
-                    col = Color.Lerp(col, Shade(paw, diffuse), SlothSmooth(28f, 16f, uy));
-                    float crease = Mathf.Clamp01(1f - (Mathf.Abs(uy - 62f) / 5f)) * 0.07f; // el pliegue del codo
-                    col.r *= 1f - crease;
-                    col.g *= 1f - crease;
-                    col.b *= 1f - crease;
-                    float m = 1f + (0.15f * strand);
-                    col.r *= m;
-                    col.g *= m;
-                    col.b *= m;
-                    float edge = Mathf.Abs(nx);
-                    col = Color.Lerp(col, SlothRimLight, edge * edge * edge * edge * 0.16f);
-                    col.a = 1f;
-                    pc.Blend(x, y, col, cov);
+                    ToyTones tones = ToyTones.Lerp(SlothToy.Limb, SlothToy.Algae, algaeAmount);
+                    tones = ToyTones.Lerp(tones, SlothToy.Paw, SlothSmooth(28f, 16f, uy));
+                    float hClump = ToyShading.PlushClumps(ux * 1.3f, SlothCellPx - uy, SlothClumpU * 0.8f, 53, out float sx, out float sy);
+                    Vector3 shape = ToyShading.FacingLight(across);
+                    Vector3 n = ToyShading.Tilt(shape, sx * 0.6f, sy * 0.6f, SlothClumpTilt);
+
+                    // Oclusión: el pliegue del codo, la unión con el cuerpo (arriba) y, sobre la mano, la sombra de las garras que
+                    // se cierran sobre la rama [P] (TiTino cuelga: no hay suelo para una sombra de contacto).
+                    float ao = Mathf.Clamp01(1f - (Mathf.Abs(uy - 62f) / 5f)) * 0.25f;
+                    ao += 0.45f * SlothSmooth(102f, 124f, uy);
+                    ao += 0.5f * SlothSmooth(24f, 10f, uy);
+                    ao += SlothClumpGroove * (1f - Mathf.Clamp01(hClump * 1.6f));
+                    pc.Blend(x, y, ToyShading.Shade(tones, n, Mathf.Clamp01(ao), SlothFurGloss, shape), cov);
                 }
             }
 
@@ -1004,8 +924,9 @@ namespace AF.Presentation
             }
         }
 
-        // Una garra como trazo de Bézier cuadrática que se afina (unidades de la pieza de la extremidad, x desde su eje): pass 0
-        // el contorno, 1 el hueso con su degradado (base parda, punta marfil) y 2 el brillo a lo largo del lomo de la garra.
+        // Una garra de marfil lacado como trazo de Bézier cuadrática que se afina (unidades de la pieza de la extremidad, x desde
+        // su eje): pass 0 el contorno fino coloreado, 1 el hueso (cilindro con su luz: la base en la sombra de la mano, la punta
+        // clara) y 2 el brillo nítido del barniz a lo largo del lomo.
         private static void DrawSlothClaw(PixelCanvas pc, int ox, int oy, float k, float x0, float y0, float x1, float y1, float x2, float y2, int pass)
         {
             const int steps = 14;
@@ -1024,17 +945,19 @@ namespace AF.Presentation
                 float by = oy + (qy * k);
                 if (pass == 0)
                 {
-                    pc.FillCapsule(ax, ay, bx, by, (r + 1.1f) * k, SlothClawInk);
+                    pc.FillCapsule(ax, ay, bx, by, (r + 0.7f) * k, SlothToy.Claw.Outline);
                 }
                 else if (pass == 1)
                 {
-                    Color c = t < 0.5f ? Color.Lerp(SlothClawBase, SlothClaw, t / 0.5f) : Color.Lerp(SlothClaw, SlothClawTip, (t - 0.5f) / 0.5f);
+                    // Oclusión en la raíz (la garra sale de la sombra de la mano) que se aclara hacia la punta.
+                    float ao = 0.55f * (1f - SlothSmooth(0f, 0.45f, t));
+                    Color c = ToyShading.Shade(SlothToy.Claw, ToyShading.FacingLight(0f), ao, 0f);
+                    c = Color.Lerp(c, SlothClawTip, 0.45f * SlothSmooth(0.5f, 1f, t));
                     pc.FillCapsule(ax, ay, bx, by, r * k, c);
                 }
-                else if (t < 0.8f)
+                else if (t > 0.2f && t < 0.8f)
                 {
-                    Color c = Color.Lerp(SlothClawTip, Color.white, 0.4f);
-                    pc.FillCapsule(ax - (0.7f * r * k), ay + (0.2f * k), bx - (0.7f * r * k), by + (0.2f * k), Mathf.Max(0.32f * r * k, 0.6f), c);
+                    pc.FillCapsule(ax - (0.55f * r * k), ay + (0.2f * k), bx - (0.55f * r * k), by + (0.2f * k), Mathf.Max(0.28f * r * k, 0.6f), new Color(1f, 1f, 1f, 0.85f));
                 }
 
                 px = qx;

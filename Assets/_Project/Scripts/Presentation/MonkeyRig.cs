@@ -244,7 +244,7 @@ namespace AF.Presentation
             }
 
             _held.enabled = false;
-            _tail.SetColors(art.Tail, art.TailTip, 0.72f, new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f), Mathf.Max(0.8f, 0.03f * _s));
+            _tail.SetColors(art.Tail, art.TailTip, 0.72f, art.TailEdge, Mathf.Max(0.6f, art.TailEdgeS * _s));
         }
 
         /// <summary>

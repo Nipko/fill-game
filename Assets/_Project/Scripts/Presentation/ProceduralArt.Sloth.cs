@@ -47,8 +47,6 @@ namespace AF.Presentation
         /// <summary>Garganta parda de la especie #6E5440 [P].</summary>
         public static readonly Color SlothThroat = Palette.Hex(0x6E5440);
 
-        // Nariz y contorno #2B2118 (c.4), el contorno al 80 % como la fauna (07 §6.1).
-        private static readonly Color SlothInk = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 1f);
         private static readonly Color SlothOutline = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f);
 
         // Hueso claro de las garras #CDBFA3 (c.4): el párpado cerrado sobre el antifaz.
@@ -108,12 +106,10 @@ namespace AF.Presentation
             float hk = 19f * k / SlothHeadRadiusPx; // px por unidad de la cabeza
             float cx = 28f * k;
             float cy = 30f * k;
-            SlothTones fur = Tones(SlothFur, 0.36f, 0.2f);
-            SlothTones algae = Tones(Color.Lerp(SlothFur, SlothAlgae, 0.75f), 0.34f, 0.16f);
-            SlothTones throat = Tones(SlothThroat, 0.3f, 0.14f);
             float aa = 1f / hk;
 
-            // Hombros: medio óvalo bajo la cabeza, con mechones que caen y el matiz de algas a parches en los costados.
+            // Hombros: medio óvalo bajo la cabeza, de felpa con mechones que caen, el matiz de algas a parches en los costados,
+            // la garganta parda y la oclusión bajo la barbilla (D-058).
             for (int y = 0; y < s; y++)
             {
                 for (int x = 0; x < s; x++)
@@ -122,12 +118,12 @@ namespace AF.Presentation
                     float uy = (y + 0.5f - cy) / hk;
                     float a = Mathf.Atan2(uy + 70f, ux);
                     float body = EllipseDp(ux, uy, 0f, -76f, 64f, 38f) - SlothTuft(a, 16, 2.4f, 0.2f, 43, out float valley);
-                    if (body > SlothInkPx + aa)
+                    if (body > SlothEdgePx + aa)
                     {
                         continue;
                     }
 
-                    pc.Blend(x, y, SlothOutline, PixelCanvas.Coverage((body - SlothInkPx) * hk));
+                    pc.Blend(x, y, SlothToy.Fur.Outline, PixelCanvas.Coverage((body - SlothEdgePx) * hk));
                     float cov = PixelCanvas.Coverage(body * hk);
                     if (cov <= 0f)
                     {
@@ -136,27 +132,12 @@ namespace AF.Presentation
 
                     float nx = ux / 66f;
                     float ny = (uy + 66f) / 44f;
-                    float strand = SlothStrand(-uy, ux, 23, 8f, 16f);
                     float algaeAmount = 0.28f * SlothSmooth(18f, 52f, Mathf.Abs(ux)) * SlothAlgaePatch(ux, uy, 11);
-                    Color col = SlothFurColor(fur, algae, nx, ny, strand, algaeAmount);
+                    ToyTones t = SlothFurTones(algaeAmount);
                     float throatD = EllipseDp(ux, uy, 0f, -46f, 22f, 13f) + (3f * (ArtNoise.Value2(ux * 0.3f, uy * 0.12f, 9) - 0.5f));
-                    float t = PixelCanvas.SoftCoverage(throatD * hk, 9f * hk) * 0.85f;
-                    if (t > 0f)
-                    {
-                        Color th = Shade(throat, SlothDiffuse(nx, ny, out _));
-                        float m = 1f + (0.14f * strand);
-                        th.r *= m;
-                        th.g *= m;
-                        th.b *= m;
-                        col = Color.Lerp(col, th, t * 0.92f);
-                    }
-
-                    float groove = valley * Mathf.Clamp01(1f + (body / 8f)) * 0.3f;
-                    col.r *= 1f - groove;
-                    col.g *= 1f - groove;
-                    col.b *= 1f - groove;
-                    col.a = 1f;
-                    pc.Blend(x, y, col, cov);
+                    t = ToyTones.Lerp(t, SlothToy.Throat, PixelCanvas.SoftCoverage(throatD * hk, 9f * hk) * 0.8f);
+                    float ao = (valley * Mathf.Clamp01(1f + (body / 8f)) * 0.5f) + (0.55f * ToyShading.ContactShadow(ux, uy + 44f, 40f, 16f));
+                    pc.Blend(x, y, SlothToyFur(t, nx, ny, ux, -uy, 23, Mathf.Clamp01(ao)), cov);
                 }
             }
 

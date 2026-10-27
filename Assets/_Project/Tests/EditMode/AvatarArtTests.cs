@@ -159,6 +159,98 @@ namespace AF.Tests.EditMode
             Assert.That(ProceduralArt.AvatarSlot("dart_frog"), Is.EqualTo("avatar_dart_frog"));
         }
 
+        [Test]
+        public void TheSilhouette_ReadsAt32And24dp_LockedAndUnlocked()
+        {
+            // D-058 y avatares.md §2.1: a 32 dp (la Liga, 96 px) y a 24 dp (la victoria, 72 px) el animal se separa del disco. El
+            // bloqueado, silueta sólida: ocupa una parte clara del disco (ni un punto ni un disco lleno) y contrasta con él. El
+            // normal, de juguete: su borde fino coloreado contrasta con el disco de justo fuera.
+            foreach (int px in new[] { 96, 72 })
+            {
+                var mask = new float[px * px];
+                for (int i = 0; i < ProceduralArt.AvatarArtCount; i++)
+                {
+                    ProceduralArt.AvatarSilhouetteMask(i, px, mask);
+                    Color32[] locked = ProceduralArt.AvatarPixels(i, Backdrops[i], AvatarArtBadge.None, true, px);
+                    Color32[] normal = ProceduralArt.AvatarPixels(i, Backdrops[i], AvatarArtBadge.None, false, px);
+                    float r = px * 0.5f * ProceduralArt.AvatarDiscFraction - 2f;
+                    int disc = 0;
+                    int sil = 0;
+                    double silL = 0;
+                    double bgL = 0;
+                    double edgeIn = 0;
+                    int edges = 0;
+                    int bg = 0;
+                    for (int y = 1; y < px - 1; y++)
+                    {
+                        for (int x = 1; x < px - 1; x++)
+                        {
+                            float dx = x + 0.5f - (px * 0.5f);
+                            float dy = y + 0.5f - (px * 0.5f);
+                            if ((dx * dx) + (dy * dy) > r * r)
+                            {
+                                continue;
+                            }
+
+                            int k = (y * px) + x;
+                            disc++;
+                            float m = mask[k];
+                            float l = ColorMath.RelativeLuminance(locked[k]);
+                            if (m > 0.99f)
+                            {
+                                sil++;
+                                silL += l;
+                            }
+                            else if (m < 0.01f && y > px * 0.45f)
+                            {
+                                bg++; // el disco por encima de las hojas del pie
+                                bgL += l;
+                            }
+
+                            // Borde del animal: un píxel del relleno con un vecino fuera (el borde fino coloreado) y, dos más allá, el
+                            // disco; se mide lo que más separa (el relleno o el borde) del disco.
+                            if (m > 0.9f)
+                            {
+                                foreach (int dir in new[] { -1, 1, -px, px })
+                                {
+                                    int o1 = k + dir;
+                                    int o3 = k + (3 * dir);
+                                    if (o3 < 0 || o3 >= mask.Length || mask[o1] > 0.5f || mask[o3] > 0.01f)
+                                    {
+                                        continue;
+                                    }
+
+                                    double disk = ColorMath.RelativeLuminance(normal[o3]);
+                                    edgeIn += Math.Max(Ratio(ColorMath.RelativeLuminance(normal[k]), disk), Ratio(ColorMath.RelativeLuminance(normal[o1]), disk));
+                                    edges++;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    string what = "avatar " + i + " a " + px + " px";
+                    float share = sil / (float)disc;
+                    Assert.That(share, Is.InRange(0.12f, 0.8f), what + ": la silueta ocupa una parte clara del disco (" + share + ")");
+                    Assert.That(bg, Is.GreaterThan(0), what);
+                    float lockedRatio = Ratio(silL / sil, bgL / bg);
+                    Assert.That(lockedRatio, Is.GreaterThanOrEqualTo(1.4f), what + ": la silueta del bloqueado contrasta con su disco (" + lockedRatio + ":1)");
+                    Assert.That(edges, Is.GreaterThan(px / 2), what);
+                    float edgeRatio = (float)(edgeIn / edges);
+                    Assert.That(edgeRatio, Is.GreaterThanOrEqualTo(1.5f), what + ": el borde fino del normal se separa del disco (" + edgeRatio + ":1)");
+                    TestContext.WriteLine(what + ": silueta " + share.ToString("0.00") + ", bloqueado " + lockedRatio.ToString("0.00") + ":1, borde " + edgeRatio.ToString("0.00") + ":1");
+                }
+            }
+        }
+
+        // Contraste WCAG entre dos luminancias relativas medias.
+        private static float Ratio(double a, double b)
+        {
+            double hi = Math.Max(a, b);
+            double lo = Math.Min(a, b);
+            return (float)((hi + 0.05) / (lo + 0.05));
+        }
+
         private static float Difference(Color32[] a, Color32[] b)
         {
             double sum = 0;
