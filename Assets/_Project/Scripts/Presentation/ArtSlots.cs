@@ -106,6 +106,9 @@ namespace AF.Presentation
         /// <summary>Prefijo del ambiente de un sitio (<c>amb_&lt;id&gt;</c>; glosario §11).</summary>
         public const string AmbientPrefix = "amb_";
 
+        /// <summary>Prefijo de los retratos de avatar del jugador (<c>avatar_&lt;id&gt;</c>, 512 px; D-056, avatares.md §2.1).</summary>
+        public const string AvatarPrefix = "avatar_";
+
         /// <summary>Ranuras fijas del Mapa del río (D-013; glosario §11).</summary>
         public static readonly string[] MapSlots =
         {
@@ -166,6 +169,11 @@ namespace AF.Presentation
             if (slot.StartsWith(AmbientPrefix, StringComparison.Ordinal))
             {
                 return IsId(slot, AmbientPrefix.Length);
+            }
+
+            if (slot.StartsWith(AvatarPrefix, StringComparison.Ordinal))
+            {
+                return IsId(slot, AvatarPrefix.Length);
             }
 
             if (slot.StartsWith(FaunaPrefix, StringComparison.Ordinal))

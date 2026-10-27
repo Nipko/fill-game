@@ -1,0 +1,35 @@
+{
+  "week": "2026-W43",
+  "starts_at": "2026-10-19T12:00:00Z",
+  "ends_at": "2026-10-26T12:00:00Z",
+  "scope": "country",
+  "country": "CO",
+  "updated_at": "2026-10-23T20:00:00Z",
+  "top": [
+    {
+      "rank": 1,
+      "name_key": "league_name_jaguar",
+      "name_num": 1203,
+      "country": "CO",
+      "points": 980,
+      "avatar": 8
+    },
+    {
+      "rank": 2,
+      "name_key": "league_name_anaconda",
+      "name_num": 3310,
+      "country": "CO",
+      "points": 950,
+      "avatar": null
+    }
+  ],
+  "me": {
+    "points": 140,
+    "rank": null,
+    "percentile": 12,
+    "name_key": "league_name_capybara",
+    "name_num": 4821,
+    "country": "CO",
+    "avatar": 7
+  }
+}

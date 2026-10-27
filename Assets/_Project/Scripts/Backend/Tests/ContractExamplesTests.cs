@@ -57,6 +57,8 @@ namespace AF.Backend.Tests
             ["league-wins.request.schema.json"] = Codec.Of<LeagueWinsRequestDto>(LeagueWinsRequestDto.TryParse, v => v.ToJson()),
             ["league-wins.response.schema.json"] = Codec.Of<LeagueWinsResponseDto>(LeagueWinsResponseDto.TryParseStrict, v => v.ToJson()),
             ["league-board.response.schema.json"] = Codec.Of<LeagueBoardResponseDto>(LeagueBoardResponseDto.TryParseStrict, v => v.ToJson()),
+            ["league-avatar.request.schema.json"] = Codec.Of<LeagueAvatarRequestDto>(LeagueAvatarRequestDto.TryParse, v => v.ToJson()), // D-056
+            ["league-avatar.response.schema.json"] = Codec.Of<LeagueAvatarResponseDto>(LeagueAvatarResponseDto.TryParseStrict, v => v.ToJson()),
             ["error.schema.json"] = Codec.Of<ApiError>(ApiError.TryParseStrict, v => v.ToJson()),
         };
 
@@ -179,7 +181,7 @@ namespace AF.Backend.Tests
             }
 
             Assert.That(accepted, Is.Empty, "ejemplos inválidos que el cliente acepta");
-            Assert.That(checkedCount, Is.EqualTo(7), "con league-wins.request.invalid-too-many (D-046)");
+            Assert.That(checkedCount, Is.EqualTo(8), "con league-wins.request.invalid-too-many (D-046) y league-avatar.request.invalid-out-of-range (D-056)");
         }
 
         [Test]

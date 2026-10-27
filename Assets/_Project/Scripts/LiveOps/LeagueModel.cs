@@ -41,6 +41,12 @@ namespace AF.LiveOps
 
         /// <summary><c>not_configured</c>: este build no tiene backend o está apagado (<c>biz_backend_enabled</c>).</summary>
         NotConfigured = 4,
+
+        /// <summary>
+        /// 400 <c>bad_request</c> de <c>POST /v1/league/avatar</c> (D-056; avatares.md §4.4): un índice que el servidor no admite. No sale
+        /// en <c>af_league_unavailable</c> (solo lo usa el envío del avatar, que lo anota en <c>af_error{module=league}</c>).
+        /// </summary>
+        Rejected = 5,
     }
 
     /// <summary>Ids de <see cref="LeagueScope"/>, <see cref="LeagueWinKind"/> y <see cref="LeagueFailure"/> en el contrato y la analítica.</summary>
@@ -153,8 +159,9 @@ namespace AF.LiveOps
     public sealed class LeagueWinsResult
     {
         public LeagueWinsResult(string week, int points, IReadOnlyList<string> accepted, IReadOnlyList<LeagueRejection> rejected,
-            string nameKey, int nameNum, string? country)
+            string nameKey, int nameNum, string? country, int? avatar = null)
         {
+            Avatar = avatar;
             Week = week;
             Points = points;
             Accepted = accepted;
@@ -179,13 +186,17 @@ namespace AF.LiveOps
 
         /// <summary>País de la semana, o null si es desconocido.</summary>
         public string? Country { get; }
+
+        /// <summary><c>avatar</c> (D-056) del jugador según el servidor, o null (nunca eligió o el campo falta).</summary>
+        public int? Avatar { get; }
     }
 
     /// <summary>Una fila del top (liga.md §3.1, <c>top[]</c>).</summary>
     public sealed class LeagueRow
     {
-        public LeagueRow(int rank, string nameKey, int nameNum, string? country, int points)
+        public LeagueRow(int rank, string nameKey, int nameNum, string? country, int points, int? avatar = null)
         {
+            Avatar = avatar;
             Rank = rank;
             NameKey = nameKey;
             NameNum = nameNum;
@@ -202,13 +213,17 @@ namespace AF.LiveOps
         public string? Country { get; }
 
         public int Points { get; }
+
+        /// <summary><c>avatar</c> (D-056) de la fila: el índice del catálogo, o null (nunca eligió: el disco neutro).</summary>
+        public int? Avatar { get; }
     }
 
     /// <summary>La fila del jugador (liga.md §3.1, <c>me</c>).</summary>
     public sealed class LeagueMe
     {
-        public LeagueMe(int points, int? rank, int? percentile, string? nameKey, int nameNum, string? country)
+        public LeagueMe(int points, int? rank, int? percentile, string? nameKey, int nameNum, string? country, int? avatar = null)
         {
+            Avatar = avatar;
             Points = points;
             Rank = rank;
             Percentile = percentile;
@@ -231,6 +246,9 @@ namespace AF.LiveOps
         public int NameNum { get; }
 
         public string? Country { get; }
+
+        /// <summary><c>me.avatar</c> (D-056) según el servidor, o null. La fila del jugador pinta el del perfil local (avatares.md §3.3).</summary>
+        public int? Avatar { get; }
     }
 
     /// <summary>Respuesta 200 de <c>GET /v1/league?scope=</c> (liga.md §3.1).</summary>
@@ -301,5 +319,22 @@ namespace AF.LiveOps
 
         /// <summary><c>GET /v1/league?scope=</c>.</summary>
         void GetBoard(LeagueScope scope, Action<LeagueResult<LeagueBoard>> onDone);
+
+        /// <summary>
+        /// <c>POST /v1/league/avatar</c> (D-056; avatares.md §4.4) con el índice <paramref name="avatar"/> (0-63). Un 400 falla con
+        /// <see cref="LeagueFailure.Rejected"/>; un 404 de ruta (backend aún sin desplegar), un 429 y lo demás, con su motivo de siempre.
+        /// </summary>
+        void SetAvatar(int avatar, Action<LeagueResult<LeagueAvatarResult>> onDone);
+    }
+
+    /// <summary>Respuesta 200 de <c>POST /v1/league/avatar</c>: el índice que guardó el servidor.</summary>
+    public sealed class LeagueAvatarResult
+    {
+        public LeagueAvatarResult(int avatar)
+        {
+            Avatar = avatar;
+        }
+
+        public int Avatar { get; }
     }
 }
