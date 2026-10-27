@@ -49,6 +49,9 @@ OTHER = PREFIX + "other"
 GENERATED_MARK = "Generado por tools/loc/league_countries.py"
 MIN_MAX_CHARS = 24
 LOCALES = ("es-419", "en", "pt-BR")
+# D-057 (decisiones de la revisión del código mundial, punto 2): el asesor cultural revisa primero estos nombres.
+POLITICAL = ("EH", "PS", "TW", "XK")
+POLITICAL_NOTE = " Prioridad del asesor: nombre con carga política."
 
 
 def load_snapshot(text: str) -> tuple[str, dict[str, dict[str, str]]]:
@@ -71,6 +74,8 @@ def row_for(code: str, names: dict[str, str], cldr: str) -> list[str]:
                "Global, y en Ajustes («País en la Liga: {country}»). Liga del río (D-046); tabla completa de D-057 (P7 (a))." % code)
     notes = ("%s desde CLDR %s (Unicode; nombres revisados por hablantes nativos): no se edita a mano. [P] Pendiente del asesor "
              "cultural (lugares; 07 §8.2)." % (GENERATED_MARK, cldr))
+    if code in POLITICAL:
+        notes += POLITICAL_NOTE
     return [PREFIX + code.lower(), names["es-419"], names["en"], names["pt-BR"], context, str(max(MIN_MAX_CHARS, longest)),
             "aprobado_es", "revisado_nativo", "revisado_nativo", notes, ""]
 
@@ -189,6 +194,8 @@ def self_test() -> int:
     check("max_chars cubre el más largo", unquote(gs[5]) == "40")
     check("max_chars mínimo 24", unquote(jp[5]) == "24")
     check("marca de generado", GENERATED_MARK in unquote(jp[9]))
+    check("sin carga política, sin la nota", POLITICAL_NOTE.strip() not in unquote(jp[9]))
+    check("carga política en la nota", POLITICAL_NOTE.strip() in generate(table, snap.replace('"CI"', '"PS"'))[0])
     again, cs2 = generate(out, snap)
     check("idempotente", again == out and cs2 == cs)
     check("C# con todos los códigos", '"BR", "CI", "GS", "JP",' in cs)
