@@ -331,6 +331,11 @@ namespace AF.Save
                 root.Set("album", album);
             }
 
+            if (!p.Avatar.IsEmpty)
+            {
+                root.Set("avatar", AvatarNode(p.Avatar)); // D-056 [P]: falta hasta el primer avatar
+            }
+
             if (p.DailyChallenge != null)
             {
                 root.Set("daily_challenge", DailyChallengeNode(p.DailyChallenge)); // E4: la clave falta hasta el primer guardado del Reto
@@ -545,6 +550,12 @@ namespace AF.Save
                 }
             }
 
+            JsonNode? avatar = TolerantSection(root, "avatar");
+            if (avatar != null)
+            {
+                ReadAvatar(avatar, p.Avatar);
+            }
+
             JsonNode? dailyChallenge = Section(root, "daily_challenge");
             p.DailyChallenge = dailyChallenge == null ? null : ReadDailyChallenge(dailyChallenge);
             ReadB8(root, p);
@@ -736,6 +747,67 @@ namespace AF.Save
             }
 
             values.RemoveRange(w, values.Count - w);
+        }
+
+        // avatar (D-056 [P]; avatares.md §4.1): id, chosen y at; unlocked y seen en orden ordinal y sin repetidos.
+        private static JsonNode AvatarNode(AvatarData a)
+        {
+            JsonNode node = JsonNode.NewObject();
+            if (a.Id != null)
+            {
+                node.Set("id", JsonNode.FromString(a.Id));
+            }
+
+            node.Set("chosen", JsonNode.FromBool(a.Chosen));
+            if (a.At.HasValue)
+            {
+                node.Set("at", Timestamp(a.At));
+            }
+
+            JsonNode unlocked = JsonNode.NewArray();
+            for (int i = 0; i < a.Unlocked.Count; i++)
+            {
+                unlocked.Add(JsonNode.FromString(a.Unlocked[i]));
+            }
+
+            JsonNode seen = JsonNode.NewArray();
+            for (int i = 0; i < a.Seen.Count; i++)
+            {
+                seen.Add(JsonNode.FromString(a.Seen[i]));
+            }
+
+            node.Set("unlocked", unlocked);
+            node.Set("seen", seen);
+            return node;
+        }
+
+        // avatar (D-056 [P]): tolerante, como settings (no es economía): un id con otra forma queda null y se reasigna al cargar
+        // (AF.LiveOps.AvatarService), una hora mal escrita queda null y lo que no es un id se descarta de las listas.
+        private static void ReadAvatar(JsonNode node, AvatarData a)
+        {
+            a.Clear();
+            string? id = TolerantString(node, "id");
+            a.Id = AvatarData.IsId(id) ? id : null;
+            a.Chosen = TolerantBool(node, "chosen", false);
+            a.At = TolerantTimestamp(node, "at");
+            var list = new List<string>();
+            TolerantStringList(node, "unlocked", list);
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (AvatarData.IsId(list[i]))
+                {
+                    a.AddUnlocked(list[i]);
+                }
+            }
+
+            TolerantStringList(node, "seen", list);
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (AvatarData.IsId(list[i]))
+                {
+                    a.AddSeen(list[i]);
+                }
+            }
         }
 
         // fauna.sighted (esquema 2; DC15): una entrada que no es un objeto {species_id, level} válido se descarta; si una especie

@@ -368,6 +368,15 @@ namespace AF.Presentation
             return 1f - (t * t * (3f - (2f * t)));
         }
 
+        /// <summary>
+        /// Copia el lienzo a <paramref name="tex"/> (legible) en (<paramref name="x"/>, <paramref name="y"/>), sin asignar memoria: las
+        /// celdas del atlas de avatares (D-056), que se repintan sin crear texturas. El lienzo sigue valiendo.
+        /// </summary>
+        public void CopyTo(Texture2D tex, int x, int y)
+        {
+            tex.SetPixels(x, y, Width, Height, _px);
+        }
+
         /// <summary>Píxeles como <see cref="Color32"/> (caché en disco de las texturas generadas). El lienzo sigue valiendo.</summary>
         public Color32[] ToColor32()
         {

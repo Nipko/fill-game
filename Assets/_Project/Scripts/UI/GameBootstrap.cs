@@ -1013,6 +1013,12 @@ namespace AF.UI
                 return CloseFruitSheet();
             }
 
+            // «Tu avatar» (D-056), encima del inicio, de Ajustes o de la Liga: Atrás la cierra como su X.
+            if (CloseAvatarScreen())
+            {
+                return true;
+            }
+
             // El Mapa del río se cierra con Atrás, como con su ← (M3.3), también abierto encima del nivel (pausa, victoria).
             if (_mapScreen != null && _mapScreen.Visible)
             {
@@ -1843,6 +1849,7 @@ namespace AF.UI
             SetUpConsent(clock, consentStore); // B12: cifras, país y perfil legal, flujo y pantalla (GameBootstrap.Consent.cs)
             _consentSetUp = true;
             SetUpLeague(); // D-046 (GameBootstrap.League.cs): la Liga del río, tras la edad y el consentimiento (nada con <13 ni sin contestar)
+            SetUpAvatars(); // D-056 (GameBootstrap.Avatars.cs): los avatares del jugador, tras la Liga (le mandan el índice elegido)
             ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
             _bootInProgress = false; // desde aquí, volver de segundo plano reanuda lo de siempre
 

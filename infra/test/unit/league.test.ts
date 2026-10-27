@@ -178,7 +178,7 @@ describe('Liga: transacciones, top y borrado',()=>{
   it('colisiones de seudónimo reservadas atómicamente',async()=>{
     const a = await aliasOf({...deps,pick:()=>0},UID);
     let pick = 0;
-    const b = await aliasOf({...deps,pick:max=>max===24?0:(pick++===0?0:1)},OTHER_UID);
+    const b = await aliasOf({...deps,pick:max=>max===23?0:(pick++===0?0:1)},OTHER_UID);
     expect(a.name_key).toBe(b.name_key);
     expect(a.name_num).not.toBe(b.name_num);
   });

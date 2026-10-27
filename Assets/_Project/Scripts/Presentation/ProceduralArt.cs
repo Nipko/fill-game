@@ -223,6 +223,7 @@ namespace AF.Presentation
         public void Dispose()
         {
             AbandonBannerArt(); // el arte del banner que aún se pinta en otro hilo para y se descarta (ProceduralArt.Mascots.cs)
+            ForgetAvatarPortrait(); // D-056: el retrato elegido (ProceduralArt.Avatars.cs)
             for (int i = 0; i < _owned.Count; i++)
             {
                 if (_owned[i] != null)

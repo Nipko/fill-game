@@ -599,6 +599,9 @@ namespace AF.Tests.EditMode
             // D-046: la Liga del río (botón, pantalla, línea de la victoria, Ajustes, TalkBack, animales y países): AF.UI.LeagueText.
             keys.AddRange(LeagueText.AllKeys);
 
+            // D-056: los avatares del jugador («Tu avatar», Ajustes, el inicio, los hitos y TalkBack): AF.UI.AvatarText.
+            keys.AddRange(AvatarText.AllKeys);
+
             return keys;
         }
 

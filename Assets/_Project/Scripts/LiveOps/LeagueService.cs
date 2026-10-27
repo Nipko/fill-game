@@ -56,6 +56,7 @@ namespace AF.LiveOps
         private readonly Func<string?> _region;
         private readonly Func<bool> _allowed;
         private bool _sending;
+        private bool _sendingAvatar;
         private readonly bool[] _fetching = new bool[2];
         private readonly LeagueFailure?[] _lastFailure = new LeagueFailure?[2];
 
@@ -96,6 +97,72 @@ namespace AF.LiveOps
 
         /// <summary>Cambió lo que se sabe de un ámbito (llegó su clasificación o falló su descarga).</summary>
         public event Action<LeagueScope>? BoardChanged;
+
+        /// <summary>
+        /// El servidor rechazó el índice del avatar (400; D-056, avatares.md §4.4): el pendiente se descartó. Para
+        /// <c>af_error{module=league}</c>.
+        /// </summary>
+        public event Action<int>? AvatarRejected;
+
+        /// <summary>El servidor confirmó el índice del avatar (<c>league.avatar_sent</c>).</summary>
+        public event Action<int>? AvatarSent;
+
+        /// <summary>Hay un envío del avatar en vuelo.</summary>
+        public bool SendingAvatar => _sendingAvatar;
+
+        /// <summary>
+        /// El avatar de la Liga (D-056; avatares.md §4.4): si <paramref name="index"/> (el elegido en el perfil, 0-63) no es el último que
+        /// confirmó el servidor (<c>league.avatar_sent</c>), queda pendiente (<c>league.avatar_pending</c>) y se intenta mandar. Se llama
+        /// tras elegir, al cargar (una fusión con la nube puede traer otro) y al volver a primer plano. Con la Liga inactiva solo se
+        /// apunta; sale cuando la Liga esté activa. True si quedó algo pendiente.
+        /// </summary>
+        public bool SyncAvatar(int index)
+        {
+            if (index < 0 || index > LeagueRules.MaxAvatar || Wiped)
+            {
+                return false;
+            }
+
+            LeagueRecord record = _store.Load();
+            int? pending = record.AvatarSent == index ? (int?)null : index;
+            if (record.AvatarPending != pending)
+            {
+                record.AvatarPending = pending;
+                _store.Save(record);
+            }
+
+            if (pending == null)
+            {
+                return false;
+            }
+
+            FlushAvatar();
+            return true;
+        }
+
+        /// <summary>
+        /// Manda el avatar pendiente si lo hay, la Liga está activa y no hay otro envío en vuelo. Sin red, con un 404 de ruta (backend
+        /// aún sin desplegar) o un 429, el pendiente se queda para la siguiente apertura, sin <see cref="Unavailable"/>; con un 400, se
+        /// descarta (<see cref="AvatarRejected"/>). False si no mandó.
+        /// </summary>
+        public bool FlushAvatar()
+        {
+            if (_sendingAvatar || Wiped || !Active)
+            {
+                return false;
+            }
+
+            int? pending = _store.Load().AvatarPending;
+            if (!pending.HasValue)
+            {
+                return false;
+            }
+
+            int index = pending.Value;
+            _sendingAvatar = true;
+            _api.SetAvatar(index, result => OnAvatar(index, result));
+            return true;
+        }
 
         /// <summary>
         /// La victoria del nivel de campaña <paramref name="level"/>, de dificultad <paramref name="tier"/>: si suma (Liga activa,
@@ -234,6 +301,7 @@ namespace AF.LiveOps
         {
             _store.Wipe();
             _sending = false;
+            _sendingAvatar = false;
             _fetching[0] = false;
             _fetching[1] = false;
             Wiped = true;
@@ -288,6 +356,42 @@ namespace AF.LiveOps
             if (removed > 0 && record.Pending.Count > 0)
             {
                 Flush(); // el resto de la cola, en el lote siguiente
+            }
+        }
+
+        private void OnAvatar(int index, LeagueResult<LeagueAvatarResult> result)
+        {
+            if (Wiped)
+            {
+                return;
+            }
+
+            _sendingAvatar = false;
+            LeagueRecord record = _store.Load();
+            if (!result.IsOk)
+            {
+                if (result.Failure == LeagueFailure.Rejected && record.AvatarPending == index)
+                {
+                    record.AvatarPending = null;
+                    _store.Save(record);
+                    AvatarRejected?.Invoke(index);
+                }
+
+                return; // sin red, 404 de ruta o 429: se queda pendiente, sin af_league_unavailable
+            }
+
+            record.AvatarSent = result.Value!.Avatar;
+            bool more = record.AvatarPending.HasValue && record.AvatarPending.Value != record.AvatarSent.Value;
+            if (!more)
+            {
+                record.AvatarPending = null;
+            }
+
+            _store.Save(record);
+            AvatarSent?.Invoke(record.AvatarSent.Value);
+            if (more)
+            {
+                FlushAvatar(); // el jugador cambió otra vez mientras iba el envío
             }
         }
 

@@ -52,6 +52,9 @@ namespace AF.LiveOps
         /// <summary>Prefijo de las victorias del Reto del río.</summary>
         public const string DailyPrefix = "d:";
 
+        /// <summary>El índice de avatar más alto del contrato (<c>avatar</c> 0-63; D-056, avatares.md §4.4).</summary>
+        public const int MaxAvatar = 63;
+
         /// <summary>
         /// Los 24 animales del seudónimo, en el orden de liga.md §1 (índice 0-23). El servidor elige uno al crear el seudónimo y lo
         /// manda como clave; sus textos están en <c>strings.csv</c> (nacen <c>pendiente_asesor</c>).

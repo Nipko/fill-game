@@ -64,6 +64,44 @@ namespace AF.UI
             });
         }
 
+        public void SetAvatar(int avatar, Action<LeagueResult<LeagueAvatarResult>> onDone)
+        {
+            if (_switch != null && !_switch.BizBackendEnabled)
+            {
+                onDone(LeagueResult<LeagueAvatarResult>.Fail(LeagueFailure.NotConfigured));
+                return;
+            }
+
+            if (avatar < 0 || avatar > LeagueContract.MaxAvatar)
+            {
+                onDone(LeagueResult<LeagueAvatarResult>.Fail(LeagueFailure.Rejected));
+                return;
+            }
+
+            _backend.SetLeagueAvatar(new LeagueAvatarRequestDto(avatar), r =>
+            {
+                if (!r.IsOk)
+                {
+                    onDone(LeagueResult<LeagueAvatarResult>.Fail(AvatarFailureOf(r.Error!)));
+                    return;
+                }
+
+                onDone(LeagueResult<LeagueAvatarResult>.Ok(new LeagueAvatarResult(r.Value!.Avatar)));
+            });
+        }
+
+        // D-056 (avatares.md §4.4): un 400 es un índice que el servidor no admite (se descarta); el resto (sin red, 404 de una ruta aún
+        // sin desplegar, 429…) deja el pendiente para la siguiente apertura.
+        internal static LeagueFailure AvatarFailureOf(BackendError error)
+        {
+            if (error.HttpStatus == 400 || error.Code == ApiErrorCode.BadRequest)
+            {
+                return LeagueFailure.Rejected;
+            }
+
+            return FailureOf(error, false);
+        }
+
         internal static LeagueWinsRequestDto ToDto(LeagueWinsRequest request)
         {
             var wins = new List<LeagueWinDto>(request.Wins.Count);
@@ -86,7 +124,7 @@ namespace AF.UI
                 rejected.Add(new LeagueRejection(dto.Rejected[i].Key, dto.Rejected[i].Value));
             }
 
-            return new LeagueWinsResult(dto.Week, dto.Points, dto.Accepted, rejected, dto.NameKey, dto.NameNum, dto.Country);
+            return new LeagueWinsResult(dto.Week, dto.Points, dto.Accepted, rejected, dto.NameKey, dto.NameNum, dto.Country, dto.Avatar);
         }
 
         internal static LeagueBoard FromDto(LeagueBoardResponseDto dto, LeagueScope asked)
@@ -95,10 +133,10 @@ namespace AF.UI
             for (int i = 0; i < dto.Top.Count; i++)
             {
                 LeagueRowDto r = dto.Top[i];
-                top.Add(new LeagueRow(r.Rank, r.NameKey, r.NameNum, r.Country, r.Points));
+                top.Add(new LeagueRow(r.Rank, r.NameKey, r.NameNum, r.Country, r.Points, r.Avatar));
             }
 
-            var me = new LeagueMe(dto.MePoints, dto.MeRank, dto.MePercentile, dto.MeNameKey, dto.MeNameNum, dto.MeCountry);
+            var me = new LeagueMe(dto.MePoints, dto.MeRank, dto.MePercentile, dto.MeNameKey, dto.MeNameNum, dto.MeCountry, dto.MeAvatar);
             LeagueIds.TryScope(dto.Scope, out LeagueScope scope);
             return new LeagueBoard(dto.Week, dto.StartsAt, dto.EndsAt, dto.Scope == null ? asked : scope, dto.Country, dto.UpdatedAt, top, me);
         }
