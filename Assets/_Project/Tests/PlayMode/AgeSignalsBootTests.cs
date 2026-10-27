@@ -76,10 +76,11 @@ namespace AF.Tests.PlayMode
             var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Adult)));
 
             yield return PlayModeHelpers.LoadAppWithConsent(store);
-            GameBootstrap first = GameBootstrap.Current!;
+            // La señal llega tarde (con el inicio ya a la vista): BlockSession recarga la escena, y la recargada arranca bloqueada sin
+            // encender nada. Solo esa cumple las tres condiciones (la primera encendió los servicios al arrancar).
             yield return PlayModeHelpers.WaitFor(
-                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked
-                    && GameBootstrap.Current.App == null,
+                () => GameBootstrap.Current != null && GameBootstrap.Current.ConsentBlocked && GameBootstrap.Current.App == null
+                    && !GameBootstrap.Current.DataServicesAtBoot,
                 "la escena recargada, bloqueada por la señal de 0-12");
 
             GameBootstrap boot = GameBootstrap.Current!;
@@ -88,7 +89,7 @@ namespace AF.Tests.PlayMode
             Assert.That(GameBootstrap.LastAgeSignal!.Value.Band, Is.EqualTo(AgeBand.Under13));
             Assert.That(store.Load().Profile!.Consent!.AgeBand, Is.EqualTo(AgeBand.Adult), "la señal no se guarda en el perfil");
 
-            Assert.That(boot.DataServicesAtBoot, Is.False, "la recarga no enciende Crashlytics, Remote Config, Firebase Analytics ni la nube");
+            Assert.That(crash.FindAll(on => !on).Count, Is.GreaterThanOrEqualTo(2), "se apaga al bloquear y otra vez, explícito, en la recarga");
             Assert.That(crash.Count, Is.GreaterThanOrEqualTo(2));
             Assert.That(crash[0], Is.True, "el primer arranque (18+ guardado) lo encendió");
             int firstFalse = crash.IndexOf(false);
@@ -144,7 +145,9 @@ namespace AF.Tests.PlayMode
         {
             WithSignalSource();
             GameBootstrap.AgeSignalsOverride = new FakeAgeSignals(AgeSignal.ForRange(13, 15));
-            var sink = new FakeAnalyticsSink(requiresConsent: true);
+            // Un sumidero local (sin consentimiento): con 13-17 en CO (edad digital 18, D-057) la analítica está apagada, pero lo que
+            // importa aquí es qué lleva el evento.
+            var sink = new FakeAnalyticsSink(requiresConsent: false);
             GameBootstrap.AnalyticsSinkOverride = sink;
             var store = new MemoryProfileStore();
 
