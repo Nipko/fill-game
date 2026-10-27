@@ -9,7 +9,9 @@ Uso: python construir.py
      y 48 px, las capas adaptativas de Android a 432 (fondo, frente y monocroma) y el logo horizontal claro y oscuro;
   3. compone la hoja (HTML temporal con las imágenes incrustadas) y su captura hoja-meandros.png, con la versión actual
      (../../out, sin tocar) al lado para comparar.
-No toca out/, AfIcon.androidlib, BrandEmblem.Generated.cs ni la web: eso es la fase 2, cuando el dueño elija variante.
+No toca out/, AfIcon.androidlib, BrandEmblem.Generated.cs ni la web. El dueño eligió la B (añadido de D-045 del 2026-10-27); desde
+la fase 2, out/ ya es la B, así que la fila «actual» de la hoja muestra la B oficial y no el río recto (la hoja de la fase 1 está
+en el commit 78e236bf; el río recto, con `generar.py --variante recto`).
 Códigos: 0 hecho · 1 fallo · 2 sin Chrome.
 """
 import base64

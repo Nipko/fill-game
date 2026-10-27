@@ -180,8 +180,10 @@ def vertido(lip, impact, vol):
     return g
 
 
-LIP, IMPACT = (558, 452), (604, 646)
-V = vertido(LIP, IMPACT, 2.6)
+# La cuia y el impacto del icono v2 recto (D-045, 2026-10-23). Los bocetos de meandros y el icono oficial con meandros
+# (añadido de D-045 del 2026-10-27, variante B) los desplazan; LIP, IMPACT y V oficiales se fijan al final del bloque de meandros.
+LIP0, IMPACT0 = (558, 452), (604, 646)
+V0 = vertido(LIP0, IMPACT0, 2.6)
 
 # ----------------------------------------------------------------------------------------- piezas SVG
 DEFS = f"""<defs>
@@ -222,8 +224,8 @@ def palmera(x, y, h, lean, color):
     return "\n  ".join(s)
 
 
-def fondo():
-    """Todo lo que no es la cuia ni el chorro. Las bandas sangran mucho para la capa adaptativa."""
+def fondo_recto():
+    """El fondo del icono v2 recto (D-045, hasta el 2026-10-27): el río como una franja. Se guarda como boceto «recto»."""
     copas = ("M -600 650 L -600 560 C -500 520 -440 540 -400 556 " +
              " ".join(f"C {x - 70} {500 + (i % 3) * 8} {x - 10} {492 + (i % 2) * 14} {x + 30} {530 + (i % 2) * 6}"
                       for i, x in enumerate(range(-320, 1700, 130))) + " L 1700 650 Z")
@@ -255,9 +257,8 @@ def fondo():
   <path d="M -600 908 C 300 872 700 946 1700 906" fill="none" stroke="#26603A" stroke-width="22"/>"""
 
 
-def frente(v=None, imp=IMPACT, aros=(76, 22, 122, 36)):
-    """La cuia, el chorro y los aros del impacto. Por defecto, los del icono oficial (V, IMPACT)."""
-    v = v or V
+def _frente(v, imp, aros=(76, 22, 122, 36)):
+    """La cuia, el chorro y los aros del impacto, para la cuia v (vertido) que vierte sobre imp."""
     ix, iy = imp
     a1x, a1y, a2x, a2y = aros
     sx0, sx1 = v["surf"]
@@ -289,9 +290,8 @@ RIO_MONO = """<path d="M -600 624 C 250 590 560 650 1700 600" fill="none" stroke
     <path d="M 566 650 C 660 644 810 620 1700 602 L 1700 905 C 920 908 810 870 748 796 C 694 734 628 690 566 664 Z" fill="#FFF"/>"""
 
 
-def monocroma(v=None, imp=IMPACT, rio=RIO_MONO, aro=(96, 30, 80, 24)):
+def _monocroma(v, imp, rio, aro=(96, 30, 80, 24)):
     """Icono temático de Android 13+: una sola tinta (el sistema la colorea). Río abajo lleno = teñido."""
-    v = v or V
     ix, iy = imp
     # Máscara: blanco = tinta; negro = hueco transparente (separa las dosis y despega la cuia del río).
     return f"""<mask id="tinta" maskUnits="userSpaceOnUse" x="-600" y="-600" width="2224" height="2224">
@@ -550,14 +550,19 @@ class Rio:
     def banda(self, izq, der, i0=0, i1=None):
         """Polígono entre la orilla izquierda (eje + n·izq(i)) y la derecha (eje − n·der(i))."""
         i1 = self.N - 1 if i1 is None else i1
-        rng = range(i0, i1 + 1)
+        rng = self._paso(i0, i1)
         a = [(self.x[i] + self.nx[i] * izq(i), self.y[i] + self.ny[i] * izq(i)) for i in rng]
         b = [(self.x[i] - self.nx[i] * der(i), self.y[i] - self.ny[i] * der(i)) for i in reversed(rng)]
         return P(a + b)
 
     def linea(self, off, i0=0, i1=None):
         i1 = self.N - 1 if i1 is None else i1
-        return L([(self.x[i] + self.nx[i] * off(i), self.y[i] + self.ny[i] * off(i)) for i in range(i0, i1 + 1)])
+        return L([(self.x[i] + self.nx[i] * off(i), self.y[i] + self.ny[i] * off(i)) for i in self._paso(i0, i1)])
+
+    @staticmethod
+    def _paso(i0, i1, k=3):
+        """Las muestras que se escriben: una de cada k (y los extremos), para que el SVG no pese de más (el logo de la web)."""
+        return list(range(i0, i1, k)) + [i1]
 
     def acai(self, r0, abre, extra=0.0):
         """Media anchura del açaí: una gota de radio r0 en el impacto que se abre río abajo hasta llenar el cauce."""
@@ -634,13 +639,15 @@ def rio_svg(rio, r0=40, abre=260):
   </g>"""
 
 
-def rio_mono(rio, r0=40, abre=260, trazo=16):
-    """La monocroma del río: río arriba, solo sus orillas; desde el impacto, lleno (teñido)."""
+def rio_mono(rio, r0=40, abre=260, trazo=16, orillas_desde=0.0):
+    """La monocroma del río: río arriba, solo sus orillas (desde donde la media anchura llega a orillas_desde: las lejanas,
+    finas, se quedan fuera para que a 48 px no hagan ruido); desde el impacto, lleno (teñido)."""
     a, ia = rio.acai(r0, abre)
     i = rio.i_imp
     h = rio.h
-    return (f'<path d="{rio.linea(lambda k: h[k], 0, i)}" fill="none" stroke="#FFF" stroke-width="{trazo}" stroke-linecap="round"/>\n'
-            f'    <path d="{rio.linea(lambda k: -h[k], 0, i)}" fill="none" stroke="#FFF" stroke-width="{trazo}" stroke-linecap="round"/>\n'
+    i0 = next((k for k in range(i) if h[k] >= orillas_desde), 0)
+    return (f'<path d="{rio.linea(lambda k: h[k], i0, i)}" fill="none" stroke="#FFF" stroke-width="{trazo}" stroke-linecap="round"/>\n'
+            f'    <path d="{rio.linea(lambda k: -h[k], i0, i)}" fill="none" stroke="#FFF" stroke-width="{trazo}" stroke-linecap="round"/>\n'
             f'    <path d="{rio.linea(lambda k: h[k], i)}" fill="none" stroke="#FFF" stroke-width="{trazo}"/>\n'
             f'    <path d="{rio.linea(lambda k: -h[k], i)}" fill="none" stroke="#FFF" stroke-width="{trazo}"/>\n'
             f'    <path d="{rio.banda(lambda k: a[k], lambda k: a[k], ia)}" fill="#FFF"/>')
@@ -673,16 +680,18 @@ def horizonte(y, palmeras):
   {palm}
   <path d="{copas}" fill="#0E4232"/>
   <rect x="-600" y="{y}" width="2224" height="1800" fill="url(#suelo)"/>
-  <rect x="-600" y="{y + 40}" width="2224" height="1800" fill="url(#doselSuelo)" opacity="0.35"/>"""
+  <rect x="-600" y="{y + 40}" width="2224" height="1800" fill="url(#doselSuelo)" opacity="0.22"/>"""
 
 
 class Variante:
     """Un boceto de meandros: el eje del río, dónde cae el chorro (la cuia se mueve con él) y el horizonte, si lo hay."""
 
-    def __init__(self, nombre, titulo, ctrl, mover=(0, 0), horiz=None, palmeras=(), r0=40, abre=260, aros=(76, 22, 122, 36)):
+    def __init__(self, nombre, titulo, ctrl, mover=(0, 0), horiz=None, palmeras=(), r0=40, abre=260, aros=(76, 22, 122, 36),
+                 orillas_desde=0.0):
         self.nombre, self.titulo = nombre, titulo
-        self.lip = (LIP[0] + mover[0], LIP[1] + mover[1])
-        self.imp = (IMPACT[0] + mover[0], IMPACT[1] + mover[1])
+        self.lip = (LIP0[0] + mover[0], LIP0[1] + mover[1])
+        self.imp = (IMPACT0[0] + mover[0], IMPACT0[1] + mover[1])
+        self.orillas_desde = orillas_desde
         self.v = vertido(self.lip, self.imp, 2.6)
         self.rio = Rio(ctrl, self.imp)
         self.horiz, self.palmeras, self.r0, self.abre, self.aros = horiz, palmeras, r0, abre, aros
@@ -693,16 +702,34 @@ class Variante:
         return f"{DEFS_MEANDRO}\n  {base}\n  {rio_svg(self.rio, self.r0, self.abre)}"
 
     def frente(self):
-        return frente(self.v, self.imp, self.aros)
+        return _frente(self.v, self.imp, self.aros)
 
     def monocroma(self):
         a = self.aros
-        return monocroma(self.v, self.imp, rio_mono(self.rio, self.r0, self.abre), (a[0] + 20, a[1] + 8, a[0] + 4, a[1] + 2))
+        return _monocroma(self.v, self.imp, rio_mono(self.rio, self.r0, self.abre, orillas_desde=self.orillas_desde),
+                          (a[0] + 20, a[1] + 8, a[0] + 4, a[1] + 2))
+
+
+class Recto:
+    """El icono v2 recto (D-045, hasta el 2026-10-27), como boceto «recto» para comparar."""
+    nombre, titulo = "recto", "El río recto (v2 hasta el 2026-10-27)"
+    lip, imp, v = LIP0, IMPACT0, V0
+
+    def fondo(self):
+        return fondo_recto()
+
+    def frente(self):
+        return _frente(V0, IMPACT0)
+
+    def monocroma(self):
+        return _monocroma(V0, IMPACT0, RIO_MONO)
 
 
 def variantes():
-    """Los bocetos de meandros (fase 1). El punto de control con el impacto va en la lista: el chorro cae sobre el eje."""
+    """Los bocetos de meandros (fase 1) y el oficial («dos-meandros», añadido de D-045 del 2026-10-27). El punto de control con
+    el impacto va en la lista: el chorro cae sobre el eje."""
     return {
+        "recto": Recto(),
         # Un meandro amplio en S: nace fino en el horizonte, a la derecha; gira bajo la cuia y se abre en el primer plano.
         "s-amplia": Variante(
             "s-amplia", "A · un meandro amplio en S",
@@ -710,12 +737,15 @@ def variantes():
              (360, 840, 92), (580, 910, 108), (840, 970, 122), (1040, 1080, 136)],
             mover=(0, -40), horiz=450, palmeras=((120, 170, -14), (930, 200, 18))),
         # Dos meandros con perspectiva, como en la pantalla de carga: dos curvas lejanas y una ancha en el primer plano.
+        # Oficial desde el añadido de D-045 del 2026-10-27 (fase 2): la cuia 60 px a la derecha y 40 arriba del recto, con margen
+        # en la zona segura de 66 dp (ver zona_segura_dp); las curvas lejanas, algo más anchas para que se lean a 48 px; en la
+        # monocroma, solo las orillas del tramo cercano (media anchura ≥ 30).
         "dos-meandros": Variante(
             "dos-meandros", "B · dos meandros con perspectiva",
-            [(700, 342, 3), (790, 362, 6), (730, 392, 10), (630, 420, 14), (650, 454, 20), (790, 488, 28), (840, 532, 36),
-             (760, 568, 44), (644, 586, 50), (500, 650, 62), (410, 760, 78), (460, 880, 95), (640, 980, 110),
-             (780, 1110, 124)],
-            mover=(40, -60), horiz=342, palmeras=((110, 140, -14), (930, 160, 18))),
+            [(720, 342, 4), (806, 362, 7), (748, 392, 11), (656, 420, 16), (676, 454, 22), (806, 490, 30), (856, 536, 38),
+             (786, 578, 46), (664, 606, 54), (530, 666, 66), (440, 772, 80), (490, 890, 96), (670, 986, 110),
+             (800, 1110, 124)],
+            mover=(60, -40), horiz=342, palmeras=((110, 140, -14), (930, 160, 18)), orillas_desde=30),
         # Vista desde el aire: sin cielo; el río cruza la selva de izquierda a derecha con meandros en U.
         "aereo": Variante(
             "aereo", "C · desde el aire",
@@ -723,6 +753,34 @@ def variantes():
              (800, 840, 84), (960, 860, 84), (1060, 700, 84), (1180, 560, 84)],
             mover=(-20, -80), aros=(76, 34, 122, 54)),
     }
+
+
+OFICIAL = "dos-meandros"
+_OF = variantes()[OFICIAL]
+LIP, IMPACT, V = _OF.lip, _OF.imp, _OF.v
+
+
+def fondo():
+    """Todo lo que no es la cuia ni el chorro (el oficial: el río con dos meandros). Sangra mucho para la capa adaptativa."""
+    return _OF.fondo()
+
+
+def frente():
+    """La cuia, el chorro y los aros del icono oficial."""
+    return _OF.frente()
+
+
+def monocroma():
+    """La monocroma del icono oficial."""
+    return _OF.monocroma()
+
+
+def zona_segura_dp(pieza=None):
+    """Distancia máxima (dp) al centro del icono adaptativo de la cuia (vidrio, pie y borde), con la escala de ADAPT; la zona
+    segura de Android es un círculo de 33 dp de radio."""
+    v = (pieza or _OF).v
+    m = max(math.hypot(x - 512, y - 512) for x, y in v["glass"] + v["foot"] + v["rim"])
+    return m * 0.86 / 1024 * 108
 
 
 def icono_en(x, y, size, rid, pieza=None):
@@ -778,7 +836,8 @@ def main(argv=None):
           f'{DEFS}\n{icono_en((Wv - 420) / 2, 0, 420, "r2", pieza)}\n'
           f'<path d="{d}" fill="{color}" transform="translate({(Wv - tw) / 2:.1f} 680)"/>\n</svg>\n')
     w("feature-graphic.svg", grafico_funciones(font, pieza))
-    print("inclinación", round(math.degrees((pieza.v if pieza else V)["r"]), 1), "grados; SVG en", out)
+    print("inclinación", round(math.degrees((pieza.v if pieza else V)["r"]), 1), "grados; cuia a",
+          round(zona_segura_dp(pieza), 1), "dp del centro (zona segura: 33); SVG en", out)
     return 0
 
 

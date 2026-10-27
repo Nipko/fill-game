@@ -14,12 +14,12 @@ def tema(fondo,tinta,size):
             f'<div style="position:absolute;width:{size*1.5}px;height:{size*1.5}px;left:{-size*0.25}px;top:{-size*0.25}px;'
             f'background:{tinta};-webkit-mask:url({mono}) center/contain no-repeat;mask:url({mono}) center/contain no-repeat"></div></div>')
 f=lambda c,t:f'<figure>{c}<figcaption>{t}</figcaption></figure>'
-h=f'''<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Tintalú · propuesta B</title><style>
+h=f'''<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Tintalú · el río que se tiñe</title><style>
 body{{margin:0;padding:24px;background:#EEF1EE;font:14px system-ui,sans-serif;color:#13303A}}
 .fila{{display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap;margin:0 0 30px}}figure{{margin:0;text-align:center}}
 .oscuro{{background:#121417;padding:20px;border-radius:12px;display:flex;gap:24px;align-items:flex-end}}
 img{{display:block}}</style></head><body>
-<h2>Tintalú · propuesta B «El río que se tiñe»</h2>
+<h2>Tintalú · «El río que se tiñe», con meandros</h2>
 <div class="fila">{f(f'<img src="{u("app-store-1024.png")}" width="300" style="border-radius:22%">',"iOS / Play (máscara del sistema)")}
 {f(mask("circulo",200),"Android círculo")}{f(mask("squircle",200),"Android squircle")}{f(mask("cuadrado",200),"Android cuadrado")}</div>
 <h3>Tamaño real</h3><div class="fila">{"".join(f(f'<img src="{u(f"legacy-{n}.png")}" width="{n}" style="border-radius:22%">',str(n)) for n in (192,144,96,72,48))}
