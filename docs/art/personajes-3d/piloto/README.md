@@ -29,6 +29,20 @@ Capturas del piloto de la fase 1 del encargo `docs/dev/traspaso/spark-personajes
 - **Rosa, la bota rosada** (`ProceduralArt.Mascots.cs`), como segundo animal [P] (guía §9, pregunta 4).
 - **El sombreado** (`ProceduralArt.Toy.cs`): `ToyShading` y `ToyTones`, funciones puras con 16 tests EditMode (`ToyShadingTests`). A `ColorMath` se le añade `ScaleOkLightnessChroma`.
 
-## Mediciones
+## Mediciones (2026-10-27, el Spark: Windows ARM64, Editor arm64)
 
-Las rellena la verificación de la entrega (ver el informe del commit).
+Todos los tiempos son de reloj y tienen ruido de unos ±20 %. «Antes» se midió con el código del piloto retirado del árbol (un stash temporal), sobre la misma Library.
+
+| Qué | Antes | Después | Presupuesto |
+|---|---|---|---|
+| Banner de mundo con Capi: en el hilo principal (`WorldBannerArtTests`) | 0,7-1,1 ms | 0,9-1,5 ms | ≤ 8 ms (pasa) |
+| Banner de mundo con Capi: en el otro hilo (mejor ronda) | ≈ 240-250 ms | ≈ 310-340 ms | ≤ 500 ms (pasa) |
+| Atlas de TiTino (1024 × 512 con mipmaps; `SlothArtMs`, una vez por sesión) | 59,9 ms | 80-102 ms | sin presupuesto en los tests |
+| Rama de embaúba (sin cambios: control del ruido) | 37,1 ms | 38,7-51,6 ms | — |
+| Memoria de los atlas | la misma | **la misma** (mismos tamaños y formatos) | — |
+| Asignaciones por fotograma | — | ninguna nueva (todo se hornea una vez) | — |
+
+- **Lo que se hizo para contener el coste del banner:**
+  - la normal del borde de Capi solo se calcula en la franja de su cúpula; más dentro, la cúpula ya mira de frente;
+  - el barniz y la luz de borde usan multiplicaciones en lugar de `Mathf.Pow`.
+- **El atlas de TiTino** cuesta unos 20-40 ms más, una vez por sesión, la primera vez que se pide. Si hace falta, se puede pintar fuera del hilo principal, como el banner. Queda anotado y no se subió ningún presupuesto.
