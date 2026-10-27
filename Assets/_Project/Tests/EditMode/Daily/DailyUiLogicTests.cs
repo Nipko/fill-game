@@ -68,7 +68,7 @@ namespace AF.Tests.EditMode.Daily
                 Assert.That(VisibleLength(f[1]), Is.LessThanOrEqualTo(max), key + ": el texto es-419 cabe en max_chars");
                 Assert.That((VisibleLength(f[2]) * 10) <= (max * 13), Is.True, key + ": en cabe en max_chars × 1,3");
                 Assert.That((VisibleLength(f[3]) * 10) <= (max * 13), Is.True, key + ": pt-BR cabe en max_chars × 1,3");
-                Assert.That(f[6], Is.EqualTo("borrador").Or.EqualTo("pendiente_asesor"), key + ": status");
+                Assert.That(f[6], Is.EqualTo("borrador").Or.EqualTo("pendiente_asesor").Or.EqualTo("aprobado_es"), key + ": status (aprobado_es tras la revisión de D-054)");
                 Assert.That(f[1].Contains("{0}") || f[1].Contains("{1}"), Is.False, key + ": marcadores con nombre");
             }
 

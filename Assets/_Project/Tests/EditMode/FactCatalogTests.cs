@@ -54,8 +54,9 @@ namespace AF.Tests.EditMode
             "fact.cacao.17", "fact.cacao.18", "fact.cacao.19", "fact.cacao.20",
         };
 
-        // Líneas que entran como borrador (D-013, 2026-10-13): repiten datos de llegada del Mapa y no salen en release.
-        private static readonly string[] DraftLines = { "fact.agua_tapajos.14", "fact.agua_tapajos.19" };
+        // Líneas que entran como borrador (D-013, 2026-10-13): repiten datos de llegada del Mapa y no salen en release. Las dos
+        // que había (fact.agua_tapajos.14 y .19) las sustituyó la revisión de D-054 (gemini-revision/resumen.md §4.2).
+        private static readonly string[] DraftLines = Array.Empty<string>();
 
         // Id de fuente citado en el context: «Fuente A1, …» o «Fuentes T1, …; T2, …».
         private static readonly Regex CitedSource = new Regex("(?:Fuentes? |; )([A-Z][A-Za-z]*[0-9]+), ");
@@ -243,7 +244,16 @@ namespace AF.Tests.EditMode
 
                     LocStatus status = facts.StatusAt(row, LocLocale.SourceLocale);
                     bool draft = Array.IndexOf(DraftLines, key) >= 0;
-                    Assert.That(status, Is.EqualTo(draft ? LocStatus.Draft : LocStatus.PendingAdvisor), key + (draft ? ": borrador (D-013)" : ": nace pendiente del asesor (07 §8.2)"));
+                    if (draft)
+                    {
+                        Assert.That(status, Is.EqualTo(LocStatus.Draft), key + ": borrador (D-013)");
+                    }
+                    else
+                    {
+                        // Nace pendiente del asesor (07 §8.2); la revisión cultural de D-054 la deja en aprobado_es.
+                        Assert.That(status, Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs), key + ": pendiente del asesor o aprobada (07 §8.2; D-054)");
+                    }
+
                     foreach (string locale in facts.Locales)
                     {
                         if (locale != LocLocale.SourceLocale && status < LocStatus.ApprovedEs)
@@ -281,7 +291,7 @@ namespace AF.Tests.EditMode
                     int riverName = facts.IndexOf(s.NameKey);
                     Assert.That(riverName, Is.GreaterThanOrEqualTo(0), s.NameKey);
                     Assert.That(facts.MaxCharsAt(riverName), Is.EqualTo(24), s.NameKey + ": como los nombres de tinte");
-                    Assert.That(facts.StatusAt(riverName, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor), s.NameKey);
+                    Assert.That(facts.StatusAt(riverName, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs), s.NameKey);
                     continue;
                 }
 
@@ -291,10 +301,10 @@ namespace AF.Tests.EditMode
                 Assert.That(tag, Is.GreaterThanOrEqualTo(0), s.TagKey);
                 Assert.That(facts.MaxCharsAt(tag), Is.EqualTo(40), s.TagKey + ": ≤ 40 caracteres (propuesta §5.1)");
                 Assert.That(facts.TextAt(tag, LocLocale.SourceLocale).Length, Is.LessThanOrEqualTo(40), s.TagKey);
-                Assert.That(facts.StatusAt(tag, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor), s.TagKey);
+                Assert.That(facts.StatusAt(tag, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs), s.TagKey);
                 int name = facts.IndexOf(s.NameKey);
                 Assert.That(name, Is.GreaterThanOrEqualTo(0), s.NameKey);
-                Assert.That(facts.StatusAt(name, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor), s.NameKey);
+                Assert.That(facts.StatusAt(name, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs), s.NameKey);
                 Assert.That(Loc.Fact(s.TagKey), Does.StartWith(Loc.Fact(s.NameKey) == "Agua del Río Negro" ? "Río Negro" : Loc.Fact(s.NameKey)),
                     s.TagKey + ": «Nombre: frase»");
             }
@@ -385,24 +395,46 @@ namespace AF.Tests.EditMode
             Assert.That(units, Is.GreaterThanOrEqualTo(46), "las 46 cifras con unidad de las líneas de fruta de la versión 1");
         }
 
+        /// <summary>
+        /// En release, una línea sale solo con su español en aprobado_es (08 §4.7): sin aprobar, nunca; aprobada (D-054), sí. Las
+        /// claves sin fila (<see cref="PendingWriting"/>) no salen nunca.
+        /// </summary>
         [Test]
         public void InRelease_NoUnapprovedLineIsShown()
         {
+            LocTable facts = LocSetUpFixture.Catalog.Facts;
             Loc.Configure(LocSetUpFixture.Catalog, LocLocale.SourceLocale, false);
+            int shown = 0;
             foreach (FactSeries s in Real.Series)
             {
                 for (int k = 1; k <= s.Lines; k++)
                 {
-                    Assert.That(Loc.Fact(s.KeyAt(k)), Is.Empty, s.KeyAt(k) + ": sin aprobar, no sale en release (08 §4.7)");
+                    shown += AssertShownOnlyIfApproved(facts, s.KeyAt(k));
                 }
 
                 if (s.TagKey != null)
                 {
-                    Assert.That(Loc.Fact(s.TagKey), Is.Empty, s.TagKey);
+                    shown += AssertShownOnlyIfApproved(facts, s.TagKey);
                 }
 
-                Assert.That(Loc.Fact(s.NameKey), Is.Empty, s.NameKey);
+                shown += AssertShownOnlyIfApproved(facts, s.NameKey);
             }
+
+            Assert.That(shown, Is.GreaterThan(0), "con la revisión de D-054, las líneas aprobadas salen en release");
+        }
+
+        private static int AssertShownOnlyIfApproved(LocTable facts, string key)
+        {
+            int row = facts.IndexOf(key);
+            bool approved = row >= 0 && facts.StatusAt(row, LocLocale.SourceLocale) >= LocStatus.ApprovedEs;
+            if (approved)
+            {
+                Assert.That(Loc.Fact(key), Is.Not.Empty, key + ": aprobada, sale en release (08 §4.7; D-054)");
+                return 1;
+            }
+
+            Assert.That(Loc.Fact(key), Is.Empty, key + ": sin aprobar, no sale en release (08 §4.7)");
+            return 0;
         }
 
         // ---------------------------------------------------------------------------------------------- carga

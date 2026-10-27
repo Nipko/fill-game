@@ -100,18 +100,18 @@ namespace AF.Tests.EditMode
                 string es = strings.TextAt(r, LocLocale.SourceLocale);
                 Assert.That(es.Length, Is.InRange(1, 50), key + ": ≤ 50 caracteres en español (e.2)");
                 Assert.That(strings.MaxCharsAt(r), Is.EqualTo(50), key);
-                Assert.That(strings.StatusAt(r, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor), key);
+                Assert.That(strings.StatusAt(r, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs), key);
                 foreach (string locale in new[] { LocLocale.English, LocLocale.PortugueseBrazil })
                 {
                     string text = strings.TextAt(r, locale);
                     Assert.That(text.Length, Is.InRange(1, 85), key + " (" + locale + "): borrador de e.4, ≤ 85");
-                    Assert.That(strings.StatusAt(r, locale), Is.EqualTo(LocStatus.Translated), key + " (" + locale + "): sin revisión nativa");
+                    Assert.That(strings.StatusAt(r, locale), Is.EqualTo(LocStatus.Translated).Or.EqualTo(LocStatus.NativeReviewed), key + " (" + locale + "): traducida (y revisada en D-054)");
                 }
             }
 
             int row = strings.IndexOf(UiText.Keys.SettingsSlothMessages);
             Assert.That(row, Is.GreaterThanOrEqualTo(0));
-            Assert.That(strings.StatusAt(row, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor));
+            Assert.That(strings.StatusAt(row, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs));
             Assert.That(UiText.SettingsSlothMessages, Is.EqualTo("Mensajes de TiTino"));
         }
 
@@ -127,13 +127,16 @@ namespace AF.Tests.EditMode
                 int r = facts.IndexOf(key);
                 Assert.That(r, Is.GreaterThanOrEqualTo(0), key);
                 Assert.That(facts.TextAt(r, LocLocale.SourceLocale).Length, Is.InRange(1, 90), key + ": ≤ 90 (g.3)");
-                Assert.That(facts.StatusAt(r, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor), key);
+                Assert.That(facts.StatusAt(r, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs), key);
                 Assert.That(facts.ContextAt(r), Does.Contain("http"), key + ": la fuente con su URL");
                 Assert.That(UiText.SlothFact(key), Is.Not.Empty, key + ": en desarrollo se ve");
             }
 
             Assert.That(SlothLines.SlothFactKeys[10], Is.EqualTo(SlothLines.ColorFactKey));
-            Assert.That(UiText.SlothColorFactApproved, Is.False, "el dato_11 aún sin aprobar: la frase n.º 3 no sale");
+            // La frase n.º 3 solo sale con el dato_11 aprobado: lo aprobó la revisión de D-054.
+            int colorFact = facts.IndexOf(SlothLines.ColorFactKey);
+            Assert.That(UiText.SlothColorFactApproved, Is.EqualTo(facts.StatusAt(colorFact, LocLocale.SourceLocale) >= LocStatus.ApprovedEs));
+            Assert.That(UiText.SlothColorFactApproved, Is.True, "dato_11 aprobado en D-054");
         }
 
         [Test]
@@ -180,7 +183,9 @@ namespace AF.Tests.EditMode
             Assert.That(UiText.TrySlothLine(in back, out text), Is.True);
             Assert.That(text, Is.EqualTo("El río sigue donde lo dejaste: nivel 1000."));
 
-            Loc.Configure(LocSetUpFixture.Catalog, LocLocale.SourceLocale, false);
+            // Release con las frases y los datos pendientes del asesor (el estado con el que nacen; la tabla real los tiene
+            // aprobados desde D-054): no se enseñan.
+            Loc.Configure(Pending(LocSetUpFixture.Catalog, false), LocLocale.SourceLocale, false);
             Assert.That(UiText.TrySlothLine(in plain, out text), Is.False, "release: pendiente del asesor, no se enseña");
             Assert.That(text, Is.Empty);
             Assert.That(UiText.SlothFact(SlothLines.SlothFactKeys[0]), Is.Empty, "release: el dato sin aprobar es «»");
@@ -188,17 +193,44 @@ namespace AF.Tests.EditMode
             // En otro idioma, en release, ni el borrador de e.4 (traducido) ni nada sin aprobado_es y revisado_nativo.
             foreach (string locale in new[] { LocLocale.English, LocLocale.PortugueseBrazil })
             {
-                Loc.Configure(LocSetUpFixture.Catalog, locale, false);
+                Loc.Configure(Pending(LocSetUpFixture.Catalog, true), locale, false);
                 Assert.That(UiText.TrySlothLine(in plain, out text), Is.False, locale + ": release sin revisión nativa");
                 Assert.That(text, Is.Empty, locale);
                 Assert.That(UiText.TrySlothLine(in streak, out text), Is.False, locale + ": release sin revisión nativa");
                 Assert.That(text, Is.Empty, locale);
             }
 
+            // La tabla real (D-054): español aprobado y traducción revisada, así que en release sí salen.
+            Loc.Configure(LocSetUpFixture.Catalog, LocLocale.SourceLocale, false);
+            Assert.That(UiText.TrySlothLine(in plain, out text), Is.True, "release: aprobada en D-054");
+            Assert.That(text, Is.EqualTo("Paso a paso. La próxima sale."));
+            Assert.That(UiText.SlothFact(SlothLines.SlothFactKeys[0]), Is.Not.Empty, "release: el dato aprobado sale");
+            Loc.Configure(LocSetUpFixture.Catalog, LocLocale.English, false);
+            Assert.That(UiText.TrySlothLine(in plain, out text), Is.True, "en: revisado_nativo en D-054");
+            Assert.That(text, Is.EqualTo("Step by step. You'll get the next one."));
+
             // En desarrollo, en inglés, el texto inglés (nunca mezcla idiomas).
             Loc.Configure(LocSetUpFixture.Catalog, LocLocale.English, true);
             Assert.That(UiText.TrySlothLine(in plain, out text), Is.True);
             Assert.That(text, Is.EqualTo("Step by step. You'll get the next one."));
+        }
+
+        /// <summary>
+        /// <paramref name="catalog"/> con el español de las tablas en pendiente_asesor (y, con <paramref name="unreviewed"/>, las
+        /// traducciones en «traducido»): el estado de antes de la revisión de D-054, para probar la regla de release.
+        /// </summary>
+        private static LocCatalog Pending(LocCatalog catalog, bool unreviewed)
+        {
+            string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile).Replace(",aprobado_es,", ",pendiente_asesor,");
+            string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile).Replace(",aprobado_es,", ",pendiente_asesor,");
+            if (unreviewed)
+            {
+                strings = strings.Replace(",revisado_nativo", ",traducido");
+                facts = facts.Replace(",revisado_nativo", ",traducido");
+            }
+
+            Assert.That(catalog, Is.Not.Null);
+            return LocCatalog.Parse(strings, facts);
         }
 
         // ------------------------------------------------------------------------------------------- victoria

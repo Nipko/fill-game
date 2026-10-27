@@ -81,7 +81,7 @@ namespace AF.Tests.EditMode
         {
             foreach (string key in LeagueRules.NameKeys)
             {
-                Assert.That(Loc.StatusOf(key, "es-419"), Is.EqualTo(LocStatus.PendingAdvisor), key);
+                Assert.That(Loc.StatusOf(key, "es-419"), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs), key + ": pendiente del asesor o revisado en D-054");
             }
         }
 
@@ -91,10 +91,10 @@ namespace AF.Tests.EditMode
             // Lugares (localizacion.md: lo cultural nace pendiente_asesor), también «Otro país».
             foreach (string code in LeagueText.NamedCountries)
             {
-                Assert.That(Loc.StatusOf(LeagueText.CountryKey(code), "es-419"), Is.EqualTo(LocStatus.PendingAdvisor), code);
+                Assert.That(Loc.StatusOf(LeagueText.CountryKey(code), "es-419"), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs), code);
             }
 
-            Assert.That(Loc.StatusOf(LeagueText.CountryOtherKey, "es-419"), Is.EqualTo(LocStatus.PendingAdvisor));
+            Assert.That(Loc.StatusOf(LeagueText.CountryOtherKey, "es-419"), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs));
             Assert.That(LeagueText.NamedCountries.Length, Is.EqualTo(21));
         }
 

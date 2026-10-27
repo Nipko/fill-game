@@ -50,6 +50,10 @@ namespace AF.Tests.EditMode
 
         private const string AdvisorMark = "Pendiente del asesor cultural";
 
+        // D-054 (añadido del 2026-10-26): la revisión cultural de Gemini, aprobada por el dueño, sustituye al asesor para la 1.0;
+        // la fila revisada cambia la marca de pendiente por esta.
+        private const string ReviewedMark = "Revisado en D-054";
+
         // IDs de los comodines del glosario §11 (nombre temático del §5.1 en booster.<id>).
         private static readonly string[] Boosters = { "undo", "extra_cuia", "hint", "shuffle", "reveal", "skip", "restart", "continue_cuia", "rv_double_harvest" };
 
@@ -233,7 +237,10 @@ namespace AF.Tests.EditMode
                 }
 
                 marked++;
-                Assert.That(row.Notes.IndexOf(AdvisorMark, StringComparison.Ordinal), Is.GreaterThanOrEqualTo(0), row.Term + ": «" + AdvisorMark + "» en las notas (07 §8.2)");
+                bool pending = row.Notes.IndexOf(AdvisorMark, StringComparison.Ordinal) >= 0;
+                bool reviewed = row.Notes.IndexOf(ReviewedMark, StringComparison.Ordinal) >= 0;
+                Assert.That(pending ^ reviewed, Is.True,
+                    row.Term + ": «" + AdvisorMark + "» o, revisada, «" + ReviewedMark + "» en las notas (07 §8.2; D-054), y solo una");
             }
 
             foreach (string term in CulturalBoosters)

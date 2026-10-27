@@ -115,17 +115,20 @@ namespace AF.Tests.EditMode
             {
                 int r = strings.IndexOf(key);
                 Assert.That(r, Is.GreaterThanOrEqualTo(0), key);
-                Assert.That(strings.StatusAt(r, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor), key + ": nace pendiente_asesor");
+                Assert.That(strings.StatusAt(r, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs),
+                    key + ": nace pendiente_asesor (aprobado_es tras la revisión de D-054)");
                 Assert.That(strings.ContextAt(r), Is.Not.Empty, key);
                 Assert.That(strings.MaxCharsAt(r), Is.GreaterThan(0), key);
                 foreach (string locale in strings.Locales)
                 {
                     if (locale != LocLocale.SourceLocale)
                     {
-                        // Sin traducir (vacío y sin estado) o con la traducción con IA de T2 (traducido; D-022, pregunta 51 (b)),
-                        // que espera la revisión nativa y la del asesor.
+                        // Sin traducir (vacío y sin estado), con la traducción con IA de T2 (traducido; D-022, pregunta 51 (b))
+                        // o con la revisión nativa de D-054 (revisado_nativo).
                         bool translated = strings.TextAt(r, locale).Length > 0;
-                        Assert.That(strings.StatusAt(r, locale), translated ? Is.EqualTo(LocStatus.Translated) : Is.EqualTo(LocStatus.Missing), key + " (" + locale + ")");
+                        Assert.That(strings.StatusAt(r, locale),
+                            translated ? Is.EqualTo(LocStatus.Translated).Or.EqualTo(LocStatus.NativeReviewed) : Is.EqualTo(LocStatus.Missing),
+                            key + " (" + locale + ")");
                     }
                 }
             }

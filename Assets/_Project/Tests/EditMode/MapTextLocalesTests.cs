@@ -124,14 +124,20 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void StopTexts_DoNotReachThePlayer_InRelease_WhileTheSpanishIsPendingTheAdvisor([ValueSource(nameof(Locales))] string locale)
+        public void StopTexts_ReachThePlayer_InRelease_OnlyWithTheSpanishApproved_AndTheTranslationReviewed([ValueSource(nameof(Locales))] string locale)
         {
             Loc.Configure(LocSetUpFixture.Catalog, locale, false);
             RiverStop stop = Stops.At(5)!;
-            Assert.That(Loc.StatusOf(stop.NameKey, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor), "lo cultural sigue pendiente del asesor");
-            Assert.That(Loc.StatusOf(stop.NameKey, locale), Is.EqualTo(LocStatus.Translated), "la traducción con IA, sin revisión nativa");
-            Assert.That(UiText.StopName(stop), Is.Empty, "08 §4.7: sin aprobado_es ni revisado_nativo, no se muestra");
-            Assert.That(UiText.NextPlaceName(Stops, stop), Is.Empty);
+            LocStatus spanish = Loc.StatusOf(stop.NameKey, LocLocale.SourceLocale);
+            LocStatus translation = Loc.StatusOf(stop.NameKey, locale);
+            Assert.That(spanish, Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs), "lo cultural nace pendiente del asesor");
+            Assert.That(translation, Is.EqualTo(LocStatus.Translated).Or.EqualTo(LocStatus.NativeReviewed));
+
+            // 08 §4.7: sin aprobado_es y revisado_nativo, no se muestra; con los dos (revisión de D-054), sí.
+            bool shown = spanish >= LocStatus.ApprovedEs && translation == LocStatus.NativeReviewed;
+            Assert.That(shown, Is.True, "D-054: la parada 5 tiene el español aprobado y la traducción revisada");
+            Assert.That(UiText.StopName(stop), Is.Not.Empty, "08 §4.7: aprobada y revisada, se muestra");
+            Assert.That(UiText.NextPlaceName(Stops, stop), Is.Not.Empty);
         }
 
         private static void Check(StringBuilder problems, string what, string text)
