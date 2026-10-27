@@ -209,6 +209,38 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator WithoutSim_ThePlayAccountCountry_GoesBeforeTheRegion_AndATeenInGermanyHasNoAnalytics()
+        {
+            // D-057: P4 (a), el país de la cuenta de Play (guardado de la conexión anterior) delante de la región del teléfono; y P2 (a),
+            // con 13-17 en Alemania (edad digital 16) la pantalla no ofrece la analítica y «Aceptar todo» la deja apagada.
+            GameBootstrap.SimCountryOverride = ManualSimCountry.None;
+            GameBootstrap.PlayAccountCountryOverride = new MemoryPlayAccountCountry("DE");
+            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("en-US");
+            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ConsentCountryCode, Is.EqualTo("DE"));
+            Assert.That(boot.ConsentCountrySource, Is.EqualTo(CountrySource.PlayAccount));
+            Assert.That(boot.Consent!.Profile, Is.EqualTo(LegalProfiles.Ump));
+
+            boot.ConsentView!.AgeButton(AgeBand.Teen).onClick.Invoke();
+            Assert.That(boot.ConsentView.AnalyticsToggleShown, Is.False, "D-057: sin la fila «Analítica»");
+            boot.ConsentView.AcceptAllButton.onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(() => boot.App!.Screen != AppScreen.Boot, "la primera pantalla");
+            Assert.That(boot.Consent.Record!.Analytics, Is.False);
+            Assert.That(boot.Consent.Flags.AnalyticsEnabled, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator ATeenInColombia_StillGetsTheAnalyticsChoice()
+        {
+            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ConsentCountrySource, Is.EqualTo(CountrySource.Sim));
+            boot.ConsentView!.AgeButton(AgeBand.Teen).onClick.Invoke();
+            Assert.That(boot.ConsentView.AnalyticsToggleShown, Is.True, "Q-B12-7 (a): CO, edad digital 13");
+        }
+
+        [UnityTest]
         public IEnumerator UnknownCountry_IsStrict_AndUmp_LeavesTheAdsToUmp()
         {
             GameBootstrap.SimCountryOverride = ManualSimCountry.None;

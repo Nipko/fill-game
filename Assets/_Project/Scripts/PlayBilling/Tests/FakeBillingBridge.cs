@@ -29,6 +29,8 @@ namespace AF.IAP.PlayBilling.Tests
 
         public List<string> Acknowledges { get; } = new List<string>();
 
+        public List<int> ConfigQueries { get; } = new List<int>();
+
         public int Disposed { get; private set; }
 
         /// <summary>La próxima llamada lanza (JNI roto, plugin ausente).</summary>
@@ -72,6 +74,12 @@ namespace AF.IAP.PlayBilling.Tests
         {
             Maybe();
             Acknowledges.Add(token);
+        }
+
+        public void QueryBillingConfig(int requestId)
+        {
+            Maybe();
+            ConfigQueries.Add(requestId);
         }
 
         public void Dispose() => Disposed++;

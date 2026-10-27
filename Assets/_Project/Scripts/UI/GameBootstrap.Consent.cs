@@ -54,6 +54,20 @@ namespace AF.UI
         /// <summary>SIM para los tests (por defecto, la del teléfono; en el Editor, ninguna).</summary>
         internal static ISimCountry? SimCountryOverride { get; set; }
 
+        /// <summary>
+        /// País de la cuenta de Play guardado, para los tests (por defecto, <see cref="PlayerPrefsPlayAccountCountry"/> en el teléfono y
+        /// en memoria en el Editor; D-057).
+        /// </summary>
+        internal static IPlayAccountCountryStore? PlayAccountCountryOverride { get; set; }
+
+        private IPlayAccountCountryStore? _playAccountCountry;
+
+        /// <summary>El almacén del país de la cuenta de Play de esta sesión (D-057).</summary>
+        internal IPlayAccountCountryStore PlayAccountCountry => _playAccountCountry ??= PlayAccountCountryOverride ?? PlayerPrefsPlayAccountCountry.ForPlatform();
+
+        /// <summary>De dónde salió el país del perfil legal (SIM, cuenta de Play, región o ninguno).</summary>
+        public CountrySource ConsentCountrySource => _consentCountrySource;
+
         /// <summary>La edad y el consentimiento actúan (<see cref="ConsentEnabledOverride"/> o, sin él, siempre).</summary>
         public static bool ConsentEnabled => ConsentEnabledOverride ?? true;
 
@@ -83,6 +97,7 @@ namespace AF.UI
             CrashReportingOverride = null;
             AnalyticsResetOverride = null;
             SimCountryOverride = null;
+            PlayAccountCountryOverride = null;
             AdProviderOverride = null; // D-042: el proveedor de anuncios de los tests
         }
 
@@ -221,7 +236,9 @@ namespace AF.UI
             // Las cifras ya enlazadas con el resto (RcConfigBinder; sus errores ya salieron en SetUpTelemetry): una sola fuente.
             _consentConfig = _rcConfigs?.Consent ?? ConsentConfig.Defaults;
 
-            _consentCountry = ConsentCountry.Resolve(SimCountryOverride ?? AndroidSimCountry.ForPlatform(), _deviceLocale, out _consentCountrySource);
+            // D-057 (P4 (a)): SIM → cuenta de Play (la de la última conexión con Play) → región → ninguno.
+            _consentCountry = ConsentCountry.Resolve(
+                SimCountryOverride ?? AndroidSimCountry.ForPlatform(), PlayAccountCountry, _deviceLocale, out _consentCountrySource);
             string profile = _consentConfig.ProfileFor(_consentCountry);
             _consentFlow = new ConsentFlow(_consentConfig, ConsentStoreOverride ?? store, clock, profile, countryKnown: _consentCountry != null, country: _consentCountry)
             {

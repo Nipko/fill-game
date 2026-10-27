@@ -82,6 +82,7 @@ En el editor, en los tests y en cualquier build sin el backend real, la tienda d
   - `queryProductDetailsAsync` (`QueryProductDetailsResult`; productos `INAPP`; de cada uno, la oferta de compra única con su `offerToken`);
   - `launchBillingFlow` con `setObfuscatedAccountId` y el `offerToken` de esa oferta;
   - `queryPurchasesAsync` (`INAPP`);
+  - `getBillingConfigAsync` (D-057, P4 (a)): solo `getCountryCode()`, el país de la cuenta de Play, segunda fuente del país legal (`docs/dev/consentimiento.md` §1.4);
   - `consumeAsync` y `acknowledgePurchase`;
   - los avisos de `PurchasesUpdatedListener`.
 - **Conexión:** si la biblioteca ya se está reconectando sola (`getConnectionState() == CONNECTING`), `connect` espera a que termine (una sola espera para todos, hasta 30 s, cada 500 ms) en lugar de pedir otra conexión, que Play respondería con `DEVELOPER_ERROR`; si no termina, responde `SERVICE_UNAVAILABLE`. `launch` sin conexión espera hasta 5 s a la reconexión antes de abrir la hoja. Cada consulta de productos sustituye a la anterior: solo se puede comprar lo que Play devuelve a la última (la respuesta de una consulta vieja no toca la lista).
@@ -283,6 +284,7 @@ Residual: con un token robado y la app auténtica en un dispositivo íntegro, el
 |---|---|---|---|
 | Token de compra (`purchaseToken`) | Verificar la compra en el servidor (hash en el libro mayor) | Ejecución del contrato: la compra que pide el jugador | Fila «Google Play Billing» y fila del backend propio |
 | UID anónimo como `obfuscatedAccountId` en Play | Antifraude de Play y contraste en `verifyPurchase` (08 §10.1) | Interés legítimo (seguridad), ya en el canon | Fila «Google Play Billing» |
+| País de la cuenta de Play (`getBillingConfigAsync`, D-057) | País legal del consentimiento (SIM → Play → región) y `geo_tier` | Se lee en el teléfono y se guarda solo en el dispositivo (`PlayerPrefs`); no sale de él | Ninguna nueva: no se recoge ni se envía |
 | Registros de diagnóstico de la biblioteca a Google | Funcionamiento de Play Billing (de Google) | La compra que pide el jugador; Google Play es quien procesa | Fila «Google Play Billing» (Q-BILL-2, el abogado lo revisa) |
 
 - **Ya no sale nada a Unity:** ni eventos de compra ni búsquedas en su catálogo. El plugin no habla con ningún host: solo con el servicio de facturación de la Play Store por la biblioteca.

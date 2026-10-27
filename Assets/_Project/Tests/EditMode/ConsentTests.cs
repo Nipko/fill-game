@@ -73,6 +73,39 @@ namespace AF.Tests.EditMode
             Assert.That(s4, Is.EqualTo(CountrySource.None));
         }
 
+        [Test]
+        public void Country_SimFirst_ThenPlayAccount_ThenRegion_ThenNone()
+        {
+            // D-057 (P4 (a)): la cuenta de Google Play va detrás de la SIM y delante de la región del teléfono.
+            var de = new ManualPlayAccountCountry("de");
+            Assert.That(ConsentCountry.Resolve(new ManualSimCountry("br"), de, new ManualDeviceLocale("en-US"), out CountrySource s1), Is.EqualTo("BR"));
+            Assert.That(s1, Is.EqualTo(CountrySource.Sim));
+            Assert.That(ConsentCountry.Resolve(ManualSimCountry.None, de, new ManualDeviceLocale("en-US"), out CountrySource s2), Is.EqualTo("DE"),
+                "una tableta sin SIM en Alemania con el teléfono en en-US ya no queda como US");
+            Assert.That(s2, Is.EqualTo(CountrySource.PlayAccount));
+            Assert.That(ConsentCountry.SourceKey(s2), Is.EqualTo("play"));
+            Assert.That(ConsentCountry.Resolve(ManualSimCountry.None, ManualPlayAccountCountry.None, new ManualDeviceLocale("es-CO"), out CountrySource s3), Is.EqualTo("CO"));
+            Assert.That(s3, Is.EqualTo(CountrySource.Region));
+            Assert.That(ConsentCountry.Resolve(ManualSimCountry.None, new ManualPlayAccountCountry("419"), new ManualDeviceLocale("es-419"), out CountrySource s4), Is.Null);
+            Assert.That(s4, Is.EqualTo(CountrySource.None));
+            Assert.That(ConsentConfig.Defaults.ProfileFor(ConsentCountry.Resolve(ManualSimCountry.None, de, new ManualDeviceLocale("en-US"), out _)),
+                Is.EqualTo(LegalProfiles.Ump));
+        }
+
+        [Test]
+        public void ThePlayAccountStore_KeepsTwoLettersInUppercase()
+        {
+            var store = new MemoryPlayAccountCountry();
+            Assert.That(store.CountryIso, Is.Empty);
+            store.Save("jp");
+            Assert.That(store.CountryIso, Is.EqualTo("JP"));
+            store.Save("JP");
+            store.Save("419");
+            store.Save("");
+            Assert.That(store.CountryIso, Is.EqualTo("JP"));
+            Assert.That(store.Saves, Is.EqualTo(1));
+        }
+
         [TestCase("pt-BR", "BR")]
         [TestCase("pt_BR", "BR")]
         [TestCase("zh-Hant-TW", "TW")]
