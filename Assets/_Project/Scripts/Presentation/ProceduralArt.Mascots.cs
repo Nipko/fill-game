@@ -145,15 +145,6 @@ namespace AF.Presentation
         private const float MascotOutlineDp = 1.35f;
         private static readonly Color MascotInk = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f);
 
-        // Luz de borde de Capi: ancho (dp) dentro del contorno y dirección de la luz de juego (arriba a la izquierda).
-        private const float MascotRimDp = 1.8f;
-        private static readonly Vector2 MascotLight = new Vector2(-0.42f, 0.91f).normalized;
-
-        // Contorno de Capi: la misma tinta, al 93 %. El lienzo mezcla en lineal, donde la tinta al 80 % sobre el cielo durazno y
-        // el agua blanca se ve como un gris marrón a medias (un halo, no un trazo); al 93 % se ve como el 80 % de 07 §6.1 mezclado
-        // en sRGB (≈ el contorno de Rosa, que va sobre el agua, más oscura).
-        private static readonly Color CapiInk = new Color(MascotInk.r, MascotInk.g, MascotInk.b, 0.93f);
-
         // Azul claro de las gotas del soplo y su contorno fino: se leen sobre el cielo durazno y sobre el agua.
         private static readonly Color SprayDrop = new Color(0.80f, 0.92f, 0.99f, 0.97f);
         private static readonly Color SprayEdge = new Color(0.25f, 0.45f, 0.58f, 0.85f);
@@ -748,23 +739,52 @@ namespace AF.Presentation
             return f / (len / (2f * e)) * s;
         }
 
+        // Capi de juguete (D-058): los tonos de cada material, el contorno fino coloreado y el radio de las cúpulas (en unidades
+        // del lado del cuadrado). En su propia clase para que se inicialicen la primera vez que se pintan, con los colores de
+        // ProceduralArt ya inicializados, en cualquier hilo (el banner se pinta fuera del principal).
+        private static class CapiToy
+        {
+            public static readonly ToyTones Fur = ToyShading.Tones(CapiFur);
+            public static readonly ToyTones Belly = ToyShading.Tones(CapiBelly, 0.7f);
+            public static readonly ToyTones Muzzle = ToyShading.Tones(ColorMath.Darken(CapiFur, 0.14f));
+            public static readonly ToyTones Cheek = ToyShading.Tones(ColorMath.Lighten(CapiFur, 0.1f));
+            public static readonly ToyTones Ear = ToyShading.Tones(CapiNose);
+            public static readonly ToyTones Nose = ToyShading.Tones(CapiNose);
+            public static readonly ToyTones Palm = ToyShading.Tones(ColorMath.Lighten(CapiBelly, 0.08f), 0.7f);
+            public static readonly Color Crease = ColorMath.WithAlpha(ToyShading.Tones(CapiFur).Shadow, 0.55f);
+            public static readonly Color Iris = Palette.Hex(0x4A2E1C);
+        }
+
+        // Contorno fino coloreado de Capi (dp) y radio de sus cúpulas (en unidades del lado): grande en el cuerpo, que se lee
+        // como un juguete macizo y redondo.
+        private const float CapiEdgeDp = 0.8f;
+        private const float CapiDome = 0.12f;
+        private const float CapiGloss = 0.45f;
+
+        // Las dos piezas de Capi por separado (cabeza y cuerpo), para la oclusión de la unión del cuello.
+        private static void CapiParts(float x, float y, out float head, out float body)
+        {
+            float haunch = SdEllipse(x, y, 0.285f, 0.235f, 0.225f, 0.205f);
+            float torso = SdEllipse(x, y, 0.445f, 0.355f, 0.235f, 0.175f, Rot36);
+            body = Smin(haunch, torso, 0.06f);
+            float h = SdRoundBox(x, y, 0.655f, 0.635f, 0.215f, 0.135f, 0.06f, RotM12);
+            float muzzle = SdRoundBox(x, y, 0.815f, 0.598f, 0.08f, 0.118f, 0.05f, RotM12);
+            head = Smin(h, muzzle, 0.02f);
+        }
+
         // Capi sentado de perfil, mirando a la derecha, sin la pata que presenta (CapiPaw), en el cuadrado de s px cuya esquina
-        // de abajo a la izquierda es el píxel (ox, oy) del lienzo (las patas, en su canto de abajo). Solo evalúa la silueta en
-        // las celdas que pueden tocarla o tocar su contorno: CapiSdf es 1-lipschitziana, así que si en el centro de la celda la
-        // distancia pasa del contorno más media diagonal, ningún píxel de la celda se pinta (el resultado es el mismo).
+        // de abajo a la izquierda es el píxel (ox, oy) del lienzo (las patas, en su canto de abajo), con el acabado de juguete
+        // (D-058): contorno fino del color del pelo, cúpulas desde el borde, felpa corta, barniz suave, la oclusión del cuello y de
+        // los pliegues del muslo y la pata, y el ojo de juguete. Solo evalúa la silueta en las celdas que pueden tocarla o tocar su
+        // contorno: CapiSdf es 1-lipschitziana, así que si en el centro de la celda la distancia pasa del contorno más media
+        // diagonal, ningún píxel de la celda se pinta (el resultado es el mismo).
         private static void DrawCapi(PixelCanvas pc, int ox, int oy, int s)
         {
             float inv = 1f / s;
-            float outline = MascotOutlineDp * MascotPxPerDp;
-            float rimW = MascotRimDp * MascotPxPerDp;
-            float band = outline + rimW + 2f;
+            float outline = Mathf.Max(1.6f, CapiEdgeDp * MascotPxPerDp * Mathf.Min(1f, s / (CapiPresentDp * MascotPxPerDp * 0.5f)));
             float reach = outline + 1f + (0.5f * 1.4143f * SilhouetteCell) + 1f;
-            Color furDark = ColorMath.Darken(CapiFur, 0.24f);
-            Color furTop = ColorMath.Lighten(CapiFur, 0.08f);
-            Color furLight = ColorMath.Lighten(CapiFur, 0.22f);
-            Color furShadow = ColorMath.Darken(CapiFur, 0.32f);
-            Color muzzle = ColorMath.Darken(CapiFur, 0.12f);
-            Color cheekLight = ColorMath.Lighten(CapiFur, 0.08f);
+            float domePx = CapiDome * s;
+            float band = domePx + outline + 2f; // más dentro, la cúpula ya mira de frente: no hace falta la normal del borde
             for (int cy = 0; cy < s; cy += SilhouetteCell)
             {
                 int cyEnd = Mathf.Min(s, cy + SilhouetteCell);
@@ -782,96 +802,76 @@ namespace AF.Presentation
                         {
                             float x = (px + 0.5f) * inv;
                             float y = (py + 0.5f) * inv;
-                            float d = CapiDistance(x, y, s, band, out Vector2 normal); // px, negativa dentro
+                            float d = CapiDistance(x, y, s, band, out Vector2 normal); // px, negativa dentro; la normal, en la franja del borde
                             if (d > outline + 1f)
                             {
                                 continue;
                             }
 
-                            pc.Blend(ox + px, oy + py, CapiInk, PixelCanvas.Coverage(d - outline));
+                            pc.Blend(ox + px, oy + py, CapiToy.Fur.Outline, PixelCanvas.Coverage(d - outline));
                             float cov = PixelCanvas.Coverage(d);
                             if (cov <= 0f)
                             {
                                 continue;
                             }
 
-                            pc.Blend(ox + px, oy + py, CapiFurAt(x, y, d, normal, s, rimW, furDark, furTop, furLight, furShadow, muzzle, cheekLight), cov);
+                            pc.Blend(ox + px, oy + py, CapiFurAt(x, y, d, normal, s, domePx), cov);
                         }
                     }
                 }
             }
 
-            // La línea del muslo sobre la grupa y la que separa la pata de apoyo del pecho (trazos finos de tinta).
-            float thin = 0.9f * MascotOutlineDp;
-            StrokeArcUnits(pc, s, ox, oy, 0.285f, 0.20f, 0.135f, 30f, 118f, thin);
-            StrokeArcUnits(pc, s, ox, oy, 0.545f, 0.235f, 0.05f, 195f, 285f, 0.85f * thin);
+            // Los pliegues del muslo sobre la grupa y de la pata de apoyo contra el pecho: sombras suaves, no trazos de tinta.
+            float thin = 1.1f * CapiEdgeDp;
+            StrokeArcUnits(pc, s, ox, oy, 0.285f, 0.20f, 0.135f, 30f, 118f, thin, CapiToy.Crease);
+            StrokeArcUnits(pc, s, ox, oy, 0.545f, 0.235f, 0.05f, 195f, 285f, 0.85f * thin, CapiToy.Crease);
 
-            // La nariz arriba en el frente del hocico (como la de la capibara), el ojo pequeño y alto con su brillo, y la boca.
+            // La nariz lacada arriba en el frente del hocico (como la de la capibara), el ojo de juguete, pequeño y alto (1,25 veces
+            // el de antes), y la boca.
             float k = s;
-            pc.FillEllipseSoft(ox + (0.868f * k), oy + (0.662f * k), 0.026f * k, 0.017f * k, 1.2f, CapiNose);
+            pc.FillEllipseSoft(ox + (0.868f * k), oy + (0.662f * k), 0.026f * k, 0.017f * k, 1.2f, ToyShading.Shade(CapiToy.Nose, ToyShading.Normal(0f, 0f), 0f, 0f));
             pc.FillEllipseSoft(ox + (0.876f * k), oy + (0.664f * k), 0.008f * k, 0.006f * k, 1f, new Color(0f, 0f, 0f, 0.6f));
-            pc.FillCircle(ox + (0.665f * k), oy + (0.70f * k), 0.021f * k, Palette.Ink);
-            pc.FillCircle(ox + (0.671f * k), oy + (0.708f * k), 0.0075f * k, new Color(1f, 1f, 1f, 0.95f));
-            StrokeArcUnits(pc, s, ox, oy, 0.845f, 0.548f, 0.026f, 205f, 300f, 0.8f * thin);
+            pc.FillEllipseSoft(ox + (0.86f * k), oy + (0.672f * k), 0.008f * k, 0.004f * k, 0.8f, new Color(1f, 1f, 1f, 0.7f));
+            DrawToyEye(pc, ox + (0.665f * k), oy + (0.70f * k), Mathf.Max(1.1f, 0.026f * k), CapiToy.Iris);
+            StrokeArcUnits(pc, s, ox, oy, 0.845f, 0.548f, 0.026f, 205f, 300f, 0.8f * thin, CapiToy.Fur.Outline);
         }
 
-        // Pelaje de Capi en (x, y) (unidades del lado s), a d px del borde (negativa dentro) con la normal del borde: más oscuro
-        // abajo y algo más claro arriba, luz de borde donde el canto mira arriba a la izquierda (MascotLight), sombra en los
-        // cantos de abajo, la panza clara, el hocico algo más oscuro, una luz suave en la mejilla y el interior de la oreja.
-        // Sin grano (D-003: vidrio, madera y luz de juego, no fieltro).
-        private static Color CapiFurAt(float x, float y, float d, Vector2 normal, float s, float rimW, Color furDark, Color furTop,
-            Color furLight, Color furShadow, Color muzzle, Color cheekLight)
+        // Pelaje de Capi en (x, y) (unidades del lado s), a d px del borde (negativa dentro) con la normal del borde: las
+        // regiones de color (la panza clara, el hocico algo más oscuro, la mejilla y el interior de la oreja) mezcladas en los
+        // tonos, una cúpula desde el borde de domePx px, la felpa corta y la oclusión de la unión de la cabeza con el cuerpo.
+        private static Color CapiFurAt(float x, float y, float d, Vector2 normal, float s, float domePx)
         {
-            Color fur = Color.Lerp(furDark, CapiFur, SmoothRange(0.04f, 0.62f, y));
-            fur = Color.Lerp(fur, furTop, SmoothRange(0.55f, 0.85f, y));
-            fur = RimShade(fur, -d, normal, rimW, furLight, furShadow);
-
+            ToyTones t = CapiToy.Fur;
             float belly = SdEllipse(x, y, 0.52f, 0.285f, 0.135f, 0.10f, Rot34) * s;
             if (belly < 6f)
             {
-                fur = Color.Lerp(fur, CapiBelly, 0.85f * (1f - SmoothRange(0f, 1f, (belly + 4.5f) / 9f)));
+                t = ToyTones.Lerp(t, CapiToy.Belly, 0.85f * (1f - SmoothRange(0f, 1f, (belly + 4.5f) / 9f)));
             }
 
             float snout = SdRoundBox(x, y, 0.83f, 0.598f, 0.065f, 0.10f, 0.045f, RotM12) * s;
             if (snout < 6f)
             {
-                fur = Color.Lerp(fur, muzzle, 0.55f * (1f - SmoothRange(0f, 1f, (snout + 4.5f) / 9f)));
+                t = ToyTones.Lerp(t, CapiToy.Muzzle, 0.6f * (1f - SmoothRange(0f, 1f, (snout + 4.5f) / 9f)));
             }
 
             float cheek = SdEllipse(x, y, 0.68f, 0.585f, 0.09f, 0.06f, RotM12) * s;
             if (cheek < 8f)
             {
-                fur = Color.Lerp(fur, cheekLight, 0.35f * (1f - SmoothRange(0f, 1f, (cheek + 6f) / 12f)));
+                t = ToyTones.Lerp(t, CapiToy.Cheek, 0.4f * (1f - SmoothRange(0f, 1f, (cheek + 6f) / 12f)));
             }
 
             float earIn = SdEllipse(x, y, 0.538f, 0.79f, 0.016f, 0.013f, Rot15) * s;
             if (earIn < 1f)
             {
-                fur = Color.Lerp(fur, CapiNose, 0.75f * PixelCanvas.Coverage(earIn));
+                t = ToyTones.Lerp(t, CapiToy.Ear, 0.75f * PixelCanvas.Coverage(earIn));
             }
 
-            fur.a = 1f;
-            return fur;
-        }
-
-        // Luz de borde y sombra de un canto: a inside px dentro del borde (hasta rimW), según lo que mira la normal: hacia la luz
-        // (MascotLight, arriba a la izquierda) se aclara y hacia abajo se oscurece.
-        private static Color RimShade(Color c, float inside, Vector2 normal, float rimW, Color light, Color shadow)
-        {
-            if (normal.x == 0f && normal.y == 0f)
-            {
-                return c;
-            }
-
-            float edge = 1f - SmoothRange(0f, rimW, inside);
-            if (edge <= 0f)
-            {
-                return c;
-            }
-
-            float lit = Mathf.Max(0f, (normal.x * MascotLight.x) + (normal.y * MascotLight.y));
-            c = Color.Lerp(c, light, 0.65f * edge * SmoothRange(0.25f, 0.9f, lit));
-            return Color.Lerp(c, shadow, 0.45f * edge * SmoothRange(0.2f, 0.9f, Mathf.Max(0f, -normal.y)));
+            Vector3 shape = ToyShading.EdgeDome(normal, -d, domePx);
+            float hClump = ToyShading.PlushClumps(x * 18f, y * 18f, 1f, 71, out float sx, out float sy);
+            Vector3 n = ToyShading.Tilt(shape, sx, sy, 0.06f);
+            CapiParts(x, y, out float head, out float body);
+            float ao = (0.7f * ToyShading.CreaseAO(head, body, 0.05f)) + (0.06f * (1f - Mathf.Clamp01(hClump * 1.6f)));
+            return ToyShading.Shade(t, n, Mathf.Clamp01(ao), CapiGloss, shape);
         }
 
         private static float SmoothRange(float from, float to, float x)
@@ -904,17 +904,13 @@ namespace AF.Presentation
             int w = Mathf.RoundToInt(CapiPawLengthDp * MascotPxPerDp);
             int h = Mathf.RoundToInt(CapiPawThickDp * MascotPxPerDp);
             var pc = new PixelCanvas(w, h);
-            float outline = MascotOutlineDp * MascotPxPerDp;
-            float rimW = MascotRimDp * MascotPxPerDp;
+            float outline = CapiEdgeDp * MascotPxPerDp;
+            float domePx = 5f * MascotPxPerDp; // el brazo es un cilindro de ≈ 5 dp de radio
             float e = 0.5f / MascotPxPerDp;
             float near = (2f * outline) + 2f;
 
             // Poda por celdas, con el margen de las cápsulas de radio variable (algo más que 1-lipschitzianas).
             float reach = near + (1.25f * 0.5f * 1.4143f * SilhouetteCell) + 1f;
-            Color furDark = ColorMath.Darken(CapiFur, 0.18f);
-            Color furLight = ColorMath.Lighten(CapiFur, 0.22f);
-            Color furShadow = ColorMath.Darken(CapiFur, 0.3f);
-            Color palm = ColorMath.Lighten(CapiBelly, 0.08f);
             for (int cy = 0; cy < h; cy += SilhouetteCell)
             {
                 int cyEnd = Mathf.Min(h, cy + SilhouetteCell);
@@ -948,36 +944,35 @@ namespace AF.Presentation
                                 continue;
                             }
 
-                            pc.Blend(px, py, CapiInk, PixelCanvas.Coverage(d - outline));
+                            pc.Blend(px, py, CapiToy.Fur.Outline, PixelCanvas.Coverage(d - outline));
                             float cov = PixelCanvas.Coverage(d);
                             if (cov <= 0f)
                             {
                                 continue;
                             }
 
-                            Color fur = Color.Lerp(furDark, CapiFur, SmoothRange(2f, 20f, y));
-                            fur = RimShade(fur, -d, normal, rimW, furLight, furShadow);
-
-                            // La palma hacia arriba: la cara de arriba de la mano, clara.
+                            // La palma hacia arriba: la cara de arriba de la mano, clara; el hombro, en la sombra del cuerpo.
+                            ToyTones t = CapiToy.Fur;
                             float pad = SdEllipse(x, y, PawHand.x + 0.8f, PawHand.y + 1f, 4.4f, 1.6f, Rot10) * MascotPxPerDp;
                             if (pad < 4f)
                             {
-                                fur = Color.Lerp(fur, palm, 0.9f * (1f - SmoothRange(0f, 1f, (pad + 3f) / 6f)));
+                                t = ToyTones.Lerp(t, CapiToy.Palm, 0.9f * (1f - SmoothRange(0f, 1f, (pad + 3f) / 6f)));
                             }
 
-                            fur.a = 1f;
-                            pc.Blend(px, py, fur, cov);
+                            Vector3 n = ToyShading.EdgeDome(normal, -d, domePx);
+                            float ao = 0.45f * (1f - SmoothRange(4f, 12f, x));
+                            pc.Blend(px, py, ToyShading.Shade(t, n, ao, CapiGloss), cov);
                         }
                     }
                 }
             }
 
-            // El pliegue del codo y la separación de los dedos.
-            float thin = 0.75f * MascotOutlineDp * MascotPxPerDp;
+            // El pliegue del codo y la separación de los dedos: sombras suaves del color del pelo.
+            float thin = 1.1f * CapiEdgeDp * MascotPxPerDp;
             float k = MascotPxPerDp;
-            pc.StrokeArc(PawElbow.x * k, (PawElbow.y + 5f) * k, 2.4f * k, thin, 235f, 305f, MascotInk);
-            pc.FillCapsule(41.6f * k, 11.6f * k, 42.6f * k, 11.1f * k, 0.35f * k, MascotInk);
-            pc.FillCapsule(42.4f * k, 10.2f * k, 43.4f * k, 9.8f * k, 0.35f * k, MascotInk);
+            pc.StrokeArc(PawElbow.x * k, (PawElbow.y + 5f) * k, 2.4f * k, thin, 235f, 305f, CapiToy.Crease);
+            pc.FillCapsule(41.6f * k, 11.6f * k, 42.6f * k, 11.1f * k, 0.35f * k, CapiToy.Fur.Outline);
+            pc.FillCapsule(42.4f * k, 10.2f * k, 43.4f * k, 9.8f * k, 0.35f * k, CapiToy.Fur.Outline);
             return pc;
         }
 
@@ -1033,6 +1028,13 @@ namespace AF.Presentation
         // cada 4 puntos (t = i / 24) y después los 4 vecinos de cada lado (t ± i / 96).
         private static float RosaSdf(float x, float y, out float side)
         {
+            return RosaSdf(x, y, out side, out _, out _, out _);
+        }
+
+        // RosaSdf con las piezas: la distancia al cuerpo con la aleta (body) y a la cabeza (head), en unidades del alto, y la
+        // normal del lomo en el punto más cercano (spineNormal, unitaria y hacia arriba), para el volumen de cilindro.
+        private static float RosaSdf(float x, float y, out float side, out float body, out float head, out Vector2 spineNormal)
+        {
             Vector2[] spine = RosaSpineTable;
             float best = float.MaxValue;
             int bestI = 0;
@@ -1076,23 +1078,35 @@ namespace AF.Presentation
             }
 
             normal.Normalize();
+            spineNormal = normal;
             float r = RosaRadius(bestI / (float)RosaSpineSteps);
-            float body = Mathf.Sqrt(best) - r;
+            float trunk = Mathf.Sqrt(best) - r;
             side = Mathf.Clamp(Vector2.Dot(new Vector2(x - at.x, y - at.y), normal) / r, -1f, 1f);
 
             // Aleta dorsal baja sobre el lomo y frente abombada; el hocico largo y fino.
             float fin = SdEllipse(x, y, RosaFinAt.x, RosaFinAt.y, 0.11f, 0.045f, Rot12);
-            float d = Smin(body, fin, 0.04f);
+            body = Smin(trunk, fin, 0.04f);
             float melon = SdEllipse(x, y, 0.56f, 0.64f, 0.145f, 0.135f);
             float snout = SdCapsule(x, y, 0.46f, 0.57f, 0.12f, 0.47f, 0.042f);
-            float head = Smin(melon, snout, 0.05f);
-            if (head < d - 0.01f)
+            head = Smin(melon, snout, 0.05f);
+            if (head < body - 0.01f)
             {
                 side = 0f;
             }
 
-            return Smin(d, head, 0.045f);
+            return Smin(body, head, 0.045f);
         }
+
+        // Rosa de juguete (D-058): vinilo rosa lacado, el material más brillante del piloto (piel lisa y mojada, sin pelo).
+        private static class RosaToy
+        {
+            public static readonly ToyTones Pink = ToyShading.Tones(RosaPink);
+            public static readonly ToyTones Back = ToyShading.Tones(RosaBack);
+            public static readonly ToyTones Belly = ToyShading.Tones(RosaBelly, 0.7f);
+            public static readonly Color Iris = Palette.Hex(0x3A2230);
+        }
+
+        private const float RosaGloss = 0.9f;
 
         private static PixelCanvas DrawRosa()
         {
@@ -1100,12 +1114,11 @@ namespace AF.Presentation
             int h = Mathf.RoundToInt(RosaHeightDp * MascotPxPerDp);
             var pc = new PixelCanvas(w, h);
             float inv = 1f / h;
-            float outline = MascotOutlineDp * MascotPxPerDp;
+            float outline = CapiEdgeDp * MascotPxPerDp;
 
             // Poda por celdas: el lomo muestreado y el radio variable dejan la distancia algo por encima de la real y algo más
             // que 1-lipschitziana; el margen lo cubre de sobra (unos 4 px).
             float reach = outline + 1f + (1.25f * 0.5f * 1.4143f * SilhouetteCell) + 4f;
-            Color light = ColorMath.Lighten(RosaPink, 0.12f);
             for (int cy = 0; cy < h; cy += SilhouetteCell)
             {
                 int cyEnd = Mathf.Min(h, cy + SilhouetteCell);
@@ -1123,60 +1136,72 @@ namespace AF.Presentation
                         {
                             float x = (px + 0.5f) * inv;
                             float y = (py + 0.5f) * inv;
-                            float d = RosaSdf(x, y, out float side) * h;
+                            float d = RosaSdf(x, y, out float side, out float body, out float head, out Vector2 spineNormal) * h;
                             if (d > outline + 1f)
                             {
                                 continue;
                             }
 
-                            pc.Blend(px, py, MascotInk, PixelCanvas.Coverage(d - outline));
+                            pc.Blend(px, py, RosaToy.Pink.Outline, PixelCanvas.Coverage(d - outline));
                             float cov = PixelCanvas.Coverage(d);
                             if (cov <= 0f)
                             {
                                 continue;
                             }
 
-                            pc.Blend(px, py, RosaColorAt(x, y, side, h, light), cov);
+                            pc.Blend(px, py, RosaColorAt(x, y, side, body, head, spineNormal), cov);
                         }
                     }
                 }
             }
 
-            // Boca a lo largo del hocico y el ojo pequeño, sin pestañas.
-            pc.FillCapsule(0.16f * h, 0.475f * h, 0.47f * h, 0.53f * h, Mathf.Max(0.8f, 0.35f * MascotPxPerDp), new Color(MascotInk.r, MascotInk.g, MascotInk.b, 0.5f));
-            pc.FillCircle(0.545f * h, 0.60f * h, 0.022f * h, Palette.Ink);
-            pc.FillCircle(0.55f * h, 0.607f * h, 0.008f * h, new Color(1f, 1f, 1f, 0.9f));
+            // Boca a lo largo del hocico y el ojo de juguete, pequeño (1,25 veces el de antes), sin pestañas.
+            pc.FillCapsule(0.16f * h, 0.475f * h, 0.47f * h, 0.53f * h, Mathf.Max(0.8f, 0.3f * MascotPxPerDp), ColorMath.WithAlpha(RosaToy.Pink.Outline, 0.55f));
+            DrawToyEye(pc, 0.545f * h, 0.60f * h, 0.0275f * h, RosaToy.Iris);
             return pc;
         }
 
-        // Rosa de base; dorso más oscuro arriba y vientre claro abajo (por el lado del lomo); en la cabeza, el hocico se aclara
-        // por debajo y la frente recibe la luz de juego.
-        private static Color RosaColorAt(float x, float y, float side, int h, Color light)
+        // Rosa en (x, y): el dorso más oscuro arriba y el vientre claro abajo (por el lado del lomo) mezclados en los tonos; en la
+        // cabeza, el hocico se aclara por debajo. El volumen: un cilindro a lo largo del lomo (la normal del lomo por el lado) y,
+        // en la cabeza, la cúpula de la frente y el cilindro del hocico, fundidos donde se unen; la oclusión, en la unión de la
+        // cabeza con el cuerpo.
+        private static Color RosaColorAt(float x, float y, float side, float body, float head, Vector2 spineNormal)
         {
-            Color c = RosaPink;
+            ToyTones t = RosaToy.Pink;
             if (side > 0.25f)
             {
-                c = Color.Lerp(c, RosaBack, Mathf.SmoothStep(0f, 1f, (side - 0.25f) / 0.55f));
+                t = ToyTones.Lerp(t, RosaToy.Back, Mathf.SmoothStep(0f, 1f, (side - 0.25f) / 0.55f));
             }
             else if (side < -0.2f)
             {
-                c = Color.Lerp(c, RosaBelly, Mathf.SmoothStep(0f, 1f, (-side - 0.2f) / 0.5f));
+                t = ToyTones.Lerp(t, RosaToy.Belly, Mathf.SmoothStep(0f, 1f, (-side - 0.2f) / 0.5f));
             }
 
             if (side == 0f)
             {
                 float under = Mathf.Clamp01((0.56f - y) / 0.12f);
-                c = Color.Lerp(c, RosaBelly, 0.55f * under * Mathf.Clamp01((0.5f - x) / 0.2f));
+                t = ToyTones.Lerp(t, RosaToy.Belly, 0.55f * under * Mathf.Clamp01((0.5f - x) / 0.2f));
             }
 
-            float forehead = SdEllipse(x, y, 0.53f, 0.71f, 0.07f, 0.045f, RotM20) * h;
-            if (forehead < 3f)
+            Vector3 trunk = ToyShading.Normal(spineNormal.x * side * 0.92f, spineNormal.y * side * 0.92f);
+            Vector3 melon = ToyShading.Normal((x - 0.56f) / 0.16f, (y - 0.64f) / 0.15f);
+            Vector2 snoutAxis = new Vector2(0.12f - 0.46f, 0.47f - 0.57f).normalized;
+            Vector2 snoutSide = new Vector2(-snoutAxis.y, snoutAxis.x);
+            if (snoutSide.y < 0f)
             {
-                c = Color.Lerp(c, light, 0.7f * PixelCanvas.SoftCoverage(forehead, 4f * MascotPxPerDp));
+                snoutSide = -snoutSide;
             }
 
-            c.a = 1f;
-            return c;
+            float across = Mathf.Clamp(Vector2.Dot(new Vector2(x - 0.46f, y - 0.57f), snoutSide) / 0.05f, -0.95f, 0.95f);
+            Vector3 snout = ToyShading.Normal(snoutSide.x * across, snoutSide.y * across);
+            float melonD = SdEllipse(x, y, 0.56f, 0.64f, 0.145f, 0.135f);
+            float snoutD = SdCapsule(x, y, 0.46f, 0.57f, 0.12f, 0.47f, 0.042f);
+            float toMelon = Mathf.Clamp01(0.5f + (0.5f * (snoutD - melonD) / 0.05f));
+            Vector3 headN = Vector3.Lerp(snout, melon, toMelon);
+            float toHead = Mathf.Clamp01(0.5f + (0.5f * (body - head) / 0.045f));
+            Vector3 n = Vector3.Lerp(trunk, headN, toHead).normalized;
+            float ao = 0.6f * ToyShading.CreaseAO(head, body, 0.045f);
+            return ToyShading.Shade(t, n, ao, RosaGloss);
         }
 
         // Soplo [P, pendiente del asesor cultural] (revisión 2 de A4, captura 69d): el boto exhala con un soplo corto y bajo, no
@@ -1498,7 +1523,9 @@ namespace AF.Presentation
             int s = Mathf.RoundToInt(CapiPresentDp * k);
             int ox = Mathf.RoundToInt((BannerSceneCapiX * w) - (s * 0.5f));
             int oy = Mathf.RoundToInt(bankTop - (BannerSceneCapiFootDp * k));
-            pc.FillEllipseSoft(ox + (0.42f * s), oy + (0.012f * s), 0.30f * s, 2.2f * k, 2.4f * k, new Color(0.30f, 0.20f, 0.09f, 0.32f));
+            // Sombra de contacto de juguete (D-058): una caída ancha y suave y un núcleo oscuro y estrecho bajo las patas.
+            pc.FillEllipseSoft(ox + (0.42f * s), oy + (0.012f * s), 0.34f * s, 3.6f * k, 3.6f * k, new Color(0.30f, 0.20f, 0.09f, 0.24f));
+            pc.FillEllipseSoft(ox + (0.42f * s), oy + (0.012f * s), 0.24f * s, 1.4f * k, 1.4f * k, new Color(0.22f, 0.14f, 0.06f, 0.42f));
             DrawCapi(pc, ox, oy, s);
             return pc;
         }
@@ -1635,11 +1662,11 @@ namespace AF.Presentation
             return Mathf.Lerp(b, a, h) - (k * h * (1f - h));
         }
 
-        // Arco de tinta fino en unidades del lado s del cuadrado con la esquina en el píxel (ox, oy) (centro, radio y ángulos en
+        // Arco fino del color color en unidades del lado s del cuadrado con la esquina en el píxel (ox, oy) (centro, radio y ángulos en
         // grados, y grosor en dp).
-        private static void StrokeArcUnits(PixelCanvas pc, int s, int ox, int oy, float cx, float cy, float r, float fromDeg, float toDeg, float thickDp)
+        private static void StrokeArcUnits(PixelCanvas pc, int s, int ox, int oy, float cx, float cy, float r, float fromDeg, float toDeg, float thickDp, Color color)
         {
-            pc.StrokeArc(ox + (cx * s), oy + (cy * s), r * s, thickDp * MascotPxPerDp, fromDeg, toDeg, MascotInk);
+            pc.StrokeArc(ox + (cx * s), oy + (cy * s), r * s, thickDp * MascotPxPerDp, fromDeg, toDeg, color);
         }
 
         /// <summary>

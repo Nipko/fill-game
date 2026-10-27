@@ -194,9 +194,10 @@ namespace AF.Presentation
         }
 
         // Alas abiertas a MechanicPxPerU (y hacia arriba), en un lienzo con MorphoSpritePadPx de margen por lado (para el halo):
-        // las de arriba, grandes, y las de abajo, con el filo oscuro, el azul iridiscente del vuelo, el reflejo claro hacia la
-        // raíz y dos puntos de marfil en las puntas (≤ 2 dp). Con halo, solo la silueta engordada MorphoHaloPx, en blanco (la
-        // imagen la tiñe con MorphoHalo).
+        // las de arriba, grandes, y las de abajo, encima, con el acabado de juguete (D-058): esmalte azul iridiscente con volumen
+        // de placa baja, el margen oscuro de la morpho, el reflejo claro hacia la raíz, el doble brillo del barniz, la oclusión
+        // que proyecta el ala de abajo sobre la de arriba y la del cuerpo, y dos puntos de marfil en las puntas (≤ 2 dp). Con
+        // halo, solo la silueta engordada MorphoHaloPx, en blanco (la imagen la tiñe con MorphoHalo): la misma de siempre.
         private Sprite BuildMorphoWings(bool halo)
         {
             int w = Mathf.RoundToInt(MorphoWingsWidthU * MechanicPxPerU);
@@ -205,31 +206,119 @@ namespace AF.Presentation
             var pc = new PixelCanvas(w + (2 * pad), h + (2 * pad));
             float cx = (w * 0.5f) + pad;
             float cy = (h * 0.5f) + pad;
-            for (int s = -1; s <= 1; s += 2)
+            if (halo)
             {
-                float upDeg = 90f - (s * 58f);
-                float lowDeg = 90f + (s * 60f);
-                if (halo)
+                for (int s = -1; s <= 1; s += 2)
                 {
+                    float upDeg = 90f - (s * 58f);
+                    float lowDeg = 90f + (s * 60f);
                     FillEllipseRotated(pc, cx + (s * 22f), cy + 9f, 25f + MorphoHaloPx, 15f + MorphoHaloPx, upDeg, Color.white);
                     FillEllipseRotated(pc, cx + (s * 15f), cy - 14f, 16f + MorphoHaloPx, 11f + MorphoHaloPx, lowDeg, Color.white);
-                    continue;
                 }
 
-                FillEllipseRotated(pc, cx + (s * 22f), cy + 9f, 25f, 15f, upDeg, MorphoDeep);
-                FillEllipseRotated(pc, cx + (s * 15f), cy - 14f, 16f, 11f, lowDeg, MorphoDeep);
-                FillEllipseRotated(pc, cx + (s * 22f), cy + 9.5f, 22f, 12.5f, upDeg, MorphoFlightBlue);
-                FillEllipseRotated(pc, cx + (s * 15f), cy - 13.5f, 13.5f, 8.8f, lowDeg, MorphoFlightBlue);
-                FillEllipseRotated(pc, cx + (s * 17f), cy + 6f, 12f, 6.5f, upDeg, MorphoFlightLight);
-                FillEllipseRotated(pc, cx + (s * 12f), cy - 11f, 6f, 3.5f, lowDeg, ColorMath.WithAlpha(MorphoFlightLight, 0.85f));
+                return MakeSprite(pc, "morpho_wings_halo", new Vector2(0.5f, 0.5f), Vector4.zero);
+            }
+
+            // Primero las dos alas de arriba y después las de abajo, que las tapan en la raíz.
+            for (int pass = 0; pass < 2; pass++)
+            {
+                for (int s = -1; s <= 1; s += 2)
+                {
+                    if (pass == 0)
+                    {
+                        DrawToyWing(pc, cx, cx + (s * 22f), cy + 9f, 25f, 15f, 90f - (s * 58f), cx + (s * 15f), cy - 14f, 16f, 11f, 90f + (s * 60f));
+                    }
+                    else
+                    {
+                        DrawToyWing(pc, cx, cx + (s * 15f), cy - 14f, 16f, 11f, 90f + (s * 60f), 0f, 0f, 0f, 0f, 0f);
+                    }
+                }
+            }
+
+            for (int s = -1; s <= 1; s += 2)
+            {
                 pc.FillCircle(cx + (s * 38f), cy + 26f, 2.2f, Palette.UiPaper);
             }
 
-            return MakeSprite(pc, halo ? "morpho_wings_halo" : "morpho_wings", new Vector2(0.5f, 0.5f), Vector4.zero);
+            return MakeSprite(pc, "morpho_wings", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
-        // Cuerpo a MechanicPxPerU (cabeza arriba), con el mismo margen: abdomen, tórax, cabeza y dos antenas con su maza. Con halo,
-        // la silueta engordada MorphoHaloPx, en blanco.
+        // Morpho de juguete: los tonos del esmalte, calculados una vez (en su propia clase: se inicializan al pintarla, con los
+        // colores ya listos).
+        private static class MorphoToy
+        {
+            public static readonly ToyTones Deep = ToyShading.Tones(MorphoDeep, 0.8f);
+            public static readonly ToyTones Blue = ToyShading.Tones(MorphoFlightBlue, 0.8f);
+            public static readonly ToyTones Light = ToyShading.Tones(MorphoFlightLight, 0.6f);
+            public static readonly ToyTones Body = ToyShading.Tones(MorphoBody);
+        }
+
+        // Un ala de esmalte en la elipse (wx, wy, rx, ry) girada deg grados: placa baja abombada con el margen oscuro, el azul que
+        // se aclara hacia la raíz (bodyX, la x del cuerpo) y se vuelve más claro donde le da el brillo (iridiscencia), y su
+        // contorno fino. Si rx2 > 0, el ala de abajo (lx, ly, rx2, ry2, deg2) le proyecta una sombra suave.
+        private static void DrawToyWing(PixelCanvas pc, float bodyX, float wx, float wy, float rx, float ry, float deg,
+            float lx, float ly, float rx2, float ry2, float deg2)
+        {
+            float rad = deg * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(rad);
+            float sin = Mathf.Sin(rad);
+            float cos2 = Mathf.Cos(deg2 * Mathf.Deg2Rad);
+            float sin2 = Mathf.Sin(deg2 * Mathf.Deg2Rad);
+            float r = Mathf.Max(rx, ry);
+            float minR = Mathf.Min(rx, ry);
+            int x0 = Mathf.Max(0, Mathf.FloorToInt(wx - r - 1f));
+            int x1 = Mathf.Min(pc.Width - 1, Mathf.CeilToInt(wx + r + 1f));
+            int y0 = Mathf.Max(0, Mathf.FloorToInt(wy - r - 1f));
+            int y1 = Mathf.Min(pc.Height - 1, Mathf.CeilToInt(wy + r + 1f));
+            for (int y = y0; y <= y1; y++)
+            {
+                for (int x = x0; x <= x1; x++)
+                {
+                    float dx = (x + 0.5f) - wx;
+                    float dy = (y + 0.5f) - wy;
+                    float qx = ((dx * cos) + (dy * sin)) / rx;
+                    float qy = ((-dx * sin) + (dy * cos)) / ry;
+                    float q = Mathf.Sqrt((qx * qx) + (qy * qy));
+                    float cov = PixelCanvas.Coverage((q - 1f) * minR);
+                    if (cov <= 0f)
+                    {
+                        continue;
+                    }
+
+                    // Normal de placa baja, de vuelta al espacio de la pantalla.
+                    float nx = 0.6f * ((qx * cos) - (qy * sin));
+                    float ny = 0.6f * ((qx * sin) + (qy * cos));
+                    Vector3 n = ToyShading.Normal(nx, ny);
+
+                    // El color: claro en la raíz, azul de vuelo y el margen oscuro (≈ 4 px), con el contorno fino fuera.
+                    float root = Mathf.Clamp01(1f - (Mathf.Abs((x + 0.5f) - bodyX) / (2.2f * rx)));
+                    ToyTones t = ToyTones.Lerp(MorphoToy.Blue, MorphoToy.Light, 0.55f * root * root);
+                    float edgePx = (1f - q) * minR;
+                    t = ToyTones.Lerp(t, MorphoToy.Deep, 1f - Mathf.Clamp01((edgePx - 3.2f) / 2.2f));
+                    float ao = 0f;
+                    if (rx2 > 0f)
+                    {
+                        float ex = (x + 0.5f) - lx;
+                        float ey = (y + 0.5f) - ly;
+                        float px2 = ((ex * cos2) + (ey * sin2)) / rx2;
+                        float py2 = ((-ex * sin2) + (ey * cos2)) / ry2;
+                        float lowD = (Mathf.Sqrt((px2 * px2) + (py2 * py2)) - 1f) * Mathf.Min(rx2, ry2);
+                        ao = 0.55f * (1f - Mathf.Clamp01(lowD / 5f));
+                    }
+
+                    ao = Mathf.Max(ao, 0.45f * (1f - Mathf.Clamp01((Mathf.Abs((x + 0.5f) - bodyX) - 3f) / 5f)));
+                    Color c = ToyShading.Shade(t, n, ao, 1f);
+                    c = Color.Lerp(c, ColorMath.WithAlpha(MorphoToy.Light.Light, 1f), 0.35f * ToyShading.Specular(n, 4f) * (1f - ao));
+                    c = Color.Lerp(c, MorphoToy.Deep.Outline, Mathf.Clamp01(1f - (edgePx / 1.1f)) * 0.9f);
+                    c.a = 1f;
+                    pc.Blend(x, y, c, cov);
+                }
+            }
+        }
+
+        // Cuerpo a MechanicPxPerU (cabeza arriba), con el mismo margen, de juguete lacado: abdomen y tórax como un cilindro negro
+        // brillante, la cabeza abombada con dos puntos de luz por ojos y las dos antenas con su maza. Con halo, la silueta
+        // engordada MorphoHaloPx, en blanco: la misma de siempre.
         private Sprite BuildMorphoBody(bool halo)
         {
             int w = Mathf.RoundToInt(MorphoBodyWidthU * MechanicPxPerU);
@@ -239,15 +328,51 @@ namespace AF.Presentation
             float cx = (w * 0.5f) + pad;
             float g = halo ? MorphoHaloPx : 0f;
             Color c = halo ? Color.white : MorphoBody;
-            pc.FillCapsule(cx, pad + 6f, cx, pad + (h * 0.62f), 3.6f + g, c);
-            pc.FillCircle(cx, pad + (h * 0.62f) + 4f, 4.6f + g, c);
+            float headY = pad + (h * 0.62f) + 4f;
             for (int s = -1; s <= 1; s += 2)
             {
                 pc.FillCapsule(cx + (s * 1.5f), pad + (h * 0.62f) + 7f, cx + (s * 8f), pad + h - 4f, 1.2f + g, c);
                 pc.FillCircle(cx + (s * 8f), pad + h - 4f, 2.2f + g, c);
             }
 
-            return MakeSprite(pc, halo ? "morpho_body_halo" : "morpho_body", new Vector2(0.5f, 0.5f), Vector4.zero);
+            if (halo)
+            {
+                pc.FillCapsule(cx, pad + 6f, cx, pad + (h * 0.62f), 3.6f + g, c);
+                pc.FillCircle(cx, headY, 4.6f + g, c);
+                return MakeSprite(pc, "morpho_body_halo", new Vector2(0.5f, 0.5f), Vector4.zero);
+            }
+
+            float top = pad + (h * 0.62f);
+            for (int y = 0; y < pc.Height; y++)
+            {
+                for (int x = 0; x < pc.Width; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    float ty = Mathf.Clamp(py, pad + 6f, top);
+                    float abdomen = Mathf.Sqrt(((px - cx) * (px - cx)) + ((py - ty) * (py - ty))) - 3.6f;
+                    float headD = Mathf.Sqrt(((px - cx) * (px - cx)) + ((py - headY) * (py - headY))) - 4.6f;
+                    float d = Mathf.Min(abdomen, headD);
+                    float cov = PixelCanvas.Coverage(d);
+                    if (cov <= 0f)
+                    {
+                        continue;
+                    }
+
+                    Vector3 n = headD < abdomen
+                        ? ToyShading.Normal((px - cx) / 4.9f, (py - headY) / 4.9f)
+                        : ToyShading.Normal((px - cx) / 3.9f, 0f);
+                    float ao = 0.5f * ToyShading.CreaseAO(abdomen, headD, 2.5f);
+                    pc.Blend(x, y, ToyShading.Shade(MorphoToy.Body, n, ao, 1f), cov);
+                }
+            }
+
+            for (int s = -1; s <= 1; s += 2)
+            {
+                pc.FillCircle(cx + (s * 2.3f), headY + 0.8f, 1.1f, new Color(1f, 1f, 1f, 0.85f));
+            }
+
+            return MakeSprite(pc, "morpho_body", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
     }
 }

@@ -199,6 +199,10 @@ namespace AF.Presentation
             // Capi sentado (el cuadrado de 20 dp, las patas dentro del casco).
             DrawCapi(pc, Mathf.RoundToInt(12f * k), Mathf.RoundToInt(8f * k), Mathf.RoundToInt(20f * k));
 
+            // Oclusión de juguete (D-058) donde Capi se hunde en el casco: una sombra suave sobre su cuerpo, justo encima de la
+            // borda.
+            pc.FillEllipseSoft(21f * k, 13.2f * k, 7f * k, 1.6f * k, 1.4f * k, new Color(0.16f, 0.1f, 0.05f, 0.4f));
+
             // Casco: 38 dp de eslora, los extremos levantados y la proa (derecha) más alta; borda clara y una línea de tablón.
             Color hullTop = Palette.DockLight;
             Color hullLow = Palette.DockShadow;
