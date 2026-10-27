@@ -8,7 +8,110 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ## Personajes 3D
 
-### 2026-10-27 · Piloto (fase 1) de los personajes en «3D cartoon, juguete brillante», D-058 (`spark/personajes-3d`): HECHO · verificación completa VERDE · **parado hasta el visto bueno del dueño**
+### 2026-10-27 · Fase 2 de los personajes en «3D cartoon, juguete brillante», D-058 (`spark/personajes-3d`): HECHA · verificación completa VERDE · code-reviewer: APROBADO (2.ª ronda)
+
+- **Visto bueno del dueño (2026-10-27)**, literal: «Apruebo el piloto de personajes 3D con las opciones recomendadas; ablanda la felpa de TiTino y recupera la panza de Capi y el contraste de la morpho, y sigue con la fase 2.»
+  - Quedan decididas P3D-1 a P3D-10 con la recomendada; la tabla está al pie de esta sección.
+  - **Petición añadida del dueño**, literal: «en el rediseño, mejoremos adicional al delfin que tenga mejor forma, esta un poco deforme con ese arco no se ve tan natural». Es la única excepción a la regla de «no cambiar siluetas», y solo cubre la silueta del delfín.
+- **Rama:** `spark/personajes-3d`. Fusiona `origin/integracion-fase1-fase2` (`5b6c1aa2`, con `tanda6/avatares`) en `ea5025d2`.
+- **Commits:**
+  - `a5144bea`, `c3a928bb` y `8113adc5`: las capturas «antes», tomadas con el arte de antes, y `Personajes3dFase2SnapshotTests` (explícito);
+  - `0e2d4f05` y `eb501998`: el código y la caché del sombreado de los avatares;
+  - `ba9fa3a3`: las capturas «después», el README y la guía;
+  - `fb71b335` y `3d4ed2c2`: la revisión; la pose del delfín y los menores;
+  - el último: este estado.
+- **Qué hay:**
+  - **Base** (`ProceduralArt.Toy.cs`):
+    - `ToyShading.ShadeCore`, la misma cuenta en floats; `Shade` lo envuelve;
+    - las piezas `ToyEllipse`, `ToyEllipseOn` y `ToyCapsule`: borde fino, volumen, barniz y oclusión en una sola pasada;
+    - `ToyLut`, la tabla del sombreado en bytes: una caché por hilo de 24 tablas para la fauna y una por parte de avatar (publicada con `Volatile`);
+    - guardas de división en `CreaseAO` y `ContactShadow`.
+  - **Fauna en estilo juguete:**
+    - los 11 miquitos del catálogo, con el borde fino en lugar de la tinta, ojos con dos reflejos y la lana en felpa (de la cola solo cambia el borde);
+    - la piraña (el pez despierto y dormido);
+    - la luciérnaga (cuerpo y alas; el farol no cambia);
+    - el bufeo.
+  - **El delfín** (Rosa y el bufeo comparten la silueta), según la petición del dueño:
+    - cuerpo fusiforme con una curva suave, sin el arco;
+    - melón redondo y rostro largo y fino;
+    - quilla dorsal baja, pectoral ancha y cola horizontal de dos lóbulos.
+  - **El delfín en reposo:** en el banner se ve nadando en la superficie, con la cola hundida.
+    - La espuma (40 dp, sin cambios) tapa sola el corte con el agua, que mide 29,3 dp en los píxeles reales.
+    - `RosaCutWidth` = 0,29 y `RosaCutCenter` = 0,79; `RosaBlowhole` pasa a (0,30; 0,745).
+    - No cambian ni el tamaño del sprite (104 × 66), ni las API, ni los `ArtSlots`.
+  - **Los 16 avatares** en estilo juguete, con el borde fino de cada parte en lugar de la tinta de Capi (D-058) y un segundo reflejo en los ojos.
+    - El bloqueado sigue en silueta sólida, sin ojos ni brillos.
+    - El disco, el aro, la chapa y los fondos no cambian.
+  - **Ajustes del piloto:**
+    - P3D-2: `SlothClumpU` sube de 16 a 23, con menos surco; el brillo del pelaje pasa de 0,32 a 0,42 y el de la cara de 0,45 a 0,72.
+    - P3D-3: la panza de Capi, más clara; en la morpho, el borde azul más ancho y el centro claro más amplio.
+    - P3D-4 (a): `Personajes3dPerfTests`, con el atlas de TiTino ≤ 150 ms (`PerfBudget.Ms`).
+  - **Los menores del revisor del piloto:** el alfa 0,92 en el test de contraste, sin el `Lerp` sobrante ni `SlothInk`, y los iris leídos de la fuente. Se quitaron también `MascotInk` y `MascotOutlineDp`, que se quedaron sin uso.
+  - **Tests nuevos:**
+    - `ToyShadingTests` (`ShadeCore` contra las funciones públicas, las piezas, las guardas y `ToyLut`);
+    - `AvatarArtTests.TheSilhouette_ReadsAt32And24dp_LockedAndUnlocked`;
+    - `RosaWaterCutTests`: que el corte quepa bajo la espuma, medido en los píxeles reales, y el margen transparente.
+    - En `IntroArtTests`, el ámbar y el pelo se comprueban por familia de tono, y el umbral de la nariz del huapo pasa de 0,06 a 0,03, con su motivo comentado.
+  - **Fuera, a propósito:** la cueva y el bocado de la piraña, las mecánicas que son objetos, los glifos de chip y de chapa, los iconos de la bandeja, y la garza y el ave lejana del fondo (son paisaje: F2-1).
+  - **Capturas para el dueño:** 32 PNG por LFS en `docs/art/personajes-3d/fase2/{antes,despues}`:
+    - `f2_01` la fauna;
+    - `f2_02` los avatares (56, 32 y 24 dp, normales y bloqueados);
+    - `f2_03` y `f2_04` la intro;
+    - `f2_05` el Mapa con el bufeo;
+    - `f2_06` la victoria con avatar;
+    - `f2_07` la Liga;
+    - `f2_08` el delfín y `f2_08b` el banner en reposo;
+    - las escenas también en Alto contraste, y las láminas del piloto rehechas.
+
+    El `README.md` dice qué mirar. La guía tiene una §11 nueva y las [P] marcadas como decididas.
+- **Verificación**, con el código final (`3d4ed2c2`):
+
+  | Comando | Resultado |
+  |---|---|
+  | `dotnet build -warnaserror` / `dotnet test` | 0 avisos / 1.002 (996 + 6) |
+  | `validate_schema.py` | 116/116 |
+  | `unity-compile` | OK |
+  | EditMode | 4.750 (4.743 + 7), 0 fallos |
+  | PlayMode (`-TimeoutSec 7200`) | 2.263 (1.934 + 329), 0 fallos |
+  | Capturas explícitas de la fase 2 y láminas del piloto | 15/15 |
+  | `unity-build.ps1 -Method Dev` | OK, `dev.apk` de 76,8 MB |
+  | `check-16kb` / `check-manifest -Mode dev` | OK / OK |
+  | `size-gate` | no se aplica: solo acepta `.aab` |
+  | Teléfono | sin dispositivo en `adb devices`: sin fps ni arranque |
+
+- **Rendimiento** (en el Editor; mínimo de 3 pasadas):
+
+  | Qué | Antes | Después | Presupuesto |
+  |---|---|---|---|
+  | Avatar de 192 px | 5,7 ms | 6,4 ms | ≤ 8 ms |
+  | Miquito (la peor especie) | 6,8 ms | 8,6 ms | ≤ 10 ms |
+  | Atlas de TiTino | 60 ms | 55 ms | ≤ 150 ms (nuevo) |
+  | Rosa | 28 ms | 24 ms | no tiene |
+  | Bufeo | 2,2 ms | 5,8 ms | no tiene |
+
+  - Sin la caché, el avatar salía a 10-15 ms.
+  - No se subió ningún presupuesto.
+  - La memoria de los atlas no cambia. Las tablas ocupan ~360 KB con los 16 avatares, más ~78 KB por cada hilo que pinta fauna.
+  - No hay asignaciones nuevas por fotograma.
+  - **Incidencia:** la máquina estaba compartida con un `llama-server` local y los tiempos variaron hasta ×1,5 entre pasadas. En una pasada cargada fallaron por tiempo `APortrait_TakesLessThan8ms` y el atlas de frutas, que no se tocó. Las suites finales pasaron sin fallos.
+- **code-reviewer:**
+  - 1.ª ronda: CAMBIOS NECESARIOS por dos bloqueantes:
+    - faltaba esta entrada;
+    - con la silueta nueva, la espuma de 40 dp no tapaba el corte de 45 dp con el agua en reposo. El comentario y la guía decían, mal, que lo tapaba la onda, y la captura lo escondía al pintar la onda opaca.
+
+    Los dos quedaron resueltos en `fb71b335`, `3d4ed2c2` y esta entrada, junto con los menores: el test de `ShadeCore` dejó de ser tautológico, `Volatile` en `ToyLut`, la sangría, el comentario de 0,03 y el margen del sprite.
+  - 2.ª ronda: **APROBADO**. Comprobó a mano el margen de la espuma (unos 5,5 dp a cada lado) y el soplo sobre el contorno del melón. Una observación que no bloquea: en `f2_08b`, el lóbulo de arriba de la cola asoma un poco sobre el agua, a la derecha de la espuma (F2-3).
+
+### Para el dueño (fase 2; no bloquean lo entregado)
+
+| Id | Pregunta | Recomendada [P] |
+|---|---|---|
+| F2-1 | La garza blanca del fondo (`Scene.Heron`) y el ave lejana del muelle: ¿también en estilo juguete? | Dejarlas como paisaje: no son personajes |
+| F2-2 | La cola de los miquitos es una tira plana que se dibuja en cada fotograma: ¿le damos volumen en el shader de la tira? | Dejarla así: el volumen obliga a tocar el shader |
+| F2-3 | El delfín en el banner nada en la superficie con la cola hundida; sobre el agua quedan la cabeza, el lomo y la pectoral | Dejarlo así; si quieres más cuerpo fuera, que se mire en el banner real, en movimiento |
+| F2-4 | Probar el APK en el teléfono (fps y arranque): no había dispositivo | Reactivar la depuración inalámbrica cuando puedas |
+
+### 2026-10-27 · Piloto (fase 1) de los personajes en «3D cartoon, juguete brillante», D-058 (`spark/personajes-3d`): HECHO · verificación completa VERDE · **aprobado por el dueño el 2026-10-27**
 
 - **Encargo:** `docs/dev/traspaso/spark-personajes-3d.md`.
 - **Rama:** `spark/personajes-3d`, desde `origin/integracion-fase1-fase2` en `16c1399d`.
@@ -54,7 +157,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
     - `SlothInk` está sin uso;
     - los hex de los iris están copiados en `ToyStyleSheetTests`.
 
-### Para el dueño (decide antes de la fase 2)
+### Decisiones del piloto (el dueño las resolvió todas el 2026-10-27, con la recomendada)
 
 | Id | Pregunta | Recomendada [P] |
 |---|---|---|
