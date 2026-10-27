@@ -9,15 +9,21 @@
 #                 tocan el nucleo o dotnet/: instrumentado, dotnet test tarda unas 13 veces mas (19 min frente a 1,5 en
 #                 el escritorio Ryzen 9 9900X), asi que no va en cada PR.
 #   changes       decide si el PR o el push a main toca Unity (Assets, Packages, ProjectSettings, ci, workflows) o el
-#                 nucleo. En main compara con el commit anterior del push (github.event.before): un push de solo
-#                 documentacion no lanza Unity (unos 100 min de runner y el asiento Personal) ni la cobertura.
+#                 nucleo (ci/ci-changes.sh). En main compara con el ultimo commit cuyos tests de Unity pasaron (el
+#                 head_sha del ultimo run de ci.yml en main en success con el job de Unity en success), no con
+#                 github.event.before: si el run de un push que toca Unity se cancela (GitHub cancela el run en espera
+#                 cuando llega otro, o un PR o release.yml lo desplaza en unity-personal-seat) y llega despues un push de
+#                 solo documentacion, este aun ve lo que quedo sin probar. Sin run probado, si la API falla o si ese
+#                 commit no es ancestro: todo a true. Asi un push de solo documentacion no lanza Unity (unos 100 min de
+#                 runner y el asiento Personal) ni la cobertura.
 #   unity-tests   EditMode + PlayMode (game-ci/unity-test-runner) en PR listos (no borradores) que tocan Unity y en los
 #                 push a main que tocan Unity. Los presupuestos de tiempo de los tests de rendimiento llevan holgura en
 #                 la CI (-afPerfBudgetFactor 3; Assets/_Project/Tests/Support/PerfBudget.cs): el runner es ~2 veces mas
 #                 lento que el escritorio, donde se miden tal cual. Los tests [Explicit] (capturas y KnownIssue) ya no se
 #                 ejecutan (0 s en la primera ejecucion real). El veredicto lo dan los XML NUnit
 #                 (ci/check-unity-test-results.sh), no el codigo de salida de game-ci, que puede ser 1 al devolver la
-#                 licencia Personal; lo mismo en build-android, donde lo dan el AAB y las compuertas.
+#                 licencia Personal; lo mismo en build-android, donde lo dan la linea [AF.BuildRelease] OK (con
+#                 -afResultFile), el AAB y las compuertas.
 #   build-android solo en main (o a mano): AAB sin firma de release con AF.EditorTools.BuildRelease, IL2CPP ARM64 y
 #                 Managed Stripping High, y las compuertas size-gate (<= 80 MB), check-16kb, check-manifest y
 #                 check-release-classes (sin firebase-appcheck-debug; D-033, anadido del 2026-10-22, punto 9) y
@@ -140,6 +146,10 @@ jobs:
     name: rutas tocadas
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    # actions: read para buscar el ultimo run de main con los tests de Unity en success (ci/ci-changes.sh).
+    permissions:
+      contents: read
+      actions: read
     outputs:
       unity: ${{ steps.diff.outputs.unity }}
       core: ${{ steps.diff.outputs.core }}
@@ -155,39 +165,10 @@ jobs:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
-        run: |
-          set -uo pipefail
-          all_true() { { echo "unity=true"; echo "core=true"; } >> "$GITHUB_OUTPUT"; exit 0; }
-          case "$EVENT" in
-            pull_request)
-              # Contra el punto de bifurcacion del PR (BASE...HEAD), no contra la punta de main.
-              git fetch --no-tags --depth=200 origin "$BASE" "$HEAD" || all_true
-              files="$(git diff --name-only "$BASE...$HEAD")" || all_true
-              ;;
-            push)
-              # Todo lo que trae el push (BEFORE..AFTER). Sin commit anterior (rama nueva) o si no se encuentra: todo.
-              case "$BEFORE" in ''|0000000000000000000000000000000000000000) all_true ;; esac
-              git fetch --no-tags --depth=200 origin "$BEFORE" "$AFTER" || all_true
-              files="$(git diff --name-only "$BEFORE" "$AFTER")" || all_true
-              ;;
-            *)
-              all_true # workflow_dispatch: todo
-              ;;
-          esac
-          echo "Rutas tocadas:"
-          echo "$files"
-          if printf '%s\n' "$files" | grep -Eq '^(Assets/|Packages/|ProjectSettings/|ci/|\.github/workflows/)'; then
-            echo "unity=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "unity=false" >> "$GITHUB_OUTPUT"
-          fi
-          if printf '%s\n' "$files" | grep -Eq '^(Packages/com\.amazonfill\.core/|dotnet/|global\.json|\.github/workflows/)'; then
-            echo "core=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "core=false" >> "$GITHUB_OUTPUT"
-          fi
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash ci/ci-changes.sh
 
   unity-tests:
     name: Unity EditMode + PlayMode
@@ -354,7 +335,8 @@ jobs:
           buildMethod: AF.EditorTools.BuildRelease.BuildAndroid
           androidExportType: androidAppBundle
           androidVersionCode: ${{ github.run_number }}
-          customParameters: ${{ steps.identity.outputs.params }}
+          # -afResultFile: BuildRelease escribe ahi su linea de veredicto ([AF.BuildRelease] OK. o FALLO (codigo N).).
+          customParameters: ${{ steps.identity.outputs.params }} -afResultFile build/af-build-result.txt
 
       # Como en unity-tests: tambien si falla el build, no si se cancela (este job solo corre en main).
       - name: Cache de Library (Android), guardar
@@ -364,13 +346,24 @@ jobs:
           path: Library
           key: ${{ steps.library-cache.outputs.cache-primary-key }}
 
-      - name: Un solo AAB
+      - name: Veredicto del build ([AF.BuildRelease] OK y un solo AAB)
         env:
           AF_UNITY_OUTCOME: ${{ steps.unitybuild.outcome }}
         run: |
           set -euo pipefail
           shopt -s nullglob
-          echo "Resultado del paso de game-ci: $AF_UNITY_OUTCOME (el veredicto lo dan el AAB y las compuertas)."
+          echo "Resultado del paso de game-ci: $AF_UNITY_OUTCOME (el veredicto lo dan BuildRelease, el AAB y las compuertas)."
+          # Como scripts/unity-build.ps1 con el log: la linea del metodo, no el codigo de salida de game-ci.
+          result=build/af-build-result.txt
+          if [ ! -s "$result" ]; then
+            echo "BuildRelease no escribio su veredicto en $result: el build no termino." >&2
+            exit 1
+          fi
+          cat "$result"
+          if ! grep -q '^\[AF\.BuildRelease\] OK\.' "$result"; then
+            echo "BuildRelease no termino en OK." >&2
+            exit 1
+          fi
           aabs=(build/Android/*.aab)
           if [ "${#aabs[@]}" -ne 1 ]; then
             echo "Se esperaba un .aab en build/Android y hay ${#aabs[@]}: el build de Unity no termino." >&2

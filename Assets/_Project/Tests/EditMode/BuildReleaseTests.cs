@@ -37,6 +37,33 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void ResultFile_IsOptional_AndKeepsTheVerdictLine()
+        {
+            Assert.That(BuildRelease.ResultFileFrom(new[] { "Unity.exe", "-batchmode" }), Is.Null);
+            Assert.That(BuildRelease.ResultFileFrom(new[] { "Unity.exe", "-afResultFile" }), Is.Null, "sin valor");
+            Assert.That(BuildRelease.ResultFileFrom(new[] { "-afResultFile", "-afRehearsal" }), Is.Null, "el siguiente es otra opción");
+            Assert.That(BuildRelease.ResultFileFrom(new[] { "-afRehearsal", "-afResultFile", "build/af-build-result.txt" }),
+                Is.EqualTo("build/af-build-result.txt"));
+            Assert.That(Parse(null, "-afRehearsal", "-afResultFile", "build/r.txt").Rehearsal, Is.True, "el parser lo ignora");
+
+            string dir = Path.Combine(Path.GetTempPath(), "af-result-" + System.Guid.NewGuid().ToString("N"));
+            string path = Path.Combine(dir, "sub", "af-build-result.txt");
+            try
+            {
+                BuildRelease.WriteResultFile(path, "[AF.BuildRelease] OK.");
+                Assert.That(File.ReadAllText(path), Is.EqualTo("[AF.BuildRelease] OK.\n"));
+                BuildRelease.WriteResultFile(null, "x"); // sin ruta: nada
+            }
+            finally
+            {
+                if (Directory.Exists(dir))
+                {
+                    Directory.Delete(dir, true);
+                }
+            }
+        }
+
+        [Test]
         public void TheEnvironmentIdIsUsedOnlyWithoutTheArgument()
         {
             Assert.That(Parse("com.estudio.env").ApplicationId, Is.EqualTo("com.estudio.env"));

@@ -175,18 +175,63 @@ namespace AF.EditorTools
 
         private static void Finish(int code)
         {
+            string verdict = code == ExitOk ? LogPrefix + "OK." : LogPrefix + "FALLO (código " + code + ").";
             if (code == ExitOk)
             {
-                Debug.Log(LogPrefix + "OK.");
+                Debug.Log(verdict);
             }
             else
             {
-                Debug.LogError(LogPrefix + "FALLO (código " + code + ").");
+                Debug.LogError(verdict);
             }
+
+            WriteResultFile(ResultFileFrom(Environment.GetCommandLineArgs()), verdict);
 
             if (Application.isBatchMode)
             {
                 EditorApplication.Exit(code);
+            }
+        }
+
+        /// <summary>
+        /// Ruta de <c>-afResultFile &lt;ruta&gt;</c>, o null. La CI la pide para juzgar el build por la línea del veredicto
+        /// (<c>[AF.BuildRelease] OK.</c> o <c>FALLO (código N).</c>), como <c>scripts/unity-build.ps1</c> con el log: game-ci
+        /// v6 sale con 1 al devolver la licencia Personal aunque el build termine bien, y su log solo va a la salida del paso.
+        /// </summary>
+        internal static string? ResultFileFrom(string[] args)
+        {
+            for (int i = 0; i + 1 < args.Length; i++)
+            {
+                if (string.Equals(args[i], "-afResultFile", StringComparison.Ordinal) && !args[i + 1].StartsWith("-", StringComparison.Ordinal))
+                {
+                    return args[i + 1];
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>Escribe la línea del veredicto en <paramref name="path"/> (si hay ruta); un error de E/S solo se anota.</summary>
+        internal static void WriteResultFile(string? path, string verdict)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                return;
+            }
+
+            try
+            {
+                string? dir = Path.GetDirectoryName(Path.GetFullPath(path));
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                File.WriteAllText(path, verdict + "\n");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(LogPrefix + "no se pudo escribir -afResultFile " + path + ": " + e.Message);
             }
         }
 

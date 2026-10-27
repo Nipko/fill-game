@@ -3,7 +3,7 @@
 #
 # game-ci v4/v6 puede salir con 1 aunque todo vaya bien: al devolver la licencia Personal por derechos falla con
 # "Serial number unavailable for ULF return" (primera ejecucion real de ci.yml y de release.yml, 2026-10-27). Por eso
-# el paso de unity-test-runner lleva continue-on-error y este script decide: cada modo pedido tiene su XML, con al
+# el paso de unity-test-runner lleva continue-on-error y este script decide: cada modo pedido tiene un solo XML, con al
 # menos un test, sin fallos y con result="Passed" en <test-run>.
 #
 # Uso:
@@ -12,7 +12,8 @@
 #
 # Codigos de salida:
 #   0  todos los modos tienen su XML y pasan
-#   1  falta un XML, no tiene <test-run>, tiene 0 tests, algun test falla o result no es Passed
+#   1  falta un XML o hay mas de uno por modo, no tiene <test-run>, total no es un numero > 0, algun test falla
+#      o result no es Passed
 #   2  argumentos incorrectos o carpeta inexistente
 set -uo pipefail
 
@@ -28,13 +29,18 @@ check_dir() {
     echo "ERROR: no existe la carpeta de artefactos: $dir" >&2
     return 2
   fi
-  local bad=0 mode file line total failed passed skipped result
+  local bad=0 mode count file line total failed passed skipped result
   for mode in "${modes[@]}"; do
-    file="$(find "$dir" -maxdepth 2 -type f -iname "*${mode}*.xml" | head -n 1)"
-    if [ -z "$file" ]; then
+    count="$(find "$dir" -maxdepth 2 -type f -iname "*${mode}*.xml" | wc -l | tr -d ' ')"
+    if [ "$count" -eq 0 ]; then
       echo "FALLO: no hay XML de resultados de $mode en $dir (Unity no llego a ejecutarlos)."
       bad=1; continue
     fi
+    if [ "$count" -gt 1 ]; then
+      echo "FALLO: hay $count XML de $mode en $dir; se esperaba uno (no se sabe cual juzgar)."
+      bad=1; continue
+    fi
+    file="$(find "$dir" -maxdepth 2 -type f -iname "*${mode}*.xml")"
     line="$(grep -m 1 -o '<test-run [^>]*>' "$file" || true)"
     if [ -z "$line" ]; then
       echo "FALLO: $file no tiene <test-run> (XML incompleto)."
@@ -84,6 +90,17 @@ self_test() {
   printf '<?xml version="1.0"?>\n' > "$tmp/broken/editmode-results.xml"
   ok_xml "$tmp/broken/playmode-results.xml" 5 5 0
   expect 1 "XML sin test-run" "$tmp/broken"
+  mkdir -p "$tmp/twice" "$tmp/twice/sub" "$tmp/failed0" "$tmp/nan"
+  ok_xml "$tmp/twice/editmode-results.xml" 10 10 0
+  ok_xml "$tmp/twice/sub/editmode-results.xml" 10 10 0
+  ok_xml "$tmp/twice/playmode-results.xml" 5 5 0
+  expect 1 "dos XML de editmode" "$tmp/twice"
+  ok_xml "$tmp/failed0/editmode-results.xml" 10 10 0
+  printf '<test-run id="2" result="Failed" total="5" passed="5" failed="0" skipped="0">\n</test-run>\n' > "$tmp/failed0/playmode-results.xml"
+  expect 1 "result Failed con failed=0" "$tmp/failed0"
+  ok_xml "$tmp/nan/editmode-results.xml" 10 10 0
+  printf '<test-run id="2" result="Passed" total="cinco" passed="5" failed="0" skipped="0">\n</test-run>\n' > "$tmp/nan/playmode-results.xml"
+  expect 1 "total no numerico" "$tmp/nan"
   expect 2 "carpeta inexistente" "$tmp/no-existe"
   if [ "$fails" -eq 0 ]; then echo "self-test OK"; return 0; fi
   echo "self-test con $fails fallos"; return 1
