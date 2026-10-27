@@ -245,7 +245,7 @@ namespace AF.Tests.PlayMode
             string line = DevProbe.FormatConsentState(1234, "done", flags, LegalProfiles.Co1581, "CO", CountrySource.Sim);
             Assert.That(line, Is.EqualTo(
                 "AF_STATE {\"event\":\"consent\",\"t\":1234,\"step\":\"done\",\"profile\":\"co_1581\",\"country\":\"CO\",\"country_source\":\"sim\","
-                + "\"age_band\":\"13-17\",\"decided\":true,\"blocked\":false,\"analytics\":true,\"npa\":true,\"ump\":false,\"tfcd\":false,"
+                + "\"age_band\":\"13-17\",\"band_from_signal\":false,\"decided\":true,\"blocked\":false,\"analytics\":true,\"npa\":true,\"ump\":false,\"tfcd\":false,"
                 + "\"rating\":\"G\",\"purchases\":true,\"double_confirm\":true}"));
 
             ConsentFlags ump = ConsentPolicy.Flags(
@@ -253,6 +253,12 @@ namespace AF.Tests.PlayMode
                 ConsentConfig.Defaults);
             StringAssert.Contains("\"npa\":false,\"ump\":true", DevProbe.FormatConsentState(1, "done", ump, LegalProfiles.Ump, "DE", CountrySource.Sim),
                 "la sonda dice lo mismo que recibe el SDK de anuncios: con UMP no se fuerza npa");
+
+            ConsentFlags signal = ConsentPolicy.Flags(
+                new ConsentRecord(LegalProfiles.Co1581, 1, new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc), true, true, AgeBand.Adult),
+                ConsentConfig.Defaults, signalBand: AgeBand.Teen);
+            StringAssert.Contains("\"age_band\":\"13-17\",\"band_from_signal\":true",
+                DevProbe.FormatConsentState(1, "done", signal, LegalProfiles.Co1581, "CO", CountrySource.Sim), "T-L3: la banda vino de la señal");
         }
     }
 }

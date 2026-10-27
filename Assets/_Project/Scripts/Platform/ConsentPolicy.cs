@@ -16,9 +16,11 @@ namespace AF.Platform
 
         internal ConsentFlags(
             bool decided, bool blocked, AgeBand band, string? profile, bool analytics, bool adsPersonalized, bool childDirected,
-            bool purchasesAllowed, bool purchaseDoubleConfirm, bool playGamesAllowed, bool rcPersonalization, bool adsByUmp = false)
+            bool purchasesAllowed, bool purchaseDoubleConfirm, bool playGamesAllowed, bool rcPersonalization, bool adsByUmp = false,
+            bool bandFromSignal = false)
         {
             AdsByUmp = adsByUmp;
+            BandFromSignal = bandFromSignal;
             Decided = decided;
             Blocked = blocked;
             Band = band;
@@ -41,8 +43,17 @@ namespace AF.Platform
         /// <summary>Banda &lt;13: no se crea sesión de juego (pantalla «Pide a un adulto que instale el juego»).</summary>
         public bool Blocked { get; }
 
-        /// <summary>La banda declarada.</summary>
+        /// <summary>
+        /// La banda que se aplica: la declarada o, con Play Age Signals (T-L3), la más estricta de la declarada y la de la señal
+        /// (<see cref="AgeSignalPolicy.Effective"/>).
+        /// </summary>
         public AgeBand Band { get; }
+
+        /// <summary>
+        /// La señal de Play Age Signals cambió la banda declarada (o bloqueó sin banda declarada). Entonces la banda no se manda a la
+        /// analítica (T-L4; [F25]): <c>af_consent.age_band</c> solo lleva la autodeclarada y solo si la señal no la corrigió.
+        /// </summary>
+        public bool BandFromSignal { get; }
 
         /// <summary>El perfil legal del registro (null sin decidir).</summary>
         public string? Profile { get; }
@@ -139,24 +150,40 @@ namespace AF.Platform
         /// del país de ahora), una decisión de otro perfil cuenta como sin decidir hasta volver a preguntar (Q-B12-15); sin país
         /// (<paramref name="countryKnown"/> = false), los anuncios nunca son personalizados ni los decide UMP (Q-T3 (a), Q-B12-13). Con
         /// 13-17, la analítica solo si <see cref="OffersAnalyticsChoice"/> con <paramref name="country"/> (el país de ahora; null con
-        /// <paramref name="countryKnown"/> = true, el resto del mapa) (D-057).
+        /// <paramref name="countryKnown"/> = true, el resto del mapa) (D-057). <paramref name="signalBand"/> es la banda de Play Age
+        /// Signals (T-L3; <see cref="AgeBand.Unknown"/> sin señal): 0-12 bloquea y, si no, se aplica la más estricta de la declarada y
+        /// la de la señal.
         /// </summary>
         public static ConsentFlags Flags(
-            ConsentRecord? record, ConsentConfig config, string? currentProfile = null, bool countryKnown = true, string? country = null)
+            ConsentRecord? record, ConsentConfig config, string? currentProfile = null, bool countryKnown = true, string? country = null,
+            AgeBand signalBand = AgeBand.Unknown)
         {
             if (config == null)
             {
                 throw new ArgumentNullException(nameof(config));
             }
 
-            if (record == null || record.AgeBand == AgeBand.Unknown)
+            // Play Age Signals (T-L3): con una señal de 0-12, el bloqueo aunque no haya banda declarada (sin guardarlo: la señal se
+            // vuelve a pedir en cada arranque); con 13-17, la más estricta de las dos (AgeSignalPolicy.Effective).
+            AgeBand declared = record?.AgeBand ?? AgeBand.Unknown;
+            if (signalBand == AgeBand.Under13 && declared != AgeBand.Under13)
+            {
+                return new ConsentFlags(
+                    decided: false, blocked: true, band: AgeBand.Under13, profile: record?.Profile, analytics: false, adsPersonalized: false,
+                    childDirected: true, purchasesAllowed: false, purchaseDoubleConfirm: false, playGamesAllowed: false, rcPersonalization: false,
+                    bandFromSignal: true);
+            }
+
+            if (record == null || declared == AgeBand.Unknown)
             {
                 return Undecided;
             }
 
             bool sameProfile = currentProfile == null || string.Equals(record.Profile, currentProfile, StringComparison.Ordinal);
+            AgeBand band = AgeSignalPolicy.Effective(declared, signalBand);
+            bool fromSignal = band != declared;
 
-            switch (record.AgeBand)
+            switch (band)
             {
                 case AgeBand.Under13:
                     return new ConsentFlags(
@@ -174,7 +201,7 @@ namespace AF.Platform
                         decided: decided, blocked: false, band: AgeBand.Teen, profile: record.Profile, analytics: analytics,
                         adsPersonalized: decided && !strict && !ump && countryKnown && record.AdsPersonalized, childDirected: false,
                         purchasesAllowed: decided, purchaseDoubleConfirm: strict, playGamesAllowed: decided, rcPersonalization: decided && !strict,
-                        adsByUmp: decided && !strict && ump && countryKnown);
+                        adsByUmp: decided && !strict && ump && countryKnown, bandFromSignal: fromSignal);
                 }
 
                 default:
@@ -184,7 +211,8 @@ namespace AF.Platform
                     return new ConsentFlags(
                         decided: decided, blocked: false, band: AgeBand.Adult, profile: record.Profile, analytics: decided && record.Analytics,
                         adsPersonalized: decided && !ump && countryKnown && record.AdsPersonalized, childDirected: false, purchasesAllowed: decided,
-                        purchaseDoubleConfirm: false, playGamesAllowed: decided, rcPersonalization: decided, adsByUmp: decided && ump && countryKnown);
+                        purchaseDoubleConfirm: false, playGamesAllowed: decided, rcPersonalization: decided, adsByUmp: decided && ump && countryKnown,
+                        bandFromSignal: fromSignal);
                 }
             }
         }

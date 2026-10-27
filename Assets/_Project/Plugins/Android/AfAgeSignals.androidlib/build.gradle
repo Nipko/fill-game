@@ -1,0 +1,29 @@
+// Plugin propio de Play Age Signals de Amazon Fill (T-L3; D-057, añadido del 2026-10-27; docs/dev/consentimiento.md §3).
+// Solo Java: sin el plugin de Kotlin en Gradle. Solo pide la franja de edad a Google Play (AgeSignalsManager), a ningún otro host.
+// La biblioteca entra en el build por EDM4U (Assets/_Project/Plugins/Editor/AfAgeSignalsDependencies.xml, que la escribe en
+// mainTemplate.gradle). Aquí solo se compila contra ella (compileOnly), con la misma versión exacta: cambiarla exige la aprobación
+// del dueño y el test AfAgeSignalsPluginTests la comprueba en los dos sitios.
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.amazonfill.agesignals'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+    }
+}
+
+dependencies {
+    compileOnly 'com.google.android.play:age-signals:0.0.4'
+}

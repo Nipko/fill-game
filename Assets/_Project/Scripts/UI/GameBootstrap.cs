@@ -1911,6 +1911,7 @@ namespace AF.UI
 
         private void Update()
         {
+            TickAgeSignals(); // T-L3: la respuesta de Play Age Signals, también durante el arranque (GameBootstrap.AgeSignals.cs)
             if (_splash != null)
             {
                 _splash.Tick(Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs)); // TiTino en la pantalla de arranque
