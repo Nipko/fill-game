@@ -4141,3 +4141,36 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
     - mantenimiento.
   - **Hoy** Play Games (Saved Games, D-042) ya guarda la partida en Android.
   - **Recomendación para la 1.1:** vincular primero Firebase Auth con Google (y con Apple si llega iOS); Facebook, solo si se hacen funciones sociales con amigos.
+
+## D-057 · Lanzamiento mundial y avatares con las recomendadas; lo legal se investiga sin abogado
+
+- **Fecha:** 2026-10-27. Registrada por el integrador.
+- **Estado:** el dueño en el chat: «vamos con la recomendaciones, lancemos investigaciones si requieres saber algo mas de lo legal, pero vamos a lanzar con lo que investiguemos, por ahora no tenemos revisor legal, pero para eso tenemos todo el dominio de internet para investigar y copiarnos a los que ya lo hacen bien y lo que fallaron aprender de esos errores.»
+- **Lanzamiento mundial** (`docs/dev/lanzamiento-mundial.md`, P1-P10, todas con la recomendada):
+  1. una sola salida mundial, con la producción escalonada por porcentaje;
+  2. la clave `consent_digital_age_by_country`, que apaga la analítica para 13-17 donde la edad de consentimiento digital pasa de 13;
+  3. distribución en todos los países salvo Rusia y Bielorrusia (Vietnam e Indonesia, según la investigación);
+  4. el país de la cuenta de Play como segunda fuente del país legal;
+  5. precios con base en USD y la conversión de Play, con LatAm y EUR fijados a mano;
+  6. la tanda 2 de idiomas, después de la 1.0;
+  7. una tabla ISO completa de países para la Liga, en los tres idiomas;
+  8. solo `sa-east-1` en la 1.0;
+  9. ficha de Play con en-US por defecto, más es-419, es-ES, pt-BR y pt-PT;
+  10. no hay abogado: en su lugar se hace una investigación propia (abajo).
+- **Avatares** (`docs/dev/avatares.md`, Q-AV-1 a Q-AV-12, todas con la recomendada):
+  - los 16 animales y 6 libres;
+  - en el primer arranque, uno libre al azar;
+  - en el inicio, arriba a la izquierda, desde el 10;
+  - en la victoria, solo en la línea de puntos de la Liga;
+  - el seudónimo es independiente del avatar;
+  - un avatar bloqueado se ve en silueta, con su hito;
+  - los 10 hitos propuestos;
+  - el avatar de la Liga queda oculto si la Liga está apagada;
+  - lo ven también 13-17;
+  - perfil con cabecera y rejilla;
+  - los marcos, en la 1.2;
+  - **la anaconda se retira de los seudónimos nuevos** (glosario §3.3), sin cambiar los índices.
+- **Lo legal, sin abogado:**
+  - los marcadores `[[ABOGADO]]` se resuelven con una investigación propia en fuentes oficiales y en lo que hacen los juegos que lo hacen bien, aprendiendo también de sus sanciones y errores (`docs/legal/investigacion-*.md`);
+  - lo que no se pueda resolver con fuentes queda como riesgo aceptado por el dueño;
+  - la revisión de un abogado pasa a ser opcional y posterior.
