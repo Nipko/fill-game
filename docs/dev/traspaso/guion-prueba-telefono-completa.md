@@ -34,6 +34,31 @@ Aquí entra todo.
 
 ## Encargo de la jornada 4 (escritorio, 2026-10-26)
 
+**Actualización del 2026-10-27:** la jornada 4 aún no se ha hecho y la integración siguió avanzando. **Nuevo punto de partida:** `integracion-fase1-fase2` en `1048450d` o posterior. Todo lo de abajo (N4) sigue valiendo; se suma el bloque N4b.
+
+**Lo que entró después y nunca se ha visto en el teléfono:**
+- **Los personajes en «3D cartoon, juguete brillante»** (D-058; piloto `bfc69c56`, fase 2 `0e2d4f05` y `eb501998`, el delfín `fb71b335`; integrado en `ceffe37f`):
+  - TiTino (todas las poses, de día y de noche), Capi, Rosa y el bufeo, la morpho, la fauna (miquitos, churuco) y los 16 avatares;
+  - volumen, luz arriba a la izquierda, barniz, ojos con reflejos y sin el contorno grueso;
+  - guía `docs/art/estilo-personajes-3d.md`; capturas de referencia en `docs/art/personajes-3d/piloto/despues/` y `docs/art/personajes-3d/fase2/despues/`.
+- **Avatares del jugador** (D-056 y D-057; `e9212484`, `daebca84`; diseño en `docs/dev/avatares.md`): el disco del inicio desde el 10, «Tu avatar» con la rejilla, los 10 hitos, la chapa «Nuevo», el globo del bloqueado, la fila de Ajustes, la Liga y la línea de la Liga en la victoria.
+- **«Enviar informes de fallos»** en Ajustes, activado por defecto (T-L6, D-057; `d9c003e6`, `2e4be455`, `cdbd047b`), y la frase de la pantalla de consentimiento que lo anuncia.
+- **La Mochila de inicio de 48 h** se quita al llegar a cero con el Mercado o su tarjeta abiertos (T-L9; `d2aaa13e`).
+- **Lanzamiento mundial** (D-057; `dd4ca621`, `972e8b58`, `fb78f26b`, `e03ca0ef`; `docs/dev/lanzamiento-mundial.md`):
+  - el país de la cuenta de Play como fuente del país legal, entre la SIM y la región;
+  - los nombres de país de CLDR en la Liga, en los tres idiomas;
+  - los decimales de ISO 4217 en los precios;
+  - 13-17 sin país conocido: sin analítica.
+- **Play Age Signals 0.0.4** (`AfAgeSignals.androidlib`; T-L3 a T-L5; `40987339`, `a5b31226`, integrado en `71f2c2f8`): `consent_age_signal_source` = `self_declared+play_age_signals` por defecto; 0-12 bloquea; la banda de la señal nunca va a la analítica; `rdp=1` con 13-17 en EE. UU.
+- **Anuncios** (añadidos de D-049 del 2026-10-27):
+  - AppLovin MAX sale del build (`5980da99`, `0cb6036d`, integrado en `2cfa20aa`) y entra la compuerta `ci/check-no-applovin.ps1`;
+  - Unity Ads 4.20.1 como red de mediación de AdMob, con el adaptador 3.21.1 y sin su inicializador automático (`7e5c12a3`, integrado en `5b6c1aa2`);
+  - el recompensado de producción pasa al bloque `1182085615` (`cbcfdfc4`, integrado en `6b1ba42c`). Los builds de prueba siguen con los bloques de prueba de Google (`docs/dev/anuncios-admob.md` §3), así que ese bloque no se ve en el teléfono.
+- **El icono y el logo con dos meandros** (variante B, añadido de D-045; `52e256bf`, integrado en `467ad06d`): el icono adaptativo, el monocromo, la ventana de lanzamiento y el emblema de la intro.
+- **La revisión 2 de Gemini** en inglés y portugués de Brasil (añadido de D-054; `9ccbe4e2`): las 27 claves de los avatares y del interruptor, y «Vença um nível para entrar na Liga».
+- **La web legal** (`a0fa231d`, `c95d6c5f`): Parallext, LLC, «Vigente desde: 30 de octubre de 2026» y Unity Ads en Créditos. Es la web, no la app: la app no abre enlaces.
+- Arreglos de la CI y de los tests (`83ac9fa3`, `29278417`…): no cambian el juego, no hace falta probarlos.
+
 La jornada 3 (`pruebas-telefono-2026-10-26-completa-j3.md`) cubrió el bloque 0 y N3. Sus observaciones están respondidas al final de esa hoja. Esta jornada empieza otra vez por el bloque 0 sobre la integración nueva, comprueba lo que entró y sigue con lo pendiente.
 
 **Punto de partida:** `integracion-fase1-fase2` en `2ec9bdba` o posterior.
@@ -54,14 +79,22 @@ La jornada 3 (`pruebas-telefono-2026-10-26-completa-j3.md`) cubrió el bloque 0 
 
 ### Orden de la jornada 4
 
-1. **Bloque 0 entero**, con el `dev.apk` y el `rehearsal.apk` nuevos (`-Apk`). Anota los tamaños: en la jornada 3 eran 76,07 MB, 59,10 MB y 64,62 MB.
+1. **Bloque 0 entero**, con el `dev.apk` y el `rehearsal.apk` nuevos (`-Apk`). Anota los tamaños: en la jornada 3 eran 76,07 MB, 59,10 MB y 64,62 MB (Unity Ads suma unos 2 MB y MAX resta; `docs/dev/anuncios-admob.md` §12.4).
+   - Pasa también la compuerta sin AppLovin sobre los tres artefactos (0 OK · 1 lo lleva · 2 argumentos o ilegible):
+     ```
+     pwsh -NoProfile -File ci/check-no-applovin.ps1 Builds/Android/dev.apk
+     pwsh -NoProfile -File ci/check-no-applovin.ps1 <aab>
+     pwsh -NoProfile -File ci/check-no-applovin.ps1 <apk del ensayo>
+     ```
+   - En `check-manifest`, anota si aparece el inicializador de Unity Ads (`AdsSdkInitializer`): no debe estar.
 2. **Bloque N4, «Lo nuevo de la jornada 4»** (abajo).
-3. **Los pendientes:**
+3. **Bloque N4b, «Lo nuevo del 2026-10-27»** (abajo, después de N4).
+4. **Los pendientes:**
    - los 3 puntos sin probar del bloque 3;
    - el bloque 4 entero, salvo el 4.9;
    - los bloques 5 y 7 a 23, en orden, con lo que quedó de N1: Reducir movimiento del sistema, la mañana y el mediodía del inicio (bloque 15), el 16:9 (bloque 16) y los anuncios sin red o cerrados antes de tiempo (bloque 9).
-4. **Hoja nueva:** `docs/dev/traspaso/pruebas-telefono-<fecha>-completa-j4.md`, con el mismo formato. Al final de la jornada, commit y push con el mensaje «Añade la prueba completa en el teléfono (jornada 4)», solo la hoja. Si la jornada no da para todo, se commitea lo hecho y la jornada 5 sigue donde quedó.
-5. **Anuncios de Google:** paso a paso, con una captura antes de cada toque. Los recorridos automáticos, con `--ei af_ads_fill 0/1`.
+5. **Hoja nueva:** `docs/dev/traspaso/pruebas-telefono-<fecha>-completa-j4.md`, con el mismo formato. Al final de la jornada, commit y push con el mensaje «Añade la prueba completa en el teléfono (jornada 4)», solo la hoja. Si la jornada no da para todo, se commitea lo hecho y la jornada 5 sigue donde quedó.
+6. **Anuncios de Google:** paso a paso, con una captura antes de cada toque. Los recorridos automáticos, con el anuncio simulado: `--es af_ads_fill fill`, `no_fill` o `error`. **Corrección del 2026-10-27:** el extra es de texto (`LaunchOptions.ResolveAdFill` lo lee con `getStringExtra`), así que `--ei af_ads_fill 0/1` no se lee y deja los anuncios de Google; si la jornada 3 lo usó así, anótalo.
 
 ### N4. Lo nuevo de la jornada 4 (≈ 2 h)
 
@@ -94,6 +127,67 @@ La jornada 3 (`pruebas-telefono-2026-10-26-completa-j3.md`) cubrió el bloque 0 
    - **Desde la pestaña o la pausa**, el Mapa se abre como antes, con el botón desde el principio.
    - Capturas del principio, de la mitad y de la llegada.
 4. **El ensayo de release (`rehearsal.apk`):** la intro entera, el icono en la ventana y el viaje del Mapa del 10 se ven igual que en desarrollo.
+
+### N4b. Lo nuevo del 2026-10-27 (≈ 3 h 30 min)
+
+Con el `dev.apk`, salvo donde se diga. Las capturas, con `adb exec-out screencap -p`, en `Logs/device/` con el nombre del punto. Los extras de lanzamiento solo valen en desarrollo.
+
+1. **Icono y logo con dos meandros** (añadido de D-045):
+   - **El icono en el lanzador:** el río con dos meandros, la cuia dentro de la zona segura, sin ruido en las orillas lejanas. Captura del cajón de apps.
+   - **El monocromo** (lo enciende el dueño: iconos temáticos del sistema, si One UI los ofrece): el icono se lee a una tinta. Si el sistema no tiene la opción, anótalo.
+   - **La ventana de lanzamiento:** el icono nuevo centrado sobre el petróleo (ráfaga de capturas, como en N4.1).
+   - **El emblema de la intro:** el río con los dos meandros. En el primer arranque tras instalar, anota de `AF_STATE brand_intro` el `emblem_cache` (con el emblema nuevo, la primera vez debería ser `miss`) y el `emblem_ms`.
+   - **Con el `rehearsal.apk`:** lo mismo.
+2. **Los personajes de juguete brillante** (D-058). Compara cada sitio con su captura de referencia de `docs/art/personajes-3d/piloto/despues/` (`p3d_*`) y `docs/art/personajes-3d/fase2/despues/` (`f2_*`), y haz la captura del teléfono con el mismo nombre:
+   - **TiTino en el inicio:** de mañana (`p3d_01_inicio`, nivel 31 a las 8:00), a mediodía tomando el sol y de noche dormido (`p3d_02_inicio_noche`, 22:00). La hora la cambia **el dueño**; después, otra vez la automática. Se puede juntar con N4.2.
+   - **TiTino en el arranque, la victoria** (`p3d_05_victoria`, el hito del 40 con `--ei af_level 40`), **la banda de los tutoriales** (niveles 1-3 y 6) **y la ventanita del Mapa.**
+   - **Capi y Rosa en el Mapa:** «Ver mapa» del 20 a mitad del viaje (`p3d_04_mapa_viaje`) y el bufeo guiando la canoa con `--ei af_max_level 305` (`f2_05_mapa_bufeo`).
+   - **Rosa en el banner de mundo:** al asomar y en reposo (`f2_08_delfin`, `f2_08b_delfin_reposo`): la espuma tapa el corte con el agua, sin línea dura.
+   - **La fauna:** la tropa del nivel 2 (`f2_03_intro_tropa`) y el churuco del 82 (`--ei af_level 82`, `f2_04_intro_churuco`).
+   - **La morpho:** el botón del comodín y su vuelo.
+   - **En cada sitio:** volumen, luz de arriba a la izquierda, brillo de barniz, ojos con reflejos, sin el contorno grueso de antes; sin bordes dentados, borrosos ni costuras (el párpado de TiTino dormido encaja con la cara).
+   - **Alto contraste** (lo enciende **el dueño** en Ajustes del juego): repite el inicio, la tropa, el Mapa, la victoria y la Liga (las capturas `_ac`). Los personajes **no cambian** (guía §5); solo cambia el tablero.
+   - **A 32 dp y a 24 dp:** los avatares en las filas de la Liga (32 dp, `f2_07_liga`) y en la línea de la Liga de la victoria (24 dp, `f2_06_victoria_avatar`); se reconocen por la silueta. Capturas recortadas de cerca.
+   - **Fluidez:** ningún tirón la primera vez que sale cada personaje. Con `--ei af_bench_morpho 1`, anota las líneas `AF_PERF frames` de dos niveles con tropa y del 82, y compáralas con las de la jornada 1. Anota `AF_PERF mem` en el inicio y en el Mapa, y el PSS de `adb shell dumpsys meminfo com.amazonfill.dev` frente al de N3 (el tamaño de los atlas no cambia, guía §8).
+3. **Avatares del jugador** (D-056; `docs/dev/avatares.md`). Perfil limpio (`pm clear`):
+   - **Antes del 10** no hay avatar en el inicio. **Al ganar el 10**, sale el disco arriba a la izquierda con el punto «nuevo» (`AF_LAYOUT lobby` con el id `avatar`). En el primer arranque se asignó uno de los 6 libres al azar: `AF_STATE avatar` con `cause` `assign` y `chosen` false.
+   - **Tocar el disco** abre «Tu avatar» (`AF_STATE avatar` con `cause` `open`; `AF_LAYOUT avatar` con `close` y `avatar_<id>`): la cabecera a 112 dp, la rejilla de 4 columnas, los 6 libres primero y luego los 10 de hito en silueta, con su chapa y el texto corto del hito. Captura, y compárala con `f2_02_avatares`.
+   - **Tocar uno libre:** se elige en el acto, con rebote y el sonido de UI; `AF_STATE avatar` con `cause` `select` y `chosen` true. Al cerrar (`cause` `close`), el disco del inicio cambia y el punto se va.
+   - **Tocar uno bloqueado:** sacudida, un globo con la frase entera del hito («Gana tu primer nivel Muy difícil.»…) y no se elige. Captura del globo.
+   - **Desbloqueo por hito:** relanza con `--ei af_max_level 60` (y luego 80). Anota si sale `AF_STATE avatar` con `cause` `unlock`, la rana dardo y el jaguar (y el caimán) en `unlocked`, `new` true, el punto en el inicio y la chapa «Nuevo» en la rejilla. Si no se desbloquean así, anótalo: el diseño dice «≥ el nivel» para los perfiles anteriores.
+   - **Ajustes:** la fila «Avatar» arriba del todo (`avatar_row` en `AF_LAYOUT settings`) abre la misma pantalla. Atrás de Android la cierra.
+   - **Liga** (`--ez af_league true --ez af_league_fake true`, con `--ei af_max_level 60`): tu avatar en la fila fija de abajo, el de cada fila del top a 32 dp o el disco neutro, y tocar tu fila abre «Tu avatar» (`AF_STATE league_open` y `avatar` con `open`). Gana un nivel desde el 41: la victoria lleva el avatar a 24 dp en la línea «+n puntos de Liga».
+   - **A 320 dp y al 130 %** (lo autoriza **el dueño**, como en el bloque 16; o `--ei af_font_scale 130`): la rejilla pasa a 3 columnas y los nombres caben en dos líneas.
+   - **TalkBack** (lo enciende **el dueño**): el disco dice «Tu avatar: {animal}. Toca para cambiarlo» (con el punto, «Hay un avatar nuevo»); las celdas, «{animal}, elegido», «{animal}, nuevo», «{animal}. Toca para elegirlo» o «{animal}, bloqueado.» con la frase del hito; la cabecera, «{animal}. En la Liga: …». En las filas de la Liga el avatar **no** se lee.
+   - **Reducir movimiento:** sin rebote ni sacudida, y el punto no late.
+4. **Informes de fallos** (T-L6):
+   - **Primer arranque** (`pm clear`): la pantalla de consentimiento dice «Los informes de fallos ayudan a mejorar el juego. Puedes desactivarlos en Ajustes.». Captura.
+   - **Ajustes › «Enviar informes de fallos»**, bajo «Privacidad y datos» (`crash_reports` en `AF_LAYOUT settings`): encendido por defecto. Al apagarlo, `AF_STATE settings_change` con `crash_reports` y `false`; al encenderlo, `true`.
+   - **Apagado y relanzado** (`force-stop` y abrir): sigue apagado. Vuelve a encenderlo al final.
+   - Con TalkBack, la fila se lee como interruptor con su estado.
+5. **Anuncios: AdMob con Unity Ads y sin MAX** (añadidos de D-049):
+   - En el arranque, logcat dice `[AF.Ads] proveedor: google (bloques de prueba)` en el `dev.apk` **y también en el `rehearsal.apk`** (lleva `com.amazonfill.dev`). El bloque de producción `1182085615` solo va en el release con el ID definitivo: **no se puede ver en el teléfono.**
+   - **Unity Ads no arranca antes de la edad:** con `pm clear` y `adb logcat -c`, guarda `adb logcat` hasta contestar la edad y el consentimiento. No debe salir ninguna línea con `UnityAds` antes de ese momento. Anota la primera que salga y en qué momento.
+   - **Un recompensado y un intersticial de prueba** (paso a paso, con captura antes de cada toque): se ven y pagan. Anota la línea `AF_EVENT` de `ad_impression` con su `ad_source` y su `ad_format`. Con los bloques de prueba de Google la mediación de Unity Ads no entra: es lo esperado.
+   - **Ad Inspector:** el juego **no tiene** un gancho para abrirlo. Solo si **el dueño** registra el teléfono como dispositivo de prueba en la consola de AdMob, con su gesto; si no, se salta.
+   - **Sin AppLovin en logcat:** ninguna línea con `AppLovin` ni `applovin` en todo el arranque.
+6. **Play Age Signals** (T-L3):
+   - **Primer arranque con 18+:** anota la línea `AF_STATE consent` del paso `done`, con `age_band`, `band_from_signal`, `country` y `country_source`. Con la cuenta de Play de Colombia, lo esperado es **sin señal**: `band_from_signal` false y la banda autodeclarada. Si sale `[AF.AndroidAgeSignals] no se pudo pedir la señal de edad…`, anótalo entero: el juego sigue con la autodeclarada.
+   - **Sin espera:** el nivel 1 no tarda más que en N4 por la señal.
+   - **13-17 y luego <13** (con `pm clear` entre uno y otro): la banda, `analytics`, `npa`, `tfcd` y `rating` de `AF_STATE consent`, como en el bloque 1.
+   - **El bloqueo 0-12 por la señal no se puede provocar en el teléfono:** no hay extra para fingir la señal; lo cubren los tests. Anótalo como no probado.
+7. **País y mundo** (D-057):
+   - **El país legal:** en `AF_STATE consent`, `country_source` es `sim` con la SIM puesta. Para ver `play`, haría falta un teléfono sin SIM y con la cuenta de Play conectada: solo si **el dueño** lo quiere probar (sin SIM o con otro teléfono). Anota lo que salga.
+   - **Nombres de país en la Liga** (`--ez af_league true --ez af_league_fake true`, `--ei af_max_level 60`): en el top global, los países de fuera de la tabla de D-046 (FR, DE, GY, SR) salen con su nombre, no con el código. Repite con `--es af_lang en` y `--es af_lang pt-BR`. Captura de cada idioma.
+   - **Decimales:** con `--ez af_fake_store true`, los precios del Mercado en COP salen sin decimales. Anota el texto exacto de dos precios. Otras monedas no se pueden ver sin una cuenta de Play de otro país.
+   - **13-17 sin país:** no se puede provocar con la SIM puesta; lo cubren los tests.
+8. **Textos de la revisión 2 de Gemini** (añadido de D-054), con `--es af_lang en` y con `--es af_lang pt-BR`:
+   - «Tu avatar» (cabecera, celdas, globo de un bloqueado) y la fila «Avatar» de Ajustes;
+   - la fila de los informes de fallos y la frase del consentimiento;
+   - en pt-BR, la Liga sin puntos: «Vença um nível para entrar na Liga»;
+   - ningún texto cortado, ni en otro idioma, ni vacío. Capturas.
+9. **La web legal** (opcional, **el dueño** en el navegador del teléfono): en tintalu.com, la política y los términos dicen «Vigente desde: 30 de octubre de 2026» y Parallext, LLC, y Créditos nombra Unity Ads. Solo si el dueño ya desplegó la web nueva.
+10. **El ensayo de release (`rehearsal.apk`):** el icono, el emblema, los personajes del inicio y del Mapa, el disco del avatar y «Tu avatar» se ven igual que en desarrollo (D-052: ningún hueco de arte), y el interruptor de informes de fallos está en Ajustes.
 
 ## Encargo de la jornada 3 (escritorio, 2026-10-26)
 
