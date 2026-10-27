@@ -436,21 +436,24 @@ namespace AF.Presentation
 
     /// <summary>
     /// Tabla del sombreado de juguete de un material (D-058): <see cref="ToyShading.ShadeCore"/> sin oclusión, precalculado en una
-    /// rejilla de (<see cref="Size"/> + 1)² normales aparentes (nx, ny en −<see cref="Reach"/>..<see cref="Reach"/>) e interpolado.
-    /// Las piezas de juguete del arte por código (los miquitos, los avatares) lo leen por píxel en lugar de recalcularlo: en el
-    /// Editor, la cuenta completa cuesta unos 120 ns por píxel y la tabla, una fracción. Se cachea por hilo (<see cref="For"/>).
+    /// rejilla de (n + 1)² normales aparentes (nx, ny en −<see cref="Reach"/>..<see cref="Reach"/>), en bytes, e interpolado. Las
+    /// piezas de juguete del arte por código lo leen por píxel en lugar de recalcularlo: en el Editor la cuenta completa cuesta
+    /// 100-150 ns por píxel y la tabla, una fracción. Dos usos: la caché por hilo de los materiales de la fauna (<see cref="For"/>,
+    /// 24 tablas de 33² normales) y la tabla propia de cada parte de los avatares (<see cref="Create"/>, de 25², que se rellena la
+    /// primera vez que se pinta).
     /// </summary>
     internal sealed class ToyLut
     {
-        /// <summary>Celdas por eje.</summary>
-        public const int Size = 32;
+        /// <summary>Celdas por eje de las tablas de la caché.</summary>
+        public const int CachedSize = 32;
 
         /// <summary>Alcance de la normal aparente en cada eje (fuera, se recorta: el canto).</summary>
         public const float Reach = 1.1f;
 
+        /// <summary>Píxeles a partir de los que compensa crear una tabla de la caché (crearla cuesta unas 1.100 cuentas completas).</summary>
+        public const int MinPixels = 1800;
+
         private const int Slots = 24;
-        private const float Step = 2f * Reach / Size;
-        private const float InvStep = Size / (2f * Reach);
 
         [System.ThreadStatic]
         private static ToyLut[]? s_cache;
@@ -458,12 +461,27 @@ namespace AF.Presentation
         [System.ThreadStatic]
         private static int s_next;
 
-        private readonly float[] _rgb = new float[(Size + 1) * (Size + 1) * 3];
+        private readonly int _n;
+        private readonly float _inv;
+        private readonly byte[] _rgb;
         private ToyTones _tones;
         private float _gloss = -1f;
 
-        /// <summary>Píxeles a partir de los que compensa crear la tabla (crearla cuesta unas 1.100 cuentas completas).</summary>
-        public const int MinPixels = 1800;
+        private ToyLut(int size)
+        {
+            _n = size;
+            _inv = size / (2f * Reach);
+            _rgb = new byte[(size + 1) * (size + 1) * 3];
+        }
+
+        /// <summary>Está rellena (con <see cref="Fill"/>).</summary>
+        public bool Ready => _gloss >= 0f;
+
+        /// <summary>Una tabla vacía de <paramref name="size"/> celdas por eje (se rellena con <see cref="Fill"/>).</summary>
+        public static ToyLut Create(int size)
+        {
+            return new ToyLut(Mathf.Clamp(size, 4, 64));
+        }
 
         /// <summary>
         /// La tabla del material <paramref name="t"/> con barniz <paramref name="gloss"/> para una pieza de unos
@@ -489,71 +507,85 @@ namespace AF.Presentation
 
             ToyLut lut = cache[s_next];
             s_next = (s_next + 1) % Slots;
-            lut.Build(t, gloss);
+            lut.Fill(t, gloss);
             return lut;
         }
 
-        // La caché de este hilo, entera de una vez: después, pintar no asigna memoria (el atlas de avatares lo comprueba).
+        /// <summary>El color (opaco) de la normal aparente (nx, ny), interpolado en la tabla.</summary>
+        public void Sample(float nx, float ny, out float r, out float g, out float b)
+        {
+            int n = _n;
+            float max = n - 0.0001f;
+            float fx = (nx + Reach) * _inv;
+            float fy = (ny + Reach) * _inv;
+            fx = fx < 0f ? 0f : (fx > max ? max : fx);
+            fy = fy < 0f ? 0f : (fy > max ? max : fy);
+            int ix = (int)fx;
+            int iy = (int)fy;
+            float tx = fx - ix;
+            float ty = fy - iy;
+            int row = (n + 1) * 3;
+            int i00 = (iy * row) + (ix * 3);
+            int i10 = i00 + 3;
+            int i01 = i00 + row;
+            int i11 = i01 + 3;
+            byte[] v = _rgb;
+            const float k = 1f / 255f;
+            float w00 = (1f - tx) * (1f - ty) * k;
+            float w10 = tx * (1f - ty) * k;
+            float w01 = (1f - tx) * ty * k;
+            float w11 = tx * ty * k;
+            r = (v[i00] * w00) + (v[i10] * w10) + (v[i01] * w01) + (v[i11] * w11);
+            g = (v[i00 + 1] * w00) + (v[i10 + 1] * w10) + (v[i01 + 1] * w01) + (v[i11 + 1] * w11);
+            b = (v[i00 + 2] * w00) + (v[i10 + 2] * w10) + (v[i01 + 2] * w01) + (v[i11 + 2] * w11);
+        }
+
+        /// <summary>Rellena la tabla con el material <paramref name="t"/> y el barniz <paramref name="gloss"/> (sin asignar memoria).</summary>
+        public void Fill(in ToyTones t, float gloss)
+        {
+            _tones = t;
+            int n = _n;
+            float step = 2f * Reach / n;
+            int k = 0;
+            for (int j = 0; j <= n; j++)
+            {
+                float ny = -Reach + (j * step);
+                for (int i = 0; i <= n; i++)
+                {
+                    Vector3 v = ToyShading.Normal(-Reach + (i * step), ny);
+                    ToyShading.ShadeCore(t, v.x, v.y, v.z, 0f, gloss, v.x, v.y, v.z, out float r, out float g, out float b);
+                    _rgb[k] = ToByte(r);
+                    _rgb[k + 1] = ToByte(g);
+                    _rgb[k + 2] = ToByte(b);
+                    k += 3;
+                }
+            }
+
+            _gloss = Mathf.Max(0f, gloss);
+        }
+
+        private static byte ToByte(float v)
+        {
+            v = (v * 255f) + 0.5f;
+            return (byte)(v < 0f ? 0f : (v > 255f ? 255f : v));
+        }
+
+        // La caché de este hilo, entera de una vez: después, pintar no asigna memoria.
         private static ToyLut[] NewCache()
         {
             var cache = new ToyLut[Slots];
             for (int i = 0; i < Slots; i++)
             {
-                cache[i] = new ToyLut();
+                cache[i] = new ToyLut(CachedSize);
             }
 
             s_cache = cache;
             return cache;
         }
 
-        /// <summary>El color (opaco) de la normal aparente (nx, ny), interpolado en la tabla.</summary>
-        public void Sample(float nx, float ny, out float r, out float g, out float b)
-        {
-            float fx = (nx + Reach) * InvStep;
-            float fy = (ny + Reach) * InvStep;
-            fx = fx < 0f ? 0f : (fx > Size - 0.0001f ? Size - 0.0001f : fx);
-            fy = fy < 0f ? 0f : (fy > Size - 0.0001f ? Size - 0.0001f : fy);
-            int ix = (int)fx;
-            int iy = (int)fy;
-            float tx = fx - ix;
-            float ty = fy - iy;
-            int i00 = ((iy * (Size + 1)) + ix) * 3;
-            int i10 = i00 + 3;
-            int i01 = i00 + ((Size + 1) * 3);
-            int i11 = i01 + 3;
-            float[] v = _rgb;
-            float w00 = (1f - tx) * (1f - ty);
-            float w10 = tx * (1f - ty);
-            float w01 = (1f - tx) * ty;
-            float w11 = tx * ty;
-            r = (v[i00] * w00) + (v[i10] * w10) + (v[i01] * w01) + (v[i11] * w11);
-            g = (v[i00 + 1] * w00) + (v[i10 + 1] * w10) + (v[i01 + 1] * w01) + (v[i11 + 1] * w11);
-            b = (v[i00 + 2] * w00) + (v[i10 + 2] * w10) + (v[i01 + 2] * w01) + (v[i11 + 2] * w11);
-        }
-
         private bool Matches(in ToyTones t, float gloss)
         {
             return gloss == _gloss && t.Mid == _tones.Mid && t.Shadow == _tones.Shadow && t.Light == _tones.Light;
-        }
-
-        private void Build(in ToyTones t, float gloss)
-        {
-            _tones = t;
-            _gloss = gloss;
-            int k = 0;
-            for (int j = 0; j <= Size; j++)
-            {
-                float ny = -Reach + (j * Step);
-                for (int i = 0; i <= Size; i++)
-                {
-                    Vector3 n = ToyShading.Normal(-Reach + (i * Step), ny);
-                    ToyShading.ShadeCore(t, n.x, n.y, n.z, 0f, gloss, n.x, n.y, n.z, out float r, out float g, out float b);
-                    _rgb[k] = r;
-                    _rgb[k + 1] = g;
-                    _rgb[k + 2] = b;
-                    k += 3;
-                }
-            }
         }
     }
 

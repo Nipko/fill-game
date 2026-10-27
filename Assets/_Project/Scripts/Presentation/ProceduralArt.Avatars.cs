@@ -517,6 +517,32 @@ namespace AF.Presentation
         private const float AvToyPatchGloss = 0.45f;
         private const float AvToyFlatGloss = 0.3f;
 
+        // Celdas por eje de la tabla de sombreado de cada parte (ToyLut, 25² normales en bytes: unos 1,9 KB por parte; los 16
+        // avatares, ≈ 360 KB, solo de los que se pintan). Se rellena la primera vez que la parte se pinta (≈ 625 cuentas).
+        private const int AvLutSize = 24;
+
+        /// <summary>
+        /// Crea (vacías) las tablas de sombreado de las partes del avatar <paramref name="index"/>: al pedir la celda, no al pintar,
+        /// así que pintar no asigna memoria. Se rellenan al pintar la primera vez.
+        /// </summary>
+        internal static void EnsureAvatarLuts(int index)
+        {
+            if (index < 0 || index >= AvatarArtCount)
+            {
+                return;
+            }
+
+            AvPart[] parts = AvAnimals[index];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                AvPart p = parts[i];
+                if (!p.Detail && p.Lut == null) // los ojos y los detalles no la usan
+                {
+                    p.Lut = ToyLut.Create(AvLutSize);
+                }
+            }
+        }
+
         // Una parte de un retrato normal de juguete (D-058), recortada al disco: el borde fino del color oscuro de la parte (en
         // lugar de la tinta), el relleno con el volumen de su forma (una cúpula para la elipse, un cilindro con las puntas en
         // cúpula para la cápsula y un cojín desde el borde para el polígono) y el barniz; los ojos, con el iris en degradado; los
@@ -546,7 +572,15 @@ namespace AF.Presentation
             float phx = Mathf.Max(1e-4f, (p.MaxX - p.MinX) * 0.5f);
             float phy = Mathf.Max(1e-4f, (p.MaxY - p.MinY) * 0.5f);
             float pillow = 0.45f * Mathf.Min(phx, phy);
-            ToyLut? lut = eye ? null : ToyLut.For(p.Toy, gloss, (x1 - x0 + 1) * (y1 - y0 + 1) * 0.7f);
+            ToyLut? lut = null;
+            if (!eye)
+            {
+                lut = p.Lut ??= ToyLut.Create(AvLutSize); // ya creada al pedir la celda (EnsureAvatarLuts): no asigna al pintar
+                if (!lut.Ready)
+                {
+                    lut.Fill(p.Toy, gloss);
+                }
+            }
             for (int y = y0; y <= y1; y++)
             {
                 float uy = ((y + 0.5f) - f.Cy) * invK;
@@ -787,6 +821,9 @@ namespace AF.Presentation
 
             /// <summary>Los tonos de juguete del relleno (D-058), calculados una vez al crear las tablas (<see cref="WithToyTones"/>).</summary>
             public ToyTones Toy;
+
+            /// <summary>La tabla de sombreado de la parte (D-058; <see cref="EnsureAvatarLuts"/>), o null hasta que se pide.</summary>
+            public ToyLut? Lut;
             public float MinX;
             public float MinY;
             public float MaxX;
@@ -1344,6 +1381,11 @@ namespace AF.Presentation
             if (_index[cell] == index && _backdrop[cell] == backdrop && _badge[cell] == badge && _locked[cell] == locked && (_painted[cell] || _dirty[cell] || _png[cell] != null))
             {
                 return;
+            }
+
+            if (!locked)
+            {
+                ProceduralArt.EnsureAvatarLuts(index);
             }
 
             _index[cell] = index;
