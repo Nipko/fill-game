@@ -38,6 +38,10 @@ status_pt-BR, notes y args):
   corto de su fuente (source_short.names de overrides.json [P]; 40 caracteres, los 48 de map_card_source menos
   «Fuente: »); con varias fuentes, la primera [V] o, sin ninguna [V], la primera (source_of); sin fuente con URL, sin
   fila. Nombre propio: en y pt-BR vacios, como las demas filas, y el traductor lo copia tal cual;
+- desde D-054 (revision cultural aprobada por el dueño), la regeneracion conserva el status aprobado_es de una fila cuyo
+  es-419 no cambio (como conserva en, pt-BR y sus estados, T2-Q1), y es_revision de overrides.json ({why, texts: {clave:
+  {from, to}}}) da el español revisado de una fila: «from» tiene que ser el texto de la investigacion (si cambio, --check
+  falla y la fila se revisa otra vez) y «to», que cumple las reglas del bloque, la sustituye; el contexto lo dice;
 - el contexto dice donde sale cada texto: en los hitos de TiTino (fin de mundo salvo el 10, primer Dificil 40 y primer
   Muy dificil 60; D-022, punto 1), el dato de llegada del 10k sale en la victoria siguiente;
 - --check falla si el bloque no esta al dia (desfase), si una clave citada no tiene fila con texto, si un texto pasa de su
@@ -740,6 +744,7 @@ TEXT_STATUS = "pendiente_asesor"   # lo cultural nace pendiente del asesor (07 �
 SOURCE_SUFFIX = ".source"
 SOURCE_MAX_CHARS = 48 - len("Fuente: ")
 SOURCE_SHORT_FIELDS = frozenset({"names", "why"})
+ES_REVISION_FIELDS = frozenset({"texts", "why"})
 EVIDENCE = ("V", "E")
 REQUIRED_COLUMNS = ("key", "es-419", "context", "max_chars", "status", "notes", "args")
 GENERATED = "Fila generada por tools/river-map/stops.py --write-texts (M1.1t): no se edita a mano."
@@ -747,6 +752,9 @@ GENERATED = "Fila generada por tools/river-map/stops.py --write-texts (M1.1t): n
 # estado de cada fila map.* se copian de facts.csv si el es-419 no cambió; si cambió, vuelven a vacío (08 §4.7: «si el
 # asesor cambia el español, los estados de los demás idiomas vuelven a vacío»). Las escribe tools/loc/apply_translations.py.
 PRESERVED_LOCALE_COLUMNS = ("en", "pt-BR", "status_en", "status_pt-BR")
+# La aprobacion del español (D-054, revision cultural aprobada por el dueño) tambien se conserva mientras el es-419 no
+# cambie: la fila nace pendiente_asesor y, si facts.csv ya la tiene en este estado con el mismo texto, se queda en el.
+PRESERVED_STATUS = "aprobado_es"
 NO_CAPTURE = "Captura: ninguna todavía (la placa de llegada y el Mapa aún no existen en el cliente)."
 
 RE_MARKER = re.compile(r"\{([a-z][a-z0-9_]*)\}")
@@ -1011,6 +1019,7 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
     used_short: set = set()
     stops = doc["stops"]
     rows: dict = {}
+    row_args: dict = {}
 
     def add(key: str, text, max_chars: int, context: str, notes: str, args: dict | None = None) -> None:
         args = args or {}
@@ -1029,6 +1038,7 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
         if key in rows and rows[key] != row:
             errors.append(f"{key}: dos filas distintas con la misma clave")
         rows[key] = row
+        row_args[key] = args
 
     def where(s: dict) -> str:
         a, b = s["levels"]
@@ -1354,10 +1364,55 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
     for sid in sorted(set(short_names) - used_short):
         errors.append(f"overrides.json: source_short.names lleva {sid!r}, que no es la fuente de ningun dato con fila .source")
 
+    errors.extend(apply_es_revision(overrides, rows, row_args))
     for key in cited_keys(doc):
         if key not in rows:
             errors.append(f"{key}: citada en river_stops_v1.json y sin texto en el bloque")
     return rows, errors
+
+
+def apply_es_revision(overrides: dict, rows: dict, row_args: dict) -> list[str]:
+    """es_revision de overrides.json (D-054): {"why": "...", "texts": {clave: {"from": texto, "to": texto}}}. El español que
+    aprobó la revisión cultural sustituye al de la investigación en su fila, para que regenerar no lo pise. Falla si la clave
+    no es una fila del bloque, si la investigación ya no dice «from» (cambió: hay que revisar la fila otra vez) o si «to» no
+    cumple las reglas del bloque (marcadores = args, longitud, cifras, veto de Belen)."""
+    raw = overrides.get("es_revision")
+    if raw is None:
+        return []
+    if not isinstance(raw, dict):
+        return ["overrides.json: «es_revision» tiene que ser un objeto {why, texts}"]
+    errors: list[str] = []
+    unknown = sorted(set(raw) - ES_REVISION_FIELDS)
+    if unknown:
+        errors.append(f"overrides.json: es_revision lleva campos desconocidos {unknown} (admitidos: texts y why)")
+    if not isinstance(raw.get("why"), str) or not raw["why"].strip():
+        errors.append("overrides.json: es_revision sin why (la decision que aprueba el español revisado)")
+    texts = raw.get("texts")
+    if not isinstance(texts, dict):
+        return errors + ["overrides.json: es_revision.texts tiene que ser un objeto {clave: {from, to}}"]
+    for key in sorted(texts):
+        entry = texts[key]
+        if (not isinstance(entry, dict) or set(entry) != {"from", "to"}
+                or not all(isinstance(entry[f], str) and entry[f].strip() for f in ("from", "to"))):
+            errors.append(f"overrides.json: es_revision.texts[{key!r}] tiene que ser {{from, to}} con dos textos")
+            continue
+        row = rows.get(key)
+        if row is None:
+            errors.append(f"overrides.json: es_revision.texts lleva {key!r}, que no es ninguna fila del bloque {TEXT_PREFIX}*")
+            continue
+        if row["es-419"] != clean_text(entry["from"]):
+            errors.append(f"overrides.json: es_revision.texts[{key!r}]: la investigacion ya no dice «{entry['from']}» sino "
+                          f"«{row['es-419']}»; revisa la fila otra vez")
+            continue
+        to = clean_text(entry["to"])
+        errs = check_text(key, to, int(row["max_chars"]), row_args.get(key) or {})
+        if errs:
+            errors.extend(f"overrides.json: es_revision: {e}" for e in errs)
+            continue
+        row["es-419"] = to
+        row["context"] += (f" Español revisado (tools/river-map/overrides.json, es_revision), que sustituye a «{entry['from']}» "
+                           "de la investigacion.")
+    return errors
 
 
 def build_all(source: dict, overrides: dict, wt: WorldTable, geo: "geometry.Geometry | None" = None,
@@ -1376,7 +1431,8 @@ def _record_key(record: str) -> str:
 
 
 def preserve_locales(rows: dict, header: list[str], block_records: list[str]) -> dict:
-    """rows con las columnas de PRESERVED_LOCALE_COLUMNS de las filas map.* actuales cuyo es-419 sigue igual (T2-Q1)."""
+    """rows con las columnas de PRESERVED_LOCALE_COLUMNS de las filas map.* actuales cuyo es-419 sigue igual (T2-Q1), y con
+    su status si ya es PRESERVED_STATUS (D-054)."""
     cols = [c for c in PRESERVED_LOCALE_COLUMNS if c in header]
     if not cols:
         return rows
@@ -1388,10 +1444,14 @@ def preserve_locales(rows: dict, header: list[str], block_records: list[str]) ->
     out = {}
     for key, row in rows.items():
         have = current.get(key)
-        if have is not None and have.get("es-419", "") == row.get("es-419", "") and any(have.get(c, "") for c in cols):
+        same = have is not None and have.get("es-419", "") == row.get("es-419", "")
+        if same and any(have.get(c, "") for c in cols):
             row = dict(row)
             for c in cols:
                 row[c] = have.get(c, "")
+        if same and "status" in header and have.get("status", "") == PRESERVED_STATUS:
+            row = dict(row)
+            row["status"] = PRESERVED_STATUS
         out[key] = row
     return out
 

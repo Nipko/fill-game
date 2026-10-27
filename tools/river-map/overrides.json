@@ -1,5 +1,5 @@
 {
-  "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: arrival_text, country, country_name, name, river y why). name y river sustituyen al nombre y al río de la investigación en las filas map.stop.<id>.name y map.stop.<id>.river de facts.csv (M1.1t): el río va en {río} de map_arrived («{lugar} · {país} · río {río}», glosario §10), así que es solo el nombre del río, sin «río» ni descripciones (--check falla si el río lleva paréntesis, empieza por «río» o por minúscula). arrival_text (M4.5a) sustituye al texto es-419 del dato de llegada de la parada (su arrival_fact) en su fila de facts.csv, con la misma clave, la misma etiqueta y las mismas fuentes, sin tocar rio-amazonas.json: la fila lo marca con [P] y su contexto cita el texto de la investigación (--check falla si la parada no tiene dato de llegada). source_short (DC9; D-028, pregunta 57 a): {why, names}, el nombre corto de cada fuente que nombra una fila <clave del dato>.source de facts.csv (id de rio-amazonas.json, fuentes -> nombre corto); --check falla si un dato con fuente no tiene nombre corto, si un id no está en fuentes o no lo nombra ninguna fila, o si un nombre pasa de 40 caracteres.",
+  "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: arrival_text, country, country_name, name, river y why). name y river sustituyen al nombre y al río de la investigación en las filas map.stop.<id>.name y map.stop.<id>.river de facts.csv (M1.1t): el río va en {río} de map_arrived («{lugar} · {país} · río {río}», glosario §10), así que es solo el nombre del río, sin «río» ni descripciones (--check falla si el río lleva paréntesis, empieza por «río» o por minúscula). arrival_text (M4.5a) sustituye al texto es-419 del dato de llegada de la parada (su arrival_fact) en su fila de facts.csv, con la misma clave, la misma etiqueta y las mismas fuentes, sin tocar rio-amazonas.json: la fila lo marca con [P] y su contexto cita el texto de la investigación (--check falla si la parada no tiene dato de llegada). es_revision (D-054): {why, texts}, el español aprobado en la revisión cultural que sustituye al de la investigación en una fila del bloque ({clave: {from, to}}); --check falla si la clave no es del bloque o si la investigación ya no dice «from». source_short (DC9; D-028, pregunta 57 a): {why, names}, el nombre corto de cada fuente que nombra una fila <clave del dato>.source de facts.csv (id de rio-amazonas.json, fuentes -> nombre corto); --check falla si un dato con fuente no tiene nombre corto, si un id no está en fuentes o no lo nombra ninguna fila, o si un nombre pasa de 40 caracteres.",
   "stops": {
     "atalaya": {
       "river": "Ucayali",
@@ -164,6 +164,15 @@
       "wp_tuichi_river": "Wikipedia",
       "wp_ucayali": "Wikipedia",
       "wp_urubamba": "Wikipedia"
+    }
+  },
+  "es_revision": {
+    "why": "D-054 (añadido del 2026-10-26): el dueño aprobó los 12 cambios al español de la revisión cultural de Gemini (docs/dev/traspaso/gemini-revision/revision_es.csv). Los del bloque map.* van aquí para que regenerar el bloque no devuelva el texto de la investigación; la fila conserva su aprobado_es y sus traducciones revisadas mientras el es-419 no cambie (stops.py, PRESERVED_STATUS y PRESERVED_LOCALE_COLUMNS).",
+    "texts": {
+      "map.stop.flona_tapajos.dato_01": {
+        "from": "De natural, el Tapajós es claro: baja de rocas muy viejas que sueltan poco barro.",
+        "to": "Por naturaleza, el Tapajós es claro: baja de rocas muy viejas que sueltan poco barro."
+      }
     }
   }
 }

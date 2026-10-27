@@ -886,17 +886,20 @@ def without_block(data: bytes) -> bytes:
 
 
 def without_translations(data: bytes) -> bytes:
-    """facts.csv con en, pt-BR y sus estados vacios en las filas map.*: lo que da --write-texts sin el bloque anterior, del
-    que conserva las traducciones (T2-Q1); las de las demas filas no se tocan."""
+    """facts.csv con en, pt-BR y sus estados vacios y el status de nacimiento (pendiente_asesor) en las filas map.*: lo que da
+    --write-texts sin el bloque anterior, del que conserva las traducciones (T2-Q1) y la aprobacion del español (D-054); las
+    demas filas no se tocan."""
     records = split_csv_records(data.decode("utf-8"))
     header = parse_csv_record(records[0])
     cols = [header.index(c) for c in stops.PRESERVED_LOCALE_COLUMNS]
+    status = header.index("status")
     out = [records[0]]
     for r in records[1:]:
         fields = parse_csv_record(r)
-        if fields[0].startswith("map.") and any(fields[i] for i in cols):
+        if fields[0].startswith("map.") and (any(fields[i] for i in cols) or fields[status] != stops.TEXT_STATUS):
             for i in cols:
                 fields[i] = ""
+            fields[status] = stops.TEXT_STATUS
             r = stops.format_csv_row(fields)
         out.append(r)
     return "".join(out).encode("utf-8")
@@ -972,7 +975,8 @@ class TextBlockTests(unittest.TestCase):
                         self.assertIn(row["status_" + loc], ("traducido", "revisado_nativo"), loc)
                     else:
                         self.assertEqual("", row["status_" + loc], loc)
-                self.assertEqual("pendiente_asesor", row["status"])
+                # Nace pendiente_asesor; la revision aprobada (D-054) la deja en aprobado_es y stops.py lo conserva.
+                self.assertIn(row["status"], ("pendiente_asesor", "aprobado_es"))
                 self.assertRegex(row["notes"], r"^\[(V|E|P)\] ")
                 if re.search(r"\[(V|E)\]", row["notes"]):
                     # 08 §4.5: cada etiqueta [V] o [E] lleva a una fuente con URL.
@@ -1003,7 +1007,15 @@ class TextBlockTests(unittest.TestCase):
             dato = records[0 if s["n"] == 1 else s["n"]]["dato_del_nivel"]
             ov = self.overrides["stops"].get(s["id"], {})
             with self.subTest(key=s["arrival_fact"]):
-                self.assertEqual(stops.clean_text(ov.get("arrival_text", dato["texto"])), row["es-419"])
+                expected = stops.clean_text(ov.get("arrival_text", dato["texto"]))
+                # El español aprobado en la revision cultural (D-054; es_revision de overrides.json) sustituye al de la
+                # investigacion, que tiene que seguir siendo su «from».
+                revised = self.overrides.get("es_revision", {}).get("texts", {}).get(s["arrival_fact"])
+                if revised is not None:
+                    self.assertEqual(stops.clean_text(revised["from"]), expected)
+                    expected = stops.clean_text(revised["to"])
+                    self.assertIn("es_revision", row["context"])
+                self.assertEqual(expected, row["es-419"])
                 self.assertTrue(row["notes"].startswith(f"[{dato['etiqueta']}] "))
                 # Un texto de overrides.json (arrival_text, M4.5a) lo dice con [P] y cita el de la investigacion; los
                 # demas, no.
@@ -1266,7 +1278,7 @@ class TextBlockTests(unittest.TestCase):
         self.assertIn("map_card_other_fact", row["context"])
         self.assertIn("https://", row["context"])
         self.assertEqual("90", row["max_chars"])
-        self.assertEqual("pendiente_asesor", row["status"])
+        self.assertIn(row["status"], ("pendiente_asesor", "aprobado_es"))
         self.assertIn("5-6 m", t["map.stop.itaya.dato_01"]["es-419"], "U+00A0 entre la cifra y la unidad")
         # Con una cifra (M4.5a): {n} en el texto y su valor en args (Q8-A).
         row = t["map.stop.collpa_tambopata.dato_04"]
@@ -1535,12 +1547,16 @@ class SourceRowTests(unittest.TestCase):
                 self.assertEqual(self.names[sid], row["es-419"])
                 # Nombre propio que no se traduce: sin traducir, o copiado tal cual por el traductor con su estado.
                 if row["en"] or row["pt-BR"] or row["status_en"] or row["status_pt-BR"]:
-                    self.assertEqual((row["es-419"], row["es-419"]), (row["en"], row["pt-BR"]), "copiado tal cual")
+                    # Los nombres van tal cual; solo la conjuncion entre dos fuentes se traduce («AGU y Wikipedia» ->
+                    # «AGU and Wikipedia» / «AGU e Wikipedia», revision de D-054).
+                    es = row["es-419"]
+                    self.assertIn((row["en"], row["pt-BR"]), ((es, es), (es.replace(" y ", " and "), es.replace(" y ", " e "))),
+                                  "copiado tal cual")
                     self.assertIn(row["status_en"], ("traducido", "revisado_nativo"))
                     self.assertIn(row["status_pt-BR"], ("traducido", "revisado_nativo"))
                 else:
                     self.assertEqual(("", "", "", ""), (row["en"], row["pt-BR"], row["status_en"], row["status_pt-BR"]))
-                self.assertEqual("pendiente_asesor", row["status"])
+                self.assertIn(row["status"], ("pendiente_asesor", "aprobado_es"))
                 self.assertEqual("40", row["max_chars"])
                 self.assertEqual("", row["args"])
                 self.assertTrue(row["notes"].startswith(f"[P] Nombre corto de la fuente {sid} ({url})"))
