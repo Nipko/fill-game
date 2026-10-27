@@ -89,3 +89,9 @@ Pega el valor en el secreto y vacía el portapapeles. No lo guardes en un archiv
 
 - **Resuelto el 2026-10-27:** game-ci/unity-builder v6.0.0 **no** monta `$RUNNER_TEMP/_github_home` como `/root` (la primera ejecución salió con 9, «no existe el keystore»); el keystore va ahora en `.af-signing/` dentro del workspace. Sí pasa `ANDROID_KEYSTORE_*` al contenedor. Si no lo hace, `BuildRelease` sale con 9 («no existe el keystore»): falla cerrado y no produce un AAB sin firmar.
 - El tiempo del job `build`, unos 30-60 min de los 2.000 al mes, como `build-android`.
+
+## 7. Primera ejecución completa (2026-10-27)
+
+- El build de Unity terminó bien: `[AF.BuildRelease] OK`, AAB de 59,18 MB, firmado con la clave de subida y con `LocReleaseGate` en OK. Aun así, game-ci v6 salió con 1 al devolver la licencia Personal («Serial number unavailable for ULF return»), y su `validateBuild` cortó el job antes de las compuertas.
+- Desde entonces, el paso de game-ci lleva `continue-on-error: true`. El veredicto lo dan el paso «Un solo AAB» y las compuertas siguientes, que un AAB ausente o a medias no pasa.
+
