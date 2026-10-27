@@ -213,7 +213,7 @@ namespace AF.Platform
         /// <summary>
         /// La pantalla de consentimiento ofrece la finalidad «Analítica» (D-057, P2 (a); 05 §7; 08 §9,
         /// <c>consent_digital_age_by_country</c>): con 18+, siempre; con 13-17, solo si la edad de consentimiento digital del país
-        /// (<see cref="ConsentConfig.DigitalAgeFor"/>) es 13. Donde pasa de 13 (RGPD art. 8 en buena parte del EEE, Suiza, Corea, la
+        /// (<see cref="ConsentConfig.DigitalAgeFor"/>) es 13. Donde pasa de 13 (RGPD art. 8 en buena parte del EEE, Suiza, Colombia, Brasil, México, Corea, la
         /// India…) la banda 13-17 no distingue a quien ya puede consentir, así que la analítica no se ofrece y queda apagada. Sin país
         /// (<paramref name="countryKnown"/> = false), tampoco: el tratamiento más estricto (Q-T3 (a)) [P]. Con
         /// <paramref name="country"/> null y el país conocido, la edad del resto del mapa.

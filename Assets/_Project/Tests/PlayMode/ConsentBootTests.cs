@@ -231,13 +231,22 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ATeenInColombia_StillGetsTheAnalyticsChoice()
+        public IEnumerator ATeen_GetsTheAnalyticsChoice_InTheUnitedStates_ButNotInColombia()
         {
+            GameBootstrap.SimCountryOverride = new ManualSimCountry("US");
             yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.ConsentCountrySource, Is.EqualTo(CountrySource.Sim));
             boot.ConsentView!.AgeButton(AgeBand.Teen).onClick.Invoke();
-            Assert.That(boot.ConsentView.AnalyticsToggleShown, Is.True, "Q-B12-7 (a): CO, edad digital 13");
+            Assert.That(boot.ConsentView.AnalyticsToggleShown, Is.True, "Q-B12-7 (a): US, edad digital 13");
+
+            LaunchOptions.Reset();
+            GameBootstrap.SimCountryOverride = new ManualSimCountry("CO");
+            LaunchOptions.ClockOverride = new ManualClock(T0, TimeSpan.FromHours(-5));
+            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
+            boot = GameBootstrap.Current!;
+            boot.ConsentView!.AgeButton(AgeBand.Teen).onClick.Invoke();
+            Assert.That(boot.ConsentView.AnalyticsToggleShown, Is.False, "CO, edad digital 18 (la investigación legal, §2.1)");
         }
 
         [UnityTest]

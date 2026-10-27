@@ -77,8 +77,8 @@ namespace AF.Platform
         /// <c>consent_digital_age_by_country</c> (05; D-057, P2 (a)): país (ISO alfa-2, o <see cref="EeaKey"/>, <see cref="UkKey"/> y
         /// <see cref="RestKey"/>) → edad de consentimiento digital (RGPD art. 8 y equivalentes), entre <see cref="MinDigitalAge"/> y
         /// <see cref="MaxDigitalAge"/>. Con la banda 13-17 y una edad mayor de 13, la analítica no se ofrece
-        /// (<see cref="ConsentPolicy.OffersAnalyticsChoice"/>). Los valores son los de <c>docs/dev/lanzamiento-mundial.md</c> §1.4 [NV],
-        /// pendientes de la investigación legal: se cambian en Remote Config sin build.
+        /// (<see cref="ConsentPolicy.OffersAnalyticsChoice"/>). Los valores son los de la investigación legal propia
+        /// (<c>docs/legal/investigacion-legal-mundial.md</c> §2.1): se cambian en Remote Config sin build.
         /// </summary>
         [RemoteConfigKey("consent_digital_age_by_country")]
         public IReadOnlyDictionary<string, int> ConsentDigitalAgeByCountry { get; set; } = DefaultDigitalAges();
@@ -104,20 +104,20 @@ namespace AF.Platform
         }
 
         /// <summary>
-        /// El mapa de 08 §9 (D-057; <c>docs/dev/lanzamiento-mundial.md</c> §1.4 [NV]): los 30 Estados del EEE con su edad del RGPD
-        /// art. 8, Suiza 16 (prudente: la nLPD no fija edad), Corea 14, la India 18, el Reino Unido 13 y el resto 13. En el orden de
-        /// 08 §9.
+        /// El mapa de 08 §9 (D-057; <c>docs/legal/investigacion-legal-mundial.md</c> §2.1, ante la duda el valor más alto): los 30
+        /// Estados del EEE con su edad del RGPD art. 8 (13-16; NO 15, SI 16), Suiza 16 (la nLPD no fija edad), el Reino Unido 13,
+        /// Colombia, Brasil, México y la India 18, Corea, Perú y Canadá 14, Japón 16 y el resto 13. En el orden de 08 §9.
         /// </summary>
         public static IReadOnlyDictionary<string, int> DefaultDigitalAges()
         {
             return new Dictionary<string, int>(StringComparer.Ordinal)
             {
                 { RestKey, 13 },
-                { "AT", 14 }, { "BE", 13 }, { "BG", 14 }, { "CH", 16 }, { "CY", 14 }, { "CZ", 15 }, { "DE", 16 }, { "DK", 13 },
-                { "EE", 13 }, { "ES", 14 }, { "FI", 13 }, { "FR", 15 }, { "GR", 15 }, { "HR", 16 }, { "HU", 16 }, { "IE", 16 },
-                { "IN", 18 }, { "IS", 13 }, { "IT", 14 }, { "KR", 14 }, { "LI", 16 }, { "LT", 14 }, { "LU", 16 }, { "LV", 13 },
-                { "MT", 13 }, { "NL", 16 }, { "NO", 13 }, { "PL", 16 }, { "PT", 13 }, { "RO", 16 }, { "SE", 13 }, { "SI", 15 },
-                { "SK", 16 }, { UkKey, 13 },
+                { "AT", 14 }, { "BE", 13 }, { "BG", 14 }, { "BR", 18 }, { "CA", 14 }, { "CH", 16 }, { "CO", 18 }, { "CY", 14 },
+                { "CZ", 15 }, { "DE", 16 }, { "DK", 13 }, { "EE", 13 }, { "ES", 14 }, { "FI", 13 }, { "FR", 15 }, { "GR", 15 },
+                { "HR", 16 }, { "HU", 16 }, { "IE", 16 }, { "IN", 18 }, { "IS", 13 }, { "IT", 14 }, { "JP", 16 }, { "KR", 14 },
+                { "LI", 16 }, { "LT", 14 }, { "LU", 16 }, { "LV", 13 }, { "MT", 13 }, { "MX", 18 }, { "NL", 16 }, { "NO", 15 },
+                { "PE", 14 }, { "PL", 16 }, { "PT", 13 }, { "RO", 16 }, { "SE", 13 }, { "SI", 16 }, { "SK", 16 }, { UkKey, 13 },
             };
         }
 

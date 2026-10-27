@@ -326,9 +326,16 @@ namespace AF.Tests.EditMode
         [TestCase("CH", 16)]
         [TestCase("KR", 14)]
         [TestCase("IN", 18)]
+        [TestCase("NO", 15)] // la investigación legal: ante la duda, el valor más alto
+        [TestCase("SI", 16)]
         [TestCase("US", 13)]
-        [TestCase("CO", 13)]
-        [TestCase("BR", 13)]
+        [TestCase("AR", 13)]
+        [TestCase("CO", 18)]
+        [TestCase("BR", 18)]
+        [TestCase("MX", 18)]
+        [TestCase("PE", 14)]
+        [TestCase("CA", 14)]
+        [TestCase("JP", 16)]
         [TestCase(null, 13)]
         public void DigitalAgeFor_FollowsTheMapOf08_9(string? country, int expected)
         {
@@ -400,8 +407,10 @@ namespace AF.Tests.EditMode
         [TestCase("CH", false)]
         [TestCase("BE", true)]
         [TestCase("GB", true)]
-        [TestCase("CO", true)]
+        [TestCase("CO", false)]
+        [TestCase("BR", false)]
         [TestCase("US", true)]
+        [TestCase("AR", true)]
         public void Teen_GetsTheAnalyticsChoice_OnlyWhereTheDigitalAgeIs13(string country, bool offered)
         {
             ConsentConfig c = ConsentConfig.Defaults;
@@ -447,10 +456,10 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void TheFlow_ForATeenInColombia_StillOffersAnalytics()
+        public void TheFlow_ForATeenInTheUnitedStates_StillOffersAnalytics()
         {
             var store = new MemoryConsentStore();
-            var flow = new ConsentFlow(ConsentConfig.Defaults, store, Clock(), LegalProfiles.Co1581, true, "CO");
+            var flow = new ConsentFlow(ConsentConfig.Defaults, store, Clock(), LegalProfiles.Default, true, "US");
             flow.StartBoot();
             flow.ChooseAge(AgeBand.Teen);
             Assert.That(flow.OffersAnalyticsChoice, Is.True, "Q-B12-7 (a)");
