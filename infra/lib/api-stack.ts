@@ -1,5 +1,5 @@
 // F2-2 · api-stack: HTTP API con autorizador JWT de Firebase, rutas /v1/... del contrato v1,
-// las 5 Lambdas de esqueleto (501), límites por ruta, secretos vacíos y el job diario.
+// las Lambdas del contrato, límites por ruta, secretos vacíos y el job diario.
 import { CfnOutput, Duration, Fn, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import type { StackProps } from 'aws-cdk-lib';
 import { AccessLogFormat } from 'aws-cdk-lib/aws-apigateway';
@@ -200,7 +200,7 @@ export class ApiStack extends Stack {
     voidedJob.grantTable(tables.jobs, [...DDB_GET, ...DDB_PUT]);
     voidedJob.grantSecret(this.secrets.playServiceAccount);
     const leagueEnv = tableEnv({ LEAGUE_PLAYERS: tables.leaguePlayers, LEAGUE_BOARD: tables.leagueBoard, LEAGUE_HISTOGRAM: tables.leagueHistogram, LEAGUE_NAMES: tables.leagueNames, INTEGRITY: tables.integrity, RATE_LIMITS: tables.rateLimits });
-    const leagueFunction = (id: string, name: 'league-wins' | 'league-board'): AfFunction => {
+    const leagueFunction = (id: string, name: 'league-wins' | 'league-board' | 'league-avatar'): AfFunction => {
       const f = new AfFunction(this, id, { config, name, usesPlayVerifier: true, description: `${name}: Liga del río (D-046; docs/dev/liga.md).`, environment: { ...leagueEnv, ...appCheckEnv } });
       f.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_CONDITION_CHECK]);
       f.grantTable(tables.integrity, [...DDB_GET, ...DDB_PUT]);
@@ -215,6 +215,11 @@ export class ApiStack extends Stack {
     leagueBoard.grantTable(tables.leaguePlayers, DDB_GET);
     leagueBoard.grantTable(tables.leagueBoard, DDB_QUERY);
     leagueBoard.grantTable(tables.leagueHistogram, DDB_QUERY);
+    // D-056: avatar con el seudónimo (Get/Put de leagueNames) y copiado a sus filas del top de la semana (Put), con la
+    // revisión del jugador comprobada en la misma transacción. Sin Delete ni histograma: no cambia la posición.
+    const leagueAvatar = leagueFunction('LeagueAvatar', 'league-avatar');
+    leagueAvatar.grantTable(tables.leaguePlayers, [...DDB_GET, ...DDB_CONDITION_CHECK]);
+    leagueAvatar.grantTable(tables.leagueBoard, DDB_PUT);
     this.functions = {
       'verify-purchase': verifyPurchase,
       'restore-ledger': restoreLedger,
@@ -223,6 +228,7 @@ export class ApiStack extends Stack {
       'voided-purchases-job': voidedJob,
       'league-wins': leagueWins,
       'league-board': leagueBoard,
+      'league-avatar': leagueAvatar,
     };
 
     // ---- HTTP API ----

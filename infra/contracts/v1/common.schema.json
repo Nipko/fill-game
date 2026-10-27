@@ -49,6 +49,23 @@
       "description": "Instante en milisegundos desde 1970-01-01 UTC.",
       "type": "integer",
       "minimum": 0
+    },
+    "avatar": {
+      "description": "Avatar de la Liga (D-056; docs/dev/avatares.md §1.2 y §4.4): índice del catálogo del cliente, que solo crece por el final. El servidor valida solo el rango 0-63, no la lista: un avatar nuevo no exige desplegar el backend.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 63
+    },
+    "avatarOrNull": {
+      "description": "Avatar público de una fila de la Liga, opcional: null si el jugador nunca eligió avatar (el cliente pinta el disco neutro). Los clientes anteriores a D-056 lo ignoran.",
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/avatar"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   }
 }

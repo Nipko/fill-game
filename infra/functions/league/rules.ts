@@ -2,6 +2,21 @@ import catalog from './levels.generated.json' with { type: 'json' };
 import { badRequest } from '../shared/errors.ts';
 
 export const NAME_KEYS = ['capybara','jaguar','toucan','macaw','boto','sloth','tapir','otter','manatee','turtle','howler','squirrel_monkey','caiman','anaconda','dart_frog','morpho','hummingbird','heron','kingfisher','anteater','armadillo','ocelot','coati','arapaima'].map(n => `league_name_${n}`);
+/**
+ * Claves que se pueden asignar a un seudónimo nuevo (D-057, Q-AV-12 a; glosario §3.3): sin la anaconda.
+ * NAME_KEYS no cambia (índices y enum del contrato): quien ya la tiene la conserva y se sigue leyendo.
+ */
+export const RETIRED_NAME_KEYS: readonly string[] = ['league_name_anaconda'];
+export const ASSIGNABLE_NAME_KEYS = NAME_KEYS.filter(k => !RETIRED_NAME_KEYS.includes(k));
+/** Avatar de la Liga (D-056; avatares.md §4.4): índice 0-63; el servidor solo valida el rango, no la lista del cliente. */
+export const AVATAR_MIN = 0, AVATAR_MAX = 63;
+/** Cambios de avatar por UID y día UTC [P] (avatares.md §4.4: 30 en 24 h). */
+export const AVATAR_CHANGES_PER_DAY = 30;
+export const isAvatar = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= AVATAR_MIN && v <= AVATAR_MAX;
+export function parseAvatarRequest(raw: Record<string, unknown>): { avatar: number } {
+  if (Object.keys(raw).some(k => k !== 'avatar') || !isAvatar(raw.avatar)) throw badRequest('Avatar no válido.');
+  return { avatar: raw.avatar };
+}
 // ISO 3166-1 alpha-2; se excluyen códigos reservados (EU, UK, XK, ZZ).
 const COUNTRIES = new Set(('AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW').split(' '));
 export function countryOf(region: unknown): string | null {
