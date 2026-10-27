@@ -61,7 +61,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.View, Is.EqualTo(ConsentView.Age), "06 §2.1, regla 3: antes del nivel 1");
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Boot));
             Assert.That(boot.Analytics!.CollectionEnabled, Is.False, "08 §2.3: apagada hasta el consentimiento");
-            Assert.That(boot.ConsentAds!.Initialized, Is.False, "MAX sin inicializar");
+            Assert.That(boot.ConsentAds!.Initialized, Is.False, "anuncios sin inicializar");
             Assert.That(boot.Consent!.Profile, Is.EqualTo(LegalProfiles.Co1581), "Q-T3 (a): el país de la SIM");
             Assert.That(boot.ConsentHoldsSession, Is.True, "sin sesión ni avisos locales hasta decidir");
             Assert.That(boot.PressAndroidBack(), Is.False, "Atrás no salta la pantalla");

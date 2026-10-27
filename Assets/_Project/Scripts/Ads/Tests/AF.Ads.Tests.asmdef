@@ -5,8 +5,6 @@
     "AF.Platform",
     "AF.Save",
     "AF.Ads",
-    "AF.Ads.Max",
-    "AF.Ads.Max.Editor",
     "AF.Ads.Google",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"

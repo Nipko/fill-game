@@ -14,7 +14,7 @@ namespace AF.Backend
     /// <item><c>verifyPurchase</c>: <c>ok</c> con el <c>grant</c> de <see cref="GrantFor"/> la primera vez; <c>duplicate</c> si el
     /// token ya está en el libro mayor; <c>pending</c> si se marcó con <see cref="MarkPending"/>.</item>
     /// <item><c>restoreLedger</c>: las compras verificadas con su estado y los nonces que confirmó
-    /// <see cref="ReceiveSsv"/> (el callback S2S de MAX).</item>
+    /// <see cref="ReceiveSsv"/> (el SSV de AdMob, D-049; antes el callback S2S de MAX).</item>
     /// <item><c>account/code</c>: un código nuevo en cada llamada (deterministas, del formato del contrato).</item>
     /// <item><c>account/delete</c>: vacía el estado; idempotente.</item>
     /// </list>

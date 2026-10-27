@@ -22,7 +22,7 @@
 | Google Play Games para Unity (D-042) | 2.3.0 | Apache 2.0 [NV]: el `.tgz` **no trae LICENSE**; el plugin se publica como código abierto Apache 2.0 | `Packages/playgames/com.google.play.games-2.3.0.tgz` (solo `package.json`, autor Google LLC) | Sí |
 | Play Games Services v2 (`play-services-games-v2`) | 22.1.0 | Android Software Development Kit License | `GooglePlayGamesPluginDependencies.xml`; POM en la caché de Gradle | Sí. `play-services-nearby` 18.5.0 **no** (excluido en `mainTemplate.gradle`) |
 | External Dependency Manager for Unity (EDM4U) | 1.2.189 | **Apache 2.0**, con el aviso de MiniJSON (MIT) | `Packages/firebase/com.google.external-dependency-manager-1.2.189.tgz` → `package/LICENSE.md` | Solo Editor (resuelve las dependencias; no entra código suyo en el APK) [E] |
-| AppLovin MAX para Unity (instalado sin servir, D-049) | 8.6.6 (`applovin-sdk` 13.6.4) | **AppLovin SDK EULA** (https://www.applovin.com/eula), propietaria; el plugin de Unity incluye MiniJSON (MIT) | `Packages/applovin/com.applovin.mediation.ads-8.6.6.tgz` → `package/LICENSE.md`; POM `applovin-sdk-13.6.4.pom` | **Sí**: `com/applovin/…` y `libapplovin-native-crash-reporter.so` están en `dev.apk` y en `rehearsal.aab`. Trae `okhttp3` renombrado (`com/applovin/shadow/okhttp3/…`) con su `NOTICE` y la lista de sufijos públicos |
+| ~~AppLovin MAX para Unity~~ (retirado del proyecto: D-049, añadido del 2026-10-27) | antes 8.6.6 (`applovin-sdk` 13.6.4) | AppLovin SDK EULA (propietaria) | Ya no está: salieron `Packages/applovin/`, `Assets/MaxSdk/` y `AF.Ads.Max` | **No**: `ci/check-no-applovin.ps1` (CI y release) comprueba que `dev.apk` y el AAB no llevan `com/applovin/…`, `libapplovin-native-crash-reporter.so` ni su `okhttp3` renombrado |
 
 ## 2. Bibliotecas que traen los SDK (en el APK)
 
@@ -31,8 +31,7 @@
 | AndroidX (activity, appcompat, core, fragment, lifecycle, room, work, webkit, datastore, credentials, privacysandbox.ads y las demás de `META-INF/*.version`, 48 en total) | Apache 2.0 [NV] | `META-INF/androidx.*.version` de `dev.apk`; POM en la caché de Gradle | Las traen Google Mobile Ads, Firebase y Play Games |
 | Kotlin (stdlib) y kotlinx.coroutines (`core`, `android`, `play-services`) | Apache 2.0 [NV] | `kotlin/*.kotlin_builtins` y `META-INF/kotlinx_coroutines_*.version` del APK | — |
 | Play Services comunes (`play-services-base`, `-basement`, `-tasks`, `-measurement*`, `-ads-identifier`, `-appset`, `-auth*`, `-location`, `-stats`, `integrity`, `recaptcha`, `googleid`…) | Android Software Development Kit License [NV salvo `play-services-ads` y `-games-v2`, comprobadas] | `*.properties` en la raíz del APK | — |
-| MiniJSON (Calvin Rien) | MIT | Final de `LICENSE.md` de Firebase 13.17.0 y de EDM4U 1.2.189 | La copia de AppLovin es otra (en `Scripts/ThirdParty/MiniJSON.cs` de su `.tgz`) |
-| okhttp3 (Square) y la Public Suffix List, renombrados dentro de AppLovin | Apache 2.0 y MPL 2.0 [NV] | `com/applovin/shadow/okhttp3/internal/publicsuffix/NOTICE` del APK | Apache 2.0 §4(d) pide reproducir el `NOTICE` si se redistribuye |
+| MiniJSON (Calvin Rien) | MIT | Final de `LICENSE.md` de Firebase 13.17.0 y de EDM4U 1.2.189 | — |
 | Lo que trae Unity Ads 4.20.1: `com.unity3d.coherence:coherencelib` 0.1.0 (`libunitycoherencenative.so`), `okhttp` 3.12.13 con `okio`, `protobuf-kotlin-lite` 3.25.6 | coherencelib: «Unity Ads License» (POM `coherencelib-0.1.0.pom`); okhttp y okio: Apache 2.0 [NV]; protobuf: BSD-3-Clause [NV] | POM en la caché de Gradle (`com.unity3d.coherence`, `com.squareup.okhttp3`, `com.google.protobuf`) | okhttp aquí va sin renombrar (no es la copia de AppLovin) |
 | Android Game Development Kit: GameActivity (`libgame.so`) y Frame Pacing (`libswappywrapper.so`) | Apache 2.0 [NV] | `lib/arm64-v8a/` del APK | Los añade Unity |
 | `libc++_shared.so` (LLVM, del NDK r27c) | Apache 2.0 con excepciones de LLVM [NV] | `lib/arm64-v8a/` del APK | — |
@@ -54,7 +53,7 @@ La OFL exige que la licencia acompañe a la fuente cuando se distribuye: hoy los
 
 - **Apache 2.0** (Firebase para Unity, GMA para Unity, Play Games para Unity, EDM4U, AndroidX, Kotlin, AGDK): una copia de la licencia y el `NOTICE` de quien lo tenga (§4 a y d). La web enlaza el texto y nombra los componentes.
 - **MIT** (MiniJSON, Mono, cdt2d…): el aviso de copyright y el de permiso. La web nombra a MiniJSON y a Calvin Rien y enlaza el texto MIT; falta el texto literal de cada aviso en el juego.
-- **Android SDK License**, **AppLovin SDK EULA** y **Unity Ads License**: no piden aviso al usuario final [E]; se nombran por transparencia (Unity Ads, en `credits.html` con el enlace a `https://unity.com/legal`).
+- **Android SDK License** y **Unity Ads License**: no piden aviso al usuario final [E]; se nombran por transparencia (Unity Ads, en `credits.html` con el enlace a `https://unity.com/legal`).
 - **Unity Companion License y términos de Unity**: Unity publica su propia lista de avisos de terceros del motor [NV]; se enlaza desde la pantalla del juego.
 - **OFL 1.1**: el texto de la OFL con cada fuente.
 
@@ -64,6 +63,6 @@ La OFL exige que la licencia acompañe a la fuente cuando se distribuye: hoy los
    - una entrada «Créditos y licencias» en Ajustes, junto a «Privacidad y datos»;
    - una vista con scroll que muestre los créditos y, por componente, el nombre, la licencia y el aviso literal (Apache 2.0 con los `NOTICE`, MIT con su copyright, OFL con su texto), leídos de un archivo generado (por ejemplo, `Data/Legal/licencias.txt`) que salga de esta lista y de los `LICENSE` del repositorio, no escrito a mano;
    - o, como mínimo, un enlace a `credits.html` de la web y el plugin `oss-licenses` de Google Play Services, si el dueño lo aprueba (es una dependencia nueva: regla dura 4).
-2. **AppLovin MAX va en el APK aunque no sirva anuncios** (D-049). La web no lo nombra porque la política dice que los anuncios solo vienen de AdMob. Decide el dueño: quitar el paquete del build de release (lo más limpio) o nombrarlo en Créditos con el `NOTICE` de okhttp3.
+2. ~~AppLovin MAX va en el APK aunque no sirva anuncios~~ **Resuelto (D-049, añadido del 2026-10-27):** el dueño decidió quitarlo; MAX salió del proyecto entero (plugin, `applovin-sdk`, `AF.Ads.Max`) y con él `libapplovin-native-crash-reporter.so` y el `okhttp3` renombrado con su `NOTICE`. La compuerta `ci/check-no-applovin.ps1` lo vigila en la CI y en el release. Si AppLovin abre cuentas, entra como red de mediación de AdMob, con su adaptador, y entonces tendrá su fila aquí.
 3. Cerrar los [NV] de la sección 2 con los POM y `NOTICE` reales (por ejemplo, con un informe de dependencias de Gradle del build de release en el CI) y confirmar qué componentes de terceros de los paquetes de Unity llegan al reproductor.
 4. Confirmar si Liberation Sans entra en el build de release.

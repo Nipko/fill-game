@@ -6,14 +6,6 @@
       "source": "embedded",
       "dependencies": {}
     },
-    "com.applovin.mediation.ads": {
-      "version": "file:applovin/com.applovin.mediation.ads-8.6.6.tgz",
-      "depth": 0,
-      "source": "local-tarball",
-      "dependencies": {
-        "com.google.external-dependency-manager": "1.2.182"
-      }
-    },
     "com.google.ads.mobile": {
       "version": "file:googleads/com.google.ads.mobile-11.5.0.tgz",
       "depth": 0,

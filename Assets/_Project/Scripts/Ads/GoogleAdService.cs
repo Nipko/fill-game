@@ -182,9 +182,9 @@ namespace AF.Ads
     /// <item><b>No personalizados:</b> con <c>npa</c> de nuestra pantalla (13-17, sin consentimiento de anuncios personalizados o sin
     /// país), cada petición lleva <c>npa=1</c>. Con el perfil <c>ump</c> de 18+ deciden las cadenas TCF de UMP.</item>
     /// <item><b>Redes de mediación (Unity Ads; D-049, añadido del 2026-10-27):</b> antes de UMP y de <c>MobileAds.Initialize</c>, y
-    /// otra vez si cambia, <see cref="IGmaPort.SetMediationConsent"/> con los mismos flags que recibía MAX: con <c>npa</c>
+    /// otra vez si cambia, <see cref="IGmaPort.SetMediationConsent"/> con los flags de <see cref="AdConsentSettings"/> (los que antes recibía MAX): con <c>npa</c>
     /// (13-17, también 13-17 en EE. UU., o sin consentimiento) <c>gdpr.consent</c> y <c>privacy.consent</c> en false.</item>
-    /// <item><b>Precarga según el nivel</b> y reintentos con espera exponencial, como con MAX (<see cref="MaxAdService"/>).</item>
+    /// <item><b>Precarga según el nivel</b> y reintentos con espera exponencial (<see cref="Backoff"/>: 2, 4 … 64 s).</item>
     /// <item><b>SSV (08 §10.2; D-049):</b> antes de cada recompensado, si hay UID de Firebase Auth, <c>ServerSideVerificationOptions</c>
     /// con <c>user_id</c> = ese UID (el mismo que valida el JWT de <c>restoreLedger</c>) y <c>custom_data = placement|nonce</c>
     /// (<see cref="AdRewardCustomData"/>); AdMob los devuelve firmados a <c>/v1/ssv</c>, que anota el nonce para ese UID. Sin UID
@@ -196,11 +196,17 @@ namespace AF.Ads
     /// </summary>
     public sealed class GoogleAdService : IAdService, IAdConsentTarget, IAdImpressionSource, IGmaListener, IAdTicker
     {
-        /// <summary>Margen para una recompensa que llega después del cierre [P] (como <see cref="MaxAdService.RewardGrace"/>).</summary>
+        /// <summary>Margen para una recompensa que llega después del cierre [P] (el orden de los avisos no está garantizado).</summary>
         public static readonly TimeSpan RewardGrace = TimeSpan.FromSeconds(1.5);
 
-        /// <summary>Margen tras volver de segundo plano con un anuncio aún sin cerrar [P] (como <see cref="MaxAdService.ResumeGrace"/>).</summary>
+        /// <summary>Margen tras volver de segundo plano con un anuncio aún sin cerrar [P].</summary>
         public static readonly TimeSpan ResumeGrace = TimeSpan.FromSeconds(3);
+
+        /// <summary>Primera espera tras un fallo de carga.</summary>
+        public static readonly TimeSpan FirstRetry = TimeSpan.FromSeconds(2);
+
+        /// <summary>Espera máxima entre reintentos de carga.</summary>
+        public static readonly TimeSpan MaxRetry = TimeSpan.FromSeconds(64);
 
         private readonly IGmaPort _port;
         private readonly IClock _clock;
@@ -428,7 +434,7 @@ namespace AF.Ads
                     unit.Loaded = false;
                     unit.Stale = false;
                     unit.Failures++;
-                    unit.RetryAt = _clock.UtcNow + MaxAdService.Backoff(unit.Failures);
+                    unit.RetryAt = _clock.UtcNow + Backoff(unit.Failures);
                     break;
 
                 case GmaAdEvent.RewardReceived:
@@ -468,6 +474,14 @@ namespace AF.Ads
 
                     break;
             }
+        }
+
+        /// <summary>Espera tras <paramref name="failures"/> fallos de carga seguidos: 2, 4, 8 … hasta 64 s.</summary>
+        public static TimeSpan Backoff(int failures)
+        {
+            int exponent = Math.Max(0, Math.Min(failures - 1, 5));
+            double seconds = FirstRetry.TotalSeconds * (1 << exponent);
+            return TimeSpan.FromSeconds(Math.Min(seconds, MaxRetry.TotalSeconds));
         }
 
         /// <inheritdoc />
