@@ -694,6 +694,13 @@
       "description": "Rango 08 §9: off · victory · map. «¿Verdad o mito?» del Mapa del río: experimento de la 1.1, apagado en la 1.0 (D-013, Q12-A); en la 1.0, el dato simple [P]",
       "valueType": "STRING"
     },
+    "ui_avatars_enabled": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Avatares del jugador (D-056; docs/dev/avatares.md §4.3), de respaldo: apagada, sin retrato en el inicio, sin fila en Ajustes y sin avatar en la Liga ni en la victoria; el perfil conserva el campo y la Liga deja de enviarlo. Los hitos van e…",
+      "valueType": "BOOLEAN"
+    },
     "ui_max_takeovers_per_session": {
       "defaultValue": {
         "value": "1"

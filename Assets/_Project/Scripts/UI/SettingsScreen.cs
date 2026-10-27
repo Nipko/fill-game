@@ -172,6 +172,7 @@ namespace AF.UI
             _scroll.horizontal = false;
             _scroll.vertical = true;
             _scroll.movementType = ScrollRect.MovementType.Clamped;
+            BuildAvatarRow(); // «Avatar», arriba del todo (D-056; SettingsScreen.Avatar.cs), oculta hasta el 10
             BuildAudioRows(); // Sonido, Música y Vibración (AU1; SettingsScreen.Audio.cs)
 
             _languageTitle = SectionTitle("LanguageTitle", UiText.Language);
@@ -396,6 +397,11 @@ namespace AF.UI
 
             yield return _slothRow.Label;
             yield return _idleRow.Label;
+            foreach (TextMeshProUGUI label in AvatarRowTexts())
+            {
+                yield return label;
+            }
+
             foreach (TextMeshProUGUI label in A11yTexts())
             {
                 yield return label;
@@ -557,13 +563,14 @@ namespace AF.UI
             float headerBottom = y;
             _rowTops.Clear();
             _rowHeights.Clear();
+            float audioTop = LayoutAvatarRow(0f, inner, rowH, s); // D-056: «Avatar», arriba del todo
             for (int i = 0; i < AudioRowCount; i++)
             {
-                _rowTops.Add(i * (rowH + RowGapDp));
+                _rowTops.Add(audioTop + (i * (rowH + RowGapDp)));
                 _rowHeights.Add(rowH);
             }
 
-            y = LayoutAudio(0f, inner, rowH, s);
+            y = LayoutAudio(audioTop, inner, rowH, s);
 
             // Idioma.
             PlaceTitle(_languageTitle, 16f, y, inner, titleH, s);
@@ -775,7 +782,8 @@ namespace AF.UI
         // cuáles (distinta de 0).
         private void LayoutTargets(out string[] ids, out RectTransform[] rects, out int shown, out int signature)
         {
-            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount + PushLayoutCount;
+            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount + PushLayoutCount
+                + AvatarRowLayoutCount;
             ids = new string[n];
             rects = new RectTransform[n];
             ids[0] = "close";
@@ -804,6 +812,7 @@ namespace AF.UI
             AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount); // delete_account (B8)
             int consent = ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount); // consent, crash_reports (T-L6) y age_band (B12)
             PushLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + consent); // push y push_open_phone
+            AvatarRowLayoutIds(ids, rects, n - 1); // avatar_row (D-056), la última entrada
 
             shown = 0;
             signature = 17;

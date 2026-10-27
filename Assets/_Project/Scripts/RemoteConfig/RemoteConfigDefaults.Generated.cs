@@ -474,6 +474,10 @@ namespace AF.RemoteConfig
       ""type"": ""string"",
       ""default"": ""off""
     },
+    ""ui_avatars_enabled"": {
+      ""type"": ""bool"",
+      ""default"": true
+    },
     ""ui_max_takeovers_per_session"": {
       ""type"": ""int"",
       ""default"": 1

@@ -11,6 +11,7 @@ export const FUNCTION_NAMES = [
   'voided-purchases-job',
   'league-wins',
   'league-board',
+  'league-avatar',
 ] as const;
 export type FunctionName = (typeof FUNCTION_NAMES)[number];
 

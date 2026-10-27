@@ -57,8 +57,15 @@ namespace AF.LiveOps
 
         public LeagueCacheEntry? CacheCountry { get; set; }
 
+        /// <summary><c>avatar_sent</c> (D-056; avatares.md §4.1): el último índice de avatar que confirmó el servidor, o null.</summary>
+        public int? AvatarSent { get; set; }
+
+        /// <summary><c>avatar_pending</c>: el índice por enviar a <c>POST /v1/league/avatar</c>, o null.</summary>
+        public int? AvatarPending { get; set; }
+
         /// <summary>El registro no tiene nada (no hace falta guardar el bloque).</summary>
-        public bool IsEmpty => Week == null && Pending.Count == 0 && Counted.Count == 0 && MeWeek == null && CacheGlobal == null && CacheCountry == null;
+        public bool IsEmpty => Week == null && Pending.Count == 0 && Counted.Count == 0 && MeWeek == null && CacheGlobal == null && CacheCountry == null
+            && AvatarSent == null && AvatarPending == null;
 
         public LeagueCacheEntry? Cache(LeagueScope scope) => scope == LeagueScope.Country ? CacheCountry : CacheGlobal;
 
@@ -165,7 +172,20 @@ namespace AF.LiveOps
             CacheJson(sb, record.CacheGlobal);
             Key(sb, "country", false);
             CacheJson(sb, record.CacheCountry);
-            sb.Append("}}");
+            sb.Append('}');
+            if (record.AvatarSent.HasValue)
+            {
+                Key(sb, "avatar_sent", false); // D-056: solo si hay (el registro de antes se escribe igual)
+                Int(sb, record.AvatarSent.Value);
+            }
+
+            if (record.AvatarPending.HasValue)
+            {
+                Key(sb, "avatar_pending", false);
+                Int(sb, record.AvatarPending.Value);
+            }
+
+            sb.Append('}');
             return sb.ToString();
         }
 
@@ -238,6 +258,8 @@ namespace AF.LiveOps
                 record.CacheCountry = ReadCache(cache.Get("country"), LeagueScope.Country);
             }
 
+            record.AvatarSent = AvatarOf(OptInt(root, "avatar_sent"));
+            record.AvatarPending = AvatarOf(OptInt(root, "avatar_pending"));
             return record;
         }
 
@@ -298,6 +320,12 @@ namespace AF.LiveOps
                 Str(sb, r.Country);
                 sb.Append(',');
                 Int(sb, r.Points);
+                if (r.Avatar.HasValue)
+                {
+                    sb.Append(','); // D-056: el avatar como sexto elemento, solo si lo hay
+                    Int(sb, r.Avatar.Value);
+                }
+
                 sb.Append(']');
             }
 
@@ -316,6 +344,12 @@ namespace AF.LiveOps
             Int(sb, b.Me.NameNum);
             Key(sb, "country", false);
             Str(sb, b.Me.Country);
+            if (b.Me.Avatar.HasValue)
+            {
+                Key(sb, "avatar", false);
+                Int(sb, b.Me.Avatar.Value);
+            }
+
             sb.Append("}}");
         }
 
@@ -355,25 +389,32 @@ namespace AF.LiveOps
                 for (int i = 0; i < rows.Items.Count && top.Count < LeagueRules.MaxTop; i++)
                 {
                     JsonValue r = rows.Items[i];
-                    if (r.Kind != JsonKind.Array || r.Items.Count != 5 || r.Items[0].Kind != JsonKind.Number || r.Items[1].Kind != JsonKind.String
+                    if (r.Kind != JsonKind.Array || r.Items.Count < 5 || r.Items.Count > 6 || r.Items[0].Kind != JsonKind.Number || r.Items[1].Kind != JsonKind.String
                         || r.Items[2].Kind != JsonKind.Number || r.Items[4].Kind != JsonKind.Number)
                     {
                         continue;
                     }
 
                     string? country = r.Items[3].Kind == JsonKind.String ? r.Items[3].AsString() : null;
-                    top.Add(new LeagueRow(r.Items[0].AsInt(), r.Items[1].AsString(), r.Items[2].AsInt(), LeagueRules.IsCountryCode(country) ? country : null, r.Items[4].AsInt()));
+                    int? avatar = r.Items.Count == 6 && r.Items[5].Kind == JsonKind.Number ? AvatarOf(r.Items[5].AsInt()) : null;
+                    top.Add(new LeagueRow(r.Items[0].AsInt(), r.Items[1].AsString(), r.Items[2].AsInt(), LeagueRules.IsCountryCode(country) ? country : null, r.Items[4].AsInt(), avatar));
                 }
             }
 
             JsonValue? me = node.Get("me");
             LeagueMe mine = me != null && me.Kind == JsonKind.Object
                 ? new LeagueMe(Math.Max(0, OptInt(me, "points") ?? 0), OptInt(me, "rank"), OptInt(me, "percentile"), OptString(me, "name_key"),
-                    OptInt(me, "name_num") ?? 0, OptString(me, "country"))
+                    OptInt(me, "name_num") ?? 0, OptString(me, "country"), AvatarOf(OptInt(me, "avatar")))
                 : new LeagueMe(0, null, null, null, 0, null);
             string? boardCountry = OptString(node, "country");
             var board = new LeagueBoard(week, starts, ends, scope, LeagueRules.IsCountryCode(boardCountry) ? boardCountry : null, updated, top, mine);
             return new LeagueCacheEntry(board, fetched);
+        }
+
+        // Un índice de avatar del contrato (0-63) o null.
+        private static int? AvatarOf(int? value)
+        {
+            return value.HasValue && value.Value >= 0 && value.Value <= LeagueRules.MaxAvatar ? value : null;
         }
 
         private static LeagueWin? ReadWin(JsonValue node)

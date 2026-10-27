@@ -32,11 +32,11 @@ describe('contrato v1: esquemas', () => {
     expect([...cited].sort()).toEqual(SCHEMA_FILES);
   });
 
-  it('las rutas son únicas, van bajo /v1/ y cubren las 7 funciones', () => {
+  it('las rutas son únicas, van bajo /v1/ y cubren las 8 funciones', () => {
     const keys = index.operations.map(routeKey);
     expect(new Set(keys).size).toBe(keys.length);
     const fns = new Set([...index.operations.map((o) => o.function), ...index.jobs.map((j) => j.function)]);
-    expect([...fns].sort()).toEqual(['delete-account', 'league-board', 'league-wins', 'restore-ledger', 'rewarded-ssv', 'verify-purchase', 'voided-purchases-job']);
+    expect([...fns].sort()).toEqual(['delete-account', 'league-avatar', 'league-board', 'league-wins', 'restore-ledger', 'rewarded-ssv', 'verify-purchase', 'voided-purchases-job']);
   });
 
   it('integridad solo con Firebase Auth, y nunca en restoreLedger (plan F2-5)', () => {
@@ -134,6 +134,39 @@ describe('contrato v1: formatos', () => {
     expect(v({ code: '0123456789ABCDEFGHJKMNPQRI' })).toBe(false); // I no es Crockford
     expect(v({ code: 'kT3x9QeVb2Rz8LmN4pWs7YcA1dF5' })).toBe(false); // UID de Firebase
     expect(v({ code: '0123456789ABCDEFGHJKMNPQRS', uid: 'x' })).toBe(false);
+  });
+
+  it('avatar de la Liga (D-056): solo enteros de 0 a 63 y ningún otro campo', () => {
+    const v = validator('league-avatar.request.schema.json');
+    for (const avatar of [0, 7, 63]) expect(v({ avatar }), String(avatar)).toBe(true);
+    for (const avatar of [-1, 64, 1.5, '7', true, null]) expect(v({ avatar }), String(avatar)).toBe(false);
+    expect(v({})).toBe(false);
+    expect(v({ avatar: 7, uid: 'x' })).toBe(false);
+  });
+
+  it('compatibilidad v1: avatar es opcional y aditivo en las respuestas de la Liga', () => {
+    const board = validator('league-board.response.schema.json');
+    const wins = validator('league-wins.response.schema.json');
+    // Las respuestas anteriores a D-056 (sin avatar) siguen siendo válidas.
+    const oldBoard = readExample('league-board.response.json') as { top: Array<Record<string, unknown>>; me: Record<string, unknown> };
+    const oldWins = readExample('league-wins.response.json') as Record<string, unknown>;
+    expect(JSON.stringify(oldBoard)).not.toContain('avatar');
+    expect(board(oldBoard)).toBe(true);
+    expect(wins(oldWins)).toBe(true);
+    // Con avatar: entero 0-63 o null; nada fuera de rango.
+    for (const avatar of [0, 63, null]) {
+      expect(board({ ...oldBoard, top: [{ ...oldBoard.top[0], avatar }], me: { ...oldBoard.me, avatar } })).toBe(true);
+      expect(wins({ ...oldWins, avatar })).toBe(true);
+    }
+    for (const avatar of [-1, 64, '7']) {
+      expect(board({ ...oldBoard, top: [{ ...oldBoard.top[0], avatar }] })).toBe(false);
+      expect(board({ ...oldBoard, me: { ...oldBoard.me, avatar } })).toBe(false);
+      expect(wins({ ...oldWins, avatar })).toBe(false);
+    }
+    // La petición de victorias no cambia: el avatar no viaja con ellas.
+    expect(validator('league-wins.request.schema.json')({ ...(readExample('league-wins.request.json') as object), avatar: 7 })).toBe(false);
+    // La anaconda se sigue leyendo (quien ya la tiene la conserva; D-057, Q-AV-12).
+    expect(board({ ...oldBoard, me: { ...oldBoard.me, name_key: 'league_name_anaconda' } })).toBe(true);
   });
 
   it('verifyPurchase no acepta un uid en el cuerpo (sale del token)', () => {

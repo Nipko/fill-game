@@ -104,6 +104,13 @@ namespace AF.Save
         public AlbumData Album { get; } = new AlbumData();
 
         /// <summary>
+        /// <c>avatar</c> [P] (D-056; <c>docs/dev/avatares.md</c> §4.1; 08 §4.3): el avatar elegido, si se eligió, cuándo, y los de hito
+        /// desbloqueados y vistos (<see cref="AvatarData"/>). Entra sin migración (sin id, el bloque no se escribe): aún no se ha
+        /// publicado. En la fusión de la nube, unión de listas y la elección más reciente (<see cref="AvatarData.Merge"/>).
+        /// </summary>
+        public AvatarData Avatar { get; } = new AvatarData();
+
+        /// <summary>
         /// <c>daily_challenge</c> (08 §4.3 ampliado por R-Q4, R-Q5 y R-Q16; nota del Reto §10; enganche E4): el registro del Reto
         /// del río, o null si nunca se guardó (entonces la clave no se escribe). Vive en el mismo perfil que <see cref="Wallet"/>
         /// para que el registro del cobro y el pago salgan en la misma escritura (nunca dos pagos por la misma fecha). Las reglas

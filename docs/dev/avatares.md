@@ -55,8 +55,8 @@ La rana dardo y el jaguar ya son los iconos de Difícil y Muy difícil. Ganarlos
 ### 1.3 Reglas del desbloqueo [P]
 
 - **Todo sale del estado que ya existe** (08 §4.3), sin contadores nuevos:
-  - mundos: `progress.max_level` > el último nivel del mundo (un nivel saltado con el Salto del Boto cuenta como pasado);
-  - Difícil y Muy difícil: la victoria de un nivel con esa etiqueta, o `max_level` ≥ 41 / ≥ 61 para los perfiles anteriores;
+  - mundos: `progress.max_level` ≥ el último nivel del mundo, es decir, haberlo ganado (un nivel saltado con el Salto del Boto cuenta como pasado);
+  - Difícil y Muy difícil: la victoria de un nivel con esa etiqueta, o `max_level` ≥ 40 / ≥ 60 para los perfiles anteriores (el primer Difícil y el primer Muy difícil, 03 §12, con la misma regla de «≥ el nivel» que los mundos);
   - Crecida: al pagar el hito 10 (`streak.river_full` pasa a true);
   - Reto: `daily_challenge.streak_days` ≥ 7 al cobrar, o `stamps.days` con 20 o más;
   - Liga: `league.me.points` ≥ 50 en una respuesta del servidor.
@@ -346,7 +346,7 @@ Cambios:
    - **El servidor no valida contra la lista de 16, solo el rango:** un avatar nuevo de la 1.1 no exige desplegar el backend, igual que los niveles que no están en la tabla (liga.md §3.2).
    - Errores: 400 `bad_request` (fuera de rango o mal formado), 401, 403 `integrity_failed`, 429 `rate_limited` (más de 30 cambios en 24 h por UID [P]).
    - Si el UID aún no tiene seudónimo, **lo crea** (la misma función que `leagueWins`) y guarda el avatar con él, para que el jugador salga con su avatar desde su primera victoria.
-2. **`league-board.response`:** `top[].avatar` y `me.avatar`, opcionales, `integer` 0-63 o `null` (null = nunca eligió).
+2. **`league-board.response`:** `top[].avatar` y `me.avatar`, opcionales, `integer` 0-63 o `null` (null = nunca eligió). **El servidor omite el campo** cuando el jugador nunca eligió (`tanda6/avatares-liga-backend`): el cliente trata igual la falta y `null` (el disco neutro), y en su lectura tolerante un valor fuera de 0-63 también (un avatar de una versión más nueva).
 3. **`league-wins.response`:** `avatar`, opcional, el mismo tipo. La petición de victorias **no cambia** (`wins` sigue con `minItems` 1; el avatar no viaja con las victorias, para no mezclar un cambio de preferencia con la cola idempotente).
 4. **Ejemplos** nuevos en `examples/` (petición, respuesta, petición inválida fuera de rango) y su entrada en `index.json`. Los ejemplos de hoy siguen siendo válidos (el campo es opcional).
 
@@ -399,7 +399,7 @@ Cambios:
 | # | Carril | Agente | Qué | Tamaño | Depende de |
 |---|---|---|---|---|---|
 | 0 | `tanda6/avatares-gdd` | integrador (docs) | Con las respuestas de la sección 7: 06 §4.7 (Lobby y la pantalla «Tu avatar»), 06 §4.6 (el avatar no es el Cuaderno), 07 §7.9, 08 §4.3, §8.2, §9 (+1 clave) y §11 (la fusión), glosario §10 y §11, **liga.md §1, §3 y §4** (contrato), GDD.md §2 y §7. Regenerar `rc_defaults.py`. | S | Respuestas del dueño |
-| 1 | `tanda6/avatares-textos` | integrador o Gemini (D-054) | `strings.csv`:<br>• ~30 filas nuevas (`avatar_title`, `avatar_settings_row`, `avatar_home_a11y`, `avatar_new`, `avatar_new_dot_a11y`, `avatar_chosen_a11y`, `avatar_locked_a11y`, `avatar_league_alias`, y `avatar_goal_<hito>` y `avatar_goal_<hito>_long` para los 10 hitos, con `{n}` y `{world}`);<br>• `context` y `max_chars`;<br>• borrador en es-419, en y pt-BR.<br>Añadir a la `context` de las 16 `league_name_*` «también nombre de avatar (avatares.md)». `apply_translations.py --check`. | S | 0 |
+| 1 | `tanda6/avatares-textos` | integrador o Gemini (D-054) | `strings.csv`:<br>• ~30 filas nuevas (`avatar_title`, `avatar_settings_row`, `avatar_home_a11y`, `avatar_new`, `avatar_home_new_a11y`, `avatar_chosen_a11y`, `avatar_locked_a11y`, `avatar_league_alias`, y `avatar_goal_<hito>` y `avatar_goal_<hito>_long` para los 10 hitos, con `{n}` y `{world}`);<br>• `context` y `max_chars`;<br>• borrador en es-419, en y pt-BR.<br>Añadir a la `context` de las 16 `league_name_*` «también nombre de avatar (avatares.md)». `apply_translations.py --check`. | S | 0 |
 | 2 | `tanda6/avatares-backend` | Codex (`infra/`) | 4.4: esquemas, ejemplos, `index.json`, `league-avatar`, `service.ts`, `api-stack.ts`, tests, `infra/LEAGUE.md`. Verificación sin credenciales: `npm ci`, lint, typecheck, tests y `cdk synth`. Despliega el dueño. | M (~300-400 líneas) | 0 (liga.md) |
 | 3a | `tanda6/avatares-datos` | unity-gameplay-dev (sin Editor para los tests de dominio) | `AvatarCatalog` y `AvatarRules` (sin motor, en `AF.LiveOps`), `avatar` en `Profile.cs`, `CloudMerge.Fields.cs`, la evaluación de 1.3 enganchada a victoria, Reto, Crecida y Liga, los eventos de 4.2 y la clave de 4.3. Tests EditMode: hitos, retroactividad, fusión y default. | M | 0 |
 | 3b | `tanda6/avatares-arte` | unity-gameplay-dev (Editor) | `ProceduralArt.Avatars.cs`: los 16 retratos, el bloqueado, el disco neutro, el atlas perezoso por fotogramas y la ranura `avatar_<id>`. Tests: sin NaN, opacidad del disco, tiempo por retrato y sin asignaciones por fotograma. Capturas para el dueño (D-050: «el dueño ve capturas antes de integrar»). Si pasa de 400 líneas, en dos PR de 8 y 8. | L | 0; en paralelo con 3a |
