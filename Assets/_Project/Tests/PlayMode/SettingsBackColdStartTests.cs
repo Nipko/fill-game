@@ -10,7 +10,6 @@ using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 
@@ -28,7 +27,7 @@ namespace AF.Tests.PlayMode
     /// un anuncio simulado o el aviso del perfil bloqueado delante, Atrás no hace nada (revisión de FXT): no cierra lo que hay
     /// debajo, para que la compra o el anuncio no terminen sobre una pantalla ya cerrada.
     /// </summary>
-    public sealed class SettingsBackColdStartTests : InputTestFixture
+    public sealed class SettingsBackColdStartTests : UiInputTestFixture
     {
         private const string SettingsClosed = "AF_STATE {\"event\":\"settings_closed\"";
         private const string PurchaseSim = "AF_STATE {\"event\":\"purchase_sim\"";
@@ -50,13 +49,6 @@ namespace AF.Tests.PlayMode
         {
             GameBootstrap.ResetDailyOverrides();
             Application.logMessageReceived -= OnLog;
-
-            // El módulo de UI y la acción de Atrás usan el Input System de prueba: se apagan antes de restaurarlo.
-            InputSystemUIInputModule[] modules = UnityEngine.Object.FindObjectsByType<InputSystemUIInputModule>(FindObjectsSortMode.None);
-            for (int i = 0; i < modules.Length; i++)
-            {
-                modules[i].enabled = false;
-            }
 
             if (GameBootstrap.Current != null)
             {
