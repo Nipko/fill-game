@@ -74,12 +74,17 @@ namespace AF.Ads.Google
         }
 
         /// <inheritdoc />
-        public void Load(GmaAdKind kind, bool nonPersonalized)
+        public void Load(GmaAdKind kind, bool nonPersonalized, bool restrictedDataProcessing)
         {
             var request = new AdRequest();
             if (nonPersonalized)
             {
                 request.Extras.Add("npa", "1"); // 13-17, sin consentimiento de personalizados o sin país (08 §7)
+            }
+
+            if (restrictedDataProcessing)
+            {
+                request.Extras.Add("rdp", "1"); // T-L5: 13-17 con el país legal US, tratamiento restringido de datos ([F28])
             }
 
             string unit = _units.For(kind);

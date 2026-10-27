@@ -84,6 +84,7 @@ namespace AF.UI
             AnalyticsResetOverride = null;
             SimCountryOverride = null;
             AdProviderOverride = null; // D-042: el proveedor de anuncios de los tests
+            ResetAgeSignals(); // T-L3: Play Age Signals de los tests (GameBootstrap.AgeSignals.cs)
         }
 
         // false con la banda <13 guardada (StartsDataServicesAtBoot): el arranque no enciende Crashlytics, no descarga Remote Config,
@@ -119,7 +120,10 @@ namespace AF.UI
 
             IConsentStore actual = ConsentStoreOverride ?? store;
             ConsentRecord? record = actual.Load();
-            if (!ConsentPolicy.IsBlocked(record))
+            // T-L3: una señal de Play Age Signals de 0-12 recibida en este proceso (la escena se recarga tras bloquear) también para
+            // el arranque aquí, sin estar guardada.
+            AgeBand signalBand = CachedSignalBand(_rcConfigs?.Consent ?? ConsentConfig.Defaults);
+            if (!ConsentPolicy.IsBlocked(record) && signalBand != AgeBand.Under13)
             {
                 return false;
             }
@@ -130,7 +134,9 @@ namespace AF.UI
             CutSplash();
             _consentScreen ??= new ConsentScreen(transform, _art);
             _consentScreen.ShowBlocked();
-            DevProbe.ConsentState("blocked", ConsentPolicy.Flags(record, ConsentConfig.Defaults), record!.Profile, null, CountrySource.None);
+            DevProbe.ConsentState(
+                "blocked", ConsentPolicy.Flags(record, ConsentConfig.Defaults, signalBand: signalBand), record?.Profile ?? LegalProfiles.Default, null,
+                CountrySource.None);
             return true;
         }
 
@@ -234,6 +240,8 @@ namespace AF.UI
                 _consentStore.Precheck = (product, request) =>
                     BillingPrecheck(product) ?? _storeLedger?.CheckPurchasable(product, request); // nunca confirmar lo imposible (ni sin precio de Play, D-040)
             }
+
+            RequestAgeSignal(_consentConfig); // T-L3: Play Age Signals, si la fuente la incluye (GameBootstrap.AgeSignals.cs)
         }
 
         /// <summary>
@@ -419,7 +427,7 @@ namespace AF.UI
                 return ConsentAdsLine.Strict;
             }
 
-            return flow.Band == AgeBand.Teen ? ConsentAdsLine.Teen : ConsentAdsLine.Strict;
+            return flow.EffectiveBand == AgeBand.Teen ? ConsentAdsLine.Teen : ConsentAdsLine.Strict;
         }
 
         /// <summary>
@@ -547,7 +555,7 @@ namespace AF.UI
             _appliedConsent = flow.Record;
             ConsentFlags flags = flow.Flags;
             _analytics?.SetCollectionEnabled(flags.AnalyticsEnabled);
-            _consentAds?.Apply(flags);
+            _consentAds?.Apply(flags, _consentCountry); // T-L5: rdp=1 con 13-17 y el país legal US
             _consentStore?.Apply(flags);
             if (flags.Decided && flags.Profile != null)
             {
@@ -576,7 +584,7 @@ namespace AF.UI
                 .Add("analytics", report.Analytics)
                 .Add("ads_personalized", report.AdsPersonalized)
                 .Add("step", report.Step);
-            string? band = AgeBands.Id(report.Band);
+            string? band = report.AnalyticsAgeBand; // T-L4: solo la autodeclarada, y nunca si Play Age Signals la corrigió
             if (band != null)
             {
                 e.Add("age_band", band);

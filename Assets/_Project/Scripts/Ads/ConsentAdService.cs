@@ -70,6 +70,9 @@ namespace AF.Ads
         /// <summary>Veces que se pidieron las opciones de privacidad de UMP desde Ajustes (MAX: el formulario para un usuario ya preguntado [NV]).</summary>
         public int PrivacyOptionsRequests { get; private set; }
 
+        /// <summary>Las peticiones llevan <c>rdp=1</c> (13-17 con el país legal <c>US</c>; T-L5).</summary>
+        public bool RestrictedDataProcessing { get; private set; }
+
         /// <summary>Veces que se aplicaron flags (la primera inicializa; las siguientes, desde Ajustes, los actualizan).</summary>
         public int Applies { get; private set; }
 
@@ -77,7 +80,8 @@ namespace AF.Ads
         /// Aplica <paramref name="flags"/>: con una decisión vigente, inicializa (la primera vez) y fija los flags; con el bloqueo o sin
         /// decisión, deja los anuncios sin cargar (y con el bloqueo, TFCD por si algún día se inicializara).
         /// </summary>
-        public void Apply(ConsentFlags flags)
+        /// <remarks><paramref name="legalCountry"/>: el país del perfil legal (T-L5: <c>rdp=1</c> con 13-17 en <c>US</c>).</remarks>
+        public void Apply(ConsentFlags flags, string? legalCountry = null)
         {
             if (flags == null)
             {
@@ -90,9 +94,11 @@ namespace AF.Ads
             MaxAdContentRating = flags.MaxAdContentRating;
             Initialized = flags.Decided && !flags.Blocked;
             Applies++;
+            AdConsentSettings settings = AdConsentSettings.From(flags, legalCountry);
+            RestrictedDataProcessing = settings.RestrictedDataProcessing;
             if (_inner is IAdConsentTarget target)
             {
-                target.ApplyConsent(AdConsentSettings.From(flags));
+                target.ApplyConsent(settings);
             }
         }
 

@@ -541,6 +541,80 @@ namespace AF.Ads.Tests
             StringAssert.StartsWith("ca-app-pub-2916158449453694~", GoogleAdUnits.AndroidAppId);
         }
 
+        // ---- T-L5: rdp=1 con 13-17 en EE. UU. ([F28]) ----
+
+        private static void ApplyAndStart(Rig rig, ConsentFlags flags, string? country)
+        {
+            rig.Consent.Apply(flags, country);
+            rig.Port.ResolveConsent(true);
+            rig.Port.CompleteInitialization();
+        }
+
+        [Test]
+        public void TeenInTheUs_EveryRequestCarriesRdp()
+        {
+            var rig = new Rig();
+            ApplyAndStart(rig, FlagsFor(AgeBand.Teen, ads: true, profile: LegalProfiles.Default), "US");
+
+            Assert.That(rig.Google.Consent!.RestrictedDataProcessing, Is.True);
+            Assert.That(rig.Consent.RestrictedDataProcessing, Is.True);
+            Assert.That(rig.Port.Calls, Does.Contain("load:rewarded:npa=true:rdp=true"), "T-L5: rdp=1 además de npa=1");
+            Assert.That(rig.Port.Calls, Has.No.Member("load:rewarded:npa=true"), "ninguna petición sin rdp");
+        }
+
+        [TestCase("BR")]
+        [TestCase("MX")]
+        [TestCase(null)]
+        public void TeenOutsideTheUs_NoRdp(string? country)
+        {
+            var rig = new Rig();
+            ApplyAndStart(rig, FlagsFor(AgeBand.Teen, ads: true, profile: LegalProfiles.Default), country);
+
+            Assert.That(rig.Google.Consent!.RestrictedDataProcessing, Is.False);
+            Assert.That(rig.Port.Calls, Does.Contain("load:rewarded:npa=true"));
+            Assert.That(rig.Port.Count("load:rewarded:npa=true:rdp"), Is.EqualTo(0));
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void AdultInTheUs_NoRdp(bool ads)
+        {
+            var rig = new Rig();
+            ApplyAndStart(rig, FlagsFor(AgeBand.Adult, ads, profile: LegalProfiles.Default), "US");
+
+            Assert.That(rig.Google.Consent!.RestrictedDataProcessing, Is.False, "RDP solo para 13-17 (T-L5)");
+            Assert.That(rig.Port.Calls, Does.Contain("load:rewarded:npa=" + (ads ? "false" : "true")));
+        }
+
+        [Test]
+        public void TeenInTheUs_WithPersonalizationAllowedByConfig_StillCarriesRdp()
+        {
+            var config = new ConsentConfig { BizUnder18NoPersonalization = false };
+            ConsentFlags flags = ConsentPolicy.Flags(new ConsentRecord(LegalProfiles.Default, 1, At, true, true, AgeBand.Teen), config);
+            var rig = new Rig();
+            ApplyAndStart(rig, flags, "us");
+
+            Assert.That(rig.Port.Calls, Does.Contain("load:rewarded:npa=false:rdp=true"), "rdp no depende de npa");
+        }
+
+        [Test]
+        public void AdultInTheUs_CorrectedToTeenByTheAgeSignal_DiscardsTheLoadedAd_AndReloadsWithRdp()
+        {
+            var rig = new Rig();
+            var record = new ConsentRecord(LegalProfiles.Default, 1, At, true, true, AgeBand.Adult);
+            ApplyAndStart(rig, ConsentPolicy.Flags(record, ConsentConfig.Defaults), "US");
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
+            Assert.That(rig.Consent.IsReady(AdPlacement.Hint), Is.True);
+
+            // La señal de Play Age Signals llega tarde con 13-15 (T-L3): la más estricta, 13-17.
+            ConsentFlags corrected = ConsentPolicy.Flags(record, ConsentConfig.Defaults, signalBand: AgeBand.Teen);
+            Assert.That(corrected.BandFromSignal, Is.True);
+            rig.Consent.Apply(corrected, "US");
+
+            Assert.That(rig.Port.Calls[rig.Port.Calls.Count - 1], Is.EqualTo("load:rewarded:npa=true:rdp=true"),
+                "el anuncio pedido sin rdp se descarta y se vuelve a pedir con rdp=1");
+        }
+
         [Test]
         public void InTheEditor_TheProviderIsTheSimulatedOne()
         {

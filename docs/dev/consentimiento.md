@@ -196,7 +196,13 @@ Si B8 entra antes, la línea de `n` de `EmitLayout` se resuelve a mano: sumar `A
 - **MAX**: pasar `ChildDirected`, `NonPersonalized` y `MaxAdContentRating` de `ConsentAdService` a la API de su versión [NV]; inicializar en `Apply` con una decisión vigente. El mensaje de UMP lo muestra MAX («Google UMP automation»).
 - **Firebase Analytics**: el sumidero real con `RequiresConsent` = true; `firebase_analytics_collection_enabled=false` en el manifiesto hasta el consentimiento (08 §15.3).
 - **Play Games y Remote Config personalizado**: leer `ConsentFlags.PlayGamesAllowed` y `RcPersonalization` cuando lleguen.
-- **Play Age Signals** (`consent_age_signal_source` = `self_declared+play_age_signals`): sin implementar; hoy siempre se usa la autodeclaración. Es la compuerta de la Fase 5.
+- **Play Age Signals** (`consent_age_signal_source` = `self_declared+play_age_signals`; T-L3, D-057 y su añadido del 2026-10-27; `tanda6/age-signals`): la parte de C# está hecha y la del teléfono espera a la dependencia.
+  - **Sin motor (`AF.Platform/AgeSignals.cs`):** `AgeSignal` (formato del puente `adult`, `range:<inferior>[:<superior>]`, `none`, `error`), `IAgeSignals` con `FakeAgeSignals` y `AgeSignalPolicy`. Bandas: 0-12 → bloqueo como `<13`; 13-15 y 16-17 → 13-17; sin señal o con error → la autodeclarada. Con las dos, **la más estricta** (un 18+ verificado no relaja un 13-17 declarado [P]).
+  - **Flujo y flags:** `ConsentFlow.ApplyAgeSignal`, `SignalBand` y `EffectiveBand`; `ConsentPolicy.Flags(…, signalBand)` y `ConsentFlags.BandFromSignal`. La señal **no se guarda** en `profile.consent` (el registro conserva la autodeclarada); el bloqueo por señal se recuerda solo en el proceso, para que la escena recargada arranque bloqueada.
+  - **Arranque (`GameBootstrap.AgeSignals.cs`):** se pide una vez por proceso al montar el consentimiento (solo con la segunda fuente) y se recoge cada fotograma; si llega tarde, se vuelven a aplicar los flags y, con 0-12, `BlockSession`. No se espera a la señal antes de jugar (pregunta abierta en el informe de la rama).
+  - **T-L4:** `af_consent.age_band` = `ConsentReport.AnalyticsAgeBand`: la autodeclarada, y nada si la señal la corrigió.
+  - **En el teléfono (`AF.UI/AndroidAgeSignals.cs`):** JNI a `com.amazonfill.agesignals.AfAgeSignals.request(activity, listener)`. **Pendiente:** el puente Java y la dependencia Maven de Play Age Signals API 0.0.4 (la coordenada no está en el repositorio con fuente). Sin el puente, la llamada da `error` y manda la autodeclarada.
+  - El default de 08 §9 sigue en `self_declared` hasta que entre el puente.
 
 ---
 

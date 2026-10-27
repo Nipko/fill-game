@@ -14,7 +14,7 @@ namespace AF.Ads
         private readonly bool[] _ready = new bool[2];
 
         /// <summary>
-        /// Cada llamada, en orden: <c>config:tfua=false</c>, <c>ump:tfua=false</c>, <c>init</c>, <c>load:rewarded:npa=true</c>,
+        /// Cada llamada, en orden: <c>config:tfua=false</c>, <c>ump:tfua=false</c>, <c>init</c>, <c>load:rewarded:npa=true</c> (con <c>:rdp=true</c> si va <c>rdp=1</c>),
         /// <c>show:rewarded:user</c> (o <c>:nouser</c>), <c>privacy</c>. El UID no se apunta (nunca a los logs).
         /// </summary>
         public List<string> Calls { get; } = new List<string>();
@@ -103,9 +103,10 @@ namespace AF.Ads
         }
 
         /// <inheritdoc />
-        public void Load(GmaAdKind kind, bool nonPersonalized)
+        public void Load(GmaAdKind kind, bool nonPersonalized, bool restrictedDataProcessing)
         {
-            Calls.Add("load:" + Name(kind) + ":npa=" + (nonPersonalized ? "true" : "false"));
+            // rdp solo se apunta cuando va (T-L5), para que las llamadas de siempre se lean igual.
+            Calls.Add("load:" + Name(kind) + ":npa=" + (nonPersonalized ? "true" : "false") + (restrictedDataProcessing ? ":rdp=true" : string.Empty));
             if (AutoFill)
             {
                 _ready[(int)kind] = true;
