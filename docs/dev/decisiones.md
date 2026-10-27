@@ -4086,3 +4086,9 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - las propuestas del `glosario.diff` (T2-Q11);
   - las dos líneas `borrador` de `fact.agua_tapajos.14` y `.19`, sustituidas por las que propone el resumen §4.2.
 - **Encargo:** carril `tanda6/integra-gemini-textos`.
+- **Del integrador (2026-10-26), al integrar `tanda6/integra-gemini-textos`:**
+  - `LocReleaseGate` pasa de 1.087 a 0.
+  - 1.085 filas quedan en `aprobado_es` y 2.728 celdas en `revisado_nativo`.
+  - En los CSV de la entrega se editaron 4 celdas, para que el `--check` las dé por aplicadas: `world_w03_name`, `world_w11_name` y `fact.agua_tapajos.14` y `.19`.
+  - Las `notes` de `strings.csv` y `facts.csv` siguen diciendo «Pendiente del asesor cultural»; se ponen al día en otra tarea.
+  - Un cambio posterior del español de una fila revisada hace fallar `--check`: se cierra con una entrega nueva de revisión.
