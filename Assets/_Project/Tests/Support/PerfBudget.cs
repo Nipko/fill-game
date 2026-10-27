@@ -6,15 +6,14 @@ namespace AF.Tests
 {
     /// <summary>
     /// Presupuestos de tiempo de reloj (ms) de los tests de rendimiento. Los números de los tests son los del escritorio, donde
-    /// se miden tal cual (factor 1). En la CI de GitHub (runner Linux compartido, sin GPU y varias veces más lento) se
-    /// multiplican por <see cref="CiFactor"/>: la primera ejecución real de ci.yml (2026-10-27) dio 17,4 ms frente a 10 y
-    /// 14,95 frente a 8 (≈ 1,9 ×). Así la CI sigue parando una regresión grande (un bucle o una asignación por píxel) sin
-    /// romperse por la máquina, y el escritorio sigue vigilando el presupuesto exacto.
+    /// se miden tal cual (factor 1). La CI de GitHub (runner Linux compartido, sin GPU y más lento) los multiplica por un
+    /// factor que pide ella misma: ci.yml pasa <c>-afPerfBudgetFactor 3</c>. La primera ejecución real de ci.yml (2026-10-27)
+    /// dio 17,4 ms frente a 10 y 14,95 frente a 8 (≈ 1,9 ×). Así la CI sigue parando una regresión grande (un bucle o una
+    /// asignación por píxel) sin romperse por la máquina, y el escritorio sigue vigilando el presupuesto exacto.
     /// <para>
-    /// El factor sale, por orden: del argumento <c>-afPerfBudgetFactor N</c> de la línea de comandos de Unity (ci.yml lo pasa
-    /// con <c>customParameters</c>), de la variable <c>AF_PERF_BUDGET_FACTOR</c>, o de <c>GITHUB_ACTIONS</c> o <c>CI</c> =
-    /// <c>true</c> (<see cref="CiFactor"/>); si no, 1. Nunca es menor que 1: solo afloja, no aprieta. Un valor ilegible se
-    /// ignora y se pasa a la fuente siguiente.
+    /// El factor sale, por orden, del argumento <c>-afPerfBudgetFactor N</c> de la línea de comandos de Unity o de la variable
+    /// <c>AF_PERF_BUDGET_FACTOR</c>; si no, 1. No se deduce del entorno (<c>CI</c>, <c>GITHUB_ACTIONS</c>): solo afloja quien
+    /// lo pide. Nunca es menor que 1. Un valor ilegible se ignora y se pasa a la fuente siguiente.
     /// </para>
     /// </summary>
     public static class PerfBudget
@@ -25,9 +24,6 @@ namespace AF.Tests
         /// <summary>Variable de entorno con el factor.</summary>
         public const string FactorVariable = "AF_PERF_BUDGET_FACTOR";
 
-        /// <summary>Factor en la CI cuando no se da otro (≈ 1,9 × medido, con margen).</summary>
-        public const double CiFactor = 3d;
-
         private static double? s_factor;
 
         /// <summary>Factor de esta ejecución (1 en el escritorio).</summary>
@@ -36,7 +32,7 @@ namespace AF.Tests
         /// <summary>El presupuesto del escritorio <paramref name="desktopMs"/> con el factor de esta ejecución.</summary>
         public static double Ms(double desktopMs) => desktopMs * Factor;
 
-        /// <summary>Texto para el mensaje del assert: «≤ 8 ms» o «≤ 24 ms (8 × 3, CI)».</summary>
+        /// <summary>Texto para el mensaje del assert: «≤ 8 ms» o «≤ 24 ms (8 × 3, factor de la CI)».</summary>
         public static string Describe(double desktopMs)
         {
             string budget = Ms(desktopMs).ToString("0.##", CultureInfo.InvariantCulture);
@@ -46,7 +42,7 @@ namespace AF.Tests
             }
 
             return "≤ " + budget + " ms (" + desktopMs.ToString("0.##", CultureInfo.InvariantCulture) + " × "
-                + Factor.ToString("0.##", CultureInfo.InvariantCulture) + ", CI)";
+                + Factor.ToString("0.##", CultureInfo.InvariantCulture) + ", factor de la CI)";
         }
 
         /// <summary>Calcula el factor a partir de los argumentos y del entorno (público para sus tests).</summary>
@@ -68,11 +64,6 @@ namespace AF.Tests
                 return fromVariable;
             }
 
-            if (IsTrue(environment("GITHUB_ACTIONS")) || IsTrue(environment("CI")))
-            {
-                return CiFactor;
-            }
-
             return 1d;
         }
 
@@ -89,8 +80,5 @@ namespace AF.Tests
             factor = Math.Max(1d, parsed);
             return true;
         }
-
-        private static bool IsTrue(string? raw) =>
-            raw != null && (string.Equals(raw.Trim(), "true", StringComparison.OrdinalIgnoreCase) || raw.Trim() == "1");
     }
 }

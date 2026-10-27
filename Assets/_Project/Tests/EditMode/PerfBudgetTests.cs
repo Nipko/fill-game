@@ -5,8 +5,8 @@ using NUnit.Framework;
 namespace AF.Tests.EditMode
 {
     /// <summary>
-    /// <see cref="PerfBudget"/>: en el escritorio, los presupuestos de tiempo tal cual; en la CI, con holgura; nunca más
-    /// estrictos que en el escritorio.
+    /// <see cref="PerfBudget"/>: en el escritorio, los presupuestos de tiempo tal cual; con holgura solo si se pide
+    /// (<c>-afPerfBudgetFactor</c> o <c>AF_PERF_BUDGET_FACTOR</c>), y nunca más estrictos que en el escritorio.
     /// </summary>
     public sealed class PerfBudgetTests
     {
@@ -22,34 +22,34 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Desktop_WithoutCiOrFactor_IsOne()
+        public void WithoutArgumentOrVariable_IsOne()
         {
             Assert.That(PerfBudget.Resolve(new[] { "Unity.exe", "-batchmode" }, Env()), Is.EqualTo(1d));
-            Assert.That(PerfBudget.Resolve(null, Env("CI", "false", "GITHUB_ACTIONS", "")), Is.EqualTo(1d));
+            Assert.That(PerfBudget.Resolve(null, Env()), Is.EqualTo(1d));
         }
 
         [Test]
-        public void GitHubActionsOrCi_UsesTheCiFactor()
+        public void TheCiEnvironment_DoesNotLoosenByItself()
         {
-            Assert.That(PerfBudget.Resolve(null, Env("GITHUB_ACTIONS", "true")), Is.EqualTo(PerfBudget.CiFactor));
-            Assert.That(PerfBudget.Resolve(null, Env("CI", "TRUE")), Is.EqualTo(PerfBudget.CiFactor));
-            Assert.That(PerfBudget.Resolve(null, Env("CI", "1")), Is.EqualTo(PerfBudget.CiFactor));
+            Assert.That(PerfBudget.Resolve(null, Env("GITHUB_ACTIONS", "true", "CI", "true")), Is.EqualTo(1d),
+                "solo afloja quien lo pide: ci.yml pasa -afPerfBudgetFactor");
         }
 
         [Test]
-        public void TheArgument_WinsOverTheVariable_AndTheVariableOverCi()
+        public void TheArgument_WinsOverTheVariable()
         {
             string[] args = { "Unity", PerfBudget.FactorArgument, "2.5" };
-            Assert.That(PerfBudget.Resolve(args, Env(PerfBudget.FactorVariable, "4", "CI", "true")), Is.EqualTo(2.5d));
-            Assert.That(PerfBudget.Resolve(null, Env(PerfBudget.FactorVariable, "4", "CI", "true")), Is.EqualTo(4d));
+            Assert.That(PerfBudget.Resolve(args, Env(PerfBudget.FactorVariable, "4")), Is.EqualTo(2.5d));
+            Assert.That(PerfBudget.Resolve(null, Env(PerfBudget.FactorVariable, "4")), Is.EqualTo(4d));
+            Assert.That(PerfBudget.Resolve(new[] { "-afperfbudgetfactor", "3" }, Env()), Is.EqualTo(3d), "sin distinguir mayúsculas");
         }
 
         [Test]
         public void NeverTighter_AndUnreadableValuesFallThrough()
         {
             Assert.That(PerfBudget.Resolve(new[] { PerfBudget.FactorArgument, "0.5" }, Env()), Is.EqualTo(1d), "solo afloja");
-            Assert.That(PerfBudget.Resolve(new[] { PerfBudget.FactorArgument, "x" }, Env("GITHUB_ACTIONS", "true")),
-                Is.EqualTo(PerfBudget.CiFactor), "ilegible: la fuente siguiente");
+            Assert.That(PerfBudget.Resolve(new[] { PerfBudget.FactorArgument, "x" }, Env(PerfBudget.FactorVariable, "2")),
+                Is.EqualTo(2d), "ilegible: la fuente siguiente");
             Assert.That(PerfBudget.Resolve(new[] { PerfBudget.FactorArgument }, Env(PerfBudget.FactorVariable, "NaN")), Is.EqualTo(1d));
         }
 
