@@ -27,7 +27,8 @@
 #   build-android solo en main (o a mano): AAB sin firma de release con AF.EditorTools.BuildRelease, IL2CPP ARM64 y
 #                 Managed Stripping High, y las compuertas size-gate (<= 80 MB), check-16kb, check-manifest y
 #                 check-release-classes (sin firebase-appcheck-debug; D-033, anadido del 2026-10-22, punto 9) y
-#                 check-no-unity-iap (sin Unity IAP ni su telemetria; D-040, anadido de Q-IAP-1).
+#                 check-no-unity-iap (sin Unity IAP ni su telemetria; D-040, anadido de Q-IAP-1) y check-no-applovin
+#                 (sin AppLovin MAX; D-049, anadido del 2026-10-27).
 #
 # Licencia Personal: solo los secretos UNITY_EMAIL y UNITY_PASSWORD (los crea el dueno; aqui solo se referencian) y
 # los jobs de Unity en serie (concurrency unity-personal-seat). Sin keystore: el AAB va firmado con la clave de
@@ -404,6 +405,11 @@ jobs:
       # en .so y global-metadata.dat (el codigo C# de Unity IAP va en IL2CPP, no en el dex) y vale para dev.
       - name: Compuerta sin Unity IAP (com.unity.purchasing ni su telemetria)
         run: pwsh -NoProfile -File ci/check-no-unity-iap.ps1 build/Android
+
+      # D-049, anadido del 2026-10-27: AppLovin MAX salio del proyecto; ni su SDK (com/applovin, okhttp3 renombrado),
+      # ni libapplovin-native-crash-reporter.so, ni su plugin de C# vuelven a entrar en el AAB.
+      - name: Compuerta sin AppLovin MAX (com.applovin ni libapplovin)
+        run: pwsh -NoProfile -File ci/check-no-applovin.ps1 build/Android
 
       - name: AAB
         uses: actions/upload-artifact@v4.6.2

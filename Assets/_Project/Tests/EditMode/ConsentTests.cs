@@ -614,7 +614,7 @@ namespace AF.Tests.EditMode
 
             flow.Choose(ConsentAnswer.AcceptAll);
 
-            Assert.That(store.Record!.AdsPersonalized, Is.False, "lo decide UMP al inicializar MAX (08 §7 #2)");
+            Assert.That(store.Record!.AdsPersonalized, Is.False, "lo decide UMP al inicializar los anuncios (08 §7 #2)");
             Assert.That(store.Record!.Analytics, Is.True);
             Assert.That(store.Record!.Profile, Is.EqualTo("ump"));
         }

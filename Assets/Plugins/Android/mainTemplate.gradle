@@ -10,7 +10,6 @@ dependencies {
     implementation 'androidx.fragment:fragment:1.7.1' // Packages/com.google.ads.mobile/GoogleMobileAds/Editor/GoogleMobileAdsDependencies.xml:22
     implementation 'androidx.lifecycle:lifecycle-process:2.6.2' // Packages/com.google.ads.mobile/GoogleMobileAds/Editor/GoogleMobileAdsDependencies.xml:17
     implementation 'com.android.billingclient:billing:9.0.0' // Assets/_Project/Plugins/Editor/AfBillingDependencies.xml:10
-    implementation 'com.applovin:applovin-sdk:13.6.4' // Packages/com.applovin.mediation.ads/AppLovin/Editor/Dependencies.xml:4
     implementation 'com.google.android.gms:play-services-ads:25.4.0' // Packages/com.google.ads.mobile/GoogleMobileAds/Editor/GoogleMobileAdsDependencies.xml:7
     implementation 'com.google.android.gms:play-services-base:18.10.1' // Packages/com.google.firebase.app/Firebase/Editor/AppDependencies.xml:20
     implementation 'com.google.android.gms:play-services-games-v2:22.1.0' // Packages/com.google.play.games/Editor/GooglePlayGamesPluginDependencies.xml:9

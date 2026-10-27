@@ -15,7 +15,7 @@ namespace AF.Analytics.Firebase
     /// entrega eventos con la recogida encendida. Además Firebase recoge por su cuenta (sesiones, primera apertura): el manifiesto
     /// (<c>Assets/Plugins/Android/LauncherManifest.xml</c>) arranca con <c>firebase_analytics_collection_enabled = false</c>, sin
     /// almacenamiento de analítica ni de anuncios y sin ID de publicidad, y <see cref="SetCollectionEnabled"/> sigue al consentimiento.
-    /// Las señales de anuncios (<c>ad_storage</c>, <c>ad_user_data</c>, <c>ad_personalization</c>) siguen denegadas: llegan con MAX y UMP.
+    /// Las señales de anuncios (<c>ad_storage</c>, <c>ad_user_data</c>, <c>ad_personalization</c>) siguen denegadas: llegan con Google Mobile Ads y UMP.
     /// Sin <c>user_id</c>: el UID de Firebase Auth nunca va a la analítica.
     /// </para>
     /// Los booleanos, que en el evento son <c>true</c>/<c>false</c>, llegan a Firebase como 0/1 (D-033, Q-B7-18 (a);

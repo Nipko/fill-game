@@ -53,31 +53,31 @@ namespace AF.Ads
     }
 
     /// <summary>
-    /// Una impresión pagada (ILR de MAX u <c>OnAdPaid</c> de Google Mobile Ads, D-049) para el evento recomendado de Firebase <c>ad_impression</c> (08 §8.2; <c>ads_ilr_to_firebase</c>):
+    /// Una impresión pagada (<c>OnAdPaid</c> de Google Mobile Ads, D-049) para el evento recomendado de Firebase <c>ad_impression</c> (08 §8.2; <c>ads_ilr_to_firebase</c>):
     /// <c>ad_platform</c>, <c>ad_source</c>, <c>ad_format</c>, <c>ad_unit_name</c>, <c>value</c> y <c>currency</c>. Sin identificadores.
     /// </summary>
     public sealed class AdImpression
     {
-        /// <summary><c>ad_platform</c> de AppLovin MAX (D-042).</summary>
-        public const string PlatformAppLovin = "appLovin";
-
         /// <summary><c>ad_platform</c> de Google Mobile Ads (AdMob directo, D-049).</summary>
         public const string PlatformAdMob = "AdMob";
 
-        /// <summary>Crea la impresión (<paramref name="platform"/>: <see cref="PlatformAppLovin"/> por defecto, o <see cref="PlatformAdMob"/>).</summary>
-        public AdImpression(string adSource, AdPlacement placement, double value, string currency = "USD", string platform = PlatformAppLovin)
+        /// <summary>
+        /// Crea la impresión (<paramref name="platform"/>: <see cref="PlatformAdMob"/> por defecto). Las redes de la mediación de AdMob
+        /// (también AppLovin si entra así, añadido de D-049 del 2026-10-27) van en <paramref name="adSource"/>, no en la plataforma.
+        /// </summary>
+        public AdImpression(string adSource, AdPlacement placement, double value, string currency = "USD", string platform = PlatformAdMob)
         {
-            AdPlatform = string.IsNullOrEmpty(platform) ? PlatformAppLovin : platform;
+            AdPlatform = string.IsNullOrEmpty(platform) ? PlatformAdMob : platform;
             AdSource = adSource ?? string.Empty;
             Placement = placement;
             Value = value;
             Currency = currency ?? "USD";
         }
 
-        /// <summary><c>ad_platform</c>: <c>appLovin</c> (MAX) o <c>AdMob</c> (Google Mobile Ads, D-049).</summary>
+        /// <summary><c>ad_platform</c>: <c>AdMob</c> (Google Mobile Ads, D-049).</summary>
         public string AdPlatform { get; }
 
-        /// <summary><c>ad_source</c>: la red que sirvió el anuncio (el <c>NetworkName</c> de MAX o el <c>AdSourceName</c> de Google).</summary>
+        /// <summary><c>ad_source</c>: la red que sirvió el anuncio (el <c>AdSourceName</c> de Google).</summary>
         public string AdSource { get; }
 
         /// <summary>La ubicación del juego (<c>ad_unit_name</c> = su ID).</summary>
@@ -89,7 +89,7 @@ namespace AF.Ads
         /// <summary><c>value</c>: ingreso estimado de la impresión.</summary>
         public double Value { get; }
 
-        /// <summary><c>currency</c>: MAX informa en USD; Google, en la moneda de su <c>AdValue</c>.</summary>
+        /// <summary><c>currency</c>: la moneda del <c>AdValue</c> de Google (USD si no viene).</summary>
         public string Currency { get; }
     }
 
@@ -98,33 +98,5 @@ namespace AF.Ads
     {
         /// <summary>Cada impresión pagada, en el hilo principal.</summary>
         event Action<AdImpression>? Impression;
-    }
-
-    /// <summary>
-    /// Sin proveedor de anuncios: nunca hay anuncio (un build de release sin la configuración de MAX, que no debe enseñar el anuncio
-    /// simulado). Los botones de video se ocultan y el intersticial no sale (05 §6.2).
-    /// </summary>
-    public sealed class UnavailableAdService : IAdService
-    {
-        /// <inheritdoc />
-        public bool IsShowing => false;
-
-        /// <inheritdoc />
-        public bool IsReady(AdPlacement placement)
-        {
-            placement.ToId();
-            return false;
-        }
-
-        /// <inheritdoc />
-        public void Show(AdPlacement placement, Action<AdOutcome> onDone)
-        {
-            if (onDone == null)
-            {
-                throw new ArgumentNullException(nameof(onDone));
-            }
-
-            onDone(AdOutcome.NoFill);
-        }
     }
 }

@@ -87,7 +87,7 @@ Fuentes por URL principal (del manifiesto, agrupadas; columna «Autor», tal cua
 
 | SDK | Versión fijada | Licencia [NV] |
 |---|---|---|
-| AppLovin MAX + adaptadores (AdMob, Unity Ads, Meta Audience Network, Mintegral) | 8.6.6 | Términos de cada red |
+| ~~AppLovin MAX + adaptadores~~ (retirado del proyecto: añadido de D-049 del 2026-10-27; los anuncios van con Google Mobile Ads 11.5.0, `docs/legal/avisos-de-licencia.md`) | — | — |
 | Firebase Unity SDK (Analytics, Crashlytics, Remote Config, Auth, App Check, Functions) | 13.17.0 | Apache 2.0 y términos de Firebase [NV] |
 | Unity In App Purchasing (+ Authentication 3.7.1 o superior) | 5.4.4 | Términos de Unity |
 | Play Games plugin for Unity | 2.3.0 | Apache 2.0 [NV] |

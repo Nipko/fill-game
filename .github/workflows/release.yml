@@ -12,7 +12,7 @@
 #   build      AF.EditorTools.BuildRelease.BuildAndroid -afRequireSigning (IL2CPP ARM64, Managed Stripping High, sin
 #              Development Build) y las compuertas: size-gate -RequireBundletool, check-16kb con
 #              CHECK16_REQUIRE_ZIPALIGN=1, check-manifest -Mode release -RequireBilling, check-release-classes,
-#              check-no-unity-iap, applicationId y version del manifiesto, y la firma (ci/check-release-signature.sh).
+#              check-no-unity-iap, check-no-applovin (D-049, anadido del 2026-10-27), applicationId y version del manifiesto, y la firma (ci/check-release-signature.sh).
 #
 # Secretos (los crea el dueno; aqui solo se referencian, nunca con echo): UNITY_EMAIL y UNITY_PASSWORD en el
 # repositorio; ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASS, ANDROID_KEYALIAS_NAME y ANDROID_KEYALIAS_PASS en el
@@ -251,6 +251,9 @@ jobs:
 
       - name: Compuerta sin Unity IAP (com.unity.purchasing ni su telemetria)
         run: pwsh -NoProfile -File ci/check-no-unity-iap.ps1 build/Android
+
+      - name: Compuerta sin AppLovin MAX (com.applovin ni libapplovin)
+        run: pwsh -NoProfile -File ci/check-no-applovin.ps1 build/Android
 
       # Artefacto de la ejecucion; NO se sube a Google Play (lo hace el dueno a mano).
       - name: AAB de release

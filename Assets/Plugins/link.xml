@@ -4,7 +4,7 @@
   (lectores JSON propios: AF.Levels y AF.Save), así que no se preserva.
   - Unity.InputSystem: crea layouts, procesadores e interacciones por nombre (InputSystem.RegisterLayout y cadenas como
     "processors=..."); la acción de Atrás de Android (Escape) depende de ello.
-  Cuando lleguen los SDK (Firebase, IAP, MAX), sus entradas van aquí con la guía de cada SDK (08 §5.4).
+  Cuando lleguen los SDK (Firebase, Play Billing, Google Mobile Ads), sus entradas van aquí con la guía de cada SDK (08 §5.4).
   Si un SDK falla por reflexión con High, se vuelve a Medium (08 §16.3, punto 3).
 -->
 <linker>
