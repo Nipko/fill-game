@@ -664,7 +664,7 @@ namespace AF.Tests.PlayMode
 
             for (int i = 0; i < levels.Length; i++)
             {
-                Assert.That(best[i], Is.LessThanOrEqualTo(8.0), "nivel " + levels[i] + ": " + report);
+                Assert.That(best[i], Is.LessThanOrEqualTo(PerfBudget.Ms(8.0)), "nivel " + levels[i] + " (" + PerfBudget.Describe(8.0) + "): " + report);
                 Assert.That(land[i], Is.GreaterThan(0), "la tierra");
             }
 

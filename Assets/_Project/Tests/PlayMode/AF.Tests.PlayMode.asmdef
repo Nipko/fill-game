@@ -27,7 +27,8 @@
     "AF.Events",
     "AF.RemoteConfig",
     "AF.RemoteConfig.Binding",
-    "AF.Analytics"
+    "AF.Analytics",
+    "AF.Tests.Support"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

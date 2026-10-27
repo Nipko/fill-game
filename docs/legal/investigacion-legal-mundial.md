@@ -288,6 +288,7 @@ El art. 4.5 de la Directiva 2019/882 exime a las **microempresas que prestan ser
 - Los datos que el sistema de pagos recoge para procesar la transacción **no los declara el desarrollador** [F56]: así se cierra Q-BILL-2 en Data Safety.
 - La IP de los registros solo se declara si se deriva una ubicación. **La Liga usa el país de la conexión de CloudFront** (`data-safety.md`, Liga), así que hay que declarar **«Ubicación aproximada»** para la Liga, como ya propone el borrador.
 - **Incoherencia detectada:** la política dice «la implementación inicial usa la región del teléfono» y `data-safety.md` dice «primero el país de conexión de CloudFront». El integrador comprueba el código y alinea los dos textos (§11, T-L12).
+- **Resuelto (T-L12, 2026-10-27):** la Liga **no** usa CloudFront. El cliente manda el país del perfil legal (SIM o, si no hay, la región del teléfono) y el servidor ignora `CloudFront-Viewer-Country` (`infra/LEAGUE.md`; `infra/functions/league/rules.ts`). La política y `data-safety.md` ya lo dicen así; la línea anterior sobre CloudFront no se aplica.
 
 ---
 
@@ -415,7 +416,7 @@ El art. 4.5 de la Directiva 2019/882 exime a las **microempresas que prestan ser
 |---|---|
 | Crashlytics y Remote Config antes del consentimiento | «Opcional: no» mientras no exista el interruptor; con T-L6, Crashlytics pasa a «opcional: sí» |
 | Plazo fiscal del libro mayor | 7 años (§9, fila 20) |
-| IP de los registros | No se declara por sí sola: no se deriva ubicación; sí «Ubicación aproximada» por el país de CloudFront de la Liga (§7.5) |
+| IP de los registros | No se declara por sí sola: no se deriva ubicación; sí «Ubicación aproximada» por el país de CloudFront de la Liga (§7.5). **Resuelto (T-L12, 2026-10-27):** la Liga no usa CloudFront; el país lo manda el teléfono (SIM o región) y no se declara «Ubicación aproximada» por la conexión (§7.5; `data-safety.md`) |
 | Registros de Play Billing (Q-BILL-2) | No se declaran: los recoge el sistema de pagos para procesar la transacción [F56] |
 | Liga: categoría «compartido» | Mantener «compartido» para el seudónimo, la bandera y los puntos, como propone el borrador; la excepción por acción del usuario no está clara [NV] |
 

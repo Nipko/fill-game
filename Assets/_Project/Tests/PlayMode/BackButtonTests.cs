@@ -6,7 +6,6 @@ using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
 
 namespace AF.Tests.PlayMode
@@ -19,7 +18,7 @@ namespace AF.Tests.PlayMode
     /// abiertos, y la fase no cambia ni se cobra nada. Hoy el juego no maneja Atrás en ningún sitio: el test protege que siga
     /// sin cerrar el embudo cuando se añada (p. ej. para la pausa).
     /// </summary>
-    public sealed class BackButtonTests : InputTestFixture
+    public sealed class BackButtonTests : UiInputTestFixture
     {
         private const int FramesPressed = 3;
 
@@ -33,13 +32,6 @@ namespace AF.Tests.PlayMode
         /// <inheritdoc />
         public override void TearDown()
         {
-            // El módulo de UI de la escena usa acciones creadas con el Input System de prueba: se apaga antes de restaurarlo.
-            InputSystemUIInputModule[] modules = Object.FindObjectsByType<InputSystemUIInputModule>(FindObjectsSortMode.None);
-            for (int i = 0; i < modules.Length; i++)
-            {
-                modules[i].enabled = false;
-            }
-
             LaunchOptions.Reset();
             base.TearDown();
         }

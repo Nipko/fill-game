@@ -81,6 +81,8 @@ describe('web/site', () => {
         const sections = (d: string): string[] => [...d.matchAll(/<h2 id="([^"]+)"/g)].map((m) => m[1]);
         expect(sections(doc), `${page.id} ${lang}`).toEqual(sections(es));
         expect(markers(doc), `${page.id} ${lang}`).toEqual(markers(es));
+        // D-057: el aviso de versión previa va justo en las páginas que aún tienen datos del dueño pendientes.
+        expect(markers(doc).length > 0, `${page.id} ${lang}: aviso de versión previa`).toBe(page.draft);
         expect(doc.includes('<form id="delete-form"'), `${page.id} ${lang}`).toBe(page.id === 'delete');
       }
     }
@@ -207,11 +209,18 @@ describe('web/site', () => {
       }
     }
     // Las únicas salidas son enlaces (no recursos) al sitio del desarrollador y a las políticas de Google como socio de
-    // anuncios (AdMob, D-049).
+    // anuncios (AdMob, D-049), las de los proveedores (Firebase y AWS) y los textos de las licencias de terceros de
+    // Créditos (T-L13, D-057).
     expect([...externalLinks].sort()).toEqual([
+      'https://aws.amazon.com/privacy/',
+      'https://developer.android.com/studio/terms',
+      'https://firebase.google.com/support/privacy',
+      'https://opensource.org/license/mit',
       'https://parallext.com',
       'https://policies.google.com/privacy',
       'https://policies.google.com/technologies/partner-sites',
+      'https://unity3d.com/legal/licenses/unity_companion_license',
+      'https://www.apache.org/licenses/LICENSE-2.0',
     ]);
     const css = site.get('assets/site.css') ?? '';
     expect(css).not.toMatch(/@import|url\(|@font-face/);
@@ -219,6 +228,20 @@ describe('web/site', () => {
     expect(js).not.toMatch(/https?:\/\/|document\.cookie|localStorage|sessionStorage|eval\(|new Function/);
     // Ningún carácter fuera de ASCII en el script (se sirve sin charset).
     expect([...js].every((c) => c.charCodeAt(0) < 128)).toBe(true);
+  });
+
+  it('la tabla de datos de la privacidad tiene una sola fila de anuncios (AD_ID) y una de Crashlytics por idioma', () => {
+    // Guarda de la fusión 5699efd5, que repitió la fila de anuncios y perdió la de Crashlytics.
+    const privacy = PAGES.find((p) => p.id === 'privacy');
+    if (!privacy) throw new Error('Falta la página de privacidad');
+    for (const lang of LANGS) {
+      const doc = html(privacy, lang);
+      const start = doc.indexOf('<h2 id="datos"');
+      const table = doc.slice(start, doc.indexOf('</table>', start));
+      const rows = [...table.matchAll(/<tr><td>[\s\S]*?<\/tr>/g)].map((m) => m[0]);
+      expect(rows.filter((r) => r.includes('AD_ID')), lang).toHaveLength(1);
+      expect(rows.filter((r) => r.includes('Firebase Crashlytics')), lang).toHaveLength(1);
+    }
   });
 
   it('la página de borrado tiene el formulario completo en cada idioma', () => {

@@ -323,7 +323,7 @@ namespace AF.Tests.EditMode
 
             TestContext.WriteLine("Atlas de iconos de fruta: " + best.ToString("F1") + " ms (mínimo de 3, tras el JIT).");
             Assert.That(best, Is.GreaterThan(0.0), "se mide");
-            Assert.That(best, Is.LessThan(30.0), "14 siluetas y 2 contornos en menos de 30 ms (Editor, tras el JIT)");
+            Assert.That(best, Is.LessThan(PerfBudget.Ms(30.0)), "14 siluetas y 2 contornos en menos de 30 ms (Editor, tras el JIT), " + PerfBudget.Describe(30.0));
         }
 
         [Test]
