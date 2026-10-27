@@ -32,7 +32,7 @@ namespace AF.Tests.EditMode
         public void FruitFlight_Has14DistinctSprites_InOneTexture_GeneratedWithin10ms()
         {
             Art.FruitFlight(1); // primera generación (incluye el JIT)
-            Assert.That(MinGenerationMs(art => art.FruitFlight(1), art => art.FruitAtlasMs), Is.LessThanOrEqualTo(10.0), "generación del atlas tras el JIT (mínimo de 3)");
+            Assert.That(MinGenerationMs(art => art.FruitFlight(1), art => art.FruitAtlasMs), Is.LessThanOrEqualTo(PerfBudget.Ms(10.0)), "generación del atlas tras el JIT (mínimo de 3), " + PerfBudget.Describe(10.0));
             var second = new ProceduralArt("white");
             try
             {
@@ -212,7 +212,7 @@ namespace AF.Tests.EditMode
             FaunaCatalog catalog = FaunaCatalogReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Fauna/miquitos_v0.json")));
             Art.MonkeyArtFor(catalog.Find("saimiri_collinsi")!); // JIT
             FaunaSpecies silvery = catalog.Find("mico_argentatus")!;
-            Assert.That(MinGenerationMs(art => art.MonkeyArtFor(silvery), art => art.FaunaArtMs), Is.LessThanOrEqualTo(10.0), "piezas de una especie (mínimo de 3)");
+            Assert.That(MinGenerationMs(art => art.MonkeyArtFor(silvery), art => art.FaunaArtMs), Is.LessThanOrEqualTo(PerfBudget.Ms(10.0)), "piezas de una especie (mínimo de 3), " + PerfBudget.Describe(10.0));
             var second = new ProceduralArt("white");
             try
             {

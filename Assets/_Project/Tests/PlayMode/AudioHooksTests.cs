@@ -17,7 +17,6 @@ using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 
@@ -754,7 +753,7 @@ namespace AF.Tests.PlayMode
     /// abierta, la cierra con un solo <c>sfx_ui_back</c> y sin háptico. Escape se inyecta con <see cref="InputTestFixture"/>, por
     /// el camino del juego (<c>GameBootstrap.Update</c>), como en <see cref="BackButtonTests"/>.
     /// </summary>
-    public sealed class AudioBackTests : InputTestFixture
+    public sealed class AudioBackTests : UiInputTestFixture
     {
         private const int FramesPressed = 3;
         private FakeAudioService _audio = null!;
@@ -771,12 +770,6 @@ namespace AF.Tests.PlayMode
         /// <inheritdoc />
         public override void TearDown()
         {
-            InputSystemUIInputModule[] modules = UnityEngine.Object.FindObjectsByType<InputSystemUIInputModule>(FindObjectsSortMode.None);
-            for (int i = 0; i < modules.Length; i++)
-            {
-                modules[i].enabled = false;
-            }
-
             LaunchOptions.Reset();
             AudioCues.Override = null;
             AudioCues.Install(null);
