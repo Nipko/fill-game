@@ -62,6 +62,14 @@ namespace AF.Presentation
         /// <summary>Color de la punta de la cola.</summary>
         public Color TailTip { get; internal set; }
 
+        /// <summary>
+        /// Borde de la cola y su grosor relativo (S): el borde fino del color de la cola (D-058) en el arte por código; el contorno
+        /// de tinta de antes con el PNG del artista.
+        /// </summary>
+        internal Color TailEdge { get; set; } = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f);
+
+        internal float TailEdgeS { get; set; } = 0.03f;
+
         /// <summary>Grosor de la cola (S).</summary>
         public float TailWidthS { get; internal set; } = 0.07f;
 
@@ -110,7 +118,6 @@ namespace AF.Presentation
         // ancho, y 12 px de alto, de los que asoman unos 14 bajo el cráneo.
         private const float CollarRxPx = 18f;
         private const float CollarRyPx = 12f;
-        private static readonly Color FaunaInk = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f);
 
         // Bigote blanco (rasgo bigote_blanco; revisión del 2026-10-09): hebras #F4F1EA con un borde de 1 px #BDB8AE, sin
         // contorno de tinta (con tinta se leía como colmillos de morsa).
@@ -199,6 +206,8 @@ namespace AF.Presentation
             else
             {
                 PixelCanvas pc = BuildFaunaCanvas(species, art, p);
+                art.TailEdge = ToyShading.Tones(art.Tail).Outline;
+                art.TailEdgeS = 0.016f;
                 Texture2D tex = pc.ToTexture("fauna_" + key);
                 _owned.Add(tex);
                 art.Head = SubSprite(tex, new Rect(0, 128, 128, 128), "head", 0f);
@@ -233,45 +242,74 @@ namespace AF.Presentation
         }
 
         // Celdas: cabeza (0, 128), torso (128, 128), extremidad (0, 0, 32 × 112) y párpado (32, 0, 48 × 20). Mirando a la derecha,
-        // luz desde arriba a la izquierda; contorno de tinta al 80 % (como Capi).
+        // de juguete brillante (D-058; guía docs/art/estilo-personajes-3d.md): cada pieza con su volumen en tres tonos, el barniz
+        // y el borde fino de su color; los parches de color (la cara, el hocico, el babero) siguen la cúpula de su pieza.
         private static PixelCanvas BuildFaunaCanvas(FaunaSpecies sp, MonkeyArt art, FaunaPalette p)
         {
             var pc = new PixelCanvas(FaunaAtlasPx, FaunaAtlasPx);
-            Color body = Hex(p.Body);
-            Color limbs = Hex(p.Limbs);
-            Color face = Hex(p.Face);
-            Color muzzle = Hex(p.Muzzle);
-            Color cap = Hex(p.Cap);
-            DrawHead(pc, sp, art, 0f, 128f, body, face, muzzle, cap, limbs);
-            DrawTorso(pc, sp, 128f, 128f, body, limbs, face);
+            var tones = new FaunaTones(p);
+            DrawHead(pc, sp, art, 0f, 128f, tones);
+            DrawTorso(pc, sp, 128f, 128f, tones);
+            ToyTones limbs = tones.Limbs;
             if (sp.HasTrait("collar_blanco"))
             {
-                limbs = body; // el blanco del sauim es el collar (el babero del torso): los brazos, del color del cuerpo
+                limbs = tones.Body; // el blanco del sauim es el collar (el babero del torso): los brazos, del color del cuerpo
             }
+
+            // Extremidad: cápsula vertical (un cilindro de juguete) con la mano o el pie más oscuros abajo.
+            ToyCapsule(pc, 16f, 100f, 16f, 12f, 11f, limbs, FaunaFurGloss, FaunaEdgePx);
+            ToyEllipse(pc, 16f, 13f, 9.5f, 9.5f, ToyShading.Tones(ColorMath.Darken(limbs.Mid, 0.22f)), FaunaFurGloss, 0f);
+
+            // Párpado: elipse del color de la cara con su borde fino.
+            Color lid = sp.HasTrait("cara_roja") || sp.HasTrait("mascara_redondeada") || sp.HasTrait("cara_blanca") || sp.HasTrait("ojos_grandes") || sp.HasTrait("orejas_desnudas") ? tones.Face.Mid : tones.Cap.Mid;
+            ToyEllipse(pc, 56f, 11f, 20f, 7f, ToyShading.Tones(lid), FaunaFaceGloss, FaunaEdgePx);
 
             if (sp.HasTrait("bigote_blanco"))
             {
                 DrawWhiskers(pc);
             }
 
-            // Extremidad: cápsula vertical con la mano o el pie más oscuros abajo.
-            pc.FillCapsule(16f, 100f, 16f, 12f, 13f, FaunaInk);
-            pc.FillCapsule(16f, 100f, 16f, 12f, 11f, limbs);
-            pc.FillCircle(16f, 13f, 9.5f, ColorMath.Darken(limbs, 0.22f));
-            pc.FillCapsule(11f, 96f, 11f, 30f, 2.4f, ColorMath.WithAlpha(ColorMath.Lighten(limbs, 0.35f), 0.55f)); // luz
-
-            // Párpado: elipse del color de la cara con su línea de tinta.
-            Color lid = sp.HasTrait("cara_roja") || sp.HasTrait("mascara_redondeada") || sp.HasTrait("cara_blanca") || sp.HasTrait("ojos_grandes") || sp.HasTrait("orejas_desnudas") ? face : cap;
-            pc.FillEllipseSoft(56f, 10f, 22f, 8.5f, 1f, FaunaInk);
-            pc.FillEllipseSoft(56f, 11f, 20f, 7f, 1f, lid);
             return pc;
         }
 
-        private static void DrawHead(PixelCanvas pc, FaunaSpecies sp, MonkeyArt art, float ox, float oy, Color body, Color face, Color muzzle, Color cap, Color limbs)
+        // Juguete de los miquitos: el borde fino coloreado (px de la celda de 128), el barniz de la felpa y de la cara y la
+        // oclusión que deja una pieza sobre la de debajo (px).
+        private const float FaunaEdgePx = 1.3f;
+        private const float FaunaFurGloss = 0.42f;
+        private const float FaunaFaceGloss = 0.62f;
+        private const float FaunaAoPx = 3f;
+
+        // Iris pardo muy oscuro de los miquitos de ojos pequeños (en degradado, con dos reflejos).
+        private static readonly Color FaunaDarkIris = new Color(0x3A / 255f, 0x24 / 255f, 0x16 / 255f, 1f);
+
+        // Los tonos de juguete de la paleta de una especie (una vez por especie, nunca por píxel).
+        private readonly struct FaunaTones
+        {
+            public FaunaTones(FaunaPalette p)
+            {
+                Body = ToyShading.Tones(Hex(p.Body));
+                Limbs = ToyShading.Tones(Hex(p.Limbs));
+                Face = ToyShading.Tones(Hex(p.Face), 0.6f);
+                Muzzle = ToyShading.Tones(Hex(p.Muzzle), 0.7f);
+                Cap = ToyShading.Tones(Hex(p.Cap));
+            }
+
+            public ToyTones Body { get; }
+
+            public ToyTones Limbs { get; }
+
+            public ToyTones Face { get; }
+
+            public ToyTones Muzzle { get; }
+
+            public ToyTones Cap { get; }
+        }
+
+        private static void DrawHead(PixelCanvas pc, FaunaSpecies sp, MonkeyArt art, float ox, float oy, in FaunaTones tones)
         {
             if (sp.HasTrait("cara_roja"))
             {
-                DrawBaldRedHead(pc, art, ox, oy, face);
+                DrawBaldRedHead(pc, art, ox, oy, tones.Face);
                 return;
             }
 
@@ -280,50 +318,42 @@ namespace AF.Presentation
             float r = 40f;
             bool fluffy = sp.Skeleton == FaunaSkeleton.C || sp.HasTrait("lanudo");
             bool bigEars = sp.HasTrait("orejas_desnudas") || sp.Skeleton == FaunaSkeleton.A;
+            Color face = tones.Face.Mid;
 
             // Orejas, detrás del cráneo.
             if (bigEars)
             {
-                Color ear = sp.HasTrait("orejas_desnudas") ? face : cap;
-                FaunaDisc(pc, cx - 26f, cy + 30f, 14f, ear);
-                FaunaDisc(pc, cx - 6f, cy + 38f, 10f, ColorMath.Darken(ear, 0.12f));
-                pc.FillCircle(cx - 26f, cy + 30f, 7f, ColorMath.Darken(ear, 0.25f));
+                ToyTones ear = sp.HasTrait("orejas_desnudas") ? tones.Face : tones.Cap;
+                ToyEllipse(pc, cx - 26f, cy + 30f, 14f, 14f, ear, FaunaFurGloss, FaunaEdgePx);
+                ToyEllipse(pc, cx - 6f, cy + 38f, 10f, 10f, ToyShading.Tones(ColorMath.Darken(ear.Mid, 0.12f)), FaunaFurGloss, FaunaEdgePx);
+                ToyEllipseOn(pc, cx - 26f, cy + 30f, 7f, 7f, ToyShading.Tones(ColorMath.Darken(ear.Mid, 0.25f), 0.6f), 0.2f, 0f, 0f, cx - 23f, cy + 27f, 16f, 16f, 1.5f);
             }
             else if (!fluffy)
             {
-                FaunaDisc(pc, cx - 24f, cy + 26f, 8f, face);
+                ToyEllipse(pc, cx - 24f, cy + 26f, 8f, 8f, tones.Face, FaunaFurGloss, FaunaEdgePx);
             }
 
             if (sp.HasTrait("collar_blanco"))
             {
                 // Sauim: el babero blanco asoma bajo la cabeza negra, por delante (va en la pieza de la cabeza, por encima del
-                // torso: el brazo de delante tapa el pecho del torso cuando cuelga). El blanco del catálogo va en «extremidades».
-                Color white = limbs;
-                pc.FillEllipseSoft(cx + 14f, oy + 14f, CollarRxPx + 2f, CollarRyPx + 2f, 1f, FaunaInk);
-                pc.FillEllipseSoft(cx + 14f, oy + 14f, CollarRxPx, CollarRyPx, 1.5f, white);
+                // torso: el brazo de delante tapa el pecho del torso cuando cuelga). El blanco del catálogo va en «extremidades»;
+                // con poco contraste, para que el blanco se lea blanco.
+                ToyEllipse(pc, cx + 14f, oy + 14f, CollarRxPx, CollarRyPx, ToyShading.Tones(tones.Limbs.Mid, 0.3f), 0.25f, FaunaEdgePx);
             }
 
-            // Pelo mullido o lanudo alrededor (pitécidos y churuco).
+            // Pelo mullido o lanudo alrededor (pitécidos y churuco): mechones grandes y redondos de felpa.
             if (fluffy)
             {
-                Color fur = body;
                 for (int i = 0; i < 11; i++)
                 {
                     float a = (95f + (i * 22f)) * Mathf.Deg2Rad;
-                    pc.FillCircle(cx + (Mathf.Cos(a) * (r + 2f)), cy + (Mathf.Sin(a) * (r + 2f)), 13f, FaunaInk);
-                }
-
-                for (int i = 0; i < 11; i++)
-                {
-                    float a = (95f + (i * 22f)) * Mathf.Deg2Rad;
-                    pc.FillCircle(cx + (Mathf.Cos(a) * (r + 2f)), cy + (Mathf.Sin(a) * (r + 2f)), 11f, fur);
+                    ToyEllipse(pc, cx + (Mathf.Cos(a) * (r + 2f)), cy + (Mathf.Sin(a) * (r + 2f)), 11f, 11f, tones.Body, FaunaFurGloss, FaunaEdgePx, 1.5f);
                 }
             }
 
-            // Cráneo con la gorra (el color de arriba de la cabeza).
-            pc.FillCircle(cx, cy, r + 3.5f, FaunaInk);
-            pc.FillCircle(cx, cy, r, cap);
-            pc.FillEllipseSoft(cx - 12f, cy + 16f, 16f, 10f, 8f, ColorMath.WithAlpha(ColorMath.Lighten(cap, 0.3f), 0.45f)); // luz
+            // Cráneo con la gorra (el color de arriba de la cabeza), con la oclusión sobre las orejas y los mechones.
+            ToyEllipse(pc, cx, cy, r, r, tones.Cap, FaunaFurGloss, FaunaEdgePx, FaunaAoPx);
+            float domeR = r * 1.06f;
 
             Vector2 nearEye = new Vector2(cx + 26f, cy + 6f);
             Vector2 farEye = new Vector2(cx + 9f, cy + 9f);
@@ -332,16 +362,16 @@ namespace AF.Presentation
             if (sp.HasTrait("mascara_redondeada"))
             {
                 // Máscara blanca redondeada y cálida alrededor de los ojos (que no se lea como calavera) y hocico negro.
-                pc.FillEllipseSoft(cx + 19f, cy + 7f, 24f, 18f, 2f, face);
-                pc.FillEllipseSoft(cx + 24f, cy - 7f, 18f, 14f, 2f, face);
-                pc.FillEllipseSoft(cx + 33f, cy - 12f, 11f, 8.5f, 1.5f, muzzle);
+                ToyEllipseOn(pc, cx + 19f, cy + 7f, 24f, 18f, tones.Face, FaunaFaceGloss, 0f, 0f, cx, cy, domeR, domeR, 2f);
+                ToyEllipseOn(pc, cx + 24f, cy - 7f, 18f, 14f, tones.Face, FaunaFaceGloss, 0f, 0f, cx, cy, domeR, domeR, 2f);
+                ToyEllipseOn(pc, cx + 33f, cy - 12f, 11f, 8.5f, tones.Muzzle, FaunaFaceGloss, 0f, 0f, cx + 30f, cy - 10f, 14f, 11f, 1.5f);
                 nose = 1f;
             }
             else if (sp.HasTrait("cara_blanca"))
             {
                 // Saquí macho: disco blanco alrededor de una cara oscura pequeña.
-                pc.FillEllipseSoft(cx + 16f, cy + 1f, 27f, 29f, 2f, face);
-                pc.FillEllipseSoft(cx + 29f, cy - 9f, 9f, 8f, 2f, muzzle);
+                ToyEllipseOn(pc, cx + 16f, cy + 1f, 27f, 29f, tones.Face, FaunaFaceGloss, 0f, 0f, cx, cy, domeR, domeR, 2f);
+                ToyEllipseOn(pc, cx + 29f, cy - 9f, 9f, 8f, tones.Muzzle, FaunaFaceGloss, 0f, 0f, cx + 28f, cy - 8f, 12f, 11f, 2f);
             }
             else if (sp.HasTrait("ojos_grandes"))
             {
@@ -350,26 +380,27 @@ namespace AF.Presentation
                 eyeR = 7f * 1.8f;
                 nearEye = new Vector2(cx + 30f, cy + 2f);
                 farEye = new Vector2(cx + 4f, cy + 6f);
-                pc.FillEllipseSoft(cx + 16f, cy + 1f, 30f, 29f, 2f, face);
-                Color eyeRing = ColorMath.WithAlpha(muzzle, 0.85f);
+                ToyEllipseOn(pc, cx + 16f, cy + 1f, 30f, 29f, tones.Face, FaunaFaceGloss, 0f, 0f, cx, cy, domeR, domeR, 2f);
+                Color eyeRing = ColorMath.WithAlpha(tones.Muzzle.Mid, 0.85f);
                 pc.FillCircle(nearEye.x, nearEye.y, eyeR + 3.2f, eyeRing);
                 pc.FillCircle(farEye.x, farEye.y, (eyeR * 0.85f) + 3f, eyeRing);
-                var white = new Color(0.98f, 0.97f, 0.94f, 1f);
-                pc.FillEllipseSoft(nearEye.x + 1f, nearEye.y + eyeR + 6f, eyeR * 0.85f, 4.6f, 1.5f, white);
-                pc.FillEllipseSoft(farEye.x, farEye.y + (eyeR * 0.85f) + 6f, eyeR * 0.72f, 4.2f, 1.5f, white);
-                pc.FillCapsule(cx + 17f, cy + 22f, cx + 17f, cy + 40f, 3.2f, cap);
-                pc.FillCapsule(cx - 6f, cy + 20f, cx - 12f, cy + 34f, 2.8f, cap);
-                pc.FillCapsule(cx + 42f, cy + 18f, cx + 44f, cy + 30f, 2.8f, cap);
-                pc.FillEllipseSoft(cx + 33f, cy - 15f, 7f, 5f, 2f, muzzle);
+                ToyTones white = ToyShading.Tones(new Color(0.98f, 0.97f, 0.94f, 1f), 0.5f);
+                ToyEllipseOn(pc, nearEye.x + 1f, nearEye.y + eyeR + 6f, eyeR * 0.85f, 4.6f, white, FaunaFaceGloss, 0f, 0f, cx, cy, domeR, domeR, 1.5f);
+                ToyEllipseOn(pc, farEye.x, farEye.y + (eyeR * 0.85f) + 6f, eyeR * 0.72f, 4.2f, white, FaunaFaceGloss, 0f, 0f, cx, cy, domeR, domeR, 1.5f);
+                ToyCapsule(pc, cx + 17f, cy + 22f, cx + 17f, cy + 40f, 3.2f, tones.Cap, FaunaFurGloss, 0f);
+                ToyCapsule(pc, cx - 6f, cy + 20f, cx - 12f, cy + 34f, 2.8f, tones.Cap, FaunaFurGloss, 0f);
+                ToyCapsule(pc, cx + 42f, cy + 18f, cx + 44f, cy + 30f, 2.8f, tones.Cap, FaunaFurGloss, 0f);
+                ToyEllipseOn(pc, cx + 33f, cy - 15f, 7f, 5f, tones.Muzzle, FaunaFaceGloss, 0f, 0f, cx + 32f, cy - 14f, 9f, 7f, 2f);
             }
             else
             {
                 // Cara desnuda (sagui: color carne; sauim, churuco, maquisapa: negra; pichico: oscura).
-                pc.FillEllipseSoft(cx + 17f, cy + 1f, 22f, 25f, 2f, face);
-                pc.FillEllipseSoft(cx + 30f, cy - 10f, 8f, 6f, 2f, muzzle);
+                ToyEllipseOn(pc, cx + 17f, cy + 1f, 22f, 25f, tones.Face, FaunaFaceGloss, 0f, 0f, cx, cy, domeR, domeR, 2f);
+                ToyEllipseOn(pc, cx + 30f, cy - 10f, 8f, 6f, tones.Muzzle, FaunaFaceGloss, 0f, 0f, cx + 29f, cy - 9f, 10f, 8f, 2f);
             }
 
-            // Ojos (3/4 mirando a la derecha) con brillo; en caras oscuras, un anillo claro para que se lean a 40 dp.
+            // Ojos de juguete (3/4 mirando a la derecha) con el iris en degradado y dos reflejos; en caras oscuras, un anillo
+            // claro para que se lean a 40 dp.
             bool darkFace = ColorMath.RelativeLuminance(face) < 0.08f;
             Color ring = ColorMath.Lighten(face, 0.45f);
             if (darkFace)
@@ -378,18 +409,9 @@ namespace AF.Presentation
                 pc.FillCircle(farEye.x, farEye.y, (eyeR * 0.85f) + 2f, ring);
             }
 
-            bool bigEyes = sp.HasTrait("ojos_grandes");
-            Color iris = bigEyes ? AmberIris : new Color(0x2A / 255f, 0x1A / 255f, 0x10 / 255f, 1f);
-            pc.FillCircle(nearEye.x, nearEye.y, eyeR, iris);
-            pc.FillCircle(farEye.x, farEye.y, eyeR * 0.85f, iris);
-            if (bigEyes)
-            {
-                var pupil = new Color(0.07f, 0.05f, 0.04f, 1f);
-                pc.FillCircle(nearEye.x + (eyeR * 0.08f), nearEye.y - (eyeR * 0.04f), eyeR * 0.5f, pupil);
-                pc.FillCircle(farEye.x + (eyeR * 0.06f), farEye.y - (eyeR * 0.04f), eyeR * 0.42f, pupil);
-            }
-            pc.FillCircle(nearEye.x - (eyeR * 0.35f), nearEye.y + (eyeR * 0.35f), Mathf.Max(1.6f, eyeR * 0.3f), Color.white);
-            pc.FillCircle(farEye.x - (eyeR * 0.3f), farEye.y + (eyeR * 0.3f), Mathf.Max(1.4f, eyeR * 0.26f), Color.white);
+            Color iris = sp.HasTrait("ojos_grandes") ? AmberIris : FaunaDarkIris;
+            DrawToyEye(pc, nearEye.x, nearEye.y, eyeR, iris);
+            DrawToyEye(pc, farEye.x, farEye.y, eyeR * 0.85f, iris);
             if (sp.Lighting == FaunaLighting.Night)
             {
                 pc.FillCircle(nearEye.x + (eyeR * 0.3f), nearEye.y - (eyeR * 0.3f), 1.4f, new Color(0.85f, 0.92f, 1f, 0.9f)); // destello de luna
@@ -397,41 +419,33 @@ namespace AF.Presentation
 
             if (nose > 0f)
             {
-                pc.FillCircle(cx + 39f, cy - 10f, 2f, FaunaInk);
+                pc.FillCircle(cx + 39f, cy - 10f, 2f, tones.Muzzle.Outline);
             }
 
             art.EyelidOffsetS = new Vector2(((nearEye.x + farEye.x) * 0.5f) - (ox + 64f), ((nearEye.y + farEye.y) * 0.5f) - (oy + 64f)) / FaunaPxPerS * (art.HeadS / 0.6f);
             art.EyelidSizeS = new Vector2((Mathf.Abs(nearEye.x - farEye.x) + (eyeR * 2.6f)) / FaunaPxPerS, eyeR * 2.4f / FaunaPxPerS) * (art.HeadS / 0.6f);
         }
 
-        private static void DrawTorso(PixelCanvas pc, FaunaSpecies sp, float ox, float oy, Color body, Color limbs, Color face)
+        private static void DrawTorso(PixelCanvas pc, FaunaSpecies sp, float ox, float oy, in FaunaTones tones)
         {
             float cx = ox + 64f;
             float cy = oy + 62f;
             bool woolly = sp.HasTrait("lanudo") || sp.Skeleton == FaunaSkeleton.C;
             bool longHair = sp.HasTrait("cara_roja");
-            Color fur = longHair ? LongRedHair : body;
+            ToyTones fur = longHair ? LongRedHairToy : tones.Body;
             if (woolly)
             {
+                // Lana: mechones grandes y redondos alrededor del cuerpo (felpa, no pelos sueltos).
                 for (int i = 0; i < 14; i++)
                 {
                     float a = i * (Mathf.PI * 2f / 14f);
-                    pc.FillCircle(cx + (Mathf.Cos(a) * 50f), cy + (Mathf.Sin(a) * 40f), 11f, FaunaInk);
+                    ToyEllipse(pc, cx + (Mathf.Cos(a) * 50f), cy + (Mathf.Sin(a) * 40f), 9f, 9f, fur, FaunaFurGloss, FaunaEdgePx);
                 }
             }
 
-            pc.FillEllipseSoft(cx, cy, 55f, 45f, 1f, FaunaInk);
-            if (woolly)
-            {
-                for (int i = 0; i < 14; i++)
-                {
-                    float a = i * (Mathf.PI * 2f / 14f);
-                    pc.FillCircle(cx + (Mathf.Cos(a) * 50f), cy + (Mathf.Sin(a) * 40f), 9f, fur);
-                }
-            }
-
-            pc.FillEllipseSoft(cx, cy, 51.5f, 41.5f, 1f, body);
-            pc.FillEllipseSoft(cx - 14f, cy + 18f, 26f, 12f, 10f, ColorMath.WithAlpha(ColorMath.Lighten(body, 0.3f), 0.45f)); // luz
+            ToyEllipse(pc, cx, cy, 51.5f, 41.5f, tones.Body, FaunaFurGloss, FaunaEdgePx, woolly ? FaunaAoPx : 0f);
+            float dx = 51.5f * 1.06f;
+            float dy = 41.5f * 1.06f;
             if (longHair)
             {
                 // Huapo: mechones de pelo largo rojizo que cuelgan del lomo y de los hombros (mirando a la derecha: el lomo a la
@@ -446,28 +460,29 @@ namespace AF.Presentation
             {
                 // Sauim: babero blanco elíptico de 0,45 del ancho del torso, en la mitad de arriba del pecho, que sigue al de la
                 // pieza de la cabeza (más arriba, la cabeza lo tapa; el blanco del catálogo va en «extremidades» y los brazos
-                // salen del color del cuerpo).
+                // salen del color del cuerpo). Sigue la cúpula del torso, con poco contraste: un blanco que se lee blanco.
                 float bibRx = 0.45f * 51.5f;
-                pc.FillEllipseSoft(cx + 12f, cy + 2f, bibRx + 2f, 22f, 1f, FaunaInk);
-                pc.FillEllipseSoft(cx + 12f, cy + 2f, bibRx, 20f, 1.5f, limbs);
+                ToyEllipseOn(pc, cx + 12f, cy + 2f, bibRx, 20f, ToyShading.Tones(tones.Limbs.Mid, 0.3f), 0.25f, FaunaEdgePx, 0f, cx + 12f, cy + 6f, bibRx * 1.8f, 34f, 0f);
             }
             else if (sp.HasTrait("pecho_rojizo"))
             {
-                pc.FillEllipseSoft(cx + 28f, cy - 4f, 22f, 30f, 3f, limbs);
+                ToyEllipseOn(pc, cx + 28f, cy - 4f, 22f, 30f, tones.Limbs, FaunaFurGloss, 0f, 0f, cx, cy, dx, dy, 3f);
             }
             else if (sp.Skeleton == FaunaSkeleton.B)
             {
-                pc.FillEllipseSoft(cx + 24f, cy - 12f, 24f, 22f, 6f, ColorMath.WithAlpha(ColorMath.Lighten(body, 0.35f), 0.8f)); // vientre claro
+                // Vientre claro.
+                ToyEllipseOn(pc, cx + 24f, cy - 12f, 24f, 22f, ToyShading.Tones(ColorMath.Lighten(tones.Body.Mid, 0.3f), 0.6f), FaunaFurGloss, 0f, 0f, cx, cy, dx, dy, 6f);
             }
 
             if (sp.HasTrait("cria_espalda"))
             {
                 // El padre carga a la cría en la espalda.
-                pc.FillCircle(cx - 30f, cy + 38f, 17f, FaunaInk);
-                pc.FillCircle(cx - 30f, cy + 38f, 14.5f, body);
-                pc.FillEllipseSoft(cx - 24f, cy + 37f, 8f, 8f, 1f, face);
+                ToyEllipse(pc, cx - 30f, cy + 38f, 14.5f, 14.5f, tones.Body, FaunaFurGloss, FaunaEdgePx, 2f);
+                ToyEllipseOn(pc, cx - 24f, cy + 37f, 8f, 8f, tones.Face, FaunaFaceGloss, 0f, 0f, cx - 30f, cy + 38f, 15.4f, 15.4f, 1f);
                 pc.FillCircle(cx - 21f, cy + 39f, 2.6f, new Color(0.16f, 0.1f, 0.06f, 1f));
                 pc.FillCircle(cx - 27f, cy + 40f, 2.2f, new Color(0.16f, 0.1f, 0.06f, 1f));
+                pc.FillCircle(cx - 21.8f, cy + 39.9f, 0.8f, Color.white);
+                pc.FillCircle(cx - 27.6f, cy + 40.7f, 0.7f, Color.white);
             }
         }
 
@@ -475,13 +490,14 @@ namespace AF.Presentation
         // cabeza calva es un óvalo vertical, rojo solo en la cara y el cuero cabelludo (el color «cara» del catálogo), sin nariz
         // saliente (solo dos fosas a ras de la cara) y con ojos pequeños de color ámbar; 7 mechones de pelo largo rojizo le
         // salen de la nuca y de debajo de la mandíbula y cuelgan hacia los hombros (los del lomo van en el torso). Todo dentro
-        // de la celda de la cabeza (0..128).
-        private static void DrawBaldRedHead(PixelCanvas pc, MonkeyArt art, float ox, float oy, Color face)
+        // de la celda de la cabeza (0..128). De juguete: el óvalo, de vinilo lacado (el más brillante de los miquitos).
+        private static void DrawBaldRedHead(PixelCanvas pc, MonkeyArt art, float ox, float oy, in ToyTones faceTones)
         {
             float cx = ox + 62f;
             float cy = oy + 66f;
             const float rx = 25f;
             const float ry = 33f;
+            Color face = faceTones.Mid;
 
             // Mechones de la nuca a la mandíbula (ángulo en grados desde +x, con y hacia arriba; la cara, a la derecha, y el
             // cuero cabelludo quedan calvos): salen del borde del óvalo, se abren un poco hacia fuera y cuelgan.
@@ -499,25 +515,18 @@ namespace AF.Presentation
                 HairLock(pc, root.x, root.y, mid.x, mid.y, tip.x, tip.y, 6.5f);
             }
 
-            // Óvalo vertical calvo con su contorno de tinta y una luz suave arriba a la izquierda.
-            pc.FillEllipseSoft(cx, cy, rx + 3.5f, ry + 3.5f, 1f, FaunaInk);
-            pc.FillEllipseSoft(cx, cy, rx, ry, 1f, face);
-            pc.FillEllipseSoft(cx - 7f, cy + 14f, 12f, 10f, 8f, ColorMath.WithAlpha(ColorMath.Lighten(face, 0.28f), 0.45f));
+            // Óvalo vertical calvo de vinilo lacado, con su borde fino y la oclusión sobre los mechones.
+            ToyEllipse(pc, cx, cy, rx, ry, faceTones, 0.85f, FaunaEdgePx, FaunaAoPx);
 
-            // Ojos pequeños de color ámbar (3/4 mirando a la derecha) con pupila y brillo, y dos fosas nasales a ras.
+            // Ojos pequeños de color ámbar (3/4 mirando a la derecha), de juguete, y dos fosas nasales a ras.
             var nearEye = new Vector2(cx + 13f, cy + 5f);
             var farEye = new Vector2(cx - 1f, cy + 6f);
             const float eyeR = 4.6f;
             var socket = ColorMath.Darken(face, 0.2f);
             pc.FillCircle(nearEye.x, nearEye.y, eyeR + 1.4f, socket);
             pc.FillCircle(farEye.x, farEye.y, (eyeR * 0.85f) + 1.3f, socket);
-            pc.FillCircle(nearEye.x, nearEye.y, eyeR, AmberIris);
-            pc.FillCircle(farEye.x, farEye.y, eyeR * 0.85f, AmberIris);
-            var pupil = new Color(0.12f, 0.07f, 0.04f, 1f);
-            pc.FillCircle(nearEye.x + 0.8f, nearEye.y - 0.3f, eyeR * 0.45f, pupil);
-            pc.FillCircle(farEye.x + 0.6f, farEye.y - 0.3f, eyeR * 0.38f, pupil);
-            pc.FillCircle(nearEye.x - 1.4f, nearEye.y + 1.5f, 1.2f, Color.white);
-            pc.FillCircle(farEye.x - 1.2f, farEye.y + 1.3f, 1f, Color.white);
+            DrawToyEye(pc, nearEye.x, nearEye.y, eyeR, AmberIris);
+            DrawToyEye(pc, farEye.x, farEye.y, eyeR * 0.85f, AmberIris);
             Color nostril = ColorMath.WithAlpha(ColorMath.Darken(face, 0.45f), 0.85f);
             pc.FillEllipseSoft(cx + 17f, cy - 10f, 1.6f, 1.1f, 0.8f, nostril);
             pc.FillEllipseSoft(cx + 12f, cy - 10.5f, 1.4f, 1f, 0.8f, nostril);
@@ -527,13 +536,14 @@ namespace AF.Presentation
         }
 
         // Mechón de pelo largo: cápsulas que se afinan a lo largo de una Bézier cuadrática (raíz, control, punta) de
-        // radio <paramref name="r0"/> a un cuarto de él, con contorno de tinta de 2 px y una hebra clara encima.
+        // radio <paramref name="r0"/> a un cuarto de él: el borde fino del color del pelo, el relleno de juguete (cada tramo, un
+        // cilindro con su barniz) y una hebra oscura apenas marcada.
         private static void HairLock(PixelCanvas pc, float x0, float y0, float x1, float y1, float x2, float y2, float r0)
         {
             const int steps = 12;
-            Color light = ColorMath.WithAlpha(ColorMath.Lighten(LongRedHair, 0.3f), 0.7f);
-            Color dark = ColorMath.Darken(LongRedHair, 0.22f);
-            for (int pass = 0; pass < 4; pass++)
+            ToyTones hair = LongRedHairToy;
+            Color dark = ColorMath.WithAlpha(hair.Shadow, 0.6f);
+            for (int pass = 0; pass < 3; pass++)
             {
                 float px = x0;
                 float py = y0;
@@ -547,16 +557,13 @@ namespace AF.Presentation
                     switch (pass)
                     {
                         case 0:
-                            pc.FillCapsule(px, py, qx, qy, r + 2f, FaunaInk);
+                            pc.FillCapsule(px, py, qx, qy, r + FaunaEdgePx, hair.Outline);
                             break;
                         case 1:
-                            pc.FillCapsule(px, py, qx, qy, r, LongRedHair);
-                            break;
-                        case 2:
-                            pc.FillCapsule(px - (r * 0.35f), py, qx - (r * 0.35f), qy, Mathf.Max(0.5f, r * 0.18f), dark); // hebra
+                            ToyCapsule(pc, px, py, qx, qy, r, hair, FaunaFurGloss, 0f);
                             break;
                         default:
-                            pc.FillCapsule(px + (r * 0.3f), py, qx + (r * 0.3f), qy, Mathf.Max(0.5f, r * 0.2f), light); // luz
+                            pc.FillCapsule(px - (r * 0.35f), py, qx - (r * 0.35f), qy, Mathf.Max(0.5f, r * 0.16f), dark); // hebra
                             break;
                     }
 
@@ -564,6 +571,14 @@ namespace AF.Presentation
                     py = qy;
                 }
             }
+        }
+
+        // Los tonos del pelo largo rojizo, en su propia clase (se inicializan al pintar, con LongRedHair ya listo).
+        private static ToyTones LongRedHairToy => FaunaToy.LongRedHair;
+
+        private static class FaunaToy
+        {
+            public static readonly ToyTones LongRedHair = ToyShading.Tones(ProceduralArt.LongRedHair);
         }
 
         // Bigote del pichico emperador (guion §4.2: «bigote blanco largo», que pasa de los hombros; revisión del 2026-10-09):
@@ -633,12 +648,6 @@ namespace AF.Presentation
         {
             float u = 1f - t;
             return (u * u * u * a) + (3f * u * u * t * b) + (3f * u * t * t * c) + (t * t * t * d);
-        }
-
-        private static void FaunaDisc(PixelCanvas pc, float x, float y, float r, Color c)
-        {
-            pc.FillCircle(x, y, r + 3f, FaunaInk);
-            pc.FillCircle(x, y, r, c);
         }
     }
 }

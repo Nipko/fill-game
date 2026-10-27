@@ -259,7 +259,7 @@ namespace AF.Presentation
             int w = Mathf.RoundToInt(PiranaFishWidthU * MechanicPxPerU);
             int h = Mathf.RoundToInt(PiranaFishHeightU * MechanicPxPerU);
             const float k = MechanicPxPerU / 96f;
-            float outline = 3f * k;
+            float outline = PiranaToyEdge * k; // el borde fino de juguete (D-058), antes 3 px de tinta
             float cx = w * 0.44f;
             float cy = h * 0.5f;
             float rx = w * 0.29f;
@@ -282,7 +282,7 @@ namespace AF.Presentation
             for (int pass = 0; pass < 2; pass++)
             {
                 float grow = pass == 0 ? outline : 0f;
-                Color c = pass == 0 ? PiranaFishOutline : PiranaFishFin;
+                Color c = pass == 0 ? PiranaToy.Fin.Outline : PiranaToy.Fin.Mid;
                 FillPiranaTriangle(pc, baseTop, tipTop, notch, grow, c);
                 FillPiranaTriangle(pc, baseBottom, notch, tipBottom, grow, c);
                 FillPiranaTriangle(pc, baseTop, notch, baseBottom, grow, c);
@@ -303,7 +303,8 @@ namespace AF.Presentation
                 }
             }
 
-            // Cuerpo: contorno y degradado de lomo oscuro, costado plateado y vientre claro; la mandíbula asoma abajo.
+            // Cuerpo de juguete (D-058): lomo oscuro, costado plateado y vientre claro mezclados en los tonos, con el volumen de
+            // una cúpula alargada, el barniz y el borde fino; la mandíbula asoma abajo.
             float jawX = cx - (rx * 0.8f);
             float jawY = cy - (ry * 0.32f);
             float jawR = 5.5f * k;
@@ -325,28 +326,30 @@ namespace AF.Presentation
                         continue;
                     }
 
-                    pc.Blend(x, y, PiranaFishOutline, PixelCanvas.Coverage(d - outline));
+                    float t = Mathf.Clamp01((ny + 1f) * 0.5f);
+                    ToyTones tones = t < 0.38f
+                        ? ToyTones.Lerp(PiranaToy.Belly, PiranaToy.Silver, Mathf.SmoothStep(0f, 1f, t / 0.38f))
+                        : (t < 0.66f ? PiranaToy.Silver : ToyTones.Lerp(PiranaToy.Silver, PiranaToy.Back, Mathf.SmoothStep(0f, 1f, (t - 0.66f) / 0.34f)));
+                    if (nx > 0.35f)
+                    {
+                        tones = ToyTones.Lerp(tones, PiranaToy.Back, 0.22f * Mathf.Clamp01((nx - 0.35f) / 0.65f)); // hacia la cola, más oscuro
+                    }
+
+                    pc.Blend(x, y, PiranaToy.Back.Outline, PixelCanvas.Coverage(d - outline));
                     float inside = PixelCanvas.Coverage(d);
                     if (inside <= 0f)
                     {
                         continue;
                     }
 
-                    float t = Mathf.Clamp01((ny + 1f) * 0.5f);
-                    Color c = t < 0.38f
-                        ? Color.Lerp(PiranaFishBelly, PiranaFishSilver, Mathf.SmoothStep(0f, 1f, t / 0.38f))
-                        : (t < 0.66f ? PiranaFishSilver : Color.Lerp(PiranaFishSilver, PiranaFishBack, Mathf.SmoothStep(0f, 1f, (t - 0.66f) / 0.34f)));
-                    if (nx > 0.35f)
-                    {
-                        c = Color.Lerp(c, PiranaFishBack, 0.22f * Mathf.Clamp01((nx - 0.35f) / 0.65f)); // hacia la cola, más oscuro
-                    }
-
-                    pc.Blend(x, y, c, inside);
+                    Vector3 n = body < jaw ? ToyShading.Normal(nx / 1.06f, ny / 1.06f) : ToyShading.Normal(jdx / (jawR * 1.2f), jdy / (jawR * 1.2f));
+                    float ao = 0.6f * ToyShading.CreaseAO(body, jaw, 3f * k);
+                    pc.Blend(x, y, ToyShading.Shade(tones, n, ao, PiranaGloss), inside);
                 }
             }
 
-            // Aleta pectoral, motas, branquia y brillo del costado.
-            pc.FillEllipseSoft(cx - (rx * 0.12f), cy - (ry * 0.22f), 6f * k, 3.4f * k, 1f, ColorMath.WithAlpha(PiranaFishFin, 0.95f));
+            // Aleta pectoral, motas y branquia (el brillo del costado ya lo pone el barniz).
+            ToyEllipseOn(pc, cx - (rx * 0.12f), cy - (ry * 0.22f), 6f * k, 3.4f * k, PiranaToy.Fin, 0.5f, 0.8f * k, 0f, cx - (rx * 0.12f), cy - (ry * 0.1f), 12f * k, 8f * k, 0f);
             for (int i = 0; i < 6; i++)
             {
                 float sx = cx + ((ArtNoise.Hash(i, 3, 71) - 0.25f) * rx * 1.1f);
@@ -354,26 +357,39 @@ namespace AF.Presentation
                 pc.FillCircle(sx, sy, 1.3f * k, ColorMath.WithAlpha(PiranaFishBack, 0.55f));
             }
 
-            pc.StrokeArc(cx - (rx * 0.4f), cy + (ry * 0.02f), ry * 0.62f, 1.7f * k, -62f, 62f, ColorMath.WithAlpha(PiranaFishBack, 0.75f));
-            pc.FillCapsule(cx - (rx * 0.2f), cy + (ry * 0.5f), cx + (rx * 0.42f), cy + (ry * 0.56f), 1.5f * k, new Color(1f, 1f, 1f, 0.55f));
+            pc.StrokeArc(cx - (rx * 0.4f), cy + (ry * 0.02f), ry * 0.62f, 1.4f * k, -62f, 62f, ColorMath.WithAlpha(PiranaToy.Silver.Shadow, 0.8f));
 
-            // Boca cerrada, sin dientes (b.2 M7), y ojo grande; dormida, el párpado cerrado.
-            pc.FillCapsule(cx - rx - (1.5f * k), cy - (ry * 0.3f), cx - (rx * 0.66f), cy - (ry * 0.4f), 0.9f * k, PiranaFishOutline);
+            // Boca cerrada, sin dientes (b.2 M7), y ojo grande de juguete (iris en degradado y dos reflejos); dormida, el
+            // párpado cerrado.
+            pc.FillCapsule(cx - rx - (1.5f * k), cy - (ry * 0.3f), cx - (rx * 0.66f), cy - (ry * 0.4f), 0.8f * k, PiranaToy.Back.Outline);
             float ex = cx - (rx * 0.56f);
             float ey = cy + (ry * 0.24f);
             if (asleep)
             {
-                pc.StrokeArc(ex, ey + (1.2f * k), 3.6f * k, 1.7f * k, 200f, 340f, PiranaFishOutline);
+                pc.StrokeArc(ex, ey + (1.2f * k), 3.6f * k, 1.5f * k, 200f, 340f, PiranaToy.Back.Outline);
             }
             else
             {
                 pc.FillCircle(ex, ey, 5f * k, ColorMath.WithAlpha(Palette.Cream, 0.95f));
-                pc.FillCircle(ex - (0.4f * k), ey, 3.6f * k, PiranaFishOutline);
-                pc.FillCircle(ex - (1.4f * k), ey + (1.3f * k), 1.3f * k, Color.white);
+                DrawToyEye(pc, ex - (0.4f * k), ey, 3.7f * k, PiranaEyeIris);
             }
 
             return MakeSprite(pc, asleep ? "mech_pirana_fish_asleep" : "mech_pirana_fish", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
+
+        // Piraña de juguete (D-058): los tonos, una vez (en su propia clase: se inicializan al pintarla).
+        private static class PiranaToy
+        {
+            public static readonly ToyTones Back = ToyShading.Tones(PiranaFishBack);
+            public static readonly ToyTones Silver = ToyShading.Tones(PiranaFishSilver, 0.8f);
+            public static readonly ToyTones Belly = ToyShading.Tones(PiranaFishBelly, 0.6f);
+            public static readonly ToyTones Fin = ToyShading.Tones(PiranaFishFin, 0.7f);
+        }
+
+        // Escamas lacadas (el pez es liso y mojado) y el borde fino (px de 96 por u).
+        private const float PiranaGloss = 0.8f;
+        private const float PiranaToyEdge = 1.8f;
+        private static readonly Color PiranaEyeIris = Palette.Hex(0x3B3A2A);
 
         // Triángulo agrandado grow px desde su centro (contornos de las aletas).
         private static void FillPiranaTriangle(PixelCanvas pc, Vector2 a, Vector2 b, Vector2 c, float grow, Color color)

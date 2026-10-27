@@ -69,21 +69,24 @@ namespace AF.Presentation
 
         /// <summary>
         /// Respiradero de Rosa (fracción del sprite: x desde la izquierda, y desde abajo): en lo alto de la cabeza, justo detrás
-        /// del melón (a un tercio de la cabeza desde la frente), sobre el contorno; de ahí sale el soplo.
+        /// del melón, sobre el contorno; de ahí sale el soplo. Con la silueta de la fase 2 (D-058, el dueño el 2026-10-27: el
+        /// cuerpo sin el arco), detrás del melón redondo.
         /// </summary>
-        public static readonly Vector2 RosaBlowhole = new Vector2(0.42f, 0.765f);
+        public static readonly Vector2 RosaBlowhole = new Vector2(0.30f, 0.685f);
 
         /// <summary>Lado del soplo de la exhalación (dp): el abanico de gotas nace en el centro de su canto de abajo.</summary>
         public const float RosaSprayDp = 30f;
 
         /// <summary>
         /// Centro del corte del cuerpo de Rosa con el agua (fracción del ancho del sprite) cuando asoma el 74 % de su alto
-        /// (<c>WorldBannerView.RosaAbove</c>): el lomo entra en el agua entre 0,70 y 0,925 del ancho. Ahí va la espuma.
+        /// (<c>WorldBannerView.RosaAbove</c>): con la silueta de la fase 2, el vientre y el lomo entran en el agua entre 0,42 y
+        /// 0,85 del ancho (sobre el agua quedan la cabeza, el melón y el lomo con la quilla). Ahí va la espuma; la onda, más ancha,
+        /// tapa los extremos del corte.
         /// </summary>
-        public const float RosaCutCenter = 0.81f;
+        public const float RosaCutCenter = 0.635f;
 
         /// <summary>Ancho del corte del cuerpo con el agua (fracción del ancho del sprite), con <see cref="RosaCutCenter"/>.</summary>
-        public const float RosaCutWidth = 0.225f;
+        public const float RosaCutWidth = 0.435f;
 
         /// <summary>Ancho de la espuma que tapa el corte del cuerpo de Rosa con el agua (dp).</summary>
         public const float RosaFoamWidthDp = 40f;
@@ -141,10 +144,6 @@ namespace AF.Presentation
         // Celdas de la poda de las siluetas (px): solo se evalúan las que pueden tocar la silueta o su contorno.
         private const int SilhouetteCell = 6;
 
-        // Contorno de tinta de las mascotas: 2 px del arte a 1,5 px/dp ≈ 1,35 dp (07 §6.1: «trazo de contorno 2 px #2B2118 al 80 %»).
-        private const float MascotOutlineDp = 1.35f;
-        private static readonly Color MascotInk = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f);
-
         // Azul claro de las gotas del soplo y su contorno fino: se leen sobre el cielo durazno y sobre el agua.
         private static readonly Color SprayDrop = new Color(0.80f, 0.92f, 0.99f, 0.97f);
         private static readonly Color SprayEdge = new Color(0.25f, 0.45f, 0.58f, 0.85f);
@@ -168,10 +167,9 @@ namespace AF.Presentation
         private static readonly Vector2 RotM20 = Rot(-20f);
         private static readonly Vector2 RotM30 = Rot(-30f);
 
-        // Lomo de Rosa muestreado en t = i / 96 (la búsqueda gruesa toma uno de cada 4) y la aleta dorsal, fija.
+        // Lomo de Rosa muestreado en t = i / 96 (la búsqueda gruesa toma uno de cada 4); las aletas, en RosaShape.
         private const int RosaSpineSteps = 96;
         private static readonly Vector2[] RosaSpineTable = BuildRosaSpineTable();
-        private static readonly Vector2 RosaFinAt = RosaSpine(0.42f) + (new Vector2(0.03f, 1f).normalized * (RosaRadius(0.42f) * 0.92f));
 
         // Lo que pinta el trabajo del banner en el otro hilo, sin cierre ni asignación por petición.
         private static readonly WaitCallback RunBannerJobCallback = RunBannerJob;
@@ -742,10 +740,11 @@ namespace AF.Presentation
         // Capi de juguete (D-058): los tonos de cada material, el contorno fino coloreado y el radio de las cúpulas (en unidades
         // del lado del cuadrado). En su propia clase para que se inicialicen la primera vez que se pintan, con los colores de
         // ProceduralArt ya inicializados, en cualquier hilo (el banner se pinta fuera del principal).
-        private static class CapiToy
+        internal static class CapiToy
         {
             public static readonly ToyTones Fur = ToyShading.Tones(CapiFur);
-            public static readonly ToyTones Belly = ToyShading.Tones(CapiBelly, 0.7f);
+            // La panza, con poco contraste y algo más clara (P3D-3: que se lea la panza clara aunque mire hacia abajo, a la sombra).
+            public static readonly ToyTones Belly = ToyShading.Tones(ColorMath.Lighten(CapiBelly, 0.06f), 0.4f);
             public static readonly ToyTones Muzzle = ToyShading.Tones(ColorMath.Darken(CapiFur, 0.14f));
             public static readonly ToyTones Cheek = ToyShading.Tones(ColorMath.Lighten(CapiFur, 0.1f));
             public static readonly ToyTones Ear = ToyShading.Tones(CapiNose);
@@ -845,7 +844,7 @@ namespace AF.Presentation
             float belly = SdEllipse(x, y, 0.52f, 0.285f, 0.135f, 0.10f, Rot34) * s;
             if (belly < 6f)
             {
-                t = ToyTones.Lerp(t, CapiToy.Belly, 0.85f * (1f - SmoothRange(0f, 1f, (belly + 4.5f) / 9f)));
+                t = ToyTones.Lerp(t, CapiToy.Belly, 1f - SmoothRange(0f, 1f, (belly + 3.5f) / 9f));
             }
 
             float snout = SdRoundBox(x, y, 0.83f, 0.598f, 0.065f, 0.10f, 0.045f, RotM12) * s;
@@ -996,13 +995,15 @@ namespace AF.Presentation
 
         // ---- Rosa ----
 
-        // Lomo de Rosa: curva de Bézier cuadrática desde la cola sumergida (derecha, abajo) hasta la cabeza (izquierda), en
-        // unidades del alto del sprite (x hasta W/H).
+        // Lomo de Rosa (fase 2, D-058; el dueño, 2026-10-27: «mejor forma, sin ese arco»): una Bézier cuadrática casi recta desde el
+        // pedúnculo de la cola (t = 0, abajo a la derecha) hasta la nuca (t = 1, arriba a la izquierda), con una curvatura suave
+        // (el lomo algo convexo), en unidades del alto del sprite (x hasta W/H). El cuerpo sube unos 25° hacia la cabeza: nada
+        // en la superficie (en el banner, la línea del agua deja fuera la cola) y en el Mapa se ve entero, con la cola dentro.
         private static Vector2 RosaSpine(float t)
         {
-            var p0 = new Vector2(1.42f, -0.06f);
-            var p1 = new Vector2(1.10f, 0.86f);
-            var p2 = new Vector2(0.60f, 0.56f);
+            var p0 = new Vector2(1.34f, 0.21f);
+            var p1 = new Vector2(0.98f, 0.40f);
+            var p2 = new Vector2(0.50f, 0.52f);
             float u = 1f - t;
             return (u * u * p0) + (2f * u * t * p1) + (t * t * p2);
         }
@@ -1018,9 +1019,61 @@ namespace AF.Presentation
             return table;
         }
 
+        // El grosor del cuerpo a lo largo del lomo: fusiforme y macizo, fino en el pedúnculo de la cola, lo más ancho a 3/5 (el
+        // pecho) y algo más fino en la nuca, donde el melón y el cuello del boto se marcan.
         private static float RosaRadius(float t)
         {
-            return t < 0.55f ? Mathf.Lerp(0.15f, 0.175f, t / 0.55f) : Mathf.Lerp(0.175f, 0.14f, (t - 0.55f) / 0.45f);
+            if (t < 0.6f)
+            {
+                return Mathf.Lerp(0.042f, 0.15f, Mathf.Pow(SmoothRange(0f, 0.6f, t), 0.6f));
+            }
+
+            return Mathf.Lerp(0.15f, 0.118f, SmoothRange(0.6f, 1f, t));
+        }
+
+        // Las piezas fijas de la silueta de Rosa (fase 2): la quilla dorsal baja sobre el lomo, los dos lóbulos de la cola
+        // horizontal (vista algo desde arriba: una media luna barrida hacia atrás) y la aleta pectoral ancha bajo el pecho; el
+        // melón redondo y el rostro largo y fino. En su propia clase: se calculan una vez, al pintar, con el lomo ya listo.
+        private static class RosaShape
+        {
+            public static readonly Vector2 FinAt;
+            public static readonly Vector2 FinRot;
+            public static readonly Vector2 FlukeA;
+            public static readonly Vector2 FlukeB;
+            public static readonly Vector2 FlukeRotA;
+            public static readonly Vector2 FlukeRotB;
+            public static readonly Vector2 PecAt = new Vector2(0.665f, 0.305f);
+            public static readonly Vector2 PecRot = Rot(-34f);
+            public static readonly Vector2 Melon = new Vector2(0.40f, 0.59f);
+            public const float MelonR = 0.12f;
+            public static readonly Vector2 SnoutBase = new Vector2(0.33f, 0.545f);
+            public static readonly Vector2 SnoutTip = new Vector2(0.035f, 0.47f);
+            public const float SnoutBaseR = 0.052f;
+            public const float SnoutTipR = 0.03f;
+
+            static RosaShape()
+            {
+                const float tf = 0.47f;
+                Vector2 f = RosaSpine(tf);
+                Vector2 dir = (RosaSpine(tf + 0.01f) - RosaSpine(tf - 0.01f)).normalized;
+                var n = new Vector2(-dir.y, dir.x);
+                if (n.y < 0f)
+                {
+                    n = -n;
+                }
+
+                FinAt = f + (n * (RosaRadius(tf) * 0.86f));
+                FinRot = dir;
+
+                Vector2 tail = RosaSpine(0f);
+                Vector2 back = (tail - RosaSpine(2f / RosaSpineSteps)).normalized; // hacia atrás, a lo largo del eje
+                var side = new Vector2(-back.y, back.x);
+                float ang = Mathf.Atan2(back.y, back.x) * Mathf.Rad2Deg;
+                FlukeA = tail + (back * 0.075f) + (side * 0.05f);
+                FlukeB = tail + (back * 0.075f) - (side * 0.05f);
+                FlukeRotA = Rot(ang + 40f);
+                FlukeRotB = Rot(ang - 40f);
+            }
         }
 
         // Distancia (unidades del alto) al cuerpo de Rosa y, en side, el lado respecto del lomo (+1 arriba, −1 abajo, según la
@@ -1083,22 +1136,32 @@ namespace AF.Presentation
             float trunk = Mathf.Sqrt(best) - r;
             side = Mathf.Clamp(Vector2.Dot(new Vector2(x - at.x, y - at.y), normal) / r, -1f, 1f);
 
-            // Aleta dorsal baja sobre el lomo y frente abombada; el hocico largo y fino.
-            float fin = SdEllipse(x, y, RosaFinAt.x, RosaFinAt.y, 0.11f, 0.045f, Rot12);
-            body = Smin(trunk, fin, 0.04f);
-            float melon = SdEllipse(x, y, 0.56f, 0.64f, 0.145f, 0.135f);
-            float snout = SdCapsule(x, y, 0.46f, 0.57f, 0.12f, 0.47f, 0.042f);
+            // La quilla dorsal baja sobre el lomo, la cola horizontal y la aleta pectoral; el melón redondo y el rostro largo y fino.
+            float fin = SdEllipse(x, y, RosaShape.FinAt.x, RosaShape.FinAt.y, 0.15f, 0.032f, RosaShape.FinRot);
+            float fluke = Smin(
+                SdEllipse(x, y, RosaShape.FlukeA.x, RosaShape.FlukeA.y, 0.078f, 0.025f, RosaShape.FlukeRotA),
+                SdEllipse(x, y, RosaShape.FlukeB.x, RosaShape.FlukeB.y, 0.078f, 0.025f, RosaShape.FlukeRotB),
+                0.02f);
+            float pec = SdEllipse(x, y, RosaShape.PecAt.x, RosaShape.PecAt.y, 0.10f, 0.042f, RosaShape.PecRot);
+            float limb = Mathf.Min(fluke, pec);
+            body = Smin(Smin(Smin(trunk, fin, 0.05f), fluke, 0.025f), pec, 0.015f);
+            float melon = SdCircle(x, y, RosaShape.Melon.x, RosaShape.Melon.y, RosaShape.MelonR);
+            float snout = SdTaper(x, y, RosaShape.SnoutBase, RosaShape.SnoutBaseR, RosaShape.SnoutTip, RosaShape.SnoutTipR);
             head = Smin(melon, snout, 0.05f);
             if (head < body - 0.01f)
             {
                 side = 0f;
             }
+            else if (limb < trunk)
+            {
+                side = 2f; // una aleta (la cola o la pectoral): placa baja, sin el cilindro del lomo
+            }
 
-            return Smin(body, head, 0.045f);
+            return Smin(body, head, 0.035f);
         }
 
         // Rosa de juguete (D-058): vinilo rosa lacado, el material más brillante del piloto (piel lisa y mojada, sin pelo).
-        private static class RosaToy
+        internal static class RosaToy
         {
             public static readonly ToyTones Pink = ToyShading.Tones(RosaPink);
             public static readonly ToyTones Back = ToyShading.Tones(RosaBack);
@@ -1107,6 +1170,11 @@ namespace AF.Presentation
         }
 
         private const float RosaGloss = 0.9f;
+
+        // La boca (de la punta del rostro a la comisura) y el ojo, en unidades del alto (Rosa y el bufeo).
+        private static readonly Vector2 RosaMouthFrom = new Vector2(0.07f, 0.462f);
+        private static readonly Vector2 RosaMouthTo = new Vector2(0.345f, 0.515f);
+        private static readonly Vector2 RosaEyeAt = new Vector2(0.39f, 0.552f);
 
         private static PixelCanvas DrawRosa()
         {
@@ -1149,15 +1217,15 @@ namespace AF.Presentation
                                 continue;
                             }
 
-                            pc.Blend(px, py, RosaColorAt(x, y, side, body, head, spineNormal), cov);
+                            pc.Blend(px, py, RosaColorAt(x, y, side, body, head, spineNormal, RosaToy.Pink, RosaToy.Back, RosaToy.Belly), cov);
                         }
                     }
                 }
             }
 
-            // Boca a lo largo del hocico y el ojo de juguete, pequeño (1,25 veces el de antes), sin pestañas.
-            pc.FillCapsule(0.16f * h, 0.475f * h, 0.47f * h, 0.53f * h, Mathf.Max(0.8f, 0.3f * MascotPxPerDp), ColorMath.WithAlpha(RosaToy.Pink.Outline, 0.55f));
-            DrawToyEye(pc, 0.545f * h, 0.60f * h, 0.0275f * h, RosaToy.Iris);
+            // Boca a lo largo del rostro y el ojo de juguete, pequeño, sobre la comisura y bajo el melón, sin pestañas.
+            pc.FillCapsule(RosaMouthFrom.x * h, RosaMouthFrom.y * h, RosaMouthTo.x * h, RosaMouthTo.y * h, Mathf.Max(0.8f, 0.3f * MascotPxPerDp), ColorMath.WithAlpha(RosaToy.Pink.Outline, 0.55f));
+            DrawToyEye(pc, RosaEyeAt.x * h, RosaEyeAt.y * h, 0.0275f * h, RosaToy.Iris);
             return pc;
         }
 
@@ -1165,37 +1233,41 @@ namespace AF.Presentation
         // cabeza, el hocico se aclara por debajo. El volumen: un cilindro a lo largo del lomo (la normal del lomo por el lado) y,
         // en la cabeza, la cúpula de la frente y el cilindro del hocico, fundidos donde se unen; la oclusión, en la unión de la
         // cabeza con el cuerpo.
-        private static Color RosaColorAt(float x, float y, float side, float body, float head, Vector2 spineNormal)
+        // Con otros tonos (pink, back, belly), es también el bufeo del Mapa (la silueta de Rosa con su paleta gris azulada).
+        private static Color RosaColorAt(float x, float y, float side, float body, float head, Vector2 spineNormal, in ToyTones pink, in ToyTones back, in ToyTones belly)
         {
-            ToyTones t = RosaToy.Pink;
+            ToyTones t = pink;
             if (side > 0.25f)
             {
-                t = ToyTones.Lerp(t, RosaToy.Back, Mathf.SmoothStep(0f, 1f, (side - 0.25f) / 0.55f));
+                t = ToyTones.Lerp(t, back, Mathf.SmoothStep(0f, 1f, (side - 0.25f) / 0.55f));
             }
             else if (side < -0.2f)
             {
-                t = ToyTones.Lerp(t, RosaToy.Belly, Mathf.SmoothStep(0f, 1f, (-side - 0.2f) / 0.5f));
+                t = ToyTones.Lerp(t, belly, Mathf.SmoothStep(0f, 1f, (-side - 0.2f) / 0.5f));
             }
 
             if (side == 0f)
             {
                 float under = Mathf.Clamp01((0.56f - y) / 0.12f);
-                t = ToyTones.Lerp(t, RosaToy.Belly, 0.55f * under * Mathf.Clamp01((0.5f - x) / 0.2f));
+                t = ToyTones.Lerp(t, belly, 0.55f * under * Mathf.Clamp01((0.5f - x) / 0.2f));
             }
 
-            Vector3 trunk = ToyShading.Normal(spineNormal.x * side * 0.92f, spineNormal.y * side * 0.92f);
-            Vector3 melon = ToyShading.Normal((x - 0.56f) / 0.16f, (y - 0.64f) / 0.15f);
-            Vector2 snoutAxis = new Vector2(0.12f - 0.46f, 0.47f - 0.57f).normalized;
+            // Las aletas (side = 2), placas bajas abombadas apenas; el cuerpo, un cilindro a lo largo del lomo.
+            Vector3 trunk = side > 1.5f
+                ? ToyShading.Normal(0.2f * spineNormal.x, 0.35f)
+                : ToyShading.Normal(spineNormal.x * side * 0.92f, spineNormal.y * side * 0.92f);
+            Vector3 melon = ToyShading.Normal((x - RosaShape.Melon.x) / (RosaShape.MelonR * 1.1f), (y - RosaShape.Melon.y) / (RosaShape.MelonR * 1.1f));
+            Vector2 snoutAxis = (RosaShape.SnoutTip - RosaShape.SnoutBase).normalized;
             Vector2 snoutSide = new Vector2(-snoutAxis.y, snoutAxis.x);
             if (snoutSide.y < 0f)
             {
                 snoutSide = -snoutSide;
             }
 
-            float across = Mathf.Clamp(Vector2.Dot(new Vector2(x - 0.46f, y - 0.57f), snoutSide) / 0.05f, -0.95f, 0.95f);
+            float across = Mathf.Clamp(Vector2.Dot(new Vector2(x - RosaShape.SnoutBase.x, y - RosaShape.SnoutBase.y), snoutSide) / 0.045f, -0.95f, 0.95f);
             Vector3 snout = ToyShading.Normal(snoutSide.x * across, snoutSide.y * across);
-            float melonD = SdEllipse(x, y, 0.56f, 0.64f, 0.145f, 0.135f);
-            float snoutD = SdCapsule(x, y, 0.46f, 0.57f, 0.12f, 0.47f, 0.042f);
+            float melonD = SdCircle(x, y, RosaShape.Melon.x, RosaShape.Melon.y, RosaShape.MelonR);
+            float snoutD = SdTaper(x, y, RosaShape.SnoutBase, RosaShape.SnoutBaseR, RosaShape.SnoutTip, RosaShape.SnoutTipR);
             float toMelon = Mathf.Clamp01(0.5f + (0.5f * (snoutD - melonD) / 0.05f));
             Vector3 headN = Vector3.Lerp(snout, melon, toMelon);
             float toHead = Mathf.Clamp01(0.5f + (0.5f * (body - head) / 0.045f));

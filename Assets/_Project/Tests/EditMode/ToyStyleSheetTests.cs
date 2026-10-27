@@ -39,7 +39,7 @@ namespace AF.Tests.EditMode
             }
 
             Rect(pc, 0, 780, W, 260, Palette.Panel.Top);
-            Color[] irises = { Palette.Hex(0x6A4730), Palette.Hex(0x4A2E1C), Palette.Hex(0x3A2230) };
+            Color[] irises = { ProceduralArt.SlothEyeWarm, ProceduralArt.CapiToy.Iris, ProceduralArt.RosaToy.Iris }; // los de la fuente
             Color[] chars = { ProceduralArt.SlothFur, ProceduralArt.CapiFur, ProceduralArt.RosaPink, ProceduralArt.MorphoFlightBlue };
             for (int i = 0; i < 3; i++)
             {

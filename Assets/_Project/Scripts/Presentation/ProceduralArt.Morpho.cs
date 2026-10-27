@@ -247,7 +247,7 @@ namespace AF.Presentation
         // colores ya listos).
         private static class MorphoToy
         {
-            public static readonly ToyTones Deep = ToyShading.Tones(MorphoDeep, 0.8f);
+            public static readonly ToyTones Deep = ToyShading.Tones(MorphoDeep, 1f);
             public static readonly ToyTones Blue = ToyShading.Tones(MorphoFlightBlue, 0.8f);
             public static readonly ToyTones Light = ToyShading.Tones(MorphoFlightLight, 0.6f);
             public static readonly ToyTones Body = ToyShading.Tones(MorphoBody);
@@ -291,10 +291,13 @@ namespace AF.Presentation
                     Vector3 n = ToyShading.Normal(nx, ny);
 
                     // El color: claro en la raíz, azul de vuelo y el margen oscuro (≈ 4 px), con el contorno fino fuera.
+                    // P3D-3 (el dueño, 2026-10-27): más contraste entre el margen azul profundo, más ancho y menos barnizado, y
+                    // el centro claro, que llega más lejos desde la raíz.
                     float root = Mathf.Clamp01(1f - (Mathf.Abs((x + 0.5f) - bodyX) / (2.2f * rx)));
-                    ToyTones t = ToyTones.Lerp(MorphoToy.Blue, MorphoToy.Light, 0.55f * root * root);
+                    ToyTones t = ToyTones.Lerp(MorphoToy.Blue, MorphoToy.Light, 0.8f * root);
                     float edgePx = (1f - q) * minR;
-                    t = ToyTones.Lerp(t, MorphoToy.Deep, 1f - Mathf.Clamp01((edgePx - 3.2f) / 2.2f));
+                    float deep = 1f - Mathf.Clamp01((edgePx - 4.6f) / 2.4f);
+                    t = ToyTones.Lerp(t, MorphoToy.Deep, deep);
                     float ao = 0f;
                     if (rx2 > 0f)
                     {
@@ -307,8 +310,8 @@ namespace AF.Presentation
                     }
 
                     ao = Mathf.Max(ao, 0.45f * (1f - Mathf.Clamp01((Mathf.Abs((x + 0.5f) - bodyX) - 3f) / 5f)));
-                    Color c = ToyShading.Shade(t, n, ao, 1f);
-                    c = Color.Lerp(c, ColorMath.WithAlpha(MorphoToy.Light.Light, 1f), 0.35f * ToyShading.Specular(n, 4f) * (1f - ao));
+                    Color c = ToyShading.Shade(t, n, ao, 1f - (0.6f * deep));
+                    c = Color.Lerp(c, ColorMath.WithAlpha(MorphoToy.Light.Light, 1f), 0.35f * ToyShading.Specular(n, 4f) * (1f - ao) * (1f - deep));
                     c = Color.Lerp(c, MorphoToy.Deep.Outline, Mathf.Clamp01(1f - (edgePx / 1.1f)) * 0.9f);
                     c.a = 1f;
                     pc.Blend(x, y, c, cov);

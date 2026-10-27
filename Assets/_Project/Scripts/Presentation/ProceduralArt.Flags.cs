@@ -196,8 +196,9 @@ namespace AF.Presentation
             return MakeSprite(pc, "map_flag_" + iso2.ToLowerInvariant() + "_simplified", new Vector2(0f, 0.5f), Vector4.zero, k);
         }
 
-        // El bufeo de la franja: la silueta de Rosa (RosaSdf, en unidades del alto) a MapBufeoWidthDp, con su contorno de tinta y la
-        // paleta gris azulada (BufeoColorAt), la boca y el ojo de Rosa. Solo al pedirlo, en el hilo principal: ≈ 6.000 píxeles.
+        // El bufeo de la franja: la silueta de Rosa (RosaSdf, en unidades del alto) a MapBufeoWidthDp, de juguete como ella (D-058):
+        // el vinilo lacado con el volumen de Rosa (RosaColorAt) y la paleta gris azulada en los tonos, el borde fino de su color
+        // (con un mínimo para que se lea), la boca y el ojo de juguete. Solo al pedirlo, en el hilo principal: ≈ 6.000 píxeles.
         private Sprite BuildMapBufeo()
         {
             const float k = UiPxPerDp;
@@ -206,57 +207,43 @@ namespace AF.Presentation
             var pc = new PixelCanvas(w, h);
             float inv = 1f / h;
 
-            // El contorno de Rosa (MascotOutlineDp de su sprite de RosaHeightDp) a esta escala, con un mínimo para que se lea.
-            float outline = Mathf.Max(1.5f, MascotOutlineDp * h / RosaHeightDp);
+            // El borde fino de Rosa (CapiEdgeDp de su sprite de RosaHeightDp) a esta escala, con un mínimo para que se lea.
+            float outline = Mathf.Max(1.2f, CapiEdgeDp * h / RosaHeightDp);
             for (int py = 0; py < h; py++)
             {
                 for (int px = 0; px < w; px++)
                 {
                     float x = (px + 0.5f) * inv;
                     float y = (py + 0.5f) * inv;
-                    float d = RosaSdf(x, y, out float side) * h;
+                    float d = RosaSdf(x, y, out float side, out float body, out float head, out Vector2 spineNormal) * h;
                     if (d > outline + 1f)
                     {
                         continue;
                     }
 
-                    pc.Blend(px, py, MascotInk, PixelCanvas.Coverage(d - outline));
+                    pc.Blend(px, py, BufeoToy.Body.Outline, PixelCanvas.Coverage(d - outline));
                     float cov = PixelCanvas.Coverage(d);
                     if (cov > 0f)
                     {
-                        pc.Blend(px, py, BufeoColorAt(x, y, side), cov);
+                        pc.Blend(px, py, RosaColorAt(x, y, side, body, head, spineNormal, BufeoToy.Body, BufeoToy.Back, BufeoToy.Belly), cov);
                     }
                 }
             }
 
-            pc.FillCapsule(0.16f * h, 0.475f * h, 0.47f * h, 0.53f * h, Mathf.Max(0.6f, 0.012f * h), new Color(MascotInk.r, MascotInk.g, MascotInk.b, 0.5f));
-            pc.FillCircle(0.545f * h, 0.60f * h, Mathf.Max(1f, 0.03f * h), Palette.Ink);
+            pc.FillCapsule(RosaMouthFrom.x * h, RosaMouthFrom.y * h, RosaMouthTo.x * h, RosaMouthTo.y * h, Mathf.Max(0.6f, 0.012f * h), ColorMath.WithAlpha(BufeoToy.Body.Outline, 0.55f));
+            DrawToyEye(pc, RosaEyeAt.x * h, RosaEyeAt.y * h, Mathf.Max(1.1f, 0.0275f * h), BufeoIris);
             return MakeSprite(pc, "map_guide_bufeo", new Vector2(0.5f, 0f), Vector4.zero, k);
         }
 
-        // La paleta del bufeo sobre la silueta de Rosa (como RosaColorAt): el dorso más oscuro por encima del lomo y el vientre claro
-        // por debajo; el hocico se aclara por debajo.
-        private static Color BufeoColorAt(float x, float y, float side)
+        // El bufeo de juguete: los tonos de su paleta gris azulada, una vez (en su propia clase: se inicializan al pintarlo).
+        private static class BufeoToy
         {
-            Color c = BufeoBody;
-            if (side > 0.25f)
-            {
-                c = Color.Lerp(c, BufeoBack, Mathf.SmoothStep(0f, 1f, (side - 0.25f) / 0.55f));
-            }
-            else if (side < -0.2f)
-            {
-                c = Color.Lerp(c, BufeoBelly, Mathf.SmoothStep(0f, 1f, (-side - 0.2f) / 0.5f));
-            }
-
-            if (side == 0f)
-            {
-                float under = Mathf.Clamp01((0.56f - y) / 0.12f);
-                c = Color.Lerp(c, BufeoBelly, 0.55f * under * Mathf.Clamp01((0.5f - x) / 0.2f));
-            }
-
-            c.a = 1f;
-            return c;
+            public static readonly ToyTones Body = ToyShading.Tones(BufeoBody);
+            public static readonly ToyTones Back = ToyShading.Tones(BufeoBack);
+            public static readonly ToyTones Belly = ToyShading.Tones(BufeoBelly, 0.7f);
         }
+
+        private static readonly Color BufeoIris = Palette.Hex(0x2A2E3A);
 
         // Color del paño de la bandera iso2 en el punto (xd, yd) en dp, con el origen abajo a la izquierda.
         private static Color FlagColor(string iso2, float xd, float yd)

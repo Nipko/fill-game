@@ -201,14 +201,133 @@ namespace AF.Tests.EditMode
         {
             // Alto contraste no cambia a los personajes [P]: sobre la selva clara los separa el contorno fino (≥ 3:1, el mínimo de
             // los glifos) y sobre el panel azul petróleo, el propio material (≥ 2:1).
-            foreach (Color c in new[] { ProceduralArt.SlothFur, ProceduralArt.CapiFur, ProceduralArt.RosaPink, ProceduralArt.MorphoFlightBlue })
+            foreach (Color c in new[]
+            {
+                ProceduralArt.SlothFur, ProceduralArt.CapiFur, ProceduralArt.RosaPink, ProceduralArt.MorphoFlightBlue,
+                ProceduralArt.BufeoBody, ProceduralArt.PiranaFishSilver,
+            })
             {
                 ToyTones t = ToyShading.Tones(c);
-                Color outline = t.Outline;
+                Color outline = Color.Lerp(Palette.JungleLight, t.Outline, t.Outline.a); // con su alfa real (0,92) sobre el fondo
                 outline.a = 1f;
+                Assert.That(t.Outline.a, Is.EqualTo(ToyShading.OutlineAlpha));
                 Assert.That(ColorMath.ContrastRatio(outline, Palette.JungleLight), Is.GreaterThanOrEqualTo(3f), "contorno sobre la selva clara: " + c);
                 Assert.That(ColorMath.ContrastRatio(t.Mid, Palette.Panel.Top), Is.GreaterThanOrEqualTo(2f), "material sobre el panel: " + c);
             }
+        }
+
+        [Test]
+        public void ShadeCore_UsesTheSameLights_AsTheVectors()
+        {
+            // ShadeCore lleva las luces como constantes (se llama por píxel): las mismas que KeyLight, Half, RimFrom y los colores.
+            Assert.That(ToyShading.KeyX, Is.EqualTo(ToyShading.KeyLight.x).Within(1e-6f));
+            Assert.That(ToyShading.KeyY, Is.EqualTo(ToyShading.KeyLight.y).Within(1e-6f));
+            Assert.That(ToyShading.KeyZ, Is.EqualTo(ToyShading.KeyLight.z).Within(1e-6f));
+            Assert.That(ToyShading.HalfX, Is.EqualTo(ToyShading.Half.x).Within(1e-6f));
+            Assert.That(ToyShading.HalfY, Is.EqualTo(ToyShading.Half.y).Within(1e-6f));
+            Assert.That(ToyShading.HalfZ, Is.EqualTo(ToyShading.Half.z).Within(1e-6f));
+            Assert.That(ToyShading.RimX, Is.EqualTo(ToyShading.RimFrom.x).Within(1e-6f));
+            Assert.That(ToyShading.RimY, Is.EqualTo(ToyShading.RimFrom.y).Within(1e-6f));
+            Assert.That(new Color(ToyShading.RimWarmR, ToyShading.RimWarmG, ToyShading.RimWarmB), Is.EqualTo(ToyShading.RimWarm));
+            Assert.That(new Color(ToyShading.BounceR, ToyShading.BounceG, ToyShading.BounceB), Is.EqualTo(ToyShading.BounceCool));
+
+            // Y Shade es ShadeCore: la misma cuenta con vectores.
+            ToyTones t = ToyShading.Tones(Fur);
+            Vector3 n = ToyShading.Normal(-0.3f, 0.4f);
+            Vector3 g = ToyShading.Normal(0.1f, -0.2f);
+            ToyShading.ShadeCore(t, n.x, n.y, n.z, 0.25f, 0.6f, g.x, g.y, g.z, out float r, out float gg, out float b);
+            Color c = ToyShading.Shade(t, n, 0.25f, 0.6f, g);
+            Assert.That(c.r, Is.EqualTo(r));
+            Assert.That(c.g, Is.EqualTo(gg));
+            Assert.That(c.b, Is.EqualTo(b));
+            Assert.That(c.a, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void CreaseAO_AndContactShadow_SurviveAZeroRadius()
+        {
+            // Guardas de división (revisión del piloto): un radio 0 no da NaN ni infinito.
+            float ao = ToyShading.CreaseAO(0.1f, -0.1f, 0f);
+            float shadow = ToyShading.ContactShadow(1f, 1f, 0f, 0f);
+            Assert.That(float.IsNaN(ao) || float.IsInfinity(ao), Is.False);
+            Assert.That(float.IsNaN(shadow) || float.IsInfinity(shadow), Is.False);
+            Assert.That(ao, Is.InRange(0f, 1f));
+            Assert.That(shadow, Is.InRange(0f, 1f));
+        }
+
+        [Test]
+        public void ToyEllipse_HasTheThinColoredEdge_TheLightUpperLeft_AndTheCrease()
+        {
+            // Una pieza de juguete sobre un fondo opaco: el borde del color oscuro de la pieza en el canto, el relleno más claro
+            // arriba a la izquierda que abajo a la derecha, y la oclusión oscurece lo de alrededor, no lo lejano.
+            var pc = new PixelCanvas(64, 64);
+            Color under = new Color(0.6f, 0.6f, 0.6f, 1f);
+            pc.Fill(under);
+            ToyTones t = ToyShading.Tones(Fur);
+            ProceduralArt.ToyEllipse(pc, 32f, 32f, 20f, 20f, t, 0.5f, 1.5f, 4f);
+            Color edge = pc.Get(32, 32 + 20); // en el canto de arriba (y hacia arriba)
+            Assert.That(ColorMath.LabLightness(edge), Is.LessThan(ColorMath.LabLightness(t.Mid)), "el borde, oscuro");
+            Color lit = pc.Get(32 - 9, 32 + 9);
+            Color dark = pc.Get(32 + 12, 32 - 12);
+            Assert.That(ColorMath.LabLightness(lit), Is.GreaterThan(ColorMath.LabLightness(dark)), "luz arriba a la izquierda");
+            Color near = pc.Get(32 + 23, 32);
+            Color far = pc.Get(2, 2);
+            Assert.That(near.r, Is.LessThan(under.r), "la oclusión alrededor de la pieza");
+            Assert.That(far, Is.EqualTo(under), "lejos, nada");
+            for (int y = 0; y < 64; y++)
+            {
+                for (int x = 0; x < 64; x++)
+                {
+                    Color c = pc.Get(x, y);
+                    Assert.That(float.IsNaN(c.r) || float.IsNaN(c.a), Is.False);
+                }
+            }
+
+            pc.Release();
+        }
+
+        [Test]
+        public void ToyCapsule_IsACylinder_LitTheSameAlongItsLength()
+        {
+            // Un cilindro: a lo largo del eje, el mismo tono; de un lado al otro, de la luz a la sombra.
+            var pc = new PixelCanvas(48, 96);
+            ToyTones t = ToyShading.Tones(Fur);
+            ProceduralArt.ToyCapsule(pc, 24f, 20f, 24f, 76f, 12f, t, 0f, 1f);
+            Color a = pc.Get(20, 40);
+            Color b = pc.Get(20, 56);
+            Assert.That(Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b), Is.LessThan(1e-4f), "a lo largo, igual");
+            Assert.That(ColorMath.LabLightness(pc.Get(17, 48)), Is.GreaterThan(ColorMath.LabLightness(pc.Get(32, 48))), "la luz, a la izquierda");
+            Assert.That(pc.Get(24, 2).a, Is.EqualTo(0f), "fuera, transparente");
+            pc.Release();
+        }
+
+        [Test]
+        public void TheLut_MatchesTheFullShading_AndIsCachedPerMaterial()
+        {
+            // La tabla de una pieza grande da casi lo mismo que la cuenta completa (media < 0,01 por canal y máximo < 0,08, en el
+            // canto del brillo nítido); las piezas pequeñas sin tabla en caché van por la cuenta completa.
+            ToyTones t = ToyShading.Tones(ProceduralArt.RosaPink);
+            ToyLut lut = ToyLut.For(t, 0.9f, ToyLut.MinPixels)!;
+            Assert.That(ToyLut.For(t, 0.9f, 0f), Is.SameAs(lut), "en caché");
+            Assert.That(ToyLut.For(ToyShading.Tones(ProceduralArt.CapiFur), 0.37f, 10f), Is.Null, "pequeña y sin tabla: la cuenta completa");
+            double sum = 0;
+            float worst = 0f;
+            int n = 0;
+            for (float ny = -1.05f; ny <= 1.05f; ny += 0.037f)
+            {
+                for (float nx = -1.05f; nx <= 1.05f; nx += 0.041f)
+                {
+                    Color exact = ProceduralArt.ToyColor(t, 0.9f, null, nx, ny);
+                    Color table = ProceduralArt.ToyColor(t, 0.9f, lut, nx, ny);
+                    float d = Mathf.Max(Mathf.Abs(exact.r - table.r), Mathf.Max(Mathf.Abs(exact.g - table.g), Mathf.Abs(exact.b - table.b)));
+                    sum += d;
+                    worst = Mathf.Max(worst, d);
+                    n++;
+                }
+            }
+
+            Assert.That(sum / n, Is.LessThan(0.01));
+            Assert.That(worst, Is.LessThan(0.08f));
         }
     }
 }

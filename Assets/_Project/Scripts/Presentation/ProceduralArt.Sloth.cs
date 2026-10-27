@@ -47,9 +47,6 @@ namespace AF.Presentation
         /// <summary>Garganta parda de la especie #6E5440 [P].</summary>
         public static readonly Color SlothThroat = Palette.Hex(0x6E5440);
 
-        // Nariz y contorno #2B2118 (c.4), el contorno al 80 % como la fauna (07 §6.1). Desde D-058 el contorno solo lo usa la
-        // hoja de embaúba (un objeto, no el personaje), que conserva su tinta.
-        private static readonly Color SlothInk = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 1f);
         private static readonly Color SlothOutline = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f);
 
         // Hueso claro de las garras #CDBFA3 (c.4): el párpado cerrado sobre el antifaz.

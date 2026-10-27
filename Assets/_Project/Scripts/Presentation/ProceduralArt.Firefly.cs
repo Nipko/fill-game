@@ -278,8 +278,9 @@ namespace AF.Presentation
             float cx = w * 0.5f;
             float lanternY = (h * 0.5f) - (FireflyLanternBelowU * MechanicPxPerU);
 
-            // Abdomen oscuro con dos juntas apenas más claras (líneas de 1 px).
-            pc.FillCapsule(cx, lanternY + 6f, cx, lanternY + 34f, 10.5f, FireflyBody);
+            // Abdomen oscuro de juguete (D-058: un escarabajo lacado, con el volumen en tres tonos y el barniz) con dos juntas
+            // apenas más claras (líneas de 1 px).
+            ToyCapsule(pc, cx, lanternY + 6f, cx, lanternY + 34f, 10.5f, FireflyToy.Body, 1f, 0f);
             for (int j = 0; j < 2; j++)
             {
                 float y = lanternY + 18f + (j * 9f);
@@ -293,8 +294,8 @@ namespace AF.Presentation
 
             // Tórax ancho, cabeza y antenas.
             float thorax = lanternY + 42f;
-            pc.FillRoundedRect(cx - 10f, thorax - 6f, cx + 10f, thorax + 6f, 6f, FireflyThorax);
-            pc.FillCircle(cx, thorax + 10f, 5.5f, FireflyBody);
+            ToyCapsule(pc, cx - 4f, thorax, cx + 4f, thorax, 6f, FireflyToy.Thorax, 1f, 0f, 1.5f);
+            ToyEllipse(pc, cx, thorax + 10f, 5.5f, 5.5f, FireflyToy.Body, 1f, 0f, 1.2f);
             pc.FillCapsule(cx - 2f, thorax + 14f, cx - 9f, h - 3f, 1.3f, FireflyBody);
             pc.FillCapsule(cx + 2f, thorax + 14f, cx + 9f, h - 3f, 1.3f, FireflyBody);
             return MakeSprite(pc, "firefly_body", new Vector2(0.5f, 0.5f), Vector4.zero);
@@ -315,6 +316,10 @@ namespace AF.Presentation
                 float deg = side == 0 ? 160f : 20f;
                 FillEllipseRotated(pc, x, cy + 4f, 24f, 11f, deg, ColorMath.WithAlpha(Palette.Cream, 0.55f));
                 FillEllipseRotated(pc, x, cy + 4f, 22.5f, 9.5f, deg, ColorMath.WithAlpha(FireflyWing, 0.78f));
+
+                // El brillo de barniz de cada ala (D-058): una mancha alargada hacia la luz principal, arriba a la izquierda.
+                float hx = x - (6f * Mathf.Cos(deg * Mathf.Deg2Rad)) - 2f;
+                FillEllipseRotated(pc, hx, cy + 8f, 9f, 2.6f, deg, new Color(1f, 1f, 1f, 0.42f));
             }
 
             return MakeSprite(pc, "firefly_wings", new Vector2(0.5f, 0.5f), Vector4.zero);
@@ -350,6 +355,13 @@ namespace AF.Presentation
             }
 
             return MakeSprite(pc, "reveal_halo", new Vector2(0.5f, 0.5f), new Vector4(b, b, b, b));
+        }
+
+        // Luciérnaga de juguete (D-058): los tonos del cuerpo, una vez.
+        private static class FireflyToy
+        {
+            public static readonly ToyTones Body = ToyShading.Tones(Color.Lerp(FireflyBody, FireflyThorax, 0.35f), 1.6f);
+            public static readonly ToyTones Thorax = ToyShading.Tones(FireflyThorax, 1.6f);
         }
 
         // Elipse de semiejes rx × ry girada deg grados (antihorario) con antialias aproximado por distancia.

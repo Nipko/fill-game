@@ -39,7 +39,8 @@ namespace AF.Presentation
 
     /// <summary>
     /// Retratos de los avatares del jugador por código (D-056 y D-052; <c>docs/dev/avatares.md</c> §2): 16 animales de busto en un disco
-    /// de fondo (una familia de la UI) con hojas ovadas al pie, el contorno de tinta de Capi, proporciones de adulto y un aro de madera
+    /// de fondo (una familia de la UI) con hojas ovadas al pie, de juguete brillante (D-058: el volumen en tres tonos, el barniz, el
+    /// borde fino del color de cada parte en lugar del contorno de tinta de Capi y los ojos con dos reflejos), proporciones de adulto y un aro de madera
     /// con filete crema (el sitio del marco de la 1.2). Bloqueado: el fondo desaturado al 40 %, el animal en silueta sólida del
     /// <c>_contorno</c> de su familia (alfa 0,85, sin ojos ni brillos), el aro gris y la chapa de madera con el icono del hito. El
     /// disco neutro (sin avatar o un índice desconocido): Hoja con una hoja ovada crema. El PNG del artista manda por la ranura
@@ -219,8 +220,7 @@ namespace AF.Presentation
                 {
                     for (int i = 0; i < parts.Length; i++)
                     {
-                        AvPart p = parts[i];
-                        DrawPart(pc, frame, p, p.Fill, p.Ink, true, p.Shade);
+                        DrawToyPart(pc, frame, parts[i]);
                     }
                 }
                 else
@@ -256,6 +256,36 @@ namespace AF.Presentation
             {
                 PaintBadge(pc, frame, badge);
             }
+        }
+
+        /// <summary>
+        /// La silueta del animal <paramref name="index"/> en un retrato de <paramref name="px"/> px (las partes sin detalle, recortadas al
+        /// disco, como la del bloqueado): <paramref name="mask"/>[y · px + x] es la cobertura (0..1). Para las pruebas de legibilidad a
+        /// 24 y 32 dp. Sin asignar más que su lienzo.
+        /// </summary>
+        internal static void AvatarSilhouetteMask(int index, int px, float[] mask)
+        {
+            var scratch = new PixelCanvas(px, px);
+            float half = px * 0.5f;
+            var frame = new AvFrame(half, half, half * AvatarDiscFraction, px);
+            AvPart[] parts = AvAnimals[index];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (!parts[i].Detail)
+                {
+                    DrawPart(scratch, frame, parts[i], Color.white, false, true, 0f);
+                }
+            }
+
+            for (int y = 0; y < px; y++)
+            {
+                for (int x = 0; x < px; x++)
+                {
+                    mask[(y * px) + x] = scratch.Get(x, y).a;
+                }
+            }
+
+            scratch.Release();
         }
 
         private static void BackdropColors(AvatarArtBackdrop bg, out Color light, out Color deep, out Color outline)
@@ -481,6 +511,145 @@ namespace AF.Presentation
             }
         }
 
+        // Juguete de los avatares (D-058): el borde fino coloreado (px del retrato: ≈ 1 px a 32 dp) y el barniz de cada clase de
+        // parte (las formas del animal, lacadas; los parches sin borde y las de color plano, algo menos).
+        private const float AvToyGloss = 0.6f;
+        private const float AvToyPatchGloss = 0.45f;
+        private const float AvToyFlatGloss = 0.3f;
+
+        // Una parte de un retrato normal de juguete (D-058), recortada al disco: el borde fino del color oscuro de la parte (en
+        // lugar de la tinta), el relleno con el volumen de su forma (una cúpula para la elipse, un cilindro con las puntas en
+        // cúpula para la cápsula y un cojín desde el borde para el polígono) y el barniz; los ojos, con el iris en degradado; los
+        // detalles (pupilas, brillos, marcas), planos como antes. Sin asignar memoria: los tonos se calculan al crear las tablas.
+        private static void DrawToyPart(PixelCanvas pc, in AvFrame f, AvPart p)
+        {
+            if (p.Detail && !p.Ink)
+            {
+                DrawPart(pc, f, p, p.Fill, false, true, 0f);
+                return;
+            }
+
+            bool eye = p.Detail && p.Ink;
+            float edgePx = p.Ink ? Mathf.Max(0.9f, f.N / 150f) : 0f;
+            float gloss = p.Ink ? AvToyGloss : (p.Shade > 0f ? AvToyPatchGloss : AvToyFlatGloss);
+            float bulge = p.Ink ? 1f : 0.6f; // los parches sin borde, más planos: siguen a la pieza de debajo
+            float pad = edgePx + 1.5f;
+            int x0 = Mathf.Max(0, Mathf.FloorToInt(f.Cx + (p.MinX * f.K) - pad));
+            int x1 = Mathf.Min(f.N - 1, Mathf.CeilToInt(f.Cx + (p.MaxX * f.K) + pad));
+            int y0 = Mathf.Max(0, Mathf.FloorToInt(f.Cy + (p.MinY * f.K) - pad));
+            int y1 = Mathf.Min(f.N - 1, Mathf.CeilToInt(f.Cy + (p.MaxY * f.K) + pad));
+            float invK = 1f / f.K;
+            float insideR = Mathf.Max(0f, 1f - (1f / f.K));
+            float inside2 = insideR * insideR;
+            float pcx = (p.MinX + p.MaxX) * 0.5f;
+            float pcy = (p.MinY + p.MaxY) * 0.5f;
+            float phx = Mathf.Max(1e-4f, (p.MaxX - p.MinX) * 0.5f);
+            float phy = Mathf.Max(1e-4f, (p.MaxY - p.MinY) * 0.5f);
+            float pillow = 0.45f * Mathf.Min(phx, phy);
+            ToyLut? lut = eye ? null : ToyLut.For(p.Toy, gloss, (x1 - x0 + 1) * (y1 - y0 + 1) * 0.7f);
+            for (int y = y0; y <= y1; y++)
+            {
+                float uy = ((y + 0.5f) - f.Cy) * invK;
+                for (int x = x0; x <= x1; x++)
+                {
+                    float ux = ((x + 0.5f) - f.Cx) * invK;
+                    float clipCov = 1f;
+                    float r2 = (ux * ux) + (uy * uy);
+                    if (r2 > inside2)
+                    {
+                        clipCov = PixelCanvas.Coverage((Mathf.Sqrt(r2) - 1f) * f.K);
+                        if (clipCov <= 0f)
+                        {
+                            continue;
+                        }
+                    }
+
+                    float sd = Sdf(p, ux, uy);
+                    float d = sd * f.K;
+                    if (d > edgePx + 1f)
+                    {
+                        continue;
+                    }
+
+                    if (edgePx > 0f && d > -0.5f)
+                    {
+                        float ci = PixelCanvas.Coverage(d - edgePx) * clipCov;
+                        if (ci > 0f)
+                        {
+                            pc.Blend(x, y, p.Toy.Outline, ci);
+                        }
+                    }
+
+                    float cf = PixelCanvas.Coverage(d) * clipCov;
+                    if (cf <= 0f)
+                    {
+                        continue;
+                    }
+
+                    Color c;
+                    if (eye)
+                    {
+                        // El iris en degradado (la pupila y los reflejos son las partes de detalle que van encima).
+                        float er = Mathf.Max(1e-4f, p.C);
+                        c = ToyShading.Iris((ux - p.A) / er, (uy - p.B) / er, p.Fill, 0f);
+                    }
+                    else
+                    {
+                        Vector2 n = ToyNormal(p, ux, uy, sd, bulge, pcx, pcy, phx, phy, pillow);
+                        c = ToyColor(p.Toy, gloss, lut, n.x, n.y);
+                    }
+
+                    if (cf >= 1f)
+                    {
+                        pc.Set(x, y, c);
+                    }
+                    else
+                    {
+                        pc.Blend(x, y, c, cf);
+                    }
+                }
+            }
+        }
+
+        // La normal aparente de la parte en (x, y) (unidades del disco), a sd de su borde, en el plano (la z la pone la cúpula,
+        // ToyShading.Normal): la cúpula de la elipse (girada con ella), el cilindro de la cápsula o el cojín del polígono desde su
+        // borde, aplanada por bulge.
+        private static Vector2 ToyNormal(AvPart p, float x, float y, float sd, float bulge, float pcx, float pcy, float phx, float phy, float pillow)
+        {
+            switch (p.Kind)
+            {
+                case AvKind.Ellipse:
+                {
+                    float px = x - p.A;
+                    float py = y - p.B;
+                    float lx = ((px * p.Cos) + (py * p.Sin)) / (p.C * 1.06f);
+                    float ly = ((-px * p.Sin) + (py * p.Cos)) / (p.D * 1.06f);
+                    return new Vector2(((lx * p.Cos) - (ly * p.Sin)) * bulge, ((lx * p.Sin) + (ly * p.Cos)) * bulge);
+                }
+
+                case AvKind.Capsule:
+                {
+                    float px = x - p.A;
+                    float py = y - p.B;
+                    float vx = p.C - p.A;
+                    float vy = p.D - p.B;
+                    float t = Mathf.Clamp01(((px * vx) + (py * vy)) / Mathf.Max(1e-6f, (vx * vx) + (vy * vy)));
+                    float inv = bulge / Mathf.Max(1e-5f, p.E * 1.06f);
+                    return new Vector2((px - (vx * t)) * inv, (py - (vy * t)) * inv);
+                }
+
+                default:
+                {
+                    // El cojín desde el borde (como ToyShading.EdgeDome): mira de lado en el canto y de frente a pillow dentro.
+                    float dx = (x - pcx) / phx;
+                    float dy = (y - pcy) / phy;
+                    float len = Mathf.Sqrt((dx * dx) + (dy * dy));
+                    float m = (1f - Mathf.Clamp01(-sd / Mathf.Max(1e-5f, pillow))) * bulge;
+                    return len > 1e-5f ? new Vector2(dx / len * m, dy / len * m) : Vector2.zero;
+                }
+            }
+        }
+
         // Distancia con signo (unidades del disco, negativa dentro) de la parte en (x, y).
         private static float Sdf(AvPart p, float x, float y)
         {
@@ -615,6 +784,9 @@ namespace AF.Presentation
             public bool Ink = true;
             public bool Detail;
             public float Shade = 0.16f;
+
+            /// <summary>Los tonos de juguete del relleno (D-058), calculados una vez al crear las tablas (<see cref="WithToyTones"/>).</summary>
+            public ToyTones Toy;
             public float MinX;
             public float MinY;
             public float MaxX;
@@ -692,7 +864,8 @@ namespace AF.Presentation
             return new AvPart { Kind = AvKind.Poly, Points = xy, Fill = Palette.Hex(hex), MinX = minX, MaxX = maxX, MinY = minY, MaxY = maxY };
         }
 
-        // Ojo de adulto: tinta fina, iris y pupila; el brillo de 1 punto va aparte.
+        // Ojo de adulto: borde fino, iris (en degradado en el retrato de juguete) y pupila, y los dos reflejos de juguete (D-058):
+        // el grande arriba a la izquierda, hacia la luz, y el pequeño abajo a la derecha.
         private static AvPart[] Eye(float x, float y, float r, int iris)
         {
             return new[]
@@ -700,6 +873,7 @@ namespace AF.Presentation
                 E(x, y, r, r, iris).Eye(),
                 E(x, y, r * 0.5f, r * 0.55f, 0x1A1410).Det(),
                 E(x - (r * 0.3f), y + (r * 0.35f), r * 0.22f, r * 0.22f, 0xFFF8E6).Det(),
+                E(x + (r * 0.36f), y - (r * 0.32f), r * 0.11f, r * 0.11f, 0xFFF8E6).Det(), // el reflejo pequeño (D-058)
             };
         }
 
@@ -1061,7 +1235,22 @@ namespace AF.Presentation
                 E(0.75f, -0.04f, 0.03f, 0.03f, 0x2B2118).Det(),
                 Eye(0.16f, 0.16f, 0.03f, 0x1A1410));
 
-            return a;
+            return WithToyTones(a);
+        }
+
+        // Los tonos de juguete de cada parte, una vez (no al pintar: el atlas pinta sin asignar ni repetir la cuenta en OKLab).
+        private static AvPart[][] WithToyTones(AvPart[][] animals)
+        {
+            for (int i = 0; i < animals.Length; i++)
+            {
+                AvPart[] parts = animals[i];
+                for (int j = 0; j < parts.Length; j++)
+                {
+                    parts[j].Toy = ToyShading.Tones(parts[j].Fill, 0.85f);
+                }
+            }
+
+            return animals;
         }
     }
 
