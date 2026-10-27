@@ -46,7 +46,7 @@ export const PAGES: readonly PageDef[] = [
       en: 'What data Tintalú processes, why, with whom, and how to exercise your rights.',
       'pt-BR': 'Quais dados o Tintalú trata, para quê, com quem e como exercer seus direitos.',
     },
-    draft: true,
+    draft: false,
   },
   {
     id: 'terms',
@@ -57,7 +57,7 @@ export const PAGES: readonly PageDef[] = [
       en: 'The conditions for playing Tintalú.',
       'pt-BR': 'As condições para jogar Tintalú.',
     },
-    draft: true,
+    draft: false,
   },
   {
     id: 'delete',
@@ -81,7 +81,7 @@ export const PAGES: readonly PageDef[] = [
       en: 'Who makes Tintalú and the licenses of third-party material.',
       'pt-BR': 'Quem faz o Tintalú e as licenças do material de terceiros.',
     },
-    draft: true,
+    draft: false,
   },
 ];
 

@@ -209,9 +209,12 @@ describe('web/site', () => {
       }
     }
     // Las únicas salidas son enlaces (no recursos) al sitio del desarrollador y a las políticas de Google como socio de
-    // anuncios (AdMob, D-049), y los textos de las licencias de terceros de Créditos (T-L13, D-057).
+    // anuncios (AdMob, D-049), las de los proveedores (Firebase y AWS) y los textos de las licencias de terceros de
+    // Créditos (T-L13, D-057).
     expect([...externalLinks].sort()).toEqual([
+      'https://aws.amazon.com/privacy/',
       'https://developer.android.com/studio/terms',
+      'https://firebase.google.com/support/privacy',
       'https://opensource.org/license/mit',
       'https://parallext.com',
       'https://policies.google.com/privacy',
@@ -225,6 +228,20 @@ describe('web/site', () => {
     expect(js).not.toMatch(/https?:\/\/|document\.cookie|localStorage|sessionStorage|eval\(|new Function/);
     // Ningún carácter fuera de ASCII en el script (se sirve sin charset).
     expect([...js].every((c) => c.charCodeAt(0) < 128)).toBe(true);
+  });
+
+  it('la tabla de datos de la privacidad tiene una sola fila de anuncios (AD_ID) y una de Crashlytics por idioma', () => {
+    // Guarda de la fusión 5699efd5, que repitió la fila de anuncios y perdió la de Crashlytics.
+    const privacy = PAGES.find((p) => p.id === 'privacy');
+    if (!privacy) throw new Error('Falta la página de privacidad');
+    for (const lang of LANGS) {
+      const doc = html(privacy, lang);
+      const start = doc.indexOf('<h2 id="datos"');
+      const table = doc.slice(start, doc.indexOf('</table>', start));
+      const rows = [...table.matchAll(/<tr><td>[\s\S]*?<\/tr>/g)].map((m) => m[0]);
+      expect(rows.filter((r) => r.includes('AD_ID')), lang).toHaveLength(1);
+      expect(rows.filter((r) => r.includes('Firebase Crashlytics')), lang).toHaveLength(1);
+    }
   });
 
   it('la página de borrado tiene el formulario completo en cada idioma', () => {

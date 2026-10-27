@@ -416,7 +416,7 @@ El art. 4.5 de la Directiva 2019/882 exime a las **microempresas que prestan ser
 |---|---|
 | Crashlytics y Remote Config antes del consentimiento | «Opcional: no» mientras no exista el interruptor; con T-L6, Crashlytics pasa a «opcional: sí» |
 | Plazo fiscal del libro mayor | 7 años (§9, fila 20) |
-| IP de los registros | No se declara por sí sola: no se deriva ubicación; sí «Ubicación aproximada» por el país de CloudFront de la Liga (§7.5) |
+| IP de los registros | No se declara por sí sola: no se deriva ubicación; sí «Ubicación aproximada» por el país de CloudFront de la Liga (§7.5). **Resuelto (T-L12, 2026-10-27):** la Liga no usa CloudFront; el país lo manda el teléfono (SIM o región) y no se declara «Ubicación aproximada» por la conexión (§7.5; `data-safety.md`) |
 | Registros de Play Billing (Q-BILL-2) | No se declaran: los recoge el sistema de pagos para procesar la transacción [F56] |
 | Liga: categoría «compartido» | Mantener «compartido» para el seudónimo, la bandera y los puntos, como propone el borrador; la excepción por acción del usuario no está clara [NV] |
 
