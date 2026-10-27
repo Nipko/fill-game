@@ -63,6 +63,15 @@ namespace AF.LiveOps
 
         public int BoardCalls { get; private set; }
 
+        /// <summary>Envíos del avatar recibidos (tests).</summary>
+        public int AvatarCalls { get; private set; }
+
+        /// <summary>El avatar del jugador que «guardó el servidor» (null: nunca eligió).</summary>
+        public int? MyAvatar { get; set; }
+
+        /// <summary>Falla cada envío del avatar con este motivo (null: no); por ejemplo, <see cref="LeagueFailure.Rejected"/> para un 400.</summary>
+        public LeagueFailure? AvatarFailWith { get; set; }
+
         /// <summary>La última petición de victorias (tests).</summary>
         public LeagueWinsRequest? LastRequest { get; private set; }
 
@@ -134,7 +143,7 @@ namespace AF.LiveOps
                     }
                 }
 
-                onDone(LeagueResult<LeagueWinsResult>.Ok(new LeagueWinsResult(_week!, _points, accepted, rejected, NameKey, NameNum, Country)));
+                onDone(LeagueResult<LeagueWinsResult>.Ok(new LeagueWinsResult(_week!, _points, accepted, rejected, NameKey, NameNum, Country, MyAvatar)));
             });
         }
 
@@ -165,6 +174,48 @@ namespace AF.LiveOps
             });
         }
 
+        /// <inheritdoc />
+        public void SetAvatar(int avatar, Action<LeagueResult<LeagueAvatarResult>> onDone)
+        {
+            if (onDone == null)
+            {
+                throw new ArgumentNullException(nameof(onDone));
+            }
+
+            AvatarCalls++;
+            Respond(() =>
+            {
+                if (Offline || FailWith.HasValue || AvatarFailWith.HasValue)
+                {
+                    onDone(LeagueResult<LeagueAvatarResult>.Fail(Offline ? LeagueFailure.Offline : (AvatarFailWith ?? FailWith!.Value)));
+                    return;
+                }
+
+                if (avatar < 0 || avatar > LeagueRules.MaxAvatar)
+                {
+                    onDone(LeagueResult<LeagueAvatarResult>.Fail(LeagueFailure.Rejected));
+                    return;
+                }
+
+                MyAvatar = avatar;
+                onDone(LeagueResult<LeagueAvatarResult>.Ok(new LeagueAvatarResult(avatar)));
+            });
+        }
+
+        /// <summary>
+        /// El avatar de la fila <paramref name="i"/> del top falso (D-056): uno del catálogo, sin avatar (el disco neutro) en una de cada
+        /// cinco y un índice que este cliente no conoce (40) en la fila 23.
+        /// </summary>
+        public static int? SampleAvatar(int i)
+        {
+            if (i == 23)
+            {
+                return 40;
+            }
+
+            return i % 5 == 4 ? (int?)null : (i * 7) % 16;
+        }
+
         /// <summary>La clasificación que daría ahora el servidor falso.</summary>
         public LeagueBoard Board(LeagueScope scope)
         {
@@ -182,7 +233,7 @@ namespace AF.LiveOps
                 if (hasPoints && myRank == 0 && _points > points)
                 {
                     myRank = rank;
-                    top.Add(new LeagueRow(rank++, NameKey, NameNum, Country, _points));
+                    top.Add(new LeagueRow(rank++, NameKey, NameNum, Country, _points, MyAvatar));
                     if (top.Count >= count)
                     {
                         break;
@@ -196,7 +247,7 @@ namespace AF.LiveOps
                 }
 
                 string? country = scope == LeagueScope.Country ? Country : GlobalCountries[i % GlobalCountries.Length];
-                top.Add(new LeagueRow(rank++, key, 1000 + ((i * 397) % 9000), country, points));
+                top.Add(new LeagueRow(rank++, key, 1000 + ((i * 397) % 9000), country, points, SampleAvatar(i)));
             }
 
             int? percentile = null;
@@ -205,7 +256,7 @@ namespace AF.LiveOps
                 percentile = Math.Max(1, Math.Min(100, 100 - (_points / 10)));
             }
 
-            var me = new LeagueMe(_points, myRank > 0 ? myRank : (int?)null, percentile, hasPoints || _accepted.Count > 0 ? NameKey : null, NameNum, Country);
+            var me = new LeagueMe(_points, myRank > 0 ? myRank : (int?)null, percentile, hasPoints || _accepted.Count > 0 ? NameKey : null, NameNum, Country, MyAvatar);
             return new LeagueBoard(_week!, start, LeagueRules.WeekEnd(start), scope, Country, now, top, me);
         }
 

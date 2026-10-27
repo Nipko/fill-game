@@ -48,6 +48,9 @@ namespace AF.UI
         private const float CountrySp = 12f;
         private const float InfoSp = 14f;
 
+        /// <summary>El avatar de una fila (dp; D-056, avatares.md §3.3).</summary>
+        public const float AvatarDp = 32f;
+
         private readonly ProceduralArt _art;
         private readonly DevProbe? _probe;
         private readonly Action _onClose;
@@ -106,6 +109,7 @@ namespace AF.UI
             _message.textWrappingMode = TextWrappingModes.Normal;
 
             _me = new Row("MeRow", _panel, art, true);
+            _me.MakeAvatarButton(() => MeTapped?.Invoke());
             _youPill = UiBuilder.Label("You", _me.Root, TextStyle.PillWood, LeagueText.You, 12f, Palette.Cream, TextAlignmentOptions.Center);
             A11yLabels.Set(_youPill, () => string.Empty); // lo dice la lectura de la fila
             _canvas.Canvas.gameObject.SetActive(false);
@@ -201,6 +205,46 @@ namespace AF.UI
             _canvas.Canvas.gameObject.SetActive(false);
         }
 
+        /// <summary>
+        /// El atlas de los retratos de las filas (D-056; null con los avatares apagados: las filas sin avatar). Lo pone y lo suelta
+        /// <c>GameBootstrap</c>.
+        /// </summary>
+        internal AvatarAtlas? Atlas { get; set; }
+
+        /// <summary>El retrato del jugador (el de su perfil, no el que dice el servidor: un cambio se ve en el acto; avatares.md §3.3).</summary>
+        internal Sprite? MyAvatar { get; set; }
+
+        /// <summary>Al tocar el avatar de la fila del jugador: abre «Tu avatar» (<c>source = league</c>).</summary>
+        internal Action? MeTapped { get; set; }
+
+        /// <summary>Las filas llevan avatar.</summary>
+        public bool AvatarsShown => Atlas != null;
+
+        /// <summary>El sprite del avatar de la fila <paramref name="i"/> del top (o de la del jugador con −1), o null sin avatar.</summary>
+        internal Sprite? RowAvatar(int i) => (i < 0 ? _me : _rows[i]).AvatarSprite;
+
+        /// <summary>El índice que pinta la fila <paramref name="i"/> (null: el disco neutro).</summary>
+        internal int? RowAvatarIndex(int i) => _rows[i].AvatarIndex;
+
+        /// <summary>El botón del avatar de la fila del jugador (abre «Tu avatar»).</summary>
+        internal Button? MeAvatarButton => _me.AvatarButton;
+
+        /// <summary>Vuelve a poner los sprites de las filas (cuando el atlas pinta celdas nuevas).</summary>
+        internal void RefreshAvatars()
+        {
+            if (!Visible)
+            {
+                return;
+            }
+
+            for (int i = 0; i < RowsShown; i++)
+            {
+                _rows[i].ApplyAvatar(Atlas);
+            }
+
+            _me.ApplyMyAvatar(Atlas != null ? MyAvatar : null);
+        }
+
         /// <summary>Se pulsó una pestaña (lo fija <c>GameBootstrap</c>, que pide la clasificación y escribe la analítica).</summary>
         public Action<LeagueScope>? TabSelected { get; set; }
 
@@ -275,6 +319,7 @@ namespace AF.UI
                 {
                     Row row = RowAt(i);
                     row.Fill(board.Top[i], global);
+                    row.SetAvatar(board.Top[i].Avatar, Atlas);
                     shown++;
                 }
             }
@@ -295,6 +340,7 @@ namespace AF.UI
             if (board != null)
             {
                 _me.FillMe(board.Me, global);
+                _me.ApplyMyAvatar(Atlas != null ? MyAvatar : null);
             }
 
             Layout();
@@ -375,16 +421,26 @@ namespace AF.UI
             y += 4f;
             bool global = _scope == LeagueScope.Global;
             float rowH = RowHeight(s, global);
+            if (AvatarsShown)
+            {
+                // D-056 (avatares.md §3.3): el avatar resta 38 dp al seudónimo; a 320 dp y al 130 % el seudónimo y el país pueden ir en
+                // dos líneas, y todas las filas crecen igual (la lista sigue siendo uniforme).
+                for (int i = 0; i < RowsShown; i++)
+                {
+                    rowH = Mathf.Max(rowH, _rows[i].MeasureWithAvatar(w - 24f, s));
+                }
+            }
+
             _youPill.fontSize = Mathf.Max(UiBuilder.MinTextSp, 12f * s);
             float pillW = Mathf.Ceil(UiBuilder.MinTextWidth(_youPill)) + 12f;
-            float meH = _me.MeasureMe(w - 24f, s, pillW);
+            float meH = _me.MeasureMe(w - 24f, s, pillW, AvatarsShown);
             float listBottom = h - 16f - (_me.Root.gameObject.activeSelf ? meH + 6f : 0f);
             float viewH = Mathf.Max(rowH, listBottom - y);
             UiBuilder.Place(_viewport, 12f, y, w - 24f, viewH);
             float rowsW = w - 24f;
             for (int i = 0; i < RowsShown; i++)
             {
-                _rows[i].Layout(0f, i * rowH, rowsW, rowH, s, i % 2 == 1);
+                _rows[i].Layout(0f, i * rowH, rowsW, rowH, s, i % 2 == 1, AvatarsShown);
             }
 
             UiBuilder.Place(_content, 0f, 0f, rowsW, RowsShown * rowH);
@@ -393,7 +449,7 @@ namespace AF.UI
             _message.fontSize = Mathf.Max(UiBuilder.MinTextSp, 16f * s);
             if (_me.Root.gameObject.activeSelf)
             {
-                _me.LayoutMe(12f, h - 16f - meH, w - 24f, meH, s, _youPill, pillW);
+                _me.LayoutMe(12f, h - 16f - meH, w - 24f, meH, s, _youPill, pillW, AvatarsShown);
             }
         }
 
@@ -480,7 +536,10 @@ namespace AF.UI
         {
             private readonly Image _bg;
             private readonly bool _isMe;
+            private readonly Image _avatar;
             private string _reading = string.Empty;
+            private float _nameH;
+            private float _subH;
 
             public Row(string name, Transform parent, ProceduralArt art, bool isMe)
             {
@@ -497,6 +556,9 @@ namespace AF.UI
                 Sub = UiBuilder.Label("Sub", Root, isMe ? TextStyle.PillWood : TextStyle.Body, string.Empty, CountrySp, isMe ? Palette.Cream : Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
                 Points = UiBuilder.Label("Points", Root, style, string.Empty, NameSp, ink, TextAlignmentOptions.MidlineRight);
                 Flag = new LeagueFlag("Flag", Root, art);
+                _avatar = UiBuilder.Image("Avatar", Root, null, Color.white); // decorativo: TalkBack no lo lee (avatares.md §3.6)
+                _avatar.preserveAspect = true;
+                _avatar.gameObject.SetActive(false);
                 Name.textWrappingMode = TextWrappingModes.NoWrap;
                 Sub.textWrappingMode = TextWrappingModes.NoWrap;
                 // La fila se lee entera en un elemento: el del rango (siempre tiene texto) o, en la del jugador, el del nombre.
@@ -521,6 +583,64 @@ namespace AF.UI
 
             /// <summary>El texto que lleva la lectura de TalkBack de la fila.</summary>
             public TextMeshProUGUI Reader { get; }
+
+            /// <summary>El índice del avatar de la fila (null: el disco neutro).</summary>
+            public int? AvatarIndex { get; private set; }
+
+            /// <summary>El sprite que pinta, o null sin avatar.</summary>
+            public Sprite? AvatarSprite => _avatar.gameObject.activeSelf ? _avatar.sprite : null;
+
+            /// <summary>El botón del avatar de la fila del jugador (48 dp alrededor del retrato), o null.</summary>
+            public Button? AvatarButton { get; private set; }
+
+            /// <summary>La fila del jugador: su retrato es un botón que abre «Tu avatar».</summary>
+            public void MakeAvatarButton(Action onClick)
+            {
+                AvatarButton = UiBuilder.BareButton("AvatarButton", Root, onClick);
+                A11yLabels.Set(AvatarButton, () => AvatarText.Title);
+                _avatar.transform.SetParent(AvatarButton.transform, false);
+                AvatarButton.gameObject.SetActive(false);
+            }
+
+            /// <summary>El avatar de una fila del top: el del índice, o el disco neutro sin avatar o con uno que no se conoce.</summary>
+            public void SetAvatar(int? index, AvatarAtlas? atlas)
+            {
+                AvatarIndex = AvatarCatalog.AtIndex(index) != null ? index : null;
+                ApplyAvatar(atlas);
+            }
+
+            public void ApplyAvatar(AvatarAtlas? atlas)
+            {
+                if (atlas == null)
+                {
+                    _avatar.gameObject.SetActive(false);
+                    return;
+                }
+
+                AvatarInfo? info = AvatarCatalog.AtIndex(AvatarIndex);
+                int cell = info != null ? info.Index : AvatarAtlas.NeutralCell;
+                if (info != null)
+                {
+                    atlas.Request(cell, info.Id, info.Index, AvatarScreen.BackdropOf(info), AvatarArtBadge.None, false);
+                }
+                else
+                {
+                    atlas.Request(cell, null, ProceduralArt.AvatarNeutral, AvatarArtBackdrop.Leaf, AvatarArtBadge.None, false);
+                }
+
+                _avatar.sprite = atlas.Cell(cell);
+                _avatar.gameObject.SetActive(true);
+            }
+
+            public void ApplyMyAvatar(Sprite? portrait)
+            {
+                _avatar.sprite = portrait;
+                _avatar.gameObject.SetActive(portrait != null);
+                if (AvatarButton != null)
+                {
+                    AvatarButton.gameObject.SetActive(portrait != null);
+                }
+            }
 
             public void Fill(LeagueRow row, bool global)
             {
@@ -548,8 +668,36 @@ namespace AF.UI
                 _reading = LeagueText.MeA11y(me, global);
             }
 
-            public void Layout(float x, float y, float w, float h, float s, bool odd)
+            /// <summary>
+            /// Alto de la fila con avatar en el ancho <paramref name="w"/>: el seudónimo y el país pueden partirse en dos líneas (a 320 dp
+            /// y al 130 % no caben en una junto al avatar). Guarda los altos para <see cref="Layout"/>.
+            /// </summary>
+            public float MeasureWithAvatar(float w, float s)
             {
+                const float pad = 4f;
+                float nameSp = NameSp * s;
+                float subSp = Mathf.Max(UiBuilder.MinTextSp, CountrySp * s);
+                Fit(Name, nameSp, s);
+                Fit(Sub, subSp, s);
+                Name.textWrappingMode = TextWrappingModes.Normal;
+                Sub.textWrappingMode = TextWrappingModes.Normal;
+                float nameX = pad + RankColDp + GapDp + AvatarDp + GapDp;
+                float nameW = w - nameX - PointsColDp - pad - GapDp;
+                _nameH = Mathf.Ceil(Mathf.Max(nameSp * LineK, UiBuilder.MinTextHeight(Name, nameW)));
+                bool two = Sub.gameObject.activeSelf && Sub.text.Length > 0;
+                float flag = Flag.Code != null && two ? (Mathf.Min(FlagHDp * s, subSp * LineK) * LeagueFlag.Aspect) + 5f : 0f;
+                _subH = two ? Mathf.Ceil(Mathf.Max(subSp * LineK, UiBuilder.MinTextHeight(Sub, nameW - flag))) : 0f;
+                return Mathf.Max(MinRowDp, _nameH + _subH + 8f);
+            }
+
+            public void Layout(float x, float y, float w, float h, float s, bool odd, bool avatars)
+            {
+                if (!avatars)
+                {
+                    Name.textWrappingMode = TextWrappingModes.NoWrap;
+                    Sub.textWrappingMode = TextWrappingModes.NoWrap;
+                }
+
                 UiBuilder.Place(Root, x, y, w, h);
                 _bg.enabled = odd;
                 float nameSp = NameSp * s;
@@ -562,6 +710,13 @@ namespace AF.UI
                 UiBuilder.Place(Rank.rectTransform, pad, 0f, RankColDp, h);
                 UiBuilder.Place(Points.rectTransform, w - pad - PointsColDp, 0f, PointsColDp, h);
                 float nameX = pad + RankColDp + GapDp;
+                if (avatars)
+                {
+                    // D-056 (avatares.md §3.3): rango · avatar de 32 dp · seudónimo, centrado en la fila (que no crece por él).
+                    UiBuilder.Place(_avatar.rectTransform, nameX, (h - AvatarDp) * 0.5f, AvatarDp, AvatarDp);
+                    nameX += AvatarDp + GapDp;
+                }
+
                 float nameW = w - nameX - PointsColDp - pad - GapDp;
                 bool two = Sub.gameObject.activeSelf && Sub.text.Length > 0;
                 if (!two)
@@ -570,8 +725,8 @@ namespace AF.UI
                     return;
                 }
 
-                float lineH = Mathf.Ceil(nameSp * LineK);
-                float subH = Mathf.Ceil(subSp * LineK);
+                float lineH = avatars ? Mathf.Max(_nameH, Mathf.Ceil(nameSp * LineK)) : Mathf.Ceil(nameSp * LineK);
+                float subH = avatars ? Mathf.Max(_subH, Mathf.Ceil(subSp * LineK)) : Mathf.Ceil(subSp * LineK);
                 float top = Mathf.Max(0f, (h - lineH - subH) * 0.5f);
                 UiBuilder.Place(Name.rectTransform, nameX, top, nameW, lineH);
                 float subX = nameX;
@@ -591,21 +746,21 @@ namespace AF.UI
             /// Alto de la fila del jugador con el ancho <paramref name="w"/>: arriba la posición, el seudónimo y los puntos; debajo,
             /// la píldora «Tú» y la línea de la posición o del percentil, que puede ir en dos líneas (al 130 % en pt-BR no cabe en una).
             /// </summary>
-            public float MeasureMe(float w, float s, float pillW)
+            public float MeasureMe(float w, float s, float pillW, bool avatars)
             {
                 float nameSp = NameSp * s;
                 float subSp = Mathf.Max(UiBuilder.MinTextSp, CountrySp * s);
                 Sub.enableAutoSizing = false;
                 Sub.fontSize = subSp;
                 Sub.textWrappingMode = TextWrappingModes.Normal;
-                float subW = SubWidth(w, pillW);
+                float subW = SubWidth(w, pillW, avatars);
                 float subH = Sub.text.Length > 0 ? Mathf.Ceil(Mathf.Max(subSp * LineK, UiBuilder.MinTextHeight(Sub, subW))) : 0f;
                 float pillH = Mathf.Ceil((Mathf.Max(UiBuilder.MinTextSp, 12f * s) * LineK) + 2f);
                 return Mathf.Max(MinRowDp + 8f, Mathf.Ceil(8f + (nameSp * LineK) + 2f + Mathf.Max(subH, pillH) + 8f));
             }
 
             /// <summary>Coloca la fila del jugador (ya medida con <see cref="MeasureMe"/>) con su píldora «Tú».</summary>
-            public void LayoutMe(float x, float y, float w, float h, float s, TextMeshProUGUI pill, float pillW)
+            public void LayoutMe(float x, float y, float w, float h, float s, TextMeshProUGUI pill, float pillW, bool avatars)
             {
                 UiBuilder.Place(Root, x, y, w, h);
                 float nameSp = NameSp * s;
@@ -618,19 +773,28 @@ namespace AF.UI
                 UiBuilder.Place(Rank.rectTransform, pad, top, RankColDp, lineH);
                 UiBuilder.Place(Points.rectTransform, w - pad - PointsColDp, top, PointsColDp, lineH);
                 float nameX = pad + RankColDp + GapDp;
+                if (avatars && AvatarButton != null)
+                {
+                    // El retrato del jugador, en un área táctil de 48 dp centrada en la fila (abre «Tu avatar»).
+                    float touch = Mathf.Max(MinRowDp, AvatarDp);
+                    UiBuilder.Place((RectTransform)AvatarButton.transform, nameX - ((touch - AvatarDp) * 0.5f), (h - touch) * 0.5f, touch, touch);
+                    UiBuilder.Place(_avatar.rectTransform, (touch - AvatarDp) * 0.5f, (touch - AvatarDp) * 0.5f, AvatarDp, AvatarDp);
+                    nameX += AvatarDp + GapDp;
+                }
+
                 UiBuilder.Place(Name.rectTransform, nameX, top, w - nameX - PointsColDp - pad - GapDp, lineH);
                 float line2 = top + lineH + 2f;
                 float pillH = Mathf.Ceil((pill.fontSize * LineK) + 2f);
                 UiBuilder.Place(pill.rectTransform, nameX, line2, pillW, pillH);
                 float subX = nameX + pillW + GapDp;
-                UiBuilder.Place(Sub.rectTransform, subX, line2, SubWidth(w, pillW), h - line2 - 6f);
+                UiBuilder.Place(Sub.rectTransform, subX, line2, SubWidth(w, pillW, avatars), h - line2 - 6f);
                 Flag.Root.gameObject.SetActive(false);
             }
 
-            private static float SubWidth(float w, float pillW)
+            private static float SubWidth(float w, float pillW, bool avatars)
             {
                 const float pad = 10f;
-                float nameX = pad + RankColDp + GapDp;
+                float nameX = pad + RankColDp + GapDp + (avatars ? AvatarDp + GapDp : 0f);
                 return w - (nameX + pillW + GapDp) - pad;
             }
 

@@ -17,6 +17,13 @@ namespace AF.UI
         /// <summary>Tamaño del texto de la línea al 100 % (sp) [P].</summary>
         public const float LeagueLineSp = 14f;
 
+        /// <summary>El avatar de la línea (dp; D-056, avatares.md §3.4: «⟨avatar 24 dp⟩ +{n} puntos de Liga»).</summary>
+        public const float LeagueAvatarDp = 24f;
+
+        private const float LeagueAvatarGapDp = 6f;
+
+        private UnityEngine.UI.Image? _leagueAvatar;
+
         private TextMeshProUGUI? _leagueLine;
         private int _leaguePoints;
         private int _leaguePointsLevel = -1;
@@ -31,6 +38,17 @@ namespace AF.UI
         internal string LeagueLineText => LeagueLineShown ? _leagueLine!.text : string.Empty;
 
         internal RectTransform? LeagueLineRect => _leagueLine?.rectTransform;
+
+        /// <summary>
+        /// El retrato del jugador para la línea de la Liga (D-056; Q-AV-4: solo en esta línea), o null con los avatares apagados. Lo
+        /// pone <c>GameBootstrap</c>.
+        /// </summary>
+        internal Sprite? LeagueAvatar { get; set; }
+
+        /// <summary>El avatar de la línea se ve.</summary>
+        internal bool LeagueAvatarShown => _leagueAvatar != null && _leagueAvatar.gameObject.activeSelf;
+
+        internal RectTransform? LeagueAvatarRect => _leagueAvatar?.rectTransform;
 
         /// <summary>La victoria del nivel <paramref name="level"/> sumó <paramref name="points"/> puntos de Liga (0 = no sumó).</summary>
         internal void SetLeagueVictory(int level, int points)
@@ -85,7 +103,33 @@ namespace AF.UI
             _leagueLine.fontSizeMin = Mathf.Min(_leagueLine.fontSizeMax, UiBuilder.MinTextSp * s);
             _leagueLine.text = earned ? LeagueText.VictoryPoints(_leaguePoints) : string.Empty;
             _leagueLine.gameObject.SetActive(earned);
-            UiBuilder.Place(_leagueLine.rectTransform, 16f, y, panelW - 32f, h);
+            bool avatar = earned && LeagueAvatar != null;
+            if (_leagueAvatar == null && avatar)
+            {
+                _leagueAvatar = UiBuilder.Image("LeagueAvatar", _victoryPanel, null, Color.white); // decorativo: TalkBack lee la línea
+                _leagueAvatar.preserveAspect = true;
+            }
+
+            if (_leagueAvatar != null)
+            {
+                _leagueAvatar.gameObject.SetActive(avatar);
+            }
+
+            if (!avatar)
+            {
+                UiBuilder.Place(_leagueLine.rectTransform, 16f, y, panelW - 32f, h);
+                return h;
+            }
+
+            // «⟨avatar⟩ +{n} puntos de Liga» centrados como un grupo: el texto, a su ancho (sin pasar del panel), y el retrato a su
+            // izquierda, centrado en el alto de la línea.
+            float maxText = panelW - 32f - LeagueAvatarDp - LeagueAvatarGapDp;
+            float textW = Mathf.Min(maxText, Mathf.Ceil(_leagueLine.GetPreferredValues(_leagueLine.text, maxText, h).x) + 2f);
+            float groupW = LeagueAvatarDp + LeagueAvatarGapDp + textW;
+            float x0 = (panelW - groupW) * 0.5f;
+            _leagueAvatar!.sprite = LeagueAvatar;
+            UiBuilder.Place(_leagueAvatar.rectTransform, x0, y + ((h - LeagueAvatarDp) * 0.5f), LeagueAvatarDp, LeagueAvatarDp);
+            UiBuilder.Place(_leagueLine.rectTransform, x0 + LeagueAvatarDp + LeagueAvatarGapDp, y, textW, h);
             return h;
         }
     }

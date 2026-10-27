@@ -98,6 +98,45 @@ namespace AF.Backend.Contract
             return v;
         }
 
+        /// <summary>Índice máximo de un avatar (<c>common.schema.json#/$defs/avatar</c>: 0-63; D-056).</summary>
+        public const int MaxAvatar = 63;
+
+        /// <summary>Un índice de avatar del contrato (0-63).</summary>
+        public static bool IsAvatar(long value) => value >= 0 && value <= MaxAvatar;
+
+        // avatar (D-056; avatarOrNull): opcional. Falta o null = nunca eligió (el disco neutro). En la lectura estricta, un valor que no
+        // es un entero de 0-63 rompe la respuesta; en la tolerante (la del cliente) queda en null, como un avatar que no se conoce.
+        internal static int? ReadAvatar(ObjectReader r, string where, bool strict, out bool present)
+        {
+            present = r.Has("avatar");
+            JsonNode? node = r.Optional("avatar");
+            if (node == null || node.Kind == JsonKind.Null)
+            {
+                return null;
+            }
+
+            if (node.Kind == JsonKind.Number && long.TryParse(node.Text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out long v) && IsAvatar(v))
+            {
+                return (int)v;
+            }
+
+            if (strict)
+            {
+                throw new ContractException(where + ": 'avatar' debe ser un entero entre 0 y 63 o null.");
+            }
+
+            return null;
+        }
+
+        // Escribe avatar solo si venía (falta = falta; null = null), para que la ida y vuelta conserve la forma del ejemplo.
+        internal static void WriteAvatar(JsonNode target, bool present, int? avatar)
+        {
+            if (present)
+            {
+                target.Set("avatar", NullableNumber(avatar));
+            }
+        }
+
         internal static JsonNode NullableText(string? value) => value == null ? JsonNode.Null : JsonNode.FromString(value);
 
         internal static JsonNode NullableNumber(int? value) => value.HasValue ? JsonNode.FromLong(value.Value) : JsonNode.Null;
@@ -359,6 +398,12 @@ namespace AF.Backend.Contract
 
         public string? Country { get; }
 
+        /// <summary><c>avatar</c> (D-056) del jugador según el servidor, o null (falta, null o, en la lectura tolerante, fuera de rango).</summary>
+        public int? Avatar { get; private set; }
+
+        /// <summary>La respuesta traía la clave <c>avatar</c> (aunque fuera null).</summary>
+        public bool AvatarPresent { get; private set; }
+
         public string ToJson()
         {
             JsonNode accepted = JsonNode.NewArray();
@@ -373,14 +418,16 @@ namespace AF.Backend.Contract
                 rejected.Add(JsonNode.NewObject().Set("win_id", JsonNode.FromString(Rejected[i].Key)).Set("reason", JsonNode.FromString(Rejected[i].Value)));
             }
 
-            return BackendJson.Write(JsonNode.NewObject()
+            JsonNode root = JsonNode.NewObject()
                 .Set("week", JsonNode.FromString(Week))
                 .Set("points", JsonNode.FromLong(Points))
                 .Set("accepted", accepted)
                 .Set("rejected", rejected)
                 .Set("name_key", JsonNode.FromString(NameKey))
                 .Set("name_num", JsonNode.FromLong(NameNum))
-                .Set("country", LeagueContract.NullableText(Country)));
+                .Set("country", LeagueContract.NullableText(Country));
+            LeagueContract.WriteAvatar(root, AvatarPresent, Avatar);
+            return BackendJson.Write(root);
         }
 
         /// <summary>Lectura tolerante (lo que usa el cliente): claves nuevas y animales más nuevos no la rompen.</summary>
@@ -426,8 +473,9 @@ namespace AF.Backend.Contract
             }
 
             string? country = LeagueContract.NullableString(r, "country", LeagueContract.IsCountry);
+            int? avatar = LeagueContract.ReadAvatar(r, "leagueWins.response", strict, out bool avatarPresent);
             r.End();
-            return new LeagueWinsResponseDto(week, points, accepted, rejected, nameKey, nameNum, country);
+            return new LeagueWinsResponseDto(week, points, accepted, rejected, nameKey, nameNum, country) { Avatar = avatar, AvatarPresent = avatarPresent };
         }
     }
 
@@ -452,6 +500,12 @@ namespace AF.Backend.Contract
         public string? Country { get; }
 
         public int Points { get; }
+
+        /// <summary><c>avatar</c> (D-056) de la fila, o null (nunca eligió, o desconocido).</summary>
+        public int? Avatar { get; internal set; }
+
+        /// <summary>La fila traía la clave <c>avatar</c>.</summary>
+        public bool AvatarPresent { get; internal set; }
     }
 
     /// <summary>Respuesta 200 de <c>GET /v1/league?scope=</c> (<c>league-board.response.schema.json</c>).</summary>
@@ -492,18 +546,26 @@ namespace AF.Backend.Contract
 
         public string? MeCountry { get; private set; }
 
+        /// <summary><c>me.avatar</c> (D-056), o null.</summary>
+        public int? MeAvatar { get; private set; }
+
+        /// <summary><c>me</c> traía la clave <c>avatar</c>.</summary>
+        public bool MeAvatarPresent { get; private set; }
+
         public string ToJson()
         {
             JsonNode top = JsonNode.NewArray();
             for (int i = 0; i < Top.Count; i++)
             {
                 LeagueRowDto row = Top[i];
-                top.Add(JsonNode.NewObject()
+                JsonNode item = JsonNode.NewObject()
                     .Set("rank", JsonNode.FromLong(row.Rank))
                     .Set("name_key", JsonNode.FromString(row.NameKey))
                     .Set("name_num", JsonNode.FromLong(row.NameNum))
                     .Set("country", LeagueContract.NullableText(row.Country))
-                    .Set("points", JsonNode.FromLong(row.Points)));
+                    .Set("points", JsonNode.FromLong(row.Points));
+                LeagueContract.WriteAvatar(item, row.AvatarPresent, row.Avatar);
+                top.Add(item);
             }
 
             JsonNode me = JsonNode.NewObject()
@@ -513,6 +575,7 @@ namespace AF.Backend.Contract
                 .Set("name_key", LeagueContract.NullableText(MeNameKey))
                 .Set("name_num", JsonNode.FromLong(MeNameNum))
                 .Set("country", LeagueContract.NullableText(MeCountry));
+            LeagueContract.WriteAvatar(me, MeAvatarPresent, MeAvatar);
             return BackendJson.Write(JsonNode.NewObject()
                 .Set("week", JsonNode.FromString(Week))
                 .Set("starts_at", JsonNode.FromString(_startsAtText))
@@ -567,8 +630,9 @@ namespace AF.Backend.Contract
                 int num = (int)x.RequiredInteger("name_num", minNum, LeagueContract.MaxNameNum);
                 string? country = LeagueContract.NullableString(x, "country", LeagueContract.IsCountry);
                 int points = (int)x.RequiredInteger("points", strict ? 1 : 0, maxPoints);
+                int? avatar = LeagueContract.ReadAvatar(x, where + ".top", strict, out bool avatarPresent);
                 x.End();
-                rows.Add(new LeagueRowDto(rank, key, num, country, points));
+                rows.Add(new LeagueRowDto(rank, key, num, country, points) { Avatar = avatar, AvatarPresent = avatarPresent });
             }
 
             b.Top = rows;
@@ -584,9 +648,78 @@ namespace AF.Backend.Contract
             }
 
             b.MeCountry = LeagueContract.NullableString(me, "country", LeagueContract.IsCountry);
+            b.MeAvatar = LeagueContract.ReadAvatar(me, where + ".me", strict, out bool meAvatarPresent);
+            b.MeAvatarPresent = meAvatarPresent;
             me.End();
             r.End();
             return b;
+        }
+    }
+}
+
+namespace AF.Backend.Contract
+{
+    /// <summary>
+    /// <c>POST /v1/league/avatar</c>, petición (<c>league-avatar.request.schema.json</c>; D-056, avatares.md §4.4): <c>{"avatar": n}</c>
+    /// con n entero de 0 a 63 (<c>additionalProperties: false</c>). El servidor solo valida el rango, no la lista de 16.
+    /// </summary>
+    public sealed class LeagueAvatarRequestDto
+    {
+        public LeagueAvatarRequestDto(int avatar)
+        {
+            if (!LeagueContract.IsAvatar(avatar))
+            {
+                throw new ArgumentOutOfRangeException(nameof(avatar), avatar, "avatar va de 0 a 63.");
+            }
+
+            Avatar = avatar;
+        }
+
+        /// <summary>El índice del avatar elegido.</summary>
+        public int Avatar { get; }
+
+        public string ToJson() => BackendJson.Write(JsonNode.NewObject().Set("avatar", JsonNode.FromLong(Avatar)));
+
+        /// <summary>Lectura del esquema (estricta: sin claves de más, entero de 0 a 63).</summary>
+        public static bool TryParse(string? json, out LeagueAvatarRequestDto? value, out string? error) =>
+            ContractRules.TryRead(json, Read, out value, out error);
+
+        internal static LeagueAvatarRequestDto Read(JsonNode node)
+        {
+            var r = new ObjectReader(node, "leagueAvatar.request", strict: true);
+            int avatar = (int)r.RequiredInteger("avatar", 0, LeagueContract.MaxAvatar);
+            r.End();
+            return new LeagueAvatarRequestDto(avatar);
+        }
+    }
+
+    /// <summary>Respuesta 200 de <c>POST /v1/league/avatar</c> (<c>league-avatar.response.schema.json</c>): el avatar guardado.</summary>
+    public sealed class LeagueAvatarResponseDto
+    {
+        private LeagueAvatarResponseDto(int avatar)
+        {
+            Avatar = avatar;
+        }
+
+        /// <summary>El índice que guardó el servidor.</summary>
+        public int Avatar { get; }
+
+        public string ToJson() => BackendJson.Write(JsonNode.NewObject().Set("avatar", JsonNode.FromLong(Avatar)));
+
+        /// <summary>Lectura tolerante (lo que usa el cliente): claves nuevas no la rompen.</summary>
+        public static bool TryParse(string? json, out LeagueAvatarResponseDto? value, out string? error) =>
+            ContractRules.TryRead(json, n => Read(n, strict: false), out value, out error);
+
+        /// <summary>Lectura con los límites exactos del esquema.</summary>
+        public static bool TryParseStrict(string? json, out LeagueAvatarResponseDto? value, out string? error) =>
+            ContractRules.TryRead(json, n => Read(n, strict: true), out value, out error);
+
+        internal static LeagueAvatarResponseDto Read(JsonNode node, bool strict)
+        {
+            var r = new ObjectReader(node, "leagueAvatar.response", strict);
+            int avatar = (int)r.RequiredInteger("avatar", 0, LeagueContract.MaxAvatar);
+            r.End();
+            return new LeagueAvatarResponseDto(avatar);
         }
     }
 }

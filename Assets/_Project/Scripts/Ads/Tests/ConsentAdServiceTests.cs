@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace AF.Ads.Tests
 {
     /// <summary>
-    /// Los anuncios detrás del consentimiento y la edad (bloque B12; 08 §2.3: «MAX arranca solo tras consentir»; 08 §7: TFCD con
+    /// Los anuncios detrás del consentimiento y la edad (bloque B12; 08 §2.3: «los anuncios arrancan solo tras consentir»; 08 §7: TFCD con
     /// &lt;13, <c>npa</c> sin consentimiento o con 13-17, contenido G en todas las bandas, D-029).
     /// </summary>
     public sealed class ConsentAdServiceTests

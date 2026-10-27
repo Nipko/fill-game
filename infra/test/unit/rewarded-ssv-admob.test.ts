@@ -31,7 +31,7 @@ import { MemDb, TABLES } from './memdb.ts';
 const N1 = '6f1c2a4e-8b3d-4f5a-9c7e-1d2b3a4c5e6f';
 const N2 = '0a9b8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d';
 /** Lista blanca de dev: el bloque de producción y el de prueba de Google (lib/config.ts). */
-const SSV_ENV = { ...TABLES, AF_ADMOB_AD_UNITS: '2877105387,5224354917' };
+const SSV_ENV = { ...TABLES, AF_ADMOB_AD_UNITS: '1182085615,5224354917' };
 
 let db: MemDb;
 beforeEach(() => {
@@ -308,10 +308,10 @@ describe('rewardedSsv (AdMob)', () => {
   });
 
   it('ad_unit propio: el número o el id completo; el de prueba de Google solo si está en la lista del entorno', async () => {
-    expect((await call(signed({ ad_unit: 'ca-app-pub-2916158449453694/2877105387' }))).body).toEqual({ status: 'ok' });
+    expect((await call(signed({ ad_unit: 'ca-app-pub-2916158449453694/1182085615' }))).body).toEqual({ status: 'ok' });
     expect((await call(signed({ ad_unit: '5224354917', custom_data: `rescue|${N2}`, transaction_id: 'tx-2' }))).body).toEqual({ status: 'ok' });
     // En prod la lista solo tiene el bloque de producción: el de prueba queda fuera.
-    const prod = ssvHandler(() => ({ ddb: db.client, keys: signer.keys, env: { ...TABLES, AF_ADMOB_AD_UNITS: '2877105387' }, now: () => now }));
+    const prod = ssvHandler(() => ({ ddb: db.client, keys: signer.keys, env: { ...TABLES, AF_ADMOB_AD_UNITS: '1182085615' }, now: () => now }));
     const r = res(await prod(httpEvent({ routeKey: 'GET /v1/ssv', rawQuery: signed({ ad_unit: '5224354917', transaction_id: 'tx-3' }) })));
     expect(r.body).toEqual({ status: 'ignored' });
   });

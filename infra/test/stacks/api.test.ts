@@ -81,10 +81,10 @@ describe.each([
     expect(apis[0][1].CorsConfiguration).toBeUndefined();
   });
 
-  it('7 Lambdas Node 24 arm64 con log group de 30 días', () => {
+  it('8 Lambdas Node 24 arm64 con log group de 30 días', () => {
     const fns = resourcesOfType(json, 'AWS::Lambda::Function');
     expect(fns.map(([, p]) => p.FunctionName).sort()).toEqual(
-      ['delete-account', 'league-board', 'league-wins', 'restore-ledger', 'rewarded-ssv', 'verify-purchase', 'voided-purchases-job'].map((n) => `af-${envName}-${n}`),
+      ['delete-account', 'league-avatar', 'league-board', 'league-wins', 'restore-ledger', 'rewarded-ssv', 'verify-purchase', 'voided-purchases-job'].map((n) => `af-${envName}-${n}`),
     );
     for (const [, p] of fns) {
       expect(p.Runtime).toBe('nodejs24.x');
@@ -95,7 +95,7 @@ describe.each([
   });
 
   it(`verificador falso de Play ${envName === 'prod' ? 'ausente' : 'presente'}`, () => {
-    const withFake = ['delete-account', 'verify-purchase', 'voided-purchases-job', 'league-wins', 'league-board'].map((n) => `af-${envName}-${n}`);
+    const withFake = ['delete-account', 'verify-purchase', 'voided-purchases-job', 'league-wins', 'league-board', 'league-avatar'].map((n) => `af-${envName}-${n}`);
     for (const [, p] of resourcesOfType(json, 'AWS::Lambda::Function')) {
       const vars = ((p.Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
       if (envName === 'prod' || !withFake.includes(p.FunctionName as string)) expect(vars).not.toHaveProperty('AF_FAKE_PLAY_VERIFIER');
@@ -108,7 +108,7 @@ describe.each([
   it('rewardedSsv recibe la lista blanca de bloques de AdMob del entorno (D-049)', () => {
     const fn = resourcesOfType(json, 'AWS::Lambda::Function').find(([, p]) => p.FunctionName === `af-${envName}-rewarded-ssv`);
     const vars = ((fn?.[1].Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
-    expect(vars.AF_ADMOB_AD_UNITS).toBe(envName === 'prod' ? '2877105387' : '2877105387,5224354917');
+    expect(vars.AF_ADMOB_AD_UNITS).toBe(envName === 'prod' ? '1182085615' : '1182085615,5224354917');
   });
 
   it('dos secretos sin valor en la plantilla (sin el de MAX: el SSV de AdMob usa claves públicas, D-049)', () => {
@@ -124,7 +124,7 @@ describe.each([
 
   it('IAM mínimo: roles sin políticas gestionadas ni comodines', () => {
     const roles = resourcesOfType(json, 'AWS::IAM::Role').filter(([id]) => !id.startsWith('SchedulerRole'));
-    expect(roles).toHaveLength(7);
+    expect(roles).toHaveLength(8);
     for (const [, p] of roles) expect(p.ManagedPolicyArns).toBeUndefined();
     for (const [id, p] of resourcesOfType(json, 'AWS::IAM::Policy')) {
       for (const s of (p.PolicyDocument as { Statement: Statement[] }).Statement) {
@@ -188,6 +188,13 @@ describe.each([
         LeagueBoard: ['dynamodb:Query'],
         LeagueHistogram: ['dynamodb:Query'],
       },
+      LeagueAvatar: {
+        RateLimits: ['dynamodb:GetItem','dynamodb:PutItem','dynamodb:ConditionCheckItem'],
+        Integrity: ['dynamodb:GetItem','dynamodb:PutItem'],
+        LeagueNames: ['dynamodb:GetItem','dynamodb:PutItem'],
+        LeaguePlayers: ['dynamodb:GetItem','dynamodb:ConditionCheckItem'],
+        LeagueBoard: ['dynamodb:PutItem'],
+      },
     };
     for (const [fn, want] of Object.entries(expected)) {
       const got = grantsOf(roleStatements(json, fn));
@@ -213,7 +220,7 @@ describe.each([
   it(`App Check: ${envName === 'prod' ? 'las Lambdas con integridad solo admiten las apps de -c firebaseAppIds' : 'sin lista de apps en dev'}`, () => {
     for (const [, p] of resourcesOfType(json, 'AWS::Lambda::Function')) {
       const vars = ((p.Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
-      const usesIntegrity = ['verify-purchase', 'delete-account', 'league-board', 'league-wins'].some((n) => p.FunctionName === `af-${envName}-${n}`);
+      const usesIntegrity = ['verify-purchase', 'delete-account', 'league-board', 'league-wins', 'league-avatar'].some((n) => p.FunctionName === `af-${envName}-${n}`);
       if (envName === 'prod' && usesIntegrity) expect(vars.AF_APPCHECK_APP_IDS).toBe(TEST_APP_ID);
       else expect(vars).not.toHaveProperty('AF_APPCHECK_APP_IDS');
     }

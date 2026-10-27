@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/league-avatar.response.schema.json",
+  "title": "league-avatar.response",
+  "description": "docs/dev/avatares.md §4.4; D-056. El avatar guardado (repetir el mismo es idempotente y no gasta cupo).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "avatar"
+  ],
+  "properties": {
+    "avatar": {
+      "$ref": "common.schema.json#/$defs/avatar"
+    }
+  }
+}

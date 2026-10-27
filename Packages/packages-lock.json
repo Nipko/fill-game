@@ -6,14 +6,6 @@
       "source": "embedded",
       "dependencies": {}
     },
-    "com.applovin.mediation.ads": {
-      "version": "file:applovin/com.applovin.mediation.ads-8.6.6.tgz",
-      "depth": 0,
-      "source": "local-tarball",
-      "dependencies": {
-        "com.google.external-dependency-manager": "1.2.182"
-      }
-    },
     "com.google.ads.mobile": {
       "version": "file:googleads/com.google.ads.mobile-11.5.0.tgz",
       "depth": 0,
@@ -21,6 +13,14 @@
       "dependencies": {
         "com.google.external-dependency-manager": "1.2.187",
         "com.unity.modules.androidjni": "1.0.0"
+      }
+    },
+    "com.google.ads.mobile.mediation.unity": {
+      "version": "file:googleads/com.google.ads.mobile.mediation.unity-3.21.1.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.google.ads.mobile": "11.0.0"
       }
     },
     "com.google.external-dependency-manager": {

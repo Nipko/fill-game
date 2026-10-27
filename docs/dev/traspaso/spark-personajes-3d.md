@@ -101,3 +101,4 @@ Informa de los resultados en `spark-estado.md`. Si puedes, prueba el APK en un t
 ## 8. Avisos del integrador
 
 - *(2026-10-27)* Encargo abierto. Los avatares (`tanda6/avatares`) aún no están integrados: el piloto no los toca.
+- *(2026-10-27)* `tanda6/avatares` ya está en `integracion-fase1-fase2` (`ProceduralArt.Avatars.cs`, D-056). Entra en la fase 2, tras aprobar el piloto. Haz pull antes.

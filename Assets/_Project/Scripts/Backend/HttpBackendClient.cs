@@ -128,6 +128,13 @@ namespace AF.Backend
             Start(BackendOperation.LeagueBoard, null, LeagueBoardResponseDto.TryParse, onDone, "?scope=" + scope);
         }
 
+        /// <summary><c>POST /v1/league/avatar</c> (D-056; avatares.md §4.4), con integridad.</summary>
+        public void SetLeagueAvatar(LeagueAvatarRequestDto request, Action<BackendResult<LeagueAvatarResponseDto>> onDone)
+        {
+            string body = (request ?? throw new ArgumentNullException(nameof(request))).ToJson();
+            Start(BackendOperation.LeagueAvatar, body, LeagueAvatarResponseDto.TryParse, onDone);
+        }
+
         private delegate bool Parser<T>(string? json, out T? value, out string? error)
             where T : class;
 

@@ -137,6 +137,9 @@ namespace AF.Analytics
             E("af_league_wins_sent", "count", "accepted", "rejected"),
             E("af_league_unavailable", "reason"),
             E("af_league_rank", "week", "bucket_rank", "tier"),
+            E("af_avatar_open", "source"), // D-056: avatares del jugador
+            E("af_avatar_select", "avatar", "free", "first"),
+            E("af_avatar_unlock", "avatar", "milestone", "retro"),
             E("af_world_enter", "world", "days_since_install", "pack_ready"),
             E("af_ad_request", "placement", "format", "result", "ms", "network"),
             E("af_ad_shown", "placement", "format", "gap_since_last_s", "levels_since_last", "session_count", "day_count"),

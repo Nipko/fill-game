@@ -8,12 +8,9 @@
     hasta que llegaran los anuncios (ver D-049 abajo: ahora esta activado). D-039, anadido del 2026-10-21: tambien ACCESS_ADSERVICES_ATTRIBUTION y
     ACCESS_ADSERVICES_AD_ID (Privacy Sandbox de anuncios, de Firebase Analytics) y READ_GSERVICES (de reCAPTCHA, que arrastra
     Firebase Auth; el acceso anonimo no lo usa). Lo comprueba ci/check-manifest.ps1 (ninguno esta en su lista blanca).
-  - D-042 (AppLovin MAX 8.6.6, SDK Android 13.6.4): AD_ID tambien lo declara applovin-sdk; se quito hasta que el dueno
-    lo decidio (D-049 y D-055, abajo); se quitan ademas com.android.vending.CHECK_LICENSE y android.permission.ACCESS_WIFI_STATE (Open Measurement),
-    que declara applovin-sdk, y siguen fuera por decision del dueno (D-049 y D-055, punto 3). Tambien se quita el
-    proveedor com.applovin.sdk.AppLovinInitProvider: arranca codigo de AppLovin al iniciar el proceso (lee el ID de publicidad
-    y el App Set ID en un hilo) antes del consentimiento (08 sec. 2.3: MAX solo tras consentir); MAX se inicia desde
-    MaxSdk.InitializeSdk tras la decision de edad y consentimiento.
+  - D-042 (AppLovin MAX 8.6.6): CHECK_LICENSE y ACCESS_WIFI_STATE se quitaron entonces y siguen fuera por decision del
+    dueno (D-049 y D-055, punto 3). MAX y su proveedor AppLovinInitProvider salieron del proyecto con el anadido de D-049
+    del 2026-10-27 (ci/check-no-applovin.ps1 vigila que no vuelvan), asi que ya no hay nada de AppLovin que quitar aqui.
   - 08 sec. 2.3 y sec. 7 (consentimiento antes que nada): Firebase Analytics arranca sin recoger nada, sin almacenamiento de
     analitica ni de anuncios y sin ID de publicidad; AF.Analytics.Firebase.FirebaseAnalyticsSink lo enciende con el consentimiento.
     Crashlytics arranca apagado y lo enciende el codigo en el arranque (AF.Analytics.Firebase.CrashReporting).
@@ -38,6 +35,13 @@
     (lo genera docs/art/marca-oficial/v2/exportar.py con la opcion android-xml): el tema de Unity (BaseUnityGameActivityTheme) con el icono
     adaptativo v2 sobre el petroleo de la marca, en lugar del icono transparente de Unity, y el mismo petroleo de fondo de
     ventana hasta el primer fotograma del juego.
+  - D-049, anadido del 2026-10-27 (Unity Ads 4.20.1 como red de mediacion de AdMob, adaptador 4.20.1.0, paquete
+    com.google.ads.mobile.mediation.unity 3.21.1): se quita el inicializador com.unity3d.services.core.configuration.AdsSdkInitializer
+    que unity-ads registra en androidx.startup (InitializationProvider): guarda el contexto y lanza una corrutina al iniciar el
+    proceso, antes de la edad y el consentimiento (08 sec. 2.3; D-033 B12). Unity Ads lo inicia el adaptador desde
+    MobileAds.Initialize. El proveedor InitializationProvider se queda (lo usan work-runtime, lifecycle-process y otros).
+    Los permisos que declara unity-ads (AD_ID, ACCESS_ADSERVICES_TOPICS y ACCESS_ADSERVICES_ATTRIBUTION) ya estan resueltos arriba.
+    Lo vigila ci/check-manifest.ps1 (componente prohibido).
 -->
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -73,7 +77,12 @@
         <provider android:name="com.google.android.gms.games.provider.PlayGamesInitProvider"
                   android:authorities="${applicationId}.playgamesinitprovider"
                   tools:node="remove"/>
-        <provider android:name="com.applovin.sdk.AppLovinInitProvider" tools:node="remove"/>
+        <provider android:name="androidx.startup.InitializationProvider"
+                  android:authorities="${applicationId}.androidx-startup"
+                  tools:node="merge">
+            <meta-data android:name="com.unity3d.services.core.configuration.AdsSdkInitializer"
+                       tools:node="remove"/>
+        </provider>
         <activity android:name="com.unity3d.player.UnityPlayerGameActivity"
                   android:theme="@style/AfLaunchTheme"
                   tools:replace="android:theme"/>

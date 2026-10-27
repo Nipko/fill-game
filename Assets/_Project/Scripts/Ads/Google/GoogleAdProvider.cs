@@ -6,7 +6,7 @@ using UnityEngine;
 namespace AF.Ads.Google
 {
     /// <summary>
-    /// Qué proveedor de anuncios usa este build (D-049: AdMob directo con Google Mobile Ads; MAX queda instalado sin servir):
+    /// Qué proveedor de anuncios usa este build (D-049: AdMob directo con Google Mobile Ads; MAX salió del proyecto, añadido del 2026-10-27):
     /// <list type="bullet">
     /// <item>En un teléfono Android: <see cref="GoogleAdService"/> sobre <see cref="NativeGmaPort"/>, con los bloques de
     /// <see cref="GoogleAdUnits.Choose"/> (los de prueba de Google en desarrollo y con <c>com.amazonfill.dev</c>). No toca el SDK hasta

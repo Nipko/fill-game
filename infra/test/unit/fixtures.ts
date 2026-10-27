@@ -180,7 +180,7 @@ export function admobSigner(keyId = '3335741209') {
 export function admobParams(over: Record<string, string | undefined> = {}, now = NOW): Array<[string, string]> {
   const base: Record<string, string | undefined> = {
     ad_network: '5450213213286189855',
-    ad_unit: '2877105387',
+    ad_unit: '1182085615',
     custom_data: 'rescue|6f1c2a4e-8b3d-4f5a-9c7e-1d2b3a4c5e6f',
     reward_amount: '1',
     reward_item: 'Reward',

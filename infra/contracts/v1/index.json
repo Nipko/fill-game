@@ -350,7 +350,8 @@
         ],
         "response": [
           "league-wins.response.json",
-          "league-wins.response.mixed.json"
+          "league-wins.response.mixed.json",
+          "league-wins.response.avatar.json"
         ],
         "invalidRequest": [
           "league-wins.request.invalid-too-many.json"
@@ -397,7 +398,8 @@
       "examples": {
         "request": [],
         "response": [
-          "league-board.response.json"
+          "league-board.response.json",
+          "league-board.response.avatar.json"
         ],
         "invalidRequest": []
       },
@@ -430,6 +432,56 @@
           "internal_error"
         ]
       }
+    },
+    {
+      "operation": "leagueAvatar",
+      "function": "league-avatar",
+      "method": "POST",
+      "path": "/v1/league/avatar",
+      "auth": "firebase",
+      "integrity": true,
+      "throttle": "default",
+      "requestIn": "body",
+      "request": "league-avatar.request.schema.json",
+      "response": "league-avatar.response.schema.json",
+      "examples": {
+        "request": [
+          "league-avatar.request.json"
+        ],
+        "response": [
+          "league-avatar.response.json"
+        ],
+        "invalidRequest": [
+          "league-avatar.request.invalid-out-of-range.json"
+        ]
+      },
+      "errors": {
+        "400": [
+          "bad_request"
+        ],
+        "401": [
+          "unauthorized"
+        ],
+        "403": [
+          "integrity_failed"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ],
+        "502": [
+          "upstream_error"
+        ],
+        "503": [
+          "upstream_error"
+        ],
+        "500": [
+          "internal_error"
+        ]
+      },
+      "source": "docs/dev/avatares.md §4.4 y docs/dev/liga.md §3.1; D-056 y D-057. Opcional y aditiva: los clientes sin avatares no la llaman. Guarda el avatar con el seudónimo (lo crea si falta) y lo copia a las filas del top de la semana en curso. Solo valida el rango 0-63. Repetir el avatar vigente responde 200 sin gastar cupo; más de 30 cambios por UID y día UTC [P] → 429 con retry_after_s hasta la medianoche UTC."
     }
   ],
   "jobs": [
