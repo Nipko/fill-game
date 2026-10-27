@@ -830,6 +830,14 @@ namespace AF.Save
         public bool HighContrast { get; set; }
 
         /// <summary>
+        /// <c>crash_reports</c> [P] (T-L6 de <c>docs/legal/investigacion-legal-mundial.md</c> §11; D-057, añadido del 2026-10-27;
+        /// sustituye la «línea sin interruptor» de Q-B12-4): Ajustes › «Enviar informes de fallos», la objeción a Crashlytics (08 §2.3,
+        /// interés legítimo). Default true; apagado, Crashlytics no recoge y los informes sin enviar se borran, desde el arranque. Se
+        /// escribe solo si deja su default.
+        /// </summary>
+        public bool CrashReports { get; set; } = true;
+
+        /// <summary>
         /// <c>push</c> (08 §4.3: <c>pre_prompt_shown</c> y <c>granted</c>; B6): el pre-prompt y el permiso de los avisos, con
         /// <c>pre_prompt_at</c> y <c>second_prompt_shown</c> [P] para el segundo pre-prompt de 06 §8.1. Las reglas son de
         /// <c>AF.LiveOps</c> (<c>PushPermissionService</c>).

@@ -335,6 +335,8 @@ namespace AF.UI
             bool privacy = ConsentEnabled && flow != null && flow.Flags.Decided;
             settings.PrivacyPressed = () => OpenPrivacy();
             settings.AgePressed = () => OpenAgeCorrection();
+            settings.CrashReportsToggled = on => ChooseCrashReports(on); // T-L6: «Enviar informes de fallos» (GameBootstrap.CrashReports.cs)
+            settings.MarkCrashReports(_profile?.Settings.CrashReports ?? true);
             settings.ShowConsentRows(privacy, privacy && flow!.CanCorrectAge);
         }
 
