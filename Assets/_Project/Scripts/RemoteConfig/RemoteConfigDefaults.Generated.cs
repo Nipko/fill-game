@@ -71,15 +71,12 @@ namespace AF.RemoteConfig
     },
     ""biz_market_phase"": {
       ""type"": ""string"",
-      ""default"": ""closed_beta""
+      ""default"": ""global""
     },
     ""biz_country_enabled"": {
       ""type"": ""json"",
       ""default"": {
-        ""CO"": true,
-        ""PE"": true,
-        ""MX"": true,
-        ""*"": false
+        ""*"": true
       }
     },
     ""biz_min_app_version"": {

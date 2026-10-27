@@ -69,7 +69,9 @@ namespace AF.RemoteConfig.Tests
         [TestCase("anim_tint_skip_alarm_pct", "0.4")]
         [TestCase("lvl_daily_bracket_levels", "[41,201]")]
         [TestCase("streak_milestones", "{\"3\":300,\"6\":\"chest\",\"10\":\"extra_cuia+rio_crecido\"}")]
-        [TestCase("biz_country_enabled", "{\"CO\":true,\"PE\":true,\"MX\":true,\"*\":false}")]
+        [TestCase("biz_country_enabled", "{\"*\":true}")] // D-057: salida mundial
+        [TestCase("biz_market_phase", "global")]
+        [TestCase("consent_digital_age_by_country", "{\"*\":13,\"AT\":14,\"BE\":13,\"BG\":14,\"CH\":16,\"CY\":14,\"CZ\":15,\"DE\":16,\"DK\":13,\"EE\":13,\"ES\":14,\"FI\":13,\"FR\":15,\"GR\":15,\"HR\":16,\"HU\":16,\"IE\":16,\"IN\":18,\"IS\":13,\"IT\":14,\"KR\":14,\"LI\":16,\"LT\":14,\"LU\":16,\"LV\":13,\"MT\":13,\"NL\":16,\"NO\":13,\"PL\":16,\"PT\":13,\"RO\":16,\"SE\":13,\"SI\":15,\"SK\":16,\"UK\":13}")]
         [TestCase("eco_model_version", "B-2026-10-06e")]
         public void SomeDefaults_AreTheOnesOf08_9(string key, string expected)
         {

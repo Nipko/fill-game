@@ -38,16 +38,16 @@
     },
     "biz_market_phase": {
       "defaultValue": {
-        "value": "closed_beta"
+        "value": "global"
       },
-      "description": "Rango 08 §9: closed_beta · soft_launch_latam · soft_launch_br · global · ios. Fase de mercado; habilita funciones por fase y segmenta cohortes (absorbe launch_phase de 09)",
+      "description": "Rango 08 §9: closed_beta · soft_launch_latam · soft_launch_br · global · ios. Fase de mercado; habilita funciones por fase y segmenta cohortes (absorbe launch_phase de 09). D-057 (2026-10-27, P1 (a)): una sola salida mundial, así que el default es global…",
       "valueType": "STRING"
     },
     "biz_country_enabled": {
       "defaultValue": {
-        "value": "{\"CO\":true,\"PE\":true,\"MX\":true,\"*\":false}"
+        "value": "{\"*\":true}"
       },
-      "description": "Rango 08 §9: —. Compuerta por país además de la distribución de Play",
+      "description": "Rango 08 §9: —. Compuerta por país además de la distribución de Play. D-057 (2026-10-27, P1 y P3 (a)): todos los países abiertos por defecto (antes CO, PE, MX = true y el resto false); qué países reciben el juego lo decide la distribución de Play (todos s…",
       "valueType": "JSON"
     },
     "biz_min_app_version": {

@@ -45,7 +45,7 @@ esa celda, el generador falla y pide revisarla, en vez de adivinar.
 
 | Celda (primera clave) | Se escribe | Nota |
 |---|---|---|
-| `biz_country_enabled`: «CO, PE, MX = true; resto false» | `{"CO":true,"PE":true,"MX":true,"*":false}` | «resto» = `"*"` [P] (Q-B7-4) |
+| `biz_country_enabled`: «CO, PE, MX = true; resto false» | `{"CO":true,"PE":true,"MX":true,"*":false}` | «resto» = `"*"` [P] (Q-B7-4). **D-057 (2026-10-27):** 08 §9 pasa a `{"*":true}` literal y la interpretación se retira |
 | `biz_legal_profile_by_country` | `{"BR":"br_lgpd_eca",…,"EEE":"ump","UK":"ump","CH":"ump","*":"default"}` | idem; `EEE`, `UK` y `CH` tal cual los escribe 08 [P] |
 | `biz_ua_paid_enabled_by_country` / `biz_ua_test_active`: «todos false / false» | `{"*":false}` / `false` | idem |
 | `biz_kpi_targets` / `biz_kpi_alert_thresholds`: «01 §KPIs / 09 tabla 6.1» | `null` + `pending` | remiten a otra tabla (Q-B7-6) |
