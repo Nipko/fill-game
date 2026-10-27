@@ -4274,3 +4274,16 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **Fuera del encargo:** `league_me_no_points` en portugués pasa de «fase» a «nível». Se cambia también en la entrega 1, para que su `--check` siga cuadrando.
 - **Herramienta:** `apply_translations.py --review` admite ahora revisiones parciales, sin `revision_es.csv` o sin `facts_revision.csv`.
 - **Resultado:** no queda ninguna fila en `traducido`, así que la compuerta `LocReleaseGate` vuelve a quedar sin problemas en inglés y portugués de Brasil.
+
+### D-035, añadido del 2026-10-27: Firebase prod con la app Android y AWS prod completo, desplegados
+
+- **Estado:** hecho por el escritorio con el dueño, en sus sesiones de Firebase (cuenta empresarial) y de AWS (`af-prod`), con su sí literal al `cdk diff`: «Sí: despliega AWS prod completo (cdk deploy --all) con ese diff y esos contextos.»
+- **Firebase prod (`tintalu`):** registrada la app Android `com.parallext.tintalu` («Tintalu Android (prod)»), ID `1:459140125724:android:810c83a65d0ff611f07bd9` (público). El dueño descargó `google-services.json` y lo guarda fuera del repositorio. Analytics: conservación de datos de eventos 2 meses y de usuario 14 meses (decisión del dueño). La plantilla de Remote Config (`tools/out/remote_config_template_prod.json`, 250 parámetros) la publica el dueño desde la consola.
+- **AWS prod (cuenta `522982706995`):** `cdk deploy --all` con `env=prod`, `domain=tintalu.com`, `firebaseProjectId=tintalu` (el proyecto no se llama `amazon-fill-prod`, el valor por defecto), `firebaseAppIds=<el ID de arriba>`, `packageName=com.parallext.tintalu` y `alertEmail=support@tintalu.com`. Creados `AfProdData`, `AfProdApi`, `AfProdCdn` y `AfProdOps`; `AfProdWeb` añade la ruta del borrado de cuenta y vuelve a subir el sitio; `AfProdGlobal` sin cambios. Salidas: `ApiUrl` `https://vsublt4swh.execute-api.sa-east-1.amazonaws.com`, `CdnUrl` `https://d2dkpz8mz2w7s9.cloudfront.net`.
+- **Comprobado:** `/v1/ssv` sin firma → 403; `POST /v1/purchases/verify` sin token → 401; `https://tintalu.com` → 200 y `config.json` → `{"deleteEnabled":true,"apiBase":""}`; `POST /v1/account/delete-request` vacío desde la web → 400; alarmas: 25 en OK y 4 sin datos.
+- **SSV de AdMob:** activado en «Tintalu Rewarded» (`…/1182085615`) con `<ApiUrl>/v1/ssv`; la consola verificó la URL. Marcada «Aplicar a todas las redes en los grupos de mediación», para que las recompensas servidas por Unity Ads también se confirmen en el servidor.
+- **Pendiente del dueño:**
+  - cargar los secretos `af-prod/firebase-admin-service-account` y el de la API de Google Play desde archivos fuera del repositorio (`infra/README.md` §5); este último, cuando exista la app en Play Console;
+  - confirmar la suscripción de las alarmas que llega a `support@tintalu.com`;
+  - App Check con Play Integrity y la huella SHA-256 de la firma de Play, cuando exista la app en Play Console.
+- **Pendiente técnico:** `release.yml` no coloca `google-services.json`, así que un release firmado hoy sale sin Firebase (`UnavailableBackendClient`: la tienda no vende). Hace falta un secreto de CI que cree el dueño y un paso que lo escriba en `Assets/_LocalSecrets/` antes del build.
