@@ -1,6 +1,6 @@
 # Anuncios con AdMob directo: Google Mobile Ads para Unity (D-049)
 
-Estado: 2026-10-25, rama `tanda6/sdk-gma`. Decisión: D-049 y su añadido del 2026-10-25 (`docs/dev/decisiones.md`): AppLovin no acepta cuentas nuevas, así que los anuncios van con **AdMob directo** y el plugin **Google Mobile Ads para Unity**. Propuesta técnica verificada: `docs/dev/anuncios-gma-propuesta.md`. GDD: 08 §2.2 (`AF.Ads`), §2.3, §7 #2, §8.2, §9 (`ads_*`), §10.1-§10.2 y §13.3; 05 §6-§7; D-033 B12; D-042 (MAX, que se queda instalado sin servir: `docs/dev/anuncios-max.md`).
+Estado: 2026-10-25, rama `tanda6/sdk-gma`. Decisión: D-049 y su añadido del 2026-10-25 (`docs/dev/decisiones.md`): AppLovin no acepta cuentas nuevas, así que los anuncios van con **AdMob directo** y el plugin **Google Mobile Ads para Unity**. Propuesta técnica verificada: `docs/dev/anuncios-gma-propuesta.md`. GDD: 08 §2.2 (`AF.Ads`), §2.3, §7 #2, §8.2, §9 (`ads_*`), §10.1-§10.2 y §13.3; 05 §6-§7; D-033 B12; D-042 (MAX, que quedó instalado sin servir: `docs/dev/anuncios-max.md`). **Añadido de D-049 del 2026-10-27: MAX sale del proyecto** (§8 bis).
 
 ## 1. Qué entra
 
@@ -8,7 +8,7 @@ Estado: 2026-10-25, rama `tanda6/sdk-gma`. Decisión: D-049 y su añadido del 20
 |---|---|---|---|
 | `com.google.ads.mobile` (Google Mobile Ads for Unity) | **11.5.0** (SDK Android `play-services-ads` 25.4.0, UMP 4.0.0) | OpenUPM: `https://package.openupm.com/com.google.ads.mobile/-/com.google.ads.mobile-11.5.0.tgz` (revisión `12a1edb4…`, el tag `v11.5.0`) | `54aa0d8ea6ef33e52d527ffd93153b5ee9bc8b7384f06ae08d276e97a3cbb13b` (comprobado otra vez al copiarlo) |
 
-- El `.tgz` está en `Packages/googleads/` con Git LFS (`.gitattributes`) y se referencia con `file:` en `Packages/manifest.json`, como Firebase y MAX (D-039). Pide `com.google.external-dependency-manager` 1.2.187; manda el **1.2.189** que trae Firebase (no entra `com.unity.external-dependency-manager`).
+- El `.tgz` está en `Packages/googleads/` con Git LFS (`.gitattributes`) y se referencia con `file:` en `Packages/manifest.json`, como Firebase (D-039). Pide `com.google.external-dependency-manager` 1.2.187; manda el **1.2.189** que trae Firebase (no entra `com.unity.external-dependency-manager`).
 - **No entra:** Unity Ads ni ningún otro adaptador (no aprobados todavía; D-049, añadido); el SDK «Next-Gen».
 - El plugin crea, la primera vez, `Assets/GoogleMobileAds/Resources/GoogleMobileAdsSettings.asset` (lo escribe `GoogleAdsProjectSetup`, §2) y `Assets/GoogleMobileAds/link.xml` (conserva sus ensamblados con el stripping High). Los dos se commitean tal como los deja Unity.
 
@@ -21,7 +21,7 @@ Los fija `AF.Ads.Google.Editor.GoogleAdsProjectSetup.Apply` (menú «Amazon Fill
 
 `BuildDev` y `BuildRelease` llaman a `GoogleAdsProjectSetup.CheckForBuild` antes de construir: si el asset no está como debe, lo aplica; si aun así falla, el build se para con el código 2. Así ningún build sale con el App ID vacío (sin él, el plugin para el build, y `MobileAdsInitProvider` cerraría la app al arrancar). Lo prueban los tests EditMode `GoogleAdsProjectSetupTests`.
 
-**MAX:** `MaxProjectSetup.Apply` deja ahora el flujo de términos y privacidad de MAX con la automatización de UMP **apagado** (`ProjectSettings/AppLovinInternalSettings.json`), para que solo haya un aviso de consentimiento (el de Google). Con eso el preproceso de MAX deja de pedir UMP en `Assets/MaxSdk/AppLovin/Editor/Dependencies.xml`; la UMP 4.0.0 llega ahora por el plugin de Google. MAX sigue sin clave, así que no sirve anuncios (`not_configured`). Al apagar el flujo, el propio plugin de MAX vacía también los textos de ATT de iOS de ese JSON (`userTrackingUsageDescription*`): no afecta a Android.
+**MAX (historia):** hasta el 2026-10-27, `MaxProjectSetup.Apply` dejaba apagado el flujo de UMP de MAX (`ProjectSettings/AppLovinInternalSettings.json`) para que solo hubiera un aviso de consentimiento, el de Google. Con la salida de MAX (§8 bis) desaparecen `MaxProjectSetup`, ese JSON y la compuerta de `BuildDev` y `BuildRelease` sobre `AppLovinSettings.asset`; UMP 4.0.0 llega solo por el plugin de Google.
 
 ## 3. Bloques de anuncios
 
@@ -33,14 +33,14 @@ Constantes de `AF.Ads.GoogleAdUnits` (ninguno es secreto; 08 §9 no tiene claves
 | Release con el ID definitivo | `ca-app-pub-2916158449453694/2877105387` | `ca-app-pub-2916158449453694/7187673451` |
 
 - Los de prueba son los **bloques de prueba oficiales de Google** para Android (comprobados el 2026-10-25 en https://developers.google.com/admob/android/test-ads y en el ejemplo del propio paquete 11.5.0). Así ningún build de prueba genera tráfico inválido en la cuenta de AdMob.
-- La decisión es la función pura `GoogleAdUnits.Choose(developmentBuild, applicationId)`, probada en `GoogleAdServiceTests`. El arranque escribe en logcat `[AF.Ads] proveedor: google (bloques de prueba|bloques de produccion); max: not_configured`, sin los ID.
+- La decisión es la función pura `GoogleAdUnits.Choose(developmentBuild, applicationId)`, probada en `GoogleAdServiceTests`. El arranque escribe en logcat `[AF.Ads] proveedor: google (bloques de prueba|bloques de produccion)` (hasta el 2026-10-27 terminaba en «; max: not_configured»), sin los ID.
 - Un recompensado para las seis ubicaciones `rv_*` y un intersticial para `interstitial_post_level`, como con MAX.
 
 ## 4. Código
 
 | Ensamblado | Qué |
 |---|---|
-| `AF.Ads` (sin motor) | `GoogleAdService` (la lógica, sobre `IGmaPort`), `FakeGmaPort`, `GoogleAdUnits`. `AdConsentSettings` gana `Teen` (para `TagForUnderAgeOfConsent`); `AdImpression` gana la plataforma (`AdMob` o `appLovin`) |
+| `AF.Ads` (sin motor) | `GoogleAdService` (la lógica, sobre `IGmaPort`), `FakeGmaPort`, `GoogleAdUnits`. `AdConsentSettings` gana `Teen` (para `TagForUnderAgeOfConsent`); `AdImpression` gana la plataforma (`AdMob`; `appLovin` salió con MAX el 2026-10-27, y una red de la mediación de AdMob va en `ad_source`) |
 | `AF.Ads.Google` (con motor) | `NativeGmaPort` (solo `UNITY_ANDROID && !UNITY_EDITOR`): `MobileAds`, `ConsentInformation`/`ConsentForm`, `RewardedAd` e `InterstitialAd`. Encola los avisos del SDK (pueden llegar en otro hilo) y los entrega en `Pump`, cada fotograma desde `GameBootstrap.TickAds`. `GoogleAdProvider` elige Google en el teléfono y el simulado en el editor |
 | `AF.Ads.Google.Editor` | `GoogleAdsProjectSetup` |
 | `AF.UI` | `GameBootstrap.Ads.cs`: `CreateAdProvider` usa `GoogleAdProvider`, envuelto por `WrapConsentAds` y `WrapAds` como siempre. Un build de desarrollo lanzado con el extra `af_ads_fill` sigue con el anuncio simulado (las pruebas automáticas en el teléfono) |
@@ -94,7 +94,7 @@ Medido con `gradlew :launcher:dependencies --configuration debugRuntimeClasspath
 | `androidx.datastore` | 1.0.0 | 1.1.7 |
 | `constraintlayout` / `lifecycle-process` / `fragment` | 2.1.4 / 2.6.2 / 1.7.1 | iguales |
 | `kotlin-stdlib` / `kotlinx-coroutines-android` | 2.1.0 / 1.8.0 | 2.1.0 / 1.9.0 |
-| Billing / AppLovin / Play Games / Firebase Analytics | 9.0.0 / 13.6.4 / 22.1.0 / 23.2.0 | sin cambios |
+| Billing / AppLovin / Play Games / Firebase Analytics | 9.0.0 / 13.6.4 / 22.1.0 / 23.2.0 | sin cambios (AppLovin salió el 2026-10-27, §8 bis) |
 
 Sin bajadas de versión ni choques: las incidencias del plugin con AGP 9 (#4157 `namespace` y #4106 `packagingOptions`) no aparecieron en el build.
 
@@ -103,7 +103,7 @@ Sin bajadas de versión ni choques: las incidencias del plugin con AGP 9 (#4157 
 `Assets/Plugins/Android/LauncherManifest.xml` (máxima prioridad en la fusión):
 
 - **`AD_ID` activado** (ya no se quita; aprobado en el añadido de D-049 y confirmado en D-055, punto 3). El ID de publicidad solo personaliza con 18+ y el consentimiento de anuncios personalizados (o lo que decida UMP en el EEE/UK/CH); con 13-17, sin consentimiento o sin país, `npa=1` y, con 13-17, `TagForUnderAgeOfConsent`; con `<13` ningún SDK de anuncios; con 13-17 en el EEE/UK/CH, sin anuncios (§5; tests `GoogleAdServiceTests.AdvertisingId_PersonalizedOnlyForAdultsWhoConsent_D055` y `UmpProfile_AdultCorrectedToTeen_StopsLoadingAndShowing_D055`). Con `npa`, Google sigue pudiendo leer el ID para límites de frecuencia, informes agregados y fraude [NV]. Firebase Analytics sigue sin leerlo (`google_analytics_adid_collection_enabled` = false).
-- **Fuera** con `tools:node="remove"`: `ACCESS_WIFI_STATE` y `CHECK_LICENSE` (ya estaban), `FOREGROUND_SERVICE` y `RECEIVE_BOOT_COMPLETED` (de `work-runtime`), `ACCESS_ADSERVICES_TOPICS`, `ACCESS_ADSERVICES_AD_ID` y `ACCESS_ADSERVICES_ATTRIBUTION` (Privacy Sandbox), `READ_GSERVICES`. Siguen quitados `AppLovinInitProvider` y `PlayGamesInitProvider`.
+- **Fuera** con `tools:node="remove"`: `ACCESS_WIFI_STATE` y `CHECK_LICENSE` (ya estaban), `FOREGROUND_SERVICE` y `RECEIVE_BOOT_COMPLETED` (de `work-runtime`), `ACCESS_ADSERVICES_TOPICS`, `ACCESS_ADSERVICES_AD_ID` y `ACCESS_ADSERVICES_ATTRIBUTION` (Privacy Sandbox), `READ_GSERVICES`. Sigue quitado `PlayGamesInitProvider` (`AppLovinInitProvider` ya no existe: §8 bis).
 - `com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT` = true.
 - `ci/check-manifest.ps1` admite `AD_ID` en su lista blanca (autotest: 57 casos, con `AD_ID` aprobado y `ACCESS_ADSERVICES_TOPICS` y `FOREGROUND_SERVICE` rechazados; D-055 suma 2: `aapt2: ACCESS_WIFI_STATE sigue fuera (D-055)` y `aapt2: CHECK_LICENSE sigue fuera (D-055)`); cualquier otro permiso sigue fallando.
 
@@ -120,11 +120,32 @@ Sin bajadas de versión ni choques: las incidencias del plugin con AGP 9 (#4157 
 | `dev.apk` | 76.011.517 B (72,49 MiB) | OK | lleva `firebase-appcheck-debug` (esperado en desarrollo) | OK | OK (19) | — |
 | `rehearsal.aab` | 59.035.955 B (59,04 MB) | OK | OK (4 `.dex`, 28.679 clases) | OK | OK (19) | OK (≤ 80 MB; sin `bundletool`, solo el archivo) |
 
-- **Peso de Google Mobile Ads:** unos **+3,1 MB** en el AAB del ensayo (55,94 MB antes, en `integracion-fase1-fase2`) y +3,2 MB en `dev.apk` (~72,8 MB antes); unas 9.000 clases más en el `.dex` del release. MAX sigue dentro (2-3 MB) aunque no sirva.
+- **Peso de Google Mobile Ads:** unos **+3,1 MB** en el AAB del ensayo (55,94 MB antes, en `integracion-fase1-fase2`) y +3,2 MB en `dev.apk` (~72,8 MB antes); unas 9.000 clases más en el `.dex` del release. MAX seguía dentro (2-3 MB) aunque no sirviera; salió el 2026-10-27 (§8 bis).
+
+## 8 bis. AppLovin MAX sale del proyecto (añadido de D-049 del 2026-10-27)
+
+Decisión del dueño: «Sí, quita AppLovin MAX del build de release; si AppLovin abre, entra como red dentro de AdMob». Rama `tanda6/sin-max`.
+
+- **Fuera:** `Packages/applovin/` (el `.tgz` de MAX 8.6.6 y su línea de `Packages/manifest.json` y `.gitattributes`), `Assets/MaxSdk/` (con `AppLovinSettings.asset`), `ProjectSettings/AppLovinInternalSettings.json`, `com.applovin:applovin-sdk:13.6.4` de `mainTemplate.gradle` y `AndroidResolverDependencies.xml` (este lo regenera EDM4U), `AF.Ads.Max` (`MaxAdProvider`, `NativeMaxSdkPort`, `MaxBuildConfig`, `MaxProjectSetup`), `MaxAdService`, `FakeMaxSdkPort`, `UnavailableAdService` (solo lo usaba MAX) y sus tests (EditMode: `MaxAdServiceTests`, `MaxBuildConfigTests`, `AdProviderChoiceTests`, `MaxProjectSetupTests`; PlayMode: `MaxConsentBootTests`). `BuildDev` y `BuildRelease` ya no comprueban los ajustes de MAX. El proveedor `AppLovinInitProvider` ya no se quita en `LauncherManifest.xml` porque no llega.
+- **Se queda:** la interfaz de `AF.Ads` y `GoogleAdService`, que hereda `Backoff` (2, 4 … 64 s; test `Backoff_DoublesFrom2sUpTo64s`). `AdImpression` usa `AdMob` por defecto y ya no tiene `appLovin`: si AppLovin entra como red de la mediación de AdMob, sale en `ad_source` con `ad_platform` = `AdMob`, así que no se pierde ningún identificador que lea la analítica.
+- **Restos en `Library`:** Unity reexporta el proyecto Gradle de `Library/Bee` sin vaciar `unityLibrary/src/main/res`, y el `res/raw/applovin_settings.json` que dejaba el post-proceso de MAX siguió entrando en el primer `dev.apk` y el primer `rehearsal.aab` incrementales (la compuerta nueva los rechazó). Lo borra ahora `AF.EditorTools.RemovedSdkLeftovers` (`IPostGenerateGradleAndroidProject`, con `af_max_config.xml` de `MaxBuildConfig`), que también cubre el CI, que restaura `Library` de una caché anterior.
+- **Compuerta:** `ci/check-no-applovin.ps1 <aab|apk|carpeta>` (0 OK · 1 lo lleva · 2 argumentos o ilegible; `--self-test`, 11 casos) falla si una entrada se llama `*applovin*` o si el contenido lleva `Lcom/applovin/` (el SDK y su okhttp3 renombrado), `com.applovin.` (ASCII o UTF-16) o el plugin de C# (`MaxSdkBase`, `AppLovinMax.`). Va en `ci.yml` (job de build) y `release.yml`, tras `check-no-unity-iap`.
+
+**Antes y después** (escritorio x64, `unity-build.ps1 -Method Dev` y `-Method Release -Rehearsal`; «antes» = los builds de `tanda6/ad-id` del 2026-10-27, con el mismo juego de SDK):
+
+| Artefacto | Antes | Después | Diferencia |
+|---|---|---|---|
+| `dev.apk` | 76.146.974 B | 74.392.717 B | −1.754.257 B (−1,75 MB) |
+| `rehearsal.aab` | 59.180.140 B (59,18 MB) | 57.727.293 B (57,73 MB) | −1.452.847 B (−1,45 MB) |
+| Clases del release (`check-release-classes`) | 28.681 en 4 `.dex` | 26.775 en 3 `.dex` | −1.906 |
+| Bibliotecas nativas de 64 bits (`check-16kb`) | 19 | 18 (sin `libapplovin-native-crash-reporter.so`) | −1 |
+
+- **Permisos** (`check-manifest -Mode dev`, OK en los dos): los mismos antes y después: `INTERNET`, `ACCESS_NETWORK_STATE`, `VIBRATE`, `BILLING`, `AD_ID`, `WAKE_LOCK`, `BIND_GET_INSTALL_REFERRER_SERVICE`, `POST_NOTIFICATIONS` y `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. `AD_ID` sigue porque lo pide Google Mobile Ads (D-049, D-055).
+- `check-no-applovin`: falla antes (84 hallazgos en `dev.apk` y 94 en el ensayo: `com/applovin`, la `.so`, recursos `applovin_*`, el plugin de C#), OK después. `check-release-classes`: OK en el ensayo; `dev.apk` lleva `firebase-appcheck-debug`, como siempre en desarrollo. `check-no-unity-iap`, `check-16kb` y `size-gate` (≤ 80 MB, solo el archivo): OK.
 
 ## 9. Data Safety y política
 
-- Fila de Google Mobile Ads en 08 §13.3 (D-049); MAX queda como instalado sin servir. `docs/store-listing/data-safety.md` puesto al día.
+- Fila de Google Mobile Ads en 08 §13.3 (D-049); MAX, fuera del build desde el 2026-10-27 (§8 bis). `docs/store-listing/data-safety.md` puesto al día.
 - **La web (`infra/web`), puesta al día en `tanda6/ssv-admob-web`.** Textos que cambian en `infra/web/src/content/*/privacy.html`, `terms.html` (sección 6) y `credits.html`: «Hoy el juego no muestra anuncios» pasa a anuncios de **Google AdMob** (no AppLovin MAX) tras la edad y el consentimiento, nunca con `<13`, no personalizados con 13-17, mensaje de UMP de Google en el EEE/UK/CH y en los estados de EE. UU.; el **ID de publicidad** se usa para los anuncios (permiso `AD_ID`); Google como socio de anuncios en lugar de AppLovin, con el enlace a su política; las redes de la mediación de AdMob, «todavía no». `app-ads.txt` (`infra/web/src/static/app-ads.txt`): la línea de AdMob `google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0`.
 
 ## 10. Lo que hace el dueño
