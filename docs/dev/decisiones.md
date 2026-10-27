@@ -3398,7 +3398,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-B12-1:** la pantalla de edad neutral son **tres botones iguales**, uno por banda, sin ninguno marcado (no el año de nacimiento). Pendiente del abogado: la neutralidad para Google Play.
 - **Q-B12-2:** al subir `consent_text_version` **solo se vuelven a pedir las finalidades**; la banda guardada se conserva (08 §7 permite una sola corrección).
 - **Q-B12-3:** el bloqueo de `<13` **es definitivo** en el dispositivo: no se vuelve a preguntar ni con textos nuevos y no hay salida desde la pantalla (solo reinstalar).
-- **Q-B12-4:** el diagnóstico (Crashlytics) es una **línea informativa sin interruptor** (interés legítimo, 08 §2.3), pendiente de la pregunta 6 de 08 al abogado.
+- **Q-B12-4:** el diagnóstico (Crashlytics) es una **línea informativa sin interruptor** (interés legítimo, 08 §2.3), pendiente de la pregunta 6 de 08 al abogado. *Sin efecto desde D-057, añadido del 2026-10-27: interruptor «Enviar informes de fallos» en Ajustes (T-L6).*
 - **Q-B12-5:** los textos legales van en `strings.csv` con el estado **`borrador`** y la nota «pendiente del abogado» (sin un estado nuevo en el contrato 32).
 - **Q-B12-6:** la doble confirmación es **una pantalla más**: el toque en «Comprar» del juego, una confirmación con el precio de la tienda y después la hoja de Google Play. Pendiente del abogado, con Q-T4.
 - **Q-B12-7:** con 13-17 **la analítica se ofrece** como finalidad que se puede aceptar (sin audiencias ni anuncios personalizados). Pendiente del abogado (ECA Digital).
