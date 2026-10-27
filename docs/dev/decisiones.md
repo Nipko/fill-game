@@ -3398,7 +3398,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-B12-1:** la pantalla de edad neutral son **tres botones iguales**, uno por banda, sin ninguno marcado (no el año de nacimiento). Pendiente del abogado: la neutralidad para Google Play.
 - **Q-B12-2:** al subir `consent_text_version` **solo se vuelven a pedir las finalidades**; la banda guardada se conserva (08 §7 permite una sola corrección).
 - **Q-B12-3:** el bloqueo de `<13` **es definitivo** en el dispositivo: no se vuelve a preguntar ni con textos nuevos y no hay salida desde la pantalla (solo reinstalar).
-- **Q-B12-4:** el diagnóstico (Crashlytics) es una **línea informativa sin interruptor** (interés legítimo, 08 §2.3), pendiente de la pregunta 6 de 08 al abogado.
+- **Q-B12-4:** el diagnóstico (Crashlytics) es una **línea informativa sin interruptor** (interés legítimo, 08 §2.3), pendiente de la pregunta 6 de 08 al abogado. *Sin efecto desde D-057, añadido del 2026-10-27: interruptor «Enviar informes de fallos» en Ajustes (T-L6).*
 - **Q-B12-5:** los textos legales van en `strings.csv` con el estado **`borrador`** y la nota «pendiente del abogado» (sin un estado nuevo en el contrato 32).
 - **Q-B12-6:** la doble confirmación es **una pantalla más**: el toque en «Comprar» del juego, una confirmación con el precio de la tienda y después la hoja de Google Play. Pendiente del abogado, con Q-T4.
 - **Q-B12-7:** con 13-17 **la analítica se ofrece** como finalidad que se puede aceptar (sin audiencias ni anuncios personalizados). Pendiente del abogado (ECA Digital).
@@ -4213,3 +4213,36 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 2. **Nombres de países de CLDR 47.0.** Se aceptan como fuente para la tabla de la Liga, con la misma excepción que las 21 filas de D-046 (`aprobado_es`/`revisado_nativo`, con la nota «Pendiente del asesor cultural»). El asesor revisará con prioridad los nombres con carga política: Taiwán, Palestina, Kosovo y Sáhara Occidental.
 3. **13-17 sin país conocido:** no se ofrece la analítica, que es el tratamiento más estricto. Sustituye el «sin país, `*`» de T-L1.
 4. **Lista T1 (T-M6):** se añaden Nueva Zelanda, Singapur, Hong Kong, Taiwán, Israel y los países del Golfo, como [P]. Se editan 04 §6.2 y 05 §6.3.
+
+### D-049, añadido del 2026-10-27: Unity Ads como red de mediación de AdMob
+
+- **Aprobación del dueño, en el chat:** «apruebo el adaptador 3.21.1». Es `com.google.ads.mobile.mediation.unity` 3.21.1, con el adaptador `com.google.ads.mediation:unity:4.20.1.0` y el SDK `com.unity3d.ads:unity-ads:4.20.1` (`docs/dev/anuncios-gma-propuesta.md` §7).
+- **Cuentas, configuradas con el dueño el 2026-10-27:**
+  - **Unity:** la organización 20067668703382 tiene el proyecto y la app «Tintalú» (Android, audiencia general, sin URL de tienda). El Game ID es 800412912 y los placements de bidding son `BP_Rewarded_Android` y `BP_Interstitial_Android`.
+  - **AdMob:** hay dos grupos de mediación con Unity Ads por licitación: «Tintalú Recompensado Android» (9122104719) y «Tintalú Intersticial Android» (3021919976). El dueño aceptó las condiciones de procesamiento de datos y el acuerdo de licitación.
+  - **Pendiente del dueño:**
+    - poner Parallext, LLC como nombre de la organización de Unity, con su dirección y los datos de cobro;
+    - añadir Unity Ads a los partners de los mensajes de RGPD y de EE. UU. en AdMob.
+- **Bloque recompensado corregido:** `…/2877105387` era de formato «Intersticial recompensado» y el juego lo cargaba como Recompensado. Se creó `…/1182085615` (Recompensado), que pasa a ser el bloque de producción.
+- **Condiciones de la integración:**
+  - quitar el inicializador automático de Unity Ads, para que nada arranque antes de la edad y el consentimiento;
+  - sin permisos nuevos;
+  - la biblioteca nativa alineada a 16 KB;
+  - el AAB por debajo de 80 MB.
+
+## D-058 · Rediseño de los personajes: «3D cartoon», juguete brillante, por código
+
+- **Fecha:** 2026-10-27. Registrada por el integrador.
+- **Estado:** pedido por el dueño en el chat: «quiero que hagamos rediseño de los personajes, demosle mas estilo, como 3D cartoon, CGI estilizado, character y glozy toy aestethic, manda esa encargo a spark». A las tres preguntas respondió con las recomendadas: todos los personajes, por código en pseudo-3D y con un piloto primero.
+- **Decisión:**
+  1. TiTino, Capi, la fauna y los 16 avatares pasan a un acabado de personaje CGI estilizado de juguete brillante:
+     - volumen;
+     - luz principal arriba a la izquierda y luz de borde;
+     - brillo de barniz;
+     - ojos con reflejos;
+     - sin el contorno de tinta grueso.
+  2. **Se sigue dibujando por código (D-052):** sin modelos 3D, renders, IA de imágenes ni herramientas o paquetes nuevos. Se mantiene la dirección «Selva brillante premium» (D-003).
+  3. **Lo hace el Spark** (`docs/dev/traspaso/spark-personajes-3d.md`) en dos fases:
+     - un piloto: guía de estilo, TiTino, Capi, dos animales y capturas de antes y después, que **aprueba el dueño**;
+     - después, el resto.
+  4. **Sustituye** el «contorno de tinta de Capi» de los avatares (D-056 y `docs/dev/avatares.md`). Las APIs, los tamaños, los `ArtSlots` y los presupuestos de tiempo siguen igual.

@@ -186,6 +186,9 @@ namespace AF.Save
             Profile merged = ProfileJson.Deserialize(winner == CloudMergeWinner.Local ? localJson : cloudJson);
             merged.AccountCode = local.AccountCode; // F3-5 [P]: el código de borrado es del dispositivo (el otro puede estar invalidado)
             merged.Consent = local.Consent; // Q-B12-8 (a): la edad y el consentimiento son del dispositivo (08 §7); uno nuevo vuelve a preguntar
+            // T-L6 [P]: «Enviar informes de fallos» apagado en cualquiera de los dos se queda apagado, también si gana la nube por la
+            // firma: la objeción a Crashlytics no se pierde al fusionar (se vuelve a encender a mano en Ajustes).
+            merged.Settings.CrashReports = local.Settings.CrashReports && cloud.Settings.CrashReports;
             if (reason != CloudMergeReason.Integrity)
             {
                 MergeFields(merged, loser);

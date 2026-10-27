@@ -169,6 +169,10 @@ namespace AF.Analytics.Firebase
     /// apagado (<c>firebase_crashlytics_collection_enabled = false</c>) para que lo encienda el arranque, en el código, y se pueda
     /// cortar por banda de edad o consentimiento sin otro build. Sin <c>SetUserId</c>: los informes no llevan el UID.
     /// <para>
+    /// Ajustes › «Enviar informes de fallos» (T-L6; D-057, añadido del 2026-10-27; sustituye Q-B12-4) llama a <see cref="Start"/> o
+    /// <see cref="Stop"/>, también en el arranque: apagado, la recogida a false y los informes sin enviar, borrados.
+    /// </para>
+    /// <para>
     /// Lo que se aplica al estar Firebase listo es siempre la <b>última</b> petición (<see cref="Start"/> o <see cref="Stop"/>), no
     /// cada una en su orden: un <see cref="Start"/> que espera a Firebase no puede encenderlo después de un <see cref="Stop"/>.
     /// </para>
@@ -230,6 +234,7 @@ namespace AF.Analytics.Firebase
                     break;
                 case CrashReportingAction.DisableInSdk:
                     global::Firebase.Crashlytics.Crashlytics.IsCrashlyticsCollectionEnabled = false;
+                    DeleteUnsentNative(); // T-L6: lo que quedara en el disco sin enviar no sale nunca (el SDK de C# no lo expone)
                     break;
                 case CrashReportingAction.DisableNative:
                     StopNative(); // el Firebase de C# no está disponible: apagado igualmente en el SDK de Android
@@ -255,6 +260,24 @@ namespace AF.Analytics.Firebase
                 // Sin FirebaseApp o sin la clase: Crashlytics no está corriendo en este proceso.
             }
         }
+
+        // T-L6 (D-057): los informes sin enviar, borrados con el SDK de Android (deleteUnsentReports), tras apagar la recogida con el
+        // de C#. Con la recogida apagada Crashlytics guarda en el disco lo que capture hasta que alguien lo envíe o lo borre.
+        private static void DeleteUnsentNative()
+        {
+            try
+            {
+                using (var crashlytics = new UnityEngine.AndroidJavaClass("com.google.firebase.crashlytics.FirebaseCrashlytics"))
+                using (UnityEngine.AndroidJavaObject instance = crashlytics.CallStatic<UnityEngine.AndroidJavaObject>("getInstance"))
+                {
+                    instance.Call("deleteUnsentReports");
+                }
+            }
+            catch (System.Exception)
+            {
+                // Sin FirebaseApp o sin la clase: nada que borrar.
+            }
+        }
 #endif
     }
 
@@ -267,7 +290,7 @@ namespace AF.Analytics.Firebase
         /// <summary>Encenderlo con el SDK de C# (Firebase listo).</summary>
         EnableInSdk = 1,
 
-        /// <summary>Apagarlo con el SDK de C# (Firebase listo).</summary>
+        /// <summary>Apagarlo con el SDK de C# (Firebase listo) y borrar lo no enviado (T-L6).</summary>
         DisableInSdk = 2,
 
         /// <summary>Apagarlo en el SDK de Android, sin el Firebase de C# (no pedido o no disponible), y borrar lo no enviado.</summary>

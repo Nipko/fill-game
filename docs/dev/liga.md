@@ -132,6 +132,7 @@ Entran en `infra/contracts/v1` con sus esquemas, sus ejemplos y su entrada en `i
 - **`AF.Backend`:** el cliente HTTP real de §3.1, con el autorizador de siempre.
 - **UI:** el botón del inicio, la pantalla de la Liga, la línea de la victoria y la fila del país en Ajustes. Textos en `strings.csv` en los tres idiomas, con `context` y `max_chars`. Los nombres de animal `league_name_*` nacen `pendiente_asesor`.
 - **Banderas:** dibujadas por código como el resto del arte provisional. Siempre con el nombre del país al lado; la bandera nunca va sola.
+- **Nombres de país (D-057, P7 (a)):** todos los de ISO 3166-1 más XK (250), en es-419, en y pt-BR, generados desde CLDR (no a mano): `node tools/loc/cldr_regions.mjs` escribe la instantánea `tools/loc/data/cldr_regions.json` y `python tools/loc/league_countries.py` las filas `league_country_xx` de `strings.csv` y `LeagueCountries.Generated.cs` (`--check` y `--self-test`). Las 21 filas de D-046 se quedan como estaban. Sin bandera dibujada, la placa neutra con el código; un código fuera de la tabla sigue como «Otro país».
 - **Accesibilidad:** TalkBack lee cada fila (posición, seudónimo, país, puntos). Al 130 % todo cabe en los tres idiomas.
 - **Sin perfil de servidor:** la cola vive en el perfil (`league.pending[]`, 08 §4.3). Lo que se descarga es caché, nunca la fuente de verdad.
 
@@ -153,7 +154,7 @@ Nunca llevan seudónimo ni país, solo claves (regla de `localizacion.md`).
 
 La política, en tres idiomas, tiene que decir:
 - que la Liga muestra a otros jugadores un **seudónimo automático, el avatar de animal que elija entre los del juego (D-056), la bandera del país y los puntos de la semana**;
-- que el país sale de la conexión o de la región del teléfono;
+- que el país lo manda el teléfono (SIM → cuenta de Play → región; el servidor no usa la conexión);
 - que se borra con la cuenta;
 - que con <13 no hay Liga.
 

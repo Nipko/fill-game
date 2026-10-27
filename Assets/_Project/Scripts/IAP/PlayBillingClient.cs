@@ -143,6 +143,15 @@ namespace AF.IAP
         public event Action? StateChanged;
 
         /// <summary>
+        /// El país de la cuenta de Google Play (ISO 3166-1 alfa-2 en mayúsculas), o null mientras no se sepa o si el puerto no lo da
+        /// (<see cref="IPlayAccountCountryPort"/>; D-057, P4 (a)). Se pide una vez tras conectar; si falla, en la próxima conexión.
+        /// </summary>
+        public string? AccountCountry { get; private set; }
+
+        /// <summary>Se supo (o cambió) <see cref="AccountCountry"/>: quien lo recibe lo guarda para el país legal del próximo arranque.</summary>
+        public event Action<string>? AccountCountryKnown;
+
+        /// <summary>
         /// Pedidos cuyo <c>deferred_ack</c> rechazó el puerto alguna vez en la sesión (no tenía el pedido cobrado o el plugin falló), uno
         /// por pedido aunque después se reconozca. Se queda con su nombre para
         /// no cambiar el contrato (D-040, añadido de Q-IAP-1); con Unity IAP 5.4.4 contaba los consumibles, que no se podían reconocer sin
@@ -191,6 +200,7 @@ namespace AF.IAP
             _port.Disconnected -= OnDisconnected;
             UnfinishedChanged = null;
             StateChanged = null;
+            AccountCountryKnown = null;
             _open = null;
             State = PlayBillingState.Unavailable;
             _port.Dispose();
@@ -214,8 +224,49 @@ namespace AF.IAP
                 }
 
                 _port.FetchProducts(Definitions(), products => OnProducts(generation, products));
+                FetchAccountCountry(generation);
             });
         }
+
+        // D-057: el país de la cuenta de Play, una vez por sesión (si falla, en la próxima conexión). Solo dos letras ASCII.
+        private void FetchAccountCountry(int generation)
+        {
+            if (AccountCountry != null || _disposed || !(_port is IPlayAccountCountryPort countries))
+            {
+                return;
+            }
+
+            countries.FetchAccountCountry(country =>
+            {
+                string? code = CountryCode(country);
+                if (_disposed || generation != _generation || code == null || string.Equals(code, AccountCountry, StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                AccountCountry = code;
+                AccountCountryKnown?.Invoke(code);
+            });
+        }
+
+        /// <summary>El código de país de Play en mayúsculas si son dos letras ASCII; si no, null.</summary>
+        internal static string? CountryCode(string? country)
+        {
+            if (country == null)
+            {
+                return null;
+            }
+
+            string c = country.Trim();
+            if (c.Length != 2 || !IsAsciiLetter(c[0]) || !IsAsciiLetter(c[1]))
+            {
+                return null;
+            }
+
+            return c.ToUpperInvariant();
+        }
+
+        private static bool IsAsciiLetter(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 
         /// <summary>
         /// Al volver a primer plano: si no hay Play, vuelve a intentarlo; si la hay, consulta otra vez las compras (lo que Play cobró

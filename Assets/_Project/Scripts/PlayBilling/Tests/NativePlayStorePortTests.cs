@@ -601,5 +601,100 @@ namespace AF.IAP.PlayBilling.Tests
             port.Connect(c => connected = c);
             Assert.That(connected, Is.False);
         }
+
+        // ------------------------------------------------------------------ país de la cuenta de Play (D-057, P4 (a))
+
+        [Test]
+        public void AccountCountry_IsTheCountryCodeOfPlay_OrNullWhenPlayFails()
+        {
+            (NativePlayStorePort port, FakeBillingBridge bridge) = New();
+            var answers = new List<string?>();
+            port.FetchAccountCountry(answers.Add);
+            port.FetchAccountCountry(answers.Add);
+            Assert.That(bridge.ConfigQueries, Has.Count.EqualTo(2));
+            Assert.That(answers, Is.Empty, "espera a Play");
+
+            ((IBillingBridgeListener)port).OnBillingConfig(bridge.ConfigQueries[0], BillingCodes.Ok, "DE");
+            ((IBillingBridgeListener)port).OnBillingConfig(bridge.ConfigQueries[1], BillingCodes.ServiceUnavailable, "DE");
+            ((IBillingBridgeListener)port).OnBillingConfig(bridge.ConfigQueries[1], BillingCodes.Ok, "FR");
+            Assert.That(answers, Is.EqualTo(new string?[] { "DE", null }), "una respuesta por consulta; con un error, null");
+
+            port.FetchAccountCountry(answers.Add);
+            ((IBillingBridgeListener)port).OnBillingConfig(bridge.ConfigQueries[2], BillingCodes.Ok, null);
+            Assert.That(answers[2], Is.Null, "Play sin país");
+        }
+
+        [Test]
+        public void AccountCountry_ADisconnectAnswersNull_WithoutStoppingTheSales()
+        {
+            (NativePlayStorePort port, FakeBillingBridge bridge) = New();
+            int disconnected = 0;
+            port.Disconnected += () => disconnected++;
+            string? got = "x";
+            port.FetchAccountCountry(c => got = c);
+            ((IBillingBridgeListener)port).OnDisconnected();
+            Assert.That(got, Is.Null);
+            Assert.That(disconnected, Is.EqualTo(0), "el país no es parte de la venta: sin nada más en vuelo no se avisa");
+        }
+
+        [Test]
+        public void AccountCountry_AfterDisposeOrWhenThePluginThrows_IsNull()
+        {
+            (NativePlayStorePort port, FakeBillingBridge bridge) = New();
+            string? pending = "x";
+            port.FetchAccountCountry(c => pending = c);
+            port.Dispose();
+            Assert.That(pending, Is.Null, "Dispose responde lo que esperaba");
+            string? after = "x";
+            port.FetchAccountCountry(c => after = c);
+            Assert.That(after, Is.Null);
+
+            (NativePlayStorePort broken, FakeBillingBridge b2) = New();
+            b2.Throw = true;
+            string? thrown = "x";
+            broken.FetchAccountCountry(c => thrown = c);
+            Assert.That(thrown, Is.Null);
+        }
+
+        [Test]
+        public void TheClient_AsksForTheCountryAfterConnecting_AndKeepsItInUppercase()
+        {
+            (NativePlayStorePort port, FakeBillingBridge bridge) = New();
+            var client = new PlayBillingClient(port, StoreCatalog.Default, "USD");
+            var known = new List<string>();
+            client.AccountCountryKnown += known.Add;
+            client.Start();
+            Assert.That(bridge.ConfigQueries, Is.Empty, "antes de conectar, nada");
+
+            ((IBillingBridgeListener)port).OnSetupFinished(BillingCodes.Ok);
+            Assert.That(bridge.ConfigQueries, Has.Count.EqualTo(1));
+            ((IBillingBridgeListener)port).OnBillingConfig(bridge.ConfigQueries[0], BillingCodes.Ok, "de");
+            Assert.That(client.AccountCountry, Is.EqualTo("DE"));
+            Assert.That(known, Is.EqualTo(new[] { "DE" }));
+
+            client.Dispose();
+            Assert.That(client.AccountCountry, Is.EqualTo("DE"));
+        }
+
+        [Test]
+        public void TheClient_IgnoresACountryThatIsNotTwoLetters_AndAsksAgainOnTheNextConnection()
+        {
+            (NativePlayStorePort port, FakeBillingBridge bridge) = New();
+            var client = new PlayBillingClient(port, StoreCatalog.Default, "USD");
+            var known = new List<string>();
+            client.AccountCountryKnown += known.Add;
+            client.Start();
+            ((IBillingBridgeListener)port).OnSetupFinished(BillingCodes.Ok);
+            ((IBillingBridgeListener)port).OnBillingConfig(bridge.ConfigQueries[0], BillingCodes.Ok, "419");
+            Assert.That(client.AccountCountry, Is.Null);
+            Assert.That(known, Is.Empty);
+
+            ((IBillingBridgeListener)port).OnDisconnected(); // sin Play: Refresh vuelve a conectar
+            client.Refresh();
+            ((IBillingBridgeListener)port).OnSetupFinished(BillingCodes.Ok);
+            Assert.That(bridge.ConfigQueries, Has.Count.EqualTo(2), "sin país aún: se vuelve a pedir");
+            ((IBillingBridgeListener)port).OnBillingConfig(bridge.ConfigQueries[1], BillingCodes.Ok, "KR");
+            Assert.That(known, Is.EqualTo(new[] { "KR" }));
+        }
     }
 }

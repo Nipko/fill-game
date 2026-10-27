@@ -112,8 +112,9 @@ namespace AF.Ads
         /// <summary>App ID de AdMob para Android («Tintalú»; <c>GoogleMobileAdsSettings</c>, lo fija <c>GoogleAdsProjectSetup</c>).</summary>
         public const string AndroidAppId = "ca-app-pub-2916158449453694~9925643748";
 
-        /// <summary>Bloque recompensado de producción.</summary>
-        public const string ProductionRewarded = "ca-app-pub-2916158449453694/2877105387";
+        /// <summary>Bloque recompensado de producción («Tintalu Rewarded», formato Recompensado; el antiguo <c>2877105387</c> es un
+        /// intersticial recompensado y no se carga como <c>RewardedAd</c>: no usar; <c>docs/dev/anuncios-admob.md</c> §3 bis).</summary>
+        public const string ProductionRewarded = "ca-app-pub-2916158449453694/1182085615";
 
         /// <summary>Bloque intersticial de producción.</summary>
         public const string ProductionInterstitial = "ca-app-pub-2916158449453694/7187673451";

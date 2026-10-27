@@ -154,6 +154,7 @@ namespace AF.UI
             {
                 _playBilling.UnfinishedChanged += OnPlayUnfinished;
                 _playBilling.StateChanged += OnPlayStateChanged;
+                _playBilling.AccountCountryKnown += OnPlayAccountCountry;
             }
 
             _revocation = new LocalRevocation(profile, ledger.Wallet, batch, capsClock, _rcConfigs?.Revocation);
@@ -204,6 +205,14 @@ namespace AF.UI
         private void OnPlayStateChanged()
         {
             _market?.Refresh();
+        }
+
+        // D-057 (P4 (a)): el país de la cuenta de Play se guarda para el país legal (y el geo_tier) del arranque siguiente. No cambia
+        // nada en esta sesión: el consentimiento ya se decidió con el país de antes; si el perfil legal cambia, el próximo arranque
+        // vuelve a pedir las finalidades (Q-B12-15).
+        private void OnPlayAccountCountry(string country)
+        {
+            PlayAccountCountry.Save(country);
         }
 
         /// <summary>

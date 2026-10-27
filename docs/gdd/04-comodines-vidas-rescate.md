@@ -260,7 +260,7 @@ ctx = {
   streak, shield_available,            # Crecida y Hoja escudo
   rescues_today, rescues_level,
   af_rescue_shown_today, af_rescue_declined_days,   # Balsa de rescate: contadores de estado, no eventos de analítica (§11)
-  geo_tier ∈ {T1, T3},                 # T1: US/CA/Europa occ./AU/JP/KR · T3: LatAm salvo CL/UY (research/04 §Segmentación)
+  geo_tier ∈ {T1, T3},                 # T1: US/CA/Europa occ./AU/JP/KR + NZ/SG/HK/TW/IL/Golfo (AE, SA, QA, KW, BH, OM) [P] (D-057, decisiones de la revisión, punto 4) · T3: LatAm salvo CL/UY y el resto (research/04 §Segmentación)
   no_ads,                              # compró Sin anuncios (conserva recompensados)
   last_skip     = max(l in skipped_levels if l < level) or none,   # D-033, B3-Q-S1: el hueco sale de skipped_levels, no de since_last_skip
   skip_gap      = level - last_skip if last_skip else level,       # Q-S2: tras saltar el 40, el 50 ya puede
