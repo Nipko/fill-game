@@ -95,7 +95,7 @@ namespace AF.Tests.EditMode
             }
 
             Assert.That(Loc.StatusOf(LeagueText.CountryOtherKey, "es-419"), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs));
-            Assert.That(LeagueText.NamedCountries.Length, Is.EqualTo(21));
+            Assert.That(LeagueText.NamedCountries.Length, Is.EqualTo(250), "D-057: ISO 3166-1 (249) más XK");
         }
 
         [Test]
@@ -113,7 +113,10 @@ namespace AF.Tests.EditMode
         {
             Assert.That(LeagueText.Country("CO"), Is.EqualTo("Colombia"));
             Assert.That(LeagueText.Country("BR"), Is.EqualTo("Brasil"));
-            Assert.That(LeagueText.Country("JP"), Is.EqualTo("Otro país"), "sin fila, «Otro país» (el código ISO va en la placa neutra)");
+            Assert.That(LeagueText.Country("JP"), Is.EqualTo("Japón"), "D-057: la tabla ISO completa");
+            Assert.That(LeagueText.Country("KR"), Is.EqualTo("Corea del Sur"));
+            Assert.That(LeagueText.Country("XK"), Is.EqualTo("Kosovo"));
+            Assert.That(LeagueText.Country("ZZ"), Is.EqualTo("Otro país"), "un código fuera de la tabla: «Otro país» (el código va en la placa neutra)");
             Assert.That(LeagueText.CountryKey("GF"), Is.EqualTo("league_country_gf"));
             foreach (string flag in LeagueText.FlagCountries)
             {
@@ -121,6 +124,12 @@ namespace AF.Tests.EditMode
             }
 
             Assert.That(LeagueText.SettingsCountry("PE"), Is.EqualTo("País en la Liga: Perú"));
+            Assert.That(LeagueText.SettingsCountry("JP"), Is.EqualTo("País en la Liga: Japón"), "D-057: también en Ajustes");
+            Loc.Configure(LocSetUpFixture.Catalog, "en", true);
+            Assert.That(LeagueText.Country("JP"), Is.EqualTo("Japan"));
+            Loc.Configure(LocSetUpFixture.Catalog, "pt-BR", true);
+            Assert.That(LeagueText.Country("JP"), Is.EqualTo("Japão"));
+            Assert.That(LeagueText.Country("CI"), Is.EqualTo("Costa do Marfim"));
         }
 
         [Test]
