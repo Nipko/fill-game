@@ -22,6 +22,12 @@ namespace AF.Ads
         /// <inheritdoc />
         public IGmaListener? Listener { get; set; }
 
+        /// <summary>
+        /// Cada <see cref="SetMediationConsent"/>, en orden y aparte de <see cref="Calls"/>: <c>unity:gdpr=false:privacy=false</c> (una
+        /// clave que no se manda sale como <c>-</c>) y, al final, <c>:before-init</c> o <c>:after-init</c>.
+        /// </summary>
+        public List<string> MediationConsent { get; } = new List<string>();
+
         /// <summary>Veces que se llamó a <c>MobileAds.Initialize</c>.</summary>
         public int Initializations { get; private set; }
 
@@ -71,6 +77,15 @@ namespace AF.Ads
         public void SetRequestConfiguration(bool underAgeOfConsent)
         {
             Calls.Add("config:tfua=" + (underAgeOfConsent ? "true" : "false"));
+        }
+
+        /// <inheritdoc />
+        public void SetMediationConsent(bool? hasUserConsent, bool? doNotSell)
+        {
+            MediationConsent.Add(
+                "unity:gdpr=" + Flag(hasUserConsent)
+                + ":privacy=" + Flag(doNotSell.HasValue ? !doNotSell.Value : (bool?)null)
+                + (Initializations == 0 ? ":before-init" : ":after-init"));
         }
 
         /// <inheritdoc />
@@ -173,6 +188,8 @@ namespace AF.Ads
         {
             Listener?.OnPaid(kind, adSource, valueMicros, currency);
         }
+
+        private static string Flag(bool? value) => value.HasValue ? (value.Value ? "true" : "false") : "-";
 
         private static string Name(GmaAdKind kind) => kind == GmaAdKind.Rewarded ? "rewarded" : "interstitial";
     }

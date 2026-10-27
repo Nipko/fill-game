@@ -75,6 +75,15 @@ namespace AF.Ads
         /// </summary>
         void RequestConsent(bool underAgeOfConsent);
 
+        /// <summary>
+        /// El consentimiento de nuestra pantalla para las redes de mediación que no leen el de Google (D-049, añadido del 2026-10-27:
+        /// Unity Ads). En Unity Ads es su API <c>MetaData</c>: <c>gdpr.consent</c> = <paramref name="hasUserConsent"/> y
+        /// <c>privacy.consent</c> = no <paramref name="doNotSell"/> (la guía de mediación de Google: CCPA y leyes de los estados de
+        /// EE. UU.). Un null no manda esa clave (perfil <c>ump</c> de 18+: deciden las cadenas TCF de UMP). No inicia nada; va antes de
+        /// <see cref="Initialize"/>, que es quien inicia las redes de mediación.
+        /// </summary>
+        void SetMediationConsent(bool? hasUserConsent, bool? doNotSell);
+
         /// <summary>UMP pide un punto de entrada a las opciones de privacidad (<c>PrivacyOptionsRequirementStatus.Required</c>).</summary>
         bool PrivacyOptionsRequired { get; }
 
@@ -172,6 +181,9 @@ namespace AF.Ads
     /// UMP dice <c>CanRequestAds</c>, <c>MobileAds.Initialize</c>. Si la edad pasa a &lt;13 después, deja de cargar y de mostrar.</item>
     /// <item><b>No personalizados:</b> con <c>npa</c> de nuestra pantalla (13-17, sin consentimiento de anuncios personalizados o sin
     /// país), cada petición lleva <c>npa=1</c>. Con el perfil <c>ump</c> de 18+ deciden las cadenas TCF de UMP.</item>
+    /// <item><b>Redes de mediación (Unity Ads; D-049, añadido del 2026-10-27):</b> antes de UMP y de <c>MobileAds.Initialize</c>, y
+    /// otra vez si cambia, <see cref="IGmaPort.SetMediationConsent"/> con los flags de <see cref="AdConsentSettings"/> (los que antes recibía MAX): con <c>npa</c>
+    /// (13-17, también 13-17 en EE. UU., o sin consentimiento) <c>gdpr.consent</c> y <c>privacy.consent</c> en false.</item>
     /// <item><b>Precarga según el nivel</b> y reintentos con espera exponencial (<see cref="Backoff"/>: 2, 4 … 64 s).</item>
     /// <item><b>SSV (08 §10.2; D-049):</b> antes de cada recompensado, si hay UID de Firebase Auth, <c>ServerSideVerificationOptions</c>
     /// con <c>user_id</c> = ese UID (el mismo que valida el JWT de <c>restoreLedger</c>) y <c>custom_data = placement|nonce</c>
@@ -208,6 +220,9 @@ namespace AF.Ads
         private bool _allowed;
         private bool _nonPersonalized = true;
         private bool? _underAgeApplied;
+        private bool _mediationApplied;
+        private bool? _mediationConsent;
+        private bool? _mediationDoNotSell;
         private bool _consentInFlight;
         private bool _canRequestAds;
         private Action<AdOutcome>? _pending;
@@ -277,6 +292,15 @@ namespace AF.Ads
             }
 
             _nonPersonalized = settings.NonPersonalized;
+            if (!_mediationApplied || _mediationConsent != settings.HasUserConsent || _mediationDoNotSell != settings.DoNotSell)
+            {
+                // Antes de SetRequestConfiguration, UMP e Initialize: el adaptador de Unity Ads lo lee al iniciarse (D-049, añadido).
+                _mediationApplied = true;
+                _mediationConsent = settings.HasUserConsent;
+                _mediationDoNotSell = settings.DoNotSell;
+                _port.SetMediationConsent(settings.HasUserConsent, settings.DoNotSell);
+            }
+
             if (_underAgeApplied != settings.Teen)
             {
                 _underAgeApplied = settings.Teen;

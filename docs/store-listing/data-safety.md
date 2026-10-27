@@ -14,7 +14,8 @@
 | Backend propio en AWS, `sa-east-1` (São Paulo) | **Integrado** (D-035): verificación de compras, restauración del libro mayor, código de borrado y borrado de cuenta | 08 §13.3, fila «Backend propio»; `infra/contracts/v1` |
 | Google Play Billing Library 9.0.0, con el plugin propio `AfBilling.androidlib` | **Integrado** (D-040, añadido de Q-IAP-1). **Unity IAP ya no está:** se quitó con sus dependencias de Unity Services y su telemetría de compras a Unity | `docs/dev/iap.md` §1; `ci/check-no-unity-iap.ps1` |
 | Unity Mobile Notifications 2.4.3 | Integrado: avisos locales, nada sale del teléfono | 08 §13.3 |
-| **Google Mobile Ads 11.5.0 (AdMob directo) + UMP 4.0.0** | **Integrado en `tanda6/sdk-gma` (D-049, 2026-10-25)**: anuncios de AdMob tras la edad, nuestro consentimiento y UMP; nunca con `<13`; permiso `AD_ID` activado (D-049; confirmado en D-055, punto 3). Sin anuncios con 13-17 en el EEE, el Reino Unido y Suiza (D-055, punto 4). Sin redes de mediación todavía | `docs/dev/anuncios-admob.md` |
+| **Google Mobile Ads 11.5.0 (AdMob directo) + UMP 4.0.0** | **Integrado en `tanda6/sdk-gma` (D-049, 2026-10-25)**: anuncios de AdMob tras la edad, nuestro consentimiento y UMP; nunca con `<13`; permiso `AD_ID` activado (D-049; confirmado en D-055, punto 3). Sin anuncios con 13-17 en el EEE, el Reino Unido y Suiza (D-055, punto 4). Primera red de mediación: Unity Ads (fila siguiente) | `docs/dev/anuncios-admob.md` |
+| **Unity Ads 4.20.1 (red de mediación de AdMob; adaptador 4.20.1.0, paquete 3.21.1)** | **Integrado en `tanda6/unity-ads` (D-049, añadido del 2026-10-27)**: solo dentro de la mediación de AdMob, iniciado por `MobileAds.Initialize` (su inicializador automático se quita del manifiesto); recibe nuestra decisión de anuncios personalizados por su `MetaData` (`gdpr.consent` y `privacy.consent`). Sin permisos nuevos | `docs/dev/anuncios-admob.md` §12 |
 | AppLovin MAX 8.6.6 | **Fuera del build** (D-049, añadido del 2026-10-27): no se declara; `ci/check-no-applovin.ps1` lo comprueba | `docs/dev/anuncios-admob.md` §8 bis |
 | Play Games 2.3.0 (inicio de sesión silencioso y Saved Games) | **Todavía no en el juego** (D-042, en integración) | D-042 |
 
@@ -58,7 +59,7 @@
 
 ### 3.2 Anuncios (D-049: Google AdMob directo) y Play Games (D-042)
 
-Se añaden a la sección 3.1 cuando el build que se envía los lleve. **Con D-049 los anuncios son de Google Mobile Ads (AdMob directo)**, no de MAX: donde abajo dice «MAX y adaptadores» léase «Google Mobile Ads (AdMob) y, cuando entren, las redes de su mediación»:
+Se añaden a la sección 3.1 cuando el build que se envía los lleve. **Con D-049 los anuncios son de Google Mobile Ads (AdMob directo)**, no de MAX: donde abajo dice «MAX y adaptadores» léase «Google Mobile Ads (AdMob) y las redes de su mediación». **Desde el añadido de D-049 del 2026-10-27, Unity Ads es una de ellas**: comparte con Unity Technologies la ubicación aproximada (IP), el ID de publicidad, las interacciones con los anuncios y el diagnóstico del SDK cuando participa en una petición (no el UID ni el `custom_data` del SSV); en Data Safety, «Compartido: Sí» en esas filas cubre a Google y a Unity:
 
 | Categoría · tipo [NV] | Quién lo recoge | Recogido | Compartido | Finalidad | ¿Opcional? | Notas |
 |---|---|---|---|---|---|---|
@@ -87,6 +88,7 @@ Nombre, correo, dirección, teléfono, mensajes, fotos, vídeos, audio, archivos
 | Google Play Billing Library 9.0.0 (plugin propio) | En el juego | Historial de compras; UID como `obfuscatedAccountId`; registros de diagnóstico de la biblioteca a Google (Q-BILL-2) [E]. Sin terceros |
 | Unity Mobile Notifications 2.4.3 | En el juego | Nada |
 | Google Mobile Ads 11.5.0 + UMP 4.0.0 (AdMob directo) | **D-049, rama `tanda6/sdk-gma`** | Ubicación aproximada (IP), interacciones con anuncios, diagnóstico e ID de publicidad; compartidos con Google (y las redes de su mediación cuando entren) |
+| Unity Ads 4.20.1 (mediación de AdMob) | **D-049, añadido del 2026-10-27, rama `tanda6/unity-ads`** | Ubicación aproximada (IP), ID de publicidad, interacciones con anuncios y diagnóstico, compartidos con Unity Technologies cuando participa en una petición; nada antes de `MobileAds.Initialize` |
 | AppLovin MAX 8.6.6 | Fuera del build (D-049, añadido del 2026-10-27) | Nada: no está en el APK |
 | Play Games 2.3.0 (Saved Games) | **Al integrar D-042** | ID de jugador de Play Games y partida guardada; funcionalidad |
 | Runtime de Unity 6000.3 (módulo `com.unity.modules.unityanalytics`, Engine Diagnostics) | En el build | **Sin comprobar** (Q-B13-9 y el «pendiente aparte» de D-040): build-release comprueba que no envía nada en release; si envía, lleva fila |

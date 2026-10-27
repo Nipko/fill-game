@@ -61,6 +61,11 @@ $ContentMarks = [ordered]@{
     'AppLovinMax.'   = 'plugin de C# de MAX (espacio de nombres AppLovinMax)'
 }
 $DexOnly = @('Lcom/applovin/')
+# Excepcion estrecha (D-049, anadido del 2026-10-27: Unity Ads 4.20.1 como red de mediacion de AdMob): el SDK de Unity Ads
+# trae un puente por reflexion (com.unity3d.services.core.reflection.AppLovinCommunicatorBridge) que solo nombra, como
+# texto, las clases com.applovin.communicator.AppLovinCommunicator* por si MAX esta en la app. No es codigo de AppLovin:
+# esos nombres se quitan antes de buscar. Una clase real de AppLovin (Lcom/applovin/...) u otro com.applovin. sigue fallando.
+$ExemptStrings = @('com.applovin.communicator.AppLovinCommunicator')
 
 function Stop-WithCode {
     param([int]$Code, [string]$Message)
@@ -82,6 +87,7 @@ function Get-Findings([string]$File) {
 
     $overlap = 0
     foreach ($n in $needles) { $overlap = [Math]::Max($overlap, $n.Text.Length) }
+    foreach ($e in $ExemptStrings) { $overlap = [Math]::Max($overlap, $e.Length) }   # la excepcion entera cabe en el solape
     $overlap -= 1
     $buffer = [byte[]]::new(4MB)   # uno para todo el artefacto
     $zip = [System.IO.Compression.ZipFile]::OpenRead($File)
@@ -100,8 +106,10 @@ function Get-Findings([string]$File) {
             try {
                 while (($read = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
                     $text = $carry + $latin1.GetString($buffer, 0, $read)
+                    $search = $text
+                    foreach ($e in $ExemptStrings) { $search = $search.Replace($e, '') }
                     for ($i = 0; $i -lt $needles.Count; $i++) {
-                        if (-not $found[$i] -and $text.IndexOf($needles[$i].Text, [StringComparison]::Ordinal) -ge 0) { $found[$i] = $true }
+                        if (-not $found[$i] -and $search.IndexOf($needles[$i].Text, [StringComparison]::Ordinal) -ge 0) { $found[$i] = $true }
                     }
 
                     $keep = [Math]::Min($text.Length, $overlap)
@@ -221,6 +229,11 @@ function Invoke-SelfTest {
                 'AndroidManifest.xml' = $noise + $utf16.GetBytes('com.applovin.sdk.AppLovinInitProvider') + $noise } }
         @{ Name = 'metadata.aab'; Expect = 1; Entries = @{
                 'base/assets/bin/Data/Managed/Metadata/global-metadata.dat' = $noise + $ascii.GetBytes('MaxSdkBase') + $noise } }
+        # Unity Ads 4.20.1 (D-049, anadido): su puente por reflexion nombra com.applovin.communicator.* como texto; no es AppLovin.
+        @{ Name = 'unity-ads-puente.aab'; Expect = 0; Entries = @{
+                'base/dex/classes3.dex' = $noise + $ascii.GetBytes('Lcom/unity3d/services/core/reflection/AppLovinCommunicatorBridge;.com.applovin.communicator.AppLovinCommunicator5com.applovin.communicator.AppLovinCommunicatorMessage8com.applovin.communicator.AppLovinCommunicatorSubscriber') + $noise } }
+        @{ Name = 'unity-ads-puente-y-max.aab'; Expect = 1; Entries = @{
+                'base/dex/classes3.dex' = $noise + $ascii.GetBytes('.com.applovin.communicator.AppLovinCommunicator com.applovin.sdk.AppLovinInitProvider') + $noise } }
         @{ Name = 'frontera.aab'; Expect = 1; Entries = @{
                 'base/dex/classes.dex' = $straddle } }
     )
