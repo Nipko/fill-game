@@ -6,13 +6,13 @@ namespace AF.Ads
 {
     /// <summary>
     /// Los anuncios detrás del consentimiento y la edad (bloque B12; 08 §2.3: <c>Ads.InitAsync(profile.consent, age_band)</c>,
-    /// «MAX arranca solo tras consentir»; 08 §7: TFCD con &lt;13, <c>npa</c> sin consentimiento o con 13-17 y
-    /// <c>maxAdContentRating</c> = G en todas las bandas). Envuelve al proveedor (<see cref="FakeAdService"/> en el editor, los tests y
-    /// los builds sin la configuración de MAX; <see cref="MaxAdService"/> en el teléfono, D-042):
+    /// «los anuncios arrancan solo tras consentir»; 08 §7: TFCD con &lt;13, <c>npa</c> sin consentimiento o con 13-17 y
+    /// <c>maxAdContentRating</c> = G en todas las bandas). Envuelve al proveedor (<see cref="FakeAdService"/> en el editor y los tests;
+    /// <see cref="GoogleAdService"/> en el teléfono, D-049):
     /// hasta <see cref="Apply"/> con una decisión, no hay anuncio cargado (<see cref="IsReady"/> = false y <see cref="Show"/> da
-    /// <see cref="AdOutcome.NoFill"/>), igual que un MAX sin inicializar. Los flags que recibiría MAX quedan en
+    /// <see cref="AdOutcome.NoFill"/>), igual que un SDK sin inicializar. Los flags que recibe el SDK quedan en
     /// <see cref="ChildDirected"/>, <see cref="NonPersonalized"/> y <see cref="MaxAdContentRating"/>; si el proveedor es
-    /// <see cref="IAdConsentTarget"/> (MAX), recibe además cada decisión como <see cref="AdConsentSettings"/>: así MAX no se inicia
+    /// <see cref="IAdConsentTarget"/> (Google), recibe además cada decisión como <see cref="AdConsentSettings"/>: así el SDK no se inicia
     /// antes de consentir ni nunca con &lt;13. Si el proveedor informa de impresiones (<see cref="IAdImpressionSource"/>), se reenvían.
     /// Hilo principal.
     /// </summary>
@@ -49,7 +49,7 @@ namespace AF.Ads
             }
         }
 
-        /// <summary>«MAX» inicializado: hay una decisión de consentimiento y edad que permite jugar.</summary>
+        /// <summary>Anuncios «inicializados»: hay una decisión de consentimiento y edad que permite jugar.</summary>
         public bool Initialized { get; private set; }
 
         /// <summary><c>TagForChildDirectedTreatment</c>.</summary>
@@ -67,7 +67,7 @@ namespace AF.Ads
         /// </summary>
         public bool UmpDecides { get; private set; }
 
-        /// <summary>Veces que se pidieron las opciones de privacidad de UMP desde Ajustes (MAX: el formulario para un usuario ya preguntado [NV]).</summary>
+        /// <summary>Veces que se pidieron las opciones de privacidad de UMP desde Ajustes (Google: el formulario de UMP para un usuario ya preguntado).</summary>
         public int PrivacyOptionsRequests { get; private set; }
 
         /// <summary>Las peticiones llevan <c>rdp=1</c> (13-17 con el país legal <c>US</c>; T-L5).</summary>
@@ -104,7 +104,7 @@ namespace AF.Ads
 
         /// <summary>
         /// Ajustes › Privacidad con el perfil <c>ump</c>: vuelve a abrir el mensaje de UMP para cambiar o retirar el consentimiento
-        /// de los anuncios (05 §7: «revocación en Ajustes»). Con el proveedor falso solo se cuenta; con MAX, su formulario de
+        /// de los anuncios (05 §7: «revocación en Ajustes»). Con el proveedor falso solo se cuenta; con Google, su formulario de
         /// privacidad [NV]. Devuelve si se pidió (solo con <see cref="UmpDecides"/>).
         /// </summary>
         public bool ShowPrivacyOptions()
@@ -117,7 +117,7 @@ namespace AF.Ads
             PrivacyOptionsRequests++;
             if (_inner is IAdConsentTarget target)
             {
-                return target.ShowPrivacyOptions(); // MAX: false si no hay CMP o aún no se inició
+                return target.ShowPrivacyOptions(); // Google: false si UMP no pide opciones de privacidad
             }
 
             return true;

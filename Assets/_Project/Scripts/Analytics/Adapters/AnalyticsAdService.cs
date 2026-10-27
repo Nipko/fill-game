@@ -7,7 +7,7 @@ namespace AF.Analytics.Adapters
     /// <summary>
     /// Analítica de anuncios (08 §8.2: <c>af_ad_request</c>, <c>af_ad_shown</c> y <c>af_ad_reward</c>) como envoltorio de un
     /// <see cref="IAdService"/>: no cambia nada del anuncio, solo mira el resultado. <c>AF.Ads</c> no se toca (el arranque
-    /// envuelve el servicio falso o el de MAX, D-042). Con MAX, cada impresión pagada (ILR, <see cref="IAdImpressionSource"/>) sale como
+    /// envuelve el servicio falso o el de Google Mobile Ads, D-049). Con Google, cada impresión pagada (ILR, <see cref="IAdImpressionSource"/>) sale como
     /// <c>ad_impression</c> mientras <c>ads_ilr_to_firebase</c> esté encendido; <c>af_ad_reward</c> sale con <c>granted</c> =
     /// <c>provisional</c> (08 §10.2: lo confirma o lo revoca el SSV después). Los parámetros que el servicio
     /// falso no conoce (<c>ms</c>, <c>network</c>, <c>gap_since_last_s</c>…) no se envían, en lugar de inventarlos [P].

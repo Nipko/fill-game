@@ -19,6 +19,7 @@ namespace AF.RemoteConfig.Binding
             "consent_text_version",
             "consent_under13_policy",
             "consent_age_signal_source",
+            "consent_digital_age_by_country",
             "biz_legal_profile_by_country",
             "biz_under18_no_personalization",
         };
@@ -35,6 +36,7 @@ namespace AF.RemoteConfig.Binding
             Try(errors, "consent_text_version", () => c.ConsentTextVersion = rc.Get<int>("consent_text_version"));
             Try(errors, "consent_under13_policy", () => c.ConsentUnder13Policy = rc.Get<string>("consent_under13_policy"));
             Try(errors, "consent_age_signal_source", () => c.ConsentAgeSignalSource = rc.Get<string>("consent_age_signal_source"));
+            Try(errors, "consent_digital_age_by_country", () => c.ConsentDigitalAgeByCountry = Ages(rc.Get<RcJson>("consent_digital_age_by_country")));
             Try(errors, "biz_legal_profile_by_country", () => c.BizLegalProfileByCountry = Profiles(rc.Get<RcJson>("biz_legal_profile_by_country")));
             Try(errors, "biz_under18_no_personalization", () => c.BizUnder18NoPersonalization = rc.Get<bool>("biz_under18_no_personalization"));
             try
@@ -59,6 +61,29 @@ namespace AF.RemoteConfig.Binding
             {
                 errors?.Add(key + ": " + ex.Message); // se queda el default de esa propiedad
             }
+        }
+
+        // {país: edad} (D-057): enteros; el rango (13-18) y la clave «*» los comprueba ConsentConfig.Validate.
+        private static IReadOnlyDictionary<string, int> Ages(RcJson json)
+        {
+            if (json.Kind != RcJsonKind.Object)
+            {
+                throw new FormatException("se esperaba un objeto {país: edad}");
+            }
+
+            var map = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < json.Members.Count; i++)
+            {
+                RcJson value = json.Members[i].Value;
+                if (!value.IsInteger || value.Number < int.MinValue || value.Number > int.MaxValue)
+                {
+                    throw new FormatException("la edad de " + json.Members[i].Key + " debe ser un entero");
+                }
+
+                map[json.Members[i].Key.ToUpperInvariant()] = (int)value.Number;
+            }
+
+            return map;
         }
 
         private static IReadOnlyDictionary<string, string> Profiles(RcJson json)

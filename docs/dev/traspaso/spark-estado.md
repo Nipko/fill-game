@@ -411,7 +411,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   | Q-B12-1 | Pantalla de edad: tres botones o año de nacimiento | (a) tres botones |
   | Q-B12-2 | ¿Repetir la edad al subir los textos? | (a) no, solo las finalidades |
   | Q-B12-3 | Bloqueo `<13` definitivo | (a) sí |
-  | Q-B12-4 | Diagnóstico sin interruptor | (a) sí, pendiente del abogado |
+  | Q-B12-4 | Diagnóstico sin interruptor | (a) sí, pendiente del abogado; sin efecto desde D-057 (añadido del 2026-10-27): interruptor en Ajustes (T-L6) |
   | Q-B12-5 | Estado «pendiente del abogado» | (a) `borrador` + nota |
   | Q-B12-6 | Doble confirmación: una pantalla más | (a) |
   | Q-B12-7 | Analítica con 13-17 | (a) se puede aceptar |

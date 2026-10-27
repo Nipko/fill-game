@@ -94,6 +94,14 @@ namespace AF.IAP.PlayBilling
                     }
 
                     return false;
+                case "onBillingConfig":
+                    if (a.Length == 3 && TryInt(a[0], out int configId) && TryInt(a[1], out int configCode) && TryString(a[2], out string? country))
+                    {
+                        post(() => target.OnBillingConfig(configId, configCode, country));
+                        return true;
+                    }
+
+                    return false;
                 default:
                     return false;
             }

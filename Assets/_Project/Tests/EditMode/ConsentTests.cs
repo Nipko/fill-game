@@ -73,6 +73,39 @@ namespace AF.Tests.EditMode
             Assert.That(s4, Is.EqualTo(CountrySource.None));
         }
 
+        [Test]
+        public void Country_SimFirst_ThenPlayAccount_ThenRegion_ThenNone()
+        {
+            // D-057 (P4 (a)): la cuenta de Google Play va detrás de la SIM y delante de la región del teléfono.
+            var de = new ManualPlayAccountCountry("de");
+            Assert.That(ConsentCountry.Resolve(new ManualSimCountry("br"), de, new ManualDeviceLocale("en-US"), out CountrySource s1), Is.EqualTo("BR"));
+            Assert.That(s1, Is.EqualTo(CountrySource.Sim));
+            Assert.That(ConsentCountry.Resolve(ManualSimCountry.None, de, new ManualDeviceLocale("en-US"), out CountrySource s2), Is.EqualTo("DE"),
+                "una tableta sin SIM en Alemania con el teléfono en en-US ya no queda como US");
+            Assert.That(s2, Is.EqualTo(CountrySource.PlayAccount));
+            Assert.That(ConsentCountry.SourceKey(s2), Is.EqualTo("play"));
+            Assert.That(ConsentCountry.Resolve(ManualSimCountry.None, ManualPlayAccountCountry.None, new ManualDeviceLocale("es-CO"), out CountrySource s3), Is.EqualTo("CO"));
+            Assert.That(s3, Is.EqualTo(CountrySource.Region));
+            Assert.That(ConsentCountry.Resolve(ManualSimCountry.None, new ManualPlayAccountCountry("419"), new ManualDeviceLocale("es-419"), out CountrySource s4), Is.Null);
+            Assert.That(s4, Is.EqualTo(CountrySource.None));
+            Assert.That(ConsentConfig.Defaults.ProfileFor(ConsentCountry.Resolve(ManualSimCountry.None, de, new ManualDeviceLocale("en-US"), out _)),
+                Is.EqualTo(LegalProfiles.Ump));
+        }
+
+        [Test]
+        public void ThePlayAccountStore_KeepsTwoLettersInUppercase()
+        {
+            var store = new MemoryPlayAccountCountry();
+            Assert.That(store.CountryIso, Is.Empty);
+            store.Save("jp");
+            Assert.That(store.CountryIso, Is.EqualTo("JP"));
+            store.Save("JP");
+            store.Save("419");
+            store.Save("");
+            Assert.That(store.CountryIso, Is.EqualTo("JP"));
+            Assert.That(store.Saves, Is.EqualTo(1));
+        }
+
         [TestCase("pt-BR", "BR")]
         [TestCase("pt_BR", "BR")]
         [TestCase("zh-Hant-TW", "TW")]
@@ -100,6 +133,7 @@ namespace AF.Tests.EditMode
             Assert.That(c.ConsentAgeSignalSource, Is.EqualTo(d.ConsentAgeSignalSource).And.EqualTo("self_declared+play_age_signals"));
             Assert.That(c.BizUnder18NoPersonalization, Is.EqualTo(d.BizUnder18NoPersonalization).And.True);
             Assert.That(Sorted(c.BizLegalProfileByCountry), Is.EqualTo(Sorted(d.BizLegalProfileByCountry)));
+            Assert.That(SortedAges(c.ConsentDigitalAgeByCountry), Is.EqualTo(SortedAges(d.ConsentDigitalAgeByCountry)), "D-057");
         }
 
         [Test]
@@ -279,6 +313,219 @@ namespace AF.Tests.EditMode
             Assert.That(store.Record!.Analytics, Is.True);
         }
 
+        // ---- Edad de consentimiento digital (D-057, P2 (a); consent_digital_age_by_country) ----
+
+        [TestCase("DE", 16)]
+        [TestCase("de", 16)]
+        [TestCase("NL", 16)]
+        [TestCase("FR", 15)]
+        [TestCase("ES", 14)]
+        [TestCase("IT", 14)]
+        [TestCase("BE", 13)]
+        [TestCase("GB", 13)]
+        [TestCase("CH", 16)]
+        [TestCase("KR", 14)]
+        [TestCase("IN", 18)]
+        [TestCase("NO", 15)] // la investigación legal: ante la duda, el valor más alto
+        [TestCase("SI", 16)]
+        [TestCase("US", 13)]
+        [TestCase("AR", 13)]
+        [TestCase("CO", 18)]
+        [TestCase("BR", 18)]
+        [TestCase("MX", 18)]
+        [TestCase("PE", 14)]
+        [TestCase("CA", 14)]
+        [TestCase("JP", 16)]
+        [TestCase(null, 13)]
+        public void DigitalAgeFor_FollowsTheMapOf08_9(string? country, int expected)
+        {
+            Assert.That(ConsentConfig.Defaults.DigitalAgeFor(country), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TheDefaultMap_HasEveryEeaState_AndTheRest()
+        {
+            ConsentConfig c = ConsentConfig.Defaults;
+            foreach (string code in new[]
+            {
+                "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU", "IE", "IS", "IT", "LI", "LT", "LU",
+                "LV", "MT", "NL", "NO", "PL", "PT", "RO", "SE", "SI", "SK",
+            })
+            {
+                Assert.That(ConsentConfig.IsEea(code), Is.True, code);
+                Assert.That(c.ConsentDigitalAgeByCountry.ContainsKey(code), Is.True, code + ": cada Estado del EEE con su edad del RGPD art. 8");
+            }
+
+            Assert.That(c.ConsentDigitalAgeByCountry[ConsentConfig.RestKey], Is.EqualTo(13));
+            Assert.DoesNotThrow(c.Validate);
+        }
+
+        [Test]
+        public void TheGroupKeys_EeaAndUk_AreUsedWhenTheCountryHasNoEntry()
+        {
+            ConsentConfig c = ConsentConfig.Defaults;
+            c.ConsentDigitalAgeByCountry = new Dictionary<string, int>(StringComparer.Ordinal) { { "*", 13 }, { "EEE", 16 }, { "UK", 14 } };
+            Assert.That(c.DigitalAgeFor("PT"), Is.EqualTo(16));
+            Assert.That(c.DigitalAgeFor("GB"), Is.EqualTo(14));
+            Assert.That(c.DigitalAgeFor("JP"), Is.EqualTo(13));
+        }
+
+        [Test]
+        public void ADigitalAgeOutOf13To18_OrWithoutTheRest_FailsValidation()
+        {
+            ConsentConfig c = ConsentConfig.Defaults;
+            c.ConsentDigitalAgeByCountry = new Dictionary<string, int>(StringComparer.Ordinal) { { "*", 13 }, { "DE", 12 } };
+            Assert.Throws<InvalidOperationException>(c.Validate);
+            c.ConsentDigitalAgeByCountry = new Dictionary<string, int>(StringComparer.Ordinal) { { "DE", 16 } };
+            Assert.Throws<InvalidOperationException>(c.Validate);
+        }
+
+        [Test]
+        public void RemoteDigitalAges_ReachTheConfig_AndABadMapFallsBackToTheDefaults()
+        {
+            var errors = new List<string>();
+            ConsentConfig c = ConsentConfigBinder.Bind(Snapshot("consent_digital_age_by_country", "{\"*\":13,\"jp\":15}"), errors);
+            Assert.That(errors, Is.Empty);
+            Assert.That(c.DigitalAgeFor("JP"), Is.EqualTo(15), "«jp» de Remote Config vale para JP");
+            Assert.That(c.DigitalAgeFor("DE"), Is.EqualTo(13), "sin entrada propia, el resto");
+
+            errors.Clear();
+            c = ConsentConfigBinder.Bind(Snapshot("consent_digital_age_by_country", "{\"*\":13,\"DE\":\"16\"}"), errors);
+            Assert.That(errors, Has.Count.EqualTo(1), "una edad que no es un entero");
+            Assert.That(c.DigitalAgeFor("DE"), Is.EqualTo(16), "se queda el default de la propiedad");
+
+            errors.Clear();
+            c = ConsentConfigBinder.Bind(Snapshot("consent_digital_age_by_country", "{\"*\":13,\"DE\":21}"), errors);
+            Assert.That(errors, Has.Count.EqualTo(1), "fuera de 13-18: Validate falla y vuelven los defaults");
+            Assert.That(c.DigitalAgeFor("DE"), Is.EqualTo(16));
+        }
+
+        [TestCase("DE", false)]
+        [TestCase("FR", false)]
+        [TestCase("KR", false)]
+        [TestCase("IN", false)]
+        [TestCase("CH", false)]
+        [TestCase("BE", true)]
+        [TestCase("GB", true)]
+        [TestCase("CO", false)]
+        [TestCase("BR", false)]
+        [TestCase("US", true)]
+        [TestCase("AR", true)]
+        public void Teen_GetsTheAnalyticsChoice_OnlyWhereTheDigitalAgeIs13(string country, bool offered)
+        {
+            ConsentConfig c = ConsentConfig.Defaults;
+            Assert.That(ConsentPolicy.OffersAnalyticsChoice(AgeBand.Teen, c, country), Is.EqualTo(offered));
+            Assert.That(ConsentPolicy.OffersAnalyticsChoice(AgeBand.Adult, c, country), Is.True, "con 18+, siempre");
+
+            ConsentFlags f = ConsentPolicy.Flags(Record(AgeBand.Teen, analytics: true, profile: c.ProfileFor(country)), c, c.ProfileFor(country), true, country);
+            Assert.That(f.Decided, Is.True);
+            Assert.That(f.AnalyticsEnabled, Is.EqualTo(offered), "aceptada antes, se apaga donde la edad pasa de 13");
+            Assert.That(f.PurchasesAllowed, Is.True, "las compras siguen, con la doble confirmación");
+        }
+
+        [Test]
+        public void Teen_WithoutCountry_GetsNoAnalytics()
+        {
+            ConsentConfig c = ConsentConfig.Defaults;
+            Assert.That(ConsentPolicy.OffersAnalyticsChoice(AgeBand.Teen, c, null, countryKnown: false), Is.False, "Q-T3 (a): lo más estricto");
+            Assert.That(ConsentPolicy.OffersAnalyticsChoice(AgeBand.Adult, c, null, countryKnown: false), Is.True);
+            ConsentFlags f = ConsentPolicy.Flags(Record(AgeBand.Teen, profile: LegalProfiles.Default), c, LegalProfiles.Default, countryKnown: false);
+            Assert.That(f.AnalyticsEnabled, Is.False);
+        }
+
+        [Test]
+        public void TheFlow_ForATeenInGermany_HidesAnalytics_AndAcceptAllLeavesItOff()
+        {
+            var store = new MemoryConsentStore();
+            var reports = new List<ConsentReport>();
+            var flow = new ConsentFlow(ConsentConfig.Defaults, store, Clock(), LegalProfiles.Ump, true, "DE") { Reported = reports.Add };
+            flow.StartBoot();
+            flow.ChooseAge(AgeBand.Teen);
+            Assert.That(flow.OffersAnalyticsChoice, Is.False);
+
+            flow.Choose(ConsentAnswer.AcceptAll);
+            Assert.That(store.Record!.Analytics, Is.False);
+            Assert.That(flow.Flags.AnalyticsEnabled, Is.False);
+            Assert.That(reports[reports.Count - 1].Analytics, Is.False, "af_consent dice lo mismo que el registro");
+
+            var save = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(), Clock(), LegalProfiles.Ump, true, "DE");
+            save.StartBoot();
+            save.ChooseAge(AgeBand.Teen);
+            save.Choose(ConsentAnswer.Save, analytics: true);
+            Assert.That(save.Record!.Analytics, Is.False, "no se puede encender lo que no se ofrece");
+        }
+
+        [Test]
+        public void TheFlow_WithNothingToChoose_ReportsTheButton_NotARejection()
+        {
+            // 13-17 en Alemania (UMP, sin anuncios ni analítica que elegir): «Aceptar todo» no es un rechazo (revisión de D-057).
+            var reports = new List<ConsentReport>();
+            var flow = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(), Clock(), LegalProfiles.Ump, true, "DE") { Reported = reports.Add };
+            flow.StartBoot();
+            flow.ChooseAge(AgeBand.Teen);
+            Assert.That(flow.OffersAdsChoice || flow.OffersAnalyticsChoice, Is.False);
+            flow.Choose(ConsentAnswer.AcceptAll);
+            Assert.That(reports[reports.Count - 1].Step, Is.EqualTo(ConsentReport.Accepted));
+            Assert.That(reports[reports.Count - 1].Analytics, Is.False);
+
+            var rejected = new List<ConsentReport>();
+            var flow2 = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(), Clock(), LegalProfiles.Ump, true, "DE") { Reported = rejected.Add };
+            flow2.StartBoot();
+            flow2.ChooseAge(AgeBand.Teen);
+            flow2.Choose(ConsentAnswer.RejectAll);
+            Assert.That(rejected[rejected.Count - 1].Step, Is.EqualTo(ConsentReport.Rejected));
+
+            // Con algo que elegir, como siempre: guardar sin marcar nada es un rechazo.
+            var adult = new List<ConsentReport>();
+            var flow3 = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(), Clock(), LegalProfiles.Co1581, true, "CO") { Reported = adult.Add };
+            flow3.StartBoot();
+            flow3.ChooseAge(AgeBand.Adult);
+            flow3.Choose(ConsentAnswer.Save);
+            Assert.That(adult[adult.Count - 1].Step, Is.EqualTo(ConsentReport.Rejected));
+        }
+
+        [Test]
+        public void BeginChange_ForATeenInGermany_StartsWithAnalyticsOff_EvenIfTheRecordSaysOn()
+        {
+            var store = new MemoryConsentStore(new ConsentRecord(LegalProfiles.Ump, 1, T0, true, false, AgeBand.Teen));
+            var flow = new ConsentFlow(ConsentConfig.Defaults, store, Clock(), LegalProfiles.Ump, true, "DE");
+            Assert.That(flow.StartBoot(), Is.EqualTo(ConsentStep.Done));
+            Assert.That(flow.BeginChange(), Is.EqualTo(ConsentStep.Choices));
+            Assert.That(flow.InitialAnalytics, Is.False, "lo que no se ofrece no sale marcado");
+            Assert.That(flow.OffersAnalyticsChoice, Is.False);
+            Assert.That(flow.Flags.AnalyticsEnabled, Is.False);
+        }
+
+        [Test]
+        public void TheFlow_ForATeenInTheUnitedStates_StillOffersAnalytics()
+        {
+            var store = new MemoryConsentStore();
+            var flow = new ConsentFlow(ConsentConfig.Defaults, store, Clock(), LegalProfiles.Default, true, "US");
+            flow.StartBoot();
+            flow.ChooseAge(AgeBand.Teen);
+            Assert.That(flow.OffersAnalyticsChoice, Is.True, "Q-B12-7 (a)");
+            flow.Choose(ConsentAnswer.AcceptAll);
+            Assert.That(store.Record!.Analytics, Is.True);
+            Assert.That(flow.Flags.AnalyticsEnabled, Is.True);
+        }
+
+        [Test]
+        public void CorrectingTheAgeTo13To17_InGermany_TurnsTheAnalyticsOff()
+        {
+            var store = new MemoryConsentStore();
+            store.Save(new ConsentRecord(LegalProfiles.Ump, 1, T0, true, false, AgeBand.Adult));
+            var flow = new ConsentFlow(ConsentConfig.Defaults, store, Clock(), LegalProfiles.Ump, true, "DE");
+            Assert.That(flow.StartBoot(), Is.EqualTo(ConsentStep.Done));
+            Assert.That(flow.Flags.AnalyticsEnabled, Is.True);
+
+            flow.BeginAgeCorrection();
+            flow.ChooseAge(AgeBand.Teen);
+            Assert.That(store.Record!.Analytics, Is.False);
+            Assert.That(flow.Flags.AnalyticsEnabled, Is.False);
+            flow.BeginChange();
+            Assert.That(flow.InitialAnalytics, Is.False);
+        }
+
         // ---- Recorrido ----
 
         [Test]
@@ -367,7 +614,7 @@ namespace AF.Tests.EditMode
 
             flow.Choose(ConsentAnswer.AcceptAll);
 
-            Assert.That(store.Record!.AdsPersonalized, Is.False, "lo decide UMP al inicializar MAX (08 §7 #2)");
+            Assert.That(store.Record!.AdsPersonalized, Is.False, "lo decide UMP al inicializar los anuncios (08 §7 #2)");
             Assert.That(store.Record!.Analytics, Is.True);
             Assert.That(store.Record!.Profile, Is.EqualTo("ump"));
         }
@@ -606,6 +853,18 @@ namespace AF.Tests.EditMode
             var rc = new RemoteConfigService();
             Assert.That(rc.Activate(d), Is.True);
             return rc.Freeze();
+        }
+
+        private static List<string> SortedAges(IReadOnlyDictionary<string, int> map)
+        {
+            var list = new List<string>();
+            foreach (KeyValuePair<string, int> entry in map)
+            {
+                list.Add(entry.Key + "=" + entry.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            list.Sort(StringComparer.Ordinal);
+            return list;
         }
 
         private static List<string> Sorted(IReadOnlyDictionary<string, string> map)

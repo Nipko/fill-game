@@ -9,7 +9,9 @@ google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0
 #
 # Futuras: las demás redes se añaden al sumarlas a la mediación de AdMob, con las líneas exactas que den sus paneles
 # (los IDs NO se escriben a mano ni se inventan; los dominios de abajo son los habituales de cada red [NV]):
-# unity.com, [[DATO DEL DUEÑO: ID de organización de Unity Ads]], DIRECT
+# Unity Ads (grupos de mediación de AdMob por bidding, docs/dev/anuncios-admob.md §3 bis): ID de organización del dueño.
+# Comentada hasta que el adaptador de Unity Ads (3.21.1) entre en el build con la aprobación del dueño; entonces se quita el «# »:
+# unity.com, 20067668703382, DIRECT
 # facebook.com, [[DATO DEL DUEÑO: ID de Meta Audience Network]], DIRECT
 # mintegral.com, [[DATO DEL DUEÑO: ID de Mintegral]], DIRECT
 # AppLovin MAX ya no sirve anuncios (D-049): su línea no se publica.

@@ -76,7 +76,7 @@
   - Suiza (nLPD) no fija una edad: se mira la capacidad de discernimiento, que suele situarse entre 13 y 16 [NV, abogado].
   - Un jugador de 14 años en Alemania o en los Países Bajos puede hoy pulsar «Aceptar todo» y activar la analítica: es **un consentimiento que no vale**.
   - Como la banda 13-17 no distingue 13-15 de 16-17, el juego no puede saber si el consentimiento es válido.
-  - Crashlytics («siempre activo», `consent_diagnostics`), la cuenta anónima, la nube y la Liga no se basan en el consentimiento, sino en el interés legítimo o en el contrato. El art. 8 no les aplica, pero el abogado debe confirmar esas bases, y la ePrivacy para Crashlytics.
+  - Crashlytics (activado por defecto y, desde T-L6 de D-057, con el interruptor «Enviar informes de fallos» en Ajustes; `consent_diagnostics_optional`), la cuenta anónima, la nube y la Liga no se basan en el consentimiento, sino en el interés legítimo o en el contrato. El art. 8 no les aplica, pero el abogado debe confirmar esas bases, y la ePrivacy para Crashlytics.
 - **Recomendación:** opción (a) de la pregunta P2.
   - Una clave de Remote Config nueva, `consent_digital_age_by_country` (map país→int: default `*` = 13 y el EEE con los valores de la tabla, que confirma el abogado).
   - La regla: **si la banda es 13-17 y la edad digital del país es mayor de 13, la analítica no se ofrece** (queda apagada, como los anuncios personalizados). Las compras siguen con la doble confirmación.
@@ -513,3 +513,5 @@
 | T-M6: `GeoTierRule` ampliada | unity-gameplay-dev | `UI/GeoTierRule.cs` y sus tests | puede esperar |
 
 Verificación obligatoria de cada tarea: la de `CLAUDE.md`. Con T-M1 y T-M5, además, `python tools/remote-config/rc_defaults.py --check` y sus tests. Con T-M1, T-M2, T-M3 y T-M4, EditMode, y PlayMode antes del PR.
+
+**Estado (2026-10-27, rama `tanda6/mundial-codigo`, D-057):** T-M1 a T-M5 hechas; en T-M1, las edades son las de `docs/legal/investigacion-legal-mundial.md` §2.1. T-M6 hecha: el `geo_tier` lee el país de la cuenta de Play (Q-E3 (a)) y, con el añadido «decisiones de la revisión del código mundial» (punto 4), T1 suma NZ, SG, HK, TW, IL y el Golfo [P] (04 §6.2 y 05 §6.3). El GDD (01 §8.1, 05 §4.2 y §7, 08 §9 y §13.1 #5, #6, #10, #14, #20 y #22) recoge D-057.

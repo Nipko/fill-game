@@ -244,6 +244,11 @@ namespace AF.Save
                 settings.Set("high_contrast", JsonNode.FromBool(true)); // B9: settings.high_contrast [P], solo encendido
             }
 
+            if (!p.Settings.CrashReports)
+            {
+                settings.Set("crash_reports", JsonNode.FromBool(false)); // T-L6: settings.crash_reports [P], solo apagado
+            }
+
             if (!p.Settings.Push.IsDefault)
             {
                 // B6: settings.push (08 §4.3) solo cuando deja su default, para no cambiar los perfiles que aún no lo usan.
@@ -934,6 +939,7 @@ namespace AF.Save
             }
 
             s.HighContrast = TolerantBool(node, "high_contrast", s.HighContrast); // B9
+            s.CrashReports = TolerantBool(node, "crash_reports", s.CrashReports); // T-L6 [P]
             JsonNode? push = TolerantSection(node, "push");
             if (push != null)
             {

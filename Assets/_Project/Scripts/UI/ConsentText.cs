@@ -40,8 +40,12 @@ namespace AF.UI
             /// <summary>Finalidad «Analítica».</summary>
             public const string PurposeAnalytics = "consent_purpose_analytics";
 
-            /// <summary>Línea del diagnóstico (Crashlytics como interés legítimo, 08 §2.3; sin interruptor).</summary>
-            public const string Diagnostics = "consent_diagnostics";
+            /// <summary>
+            /// Línea del diagnóstico (Crashlytics como interés legítimo, 08 §2.3): se puede desactivar en Ajustes (T-L6; D-057, añadido
+            /// del 2026-10-27). Sustituye a <c>consent_diagnostics</c> («siempre activos», la línea sin interruptor de Q-B12-4), que sale
+            /// de la tabla: una clave no se reutiliza para otro sentido.
+            /// </summary>
+            public const string Diagnostics = "consent_diagnostics_optional";
 
             /// <summary>Línea de los anuncios en el EEE, el Reino Unido y Suiza: los decide el aviso de UMP.</summary>
             public const string AdsByUmp = "consent_ads_ump";
@@ -73,6 +77,9 @@ namespace AF.UI
             /// <summary>Fila de Ajustes que abre la pantalla de edad (una vez).</summary>
             public const string SettingsAge = "settings_age_correct";
 
+            /// <summary>Fila de Ajustes «Enviar informes de fallos» (T-L6; D-057): interruptor de <c>settings.crash_reports</c> [P].</summary>
+            public const string SettingsCrashReports = "settings_crash_reports";
+
             /// <summary>Título de la segunda confirmación de una compra (13-17).</summary>
             public const string ConfirmTitle = "purchase_confirm_title";
 
@@ -91,7 +98,7 @@ namespace AF.UI
         {
             Keys.AgeTitle, Keys.AgeUnder13, Keys.AgeTeen, Keys.AgeAdult, Keys.Title, Keys.Body, Keys.PurposeAds, Keys.PurposeAnalytics,
             Keys.Diagnostics, Keys.AdsByUmp, Keys.AdsTeen, Keys.AdsStrict, Keys.AdsUmpOptions, Keys.AcceptAll, Keys.RejectAll, Keys.Save, Keys.Blocked, Keys.SettingsPrivacy,
-            Keys.SettingsAge, Keys.ConfirmTitle, Keys.ConfirmBody, Keys.ConfirmBuy, Keys.ConfirmCancel,
+            Keys.SettingsAge, Keys.SettingsCrashReports, Keys.ConfirmTitle, Keys.ConfirmBody, Keys.ConfirmBuy, Keys.ConfirmCancel,
         };
 
         /// <summary>Texto de <paramref name="key"/>.</summary>

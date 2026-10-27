@@ -149,7 +149,7 @@ namespace AF.IAP.Tests
         [Test]
         public void TheSsvNonces_AreConfirmedOrRevokedAfterTheGrace_OnlyWithAServerAnswer()
         {
-            // F3-4: confirmados por el callback S2S de MAX → dejan de ser provisionales; sin confirmar tras sec_ssv_grace_h → se
+            // F3-4: confirmados por el SSV del servidor (AdMob, D-049) → dejan de ser provisionales; sin confirmar tras sec_ssv_grace_h → se
             // revocan sin bajar de 0 y fraud_flag++. Sin respuesta del servidor no se revoca nada.
             var fx = new VerifiedStoreFixture();
             LedgerRestore restore = Restorer(fx, out LocalRevocation revocation);

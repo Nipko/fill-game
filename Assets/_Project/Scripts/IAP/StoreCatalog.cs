@@ -42,7 +42,7 @@ namespace AF.IAP
 
         /// <summary>
         /// Cifras decimales con que se escribe (<see cref="LocPrice.DecimalsOf"/>: 0 en COP y MXN, 2 en el resto, 05 §4.2; y, por el
-        /// añadido de D-025 de Q-IAP-3, 0 en CLP y JPY y 3 en KWD y BHD).
+        /// añadido de D-025 de Q-IAP-3 y D-057, la tabla de ISO 4217: 0 en KRW, VND, CLP, JPY…, 3 en KWD, BHD…).
         /// </summary>
         public int Decimals { get; }
 

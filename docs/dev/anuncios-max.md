@@ -1,5 +1,7 @@
 # Anuncios con AppLovin MAX (D-042)
 
+> **Retirado (D-049, añadido del 2026-10-27):** el dueño decidió sacar MAX del build. El plugin (`Packages/applovin/`, `Assets/MaxSdk/`), `applovin-sdk`, `AF.Ads.Max`, `MaxAdService`, `MaxProjectSetup`, `MaxBuildConfig` y sus tests salieron del proyecto (rama `tanda6/sin-max`); la compuerta `ci/check-no-applovin.ps1` vigila que no vuelva. Esta nota queda como historia; lo vigente está en `docs/dev/anuncios-admob.md`. Si AppLovin abre cuentas, entra como red de mediación dentro de AdMob, no como MAX.
+
 > **D-049 (2026-10-25):** AppLovin no acepta cuentas nuevas de editor, así que los anuncios irán con **AdMob directo** (plugin Google Mobile Ads), con el SSV de AdMob y Unity Ads como primera red adicional. MAX queda integrado pero sin servir anuncios y, desde el carril `tanda6/sdk-gma`, con su flujo de UMP apagado (§2). **La integración de AdMob está en `docs/dev/anuncios-admob.md`**; esta nota queda como referencia de MAX. La cuenta de AdMob ya configurada está en §10.
 
 Estado: 2026-10-23, rama `tanda5/sdk-max`. Decisión: D-042 (integración de MAX con UMP y adaptadores). GDD: 08 §2.2 (`AF.Ads`), §2.3, §7 #1-#2, §8.2 (eventos de anuncios), §9 (`ads_*`, `biz_*`), §10.1-§10.2 (SSV) y §13.3; 05 §6-§7; D-033 B12 (consentimiento); D-035 (SSV en AWS). Integra el MAX **sin adaptadores**: los adaptadores esperan la aprobación del dueño (§7).
@@ -133,7 +135,7 @@ Fila de AppLovin MAX en 08 §13.3 al día. La web (`infra/web/src/content/*/priv
    |---|---|
    | ID de editor | `pub-2916158449453694` |
    | App ID (Android, «Tintalú», sin tienda vinculada) | `ca-app-pub-2916158449453694~9925643748` |
-   | Bloque recompensado `Tintalu Rewarded MAX` (sin SSV de AdMob) | `ca-app-pub-2916158449453694/2877105387` |
+   | Bloque `Tintalu Rewarded MAX`: **no usar, es de formato intersticial recompensado** (2026-10-27; lo sustituye «Tintalu Rewarded», `ca-app-pub-2916158449453694/1182085615`, `docs/dev/anuncios-admob.md` §3 bis) | `ca-app-pub-2916158449453694/2877105387` |
    | Bloque intersticial `Tintalu Interstitial MAX` (sin ofertas de socios) | `ca-app-pub-2916158449453694/7187673451` |
 
    - **Mensaje del RGPD** «Tintalú RGPD»:

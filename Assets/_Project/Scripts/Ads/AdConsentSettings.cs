@@ -5,21 +5,18 @@ using AF.Platform;
 namespace AF.Ads
 {
     /// <summary>
-    /// Lo que el proveedor de anuncios real (MAX, D-042) recibe del consentimiento y la edad (08 §2.3 y §7; 05 §7; D-033 B12),
-    /// calculado sin motor a partir de <see cref="ConsentFlags"/>:
+    /// Lo que el proveedor de anuncios real (Google Mobile Ads, D-049) recibe del consentimiento y la edad (08 §2.3 y §7; 05 §7;
+    /// D-033 B12), calculado sin motor a partir de <see cref="ConsentFlags"/>:
     /// <list type="bullet">
-    /// <item><see cref="MayInitialize"/>: solo con una decisión vigente y sin el bloqueo de &lt;13 («MAX arranca solo tras consentir»;
-    /// con &lt;13, nunca). Tampoco con 13-17 y el perfil <c>ump</c> (EEE, Reino Unido y Suiza): la automatización de UMP de MAX
-    /// enseñaría su mensaje de consentimiento a un menor: sin anuncios (Q-MAX-6 (b) de D-042, confirmada por el dueño en D-055,
-    /// punto 4, también para AdMob).</item>
-    /// <item><see cref="HasUserConsent"/> y <see cref="DoNotSell"/>: los dos flags de privacidad que expone MAX 13
-    /// (<c>MaxSdk.SetHasUserConsent</c> y <c>MaxSdk.SetDoNotSell</c>). Con <c>npa</c> (sin consentimiento de anuncios personalizados,
-    /// 13-17 con <c>biz_under18_no_personalization</c> o sin país), false y true. Con el perfil <c>ump</c> de 18+, null: los decide el
-    /// mensaje de UMP que MAX muestra al iniciarse (las cadenas TCF v2 que pasa a las redes, 08 §7 #2) y el juego no los fija.</item>
-    /// <item><see cref="MaxAdContentRating"/>: G en todas las bandas (D-029). MAX 13 no tiene API para el contenido máximo: se fija en
-    /// las consolas de las redes (en AdMob, «Contenido máximo de los anuncios» = G para la app) [NV por red].</item>
-    /// <item><see cref="ChildDirected"/>: TFCD con &lt;13; MAX 13 ya no tiene API para usuarios menores (quitó
-    /// <c>SetIsAgeRestrictedUser</c>), así que con &lt;13 simplemente no se inicia [NV].</item>
+    /// <item><see cref="MayInitialize"/>: solo con una decisión vigente y sin el bloqueo de &lt;13 (los anuncios arrancan solo tras
+    /// consentir; con &lt;13, nunca). Tampoco con 13-17 y el perfil <c>ump</c> (EEE, Reino Unido y Suiza): sin anuncios (Q-MAX-6 (b)
+    /// de D-042, confirmada por el dueño en D-055, punto 4, también para AdMob).</item>
+    /// <item><see cref="HasUserConsent"/> y <see cref="DoNotSell"/>: los flags de privacidad de nuestra pantalla. Con <c>npa</c> (sin
+    /// consentimiento de anuncios personalizados, 13-17 con <c>biz_under18_no_personalization</c> o sin país), false y true. Con el
+    /// perfil <c>ump</c> de 18+, null: los decide el mensaje de UMP (las cadenas TCF v2, 08 §7 #2) y el juego no los fija.</item>
+    /// <item><see cref="MaxAdContentRating"/>: G en todas las bandas (D-029; <c>RequestConfiguration</c> de Google y, en las consolas
+    /// de las redes de la mediación, «Contenido máximo de los anuncios» = G) [NV por red].</item>
+    /// <item><see cref="ChildDirected"/>: TFCD con &lt;13; con &lt;13 el SDK de anuncios simplemente no se inicia.</item>
     /// </list>
     /// Inmutable.
     /// </summary>
@@ -116,7 +113,7 @@ namespace AF.Ads
         }
     }
 
-    /// <summary>Un proveedor de anuncios con trabajo por fotograma y al volver de segundo plano (MAX: los márgenes de cierre).</summary>
+    /// <summary>Un proveedor de anuncios con trabajo por fotograma y al volver de segundo plano (Google: los márgenes de cierre).</summary>
     public interface IAdTicker
     {
         /// <summary>Cada fotograma.</summary>
@@ -127,7 +124,7 @@ namespace AF.Ads
     }
 
     /// <summary>
-    /// Un proveedor de anuncios que necesita el consentimiento (MAX, D-042): <see cref="ConsentAdService"/> le pasa cada decisión y le
+    /// Un proveedor de anuncios que necesita el consentimiento (Google Mobile Ads, D-049): <see cref="ConsentAdService"/> le pasa cada decisión y le
     /// reenvía las opciones de privacidad de UMP. El proveedor falso no lo implementa.
     /// </summary>
     public interface IAdConsentTarget

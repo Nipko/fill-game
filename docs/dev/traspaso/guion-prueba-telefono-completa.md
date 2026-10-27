@@ -221,7 +221,7 @@ La jornada 1 (`pruebas-telefono-2026-10-25-completa.md`) cubrió los bloques 0, 
    - Idiomas `en` y `pt` (`af_lang`): ningún texto cortado ni `[clave]`.
 3. **Volver al inicio desde un nivel, la victoria y el Mapa** varias veces seguidas: ningún parpadeo, ningún salto de la canoa ni del bocadillo, y 0 `E/Unity`.
 4. **Anuncios de prueba de Google (D-049).** Sustituye la parte de vídeos e intersticiales del bloque 9:
-   - Al arrancar, logcat dice `[AF.Ads] proveedor: google (bloques de prueba); max: not_configured`. Si dice «produccion», es **bloqueante**: para y avisa.
+   - Al arrancar, logcat dice `[AF.Ads] proveedor: google (bloques de prueba)` (sin «; max: not_configured» desde que MAX salió del proyecto, añadido de D-049 del 2026-10-27). Si dice «produccion», es **bloqueante**: para y avisa.
    - Con perfil 18+ en Colombia no sale el mensaje de UMP (manda nuestra pantalla). Anota si sale.
    - Cosecha doble (victoria del 11) y los demás vídeos con premio: el anuncio de prueba de Google («Test Ad») se ve entero y luego se cierra. Se dan el premio una vez y las líneas `af_ad_request`, `af_ad_shown` y `af_ad_reward`. Si lo cierras antes de tiempo, no hay premio.
    - Intersticial a partir del 22, con la cadencia del bloque 2.3 y en los mismos sitios prohibidos.

@@ -9,8 +9,10 @@ namespace AF.UI
     /// <summary>
     /// Textos de la Liga del río (D-046; <c>docs/dev/liga.md</c> §1): solo claves de <c>strings.csv</c> con sus marcadores con nombre.
     /// El seudónimo llega como clave de animal (<c>league_name_*</c>) y cifras; una clave que este cliente no conoce se pinta como
-    /// «Jugador {n}». El país, por su código ISO con <c>league_country_xx</c>; un país sin fila en la tabla es «Otro país»
-    /// (<c>league_country_other</c>) y su código ISO, que no se traduce, solo va en la placa neutra de la bandera.
+    /// «Jugador {n}». El país, por su código ISO con <c>league_country_xx</c>: con D-057 (P7 (a)), la tabla tiene todos los países de
+    /// ISO 3166-1 más XK en los tres idiomas, generados desde CLDR por <c>tools/loc/league_countries.py</c> (las 21 filas de D-046 se
+    /// quedan como estaban). Un código que no está en la tabla es «Otro país» (<c>league_country_other</c>) y su código, que no se
+    /// traduce, solo va en la placa neutra de la bandera.
     /// </summary>
     public static class LeagueText
     {
@@ -47,11 +49,11 @@ namespace AF.UI
         /// <summary>Los países con bandera dibujada (los amazónicos y los mercados principales; liga.md §4).</summary>
         public static readonly string[] FlagCountries = { "BR", "CO", "PE", "VE", "EC", "BO", "GY", "SR", "MX", "US", "AR", "CL" };
 
-        /// <summary>Los países con nombre en la tabla (los de bandera y algunos más) [P].</summary>
-        public static readonly string[] NamedCountries =
-        {
-            "AR", "BO", "BR", "CA", "CL", "CO", "DE", "EC", "ES", "FR", "GB", "GF", "GY", "MX", "PE", "PT", "PY", "SR", "US", "UY", "VE",
-        };
+        /// <summary>
+        /// Los países con nombre en la tabla: ISO 3166-1 alfa-2 más XK (D-057, P7 (a)), en orden ordinal. La lista la genera
+        /// <c>tools/loc/league_countries.py</c> junto con las filas (<see cref="LeagueCountriesData"/>).
+        /// </summary>
+        public static readonly string[] NamedCountries = LeagueCountriesData.Codes;
 
         /// <summary>Todas las claves de <c>strings.csv</c> que pinta o dice la Liga: las de la UI, los 24 animales y los países.</summary>
         public static IReadOnlyList<string> AllKeys

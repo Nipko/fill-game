@@ -39,7 +39,7 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 - **Finalidades separadas**:
   - «Anuncios personalizados»;
   - «Analítica para mejorar el juego»;
-  - una línea sin interruptor para los informes de fallos: Crashlytics como interés legítimo, 08 §2.3 y pregunta 6 de 08.
+  - una línea para los informes de fallos: Crashlytics como interés legítimo, 08 §2.3, que se desactiva en Ajustes › «Enviar informes de fallos» (T-L6; D-057, añadido del 2026-10-27, que deja sin efecto la «línea sin interruptor» de Q-B12-4; clave `consent_diagnostics_optional`, que sustituye a `consent_diagnostics`).
 - En el arranque, todo apagado al abrir (consentimiento expreso).
 - «Rechazar todo» y «Aceptar todo» van uno al lado del otro, con el mismo botón de madera y el mismo tamaño: «Rechazar» al mismo nivel que «Aceptar». Debajo, «Guardar mi elección».
 - **Anuncios personalizados** solo se ofrecen con 18+ y fuera de UMP:
@@ -50,9 +50,16 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 
 ### 1.4 País y perfil legal (Q-T3 (a))
 
-1. País de la SIM: `TelephonyManager.getSimCountryIso()` por el JNI de Unity. Sin permiso: no necesita `READ_PHONE_STATE`. En `AndroidSimCountry`.
-2. Si no, la región del teléfono, la de `IDeviceLocale` (`es-CO` → CO; `es-419` no es un país).
-3. Si no, ningún país: el perfil es `default` **y** no se ofrecen anuncios personalizados (`npa` sin elección). Ese es «el tratamiento más estricto» de Q-T3 (a) [P] (Q-B12-13).
+**Orden de prioridad (D-057, P4 (a); `ConsentCountry.Resolve`):** SIM → cuenta de Google Play → región del teléfono → ninguno.
+
+1. País de la SIM: `TelephonyManager.getSimCountryIso()` por el JNI de Unity. Sin permiso: no necesita `READ_PHONE_STATE`. En `AndroidSimCountry`. Va primero porque es donde está la línea: la mejor señal de dónde vive el jugador, y la que ya usaba Q-T3 (a).
+2. **Si no, el país de la cuenta de Google Play (D-057).** `BillingClient.getBillingConfigAsync` → `BillingConfig.getCountryCode()`, de Play Billing Library 9.0.0 (ya aprobada en D-040: sin SDK, permiso ni paquete nuevo). Es el país donde el jugador paga y el que usa Play para la distribución. Cubre las tabletas sin SIM, que antes caían en la región del idioma (una tableta en Alemania con el teléfono en `en-US` quedaba como US, con el perfil `default`; ahora es DE, `ump`).
+   - El plugin lo pide con `queryBillingConfig` y solo devuelve el código (`AfBillingPluginTests` lo vigila); `NativePlayStorePort` lo expone por `IPlayAccountCountryPort`; `PlayBillingClient` lo pide una vez tras conectar (si falla, en la próxima conexión) y avisa `AccountCountryKnown`.
+   - **Cuándo vale:** Play Billing solo se conecta tras la pantalla de edad (y nunca con <13), pero el país legal se decide antes. Por eso `GameBootstrap` guarda el país en el dispositivo (`PlayerPrefsPlayAccountCountry`, clave `af_play_account_country` de `PlayerPrefs`; en el Editor, en memoria) y vale **desde el arranque siguiente**. En el primer arranque de un teléfono sin SIM manda la región, como antes.
+   - **Si el país cambia después de decidir:** el arranque siguiente resuelve el país con el de Play; si su perfil legal es otro, las finalidades se vuelven a pedir con la banda guardada (Q-B12-15). Si el perfil es el mismo pero cambia la edad de consentimiento digital (D-057, `consent_digital_age_by_country`), los flags se recalculan con el país de ahora y la analítica de 13-17 se apaga sin volver a preguntar.
+   - Es un país, no un identificador. No va a la nube. **Sí sale del teléfono** (D-057, añadido «decisiones de la revisión del código mundial», punto 1): el país legal resultante (SIM → Play → región) va como `region` de la Liga del río si el jugador participa (liga.md §3.3), y el `geo_tier` (T1/T3, que sale del país de Play o de la región; Q-E3 (a)) va agregado en la analítica con consentimiento. «Eliminar cuenta y datos» lo borra con `PlayerPrefs` y vuelve con la próxima conexión con Play.
+3. Si no, la región del teléfono, la de `IDeviceLocale` (`es-CO` → CO; `es-419` no es un país). Va la última de las tres porque es solo una preferencia de idioma.
+4. Si no, ningún país: el perfil es `default` **y** no se ofrecen anuncios personalizados (`npa` sin elección). Ese es «el tratamiento más estricto» de Q-T3 (a) [P] (Q-B12-13). Con D-057 (añadido «decisiones de la revisión del código mundial», punto 3), con 13-17 tampoco se ofrece la analítica.
 - El perfil sale de `biz_legal_profile_by_country`:
   - la entrada del país;
   - si no la hay, la de su grupo (`EEE` para los 30 del EEE; `UK` para `GB`);
@@ -216,7 +223,7 @@ Se avanzó con la recomendada, marcada [P] en el código.
 | Q-B12-1 | Forma de la pantalla de edad neutral | (a) tres botones iguales por banda; (b) año de nacimiento con una rueda sin valor inicial, que se clasifica en bandas | **(a)**: cabe en los ≤ 10 s de 06 §2.1 y no pide un dato más fino del necesario. Que lo valide el abogado (neutralidad para Google Play) |
 | Q-B12-2 | Al subir `consent_text_version`, ¿se vuelve a pedir la edad? | (a) solo las finalidades, y la banda guardada se conserva; (b) la edad y las finalidades, como el pseudocódigo literal de 08 §2.3 | **(a)**: repetir la edad abriría una segunda corrección, y 08 §7 permite una |
 | Q-B12-3 | ¿El bloqueo `<13` es definitivo en el dispositivo? | (a) sí: no se vuelve a preguntar ni con textos nuevos y no hay salida desde la pantalla (solo reinstalar); (b) un enlace «Me equivoqué» que gasta la corrección de edad | **(a)**: 08 §7 («en cualquier arranque posterior»). Con (b), un menor lo usaría |
-| Q-B12-4 | Diagnóstico (Crashlytics) en la pantalla | (a) línea informativa sin interruptor (interés legítimo, 08 §2.3); (b) un tercer interruptor | **(a)**, pendiente de la pregunta 6 de 08 al abogado. Con (b), hace falta el campo `consent.diagnostics` en 08 §4.3 |
+| Q-B12-4 | Diagnóstico (Crashlytics) en la pantalla | (a) línea informativa sin interruptor (interés legítimo, 08 §2.3); (b) un tercer interruptor | **(a)**, pendiente de la pregunta 6 de 08 al abogado. Con (b), hace falta el campo `consent.diagnostics` en 08 §4.3 · **Sin efecto desde D-057, añadido del 2026-10-27:** el dueño aprobó el interruptor (T-L6): «Enviar informes de fallos» en Ajustes, activado por defecto, en `settings.crash_reports` [P] (no en `consent`: es una objeción, no un consentimiento) |
 | Q-B12-5 | Estado de los textos legales en `strings.csv`: el contrato 32 no tiene un estado «pendiente del abogado» | (a) `borrador`, con la nota «pendiente del abogado»; (b) añadir un estado `pendiente_legal` al contrato 32 (cambia 08 §4.7 y `LocReleaseGate`) | **(a)**: no se inventa un valor. Si el dueño quiere bloquear el release por ellos, (b) |
 | Q-B12-6 | ¿«Doble confirmación» es una pantalla más o dos? | (a) el toque en «Comprar» del juego + una confirmación con el precio, y después Google Play; (b) dos confirmaciones en el juego | **(a)**, a confirmar con el abogado junto con Q-T4 |
 | Q-B12-7 | Con 13-17, ¿se ofrece la analítica? | (a) sí, como finalidad que se puede aceptar (sin audiencias ni anuncios personalizados); (b) apagada siempre | **(a)**: 05 §7 solo prohíbe el perfilado publicitario. A confirmar con el abogado (ECA Digital) |

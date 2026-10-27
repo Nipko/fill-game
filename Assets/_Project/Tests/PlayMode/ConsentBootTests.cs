@@ -61,7 +61,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.View, Is.EqualTo(ConsentView.Age), "06 §2.1, regla 3: antes del nivel 1");
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Boot));
             Assert.That(boot.Analytics!.CollectionEnabled, Is.False, "08 §2.3: apagada hasta el consentimiento");
-            Assert.That(boot.ConsentAds!.Initialized, Is.False, "MAX sin inicializar");
+            Assert.That(boot.ConsentAds!.Initialized, Is.False, "anuncios sin inicializar");
             Assert.That(boot.Consent!.Profile, Is.EqualTo(LegalProfiles.Co1581), "Q-T3 (a): el país de la SIM");
             Assert.That(boot.ConsentHoldsSession, Is.True, "sin sesión ni avisos locales hasta decidir");
             Assert.That(boot.PressAndroidBack(), Is.False, "Atrás no salta la pantalla");
@@ -206,6 +206,65 @@ namespace AF.Tests.PlayMode
             ConsentRecord saved = store.Load().Profile!.Consent!;
             Assert.That(saved.AgeBand, Is.EqualTo(AgeBand.Under13));
             Assert.That(saved.AgeBandCorrected, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutSim_ThePlayAccountCountry_GoesBeforeTheRegion_AndATeenInGermanyHasNoAnalytics()
+        {
+            // D-057: P4 (a), el país de la cuenta de Play (guardado de la conexión anterior) delante de la región del teléfono; y P2 (a),
+            // con 13-17 en Alemania (edad digital 16) la pantalla no ofrece la analítica y «Aceptar todo» la deja apagada.
+            GameBootstrap.SimCountryOverride = ManualSimCountry.None;
+            GameBootstrap.PlayAccountCountryOverride = new MemoryPlayAccountCountry("DE");
+            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("en-US");
+            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ConsentCountryCode, Is.EqualTo("DE"));
+            Assert.That(boot.ConsentCountrySource, Is.EqualTo(CountrySource.PlayAccount));
+            Assert.That(boot.Consent!.Profile, Is.EqualTo(LegalProfiles.Ump));
+
+            boot.ConsentView!.AgeButton(AgeBand.Teen).onClick.Invoke();
+            Assert.That(boot.ConsentView.AnalyticsToggleShown, Is.False, "D-057: sin la fila «Analítica»");
+            boot.ConsentView.AcceptAllButton.onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(() => boot.App!.Screen != AppScreen.Boot, "la primera pantalla");
+            Assert.That(boot.Consent.Record!.Analytics, Is.False);
+            Assert.That(boot.Consent.Flags.AnalyticsEnabled, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator ATeen_GetsTheAnalyticsChoice_InTheUnitedStates_ButNotInColombia()
+        {
+            GameBootstrap.SimCountryOverride = new ManualSimCountry("US");
+            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ConsentCountrySource, Is.EqualTo(CountrySource.Sim));
+            boot.ConsentView!.AgeButton(AgeBand.Teen).onClick.Invoke();
+            Assert.That(boot.ConsentView.AnalyticsToggleShown, Is.True, "Q-B12-7 (a): US, edad digital 13");
+
+            LaunchOptions.Reset();
+            GameBootstrap.SimCountryOverride = new ManualSimCountry("CO");
+            LaunchOptions.ClockOverride = new ManualClock(T0, TimeSpan.FromHours(-5));
+            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
+            boot = GameBootstrap.Current!;
+            boot.ConsentView!.AgeButton(AgeBand.Teen).onClick.Invoke();
+            Assert.That(boot.ConsentView.AnalyticsToggleShown, Is.False, "CO, edad digital 18 (la investigación legal, §2.1)");
+        }
+
+        [UnityTest]
+        public IEnumerator ASavedPlayCountry_WithAnotherLegalProfile_AsksForTheChoicesAgain()
+        {
+            // Revisión de D-057: una decisión con el perfil default (región en-US) y, guardado desde la conexión anterior con Play, el
+            // país DE: el arranque resuelve DE (ump) y vuelve a pedir las finalidades con la banda guardada (Q-B12-15).
+            GameBootstrap.SimCountryOverride = ManualSimCountry.None;
+            GameBootstrap.PlayAccountCountryOverride = new MemoryPlayAccountCountry("DE");
+            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("en-US");
+            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Default, 1, T0, true, true, AgeBand.Adult)));
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ConsentCountryCode, Is.EqualTo("DE"));
+            Assert.That(boot.ConsentCountrySource, Is.EqualTo(CountrySource.PlayAccount));
+            Assert.That(boot.ConsentView!.Visible, Is.True, "otro perfil legal: se vuelve a preguntar");
+            Assert.That(boot.ConsentView.View, Is.EqualTo(ConsentView.Choices), "solo las finalidades, con la banda guardada");
+            Assert.That(boot.Consent!.Flags.Decided, Is.False);
         }
 
         [UnityTest]

@@ -101,7 +101,7 @@ namespace AF.IAP.PlayBilling.Tests
                 csMethods.Add(m.Groups[1].Value);
             }
 
-            Assert.That(javaMethods, Has.Count.EqualTo(8));
+            Assert.That(javaMethods, Has.Count.EqualTo(9), "con onBillingConfig (D-057)");
             Assert.That(csMethods, Is.EqualTo(javaMethods));
             StringAssert.Contains("\"" + "com.amazonfill.billing.AfBillingListener" + "\"", dispatch);
         }
@@ -121,10 +121,26 @@ namespace AF.IAP.PlayBilling.Tests
                 StringAssert.Contains("public void " + m.Groups[1].Value + "(", plugin, m.Groups[1].Value);
             }
 
-            Assert.That(calls, Is.EqualTo(7), "connect, queryProducts, queryPurchases, launch, consume, acknowledge, release");
+            Assert.That(calls, Is.EqualTo(8), "connect, queryProducts, queryPurchases, launch, consume, acknowledge, queryBillingConfig, release");
             StringAssert.Contains("enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())", plugin);
             StringAssert.Contains(".enableAutoServiceReconnection()", plugin);
             StringAssert.Contains("setObfuscatedAccountId(", plugin);
+        }
+
+        [Test]
+        public void BillingConfig_OnlyReadsTheCountryOfTheAccount_AndStoresNothing()
+        {
+            // D-057 (P4 (a)): el país de la cuenta de Play, por getBillingConfigAsync de la biblioteca ya aprobada (sin SDK nuevo). Solo
+            // sale countryCode, limpio de separadores, y solo con OK; no se guarda en el plugin ni se escribe en el log.
+            string plugin = Read(JavaDir, "AfBilling.java").Replace("\r\n", "\n");
+            string query = Between(plugin, "public void queryBillingConfig(", "public void queryPurchases(");
+            StringAssert.Contains("client.getBillingConfigAsync(GetBillingConfigParams.newBuilder().build(),", query);
+            StringAssert.Contains("code == OK && config != null ? config.getCountryCode() : null", query);
+            StringAssert.Contains("listener.onBillingConfig(requestId, code, clean(country) ? country : null);", query);
+            StringAssert.Contains("listener.onBillingConfig(requestId, BillingClient.BillingResponseCode.ERROR, null);", query);
+            Assert.That(Regex.Matches(query, @"config\.get\w+\(").Count, Is.EqualTo(1), "nada más de BillingConfig que el país");
+            StringAssert.DoesNotContain(" = country", query, "no se guarda en el plugin");
+            StringAssert.Contains("import com.android.billingclient.api.GetBillingConfigParams;", plugin);
         }
 
         [Test]
