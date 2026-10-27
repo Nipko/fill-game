@@ -11,7 +11,8 @@ namespace AF.UI
     /// <item>activado por defecto y guardado con el resto de ajustes, en <c>settings.crash_reports</c> [P];</item>
     /// <item>el arranque lo respeta antes de encender Crashlytics (<see cref="CrashReportsAtBoot"/>, en <c>SetUpTelemetry</c>):
     /// apagado, <c>CrashReporting.Stop</c> (recogida a false y los informes sin enviar, borrados);</item>
-    /// <item>al tocarlo, al momento: encendido, <c>CrashReporting.Start</c>; apagado, <c>CrashReporting.Stop</c>;</item>
+    /// <item>al tocarlo, al momento: encendido, <c>CrashReporting.Start</c>; apagado, <c>CrashReporting.Stop</c>; y el perfil sube a la
+    /// nube si hay sesión (<see cref="UploadCloud"/>), porque la fusión conserva el apagado de cualquiera de los dos;</item>
     /// <item>con la banda &lt;13 nada cambia: el arranque se para antes (sin SDK) y Crashlytics no se enciende nunca.</item>
     /// </list>
     /// Sin evento de analítica: <c>crash_reports</c> no está en las claves de <c>af_settings_change</c> (08 §8.2); solo la sonda de
@@ -41,6 +42,10 @@ namespace AF.UI
             {
                 profile.Settings.CrashReports = on;
                 SaveSettings(profile);
+
+                // A la nube en el acto, si hay sesión (D-042, como tras una compra): la fusión deja apagado lo que cualquiera de los dos
+                // apagó, así que sin subir, un snapshot viejo apagado volvería a apagar lo que el jugador acaba de encender.
+                UploadCloud();
             }
 
             // Encender solo si este arranque puede tener servicios de datos (con <13 nunca: ni se llega a Ajustes). Apagar, siempre.

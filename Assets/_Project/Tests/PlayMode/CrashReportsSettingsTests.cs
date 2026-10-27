@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using AF.Economy;
 using AF.Platform;
 using AF.Save;
@@ -96,6 +97,31 @@ namespace AF.Tests.PlayMode
             Assert.That(crash, Is.EqualTo(new[] { false }), "con <13 sin SDK: solo el apagado explícito");
             Assert.That(boot.ChooseCrashReports(true), Is.True);
             Assert.That(crash, Has.No.Member(true), "ni a mano se enciende con <13");
+        }
+
+        [UnityTest]
+        public IEnumerator TurningItBackOn_UploadsToTheCloud_SoAnOldSnapshotDoesNotTurnItOffAgain()
+        {
+            // La fusión deja apagado lo que cualquiera de los dos apagó (CloudMerge): al cambiarlo, el perfil sube en el acto (D-042).
+            var crash = new List<bool>();
+            GameBootstrap.CrashReportingOverride = on => crash.Add(on);
+            Profile local = Adult(false);
+            var cloud = new FakeCloudSave(Encoding.UTF8.GetBytes(ProfileJson.Serialize(Adult(false))));
+            GameBootstrap.CloudSaveOverride = cloud;
+            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore(local)); // con la edad ya declarada (18+), la nube arranca
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.CloudSessionNow!.State, Is.EqualTo(CloudSessionState.Synced));
+            int saves = cloud.SaveCount;
+
+            Assert.That(boot.ChooseCrashReports(true), Is.True);
+            Assert.That(cloud.SaveCount, Is.EqualTo(saves + 1), "sube al cambiarlo");
+            Profile uploaded = ProfileJson.Deserialize(Encoding.UTF8.GetString(cloud.Blob!));
+            Assert.That(uploaded.Settings.CrashReports, Is.True, "la nube ya lo tiene encendido");
+            Assert.That(CloudMerge.Resolve(boot.Profile!, uploaded).Merged.Settings.CrashReports, Is.True,
+                "una fusión posterior no lo vuelve a apagar");
+
+            Assert.That(boot.ChooseCrashReports(true), Is.True);
+            Assert.That(cloud.SaveCount, Is.EqualTo(saves + 1), "sin cambio, sin subida");
         }
 
         [UnityTest]
