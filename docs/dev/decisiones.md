@@ -4092,3 +4092,25 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - En los CSV de la entrega se editaron 4 celdas, para que el `--check` las dé por aplicadas: `world_w03_name`, `world_w11_name` y `fact.agua_tapajos.14` y `.19`.
   - Las `notes` de `strings.csv` y `facts.csv` siguen diciendo «Pendiente del asesor cultural»; se ponen al día en otra tarea.
   - Un cambio posterior del español de una fila revisada hace fallar `--check`: se cierra con una entrega nueva de revisión.
+
+## D-055 · Música actual para la 1.0, AD_ID aprobado, 13-17 sin anuncios en el EEE, Reino Unido y Suiza, y lanzamiento mundial
+
+- **Fecha:** 2026-10-27. Registrada por el integrador.
+- **Estado:** respuestas del dueño en el formulario del chat:
+  - TiTino de noche: «Calla mientras duerme»;
+  - música: «Salir con la música actual»;
+  - permisos de anuncios: «Aprobar AD_ID»;
+  - 13-17 en el EEE, el Reino Unido y Suiza: «Sin anuncios, pero vamos a lanzar en todo el mundo, no solo america latina.»
+- **Decisión:**
+  1. **TiTino de noche (20-6)** duerme callado. Ya lo hace (añadido de D-050 del 2026-10-26, `HomeSloth.cs`). Queda comprobarlo en el teléfono, en la jornada 4.
+  2. **Música:** la 1.0 sale con la música actual; la v2 queda para una actualización.
+  3. **Permiso `com.google.android.gms.permission.AD_ID`:** aprobado (regla dura 4) para los anuncios de AdMob (D-049).
+     - Solo se usa con el consentimiento de anuncios personalizados y con 18 años o más. Con 13-17, no personalizados; con <13 no arranca nada.
+     - `ACCESS_WIFI_STATE` y `CHECK_LICENSE` siguen fuera.
+     - Va a la lista blanca de `ci/check-manifest.ps1`, a Data Safety (08 §13.3, `docs/store-listing/data-safety.md`) y a la política de la web.
+  4. **13-17 en el EEE, el Reino Unido y Suiza:** sin anuncios. Confirma la provisional Q-MAX-6 (b), ahora aplicada a AdMob.
+  5. **Lanzamiento mundial:** la 1.0 se publica en todo el mundo, no solo en América Latina. Cambia los supuestos de 08 §13.1 (países), 05 §4.2 (precios), de la edad y el consentimiento por país (05 §7) y de la política. Esto queda pendiente:
+     - el **abogado** revisa la edad de consentimiento digital por país (el RGPD art. 8 la sube a 16 años en algunos Estados), la COPPA en EE. UU. y el texto legal mundial;
+     - los **precios** de los demás países, en Play Console (plantillas o conversión automática);
+     - los **idiomas:** se mantienen es-419, en y pt-BR. El resto del mundo ve inglés.
+     - Lo que el código ya resuelve por país (el consentimiento UMP en el EEE, el Reino Unido y Suiza, y los perfiles `biz_legal_profile_by_country`) se revisa en una tarea aparte.
