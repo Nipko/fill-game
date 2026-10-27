@@ -9,7 +9,9 @@ densidad (BrandEmblem). Lo usa exportar.py --unity-emblem.
 
 Grupos (lo que el juego coloca o anima por separado): 3 impacto (aros y gotitas), 4 chorro, 5 cuia, 6 y 7 las dos palmeras de
 açaí del icono. Del fondo del icono solo se llevan las palmeras: el río con meandros, la selva y las orillas los compone el juego
-para la pantalla vertical (BrandRiverScene; 0-2 quedan sin uso).
+para la pantalla vertical (BrandRiverScene; 0-2 quedan sin uso). Desde el añadido de D-045 del 2026-10-27, el fondo del icono
+también lleva meandros (su <defs> con la arena, el suelo y los doseles, las copas de las orillas y las ondas): se ignoran; las
+palmeras se comprueban (dos de 8 trazos).
 """
 import math
 import os
@@ -234,6 +236,8 @@ def capas():
 
     def recorrer(el, hered, seccion):
         tag = el.tag
+        if tag in ("defs", "pattern", "mask", "clipPath", "linearGradient", "radialGradient"):
+            return  # definiciones (degradados y tramas del río con meandros): no se pintan
         a = dict(hered)
         a.update(el.attrib)
         if tag == "g":
@@ -296,6 +300,8 @@ def capas():
     for seccion in ("fondo", "frente"):
         for el in raiz.find(seccion):
             recorrer(el, {}, seccion)
+    if palmas[0] != 16:
+        raise ValueError(f"se esperaban 16 trazos de palmera en el fondo (dos palmeras de 8) y hay {palmas[0]}")
     return out
 
 
