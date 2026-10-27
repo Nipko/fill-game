@@ -183,6 +183,17 @@ namespace AF.Tests.EditMode
             Assert.That(GeoTierRule.FromLanguageTag(tag), Is.EqualTo(tier));
         }
 
+        [TestCase("DE", "en-US", GeoTier.T1)] // D-057: el país de la cuenta de Play manda sobre la región (Q-E3 (a))
+        [TestCase("CO", "en-US", GeoTier.T3)]
+        [TestCase("jp", "es-CO", GeoTier.T1)]
+        [TestCase("", "en-US", GeoTier.T1)] // sin país de Play, la región del teléfono
+        [TestCase(null, "es-MX", GeoTier.T3)]
+        [TestCase("419", "de-DE", GeoTier.T1)]
+        public void GeoTier_FromThePlayAccountCountry_ThenThePhoneRegion(string? play, string tag, GeoTier tier)
+        {
+            Assert.That(GeoTierRule.FromSources(play, tag), Is.EqualTo(tier));
+        }
+
         [Test]
         public void TabWidths_ShareTheRow_AndNeverLeaveThePanel()
         {

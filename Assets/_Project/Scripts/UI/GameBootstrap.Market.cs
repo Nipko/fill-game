@@ -32,7 +32,7 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><b>B5-bootstrap</b>: la llamada a <see cref="SetUpMarket"/> en <c>Start</c> (tras <c>SetUpSessions();</c>), Atrás de
     /// Android (<see cref="PressMarketBack"/>), el Mercado y la tarjeta en <c>CommerceOpen</c> (<see cref="MarketCommerceOpen"/>) y
-    /// <c>geo_tier</c> desde la región del teléfono (<see cref="GeoTierRule"/>; Q-E3 (a)).</item>
+    /// <c>geo_tier</c> desde el país de la cuenta de Play y, sin él, la región del teléfono (<see cref="GeoTierRule"/>; Q-E3 (a), D-057).</item>
     /// <item><b>B5-profile</b>: <c>piggy</c> y <c>offers</c> en el perfil, con <c>ProfileOffersStore</c> (implementa
     /// <see cref="CreateProfileOffersStore"/>). Sin él: en desarrollo, en memoria (se pierde al cerrar la app); en release no hay
     /// Mercado ni ofertas (D-008: oculto mientras no exista).</item>
