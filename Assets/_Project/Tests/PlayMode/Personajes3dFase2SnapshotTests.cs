@@ -35,6 +35,8 @@ namespace AF.Tests.PlayMode
     /// <item><c>f2_05_mapa_bufeo</c>: el Mapa con el bufeo boliviano guiando la canoa (mundo 7, max 305);</item>
     /// <item><c>f2_06_victoria_avatar</c>: la victoria del 41 con el avatar en la línea de la Liga (24 dp);</item>
     /// <item><c>f2_07_liga</c>: la Liga con el avatar de cada fila (32 dp);</item>
+    /// <item><c>f2_08_delfin</c>: el delfín de río (Rosa y el bufeo) en grande, en el banner con la onda, la espuma y el soplo, y
+    /// a su tamaño en el Mapa;</item>
     /// <item>las escenas también con <c>_ac</c>: con Alto contraste encendido (B9).</item>
     /// </list>
     /// Todas a 360 dp (1080 px de ancho, 3 px/dp), con el texto al 100 % y en es-419. Necesitan gráficos: <c>unity test &lt;repo&gt;
@@ -211,6 +213,65 @@ namespace AF.Tests.PlayMode
             yield return null;
             SaveSheet("f2_02_avatares");
         }
+
+        /// <summary>
+        /// El delfín de río (petición del dueño del 2026-10-27: «mejor forma, sin ese arco»): Rosa y el bufeo en grande; Rosa en el
+        /// banner (la línea del agua deja ver el 74 % de su alto, con la onda, la espuma sobre el corte y el soplo en el
+        /// respiradero); y los dos a su tamaño real en el Mapa (22 dp en la vista del mundo, 16 dp en la de la cuenca) y a 32 dp,
+        /// sobre el verde del Mapa y el agua.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CaptureDolphinSheet()
+        {
+            const float sheetH = 560f;
+            RectTransform layer = PrepareSheet((int)sheetH);
+            Background(layer, 0f, 0f, WidthDp, 160f, Palette.JungleLight);
+            Background(layer, 0f, 160f, WidthDp, 200f, Palette.Panel.Top);
+            Background(layer, 0f, 360f, WidthDp, 100f, MapGreen);
+            Background(layer, 0f, 460f, WidthDp, 100f, MapWater);
+            Sprite rosa = _art!.Rosa;
+            Sprite bufeo = _art.MapBufeo;
+            const float rw = ProceduralArt.RosaWidthDp * 1.4f;
+            const float rh = ProceduralArt.RosaHeightDp * 1.4f;
+            Place(layer, rosa, 6f, 8f, rw, rh);
+            Place(layer, bufeo, 6f + rw + 12f, 8f + (rh * 0.15f), rw * 0.82f, rh * 0.82f);
+
+            // El banner: la escena del agua (abajo, oscura), Rosa con el 74 % de su alto fuera, la onda, la espuma y el soplo.
+            float waterline = 160f + 130f;
+            float bx = 30f;
+            float above = 0.74f * ProceduralArt.RosaHeightDp;
+            Place(layer, rosa, bx, waterline - above, ProceduralArt.RosaWidthDp, ProceduralArt.RosaHeightDp);
+            Background(layer, 0f, waterline, WidthDp, 70f, MapWater);
+            layer.GetChild(0).SetAsLastSibling(); // el agua tapa la parte de Rosa bajo la línea
+            Place(layer, _art.RosaRipple, bx + (ProceduralArt.RosaWidthDp * 0.5f) - (ProceduralArt.RosaRippleWidthDp * 0.5f), waterline - (ProceduralArt.RosaRippleHeightDp * 0.5f), ProceduralArt.RosaRippleWidthDp, ProceduralArt.RosaRippleHeightDp);
+            float foamX = bx + (ProceduralArt.RosaCutCenter * ProceduralArt.RosaWidthDp);
+            Place(layer, _art.RosaFoam, foamX - (ProceduralArt.RosaFoamWidthDp * 0.5f), waterline - (ProceduralArt.RosaFoamHeightDp * 0.5f), ProceduralArt.RosaFoamWidthDp, ProceduralArt.RosaFoamHeightDp);
+            Vector2 blow = ProceduralArt.RosaBlowhole;
+            float sx = bx + (blow.x * ProceduralArt.RosaWidthDp);
+            float sy = waterline - above + ((1f - blow.y) * ProceduralArt.RosaHeightDp);
+            Place(layer, _art.RosaSpray, sx - (ProceduralArt.RosaSprayDp * 0.5f), sy - ProceduralArt.RosaSprayDp, ProceduralArt.RosaSprayDp, ProceduralArt.RosaSprayDp);
+
+            // A su tamaño en el Mapa: 32, 22 y 16 dp de ancho, Rosa y el bufeo, sobre el verde y sobre el agua.
+            for (int row = 0; row < 2; row++)
+            {
+                float top = row == 0 ? 380f : 480f;
+                float x = 12f;
+                foreach (float w in new[] { 32f, 22f, 16f })
+                {
+                    float h = w * ProceduralArt.RosaHeightDp / ProceduralArt.RosaWidthDp;
+                    Place(layer, rosa, x, top + 30f - h, w, h);
+                    Place(layer, bufeo, x + w + 8f, top + 30f - h, w, h);
+                    x += (2f * w) + 30f;
+                }
+            }
+
+            yield return null;
+            SaveSheet("f2_08_delfin");
+        }
+
+        // El verde de tierra y el agua del Mapa (aproximados, para la lámina).
+        private static readonly Color MapGreen = Palette.Hex(0x2F7D4E);
+        private static readonly Color MapWater = Palette.Hex(0x5E9FA8);
 
         [UnityTest]
         public IEnumerator CaptureIntroTroop([Values(false, true)] bool highContrast)
