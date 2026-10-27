@@ -390,7 +390,8 @@ namespace AF.Tests.PlayMode
             Assert.That(intro.ReduceMotion, Is.False);
             Assert.That(report.LoadMs, Is.LessThan((long)BrandIntro.AnimMs), "en el Editor la carga acaba antes que la intro");
             Assert.That(intro.IntroMs, Is.GreaterThanOrEqualTo((long)BrandIntro.AnimMs), "añadido de D-051 del 2026-10-26: entera, aunque la carga acabe antes");
-            Assert.That(intro.IntroMs, Is.LessThan((long)BrandIntro.AnimMs + 600), "y sin más espera que la suya");
+            // El margen es tiempo de reloj: la CI (runner Linux lento) lo multiplica (dio 800 ms sobre la animación el 2026-10-27).
+            Assert.That(intro.IntroMs, Is.LessThan(BrandIntro.AnimMs + PerfBudget.Ms(600d)), "y sin más espera que la suya, " + PerfBudget.Describe(600d));
             Assert.That(intro.Cut, Is.False, "nunca se corta porque acabe la carga");
             Assert.That(intro.ShownMs, Is.EqualTo((long)BrandIntro.AnimMs));
             Assert.That(intro.LoadingMs, Is.EqualTo(0L), "la carga acabó antes: no se vio «Cargando…»");
