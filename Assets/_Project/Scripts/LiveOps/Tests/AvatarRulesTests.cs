@@ -53,12 +53,12 @@ namespace AF.LiveOps.Tests
         [Test]
         public void Milestones_AreMetByTheExistingState()
         {
-            Assert.That(AvatarRules.IsMet(AvatarMilestone.HardWin, P(maxLevel: 40)), Is.False);
-            Assert.That(AvatarRules.IsMet(AvatarMilestone.HardWin, P(maxLevel: 40, hard: true)), Is.True, "la victoria de un Difícil");
-            Assert.That(AvatarRules.IsMet(AvatarMilestone.HardWin, P(maxLevel: 41)), Is.True, "retroactivo: max_level ≥ 41");
-            Assert.That(AvatarRules.IsMet(AvatarMilestone.VeryHardWin, P(maxLevel: 60, hard: true)), Is.False);
-            Assert.That(AvatarRules.IsMet(AvatarMilestone.VeryHardWin, P(maxLevel: 60, veryHard: true)), Is.True);
-            Assert.That(AvatarRules.IsMet(AvatarMilestone.VeryHardWin, P(maxLevel: 61)), Is.True, "retroactivo: max_level ≥ 61");
+            Assert.That(AvatarRules.IsMet(AvatarMilestone.HardWin, P(maxLevel: 39)), Is.False);
+            Assert.That(AvatarRules.IsMet(AvatarMilestone.HardWin, P(maxLevel: 39, hard: true)), Is.True, "la victoria de un Difícil");
+            Assert.That(AvatarRules.IsMet(AvatarMilestone.HardWin, P(maxLevel: 40)), Is.True, "retroactivo: max_level ≥ 40, el primer Difícil (03 §12)");
+            Assert.That(AvatarRules.IsMet(AvatarMilestone.VeryHardWin, P(maxLevel: 59, hard: true)), Is.False);
+            Assert.That(AvatarRules.IsMet(AvatarMilestone.VeryHardWin, P(maxLevel: 59, veryHard: true)), Is.True);
+            Assert.That(AvatarRules.IsMet(AvatarMilestone.VeryHardWin, P(maxLevel: 60)), Is.True, "retroactivo: max_level ≥ 60, el primer Muy difícil");
             Assert.That(AvatarRules.IsMet(AvatarMilestone.World3, P(maxLevel: 79)), Is.False);
             Assert.That(AvatarRules.IsMet(AvatarMilestone.World3, P(maxLevel: 80)), Is.True, "gana el 80 (Manaos)");
             Assert.That(AvatarRules.IsMet(AvatarMilestone.World4, P(maxLevel: 140)), Is.True);

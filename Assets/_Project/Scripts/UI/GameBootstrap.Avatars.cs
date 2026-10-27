@@ -31,7 +31,7 @@ namespace AF.UI
     /// </summary>
     public sealed partial class GameBootstrap
     {
-        /// <summary>Cada cuánto se vuelven a mirar los hitos y el envío pendiente a la Liga (ms) [P].</summary>
+        /// <summary>Cada cuánto se vuelven a mirar los hitos (ms) [P].</summary>
         public const float AvatarCheckIntervalMs = 1000f;
 
         private AvatarService? _avatars;
@@ -40,7 +40,6 @@ namespace AF.UI
         private AvatarAtlas? _avatarAtlas;
         private AvatarAtlas? _leagueAvatarAtlas;
         private float _avatarCheckMs;
-        private float _avatarSyncMs;
         private long _avatarSignature = long.MinValue;
 
         /// <summary>Elección del libre por defecto para los tests (recibe 6, devuelve 0-5); por defecto, al azar.</summary>
@@ -199,7 +198,7 @@ namespace AF.UI
             return s;
         }
 
-        /// <summary>Cada fotograma (lo llama <see cref="AvatarRunner"/>): el atlas, la pantalla, los hitos y el envío pendiente.</summary>
+        /// <summary>Cada fotograma (lo llama <see cref="AvatarRunner"/>): el atlas, la pantalla y los hitos.</summary>
         internal void TickAvatars(float dtMs)
         {
             if (_avatars == null || AccountDeleted)
@@ -252,13 +251,6 @@ namespace AF.UI
                     RefreshAvatarUi(); // max_level llegó al 10: sale el retrato
                 }
             }
-
-            _avatarSyncMs += dtMs;
-            if (_avatarSyncMs >= RetryIntervalMs)
-            {
-                _avatarSyncMs = 0f;
-                SyncLeagueAvatar();
-            }
         }
 
         private void EvaluateAvatars(bool hardWon, bool veryHardWon)
@@ -307,8 +299,8 @@ namespace AF.UI
 
         /// <summary>
         /// El avatar a la Liga (avatares.md §4.4): con los avatares encendidos, el índice elegido queda pendiente si no es el que confirmó
-        /// el servidor y sale con la Liga activa. Tras elegir, al arrancar (también tras una fusión con la nube) y cada
-        /// <see cref="RetryIntervalMs"/>.
+        /// el servidor y sale con la Liga activa. Tras elegir, al arrancar (también tras una fusión con la nube) y al
+        /// volver a primer plano (<c>ResumeLeague</c>): sin red, con un 404 o un 429 no se reintenta mientras la app sigue abierta.
         /// </summary>
         private void SyncLeagueAvatar()
         {

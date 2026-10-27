@@ -85,11 +85,11 @@ namespace AF.LiveOps
         /// <summary>El avatar sale en el inicio (y en Ajustes) desde que se gana este nivel, con el Mapa y el Mercado (Q-AV-3).</summary>
         public const int HomeUnlockLevel = 10;
 
-        /// <summary>Retroactividad de Difícil: <c>max_level</c> ≥ 41 en un perfil anterior (avatares.md §1.3).</summary>
-        public const int HardRetroLevel = 41;
+        /// <summary>Retroactividad de Difícil: <c>max_level</c> ≥ 40, el primer Difícil (03 §12; 06 §3, fila 40; avatares.md §1.3).</summary>
+        public const int HardRetroLevel = 40;
 
-        /// <summary>Retroactividad de Muy difícil: <c>max_level</c> ≥ 61.</summary>
-        public const int VeryHardRetroLevel = 61;
+        /// <summary>Retroactividad de Muy difícil: <c>max_level</c> ≥ 60, el primer Muy difícil (03 §12).</summary>
+        public const int VeryHardRetroLevel = 60;
 
         /// <summary>Racha del Reto del martín pescador (la que paga la Pororoca, 06 §4.1).</summary>
         public const int DailyStreakDays = 7;

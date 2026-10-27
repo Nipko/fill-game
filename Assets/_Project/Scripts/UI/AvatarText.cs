@@ -17,7 +17,7 @@ namespace AF.UI
         public const string TitleKey = "avatar_title";
         public const string SettingsRowKey = "avatar_settings_row";
         public const string HomeA11yKey = "avatar_home_a11y";
-        public const string NewDotA11yKey = "avatar_new_dot_a11y";
+        public const string HomeNewA11yKey = "avatar_home_new_a11y";
         public const string NewKey = "avatar_new";
         public const string CellA11yKey = "avatar_cell_a11y";
         public const string ChosenA11yKey = "avatar_chosen_a11y";
@@ -50,11 +50,13 @@ namespace AF.UI
         /// <summary>El nombre del animal (el del seudónimo de la Liga).</summary>
         public static string Name(AvatarInfo avatar) => Loc.T(avatar.NameKey);
 
-        /// <summary>«Tu avatar: Tucán. Toca para cambiarlo» y, con el punto, «Hay un avatar nuevo» (dos frases de la tabla, cada una entera).</summary>
+        /// <summary>
+        /// «Tu avatar: Tucán. Toca para cambiarlo» o, con el punto, «Tu avatar: Tucán. Hay un avatar nuevo. Toca para cambiarlo» (una
+        /// clave por frase completa).
+        /// </summary>
         public static string HomeA11y(AvatarInfo avatar, bool dot)
         {
-            string open = Loc.T(HomeA11yKey, LocArgs.Of("animal", Name(avatar)));
-            return dot ? open + "\n" + Loc.T(NewDotA11yKey) : open;
+            return Loc.T(dot ? HomeNewA11yKey : HomeA11yKey, LocArgs.Of("animal", Name(avatar)));
         }
 
         /// <summary>El texto corto del hito bajo una celda bloqueada («Muy difícil», «Mundo 4 · Trapecio»…), o «» si es libre.</summary>
@@ -150,7 +152,7 @@ namespace AF.UI
             {
                 var keys = new List<string>
                 {
-                    TitleKey, SettingsRowKey, HomeA11yKey, NewDotA11yKey, NewKey, CellA11yKey, ChosenA11yKey, CellNewA11yKey,
+                    TitleKey, SettingsRowKey, HomeA11yKey, HomeNewA11yKey, NewKey, CellA11yKey, ChosenA11yKey, CellNewA11yKey,
                     LockedA11yKey, LeagueAliasKey, HeaderA11yKey,
                 };
                 for (int i = 0; i < GoalIds.Length; i++)

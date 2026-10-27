@@ -115,7 +115,7 @@ namespace AF.Tests.EditMode
             }
 
             TestContext.WriteLine("AF_PERF avatar " + perPortrait.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " ms por retrato de " + Px + " px");
-            Assert.That(perPortrait, Is.LessThanOrEqualTo(8.0), "≤ 8 ms por retrato de 192 px en el Editor x64 (avatares.md §2.2)");
+            Assert.That(perPortrait, Is.LessThanOrEqualTo(PerfBudget.Ms(8.0)), "≤ 8 ms por retrato de 192 px en el Editor x64 (avatares.md §2.2), " + PerfBudget.Describe(8.0));
             pc.Release();
             scratch.Release();
         }

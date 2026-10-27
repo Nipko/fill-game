@@ -171,5 +171,43 @@ namespace AF.Tests.EditMode
             Assert.That(LeagueBackendApi.FailureOf(BackendError.Http(404, ApiErrorCode.Unknown), true), Is.EqualTo(LeagueFailure.CountryUnknown));
             Assert.That(LeagueBackendApi.FailureOf(BackendError.Http(500, ApiErrorCode.Unknown), false), Is.EqualTo(LeagueFailure.Server));
         }
+
+        /// <summary>
+        /// D-056 (avatares.md §4.4): el envío del avatar descarta el pendiente solo con un 400; sin red, con un 404 de una ruta aún sin
+        /// desplegar o con un 429, se queda para la siguiente apertura. Un índice fuera de 0-63 no llega al backend.
+        /// </summary>
+        [Test]
+        public void TheAvatarFailures_OnlyA400Rejects_AndAnOutOfRangeIndexNeverLeaves()
+        {
+            Assert.That(LeagueBackendApi.AvatarFailureOf(BackendError.Http(400, ApiErrorCode.BadRequest)), Is.EqualTo(LeagueFailure.Rejected));
+            Assert.That(LeagueBackendApi.AvatarFailureOf(BackendError.Http(404, ApiErrorCode.Unknown)), Is.Not.EqualTo(LeagueFailure.Rejected));
+            Assert.That(LeagueBackendApi.AvatarFailureOf(BackendError.Http(429, ApiErrorCode.RateLimited)), Is.Not.EqualTo(LeagueFailure.Rejected));
+            Assert.That(LeagueBackendApi.AvatarFailureOf(BackendError.Network("x")), Is.EqualTo(LeagueFailure.Offline));
+
+            var backend = new CountingLeagueBackend();
+            var api = new LeagueBackendApi(backend, null);
+            foreach (int avatar in new[] { 64, -1 })
+            {
+                LeagueResult<LeagueAvatarResult>? result = null;
+                api.SetAvatar(avatar, r => result = r);
+                Assert.That(result, Is.Not.Null, "responde en el acto");
+                Assert.That(result!.IsOk, Is.False);
+                Assert.That(result.Failure, Is.EqualTo(LeagueFailure.Rejected), avatar + ": fuera de 0-63");
+            }
+
+            Assert.That(backend.Calls, Is.EqualTo(0), "sin llamar al backend");
+        }
+
+        /// <summary>Un <see cref="ILeagueBackend"/> que solo cuenta las llamadas (nunca responde).</summary>
+        private sealed class CountingLeagueBackend : ILeagueBackend
+        {
+            public int Calls { get; private set; }
+
+            public void SendLeagueWins(LeagueWinsRequestDto request, Action<BackendResult<LeagueWinsResponseDto>> onDone) => Calls++;
+
+            public void GetLeagueBoard(string scope, Action<BackendResult<LeagueBoardResponseDto>> onDone) => Calls++;
+
+            public void SetLeagueAvatar(LeagueAvatarRequestDto request, Action<BackendResult<LeagueAvatarResponseDto>> onDone) => Calls++;
+        }
     }
 }

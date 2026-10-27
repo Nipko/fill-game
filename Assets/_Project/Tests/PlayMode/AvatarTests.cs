@@ -101,8 +101,7 @@ namespace AF.Tests.PlayMode
             Assert.That(lobby.AvatarDotShown, Is.True, "sin elegir nunca: el punto invita a cambiarlo");
             Assert.That(lobby.AvatarSprite, Is.Not.Null);
             Assert.That(lobby.AvatarRect.rect.width, Is.GreaterThanOrEqualTo(48f), "área táctil (07 §7.8)");
-            Assert.That(lobby.AvatarA11y, Does.StartWith("Tu avatar: Tucán. Toca para cambiarlo"));
-            Assert.That(lobby.AvatarA11y, Does.Contain("Hay un avatar nuevo"));
+            Assert.That(lobby.AvatarA11y, Is.EqualTo("Tu avatar: Tucán. Hay un avatar nuevo. Toca para cambiarlo"), "con el punto, una frase entera (sin concatenar)");
             Assert.That(boot.PressSettings(), Is.True);
             Assert.That(boot.SettingsView!.AvatarRowShown, Is.True, "la fila de Ajustes, arriba del todo");
             Assert.That(boot.SettingsView.AvatarRowA11y, Is.EqualTo("Tu avatar: Tucán. Toca para cambiarlo"));
@@ -167,7 +166,7 @@ namespace AF.Tests.PlayMode
             Assert.That(screen.ShownIds[0], Is.EqualTo("macaw"), "primero los libres, en el orden de la tabla");
             Assert.That(screen.CellChosen("toucan"), Is.True);
             Assert.That(screen.CellA11y("toucan"), Is.EqualTo("Tucán, elegido"));
-            Assert.That(screen.CellLocked("dart_frog"), Is.False, "el 57 ya pasó el primer Difícil (retroactivo, ≥ 41)");
+            Assert.That(screen.CellLocked("dart_frog"), Is.False, "el 57 ya pasó el primer Difícil (retroactivo, ≥ 40)");
             Assert.That(screen.CellNew("dart_frog"), Is.True, "desbloqueado sin ver: «Nuevo»");
             Assert.That(screen.CellLocked("anteater"), Is.True);
             Assert.That(screen.CellGoal("anteater"), Is.EqualTo("Mundo 4 · Trapecio"));
