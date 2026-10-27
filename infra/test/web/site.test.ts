@@ -207,11 +207,15 @@ describe('web/site', () => {
       }
     }
     // Las únicas salidas son enlaces (no recursos) al sitio del desarrollador y a las políticas de Google como socio de
-    // anuncios (AdMob, D-049).
+    // anuncios (AdMob, D-049), y los textos de las licencias de terceros de Créditos (T-L13, D-057).
     expect([...externalLinks].sort()).toEqual([
+      'https://developer.android.com/studio/terms',
+      'https://opensource.org/license/mit',
       'https://parallext.com',
       'https://policies.google.com/privacy',
       'https://policies.google.com/technologies/partner-sites',
+      'https://unity3d.com/legal/licenses/unity_companion_license',
+      'https://www.apache.org/licenses/LICENSE-2.0',
     ]);
     const css = site.get('assets/site.css') ?? '';
     expect(css).not.toMatch(/@import|url\(|@font-face/);
