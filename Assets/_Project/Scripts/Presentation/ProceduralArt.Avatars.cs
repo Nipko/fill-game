@@ -129,6 +129,35 @@ namespace AF.Presentation
             _avatarPortraitKey = null;
         }
 
+        private Sprite? _avatarChevron;
+        private Sprite? _avatarCheck;
+
+        /// <summary>Flecha «›» blanca (se tiñe) de la fila «Avatar» de Ajustes, 24 × 24 dp.</summary>
+        public Sprite AvatarChevron => _avatarChevron ??= BuildAvatarGlyph(false);
+
+        /// <summary>Marca «✓» blanca (se tiñe) de la chapa del avatar elegido, 24 × 24 dp.</summary>
+        public Sprite AvatarCheck => _avatarCheck ??= BuildAvatarGlyph(true);
+
+        private Sprite BuildAvatarGlyph(bool check)
+        {
+            const float k = UiPxPerDp;
+            int n = Mathf.RoundToInt(24f * k);
+            var pc = new PixelCanvas(n, n);
+            float r = 1.6f * k;
+            if (check)
+            {
+                pc.FillCapsule(6f * k, 12.5f * k, 10f * k, 8f * k, r, Color.white);
+                pc.FillCapsule(10f * k, 8f * k, 18f * k, 17f * k, r, Color.white);
+            }
+            else
+            {
+                pc.FillCapsule(9f * k, 18f * k, 15f * k, 12f * k, r, Color.white);
+                pc.FillCapsule(15f * k, 12f * k, 9f * k, 6f * k, r, Color.white);
+            }
+
+            return MakeSprite(pc, check ? "avatar_check" : "avatar_chevron", new Vector2(0.5f, 0.5f), Vector4.zero, k);
+        }
+
         /// <summary>Nombre de la ranura del PNG del avatar <paramref name="id"/> (identificador, no texto visible).</summary>
         public static string AvatarSlot(string id) => ArtSlots.AvatarPrefix + id;
 

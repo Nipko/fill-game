@@ -41,7 +41,7 @@ namespace AF.UI
     /// contadores se actualizan solo al cambiar y nada asigna memoria por fotograma (08 §5.4). Sin el catálogo de paradas, el inicio
     /// sin fondo de parada, sin travesía y sin TiTino.
     /// </summary>
-    public sealed class LobbyScreen
+    public sealed partial class LobbyScreen
     {
         /// <summary>Ancho del lienzo (dp).</summary>
         public const float ReferenceWidth = 360f;
@@ -271,6 +271,8 @@ namespace AF.UI
             Image gear = UiBuilder.Image("Icon", _settings.Face, art.IconGear, Color.white);
             UiBuilder.Place(gear.rectTransform, 7f, 7f, 26f, 26f);
             _settings.Relief.Bind(_settings.Face, _settings.Base, _settings.FaceImage, art.DiscWood, gear, art.IconGearDisabled, null);
+
+            BuildAvatar(top, art); // D-056: el retrato del jugador arriba a la izquierda, desde el 10 (LobbyScreen.Avatar.cs)
 
             // Música y Sonido con un toque (D-046, punto 2; 07 §9.4): en columna bajo el engranaje, junto a él.
             _audio = new AudioToggles(top, art);
@@ -1138,13 +1140,18 @@ namespace AF.UI
             PlaceAt(_foliage[3].rectTransform, w, tabTop + 24f, bottom, bottom, new Vector2(1f, 0f));
             UiBuilder.Place(_scrim.rectTransform, 0f, 0f, w, _safeTop + 48f);
 
-            // Cabecera (ficha §7.1): Semillas a la izquierda, Canoas a su derecha y Ajustes en la esquina.
-            UiBuilder.Place(_seeds, 16f, topY + 4f, 112f, 40f);
+            // Cabecera (ficha §7.1): Semillas a la izquierda, Canoas a su derecha y Ajustes en la esquina. Con el avatar (D-056,
+            // avatares.md §3.1, desde el 10), el retrato va en x = 8 y Semillas pasa a x = 60; Canoas, 4 dp antes del engranaje y, si no
+            // cabe, más estrecha (104 dp a 320 dp, con el icono 8 dp más estrecho), y Semillas llega hasta 4 dp antes de Canoas.
+            TopRowMetrics(w, _avatarShown, out float seedsX, out float seedsW, out float canoesX, out float canoesW);
+            _canoesW = canoesW;
+            PlaceAvatar(topY);
+            UiBuilder.Place(_seeds, seedsX, topY + 4f, seedsW, 40f);
             UiBuilder.Place(_seedsIcon.rectTransform, -8f, 1f, 38f, 38f);
-            UiBuilder.Place(_seedsText.rectTransform, 30f, 0f, 74f, 40f);
+            UiBuilder.Place(_seedsText.rectTransform, 30f, 0f, seedsW - 38f, 40f);
             // A 320 dp el engranaje (w − 56) pisaba 4 dp de Canoas: Canoas se arrima a Semillas lo justo, 4 dp antes del engranaje.
-            UiBuilder.Place((RectTransform)_canoes.transform, Mathf.Min(140f, w - 8f - MinTouchDp - 4f - 128f), topY, 128f, TopRowHeight);
-            UiBuilder.Place(_canoesIcon.rectTransform, -8f, 11f, 48f, 28f);
+            UiBuilder.Place((RectTransform)_canoes.transform, canoesX, topY, canoesW, TopRowHeight);
+            UiBuilder.Place(_canoesIcon.rectTransform, -8f, 11f, 48f - (128f - canoesW) * (8f / 24f), 28f);
             LayoutCanoesContent();
             UiBuilder.Place((RectTransform)_settings.Button.transform, w - 8f - MinTouchDp, topY, MinTouchDp, MinTouchDp);
 
@@ -1228,18 +1235,21 @@ namespace AF.UI
             float s = _canoesTextScale;
             float plateH = timer ? Mathf.Max(40f, Mathf.Ceil((37f * s) + 3f)) : 40f;
             float plateTop = 4f - ((plateH - 40f) * 0.5f);
-            UiBuilder.Place(_canoesPlate.rectTransform, 0f, plateTop, 128f, plateH);
+            float cw = _canoesW; // 128 dp, o menos con el avatar a 320 dp (D-056)
+            float textX = 40f - (128f - cw) * (8f / 24f);
+            float textW = cw - textX - 6f;
+            UiBuilder.Place(_canoesPlate.rectTransform, 0f, plateTop, cw, plateH);
             if (timer)
             {
                 float countTop = plateTop + 1f;
-                UiBuilder.Place(_canoesCount.rectTransform, 40f, countTop, 82f, 21f * s);
-                UiBuilder.Place(_canoesTimer.rectTransform, 40f, countTop + (20f * s), 82f, 17f * s);
-                UiBuilder.Place(_canoesInfinite.rectTransform, 40f + ((82f - 26f) * 0.5f), 9f, 26f, 14f);
+                UiBuilder.Place(_canoesCount.rectTransform, textX, countTop, textW, 21f * s);
+                UiBuilder.Place(_canoesTimer.rectTransform, textX, countTop + (20f * s), textW, 17f * s);
+                UiBuilder.Place(_canoesInfinite.rectTransform, textX + ((textW - 26f) * 0.5f), 9f, 26f, 14f);
             }
             else
             {
-                UiBuilder.Place(_canoesCount.rectTransform, 40f, 4f, 82f, 40f);
-                UiBuilder.Place(_canoesInfinite.rectTransform, 40f + ((82f - 26f) * 0.5f), 17f, 26f, 14f);
+                UiBuilder.Place(_canoesCount.rectTransform, textX, 4f, textW, 40f);
+                UiBuilder.Place(_canoesInfinite.rectTransform, textX + ((textW - 26f) * 0.5f), 17f, 26f, 14f);
             }
         }
 
@@ -1420,6 +1430,12 @@ namespace AF.UI
 
                 ids.Add("settings");
                 rects.Add((RectTransform)_settings.Button.transform);
+                if (_avatarShown)
+                {
+                    ids.Add("avatar"); // D-056 (avatares.md §3.6)
+                    rects.Add(AvatarRect);
+                }
+
                 _audio.VisibleButtons(ids, rects, string.Empty);
                 if (_mapTab.Button.gameObject.activeSelf)
                 {

@@ -196,6 +196,7 @@ namespace AF.UI
                 league.RequestBoard(LeagueScope.Country);
             }
 
+            PrepareLeagueAvatars(screen); // D-056: el avatar en cada fila (GameBootstrap.Avatars.cs)
             screen.Open(league, _leagueClock, LeagueScope.Global);
             _leagueButton?.Hide();
             _leagueButtonShown = false;
@@ -269,6 +270,11 @@ namespace AF.UI
             {
                 _screen.LeagueLineReserved = league.Active;
                 _screen.SetLeagueVictory(won.Level, points);
+                if (points > 0)
+                {
+                    _screen.LeagueAvatar = AvatarsEnabled ? AvatarPortraitNow() : null; // D-056 (Q-AV-4): el avatar, solo en esta línea
+                }
+
             }
 
             if (DevProbe.Enabled && points > 0)
@@ -387,6 +393,8 @@ namespace AF.UI
             {
                 _league?.Flush();
             }
+
+            SyncLeagueAvatar(); // D-056: el avatar que no salió (GameBootstrap.Avatars.cs)
         }
 
         /// <summary>Borrado de cuenta (08 §11): la cola y la caché de la Liga se van con el perfil y nada más se envía.</summary>
