@@ -172,7 +172,12 @@ namespace AF.Tests.EditMode
         [TestCase("en_GB", GeoTier.T1)]
         [TestCase("en-US-u-mu-celsius", GeoTier.T1)]
         [TestCase("es-CL", GeoTier.T3)]
-        [TestCase("zh-Hant-TW", GeoTier.T3)]
+        [TestCase("zh-Hant-TW", GeoTier.T1)] // D-057, decisiones de la revisión, punto 4
+        [TestCase("en-NZ", GeoTier.T1)]
+        [TestCase("ar-AE", GeoTier.T1)]
+        [TestCase("he-IL", GeoTier.T1)]
+        [TestCase("ar-EG", GeoTier.T3)]
+        [TestCase("tr-TR", GeoTier.T3)]
         [TestCase("en-u-ca-gregory", GeoTier.T3)]
         [TestCase("de-u-co-phonebk", GeoTier.T3)]
         [TestCase("es-419", GeoTier.T3)]
@@ -185,6 +190,8 @@ namespace AF.Tests.EditMode
 
         [TestCase("DE", "en-US", GeoTier.T1)] // D-057: el país de la cuenta de Play manda sobre la región (Q-E3 (a))
         [TestCase("CO", "en-US", GeoTier.T3)]
+        [TestCase("SG", "es-CO", GeoTier.T1)]
+        [TestCase("OM", "es-CO", GeoTier.T1)]
         [TestCase("jp", "es-CO", GeoTier.T1)]
         [TestCase("", "en-US", GeoTier.T1)] // sin país de Play, la región del teléfono
         [TestCase(null, "es-MX", GeoTier.T3)]

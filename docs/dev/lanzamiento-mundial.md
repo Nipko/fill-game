@@ -514,4 +514,4 @@
 
 Verificación obligatoria de cada tarea: la de `CLAUDE.md`. Con T-M1 y T-M5, además, `python tools/remote-config/rc_defaults.py --check` y sus tests. Con T-M1, T-M2, T-M3 y T-M4, EditMode, y PlayMode antes del PR.
 
-**Estado (2026-10-27, rama `tanda6/mundial-codigo`, D-057):** T-M1 a T-M5 hechas; en T-M1, las edades son las de `docs/legal/investigacion-legal-mundial.md` §2.1. T-M6 hecha a medias: el `geo_tier` ya lee el país de la cuenta de Play (Q-E3 (a)), pero la lista T1 no cambia, porque añadir NZ, SG, HK, TW, IL y el Golfo cambia la definición de 04 §6.2 y 05 §6.3 (decisión del dueño). El GDD (01 §8.1, 05 §4.2 y §7, 08 §9 y §13.1 #5, #6, #10, #14, #20 y #22) recoge D-057.
+**Estado (2026-10-27, rama `tanda6/mundial-codigo`, D-057):** T-M1 a T-M5 hechas; en T-M1, las edades son las de `docs/legal/investigacion-legal-mundial.md` §2.1. T-M6 hecha: el `geo_tier` lee el país de la cuenta de Play (Q-E3 (a)) y, con el añadido «decisiones de la revisión del código mundial» (punto 4), T1 suma NZ, SG, HK, TW, IL y el Golfo [P] (04 §6.2 y 05 §6.3). El GDD (01 §8.1, 05 §4.2 y §7, 08 §9 y §13.1 #5, #6, #10, #14, #20 y #22) recoge D-057.

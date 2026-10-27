@@ -14,19 +14,24 @@ namespace AF.UI
     /// extensión como <c>en-u-ca-gregory</c>).
     /// <para>Con D-057 (T-M6), la segunda mitad de Q-E3 (a): si se sabe el país de la cuenta de Google Play (el de la tienda,
     /// <c>getBillingConfigAsync</c>, guardado desde la última conexión con Play), manda ese país; si no, la región del teléfono
-    /// (<see cref="FromSources"/>). La lista de T1 no cambia: ampliarla (NZ, SG, HK, TW, IL, el Golfo…, propuesta de
-    /// <c>docs/dev/lanzamiento-mundial.md</c> §2.4) cambia la definición de 04 §6.2 y 05 §6.3 y queda para el dueño.</para>
+    /// (<see cref="FromSources"/>). <b>No usa la SIM</b>, a diferencia del país legal (<c>ConsentCountry</c>): Q-E3 (a) fija como fuentes
+    /// la región del dispositivo y el país de la tienda, porque el tier mide dónde paga el jugador (el orden Balsa/Puñado y la cohorte
+    /// de ingresos) y ese país lo fija la cuenta de Play, que es la que pone la moneda y el precio; la SIM dice dónde está la línea,
+    /// no dónde se compra. Con D-057 (decisiones de la revisión, punto 4), T1 suma NZ, SG, HK, TW, IL y el Golfo [P].</para>
     /// </summary>
     public static class GeoTierRule
     {
         /// <summary>
         /// Regiones T1 (ISO 3166-1 alfa-2): US, CA, AU, JP, KR y, como «Europa occidental» [P], los países del Espacio Económico
-        /// Europeo del oeste más el Reino Unido, Suiza y los microestados (Andorra, Mónaco, San Marino y Liechtenstein).
+        /// Europeo del oeste más el Reino Unido, Suiza y los microestados (Andorra, Mónaco, San Marino y Liechtenstein). Con D-057
+        /// (decisiones de la revisión del código mundial, punto 4; 04 §6.2 y 05 §6.3) [P]: Nueva Zelanda, Singapur, Hong Kong, Taiwán,
+        /// Israel y los países del Golfo (AE, SA, QA, KW, BH y OM).
         /// </summary>
         public static readonly string[] T1Regions =
         {
             "US", "CA", "AU", "JP", "KR",
             "AD", "AT", "BE", "CH", "DE", "DK", "ES", "FI", "FR", "GB", "IE", "IS", "IT", "LI", "LU", "MC", "NL", "NO", "PT", "SE", "SM",
+            "NZ", "SG", "HK", "TW", "IL", "AE", "SA", "QA", "KW", "BH", "OM",
         };
 
         /// <summary><c>geo_tier</c> como lo escribe la analítica (08 §8.1 y §8.2): <c>T1</c> o <c>T3</c>.</summary>
