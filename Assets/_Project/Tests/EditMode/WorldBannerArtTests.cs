@@ -121,7 +121,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(bestMain, Is.LessThanOrEqualTo(MainBudgetMs), "arte del banner en el hilo principal (ms): " + bestLine);
+            Assert.That(bestMain, Is.LessThanOrEqualTo(PerfBudget.Ms(MainBudgetMs)), "arte del banner en el hilo principal (ms, " + PerfBudget.Describe(MainBudgetMs) + "): " + bestLine);
             Assert.That(_warnings, Is.Empty, "sin avisos");
         }
 
@@ -179,7 +179,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(bestMain, Is.LessThanOrEqualTo(MainBudgetMs), "arte del banner con la superficie, en el hilo principal (ms): " + bestLine);
+            Assert.That(bestMain, Is.LessThanOrEqualTo(PerfBudget.Ms(MainBudgetMs)), "arte del banner con la superficie, en el hilo principal (ms, " + PerfBudget.Describe(MainBudgetMs) + "): " + bestLine);
             Assert.That(_warnings, Is.Empty, "sin avisos");
         }
 
@@ -276,7 +276,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(bestRaster, Is.LessThanOrEqualTo(RasterBudgetMs), "arte del banner en el otro hilo (ms)");
+            Assert.That(bestRaster, Is.LessThanOrEqualTo(PerfBudget.Ms(RasterBudgetMs)), "arte del banner en el otro hilo (ms, " + PerfBudget.Describe(RasterBudgetMs) + ")");
         }
 
         [Test]
