@@ -4114,3 +4114,30 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
      - los **precios** de los demás países, en Play Console (plantillas o conversión automática);
      - los **idiomas:** se mantienen es-419, en y pt-BR. El resto del mundo ve inglés.
      - Lo que el código ya resuelve por país (el consentimiento UMP en el EEE, el Reino Unido y Suiza, y los perfiles `biz_legal_profile_by_country`) se revisa en una tarea aparte.
+
+## D-056 · Avatares del jugador en la 1.0; inicio de sesión con Facebook, para la próxima versión
+
+- **Fecha:** 2026-10-27. Registrada por el integrador.
+- **Estado:** respuestas del dueño en el chat. Pidió: «Quiero tengamos unos avatars predeterminados para escoger para el personaje del jugador, esto con respecto a la tematica, y podamos mostrarlo en la pantalla principal de inicio». En el formulario eligió:
+  - cuándo: 1.0;
+  - estilo: animales de la selva;
+  - dónde: Inicio, Liga y Victoria/perfil;
+  - desbloqueo: «Unos libres y otros por hitos».
+- **Decisión. Avatares:**
+  - un juego de **avatares predeterminados de animales de la selva** (retratos redondos), con el arte por código como el resto (D-052);
+  - se eligen en el juego: unos están libres desde el principio y otros se desbloquean por hitos (mundos, Reto del río, Liga…);
+  - se ven en el **inicio**, en la **Liga** (junto al seudónimo, guardado en el backend como un índice, sin datos personales) y en la **victoria o el perfil**.
+  - Hasta ahora no existían: la Liga solo mostraba un seudónimo automático y la bandera (`docs/dev/liga.md` §1).
+  - Diseño: `docs/dev/avatares.md` (carril `tanda6/avatares-diseno`), con las preguntas abiertas y su recomendada.
+- **Para la próxima versión, sin hacer ahora:** iniciar sesión con Facebook para guardar el progreso, como Magic Sort.
+  - **Qué se gana:**
+    - recuperar la partida en otro teléfono, también entre Android e iOS, sin depender de la cuenta de Google;
+    - funciones sociales (amigos en la Liga, invitar, regalar vidas o premios), que en juegos casuales suben la retención y la viralidad;
+    - el premio por conectarse, como gancho.
+  - **Qué cuesta:**
+    - el SDK de Facebook (rastreadores, permisos, Data Safety y la revisión de la app por Meta);
+    - la URL de borrado de datos que exige Meta;
+    - las reglas de edad (13-17);
+    - mantenimiento.
+  - **Hoy** Play Games (Saved Games, D-042) ya guarda la partida en Android.
+  - **Recomendación para la 1.1:** vincular primero Firebase Auth con Google (y con Apple si llega iOS); Facebook, solo si se hacen funciones sociales con amigos.
