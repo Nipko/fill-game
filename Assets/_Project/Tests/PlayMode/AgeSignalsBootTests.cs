@@ -97,7 +97,11 @@ namespace AF.Tests.PlayMode
             Assert.That(crash.GetRange(firstFalse, crash.Count - firstFalse), Has.No.Member(true), "tras el bloqueo, ningún true");
             Assert.That(crash[crash.Count - 1], Is.False);
             Assert.That(rc.Fetches, Is.EqualTo(1), "solo la descarga del primer arranque: la recarga no descarga Remote Config");
-            Assert.That(sink.Calls, Has.No.Member(true), "la analítica nunca se enciende");
+            // El primer arranque (18+ guardado, con la analítica aceptada) la encendió antes de que llegara la señal; desde el bloqueo,
+            // nunca más.
+            int analyticsOff = sink.Calls.IndexOf(false, Math.Max(0, sink.Calls.IndexOf(true)));
+            Assert.That(analyticsOff, Is.GreaterThanOrEqualTo(0), "el bloqueo la apaga");
+            Assert.That(sink.Calls.GetRange(analyticsOff, sink.Calls.Count - analyticsOff), Has.No.Member(true), "tras el bloqueo, nunca se enciende");
             Assert.That(boot.BootCloudSync, Is.Null, "sin nube en la recarga");
         }
 
