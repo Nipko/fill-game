@@ -4196,3 +4196,20 @@ Fuente: `docs/legal/investigacion-legal-mundial.md` (§11, tareas T-L; §12, rie
   - T-L10, el «≈ x €» informativo y los tamaños de pack; queda abierta;
   - T-L11, las consolas de Firebase, Analytics y AdMob;
   - T-L14, la ficha sin captación infantil.
+
+### D-049, añadido del 2026-10-27: AppLovin MAX sale del build
+
+- **Decisión del dueño, en el chat:** «Sí, quita AppLovin MAX del build de release; si AppLovin abre, entra como red dentro de AdMob».
+- **Motivo:** AppLovin sigue sin aceptar cuentas nuevas. MAX iba en el AAB sin servir anuncios: con su detector de fallos nativo, con okhttp3 y teniendo que nombrarlo en Créditos y en la política (`docs/legal/avisos-de-licencia.md` §5.2).
+- **Cambio:** el SDK de AppLovin MAX y sus dependencias salen del build de release. La interfaz de `AF.Ads` sigue igual. Una compuerta de la CI comprueba que el release no lleva `com.applovin`.
+- **Si AppLovin abre cuentas:** entra como red de mediación dentro de AdMob, con su adaptador y su versión aprobados por el dueño. MAX no vuelve.
+- **Sustituye** el punto 5 de D-049 («MAX queda guardado»).
+
+### D-057, añadido del 2026-10-27: decisiones de la revisión del código mundial
+
+Las toma el integrador con la recomendada, según la regla del dueño «si tienen recomendada vamos con esa». Fuente: la revisión de `tanda6/mundial-codigo`.
+
+1. **El país legal llega al servidor de la Liga.** El país que resulta de la SIM, de la cuenta de Play o de la región va como `region` de la Liga (liga.md §3.3) y como `geo_tier` agregado en la analítica. Se corrigen los documentos que decían que el país de Play no sale del teléfono, la política de la web y Data Safety.
+2. **Nombres de países de CLDR 47.0.** Se aceptan como fuente para la tabla de la Liga, con la misma excepción que las 21 filas de D-046 (`aprobado_es`/`revisado_nativo`, con la nota «Pendiente del asesor cultural»). El asesor revisará con prioridad los nombres con carga política: Taiwán, Palestina, Kosovo y Sáhara Occidental.
+3. **13-17 sin país conocido:** no se ofrece la analítica, que es el tratamiento más estricto. Sustituye el «sin país, `*`» de T-L1.
+4. **Lista T1 (T-M6):** se añaden Nueva Zelanda, Singapur, Hong Kong, Taiwán, Israel y los países del Golfo, como [P]. Se editan 04 §6.2 y 05 §6.3.

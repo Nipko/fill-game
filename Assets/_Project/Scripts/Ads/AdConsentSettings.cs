@@ -10,8 +10,8 @@ namespace AF.Ads
     /// <list type="bullet">
     /// <item><see cref="MayInitialize"/>: solo con una decisión vigente y sin el bloqueo de &lt;13 («MAX arranca solo tras consentir»;
     /// con &lt;13, nunca). Tampoco con 13-17 y el perfil <c>ump</c> (EEE, Reino Unido y Suiza): la automatización de UMP de MAX
-    /// enseñaría su mensaje de consentimiento a un menor, así que hasta que decidan el dueño y el abogado, sin anuncios
-    /// (Q-MAX-6 (b), recomendada provisional, D-042).</item>
+    /// enseñaría su mensaje de consentimiento a un menor: sin anuncios (Q-MAX-6 (b) de D-042, confirmada por el dueño en D-055,
+    /// punto 4, también para AdMob).</item>
     /// <item><see cref="HasUserConsent"/> y <see cref="DoNotSell"/>: los dos flags de privacidad que expone MAX 13
     /// (<c>MaxSdk.SetHasUserConsent</c> y <c>MaxSdk.SetDoNotSell</c>). Con <c>npa</c> (sin consentimiento de anuncios personalizados,
     /// 13-17 con <c>biz_under18_no_personalization</c> o sin país), false y true. Con el perfil <c>ump</c> de 18+, null: los decide el
@@ -101,7 +101,7 @@ namespace AF.Ads
 
             if (flags.Band == AgeBand.Teen && string.Equals(flags.Profile, LegalProfiles.Ump, StringComparison.Ordinal))
             {
-                return new AdConsentSettings(false, false, false, true, flags.MaxAdContentRating, false, true); // Q-MAX-6 (b)
+                return new AdConsentSettings(false, false, false, true, flags.MaxAdContentRating, false, true); // Q-MAX-6 (b), D-055 punto 4
             }
 
             if (flags.AdsByUmp)

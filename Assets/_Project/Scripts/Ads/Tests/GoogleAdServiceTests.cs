@@ -166,6 +166,58 @@ namespace AF.Ads.Tests
         }
 
         [Test]
+        public void UmpProfile_AdultCorrectedToTeen_StopsLoadingAndShowing_D055()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true, profile: LegalProfiles.Ump);
+            rig.Port.Raise(GmaAdKind.Rewarded, GmaAdEvent.Loaded);
+            Assert.That(rig.Consent.IsReady(AdPlacement.Hint), Is.True);
+            int calls = rig.Port.Calls.Count;
+
+            rig.Consent.Apply(FlagsFor(AgeBand.Teen, ads: true, profile: LegalProfiles.Ump));
+
+            Assert.That(rig.Consent.IsReady(AdPlacement.Hint), Is.False, "D-055, punto 4: 13-17 en el EEE, el Reino Unido y Suiza, sin anuncios");
+            AdOutcome? outcome = null;
+            rig.Consent.Show(AdPlacement.Hint, o => outcome = o);
+            Assert.That(outcome, Is.EqualTo(AdOutcome.NoFill));
+            Assert.That(rig.Port.Calls.Count, Is.EqualTo(calls), "ni una llamada más al SDK");
+        }
+
+        /// <summary>
+        /// D-055, punto 3: el ID de publicidad (permiso <c>AD_ID</c>) solo sirve para personalizar con 18+ y el consentimiento de
+        /// anuncios personalizados (o, en el EEE, el Reino Unido y Suiza, con lo que decida UMP); con 13-17, sin consentimiento o sin
+        /// país, cada petición lleva <c>npa=1</c>; con &lt;13 y con 13-17 en el perfil <c>ump</c>, ninguna llamada al SDK.
+        /// </summary>
+        [TestCase(AgeBand.Adult, true, LegalProfiles.BrLgpdEca, true, "load:rewarded:npa=false")]
+        [TestCase(AgeBand.Adult, false, LegalProfiles.BrLgpdEca, true, "load:rewarded:npa=true")]
+        [TestCase(AgeBand.Adult, true, LegalProfiles.Default, false, "load:rewarded:npa=true")]
+        [TestCase(AgeBand.Adult, true, LegalProfiles.Default, true, "load:rewarded:npa=false")]
+        [TestCase(AgeBand.Adult, false, LegalProfiles.Ump, true, "load:rewarded:npa=false")]
+        [TestCase(AgeBand.Teen, true, LegalProfiles.BrLgpdEca, true, "load:rewarded:npa=true")]
+        [TestCase(AgeBand.Teen, true, LegalProfiles.Default, false, "load:rewarded:npa=true")]
+        [TestCase(AgeBand.Teen, true, LegalProfiles.Ump, true, null)]
+        [TestCase(AgeBand.Under13, true, LegalProfiles.BrLgpdEca, true, null)]
+        public void AdvertisingId_PersonalizedOnlyForAdultsWhoConsent_D055(AgeBand band, bool ads, string profile, bool countryKnown, string? expectedLoad)
+        {
+            var rig = new Rig();
+            rig.Consent.Apply(ConsentPolicy.Flags(new ConsentRecord(profile, 1, At, true, ads, band), ConsentConfig.Defaults, null, countryKnown));
+            if (rig.Port.ConsentRequests > 0)
+            {
+                rig.Port.ResolveConsent(true);
+                rig.Port.CompleteInitialization();
+            }
+
+            if (expectedLoad == null)
+            {
+                Assert.That(rig.Port.Calls, Is.Empty, "sin anuncios: ni SetRequestConfiguration, ni UMP, ni Initialize");
+                return;
+            }
+
+            Assert.That(rig.Port.Calls, Does.Contain(expectedLoad));
+            Assert.That(rig.Port.Calls, Does.Contain(band == AgeBand.Teen ? "config:tfua=true" : "config:tfua=false"), "13-17: TagForUnderAgeOfConsent");
+        }
+
+        [Test]
         public void AgeCorrectedToUnder13_AfterInit_StopsLoadingAndShowing()
         {
             var rig = new Rig();

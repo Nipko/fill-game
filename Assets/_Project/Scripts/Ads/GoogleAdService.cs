@@ -263,7 +263,7 @@ namespace AF.Ads
             _allowed = settings.MayInitialize;
             if (!settings.MayInitialize)
             {
-                return; // sin decisión, <13 o 13-17 con UMP (Q-MAX-6 (b)): ni una llamada más al SDK; si ya estaba iniciado, nada se carga ni se muestra
+                return; // sin decisión, <13 o 13-17 con UMP (Q-MAX-6 (b), D-055 punto 4): ni una llamada más al SDK; si ya estaba iniciado, nada se carga ni se muestra
             }
 
             if (settings.NonPersonalized && !_nonPersonalized)
