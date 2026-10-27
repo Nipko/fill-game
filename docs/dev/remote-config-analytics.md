@@ -266,7 +266,7 @@ la API. Cada vez que cambie 08 §9 se regeneran las dos (con `rc_defaults.py`) y
 
 ### 9.2 Desarrollo (`fill-dev-e75a2`): importar en la consola
 
-1. Regenera y comprueba: `py -3.14 tools/remote-config/rc_template.py --check` («identico (249 parámetros; …)»).
+1. Regenera y comprueba: `py -3.14 tools/remote-config/rc_template.py --check` («identico (250 parámetros; …)»).
 2. Consola de Firebase → proyecto `fill-dev-e75a2` → **Remote Config**. Descarga **siempre** antes una copia de lo publicado
    (aunque creas que está vacío), y guárdala fuera del repositorio con la fecha: menú ⋮ → **Descargar el archivo de
    configuración actual** (*Download current config file*).
