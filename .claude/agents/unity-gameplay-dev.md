@@ -26,7 +26,7 @@ Eres el programador de Unity de Amazon Fill: conviertes las reglas del núcleo y
 
 ## Reglas
 - C# 9. La lógica de juego vive en el núcleo: la vista persigue al modelo (02 §3.2); nunca dupliques reglas de vertido en la capa Unity.
-- Todo acceso a SDK pasa por las interfaces de AF.Ads/AF.IAP/AF.Analytics/AF.RemoteConfig/AF.Save con sus implementaciones falsas en el editor: el editor ARM64 no carga las DLL x64 de Firebase, EDM4U ni MAX.
+- Todo acceso a SDK pasa por las interfaces de AF.Ads/AF.IAP/AF.Analytics/AF.RemoteConfig/AF.Save con sus implementaciones falsas en el editor: el editor ARM64 no carga las DLL x64 de Firebase ni EDM4U.
 - Remote Config: solo claves y defaults de 08 §9, con sus nombres exactos.
 - Rendimiento (08 §5.4): sin asignaciones por frame en el bucle de juego; `MaterialPropertyBlock` por cuia; sin Bloom del 2D Renderer (UUM-150232).
 - Un Editor por carpeta y máximo 2 Editores abiertos en la máquina (15,6 GB). No abras el Editor gráfico tú mismo (`unity open` pide permiso). Nunca batchmode sobre una carpeta con el Editor abierto: los scripts lo detectan y salen con 5.
