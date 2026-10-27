@@ -143,7 +143,7 @@ Nunca llevan seudónimo ni país, solo claves (regla de `localizacion.md`).
 
 La política, en tres idiomas, tiene que decir:
 - que la Liga muestra a otros jugadores un **seudónimo automático, la bandera del país y los puntos de la semana**;
-- que el país sale de la conexión o de la región del teléfono;
+- que el país lo manda el teléfono (SIM → cuenta de Play → región; el servidor no usa la conexión);
 - que se borra con la cuenta;
 - que con <13 no hay Liga.
 

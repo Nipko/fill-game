@@ -24,7 +24,7 @@ namespace AF.UI
     /// <item><see cref="WrapConsentAds"/> y <see cref="WrapConsentStore"/> envuelven el proveedor de anuncios y la tienda: sin
     /// decisión, MAX sin inicializar y sin compras; con 13-17, la doble confirmación.</item>
     /// <item><see cref="SetUpConsent"/>, con Remote Config enlazado: las cifras (<see cref="ConsentConfigBinder"/>), el país
-    /// (SIM → región → ninguno) y su perfil legal, el flujo y la pantalla.</item>
+    /// (SIM → cuenta de Play → región → ninguno) y su perfil legal, el flujo y la pantalla.</item>
     /// <item><see cref="StartConsentAtBoot"/> (y, si hay pantalla, <see cref="WaitConsentAtBoot"/>), tras cortar la pantalla de arranque y antes de <c>AppFlow.Start</c>: la edad y el
     /// consentimiento si hacen falta, y los flags a la analítica (<c>Analytics.SetEnabled</c>, «siempre ANTES de GameFlow.Go»), a
     /// los anuncios y a la tienda. Con &lt;13, <see cref="ConsentBlocked"/> y la app no arranca.</item>
