@@ -217,6 +217,57 @@ namespace AF.Ads.Tests
             Assert.That(rig.Port.Calls, Does.Contain(band == AgeBand.Teen ? "config:tfua=true" : "config:tfua=false"), "13-17: TagForUnderAgeOfConsent");
         }
 
+        /// <summary>
+        /// D-049, añadido del 2026-10-27 (Unity Ads como red de mediación): Unity Ads no lee nuestra pantalla, así que antes de UMP y de
+        /// <c>MobileAds.Initialize</c> recibe por su <c>MetaData</c> los mismos flags que recibía MAX: <c>gdpr.consent</c> y
+        /// <c>privacy.consent</c> (CCPA y estados de EE. UU.) en false con <c>npa</c> (13-17, también en EE. UU., sin consentimiento o
+        /// sin país) y en true con el consentimiento de 18+; con el perfil <c>ump</c> de 18+ no se manda nada (TCF); con &lt;13 y con
+        /// 13-17 en el perfil <c>ump</c>, nada.
+        /// </summary>
+        [TestCase(AgeBand.Adult, true, LegalProfiles.BrLgpdEca, true, "unity:gdpr=true:privacy=true:before-init")]
+        [TestCase(AgeBand.Adult, false, LegalProfiles.BrLgpdEca, true, "unity:gdpr=false:privacy=false:before-init")]
+        [TestCase(AgeBand.Adult, true, LegalProfiles.Default, true, "unity:gdpr=true:privacy=true:before-init")]
+        [TestCase(AgeBand.Adult, true, LegalProfiles.Default, false, "unity:gdpr=false:privacy=false:before-init")]
+        [TestCase(AgeBand.Adult, true, LegalProfiles.Ump, true, "unity:gdpr=-:privacy=-:before-init")]
+        [TestCase(AgeBand.Teen, true, LegalProfiles.Default, true, "unity:gdpr=false:privacy=false:before-init")]
+        [TestCase(AgeBand.Teen, true, LegalProfiles.MxLfpdppp, true, "unity:gdpr=false:privacy=false:before-init")]
+        [TestCase(AgeBand.Teen, true, LegalProfiles.Ump, true, null)]
+        [TestCase(AgeBand.Under13, true, LegalProfiles.BrLgpdEca, true, null)]
+        public void UnityAds_GetsOurConsent_BeforeInitialize(AgeBand band, bool ads, string profile, bool countryKnown, string? expected)
+        {
+            var rig = new Rig();
+            rig.Consent.Apply(ConsentPolicy.Flags(new ConsentRecord(profile, 1, At, true, ads, band), ConsentConfig.Defaults, null, countryKnown));
+            if (rig.Port.ConsentRequests > 0)
+            {
+                rig.Port.ResolveConsent(true);
+                rig.Port.CompleteInitialization();
+            }
+
+            if (expected == null)
+            {
+                Assert.That(rig.Port.MediationConsent, Is.Empty, "sin anuncios: tampoco el MetaData de Unity Ads");
+                return;
+            }
+
+            Assert.That(rig.Port.MediationConsent, Is.EqualTo(new List<string> { expected }), "una vez, antes de Initialize");
+            Assert.That(rig.Port.Initializations, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void UnityAds_ConsentWithdrawnInSettings_IsSentAgain_OnlyWhenItChanges()
+        {
+            var rig = new Rig();
+            rig.Decide(AgeBand.Adult, ads: true);
+            rig.Consent.Apply(FlagsFor(AgeBand.Adult, ads: true)); // la misma decisión: no se repite
+            rig.Consent.Apply(FlagsFor(AgeBand.Adult, ads: false)); // retira el consentimiento en Ajustes
+
+            Assert.That(rig.Port.MediationConsent, Is.EqualTo(new List<string>
+            {
+                "unity:gdpr=true:privacy=true:before-init",
+                "unity:gdpr=false:privacy=false:after-init",
+            }));
+        }
+
         [Test]
         public void AgeCorrectedToUnder13_AfterInit_StopsLoadingAndShowing()
         {

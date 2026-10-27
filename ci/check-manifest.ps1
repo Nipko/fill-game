@@ -44,7 +44,9 @@
       6 bis. Componentes prohibidos (D-042, anadido: play-services-nearby no entra): ningun nombre del manifiesto
          empieza por un prefijo de $ForbiddenComponentPrefixes (hoy com.google.android.gms.nearby., p. ej. el servicio
          exportado de Exposure Notifications que trae play-services-nearby 18.5.0 con el plugin de Play Games 2.3.0;
-         lo excluye Assets/Plugins/Android/mainTemplate.gradle; docs/dev/play-games.md).
+         lo excluye Assets/Plugins/Android/mainTemplate.gradle; docs/dev/play-games.md). D-049, anadido del 2026-10-27:
+         tambien com.unity3d.services.core.configuration.AdsSdkInitializer, el inicializador de androidx.startup de
+         Unity Ads, que arrancaria antes de la edad y el consentimiento (lo quita Assets/Plugins/Android/LauncherManifest.xml).
       7. IL2CPP ARM64 (.claude/rules/ci.md): las bibliotecas nativas del artefacto (lib/<abi>/ en el APK,
          base/lib/<abi>/ en el AAB) son solo de arm64-v8a y entre ellas esta libil2cpp.so.
 
@@ -104,7 +106,12 @@ $WakeLockPermission = 'android.permission.WAKE_LOCK'   # aprobado: D-039 (Fireba
 $InstallReferrerPermission = 'com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE'   # aprobado: D-039, anadido del 2026-10-21 (Install Referrer de Play)
 $AdIdPermission = 'com.google.android.gms.permission.AD_ID'   # aprobado: D-049, anadido del 2026-10-25, y D-055, punto 3 (anuncios de AdMob)
 # D-042, anadido (2026-10-23): play-services-nearby (Nearby Connections y Exposure Notifications) no entra con el plugin de Play Games.
-$ForbiddenComponentPrefixes = @('com.google.android.gms.nearby.')
+# D-049, anadido (2026-10-27): el inicializador de Unity Ads en androidx.startup no entra (08 sec. 2.3; D-033 B12).
+$ForbiddenComponentPrefixes = @('com.google.android.gms.nearby.', 'com.unity3d.services.core.configuration.AdsSdkInitializer')
+$ForbiddenComponentReasons = @{
+    'com.google.android.gms.nearby.' = 'D-042, anadido: play-services-nearby no entra; exclusion en mainTemplate.gradle'
+    'com.unity3d.services.core.configuration.AdsSdkInitializer' = 'D-049, anadido del 2026-10-27: Unity Ads no arranca antes del consentimiento; tools:node="remove" en LauncherManifest.xml'
+}
 $BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission, $NotificationsPermission, $BillingPermission, $AdIdPermission)
 
 function Stop-WithCode {
@@ -300,7 +307,7 @@ function Test-Manifest($M, [string]$Prof, [int]$Target, [int]$Min, [string[]]$Ex
     }
 
     foreach ($prefix in $ForbiddenComponentPrefixes) {
-        if ("$($M.Raw)".Contains($prefix)) { $fail.Add("componente prohibido en el manifiesto: '$prefix*' (D-042, anadido: play-services-nearby no entra; exclusion en mainTemplate.gradle)") }
+        if ("$($M.Raw)".Contains($prefix)) { $fail.Add("componente prohibido en el manifiesto: '$prefix*' ($($ForbiddenComponentReasons[$prefix]))") }
     }
 
     if ($null -ne $M.Abis) {
@@ -406,6 +413,9 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'aapt2: targetSdk 37 con -TargetSdk 36';       Fmt = 'tree'; Text = $okTree.Replace('(0x01010270)=36', '(0x01010270)=37'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'xml: servicio de Nearby prohibido (D-042)';  Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<service android:name="com.google.android.gms.nearby.exposurenotification.WakeUpService" android:exported="true"/><activity android:name="x">'); Prof = 'release'; Fails = 1 }
         @{ Name = 'aapt2: servicio de Nearby prohibido (D-042)'; Fmt = 'tree'; Text = $okTree.Replace('"unity.splash-mode" (Raw: "unity.splash-mode")', '"com.google.android.gms.nearby.exposurenotification.WakeUpService" (Raw: "x")'); Prof = 'dev'; Fails = 1 }
+        @{ Name = 'xml: inicializador de Unity Ads prohibido (D-049)'; Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<provider android:name="androidx.startup.InitializationProvider" android:authorities="x.androidx-startup"><meta-data android:name="com.unity3d.services.core.configuration.AdsSdkInitializer" android:value="androidx.startup"/></provider><activity android:name="x">'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'aapt2: inicializador de Unity Ads prohibido (D-049)'; Fmt = 'tree'; Text = $okTree.Replace('"unity.splash-mode" (Raw: "unity.splash-mode")', '"com.unity3d.services.core.configuration.AdsSdkInitializer" (Raw: "com.unity3d.services.core.configuration.AdsSdkInitializer")'); Prof = 'dev'; Fails = 1 }
+        @{ Name = 'xml: InitializationProvider sin Unity Ads';  Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<provider android:name="androidx.startup.InitializationProvider" android:authorities="x.androidx-startup"><meta-data android:name="androidx.work.WorkManagerInitializer" android:value="androidx.startup"/></provider><activity android:name="x">'); Prof = 'release'; Fails = 0 }
         @{ Name = 'aapt2: appCategory 3';                        Fmt = 'tree'; Text = $okTree.Replace('(0x01010545)=0', '(0x01010545)=3'); Prof = 'dev'; Fails = 1 }
     )
     $arm = @('base/lib/arm64-v8a/libil2cpp.so', 'base/lib/arm64-v8a/libunity.so', 'base/dex/classes.dex')

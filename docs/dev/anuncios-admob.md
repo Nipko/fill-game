@@ -9,7 +9,7 @@ Estado: 2026-10-25, rama `tanda6/sdk-gma`. Decisión: D-049 y su añadido del 20
 | `com.google.ads.mobile` (Google Mobile Ads for Unity) | **11.5.0** (SDK Android `play-services-ads` 25.4.0, UMP 4.0.0) | OpenUPM: `https://package.openupm.com/com.google.ads.mobile/-/com.google.ads.mobile-11.5.0.tgz` (revisión `12a1edb4…`, el tag `v11.5.0`) | `54aa0d8ea6ef33e52d527ffd93153b5ee9bc8b7384f06ae08d276e97a3cbb13b` (comprobado otra vez al copiarlo) |
 
 - El `.tgz` está en `Packages/googleads/` con Git LFS (`.gitattributes`) y se referencia con `file:` en `Packages/manifest.json`, como Firebase y MAX (D-039). Pide `com.google.external-dependency-manager` 1.2.187; manda el **1.2.189** que trae Firebase (no entra `com.unity.external-dependency-manager`).
-- **No entra:** Unity Ads ni ningún otro adaptador (no aprobados todavía; D-049, añadido); el SDK «Next-Gen».
+- **Unity Ads** entra como red de mediación con el añadido de D-049 del 2026-10-27 (§12). **No entra:** ningún otro adaptador; el SDK «Next-Gen».
 - El plugin crea, la primera vez, `Assets/GoogleMobileAds/Resources/GoogleMobileAdsSettings.asset` (lo escribe `GoogleAdsProjectSetup`, §2) y `Assets/GoogleMobileAds/link.xml` (conserva sus ensamblados con el stripping High). Los dos se commitean tal como los deja Unity.
 
 ## 2. Ajustes del plugin (versionados)

@@ -209,8 +209,8 @@ describe('web/site', () => {
       }
     }
     // Las únicas salidas son enlaces (no recursos) al sitio del desarrollador y a las políticas de Google como socio de
-    // anuncios (AdMob, D-049), las de los proveedores (Firebase y AWS) y los textos de las licencias de terceros de
-    // Créditos (T-L13, D-057).
+    // anuncios (AdMob, D-049, y Unity Ads en su mediación, añadido de D-049 del 2026-10-27), las de los proveedores
+    // (Firebase y AWS) y los textos de las licencias de terceros de Créditos (T-L13, D-057).
     expect([...externalLinks].sort()).toEqual([
       'https://aws.amazon.com/privacy/',
       'https://developer.android.com/studio/terms',
@@ -219,6 +219,7 @@ describe('web/site', () => {
       'https://parallext.com',
       'https://policies.google.com/privacy',
       'https://policies.google.com/technologies/partner-sites',
+      'https://unity.com/legal/game-player-and-app-user-privacy-policy',
       'https://unity3d.com/legal/licenses/unity_companion_license',
       'https://www.apache.org/licenses/LICENSE-2.0',
     ]);
@@ -333,12 +334,13 @@ describe('web/site', () => {
     expect(() => renderSite({ indexable: true })).toThrow(/indexable/);
   });
 
-  it('app-ads.txt: solo la línea real de AdMob (D-049); las demás redes, comentadas hasta sumarlas a la mediación', () => {
+  it('app-ads.txt: AdMob (D-049) y Unity Ads (añadido de D-049 del 2026-10-27); las demás redes, comentadas hasta sumarlas', () => {
     const ads = site.get('app-ads.txt') ?? '';
     const lines = ads.split('\n').filter((l) => l.trim() !== '');
     const active = lines.filter((l) => !l.startsWith('#'));
-    expect(active).toEqual(['google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0']);
-    for (const network of ['unity.com', 'facebook.com', 'mintegral.com']) expect(ads).toContain(`# ${network}, `);
+    expect(active).toEqual(['google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0', 'unity.com, 20067668703382, DIRECT']);
+    expect(ads).not.toContain('# unity.com, ');
+    for (const network of ['facebook.com', 'mintegral.com']) expect(ads).toContain(`# ${network}, `);
     expect(ads).not.toMatch(/^applovin\.com/m);
   });
 });

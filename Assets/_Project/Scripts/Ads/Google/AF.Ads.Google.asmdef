@@ -3,7 +3,8 @@
   "rootNamespace": "AF.Ads.Google",
   "references": [
     "AF.Ads",
-    "AF.Platform"
+    "AF.Platform",
+    "GoogleMobileAds.Mediation.UnityAds.Api"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
