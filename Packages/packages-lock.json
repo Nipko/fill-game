@@ -15,6 +15,14 @@
         "com.unity.modules.androidjni": "1.0.0"
       }
     },
+    "com.google.ads.mobile.mediation.unity": {
+      "version": "file:googleads/com.google.ads.mobile.mediation.unity-3.21.1.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.google.ads.mobile": "11.0.0"
+      }
+    },
     "com.google.external-dependency-manager": {
       "version": "file:firebase/com.google.external-dependency-manager-1.2.189.tgz",
       "depth": 0,

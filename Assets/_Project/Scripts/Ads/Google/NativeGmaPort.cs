@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using GoogleMobileAds.Api;
+using GoogleMobileAds.Mediation.UnityAds.Api;
 using GoogleMobileAds.Ump.Api;
 
 namespace AF.Ads.Google
@@ -42,6 +43,29 @@ namespace AF.Ads.Google
                 MaxAdContentRating = MaxAdContentRating.G, // D-029, todas las bandas
                 TagForUnderAgeOfConsent = underAgeOfConsent ? TagForUnderAgeOfConsent.True : TagForUnderAgeOfConsent.Unspecified,
             });
+        }
+
+        /// <inheritdoc />
+        public void SetMediationConsent(bool? hasUserConsent, bool? doNotSell)
+        {
+            // Unity Ads 4.20.1 por el paquete de mediación 3.21.1 (D-049, añadido del 2026-10-27): su MetaData, antes de Initialize.
+            try
+            {
+                if (hasUserConsent.HasValue)
+                {
+                    UnityAds.SetConsentMetaData("gdpr.consent", hasUserConsent.Value);
+                }
+
+                if (doNotSell.HasValue)
+                {
+                    UnityAds.SetConsentMetaData("privacy.consent", !doNotSell.Value); // CCPA y estados de EE. UU.
+                }
+            }
+            catch (Exception)
+            {
+                // Sin la clase de Unity Ads en el APK: AdMob sigue; Unity Ads no se inicia sin el adaptador.
+                UnityEngine.Debug.LogWarning("[AF.Ads] Unity Ads: no se pudo fijar el consentimiento de mediación");
+            }
         }
 
         /// <inheritdoc />

@@ -10,6 +10,7 @@ dependencies {
     implementation 'androidx.fragment:fragment:1.7.1' // Packages/com.google.ads.mobile/GoogleMobileAds/Editor/GoogleMobileAdsDependencies.xml:22
     implementation 'androidx.lifecycle:lifecycle-process:2.6.2' // Packages/com.google.ads.mobile/GoogleMobileAds/Editor/GoogleMobileAdsDependencies.xml:17
     implementation 'com.android.billingclient:billing:9.0.0' // Assets/_Project/Plugins/Editor/AfBillingDependencies.xml:10
+    implementation 'com.google.ads.mediation:unity:4.20.1.0' // Packages/com.google.ads.mobile.mediation.unity/source/plugin/Assets/GoogleMobileAds/Mediation/UnityAds/Editor/Dependencies.xml:25
     implementation 'com.google.android.gms:play-services-ads:25.4.0' // Packages/com.google.ads.mobile/GoogleMobileAds/Editor/GoogleMobileAdsDependencies.xml:7
     implementation 'com.google.android.gms:play-services-base:18.10.1' // Packages/com.google.firebase.app/Firebase/Editor/AppDependencies.xml:20
     implementation 'com.google.android.gms:play-services-games-v2:22.1.0' // Packages/com.google.play.games/Editor/GooglePlayGamesPluginDependencies.xml:9
@@ -30,6 +31,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-config-unity:13.17.0' // Packages/com.google.firebase.remote-config/Firebase/Editor/RemoteConfigDependencies.xml:23
     implementation 'com.google.firebase:firebase-crashlytics-ndk:20.1.1' // Packages/com.google.firebase.crashlytics/Firebase/Editor/CrashlyticsDependencies.xml:16
     implementation 'com.google.firebase:firebase-crashlytics-unity:13.17.0' // Packages/com.google.firebase.crashlytics/Firebase/Editor/CrashlyticsDependencies.xml:23
+    implementation 'com.unity3d.ads:unity-ads:4.20.1' // Packages/com.google.ads.mobile.mediation.unity/source/plugin/Assets/GoogleMobileAds/Mediation/UnityAds/Editor/Dependencies.xml:33
 // Android Resolver Dependencies End
 **DEPS**}
 

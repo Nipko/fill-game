@@ -35,6 +35,13 @@
     (lo genera docs/art/marca-oficial/v2/exportar.py con la opcion android-xml): el tema de Unity (BaseUnityGameActivityTheme) con el icono
     adaptativo v2 sobre el petroleo de la marca, en lugar del icono transparente de Unity, y el mismo petroleo de fondo de
     ventana hasta el primer fotograma del juego.
+  - D-049, anadido del 2026-10-27 (Unity Ads 4.20.1 como red de mediacion de AdMob, adaptador 4.20.1.0, paquete
+    com.google.ads.mobile.mediation.unity 3.21.1): se quita el inicializador com.unity3d.services.core.configuration.AdsSdkInitializer
+    que unity-ads registra en androidx.startup (InitializationProvider): guarda el contexto y lanza una corrutina al iniciar el
+    proceso, antes de la edad y el consentimiento (08 sec. 2.3; D-033 B12). Unity Ads lo inicia el adaptador desde
+    MobileAds.Initialize. El proveedor InitializationProvider se queda (lo usan work-runtime, lifecycle-process y otros).
+    Los permisos que declara unity-ads (AD_ID, ACCESS_ADSERVICES_TOPICS y ACCESS_ADSERVICES_ATTRIBUTION) ya estan resueltos arriba.
+    Lo vigila ci/check-manifest.ps1 (componente prohibido).
 -->
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -70,6 +77,12 @@
         <provider android:name="com.google.android.gms.games.provider.PlayGamesInitProvider"
                   android:authorities="${applicationId}.playgamesinitprovider"
                   tools:node="remove"/>
+        <provider android:name="androidx.startup.InitializationProvider"
+                  android:authorities="${applicationId}.androidx-startup"
+                  tools:node="merge">
+            <meta-data android:name="com.unity3d.services.core.configuration.AdsSdkInitializer"
+                       tools:node="remove"/>
+        </provider>
         <activity android:name="com.unity3d.player.UnityPlayerGameActivity"
                   android:theme="@style/AfLaunchTheme"
                   tools:replace="android:theme"/>

@@ -7,11 +7,12 @@
 # consola de AdMob para la cuenta de editor del dueño:
 google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0
 #
+# Unity Ads, red de mediación de AdMob por licitación (D-049, añadido del 2026-10-27; docs/dev/anuncios-admob.md §3 bis y §12):
+# la organización de Unity del dueño. Activa desde que el adaptador 3.21.1 está en el build.
+unity.com, 20067668703382, DIRECT
+#
 # Futuras: las demás redes se añaden al sumarlas a la mediación de AdMob, con las líneas exactas que den sus paneles
 # (los IDs NO se escriben a mano ni se inventan; los dominios de abajo son los habituales de cada red [NV]):
-# Unity Ads (grupos de mediación de AdMob por bidding, docs/dev/anuncios-admob.md §3 bis): ID de organización del dueño.
-# Comentada hasta que el adaptador de Unity Ads (3.21.1) entre en el build con la aprobación del dueño; entonces se quita el «# »:
-# unity.com, 20067668703382, DIRECT
 # facebook.com, [[DATO DEL DUEÑO: ID de Meta Audience Network]], DIRECT
 # mintegral.com, [[DATO DEL DUEÑO: ID de Mintegral]], DIRECT
 # AppLovin MAX ya no sirve anuncios (D-049): su línea no se publica.
