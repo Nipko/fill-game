@@ -9,7 +9,9 @@ namespace AF.UI
     /// se conecta después de la pantalla de edad, pero el país legal se decide antes (<see cref="ConsentCountry.Resolve(ISimCountry, IPlayAccountCountry, IDeviceLocale, out CountrySource)"/>):
     /// por eso el país que da <c>getBillingConfigAsync</c> se guarda aquí y vale desde el arranque siguiente. En el teléfono, en
     /// <c>PlayerPrefs</c> (un flag de arranque, 08 §11: lo borra «Eliminar cuenta y datos» y vuelve con la próxima conexión con Play);
-    /// en el Editor y en los tests, en memoria. Es un país (dos letras), no un identificador: no sale del teléfono.
+    /// en el Editor y en los tests, en memoria. Es un país (dos letras), no un identificador. No va a la nube, pero el país legal que
+    /// resulta (SIM → Play → región) sí va como <c>region</c> de la Liga y, agregado, en <c>geo_tier</c> (D-057, decisiones de la
+    /// revisión, punto 1).
     /// </summary>
     internal sealed class PlayerPrefsPlayAccountCountry : IPlayAccountCountryStore
     {

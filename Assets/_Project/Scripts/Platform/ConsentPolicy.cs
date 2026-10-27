@@ -266,8 +266,9 @@ namespace AF.Platform
     /// <summary>
     /// El país de la cuenta de Google Play que vio la última conexión con Play (D-057, P4 (a)): lo pide <c>AF.IAP.PlayBillingClient</c>
     /// (<c>getBillingConfigAsync</c>) y lo guarda <c>AF.UI.PlayerPrefsPlayAccountCountry</c> en el dispositivo, porque Play Billing se
-    /// conecta después de la pantalla de edad y el país legal se decide antes. Es un país, no un identificador: no viaja a la nube ni
-    /// al servidor. El Editor y los tests usan <see cref="ManualPlayAccountCountry"/>.
+    /// conecta después de la pantalla de edad y el país legal se decide antes. Es un país, no un identificador: no viaja a la nube,
+    /// pero el país legal que resulta (SIM → Play → región) sí va como <c>region</c> de la Liga y, agregado, en <c>geo_tier</c> (D-057,
+    /// decisiones de la revisión, punto 1). El Editor y los tests usan <see cref="ManualPlayAccountCountry"/>.
     /// </summary>
     public interface IPlayAccountCountry
     {

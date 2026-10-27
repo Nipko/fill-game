@@ -284,7 +284,7 @@ Residual: con un token robado y la app auténtica en un dispositivo íntegro, el
 |---|---|---|---|
 | Token de compra (`purchaseToken`) | Verificar la compra en el servidor (hash en el libro mayor) | Ejecución del contrato: la compra que pide el jugador | Fila «Google Play Billing» y fila del backend propio |
 | UID anónimo como `obfuscatedAccountId` en Play | Antifraude de Play y contraste en `verifyPurchase` (08 §10.1) | Interés legítimo (seguridad), ya en el canon | Fila «Google Play Billing» |
-| País de la cuenta de Play (`getBillingConfigAsync`, D-057) | País legal del consentimiento (SIM → Play → región) y `geo_tier` | Se lee en el teléfono y se guarda solo en el dispositivo (`PlayerPrefs`); no sale de él | Ninguna nueva: no se recoge ni se envía |
+| País de la cuenta de Play (`getBillingConfigAsync`, D-057) | País legal del consentimiento (SIM → Play → región), que también va como `region` de la Liga (liga.md §3.3) si el jugador participa; y `geo_tier` (T1/T3, agregado, en la analítica con consentimiento) | Se lee en el teléfono y se guarda en el dispositivo (`PlayerPrefs`). Sale de él solo como el país legal resultante en la Liga y, agregado, en `geo_tier` (D-057, añadido «decisiones de la revisión del código mundial», punto 1) | La fila «País de la Liga» de `docs/store-listing/data-safety.md`; nada nuevo aparte |
 | Registros de diagnóstico de la biblioteca a Google | Funcionamiento de Play Billing (de Google) | La compra que pide el jugador; Google Play es quien procesa | Fila «Google Play Billing» (Q-BILL-2, el abogado lo revisa) |
 
 - **Ya no sale nada a Unity:** ni eventos de compra ni búsquedas en su catálogo. El plugin no habla con ningún host: solo con el servicio de facturación de la Play Store por la biblioteca.
