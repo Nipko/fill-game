@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using AF.Core.Board;
 using AF.Core.Rules;
 using AF.GameFlow;
+using AF.Localization;
 using AF.Save;
 using AF.UI;
 using NUnit.Framework;
@@ -20,6 +21,54 @@ namespace AF.Tests.PlayMode
     {
         public const string ScenePath = "Assets/_Project/Scenes/Game.unity";
         public const float TimeoutSeconds = 20f;
+
+        /// <summary>
+        /// Las tablas del proyecto con el español en pendiente_asesor (el estado con el que nace lo cultural): el de antes de la
+        /// revisión de D-054, para probar que en release lo no aprobado no sale.
+        /// </summary>
+        public static LocCatalog CatalogPendingTheAdvisor()
+        {
+            string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile).Replace(",aprobado_es,", ",pendiente_asesor,");
+            string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile).Replace(",aprobado_es,", ",pendiente_asesor,");
+            return LocCatalog.Parse(strings, facts);
+        }
+
+        /// <summary>
+        /// Las tablas del proyecto sin el texto en inglés (ni su estado) de las filas <paramref name="factKeys"/> de facts.csv: un
+        /// idioma sin esa línea (D-018, Q10-A), ahora que la revisión de D-054 tradujo todas.
+        /// </summary>
+        public static LocCatalog CatalogWithoutEnglish(params string[] factKeys)
+        {
+            string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
+            string[] lines = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile).Replace("\r\n", "\n").Split('\n');
+            int found = 0;
+            for (int i = 1; i < lines.Length; i++)
+            {
+                foreach (string key in factKeys)
+                {
+                    if (!lines[i].StartsWith(key + ",", System.StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    IReadOnlyList<LocCsvRow> rows = LocCsv.Parse(lines[0] + "\n" + lines[i] + "\n", LocCatalog.FactsFile);
+                    var fields = new List<string>(rows[1].Fields);
+                    fields[2] = string.Empty; // en
+                    fields[7] = string.Empty; // status_en
+                    for (int f = 0; f < fields.Count; f++)
+                    {
+                        string v = fields[f];
+                        fields[f] = v.IndexOf(',') >= 0 || v.IndexOf('"') >= 0 ? "\"" + v.Replace("\"", "\"\"") + "\"" : v;
+                    }
+
+                    lines[i] = string.Join(",", fields);
+                    found++;
+                }
+            }
+
+            Assert.That(found, Is.EqualTo(factKeys.Length), "las filas de facts.csv sin inglés");
+            return LocCatalog.Parse(strings, string.Join("\n", lines));
+        }
 
         /// <summary>
         /// Carga la escena Game directamente en el nivel <paramref name="level"/> (gancho <see cref="LaunchOptions.StartLevelOverride"/>)

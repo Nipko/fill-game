@@ -450,7 +450,8 @@ namespace AF.Tests.PlayMode
             LocCatalog catalog = Loc.Catalog;
             string locale = Loc.Locale;
             string? numbers = Loc.RequestedNumberTag;
-            Loc.Configure(catalog, locale, false, numbers);
+            // Con las tablas en el estado de antes de la revisión de D-054 (todo pendiente del asesor).
+            Loc.Configure(PlayModeHelpers.CatalogPendingTheAdvisor(), locale, false, numbers);
             try
             {
                 Assert.That(HomeSloth.FactFor(20000, out string? key), NUnit.Framework.Is.Empty, "todos los datos están pendientes del asesor");

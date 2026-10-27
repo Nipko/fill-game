@@ -448,7 +448,7 @@ namespace AF.Tests.PlayMode
             yield return Win(20, v =>
             {
                 v.RiverPolicyOverride = RiverFactPolicy.SingleKey;
-                Loc.SetLocale(LocLocale.English);
+                Loc.Configure(PlayModeHelpers.CatalogWithoutEnglish("fact.acai.20"), LocLocale.English, true);
             });
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -589,7 +589,7 @@ namespace AF.Tests.PlayMode
         {
             // en: la UI de la cabecera tiene inglés (river_fact), pero la línea y el nombre del tinte no: no sale nada, nunca a medias
             // ni en español (D-018, Q10-A).
-            yield return Win(3, v => Loc.SetLocale(LocLocale.English));
+            yield return Win(3, v => Loc.Configure(PlayModeHelpers.CatalogWithoutEnglish("fact.acai.03", "tint.acai.name"), LocLocale.English, true));
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             PlayModeHelpers.Step(boot, 1000);
