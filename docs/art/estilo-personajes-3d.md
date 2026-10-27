@@ -10,7 +10,7 @@ Fecha: 2026-10-27. La escribe el equipo Spark en la fase 1, el piloto, del encar
 - **Cómo se hace.** Todo se sigue dibujando **por código**, sobre las formas de distancia con signo (SDF) que ya existían (D-052). No hay modelos 3D, renders, IA de imágenes, Shader Graph, paquetes nuevos ni Bloom.
 - **Dónde está el sombreado.** En la clase pura `ToyShading`, en `Assets/_Project/Scripts/Presentation/ProceduralArt.Toy.cs`, con sus tests en `Tests/EditMode/ToyShadingTests.cs`. Cada pieza da su normal aparente; `ToyShading` hace el resto.
 - **Qué sigue igual.** Siguen igual:
-  - la dirección «Selva brillante premium» (D-003): vidrio, madera y luz de juego, sin papel ni tinta;
+  - la dirección «Selva brillante premium» (D-003): vidrio, madera y luz de juego, sin papel ni acuarela;
   - las siluetas, los tamaños, los pivotes y las celdas de los atlas;
   - el rig y sus poses, las APIs públicas de arte y los `ArtSlots`. El PNG del artista, si existe, sigue mandando.
 

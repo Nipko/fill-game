@@ -6,6 +6,64 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## Personajes 3D
+
+### 2026-10-27 · Piloto (fase 1) de los personajes en «3D cartoon, juguete brillante», D-058 (`spark/personajes-3d`): HECHO · verificación completa VERDE · **parado hasta el visto bueno del dueño**
+
+- **Encargo:** `docs/dev/traspaso/spark-personajes-3d.md`.
+- **Rama:** `spark/personajes-3d`, desde `origin/integracion-fase1-fase2` en `16c1399d`.
+- **Commits:**
+  - `269d1df1`: las capturas «antes» y `Personajes3dSnapshotTests` (explícito);
+  - `bfc69c56`: el código;
+  - `d8f7942a`: la guía y las capturas «después»;
+  - `a0872f3b`: las mediciones;
+  - el último: este estado y la frase de la guía §0.
+- **Qué hay:**
+  - `ToyShading` y `ToyTones`, funciones puras de sombreado (`Scripts/Presentation/ProceduralArt.Toy.cs`; 16 tests en `ToyShadingTests`), y `ColorMath.ScaleOkLightnessChroma`;
+  - TiTino repintado: las 10 poses del rig, de día y de noche, y el retrato;
+  - Capi repintado: el banner, la canoa del Mapa y del muelle, y la pata;
+  - Rosa y el morpho repintados;
+  - sin cambios en siluetas, tamaños, rig, poses, API ni `ArtSlots`;
+  - la guía `docs/art/estilo-personajes-3d.md`, con la lámina generada por el código (`docs/art/personajes-3d/p3d_20_referencia_estilo.png`);
+  - **las capturas para el dueño**: 12 pares antes/después por LFS en `docs/art/personajes-3d/piloto/`. Su `README.md` dice qué mirar en cada par. La intro sale idéntica byte a byte; es el control.
+- **Verificación:**
+
+  | Comando | Resultado |
+  |---|---|
+  | `dotnet build -warnaserror` / `dotnet test` | 0 avisos / 1.002 (996 + 6) |
+  | `validate_schema.py` | 116/116 |
+  | `unity-compile` | OK |
+  | EditMode | 4.743 (4.738 + 5), 0 fallos |
+  | PlayMode (`-TimeoutSec 7200`) | 2.237 (1.922 + 315), 0 fallos |
+  | `unity-build.ps1 -Method Dev` | OK, `dev.apk` de 76,2 MB |
+  | `check-16kb` / `check-manifest -Mode dev` | OK / OK |
+  | `size-gate` | no se aplica: solo acepta `.aab` |
+  | Teléfono | sin dispositivo en `adb devices`: sin fps ni arranque |
+
+- **Rendimiento:**
+  - El banner con Capi tarda 0,9-1,5 ms en el hilo principal (tope 8 ms) y 310-340 ms en el otro hilo (tope 500 ms).
+  - El atlas de TiTino pasa de 60 a 80-102 ms, una vez por sesión, sin presupuesto.
+  - La memoria de los atlas no cambia y no hay asignaciones nuevas por fotograma. No se subió ningún presupuesto.
+- **code-reviewer:** CAMBIOS NECESARIOS por un único bloqueante, que faltaba esta entrada; resuelto con esta entrada.
+  - El código, los tests, el rendimiento y las capturas, sin hallazgos.
+  - Comprobado que el `git stash pop` del autor no perdió ni coló nada.
+  - **Menores para la fase 2:**
+    - el test de contraste usa el alfa 1 del contorno (con 0,92 sigue dando ≥ 3,8:1);
+    - sobra un `Lerp` en `SlothRig.cs:907`;
+    - faltan guardas de división en `CreaseAO` y `ContactShadow`;
+    - `SlothInk` está sin uso;
+    - los hex de los iris están copiados en `ToyStyleSheetTests`.
+
+### Para el dueño (decide antes de la fase 2)
+
+| Id | Pregunta | Recomendada [P] |
+|---|---|---|
+| P3D-1 | ¿Se aprueba el piloto y se sigue con la fase 2 (la fauna que falta, el bufeo del Mapa y, cuando se integren, los avatares)? | Mirar las capturas; si no convence, decir qué personaje cambiar |
+| P3D-2 | La felpa de TiTino: los mechones redondos aún se distinguen en grande (190 dp y la lámina) y se lee más «felpa grumosa» que «vinilo lacado» | Ablandarla (subir `SlothClumpU`) y dar más brillo a la cara si al dueño le parece grumosa |
+| P3D-3 | Aspecto en `p3d_11`: la panza clara de Capi casi desaparece y la morpho pierde el contraste entre el borde azul profundo y el centro claro | Recuperar los dos en la fase 2 |
+| P3D-4 | El atlas de TiTino (80-102 ms en el hilo principal, en el Editor; en el teléfono puede ser más) | (a) un `PerfBudget` propio en la fase 2; (b) pintarlo fuera del hilo principal, como el banner, si se mide un tirón en el teléfono |
+| P3D-5 a P3D-10 | Las 6 decisiones de la guía §9: ojos a 1,25×, Alto contraste sin cambios en los personajes, oclusión en las garras en lugar de sombra en la rama, Rosa como segundo animal, el icono de la morpho como icono y el bufeo en la fase 2 | Las [P] de la guía |
+
 ## 2026-10-25 · Integración de T6, carriles A y B (escritorio)
 
 - **Fusionados** en `integracion-fase1-fase2`: `spark/t6-tests-fiables` (f1cdb634) y `spark/t6-pulido-pantalla` (c6b2f078), junto con `codex/web-marca` (7e09ab38). Conflicto solo en este archivo: se dejaron las dos entradas.
