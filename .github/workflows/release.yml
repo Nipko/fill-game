@@ -125,6 +125,13 @@ jobs:
     steps:
       - name: Espacio en disco (la imagen Android de Unity ocupa mucho)
         run: |
+          # Antes de borrar el SDK de Android del runner, guarda su build-tools mas alta: check-16kb.sh necesita zipalign
+          # (>= 35, por -P 16) con CHECK16_REQUIRE_ZIPALIGN=1 (CI de main del 2026-10-27, run 40581954678: codigo 3).
+          bt="$(ls -1 /usr/local/lib/android/sdk/build-tools | sort -V | tail -n 1)"
+          case "$bt" in 3[5-9].*|[4-9][0-9].*) ;; *) echo "ERROR: build-tools del runner sin zipalign -P 16 (>= 35): '$bt'"; exit 1 ;; esac
+          sudo mkdir -p /opt/af-build-tools
+          sudo cp -a "/usr/local/lib/android/sdk/build-tools/$bt" /opt/af-build-tools/
+          echo "ZIPALIGN=/opt/af-build-tools/$bt/zipalign" >> "$GITHUB_ENV"
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift
           docker image prune -af
           df -h /
