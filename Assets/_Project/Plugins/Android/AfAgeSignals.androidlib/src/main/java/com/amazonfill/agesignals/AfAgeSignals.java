@@ -15,7 +15,7 @@ import com.google.android.play.agesignals.AgeSignalsResult;
  *   <li>{@code none}: sin franja (no compartida, sin verificar o fuera de los territorios con señal: edades null);</li>
  *   <li>{@code error[:<código>]}: la llamada falló (código de {@code AgeSignalsErrorCode}).</li>
  * </ul>
- * Solo se leen {@code ageLower()} y {@code ageUpper()}: nunca {@code installId()} ni otros campos. La señal solo sirve para dar
+ * Solo se leen {@code ageLower()} y {@code ageUpper()}: nunca el identificador de instalación ni otros campos. La señal solo sirve para dar
  * una experiencia adecuada a la edad, nunca para analítica ni publicidad (T-L4). Nada se escribe en el log.
  */
 public final class AfAgeSignals {
