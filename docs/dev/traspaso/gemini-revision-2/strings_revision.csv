@@ -1,0 +1,28 @@
+key,es-419,en,pt-BR,status_en,status_pt-BR
+avatar_cell_a11y,{animal}. Toca para elegirlo,{animal}. Tap to select,{animal}. Toque para escolher,revisado_nativo,revisado_nativo
+avatar_cell_new_a11y,"{animal}, nuevo","{animal}, new","{animal}, novo",revisado_nativo,revisado_nativo
+avatar_chosen_a11y,"{animal}, elegido","{animal}, selected","{animal}, escolhido",revisado_nativo,revisado_nativo
+avatar_goal_daily_stamps_20,{n:plural:{} sello en un mes|{} sellos en un mes},{n:plural:{} stamp in a month|{} stamps in a month},{n:plural:{} selo em um mês|{} selos em um mês},revisado_nativo,revisado_nativo
+avatar_goal_daily_stamps_20_long,Consigue {n:plural:{} sello|{} sellos} del Reto del río en un mes.,Earn {n:plural:{} River Challenge stamp|{} River Challenge stamps} in a month.,Ganhe {n:plural:{} selo|{} selos} do Desafio do Rio em um mês.,revisado_nativo,revisado_nativo
+avatar_goal_daily_streak_7,{n:plural:{} Reto seguido|{} Retos seguidos},{n:plural:{} Challenge in a row|{} Challenges in a row},{n:plural:{} Desafio seguido|{} Desafios seguidos},revisado_nativo,revisado_nativo
+avatar_goal_daily_streak_7_long,Gana el Reto del río {n:plural:{} día seguido|{} días seguidos}.,Win the River Challenge {n:plural:{} day in a row|{} days in a row}.,Vença o Desafio do Rio {n:plural:{} dia seguido|{} dias seguidos}.,revisado_nativo,revisado_nativo
+avatar_goal_hard,Difícil,Hard,Difícil,revisado_nativo,revisado_nativo
+avatar_goal_hard_long,Gana tu primer nivel Difícil.,Win your first Hard level.,Vença seu primeiro nível Difícil.,revisado_nativo,revisado_nativo
+avatar_goal_league_50,{n:plural:{} punto de Liga|{} puntos de Liga},{n:plural:{} League point|{} League points},{n:plural:{} ponto da Liga|{} pontos da Liga},revisado_nativo,revisado_nativo
+avatar_goal_league_50_long,Suma {n:plural:{} punto|{} puntos} en la Liga en una semana.,Score {n:plural:{} point|{} points} in the League in a week.,Faça {n:plural:{} ponto|{} pontos} na Liga em uma semana.,revisado_nativo,revisado_nativo
+avatar_goal_streak_10,Crecida {n},Rising River {n},Enchente {n},revisado_nativo,revisado_nativo
+avatar_goal_streak_10_long,{n:plural:Llega a {} victoria seguida en tu Crecida.|Llega a {} victorias seguidas en tu Crecida.},{n:plural:Reach {} win in a row on your Rising River.|Reach {} wins in a row on your Rising River.},{n:plural:Chegue a {} vitória seguida na sua Enchente.|Chegue a {} vitórias seguidas na sua Enchente.},revisado_nativo,revisado_nativo
+avatar_goal_very_hard,Muy difícil,Very hard,Muito difícil,revisado_nativo,revisado_nativo
+avatar_goal_very_hard_long,Gana tu primer nivel Muy difícil.,Win your first Very Hard level.,Vença seu primeiro nível Muito difícil.,revisado_nativo,revisado_nativo
+avatar_goal_world,Mundo {n} · {world},World {n} · {world},Mundo {n} · {world},revisado_nativo,revisado_nativo
+avatar_goal_world_long,Completa {world} ({n:plural:te falta {} nivel|te faltan {} niveles}).,Complete {world} ({n:plural:{} level to go|{} levels to go}).,Complete {world} ({n:plural:falta {} nível|faltam {} níveis}).,revisado_nativo,revisado_nativo
+avatar_header_a11y,{animal}. En la Liga: {player},{animal}. In the League: {player},{animal}. Na Liga: {player},revisado_nativo,revisado_nativo
+avatar_home_a11y,Tu avatar: {animal}. Toca para cambiarlo,Your avatar: {animal}. Tap to change it,Seu avatar: {animal}. Toque para trocar,revisado_nativo,revisado_nativo
+avatar_home_new_a11y,Tu avatar: {animal}. Hay un avatar nuevo. Toca para cambiarlo,Your avatar: {animal}. There's a new avatar. Tap to change it,Seu avatar: {animal}. Há um avatar novo. Toque para trocar,revisado_nativo,revisado_nativo
+avatar_league_alias,En la Liga: {player},In the League: {player},Na Liga: {player},revisado_nativo,revisado_nativo
+avatar_locked_a11y,"{animal}, bloqueado. {goal}","{animal}, locked. {goal}","{animal}, bloqueado. {goal}",revisado_nativo,revisado_nativo
+avatar_new,Nuevo,New,Novo,revisado_nativo,revisado_nativo
+avatar_settings_row,Avatar,Avatar,Avatar,revisado_nativo,revisado_nativo
+avatar_title,Tu avatar,Your avatar,Seu avatar,revisado_nativo,revisado_nativo
+consent_diagnostics_optional,Los informes de fallos ayudan a mejorar el juego. Puedes desactivarlos en Ajustes.,Crash reports help us improve the game. You can turn them off in Settings.,Os relatórios de falhas ajudam a melhorar o jogo. Você pode desativá-los em Configurações.,revisado_nativo,revisado_nativo
+settings_crash_reports,Enviar informes de fallos,Send crash reports,Enviar relatórios de falhas,revisado_nativo,revisado_nativo
