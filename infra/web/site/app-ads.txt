@@ -7,7 +7,8 @@
 # consola de AdMob para la cuenta de editor del dueño:
 google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0
 #
-# Unity Ads, red de mediación de AdMob por licitación (D-049, añadido del 2026-10-27): la organización de Unity del dueño.
+# Unity Ads, red de mediación de AdMob por licitación (D-049, añadido del 2026-10-27; docs/dev/anuncios-admob.md §3 bis y §12):
+# la organización de Unity del dueño. Activa desde que el adaptador 3.21.1 está en el build.
 unity.com, 20067668703382, DIRECT
 #
 # Futuras: las demás redes se añaden al sumarlas a la mediación de AdMob, con las líneas exactas que den sus paneles

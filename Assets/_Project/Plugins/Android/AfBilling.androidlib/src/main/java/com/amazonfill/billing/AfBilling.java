@@ -11,6 +11,7 @@ import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.ConsumeParams;
+import com.android.billingclient.api.GetBillingConfigParams;
 import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
@@ -235,6 +236,35 @@ public final class AfBilling implements PurchasesUpdatedListener {
 
         details = fresh;
         listener.onProducts(requestId, OK, rows.toString());
+    }
+
+    /**
+     * Pide la configuración de facturación de la cuenta de Play ({@code getBillingConfigAsync}) y responde con
+     * {@link AfBillingListener#onBillingConfig} solo su país ({@code countryCode}, ISO 3166-1 alfa-2): el país de la cuenta, segunda
+     * fuente del país legal de ConsentCountry (D-057, P4 (a); docs/dev/consentimiento.md). No guarda nada.
+     */
+    public void queryBillingConfig(final int requestId) {
+        main.post(() -> {
+            if (released) {
+                return;
+            }
+
+            create();
+            try {
+                client.getBillingConfigAsync(GetBillingConfigParams.newBuilder().build(),
+                        (result, config) -> main.post(() -> {
+                            if (released) {
+                                return;
+                            }
+
+                            int code = code(result);
+                            String country = code == OK && config != null ? config.getCountryCode() : null;
+                            listener.onBillingConfig(requestId, code, clean(country) ? country : null);
+                        }));
+            } catch (RuntimeException e) {
+                listener.onBillingConfig(requestId, BillingClient.BillingResponseCode.ERROR, null);
+            }
+        });
     }
 
     /** Consulta las compras de productos integrados de la cuenta; responde con {@link AfBillingListener#onPurchases}. */

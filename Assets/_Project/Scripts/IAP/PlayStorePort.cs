@@ -184,6 +184,21 @@ namespace AF.IAP
     }
 
     /// <summary>
+    /// Un puerto de Play que sabe el país de la cuenta de Google Play (<c>BillingClient.getBillingConfigAsync</c> → <c>countryCode</c>,
+    /// de Play Billing Library 9.0.0; D-057, P4 (a)): la segunda fuente del país legal (<c>AF.Platform.ConsentCountry</c>), detrás de la
+    /// SIM y delante de la región del teléfono (<c>docs/dev/consentimiento.md</c>). Aparte de <see cref="IPlayStorePort"/> para no
+    /// obligar a los puertos que no lo saben. Lo implementa <c>AF.IAP.PlayBilling.NativePlayStorePort</c>.
+    /// </summary>
+    public interface IPlayAccountCountryPort
+    {
+        /// <summary>
+        /// Pide el país de la cuenta; <paramref name="onDone"/> recibe el código tal como lo da Play (ISO 3166-1 alfa-2) o null si la
+        /// consulta falló, Play no lo dio o se perdió la conexión. Se llama una vez, en el hilo principal.
+        /// </summary>
+        void FetchAccountCountry(Action<string?> onDone);
+    }
+
+    /// <summary>
     /// Puerto sin Play: no conecta nunca. Lo usa <c>PlayBillingFactory</c> si el plugin de Play Billing falla al crearse en el teléfono, para que el juego
     /// arranque sin tienda (no con la simulada, que en un build real «vendería» compras que el servidor rechazaría).
     /// </summary>

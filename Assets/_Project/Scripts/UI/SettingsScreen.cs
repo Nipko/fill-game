@@ -406,6 +406,11 @@ namespace AF.UI
                 yield return label;
             }
 
+            foreach (TextMeshProUGUI label in ConsentTexts())
+            {
+                yield return label; // «Enviar informes de fallos» (T-L6)
+            }
+
             foreach (TextMeshProUGUI label in AudioTexts())
             {
                 yield return label;
@@ -797,7 +802,7 @@ namespace AF.UI
             A11yLayoutIds(ids, rects, k + 1 + AudioRowCount); // reduce_motion y high_contrast (B9)
             AboutLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
             AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount); // delete_account (B8)
-            int consent = ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount); // consent y age_band (B12)
+            int consent = ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount); // consent, crash_reports (T-L6) y age_band (B12)
             PushLayoutIds(ids, rects, k + 1 + AudioRowCount + A11yRowCount + AboutLayoutCount + AccountLayoutCount + consent); // push y push_open_phone
 
             shown = 0;

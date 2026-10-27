@@ -32,7 +32,7 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><b>B5-bootstrap</b>: la llamada a <see cref="SetUpMarket"/> en <c>Start</c> (tras <c>SetUpSessions();</c>), Atrás de
     /// Android (<see cref="PressMarketBack"/>), el Mercado y la tarjeta en <c>CommerceOpen</c> (<see cref="MarketCommerceOpen"/>) y
-    /// <c>geo_tier</c> desde la región del teléfono (<see cref="GeoTierRule"/>; Q-E3 (a)).</item>
+    /// <c>geo_tier</c> desde el país de la cuenta de Play y, sin él, la región del teléfono (<see cref="GeoTierRule"/>; Q-E3 (a), D-057).</item>
     /// <item><b>B5-profile</b>: <c>piggy</c> y <c>offers</c> en el perfil, con <c>ProfileOffersStore</c> (implementa
     /// <see cref="CreateProfileOffersStore"/>). Sin él: en desarrollo, en memoria (se pierde al cerrar la app); en release no hay
     /// Mercado ni ofertas (D-008: oculto mientras no exista).</item>
@@ -413,12 +413,40 @@ namespace AF.UI
 
             SyncMarketIcons();
 
+            // T-L9 (05 §4.1): la Mochila desaparece de verdad al llegar a cero (o al pasar el 20) aunque el Mercado o su tarjeta
+            // estuvieran abiertos: la fila se quita y la tarjeta se va sin respuesta.
+            DropStaleStarter(offers);
+
             // F3-5: una nota de compra cambió (pendiente, rechazada o acreditada tarde) con el Mercado abierto: se rehace.
             MarketScreen? market = _market;
             if (market != null && market.Visible && _services != null && market.NotesShown != _services.PurchaseNotes.Version)
             {
                 market.Refresh();
             }
+        }
+
+        // La Mochila a la vista (fila del Mercado o tarjeta) que ya no está a la venta, fuera (T-L9; 05 §4.1).
+        private void DropStaleStarter(OfferScheduler offers)
+        {
+            MarketScreen? market = _market;
+            if (market != null && market.StarterStale)
+            {
+                market.Refresh();
+            }
+
+            OfferCard? card = _offerCard;
+            if (card != null && card.Visible && string.Equals(card.Sku, StoreCatalog.Starter, StringComparison.Ordinal)
+                && !offers.StarterAvailable(StarterLevelNow()))
+            {
+                card.Dismiss();
+                _offerFromVictory = false;
+            }
+        }
+
+        // El max_level con el que se decide si la Mochila sigue a la venta (el del Mercado).
+        private int StarterLevelNow()
+        {
+            return _progress?.MaxLevel ?? 0;
         }
 
         private void OnCampaignVictoryForMarket(LevelFlow flow)
@@ -590,6 +618,11 @@ namespace AF.UI
                     MarketProbe("offer_declined", "\"kind\":\"" + OfferScheduler.IdOf(kind) + "\"");
                 }
                 return;
+            }
+
+            if (kind == OfferKind.Starter && !offers.StarterAvailable(StarterLevelNow()))
+            {
+                return; // T-L9 (05 §4.1): la tarjeta se quedó abierta más allá de las 48 h; la Mochila ya no se vende
             }
 
             PurchaseRequest request = kind == OfferKind.PiggyFull

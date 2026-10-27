@@ -30,6 +30,9 @@ namespace AF.IAP.PlayBilling
 
         /// <summary><c>acknowledgePurchase</c> → <see cref="IBillingBridgeListener.OnAcknowledged"/>.</summary>
         void Acknowledge(string token);
+
+        /// <summary><c>getBillingConfigAsync</c> (el país de la cuenta de Play; D-057) → <see cref="IBillingBridgeListener.OnBillingConfig"/>.</summary>
+        void QueryBillingConfig(int requestId);
     }
 
     /// <summary>
@@ -53,6 +56,8 @@ namespace AF.IAP.PlayBilling
         void OnConsumed(string? token, int code);
 
         void OnAcknowledged(string? token, int code);
+
+        void OnBillingConfig(int requestId, int code, string? countryCode);
     }
 
     /// <summary>Códigos de <c>BillingClient.BillingResponseCode</c> de Play Billing Library 9.0.0 (leídos con <c>javap</c> del AAR).</summary>

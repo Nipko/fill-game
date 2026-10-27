@@ -126,7 +126,10 @@ namespace AF.UI
             SetUpRemoteConfig(clock); // ya hecho al principio de Start; aquí solo si alguien llama sin él
             if (_dataServicesAtBoot)
             {
-                SetCrashReporting(true); // 08 §2.3: Crashlytics.Enable() (diagnóstico; pregunta abierta 6); solo en el teléfono. Con <13 guardado, nunca (B12)
+                // 08 §2.3: Crashlytics.Enable() (diagnóstico); solo en el teléfono. Con <13 guardado, nunca (B12). Con «Enviar informes
+                // de fallos» apagado en Ajustes (T-L6; D-057), apagado de forma explícita antes de encenderlo: la recogida a false y lo
+                // no enviado, borrado.
+                SetCrashReporting(CrashReportsAtBoot);
             }
             s_session ??= new SessionTracker(clock.UtcNow);
             _analytics = new AnalyticsService(_events, new CommonSource(this));

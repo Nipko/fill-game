@@ -1754,7 +1754,7 @@ namespace AF.UI
             // F3-5: la compra verificada (F3-3) con el cliente del backend de este build (GameBootstrap.Backend.cs); la hoja «Compra
             // simulada» es la de la tienda de la plataforma simulada (FakeBillingClient) sin Play real (D-040).
             _store = WrapStore(WrapNoticeStore(WrapCloudStore(WrapConsentStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch))))); // B12: flags de edad; D-042: subida tras cada compra (bajo la analítica, que va fuera); el aviso de la tienda no disponible
-            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
+            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromSources(PlayAccountCountry.CountryIso, _deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
 
             // Antes de crear las pantallas (que aún no están enlazadas al flujo), el último fotograma para la intro (jornada 3 de D-051).

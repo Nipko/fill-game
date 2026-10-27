@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,6 +15,13 @@ namespace AF.UI
     /// <see cref="AgePressed"/>. Parcial nuevo: <c>SettingsScreen.cs</c> solo gana las llamadas a <see cref="BuildConsent"/>
     /// (constructor), <see cref="LayoutConsent"/> (<c>Layout</c>) y <see cref="ConsentLayoutIds"/> (<c>EmitLayout</c>), con el
     /// parche <c>B12-ui.diff</c>. Sin el consentimiento en marcha (tests), el hueco no se ve.
+    /// <para>
+    /// Entre los dos, la opción «Enviar informes de fallos» (T-L6 de <c>docs/legal/investigacion-legal-mundial.md</c> §11; D-057,
+    /// añadido del 2026-10-27, que deja sin efecto la «línea sin interruptor» de Q-B12-4): se marca o se desmarca con un toque, como
+    /// «Alto contraste», y quien abre la pantalla (<c>GameBootstrap.CrashReports.cs</c>, por <see cref="CrashReportsToggled"/>) lo
+    /// guarda en <c>settings.crash_reports</c> [P] y enciende o apaga Crashlytics al momento. TalkBack lee su texto y si está marcada
+    /// (<see cref="OptionRow"/>); crece con la fuente hasta el 130 % como el resto de opciones.
+    /// </para>
     /// </summary>
     internal sealed partial class SettingsScreen
     {
@@ -23,8 +31,11 @@ namespace AF.UI
         /// <summary>Id de la fila «Corregir mi edad» en la sonda.</summary>
         public const string AgeId = "age_band";
 
+        /// <summary>Id de la opción «Enviar informes de fallos» en la sonda (<c>AF_LAYOUT settings</c> y <c>settings_change</c>).</summary>
+        public const string CrashReportsId = "crash_reports";
+
         /// <summary>Entradas que añade la sección a <c>AF_LAYOUT settings</c> (las filas a la vista).</summary>
-        private int ConsentLayoutCount => (PrivacyShown ? 1 : 0) + (AgeShown ? 1 : 0);
+        private int ConsentLayoutCount => (PrivacyShown ? 2 : 0) + (AgeShown ? 1 : 0);
 
         private Button? _privacy;
         private TextMeshProUGUI? _privacyLabel;
@@ -32,6 +43,8 @@ namespace AF.UI
         private TextMeshProUGUI? _ageLabel;
         private bool _privacyShown;
         private bool _ageShown;
+        private OptionRow? _crashRow;
+        private bool _crashReports = true;
 
         /// <summary>Hueco de la sección (null hasta <see cref="BuildConsent"/>).</summary>
         public RectTransform? ConsentSlot { get; private set; }
@@ -41,6 +54,28 @@ namespace AF.UI
 
         /// <summary>Al tocar «Corregir mi edad». Lo fija <c>GameBootstrap</c>.</summary>
         public Action? AgePressed { get; set; }
+
+        /// <summary>Al tocar «Enviar informes de fallos»: el valor nuevo de <c>settings.crash_reports</c>. Lo fija <c>GameBootstrap</c>.</summary>
+        public Action<bool>? CrashReportsToggled { get; set; }
+
+        /// <summary>Botón de la opción «Enviar informes de fallos» (null hasta <see cref="BuildConsent"/>).</summary>
+        public Button? CrashReportsButton => _crashRow?.Button;
+
+        /// <summary>Texto de la opción «Enviar informes de fallos».</summary>
+        public string CrashReportsLabel => _crashRow?.Label.text ?? string.Empty;
+
+        /// <summary>Si la opción «Enviar informes de fallos» lleva la marca (informes activados).</summary>
+        public bool CrashReportsMarked => _crashRow != null && _crashRow.Selected;
+
+        /// <summary>Se ve la opción «Enviar informes de fallos» (con «Privacidad y datos»).</summary>
+        public bool CrashReportsShown => PrivacyShown && _crashRow != null;
+
+        /// <summary>Marca o desmarca «Enviar informes de fallos» sin cerrar (al abrir y tras tocarla).</summary>
+        public void MarkCrashReports(bool on)
+        {
+            _crashReports = on;
+            _crashRow?.SetSelected(on);
+        }
 
         /// <summary>Enlace «Privacidad y datos» (null hasta <see cref="BuildConsent"/>).</summary>
         public Button? PrivacyButton => _privacy;
@@ -107,6 +142,9 @@ namespace AF.UI
             _privacy = ModalKit.Link("Privacy", ConsentSlot, ConsentText.T(ConsentText.Keys.SettingsPrivacy), () => PrivacyPressed?.Invoke(), out TextMeshProUGUI privacy);
             _privacyLabel = privacy;
             privacy.fontSizeMin = MinTextSp;
+            _crashRow = Option(ConsentSlot, _art, "CrashReports", CrashReportsId, ConsentText.T(ConsentText.Keys.SettingsCrashReports),
+                () => CrashReportsToggled?.Invoke(!_crashReports));
+            _crashRow.SetSelected(_crashReports);
             _age = ModalKit.Link("AgeBand", ConsentSlot, ConsentText.T(ConsentText.Keys.SettingsAge), () => AgePressed?.Invoke(), out TextMeshProUGUI age);
             _ageLabel = age;
             age.fontSizeMin = MinTextSp;
@@ -126,17 +164,23 @@ namespace AF.UI
                 return fallback;
             }
 
-            int rows = AgeShown ? 2 : 1;
+            int rows = AgeShown ? 3 : 2;
             UiBuilder.Place(ConsentSlot, 16f, y, inner, (rowH * rows) + (RowGapDp * (rows - 1)));
             _privacyLabel.fontSizeMax = 16f * s;
             UiBuilder.Place((RectTransform)_privacy!.transform, 0f, 0f, inner, rowH);
             _rowTops.Add(y);
             _rowHeights.Add(rowH);
             float bottom = y + rowH;
+
+            // «Enviar informes de fallos» (T-L6), bajo «Privacidad y datos».
+            _crashRow!.Place(0f, rowH + RowGapDp, inner, rowH, s);
+            _rowTops.Add(bottom + RowGapDp);
+            _rowHeights.Add(rowH);
+            bottom += RowGapDp + rowH;
             if (AgeShown && _ageLabel != null)
             {
                 _ageLabel.fontSizeMax = 16f * s;
-                UiBuilder.Place((RectTransform)_age!.transform, 0f, rowH + RowGapDp, inner, rowH);
+                UiBuilder.Place((RectTransform)_age!.transform, 0f, bottom - y + RowGapDp, inner, rowH);
                 _rowTops.Add(bottom + RowGapDp);
                 _rowHeights.Add(rowH);
                 bottom += RowGapDp + rowH;
@@ -156,6 +200,13 @@ namespace AF.UI
                 n++;
             }
 
+            if (CrashReportsShown && k + n < ids.Length)
+            {
+                ids[k + n] = CrashReportsId;
+                rects[k + n] = _crashRow!.Root;
+                n++;
+            }
+
             if (AgeShown && k + n < ids.Length)
             {
                 ids[k + n] = AgeId;
@@ -164,6 +215,15 @@ namespace AF.UI
             }
 
             return n;
+        }
+
+        // El texto de la opción «Enviar informes de fallos» a la vista (tests: ≥ 12 sp y sin recortes al 130 %).
+        private IEnumerable<TextMeshProUGUI> ConsentTexts()
+        {
+            if (CrashReportsShown)
+            {
+                yield return _crashRow!.Label;
+            }
         }
     }
 }

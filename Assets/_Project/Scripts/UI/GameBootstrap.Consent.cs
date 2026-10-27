@@ -24,7 +24,7 @@ namespace AF.UI
     /// <item><see cref="WrapConsentAds"/> y <see cref="WrapConsentStore"/> envuelven el proveedor de anuncios y la tienda: sin
     /// decisión, MAX sin inicializar y sin compras; con 13-17, la doble confirmación.</item>
     /// <item><see cref="SetUpConsent"/>, con Remote Config enlazado: las cifras (<see cref="ConsentConfigBinder"/>), el país
-    /// (SIM → región → ninguno) y su perfil legal, el flujo y la pantalla.</item>
+    /// (SIM → cuenta de Play → región → ninguno) y su perfil legal, el flujo y la pantalla.</item>
     /// <item><see cref="StartConsentAtBoot"/> (y, si hay pantalla, <see cref="WaitConsentAtBoot"/>), tras cortar la pantalla de arranque y antes de <c>AppFlow.Start</c>: la edad y el
     /// consentimiento si hacen falta, y los flags a la analítica (<c>Analytics.SetEnabled</c>, «siempre ANTES de GameFlow.Go»), a
     /// los anuncios y a la tienda. Con &lt;13, <see cref="ConsentBlocked"/> y la app no arranca.</item>
@@ -53,6 +53,20 @@ namespace AF.UI
 
         /// <summary>SIM para los tests (por defecto, la del teléfono; en el Editor, ninguna).</summary>
         internal static ISimCountry? SimCountryOverride { get; set; }
+
+        /// <summary>
+        /// País de la cuenta de Play guardado, para los tests (por defecto, <see cref="PlayerPrefsPlayAccountCountry"/> en el teléfono y
+        /// en memoria en el Editor; D-057).
+        /// </summary>
+        internal static IPlayAccountCountryStore? PlayAccountCountryOverride { get; set; }
+
+        private IPlayAccountCountryStore? _playAccountCountry;
+
+        /// <summary>El almacén del país de la cuenta de Play de esta sesión (D-057).</summary>
+        internal IPlayAccountCountryStore PlayAccountCountry => _playAccountCountry ??= PlayAccountCountryOverride ?? PlayerPrefsPlayAccountCountry.ForPlatform();
+
+        /// <summary>De dónde salió el país del perfil legal (SIM, cuenta de Play, región o ninguno).</summary>
+        public CountrySource ConsentCountrySource => _consentCountrySource;
 
         /// <summary>La edad y el consentimiento actúan (<see cref="ConsentEnabledOverride"/> o, sin él, siempre).</summary>
         public static bool ConsentEnabled => ConsentEnabledOverride ?? true;
@@ -83,6 +97,7 @@ namespace AF.UI
             CrashReportingOverride = null;
             AnalyticsResetOverride = null;
             SimCountryOverride = null;
+            PlayAccountCountryOverride = null;
             AdProviderOverride = null; // D-042: el proveedor de anuncios de los tests
         }
 
@@ -221,9 +236,11 @@ namespace AF.UI
             // Las cifras ya enlazadas con el resto (RcConfigBinder; sus errores ya salieron en SetUpTelemetry): una sola fuente.
             _consentConfig = _rcConfigs?.Consent ?? ConsentConfig.Defaults;
 
-            _consentCountry = ConsentCountry.Resolve(SimCountryOverride ?? AndroidSimCountry.ForPlatform(), _deviceLocale, out _consentCountrySource);
+            // D-057 (P4 (a)): SIM → cuenta de Play (la de la última conexión con Play) → región → ninguno.
+            _consentCountry = ConsentCountry.Resolve(
+                SimCountryOverride ?? AndroidSimCountry.ForPlatform(), PlayAccountCountry, _deviceLocale, out _consentCountrySource);
             string profile = _consentConfig.ProfileFor(_consentCountry);
-            _consentFlow = new ConsentFlow(_consentConfig, ConsentStoreOverride ?? store, clock, profile, countryKnown: _consentCountry != null)
+            _consentFlow = new ConsentFlow(_consentConfig, ConsentStoreOverride ?? store, clock, profile, countryKnown: _consentCountry != null, country: _consentCountry)
             {
                 Reported = ReportConsent,
             };
@@ -335,6 +352,8 @@ namespace AF.UI
             bool privacy = ConsentEnabled && flow != null && flow.Flags.Decided;
             settings.PrivacyPressed = () => OpenPrivacy();
             settings.AgePressed = () => OpenAgeCorrection();
+            settings.CrashReportsToggled = on => ChooseCrashReports(on); // T-L6: «Enviar informes de fallos» (GameBootstrap.CrashReports.cs)
+            settings.MarkCrashReports(_profile?.Settings.CrashReports ?? true);
             settings.ShowConsentRows(privacy, privacy && flow!.CanCorrectAge);
         }
 
@@ -386,7 +405,8 @@ namespace AF.UI
                     break;
                 case ConsentStep.Choices:
                     screen.ShowChoices(AdsLineFor(flow), flow.InitialAnalytics, flow.InitialAdsPersonalized, OnConsentAnswer,
-                        fromSettings ? CloseConsentFromSettings : (System.Action?)null, fromSettings ? OpenAdsPrivacyOptions : (System.Action?)null);
+                        fromSettings ? CloseConsentFromSettings : (System.Action?)null, fromSettings ? OpenAdsPrivacyOptions : (System.Action?)null,
+                        flow.OffersAnalyticsChoice); // D-057: sin «Analítica» con 13-17 donde la edad digital del país pasa de 13
                     break;
                 case ConsentStep.Blocked:
                     screen.ShowBlocked();

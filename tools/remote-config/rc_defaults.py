@@ -62,11 +62,6 @@ class GddError(Exception):
 # default, pending)]). Cada una transcribe la prosa de la celda, sin añadir nada que la celda no diga.
 
 
-def _interp_country_bool(keys, types, cell):
-    # «CO, PE, MX = true; resto false»: «resto» se escribe con la clave "*" [P] (nota §2.1, Q-B7-4).
-    return [(keys[0], "json", {"CO": True, "PE": True, "MX": True, "*": False}, None)]
-
-
 def _interp_legal_profile(keys, types, cell):
     # «BR `br_lgpd_eca` · CO `co_1581` · PE `pe_29733` · MX `mx_lfpdppp` · EEE/UK/CH `ump` · resto `default`».
     value = {
@@ -147,7 +142,6 @@ def _interp_league(keys, types, cell):
 
 # Primera clave de la fila → (texto exacto de la celda de tipo, texto exacto de la de default, función).
 INTERPRETATIONS = {
-    "biz_country_enabled": ("map país→bool", "CO, PE, MX = true; resto false", _interp_country_bool),
     "biz_legal_profile_by_country": ("map país→string",
         "BR `br_lgpd_eca` · CO `co_1581` · PE `pe_29733` · MX `mx_lfpdppp` · EEE/UK/CH `ump` · resto `default`",
         _interp_legal_profile),
@@ -448,8 +442,9 @@ def self_test(gdd_path: Path = GDD_08) -> int:
         ("| `b` / `c` | int | 1 / 2 / 3 | — | 05 | x |\n", "defaults de más"),
         ("| `b_<x>` | int | 1 | — | 05 | x |\n", "plantilla sin sufijos"),
         ("| `k_000` | int | 1 | — | 05 | x |\n", "clave repetida"),
-        ("| `biz_country_enabled` | map país→bool | CO = true | — | 01 | x |\n", "interpretación con otro texto"),
-        ("| `biz_country_enabled` | json | CO, PE, MX = true; resto false | — | 01 | x |\n", "interpretación con otro tipo"),
+        ("| `biz_legal_profile_by_country` | map país→string | BR `br_lgpd_eca` | — | 01 | x |\n", "interpretación con otro texto"),
+        ("| `biz_legal_profile_by_country` | json | BR `br_lgpd_eca` · CO `co_1581` · PE `pe_29733` · MX `mx_lfpdppp` · "
+         "EEE/UK/CH `ump` · resto `default` | — | 01 | x |\n", "interpretación con otro tipo"),
         ("| `league_bucket_size` / `regatta_bucket_size` | int / int / json / json / json / int | 50 / 20 / "
          "`{\"normal\":10,\"hard\":20,\"very_hard\":30,\"daily\":20,\"trail\":10}` / tablas 06 §6 y §5.2 / 40 | — | 06 | x |\n",
          "interpretación con menos claves"),
@@ -473,6 +468,8 @@ def self_test(gdd_path: Path = GDD_08) -> int:
     check("tinaja 323", d["mech_debut_level_tinaja"][1] == 323)
     check("pendiente con texto", d["eco_calendar_table_v1"][1] is None and d["eco_calendar_table_v1"][2].startswith("tabla 05"))
     check("biz_feature_lives", d["biz_feature_lives"] == ("bool", True, None))
+    check("D-057: salida mundial", d["biz_country_enabled"] == ("json", {"*": True}, None) and d["biz_market_phase"][1] == "global")
+    check("D-057: edad digital", d["consent_digital_age_by_country"][1]["DE"] == 16 and d["consent_digital_age_by_country"][1]["*"] == 13)
     check("ni una plantilla en las claves", not any("<" in k or "{" in k for k in keys))
     j, cs = generate(gdd_path.read_text(encoding="utf-8"))
     check("JSON con LF y salto final", "\r" not in j and j.endswith("}\n"))

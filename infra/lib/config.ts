@@ -90,8 +90,8 @@ export interface AfConfig {
  * secretos. Prod: el bloque de producción. Dev: además el bloque recompensado de prueba de Google, para probar el SSV.
  */
 export const ADMOB_REWARDED_AD_UNITS: Record<EnvName, readonly string[]> = {
-  dev: ['2877105387', '5224354917'],
-  prod: ['2877105387'],
+  dev: ['1182085615', '5224354917'],
+  prod: ['1182085615'],
 };
 
 /** Valores por defecto del proyecto de Firebase por entorno (08, cabecera y §15.3 #2). */
@@ -107,7 +107,7 @@ const ZONE_RE = /^Z[A-Z0-9]{5,32}$/;
 const FIREBASE_PROJECT_RE = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const FIREBASE_APP_ID_RE = /^1:\d{1,20}:android:[0-9a-f]{6,64}$/;
 const PACKAGE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
-/** Bloque de AdMob: el número (`2877105387`) o el id completo (`ca-app-pub-<editor>/<número>`), que se reduce al número. */
+/** Bloque de AdMob: el número (`1182085615`) o el id completo (`ca-app-pub-<editor>/<número>`), que se reduce al número. */
 const AD_UNIT_RE = /^(?:ca-app-pub-\d{1,20}\/)?(\d{1,20})$/;
 /** applicationId provisional de los builds de prueba (CLAUDE.md, regla 6): nunca en prod. */
 export const DEV_PACKAGE_NAME = 'com.amazonfill.dev';

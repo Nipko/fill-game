@@ -100,6 +100,7 @@ namespace AF.UI
         private Action? _onAdsOptions;
         private bool _closable;
         private ConsentAdsLine _adsMode;
+        private bool _offersAnalytics = true;
 
         public ConsentScreen(Transform host, ProceduralArt art)
         {
@@ -176,6 +177,9 @@ namespace AF.UI
         /// <summary>El interruptor de anuncios se ve.</summary>
         public bool AdsToggleShown => _adsToggle.Button.gameObject.activeSelf;
 
+        /// <summary>El interruptor «Analítica» se ve (no con 13-17 donde la edad digital del país pasa de 13; D-057).</summary>
+        public bool AnalyticsToggleShown => _analyticsToggle.Button.gameObject.activeSelf;
+
         /// <summary>Anuncios personalizados marcado.</summary>
         public bool AdsSelected => _adsToggle.Selected;
 
@@ -230,11 +234,13 @@ namespace AF.UI
         /// <summary>
         /// Pantalla de consentimiento: <paramref name="ads"/> dice cómo sale la línea de los anuncios; lo marcado al abrir,
         /// <paramref name="analytics"/> y <paramref name="adsPersonalized"/>; con <paramref name="onClose"/>, con la X (Ajustes); con
-        /// <paramref name="onAdsOptions"/> y la línea de UMP, la línea es un enlace que vuelve a abrir el mensaje de UMP.
+        /// <paramref name="onAdsOptions"/> y la línea de UMP, la línea es un enlace que vuelve a abrir el mensaje de UMP. Con
+        /// <paramref name="offersAnalytics"/> = false (13-17 donde la edad de consentimiento digital del país pasa de 13; D-057), sin la
+        /// fila «Analítica», que queda apagada.
         /// </summary>
         public void ShowChoices(
             ConsentAdsLine ads, bool analytics, bool adsPersonalized, Action<ConsentAnswer, bool, bool> onAnswer, Action? onClose = null,
-            Action? onAdsOptions = null)
+            Action? onAdsOptions = null, bool offersAnalytics = true)
         {
             Clear();
             _onAnswer = onAnswer ?? throw new ArgumentNullException(nameof(onAnswer));
@@ -242,13 +248,14 @@ namespace AF.UI
             _onAdsOptions = ads == ConsentAdsLine.Ump ? onAdsOptions : null;
             _closable = onClose != null;
             _adsMode = ads;
+            _offersAnalytics = offersAnalytics;
             View = ConsentView.Choices;
             _title.text = ConsentText.T(ConsentText.Keys.Title);
             _body.text = ConsentText.T(ConsentText.Keys.Body);
             _adsToggle.Rebind(string.Empty, ConsentText.T(ConsentText.Keys.PurposeAds), () => _adsToggle.SetSelected(!_adsToggle.Selected));
             _adsToggle.SetSelected(ads == ConsentAdsLine.Toggle && adsPersonalized);
             _analyticsToggle.Rebind(string.Empty, ConsentText.T(ConsentText.Keys.PurposeAnalytics), () => _analyticsToggle.SetSelected(!_analyticsToggle.Selected));
-            _analyticsToggle.SetSelected(analytics);
+            _analyticsToggle.SetSelected(offersAnalytics && analytics);
             _adsLine.text = ConsentText.T(AdsLineKey(ads));
             _adsOptionsLabel.text = ConsentText.T(ConsentText.Keys.AdsUmpOptions);
             _diagnostics.text = ConsentText.T(ConsentText.Keys.Diagnostics);
@@ -346,7 +353,11 @@ namespace AF.UI
                         Add(ids, rects, "consent_ads_options", _adsOptions);
                     }
 
-                    Add(ids, rects, "consent_analytics", _analyticsToggle.Button);
+                    if (_offersAnalytics)
+                    {
+                        Add(ids, rects, "consent_analytics", _analyticsToggle.Button);
+                    }
+
                     Add(ids, rects, "consent_reject_all", _reject.Button);
                     Add(ids, rects, "consent_accept_all", _accept.Button);
                     Add(ids, rects, "consent_save", _save);
@@ -391,7 +402,7 @@ namespace AF.UI
             }
 
             Action<ConsentAnswer, bool, bool>? onAnswer = _onAnswer;
-            bool analytics = _analyticsToggle.Selected;
+            bool analytics = _offersAnalytics && _analyticsToggle.Selected;
             bool ads = _adsMode == ConsentAdsLine.Toggle && _adsToggle.Selected;
             onAnswer?.Invoke(answer, analytics, ads);
         }
@@ -486,7 +497,7 @@ namespace AF.UI
             _adsToggle.Button.gameObject.SetActive(adsToggle);
             _adsLine.gameObject.SetActive(choices && !adsToggle && !adsLink);
             _adsOptions.gameObject.SetActive(adsLink);
-            _analyticsToggle.Button.gameObject.SetActive(choices);
+            _analyticsToggle.Button.gameObject.SetActive(choices && _offersAnalytics);
             _diagnostics.gameObject.SetActive(choices);
             if (choices)
             {
@@ -509,8 +520,12 @@ namespace AF.UI
                     y += ModalKit.PlaceLine(_adsLine, 16f, y, inner, 40f) + 8f;
                 }
 
-                _analyticsToggle.Place(16f, y, inner, rowH, Mathf.Max(1f, UiBuilder.TextScale));
-                y += rowH + 8f;
+                if (_offersAnalytics)
+                {
+                    _analyticsToggle.Place(16f, y, inner, rowH, Mathf.Max(1f, UiBuilder.TextScale));
+                    y += rowH + 8f;
+                }
+
                 y += ModalKit.PlaceLine(_diagnostics, 16f, y, inner, 40f) + 10f;
             }
 

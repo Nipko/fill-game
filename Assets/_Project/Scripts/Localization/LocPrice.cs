@@ -7,7 +7,8 @@ namespace AF.Localization
     /// Precios con el mismo formato que el resto de las cifras (D-025, «un solo formato de cifras, también en los precios»):
     /// código ISO 4217 de la moneda, un espacio y el importe con los separadores de <see cref="LocNumber"/> (los de la región del
     /// teléfono, Q8-A de D-018; sin región, es-CO [P]) y los decimales de la moneda (<see cref="DecimalsOf"/>: 0 en COP y MXN, 2
-    /// en el resto, 05 §4.2; y, por el añadido de D-025 de Q-IAP-3, 0 en CLP y JPY y 3 en KWD y BHD). Los importes de 05 §4.2 no cambian, solo su escritura: con el teléfono en en-US, «COP 3,900»; en
+    /// en el resto, 05 §4.2; por el añadido de D-025 de Q-IAP-3, las monedas sin céntimos y las de tres decimales de ISO 4217; y,
+    /// con D-057, la tabla ISO 4217 completa más IDR, HUF y TWD sin decimales, como las escribe Google Play). Los importes de 05 §4.2 no cambian, solo su escritura: con el teléfono en en-US, «COP 3,900»; en
     /// es-CO, «COP 3.900»; en es-MX, «MXN 19»; en pt-BR, «BRL 4,99».
     /// <para>Es la única función de precios: la usan la tienda simulada (<c>AF.IAP</c>: <c>LocalPrice</c>,
     /// <c>FakeStoreService</c>) y, por ella, todos los textos con precio de la UI (<c>GameServices.PriceText</c>). Con la tienda
@@ -24,9 +25,18 @@ namespace AF.Localization
         private static readonly long[] Pow10 = { 1L, 10L, 100L, 1000L };
 
         /// <summary>
-        /// Decimales con que se escribe un importe en <paramref name="iso4217"/> (D-025, punto 2; 05 §4.2): 0 en COP y MXN, 2 en
-        /// el resto. Añadido de D-025 por Q-IAP-3 (D-040; <c>LocalPrice</c> admite cualquier código ISO 4217): las monedas sin
-        /// céntimos, CLP y JPY, con 0, y las de tres decimales, KWD y BHD, con 3.
+        /// Decimales con que se escribe un importe en <paramref name="iso4217"/> (D-025, punto 2; 05 §4.2): 0 en COP y MXN (decisión
+        /// de D-025, aunque ISO 4217 les da 2), 2 en el resto. Añadido de D-025 por Q-IAP-3 (D-040; <c>LocalPrice</c> admite cualquier
+        /// código ISO 4217) y por D-057 (lanzamiento mundial; <c>docs/dev/lanzamiento-mundial.md</c> §2.3), con la tabla de unidades
+        /// menores de ISO 4217:
+        /// <list type="bullet">
+        /// <item>0: las monedas sin céntimos de ISO 4217 (BIF, CLP, DJF, GNF, ISK, JPY, KMF, KRW, PYG, RWF, UGX, UYI, VND, VUV, XAF,
+        /// XOF y XPF) y las que Google Play escribe sin decimales aunque ISO 4217 les dé 2: IDR, HUF y TWD [P; NV, confirmar en una
+        /// compra de prueba];</item>
+        /// <item>3: BHD, IQD, JOD, KWD, LYD, OMR y TND;</item>
+        /// <item>2: el resto (también un código que ISO 4217 no tenga: el importe sigue siendo el de Play).</item>
+        /// </list>
+        /// Las de 4 decimales de ISO (CLF, UYW) no son monedas de venta y quedan en 2.
         /// </summary>
         /// <exception cref="ArgumentException">No es un código ISO 4217 (tres letras mayúsculas).</exception>
         public static int DecimalsOf(string iso4217)
@@ -34,13 +44,36 @@ namespace AF.Localization
             CheckCode(iso4217);
             switch (iso4217)
             {
-                case "COP":
-                case "MXN":
+                case "COP": // D-025
+                case "MXN": // D-025
+                case "BIF":
                 case "CLP":
+                case "DJF":
+                case "GNF":
+                case "ISK":
                 case "JPY":
+                case "KMF":
+                case "KRW":
+                case "PYG":
+                case "RWF":
+                case "UGX":
+                case "UYI":
+                case "VND":
+                case "VUV":
+                case "XAF":
+                case "XOF":
+                case "XPF":
+                case "IDR": // Google Play, sin decimales [P]
+                case "HUF": // Google Play, sin decimales [P]
+                case "TWD": // Google Play, sin decimales [P]
                     return 0;
-                case "KWD":
                 case "BHD":
+                case "IQD":
+                case "JOD":
+                case "KWD":
+                case "LYD":
+                case "OMR":
+                case "TND":
                     return 3;
                 default:
                     return 2;
