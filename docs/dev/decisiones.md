@@ -4066,3 +4066,23 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   2. Sustituye, para la 1.0, al asesor cultural humano y a la revisión nativa humana (D-018, Q5-A; D-022). El dueño revisa una muestra y las filas corregidas o dudosas antes de que pasen a `aprobado_es`; las dudosas se quedan en `pendiente_asesor` y no se muestran en release.
 - **Riesgo anotado:** es una revisión por IA, no humana. Un error cultural o de traducción puede llegar al jugador. Se puede volver a una revisión humana en una versión posterior sin cambiar el juego.
 - **Cómo revertir:** con una decisión nueva del dueño.
+
+### D-054, añadido del 2026-10-26: aprobación de la entrega de Gemini
+
+- **Estado:** el dueño aprobó en el chat: «Apruebo los 12 cambios al español y las recomendaciones de T2-Q8 a T2-Q11 de Gemini. Integra la revisión con el modo de revisión de apply_translations, los tests y la compuerta LocReleaseGate.»
+- **Entrega:** rama `spark/revision-textos`, commit `fcc37e10`, en `docs/dev/traspaso/gemini-revision/`. Son:
+  - `revision_es.csv`: 1.083 filas, 1.071 `ok`, 12 `cambia` y 0 `duda`;
+  - `strings_revision.csv` (542 filas) y `facts_revision.csv` (822 filas), en `revisado_nativo`;
+  - `preguntas_t2.md`;
+  - `resumen.md`.
+- **Validación del integrador:**
+  - **Formato:** UTF-8 sin BOM, LF, en orden ordinal y con las mismas claves que las tablas.
+  - **Contenido:** iguales marcadores y plurales que el español, sin filas vacías y con el U+00A0 conservado. Las 10 celdas que superan `max_chars` × 1,3 ya eran así en las tablas y no las tocó.
+  - **Fuentes:** 589 de las 820 filas de `facts.csv` citan una URL. El resto cita documentos internos (204 citan solo el glosario).
+  - **Motivos de los `ok`:** son en gran parte frases de plantilla. La parte cultural queda como revisión de IA, aprobada por el dueño. El asesor humano puede revisarla en la 1.1.
+- **Decisión:** se aplican los 12 cambios al español, las traducciones revisadas y T2-Q8 a T2-Q11 con la recomendación de Gemini. Eso incluye:
+  - `Manaus` en `en` y `pt-BR` (T2-Q9), con `world_w11_name` localizado;
+  - los textos del glosario §10 (T2-Q10);
+  - las propuestas del `glosario.diff` (T2-Q11);
+  - las dos líneas `borrador` de `fact.agua_tapajos.14` y `.19`, sustituidas por las que propone el resumen §4.2.
+- **Encargo:** carril `tanda6/integra-gemini-textos`.
