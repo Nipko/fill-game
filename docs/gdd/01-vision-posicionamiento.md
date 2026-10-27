@@ -215,7 +215,7 @@ Referencias de escala para el productor: 50 K DAU LatAm-heavy ≈ 22 K USD/mes n
 ### 8.1 Fases y criterios de paso
 
 **D-057 (2026-10-27, P1, P3 y P5 (a); `docs/dev/lanzamiento-mundial.md`):** la 1.0 sale **en todo el mundo de una vez**, no por fases de países. Sustituye a las filas 1, 2 y 3 de la tabla de abajo, que quedan como historia:
-- **Distribución:** todos los países de Google Play salvo Rusia y Bielorrusia; Vietnam e Indonesia, según la investigación legal (`docs/legal/investigacion-legal-mundial.md`).
+- **Distribución:** todos los países de Google Play salvo Rusia, Bielorrusia, Vietnam e Indonesia; Turquía se queda (D-057, añadido del 2026-10-27; `docs/legal/investigacion-legal-mundial.md`).
 - **Producción escalonada por porcentaje mundial:** 5 % → 20 % → 100 % (08 §13.1 #22), con los criterios obligatorios de las fases 1 y 2 (D1/D7/D30, crash-free, nota) leídos por cohorte y por país en Firebase en cada escalón.
 - **Prueba cerrada (fase 0):** testers de LatAm y de al menos un país del EEE, para ver UMP de verdad (08 §13.1 #20).
 - **Precios:** base en USD con la conversión automática de Play; LatAm y EUR, fijados a mano (05 §4.2).
