@@ -118,19 +118,22 @@ namespace AF.Platform
         private readonly IClock _clock;
         private readonly string _profile;
         private readonly bool _countryKnown;
+        private readonly string? _country;
 
         /// <summary>
         /// Crea el flujo para el perfil legal <paramref name="legalProfile"/> (<see cref="ConsentConfig.ProfileFor"/>);
         /// <paramref name="countryKnown"/> = false si no se supo el país (Q-T3 (a): el tratamiento más estricto, sin elegir anuncios
-        /// personalizados).
+        /// personalizados). <paramref name="country"/> es el país de ahora (ISO alfa-2), para la edad de consentimiento digital de la
+        /// analítica con 13-17 (<see cref="ConsentPolicy.OffersAnalyticsChoice"/>; D-057); null con el país conocido = el resto del mapa.
         /// </summary>
-        public ConsentFlow(ConsentConfig config, IConsentStore store, IClock clock, string legalProfile, bool countryKnown = true)
+        public ConsentFlow(ConsentConfig config, IConsentStore store, IClock clock, string legalProfile, bool countryKnown = true, string? country = null)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _profile = LegalProfiles.IsKnown(legalProfile) ? legalProfile : LegalProfiles.Default;
             _countryKnown = countryKnown;
+            _country = countryKnown ? country : null;
             Record = store.Load();
         }
 
@@ -158,6 +161,12 @@ namespace AF.Platform
         /// <summary>La pantalla de consentimiento ofrece «Anuncios personalizados» (<see cref="ConsentPolicy.OffersAdsChoice"/>).</summary>
         public bool OffersAdsChoice => ConsentPolicy.OffersAdsChoice(_profile, Band, _config, _countryKnown);
 
+        /// <summary>
+        /// La pantalla de consentimiento ofrece «Analítica» con la banda de la pantalla abierta (<see cref="ConsentPolicy.OffersAnalyticsChoice"/>;
+        /// D-057): no con 13-17 donde la edad de consentimiento digital del país pasa de 13, ni sin país.
+        /// </summary>
+        public bool OffersAnalyticsChoice => ConsentPolicy.OffersAnalyticsChoice(Band, _config, _country, _countryKnown);
+
         /// <summary>Lo marcado al abrir las finalidades: en el arranque, nada (consentimiento expreso); al cambiar, lo guardado.</summary>
         public bool InitialAnalytics { get; private set; }
 
@@ -168,7 +177,7 @@ namespace AF.Platform
         public bool CanCorrectAge => Record != null && Record.AgeBand != AgeBand.Unknown && Record.AgeBand != AgeBand.Under13 && !Record.AgeBandCorrected;
 
         /// <summary>Los flags vigentes (<see cref="ConsentPolicy.Flags"/>).</summary>
-        public ConsentFlags Flags => ConsentPolicy.Flags(Record, _config, _profile, _countryKnown);
+        public ConsentFlags Flags => ConsentPolicy.Flags(Record, _config, _profile, _countryKnown, _country);
 
         /// <summary>
         /// Los anuncios los decide el mensaje de UMP con la banda de la pantalla abierta: perfil <c>ump</c>, país conocido y 18+ (o
@@ -215,7 +224,7 @@ namespace AF.Platform
             ConsentRecord record = RequireDecided();
             Mode = ConsentFlowMode.Change;
             Band = record.AgeBand;
-            InitialAnalytics = record.Analytics;
+            InitialAnalytics = record.Analytics && OffersAnalyticsChoice;
             InitialAdsPersonalized = record.AdsPersonalized && OffersAdsChoice;
             return Go(ConsentStep.Choices);
         }
@@ -267,9 +276,11 @@ namespace AF.Platform
                     return Go(ConsentStep.Blocked);
                 }
 
-                // 13-17 sin personalización: los anuncios personalizados se apagan aunque se hubieran aceptado con 18+.
+                // 13-17 sin personalización: los anuncios personalizados se apagan aunque se hubieran aceptado con 18+; y la analítica,
+                // donde la edad de consentimiento digital pasa de 13 (D-057).
                 bool ads = current.AdsPersonalized && ConsentPolicy.OffersAdsChoice(current.Profile, band, _config, _countryKnown);
-                var corrected = new ConsentRecord(current.Profile, current.TextVersion, now, current.Analytics, ads, band, true);
+                bool analytics = current.Analytics && OffersAnalyticsChoice;
+                var corrected = new ConsentRecord(current.Profile, current.TextVersion, now, analytics, ads, band, true);
                 Save(corrected);
                 Report(ConsentReport.Changed, corrected.Profile, corrected.TextVersion, corrected.Analytics, corrected.AdsPersonalized, band);
                 return Go(ConsentStep.Done);
@@ -300,10 +311,11 @@ namespace AF.Platform
             }
 
             bool offersAds = OffersAdsChoice;
+            bool offersAnalytics = OffersAnalyticsChoice;
             switch (answer)
             {
                 case ConsentAnswer.AcceptAll:
-                    analytics = true;
+                    analytics = offersAnalytics;
                     adsPersonalized = offersAds;
                     break;
                 case ConsentAnswer.RejectAll:
@@ -311,6 +323,7 @@ namespace AF.Platform
                     adsPersonalized = false;
                     break;
                 default:
+                    analytics = analytics && offersAnalytics;
                     adsPersonalized = adsPersonalized && offersAds;
                     break;
             }

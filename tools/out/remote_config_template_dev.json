@@ -29,6 +29,13 @@
       "description": "Rango 08 §9: self_declared · self_declared+play_age_signals. Fuente de la banda de edad: declaración en la pantalla neutral; la segunda opción añade Play Age Signals API (compuerta de la Fase 5, 09 §2.3; 05 §7)",
       "valueType": "STRING"
     },
+    "consent_digital_age_by_country": {
+      "defaultValue": {
+        "value": "{\"*\":13,\"AT\":14,\"BE\":13,\"BG\":14,\"CH\":16,\"CY\":14,\"CZ\":15,\"DE\":16,\"DK\":13,\"EE\":13,\"ES\":14,\"FI\":13,\"FR\":15,\"GR\":15,\"HR\":16,\"HU\":16,\"IE\":16,\"IN\":18,\"IS\":13,\"IT\":14,\"KR\":14,\"LI\":16,\"LT\":14,\"LU\":16,\"LV\":13,\"MT\":13,\"NL\":16,\"NO\":13,\"PL\":16,\"PT\":13,\"RO\":16,\"SE\":13,\"SI\":15,\"SK\":16,\"UK\":13}"
+      },
+      "description": "Rango 08 §9: 13-18. D-057 (2026-10-27, P2 (a)): edad de consentimiento digital por país (RGPD art. 8 y equivalentes). Con la banda 13-17 y una edad mayor de 13, la analítica no se ofrece en la pantalla de consentimiento y queda apagada (05 §7); sin país,…",
+      "valueType": "JSON"
+    },
     "biz_market_phase": {
       "defaultValue": {
         "value": "closed_beta"

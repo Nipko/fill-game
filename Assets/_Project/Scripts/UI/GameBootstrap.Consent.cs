@@ -223,7 +223,7 @@ namespace AF.UI
 
             _consentCountry = ConsentCountry.Resolve(SimCountryOverride ?? AndroidSimCountry.ForPlatform(), _deviceLocale, out _consentCountrySource);
             string profile = _consentConfig.ProfileFor(_consentCountry);
-            _consentFlow = new ConsentFlow(_consentConfig, ConsentStoreOverride ?? store, clock, profile, countryKnown: _consentCountry != null)
+            _consentFlow = new ConsentFlow(_consentConfig, ConsentStoreOverride ?? store, clock, profile, countryKnown: _consentCountry != null, country: _consentCountry)
             {
                 Reported = ReportConsent,
             };
@@ -386,7 +386,8 @@ namespace AF.UI
                     break;
                 case ConsentStep.Choices:
                     screen.ShowChoices(AdsLineFor(flow), flow.InitialAnalytics, flow.InitialAdsPersonalized, OnConsentAnswer,
-                        fromSettings ? CloseConsentFromSettings : (System.Action?)null, fromSettings ? OpenAdsPrivacyOptions : (System.Action?)null);
+                        fromSettings ? CloseConsentFromSettings : (System.Action?)null, fromSettings ? OpenAdsPrivacyOptions : (System.Action?)null,
+                        flow.OffersAnalyticsChoice); // D-057: sin «Analítica» con 13-17 donde la edad digital del país pasa de 13
                     break;
                 case ConsentStep.Blocked:
                     screen.ShowBlocked();

@@ -87,7 +87,8 @@ namespace AF.Platform
     /// también bloquea [P]); TFCD, sin analítica, sin compras, sin Play Games ni Remote Config personalizado. Es definitivo: no se
     /// vuelve a preguntar ni al subir <c>consent_text_version</c> («en cualquier arranque posterior», 08 §7) [P].</item>
     /// <item><c>13-17</c> con <c>biz_under18_no_personalization</c>: <c>npa</c> aunque se acepte, sin Remote Config personalizado
-    /// y con doble confirmación de compras; la analítica, según la decisión.</item>
+    /// y con doble confirmación de compras; la analítica, según la decisión, salvo donde la edad de consentimiento digital del país
+    /// pasa de 13 o sin país (<see cref="OffersAnalyticsChoice"/>; D-057): ahí no se ofrece y queda apagada.</item>
     /// <item><c>18+</c>: lo que se decidió.</item>
     /// <item>En todas las bandas, <c>maxAdContentRating</c> = G (D-029).</item>
     /// </list>
@@ -136,9 +137,12 @@ namespace AF.Platform
         /// <summary>
         /// Los flags de <paramref name="record"/> con <paramref name="config"/>. Con <paramref name="currentProfile"/> (el perfil legal
         /// del país de ahora), una decisión de otro perfil cuenta como sin decidir hasta volver a preguntar (Q-B12-15); sin país
-        /// (<paramref name="countryKnown"/> = false), los anuncios nunca son personalizados ni los decide UMP (Q-T3 (a), Q-B12-13).
+        /// (<paramref name="countryKnown"/> = false), los anuncios nunca son personalizados ni los decide UMP (Q-T3 (a), Q-B12-13). Con
+        /// 13-17, la analítica solo si <see cref="OffersAnalyticsChoice"/> con <paramref name="country"/> (el país de ahora; null con
+        /// <paramref name="countryKnown"/> = true, el resto del mapa) (D-057).
         /// </summary>
-        public static ConsentFlags Flags(ConsentRecord? record, ConsentConfig config, string? currentProfile = null, bool countryKnown = true)
+        public static ConsentFlags Flags(
+            ConsentRecord? record, ConsentConfig config, string? currentProfile = null, bool countryKnown = true, string? country = null)
         {
             if (config == null)
             {
@@ -165,8 +169,9 @@ namespace AF.Platform
                     bool strict = config.BizUnder18NoPersonalization;
                     bool decided = !NeedsPrompt(record, config) && sameProfile;
                     bool ump = string.Equals(record.Profile, LegalProfiles.Ump, StringComparison.Ordinal);
+                    bool analytics = decided && record.Analytics && OffersAnalyticsChoice(AgeBand.Teen, config, country, countryKnown);
                     return new ConsentFlags(
-                        decided: decided, blocked: false, band: AgeBand.Teen, profile: record.Profile, analytics: decided && record.Analytics,
+                        decided: decided, blocked: false, band: AgeBand.Teen, profile: record.Profile, analytics: analytics,
                         adsPersonalized: decided && !strict && !ump && countryKnown && record.AdsPersonalized, childDirected: false,
                         purchasesAllowed: decided, purchaseDoubleConfirm: strict, playGamesAllowed: decided, rcPersonalization: decided && !strict,
                         adsByUmp: decided && !strict && ump && countryKnown);
@@ -203,6 +208,29 @@ namespace AF.Platform
             }
 
             return band == AgeBand.Adult || (band == AgeBand.Teen && !config.BizUnder18NoPersonalization);
+        }
+
+        /// <summary>
+        /// La pantalla de consentimiento ofrece la finalidad «Analítica» (D-057, P2 (a); 05 §7; 08 §9,
+        /// <c>consent_digital_age_by_country</c>): con 18+, siempre; con 13-17, solo si la edad de consentimiento digital del país
+        /// (<see cref="ConsentConfig.DigitalAgeFor"/>) es 13. Donde pasa de 13 (RGPD art. 8 en buena parte del EEE, Suiza, Corea, la
+        /// India…) la banda 13-17 no distingue a quien ya puede consentir, así que la analítica no se ofrece y queda apagada. Sin país
+        /// (<paramref name="countryKnown"/> = false), tampoco: el tratamiento más estricto (Q-T3 (a)) [P]. Con
+        /// <paramref name="country"/> null y el país conocido, la edad del resto del mapa.
+        /// </summary>
+        public static bool OffersAnalyticsChoice(AgeBand band, ConsentConfig config, string? country, bool countryKnown = true)
+        {
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
+
+            if (band != AgeBand.Teen)
+            {
+                return true;
+            }
+
+            return countryKnown && config.DigitalAgeFor(country) <= ConsentConfig.MinDigitalAge;
         }
     }
 

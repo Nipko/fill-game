@@ -7,7 +7,7 @@ namespace AF.Platform
     /// <summary>
     /// Cifras del consentimiento y la edad con el <b>default compilado</b> de la tabla única de 08 §9 (bloque B12):
     /// <c>consent_text_version</c>, <c>consent_under13_policy</c>, <c>consent_age_signal_source</c>,
-    /// <c>biz_legal_profile_by_country</c> y <c>biz_under18_no_personalization</c>. Vive en <c>AF.Platform</c>, junto a
+    /// <c>consent_digital_age_by_country</c> (D-057), <c>biz_legal_profile_by_country</c> y <c>biz_under18_no_personalization</c>. Vive en <c>AF.Platform</c>, junto a
     /// <see cref="ConsentPolicy"/>, porque la leen los anuncios, la tienda y el arranque. Las enlaza con Remote Config
     /// <c>AF.RemoteConfig.Binding.ConsentConfigBinder</c>, desde <c>RcConfigBinder</c> (<c>RcConfigs.Consent</c>).
     /// </summary>
@@ -33,6 +33,15 @@ namespace AF.Platform
 
         /// <summary>Clave del Reino Unido en el mapa de 08 §9 (su código ISO es <c>GB</c>).</summary>
         public const string UkKey = "UK";
+
+        /// <summary>
+        /// Edad de consentimiento digital más baja que admite <c>consent_digital_age_by_country</c> (08 §9; D-057): la de la banda
+        /// 13-17. Con ella, la banda 13-17 puede consentir la analítica.
+        /// </summary>
+        public const int MinDigitalAge = 13;
+
+        /// <summary>Edad de consentimiento digital más alta que admite <c>consent_digital_age_by_country</c> (la de la banda 18+).</summary>
+        public const int MaxDigitalAge = 18;
 
         // EEE = los 27 de la UE más Islandia, Liechtenstein y Noruega (códigos ISO 3166-1 alfa-2). Suiza y el Reino Unido tienen
         // su propia clave en el mapa (CH y UK).
@@ -64,6 +73,16 @@ namespace AF.Platform
         [RemoteConfigKey("biz_legal_profile_by_country")]
         public IReadOnlyDictionary<string, string> BizLegalProfileByCountry { get; set; } = DefaultProfiles();
 
+        /// <summary>
+        /// <c>consent_digital_age_by_country</c> (05; D-057, P2 (a)): país (ISO alfa-2, o <see cref="EeaKey"/>, <see cref="UkKey"/> y
+        /// <see cref="RestKey"/>) → edad de consentimiento digital (RGPD art. 8 y equivalentes), entre <see cref="MinDigitalAge"/> y
+        /// <see cref="MaxDigitalAge"/>. Con la banda 13-17 y una edad mayor de 13, la analítica no se ofrece
+        /// (<see cref="ConsentPolicy.OffersAnalyticsChoice"/>). Los valores son los de <c>docs/dev/lanzamiento-mundial.md</c> §1.4 [NV],
+        /// pendientes de la investigación legal: se cambian en Remote Config sin build.
+        /// </summary>
+        [RemoteConfigKey("consent_digital_age_by_country")]
+        public IReadOnlyDictionary<string, int> ConsentDigitalAgeByCountry { get; set; } = DefaultDigitalAges();
+
         /// <summary><c>biz_under18_no_personalization</c> (01): con 13-17, <c>npa</c>, contenido G, sin perfilado y doble confirmación de compras.</summary>
         [RemoteConfigKey("biz_under18_no_personalization")]
         public bool BizUnder18NoPersonalization { get; set; } = true;
@@ -81,6 +100,24 @@ namespace AF.Platform
                 { UkKey, LegalProfiles.Ump },
                 { "CH", LegalProfiles.Ump },
                 { RestKey, LegalProfiles.Default },
+            };
+        }
+
+        /// <summary>
+        /// El mapa de 08 §9 (D-057; <c>docs/dev/lanzamiento-mundial.md</c> §1.4 [NV]): los 30 Estados del EEE con su edad del RGPD
+        /// art. 8, Suiza 16 (prudente: la nLPD no fija edad), Corea 14, la India 18, el Reino Unido 13 y el resto 13. En el orden de
+        /// 08 §9.
+        /// </summary>
+        public static IReadOnlyDictionary<string, int> DefaultDigitalAges()
+        {
+            return new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                { RestKey, 13 },
+                { "AT", 14 }, { "BE", 13 }, { "BG", 14 }, { "CH", 16 }, { "CY", 14 }, { "CZ", 15 }, { "DE", 16 }, { "DK", 13 },
+                { "EE", 13 }, { "ES", 14 }, { "FI", 13 }, { "FR", 15 }, { "GR", 15 }, { "HR", 16 }, { "HU", 16 }, { "IE", 16 },
+                { "IN", 18 }, { "IS", 13 }, { "IT", 14 }, { "KR", 14 }, { "LI", 16 }, { "LT", 14 }, { "LU", 16 }, { "LV", 13 },
+                { "MT", 13 }, { "NL", 16 }, { "NO", 13 }, { "PL", 16 }, { "PT", 13 }, { "RO", 16 }, { "SE", 13 }, { "SI", 15 },
+                { "SK", 16 }, { UkKey, 13 },
             };
         }
 
@@ -130,6 +167,36 @@ namespace AF.Platform
             return Lookup(RestKey, out profile) ? profile! : LegalProfiles.Default;
         }
 
+        /// <summary>
+        /// La edad de consentimiento digital de <paramref name="country"/> (ISO alfa-2; null o vacío = sin país): la entrada del país;
+        /// si no, la de su grupo (<see cref="EeaKey"/> para el EEE, <see cref="UkKey"/> para <c>GB</c>); si no, la del resto
+        /// (<see cref="RestKey"/>); y, sin nada, <see cref="MinDigitalAge"/>. Sin país, la del resto: el tratamiento de «sin país» lo
+        /// decide <see cref="ConsentPolicy.OffersAnalyticsChoice"/>.
+        /// </summary>
+        public int DigitalAgeFor(string? country)
+        {
+            if (!string.IsNullOrEmpty(country))
+            {
+                string code = country!.ToUpperInvariant();
+                if (LookupAge(code, out int age))
+                {
+                    return age;
+                }
+
+                if (IsEea(code) && LookupAge(EeaKey, out age))
+                {
+                    return age;
+                }
+
+                if (string.Equals(code, "GB", StringComparison.Ordinal) && LookupAge(UkKey, out age))
+                {
+                    return age;
+                }
+            }
+
+            return LookupAge(RestKey, out int rest) ? rest : MinDigitalAge;
+        }
+
         /// <summary>Comprueba que los valores tienen sentido (no que coincidan con 08 §9: eso lo hacen los tests).</summary>
         /// <exception cref="InvalidOperationException">Algún valor está fuera de lo admisible.</exception>
         public void Validate()
@@ -163,6 +230,32 @@ namespace AF.Platform
                     throw new InvalidOperationException("ConsentConfig: perfil legal desconocido «" + entry.Value + "» para " + entry.Key + ".");
                 }
             }
+
+            if (ConsentDigitalAgeByCountry == null || !ConsentDigitalAgeByCountry.ContainsKey(RestKey))
+            {
+                throw new InvalidOperationException("ConsentConfig: consent_digital_age_by_country necesita la clave \"*\" (el resto).");
+            }
+
+            foreach (KeyValuePair<string, int> entry in ConsentDigitalAgeByCountry)
+            {
+                if (entry.Value < MinDigitalAge || entry.Value > MaxDigitalAge)
+                {
+                    throw new InvalidOperationException("ConsentConfig: consent_digital_age_by_country fuera de 13-18 para " + entry.Key + ".");
+                }
+            }
+        }
+
+        private bool LookupAge(string key, out int age)
+        {
+            if (ConsentDigitalAgeByCountry != null && ConsentDigitalAgeByCountry.TryGetValue(key, out int value)
+                && value >= MinDigitalAge && value <= MaxDigitalAge)
+            {
+                age = value;
+                return true;
+            }
+
+            age = 0;
+            return false;
         }
 
         private bool Lookup(string key, out string? profile)
