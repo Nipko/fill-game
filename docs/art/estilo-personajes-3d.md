@@ -248,12 +248,12 @@ Para la fauna, que se dibujaba con primitivas (círculos, elipses y cápsulas co
 El dueño pidió el 2026-10-27 «que tenga mejor forma, está un poco deforme con ese arco»; es la única excepción a «no cambiar siluetas». Mismo sprite (104 × 66 dp), mismas API y `ArtSlots`:
 - **el cuerpo,** fusiforme y macizo, sube unos 25° hacia la cabeza con una curvatura suave del lomo (una Bézier casi recta), en lugar del arco;
 - **el melón** redondo en la frente, con el cuello del boto marcado detrás;
-- **el rostro** largo y fino, algo caído hacia la punta;
+- **el rostro** largo y fino, algo caído hacia la punta (con un margen transparente hasta el borde del sprite);
 - **la quilla dorsal** baja, una cresta a lo largo del lomo, no una aleta alta;
 - **la pectoral** ancha bajo el pecho, hacia atrás;
 - **la cola horizontal,** con sus dos lóbulos barridos hacia atrás (vista algo desde arriba), dentro del sprite: en el Mapa se ve entero.
 
-**Los anclajes que dependían del arco,** al día: el respiradero (`RosaBlowhole`, de (0,42; 0,765) a (0,30; 0,685)), donde nace el soplo; y el corte con el agua del banner (`RosaCutCenter` de 0,81 a 0,635 y `RosaCutWidth` de 0,225 a 0,435), donde va la espuma. La onda (72 dp, centrada en Rosa) tapa los dos extremos del corte. La boca y el ojo se mueven con la cabeza, igual en Rosa y en el bufeo.
+**Los anclajes que dependían del arco,** al día: el respiradero (`RosaBlowhole`, de (0,42; 0,765) a (0,30; 0,745)), donde nace el soplo; y el corte con el agua del banner (`RosaCutCenter` de 0,81 a 0,79 y `RosaCutWidth` de 0,225 a 0,29), donde va la espuma. El cuerpo va algo alto en el sprite para que la línea del agua (al 26 % del alto, `RosaAbove` sin cambios) lo corte cerca del pedúnculo, donde es estrecho: unos 30 dp con su borde (29,3 dp medidos en los píxeles), bajo los 40 dp de la espuma con margen para sus puntas afinadas, porque **en reposo la espuma tapa sola el corte** (la onda y el soplo solo se ven al asomar). Lo comprueba `RosaWaterCutTests`, con las constantes y con los píxeles reales de la fila del agua, y también que la silueta de Rosa y del bufeo deja un margen transparente en los bordes del sprite. La pectoral queda entera sobre el agua. La boca y el ojo se mueven con la cabeza, igual en Rosa y en el bufeo.
 
 ### 11.4 Los avatares
 
