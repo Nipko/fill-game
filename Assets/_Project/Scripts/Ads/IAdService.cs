@@ -27,8 +27,7 @@ namespace AF.Ads
 
     /// <summary>
     /// Proveedor de anuncios (GDD 08 §2.1 principio 6 y §2.2 <c>AF.Ads</c>): <see cref="FakeAdService"/> (fase 2, D-008: sin SDK ni
-    /// red) en el editor, los tests y los builds sin la configuración de MAX, y <see cref="MaxAdService"/> (AppLovin MAX 8.6.6, D-042)
-    /// en el teléfono, con la inicialización tras el consentimiento y la edad (08 §2.3), la precarga y la concesión con SSV
+    /// red) en el editor y los tests, y <see cref="GoogleAdService"/> (AdMob directo con Google Mobile Ads, D-049) en el teléfono, con la inicialización tras el consentimiento y la edad (08 §2.3), la precarga y la concesión con SSV
     /// (08 §10.2). Las reglas
     /// de cadencia y topes no son suyas: son de <see cref="AdPolicy"/>. Se usa desde el hilo principal.
     /// </summary>

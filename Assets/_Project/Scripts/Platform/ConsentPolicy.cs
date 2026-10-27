@@ -33,8 +33,8 @@ namespace AF.Platform
         }
 
         /// <summary>
-        /// Hay una decisión que permite jugar (banda y finalidades, con los textos vigentes). Sin ella, MAX no se inicializa
-        /// (08 §2.3: «MAX arranca solo tras consentir») y la analítica no recoge.
+        /// Hay una decisión que permite jugar (banda y finalidades, con los textos vigentes). Sin ella, los anuncios no se inicializan
+        /// (08 §2.3: los anuncios arrancan solo tras consentir) y la analítica no recoge.
         /// </summary>
         public bool Decided { get; }
 
@@ -54,7 +54,7 @@ namespace AF.Platform
         public bool AdsPersonalized { get; }
 
         /// <summary>
-        /// Perfil <c>ump</c> con 18+: la personalización de los anuncios la decide el mensaje de UMP (las cadenas TCF que MAX pasa a
+        /// Perfil <c>ump</c> con 18+: la personalización de los anuncios la decide el mensaje de UMP (las cadenas TCF que UMP pasa a
         /// las redes, 08 §7 #2), no la pantalla propia; el juego no fuerza <c>npa</c>.
         /// </summary>
         public bool AdsByUmp { get; }
@@ -187,7 +187,7 @@ namespace AF.Platform
         /// <summary>
         /// La pantalla de consentimiento propia ofrece la finalidad «Anuncios personalizados»: solo con 18+ (con 13-17 y
         /// <c>biz_under18_no_personalization</c> no se puede activar), fuera de UMP (en el EEE, el Reino Unido y Suiza la decide el
-        /// mensaje de UMP que muestra MAX al inicializarse, 08 §7 #2) y con el país conocido: sin país (Q-T3 (a), «el tratamiento
+        /// mensaje de UMP de Google Mobile Ads, 08 §7 #2) y con el país conocido: sin país (Q-T3 (a), «el tratamiento
         /// más estricto»), <c>npa</c> sin elección [P] (Q-B12-13).
         /// </summary>
         public static bool OffersAdsChoice(string profile, AgeBand band, ConsentConfig config, bool countryKnown = true)

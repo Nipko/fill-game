@@ -61,7 +61,7 @@ namespace AF.Platform
 
     /// <summary>
     /// Perfiles legales de <c>biz_legal_profile_by_country</c> (08 §9; 08 §7, «Consentimiento»): pantalla propia en BR, CO, PE y MX;
-    /// UMP (dentro de MAX) en EEE, Reino Unido y Suiza; <c>default</c> en el resto y cuando no se sabe el país (Q-T3 (a): el
+    /// UMP (de Google Mobile Ads) en EEE, Reino Unido y Suiza; <c>default</c> en el resto y cuando no se sabe el país (Q-T3 (a): el
     /// tratamiento más estricto).
     /// </summary>
     public static class LegalProfiles
@@ -78,7 +78,7 @@ namespace AF.Platform
         /// <summary>México: LFPDPPP.</summary>
         public const string MxLfpdppp = "mx_lfpdppp";
 
-        /// <summary>EEE, Reino Unido y Suiza: el mensaje de UMP que muestra MAX al inicializarse (08 §7 #2).</summary>
+        /// <summary>EEE, Reino Unido y Suiza: el mensaje de UMP de Google Mobile Ads (08 §7 #2).</summary>
         public const string Ump = "ump";
 
         /// <summary>El resto, y el país desconocido (Q-T3 (a)).</summary>

@@ -165,7 +165,7 @@ namespace AF.Tests.PlayMode
             Assert.That(options, Is.EqualTo(1));
 
             _screen.ShowChoices(ConsentAdsLine.Ump, true, false, (a, an, ad) => { });
-            Assert.That(_screen.AdsOptionsShown, Is.False, "en el arranque, la línea: UMP sale al inicializar MAX");
+            Assert.That(_screen.AdsOptionsShown, Is.False, "en el arranque, la línea: UMP sale al inicializar los anuncios");
         }
 
         [Test]
@@ -252,7 +252,7 @@ namespace AF.Tests.PlayMode
                 new ConsentRecord(LegalProfiles.Ump, 1, new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc), true, false, AgeBand.Adult),
                 ConsentConfig.Defaults);
             StringAssert.Contains("\"npa\":false,\"ump\":true", DevProbe.FormatConsentState(1, "done", ump, LegalProfiles.Ump, "DE", CountrySource.Sim),
-                "la sonda dice lo mismo que recibe MAX: con UMP no se fuerza npa");
+                "la sonda dice lo mismo que recibe el SDK de anuncios: con UMP no se fuerza npa");
         }
     }
 }

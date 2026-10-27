@@ -147,7 +147,7 @@ namespace AF.UI
 
         private IAdService WrapAds(IAdService inner)
         {
-            // ad_impression (ILR de MAX, D-042) mientras ads_ilr_to_firebase (08 §9) esté encendido.
+            // ad_impression (OnAdPaid de Google Mobile Ads, D-049) mientras ads_ilr_to_firebase (08 §9) esté encendido.
             RemoteConfigService? rc = _rc;
             return _analytics != null
                 ? new AnalyticsAdService(inner, _analytics, () => rc == null || !rc.TryGet("ads_ilr_to_firebase", out bool ilr) || ilr)

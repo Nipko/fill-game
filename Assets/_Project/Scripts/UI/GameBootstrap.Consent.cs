@@ -22,7 +22,7 @@ namespace AF.UI
     /// banda &lt;13 guardada, corta la pantalla de arranque, enseña «Pide a un adulto que instale el juego» y el arranque se para
     /// (no se crea sesión de juego, 08 §7).</item>
     /// <item><see cref="WrapConsentAds"/> y <see cref="WrapConsentStore"/> envuelven el proveedor de anuncios y la tienda: sin
-    /// decisión, MAX sin inicializar y sin compras; con 13-17, la doble confirmación.</item>
+    /// decisión, los anuncios sin inicializar y sin compras; con 13-17, la doble confirmación.</item>
     /// <item><see cref="SetUpConsent"/>, con Remote Config enlazado: las cifras (<see cref="ConsentConfigBinder"/>), el país
     /// (SIM → región → ninguno) y su perfil legal, el flujo y la pantalla.</item>
     /// <item><see cref="StartConsentAtBoot"/> (y, si hay pantalla, <see cref="WaitConsentAtBoot"/>), tras cortar la pantalla de arranque y antes de <c>AppFlow.Start</c>: la edad y el
@@ -442,7 +442,7 @@ namespace AF.UI
             }
         }
 
-        // Ajustes con el perfil ump: vuelve a abrir el mensaje de UMP (MAX) para cambiar o retirar el consentimiento de los anuncios.
+        // Ajustes con el perfil ump: vuelve a abrir el mensaje de UMP (Google) para cambiar o retirar el consentimiento de los anuncios.
         private void OpenAdsPrivacyOptions()
         {
             if (_consentAds != null && _consentAds.ShowPrivacyOptions())
