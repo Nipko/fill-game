@@ -8,8 +8,22 @@
 #   coverage      cobertura >= 80 % de lineas sobre AF.Core y AF.Solver (coverlet.msbuild), en main y en los PR que
 #                 tocan el nucleo o dotnet/: instrumentado, dotnet test tarda unas 13 veces mas (19 min frente a 1,5 en
 #                 el escritorio Ryzen 9 9900X), asi que no va en cada PR.
-#   changes       decide si el PR toca Unity (Assets, Packages, ProjectSettings, ci, workflows) o el nucleo.
-#   unity-tests   EditMode + PlayMode (game-ci/unity-test-runner) en PR listos (no borradores) que tocan Unity y en main.
+#   changes       decide si el PR o el push a main toca Unity (Assets, Packages, ProjectSettings, ci, workflows) o el
+#                 nucleo (ci/ci-changes.sh). En main compara con el ultimo commit cuyos tests de Unity pasaron (el
+#                 head_sha del ultimo run de ci.yml en main en success con el job de Unity en success), no con
+#                 github.event.before: si el run de un push que toca Unity se cancela (GitHub cancela el run en espera
+#                 cuando llega otro, o un PR o release.yml lo desplaza en unity-personal-seat) y llega despues un push de
+#                 solo documentacion, este aun ve lo que quedo sin probar. Sin run probado, si la API falla o si ese
+#                 commit no es ancestro: todo a true. Asi un push de solo documentacion no lanza Unity (unos 100 min de
+#                 runner y el asiento Personal) ni la cobertura.
+#   unity-tests   EditMode + PlayMode (game-ci/unity-test-runner) en PR listos (no borradores) que tocan Unity y en los
+#                 push a main que tocan Unity. Los presupuestos de tiempo de los tests de rendimiento llevan holgura en
+#                 la CI (-afPerfBudgetFactor 3; Assets/_Project/Tests/Support/PerfBudget.cs): el runner es ~2 veces mas
+#                 lento que el escritorio, donde se miden tal cual. Los tests [Explicit] (capturas y KnownIssue) ya no se
+#                 ejecutan (0 s en la primera ejecucion real). El veredicto lo dan los XML NUnit
+#                 (ci/check-unity-test-results.sh), no el codigo de salida de game-ci, que puede ser 1 al devolver la
+#                 licencia Personal; lo mismo en build-android, donde lo dan la linea [AF.BuildRelease] OK (con
+#                 -afResultFile), el AAB y las compuertas.
 #   build-android solo en main (o a mano): AAB sin firma de release con AF.EditorTools.BuildRelease, IL2CPP ARM64 y
 #                 Managed Stripping High, y las compuertas size-gate (<= 80 MB), check-16kb, check-manifest y
 #                 check-release-classes (sin firebase-appcheck-debug; D-033, anadido del 2026-10-22, punto 9) y
@@ -21,6 +35,14 @@
 #
 # Cola de unity-personal-seat: GitHub guarda un solo job en espera por grupo; si llega otro, el que esperaba se
 # cancela (sale "cancelled" en el PR y se relanza a mano). Es el precio de no pedir dos asientos Personal a la vez.
+# El job de release.yml comparte el grupo: no espera a que la CI pase, pero si la CI ocupa el asiento (unos 100 min de
+# tests y hasta 120 de build en main) espera, y un job de la CI que llegue despues lo cancela si aun no ha empezado. Por
+# eso los push de solo documentacion ya no ocupan el asiento; lanza el release con la CI de main parada o terminada.
+#
+# Cache de Library: se restaura en todos los runs y se GUARDA solo en main (push o a mano) aunque fallen los tests (no
+# si se cancelan): sin ella, la importacion y el arranque costaron unos 8 min en la primera ejecucion real, y un run
+# fallido no la estropea (en esa ejecucion, con actions/cache, no se guardo por fallar los tests). Los PR solo leen la
+# de main (una cache guardada en un PR solo la ve ese PR y gasta los 10 GB del repositorio).
 #
 # Identidad del build: hasta el dictamen de marca no hay applicationId definitivo, asi que el job construye un ENSAYO
 # (-afRehearsal: configuracion de release con com.amazonfill.dev) y lo comprueba como build de prueba
@@ -124,6 +146,10 @@ jobs:
     name: rutas tocadas
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    # actions: read para buscar el ultimo run de main con los tests de Unity en success (ci/ci-changes.sh).
+    permissions:
+      contents: read
+      actions: read
     outputs:
       unity: ${{ steps.diff.outputs.unity }}
       core: ${{ steps.diff.outputs.core }}
@@ -139,23 +165,10 @@ jobs:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -uo pipefail
-          all_true() { { echo "unity=true"; echo "core=true"; } >> "$GITHUB_OUTPUT"; exit 0; }
-          [ "$EVENT" = "pull_request" ] || all_true
-          # Contra el punto de bifurcacion del PR (BASE...HEAD), no contra la punta de main.
-          git fetch --no-tags --depth=200 origin "$BASE" "$HEAD" || all_true
-          files="$(git diff --name-only "$BASE...$HEAD")" || all_true
-          if printf '%s\n' "$files" | grep -Eq '^(Assets/|Packages/|ProjectSettings/|ci/|\.github/workflows/)'; then
-            echo "unity=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "unity=false" >> "$GITHUB_OUTPUT"
-          fi
-          if printf '%s\n' "$files" | grep -Eq '^(Packages/com\.amazonfill\.core/|dotnet/|global\.json|\.github/workflows/)'; then
-            echo "core=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "core=false" >> "$GITHUB_OUTPUT"
-          fi
+          AFTER: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash ci/ci-changes.sh
 
   unity-tests:
     name: Unity EditMode + PlayMode
@@ -164,7 +177,8 @@ jobs:
       needs.changes.outputs.unity == 'true' &&
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-24.04
-    # PlayMode solo tarda unos 29 min en el escritorio (1.587 tests); el runner de 4 nucleos es mas lento.
+    # Primera ejecucion real (2026-10-27, sin cache de Library): ~8 min de arranque e importacion, PlayMode 76 min
+    # (2.215 tests; 30 en el escritorio) y EditMode 12,5 min: unos 100 min en total. Se deja margen para el runner lento.
     timeout-minutes: 150
     concurrency:
       group: unity-personal-seat
@@ -194,14 +208,20 @@ jobs:
       - name: git lfs pull
         run: git lfs pull
 
-      - name: Cache de Library (tests)
-        uses: actions/cache@v4.2.3
+      - name: Cache de Library (tests), restaurar
+        id: library-cache
+        uses: actions/cache/restore@v4.2.3
         with:
           path: Library
           key: Library-tests-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/**', 'Assets/**') }}
           restore-keys: Library-tests-
 
+      # game-ci puede salir con 1 aunque los tests pasen: falla al devolver la licencia Personal por derechos («Serial
+      # number unavailable for ULF return»; primera ejecucion real de ci.yml y de release.yml, 2026-10-27). El paso no corta
+      # el job: el veredicto lo da ci/check-unity-test-results.sh con los XML NUnit (los dos modos, > 0 tests, 0 fallos).
       - name: Tests de Unity
+        id: unitytests
+        continue-on-error: true
         uses: game-ci/unity-test-runner@v4.4.0
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -210,6 +230,25 @@ jobs:
           testMode: all
           cliVersion: v0.1.72
           artifactsPath: artifacts
+          # Holgura de los presupuestos de tiempo en el runner (PerfBudget.cs); en el escritorio, factor 1.
+          customParameters: -afPerfBudgetFactor 3
+
+      # Tambien si fallan los tests (la importacion vale igual), pero no si se cancela el run; solo en main.
+      - name: Cache de Library (tests), guardar en main
+        if: >-
+          ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
+          steps.library-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4.2.3
+        with:
+          path: Library
+          key: ${{ steps.library-cache.outputs.cache-primary-key }}
+
+      - name: Veredicto de los tests (XML de EditMode y PlayMode)
+        env:
+          AF_UNITY_OUTCOME: ${{ steps.unitytests.outcome }}
+        run: |
+          echo "Resultado del paso de game-ci: $AF_UNITY_OUTCOME (el veredicto lo dan los XML)."
+          bash ci/check-unity-test-results.sh artifacts editmode playmode
 
       - name: Resultados de los tests
         if: always()
@@ -258,8 +297,9 @@ jobs:
       - name: git lfs pull
         run: git lfs pull
 
-      - name: Cache de Library (Android)
-        uses: actions/cache@v4.2.3
+      - name: Cache de Library (Android), restaurar
+        id: library-cache
+        uses: actions/cache/restore@v4.2.3
         with:
           path: Library
           key: Library-android-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/**', 'Assets/**') }}
@@ -278,7 +318,12 @@ jobs:
             echo "Sin AF_RELEASE_APPLICATION_ID: ensayo con com.amazonfill.dev (no es un release)."
           fi
 
+      # Como en release.yml: game-ci v6 sale con 1 aunque el build termine bien (falla al devolver la licencia Personal,
+      # «Serial number unavailable for ULF return»). El paso no corta el job: el veredicto lo dan «Un solo AAB» y las
+      # compuertas de abajo, que un AAB a medias no pasa.
       - name: Build Android (AAB sin firma de release)
+        id: unitybuild
+        continue-on-error: true
         uses: game-ci/unity-builder@v6.0.0
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -290,7 +335,41 @@ jobs:
           buildMethod: AF.EditorTools.BuildRelease.BuildAndroid
           androidExportType: androidAppBundle
           androidVersionCode: ${{ github.run_number }}
-          customParameters: ${{ steps.identity.outputs.params }}
+          # -afResultFile: BuildRelease escribe ahi su linea de veredicto ([AF.BuildRelease] OK. o FALLO (codigo N).).
+          customParameters: ${{ steps.identity.outputs.params }} -afResultFile build/af-build-result.txt
+
+      # Como en unity-tests: tambien si falla el build, no si se cancela (este job solo corre en main).
+      - name: Cache de Library (Android), guardar
+        if: ${{ !cancelled() && steps.library-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4.2.3
+        with:
+          path: Library
+          key: ${{ steps.library-cache.outputs.cache-primary-key }}
+
+      - name: Veredicto del build ([AF.BuildRelease] OK y un solo AAB)
+        env:
+          AF_UNITY_OUTCOME: ${{ steps.unitybuild.outcome }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          echo "Resultado del paso de game-ci: $AF_UNITY_OUTCOME (el veredicto lo dan BuildRelease, el AAB y las compuertas)."
+          # Como scripts/unity-build.ps1 con el log: la linea del metodo, no el codigo de salida de game-ci.
+          result=build/af-build-result.txt
+          if [ ! -s "$result" ]; then
+            echo "BuildRelease no escribio su veredicto en $result: el build no termino." >&2
+            exit 1
+          fi
+          cat "$result"
+          if ! grep -q '^\[AF\.BuildRelease\] OK\.' "$result"; then
+            echo "BuildRelease no termino en OK." >&2
+            exit 1
+          fi
+          aabs=(build/Android/*.aab)
+          if [ "${#aabs[@]}" -ne 1 ]; then
+            echo "Se esperaba un .aab en build/Android y hay ${#aabs[@]}: el build de Unity no termino." >&2
+            exit 1
+          fi
+          echo "AAB: ${aabs[0]}"
 
       - uses: actions/setup-java@v4.7.1
         with:

@@ -14,7 +14,6 @@ using NUnit.Framework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
 
 namespace AF.Tests.PlayMode
@@ -559,17 +558,11 @@ namespace AF.Tests.PlayMode
     /// El Atrás de Android cierra Ajustes (tarea L3): llega como <c>Keyboard.escapeKey</c> (ver <see cref="BackButtonTests"/>),
     /// y con Ajustes abierto vuelve al inicio, que sigue igual.
     /// </summary>
-    public sealed class SettingsBackButtonTests : InputTestFixture
+    public sealed class SettingsBackButtonTests : UiInputTestFixture
     {
         /// <inheritdoc />
         public override void TearDown()
         {
-            InputSystemUIInputModule[] modules = UnityEngine.Object.FindObjectsByType<InputSystemUIInputModule>(FindObjectsSortMode.None);
-            for (int i = 0; i < modules.Length; i++)
-            {
-                modules[i].enabled = false;
-            }
-
             LaunchOptions.Reset();
             base.TearDown();
         }

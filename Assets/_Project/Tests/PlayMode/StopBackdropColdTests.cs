@@ -41,14 +41,14 @@ namespace AF.Tests.PlayMode
             TestContext.WriteLine("71 en frío: " + cold);
             Debug.Log("AF_FX4 71 en frío: " + cold);
             Assert.That(b.Warmed, Is.True);
-            Assert.That(b.BuildMs, Is.LessThanOrEqualTo(6.5d), "objetivo de FX4 (≤ 8 ms, 08 §5.4)");
+            Assert.That(b.BuildMs, Is.LessThanOrEqualTo(PerfBudget.Ms(6.5d)), "objetivo de FX4 (≤ 8 ms, 08 §5.4), " + PerfBudget.Describe(6.5d));
 
             // Ya en caliente, otra parada (la preparación es una sola vez por fondo: StopBackdropTests).
             yield return HudSetup.LoadAtIntro(51);
             b = GameBootstrap.Current!.View!.StopBackdrop;
             Debug.Log("AF_FX4 51 después: build_ms " + b.BuildMs.ToString("0.###", CultureInfo.InvariantCulture) + ", warm_ms "
                 + b.WarmMs.ToString("0.###", CultureInfo.InvariantCulture));
-            Assert.That(b.BuildMs, Is.LessThanOrEqualTo(6.5d));
+            Assert.That(b.BuildMs, Is.LessThanOrEqualTo(PerfBudget.Ms(6.5d)), PerfBudget.Describe(6.5d));
         }
     }
 }
