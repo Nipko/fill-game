@@ -133,7 +133,7 @@ Fila de AppLovin MAX en 08 §13.3 al día. La web (`infra/web/src/content/*/priv
    |---|---|
    | ID de editor | `pub-2916158449453694` |
    | App ID (Android, «Tintalú», sin tienda vinculada) | `ca-app-pub-2916158449453694~9925643748` |
-   | Bloque recompensado `Tintalu Rewarded MAX` (sin SSV de AdMob) | `ca-app-pub-2916158449453694/2877105387` |
+   | Bloque `Tintalu Rewarded MAX`: **no usar, es de formato intersticial recompensado** (2026-10-27; lo sustituye «Tintalu Rewarded», `ca-app-pub-2916158449453694/1182085615`, `docs/dev/anuncios-admob.md` §3 bis) | `ca-app-pub-2916158449453694/2877105387` |
    | Bloque intersticial `Tintalu Interstitial MAX` (sin ofertas de socios) | `ca-app-pub-2916158449453694/7187673451` |
 
    - **Mensaje del RGPD** «Tintalú RGPD»:

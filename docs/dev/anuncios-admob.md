@@ -30,11 +30,33 @@ Constantes de `AF.Ads.GoogleAdUnits` (ninguno es secreto; 08 §9 no tiene claves
 | Build | Recompensado | Intersticial |
 |---|---|---|
 | Desarrollo (`Debug.isDebugBuild`) o con el `applicationId` provisional `com.amazonfill.dev` (también el ensayo de release) | `ca-app-pub-3940256099942544/5224354917` | `ca-app-pub-3940256099942544/1033173712` |
-| Release con el ID definitivo | `ca-app-pub-2916158449453694/2877105387` | `ca-app-pub-2916158449453694/7187673451` |
+| Release con el ID definitivo | `ca-app-pub-2916158449453694/1182085615` | `ca-app-pub-2916158449453694/7187673451` |
 
 - Los de prueba son los **bloques de prueba oficiales de Google** para Android (comprobados el 2026-10-25 en https://developers.google.com/admob/android/test-ads y en el ejemplo del propio paquete 11.5.0). Así ningún build de prueba genera tráfico inválido en la cuenta de AdMob.
 - La decisión es la función pura `GoogleAdUnits.Choose(developmentBuild, applicationId)`, probada en `GoogleAdServiceTests`. El arranque escribe en logcat `[AF.Ads] proveedor: google (bloques de prueba|bloques de produccion); max: not_configured`, sin los ID.
 - Un recompensado para las seis ubicaciones `rv_*` y un intersticial para `interstitial_post_level`, como con MAX.
+
+### 3 bis. Bloques y mediación en la consola de AdMob (2026-10-27)
+
+El bloque recompensado de producción que había en el código, `…/2877105387` («Tintalu Rewarded MAX»), resultó ser de formato **Intersticial recompensado** (comprobado el 2026-10-27 en la consola de AdMob). El juego lo carga como `RewardedAd`, así que en producción no se habría servido por no coincidir el formato. Con el dueño se creó un bloque nuevo de formato **Recompensado** y el código pasa a él.
+
+| Bloque (consola de AdMob) | Formato | ID | Estado |
+|---|---|---|---|
+| «Tintalu Rewarded» | Recompensado (recompensa: 1 «Reward») | `ca-app-pub-2916158449453694/1182085615` | **En uso** (`GoogleAdUnits.ProductionRewarded`). SSV **todavía sin activar** |
+| «Tintalu Interstitial MAX» | Intersticial | `ca-app-pub-2916158449453694/7187673451` | **En uso** (`GoogleAdUnits.ProductionInterstitial`) |
+| «Tintalu Rewarded MAX» | Intersticial recompensado | `ca-app-pub-2916158449453694/2877105387` | **No usar: intersticial recompensado.** No está en el código ni en la lista blanca del SSV |
+
+Grupos de mediación con **Unity Ads por bidding** (Android):
+
+| Grupo | ID | Bloque de AdMob | Placement de Unity Ads |
+|---|---|---|---|
+| «Tintalú Recompensado Android» | 9122104719 | `…/1182085615` | `BP_Rewarded_Android` |
+| «Tintalú Intersticial Android» | 3021919976 | `…/7187673451` | `BP_Interstitial_Android` |
+
+- **Game ID de Unity Ads (Android):** 800412912. **ID de organización de Unity:** `20067668703382` (para `app-ads.txt`). Ninguno es secreto.
+- **El adaptador de Unity Ads para Google Mobile Ads (3.21.1) espera la aprobación del dueño** (regla dura 4: sin aprobación, ni paquetes ni SDK). Hasta que entre en el build, los grupos de mediación existen en la consola pero Unity Ads no puja: AdMob sirve solo su demanda. Al integrarlo hay que repasar el manifiesto, el tamaño, el 16 KB, Data Safety (08 §13.3) y la web.
+- **`app-ads.txt`:** la línea `unity.com, 20067668703382, DIRECT` está en `infra/web/src/static/app-ads.txt` **solo comentada**; se descomenta cuando entre el adaptador.
+- **Pendiente del dueño:** cuando se despliegue la API, activar el SSV en el bloque **nuevo** `1182085615` con la URL `<ApiUrl>/v1/ssv` (`infra/README.md` §5 bis). La lista blanca del servidor (`infra/lib/config.ts`, `admobRewardedAdUnits`) ya es `1182085615` en prod y `1182085615` + `5224354917` en dev.
 
 ## 4. Código
 
@@ -72,7 +94,7 @@ Las reglas de cadencia, topes, esperas e intersticiales siguen en `AdPolicy` (05
 - Antes de cada recompensado, **si hay UID** de Firebase Auth anónimo (`FirebaseAuthUid.Current`, el mismo `sub` que valida el JWT de `restoreLedger`), `RewardedAd.SetServerSideVerificationOptions` con `UserId` = ese UID en claro y `CustomData = placement|nonce` (UUID v4; el contrato `infra/contracts/v1/rewarded-ssv` y `parseSsvQuery`). A diferencia de `MaxSdk.SetUserId`, va solo en ese anuncio, no en todas las peticiones. El UID se lee en cada recompensado (si llega tarde, vale desde el siguiente).
 - **Sin UID** (sin Firebase o sin backend): no se fija nada, no hay nonce (`LastRewardNonce` = null) y la recompensa sigue como hoy, solo provisional. Si el SSV está activado en el bloque, AdMob llama igualmente con `user_id` y `custom_data` vacíos y el servidor responde `200 ignored` sin escribir. Lo prueban `GoogleAdServiceTests` (`Rewarded_SetsSsv_UserIdAndCustomData_AndRewardsOnce`, `Rewarded_WithoutUid_SetsNoSsv_AndStillRewardsProvisionally`, `Rewarded_EmptyUid_IsLikeNoUid` y `Rewarded_UidThatArrivesLater_IsUsedOnTheNextShow`).
 - `AdOutcome.Rewarded` sale con la recompensa del `Show` y el cierre (`OnAdFullScreenContentClosed`), en cualquier orden y una sola vez: es la **concesión provisional**, como antes. `GoogleAdService.LastRewardNonce` y `LastRewardPlacement` dan el nonce de la última concesión.
-- **Servidor (`infra/functions/rewarded-ssv`, rama `tanda6/ssv-admob-web`):** `/v1/ssv` acepta el GET de AdMob (`ad_network`, `ad_unit`, `custom_data`, `reward_amount`, `reward_item`, `timestamp`, `transaction_id`, `user_id`, y al final `signature` y `key_id`) y verifica la **firma ECDSA P-256 sobre SHA-256** de la consulta cruda hasta antes de `&signature=` (sin reordenar ni decodificar; `rawQueryString` de API Gateway) con la clave pública del `key_id` de `https://www.gstatic.com/admob/reward/verifier-keys.json` (caché ≤ 24 h en la Lambda; un `key_id` desconocido la refresca una vez, como mucho una por minuto). Como las claves de Google son las mismas para todos los editores, **solo acepta los bloques recompensados propios** (lista blanca de `ad_unit` del entorno: `-c admobRewardedAdUnits`, por defecto `2877105387` en prod y además el de prueba de Google `5224354917` en dev; número o id completo); un bloque ajeno o sin `ad_unit` recibe `200 ignored` sin escribir ni gastar cupo (log `ssv_foreign_ad_unit`). El `transaction_id` hace de `event_id` (atado a un único UID y nonce). Además: `timestamp` de más de 24 h o de más de 10 min en el futuro → 400 `request_expired`; sin `user_id` o `custom_data` → `200 ignored`; idempotencia por nonce, TTL de 30 días, tope de 100 por UID y día y transacción contra UID borrado, como antes. Ya no hay secreto de MAX (`af-<env>/max-ssv-key` desaparece del stack). Contrato: `rewarded-ssv.request.schema.json` describe el callback de AdMob y la respuesta admite `ignored` (también en `AF.Backend`: `SsvCallback`, `SsvResponse.Ignored`). Tests: `infra/test/unit/rewarded-ssv-admob.test.ts` con un par de claves generado en el test, sin red. Después, el dueño activa el SSV en el bloque recompensado de AdMob (`infra/README.md` §5 bis).
+- **Servidor (`infra/functions/rewarded-ssv`, rama `tanda6/ssv-admob-web`):** `/v1/ssv` acepta el GET de AdMob (`ad_network`, `ad_unit`, `custom_data`, `reward_amount`, `reward_item`, `timestamp`, `transaction_id`, `user_id`, y al final `signature` y `key_id`) y verifica la **firma ECDSA P-256 sobre SHA-256** de la consulta cruda hasta antes de `&signature=` (sin reordenar ni decodificar; `rawQueryString` de API Gateway) con la clave pública del `key_id` de `https://www.gstatic.com/admob/reward/verifier-keys.json` (caché ≤ 24 h en la Lambda; un `key_id` desconocido la refresca una vez, como mucho una por minuto). Como las claves de Google son las mismas para todos los editores, **solo acepta los bloques recompensados propios** (lista blanca de `ad_unit` del entorno: `-c admobRewardedAdUnits`, por defecto `1182085615` en prod y además el de prueba de Google `5224354917` en dev; número o id completo); un bloque ajeno o sin `ad_unit` recibe `200 ignored` sin escribir ni gastar cupo (log `ssv_foreign_ad_unit`). El `transaction_id` hace de `event_id` (atado a un único UID y nonce). Además: `timestamp` de más de 24 h o de más de 10 min en el futuro → 400 `request_expired`; sin `user_id` o `custom_data` → `200 ignored`; idempotencia por nonce, TTL de 30 días, tope de 100 por UID y día y transacción contra UID borrado, como antes. Ya no hay secreto de MAX (`af-<env>/max-ssv-key` desaparece del stack). Contrato: `rewarded-ssv.request.schema.json` describe el callback de AdMob y la respuesta admite `ignored` (también en `AF.Backend`: `SsvCallback`, `SsvResponse.Ignored`). Tests: `infra/test/unit/rewarded-ssv-admob.test.ts` con un par de claves generado en el test, sin red. Después, el dueño activa el SSV en el bloque recompensado de AdMob (`infra/README.md` §5 bis).
 - **Pendiente (F3-4, `unity-gameplay-dev`):** registrar cada concesión con su nonce (`LocalRevocation.RegisterProvisional`) para que `restoreLedger` la confirme o la revoque a las 24 h, cuando el SSV del servidor esté listo.
 
 ## 7. Gradle: lo que resolvió de verdad
@@ -129,11 +151,12 @@ Sin bajadas de versión ni choques: las incidencias del plugin con AGP 9 (#4157 
 
 ## 10. Lo que hace el dueño
 
-1. Desplegar la API con el nuevo `rewardedSsv` y activar el SSV en el bloque recompensado de producción de AdMob con la URL `<ApiUrl>/v1/ssv` (`infra/README.md` §5 bis; §6).
+1. Desplegar la API con el nuevo `rewardedSsv` y activar el SSV en el bloque recompensado **nuevo** `ca-app-pub-2916158449453694/1182085615` («Tintalu Rewarded») con la URL `<ApiUrl>/v1/ssv` (`infra/README.md` §5 bis; §3 bis y §6). No en el antiguo `2877105387`, que es un intersticial recompensado.
 2. Vincular la app de AdMob a la ficha de Play cuando exista; publicar `app-ads.txt` con la línea de AdMob.
 3. Declarar el ID de publicidad en Play Console («Uso del ID de publicidad»: publicidad) y en Data Safety.
 4. Si se vincula AdMob con Firebase en la consola, AdMob registra `ad_impression` por su cuenta: entonces apagar `ads_ilr_to_firebase` en Remote Config para no contarlas dos veces (pregunta 3 de §11).
 5. Probar en el teléfono con un `dev.apk` (bloques de prueba de Google), nunca con clics propios en anuncios reales.
+6. Aprobar (o no) el adaptador de Unity Ads 3.21.1 para la mediación de AdMob (§3 bis); con él, descomentar la línea de Unity en `app-ads.txt`.
 
 ## 11. Preguntas abiertas
 
