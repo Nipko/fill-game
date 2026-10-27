@@ -230,6 +230,30 @@ namespace AF.Tests.EditMode
             Assert.That(flow.Flags.Band, Is.EqualTo(AgeBand.Teen));
         }
 
+        [Test]
+        public void Flow_DeclaredAdult_SignalTeen_InDE_DoesNotOfferAnalytics()
+        {
+            // D-057 (consent_digital_age_by_country): en DE la edad de consentimiento digital es 16, así que con 13-17 no se ofrece la
+            // analítica. Con 18+ declarado y la señal 13-15, manda la más estricta (T-L3).
+            var store = new MemoryConsentStore();
+            var flow = new ConsentFlow(WithSignals(), store, Clock(), LegalProfiles.Ump, countryKnown: true, country: "DE");
+            flow.ApplyAgeSignal(AgeSignal.ForRange(13, 15));
+
+            flow.StartBoot();
+            flow.ChooseAge(AgeBand.Adult);
+            Assert.That(flow.EffectiveBand, Is.EqualTo(AgeBand.Teen));
+            Assert.That(flow.OffersAnalyticsChoice, Is.False, "13-17 por la señal en DE: sin la finalidad de analítica");
+            flow.Choose(ConsentAnswer.AcceptAll);
+
+            Assert.That(store.Record!.Analytics, Is.False);
+            Assert.That(flow.Flags.AnalyticsEnabled, Is.False);
+
+            var adult = new ConsentFlow(WithSignals(), new MemoryConsentStore(), Clock(), LegalProfiles.Ump, countryKnown: true, country: "DE");
+            adult.StartBoot();
+            adult.ChooseAge(AgeBand.Adult);
+            Assert.That(adult.OffersAnalyticsChoice, Is.True, "sin señal, 18+ en DE sí la ofrece");
+        }
+
         // ---- T-L4: la banda de la señal nunca va a la analítica ----
 
         [Test]

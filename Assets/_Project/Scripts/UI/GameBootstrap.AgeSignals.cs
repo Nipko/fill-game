@@ -37,15 +37,16 @@ namespace AF.UI
             s_ageSignal = null;
         }
 
-        /// <summary>La banda de la señal ya recibida en este proceso, si la fuente la incluye (si no, <see cref="AgeBand.Unknown"/>).</summary>
-        private static AgeBand CachedSignalBand(ConsentConfig config)
-        {
-            return s_ageSignal.HasValue && AgeSignalPolicy.Enabled(config) ? s_ageSignal.Value.Band : AgeBand.Unknown;
-        }
+        /// <summary>
+        /// Una señal de 0-12 ya recibida en este proceso: el arranque de la escena recargada no enciende nada que recoja o descargue
+        /// (<see cref="DataServicesAllowedAtBoot"/>), como con &lt;13 guardado. Solo hay señal recordada si se pidió, es decir, si la
+        /// fuente la incluía.
+        /// </summary>
+        private static bool SignalBlocksInThisProcess => s_ageSignal.HasValue && s_ageSignal.Value.Band == AgeBand.Under13;
 
         /// <summary>
-        /// Con la fuente <c>self_declared+play_age_signals</c>: aplica la señal ya recibida en este proceso o, si no se pidió, la pide.
-        /// Con <c>self_declared</c> (el default de 08 §9), nada.
+        /// Con la fuente <c>self_declared+play_age_signals</c> (el default de 08 §9 desde D-057, añadido del 2026-10-27): aplica la
+        /// señal ya recibida en este proceso o, si no se pidió, la pide. Con <c>self_declared</c> (desde Remote Config), nada.
         /// </summary>
         private void RequestAgeSignal(ConsentConfig config)
         {

@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using AF.Analytics;
 using AF.Economy;
 using AF.GameFlow;
@@ -61,21 +62,81 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Signal0to12_BlocksTheGame_AndTheReloadedSceneStaysBlocked_WithoutSavingIt()
         {
-            WithSignalSource();
+            // Con el default de 08 §9 (self_declared+play_age_signals). Tras el bloqueo, la escena recargada no vuelve a encender nada
+            // de lo que recoge o descarga, como con <13 guardado (08 §7): ni Crashlytics, ni la descarga de Remote Config, ni el
+            // sumidero de Firebase, ni la nube.
+            var crash = new List<bool>();
+            var rc = new CountingFetchBackend();
+            var sink = new CollectionSink();
+            GameBootstrap.CrashReportingOverride = on => crash.Add(on);
+            GameBootstrap.RemoteConfigBackendOverride = rc;
+            GameBootstrap.AnalyticsSinkOverride = sink;
             var signals = new FakeAgeSignals(AgeSignal.ForRange(0, 12));
             GameBootstrap.AgeSignalsOverride = signals;
             var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Adult)));
 
             yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap first = GameBootstrap.Current!;
             yield return PlayModeHelpers.WaitFor(
-                () => GameBootstrap.Current != null && GameBootstrap.Current.ConsentBlocked && GameBootstrap.Current.App == null,
-                "el arranque bloqueado por la señal de 0-12");
+                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked
+                    && GameBootstrap.Current.App == null,
+                "la escena recargada, bloqueada por la señal de 0-12");
 
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.ConsentView!.View, Is.EqualTo(ConsentView.Blocked), "«Pide a un adulto que instale el juego», como <13");
             Assert.That(signals.Requests, Is.EqualTo(1), "una petición por arranque (por proceso): la recarga usa la respuesta");
             Assert.That(GameBootstrap.LastAgeSignal!.Value.Band, Is.EqualTo(AgeBand.Under13));
             Assert.That(store.Load().Profile!.Consent!.AgeBand, Is.EqualTo(AgeBand.Adult), "la señal no se guarda en el perfil");
+
+            Assert.That(boot.DataServicesAtBoot, Is.False, "la recarga no enciende Crashlytics, Remote Config, Firebase Analytics ni la nube");
+            Assert.That(crash.Count, Is.GreaterThanOrEqualTo(2));
+            Assert.That(crash[0], Is.True, "el primer arranque (18+ guardado) lo encendió");
+            int firstFalse = crash.IndexOf(false);
+            Assert.That(firstFalse, Is.GreaterThan(0), "al llegar la señal se apaga");
+            Assert.That(crash.GetRange(firstFalse, crash.Count - firstFalse), Has.No.Member(true), "tras el bloqueo, ningún true");
+            Assert.That(crash[crash.Count - 1], Is.False);
+            Assert.That(rc.Fetches, Is.EqualTo(1), "solo la descarga del primer arranque: la recarga no descarga Remote Config");
+            Assert.That(sink.Calls, Has.No.Member(true), "la analítica nunca se enciende");
+            Assert.That(boot.BootCloudSync, Is.Null, "sin nube en la recarga");
+        }
+
+        private sealed class CountingFetchBackend : IFetchingRemoteConfigBackend
+        {
+            public int Fetches;
+
+            public IReadOnlyDictionary<string, string>? Cached => null;
+
+            public DateTime? LastFetchUtc => null;
+
+            public void MarkFetched(DateTime nowUtc)
+            {
+            }
+
+            public void Fetch(Action<IReadOnlyDictionary<string, string>?> onDone)
+            {
+                Fetches++;
+                onDone?.Invoke(null);
+            }
+        }
+
+        private sealed class CollectionSink : IAnalyticsSink, ICollectionAwareSink
+        {
+            public readonly List<bool> Calls = new List<bool>();
+
+            public bool RequiresConsent => true;
+
+            public void Send(AnalyticsEvent e)
+            {
+            }
+
+            public void SetUserProperty(string name, string value)
+            {
+            }
+
+            public void SetCollectionEnabled(bool enabled)
+            {
+                Calls.Add(enabled);
+            }
         }
 
         [UnityTest]

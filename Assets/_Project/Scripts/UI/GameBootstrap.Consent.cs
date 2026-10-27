@@ -106,9 +106,13 @@ namespace AF.UI
         // no crea el sumidero de Firebase Analytics ni fusiona con la nube. Se decide con el perfil leído, antes de iniciar ningún SDK.
         private bool _dataServicesAtBoot = true;
 
+        /// <summary>Tests: este arranque encendió lo que recoge o descarga (Crashlytics, Remote Config, Firebase Analytics y la nube).</summary>
+        internal bool DataServicesAtBoot => _dataServicesAtBoot;
+
         /// <summary>
         /// El arranque puede encender lo que recoge o descarga (Crashlytics, la descarga de Remote Config, Firebase Analytics y la
-        /// nube): sin banda guardada, 13-17 y 18+, sí; con &lt;13 guardado, no (B12; 08 §7). Sin el consentimiento en marcha (los tests de
+        /// nube): sin banda guardada, 13-17 y 18+, sí; con &lt;13 guardado, o con una señal de 0-12 de Play Age Signals ya recibida en
+        /// este proceso (T-L3), no (B12; 08 §7). Sin el consentimiento en marcha (los tests de
         /// siempre), sí. Lee <see cref="ConsentStoreOverride"/> si lo hay, como <see cref="BlockedAtBoot"/>.
         /// </summary>
         private static bool DataServicesAllowedAtBoot(Profile profile)
@@ -116,6 +120,14 @@ namespace AF.UI
             if (!ConsentEnabled)
             {
                 return true;
+            }
+
+            // T-L3: tras un bloqueo por una señal de Play Age Signals de 0-12 en este proceso (la escena se recarga), tampoco: la
+            // señal no se guarda, pero se recuerda en el proceso. Aquí aún no hay Remote Config: la señal solo se pidió (y se
+            // recuerda) si su fuente la incluía.
+            if (SignalBlocksInThisProcess)
+            {
+                return false;
             }
 
             ConsentRecord? record = ConsentStoreOverride != null ? ConsentStoreOverride.Load() : profile.Consent;
@@ -137,7 +149,8 @@ namespace AF.UI
             ConsentRecord? record = actual.Load();
             // T-L3: una señal de Play Age Signals de 0-12 recibida en este proceso (la escena se recarga tras bloquear) también para
             // el arranque aquí, sin estar guardada.
-            AgeBand signalBand = CachedSignalBand(_rcConfigs?.Consent ?? ConsentConfig.Defaults);
+            // Con la misma condición que DataServicesAllowedAtBoot (SignalBlocksInThisProcess), para que los dos digan lo mismo.
+            AgeBand signalBand = SignalBlocksInThisProcess ? AgeBand.Under13 : AgeBand.Unknown;
             if (!ConsentPolicy.IsBlocked(record) && signalBand != AgeBand.Under13)
             {
                 return false;
