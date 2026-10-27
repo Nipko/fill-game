@@ -164,7 +164,13 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/.af-signing/af-upload.keystore"
           test -s "$GITHUB_WORKSPACE/.af-signing/af-upload.keystore"
 
+      # game-ci v6 sale con 1 aunque el build termine bien: falla al devolver la licencia Personal por derechos
+      # («Serial number unavailable for ULF return»; primera ejecucion completa, 2026-10-27: [AF.BuildRelease] OK,
+      # 59,18 MB, y despues validateBuild con 1). Por eso el paso no corta el job: el veredicto lo dan el AAB y las
+      # compuertas de abajo (firma, identidad y version, bundletool, 16 KB y manifiesto), que un AAB a medias no pasa.
       - name: Build Android (AAB de release firmado)
+        id: unitybuild
+        continue-on-error: true
         uses: game-ci/unity-builder@v6.0.0
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -198,12 +204,15 @@ jobs:
           echo "BUNDLETOOL_JAR=$jar" >> "$GITHUB_ENV"
 
       - name: Un solo AAB
+        env:
+          AF_UNITY_OUTCOME: ${{ steps.unitybuild.outcome }}
         run: |
           set -euo pipefail
           shopt -s nullglob
+          echo "Resultado del paso de game-ci: $AF_UNITY_OUTCOME (el veredicto lo dan el AAB y las compuertas)."
           aabs=(build/Android/*.aab)
           if [ "${#aabs[@]}" -ne 1 ]; then
-            echo "Se esperaba un .aab en build/Android y hay ${#aabs[@]}." >&2
+            echo "Se esperaba un .aab en build/Android y hay ${#aabs[@]}: el build de Unity no termino." >&2
             exit 1
           fi
           echo "AF_AAB=${aabs[0]}" >> "$GITHUB_ENV"
