@@ -15,7 +15,9 @@
 #                 push a main que tocan Unity. Los presupuestos de tiempo de los tests de rendimiento llevan holgura en
 #                 la CI (-afPerfBudgetFactor 3; Assets/_Project/Tests/Support/PerfBudget.cs): el runner es ~2 veces mas
 #                 lento que el escritorio, donde se miden tal cual. Los tests [Explicit] (capturas y KnownIssue) ya no se
-#                 ejecutan (0 s en la primera ejecucion real).
+#                 ejecutan (0 s en la primera ejecucion real). El veredicto lo dan los XML NUnit
+#                 (ci/check-unity-test-results.sh), no el codigo de salida de game-ci, que puede ser 1 al devolver la
+#                 licencia Personal; lo mismo en build-android, donde lo dan el AAB y las compuertas.
 #   build-android solo en main (o a mano): AAB sin firma de release con AF.EditorTools.BuildRelease, IL2CPP ARM64 y
 #                 Managed Stripping High, y las compuertas size-gate (<= 80 MB), check-16kb, check-manifest y
 #                 check-release-classes (sin firebase-appcheck-debug; D-033, anadido del 2026-10-22, punto 9) y
@@ -233,7 +235,12 @@ jobs:
           key: Library-tests-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/**', 'Assets/**') }}
           restore-keys: Library-tests-
 
+      # game-ci puede salir con 1 aunque los tests pasen: falla al devolver la licencia Personal por derechos («Serial
+      # number unavailable for ULF return»; primera ejecucion real de ci.yml y de release.yml, 2026-10-27). El paso no corta
+      # el job: el veredicto lo da ci/check-unity-test-results.sh con los XML NUnit (los dos modos, > 0 tests, 0 fallos).
       - name: Tests de Unity
+        id: unitytests
+        continue-on-error: true
         uses: game-ci/unity-test-runner@v4.4.0
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -254,6 +261,13 @@ jobs:
         with:
           path: Library
           key: ${{ steps.library-cache.outputs.cache-primary-key }}
+
+      - name: Veredicto de los tests (XML de EditMode y PlayMode)
+        env:
+          AF_UNITY_OUTCOME: ${{ steps.unitytests.outcome }}
+        run: |
+          echo "Resultado del paso de game-ci: $AF_UNITY_OUTCOME (el veredicto lo dan los XML)."
+          bash ci/check-unity-test-results.sh artifacts editmode playmode
 
       - name: Resultados de los tests
         if: always()
@@ -323,7 +337,12 @@ jobs:
             echo "Sin AF_RELEASE_APPLICATION_ID: ensayo con com.amazonfill.dev (no es un release)."
           fi
 
+      # Como en release.yml: game-ci v6 sale con 1 aunque el build termine bien (falla al devolver la licencia Personal,
+      # «Serial number unavailable for ULF return»). El paso no corta el job: el veredicto lo dan «Un solo AAB» y las
+      # compuertas de abajo, que un AAB a medias no pasa.
       - name: Build Android (AAB sin firma de release)
+        id: unitybuild
+        continue-on-error: true
         uses: game-ci/unity-builder@v6.0.0
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -344,6 +363,20 @@ jobs:
         with:
           path: Library
           key: ${{ steps.library-cache.outputs.cache-primary-key }}
+
+      - name: Un solo AAB
+        env:
+          AF_UNITY_OUTCOME: ${{ steps.unitybuild.outcome }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          echo "Resultado del paso de game-ci: $AF_UNITY_OUTCOME (el veredicto lo dan el AAB y las compuertas)."
+          aabs=(build/Android/*.aab)
+          if [ "${#aabs[@]}" -ne 1 ]; then
+            echo "Se esperaba un .aab en build/Android y hay ${#aabs[@]}: el build de Unity no termino." >&2
+            exit 1
+          fi
+          echo "AAB: ${aabs[0]}"
 
       - uses: actions/setup-java@v4.7.1
         with:
