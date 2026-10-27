@@ -151,7 +151,7 @@ Decisión del dueño: «Sí, quita AppLovin MAX del build de release; si AppLovi
 - **Fuera:** `Packages/applovin/` (el `.tgz` de MAX 8.6.6 y su línea de `Packages/manifest.json` y `.gitattributes`), `Assets/MaxSdk/` (con `AppLovinSettings.asset`), `ProjectSettings/AppLovinInternalSettings.json`, `com.applovin:applovin-sdk:13.6.4` de `mainTemplate.gradle` y `AndroidResolverDependencies.xml` (este lo regenera EDM4U), `AF.Ads.Max` (`MaxAdProvider`, `NativeMaxSdkPort`, `MaxBuildConfig`, `MaxProjectSetup`), `MaxAdService`, `FakeMaxSdkPort`, `UnavailableAdService` (solo lo usaba MAX) y sus tests (EditMode: `MaxAdServiceTests`, `MaxBuildConfigTests`, `AdProviderChoiceTests`, `MaxProjectSetupTests`; PlayMode: `MaxConsentBootTests`). `BuildDev` y `BuildRelease` ya no comprueban los ajustes de MAX. El proveedor `AppLovinInitProvider` ya no se quita en `LauncherManifest.xml` porque no llega.
 - **Se queda:** la interfaz de `AF.Ads` y `GoogleAdService`, que hereda `Backoff` (2, 4 … 64 s; test `Backoff_DoublesFrom2sUpTo64s`). `AdImpression` usa `AdMob` por defecto y ya no tiene `appLovin`: si AppLovin entra como red de la mediación de AdMob, sale en `ad_source` con `ad_platform` = `AdMob`, así que no se pierde ningún identificador que lea la analítica.
 - **Restos en `Library`:** Unity reexporta el proyecto Gradle de `Library/Bee` sin vaciar `unityLibrary/src/main/res`, y el `res/raw/applovin_settings.json` que dejaba el post-proceso de MAX siguió entrando en el primer `dev.apk` y el primer `rehearsal.aab` incrementales (la compuerta nueva los rechazó). Lo borra ahora `AF.EditorTools.RemovedSdkLeftovers` (`IPostGenerateGradleAndroidProject`, con `af_max_config.xml` de `MaxBuildConfig`), que también cubre el CI, que restaura `Library` de una caché anterior.
-- **Compuerta:** `ci/check-no-applovin.ps1 <aab|apk|carpeta>` (0 OK · 1 lo lleva · 2 argumentos o ilegible; `--self-test`, 11 casos) falla si una entrada se llama `*applovin*` o si el contenido lleva `Lcom/applovin/` (el SDK y su okhttp3 renombrado), `com.applovin.` (ASCII o UTF-16) o el plugin de C# (`MaxSdkBase`, `AppLovinMax.`). Va en `ci.yml` (job de build) y `release.yml`, tras `check-no-unity-iap`.
+- **Compuerta:** `ci/check-no-applovin.ps1 <aab|apk|carpeta>` (0 OK · 1 lo lleva · 2 argumentos o ilegible; `--self-test`, 13 casos desde §12) falla si una entrada se llama `*applovin*` o si el contenido lleva `Lcom/applovin/` (el SDK y su okhttp3 renombrado), `com.applovin.` (ASCII o UTF-16) o el plugin de C# (`MaxSdkBase`, `AppLovinMax.`). Va en `ci.yml` (job de build) y `release.yml`, tras `check-no-unity-iap`.
 
 **Antes y después** (escritorio x64, `unity-build.ps1 -Method Dev` y `-Method Release -Rehearsal`; «antes» = los builds de `tanda6/ad-id` del 2026-10-27, con el mismo juego de SDK):
 
@@ -184,3 +184,67 @@ Decisión del dueño: «Sí, quita AppLovin MAX del build de release; si AppLovi
 1. **Bloques en el código (resuelta el 2026-10-26: el dueño aprueba las constantes y se actualiza `.claude/rules/sdk.md`):** 08 §9 no tiene claves de Remote Config para los bloques de anuncios y `.claude/rules/sdk.md` dice «ningún ID de unidad privada en el código»; la tarea del dueño dice que no son secretos y pide constantes. Recomendación: dejarlos como constantes (cambian con un build) y actualizar la regla de `sdk.md`.
 2. **13-17 con el perfil `ump` (Q-MAX-6 (b); decidida por el dueño en D-055, punto 4: sin anuncios):** con Google, UMP con `TagForUnderAgeOfConsent` no enseña el formulario a un menor y AdMob sirve anuncios limitados, así que el motivo de Q-MAX-6 (b) desaparece. Se mantiene «sin anuncios» porque así está decidido. Recomendación: preguntar al abogado si se pueden servir anuncios limitados a 13-17 en el EEE/UK/CH.
 3. **`ad_impression` doble** si se vincula AdMob con Firebase (§10 punto 4).
+4. **Unity Ads y el mensaje de EE. UU. de UMP (§12.3):** con 18+ en un estado de EE. UU., Unity Ads recibe `privacy.consent` de nuestra pantalla, no la elección del mensaje de UMP (no se lee la cadena GPP). Recomendación: decidir si basta (nuestra pantalla también pide el consentimiento de anuncios personalizados) o si hay que leer `IABGPP_*` de UMP; lo revisa el abogado.
+
+## 12. Unity Ads en la mediación de AdMob (añadido de D-049 del 2026-10-27)
+
+Aprobación del dueño: «apruebo el adaptador 3.21.1» (`docs/dev/decisiones.md`, añadido de D-049 del 2026-10-27). Propuesta técnica: `docs/dev/anuncios-gma-propuesta.md` §6 y §7 (por qué 3.21.1 y no 3.22.0: `coherencelib` fija). Rama `tanda6/unity-ads`.
+
+### 12.1 Qué entra
+
+| Pieza | Versión | Origen | Licencia |
+|---|---|---|---|
+| `com.google.ads.mobile.mediation.unity` (plugin de Unity) | **3.21.1** («Built and tested with the Google Mobile Ads Unity Plugin version 11.5.0», su `CHANGELOG.md`) | OpenUPM: `https://package.openupm.com/com.google.ads.mobile.mediation.unity/-/com.google.ads.mobile.mediation.unity-3.21.1.tgz`, en `Packages/googleads/` con Git LFS y `file:` en `Packages/manifest.json`, como GMA. SHA-256 `b0213c58c0fc0ffd048a92e8ff61100f93233e3c236a6078d5f1be6c52bbf9f4` (el de la propuesta §7) | Apache 2.0 |
+| `com.google.ads.mediation:unity` (adaptador) | **4.20.1.0** | Google Maven; lo pide el `Dependencies.xml` del plugin y EDM4U lo escribe en `mainTemplate.gradle` | Apache-2.0 (POM) |
+| `com.unity3d.ads:unity-ads` (SDK) | **4.20.1** | Maven Central, ídem | «Unity Ads License», `https://unity.com/legal` (POM) |
+| `com.unity3d.coherence:coherencelib` | 0.1.0 (fija en el POM de 4.20.1) | Maven Central, la arrastra el SDK | «Unity Ads License» (POM) |
+
+- El plugin pide `com.google.ads.mobile` ≥ 11.0.0 (se queda la 11.5.0) y no trae `.dll` ni `.so`: tres asmdef de C# (`…UnityAds.Api`, `.Common`, `.Android`) y su `Dependencies.xml`. `AF.Ads.Google` referencia `GoogleMobileAds.Mediation.UnityAds.Api` por nombre (los asmdef de un paquete no se ven solos desde otro asmdef, al revés que las `.dll` de GMA).
+- EDM4U añade a `settingsTemplate.gradle` los repositorios `https://repo.maven.apache.org/maven2/` y `https://dl.google.com/dl/android/maven2/`.
+- No entra ningún otro adaptador ni otra versión.
+
+### 12.2 Arranque: el inicializador de Unity Ads, fuera
+
+`unity-ads` registra `com.unity3d.services.core.configuration.AdsSdkInitializer` en `androidx.startup` (`InitializationProvider`): guarda el contexto y lanza una corrutina al iniciar el proceso, antes de la edad y el consentimiento. `LauncherManifest.xml` lo quita con `tools:node="remove"` dentro de `InitializationProvider` (con `tools:node="merge"`; el proveedor se queda para `WorkManagerInitializer`, `ProcessLifecycleInitializer` y `ProfileInstallerInitializer`). Así Unity Ads solo arranca cuando el adaptador lo inicia desde `MobileAds.Initialize`: nunca antes de la edad, nuestro consentimiento y UMP; nunca con `<13`; nunca con 13-17 en el EEE/UK/CH (§5).
+
+- `ci/check-manifest.ps1` lo trata como componente prohibido (`$ForbiddenComponentPrefixes`; autotest de 60 casos, 3 nuevos). En el `dev.apk` y el `rehearsal.aab` del 2026-10-27 no está; sí `com.unity3d.ads.adplayer.FullScreenWebViewDisplay`, la actividad que muestra sus anuncios.
+- **Pendiente de comprobar en el teléfono [E]:** que el adaptador inicia Unity Ads igual sin el inicializador (la propuesta §7 lo da por bueno leyendo el bytecode).
+
+### 12.3 Qué recibe Unity Ads de nuestra política
+
+Unity Ads no lee nuestra pantalla de consentimiento. Antes de UMP y de `MobileAds.Initialize`, y otra vez si la decisión cambia (por ejemplo, al retirar el consentimiento en Ajustes), `GoogleAdService` llama a `IGmaPort.SetMediationConsent(hasUserConsent, doNotSell)` con los flags de `AdConsentSettings` (los que antes recibía MAX). `NativeGmaPort` los manda con la API del paquete, `UnityAds.SetConsentMetaData`, que escribe el `MetaData` de Unity Ads:
+
+| Situación (§5) | `gdpr.consent` | `privacy.consent` (CCPA y estados de EE. UU.) | Además |
+|---|---|---|---|
+| 18+ que acepta «Anuncios personalizados» (fuera del perfil `ump`) | true | true | — |
+| 18+ que no acepta, o sin país | false | false | `npa=1` en las peticiones de Google |
+| 13-17 fuera del EEE/UK/CH (también en EE. UU.) | false | false | `npa=1` y `TagForUnderAgeOfConsent`; con la rama `tanda6/age-signals`, `rdp=1` en EE. UU. |
+| 18+ con el perfil `ump` (EEE, Reino Unido, Suiza) | no se manda | no se manda | Deciden las cadenas TCF de UMP [NV: que Unity Ads 4.20.1 las lea; Unity tiene que estar en la lista de partners del mensaje del RGPD, tarea del dueño] |
+| `<13`, 13-17 con el perfil `ump`, sin decisión | nada (no se toca ningún SDK) | nada | — |
+
+- **RDP en EE. UU. con 13-17:** el `rdp=1` de Google lo añade `tanda6/age-signals` en `GoogleAdService` (no se duplica aquí). Para Unity Ads, ese caso ya va con `privacy.consent = false`.
+- No se usa `user.nonbehavioral` de Unity (es para menores de 13; con `<13` no hay anuncios).
+- **Pregunta abierta:** con 18+ en un estado de EE. UU., si el jugador acepta en nuestra pantalla pero dice que no en el mensaje de EE. UU. de UMP, Unity Ads recibe `privacy.consent = true` (no leemos la cadena GPP de UMP). Ver §11.
+- Tests: `GoogleAdServiceTests.UnityAds_GetsOurConsent_BeforeInitialize` (9 casos) y `UnityAds_ConsentWithdrawnInSettings_IsSentAgain_OnlyWhenItChanges`. `FakeGmaPort.MediationConsent` apunta cada llamada y si fue antes o después de `Initialize`.
+
+### 12.4 Permisos, 16 KB, tamaño y compuertas
+
+Escritorio x64, `unity-build.ps1 -Method Dev` y `-Method Release -Rehearsal`, sobre `integracion-fase1-fase2` con `tanda6/sin-max` ya dentro. «Antes» = los builds de §8 bis (sin MAX y sin Unity Ads).
+
+| | Antes | Después | Diferencia |
+|---|---|---|---|
+| `dev.apk` | 74.392.717 B | 76.667.866 B | +2.275.149 B (+2,28 MB) |
+| `rehearsal.aab` | 57.727.293 B (57,73 MB) | 59.573.246 B (59,57 MB) | +1.845.953 B (+1,85 MB; la propuesta estimaba +2 a +3 MB) |
+| Clases del release (`check-release-classes`) | 26.775 en 3 `.dex` | 30.495 en 4 `.dex` | +3.720 |
+| Bibliotecas nativas de 64 bits (`check-16kb`) | 18 | 19 (`libunitycoherencenative.so`, de `coherencelib`, alineada a 16 KB) | +1 |
+
+- **Permisos** (`check-manifest -Mode dev`, OK en los dos): los mismos antes y después (`INTERNET`, `ACCESS_NETWORK_STATE`, `VIBRATE`, `BILLING`, `AD_ID`, `WAKE_LOCK`, `BIND_GET_INSTALL_REFERRER_SERVICE`, `POST_NOTIFICATIONS` y el propio `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`). Los que declara `unity-ads` (`AD_ID`, `ACCESS_ADSERVICES_TOPICS`, `ACCESS_ADSERVICES_ATTRIBUTION`) ya estaban resueltos en `LauncherManifest.xml` (§8).
+- `size-gate` (≤ 80 MB, solo el archivo): OK. `check-no-unity-iap`: OK (Unity Ads no es Unity IAP ni lleva `prd.insights.analytics.unity3d.com`). `check-release-classes`: OK en el ensayo; `dev.apk` lleva `firebase-appcheck-debug`, como siempre.
+- `check-no-applovin` **fallaba** en los dos artefactos por `com.applovin.` en `classes3.dex`: el SDK de Unity Ads trae `com.unity3d.services.core.reflection.AppLovinCommunicatorBridge`, que nombra como texto `com.applovin.communicator.AppLovinCommunicator*` por si MAX está en la app (no es código de AppLovin). La compuerta excluye ahora solo ese prefijo antes de buscar (autotest de 13 casos: el puente solo pasa; el puente con otra cadena `com.applovin.` falla). Con eso, OK en los dos.
+
+### 12.5 Lo que hace el dueño
+
+1. En AdMob, añadir Unity Ads a los partners de los mensajes del RGPD y de los estados de EE. UU.
+2. En Unity, poner Parallext, LLC como organización, con dirección y cobro.
+3. Publicar `app-ads.txt` con las dos líneas activas (AdMob y `unity.com, 20067668703382, DIRECT`).
+4. Probar en el teléfono con un `dev.apk` que el arranque no inicia Unity Ads antes de la edad (logcat sin `UnityAds` hasta `MobileAds.Initialize`) y, con el inspector de anuncios de AdMob, que los grupos de mediación sirven.
