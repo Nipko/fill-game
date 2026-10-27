@@ -214,6 +214,14 @@ Referencias de escala para el productor: 50 K DAU LatAm-heavy ≈ 22 K USD/mes n
 
 ### 8.1 Fases y criterios de paso
 
+**D-057 (2026-10-27, P1, P3 y P5 (a); `docs/dev/lanzamiento-mundial.md`):** la 1.0 sale **en todo el mundo de una vez**, no por fases de países. Sustituye a las filas 1, 2 y 3 de la tabla de abajo, que quedan como historia:
+- **Distribución:** todos los países de Google Play salvo Rusia y Bielorrusia; Vietnam e Indonesia, según la investigación legal (`docs/legal/investigacion-legal-mundial.md`).
+- **Producción escalonada por porcentaje mundial:** 5 % → 20 % → 100 % (08 §13.1 #22), con los criterios obligatorios de las fases 1 y 2 (D1/D7/D30, crash-free, nota) leídos por cohorte y por país en Firebase en cada escalón.
+- **Prueba cerrada (fase 0):** testers de LatAm y de al menos un país del EEE, para ver UMP de verdad (08 §13.1 #20).
+- **Precios:** base en USD con la conversión automática de Play; LatAm y EUR, fijados a mano (05 §4.2).
+- **Idiomas:** es-419, en y pt-BR; el resto del mundo ve inglés (D-055). La tanda 2 de D-018, después de la 1.0.
+- `biz_market_phase` = `global` y `biz_country_enabled` = todos (08 §9). La fase 3 (UA pagada en EE. UU. con sus compuertas) y la 4 (iOS) siguen igual.
+
 Todas las métricas se leen por cohorte de instalación en Firebase; una fase no avanza hasta cumplir **todos** sus criterios "obligatorios" durante dos semanas consecutivas. Duraciones [P]. Las metas de ARPDAU de la columna "Criterios deseables" son las de la tabla única **05 §9** (reflejada en 09 §6.1): fase 1 piso 0,012 / meta ≥0,015; fase 2 ≥0,018 (rango 0,018-0,025); US orgánico ≥0,05; UA pagada en US ≥0,08 (dirección 19). Las compuertas no se leen de ninguna otra tabla.
 
 | Fase | Países y plataforma | Duración [P] | Objetivo | Criterios obligatorios para pasar | Criterios deseables |
@@ -348,8 +356,8 @@ Si una tienda retira la ficha por queja de marca: (1) responder con la prueba de
 
 **Ver 08 §9**, la única tabla de Remote Config del GDD (clave, tipo, default compilado, rango y capítulo dueño); este capítulo no repite defaults ni valores. Posee las compuertas de mercado, los kill switches y el registro de negocio (prefijo `biz_`, dueño 01); los valores de economía, anuncios y dificultad los fijan sus capítulos. Claves de este capítulo y qué gobiernan:
 
-- `biz_market_phase`: fase de mercado (`closed_beta` · `soft_launch_latam` · `soft_launch_br` · `global` · `ios`); habilita funciones por fase (p. ej. Balsa de rescate solo desde `soft_launch_latam`) y segmenta cohortes.
-- `biz_country_enabled`: compuerta por país además de la distribución de Play Console (fase 1: CO, PE, MX).
+- `biz_market_phase`: fase de mercado (`closed_beta` · `soft_launch_latam` · `soft_launch_br` · `global` · `ios`); habilita funciones por fase (p. ej. Balsa de rescate solo desde `soft_launch_latam`) y segmenta cohortes. **D-057:** la 1.0 sale con `global` (salida mundial única, §8.1).
+- `biz_country_enabled`: compuerta por país además de la distribución de Play Console. **D-057:** todos abiertos (`{"*":true}`); antes, fase 1: CO, PE, MX.
 - `biz_iap_enabled` · `biz_ads_enabled` · `biz_interstitials_enabled` · `biz_rewarded_enabled`: kill switches de toda la tienda, de todos los anuncios (los recompensados pasan a cobrar semillas), solo de intersticiales (único interruptor de intersticiales) y solo de recompensados.
 - `biz_legal_profile_by_country`: perfil legal por país (pantalla de consentimiento propia en BR/CO/PE/MX, UMP en EEE/UK/CH, `default` en el resto); selecciona la pantalla de consentimiento y el tratamiento de edad.
 - `biz_under18_no_personalization`: anuncios no personalizados (`npa`), `maxAdContentRating = G` y doble confirmación de compras en el juego (Q-T4 (a), Q-B12-6; D-033) cuando el jugador declara 13-17; la banda <13 queda bloqueada en 1.0 por `consent_under13_policy` (dueño 08), no por esta clave.
