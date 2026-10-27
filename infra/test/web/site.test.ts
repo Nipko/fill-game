@@ -81,6 +81,8 @@ describe('web/site', () => {
         const sections = (d: string): string[] => [...d.matchAll(/<h2 id="([^"]+)"/g)].map((m) => m[1]);
         expect(sections(doc), `${page.id} ${lang}`).toEqual(sections(es));
         expect(markers(doc), `${page.id} ${lang}`).toEqual(markers(es));
+        // D-057: el aviso de versión previa va justo en las páginas que aún tienen datos del dueño pendientes.
+        expect(markers(doc).length > 0, `${page.id} ${lang}: aviso de versión previa`).toBe(page.draft);
         expect(doc.includes('<form id="delete-form"'), `${page.id} ${lang}`).toBe(page.id === 'delete');
       }
     }

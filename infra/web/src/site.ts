@@ -3,8 +3,9 @@
 // web/site/, que el stack Web (S3 + CloudFront) despliega tal cual. web/site/ es generado: no se edita a mano.
 //
 // Desarrollador y responsable: Parallext, LLC (D-041). Los datos que faltan van como [[DATO DEL DUEÑO: …]] y lo que
-// decide el abogado como [[ABOGADO: …]]; el generador los resalta. Los textos legales son borrador hasta el abogado
-// (D-033, añadido del 2026-10-22, punto 7); en y pt-BR son traducción con IA, pendiente del revisor nativo.
+// quedaba para el abogado como [[ABOGADO: …]]; el generador los resalta. Sin abogado (D-057), los textos legales salen de
+// docs/legal/investigacion-legal-mundial.md §9; mientras queden datos del dueño, las páginas llevan el aviso de versión
+// previa a la publicación. en y pt-BR son traducción con IA, pendiente del revisor nativo.
 
 export const LANGS = ['es-419', 'en', 'pt-BR'] as const;
 export type Lang = (typeof LANGS)[number];
@@ -18,7 +19,7 @@ export interface PageDef {
   readonly path: Record<Lang, string>;
   readonly title: Record<Lang, string>;
   readonly description: Record<Lang, string>;
-  /** Página legal en borrador: lleva el aviso «BORRADOR: requiere revisión del abogado». */
+  /** Página con datos del dueño pendientes: lleva el aviso de versión previa a la publicación (D-057). */
   readonly draft: boolean;
   /** Script propio de la página (en /assets/), si lo tiene. */
   readonly script?: string;
@@ -68,7 +69,7 @@ export const PAGES: readonly PageDef[] = [
       en: 'How to delete your Tintalú account and its data, in the game or from this page.',
       'pt-BR': 'Como excluir sua conta do Tintalú e os dados dela, no jogo ou por esta página.',
     },
-    draft: true,
+    draft: false,
     script: '/assets/delete-account.js',
   },
   {
@@ -132,8 +133,8 @@ export const UI: Record<Lang, UiText> = {
     skip: 'Saltar al contenido',
     langNav: 'Idioma',
     footerNav: 'Páginas del sitio',
-    draft: 'BORRADOR: requiere revisión del abogado.',
-    draftDetail: 'Este texto todavía no es definitivo. Los datos entre dobles corchetes están pendientes.',
+    draft: 'Versión previa a la publicación.',
+    draftDetail: 'Faltan algunos datos, marcados entre dobles corchetes.',
     footerDeveloper: 'Tintalú es un juego de Parallext, LLC.',
     independence: 'Juego independiente inspirado en la cuenca amazónica; sin relación con Amazon.com, Inc.',
     deleteForm: {
@@ -166,8 +167,8 @@ export const UI: Record<Lang, UiText> = {
     skip: 'Skip to content',
     langNav: 'Language',
     footerNav: 'Site pages',
-    draft: 'DRAFT: requires review by legal counsel.',
-    draftDetail: 'This text is not final yet. Data in double brackets is pending.',
+    draft: 'Pre-release version.',
+    draftDetail: 'Some details are still missing; they are marked in double brackets.',
     footerDeveloper: 'Tintalú is a game by Parallext, LLC.',
     independence: 'Independent game inspired by the Amazon basin; not affiliated with Amazon.com, Inc.',
     deleteForm: {
@@ -200,8 +201,8 @@ export const UI: Record<Lang, UiText> = {
     skip: 'Pular para o conteúdo',
     langNav: 'Idioma',
     footerNav: 'Páginas do site',
-    draft: 'RASCUNHO: requer revisão do advogado.',
-    draftDetail: 'Este texto ainda não é definitivo. Os dados entre colchetes duplos estão pendentes.',
+    draft: 'Versão anterior à publicação.',
+    draftDetail: 'Faltam alguns dados, marcados entre colchetes duplos.',
     footerDeveloper: 'Tintalú é um jogo da Parallext, LLC.',
     independence: 'Jogo independente inspirado na bacia amazônica; sem relação com a Amazon.com, Inc.',
     deleteForm: {
