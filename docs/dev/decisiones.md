@@ -4246,3 +4246,20 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
      - un piloto: guía de estilo, TiTino, Capi, dos animales y capturas de antes y después, que **aprueba el dueño**;
      - después, el resto.
   4. **Sustituye** el «contorno de tinta de Capi» de los avatares (D-056 y `docs/dev/avatares.md`). Las APIs, los tamaños, los `ArtSlots` y los presupuestos de tiempo siguen igual.
+
+### D-045, añadido del 2026-10-27: el río del logo con meandros (variante B)
+
+- **Pedido del dueño, en el chat:** «realmente no se logra entender que es un rio, dejemos la idea pero agregando los meandro como hicimos en la pantalla de carga». Tras ver la hoja de comparación (`docs/art/marca-oficial/v2/bocetos/meandros/hoja-meandros.png`), eligió: «Vamos con la variante B (dos meandros con perspectiva)».
+- **Decisión:**
+  - el emblema mantiene la idea de D-045: la cuia de vidrio vierte açaí y el río se tiñe desde el impacto, río abajo;
+  - el río pasa a dos meandros con perspectiva: dos curvas finas de agua blanca a lo lejos y una curva ancha de açaí hacia el primer plano, como en `BrandRiverScene`;
+  - se regeneran desde `generar.py`:
+    - el icono, con el adaptativo, el monocromo y el clásico;
+    - los logos y los favicons;
+    - el gráfico de funciones;
+    - `AfIcon.androidlib`;
+    - `BrandEmblem.Generated.cs`;
+    - los recursos de la web.
+- **A cuidar en el cambio:**
+  - en el monocromo y a 48 px, las orillas lejanas no deben convertirse en ruido; se simplifican si hace falta;
+  - la cuia debe quedar dentro de la zona segura de 66 dp.
