@@ -80,12 +80,12 @@ Pega el valor en el secreto y vacía el portapapeles. No lo guardes en un archiv
 ## 5. Cómo se protege la clave
 
 - Los secretos solo entran como `${{ secrets.X }}` en `env:` o `with:`, nunca dentro de un `run:` ni con `echo`. Los scripts nunca imprimen sus valores, y GitHub los enmascara en el log.
-- El keystore se decodifica con `umask 077` en `$RUNNER_TEMP`, fuera del repositorio. En el build va a `$RUNNER_TEMP/_github_home`, que game-ci monta como `/root` en su contenedor. Se borra al acabar con `if: always()`. No se usa la entrada `androidKeystoreBase64` de game-ci, porque escribiría el keystore dentro del proyecto.
+- El keystore se decodifica con `umask 077` en `$RUNNER_TEMP`, fuera del repositorio. En el build va a `$GITHUB_WORKSPACE/.af-signing/` (ignorado por git, fuera de `Assets/` y de toda caché), que el contenedor de game-ci ve en `/github/workspace/.af-signing/`: game-ci v6 no monta `$RUNNER_TEMP/_github_home` como `/root` (primera ejecución del 2026-10-27, código 9). Se borra al acabar con `if: always()`. No se usa la entrada `androidKeystoreBase64` de game-ci, porque escribiría el keystore dentro del proyecto.
 - `BuildRelease` lee la firma de las variables `ANDROID_KEYSTORE_NAME`, `ANDROID_KEYSTORE_PASS`, `ANDROID_KEYALIAS_NAME` y `ANDROID_KEYALIAS_PASS`; los argumentos de game-ci son el respaldo. La pone en los Player Settings solo durante el build y después la restaura. Unity no guarda las contraseñas en `ProjectSettings/`, y `ProjectSetup.Validate` sigue exigiendo `useCustomKeystore = false`.
 - **La caché de `Library` solo se restaura en el release y nunca se guarda.** Unity escribe la configuración de firma, contraseñas incluidas, en el proyecto Gradle de `Library/Bee`, y una caché guardada la podría leer cualquier workflow del repositorio.
 - El AAB firmado es un artefacto privado de la ejecución. Nada se publica.
 
 ## 6. Pendiente de comprobar en la primera ejecución
 
-- Que game-ci/unity-builder v6.0.0 monta `$RUNNER_TEMP/_github_home` como `/root`, como en las versiones anteriores, y pasa `ANDROID_KEYSTORE_*` al contenedor. Si no lo hace, `BuildRelease` sale con 9 («no existe el keystore»): falla cerrado y no produce un AAB sin firmar.
+- **Resuelto el 2026-10-27:** game-ci/unity-builder v6.0.0 **no** monta `$RUNNER_TEMP/_github_home` como `/root` (la primera ejecución salió con 9, «no existe el keystore»); el keystore va ahora en `.af-signing/` dentro del workspace. Sí pasa `ANDROID_KEYSTORE_*` al contenedor. Si no lo hace, `BuildRelease` sale con 9 («no existe el keystore»): falla cerrado y no produce un AAB sin firmar.
 - El tiempo del job `build`, unos 30-60 min de los 2.000 al mes, como `build-android`.

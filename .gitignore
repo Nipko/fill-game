@@ -176,3 +176,5 @@ mono_crash.*
 # Salidas del framework de pruebas de rendimiento de Unity que deja cada PlayMode (no deben llegar al APK)
 /Assets/Resources/PerformanceTestRun*.json
 /Assets/Resources/PerformanceTestRun*.json.meta
+# Keystore de subida del release (solo en el runner; release.yml lo borra al terminar)
+/.af-signing/

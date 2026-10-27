@@ -21,10 +21,11 @@
 # Environment solo llegan a jobs de main que lo declaran (y, con revisor, tras su aprobacion).
 # Variable de repositorio (no secreta): AF_RELEASE_APPLICATION_ID, solo tras el dictamen de marca (D-034, D-041).
 #
-# El keystore: se decodifica con umask 077 en $RUNNER_TEMP, fuera del repositorio, y se borra al acabar (paso con
-# if: always()). En el build va a $RUNNER_TEMP/_github_home, que game-ci/unity-builder monta como /root en su
-# contenedor: Unity lo lee en /root/af-upload.keystore. No se pasa androidKeystoreBase64 a game-ci, que lo escribiria
-# dentro del proyecto. Las contrasenas llegan a BuildRelease por las variables ANDROID_* que game-ci pasa al contenedor.
+# El keystore: en el preflight se decodifica con umask 077 en $RUNNER_TEMP. En el build va a
+# $GITHUB_WORKSPACE/.af-signing/ (ignorado por git, fuera de Assets/ y de toda cache: la de Library solo se restaura y
+# la de LFS solo guarda .git/lfs), porque el contenedor de game-ci v6 solo ve el workspace, en /github/workspace (no
+# monta $RUNNER_TEMP/_github_home como /root: primera ejecucion del 2026-10-27, codigo 9). Se borra al acabar (paso con
+# if: always()). Las contrasenas llegan a BuildRelease por las variables ANDROID_* que game-ci pasa al contenedor.
 #
 # Cache de Library: SOLO se restaura (actions/cache/restore), nunca se guarda: Unity escribe la configuracion de firma,
 # contrasenas incluidas, en el proyecto Gradle de Library/Bee, y una cache guardada la podria leer cualquier workflow
@@ -159,9 +160,9 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-          mkdir -p "$RUNNER_TEMP/_github_home"
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/_github_home/af-upload.keystore"
-          test -s "$RUNNER_TEMP/_github_home/af-upload.keystore"
+          mkdir -p "$GITHUB_WORKSPACE/.af-signing"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/.af-signing/af-upload.keystore"
+          test -s "$GITHUB_WORKSPACE/.af-signing/af-upload.keystore"
 
       - name: Build Android (AAB de release firmado)
         uses: game-ci/unity-builder@v6.0.0
@@ -176,8 +177,8 @@ jobs:
           androidExportType: androidAppBundle
           androidVersionCode: ${{ needs.preflight.outputs.version_code }}
           versioning: None
-          # Ruta dentro del contenedor de game-ci ($RUNNER_TEMP/_github_home montado como /root).
-          androidKeystoreName: /root/af-upload.keystore
+          # Ruta dentro del contenedor de game-ci (el workspace se monta en /github/workspace).
+          androidKeystoreName: /github/workspace/.af-signing/af-upload.keystore
           androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
           androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
           androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
@@ -211,7 +212,7 @@ jobs:
         env:
           ANDROID_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
           ANDROID_KEYALIAS_NAME: ${{ secrets.ANDROID_KEYALIAS_NAME }}
-        run: AF_KEYSTORE_PATH="$RUNNER_TEMP/_github_home/af-upload.keystore" bash ci/check-release-signature.sh "$AF_AAB"
+        run: AF_KEYSTORE_PATH="$GITHUB_WORKSPACE/.af-signing/af-upload.keystore" bash ci/check-release-signature.sh "$AF_AAB"
 
       - name: Compuerta de identidad y version del manifiesto
         run: |
@@ -254,7 +255,7 @@ jobs:
       - name: Borrar el keystore
         if: always()
         run: |
-          ks="$RUNNER_TEMP/_github_home/af-upload.keystore"
+          ks="$GITHUB_WORKSPACE/.af-signing/af-upload.keystore"
           if [ -f "$ks" ]; then
             shred -u "$ks" 2> /dev/null || rm -f "$ks"
           fi
