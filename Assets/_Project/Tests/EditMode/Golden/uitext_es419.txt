@@ -240,7 +240,7 @@ WorldBanner(1)	Mundo 1: Estuario · Brasil (Pará) · Amazonas / Tocantins
 WorldBanner(10)	Mundo 10: Alto Negro · Venezuela / Brasil · Negro, Casiquiare
 WorldBanner(11)	Mundo 11: Escudo de Guayana · Guyana / Surinam / Guayana Francesa · Takutu / Branco, Maroni
 WorldBanner(12)	Mundo 12: Invitados del Orinoco · Venezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
-WorldBanner(13)	Mundo 13: El origen · Perú (Andes) · Marañón alto
+WorldBanner(13)	Mundo 13: El origen · Perú (Andes) · Apurímac
 WorldBanner(2)	Mundo 2: Tapajós · Brasil (Pará) · Tapajós
 WorldBanner(3)	Mundo 3: Manaos · Brasil (Amazonas) · Negro + Solimões
 WorldBanner(4)	Mundo 4: Trapecio · Colombia · Amazonas / Putumayo
@@ -292,7 +292,7 @@ WorldPlace(1)	Brasil (Pará) · Amazonas / Tocantins
 WorldPlace(10)	Venezuela / Brasil · Negro, Casiquiare
 WorldPlace(11)	Guyana / Surinam / Guayana Francesa · Takutu / Branco, Maroni
 WorldPlace(12)	Venezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
-WorldPlace(13)	Perú (Andes) · Marañón alto
+WorldPlace(13)	Perú (Andes) · Apurímac
 WorldPlace(2)	Brasil (Pará) · Tapajós
 WorldPlace(3)	Brasil (Amazonas) · Negro + Solimões
 WorldPlace(4)	Colombia · Amazonas / Putumayo
@@ -309,8 +309,8 @@ WorldPlaceLine(11,named)	<b>Escudo de Guayana</b> · Guyana / Surinam / Guayana 
 WorldPlaceLine(11,place)	Guyana / Surinam / Guayana Francesa · Takutu / Branco, Maroni
 WorldPlaceLine(12,named)	<b>Invitados del Orinoco</b> · Venezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
 WorldPlaceLine(12,place)	Venezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
-WorldPlaceLine(13,named)	<b>El origen</b> · Perú (Andes) · Marañón alto
-WorldPlaceLine(13,place)	Perú (Andes) · Marañón alto
+WorldPlaceLine(13,named)	<b>El origen</b> · Perú (Andes) · Apurímac
+WorldPlaceLine(13,place)	Perú (Andes) · Apurímac
 WorldPlaceLine(2,named)	<b>Tapajós</b> · Brasil (Pará) · Tapajós
 WorldPlaceLine(2,place)	Brasil (Pará) · Tapajós
 WorldPlaceLine(3,named)	<b>Manaos</b> · Brasil (Amazonas) · Negro + Solimões
@@ -331,7 +331,7 @@ WorldPlaceNamed(1)	Estuario · Brasil (Pará) · Amazonas / Tocantins
 WorldPlaceNamed(10)	Alto Negro · Venezuela / Brasil · Negro, Casiquiare
 WorldPlaceNamed(11)	Escudo de Guayana · Guyana / Surinam / Guayana Francesa · Takutu / Branco, Maroni
 WorldPlaceNamed(12)	Invitados del Orinoco · Venezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
-WorldPlaceNamed(13)	El origen · Perú (Andes) · Marañón alto
+WorldPlaceNamed(13)	El origen · Perú (Andes) · Apurímac
 WorldPlaceNamed(2)	Tapajós · Brasil (Pará) · Tapajós
 WorldPlaceNamed(3)	Manaos · Brasil (Amazonas) · Negro + Solimões
 WorldPlaceNamed(4)	Trapecio · Colombia · Amazonas / Putumayo
@@ -352,9 +352,9 @@ WorldPlaceSplit(11,place,0)	Guyana / Surinam / Guayana Francesa\nTakutu / Branco
 WorldPlaceSplit(12,named,0)	<b>Invitados del Orinoco</b>\nVenezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
 WorldPlaceSplit(12,named,1)	<b>Invitados del Orinoco</b> · Venezuela / Colombia\nCaroní, Caño Cristales (vecinos del Orinoco)
 WorldPlaceSplit(12,place,0)	Venezuela / Colombia\nCaroní, Caño Cristales (vecinos del Orinoco)
-WorldPlaceSplit(13,named,0)	<b>El origen</b>\nPerú (Andes) · Marañón alto
-WorldPlaceSplit(13,named,1)	<b>El origen</b> · Perú (Andes)\nMarañón alto
-WorldPlaceSplit(13,place,0)	Perú (Andes)\nMarañón alto
+WorldPlaceSplit(13,named,0)	<b>El origen</b>\nPerú (Andes) · Apurímac
+WorldPlaceSplit(13,named,1)	<b>El origen</b> · Perú (Andes)\nApurímac
+WorldPlaceSplit(13,place,0)	Perú (Andes)\nApurímac
 WorldPlaceSplit(2,named,0)	<b>Tapajós</b>\nBrasil (Pará) · Tapajós
 WorldPlaceSplit(2,named,1)	<b>Tapajós</b> · Brasil (Pará)\nTapajós
 WorldPlaceSplit(2,place,0)	Brasil (Pará)\nTapajós
@@ -383,7 +383,7 @@ WorldRiver(1)	Amazonas / Tocantins
 WorldRiver(10)	Negro, Casiquiare
 WorldRiver(11)	Takutu / Branco, Maroni
 WorldRiver(12)	Caroní, Caño Cristales (vecinos del Orinoco)
-WorldRiver(13)	Marañón alto
+WorldRiver(13)	Apurímac
 WorldRiver(2)	Tapajós
 WorldRiver(3)	Negro + Solimões
 WorldRiver(4)	Amazonas / Putumayo

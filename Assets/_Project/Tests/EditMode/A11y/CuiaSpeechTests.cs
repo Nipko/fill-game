@@ -182,13 +182,27 @@ namespace AF.Tests.EditMode
         [Test]
         public void InRelease_ThePendingMechanicName_IsNotSaid() // la regla de release: pendiente_asesor no se enseña
         {
-            Loc.Configure(B9Loc.Catalog(), LocLocale.SourceLocale, false);
+            // Con la revisión de D-054, facts.csv ya tiene la Hoja y las frutas en aprobado_es: la regla se prueba con esas filas
+            // devueltas a pendiente_asesor, el estado con el que nace lo cultural.
+            Loc.Configure(WithFactsPendingTheAdvisor(), LocLocale.SourceLocale, false);
             Assert.That(A11yText.MechanicName("hoja"), Is.Empty, "mechanic.hoja espera al asesor");
             BoardState state = Board(Cuia.Create(4, new[] { Acai }).WithMechanic(MechanicType.Hoja, key: Aguaje), Cuia.Empty(4).WithMechanic(MechanicType.Matapi));
             string label = CuiaSpeech.Label(state, 0);
             Assert.That(label, Is.EqualTo("cuia 1: fruta, 3 huecos"), "la etiqueta de 02 §12 (la fruta también espera al asesor), sin nombre detrás");
             Assert.That(label, Does.Not.Contain("Hoja"));
             Assert.That(CuiaSpeech.Label(state, 1), Is.EqualTo("cuia 2: 4 huecos"), "vacía, igual");
+
+            // Aprobada (D-054), en release sí se dice.
+            Loc.Configure(B9Loc.Catalog(), LocLocale.SourceLocale, false);
+            Assert.That(A11yText.MechanicName("hoja"), Is.EqualTo("Hoja"), "mechanic.hoja aprobada en D-054");
+        }
+
+        private static LocCatalog WithFactsPendingTheAdvisor()
+        {
+            LocCatalog b9 = B9Loc.Catalog();
+            string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile)
+                .Replace(",aprobado_es,", ",pendiente_asesor,");
+            return new LocCatalog(b9.Strings, LocTable.Parse(facts, LocCatalog.FactsFile));
         }
 
         [Test]

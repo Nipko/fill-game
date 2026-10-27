@@ -332,7 +332,8 @@ namespace AF.Tests.PlayMode
             string locale = Loc.Locale;
             bool unapproved = Loc.ShowUnapproved;
             string? tag = Loc.RequestedNumberTag;
-            Loc.Configure(catalog, locale, false, tag); // como en release: lo no aprobado no se muestra
+            // Como en release (lo no aprobado no se muestra), con las tablas de antes de la revisión de D-054.
+            Loc.Configure(PlayModeHelpers.CatalogPendingTheAdvisor(), locale, false, tag);
             try
             {
                 Assert.That(Loc.Fact(stops.At(6)!.NameKey), Is.Empty, "Anavilhanas está pendiente del asesor");

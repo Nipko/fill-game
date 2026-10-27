@@ -26,7 +26,7 @@ El proyecto conserva el nombre interno **Amazon Fill** (carpeta, código, analí
 | La tematización fuerte no vende por sí sola: sirve para creativos de UA y para destacar en la estantería | research/08 §2 [V] |
 | 30 caracteres en Google Play y App Store; prohibidos "Best", "#1", "Free", mayúsculas, emojis | research/08 §3.2 [V] |
 
-Alcance de la regla de evitar la cadena "Amazon" (D-033, añadido del 2026-10-22, punto 3): vale para el **nombre de la app** (título de ficha, logotipo y marca) y para los **identificadores** (paquete, IDs, dominios y usuarios de redes), no para la geografía. Los textos del juego pueden nombrar la región y sus ríos y estados: «Amazonía» / «the Amazon» / «Amazônia», «Amazonas» (el río; en EN «Amazon») y el estado brasileño «Amazonas», invariante, además de Tocantins y Putumayo (sección 12). El asesor cultural puede ajustarlos.
+Alcance de la regla de evitar la cadena "Amazon" (D-033, añadido del 2026-10-22, punto 3): vale para el **nombre de la app** (título de ficha, logotipo y marca) y para los **identificadores** (paquete, IDs, dominios y usuarios de redes), no para la geografía. Los textos del juego pueden nombrar la región y sus ríos y estados: «Amazonía» / «the Amazon» / «Amazônia», «Amazonas» (el río; en EN «Amazon») y el estado brasileño «Amazonas», invariante, además de Tocantins y Putumayo (sección 12). Confirmados en la revisión cultural de D-054 (T2-Q8, 2026-10-26); en EN, «Amazonas» se queda invariante cuando nombra el estado brasileño o el departamento de Colombia o del Perú, nunca «Amazon».
 
 ### 1.2 Nombre vigente: Tintalú (decisión del dueño, 2026-10-06)
 
@@ -351,9 +351,9 @@ Reglas transversales (research/09 §Mejorar [V]): el premio de racha siempre sup
 | 12 | **Invitados del Orinoco** | Venezuela / Colombia | Caroní, Caño Cristales (**no amazónicos**, etiquetados "vecinos del Orinoco") | 921-960 | Clara | — (skin de evento) |
 | 13 | **El origen** | Perú (Andes) | Apurímac hasta el nevado Mismi (quebrada Carhuasanta), **una de las nacientes** del Amazonas: la más lejana con agua todo el año (blanca; D-013, Q7-A, que sustituye al «Marañón alto») | 961-1.000 | Blanca (variante fría de arte [P]) | — (hitos con 13 colores; 14 solo en eventos) |
 
-Nombres de mundo en EN/PT: se mantienen los topónimos (Estuario → Estuary / Estuário; Trapecio → Amazon Trapeze / Trapézio; Oriente → Oriente; El origen → The Source / A Nascente; Invitados del Orinoco → Orinoco Neighbors / Vizinhos do Orinoco; el resto invariante). Reciclaje desde el nivel 1.001 con variantes lluvia/noche/alba y crecida/vaciante (research/02 C3.4 [E]). Los rangos y debuts de tinte son hipótesis [E] de research/02 a validar con el embudo del soft launch; los debuts de capacidades y mecánicas no van por mundo sino por nivel (Cuia chica 14, Cuia alta 27/141, bloqueadores 43-183: 02 §8 y §9.1). K = 14 solo en el evento Encuentro de las Aguas (GDD §8 Desviaciones 4). Niveles instalados en el AAB: 1-700 (mundos 1-9); 701+ remotos (08 §6.2). Fondos de 1.0: mundos 1-4 en la instalación + Loreto (141-200) por Play Asset Delivery; fondo "río genérico" para 201-700 (mundos 6-9) hasta que lleguen sus packs (07 §2.1 y §11; 08 §6.2). Con D-013 (2026-10-13), en 1-200 el fondo es **el de la parada** del Mapa del río (kit del mundo y héroe del sitio) y en 201-700, el kit del mundo con el rótulo del sitio, sin héroe; el «río genérico» queda de respaldo (07 §2.1). El viaje de la campaña remonta el río: del Estuario a una de sus nacientes, en el mundo 13.
+Nombres de mundo en EN/PT: se mantienen los topónimos (Estuario → Estuary / Estuário; Trapecio → Amazon Trapeze / Trapézio; Oriente → Oriente; El origen → The Source / A Nascente; Invitados del Orinoco → Orinoco Neighbors / Vizinhos do Orinoco; con D-054, T2-Q9, Manaos → Manaus / Manaus y Escudo de Guayana → Guiana Shield / Escudo das Guianas; el resto invariante). Reciclaje desde el nivel 1.001 con variantes lluvia/noche/alba y crecida/vaciante (research/02 C3.4 [E]). Los rangos y debuts de tinte son hipótesis [E] de research/02 a validar con el embudo del soft launch; los debuts de capacidades y mecánicas no van por mundo sino por nivel (Cuia chica 14, Cuia alta 27/141, bloqueadores 43-183: 02 §8 y §9.1). K = 14 solo en el evento Encuentro de las Aguas (GDD §8 Desviaciones 4). Niveles instalados en el AAB: 1-700 (mundos 1-9); 701+ remotos (08 §6.2). Fondos de 1.0: mundos 1-4 en la instalación + Loreto (141-200) por Play Asset Delivery; fondo "río genérico" para 201-700 (mundos 6-9) hasta que lleguen sus packs (07 §2.1 y §11; 08 §6.2). Con D-013 (2026-10-13), en 1-200 el fondo es **el de la parada** del Mapa del río (kit del mundo y héroe del sitio) y en 201-700, el kit del mundo con el rótulo del sitio, sin héroe; el «río genérico» queda de respaldo (07 §2.1). El viaje de la campaña remonta el río: del Estuario a una de sus nacientes, en el mundo 13.
 
-Ríos y lugares de esta tabla en EN y PT-BR (D-033, añadido del 2026-10-22, puntos 3 y 6; `world_w<nn>_river`, `world_w<nn>_country` y `map_source_name` de `strings.csv`): «Amazonas / Tocantins» es «Amazon / Tocantins» / «Amazonas / Tocantins»; «Amazonas / Putumayo», «Amazon / Putumayo» / «Amazonas / Putumayo»; «Brasil (Amazonas)», «Brazil (Amazonas)» / «Brasil (Amazonas)». La naciente del mundo 13, «El nevado Mismi», es **Mount Mismi** / **Nevado Mismi**, **provisional, pendiente del asesor cultural**. Todos siguen pendientes del asesor (D-012) y van en la sección 12 (`place.amazonas`, `place.tocantins`, `place.putumayo` y `place.mismi`).
+Ríos y lugares de esta tabla en EN y PT-BR (D-033, añadido del 2026-10-22, puntos 3 y 6; `world_w<nn>_river`, `world_w<nn>_country` y `map_source_name` de `strings.csv`): «Amazonas / Tocantins» es «Amazon / Tocantins» / «Amazonas / Tocantins»; «Amazonas / Putumayo», «Amazon / Putumayo» / «Amazonas / Putumayo»; «Brasil (Amazonas)», «Brazil (Amazonas)» / «Brasil (Amazonas)». La naciente del mundo 13, «El nevado Mismi», es **Mount Mismi** / **Nevado Mismi**, provisional en D-033 y confirmado en D-054 (T2-Q11). Todos quedan revisados por la revisión cultural de D-054 (2026-10-26: la de Gemini, aprobada por el dueño, sustituye para la 1.0 al asesor de D-012) y van en la sección 12 (`place.amazonas`, `place.tocantins`, `place.putumayo` y `place.mismi`).
 
 ## 9. Paleta de 14 tintes
 
@@ -397,15 +397,15 @@ Reglas asociadas: K_motor = 16 (índice 15 = Barro, 16 reservado; 02 §9.1 y 08 
 | `stuck_restart` | Volver a la orilla (gratis) | Back to shore (free) | Voltar à margem (grátis) |
 | `stuck_canoe_lost` | Travesía perdida: −1 canoa | Trip lost: −1 canoe | Travessia perdida: −1 canoa |
 | `stuck_canoe_lost_last` | Travesía perdida: tu última canoa | Trip lost: your last canoe | Travessia perdida: sua última canoa |
-| `stuck_give_up` | Rendirse | pendiente del traductor | pendiente del traductor |
-| `giveup_confirm_title` | ¿Seguro? | pendiente del traductor | pendiente del traductor |
-| `giveup_confirm_canoe` | Perderás 1 canoa | pendiente del traductor | pendiente del traductor |
-| `level_failed` | Nivel fallido | pendiente del traductor | pendiente del traductor |
-| `level_failed_reward` | Premio: {n} semillas | pendiente del traductor | pendiente del traductor |
-| `retry` | Reintentar | pendiente del traductor | pendiente del traductor |
+| `stuck_give_up` | Rendirse | Give up | Desistir |
+| `giveup_confirm_title` | ¿Seguro? | Are you sure? | Tem certeza? |
+| `giveup_confirm_canoe` | Perderás 1 canoa | You'll lose 1 canoe | Você perderá 1 canoa |
+| `level_failed` | Nivel fallido | Level failed | Nível não concluído |
+| `level_failed_reward` | Premio: {n} semillas | Reward: {n} seeds | Prêmio: {n} sementes |
+| `retry` | Reintentar | Retry | Tentar de novo |
 | `quit_confirm` | ¿Salir del nivel? Perderás 1 canoa | pendiente del traductor | pendiente del traductor |
 | `level_complete` | ¡Nivel completado! | Level complete! | Nível concluído! |
-| `victory_perfect` [P] | ¡Perfecto! | pendiente del traductor | pendiente del traductor |
+| `victory_perfect` [P] | ¡Perfecto! | Perfect! | Perfeito! |
 | `river_lowered` | El río bajó | The river dropped | O rio baixou |
 | `fauna_sighted_card` [P] | ¡Miquito a la vista! | Monkey spotted! | Nova espécie à vista! |
 | `lives` | Canoas | Canoes | Canoas |
@@ -428,36 +428,36 @@ Reglas asociadas: K_motor = 16 (índice 15 = Barro, 16 reservado; 02 §9.1 y 08 
 | `loading` | Cargando… | Loading… | Carregando… |
 | `back` / `pause` | Volver / Pausa | Back / Pause | Voltar / Pausa |
 | `world_banner` | Mundo {n}: {nombre} · {país} · {río} | World {n}: {name} · {country} · {river} | Mundo {n}: {nome} · {país} · {rio} |
-| `map_stop_remaining` [P] | Faltan {n} niveles para {lugar} / Falta 1 nivel para {lugar} (singular) | pendiente del traductor | pendiente del traductor |
-| `map_arrived` [P] | {lugar} · {país} · río {río} | pendiente del traductor | pendiente del traductor |
-| `map_home_distance` [P] | Casa · a unos {km} km | pendiente del traductor | pendiente del traductor |
-| `map_country_welcome` [P] | {país} te da la bienvenida | pendiente del traductor | pendiente del traductor |
-| `map_world_question` [P] | {mundo} · {pregunta} | pendiente del traductor | pendiente del traductor |
-| `map_next_world` [P] | Mundo {n} · {nombre} · Nivel {nivel} | pendiente del traductor | pendiente del traductor |
-| `map_samples` [P] | Muestrario · {k}/{n} | pendiente del traductor | pendiente del traductor |
-| `map_north_up` / `map_back_to_canoe` [P] | Norte arriba / Volver a la canoa | pendiente del traductor | pendiente del traductor |
-| `map_hito_preview` [P] | Si lo superas, llegas a {lugar} | pendiente del traductor | pendiente del traductor |
-| `stop_label` [P] | {lugar} · {país} | pendiente del traductor | pendiente del traductor |
-| `map_view_world` [P] | Mundo | pendiente del traductor | pendiente del traductor |
-| `map_view_basin` [P] | Cuenca | pendiente del traductor | pendiente del traductor |
-| `map_label_andes` [P] | Andes ↑ | pendiente del traductor | pendiente del traductor |
-| `map_label_atlantic` [P] | Océano Atlántico ↓ | pendiente del traductor | pendiente del traductor |
-| `map_back_to_level` [P] | Volver al nivel | pendiente del traductor | pendiente del traductor |
-| `map_open` [P] | Ver mapa | pendiente del traductor | pendiente del traductor |
-| `map_card_other_fact` [P] | Otro dato | pendiente del traductor | pendiente del traductor |
-| `map_card_source` [P] | Fuente: {fuente} | pendiente del traductor | pendiente del traductor |
-| `map_facts_count` [P] | Datos del río · {k}/{n} | pendiente del traductor | pendiente del traductor |
-| `map_l10_intro` [P] | Yo vivo aquí, donde el río entra al mar. | pendiente del traductor | pendiente del traductor |
-| `fact_progress` [P] | {name} · {k}/{n} | pendiente del traductor | pendiente del traductor |
+| `map_stop_remaining` [P] | Faltan {n} niveles para {lugar} / Falta 1 nivel para {lugar} (singular) | {n} levels left to {place} / 1 level left to {place} (singular) | Faltam {n} níveis para {lugar} / Falta 1 nível para {lugar} (singular) |
+| `map_arrived` [P] | {lugar} · {país} · río {río} | {place} · {country} · {river} River | {lugar} · {país} · rio {rio} |
+| `map_home_distance` [P] | Casa · a unos {km} km | Home · about {km} km | Casa · a cerca de {km} km |
+| `map_country_welcome` [P] | {país} te da la bienvenida | {country} welcomes you | {país} dá as boas-vindas a você |
+| `map_world_question` [P] | {mundo} · {pregunta} | {world} · {question} | {mundo} · {pergunta} |
+| `map_next_world` [P] | Mundo {n} · {nombre} · Nivel {nivel} | World {n} · {name} · Level {level} | Mundo {n} · {nome} · Nível {nível} |
+| `map_samples` [P] | Muestrario · {k}/{n} | Samples · {k}/{n} | Mostruário · {k}/{n} |
+| `map_north_up` / `map_back_to_canoe` [P] | Norte arriba / Volver a la canoa | North up / Back to the canoe | Norte para cima / Voltar à canoa |
+| `map_hito_preview` [P] | Si lo superas, llegas a {lugar} | Beat it and you'll reach {place} | Se vencer, você chega a {lugar} |
+| `stop_label` [P] | {lugar} · {país} | {place} · {country} | {lugar} · {país} |
+| `map_view_world` [P] | Mundo | World | Mundo |
+| `map_view_basin` [P] | Cuenca | Basin | Bacia |
+| `map_label_andes` [P] | Andes ↑ | Andes ↑ | Andes ↑ |
+| `map_label_atlantic` [P] | Océano Atlántico ↓ | Atlantic Ocean ↓ | Oceano Atlântico ↓ |
+| `map_back_to_level` [P] | Volver al nivel | Back to level | Voltar ao nível |
+| `map_open` [P] | Ver mapa | View map | Ver mapa |
+| `map_card_other_fact` [P] | Otro dato | Another fact | Outra curiosidade |
+| `map_card_source` [P] | Fuente: {fuente} | Source: {source} | Fonte: {fonte} |
+| `map_facts_count` [P] | Datos del río · {k}/{n} | River facts · {k}/{n} | Curiosidades do rio · {k}/{n} |
+| `map_l10_intro` [P] | Yo vivo aquí, donde el río entra al mar. | I live here, where the river meets the sea. | Eu moro aqui, onde o rio encontra o mar. |
+| `fact_progress` [P] | {name} · {k}/{n} | {name} · {k}/{n} | {name} · {k}/{n} |
 | `fact_sheet_title` | Frutas del río | River Fruits | Frutas do Rio |
-| `fact_locked` | Nivel {n} | pendiente del traductor | pendiente del traductor |
-| `fact_starts_at` | Su serie empieza en el nivel {n} | pendiente del traductor | pendiente del traductor |
-| `fact_sources` | Fuentes | pendiente del traductor | pendiente del traductor |
-| `fact_a11y` | Dato del río. {name}, {k} de {n}. {text} | pendiente del traductor | pendiente del traductor |
-| `settings_sloth_messages` [P] | Mensajes de TiTino | pendiente del traductor | pendiente del traductor |
+| `fact_locked` | Nivel {n} | Level {n} | Nível {n} |
+| `fact_starts_at` | Su serie empieza en el nivel {n} | Its series starts at level {n} | A série começa no nível {n} |
+| `fact_sources` | Fuentes | Sources | Fontes |
+| `fact_a11y` | Dato del río. {name}, {k} de {n}. {text} | River fact. {name}, {k} of {n}. {text} | Curiosidade do rio. {name}, {k} de {n}. {text} |
+| `settings_sloth_messages` [P] | Mensajes de TiTino | Messages from TiTino | Mensagens do TiTino |
 | `settings_about_amazon` | Sobre la Amazonía | About the Amazon | Sobre a Amazônia |
 
-Con D-033 (añadido del 2026-10-22, puntos 2 a 8; `docs/dev/decisiones.md`), el dueño fija: la etiqueta de la Pororoca en la bandeja es **Mix** / **Misturar**, porque «Shuffle» y «Embaralhar» no caben en la ranura de 56 dp a 12 sp con 5 ranuras (P-18 de `docs/dev/pororoca.md`, cerrada; el nombre temático sigue siendo «Pororoca», sección 5.1); `fact_sheet_title` es «River Fruits» / «Frutas do Rio»; `settings_about_amazon`, «About the Amazon» / «Sobre a Amazônia» (sección 1.1: la regla de la cadena «Amazon» no alcanza a la geografía); `market_tab_boosters`, «Boosters» / «Reforços» (sección 5). **Provisionales hasta el asesor cultural:** el PT-BR de `fauna_sighted_card`, «Nova espécie à vista!» (evita «macaco»), y los nombres de las secciones 4 (Totuma; Meeting Cuia / Cuia do Encontro), 8 (Mount Mismi / Nevado Mismi) y de la pregunta abierta 8 (Big Basket / Cesta grande). Los textos legales de B12 traducidos con IA (consentimiento, edad y confirmación de compra) siguen en `borrador` hasta el abogado: no bloquean el selector de idioma, pero sí el lanzamiento en EN y PT-BR (punto 7).
+Con D-033 (añadido del 2026-10-22, puntos 2 a 8; `docs/dev/decisiones.md`), el dueño fija: la etiqueta de la Pororoca en la bandeja es **Mix** / **Misturar**, porque «Shuffle» y «Embaralhar» no caben en la ranura de 56 dp a 12 sp con 5 ranuras (P-18 de `docs/dev/pororoca.md`, cerrada; el nombre temático sigue siendo «Pororoca», sección 5.1); `fact_sheet_title` es «River Fruits» / «Frutas do Rio»; `settings_about_amazon`, «About the Amazon» / «Sobre a Amazônia» (sección 1.1: la regla de la cadena «Amazon» no alcanza a la geografía); `market_tab_boosters`, «Boosters» / «Reforços» (sección 5). Eran provisionales hasta el asesor cultural y los confirmó la revisión de D-054 (T2-Q10 y T2-Q11, 2026-10-26): el PT-BR de `fauna_sighted_card`, «Nova espécie à vista!» (evita «macaco»), y los nombres de las secciones 4 (Totuma; Meeting Cuia / Cuia do Encontro), 8 (Mount Mismi / Nevado Mismi) y de la pregunta abierta 8 (Big Basket / Cesta grande). **Con D-054 (T2-Q10)**, las celdas EN y PT-BR que esperaban al traductor llevan los textos de la revisión nativa de Gemini (`docs/dev/traspaso/gemini-revision/strings_revision.csv`), con los marcadores con el nombre de cada idioma, como `world_banner`; en la tabla de textos los marcadores son los de `strings.csv` y los plurales van con su sintaxis. `quit_confirm` sigue pendiente: no es una clave de `strings.csv` (el cliente usa `pause_quit` y `giveup_confirm_*`). Los textos legales de B12 traducidos con IA (consentimiento, edad y confirmación de compra) siguen en `borrador` hasta el abogado: no bloquean el selector de idioma, pero sí el lanzamiento en EN y PT-BR (punto 7).
 
 Regla de redacción: tuteo en ES-419 ("tú"), "você" en PT-BR, imperativo en EN; sin signos de exclamación dobles. **Números con el formato de la región del teléfono** (D-018, Q8-A, 2026-10-13, que sustituye al formato fijo por idioma, «1.000» en ES y PT y «1,000» en EN): Colombia y Brasil escriben «1.000», México y Perú «1,000» y EE. UU. «1,000», siempre con una sola función de formato (también las distancias del Mapa: «a unos 1,480 km» con el teléfono en en-US; ratificado el 2026-10-19, D-030, pregunta 14 (a)); en los datos de fruta, toda cifra con separador o decimales va con el marcador `{n}`. Los plurales, con la sintaxis de la tabla de textos (contrato 32; nunca «1 semillas»). **Forma de las claves** (pregunta 49 de GDD.md §6.3, decidida el 2026-10-14: (a); D-022): dos familias. Las claves de UI, como las de esta tabla, van en `snake_case` y sin puntos (regla 1 de la propuesta de idiomas); las de contenido largo (datos de fruta, del Mapa y de fauna) van con puntos, como las aprobó D-013 y las fija Frutas del río (`fact.<tinte>.<kk>`, `fact.<tinte>.tag`, `tint.<tinte>.name`, `map.stop.<lugar>.dato_NN`, `fauna.bradypus_variegatus.dato_<nn>`), y la fauna que ya existe en los datos conserva `fauna_<id>_dato`. Las columnas de las dos tablas están en 08 §4.7. **Frases de TiTino:** van en `strings.csv` con claves `sloth_line_<momento>_<nn>` [P], un banco por momento (propuesta de TiTino, e.3 y e.4), y no se listan en esta tabla. Con D-030 (2026-10-19, pregunta 16 (b)), las cuatro fijas que se repetían (n.º 21, la Crecida se vació; n.º 25, el saludo de la mañana; n.º 29, el fin de mundo; y n.º 30, el primer Muy difícil) suman **2 alternativas cada una** [P], 8 textos nuevos al final de su banco, con estado `pendiente_asesor` en es-419 y EN y PT-BR en borrador para el revisor nativo; sus claves y sus textos los fija la tarea DC25 [P] y pasan por el asesor cultural. Las claves `stuck_*` completas del modal Aguas estancadas están en 04 §6.5; `stuck_canoe_lost` / `stuck_canoe_lost_last` son líneas de estado bajo el titular desde el nivel 31 (ocultas con Canoas infinitas) y sustituyen a las retiradas `stuck_restart_canoe` / `stuck_restart_last_canoe`: el coste es del bloqueo, no del reinicio. Las siete claves marcadas [P] son del embudo de D-008 (2026-10-08): el texto ES está propuesto y las traducciones EN y PT-BR esperan al visto bueno del dueño (P14 de `docs/dev/decisiones.md`). Los textos de los 11 tutoriales de estreno de la 1.0 son los de 02 §8, §9.1 y §11; los del Matapi, la Liana con fruta, Aguas turbias y la Cuia alta del 27 son [P], y el de la Piraña suma con D-012 que sellar a tiempo evita el mordisco [P]. Esos 11 textos y los de la tarjeta previa de D-009 («Premio: {n}» con la cinta «×3» o «×4», 02 §10) solo existen en ES y están pendientes del asesor cultural; las traducciones EN y PT-BR están pendientes y aún no tienen clave en esta tabla. Los nombres de mundos, países y ríos de `world_banner` son los de la sección 8, también pendientes del asesor (D-012). Las diez claves `map_*` y `stop_label` [P] son los textos del sistema del Mapa del río (D-013, 2026-10-13; propuesta del Mapa, sección 6.4), aprobados con su lote de documentación: solo existen en ES y esperan al traductor y al asesor. `map_stop_remaining` sale en el inicio, la victoria y el Mapa, con su plural; `map_arrived` en la placa de llegada y la tarjeta de la parada; `map_home_distance` en la ventanita de casa de TiTino; `map_country_welcome`, sin género («te da la bienvenida», nunca «¡Bienvenido!»), en la franja de llegada de la victoria del 80 y del 140, antes de la placa del dato (P-M7; D-023): el banner del 81 y del 141 y el primer Mapa solo izan la bandera; `map_world_question` en la cabecera del Mapa, con ✓ al responderse; `map_next_world` en la silueta de un mundo futuro; `map_hito_preview` en la tarjeta previa del hito p20 (02 §10); `stop_label` en el rótulo del lugar (07 §2.1). **Con P-M2 (D-023, 2026-10-14)**, otras diez claves `map_*` [P], también solo en ES y a la espera del traductor y del asesor: `map_view_world` y `map_view_basin`, las dos vistas del Mapa (D-013, punto 5); `map_label_andes` y `map_label_atlantic`, los rótulos de orientación, que se pintan en Baloo 2 porque tiene las flechas (el ✓ de `map_world_question` es un icono procedural: ninguna de las dos familias lo tiene); `map_back_to_level`, el «Jugar» del Mapa abierto desde la pausa (D-013, punto 7; 04 §5.2); `map_open`, «Ver mapa» en la victoria del `10k` y en el banner; `map_card_other_fact` y `map_card_source`, en la tarjeta de la parada; `map_facts_count`, los Datos del río vistos en el Muestrario; y `map_l10_intro`, el bocadillo con el que TiTino se presenta en el Mapa del 10 (06 §2.3; ≤ 50 caracteres, `pendiente_asesor` y fuera del prefijo `sloth_line_*`). Los datos de llegada no son claves de UI: van con sus claves de contenido (`map.stop.<lugar>.dato_NN`, `map.country.<iso2>.dato_NN`, `map.myth.<tema>` y `map.general.*`, sin nombres de personaje y en estado `pendiente_asesor`), que son también el `fact_id` de `af_river_fact_shown` (08 §8.2); la fuente de cada uno va en la fila `<clave del dato>.source` (nombre corto y sin traducir los nombres propios; 08 §4.7; pregunta 57 de GDD.md §6.3, decidida el 2026-10-19: (a); D-028). Longitudes en ES: el dato, ≤ 90 caracteres; la pregunta del mundo y las frases de TiTino, ≤ 50. **Con D-017 (2026-10-13)**, las seis claves `fact_*` [P] son los textos del sistema de Frutas del río: `fact_progress` en la cabecera de la línea de la victoria y de la ficha («Açaí · 3/20»), `fact_sheet_title` en la ficha y en la lista de Ajustes › «Sobre la Amazonía», `fact_locked` en las líneas en silueta, `fact_starts_at` en una serie que aún no empezó, `fact_sources` al pie de la ficha y `fact_a11y`, la etiqueta del lector de pantalla. Las líneas de cada serie, la frase de su tarjeta «Fruta nueva» y el nombre visible de cada tinte son claves de contenido con puntos (`fact.<tinte>.<kk>`, `fact.<tinte>.tag` y `tint.<tinte>.name`; pregunta 49 de GDD.md §6.3, (a)), en estado `pendiente_asesor`. **Series de río** [P] (`kind` = `river`, C1a; 08 §4.6): en los bloques sin tinte nuevo (261-280, `rio_napo`, «Napo y Cuyabeno», y 281-300, `rio_amazonas`, «Amazonas»; nombres pendientes del asesor), las líneas son `fact.<río>.<kk>` y el `{name}` de `fact_progress` sale de `fact.<río>.name` (≤ 24 caracteres, `pendiente_asesor`), no de `tint.<tinte>.name`: el río no es un tinte de la sección 9. No llevan frase de «Fruta nueva» (`fact.<río>.tag`). **Con D-016**, las frases de TiTino van con las claves `sloth_line_<momento>_<nn>` (momentos `win`, `hard`, `fail`, `restart`, `streak`, `return`, `debut` y `milestone`; ≤ 50 caracteres en ES y hasta 85 en EN y PT-BR) y el ajuste, con `settings_sloth_messages`; todo `pendiente_asesor`. **Con D-019**, el tutorial de la Tinaja (02 §9.1, M13) [P]: «La tinaja no deja ver: solo ves la fruta de arriba, y la de debajo nunca es igual.» / «Saca el agua con su cuia chica: le caben dos dosis.», y en el segundo tablero de su estreno, «Si sacas dos veces, la primera dosis queda debajo.»; EN y PT-BR en la propuesta de la tinaja (b.2), pendientes del asesor y del revisor nativo, y sin clave todavía, como los demás tutoriales.
 
@@ -485,100 +485,100 @@ Regla de redacción: tuteo en ES-419 ("tú"), "você" en PT-BR, imperativo en EN
 ## 12. Nombres con EN y PT de la traducción con IA (T2) [P]
 
 
-Decisión del dueño del 2026-10-20 (T2-Q3 y T2-Q4, «las preguntas t2 hagamos lo recomendado»; registro en `docs/dev/traspaso/spark-estado.md`): para traducir con IA (D-022, pregunta 51 (b)) los textos que nombran comodines, mecánicas, lugares y fauna, el glosario gana las formas EN y PT de esta sección. Todas son propuestas [P] de la tarea T2 del equipo Spark, sin revisión nativa; lo cultural (comodines con nombre de fauna o tupí, mecánicas, lugares y fauna) queda **pendiente del asesor cultural** (07 §8.2). `Data/Loc/glossary.csv` las recoge con dos tipos nuevos, `place` (lugares: países, ríos, ciudades y sitios, con su exónimo habitual o invariantes) y `fauna` (la fauna que citan los textos), ambos culturales; los comodines y las mecánicas conservan su fila y sus notas de las secciones 5.1 y 6.5. Con D-033 (añadido del 2026-10-22, punto 3), la regla de la cadena «Amazon» (sección 1.1) vale para el nombre de la app y los identificadores, no para la geografía: «Amazonía» / «the Amazon» / «Amazônia» y «Amazonas» (el río, «Amazon» en EN; el estado, invariante) entran como `place.amazonia` y `place.amazonas`, con Tocantins y Putumayo; otras regiones (trópico americano, alta Amazonía…) siguen sin fila hasta que se necesiten.
+Decisión del dueño del 2026-10-20 (T2-Q3 y T2-Q4, «las preguntas t2 hagamos lo recomendado»; registro en `docs/dev/traspaso/spark-estado.md`): para traducir con IA (D-022, pregunta 51 (b)) los textos que nombran comodines, mecánicas, lugares y fauna, el glosario gana las formas EN y PT de esta sección. Todas son propuestas [P] de la tarea T2 del equipo Spark, sin revisión nativa; lo cultural (comodines con nombre de fauna o tupí, mecánicas, lugares y fauna) quedaba **pendiente del asesor cultural** (07 §8.2). **Con D-054 (2026-10-26)**, la revisión cultural y nativa de Gemini, aprobada por el dueño, confirma todas las formas de esta tabla (T2-Q8 y T2-Q11; `docs/dev/traspaso/gemini-revision/preguntas_t2.md`): la columna Estado lo dice con «revisado (D-054)» y `glossary.csv`, con «Revisado en D-054» en las notas. El asesor humano puede revisarlas en la 1.1. `Data/Loc/glossary.csv` las recoge con dos tipos nuevos, `place` (lugares: países, ríos, ciudades y sitios, con su exónimo habitual o invariantes) y `fauna` (la fauna que citan los textos), ambos culturales; los comodines y las mecánicas conservan su fila y sus notas de las secciones 5.1 y 6.5. Con D-033 (añadido del 2026-10-22, punto 3), la regla de la cadena «Amazon» (sección 1.1) vale para el nombre de la app y los identificadores, no para la geografía: «Amazonía» / «the Amazon» / «Amazônia» y «Amazonas» (el río, «Amazon» en EN; el estado, invariante) entran como `place.amazonia` y `place.amazonas`, con Tocantins y Putumayo; otras regiones (trópico americano, alta Amazonía…) siguen sin fila hasta que se necesiten.
 
 | Término (`glossary.csv`) | Tipo | ES-419 | EN | PT-BR | Estado |
 |---|---|---|---|---|---|
 | `booster.continue_cuia` | booster | Cuia de rescate | Rescue Cuia | Cuia de Resgate | [P] T2 |
 | `booster.extra_cuia` | booster | Cuia extra | Extra Cuia | Cuia Extra | [P] T2 |
-| `booster.hint` | booster | Morpho | Morpho | Morpho | [P] T2 · pendiente del asesor |
+| `booster.hint` | booster | Morpho | Morpho | Morpho | [P] T2 · revisado (D-054) |
 | `booster.restart` | booster | Volver a la orilla | Back to shore | Voltar à margem | [P] T2 |
-| `booster.reveal` | booster | Luciérnaga | Firefly | Vaga-lume | [P] T2 · pendiente del asesor |
+| `booster.reveal` | booster | Luciérnaga | Firefly | Vaga-lume | [P] T2 · revisado (D-054) |
 | `booster.rv_double_harvest` | booster | Cosecha doble | Double Harvest | Colheita dupla | [P] T2 |
-| `booster.shuffle` | booster | Pororoca | Pororoca | Pororoca | [P] T2 · pendiente del asesor |
-| `booster.skip` | booster | Salto del Boto | Boto Leap | Salto do Boto | [P] T2 · pendiente del asesor |
+| `booster.shuffle` | booster | Pororoca | Pororoca | Pororoca | [P] T2 · revisado (D-054) |
+| `booster.skip` | booster | Salto del Boto | Boto Leap | Salto do Boto | [P] T2 · revisado (D-054) |
 | `booster.undo` | booster | Marea | Tide | Maré | [P] T2 |
-| `difficulty_subtitle_hard` | ui | Aguas bravas | Rough Waters | Águas bravas | [P] T2 · pendiente del asesor |
-| `difficulty_subtitle_very_hard` | ui | Noche de jaguar | Jaguar Night | Noite da Onça | [P] T2 · pendiente del asesor |
-| `fauna.agouti` | fauna | agutí | agouti | cutia | [P] T2 · pendiente del asesor |
-| `fauna.anaconda` | fauna | anaconda | anaconda | sucuri | [P] T2 · pendiente del asesor |
-| `fauna.caiman` | fauna | caimán | caiman | jacaré | [P] T2 · pendiente del asesor |
-| `fauna.deer` | fauna | venado | deer | veado | [P] T2 · pendiente del asesor |
-| `fauna.macaw` | fauna | guacamayo | macaw | arara | [P] T2 · pendiente del asesor |
-| `fauna.manatee` | fauna | manatí | manatee | peixe-boi | [P] T2 · pendiente del asesor |
-| `fauna.paca` | fauna | paca | paca | paca | [P] T2 · pendiente del asesor |
-| `fauna.parrot` | fauna | loro | parrot | papagaio | [P] T2 · pendiente del asesor |
-| `fauna.river_dolphin` | fauna | delfín de río | river dolphin | boto | [P] T2 · pendiente del asesor |
-| `fauna.tapir` | fauna | tapir | tapir | anta | [P] T2 · pendiente del asesor |
-| `fauna.toucan` | fauna | tucán | toucan | tucano | [P] T2 · pendiente del asesor |
+| `difficulty_subtitle_hard` | ui | Aguas bravas | Rough Waters | Águas bravas | [P] T2 · revisado (D-054) |
+| `difficulty_subtitle_very_hard` | ui | Noche de jaguar | Jaguar Night | Noite da Onça | [P] T2 · revisado (D-054) |
+| `fauna.agouti` | fauna | agutí | agouti | cutia | [P] T2 · revisado (D-054) |
+| `fauna.anaconda` | fauna | anaconda | anaconda | sucuri | [P] T2 · revisado (D-054) |
+| `fauna.caiman` | fauna | caimán | caiman | jacaré | [P] T2 · revisado (D-054) |
+| `fauna.deer` | fauna | venado | deer | veado | [P] T2 · revisado (D-054) |
+| `fauna.macaw` | fauna | guacamayo | macaw | arara | [P] T2 · revisado (D-054) |
+| `fauna.manatee` | fauna | manatí | manatee | peixe-boi | [P] T2 · revisado (D-054) |
+| `fauna.paca` | fauna | paca | paca | paca | [P] T2 · revisado (D-054) |
+| `fauna.parrot` | fauna | loro | parrot | papagaio | [P] T2 · revisado (D-054) |
+| `fauna.river_dolphin` | fauna | delfín de río | river dolphin | boto | [P] T2 · revisado (D-054) |
+| `fauna.tapir` | fauna | tapir | tapir | anta | [P] T2 · revisado (D-054) |
+| `fauna.toucan` | fauna | tucán | toucan | tucano | [P] T2 · revisado (D-054) |
 | `iap_af_rescue_name` | ui | Balsa de rescate | Rescue Raft | Balsa de Resgate | [P] T2 |
 | `market_tab_boosters` | ui | Comodines | Boosters | Reforços | [P] D-033 |
 | `mechanic.alta` | mechanic | Cuia alta | Tall Cuia | Cuia alta | [P] T2 |
-| `mechanic.barro` | mechanic | Barro | Mud | Barro | [P] T2 · pendiente del asesor |
-| `mechanic.brote` | mechanic | Brote | Sprout | Broto | [P] T2 · pendiente del asesor |
-| `mechanic.brote_n2` | mechanic | Brote de dos hojas | Two-Leaf Sprout | Broto de duas folhas | [P] T2 · pendiente del asesor |
+| `mechanic.barro` | mechanic | Barro | Mud | Barro | [P] T2 · revisado (D-054) |
+| `mechanic.brote` | mechanic | Brote | Sprout | Broto | [P] T2 · revisado (D-054) |
+| `mechanic.brote_n2` | mechanic | Brote de dos hojas | Two-Leaf Sprout | Broto de duas folhas | [P] T2 · revisado (D-054) |
 | `mechanic.chica` | mechanic | Cuia chica | Small Cuia | Cuia pequena | [P] T2 |
-| `mechanic.flor` | mechanic | Flor de vitória-régia | Water Lily Flower | Flor de vitória-régia | [P] T2 · pendiente del asesor |
-| `mechanic.hoja` | mechanic | Hoja | Leaf | Palha | [P] T2 · pendiente del asesor |
-| `mechanic.hoja_atada` | mechanic | Hoja atada | Tied Leaf | Palha atada | [P] T2 · pendiente del asesor |
-| `mechanic.liana` | mechanic | Liana con fruta | Fruit Vine | Cipó | [P] T2 · pendiente del asesor |
-| `mechanic.liana_n` | mechanic | Liana de cuenta | Counting Vine | Cipó de contas | [P] T2 · pendiente del asesor |
-| `mechanic.lluvia` | mechanic | Lluvia | Rain | Chuva | [P] T2 · pendiente del asesor |
-| `mechanic.matapi` | mechanic | Matapi | Matapi | Matapi | [P] T2 · pendiente del asesor |
-| `mechanic.pirana` | mechanic | Piraña | Piranha | Piranha | [P] T2 · pendiente del asesor |
-| `mechanic.remolino` | mechanic | Remolino | Whirlpool | Redemoinho | [P] T2 · pendiente del asesor |
-| `place.amazonas` | place | Amazonas | Amazon | Amazonas | [P] D-033 · pendiente del asesor |
-| `place.amazonia` | place | Amazonía | the Amazon | Amazônia | [P] D-033 · pendiente del asesor |
-| `place.andes` | place | Andes | Andes | Andes | [P] T2 · pendiente del asesor |
-| `place.atlantic` | place | océano Atlántico | Atlantic Ocean | oceano Atlântico | [P] T2 · pendiente del asesor |
-| `place.belem` | place | Belém | Belém | Belém | [P] T2 · pendiente del asesor |
-| `place.beni` | place | Beni | Beni | Beni | [P] T2 · pendiente del asesor |
-| `place.bolivia` | place | Bolivia | Bolivia | Bolívia | [P] T2 · pendiente del asesor |
-| `place.branco` | place | Branco | Branco | Branco | [P] T2 · pendiente del asesor |
-| `place.brazil` | place | Brasil | Brazil | Brasil | [P] T2 · pendiente del asesor |
-| `place.cano_cristales` | place | Caño Cristales | Caño Cristales | Caño Cristales | [P] T2 · pendiente del asesor |
-| `place.caroni` | place | Caroní | Caroní | Caroní | [P] T2 · pendiente del asesor |
-| `place.casiquiare` | place | Casiquiare | Casiquiare | Casiquiare | [P] T2 · pendiente del asesor |
-| `place.colombia` | place | Colombia | Colombia | Colômbia | [P] T2 · pendiente del asesor |
-| `place.cuyabeno` | place | Cuyabeno | Cuyabeno | Cuyabeno | [P] T2 · pendiente del asesor |
-| `place.ecuador` | place | Ecuador | Ecuador | Equador | [P] T2 · pendiente del asesor |
-| `place.french_guiana` | place | Guayana Francesa | French Guiana | Guiana Francesa | [P] T2 · pendiente del asesor |
-| `place.guyana` | place | Guyana | Guyana | Guiana | [P] T2 · pendiente del asesor |
-| `place.iquitos` | place | Iquitos | Iquitos | Iquitos | [P] T2 · pendiente del asesor |
-| `place.itenez` | place | Iténez | Iténez | Iténez | [P] T2 · pendiente del asesor |
-| `place.kew` | place | Kew | Kew | Kew | [P] T2 · pendiente del asesor |
-| `place.mamore` | place | Mamoré | Mamoré | Mamoré | [P] T2 · pendiente del asesor |
-| `place.maranon` | place | Marañón | Marañón | Marañón | [P] T2 · pendiente del asesor |
-| `place.maroni` | place | Maroni | Maroni | Maroni | [P] T2 · pendiente del asesor |
-| `place.meeting_of_waters` | place | Encuentro de las Aguas | Meeting of Waters | Encontro das Águas | [P] T2 · pendiente del asesor |
-| `place.mexico` | place | México | Mexico | México | [P] T2 · pendiente del asesor |
-| `place.mismi` | place | nevado Mismi | Mount Mismi | Nevado Mismi | [P] D-033 · provisional, pendiente del asesor |
-| `place.napo` | place | Napo | Napo | Napo | [P] T2 · pendiente del asesor |
-| `place.negro` | place | Negro | Negro | Negro | [P] T2 · pendiente del asesor |
-| `place.noel_kempff` | place | Noel Kempff | Noel Kempff | Noel Kempff | [P] T2 · pendiente del asesor |
-| `place.orinoco` | place | Orinoco | Orinoco | Orinoco | [P] T2 · pendiente del asesor |
-| `place.para` | place | Pará | Pará | Pará | [P] T2 · pendiente del asesor |
-| `place.peru` | place | Perú | Peru | Peru | [P] T2 · pendiente del asesor |
-| `place.putumayo` | place | Putumayo | Putumayo | Putumayo | [P] D-033 · pendiente del asesor |
-| `place.santarem` | place | Santarém | Santarém | Santarém | [P] T2 · pendiente del asesor |
-| `place.shanay_timpishka` | place | Shanay-Timpishka | Shanay-Timpishka | Shanay-Timpishka | [P] T2 · pendiente del asesor |
-| `place.solimoes` | place | Solimões | Solimões | Solimões | [P] T2 · pendiente del asesor |
-| `place.suriname` | place | Surinam | Suriname | Suriname | [P] T2 · pendiente del asesor |
-| `place.takutu` | place | Takutu | Takutu | Takutu | [P] T2 · pendiente del asesor |
-| `place.tambopata` | place | Tambopata | Tambopata | Tambopata | [P] T2 · pendiente del asesor |
-| `place.tocantins` | place | Tocantins | Tocantins | Tocantins | [P] D-033 · pendiente del asesor |
-| `place.tuichi` | place | Tuichi | Tuichi | Tuichi | [P] T2 · pendiente del asesor |
-| `place.venezuela` | place | Venezuela | Venezuela | Venezuela | [P] T2 · pendiente del asesor |
-| `skin_af_skin_m03_name` | ui | Cuia del Encuentro | Meeting Cuia | Cuia do Encontro | [P] D-033 · provisional, pendiente del asesor |
-| `skin_af_skin_m04_name` | ui | Totuma | Totuma | Totuma | [P] D-033 · provisional, pendiente del asesor |
+| `mechanic.flor` | mechanic | Flor de vitória-régia | Water Lily Flower | Flor de vitória-régia | [P] T2 · revisado (D-054) |
+| `mechanic.hoja` | mechanic | Hoja | Leaf | Palha | [P] T2 · revisado (D-054) |
+| `mechanic.hoja_atada` | mechanic | Hoja atada | Tied Leaf | Palha atada | [P] T2 · revisado (D-054) |
+| `mechanic.liana` | mechanic | Liana con fruta | Fruit Vine | Cipó | [P] T2 · revisado (D-054) |
+| `mechanic.liana_n` | mechanic | Liana de cuenta | Counting Vine | Cipó de contas | [P] T2 · revisado (D-054) |
+| `mechanic.lluvia` | mechanic | Lluvia | Rain | Chuva | [P] T2 · revisado (D-054) |
+| `mechanic.matapi` | mechanic | Matapi | Matapi | Matapi | [P] T2 · revisado (D-054) |
+| `mechanic.pirana` | mechanic | Piraña | Piranha | Piranha | [P] T2 · revisado (D-054) |
+| `mechanic.remolino` | mechanic | Remolino | Whirlpool | Redemoinho | [P] T2 · revisado (D-054) |
+| `place.amazonas` | place | Amazonas | Amazon | Amazonas | [P] D-033 · revisado (D-054) |
+| `place.amazonia` | place | Amazonía | the Amazon | Amazônia | [P] D-033 · revisado (D-054) |
+| `place.andes` | place | Andes | Andes | Andes | [P] T2 · revisado (D-054) |
+| `place.atlantic` | place | océano Atlántico | Atlantic Ocean | oceano Atlântico | [P] T2 · revisado (D-054) |
+| `place.belem` | place | Belém | Belém | Belém | [P] T2 · revisado (D-054) |
+| `place.beni` | place | Beni | Beni | Beni | [P] T2 · revisado (D-054) |
+| `place.bolivia` | place | Bolivia | Bolivia | Bolívia | [P] T2 · revisado (D-054) |
+| `place.branco` | place | Branco | Branco | Branco | [P] T2 · revisado (D-054) |
+| `place.brazil` | place | Brasil | Brazil | Brasil | [P] T2 · revisado (D-054) |
+| `place.cano_cristales` | place | Caño Cristales | Caño Cristales | Caño Cristales | [P] T2 · revisado (D-054) |
+| `place.caroni` | place | Caroní | Caroní | Caroní | [P] T2 · revisado (D-054) |
+| `place.casiquiare` | place | Casiquiare | Casiquiare | Casiquiare | [P] T2 · revisado (D-054) |
+| `place.colombia` | place | Colombia | Colombia | Colômbia | [P] T2 · revisado (D-054) |
+| `place.cuyabeno` | place | Cuyabeno | Cuyabeno | Cuyabeno | [P] T2 · revisado (D-054) |
+| `place.ecuador` | place | Ecuador | Ecuador | Equador | [P] T2 · revisado (D-054) |
+| `place.french_guiana` | place | Guayana Francesa | French Guiana | Guiana Francesa | [P] T2 · revisado (D-054) |
+| `place.guyana` | place | Guyana | Guyana | Guiana | [P] T2 · revisado (D-054) |
+| `place.iquitos` | place | Iquitos | Iquitos | Iquitos | [P] T2 · revisado (D-054) |
+| `place.itenez` | place | Iténez | Iténez | Iténez | [P] T2 · revisado (D-054) |
+| `place.kew` | place | Kew | Kew | Kew | [P] T2 · revisado (D-054) |
+| `place.mamore` | place | Mamoré | Mamoré | Mamoré | [P] T2 · revisado (D-054) |
+| `place.maranon` | place | Marañón | Marañón | Marañón | [P] T2 · revisado (D-054) |
+| `place.maroni` | place | Maroni | Maroni | Maroni | [P] T2 · revisado (D-054) |
+| `place.meeting_of_waters` | place | Encuentro de las Aguas | Meeting of Waters | Encontro das Águas | [P] T2 · revisado (D-054) |
+| `place.mexico` | place | México | Mexico | México | [P] T2 · revisado (D-054) |
+| `place.mismi` | place | nevado Mismi | Mount Mismi | Nevado Mismi | [P] D-033 · revisado (D-054) |
+| `place.napo` | place | Napo | Napo | Napo | [P] T2 · revisado (D-054) |
+| `place.negro` | place | Negro | Negro | Negro | [P] T2 · revisado (D-054) |
+| `place.noel_kempff` | place | Noel Kempff | Noel Kempff | Noel Kempff | [P] T2 · revisado (D-054) |
+| `place.orinoco` | place | Orinoco | Orinoco | Orinoco | [P] T2 · revisado (D-054) |
+| `place.para` | place | Pará | Pará | Pará | [P] T2 · revisado (D-054) |
+| `place.peru` | place | Perú | Peru | Peru | [P] T2 · revisado (D-054) |
+| `place.putumayo` | place | Putumayo | Putumayo | Putumayo | [P] D-033 · revisado (D-054) |
+| `place.santarem` | place | Santarém | Santarém | Santarém | [P] T2 · revisado (D-054) |
+| `place.shanay_timpishka` | place | Shanay-Timpishka | Shanay-Timpishka | Shanay-Timpishka | [P] T2 · revisado (D-054) |
+| `place.solimoes` | place | Solimões | Solimões | Solimões | [P] T2 · revisado (D-054) |
+| `place.suriname` | place | Surinam | Suriname | Suriname | [P] T2 · revisado (D-054) |
+| `place.takutu` | place | Takutu | Takutu | Takutu | [P] T2 · revisado (D-054) |
+| `place.tambopata` | place | Tambopata | Tambopata | Tambopata | [P] T2 · revisado (D-054) |
+| `place.tocantins` | place | Tocantins | Tocantins | Tocantins | [P] D-033 · revisado (D-054) |
+| `place.tuichi` | place | Tuichi | Tuichi | Tuichi | [P] T2 · revisado (D-054) |
+| `place.venezuela` | place | Venezuela | Venezuela | Venezuela | [P] T2 · revisado (D-054) |
+| `skin_af_skin_m03_name` | ui | Cuia del Encuentro | Meeting Cuia | Cuia do Encontro | [P] D-033 · revisado (D-054) |
+| `skin_af_skin_m04_name` | ui | Totuma | Totuma | Totuma | [P] D-033 · revisado (D-054) |
 | `stuck_subtitle` | ui | Aguas estancadas | Still waters | Águas paradas | [P] T2 |
 | `ui.basin` | ui | Cuenca | Basin | Bacia | [P] T2 |
-| `ui.grand_basket` | ui | Canasta grande | Big Basket | Cesta grande | [P] D-033 · provisional, pendiente del asesor |
+| `ui.grand_basket` | ui | Canasta grande | Big Basket | Cesta grande | [P] D-033 · revisado (D-054) |
 | `ui.handful` | ui | Puñado de semillas | Handful of seeds | Punhado de sementes | [P] T2 |
 | `ui.infinite_canoes` | ui | Canoas infinitas | Endless Canoes | Canoas infinitas | [P] T2 |
 | `ui.river_samples` | ui | Muestrario del río | River Samples | Mostruário do Rio | [P] T2 |
 
-Las mecánicas que ya tenían PT de la propuesta de D-007 (b.2) lo conservan (Hoja «Palha», Liana «Cipó», Matapi invariante; sección 6.5); para el Remolino se elige «Redemoinho» entre las dos de esa propuesta. El tinte `tint.agua_negro.name` sigue siendo «Rio Negro Water» / «Água do Rio Negro»; el río es `place.negro`. La ciudad de Manaos no tiene fila propia: «Manaos» es hoy el nombre invariante del mundo 3 (sección 8) y `glossary.csv` no admite dos filas con el mismo español; si el mundo pasa a «Manaus» en EN y PT, lo decide el dueño. `fact_sheet_title` ya tiene EN y PT en el §10: «River Fruits» / «Frutas do Rio» (D-033, punto 4). Las filas marcadas D-033 son del añadido del 2026-10-22 (puntos 3, 5, 6 y 8); las «provisionales» esperan al asesor cultural.
+Las mecánicas que ya tenían PT de la propuesta de D-007 (b.2) lo conservan (Hoja «Palha», Liana «Cipó», Matapi invariante; sección 6.5); para el Remolino se elige «Redemoinho» entre las dos de esa propuesta. El tinte `tint.agua_negro.name` sigue siendo «Rio Negro Water» / «Água do Rio Negro»; el río es `place.negro`. La ciudad de Manaos no tiene fila propia: es `world_w03_name` (sección 8), «Manaos» en ES y «Manaus» en EN y PT (T2-Q9; D-054), porque `glossary.csv` no admite dos filas con el mismo español; los datos del Mapa, de fruta y de fauna escriben también «Manaus» en EN y PT. `fact_sheet_title` ya tiene EN y PT en el §10: «River Fruits» / «Frutas do Rio» (D-033, punto 4). Las filas marcadas D-033 son del añadido del 2026-10-22 (puntos 3, 5, 6 y 8); las «provisionales» las confirmó D-054 (T2-Q11). En la Liga del río, el PT-BR de `league_name_squirrel_monkey` es «Mico-de-cheiro», no «Macaco-de-cheiro» (sección 10: en PT, evitar «macaco»; T2-Q11; D-054). En un dato que contrasta los dos delfines de río (boto y tucuxi), el PT-BR dice «golfinhos de rio» y no «botos» (T2-Q11).
 
 ## Parámetros configurables (Remote Config)
 

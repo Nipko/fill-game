@@ -234,7 +234,10 @@ namespace AF.Tests.EditMode
                         || (key.StartsWith("world_w", StringComparison.Ordinal) && key.Length > "world_w00_".Length && char.IsDigit(key[7]));
                     if (cultural)
                     {
-                        Assert.That(table.StatusAt(r, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor), table.File + " " + key);
+                        // Nace pendiente_asesor; la revisión cultural de D-054 (aprobada por el dueño) la pasa a aprobado_es.
+                        // Nunca borrador ni sin estado.
+                        Assert.That(table.StatusAt(r, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor).Or.EqualTo(LocStatus.ApprovedEs),
+                            table.File + " " + key);
                     }
                 }
             }
