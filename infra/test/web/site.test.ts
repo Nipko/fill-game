@@ -219,6 +219,7 @@ describe('web/site', () => {
       'https://parallext.com',
       'https://policies.google.com/privacy',
       'https://policies.google.com/technologies/partner-sites',
+      'https://unity.com/legal',
       'https://unity.com/legal/game-player-and-app-user-privacy-policy',
       'https://unity3d.com/legal/licenses/unity_companion_license',
       'https://www.apache.org/licenses/LICENSE-2.0',
