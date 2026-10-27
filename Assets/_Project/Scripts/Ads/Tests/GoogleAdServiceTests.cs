@@ -588,7 +588,7 @@ namespace AF.Ads.Tests
             GoogleAdUnits release = GoogleAdUnits.Choose(developmentBuild: false, "com.parallext.tintalu");
 
             Assert.That(release.Production, Is.True);
-            Assert.That(release.For(GmaAdKind.Rewarded), Is.EqualTo("ca-app-pub-2916158449453694/2877105387"));
+            Assert.That(release.For(GmaAdKind.Rewarded), Is.EqualTo("ca-app-pub-2916158449453694/1182085615"));
             Assert.That(release.For(GmaAdKind.Interstitial), Is.EqualTo("ca-app-pub-2916158449453694/7187673451"));
             StringAssert.StartsWith("ca-app-pub-2916158449453694~", GoogleAdUnits.AndroidAppId);
         }

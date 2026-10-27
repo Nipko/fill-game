@@ -17,7 +17,7 @@
       "maxLength": 64
     },
     "ad_unit": {
-      "description": "Bloque de anuncios: su número (2877105387) o, por si llegara así, el id completo (ca-app-pub-<editor>/<número>). Solo valen los de la lista blanca del entorno; ajeno o ausente → 200 ignored.",
+      "description": "Bloque de anuncios: su número (1182085615) o, por si llegara así, el id completo (ca-app-pub-<editor>/<número>). Solo valen los de la lista blanca del entorno; ajeno o ausente → 200 ignored.",
       "type": "string",
       "maxLength": 64
     },

@@ -108,7 +108,7 @@ describe.each([
   it('rewardedSsv recibe la lista blanca de bloques de AdMob del entorno (D-049)', () => {
     const fn = resourcesOfType(json, 'AWS::Lambda::Function').find(([, p]) => p.FunctionName === `af-${envName}-rewarded-ssv`);
     const vars = ((fn?.[1].Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
-    expect(vars.AF_ADMOB_AD_UNITS).toBe(envName === 'prod' ? '2877105387' : '2877105387,5224354917');
+    expect(vars.AF_ADMOB_AD_UNITS).toBe(envName === 'prod' ? '1182085615' : '1182085615,5224354917');
   });
 
   it('dos secretos sin valor en la plantilla (sin el de MAX: el SSV de AdMob usa claves públicas, D-049)', () => {
