@@ -441,6 +441,9 @@ namespace AF.Save
             UnionSorted(merged.Entitlements.Frames, other.Entitlements.Frames);
             merged.Album.MergeFruits(other.Album);
 
+            // D-056 [P] (avatares.md §4.1): unión de los desbloqueados y los vistos, «o» en chosen y la elección más reciente.
+            merged.Avatar.Merge(other.Avatar);
+
             // B4 [P] (nota de B4 §7): calendar, el registro con más avance (cycle y luego next_day; en empate, el del ganador), y
             // played_date por máximo. Así una casilla sellada en un teléfono no se vuelve a sellar en el otro.
             CalendarData? mine = merged.Calendar;

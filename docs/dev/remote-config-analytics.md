@@ -253,7 +253,7 @@ la API. Cada vez que cambie 08 §9 se regeneran las dos (con `rc_defaults.py`) y
   `bool` → `BOOLEAN` (`true`/`false`), `string` (y `enum`) → `STRING`, `json` (y `map país→…`) → `JSON` compacto. El cliente
   trata un valor remoto igual al default como si no hubiera llegado: **publicar la plantilla no cambia el comportamiento**.
 - **Descripción:** «Rango 08 §9: <rango>. <uso>» de la fila, cortada a 256 caracteres. Es la chuleta para editar en la consola.
-- **Quedan fuera (248 de 254 parámetros van en la plantilla)** las 6 claves sin valor literal en 08 §9 (`biz_kpi_targets`,
+- **Quedan fuera (249 de 255 parámetros van en la plantilla)** las 6 claves sin valor literal en 08 §9 (`biz_kpi_targets`,
   `biz_kpi_alert_thresholds`, `eco_calendar_table_v1`, `eco_calendar_table_v2`, `league_prizes`, `regatta_prizes`; Q-B7-6):
   no hay valor que publicar. La herramienta las nombra en cada ejecución.
 - **Nombres de clave:** Remote Config solo admite letras inglesas, cifras y «_», empezando por letra o «_», hasta 256

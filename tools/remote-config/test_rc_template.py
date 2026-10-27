@@ -149,7 +149,7 @@ class RcTemplateTests(unittest.TestCase):
             self.assertEqual(params["mech_enabled_" + mech]["valueType"], "BOOLEAN", mech)
             self.assertEqual(params["mech_debut_level_" + mech]["valueType"], "NUMBER", mech)
         self.assertEqual(params["mech_debut_level_chica"]["defaultValue"]["value"], "14")
-        self.assertEqual(len(params), 248)
+        self.assertEqual(len(params), 249)
 
     def test_numbers_never_use_an_exponent(self):
         for key, p in _template()["parameters"].items():
