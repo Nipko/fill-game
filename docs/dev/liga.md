@@ -34,8 +34,10 @@ Esta especificación es la fuente única de los dos lados. Si hay que cambiar el
 - **Seudónimo:** automático y sin texto libre: un animal del glosario y 4 cifras, p. ej. «Capibara 4821». Lo asigna el servidor la primera vez y no se puede editar en la 1.0. El animal viaja como **clave** (`name_key`), así el cliente lo pinta en su idioma; las cifras, como número (`name_num`).
 - **Los animales del seudónimo** (24, en este orden; índice 0-23; nacen `pendiente_asesor`): `league_name_capybara`, `league_name_jaguar`, `league_name_toucan`, `league_name_macaw`, `league_name_boto`, `league_name_sloth`, `league_name_tapir`, `league_name_otter`, `league_name_manatee`, `league_name_turtle`, `league_name_howler`, `league_name_squirrel_monkey`, `league_name_caiman`, `league_name_anaconda`, `league_name_dart_frog`, `league_name_morpho`, `league_name_hummingbird`, `league_name_heron`, `league_name_kingfisher`, `league_name_anteater`, `league_name_armadillo`, `league_name_ocelot`, `league_name_coati`, `league_name_arapaima`.
   - El servidor elige el animal y las cifras al azar al crear el seudónimo, sin repetir la pareja animal-cifras.
+  - **Sin la anaconda en los seudónimos nuevos** (D-057, Q-AV-12; glosario §3.3, «Descartados»): el servidor sortea entre los otros 23. Los índices no cambian y `league_name_anaconda` sigue en el `enum` del contrato, así que quien ya la tiene la conserva y el cliente la sigue pintando.
   - El cliente pone el texto de cada clave en `strings.csv` en los tres idiomas.
   - Una clave desconocida (si el servidor tiene una lista más nueva) se pinta como «Jugador {n}».
+- **Avatar** (D-056; diseño en `docs/dev/avatares.md`): el jugador elige un animal del catálogo del cliente y su **índice** (0-63) viaja con `POST /v1/league/avatar` (§3.1). Va con el seudónimo, sale en su fila del top y en la suya, y es independiente del animal del seudónimo (Q-AV-5). Opcional: quien no eligió sale sin avatar (disco neutro).
 - **País:** lo detecta el servidor (§3.3) y se fija para toda la semana con el primer envío. Ajustes muestra «País en la Liga: {país}», sin poder cambiarlo en la 1.0.
 - **Edad:**
   - con <13 no hay Liga (D-033: no hay red ni SDK);
@@ -77,6 +79,15 @@ Entran en `infra/contracts/v1` con sus esquemas, sus ejemplos y su entrada en `i
   - `me.rank` es exacto si el jugador está en el top 100; si no, `null` con `percentile` (1-100, «estás en el p % mejor»).
   - Sin puntos esa semana: `me.points` 0, `rank` y `percentile` `null`.
   - Con `scope=country` y país desconocido: 404 `country_unknown`.
+- **Avatar (D-056; revisión del 2026-10-27, compatible con v1):** todo es **opcional y aditivo**.
+  - `top[].avatar` y `me.avatar` en `league-board.response`, y `avatar` en `league-wins.response`: entero 0-63, o `null`. El servidor **omite** el campo si el jugador nunca eligió (la respuesta es idéntica a la anterior); el cliente lo trata igual que `null` (disco neutro). Los clientes anteriores lo ignoran (`strict: false`).
+  - La petición de victorias **no cambia**: el avatar no viaja con ellas.
+  - `POST /v1/league/avatar`, petición `league-avatar.request.schema.json` y respuesta 200 `league-avatar.response.schema.json`, los dos `{ "avatar": 7 }` (`additionalProperties: false`). Mismo autorizador que las otras dos: ID token de Firebase y App Check.
+    - **Solo valida el rango 0-63**, no la lista del cliente: un avatar nuevo no exige desplegar el backend.
+    - Si el UID aún no tiene seudónimo, **lo crea** y guarda el avatar con él.
+    - Guarda el avatar en la fila del seudónimo y, en la misma transacción, reescribe las filas del top de la semana en curso (global y país), sin esperar a otra victoria.
+    - Repetir el avatar vigente responde 200 sin escribir ni gastar cupo.
+    - Errores: 400 `bad_request` (fuera de rango, no entero, campo extra o cuerpo mal formado), 401 (sin token o cuenta borrada), 403 `integrity_failed`, 429 `rate_limited` con más de **30 cambios por UID y día UTC** [P] (con `retry_after_s` hasta la medianoche UTC) y 503 si la transacción no sale tras los reintentos.
 
 ### 3.2 Puntos e integridad (06 §6, «Antifraude»)
 
@@ -95,7 +106,7 @@ Entran en `infra/contracts/v1` con sus esquemas, sus ejemplos y su entrada en `i
   - Un salto de +1 es normal, y de +2 si el nivel omitido es `skippable` (Salto del Boto, D-008).
   - **Un hueco mayor no se rechaza ni marca:** la referencia se repone a ese nivel, como con la primera victoria, y la victoria cuenta. Una victoria puede no llegar nunca (cola perdida al reinstalar, la Liga apagada, una semana pasada sin red), y el progreso lo decide el cliente: no hay prueba de juego en el servidor (D-046).
 - **Sin marca automática en la 1.0:** ningún rechazo marca la cuenta. `flagged` existe para marcar a mano (operación). Las cuentas marcadas siguen sumando para sí, pero se ocultan del top de los demás.
-- **Borrado de cuenta:** `deleteAccount` borra también todo lo de la Liga de ese `uid`, incluido el seudónimo.
+- **Borrado de cuenta:** `deleteAccount` borra también todo lo de la Liga de ese `uid`, incluido el seudónimo con su avatar y su cupo de cambios (viven en la misma fila) y las filas del top de todas sus semanas.
 
 ### 3.3 País
 
@@ -141,7 +152,7 @@ Nunca llevan seudónimo ni país, solo claves (regla de `localizacion.md`).
 ## 6. Privacidad (Codex)
 
 La política, en tres idiomas, tiene que decir:
-- que la Liga muestra a otros jugadores un **seudónimo automático, la bandera del país y los puntos de la semana**;
+- que la Liga muestra a otros jugadores un **seudónimo automático, el avatar de animal que elija entre los del juego (D-056), la bandera del país y los puntos de la semana**;
 - que el país sale de la conexión o de la región del teléfono;
 - que se borra con la cuenta;
 - que con <13 no hay Liga.
