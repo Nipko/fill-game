@@ -4174,3 +4174,42 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - los marcadores `[[ABOGADO]]` se resuelven con una investigación propia en fuentes oficiales y en lo que hacen los juegos que lo hacen bien, aprendiendo también de sus sanciones y errores (`docs/legal/investigacion-*.md`);
   - lo que no se pueda resolver con fuentes queda como riesgo aceptado por el dueño;
   - la revisión de un abogado pasa a ser opcional y posterior.
+
+### D-057, añadido del 2026-10-27: decisiones sobre la investigación legal
+
+Fuente: `docs/legal/investigacion-legal-mundial.md` (§11, tareas T-L; §12, riesgos). El dueño respondió en el chat a cuatro preguntas. El resto sigue la recomendada, por su regla «si tienen recomendada vamos con esa».
+
+- **Representante en la UE y en el Reino Unido (T-L7, R1):** «Aceptar el riesgo por ahora». Se lanza sin representante, en contra de la recomendación de la investigación. La política usa la variante «sin representante» de §9, fila 2. Se contrata si el juego crece en el EEE o en el Reino Unido.
+- **Play Age Signals (T-L3, R7):** «Sí, integrarla». El dueño aprueba la dependencia nueva, Play Age Signals API 0.0.4, solo para la edad (regla dura 4). Va acompañada de T-L4: la banda que venga de la señal no se manda a Analytics. Hay que declarar en Play Console las clasificaciones por edad de los productos.
+- **Países excluidos (T-L2, R8):** «RU, BY, VN e ID». Turquía se queda: se acepta R8 y se revisa si pasa del 3 % de las instalaciones. Lo configura el dueño en Play Console; 08 §13.1 lo recoge (T-L15).
+- **Crashlytics (T-L6, R5):** «Sí, interruptor en Ajustes». Habrá un interruptor «Enviar informes de fallos» en «Privacidad y datos», activado por defecto. Sustituye la «línea sin interruptor» de Q-B12-4.
+- **Con la recomendada:**
+  - T-L5: `rdp=1` con 13-17 en EE. UU.;
+  - T-L8: los textos de la web de §9;
+  - T-L9: la tienda frente a la ACM;
+  - T-L12: el país de la Liga;
+  - T-L13: los avisos de licencia;
+  - T-L15: el GDD;
+  - riesgos R2 a R6 y R10 a R15, aceptados con sus medidas;
+  - R9: firmar la licencia Parallext → S.A.S antes de publicar.
+- **Las decide o hace el dueño:**
+  - T-L10, el «≈ x €» informativo y los tamaños de pack; queda abierta;
+  - T-L11, las consolas de Firebase, Analytics y AdMob;
+  - T-L14, la ficha sin captación infantil.
+
+### D-049, añadido del 2026-10-27: AppLovin MAX sale del build
+
+- **Decisión del dueño, en el chat:** «Sí, quita AppLovin MAX del build de release; si AppLovin abre, entra como red dentro de AdMob».
+- **Motivo:** AppLovin sigue sin aceptar cuentas nuevas. MAX iba en el AAB sin servir anuncios: con su detector de fallos nativo, con okhttp3 y teniendo que nombrarlo en Créditos y en la política (`docs/legal/avisos-de-licencia.md` §5.2).
+- **Cambio:** el SDK de AppLovin MAX y sus dependencias salen del build de release. La interfaz de `AF.Ads` sigue igual. Una compuerta de la CI comprueba que el release no lleva `com.applovin`.
+- **Si AppLovin abre cuentas:** entra como red de mediación dentro de AdMob, con su adaptador y su versión aprobados por el dueño. MAX no vuelve.
+- **Sustituye** el punto 5 de D-049 («MAX queda guardado»).
+
+### D-057, añadido del 2026-10-27: decisiones de la revisión del código mundial
+
+Las toma el integrador con la recomendada, según la regla del dueño «si tienen recomendada vamos con esa». Fuente: la revisión de `tanda6/mundial-codigo`.
+
+1. **El país legal llega al servidor de la Liga.** El país que resulta de la SIM, de la cuenta de Play o de la región va como `region` de la Liga (liga.md §3.3) y como `geo_tier` agregado en la analítica. Se corrigen los documentos que decían que el país de Play no sale del teléfono, la política de la web y Data Safety.
+2. **Nombres de países de CLDR 47.0.** Se aceptan como fuente para la tabla de la Liga, con la misma excepción que las 21 filas de D-046 (`aprobado_es`/`revisado_nativo`, con la nota «Pendiente del asesor cultural»). El asesor revisará con prioridad los nombres con carga política: Taiwán, Palestina, Kosovo y Sáhara Occidental.
+3. **13-17 sin país conocido:** no se ofrece la analítica, que es el tratamiento más estricto. Sustituye el «sin país, `*`» de T-L1.
+4. **Lista T1 (T-M6):** se añaden Nueva Zelanda, Singapur, Hong Kong, Taiwán, Israel y los países del Golfo, como [P]. Se editan 04 §6.2 y 05 §6.3.
