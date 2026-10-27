@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sin permisos propios. La biblioteca age-signals 0.0.4 tampoco declara ninguno (solo una actividad no exportada). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

@@ -67,8 +67,9 @@ namespace AF.Platform
         public const string Changed = "changed";
 
         /// <summary>Crea el aviso.</summary>
-        public ConsentReport(string step, string profile, int textVersion, bool analytics, bool adsPersonalized, AgeBand band)
+        public ConsentReport(string step, string profile, int textVersion, bool analytics, bool adsPersonalized, AgeBand band, bool bandFromSignal = false)
         {
+            BandFromSignal = bandFromSignal;
             Step = step;
             Profile = profile;
             TextVersion = textVersion;
@@ -92,8 +93,17 @@ namespace AF.Platform
         /// <summary><c>ads_personalized</c>.</summary>
         public bool AdsPersonalized { get; }
 
-        /// <summary><c>age_band</c> (<see cref="AgeBands.Id"/>; null sin declarar).</summary>
+        /// <summary>La banda autodeclarada (nunca la de Play Age Signals: T-L4).</summary>
         public AgeBand Band { get; }
+
+        /// <summary>Play Age Signals corrigió la banda declarada (T-L3): la banda no va a la analítica (T-L4; [F25]).</summary>
+        public bool BandFromSignal { get; }
+
+        /// <summary>
+        /// <c>age_band</c> de <c>af_consent</c> (08 §8.2): la autodeclarada (<see cref="AgeBands.Id"/>), o null si no se declaró o si
+        /// Play Age Signals la corrigió (T-L4: la información de la señal nunca va a la analítica, [F25]).
+        /// </summary>
+        public string? AnalyticsAgeBand => BandFromSignal ? null : AgeBands.Id(Band);
     }
 
     /// <summary>
@@ -159,13 +169,13 @@ namespace AF.Platform
         public AgeBand Band { get; private set; }
 
         /// <summary>La pantalla de consentimiento ofrece «Anuncios personalizados» (<see cref="ConsentPolicy.OffersAdsChoice"/>).</summary>
-        public bool OffersAdsChoice => ConsentPolicy.OffersAdsChoice(_profile, Band, _config, _countryKnown);
+        public bool OffersAdsChoice => ConsentPolicy.OffersAdsChoice(_profile, EffectiveBand, _config, _countryKnown);
 
         /// <summary>
         /// La pantalla de consentimiento ofrece «Analítica» con la banda de la pantalla abierta (<see cref="ConsentPolicy.OffersAnalyticsChoice"/>;
         /// D-057): no con 13-17 donde la edad de consentimiento digital del país pasa de 13, ni sin país.
         /// </summary>
-        public bool OffersAnalyticsChoice => ConsentPolicy.OffersAnalyticsChoice(Band, _config, _country, _countryKnown);
+        public bool OffersAnalyticsChoice => ConsentPolicy.OffersAnalyticsChoice(EffectiveBand, _config, _country, _countryKnown);
 
         /// <summary>Lo marcado al abrir las finalidades: en el arranque, nada (consentimiento expreso); al cambiar, lo guardado.</summary>
         public bool InitialAnalytics { get; private set; }
@@ -177,7 +187,44 @@ namespace AF.Platform
         public bool CanCorrectAge => Record != null && Record.AgeBand != AgeBand.Unknown && Record.AgeBand != AgeBand.Under13 && !Record.AgeBandCorrected;
 
         /// <summary>Los flags vigentes (<see cref="ConsentPolicy.Flags"/>).</summary>
-        public ConsentFlags Flags => ConsentPolicy.Flags(Record, _config, _profile, _countryKnown, _country);
+        public ConsentFlags Flags => ConsentPolicy.Flags(Record, _config, _profile, _countryKnown, _country, SignalBand);
+
+        /// <summary>
+        /// La banda de Play Age Signals (T-L3) recibida en este arranque, o <see cref="AgeBand.Unknown"/> sin señal (o con la fuente
+        /// <c>self_declared</c>). No se guarda: se pide en cada arranque.
+        /// </summary>
+        public AgeBand SignalBand { get; private set; }
+
+        /// <summary>La banda que se aplica en la pantalla abierta: la más estricta de <see cref="Band"/> y <see cref="SignalBand"/>.</summary>
+        public AgeBand EffectiveBand => AgeSignalPolicy.Effective(Band, SignalBand);
+
+        /// <summary>
+        /// Recibe la señal de Play Age Signals (T-L3). Solo cuenta con <c>consent_age_signal_source</c> =
+        /// <c>self_declared+play_age_signals</c>; sin señal o con error, manda la autodeclarada. Con 0-12, el flujo pasa a
+        /// <see cref="ConsentStep.Blocked"/> (sin guardar nada: la señal se vuelve a pedir en cada arranque). Devuelve si cambió la
+        /// banda de la señal (y quien lo llama vuelve a aplicar los flags).
+        /// </summary>
+        public bool ApplyAgeSignal(AgeSignal signal)
+        {
+            if (!AgeSignalPolicy.Enabled(_config))
+            {
+                return false;
+            }
+
+            AgeBand band = signal.Band;
+            if (band == SignalBand)
+            {
+                return false;
+            }
+
+            SignalBand = band;
+            if (band == AgeBand.Under13)
+            {
+                Go(ConsentStep.Blocked);
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Los anuncios los decide el mensaje de UMP con la banda de la pantalla abierta: perfil <c>ump</c>, país conocido y 18+ (o
@@ -185,7 +232,7 @@ namespace AF.Platform
         /// </summary>
         public bool AdsByUmp => _countryKnown
             && string.Equals(_profile, LegalProfiles.Ump, StringComparison.Ordinal)
-            && (Band == AgeBand.Adult || (Band == AgeBand.Teen && !_config.BizUnder18NoPersonalization));
+            && (EffectiveBand == AgeBand.Adult || (EffectiveBand == AgeBand.Teen && !_config.BizUnder18NoPersonalization));
 
         /// <summary>Cada aviso para <c>af_consent</c> (lo conecta el arranque a la analítica).</summary>
         public Action<ConsentReport>? Reported { get; set; }
@@ -198,6 +245,12 @@ namespace AF.Platform
             if (ConsentPolicy.IsBlocked(record))
             {
                 Band = AgeBand.Under13;
+                return Go(ConsentStep.Blocked);
+            }
+
+            if (SignalBand == AgeBand.Under13)
+            {
+                Band = record?.AgeBand ?? AgeBand.Unknown; // T-L3: la señal de 0-12 bloquea sin tocar lo guardado
                 return Go(ConsentStep.Blocked);
             }
 
@@ -277,8 +330,9 @@ namespace AF.Platform
                 }
 
                 // 13-17 sin personalización: los anuncios personalizados se apagan aunque se hubieran aceptado con 18+; y la analítica,
-                // donde la edad de consentimiento digital pasa de 13 (D-057).
-                bool ads = current.AdsPersonalized && ConsentPolicy.OffersAdsChoice(current.Profile, band, _config, _countryKnown);
+                // donde la edad de consentimiento digital pasa de 13 (D-057). Con Play Age Signals, con la más estricta (T-L3).
+                bool ads = current.AdsPersonalized
+                    && ConsentPolicy.OffersAdsChoice(current.Profile, AgeSignalPolicy.Effective(band, SignalBand), _config, _countryKnown);
                 bool analytics = current.Analytics && OffersAnalyticsChoice;
                 var corrected = new ConsentRecord(current.Profile, current.TextVersion, now, analytics, ads, band, true);
                 Save(corrected);
@@ -376,7 +430,7 @@ namespace AF.Platform
 
         private void Report(string step, string profile, int textVersion, bool analytics, bool ads, AgeBand band)
         {
-            Reported?.Invoke(new ConsentReport(step, profile, textVersion, analytics, ads, band));
+            Reported?.Invoke(new ConsentReport(step, profile, textVersion, analytics, ads, band, AgeSignalPolicy.Corrects(band, SignalBand)));
         }
 
         private ConsentStep Go(ConsentStep step)

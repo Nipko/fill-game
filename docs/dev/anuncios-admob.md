@@ -79,12 +79,14 @@ Las reglas de cadencia, topes, esperas e intersticiales siguen en `AdPolicy` (05
 | Decisión que permite anuncios | 1) `MobileAds.SetRequestConfiguration` (contenido máximo **G** siempre; con 13-17, `TagForUnderAgeOfConsent = True`); 2) UMP: `ConsentInformation.Update` (con `TagForUnderAgeOfConsent` con 13-17) y `ConsentForm.LoadAndShowConsentFormIfRequired`; 3) **solo si** `ConsentInformation.CanRequestAds()`, `MobileAds.Initialize`; 4) al avisar de que está listo, la precarga |
 | UMP no resuelve (sin red en la primera sesión) | Sin `Initialize`; se vuelve a preguntar al volver a la app (`OnResume`) |
 | 13-17 fuera del EEE/UK/CH | `TagForUnderAgeOfConsent` y cada petición con `npa=1` (`biz_under18_no_personalization`) |
+| 13-17 con el país legal `US` (T-L5) | Lo de la fila anterior y, además, cada petición con el extra `rdp=1` (tratamiento restringido de datos), también si `biz_under18_no_personalization` está apagado |
 | 13-17 con el perfil `ump` (EEE, Reino Unido, Suiza) | **Sin anuncios** (Q-MAX-6 (b), confirmada por el dueño en D-055, punto 4): ninguna llamada. Pregunta 2 de §11 |
 | 18+ que no acepta «Anuncios personalizados», o sin país | `npa=1` en cada petición |
 | 18+ que acepta | Sin `npa` |
 | Perfil `ump` con 18+ | Sin `npa`: deciden las cadenas TCF del mensaje de UMP. Ajustes › Privacidad › opciones de anuncios llama a `ConsentForm.ShowPrivacyOptionsForm` si UMP lo pide (`PrivacyOptionsRequirementStatus.Required`) |
 
 - **Edad corregida después de UMP** (18+ → 13-17 en Ajustes): se reenvía `SetRequestConfiguration` con `TagForUnderAgeOfConsent`, se descarta el anuncio ya cargado y se recarga con `npa=1`; UMP no se vuelve a pedir (fuera del perfil `ump` manda nuestra pantalla, y con el perfil `ump` 13-17 no tiene anuncios).
+- **RDP con 13-17 en EE. UU. (T-L5; D-057, añadido del 2026-10-27; `docs/legal/investigacion-legal-mundial.md` §3.3 y [F28]):** los anuncios no personalizados de Google siguen usando identificadores para la frecuencia, el fraude y los informes; para que los de un menor no cuenten como «compartir» en las leyes de los estados de EE. UU., cada petición lleva `rdp=1` (`AdRequest.Extras`, `NativeGmaPort.Load`) cuando la banda que se aplica es 13-17 y el país legal (el del perfil legal: SIM → región) es `US`. Lo calcula `AdConsentSettings.RestrictedDataProcessing` (`ConsentAdService.Apply(flags, país)`); si pasa a `rdp=1` con un anuncio ya cargado (p. ej. la señal de edad llega tarde), se descarta y se recarga. Tests en `GoogleAdServiceTests` (sección «T-L5»). La banda puede venir corregida por **Play Age Signals** (T-L3; `docs/dev/consentimiento.md` §3): entonces se aplica la más estricta de la declarada y la de la señal, que es un uso permitido de la señal (experiencia adecuada a la edad), nunca para segmentar.
 - El mensaje de UMP solo aparece donde AdMob lo tiene publicado: el del RGPD (EEE, Reino Unido, Suiza) y el de los estados de EE. UU. En Brasil, Colombia, Perú y México manda nuestra pantalla (08 §7).
 - **Contenido G (D-029):** por código (`MaxAdContentRating.G`) y en la consola de AdMob («Contenido máximo» = G, ya hecho).
 - `MobileAdsInitProvider` (initOrder 100) se queda: en 25.4.0 solo valida el App ID (sin red ni ID de publicidad; propuesta §4). `DELAY_APP_MEASUREMENT_INIT` = true como refuerzo.
@@ -178,6 +180,7 @@ Decisión del dueño: «Sí, quita AppLovin MAX del build de release; si AppLovi
 4. Si se vincula AdMob con Firebase en la consola, AdMob registra `ad_impression` por su cuenta: entonces apagar `ads_ilr_to_firebase` en Remote Config para no contarlas dos veces (pregunta 3 de §11).
 5. Probar en el teléfono con un `dev.apk` (bloques de prueba de Google), nunca con clics propios en anuncios reales.
 6. ~~Aprobar el adaptador de Unity Ads 3.21.1~~ (aprobado el 2026-10-27, añadido de D-049; integrado en §12, con la línea de Unity ya activa en `app-ads.txt`). Queda: poner Parallext, LLC en la organización de Unity (dirección y cobro) y añadir Unity Ads a los partners de los mensajes del RGPD y de EE. UU. en AdMob (§12).
+7. **Play Console (T-L3, Texas):** declarar las clasificaciones por edad de los productos de la app (<13, 13-15, 16-17, 18+) en la sección de las leyes de las tiendas de EE. UU. [F24]. Lo declara el dueño; el código no lo puede hacer.
 
 ## 11. Preguntas abiertas
 

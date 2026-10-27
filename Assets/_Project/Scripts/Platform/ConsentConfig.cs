@@ -22,7 +22,7 @@ namespace AF.Platform
         /// <summary><c>self_declared</c>: la banda sale de la pantalla neutral.</summary>
         public const string SourceSelfDeclared = "self_declared";
 
-        /// <summary><c>self_declared+play_age_signals</c>: además, Play Age Signals (compuerta de la Fase 5; sin implementar).</summary>
+        /// <summary><c>self_declared+play_age_signals</c>: además, Play Age Signals (T-L3; <see cref="AgeSignalPolicy"/>). Default de 08 §9 desde D-057, añadido del 2026-10-27.</summary>
         public const string SourceWithPlayAgeSignals = "self_declared+play_age_signals";
 
         /// <summary>Clave del resto de países en el mapa (Q-B7-4 (a): <c>"*"</c>).</summary>
@@ -64,7 +64,7 @@ namespace AF.Platform
 
         /// <summary><c>consent_age_signal_source</c> (05): <see cref="SourceSelfDeclared"/> o <see cref="SourceWithPlayAgeSignals"/>.</summary>
         [RemoteConfigKey("consent_age_signal_source")]
-        public string ConsentAgeSignalSource { get; set; } = SourceSelfDeclared;
+        public string ConsentAgeSignalSource { get; set; } = SourceWithPlayAgeSignals;
 
         /// <summary>
         /// <c>biz_legal_profile_by_country</c> (01): país (ISO alfa-2, o <see cref="EeaKey"/>, <see cref="UkKey"/> y

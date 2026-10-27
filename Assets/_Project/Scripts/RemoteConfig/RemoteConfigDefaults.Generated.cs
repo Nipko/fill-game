@@ -27,7 +27,7 @@ namespace AF.RemoteConfig
     },
     ""consent_age_signal_source"": {
       ""type"": ""string"",
-      ""default"": ""self_declared""
+      ""default"": ""self_declared+play_age_signals""
     },
     ""consent_digital_age_by_country"": {
       ""type"": ""json"",

@@ -8,7 +8,8 @@ namespace AF.UI
     /// <summary>
     /// Sonda de la edad y el consentimiento (bloque B12), solo en desarrollo (<see cref="Enabled"/>):
     /// <c>AF_STATE {"event":"consent","t":…,"step":"age","profile":"co_1581","country":"CO","country_source":"sim",…}</c> cada vez
-    /// que cambia el paso o se aplican los flags, con lo que reciben los anuncios, la analítica y la tienda (<c>analytics</c>,
+    /// que cambia el paso o se aplican los flags, con la banda que se aplica (<c>age_band</c>; <c>band_from_signal</c> si vino o se
+    /// corrigió con Play Age Signals, T-L3) y lo que reciben los anuncios, la analítica y la tienda (<c>analytics</c>,
     /// <c>npa</c>, <c>tfcd</c>, <c>rating</c>, <c>purchases</c>, <c>double_confirm</c>). Solo ids y booleanos, nunca texto visible;
     /// los botones de la pantalla salen en <c>AF_LAYOUT</c> con <c>"screen":"consent"</c> para tocarlos con <c>adb shell input tap</c>.
     /// </summary>
@@ -60,6 +61,9 @@ namespace AF.UI
                 sb.Append('"').Append(band).Append('"');
             }
 
+            // T-L3: la banda aplicada vino (o se corrigió) con Play Age Signals. Solo en la sonda de desarrollo (logcat), nunca en la
+            // analítica (T-L4).
+            sb.Append(",\"band_from_signal\":").Append(flags.BandFromSignal ? "true" : "false");
             sb.Append(",\"decided\":").Append(flags.Decided ? "true" : "false");
             sb.Append(",\"blocked\":").Append(flags.Blocked ? "true" : "false");
             sb.Append(",\"analytics\":").Append(flags.AnalyticsEnabled ? "true" : "false");

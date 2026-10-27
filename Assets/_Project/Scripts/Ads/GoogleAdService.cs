@@ -93,8 +93,11 @@ namespace AF.Ads
         /// <summary><c>MobileAds.Initialize</c>.</summary>
         void Initialize();
 
-        /// <summary>Carga un anuncio del bloque <paramref name="kind"/> (con <c>npa=1</c> si <paramref name="nonPersonalized"/>).</summary>
-        void Load(GmaAdKind kind, bool nonPersonalized);
+        /// <summary>
+        /// Carga un anuncio del bloque <paramref name="kind"/> (con <c>npa=1</c> si <paramref name="nonPersonalized"/> y con
+        /// <c>rdp=1</c> si <paramref name="restrictedDataProcessing"/>: 13-17 en EE. UU., T-L5).
+        /// </summary>
+        void Load(GmaAdKind kind, bool nonPersonalized, bool restrictedDataProcessing);
 
         /// <summary>Hay un anuncio cargado que se puede mostrar (<c>CanShowAd</c>).</summary>
         bool IsReady(GmaAdKind kind);
@@ -184,6 +187,7 @@ namespace AF.Ads
     /// <item><b>Redes de mediación (Unity Ads; D-049, añadido del 2026-10-27):</b> antes de UMP y de <c>MobileAds.Initialize</c>, y
     /// otra vez si cambia, <see cref="IGmaPort.SetMediationConsent"/> con los flags de <see cref="AdConsentSettings"/> (los que antes recibía MAX): con <c>npa</c>
     /// (13-17, también 13-17 en EE. UU., o sin consentimiento) <c>gdpr.consent</c> y <c>privacy.consent</c> en false.</item>
+    /// <item><b>RDP (T-L5):</b> con 13-17 y el país legal <c>US</c>, cada petición lleva además <c>rdp=1</c> [F28].</item>
     /// <item><b>Precarga según el nivel</b> y reintentos con espera exponencial (<see cref="Backoff"/>: 2, 4 … 64 s).</item>
     /// <item><b>SSV (08 §10.2; D-049):</b> antes de cada recompensado, si hay UID de Firebase Auth, <c>ServerSideVerificationOptions</c>
     /// con <c>user_id</c> = ese UID (el mismo que valida el JWT de <c>restoreLedger</c>) y <c>custom_data = placement|nonce</c>
@@ -219,6 +223,7 @@ namespace AF.Ads
 
         private bool _allowed;
         private bool _nonPersonalized = true;
+        private bool _restricted;
         private bool? _underAgeApplied;
         private bool _mediationApplied;
         private bool? _mediationConsent;
@@ -300,6 +305,15 @@ namespace AF.Ads
                 _mediationDoNotSell = settings.DoNotSell;
                 _port.SetMediationConsent(settings.HasUserConsent, settings.DoNotSell);
             }
+
+            if (settings.RestrictedDataProcessing && !_restricted)
+            {
+                // Pasa a rdp=1 (T-L5; p. ej. la señal de edad llega tarde con 13-17): lo ya cargado se pidió sin él y no se muestra.
+                Discard(_rewarded);
+                Discard(_interstitial);
+            }
+
+            _restricted = settings.RestrictedDataProcessing;
 
             if (_underAgeApplied != settings.Teen)
             {
@@ -595,7 +609,7 @@ namespace AF.Ads
 
             unit.Loading = true;
             unit.Loaded = false;
-            _port.Load(kind, _nonPersonalized);
+            _port.Load(kind, _nonPersonalized, _restricted);
         }
 
         private void Finish(GmaAdKind kind, AdOutcome outcome)

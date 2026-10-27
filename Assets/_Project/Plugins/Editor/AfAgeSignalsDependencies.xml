@@ -1,0 +1,13 @@
+<!--
+Plugin propio de Play Age Signals de Amazon Fill (Assets/_Project/Plugins/Android/AfAgeSignals.androidlib; T-L3).
+EDM4U lee este archivo y escribe la dependencia en Assets/Plugins/Android/mainTemplate.gradle. Versión exacta aprobada por el
+dueño en D-057, añadido del 2026-10-27 (Play Age Signals API 0.0.4, solo para la edad): cambiarla exige otra aprobación. La
+misma versión va en el build.gradle del plugin (compileOnly). Fuente: developer.android.com/google/play/age-signals/use-age-signals-api
+(actualizada el 2026-10-23, consultada el 2026-10-27 por el integrador).
+-->
+<dependencies>
+  <androidPackages>
+    <androidPackage spec="com.google.android.play:age-signals:0.0.4">
+    </androidPackage>
+  </androidPackages>
+</dependencies>

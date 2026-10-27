@@ -25,8 +25,13 @@ namespace AF.Ads
         /// <summary>Sin decisión: no se inicia.</summary>
         public static readonly AdConsentSettings NotDecided = new AdConsentSettings(false, false, false, true, ConsentFlags.MaxAdContentRatingG, false, false);
 
-        private AdConsentSettings(bool mayInitialize, bool childDirected, bool? hasUserConsent, bool? doNotSell, string rating, bool umpDecides, bool teen)
+        /// <summary>El país legal de EE. UU., donde 13-17 pide el tratamiento restringido de datos (T-L5).</summary>
+        public const string RestrictedDataProcessingCountry = "US";
+
+        private AdConsentSettings(
+            bool mayInitialize, bool childDirected, bool? hasUserConsent, bool? doNotSell, string rating, bool umpDecides, bool teen, bool rdp = false)
         {
+            RestrictedDataProcessing = rdp;
             Teen = teen;
             MayInitialize = mayInitialize;
             ChildDirected = childDirected;
@@ -63,8 +68,18 @@ namespace AF.Ads
         /// </summary>
         public bool Teen { get; }
 
-        /// <summary>Lo que corresponde a <paramref name="flags"/>.</summary>
-        public static AdConsentSettings From(ConsentFlags flags)
+        /// <summary>
+        /// Tratamiento restringido de datos de Google (RDP; T-L5 de <c>docs/legal/investigacion-legal-mundial.md</c> §3.3 y §11, [F28]):
+        /// con 13-17 y el país legal <c>US</c>, cada petición de anuncios lleva el extra <c>rdp=1</c>, para que los anuncios de un menor
+        /// no cuenten como «compartir» en las leyes de los estados de EE. UU.
+        /// </summary>
+        public bool RestrictedDataProcessing { get; }
+
+        /// <summary>
+        /// Lo que corresponde a <paramref name="flags"/>; <paramref name="legalCountry"/> es el país del perfil legal (ISO alfa-2, null si
+        /// no se supo): con <c>US</c> y 13-17, <see cref="RestrictedDataProcessing"/>.
+        /// </summary>
+        public static AdConsentSettings From(ConsentFlags flags, string? legalCountry = null)
         {
             if (flags == null)
             {
@@ -92,7 +107,9 @@ namespace AF.Ads
             }
 
             bool personalized = flags.AdsPersonalized;
-            return new AdConsentSettings(true, false, personalized, !personalized, flags.MaxAdContentRating, false, flags.Band == AgeBand.Teen);
+            bool teen = flags.Band == AgeBand.Teen;
+            bool rdp = teen && string.Equals(legalCountry, RestrictedDataProcessingCountry, StringComparison.OrdinalIgnoreCase);
+            return new AdConsentSettings(true, false, personalized, !personalized, flags.MaxAdContentRating, false, teen, rdp);
         }
     }
 
