@@ -2,17 +2,30 @@ import { randomInt } from 'node:crypto';
 import { GetCommand, QueryCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient, TransactWriteCommandInput } from '@aws-sdk/lib-dynamodb';
 import { cancellationCodes } from '../shared/ddb.ts';
-import { HttpError, unauthorized } from '../shared/errors.ts';
+import { HttpError, rateLimited, unauthorized } from '../shared/errors.ts';
 import type { Env } from '../shared/env.ts';
 import { requireEnv } from '../shared/env.ts';
 import { uidHash } from '../shared/log.ts';
 import { isDeleted, notDeletedCheck } from '../shared/rateLimit.ts';
-import { bucketOf, evaluate, NAME_KEYS, percentile, rankKey, scopesOf, visible, weekOf } from './rules.ts';
+import { ASSIGNABLE_NAME_KEYS, AVATAR_CHANGES_PER_DAY, bucketOf, evaluate, isAvatar, percentile, rankKey, scopesOf, visible, weekOf } from './rules.ts';
 import type { Player, Request } from './rules.ts';
 
 type Tx = NonNullable<TransactWriteCommandInput['TransactItems']>;
 export interface LeagueDeps { ddb: DynamoDBDocumentClient; env: Env; now: () => number; pick?: (max: number) => number }
-export interface Alias { uid: string; name_key: string; name_num: number; highest: number; rev: number; reservation: string }
+export interface Alias {
+  uid: string; name_key: string; name_num: number; highest: number; rev: number; reservation: string;
+  /** Avatar elegido (D-056; 0-63), con el seudónimo y copiado a las filas del top. Sin él, nunca eligió. */
+  avatar?: number;
+  /** Cupo de cambios de avatar del día UTC [P], en la misma fila: se borra con el seudónimo. */
+  avatar_day?: string; avatar_changes?: number;
+}
+/** El avatar público de una fila del seudónimo o del top: null si nunca eligió (o la fila es anterior a D-056). */
+export const avatarOf = (row: { avatar?: unknown } | undefined): number | null => isAvatar(row?.avatar) ? row.avatar : null;
+/**
+ * Campo `avatar` de las respuestas (contrato v1, opcional): solo si el jugador eligió uno. Sin elegir, se omite y
+ * la respuesta es idéntica a la anterior a D-056; el esquema admite también null.
+ */
+const avatarField = (row: { avatar?: unknown } | undefined): { avatar?: number } => { const a = avatarOf(row); return a === null ? {} : {avatar:a}; };
 export const leagueTables = (env: Env) => ({
   players: requireEnv(env,'AF_TABLE_LEAGUE_PLAYERS'), board: requireEnv(env,'AF_TABLE_LEAGUE_BOARD'),
   histogram: requireEnv(env,'AF_TABLE_LEAGUE_HISTOGRAM'), names: requireEnv(env,'AF_TABLE_LEAGUE_NAMES'),
@@ -37,7 +50,8 @@ export async function aliasOf(deps: LeagueDeps, uid: string): Promise<Alias> {
     const existing = await read<Alias>(deps,t.names,{uid});
     if (existing) return existing;
     const pick = deps.pick ?? ((n: number) => randomInt(n));
-    const name_key = NAME_KEYS[pick(NAME_KEYS.length)], name_num = 1000 + pick(9000);
+    // Sin la anaconda en los seudónimos nuevos (D-057, Q-AV-12): los que ya la tienen la conservan.
+    const name_key = ASSIGNABLE_NAME_KEYS[pick(ASSIGNABLE_NAME_KEYS.length)], name_num = 1000 + pick(9000);
     const reservation = `name#${name_key}#${name_num}`;
     const alias: Alias = {uid,name_key,name_num,highest:0,rev:0,reservation};
     try {
@@ -51,6 +65,10 @@ export async function aliasOf(deps: LeagueDeps, uid: string): Promise<Alias> {
   }
   throw unavailable();
 }
+/** Fila pública del top: sin UID ni nada del jugador fuera de seudónimo, avatar, país y puntos. */
+function boardItem(scope: string, p: Player, alias: Alias) {
+  return {scope,sort:rankKey(p),points:p.points,country:p.country,name_key:alias.name_key,name_num:alias.name_num,...avatarField(alias),ttl:p.ttl};
+}
 export function boardChanges(t: Tables, before: Player | undefined, after: Player | undefined, alias: Alias): Tx {
   const tx: Tx = [];
   if (before && after && rankKey(before) === rankKey(after) && visible(before) === visible(after)) return tx;
@@ -58,9 +76,8 @@ export function boardChanges(t: Tables, before: Player | undefined, after: Playe
   for (const [p,delta] of [[before,-1],[after,1]] as const) {
     if (!visible(p)) continue;
     for (const scope of scopesOf(p)) {
-      const key = {scope,sort:rankKey(p)};
-      if (delta === -1) tx.push({Delete:{TableName:t.board,Key:key}});
-      else tx.push({Put:{TableName:t.board,Item:{...key,points:p.points,country:p.country,name_key:alias.name_key,name_num:alias.name_num,ttl:p.ttl}}});
+      if (delta === -1) tx.push({Delete:{TableName:t.board,Key:{scope,sort:rankKey(p)}}});
+      else tx.push({Put:{TableName:t.board,Item:boardItem(scope,p,alias)}});
       const bucket = bucketOf(p.points), id = `${scope}|${bucket}`;
       const c = changes.get(id) ?? {scope,bucket,delta:0,ttl:p.ttl};
       c.delta += delta;
@@ -93,7 +110,7 @@ export async function submit(deps: LeagueDeps, uid: string, req: Request) {
         ...boardChanges(t,old,next,alias),
         notDeletedCheck(t.rateLimits,uidHash(uid),now),
       ] }));
-      return {week:week.week,points:next.points,accepted:result.accepted,rejected:result.rejected,name_key:alias.name_key,name_num:alias.name_num,country:next.country};
+      return {week:week.week,points:next.points,accepted:result.accepted,rejected:result.rejected,name_key:alias.name_key,name_num:alias.name_num,country:next.country,...avatarField(alias)};
     } catch(e) { if (!retryable(e)) throw e; }
   }
   throw unavailable();
@@ -120,9 +137,43 @@ export async function board(deps: LeagueDeps, uid: string, scope: 'global'|'coun
     percent = percentile(player!.points,bins);
   }
   // Nunca devolver sort (contiene UID) ni claves/TTL internos a otros jugadores.
-  const top = rows.map((row,i)=>({rank:i+1,name_key:String(row.name_key),name_num:Number(row.name_num),country:typeof row.country==='string'?row.country:null,points:Number(row.points)}));
+  const top = rows.map((row,i)=>({rank:i+1,name_key:String(row.name_key),name_num:Number(row.name_num),country:typeof row.country==='string'?row.country:null,points:Number(row.points),...avatarField(row)}));
   await liveAccount(deps,uid);
-  return {week:week.week,starts_at:new Date(week.start).toISOString(),ends_at:new Date(week.end).toISOString(),scope,country,updated_at:new Date(now).toISOString(),top,me:{points:player?.points??0,rank:index>=0?index+1:null,percentile:percent,name_key:alias.name_key,name_num:alias.name_num,country}};
+  return {week:week.week,starts_at:new Date(week.start).toISOString(),ends_at:new Date(week.end).toISOString(),scope,country,updated_at:new Date(now).toISOString(),top,me:{points:player?.points??0,rank:index>=0?index+1:null,percentile:percent,name_key:alias.name_key,name_num:alias.name_num,country,...avatarField(alias)}};
+}
+/**
+ * POST /v1/league/avatar (D-056; avatares.md §4.4): guarda el avatar con el seudónimo (lo crea si falta) y, en la
+ * misma transacción, reescribe las filas del top de la semana en curso. Repetir el mismo avatar no gasta cupo.
+ */
+export async function setAvatar(deps: LeagueDeps, uid: string, avatar: number): Promise<{ avatar: number }> {
+  const t = leagueTables(deps.env), now = deps.now(), week = weekOf(now);
+  const day = new Date(now).toISOString().slice(0,10);
+  await aliasOf(deps,uid);
+  for (let attempt=0;attempt<8;attempt++) {
+    await liveAccount(deps,uid);
+    const alias = await read<Alias>(deps,t.names,{uid});
+    if (!alias) throw unauthorized();
+    if (avatarOf(alias) === avatar) return {avatar};
+    const used = alias.avatar_day === day ? Number(alias.avatar_changes ?? 0) : 0;
+    if (used >= AVATAR_CHANGES_PER_DAY) throw rateLimited((Date.parse(`${day}T00:00:00Z`) + 86400_000 - now) / 1000);
+    const next: Alias = {...alias,avatar,avatar_day:day,avatar_changes:used+1,rev:alias.rev+1};
+    const player = await read<Player>(deps,t.players,{uid,week:week.week});
+    // Toda victoria aceptada sube rev del seudónimo, así que su condición ya detecta un cambio del top; la del
+    // jugador protege además de una marca manual o un borrado que no pase por el seudónimo.
+    const rows: Tx = visible(player) ? [
+      {ConditionCheck:{TableName:t.players,Key:{uid,week:player.week},ConditionExpression:'#r = :r',ExpressionAttributeNames:{'#r':'rev'},ExpressionAttributeValues:{':r':player.rev}}},
+      ...scopesOf(player).map(scope => ({Put:{TableName:t.board,Item:boardItem(scope,player,next)}})),
+    ] : [];
+    try {
+      await deps.ddb.send(new TransactWriteCommand({ TransactItems:[
+        {Put:{TableName:t.names,Item:next,ConditionExpression:'#r = :r',ExpressionAttributeNames:{'#r':'rev'},ExpressionAttributeValues:{':r':alias.rev}}},
+        ...rows,
+        notDeletedCheck(t.rateLimits,uidHash(uid),now),
+      ] }));
+      return {avatar};
+    } catch(e) { if (!retryable(e)) throw e; }
+  }
+  throw unavailable();
 }
 /** Partición por UID, lectura fuerte y paginada: sin depender del retraso de un GSI. */
 export async function eraseLeague(deps: LeagueDeps, uid: string): Promise<void> {

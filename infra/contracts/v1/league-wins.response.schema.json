@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.invalid/af/v1/league-wins.response.schema.json",
   "title": "league-wins.response",
-  "description": "docs/dev/liga.md §3.1; D-046. País desconocido: null.",
+  "description": "docs/dev/liga.md §3.1; D-046. País desconocido: null. avatar (D-056) es opcional; null = nunca eligió.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -97,6 +97,9 @@
         "null"
       ],
       "pattern": "^[A-Z]{2}$"
+    },
+    "avatar": {
+      "$ref": "common.schema.json#/$defs/avatarOrNull"
     }
   }
 }

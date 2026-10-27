@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/league-avatar.request.schema.json",
+  "title": "league-avatar.request",
+  "description": "docs/dev/avatares.md §4.4; D-056. Cambia el avatar de la Liga del UID del token. Fuera de rango o mal formado: 400.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "avatar"
+  ],
+  "properties": {
+    "avatar": {
+      "$ref": "common.schema.json#/$defs/avatar"
+    }
+  }
+}

@@ -12,12 +12,13 @@ import {
   parseVerifyPurchase,
 } from '../../functions/shared/validate.ts';
 import { CATALOG } from '../../functions/shared/catalog.ts';
-import { parseRequest } from '../../functions/league/rules.ts';
+import { parseAvatarRequest, parseRequest } from '../../functions/league/rules.ts';
 import { loadContractIndex } from '../../lib/contract.ts';
 import { readExample, validator } from './ajv.ts';
 
 const PARSERS: Record<string, (body: Record<string, unknown>) => unknown> = {
   leagueWins: parseRequest,
+  leagueAvatar: parseAvatarRequest,
   verifyPurchase: parseVerifyPurchase,
   restoreLedger: parseRestoreLedger,
   // Como el handler: sin user_id o custom_data el callback es válido y se responde ignored sin leer más.
