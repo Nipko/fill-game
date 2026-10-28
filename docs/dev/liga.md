@@ -43,6 +43,7 @@ Esta especificación es la fuente única de los dos lados. Si hay que cambiar el
   - con <13 no hay Liga (D-033: no hay red ni SDK);
   - 13-17 y 18+ la ven igual: solo hay seudónimo y bandera, nunca nada que identifique.
 - **Interruptor:** `live_league_enabled` en Remote Config (§5), **apagado por defecto** hasta que haya backend en prod. En los builds de desarrollo se enciende con un extra de la sonda.
+  - **Backend de prod (añadido de D-035 del 2026-10-28):** ya existe (`AfProdApi`, con las rutas `/v1/league*`) y el release con el ID definitivo lo llama (`BackendEndpoints.Prod`). El default sigue en `false`; encenderla es del dueño, solo en la consola de Remote Config de `tintalu` y después de registrar App Check con Play Integrity (`docs/dev/remote-config-analytics.md` §9.4 bis).
 
 ## 2. Qué no entra en la 1.0
 

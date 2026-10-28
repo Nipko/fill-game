@@ -16,16 +16,52 @@ namespace AF.Backend.Tests
         /// <summary>La URL del API de dev desplegado (D-035, añadido de F3-1 y F3-2; codex-estado.md, «Dev desplegado y comprobado»).</summary>
         private const string ApprovedDevUrl = "https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com";
 
+        /// <summary>La URL del API de prod desplegado (D-035, añadidos del 2026-10-27 y del 2026-10-28: salida <c>ApiUrl</c> de <c>AfProdApi</c>).</summary>
+        private const string ApprovedProdUrl = "https://vsublt4swh.execute-api.sa-east-1.amazonaws.com";
+
+        /// <summary>Forma de una salida <c>ApiUrl</c> de API Gateway (HTTP API) en sa-east-1: <c>https://&lt;id de 10&gt;.execute-api…</c>, sin etapa.</summary>
+        private static readonly System.Text.RegularExpressions.Regex ExecuteApiShape =
+            new System.Text.RegularExpressions.Regex(@"^https://[a-z0-9]{10}\.execute-api\.sa-east-1\.amazonaws\.com$");
+
         [Test]
         public void EndpointsByEnvironment_TheEditorStaysOnTheFake()
         {
             Assert.That(BackendEndpoints.Dev, Is.EqualTo(ApprovedDevUrl), "la URL aprobada (F3-6)");
             Assert.That(BackendEndpoint.Normalize(BackendEndpoints.Dev), Is.EqualTo(ApprovedDevUrl), "https://host, sin barra ni consulta");
-            Assert.That(BackendEndpoints.Prod, Is.Empty, "la de prod llega con F5-1");
+            Assert.That(BackendEndpoints.Prod, Is.EqualTo(ApprovedProdUrl), "la URL de prod desplegada (añadido de D-035 del 2026-10-28)");
             Assert.That(BackendEndpoints.IsDevelopment, Is.True, "el editor cuenta como desarrollo");
             Assert.That(BackendEndpoints.IsEditor, Is.True);
             Assert.That(BackendEndpoints.Current, Is.Empty, "el editor nunca llama al API: sin Firebase no hay tokens (08 §2.1, principio 6)");
             Assert.That(BackendEndpoints.Mode, Is.EqualTo(BackendMode.Fake));
+        }
+
+        [Test]
+        public void ProdEndpoint_IsHttps_NotDev_AndAnExecuteApiUrl()
+        {
+            string prod = BackendEndpoints.Prod;
+            Assert.That(prod, Does.StartWith("https://"), "solo HTTPS: las llamadas llevan el ID token");
+            Assert.That(prod, Is.Not.EqualTo(BackendEndpoints.Dev), "prod no es dev");
+            Assert.That(new Uri(prod).Host, Is.Not.EqualTo(new Uri(BackendEndpoints.Dev).Host), "ni el mismo API con otra etapa");
+            Assert.That(ExecuteApiShape.IsMatch(prod), Is.True, prod + ": https://<id>.execute-api.sa-east-1.amazonaws.com");
+            Assert.That(ExecuteApiShape.IsMatch(BackendEndpoints.Dev), Is.True, "la misma forma que dev");
+            Assert.That(BackendEndpoint.Normalize(prod), Is.EqualTo(prod), "https://host, sin barra ni consulta");
+            Assert.That(BackendEndpoint.Choose(prod, development: false), Is.EqualTo(BackendMode.Http), "un release con la URL de prod usa el cliente HTTP");
+        }
+
+        [Test]
+        public void EndpointsOutsideTheEditor_DevForDevelopment_ProdForTheReleaseId_NoneForTheRehearsal()
+        {
+            const string releaseId = "com.parallext.tintalu"; // AF_RELEASE_APPLICATION_ID del CI (D-047); aquí solo como dato de prueba
+            Assert.That(BackendEndpoints.For(true, BackendEndpoints.ProvisionalApplicationId), Is.EqualTo(BackendEndpoints.Dev), "BuildDev");
+            Assert.That(BackendEndpoints.For(true, releaseId), Is.EqualTo(BackendEndpoints.Dev), "desarrollo, siempre dev");
+            Assert.That(BackendEndpoints.For(false, releaseId), Is.EqualTo(BackendEndpoints.Prod), "el release firmado");
+            Assert.That(BackendEndpoints.For(false, BackendEndpoints.ProvisionalApplicationId), Is.Empty,
+                "el ensayo (-afRehearsal) lleva Firebase de dev: el autorizador de prod lo rechazaría");
+            Assert.That(BackendEndpoint.Choose(BackendEndpoints.For(false, BackendEndpoints.ProvisionalApplicationId), false),
+                Is.EqualTo(BackendMode.Unavailable), "el ensayo sigue sin backend, como antes");
+            Assert.That(BackendEndpoint.Choose(BackendEndpoints.For(false, releaseId), false), Is.EqualTo(BackendMode.Http));
+            Assert.That(BackendEndpoints.For(false, null), Is.EqualTo(BackendEndpoints.Prod), "un ID desconocido no es el provisional");
+            Assert.That(BackendEndpoints.ProvisionalApplicationId, Is.EqualTo("com.amazonfill.dev"), "el ID provisional de la regla dura 6 (el de GoogleAdUnits)");
         }
 
         [Test]
@@ -148,8 +184,8 @@ namespace AF.Backend.Tests
                 Assert.That(text, Does.Not.Contain("Console.Write"), Path.GetFileName(path));
                 if (Path.GetFileName(path) == "BackendSetup.cs")
                 {
-                    // La única URL real es la de dev, en BackendEndpoints.Dev (D-035, añadido de F3-1 y F3-2).
-                    Assert.That(text.Replace(ApprovedDevUrl, ""), Does.Not.Contain("amazonaws"), "solo la URL de dev aprobada");
+                    // Las únicas URL reales son las aprobadas, en BackendEndpoints.Dev y .Prod (D-035, añadidos de F3-1 y F3-2 y del 2026-10-28).
+                    Assert.That(text.Replace(ApprovedDevUrl, "").Replace(ApprovedProdUrl, ""), Does.Not.Contain("amazonaws"), "solo las URL de dev y prod aprobadas");
                     continue;
                 }
 

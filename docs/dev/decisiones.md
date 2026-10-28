@@ -4384,3 +4384,42 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Pendiente del dueño (propuestas, sin aplicar):**
   1. Apagar también los dos interruptores que quedan a 1 (Engine Diagnostics y `submitAnalytics`) con un método versionado en `ProjectSetup`, y que `Validate` lo exija. No cambia el AAB de hoy, pero quita la duda en el origen. Necesita un Editor para compilarlo y aplicarlo.
   2. Quitar `com.unity.modules.unityanalytics` de `Packages/manifest.json`. Cambia paquetes y exige un build y la prueba de que ningún paquete lo usa. No hace falta para Data Safety.
+### D-035, añadido del 2026-10-28: el release llama al API de prod
+
+- **Estado:** encargado por el coordinador al sdk-integrator (rama `tanda6/backend-prod`) para quitar un bloqueo del lanzamiento de la 1.0 (D-059). No cambia ninguna decisión del dueño: aplica el añadido del 2026-10-27 (AWS prod desplegado). La URL no es un secreto.
+- **El problema:** `BackendEndpoints.Prod` seguía vacía («hasta F5-1») y un test exigía que lo siguiera. Con eso, el AAB de release usaba `UnavailableBackendClient`: sin compras, sin restaurar, sin borrar la cuenta desde la app y sin Liga.
+- **Qué cambia:**
+  - `BackendEndpoints.Prod` = `https://vsublt4swh.execute-api.sa-east-1.amazonaws.com`, la salida `ApiUrl` de `AfProdApi`. **No hay `api.tintalu.com`:** con el DNS en Cloudflare (D-044, opción A) ese nombre solo se crea con `-c domainExtras=api`, y el despliegue del 2026-10-27 no lo llevaba. Si algún día se crea, cambiar a él es otro commit con su test.
+  - **El ensayo `-afRehearsal` sigue sin backend.** Lleva el ID provisional `com.amazonfill.dev` y la configuración de Firebase de dev, y no es un Development Build. Con la URL de prod llamaría al API de prod con tokens de `fill-dev-e75a2`, y el autorizador de prod (emisor `securetoken.google.com/tintalu`) los rechazaría todos. `BackendEndpoints.For` solo da la URL de prod a un release con otro ID, el mismo criterio que `GoogleAdUnits` (los bloques de prueba con el ID provisional). Así el ensayo sigue como estaba (`UnavailableBackendClient`, Mercado oculto; `BackendF35Tests.WithoutABackend_TheMarketDoesNotSell_AndIsHidden`). Las compras, el borrado y la Liga contra prod se prueban con el AAB firmado en la pista interna (D-059, punto 5).
+  - **Test:** `BackendSetupTests` exige que la URL de prod sea la aprobada, HTTPS, distinta de la de dev (también de host), con la forma `https://<id de 10>.execute-api.sa-east-1.amazonaws.com`, normalizada y que elija `BackendMode.Http`. Comprueba también qué URL toca a cada build: dev en desarrollo, prod en el release con el ID definitivo y ninguna en el ensayo.
+- **Comprobado en el código (sin tocarlo):**
+  - **No hay otra puerta.** El cliente HTTP solo depende de la URL y de los dos proveedores de tokens (`BackendFactory`). `FirebaseBoot` solo exige el proyecto de dev en los Development Builds; en release acepta la configuración que lleve el AAB. La Liga usa el `HttpBackendClient` que haya (`GameBootstrap.League.cs`), y `biz_backend_enabled` es `true` por defecto.
+  - **El release lleva Firebase de prod.** Lo escribe `release.yml` desde `GOOGLE_SERVICES_JSON_BASE64`, `BuildRelease` regenera el XML para `AF_RELEASE_APPLICATION_ID` y `ci/check-firebase-config.sh` comprueba en el AAB el `google_app_id` de prod.
+  - **App Check:**
+    - en release, el cliente instala `PlayIntegrityProviderFactory` (el de depuración, solo con `DEVELOPMENT_BUILD`);
+    - envía `X-Firebase-AppCheck` con un token de uso limitado en las 5 rutas con `integrity: true` del contrato v1: `/v1/purchases/verify`, `/v1/account/delete`, `/v1/league/wins`, `GET /v1/league` y `/v1/league/avatar`, las mismas de `infra/contracts/v1/index.json`;
+    - en prod, la Lambda lo verifica contra el proyecto `tintalu` y la app `1:459140125724:android:810c83a65d0ff611f07bd9`.
+- **Pendiente del dueño (ya estaba en el añadido del 2026-10-27), ahora en el camino crítico:**
+  - registrar App Check con Play Integrity en `tintalu`, con la huella SHA-256 de la firma de Play, cuando exista la app en Play Console;
+  - cargar el secreto `af-prod/firebase-admin-service-account` (lo usa el borrado de cuenta) y el de la API de Google Play (lo usa la verificación de compras).
+
+  Sin App Check, la compra se queda en «Confirmando…» dentro de su cola de 48 h, el borrado desde la app falla sin borrar nada y la Liga sale como no disponible. `restoreLedger` y el código de cuenta no lo necesitan.
+- **La Liga del río en prod (decide el dueño):**
+  - `live_league_enabled` sigue en `false` en 08 §9, en los defaults compilados y en la plantilla. Este añadido no lo cambia.
+  - **Está lista para encenderse:**
+    - el release ya llama a prod;
+    - las rutas `/v1/league*`, también la del avatar (commit `0f77fb11`, del 2026-10-27 a la 01:57), estaban en el código del `cdk deploy --all` de esa tarde.
+
+    Ningún agente lo ha comprobado contra el API de prod: no hay credenciales y la regla 9 lo impide. El dueño puede hacerlo con un `GET <ApiUrl>/v1/league` sin token, que debe dar 401 y no 404.
+  - **Cómo se enciende:** en la consola de Remote Config de `tintalu`, `live_league_enabled` → `true`, dentro del rango, sin un build nuevo (`docs/dev/remote-config-analytics.md` §9.4 bis). Se apaga igual.
+  - **Recomendación** [P]:
+    - encenderla en la consola de `tintalu` **antes** de la prueba en la pista interna y después de registrar App Check;
+    - probarla allí con el AAB firmado (desde el 41: Global, País, la línea de la victoria y el avatar);
+    - lanzar con ella encendida, como pide D-046 («en la 1.0»);
+    - si falla en la pista interna o tras el lanzamiento, apagarla desde la consola sin publicar un build.
+
+    Mientras no haya jugadores (publicación administrada, D-059), encenderla en prod solo la ve el dueño.
+- **Documentación actualizada:**
+  - `docs/dev/firebase-cliente.md` (§2, §3, el nuevo §4 bis, §6 y §7);
+  - `docs/dev/remote-config-analytics.md` (§9.4 y el nuevo §9.4 bis);
+  - `docs/dev/liga.md` §1.

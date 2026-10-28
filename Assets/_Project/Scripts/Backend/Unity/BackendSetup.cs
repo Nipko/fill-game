@@ -3,24 +3,35 @@ using System;
 using AF.Backend.Auth;
 using AF.Backend.Firebase;
 using AF.Platform;
+using UnityEngine;
 
 namespace AF.Backend.Unity
 {
     /// <summary>
     /// URL base del backend compilada por entorno (plan §7; B7: nunca en Remote Config). La de dev es la del API de dev desplegado
     /// (<c>execute-api</c>, que no es secreta; D-035, añadido de F3-1 y F3-2, y <c>docs/dev/traspaso/codex-estado.md</c>, «Dev
-    /// desplegado y comprobado»); la de prod llega con el dominio tras el dictamen de marca (F5-1). El <b>editor</b> no usa ninguna:
+    /// desplegado y comprobado»); la de prod, la del API de prod desplegado (<c>execute-api</c>; D-035, añadidos del 2026-10-27 y del
+    /// 2026-10-28: sin <c>api.tintalu.com</c>, que solo existe con <c>-c domainExtras=api</c>). El <b>editor</b> no usa ninguna:
     /// sin Firebase no hay tokens (08 §2.1, principio 6), así que siempre va con <see cref="FakeBackendClient"/>. Un build de
     /// desarrollo sin la configuración de Firebase (sin <c>google-services.json</c>) también sigue con el falso
     /// (<see cref="BackendFactory"/>), y un release sin URL o sin Firebase usa <see cref="UnavailableBackendClient"/>, que nunca concede nada.
+    /// Un release con el <c>applicationId</c> provisional (<see cref="ProvisionalApplicationId"/>: el ensayo <c>-afRehearsal</c>, que
+    /// lleva la configuración de Firebase de dev) no usa la de prod: el autorizador de prod rechazaría sus tokens; sigue sin backend,
+    /// como antes del añadido del 2026-10-28.
     /// </summary>
     public static class BackendEndpoints
     {
         /// <summary>Entorno dev (<c>DEVELOPMENT_BUILD</c> en el teléfono): el API de dev en AWS (<c>sa-east-1</c>).</summary>
         public const string Dev = "https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com";
 
-        /// <summary>Entorno prod (release). Vacía hasta F5-1.</summary>
-        public const string Prod = "";
+        /// <summary>
+        /// Entorno prod (release con el <c>applicationId</c> definitivo): el API de prod en AWS (<c>sa-east-1</c>), salida <c>ApiUrl</c>
+        /// del stack <c>AfProdApi</c> (D-035, añadido del 2026-10-27). Solo acepta tokens del proyecto de Firebase <c>tintalu</c>.
+        /// </summary>
+        public const string Prod = "https://vsublt4swh.execute-api.sa-east-1.amazonaws.com";
+
+        /// <summary>El <c>applicationId</c> provisional de los builds de prueba (regla dura 6), también del ensayo de release.</summary>
+        public const string ProvisionalApplicationId = "com.amazonfill.dev";
 
         /// <summary>Build de desarrollo: el editor o un build con <c>DEVELOPMENT_BUILD</c> (<c>BuildDev</c>).</summary>
         public static bool IsDevelopment
@@ -48,8 +59,22 @@ namespace AF.Backend.Unity
             }
         }
 
-        /// <summary>URL base del entorno de este build (vacía en el editor).</summary>
-        public static string Current => IsEditor ? "" : IsDevelopment ? Dev : Prod;
+        /// <summary>URL base del entorno de este build (vacía en el editor y en un release con el ID provisional).</summary>
+        public static string Current => IsEditor ? "" : For(IsDevelopment, Application.identifier);
+
+        /// <summary>
+        /// URL fuera del editor: <see cref="Dev"/> en desarrollo; en release, <see cref="Prod"/> salvo con el <c>applicationId</c>
+        /// provisional (el ensayo), que se queda sin URL (<see cref="BackendMode.Unavailable"/>).
+        /// </summary>
+        internal static string For(bool development, string? applicationId)
+        {
+            if (development)
+            {
+                return Dev;
+            }
+
+            return string.Equals(applicationId, ProvisionalApplicationId, StringComparison.Ordinal) ? "" : Prod;
+        }
 
         /// <summary>Cliente que toca en este build (<see cref="BackendEndpoint.Choose"/>).</summary>
         public static BackendMode Mode => BackendEndpoint.Choose(Current, IsDevelopment);

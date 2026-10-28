@@ -154,8 +154,8 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator WithoutABackend_TheMarketDoesNotSell_AndIsHidden()
         {
-            // Release sin URL (BackendEndpoints vacías): UnavailableBackendClient, el camino del ensayo de release (BuildRelease
-            // -afRehearsal). La tienda no vende (no podría acreditar nada) y, sin precios de Play, el inicio no enseña el Mercado ni el
+            // Release sin URL o sin Firebase: UnavailableBackendClient, el camino del ensayo de release (BuildRelease -afRehearsal, que
+            // con el ID provisional no usa BackendEndpoints.Prod; añadido de D-035 del 2026-10-28). La tienda no vende (no podría acreditar nada) y, sin precios de Play, el inicio no enseña el Mercado ni el
             // Cántaro (D-046, añadido del 2026-10-24; prueba del 2026-10-25, jornada 2, observación 4: el ensayo enseñaba el icono).
             GameBootstrap.BackendModeOverride = BackendMode.Unavailable;
             yield return LoadLobby(new MemoryProfileStore(ProfileAt(26)));
