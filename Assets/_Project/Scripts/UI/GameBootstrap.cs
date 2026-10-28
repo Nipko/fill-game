@@ -1551,6 +1551,7 @@ namespace AF.UI
             _awakeMs = SinceStartupMs(); // AF_PERF boot_steps: en el teléfono, lo que tardó el motor en llegar aquí
             Application.targetFrameRate = 60; // 08 §5.4
             DevProbe.Initialize();
+            _procAwakeMs = DevProbe.Enabled ? ProcessUptimeMs() : -1L; // AF_PERF boot_steps: del arranque del proceso al Awake (jornada 4)
             EnsureEventSystem();
 
             // Atrás de Android, desde el arranque y aunque aún no exista el teclado (FXT): la acción se vuelve a enlazar sola
@@ -1591,6 +1592,7 @@ namespace AF.UI
                 // Ya compuesta con o sin TiTino (el logotipo no salta) y con la intro de la marca encima (D-051, punto 3).
                 _splashStartMs = SinceStartupMs();
                 _splash = new BootSplash(transform, BootSplash.SlothExpected, withIntro: BrandIntro.Enabled);
+                _splash.IntroAutoPlay = false; // jornada 4: el vertido empieza en un hueco de la carga y nada carga mientras se mueve (IntroGap)
                 yield return null; // el río y el logotipo, a la vista antes de cargar
             }
 
@@ -1660,7 +1662,7 @@ namespace AF.UI
             MarkBootStep(StepProfile);
             if (IntroFrameDue(StepProfile))
             {
-                yield return null; // jornada 3 de D-051: la intro se ve moverse entre bloques de la carga (GameBootstrap.BootSteps.cs)
+                yield return IntroGap(); // jornada 3 de D-051 y jornada 4: un fotograma, o el vertido entero sin cargar nada (GameBootstrap.BootSteps.cs)
             }
 
             _dataServicesAtBoot = DataServicesAllowedAtBoot(profile); // otra vez, tras la fusión con la nube (o con el perfil de la reconstrucción)
@@ -1684,7 +1686,7 @@ namespace AF.UI
             _splash?.PrepareWordmark(); // el nombre de la intro, en un hueco de la carga y no en mitad de la animación
             if (IntroFrameDue(StepCatalog))
             {
-                yield return null;
+                yield return IntroGap();
             }
 
             // Textos (D-018; tareas L2b y L3): con el perfil leído y antes de construir ninguna pantalla. Desarrollo (af_lang) >
@@ -1732,7 +1734,7 @@ namespace AF.UI
                 if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), _art.HomeBranch, firstRun, reduceMotion: ResolveReduceMotion(profile)))
                 {
                     _splash.RefreshIntro(); // la intro, al instante de ahora en ese fotograma
-                    yield return null; // TiTino, a la vista mientras se construye el resto
+                    yield return IntroGap(); // TiTino, a la vista mientras se construye el resto (o el vertido, si toca ya)
                 }
             }
 
@@ -1767,7 +1769,7 @@ namespace AF.UI
             MarkBootStep(StepAds);
             if (IntroFrameDue(StepAds))
             {
-                yield return null;
+                yield return IntroGap();
             }
 
             _screen = new GameScreen(transform, _art, _probe, this);
@@ -1788,7 +1790,7 @@ namespace AF.UI
             MarkBootStep(StepGame);
             if (IntroFrameDue(StepGame))
             {
-                yield return null; // la pantalla del juego, oculta y sin enlazar: el flujo aún no existe (Update no hace nada)
+                yield return IntroGap(); // la pantalla del juego, oculta y sin enlazar: el flujo aún no existe (Update no hace nada)
             }
 
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
@@ -2449,6 +2451,7 @@ namespace AF.UI
             double introCap = Time.realtimeSinceStartupAsDouble + (IntroWaitCapMs / 1000.0);
             while (_splash != null && splash.IntroPending)
             {
+                splash.TryPlayIntro(); // jornada 4: si aún no se movía (la GPU tardó en enseñar el primer fotograma), empieza ahora
                 if (Time.realtimeSinceStartupAsDouble >= introCap)
                 {
                     _introWaitCapped = true; // tope de seguridad: la sonda lo anota (wait_capped)

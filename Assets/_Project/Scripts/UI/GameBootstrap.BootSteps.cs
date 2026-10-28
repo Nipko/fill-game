@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections;
 using System.Globalization;
 using System.Text;
 using UnityEngine;
@@ -11,13 +12,21 @@ namespace AF.UI
     /// <item><b>Fotogramas para la intro:</b> entre los bloques de la carga, mientras la intro está a la vista
     /// (<see cref="BootSplash.IntroVisible"/>), se deja pintar un fotograma con la intro al instante de ahora
     /// (<see cref="IntroFrameDue"/>): antes solo llegaban a pintarse 2-3 y la animación no se veía moverse. Desde el añadido de D-051
-    /// del 2026-10-26 la intro se ve entera (unos 2,5 s) aunque la carga acabe antes, así que repartirla no alarga el arranque. Los
+    /// del 2026-10-26 la intro se ve entera (unos 2,5 s; 3,5 s desde el 2026-10-28) aunque la carga acabe antes, así que repartirla no alarga el arranque. Los
     /// huecos van donde el estado es seguro: antes de crear las pantallas que aún no están enlazadas (Update no hace nada hasta que
     /// existe el flujo).</item>
     /// <item><b>La sonda <c>AF_PERF boot_steps</c></b> (solo en desarrollo): desde que se creó la pantalla, cuándo acabó cada bloque
     /// de la carga, qué costó la escena de la marca y si salió de la caché, cuándo arrancó Unity el Awake y la pantalla, y cuándo se
     /// pintó su primer fotograma. Sirve para separar en el teléfono el arranque del motor (antes del Awake, no depende del juego)
     /// de lo nuestro.</item>
+    /// <item><b>Jornada 4 (2026-10-28), el vertido fluido:</b> el movimiento de la intro (del chorro al nombre entero,
+    /// <see cref="BrandIntro.SettledMs"/>) empieza en un hueco de la carga, cuando se sabe que su primer fotograma ya está en la
+    /// pantalla (<see cref="BrandIntro.OnScreen"/>), y la carga se para mientras se mueve (<see cref="IntroGap"/>): cada fotograma
+    /// del vertido sale a su ritmo, sin bloques de la carga entre medias. Lo que queda de la carga va en el último tramo, quieto, con
+    /// el emblema y el nombre. Antes, la intro se movía mientras cargaba y solo llegaban a pintarse unos pocos fotogramas del
+    /// vertido. La sonda <c>boot_steps</c> suma <c>visible_ms</c>, <c>play_ms</c>, <c>motion_hold_ms</c> (lo que la carga esperó al
+    /// movimiento), <c>proc_awake_ms</c> (del arranque del proceso de Android al Awake) y <c>proc_visible_ms</c> (del arranque del
+    /// proceso al primer fotograma de la intro ya en la pantalla), para comparar con la ráfaga de capturas.</item>
     /// </list>
     /// </summary>
     public sealed partial class GameBootstrap
@@ -42,6 +51,8 @@ namespace AF.UI
         private readonly long[] _bootStepHeap = { -1, -1, -1, -1, -1, -1, -1, -1 };
         private readonly long[] _bootStepUsed = { -1, -1, -1, -1, -1, -1, -1, -1 };
         private long _awakeMs = -1;
+        private long _procAwakeMs = -1;
+        private long _introMotionHoldMs;
         private bool _bootInProgress;
         private bool _consentSetUp;
         private bool _introWaitCapped;
@@ -77,6 +88,67 @@ namespace AF.UI
 
         /// <summary>Fotogramas que la carga dejó pintar para la intro (tests).</summary>
         internal int IntroYields => _introYields;
+
+        /// <summary>Lo que la carga esperó al movimiento de la intro (ms; <c>motion_hold_ms</c>; tests).</summary>
+        internal long IntroMotionHoldMs => _introMotionHoldMs;
+
+        // Tope de seguridad de la espera al movimiento en un hueco (ms desde que empezó): fotogramas parados, reloj raro.
+        private const int IntroMotionCapMs = BrandIntro.SettledMs + 2000;
+
+        // Un hueco de la carga con la intro a la vista (jornada 4, 2026-10-28): deja pintar un fotograma y, si la intro ya puede
+        // moverse (su primer fotograma está en la pantalla y no hay Reducir movimiento), la arranca y no vuelve a la carga hasta que
+        // el nombre entró entero: el vertido sale a su ritmo, sin bloques de la carga entre sus fotogramas.
+        private IEnumerator IntroGap()
+        {
+            yield return null;
+            BootSplash? splash = _splash;
+            if (splash == null || !splash.TryPlayIntro())
+            {
+                yield break;
+            }
+
+            double start = Time.realtimeSinceStartupAsDouble;
+            double cap = start + (IntroMotionCapMs / 1000.0);
+            while (_splash != null && splash.IntroMoving && Time.realtimeSinceStartupAsDouble < cap)
+            {
+                yield return null;
+            }
+
+            _introMotionHoldMs += (long)((Time.realtimeSinceStartupAsDouble - start) * 1000.0);
+        }
+
+        // Del arranque del proceso de Android a ahora (ms; -1 fuera del teléfono o si falla): solo para la sonda boot_steps, en
+        // desarrollo. Alinea los tiempos de Unity (realtimeSinceStartup) con la ráfaga de capturas, que cuenta desde el lanzamiento.
+        private static long ProcessUptimeMs()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using (var clock = new AndroidJavaClass("android.os.SystemClock"))
+                using (var process = new AndroidJavaClass("android.os.Process"))
+                {
+                    return clock.CallStatic<long>("elapsedRealtime") - process.CallStatic<long>("getStartElapsedRealtime");
+                }
+            }
+            catch (System.Exception)
+            {
+                return -1L;
+            }
+#else
+            return -1L;
+#endif
+        }
+
+        // Del arranque del proceso al instante splashMs (ms desde la creación de la pantalla); -1 si falta algo.
+        private long ProcMsAt(long splashMs)
+        {
+            if (_procAwakeMs < 0 || _awakeMs < 0 || _splashStartMs < 0 || splashMs < 0)
+            {
+                return -1L;
+            }
+
+            return _procAwakeMs + (_splashStartMs - _awakeMs) + splashMs;
+        }
 
         /// <summary>Cuándo acabó cada bloque de la carga (ms desde que se creó la pantalla; -1 si no llegó; tests).</summary>
         internal long BootStepMs(int step) => _bootSteps[step];
@@ -153,6 +225,11 @@ namespace AF.UI
             sb.Append(",\"emblem_ms\":").Append((intro?.EmblemMs ?? -1L).ToString(inv));
             sb.Append(",\"emblem_cache\":\"").Append(CacheId(intro?.EmblemCache ?? BrandEmblemCacheResult.Off)).Append('"');
             sb.Append(",\"first_frame_ms\":").Append((intro?.FirstFrameMs ?? -1L).ToString(inv));
+            sb.Append(",\"visible_ms\":").Append((intro?.VisibleMs ?? -1L).ToString(inv));
+            sb.Append(",\"play_ms\":").Append((intro?.PlayMs ?? -1L).ToString(inv));
+            sb.Append(",\"motion_hold_ms\":").Append(_introMotionHoldMs.ToString(inv));
+            sb.Append(",\"proc_awake_ms\":").Append(_procAwakeMs.ToString(inv));
+            sb.Append(",\"proc_visible_ms\":").Append(ProcMsAt(intro?.VisibleMs ?? -1L).ToString(inv));
             for (int i = 0; i < BootStepNames.Length; i++)
             {
                 sb.Append(",\"").Append(BootStepNames[i]).Append("\":").Append(_bootSteps[i].ToString(inv));
