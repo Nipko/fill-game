@@ -748,7 +748,7 @@ Recorre **cada fila** de Ajustes y comprueba que hace lo que dice, al momento y 
 - Eliminar cuenta y datos.
 
 **Además:**
-0. **Toque con la lista en movimiento** (observación 3 de la jornada 4): lanza la lista de Ajustes con un deslizamiento rápido y, mientras sigue moviéndose, toca una fila (por ejemplo, «Corregir mi edad»). La lista se para y la fila **no** se activa; el toque siguiente, con la lista quieta, sí. Lo mismo en la Liga, el Mercado y «Tu avatar».
+0. **Toque con la lista en movimiento** (observación 3 de la jornada 4): lanza la lista de Ajustes con un deslizamiento rápido y, mientras sigue moviéndose, toca una fila (por ejemplo, «Corregir mi edad»). La lista se para y la fila **no** se activa; el toque siguiente, con la lista quieta, sí. Lo mismo en la Liga, el Mercado, «Tu avatar», la hoja de la fruta y las muestras del Mapa.
 1. **Privacidad:** apagar la analítica hace que las líneas pasen a `AF_EVENT_UNSENT`. Encenderla las devuelve a `AF_EVENT`.
 2. **Corregir mi edad:** a 13-17, una sola vez; después desaparece. Antes, la **confirmación neutral** (añadido de D-033 del 2026-10-28):
    - elegir otra banda enseña «Corregir mi edad», «Elegiste: {banda}. La edad solo se puede corregir una vez y no se puede deshacer.», «Volver a elegir» y «Confirmar»; **la misma pantalla** al tocar «Menos de 13», «De 13 a 17» o «18 o más» (solo cambia la banda): captura de las tres;

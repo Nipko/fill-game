@@ -4290,7 +4290,7 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 
 ### D-033, añadido del 2026-10-28: confirmación neutral al corregir la edad (B12)
 
-- **Fecha:** 2026-10-28. Registrada el 2026-10-28 por el agente de la rama `tanda6/fx-j4-ui`, a partir de la observación 3 de la jornada 4 en el teléfono (`docs/dev/traspaso/pruebas-telefono-2026-10-27-completa-j4.md`): un toque accidental en «Corregir mi edad» y el siguiente en «Menor de 13» bloquearon el perfil sin confirmar.
+- **Fecha:** 2026-10-28. Registrada el 2026-10-28 por el agente de la rama `tanda6/fx-j4-ui`, a partir de la observación 3 de la jornada 4 en el teléfono (`docs/dev/traspaso/pruebas-telefono-2026-10-27-completa-j4.md`): un toque accidental en «Corregir mi edad» y el siguiente en «Under 13» (en español, «Menos de 13») bloquearon el perfil sin confirmar.
 - **Pregunta al dueño (por el coordinador):** «¿Corregir la edad desde Ajustes debe pedir confirmación (neutral, igual para toda banda)?». **Respuesta del dueño:** «la primera hagamos de acuerdo al estandar».
 - **Qué cambia en B12 (Q-B12-1 y 08 §7):**
   - al corregir la edad desde Ajustes, tras elegir una banda **distinta** de la guardada y antes de guardarla, sale una confirmación **neutral e igual para las tres bandas**: el mismo título, la misma frase con la banda tal como sale en la pantalla de edad («La edad solo se puede corregir una vez y no se puede deshacer») y los mismos dos botones, «Volver a elegir» y «Confirmar», del mismo tamaño;
