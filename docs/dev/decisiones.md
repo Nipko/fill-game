@@ -4323,7 +4323,7 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - 09 §0.4 (Fases 2 y 4), §2.3 (Fases 2 y 4), §5, §6.1 y la pregunta 4 de Preguntas abiertas;
   - `GDD.md`: el resumen de fases (Fases 2 y 4) y los pasos 14 y 16 de §9;
   - `docs/qa/regresion-release.md`;
-  - `docs/dev/iap.md` §3, pasos 1 y 4;
+  - `docs/dev/iap.md` §3, pasos 1, 3 y 4;
   - `docs/dev/release.md` (introducción y §4 bis);
   - `docs/dev/pendientes-del-dueno.md`.
 - **Versión que se sube** [P] (propuesta del integrador): la del commit que integre los arreglos de la jornada 4 de la prueba en el teléfono. El AAB `1.0.0 (10000)` del release 40630794359 no se sube, así que el versionCode 10000 sigue libre.
