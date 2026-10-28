@@ -118,7 +118,7 @@ Sin pistas con jugadores (cerrada, abierta) y sin escalonado; la pista interna, 
 | `build` | `FirebaseApp.androidlib` existe | el editor de Firebase no generó la configuración |
 | | `ci/check-firebase-config.sh` | el AAB no lleva `google_app_id` y `gcm_defaultSenderId`, o no son los del preflight (1); bundletool no lee el AAB (3) |
 | | `size-gate -RequireBundletool`, `check-16kb` con `CHECK16_REQUIRE_ZIPALIGN=1`, `check-manifest -Mode release -RequireBilling`, `check-release-classes`, `check-no-unity-iap`, `check-no-applovin` | las compuertas de release de 08 §12.1 etapa 4 |
-| | `ci/check-no-unity-telemetry.ps1` (Q-B13-9, añadido de D-040 del 2026-10-28) | el AAB lleva `UnityConnectSettings` (clase 310 en `globalgamemanagers`: la configuración de Unity Analytics, Cloud Diagnostics y Performance Reporting) o un host de datos de Unity (`cloud.unity3d.com`, `services.api.unity.com`) (1); sin `globalgamemanagers` o con un formato que no sabe leer (2). Unity Ads (`unityads.unity3d.com`) no cuenta: se declara con los anuncios |
+| | `ci/check-no-unity-telemetry.ps1` (Q-B13-9, añadido de D-040 del 2026-10-28) | el AAB lleva `UnityConnectSettings` (clase 310 en `globalgamemanagers`: la configuración de Unity Analytics, Cloud Diagnostics y Performance Reporting) o un host de datos de Unity (`cloud.unity3d.com`, `analytics.unity3d.com`, `operate-sdk-telemetry.unity3d.com`, `services.api.unity.com`) (1); sin `globalgamemanagers`, con un formato distinto del comprobado (22) o con tablas que no cuadran (2). Unity Ads (`unityads.unity3d.com`) no cuenta: se declara con los anuncios |
 
 ## 5. Cómo se protege la clave
 

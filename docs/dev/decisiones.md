@@ -4370,16 +4370,16 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 
 ### D-040, añadido del 2026-10-28: el runtime de Unity no envía datos en release (Q-B13-9)
 
-Cierra el «pendiente aparte» de D-040 y Q-B13-9 con lo decidido (a): build-release comprueba que todo está apagado en release y Data Safety no lleva fila de Unity. Carril `tanda6/release-unity-analytics`.
+Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el dueño aceptó el 2026-10-20 con las demás Q-B13 («las preguntas dejemos las recomendadas»; añadido de D-033 del 2026-10-20): build-release comprueba que todo está apagado en release y Data Safety no lleva fila de Unity. Carril `tanda6/release-unity-analytics`.
 
 - **Ajustes del proyecto (leídos, sin tocar):** en `UnityConnectSettings.asset`, los servicios (`m_Enabled`), Unity Analytics, Cloud Diagnostics (`m_EnableCloudDiagnosticsReporting`), Performance Reporting, Unity Ads del motor y Purchasing, todos a 0; `cloudProjectId` y `organizationId` vacíos y `cloudEnabled: 0`. Quedan a 1 `InsightsSettings.m_EngineDiagnosticsEnabled` y `submitAnalytics` de `ProjectSettings.asset`.
 - **Lo que lleva el AAB de release** (run 40662873429, de `main` en 7ca60990; inspeccionado sin Unity):
   - `globalgamemanagers` no lleva el objeto `UnityConnectSettings` (clase 310), que es donde están las URL de eventos, configuración y fallos y si cada servicio está activo;
-  - ningún dex, `.so`, `global-metadata.dat` ni archivo de `assets/bin/Data` lleva `cloud.unity3d.com` (`config.uca`, `cdp`, `api.uca`, `perf-events`) ni `services.api.unity.com`; `libunity.so` no trae ninguna URL de Unity propia;
+  - ningún dex, `.so`, `global-metadata.dat` ni archivo de `assets/bin/Data` lleva `cloud.unity3d.com` (`config.uca`, `cdp`, `api.uca`, `perf-events`), `analytics.unity3d.com`, `operate-sdk-telemetry.unity3d.com` ni `services.api.unity.com`; `libunity.so` no trae ninguna URL de Unity propia;
   - los únicos hosts de Unity son `gateway.unityads.unity3d.com` y `webview.unityads.unity3d.com`, de Unity Ads (D-049), que ya tiene su fila; `com/unity3d/services/` y `com.unity3d.coherence` (`libunitycoherencenative.so`) son del SDK de Unity Ads;
   - sí van el código del módulo (`UnityEngine.UnityAnalyticsModule`, `CrashReportingModule`, `PerformanceReportingModule`, `InsightsModule` y la actualización `AnalyticsCoreStatsUpdate`) y, en el dex del player, los ayudantes de `ApplicationExitInfo`. Sin configuración ni host no tienen a dónde enviar.
 - **Conclusión:** en release, el runtime de Unity no envía datos a Unity. Data Safety no lleva fila por él.
-- **Compuerta:** `ci/check-no-unity-telemetry.ps1`, en `build-android` de `ci.yml` y en `release.yml`, con `--self-test`. Falla (1) si el AAB lleva la clase 310 en `globalgamemanagers` o uno de esos hosts, y sale con 2, sin dar OK, si no sabe leer el `globalgamemanagers`. No cuenta Unity Ads.
+- **Compuerta:** `ci/check-no-unity-telemetry.ps1`, en `build-android` de `ci.yml` y en `release.yml`, con `--self-test`. Falla (1) si el AAB lleva la clase 310 en `globalgamemanagers` o uno de esos hosts, y sale con 2, sin dar OK, si el `globalgamemanagers` no es del formato comprobado (22) o sus tablas no cuadran. Junta las partes `.splitN` y no abre nunca `google-services*.json`. No cuenta Unity Ads.
 - **Límite:** es una prueba estática del artefacto, no una captura de red en el teléfono. Si el dueño quiere más certeza, puede mirar las DNS de la app con PCAPdroid durante una partida del build de release.
 - **Pendiente del dueño (propuestas, sin aplicar):**
   1. Apagar también los dos interruptores que quedan a 1 (Engine Diagnostics y `submitAnalytics`) con un método versionado en `ProjectSetup`, y que `Validate` lo exija. No cambia el AAB de hoy, pero quita la duda en el origen. Necesita un Editor para compilarlo y aplicarlo.
