@@ -92,8 +92,17 @@ namespace AF.UI
         /// <summary>Lo que la carga esperó al movimiento de la intro (ms; <c>motion_hold_ms</c>; tests).</summary>
         internal long IntroMotionHoldMs => _introMotionHoldMs;
 
-        // Tope de seguridad de la espera al movimiento en un hueco (ms desde que empezó): fotogramas parados, reloj raro.
-        private const int IntroMotionCapMs = BrandIntro.SettledMs + 2000;
+        /// <summary>Tope de seguridad de la espera al movimiento en un hueco (ms desde que empezó): fotogramas parados, reloj raro.</summary>
+        internal const int IntroMotionCapMs = BrandIntro.SettledMs + 2000;
+
+        /// <summary>Solo para los tests: sustituye a <see cref="IntroMotionCapMs"/> (null = el de siempre). Lo vuelven a null.</summary>
+        internal static int? IntroMotionCapOverrideMsForTests { get; set; }
+
+        /// <summary>
+        /// Costura de los tests: se llama una vez por hueco en que la carga espera al movimiento de la intro, en su primer fotograma
+        /// de espera (el arranque, a medias). Null fuera de ellos (y lo vuelven a null).
+        /// </summary>
+        internal static System.Action<GameBootstrap>? IntroMotionHookForTests { get; set; }
 
         // Un hueco de la carga con la intro a la vista (jornada 4, 2026-10-28): deja pintar un fotograma y, si la intro ya puede
         // moverse (su primer fotograma está en la pantalla y no hay Reducir movimiento), la arranca y no vuelve a la carga hasta que
@@ -108,9 +117,16 @@ namespace AF.UI
             }
 
             double start = Time.realtimeSinceStartupAsDouble;
-            double cap = start + (IntroMotionCapMs / 1000.0);
+            double cap = start + ((IntroMotionCapOverrideMsForTests ?? IntroMotionCapMs) / 1000.0);
+            bool hooked = false;
             while (_splash != null && splash.IntroMoving && Time.realtimeSinceStartupAsDouble < cap)
             {
+                if (!hooked)
+                {
+                    hooked = true;
+                    IntroMotionHookForTests?.Invoke(this);
+                }
+
                 yield return null;
             }
 
@@ -121,7 +137,7 @@ namespace AF.UI
         // desarrollo. Alinea los tiempos de Unity (realtimeSinceStartup) con la ráfaga de capturas, que cuenta desde el lanzamiento.
         private static long ProcessUptimeMs()
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID && !UNITY_EDITOR && DEVELOPMENT_BUILD
             try
             {
                 using (var clock = new AndroidJavaClass("android.os.SystemClock"))

@@ -38,6 +38,9 @@ namespace AF.Tests.PlayMode
             LaunchOptions.Reset();
             GameBootstrap.IntroFrameHookForTests = null;
             BrandIntro.FrameVisibleOverrideForTests = null;
+            BrandIntro.ClockFrozenForTests = false;
+            GameBootstrap.IntroMotionCapOverrideMsForTests = null;
+            GameBootstrap.IntroMotionHookForTests = null;
             _art?.Dispose();
             _art = null;
             if (_host != null)
@@ -497,6 +500,7 @@ namespace AF.Tests.PlayMode
             BusyWait(0.3);
             splash.Tick(16f);
             Assert.That(intro.FirstFrameMs, Is.GreaterThanOrEqualTo(290L));
+            splash.Tick(16f); // el segundo: el primer fotograma ya está enviado a la GPU
             splash.BeginIntro(false);
             Assert.That(intro.Playing, Is.False, "aún quieta, en su primer fotograma");
             Assert.That(intro.ClockMs, Is.EqualTo(0f));
@@ -593,6 +597,7 @@ namespace AF.Tests.PlayMode
             Assert.That(splash.TryPlayIntro(), Is.False, "antes de saber si hay Reducir movimiento, no");
             splash.BeginIntro(false);
             splash.Tick(16f);
+            splash.Tick(16f);
             splash.RefreshIntro();
             Assert.That(intro.Playing, Is.False, "sin AutoPlay, el arranque elige el momento");
             Assert.That(splash.IntroMoving, Is.False);
@@ -646,6 +651,164 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(GC.GetAllocatedBytesForCurrentThread() - before, Is.EqualTo(0L), "sin asignaciones por fotograma (08 §5.4)");
+        }
+
+        // Revisión de 6336136c: el primer Tick va en el mismo fotograma en que se crea la intro (Start y Update del mismo fotograma),
+        // que aún no está enviado a la GPU; una lectura pedida entonces se encolaría antes de sus dibujos. Se pide en el segundo.
+        [UnityTest]
+        public IEnumerator TheGpuRead_IsRequestedOnTheSecondTick_WhenTheFirstFrameIsSent([Values(true, false)] bool withOverride)
+        {
+            if (withOverride)
+            {
+                BrandIntro.FrameVisibleOverrideForTests = () => true;
+            }
+
+            BootSplash splash = NewSplash();
+            BrandIntro intro = splash.Intro!;
+            splash.BeginIntro(false);
+            splash.Tick(16f);
+            Assert.That(intro.FenceRequestedAtTick, Is.EqualTo(-1), "en el primer fotograma, aún no");
+            Assert.That(intro.OnScreen, Is.False, "el primer fotograma aún no se ha enviado: no puede darse por visto");
+            Assert.That(intro.Playing, Is.False);
+            yield return null;
+            splash.Tick(16f);
+            Assert.That(intro.FenceRequestedAtTick, Is.EqualTo(BrandIntro.FenceTick));
+            Assert.That(BrandIntro.FenceTick, Is.EqualTo(2));
+            if (withOverride)
+            {
+                Assert.That(intro.OnScreen, Is.True);
+                Assert.That(intro.Playing, Is.True, "visto: empieza en ese mismo fotograma");
+            }
+        }
+
+        [Test]
+        public void AGpuReadWithAnError_DoesNotCountAsSeen()
+        {
+            Assert.That(BrandIntro.FenceResult(false, false), Is.EqualTo(BrandIntroVisibleBy.None), "aún sin respuesta");
+            Assert.That(BrandIntro.FenceResult(true, false), Is.EqualTo(BrandIntroVisibleBy.Gpu), "terminó: el fotograma ya se pintó");
+            Assert.That(BrandIntro.FenceResult(true, true), Is.EqualTo(BrandIntroVisibleBy.NoReadback), "con error no prueba nada");
+            Assert.That(DevProbe.VisibleById(BrandIntroVisibleBy.NoReadback), Is.EqualTo("no_readback"));
+        }
+
+        [UnityTest]
+        public IEnumerator APauseWhileMoving_IsCountedApart_NotAsASlowFrame()
+        {
+            BrandIntro.FrameVisibleOverrideForTests = () => true;
+            BootSplash splash = NewSplash();
+            splash.BeginIntro(false);
+            splash.PrepareWordmark();
+            splash.Tick(16f);
+            splash.Tick(16f);
+            Assert.That(splash.Intro!.Playing, Is.True);
+            yield return null;
+            splash.Tick(16f);
+            BusyWait((BrandIntro.MotionPauseMs + 100) / 1000.0); // segundo plano a mitad del vertido
+            splash.Tick(16f);
+            BrandIntroReport report = splash.EndIntro()!;
+            Assert.That(report.MotionFrames, Is.EqualTo(2));
+            Assert.That(report.MotionPauses, Is.EqualTo(1), "motion_pauses: el hueco largo, aparte");
+            Assert.That(report.FrameMaxMs, Is.LessThan((float)BrandIntro.MotionPauseMs), "frame_max_ms sin la pausa");
+            Assert.That(report.FrameP95Ms, Is.LessThan((float)BrandIntro.MotionPauseMs));
+            StringAssert.Contains("\"motion_pauses\":1,", new DevProbe().FormatBrandIntro(report)!);
+        }
+
+        // Arranque completo: la GPU nunca confirma el primer fotograma. FinishSplash arranca la intro por el tope de 1,2 s y se ve
+        // entera igual.
+        [UnityTest]
+        public IEnumerator ColdStart_TheGpuNeverConfirms_TheIntroStartsAtItsCap_AndIsSeenWhole()
+        {
+            BootSplash.EnabledOverride = true;
+            MapArtRule.ForceProvisional = false;
+            ArtSlots.ForceProcedural = true;
+            BrandIntro.FrameVisibleOverrideForTests = () => false;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            BrandIntroReport intro = boot.IntroInfo!;
+            Assert.That(intro.VisibleBy, Is.EqualTo(BrandIntroVisibleBy.Cap), "visible_by: cap");
+            Assert.That(intro.VisibleMs - intro.FirstFrameMs, Is.GreaterThanOrEqualTo((long)BrandIntro.VisibleWaitCapMs - 20));
+            Assert.That(intro.PlayMs, Is.GreaterThanOrEqualTo(intro.VisibleMs));
+            Assert.That(intro.ShownMs, Is.EqualTo((long)BrandIntro.AnimMs), "shown_ms 3.500");
+            Assert.That(intro.Cut, Is.False);
+            Assert.That(intro.WaitCapped, Is.False, "el tope de la intro no llega: la espera a la GPU cabe en el de la carga");
+            Assert.That(boot.Splash, Is.Null);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level), "primera apertura: el nivel 1");
+        }
+
+        // Arranque completo: los fotogramas se paran a mitad del movimiento (reloj de la intro congelado). IntroGap no espera para
+        // siempre: a su tope sigue la carga; luego la intro vuelve a correr y se ve entera.
+        [UnityTest]
+        public IEnumerator ColdStart_IntroGap_HasACap_WhenTheFramesStop()
+        {
+            BootSplash.EnabledOverride = true;
+            MapArtRule.ForceProvisional = false;
+            ArtSlots.ForceProcedural = true;
+            BrandIntro.FrameVisibleOverrideForTests = () => true;
+            const int capMs = 600;
+            GameBootstrap.IntroMotionCapOverrideMsForTests = capMs;
+            int frozenAt = -1;
+            GameBootstrap.IntroMotionHookForTests = b =>
+            {
+                frozenAt = b.IntroYields;
+                BrandIntro.ClockFrozenForTests = true; // los fotogramas, parados: la intro no avanza
+            };
+            GameBootstrap.IntroFrameHookForTests = (b, at) =>
+            {
+                if (BrandIntro.ClockFrozenForTests)
+                {
+                    BrandIntro.ClockFrozenForTests = false; // el siguiente hueco: ya pasó el tope y la carga siguió
+                }
+            };
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(frozenAt, Is.GreaterThanOrEqualTo(1), "el movimiento empezó en un hueco");
+            Assert.That(boot.IntroMotionHoldMs, Is.InRange((long)capMs - 20, (long)(capMs + PerfBudget.Ms(400d))), "a su tope, la carga sigue");
+            Assert.That(boot.IntroMotionHoldMs, Is.LessThan((long)BrandIntro.SettledMs), "sin esperar el movimiento entero");
+            for (int i = 0; i < GameBootstrap.BootStepCount; i++)
+            {
+                Assert.That(boot.BootStepMs(i), Is.GreaterThanOrEqualTo(0L), "bloque " + i + ": la carga llegó entera");
+            }
+
+            BrandIntroReport intro = boot.IntroInfo!;
+            Assert.That(intro.Cut, Is.False);
+            Assert.That(intro.ShownMs, Is.EqualTo((long)BrandIntro.AnimMs));
+            Assert.That(intro.WaitCapped, Is.False);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
+            Assert.That(GameBootstrap.IntroMotionCapMs, Is.EqualTo(BrandIntro.SettledMs + 2000));
+        }
+
+        // Arranque completo: Inicio y volver mientras la carga espera al movimiento (dentro de IntroGap). OnApplicationPause(false)
+        // no reanuda nada, la carga sigue después, no se pierde ningún paso y la intro no se corta.
+        [UnityTest]
+        public IEnumerator ColdStart_PauseAndResume_WhileTheIntroMoves_TheBootEndsTheSame([Values(true, false)] bool firstOpen)
+        {
+            BootSplash.EnabledOverride = true;
+            MapArtRule.ForceProvisional = false;
+            ArtSlots.ForceProcedural = true;
+            int hits = 0;
+            bool inProgress = false;
+            GameBootstrap.IntroMotionHookForTests = b =>
+            {
+                hits++;
+                inProgress = b.BootInProgress;
+                b.SendMessage("OnApplicationPause", true);
+                b.SendMessage("OnApplicationPause", false);
+            };
+            yield return PlayModeHelpers.LoadApp(firstOpen ? new MemoryProfileStore() : new MemoryProfileStore(SettingsScreenTests.ProfileAt(4)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(hits, Is.EqualTo(1), "un solo movimiento, en un hueco");
+            Assert.That(inProgress, Is.True, "durante el movimiento, el arranque está a medias");
+            Assert.That(boot.BootInProgress, Is.False, "y después termina");
+            Assert.That(boot.RestoreLedgerBeforeConsent, Is.EqualTo(0), "restoreLedger nunca antes de SetUpConsent");
+            for (int i = 0; i < GameBootstrap.BootStepCount; i++)
+            {
+                Assert.That(boot.BootStepMs(i), Is.GreaterThanOrEqualTo(0L), "bloque " + i + ": no se perdió");
+            }
+
+            BrandIntroReport intro = boot.IntroInfo!;
+            Assert.That(intro.Cut, Is.False, "cut false");
+            Assert.That(intro.ShownMs, Is.EqualTo((long)BrandIntro.AnimMs));
+            Assert.That(intro.WaitCapped, Is.False);
+            Assert.That(boot.App!.Screen, Is.EqualTo(firstOpen ? AppScreen.Level : AppScreen.Lobby));
         }
 
         [Test]

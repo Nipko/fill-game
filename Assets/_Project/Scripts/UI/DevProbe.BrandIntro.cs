@@ -8,7 +8,7 @@ namespace AF.UI
     /// Sonda de la intro de la marca (D-051, punto 3; <see cref="BrandIntro"/>), solo en desarrollo:
     /// <c>AF_STATE {"event":"brand_intro","t":…,"intro_ms":3790,"anim_ms":3500,"shown_ms":3500,"cut":false,"frames":215,
     /// "reduce_motion":false,"begun":true,"first_frame_ms":40,"start_ms":1450,"emblem_ms":12,"emblem_cache":"hit","yields":4,
-    /// "visible_ms":60,"visible_by":"gpu","play_ms":250,"motion_frames":174,"frame_p95_ms":17.6,"frame_max_ms":24.1,"loading_ms":0,"wait_capped":false}</c>
+    /// "visible_ms":60,"visible_by":"gpu","play_ms":250,"motion_frames":174,"frame_p95_ms":17.6,"frame_max_ms":24.1,"motion_pauses":0,"loading_ms":0,"wait_capped":false}</c>
     /// al quitarse: al terminar la carga, si la intro ya se vio entera, o al acabar la intro.
     /// <list type="bullet">
     /// <item><c>intro_ms</c>: tiempo a la vista (ms reales, desde la creación de la pantalla de arranque, el origen de
@@ -31,7 +31,9 @@ namespace AF.UI
     /// y <c>visible_by</c> (<c>gpu</c>; <c>cap</c> si la GPU no respondió en 1,2 s; <c>no_readback</c> sin lecturas, en el Editor);
     /// <c>play_ms</c>, de la creación a cuando empezó a moverse (desde ahí cuenta su reloj); <c>motion_frames</c>, fotogramas
     /// pintados mientras se movía (del chorro al nombre entero, 2,9 s), y <c>frame_p95_ms</c> y <c>frame_max_ms</c>, el percentil 95
-    /// y el máximo del tiempo entre esos fotogramas (a 60 fps, ~16,7; -1 sin datos).</item>
+    /// y el máximo del tiempo entre esos fotogramas (a 60 fps, ~16,7; -1 sin datos), sin las pausas de más de 500 ms (volver de
+    /// segundo plano), que se cuentan en <c>motion_pauses</c>. La lectura a la GPU se pide en el segundo fotograma de la intro, ya
+    /// enviado el primero; si vuelve con error, <c>visible_by</c> es <c>no_readback</c>.</item>
     /// </list>
     /// </summary>
     public sealed partial class DevProbe
@@ -76,6 +78,7 @@ namespace AF.UI
             sb.Append(",\"motion_frames\":").Append(report.MotionFrames.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"frame_p95_ms\":").Append(report.FrameP95Ms.ToString("0.0", CultureInfo.InvariantCulture));
             sb.Append(",\"frame_max_ms\":").Append(report.FrameMaxMs.ToString("0.0", CultureInfo.InvariantCulture));
+            sb.Append(",\"motion_pauses\":").Append(report.MotionPauses.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"loading_ms\":").Append(report.LoadingMs.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"wait_capped\":").Append(report.WaitCapped ? "true" : "false");
             sb.Append('}');

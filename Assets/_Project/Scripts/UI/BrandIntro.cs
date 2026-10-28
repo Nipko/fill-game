@@ -74,8 +74,14 @@ namespace AF.UI
         /// <summary>Percentil 95 del tiempo entre fotogramas mientras se movía (ms; -1 sin datos; <c>frame_p95_ms</c>).</summary>
         public float FrameP95Ms { get; internal set; } = -1f;
 
-        /// <summary>El mayor tiempo entre fotogramas mientras se movía (ms; -1 sin datos; <c>frame_max_ms</c>).</summary>
+        /// <summary>El mayor tiempo entre fotogramas mientras se movía (ms; -1 sin datos; <c>frame_max_ms</c>), sin las pausas.</summary>
         public float FrameMaxMs { get; internal set; } = -1f;
+
+        /// <summary>
+        /// Huecos entre fotogramas de más de <see cref="BrandIntro.MotionPauseMs"/> mientras se movía (la app a segundo plano, un
+        /// bloqueo): no cuentan en <see cref="FrameP95Ms"/> ni en <see cref="FrameMaxMs"/> (<c>motion_pauses</c>).
+        /// </summary>
+        public int MotionPauses { get; internal set; }
     }
 
     /// <summary>Cómo supo la intro que su primer fotograma ya estaba en la pantalla (<see cref="BrandIntro.VisibleBy"/>; sonda <c>visible_by</c>).</summary>
@@ -90,7 +96,10 @@ namespace AF.UI
         /// <summary>La GPU no respondió a tiempo y se dio por visto al llegar al tope (<see cref="BrandIntro.VisibleWaitCapMs"/>).</summary>
         Cap,
 
-        /// <summary>Sin lecturas de la GPU (el Editor sin gráficos, los tests): se da por visto en su primer fotograma.</summary>
+        /// <summary>
+        /// Sin lecturas de la GPU (el Editor sin gráficos, los tests) o la lectura volvió con error: se da por visto en cuanto el
+        /// primer fotograma está enviado (<see cref="BrandIntro.FenceTick"/>).
+        /// </summary>
         NoReadback,
     }
 
@@ -153,6 +162,19 @@ namespace AF.UI
         /// </summary>
         public const int VisibleWaitCapMs = 1200;
 
+        /// <summary>
+        /// El <see cref="Tick"/> en que se pide la lectura a la GPU (y desde el que se mira si ya volvió): el segundo. El primero va
+        /// en el mismo fotograma en que se crea la intro, que aún no se ha enviado a la GPU; una lectura pedida entonces se encolaría
+        /// antes de los dibujos de la intro y solo probaría que acabó el fotograma anterior.
+        /// </summary>
+        public const int FenceTick = 2;
+
+        /// <summary>
+        /// Un hueco entre fotogramas mayor que esto (ms) mientras se mueve es una pausa (segundo plano, bloqueo), no un fotograma
+        /// lento: se cuenta aparte (<see cref="BrandIntroReport.MotionPauses"/>) [P].
+        /// </summary>
+        public const int MotionPauseMs = 500;
+
         /// <summary>Con Reducir movimiento, la escena entera sale quieta y se sostiene esto (ms; o lo que dure la carga) [P].</summary>
         public const int ReduceMotionHoldMs = 1000;
 
@@ -180,6 +202,8 @@ namespace AF.UI
         private bool _playing;
         private int _motionCount;
         private int _motionFrames;
+        private int _motionPauses;
+        private int _fenceAtTick = -1;
         private float _motionMax;
         private float _tintFill;
         private bool _begun;
@@ -198,6 +222,15 @@ namespace AF.UI
         /// siempre). El tope <see cref="VisibleWaitCapMs"/> sigue valiendo. Los tests que lo cambian lo vuelven a null en su TearDown.
         /// </summary>
         public static Func<bool>? FrameVisibleOverrideForTests { get; set; }
+
+        /// <summary>
+        /// Solo para los tests: el reloj de la intro no avanza aunque pasen fotogramas (fotogramas parados, para el tope de
+        /// <c>GameBootstrap.IntroGap</c>). Los tests que lo cambian lo vuelven a false en su TearDown.
+        /// </summary>
+        public static bool ClockFrozenForTests { get; set; }
+
+        /// <summary>El <see cref="Tick"/> en que se pidió la lectura a la GPU (o se empezó a mirar si se ve); -1 si aún no (tests).</summary>
+        public int FenceRequestedAtTick => _fenceAtTick;
 
         /// <summary>
         /// Interruptor de los tests (null = lo de siempre: sale con la pantalla de arranque). Los tests que lo cambian lo vuelven a
@@ -377,7 +410,7 @@ namespace AF.UI
                 Play();
             }
 
-            if (Animating)
+            if (Animating && !ClockFrozenForTests)
             {
                 Apply(CurrentMs());
             }
@@ -399,7 +432,11 @@ namespace AF.UI
             if (_firstFrameAt < 0.0)
             {
                 _firstFrameAt = now; // su primer fotograma: desde aquí se espera a verlo en la pantalla
-                ArmFence(now);
+            }
+
+            if (_fenceAtTick < 0 && _frames >= FenceTick)
+            {
+                ArmFence(now); // el primer fotograma ya está enviado a la GPU: la lectura va detrás de sus dibujos
             }
 
             PollVisible(now);
@@ -421,7 +458,10 @@ namespace AF.UI
             }
 
             _lastTickAt = now;
-            Apply(CurrentMs());
+            if (!ClockFrozenForTests)
+            {
+                Apply(CurrentMs());
+            }
         }
 
         /// <summary>Lleva la animación al instante <paramref name="ms"/> y la deja ahí (capturas y tests deterministas).</summary>
@@ -463,8 +503,9 @@ namespace AF.UI
                 VisibleBy = _visibleBy,
                 PlayMs = _seeked ? -1L : PlayMs,
                 MotionFrames = _motionFrames,
-                FrameP95Ms = MotionP95(),
-                FrameMaxMs = _motionFrames > 0 ? _motionMax : -1f,
+                FrameP95Ms = DevProbe.Enabled ? MotionP95() : -1f,
+                FrameMaxMs = _motionCount > 0 ? _motionMax : -1f,
+                MotionPauses = _motionPauses,
             };
             _ended = true;
             if (_root != null)
@@ -543,6 +584,7 @@ namespace AF.UI
         // primera apertura la pantalla seguía lisa ~1 s aunque el juego ya hubiera mandado la intro). Sin lecturas, se da por visto.
         private void ArmFence(double now)
         {
+            _fenceAtTick = _frames;
             if (FrameVisibleOverrideForTests != null)
             {
                 return;
@@ -568,9 +610,9 @@ namespace AF.UI
         // ¿Ya está el primer fotograma en la pantalla? Con el tope VisibleWaitCapMs desde ese fotograma (sin asignaciones).
         private void PollVisible(double now)
         {
-            if (_visibleAt >= 0.0 || _firstFrameAt < 0.0)
+            if (_visibleAt >= 0.0 || _fenceAtTick < 0)
             {
-                return;
+                return; // ya se sabe, o el primer fotograma aún no está enviado
             }
 
             Func<bool>? overrideVisible = FrameVisibleOverrideForTests;
@@ -589,10 +631,11 @@ namespace AF.UI
                     _fence.Update();
                 }
 
-                if (_fence.done)
+                BrandIntroVisibleBy by = FenceResult(_fence.done, _fence.done && _fence.hasError);
+                if (by != BrandIntroVisibleBy.None)
                 {
                     _fenceArmed = false;
-                    MarkVisible(now, BrandIntroVisibleBy.Gpu);
+                    MarkVisible(now, by);
                     return;
                 }
             }
@@ -604,6 +647,20 @@ namespace AF.UI
             }
         }
 
+        /// <summary>
+        /// Lo que dice una lectura de la GPU: aún nada (<see cref="BrandIntroVisibleBy.None"/>), visto (<see cref="BrandIntroVisibleBy.Gpu"/>)
+        /// o, si volvió con error, que no se pudo saber (<see cref="BrandIntroVisibleBy.NoReadback"/>: un error no prueba que se pintara).
+        /// </summary>
+        internal static BrandIntroVisibleBy FenceResult(bool done, bool hasError)
+        {
+            if (!done)
+            {
+                return BrandIntroVisibleBy.None;
+            }
+
+            return hasError ? BrandIntroVisibleBy.NoReadback : BrandIntroVisibleBy.Gpu;
+        }
+
         private void MarkVisible(double now, BrandIntroVisibleBy by)
         {
             _visibleAt = now;
@@ -613,6 +670,12 @@ namespace AF.UI
         private void NoteMotionFrame(float deltaMs)
         {
             _motionFrames++;
+            if (deltaMs > MotionPauseMs)
+            {
+                _motionPauses++; // una pausa (segundo plano), no un fotograma lento
+                return;
+            }
+
             if (deltaMs > _motionMax)
             {
                 _motionMax = deltaMs;
