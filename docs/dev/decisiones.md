@@ -4287,3 +4287,30 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - confirmar la suscripción de las alarmas que llega a `support@tintalu.com`;
   - App Check con Play Integrity y la huella SHA-256 de la firma de Play, cuando exista la app en Play Console.
 - **Pendiente técnico:** `release.yml` no coloca `google-services.json`, así que un release firmado hoy sale sin Firebase (`UnavailableBackendClient`: la tienda no vende). Hace falta un secreto de CI que cree el dueño y un paso que lo escriba en `Assets/_LocalSecrets/` antes del build.
+
+## D-059 · Lanzamiento directo a producción al 100 %, con publicación administrada
+
+- **Fecha:** 2026-10-28. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat. Ante la idea de subir el AAB a la prueba interna dijo: «NO quiero prueba interna, osea cuando se lance quiero que ya este disponible completamente». Cuando le explicaron la publicación administrada respondió: «si hagamoslo administrada».
+- **Decisión:**
+  1. **Sin pistas de prueba:** ni interna, ni cerrada, ni abierta. El AAB de la 1.0 se sube directamente a la pista de producción de Play Console. La cuenta es de organización (Parallext), así que no se le aplica la prueba cerrada obligatoria de 12 probadores durante 14 días (research/06 §5 [V]; setup/b §6).
+  2. **Al 100 % desde el primer día, sin escalonado:** se elimina el 5 % → 20 % → 100 %. La versión sale a todos los países de D-057 a la vez: todos los de Play salvo RU, BY, VN e ID, con Turquía incluida.
+  3. **Publicación administrada** («Resumen de publicación» › «Publicación administrada» en Play Console), activada **antes** de enviar a revisión:
+     - Google revisa la versión;
+     - una vez aprobada, no sale hasta que el dueño pulsa «Publicar cambios»;
+     - el dueño elige así el día y la hora del lanzamiento.
+  4. **Qué sustituye a la prueba con testers:**
+     - la regresión de release de 60 casos (`docs/qa/regresion-release.md`, 08 §14.3), en el teléfono con el ensayo de release del mismo commit, antes de lanzar `release.yml`;
+     - la prueba completa en el teléfono por jornadas;
+     - después del lanzamiento, Crashlytics, las alertas de Play y Remote Config para apagar sistemas sin publicar (`biz_feature_*`, `mech_enabled_*`). Las métricas de calidad de 08 §13.1 #21 se miden ya en producción.
+- **Riesgo aceptado:**
+  - un fallo en un modelo que no se haya probado llega a todos los jugadores a la vez;
+  - detener la versión en Play no la retira de quien ya la instaló;
+  - UMP en un país del EEE (D-057) no se verá con jugadores reales antes del lanzamiento.
+- **Cambia:**
+  - 08 §12.1, el texto sobre pistas y tránsito;
+  - 08 §13.1: #19, #20 y #22;
+  - 08 §14, la prueba cerrada LatAm;
+  - 09 §6, la Fase 4 y la pregunta 4;
+  - el resumen de fases de GDD.md.
+- **Versión que se sube:** la del commit que integre los arreglos de la jornada 4 de la prueba en el teléfono. El AAB `1.0.0 (10000)` del release 40630794359 no se sube, así que el versionCode 10000 sigue libre.

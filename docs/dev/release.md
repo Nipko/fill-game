@@ -2,7 +2,7 @@
 
 Fuentes: `docs/setup/plan-instalacion.md` (s31-s32), GDD 08 §12.1 (etapas 3-5) y §13.1 #1 y #3, D-034 y D-041; reglas en `.claude/rules/ci.md` y `CLAUDE.md` (reglas duras 5 y 6).
 
-El workflow `.github/workflows/release.yml` construye el AAB de release **firmado con la clave de subida**, lo pasa por las compuertas de release y lo deja como artefacto de la ejecución. **No lo sube a Google Play**: la subida la hace el dueño a mano en Play Console, y la primera espera al dictamen de marca (08 §13.1 #1).
+El workflow `.github/workflows/release.yml` construye el AAB de release **firmado con la clave de subida**, lo pasa por las compuertas de release y lo deja como artefacto de la ejecución. **No lo sube a Google Play**: la subida la hace el dueño a mano en Play Console, directamente a producción y con la publicación administrada (D-059; §4 bis). D-047 retiró la espera al dictamen de marca.
 
 ## 1. Qué crea el dueño en GitHub
 
@@ -82,6 +82,22 @@ Qué hace el workflow con él:
 2. `versionName`: `MAYOR.MENOR.PARCHE`, por ejemplo `1.0.0`.
 3. `versionCode`: vacío aplica la regla `MAYOR*10000 + MENOR*100 + PARCHE`; `1.0.0` da 10000. Para reconstruir la misma versión hace falta un código mayor: Play rechaza un `versionCode` ya subido. Con MENOR o PARCHE por encima de 99, indícalo a mano.
 4. Al terminar, descarga el artefacto `android-aab-release-<versionName>-<versionCode>`, que se guarda 30 días, y súbelo tú a Play Console.
+
+## 4 bis. Lanzamiento de la 1.0: directo a producción, al 100 % y con publicación administrada (D-059)
+
+Sin pista interna, cerrada ni abierta, y sin escalonado (08 §13.1 #19-#22). Orden:
+1. **Antes de lanzar `release.yml`:** la regresión de release (`docs/qa/regresion-release.md`) en el teléfono, con el ensayo de release (`scripts/unity-build.ps1 -Method Release -Rehearsal -Apk`) del mismo commit de `main`.
+2. **Release firmado** (§4) desde ese commit. Para la 1.0, `versionName` `1.0.0` y `versionCode` vacío (10000). El AAB de 10000 del run 40630794359, del 2026-10-28, no se subió, así que ese número sigue libre.
+3. **En Play Console, antes de enviar nada a revisión:** «Resumen de publicación» › **«Publicación administrada»**, activada. Así, cuando Google apruebe la versión, no sale sola.
+4. Con la ficha, la clasificación de contenido, Data Safety, el público objetivo, los anuncios y los países completos (08 §13.1; los países, D-057), **Producción › Crear versión**:
+   - sube el AAB;
+   - pon las notas de la versión;
+   - disponibilidad: **100 %**, nunca un porcentaje menor;
+   - envía a revisión.
+
+   La primera revisión de una app nueva puede tardar varios días.
+5. **Aprobada**, en «Resumen de publicación» › **«Publicar cambios»**, el día y a la hora que elijas: sale entera en todos los países a la vez.
+6. Después: 08 §13.1 #23 (`app-ads.txt`, alertas de Crashlytics y de Play), y vigilar las métricas de #21 desde el primer día. Si hace falta frenar, primero Remote Config (`biz_feature_*`, `mech_enabled_*`); detener la versión en Play no la retira de quien ya la instaló.
 
 ### Qué comprueba
 

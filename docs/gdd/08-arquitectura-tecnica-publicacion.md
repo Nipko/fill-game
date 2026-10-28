@@ -926,7 +926,7 @@ jobs:
       # y hasta fijar el applicationId definitivo (sección 13.1 #1; docs/legal/marca.md).
 ```
 
-Pistas y tránsito: interna (equipo, minutos) → cerrada (20-50 testers LatAm, 1-2 semanas; la cuenta de organización está **exenta** del requisito de 12 testers / 14 días, research/06 §5 [V]) → abierta opcional → producción escalonada 5 % → 20 % → 100 % (research/06 §10 [V/E]). Firmado: Play App Signing con clave de subida separada; AAB obligatorio (research/06 §4 [V]); la clave de subida debe valer 25 años o más y caducar después del 22-10-2033 (setup/b §6 [V]). La primera subida, también a la pista interna, espera al dictamen de marca (sección 13.1 #1).
+Pistas y tránsito: **con D-059 (2026-10-28), la 1.0 va directa a producción, al 100 % y con publicación administrada, sin pistas de prueba ni escalonado (sección 13.1 #19, #20 y #22); el tránsito de abajo queda como referencia para versiones posteriores.** Interna (equipo, minutos) → cerrada (20-50 testers LatAm, 1-2 semanas; la cuenta de organización está **exenta** del requisito de 12 testers / 14 días, research/06 §5 [V]) → abierta opcional → producción escalonada 5 % → 20 % → 100 % (research/06 §10 [V/E]). Firmado: Play App Signing con clave de subida separada; AAB obligatorio (research/06 §4 [V]); la clave de subida debe valer 25 años o más y caducar después del 22-10-2033 (setup/b §6 [V]). La primera subida, también a la pista interna, espera al dictamen de marca (sección 13.1 #1).
 
 ### 12.2 iOS (fase 4)
 
@@ -964,10 +964,10 @@ Pistas y tránsito: interna (equipo, minutos) → cerrada (20-50 testers LatAm, 
 | 16 | Play Games Services | Proyecto, credenciales OAuth, Saved Games activado, logros básicos | research/06 §3 [V] |
 | 17 | Play Asset Delivery | Verificar en el explorador del bundle el pack `world_w05`, los kits de los mundos 6-9 de D-013 (`bg_kit_w06` … `bg_kit_w09`, en `world_w06` … `world_w09` o, mientras no haya Addressables, en el AAB; los héroes y las skins de los mundos 6-13 entran en versiones posteriores) y el fondo "río genérico" install-time, de respaldo (6.2); tamaño base + install-time ≤80 MB | sección 6 |
 | 18 | Play Integrity | Activar Play Integrity y vincular el proyecto de Google Cloud en Play Console; App Check con Play Integrity en el proyecto de Firebase de prod, y el id de su app Android pasado al CDK (`-c firebaseAppIds`) para que la API en AWS solo acepte sus tokens (D-035, Q-AWS-4 (a); `infra/README.md`) | research/06 C6.1 [V] |
-| 19 | Pista interna | Subir AAB desde CI; informe previo al lanzamiento sin crashes ni problemas de accesibilidad bloqueantes | — |
-| 20 | Prueba cerrada | 20-50 testers de LatAm (CO/PE/MX) y de al menos un país del EEE, para ver UMP de verdad (D-057), durante 1-2 semanas; medir crash rate, FPS y legibilidad en 360 px | research/06 §Implicaciones 7 [E] |
+| 19 | Subida a producción | **D-059 (2026-10-28):** sin pista interna. El AAB firmado de `release.yml` (sección 12.1) se sube a la pista de producción con la **publicación administrada** activada antes de enviarlo a revisión; antes de lanzar `release.yml`, la regresión de release (14.3, `docs/qa/regresion-release.md`) en el teléfono con el ensayo de release del mismo commit | D-059 |
+| 20 | ~~Prueba cerrada~~ | **Retirada por D-059 (2026-10-28):** sin prueba cerrada ni abierta (la cuenta de organización está exenta de los 12 testers / 14 días, research/06 §5 [V]). La sustituyen la regresión de release y la prueba completa en el teléfono; UMP en el EEE se ve ya en producción | D-059 |
 | 21 | Métricas de calidad | Crash percibido por usuario <1,09 % (umbral de Play); ANR percibido por debajo del umbral vigente de Play [NV cifra] | research/06 §10 [V] |
-| 22 | Producción escalonada | **D-057 (P1 y P3 (a)):** 5 % → 20 % → 100 % **en todo el mundo** (antes en CO/PE/MX); distribución en todos los países de Play salvo RU, BY, VN e ID, con Turquía dentro (D-057, añadido del 2026-10-27); `biz_country_enabled` abierto a todos (sección 9) | capítulo 1 §8.1 |
+| 22 | Producción al 100 % | **D-059 (2026-10-28):** al 100 % desde el primer día, sin escalonado (antes, con D-057, 5 % → 20 % → 100 %); el dueño pulsa «Publicar cambios» cuando Google aprueba la versión (publicación administrada). **D-057 (P1 y P3 (a)):** **en todo el mundo** (antes en CO/PE/MX); distribución en todos los países de Play salvo RU, BY, VN e ID, con Turquía dentro (D-057, añadido del 2026-10-27); `biz_country_enabled` abierto a todos (sección 9) | capítulo 1 §8.1 |
 | 23 | Tras publicar | Rellenar `app-ads.txt` en la ficha (sitio web del desarrollador), activar informes de Crashlytics y alertas de Play, archivar la versión de todos los textos legales mostrados | research/06 §10 [V] |
 
 ### 13.2 iOS (fase 4)
@@ -1028,7 +1028,7 @@ Pistas y tránsito: interna (equipo, minutos) → cerrada (20-50 testers LatAm, 
 ### 14.3 Pruebas manuales por fase
 
 - **Pista interna**: IAP con licencia de prueba (compra, cancelación, `PENDING` con método diferido, reembolso → Voided Purchases), restauración en segundo dispositivo, Sin anuncios cruzado con rewarded activo, PAD con Wi-Fi apagado, consentimiento por país (cambiar región con VPN), ATT (iOS).
-- **Prueba cerrada LatAm** (20-50 testers): crash-free sessions ≥99,5 % [P], FPS en clase A, legibilidad de 14 tintes con simulador de daltonismo sobre el shader real (research/07 §Preguntas abiertas [E]), embudo 1-30, comprensión de "El río bajó" y de las etiquetas Difícil/Muy difícil.
+- **Prueba cerrada LatAm** (20-50 testers; **retirada en la 1.0 por D-059**: estas comprobaciones se hacen en la regresión de release y en la prueba completa en el teléfono, y tras el lanzamiento con Crashlytics y Analytics): crash-free sessions ≥99,5 % [P], FPS en clase A, legibilidad de 14 tintes con simulador de daltonismo sobre el shader real (research/07 §Preguntas abiertas [E]), embudo 1-30, comprensión de "El río bajó" y de las etiquetas Difícil/Muy difícil.
 - **Regresión de release**: lista de 60 casos (HUD, modal, Mercado, Bitácora, Canasta, Reto del río, cambio de idioma, notificaciones locales, segundo plano a mitad de vertido, pérdida de red durante compra y durante anuncio).
 
 ## 15. Instalación inicial del entorno (Windows 11 del dueño)
