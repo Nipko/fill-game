@@ -4292,7 +4292,7 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 ## D-059 · Lanzamiento directo a producción al 100 %, con publicación administrada
 
 - **Fecha:** 2026-10-28. Registrada por el integrador.
-- **Estado:** decidido por el dueño en el chat. Ante la idea de subir el AAB a la prueba interna dijo: «NO quiero prueba interna, osea cuando se lance quiero que ya este disponible completamente». Cuando le explicaron la publicación administrada respondió: «si hagamoslo administrada».
+- **Estado:** decidido por el dueño en el chat. Ante la idea de subir el AAB a la prueba interna dijo: «NO quiero prueba interna, osea cuando se lance quiero que ya este disponible completamente». Cuando le explicaron la publicación administrada respondió: «si hagamoslo administrada». Ese mismo día, a la pregunta «¿Cómo probamos las compras antes del lanzamiento?» (sin pistas con jugadores, la primera compra real con Play Billing y su verificación en el backend, PAD y Play Games instalados desde Play no se verían antes de producción), respondió: «Pista interna, solo yo», con el botón «Usa la pista interna solo para mí (sin jugadores) para probar compras con licencia de prueba, PAD y Play Games antes de publicar; el lanzamiento público sigue siendo al 100 % con publicación administrada» (punto 5).
 - **Decisión:**
   1. **Sin pistas de prueba con jugadores:** ni cerrada ni abierta, y sin escalonado. La pista interna se usa **solo con el dueño como único tester** (punto 5, decidido el mismo día) y el AAB que pasa esa prueba se promociona a la pista de producción de Play Console. La cuenta es de organización (Parallext), así que no se le aplica la prueba cerrada obligatoria de 12 probadores durante 14 días (research/06 §5 [V]; setup/b §6).
   2. **Al 100 % desde el primer día, sin escalonado:** se elimina el 5 % → 20 % → 100 %. La versión sale a todos los países de D-057 a la vez: todos los de Play salvo RU, BY, VN e ID, con Turquía incluida.
@@ -4305,24 +4305,23 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
      - la prueba completa en el teléfono por jornadas;
      - la prueba del dueño en la pista interna (punto 5);
      - después del lanzamiento, Crashlytics, las alertas de Play y Remote Config para apagar sistemas sin publicar (`biz_feature_*`, `mech_enabled_*`). Las métricas de calidad de 08 §13.1 #21 se miden ya en producción.
-- **Riesgos (expuestos al dueño en el chat antes de su respuesta):** se le dijo «si sale un fallo en un modelo de teléfono que no hemos probado, le llega a todo el mundo a la vez; se puede detener una versión en Play, pero quien ya la instaló la conserva».
-  - un fallo en un modelo que no se haya probado llega a todos los jugadores a la vez;
-  - detener la versión en Play no la retira de quien ya la instaló;
-  - UMP en un país del EEE (D-057) no se verá con jugadores reales antes del lanzamiento.
-- **Compras, PAD y Play Games antes del lanzamiento: pista interna solo con el dueño** (decidido por el dueño en el chat el 2026-10-28). Sin pistas con jugadores, la primera compra real con Play Billing, su verificación en el backend (`docs/dev/iap.md` §3, modo de ensayo, paso 4), PAD y Play Games instalados desde Play no se veían antes de producción. A la pregunta «¿Cómo probamos las compras antes del lanzamiento?» respondió: «Pista interna, solo yo». Su botón decía: «Usa la pista interna solo para mí (sin jugadores) para probar compras con licencia de prueba, PAD y Play Games antes de publicar; el lanzamiento público sigue siendo al 100 % con publicación administrada».
   5. **Pista interna solo con el dueño:**
      - el dueño es el **único tester**, nunca con jugadores;
      - prueba ahí las compras con licencia de prueba y su verificación en el backend, PAD y Play Games, con la app instalada desde Play (`docs/dev/iap.md` §3);
      - el AAB que pasa esa prueba se **promociona** de la pista interna a producción: es la misma versión y el mismo versionCode, así que no hace falta otro build;
      - se publica al 100 %, con la publicación administrada (puntos 2 y 3); el orden está en `docs/dev/release.md` §4 bis.
+- **Riesgos (expuestos al dueño en el chat antes de su respuesta):** se le dijo «si sale un fallo en un modelo de teléfono que no hemos probado, le llega a todo el mundo a la vez; se puede detener una versión en Play, pero quien ya la instaló la conserva».
+  - un fallo en un modelo que no se haya probado llega a todos los jugadores a la vez;
+  - detener la versión en Play no la retira de quien ya la instaló;
+  - UMP en un país del EEE (D-057) no se verá con jugadores reales antes del lanzamiento.
 - **Cambia:**
   - 01 §8.1, el escalonado y la beta cerrada;
-  - 08 §1 (punto 6) y §12.1 (etapa 5, el comentario del workflow y el texto sobre pistas y tránsito);
-  - 08 §13.1: #1, #19, #20 y #22, y §13.3 #4 y #7;
+  - 08 §2.1 (punto 6) y §12.1 (etapa 5, el comentario del workflow y el texto sobre pistas y tránsito);
+  - 08 §13.1: #1, #19, #20 y #22; §15.3 #4 y #7; y la tabla de Dependencias;
   - 08 Preguntas abiertas, la 3;
   - 08 §14.3, la pista interna y la prueba cerrada LatAm;
-  - 09 §0.4 (Fases 2 y 4), §2.3 (Fase 4), §6.1 y la pregunta 4 de Preguntas abiertas;
-  - `GDD.md`: el resumen de fases y la Fase 3 y su salida;
+  - 09 §0.4 (Fases 2 y 4), §2.3 (Fases 2 y 4), §5, §6.1 y la pregunta 4 de Preguntas abiertas;
+  - `GDD.md`: el resumen de fases (Fases 2 y 4) y los pasos 14 y 16 de §9;
   - `docs/qa/regresion-release.md`;
   - `docs/dev/iap.md` §3, pasos 1 y 4;
   - `docs/dev/release.md` (introducción y §4 bis);
