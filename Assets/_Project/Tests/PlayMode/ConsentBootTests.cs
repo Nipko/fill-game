@@ -196,6 +196,9 @@ namespace AF.Tests.PlayMode
             Assert.That(first.PressSettings(), Is.True);
             first.SettingsView!.AgeButton!.onClick.Invoke();
             first.ConsentView!.AgeButton(AgeBand.Under13).onClick.Invoke();
+            Assert.That(first.ConsentView!.View, Is.EqualTo(ConsentView.AgeConfirm), "antes de guardar, la confirmación neutral");
+            Assert.That(store.Load().Profile!.Consent!.AgeBandCorrected, Is.False, "aún no se gasta la corrección");
+            first.ConsentView!.AgeConfirmButton.onClick.Invoke();
 
             yield return PlayModeHelpers.WaitFor(
                 () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked,
@@ -206,6 +209,110 @@ namespace AF.Tests.PlayMode
             ConsentRecord saved = store.Load().Profile!.Consent!;
             Assert.That(saved.AgeBand, Is.EqualTo(AgeBand.Under13));
             Assert.That(saved.AgeBandCorrected, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator Settings_AgeCorrection_AsksANeutralConfirmation_AndGoingBackDoesNotSpendIt()
+        {
+            // Añadido de D-033 del 2026-10-28 (el dueño: «de acuerdo al estándar»): una banda distinta de la guardada pide confirmar
+            // antes de guardarla; «Volver a elegir», el Atrás y la X no gastan la corrección; la misma banda no pide nada.
+            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Adult)));
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressSettings(), Is.True);
+            SettingsScreen settings = boot.SettingsView!;
+            ConsentScreen view = boot.ConsentView!;
+
+            settings.AgeButton!.onClick.Invoke();
+            view.AgeButton(AgeBand.Adult).onClick.Invoke();
+            Assert.That(view.Visible, Is.False, "la misma banda: sin confirmación");
+            Assert.That(settings.AgeShown, Is.True, "y sin gastar la corrección");
+
+            settings.AgeButton.onClick.Invoke();
+            view.AgeButton(AgeBand.Under13).onClick.Invoke();
+            Assert.That(view.View, Is.EqualTo(ConsentView.AgeConfirm));
+            Assert.That(view.BodyText, Is.EqualTo(ConsentText.AgeConfirmBody(AgeBand.Under13)));
+            view.AgeBackButton.onClick.Invoke();
+            Assert.That(view.View, Is.EqualTo(ConsentView.Age), "«Volver a elegir»: la pantalla de edad otra vez");
+            Assert.That(boot.ConsentBlocked, Is.False);
+            ConsentRecord kept = store.Load().Profile!.Consent!;
+            Assert.That(kept.AgeBand, Is.EqualTo(AgeBand.Adult));
+            Assert.That(kept.AgeBandCorrected, Is.False, "«Volver a elegir» no gasta la corrección");
+
+            view.AgeButton(AgeBand.Teen).onClick.Invoke();
+            Assert.That(view.View, Is.EqualTo(ConsentView.AgeConfirm));
+            Assert.That(boot.PressAndroidBack(), Is.True);
+            Assert.That(view.View, Is.EqualTo(ConsentView.Age), "el Atrás de Android también vuelve a elegir");
+
+            view.AgeButton(AgeBand.Teen).onClick.Invoke();
+            view.CloseButton.onClick.Invoke();
+            Assert.That(view.Visible, Is.False, "la X cierra sin cambiar nada");
+            Assert.That(settings.AgeShown, Is.True, "la corrección sigue ahí");
+            Assert.That(store.Load().Profile!.Consent!.AgeBandCorrected, Is.False);
+
+            settings.AgeButton.onClick.Invoke();
+            view.AgeButton(AgeBand.Teen).onClick.Invoke();
+            view.AgeConfirmButton.onClick.Invoke();
+            Assert.That(view.Visible, Is.False);
+            ConsentRecord saved = store.Load().Profile!.Consent!;
+            Assert.That(saved.AgeBand, Is.EqualTo(AgeBand.Teen), "confirmar guarda como hasta ahora");
+            Assert.That(saved.AgeBandCorrected, Is.True, "age_band_corrected");
+            Assert.That(settings.AgeShown, Is.False, "una sola vez (08 §7)");
+        }
+
+        [UnityTest]
+        public IEnumerator Settings_ATapWhileTheListFlings_StopsIt_WithoutOpeningTheAgeScreen()
+        {
+            // Observación 3 de la jornada 4 (2026-10-27): con la lista de Ajustes aún en movimiento, un toque activó «Corregir mi edad».
+            // Como en Android, ese toque solo para la lista; el siguiente, con la lista quieta, sí activa la fila.
+            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Adult)));
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressSettings(), Is.True);
+            SettingsScreen settings = boot.SettingsView!;
+            settings.ScrollToPrivacy();
+            UnityEngine.UI.Button age = settings.AgeButton!;
+            FlingStopScrollRect list = age.GetComponentInParent<FlingStopScrollRect>();
+            Assert.That(list, Is.Not.Null, "Ajustes usa la lista que para con un toque");
+            Assert.That(UnityEngine.EventSystems.ExecuteEvents.GetEventHandler<UnityEngine.EventSystems.IDragHandler>(age.gameObject), Is.SameAs(list.gameObject),
+                "el arrastre que empieza en la fila es de la lista");
+
+            list.velocity = new UnityEngine.Vector2(0f, 900f); // la lista sigue por inercia
+            TapLikeTheInputModule(age.gameObject);
+            Assert.That(list.LastTapStoppedFling, Is.True);
+            Assert.That(list.velocity, Is.EqualTo(UnityEngine.Vector2.zero), "el toque para la lista");
+            Assert.That(boot.ConsentView!.Visible, Is.False, "y no activa «Corregir mi edad»");
+
+            TapLikeTheInputModule(age.gameObject);
+            Assert.That(list.LastTapStoppedFling, Is.False);
+            Assert.That(boot.ConsentView.View, Is.EqualTo(ConsentView.Age), "con la lista quieta, el toque abre la pantalla de edad");
+            Assert.That(store.Load().Profile!.Consent!.AgeBandCorrected, Is.False);
+        }
+
+        // Un toque como lo entrega InputSystemUIInputModule: pointerDown en la fila, initializePotentialDrag a quien arrastra (la lista),
+        // pointerUp y el clic solo si eligibleForClick sigue en true.
+        private static void TapLikeTheInputModule(UnityEngine.GameObject target)
+        {
+            var data = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current)
+            {
+                button = UnityEngine.EventSystems.PointerEventData.InputButton.Left,
+                eligibleForClick = true,
+                useDragThreshold = true,
+            };
+            UnityEngine.GameObject? pressed = UnityEngine.EventSystems.ExecuteEvents.ExecuteHierarchy(target, data, UnityEngine.EventSystems.ExecuteEvents.pointerDownHandler);
+            data.pointerClick = UnityEngine.EventSystems.ExecuteEvents.GetEventHandler<UnityEngine.EventSystems.IPointerClickHandler>(target);
+            data.pointerPress = pressed ?? data.pointerClick;
+            data.pointerDrag = UnityEngine.EventSystems.ExecuteEvents.GetEventHandler<UnityEngine.EventSystems.IDragHandler>(target);
+            if (data.pointerDrag != null)
+            {
+                UnityEngine.EventSystems.ExecuteEvents.Execute(data.pointerDrag, data, UnityEngine.EventSystems.ExecuteEvents.initializePotentialDrag);
+            }
+
+            UnityEngine.EventSystems.ExecuteEvents.Execute(data.pointerPress, data, UnityEngine.EventSystems.ExecuteEvents.pointerUpHandler);
+            if (data.pointerClick != null && data.eligibleForClick)
+            {
+                UnityEngine.EventSystems.ExecuteEvents.Execute(data.pointerClick, data, UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
+            }
         }
 
         [UnityTest]
@@ -554,6 +661,8 @@ namespace AF.Tests.PlayMode
 
             settings.AgeButton.onClick.Invoke();
             view.AgeButton(AgeBand.Teen).onClick.Invoke();
+            Assert.That(view.View, Is.EqualTo(ConsentView.AgeConfirm), "una banda distinta pide confirmación (añadido de D-033 del 2026-10-28)");
+            view.AgeConfirmButton.onClick.Invoke();
             Assert.That(view.Visible, Is.False);
             ConsentRecord saved = store.Load().Profile!.Consent!;
             Assert.That(saved.AgeBand, Is.EqualTo(AgeBand.Teen));

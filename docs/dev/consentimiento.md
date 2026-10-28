@@ -109,8 +109,14 @@ Sección nueva tras «Pista por inactividad», con dos enlaces:
   - al guardar: `af_consent` con `step = changed`, `af_settings_change` con `key = consent` y `value = choices`, y los flags nuevos al momento (05 §7: «revocación en Ajustes»).
 - **«Corregir mi edad»**:
   - la pantalla neutral otra vez, una sola vez (08 §7 y 05 §7);
-  - elegir la misma banda no gasta la corrección;
-  - una banda distinta se guarda con `age_band_corrected` [P];
+  - elegir la misma banda no gasta la corrección y no pide confirmación;
+  - una banda distinta pide antes una **confirmación neutral** (añadido de D-033 del 2026-10-28, el dueño: «de acuerdo al estándar»):
+    - la misma para las tres bandas: título «Corregir mi edad», la línea «Elegiste: {banda}. La edad solo se puede corregir una vez y no se puede deshacer.» con la banda tal como sale en su botón, y «Volver a elegir» y «Confirmar», del mismo tamaño (≥ 48 dp);
+    - ni empuja ni disuade: nada solo para `<13` ni que diga qué pasa con una banda;
+    - «Volver a elegir» y el Atrás de Android vuelven a la pantalla de edad sin gastar la corrección; la X cierra sin cambiar nada;
+    - TalkBack lee el título, la línea y los dos botones; la sonda publica `age_confirm_back` y `age_confirm_ok`;
+    - la pantalla de edad del primer arranque no lleva confirmación;
+  - «Confirmar» guarda la banda con `age_band_corrected` [P], como antes; la analítica no cambia (`af_settings_change` con `value = age` y `af_consent` con `step = changed`);
   - pasar a 13-17 apaga los anuncios personalizados;
   - pasar a `<13` bloquea: la escena se recarga y el arranque se para en el bloqueo, sin sesión de juego (como en 1.1);
   - tras usarla, el enlace desaparece.

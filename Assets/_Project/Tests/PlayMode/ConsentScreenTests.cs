@@ -221,6 +221,89 @@ namespace AF.Tests.PlayMode
         }
 
         [Test]
+        public void AgeConfirm_IsTheSameForTheThreeBands_AndOnlyTheBandLabelChanges()
+        {
+            // Añadido de D-033 del 2026-10-28 (el dueño: «de acuerdo al estándar»): la confirmación de «Corregir mi edad» es neutral; ni
+            // empuja ni disuade: el mismo título, los mismos botones del mismo tamaño y la misma frase con la banda tal como sale en su
+            // botón de la pantalla de edad. TalkBack la lee y los botones tienen al menos 48 dp.
+            AgeBand[] bands = { AgeBand.Under13, AgeBand.Teen, AgeBand.Adult };
+            string? title = null;
+            string[]? pair = null;
+            Rect back = default;
+            Rect ok = default;
+            Rect panel = default;
+            foreach (AgeBand band in bands)
+            {
+                _screen.ShowAge(_ => { }, () => { });
+                string label = _screen.AgeLabels[Array.IndexOf(bands, band)];
+                _screen.ShowAgeConfirm(band, () => { }, () => { }, () => { });
+                Canvas.ForceUpdateCanvases();
+                Assert.That(_screen.View, Is.EqualTo(ConsentView.AgeConfirm), band.ToString());
+                Assert.That(_screen.Closable, Is.True, band + ": con la X, como la pantalla de edad desde Ajustes");
+                Assert.That(_screen.BodyText, Is.EqualTo(ConsentText.AgeConfirmBody(band)), band.ToString());
+                Assert.That(_screen.BodyText, Does.Contain(label), band + ": la banda tal como sale en su botón");
+                Assert.That(_screen.SaveButton.gameObject.activeSelf, Is.False);
+                Assert.That(_screen.AgeButton(band).gameObject.activeSelf, Is.False, "sin las bandas");
+                RectTransform backRt = (RectTransform)_screen.AgeBackButton.transform;
+                RectTransform okRt = (RectTransform)_screen.AgeConfirmButton.transform;
+                Assert.That(backRt.rect.height, Is.GreaterThanOrEqualTo(48f), band + ": «Volver a elegir» de 48 dp o más");
+                Assert.That(okRt.rect.height, Is.GreaterThanOrEqualTo(48f), band + ": «Confirmar» de 48 dp o más");
+                Assert.That(okRt.rect.size, Is.EqualTo(backRt.rect.size), band + ": los dos botones iguales");
+
+                var items = new List<A11yItem>();
+                new A11yScanner().CollectGeneric(_screen.Canvas, null, items);
+                var labels = new List<string>();
+                foreach (A11yItem item in items)
+                {
+                    labels.Add(item.Label);
+                }
+
+                Assert.That(labels, Does.Contain(_screen.TitleText).And.Contain(_screen.BodyText), band + ": TalkBack lee el título y la frase");
+                Assert.That(labels, Does.Contain(_screen.PairLabels[0]).And.Contain(_screen.PairLabels[1]), band + ": y los dos botones");
+
+                if (title == null)
+                {
+                    title = _screen.TitleText;
+                    pair = _screen.PairLabels;
+                    back = backRt.rect;
+                    ok = okRt.rect;
+                    panel = ((RectTransform)backRt.parent).rect;
+                    continue;
+                }
+
+                Assert.That(_screen.TitleText, Is.EqualTo(title), band + ": el mismo título");
+                Assert.That(_screen.PairLabels, Is.EqualTo(pair), band + ": los mismos botones");
+                Assert.That(backRt.rect, Is.EqualTo(back), band + ": del mismo tamaño");
+                Assert.That(okRt.rect, Is.EqualTo(ok), band.ToString());
+                Assert.That(((RectTransform)backRt.parent).rect.width, Is.EqualTo(panel.width), band + ": el mismo panel");
+            }
+        }
+
+        [Test]
+        public void AgeConfirm_ConfirmBackAndClose_AnswerOnce()
+        {
+            var calls = new List<string>();
+            _screen.ShowAgeConfirm(AgeBand.Teen, () => calls.Add("ok"), () => calls.Add("back"), () => calls.Add("close"));
+            _screen.AgeBackButton.onClick.Invoke();
+            _screen.AgeBackButton.onClick.Invoke(); // una sola respuesta
+
+            _screen.ShowAgeConfirm(AgeBand.Teen, () => calls.Add("ok"), () => calls.Add("back"), () => calls.Add("close"));
+            Assert.That(_screen.PressBack(), Is.True, "Atrás de Android…");
+
+            _screen.ShowAgeConfirm(AgeBand.Teen, () => calls.Add("ok"), () => calls.Add("back"), () => calls.Add("close"));
+            _screen.CloseButton.onClick.Invoke();
+            Assert.That(_screen.Visible, Is.False, "la X cierra");
+
+            _screen.ShowAgeConfirm(AgeBand.Teen, () => calls.Add("ok"), () => calls.Add("back"), () => calls.Add("close"));
+            var ids = new List<string>();
+            _screen.VisibleButtons(ids, new List<RectTransform>());
+            Assert.That(ids, Is.EqualTo(new[] { "consent_close", "age_confirm_back", "age_confirm_ok" }));
+            _screen.AgeConfirmButton.onClick.Invoke();
+
+            Assert.That(calls, Is.EqualTo(new[] { "back", "back", "close", "ok" }), "…vuelve a elegir, como «Volver a elegir»");
+        }
+
+        [Test]
         public void TheProbeSeesEveryButton()
         {
             var ids = new List<string>();

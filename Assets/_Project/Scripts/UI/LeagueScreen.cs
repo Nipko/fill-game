@@ -99,7 +99,7 @@ namespace AF.UI
             _viewport.gameObject.AddComponent<RectMask2D>();
             _viewport.gameObject.AddComponent<HitArea>().raycastTarget = true;
             _content = UiBuilder.Rect("Content", _viewport);
-            _scroll = _viewport.gameObject.AddComponent<ScrollRect>();
+            _scroll = _viewport.gameObject.AddComponent<FlingStopScrollRect>();
             _scroll.viewport = _viewport;
             _scroll.content = _content;
             _scroll.horizontal = false;
@@ -109,9 +109,9 @@ namespace AF.UI
             _message.textWrappingMode = TextWrappingModes.Normal;
 
             _me = new Row("MeRow", _panel, art, true);
-            _me.MakeAvatarButton(() => MeTapped?.Invoke());
             _youPill = UiBuilder.Label("You", _me.Root, TextStyle.PillWood, LeagueText.You, 12f, Palette.Cream, TextAlignmentOptions.Center);
             A11yLabels.Set(_youPill, () => string.Empty); // lo dice la lectura de la fila
+            _me.MakeMeButton(() => MeTapped?.Invoke()); // la última: toda la fila es el blanco del toque (observación 4 de la jornada 4)
             _canvas.Canvas.gameObject.SetActive(false);
         }
 
@@ -166,8 +166,19 @@ namespace AF.UI
         public string RowA11y(int i)
         {
             Row row = i < 0 ? _me : _rows[i];
+            if (row.MeButton != null && row.MeButton.gameObject.activeSelf)
+            {
+                return A11yScanner.ButtonLabel(row.MeButton, out _); // la fila del jugador es un botón: su lectura es la del botón
+            }
+
             return A11yLabels.TryGetTextReading(row.Reader.gameObject, out string label) ? label : string.Empty;
         }
+
+        /// <summary>El seudónimo que enseña la fila del jugador («» sin seudónimo: entonces solo la chapa «Tú» la nombra).</summary>
+        public string MeNameText => _me.Name.text;
+
+        /// <summary>La chapa de la fila del jugador («Tú»).</summary>
+        public string MePillText => _youPill.text;
 
         /// <summary>Nombre del seudónimo de la fila <paramref name="i"/>.</summary>
         public string RowName(int i) => _rows[i].Name.text;
@@ -226,8 +237,11 @@ namespace AF.UI
         /// <summary>El índice que pinta la fila <paramref name="i"/> (null: el disco neutro).</summary>
         internal int? RowAvatarIndex(int i) => _rows[i].AvatarIndex;
 
-        /// <summary>El botón del avatar de la fila del jugador (abre «Tu avatar»).</summary>
-        internal Button? MeAvatarButton => _me.AvatarButton;
+        /// <summary>
+        /// El botón de la fila del jugador: la fila entera (abre «Tu avatar»; observación 4 de la jornada 4). Activo solo con los
+        /// avatares.
+        /// </summary>
+        internal Button? MeButton => _me.MeButton;
 
         /// <summary>Vuelve a poner los sprites de las filas (cuando el atlas pinta celdas nuevas).</summary>
         internal void RefreshAvatars()
@@ -475,6 +489,13 @@ namespace AF.UI
                 rects.Add((RectTransform)_tabCountry.Button.transform);
             }
 
+            Button? me = _me.MeButton;
+            if (me != null && me.gameObject.activeInHierarchy)
+            {
+                ids.Add("me_row"); // la fila del jugador entera: abre «Tu avatar»
+                rects.Add((RectTransform)me.transform);
+            }
+
             _probe.Layout(ProbeScreen, 0, null, ids.ToArray(), rects.ToArray());
         }
 
@@ -590,16 +611,23 @@ namespace AF.UI
             /// <summary>El sprite que pinta, o null sin avatar.</summary>
             public Sprite? AvatarSprite => _avatar.gameObject.activeSelf ? _avatar.sprite : null;
 
-            /// <summary>El botón del avatar de la fila del jugador (48 dp alrededor del retrato), o null.</summary>
-            public Button? AvatarButton { get; private set; }
+            /// <summary>El botón de la fila del jugador (la fila entera, encima de todo), o null en las demás.</summary>
+            public Button? MeButton { get; private set; }
 
-            /// <summary>La fila del jugador: su retrato es un botón que abre «Tu avatar».</summary>
-            public void MakeAvatarButton(Action onClick)
+            /// <summary>
+            /// La fila del jugador: toda ella es un botón que abre «Tu avatar» (el guion dice «tocar tu fila»; observación 4 de la jornada
+            /// 4 en el teléfono, 2026-10-27; avatares.md §3.3). Antes solo lo era el disco del retrato. Va encima de los textos y la
+            /// chapa, que no reciben toques; TalkBack lee la fila y lo que hace en un solo elemento: «{la fila}, Tu avatar».
+            /// </summary>
+            public void MakeMeButton(Action onClick)
             {
-                AvatarButton = UiBuilder.BareButton("AvatarButton", Root, onClick);
-                A11yLabels.Set(AvatarButton, () => AvatarText.Title);
-                _avatar.transform.SetParent(AvatarButton.transform, false);
-                AvatarButton.gameObject.SetActive(false);
+                Button button = UiBuilder.BareButton("MeButton", Root, onClick);
+                MeButton = button;
+                UiBuilder.Stretch((RectTransform)button.transform);
+                button.transform.SetAsLastSibling();
+                A11yLabels.Set(button, () => A11yText.Append(_reading, AvatarText.Title));
+                A11yLabels.SetText(Reader, () => button.gameObject.activeSelf ? string.Empty : _reading); // con el botón, la lee él
+                button.gameObject.SetActive(false);
             }
 
             /// <summary>El avatar de una fila del top: el del índice, o el disco neutro sin avatar o con uno que no se conoce.</summary>
@@ -636,9 +664,9 @@ namespace AF.UI
             {
                 _avatar.sprite = portrait;
                 _avatar.gameObject.SetActive(portrait != null);
-                if (AvatarButton != null)
+                if (MeButton != null)
                 {
-                    AvatarButton.gameObject.SetActive(portrait != null);
+                    MeButton.gameObject.SetActive(portrait != null);
                 }
             }
 
@@ -658,7 +686,9 @@ namespace AF.UI
             public void FillMe(LeagueMe me, bool global)
             {
                 Rank.text = me.Rank.HasValue ? Loc(me.Rank.Value) : string.Empty;
-                Name.text = me.NameKey != null ? LeagueText.Player(me.NameKey, me.NameNum) : LeagueText.You;
+                // Observación 5 de la jornada 4: sin seudónimo (aún sin ningún envío aceptado), el nombre queda vacío y la fila la nombra
+                // la chapa «Tú»; antes decía «Tú · Tú». Con seudónimo, el seudónimo y la chapa (league_you: «junto a su seudónimo»).
+                Name.text = me.NameKey != null ? LeagueText.Player(me.NameKey, me.NameNum) : string.Empty;
                 Points.text = LeagueText.PointsNumber(me.Points);
                 Sub.gameObject.SetActive(true);
                 Sub.text = me.Rank.HasValue
@@ -773,21 +803,28 @@ namespace AF.UI
                 UiBuilder.Place(Rank.rectTransform, pad, top, RankColDp, lineH);
                 UiBuilder.Place(Points.rectTransform, w - pad - PointsColDp, top, PointsColDp, lineH);
                 float nameX = pad + RankColDp + GapDp;
-                if (avatars && AvatarButton != null)
+                if (avatars)
                 {
-                    // El retrato del jugador, en un área táctil de 48 dp centrada en la fila (abre «Tu avatar»).
-                    float touch = Mathf.Max(MinRowDp, AvatarDp);
-                    UiBuilder.Place((RectTransform)AvatarButton.transform, nameX - ((touch - AvatarDp) * 0.5f), (h - touch) * 0.5f, touch, touch);
-                    UiBuilder.Place(_avatar.rectTransform, (touch - AvatarDp) * 0.5f, (touch - AvatarDp) * 0.5f, AvatarDp, AvatarDp);
+                    // El retrato del jugador, centrado en la fila; el toque lo recibe la fila entera (MeButton, estirado sobre ella).
+                    UiBuilder.Place(_avatar.rectTransform, nameX, (h - AvatarDp) * 0.5f, AvatarDp, AvatarDp);
                     nameX += AvatarDp + GapDp;
                 }
 
                 UiBuilder.Place(Name.rectTransform, nameX, top, w - nameX - PointsColDp - pad - GapDp, lineH);
-                float line2 = top + lineH + 2f;
                 float pillH = Mathf.Ceil((pill.fontSize * LineK) + 2f);
-                UiBuilder.Place(pill.rectTransform, nameX, line2, pillW, pillH);
                 float subX = nameX + pillW + GapDp;
-                UiBuilder.Place(Sub.rectTransform, subX, line2, SubWidth(w, pillW, avatars), h - line2 - 6f);
+                if (Name.text.Length == 0)
+                {
+                    // Sin seudónimo: la chapa «Tú» y la línea, centradas en la fila (sin una línea de nombre vacía encima).
+                    UiBuilder.Place(pill.rectTransform, nameX, Mathf.Round((h - pillH) * 0.5f), pillW, pillH);
+                    UiBuilder.Place(Sub.rectTransform, subX, 6f, SubWidth(w, pillW, avatars), h - 12f);
+                }
+                else
+                {
+                    float line2 = top + lineH + 2f;
+                    UiBuilder.Place(pill.rectTransform, nameX, line2, pillW, pillH);
+                    UiBuilder.Place(Sub.rectTransform, subX, line2, SubWidth(w, pillW, avatars), h - line2 - 6f);
+                }
                 Flag.Root.gameObject.SetActive(false);
             }
 
