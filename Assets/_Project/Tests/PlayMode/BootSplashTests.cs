@@ -463,7 +463,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator LaterOpen_Idle_NoAddedWait_ThenTheLobby()
         {
             BootSplash.EnabledOverride = true;
-            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera su 2,5 s (BrandIntroTests)
+            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera sus 3,5 s (BrandIntroTests)
             MapArtRule.ForceProvisional = true;
             Watch();
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(4)));
@@ -491,7 +491,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator WithoutAnyArt_FirstOpen_NoSloth_NoWait()
         {
             BootSplash.EnabledOverride = true;
-            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera su 2,5 s (BrandIntroTests)
+            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera sus 3,5 s (BrandIntroTests)
             MapArtRule.ForceProvisional = false; // forzado: hoy el arte por código sale en todos los builds, release incluido (D-052)
             ArtSlots.ForceProcedural = true;
             Watch();
@@ -515,7 +515,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator FirstOpen_WakeDoesNotFitInTwentySeconds_CutsWithoutWaiting_AndNotesIt()
         {
             BootSplash.EnabledOverride = true;
-            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera su 2,5 s (BrandIntroTests)
+            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera sus 3,5 s (BrandIntroTests)
             MapArtRule.ForceProvisional = true;
             BootSplash.TestStartupOffsetMs = 15000; // la carga termina pasados los 15 s: el segundo ya no cabe (09 §6)
             Watch();
@@ -548,7 +548,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator SlothSwitchedOff_FirstOpen_NoSloth_NoWait()
         {
             BootSplash.EnabledOverride = true;
-            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera su 2,5 s (BrandIntroTests)
+            BrandIntro.EnabledOverride = false; // los tiempos de TiTino sin la intro de la marca, que espera sus 3,5 s (BrandIntroTests)
             BootSplash.SlothEnabledOverride = false; // ui_sloth_enabled apagado en remoto (08 §9; D-016)
             MapArtRule.ForceProvisional = true; // aunque haya arte
             Assert.That(BootSplash.SlothExpected, Is.False);

@@ -571,6 +571,47 @@ namespace AF.UI
         /// </summary>
         public bool IntroPending => !_disposed && _intro != null && _intro.Visible && !_intro.Done;
 
+        /// <summary>
+        /// La intro empieza a moverse sola en cuanto puede (<see cref="BrandIntro.AutoPlay"/>; true por defecto). GameBootstrap lo
+        /// apaga y la arranca él en un hueco de la carga (<see cref="TryPlayIntro"/>), para no cargar nada mientras se mueve.
+        /// </summary>
+        public bool IntroAutoPlay
+        {
+            get => _intro == null || _intro.AutoPlay;
+            set
+            {
+                if (_intro != null)
+                {
+                    _intro.AutoPlay = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Arranca el movimiento de la intro si puede (<see cref="BrandIntro.ReadyToPlay"/>: sin Reducir movimiento y con su primer
+        /// fotograma ya en la pantalla), con el nombre ya hecho para que su coste no caiga en mitad del vertido. True si empezó.
+        /// </summary>
+        public bool TryPlayIntro()
+        {
+            if (_disposed || _intro == null || !_intro.Visible)
+            {
+                return false;
+            }
+
+            if (_intro.Playing || _intro.ReduceMotion || !_intro.Begun)
+            {
+                return false;
+            }
+
+            // El nombre antes de mirar si puede: lo que cueste no se come el instante 0 del vertido.
+            EnsureWordmark();
+            UpdateWordmarkAlpha();
+            return _intro.Play();
+        }
+
+        /// <summary>La intro se mueve (del vertido al nombre entero, <see cref="BrandIntro.Moving"/>): el arranque no carga nada entre fotogramas.</summary>
+        public bool IntroMoving => !_disposed && _intro != null && _intro.Visible && _intro.Moving;
+
         /// <summary>Lleva la intro al instante de ahora, sin contar fotograma (justo antes de dejar pintar uno; <see cref="BrandIntro.Refresh"/>).</summary>
         public void RefreshIntro()
         {

@@ -1,6 +1,8 @@
 #nullable enable
+using System;
 using AF.Presentation;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 namespace AF.UI
@@ -52,6 +54,53 @@ namespace AF.UI
 
         /// <summary>Fotogramas que GameBootstrap dejó pintar entre bloques de la carga para que la intro se viera moverse (<c>yields</c>).</summary>
         public int Yields { get; internal set; }
+
+        /// <summary>
+        /// Jornada 4 (2026-10-28): de la creación de la pantalla a cuando se supo que su primer fotograma ya estaba en la pantalla
+        /// (la GPU lo terminó: <see cref="BrandIntro.VisibleBy"/>; ms reales; -1 si no llegó; <c>visible_ms</c>). Es una cota por
+        /// arriba: se mira en cada fotograma y en cada hueco de la carga.
+        /// </summary>
+        public long VisibleMs { get; internal set; } = -1;
+
+        /// <summary>Cómo se supo (<c>visible_by</c>: <c>gpu</c>, <c>cap</c>, <c>no_readback</c> o <c>none</c>).</summary>
+        public BrandIntroVisibleBy VisibleBy { get; internal set; }
+
+        /// <summary>De la creación de la pantalla a cuando empezó a moverse (el chorro sale de la cuia; ms reales; -1 si no empezó; <c>play_ms</c>).</summary>
+        public long PlayMs { get; internal set; } = -1;
+
+        /// <summary>Fotogramas pintados mientras se movía, del primer movimiento al nombre entero (<c>motion_frames</c>).</summary>
+        public int MotionFrames { get; internal set; }
+
+        /// <summary>Percentil 95 del tiempo entre fotogramas mientras se movía (ms; -1 sin datos; <c>frame_p95_ms</c>).</summary>
+        public float FrameP95Ms { get; internal set; } = -1f;
+
+        /// <summary>El mayor tiempo entre fotogramas mientras se movía (ms; -1 sin datos; <c>frame_max_ms</c>), sin las pausas.</summary>
+        public float FrameMaxMs { get; internal set; } = -1f;
+
+        /// <summary>
+        /// Huecos entre fotogramas de más de <see cref="BrandIntro.MotionPauseMs"/> mientras se movía (la app a segundo plano, un
+        /// bloqueo): no cuentan en <see cref="FrameP95Ms"/> ni en <see cref="FrameMaxMs"/> (<c>motion_pauses</c>).
+        /// </summary>
+        public int MotionPauses { get; internal set; }
+    }
+
+    /// <summary>Cómo supo la intro que su primer fotograma ya estaba en la pantalla (<see cref="BrandIntro.VisibleBy"/>; sonda <c>visible_by</c>).</summary>
+    public enum BrandIntroVisibleBy
+    {
+        /// <summary>Aún no se sabe (o la intro no llegó a pintarse).</summary>
+        None,
+
+        /// <summary>La GPU terminó una lectura pedida tras el primer fotograma: ese fotograma ya se pintó.</summary>
+        Gpu,
+
+        /// <summary>La GPU no respondió a tiempo y se dio por visto al llegar al tope (<see cref="BrandIntro.VisibleWaitCapMs"/>).</summary>
+        Cap,
+
+        /// <summary>
+        /// Sin lecturas de la GPU (el Editor sin gráficos, los tests) o la lectura volvió con error: se da por visto en cuanto el
+        /// primer fotograma está enviado (<see cref="BrandIntro.FenceTick"/>).
+        /// </summary>
+        NoReadback,
     }
 
     /// <summary>
@@ -66,7 +115,7 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item>Va en la pantalla de arranque (<see cref="BootSplash"/>), por encima de todo lo suyo, en cada arranque en frío
     /// (añadido de D-051 del 2026-10-26, que sustituye a «nunca alarga la carga»): se ve <b>entera y a su ritmo</b>
-    /// (<see cref="AnimMs"/>, unos 2,5 s: el chorro cae, salen los aros, el açaí tiñe el río hasta <see cref="MotionMs"/> y entra
+    /// (<see cref="AnimMs"/>, unos 3,5 s desde el añadido del 2026-10-28: el chorro cae, salen los aros, el açaí tiñe el río hasta <see cref="MotionMs"/> y entra
     /// el nombre «Tintalú», <see cref="WordmarkAlpha"/>, que se sostiene), y el arranque la espera aunque la carga acabe antes
     /// (<see cref="Done"/>). Si la carga dura más, se queda en su último fotograma y la pantalla de arranque enseña «Cargando…»
     /// bajo el nombre hasta que acabe. Con Reducir movimiento sale quieta, entera, y se sostiene <see cref="ReduceMotionHoldMs"/>
@@ -79,25 +128,52 @@ namespace AF.UI
     {
         /// <summary>
         /// Duración entera de la intro (ms; <c>anim_ms</c>): anima hasta <see cref="MotionMs"/>, entra el nombre y sostiene el
-        /// emblema con «Tintalú» hasta aquí. Añadido de D-051 del 2026-10-26 (el dueño: «es la marca, debe durar unos segundos»):
-        /// unos 2,5 s [P], y nunca se corta antes porque la carga acabe.
+        /// emblema con «Tintalú» hasta aquí. Añadido de D-051 del 2026-10-26 (el dueño: «es la marca, debe durar unos segundos»)
+        /// y del 2026-10-28 (el dueño: «podemos dejarla un segundo más para apreciarla mejor»): unos 3,5 s [P], con el segundo de
+        /// más repartido en el vertido, el tinte y la entrada del nombre (no como pausa al final). Nunca se corta antes porque la
+        /// carga acabe; cuenta desde que empieza a moverse (<see cref="Play"/>).
         /// </summary>
-        public const int AnimMs = 2500;
+        public const int AnimMs = 3500;
 
         /// <summary>Fin del movimiento: el açaí llega al primer plano (ms) [P].</summary>
-        public const int MotionMs = 1800;
+        public const int MotionMs = 2500;
 
         /// <summary>Fin del chorro: llega de la boca de la cuia al río (ms) [P].</summary>
-        public const int FallMs = 520;
+        public const int FallMs = 800;
 
         /// <summary>Fin de los aros del impacto (ms) [P].</summary>
-        public const int RippleEndMs = 1250;
+        public const int RippleEndMs = 1750;
 
         /// <summary>El nombre «Tintalú» entra bajo la cuia desde aquí (ms) [P].</summary>
-        public const int WordmarkFromMs = 1650;
+        public const int WordmarkFromMs = 2350;
 
         /// <summary>Lo que tarda el nombre en entrar (ms) [P].</summary>
-        public const int WordmarkFadeMs = 350;
+        public const int WordmarkFadeMs = 550;
+
+        /// <summary>
+        /// Desde aquí no se mueve nada (ms): el nombre ya entró entero y solo se sostiene el emblema hasta <see cref="AnimMs"/>. Hasta
+        /// aquí GameBootstrap no carga nada entre fotogramas (jornada 4, 2026-10-28: el vertido, fluido); en lo que queda, sí.
+        /// </summary>
+        public const int SettledMs = WordmarkFromMs + WordmarkFadeMs;
+
+        /// <summary>
+        /// Tope de la espera a saber que el primer fotograma ya está en la pantalla (ms desde ese fotograma) [P]: si la GPU no responde
+        /// antes, la intro empieza a moverse igual (<see cref="BrandIntroVisibleBy.Cap"/>).
+        /// </summary>
+        public const int VisibleWaitCapMs = 1200;
+
+        /// <summary>
+        /// El <see cref="Tick"/> en que se pide la lectura a la GPU (y desde el que se mira si ya volvió): el segundo. El primero va
+        /// en el mismo fotograma en que se crea la intro, que aún no se ha enviado a la GPU; una lectura pedida entonces se encolaría
+        /// antes de los dibujos de la intro y solo probaría que acabó el fotograma anterior.
+        /// </summary>
+        public const int FenceTick = 2;
+
+        /// <summary>
+        /// Un hueco entre fotogramas mayor que esto (ms) mientras se mueve es una pausa (segundo plano, bloqueo), no un fotograma
+        /// lento: se cuenta aparte (<see cref="BrandIntroReport.MotionPauses"/>) [P].
+        /// </summary>
+        public const int MotionPauseMs = 500;
 
         /// <summary>Con Reducir movimiento, la escena entera sale quieta y se sostiene esto (ms; o lo que dure la carga) [P].</summary>
         public const int ReduceMotionHoldMs = 1000;
@@ -115,7 +191,20 @@ namespace AF.UI
         private readonly Image _background;
         private readonly BrandEmblemImages _images;
         private readonly double _createdAt;
-        private double _origin = -1.0;
+        private readonly float[] _motionDeltas = new float[MotionDeltaCapacity];
+        private double _firstFrameAt = -1.0;
+        private double _visibleAt = -1.0;
+        private double _playAt = -1.0;
+        private double _lastTickAt = -1.0;
+        private BrandIntroVisibleBy _visibleBy;
+        private AsyncGPUReadbackRequest _fence;
+        private bool _fenceArmed;
+        private bool _playing;
+        private int _motionCount;
+        private int _motionFrames;
+        private int _motionPauses;
+        private int _fenceAtTick = -1;
+        private float _motionMax;
         private float _tintFill;
         private bool _begun;
         private bool _reduceMotion;
@@ -124,6 +213,24 @@ namespace AF.UI
         private float _clockMs;
         private float _wordmarkAlpha;
         private int _frames;
+
+        // Tiempos entre fotogramas que se guardan mientras se mueve (unos 3 s a 120 Hz caben).
+        private const int MotionDeltaCapacity = 512;
+
+        /// <summary>
+        /// Solo para los tests: sustituye a la lectura de la GPU que dice si el primer fotograma ya está en la pantalla (null = la de
+        /// siempre). El tope <see cref="VisibleWaitCapMs"/> sigue valiendo. Los tests que lo cambian lo vuelven a null en su TearDown.
+        /// </summary>
+        public static Func<bool>? FrameVisibleOverrideForTests { get; set; }
+
+        /// <summary>
+        /// Solo para los tests: el reloj de la intro no avanza aunque pasen fotogramas (fotogramas parados, para el tope de
+        /// <c>GameBootstrap.IntroGap</c>). Los tests que lo cambian lo vuelven a false en su TearDown.
+        /// </summary>
+        public static bool ClockFrozenForTests { get; set; }
+
+        /// <summary>El <see cref="Tick"/> en que se pidió la lectura a la GPU (o se empezó a mirar si se ve); -1 si aún no (tests).</summary>
+        public int FenceRequestedAtTick => _fenceAtTick;
 
         /// <summary>
         /// Interruptor de los tests (null = lo de siempre: sale con la pantalla de arranque). Los tests que lo cambian lo vuelven a
@@ -164,6 +271,30 @@ namespace AF.UI
         /// <summary>La intro está a la vista.</summary>
         public bool Visible => !_ended && _root != null && _root.gameObject.activeSelf;
 
+        /// <summary>
+        /// Empieza a moverse sola en cuanto puede (<see cref="ReadyToPlay"/>; lo de siempre). GameBootstrap la apaga para elegir él el
+        /// momento, en un hueco de la carga, y no cargar nada mientras se mueve (jornada 4, 2026-10-28).
+        /// </summary>
+        public bool AutoPlay { get; set; } = true;
+
+        /// <summary>Su primer fotograma ya está en la pantalla (o se dio por visto: <see cref="VisibleBy"/>).</summary>
+        public bool OnScreen => _visibleAt >= 0.0;
+
+        /// <summary>Cómo se supo que su primer fotograma ya estaba en la pantalla.</summary>
+        public BrandIntroVisibleBy VisibleBy => _visibleBy;
+
+        /// <summary>Ya empezó a moverse (su reloj corre desde <see cref="Play"/>).</summary>
+        public bool Playing => _playing;
+
+        /// <summary>
+        /// Puede empezar a moverse: se sabe que no hay Reducir movimiento, su primer fotograma ya está en la pantalla y aún no empezó
+        /// (false con Reducir movimiento, en las capturas con <see cref="Seek"/> y tras quitarse).
+        /// </summary>
+        public bool ReadyToPlay => !_ended && _begun && !_reduceMotion && !_seeked && !_playing && _visibleAt >= 0.0;
+
+        /// <summary>Se mueve: empezó y aún no llegó a <see cref="SettledMs"/> (el nombre entero). Mientras, GameBootstrap no carga nada.</summary>
+        public bool Moving => Animating && _clockMs < SettledMs;
+
         /// <summary>Se sabe si hay Reducir movimiento y la animación corre (o, con él, está en su último fotograma).</summary>
         public bool Begun => _begun;
 
@@ -183,13 +314,19 @@ namespace AF.UI
         public long AgeMs => (long)((Time.realtimeSinceStartupAsDouble - _createdAt) * 1000.0);
 
         /// <summary>De la creación a su primer fotograma a la vista (ms reales; -1 si aún no llegó; <c>first_frame_ms</c>).</summary>
-        public long FirstFrameMs => _origin < 0.0 ? -1L : (long)((_origin - _createdAt) * 1000.0);
+        public long FirstFrameMs => _firstFrameAt < 0.0 ? -1L : (long)((_firstFrameAt - _createdAt) * 1000.0);
+
+        /// <summary>De la creación a cuando se supo que su primer fotograma ya estaba en la pantalla (ms reales; -1 si no; <c>visible_ms</c>).</summary>
+        public long VisibleMs => _visibleAt < 0.0 ? -1L : (long)((_visibleAt - _createdAt) * 1000.0);
+
+        /// <summary>De la creación a cuando empezó a moverse (ms reales; -1 si no empezó; <c>play_ms</c>).</summary>
+        public long PlayMs => _playAt < 0.0 ? -1L : (long)((_playAt - _createdAt) * 1000.0);
 
         /// <summary>
         /// La animación está corriendo y aún no llegó a su último fotograma: cada fotograma pintado enseña algo nuevo (false antes de
         /// <see cref="Begin"/>, con Reducir movimiento, al acabar, al quitarse y en las capturas con <see cref="Seek"/>).
         /// </summary>
-        public bool Animating => !_ended && _begun && !_reduceMotion && !_seeked && _clockMs < AnimMs;
+        public bool Animating => !_ended && _begun && !_reduceMotion && !_seeked && _playing && _clockMs < AnimMs;
 
         /// <summary>
         /// La intro ya se vio entera (añadido de D-051 del 2026-10-26): su reloj llegó a <see cref="AnimMs"/> o, con Reducir
@@ -207,7 +344,8 @@ namespace AF.UI
 
                 if (_reduceMotion)
                 {
-                    return _origin >= 0.0 && (Time.realtimeSinceStartupAsDouble - _origin) * 1000.0 >= ReduceMotionHoldMs;
+                    PollVisible(Time.realtimeSinceStartupAsDouble);
+                    return _visibleAt >= 0.0 && (Time.realtimeSinceStartupAsDouble - _visibleAt) * 1000.0 >= ReduceMotionHoldMs;
                 }
 
                 return _clockMs >= AnimMs;
@@ -224,8 +362,9 @@ namespace AF.UI
         public float StreamFill => _images.Stream.fillAmount;
 
         /// <summary>
-        /// Arranca la animación, con lo que se sabe ya del perfil: con <paramref name="reduceMotion"/>, salta a su último fotograma y
-        /// se queda quieta. El reloj cuenta desde que se creó la intro, no desde aquí: no se alarga nada.
+        /// Con lo que se sabe ya del perfil: con <paramref name="reduceMotion"/>, salta a su último fotograma y se queda quieta; si
+        /// no, sigue quieta en el primero (la cuia sobre el río) hasta <see cref="Play"/> o, con <see cref="AutoPlay"/>, hasta que
+        /// pueda empezar.
         /// </summary>
         public void Begin(bool reduceMotion)
         {
@@ -236,7 +375,27 @@ namespace AF.UI
 
             _begun = true;
             _reduceMotion = reduceMotion;
-            Apply(reduceMotion ? AnimMs : CurrentMs());
+            Apply(reduceMotion ? AnimMs : _clockMs);
+        }
+
+        /// <summary>
+        /// Empieza a moverse ahora, si puede (<see cref="ReadyToPlay"/>): su reloj cuenta desde aquí, así que nada de lo que pasó
+        /// antes (la escena, la carga, la espera a la GPU) se come el vertido. True si empezó.
+        /// </summary>
+        public bool Play()
+        {
+            double now = Time.realtimeSinceStartupAsDouble;
+            PollVisible(now);
+            if (!ReadyToPlay)
+            {
+                return false;
+            }
+
+            _playing = true;
+            _playAt = now;
+            _lastTickAt = now;
+            Apply(0f);
+            return true;
         }
 
         /// <summary>
@@ -245,13 +404,22 @@ namespace AF.UI
         /// </summary>
         public void Refresh()
         {
-            if (Animating)
+            PollVisible(Time.realtimeSinceStartupAsDouble);
+            if (AutoPlay && ReadyToPlay)
+            {
+                Play();
+            }
+
+            if (Animating && !ClockFrozenForTests)
             {
                 Apply(CurrentMs());
             }
         }
 
-        /// <summary>Un fotograma: avanza el reloj con el tiempo real (sin asignaciones). Quieta antes de <see cref="Begin"/>, con Reducir movimiento y tras el final.</summary>
+        /// <summary>
+        /// Un fotograma: mira si su primer fotograma ya está en la pantalla, empieza a moverse si toca (<see cref="AutoPlay"/>) y
+        /// avanza el reloj con el tiempo real (sin asignaciones). Quieta antes de empezar, con Reducir movimiento y tras el final.
+        /// </summary>
         public void Tick()
         {
             if (_ended)
@@ -260,23 +428,47 @@ namespace AF.UI
             }
 
             _frames++;
-            if (_origin < 0.0)
+            double now = Time.realtimeSinceStartupAsDouble;
+            if (_firstFrameAt < 0.0)
             {
-                _origin = Time.realtimeSinceStartupAsDouble; // su primer fotograma a la vista: aquí empieza su reloj
+                _firstFrameAt = now; // su primer fotograma: desde aquí se espera a verlo en la pantalla
             }
 
-            if (!_begun || _reduceMotion || _seeked || _clockMs >= AnimMs)
+            if (_fenceAtTick < 0 && _frames >= FenceTick)
             {
+                ArmFence(now); // el primer fotograma ya está enviado a la GPU: la lectura va detrás de sus dibujos
+            }
+
+            PollVisible(now);
+            if (AutoPlay && ReadyToPlay)
+            {
+                Play(); // este fotograma enseña su instante 0
                 return;
             }
 
-            Apply(CurrentMs());
+            if (!Animating)
+            {
+                _lastTickAt = now;
+                return;
+            }
+
+            if (_clockMs < SettledMs && _lastTickAt >= _playAt)
+            {
+                NoteMotionFrame((float)((now - _lastTickAt) * 1000.0));
+            }
+
+            _lastTickAt = now;
+            if (!ClockFrozenForTests)
+            {
+                Apply(CurrentMs());
+            }
         }
 
         /// <summary>Lleva la animación al instante <paramref name="ms"/> y la deja ahí (capturas y tests deterministas).</summary>
         public void Seek(float ms)
         {
             _seeked = true;
+            _playing = true;
             _begun = true;
             Apply(ms);
         }
@@ -307,6 +499,13 @@ namespace AF.UI
                 FirstFrameMs = FirstFrameMs,
                 ReduceMotion = _reduceMotion,
                 Begun = _begun,
+                VisibleMs = VisibleMs,
+                VisibleBy = _visibleBy,
+                PlayMs = _seeked ? -1L : PlayMs,
+                MotionFrames = _motionFrames,
+                FrameP95Ms = DevProbe.Enabled ? MotionP95() : -1f,
+                FrameMaxMs = _motionCount > 0 ? _motionMax : -1f,
+                MotionPauses = _motionPauses,
             };
             _ended = true;
             if (_root != null)
@@ -341,8 +540,9 @@ namespace AF.UI
             _images.Impact.rectTransform.localScale = new Vector3(rs, rs, 1f);
             _images.Impact.color = new Color(1f, 1f, 1f, ripple < 0f ? 0f : Mathf.Clamp01(ripple * 2.5f));
 
-            // El frente del açaí recorre los tramos río abajo: cada tramo, opaco y con su frente en lengua, se enciende entero al
-            // llegar el frente (nunca a medias: ni velos ni cortes rectos).
+            // El frente del açaí recorre los tramos río abajo: cada tramo, con su frente en lengua, entra mientras el frente lo cruza
+            // (jornada 4, 2026-10-28: con el avance, sin saltos de un tramo entero de golpe) y queda opaco detrás; en cada instante
+            // solo va a medias el tramo del frente.
             float spread = t <= FallMs ? 0f : Mathf.Clamp01((t - FallMs) / (MotionMs - FallMs));
             float eased = 1f - Mathf.Pow(1f - spread, 1.6f);
             _tintFill = eased;
@@ -350,21 +550,156 @@ namespace AF.UI
             float front = eased * acai.Length;
             for (int k = 0; k < acai.Length; k++)
             {
-                bool lit = spread > 0f && (front > k || eased >= 1f);
-                acai[k].color = new Color(1f, 1f, 1f, lit ? 1f : 0f);
+                acai[k].color = new Color(1f, 1f, 1f, AcaiAlpha(front, k, spread, eased));
             }
         }
 
-        // Del primer fotograma a ahora (ms); si aún no se pintó ninguno (Begin antes del primer Tick), el reloj empieza aquí.
-        private float CurrentMs()
+        /// <summary>
+        /// Lo que se ve del tramo <paramref name="k"/> del açaí con el frente en <paramref name="front"/> (tramos): 0 delante del
+        /// frente, 1 detrás y, mientras el frente lo cruza, de 0 a 1 con suavidad (jornada 4, 2026-10-28).
+        /// </summary>
+        internal static float AcaiAlpha(float front, int k, float spread, float eased)
         {
-            double now = Time.realtimeSinceStartupAsDouble;
-            if (_origin < 0.0)
+            if (spread <= 0f)
             {
-                _origin = now;
+                return 0f;
             }
 
-            return (float)((now - _origin) * 1000.0);
+            if (eased >= 1f)
+            {
+                return 1f;
+            }
+
+            float a = Mathf.Clamp01(front - k);
+            return a * a * (3f - (2f * a));
+        }
+
+        // Desde que empezó a moverse hasta ahora (ms; 0 si aún no empezó).
+        private float CurrentMs()
+        {
+            return _playAt < 0.0 ? 0f : (float)((Time.realtimeSinceStartupAsDouble - _playAt) * 1000.0);
+        }
+
+        // Pide a la GPU una lectura mínima tras el primer fotograma: cuando la termina, ese fotograma ya se pintó (jornada 4: en la
+        // primera apertura la pantalla seguía lisa ~1 s aunque el juego ya hubiera mandado la intro). Sin lecturas, se da por visto.
+        private void ArmFence(double now)
+        {
+            _fenceAtTick = _frames;
+            if (FrameVisibleOverrideForTests != null)
+            {
+                return;
+            }
+
+            if (!SystemInfo.supportsAsyncGPUReadback)
+            {
+                MarkVisible(now, BrandIntroVisibleBy.NoReadback);
+                return;
+            }
+
+            try
+            {
+                _fence = AsyncGPUReadback.Request(Texture2D.whiteTexture);
+                _fenceArmed = true;
+            }
+            catch (Exception)
+            {
+                MarkVisible(now, BrandIntroVisibleBy.NoReadback);
+            }
+        }
+
+        // ¿Ya está el primer fotograma en la pantalla? Con el tope VisibleWaitCapMs desde ese fotograma (sin asignaciones).
+        private void PollVisible(double now)
+        {
+            if (_visibleAt >= 0.0 || _fenceAtTick < 0)
+            {
+                return; // ya se sabe, o el primer fotograma aún no está enviado
+            }
+
+            Func<bool>? overrideVisible = FrameVisibleOverrideForTests;
+            if (overrideVisible != null)
+            {
+                if (overrideVisible())
+                {
+                    MarkVisible(now, BrandIntroVisibleBy.Gpu);
+                    return;
+                }
+            }
+            else if (_fenceArmed)
+            {
+                if (!_fence.done)
+                {
+                    _fence.Update();
+                }
+
+                BrandIntroVisibleBy by = FenceResult(_fence.done, _fence.done && _fence.hasError);
+                if (by != BrandIntroVisibleBy.None)
+                {
+                    _fenceArmed = false;
+                    MarkVisible(now, by);
+                    return;
+                }
+            }
+
+            if ((now - _firstFrameAt) * 1000.0 >= VisibleWaitCapMs)
+            {
+                _fenceArmed = false;
+                MarkVisible(now, BrandIntroVisibleBy.Cap);
+            }
+        }
+
+        /// <summary>
+        /// Lo que dice una lectura de la GPU: aún nada (<see cref="BrandIntroVisibleBy.None"/>), visto (<see cref="BrandIntroVisibleBy.Gpu"/>)
+        /// o, si volvió con error, que no se pudo saber (<see cref="BrandIntroVisibleBy.NoReadback"/>: un error no prueba que se pintara).
+        /// </summary>
+        internal static BrandIntroVisibleBy FenceResult(bool done, bool hasError)
+        {
+            if (!done)
+            {
+                return BrandIntroVisibleBy.None;
+            }
+
+            return hasError ? BrandIntroVisibleBy.NoReadback : BrandIntroVisibleBy.Gpu;
+        }
+
+        private void MarkVisible(double now, BrandIntroVisibleBy by)
+        {
+            _visibleAt = now;
+            _visibleBy = by;
+        }
+
+        private void NoteMotionFrame(float deltaMs)
+        {
+            _motionFrames++;
+            if (deltaMs > MotionPauseMs)
+            {
+                _motionPauses++; // una pausa (segundo plano), no un fotograma lento
+                return;
+            }
+
+            if (deltaMs > _motionMax)
+            {
+                _motionMax = deltaMs;
+            }
+
+            if (_motionCount < _motionDeltas.Length)
+            {
+                _motionDeltas[_motionCount++] = deltaMs;
+            }
+        }
+
+        // Percentil 95 de los tiempos entre fotogramas mientras se movía (-1 sin datos); solo al quitarse (asigna una copia).
+        private float MotionP95()
+        {
+            if (_motionCount == 0)
+            {
+                return -1f;
+            }
+
+            var sorted = new float[_motionCount];
+            Array.Copy(_motionDeltas, sorted, _motionCount);
+            Array.Sort(sorted);
+            int index = Mathf.Clamp(Mathf.CeilToInt(0.95f * _motionCount) - 1, 0, _motionCount - 1);
+            return sorted[index];
         }
     }
 }
