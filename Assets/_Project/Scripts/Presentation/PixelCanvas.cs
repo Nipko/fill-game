@@ -42,6 +42,12 @@ namespace AF.Presentation
             _px[(y * Width) + x] = c;
         }
 
+        /// <summary>
+        /// El búfer de píxeles (índice y · <see cref="Width"/> + x; puede ser más largo que el lienzo) para los bucles calientes que
+        /// escriben píxeles opacos sin pasar por <see cref="Set"/> (el retrato de avatar, 2026-10-27): quien lo usa garantiza los límites.
+        /// </summary>
+        public Color[] Pixels => _px;
+
         // El búfer alquilado puede ser más largo que el lienzo: fuera del lienzo ya no siempre salta IndexOutOfRange. En el Editor y
         // en desarrollo (UNITY_ASSERTIONS) se avisa; en release no cuesta nada.
         [System.Diagnostics.Conditional("UNITY_ASSERTIONS")]
