@@ -152,6 +152,129 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Stuck.RescuePulse.AlphaNow, Is.EqualTo(1f));
         }
 
+        [UnityTest]
+        public IEnumerator Stuck_TheGrayRefillSeeds_PulsesItsOwnLabel_AndChargesNothing([Values(true, false)] bool storeOn)
+        {
+            GameBootstrap boot = null!;
+            yield return Load31(FunnelSetup.Profile(0), b => boot = b);
+            GameScreen view = boot.View!;
+            boot.Services!.StoreLedger.Config.BizIapEnabled = storeOn;
+            FunnelSetup.GetStuck(boot);
+
+            // Sin cupo ni stock de Marea, sin video y sin semillas: «+3 Deshacer · 30 semillas» en gris (04 §6.2, regla 0).
+            StuckContext ctx = boot.Flow!.BuildStuckContext(false, true, GeoTier.T3);
+            ctx.UndoUnlimited = false;
+            ctx.UndoFree = 0;
+            ctx.UndoStock = 0;
+            ctx.UndoAdReady = false;
+            ctx.PurchasesBlocked = !storeOn;
+            view.ShowStuckVariant(StuckModalModel.Build(ctx, boot.Flow.Boosters));
+            Assert.That(view.Stuck.View!.Undo, Is.EqualTo(StuckUndoKind.Refill));
+            Assert.That(view.Stuck.View.UndoRefillMissing, Is.GreaterThan(0), "condición: sin saldo");
+            Assert.That(view.Stuck.RefillSeedsButton.GetComponent<ReliefButton>().Interactable, Is.False, "en gris");
+            Assert.That(view.Stuck.RefillSeedsButton.IsInteractable(), Is.True, "pero el toque llega");
+
+            view.Stuck.RefillSeedsButton.onClick.Invoke();
+            Assert.That(view.Stuck.RefillSeedsPulse.Running, Is.True, "sin línea «Te faltan», late su etiqueta con el precio");
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(0));
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
+            Assert.That(boot.StoreUnavailableNoticeCount, Is.EqualTo(storeOn ? 0 : 1), "el aviso solo si la tienda no vende");
+            float max = 1f;
+            for (int ms = 0; ms < NotePulse.DurationMs; ms += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                max = UnityEngine.Mathf.Max(max, view.Stuck.RefillSeedsPulse.ScaleNow);
+            }
+
+            Assert.That(max, Is.GreaterThan(1.04f));
+            PlayModeHelpers.Step(boot, 100);
+            Assert.That(view.Stuck.RefillSeedsPulse.ScaleNow, Is.EqualTo(1f), "vuelve a reposo");
+        }
+
+        [UnityTest]
+        public IEnumerator Stuck_TheGraySkip_PulsesTheMissingLine_AndOpensNothing([Values(true, false)] bool storeOn)
+        {
+            GameBootstrap boot = null!;
+            yield return Load31(FunnelSetup.Profile(0), b => boot = b);
+            GameScreen view = boot.View!;
+            boot.Services!.StoreLedger.Config.BizIapEnabled = storeOn;
+            FunnelSetup.GetStuck(boot);
+
+            // Rama D sin saldo (04 §6.2 y §1: el precio en gris y «Te faltan {n} semillas»).
+            StuckContext ctx = boot.Flow!.BuildStuckContext(false, true, GeoTier.T3);
+            ctx.Skip = new SkipOffer(SkipState.Disabled, 300, 300, 31);
+            ctx.PurchasesBlocked = !storeOn;
+            view.ShowStuckVariant(StuckModalModel.Build(ctx, boot.Flow.Boosters));
+            Assert.That(view.Stuck.SkipButton.gameObject.activeSelf, Is.True, "rama D");
+            Assert.That(view.Stuck.SkipNoteText, Is.EqualTo(UiText.MissingSeeds(300)));
+            Assert.That(view.Stuck.SkipButton.GetComponent<ReliefButton>().Interactable, Is.False, "en gris");
+
+            view.Stuck.SkipButton.onClick.Invoke();
+            Assert.That(view.Stuck.SkipPulse.Running, Is.True, "late «Te faltan {n} semillas»");
+            Assert.That(boot.SkipConfirmView == null || !boot.SkipConfirmView.Visible, Is.True, "no abre la confirmación");
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(31));
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(0));
+            Assert.That(boot.StoreUnavailableNoticeCount, Is.EqualTo(storeOn ? 0 : 1));
+        }
+
+        [UnityTest]
+        public IEnumerator NoCanoes_TheGrayRefill_PulsesTheMissingLine([Values(true, false)] bool storeOn)
+        {
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0, 1));
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            boot.Services!.StoreLedger.Config.BizIapEnabled = storeOn;
+            FunnelSetup.GetStuck(boot);
+            boot.PressGiveUp();
+            boot.ConfirmGiveUp();
+            boot.PressRetry();
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.NoCanoes));
+            PlayModeHelpers.Step(boot, 20);
+            NoCanoesPanel panel = boot.View!.NoCanoes;
+            Assert.That(panel.RefillButton.gameObject.activeSelf, Is.True);
+            Assert.That(panel.RefillButton.GetComponent<ReliefButton>().Interactable, Is.False, "sin saldo, en gris");
+
+            panel.RefillButton.onClick.Invoke();
+            Assert.That(panel.RefillPulse.Running, Is.True, "late «Te faltan {n} semillas»");
+            Assert.That(boot.Wallet!.Canoes.Count, Is.EqualTo(0), "no llena nada");
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(0));
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.NoCanoes));
+            Assert.That(boot.StoreUnavailableNoticeCount, Is.EqualTo(storeOn ? 0 : 1));
+            PlayModeHelpers.Step(boot, (int)NotePulse.DurationMs + 100);
+            Assert.That(panel.RefillPulse.Running, Is.False, "la pantalla de nivel la hace avanzar");
+        }
+
+        [UnityTest]
+        public IEnumerator NoCanoes_FromTheLobby_TheGrayRefill_Responds_Too([Values(true, false)] bool storeOn)
+        {
+            Profile profile = FunnelSetup.Profile(0, 0);
+            profile.Progress.MaxLevel = 30;
+            profile.Progress.NextLevel = 31;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.Services!.StoreLedger.Config.BizIapEnabled = storeOn;
+            boot.Lobby!.CanoesButton.onClick.Invoke();
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.NoCanoes));
+            NoCanoesPanel panel = boot.Lobby.NoCanoes;
+            Assert.That(panel.RefillButton.GetComponent<ReliefButton>().Interactable, Is.False, "sin saldo, en gris");
+
+            panel.RefillButton.onClick.Invoke();
+            Assert.That(panel.RefillPulse.Running, Is.True);
+            Assert.That(boot.Wallet!.Canoes.Count, Is.EqualTo(0));
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.NoCanoes));
+            Assert.That(boot.StoreUnavailableNoticeCount, Is.EqualTo(storeOn ? 0 : 1));
+            for (int i = 0; i < 40; i++)
+            {
+                boot.Lobby.Tick(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(panel.RefillPulse.Running, Is.False, "el inicio la hace avanzar");
+        }
+
         // El nivel 31 con el tablero 6 del tutorial (como StuckFunnelTests).
         private static IEnumerator Load31(Profile profile, System.Action<GameBootstrap> done)
         {

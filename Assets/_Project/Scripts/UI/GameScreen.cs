@@ -546,7 +546,9 @@ namespace AF.UI
             _stuckDim = UiBuilder.Image("Dim", _stuckOverlay, null, new Color(0f, 0f, 0f, 0f), true);
             UiBuilder.Stretch(_stuckDim.rectTransform);
             _stuck = new StuckModal(_stuckOverlay, art, actions);
-            _stuck.RescueMissing = () => OnRescueMissing(true);
+            _stuck.RescueMissing = () => OnMissingTap("rescue", reduce => _stuck.PulseRescueMissing(reduce));
+            _stuck.RefillSeedsMissing = () => OnMissingTap("refill_seeds", reduce => _stuck.PulseRefillSeedsMissing(reduce));
+            _stuck.SkipMissing = () => OnMissingTap("skip", reduce => _stuck.PulseSkipMissing(reduce));
             _stuckOverlay.gameObject.SetActive(false);
 
             // ---- Victoria (02 §6; 07 §5.4; guía 5.3, 5.5 y 6.9): panel abajo, cinta-hoja y Siguiente; sin auto-avance por
@@ -617,10 +619,11 @@ namespace AF.UI
 
             // ---- Embudo de D-008 (B2-2 y B2-3): ¿Seguro?, Nivel fallido y Sin canoas, con el tablero atenuado detrás. ----
             _giveUp = new GiveUpConfirm(_root, art, actions);
-            _giveUp.RescueMissing = () => OnRescueMissing(false);
+            _giveUp.RescueMissing = () => OnMissingTap("give_up_rescue", reduce => _giveUp.PulseRescueMissing(reduce));
             _failed = new LevelFailedScreen(_root, art, actions);
             _noCanoes = new NoCanoesPanel(_root, art, () => _actions.PressExtraCanoeVideo(), () => _actions.PressRefillCanoes(),
                 () => _actions.PressInfiniteCanoes(), () => _actions.PressNoCanoesMap(), () => _actions.PressNoCanoesClose());
+            _noCanoes.RefillMissing = () => OnMissingTap("refill_canoes", reduce => _noCanoes.PulseRefillMissing(reduce));
 
             // ---- Capa superior: pausa (02 §5: izquierda de la fila superior; disco de 40 dp) y saldos del embudo (D-008). ----
             _topLayer = UiBuilder.Rect("TopLayer", _root);
@@ -962,6 +965,7 @@ namespace AF.UI
             RevealTick(dtMs);
             _stuck.Tick(dtMs); // el latido de «Te faltan {n} semillas» del rescate en gris
             _giveUp.Tick(dtMs);
+            _noCanoes.Tick(dtMs);
             HintTick(dtMs);
             ShuffleTick(dtMs);
             StopTick(dtMs);
@@ -1613,14 +1617,14 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Toque en «Continuar: +1 cuia» en gris (sin saldo) en Aguas estancadas (<paramref name="stuck"/>) o en ¿Seguro?: antes no
-        /// hacía nada (observación 6 de la jornada 5 en el teléfono; guion 8.2: «no un toque mudo como el 23»). Responde como un
-        /// comodín sin saldo: late «Te faltan {n} semillas» (con Reducir movimiento, solo se atenúa), sin cobrar nada, sin háptico ni
-        /// analítica, como la Pista y la Luciérnaga (D-022). Si además la tienda no vende (sin Puñado ni Balsa que ofrecer: la tienda
-        /// apagada o sin precios, o el perfil en solo lectura), sale el aviso «Las compras no están disponibles ahora», el mismo
-        /// de «Canoas infinitas» en Sin canoas. Escribe <c>AF_STATE rescue_missing</c>.
+        /// Toque en un botón en gris por falta de semillas que antes no hacía nada (observación 6 de la jornada 5 en el teléfono; guion
+        /// 8.2: «no un toque mudo como el 23»): «Continuar: +1 cuia» en Aguas estancadas y en ¿Seguro?, «+3 Deshacer · 30 semillas»,
+        /// el Salto del Boto y «Llenar canoas». Responde como un comodín sin saldo, sin cobrar nada, sin háptico ni analítica (como la
+        /// Pista y la Luciérnaga, D-022): <paramref name="pulse"/> hace latir su «Te faltan {n} semillas» (o, sin esa línea, su
+        /// etiqueta con el precio; con Reducir movimiento, solo se atenúa). Si además la tienda no vende, el aviso de la tienda
+        /// (<see cref="RespondToMissing"/>).
         /// </summary>
-        internal void OnRescueMissing(bool stuck)
+        private void OnMissingTap(string option, Func<bool, bool> pulse)
         {
             LevelFlow? flow = _flow;
             if (flow == null || !flow.HasLevel)
@@ -1628,18 +1632,29 @@ namespace AF.UI
                 return;
             }
 
-            bool pulsed = stuck ? _stuck.PulseRescueMissing(flow.ReduceMotion) : _giveUp.PulseRescueMissing(flow.ReduceMotion);
-            bool storeDown = _services != null && (_services.PurchasesBlocked || !_services.Store.IsAvailable);
+            RespondToMissing(option, pulse(flow.ReduceMotion), _services, _actions, _probe, flow.LevelNumber);
+        }
+
+        /// <summary>
+        /// Lo común a la pantalla de nivel y a la de inicio tras el latido: si la tienda no vende (apagada, sin precios o el perfil en
+        /// solo lectura), el aviso «Las compras no están disponibles ahora» (<c>market_store_unavailable</c>), el mismo de «Canoas
+        /// infinitas» en Sin canoas; y la línea <c>AF_STATE missing_tap</c> con <paramref name="option"/>. Devuelve si la tienda no vende.
+        /// </summary>
+        internal static bool RespondToMissing(string option, bool pulsed, GameServices? services, IGameActions actions, DevProbe probe, int level)
+        {
+            bool storeDown = services != null && (services.PurchasesBlocked || !services.Store.IsAvailable);
             if (storeDown)
             {
-                (_actions as IStoreNoticeActions)?.ShowStoreUnavailable();
+                (actions as IStoreNoticeActions)?.ShowStoreUnavailable();
             }
 
             if (DevProbe.Enabled)
             {
-                _probe.Event("rescue_missing", "\"modal\":\"" + (stuck ? "stuck" : "give_up") + "\",\"pulsed\":" + (pulsed ? "true" : "false")
-                    + ",\"store\":" + (storeDown ? "false" : "true") + ",\"level\":" + flow.LevelNumber.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                probe.Event("missing_tap", "\"option\":\"" + option + "\",\"pulsed\":" + (pulsed ? "true" : "false")
+                    + ",\"store\":" + (storeDown ? "false" : "true") + ",\"level\":" + level.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
+
+            return storeDown;
         }
 
         private StuckContext StuckContext(LevelFlow flow)

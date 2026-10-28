@@ -141,6 +141,8 @@ namespace AF.UI
         private readonly PriceTag _rescuePrice;
         private readonly TextMeshProUGUI _rescueNote;
         private readonly NotePulse _rescuePulse;
+        private readonly NotePulse _refillSeedsPulse;
+        private readonly NotePulse _skipPulse;
         private readonly ReliefParts _handful;
         private readonly TextMeshProUGUI _handfulLabel;
         private readonly ReliefParts _balsa;
@@ -178,8 +180,9 @@ namespace AF.UI
             _refillVideo = ModalKit.Cta("RefillVideoButton", _panel, art.CtaWater, TextStyle.CtaWater, string.Empty, 16f, () => actions.PressUndoRefillVideo(), out _refillVideoLabel);
             _refillVideoLabel.textWrappingMode = TextWrappingModes.Normal;
             _refillVideoIcon = UiBuilder.Image("Video", _refillVideo.Face, art.IconVideo, Color.white);
-            _refillSeeds = ModalKit.Cta("RefillSeedsButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 15f, () => actions.PressUndoRefillSeeds(), out _refillSeedsLabel);
+            _refillSeeds = ModalKit.Cta("RefillSeedsButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 15f, () => OnRefillSeeds(actions), out _refillSeedsLabel);
             _refillSeedsLabel.textWrappingMode = TextWrappingModes.Normal;
+            _refillSeedsPulse = new NotePulse(_refillSeedsLabel); // sin línea «Te faltan»: late su etiqueta, que lleva el precio
 
             _rescue = ModalKit.Cta("RescueButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.StuckRescueCta, 21f, () => OnRescue(actions), out _rescueLabel);
             _rescuePrice = new PriceTag("Price", _rescue.Face, art);
@@ -199,9 +202,10 @@ namespace AF.UI
             _shieldLine = ModalKit.Line("ShieldLine", _panel, string.Empty, 14f, Palette.FamilyWood.Base);
             _shieldLine.gameObject.SetActive(false);
             // Rama D (bloque B3): estilo secundario (madera), 3.ª opción (04 §6.6 wireframe D).
-            _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, () => (actions as ISkipActions)?.PressSkip(), out _skipLabel);
+            _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, () => OnSkip(actions), out _skipLabel);
             _skipPrice = new PriceTag("Price", _skip.Face, art);
             _skipNote = ModalKit.Line("SkipNote", _panel, string.Empty, 13f, Palette.FamilyWood.Base);
+            _skipPulse = new NotePulse(_skipNote);
 
             _restart = ModalKit.Cta("RestartModalButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.StuckRestart, 18f, () => actions.PressRestart(), out _restartLabel);
             _giveUp = ModalKit.Link("GiveUpButton", _panel, UiText.StuckGiveUp, () => actions.PressGiveUp(), out _);
@@ -325,10 +329,39 @@ namespace AF.UI
             return _view != null && _view.Rescue == StuckRescueKind.Disabled && _rescuePulse.Start(reduceMotion);
         }
 
-        /// <summary>Avanza el latido de la nota del rescate.</summary>
+        /// <summary>Toque en «+3 Deshacer · 30 semillas» en gris (sin saldo): como <see cref="RescueMissing"/>.</summary>
+        public System.Action? RefillSeedsMissing { get; set; }
+
+        /// <summary>Toque en «Salto del Boto» en gris (rama D sin saldo): como <see cref="RescueMissing"/>.</summary>
+        public System.Action? SkipMissing { get; set; }
+
+        /// <summary>La etiqueta de «+3 Deshacer · 30 semillas» responde a un toque (tests).</summary>
+        internal NotePulse RefillSeedsPulse => _refillSeedsPulse;
+
+        /// <summary>«Te faltan {n} semillas» bajo el Salto del Boto responde a un toque (tests).</summary>
+        internal NotePulse SkipPulse => _skipPulse;
+
+        /// <summary>
+        /// Late la etiqueta de «+3 Deshacer · 30 semillas» en gris (no tiene línea «Te faltan»: su etiqueta lleva el precio). False si
+        /// no se ve o no está en gris.
+        /// </summary>
+        public bool PulseRefillSeedsMissing(bool reduceMotion)
+        {
+            return _view != null && _view.Undo == StuckUndoKind.Refill && _view.UndoRefillMissing > 0 && _refillSeedsPulse.Start(reduceMotion);
+        }
+
+        /// <summary>Late «Te faltan {n} semillas» bajo el Salto del Boto en gris. False si no se ve.</summary>
+        public bool PulseSkipMissing(bool reduceMotion)
+        {
+            return _view != null && _view.Skip.Offered && !_view.Skip.CanUse && _view.Skip.Missing > 0 && _skipPulse.Start(reduceMotion);
+        }
+
+        /// <summary>Avanza los latidos del modal.</summary>
         public void Tick(float dtMs)
         {
             _rescuePulse.Tick(dtMs);
+            _refillSeedsPulse.Tick(dtMs);
+            _skipPulse.Tick(dtMs);
         }
 
         /// <summary>Texto de la nota del rescate (descuento o «Te faltan»), o null.</summary>
@@ -348,6 +381,30 @@ namespace AF.UI
             }
 
             actions.PressRescue();
+        }
+
+        // «+3 Deshacer · 30 semillas»: en gris (sin saldo), nada se cobra y responde RefillSeedsMissing.
+        private void OnRefillSeeds(IGameActions actions)
+        {
+            if (_view != null && _view.Undo == StuckUndoKind.Refill && _view.UndoRefillMissing > 0)
+            {
+                RefillSeedsMissing?.Invoke();
+                return;
+            }
+
+            actions.PressUndoRefillSeeds();
+        }
+
+        // «Salto del Boto»: en gris por el saldo, no abre la confirmación y responde SkipMissing.
+        private void OnSkip(IGameActions actions)
+        {
+            if (_view != null && _view.Skip.Offered && !_view.Skip.CanUse && _view.Skip.Missing > 0)
+            {
+                SkipMissing?.Invoke();
+                return;
+            }
+
+            (actions as ISkipActions)?.PressSkip();
         }
 
         /// <summary>
@@ -403,7 +460,9 @@ namespace AF.UI
         // Ningún texto baja de 12 sp ni ningún botón de 48 dp.
         private void Lay(StuckModalView view, GameServices? services, float canvasW, bool compact)
         {
-            _rescuePulse.Stop(); // la nota vuelve a su sitio antes de recolocarla
+            _rescuePulse.Stop(); // las notas y la etiqueta vuelven a su sitio antes de recolocarlas
+            _refillSeedsPulse.Stop();
+            _skipPulse.Stop();
             _view = view;
             Compact = compact;
             _width = Mathf.Min(328f, canvasW - 32f);
@@ -466,6 +525,10 @@ namespace AF.UI
                 _refillVideoLabel.text = UiText.StuckRefillVideo(amount);
                 _refillSeedsLabel.text = UiText.StuckRefillSeeds(amount, view.UndoRefillPrice, view.UndoVideo);
                 UiBuilder.SetEnabled(_refillSeeds.Button, view.UndoRefillMissing == 0);
+                if (view.UndoRefillMissing > 0)
+                {
+                    _refillSeeds.Button.interactable = true; // gris, pero el toque responde (OnRefillSeeds)
+                }
                 if (view.UndoVideo)
                 {
                     // Las dos igual de altas: en la compacta, lo que pida la etiqueta más alta.
@@ -675,6 +738,10 @@ namespace AF.UI
             {
                 bool ready = view.Skip.CanUse;
                 UiBuilder.SetEnabled(_skip.Button, ready);
+                if (!ready && view.Skip.Missing > 0)
+                {
+                    _skip.Button.interactable = true; // gris por el saldo, pero el toque responde (OnSkip)
+                }
                 _skipPrice.Set(view.Skip.Price, 0, !ready);
                 // Como el rescate: la etiqueta a la izquierda del precio, con la medida de la disposición (compacta o de siempre; FX16a).
                 float inset = _skipPrice.Width + 36f;
