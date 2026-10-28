@@ -175,10 +175,12 @@ La app aún no existe en Play Console (D-034). Cuando el dueño la cree, en este
 1. **[dueño]** En Play Console, la app con el `applicationId` que se vaya a probar.
    - Regla dura 6: nunca el definitivo `com.<estudio>.tintalu` antes del dictamen.
    - Si se usa `com.amazonfill.dev` para la pista interna, lo decide el dueño, porque reserva ese nombre en la cuenta.
+   - (Con D-047 y D-059: el ID definitivo `com.parallext.tintalu` ya no espera al dictamen; la pista interna del dueño usa el AAB del Release firmado, que luego se promociona a producción.)
    - Los productos integrados con los ids `af_*` de 05 §4.1: tipo «producto integrado», **una sola oferta de compra** por producto (Q-BILL-3), precios por país de 05 §4.2, activos y sin compras de varias unidades (Q-BILL-4).
 2. **[dueño]** Licencias de prueba: Play Console › Configuración › Pruebas de licencias, con la cuenta de Google del teléfono.
 3. **[dueño]** Backend de dev desplegado (F4) y `google-services.json` de dev fuera del repo (D-039): sin `HttpBackendClient` el juego usa la tienda simulada.
 4. **[dueño]** Build firmado subido a la pista de prueba interna e instalado desde Play. Los agentes no suben nada.
+   - (Con D-059, 2026-10-28: **sigue valiendo, solo con el dueño** como único tester, nunca con jugadores. El AAB del Release firmado se sube a la pista interna; el dueño prueba ahí las compras con licencia de prueba y su verificación en el backend, PAD y Play Games, y esa misma versión se promociona a producción: `docs/dev/release.md` §4 bis.)
 5. Casos, con `adb logcat -s Unity` y las sondas `AF_STATE` de desarrollo. El plugin no escribe nada; el token y el UID nunca salen en el log.
    - Mercado: precio en la moneda de la cuenta (no el de 05) y «tienda no disponible» antes de que Play responda.
    - Compra con la tarjeta de prueba que **siempre aprueba**: «Confirmando…», crédito una vez y la compra consumida (se puede volver a comprar).
