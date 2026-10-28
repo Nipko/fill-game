@@ -250,7 +250,7 @@ check_zipalign_apk() {
   local out
   out="$("$ZIPALIGN_BIN" -c -P 16 -v 4 "$apk" 2>&1)"
   local rc=$?
-  if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'Verification successful'; then
+  if [ "$rc" -eq 0 ] && grep -q 'Verification successful' <<< "$out"; then
     printf '  [OK]    zipalign -c -P 16 -v 4 %s\n' "$label"
   else
     printf '  [FALLA] zipalign -c -P 16 -v 4 %s (salida %d)\n' "$label" "$rc"
