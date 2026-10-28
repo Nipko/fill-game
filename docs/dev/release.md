@@ -23,9 +23,10 @@ Los dos jobs de `release.yml` declaran `environment: release`. Es la barrera que
 | Environment `release` | Secreto | `ANDROID_KEYSTORE_PASS` | Contraseña del keystore | Ídem |
 | Environment `release` | Secreto | `ANDROID_KEYALIAS_NAME` | Alias de la clave de subida (recomendado `tintalu-upload`) | Ídem |
 | Environment `release` | Secreto | `ANDROID_KEYALIAS_PASS` | Contraseña de la clave (con PKCS12, la misma que la del keystore) | Ídem |
+| Environment `release` | Secreto | `GOOGLE_SERVICES_JSON_BASE64` | El `google-services.json` de prod (proyecto `tintalu`, app `com.parallext.tintalu`) en Base64 (§2 bis) | Ya puede crearse (añadido de D-035 del 2026-10-27) |
 | Repositorio (pestaña *Variables*; no es secreta) | Variable | `AF_RELEASE_APPLICATION_ID` | **`com.parallext.tintalu`** (D-047, confirmado por el dueño el 2026-10-25) | Ya puede crearse (D-047 retiró la espera al dictamen) |
 
-Los cuatro `ANDROID_*` **no** se crean como secretos del repositorio, solo en el Environment. Si GitHub no tiene el Environment `release`, lo crea vacío en la primera ejecución; el job `preflight` fallaría entonces con 5 (faltan los secretos), sin llegar a Unity.
+Los cuatro `ANDROID_*` y `GOOGLE_SERVICES_JSON_BASE64` **no** se crean como secretos del repositorio, solo en el Environment (siete secretos en total con los dos de Unity). Si GitHub no tiene el Environment `release`, lo crea vacío en la primera ejecución; el job `preflight` fallaría entonces con 5 (faltan los secretos), sin llegar a Unity.
 
 Sin `AF_RELEASE_APPLICATION_ID`, con `com.amazonfill.dev` o con un ID que lleve «amazon», el workflow falla en el primer job, sin pedir la licencia de Unity. Mientras la variable no exista, el job `build-android` de `ci.yml` sigue construyendo un ensayo con la identidad de prueba. Cuando exista, ese job construye el release con el ID definitivo, firmado con la clave de depuración, y solo `release.yml` lo firma con la de subida.
 
@@ -51,6 +52,21 @@ Para el secreto `ANDROID_KEYSTORE_BASE64`, en PowerShell:
 
 Pega el valor en el secreto y vacía el portapapeles. No lo guardes en un archivo.
 
+## 2 bis. `google-services.json` de prod (secreto `GOOGLE_SERVICES_JSON_BASE64`)
+
+Sin él, el AAB de release sale sin Firebase: el juego usa `UnavailableBackendClient` (la tienda no vende) y no hay Analytics, Crashlytics, Remote Config ni Auth (`docs/dev/firebase-cliente.md` §3). Es el archivo que descargaste de la consola de Firebase, proyecto `tintalu` (número 459140125724), app Android `com.parallext.tintalu` (ID `1:459140125724:android:810c83a65d0ff611f07bd9`). Crea el secreto en **Settings › Environments › release › Environment secrets › Add secret**, con el nombre `GOOGLE_SERVICES_JSON_BASE64` y como valor el archivo en Base64, en una sola línea:
+
+- Git Bash: `base64 -w0 /c/ruta/google-services.json | clip` (sin `-w0`, `base64` parte la salida en líneas de 76 caracteres).
+- PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\ruta\google-services.json")) | Set-Clipboard`
+
+Pega el valor en el secreto y vacía el portapapeles; no lo guardes en un archivo. Si regeneras el `google-services.json` (por ejemplo, al añadir el SHA de Play App Signing a la app de Firebase), vuelve a crear el secreto: el archivo cambia aunque el ID de app siga igual.
+
+Qué hace el workflow con él:
+
+- **`preflight`:** `ci/release-preflight.sh` lo decodifica en memoria y comprueba, sin imprimir el contenido, que es JSON con `project_info.project_number` y que tiene un cliente Android con `package_name` igual a `AF_RELEASE_APPLICATION_ID` cuyo `mobilesdk_app_id` es de ese proyecto (código 7 si no; 8 si falta python). Solo imprime el número de proyecto y el ID de app, que son públicos, y los pasa al job `build`.
+- **`build`:** lo escribe con `umask 077` en `Assets/_LocalSecrets/google-services.json` (la ruta de `docs/dev/firebase-cliente.md` §2; el paso falla si `git check-ignore` deja de cubrirla) justo antes del paso de Unity. El editor de Firebase genera de él `Assets/Plugins/Android/FirebaseApp.androidlib` con el `applicationId` que fija `BuildRelease`. Tras el build se comprueba que esa carpeta existe y `ci/check-firebase-config.sh` lee del AAB `google_app_id` y `gcm_defaultSenderId` (con `bundletool dump resources`) y los compara con el ID de app y el número de proyecto del preflight. Nunca lee `google_api_key`. Al acabar, con `if: always()`, se borran el archivo, `FirebaseApp.androidlib` y `StreamingAssets/google-services-desktop.json` (con sus `.meta`).
+- No cae en ninguna caché: la de `Library` solo se restaura y la de LFS solo guarda `.git/lfs`. El artefacto solo lleva el `.aab`.
+
 ## 3. Play App Signing (08 §13.1 #3)
 
 1. Al crear la app en Play Console (ya sin esperar al dictamen, D-047), deja activado **Play App Signing** con la clave de firma de la app **generada por Google**: es la opción recomendada.
@@ -75,6 +91,9 @@ Pega el valor en el secreto y vacía el portapapeles. No lo guardes en un archiv
 | `build` (Unity, `unity-personal-seat`) | `BuildRelease.BuildAndroid -afRequireSigning` | firma incompleta o keystore inexistente (código 9 del método); identidad (7); textos (6), etc. |
 | | `ci/check-release-signature.sh` | AAB sin firma, con la clave de depuración o con otra clave |
 | | Identidad y versión del manifiesto | `package`, `versionCode` o `versionName` distintos de los pedidos |
+| `preflight` | `ci/release-preflight.sh` (google-services.json) | `GOOGLE_SERVICES_JSON_BASE64` falta (5), no es Base64 o JSON, no tiene `project_number`, no tiene el cliente de `AF_RELEASE_APPLICATION_ID` o su ID de app es de otro proyecto (7); falta python (8) |
+| `build` | `FirebaseApp.androidlib` existe | el editor de Firebase no generó la configuración |
+| | `ci/check-firebase-config.sh` | el AAB no lleva `google_app_id` y `gcm_defaultSenderId`, o no son los del preflight (1); bundletool no lee el AAB (3) |
 | | `size-gate -RequireBundletool`, `check-16kb` con `CHECK16_REQUIRE_ZIPALIGN=1`, `check-manifest -Mode release -RequireBilling`, `check-release-classes`, `check-no-unity-iap` | las compuertas de release de 08 §12.1 etapa 4 |
 
 ## 5. Cómo se protege la clave
@@ -88,6 +107,7 @@ Pega el valor en el secreto y vacía el portapapeles. No lo guardes en un archiv
 ## 6. Pendiente de comprobar en la primera ejecución
 
 - **Resuelto el 2026-10-27:** game-ci/unity-builder v6.0.0 **no** monta `$RUNNER_TEMP/_github_home` como `/root` (la primera ejecución salió con 9, «no existe el keystore»); el keystore va ahora en `.af-signing/` dentro del workspace. Sí pasa `ANDROID_KEYSTORE_*` al contenedor. Si no lo hace, `BuildRelease` sale con 9 («no existe el keystore»): falla cerrado y no produce un AAB sin firmar.
+- **Pendiente desde el 2026-10-27 (`google-services.json`):** que el editor de Firebase regenere `FirebaseApp.androidlib` dentro del contenedor de game-ci con el `applicationId` de release. Lo hace con `generate_xml_from_google_services_json.py`, que necesita Python en la imagen `unityci/editor`, y si solo lo generara con el ID del proyecto (`com.amazonfill.dev`, que no está en el archivo de prod) fallaría. En los dos casos el AAB sale sin `google_app_id` y la compuerta de Firebase falla cerrada: no se publica un release sin Firebase.
 - El tiempo del job `build`, unos 30-60 min de los 2.000 al mes, como `build-android`.
 
 ## 7. Primera ejecución completa (2026-10-27)
