@@ -1,0 +1,5 @@
+key,es-419,en,pt-BR,status_en,status_pt-BR
+consent_age_confirm_back,Volver a elegir,Choose again,Escolher de novo,revisado_nativo,revisado_nativo
+consent_age_confirm_body,Elegiste: {band}. La edad solo se puede corregir una vez y no se puede deshacer.,"You chose: {band}. Your age can only be corrected once, and this can't be undone.",Você escolheu: {band}. A idade só pode ser corrigida uma vez e não dá para desfazer.,revisado_nativo,revisado_nativo
+consent_age_confirm_ok,Confirmar,Confirm,Confirmar,revisado_nativo,revisado_nativo
+consent_age_confirm_title,Corregir mi edad,Correct my age,Corrigir minha idade,revisado_nativo,revisado_nativo
