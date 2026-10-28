@@ -4367,3 +4367,20 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **Sondas:** `AF_STATE brand_intro` con `anim_ms` 3.500 y, nuevos, `visible_ms` y `visible_by` (`gpu`, `cap` o `no_readback`), `play_ms`, `motion_frames`, `frame_p95_ms` y `frame_max_ms` (sin las pausas de más de 500 ms, como volver de segundo plano) y `motion_pauses`; `AF_PERF boot_steps` con `visible_ms`, `play_ms`, `motion_hold_ms`, `proc_awake_ms` (del arranque del proceso al Awake) y `proc_visible_ms` (del arranque del proceso al primer fotograma de la intro en la pantalla). Valores esperados en el teléfono: `motion_frames` ≈ 170-175 a 60 Hz, `frame_p95_ms` ≤ 20, `frame_max_ms` ≤ 40, `motion_pauses` 0, `motion_hold_ms` ≈ 2.900, `visible_by` `gpu`. **Cómo leer el hueco:** si `proc_visible_ms` cae donde acaba el petróleo liso de la ráfaga y `visible_ms` − `first_frame_ms` ronda 1 s, es la GPU del primer fotograma; si `proc_awake_ms` ya ronda el final del hueco, es el arranque del motor.
 - **Carril:** `tanda6/fx-j4-intro`.
 - **Cómo revertir:** con una decisión nueva del dueño.
+
+### D-040, añadido del 2026-10-28: el runtime de Unity no envía datos en release (Q-B13-9)
+
+Cierra el «pendiente aparte» de D-040 y Q-B13-9 con lo decidido (a): build-release comprueba que todo está apagado en release y Data Safety no lleva fila de Unity. Carril `tanda6/release-unity-analytics`.
+
+- **Ajustes del proyecto (leídos, sin tocar):** en `UnityConnectSettings.asset`, los servicios (`m_Enabled`), Unity Analytics, Cloud Diagnostics (`m_EnableCloudDiagnosticsReporting`), Performance Reporting, Unity Ads del motor y Purchasing, todos a 0; `cloudProjectId` y `organizationId` vacíos y `cloudEnabled: 0`. Quedan a 1 `InsightsSettings.m_EngineDiagnosticsEnabled` y `submitAnalytics` de `ProjectSettings.asset`.
+- **Lo que lleva el AAB de release** (run 40662873429, de `main` en 7ca60990; inspeccionado sin Unity):
+  - `globalgamemanagers` no lleva el objeto `UnityConnectSettings` (clase 310), que es donde están las URL de eventos, configuración y fallos y si cada servicio está activo;
+  - ningún dex, `.so`, `global-metadata.dat` ni archivo de `assets/bin/Data` lleva `cloud.unity3d.com` (`config.uca`, `cdp`, `api.uca`, `perf-events`) ni `services.api.unity.com`; `libunity.so` no trae ninguna URL de Unity propia;
+  - los únicos hosts de Unity son `gateway.unityads.unity3d.com` y `webview.unityads.unity3d.com`, de Unity Ads (D-049), que ya tiene su fila; `com/unity3d/services/` y `com.unity3d.coherence` (`libunitycoherencenative.so`) son del SDK de Unity Ads;
+  - sí van el código del módulo (`UnityEngine.UnityAnalyticsModule`, `CrashReportingModule`, `PerformanceReportingModule`, `InsightsModule` y la actualización `AnalyticsCoreStatsUpdate`) y, en el dex del player, los ayudantes de `ApplicationExitInfo`. Sin configuración ni host no tienen a dónde enviar.
+- **Conclusión:** en release, el runtime de Unity no envía datos a Unity. Data Safety no lleva fila por él.
+- **Compuerta:** `ci/check-no-unity-telemetry.ps1`, en `build-android` de `ci.yml` y en `release.yml`, con `--self-test`. Falla (1) si el AAB lleva la clase 310 en `globalgamemanagers` o uno de esos hosts, y sale con 2, sin dar OK, si no sabe leer el `globalgamemanagers`. No cuenta Unity Ads.
+- **Límite:** es una prueba estática del artefacto, no una captura de red en el teléfono. Si el dueño quiere más certeza, puede mirar las DNS de la app con PCAPdroid durante una partida del build de release.
+- **Pendiente del dueño (propuestas, sin aplicar):**
+  1. Apagar también los dos interruptores que quedan a 1 (Engine Diagnostics y `submitAnalytics`) con un método versionado en `ProjectSetup`, y que `Validate` lo exija. No cambia el AAB de hoy, pero quita la duda en el origen. Necesita un Editor para compilarlo y aplicarlo.
+  2. Quitar `com.unity.modules.unityanalytics` de `Packages/manifest.json`. Cambia paquetes y exige un build y la prueba de que ningún paquete lo usa. No hace falta para Data Safety.

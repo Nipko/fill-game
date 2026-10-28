@@ -14,7 +14,8 @@
 #   build      AF.EditorTools.BuildRelease.BuildAndroid -afRequireSigning (IL2CPP ARM64, Managed Stripping High, sin
 #              Development Build) y las compuertas: size-gate -RequireBundletool, check-16kb con
 #              CHECK16_REQUIRE_ZIPALIGN=1, check-manifest -Mode release -RequireBilling, check-release-classes,
-#              check-no-unity-iap, check-no-applovin (D-049, anadido del 2026-10-27), applicationId y version del
+#              check-no-unity-iap, check-no-applovin (D-049, anadido del 2026-10-27), check-no-unity-telemetry
+#              (Q-B13-9, anadido de D-040 del 2026-10-28), applicationId y version del
 #              manifiesto, la firma (ci/check-release-signature.sh) y la configuracion de Firebase de prod
 #              (ci/check-firebase-config.sh: google_app_id y gcm_defaultSenderId del AAB; anadido de D-035 del 2026-10-27).
 #
@@ -308,6 +309,9 @@ jobs:
 
       - name: Compuerta sin AppLovin MAX (com.applovin ni libapplovin)
         run: pwsh -NoProfile -File ci/check-no-applovin.ps1 build/Android
+
+      - name: Compuerta sin servicios de datos de Unity (Analytics, Cloud Diagnostics, Performance Reporting, UGS)
+        run: pwsh -NoProfile -File ci/check-no-unity-telemetry.ps1 build/Android
 
       # Artefacto de la ejecucion; NO se sube a Google Play (lo hace el dueno a mano).
       - name: AAB de release

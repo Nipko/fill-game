@@ -27,8 +27,9 @@
 #   build-android solo en main (o a mano): AAB sin firma de release con AF.EditorTools.BuildRelease, IL2CPP ARM64 y
 #                 Managed Stripping High, y las compuertas size-gate (<= 80 MB), check-16kb, check-manifest y
 #                 check-release-classes (sin firebase-appcheck-debug; D-033, anadido del 2026-10-22, punto 9) y
-#                 check-no-unity-iap (sin Unity IAP ni su telemetria; D-040, anadido de Q-IAP-1) y check-no-applovin
-#                 (sin AppLovin MAX; D-049, anadido del 2026-10-27).
+#                 check-no-unity-iap (sin Unity IAP ni su telemetria; D-040, anadido de Q-IAP-1), check-no-applovin
+#                 (sin AppLovin MAX; D-049, anadido del 2026-10-27) y check-no-unity-telemetry (sin Unity Analytics,
+#                 Cloud Diagnostics, Performance Reporting ni UGS; Q-B13-9, anadido de D-040 del 2026-10-28).
 #
 # Licencia Personal: solo los secretos UNITY_EMAIL y UNITY_PASSWORD (los crea el dueno; aqui solo se referencian) y
 # los jobs de Unity en serie (concurrency unity-personal-seat). Sin keystore: el AAB va firmado con la clave de
@@ -417,6 +418,11 @@ jobs:
       # ni libapplovin-native-crash-reporter.so, ni su plugin de C# vuelven a entrar en el AAB.
       - name: Compuerta sin AppLovin MAX (com.applovin ni libapplovin)
         run: pwsh -NoProfile -File ci/check-no-applovin.ps1 build/Android
+
+      # Q-B13-9 (anadido de D-040 del 2026-10-28): Data Safety no declara a Unity; el AAB no lleva UnityConnectSettings
+      # (clase 310, la configuracion de Analytics, Cloud Diagnostics y Performance Reporting) ni hosts de datos de Unity.
+      - name: Compuerta sin servicios de datos de Unity (Analytics, Cloud Diagnostics, Performance Reporting, UGS)
+        run: pwsh -NoProfile -File ci/check-no-unity-telemetry.ps1 build/Android
 
       - name: AAB
         uses: actions/upload-artifact@v4.6.2
