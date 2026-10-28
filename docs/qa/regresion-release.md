@@ -1,6 +1,6 @@
 # Lista de regresión de release (60 casos) · BORRADOR
 
-- **Qué es:** la «Regresión de release» de 08 §14.3: 60 casos manuales que se pasan en el teléfono antes de cada build de release (pista interna, prueba cerrada y producción). Cubre lo que pide 08 §14.3 (HUD, modal, Mercado, Bitácora, Canasta, Reto del río, cambio de idioma, notificaciones locales, segundo plano a mitad de vertido, pérdida de red durante compra y durante anuncio) y el resto de la 1.0. Borrador del bloque B13 de la tanda 5 (2026-10-20).
+- **Qué es:** la «Regresión de release» de 08 §14.3: 60 casos manuales que se pasan en el teléfono antes de cada build de release (pista interna, prueba cerrada y producción). Con D-059 (2026-10-28), la 1.0 no pasa por prueba cerrada y la pista interna es solo del dueño: la regresión se pasa con el ensayo de release (`BuildRelease.BuildAndroid -afRehearsal`) del mismo commit, antes de lanzar el Release firmado (`release.yml`), cuyo AAB el dueño prueba en la pista interna y promociona a producción. Cubre lo que pide 08 §14.3 (HUD, modal, Mercado, Bitácora, Canasta, Reto del río, cambio de idioma, notificaciones locales, segundo plano a mitad de vertido, pérdida de red durante compra y durante anuncio) y el resto de la 1.0. Borrador del bloque B13 de la tanda 5 (2026-10-20).
 - **No sustituye** a las suites automáticas de 08 §14.2 (EditMode, PlayMode, `tools/level-qa`, capturas): aquí va lo que solo se ve en un teléfono real.
 - **Dispositivos (08 §14.1):** como mínimo uno de clase A (gama baja, Android 8-11, 3 GB) y uno de clase C (Android 16, target API 36); las pantallas, 360 × 800 (20:9) y una 16:9. El teléfono de pruebas del dueño (Samsung SM-S938B, Android 16) es de clase C.
 - **Cifras:** los defaults de la tabla única de Remote Config (08 §9). Si Remote Config cambia un valor, el caso usa el valor activo.
@@ -124,5 +124,5 @@
 
 ## Fuera de esta lista (08 §14.3, otras fases)
 
-- **Pista interna:** restauración en un segundo dispositivo, PAD con Wi-Fi apagado, consentimiento por país con VPN, ATT (iOS).
-- **Prueba cerrada LatAm:** crash-free ≥ 99,5 % [P], FPS en clase A, legibilidad de los 14 tintes con simulador de daltonismo, embudo 1-30, comprensión de «El río bajó» y de las etiquetas.
+- **Pista interna** (con D-059: sigue valiendo, solo con el dueño como único tester; `docs/dev/iap.md` §3)**:** restauración en un segundo dispositivo, PAD con Wi-Fi apagado, consentimiento por país con VPN, ATT (iOS).
+- **Prueba cerrada LatAm** (con D-059: no la hay en la 1.0; se ve en la prueba completa en el teléfono y, tras el lanzamiento, en Crashlytics y Analytics)**:** crash-free ≥ 99,5 % [P], FPS en clase A, legibilidad de los 14 tintes con simulador de daltonismo, embudo 1-30, comprensión de «El río bajó» y de las etiquetas.

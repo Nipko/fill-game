@@ -2,7 +2,7 @@
 
 Fuentes: `docs/setup/plan-instalacion.md` (s31-s32), GDD 08 §12.1 (etapas 3-5) y §13.1 #1 y #3, D-034 y D-041; reglas en `.claude/rules/ci.md` y `CLAUDE.md` (reglas duras 5 y 6).
 
-El workflow `.github/workflows/release.yml` construye el AAB de release **firmado con la clave de subida**, lo pasa por las compuertas de release y lo deja como artefacto de la ejecución. **No lo sube a Google Play**: la subida la hace el dueño a mano en Play Console, y la primera espera al dictamen de marca (08 §13.1 #1).
+El workflow `.github/workflows/release.yml` construye el AAB de release **firmado con la clave de subida**, lo pasa por las compuertas de release y lo deja como artefacto de la ejecución. **No lo sube a Google Play**: la subida la hace el dueño a mano en Play Console: primero a la pista interna, con él como único tester, y de ahí, la misma versión, a producción al 100 % con la publicación administrada (D-059; §4 bis). D-047 retiró la espera al dictamen de marca.
 
 ## 1. Qué crea el dueño en GitHub
 
@@ -82,6 +82,28 @@ Qué hace el workflow con él:
 2. `versionName`: `MAYOR.MENOR.PARCHE`, por ejemplo `1.0.0`.
 3. `versionCode`: vacío aplica la regla `MAYOR*10000 + MENOR*100 + PARCHE`; `1.0.0` da 10000. Para reconstruir la misma versión hace falta un código mayor: Play rechaza un `versionCode` ya subido. Con MENOR o PARCHE por encima de 99, indícalo a mano.
 4. Al terminar, descarga el artefacto `android-aab-release-<versionName>-<versionCode>`, que se guarda 30 días, y súbelo tú a Play Console.
+
+## 4 bis. Lanzamiento de la 1.0: pista interna solo con el dueño y producción al 100 % con publicación administrada (D-059)
+
+Sin pistas con jugadores (cerrada, abierta) y sin escalonado; la pista interna, solo con el dueño como único tester (08 §13.1 #19-#22). Orden:
+1. **Antes de lanzar `release.yml`:** la regresión de release (`docs/qa/regresion-release.md`) en el teléfono, con el ensayo de release (`scripts/unity-build.ps1 -Method Release -Rehearsal -Apk`) del mismo commit de `main`.
+2. **Release firmado** (§4) desde ese commit. Para la 1.0, `versionName` `1.0.0` y `versionCode` vacío (10000). El AAB de 10000 del run 40630794359, del 2026-10-28, no se subió, así que ese número sigue libre.
+3. **En Play Console, antes de enviar nada a revisión:** «Resumen de publicación» › **«Publicación administrada»**, activada. Así, cuando Google apruebe la versión, no sale sola.
+4. **Pista interna, solo tú:** en «Pruebas internas», una lista de testers con **solo tu cuenta** (nunca jugadores) y una versión con el AAB del paso 2. Instálala desde Play con el enlace de participación y prueba, siguiendo `docs/dev/iap.md` §3:
+   - las compras con licencia de prueba («Pruebas de licencias» con tu cuenta) y su verificación en el backend **de prod** (el AAB lleva Firebase de prod). Antes de probarlas: `af-prod/play-service-account` cargado en AWS e invitado en Play Console con sus permisos, `af-prod/firebase-admin-service-account` cargado (borrado de cuenta), y App Check con Play Integrity y la SHA-256 de la firma de Play, que aparece tras esta primera subida (`docs/dev/iap.md` §3, paso 3; 08 §13.1 #18). Sin el primero no se acredita ninguna compra;
+   - PAD;
+   - Play Games.
+
+   Si algo falla, se corrige y se vuelve al paso 1 con un `versionCode` mayor.
+5. Con la ficha, la clasificación de contenido, Data Safety, el público objetivo, los anuncios y los países completos (08 §13.1; los países, D-057), **promociona a Producción** la versión de la pista interna que pasó la prueba:
+   - es el mismo AAB y el mismo `versionCode`: no subas otro build;
+   - pon las notas de la versión;
+   - disponibilidad: **100 %**, nunca un porcentaje menor;
+   - envía a revisión.
+
+   La primera revisión de una app nueva puede tardar varios días.
+6. **Aprobada**, en «Resumen de publicación» › **«Publicar cambios»**, el día y a la hora que elijas: sale entera en todos los países a la vez.
+7. Después: 08 §13.1 #23 (`app-ads.txt`, alertas de Crashlytics y de Play), y vigilar las métricas de #21 desde el primer día. Si hace falta frenar, primero Remote Config (`biz_feature_*`, `mech_enabled_*`); detener la versión en Play no la retira de quien ya la instaló.
 
 ### Qué comprueba
 
