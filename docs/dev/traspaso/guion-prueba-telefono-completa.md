@@ -36,7 +36,7 @@ Aquí entra todo.
 
 **Punto de partida:** `integracion-fase1-fase2` en el commit que trae este encargo o uno posterior (`git pull`); el `dev.apk` y el ensayo de release se construyen de nuevo desde ahí. La jornada 5 (`pruebas-telefono-2026-10-28-completa-j5.md`) salió casi limpia: sus observaciones 1, 2, 5 y 6 se arreglan en los carriles `tanda6/fx-j5-arranque` y `tanda6/fx-j5-ui`, ya integrados; la 3 y la 4 no son defectos.
 
-**Orden:** el bloque 0; N6 entero (lo nuevo); después, lo que la jornada 5 dejó pendiente: el bloque 6 del 188 al 700 (el jugador automático), los bloques 5, 8 a 19, 21, 22 y 23, y lo que hace el dueño (TalkBack, Reducir movimiento, dos dedos, la mirada a la intro). La hoja es `pruebas-telefono-<fecha>-completa-j6.md`. Las compras de verdad siguen fuera: se prueban en la pista interna con el AAB firmado (D-059).
+**Orden:** el bloque 0; N6 entero (lo nuevo); después, lo que la jornada 5 dejó pendiente (su bloque 6, el jugador automático, ya cumplió 308/308): los bloques 5, 8 a 19, 21, 22 y 23, y lo que hace el dueño (TalkBack, Reducir movimiento, dos dedos, la mirada a la intro). La hoja es `pruebas-telefono-<fecha>-completa-j6.md`. Las compras de verdad siguen fuera: se prueban en la pista interna con el AAB firmado (D-059).
 
 **Antes de publicar:** el Release definitivo no se lanza hasta que N6 confirme en el teléfono la pantalla del sistema hasta la intro (`os_splash_release` = `signal` y `os_splash_by` = `intro` en la primera apertura, en frío y en el ensayo). Si sale `cap`, se anota con su ráfaga y se revierte quitando `AfSplashHold.androidlib`.
 
