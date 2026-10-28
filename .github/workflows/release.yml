@@ -7,16 +7,21 @@
 #
 #   preflight  sin Unity ni licencia (1 min): rama main, applicationId de la variable de repositorio
 #              AF_RELEASE_APPLICATION_ID (falla cerrado si falta, si es el provisional com.amazonfill.dev o si lleva
-#              "amazon"), los seis secretos presentes, versionName y versionCode validos, y el keystore se abre con su
-#              contrasena y tiene el alias (ci/release-preflight.sh y ci/check-release-signature.sh --keystore-only).
+#              "amazon"), los siete secretos presentes, google-services.json de prod valido (JSON con project_number y
+#              un cliente Android con ese applicationId; solo se imprimen el numero de proyecto y el ID de app),
+#              versionName y versionCode validos, y el keystore se abre con su contrasena y tiene el alias
+#              (ci/release-preflight.sh y ci/check-release-signature.sh --keystore-only).
 #   build      AF.EditorTools.BuildRelease.BuildAndroid -afRequireSigning (IL2CPP ARM64, Managed Stripping High, sin
 #              Development Build) y las compuertas: size-gate -RequireBundletool, check-16kb con
 #              CHECK16_REQUIRE_ZIPALIGN=1, check-manifest -Mode release -RequireBilling, check-release-classes,
-#              check-no-unity-iap, check-no-applovin (D-049, anadido del 2026-10-27), applicationId y version del manifiesto, y la firma (ci/check-release-signature.sh).
+#              check-no-unity-iap, check-no-applovin (D-049, anadido del 2026-10-27), applicationId y version del
+#              manifiesto, la firma (ci/check-release-signature.sh) y la configuracion de Firebase de prod
+#              (ci/check-firebase-config.sh: google_app_id y gcm_defaultSenderId del AAB; anadido de D-035 del 2026-10-27).
 #
 # Secretos (los crea el dueno; aqui solo se referencian, nunca con echo): UNITY_EMAIL y UNITY_PASSWORD en el
-# repositorio; ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASS, ANDROID_KEYALIAS_NAME y ANDROID_KEYALIAS_PASS en el
-# Environment "release" de GitHub (limitado a main y, si el dueno quiere, con un revisor obligatorio). Los dos jobs
+# repositorio; ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASS, ANDROID_KEYALIAS_NAME, ANDROID_KEYALIAS_PASS y
+# GOOGLE_SERVICES_JSON_BASE64 (google-services.json de prod, proyecto tintalu, en base64) en el Environment "release"
+# de GitHub (limitado a main y, si el dueno quiere, con un revisor obligatorio): siete secretos en total. Los dos jobs
 # declaran environment: release: es la barrera que no depende del contenido de este archivo, porque los secretos del
 # Environment solo llegan a jobs de main que lo declaran (y, con revisor, tras su aprobacion).
 # Variable de repositorio (no secreta): AF_RELEASE_APPLICATION_ID, solo tras el dictamen de marca (D-034, D-041).
@@ -26,6 +31,12 @@
 # la de LFS solo guarda .git/lfs), porque el contenedor de game-ci v6 solo ve el workspace, en /github/workspace (no
 # monta $RUNNER_TEMP/_github_home como /root: primera ejecucion del 2026-10-27, codigo 9). Se borra al acabar (paso con
 # if: always()). Las contrasenas llegan a BuildRelease por las variables ANDROID_* que game-ci pasa al contenedor.
+#
+# google-services.json de prod (sin el, el release arranca sin Firebase: UnavailableBackendClient, la tienda no vende):
+# se escribe con umask 077 en Assets/_LocalSecrets/ (ignorado por git, la ruta del editor de Firebase;
+# docs/dev/firebase-cliente.md sec. 2) justo antes del build y se borra al acabar (if: always()) junto con lo que genera
+# el editor de Firebase (FirebaseApp.androidlib y StreamingAssets/google-services-desktop.json, con las claves del
+# proyecto). No cae en ninguna cache: la de Library solo se restaura y la de LFS solo guarda .git/lfs.
 #
 # Cache de Library: SOLO se restaura (actions/cache/restore), nunca se guarda: Unity escribe la configuracion de firma,
 # contrasenas incluidas, en el proyecto Gradle de Library/Bee, y una cache guardada la podria leer cualquier workflow
@@ -65,13 +76,15 @@ jobs:
       application_id: ${{ steps.check.outputs.application_id }}
       version_name: ${{ steps.check.outputs.version_name }}
       version_code: ${{ steps.check.outputs.version_code }}
+      firebase_project_number: ${{ steps.check.outputs.firebase_project_number }}
+      firebase_app_id: ${{ steps.check.outputs.firebase_app_id }}
     steps:
       - uses: actions/checkout@v4.2.2
         with:
           lfs: false
 
       - id: check
-        name: Rama, applicationId, secretos y version
+        name: Rama, applicationId, secretos, google-services.json y version
         env:
           AF_GIT_REF: ${{ github.ref }}
           AF_RELEASE_APPLICATION_ID: ${{ vars.AF_RELEASE_APPLICATION_ID }}
@@ -83,6 +96,7 @@ jobs:
           ANDROID_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
           ANDROID_KEYALIAS_NAME: ${{ secrets.ANDROID_KEYALIAS_NAME }}
           ANDROID_KEYALIAS_PASS: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
         run: bash ci/release-preflight.sh
 
       - uses: actions/setup-java@v4.7.1
@@ -119,6 +133,8 @@ jobs:
       AF_APPLICATION_ID: ${{ needs.preflight.outputs.application_id }}
       AF_VERSION_NAME: ${{ needs.preflight.outputs.version_name }}
       AF_VERSION_CODE: ${{ needs.preflight.outputs.version_code }}
+      AF_FIREBASE_PROJECT_NUMBER: ${{ needs.preflight.outputs.firebase_project_number }}
+      AF_FIREBASE_APP_ID: ${{ needs.preflight.outputs.firebase_app_id }}
       BUNDLETOOL_VERSION: 1.17.2
       # sha256 de bundletool-all-1.17.2.jar (el mismo que en ci.yml).
       BUNDLETOOL_SHA256: 2d4ad908faea64047c1cc9cb747e6aa667c6ab192e09607bd16b67246a8cd6ae
@@ -170,6 +186,23 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/.af-signing"
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/.af-signing/af-upload.keystore"
           test -s "$GITHUB_WORKSPACE/.af-signing/af-upload.keystore"
+
+      # El editor de Firebase lo convierte en Assets/Plugins/Android/FirebaseApp.androidlib durante el build (con el
+      # applicationId que fija BuildRelease); la compuerta de Firebase de abajo comprueba el resultado en el AAB.
+      - name: google-services.json de prod en Assets/_LocalSecrets (ignorado por git)
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          gs="$GITHUB_WORKSPACE/Assets/_LocalSecrets/google-services.json"
+          # Falla cerrado si .gitignore dejara de cubrirlo.
+          git check-ignore -q "Assets/_LocalSecrets/google-services.json" || { echo "Assets/_LocalSecrets/google-services.json no esta ignorado por git" >&2; exit 1; }
+          mkdir -p "$(dirname "$gs")"
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > "$gs"
+          test -s "$gs"
+          # El contenedor de game-ci corre como root y lo lee igual; nadie mas en el runner.
+          ls -l "$gs" | cut -d' ' -f1
 
       # game-ci v6 sale con 1 aunque el build termine bien: falla al devolver la licencia Personal por derechos
       # («Serial number unavailable for ULF return»; primera ejecucion completa, 2026-10-27: [AF.BuildRelease] OK,
@@ -224,6 +257,16 @@ jobs:
           fi
           echo "AF_AAB=${aabs[0]}" >> "$GITHUB_ENV"
 
+      - name: El editor de Firebase genero FirebaseApp.androidlib
+        run: |
+          set -euo pipefail
+          lib="$GITHUB_WORKSPACE/Assets/Plugins/Android/FirebaseApp.androidlib"
+          if [ ! -d "$lib" ]; then
+            echo "No existe $lib: el build no tomo google-services.json (el AAB saldria sin Firebase)." >&2
+            exit 1
+          fi
+          echo "FirebaseApp.androidlib presente."
+
       - name: Compuerta de firma (clave de subida, no la de depuracion)
         env:
           ANDROID_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
@@ -241,6 +284,9 @@ jobs:
           [ "$pkg" = "$AF_APPLICATION_ID" ] || { echo "package $pkg distinto de $AF_APPLICATION_ID" >&2; exit 1; }
           [ "$code" = "$AF_VERSION_CODE" ] || { echo "versionCode $code distinto de $AF_VERSION_CODE" >&2; exit 1; }
           [ "$name" = "$AF_VERSION_NAME" ] || { echo "versionName $name distinto de $AF_VERSION_NAME" >&2; exit 1; }
+
+      - name: Compuerta de Firebase (google_app_id y numero de proyecto de prod en el AAB)
+        run: bash ci/check-firebase-config.sh "$AF_AAB"
 
       - name: Compuerta de tamano (<= 80 MB, bundletool get-size total)
         run: pwsh -NoProfile -File ci/size-gate.ps1 build/Android -RequireBundletool -Breakdown
@@ -279,3 +325,20 @@ jobs:
             shred -u "$ks" 2> /dev/null || rm -f "$ks"
           fi
           test ! -e "$ks"
+
+      # Lo que genero el contenedor de game-ci es de root: por eso sudo.
+      - name: Borrar google-services.json y lo que genera de el el editor de Firebase
+        if: always()
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          gs=Assets/_LocalSecrets/google-services.json
+          if [ -f "$gs" ]; then
+            sudo shred -u "$gs" 2> /dev/null || sudo rm -f "$gs"
+          fi
+          sudo rm -rf Assets/_LocalSecrets Assets/_LocalSecrets.meta \
+            Assets/Plugins/Android/FirebaseApp.androidlib Assets/Plugins/Android/FirebaseApp.androidlib.meta \
+            Assets/StreamingAssets/google-services-desktop.json Assets/StreamingAssets/google-services-desktop.json.meta
+          test ! -e "$gs"
+          test ! -e Assets/Plugins/Android/FirebaseApp.androidlib
+          test ! -e Assets/StreamingAssets/google-services-desktop.json

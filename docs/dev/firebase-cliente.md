@@ -26,6 +26,7 @@ Regla dura 5: **ningún agente lo lee, lo crea, lo imprime ni lo commitea.**
 - Lo cubren en `.gitignore` las reglas `/[Aa]ssets/_LocalSecrets/` y `/[Aa]ssets/_LocalSecrets.meta` (después de la regla que versiona los `.meta`, para que ganen), además de la regla general `google-services.json`. Compruébalo con `git check-ignore -v Assets/_LocalSecrets/google-services.json`.
 - El editor de Firebase lo convierte en cada build en `Assets/Plugins/Android/FirebaseApp.androidlib/` (recursos con las claves del proyecto) y en la copia de escritorio `Assets/StreamingAssets/google-services-desktop.json`, las dos ignoradas (con sus `.meta`). Crashlytics deja su id de build en `Assets/Plugins/Android/FirebaseCrashlytics.androidlib/` (ignorado). EDM4U puede crear `Assets/GeneratedLocalRepo/` (ignorado).
 - Prod: no hay proyecto de prod todavía (D-035, «Pendiente para prod»). Un build de release con el de dev no sirve para Play.
+- Release firmado del CI (añadido de D-035 del 2026-10-27): `release.yml` escribe aquí el de prod desde el secreto `GOOGLE_SERVICES_JSON_BASE64` del Environment `release` y lo borra al acabar; `ci/check-firebase-config.sh` comprueba en el AAB el `google_app_id` de prod (`docs/dev/release.md` §2 bis).
 
 ## 3. Qué pasa sin el archivo
 
