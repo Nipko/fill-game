@@ -101,6 +101,26 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void FirebaseConfig_RegeneratesInReleaseAndFailsClosedInTheSignedOne()
+        {
+            System.Func<string, bool> withJson = p => p == BuildRelease.GoogleServicesJsonPath;
+            System.Func<string, bool> withoutJson = _ => false;
+            BuildRelease.FirebaseConfigPlan plan;
+
+            Assert.That(BuildRelease.CheckFirebaseConfig(new BuildRelease.Options { Rehearsal = true }, withJson, out plan), Is.Null);
+            Assert.That(plan, Is.EqualTo(BuildRelease.FirebaseConfigPlan.Skip), "el ensayo usa la configuracion de prueba");
+
+            Assert.That(BuildRelease.CheckFirebaseConfig(new BuildRelease.Options { RequireSigning = true }, withJson, out plan), Is.Null);
+            Assert.That(plan, Is.EqualTo(BuildRelease.FirebaseConfigPlan.Regenerate));
+
+            Assert.That(BuildRelease.CheckFirebaseConfig(new BuildRelease.Options(), withoutJson, out plan), Is.Null);
+            Assert.That(plan, Is.EqualTo(BuildRelease.FirebaseConfigPlan.Warn), "release local sin JSON: solo aviso");
+
+            Assert.That(BuildRelease.CheckFirebaseConfig(new BuildRelease.Options { RequireSigning = true }, withoutJson, out plan),
+                Does.Contain(BuildRelease.GoogleServicesJsonPath), "el release del CI no sale sin Firebase");
+        }
+
+        [Test]
         public void OutputPaths()
         {
             Assert.That(BuildRelease.OutputPath(new BuildRelease.Options { Rehearsal = true }, false), Is.EqualTo("Builds/Android/rehearsal.aab"));

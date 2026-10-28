@@ -89,7 +89,7 @@ Qué hace el workflow con él:
 |---|---|---|
 | `preflight` (sin Unity, ~1 min) | `ci/release-preflight.sh` | rama distinta de `main` (3); `applicationId` ausente, provisional, con «amazon» o mal formado (4); falta algún secreto (5); versión inválida (6) |
 | | `ci/check-release-signature.sh --keystore-only` | el keystore no se abre con la contraseña o no tiene el alias (4) |
-| `build` (Unity, `unity-personal-seat`) | `BuildRelease.BuildAndroid -afRequireSigning` | firma incompleta o keystore inexistente (código 9 del método); identidad (7); textos (6), etc. |
+| `build` (Unity, `unity-personal-seat`) | `BuildRelease.BuildAndroid -afRequireSigning` | firma incompleta o keystore inexistente (código 9 del método); identidad (7); textos (6); Firebase sin generar para el ID de release (10), etc. |
 | | `ci/check-release-signature.sh` | AAB sin firma, con la clave de depuración o con otra clave |
 | | Identidad y versión del manifiesto | `package`, `versionCode` o `versionName` distintos de los pedidos |
 | `preflight` | `ci/release-preflight.sh` (google-services.json) | `GOOGLE_SERVICES_JSON_BASE64` falta (5), no es Base64 o JSON, no tiene `project_number`, no tiene el cliente de `AF_RELEASE_APPLICATION_ID` o su ID de app es de otro proyecto (7); falta python (8) |
@@ -108,7 +108,7 @@ Qué hace el workflow con él:
 ## 6. Pendiente de comprobar en la primera ejecución
 
 - **Resuelto el 2026-10-27:** game-ci/unity-builder v6.0.0 **no** monta `$RUNNER_TEMP/_github_home` como `/root` (la primera ejecución salió con 9, «no existe el keystore»); el keystore va ahora en `.af-signing/` dentro del workspace. Sí pasa `ANDROID_KEYSTORE_*` al contenedor. Si no lo hace, `BuildRelease` sale con 9 («no existe el keystore»): falla cerrado y no produce un AAB sin firmar.
-- **Pendiente desde el 2026-10-27 (`google-services.json`):** que el editor de Firebase regenere `FirebaseApp.androidlib` dentro del contenedor de game-ci con el `applicationId` de release. Lo hace con `generate_xml_from_google_services_json.py`, que necesita Python en la imagen `unityci/editor`, y si solo lo generara con el ID del proyecto (`com.amazonfill.dev`, que no está en el archivo de prod) fallaría. En los dos casos el AAB sale sin `google_app_id` y la compuerta de Firebase falla cerrada: no se publica un release sin Firebase.
+- **Firebase con el ID de release (2026-10-27):** el editor de Firebase genera `FirebaseApp.androidlib` al importar el JSON, con el ID que tengan entonces los Player Settings (`com.amazonfill.dev`, que no está en el archivo de prod), y en batchmode no ve el cambio de ID que hace `BuildRelease`. El primer release firmado (run 40612418639) salió por eso sin el XML y lo paró la compuerta. Desde entonces `BuildRelease`, tras fijar el ID de release, borra el XML, reimporta el JSON y sale con 10 si el XML no aparece o Unity no importa la carpeta como plugin de Android; al terminar lo reimporta con el ID restaurado. Si la imagen `unityci/editor` no tuviera Python (Firebase lo usa en Linux con `generate_xml_from_google_services_json.py`; el log de ese run no trae su error «Could not find a working python interpreter»), el código 10 lo diría.
 - El tiempo del job `build`, unos 30-60 min de los 2.000 al mes, como `build-android`.
 
 ## 7. Primera ejecución completa (2026-10-27)

@@ -66,6 +66,13 @@ namespace AF.EditorTools
     ///      MAYOR.MENOR.PARCHE)
     ///   9  firma inválida: <c>-afRequireSigning</c> sin firma completa, firma a medias, keystore inexistente o firma en un
     ///      ensayo
+    ///  10  configuración de Firebase: con <c>-afRequireSigning</c> falta <see cref="GoogleServicesJsonPath"/>, o el editor
+    ///      de Firebase no generó <see cref="FirebaseXmlPath"/> para el applicationId de release (el JSON no lo trae)
+    ///
+    /// Firebase convierte el JSON en <c>FirebaseApp.androidlib</c> al importarlo, con el ID que tengan entonces los Player
+    /// Settings (el de prueba). En batchmode no ve el cambio de ID (lo vigila en el bucle del Editor, que no corre durante
+    /// el build), así que el release reimporta el JSON tras poner su ID y comprueba que el XML existe; al terminar lo
+    /// reimporta con el ID restaurado (el run del 2026-10-27, 40612418639, salió sin el XML).
     /// </summary>
     public static class BuildRelease
     {
@@ -101,6 +108,29 @@ namespace AF.EditorTools
         private const int ExitIdentity = 7;
         private const int ExitArgs = 8;
         private const int ExitSigning = 9;
+        private const int ExitFirebase = 10;
+
+        /// <summary>Configuración de Firebase del build (ignorada por git; en el release la escribe el workflow).</summary>
+        public const string GoogleServicesJsonPath = "Assets/_LocalSecrets/google-services.json";
+
+        /// <summary>Recursos que el editor de Firebase genera desde <see cref="GoogleServicesJsonPath"/>.</summary>
+        public const string FirebaseXmlPath = "Assets/Plugins/Android/FirebaseApp.androidlib/res/values/google-services.xml";
+
+        /// <summary>Biblioteca Android que el editor de Firebase escribe con <see cref="FirebaseXmlPath"/>.</summary>
+        public const string FirebaseAndroidLibPath = "Assets/Plugins/Android/FirebaseApp.androidlib";
+
+        /// <summary>Qué hace el release con la configuración de Firebase (ver <see cref="CheckFirebaseConfig"/>).</summary>
+        internal enum FirebaseConfigPlan
+        {
+            /// <summary>Ensayo: usa la configuración de prueba tal cual.</summary>
+            Skip,
+
+            /// <summary>Regenera el XML con el applicationId de release.</summary>
+            Regenerate,
+
+            /// <summary>Sin JSON y sin firma obligatoria: sale sin Firebase, con un aviso.</summary>
+            Warn,
+        }
 
         /// <summary>Opciones leídas de la línea de comandos.</summary>
         internal sealed class Options
@@ -373,6 +403,33 @@ namespace AF.EditorTools
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Decide qué hacer con <see cref="GoogleServicesJsonPath"/>: nada en el ensayo, regenerar el XML si el JSON existe y,
+        /// sin él, error con <c>-afRequireSigning</c> (el release del CI) o aviso en un release local. Devuelve el error, o null.
+        /// </summary>
+        internal static string? CheckFirebaseConfig(Options o, Func<string, bool> fileExists, out FirebaseConfigPlan plan)
+        {
+            plan = FirebaseConfigPlan.Skip;
+            if (o.Rehearsal)
+            {
+                return null;
+            }
+
+            if (fileExists(GoogleServicesJsonPath))
+            {
+                plan = FirebaseConfigPlan.Regenerate;
+                return null;
+            }
+
+            if (o.RequireSigning)
+            {
+                return "-afRequireSigning sin " + GoogleServicesJsonPath + ": el AAB saldria sin Firebase.";
+            }
+
+            plan = FirebaseConfigPlan.Warn;
+            return null;
         }
 
         /// <summary>
@@ -692,6 +749,7 @@ namespace AF.EditorTools
             string previousVersionName = PlayerSettings.bundleVersion;
             bool previousAppBundle = EditorUserBuildSettings.buildAppBundle;
             SigningSettings previousSigning = SigningSettings.Capture();
+            bool firebaseRegenerated = false;
             try
             {
                 if (signing != null)
@@ -708,6 +766,31 @@ namespace AF.EditorTools
                 {
                     PlayerSettings.SetApplicationIdentifier(android, applicationId);
                     PlayerSettings.productName = ReleaseProductName;
+                }
+
+                string? firebaseError = CheckFirebaseConfig(o, File.Exists, out FirebaseConfigPlan firebasePlan);
+                if (firebaseError != null)
+                {
+                    Debug.LogError(LogPrefix + firebaseError);
+                    return ExitFirebase;
+                }
+
+                if (firebasePlan == FirebaseConfigPlan.Regenerate)
+                {
+                    firebaseRegenerated = true;
+                    if (!RegenerateFirebaseConfig())
+                    {
+                        Debug.LogError(LogPrefix + "El editor de Firebase no genero " + FirebaseXmlPath + " (o Unity no lo importo"
+                            + " como plugin de Android) para " + applicationId + ": ese google-services.json no trae la app de"
+                            + " release, o falta Python (busca \"Could not find a working python interpreter\" en el log).");
+                        return ExitFirebase;
+                    }
+
+                    Debug.Log(LogPrefix + "Firebase: " + FirebaseXmlPath + " generado para " + applicationId + ".");
+                }
+                else if (firebasePlan == FirebaseConfigPlan.Warn)
+                {
+                    Debug.LogWarning(LogPrefix + "Sin " + GoogleServicesJsonPath + ": el build sale sin la configuracion de Firebase.");
                 }
 
                 if (o.VersionCode > 0)
@@ -741,7 +824,43 @@ namespace AF.EditorTools
                 PlayerSettings.SetApplicationIdentifier(android, previousId);
                 PlayerSettings.productName = previousName;
                 PlayerSettings.Android.bundleVersionCode = previousVersionCode;
+                if (firebaseRegenerated)
+                {
+                    // Deja los recursos de Firebase como los esperan los builds de prueba (su ID); un fallo aquí no tapa
+                    // el resultado del build.
+                    try
+                    {
+                        RegenerateFirebaseConfig();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning(LogPrefix + "No se pudo regenerar Firebase con el ID restaurado: " + e.Message);
+                    }
+                }
             }
+        }
+
+        /// <summary>
+        /// Borra el XML de Firebase y reimporta el JSON para que su AssetPostprocessor lo genere con el applicationId
+        /// actual. Firebase escribe con File.WriteAllText sin avisar a la AssetDatabase, así que después se refresca para
+        /// que la carpeta nueva entre en el build. Devuelve si el XML existe y la carpeta es un plugin de Android.
+        /// </summary>
+        private static bool RegenerateFirebaseConfig()
+        {
+            if (File.Exists(FirebaseXmlPath))
+            {
+                File.Delete(FirebaseXmlPath);
+            }
+
+            AssetDatabase.ImportAsset(GoogleServicesJsonPath, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            if (!File.Exists(FirebaseXmlPath))
+            {
+                return false;
+            }
+
+            return AssetImporter.GetAtPath(FirebaseAndroidLibPath) is PluginImporter plugin
+                && plugin.GetCompatibleWithPlatform(BuildTarget.Android);
         }
 
         private static bool BuildOne(List<string> scenes, string path, bool appBundle)
