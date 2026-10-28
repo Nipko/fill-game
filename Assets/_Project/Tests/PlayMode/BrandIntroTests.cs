@@ -464,6 +464,11 @@ namespace AF.Tests.PlayMode
             StringAssert.Contains("\"emblem_cache\":\"off\"", steps);
             StringAssert.Contains("\"visible_ms\":" + intro.VisibleMs + ",\"play_ms\":" + intro.PlayMs + ",\"motion_hold_ms\":" + boot.IntroMotionHoldMs, steps);
             StringAssert.Contains("\"proc_awake_ms\":-1,\"proc_visible_ms\":-1", steps, "fuera del teléfono, sin tiempos del proceso");
+
+            // Añadido de D-051 del 2026-10-28: la pantalla del sistema se suelta con la intro ya en la pantalla (en el Editor no hay
+            // retención, pero el juego dice quién la soltó).
+            Assert.That(boot.OsSplashBy, Is.EqualTo(AndroidOsSplash.ByIntro), "la soltó la intro, no el fin de la carga");
+            StringAssert.Contains("\"proc_visible_ms\":-1,\"os_splash_held_ms\":-1,\"os_splash_release\":\"none\",\"os_splash_by\":\"intro\",\"proc_os_splash_ms\":-1,\"os_splash_focus_ms\":-1,", steps);
             StringAssert.Contains("\"yields\":" + intro.Yields + "}", steps);
 
             // El primer toque tras la intro llega al juego (nada se queda tragando toques).

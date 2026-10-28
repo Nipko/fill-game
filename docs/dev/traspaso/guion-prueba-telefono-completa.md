@@ -34,25 +34,59 @@ Aquí entra todo.
 
 ## Encargo de la jornada 6 (escritorio, 2026-10-28)
 
-*(Lo completa el integrador. Puntos de prueba de los arreglos de las observaciones 5 y 6 de la jornada 5, rama `tanda6/fx-j5-ui`.)*
+**Punto de partida:** `integracion-fase1-fase2` en el commit que trae este encargo o uno posterior (`git pull`); el `dev.apk` y el ensayo de release se construyen de nuevo desde ahí. La jornada 5 (`pruebas-telefono-2026-10-28-completa-j5.md`) salió casi limpia: sus observaciones 1, 2, 5 y 6 se arreglan en los carriles `tanda6/fx-j5-arranque` y `tanda6/fx-j5-ui`, ya integrados; la 3 y la 4 no son defectos.
 
-- **«Continuar: +1 cuia» en gris** (observación 6; guion 8.2), con el `dev.apk`, desde el 31 y con 0 semillas:
-  - **con la tienda falsa** (`--ez af_fake_store true`), en Aguas estancadas: tocar el botón gris hace latir «Te faltan {n} semillas» (crece un poco y vuelve en ~0,4 s); no se cobra nada, el modal sigue y no sale ningún aviso (debajo están Puñado y Balsa); `AF_STATE missing_tap` con `"option":"rescue","pulsed":true,"store":true`;
-  - **sin tienda** (el build normal sin la app en Play Console, como en la jornada 5): el mismo latido y, arriba, el aviso «Las compras no están disponibles ahora», el de «Canoas infinitas» en Sin canoas; `AF_STATE store_unavailable_notice` y `missing_tap` con `"store":false`;
-  - lo mismo en **¿Seguro?** («Rendirse» con una canoa en juego);
-  - **con Reducir movimiento** (el dueño): la línea no crece, solo se atenúa y vuelve;
-  - **con saldo** (≥ 300), el rescate de siempre;
-  - con **TalkBack**, el botón gris se puede activar, responde igual y dice «Te faltan {n} semillas» (también «+3 Deshacer», que no tiene la línea a la vista);
-  - **dos toques seguidos:** el latido vuelve a empezar y, sin tienda, salen dos avisos; no se cobra nada;
-  - **¿Seguro? abierto y semillas que llegan** (si hay forma de sumarlas con el modal abierto): el rescate pasa de gris a disponible sin cerrar el modal;
-  - en es-419, en y pt-BR, captura del aviso sobre el modal.
-- **Los otros botones en gris por falta de semillas** (mismo trato; `missing_tap` con su `option`), con y sin tienda:
-  - **«+3 Deshacer · 30 semillas»** en Aguas estancadas, sin cupo de Marea, sin video (`--es af_ads_fill no_fill`) y con < 30 semillas: late su propia etiqueta, que lleva el precio (`refill_seeds`);
-  - **Salto del Boto** en gris (rama D, quinto fallo en un nivel con < 300 semillas): late «Te faltan {n} semillas» y no se abre la confirmación (`skip`);
-  - **«Llenar canoas»** en Sin canoas sin saldo, desde el nivel (Nivel fallido › Reintentar con 0 canoas) y desde el inicio (el contador en 0/5): late «Te faltan {n} semillas» y no llena nada (`refill_canoes`);
-  - sin tienda, en los tres sale además el aviso «Las compras no están disponibles ahora»; también en el **Reto del río** con «+3 Deshacer» en gris;
-  - con Reducir movimiento, solo se atenúan.
-- **Tu fila de la Liga sin seudónimo** (observación 5; `--ez af_league true --ez af_league_fake true --ei af_max_level 60`): «Gana un nivel para entrar en la Liga» se para antes de la columna de puntos, con aire, y si no cabe pasa a dos líneas y la fila crece. En es-419, en y pt-BR, al 100 % y al 130 % (6 capturas); en pt-BR, el «0» ya no toca el texto.
+**Orden:** el bloque 0; N6 entero (lo nuevo); después, lo que la jornada 5 dejó pendiente: el bloque 6 del 188 al 700 (el jugador automático), los bloques 5, 8 a 19, 21, 22 y 23, y lo que hace el dueño (TalkBack, Reducir movimiento, dos dedos, la mirada a la intro). La hoja es `pruebas-telefono-<fecha>-completa-j6.md`. Las compras de verdad siguen fuera: se prueban en la pista interna con el AAB firmado (D-059).
+
+**Antes de publicar:** el Release definitivo no se lanza hasta que N6 confirme en el teléfono la pantalla del sistema hasta la intro (`os_splash_release` = `signal` y `os_splash_by` = `intro` en la primera apertura, en frío y en el ensayo). Si sale `cap`, se anota con su ráfaga y se revierte quitando `AfSplashHold.androidlib`.
+
+### N6. Lo nuevo de la jornada 6
+
+- **La pantalla del sistema hasta la intro** (carril `tanda6/fx-j5-arranque`; añadido de D-051 del 2026-10-28, el dueño: «si hagamoslo asi»; observaciones 1 y 2 de la jornada 5). El icono v2 sobre el petróleo se queda hasta que el primer fotograma de la intro ya está en la pantalla: se debe ver **icono → escena de la intro**, sin el petróleo liso de en medio. Lo hace el plugin `AfSplashHold.androidlib`, con un tope de 3 s.
+  - **Cómo medirlo:** una ráfaga de capturas (`screencap` cada ~110 ms, con la marca de tiempo de cada una, desde el `am start`) en cuatro casos:
+    1. **primera apertura** (`pm clear` y `logcat -c` antes);
+    2. **en frío**, cinco veces (`force-stop` y lanzar);
+    3. **con Reducir movimiento** (lo enciende el dueño): la escena sale quieta y entera;
+    4. **en el ensayo de release** (`rehearsal.apk`), primera apertura y en frío. Ahí no hay líneas `AF_*`: solo cuenta la ráfaga.
+  - **El criterio:**
+    - **ningún fotograma de petróleo liso sin icono** entre la pantalla del sistema y la escena;
+    - **ningún salto de posición ni de tamaño del icono** mientras se ve;
+    - el paso del icono a la escena puede ser un corte o el fundido corto del sistema.
+
+    Anota en qué momento se quita el icono y en qué momento sale la escena, en cada ráfaga.
+  - **La sonda** (`AF_PERF boot_steps` del `dev.apk`), campos nuevos:
+    - `os_splash_release`: `signal` esperado; `cap` quiere decir que el juego no la soltó y la quitó el tope (es un fallo, anótalo con su ráfaga); `none`, que no hubo retención;
+    - `os_splash_by`: `intro` esperado;
+    - `os_splash_held_ms`: lo retenido desde que empezó la actividad;
+    - `proc_os_splash_ms`: del arranque del proceso a soltarla; debe caer donde la ráfaga pasa del icono a la escena;
+    - `os_splash_focus_ms`: de soltarla a que la ventana recibe el foco (unos pocos fotogramas).
+
+    Anota también `proc_awake_ms`, `proc_visible_ms` y el `TotalTime` de `am start -W` y compáralos con la jornada 5. **`TotalTime` sube a propósito:** ahora mide hasta que se quita el icono. En la primera apertura debe quedar muy por debajo de 5 s (el umbral de arranque lento de Android vitals).
+  - **La intro no cambia:** `brand_intro` como en la jornada 5 (3.500 ms, `visible_by` gpu, `motion_frames` ≈ 175, `motion_pauses` 0, `cut` false). Mira con el dueño si el comienzo del vertido se ve entero tras el icono o si el fundido del sistema se come un trozo; anota su opinión literal.
+  - **Unity corre sin el foco mientras se retiene** y vuelve a lo de siempre con el foco. Compruébalo con dos cosas:
+    - tras el arranque, baja la cortina de notificaciones con el nivel en marcha: el juego se pausa como antes (`pause` en logcat, la música se para);
+    - pulsa Inicio **durante** el icono y vuelve: la intro termina normal, sin `E/Unity` y sin el icono colgado.
+  - **Android 8-11:** este teléfono no lo tiene. Si hay un emulador o un teléfono viejo, la ventana de arranque (el icono sobre el petróleo, `af_launch_window`) debe quedarse igual hasta la escena.
+  - **Arranque sin intro** (`os_splash_by` = `boot_end`): ahí la sonda puede decir `os_splash_release: pending`, porque se escribe en el mismo fotograma en que se pide soltarla; no es un cuelgue si la ráfaga muestra la escena. Anótalo si sale.
+  - **Abrir en frío desde una notificación** (la del Reto del río, si hay; si no, un `am start` con el deep link o la intención de la notificación): durante la retención se ve la pantalla del sistema con el icono, nunca la pantalla anterior congelada.
+- **Los arreglos de UI** (carril `tanda6/fx-j5-ui`; observaciones 5 y 6):
+  - **«Continuar: +1 cuia» en gris** (observación 6; guion 8.2), con el `dev.apk`, desde el 31 y con 0 semillas:
+    - **con la tienda falsa** (`--ez af_fake_store true`), en Aguas estancadas: tocar el botón gris hace latir «Te faltan {n} semillas» (crece un poco y vuelve en ~0,4 s); no se cobra nada, el modal sigue y no sale ningún aviso (debajo están Puñado y Balsa); `AF_STATE missing_tap` con `"option":"rescue","pulsed":true,"store":true`;
+    - **sin tienda** (el build normal sin la app en Play Console, como en la jornada 5): el mismo latido y, arriba, el aviso «Las compras no están disponibles ahora», el de «Canoas infinitas» en Sin canoas; `AF_STATE store_unavailable_notice` y `missing_tap` con `"store":false`;
+    - lo mismo en **¿Seguro?** («Rendirse» con una canoa en juego);
+    - **con Reducir movimiento** (el dueño): la línea no crece, solo se atenúa y vuelve;
+    - **con saldo** (≥ 300), el rescate de siempre;
+    - con **TalkBack**, el botón gris se puede activar, responde igual y dice «Te faltan {n} semillas» (también «+3 Deshacer», que no tiene la línea a la vista);
+    - **dos toques seguidos:** el latido vuelve a empezar y, sin tienda, salen dos avisos; no se cobra nada;
+    - **¿Seguro? abierto y semillas que llegan** (si hay forma de sumarlas con el modal abierto): el rescate pasa de gris a disponible sin cerrar el modal;
+    - en es-419, en y pt-BR, captura del aviso sobre el modal.
+  - **Los otros botones en gris por falta de semillas** (mismo trato; `missing_tap` con su `option`), con y sin tienda:
+    - **«+3 Deshacer · 30 semillas»** en Aguas estancadas, sin cupo de Marea, sin video (`--es af_ads_fill no_fill`) y con < 30 semillas: late su propia etiqueta, que lleva el precio (`refill_seeds`);
+    - **Salto del Boto** en gris (rama D, quinto fallo en un nivel con < 300 semillas): late «Te faltan {n} semillas» y no se abre la confirmación (`skip`);
+    - **«Llenar canoas»** en Sin canoas sin saldo, desde el nivel (Nivel fallido › Reintentar con 0 canoas) y desde el inicio (el contador en 0/5): late «Te faltan {n} semillas» y no llena nada (`refill_canoes`);
+    - sin tienda, en los tres sale además el aviso «Las compras no están disponibles ahora»; también en el **Reto del río** con «+3 Deshacer» en gris;
+    - con Reducir movimiento, solo se atenúan.
+  - **Tu fila de la Liga sin seudónimo** (observación 5; `--ez af_league true --ez af_league_fake true --ei af_max_level 60`): «Gana un nivel para entrar en la Liga» se para antes de la columna de puntos, con aire, y si no cabe pasa a dos líneas y la fila crece. En es-419, en y pt-BR, al 100 % y al 130 % (6 capturas); en pt-BR, el «0» ya no toca el texto.
 
 ## Encargo de la jornada 5 (escritorio, 2026-10-28)
 
