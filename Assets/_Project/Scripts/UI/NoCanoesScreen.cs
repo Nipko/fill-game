@@ -40,6 +40,8 @@ namespace AF.UI
         private readonly TextMeshProUGUI _refillLabel;
         private readonly PriceTag _refillPrice;
         private readonly TextMeshProUGUI _refillNote;
+        private readonly NotePulse _refillPulse;
+        private int _refillMissing;
         private readonly ReliefParts _infinite;
         private readonly TextMeshProUGUI _infiniteLabel;
         private readonly Button _home;
@@ -64,9 +66,10 @@ namespace AF.UI
             _timer = ModalKit.Line("Timer", _panel, string.Empty, 17f, Palette.FamilyWood.Base);
             _video = ModalKit.Cta("VideoButton", _panel, art.CtaWater, TextStyle.CtaWater, UiText.NoCanoesVideo + "  +1", 18f, onVideo, out _videoLabel);
             _videoIcon = UiBuilder.Image("Video", _video.Face, art.IconVideo, Color.white);
-            _refill = ModalKit.Cta("RefillButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, string.Empty, 18f, onRefill, out _refillLabel);
+            _refill = ModalKit.Cta("RefillButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, string.Empty, 18f, () => OnRefill(onRefill), out _refillLabel);
             _refillPrice = new PriceTag("Price", _refill.Face, art);
             _refillNote = ModalKit.Line("RefillNote", _panel, string.Empty, 13f, Palette.UiRedWarning);
+            _refillPulse = new NotePulse(_refillNote);
             _infinite = ModalKit.Cta("InfiniteButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 16f, onInfinite, out _infiniteLabel);
             _home = ModalKit.Link("HomeButton", _panel, TutorialTipsText.NoCanoesMap, onMap, out _); // B11: IGameActions.PressNoCanoesMap
             _daily = new NoCanoesDailyLink(_panel);
@@ -74,6 +77,43 @@ namespace AF.UI
         }
 
         public bool Visible => _root.gameObject.activeSelf;
+
+        /// <summary>
+        /// Toque en «Llenar canoas» en gris (sin saldo): no cobra nada, pero el toque llega (como el rescate en gris; observación 6
+        /// de la jornada 5). Lo ponen la pantalla de nivel y la de inicio: late «Te faltan {n} semillas» y, si la tienda no vende, el
+        /// aviso de la tienda.
+        /// </summary>
+        public Action? RefillMissing { get; set; }
+
+        /// <summary>Semillas que faltan para «Llenar canoas» (0 con saldo o sin la opción).</summary>
+        internal int RefillMissingSeeds => _refillMissing;
+
+        /// <summary>«Te faltan {n} semillas» bajo «Llenar canoas» responde a un toque (tests).</summary>
+        internal NotePulse RefillPulse => _refillPulse;
+
+        /// <summary>Late «Te faltan {n} semillas» bajo «Llenar canoas» en gris. False si no se ve.</summary>
+        public bool PulseRefillMissing(bool reduceMotion)
+        {
+            return Visible && _refillMissing > 0 && _refillPulse.Start(reduceMotion);
+        }
+
+        /// <summary>Avanza el latido de la nota.</summary>
+        public void Tick(float dtMs)
+        {
+            _refillPulse.Tick(dtMs);
+        }
+
+        // «Llenar canoas»: con saldo, la recarga; en gris, nada se cobra y responde RefillMissing (antes, un toque mudo).
+        private void OnRefill(Action onRefill)
+        {
+            if (_refillMissing > 0)
+            {
+                RefillMissing?.Invoke();
+                return;
+            }
+
+            onRefill();
+        }
 
         /// <summary>Raíz del modal, hija del lienzo de la pantalla de nivel (tests de orden de capas).</summary>
         public RectTransform Root => _root;
@@ -108,6 +148,7 @@ namespace AF.UI
 
         public void Hide()
         {
+            _refillPulse.Stop();
             _root.gameObject.SetActive(false);
         }
 
@@ -188,12 +229,18 @@ namespace AF.UI
                 y += ModalKit.HeightOf(_video) + 8f;
             }
 
+            _refillPulse.Stop(); // la nota vuelve a su sitio antes de recolocarla
+            _refillMissing = refillOn ? missing : 0;
             _refill.Button.gameObject.SetActive(refillOn);
             _refillNote.gameObject.SetActive(false);
             if (refillOn)
             {
                 _refillLabel.text = UiText.NoCanoesRefill(max);
                 UiBuilder.SetEnabled(_refill.Button, missing == 0);
+                if (missing > 0)
+                {
+                    _refill.Button.interactable = true; // gris, pero el toque responde (OnRefill)
+                }
                 _refillPrice.Set(price, 0, missing > 0);
                 ModalKit.Place(_refill, 16f, y, inner);
                 _refillPrice.PlaceAt(inner - _refillPrice.Width - 12f, (ModalKit.FaceHeightOf(_refill) - _refillPrice.Height) * 0.5f);

@@ -27,7 +27,7 @@ namespace AF.UI
     /// <see cref="MetaRunner"/> avanza el aviso y las sondas cada fotograma (<c>GameBootstrap.Update</c> no se toca). Sin
     /// asignaciones mientras nada cambia.
     /// </summary>
-    public sealed partial class GameBootstrap
+    public sealed partial class GameBootstrap : IStoreNoticeActions
     {
         /// <summary>Orden del lienzo del aviso de skin: sobre el nivel, el inicio, el Mapa (45) y la ficha de fruta (46).</summary>
         public const int MetaToastSortingOrder = 48;
@@ -234,6 +234,12 @@ namespace AF.UI
             StoreUnavailableNoticeCount++;
             ShowMetaToast(MarketText.StoreUnavailable);
             MarketProbe("store_unavailable_notice", null);
+        }
+
+        /// <inheritdoc />
+        void IStoreNoticeActions.ShowStoreUnavailable()
+        {
+            ShowStoreUnavailableNotice();
         }
 
         // Tienda: el aviso de la tienda no disponible tras una compra que no se pudo hacer.

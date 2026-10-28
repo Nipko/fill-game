@@ -354,6 +354,10 @@ namespace AF.UI
             // Sin canoas con sus opciones (04 §7.3; B2-3): la misma tarjeta que en la pantalla de nivel.
             _noCanoes = new NoCanoesPanel(_root, art, () => actions.PressExtraCanoeVideo(), () => actions.PressRefillCanoes(),
                 () => actions.PressInfiniteCanoes(), () => actions.PressNoCanoesMap(), () => actions.PressNoCanoesClose());
+            // «Llenar canoas» en gris (sin saldo): late «Te faltan {n} semillas» y, si la tienda no vende, su aviso (como en la
+            // pantalla de nivel; observación 6 de la jornada 5). Desde el inicio no hay nivel en juego: level 0 en la sonda.
+            _noCanoes.RefillMissing = () => GameScreen.RespondToMissing("refill_canoes", _noCanoes.PulseRefillMissing(_reduceMotion),
+                _noCanoes.RefillMissingSeeds, _services, actions, A11y, _probe, 0);
 
             ApplyScreenMetrics();
             _canvas.gameObject.SetActive(false);
@@ -456,6 +460,9 @@ namespace AF.UI
                 _voyage.SetReduceMotion(value);
             }
         }
+
+        /// <summary>El lector de pantalla (lo pone <c>GameBootstrap.A11y</c>; null sin él): anuncia «Te faltan {n} semillas».</summary>
+        internal A11yService? A11y { get; set; }
 
         /// <summary>Ancho del lienzo en dp.</summary>
         public float CanvasWidth => _canvasW;
@@ -838,6 +845,8 @@ namespace AF.UI
             {
                 return;
             }
+
+            _noCanoes.Tick(dtMs);
 
             GameScreen.ReadScreen(out int sw, out int sh, out Rect safe);
             if (sw != _screenW || sh != _screenH || safe != _safeArea)

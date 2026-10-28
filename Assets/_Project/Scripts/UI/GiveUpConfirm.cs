@@ -34,7 +34,10 @@ namespace AF.UI
         private readonly TextMeshProUGUI _rescueLabel;
         private readonly PriceTag _price;
         private readonly TextMeshProUGUI _note;
+        private readonly NotePulse _pulse;
         private readonly Button _giveUp;
+        private StuckRescueKind _rescueKind;
+        private int _rescueMissing;
         private float _height = 300f;
         private float _width = 328f;
         private string _label = LevelDefinition.LabelNormal;
@@ -52,14 +55,54 @@ namespace AF.UI
             _canoe = UiBuilder.Image("Canoe", _panel, art.IconCanoeEmpty, Color.white);
             _canoe.preserveAspect = true;
             _line = ModalKit.Line("Line", _panel, UiText.GiveUpConfirmCanoe, 18f, Palette.UiRedWarning);
-            _rescue = ModalKit.Cta("RescueButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.StuckRescueCta, 21f, () => actions.PressRescue(), out _rescueLabel);
+            _rescue = ModalKit.Cta("RescueButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.StuckRescueCta, 21f, () => OnRescue(actions), out _rescueLabel);
             _price = new PriceTag("Price", _rescue.Face, art);
             _note = ModalKit.Line("Note", _panel, string.Empty, 13f, Palette.FamilyWood.Base);
+            _pulse = new NotePulse(_note);
             _giveUp = ModalKit.Link("GiveUpButton", _panel, UiText.StuckGiveUp, () => actions.ConfirmGiveUp(), out _);
             _root.gameObject.SetActive(false);
         }
 
         public bool Visible => _root.gameObject.activeSelf;
+
+        /// <summary>
+        /// Toque en «Continuar: +1 cuia» en gris (sin saldo): no compra nada, pero el toque llega (observación 6 de la jornada 5). Lo
+        /// pone <c>GameScreen</c>, como en Aguas estancadas (<see cref="StuckModal.RescueMissing"/>).
+        /// </summary>
+        public System.Action? RescueMissing { get; set; }
+
+        /// <summary>Semillas que faltan para el rescate (0 con saldo o sin rescate).</summary>
+        internal int RescueMissingSeeds => _rescueKind == StuckRescueKind.Disabled ? _rescueMissing : 0;
+
+        /// <summary>El rescate tal como se ve ahora (tests).</summary>
+        internal StuckRescueKind RescueKind => _rescueKind;
+
+        /// <summary>«Te faltan {n} semillas» responde a un toque (tests).</summary>
+        internal NotePulse RescuePulse => _pulse;
+
+        /// <summary>Late «Te faltan {n} semillas» bajo el rescate en gris (<see cref="NotePulse"/>). False si no se ve.</summary>
+        public bool PulseRescueMissing(bool reduceMotion)
+        {
+            return Visible && _rescueKind == StuckRescueKind.Disabled && _pulse.Start(reduceMotion);
+        }
+
+        /// <summary>Avanza el latido de la nota.</summary>
+        public void Tick(float dtMs)
+        {
+            _pulse.Tick(dtMs);
+        }
+
+        // Con saldo, el rescate; en gris, nada se cobra y responde RescueMissing (antes, un toque mudo; guion 8.2).
+        private void OnRescue(IGameActions actions)
+        {
+            if (_rescueKind == StuckRescueKind.Disabled)
+            {
+                RescueMissing?.Invoke();
+                return;
+            }
+
+            actions.PressRescue();
+        }
 
         /// <summary>Raíz del modal, hija del lienzo de la pantalla de nivel (tests de orden de capas).</summary>
         public RectTransform Root => _root;
@@ -111,11 +154,15 @@ namespace AF.UI
 
         public void Hide()
         {
+            _pulse.Stop();
             _root.gameObject.SetActive(false);
         }
 
         public void Show(GiveUpConfirmView view, float canvasW, float canvasH)
         {
+            _pulse.Stop(); // la nota vuelve a su sitio antes de recolocarla
+            _rescueKind = view.Rescue;
+            _rescueMissing = view.RescueMissing;
             _root.gameObject.SetActive(true);
             _width = Mathf.Min(328f, canvasW - 32f);
             float inner = _width - 32f;
@@ -148,6 +195,11 @@ namespace AF.UI
             {
                 bool available = view.Rescue == StuckRescueKind.Available;
                 UiBuilder.SetEnabled(_rescue.Button, available);
+                if (!available)
+                {
+                    _rescue.Button.interactable = true; // gris, pero el toque responde (OnRescue; observación 6 de la jornada 5)
+                }
+
                 _price.Set(view.RescuePrice, view.RescueDiscounted ? view.RescueBasePrice : 0, !available);
 
                 // La etiqueta a la izquierda del precio; si no cabe en una línea a 12 sp, en dos y el botón crece (tarea L4).

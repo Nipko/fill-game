@@ -325,6 +325,7 @@ namespace AF.UI
         private float _horizonY = 118f;
         private PourTimings _timings;
         private int _stuckSeedsShown = -1;
+        private int _giveUpSeedsShown = -1;
         private int _stuckUndoShown = -1;
         private int _stuckNotesShown = -1; // F3-5: la versión de las notas de compra con la que se armó el modal
         private bool _stuckBalsaOk;
@@ -546,6 +547,9 @@ namespace AF.UI
             _stuckDim = UiBuilder.Image("Dim", _stuckOverlay, null, new Color(0f, 0f, 0f, 0f), true);
             UiBuilder.Stretch(_stuckDim.rectTransform);
             _stuck = new StuckModal(_stuckOverlay, art, actions);
+            _stuck.RescueMissing = () => OnMissingTap("rescue", reduce => _stuck.PulseRescueMissing(reduce), _stuck.View?.RescueMissing ?? 0);
+            _stuck.RefillSeedsMissing = () => OnMissingTap("refill_seeds", reduce => _stuck.PulseRefillSeedsMissing(reduce), _stuck.View?.UndoRefillMissing ?? 0);
+            _stuck.SkipMissing = () => OnMissingTap("skip", reduce => _stuck.PulseSkipMissing(reduce), _stuck.View?.Skip.Missing ?? 0);
             _stuckOverlay.gameObject.SetActive(false);
 
             // ---- Victoria (02 §6; 07 §5.4; guía 5.3, 5.5 y 6.9): panel abajo, cinta-hoja y Siguiente; sin auto-avance por
@@ -616,9 +620,11 @@ namespace AF.UI
 
             // ---- Embudo de D-008 (B2-2 y B2-3): ¿Seguro?, Nivel fallido y Sin canoas, con el tablero atenuado detrás. ----
             _giveUp = new GiveUpConfirm(_root, art, actions);
+            _giveUp.RescueMissing = () => OnMissingTap("give_up_rescue", reduce => _giveUp.PulseRescueMissing(reduce), _giveUp.RescueMissingSeeds);
             _failed = new LevelFailedScreen(_root, art, actions);
             _noCanoes = new NoCanoesPanel(_root, art, () => _actions.PressExtraCanoeVideo(), () => _actions.PressRefillCanoes(),
                 () => _actions.PressInfiniteCanoes(), () => _actions.PressNoCanoesMap(), () => _actions.PressNoCanoesClose());
+            _noCanoes.RefillMissing = () => OnMissingTap("refill_canoes", reduce => _noCanoes.PulseRefillMissing(reduce), _noCanoes.RefillMissingSeeds);
 
             // ---- Capa superior: pausa (02 §5: izquierda de la fila superior; disco de 40 dp) y saldos del embudo (D-008). ----
             _topLayer = UiBuilder.Rect("TopLayer", _root);
@@ -958,6 +964,9 @@ namespace AF.UI
             LabelsTick(dtMs);
             CardsTick(dtMs);
             RevealTick(dtMs);
+            _stuck.Tick(dtMs); // el latido de «Te faltan {n} semillas» del rescate en gris
+            _giveUp.Tick(dtMs);
+            _noCanoes.Tick(dtMs);
             HintTick(dtMs);
             ShuffleTick(dtMs);
             StopTick(dtMs);
@@ -1373,7 +1382,7 @@ namespace AF.UI
                 ShowFunnelBackdrop();
                 FitBoardToStuck(false);
                 FunnelModalShowing(phase, flow);
-                _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
+                ShowGiveUpConfirm(flow);
                 EmitFunnelLayout(GiveUpConfirmLayout);
             }
             else if (phase == FlowPhase.LevelFailed)
@@ -1469,7 +1478,7 @@ namespace AF.UI
                 case FlowPhase.GiveUpConfirm:
                     _stuck.Panel.gameObject.SetActive(false);
                     FunnelModalShowing(phase, flow);
-                    _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
+                    ShowGiveUpConfirm(flow);
                     EmitFunnelLayout(GiveUpConfirmLayout);
                     _probe.Funnel("giveup_confirm", flow);
                     break;
@@ -1606,6 +1615,62 @@ namespace AF.UI
             _stuck.Panel.gameObject.SetActive(false);
             _stuckDim.color = new Color(0.04f, 0.06f, 0.05f, 0.30f);
             _sceneVeil.color = new Color(0x6B / 255f, 0x6B / 255f, 0x6B / 255f, 0.20f);
+        }
+
+        /// <summary>
+        /// Toque en un botón en gris por falta de semillas que antes no hacía nada (observación 6 de la jornada 5 en el teléfono; guion
+        /// 8.2: «no un toque mudo como el 23»): «Continuar: +1 cuia» en Aguas estancadas y en ¿Seguro?, «+3 Deshacer · 30 semillas»,
+        /// el Salto del Boto y «Llenar canoas». Responde como un comodín sin saldo, sin cobrar nada, sin háptico ni analítica (como la
+        /// Pista y la Luciérnaga, D-022): <paramref name="pulse"/> hace latir su «Te faltan {n} semillas» (o, sin esa línea, su
+        /// etiqueta con el precio; con Reducir movimiento, solo se atenúa). Si además la tienda no vende, el aviso de la tienda
+        /// (<see cref="RespondToMissing"/>).
+        /// </summary>
+        private void OnMissingTap(string option, Func<bool, bool> pulse, int missing)
+        {
+            LevelFlow? flow = _flow;
+            if (flow == null || !flow.HasLevel)
+            {
+                return;
+            }
+
+            RespondToMissing(option, pulse(flow.ReduceMotion), missing, _services, _actions, _a11y, _probe, flow.LevelNumber);
+        }
+
+        /// <summary>
+        /// Lo común a la pantalla de nivel y a la de inicio tras el latido: con TalkBack, «Te faltan {n} semillas»
+        /// (<c>stuck_rescue_missing</c>, la clave de esas líneas; también para «+3 Deshacer», que no tiene línea propia) con
+        /// <paramref name="missing"/>; si la tienda no vende (apagada, sin precios o el perfil en solo lectura), el aviso «Las compras no
+        /// están disponibles ahora» (<c>market_store_unavailable</c>), el mismo de «Canoas infinitas» en Sin canoas; y la línea
+        /// <c>AF_STATE missing_tap</c> con <paramref name="option"/>. Devuelve si la tienda no vende.
+        /// </summary>
+        internal static bool RespondToMissing(string option, bool pulsed, int missing, GameServices? services, IGameActions actions,
+            A11yService? a11y, DevProbe probe, int level)
+        {
+            if (a11y != null && a11y.On && missing > 0)
+            {
+                a11y.Announce(UiText.MissingSeeds(missing));
+            }
+
+            bool storeDown = services != null && (services.PurchasesBlocked || !services.Store.IsAvailable);
+            if (storeDown)
+            {
+                (actions as IStoreNoticeActions)?.ShowStoreUnavailable();
+            }
+
+            if (DevProbe.Enabled)
+            {
+                probe.Event("missing_tap", "\"option\":\"" + option + "\",\"pulsed\":" + (pulsed ? "true" : "false")
+                    + ",\"store\":" + (storeDown ? "false" : "true") + ",\"level\":" + level.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            return storeDown;
+        }
+
+        // ¿Seguro? con el contexto de ahora; guarda el saldo con el que se armó (RefreshHud lo rearma si cambia).
+        private void ShowGiveUpConfirm(LevelFlow flow)
+        {
+            _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
+            _giveUpSeedsShown = _services?.Wallet.Seeds ?? 0;
         }
 
         private StuckContext StuckContext(LevelFlow flow)
@@ -1859,6 +1924,12 @@ namespace AF.UI
                 {
                     ShowStuckView(false); // también con una nota de compra nueva (F3-5: pendiente, rechazada o acreditada)
                 }
+            }
+            else if (flow.Phase == FlowPhase.GiveUpConfirm && _giveUp.Visible && (_services?.Wallet.Seeds ?? 0) != _giveUpSeedsShown)
+            {
+                // Como Aguas estancadas: con el saldo nuevo (una recompensa, una compra), el rescate de ¿Seguro? se recalcula.
+                ShowGiveUpConfirm(flow);
+                EmitFunnelLayout(GiveUpConfirmLayout);
             }
             else if (flow.Phase == FlowPhase.NoCanoes && _noCanoes.Refresh(_services))
             {

@@ -32,6 +32,28 @@ Lo escribió el integrador (escritorio) el 2026-10-25, a petición del dueño: *
 
 Aquí entra todo.
 
+## Encargo de la jornada 6 (escritorio, 2026-10-28)
+
+*(Lo completa el integrador. Puntos de prueba de los arreglos de las observaciones 5 y 6 de la jornada 5, rama `tanda6/fx-j5-ui`.)*
+
+- **«Continuar: +1 cuia» en gris** (observación 6; guion 8.2), con el `dev.apk`, desde el 31 y con 0 semillas:
+  - **con la tienda falsa** (`--ez af_fake_store true`), en Aguas estancadas: tocar el botón gris hace latir «Te faltan {n} semillas» (crece un poco y vuelve en ~0,4 s); no se cobra nada, el modal sigue y no sale ningún aviso (debajo están Puñado y Balsa); `AF_STATE missing_tap` con `"option":"rescue","pulsed":true,"store":true`;
+  - **sin tienda** (el build normal sin la app en Play Console, como en la jornada 5): el mismo latido y, arriba, el aviso «Las compras no están disponibles ahora», el de «Canoas infinitas» en Sin canoas; `AF_STATE store_unavailable_notice` y `missing_tap` con `"store":false`;
+  - lo mismo en **¿Seguro?** («Rendirse» con una canoa en juego);
+  - **con Reducir movimiento** (el dueño): la línea no crece, solo se atenúa y vuelve;
+  - **con saldo** (≥ 300), el rescate de siempre;
+  - con **TalkBack**, el botón gris se puede activar, responde igual y dice «Te faltan {n} semillas» (también «+3 Deshacer», que no tiene la línea a la vista);
+  - **dos toques seguidos:** el latido vuelve a empezar y, sin tienda, salen dos avisos; no se cobra nada;
+  - **¿Seguro? abierto y semillas que llegan** (si hay forma de sumarlas con el modal abierto): el rescate pasa de gris a disponible sin cerrar el modal;
+  - en es-419, en y pt-BR, captura del aviso sobre el modal.
+- **Los otros botones en gris por falta de semillas** (mismo trato; `missing_tap` con su `option`), con y sin tienda:
+  - **«+3 Deshacer · 30 semillas»** en Aguas estancadas, sin cupo de Marea, sin video (`--es af_ads_fill no_fill`) y con < 30 semillas: late su propia etiqueta, que lleva el precio (`refill_seeds`);
+  - **Salto del Boto** en gris (rama D, quinto fallo en un nivel con < 300 semillas): late «Te faltan {n} semillas» y no se abre la confirmación (`skip`);
+  - **«Llenar canoas»** en Sin canoas sin saldo, desde el nivel (Nivel fallido › Reintentar con 0 canoas) y desde el inicio (el contador en 0/5): late «Te faltan {n} semillas» y no llena nada (`refill_canoes`);
+  - sin tienda, en los tres sale además el aviso «Las compras no están disponibles ahora»; también en el **Reto del río** con «+3 Deshacer» en gris;
+  - con Reducir movimiento, solo se atenúan.
+- **Tu fila de la Liga sin seudónimo** (observación 5; `--ez af_league true --ez af_league_fake true --ei af_max_level 60`): «Gana un nivel para entrar en la Liga» se para antes de la columna de puntos, con aire, y si no cabe pasa a dos líneas y la fila crece. En es-419, en y pt-BR, al 100 % y al 130 % (6 capturas); en pt-BR, el «0» ya no toca el texto.
+
 ## Encargo de la jornada 5 (escritorio, 2026-10-28)
 
 La jornada 4 (`pruebas-telefono-2026-10-27-completa-j4.md`) cubrió el bloque 0, N4 y casi todo N4b, y dejó 5 observaciones. Sus arreglos ya están integrados. **Esta jornada decide el lanzamiento:** el dueño acordó que, si no sale nada, se pasa al Release definitivo y a publicar (D-059; `docs/dev/release.md` §4 bis). Así que cualquier observación **bloqueante** o **alta** se anota con su traza y sus capturas, y se avisa en cuanto aparezca.

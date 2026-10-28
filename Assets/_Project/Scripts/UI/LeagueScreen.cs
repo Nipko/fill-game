@@ -783,7 +783,7 @@ namespace AF.UI
                 Sub.enableAutoSizing = false;
                 Sub.fontSize = subSp;
                 Sub.textWrappingMode = TextWrappingModes.Normal;
-                float subW = SubWidth(w, pillW, avatars);
+                float subW = SubWidth(w, pillW, avatars, Name.text.Length == 0);
                 float subH = Sub.text.Length > 0 ? Mathf.Ceil(Mathf.Max(subSp * LineK, UiBuilder.MinTextHeight(Sub, subW))) : 0f;
                 float pillH = Mathf.Ceil((Mathf.Max(UiBuilder.MinTextSp, 12f * s) * LineK) + 2f);
                 return Mathf.Max(MinRowDp + 8f, Mathf.Ceil(8f + (nameSp * LineK) + 2f + Mathf.Max(subH, pillH) + 8f));
@@ -817,22 +817,26 @@ namespace AF.UI
                 {
                     // Sin seudónimo: la chapa «Tú» y la línea, centradas en la fila (sin una línea de nombre vacía encima).
                     UiBuilder.Place(pill.rectTransform, nameX, Mathf.Round((h - pillH) * 0.5f), pillW, pillH);
-                    UiBuilder.Place(Sub.rectTransform, subX, 6f, SubWidth(w, pillW, avatars), h - 12f);
+                    UiBuilder.Place(Sub.rectTransform, subX, 6f, SubWidth(w, pillW, avatars, true), h - 12f);
                 }
                 else
                 {
                     float line2 = top + lineH + 2f;
                     UiBuilder.Place(pill.rectTransform, nameX, line2, pillW, pillH);
-                    UiBuilder.Place(Sub.rectTransform, subX, line2, SubWidth(w, pillW, avatars), h - line2 - 6f);
+                    UiBuilder.Place(Sub.rectTransform, subX, line2, SubWidth(w, pillW, avatars, false), h - line2 - 6f);
                 }
                 Flag.Root.gameObject.SetActive(false);
             }
 
-            private static float SubWidth(float w, float pillW, bool avatars)
+            // Ancho de la línea de la posición o del percentil, a la derecha de la chapa «Tú». Sin seudónimo (reservePoints) la línea
+            // va centrada en la fila, a la altura de los puntos: se para antes de su columna, con el mismo aire que el nombre
+            // (observación 5 de la jornada 5: en pt-BR, «Vença um nível para entrar na Liga» llegaba al borde y casi tocaba el «0»).
+            // Si no cabe, pasa a otra línea y la fila crece (MeasureMe). Con seudónimo va en la segunda línea, debajo de los puntos.
+            private static float SubWidth(float w, float pillW, bool avatars, bool reservePoints)
             {
                 const float pad = 10f;
                 float nameX = pad + RankColDp + GapDp + (avatars ? AvatarDp + GapDp : 0f);
-                return w - (nameX + pillW + GapDp) - pad;
+                return w - (nameX + pillW + GapDp) - pad - (reservePoints ? PointsColDp + GapDp : 0f);
             }
 
             // Autoajuste hasta 12 sp por la escala de texto (02 §12: al 130 %, nada por debajo de 15,6 sp).
