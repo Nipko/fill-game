@@ -42,13 +42,15 @@ Aquí entra todo.
   - lo mismo en **¿Seguro?** («Rendirse» con una canoa en juego);
   - **con Reducir movimiento** (el dueño): la línea no crece, solo se atenúa y vuelve;
   - **con saldo** (≥ 300), el rescate de siempre;
-  - con **TalkBack**, el botón gris se puede activar y responde igual;
+  - con **TalkBack**, el botón gris se puede activar, responde igual y dice «Te faltan {n} semillas» (también «+3 Deshacer», que no tiene la línea a la vista);
+  - **dos toques seguidos:** el latido vuelve a empezar y, sin tienda, salen dos avisos; no se cobra nada;
+  - **¿Seguro? abierto y semillas que llegan** (si hay forma de sumarlas con el modal abierto): el rescate pasa de gris a disponible sin cerrar el modal;
   - en es-419, en y pt-BR, captura del aviso sobre el modal.
 - **Los otros botones en gris por falta de semillas** (mismo trato; `missing_tap` con su `option`), con y sin tienda:
   - **«+3 Deshacer · 30 semillas»** en Aguas estancadas, sin cupo de Marea, sin video (`--es af_ads_fill no_fill`) y con < 30 semillas: late su propia etiqueta, que lleva el precio (`refill_seeds`);
   - **Salto del Boto** en gris (rama D, quinto fallo en un nivel con < 300 semillas): late «Te faltan {n} semillas» y no se abre la confirmación (`skip`);
   - **«Llenar canoas»** en Sin canoas sin saldo, desde el nivel (Nivel fallido › Reintentar con 0 canoas) y desde el inicio (el contador en 0/5): late «Te faltan {n} semillas» y no llena nada (`refill_canoes`);
-  - sin tienda, en los tres sale además el aviso «Las compras no están disponibles ahora»;
+  - sin tienda, en los tres sale además el aviso «Las compras no están disponibles ahora»; también en el **Reto del río** con «+3 Deshacer» en gris;
   - con Reducir movimiento, solo se atenúan.
 - **Tu fila de la Liga sin seudónimo** (observación 5; `--ez af_league true --ez af_league_fake true --ei af_max_level 60`): «Gana un nivel para entrar en la Liga» se para antes de la columna de puntos, con aire, y si no cabe pasa a dos líneas y la fila crece. En es-419, en y pt-BR, al 100 % y al 130 % (6 capturas); en pt-BR, el «0» ya no toca el texto.
 
