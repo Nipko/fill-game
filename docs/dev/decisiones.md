@@ -4384,6 +4384,7 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Pendiente del dueño (propuestas, sin aplicar):**
   1. Apagar también los dos interruptores que quedan a 1 (Engine Diagnostics y `submitAnalytics`) con un método versionado en `ProjectSetup`, y que `Validate` lo exija. No cambia el AAB de hoy, pero quita la duda en el origen. Necesita un Editor para compilarlo y aplicarlo.
   2. Quitar `com.unity.modules.unityanalytics` de `Packages/manifest.json`. Cambia paquetes y exige un build y la prueba de que ningún paquete lo usa. No hace falta para Data Safety.
+
 ### D-035, añadido del 2026-10-28: el release llama al API de prod
 
 - **Estado:** encargado por el coordinador al sdk-integrator (rama `tanda6/backend-prod`) para quitar un bloqueo del lanzamiento de la 1.0 (D-059). No cambia ninguna decisión del dueño: aplica el añadido del 2026-10-27 (AWS prod desplegado). La URL no es un secreto.
