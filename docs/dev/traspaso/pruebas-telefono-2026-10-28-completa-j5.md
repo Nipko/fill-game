@@ -7,7 +7,7 @@ El portátil sigue el encargo de la jornada 5 de `guion-prueba-telefono-completa
 - buena parte del 4 y del 7;
 - de paso, el 8.5 (compra con 13-17) y parte del 9 y del 20.
 
-El bloque 6 (muestra amplia con el jugador automático) llegó al nivel 187 de los 307 previstos: a esa altura el teléfono perdió la depuración inalámbrica (`adb` rechaza la conexión). Lo que falta irá en un añadido cuando el dueño la reactive.
+El bloque 6 (muestra amplia con el jugador automático) está completo: 308 de 308 niveles ganados.
 
 **Siguen pendientes:** los bloques 5, 8 a 19 (salvo lo de paso), 21, 22 y 23, y lo que hace el dueño.
 
@@ -27,7 +27,7 @@ Capturas y logcat en el portátil: `Logs/device/completa-j5/` (fuera de git). El
 | 4. Comodines | cumple en lo probado | — |
 | 7. Perder, rendirse y reintentar | cumple en lo probado | 6 |
 | 8.5 Banda 13-17 | cumple | — |
-| 6. Muestra con el jugador automático | cumple en 1-187 (187/187); 188-700 pendiente | — |
+| 6. Muestra con el jugador automático | cumple (308/308) | — |
 
 ## Verificación (bloque 0)
 
@@ -222,18 +222,26 @@ Capturas y logcat en el portátil: `Logs/device/completa-j5/` (fuera de git). El
    - El consentimiento de 13-17 solo lleva la casilla de analítica, sin la de anuncios.
 5. **De paso, bloque 7.9 y bloque 9 (anuncios):** el vídeo simulado de la Marea (arriba) y la pantalla «Simulated ad · rv_undo_refill · rewarded», con la cuenta atrás y «Close», que se habilita al terminar.
 
-6. **Bloque 6. Muestra con el jugador automático: cumple en 1-187.** Recorre los niveles 1-200 seguidos (después, del 205 al 690 de 5 en 5 y del 691 al 700) cargando cada uno con `af_level` y jugando la solución del solver.
-   - **Llegó al 187 de los 307 previstos.** Ahí el teléfono perdió la depuración inalámbrica. Del 188 en adelante, pendiente.
-   - **187/187 ganados.** En los 187 niveles:
+6. **Bloque 6. Muestra con el jugador automático: cumple, 308/308.**
+   - **Qué hace:** cada nivel se carga con `af_level` y se juega con la solución del solver. Recorre:
+     - los niveles 1-200 seguidos;
+     - del 205 al 690, de 5 en 5;
+     - del 691 al 700.
+
+     Estos son 307 niveles más el 335 repetido.
+   - **El corte:** en el 187 el teléfono perdió la depuración inalámbrica. Al reactivarla volvió con otro puerto, y la muestra siguió desde el 188.
+   - **308/308 ganados.** En todos ellos:
      - el tablero cargado coincide con el pack;
      - la etiqueta de dificultad coincide con la del pack;
      - no hubo ni un `reject`;
-     - las tarjetas de mecánica y los banners de mundo salieron donde tocaba.
-   - **Ritmo:** mediana de 21,9 s por nivel, máximo 28,1 s, con el vertido y la victoria incluidos.
-   - **Memoria y temperatura en ~1 h 10 min** (muestras cada 8 min):
-     - PSS estable entre 520 y 537 MB, sin crecer (una muestra de 423 MB en el 111);
-     - batería del 92 al 75 %;
-     - temperatura de 30,7 a 36,6 °C.
+     - no hubo excepciones de Unity.
+   - **Tarjetas de mecánica:** salieron en el primer nivel de cada mecánica y en sus repasos (14, 25, 27, 31, 40, 43…, 698, 700).
+   - **Banners de mundo:** salieron en el 11, 41, 81 y 141. Los inicios de los mundos 6 a 9 (201, 301, 421 y 561) no entraban en la muestra de 5 en 5, así que esos banners quedan para el recorrido completo.
+   - **Ritmo:** mediana de 23,0 s por nivel y máximo de 31,2 s, con el vertido y la victoria incluidos.
+   - **Memoria y temperatura** en dos tramos (1 h 10 min y 50 min), con muestras cada 8 min:
+     - PSS entre 381 y 560 MB, sin crecer de un tramo a otro;
+     - batería del 92 al 75 % y del 100 al 89 %;
+     - temperatura máxima de 36,6 °C.
 
 ## Observaciones
 
