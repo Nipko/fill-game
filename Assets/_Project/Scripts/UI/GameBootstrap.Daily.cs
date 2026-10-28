@@ -177,6 +177,7 @@ namespace AF.UI
             _dailyService = service;
             _dailyScreen = new DailyChallengeScreen(transform, _art, service, context, OnDailyClosed);
             _dailyScreen.LeavingVictory = leave => PrePromptHoldsLeave || TryPrePromptOnLeave(true, true, leave); // 06 §8.1 (GameBootstrap.PushUi.cs); con la tarjeta delante, la victoria espera
+            _dailyScreen.StoreUnavailableNotice = ShowStoreUnavailableNotice; // «+3 Deshacer» en gris sin tienda (observación 6 de la jornada 5)
             _dailyScreen.Prepare = PrepareDaily; // B9 (GameBootstrap.A11y.cs): Reducir movimiento, Alto contraste y TalkBack
             _dailyCardCanvas = new OverlayCanvas("DailyCardCanvas", transform, DailyCardSortingOrder);
             _dailyCard = new DailyChallengeCard(_dailyCardCanvas.Root, _art, OnDailyCardTap);

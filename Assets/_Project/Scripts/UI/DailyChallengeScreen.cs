@@ -173,6 +173,12 @@ namespace AF.UI
         /// </summary>
         internal Func<Action, bool>? LeavingVictory { get; set; }
 
+        /// <summary>
+        /// El aviso «Las compras no están disponibles ahora» del juego que lo aloja (<c>GameBootstrap</c>), para un botón en gris que
+        /// lleva a una compra cuando la tienda no vende (<see cref="IStoreNoticeActions"/>). Null: sin aviso.
+        /// </summary>
+        internal Action? StoreUnavailableNotice { get; set; }
+
         // «Inicio» del calendario (y Atrás): tras ganar, como dejar la victoria (con el pre-prompt, si toca); si no, al inicio.
         private bool LeaveCalendar()
         {
@@ -753,8 +759,14 @@ namespace AF.UI
         /// Nivel fallido salen del Reto. No hay canoas, Cuia de rescate, Balsa, rendición, Mapa, ficha de fruta ni Siguiente; los
         /// videos (Marea, Morpho) quedan fuera del prototipo del Reto [P].
         /// </summary>
-        internal sealed class DailyGameActions : IGameActions, IShuffleActions
+        internal sealed class DailyGameActions : IGameActions, IShuffleActions, IStoreNoticeActions
         {
+            /// <inheritdoc />
+            public void ShowStoreUnavailable()
+            {
+                _owner.StoreUnavailableNotice?.Invoke(); // «+3 Deshacer» en gris sin tienda (observación 6 de la jornada 5)
+            }
+
             private readonly DailyChallengeScreen _owner;
 
             public DailyGameActions(DailyChallengeScreen owner)

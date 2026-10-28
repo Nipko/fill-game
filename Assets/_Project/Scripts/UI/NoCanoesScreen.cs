@@ -85,6 +85,9 @@ namespace AF.UI
         /// </summary>
         public Action? RefillMissing { get; set; }
 
+        /// <summary>Semillas que faltan para «Llenar canoas» (0 con saldo o sin la opción).</summary>
+        internal int RefillMissingSeeds => _refillMissing;
+
         /// <summary>«Te faltan {n} semillas» bajo «Llenar canoas» responde a un toque (tests).</summary>
         internal NotePulse RefillPulse => _refillPulse;
 

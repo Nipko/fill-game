@@ -37,6 +37,7 @@ namespace AF.UI
         private readonly NotePulse _pulse;
         private readonly Button _giveUp;
         private StuckRescueKind _rescueKind;
+        private int _rescueMissing;
         private float _height = 300f;
         private float _width = 328f;
         private string _label = LevelDefinition.LabelNormal;
@@ -69,6 +70,12 @@ namespace AF.UI
         /// pone <c>GameScreen</c>, como en Aguas estancadas (<see cref="StuckModal.RescueMissing"/>).
         /// </summary>
         public System.Action? RescueMissing { get; set; }
+
+        /// <summary>Semillas que faltan para el rescate (0 con saldo o sin rescate).</summary>
+        internal int RescueMissingSeeds => _rescueKind == StuckRescueKind.Disabled ? _rescueMissing : 0;
+
+        /// <summary>El rescate tal como se ve ahora (tests).</summary>
+        internal StuckRescueKind RescueKind => _rescueKind;
 
         /// <summary>«Te faltan {n} semillas» responde a un toque (tests).</summary>
         internal NotePulse RescuePulse => _pulse;
@@ -155,6 +162,7 @@ namespace AF.UI
         {
             _pulse.Stop(); // la nota vuelve a su sitio antes de recolocarla
             _rescueKind = view.Rescue;
+            _rescueMissing = view.RescueMissing;
             _root.gameObject.SetActive(true);
             _width = Mathf.Min(328f, canvasW - 32f);
             float inner = _width - 32f;

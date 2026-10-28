@@ -87,6 +87,11 @@ namespace AF.UI
                 _screen.A11y = _a11y;
             }
 
+            if (_lobby != null)
+            {
+                _lobby.A11y = _a11y; // «Llenar canoas» en gris anuncia «Te faltan {n} semillas» (observación 6 de la jornada 5)
+            }
+
             if (_mapScreen != null)
             {
                 _mapScreen.A11y = _a11y; // D-053: TalkBack anuncia la llegada de la canoa en el Mapa con viaje
@@ -151,6 +156,11 @@ namespace AF.UI
             if (_dailyScreen?.View != null)
             {
                 _dailyScreen.View.A11y = null;
+            }
+
+            if (_lobby != null)
+            {
+                _lobby.A11y = null;
             }
 
             _a11y?.Host.Clear();

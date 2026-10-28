@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections;
+using AF.Boosters;
 using AF.Core.Rules;
 using AF.Economy;
 using AF.GameFlow;
@@ -366,6 +367,38 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Profile.Stock.Shuffle, Is.EqualTo(shuffle + 1), "entra en el stock (R-Q14 a)");
             Assert.That(daily.Calendar.StatusText, Is.EqualTo("+1 Pororoca · se desbloquea en el nivel 30"));
             Assert.That(daily.Calendar.StampedDays.Count, Is.EqualTo(8));
+        }
+
+        [UnityTest]
+        public IEnumerator GrayUndoRefill_WithoutTheStore_ShowsTheStoreNotice()
+        {
+            // Observación 6 de la jornada 5: «+3 Deshacer · 30 semillas» en gris también responde en el Reto (DailyGameActions es
+            // IStoreNoticeActions): late su etiqueta y, sin tienda, el aviso «Las compras no están disponibles ahora».
+            yield return Boot();
+            GameBootstrap boot = GameBootstrap.Current!;
+            int seeds = boot.Profile!.Wallet.Seeds;
+            Assert.That(boot.PressDailyCard(), Is.True);
+            DailyChallengeScreen daily = boot.DailyScreen!;
+            Assert.That(daily.Actions, Is.InstanceOf<IStoreNoticeActions>());
+            ToPlaying(boot, daily);
+            boot.Services!.StoreLedger.Config.BizIapEnabled = false;
+            LevelFlow flow = daily.Flow!;
+            StuckContext ctx = flow.BuildStuckContext(false, true, GeoTier.T3);
+            ctx.UndoUnlimited = false;
+            ctx.UndoFree = 0;
+            ctx.UndoStock = 0;
+            ctx.UndoAdReady = false;
+            ctx.Seeds = 0;
+            GameScreen view = daily.View!;
+            view.ShowStuckVariant(StuckModalModel.Build(ctx, flow.Boosters));
+            view.Stuck.Panel.parent.gameObject.SetActive(true); // el panel a la vista, como con un bloqueo de verdad
+            view.Stuck.Panel.gameObject.SetActive(true);
+            Assert.That(view.Stuck.View!.UndoRefillMissing, Is.GreaterThan(0), "condición: «+3 Deshacer» en gris");
+
+            view.Stuck.RefillSeedsButton.onClick.Invoke();
+            Assert.That(view.Stuck.RefillSeedsPulse.Running, Is.True, "late su etiqueta");
+            Assert.That(boot.StoreUnavailableNoticeCount, Is.EqualTo(1), "el aviso de la tienda, también en el Reto");
+            Assert.That(boot.Profile.Wallet.Seeds, Is.EqualTo(seeds), "sin cobrar nada");
         }
 
         [UnityTest]
