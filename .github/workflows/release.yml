@@ -187,8 +187,9 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/.af-signing/af-upload.keystore"
           test -s "$GITHUB_WORKSPACE/.af-signing/af-upload.keystore"
 
-      # El editor de Firebase lo convierte en Assets/Plugins/Android/FirebaseApp.androidlib durante el build (con el
-      # applicationId que fija BuildRelease); la compuerta de Firebase de abajo comprueba el resultado en el AAB.
+      # BuildRelease, tras fijar el applicationId de release, lo reimporta para que el editor de Firebase genere
+      # Assets/Plugins/Android/FirebaseApp.androidlib con ese ID (código 10 si no); la compuerta de Firebase de abajo
+      # comprueba el resultado en el AAB.
       - name: google-services.json de prod en Assets/_LocalSecrets (ignorado por git)
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
