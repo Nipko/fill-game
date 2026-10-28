@@ -10,6 +10,7 @@ using AF.Localization;
 using AF.Platform;
 using AF.Save;
 using AF.UI;
+using UnityEngine.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -256,13 +257,83 @@ namespace AF.Tests.PlayMode
             Assert.That(screen.RowAvatarIndex(23), Is.Null, "un índice de una versión más nueva: el disco neutro");
             Assert.That(screen.RowAvatar(-1), Is.SameAs(boot.AvatarPortraitNow()), "la fila del jugador, con su avatar del perfil");
             Assert.That(screen.RowA11y(0), Does.StartWith("Puesto 1: "), "el avatar no se lee (es decorativo)");
-            screen.MeAvatarButton!.onClick.Invoke();
+            screen.MeButton!.onClick.Invoke();
             Assert.That(boot.AvatarScreenOpen, Is.True, "tocar el avatar del jugador abre «Tu avatar»");
             Assert.That(boot.AvatarView!.AliasText, Does.StartWith("En la Liga: "));
             Assert.That(boot.ChooseAvatar("coati"), Is.EqualTo(AvatarSelectResult.Selected));
             Assert.That(screen.RowAvatar(-1), Is.SameAs(boot.AvatarPortraitNow()), "un cambio se ve en el acto");
             Assert.That(boot.CloseAvatarScreen(), Is.True);
             Assert.That(boot.LeagueOpen, Is.True, "debajo sigue la Liga");
+        }
+
+        [UnityTest]
+        public IEnumerator TheLeague_TheWholeOwnRow_OpensYourAvatar_AndTheOthersOpenNothing()
+        {
+            // Observación 4 de la jornada 4 (2026-10-27): el guion dice «tocar tu fila»; antes solo el disco del retrato abría «Tu avatar».
+            yield return Lobby(57);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.OpenLeague(), Is.True);
+            LeagueScreen screen = boot.LeagueView!;
+            boot.LeagueAvatarAtlasNow!.PaintAll();
+            yield return null; // un fotograma: el lienzo procesa lo que se acaba de enseñar (la prueba de impacto lo ve)
+            Button me = screen.MeButton!;
+            Assert.That(me.gameObject.activeInHierarchy, Is.True);
+            Rect row = AfLayoutLog.WorldRect(screen.RowRect(-1));
+            Rect button = AfLayoutLog.WorldRect((RectTransform)me.transform);
+            Assert.That(button.size, Is.EqualTo(row.size), "el blanco es la fila entera");
+            Assert.That(((RectTransform)me.transform).rect.height, Is.GreaterThanOrEqualTo(48f), "≥ 48 dp");
+
+            // Un toque en la fila lejos del retrato (en los puntos, a la derecha) da en el botón de la fila.
+            TMPro.TextMeshProUGUI points = screen.TextsOf(-1)[3];
+            Assert.That(FirstClickHandler(AfLayoutLog.WorldRect(points.rectTransform).center), Is.SameAs(me.gameObject), "los puntos");
+            Assert.That(FirstClickHandler(new Vector2(row.xMin + (row.width * 0.6f), row.center.y)), Is.SameAs(me.gameObject), "el centro de la fila");
+            Assert.That(FirstClickHandler(new Vector2(row.xMax - 4f, row.yMin + 4f)), Is.SameAs(me.gameObject), "una esquina");
+
+            // Las filas de los demás no abren nada.
+            Rect other = AfLayoutLog.WorldRect(screen.RowRect(0));
+            GameObject? otherHandler = FirstClickHandler(other.center);
+            Assert.That(otherHandler, Is.Not.SameAs(me.gameObject), "la fila de otro no es la tuya");
+            if (otherHandler != null)
+            {
+                UnityEngine.EventSystems.ExecuteEvents.Execute(otherHandler, new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current),
+                    UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
+            }
+
+            Assert.That(boot.AvatarScreenOpen, Is.False, "tocar la fila de otro no abre nada");
+
+            // TalkBack: la fila y lo que hace, en un solo elemento (sin un «Tu avatar» suelto ni la fila repetida).
+            Canvas.ForceUpdateCanvases();
+            var items = new List<A11yItem>();
+            new A11yScanner().Scan(items);
+            var labels = new List<string>();
+            foreach (A11yItem item in items)
+            {
+                labels.Add(item.Label);
+            }
+
+            string reading = screen.RowA11y(-1);
+            Assert.That(reading, Does.StartWith("Tú, ").And.EndWith(AvatarText.Title));
+            Assert.That(labels, Does.Contain(reading));
+            Assert.That(labels, Has.No.Member(AvatarText.Title), "sin el botón suelto del retrato");
+            Assert.That(A11yScanner.ButtonLabel(me, out _), Is.EqualTo(reading));
+
+            var tap = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current)
+            {
+                button = UnityEngine.EventSystems.PointerEventData.InputButton.Left,
+                eligibleForClick = true,
+            };
+            UnityEngine.EventSystems.ExecuteEvents.Execute(me.gameObject, tap, UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
+            Assert.That(boot.AvatarScreenOpen, Is.True, "tocar la fila abre «Tu avatar»");
+            Assert.That(boot.CloseAvatarScreen(), Is.True);
+        }
+
+        private static GameObject? FirstClickHandler(Vector2 screenPoint)
+        {
+            UnityEngine.EventSystems.EventSystem events = UnityEngine.EventSystems.EventSystem.current;
+            var tap = new UnityEngine.EventSystems.PointerEventData(events) { position = screenPoint };
+            var hits = new List<UnityEngine.EventSystems.RaycastResult>();
+            events.RaycastAll(tap, hits);
+            return hits.Count == 0 ? null : UnityEngine.EventSystems.ExecuteEvents.GetEventHandler<UnityEngine.EventSystems.IPointerClickHandler>(hits[0].gameObject);
         }
 
         [UnityTest]

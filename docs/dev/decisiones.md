@@ -4287,3 +4287,16 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - confirmar la suscripción de las alarmas que llega a `support@tintalu.com`;
   - App Check con Play Integrity y la huella SHA-256 de la firma de Play, cuando exista la app en Play Console.
 - **Pendiente técnico:** `release.yml` no coloca `google-services.json`, así que un release firmado hoy sale sin Firebase (`UnavailableBackendClient`: la tienda no vende). Hace falta un secreto de CI que cree el dueño y un paso que lo escriba en `Assets/_LocalSecrets/` antes del build.
+
+### D-033, añadido del 2026-10-28: confirmación neutral al corregir la edad (B12)
+
+- **Fecha:** 2026-10-28. Registrada el 2026-10-28 por el agente de la rama `tanda6/fx-j4-ui`, a partir de la observación 3 de la jornada 4 en el teléfono (`docs/dev/traspaso/pruebas-telefono-2026-10-27-completa-j4.md`): un toque accidental en «Corregir mi edad» y el siguiente en «Menor de 13» bloquearon el perfil sin confirmar.
+- **Pregunta al dueño (por el coordinador):** «¿Corregir la edad desde Ajustes debe pedir confirmación (neutral, igual para toda banda)?». **Respuesta del dueño:** «la primera hagamos de acuerdo al estandar».
+- **Qué cambia en B12 (Q-B12-1 y 08 §7):**
+  - al corregir la edad desde Ajustes, tras elegir una banda **distinta** de la guardada y antes de guardarla, sale una confirmación **neutral e igual para las tres bandas**: el mismo título, la misma frase con la banda tal como sale en la pantalla de edad («La edad solo se puede corregir una vez y no se puede deshacer») y los mismos dos botones, «Volver a elegir» y «Confirmar», del mismo tamaño;
+  - no empuja ni disuade: nada de «¿seguro que eres menor?», ni avisos solo para `<13`, ni pistas de qué banda conviene;
+  - «Volver a elegir» (y el Atrás de Android) no gasta la corrección; la X cierra sin cambiar nada;
+  - la misma banda sigue sin gastar la corrección y sin confirmación; la pantalla de edad del primer arranque no lleva confirmación;
+  - la analítica no cambia de forma: `af_settings_change` con `value = age` y `af_consent` con `step = changed`, solo al confirmar (08 §8.2).
+- **Textos [P]:** `consent_age_confirm_title`, `consent_age_confirm_body`, `consent_age_confirm_back` y `consent_age_confirm_ok`, en `borrador` en español y en `traducido` en inglés y portugués (borrador por IA sin revisión nativa: la compuerta de release lo detiene hasta revisarlo); pendientes del abogado como los demás textos de B12 (Q-B12-5).
+- **Se actualizan:** 08 §7, `docs/dev/consentimiento.md` §1.7 y el guion de la prueba completa en el teléfono.

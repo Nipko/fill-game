@@ -727,7 +727,8 @@ Con el jugador automático, perfil con `af_max_level` alto y `af_level` en cada 
    - con `--ez af_league true --ez af_league_fake true`: la lista de 100, el país, el percentil y que el botón «Liga» casa con la columna de audio del inicio sin solaparse;
    - la Liga al 130 % y en los tres idiomas;
    - las banderas;
-   - TalkBack sobre la lista (bloque 17).
+   - TalkBack sobre la lista (bloque 17);
+   - **tu fila, fija abajo** (observaciones 4 y 5 de la jornada 4): tocarla en cualquier sitio (los puntos, el nombre, la línea de abajo) abre «Tu avatar», y tocar la fila de otro no abre nada; con TalkBack se lee entera con «Tu avatar» al final; sin seudónimo («Gana un nivel para entrar en la Liga»), «Tú» sale **una sola vez**, y con seudónimo, el seudónimo y la chapa «Tú» (también en en y pt-BR).
 
 ## 13. Ajustes, privacidad y cuenta (≈ 1 h)
 
@@ -747,8 +748,14 @@ Recorre **cada fila** de Ajustes y comprueba que hace lo que dice, al momento y 
 - Eliminar cuenta y datos.
 
 **Además:**
+0. **Toque con la lista en movimiento** (observación 3 de la jornada 4): lanza la lista de Ajustes con un deslizamiento rápido y, mientras sigue moviéndose, toca una fila (por ejemplo, «Corregir mi edad»). La lista se para y la fila **no** se activa; el toque siguiente, con la lista quieta, sí. Lo mismo en la Liga, el Mercado y «Tu avatar».
 1. **Privacidad:** apagar la analítica hace que las líneas pasen a `AF_EVENT_UNSENT`. Encenderla las devuelve a `AF_EVENT`.
-2. **Corregir mi edad:** a 13-17, una sola vez; después desaparece.
+2. **Corregir mi edad:** a 13-17, una sola vez; después desaparece. Antes, la **confirmación neutral** (añadido de D-033 del 2026-10-28):
+   - elegir otra banda enseña «Corregir mi edad», «Elegiste: {banda}. La edad solo se puede corregir una vez y no se puede deshacer.», «Volver a elegir» y «Confirmar»; **la misma pantalla** al tocar «Menos de 13», «De 13 a 17» o «18 o más» (solo cambia la banda): captura de las tres;
+   - «Volver a elegir» y Atrás vuelven a la pantalla de edad y la fila «Corregir mi edad» sigue en Ajustes; la X cierra sin cambiar nada;
+   - elegir la banda guardada cierra sin confirmación y sin gastar la corrección;
+   - con TalkBack (bloque 17) se leen el título, la frase y los dos botones;
+   - en el primer arranque, la pantalla de edad no pide confirmación.
 3. **Idiomas:** cambia a cada uno y recorre el inicio, un nivel, la victoria, el Mapa, la Bitácora, el Reto, la Liga, el Mercado (con la tienda falsa) y Ajustes. **Ningún texto vacío, cortado o en otro idioma.** Con en-XA, todo entre corchetes y nada recortado.
 4. **Eliminar cuenta: se hace al final de la prueba, en el bloque 21**, no aquí. Aquí solo se abre, se ve la espera visible y la nota de Play Juegos, y se cancela.
 

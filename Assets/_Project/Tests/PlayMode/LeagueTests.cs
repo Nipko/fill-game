@@ -158,6 +158,48 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator MyRow_SaysYouOnce_WithTheAliasAsTheName()
+        {
+            // Observación 5 de la jornada 4 (2026-10-27): sin seudónimo la fila decía «Tú · Tú». Ahora el nombre es el seudónimo y la
+            // chapa, «Tú» (league_you: «junto a su seudónimo»); sin seudónimo, solo la chapa.
+            _api.StartPoints = 0;
+            yield return Lobby(57);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.OpenLeague(), Is.True);
+            LeagueScreen screen = boot.LeagueView!;
+            Assert.That(screen.MeDetailText, Is.EqualTo(LeagueText.NoPoints), "«Gana un nivel para entrar en la Liga»");
+            Assert.That(screen.MeNameText, Is.Empty, "sin seudónimo, sin nombre");
+            Assert.That(screen.MePillText, Is.EqualTo(LeagueText.You));
+            Assert.That(YouCount(screen), Is.EqualTo(1), "«Tú» una sola vez");
+        }
+
+        [UnityTest]
+        public IEnumerator MyRow_WithAnAlias_ShowsItAsTheName_AndYouAsTheBadge()
+        {
+            yield return Lobby(57); // 140 puntos: ya tiene seudónimo
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.OpenLeague(), Is.True);
+            LeagueScreen screen = boot.LeagueView!;
+            Assert.That(screen.MeNameText, Is.EqualTo(LeagueText.Player(_api.NameKey, _api.NameNum)), "el seudónimo como nombre");
+            Assert.That(screen.MePillText, Is.EqualTo(LeagueText.You), "y «Tú» como chapa");
+            Assert.That(YouCount(screen), Is.EqualTo(1));
+        }
+
+        private static int YouCount(LeagueScreen screen)
+        {
+            int n = screen.MePillText == LeagueText.You ? 1 : 0;
+            foreach (TMPro.TextMeshProUGUI text in screen.TextsOf(-1))
+            {
+                if (text.gameObject.activeInHierarchy && text.text == LeagueText.You)
+                {
+                    n++;
+                }
+            }
+
+            return n;
+        }
+
+        [UnityTest]
         public IEnumerator Screen_Offline_SaysConnect_OrShowsTheLastOneWithItsAge()
         {
             _api.Offline = true;

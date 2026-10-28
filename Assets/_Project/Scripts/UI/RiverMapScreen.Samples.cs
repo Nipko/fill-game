@@ -919,7 +919,7 @@ namespace AF.UI
             _samplesViewport.gameObject.AddComponent<RectMask2D>();
             _samplesViewport.gameObject.AddComponent<HitArea>().raycastTarget = true; // el arrastre en los huecos también desplaza
             _samplesContent = UiBuilder.Rect("Content", _samplesViewport);
-            _samplesScroll = _samplesViewport.gameObject.AddComponent<ScrollRect>();
+            _samplesScroll = _samplesViewport.gameObject.AddComponent<FlingStopScrollRect>();
             _samplesScroll.viewport = _samplesViewport;
             _samplesScroll.content = _samplesContent;
             _samplesScroll.horizontal = false;
