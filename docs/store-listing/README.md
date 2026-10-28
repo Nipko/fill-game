@@ -35,7 +35,8 @@ Encargo: `docs/dev/plan-tanda5.md` §4, fila B13 (equipo Spark, 2026-10-20; rama
 |---|---|---|---|
 | Título (30) | 21 | 26 | 25 |
 | Descripción corta (80) | 78 | **74** | 73 |
-| Descripción completa (4.000), el bloque entero | 2.670 | 2.502 | 2.612 |
+| Descripción completa (4.000), medida el 2026-10-23 | 2.487 | 2.337 | 2.411 |
+| Descripción completa (4.000), el bloque entero, medida el 2026-10-28 | 2.670 | 2.502 | 2.612 |
 | Descripción completa sin la línea del asesor | 2.548 | 2.404 | 2.493 |
 | Descripción completa sin el asesor ni la Liga | 2.365 | 2.239 | 2.292 |
 | Novedades (500) | 143 | 145 | 134 |
@@ -58,10 +59,9 @@ Medidas de nuevo el 2026-10-23, tras poner en EN y PT-BR los nombres de D-033 (p
 | Q-B13-12 | Línea del asesor cultural en la descripción larga | Con su nombre, solo con su consentimiento por escrito | El asesor y su consentimiento | Dueño |
 | Q-B13-16 | Líneas de `app-ads.txt` | Copiarlas del panel de AppLovin MAX | La cuenta de MAX y la integración de D-042; hoy la plantilla de la web no declara ningún vendedor. **Nota del 2026-10-28:** con D-049 la plantilla ya lleva activas las líneas de AdMob (`google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0`) y de Unity Ads (`unity.com, 20067668703382, DIRECT`); MAX no se declara. Falta que la vea Google tras publicar (08 §13.1 #23) y sumar Meta y Mintegral cuando entren | Dueño |
 | Q-B13-17 | Pix (Brasil) y OXXO (México) en las fichas por país | Solo tras comprobar en Play Console que se ofrecen al lanzar | La app en Play Console (ya sin dictamen, D-047) | Dueño |
-| Q-B13-19 | Retención de Firebase Analytics | La mínima que permita el panel, por minimización | Configurarla en el proyecto de Firebase de prod y anotarla en la web (privacidad, sección 9, hoy `[[DATO DEL DUEÑO]]`). **Nota del 2026-10-28:** hecha en Firebase prod (`tintalu`): eventos 2 meses y usuario 14 meses (D-035, añadido del 2026-10-27); la web dice «2 meses». Queda la exportación a BigQuery (`docs/dev/publicar-play-console.md` §12) | Dueño |
+| Q-B13-19 | Retención de Firebase Analytics | La mínima que permita el panel, por minimización | Configurarla en el proyecto de Firebase de prod y anotarla en la web (privacidad, sección 9, hoy `[[DATO DEL DUEÑO]]`). **Nota del 2026-10-28:** hecha en Firebase prod (`tintalu`): eventos 2 meses y usuario 14 meses (D-035, añadido del 2026-10-27); la web dice «2 meses». La exportación a BigQuery queda como decisión del dueño (09, «Preguntas abiertas», 7: paneles nativos hasta confirmar la cuota; `docs/dev/publicar-play-console.md` §19, duda 5) | Dueño |
 | Q-B13-22 | Partida de Play Games y datos del teléfono cuando el borrado llega por la web | Decir que se borran la próxima vez que se abre el juego y que el jugador puede borrar su perfil de Play Games | La web deja el texto como `[[ABOGADO]]`, y Play Games aún no está en el juego (D-042): el texto se completa al integrarlo. **Nota del 2026-10-28:** Play Games 2.3.0 ya está en el código (D-042; 08 §13.3); se activa con el `APP_ID` del proyecto de Play Games (`docs/dev/play-games.md` §9) | Abogado (con D-057, investigación propia) |
 | Q-B13-24 [nueva; pendiente del sí del dueño y del abogado] | Data Safety: la dirección IP que guardan 30 días los registros de acceso del backend y de la web (08 §13.3, fila «Backend propio»; privacidad de la web, sección 9) | **(a) recomendada, aplicada en el borrador:** no se declara como un tipo aparte, porque solo sirve para seguridad y no se deriva ninguna ubicación; lo confirma el abogado; (b) declararla como «Ubicación aproximada» | El abogado | Abogado |
-| Q-B13-25 [nueva; pendiente del sí del dueño y del abogado; **cerrada el 2026-10-28**: 08 §13.3 ya pone UMP 4.0.0 en la fila de Google Mobile Ads (D-049)] | 08 §13.3 no tiene fila para Google UMP, que llega con MAX en D-042 | **(a) recomendada, aplicada en el borrador:** se cubre con la fila de MAX hasta que el integrador de D-042 confirme con la guía de Google qué trata UMP; si trata algo propio, el integrador añade la fila a 08 §13.3; (b) añadir ya una fila «UMP: nada» | El integrador de D-042 | Integrador; dueño |
 
 ### 3.2 Cerradas
 
@@ -82,6 +82,7 @@ Medidas de nuevo el 2026-10-23, tras poner en EN y PT-BR los nombres de D-033 (p
 | Q-B13-20 | Unity Authentication, dependencia de Unity IAP, sin fila en 08 §13.3 | **Obsoleta por D-040 (añadido de Q-IAP-1):** Unity IAP y sus dependencias de Unity Services salen del juego, sustituidos por el plugin propio de Play Billing 9.0.0. La fila de 08 §13.3 es ahora solo «Google Play Billing», con Q-BILL-2 |
 | Q-B13-21 | Cómo sabe la web que quien pide el borrado es el dueño | **D-035** (añadido de F1-F2a) y 08 §11: un código de cuenta aleatorio de 128 bits, distinto del UID, del que el servidor solo guarda el hash, que rota y se confirma en 5 minutos, con límites por ruta y por código. Ajustes lo muestra con guiones y la web lo normaliza (D-033, añadido del 2026-10-22, punto 11). El «ID de jugador» del borrador es ahora el **código de cuenta** |
 | Q-B13-23 | Captura 2, «14 frutas, 14 colores» | D-033, añadido del 2026-10-20, (a): «14 colores de frutas y ríos» / «14 colors from fruit and rivers» / «14 cores de frutas e rios» (fichas §6; `assets-tienda.md` §4) |
+| Q-B13-25 | 08 §13.3 no tenía fila para Google UMP, que llegaba con MAX en D-042 (recomendada (a): cubrirlo con la fila del SDK de anuncios) | **Cerrada el 2026-10-28:** 08 §13.3 pone UMP 4.0.0 dentro de la fila de Google Mobile Ads (D-049 y su añadido del 2026-10-25); `data-safety.md` §5 |
 
 ### 3.3 Historia: las 23 tal como las planteó B13
 

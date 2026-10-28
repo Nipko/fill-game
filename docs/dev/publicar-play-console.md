@@ -35,7 +35,7 @@ Marca cada una al hacerla. Entre paréntesis, la sección de esta guía.
 - [ ] Clasificación de contenido IARC (§9)
 - [ ] Los 13 productos con sus precios (§10)
 - [ ] Las dos cuentas de servicio cargadas en AWS y la de Play invitada en Play Console (§11)
-- [ ] Retención de Analytics comprobada y exportación a BigQuery activada (§12)
+- [ ] Retención de Analytics comprobada (§12)
 - [ ] Público objetivo y contenido (§13)
 - [ ] Noticias, gobierno, finanzas, salud y demás declaraciones (§14)
 - [ ] Prueba completa en la pista interna (§15)
@@ -68,7 +68,7 @@ Marca cada una al hacerla. Entre paréntesis, la sección de esta guía.
 - La Liga es de la 1.0 (D-046), pero su interruptor `live_league_enabled` vale **`false`** por defecto (08 §9) y en la plantilla de Remote Config de prod. El backend de prod ya existe (D-035, añadido del 2026-10-27).
 - Decide antes de rellenar la ficha, Data Safety e IARC, porque cambian:
   - **Encendida en la 1.0** (o encendible por Remote Config sin publicar otra versión): la ficha lleva la línea de la Liga, Data Safety declara sus filas y el IARC contesta «sí» a la interacción y al país (§5, §8 y §9).
-  - **Apagada hasta otra versión:** se quita la línea de la ficha y sus filas de Data Safety; antes de encenderla, se vuelven a enviar Data Safety y el IARC (`iarc.md` §5).
+  - **Apagada hasta otra versión:** se quita la línea de la ficha y sus filas de Data Safety; antes de encenderla, se vuelve a enviar Data Safety. **El IARC contesta «sí» igualmente** (§9): la Liga va en el build y se enciende por Remote Config sin publicar otra versión (08 §13.1 #10).
 - [P] Si dudas, declara como si estuviera encendida: declarar de más está permitido; declarar de menos, no.
 
 ### 0.5 Remote Config de prod
@@ -187,7 +187,7 @@ Al pegar la descripción completa:
 - **Borra la línea del asesor cultural** (`[PENDIENTE: dueño] …`) salvo que tengas su consentimiento por escrito (Q-B13-12 (a)).
 - **La línea de la Liga** (`- River League: …`, `- Liga del río: …`, `- Liga do Rio: …`) va solo si la Liga sale encendida (§0.4).
 - Longitudes medidas el 2026-10-28 (NFC), sin la línea del asesor: en 2.404, es 2.548, pt 2.493 caracteres; sin el asesor ni la Liga: 2.239, 2.365 y 2.292. Todas por debajo de 4.000 (`docs/store-listing/README.md` §2).
-- Sin «Best», «#1», «Free» ni emojis (08 §13.1 #5). La línea final de independencia («…not affiliated with Amazon.com, Inc.») se queda (08 §13.1 #5).
+- Sin emojis ni mayúsculas sostenidas (08 §13.1 #5; glosario §1.1). La prohibición de «Best», «#1» y «Free» del glosario (`00-glosario.md`, fila del título) es **solo para el título**; la descripción puede decir «free», como ya hace («Tintalú is free to play»). La línea final de independencia («…not affiliated with Amazon.com, Inc.») se queda (08 §13.1 #5).
 
 **Fichas personalizadas** (08 §13.1 #6; se quedan con la salida mundial, D-057): Brasil (Pix) y México (OXXO), solo si Play ofrece esos métodos al lanzar (Q-B13-17 (a)). Las frases están en `pt-BR/ficha.md` §7 y `es-419/ficha.md` §7. Son opcionales para el lanzamiento [P].
 
@@ -279,7 +279,7 @@ Marca solo estos tipos. Para cada uno, Play pregunta si se recoge, si se compart
 | Categoría › tipo [NV] | Recogido | Compartido | Obligatorio / opcional | Finalidades |
 |---|---|---|---|---|
 | Ubicación › **Ubicación aproximada** | Sí | **Sí** | Obligatorio [E] | Publicidad o marketing; prevención de fraude, seguridad y cumplimiento; (Liga) funcionalidad de la app |
-| Información personal › **ID de usuario** | Sí | (Liga) **Sí**, por el seudónimo visible; sin Liga, **No** | Obligatorio | Funcionalidad de la app; prevención de fraude, seguridad y cumplimiento; gestión de cuentas |
+| Información personal › **ID de usuario** | Sí | **Sí**: el UID va a Google (AdMob) como `user_id` del SSV de los recompensados (08 §13.3, fila de Google Mobile Ads); y, con la Liga, el seudónimo visible | Obligatorio | Funcionalidad de la app; prevención de fraude, seguridad y cumplimiento; gestión de cuentas |
 | Información financiera › **Historial de compras** | Sí | No | Opcional | Funcionalidad de la app; prevención de fraude, seguridad y cumplimiento |
 | Actividad en la app › **Interacciones en la app** | Sí | **Sí** (con los anuncios) | Obligatorio [E] (la analítica sola sería opcional) | Analítica; publicidad o marketing |
 | Actividad en la app › **Otras acciones del usuario** | Sí | (Liga) **Sí**; sin Liga, **No** | Obligatorio [E] | Funcionalidad de la app |
@@ -302,8 +302,8 @@ Contenido de la app › **Clasificación de contenido** › Empezar cuestionario
 | Categoría | **Juego** | 08 §13.1 #1 |
 | Violencia; sangre; miedo; contenido sexual; lenguaje soez; drogas, alcohol y tabaco; discriminación | **No** en todas | `iarc.md` §2 (Q-B13-11 (a): la Piraña no es violencia) |
 | Juegos de azar simulados; apuestas con dinero real | **No** | 05 §7; `iarc.md` §2 |
-| Los usuarios pueden interactuar o intercambiar contenido | (Liga) **Sí**: otros jugadores ven el seudónimo automático, el avatar, la bandera y los puntos; sin chat ni texto libre. Si la pregunta se limita a texto, voz, imágenes o audio aportados por los usuarios, **No**. Sin Liga, **No** | 08 §13.1 #10; `iarc.md` §3 |
-| Comparte la ubicación del usuario con otros usuarios | (Liga) **Sí, a nivel de país** (la bandera). Si la pregunta se limita a la ubicación física actual o precisa, **No**. Sin Liga, **No** | `iarc.md` §3 |
+| Los usuarios pueden interactuar o intercambiar contenido | **Sí**, aunque la Liga salga apagada: va en el build y se enciende por Remote Config (08 §13.1 #10). Otros jugadores ven el seudónimo automático, el avatar, la bandera y los puntos; sin chat ni texto libre. Si la pregunta se limita a texto, voz, imágenes o audio aportados por los usuarios, **No**. La alternativa «No» con la Liga apagada, en la duda 9 de §19 | 08 §13.1 #10; `iarc.md` §3 |
+| Comparte la ubicación del usuario con otros usuarios | **Sí, a nivel de país** (la bandera de la Liga), aunque la Liga salga apagada, por lo mismo. Si la pregunta se limita a la ubicación física actual o precisa, **No**. Alternativa con la Liga apagada: duda 9 de §19 | 08 §13.1 #10; `iarc.md` §3 |
 | Compras digitales | **Sí** | 08 §13.1 #10 y #14 |
 | Compras de elementos aleatorios (cajas de botín) | **No** (contestar «sí» por error daría ClassInd 18 en Brasil) | 05 §7; 09 R2 |
 | Acceso a internet sin restricciones (navegador) | **No** (los enlaces abren el navegador del sistema) | `iarc.md` §3 |
@@ -435,20 +435,16 @@ Lo usa `deleteAccount` (ámbito `identitytoolkit`, `accounts:delete`).
 
 Comprobación sin secretos: en §15, una compra de prueba que se acredita prueba la primera; «Eliminar cuenta y datos» que termina bien prueba la segunda.
 
-## 12. Firebase Analytics: retención y BigQuery
+## 12. Firebase Analytics: retención
 
 ### 12.1 Retención (Q-B13-19)
 
 - **Ya hecha** en el proyecto de prod `tintalu`: **eventos 2 meses** y **datos de usuario 14 meses** (D-035, añadido del 2026-10-27). La política de la web dice «Analítica: 2 meses» (`infra/web/src/content/es-419/privacy.html`, tabla de plazos).
 - Compruébalo en la propiedad de Google Analytics enlazada al proyecto: Administrar › Recogida y modificación de datos › **Retención de datos** [NV ruta]. Si alguien la cambió, vuelve a 2 meses (Q-B13-19 (a): la mínima).
 
-### 12.2 Exportación a BigQuery: actívala antes del lanzamiento [P]
+### 12.2 BigQuery: no es un paso de esta guía
 
-- **Por qué antes:** la exportación solo copia los datos **desde el día en que la activas** [NV: no es retroactiva], y la retención de 2 meses borra los eventos de Analytics a los 2 meses. Sin BigQuery desde el día 1, el primer mes de la 1.0 (el que más interesa: retención D1/D7, embudos, `af_level_*`) se pierde para cualquier análisis posterior. El GDD ya cuenta con ella para los KPI (06 §12; 09 §6.2, «Firebase Analytics con exportación a BigQuery») y para el futuro `rcProposalJob` (08 §2.4).
-- **Cómo** [NV rutas]: consola de Firebase › Configuración del proyecto › **Integraciones › BigQuery › Vincular**. Pide el **plan Blaze** (de pago por uso; 09 §6.2): pon antes una alerta de presupuesto en la facturación de Google Cloud.
-  - Marca **Google Analytics**; exportación **diaria** [P] (la continua, *streaming*, cuesta más). Crashlytics, opcional.
-  - **Ubicación del conjunto de datos:** ver la duda 5 de §19.
-- **Coherencia con la política [P]:** la web promete 2 meses de analítica. Pon al conjunto de datos de BigQuery una **caducidad de tablas de 60 días**, o cambia la política antes de guardar más tiempo. El sandbox de BigQuery tiene un tope gratuito [NV: 10 GB de almacenamiento y 1 TB de consulta al mes, 09 §6.2].
+La exportación a BigQuery **no** se activa como parte del lanzamiento: 09, «Preguntas abiertas», pregunta 7, se decidió con su propuesta por defecto, «paneles nativos hasta confirmar la cuota de BigQuery». Si quieres activarla antes del lanzamiento es una decisión tuya: la propuesta [P] y sus detalles están en la duda 5 de §19.
 
 ## 13. Público objetivo y contenido
 
@@ -532,7 +528,12 @@ Pruebas internas › la versión probada › **Promocionar versión › Producci
 2. **Liga del río en producción** (§0.4): ¿sale encendida en la 1.0?
 3. **Precios** (§10.4): Argentina en ARS o en USD; a qué países se aplica el EUR en paridad.
 4. **Packs de skin:** 05 §4.1 promete «la escena de la gran parada del mundo como marco del Mapa del río», pero `StoreCatalog.cs` solo da la skin y 300 semillas. ¿Se corrige 05 o falta código? La descripción de §10.3 no promete la escena.
-5. **Ubicación del conjunto de datos de BigQuery** (§12.2): ¿EE. UU. (multirregión) [P], donde ya trata los datos Google Analytics, o `southamerica-east1`, junto a AWS `sa-east-1` (D-057, P8)? Afecta a lo que dice la política sobre transferencias.
+5. **Exportación a BigQuery: ¿antes del lanzamiento?** 09, «Preguntas abiertas», pregunta 7, se decidió con «paneles nativos hasta confirmar la cuota de BigQuery», así que hoy no se activa. Propuesta [P] para que decidas:
+   - **Por qué antes:** la exportación solo copia los datos desde el día en que se activa [NV: no es retroactiva], y la retención de 2 meses borra los eventos de Analytics; sin ella desde el día 1, el primer mes de la 1.0 se pierde para análisis posteriores. El GDD cuenta con ella para los KPI (06 §12; 09 §6.2) y para el futuro `rcProposalJob` (08 §2.4).
+   - **Cómo** [NV rutas]: consola de Firebase › Configuración del proyecto › Integraciones › BigQuery › Vincular. Pide el plan Blaze (09 §6.2): antes, una alerta de presupuesto en Google Cloud. Google Analytics con exportación diaria [P]; Crashlytics, opcional. El sandbox de BigQuery tiene un tope gratuito [NV: 10 GB de almacenamiento y 1 TB de consulta al mes, 09 §6.2].
+   - **Coherencia con la política [P]:** la web promete 2 meses de analítica: caducidad de tablas de 60 días en el conjunto de datos, o cambiar la política antes.
+   - **Ubicación del conjunto de datos:** ¿EE. UU. (multirregión) [P], donde ya trata los datos Google Analytics, o `southamerica-east1`, junto a AWS `sa-east-1` (D-057, P8)? Afecta a lo que dice la política sobre transferencias.
 6. **Logros de Play Games:** 08 §13.1 #16 dice «logros básicos», pero `play-games.md` §10 y 08 §13.3 dicen «sin logros». Esta guía sigue a `play-games.md` (sin logros).
 7. **Bloqueante de §0.2** (`BackendEndpoints.Prod` vacío): el GDD y los documentos dan la URL de prod como desplegada (D-035, añadido del 2026-10-27), pero el cliente no la tiene y su test exige que siga vacía («llega con F5-1»).
 8. **Orden de Play Games:** D-059 y `release.md` §4 bis prevén probar Play Games en la pista interna con el AAB de §0.8, pero el `APP_ID` solo existe tras crear el proyecto de Play Games, que necesita las huellas de la primera subida. Esta guía propone dos subidas internas (10000 y 10001) y promocionar la segunda [P].
+9. **IARC con la Liga apagada** (§9): la guía recomienda «Sí» a la interacción entre usuarios y a compartir la ubicación a nivel de país aunque la Liga salga apagada, como 08 §13.1 #10. Alternativa: contestar «No» mientras esté apagada y repetir el cuestionario antes de encenderla (`iarc.md` §5); el riesgo es encenderla por Remote Config y olvidar el cuestionario.
