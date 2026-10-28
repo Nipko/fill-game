@@ -25,7 +25,7 @@ Regla dura 5: **ningún agente lo lee, lo crea, lo imprime ni lo commitea.**
 - Ruta: **`Assets/_LocalSecrets/google-services.json`** (el de la app `com.amazonfill.dev` del proyecto `fill-dev-e75a2`; D-035).
 - Lo cubren en `.gitignore` las reglas `/[Aa]ssets/_LocalSecrets/` y `/[Aa]ssets/_LocalSecrets.meta` (después de la regla que versiona los `.meta`, para que ganen), además de la regla general `google-services.json`. Compruébalo con `git check-ignore -v Assets/_LocalSecrets/google-services.json`.
 - El editor de Firebase lo convierte en cada build en `Assets/Plugins/Android/FirebaseApp.androidlib/` (recursos con las claves del proyecto) y en la copia de escritorio `Assets/StreamingAssets/google-services-desktop.json`, las dos ignoradas (con sus `.meta`). Crashlytics deja su id de build en `Assets/Plugins/Android/FirebaseCrashlytics.androidlib/` (ignorado). EDM4U puede crear `Assets/GeneratedLocalRepo/` (ignorado).
-- Prod: no hay proyecto de prod todavía (D-035, «Pendiente para prod»). Un build de release con el de dev no sirve para Play.
+- Prod: proyecto `tintalu`, app Android `com.parallext.tintalu` (D-035, añadido del 2026-10-27). Un build de release con el de dev no sirve para Play: el API de prod solo acepta tokens de `tintalu`.
 - Release firmado del CI (añadido de D-035 del 2026-10-27): `release.yml` escribe aquí el de prod desde el secreto `GOOGLE_SERVICES_JSON_BASE64` del Environment `release` y lo borra al acabar; `ci/check-firebase-config.sh` comprueba en el AAB el `google_app_id` de prod (`docs/dev/release.md` §2 bis).
 
 ## 3. Qué pasa sin el archivo
@@ -34,13 +34,20 @@ El build de desarrollo **compila y funciona igual que antes de F3-6**:
 
 - `FirebaseBoot.IsConfigured` mira en el teléfono si el build lleva el recurso `google_app_id` (sin red ni SDK). Sin él, todo va con las implementaciones falsas: `FakeBackendClient` (compras simuladas que se acreditan), `FakeRemoteConfigBackend` (defaults compilados), sin sumidero de Firebase Analytics y sin Crashlytics.
 - En un build de desarrollo con una configuración que no es la de dev (`fill-dev-e75a2` y `1:528273757148:android:45d5cf0ddb2e3021c93519`) pasa lo mismo (`config_mismatch`): el API de dev rechazaría sus tokens.
-- Un release sin Firebase (o sin la URL de prod, vacía hasta F5-1) usa `UnavailableBackendClient`: la tienda no vende.
+- Un release sin Firebase, o con el `applicationId` provisional `com.amazonfill.dev` (el ensayo `-afRehearsal`, que lleva la configuración de dev y por eso no usa `BackendEndpoints.Prod`; añadido de D-035 del 2026-10-28), usa `UnavailableBackendClient`: la tienda no vende.
 - El editor (ARM64 o x64) y los tests **siempre** van con las falsas (08 §2.1, principio 6): `BackendEndpoints.Current` es vacía en el editor y el código del SDK solo se compila con `UNITY_ANDROID && !UNITY_EDITOR`.
 
 ## 4. Con el archivo (build de desarrollo)
 
 - **Backend:** `HttpBackendClient` contra `BackendEndpoints.Dev` (`https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com`; D-035, añadido de F3-1 y F3-2) con el ID token de Firebase Auth anónimo (`FirebaseUser.TokenAsync`) y, en las rutas con `integrity: true`, un token de App Check de uso limitado (`GetLimitedUseAppCheckTokenAsync`). App Check va sin refresco automático.
 - **App Check (D-039, añadido del 2026-10-21):** con `DEVELOPMENT_BUILD` (`BuildDev`), el proveedor de depuración (`DebugAppCheckProviderFactory`, de `firebase-appcheck-debug`, que ya trae Firebase); en release (también el ensayo `-afRehearsal`), Play Integrity. El juego nunca escribe tokens en los logs; el secreto de depuración lo escribe el SDK de Android, y solo en los builds de desarrollo, que son los únicos que instalan ese proveedor. La biblioteca `firebase-appcheck-debug` solo va en los builds de desarrollo (D-033, añadido del 2026-10-22, punto 9); ver «`firebase-appcheck-debug` fuera del release», más abajo.
+
+## 4 bis. Release con el ID definitivo (añadido de D-035 del 2026-10-28)
+
+- **Backend:** `HttpBackendClient` contra `BackendEndpoints.Prod` (`https://vsublt4swh.execute-api.sa-east-1.amazonaws.com`, la salida `ApiUrl` de `AfProdApi`; sin `api.tintalu.com`, que solo existe con `-c domainExtras=api`), con el ID token de Firebase Auth del proyecto `tintalu` y, en las rutas con `integrity: true` (`/v1/purchases/verify`, `/v1/account/delete` y las tres de `/v1/league*`), un token de App Check de uso limitado con **Play Integrity**. El autorizador de prod comprueba el emisor `https://securetoken.google.com/tintalu`, y la Lambda, que el token de App Check sea del proyecto `tintalu` y de la app `1:459140125724:android:810c83a65d0ff611f07bd9`.
+- **Qué lo pone:** `release.yml` escribe el `google-services.json` de prod desde `GOOGLE_SERVICES_JSON_BASE64`; `BuildRelease` regenera el XML de Firebase para `AF_RELEASE_APPLICATION_ID`; `ci/check-firebase-config.sh` comprueba el `google_app_id` de prod en el AAB.
+- **El ensayo `-afRehearsal`** (ID `com.amazonfill.dev`, configuración de dev) sigue sin backend (`UnavailableBackendClient`), como antes: `BackendEndpoints.For` no le da la URL de prod, cuyo autorizador rechazaría sus tokens. Las compras, el borrado desde la app y la Liga contra prod se prueban en la pista interna con el AAB firmado (D-059, punto 5).
+- **Hasta que el dueño registre App Check con Play Integrity en `tintalu`** (con la huella SHA-256 de la firma de Play), las rutas con `integrity: true` fallan (el SDK no da token de App Check o el servidor responde 403 `integrity_failed`): la compra se queda en «Confirmando…» con su cola de 48 h, el borrado desde la app falla sin borrar nada y la Liga dice que no está disponible. `restoreLedger` y el código de cuenta no lo necesitan.
 
 ### `firebase-appcheck-debug` fuera del release
 
@@ -105,7 +112,7 @@ Los dos pasan `ci/check-manifest.ps1 -Mode dev`, `ci/check-16kb.sh` (18 bibliote
 | Ensamblado | Qué |
 |---|---|
 | `AF.Backend.Firebase` (`Scripts/Backend/Firebase/`) | `FirebaseBoot` (arranque único, App Check con Play Integrity antes que nada, ids públicos de dev), `FirebaseAuthTokenProvider`, `AppCheckIntegrityTokenProvider`, `FirebaseTokenProviders` |
-| `AF.Backend.Unity` | `BackendFactory` usa los proveedores reales cuando existen; `BackendEndpoints.Dev` |
+| `AF.Backend.Unity` | `BackendFactory` usa los proveedores reales cuando existen; `BackendEndpoints.Dev` y `BackendEndpoints.Prod` (esta, solo en un release con el ID definitivo) |
 | `AF.Analytics.Firebase` (`Scripts/Analytics/Firebase/`) | `FirebaseAnalyticsSink` (booleanos como 0/1, Q-B7-18 (a)), `CrashReporting` |
 | `AF.RemoteConfig.Firebase` (`Scripts/RemoteConfig/Firebase/`) | `FirebaseRemoteConfigBackend`, `RemoteConfigBackends`, `RcCacheFile` |
 
@@ -117,7 +124,7 @@ Los dos pasan `ci/check-manifest.ps1 -Mode dev`, `ci/check-16kb.sh` (18 bibliote
 - B12: la pantalla de consentimiento y edad debe llamar a `AnalyticsService.SetCollectionEnabled` y, con la banda < 13, no encenderla.
 - Eliminar cuenta: llamar a `FirebaseAnalyticsSink.ResetData()` (08 §13.3: `resetAnalyticsData()`); el borrado del usuario de Firebase Auth lo hace el servidor.
 - Unity IAP (otra tarea): `setObfuscatedAccountId` = UID de Firebase Auth.
-- Prod: proyecto Firebase de prod y su `google-services.json`.
+- ~~Prod: proyecto Firebase de prod y su `google-services.json`.~~ Hecho (añadidos de D-035 del 2026-10-27 y del 2026-10-28): el release del CI lleva el de `tintalu` y llama a `BackendEndpoints.Prod`. Falta App Check con Play Integrity en `tintalu` (primer punto).
 
 ## 8. Qué probar en el teléfono
 

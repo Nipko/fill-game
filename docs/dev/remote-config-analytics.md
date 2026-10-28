@@ -294,15 +294,30 @@ firebase remoteconfig:versions:list --project fill-dev-e75a2               # la 
 Volver atrás: consola → Remote Config → **Historial de cambios** → versión anterior → **Revertir**, o
 `firebase remoteconfig:rollback --project fill-dev-e75a2` (con la versión que da `versions:list`; `--help` muestra la opción).
 
-### 9.4 Producción (`tintalu`): todavía no
+### 9.4 Producción (`tintalu`)
 
-- **No publiques en `tintalu` hasta que esté registrada la app de prod** (con el `applicationId` definitivo, que espera el
-  dictamen de marca: `CLAUDE.md`, regla dura 6) y su `google-services.json`. Sin app no hay cliente que la lea, y publicar antes
-  solo deja una plantilla que nadie ha probado contra un build de release.
+- ~~No publiques en `tintalu` hasta que esté registrada la app de prod.~~ Ya lo está: `com.parallext.tintalu` (D-047, sin
+  esperar al dictamen) con su `google-services.json`, y el release del CI llama al API de prod (añadidos de D-035 del 2026-10-27
+  y del 2026-10-28). La plantilla de prod la publica el dueño desde la consola.
 - Cuando toque: el mismo procedimiento de §9.2 o §9.3 con `remote_config_template_prod.json` y `--project tintalu`, después
   de probarlo en dev con la misma versión de la plantilla (las dos deben salir de la misma ejecución de `rc_template.py`).
 - Después de publicar, un cambio de 08 §9 que mueva un default **no llega** a los jugadores con solo subir un build: el valor
   publicado manda sobre el compilado. Cada cambio de 08 §9 = regenerar, probar en dev y volver a publicar en los dos proyectos.
+
+### 9.4 bis Encender la Liga del río en prod (añadido de D-035 del 2026-10-28)
+
+`live_league_enabled` es `false` en 08 §9 y en la plantilla, y así se queda en el repositorio: se enciende **solo en la consola
+de `tintalu`**, dentro de su rango (`bool`), sin tocar 08 §9 ni los defaults compilados. Pasos del dueño:
+
+1. Publica la plantilla de prod (§9.2 o §9.3 con `remote_config_template_prod.json` y `tintalu`), con la copia de antes.
+2. Registra App Check con Play Integrity para `com.parallext.tintalu` en `tintalu` (la huella SHA-256 de la firma de Play):
+   las tres rutas `/v1/league*` exigen el token de App Check, igual que la compra y el borrado.
+3. En la consola, `live_league_enabled` → `true` → **Publicar**. Llega en el arranque siguiente (§2.2).
+4. Pruébala con el AAB firmado en la pista interna (D-059, punto 5): desde el 41, el botón «Liga», la pantalla Global y País,
+   la línea de la victoria y la fila del país en Ajustes.
+5. Si algo falla: `live_league_enabled` → `false` y publicar; el juego la quita sin un build nuevo (`LeagueService.Active`: sin
+   botón, sin pantalla, sin cola y sin llamadas). Las victorias de mientras no cuentan, y lo que quede en la cola de una semana
+   pasada se descarta al volver (el servidor lo rechazaría con `outside_week`).
 
 ### 9.5 Cambiar un valor sin romper 08 §9
 
