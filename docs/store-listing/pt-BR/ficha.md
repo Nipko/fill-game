@@ -1,6 +1,7 @@
-# Ficha de Google Play · pt-BR · BORRADOR
+# Ficha de Google Play · pt-BR (traducción; también pt-PT) · BORRADOR
 
 - **Estado:** rascunho da ficha 1.0, atualizado em 24-10-2026 (Parallext, LLC como estúdio; AUTOMATION AI S.A.S como editora no Google Play, D-048; Liga do Rio conforme D-046). A identidade visual vigente é a v2 (D-045); sem parecer nem registro de marca por enquanto (D-047). Nada será publicado sem revisão do responsável, revisão jurídica dos textos e conferência da build e das opções de produção. O restante é tradução com IA da ficha es-419, pendente de revisor nativo.
+- **Puesta al día del 2026-10-28 (D-049, D-057 y D-059):** el idioma por defecto de la ficha es en-US (`../en/ficha.md`); esta es la traducción **pt-BR** y, copiada tal cual, la **pt-PT** (D-057: «pt-PT (copia de pt-BR)»). La 1.0 sale en todo el mundo salvo RU, BY, VN e ID, al 100 % con publicación administrada (D-057; D-059): la ficha no alude a ninguna prueba ni a países limitados. El paso a paso para pegarla está en `docs/dev/publicar-play-console.md` §5.
 - Mismas reglas, marcas y fuentes que `../es-419/ficha.md`. Portugués con «você» (glosario §10). Nombres PT del glosario §5, §7.1, §9, §10 y §12; lo cultural, **pendiente de revisión** del asesor.
 
 ## 1. Datos de la app
@@ -9,8 +10,9 @@
 |---|---|---|
 | Nome do app (≤ 30) | **Tintalú: Classificar Água** (25) | glosario §1.3 |
 | Desenvolvedor | **Parallext, LLC** (parallext.com) | D-041 |
-| `applicationId`, correo, cuenta de Play Console | Los de `../es-419/ficha.md` §1 | D-041; 08 §13.1 |
-| Site | `https://tintalu.com/` (aún sin conectar: D-041) | D-041 |
+| `applicationId`, cuenta de Play Console | Los de `../es-419/ficha.md` §1 (`com.parallext.tintalu`; cuenta de AUTOMATION AI S.A.S) | D-047; D-048 |
+| E-mail de contato | `support@tintalu.com` | D-041, añadido del 2026-10-25 |
+| Site | `https://tintalu.com/` (conectado el 2026-10-25: D-044, añadido; Play tiene un solo sitio web por app [NV]) | D-041; D-044 |
 | Política de privacidade | `https://tintalu.com/pt-br/privacidade/` (fuente: `infra/web/src/content/pt-BR/privacy.html`, con encarregado Nir Levin Bermúdez Perea y canal LGPD privacy@tintalu.com, D-041, añadido del 2026-10-25) | D-041; 08 §13.1 #2 y #7 |
 | Exclusão de conta | `https://tintalu.com/tintalu/pt-br/excluir-conta/` (fuente: `infra/web/src/content/pt-BR/delete.html`) | 08 §11; Q-B13-1 (a) |
 
@@ -51,7 +53,7 @@ Todo dia, uma novidade
 - Diário do Rio: carimbe uma página por dia e escolha o seu prêmio.
 - Cesta: a cada 10 níveis, grátis e com o conteúdo à vista. Nada de caixas-surpresa.
 - Enchente: emende vitórias para o rio subir.
-- Liga do Rio: a partir do nível 41, some pontos por semana e consulte as classificações global e do seu país. Outros jogadores poderão ver seu pseudônimo automático, a bandeira do país e seus pontos. [[ABOGADO: revisar]]
+- Liga do Rio: a partir do nível 41, some pontos por semana e consulte as classificações global e do seu país. Outros jogadores poderão ver seu pseudônimo automático, a bandeira do país e seus pontos.
 
 Quem vai com você
 TiTino, um bicho-preguiça que vive na sua árvore onde o rio encontra o mar, torce por você de casa. Capi, a capivara, traz cuias e rema a canoa. E Rosa, a boto, leva você rio acima.
@@ -78,7 +80,10 @@ Notas:
 - «Nível», como la UI (`level_n` = «Nível {n}», glosario §10). «Fase» es la forma habitual del género en PT-BR [P]: si el revisor nativo la prefiere para la ficha, se cambia en las tres frases.
 - «Reforços» / «Reforços do rio» por «comodines»: el nombre PT del conjunto (D-033, añadido del 2026-10-22, punto 8; glosario §5).
 - `fact_sheet_title` y `settings_about_amazon` van con su PT de la UI: «Frutas do Rio» y «Sobre a Amazônia» (puntos 3 y 4; glosario §10).
-- **Anúncios e vídeos (D-042):** «Os vídeos opcionais […] precisam de internet», «com anúncios» y «Tire os anúncios entre os níveis com Sem anúncios» solo valen si el build que se publica lleva MAX; si no, se quitan, como en `../es-419/ficha.md` §3.
+- **Anúncios e vídeos:** el build de la 1.0 lleva AdMob (D-049): «Os vídeos opcionais […] precisam de internet», «com anúncios» y «Tire os anúncios entre os níveis com Sem anúncios» se quedan. (Antes dependían de MAX, D-042.)
+- La marca `[[ABOGADO: revisar]]` de la línea de la Liga do Rio sale del bloque el 2026-10-28 para que no se pegue en Play; la revisión sigue pendiente `[[ABOGADO: revisar]]`. Sin la Liga encendida en producción, se quita la línea.
+- La línea «[PENDIENTE: dueño] Revisão cultural de …» **no se pega** sin el consentimiento por escrito del asesor (Q-B13-12 (a)).
+- **pt-PT:** la misma ficha, copiada sin cambios (D-057). Es portugués de Brasil; un revisor de pt-PT puede ajustarla más adelante [P].
 - **Pendiente de revisión** (asesor): Morpho, Pororoca, Vaga-lume, TiTino, Capi, Rosa, «a boto», «Estuário».
 - `[PENDIENTE: abogado]`: la línea de independencia en PT-BR es traducción propuesta [P] de la de 08 §13.1 #5; la revisa también el abogado brasileño.
 
@@ -107,4 +112,4 @@ Boas-vindas ao rio. A primeira versão de Tintalú: suba o rio por nove mundos, 
 
 ## 7. Ficha personalizada de Brasil (08 §13.1 #6)
 
-Con Pix: si Play ofrece Pix en Brasil al lanzar, una línea al final de la descripción: «Pague suas compras também com Pix, onde o Google Play oferecer.» `[PENDIENTE: dueño]` comprobar en Play Console antes de escribirla (Q-B13-17 (a)). La ficha de Brasil entra con la fase 5 (01 §8.1; 09).
+Con Pix: si Play ofrece Pix en Brasil al lanzar, una línea al final de la descripción: «Pague suas compras também com Pix, onde o Google Play oferecer.» `[PENDIENTE: dueño]` comprobar en Play Console antes de escribirla (Q-B13-17 (a)). La ficha de Brasil entra con la fase 5 (01 §8.1; 09). **Nota del 2026-10-28:** con la salida mundial, 08 §13.1 #6 dice que las fichas personalizadas de BR y MX «se quedan con la salida mundial» (D-057); no hace falta esperar a la fase 5 [P].
