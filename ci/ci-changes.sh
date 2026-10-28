@@ -62,8 +62,8 @@ decide() {
   local files="$1"
   echo "Rutas tocadas:"
   echo "$files"
-  if printf '%s\n' "$files" | grep -Eq "$UNITY_RE"; then echo "unity=true" >> "$GITHUB_OUTPUT"; else echo "unity=false" >> "$GITHUB_OUTPUT"; fi
-  if printf '%s\n' "$files" | grep -Eq "$CORE_RE"; then echo "core=true" >> "$GITHUB_OUTPUT"; else echo "core=false" >> "$GITHUB_OUTPUT"; fi
+  if grep -Eq "$UNITY_RE" <<< "$files"; then echo "unity=true" >> "$GITHUB_OUTPUT"; else echo "unity=false" >> "$GITHUB_OUTPUT"; fi
+  if grep -Eq "$CORE_RE" <<< "$files"; then echo "core=true" >> "$GITHUB_OUTPUT"; else echo "core=false" >> "$GITHUB_OUTPUT"; fi
 }
 
 main() {

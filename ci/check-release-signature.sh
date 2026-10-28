@@ -74,17 +74,18 @@ expected_or_fail() {
 check_artifact() {
     local file="$1" verify certs signers sha
     verify="$("${JS[@]}" -verify "$file" 2>&1)"
-    if ! printf '%s\n' "$verify" | grep -q '^jar verified\.'; then
-        echo "FALLO: $file: jarsigner no lo verifica (sin firma o firma rota): $(printf '%s' "$verify" | head -n 1)"
+    # Here-strings y no "printf | grep -q": con pipefail, grep -q sale al primer acierto, printf recibe SIGPIPE si la
+    # salida no cabe en la tuberia y el pipeline falla aunque grep haya acertado (release 40622798443).
+    if ! grep -q '^jar verified\.' <<< "$verify"; then
+        echo "FALLO: $file: jarsigner no lo verifica (sin firma o firma rota): $(sed -n '/./{p;q;}' <<< "$verify")"
         return 1
     fi
-    if printf '%s
-' "$verify" | grep -qi 'unsigned entries'; then
+    if grep -qi 'unsigned entries' <<< "$verify"; then
         echo "FALLO: $file: lleva entradas sin firmar (anadidas despues de firmar)."
         return 1
     fi
     certs="$("${KT[@]}" -printcert -jarfile "$file" 2>&1)"
-    if printf '%s\n' "$certs" | grep -Eq '^(Owner|Issuer): .*CN=Android Debug'; then
+    if grep -Eq '^(Owner|Issuer): .*CN=Android Debug' <<< "$certs"; then
         echo "FALLO: $file: firmado con la clave de depuracion (CN=Android Debug)."
         return 1
     fi

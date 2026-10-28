@@ -228,7 +228,7 @@ self_test() {
         if [ "$got" != "$want" ]; then
             echo "FALLO: $label -> $got (esperado $want): $out"
             failures=$((failures + 1))
-        elif printf '%s' "$out" | grep -q -e 'sentinela-secreta' -e 'sentinela-api' -e 'storage_bucket' -e 'prueba-af'; then
+        elif grep -q -e 'sentinela-secreta' -e 'sentinela-api' -e 'storage_bucket' -e 'prueba-af' <<< "$out"; then
             echo "FALLO: $label imprime un secreto"
             failures=$((failures + 1))
         else
