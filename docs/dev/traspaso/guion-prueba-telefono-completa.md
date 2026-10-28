@@ -32,6 +32,81 @@ Lo escribió el integrador (escritorio) el 2026-10-25, a petición del dueño: *
 
 Aquí entra todo.
 
+## Encargo de la jornada 5 (escritorio, 2026-10-28)
+
+La jornada 4 (`pruebas-telefono-2026-10-27-completa-j4.md`) cubrió el bloque 0, N4 y casi todo N4b, y dejó 5 observaciones. Sus arreglos ya están integrados. **Esta jornada decide el lanzamiento:** el dueño acordó que, si no sale nada, se pasa al Release definitivo y a publicar (D-059; `docs/dev/release.md` §4 bis). Así que cualquier observación **bloqueante** o **alta** se anota con su traza y sus capturas, y se avisa en cuanto aparezca.
+
+**Punto de partida:** `integracion-fase1-fase2` en `e0c3adf2` o posterior.
+
+**Lo que entró después de la jornada 4 y nunca se ha visto en el teléfono:**
+- **La intro de 3,5 s, con el vertido fluido** (`6336136c` y `97e258a1`; añadido de D-051 del 2026-10-28, petición del dueño: «un poco más fluida… y dejarla un segundo más»):
+  - el chorro llega al agua a los 0,8 s, el río se tiñe hasta los 2,5 s, «Tintalú» entra entre los 2,35 y los 2,9 s, y el emblema se sostiene 0,6 s;
+  - la carga ya no corre mientras la intro se mueve, y el açaí avanza con un fundido, no por tramos;
+  - la intro no se mueve hasta que la GPU confirma que se ve (`AsyncGPUReadback`, con un tope de 1,2 s).
+  - **Observación 1 de la jornada 4 (≈ 1 s de petróleo liso en la primera apertura): solo diagnosticada.** Esta jornada la mide (N5.1).
+- **El toque con la lista en movimiento** (`9dc83bc9`, observación 3): en las 6 listas desplazables, un toque con la lista aún en inercia la para sin activar la fila.
+- **La confirmación neutral al corregir la edad** (`9dc83bc9`; añadido de D-033 del 2026-10-28, el dueño: «hagamos de acuerdo al estandar»). Revisión 3 de Gemini aplicada en `140cbbd3`.
+- **Tu fila de la Liga** (`9dc83bc9`, observaciones 4 y 5): toda la fila abre «Tu avatar», y «Tú» sale una sola vez.
+- **Sin cambios en el juego, para que no cuenten como observación:**
+  - la excepción `GoogleMobileAdsNative.Common` del plugin de anuncios es ruido conocido (observación 2; `docs/dev/anuncios-admob.md` §8 ter);
+  - D-059 (cómo se publica) y los arreglos de la CI.
+
+### Orden de la jornada 5
+
+1. **Bloque 0 entero**, con el `dev.apk` y el `rehearsal.apk` nuevos (`-Apk`) y todas sus compuertas, también `check-no-applovin`. Anota los tamaños: en la jornada 4 eran 76,94 MB, 59,81 MB y 65,32 MB.
+   - En el **ensayo**, la compuerta de textos (`[AF.LocReleaseGate] OK` en el log del build) ya no debe quejarse de nada: no queda ninguna fila en `traducido`.
+2. **Bloque N5, «Lo nuevo de la jornada 5»** (abajo).
+3. **Los pendientes**, en orden:
+   - los 3 puntos del bloque 3;
+   - el bloque 4 entero, salvo el 4.9;
+   - los bloques 5 y 7 a 23.
+   - Lo que hace el dueño (TalkBack, Reducir movimiento, la hora, 320 dp y el 130 % del sistema, el icono monocromo y el cajón de apps, Ad Inspector, la cuenta sin SIM) se agrupa en una sesión con él al lado.
+   - Bloque 21 (borrar la cuenta de verdad): al final de todo, como siempre.
+4. **Hoja nueva:** `docs/dev/traspaso/pruebas-telefono-<fecha>-completa-j5.md`, con el mismo formato. Al final de la jornada, commit y push con el mensaje «Añade la prueba completa en el teléfono (jornada 5)», solo la hoja. Si no da para todo, se commitea lo hecho y la jornada 6 sigue donde quedó.
+5. **Anuncios:** como en la jornada 4. Paso a paso con captura antes de cada toque, y los recorridos automáticos con `--es af_ads_fill fill|no_fill|error` (texto, no entero).
+6. **No es de esta jornada:** la prueba de compras de verdad. La hace el dueño en la pista interna con el AAB del Release definitivo (`docs/dev/iap.md` §3; `release.md` §4 bis). Aquí el Mercado se sigue probando con la tienda simulada (`--ez af_fake_store true`) y con los bloques 8 y 9.
+
+### N5. Lo nuevo de la jornada 5 (≈ 2 h 30 min)
+
+Con el `dev.apk`, salvo donde se diga.
+
+1. **La intro de 3,5 s y el segundo de petróleo** (la medida decide la pregunta abierta del punto 5 del añadido de D-051 del 2026-10-28):
+   - **Primera apertura** con `pm clear`, `logcat -c` y una ráfaga de capturas (`screencap` cada ~110 ms, con la marca de tiempo de cada una):
+     - anota **en qué momento empieza y acaba el petróleo liso**, si lo hay, y si en su lugar se ve la escena quieta (la cuia sobre el río);
+     - de `AF_STATE brand_intro`: `first_frame_ms`, `visible_ms`, `visible_by` (`gpu` esperado; `cap` o `no_readback` también se anotan), `play_ms`, `motion_frames` (≈ 170-175), `frame_p95_ms` (≤ 20), `frame_max_ms` (≤ 40), `motion_pauses` (0), `shown_ms` (~3.500), `cut` (false), `loading_ms` y `wait_capped` (false);
+     - de `AF_PERF boot_steps`: `awake_ms`, `proc_awake_ms`, `proc_visible_ms`, `visible_ms`, `play_ms` y `motion_hold_ms` (~2.900), y el `TotalTime` de `am start -W`.
+     - **Cómo leerlo:**
+       - si `proc_visible_ms` cae donde acaba el petróleo liso y `visible_ms` − `first_frame_ms` ronda 1 s, el hueco es de la GPU (sombreadores sin caché);
+       - si `proc_awake_ms` ya llega al final del hueco, es el arranque del motor;
+       - escribe tu conclusión en la hoja, con las cifras.
+   - **Cinco arranques en frío** (`force-stop` y lanzar): las mismas cifras en una tabla, como en la jornada 4. Con la caché (`emblem_cache` hit) no debe haber petróleo liso.
+   - **La mirada del dueño:** ¿el vertido se ve **fluido**? ¿Los 3,5 s se aprecian sin hacerse largos? ¿El açaí entra bien con el fundido? Anota su opinión literal.
+   - **«Cargando…»** tras la intro en la primera apertura: si sale, cuánto dura (se espera ≈ 0,4 s o nada).
+   - **Inicio durante el vertido y volver:** la intro termina, se llega a la edad o al nivel, `cut` false y 0 `E/Unity`.
+   - **Reducir movimiento** (lo enciende el dueño): la escena quieta ~1 s, que puede alargarse un poco si la GPU tarda en confirmar.
+   - **Primera apertura completa:** primer toque en el nivel 1 por debajo de 20 s (en la jornada 4, 11,0 s; ahora se espera algo más por el segundo extra).
+2. **El toque con la lista en movimiento** (bloque 13, punto 0): lanza cada lista con un deslizamiento rápido y toca una fila mientras sigue moviéndose. **La lista se para y la fila no se activa**; el siguiente toque, con la lista quieta, sí la activa.
+   - Pruébalo en las seis: Ajustes (sobre «Corregir mi edad»), la Liga, el Mercado, «Tu avatar», la hoja de la fruta y las muestras del Mapa.
+   - Anota también el caso contrario: un toque con la lista **casi** parada que no se activó cuando debía. El umbral es [P], de 30 dp/s (`FlingStopScrollRect.StopTapSpeedDp`).
+3. **La confirmación neutral al corregir la edad** (bloque 13, punto 2), en Ajustes › Privacidad › «Corregir mi edad»:
+   - elegir **la misma** banda que la guardada: no sale confirmación y no se gasta la corrección;
+   - elegir **otra** banda: sale «Corregir mi edad · Elegiste: {banda}. La edad solo se puede corregir una vez y no se puede deshacer.» con «Volver a elegir» y «Confirmar»;
+     - captura de la confirmación con **las tres bandas**, en es-419, en y pt-BR (9 capturas). Deben ser **idénticas salvo la banda**: ni avisos para «Menos de 13» ni un botón con más peso;
+     - en inglés debe decir «…and **this** can't be undone.» (revisión 3 de Gemini);
+   - **«Volver a elegir»**, **Atrás** y la **X**: no se gasta la corrección (la fila sigue en Ajustes);
+   - **«Confirmar»** con 13-17: se guarda, la fila desaparece y `af_settings_change` con `value=age`;
+   - **«Confirmar» con «Menos de 13»:** bloquea, como siempre. Hazlo **solo en un perfil desechable** (`pm clear` antes y después), nunca en el de la prueba;
+   - la pantalla de edad del **primer arranque** no lleva confirmación;
+   - con TalkBack (el dueño): lee el título, la frase y los dos botones.
+4. **Tu fila de la Liga** (`--ez af_league true --ez af_league_fake true --ei af_max_level 60`):
+   - tocar **cualquier punto** de tu fila (el disco, el centro, una esquina) abre «Tu avatar»; tocar la fila de otro jugador no hace nada;
+   - con seudónimo: el seudónimo como nombre y la chapa «Tú» **una vez**; sin seudónimo: solo la chapa «Tú» y «Gana un nivel para entrar en la Liga», centradas. En los tres idiomas.
+5. **El ensayo de release (`rehearsal.apk`):**
+   - la intro de 3,5 s, fluida;
+   - la confirmación de edad;
+   - la fila de la Liga;
+   - 0 líneas `AF_*`.
+
 ## Encargo de la jornada 4 (escritorio, 2026-10-26)
 
 **Actualización del 2026-10-27:** la jornada 4 aún no se ha hecho y la integración siguió avanzando. **Nuevo punto de partida:** `integracion-fase1-fase2` en `1048450d` o posterior. Todo lo de abajo (N4) sigue valiendo; se suma el bloque N4b.
