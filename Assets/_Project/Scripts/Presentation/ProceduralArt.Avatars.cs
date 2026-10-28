@@ -185,6 +185,8 @@ namespace AF.Presentation
         /// </summary>
         internal static void PaintAvatar(PixelCanvas pc, PixelCanvas scratch, int index, AvatarArtBackdrop backdrop, AvatarArtBadge badge, bool locked)
         {
+            // La escritura directa en el búfer (PaintDisc, DrawToyPart) da por hecho un lienzo cuadrado.
+            Debug.Assert(pc.Height == pc.Width, "PaintAvatar: el lienzo debe ser cuadrado");
             int n = pc.Width;
             float half = n * 0.5f;
             float k = half * AvatarDiscFraction; // px por unidad del disco
