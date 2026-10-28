@@ -361,7 +361,7 @@ El ensayo no es un build de desarrollo: no hay sondas `AF_*` ni extras de `Launc
   ```
   adb logcat -d | grep -E "E Unity|E/Unity|Exception|MissingMethod|TypeLoad|NullReference"
   ```
-  Cada excepción es una observación, con su traza.
+  Cada excepción es una observación, con su traza. **Excepción conocida, que no cuenta:** `FileNotFoundException … 'GoogleMobileAdsNative.Common'`, que lanza y atrapa el propio plugin de Google Mobile Ads en cada arranque con anuncios (`docs/dev/anuncios-admob.md` §8 ter, 2026-10-28).
 - **Sondas:** `AF_LAYOUT`, `AF_STATE`, `AF_EVENT` y `AF_PERF`, descritas en `docs/dev/prototipo-v0.md`. Para tocar, usa la última línea `AF_LAYOUT` de la pantalla que está a la vista.
 - **Jugador automático:** el de las pruebas anteriores, con la solución A* y en modo `run`. Para los bloques de pérdida y de uso, **juega a mano** o con vertidos malos a propósito: el jugador automático nunca se bloquea.
 - **Reiniciar con vertidos hechos** pide confirmación («¿Volver a la orilla?», con Seguir jugando / Deshacer · Marea / Volver a la orilla): tenlo en cuenta en el jugador automático.

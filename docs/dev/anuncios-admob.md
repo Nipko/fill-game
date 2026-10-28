@@ -167,6 +167,16 @@ Decisión del dueño: «Sí, quita AppLovin MAX del build de release; si AppLovi
 - **Permisos** (`check-manifest -Mode dev`, OK en los dos): los mismos antes y después: `INTERNET`, `ACCESS_NETWORK_STATE`, `VIBRATE`, `BILLING`, `AD_ID`, `WAKE_LOCK`, `BIND_GET_INSTALL_REFERRER_SERVICE`, `POST_NOTIFICATIONS` y `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. `AD_ID` sigue porque lo pide Google Mobile Ads (D-049, D-055).
 - `check-no-applovin`: falla antes (84 hallazgos en `dev.apk` y 94 en el ensayo: `com/applovin`, la `.so`, recursos `applovin_*`, el plugin de C#), OK después. `check-release-classes`: OK en el ensayo; `dev.apk` lleva `firebase-appcheck-debug`, como siempre en desarrollo. `check-no-unity-iap`, `check-16kb` y `size-gate` (≤ 80 MB, solo el archivo): OK.
 
+## 8 ter. Ruido conocido del plugin: `GoogleMobileAdsNative.Common` (2026-10-28)
+
+En cada arranque con anuncios, logcat muestra `FileNotFoundException: Could not load the file 'GoogleMobileAdsNative.Common'` (observación 2 de la jornada 4, `docs/dev/traspaso/pruebas-telefono-2026-10-27-completa-j4.md`). **No es un fallo nuestro y no tiene efecto:**
+- `GoogleMobileAds.Android.dll` (plugin 11.5.0), en `MobileAdsClient.onInitializationComplete`, hace `Assembly.Load("GoogleMobileAdsNative.Common")` dentro de un try/catch para saber la versión del complemento opcional de anuncios nativos, que se distribuye aparte;
+- no lo usamos y no viene en `Packages/googleads/` (ni en el plugin ni en el adaptador de Unity Ads), así que la carga falla;
+- el catch la manda a la telemetría del plugin (`GlobalExceptionHandler`, `RCS JSPB payload … Batch sent successfully`) y la inicialización sigue: los anuncios se cargan y se ven;
+- el plugin no tiene un ajuste para apagarla, y `link.xml` no sirve porque no hay nada que preservar.
+
+Decisión (recomendada, 2026-10-28): se acepta como ruido conocido. No se importa el complemento nativo (paquete nuevo, regla dura 4, y código que no usamos), no se sube de versión el plugin por esto y **no** se crea un ensamblado vacío con ese nombre (enviaría a Google una versión falsa por `setPlugin`). En las pruebas en el teléfono deja de contar como observación. Si una versión futura del plugin la quita, se verá al actualizarlo.
+
 ## 9. Data Safety y política
 
 - Fila de Google Mobile Ads en 08 §13.3 (D-049); MAX, fuera del build desde el 2026-10-27 (§8 bis). `docs/store-listing/data-safety.md` puesto al día.
