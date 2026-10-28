@@ -246,6 +246,12 @@ namespace AF.UI
             sb.Append(",\"motion_hold_ms\":").Append(_introMotionHoldMs.ToString(inv));
             sb.Append(",\"proc_awake_ms\":").Append(_procAwakeMs.ToString(inv));
             sb.Append(",\"proc_visible_ms\":").Append(ProcMsAt(intro?.VisibleMs ?? -1L).ToString(inv));
+            OsSplashInfo os = AndroidOsSplash.Read(); // añadido de D-051 del 2026-10-28 (GameBootstrap.OsSplash.cs)
+            sb.Append(",\"os_splash_held_ms\":").Append(os.HeldMs.ToString(inv));
+            sb.Append(",\"os_splash_release\":\"").Append(os.Result).Append('"');
+            sb.Append(",\"os_splash_by\":\"").Append(_osSplashBy ?? string.Empty).Append('"');
+            sb.Append(",\"proc_os_splash_ms\":").Append(os.ProcReleaseMs.ToString(inv));
+            sb.Append(",\"os_splash_focus_ms\":").Append(os.FocusAfterMs.ToString(inv));
             for (int i = 0; i < BootStepNames.Length; i++)
             {
                 sb.Append(",\"").Append(BootStepNames[i]).Append("\":").Append(_bootSteps[i].ToString(inv));

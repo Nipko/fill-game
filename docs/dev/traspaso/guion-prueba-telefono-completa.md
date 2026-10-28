@@ -32,6 +32,38 @@ Lo escribió el integrador (escritorio) el 2026-10-25, a petición del dueño: *
 
 Aquí entra todo.
 
+## Encargo de la jornada 6 (escritorio, 2026-10-28)
+
+La jornada 5 (`pruebas-telefono-2026-10-28-completa-j5.md`) dejó sus observaciones; sus arreglos entran por carriles separados, y cada uno añade aquí su punto.
+
+### N6. Lo nuevo de la jornada 6
+
+- **La pantalla del sistema hasta la intro** (carril `tanda6/fx-j5-arranque`; añadido de D-051 del 2026-10-28, el dueño: «si hagamoslo asi»; observaciones 1 y 2 de la jornada 5). El icono v2 sobre el petróleo se queda hasta que el primer fotograma de la intro ya está en la pantalla: se debe ver **icono → escena de la intro**, sin el petróleo liso de en medio. Lo hace el plugin `AfSplashHold.androidlib`, con un tope de 3 s.
+  - **Cómo medirlo:** una ráfaga de capturas (`screencap` cada ~110 ms, con la marca de tiempo de cada una, desde el `am start`) en cuatro casos:
+    1. **primera apertura** (`pm clear` y `logcat -c` antes);
+    2. **en frío**, cinco veces (`force-stop` y lanzar);
+    3. **con Reducir movimiento** (lo enciende el dueño): la escena sale quieta y entera;
+    4. **en el ensayo de release** (`rehearsal.apk`), primera apertura y en frío. Ahí no hay líneas `AF_*`: solo cuenta la ráfaga.
+  - **El criterio:**
+    - **ningún fotograma de petróleo liso sin icono** entre la pantalla del sistema y la escena;
+    - **ningún salto de posición ni de tamaño del icono** mientras se ve;
+    - el paso del icono a la escena puede ser un corte o el fundido corto del sistema.
+
+    Anota en qué momento se quita el icono y en qué momento sale la escena, en cada ráfaga.
+  - **La sonda** (`AF_PERF boot_steps` del `dev.apk`), campos nuevos:
+    - `os_splash_release`: `signal` esperado; `cap` quiere decir que el juego no la soltó y la quitó el tope (es un fallo, anótalo con su ráfaga); `none`, que no hubo retención;
+    - `os_splash_by`: `intro` esperado;
+    - `os_splash_held_ms`: lo retenido desde que empezó la actividad;
+    - `proc_os_splash_ms`: del arranque del proceso a soltarla; debe caer donde la ráfaga pasa del icono a la escena;
+    - `os_splash_focus_ms`: de soltarla a que la ventana recibe el foco (unos pocos fotogramas).
+
+    Anota también `proc_awake_ms`, `proc_visible_ms` y el `TotalTime` de `am start -W` y compáralos con la jornada 5. **`TotalTime` sube a propósito:** ahora mide hasta que se quita el icono. En la primera apertura debe quedar muy por debajo de 5 s (el umbral de arranque lento de Android vitals).
+  - **La intro no cambia:** `brand_intro` como en la jornada 5 (3.500 ms, `visible_by` gpu, `motion_frames` ≈ 175, `motion_pauses` 0, `cut` false). Mira con el dueño si el comienzo del vertido se ve entero tras el icono o si el fundido del sistema se come un trozo; anota su opinión literal.
+  - **Unity corre sin el foco mientras se retiene** y vuelve a lo de siempre con el foco. Compruébalo con dos cosas:
+    - tras el arranque, baja la cortina de notificaciones con el nivel en marcha: el juego se pausa como antes (`pause` en logcat, la música se para);
+    - pulsa Inicio **durante** el icono y vuelve: la intro termina normal, sin `E/Unity` y sin el icono colgado.
+  - **Android 8-11:** este teléfono no lo tiene. Si hay un emulador o un teléfono viejo, la ventana de arranque (el icono sobre el petróleo, `af_launch_window`) debe quedarse igual hasta la escena.
+
 ## Encargo de la jornada 5 (escritorio, 2026-10-28)
 
 La jornada 4 (`pruebas-telefono-2026-10-27-completa-j4.md`) cubrió el bloque 0, N4 y casi todo N4b, y dejó 5 observaciones. Sus arreglos ya están integrados. **Esta jornada decide el lanzamiento:** el dueño acordó que, si no sale nada, se pasa al Release definitivo y a publicar (D-059; `docs/dev/release.md` §4 bis). Así que cualquier observación **bloqueante** o **alta** se anota con su traza y sus capturas, y se avisa en cuanto aparezca.

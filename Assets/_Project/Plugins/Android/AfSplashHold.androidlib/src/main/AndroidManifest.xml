@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sin permisos. Un proveedor sin exportar que solo registra las ActivityLifecycleCallbacks de AfSplashHold al arrancar el
+     proceso (no guarda ni sirve datos: sus consultas devuelven null). Anadido de D-051 del 2026-10-28. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="com.amazonfill.splash.AfSplashHoldProvider"
+            android:authorities="${applicationId}.afsplashhold"
+            android:exported="false" />
+    </application>
+</manifest>

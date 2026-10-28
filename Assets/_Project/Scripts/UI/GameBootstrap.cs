@@ -1919,6 +1919,8 @@ namespace AF.UI
                 _splash.Tick(Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs)); // TiTino en la pantalla de arranque
             }
 
+            TickOsSplash(); // añadido de D-051 del 2026-10-28: suelta la pantalla del sistema con la intro ya en la pantalla
+
             if (_flow == null || _screen == null || _app == null || _app.Screen == AppScreen.Boot)
             {
                 _backPresses = 0; // Atrás durante el arranque: aún no hay nada que cerrar
@@ -2520,6 +2522,7 @@ namespace AF.UI
 
         private void CutSplash()
         {
+            ReleaseOsSplash(AndroidOsSplash.ByBootEnd); // si nada la soltó antes (GameBootstrap.OsSplash.cs)
             if (_splash != null)
             {
                 ReportIntro(_splash.EndIntro()); // un arranque que se para antes (catálogo roto, <13) también la anota
