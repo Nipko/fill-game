@@ -90,7 +90,7 @@ Sin pistas con jugadores (cerrada, abierta) y sin escalonado; la pista interna, 
 2. **Release firmado** (§4) desde ese commit. Para la 1.0, `versionName` `1.0.0` y `versionCode` vacío (10000). El AAB de 10000 del run 40630794359, del 2026-10-28, no se subió, así que ese número sigue libre.
 3. **En Play Console, antes de enviar nada a revisión:** «Resumen de publicación» › **«Publicación administrada»**, activada. Así, cuando Google apruebe la versión, no sale sola.
 4. **Pista interna, solo tú:** en «Pruebas internas», una lista de testers con **solo tu cuenta** (nunca jugadores) y una versión con el AAB del paso 2. Instálala desde Play con el enlace de participación y prueba, siguiendo `docs/dev/iap.md` §3:
-   - las compras con licencia de prueba («Pruebas de licencias» con tu cuenta) y su verificación en el backend;
+   - las compras con licencia de prueba («Pruebas de licencias» con tu cuenta) y su verificación en el backend **de prod** (el AAB lleva Firebase de prod). Antes, carga en AWS los secretos de la API de Google Play y de `af-prod/firebase-admin-service-account` (`infra/README.md` §5); sin ellos no se acredita ninguna compra;
    - PAD;
    - Play Games.
 
