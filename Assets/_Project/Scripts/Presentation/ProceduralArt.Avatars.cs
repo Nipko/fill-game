@@ -321,29 +321,56 @@ namespace AF.Presentation
             return new Color(Mathf.Lerp(c.r, l, amount), Mathf.Lerp(c.g, l, amount), Mathf.Lerp(c.b, l, amount), c.a);
         }
 
-        // Disco de fondo: degradado radial suave, más claro arriba a la izquierda (la luz de juego).
+        // Disco de fondo: degradado radial suave, más claro arriba a la izquierda (la luz de juego). Solo recorre, fila a fila, el tramo
+        // que puede tocar el disco (con un margen: la cobertura se sigue mirando píxel a píxel) y escribe los opacos en el búfer (el
+        // retrato de 192 px debe entrar en 8 ms en el Editor: 2026-10-27); la mezcla es la de Color.Lerp, escrita a mano.
         private static void PaintDisc(PixelCanvas pc, in AvFrame f, Color light, Color deep)
         {
             float rIn = f.K;
-            for (int y = 0; y < f.N; y++)
+            int n = f.N;
+            float cx = f.Cx;
+            float cy = f.Cy;
+            float lim = rIn + 1.5f;
+            float lim2 = lim * lim;
+            float dr = deep.r - light.r;
+            float dg = deep.g - light.g;
+            float db = deep.b - light.b;
+            float da = deep.a - light.a;
+            Color[] buf = pc.Pixels;
+            int width = pc.Width;
+            for (int y = 0; y < n; y++)
             {
-                for (int x = 0; x < f.N; x++)
+                float dy = (y + 0.5f) - cy;
+                float h2 = lim2 - (dy * dy);
+                if (h2 <= 0f)
                 {
-                    float dx = (x + 0.5f) - f.Cx;
-                    float dy = (y + 0.5f) - f.Cy;
-                    float cov = PixelCanvas.Coverage(Mathf.Sqrt((dx * dx) + (dy * dy)) - rIn);
+                    continue;
+                }
+
+                float h = Mathf.Sqrt(h2);
+                int xa = Mathf.Max(0, Mathf.FloorToInt(cx - h - 1f));
+                int xb = Mathf.Min(n - 1, Mathf.CeilToInt(cx + h));
+                float dy2 = dy * dy;
+                float ly = (dy / rIn) - 0.35f;
+                float ly2 = ly * ly;
+                int row = y * width;
+                for (int x = xa; x <= xb; x++)
+                {
+                    float dx = (x + 0.5f) - cx;
+                    float cov = 0.5f - (Mathf.Sqrt((dx * dx) + dy2) - rIn);
                     if (cov <= 0f)
                     {
                         continue;
                     }
 
                     float lx = (dx / rIn) + 0.25f;
-                    float ly = (dy / rIn) - 0.35f;
-                    float t = Mathf.Clamp01(Mathf.Sqrt((lx * lx) + (ly * ly)) / 1.45f);
-                    Color c = Color.Lerp(light, deep, t * t * (3f - (2f * t)));
+                    float t = Mathf.Sqrt((lx * lx) + ly2) / 1.45f;
+                    t = t < 0f ? 0f : (t > 1f ? 1f : t);
+                    float s = t * t * (3f - (2f * t));
+                    var c = new Color(light.r + (dr * s), light.g + (dg * s), light.b + (db * s), light.a + (da * s));
                     if (cov >= 1f)
                     {
-                        pc.Set(x, y, c);
+                        buf[row + x] = c;
                     }
                     else
                     {
@@ -365,13 +392,47 @@ namespace AF.Presentation
             Color mid = locked ? Palette.DisabledOutline : AvRingBase;
             Color shine = locked ? Color.Lerp(Palette.DisabledOutline, Color.white, 0.25f) : AvRingLight;
             Color filetColor = locked ? Color.Lerp(Palette.Cream, Palette.DisabledOutline, 0.45f) : (Color)Palette.Cream;
+            float shineR = shine.r - mid.r;
+            float shineG = shine.g - mid.g;
+            float shineB = shine.b - mid.b;
+            float shineA = shine.a - mid.a;
+            // Fila a fila, solo el tramo dentro del canto de fuera y sin el hueco del disco (con un margen de un píxel: los
+            // dos límites se siguen mirando píxel a píxel).
+            float lim = rOut + 1f;
+            float lim2 = lim * lim;
             for (int y = 0; y < f.N; y++)
             {
-                for (int x = 0; x < f.N; x++)
+                float dy = (y + 0.5f) - f.Cy;
+                float dy2 = dy * dy;
+                float h2 = lim2 - dy2;
+                if (h2 <= 0f)
                 {
+                    continue;
+                }
+
+                float h = Mathf.Sqrt(h2);
+                int xa = Mathf.Max(0, Mathf.FloorToInt(f.Cx - h - 1f));
+                int xb = Mathf.Min(f.N - 1, Mathf.CeilToInt(f.Cx + h));
+                int xs0 = int.MaxValue;
+                int xs1 = int.MinValue;
+                float hs2 = skip2 - dy2;
+                if (hs2 > 0f)
+                {
+                    float hs = Mathf.Sqrt(hs2);
+                    xs0 = Mathf.CeilToInt(f.Cx - hs + 0.5f);
+                    xs1 = Mathf.FloorToInt(f.Cx + hs - 1.5f);
+                }
+
+                for (int x = xa; x <= xb; x++)
+                {
+                    if (x == xs0 && xs0 <= xs1)
+                    {
+                        x = xs1;
+                        continue; // el disco: el aro empieza en el filete
+                    }
+
                     float dx = (x + 0.5f) - f.Cx;
-                    float dy = (y + 0.5f) - f.Cy;
-                    float r2 = (dx * dx) + (dy * dy);
+                    float r2 = (dx * dx) + dy2;
                     if (r2 < skip2)
                     {
                         continue; // el disco: el aro empieza en el filete
@@ -395,8 +456,15 @@ namespace AF.Presentation
                     float u = Mathf.Clamp01((r - rIn) / Mathf.Max(1f, rOut - rIn));
                     float band = 1f - Mathf.Abs((u * 2f) - 1f); // 0 en los cantos, 1 en el centro
                     float lightK = Mathf.Clamp01(0.5f + (0.5f * ((-dx + dy) / Mathf.Max(1f, r) * 0.7071f))); // arriba a la izquierda
-                    Color body = Color.Lerp(mid, shine, lightK * 0.75f);
-                    Color c = Color.Lerp(edge, body, Mathf.Clamp01(band * 2.2f));
+                    // Las dos mezclas de Color.Lerp, escritas a mano (sus t ya están en 0..1).
+                    float t1 = lightK * 0.75f;
+                    float br = mid.r + (shineR * t1);
+                    float bg = mid.g + (shineG * t1);
+                    float bb = mid.b + (shineB * t1);
+                    float ba = mid.a + (shineA * t1);
+                    float t2 = band * 2.2f;
+                    t2 = t2 < 0f ? 0f : (t2 > 1f ? 1f : t2);
+                    var c = new Color(edge.r + ((br - edge.r) * t2), edge.g + ((bg - edge.g) * t2), edge.b + ((bb - edge.b) * t2), edge.a + ((ba - edge.a) * t2));
                     pc.Blend(x, y, c, cov);
                 }
             }
@@ -585,26 +653,134 @@ namespace AF.Presentation
                 }
             }
 
+            // Fila a fila, solo el tramo que puede tocar el disco (con margen: el recorte se sigue mirando píxel a píxel) y con lo que
+            // no depende de x calculado una vez por fila. La distancia y la normal de la elipse y de la cápsula van aquí escritas con
+            // las mismas cuentas que Sdf y ToyNormal (el mismo dibujo: a lo sumo 0,002/255 de redondeo por canal) y los píxeles opacos, directos al búfer: el
+            // retrato de 192 px tenía que bajar de 8 ms en el Editor x64 (2026-10-27).
+            int mode = eye || p.Kind == AvKind.Poly ? 0 : (p.Kind == AvKind.Ellipse ? 1 : 2);
+            float k = f.K;
+            float cx = f.Cx;
+            float cy = f.Cy;
+            float clipLim = 1f + (2f / k); // más allá de 1 + 0,5 px el recorte del disco no deja nada
+            float clipLim2 = clipLim * clipLim;
+            float maxD = edgePx + 1f;
+            float pa = p.A;
+            float pb = p.B;
+            float pcos = p.Cos;
+            float psin = p.Sin;
+            bool rotated = pcos != 1f || psin != 0f;
+            float ec = p.C;
+            float ed = p.D;
+            float ecc = ec * ec;
+            float edd = ed * ed;
+            float ec106 = ec * 1.06f;
+            float ed106 = ed * 1.06f;
+            float eMin = Mathf.Min(ec, ed);
+            float vx = p.C - p.A;
+            float vy = p.D - p.B;
+            float vv = Mathf.Max(1e-6f, (vx * vx) + (vy * vy));
+            float capR = p.E;
+            float capInv = bulge / Mathf.Max(1e-5f, p.E * 1.06f);
+            Color outline = p.Toy.Outline;
+            Color[] buf = pc.Pixels;
+            int width = pc.Width;
             for (int y = y0; y <= y1; y++)
             {
-                float uy = ((y + 0.5f) - f.Cy) * invK;
-                for (int x = x0; x <= x1; x++)
+                float uy = ((y + 0.5f) - cy) * invK;
+                float uy2 = uy * uy;
+                float h2 = clipLim2 - uy2;
+                if (h2 <= 0f)
                 {
-                    float ux = ((x + 0.5f) - f.Cx) * invK;
+                    continue;
+                }
+
+                float h = Mathf.Sqrt(h2) * k;
+                int xa = Mathf.Max(x0, Mathf.FloorToInt(cx - h - 1f));
+                int xb = Mathf.Min(x1, Mathf.CeilToInt(cx + h + 1f));
+                float py = uy - pb;
+                float pySin = py * psin;
+                float pyCos = py * pcos;
+                float qy2 = 0f;
+                float sy2 = 0f;
+                if (mode == 1 && !rotated)
+                {
+                    float qy = py / ed;
+                    float sy = py / edd;
+                    qy2 = qy * qy;
+                    sy2 = sy * sy;
+                }
+
+                float pyvy = py * vy;
+                int row = y * width;
+                for (int x = xa; x <= xb; x++)
+                {
+                    float ux = ((x + 0.5f) - cx) * invK;
                     float clipCov = 1f;
-                    float r2 = (ux * ux) + (uy * uy);
+                    float r2 = (ux * ux) + uy2;
                     if (r2 > inside2)
                     {
-                        clipCov = PixelCanvas.Coverage((Mathf.Sqrt(r2) - 1f) * f.K);
+                        clipCov = PixelCanvas.Coverage((Mathf.Sqrt(r2) - 1f) * k);
                         if (clipCov <= 0f)
                         {
                             continue;
                         }
                     }
 
-                    float sd = Sdf(p, ux, uy);
-                    float d = sd * f.K;
-                    if (d > edgePx + 1f)
+                    float px = ux - pa;
+                    float sd;
+                    float capDx = 0f;
+                    float capDy = 0f;
+                    if (mode == 1)
+                    {
+                        float qx;
+                        float qyy;
+                        float sx;
+                        float syy;
+                        if (rotated)
+                        {
+                            float ex = (px * pcos) + pySin;
+                            float ey = (-px * psin) + pyCos;
+                            qx = ex / ec;
+                            float qy = ey / ed;
+                            qyy = qy * qy;
+                            sx = ex / ecc;
+                            float sy = ey / edd;
+                            syy = sy * sy;
+                        }
+                        else
+                        {
+                            qx = px / ec;
+                            qyy = qy2;
+                            sx = px / ecc;
+                            syy = sy2;
+                        }
+
+                        float k0 = Mathf.Sqrt((qx * qx) + qyy);
+                        if (k0 < 1e-5f)
+                        {
+                            sd = -eMin;
+                        }
+                        else
+                        {
+                            float k1 = Mathf.Sqrt((sx * sx) + syy);
+                            sd = k0 * (k0 - 1f) / k1;
+                        }
+                    }
+                    else if (mode == 2)
+                    {
+                        float t = ((px * vx) + pyvy) / vv;
+                        t = t < 0f ? 0f : (t > 1f ? 1f : t);
+                        capDx = px - (vx * t);
+                        capDy = py - (vy * t);
+                        sd = Mathf.Sqrt((capDx * capDx) + (capDy * capDy)) - capR;
+                    }
+                    else
+                    {
+                        sd = Sdf(p, ux, uy);
+                    }
+
+                    float d = sd * k;
+                    if (d > maxD)
                     {
                         continue;
                     }
@@ -614,7 +790,7 @@ namespace AF.Presentation
                         float ci = PixelCanvas.Coverage(d - edgePx) * clipCov;
                         if (ci > 0f)
                         {
-                            pc.Blend(x, y, p.Toy.Outline, ci);
+                            pc.Blend(x, y, outline, ci);
                         }
                     }
 
@@ -633,13 +809,34 @@ namespace AF.Presentation
                     }
                     else
                     {
-                        Vector2 n = ToyNormal(p, ux, uy, sd, bulge, pcx, pcy, phx, phy, pillow);
-                        c = ToyColor(p.Toy, gloss, lut, n.x, n.y);
+                        float nx;
+                        float ny;
+                        if (mode == 1)
+                        {
+                            float lx = ((px * pcos) + pySin) / ec106;
+                            float ly = ((-px * psin) + pyCos) / ed106;
+                            nx = ((lx * pcos) - (ly * psin)) * bulge;
+                            ny = ((lx * psin) + (ly * pcos)) * bulge;
+                        }
+                        else if (mode == 2)
+                        {
+                            nx = capDx * capInv;
+                            ny = capDy * capInv;
+                        }
+                        else
+                        {
+                            Vector2 n = ToyNormal(p, ux, uy, sd, bulge, pcx, pcy, phx, phy, pillow);
+                            nx = n.x;
+                            ny = n.y;
+                        }
+
+                        lut!.Sample(nx, ny, out float r, out float g, out float b);
+                        c = new Color(r, g, b, 1f);
                     }
 
                     if (cf >= 1f)
                     {
-                        pc.Set(x, y, c);
+                        buf[row + x] = c;
                     }
                     else
                     {
