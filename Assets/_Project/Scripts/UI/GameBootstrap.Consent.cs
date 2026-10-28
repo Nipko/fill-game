@@ -500,6 +500,43 @@ namespace AF.UI
                 return;
             }
 
+            // La corrección desde Ajustes (añadido de D-033 del 2026-10-28, el dueño: «de acuerdo al estándar»): una banda distinta de
+            // la guardada pide antes una confirmación neutral, la misma para las tres bandas; «Volver a elegir» no gasta la corrección.
+            // La misma banda no la pide (no gasta nada) y la pantalla de edad del primer arranque tampoco.
+            if (flow.Mode == ConsentFlowMode.CorrectAge && band != (flow.Record?.AgeBand ?? AgeBand.Unknown) && _consentScreen != null)
+            {
+                _consentScreen.ShowAgeConfirm(band, () => ApplyAgeChoice(band), BackToAgeChoice, CloseConsentFromSettings);
+                EmitConsentLayout();
+                ProbeConsent();
+                _skipNextDelta = true;
+                return;
+            }
+
+            ApplyAgeChoice(band);
+        }
+
+        // «Volver a elegir» en la confirmación de la edad: la pantalla de edad otra vez, con la corrección sin gastar.
+        private void BackToAgeChoice()
+        {
+            ConsentFlow? flow = _consentFlow;
+            if (flow == null || flow.Step != ConsentStep.Age)
+            {
+                _consentScreen?.Hide();
+                return;
+            }
+
+            ShowConsentStep();
+            ProbeConsent();
+        }
+
+        private void ApplyAgeChoice(AgeBand band)
+        {
+            ConsentFlow? flow = _consentFlow;
+            if (flow == null || flow.Step != ConsentStep.Age)
+            {
+                return;
+            }
+
             ConsentFlowMode mode = flow.Mode;
             AgeBand before = flow.Record?.AgeBand ?? AgeBand.Unknown;
             ConsentStep step = flow.ChooseAge(band);

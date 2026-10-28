@@ -129,7 +129,8 @@ Todo el arte de hoy es provisional, hecho por código. Los encargos ya están es
 | [ ] | Curación a mano de 11-200 | Comprobaciones #12-#13 de 03 §17 | `plan-tanda5.md` §3 |
 | [ ] | Contratar QA humana externa de 201-700 | Unas 40 h; la pide la compuerta de 09 §1.1 #7 | `plan-tanda5.md` §3 |
 | [ ] | Grabaciones de Magic Sort (#13) | Referencia de tiempos y sensaciones | README §6 paso 4 |
-| [ ] | Prueba cerrada en Play (más adelante) | 20-50 testers de CO, PE y MX durante 1-2 semanas | 08 §13.1 #20 |
+| — | ~~Prueba cerrada en Play (más adelante)~~ **Retirada por D-059 (2026-10-28):** la 1.0 sale directa a producción, al 100 % y con publicación administrada | ~~20-50 testers de CO, PE y MX durante 1-2 semanas~~ La sustituyen la regresión de release y la prueba completa en el teléfono | 08 §13.1 #20; D-059 |
+| [ ] | Prueba en la pista interna, solo tú como único tester (D-059) | Sube el AAB del Release firmado a la pista interna, sin jugadores; prueba con la app instalada desde Play las compras con licencia de prueba y su verificación en el backend (`docs/dev/iap.md` §3), PAD y Play Games. Luego promociona esa misma versión (mismo versionCode) a producción al 100 %, con la publicación administrada | `docs/dev/release.md` §4 bis; D-059 |
 
 ---
 
@@ -159,4 +160,4 @@ Todo el arte de hoy es provisional, hecho por código. Los encargos ya están es
 1. **Hecho (D-047):** `applicationId` `com.parallext.tintalu`; el dictamen ya no se pide. Entidad y país resueltos: AUTOMATION AI S A S, Colombia. La cuenta empresarial y el perfil comercial ya están creados; el banco está en revisión. El dueño adquirirá solo el dominio principal por ahora.
 2. **Mientras llega el dictamen:** preparar los borradores de publicación (D-034), preparar la web en AWS (D-035) y organizar los encargos de arte, asesoría y pruebas. Revisar las aprobaciones restantes de SDK con el equipo y pedirle una propuesta medida para el tamaño del AAB; INTERNET ya aprobado (D-036).
 3. **Con el ID ya fijado** (`com.parallext.tintalu`, D-047): crear la app en Play Console y la variable `AF_RELEASE_APPLICATION_ID`. Crear las cuentas de servicios según las dependencias de cada integración.
-4. **Antes de la prueba cerrada:** completar web y revisión legal, arte y revisiones de contenido, curación y QA, firma y secretos del CI. Las compras defensivas, la 1.1 y las decisiones de negocio se revisan en su fase, sin darlas por canceladas.
+4. **Antes del lanzamiento** (con D-059, 2026-10-28: sin prueba cerrada)**:** completar web y revisión legal, arte y revisiones de contenido, curación y QA, firma y secretos del CI. Las compras defensivas, la 1.1 y las decisiones de negocio se revisan en su fase, sin darlas por canceladas.

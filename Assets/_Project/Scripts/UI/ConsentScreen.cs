@@ -27,6 +27,12 @@ namespace AF.UI
 
         /// <summary>Segunda confirmación de una compra (13-17).</summary>
         Confirm = 4,
+
+        /// <summary>
+        /// Confirmación de «Corregir mi edad» desde Ajustes (añadido de D-033 del 2026-10-28): la banda elegida y que la corrección es
+        /// única; «Volver a elegir» y «Confirmar», iguales para las tres bandas.
+        /// </summary>
+        AgeConfirm = 5,
     }
 
     /// <summary>Cómo sale la línea de los anuncios en la pantalla de consentimiento.</summary>
@@ -59,6 +65,10 @@ namespace AF.UI
     /// <item><b>Bloqueo</b> (&lt;13): la línea «Pide a un adulto que instale el juego», sin botones (08 §7).</item>
     /// <item><b>Doble confirmación</b> (13-17; Q-T4 (a)): el producto y su precio tal como los da la tienda, con «Cancelar» y
     /// «Comprar».</item>
+    /// <item><b>Confirmación de la edad</b> (corrección desde Ajustes; añadido de D-033 del 2026-10-28, «de acuerdo al estándar»): tras
+    /// elegir una banda distinta de la guardada, la misma pantalla para las tres bandas (título, la línea con la banda tal como sale
+    /// en su botón y que la corrección es única y no se deshace, y «Volver a elegir» y «Confirmar» del mismo tamaño): ni empuja ni
+    /// disuade. No sale en la pantalla de edad del primer arranque.</item>
     /// </list>
     /// No decide nada: llama a quien la abre (<c>GameBootstrap.Consent.cs</c>, que usa <see cref="ConsentFlow"/>). Sonda:
     /// <c>AF_LAYOUT</c> con <c>"screen":"consent"</c> y los ids de sus botones (<see cref="VisibleButtons"/>).
@@ -97,6 +107,8 @@ namespace AF.UI
         private Action<ConsentAnswer, bool, bool>? _onAnswer;
         private Action? _onClose;
         private Action<bool>? _onConfirm;
+        private Action? _onAgeConfirm;
+        private Action? _onAgeBack;
         private Action? _onAdsOptions;
         private bool _closable;
         private ConsentAdsLine _adsMode;
@@ -210,6 +222,15 @@ namespace AF.UI
         /// <summary>«Cancelar» en la doble confirmación (el de la izquierda).</summary>
         public Button ConfirmCancelButton => _reject.Button;
 
+        /// <summary>«Confirmar» en la confirmación de la edad (el botón de la derecha).</summary>
+        public Button AgeConfirmButton => _accept.Button;
+
+        /// <summary>«Volver a elegir» en la confirmación de la edad (el de la izquierda).</summary>
+        public Button AgeBackButton => _reject.Button;
+
+        /// <summary>Etiquetas de «Volver a elegir» y «Confirmar» a la vista (izquierda y derecha).</summary>
+        public string[] PairLabels => new[] { _rejectLabel.text, _acceptLabel.text };
+
         /// <summary>Rectángulos de «Rechazar todo» y «Aceptar todo» en el lienzo (tests: mismo nivel).</summary>
         public RectTransform RejectRect => (RectTransform)_reject.Button.transform;
 
@@ -265,6 +286,29 @@ namespace AF.UI
             Open();
         }
 
+        /// <summary>
+        /// Confirmación de «Corregir mi edad» (añadido de D-033 del 2026-10-28): <paramref name="band"/> tal como sale en la pantalla
+        /// de edad y que la corrección es única. Neutral: el título, la línea, los botones y el aspecto son los mismos para las tres
+        /// bandas; solo cambia la etiqueta de la banda. <paramref name="onConfirm"/> guarda; <paramref name="onBack"/> («Volver a
+        /// elegir» y el Atrás de Android) vuelve a la pantalla de edad sin gastar la corrección; <paramref name="onClose"/> (la X) cierra
+        /// sin cambiar nada.
+        /// </summary>
+        public void ShowAgeConfirm(AgeBand band, Action onConfirm, Action onBack, Action onClose)
+        {
+            string body = ConsentText.AgeConfirmBody(band);
+            Clear();
+            _onAgeConfirm = onConfirm ?? throw new ArgumentNullException(nameof(onConfirm));
+            _onAgeBack = onBack ?? throw new ArgumentNullException(nameof(onBack));
+            _onClose = onClose ?? throw new ArgumentNullException(nameof(onClose));
+            _closable = true;
+            View = ConsentView.AgeConfirm;
+            _title.text = ConsentText.T(ConsentText.Keys.AgeConfirmTitle);
+            _body.text = body;
+            _rejectLabel.text = ConsentText.T(ConsentText.Keys.AgeConfirmBack);
+            _acceptLabel.text = ConsentText.T(ConsentText.Keys.AgeConfirmOk);
+            Open();
+        }
+
         /// <summary>«Pide a un adulto que instale el juego» (sin botones ni X).</summary>
         public void ShowBlocked()
         {
@@ -306,7 +350,11 @@ namespace AF.UI
                 return false;
             }
 
-            if (_closable)
+            if (View == ConsentView.AgeConfirm)
+            {
+                AgeAnswer(false); // el Atrás de Android vuelve a elegir, como «Volver a elegir»
+            }
+            else if (_closable)
             {
                 PressClose();
             }
@@ -366,6 +414,10 @@ namespace AF.UI
                     Add(ids, rects, "purchase_confirm_cancel", _reject.Button);
                     Add(ids, rects, "purchase_confirm_buy", _accept.Button);
                     break;
+                case ConsentView.AgeConfirm:
+                    Add(ids, rects, "age_confirm_back", _reject.Button);
+                    Add(ids, rects, "age_confirm_ok", _accept.Button);
+                    break;
             }
         }
 
@@ -387,6 +439,12 @@ namespace AF.UI
 
         private void Answer(ConsentAnswer answer)
         {
+            if (View == ConsentView.AgeConfirm)
+            {
+                AgeAnswer(answer == ConsentAnswer.AcceptAll);
+                return;
+            }
+
             if (View == ConsentView.Confirm)
             {
                 Action<bool>? confirm = _onConfirm;
@@ -405,6 +463,15 @@ namespace AF.UI
             bool analytics = _offersAnalytics && _analyticsToggle.Selected;
             bool ads = _adsMode == ConsentAdsLine.Toggle && _adsToggle.Selected;
             onAnswer?.Invoke(answer, analytics, ads);
+        }
+
+        // Confirmación de la edad: la derecha guarda; la izquierda (y el Atrás) vuelve a la pantalla de edad. Quien abre repinta.
+        private void AgeAnswer(bool confirm)
+        {
+            Action? next = confirm ? _onAgeConfirm : _onAgeBack;
+            _onAgeConfirm = null;
+            _onAgeBack = null;
+            next?.Invoke();
         }
 
         private void PressClose()
@@ -438,6 +505,8 @@ namespace AF.UI
             _onClose = null;
             _onConfirm = null;
             _onAdsOptions = null;
+            _onAgeConfirm = null;
+            _onAgeBack = null;
             pending?.Invoke(false);
         }
 
@@ -457,7 +526,7 @@ namespace AF.UI
             float y = 16f;
             bool age = View == ConsentView.Age;
             bool choices = View == ConsentView.Choices;
-            bool confirm = View == ConsentView.Confirm;
+            bool confirm = View == ConsentView.Confirm || View == ConsentView.AgeConfirm;
             bool titled = View != ConsentView.Blocked;
 
             _header.gameObject.SetActive(titled);

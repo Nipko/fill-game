@@ -136,7 +136,7 @@ namespace AF.UI
             _viewport.gameObject.AddComponent<RectMask2D>();
             _viewport.gameObject.AddComponent<HitArea>().raycastTarget = true;
             _content = UiBuilder.Rect("Content", _viewport);
-            _scroll = _viewport.gameObject.AddComponent<ScrollRect>();
+            _scroll = _viewport.gameObject.AddComponent<FlingStopScrollRect>();
             _scroll.viewport = _viewport;
             _scroll.content = _content;
             _scroll.horizontal = false;

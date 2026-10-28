@@ -91,6 +91,20 @@ namespace AF.UI
 
             /// <summary>Botón que no compra.</summary>
             public const string ConfirmCancel = "purchase_confirm_cancel";
+
+            /// <summary>
+            /// Título de la confirmación de «Corregir mi edad» (añadido de D-033 del 2026-10-28): neutral e igual para las tres bandas.
+            /// </summary>
+            public const string AgeConfirmTitle = "consent_age_confirm_title";
+
+            /// <summary>Línea de la confirmación de la edad: <c>{band}</c>, la banda elegida tal como sale en su botón.</summary>
+            public const string AgeConfirmBody = "consent_age_confirm_body";
+
+            /// <summary>Botón que guarda la banda elegida (gasta la corrección).</summary>
+            public const string AgeConfirmOk = "consent_age_confirm_ok";
+
+            /// <summary>Botón que vuelve a la pantalla de edad sin gastar la corrección.</summary>
+            public const string AgeConfirmBack = "consent_age_confirm_back";
         }
 
         /// <summary>Todas las claves (para <c>LocTablesTests</c>, con el parche <c>B12-loc.diff</c>).</summary>
@@ -99,6 +113,7 @@ namespace AF.UI
             Keys.AgeTitle, Keys.AgeUnder13, Keys.AgeTeen, Keys.AgeAdult, Keys.Title, Keys.Body, Keys.PurposeAds, Keys.PurposeAnalytics,
             Keys.Diagnostics, Keys.AdsByUmp, Keys.AdsTeen, Keys.AdsStrict, Keys.AdsUmpOptions, Keys.AcceptAll, Keys.RejectAll, Keys.Save, Keys.Blocked, Keys.SettingsPrivacy,
             Keys.SettingsAge, Keys.SettingsCrashReports, Keys.ConfirmTitle, Keys.ConfirmBody, Keys.ConfirmBuy, Keys.ConfirmCancel,
+            Keys.AgeConfirmTitle, Keys.AgeConfirmBody, Keys.AgeConfirmOk, Keys.AgeConfirmBack,
         };
 
         /// <summary>Texto de <paramref name="key"/>.</summary>
@@ -108,6 +123,27 @@ namespace AF.UI
         public static string ConfirmBody(string productName, string price)
         {
             return Loc.T(Keys.ConfirmBody, LocArgs.Of("product", productName).And("price", price));
+        }
+
+        /// <summary>La etiqueta del botón de <paramref name="band"/> en la pantalla de edad.</summary>
+        public static string AgeLabel(AF.Platform.AgeBand band)
+        {
+            switch (band)
+            {
+                case AF.Platform.AgeBand.Under13: return Loc.T(Keys.AgeUnder13);
+                case AF.Platform.AgeBand.Teen: return Loc.T(Keys.AgeTeen);
+                case AF.Platform.AgeBand.Adult: return Loc.T(Keys.AgeAdult);
+                default: throw new System.ArgumentOutOfRangeException(nameof(band));
+            }
+        }
+
+        /// <summary>
+        /// La línea de la confirmación de la edad con <paramref name="band"/> tal como sale en la pantalla de edad: la misma frase para
+        /// las tres bandas (neutral; añadido de D-033 del 2026-10-28).
+        /// </summary>
+        public static string AgeConfirmBody(AF.Platform.AgeBand band)
+        {
+            return Loc.T(Keys.AgeConfirmBody, LocArgs.Of("band", AgeLabel(band)));
         }
     }
 }

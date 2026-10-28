@@ -233,6 +233,7 @@ namespace AF.Tests.PlayMode
 
             Assert.That(first.OpenAgeCorrection(), Is.True);
             first.ConsentView!.AgeButton(AgeBand.Under13).onClick.Invoke();
+            first.ConsentView!.AgeConfirmButton.onClick.Invoke(); // la confirmación neutral (añadido de D-033 del 2026-10-28)
             yield return PlayModeHelpers.WaitFor(
                 () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked,
                 "el arranque bloqueado tras corregir a <13");

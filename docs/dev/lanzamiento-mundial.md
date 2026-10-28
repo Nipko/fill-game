@@ -309,6 +309,7 @@
   - opción (a) de P3: **todos los países de Play salvo RU y BY**, con VN e ID pendientes de que el abogado diga si hay que excluirlos para la 1.0;
   - producción escalonada por **porcentaje mundial** (5 % → 20 % → 100 %) en lugar de por países;
   - prueba cerrada con testers de LatAm y de, al menos, un país del EEE (para ver UMP de verdad);
+  - (con D-059, 2026-10-28: sin escalonado ni prueba cerrada; la 1.0 sale al 100 % con publicación administrada, tras la pista interna solo con el dueño);
   - 01 §8.1 y 08 §13.1 #20 y #22 se reescriben.
 - **Tipo:** dueño y abogado.
 
@@ -456,7 +457,7 @@
 ## 10. Preguntas para el dueño (cada una con la opción recomendada)
 
 - **P1. ¿El lanzamiento mundial sustituye a las fases de 01 §8.1 (soft launch LatAm → Brasil → global)?**
-  - **(a) Recomendada:** sí. Una sola salida mundial con producción escalonada por porcentaje (5 % → 20 % → 100 %) y lectura de D1/D7 por cohorte y país en Firebase.
+  - **(a) Recomendada:** sí. Una sola salida mundial con producción escalonada por porcentaje (5 % → 20 % → 100 %) y lectura de D1/D7 por cohorte y país en Firebase. (Con D-059, 2026-10-28: al 100 %, sin escalonado.)
   - (b) Soft launch corto en LatAm antes de abrir el resto.
 - **P2. ¿Cómo se trata a 13-17 donde la edad de consentimiento digital es mayor de 13 (gran parte del EEE, CH, KR e IN)?**
   - **(a) Recomendada:** una clave nueva `consent_digital_age_by_country` (08 §9). Con 13-17 y una edad mayor de 13, la analítica no se ofrece. Default prudente hasta el abogado: EEE y CH = 16, UK = 13, KR = 14, IN = 18 y el resto = 13.
