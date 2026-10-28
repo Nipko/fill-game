@@ -330,6 +330,7 @@ jobs:
       - name: Borrar google-services.json y lo que genera de el el editor de Firebase
         if: always()
         run: |
+          set -euo pipefail
           cd "$GITHUB_WORKSPACE"
           gs=Assets/_LocalSecrets/google-services.json
           if [ -f "$gs" ]; then
