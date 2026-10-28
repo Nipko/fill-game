@@ -95,14 +95,14 @@ Nombre, correo, dirección, teléfono, mensajes, fotos, vídeos, audio, archivos
 | Unity Ads 4.20.1 (mediación de AdMob) | **D-049, añadido del 2026-10-27, rama `tanda6/unity-ads`** | Ubicación aproximada (IP), ID de publicidad, interacciones con anuncios y diagnóstico, compartidos con Unity Technologies cuando participa en una petición; nada antes de `MobileAds.Initialize` |
 | AppLovin MAX 8.6.6 | Fuera del build (D-049, añadido del 2026-10-27) | Nada: no está en el APK |
 | Play Games 2.3.0 (Saved Games) | **Al integrar D-042** | ID de jugador de Play Games y partida guardada; funcionalidad |
-| Runtime de Unity 6000.3 (módulo `com.unity.modules.unityanalytics`, Engine Diagnostics) | En el build | **Sin comprobar** (Q-B13-9 y el «pendiente aparte» de D-040): build-release comprueba que no envía nada en release; si envía, lleva fila |
+| Runtime de Unity 6000.3 (módulo `com.unity.modules.unityanalytics`, Engine Diagnostics) | En el build, con los servicios de datos apagados | **Nada; sin fila** (Q-B13-9, añadido de D-040 del 2026-10-28). El AAB de release no lleva la configuración de Unity Analytics, Cloud Diagnostics ni Performance Reporting (`UnityConnectSettings`) ni ningún host de datos de Unity; lo vigila `ci/check-no-unity-telemetry.ps1` en cada AAB. Los hosts `unityads.unity3d.com` son de Unity Ads (fila de arriba) |
 | ~~Unity IAP 5.4.4 y Unity Authentication~~ | **Ya no está** (D-040, Q-IAP-1) | Nada. Historia: Q-B13-20 |
 
 ## 5. Contraste con 08 §13.3 y con la privacidad de la web
 
 - **Coinciden** en Firebase (filas de Analytics, Crashlytics y Remote Config/Auth/App Check), backend, Play Billing (con Q-BILL-2), notificaciones y el comportamiento con `<13`.
 - **Huecos de 08 §13.3** (no se toca el GDD desde aquí; los recoge el integrador):
-  - no tiene fila para UMP (sección 3.2) ni para el runtime de Unity (Q-B13-9);
+  - no tiene fila para UMP (sección 3.2); el runtime de Unity no la necesita (Q-B13-9, cerrada el 2026-10-28);
   - la fila de Crashlytics no dice que funciona antes de la pantalla de edad, cosa que sí dicen 08 §2.3 y la web.
 - **La web dice hoy** «Hoy el juego no muestra anuncios» y lista MAX y Play Games en «Lo que todavía no está en el juego» (sección 5). Al integrar D-042 hay que actualizar a la vez la web (`infra/web/src/content/*/privacy.html`, `terms.html` sección 6 y `credits.html`), este formulario y 08 §13.3.
 
@@ -111,7 +111,6 @@ Nombre, correo, dirección, teléfono, mensajes, fotos, vídeos, audio, archivos
 - Crashlytics: **opcional** desde T-L6 (D-057, añadido del 2026-10-27; `docs/legal/investigacion-legal-mundial.md` §10.3, riesgo R5 aceptado con el interruptor). Sigue como riesgo aceptado la descarga de Remote Config antes del consentimiento (08 pregunta 6; 05 §7).
 - `[PENDIENTE: abogado]`: el plazo fiscal del libro mayor sin el UID (08 §11); la dirección IP de los registros (sección 3.1); los registros de diagnóstico de Play Billing (Q-BILL-2).
 - `[PENDIENTE: dueño]`: conectar `tintalu.com` (D-041) para que las URL de la política y del borrado sean públicas; la retención de Firebase Analytics, con la mínima del panel (Q-B13-19 (a)).
-- build-release: Q-B13-9 (que el runtime de Unity no envía nada en release).
 - La guía de Data Safety de Google Mobile Ads 25.4.0 y UMP 4.0.0 (D-049), de cada red de mediación que entre y de Play Games en su versión fijada, fila por fila (los [E] de la sección 3.2). `AD_ID`: aprobado (D-049, añadido; confirmado en D-055, punto 3); se declara en Play Console («Uso del ID de publicidad»: publicidad).
 - `[PENDIENTE: dueño]` (T-L3): en Play Console, declarar las clasificaciones por edad de los productos por las leyes de las tiendas de EE. UU. (Texas SB 2420) [F24].
 - **Rehacer el formulario con el build real de la 1.0**, no con este borrador.
