@@ -140,6 +140,7 @@ namespace AF.UI
         private readonly TextMeshProUGUI _rescueLabel;
         private readonly PriceTag _rescuePrice;
         private readonly TextMeshProUGUI _rescueNote;
+        private readonly NotePulse _rescuePulse;
         private readonly ReliefParts _handful;
         private readonly TextMeshProUGUI _handfulLabel;
         private readonly ReliefParts _balsa;
@@ -180,9 +181,10 @@ namespace AF.UI
             _refillSeeds = ModalKit.Cta("RefillSeedsButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 15f, () => actions.PressUndoRefillSeeds(), out _refillSeedsLabel);
             _refillSeedsLabel.textWrappingMode = TextWrappingModes.Normal;
 
-            _rescue = ModalKit.Cta("RescueButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.StuckRescueCta, 21f, () => actions.PressRescue(), out _rescueLabel);
+            _rescue = ModalKit.Cta("RescueButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.StuckRescueCta, 21f, () => OnRescue(actions), out _rescueLabel);
             _rescuePrice = new PriceTag("Price", _rescue.Face, art);
             _rescueNote = ModalKit.Line("RescueNote", _panel, string.Empty, 13f, Palette.FamilyWood.Base);
+            _rescuePulse = new NotePulse(_rescueNote);
 
             _handful = ModalKit.Cta("HandfulButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 14f, () => actions.PressHandful(), out _handfulLabel);
             _handfulLabel.textWrappingMode = TextWrappingModes.Normal;
@@ -305,11 +307,48 @@ namespace AF.UI
         /// <summary>Línea de la Hoja escudo (tests de legibilidad; tarea B1b).</summary>
         internal TextMeshProUGUI ShieldLine => _shieldLine;
 
+        /// <summary>
+        /// Toque en «Continuar: +1 cuia» en gris (rama B, sin saldo): el botón no compra nada, pero el toque llega (observación 6 de
+        /// la jornada 5). Lo pone <c>GameScreen</c>: late «Te faltan {n} semillas» y, si la tienda no vende, el aviso de la tienda.
+        /// </summary>
+        public System.Action? RescueMissing { get; set; }
+
+        /// <summary>«Te faltan {n} semillas» del rescate responde a un toque (<see cref="PulseRescueMissing"/>; tests).</summary>
+        internal NotePulse RescuePulse => _rescuePulse;
+
+        /// <summary>
+        /// Late «Te faltan {n} semillas» bajo el rescate en gris, como la burbuja de un comodín sin saldo (con Reducir movimiento,
+        /// solo se atenúa y vuelve). False si la nota no se ve.
+        /// </summary>
+        public bool PulseRescueMissing(bool reduceMotion)
+        {
+            return _view != null && _view.Rescue == StuckRescueKind.Disabled && _rescuePulse.Start(reduceMotion);
+        }
+
+        /// <summary>Avanza el latido de la nota del rescate.</summary>
+        public void Tick(float dtMs)
+        {
+            _rescuePulse.Tick(dtMs);
+        }
+
         /// <summary>Texto de la nota del rescate (descuento o «Te faltan»), o null.</summary>
         public string? RescueNoteText => _rescueNote.gameObject.activeSelf ? _rescueNote.text : null;
 
         /// <summary>Precio que muestra el rescate (0 si no hay rescate).</summary>
         public int RescuePriceShown => _rescue.Button.gameObject.activeSelf ? _rescuePrice.Value : 0;
+
+        // «Continuar: +1 cuia»: con saldo, el rescate; en gris (sin saldo), nada se cobra y responde RescueMissing (antes, un toque
+        // mudo: observación 6 de la jornada 5; guion 8.2: «no un toque mudo»).
+        private void OnRescue(IGameActions actions)
+        {
+            if (_view != null && _view.Rescue == StuckRescueKind.Disabled)
+            {
+                RescueMissing?.Invoke();
+                return;
+            }
+
+            actions.PressRescue();
+        }
 
         /// <summary>
         /// Botones visibles con su id para <c>AF_LAYOUT</c> y, tras <c>balsa</c>, la línea «Todo para seguir: …» de la Balsa
@@ -364,6 +403,7 @@ namespace AF.UI
         // Ningún texto baja de 12 sp ni ningún botón de 48 dp.
         private void Lay(StuckModalView view, GameServices? services, float canvasW, bool compact)
         {
+            _rescuePulse.Stop(); // la nota vuelve a su sitio antes de recolocarla
             _view = view;
             Compact = compact;
             _width = Mathf.Min(328f, canvasW - 32f);
@@ -466,6 +506,11 @@ namespace AF.UI
             {
                 bool available = view.Rescue == StuckRescueKind.Available;
                 UiBuilder.SetEnabled(_rescue.Button, available);
+                if (!available)
+                {
+                    _rescue.Button.interactable = true; // gris, pero el toque responde (OnRescue; observación 6 de la jornada 5)
+                }
+
                 _rescuePrice.Set(view.RescuePrice, view.RescueDiscounted ? view.RescueBasePrice : 0, !available);
 
                 // La etiqueta a la izquierda del precio; si no cabe en una línea a 12 sp, en dos y el botón crece (tarea L4).

@@ -185,6 +185,48 @@ namespace AF.Tests.PlayMode
             Assert.That(YouCount(screen), Is.EqualTo(1));
         }
 
+        [UnityTest]
+        public IEnumerator MyRow_WithoutAnAlias_TheLineStopsBeforeThePoints(
+            [Values(LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil)] string locale, [Values(1f, 1.3f)] float scale)
+        {
+            // Observación 5 de la jornada 5 (2026-10-28): en pt-BR, «Vença um nível para entrar na Liga» llegaba al borde derecho y
+            // casi tocaba el «0» de los puntos. La línea, centrada en la fila a la altura de los puntos, se para antes de su columna
+            // (con aire) y, si no cabe, pasa a otra línea y la fila crece; nunca baja de 12 sp ni se sale de la fila.
+            LaunchOptions.LanguageOverride = locale;
+            LaunchOptions.FontScaleOverride = scale;
+            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
+            _api.StartPoints = 0;
+            yield return Lobby(57);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.OpenLeague(), Is.True);
+            yield return SnapshotKit.Wait(0.2f);
+            LeagueScreen screen = boot.LeagueView!;
+            Assert.That(screen.MeNameText, Is.Empty, "condición: sin seudónimo");
+            Assert.That(screen.MeDetailText, Is.EqualTo(LeagueText.NoPoints));
+            TMPro.TextMeshProUGUI[] texts = screen.TextsOf(-1);
+            TMPro.TextMeshProUGUI sub = texts[2];
+            TMPro.TextMeshProUGUI points = texts[3];
+            Assert.That(points.text, Is.EqualTo(LeagueText.PointsNumber(0)));
+            sub.ForceMeshUpdate();
+            points.ForceMeshUpdate();
+
+            // Las dos son hijas de la fila: se comparan en sus coordenadas (pivote arriba a la izquierda).
+            float subLeft = sub.rectTransform.anchoredPosition.x;
+            float subRight = subLeft + sub.rectTransform.rect.width;
+            float pointsLeft = points.rectTransform.anchoredPosition.x;
+            float inkRight = subLeft + sub.textBounds.max.x;
+            float digitLeft = pointsLeft + points.textBounds.min.x;
+            string where = locale + " al " + (scale * 100f).ToString("0") + " %";
+            Assert.That(subRight, Is.LessThanOrEqualTo(pointsLeft - 6f + 0.01f), "la caja de la línea deja libre la columna de puntos en " + where);
+            Assert.That(inkRight, Is.LessThanOrEqualTo(digitLeft - 6f), "el texto no llega al «0» en " + where);
+            Assert.That(sub.isTextOverflowing, Is.False, "la línea cabe en su caja en " + where);
+            Assert.That(sub.fontSize, Is.GreaterThanOrEqualTo(12f - 1e-3f), "nada por debajo de 12 sp");
+            float rowH = screen.RowRect(-1).rect.height;
+            float subBottom = -sub.rectTransform.anchoredPosition.y + sub.rectTransform.rect.height;
+            Assert.That(subBottom, Is.LessThanOrEqualTo(rowH + 0.01f), "dentro de la fila en " + where);
+            Assert.That(sub.preferredHeight, Is.LessThanOrEqualTo(sub.rectTransform.rect.height + 0.5f), "la fila crece con las líneas en " + where);
+        }
+
         private static int YouCount(LeagueScreen screen)
         {
             int n = screen.MePillText == LeagueText.You ? 1 : 0;

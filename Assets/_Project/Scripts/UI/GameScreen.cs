@@ -546,6 +546,7 @@ namespace AF.UI
             _stuckDim = UiBuilder.Image("Dim", _stuckOverlay, null, new Color(0f, 0f, 0f, 0f), true);
             UiBuilder.Stretch(_stuckDim.rectTransform);
             _stuck = new StuckModal(_stuckOverlay, art, actions);
+            _stuck.RescueMissing = () => OnRescueMissing(true);
             _stuckOverlay.gameObject.SetActive(false);
 
             // ---- Victoria (02 §6; 07 §5.4; guía 5.3, 5.5 y 6.9): panel abajo, cinta-hoja y Siguiente; sin auto-avance por
@@ -616,6 +617,7 @@ namespace AF.UI
 
             // ---- Embudo de D-008 (B2-2 y B2-3): ¿Seguro?, Nivel fallido y Sin canoas, con el tablero atenuado detrás. ----
             _giveUp = new GiveUpConfirm(_root, art, actions);
+            _giveUp.RescueMissing = () => OnRescueMissing(false);
             _failed = new LevelFailedScreen(_root, art, actions);
             _noCanoes = new NoCanoesPanel(_root, art, () => _actions.PressExtraCanoeVideo(), () => _actions.PressRefillCanoes(),
                 () => _actions.PressInfiniteCanoes(), () => _actions.PressNoCanoesMap(), () => _actions.PressNoCanoesClose());
@@ -958,6 +960,8 @@ namespace AF.UI
             LabelsTick(dtMs);
             CardsTick(dtMs);
             RevealTick(dtMs);
+            _stuck.Tick(dtMs); // el latido de «Te faltan {n} semillas» del rescate en gris
+            _giveUp.Tick(dtMs);
             HintTick(dtMs);
             ShuffleTick(dtMs);
             StopTick(dtMs);
@@ -1606,6 +1610,36 @@ namespace AF.UI
             _stuck.Panel.gameObject.SetActive(false);
             _stuckDim.color = new Color(0.04f, 0.06f, 0.05f, 0.30f);
             _sceneVeil.color = new Color(0x6B / 255f, 0x6B / 255f, 0x6B / 255f, 0.20f);
+        }
+
+        /// <summary>
+        /// Toque en «Continuar: +1 cuia» en gris (sin saldo) en Aguas estancadas (<paramref name="stuck"/>) o en ¿Seguro?: antes no
+        /// hacía nada (observación 6 de la jornada 5 en el teléfono; guion 8.2: «no un toque mudo como el 23»). Responde como un
+        /// comodín sin saldo: late «Te faltan {n} semillas» (con Reducir movimiento, solo se atenúa), sin cobrar nada, sin háptico ni
+        /// analítica, como la Pista y la Luciérnaga (D-022). Si además la tienda no vende (sin Puñado ni Balsa que ofrecer: la tienda
+        /// apagada o sin precios, o el perfil en solo lectura), sale el aviso «Las compras no están disponibles ahora», el mismo
+        /// de «Canoas infinitas» en Sin canoas. Escribe <c>AF_STATE rescue_missing</c>.
+        /// </summary>
+        internal void OnRescueMissing(bool stuck)
+        {
+            LevelFlow? flow = _flow;
+            if (flow == null || !flow.HasLevel)
+            {
+                return;
+            }
+
+            bool pulsed = stuck ? _stuck.PulseRescueMissing(flow.ReduceMotion) : _giveUp.PulseRescueMissing(flow.ReduceMotion);
+            bool storeDown = _services != null && (_services.PurchasesBlocked || !_services.Store.IsAvailable);
+            if (storeDown)
+            {
+                (_actions as IStoreNoticeActions)?.ShowStoreUnavailable();
+            }
+
+            if (DevProbe.Enabled)
+            {
+                _probe.Event("rescue_missing", "\"modal\":\"" + (stuck ? "stuck" : "give_up") + "\",\"pulsed\":" + (pulsed ? "true" : "false")
+                    + ",\"store\":" + (storeDown ? "false" : "true") + ",\"level\":" + flow.LevelNumber.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
         }
 
         private StuckContext StuckContext(LevelFlow flow)

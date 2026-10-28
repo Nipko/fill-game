@@ -32,6 +32,20 @@ Lo escribió el integrador (escritorio) el 2026-10-25, a petición del dueño: *
 
 Aquí entra todo.
 
+## Encargo de la jornada 6 (escritorio, 2026-10-28)
+
+*(Lo completa el integrador. Puntos de prueba de los arreglos de las observaciones 5 y 6 de la jornada 5, rama `tanda6/fx-j5-ui`.)*
+
+- **«Continuar: +1 cuia» en gris** (observación 6; guion 8.2), con el `dev.apk`, desde el 31 y con 0 semillas:
+  - **con la tienda falsa** (`--ez af_fake_store true`), en Aguas estancadas: tocar el botón gris hace latir «Te faltan {n} semillas» (crece un poco y vuelve en ~0,4 s); no se cobra nada, el modal sigue y no sale ningún aviso (debajo están Puñado y Balsa); `AF_STATE rescue_missing` con `"pulsed":true,"store":true`;
+  - **sin tienda** (el build normal sin la app en Play Console, como en la jornada 5): el mismo latido y, arriba, el aviso «Las compras no están disponibles ahora», el de «Canoas infinitas» en Sin canoas; `AF_STATE store_unavailable_notice` y `rescue_missing` con `"store":false`;
+  - lo mismo en **¿Seguro?** («Rendirse» con una canoa en juego);
+  - **con Reducir movimiento** (el dueño): la línea no crece, solo se atenúa y vuelve;
+  - **con saldo** (≥ 300), el rescate de siempre;
+  - con **TalkBack**, el botón gris se puede activar y responde igual;
+  - en es-419, en y pt-BR, captura del aviso sobre el modal.
+- **Tu fila de la Liga sin seudónimo** (observación 5; `--ez af_league true --ez af_league_fake true --ei af_max_level 60`): «Gana un nivel para entrar en la Liga» se para antes de la columna de puntos, con aire, y si no cabe pasa a dos líneas y la fila crece. En es-419, en y pt-BR, al 100 % y al 130 % (6 capturas); en pt-BR, el «0» ya no toca el texto.
+
 ## Encargo de la jornada 5 (escritorio, 2026-10-28)
 
 La jornada 4 (`pruebas-telefono-2026-10-27-completa-j4.md`) cubrió el bloque 0, N4 y casi todo N4b, y dejó 5 observaciones. Sus arreglos ya están integrados. **Esta jornada decide el lanzamiento:** el dueño acordó que, si no sale nada, se pasa al Release definitivo y a publicar (D-059; `docs/dev/release.md` §4 bis). Así que cualquier observación **bloqueante** o **alta** se anota con su traza y sus capturas, y se avisa en cuanto aparezca.

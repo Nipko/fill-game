@@ -202,6 +202,17 @@ namespace AF.UI
     }
 
     /// <summary>
+    /// El aviso breve «Las compras no están disponibles ahora» (<c>market_store_unavailable</c>) arriba, sin pasar por una compra:
+    /// para un botón que lleva a una compra cuando la tienda no vende (el rescate en gris sin saldo; observación 6 de la jornada 5,
+    /// guion 8.2). Lo implementa <see cref="GameBootstrap"/>, con el mismo aviso que una compra que acaba en <c>StoreUnavailable</c>.
+    /// </summary>
+    internal interface IStoreNoticeActions
+    {
+        /// <summary>Enseña el aviso de la tienda no disponible.</summary>
+        void ShowStoreUnavailable();
+    }
+
+    /// <summary>
     /// Puntos de entrada del input de la pantalla de nivel y del embudo (los mismos que llaman los toques y los tests PlayMode;
     /// los implementa <see cref="GameBootstrap"/>).
     /// </summary>
