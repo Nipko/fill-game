@@ -4340,3 +4340,12 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - la analítica no cambia de forma: `af_settings_change` con `value = age` y `af_consent` con `step = changed`, solo al confirmar (08 §8.2).
 - **Textos [P]:** `consent_age_confirm_title`, `consent_age_confirm_body`, `consent_age_confirm_back` y `consent_age_confirm_ok`, en `borrador` en español y en `traducido` en inglés y portugués (borrador por IA sin revisión nativa: la compuerta de release lo detiene hasta revisarlo); pendientes del abogado como los demás textos de B12 (Q-B12-5).
 - **Se actualizan:** 08 §7, `docs/dev/consentimiento.md` §1.7 y el guion de la prueba completa en el teléfono.
+
+### D-054, añadido del 2026-10-28: revisión 3 de Gemini, aprobada y aplicada
+
+- **Aprobación del dueño, en el chat:** «Sí, aplícala», a la pregunta «¿Apruebo y aplico la revisión 3 de Gemini?».
+- **Entrega:** `docs/dev/traspaso/gemini-revision-3/`, del encargo `gemini-revision-textos-3.md`. Revisa las 4 claves de la confirmación neutral al corregir la edad (añadido de D-033 del 2026-10-28):
+  - pasan a `revisado_nativo` en inglés y portugués de Brasil;
+  - cambia 1 celda: `consent_age_confirm_body` en inglés, de «and it can't be undone» a «and this can't be undone», como `delete_account_confirm_body`;
+  - el español no cambia y sigue en `borrador` hasta el abogado (Q-B12-5).
+- **Resultado:** no queda ninguna fila en `traducido`, así que `LocReleaseGate` deja pasar el Release definitivo en inglés y portugués de Brasil.
