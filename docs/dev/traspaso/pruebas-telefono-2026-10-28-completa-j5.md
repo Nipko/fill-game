@@ -28,6 +28,7 @@ Capturas y logcat en el portátil: `Logs/device/completa-j5/` (fuera de git). El
 | 7. Perder, rendirse y reintentar | cumple en lo probado | 6 |
 | 8.5 Banda 13-17 | cumple | — |
 | 6. Muestra con el jugador automático | cumple (308/308) | — |
+| Añadido: campaña 1-700 seguida | cumple (700/700) | 7, 8, 9 |
 
 ## Verificación (bloque 0)
 
@@ -243,6 +244,86 @@ Capturas y logcat en el portátil: `Logs/device/completa-j5/` (fuera de git). El
      - batería del 92 al 75 % y del 100 al 89 %;
      - temperatura máxima de 36,6 °C.
 
+7. **Añadido: la campaña entera, del 1 al 700, como un jugador (lo que pidió el dueño): cumple, 700/700.**
+   - **Cómo se jugó:**
+     - un perfil nuevo (`pm clear`, 18+, consentimiento aceptado) y los niveles en orden, siempre con «Siguiente», sin `af_level`;
+     - anuncios de prueba (`af_ads_fill fill`) y la tienda falsa (`af_fake_store`);
+     - cada nivel se ganó con la solución del solver, comprobando lo que pide el resto de esta lista.
+   - **Duración:** unas 6 h, a 19,6 s por nivel de mediana (máximo 32,3 s).
+   - **Fallos del arnés, no del juego:** cinco cortes de la herramienta, corregidos sobre la marcha (notas de la herramienta).
+   - **Los 700 niveles, ganados.** En todos:
+     - el tablero cargado coincide con el pack, salvo el 217, que se retomó a medias tras un corte del arnés;
+     - la etiqueta coincide con el pack: 523 normal, 145 hard y 32 very_hard;
+     - la cosecha base es la de su dificultad (20, 60 y 80), sin una sola diferencia;
+     - **0 excepciones de Unity** en todo el recorrido.
+   - **Estrenos de mecánica, con su tarjeta los 15:**
+     - chica (14), alta (27), hoja (43), matapí (63) y liana (83);
+     - aguas turbias (100), remolino (103), barro (123), lluvia (143) y brote (163);
+     - piraña (183), liana_n (243), hoja_atada (283), brote_n2 (343) y flor (403).
+
+     En total salieron 193 tarjetas de nivel, entre estrenos y repasos.
+   - **Banners de mundo:** salieron los 7 que tocaban en este recorrido (del 11 en adelante). El de Manaus (41) lleva la pregunta «Why is the Rio Negro black?», el mapa y el escudo.
+   - **Ayudas, por turnos:**
+     - **Deshacer:** 98 veces, y el tablero vuelve igual las 98.
+     - **Morpho:** 62 pistas, todas con un vertido válido de la solución.
+     - **Luciérnaga:** 6 revelados en aguas turbias.
+     - **Cuia extra:** 14 veces, con el tablero de 10 a 14 cuias.
+     - **Volver a la orilla:** 18 veces, siempre con el mismo tablero de salida.
+   - **Cosecha doble:**
+     - con vídeo simulado, 2 de 2 dan ×2 (20 → 40);
+     - desde el 39 el río está crecido (racha de 10 sin fallar) y la doble es gratis: 666 veces.
+
+     Tras la doble, el juego pasa solo al nivel siguiente (`auto_next`).
+   - **Racha de la Crecida:** 3 → +300; 6 → cofre con 50 semillas y una Cuia extra; 10 → río crecido.
+   - **Otros premios en el recorrido:**
+     - **Canastas:** 70 abiertas (+4.200).
+     - **Paradas:** 68 llegadas, con 150 escenas de llegada.
+     - **Aspectos:** 3 desbloqueados.
+     - **Bitácora:** el día 1 dio +60.
+     - **Fauna:** 1 avistamiento.
+   - **Total ganado:**
+     - 10.460 por victoria;
+     - 8.700 por hard y 2.560 por very_hard;
+     - 21.040 por la Cosecha doble;
+     - 4.200 por canastas y 350 por la racha.
+
+     Con las tres compras, el saldo acaba en 47.710.
+   - **Compras con la tienda falsa:** el Puñado en el Mercado, en el 250, el 450 y el 650. Cada vez:
+     - `purchase` 3.900;
+     - `iap_verification`;
+     - `af_iap_result` ok;
+     - `earn_virtual_currency` +1.000, una sola vez por compra.
+
+     En el 50 no se llegó a comprar porque la oferta «No Ads» (COP 9.900) tapaba el Inicio. Ninguna de las tres se cobró dos veces.
+   - **Ofertas que salen solas:**
+     - «Starter Pack» (COP 1.900: 500 semillas, 2 Cuias extra y 3 Morpho, «48 hours left») en el 12, el 15 y el 19;
+     - «No Ads» al volver al Inicio;
+     - «Clay Jar» llena (3.000 de 3.000, COP 5.900) en el 217 (observación 9).
+
+     Atrás cierra todas (`offer_declined`).
+   - **Otros avisos:**
+     - el permiso de notificaciones (pantalla previa) sale 2 veces;
+     - la Bitácora sale sola la primera vez que se entra al Inicio del día.
+   - **Anuncios entre niveles:**
+     - bloqueados antes del 22 (`BelowFirstLevel`) y en los 120 s de calentamiento;
+     - con hueco mínimo entre uno y otro (`MinGap`) y con tope diario (`DailyCap`);
+     - **tras una compra, ninguno durante 24 h** (`AfterPurchase`, `ads_interstitial_suppress_after_iap_h` = 24): 447 bloqueos del 250 al 700;
+     - en total, 13 anuncios simulados mostrados y cerrados.
+   - **Fin del contenido** (tras ganar el 700, «Siguiente»):
+     - la pantalla `content_end`;
+     - el Mapa con el viaje de la canoa del 690 al 700, «Samples · 73/73» y el río completo hasta Mount Mismi;
+     - al volver, «The river keeps growing: 100 new levels are coming upriver in about 14 days» con «Back».
+   - **Memoria (PSS) y temperatura** cada 25 niveles. La app se relanzó en el 41 y en el 217:
+     - del 41 al 200, de 538 a 641 MB;
+     - del 217 al 700, de 538 a 663 MB, con bajadas (591 → 556 en el 325);
+     - la temperatura se mantuvo en 30,6-39,0 °C.
+
+     Crece de forma lenta y sostenida, unos 0,25 MB por nivel (observación 8).
+   - **Capturas:** 360 px, de cada tablero y cada victoria (`total/shots/`).
+     - Ninguna sale en blanco o en negro.
+     - Todas las victorias llevan el botón verde, salvo 4 tapadas por una oferta.
+     - Se borraron 29 en las que salía una notificación personal del teléfono.
+
 ## Observaciones
 
 1. **Alta. La primera apertura sigue enseñando ≈ 1,3 s de petróleo liso**, de 0,83 a 2,12 s, entre la pantalla del sistema con el icono y la escena. Las cifras dicen que ~0,8 s es el arranque del motor (`proc_awake_ms` 1.520) y ~0,5 s es la GPU sin caché de sombreadores (`visible_ms` − `first_frame_ms` = 795 ms, frente a ~280 ms con caché). La intro de 3,5 s se ve entera y fluida (175 fotogramas, p95 de 18,5 ms y 0 pausas). La pantalla de edad llega a los 7,8 s (en la jornada 4, 4,6 s), porque la carga ya no corre mientras la intro se mueve.
@@ -251,9 +332,19 @@ Capturas y logcat en el portátil: `Logs/device/completa-j5/` (fuera de git). El
 4. **Baja. La Liga falsa (`af_league_fake`) no suma tus puntos:** tras ganar dos niveles (`league_win` aceptado), tu fila sigue en 0 y sin seudónimo. El caso «con seudónimo» de N5.4 no se puede ver con la Liga falsa; hace falta la Liga contra el backend de dev (bloque 12.2).
 5. **Baja. En pt-BR, el «0» de los puntos de tu fila casi toca el texto** «Vença um nível para entrar na Liga», que llega hasta el borde derecho (`n5-liga-fila-seudonimo-pt-BR.png`).
 6. **Baja. Sin saldo y sin tienda, «Continue: +1 cuia» en gris no hace nada al tocarlo.** La línea «You need 600 more seeds» ya explica por qué, pero el guion (8.2) pide un aviso en vez de un toque mudo cuando una pantalla lleva a una compra. En Sin canoas, «Endless Canoes» sí avisa con el toast.
+7. **Baja. «Clay Jar» se ve con un círculo marrón liso en vez de la vasija** (`total/shots/l217_offer_card.jpg`). La oferta del «Starter Pack» sí lleva su dibujo.
+8. **Baja. La memoria crece despacio en una sesión larga:** unos 0,25 MB por nivel. Del 41 al 200 pasó de 538 a 641 MB, y del 217 al 700, de 538 a 663 MB, con bajadas sueltas. En 480 niveles seguidos no llega a ser un problema, pero apunta a algo que no se libera del todo.
+9. **Baja. «Clay Jar» se ofrece llena encima de la victoria,** con «COP 5,900» justo donde estaba «Next». Un toque rápido para seguir podría caer en la compra. Lo mismo pasa con el «Starter Pack» del 12, el 15 y el 19. Atrás y «Not now» cierran bien.
 
 ## Notas de la herramienta (no son defectos del juego)
 
 - Mi jugador por coordenadas del ensayo no gana el 11: las posiciones guardadas son de otro tablero.
 - La primera prueba del Salto del Boto se hizo con el 46 ya superado (`af_max_level` 60) y no salía. Con el 46 como frontera sale bien.
 - La primera prueba de la Pororoca relanzaba con `af_level`, que vuelve a cargar el nivel. Relanzando sin extras, el tablero barajado se conserva.
+- Cortes del arnés de la campaña 1-700, todos corregidos sobre la marcha:
+  1. tras el 10, «Siguiente» abre el Mapa sobre el Inicio, y el arnés pulsaba Atrás en vez de «Jugar»;
+  2. la Bitácora sale sola al entrar al Inicio, sin pantalla propia en `AF_LAYOUT`, solo `takeover`;
+  3. el «Starter Pack» aparece unos 2 s después de la victoria, y el arnés seguía pulsando Atrás sobre la oferta ya cerrada;
+  4. con la Cosecha doble, el juego pasa solo al siguiente nivel y el arnés tocaba «Siguiente» sobre el tablero nuevo;
+  5. en el 217 se perdió un toque y el arnés reinició el nivel con «Volver a la orilla».
+- El teléfono perdió la depuración inalámbrica en el 187 del bloque 6, y al reactivarla volvió con otro puerto.
