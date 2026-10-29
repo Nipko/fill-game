@@ -1551,6 +1551,10 @@ namespace AF.UI
             // los 12 sp de 02 §12 sin la escala de texto. Solo con ShrinkAllowed, en un lienzo de menos de 360 dp (D-061: la
             // excepción de 02 §12 por debajo de 360 dp); a 360 dp nunca encoge.
             private const float LabelFloorSp = UiBuilder.MinTextSp;
+
+            // Holgura de la caja que se ensancha para la palabra a LabelFloorSp (dp): TextMeshPro corta la palabra que mide justo
+            // lo que su caja.
+            private const float LabelWordSlackDp = 0.5f;
             private const float IconDp = 32f;
             private const float IconTopDp = 6f;
             private const float LabelIconGapDp = 1f;
@@ -1888,7 +1892,7 @@ namespace AF.UI
             public float GrowFor(float w)
             {
                 float inner = w - (2f * LabelInsetFor(w));
-                if (!SetLabelLines(inner))
+                if (!SetLabelLines(ref inner, w))
                 {
                     return 0f;
                 }
@@ -1921,9 +1925,9 @@ namespace AF.UI
             // La etiqueta en una línea si cabe en la ranura; si no, en dos, con el glifo más pequeño encima (tarea L4).
             private void PlaceLabel()
             {
-                float inset = LabelInsetFor(_w);
-                float inner = _w - (2f * inset);
-                bool two = SetLabelLines(inner);
+                float inner = _w - (2f * LabelInsetFor(_w));
+                bool two = SetLabelLines(ref inner, _w);
+                float inset = (_w - inner) * 0.5f; // el aire que deja la caja (SetLabelLines la ensancha como último recurso)
 
                 // El borde de abajo de la etiqueta solo baja lo que crece la ranura (la etiqueta de precio va debajo); con la
                 // escala de texto o en dos líneas, la caja crece hacia arriba y el glifo sube y, si hace falta, se encoge.
@@ -1939,10 +1943,12 @@ namespace AF.UI
             }
 
             // Una línea si la etiqueta cabe en inner dp; si no, dos con el interlineado apretado. Devuelve si van dos. Si ni la
-            // palabra más larga cabe en inner (cinco ranuras a 320 dp con la letra al 130 %: «Deshace / r», observación 8 de la
-            // jornada 6) y el lienzo mide menos de 360 dp (ShrinkAllowed), la etiqueta encoge lo justo para que quepa, sin bajar de
-            // LabelFloorSp (D-061): nunca se parte una palabra.
-            private bool SetLabelLines(float inner)
+            // palabra más larga cabe en inner (cinco ranuras a 320 dp: «Deshace / r», observaciones 8 y 13 de la jornada 6) y el
+            // lienzo mide menos de 360 dp (ShrinkAllowed), la etiqueta encoge lo justo para que quepa, sin bajar de LabelFloorSp
+            // (D-061); si ni a ese tamaño cabe («Deshacer» mide 52,9 dp a 12 dp, «Desfazer» 50,4 y «Misturar» 48,1, y la caja de la
+            // ranura de 56 dp con su aire, 48), la caja toma el aire de la ranura, hasta su ancho entero (room), y devuelve en
+            // inner el ancho que usa: nunca se parte una palabra.
+            private bool SetLabelLines(ref float inner, float room)
             {
                 BaseLabelSize(); // cada colocación empieza con su tamaño de siempre
                 float word = UiBuilder.LongestWordWidth(Label);
@@ -1950,6 +1956,11 @@ namespace AF.UI
                 {
                     float fit = Mathf.Floor(_labelSp * (inner / word) * 10f) / 10f;
                     Label.fontSize = Mathf.Max(LabelFloorSp, Mathf.Min(_labelSp, fit));
+                    float now = UiBuilder.LongestWordWidth(Label);
+                    if (now > inner)
+                    {
+                        inner = Mathf.Min(room, Mathf.Ceil(now * 10f) / 10f + LabelWordSlackDp);
+                    }
                 }
 
                 Label.textWrappingMode = TextWrappingModes.NoWrap;

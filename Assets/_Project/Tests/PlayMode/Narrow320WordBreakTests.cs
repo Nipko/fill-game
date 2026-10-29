@@ -28,6 +28,7 @@ namespace AF.Tests.PlayMode
         {
             Fx130Walk.SetUp();
             GameScreen.SimulatedPxPerDp = Canvas320Tests.Density;
+            GameScreen.ShuffleOverride = true; // la Pororoca, como en el teléfono (observación 13 de la jornada 6): cinco ranuras en el 100
         }
 
         [TearDown]
@@ -35,6 +36,7 @@ namespace AF.Tests.PlayMode
         {
             GameScreen.SimulatedPxPerDp = null;
             GameScreen.SimulatedScreen = null;
+            GameScreen.ShuffleOverride = null;
             Fx130Walk.TearDown();
         }
 
@@ -65,6 +67,7 @@ namespace AF.Tests.PlayMode
             yield return null;
 
             // El HUD del nivel (46: Marea, Cuia extra, Pista y Pororoca; 100, con Aguas turbias, también la Luciérnaga: cinco ranuras), en juego.
+            // Hasta la observación 13 de la jornada 6 la Pororoca iba apagada (PlayModeHelpers.NoShuffleUnlessSet) y se miraban cuatro.
             yield return EnterLevel(boot, level);
             GameScreen view = boot.View!;
             Assert.That(view.CanvasWidth, Is.EqualTo(320f).Within(0.01f), "el lienzo de 320 dp");
