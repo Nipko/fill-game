@@ -4547,6 +4547,19 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   3. 02 §12 (fila «Texto») recoge la excepción.
 - **Cómo revertir:** con una decisión nueva del dueño (las alternativas eran solo el icono con etiqueta accesible, textos más cortos o la bandeja en dos filas).
 
+### D-061, añadido del 2026-10-29: el suelo de 12 dp en cualquier ancho
+
+- **Estado:** decidido con la opción recomendada (el dueño va con la recomendada por norma; la aplicó el coordinador del carril `tanda6/fx-j6b-bandeja`). A la pregunta «A 360 dp y al 130 %, con las cinco ranuras, las etiquetas de la bandeja no caben a 12 sp × escala y D-061 no deja encoger: ¿extender D-061 a cualquier ancho, acortar los textos u otra bandeja?», la opción elegida fue la primera: extender D-061 a cualquier ancho.
+- **Contexto:** observación 13 de la jornada 6. Con las cinco ranuras (Marea, Cuia extra, Pista, Pororoca y Luciérnaga), la caja de cada etiqueta mide 48 dp a 320 dp y 54 dp a 360 dp o más (por encima de 360 dp el lienzo se queda en 360 y escala: el teléfono de pruebas, a 411 dp, también). Al 130 %, «Deshacer» mide 68,7 dp, «Desfazer» 65,5, «Misturar» 62,6, «Revelar» 56,6 y «Barajar» 54: se partían también a 360 y 411 dp.
+- **Decisión** (sustituye al punto 1 de D-061):
+  1. Las etiquetas de la bandeja y «Reiniciar» van a 12 sp × escala (02 §12). Solo si a ese tamaño una palabra no cabe, **en cualquier ancho** (también a 360 dp o más):
+     - encogen lo justo para caber, hasta **12 dp sin escalar** (`LabelFloorSp`, `RestartLabelFloorSp`);
+     - si ni así cabe (a 320 dp, «Deshacer» mide 52,9 dp a 12 dp y la caja, 48), la caja de la etiqueta de la bandeja se ensancha hasta el ancho entero de su ranura.
+  2. Nunca se parte una palabra (sin cambios).
+  3. La etiqueta cuya palabra cabe a 12 sp × escala no encoge: al 100 % ninguna encoge, porque 12 sp ya son 12 dp.
+- **Tests:** `TrayAndTabFontTests` (bandeja con cinco ranuras a 320, 360 y 411 dp, al 100 y al 130 %, en es-419, en y pt-BR) y `Narrow320WordBreakTests.LastResortShrink_OnlyWhenTheWordDoesNotFit_AndNeverBelow12`.
+- **Cómo revertir:** volver a poner la condición del ancho (`canvasW < GameScreen.ReferenceWidth`) en `BoosterTray.Layout` y en `GameScreen.LayoutRestartPill`; las palabras volverían a partirse a 360 dp o más al 130 % con cinco ranuras.
+
 ### D-026, añadido del 2026-10-29: el foco de audio de Android (alarmas y avisos)
 
 - **Estado:** arreglo de la observación 10 de la jornada 6 (`pruebas-telefono-2026-10-28-completa-j6.md`: con una alarma sonando, la música del juego seguía de fondo; la llamada sí la paraba), en el carril `tanda6/fx-j6-liga-alarma`. No añade paquetes, SDK, permisos ni dependencias (regla 4): es un plugin propio con API de la plataforma, como `AfSplashHold.androidlib`. **Convivir con la música de otra app: decidido por el dueño en el chat el 2026-10-29**, literal: «hagamoslo asi entonces», a la opción recomendada: «Si ya suena música de otra app, el juego no pide el foco ni pone su música (los efectos sí suenan); si no suena nada, pide el foco y una alarma lo pausa». La regla está en 07 §9.4.

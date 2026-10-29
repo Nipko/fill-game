@@ -66,6 +66,9 @@ namespace AF.UI
         /// <summary>Margen interior de cada lado de la etiqueta de una pestaña (dp): la mitad de <see cref="TabGapDp"/>.</summary>
         public const float TabPadDp = TabGapDp * 0.5f;
 
+        /// <summary>Tamaño de la etiqueta de una pestaña (sp, × escala): el tope de su autoajuste; el suelo es 12 sp × escala (02 §12).</summary>
+        public const float TabSp = 15f;
+
         private readonly ProceduralArt _art;
         private readonly OverlayCanvas _canvas;
         private readonly RectTransform _panel;
@@ -122,7 +125,7 @@ namespace AF.UI
                 UiBuilder.Stretch(_tabLabels[i].rectTransform);
                 // D-033, punto 11: al 130 % «Sin anuncios» no cabía en una línea de su cuarto de fila: va en dos, sin partir palabras.
                 _tabLabels[i].textWrappingMode = TextWrappingModes.Normal;
-                UiBuilder.AutoSize(_tabLabels[i], UiBuilder.MinTextSp, 15f);
+                UiBuilder.AutoSize(_tabLabels[i], UiBuilder.MinTextSp, TabSp);
             }
 
             // Las filas van en un visor que se desplaza si no caben (D-033, punto 11: al 130 % las filas crecen con su texto), con
@@ -616,6 +619,7 @@ namespace AF.UI
                 placed++;
             }
 
+            ShareTabFontSize();
             y += tabH + 8f;
             int count = Math.Min(_model.Count, MaxRows);
             float maxRowH = Tab == MarketTab.Cuias ? SkinRowDp : RowDp; // las skins, más altas: su ficha es lo que se elige
@@ -767,6 +771,8 @@ namespace AF.UI
 
             for (int i = 0; i < _tabs.Length; i++)
             {
+                // Cada colocación mide con el autoajuste de siempre (ShareTabFontSize bajó el tope en la anterior).
+                _tabLabels[i].fontSizeMax = TabSp * UiBuilder.TextScale;
                 _tabWords[i] = _tabs[i].gameObject.activeSelf ? Mathf.Ceil(UiBuilder.LongestWordWidth(_tabLabels[i])) + (2f * TabPadDp) + 1f : -1f;
             }
 
@@ -795,6 +801,47 @@ namespace AF.UI
 
             return h;
         }
+
+        /// <summary>
+        /// Un solo tamaño de letra para todas las pestañas visibles (observación 15 de la jornada 6 en el teléfono: al 130 %, y en
+        /// es-419 también al 100 %, cada pestaña encogía su texto por su cuenta y la fila mezclaba tamaños). Cada etiqueta, ya en su
+        /// caja, se ajusta sola con su autoajuste (entre 12 sp y <see cref="TabSp"/> × escala); el tamaño común es el menor de esos,
+        /// el mayor que hace caber a todas, y nunca baja del mínimo del autoajuste (12 sp × escala, 02 §12; D-061 no rebaja las
+        /// pestañas). Se aplica como tope del autoajuste de cada una, así que cada etiqueta queda a ese tamaño. En la rejilla de 2×2
+        /// (320 dp con la letra grande) también es uno solo: las dos filas son la misma barra. Mide al colocar, nunca por fotograma.
+        /// </summary>
+        private void ShareTabFontSize()
+        {
+            float shared = TabSp * UiBuilder.TextScale;
+            for (int i = 0; i < _tabLabels.Length; i++)
+            {
+                if (!_tabs[i].gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                TextMeshProUGUI label = _tabLabels[i];
+                label.ForceMeshUpdate(); // el autoajuste deja en fontSize el tamaño con el que cabe en su caja
+                shared = Mathf.Min(shared, label.fontSize);
+            }
+
+            float floor = UiBuilder.MinTextSp * UiBuilder.TextScale;
+            shared = Mathf.Max(floor, Mathf.Floor(shared * 100f) / 100f);
+            for (int i = 0; i < _tabLabels.Length; i++)
+            {
+                TextMeshProUGUI label = _tabLabels[i];
+                label.fontSizeMax = Mathf.Max(label.fontSizeMin, shared);
+                if (_tabs[i].gameObject.activeSelf)
+                {
+                    label.ForceMeshUpdate();
+                }
+            }
+
+            TabFontSize = shared;
+        }
+
+        /// <summary>El tamaño común de las etiquetas de las pestañas en la última colocación (dp; tests).</summary>
+        internal float TabFontSize { get; private set; }
 
         /// <summary>
         /// Columnas de las pestañas visibles (las de <paramref name="words"/> no negativas, en dp con su aire): todas en una fila si la
