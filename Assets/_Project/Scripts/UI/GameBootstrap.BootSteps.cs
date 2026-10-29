@@ -252,6 +252,7 @@ namespace AF.UI
             sb.Append(",\"os_splash_by\":\"").Append(_osSplashBy ?? string.Empty).Append('"');
             sb.Append(",\"proc_os_splash_ms\":").Append(os.ProcReleaseMs.ToString(inv));
             sb.Append(",\"os_splash_focus_ms\":").Append(os.FocusAfterMs.ToString(inv));
+            sb.Append(",\"os_splash_veil\":\"").Append(os.Veil).Append('"');
             for (int i = 0; i < BootStepNames.Length; i++)
             {
                 sb.Append(",\"").Append(BootStepNames[i]).Append("\":").Append(_bootSteps[i].ToString(inv));

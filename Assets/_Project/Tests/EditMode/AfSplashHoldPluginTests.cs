@@ -12,7 +12,8 @@ namespace AF.Tests.EditMode
     /// La pantalla de arranque del sistema hasta la intro (añadido de D-051 del 2026-10-28): el plugin propio
     /// <c>AfSplashHold.androidlib</c> es solo Java con API de la plataforma (sin androidx, dependencias, permisos, red, disco ni
     /// registros), su proveedor no se exporta, tiene un tope de 3 s y el contrato de nombres con <see cref="AndroidOsSplash"/> cuadra;
-    /// y cuándo la suelta el juego (<see cref="AndroidOsSplash.SignalFor"/>).
+    /// desde la observación 1 de la jornada 6, es un velo que no bloquea (sin <c>OnPreDrawListener</c> ni <c>setRunWithoutFocus</c>),
+    /// no enfocable ni para TalkBack; y cuándo lo suelta el juego (<see cref="AndroidOsSplash.SignalFor"/>).
     /// </summary>
     public sealed class AfSplashHoldPluginTests
     {
@@ -44,7 +45,7 @@ namespace AF.Tests.EditMode
                 foreach (Match m in Regex.Matches(text, @"^import\s+([\w\.]+);", RegexOptions.Multiline))
                 {
                     string import = m.Groups[1].Value;
-                    bool allowed = import.StartsWith("android.", StringComparison.Ordinal) || import == "java.lang.reflect.Method";
+                    bool allowed = import.StartsWith("android.", StringComparison.Ordinal);
                     Assert.That(allowed, Is.True, Path.GetFileName(file) + " importa " + import);
                 }
             }
@@ -76,21 +77,73 @@ namespace AF.Tests.EditMode
             StringAssert.Contains("package com.amazonfill.splash;", hold);
             StringAssert.Contains("public static final long CAP_MS = " + AndroidOsSplash.CapMs + "L;", hold);
             Assert.That(AndroidOsSplash.CapMs, Is.EqualTo(3000), "tope de seguridad: nunca se queda colgada");
-            foreach (string method in new[] { "release(String by)", "String result()", "long heldMs()", "long procReleaseMs()", "long focusAfterMs()" })
+            foreach (string method in new[] { "release(String by)", "String result()", "long heldMs()", "long procReleaseMs()", "long focusAfterMs()", "String veil()" })
             {
                 StringAssert.Contains("public static " + (method.StartsWith("release", StringComparison.Ordinal) ? "void " : string.Empty) + method, hold, method);
             }
 
-            foreach (string result in new[] { "none", "pending", "signal", "cap", "gone" })
+            foreach (string result in new[] { "none", "pending", "signal", "cap", "gone", "own", "system" })
             {
                 StringAssert.Contains("= \"" + result + "\";", hold, result);
             }
 
-            // Mientras retiene, Unity corre sin foco (Android no da el foco a una ventana sin pintar) y luego vuelve a lo de siempre.
             StringAssert.Contains("MAIN.postDelayed(CAP, CAP_MS);", hold);
-            StringAssert.Contains("setRunWithoutFocus(activity, true)", hold);
-            StringAssert.Contains("setRunWithoutFocus(activity, false)", hold);
-            StringAssert.Contains("getUnityPlayerConnection", hold);
+            Assert.That(Regex.IsMatch(hold, @"public static long focusAfterMs\(\)\s*\{\s*return -1L;"), Is.True, "el velo no toca el foco: la sonda queda en -1");
+        }
+
+        [Test]
+        public void TheCap_IsWellUnderFiveSeconds()
+        {
+            // El umbral de arranque lento de Android vitals es 5 s: el velo nunca puede alargar el arranque hasta ahí.
+            Assert.That(AndroidOsSplash.CapMs, Is.LessThan(5000));
+            Assert.That(AndroidOsSplash.CapMs, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void TheVeil_DoesNotBlockTheWindow_NorTouchTheFocus()
+        {
+            // Jornada 6, observación 1: aplazar el primer fotograma (OnPreDrawListener que devuelve false) y hacer correr a Unity sin
+            // foco se esperaba a sí mismo hasta el tope. El velo no aplaza nada ni toca el foco ni usa reflexión.
+            string hold = Hold;
+            foreach (string word in new[] { "OnPreDrawListener", "addOnPreDrawListener", "setRunWithoutFocus", "getUnityPlayerConnection", "java.lang.reflect", "OnWindowFocusChangeListener", "getMethod(" })
+            {
+                Assert.That(hold.Contains(word), Is.False, word);
+            }
+
+            // Una vista encima de la DecorView con el fondo de ventana del tema (af_launch_window), puesta antes del primer fotograma.
+            StringAssert.Contains("android.R.attr.windowBackground", hold);
+            StringAssert.Contains("view.setBackground(background);", hold);
+            StringAssert.Contains("((ViewGroup) decor).addView(view, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));", hold);
+            StringAssert.Contains("public void onActivityStarted(Activity activity) {", hold);
+            StringAssert.Contains("removeView(own)", hold, "se quita al soltar");
+
+            // Android 12+: la propia pantalla del sistema, entregada a la actividad, se queda encima hasta soltar (el icono no salta).
+            StringAssert.Contains("Build.VERSION.SDK_INT >= Build.VERSION_CODES.S", hold);
+            StringAssert.Contains("getSplashScreen().setOnExitAnimationListener(AfSplashHold::onSystemSplash)", hold);
+            StringAssert.Contains("((SplashScreenView) splash).remove();", hold);
+            StringAssert.Contains("@TargetApi(31)\n    private static final class Api31", hold.Replace("\r\n", "\n"));
+
+            // Sin icono (Android 13+ la entrega de color liso fuera del lanzador, p. ej. desde una notificación) no se queda: se quita
+            // en el acto y manda el velo propio (os_splash_veil = own).
+            StringAssert.Contains("if (RESULT_PENDING.equals(result) && candidate != null && Api31.hasIcon(splash)) {", hold);
+            StringAssert.Contains("return splash instanceof SplashScreenView && ((SplashScreenView) splash).getIconView() != null;", hold);
+            Assert.That(Regex.IsMatch(hold, @"Api31\.hasIcon\(splash\)\) \{\s*makeInert\(splash\);\s*systemVeil = splash;\s*veil = VEIL_SYSTEM;\s*return;\s*\}\s*Api31\.remove\(splash\);"), Is.True, "solo con icono se queda; si no, se quita ya");
+
+            // Ni foco, ni TalkBack, ni toques: los dos velos pasan por makeInert.
+            foreach (string inert in new[] { "setFocusable(false)", "setFocusableInTouchMode(false)", "setClickable(false)", "setLongClickable(false)", "IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS" })
+            {
+                StringAssert.Contains(inert, hold, inert);
+            }
+
+            Assert.That(Regex.Matches(hold, @"makeInert\((view|splash)\);").Count, Is.EqualTo(2), "el velo propio y el del sistema");
+
+            // Solo la actividad de Unity y una vez por proceso; sin fundido (nada se mueve con Reducir movimiento).
+            StringAssert.Contains("\"com.unity3d.player.UnityPlayerGameActivity\"", hold);
+            StringAssert.Contains("if (seen) {", hold);
+            foreach (string anim in new[] { "animate(", "Animator", "setAlpha(" })
+            {
+                Assert.That(hold.Contains(anim), Is.False, anim);
+            }
         }
 
         [Test]
@@ -112,6 +165,7 @@ namespace AF.Tests.EditMode
             Assert.That(info.HeldMs, Is.EqualTo(-1L));
             Assert.That(info.ProcReleaseMs, Is.EqualTo(-1L));
             Assert.That(info.FocusAfterMs, Is.EqualTo(-1L));
+            Assert.That(info.Veil, Is.EqualTo("none"));
         }
     }
 }

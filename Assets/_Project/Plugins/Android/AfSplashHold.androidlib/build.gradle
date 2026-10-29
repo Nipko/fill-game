@@ -1,10 +1,11 @@
-// Plugin propio que retiene la pantalla de arranque del sistema hasta la intro de la marca (añadido de D-051 del 2026-10-28).
-// Solo Java y solo API de la plataforma (android.*): sin androidx, sin dependencias ni permisos. Un ContentProvider sin exportar
-// (AfSplashHoldProvider) registra unas ActivityLifecycleCallbacks al arrancar el proceso; al empezar la actividad de Unity, un
-// OnPreDrawListener en su ventana devuelve false hasta que el juego avisa por JNI (AF.UI.AndroidOsSplash.Release) de que la intro
-// ya está en la pantalla, con un tope de 3 s. Mientras, Unity corre sin el foco de la ventana (UnityPlayer.setRunWithoutFocus),
-// porque Android no da el foco a una ventana que aún no se ha pintado. Detalle en docs/dev/decisiones.md (D-051, añadido del
-// 2026-10-28, la pantalla del sistema hasta la intro) y en el test AfSplashHoldPluginTests.
+// Plugin propio que vela el arranque con el icono v2 sobre el petróleo hasta la intro de la marca (añadido de D-051 del 2026-10-28;
+// segundo diseño por la observación 1 de la jornada 6). Solo Java y solo API de la plataforma (android.*): sin androidx, sin
+// dependencias ni permisos. Un ContentProvider sin exportar (AfSplashHoldProvider) registra unas ActivityLifecycleCallbacks al
+// arrancar el proceso; al empezar la actividad de Unity se pone encima una vista con el fondo de ventana del tema (af_launch_window)
+// y, en Android 12+, se queda la propia pantalla del sistema (SplashScreenView). No aplaza ningún fotograma ni toca el foco: se
+// quitan cuando el juego avisa por JNI (AF.UI.AndroidOsSplash.Release) de que la intro ya está en la pantalla, con un tope de 3 s.
+// Detalle en docs/dev/decisiones.md (D-051, añadido del 2026-10-28, la pantalla del sistema hasta la intro) y en el test
+// AfSplashHoldPluginTests.
 apply plugin: 'com.android.library'
 
 android {

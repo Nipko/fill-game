@@ -42,9 +42,18 @@ Aquí entra todo.
 
 **Mientras tanto (el dueño, 2026-10-28):** N6.1 salió `cap` en todos los arranques (observación 1 de la hoja j6), y el escritorio lo arregla en el carril `tanda6/fx-j6-splash`. El portátil **sigue ya, con el build que tiene**, con el resto de N6 que no depende de la pantalla del sistema y con los bloques pendientes (5, 8 a 19, 21, 22 y 23, y lo que hace el dueño). Los ~3 s de más del arranque no son defecto nuevo: no se anotan otra vez. N6.1 (y Reducir movimiento, Inicio durante el icono y abrir en frío desde una notificación) se repite cuando llegue el build con el arreglo. Lo hecho se va añadiendo a la misma hoja `-j6.md`.
 
+**Repetir N6.1 con el velo sin bloqueo (2026-10-28).** La primera entrega de la jornada 6 (`pruebas-telefono-2026-10-28-completa-j6.md`, observación 1) dio `cap` en todos los arranques: la retención del primer fotograma se esperaba a sí misma. El carril `tanda6/fx-j6-splash` la cambia por un velo que no bloquea (segundo diseño del añadido de D-051 del 2026-10-28 en `decisiones.md`): una vista nativa con `af_launch_window` encima de la ventana de Unity y, en Android 12+, la propia pantalla del sistema entregada a la actividad (`SplashScreenView`). Las dos se quitan cuando la intro ya está en la pantalla. El portátil hace `git pull`, construye de nuevo el `dev.apk` y el ensayo de release desde el commit que lo integra y **repite N6.1 entero** con los cuatro casos de abajo. **La compuerta**, en la primera apertura, en frío y en el ensayo:
+- `os_splash_release` = `signal` y `os_splash_by` = `intro`;
+- `os_splash_held_ms` < 3.000 (con `cap` y ≈ 3.000 sigue fallando);
+- `proc_awake_ms` **antes** de `proc_os_splash_ms` (Unity arranca con el velo puesto; en la primera entrega iba ≈ 200 ms después);
+- en las ráfagas, **ningún fotograma de petróleo liso** entre el icono y la escena, y el icono sin saltos;
+- anota `os_splash_veil`: en este teléfono (Android 16) se espera `system`. Si sale `own`, Android no entregó su pantalla: mira entonces con más cuidado si el icono salta al pasar al velo propio.
+
+Después, sigue con lo pendiente en el orden de arriba (el resto de N6 y los bloques que dejó la jornada 5), donde se quedó con el build anterior.
+
 ### N6. Lo nuevo de la jornada 6
 
-- **La pantalla del sistema hasta la intro** (carril `tanda6/fx-j5-arranque`; añadido de D-051 del 2026-10-28, el dueño: «si hagamoslo asi»; observaciones 1 y 2 de la jornada 5). El icono v2 sobre el petróleo se queda hasta que el primer fotograma de la intro ya está en la pantalla: se debe ver **icono → escena de la intro**, sin el petróleo liso de en medio. Lo hace el plugin `AfSplashHold.androidlib`, con un tope de 3 s.
+- **La pantalla del sistema hasta la intro** (carriles `tanda6/fx-j5-arranque` y `tanda6/fx-j6-splash`; añadido de D-051 del 2026-10-28, el dueño: «si hagamoslo asi»; observaciones 1 y 2 de la jornada 5 y 1 de la jornada 6). El icono v2 sobre el petróleo se queda hasta que el primer fotograma de la intro ya está en la pantalla: se debe ver **icono → escena de la intro**, sin el petróleo liso de en medio. Lo hace el plugin `AfSplashHold.androidlib` con un velo que no bloquea el pintado de la ventana y un tope de 3 s.
   - **Cómo medirlo:** una ráfaga de capturas (`screencap` cada ~110 ms, con la marca de tiempo de cada una, desde el `am start`) en cuatro casos:
     1. **primera apertura** (`pm clear` y `logcat -c` antes);
     2. **en frío**, cinco veces (`force-stop` y lanzar);
@@ -57,20 +66,22 @@ Aquí entra todo.
 
     Anota en qué momento se quita el icono y en qué momento sale la escena, en cada ráfaga.
   - **La sonda** (`AF_PERF boot_steps` del `dev.apk`), campos nuevos:
-    - `os_splash_release`: `signal` esperado; `cap` quiere decir que el juego no la soltó y la quitó el tope (es un fallo, anótalo con su ráfaga); `none`, que no hubo retención;
+    - `os_splash_release`: `signal` esperado; `cap` quiere decir que el juego no lo soltó y lo quitó el tope (es un fallo, anótalo con su ráfaga); `none`, que no hubo velo;
     - `os_splash_by`: `intro` esperado;
-    - `os_splash_held_ms`: lo retenido desde que empezó la actividad;
-    - `proc_os_splash_ms`: del arranque del proceso a soltarla; debe caer donde la ráfaga pasa del icono a la escena;
-    - `os_splash_focus_ms`: de soltarla a que la ventana recibe el foco (unos pocos fotogramas).
+    - `os_splash_held_ms`: lo que duró el velo desde que empezó la actividad (< 3.000);
+    - `proc_os_splash_ms`: del arranque del proceso a quitar el velo; debe caer donde la ráfaga pasa del icono a la escena, y después de `proc_awake_ms`;
+    - `os_splash_veil`: `system` (Android 12+ entregó su pantalla y se quedó encima) u `own` (solo el velo propio, con `af_launch_window`);
+    - `os_splash_focus_ms`: siempre -1 desde el velo sin bloqueo, que no toca el foco.
 
-    Anota también `proc_awake_ms`, `proc_visible_ms` y el `TotalTime` de `am start -W` y compáralos con la jornada 5. **`TotalTime` sube a propósito:** ahora mide hasta que se quita el icono. En la primera apertura debe quedar muy por debajo de 5 s (el umbral de arranque lento de Android vitals).
+    Anota también `proc_awake_ms`, `proc_visible_ms` y el `TotalTime` de `am start -W` y compáralos con la jornada 5. Con el velo, **`TotalTime` vuelve a lo de la jornada 5**: la ventana se pinta enseguida y el velo va encima. La escena debe llegar como entonces (~0,9 s en frío y ~2,1 s en la primera apertura), no 3 s más tarde.
   - **La intro no cambia:** `brand_intro` como en la jornada 5 (3.500 ms, `visible_by` gpu, `motion_frames` ≈ 175, `motion_pauses` 0, `cut` false). Mira con el dueño si el comienzo del vertido se ve entero tras el icono o si el fundido del sistema se come un trozo; anota su opinión literal.
-  - **Unity corre sin el foco mientras se retiene** y vuelve a lo de siempre con el foco. Compruébalo con dos cosas:
+  - **El velo no toca el foco ni los toques.** Compruébalo con tres cosas:
     - tras el arranque, baja la cortina de notificaciones con el nivel en marcha: el juego se pausa como antes (`pause` en logcat, la música se para);
-    - pulsa Inicio **durante** el icono y vuelve: la intro termina normal, sin `E/Unity` y sin el icono colgado.
-  - **Android 8-11:** este teléfono no lo tiene. Si hay un emulador o un teléfono viejo, la ventana de arranque (el icono sobre el petróleo, `af_launch_window`) debe quedarse igual hasta la escena.
-  - **Arranque sin intro** (`os_splash_by` = `boot_end`): ahí la sonda puede decir `os_splash_release: pending`, porque se escribe en el mismo fotograma en que se pide soltarla; no es un cuelgue si la ráfaga muestra la escena. Anótalo si sale.
-  - **Abrir en frío desde una notificación** (la del Reto del río, si hay; si no, un `am start` con el deep link o la intención de la notificación): durante la retención se ve la pantalla del sistema con el icono, nunca la pantalla anterior congelada.
+    - pulsa Inicio **durante** el icono y vuelve: la intro termina normal, sin `E/Unity` y sin el icono colgado;
+    - con TalkBack (lo hace el dueño), el icono del arranque no se enfoca ni se lee.
+  - **Android 8-11:** este teléfono no lo tiene. Si hay un emulador o un teléfono viejo, la ventana de arranque (el icono sobre el petróleo, `af_launch_window`) debe quedarse igual hasta la escena (`os_splash_veil` = `own`).
+  - **Arranque sin intro** (`os_splash_by` = `boot_end`): ahí la sonda puede decir `os_splash_release: pending`, porque se escribe en el mismo fotograma en que se pide soltarlo; no es un cuelgue si la ráfaga muestra la escena. Anótalo si sale.
+  - **Abrir en frío desde una notificación** (la del Reto del río, si hay; si no, un `am start` con el deep link o la intención de la notificación): durante el velo se ve el icono sobre el petróleo, nunca la pantalla anterior congelada. Ahí `os_splash_veil` puede decir `own`: fuera del lanzador, Android 13+ entrega su pantalla sin icono y el plugin la cambia por el velo propio.
 - **Los arreglos de UI** (carril `tanda6/fx-j5-ui`; observaciones 5 y 6):
   - **«Continuar: +1 cuia» en gris** (observación 6; guion 8.2), con el `dev.apk`, desde el 31 y con 0 semillas:
     - **con la tienda falsa** (`--ez af_fake_store true`), en Aguas estancadas: tocar el botón gris hace latir «Te faltan {n} semillas» (crece un poco y vuelve en ~0,4 s); no se cobra nada, el modal sigue y no sale ningún aviso (debajo están Puñado y Balsa); `AF_STATE missing_tap` con `"option":"rescue","pulsed":true,"store":true`;
