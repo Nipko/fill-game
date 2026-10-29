@@ -47,6 +47,11 @@
          lo excluye Assets/Plugins/Android/mainTemplate.gradle; docs/dev/play-games.md). D-049, anadido del 2026-10-27:
          tambien com.unity3d.services.core.configuration.AdsSdkInitializer, el inicializador de androidx.startup de
          Unity Ads, que arrancaria antes de la edad y el consentimiento (lo quita Assets/Plugins/Android/LauncherManifest.xml).
+      6 ter. Pantalla de bloqueo (observacion 9 de la jornada 6, 2026-10-28): ninguna <activity> ni <activity-alias>
+         lleva android:showWhenLocked ni android:turnScreenOn a true (el juego nunca se muestra ni se juega sobre la pantalla
+         de bloqueo). Solo se exime la pantalla de un anuncio de Google ($LockScreenExemptPrefixes), que no es nuestra.
+         Lo que Unity pone por codigo en los builds de desarrollo lo quita en tiempo de ejecucion el plugin propio
+         AfLockGuard.androidlib (docs/dev/decisiones.md, nota tecnica de la observacion 9); el manifiesto no lo ve.
       7. IL2CPP ARM64 (.claude/rules/ci.md): las bibliotecas nativas del artefacto (lib/<abi>/ en el APK,
          base/lib/<abi>/ en el AAB) son solo de arm64-v8a y entre ellas esta libil2cpp.so.
 
@@ -112,6 +117,10 @@ $ForbiddenComponentReasons = @{
     'com.google.android.gms.nearby.' = 'D-042, anadido: play-services-nearby no entra; exclusion en mainTemplate.gradle'
     'com.unity3d.services.core.configuration.AdsSdkInitializer' = 'D-049, anadido del 2026-10-27: Unity Ads no arranca antes del consentimiento; tools:node="remove" en LauncherManifest.xml'
 }
+# Observacion 9 de la jornada 6 (2026-10-28): nada nuestro se muestra sobre la pantalla de bloqueo (6 ter). La pantalla de
+# un anuncio de Google no es nuestra.
+$LockScreenAttributes = @('showWhenLocked', 'turnScreenOn')
+$LockScreenExemptPrefixes = @('com.google.android.gms.ads.')
 $BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission, $NotificationsPermission, $BillingPermission, $AdIdPermission)
 
 function Stop-WithCode {
@@ -134,6 +143,7 @@ function New-Model {
         Abis           = $null    # ABI con bibliotecas nativas; $null = sin comprobar (autotest de solo manifiesto)
         HasIl2cpp      = $false
         Raw            = ''       # texto del volcado, para los componentes prohibidos (6 bis)
+        LockScreen     = [System.Collections.Generic.List[string]]::new()   # 'actividad:atributo' a true (6 ter)
     }
 }
 
@@ -163,6 +173,11 @@ function ConvertFrom-ManifestXml([string]$Text) {
                 $m.Debuggable = $node.GetAttribute('debuggable', $AndroidNs)
                 $m.BackCallback = $node.GetAttribute('enableOnBackInvokedCallback', $AndroidNs)
                 foreach ($child in $node.ChildNodes) {
+                    if ($child.NodeType -eq [System.Xml.XmlNodeType]::Element -and $child.LocalName -in @('activity', 'activity-alias')) {
+                        foreach ($attr in $LockScreenAttributes) {
+                            if (Test-True $child.GetAttribute($attr, $AndroidNs)) { $m.LockScreen.Add("$($child.GetAttribute('name', $AndroidNs)):$attr") }
+                        }
+                    }
                     if ($child.NodeType -eq [System.Xml.XmlNodeType]::Element -and $child.LocalName -eq 'meta-data' -and
                         $child.GetAttribute('name', $AndroidNs) -eq $BillingMetaName) {
                         $m.BillingVer = $child.GetAttribute('value', $AndroidNs)
@@ -181,6 +196,7 @@ function ConvertFrom-Aapt2Tree([string]$Text) {
     $m.Raw = $Text
     $stack = [System.Collections.Generic.List[object]]::new()   # pares (indentacion, elemento)
     $meta = $null
+    $activities = [System.Collections.Generic.List[object]]::new()
     foreach ($raw in ($Text -split "`r?`n")) {
         if (-not $raw.Trim()) { continue }
         $indent = $raw.Length - $raw.TrimStart().Length
@@ -189,6 +205,7 @@ function ConvertFrom-Aapt2Tree([string]$Text) {
             while ($stack.Count -gt 0 -and $stack[$stack.Count - 1].Indent -ge $indent) { $stack.RemoveAt($stack.Count - 1) }
             $el = [pscustomobject]@{ Indent = $indent; Name = $Matches['name']; Attrs = @{} }
             $stack.Add($el)
+            if ($el.Name -in @('activity', 'activity-alias')) { $activities.Add($el) }
             switch ($el.Name) {
                 { $_ -in @('uses-permission', 'uses-permission-sdk-23') } { $m.Permissions.Add('') }
                 'application' { $m.HasApplication = $true }
@@ -203,6 +220,7 @@ function ConvertFrom-Aapt2Tree([string]$Text) {
             $val = if ($end -gt 0) { $val.Substring(1, $end - 1) } else { $val.Substring(1) }
         }
         else {
+            $val = $val -replace '^\(type 0x[0-9a-fA-F]+\)', ''   # p. ej. (type 0x12)0xffffffff, un booleano compilado
             $val = ($val -split '\s', 2)[0]
             if ($val -match '^0x[0-9a-fA-F]+$') { $val = [string][Convert]::ToInt64($val.Substring(2), 16) }
         }
@@ -237,6 +255,14 @@ function ConvertFrom-Aapt2Tree([string]$Text) {
         }
     }
     if (-not $m.Package) { throw 'la salida de aapt2 no tiene package en <manifest>' }
+    foreach ($a in $activities) {
+        foreach ($attr in $LockScreenAttributes) {
+            if ($a.Attrs.ContainsKey($attr) -and (Test-True "$($a.Attrs[$attr])")) {
+                $name = if ($a.Attrs.ContainsKey('name')) { $a.Attrs['name'] } else { '?' }
+                $m.LockScreen.Add("${name}:$attr")
+            }
+        }
+    }
     return $m
 }
 
@@ -259,7 +285,8 @@ function Get-ZipEntryNames([string]$File) {
     finally { $zip.Dispose() }
 }
 
-function Test-True([string]$Value) { return $Value -in @('true', '1', '-1') }
+# aapt2 imprime un booleano como true o, compilado, como 0xffffffff (4294967295 tras convertirlo).
+function Test-True([string]$Value) { return $Value -in @('true', '1', '-1', '4294967295') }
 
 # Devuelve @{ Failures = [...]; Notes = [...] } para un modelo y un perfil.
 function Test-Manifest($M, [string]$Prof, [int]$Target, [int]$Min, [string[]]$ExtraAllowed, [bool]$NeedBilling, [bool]$NeedBack) {
@@ -308,6 +335,13 @@ function Test-Manifest($M, [string]$Prof, [int]$Target, [int]$Min, [string[]]$Ex
 
     foreach ($prefix in $ForbiddenComponentPrefixes) {
         if ("$($M.Raw)".Contains($prefix)) { $fail.Add("componente prohibido en el manifiesto: '$prefix*' ($($ForbiddenComponentReasons[$prefix]))") }
+    }
+
+    foreach ($entry in $M.LockScreen) {
+        $exempt = $false
+        foreach ($prefix in $LockScreenExemptPrefixes) { if ($entry.StartsWith($prefix, [System.StringComparison]::Ordinal)) { $exempt = $true } }
+        if ($exempt) { $note.Add("NOTA: $entry=true en la pantalla de un anuncio de Google (no es nuestra).") }
+        else { $fail.Add("pantalla de bloqueo: $entry=true (observacion 9 de la jornada 6: el juego no se muestra sobre el bloqueo)") }
     }
 
     if ($null -ne $M.Abis) {
@@ -416,6 +450,13 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'xml: inicializador de Unity Ads prohibido (D-049)'; Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<provider android:name="androidx.startup.InitializationProvider" android:authorities="x.androidx-startup"><meta-data android:name="com.unity3d.services.core.configuration.AdsSdkInitializer" android:value="androidx.startup"/></provider><activity android:name="x">'); Prof = 'release'; Fails = 1 }
         @{ Name = 'aapt2: inicializador de Unity Ads prohibido (D-049)'; Fmt = 'tree'; Text = $okTree.Replace('"unity.splash-mode" (Raw: "unity.splash-mode")', '"com.unity3d.services.core.configuration.AdsSdkInitializer" (Raw: "com.unity3d.services.core.configuration.AdsSdkInitializer")'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'xml: InitializationProvider sin Unity Ads';  Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<provider android:name="androidx.startup.InitializationProvider" android:authorities="x.androidx-startup"><meta-data android:name="androidx.work.WorkManagerInitializer" android:value="androidx.startup"/></provider><activity android:name="x">'); Prof = 'release'; Fails = 0 }
+        @{ Name = 'xml: showWhenLocked en la actividad (obs. 9 j6)'; Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<activity android:name="x" android:showWhenLocked="true">'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: turnScreenOn en un alias (obs. 9 j6)';  Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<activity-alias android:name="y" android:targetActivity="x" android:turnScreenOn="true"/><activity android:name="x">'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: showWhenLocked y turnScreenOn a false'; Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<activity android:name="x" android:showWhenLocked="false" android:turnScreenOn="false">'); Prof = 'release'; Fails = 0 }
+        @{ Name = 'xml: showWhenLocked en el anuncio de Google'; Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<activity android:name="com.google.android.gms.ads.AdActivity" android:showWhenLocked="true"/><activity android:name="x">'); Prof = 'release'; Fails = 0 }
+        @{ Name = 'aapt2: showWhenLocked en la actividad de Unity'; Fmt = 'tree'; Text = $okTree + "`n          E: activity (line=60)`n            A: http://schemas.android.com/apk/res/android:showWhenLocked(0x010104ec)=true`n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=`"com.unity3d.player.UnityPlayerGameActivity`" (Raw: `"com.unity3d.player.UnityPlayerGameActivity`")"; Prof = 'dev'; Fails = 1 }
+        @{ Name = 'aapt2: turnScreenOn compilado 0xffffffff';   Fmt = 'tree'; Text = $okTree + "`n          E: activity (line=60)`n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=`"com.unity3d.player.UnityPlayerGameActivity`" (Raw: `"x`")`n            A: http://schemas.android.com/apk/res/android:turnScreenOn(0x010104ed)=(type 0x12)0xffffffff"; Prof = 'dev'; Fails = 1 }
+        @{ Name = 'aapt2: actividad sin atributos de bloqueo';  Fmt = 'tree'; Text = $okTree + "`n          E: activity (line=60)`n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=`"com.unity3d.player.UnityPlayerGameActivity`" (Raw: `"x`")`n            A: http://schemas.android.com/apk/res/android:showWhenLocked(0x010104ec)=false"; Prof = 'dev'; Fails = 0 }
         @{ Name = 'aapt2: appCategory 3';                        Fmt = 'tree'; Text = $okTree.Replace('(0x01010545)=0', '(0x01010545)=3'); Prof = 'dev'; Fails = 1 }
     )
     $arm = @('base/lib/arm64-v8a/libil2cpp.so', 'base/lib/arm64-v8a/libunity.so', 'base/dex/classes.dex')
