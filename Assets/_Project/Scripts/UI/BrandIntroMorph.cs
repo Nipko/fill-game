@@ -7,17 +7,22 @@ namespace AF.UI
 {
     /// <summary>
     /// «La intro nace del logo» (añadido de D-051 del 2026-10-28): las piezas que hacen que el primer fotograma de la intro sea el
-    /// icono de la pantalla del sistema y que ese icono se abra en la escena. Las mueve <see cref="BrandIntro"/>, sin asignaciones.
+    /// icono de la pantalla del sistema y que ese icono se abra en la escena con un <b>corte sobre la cuia</b>. Las mueve
+    /// <see cref="BrandIntro"/>, sin asignaciones.
     /// <list type="bullet">
-    /// <item><b>El icono</b>: la vista del icono adaptativo v2 (<c>docs/art/marca-oficial/v2/out/png/android-vista-432.png</c>, el
-    /// fondo y el frente juntos, los mismos píxeles de las capas xxxhdpi que pinta Android), copiada tal cual en
-    /// <c>Resources/AF/Brand/af_icon_vista.bytes</c> y decodificada sin compresión ni mipmaps. Un test EditMode la compara con la de
-    /// <c>docs/</c>. Se coloca en la escena donde caen sus propias piezas (la cuia, el chorro y los aros son las mismas capas del
-    /// SVG con la escala de <see cref="BrandRiverScene.CuiaScale"/>), así que el icono y la escena casan en la cuia al fundirse.</item>
-    /// <item><b>El círculo</b>: el petróleo con un agujero redondo de borde suave (una textura de 512 px hecha por código) y cuatro
+    /// <item><b>El icono</b>: la vista del icono adaptativo v2, una copia exacta de
+    /// <c>docs/art/marca-oficial/v2/out/png/android-vista-432.png</c> (el fondo y el frente juntos, los mismos píxeles de las capas
+    /// xxxhdpi que escala Android) en <c>Resources/AF/Brand/af_icon_vista.bytes</c>, decodificada sin compresión ni mipmaps. Un test
+    /// EditMode la compara byte a byte con la de <c>docs/</c>.</item>
+    /// <item><b>Dos grupos</b>: el fondo de la escena (el halo, la selva, el río, el açaí y la isla), siempre a pantalla completa
+    /// (escala ≥ 1, así que nunca enseña sus bordes), y lo que el icono y la escena comparten, la cuia con su chorro y sus aros,
+    /// que viaja del encuadre del icono al de la escena. La vista del icono va con la cuia, debajo de ella.</item>
+    /// <item><b>El corte</b>: el resto del icono (río, selva, cielo) se funde hacia el petróleo de una capa lisa que tapa el fondo;
+    /// después esa capa se funde y el fondo entra desde el petróleo alrededor de la cuia. Los dos ríos nunca se ven a la vez.</item>
+    /// <item><b>El círculo</b>: el petróleo con un agujero redondo de borde suave (una textura de 256 px hecha por código) y cuatro
     /// bandas lisas alrededor. En el fotograma 0 el agujero mide <see cref="IconMaskDp"/> dp y la vista del icono
     /// <see cref="IconCanvasDp"/> dp, centrados en la pantalla: la caja de la pantalla del sistema de Android 12+ y la de
-    /// <c>af_launch_window</c> en Android 8-11 (el velo nativo del arranque usa ese mismo dibujable).</item>
+    /// <c>af_launch_window</c> (Android 8-11 y el velo nativo del arranque).</item>
     /// <item><b>El aro de luz</b>: un borde fino y suave en el círculo que se abre; invisible en el fotograma 0 y al final.</item>
     /// </list>
     /// </summary>
@@ -26,8 +31,9 @@ namespace AF.UI
         /// <summary>
         /// Lado de la vista del icono adaptativo en la pantalla del sistema (dp): Android 12+ pinta el icono adaptativo con fondo a
         /// 240 × 240 dp y lo recorta en un círculo de 160 dp (guía «Splash screens» de Android: «App icon with an icon background:
-        /// 240×240 dp, fit within a circle 160 dp in diameter»); <c>af_launch_window</c> (Android 8-11 y el velo nativo) repite esa
-        /// caja con capas de 240 dp y un anillo que deja un círculo de 160 dp.
+        /// 240×240 dp, fit within a circle 160 dp in diameter»; el tema v31 fija el fondo del icono para que sea siempre esa caja);
+        /// <c>af_launch_window</c> (Android 8-11 y el velo nativo) repite esa caja con capas de 240 dp y un anillo que deja un círculo
+        /// de 160 dp.
         /// </summary>
         public const float IconCanvasDp = 240f;
 
@@ -43,19 +49,23 @@ namespace AF.UI
         /// <summary>Recurso con los bytes PNG de la vista del icono (<c>Resources/AF/Brand/af_icon_vista.bytes</c>).</summary>
         public const string IconResource = "AF/Brand/af_icon_vista";
 
-        /// <summary>Lado de la textura del círculo y del aro (px) [P]: a 1:1 con el círculo de 160 dp a ~3 px por dp.</summary>
-        internal const int IrisTextureSize = 512;
+        /// <summary>Lado de la textura del círculo y del aro (px) [P].</summary>
+        internal const int IrisTextureSize = 256;
 
         /// <summary>Lo más que brilla el aro de luz, a mitad de la apertura [P].</summary>
         internal const float RimMaxAlpha = 0.3f;
+
+        /// <summary>Escala del fondo de la escena cuando empieza a verse (sobre la cuia; baja a 1 al abrirse) [P].</summary>
+        internal const float BackStartScale = 1.12f;
 
         // Radio del agujero dentro de su textura (px): deja 1 px de petróleo en el borde para el suavizado.
         private const float IrisHoleRadiusPx = (IrisTextureSize * 0.5f) - 1f;
 
         private static readonly Color RimColor = new Color(0.86f, 0.97f, 0.94f, 1f);
 
-        private readonly RectTransform _scene;
-        private readonly Image[] _mirrors = new Image[5];
+        private readonly RectTransform _back;
+        private readonly RectTransform _top;
+        private readonly Image _cover;
         private readonly Image _icon;
         private readonly Image _iris;
         private readonly Image[] _bars = new Image[4];
@@ -77,20 +87,23 @@ namespace AF.UI
         private Vector2 _screenCuia0;
         private Rect _iconScene;
         private Rect _iconFrame0;
+        private bool _iconOnTop;
 
         /// <summary>
-        /// Crea las piezas: <paramref name="scene"/> (el grupo de la escena, ya creado dentro de <paramref name="root"/>) recibe la
-        /// selva en espejo que lo extiende; el icono, el círculo y el aro van en <paramref name="root"/>, encima de la escena.
+        /// Crea las piezas dentro de <paramref name="root"/>, encima de <paramref name="back"/> (el fondo de la escena, ya creado):
+        /// la capa de petróleo que tapa el fondo, el grupo de la cuia (al que pasan <paramref name="impact"/>,
+        /// <paramref name="stream"/> y <paramref name="cuia"/>, con la vista del icono debajo), el círculo y el aro.
         /// </summary>
-        public BrandIntroMorph(RectTransform root, RectTransform scene)
+        public BrandIntroMorph(RectTransform root, RectTransform back, Image impact, Image stream, Image cuia)
         {
-            _scene = scene;
-            for (int i = 0; i < _mirrors.Length; i++)
-            {
-                _mirrors[i] = UiBuilder.Image("MorphMirror" + i, scene, null, Color.white);
-                _mirrors[i].transform.SetAsFirstSibling(); // detrás de todo lo de la escena
-            }
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            _back = back;
+            _cover = UiBuilder.Image("MorphCover", root, null, BrandIntro.Petroleum);
+            UiBuilder.Stretch(_cover.rectTransform);
 
+            var topGo = new GameObject("Cuia", typeof(RectTransform));
+            topGo.transform.SetParent(root, false);
+            _top = (RectTransform)topGo.transform;
             _iconTexture = LoadIcon();
             if (_iconTexture != null)
             {
@@ -98,10 +111,14 @@ namespace AF.UI
                 _iconSprite.name = "AF_IconVista";
             }
 
-            _icon = UiBuilder.Image("MorphIcon", root, _iconSprite, Color.white);
+            _icon = UiBuilder.Image("MorphIcon", _top, _iconSprite, Color.white);
             _icon.gameObject.SetActive(_iconSprite != null);
+            impact.transform.SetParent(_top, false);
+            stream.transform.SetParent(_top, false);
+            cuia.transform.SetParent(_top, false);
 
-            _irisTexture = RingTexture("AF_MorphIris", false);
+            var pixels = new Color32[IrisTextureSize * IrisTextureSize]; // un solo arreglo para las dos texturas
+            _irisTexture = RingTexture("AF_MorphIris", false, pixels);
             _irisSprite = Sprite.Create(_irisTexture, new Rect(0f, 0f, IrisTextureSize, IrisTextureSize), new Vector2(0.5f, 0.5f), 100f);
             _iris = UiBuilder.Image("MorphIris", root, _irisSprite, BrandIntro.Petroleum);
             for (int i = 0; i < _bars.Length; i++)
@@ -109,10 +126,14 @@ namespace AF.UI
                 _bars[i] = UiBuilder.Image("MorphBar" + i, root, null, BrandIntro.Petroleum);
             }
 
-            _rimTexture = RingTexture("AF_MorphRim", true);
+            _rimTexture = RingTexture("AF_MorphRim", true, pixels);
             _rimSprite = Sprite.Create(_rimTexture, new Rect(0f, 0f, IrisTextureSize, IrisTextureSize), new Vector2(0.5f, 0.5f), 100f);
             _rim = UiBuilder.Image("MorphRim", root, _rimSprite, new Color(RimColor.r, RimColor.g, RimColor.b, 0f));
+            BuildMs = clock.ElapsedMilliseconds;
         }
+
+        /// <summary>Lo que costó crear las piezas, con la vista del icono decodificada (ms; sonda <c>morph_build_ms</c>).</summary>
+        public long BuildMs { get; }
 
         /// <summary>Hay vista del icono (el recurso se pudo leer).</summary>
         public bool HasIcon => _iconSprite != null;
@@ -138,8 +159,17 @@ namespace AF.UI
         /// <summary>Lo que se ve de la vista del icono (0 a 1).</summary>
         public float IconAlpha => _icon.gameObject.activeSelf ? _icon.color.a : 0f;
 
-        /// <summary>Escala de la escena ahora (1 = la de siempre).</summary>
-        public float SceneScale => _scene.localScale.x;
+        /// <summary>Lo que tapa el petróleo al fondo de la escena (0 a 1; 1 = el fondo aún no se ve).</summary>
+        public float CoverAlpha => _cover.gameObject.activeSelf ? _cover.color.a : 0f;
+
+        /// <summary>Escala del grupo de la cuia ahora (1 = la de la escena; menor mientras viene del icono).</summary>
+        public float CuiaScale => _top.localScale.x;
+
+        /// <summary>Escala del fondo de la escena ahora (≥ 1: nunca enseña sus bordes).</summary>
+        public float BackScale => _back.localScale.x;
+
+        /// <summary>El grupo de la cuia (la cuia, el chorro, los aros y la vista del icono).</summary>
+        public RectTransform Top => _top;
 
         /// <summary>La vista del icono (tests).</summary>
         public Image Icon => _icon;
@@ -153,7 +183,7 @@ namespace AF.UI
         /// <summary>
         /// Rehace la geometría con la escena <paramref name="art"/> y <paramref name="unitsPerDp"/> unidades del lienzo por dp de
         /// Android: el fotograma 0 (el icono centrado, de <see cref="IconCanvasDp"/> dp, con el círculo de <see cref="IconMaskDp"/>) y
-        /// la transformación que lleva la escena de ese encuadre al suyo.
+        /// el viaje de la cuia de ese encuadre al suyo.
         /// </summary>
         public void Layout(BrandEmblemArt art, float unitsPerDp)
         {
@@ -163,7 +193,8 @@ namespace AF.UI
             _center = new Vector2(_w * 0.5f, _h * 0.5f);
             _d0 = IconMaskDp * UnitsPerDp;
             _dFull = (2f * Mathf.Sqrt((_center.x * _center.x) + (_center.y * _center.y))) + 4f;
-            UiBuilder.Place(_scene, 0f, 0f, _w, _h);
+            UiBuilder.Place(_back, 0f, 0f, _w, _h);
+            UiBuilder.Place(_top, 0f, 0f, _w, _h);
 
             // La vista del icono, en coordenadas de la escena: la capa de 1024 cubre el dibujo de 512 ± 512 / 0,86.
             BrandRiverScene scene = art.Scene;
@@ -174,53 +205,54 @@ namespace AF.UI
             _iconFrame0 = new Rect(_center.x - (side0 * 0.5f), _center.y - (side0 * 0.5f), side0, side0);
             _k0 = side0 / _iconScene.width;
 
-            // El punto que guía el viaje: el centro de la cuia (donde mira el ojo).
+            // El ancla: el centro de la cuia, el mismo dibujo en el icono y en la escena.
             Rect cuia = BrandEmblem.GroupBounds(BrandEmblem.Cuia);
             _sceneCuia = new Vector2((cuia.center.x * s) + scene.CuiaTx, (cuia.center.y * s) + scene.CuiaTy);
             _screenCuia0 = _iconFrame0.position + (_k0 * (_sceneCuia - _iconScene.position));
-
-            // Mientras la escena viene reducida, el círculo ya ve más allá de sus bordes: la selva (la base) sigue en espejo a la
-            // izquierda, a la derecha, abajo y en las dos esquinas de abajo. En el espejo el borde casa al píxel, así que no se ve
-            // ninguna costura; al llegar la escena a su encuadre, los espejos quedan fuera de la pantalla.
-            Sprite? baseSprite = art.Sprite(BrandEmblemArt.Base);
-            Rect b = art.DpRect(BrandEmblemArt.Base);
-            PlaceMirror(_mirrors[0], baseSprite, b, b.xMin, b.yMin, -1f, 1f);
-            PlaceMirror(_mirrors[1], baseSprite, b, b.xMax + b.width, b.yMin, -1f, 1f);
-            PlaceMirror(_mirrors[2], baseSprite, b, b.xMin, b.yMax + b.height, 1f, -1f);
-            PlaceMirror(_mirrors[3], baseSprite, b, b.xMin, b.yMax + b.height, -1f, -1f);
-            PlaceMirror(_mirrors[4], baseSprite, b, b.xMax + b.width, b.yMax + b.height, -1f, -1f);
         }
 
         /// <summary>
-        /// La apertura en <paramref name="e"/> (0 el icono, 1 la escena; ya suavizado) con la vista del icono a
-        /// <paramref name="iconAlpha"/>: la escena escala y se desplaza del encuadre del icono al suyo, el círculo crece del de 160 dp
-        /// a toda la pantalla y el aro brilla a mitad de camino. Sin asignaciones.
+        /// La apertura en <paramref name="e"/> (0 el icono, 1 la escena; ya suavizado): la cuia viaja del encuadre del icono al suyo
+        /// con la vista del icono a <paramref name="iconAlpha"/>; el fondo, a escala <see cref="BackStartScale"/> → 1 sobre la cuia,
+        /// tapado por el petróleo a <paramref name="coverAlpha"/>; el círculo crece de 160 dp a toda la pantalla y el aro brilla a
+        /// mitad de camino. Sin asignaciones.
         /// </summary>
-        public void Apply(float e, float iconAlpha)
+        public void Apply(float e, float iconAlpha, float coverAlpha)
         {
             e = Mathf.Clamp01(e);
+            SetIconOnTop(false);
             float k = Mathf.Pow(_k0, 1f - e); // geométrica: el zoom se ve parejo
             Vector2 cuia = Vector2.LerpUnclamped(_screenCuia0, _sceneCuia, e);
             Vector2 p = cuia - (k * _sceneCuia);
-            _scene.anchoredPosition = new Vector2(p.x, -p.y);
-            _scene.localScale = new Vector3(k, k, 1f);
+            _top.anchoredPosition = new Vector2(p.x, -p.y);
+            _top.localScale = new Vector3(k, k, 1f);
 
-            SetIcon(new Rect(p.x + (k * _iconScene.x), p.y + (k * _iconScene.y), k * _iconScene.width, k * _iconScene.height), iconAlpha);
-            float d = Mathf.Lerp(_d0, _dFull, e);
+            // El fondo: siempre ≥ 1 y sobre la cuia de la escena, así que cubre la pantalla entera.
+            float kb = Mathf.Lerp(BackStartScale, 1f, e);
+            Vector2 pb = _sceneCuia - (kb * _sceneCuia);
+            _back.anchoredPosition = new Vector2(pb.x, -pb.y);
+            _back.localScale = new Vector3(kb, kb, 1f);
+
+            SetIcon(_iconScene, iconAlpha);
+            SetCover(coverAlpha);
             float rim = RimMaxAlpha * Mathf.Sin(Mathf.PI * e);
-            SetIris(d, 1f, rim);
+            SetIris(Mathf.Lerp(_d0, _dFull, e), 1f, rim);
         }
 
         /// <summary>
-        /// Reducir movimiento: la escena quieta en su encuadre y, encima, el icono del fotograma 0 con su círculo y su petróleo, que
-        /// se funden a <paramref name="fade"/> (0 el icono entero, 1 ya fuera). Sin asignaciones.
+        /// Reducir movimiento: la escena quieta en su encuadre y, encima de todo, el icono del fotograma 0 con su círculo y su
+        /// petróleo, que se funden a <paramref name="fade"/> (0 el icono entero, 1 ya fuera). Sin asignaciones.
         /// </summary>
         public void ApplyFade(float fade)
         {
             fade = Mathf.Clamp01(fade);
-            _scene.anchoredPosition = Vector2.zero;
-            _scene.localScale = Vector3.one;
+            SetIconOnTop(true);
+            _back.anchoredPosition = Vector2.zero;
+            _back.localScale = Vector3.one;
+            _top.anchoredPosition = Vector2.zero;
+            _top.localScale = Vector3.one;
             SetIcon(_iconFrame0, 1f - fade);
+            SetCover(0f);
             SetIris(_d0, 1f - fade, 0f);
         }
 
@@ -242,6 +274,26 @@ namespace AF.UI
             }
         }
 
+        // En la apertura, la vista del icono va debajo de la cuia (la tapa la misma cuia); con Reducir movimiento, encima de todo
+        // (la cuia de la escena está en otro sitio).
+        private void SetIconOnTop(bool onTop)
+        {
+            if (_iconOnTop == onTop)
+            {
+                return;
+            }
+
+            _iconOnTop = onTop;
+            if (onTop)
+            {
+                _icon.transform.SetAsLastSibling();
+            }
+            else
+            {
+                _icon.transform.SetAsFirstSibling();
+            }
+        }
+
         private void SetIcon(Rect r, float alpha)
         {
             bool show = _iconSprite != null && alpha > 0.001f;
@@ -257,6 +309,22 @@ namespace AF.UI
 
             UiBuilder.Place(_icon.rectTransform, r.x, r.y, r.width, r.height);
             _icon.color = new Color(1f, 1f, 1f, alpha);
+        }
+
+        private void SetCover(float alpha)
+        {
+            bool show = alpha > 0.001f;
+            if (_cover.gameObject.activeSelf != show)
+            {
+                _cover.gameObject.SetActive(show);
+            }
+
+            if (show)
+            {
+                Color c = BrandIntro.Petroleum;
+                c.a = alpha;
+                _cover.color = c;
+            }
         }
 
         // El círculo de diámetro d (unidades), su petróleo a alpha y el aro a rim; se apaga entero si ya cubre la pantalla.
@@ -308,19 +376,6 @@ namespace AF.UI
             }
         }
 
-        // Una copia en espejo de la base: con el pivote arriba a la izquierda en (x, y) y la escala en -1, se extiende hacia la
-        // izquierda (sx) o hacia arriba (sy) desde ahí.
-        private static void PlaceMirror(Image image, Sprite? sprite, Rect b, float x, float y, float sx, float sy)
-        {
-            if (image.sprite != sprite)
-            {
-                image.sprite = sprite;
-            }
-
-            UiBuilder.Place(image.rectTransform, x, y, b.width, b.height);
-            image.rectTransform.localScale = new Vector3(sx, sy, 1f);
-        }
-
         private static void PlaceBar(Image bar, float x, float y, float w, float h, Color color)
         {
             UiBuilder.Place(bar.rectTransform, x, y, w, h);
@@ -352,11 +407,10 @@ namespace AF.UI
         }
 
         // El círculo (blanco fuera del agujero, transparente dentro; se tiñe de petróleo) o el aro de luz (un anillo fino en el
-        // borde del agujero), con el borde suavizado en 1 px.
-        private static Texture2D RingTexture(string name, bool rim)
+        // borde del agujero), con el borde suavizado en 1 px; escribe en pixels (reutilizado).
+        private static Texture2D RingTexture(string name, bool rim, Color32[] pixels)
         {
             int n = IrisTextureSize;
-            var pixels = new Color32[n * n];
             float c = n * 0.5f;
             for (int y = 0; y < n; y++)
             {
@@ -368,7 +422,7 @@ namespace AF.UI
                     float a;
                     if (rim)
                     {
-                        float u = (d + 1.5f) / 1.6f; // el anillo, justo por dentro del borde
+                        float u = (d + 1.2f) / 1.0f; // el anillo, justo por dentro del borde
                         a = Mathf.Exp(-(u * u));
                     }
                     else

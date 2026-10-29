@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generado por docs/art/marca-oficial/v2/exportar.py (D-051, punto 2): no se edita a mano.
-     Android 12+: el icono adaptativo v2 (la mascara redonda la pone el sistema) sobre el petroleo de la marca, sin animacion. -->
+     Android 12+: el icono adaptativo v2 (la mascara redonda la pone el sistema) sobre el petroleo de la marca, sin animacion.
+     Con fondo de icono (el mismo petroleo): Android usa siempre la caja de 240 dp con el circulo de 160 dp, la que repite la
+     intro en su primer fotograma (anadido de D-051 del 2026-10-28, «la intro nace del logo»). -->
 <resources>
     <style name="AfLaunchTheme" parent="BaseUnityGameActivityTheme">
         <item name="android:windowBackground">@drawable/af_launch_window</item>
         <item name="android:windowSplashScreenBackground">@color/af_brand_petroleum</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/af_brand_petroleum</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/af_launcher</item>
         <item name="android:windowSplashScreenAnimationDuration">0</item>
     </style>

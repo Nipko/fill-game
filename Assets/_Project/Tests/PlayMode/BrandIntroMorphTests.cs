@@ -45,19 +45,22 @@ namespace AF.Tests.PlayMode
         [Test]
         public void TheTimeline_OpensThenPours_WithinTheCap()
         {
-            Assert.That(BrandIntro.AnimMs, Is.LessThanOrEqualTo(4200), "la intro entera no pasa de ~4,2 s [P]");
-            Assert.That(BrandIntro.AnimMs, Is.InRange(3500, 4000), "cerca de los 3,5 s de antes");
-            Assert.That(BrandIntro.MorphMs, Is.InRange(600, 1000), "«el logo se abre»: unos 800 ms");
-            Assert.That(BrandIntro.AcaiRetractMs, Is.InRange(350, 550), "el açaí se recoge en ~450 ms");
+            Assert.That(BrandIntro.AnimMs, Is.LessThanOrEqualTo(3500), "unos 3,5 s, como pidió el dueño");
+            Assert.That(BrandIntro.SettledMs, Is.LessThanOrEqualTo(2900), "y la carga no espera más que antes");
+            Assert.That(BrandIntro.MorphMs, Is.InRange(500, 900), "«el logo se abre»");
+            Assert.That(BrandIntro.IconFadeMs, Is.InRange(150, 200), "el resto del icono se va al petróleo en ~150-200 ms");
+            Assert.That(BrandIntro.CoverFadeFromMs, Is.GreaterThanOrEqualTo(BrandIntro.IconFadeFromMs + BrandIntro.IconFadeMs),
+                "el fondo de la escena sale del petróleo cuando el icono ya se fue: nunca dos ríos a la vez");
+            Assert.That(BrandIntro.CoverFadeFromMs + BrandIntro.CoverFadeMs, Is.LessThanOrEqualTo(BrandIntro.PourFromMs), "la escena entera antes de verter");
+            Assert.That(BrandIntro.AcaiRetractMs, Is.InRange(300, 500), "el açaí se recoge");
             Assert.That(BrandIntro.AcaiRetractFromMs + BrandIntro.AcaiRetractMs, Is.LessThanOrEqualTo(BrandIntro.PourFromMs), "recogido antes de verter");
             Assert.That(BrandIntro.StreamRetractFromMs, Is.LessThan(BrandIntro.PourFromMs), "el chorro vuelve a la boca justo antes");
-            Assert.That(BrandIntro.PourFromMs, Is.LessThanOrEqualTo(BrandIntro.MorphMs), "y vierte en cuanto el círculo acaba de abrirse: un solo gesto");
-            Assert.That(BrandIntro.FallMs - BrandIntro.PourFromMs, Is.EqualTo(800), "la caída del chorro, como antes");
-            Assert.That(BrandIntro.IconFadeFromMs + BrandIntro.IconFadeMs, Is.LessThan(BrandIntro.AcaiRetractFromMs), "el icono ya se fundió antes de que el açaí se recoja");
-            Assert.That(BrandIntro.IconFadeMs, Is.InRange(100, 160), "un fundido corto: los dos ríos no se ven juntos");
+            Assert.That(BrandIntro.PourFromMs, Is.LessThanOrEqualTo(BrandIntro.MorphMs), "y vierte mientras el círculo acaba de abrirse: un solo gesto");
+            Assert.That(BrandIntro.FallMs - BrandIntro.PourFromMs, Is.EqualTo(700), "la caída del chorro");
             Assert.That(BrandIntro.ReduceMotionFadeMs, Is.EqualTo(200), "con Reducir movimiento, un fundido de 200 ms");
             Assert.That(BrandIntroMorph.IconCanvasDp, Is.EqualTo(240f), "la vista del icono adaptativo en la pantalla del sistema");
             Assert.That(BrandIntroMorph.IconMaskDp, Is.EqualTo(160f), "su círculo");
+            Assert.That(BrandIntroMorph.IrisTextureSize, Is.EqualTo(256));
         }
 
         [Test]
@@ -106,7 +109,10 @@ namespace AF.Tests.PlayMode
             Assert.That(-iris.anchoredPosition.y + (iris.sizeDelta.y * 0.5f), Is.EqualTo(390f).Within(0.01f));
             Assert.That((Color32)intro.Morph.Iris.color, Is.EqualTo(BrandIntro.Petroleum));
             Assert.That(intro.Morph.Rim.gameObject.activeSelf, Is.False, "sin el aro de luz: igual que el icono del sistema");
-            Assert.That(intro.MorphSceneScale, Is.LessThan(1f), "la escena, reducida al encuadre del icono");
+            Assert.That(intro.MorphSceneScale, Is.LessThan(1f), "la cuia, en el encuadre del icono");
+            Assert.That(intro.Piece("EmblemCuia")!.GetComponent<Image>().color.a, Is.EqualTo(0f), "solo el icono, tal cual: su propia cuia");
+            Assert.That(intro.MorphCoverAlpha, Is.EqualTo(1f), "el fondo de la escena, tapado por el petróleo");
+            Assert.That(intro.MorphBackScale, Is.GreaterThanOrEqualTo(1f));
 
             // El icono ya tiene el río teñido y el chorro: la escena de debajo también.
             Assert.That(intro.TintFill, Is.EqualTo(1f));
@@ -131,29 +137,34 @@ namespace AF.Tests.PlayMode
             yield return null;
             float last = 0f;
             float lastScale = 0f;
-            for (int i = 0; i <= 20; i++)
+            for (int i = 0; i <= 70; i++)
             {
-                intro.Seek(BrandIntro.MorphMs * i / 20f);
+                intro.Seek(BrandIntro.MorphMs * i / 70f);
                 Assert.That(intro.MorphDiameter, Is.GreaterThanOrEqualTo(last), "el círculo solo crece");
-                Assert.That(intro.MorphSceneScale, Is.GreaterThanOrEqualTo(lastScale), "la escena solo se acerca a su encuadre");
+                Assert.That(intro.MorphSceneScale, Is.GreaterThanOrEqualTo(lastScale), "la cuia solo se acerca a su encuadre");
+                Assert.That(intro.MorphBackScale, Is.GreaterThanOrEqualTo(1f), "el fondo nunca enseña sus bordes");
+                Assert.That(intro.MorphIconAlpha <= 0f || intro.MorphCoverAlpha >= 1f, Is.True,
+                    "a los " + (BrandIntro.MorphMs * i / 70f) + " ms: con el icono a la vista, el fondo de la escena sigue tapado (nunca dos ríos a la vez)");
                 last = intro.MorphDiameter;
                 lastScale = intro.MorphSceneScale;
             }
 
+            intro.Seek(BrandIntro.IconFadeFromMs + (BrandIntro.IconFadeMs * 0.5f));
+            Assert.That(intro.MorphIconAlpha, Is.InRange(0.1f, 0.9f), "el resto del icono se va al petróleo");
+            Assert.That(intro.Piece("EmblemCuia")!.GetComponent<Image>().color.a, Is.EqualTo(1f), "y la cuia se queda: el ancla");
             intro.Seek(BrandIntro.MorphMs * 0.5f);
             Assert.That(intro.MorphIrisVisible, Is.True, "a medias, aún con el círculo");
-            Assert.That(intro.MorphIconAlpha, Is.LessThan(0.5f), "el icono se va fundiendo en la escena");
-            intro.Seek(BrandIntro.IconFadeFromMs + BrandIntro.IconFadeMs);
-            Assert.That(intro.MorphIconAlpha, Is.EqualTo(0f), "y ya se fundió, antes de abrirse del todo");
-            Assert.That(intro.MorphDiameterDp, Is.LessThanOrEqualTo(200f), "con el círculo casi del tamaño del icono: sin dos ríos a la vez");
-            Assert.That(intro.MorphIrisVisible, Is.True);
+            Assert.That(intro.MorphIconAlpha, Is.EqualTo(0f), "el icono ya se fue");
+            Assert.That(intro.MorphCoverAlpha, Is.LessThan(1f), "y la escena entra desde el petróleo");
 
             intro.Seek(BrandIntro.MorphMs);
             Assert.That(intro.MorphIrisVisible, Is.False, "el círculo cubre la pantalla: sin petróleo alrededor");
             float half = Mathf.Sqrt((180f * 180f) + (390f * 390f));
             Assert.That(intro.MorphDiameter, Is.GreaterThanOrEqualTo(2f * half), "hasta las esquinas");
-            Assert.That(intro.MorphSceneScale, Is.EqualTo(1f), "la escena, en su encuadre");
-            Assert.That(intro.Scene.anchoredPosition, Is.EqualTo(Vector2.zero));
+            Assert.That(intro.MorphSceneScale, Is.EqualTo(1f), "la cuia, en su encuadre");
+            Assert.That(intro.MorphBackScale, Is.EqualTo(1f), "y el fondo");
+            Assert.That(intro.Scene.anchoredPosition.magnitude, Is.LessThan(1e-3f));
+            Assert.That(intro.MorphCoverAlpha, Is.EqualTo(0f), "sin petróleo encima");
             Assert.That(intro.Morph.Rim.gameObject.activeSelf, Is.False, "el aro de luz se apaga al final");
 
             intro.Seek(BrandIntro.MorphMs * 0.5f);
@@ -214,6 +225,7 @@ namespace AF.Tests.PlayMode
             Assert.That(report.MorphFrames, Is.GreaterThan(1), "morph_frames");
             Assert.That(report.MorphStartDiamDp, Is.EqualTo(160f).Within(0.01f), "morph_start_diam_dp");
             Assert.That(report.MorphUnitsPerDp, Is.EqualTo(PhoneUnitsPerDp).Within(1e-4f));
+            Assert.That(report.MorphBuildMs, Is.GreaterThanOrEqualTo(0L), "morph_build_ms");
 
             string? line = new DevProbe().FormatBrandIntro(report);
             Assert.That(line, Is.Not.Null);
@@ -221,6 +233,8 @@ namespace AF.Tests.PlayMode
             StringAssert.Contains("\"morph_start_diam_dp\":160.0", line);
             StringAssert.Contains("\"morph_frames\":", line);
             StringAssert.Contains("\"morph_ms\":", line);
+            StringAssert.Contains("\"morph_build_ms\":" + report.MorphBuildMs, line);
+            StringAssert.EndsWith("\"wait_capped\":false}", line);
         }
 
         [UnityTest]
@@ -264,7 +278,32 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator TheIconVista_IsTheSameAsTheIconsDocs()
+        public IEnumerator TheVeilGoes_AndTheLogoStartsOpening_OnTheSameTick()
+        {
+            bool visible = false;
+            BrandIntro.FrameVisibleOverrideForTests = () => visible;
+            BrandIntro intro = NewIntro(PhoneDensity);
+            _splash!.BeginIntro(false);
+            for (int i = 0; i < 3; i++)
+            {
+                yield return null;
+                _splash.Tick(16f);
+                Assert.That(AndroidOsSplash.SignalFor(true, true, intro.OnScreen, i + 1), Is.Null, "sin verse aún, el velo sigue");
+                Assert.That(intro.Playing, Is.False);
+                Assert.That(intro.MorphDiameterDp, Is.EqualTo(160f).Within(0.01f), "debajo del velo, el mismo icono");
+            }
+
+            visible = true;
+            yield return null;
+            _splash.Tick(16f);
+            Assert.That(AndroidOsSplash.SignalFor(true, true, intro.OnScreen, 4), Is.EqualTo(AndroidOsSplash.ByIntro), "el velo se suelta en este tick");
+            Assert.That(intro.Playing, Is.True, "y en el mismo tick empieza la apertura");
+            Assert.That(intro.ClockMs, Is.EqualTo(0f), "desde su instante 0: el icono, igual que el velo");
+            Assert.That(intro.MorphDiameterDp, Is.EqualTo(160f).Within(0.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator TheIconVista_LoadsAsA432Png()
         {
             var asset = Resources.Load<TextAsset>(BrandIntroMorph.IconResource);
             Assert.That(asset, Is.Not.Null, "Resources/AF/Brand/af_icon_vista.bytes");

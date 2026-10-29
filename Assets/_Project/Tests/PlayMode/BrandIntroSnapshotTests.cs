@@ -12,7 +12,7 @@ namespace AF.Tests.PlayMode
     /// Capturas de revisión de la intro de la marca (D-051, punto 3; <c>[Explicit]</c>, no forman parte de la suite), con la
     /// pantalla simulada de <see cref="SnapshotKit"/> a 360 × 780 dp (1080 × 2340 px) y en 16:9 (sufijo <c>_16x9</c>):
     /// <c>d051_01_inicio</c> (el primer fotograma: desde el añadido de D-051 del 2026-10-28, el icono del sistema en su círculo), y,
-    /// con la intro de unos 3,8 s, <c>d051_02_caida</c> (el chorro llegando al agua), <c>d051_03_tinte</c> (los aros y el açaí a
+    /// con la intro de unos 3,5 s, <c>d051_02_caida</c> (el chorro llegando al agua), <c>d051_03_tinte</c> (los aros y el açaí a
     /// mitad del río), <c>d051_04_tenido</c> (el río teñido hasta el primer plano, el nombre entrando), <c>d051_05_final</c> (el
     /// emblema con «Tintalú», el último fotograma, también el de Reducir movimiento) y
     /// <c>d051_06_cargando</c> (la carga sigue tras la intro: «Cargando…» con sus puntos bajo el nombre). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter

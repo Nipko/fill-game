@@ -100,6 +100,9 @@ namespace AF.UI
 
         /// <summary>Unidades del lienzo por dp de Android con que se midió el círculo (1 si no se supo la densidad; <c>morph_units_per_dp</c>).</summary>
         public float MorphUnitsPerDp { get; internal set; } = 1f;
+
+        /// <summary>Lo que costó crear las piezas del icono, con su vista decodificada (ms; <c>morph_build_ms</c>).</summary>
+        public long MorphBuildMs { get; internal set; }
     }
 
     /// <summary>Cómo supo la intro que su primer fotograma ya estaba en la pantalla (<see cref="BrandIntro.VisibleBy"/>; sonda <c>visible_by</c>).</summary>
@@ -133,7 +136,7 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item>Va en la pantalla de arranque (<see cref="BootSplash"/>), por encima de todo lo suyo, en cada arranque en frío
     /// (añadido de D-051 del 2026-10-26, que sustituye a «nunca alarga la carga»): se ve <b>entera y a su ritmo</b>
-    /// (<see cref="AnimMs"/>, unos 3,8 s desde «la intro nace del logo», añadido del 2026-10-28: el icono del sistema se abre en
+    /// (<see cref="AnimMs"/>, unos 3,5 s también con «la intro nace del logo», añadido del 2026-10-28: el icono del sistema se abre en
     /// la escena (<see cref="MorphMs"/>), el chorro cae, salen los aros, el açaí tiñe el río hasta <see cref="MotionMs"/> y entra
     /// el nombre «Tintalú», <see cref="WordmarkAlpha"/>, que se sostiene), y el arranque la espera aunque la carga acabe antes
     /// (<see cref="Done"/>). Si la carga dura más, se queda en su último fotograma y la pantalla de arranque enseña «Cargando…»
@@ -151,63 +154,72 @@ namespace AF.UI
         /// Duración entera de la intro (ms; <c>anim_ms</c>): anima hasta <see cref="MotionMs"/>, entra el nombre y sostiene el
         /// emblema con «Tintalú» hasta aquí. Añadido de D-051 del 2026-10-26 (el dueño: «es la marca, debe durar unos segundos»)
         /// y del 2026-10-28 (el dueño: «podemos dejarla un segundo más para apreciarla mejor»): unos 3,5 s [P], con el segundo de
-        /// más repartido en el vertido, el tinte y la entrada del nombre (no como pausa al final); 3,8 s [P] desde «la intro nace
-        /// del logo» (añadido del 2026-10-28: 0,8 s de apertura, el tinte 0,1 s más corto y 0,3 s menos de nombre quieto; tope
-        /// 4,2 s). Nunca se corta antes porque la
+        /// más repartido en el vertido, el tinte y la entrada del nombre (no como pausa al final); sigue en 3,5 s [P] con «la intro nace
+        /// del logo» (añadido del 2026-10-28: 0,55 s de apertura antes del vertido, con el vertido, el tinte y el nombre algo más
+        /// rápidos; <see cref="SettledMs"/> sigue en 2.900). Nunca se corta antes porque la
         /// carga acabe; cuenta desde que empieza a moverse (<see cref="Play"/>).
         /// </summary>
-        public const int AnimMs = 3800;
+        public const int AnimMs = 3500;
 
         /// <summary>
         /// Añadido de D-051 del 2026-10-28 («la intro nace del logo»): el círculo del icono se abre hasta cubrir la pantalla y la
-        /// escena pasa del encuadre del icono al suyo, con un ease-in-out cúbico (ms) [P].
+        /// cuia viaja del encuadre del icono al de la escena, con un ease-in-out cúbico (ms) [P].
         /// </summary>
-        public const int MorphMs = 800;
+        public const int MorphMs = 700;
 
         /// <summary>
-        /// La vista del icono se funde en la escena desde aquí (ms) [P]: pronto y corto, mientras el círculo aún mide como mucho
-        /// 200 dp, para que no se vean dos ríos a la vez (el cauce del icono y el de la escena no coinciden).
+        /// El corte sobre la cuia, primero: desde aquí el resto del icono (río, selva, cielo) se funde hacia el petróleo y la cuia
+        /// de la escena queda encima de la del icono (ms) [P]. Hasta aquí, el icono tal cual.
         /// </summary>
-        public const int IconFadeFromMs = 30;
+        public const int IconFadeFromMs = 40;
 
-        /// <summary>Lo que tarda la vista del icono en fundirse en la escena (ms) [P].</summary>
-        public const int IconFadeMs = 140;
+        /// <summary>Lo que tarda el resto del icono en irse al petróleo (ms) [P].</summary>
+        public const int IconFadeMs = 180;
+
+        /// <summary>
+        /// El corte sobre la cuia, después: desde aquí el fondo de la escena entra desde el petróleo alrededor de la cuia (ms) [P].
+        /// Empieza cuando el icono ya se fue entero: los dos ríos nunca se ven a la vez.
+        /// </summary>
+        public const int CoverFadeFromMs = IconFadeFromMs + IconFadeMs;
+
+        /// <summary>Lo que tarda el fondo de la escena en salir del petróleo (ms) [P].</summary>
+        public const int CoverFadeMs = 260;
 
         /// <summary>El açaí del río se recoge hacia la cuia (los 10 tramos al revés) desde aquí (ms) [P].</summary>
         public const int AcaiRetractFromMs = 200;
 
         /// <summary>Lo que tarda el açaí en recogerse (ms) [P].</summary>
-        public const int AcaiRetractMs = 450;
+        public const int AcaiRetractMs = 350;
 
         /// <summary>Los aros del icono se deshacen desde aquí (ms) [P].</summary>
-        public const int ImpactFadeFromMs = 200;
+        public const int ImpactFadeFromMs = 150;
 
         /// <summary>Lo que tardan en deshacerse (ms) [P].</summary>
-        public const int ImpactFadeMs = 300;
+        public const int ImpactFadeMs = 250;
 
         /// <summary>El chorro del icono vuelve a la boca de la cuia desde aquí hasta <see cref="PourFromMs"/> (ms) [P].</summary>
-        public const int StreamRetractFromMs = 450;
+        public const int StreamRetractFromMs = 350;
 
         /// <summary>Empieza el vertido de siempre: el chorro sale otra vez de la boca de la cuia (ms) [P].</summary>
-        public const int PourFromMs = 700;
+        public const int PourFromMs = 550;
 
         /// <summary>Con Reducir movimiento, el icono se funde en la escena quieta en esto (ms) [P].</summary>
         public const int ReduceMotionFadeMs = 200;
 
         /// <summary>Fin del movimiento: el açaí llega al primer plano (ms) [P].</summary>
-        public const int MotionMs = 3100;
+        public const int MotionMs = 2600;
 
-        /// <summary>Fin del chorro: llega de la boca de la cuia al río (ms; 800 ms de caída, como antes) [P].</summary>
-        public const int FallMs = 1500;
+        /// <summary>Fin del chorro: llega de la boca de la cuia al río (ms; 700 ms de caída) [P].</summary>
+        public const int FallMs = 1250;
 
-        /// <summary>Fin de los aros del impacto (ms; 950 ms, como antes) [P].</summary>
-        public const int RippleEndMs = 2450;
+        /// <summary>Fin de los aros del impacto (ms; 850 ms) [P].</summary>
+        public const int RippleEndMs = 2100;
 
         /// <summary>El nombre «Tintalú» entra bajo la cuia desde aquí (ms) [P].</summary>
-        public const int WordmarkFromMs = 2950;
+        public const int WordmarkFromMs = 2450;
 
         /// <summary>Lo que tarda el nombre en entrar (ms) [P].</summary>
-        public const int WordmarkFadeMs = 550;
+        public const int WordmarkFadeMs = 450;
 
         /// <summary>
         /// Desde aquí no se mueve nada (ms): el nombre ya entró entero y solo se sostiene el emblema hasta <see cref="AnimMs"/>. Hasta
@@ -326,7 +338,7 @@ namespace AF.UI
             sceneGo.transform.SetParent(_root, false);
             _scene = (RectTransform)sceneGo.transform;
             _images = BrandEmblemImages.Create(_scene, halo);
-            _morph = new BrandIntroMorph(_root, _scene);
+            _morph = new BrandIntroMorph(_root, _scene, _images.Impact, _images.Stream, _images.Cuia);
             Image stream = _images.Stream;
             stream.type = Image.Type.Filled;
             stream.fillMethod = Image.FillMethod.Vertical;
@@ -433,8 +445,15 @@ namespace AF.UI
         /// <summary>Lo que se ve de los aros del impacto (0 a 1).</summary>
         public float ImpactAlpha => _images.Impact.color.a;
 
-        /// <summary>La escena de la marca (el grupo que escala y se desplaza al abrirse el icono; tests).</summary>
+        /// <summary>El fondo de la escena (el halo, la selva, el río, el açaí y la isla; tests).</summary>
         public RectTransform Scene => _scene;
+
+        /// <summary>Una pieza de la escena por su nombre, en el fondo o en el grupo de la cuia (tests); null si no está.</summary>
+        public Transform? Piece(string name)
+        {
+            Transform? t = _scene.Find(name);
+            return t != null ? t : _morph.Top.Find(name);
+        }
 
         /// <summary>Lo de «la intro nace del logo»: el icono, el círculo y el aro (tests y capturas).</summary>
         internal BrandIntroMorph Morph => _morph;
@@ -457,8 +476,14 @@ namespace AF.UI
         /// <summary>Lo que se ve de la vista del icono (0 a 1).</summary>
         public float MorphIconAlpha => _morph.IconAlpha;
 
-        /// <summary>Escala de la escena ahora (1 = su encuadre; menor mientras viene del icono).</summary>
-        public float MorphSceneScale => _morph.SceneScale;
+        /// <summary>Escala del grupo de la cuia ahora (1 = su encuadre; menor mientras viene del icono).</summary>
+        public float MorphSceneScale => _morph.CuiaScale;
+
+        /// <summary>Escala del fondo de la escena ahora (≥ 1: nunca enseña sus bordes).</summary>
+        public float MorphBackScale => _morph.BackScale;
+
+        /// <summary>Lo que tapa el petróleo al fondo de la escena (0 a 1).</summary>
+        public float MorphCoverAlpha => _morph.CoverAlpha;
 
         /// <summary>
         /// Con lo que se sabe ya del perfil: con <paramref name="reduceMotion"/>, salta a su último fotograma y se queda quieta; si
@@ -641,6 +666,7 @@ namespace AF.UI
                 MorphFrames = _seeked ? 0 : _morphFrames,
                 MorphMode = _reduceMotion ? "fade" : (_playing && !_seeked ? "open" : "none"),
                 MorphUnitsPerDp = _morph.UnitsPerDp,
+                MorphBuildMs = _morph.BuildMs,
             };
             _ended = true;
             if (_root != null)
@@ -674,17 +700,23 @@ namespace AF.UI
             _clockMs = t;
 
             float open = EaseInOutCubic(t / MorphMs);
-            _morph.Apply(open, 1f - Smooth((t - IconFadeFromMs) / IconFadeMs));
+            _morph.Apply(open, 1f - Smooth((t - IconFadeFromMs) / IconFadeMs), 1f - Smooth((t - CoverFadeFromMs) / CoverFadeMs));
+
+            // Hasta el corte, el icono tal cual (su propia cuia); desde ahí, la cuia, el chorro y los aros de la escena encima, en el
+            // mismo sitio y a la misma escala.
+            float shared = t < IconFadeFromMs ? 0f : 1f;
+            _images.Cuia.color = new Color(1f, 1f, 1f, shared);
             Image[] acai = _images.Acai;
             if (t < PourFromMs)
             {
                 // El icono coge aire: el açaí se recoge hacia la cuia, los aros se deshacen y el chorro vuelve a la boca.
                 float back = Smooth((t - StreamRetractFromMs) / (PourFromMs - StreamRetractFromMs));
                 _images.Stream.fillAmount = 1f - back;
+                _images.Stream.color = new Color(1f, 1f, 1f, shared);
                 float fade = Smooth((t - ImpactFadeFromMs) / ImpactFadeMs);
                 float grow = 1f + (0.15f * fade);
                 _images.Impact.rectTransform.localScale = new Vector3(grow, grow, 1f);
-                _images.Impact.color = new Color(1f, 1f, 1f, 1f - fade);
+                _images.Impact.color = new Color(1f, 1f, 1f, (1f - fade) * shared);
                 float retreat = acai.Length * (1f - Smooth((t - AcaiRetractFromMs) / AcaiRetractMs));
                 _tintFill = retreat / acai.Length;
                 for (int k = 0; k < acai.Length; k++)
@@ -695,6 +727,7 @@ namespace AF.UI
                 return;
             }
 
+            _images.Stream.color = Color.white;
             float pour = Mathf.Clamp01((t - PourFromMs) / (FallMs - PourFromMs));
             _images.Stream.fillAmount = 1f - ((1f - pour) * (1f - pour));
 

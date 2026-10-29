@@ -170,7 +170,7 @@ namespace AF.Tests.PlayMode
             Assert.That(intro.StreamFill, Is.EqualTo(1f));
             Assert.That(intro.MorphIrisVisible, Is.True, "el círculo del icono");
             Assert.That(intro.MorphIconAlpha, Is.EqualTo(1f), "la vista del icono, entera");
-            Assert.That(intro.Scene.Find("EmblemCuia").GetComponent<Image>().sprite, Is.Not.Null, "la cuia del icono, desde el primer fotograma");
+            Assert.That(intro.Piece("EmblemCuia")!.GetComponent<Image>().sprite, Is.Not.Null, "la cuia del icono, desde el primer fotograma");
         }
 
         // Quitarla antes de tiempo solo pasa si el arranque se para (catálogo roto, <13): GameBootstrap la espera siempre.
@@ -321,7 +321,7 @@ namespace AF.Tests.PlayMode
 
             foreach (string piece in pieces)
             {
-                Image a = intro.Scene.Find(piece).GetComponent<Image>();
+                Image a = intro.Piece(piece)!.GetComponent<Image>();
                 Image b = splash.Root.Find(piece).GetComponent<Image>();
                 Assert.That(b.sprite, Is.SameAs(a.sprite), piece + ": la misma textura");
                 Assert.That(b.sprite, Is.Not.Null, piece);
@@ -335,7 +335,7 @@ namespace AF.Tests.PlayMode
 
             Image sky = splash.Root.Find("Sky").GetComponent<Image>();
             Assert.That((Color32)sky.color, Is.EqualTo(BrandIntro.Petroleum), "el mismo petróleo de la intro");
-            Assert.That(intro.Scene.Find("EmblemStream").GetComponent<Image>().fillAmount, Is.EqualTo(1f), "el chorro entero");
+            Assert.That(intro.Piece("EmblemStream")!.GetComponent<Image>().fillAmount, Is.EqualTo(1f), "el chorro entero");
 
             // Al quitarse, el mundo entra fundiéndose (de golpe con Reducir movimiento), sin mover el emblema.
             Assert.That(splash.EndIntro(), Is.Not.Null);
