@@ -15,6 +15,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | N6.2 Los arreglos de UI | cumple en lo probado; el Boto de la pausa, mudo | 2, 3 |
 | 8. Economía, Mercado y Cántaro | cumple | 4, 5 |
 | 12.1 Reto del río | cumple en lo probado | — |
+| 19. Rendimiento (memoria y Morpho) | el Morpho cumple; la memoria pasa del presupuesto | 6 |
 
 ## Verificación (bloque 0)
 
@@ -139,6 +140,26 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - 320 dp (bloque 16).
    - **Bloque 12.2, la Liga contra el backend de dev:** sin hacer. Necesita `guion-prueba-telefono-liga.md` y el backend desplegado. La lista falsa, al 130 % y en los tres idiomas, quedó vista en N6.
 
+5. **Bloque 19. Rendimiento (lo hecho): el Morpho cumple; la memoria pasa del presupuesto (observación 6).**
+   - **19.0. Desglose de memoria** (`dumpsys meminfo -d`, en `b19/meminfo-*.txt`), en KB:
+
+     | Variante | Java Heap | Native Heap | Code | Graphics (GL mtrack) | Private Other | System | Unknown (detalle) | TOTAL PSS | TOTAL RSS |
+     |---|---|---|---|---|---|---|---|---|---|
+     | `dev.apk`, 18+, nivel 75 | 22.524 | 27.404 | 90.464 | 138.120 (97.832) | 253.648 | 18.791 | 212.918 | 554.155 | 665.552 |
+     | `dev.apk`, 18+, nivel 200 | 13.060 | 30.728 | 90.176 | 138.004 (97.716) | 259.576 | 18.830 | 218.502 | 553.618 | 666.784 |
+     | `dev.apk`, <13 (bloqueado: «Ask an adult to install the game», país US por la SIM) | 16.008 | 31.624 | 96.212 | 131.108 (90.820) | 256.508 | 19.759 | 218.442 | 554.535 | 670.788 |
+     | `rehearsal.apk`, 18+, nivel 1 | 9.580 | 36.620 | 106.348 | 136.848 (96.560) | 249.156 | 22.177 | 206.783 | 565.565 | 723.504 |
+
+     - `.so mmap` ronda los 57 MB y `.dex mmap` los 33 MB.
+     - `EGL mtrack` es de 40.288 KB en todas.
+     - **Las cuatro variantes ocupan casi lo mismo**, también la de <13, que no arranca ningún SDK de anuncios y se queda en la pantalla de bloqueo.
+
+     Así que lo grande no son los anuncios ni el nivel: son `Unknown` (~210 MB, memoria nativa anónima de Unity) y Graphics (~135 MB). 08 §5.4 fija RSS ≤ 400 MB y texturas ≤ 120 MB.
+   - **19.3. Morpho en el teléfono** (`--ei af_bench_morpho 1 --ei af_level 106`):
+     - 29 niveles medidos, del 100 al 700, todos con `outcome` found;
+     - **máximo de 7,96 ms** (en frío, 7,97 ms) frente a un presupuesto de 150, con 3.561 nodos como máximo y `cut_runs` 0.
+   - **Sin hacer todavía:** la sesión larga de 60 min (en la campaña 1-700 de la jornada 5 ya se midió el PSS cada 25 niveles), el arranque en frío y en caliente (espera al arreglo de la pantalla del sistema) y el tamaño en Almacenamiento.
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -151,6 +172,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 3. **Baja. Con otra app con el foco, Tintalú se queda en el petróleo liso.** Pasó con RCN TV visible a la vez (`topResumedActivity` en otra pantalla) al lanzar la app: Unity escribió `m_RunWithoutFocus: false` y se paró en `UnloadTime` más de 40 s, sin intro. Al cerrarla el dueño, siguió normal. Hay que mirarlo de nuevo con el arreglo de la pantalla del sistema, que toca justo el correr sin foco.
 4. **Baja. Las skins de la pestaña Cuias son círculos de color lisos, sin el dibujo de la cuia** (vidrio, Santarém, Encuentro, Totuma). Es lo mismo que la vasija del Cántaro (observación 7 de la jornada 5). Así, el jugador no ve qué está eligiendo.
 5. **Baja. Al 130 % en es-419, las pestañas «Semillas» y «Comodines» del Mercado casi se tocan** (`b08/mercado-130-es-419.png`).
+6. **Media. La memoria pasa del presupuesto de 08 §5.4:** RSS de 666 a 724 MB frente a ≤ 400 MB, y Graphics de ~135 MB frente a texturas ≤ 120 MB. Ocupa lo mismo en un nivel, en el ensayo de release y en la pantalla de bloqueo de <13, sin SDK de anuncios. Lo grande es `Unknown` (~210 MB) más `GL mtrack` (~97 MB). En este teléfono, de 12 GB, no da problemas, pero en uno de 3-4 GB, el público de América Latina, Android podría cerrarla en segundo plano.
 
 ## Notas de la herramienta (no son defectos del juego)
 
