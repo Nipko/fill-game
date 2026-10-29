@@ -334,7 +334,7 @@ namespace AF.Tests.PlayMode
             foreach (string piece in ScenePieces())
             {
                 Image mine = splash.Root.Find(piece).GetComponent<Image>();
-                Image intro = splash.Intro!.Root.Find(piece).GetComponent<Image>();
+                Image intro = splash.Intro!.Piece(piece)!.GetComponent<Image>();
                 Assert.That(mine.sprite, Is.Not.Null, piece);
                 Assert.That(intro.sprite, Is.SameAs(mine.sprite), piece + ": la intro y la pantalla, la misma pieza nueva");
             }

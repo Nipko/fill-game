@@ -30,10 +30,17 @@ namespace AF.UI
     /// cuando se supo que su primer fotograma ya estaba en la pantalla (la GPU terminó una lectura pedida tras él; cota por arriba),
     /// y <c>visible_by</c> (<c>gpu</c>; <c>cap</c> si la GPU no respondió en 1,2 s; <c>no_readback</c> sin lecturas, en el Editor);
     /// <c>play_ms</c>, de la creación a cuando empezó a moverse (desde ahí cuenta su reloj); <c>motion_frames</c>, fotogramas
-    /// pintados mientras se movía (del chorro al nombre entero, 2,9 s), y <c>frame_p95_ms</c> y <c>frame_max_ms</c>, el percentil 95
+    /// pintados mientras se movía (desde el añadido «la intro nace del logo», de la apertura del icono al nombre entero: 2,9 s; antes, del chorro al nombre), y <c>frame_p95_ms</c> y <c>frame_max_ms</c>, el percentil 95
     /// y el máximo del tiempo entre esos fotogramas (a 60 fps, ~16,7; -1 sin datos), sin las pausas de más de 500 ms (volver de
     /// segundo plano), que se cuentan en <c>motion_pauses</c>. La lectura a la GPU se pide en el segundo fotograma de la intro, ya
     /// enviado el primero; si vuelve con error, <c>visible_by</c> es <c>no_readback</c>.</item>
+    /// <item>Añadido de D-051 del 2026-10-28 («la intro nace del logo»; <c>anim_ms</c> sigue en 3.500): <c>morph_mode</c>
+    /// (<c>open</c>, el icono se abrió en la escena; <c>fade</c>, Reducir movimiento: fundido de 200 ms; <c>none</c>, ni lo uno ni lo
+    /// otro), <c>morph_ms</c> (de empezar a moverse a que el círculo cubrió la pantalla: ~700; -1 si no se abrió),
+    /// <c>morph_start_diam_dp</c> (el diámetro del círculo en el primer fotograma, en dp de Android: 160, el de la pantalla del
+    /// sistema), <c>morph_frames</c> (fotogramas pintados mientras se abría: ~42 a 60 fps), <c>morph_units_per_dp</c> (unidades del
+    /// lienzo por dp de Android; 1,000 si no se supo la densidad) y <c>morph_build_ms</c> (lo que costó crear las piezas del icono,
+    /// con su vista decodificada, antes del primer fotograma).</item>
     /// </list>
     /// </summary>
     public sealed partial class DevProbe
@@ -79,6 +86,12 @@ namespace AF.UI
             sb.Append(",\"frame_p95_ms\":").Append(report.FrameP95Ms.ToString("0.0", CultureInfo.InvariantCulture));
             sb.Append(",\"frame_max_ms\":").Append(report.FrameMaxMs.ToString("0.0", CultureInfo.InvariantCulture));
             sb.Append(",\"motion_pauses\":").Append(report.MotionPauses.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_mode\":\"").Append(report.MorphMode).Append('"');
+            sb.Append(",\"morph_ms\":").Append(report.MorphMs.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_start_diam_dp\":").Append(report.MorphStartDiamDp.ToString("0.0", CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_frames\":").Append(report.MorphFrames.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_units_per_dp\":").Append(report.MorphUnitsPerDp.ToString("0.000", CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_build_ms\":").Append(report.MorphBuildMs.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"loading_ms\":").Append(report.LoadingMs.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"wait_capped\":").Append(report.WaitCapped ? "true" : "false");
             sb.Append('}');

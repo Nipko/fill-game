@@ -85,6 +85,8 @@ namespace AF.Tests.EditMode
             string v31 = File.ReadAllText(Res + "values-v31/af_splash.xml");
             StringAssert.Contains("<item name=\"android:windowSplashScreenBackground\">@color/af_brand_petroleum</item>", v31);
             StringAssert.Contains("<item name=\"android:windowSplashScreenAnimatedIcon\">@mipmap/af_launcher</item>", v31, "el icono adaptativo v2 (D-045)");
+            StringAssert.Contains("<item name=\"android:windowSplashScreenIconBackgroundColor\">@color/af_brand_petroleum</item>", v31,
+                "con fondo de icono: siempre la caja de 240 dp con el círculo de 160 dp, la del primer fotograma de la intro (añadido de D-051 del 2026-10-28)");
             Assert.That(File.Exists(Res + "mipmap-anydpi-v26/af_launcher.xml"), Is.True);
 
             const string manifest = "Assets/Plugins/Android/LauncherManifest.xml";
