@@ -352,6 +352,21 @@ namespace AF.UI
         /// <summary>Pista muestra «Te faltan {n}».</summary>
         public bool HintShowsMissing => _hint.MissingShown;
 
+        /// <summary>
+        /// Semillas que dice la burbuja «Te faltan {n}» de cada ranura (0 si no se ve): TalkBack las lee con su botón
+        /// (GameScreen.A11y), y la burbuja se calla.
+        /// </summary>
+        public int UndoMissingSeeds => _undo.MissingSeedsShown;
+
+        /// <summary>Como <see cref="UndoMissingSeeds"/>, la de Pista.</summary>
+        public int HintMissingSeeds => _hint.MissingSeedsShown;
+
+        /// <summary>Como <see cref="UndoMissingSeeds"/>, la de la Pororoca.</summary>
+        public int ShuffleMissingSeeds => _shuffle.MissingSeedsShown;
+
+        /// <summary>Como <see cref="UndoMissingSeeds"/>, la de la Luciérnaga.</summary>
+        public int RevealMissingSeeds => _reveal.MissingSeedsShown;
+
         /// <summary>Pista ofrece el video (<c>rv_hint</c>): la insignia lleva el icono de video.</summary>
         public bool HintShowsVideo => _hint.VideoShown;
 
@@ -1651,6 +1666,8 @@ namespace AF.UI
                 UiBuilder.Stretch(_missingPlate.rectTransform);
                 _missingText = UiBuilder.Label("Value", _missingBody, TextStyle.PlainBold, string.Empty, MissingSp, Palette.UiRedWarning, TextAlignmentOptions.Center);
                 UiBuilder.Stretch(_missingText.rectTransform);
+                // TalkBack: la burbuja no se lee suelta; la dice su botón con «Te faltan {n} semillas» (GameScreen.A11y, AddTray).
+                A11yLabels.SetText(_missingText, () => string.Empty);
                 _missing.gameObject.SetActive(false);
             }
 
@@ -1730,6 +1747,9 @@ namespace AF.UI
             public bool VideoShown => _badge.gameObject.activeSelf && _badgeVideo.gameObject.activeSelf;
 
             public string MissingText => MissingShown ? _missingText.text : string.Empty;
+
+            /// <summary>Semillas que dice su burbuja «Te faltan {n}» (0 si no se ve).</summary>
+            public int MissingSeedsShown => MissingShown && _missingShown > 0 ? _missingShown : 0;
 
             public float MissingWidth => _missingW;
 

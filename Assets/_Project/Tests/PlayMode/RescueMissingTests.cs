@@ -305,6 +305,53 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Stuck.RescueButton.IsInteractable(), Is.True, "sigue activable, como la bandeja");
         }
 
+        /// <summary>
+        /// Revisión de <c>tanda6/fx-j6-ui</c> (02 §12: etiqueta + estado): en ¿Seguro? y en Sin canoas, el botón en gris se lee con
+        /// «Te faltan {n} semillas» unido a su etiqueta (<see cref="GreyA11y"/>) y su línea «Te faltan» suelta se calla.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TalkBack_GiveUpAndNoCanoes_ReadTheGrayButtons_WithTheMissingSeeds()
+        {
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0, 1));
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            GameScreen view = boot.View!;
+            FunnelSetup.GetStuck(boot);
+
+            // ¿Seguro? (una canoa en juego): «Continuar: +1 cuia…, Te faltan 300 semillas».
+            Assert.That(boot.PressGiveUp(), Is.True);
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(view.GiveUp.Visible, Is.True);
+            string rescue = A11yScanner.ButtonLabel(view.GiveUp.RescueButton, out _);
+            Assert.That(rescue, Does.EndWith(UiText.MissingSeeds(view.GiveUp.RescueMissingSeeds)), "¿Seguro?: «" + rescue + "»");
+            Assert.That(view.GiveUp.RescueMissingSeeds, Is.EqualTo(300));
+            AssertSilenced(view.GiveUp.RescueButton, "Note", "¿Seguro?");
+
+            // Sin canoas, desde el nivel: «Llenar canoas…, Te faltan {n} semillas».
+            boot.ConfirmGiveUp();
+            boot.PressRetry();
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.NoCanoes));
+            PlayModeHelpers.Step(boot, 20);
+            NoCanoesPanel panel = view.NoCanoes;
+            Assert.That(panel.RefillMissingSeeds, Is.GreaterThan(0));
+            string refill = A11yScanner.ButtonLabel(panel.RefillButton, out _);
+            Assert.That(refill, Does.EndWith(UiText.MissingSeeds(panel.RefillMissingSeeds)), "Sin canoas: «" + refill + "»");
+            AssertSilenced(panel.RefillButton, "RefillNote", "Sin canoas");
+        }
+
+        // La línea «Te faltan» suelta, hermana del botón, se calla para TalkBack (etiqueta registrada a «»).
+        private static void AssertSilenced(UnityEngine.UI.Button button, string noteName, string where)
+        {
+            UnityEngine.Transform? note = button.transform.parent.Find(noteName);
+            Assert.That(note, Is.Not.Null, where + ": la línea " + noteName);
+            Assert.That(A11yLabels.TryGet(note!.gameObject, out string label, out _), Is.True, where);
+            Assert.That(label, Is.Empty, where + ": la línea «Te faltan» suelta se calla: ya la dice el botón");
+        }
+
         [UnityTest]
         public IEnumerator DoubleTap_PulsesTwice_AndShowsTwoNotices_WithoutCharging()
         {

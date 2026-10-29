@@ -112,6 +112,64 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.StoreUnavailableNoticeCount, Is.EqualTo(0));
         }
 
+        /// <summary>
+        /// TalkBack en la bandeja (02 §12: etiqueta + estado): cada botón con su burbuja «Te faltan {n}» a la vista se lee con
+        /// «Te faltan {n} semillas» unido a su etiqueta (la Cuia extra y la Luciérnaga en el 106 con 50 semillas), y la burbuja no se
+        /// lee suelta (no dos veces).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TalkBack_ReadsEachTrayButton_WithItsMissingSeeds_AndNotTheBubbleAgain()
+        {
+            var host = new FakeScreenReaderHost(true);
+            GameBootstrap.A11yHostOverride = host;
+            GameBootstrap boot = null!;
+            yield return Load106(FunnelSetup.Profile(50), b => boot = b);
+            BoosterTray tray = boot.View!.Tray;
+            Assert.That(tray.ExtraShowsMissing, Is.True);
+            Assert.That(tray.RevealShowsMissing, Is.True);
+            Assert.That(tray.RevealMissingSeeds, Is.EqualTo(70));
+            boot.A11y!.Refresh();
+            var items = new System.Collections.Generic.List<AF.UI.A11yItem>(host.Items);
+
+            string extra = LabelOf(items, tray.ExtraCuiaButton);
+            Assert.That(extra, Is.EqualTo(A11yText.Append(tray.ExtraLabel.text, UiText.MissingSeeds(100))), "«+1 cuia, Te faltan 100 semillas»");
+            string reveal = LabelOf(items, tray.RevealButton);
+            Assert.That(reveal, Is.EqualTo(A11yText.Append(tray.RevealLabel.text, UiText.MissingSeeds(70))), "la Luciérnaga");
+            foreach (string seeds in new[] { tray.ExtraMissingText, tray.RevealMissingText })
+            {
+                foreach (AF.UI.A11yItem item in items)
+                {
+                    Assert.That(item.Label, Is.Not.EqualTo(seeds), "la burbuja «" + seeds + "» no se lee suelta");
+                }
+            }
+
+            // Pista y Pororoca, con su burbuja, igual (sin saldo y sin video: BoosterTray la enseña si su precio no alcanza).
+            if (tray.HintShowsMissing)
+            {
+                Assert.That(LabelOf(items, tray.HintButton), Does.EndWith(UiText.MissingSeeds(tray.HintMissingSeeds)), "Pista");
+            }
+
+            if (tray.ShuffleShowsMissing)
+            {
+                Assert.That(LabelOf(items, tray.ShuffleButton), Does.EndWith(UiText.MissingSeeds(tray.ShuffleMissingSeeds)), "la Pororoca");
+            }
+        }
+
+        private static string LabelOf(System.Collections.Generic.List<AF.UI.A11yItem> items, UnityEngine.UI.Button button)
+        {
+            string id = "btn_" + button.GetInstanceID().ToString(System.Globalization.CultureInfo.InvariantCulture);
+            foreach (AF.UI.A11yItem item in items)
+            {
+                if (item.Id == id)
+                {
+                    return item.Label;
+                }
+            }
+
+            Assert.Fail("sin elemento para «" + button.name + "»");
+            return string.Empty;
+        }
+
         // El 106 con el tablero en juego y sin video (el precio de la Cuia extra en la ranura).
         private static IEnumerator Load106(Profile profile, Action<GameBootstrap> done)
         {
