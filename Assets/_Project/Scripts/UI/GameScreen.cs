@@ -520,7 +520,7 @@ namespace AF.UI
             _restart.Relief.Bind(_restart.Face, _restart.Base, _restart.FaceImage, art.DiscWood, restartIcon, null, null);
 
             // Bandeja de comodines (B2-1; 07 §7.4): Marea, desde el 8 Cuia extra y desde el 12 Pista (MO2).
-            _tray = new BoosterTray(_hud, art, OnTrayUndo, () => _actions.PressExtraCuia());
+            _tray = new BoosterTray(_hud, art, OnTrayUndo, OnTrayExtra);
 
             // ---- Cuia elevada cuyo cielo entra en la fila del HUD (revisión de la captura 48c): en los tableros que pasan bajo el
             // HUD (3 filas a 360 × 780), los 32 dp sobre la boca de una cuia de la fila 1 (la nube de la Lluvia, la cueva de la
@@ -2016,6 +2016,31 @@ namespace AF.UI
         }
 
         // 02 §3.1 C8 y 04 §1.1: Marea con cupo deshace; sin cupo ni stock, el botón recarga (video si hay; si no, semillas).
+        /// <summary>
+        /// «+1 cuia» de la bandeja (04 §2.2). Sin stock y sin saldo (el precio en rojo y «Te faltan {n}» en la ranura), el toque ya
+        /// no es mudo (la petición del 2026-10-29 tras la observación 2 de la jornada 6: ningún botón con «Te faltan» sin respuesta):
+        /// late esa burbuja como la de Pista (con Reducir movimiento, solo el color), lo dice TalkBack, avisa si la tienda no vende y
+        /// escribe <c>AF_STATE missing_tap</c> con <c>tray_add_cuia</c> (<see cref="OnMissingTap"/>); no cobra nada. Si no, la
+        /// Cuia extra de siempre.
+        /// </summary>
+        private void OnTrayExtra()
+        {
+            LevelFlow? flow = _flow;
+            if (flow != null && flow.HasLevel && flow.AcceptsBoardInput)
+            {
+                ExtraCuiaOffer extra = flow.ExtraCuia;
+                if (extra.State == ExtraCuiaState.Ready && !extra.FromStock && extra.Missing > 0)
+                {
+                    int missing = extra.Missing;
+                    _tray.Refresh(); // la burbuja, con la cifra de ahora
+                    OnMissingTap("tray_add_cuia", reduce => _tray.PulseExtraMissing(missing, reduce), missing);
+                    return;
+                }
+            }
+
+            _actions.PressExtraCuia();
+        }
+
         private void OnTrayUndo()
         {
             LevelFlow? flow = _flow;

@@ -370,6 +370,25 @@ namespace AF.UI
         /// <summary>«Te faltan {n}» de Pista responde al toque (<see cref="PulseHintMissing"/>; tests).</summary>
         public bool HintMissingPulsing => _hint.PulsingNow;
 
+        /// <summary>«Te faltan {n}» de la Cuia extra responde al toque (<see cref="PulseExtraMissing"/>; tests).</summary>
+        public bool ExtraMissingPulsing => _extra.PulsingNow;
+
+        /// <summary>Escala de ahora de la burbuja «Te faltan {n}» de la Cuia extra (1 en reposo; tests).</summary>
+        public float ExtraMissingScaleNow => _extra.PulseScaleNow;
+
+        /// <summary>Color de ahora de esa burbuja hacia el de la etiqueta de precio sin saldo (0 en reposo, 1 del todo; tests).</summary>
+        public float ExtraMissingColorNow => _extra.PulseColorNow;
+
+        /// <summary>
+        /// Late la burbuja «Te faltan {n}» de la Cuia extra, como la de Pista (observación 2 de la jornada 6: «+1 cuia» sin saldo
+        /// era un toque mudo); con Reducir movimiento, solo el color. False si la burbuja no se ve o lleva otra cifra. Sin
+        /// asignaciones.
+        /// </summary>
+        public bool PulseExtraMissing(int missing, bool reduceMotion)
+        {
+            return _extra.PulseMissing(missing, reduceMotion);
+        }
+
         /// <summary>La cara de Pista está pulsada: Morpho piensa.</summary>
         public bool HintPressed => _hintPressed;
 
@@ -722,6 +741,7 @@ namespace AF.UI
             _hint.TickMissingPulse(dtMs);
             _shuffle.TickMissingPulse(dtMs);
             _reveal.TickMissingPulse(dtMs);
+            _extra.TickMissingPulse(dtMs);
         }
 
         /// <summary>
