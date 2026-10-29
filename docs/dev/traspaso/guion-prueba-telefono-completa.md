@@ -959,7 +959,11 @@ Recorre **cada fila** de Ajustes y comprueba que hace lo que dice, al momento y 
 ## 14. Notificaciones (≈ 45 min, más esperas)
 
 1. Con `--ei af_dev_push 2`: el primer aviso llega a los 60 s de pasar a segundo plano, con su texto y su icono.
-   - Tocarlo abre el juego en el sitio correcto.
+   - Tocarlo abre el juego en el sitio correcto (D-062: un aviso abre lo que nombra y se salta el takeover del inicio). Con un `daily_ready` (el Reto sin jugar hoy y la Bitácora con su casilla por sellar, para que haya takeover):
+     - tras la intro, abre **el Reto, el tablero de hoy, sin la Bitácora encima**; `AF_STATE push_open` con `"type":"daily_ready","dest":"daily"`;
+     - al salir del Reto al inicio, **sale la Bitácora** (el takeover saltado; `AF_STATE takeover` con `logbook`);
+     - con el Reto ya jugado hoy, el mismo aviso deja el inicio sin la Bitácora (`dest` `home`), y la Bitácora sale en la siguiente vuelta al inicio;
+     - si al tocarlo el juego estaba en segundo plano dentro de un nivel, sigue en el nivel (`dest` `none`).
    - En los tres idiomas.
 2. **Avisos reales sin el extra:** deja la app cerrada con el Reto sin jugar y comprueba al día siguiente si llega «tu Reto del río está listo» (06 §8.3), sin pasar del tope del día.
 3. **Con <13:** ningún aviso ni diálogo de permiso.

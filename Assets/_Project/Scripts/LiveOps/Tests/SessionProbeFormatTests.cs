@@ -49,8 +49,9 @@ namespace AF.LiveOps.Tests
             Assert.That(lines, Is.EqualTo(new[]
             {
                 "AF_STATE {\"event\":\"push_sent\",\"t\":3,\"type\":\"daily_ready\",\"id\":1001}",
-                "AF_STATE {\"event\":\"push_open\",\"t\":3,\"type\":\"daily_ready\"}",
-            }));
+            }), "push_open sale aparte, con el destino tomado (D-062)");
+            Assert.That(SessionProbeFormat.PushOpen(4, "daily_ready", "daily"),
+                Is.EqualTo("AF_STATE {\"event\":\"push_open\",\"t\":4,\"type\":\"daily_ready\",\"dest\":\"daily\"}"));
         }
     }
 }

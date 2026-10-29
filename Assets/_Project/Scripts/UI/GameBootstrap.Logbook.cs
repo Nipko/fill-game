@@ -315,7 +315,13 @@ namespace AF.UI
             }
 
             bool lobby = LogbookLobbyClear && !screen.Visible;
-            if (lobby && !_logbookLobbyShown)
+            if (lobby && PushRoutePending)
+            {
+                // Se llega al inicio desde un aviso (D-062; GameBootstrap.PushRoute.cs): abre lo que nombra y esta entrada no saca el
+                // takeover, que queda para la siguiente vuelta al inicio como si no hubiera salido.
+                TakePushRoute();
+            }
+            else if (lobby && !_logbookLobbyShown)
             {
                 TakeoverAtLobby();
             }
@@ -350,6 +356,11 @@ namespace AF.UI
             if (AccountDeleted)
             {
                 return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
+            }
+
+            if (paused)
+            {
+                DropPushRoute(); // el aviso tocado no llegó al inicio antes de volver a salir (D-062)
             }
 
             if (_takeovers == null || _logbookClock == null)

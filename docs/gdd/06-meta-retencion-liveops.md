@@ -415,6 +415,18 @@ Magic Sort cobra 13+ en iOS por "Messaging and Chat" y las reseñas elogian equi
 | Regreso (D7) | 7 días sin sesión (local: D7/D14/D30 se agendan al pasar a segundo plano y se cancelan al abrir) | Capi te guardó una Cuia extra y 200 semillas. El río sigue donde lo dejaste (nivel {n}). | Capi guardou uma Cuia extra e 200 sementes para você. O rio continua onde você parou (nível {n}). | Capi saved you a Cuia extra and 200 seeds. The river is right where you left it (level {n}). |
 | Canoa prestada (2.0) | Un miembro presta | {nombre} te prestó una canoa. | {nome} emprestou uma canoa para você. | {name} lent you a canoe. |
 
+**Al tocarlo (D-062, 2026-10-29) [P]:** un aviso abre lo que nombra y se salta el takeover del inicio (sección 4.7), que queda para la siguiente vuelta al inicio. El consentimiento, la edad, la intro de la marca y los modales legales van antes.
+
+| Tipo (`type`) | Abre |
+|---|---|
+| Reto listo (`daily_ready`), Racha de Retos (`daily_streak`) | El Reto del río: el tablero de hoy, como su tarjeta. Si está bloqueado por nivel, ya jugado hoy o sin pool, el inicio sin takeover |
+| Bitácora sin sellar (`logbook_pending`) | La libreta de la Bitácora; si la casilla ya no está por sellar, el inicio sin takeover |
+| Crecida te espera (`streak_waiting`), Canoas llenas (`canoes_full`), Nuevos niveles (`new_levels`) | El inicio sin takeover, con «Jugar» a mano (no entra solo en el nivel) |
+| Regreso (`comeback_d7`, `_d14`, `_d30`, `_d60`) | El inicio sin takeover; el regalo de regreso (sección 9) ya se acreditó al abrir |
+| Evento termina, Liga cierra, Premio por reclamar (1.2); Canoa prestada (2.0) | Sin decidir: llegan con sus sistemas |
+
+Si la app vuelve de segundo plano en otra pantalla que el inicio (un nivel, el Reto, Ajustes), el aviso no la cambia.
+
 Redacción según glosario §10: tuteo en ES-419, "você" en PT-BR, imperativo en EN, sin exclamaciones dobles, sin emojis en el título. **Con D-013 (2026-10-13, T1-A) la voz de los avisos es TiTino**, con su retrato como icono grande del aviso; Capi solo se nombra cuando trae algo (el regalo de Cuia extra del regreso). Los textos PT-BR y EN que cambian son borrador para el revisor nativo; los del Mapa del río no añaden avisos.
 
 ## 9. Re-engagement y ofertas de regreso
