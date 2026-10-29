@@ -53,9 +53,10 @@ Después, sigue con lo pendiente en el orden de arriba (el resto de N6 y los blo
 
 **El build que lo trae todo (2026-10-29).** El commit que integra `tanda6/intro-desde-logo` lleva también el velo: con ese build se repite N6.1 y se prueba el punto «La intro nace del logo» de N6 (el dueño juzga si queda «muy pro»). Además, **se repite la observación 3 de la hoja j6** (otra app con el foco al lanzar: ¿sale la intro o se queda en el petróleo?), porque el velo ya no toca el correr sin foco. Las observaciones 2, 4, 5 y 6 de la hoja j6 se arreglan en carriles aparte: no hace falta volver a anotarlas.
 
-**Comprobar los arreglos de las observaciones 2 y 5 de la hoja j6** (carril `tanda6/fx-j6-ui`), con el build que los integre:
+**Comprobar los arreglos de las observaciones 2, 5 y 8 de la hoja j6** (carril `tanda6/fx-j6-ui`), con el build que los integre:
 - **«Salto del Boto» en gris en la pausa** (observación 2): en un nivel con el Salto elegible (quinto fallo, < 300 semillas), con y sin tienda. Tocarlo hace latir su etiqueta, no abre la confirmación ni cobra, y sin tienda sale «Las compras no están disponibles ahora»; `AF_STATE missing_tap` con `"option":"pause_skip"`. Lo mismo en el **banner del Salto** de la entrada del nivel (tarjeta previa o tablero sin vertidos), que también estaba mudo: late «Te faltan {n} semillas» y `missing_tap` con `"option":"banner_skip"`. Con Reducir movimiento, solo se atenúan; con TalkBack (el dueño), dicen «Te faltan {n} semillas».
 - **Las pestañas del Mercado** (observación 5): al 100 % y al 130 % (`--ei af_font_scale 130`), en es-419, en y pt-BR, ninguna pareja de pestañas casi se toca: entre los textos queda al menos el hueco de un par de letras (12 dp). Capturas `b08/mercado-130-*.png` de nuevo.
+- **Palabras partidas a 320 dp** (observación 8): con `wm density 540` y la letra al 130 %, en es-419, en y pt-BR, en un nivel con Aguas turbias (el 100: cinco comodines) y en el Mercado. Ninguna palabra se parte: «Reiniciar» y «Deshacer» encogen lo justo (nunca por debajo de 12 sp sin escala) y las pestañas del Mercado, si no caben en una fila, van en dos filas de dos. Capturas como `b16/nivel.png` y `b16/mercado.png`.
 
 ### N6. Lo nuevo de la jornada 6
 

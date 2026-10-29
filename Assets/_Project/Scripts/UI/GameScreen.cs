@@ -172,6 +172,13 @@ namespace AF.UI
         // «r» quedaban pegados a los cantos (revisión de FX5; D-003). La etiqueta ya va a 12 sp × escala, el mínimo de 02 §12,
         // así que no puede encoger para ganar aire.
         internal const float RestartPillTightPadDp = 3f;
+
+        /// <summary>
+        /// Lo menos que encoge la etiqueta de «Reiniciar» cuando su palabra no cabe ni con <see cref="RestartPillTightPadDp"/> (320 dp
+        /// con la letra al 130 %; observación 8 de la jornada 6) [P]: 12 sp sin la escala de texto, los 12 sp de 02 §12 al 100 %. Solo
+        /// fuera de lo que garantiza 02 §12 (130 % a 360 dp).
+        /// </summary>
+        internal const float RestartLabelFloorSp = UiBuilder.MinTextSp;
         private const float RestartPillOutDp = 4f;
         internal const float RestartPillGapDp = 4f;
 
@@ -229,6 +236,7 @@ namespace AF.UI
         private readonly ReliefParts _restart;
         private readonly Image _restartPill;
         private readonly TextMeshProUGUI _restartLabel;
+        private readonly float _restartLabelSp; // su tamaño de siempre (12 sp × escala); LayoutRestartPill lo baja solo como último recurso
         private float _restartPillLeft = float.NaN; // LayoutRestartPill (tarea FX5)
         private bool _restartPillTwoLines; // la etiqueta de Reiniciar va en dos líneas y la píldora crece hacia abajo (L4)
         private readonly BoosterTray _tray;
@@ -508,6 +516,7 @@ namespace AF.UI
             UiBuilder.Stretch(restartLabel.rectTransform);
             restartLabel.rectTransform.offsetMin = new Vector2(0f, 1f);
             _restartLabel = restartLabel;
+            _restartLabelSp = restartLabel.fontSize;
             _restart.Relief.Bind(_restart.Face, _restart.Base, _restart.FaceImage, art.DiscWood, restartIcon, null, null);
 
             // Bandeja de comodines (B2-1; 07 §7.4): Marea, desde el 8 Cuia extra y desde el 12 Pista (MO2).
@@ -2742,10 +2751,17 @@ namespace AF.UI
         // píldora crece hacia la izquierda lo que le falte a esa palabra y la columna del saldo se estrecha otro tanto
         // (_restartPillLeft; LayoutWalletBar), sin bajar de WalletBar.CompactMinWidthDp, y si ni así cabe, con menos aire
         // (RestartPillTightPadDp); la etiqueta, en una línea si así cabe entera y, si no, en dos, cortadas entre palabras. Si
-        // una palabra no cupiera ni así, se partiría: no pasa con es-419 ni con en-XA (Fx5Tests). Mide al colocar.
+        // una palabra no cupiera ni así (a 320 dp con la letra al 130 %: «Reinicia / r», observación 8 de la jornada 6), la etiqueta
+        // encoge lo justo para que quepa, sin bajar de 12 sp sin escala (RestartLabelFloorSp) [P]; nunca parte la palabra
+        // (Narrow320WordBreakTests). A 360 dp no pasa con es-419 ni con en-XA (Fx5Tests). Mide al colocar.
         private void LayoutRestartPill(float w)
         {
             _restartPillLeft = float.NaN;
+            if (_restartLabel.fontSize != _restartLabelSp)
+            {
+                _restartLabel.fontSize = _restartLabelSp; // cada colocación empieza con su tamaño de siempre
+            }
+
             float labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * RestartPillPadDp);
             if (labelW <= 60f)
             {
@@ -2778,6 +2794,17 @@ namespace AF.UI
                 if (wordW > capW)
                 {
                     pad = RestartPillTightPadDp;
+                    wordW = wordInk + (2f * pad);
+                    labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * pad);
+                }
+
+                if (wordW > capW && wordInk > 0f)
+                {
+                    // Último recurso (observación 8 de la jornada 6): ni con la columna del saldo a su mínimo cabe la palabra con su
+                    // aire. La etiqueta encoge hasta que quepa, sin bajar de RestartLabelFloorSp.
+                    float fit = Mathf.Floor(_restartLabelSp * ((capW - (2f * pad)) / wordInk) * 10f) / 10f;
+                    _restartLabel.fontSize = Mathf.Max(RestartLabelFloorSp, Mathf.Min(_restartLabelSp, fit));
+                    wordInk = Mathf.Ceil(UiBuilder.LongestWordWidth(_restartLabel));
                     wordW = wordInk + (2f * pad);
                     labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * pad);
                 }

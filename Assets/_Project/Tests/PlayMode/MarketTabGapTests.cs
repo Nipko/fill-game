@@ -15,8 +15,8 @@ namespace AF.Tests.PlayMode
     /// Observación 5 de la jornada 6 en el teléfono (2026-10-28): al 130 % en es-419, las pestañas «Semillas» y «Comodines» del
     /// Mercado casi se tocaban. Mide, con el texto ya dibujado, el hueco entre los glifos de cada dos pestañas vecinas con la
     /// escala de letra de <c>af_font_scale</c> (<see cref="LaunchOptions.FontScaleOverride"/>; al 200 % se queda en el tope de
-    /// 02 §12) en es-419, en y pt-BR, a 360 × 640 dp y con cada pestaña elegida (la elegida va subrayada): nunca menos de
-    /// <see cref="MarketScreen.TabGapDp"/>. El perfil y el arranque son los de <see cref="Fx130OverflowTests"/>.
+    /// 02 §12) en es-419, en y pt-BR, a 360 × 640 dp y a 320 dp (<see cref="Canvas320Tests"/>), con cada pestaña elegida (la
+    /// elegida va subrayada): entre dos vecinas de la misma fila, nunca menos de <see cref="MarketScreen.TabGapDp"/>. El perfil y el arranque son los de <see cref="Fx130OverflowTests"/>.
     /// </summary>
     public sealed class MarketTabGapTests
     {
@@ -29,14 +29,21 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameScreen.SimulatedPxPerDp = null;
+            GameScreen.SimulatedScreen = null;
             Fx130Walk.TearDown();
         }
 
         [UnityTest]
         public IEnumerator Tabs_KeepAMinimumGap_AtAnyFontScale(
-            [Values(LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil)] string locale, [Values(100, 130, 200)] int percent)
+            [Values(LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil)] string locale, [Values(100, 130, 200)] int percent, [Values(360, 320)] int width)
         {
-            yield return Fx130Walk.Load(locale, percent / 100f);
+            if (width == 320)
+            {
+                GameScreen.SimulatedPxPerDp = Canvas320Tests.Density;
+            }
+
+            yield return Fx130Walk.Load(locale, percent / 100f, width == 320 ? Canvas320Tests.Screen320 : (Vector4?)null);
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(Loc.Locale, Is.EqualTo(locale));
             Assert.That(boot.SetUpMarket(), Is.True);
@@ -54,7 +61,7 @@ namespace AF.Tests.PlayMode
                 market.SelectTab(selected);
                 yield return null;
                 Canvas.ForceUpdateCanvases();
-                var spans = new List<(MarketTab tab, float min, float max)>();
+                var spans = new List<(MarketTab tab, float row, float min, float max)>();
                 foreach (MarketTab tab in new[] { MarketTab.Seeds, MarketTab.Boosters, MarketTab.Cuias, MarketTab.NoAds })
                 {
                     if (!market.TabShown(tab))
@@ -64,13 +71,20 @@ namespace AF.Tests.PlayMode
 
                     TextMeshProUGUI label = market.TabLabel(tab);
                     Assert.That(Ink(label, panel, out float min, out float max), Is.True, tab + ": la etiqueta tiene texto dibujado");
-                    spans.Add((tab, min, max));
+                    // La fila de la pestaña (con la letra grande a 320 dp van en dos columnas; observación 8 de la jornada 6).
+                    float row = Mathf.Round(panel.InverseTransformPoint(label.rectTransform.TransformPoint(label.rectTransform.rect.center)).y);
+                    spans.Add((tab, row, min, max));
                 }
 
                 Assert.That(spans.Count, Is.GreaterThanOrEqualTo(2), "al menos Semillas y Comodines");
-                spans.Sort((a, b) => a.min.CompareTo(b.min));
+                spans.Sort((a, b) => a.row != b.row ? b.row.CompareTo(a.row) : a.min.CompareTo(b.min));
                 for (int i = 1; i < spans.Count; i++)
                 {
+                    if (spans[i].row != spans[i - 1].row)
+                    {
+                        continue; // otra fila: los vecinos son los de su fila
+                    }
+
                     float gap = spans[i].min - spans[i - 1].max;
                     narrowest = Mathf.Min(narrowest, gap);
                     if (gap < MarketScreen.TabGapDp - 0.5f)
@@ -81,7 +95,7 @@ namespace AF.Tests.PlayMode
                 }
             }
 
-            TestContext.WriteLine("AF_TAB_GAP " + locale + " al " + percent.ToString(CultureInfo.InvariantCulture) + " %: hueco mínimo "
+            TestContext.WriteLine("AF_TAB_GAP " + locale + " al " + percent.ToString(CultureInfo.InvariantCulture) + " % a " + width.ToString(CultureInfo.InvariantCulture) + " dp: hueco mínimo "
                 + narrowest.ToString("0.#", CultureInfo.InvariantCulture) + " dp");
             Assert.That(problems, Is.Empty, "pestañas demasiado juntas en " + locale + " al " + percent + " %:\n" + string.Join("\n", problems));
         }

@@ -1505,6 +1505,10 @@ namespace AF.UI
             private const float LabelHeightDp = 16f;
             private const float PriceBelowLabelDp = 3f;
             private const float LabelTwoLinesSpacing = -20f;
+
+            // Lo menos que encoge una etiqueta cuya palabra más larga no cabe en la ranura (observación 8 de la jornada 6) [P]: 12 sp
+            // sin la escala de texto, los 12 sp de 02 §12 al 100 %. Solo fuera de lo que garantiza 02 §12 (130 % a 360 dp).
+            private const float LabelFloorSp = UiBuilder.MinTextSp;
             private const float IconDp = 32f;
             private const float IconTopDp = 6f;
             private const float LabelIconGapDp = 1f;
@@ -1587,6 +1591,7 @@ namespace AF.UI
                 TextMeshProUGUI text = UiBuilder.Label("Label", Parts.Face, TextStyle.SlotWater, label, 12f, Palette.Cream, TextAlignmentOptions.Center);
                 UiBuilder.Place(text.rectTransform, 0f, LabelTopDp, SlotDp, LabelHeightDp);
                 Label = text;
+                _labelSp = text.fontSize;
                 Parts.Relief.Bind(Parts.Face, Parts.Base, Parts.FaceImage, art.SlotWater, Glyph, iconDisabled, text);
 
                 _badge = UiBuilder.Rect("Badge", Parts.Button.transform);
@@ -1632,8 +1637,18 @@ namespace AF.UI
             /// <summary>Etiqueta funcional de la ranura (12 sp; tarea L4).</summary>
             public TextMeshProUGUI Label { get; }
 
+            // Tamaño de siempre de la etiqueta (12 sp × escala); SetLabelLines lo baja solo como último recurso.
+            private readonly float _labelSp;
+
             /// <summary>Ancho de la etiqueta de la ranura en una línea (dp), sin su aire.</summary>
-            public float LabelTextDp => Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x;
+            public float LabelTextDp
+            {
+                get
+                {
+                    BaseLabelSize();
+                    return Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x;
+                }
+            }
 
             /// <summary>
             /// Aire a cada lado de la etiqueta en una ranura de <paramref name="w"/> dp: <see cref="LabelNarrowInsetDp"/> en la de
@@ -1652,7 +1667,23 @@ namespace AF.UI
             }
 
             /// <summary>Ancho de la palabra más larga de la etiqueta (dp): lo menos que necesita para no partirla (MO2).</summary>
-            public float LabelWordDp => UiBuilder.LongestWordWidth(Label);
+            public float LabelWordDp
+            {
+                get
+                {
+                    BaseLabelSize(); // a su tamaño de siempre, aunque la última colocación la encogiera (SetLabelLines)
+                    return UiBuilder.LongestWordWidth(Label);
+                }
+            }
+
+            // La etiqueta vuelve a su tamaño de siempre (lo que se mide para decidir la ranura es siempre lo mismo).
+            private void BaseLabelSize()
+            {
+                if (Label.fontSize != _labelSp)
+                {
+                    Label.fontSize = _labelSp;
+                }
+            }
 
             /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas con el ancho de ahora de la ranura (dp).</summary>
             public float MissingWideNowDp => _w + MissingWideExtraDp;
@@ -1856,9 +1887,19 @@ namespace AF.UI
                 UiBuilder.Place(Glyph.rectTransform, (_w - icon) * 0.5f, iconTop, icon, icon);
             }
 
-            // Una línea si la etiqueta cabe en inner dp; si no, dos con el interlineado apretado. Devuelve si van dos.
+            // Una línea si la etiqueta cabe en inner dp; si no, dos con el interlineado apretado. Devuelve si van dos. Si ni la
+            // palabra más larga cabe en inner (cinco ranuras a 320 dp con la letra al 130 %: «Deshace / r», observación 8 de la
+            // jornada 6), la etiqueta encoge lo justo para que quepa, sin bajar de LabelFloorSp [P]: nunca se parte una palabra.
             private bool SetLabelLines(float inner)
             {
+                BaseLabelSize(); // cada colocación empieza con su tamaño de siempre
+                float word = UiBuilder.LongestWordWidth(Label);
+                if (word > inner && inner > 0f)
+                {
+                    float fit = Mathf.Floor(_labelSp * (inner / word) * 10f) / 10f;
+                    Label.fontSize = Mathf.Max(LabelFloorSp, Mathf.Min(_labelSp, fit));
+                }
+
                 Label.textWrappingMode = TextWrappingModes.NoWrap;
                 bool two = Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x > inner;
                 if (two != _labelTwoLines)
