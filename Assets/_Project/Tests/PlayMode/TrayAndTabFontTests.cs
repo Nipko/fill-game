@@ -17,13 +17,15 @@ namespace AF.Tests.PlayMode
     /// <item>13: a 320 dp con la letra al 130 %, en el nivel 100, la bandeja partía «Deshace/r» (es-419), «Desfaze/r» y «Mistura/r»
     /// (pt-BR). El teléfono tenía las cinco ranuras (Marea, Cuia extra, Pista, Pororoca y Luciérnaga); los tests de antes
     /// (<see cref="Narrow320WordBreakTests"/>) apagaban la Pororoca y miraban cuatro. Aquí, con las cinco, con saldo y sin él (la
-    /// bandeja en gris con «Te faltan {n}», como en el teléfono): ninguna etiqueta parte una palabra; a 320 dp ninguna baja de 12 dp
-    /// (D-061) y a 360 dp todas van a 12 sp × escala (02 §12).</item>
+    /// bandeja en gris con «Te faltan {n}», como en el teléfono): ninguna etiqueta parte una palabra ni sale de 12 dp - 12 sp ×
+    /// escala, y solo encoge la que a 12 sp × escala no cabe, en cualquier ancho (D-061 y su añadido del 2026-10-29). «Reiniciar»
+    /// tampoco se parte ni baja de 12 dp.</item>
     /// <item>15: al 130 % (y en es-419 también al 100 %) cada pestaña del Mercado encogía su texto por su cuenta. Aquí las pestañas
     /// que se ven comparten un único tamaño (<see cref="MarketScreen.TabFontSize"/>), nunca por debajo de 12 sp × escala y sin
     /// partir palabras, con cada pestaña elegida.</item>
     /// </list>
-    /// A 320 y 360 dp, al 100 y al 130 %, en es-419, en y pt-BR. El perfil es el de <see cref="Fx130OverflowTests"/>.
+    /// A 320 y 360 dp, al 100 y al 130 %, y la bandeja también a 411 dp (la densidad normal del teléfono de pruebas) al 130 %, en
+    /// es-419, en y pt-BR. El perfil es el de <see cref="Fx130OverflowTests"/>.
     /// </summary>
     public sealed class TrayAndTabFontTests
     {
@@ -48,6 +50,23 @@ namespace AF.Tests.PlayMode
             [Values(LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil)] string locale, [Values(100, 130)] int percent,
             [Values(320, 360)] int width, [Values(2450, 0)] int seeds)
         {
+            yield return CheckTray(locale, percent, width, seeds);
+        }
+
+        /// <summary>
+        /// La bandeja a 411 dp (1080 px a 420 dpi, la densidad normal del teléfono de pruebas) con la letra al 130 %: el lienzo se
+        /// queda en 360 dp y escala, así que, con las cinco ranuras, «Deshacer» (68,7 dp a 15,6) tampoco cabe a 12 sp × escala y
+        /// encoge (añadido de D-061 del 2026-10-29).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TrayLabels_FiveSlots_At411And130_NeverBreakAWord(
+            [Values(LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil)] string locale, [Values(2450, 0)] int seeds)
+        {
+            yield return CheckTray(locale, 130, 411, seeds);
+        }
+
+        private static IEnumerator CheckTray(string locale, int percent, int width, int seeds)
+        {
             float scale = percent / 100f;
             yield return Load(locale, scale, width, seeds);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -58,7 +77,8 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.StepUntilIdle(boot, 4000);
             yield return null;
             GameScreen view = boot.View!;
-            Assert.That(view.CanvasWidth, Is.EqualTo((float)width).Within(0.01f), "el ancho del lienzo");
+            // Por encima de 360 dp el lienzo se queda en 360 y escala (GameScreen.ReferenceWidth): a 411 dp físicos, 360 de lienzo.
+            Assert.That(view.CanvasWidth, Is.EqualTo(Mathf.Min((float)width, GameScreen.ReferenceWidth)).Within(0.01f), "el ancho del lienzo");
             BoosterTray tray = view.Tray;
             Assert.That(tray.ShuffleShown, Is.True, "la Pororoca en la bandeja");
             Assert.That(tray.RevealShown, Is.True, "con Aguas turbias, la Luciérnaga: cinco ranuras");
@@ -93,43 +113,35 @@ namespace AF.Tests.PlayMode
                     problems.Add("la palabra más larga de «" + label.text + "» no cabe en su caja a " + size + " dp");
                 }
 
-                if (width == 360 && Mathf.Abs(label.fontSize - normal) > 0.01f)
-                {
-                    problems.Add("«" + label.text + "» a " + size + " dp, no a 12 sp × escala (02 §12)");
-                }
-
-                if (width == 320 && (label.fontSize < UiBuilder.MinTextSp - 0.01f || label.fontSize > normal + 0.01f))
+                if (label.fontSize < UiBuilder.MinTextSp - 0.01f || label.fontSize > normal + 0.01f)
                 {
                     problems.Add("«" + label.text + "» a " + size + " dp: fuera de [12 dp (D-061), 12 sp × escala]");
                 }
-            }
 
-            TestContext.WriteLine("AF_TRAY_FIT " + at + ": " + string.Join(", ", parts));
-            Assert.That(labels, Is.EqualTo(5));
-            if (width == 360 && percent == 130 && locale != LocLocale.English && problems.Count > 0 && OnlyWordProblems(problems))
-            {
-                // Pregunta abierta (no la decide este carril): a 360 dp y al 130 %, con las cinco ranuras, «Deshacer» (68,7 dp),
-                // «Desfazer», «Misturar», «Barajar» y «Revelar» no caben a 12 sp × escala en la ranura más ancha que deja la pantalla
-                // (54 dp por dentro), y D-061 solo deja encoger por debajo de 360 dp. La regla del tamaño (02 §12) sí se comprueba
-                // arriba; el corte de palabras queda pendiente del dueño (extender D-061, textos más cortos u otra bandeja).
-                Assert.Ignore("pendiente del dueño (D-061 a 360 dp con cinco ranuras), " + at + ":\n" + string.Join("\n", problems));
-            }
-
-            Assert.That(problems, Is.Empty, at + ":\n" + string.Join("\n", problems));
-        }
-
-        // Solo palabras que no caben (ningún problema de tamaño): el caso de la pregunta abierta de 360 dp al 130 %.
-        private static bool OnlyWordProblems(List<string> problems)
-        {
-            foreach (string problem in problems)
-            {
-                if (!problem.Contains("parte una palabra") && !problem.Contains("no cabe en su caja"))
+                // Solo encoge la que a 12 sp × escala no cabía (su palabra, a ese tamaño, pasa de la caja).
+                if (label.fontSize < normal - 0.01f && WidestWord(label) * (normal / label.fontSize) <= BoxWidth(label) - 0.5f)
                 {
-                    return false;
+                    problems.Add("«" + label.text + "» encoge a " + size + " dp aunque a 12 sp × escala cabía");
                 }
             }
 
-            return true;
+            // «Reiniciar» (la misma regla en el HUD): sin palabras partidas ni por debajo de 12 dp.
+            TextMeshProUGUI restart = view.RestartLabel;
+            restart.ForceMeshUpdate();
+            if (LocInventory.BrokenWordLine(restart) != 0)
+            {
+                problems.Add("«" + restart.text + "» parte una palabra (" + LinesOf(restart) + ")");
+            }
+
+            if (restart.fontSize < UiBuilder.MinTextSp - 0.01f || restart.fontSize > normal + 0.01f)
+            {
+                problems.Add("«" + restart.text + "» a " + restart.fontSize.ToString("0.0#", CultureInfo.InvariantCulture) + " dp: fuera de [12 dp, 12 sp × escala]");
+            }
+
+            parts.Add("«" + restart.text + "» " + restart.fontSize.ToString("0.0#", CultureInfo.InvariantCulture));
+            TestContext.WriteLine("AF_TRAY_FIT " + at + ": " + string.Join(", ", parts));
+            Assert.That(labels, Is.EqualTo(5));
+            Assert.That(problems, Is.Empty, at + ":\n" + string.Join("\n", problems));
         }
 
         [UnityTest]
@@ -194,6 +206,10 @@ namespace AF.Tests.PlayMode
             if (width == 320)
             {
                 GameScreen.SimulatedPxPerDp = Canvas320Tests.Density;
+            }
+            else if (width != 360)
+            {
+                GameScreen.SimulatedPxPerDp = HudLabelTests.Screen780.x / width; // 411 dp: 1080 px a 2,625 px/dp (420 dpi)
             }
 
             yield return Fx130Walk.Load(locale, scale, width == 320 ? Canvas320Tests.Screen320 : HudLabelTests.Screen780, 100, seeds);

@@ -170,15 +170,14 @@ namespace AF.UI
         // Aire más corto a cada lado de la etiqueta de «Reiniciar» cuando una palabra no cabe con RestartPillPadDp ni con la
         // columna del saldo a su ancho mínimo (tarea FX5) [P]. Nunca menos: con 2 dp, en en-XA al 130 % a 360 dp, el «[» y la
         // «r» quedaban pegados a los cantos (revisión de FX5; D-003). La etiqueta va a 12 sp × escala, el mínimo de 02 §12, así
-        // que no encoge para ganar aire; solo en un lienzo de menos de 360 dp, si ni así cabe la palabra, encoge lo justo hasta
-        // RestartLabelFloorSp (12 dp) para no partirla (D-061, la excepción de 02 §12 por debajo de 360 dp).
+        // que no encoge para ganar aire; solo si ni así cabe la palabra, en cualquier ancho, encoge lo justo hasta
+        // RestartLabelFloorSp (12 dp) para no partirla (D-061 y su añadido del 2026-10-29, la excepción de 02 §12).
         internal const float RestartPillTightPadDp = 3f;
 
         /// <summary>
         /// Lo menos que encoge la etiqueta de «Reiniciar» cuando su palabra no cabe ni con <see cref="RestartPillTightPadDp"/> (320 dp
-        /// con la letra al 130 %; observación 8 de la jornada 6): 12 dp, los 12 sp de 02 §12 sin la escala de texto. Solo en un
-        /// lienzo de menos de <see cref="ReferenceWidth"/> (D-061: la excepción de 02 §12 por debajo de 360 dp); a 360 dp nunca
-        /// encoge.
+        /// con la letra al 130 %; observación 8 de la jornada 6): 12 dp, los 12 sp de 02 §12 sin la escala de texto, en cualquier
+        /// ancho (D-061 y su añadido del 2026-10-29: la excepción de 02 §12); si la palabra cabe a 12 sp × escala, no encoge.
         /// </summary>
         internal const float RestartLabelFloorSp = UiBuilder.MinTextSp;
         private const float RestartPillOutDp = 4f;
@@ -2779,7 +2778,7 @@ namespace AF.UI
         // (_restartPillLeft; LayoutWalletBar), sin bajar de WalletBar.CompactMinWidthDp, y si ni así cabe, con menos aire
         // (RestartPillTightPadDp); la etiqueta, en una línea si así cabe entera y, si no, en dos, cortadas entre palabras. Si
         // una palabra no cupiera ni así (a 320 dp con la letra al 130 %: «Reinicia / r», observación 8 de la jornada 6), la etiqueta
-        // encoge lo justo para que quepa, solo con el lienzo de menos de 360 dp y sin bajar de 12 dp (RestartLabelFloorSp; D-061);
+        // encoge lo justo para que quepa, en cualquier ancho y sin bajar de 12 dp (RestartLabelFloorSp; D-061 y su añadido);
         // nunca parte la palabra
         // (Narrow320WordBreakTests). A 360 dp no pasa con es-419 ni con en-XA (Fx5Tests). Mide al colocar.
         private void LayoutRestartPill(float w)
@@ -2826,9 +2825,9 @@ namespace AF.UI
                     labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * pad);
                 }
 
-                if (wordW > capW && wordInk > 0f && w < ReferenceWidth - 0.5f)
+                if (wordW > capW && wordInk > 0f)
                 {
-                    // Último recurso (observación 8 de la jornada 6; D-061): por debajo de 360 dp, ni con la columna del saldo a su
+                    // Último recurso (observación 8 de la jornada 6; D-061 y su añadido del 2026-10-29): ni con la columna del saldo a su
                     // mínimo cabe la palabra con su aire. La etiqueta encoge hasta que quepa, sin bajar de RestartLabelFloorSp.
                     float fit = Mathf.Floor(_restartLabelSp * ((capW - (2f * pad)) / wordInk) * 10f) / 10f;
                     _restartLabel.fontSize = Mathf.Max(RestartLabelFloorSp, Mathf.Min(_restartLabelSp, fit));
