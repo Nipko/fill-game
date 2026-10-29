@@ -164,11 +164,14 @@ namespace AF.UI
         /// </summary>
         public const int MorphMs = 800;
 
-        /// <summary>La vista del icono se funde en la escena desde aquí (ms) [P].</summary>
-        public const int IconFadeFromMs = 120;
+        /// <summary>
+        /// La vista del icono se funde en la escena desde aquí (ms) [P]: pronto y corto, mientras el círculo aún mide como mucho
+        /// 200 dp, para que no se vean dos ríos a la vez (el cauce del icono y el de la escena no coinciden).
+        /// </summary>
+        public const int IconFadeFromMs = 30;
 
         /// <summary>Lo que tarda la vista del icono en fundirse en la escena (ms) [P].</summary>
-        public const int IconFadeMs = 380;
+        public const int IconFadeMs = 140;
 
         /// <summary>El açaí del río se recoge hacia la cuia (los 10 tramos al revés) desde aquí (ms) [P].</summary>
         public const int AcaiRetractFromMs = 200;

@@ -58,7 +58,7 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// «La intro nace del logo» (añadido de D-051 del 2026-10-28): los fotogramas 0, 25 %, 50 % y 100 % de la apertura del icono
+        /// «La intro nace del logo» (añadido de D-051 del 2026-10-28): los fotogramas 0, 10 %, 25 %, 50 % y 100 % de la apertura del icono
         /// (<see cref="BrandIntro.MorphMs"/>), el açaí recogido justo antes de verter (<see cref="BrandIntro.PourFromMs"/>) y el
         /// fundido de Reducir movimiento a medias, en un teléfono de 2,625 px por dp (411 dp de ancho, como el SM-S938B). Se copian
         /// a <c>docs/art/intro-desde-logo/</c> para el dueño.
@@ -76,6 +76,7 @@ namespace AF.Tests.PlayMode
             try
             {
                 yield return Take(dir, "d051m_00_logo" + suffix, heightPx, 0f, false);
+                yield return Take(dir, "d051m_10" + suffix, heightPx, BrandIntro.MorphMs * 0.1f, false);
                 yield return Take(dir, "d051m_25" + suffix, heightPx, BrandIntro.MorphMs * 0.25f, false);
                 yield return Take(dir, "d051m_50" + suffix, heightPx, BrandIntro.MorphMs * 0.5f, false);
                 yield return Take(dir, "d051m_recogido" + suffix, heightPx, BrandIntro.PourFromMs, false);

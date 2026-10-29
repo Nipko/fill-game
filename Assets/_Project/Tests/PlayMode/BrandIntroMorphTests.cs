@@ -53,7 +53,8 @@ namespace AF.Tests.PlayMode
             Assert.That(BrandIntro.StreamRetractFromMs, Is.LessThan(BrandIntro.PourFromMs), "el chorro vuelve a la boca justo antes");
             Assert.That(BrandIntro.PourFromMs, Is.LessThanOrEqualTo(BrandIntro.MorphMs), "y vierte en cuanto el círculo acaba de abrirse: un solo gesto");
             Assert.That(BrandIntro.FallMs - BrandIntro.PourFromMs, Is.EqualTo(800), "la caída del chorro, como antes");
-            Assert.That(BrandIntro.IconFadeFromMs + BrandIntro.IconFadeMs, Is.LessThan(BrandIntro.MorphMs), "el icono ya se fundió al abrirse del todo");
+            Assert.That(BrandIntro.IconFadeFromMs + BrandIntro.IconFadeMs, Is.LessThan(BrandIntro.AcaiRetractFromMs), "el icono ya se fundió antes de que el açaí se recoja");
+            Assert.That(BrandIntro.IconFadeMs, Is.InRange(100, 160), "un fundido corto: los dos ríos no se ven juntos");
             Assert.That(BrandIntro.ReduceMotionFadeMs, Is.EqualTo(200), "con Reducir movimiento, un fundido de 200 ms");
             Assert.That(BrandIntroMorph.IconCanvasDp, Is.EqualTo(240f), "la vista del icono adaptativo en la pantalla del sistema");
             Assert.That(BrandIntroMorph.IconMaskDp, Is.EqualTo(160f), "su círculo");
@@ -144,6 +145,7 @@ namespace AF.Tests.PlayMode
             Assert.That(intro.MorphIconAlpha, Is.LessThan(0.5f), "el icono se va fundiendo en la escena");
             intro.Seek(BrandIntro.IconFadeFromMs + BrandIntro.IconFadeMs);
             Assert.That(intro.MorphIconAlpha, Is.EqualTo(0f), "y ya se fundió, antes de abrirse del todo");
+            Assert.That(intro.MorphDiameterDp, Is.LessThanOrEqualTo(200f), "con el círculo casi del tamaño del icono: sin dos ríos a la vez");
             Assert.That(intro.MorphIrisVisible, Is.True);
 
             intro.Seek(BrandIntro.MorphMs);
