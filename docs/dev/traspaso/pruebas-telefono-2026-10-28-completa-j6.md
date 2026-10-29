@@ -21,7 +21,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Sesión con el dueño (15, 18.3, 18.4, 18.6) | cumple, salvo 9 y 10 | **9 (alta)**, 10 |
 | 19. Rendimiento (memoria y Morpho) | el Morpho cumple; la memoria pasa del presupuesto | 6 |
 | Los arreglos de la hoja j6 (build `d3e601a2`, punto 10) | cumplen 4, 5, 7, 9, 10 y la sonda de 11; quedan 8 y la memoria; el icono cambia de forma | 12, 13, 14, 15 |
-| Botones en gris, 14 y 13 (build `d3e601a2`, punto 11) | cumple: la 2 queda arreglada | — |
+| Botones en gris, 14 y 13 (build `d3e601a2`, punto 11) | cumple: la 2 queda arreglada; el aviso abre la Bitácora | 16 |
 
 ## Verificación (bloque 0)
 
@@ -336,7 +336,8 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
        - es-419: «El Reto del río de hoy ya está listo. TiTino te espera en su rama.»;
        - en: «Today's River Challenge is ready. TiTino is waiting on his branch.»;
        - pt-BR: «O Desafio do Rio de hoje já está pronto. TiTino espera por você no galho dele.».
-     - **Sin probar:** tocar el aviso para ver adónde lleva. Abrir la cortina enseñaría las notificaciones personales del dueño, así que lo hace él.
+     - Los tres textos son los del catálogo de 06 §8.3, letra por letra.
+     - **Al tocarlo (el dueño, con un aviso nuevo de las 13:16; el primero se canceló al abrir la app, como debe):** `push_sent` y `push_open` con `type` `daily_ready`. El juego abre **en el inicio con la Bitácora encima**, el takeover de prioridad 1, y la tarjeta del Reto queda debajo (observación 16).
    - **Bloque 13, Ajustes (lo hecho): cumple.**
      - **Privacidad:** con la analítica encendida en Privacidad y datos, los eventos salen como `AF_EVENT` (`af_consent`, `af_settings_change`, `level_start`). Al apagarla vuelven a `AF_EVENT_UNSENT`. Queda apagada, como estaba.
      - **Corregir mi edad, la confirmación neutral:**
@@ -355,7 +356,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
    - **Sin hacer todavía:**
      - las demás filas de Ajustes, una a una (Sonido, Música, Vibración, Reducir movimiento, Alto contraste, Avisos bloqueados desde el teléfono, Datos del río);
      - los idiomas recorriendo todas las pantallas;
-     - tocar el aviso (el dueño), 14.2 y 14.3;
+     - 14.2 y 14.3;
      - los bloques 5, 9, 10-11, 12.2, el resto de 18 y 19, 21, 22 y 23.
 
 ## Observaciones
@@ -395,6 +396,10 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
     - Todo pasa de los 450 MB de D-060. Esa cifra es para la clase A; este teléfono es de 12 GB.
     - La imagen no cambia con Auto: sin parpadeos, franjas ni fotogramas viejos. Así que no hace falta volver a `Always` por la imagen, pero tampoco se gana memoria en este teléfono.
 15. **Baja. Al 130 %, las pestañas del Mercado mezclan tamaños de letra:** cada una encoge su texto por su cuenta. «Comodines» y «Boosters» salen más pequeños que «Cuias», «No ads» o «Sin anuncios» (`b08/pestanas-6.png`). En es-419 pasa también al 100 % («Comodines»). El hueco entre pestañas ya cumple.
+16. **Baja (a decidir). El aviso «El Reto del río de hoy ya está listo» abre el inicio con la Bitácora encima, no el Reto.**
+    - Al tocarlo, el jugador ve primero la Bitácora (el takeover de prioridad 1 del inicio) y tiene que cerrarla para llegar a la tarjeta del Reto.
+    - 06 §8.3 no dice qué pantalla abre cada aviso. El guion pide «el sitio correcto».
+    - Pregunta para el escritorio y el dueño: ¿un aviso de tipo `daily_ready` debería abrir el Reto, o al menos saltarse el takeover?
 
 ## Notas de la herramienta (no son defectos del juego)
 
