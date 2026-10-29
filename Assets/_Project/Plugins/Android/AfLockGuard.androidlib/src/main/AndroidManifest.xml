@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sin permisos. Un proveedor sin exportar que solo registra las ActivityLifecycleCallbacks de AfLockGuard al arrancar el
+     proceso (no guarda ni sirve datos: sus consultas devuelven null). Observacion 9 de la jornada 6 (2026-10-28): el juego no
+     se muestra sobre la pantalla de bloqueo. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="com.amazonfill.lockguard.AfLockGuardProvider"
+            android:authorities="${applicationId}.aflockguard"
+            android:exported="false" />
+    </application>
+</manifest>

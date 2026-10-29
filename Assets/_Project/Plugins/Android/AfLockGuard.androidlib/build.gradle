@@ -1,0 +1,27 @@
+// Plugin propio que impide que el juego se muestre o se juegue sobre la pantalla de bloqueo (observacion 9 de la jornada 6 de
+// la prueba en el telefono, 2026-10-28; nota tecnica en docs/dev/decisiones.md). Solo Java y solo API de la plataforma
+// (android.*): sin androidx, sin dependencias ni permisos. Un ContentProvider sin exportar (AfLockGuardProvider) registra unas
+// ActivityLifecycleCallbacks al arrancar el proceso; en cada paso del ciclo de vida de la actividad de Unity quita
+// FLAG_SHOW_WHEN_LOCKED, FLAG_TURN_SCREEN_ON y FLAG_DISMISS_KEYGUARD de su ventana y, en Android 8.1+, llama a
+// setShowWhenLocked(false) y setTurnScreenOn(false). Causa: la variante de desarrollo del reproductor de Unity 6000.3.25f1
+// (UnityPlayer.developmentPlayerInitialize y el dialogo del teclado) los activa; la de release no. Test: AfLockGuardPluginTests.
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.amazonfill.lockguard'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+    }
+}
