@@ -31,6 +31,11 @@ namespace AF.UI
     /// horneado (<see cref="PetroleumSprite"/>, y el del círculo en su propia textura), con el color de vértice blanco. En el
     /// espacio de color lineal el lienzo pasa el color de vértice a lineal y lo guarda en 8 bits, y el #14444A (20,68,74) salía
     /// (22,69,73); la textura se decodifica en la GPU sin ese redondeo.</item>
+    /// <item><b>La forma de la máscara</b> (jornada 6, observación 12, 2026-10-29): con la caja del sistema llegan los radios de su
+    /// máscara (en One UI, un cuadrado redondeado); el agujero del fotograma 0 es la superelipse que los calca
+    /// (<see cref="IconMaskShape"/>) y se abre al círculo en los primeros ~150 ms de la apertura. Ese agujero se pinta en una
+    /// textura propia de 256 px que se rehace solo mientras la forma cambia (un octante, con tablas, sin asignaciones); después, la
+    /// del círculo de siempre. Sin máscara, el círculo desde el fotograma 0.</item>
     /// </list>
     /// </summary>
     internal sealed class BrandIntroMorph
@@ -99,6 +104,14 @@ namespace AF.UI
         private bool _iconOnTop;
         private float _pxPerUnit = 1f;
         private Vector2 _pxOrigin;
+        private IconMaskShape _shape = IconMaskShape.Circle;
+        private Texture2D? _shapeTexture;
+        private Sprite? _shapeSprite;
+        private Color32[]? _shapePixels;
+        private float[]? _powN;
+        private float[]? _powN1;
+        private float _shapeAxisTex = -1f;
+        private float _shapeN = -1f;
 
         /// <summary>
         /// Crea las piezas dentro de <paramref name="root"/>, encima de <paramref name="back"/> (el fondo de la escena, ya creado):
@@ -166,6 +179,33 @@ namespace AF.UI
 
         /// <summary>Lo que costó crear las piezas, con la vista del icono decodificada (ms; sonda <c>morph_build_ms</c>).</summary>
         public long BuildMs { get; }
+
+        /// <summary>La forma de la máscara del fotograma 0 (sondas <c>morph_shape*</c>; el círculo sin máscara).</summary>
+        public IconMaskShape Shape => _shape;
+
+        /// <summary>Cuánto le falta al agujero para ser el círculo (0 la forma del sistema, 1 ya el círculo).</summary>
+        public float ShapeProgress { get; private set; } = 1f;
+
+        /// <summary>Radio de los ejes del agujero ahora (unidades del lienzo).</summary>
+        public float ShapeAxis { get; private set; }
+
+        /// <summary>Exponente de la superelipse del agujero ahora (2 = el círculo).</summary>
+        public float ShapeExponent { get; private set; } = 2f;
+
+        /// <summary>El agujero se pinta ahora con la textura de la forma (no con la del círculo).</summary>
+        public bool ShapeDrawn => _shapeSprite != null && _iris.sprite == _shapeSprite;
+
+        /// <summary>La textura de la forma (tests; legible). Null si nunca hubo máscara.</summary>
+        internal Texture2D? ShapeTexture => _shapeTexture;
+
+        /// <summary>Radio del agujero ahora en el ángulo <paramref name="radians"/> (unidades del lienzo; el modelo, no la textura).</summary>
+        public float HoleRadius(float radians)
+        {
+            return IconMaskShape.Radius(ShapeAxis, ShapeExponent, radians);
+        }
+
+        /// <summary>Px de pantalla por unidad del lienzo (los de la caja medida o los de la sonda sin medida).</summary>
+        public float PxPerUnit => _pxPerUnit;
 
         /// <summary>Hay vista del icono (el recurso se pudo leer).</summary>
         public bool HasIcon => _iconSprite != null;
@@ -246,6 +286,13 @@ namespace AF.UI
                 _pxOrigin = Vector2.zero;
             }
 
+            _shape = Measured ? IconMaskShape.From(icon) : IconMaskShape.Circle;
+            _shapeAxisTex = -1f; // la textura de la forma se rehace con el próximo agujero
+            if (_shape.FromMask && _shapeTexture == null)
+            {
+                CreateShapeTexture();
+            }
+
             // Hasta la esquina más lejana del centro (que, medido, puede no ser el de la pantalla).
             float fx = Mathf.Max(_center.x, _w - _center.x);
             float fy = Mathf.Max(_center.y, _h - _center.y);
@@ -322,6 +369,16 @@ namespace AF.UI
             Object.Destroy(_rimTexture);
             Object.Destroy(_petroleumSprite);
             Object.Destroy(_petroleumTexture);
+            if (_shapeSprite != null)
+            {
+                Object.Destroy(_shapeSprite);
+            }
+
+            if (_shapeTexture != null)
+            {
+                Object.Destroy(_shapeTexture);
+            }
+
             if (_iconSprite != null)
             {
                 Object.Destroy(_iconSprite);
@@ -389,6 +446,8 @@ namespace AF.UI
         {
             Diameter = d;
             bool show = d < _dFull - 0.01f && alpha > 0.001f;
+            UpdateShape(d, show);
+            rim *= ShapeProgress; // el aro es redondo: sale cuando el agujero ya es el círculo
             if (_iris.gameObject.activeSelf != show)
             {
                 _iris.gameObject.SetActive(show);
@@ -431,6 +490,142 @@ namespace AF.UI
                 _rim.color = new Color(RimColor.r, RimColor.g, RimColor.b, rim * alpha);
             }
         }
+
+        // La forma del agujero para el círculo de diámetro d: la textura de la forma mientras no es el círculo (rehecha solo si
+        // cambió), la del círculo después. Sin asignaciones.
+        private void UpdateShape(float d, bool show)
+        {
+            float rho = d * 0.5f;
+            _shape.At(_d0 * 0.5f, rho, out float axis, out float n, out float progress);
+            ShapeAxis = axis;
+            ShapeExponent = n;
+            ShapeProgress = progress;
+            bool shaped = _shape.FromMask && progress < 1f && _shapeTexture != null && rho > 0f;
+            if (shaped && show)
+            {
+                // En la textura, el radio del círculo de la apertura (rho) son IrisHoleRadiusPx: el cuadrado se coloca igual.
+                float axisTex = IrisHoleRadiusPx * axis / rho;
+                if (Mathf.Abs(axisTex - _shapeAxisTex) > 0.002f || Mathf.Abs(n - _shapeN) > 0.0005f)
+                {
+                    FillShape(axisTex, n);
+                }
+            }
+
+            Sprite want = shaped ? _shapeSprite! : _irisSprite;
+            if (_iris.sprite != want)
+            {
+                _iris.sprite = want;
+            }
+        }
+
+        private void CreateShapeTexture()
+        {
+            int n = IrisTextureSize;
+            _shapePixels = new Color32[n * n];
+            _powN = new float[n / 2];
+            _powN1 = new float[n / 2];
+            _shapeTexture = new Texture2D(n, n, TextureFormat.RGBA32, false);
+            _shapeTexture.name = "AF_MorphShape";
+            _shapeTexture.filterMode = FilterMode.Bilinear;
+            _shapeTexture.wrapMode = TextureWrapMode.Clamp;
+            _shapeSprite = Sprite.Create(_shapeTexture, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f);
+            _shapeSprite.name = "AF_MorphShape";
+        }
+
+        // Pinta el agujero con forma de superelipse (radio axisTex en los ejes, exponente n; en px de la textura) en la textura de la
+        // forma: un octante con tablas de potencias y sus 8 reflejos. Sin asignaciones.
+        private void FillShape(float axisTex, float n)
+        {
+            _shapeAxisTex = axisTex;
+            _shapeN = n;
+            Color32[] pixels = _shapePixels!;
+            float[] pn = _powN!;
+            float[] pn1 = _powN1!;
+            int half = IrisTextureSize / 2;
+            for (int i = 0; i < half; i++)
+            {
+                float v = i + 0.5f;
+                pn[i] = Mathf.Pow(v / ShapeScale, n); // normalizado: con n hasta 80, 127,5^n no cabe en un float
+                pn1[i] = Mathf.Pow(v / ShapeScale, n - 1f);
+            }
+
+            Color32 petro = BrandIntro.Petroleum;
+            int size = IrisTextureSize;
+            for (int y = 0; y < half; y++)
+            {
+                for (int x = y; x < half; x++)
+                {
+                    petro.a = ShapeAlpha(pn[x] + pn[y], pn1[x], pn1[y], axisTex, n);
+                    int xr = half + x;
+                    int xl = half - 1 - x;
+                    int yu = half + y;
+                    int yd = half - 1 - y;
+                    pixels[(yu * size) + xr] = petro;
+                    pixels[(yu * size) + xl] = petro;
+                    pixels[(yd * size) + xr] = petro;
+                    pixels[(yd * size) + xl] = petro;
+
+                    // El reflejo en la diagonal (x e y cambiados).
+                    pixels[(xr * size) + yu] = petro;
+                    pixels[(xr * size) + yd] = petro;
+                    pixels[(xl * size) + yu] = petro;
+                    pixels[(xl * size) + yd] = petro;
+                }
+            }
+
+            _shapeTexture!.SetPixels32(pixels);
+            _shapeTexture.Apply(false, false);
+        }
+
+        /// <summary>
+        /// La opacidad del petróleo de la forma en un píxel (0 dentro del agujero, 255 fuera, el borde suavizado en 1 px como el del
+        /// círculo): <paramref name="sum"/> = |x|^n + |y|^n, y <paramref name="gx"/> y <paramref name="gy"/> = |x|^(n-1) y |y|^(n-1),
+        /// del centro del píxel, normalizados por <see cref="ShapeScale"/> (con n hasta 80, las potencias en px no caben en un float).
+        /// La distancia al borde es (F - a) / |grad F|, con F = sum^(1/n) · <see cref="ShapeScale"/>, la norma n en px de la textura.
+        /// </summary>
+        internal static byte ShapeAlpha(float sum, float gx, float gy, float axisTex, float n)
+        {
+            if (sum <= 0f)
+            {
+                return 0;
+            }
+
+            float fNorm = Mathf.Pow(sum, 1f / n);
+            float f = fNorm * ShapeScale;
+            if (f < axisTex - 2f)
+            {
+                return 0; // bien dentro (|grad F| ≤ 1: la distancia es aún mayor)
+            }
+
+            float fn1 = sum / fNorm; // (F / ShapeScale)^(n-1)
+            float grad = 0f;
+            if (fn1 > 0f)
+            {
+                float ux = gx / fn1;
+                float uy = gy / fn1;
+                grad = Mathf.Sqrt((ux * ux) + (uy * uy));
+            }
+
+            float dist = grad > 1e-6f ? (f - axisTex) / grad : f - axisTex;
+            return (byte)Mathf.RoundToInt(Mathf.Clamp01(dist + 0.5f) * 255f);
+        }
+
+        /// <summary>
+        /// La opacidad de la textura de la forma en el píxel (<paramref name="x"/>, <paramref name="y"/>) para una superelipse de
+        /// radio <paramref name="axisTex"/> px y exponente <paramref name="n"/> (tests; la misma cuenta que la textura).
+        /// </summary>
+        internal static byte ShapePixelAlpha(int x, int y, float axisTex, float n)
+        {
+            int half = IrisTextureSize / 2;
+            float vx = Mathf.Abs((x + 0.5f) - half);
+            float vy = Mathf.Abs((y + 0.5f) - half);
+            float nx = vx / ShapeScale;
+            float ny = vy / ShapeScale;
+            return ShapeAlpha(Mathf.Pow(nx, n) + Mathf.Pow(ny, n), Mathf.Pow(nx, n - 1f), Mathf.Pow(ny, n - 1f), axisTex, n);
+        }
+
+        /// <summary>La escala (px de la textura) con que se normalizan las potencias de la forma: medio lado de la textura.</summary>
+        internal const float ShapeScale = IrisTextureSize * 0.5f;
 
         private static void PlaceBar(Image bar, float x, float y, float w, float h, Color color)
         {

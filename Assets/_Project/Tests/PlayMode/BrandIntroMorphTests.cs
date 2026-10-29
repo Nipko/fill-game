@@ -544,6 +544,149 @@ namespace AF.Tests.PlayMode
             Assert.That(inside.r != target.r || inside.g != target.g || inside.b != target.b, Is.True, "el centro enseña el icono");
         }
 
+        // Jornada 6, observación 12: la caja del SM-S938B (504 px en 540, 1170) con una máscara squircle conocida (superelipse n = 4,
+        // ejes a 497 de 504 px).
+        private static readonly float SquircleAxis = 497f / 504f;
+        private static readonly float SquircleDiag = SquircleAxis * Mathf.Sqrt(2f) * Mathf.Pow(2f, -0.25f);
+
+        private static SplashIconBox SquircleBox()
+        {
+            return new SplashIconBox(288, 918, 504, 504, 0, 0, 1080, 2340, Mathf.RoundToInt(SquircleAxis * 10000f), Mathf.RoundToInt(SquircleDiag * 10000f), 10400);
+        }
+
+        [UnityTest]
+        public IEnumerator FrameZero_CalksTheSystemSquircle_WithinOnePixel_AndOpensToTheCircle()
+        {
+            AndroidOsSplash.IconOverrideForTests = SquircleBox();
+            BrandIntro intro = NewIntro(PhoneDensity);
+            _splash!.BeginIntro(false);
+            yield return null;
+            _splash.Tick(16f);
+            intro.Seek(0f);
+            BrandIntroMorph morph = intro.Morph;
+            Assert.That(morph.Shape.Name, Is.EqualTo("squircle"));
+            Assert.That(morph.ShapeDrawn, Is.True, "el agujero del fotograma 0 es la textura de la forma");
+            Assert.That(morph.ShapeProgress, Is.EqualTo(0f));
+            Assert.That(morph.Iris.sprite!.texture, Is.SameAs(morph.ShapeTexture));
+            Assert.That(morph.ShapeTexture!.isDataSRGB, Is.True, "el petróleo exacto, como el del círculo");
+
+            // El modelo, en px de pantalla (3 px por unidad).
+            float px = morph.PxPerUnit;
+            Assert.That(2f * morph.HoleRadius(0f) * px, Is.EqualTo(497f).Within(1f), "ejes");
+            Assert.That(2f * morph.HoleRadius(Mathf.PI * 0.5f) * px, Is.EqualTo(497f).Within(1f));
+            Assert.That(2f * morph.HoleRadius(Mathf.PI * 0.25f) * px, Is.EqualTo(SquircleDiag * 504f).Within(1f), "diagonales");
+
+            // Lo pintado: la textura de la forma, estirada al cuadrado del círculo, con el borde (opacidad 0,5) a ±1 px.
+            Color32[] tex = morph.ShapeTexture.GetPixels32();
+            int n = BrandIntroMorph.IrisTextureSize;
+            int half = n / 2;
+            float screenPerTex = morph.Iris.rectTransform.sizeDelta.x * px / n;
+            float axisEdge = Edge(i => tex[(half * n) + half + i].a, i => i + 0.5f);
+            float axisEdgeLeft = Edge(i => tex[(half * n) + half - 1 - i].a, i => i + 0.5f);
+            float diagEdge = Edge(i => tex[((half + i) * n) + half + i].a, i => (i + 0.5f) * Mathf.Sqrt(2f));
+            float diagEdge2 = Edge(i => tex[((half - 1 - i) * n) + half + i].a, i => (i + 0.5f) * Mathf.Sqrt(2f));
+            Assert.That(2f * axisEdge * screenPerTex, Is.EqualTo(497f).Within(1f), "ejes, en la textura");
+            Assert.That(2f * axisEdgeLeft * screenPerTex, Is.EqualTo(497f).Within(1f));
+            Assert.That(2f * diagEdge * screenPerTex, Is.EqualTo(SquircleDiag * 504f).Within(1f), "diagonales, en la textura");
+            Assert.That(2f * diagEdge2 * screenPerTex, Is.EqualTo(SquircleDiag * 504f).Within(1f));
+
+            // La apertura: el agujero nunca encoge en ningún ángulo (cada 10 ms) y acaba en el círculo de siempre.
+            var prev = new float[37];
+            bool circle = false;
+            for (int ms = 0; ms <= BrandIntro.MorphMs; ms += 10)
+            {
+                intro.Seek(ms);
+                if (!morph.IrisVisible)
+                {
+                    break;
+                }
+
+                for (int k = 0; k <= 36; k++)
+                {
+                    float r = morph.HoleRadius(k * 2.5f * Mathf.Deg2Rad);
+                    if (ms > 0)
+                    {
+                        Assert.That(r, Is.GreaterThanOrEqualTo(prev[k] - 0.001f), ms + " ms, " + (k * 2.5f) + " grados: ningún píxel de icono pasa a petróleo");
+                    }
+
+                    prev[k] = r;
+                }
+
+                if (morph.ShapeProgress >= 1f)
+                {
+                    circle = true;
+                    Assert.That(morph.ShapeDrawn, Is.False, ms + " ms: ya el círculo de siempre");
+                    Assert.That(morph.ShapeExponent, Is.EqualTo(2f));
+                    Assert.That(morph.HoleRadius(0.3f), Is.EqualTo(morph.Diameter * 0.5f).Within(1e-3f));
+                }
+            }
+
+            Assert.That(circle, Is.True, "la forma acaba en el círculo dentro de la apertura");
+            intro.Seek(BrandIntro.MorphMs * 0.5f);
+            Assert.That(morph.ShapeProgress, Is.EqualTo(1f), "a mitad de la apertura ya es el círculo");
+
+            BrandIntroReport report = _splash.EndIntro()!;
+            Assert.That(report.MorphShape, Is.EqualTo("squircle"));
+            Assert.That(report.MorphShapeN, Is.EqualTo(4f).Within(0.02f));
+            string? line = new DevProbe().FormatBrandIntro(report);
+            StringAssert.Contains("\"morph_shape\":\"squircle\",\"morph_shape_n\":4.00,\"morph_shape_px\":[497.0,", line);
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutAMask_FrameZeroIsTheCircle_AndTheProbeSaysSo()
+        {
+            AndroidOsSplash.IconOverrideForTests = new SplashIconBox(288, 918, 504, 504, 0, 0, 1080, 2340);
+            BrandIntro intro = NewIntro(PhoneDensity);
+            _splash!.BeginIntro(false);
+            yield return null;
+            _splash.Tick(16f);
+            intro.Seek(0f);
+            Assert.That(intro.Morph.Shape.Name, Is.EqualTo("circle"));
+            Assert.That(intro.Morph.ShapeDrawn, Is.False, "la textura del círculo de siempre");
+            Assert.That(intro.Morph.ShapeTexture, Is.Null, "sin máscara no se crea la textura de la forma");
+            Assert.That(2f * intro.Morph.HoleRadius(Mathf.PI * 0.25f) * intro.Morph.PxPerUnit, Is.EqualTo(504f).Within(0.01f));
+            BrandIntroReport report = _splash.EndIntro()!;
+            string? line = new DevProbe().FormatBrandIntro(report);
+            StringAssert.Contains("\"morph_geometry\":\"measured\"", line);
+            StringAssert.Contains("\"morph_shape\":\"circle\",\"morph_shape_n\":2.00,\"morph_shape_px\":[504.0,504.0],\"morph_shape_fit_px\":0.0", line);
+        }
+
+        [UnityTest]
+        public IEnumerator ReduceMotion_KeepsTheSquircle_WhileItFades()
+        {
+            AndroidOsSplash.IconOverrideForTests = SquircleBox();
+            BrandIntro intro = NewIntro(PhoneDensity);
+            BrandIntro.FrameVisibleOverrideForTests = () => false;
+            _splash!.BeginIntro(true);
+            for (int i = 0; i < 4; i++)
+            {
+                yield return null;
+                _splash.Tick(16f);
+            }
+
+            Assert.That(intro.MorphIconAlpha, Is.EqualTo(1f));
+            Assert.That(intro.Morph.ShapeDrawn, Is.True, "con Reducir movimiento el agujero no se abre: la forma del sistema se funde");
+            Assert.That(2f * intro.Morph.HoleRadius(0f) * intro.Morph.PxPerUnit, Is.EqualTo(497f).Within(1f));
+            Assert.That(intro.Morph.Rim.gameObject.activeSelf, Is.False);
+        }
+
+        // El radio (en las unidades de radiusAt) donde la opacidad cruza 0,5 al alejarse del centro, interpolado entre dos píxeles.
+        private static float Edge(System.Func<int, byte> alphaAt, System.Func<int, float> radiusAt)
+        {
+            for (int i = 1; i < 128; i++)
+            {
+                float a0 = alphaAt(i - 1) / 255f;
+                float a1 = alphaAt(i) / 255f;
+                if (a0 < 0.5f && a1 >= 0.5f)
+                {
+                    float t = (0.5f - a0) / (a1 - a0);
+                    return Mathf.Lerp(radiusAt(i - 1), radiusAt(i), t);
+                }
+            }
+
+            return -1f;
+        }
+
         // La vista del icono en la pantalla (unidades): su lado y su centro.
         private static void AssertIconView(BrandIntro intro, float side, Vector2 centre)
         {

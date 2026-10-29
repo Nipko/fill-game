@@ -89,6 +89,34 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// Jornada 6, observación 12: el fotograma 0 con la máscara squircle de One UI (la caja de 504 px del SM-S938B, una
+        /// superelipse n = 4 con los ejes a 497 px), la forma a medias (120 ms) y la mitad de la apertura, ya en el círculo.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CaptureMorphSquircle()
+        {
+            string dir = SnapshotKit.Prepare();
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            GameScreen.SimulatedPxPerDp = 2.625f;
+            float axis = 497f / 504f;
+            float diag = axis * Mathf.Sqrt(2f) * Mathf.Pow(2f, -0.25f);
+            AndroidOsSplash.IconOverrideForTests = new SplashIconBox(288, 918, 504, 504, 0, 0, 1080, 2340, Mathf.RoundToInt(axis * 10000f), Mathf.RoundToInt(diag * 10000f), 0);
+            ArtSlots.ForceProcedural = true;
+            _host = new GameObject("BrandIntroSnapshotHost");
+            try
+            {
+                yield return Take(dir, "obs12_00_squircle", SnapshotKit.Height, 0f, false);
+                yield return Take(dir, "obs12_120ms_forma", SnapshotKit.Height, 120f, false);
+                yield return Take(dir, "obs12_50", SnapshotKit.Height, BrandIntro.MorphMs * 0.5f, false);
+            }
+            finally
+            {
+                GameScreen.SimulatedPxPerDp = null;
+                AndroidOsSplash.IconOverrideForTests = null;
+            }
+        }
+
         private IEnumerator Take(string dir, string name, int heightPx, float ms, bool loading)
         {
             _splash?.Dispose();
