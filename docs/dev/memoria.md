@@ -90,6 +90,14 @@ Está bien como está: pasar los efectos a Compressed In Memory ahorraría unos 
 | Ajustes de memoria de Unity (`MemorySettings.asset`) | por defecto | Bloques de los asignadores; su sobrante se ve en `unity_unused_mib` | Sin cambios hasta ver la sonda |
 | Swapchain (`vulkanNumSwapchainBuffers` = 3) | 3 | El `EGL mtrack` de 40 MB son ~4 superficies de 9,6 MiB | Sin cambios: con 2 el ritmo de fotogramas empeora |
 
+**Riesgos del Blit Type en `Auto` y cómo volver atrás.** Sin el búfer intermedio, Unity presenta el fotograma directamente en la superficie de Android, y eso puede notarse donde el juego no pinta cada fotograma o donde Android pone algo encima:
+- el Mapa en reposo, que pinta con `OnDemandRendering` a `perf_target_fps_menus`: con `Always` el búfer intermedio guardaba el último fotograma; sin él, un driver podría alternar fotogramas viejos (parpadeo) al quedarse quieto, al tocar o al desplazar;
+- el paso del icono a la intro con el velo de `AfSplashHold` (añadido de D-051), que se quita cuando el primer fotograma ya está en la pantalla;
+- los bordes con el Safe Area y `androidRenderOutsideSafeArea: 1`: franjas en la zona de la cámara o en los bordes;
+- además, los anuncios a pantalla completa, la pausa, Atrás y volver de segundo plano.
+
+El portátil los mira en el teléfono (guion, encargo de la jornada 6). Si alguno falla, se vuelve atrás así: `ProjectSetup.BlitType = AndroidBlitType.Always`, `pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup` (deja `androidBlitType: 0` en `ProjectSettings.asset`) y se commitea ese cambio con el del test de `MemorySettingsTests`.
+
 ## 4. Antes y después (estimado)
 
 | Partida (S938B, `dev.apk`, nivel 75) | Antes (j6) | Después (estimado) | Por qué |
@@ -138,7 +146,7 @@ Tras esta rama, el S938B seguiría en unos **650 MB de RSS y 540 MB de PSS**. La
 
 ### Pregunta para el dueño
 
-**Los 400 MB de RSS de 08 §5.4 no se alcanzan con este stack.** Un proyecto Unity vacío con IL2CPP ya ronda los 250-300 MB de RSS en Android 14+, y Tintalú suma el código de 5 SDK (≈ 90-106 MB de `Code`), el `Unknown` de ~210 MB y las superficies de la pantalla. Aun con R8, el código más pequeño y sin profundidad (−25 a −45 MB entre los tres), el S938B quedaría en ~600 MB de RSS y un teléfono de clase A en ~540-560 MB. ¿Cuál prefieres?
+**Los 400 MB de RSS de 08 §5.4 no se alcanzan con este stack.** Un proyecto Unity vacío con IL2CPP ya rondaría los 250-300 MB de RSS en Android 14+ (estimación sin fuente: no se ha medido aquí), y Tintalú suma el código de 5 SDK (≈ 90-106 MB de `Code`), el `Unknown` de ~210 MB y las superficies de la pantalla. Aun con R8, el código más pequeño y sin profundidad (−25 a −45 MB entre los tres), el S938B quedaría en ~600 MB de RSS y un teléfono de clase A en ~540-560 MB. ¿Cuál prefieres?
 
 1. **Cambiar la métrica a PSS en un teléfono de clase A:** PSS ≤ 450 MB medido con `dumpsys meminfo` (es lo que usa Android para decidir qué cerrar; el RSS cuenta páginas compartidas con otras apps). Recomendada.
 2. Mantener RSS y subir el tope a ~600 MB.
