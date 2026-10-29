@@ -135,8 +135,9 @@ namespace AF.UI
     /// nivel cuando es elegible ("Rosa puede llevarte río arriba · 300")»). [P] (nota §3, Q-S3): una franja de madera con Rosa,
     /// arriba del tablero, mientras la opción se ofrece y el intento aún no empezó (tarjeta previa, intro o tablero sin vertidos);
     /// un toque abre la confirmación. Sin saldo, en gris y con «Te faltan {n} semillas» debajo (04 §1, «Sin stock (solo
-    /// semillas)»: como los demás comodines con precio) y sin respuesta al toque. No tapa el tablero ni captura toques fuera de
-    /// su franja.
+    /// semillas)»: como los demás comodines con precio). En gris, el toque no abre nada y responde <see cref="Missing"/> (antes, un
+    /// toque mudo; observación 2 de la jornada 6 en el teléfono, 2026-10-28): late «Te faltan {n} semillas». No tapa el tablero ni
+    /// captura toques fuera de su franja.
     /// </summary>
     internal sealed class SkipBanner
     {
@@ -152,13 +153,15 @@ namespace AF.UI
         private readonly Image _rosa;
         private readonly TextMeshProUGUI _label;
         private readonly TextMeshProUGUI _missing;
+        private readonly NotePulse _pulse;
         private int _price = -1;
         private int _missingShown = -1;
+        private bool _ready = true;
 
         public SkipBanner(Transform parent, ProceduralArt art, Action onTap)
         {
             _art = art;
-            _button = UiBuilder.BareButton("SkipBanner", parent, onTap);
+            _button = UiBuilder.BareButton("SkipBanner", parent, () => OnTap(onTap));
             _root = (RectTransform)_button.transform;
             Image plate = UiBuilder.Sliced("Plate", _root, art.RoundedRect, Palette.FamilyWood.Base);
             UiBuilder.Stretch(plate.rectTransform);
@@ -171,7 +174,43 @@ namespace AF.UI
             _missing = UiBuilder.Label("Missing", _root, TextStyle.PlainBold, string.Empty, 13f, Palette.Cream, TextAlignmentOptions.MidlineLeft);
             UiBuilder.AutoSize(_missing, UiBuilder.MinTextSp, 13f);
             _missing.gameObject.SetActive(false);
+            _pulse = new NotePulse(_missing);
             _root.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Toque en la franja en gris por el saldo (observación 2 de la jornada 6): lo pone <c>GameBootstrap.Skip.cs</c>, que hace
+        /// latir «Te faltan {n} semillas» (<see cref="PulseMissing"/>) por el camino común de <c>GameScreen.OnMissingTap</c>.
+        /// </summary>
+        public Action? Missing { get; set; }
+
+        /// <summary>Latido de «Te faltan {n} semillas» (tests).</summary>
+        internal NotePulse Pulse => _pulse;
+
+        /// <summary>Semillas que faltan (0 si la franja está lista o no se ve).</summary>
+        internal int MissingSeeds => Visible && !_ready ? _missingShown : 0;
+
+        /// <summary>Late «Te faltan {n} semillas» (con Reducir movimiento, solo se atenúa). False si la franja no está en gris.</summary>
+        public bool PulseMissing(bool reduceMotion)
+        {
+            return MissingSeeds > 0 && _pulse.Start(reduceMotion);
+        }
+
+        /// <summary>Un fotograma del latido (lo llama <see cref="SkipRunner"/>).</summary>
+        public void Tick(float dtMs)
+        {
+            _pulse.Tick(dtMs);
+        }
+
+        private void OnTap(Action onTap)
+        {
+            if (!_ready)
+            {
+                Missing?.Invoke();
+                return;
+            }
+
+            onTap();
         }
 
         public bool Visible => _root.gameObject.activeSelf;
@@ -184,14 +223,15 @@ namespace AF.UI
         /// <summary>«Te faltan {n} semillas» si la franja va en gris, o null (tests).</summary>
         public string? MissingText => _missing.gameObject.activeSelf ? _missing.text : null;
 
-        /// <summary>Responde al toque (con saldo).</summary>
-        public bool Interactable => _button.interactable;
+        /// <summary>Lista (con saldo): el toque abre la confirmación. En gris, el toque solo responde con <see cref="Missing"/>.</summary>
+        public bool Interactable => _ready;
 
         /// <summary>Sprite de Rosa (null hasta el primer <see cref="Show"/>; tests).</summary>
         internal Sprite? RosaSprite => _rosa.sprite;
 
         public void Hide()
         {
+            _pulse.Stop();
             if (_root.gameObject.activeSelf)
             {
                 _root.gameObject.SetActive(false);
@@ -200,7 +240,7 @@ namespace AF.UI
 
         /// <summary>
         /// Muestra la franja con <paramref name="price"/> y, si <paramref name="missing"/> &gt; 0, en gris con «Te faltan {n}
-        /// semillas» (sin respuesta al toque). Solo compone los textos si cambian.
+        /// semillas» (el toque la hace latir). Solo compone los textos si cambian.
         /// </summary>
         public void Show(int price, int missing, float canvasW)
         {
@@ -218,19 +258,26 @@ namespace AF.UI
             bool poor = missing > 0;
             if (poor && missing != _missingShown)
             {
+                _pulse.Stop();
                 _missingShown = missing;
                 _missing.text = UiText.MissingSeeds(missing);
             }
 
+            if (!poor)
+            {
+                _pulse.Stop();
+            }
+
             _missing.gameObject.SetActive(poor);
-            UiBuilder.SetEnabled(_button, !poor);
+            _ready = !poor;
+            UiBuilder.SetEnabled(_button, true); // en gris también llega el toque (OnTap): el gris lo dan Rosa y «Te faltan»
             _rosa.color = poor ? new Color(1f, 1f, 1f, 0.5f) : Color.white;
             float width = Mathf.Min(328f, canvasW - 32f);
             UiBuilder.Place(_root, (canvasW - width) * 0.5f, TopDp, width, HeightDp);
             UiBuilder.Place(_label.rectTransform, 64f, poor ? 2f : 0f, width - 76f, poor ? 26f : HeightDp);
-            if (poor)
+            if (poor && !_pulse.Running)
             {
-                UiBuilder.Place(_missing.rectTransform, 64f, 26f, width - 76f, 20f);
+                UiBuilder.Place(_missing.rectTransform, 64f, 26f, width - 76f, 20f); // con el latido en marcha, se queda donde está
             }
             if (!_root.gameObject.activeSelf)
             {

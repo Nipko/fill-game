@@ -640,6 +640,7 @@ namespace AF.UI
             _walletBar = new WalletBar(_topLayer, art);
             _pause = new PauseMenu(_root, art, OnResume, OnPauseMap, OnPauseRestart, OnPauseQuit, OnPauseSkip);
             _pause.Audio.Toggled = OnPauseAudio; // D-046, punto 2: Música y Sonido junto a la X
+            _pause.SkipMissing = () => OnMissingTap("pause_skip", reduce => _pause.PulseSkipMissing(reduce), _pause.SkipMissingSeeds);
             _confirm = new QuitConfirm(_root, art, OnConfirm, OnConfirmCancel, OnConfirmUndo);
             _banner = new Toast("RiverLowered", _root, art, 18f);
             _toast = new Toast("Toast", _noticeLayer, art, 15f);
@@ -967,6 +968,7 @@ namespace AF.UI
             _stuck.Tick(dtMs); // el latido de «Te faltan {n} semillas» del rescate en gris
             _giveUp.Tick(dtMs);
             _noCanoes.Tick(dtMs);
+            _pause.Tick(dtMs); // el Salto del Boto en gris de la pausa (observación 2 de la jornada 6)
             HintTick(dtMs);
             ShuffleTick(dtMs);
             StopTick(dtMs);
@@ -1620,12 +1622,12 @@ namespace AF.UI
         /// <summary>
         /// Toque en un botón en gris por falta de semillas que antes no hacía nada (observación 6 de la jornada 5 en el teléfono; guion
         /// 8.2: «no un toque mudo como el 23»): «Continuar: +1 cuia» en Aguas estancadas y en ¿Seguro?, «+3 Deshacer · 30 semillas»,
-        /// el Salto del Boto y «Llenar canoas». Responde como un comodín sin saldo, sin cobrar nada, sin háptico ni analítica (como la
+        /// el Salto del Boto (en el modal, en la pausa y en el banner de la entrada: observación 2 de la jornada 6) y «Llenar canoas». Responde como un comodín sin saldo, sin cobrar nada, sin háptico ni analítica (como la
         /// Pista y la Luciérnaga, D-022): <paramref name="pulse"/> hace latir su «Te faltan {n} semillas» (o, sin esa línea, su
         /// etiqueta con el precio; con Reducir movimiento, solo se atenúa). Si además la tienda no vende, el aviso de la tienda
         /// (<see cref="RespondToMissing"/>).
         /// </summary>
-        private void OnMissingTap(string option, Func<bool, bool> pulse, int missing)
+        internal void OnMissingTap(string option, Func<bool, bool> pulse, int missing)
         {
             LevelFlow? flow = _flow;
             if (flow == null || !flow.HasLevel)

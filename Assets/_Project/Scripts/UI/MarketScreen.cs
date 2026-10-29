@@ -46,8 +46,16 @@ namespace AF.UI
         /// <summary>Alto mínimo de una pestaña (dp): el área táctil de 07 §7.8.</summary>
         public const float TabDp = 48f;
 
-        /// <summary>Margen interior de cada lado de la etiqueta de una pestaña (dp) [P].</summary>
-        public const float TabPadDp = 3f;
+        /// <summary>
+        /// Hueco mínimo entre las etiquetas de dos pestañas vecinas (dp) [P] (observación 5 de la jornada 6 en el teléfono, 2026-10-28:
+        /// al 130 % en es-419, «Semillas» y «Comodines» casi se tocaban con el margen de 3 dp de antes). Lo garantiza
+        /// <see cref="TabPadDp"/> a cada lado de cada etiqueta: el texto nunca sale de su caja (se encoge con el autoajuste o va en
+        /// más líneas), así que entre dos pestañas quedan al menos dos márgenes.
+        /// </summary>
+        public const float TabGapDp = 12f;
+
+        /// <summary>Margen interior de cada lado de la etiqueta de una pestaña (dp): la mitad de <see cref="TabGapDp"/>.</summary>
+        public const float TabPadDp = TabGapDp * 0.5f;
 
         private readonly ProceduralArt _art;
         private readonly OverlayCanvas _canvas;
@@ -184,6 +192,9 @@ namespace AF.UI
 
         /// <summary>Se vio la pestaña <paramref name="tab"/> (las vacías no salen).</summary>
         public bool TabShown(MarketTab tab) => _tabs[(int)tab].gameObject.activeSelf;
+
+        /// <summary>Etiqueta de la pestaña <paramref name="tab"/> (tests del hueco entre pestañas).</summary>
+        internal TextMeshProUGUI TabLabel(MarketTab tab) => _tabLabels[(int)tab];
 
         /// <summary>La versión de las notas de compra con la que se rehízo por última vez (el arranque lo rehace si cambian; F3-5).</summary>
         public int NotesShown { get; private set; } = -1;

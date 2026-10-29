@@ -19,6 +19,7 @@ namespace AF.UI
             if (_boot != null)
             {
                 _boot.TickSkipBanner();
+                _boot.SkipBannerView?.Tick(Time.unscaledDeltaTime * 1000f); // el latido de «Te faltan» en gris
             }
         }
     }
