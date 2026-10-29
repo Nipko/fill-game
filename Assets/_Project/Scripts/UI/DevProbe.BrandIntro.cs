@@ -45,6 +45,10 @@ namespace AF.UI
     /// <c>guide</c>, la de la guía de Android), <c>morph_start_diam_px</c> y <c>morph_start_xy_px</c> (el diámetro y el centro
     /// [x, y] del círculo del primer fotograma en px de pantalla, desde arriba a la izquierda: se comparan con
     /// <c>os_splash_icon_px</c> y <c>os_splash_icon_xy</c> de <c>boot_steps</c>).</item>
+    /// <item>Jornada 6, observación 12 (2026-10-29): <c>morph_shape</c> (<c>squircle</c>, el agujero del primer fotograma calca la
+    /// máscara del sistema, en One UI su cuadrado redondeado; <c>circle</c>, sin máscara), <c>morph_shape_n</c> (el exponente de
+    /// la superelipse; 2,00 el círculo), <c>morph_shape_px</c> ([ejes, diagonales]: los diámetros del agujero en px de pantalla) y
+    /// <c>morph_shape_fit_px</c> (lo que se separa la superelipse de la máscara a 22,5 grados, px de radio).</item>
     /// </list>
     /// </summary>
     public sealed partial class DevProbe
@@ -100,6 +104,11 @@ namespace AF.UI
             sb.Append(",\"morph_start_diam_px\":").Append(report.MorphStartDiamPx.ToString("0.0", CultureInfo.InvariantCulture));
             sb.Append(",\"morph_start_xy_px\":[").Append(report.MorphStartCenterPx.x.ToString("0.0", CultureInfo.InvariantCulture));
             sb.Append(',').Append(report.MorphStartCenterPx.y.ToString("0.0", CultureInfo.InvariantCulture)).Append(']');
+            sb.Append(",\"morph_shape\":\"").Append(report.MorphShape).Append('"');
+            sb.Append(",\"morph_shape_n\":").Append(report.MorphShapeN.ToString("0.00", CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_shape_px\":[").Append(report.MorphShapePx.x.ToString("0.0", CultureInfo.InvariantCulture));
+            sb.Append(',').Append(report.MorphShapePx.y.ToString("0.0", CultureInfo.InvariantCulture)).Append(']');
+            sb.Append(",\"morph_shape_fit_px\":").Append(report.MorphShapeFitPx.ToString("0.0", CultureInfo.InvariantCulture));
             sb.Append(",\"loading_ms\":").Append(report.LoadingMs.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"wait_capped\":").Append(report.WaitCapped ? "true" : "false");
             sb.Append('}');

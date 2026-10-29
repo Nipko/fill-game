@@ -110,6 +110,28 @@ namespace AF.UI
         /// </summary>
         public string MorphGeometry { get; internal set; } = "guide";
 
+        /// <summary>
+        /// Jornada 6, observación 12: la forma del agujero del primer fotograma (<c>morph_shape</c>): <c>squircle</c> (la superelipse
+        /// que calca la máscara del sistema, en One UI su cuadrado redondeado) o <c>circle</c> (sin máscara: el Editor, Android 8-11,
+        /// el velo propio o una máscara ilegible; o una máscara redonda).
+        /// </summary>
+        public string MorphShape { get; internal set; } = "circle";
+
+        /// <summary>Exponente de esa superelipse (<c>morph_shape_n</c>; 2 el círculo).</summary>
+        public float MorphShapeN { get; internal set; } = 2f;
+
+        /// <summary>
+        /// Diámetros de ese agujero en px de pantalla en los ejes y en las diagonales (<c>morph_shape_px</c>): se comparan con la
+        /// forma del último fotograma del sistema en la ráfaga. Con el círculo, los dos son <see cref="MorphStartDiamPx"/>.
+        /// </summary>
+        public Vector2 MorphShapePx { get; internal set; } = new Vector2(-1f, -1f);
+
+        /// <summary>
+        /// Lo que se separa la superelipse de la máscara medida a 22,5 grados, en px de radio (<c>morph_shape_fit_px</c>; positivo,
+        /// la superelipse por fuera); 0 sin máscara.
+        /// </summary>
+        public float MorphShapeFitPx { get; internal set; }
+
         /// <summary>Fotogramas pintados mientras el icono se abría (<c>morph_frames</c>).</summary>
         public int MorphFrames { get; internal set; }
 
@@ -716,6 +738,12 @@ namespace AF.UI
                 MorphStartDiamPx = _morphStartDiamPx,
                 MorphStartCenterPx = _morphStartCenterPx,
                 MorphGeometry = _morph.Measured ? "measured" : "guide",
+                MorphShape = _morph.Shape.Name,
+                MorphShapeN = _morph.Shape.Exponent,
+                MorphShapePx = new Vector2(_morphStartDiamPx * _morph.Shape.Axis, _morphStartDiamPx * _morph.Shape.Diag),
+                MorphShapeFitPx = _morph.Shape.FromMask && _morph.Shape.Mid > 0f
+                    ? (IconMaskShape.Radius(_morph.Shape.Axis, _morph.Shape.Exponent, Mathf.PI / 8f) - _morph.Shape.Mid) * _morphStartDiamPx * 0.5f
+                    : 0f,
                 MorphFrames = _seeked ? 0 : _morphFrames,
                 MorphMode = _reduceMotion ? "fade" : (_playing && !_seeked ? "open" : "none"),
                 MorphUnitsPerDp = _morph.UnitsPerDp,

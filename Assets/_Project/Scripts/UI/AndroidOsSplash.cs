@@ -151,16 +151,30 @@ namespace AF.UI
     /// <summary>
     /// La caja del icono de la pantalla del sistema en la pantalla (px de pantalla, desde arriba a la izquierda;
     /// <see cref="AndroidOsSplash.ReadIcon"/>, <c>AfSplashHold.iconBox()</c>): la del círculo visible y la de la DecorView, el marco
-    /// con que se pasa al lienzo. Sin medida, todo 0 (<see cref="Measured"/> false).
+    /// con que se pasa al lienzo. Sin medida, todo 0 (<see cref="Measured"/> false). Con la pantalla del sistema, también la forma de
+    /// su máscara (jornada 6, observación 12): los radios a 0, 45 y 22,5 grados en diezmilésimas de medio lado
+    /// (<see cref="MaskAxis"/>, <see cref="MaskDiag"/>, <see cref="MaskMid"/>; 0 sin máscara: el círculo).
     /// </summary>
     public readonly struct SplashIconBox
     {
         /// <summary>Sin medida.</summary>
         public static readonly SplashIconBox None = default;
 
-        /// <summary>Crea la caja.</summary>
+        /// <summary>Cuántos enteros da Java (<c>AfSplashHold.BOX_LENGTH</c>): la caja, el marco y los tres radios de la máscara.</summary>
+        public const int ArrayLength = 11;
+
+        /// <summary>Crea la caja, sin la forma de la máscara (el círculo).</summary>
         public SplashIconBox(int left, int top, int width, int height, int refLeft, int refTop, int refWidth, int refHeight)
+            : this(left, top, width, height, refLeft, refTop, refWidth, refHeight, 0, 0, 0)
         {
+        }
+
+        /// <summary>Crea la caja con la forma de la máscara (radios a 0, 45 y 22,5 grados en diezmilésimas de medio lado).</summary>
+        public SplashIconBox(int left, int top, int width, int height, int refLeft, int refTop, int refWidth, int refHeight, int maskAxis, int maskDiag, int maskMid)
+        {
+            MaskAxis = maskAxis;
+            MaskDiag = maskDiag;
+            MaskMid = maskMid;
             Left = left;
             Top = top;
             Width = width;
@@ -195,6 +209,15 @@ namespace AF.UI
         /// <summary>Alto de la DecorView (px): el alto del lienzo.</summary>
         public int RefHeight { get; }
 
+        /// <summary>Radio de la máscara en los ejes (diezmilésimas de medio lado; 0 sin máscara).</summary>
+        public int MaskAxis { get; }
+
+        /// <summary>Radio de la máscara en las diagonales, a 45 grados (diezmilésimas de medio lado; 0 sin máscara).</summary>
+        public int MaskDiag { get; }
+
+        /// <summary>Radio de la máscara a 22,5 grados (diezmilésimas de medio lado; 0 sin máscara): solo para la sonda del ajuste.</summary>
+        public int MaskMid { get; }
+
         /// <summary>Hay medida: las dos cajas tienen tamaño.</summary>
         public bool Measured => Width > 0 && Height > 0 && RefWidth > 0 && RefHeight > 0;
 
@@ -222,7 +245,8 @@ namespace AF.UI
 
             return Far(Left, other.Left, tolerancePx) || Far(Top, other.Top, tolerancePx) || Far(Width, other.Width, tolerancePx)
                 || Far(Height, other.Height, tolerancePx) || Far(RefLeft, other.RefLeft, tolerancePx) || Far(RefTop, other.RefTop, tolerancePx)
-                || Far(RefWidth, other.RefWidth, tolerancePx) || Far(RefHeight, other.RefHeight, tolerancePx);
+                || Far(RefWidth, other.RefWidth, tolerancePx) || Far(RefHeight, other.RefHeight, tolerancePx)
+                || MaskAxis != other.MaskAxis || MaskDiag != other.MaskDiag || MaskMid != other.MaskMid;
         }
 
         private static bool Far(int a, int b, int tolerance)
@@ -230,7 +254,10 @@ namespace AF.UI
             return Math.Abs(a - b) > tolerance;
         }
 
-        /// <summary>La caja desde el arreglo de Java (8 enteros); sin medida si no cuadra.</summary>
+        /// <summary>
+        /// La caja desde el arreglo de Java (<see cref="ArrayLength"/> enteros; con 8, sin la forma de la máscara); sin medida si no
+        /// cuadra.
+        /// </summary>
         public static SplashIconBox FromArray(int[]? box)
         {
             if (box == null || box.Length < 8)
@@ -238,7 +265,12 @@ namespace AF.UI
                 return None;
             }
 
-            return new SplashIconBox(box[0], box[1], box[2], box[3], box[4], box[5], box[6], box[7]);
+            if (box.Length < ArrayLength)
+            {
+                return new SplashIconBox(box[0], box[1], box[2], box[3], box[4], box[5], box[6], box[7]);
+            }
+
+            return new SplashIconBox(box[0], box[1], box[2], box[3], box[4], box[5], box[6], box[7], box[8], box[9], box[10]);
         }
     }
 

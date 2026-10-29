@@ -4,6 +4,10 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Application;
 import android.content.res.TypedArray;
+import android.graphics.Path;
+import android.graphics.Region;
+import android.graphics.drawable.AdaptiveIconDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -51,6 +55,13 @@ import android.window.SplashScreenView;
  * se pinta a 108/72 = 1,5 veces la vista, recortado en ella (240 dp en un circulo de 160 dp en la guia). Con el velo propio, la
  * caja conocida de {@code af_launch_window}: un circulo de {@link #OWN_MASK_DP} dp centrado en la DecorView. Si se mide el del
  * sistema, el velo propio de debajo se escala a esa caja, por si llegara a verse un fotograma.</li>
+ * <li><b>La forma de la mascara</b> (observacion 12 de la jornada 6, 2026-10-29: One UI recorta el icono de su pantalla con su
+ * cuadrado redondeado, no con un circulo): con la caja del sistema, {@link #iconBox()} da tambien tres radios de la mascara de
+ * iconos del sistema ({@code AdaptiveIconDrawable.getIconMask()}, la misma {@code config_icon_mask} con que Android recorta el
+ * icono de su pantalla de arranque), medidos desde el centro a 0, 45 y 22,5 grados (la media de las direcciones simetricas) en
+ * diezmilesimas de medio lado de la caja. La intro dibuja con ellos su primer fotograma (una superelipse con el radio de los ejes
+ * y el de las diagonales) y la abre al circulo. Sin mascara legible, 0: el circulo de siempre. Con el velo propio, 0 (el anillo de
+ * {@code af_launch_window} es un circulo).</li>
  * </ul>
  * Solo la primera actividad del proceso, y solo si es la de Unity (el arranque en frio); nada de red, disco, registros ni
  * identificadores.
@@ -86,10 +97,21 @@ public final class AfSplashHold {
     /** El circulo de {@code af_launch_window} (dp): el que da {@link #iconBox()} con el velo propio. */
     public static final int OWN_MASK_DP = 160;
 
-    /** {@link #iconBox()}: cuantos enteros da (izquierda, arriba, ancho y alto del icono; lo mismo de la DecorView). */
-    public static final int BOX_LENGTH = 8;
+    /**
+     * {@link #iconBox()}: cuantos enteros da (izquierda, arriba, ancho y alto del icono; lo mismo de la DecorView; y los radios de la
+     * mascara a 0, 45 y 22,5 grados, en diezmilesimas de medio lado).
+     */
+    public static final int BOX_LENGTH = 11;
+
+    /** Lado (px) del cuadro en que se mide la mascara de iconos del sistema: 0,05 % de precision. */
+    static final int MASK_SAMPLE = 2000;
 
     private static final int[] NO_BOX = new int[BOX_LENGTH];
+
+    private static final int[] NO_MASK = new int[3];
+
+    // La mascara de iconos del sistema no cambia en el proceso: se mide una vez.
+    private static int[] mask;
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
@@ -229,7 +251,8 @@ public final class AfSplashHold {
     /**
      * La caja del icono en la pantalla (px), una copia: {izquierda, arriba, ancho, alto} de la vista del icono de la pantalla del
      * sistema (Android 12+, {@code SplashScreenView.getIconView()}, el circulo visible) o del circulo de {@code af_launch_window}
-     * (el velo propio), y {izquierda, arriba, ancho, alto} de la DecorView, el marco con que se pasa al lienzo de Unity. Todo 0
+     * (el velo propio), {izquierda, arriba, ancho, alto} de la DecorView, el marco con que se pasa al lienzo de Unity, y los radios
+     * de la mascara del sistema a 0, 45 y 22,5 grados ({@link #systemMask()}; 0 con el velo propio o sin mascara legible). Todo 0
      * si aun no se midio (sin velo o sin layout). La lee AF.UI.AndroidOsSplash.ReadIcon.
      */
     public static int[] iconBox() {
@@ -349,7 +372,8 @@ public final class AfSplashHold {
         root.getLocationOnScreen(ref);
         int w = Math.round(icon.getWidth() * Math.abs(icon.getScaleX()));
         int h = Math.round(icon.getHeight() * Math.abs(icon.getScaleY()));
-        publish(new int[] {at[0], at[1], w, h, ref[0], ref[1], root.getWidth(), root.getHeight()});
+        int[] m = systemMask();
+        publish(new int[] {at[0], at[1], w, h, ref[0], ref[1], root.getWidth(), root.getHeight(), m[0], m[1], m[2]});
         matchOwnVeil(at[0] + (w * 0.5f), at[1] + (h * 0.5f), Math.min(w, h));
     }
 
@@ -365,7 +389,66 @@ public final class AfSplashHold {
         int d = Math.round(OWN_MASK_DP * own.getResources().getDisplayMetrics().density);
         int cx = ref[0] + (root.getWidth() / 2);
         int cy = ref[1] + (root.getHeight() / 2);
-        publish(new int[] {cx - (d / 2), cy - (d / 2), d, d, ref[0], ref[1], root.getWidth(), root.getHeight()});
+        publish(new int[] {cx - (d / 2), cy - (d / 2), d, d, ref[0], ref[1], root.getWidth(), root.getHeight(), 0, 0, 0});
+    }
+
+    /**
+     * Los radios de la mascara de iconos del sistema (hilo principal; una vez por proceso): {0, 45, 22,5 grados} en diezmilesimas de
+     * medio lado; todo 0 si no se puede leer. Es la mascara con que Android recorta el icono adaptativo de su pantalla de arranque
+     * ({@code config_icon_mask}): en One UI, su cuadrado redondeado.
+     */
+    static int[] systemMask() {
+        if (mask != null) {
+            return mask;
+        }
+
+        int[] shape = NO_MASK;
+        try {
+            AdaptiveIconDrawable icon = new AdaptiveIconDrawable(new ColorDrawable(0), new ColorDrawable(0));
+            icon.setBounds(0, 0, MASK_SAMPLE, MASK_SAMPLE);
+            Path path = icon.getIconMask();
+            if (path != null && !path.isEmpty()) {
+                Region region = new Region();
+                if (region.setPath(path, new Region(0, 0, MASK_SAMPLE, MASK_SAMPLE))) {
+                    shape = new int[] {reach(region, 0.0), reach(region, 45.0), reach(region, 22.5)};
+                }
+            }
+        } catch (RuntimeException e) {
+            shape = NO_MASK; // sin mascara legible: el circulo de siempre
+        }
+
+        mask = shape;
+        return shape;
+    }
+
+    // El radio de la mascara desde el centro a deg grados (la media de las 8 direcciones simetricas), en diezmilesimas de medio
+    // lado; 0 si alguna no sale del centro. Biseccion: la mascara es estrellada desde el centro.
+    private static int reach(Region region, double deg) {
+        double half = MASK_SAMPLE * 0.5;
+        double sum = 0.0;
+        for (int k = 0; k < 8; k++) {
+            double a = Math.toRadians(((k / 2) * 90.0) + ((k % 2) == 0 ? deg : -deg));
+            double dx = Math.cos(a);
+            double dy = Math.sin(a);
+            if (!region.contains((int) Math.floor(half), (int) Math.floor(half))) {
+                return 0;
+            }
+
+            double in = 0.0;
+            double out = half * 1.5;
+            for (int i = 0; i < 16; i++) {
+                double r = (in + out) * 0.5;
+                if (region.contains((int) Math.floor(half + (r * dx)), (int) Math.floor(half + (r * dy)))) {
+                    in = r;
+                } else {
+                    out = r;
+                }
+            }
+
+            sum += (in + out) * 0.5;
+        }
+
+        return (int) Math.round((sum / 8.0) / half * 10000.0);
     }
 
     // El velo propio de debajo, a la caja del sistema (centro y diametro en px); solo si crece: encogido dejaria ver sus bordes.
