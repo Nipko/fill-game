@@ -89,8 +89,26 @@ namespace AF.UI
         /// </summary>
         public long MorphMs { get; internal set; } = -1;
 
-        /// <summary>Diámetro del círculo del icono en el primer fotograma de la intro (dp de Android; <c>morph_start_diam_dp</c>): 160.</summary>
+        /// <summary>
+        /// Diámetro del círculo del icono en el primer fotograma de la intro (dp de Android; <c>morph_start_diam_dp</c>): 160 con la
+        /// caja de la guía; con la caja medida, la del sistema (~185 en el SM-S938B).
+        /// </summary>
         public float MorphStartDiamDp { get; internal set; } = -1f;
+
+        /// <summary>
+        /// Jornada 6, observación 11: diámetro del círculo del primer fotograma de la intro en px de pantalla
+        /// (<c>morph_start_diam_px</c>); se compara con <c>os_splash_icon_px</c> de <c>boot_steps</c>. -1 si no hubo primer fotograma.
+        /// </summary>
+        public float MorphStartDiamPx { get; internal set; } = -1f;
+
+        /// <summary>Centro de ese círculo en px de pantalla, desde arriba a la izquierda (<c>morph_start_xy_px</c>).</summary>
+        public Vector2 MorphStartCenterPx { get; internal set; } = new Vector2(-1f, -1f);
+
+        /// <summary>
+        /// De dónde salió la caja del primer fotograma (<c>morph_geometry</c>): <c>measured</c> (la que midió Java: la vista del
+        /// icono del sistema o el círculo de <c>af_launch_window</c>) o <c>guide</c> (240/160 dp centrados: el Editor o sin medida).
+        /// </summary>
+        public string MorphGeometry { get; internal set; } = "guide";
 
         /// <summary>Fotogramas pintados mientras el icono se abría (<c>morph_frames</c>).</summary>
         public int MorphFrames { get; internal set; }
@@ -234,6 +252,15 @@ namespace AF.UI
         public const int VisibleWaitCapMs = 1200;
 
         /// <summary>
+        /// Jornada 6, observación 11: cada cuántos fotogramas se mira, mientras se espera a ver el fotograma 0, si cambió la caja del
+        /// icono que mide Java (una llamada JNI; la caja solo se copia si cambió) [P].
+        /// </summary>
+        public const int IconPollFrames = 3;
+
+        /// <summary>Cuántas veces como mucho se rehace el fotograma 0 por una caja nueva del icono [P].</summary>
+        public const int MaxIconRelayouts = 2;
+
+        /// <summary>
         /// El <see cref="Tick"/> en que se pide la lectura a la GPU (y desde el que se mira si ya volvió): el segundo. El primero va
         /// en el mismo fotograma en que se crea la intro, que aún no se ha enviado a la GPU; una lectura pedida entonces se encolaría
         /// antes de los dibujos de la intro y solo probaría que acabó el fotograma anterior.
@@ -290,6 +317,11 @@ namespace AF.UI
         private double _morphDoneAt = -1.0;
         private int _morphFrames;
         private float _morphStartDiamDp = -1f;
+        private float _morphStartDiamPx = -1f;
+        private Vector2 _morphStartCenterPx = new Vector2(-1f, -1f);
+        private BrandEmblemArt _art;
+        private int _fenceNotBefore;
+        private int _iconRelayouts;
 
         // Tiempos entre fotogramas que se guardan mientras se mueve (unos 3 s a 120 Hz caben).
         private const int MotionDeltaCapacity = 512;
@@ -339,6 +371,9 @@ namespace AF.UI
             _scene = (RectTransform)sceneGo.transform;
             _images = BrandEmblemImages.Create(_scene, halo);
             _morph = new BrandIntroMorph(_root, _scene, _images.Impact, _images.Stream, _images.Cuia);
+            _background.sprite = _morph.PetroleumSprite; // el petróleo exacto, de la textura (jornada 6, observación 11)
+            _background.color = Color.white;
+            _art = art;
             Image stream = _images.Stream;
             stream.type = Image.Type.Filled;
             stream.fillMethod = Image.FillMethod.Vertical;
@@ -566,10 +601,24 @@ namespace AF.UI
             if (_firstFrameAt < 0.0)
             {
                 _firstFrameAt = now; // su primer fotograma: desde aquí se espera a verlo en la pantalla
-                _morphStartDiamDp = MorphDiameterDp; // el círculo del icono con que empieza
+                NoteMorphStart();
+            }
+            else if (_visibleAt < 0.0 && !_playing && _iconRelayouts < MaxIconRelayouts && _frames % IconPollFrames == 0
+                && AndroidOsSplash.ReadIcon().DiffersFrom(_morph.Box, 1))
+            {
+                // La caja del icono cambió después del primer fotograma: en Android 12+ el velo propio publica primero la suya (160 dp)
+                // y la del sistema llega al colocarse su vista. Se rehace el fotograma 0 con la nueva y se vuelve a esperar a verlo en
+                // la pantalla, para que el velo no se suelte sobre el anterior.
+                _iconRelayouts++;
+                Layout(_art);
+                NoteMorphStart();
+                _firstFrameAt = now;
+                _fenceAtTick = -1;
+                _fenceArmed = false;
+                _fenceNotBefore = _frames + 1;
             }
 
-            if (_fenceAtTick < 0 && _frames >= FenceTick)
+            if (_fenceAtTick < 0 && _frames >= FenceTick && _frames >= _fenceNotBefore)
             {
                 ArmFence(now); // el primer fotograma ya está enviado a la GPU: la lectura va detrás de sus dibujos
             }
@@ -626,8 +675,9 @@ namespace AF.UI
         /// <summary>Rehace la composición con la escena <paramref name="art"/> (otra pantalla: la pantalla de arranque la rehízo).</summary>
         internal void Layout(BrandEmblemArt art)
         {
+            _art = art;
             _images.Place(art);
-            _morph.Layout(art, UnitsPerDp(art));
+            _morph.Layout(art, UnitsPerDp(art), AndroidOsSplash.ReadIcon(), ScreenPxPerUnit(art));
             Apply(_clockMs);
             if (_reduceMotion && _begun)
             {
@@ -663,6 +713,9 @@ namespace AF.UI
                 MotionPauses = _motionPauses,
                 MorphMs = _morphDoneAt < 0.0 || _seeked ? -1L : (long)((_morphDoneAt - _playAt) * 1000.0),
                 MorphStartDiamDp = _morphStartDiamDp,
+                MorphStartDiamPx = _morphStartDiamPx,
+                MorphStartCenterPx = _morphStartCenterPx,
+                MorphGeometry = _morph.Measured ? "measured" : "guide",
                 MorphFrames = _seeked ? 0 : _morphFrames,
                 MorphMode = _reduceMotion ? "fade" : (_playing && !_seeked ? "open" : "none"),
                 MorphUnitsPerDp = _morph.UnitsPerDp,
@@ -803,6 +856,26 @@ namespace AF.UI
             {
                 _morphDoneAt = now;
             }
+        }
+
+        // El círculo con que empieza (sondas morph_start_*).
+        private void NoteMorphStart()
+        {
+            _morphStartDiamDp = MorphDiameterDp;
+            _morphStartDiamPx = _morph.StartDiameterPx;
+            _morphStartCenterPx = _morph.StartCenterPx;
+        }
+
+        // Px de pantalla por unidad del lienzo (1 si no se sabe).
+        private static float ScreenPxPerUnit(BrandEmblemArt art)
+        {
+            if (art.Width <= 0f)
+            {
+                return 1f;
+            }
+
+            GameScreen.ReadScreen(out int sw, out _, out _);
+            return sw / art.Width;
         }
 
         // Unidades del lienzo por dp de Android: la densidad del teléfono entre la escala del lienzo (1 si no se sabe: el Editor).

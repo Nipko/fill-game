@@ -24,6 +24,13 @@ namespace AF.UI
     /// <see cref="IconCanvasDp"/> dp, centrados en la pantalla: la caja de la pantalla del sistema de Android 12+ y la de
     /// <c>af_launch_window</c> (Android 8-11 y el velo nativo del arranque).</item>
     /// <item><b>El aro de luz</b>: un borde fino y suave en el círculo que se abre; invisible en el fotograma 0 y al final.</item>
+    /// <item><b>La caja medida</b> (jornada 6, observación 11, 2026-10-29): si Java midió la vista del icono de la pantalla del
+    /// sistema (<see cref="AndroidOsSplash.ReadIcon"/>), el fotograma 0 usa esos píxeles (su centro y su diámetro, pasados al lienzo
+    /// con el marco de la DecorView) en lugar de la caja de la guía: Samsung pinta el icono a ~185 dp, no a 160.</item>
+    /// <item><b>El petróleo exacto</b> (la misma observación): todo el petróleo de la intro sale de una textura sRGB con el color
+    /// horneado (<see cref="PetroleumSprite"/>, y el del círculo en su propia textura), con el color de vértice blanco. En el
+    /// espacio de color lineal el lienzo pasa el color de vértice a lineal y lo guarda en 8 bits, y el #14444A (20,68,74) salía
+    /// (22,69,73); la textura se decodifica en la GPU sin ese redondeo.</item>
     /// </list>
     /// </summary>
     internal sealed class BrandIntroMorph
@@ -76,6 +83,8 @@ namespace AF.UI
         private readonly Sprite _irisSprite;
         private readonly Texture2D _rimTexture;
         private readonly Sprite _rimSprite;
+        private readonly Texture2D _petroleumTexture;
+        private readonly Sprite _petroleumSprite;
 
         private float _w;
         private float _h;
@@ -88,6 +97,8 @@ namespace AF.UI
         private Rect _iconScene;
         private Rect _iconFrame0;
         private bool _iconOnTop;
+        private float _pxPerUnit = 1f;
+        private Vector2 _pxOrigin;
 
         /// <summary>
         /// Crea las piezas dentro de <paramref name="root"/>, encima de <paramref name="back"/> (el fondo de la escena, ya creado):
@@ -98,7 +109,10 @@ namespace AF.UI
         {
             var clock = System.Diagnostics.Stopwatch.StartNew();
             _back = back;
-            _cover = UiBuilder.Image("MorphCover", root, null, BrandIntro.Petroleum);
+            _petroleumTexture = SolidTexture("AF_MorphPetroleum", BrandIntro.Petroleum);
+            _petroleumSprite = Sprite.Create(_petroleumTexture, new Rect(0f, 0f, SolidTextureSize, SolidTextureSize), new Vector2(0.5f, 0.5f), 100f);
+            _petroleumSprite.name = "AF_MorphPetroleum";
+            _cover = UiBuilder.Image("MorphCover", root, _petroleumSprite, Color.white);
             UiBuilder.Stretch(_cover.rectTransform);
 
             var topGo = new GameObject("Cuia", typeof(RectTransform));
@@ -120,10 +134,10 @@ namespace AF.UI
             var pixels = new Color32[IrisTextureSize * IrisTextureSize]; // un solo arreglo para las dos texturas
             _irisTexture = RingTexture("AF_MorphIris", false, pixels);
             _irisSprite = Sprite.Create(_irisTexture, new Rect(0f, 0f, IrisTextureSize, IrisTextureSize), new Vector2(0.5f, 0.5f), 100f);
-            _iris = UiBuilder.Image("MorphIris", root, _irisSprite, BrandIntro.Petroleum);
+            _iris = UiBuilder.Image("MorphIris", root, _irisSprite, Color.white);
             for (int i = 0; i < _bars.Length; i++)
             {
-                _bars[i] = UiBuilder.Image("MorphBar" + i, root, null, BrandIntro.Petroleum);
+                _bars[i] = UiBuilder.Image("MorphBar" + i, root, _petroleumSprite, Color.white);
             }
 
             _rimTexture = RingTexture("AF_MorphRim", true, pixels);
@@ -131,6 +145,24 @@ namespace AF.UI
             _rim = UiBuilder.Image("MorphRim", root, _rimSprite, new Color(RimColor.r, RimColor.g, RimColor.b, 0f));
             BuildMs = clock.ElapsedMilliseconds;
         }
+
+        /// <summary>
+        /// Un petróleo liso exacto (#14444A en una textura sRGB, con el color de vértice blanco): el de la intro entera (su fondo, la
+        /// capa que tapa la escena y las bandas del círculo). Ver la nota de la clase.
+        /// </summary>
+        public Sprite PetroleumSprite => _petroleumSprite;
+
+        /// <summary>La caja del icono con que se montó el fotograma 0 (<see cref="SplashIconBox.None"/> si no había medida).</summary>
+        public SplashIconBox Box { get; private set; }
+
+        /// <summary>El fotograma 0 usa la caja medida del icono de la pantalla del sistema (no la de la guía).</summary>
+        public bool Measured { get; private set; }
+
+        /// <summary>Diámetro del círculo en el fotograma 0, en px de pantalla (sonda <c>morph_start_diam_px</c>).</summary>
+        public float StartDiameterPx => _d0 * _pxPerUnit;
+
+        /// <summary>Centro del círculo en el fotograma 0, en px de pantalla desde arriba (sonda <c>morph_start_xy_px</c>).</summary>
+        public Vector2 StartCenterPx => (_center * _pxPerUnit) + _pxOrigin;
 
         /// <summary>Lo que costó crear las piezas, con la vista del icono decodificada (ms; sonda <c>morph_build_ms</c>).</summary>
         public long BuildMs { get; }
@@ -144,13 +176,13 @@ namespace AF.UI
         /// <summary>Diámetro del círculo ahora (unidades del lienzo).</summary>
         public float Diameter { get; private set; }
 
-        /// <summary>Diámetro del círculo en el fotograma 0 (unidades del lienzo): <see cref="IconMaskDp"/> dp.</summary>
+        /// <summary>Diámetro del círculo en el fotograma 0 (unidades del lienzo): el medido o, sin medida, <see cref="IconMaskDp"/> dp.</summary>
         public float StartDiameter => _d0;
 
         /// <summary>Diámetro con el que el círculo ya cubre toda la pantalla (unidades del lienzo).</summary>
         public float FullDiameter => _dFull;
 
-        /// <summary>Centro del círculo (unidades del lienzo, y desde arriba): el centro de la pantalla.</summary>
+        /// <summary>Centro del círculo (unidades del lienzo, y desde arriba): el de la caja medida o, sin ella, el de la pantalla.</summary>
         public Vector2 Center => _center;
 
         /// <summary>El círculo (y su petróleo alrededor) está a la vista: aún no cubre la pantalla.</summary>
@@ -182,17 +214,42 @@ namespace AF.UI
 
         /// <summary>
         /// Rehace la geometría con la escena <paramref name="art"/> y <paramref name="unitsPerDp"/> unidades del lienzo por dp de
-        /// Android: el fotograma 0 (el icono centrado, de <see cref="IconCanvasDp"/> dp, con el círculo de <see cref="IconMaskDp"/>) y
-        /// el viaje de la cuia de ese encuadre al suyo.
+        /// Android: el fotograma 0 y el viaje de la cuia de ese encuadre al suyo. Una sola fuente de verdad para el fotograma 0: con
+        /// <paramref name="icon"/> medido, su círculo (centro y diámetro en px, pasados al lienzo con el marco de la DecorView) y la
+        /// vista del icono a 1,5 veces su diámetro (<see cref="IconCanvasDp"/> / <see cref="IconMaskDp"/>); sin medida (el Editor,
+        /// Android 8-11 sin velo o sin entrega), la caja de la guía: el icono centrado, de <see cref="IconCanvasDp"/> dp, con el
+        /// círculo de <see cref="IconMaskDp"/>. <paramref name="screenPxPerUnit"/> (px de pantalla por unidad) solo sirve para la
+        /// sonda en px sin medida.
         /// </summary>
-        public void Layout(BrandEmblemArt art, float unitsPerDp)
+        public void Layout(BrandEmblemArt art, float unitsPerDp, SplashIconBox icon, float screenPxPerUnit)
         {
             UnitsPerDp = unitsPerDp > 0f ? unitsPerDp : 1f;
             _w = art.Width;
             _h = art.Height;
-            _center = new Vector2(_w * 0.5f, _h * 0.5f);
-            _d0 = IconMaskDp * UnitsPerDp;
-            _dFull = (2f * Mathf.Sqrt((_center.x * _center.x) + (_center.y * _center.y))) + 4f;
+            Box = icon;
+            Measured = icon.Measured && _w > 0f && _h > 0f;
+            if (Measured)
+            {
+                float unitsPerPx = _w / icon.RefWidth;
+                float unitsPerPxY = _h / icon.RefHeight;
+                Vector2 c = icon.Center;
+                _center = new Vector2((c.x - icon.RefLeft) * unitsPerPx, (c.y - icon.RefTop) * unitsPerPxY);
+                _d0 = icon.Diameter * unitsPerPx;
+                _pxPerUnit = icon.RefWidth / _w;
+                _pxOrigin = new Vector2(icon.RefLeft, icon.RefTop);
+            }
+            else
+            {
+                _center = new Vector2(_w * 0.5f, _h * 0.5f);
+                _d0 = IconMaskDp * UnitsPerDp;
+                _pxPerUnit = screenPxPerUnit > 0f ? screenPxPerUnit : 1f;
+                _pxOrigin = Vector2.zero;
+            }
+
+            // Hasta la esquina más lejana del centro (que, medido, puede no ser el de la pantalla).
+            float fx = Mathf.Max(_center.x, _w - _center.x);
+            float fy = Mathf.Max(_center.y, _h - _center.y);
+            _dFull = (2f * Mathf.Sqrt((fx * fx) + (fy * fy))) + 4f;
             UiBuilder.Place(_back, 0f, 0f, _w, _h);
             UiBuilder.Place(_top, 0f, 0f, _w, _h);
 
@@ -201,7 +258,7 @@ namespace AF.UI
             float s = scene.CuiaScale;
             float half = 512f / AdaptScale;
             _iconScene = new Rect(((512f - half) * s) + scene.CuiaTx, ((512f - half) * s) + scene.CuiaTy, 2f * half * s, 2f * half * s);
-            float side0 = IconCanvasDp * UnitsPerDp;
+            float side0 = _d0 * (IconCanvasDp / IconMaskDp);
             _iconFrame0 = new Rect(_center.x - (side0 * 0.5f), _center.y - (side0 * 0.5f), side0, side0);
             _k0 = side0 / _iconScene.width;
 
@@ -263,6 +320,8 @@ namespace AF.UI
             Object.Destroy(_irisTexture);
             Object.Destroy(_rimSprite);
             Object.Destroy(_rimTexture);
+            Object.Destroy(_petroleumSprite);
+            Object.Destroy(_petroleumTexture);
             if (_iconSprite != null)
             {
                 Object.Destroy(_iconSprite);
@@ -321,9 +380,7 @@ namespace AF.UI
 
             if (show)
             {
-                Color c = BrandIntro.Petroleum;
-                c.a = alpha;
-                _cover.color = c;
+                _cover.color = new Color(1f, 1f, 1f, alpha); // el petróleo va en la textura
             }
         }
 
@@ -358,8 +415,7 @@ namespace AF.UI
             float y0 = _center.y - (side * 0.5f);
             float x1 = x0 + side;
             float y1 = y0 + side;
-            Color petro = BrandIntro.Petroleum;
-            petro.a = alpha;
+            var petro = new Color(1f, 1f, 1f, alpha); // el petróleo va en las texturas
             _iris.color = petro;
             UiBuilder.Place(_iris.rectTransform, x0, y0, side, side);
 
@@ -380,6 +436,30 @@ namespace AF.UI
         {
             UiBuilder.Place(bar.rectTransform, x, y, w, h);
             bar.color = color;
+        }
+
+        /// <summary>Lado de la textura del petróleo liso (px).</summary>
+        internal const int SolidTextureSize = 4;
+
+        /// <summary>
+        /// Una textura sRGB lisa de color (sin mipmaps, sin filtrar): el color exacto, sin pasar por el color de vértice (la usa
+        /// también <see cref="BootSplash"/> para su cielo y su velo). Quien la pide la destruye.
+        /// </summary>
+        internal static Texture2D SolidTexture(string name, Color32 color)
+        {
+            var pixels = new Color32[SolidTextureSize * SolidTextureSize];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = color;
+            }
+
+            var tex = new Texture2D(SolidTextureSize, SolidTextureSize, TextureFormat.RGBA32, false);
+            tex.name = name;
+            tex.filterMode = FilterMode.Point;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.SetPixels32(pixels);
+            tex.Apply(false, false); // 64 bytes: se queda legible (los tests leen sus píxeles)
+            return tex;
         }
 
         // La vista del icono desde sus bytes PNG (sin compresión ni mipmaps); null si falta el recurso.
@@ -406,31 +486,42 @@ namespace AF.UI
             return tex;
         }
 
-        // El círculo (blanco fuera del agujero, transparente dentro; se tiñe de petróleo) o el aro de luz (un anillo fino en el
-        // borde del agujero), con el borde suavizado en 1 px; escribe en pixels (reutilizado).
+        /// <summary>
+        /// Un píxel de la textura del círculo (<paramref name="rim"/> false: el petróleo con el color horneado, transparente dentro
+        /// del agujero) o del aro (true: blanco, para teñirlo) en (<paramref name="x"/>, <paramref name="y"/>).
+        /// </summary>
+        internal static Color32 RingPixel(bool rim, int x, int y)
+        {
+            float c = IrisTextureSize * 0.5f;
+            float dx = (x + 0.5f) - c;
+            float dy = (y + 0.5f) - c;
+            float d = Mathf.Sqrt((dx * dx) + (dy * dy)) - IrisHoleRadiusPx;
+            float a;
+            if (rim)
+            {
+                float u = (d + 1.2f) / 1.0f; // el anillo, justo por dentro del borde
+                a = Mathf.Exp(-(u * u));
+            }
+            else
+            {
+                a = Mathf.Clamp01(d + 0.5f);
+            }
+
+            Color32 rgb = rim ? new Color32(255, 255, 255, 255) : BrandIntro.Petroleum;
+            rgb.a = (byte)Mathf.RoundToInt(a * 255f);
+            return rgb;
+        }
+
+        // El círculo (petróleo fuera del agujero, transparente dentro: el color va en la textura, no en el vértice) o el aro de luz
+        // (un anillo fino en el borde del agujero, blanco: se tiñe), con el borde suavizado en 1 px; escribe en pixels (reutilizado).
         private static Texture2D RingTexture(string name, bool rim, Color32[] pixels)
         {
             int n = IrisTextureSize;
-            float c = n * 0.5f;
             for (int y = 0; y < n; y++)
             {
-                float dy = (y + 0.5f) - c;
                 for (int x = 0; x < n; x++)
                 {
-                    float dx = (x + 0.5f) - c;
-                    float d = Mathf.Sqrt((dx * dx) + (dy * dy)) - IrisHoleRadiusPx;
-                    float a;
-                    if (rim)
-                    {
-                        float u = (d + 1.2f) / 1.0f; // el anillo, justo por dentro del borde
-                        a = Mathf.Exp(-(u * u));
-                    }
-                    else
-                    {
-                        a = Mathf.Clamp01(d + 0.5f);
-                    }
-
-                    pixels[(y * n) + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+                    pixels[(y * n) + x] = RingPixel(rim, x, y);
                 }
             }
 

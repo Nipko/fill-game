@@ -41,6 +41,10 @@ namespace AF.UI
     /// sistema), <c>morph_frames</c> (fotogramas pintados mientras se abría: ~42 a 60 fps), <c>morph_units_per_dp</c> (unidades del
     /// lienzo por dp de Android; 1,000 si no se supo la densidad) y <c>morph_build_ms</c> (lo que costó crear las piezas del icono,
     /// con su vista decodificada, antes del primer fotograma).</item>
+    /// <item>Jornada 6, observación 11 (2026-10-29): <c>morph_geometry</c> (<c>measured</c>, la caja del icono que midió Java;
+    /// <c>guide</c>, la de la guía de Android), <c>morph_start_diam_px</c> y <c>morph_start_xy_px</c> (el diámetro y el centro
+    /// [x, y] del círculo del primer fotograma en px de pantalla, desde arriba a la izquierda: se comparan con
+    /// <c>os_splash_icon_px</c> y <c>os_splash_icon_xy</c> de <c>boot_steps</c>).</item>
     /// </list>
     /// </summary>
     public sealed partial class DevProbe
@@ -92,6 +96,10 @@ namespace AF.UI
             sb.Append(",\"morph_frames\":").Append(report.MorphFrames.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"morph_units_per_dp\":").Append(report.MorphUnitsPerDp.ToString("0.000", CultureInfo.InvariantCulture));
             sb.Append(",\"morph_build_ms\":").Append(report.MorphBuildMs.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_geometry\":\"").Append(report.MorphGeometry).Append('"');
+            sb.Append(",\"morph_start_diam_px\":").Append(report.MorphStartDiamPx.ToString("0.0", CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_start_xy_px\":[").Append(report.MorphStartCenterPx.x.ToString("0.0", CultureInfo.InvariantCulture));
+            sb.Append(',').Append(report.MorphStartCenterPx.y.ToString("0.0", CultureInfo.InvariantCulture)).Append(']');
             sb.Append(",\"loading_ms\":").Append(report.LoadingMs.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"wait_capped\":").Append(report.WaitCapped ? "true" : "false");
             sb.Append('}');

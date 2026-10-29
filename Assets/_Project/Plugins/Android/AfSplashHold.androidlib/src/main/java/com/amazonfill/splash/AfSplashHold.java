@@ -43,6 +43,14 @@ import android.window.SplashScreenView;
  * movimiento).</li>
  * <li>Los velos no se enfocan, no cuentan para la accesibilidad (TalkBack no los lee) y no son pulsables: los toques pasan a
  * Unity.</li>
+ * <li><b>La caja del icono en la pantalla</b> (observacion 11 de la jornada 6, 2026-10-29: Samsung pinta el icono del sistema a
+ * ~185 dp en vez de los 160 dp de la guia): {@link #iconBox()} da, en px de pantalla, la caja de la vista del icono que Android
+ * entrego ({@code SplashScreenView.getIconView()}: su {@code getLocationOnScreen} y su ancho y alto por su escala) y la de la
+ * DecorView, para que el primer fotograma de la intro ponga su circulo y su vista del icono en esos mismos pixeles. Se mide la
+ * caja de la vista del icono, que en Android 12+ es el circulo visible: la mascara redonda llena la vista y el icono adaptativo
+ * se pinta a 108/72 = 1,5 veces la vista, recortado en ella (240 dp en un circulo de 160 dp en la guia). Con el velo propio, la
+ * caja conocida de {@code af_launch_window}: un circulo de {@link #OWN_MASK_DP} dp centrado en la DecorView. Si se mide el del
+ * sistema, el velo propio de debajo se escala a esa caja, por si llegara a verse un fotograma.</li>
  * </ul>
  * Solo la primera actividad del proceso, y solo si es la de Unity (el arranque en frio); nada de red, disco, registros ni
  * identificadores.
@@ -75,6 +83,14 @@ public final class AfSplashHold {
     /** {@link #veil()}: Android 12+ entrego su pantalla de arranque y se quedo encima del velo propio. */
     public static final String VEIL_SYSTEM = "system";
 
+    /** El circulo de {@code af_launch_window} (dp): el que da {@link #iconBox()} con el velo propio. */
+    public static final int OWN_MASK_DP = 160;
+
+    /** {@link #iconBox()}: cuantos enteros da (izquierda, arriba, ancho y alto del icono; lo mismo de la DecorView). */
+    public static final int BOX_LENGTH = 8;
+
+    private static final int[] NO_BOX = new int[BOX_LENGTH];
+
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
     // Todo el estado se cambia en el hilo principal; los volatile se leen desde el de Unity (las sondas).
@@ -90,6 +106,23 @@ public final class AfSplashHold {
     private static volatile String veil = VEIL_NONE;
     private static volatile long heldMs = -1L;
     private static volatile long procReleaseMs = -1L;
+    private static volatile int[] box = NO_BOX;
+    private static volatile int boxVersion;
+    private static View systemIcon;
+
+    // La vista del icono del sistema se mide cada vez que se coloca (la entrega puede llegar antes de su primer layout).
+    private static final View.OnLayoutChangeListener ICON_LAYOUT = (v, l, t, r, b, ol, ot, or, ob) -> {
+        if (v == systemIcon) {
+            measureSystem(v);
+        }
+    };
+
+    // El velo propio se mide cuando se coloca, si no manda la pantalla del sistema.
+    private static final View.OnLayoutChangeListener OWN_LAYOUT = (v, l, t, r, b, ol, ot, or, ob) -> {
+        if (v == ownVeil && !VEIL_SYSTEM.equals(veil)) {
+            measureOwn(v);
+        }
+    };
 
     private static final Runnable CAP = () -> finish(RESULT_CAP, "");
 
@@ -194,6 +227,31 @@ public final class AfSplashHold {
     }
 
     /**
+     * La caja del icono en la pantalla (px), una copia: {izquierda, arriba, ancho, alto} de la vista del icono de la pantalla del
+     * sistema (Android 12+, {@code SplashScreenView.getIconView()}, el circulo visible) o del circulo de {@code af_launch_window}
+     * (el velo propio), y {izquierda, arriba, ancho, alto} de la DecorView, el marco con que se pasa al lienzo de Unity. Todo 0
+     * si aun no se midio (sin velo o sin layout). La lee AF.UI.AndroidOsSplash.ReadIcon.
+     */
+    public static int[] iconBox() {
+        return box.clone();
+    }
+
+    /** Sube cada vez que cambia {@link #iconBox()} (0 sin medida): el C# solo copia la caja cuando cambia. */
+    public static int iconBoxVersion() {
+        return boxVersion;
+    }
+
+    // Publica una caja nueva (hilo principal); la misma caja no cuenta como cambio.
+    private static void publish(int[] next) {
+        if (java.util.Arrays.equals(next, box)) {
+            return;
+        }
+
+        box = next;
+        boxVersion++;
+    }
+
+    /**
      * Siempre -1: el velo no toca el foco de la ventana (la retencion anterior lo media de soltarla al foco). Se queda para no
      * cambiar el puente con C# ni la sonda os_splash_focus_ms.
      */
@@ -226,6 +284,7 @@ public final class AfSplashHold {
         makeInert(view);
         ((ViewGroup) decor).addView(view, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         ownVeil = view;
+        view.addOnLayoutChangeListener(OWN_LAYOUT);
         startedAt = SystemClock.uptimeMillis();
         if (VEIL_NONE.equals(veil)) {
             veil = VEIL_OWN;
@@ -267,10 +326,68 @@ public final class AfSplashHold {
             makeInert(splash);
             systemVeil = splash;
             veil = VEIL_SYSTEM;
+            View icon = Api31.iconView(splash);
+            systemIcon = icon;
+            icon.addOnLayoutChangeListener(ICON_LAYOUT);
+            measureSystem(icon);
             return;
         }
 
         Api31.remove(splash);
+    }
+
+    // La caja de la vista del icono del sistema en la pantalla (hilo principal): el circulo visible. Sin layout aun, nada.
+    static void measureSystem(View icon) {
+        View root = icon.getRootView();
+        if (icon.getWidth() <= 0 || icon.getHeight() <= 0 || root == null || root.getWidth() <= 0 || root.getHeight() <= 0) {
+            return;
+        }
+
+        int[] at = new int[2];
+        icon.getLocationOnScreen(at); // la esquina ya transformada por la escala de la vista
+        int[] ref = new int[2];
+        root.getLocationOnScreen(ref);
+        int w = Math.round(icon.getWidth() * Math.abs(icon.getScaleX()));
+        int h = Math.round(icon.getHeight() * Math.abs(icon.getScaleY()));
+        publish(new int[] {at[0], at[1], w, h, ref[0], ref[1], root.getWidth(), root.getHeight()});
+        matchOwnVeil(at[0] + (w * 0.5f), at[1] + (h * 0.5f), Math.min(w, h));
+    }
+
+    // El circulo de af_launch_window: OWN_MASK_DP centrado en la DecorView (el velo propio la llena).
+    static void measureOwn(View own) {
+        View root = own.getRootView();
+        if (root == null || root.getWidth() <= 0 || root.getHeight() <= 0) {
+            return;
+        }
+
+        int[] ref = new int[2];
+        root.getLocationOnScreen(ref);
+        int d = Math.round(OWN_MASK_DP * own.getResources().getDisplayMetrics().density);
+        int cx = ref[0] + (root.getWidth() / 2);
+        int cy = ref[1] + (root.getHeight() / 2);
+        publish(new int[] {cx - (d / 2), cy - (d / 2), d, d, ref[0], ref[1], root.getWidth(), root.getHeight()});
+    }
+
+    // El velo propio de debajo, a la caja del sistema (centro y diametro en px); solo si crece: encogido dejaria ver sus bordes.
+    private static void matchOwnVeil(float cx, float cy, int diameter) {
+        View own = ownVeil;
+        if (own == null || own.getWidth() <= 0 || own.getHeight() <= 0) {
+            return;
+        }
+
+        float s = diameter / (OWN_MASK_DP * own.getResources().getDisplayMetrics().density);
+        if (s < 1f) {
+            return;
+        }
+
+        int[] at = new int[2];
+        own.getRootView().getLocationOnScreen(at);
+        own.setPivotX(own.getWidth() * 0.5f);
+        own.setPivotY(own.getHeight() * 0.5f);
+        own.setScaleX(s);
+        own.setScaleY(s);
+        own.setTranslationX(cx - (at[0] + (own.getWidth() * 0.5f)));
+        own.setTranslationY(cy - (at[1] + (own.getHeight() * 0.5f)));
     }
 
     // En el hilo principal.
@@ -288,6 +405,14 @@ public final class AfSplashHold {
         View system = systemVeil;
         ownVeil = null;
         systemVeil = null;
+        if (systemIcon != null) {
+            systemIcon.removeOnLayoutChangeListener(ICON_LAYOUT);
+            systemIcon = null;
+        }
+
+        if (own != null) {
+            own.removeOnLayoutChangeListener(OWN_LAYOUT);
+        }
         if (system != null) {
             Api31.remove(system);
         }
@@ -316,6 +441,10 @@ public final class AfSplashHold {
 
         static boolean hasIcon(View splash) {
             return splash instanceof SplashScreenView && ((SplashScreenView) splash).getIconView() != null;
+        }
+
+        static View iconView(View splash) {
+            return ((SplashScreenView) splash).getIconView();
         }
 
         static void remove(View splash) {

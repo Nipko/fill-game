@@ -167,6 +167,9 @@ namespace AF.UI
         private readonly OverlayCanvas _canvas;
         private readonly Texture2D?[] _textures = new Texture2D?[8];
         private readonly Sprite?[] _sprites = new Sprite?[8];
+
+        // El hueco de _sprites/_textures del petróleo liso del cielo y del velo.
+        private const int PetroleumSlot = 7;
         private readonly Image _sky;
         private readonly BrandEmblemImages _images;
         private readonly RectTransform _front;
@@ -256,7 +259,10 @@ namespace AF.UI
             _firstEmblemCache = _emblem.Cache;
 
             UiBuilder.Stretch(UiBuilder.Image("TouchBlocker", root, null, Color.clear, raycast: true).rectTransform); // traga los toques: aún no hay nada que tocar
-            _sky = UiBuilder.Image("Sky", root, null, BrandIntro.Petroleum);
+            // El petróleo exacto (jornada 6, observación 11): en una textura sRGB con el vértice blanco; como color de vértice, en el
+            // espacio lineal salía (22,69,73) y se notaba al quitarse la intro.
+            Sprite petroleum = Own(PetroleumSlot, BrandIntroMorph.SolidTexture("AF_BootPetroleum", BrandIntro.Petroleum));
+            _sky = UiBuilder.Image("Sky", root, petroleum, Color.white);
             UiBuilder.Stretch(_sky.rectTransform);
             _front = Group("WorldFront", root); // TiTino y su rama, en el cielo
 
@@ -267,7 +273,7 @@ namespace AF.UI
             _veil = veil.gameObject.AddComponent<CanvasGroup>();
             _veil.blocksRaycasts = false;
             _veil.interactable = false;
-            UiBuilder.Stretch(UiBuilder.Image("VeilSky", veil, null, BrandIntro.Petroleum).rectTransform);
+            UiBuilder.Stretch(UiBuilder.Image("VeilSky", veil, petroleum, Color.white).rectTransform);
             _veilHalo = UiBuilder.Image("VeilHalo", veil, halo, BrandIntro.HaloColor);
 
             // La escena, en su orden; el halo, detrás de todo, en el cielo.

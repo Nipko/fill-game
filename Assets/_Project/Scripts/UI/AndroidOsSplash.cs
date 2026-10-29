@@ -73,6 +73,55 @@ namespace AF.UI
 #endif
         }
 
+        /// <summary>
+        /// Solo para los tests: la caja del icono que «midió» Java (null = lo de siempre: el puente en el teléfono, nada en el
+        /// editor). Los tests que la cambian la vuelven a null en su TearDown.
+        /// </summary>
+        public static SplashIconBox? IconOverrideForTests { get; set; }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private static AndroidJavaClass? s_bridge;
+        private static int s_iconVersion = -1;
+        private static SplashIconBox s_icon;
+#endif
+
+        /// <summary>
+        /// La caja del icono de la pantalla del sistema en la pantalla, en px (jornada 6, observación 11): la vista del icono que
+        /// entregó Android 12+ (<c>SplashScreenView.getIconView()</c>, el círculo visible) o el círculo de <c>af_launch_window</c>
+        /// con el velo propio, y el marco de la DecorView. <see cref="SplashIconBox.None"/> si no hay medida (el editor, sin velo, o
+        /// aún sin layout): entonces la intro usa la caja de la guía de Android (240/160 dp centrados).
+        /// </summary>
+        public static SplashIconBox ReadIcon()
+        {
+            SplashIconBox? fake = IconOverrideForTests;
+            if (fake.HasValue)
+            {
+                return fake.Value;
+            }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                // El puente se guarda y la caja solo se copia (un int[] de JNI) cuando Java dice que cambió.
+                s_bridge ??= new AndroidJavaClass(BridgeClass);
+                int version = s_bridge.CallStatic<int>("iconBoxVersion");
+                if (version != s_iconVersion)
+                {
+                    s_icon = SplashIconBox.FromArray(s_bridge.CallStatic<int[]>("iconBox"));
+                    s_iconVersion = version;
+                }
+
+                return s_icon;
+            }
+            catch (Exception)
+            {
+                return SplashIconBox.None;
+            }
+#else
+            return SplashIconBox.None;
+#endif
+        }
+
         /// <summary>Lo que hizo el velo (solo para la sonda de desarrollo <c>AF_PERF boot_steps</c>; en el editor, sin velo).</summary>
         public static OsSplashInfo Read()
         {
@@ -96,6 +145,100 @@ namespace AF.UI
 #else
             return OsSplashInfo.None;
 #endif
+        }
+    }
+
+    /// <summary>
+    /// La caja del icono de la pantalla del sistema en la pantalla (px de pantalla, desde arriba a la izquierda;
+    /// <see cref="AndroidOsSplash.ReadIcon"/>, <c>AfSplashHold.iconBox()</c>): la del círculo visible y la de la DecorView, el marco
+    /// con que se pasa al lienzo. Sin medida, todo 0 (<see cref="Measured"/> false).
+    /// </summary>
+    public readonly struct SplashIconBox
+    {
+        /// <summary>Sin medida.</summary>
+        public static readonly SplashIconBox None = default;
+
+        /// <summary>Crea la caja.</summary>
+        public SplashIconBox(int left, int top, int width, int height, int refLeft, int refTop, int refWidth, int refHeight)
+        {
+            Left = left;
+            Top = top;
+            Width = width;
+            Height = height;
+            RefLeft = refLeft;
+            RefTop = refTop;
+            RefWidth = refWidth;
+            RefHeight = refHeight;
+        }
+
+        /// <summary>Izquierda de la vista del icono (px).</summary>
+        public int Left { get; }
+
+        /// <summary>Arriba de la vista del icono (px).</summary>
+        public int Top { get; }
+
+        /// <summary>Ancho de la vista del icono (px).</summary>
+        public int Width { get; }
+
+        /// <summary>Alto de la vista del icono (px).</summary>
+        public int Height { get; }
+
+        /// <summary>Izquierda de la DecorView (px).</summary>
+        public int RefLeft { get; }
+
+        /// <summary>Arriba de la DecorView (px).</summary>
+        public int RefTop { get; }
+
+        /// <summary>Ancho de la DecorView (px): el ancho del lienzo.</summary>
+        public int RefWidth { get; }
+
+        /// <summary>Alto de la DecorView (px): el alto del lienzo.</summary>
+        public int RefHeight { get; }
+
+        /// <summary>Hay medida: las dos cajas tienen tamaño.</summary>
+        public bool Measured => Width > 0 && Height > 0 && RefWidth > 0 && RefHeight > 0;
+
+        /// <summary>Diámetro del círculo visible (px): el lado menor de la vista del icono.</summary>
+        public float Diameter => Mathf.Min(Width, Height);
+
+        /// <summary>Centro del círculo (px de pantalla, desde arriba).</summary>
+        public Vector2 Center => new Vector2(Left + (Width * 0.5f), Top + (Height * 0.5f));
+
+        /// <summary>
+        /// Las dos cajas difieren en más de <paramref name="tolerancePx"/> px en algún borde (la del icono o la del marco), o una
+        /// tiene medida y la otra no.
+        /// </summary>
+        public bool DiffersFrom(SplashIconBox other, int tolerancePx)
+        {
+            if (Measured != other.Measured)
+            {
+                return true;
+            }
+
+            if (!Measured)
+            {
+                return false;
+            }
+
+            return Far(Left, other.Left, tolerancePx) || Far(Top, other.Top, tolerancePx) || Far(Width, other.Width, tolerancePx)
+                || Far(Height, other.Height, tolerancePx) || Far(RefLeft, other.RefLeft, tolerancePx) || Far(RefTop, other.RefTop, tolerancePx)
+                || Far(RefWidth, other.RefWidth, tolerancePx) || Far(RefHeight, other.RefHeight, tolerancePx);
+        }
+
+        private static bool Far(int a, int b, int tolerance)
+        {
+            return Math.Abs(a - b) > tolerance;
+        }
+
+        /// <summary>La caja desde el arreglo de Java (8 enteros); sin medida si no cuadra.</summary>
+        public static SplashIconBox FromArray(int[]? box)
+        {
+            if (box == null || box.Length < 8)
+            {
+                return None;
+            }
+
+            return new SplashIconBox(box[0], box[1], box[2], box[3], box[4], box[5], box[6], box[7]);
         }
     }
 

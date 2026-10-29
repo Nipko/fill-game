@@ -92,6 +92,47 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void TheIconBox_IsMeasuredFromTheSystemIconView_OrTheOwnVeil_AndExposedToCSharp()
+        {
+            // Jornada 6, observación 11: el primer fotograma de la intro usa los píxeles del icono que se vio, no los de la guía.
+            string hold = Hold.Replace("\r\n", "\n");
+            StringAssert.Contains("public static int[] iconBox() {\n        return box.clone();", hold, "JNI: AndroidOsSplash.ReadIcon");
+            StringAssert.Contains("public static final int BOX_LENGTH = 8;", hold);
+            StringAssert.Contains("public static final int OWN_MASK_DP = " + (int)BrandIntroMorph.IconMaskDp + ";", hold, "el círculo de af_launch_window, el de la guía en C#");
+
+            // El del sistema: la vista del icono entregada, en px de pantalla con su escala, y el marco de la DecorView.
+            StringAssert.Contains("return ((SplashScreenView) splash).getIconView();", hold);
+            Assert.That(Regex.IsMatch(hold, @"veil = VEIL_SYSTEM;\s*View icon = Api31\.iconView\(splash\);\s*systemIcon = icon;\s*icon\.addOnLayoutChangeListener\(ICON_LAYOUT\);\s*measureSystem\(icon\);"), Is.True,
+                "se mide al entregarla y cada vez que se coloca");
+            StringAssert.Contains("icon.getLocationOnScreen(at);", hold);
+            StringAssert.Contains("Math.round(icon.getWidth() * Math.abs(icon.getScaleX()))", hold);
+            StringAssert.Contains("Math.round(icon.getHeight() * Math.abs(icon.getScaleY()))", hold);
+            StringAssert.Contains("publish(new int[] {at[0], at[1], w, h, ref[0], ref[1], root.getWidth(), root.getHeight()});", hold);
+
+            // El propio: la caja conocida de af_launch_window, centrada en la DecorView.
+            StringAssert.Contains("view.addOnLayoutChangeListener(OWN_LAYOUT);", hold);
+            StringAssert.Contains("int d = Math.round(OWN_MASK_DP * own.getResources().getDisplayMetrics().density);", hold);
+            StringAssert.Contains("publish(new int[] {cx - (d / 2), cy - (d / 2), d, d, ref[0], ref[1], root.getWidth(), root.getHeight()});", hold);
+
+            // La versión: el C# solo copia la caja (un int[] por JNI) cuando cambia; la misma caja no cuenta.
+            StringAssert.Contains("public static int iconBoxVersion() {", hold);
+            Assert.That(Regex.IsMatch(hold, @"if \(java\.util\.Arrays\.equals\(next, box\)\) \{\s*return;\s*\}\s*box = next;\s*boxVersion\+\+;"), Is.True);
+            Assert.That(Regex.Matches(hold, @"^\s+box = ", RegexOptions.Multiline).Count, Is.EqualTo(1), "solo publish cambia la caja");
+            StringAssert.Contains("removeOnLayoutChangeListener(ICON_LAYOUT)", hold, "al soltar, sin oyentes colgados");
+            StringAssert.Contains("removeOnLayoutChangeListener(OWN_LAYOUT)", hold);
+
+            // El C#: los 8 enteros en el mismo orden.
+            SplashIconBox b = SplashIconBox.FromArray(new[] { 297, 927, 486, 484, 0, 0, 1080, 2340 });
+            Assert.That(b.Measured, Is.True);
+            Assert.That(b.Diameter, Is.EqualTo(484f), "el lado menor: el círculo inscrito");
+            Assert.That(b.Center, Is.EqualTo(new Vector2(540f, 1169f)));
+            Assert.That(SplashIconBox.FromArray(new int[8]).Measured, Is.False, "todo 0: sin medida");
+            Assert.That(SplashIconBox.FromArray(null).Measured, Is.False);
+            Assert.That(SplashIconBox.FromArray(new[] { 1, 2, 3 }).Measured, Is.False);
+            Assert.That(AndroidOsSplash.ReadIcon().Measured, Is.False, "en el Editor no hay medida: la guía de 240/160 dp");
+        }
+
+        [Test]
         public void TheCap_IsWellUnderFiveSeconds()
         {
             // El umbral de arranque lento de Android vitals es 5 s: el velo nunca puede alargar el arranque hasta ahí.
@@ -127,7 +168,7 @@ namespace AF.Tests.EditMode
             // en el acto y manda el velo propio (os_splash_veil = own).
             StringAssert.Contains("if (RESULT_PENDING.equals(result) && candidate != null && Api31.hasIcon(splash)) {", hold);
             StringAssert.Contains("return splash instanceof SplashScreenView && ((SplashScreenView) splash).getIconView() != null;", hold);
-            Assert.That(Regex.IsMatch(hold, @"Api31\.hasIcon\(splash\)\) \{\s*makeInert\(splash\);\s*systemVeil = splash;\s*veil = VEIL_SYSTEM;\s*return;\s*\}\s*Api31\.remove\(splash\);"), Is.True, "solo con icono se queda; si no, se quita ya");
+            Assert.That(Regex.IsMatch(hold, @"Api31\.hasIcon\(splash\)\) \{\s*makeInert\(splash\);\s*systemVeil = splash;\s*veil = VEIL_SYSTEM;[^}]*return;\s*\}\s*Api31\.remove\(splash\);"), Is.True, "solo con icono se queda; si no, se quita ya");
 
             // Ni foco, ni TalkBack, ni toques: los dos velos pasan por makeInert.
             foreach (string inert in new[] { "setFocusable(false)", "setFocusableInTouchMode(false)", "setClickable(false)", "setLongClickable(false)", "IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS" })
