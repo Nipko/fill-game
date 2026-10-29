@@ -63,6 +63,34 @@ namespace AF.Tests.PlayMode
             Assert.That(DevProbe.FormatMem("map", 5, 0, s, peak, null), Does.Not.Contain("\"level\""));
         }
 
+        /// <summary>
+        /// El detalle de la jornada 6 (bloque 19; <c>docs/dev/memoria.md</c>): texturas según <c>Texture.currentTextureMemory</c>, lo
+        /// reservado sin usar, los contadores (null si no existen) y los RenderTexture con los mayores por nombre y tamaño.
+        /// </summary>
+        [Test]
+        public void FormatMemDetail_CountersNullWhenMissing_RenderTexturesWithTheirSize()
+        {
+            const long MiB = 1024L * 1024L;
+            var d = new MemDetail(48 * MiB, 3 * MiB, 120 * MiB, 7 * MiB, MiB / 2, -1, 600 * MiB, -1, 20 * MiB, 2,
+                new[] { "_CameraTargetAttachmentA 1080x2340 9.6", "q\"x 4x4 0.0" });
+
+            Assert.That(DevProbe.FormatMemDetail(d), Is.EqualTo(
+                "\"tex_cur_mib\":48.0,\"unity_unused_mib\":3.0,\"gfx_reserved_mib\":120.0,\"audio_mib\":7.0,\"mesh_mib\":0.5,"
+                + "\"profiler_mib\":null,\"app_resident_mib\":600.0,\"app_committed_mib\":null,\"rt_mib\":20.0,\"rt_count\":2,"
+                + "\"rt_top\":[\"_CameraTargetAttachmentA 1080x2340 9.6\",\"q\\\"x 4x4 0.0\"]"));
+            Assert.That(DevProbe.FormatMemDetail(new MemDetail(0, 0, -1, -1, -1, -1, -1, -1, 0, 0, null)), Does.EndWith("\"rt_count\":0,\"rt_top\":[]"));
+        }
+
+        [Test]
+        public void Mem_CarriesTheDetail_BeforeTheMomentMembers()
+        {
+            string? line = DevProbe.Mem("daily", 0, "\"pool_read\":true");
+            Assert.That(MemLine.IsMatch(line!), Is.True, line);
+            Assert.That(line, Does.Match(",\"tex_cur_mib\":\\d+\\.\\d,\"unity_unused_mib\":\\d+\\.\\d,"));
+            Assert.That(line, Does.Contain(",\"rt_count\":").And.Contain(",\"rt_top\":["));
+            Assert.That(line, Does.EndWith("],\"pool_read\":true}"), "lo propio del momento, al final");
+        }
+
         [Test]
         public void FormatBootStepHeaps_OneValuePerStep_MinusOneWithoutMark()
         {

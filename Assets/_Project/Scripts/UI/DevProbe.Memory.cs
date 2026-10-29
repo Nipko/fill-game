@@ -12,7 +12,8 @@ namespace AF.UI
     /// <c>docs/dev/memoria-2026-10-26.md</c>; docs/dev/prototipo-v0.md), solo en desarrollo, como las demás sondas:
     /// <c>AF_PERF {"event":"mem","at":"lobby","t":…,"mono_used_mib":…,"mono_heap_mib":…,"unity_alloc_mib":…,
     /// "unity_reserved_mib":…,"gfx_mib":…,"sys_mib":…,"tex_mib":…,"tex_count":…,"peak_mono_heap_mib":…,"peak_unity_reserved_mib":…,
-    /// "peak_sys_mib":…}</c>.
+    /// "peak_sys_mib":…,"tex_cur_mib":…,"unity_unused_mib":…,"gfx_reserved_mib":…,"audio_mib":…,"mesh_mib":…,"profiler_mib":…,
+    /// "app_resident_mib":…,"app_committed_mib":…,"rt_mib":…,"rt_count":…,"rt_top":[…]}</c>.
     /// <list type="bullet">
     /// <item><c>at</c>: <c>boot</c> (al cortar la pantalla de arranque, con <c>heap_steps_mib</c> y <c>used_steps_mib</c>: el heap
     /// gestionado reservado y el usado al acabar cada bloque de la carga, en el orden de <c>AF_PERF boot_steps</c>), <c>lobby</c> (cada
@@ -29,6 +30,14 @@ namespace AF.UI
     /// plataforma sale como <c>null</c>.</item>
     /// <item><c>peak_*</c>: el máximo de las muestras de la sesión (el pico entre dos muestras no se ve: con IL2CPP el heap reservado
     /// ya lo recoge).</item>
+    /// <item>Detalle (jornada 6, bloque 19, observación 6; <c>docs/dev/memoria.md</c>), para repartir el <c>Unknown</c> y el
+    /// <c>GL mtrack</c> de <c>dumpsys meminfo -d</c>: <c>tex_cur</c>, las texturas según <see cref="Texture.currentTextureMemory"/>;
+    /// <c>unity_unused</c>, lo que Unity tiene reservado sin usar (<see cref="Profiler.GetTotalUnusedReservedMemoryLong"/>);
+    /// <c>gfx_reserved</c>, <c>audio</c>, <c>mesh</c>, <c>profiler</c>, <c>app_resident</c> y <c>app_committed</c>, los contadores
+    /// «Gfx Reserved Memory», «Audio Used Memory», «Mesh Memory», «Profiler Used Memory», «App Resident Memory» y «App Committed
+    /// Memory» (<c>null</c> si la plataforma no los tiene); <c>rt</c>, <c>rt_count</c> y <c>rt_top</c>, los RenderTexture vivos (el
+    /// búfer intermedio de la cámara, si lo hubiera, sale aquí con su tamaño) y los cuatro mayores como <c>"nombre AnchoxAlto MiB"</c>.
+    /// Van al final de la línea, antes de los miembros propios del momento.</item>
     /// </list>
     /// Para leerlas en el teléfono: <c>adb logcat -d -s Unity | grep "AF_PERF {\"event\":\"mem\""</c>; junto a
     /// <c>adb shell dumpsys meminfo -d com.amazonfill.dev</c> en los mismos momentos.
@@ -43,6 +52,12 @@ namespace AF.UI
         private static ProfilerRecorder s_sysRecorder;
         private static ProfilerRecorder s_texRecorder;
         private static ProfilerRecorder s_texCountRecorder;
+        private static ProfilerRecorder s_gfxReservedRecorder;
+        private static ProfilerRecorder s_audioRecorder;
+        private static ProfilerRecorder s_meshRecorder;
+        private static ProfilerRecorder s_profilerRecorder;
+        private static ProfilerRecorder s_appResidentRecorder;
+        private static ProfilerRecorder s_appCommittedRecorder;
         private static bool s_memRecorders;
         private static MemSample s_memPeak = MemSample.Missing;
         private static int s_memLastLevel = -1;
@@ -65,6 +80,12 @@ namespace AF.UI
             s_sysRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "System Used Memory");
             s_texRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Texture Memory");
             s_texCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Texture Count");
+            s_gfxReservedRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Gfx Reserved Memory");
+            s_audioRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Audio Used Memory");
+            s_meshRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Mesh Memory");
+            s_profilerRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Profiler Used Memory");
+            s_appResidentRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "App Resident Memory");
+            s_appCommittedRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "App Committed Memory");
         }
 
         /// <summary>Lee la memoria de ahora (sin escribir nada).</summary>
@@ -96,7 +117,9 @@ namespace AF.UI
 
             MemSample now = SampleMemory();
             s_memPeak = MemSample.Max(s_memPeak, now);
-            string line = FormatMem(at, (long)(Time.realtimeSinceStartupAsDouble * 1000.0), level, now, s_memPeak, extraJson);
+            string detail = FormatMemDetail(SampleMemDetail());
+            string extra = string.IsNullOrEmpty(extraJson) ? detail : detail + "," + extraJson;
+            string line = FormatMem(at, (long)(Time.realtimeSinceStartupAsDouble * 1000.0), level, now, s_memPeak, extra);
             LastMemLine = line;
             Write(line);
             return line;
@@ -171,6 +194,80 @@ namespace AF.UI
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Lee el detalle de ahora: texturas según <see cref="Texture.currentTextureMemory"/>, lo reservado sin usar, los contadores de
+        /// gráficos, audio, mallas, perfilador y del proceso, y los RenderTexture vivos (los cuatro mayores con nombre y tamaño).
+        /// </summary>
+        public static MemDetail SampleMemDetail()
+        {
+            StartMemRecorders();
+            RenderTexture[] rts = Resources.FindObjectsOfTypeAll<RenderTexture>();
+            long rtBytes = 0;
+            var sizes = new long[rts.Length];
+            for (int i = 0; i < rts.Length; i++)
+            {
+                sizes[i] = Profiler.GetRuntimeMemorySizeLong(rts[i]);
+                rtBytes += sizes[i];
+            }
+
+            var top = new string[System.Math.Min(4, rts.Length)];
+            var taken = new bool[rts.Length];
+            for (int k = 0; k < top.Length; k++)
+            {
+                int best = -1;
+                for (int i = 0; i < rts.Length; i++)
+                {
+                    if (!taken[i] && (best < 0 || sizes[i] > sizes[best]))
+                    {
+                        best = i;
+                    }
+                }
+
+                taken[best] = true;
+                RenderTexture rt = rts[best];
+                top[k] = (string.IsNullOrEmpty(rt.name) ? "?" : rt.name) + " " + rt.width.ToString(CultureInfo.InvariantCulture) + "x"
+                    + rt.height.ToString(CultureInfo.InvariantCulture) + " " + (sizes[best] / Mib).ToString("0.0", CultureInfo.InvariantCulture);
+            }
+
+            return new MemDetail(
+                (long)Texture.currentTextureMemory,
+                Profiler.GetTotalUnusedReservedMemoryLong(),
+                Recorded(s_gfxReservedRecorder),
+                Recorded(s_audioRecorder),
+                Recorded(s_meshRecorder),
+                Recorded(s_profilerRecorder),
+                Recorded(s_appResidentRecorder),
+                Recorded(s_appCommittedRecorder),
+                rtBytes,
+                rts.Length,
+                top);
+        }
+
+        /// <summary>Miembros JSON (sin coma delante) del detalle <paramref name="d"/> (puro: no lee nada de Unity).</summary>
+        internal static string FormatMemDetail(in MemDetail d)
+        {
+            var sb = new StringBuilder(320);
+            AppendMib(sb, "tex_cur_mib", d.TextureCurrent);
+            AppendMib(sb, "unity_unused_mib", d.UnityUnused);
+            AppendMib(sb, "gfx_reserved_mib", d.GfxReserved);
+            AppendMib(sb, "audio_mib", d.Audio);
+            AppendMib(sb, "mesh_mib", d.Mesh);
+            AppendMib(sb, "profiler_mib", d.ProfilerUsed);
+            AppendMib(sb, "app_resident_mib", d.AppResident);
+            AppendMib(sb, "app_committed_mib", d.AppCommitted);
+            AppendMib(sb, "rt_mib", d.RenderTextures);
+            sb.Append(",\"rt_count\":").Append(d.RenderTextureCount.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"rt_top\":[");
+            string[] top = d.RenderTextureTop ?? System.Array.Empty<string>();
+            for (int i = 0; i < top.Length; i++)
+            {
+                sb.Append(i > 0 ? ",\"" : "\"").Append(top[i].Replace("\\", "\\\\").Replace("\"", "\\\"")).Append('"');
+            }
+
+            sb.Append(']');
+            return sb.ToString(1, sb.Length - 1); // sin la coma del primer miembro
+        }
+
         /// <summary>Miembros JSON <c>"heap_steps_mib":[…],"used_steps_mib":[…]</c> de los bloques de la carga (−1 sin marca).</summary>
         internal static string FormatBootStepHeaps(long[] heap, long[] used)
         {
@@ -227,6 +324,62 @@ namespace AF.UI
         {
             return recorder.Valid ? recorder.CurrentValue : -1;
         }
+    }
+
+    /// <summary>
+    /// El detalle de memoria de <see cref="DevProbe.SampleMemDetail"/> (bytes; −1 = el contador no existe en la plataforma).
+    /// </summary>
+    public readonly struct MemDetail
+    {
+        /// <summary>Crea el detalle.</summary>
+        public MemDetail(long textureCurrent, long unityUnused, long gfxReserved, long audio, long mesh, long profilerUsed, long appResident,
+            long appCommitted, long renderTextures, int renderTextureCount, string[]? renderTextureTop)
+        {
+            TextureCurrent = textureCurrent;
+            UnityUnused = unityUnused;
+            GfxReserved = gfxReserved;
+            Audio = audio;
+            Mesh = mesh;
+            ProfilerUsed = profilerUsed;
+            AppResident = appResident;
+            AppCommitted = appCommitted;
+            RenderTextures = renderTextures;
+            RenderTextureCount = renderTextureCount;
+            RenderTextureTop = renderTextureTop;
+        }
+
+        /// <summary>Texturas según <see cref="Texture.currentTextureMemory"/>.</summary>
+        public long TextureCurrent { get; }
+
+        /// <summary>Memoria nativa que Unity tiene reservada sin usar.</summary>
+        public long UnityUnused { get; }
+
+        /// <summary>«Gfx Reserved Memory».</summary>
+        public long GfxReserved { get; }
+
+        /// <summary>«Audio Used Memory».</summary>
+        public long Audio { get; }
+
+        /// <summary>«Mesh Memory».</summary>
+        public long Mesh { get; }
+
+        /// <summary>«Profiler Used Memory».</summary>
+        public long ProfilerUsed { get; }
+
+        /// <summary>«App Resident Memory» (lo residente del proceso, si la plataforma lo da).</summary>
+        public long AppResident { get; }
+
+        /// <summary>«App Committed Memory».</summary>
+        public long AppCommitted { get; }
+
+        /// <summary>Bytes de los RenderTexture vivos.</summary>
+        public long RenderTextures { get; }
+
+        /// <summary>RenderTexture vivos.</summary>
+        public int RenderTextureCount { get; }
+
+        /// <summary>Los cuatro mayores, como <c>"nombre AnchoxAlto MiB"</c>.</summary>
+        public string[]? RenderTextureTop { get; }
     }
 
     /// <summary>Una muestra de memoria de <see cref="DevProbe.SampleMemory"/> (bytes; −1 = el contador no existe).</summary>

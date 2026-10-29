@@ -37,6 +37,27 @@ namespace AF.Tests.EditMode
             Assert.That(string.Join("; ", ProjectSetup.Validate()), Does.Not.Contain("pipeline.supportsHDR"));
         }
 
+        /// <summary>
+        /// Android Blit Type en <c>Auto</c> (memoria, 2026-10-29; <c>docs/dev/memoria.md</c>): sin el búfer de pantalla completa
+        /// fuera de la pantalla de <c>Always</c>, que el juego no necesita (sin MSAA, HDR, posproceso ni escala de render).
+        /// </summary>
+        [Test]
+        public void AndroidBlitType_Auto_AndNoIntermediateTargetsInThePipeline()
+        {
+            Assert.That(ProjectSetup.BlitType, Is.EqualTo(UnityEditor.AndroidBlitType.Auto));
+            Assert.That(UnityEditor.PlayerSettings.Android.blitType, Is.EqualTo(UnityEditor.AndroidBlitType.Auto), "ejecuta AF.EditorTools.ProjectSetup.ApplyAndroidDefaults");
+            Assert.That(string.Join("; ", ProjectSetup.Validate()), Does.Not.Contain("android.blitType"));
+            foreach (RenderPipelineAsset asset in ProjectSetup.PipelineAssets())
+            {
+                // El asset de URP por sus propiedades serializadas (este ensamblado no referencia URP).
+                var so = new UnityEditor.SerializedObject(asset);
+                Assert.That(so.FindProperty("m_MSAA")!.intValue, Is.EqualTo(1), asset.name + ": sin MSAA (el 2D no lo necesita)");
+                Assert.That(so.FindProperty("m_RenderScale")!.floatValue, Is.EqualTo(1f), asset.name + ": escala 1 (otra cambiaría el aspecto y pediría un búfer intermedio)");
+                Assert.That(so.FindProperty("m_RequireDepthTexture")!.boolValue, Is.False, asset.name);
+                Assert.That(so.FindProperty("m_RequireOpaqueTexture")!.boolValue, Is.False, asset.name);
+            }
+        }
+
         [Test]
         public void FontAtlases_NotReadableOnTheCpu()
         {

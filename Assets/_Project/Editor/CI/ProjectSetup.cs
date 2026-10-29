@@ -96,6 +96,15 @@ namespace AF.EditorTools
         /// <summary>Propiedad serializada del HDR en el asset de URP (<c>UniversalRenderPipelineAsset.supportsHDR</c>).</summary>
         internal const string HdrProperty = "m_SupportsHDR";
 
+        /// <summary>
+        /// Android Blit Type en <c>Auto</c> (memoria, 2026-10-29; observación 6 de la jornada 6 de la prueba completa, bloque 19;
+        /// <c>docs/dev/memoria.md</c>). Con <c>Always</c> Unity pinta cada fotograma en un búfer de color y profundidad fuera de la
+        /// pantalla, del tamaño de la pantalla, y lo copia a la superficie de Android: unos 20 MiB de <c>GL mtrack</c> a 1080 × 2340.
+        /// Con <c>Auto</c> solo lo hace cuando hace falta (escala de resolución, que el juego no usa); el fotograma es el mismo. Lo
+        /// comprueba el portátil en el teléfono (guion, bloque 19).
+        /// </summary>
+        public const AndroidBlitType BlitType = AndroidBlitType.Auto;
+
         const string LogPrefix = "[AF.ProjectSetup] ";
 
         [MenuItem("Amazon Fill/CI/Aplicar ajustes Android (dev)")]
@@ -141,6 +150,7 @@ namespace AF.EditorTools
             PlayerSettings.SplashScreen.backgroundColor = BrandPetroleum;
 
             ApplyPipelineHdr(PipelineHdr);
+            PlayerSettings.Android.blitType = BlitType; // memoria (2026-10-29): sin búfer intermedio de pantalla completa
             FontSetup.SetAtlasReadability(false); // memoria (2026-10-26): los atlas de las fuentes, sin copia en CPU
 
             // Sin firma de release: Unity firma con la clave de depuración. El keystore lo gestiona el dueño.
@@ -188,6 +198,7 @@ namespace AF.EditorTools
             Check(problems, "splashScreen.show", PlayerSettings.SplashScreen.show, ShowUnitySplash);
             Check(problems, "splashScreen.showUnityLogo", PlayerSettings.SplashScreen.showUnityLogo, ShowUnitySplash);
             Check(problems, "splashScreen.backgroundColor", (Color32)PlayerSettings.SplashScreen.backgroundColor, BrandPetroleum);
+            Check(problems, "android.blitType", PlayerSettings.Android.blitType, BlitType);
             foreach (RenderPipelineAsset asset in PipelineAssets())
             {
                 bool? hdr = PipelineHdrOf(asset);
@@ -226,7 +237,8 @@ namespace AF.EditorTools
                 + ", keystorePropio=" + PlayerSettings.Android.useCustomKeystore
                 + ", pantallaUnity=" + PlayerSettings.SplashScreen.show
                 + ", logoUnity=" + PlayerSettings.SplashScreen.showUnityLogo
-                + ", hdr=" + DescribeHdr();
+                + ", hdr=" + DescribeHdr()
+                + ", blit=" + PlayerSettings.Android.blitType;
         }
 
         /// <summary>
