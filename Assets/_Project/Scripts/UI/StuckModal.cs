@@ -207,6 +207,12 @@ namespace AF.UI
             _skipNote = ModalKit.Line("SkipNote", _panel, string.Empty, 13f, Palette.FamilyWood.Base);
             _skipPulse = new NotePulse(_skipNote);
 
+            // TalkBack: los botones en gris por el saldo responden al toque, así que se leen con lo que falta (02 §12: etiqueta +
+            // estado; GreyA11y), y su línea «Te faltan» suelta se calla mientras tanto.
+            GreyA11y.Register(_rescue.Button, () => _view != null && _view.Rescue == StuckRescueKind.Disabled ? _view.RescueMissing : 0, _rescueNote);
+            GreyA11y.Register(_refillSeeds.Button, () => _view != null && _view.Undo == StuckUndoKind.Refill ? _view.UndoRefillMissing : 0);
+            GreyA11y.Register(_skip.Button, () => _view != null && _view.Skip.Offered && !_view.Skip.CanUse ? _view.Skip.Missing : 0, _skipNote);
+
             _restart = ModalKit.Cta("RestartModalButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.StuckRestart, 18f, () => actions.PressRestart(), out _restartLabel);
             _giveUp = ModalKit.Link("GiveUpButton", _panel, UiText.StuckGiveUp, () => actions.PressGiveUp(), out _);
         }

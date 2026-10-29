@@ -223,6 +223,9 @@ namespace AF.Tests.EditMode
             Assert.That(TraySpeech.Undo("Deshacer", new UndoStatus(false, 0, 0)), Is.EqualTo("Deshacer"), "sin usos: precio o video");
             Assert.That(TraySpeech.Extra("+1 cuia", new ExtraCuiaOffer(ExtraCuiaState.Ready, 2, 100, 0)), Is.EqualTo("+1 cuia, 2 restantes"));
             Assert.That(TraySpeech.Extra("+1 cuia", new ExtraCuiaOffer(ExtraCuiaState.Ready, 0, 100, 0)), Is.EqualTo("+1 cuia"));
+            Assert.That(TraySpeech.Extra("+1 cuia", new ExtraCuiaOffer(ExtraCuiaState.Ready, 0, 150, 100)),
+                Is.EqualTo(A11yText.Append("+1 cuia", UiText.MissingSeeds(100))), "sin saldo, con lo que falta (el toque responde)");
+            Assert.That(TraySpeech.Extra("+1 cuia", new ExtraCuiaOffer(ExtraCuiaState.Ready, 1, 150, 100)), Is.EqualTo("+1 cuia, 1 restante"), "con stock, no falta nada");
             Assert.That(TraySpeech.Hint("Pista", new HintOffer(HintState.Ready, 1, 50, 0, 0)), Is.EqualTo("Pista, 1 restante"));
             Assert.That(TraySpeech.Shuffle("Barajar", new ShuffleOffer(ShuffleState.Ready, 0, 300, 0)), Is.EqualTo("Barajar"));
         }

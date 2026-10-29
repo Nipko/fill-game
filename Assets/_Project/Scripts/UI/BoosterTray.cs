@@ -352,6 +352,21 @@ namespace AF.UI
         /// <summary>Pista muestra «Te faltan {n}».</summary>
         public bool HintShowsMissing => _hint.MissingShown;
 
+        /// <summary>
+        /// Semillas que dice la burbuja «Te faltan {n}» de cada ranura (0 si no se ve): TalkBack las lee con su botón
+        /// (GameScreen.A11y), y la burbuja se calla.
+        /// </summary>
+        public int UndoMissingSeeds => _undo.MissingSeedsShown;
+
+        /// <summary>Como <see cref="UndoMissingSeeds"/>, la de Pista.</summary>
+        public int HintMissingSeeds => _hint.MissingSeedsShown;
+
+        /// <summary>Como <see cref="UndoMissingSeeds"/>, la de la Pororoca.</summary>
+        public int ShuffleMissingSeeds => _shuffle.MissingSeedsShown;
+
+        /// <summary>Como <see cref="UndoMissingSeeds"/>, la de la Luciérnaga.</summary>
+        public int RevealMissingSeeds => _reveal.MissingSeedsShown;
+
         /// <summary>Pista ofrece el video (<c>rv_hint</c>): la insignia lleva el icono de video.</summary>
         public bool HintShowsVideo => _hint.VideoShown;
 
@@ -369,6 +384,25 @@ namespace AF.UI
 
         /// <summary>«Te faltan {n}» de Pista responde al toque (<see cref="PulseHintMissing"/>; tests).</summary>
         public bool HintMissingPulsing => _hint.PulsingNow;
+
+        /// <summary>«Te faltan {n}» de la Cuia extra responde al toque (<see cref="PulseExtraMissing"/>; tests).</summary>
+        public bool ExtraMissingPulsing => _extra.PulsingNow;
+
+        /// <summary>Escala de ahora de la burbuja «Te faltan {n}» de la Cuia extra (1 en reposo; tests).</summary>
+        public float ExtraMissingScaleNow => _extra.PulseScaleNow;
+
+        /// <summary>Color de ahora de esa burbuja hacia el de la etiqueta de precio sin saldo (0 en reposo, 1 del todo; tests).</summary>
+        public float ExtraMissingColorNow => _extra.PulseColorNow;
+
+        /// <summary>
+        /// Late la burbuja «Te faltan {n}» de la Cuia extra, como la de Pista (observación 2 de la jornada 6: «+1 cuia» sin saldo
+        /// era un toque mudo); con Reducir movimiento, solo el color. False si la burbuja no se ve o lleva otra cifra. Sin
+        /// asignaciones.
+        /// </summary>
+        public bool PulseExtraMissing(int missing, bool reduceMotion)
+        {
+            return _extra.PulseMissing(missing, reduceMotion);
+        }
 
         /// <summary>La cara de Pista está pulsada: Morpho piensa.</summary>
         public bool HintPressed => _hintPressed;
@@ -722,6 +756,7 @@ namespace AF.UI
             _hint.TickMissingPulse(dtMs);
             _shuffle.TickMissingPulse(dtMs);
             _reveal.TickMissingPulse(dtMs);
+            _extra.TickMissingPulse(dtMs);
         }
 
         /// <summary>
@@ -1038,6 +1073,12 @@ namespace AF.UI
         {
             _canvasW = canvasW;
             _trayTop = trayTop;
+            bool shrink = canvasW < GameScreen.ReferenceWidth - 0.5f; // D-061: el último recurso, solo por debajo de 360 dp
+            for (int i = 0; i < _order.Length; i++)
+            {
+                _order[i].ShrinkAllowed = shrink;
+            }
+
             _slotW = SlotWidthFor(canvasW);
             _grow = 0f;
             for (int i = 0; i < _order.Length; i++)
@@ -1092,8 +1133,8 @@ namespace AF.UI
             {
                 if (_order[i].Active)
                 {
-                    text = Mathf.Max(text, _order[i].LabelTextDp);
-                    word = Mathf.Max(word, _order[i].LabelWordDp);
+                    text = Mathf.Max(text, _order[i].MeasureLabelTextDp());
+                    word = Mathf.Max(word, _order[i].MeasureLabelWordDp());
                 }
             }
 
@@ -1505,6 +1546,11 @@ namespace AF.UI
             private const float LabelHeightDp = 16f;
             private const float PriceBelowLabelDp = 3f;
             private const float LabelTwoLinesSpacing = -20f;
+
+            // Lo menos que encoge una etiqueta cuya palabra más larga no cabe en la ranura (observación 8 de la jornada 6): 12 dp,
+            // los 12 sp de 02 §12 sin la escala de texto. Solo con ShrinkAllowed, en un lienzo de menos de 360 dp (D-061: la
+            // excepción de 02 §12 por debajo de 360 dp); a 360 dp nunca encoge.
+            private const float LabelFloorSp = UiBuilder.MinTextSp;
             private const float IconDp = 32f;
             private const float IconTopDp = 6f;
             private const float LabelIconGapDp = 1f;
@@ -1587,6 +1633,7 @@ namespace AF.UI
                 TextMeshProUGUI text = UiBuilder.Label("Label", Parts.Face, TextStyle.SlotWater, label, 12f, Palette.Cream, TextAlignmentOptions.Center);
                 UiBuilder.Place(text.rectTransform, 0f, LabelTopDp, SlotDp, LabelHeightDp);
                 Label = text;
+                _labelSp = text.fontSize;
                 Parts.Relief.Bind(Parts.Face, Parts.Base, Parts.FaceImage, art.SlotWater, Glyph, iconDisabled, text);
 
                 _badge = UiBuilder.Rect("Badge", Parts.Button.transform);
@@ -1619,6 +1666,8 @@ namespace AF.UI
                 UiBuilder.Stretch(_missingPlate.rectTransform);
                 _missingText = UiBuilder.Label("Value", _missingBody, TextStyle.PlainBold, string.Empty, MissingSp, Palette.UiRedWarning, TextAlignmentOptions.Center);
                 UiBuilder.Stretch(_missingText.rectTransform);
+                // TalkBack: la burbuja no se lee suelta; la dice su botón con «Te faltan {n} semillas» (GameScreen.A11y, AddTray).
+                A11yLabels.SetText(_missingText, () => string.Empty);
                 _missing.gameObject.SetActive(false);
             }
 
@@ -1632,8 +1681,22 @@ namespace AF.UI
             /// <summary>Etiqueta funcional de la ranura (12 sp; tarea L4).</summary>
             public TextMeshProUGUI Label { get; }
 
+            // Tamaño de siempre de la etiqueta (12 sp × escala); SetLabelLines lo baja solo como último recurso.
+            private readonly float _labelSp;
+
             /// <summary>Ancho de la etiqueta de la ranura en una línea (dp), sin su aire.</summary>
-            public float LabelTextDp => Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x;
+            /// <summary>
+            /// Mide el ancho de la etiqueta en una línea (dp) a su tamaño de siempre. Es un método, no una propiedad, porque la deja a
+            /// ese tamaño si la última colocación la había encogido (SetLabelLines; D-061): solo se llama al colocar la bandeja.
+            /// </summary>
+            public float MeasureLabelTextDp()
+            {
+                BaseLabelSize();
+                return Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x;
+            }
+
+            /// <summary>El último recurso de SetLabelLines está permitido: el lienzo mide menos de 360 dp (D-061; lo pone Layout).</summary>
+            public bool ShrinkAllowed { get; set; }
 
             /// <summary>
             /// Aire a cada lado de la etiqueta en una ranura de <paramref name="w"/> dp: <see cref="LabelNarrowInsetDp"/> en la de
@@ -1651,8 +1714,24 @@ namespace AF.UI
                 _wideInset = wideInset;
             }
 
-            /// <summary>Ancho de la palabra más larga de la etiqueta (dp): lo menos que necesita para no partirla (MO2).</summary>
-            public float LabelWordDp => UiBuilder.LongestWordWidth(Label);
+            /// <summary>
+            /// Mide el ancho de la palabra más larga de la etiqueta (dp): lo menos que necesita para no partirla (MO2). Como
+            /// <see cref="MeasureLabelTextDp"/>, la deja a su tamaño de siempre antes de medir: solo se llama al colocar la bandeja.
+            /// </summary>
+            public float MeasureLabelWordDp()
+            {
+                BaseLabelSize();
+                return UiBuilder.LongestWordWidth(Label);
+            }
+
+            // La etiqueta vuelve a su tamaño de siempre (lo que se mide para decidir la ranura es siempre lo mismo).
+            private void BaseLabelSize()
+            {
+                if (Label.fontSize != _labelSp)
+                {
+                    Label.fontSize = _labelSp;
+                }
+            }
 
             /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas con el ancho de ahora de la ranura (dp).</summary>
             public float MissingWideNowDp => _w + MissingWideExtraDp;
@@ -1668,6 +1747,9 @@ namespace AF.UI
             public bool VideoShown => _badge.gameObject.activeSelf && _badgeVideo.gameObject.activeSelf;
 
             public string MissingText => MissingShown ? _missingText.text : string.Empty;
+
+            /// <summary>Semillas que dice su burbuja «Te faltan {n}» (0 si no se ve).</summary>
+            public int MissingSeedsShown => MissingShown && _missingShown > 0 ? _missingShown : 0;
 
             public float MissingWidth => _missingW;
 
@@ -1856,9 +1938,20 @@ namespace AF.UI
                 UiBuilder.Place(Glyph.rectTransform, (_w - icon) * 0.5f, iconTop, icon, icon);
             }
 
-            // Una línea si la etiqueta cabe en inner dp; si no, dos con el interlineado apretado. Devuelve si van dos.
+            // Una línea si la etiqueta cabe en inner dp; si no, dos con el interlineado apretado. Devuelve si van dos. Si ni la
+            // palabra más larga cabe en inner (cinco ranuras a 320 dp con la letra al 130 %: «Deshace / r», observación 8 de la
+            // jornada 6) y el lienzo mide menos de 360 dp (ShrinkAllowed), la etiqueta encoge lo justo para que quepa, sin bajar de
+            // LabelFloorSp (D-061): nunca se parte una palabra.
             private bool SetLabelLines(float inner)
             {
+                BaseLabelSize(); // cada colocación empieza con su tamaño de siempre
+                float word = UiBuilder.LongestWordWidth(Label);
+                if (ShrinkAllowed && word > inner && inner > 0f)
+                {
+                    float fit = Mathf.Floor(_labelSp * (inner / word) * 10f) / 10f;
+                    Label.fontSize = Mathf.Max(LabelFloorSp, Mathf.Min(_labelSp, fit));
+                }
+
                 Label.textWrappingMode = TextWrappingModes.NoWrap;
                 bool two = Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x > inner;
                 if (two != _labelTwoLines)

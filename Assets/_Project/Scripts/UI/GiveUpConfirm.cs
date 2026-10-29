@@ -59,6 +59,7 @@ namespace AF.UI
             _price = new PriceTag("Price", _rescue.Face, art);
             _note = ModalKit.Line("Note", _panel, string.Empty, 13f, Palette.FamilyWood.Base);
             _pulse = new NotePulse(_note);
+            GreyA11y.Register(_rescue.Button, () => _rescueKind == StuckRescueKind.Disabled ? RescueMissingSeeds : 0, _note); // TalkBack: con lo que falta
             _giveUp = ModalKit.Link("GiveUpButton", _panel, UiText.StuckGiveUp, () => actions.ConfirmGiveUp(), out _);
             _root.gameObject.SetActive(false);
         }

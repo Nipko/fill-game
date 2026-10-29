@@ -186,24 +186,28 @@ namespace AF.UI
 
             _a11ySkip.Clear();
             _a11ySkip.Add(_board);
-            AddTray(into, _tray.UndoButton, TraySpeech.Undo(_tray.UndoLabel.text, flow.UndoStatus));
+            // Con su burbuja «Te faltan {n}» a la vista, el botón la lee unida a su etiqueta («Pista, Te faltan 50 semillas»; 02 §12:
+            // etiqueta + estado) y la burbuja se calla. La Cuia extra ya la lleva en TraySpeech.Extra.
+            AddTray(into, _tray.UndoButton, TraySpeech.Undo(_tray.UndoLabel.text, flow.UndoStatus), _tray.UndoMissingSeeds);
             AddTray(into, _tray.ExtraCuiaButton, TraySpeech.Extra(_tray.ExtraLabel.text, flow.ExtraCuia));
-            AddTray(into, _tray.HintButton, TraySpeech.Hint(_tray.HintLabel.text, flow.Hint));
-            AddTray(into, _tray.ShuffleButton, TraySpeech.Shuffle(_tray.ShuffleLabel.text, flow.Shuffle));
-            AddTray(into, _tray.RevealButton, _tray.RevealLabel.text);
+            AddTray(into, _tray.HintButton, TraySpeech.Hint(_tray.HintLabel.text, flow.Hint), _tray.HintMissingSeeds);
+            AddTray(into, _tray.ShuffleButton, TraySpeech.Shuffle(_tray.ShuffleLabel.text, flow.Shuffle), _tray.ShuffleMissingSeeds);
+            AddTray(into, _tray.RevealButton, _tray.RevealLabel.text, _tray.RevealMissingSeeds);
 
             // Lo demás del lienzo (la pausa, los saldos, los avisos…), en el orden de lectura, sin repetir lo de arriba.
             scanner.CollectGeneric(canvas, _a11ySkip, into);
             return true;
         }
 
-        // Un botón de la barra de comodines, si se ve, con su descripción; se salta en el recorrido genérico.
-        private void AddTray(List<A11yItem> into, Button button, string label)
+        // Un botón de la barra de comodines, si se ve, con su descripción y, si su burbuja dice que faltan semillas, «Te faltan {n}
+        // semillas» (missing > 0); se salta en el recorrido genérico.
+        private void AddTray(List<A11yItem> into, Button button, string label, int missing = 0)
         {
             _a11ySkip.Add(button.transform);
             if (button.gameObject.activeInHierarchy)
             {
-                into.Add(A11yScanner.ButtonItem(button, label.Trim()));
+                string reading = label.Trim();
+                into.Add(A11yScanner.ButtonItem(button, missing > 0 ? A11yText.Append(reading, UiText.MissingSeeds(missing)) : reading));
             }
         }
 

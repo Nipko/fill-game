@@ -134,10 +134,10 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// Arranca el juego en <paramref name="locale"/> con la fuente a <paramref name="scale"/>, a 360 × 640 dp (o en
-        /// <paramref name="screen"/>), con el perfil de las capturas: nivel 46, 2.450 semillas, la Cuia de Santarém puesta y el
+        /// <paramref name="screen"/>), con el perfil de las capturas: nivel 46 (o <paramref name="level"/>), 2.450 semillas, la Cuia de Santarém puesta y el
         /// Cántaro a 1.230.
         /// </summary>
-        public static IEnumerator Load(string locale, float scale, Vector4? screen = null)
+        public static IEnumerator Load(string locale, float scale, Vector4? screen = null, int level = 46)
         {
             FunnelSetup.Hooks();
             LaunchOptions.LocTablesOverride = locale == LocLocale.SourceLocale ? null : TranslatedTables.Completed(locale, out _, out _);
@@ -148,8 +148,8 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedScreen = screen ?? HudLabelTests.Screen640;
 
             Profile profile = Wallet.NewProfile(new ManualClock(T0));
-            profile.Progress.NextLevel = 46;
-            profile.Progress.MaxLevel = 45;
+            profile.Progress.NextLevel = level;
+            profile.Progress.MaxLevel = level - 1;
             profile.Wallet.Seeds = 2450;
             profile.Consent = new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Adult);
             profile.Entitlements.Skins.Add("af_skin_m02");

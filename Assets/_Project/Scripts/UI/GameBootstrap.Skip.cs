@@ -75,6 +75,9 @@ namespace AF.UI
             flow.UseSkip(_skipStore);
             Transform layer = screen.Pause.Root.parent; // el lienzo de la pantalla del nivel, donde viven la pausa y la confirmación
             _skipBanner = new SkipBanner(layer, screen.CardArt, () => PressSkip());
+            SkipBanner banner = _skipBanner;
+            // En gris por el saldo, el toque late «Te faltan {n} semillas» y avisa si la tienda no vende (observación 2 de la jornada 6).
+            banner.Missing = () => screen.OnMissingTap("banner_skip", reduce => banner.PulseMissing(reduce), banner.MissingSeeds);
             _skipConfirm = new SkipConfirm(layer, screen.CardArt, () => ConfirmSkip(), CancelSkip);
             SkipRunner runner = gameObject.GetComponent<SkipRunner>();
             if (runner == null)

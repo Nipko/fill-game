@@ -70,6 +70,7 @@ namespace AF.UI
             _refillPrice = new PriceTag("Price", _refill.Face, art);
             _refillNote = ModalKit.Line("RefillNote", _panel, string.Empty, 13f, Palette.UiRedWarning);
             _refillPulse = new NotePulse(_refillNote);
+            GreyA11y.Register(_refill.Button, () => _refillMissing, _refillNote); // TalkBack: «Llenar canoas…, Te faltan {n} semillas»
             _infinite = ModalKit.Cta("InfiniteButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 16f, onInfinite, out _infiniteLabel);
             _home = ModalKit.Link("HomeButton", _panel, TutorialTipsText.NoCanoesMap, onMap, out _); // B11: IGameActions.PressNoCanoesMap
             _daily = new NoCanoesDailyLink(_panel);

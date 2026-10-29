@@ -22,7 +22,9 @@ namespace AF.UI
     /// (<see cref="AudioToggles"/>), que se apagan o encienden con un toque y guardan lo mismo que las filas de Ajustes; la
     /// Vibración se queda en Ajustes.</para>
     /// <para>«Salto del Boto» (bloque B3; 04 §2.6: «el icono de Rosa aparece también en el menú de pausa»): con Rosa y su precio,
-    /// solo si la opción se ofrece (<c>LevelFlow.SkipOffer</c>), en gris sin saldo; un toque abre la confirmación.</para>
+    /// solo si la opción se ofrece (<c>LevelFlow.SkipOffer</c>), en gris sin saldo; un toque abre la confirmación. En gris por el
+    /// saldo, el toque no abre nada y responde <see cref="SkipMissing"/> (observación 2 de la jornada 6 en el teléfono, 2026-10-28:
+    /// era el único botón en gris sin respuesta; como el del modal de atasco): late su etiqueta, que no tiene línea «Te faltan».</para>
     /// </summary>
     internal sealed class PauseMenu
     {
@@ -42,6 +44,8 @@ namespace AF.UI
         private readonly TextMeshProUGUI _skipLabel;
         private readonly Image _skipRosa;
         private readonly PriceTag _skipPrice;
+        private readonly NotePulse _skipPulse;
+        private SkipOffer _skipOffer;
         private readonly ReliefParts _restart;
         private readonly ReliefParts _quit;
 
@@ -57,7 +61,9 @@ namespace AF.UI
             _audio.SetVisible(false);
             _resume = ModalKit.Cta("ResumeButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.KeepPlaying, 21f, onResume, out _);
             _map = ModalKit.Cta("MapButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RiverMap, 18f, onMap, out _);
-            _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, onSkip ?? (() => { }), out _skipLabel);
+            _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, () => OnSkip(onSkip), out _skipLabel);
+            _skipPulse = new NotePulse(_skipLabel); // sin línea «Te faltan», late la etiqueta (como «+3 Deshacer»)
+            GreyA11y.Register(_skip.Button, () => SkipMissingSeeds); // TalkBack: «Salto del Boto, 300, Te faltan {n} semillas»
             _skipRosa = UiBuilder.Image("Rosa", _skip.Face, null, Color.white); // el sprite, al enseñarlo (las mascotas, solo si hacen falta)
             _skipRosa.preserveAspect = true;
             _skipPrice = new PriceTag("Price", _skip.Face, art);
@@ -96,9 +102,50 @@ namespace AF.UI
 
         public Button QuitButton => _quit.Button;
 
+        /// <summary>
+        /// Toque en «Salto del Boto» en gris por el saldo (observación 2 de la jornada 6): lo pone <c>GameScreen</c>, que hace latir
+        /// la etiqueta (<see cref="PulseSkipMissing"/>), lo anuncia con TalkBack, avisa si la tienda no vende y escribe
+        /// <c>AF_STATE missing_tap</c> con <c>pause_skip</c>.
+        /// </summary>
+        public Action? SkipMissing { get; set; }
+
+        /// <summary>Semillas que le faltan al Salto del Boto que enseña la pausa (0 si alcanza o no se ofrece).</summary>
+        internal int SkipMissingSeeds => _skipOffer.Offered && !_skipOffer.CanUse ? _skipOffer.Missing : 0;
+
+        /// <summary>Latido de la etiqueta del Salto del Boto en gris (tests).</summary>
+        internal NotePulse SkipPulse => _skipPulse;
+
+        /// <summary>
+        /// Late la etiqueta «Salto del Boto» (con Reducir movimiento, solo se atenúa). False si la pausa no se ve o el salto no está
+        /// en gris por el saldo.
+        /// </summary>
+        public bool PulseSkipMissing(bool reduceMotion)
+        {
+            return Visible && _skip.Button.gameObject.activeSelf && SkipMissingSeeds > 0 && _skipPulse.Start(reduceMotion);
+        }
+
+        /// <summary>Un fotograma del latido (lo llama <c>GameScreen.Tick</c>).</summary>
+        public void Tick(float dtMs)
+        {
+            _skipPulse.Tick(dtMs);
+        }
+
         public void Hide()
         {
+            _skipPulse.Stop();
             _root.gameObject.SetActive(false);
+        }
+
+        // «Salto del Boto»: en gris por el saldo, no abre la confirmación y responde SkipMissing; si no, la confirmación.
+        private void OnSkip(Action? onSkip)
+        {
+            if (SkipMissingSeeds > 0)
+            {
+                SkipMissing?.Invoke();
+                return;
+            }
+
+            onSkip?.Invoke();
         }
 
         /// <summary>
@@ -137,6 +184,8 @@ namespace AF.UI
                 y += ModalKit.HeightOf(_map) + 8f;
             }
 
+            _skipPulse.Stop(); // la etiqueta vuelve a su sitio antes de recolocarla
+            _skipOffer = skip;
             bool canSkip = skip.Offered;
             _skip.Button.gameObject.SetActive(canSkip);
             if (canSkip)
@@ -147,6 +196,11 @@ namespace AF.UI
                 }
 
                 UiBuilder.SetEnabled(_skip.Button, skip.CanUse);
+                if (!skip.CanUse && skip.Missing > 0)
+                {
+                    _skip.Button.interactable = true; // gris por el saldo, pero el toque responde (OnSkip; observación 2 de la jornada 6)
+                }
+
                 _skipPrice.Set(skip.Price, 0, !skip.CanUse);
                 ModalKit.FitCtaLabel(_skip, _skipLabel, inner, _skipPrice.Width + 76f, 20f - ((_skipPrice.Width + 12f) * 0.5f));
                 ModalKit.Place(_skip, 16f, y, inner);

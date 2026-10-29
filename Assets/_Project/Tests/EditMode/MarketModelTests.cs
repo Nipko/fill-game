@@ -230,6 +230,23 @@ namespace AF.Tests.EditMode
             Assert.That(Sum(widths), Is.EqualTo(0f));
         }
 
+        [Test]
+        public void TabColumns_GoToTwo_OnlyWhenTheWordsDoNotFitInOneRow()
+        {
+            // Caben en una fila: todas en ella.
+            Assert.That(MarketScreen.TabColumns(296f, new[] { 60f, 80f, 50f, 90f }), Is.EqualTo(4));
+            Assert.That(MarketScreen.TabColumns(296f, new[] { 60f, -1f, 50f, 90f }), Is.EqualTo(3));
+
+            // A 320 dp con la letra al 130 % (observación 8 de la jornada 6): no caben juntas, pero cada una en media fila sí.
+            Assert.That(MarketScreen.TabColumns(256f, new[] { 80f, 95f, 50f, 85f }), Is.EqualTo(2));
+            Assert.That(MarketScreen.TabColumns(256f, new[] { 80f, 95f, -1f, 85f }), Is.EqualTo(2), "con tres, 2 + 1");
+
+            // Ni en media fila: una fila con la salvaguarda de ShareTabWidths; con dos, siempre una fila.
+            Assert.That(MarketScreen.TabColumns(256f, new[] { 80f, 140f, 50f, 85f }), Is.EqualTo(4));
+            Assert.That(MarketScreen.TabColumns(150f, new[] { 80f, -1f, -1f, 85f }), Is.EqualTo(2));
+            Assert.That(MarketScreen.TabColumns(296f, new[] { -1f, -1f, -1f, -1f }), Is.EqualTo(1));
+        }
+
         private static float Sum(float[] values)
         {
             float sum = 0f;

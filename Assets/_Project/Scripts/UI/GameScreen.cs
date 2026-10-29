@@ -169,9 +169,18 @@ namespace AF.UI
 
         // Aire más corto a cada lado de la etiqueta de «Reiniciar» cuando una palabra no cabe con RestartPillPadDp ni con la
         // columna del saldo a su ancho mínimo (tarea FX5) [P]. Nunca menos: con 2 dp, en en-XA al 130 % a 360 dp, el «[» y la
-        // «r» quedaban pegados a los cantos (revisión de FX5; D-003). La etiqueta ya va a 12 sp × escala, el mínimo de 02 §12,
-        // así que no puede encoger para ganar aire.
+        // «r» quedaban pegados a los cantos (revisión de FX5; D-003). La etiqueta va a 12 sp × escala, el mínimo de 02 §12, así
+        // que no encoge para ganar aire; solo en un lienzo de menos de 360 dp, si ni así cabe la palabra, encoge lo justo hasta
+        // RestartLabelFloorSp (12 dp) para no partirla (D-061, la excepción de 02 §12 por debajo de 360 dp).
         internal const float RestartPillTightPadDp = 3f;
+
+        /// <summary>
+        /// Lo menos que encoge la etiqueta de «Reiniciar» cuando su palabra no cabe ni con <see cref="RestartPillTightPadDp"/> (320 dp
+        /// con la letra al 130 %; observación 8 de la jornada 6): 12 dp, los 12 sp de 02 §12 sin la escala de texto. Solo en un
+        /// lienzo de menos de <see cref="ReferenceWidth"/> (D-061: la excepción de 02 §12 por debajo de 360 dp); a 360 dp nunca
+        /// encoge.
+        /// </summary>
+        internal const float RestartLabelFloorSp = UiBuilder.MinTextSp;
         private const float RestartPillOutDp = 4f;
         internal const float RestartPillGapDp = 4f;
 
@@ -229,6 +238,7 @@ namespace AF.UI
         private readonly ReliefParts _restart;
         private readonly Image _restartPill;
         private readonly TextMeshProUGUI _restartLabel;
+        private readonly float _restartLabelSp; // su tamaño de siempre (12 sp × escala); LayoutRestartPill lo baja solo como último recurso
         private float _restartPillLeft = float.NaN; // LayoutRestartPill (tarea FX5)
         private bool _restartPillTwoLines; // la etiqueta de Reiniciar va en dos líneas y la píldora crece hacia abajo (L4)
         private readonly BoosterTray _tray;
@@ -508,10 +518,11 @@ namespace AF.UI
             UiBuilder.Stretch(restartLabel.rectTransform);
             restartLabel.rectTransform.offsetMin = new Vector2(0f, 1f);
             _restartLabel = restartLabel;
+            _restartLabelSp = restartLabel.fontSize;
             _restart.Relief.Bind(_restart.Face, _restart.Base, _restart.FaceImage, art.DiscWood, restartIcon, null, null);
 
             // Bandeja de comodines (B2-1; 07 §7.4): Marea, desde el 8 Cuia extra y desde el 12 Pista (MO2).
-            _tray = new BoosterTray(_hud, art, OnTrayUndo, () => _actions.PressExtraCuia());
+            _tray = new BoosterTray(_hud, art, OnTrayUndo, OnTrayExtra);
 
             // ---- Cuia elevada cuyo cielo entra en la fila del HUD (revisión de la captura 48c): en los tableros que pasan bajo el
             // HUD (3 filas a 360 × 780), los 32 dp sobre la boca de una cuia de la fila 1 (la nube de la Lluvia, la cueva de la
@@ -640,6 +651,7 @@ namespace AF.UI
             _walletBar = new WalletBar(_topLayer, art);
             _pause = new PauseMenu(_root, art, OnResume, OnPauseMap, OnPauseRestart, OnPauseQuit, OnPauseSkip);
             _pause.Audio.Toggled = OnPauseAudio; // D-046, punto 2: Música y Sonido junto a la X
+            _pause.SkipMissing = () => OnMissingTap("pause_skip", reduce => _pause.PulseSkipMissing(reduce), _pause.SkipMissingSeeds);
             _confirm = new QuitConfirm(_root, art, OnConfirm, OnConfirmCancel, OnConfirmUndo);
             _banner = new Toast("RiverLowered", _root, art, 18f);
             _toast = new Toast("Toast", _noticeLayer, art, 15f);
@@ -967,6 +979,7 @@ namespace AF.UI
             _stuck.Tick(dtMs); // el latido de «Te faltan {n} semillas» del rescate en gris
             _giveUp.Tick(dtMs);
             _noCanoes.Tick(dtMs);
+            _pause.Tick(dtMs); // el Salto del Boto en gris de la pausa (observación 2 de la jornada 6)
             HintTick(dtMs);
             ShuffleTick(dtMs);
             StopTick(dtMs);
@@ -1620,12 +1633,12 @@ namespace AF.UI
         /// <summary>
         /// Toque en un botón en gris por falta de semillas que antes no hacía nada (observación 6 de la jornada 5 en el teléfono; guion
         /// 8.2: «no un toque mudo como el 23»): «Continuar: +1 cuia» en Aguas estancadas y en ¿Seguro?, «+3 Deshacer · 30 semillas»,
-        /// el Salto del Boto y «Llenar canoas». Responde como un comodín sin saldo, sin cobrar nada, sin háptico ni analítica (como la
+        /// el Salto del Boto (en el modal, en la pausa y en el banner de la entrada: observación 2 de la jornada 6) y «Llenar canoas». Responde como un comodín sin saldo, sin cobrar nada, sin háptico ni analítica (como la
         /// Pista y la Luciérnaga, D-022): <paramref name="pulse"/> hace latir su «Te faltan {n} semillas» (o, sin esa línea, su
         /// etiqueta con el precio; con Reducir movimiento, solo se atenúa). Si además la tienda no vende, el aviso de la tienda
         /// (<see cref="RespondToMissing"/>).
         /// </summary>
-        private void OnMissingTap(string option, Func<bool, bool> pulse, int missing)
+        internal void OnMissingTap(string option, Func<bool, bool> pulse, int missing)
         {
             LevelFlow? flow = _flow;
             if (flow == null || !flow.HasLevel)
@@ -2005,6 +2018,31 @@ namespace AF.UI
         }
 
         // 02 §3.1 C8 y 04 §1.1: Marea con cupo deshace; sin cupo ni stock, el botón recarga (video si hay; si no, semillas).
+        /// <summary>
+        /// «+1 cuia» de la bandeja (04 §2.2). Sin stock y sin saldo (el precio en rojo y «Te faltan {n}» en la ranura), el toque ya
+        /// no es mudo (la petición del 2026-10-29 tras la observación 2 de la jornada 6: ningún botón con «Te faltan» sin respuesta):
+        /// late esa burbuja como la de Pista (con Reducir movimiento, solo el color), lo dice TalkBack, avisa si la tienda no vende y
+        /// escribe <c>AF_STATE missing_tap</c> con <c>tray_add_cuia</c> (<see cref="OnMissingTap"/>); no cobra nada. Si no, la
+        /// Cuia extra de siempre.
+        /// </summary>
+        private void OnTrayExtra()
+        {
+            LevelFlow? flow = _flow;
+            if (flow != null && flow.HasLevel && flow.AcceptsBoardInput)
+            {
+                ExtraCuiaOffer extra = flow.ExtraCuia;
+                if (extra.State == ExtraCuiaState.Ready && !extra.FromStock && extra.Missing > 0)
+                {
+                    int missing = extra.Missing;
+                    _tray.Refresh(); // la burbuja, con la cifra de ahora
+                    OnMissingTap("tray_add_cuia", reduce => _tray.PulseExtraMissing(missing, reduce), missing);
+                    return;
+                }
+            }
+
+            _actions.PressExtraCuia();
+        }
+
         private void OnTrayUndo()
         {
             LevelFlow? flow = _flow;
@@ -2740,10 +2778,18 @@ namespace AF.UI
         // píldora crece hacia la izquierda lo que le falte a esa palabra y la columna del saldo se estrecha otro tanto
         // (_restartPillLeft; LayoutWalletBar), sin bajar de WalletBar.CompactMinWidthDp, y si ni así cabe, con menos aire
         // (RestartPillTightPadDp); la etiqueta, en una línea si así cabe entera y, si no, en dos, cortadas entre palabras. Si
-        // una palabra no cupiera ni así, se partiría: no pasa con es-419 ni con en-XA (Fx5Tests). Mide al colocar.
+        // una palabra no cupiera ni así (a 320 dp con la letra al 130 %: «Reinicia / r», observación 8 de la jornada 6), la etiqueta
+        // encoge lo justo para que quepa, solo con el lienzo de menos de 360 dp y sin bajar de 12 dp (RestartLabelFloorSp; D-061);
+        // nunca parte la palabra
+        // (Narrow320WordBreakTests). A 360 dp no pasa con es-419 ni con en-XA (Fx5Tests). Mide al colocar.
         private void LayoutRestartPill(float w)
         {
             _restartPillLeft = float.NaN;
+            if (_restartLabel.fontSize != _restartLabelSp)
+            {
+                _restartLabel.fontSize = _restartLabelSp; // cada colocación empieza con su tamaño de siempre
+            }
+
             float labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * RestartPillPadDp);
             if (labelW <= 60f)
             {
@@ -2776,6 +2822,17 @@ namespace AF.UI
                 if (wordW > capW)
                 {
                     pad = RestartPillTightPadDp;
+                    wordW = wordInk + (2f * pad);
+                    labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * pad);
+                }
+
+                if (wordW > capW && wordInk > 0f && w < ReferenceWidth - 0.5f)
+                {
+                    // Último recurso (observación 8 de la jornada 6; D-061): por debajo de 360 dp, ni con la columna del saldo a su
+                    // mínimo cabe la palabra con su aire. La etiqueta encoge hasta que quepa, sin bajar de RestartLabelFloorSp.
+                    float fit = Mathf.Floor(_restartLabelSp * ((capW - (2f * pad)) / wordInk) * 10f) / 10f;
+                    _restartLabel.fontSize = Mathf.Max(RestartLabelFloorSp, Mathf.Min(_restartLabelSp, fit));
+                    wordInk = Mathf.Ceil(UiBuilder.LongestWordWidth(_restartLabel));
                     wordW = wordInk + (2f * pad);
                     labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * pad);
                 }

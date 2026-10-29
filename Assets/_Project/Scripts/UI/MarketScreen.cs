@@ -55,8 +55,16 @@ namespace AF.UI
         /// <summary>Alto mínimo de una pestaña (dp): el área táctil de 07 §7.8.</summary>
         public const float TabDp = 48f;
 
-        /// <summary>Margen interior de cada lado de la etiqueta de una pestaña (dp) [P].</summary>
-        public const float TabPadDp = 3f;
+        /// <summary>
+        /// Hueco mínimo entre las etiquetas de dos pestañas vecinas (dp) [P] (observación 5 de la jornada 6 en el teléfono, 2026-10-28:
+        /// al 130 % en es-419, «Semillas» y «Comodines» casi se tocaban con el margen de 3 dp de antes). Lo garantiza
+        /// <see cref="TabPadDp"/> a cada lado de cada etiqueta: el texto nunca sale de su caja (se encoge con el autoajuste o va en
+        /// más líneas), así que entre dos pestañas quedan al menos dos márgenes.
+        /// </summary>
+        public const float TabGapDp = 12f;
+
+        /// <summary>Margen interior de cada lado de la etiqueta de una pestaña (dp): la mitad de <see cref="TabGapDp"/>.</summary>
+        public const float TabPadDp = TabGapDp * 0.5f;
 
         private readonly ProceduralArt _art;
         private readonly OverlayCanvas _canvas;
@@ -79,6 +87,7 @@ namespace AF.UI
         private readonly List<MarketRow> _model = new List<MarketRow>(MaxRows);
         private readonly float[] _tabWidths = new float[4];
         private readonly float[] _tabWords = new float[4];
+        private int _tabCols = 4;
         private readonly float[] _rowHeights = new float[MaxRows];
         private readonly MarketDeps _deps;
         private Action? _onClosed;
@@ -193,6 +202,9 @@ namespace AF.UI
 
         /// <summary>Se vio la pestaña <paramref name="tab"/> (las vacías no salen).</summary>
         public bool TabShown(MarketTab tab) => _tabs[(int)tab].gameObject.activeSelf;
+
+        /// <summary>Etiqueta de la pestaña <paramref name="tab"/> (tests del hueco entre pestañas).</summary>
+        internal TextMeshProUGUI TabLabel(MarketTab tab) => _tabLabels[(int)tab];
 
         /// <summary>La versión de las notas de compra con la que se rehízo por última vez (el arranque lo rehace si cambian; F3-5).</summary>
         public int NotesShown { get; private set; } = -1;
@@ -580,8 +592,11 @@ namespace AF.UI
                 }
             }
 
+            // En una fila o, si sus palabras no caben juntas (320 dp con la letra al 130 %; observación 8 de la jornada 6), en
+            // una rejilla de dos columnas, fila a fila.
             float tabH = TabWidths(inner, shownTabs);
             float x = 16f;
+            int placed = 0;
             for (int i = 0; i < _tabs.Length; i++)
             {
                 if (!_tabs[i].gameObject.activeSelf)
@@ -589,9 +604,16 @@ namespace AF.UI
                     continue;
                 }
 
+                if (placed > 0 && placed % _tabCols == 0)
+                {
+                    x = 16f;
+                    y += tabH;
+                }
+
                 UiBuilder.Place((RectTransform)_tabs[i].transform, x, y, _tabWidths[i], tabH);
                 UiBuilder.Place(_tabLabels[i].rectTransform, TabPadDp, 0f, _tabWidths[i] - (2f * TabPadDp), tabH);
                 x += _tabWidths[i];
+                placed++;
             }
 
             y += tabH + 8f;
@@ -726,7 +748,10 @@ namespace AF.UI
         /// devuelve su alto (D-033, punto 11; 02 §12). A partes iguales, salvo que la palabra más ancha de una etiqueta no quepa
         /// en su parte a 12 sp (× escala): esa se queda el ancho de su palabra y las demás se reparten el resto. Así ninguna
         /// palabra se parte; la etiqueta que no cabe en una línea va en dos y la fila de pestañas crece lo que pida (≥ 48 dp). Si
-        /// ni así caben, la salvaguarda de <see cref="ShareTabWidths"/> las mete en el panel. Mide al colocar, nunca por fotograma.
+        /// ni así caben (las palabras juntas pasan del panel: 320 dp con la letra al 130 % en es-419 o pt-BR; observación 8 de la
+        /// jornada 6), van en dos columnas de la mitad del panel (<see cref="TabColumns"/>), fila a fila, y la palabra cabe entera; solo
+        /// si ni en media fila cabe, la salvaguarda de <see cref="ShareTabWidths"/> las mete en el panel. Devuelve el alto de cada fila
+        /// de pestañas. Mide al colocar, nunca por fotograma.
         /// </summary>
         private float TabWidths(float inner, int shown)
         {
@@ -745,7 +770,20 @@ namespace AF.UI
                 _tabWords[i] = _tabs[i].gameObject.activeSelf ? Mathf.Ceil(UiBuilder.LongestWordWidth(_tabLabels[i])) + (2f * TabPadDp) + 1f : -1f;
             }
 
-            ShareTabWidths(inner, _tabWords, _tabWidths);
+            _tabCols = TabColumns(inner, _tabWords);
+            if (_tabCols < shown)
+            {
+                float half = Mathf.Floor(inner / _tabCols * 100f) / 100f;
+                for (int i = 0; i < _tabs.Length; i++)
+                {
+                    _tabWidths[i] = _tabWords[i] >= 0f ? half : 0f;
+                }
+            }
+            else
+            {
+                ShareTabWidths(inner, _tabWords, _tabWidths);
+            }
+
             float h = TabDp;
             for (int i = 0; i < _tabs.Length; i++)
             {
@@ -756,6 +794,34 @@ namespace AF.UI
             }
 
             return h;
+        }
+
+        /// <summary>
+        /// Columnas de las pestañas visibles (las de <paramref name="words"/> no negativas, en dp con su aire): todas en una fila si la
+        /// suma de sus palabras cabe en <paramref name="inner"/>; si no, con tres o más, dos columnas si cada palabra cabe en la mitad
+        /// (observación 8 de la jornada 6: así ninguna se parte); si ni así, una fila con la salvaguarda de <see cref="ShareTabWidths"/>.
+        /// </summary>
+        internal static int TabColumns(float inner, float[] words)
+        {
+            int shown = 0;
+            float total = 0f;
+            float widest = 0f;
+            for (int i = 0; i < words.Length; i++)
+            {
+                if (words[i] >= 0f)
+                {
+                    shown++;
+                    total += words[i];
+                    widest = Mathf.Max(widest, words[i]);
+                }
+            }
+
+            if (shown <= 2 || total <= inner || widest > inner * 0.5f)
+            {
+                return Math.Max(1, shown);
+            }
+
+            return 2;
         }
 
         /// <summary>
