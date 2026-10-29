@@ -52,6 +52,22 @@ namespace AF.UI
         /// </summary>
         public ScrollRect? Scroll { get; set; }
 
+        /// <summary>
+        /// El marco que da ahora en pantalla (píxeles, origen arriba a la izquierda): en una lista que se desplaza, lo que se ve de él
+        /// en el visor (<see cref="A11yScroll.Frame"/>); vacío sin <see cref="Rect"/> o si ya no existe. Es el que se publica en el
+        /// nodo y el que <see cref="A11yService"/> vigila para saber si hay que volver a leer los marcos (observación 7 de la jornada
+        /// 6: tras desplazar la Liga, TalkBack seguía con los marcos de antes).
+        /// </summary>
+        public UnityEngine.Rect CurrentFrame()
+        {
+            if (Rect == null)
+            {
+                return UnityEngine.Rect.zero;
+            }
+
+            return Scroll != null ? A11yScroll.Frame(Scroll!, Rect!) : UnityScreenReaderHost.ScreenFrame(Rect!);
+        }
+
         /// <summary>Misma identidad y mismo contenido que <paramref name="other"/> (si no cambia nada, no se vuelve a publicar).</summary>
         public bool SameAs(A11yItem other)
         {
@@ -79,6 +95,14 @@ namespace AF.UI
 
         /// <summary>Dice <paramref name="text"/> sin mover el foco (el anuncio de la selección, 02 §12).</summary>
         void Announce(string text);
+
+        /// <summary>
+        /// Lo publicado sigue igual, pero se movió en la pantalla (se desplazó una lista con el dedo, se arrastró el Mapa): vuelve a
+        /// leer los marcos de todos los nodos para que el lector toque y lea lo que está ahora en cada sitio (observación 7 de la
+        /// jornada 6). No mueve el foco, salvo que el elemento enfocado sea una fila que el desplazamiento sacó del visor: entonces
+        /// pasa a la primera fila de su lista que se ve, para que el orden del foco siga lo que se ve.
+        /// </summary>
+        void RefreshFrames();
     }
 
     /// <summary>
@@ -107,6 +131,15 @@ namespace AF.UI
 
         /// <summary>Veces que se publicó (los tests comprueban que no se republica sin cambios).</summary>
         public int Publishes { get; private set; }
+
+        /// <summary>Veces que se pidió volver a leer los marcos (<see cref="RefreshFrames"/>).</summary>
+        public int FrameRefreshes { get; private set; }
+
+        /// <inheritdoc />
+        public void RefreshFrames()
+        {
+            FrameRefreshes++;
+        }
 
         /// <inheritdoc />
         public void Publish(IReadOnlyList<A11yItem> items)
@@ -158,7 +191,9 @@ namespace AF.UI
     /// Los nodos de una lista que se desplaza (<see cref="A11yItem.Scroll"/>; Q-B9-17) llevan además la acción de desplazar
     /// (<see cref="AccessibilityNode.scrolled"/>: una página, y el foco pasa a la primera fila que se ve entera) y, al recibir el
     /// foco (<see cref="AccessibilityNode.focusChanged"/>), desplazan el visor para enseñarse; su marco es lo que se ve de ellos
-    /// en el visor (<see cref="A11yScroll.Frame"/>).
+    /// en el visor (<see cref="A11yScroll.Frame"/>). Unity guarda el marco de cada nodo y solo lo relee con
+    /// <see cref="AccessibilityHierarchy.RefreshNodeFrames"/>: se relee al desplazar con el lector y cuando
+    /// <see cref="A11yService"/> ve que lo publicado se movió (<see cref="RefreshFrames"/>; observación 7 de la jornada 6).
     /// </summary>
     public sealed class UnityScreenReaderHost : IScreenReaderHost
     {
@@ -297,6 +332,7 @@ namespace AF.UI
                     return false;
                 }
 
+                _hierarchy.RefreshNodeFrames(); // observación 7 de la jornada 6: los marcos de después de desplazar
                 AssistiveSupport.notificationDispatcher.SendLayoutChanged(_host.FirstShownIn(Item.Scroll!));
                 return true;
             }
@@ -306,6 +342,7 @@ namespace AF.UI
             {
                 if (focused && Reveal())
                 {
+                    _hierarchy.RefreshNodeFrames(); // la lista se movió: todos los marcos de la jerarquía, no solo el suyo
                     AssistiveSupport.notificationDispatcher.SendLayoutChanged(node);
                 }
             }
@@ -319,17 +356,96 @@ namespace AF.UI
         // El nodo de la primera fila de list que se ve entera (null si ninguna).
         private AccessibilityNode? FirstShownIn(ScrollRect list)
         {
+            int index = FirstShownIndexIn(list, true);
+            return index >= 0 ? _refs[index].Node : null;
+        }
+
+        // El índice de la primera fila de list que se ve entera (whole) o, sin whole, aunque sea en parte; −1 si ninguna.
+        private int FirstShownIndexIn(ScrollRect list, bool whole)
+        {
             for (int i = 0; i < _refs.Count; i++)
             {
                 A11yItem item = _refs[i].Item;
-                if (ReferenceEquals(item.Scroll, list) && item.Rect != null && A11yScroll.FullyShown(list, item.Rect!))
+                if (ReferenceEquals(item.Scroll, list) && item.Rect != null
+                    && (whole ? A11yScroll.FullyShown(list, item.Rect!) : A11yScroll.PartlyShown(list, item.Rect!)))
                 {
-                    return _refs[i].Node;
+                    return i;
                 }
             }
 
-            return null;
+            return -1;
         }
+
+        /// <inheritdoc />
+        public void RefreshFrames()
+        {
+            if (_hierarchy == null || !ReferenceEquals(AssistiveSupport.activeHierarchy, _hierarchy))
+            {
+                return;
+            }
+
+            // Observación 7 de la jornada 6: Unity guarda el marco de cada nodo al crearlo (AccessibilityNode.frame) y solo lo
+            // vuelve a pedir a frameGetter con RefreshNodeFrames; sin esto, tras desplazar la Liga con el dedo, TalkBack tocaba y
+            // leía la fila que había antes en ese sitio. RefreshNodeFrames ya avisa al lector (SendLayoutChanged sin mover el foco).
+            _hierarchy.RefreshNodeFrames();
+            int focused = -1;
+            for (int i = 0; i < _nodes.Count; i++)
+            {
+                if (_nodes[i].isFocused)
+                {
+                    focused = i;
+                    break;
+                }
+            }
+
+            int target = RefocusAfterMove(focused);
+            if (target >= 0 && target != focused)
+            {
+                AssistiveSupport.notificationDispatcher.SendLayoutChanged(_nodes[target]);
+            }
+        }
+
+        /// <summary>
+        /// A dónde va el foco tras moverse la interfaz con el nodo <paramref name="focused"/> enfocado (−1: ninguno): se queda donde
+        /// está, salvo que sea una fila de una lista que se desplaza y ya no se vea nada de ella; entonces, a la primera fila de esa
+        /// lista que se ve entera (o, si no hay, en parte), para que el siguiente gesto siga el orden que se ve. −1 si ninguno.
+        /// </summary>
+        internal int RefocusAfterMove(int focused)
+        {
+            if (focused < 0 || focused >= _refs.Count)
+            {
+                return -1;
+            }
+
+            A11yItem item = _refs[focused].Item;
+            if (item.Scroll == null || item.Rect == null || A11yScroll.PartlyShown(item.Scroll!, item.Rect!))
+            {
+                return focused;
+            }
+
+            int first = FirstShownIndexIn(item.Scroll!, true);
+            if (first < 0)
+            {
+                first = FirstShownIndexIn(item.Scroll!, false);
+            }
+
+            return first >= 0 ? first : focused;
+        }
+
+        /// <summary>El marco que tiene guardado el nodo <paramref name="index"/>: el que usa el lector para tocar y dibujar el foco (tests).</summary>
+        internal Rect NodeStoredFrame(int index)
+        {
+            return _nodes[index].frame;
+        }
+
+        /// <summary>Lo que lee el nodo <paramref name="index"/> (tests).</summary>
+        internal string NodeLabel(int index)
+        {
+            return _nodes[index].label;
+        }
+
+        /// <summary>Nodos publicados (tests).</summary>
+        internal int NodeCount => _nodes.Count;
 
         /// <summary>Lo que hace el nodo <paramref name="index"/> al activarlo (tests: un nodo viejo, tras republicar, no hace nada).</summary>
         internal Func<bool> NodeInvoker(int index)

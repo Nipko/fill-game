@@ -62,7 +62,9 @@ namespace AF.Audio.Unity
         private AudioClip?[] _clips = Array.Empty<AudioClip?>();
         private AudioBank? _bank;
         private Task<AudioBank>? _bankTask;
-        private bool _adPaused;
+        private bool _adPaused; // el fondo está en pausa: por un anuncio o porque otro tomó el foco de audio
+        private AudioFocusTracker _focus = new AudioFocusTracker(new FakeAudioFocusPort());
+        private bool _foreground = true;
         private float _ringerPoll;
         private IHaptics _haptics = NullHaptics.Instance;
         private AndroidRinger? _ringer;
@@ -139,6 +141,7 @@ namespace AF.Audio.Unity
             }
 
             AwakeBackground();
+            _focus = new AudioFocusTracker(AndroidAudioFocus.ForPlatform());
             _haptics = AndroidHaptics.ForPlatform();
             _ringer = AndroidRinger.ForPlatform();
             _mix.Ringer = _ringer.Read();
@@ -154,6 +157,7 @@ namespace AF.Audio.Unity
             // El arranque da el registro justo después de crear el servicio (UseClips): aquí ya se sabe si hace falta el respaldo.
             _started = true;
             StartSynthIfNeeded();
+            WantFocus();
         }
 
         private void OnDestroy()
@@ -162,6 +166,8 @@ namespace AF.Audio.Unity
             {
                 s_instance = null;
             }
+
+            _focus.Want(false);
         }
 
         private void OnApplicationFocus(bool focus)
@@ -169,6 +175,97 @@ namespace AF.Audio.Unity
             if (focus && _ringer != null)
             {
                 _mix.Ringer = _ringer.Read(); // el modo silencio pudo cambiar fuera del juego
+            }
+
+            if (focus && _focus.Reacquire())
+            {
+                ApplyFocus(); // tras perderlo sin plazo (otra app de música), al volver al juego se pide otra vez
+            }
+        }
+
+        private void OnApplicationPause(bool paused)
+        {
+            SetForeground(!paused);
+        }
+
+        /// <summary>El foco de audio (observación 10 de la jornada 6): seguimiento y puerto de ahora (tests y sonda).</summary>
+        public AudioFocusTracker AudioFocus => _focus;
+
+        /// <summary>
+        /// Usa <paramref name="port"/> como foco de audio (tests: <see cref="FakeAudioFocusPort"/>): suelta el de antes y, si toca,
+        /// pide el nuevo.
+        /// </summary>
+        public void UseFocusPort(IAudioFocusPort port)
+        {
+            if (port == null)
+            {
+                throw new ArgumentNullException(nameof(port));
+            }
+
+            _focus.Want(false);
+            _focus = new AudioFocusTracker(port);
+            ApplyFocus();
+            WantFocus();
+        }
+
+        /// <summary>
+        /// El juego pasa a primer plano (<paramref name="foreground"/>) o a segundo (<c>OnApplicationPause</c>): en segundo plano se
+        /// suelta el foco de audio y se vuelve a pedir al volver.
+        /// </summary>
+        public void SetForeground(bool foreground)
+        {
+            _foreground = foreground;
+            WantFocus();
+        }
+
+        // D-026, añadido del 2026-10-29: el foco se pide en primer plano y con la Música encendida (con ella apagada, no se corta la
+        // música de otra app del jugador) [P].
+        private void WantFocus()
+        {
+            if (_focus.Want(_foreground && _mix.Settings.Music))
+            {
+                ApplyFocus();
+            }
+        }
+
+        // El estado del foco a la mezcla: con una pérdida se calla todo (los efectos, cortados; el fondo, en pausa) y con la vuelta,
+        // todo vuelve con el fundido de 0,5 s (salvo lo apagado en Ajustes); con «duck», la música y el ambiente bajan al 20 %.
+        private void ApplyFocus()
+        {
+            AudioFocusState state = _focus.State;
+            if (state == _mix.Focus)
+            {
+                return;
+            }
+
+            _mix.SetFocus(state);
+            if (_mix.FocusPaused)
+            {
+                StopEffects();
+            }
+
+            SyncBackgroundPause();
+            if (Probe is IAudioFocusProbe probe)
+            {
+                float gain = !_mix.Settings.Music || _mix.FocusPaused ? 0f : _mix.FocusDucked ? AudioMix.FocusDuckGain : 1f;
+                probe.AudioFocus(AudioFocusStates.Name(state), gain, _mix.FocusPaused);
+            }
+        }
+
+        // El fondo (música, ambiente, lluvia, fauna y remates) en pausa mientras haya un anuncio o el foco esté perdido; al quitarse
+        // los dos, vuelve desde 0 con el fundido de AudioMix.
+        private void SyncBackgroundPause()
+        {
+            bool pause = _mix.AdActive || _mix.FocusPaused;
+            if (pause && !_adPaused)
+            {
+                PauseBackground(true);
+                _adPaused = true;
+            }
+            else if (!pause && _adPaused)
+            {
+                _adPaused = false;
+                PauseBackground(false);
             }
         }
 
@@ -545,6 +642,7 @@ namespace AF.Audio.Unity
         public void Configure(SoundSettings settings)
         {
             _mix.Settings = settings;
+            WantFocus();
             if (!settings.Sound)
             {
                 StopEffects(); // Sonido apagado: lo que suena se calla en el acto (07 §9.4)
@@ -563,14 +661,13 @@ namespace AF.Audio.Unity
             if (active)
             {
                 StopEffects();
-                PauseBackground(true);
-                _adPaused = true;
             }
-            else if (_adPaused)
+            else if (_focus.Reacquire())
             {
-                _adPaused = false;
-                PauseBackground(false); // vuelve desde 0 con el fundido de 0,5 s (AudioMix.MusicGain)
+                ApplyFocus(); // si el anuncio se quedó el foco sin devolverlo, se pide otra vez
             }
+
+            SyncBackgroundPause(); // al terminar, vuelve desde 0 con el fundido de 0,5 s (AudioMix.MusicGain), si el foco lo deja
         }
 
         /// <inheritdoc />
@@ -585,6 +682,11 @@ namespace AF.Audio.Unity
         /// </summary>
         public void Tick(float dtMs)
         {
+            if (_focus.Poll())
+            {
+                ApplyFocus(); // un aviso de Android (una alarma, una llamada, otra app de música) desde el último fotograma
+            }
+
             _mix.Tick(dtMs);
             CompleteBank();
             PollRinger(dtMs);

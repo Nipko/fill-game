@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace AF.UI
 {
@@ -10,16 +11,23 @@ namespace AF.UI
     /// (<see cref="A11yScanner"/>, con las fuentes propias como la del tablero) y, si cambió algo, lo publica en el
     /// <see cref="IScreenReaderHost"/>; los anuncios (la selección) van directos. Con el lector apagado no hace nada (coste cero
     /// por fotograma), y al apagarlo quita lo publicado. Lo crea y lo avanza <c>GameBootstrap</c> (parche <c>B9-ui.diff</c>).
+    /// En cada recorrido mira también si lo publicado se movió en la pantalla sin cambiar (una lista que se desplaza con el dedo, el
+    /// Mapa arrastrado): entonces pide al anfitrión que vuelva a leer los marcos (<see cref="IScreenReaderHost.RefreshFrames"/>;
+    /// observación 7 de la jornada 6, la Liga con TalkBack).
     /// </summary>
     public sealed class A11yService
     {
         /// <summary>Cada cuánto se vuelve a mirar la interfaz con el lector encendido (ms) [P].</summary>
         public const float RefreshMs = 250f;
 
+        /// <summary>Lo que tiene que moverse un marco (px) para volver a leer los marcos [P].</summary>
+        public const float MoveTolerancePx = 0.5f;
+
         private readonly IScreenReaderHost _host;
         private readonly A11yScanner _scanner;
         private readonly List<A11yItem> _scan = new List<A11yItem>();
         private readonly List<A11yItem> _published = new List<A11yItem>();
+        private readonly List<Rect> _frames = new List<Rect>();
         private float _sinceMs = float.MaxValue;
         private bool _wasOn;
 
@@ -44,6 +52,9 @@ namespace AF.UI
 
         /// <summary>Veces que se ha publicado algo (tests).</summary>
         public int Publishes { get; private set; }
+
+        /// <summary>Veces que se pidió volver a leer los marcos porque lo publicado se movió (tests).</summary>
+        public int FrameRefreshes { get; private set; }
 
         /// <summary>Pide recorrer la interfaz en el siguiente <see cref="Tick"/> (cambió el tablero, se abrió una pantalla…).</summary>
         public void Invalidate()
@@ -70,6 +81,7 @@ namespace AF.UI
                 {
                     _host.Clear();
                     _published.Clear();
+                    _frames.Clear();
                     _wasOn = false;
                 }
 
@@ -96,20 +108,62 @@ namespace AF.UI
             Refresh();
         }
 
-        /// <summary>Recorre la interfaz ahora y publica si cambió algo (también sin lector: tests). Devuelve si publicó.</summary>
+        /// <summary>
+        /// Recorre la interfaz ahora y publica si cambió algo (también sin lector: tests); si lo publicado se movió en la pantalla,
+        /// pide volver a leer los marcos. Devuelve si publicó.
+        /// </summary>
         public bool Refresh()
         {
             _scanner.Scan(_scan);
-            if (Same(_scan, _published))
+            bool publish = !Same(_scan, _published);
+            if (publish)
             {
-                return false;
+                _published.Clear();
+                _published.AddRange(_scan);
+                _host.Publish(_published);
+                Publishes++;
             }
 
-            _published.Clear();
-            _published.AddRange(_scan);
-            _host.Publish(_published);
-            Publishes++;
-            return true;
+            if (FramesMoved(publish))
+            {
+                _host.RefreshFrames();
+                FrameRefreshes++;
+            }
+
+            return publish;
+        }
+
+        // Guarda el marco de ahora de cada elemento publicado y dice si alguno se movió desde el último recorrido. Tras una
+        // publicación con otro número de elementos la jerarquía es nueva (sus marcos, recién leídos): solo se guardan.
+        private bool FramesMoved(bool published)
+        {
+            bool fresh = published && _frames.Count != _published.Count;
+            bool moved = false;
+            for (int i = 0; i < _published.Count; i++)
+            {
+                Rect frame = _published[i].CurrentFrame();
+                if (i >= _frames.Count)
+                {
+                    _frames.Add(frame);
+                    continue;
+                }
+
+                Rect before = _frames[i];
+                if (Mathf.Abs(frame.x - before.x) > MoveTolerancePx || Mathf.Abs(frame.y - before.y) > MoveTolerancePx
+                    || Mathf.Abs(frame.width - before.width) > MoveTolerancePx || Mathf.Abs(frame.height - before.height) > MoveTolerancePx)
+                {
+                    moved = true;
+                }
+
+                _frames[i] = frame;
+            }
+
+            if (_frames.Count > _published.Count)
+            {
+                _frames.RemoveRange(_published.Count, _frames.Count - _published.Count);
+            }
+
+            return moved && !fresh;
         }
 
         private static bool Same(List<A11yItem> a, List<A11yItem> b)

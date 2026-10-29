@@ -144,6 +144,9 @@ namespace AF.Audio.Unity
         /// <summary>Volumen del tema de menú (tests).</summary>
         public float MenuVolume => _menu.volume;
 
+        /// <summary>El tema de menú está sonando ahora (en pausa o parado, no; tests del foco de audio).</summary>
+        public bool MenuPlaying => _menu.isPlaying;
+
         /// <summary>Clip del tema de menú (tests).</summary>
         public AudioClip? MenuClip => _menu.clip;
 
