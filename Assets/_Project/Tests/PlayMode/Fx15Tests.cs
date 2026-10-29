@@ -135,7 +135,8 @@ namespace AF.Tests.PlayMode
                 Debug.Log("FX15 viaje del fin de contenido con el bucle del juego: " + frames + " fotogramas, " + between
                     + " a medio tramo, " + lasted.ToString("0.000") + " s (" + map.ContentEndJourneyMs + " ms previstos)");
                 Assert.That(map.CatchUpCompletedByTouch, Is.False, "llegó sola: ningún toque ni cierre lo completó");
-                Assert.That(map.CatchUpElapsedMs, Is.GreaterThanOrEqualTo(map.ContentEndJourneyMs), "recorrió el tramo entero");
+                // 1 ms de margen: el viaje acaba cuando la boya en float llega a la meta, y la suma de dt puede quedarse en 1499,995 (CI del 2026-10-29).
+                Assert.That(map.CatchUpElapsedMs, Is.GreaterThanOrEqualTo(map.ContentEndJourneyMs - 1f), "recorrió el tramo entero");
                 Assert.That(between, Is.GreaterThanOrEqualTo(5), "se ve a medio tramo en varios fotogramas");
 
                 // dt de GameBootstrap.Update va topado a 100 ms por fotograma: el viaje de 1,5 s no puede durar menos de ~1,5 s reales
