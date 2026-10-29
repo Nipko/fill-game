@@ -15,6 +15,7 @@ using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace AF.Tests.PlayMode
 {
@@ -472,6 +473,172 @@ namespace AF.Tests.PlayMode
             Assert.That(labels, Does.Contain(screen.RowA11y(-1)), "y la fila del jugador");
             Assert.That(labels, Does.Not.Contain(screen.RowName(0)), "el nombre suelto no se lee aparte");
             Assert.That(labels.FindAll(l => l == LeagueText.TabGlobal).Count, Is.EqualTo(1), "las pestañas, como botones");
+        }
+
+        /// <summary>
+        /// Observación 7 de la jornada 6: con TalkBack, tras desplazar la lista con el dedo, el lector tocaba y leía la fila que había
+        /// antes en ese sitio (Unity guarda el marco de cada nodo y no lo relee solo). Ahora el servicio ve que lo publicado se movió
+        /// y el anfitrión relee los marcos: en el sitio de cada fila que se ve, el nodo lee su puesto y su nombre; el orden del foco
+        /// sigue el que se ve, y un foco que el desplazamiento sacó del visor pasa a la primera fila que se ve.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TalkBack_AfterScrolling_EachNodeReadsTheRowNowOnScreen()
+        {
+            yield return Lobby(57);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen.SimulatedScreen = null; // los marcos, en píxeles de la pantalla de verdad
+            Assert.That(boot.OpenLeague(), Is.True);
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            LeagueScreen screen = boot.LeagueView!;
+            Assert.That(screen.RowsShown, Is.EqualTo(100));
+            ScrollRect list = screen.Canvas.GetComponentInChildren<ScrollRect>();
+            Assert.That(A11yScroll.Scrolls(list), Is.True, "el top 100 no cabe: la lista se desplaza");
+
+            var host = new UnityScreenReaderHost();
+            try
+            {
+                var service = new A11yService(host);
+                Assert.That(service.Refresh(), Is.True);
+                var nodeOfRow = new int[screen.RowsShown];
+                for (int r = 0; r < screen.RowsShown; r++)
+                {
+                    nodeOfRow[r] = IndexOfLabel(service.Published, screen.RowA11y(r));
+                    Assert.That(nodeOfRow[r], Is.GreaterThanOrEqualTo(0), "la fila " + r + " llega al lector");
+                    Assert.That(service.Published[nodeOfRow[r]].Scroll, Is.SameAs(list));
+                }
+
+                AssertNodesReadTheRowsOnScreen(host, service, screen, list, nodeOfRow, "arriba del todo");
+                Assert.That(host.RefocusAfterMove(nodeOfRow[0]), Is.EqualTo(nodeOfRow[0]), "arriba, la primera fila se ve: el foco se queda");
+
+                // Con el dedo (no con la acción de desplazar del lector), hasta la mitad de la lista.
+                list.verticalNormalizedPosition = 0.5f;
+                Canvas.ForceUpdateCanvases();
+                RectTransform firstRect = service.Published[nodeOfRow[0]].Rect!;
+                Assert.That(A11yScroll.PartlyShown(list, firstRect), Is.False, "la fila 1 salió del visor");
+                Rect stale = host.NodeStoredFrame(nodeOfRow[0]);
+                Assert.That(stale, Is.Not.EqualTo(service.Published[nodeOfRow[0]].CurrentFrame()), "antes de releer, el nodo guarda el marco viejo (el fallo)");
+
+                int publishes = service.Publishes;
+                Assert.That(service.Refresh(), Is.False, "nada cambió de texto: no se republica");
+                Assert.That(service.Publishes, Is.EqualTo(publishes));
+                Assert.That(service.FrameRefreshes, Is.EqualTo(1), "pero se movió: se releen los marcos en el acto");
+                Assert.That(service.SettlePending, Is.True, "el foco espera a que la lista pare");
+                AssertNodesReadTheRowsOnScreen(host, service, screen, list, nodeOfRow, "a la mitad");
+
+                // Mientras la lista corre (inercia), el foco no salta de fila; parada, pasa a la primera que se ve.
+                list.velocity = new Vector2(0f, 3000f);
+                Assert.That(host.RefocusAfterMove(nodeOfRow[0]), Is.EqualTo(nodeOfRow[0]), "con la lista en movimiento, el foco se queda");
+                list.velocity = Vector2.zero;
+                int target = host.RefocusAfterMove(nodeOfRow[0]);
+                int firstShown = FirstFullyShownRow(service, list, nodeOfRow);
+                Assert.That(firstShown, Is.GreaterThan(0));
+                Assert.That(target, Is.EqualTo(nodeOfRow[firstShown]), "parada, el foco que salió del visor pasa a la primera fila que se ve");
+                Assert.That(host.NodeLabel(target), Is.EqualTo(screen.RowA11y(firstShown)));
+
+                Assert.That(service.Refresh(), Is.False);
+                Assert.That(service.FrameRefreshes, Is.EqualTo(1), "quieta, no se vuelve a releer");
+                Assert.That(service.SettlePending, Is.False, "un recorrido quieto tras el que movió: se asienta el foco");
+            }
+            finally
+            {
+                host.Clear();
+            }
+
+            // Un desplazamiento largo, a tirones (como la inercia vista cada 250 ms): los marcos se releen en cada recorrido que se
+            // mueve y el foco solo se asienta una vez, cuando para; si la lista aún corre, espera al siguiente recorrido.
+            var fake = new FakeScreenReaderHost(true);
+            var fakeService = new A11yService(fake);
+            list.verticalNormalizedPosition = 1f;
+            Canvas.ForceUpdateCanvases();
+            fakeService.Refresh();
+            for (int step = 1; step <= 4; step++)
+            {
+                list.verticalNormalizedPosition = 1f - (0.2f * step);
+                Canvas.ForceUpdateCanvases();
+                fakeService.Refresh();
+            }
+
+            Assert.That(fake.FrameRefreshes, Is.EqualTo(4), "cuatro recorridos con movimiento: cuatro relecturas");
+            Assert.That(fake.FocusSettles, Is.EqualTo(0), "y ningún salto del foco mientras corre");
+            fake.Settled = false;
+            fakeService.Refresh();
+            Assert.That(fake.FocusSettles, Is.EqualTo(1));
+            Assert.That(fakeService.SettlePending, Is.True, "la lista aún tenía velocidad: se reintenta");
+            fake.Settled = true;
+            fakeService.Refresh();
+            Assert.That(fake.FocusSettles, Is.EqualTo(2));
+            Assert.That(fakeService.SettlePending, Is.False, "parada: el foco se asienta una vez");
+            fakeService.Refresh();
+            Assert.That(fake.FocusSettles, Is.EqualTo(2), "quieta, nada más");
+        }
+
+        // En el centro de cada fila que se ve entera, el nodo que encuentra el lector (por su marco guardado, como el toque de
+        // TalkBack) lee esa fila; y las filas que se ven van en el orden del foco de arriba abajo.
+        private static void AssertNodesReadTheRowsOnScreen(UnityScreenReaderHost host, A11yService service, LeagueScreen screen, ScrollRect list, int[] nodeOfRow, string where)
+        {
+            int seen = 0;
+            float lastY = float.MinValue;
+            int lastNode = -1;
+            for (int r = 0; r < nodeOfRow.Length; r++)
+            {
+                A11yItem item = service.Published[nodeOfRow[r]];
+                if (!A11yScroll.FullyShown(list, item.Rect!))
+                {
+                    continue;
+                }
+
+                // Donde se ve ahora el texto que lee la fila (el puesto), lo que toca el dedo: el nodo más pequeño que lo contiene.
+                Vector2 probe = item.CurrentFrame().center;
+                Rect stored = host.NodeStoredFrame(nodeOfRow[r]);
+                int hit = -1;
+                float hitArea = float.MaxValue;
+                for (int n = 0; n < host.NodeCount; n++)
+                {
+                    Rect f = host.NodeStoredFrame(n);
+                    if (f.Contains(probe) && f.width * f.height < hitArea)
+                    {
+                        hit = n;
+                        hitArea = f.width * f.height;
+                    }
+                }
+
+                Assert.That(hit, Is.GreaterThanOrEqualTo(0), where + ": algo en el sitio de la fila " + r);
+                Assert.That(host.NodeLabel(hit), Is.EqualTo(screen.RowA11y(r)), where + ": en el sitio de la fila " + r + " se lee esa fila");
+                Assert.That(stored.center.y, Is.GreaterThan(lastY), where + ": de arriba abajo");
+                Assert.That(nodeOfRow[r], Is.GreaterThan(lastNode), where + ": en el orden del foco");
+                lastY = stored.center.y;
+                lastNode = nodeOfRow[r];
+                seen++;
+            }
+
+            Assert.That(seen, Is.GreaterThan(2), where + ": se ven varias filas");
+        }
+
+        private static int FirstFullyShownRow(A11yService service, ScrollRect list, int[] nodeOfRow)
+        {
+            for (int r = 0; r < nodeOfRow.Length; r++)
+            {
+                if (A11yScroll.FullyShown(list, service.Published[nodeOfRow[r]].Rect!))
+                {
+                    return r;
+                }
+            }
+
+            return -1;
+        }
+
+        private static int IndexOfLabel(IReadOnlyList<A11yItem> items, string label)
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].Label == label)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         [UnityTest]

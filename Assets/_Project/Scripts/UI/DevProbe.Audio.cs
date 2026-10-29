@@ -26,10 +26,38 @@ namespace AF.UI
     /// <item><c>AF_PERF {"event":"audio_build","worker_ms":…,"main_ms":…,"clips":…,"pcm_kib":…}</c> una vez, cuando los
     /// clips quedan listos: lo que tardó el hilo de trabajo en generar el PCM, lo que pagó el hilo principal al crearlos y la
     /// memoria PCM (en float).</item>
+    /// <item><c>AF_STATE {"event":"audio_focus","t":…,"state":"loss_transient","music_gain":0.00,"paused":true}</c> en cada cambio del
+    /// foco de audio del teléfono (observación 10 de la jornada 6; D-026, añadido del 2026-10-29): <c>gain</c> (el juego lo tiene),
+    /// <c>duck</c> (otro suena por encima: la música baja, <c>music_gain</c> 0.20), <c>loss_transient</c> (una alarma, el timbre de
+    /// una llamada: pausa), <c>loss</c> (otra app de música: pausa), <c>denied</c> (Android no lo dio), <c>yielded</c> (ya sonaba música de otra app: la del juego calla, los efectos suenan) o <c>none</c> (sin pedir:
+    /// segundo plano o Música apagada). <c>music_gain</c> es lo que deja el foco (sin el fundido de vuelta).</item>
     /// </list>
     /// </summary>
-    public sealed partial class DevProbe : IAudioProbe
+    public sealed partial class DevProbe : IAudioProbe, IAudioFocusProbe
     {
+        /// <summary>Último <c>AF_STATE audio_focus</c> escrito (tests; null sin sonda).</summary>
+        public string? LastAudioFocusLine { get; private set; }
+
+        /// <inheritdoc />
+        public void AudioFocus(string state, float musicGain, bool paused)
+        {
+            // Pocas veces (una alarma, una llamada): también en el Editor, sin AudioLinesInEditor.
+            if (!Enabled)
+            {
+                return;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"audio_focus\"");
+            AppendTime(sb);
+            sb.Append(",\"state\":\"").Append(state).Append('"');
+            sb.Append(",\"music_gain\":").Append(musicGain.ToString("0.00", CultureInfo.InvariantCulture));
+            sb.Append(",\"paused\":").Append(paused ? "true" : "false").Append('}');
+            LastAudioFocusLine = sb.ToString();
+            Write(LastAudioFocusLine);
+        }
+
         /// <summary>
         /// Las líneas <c>sfx</c> y <c>haptic</c> también en el Editor (tests de la sonda). Por defecto no: en el Editor cada efecto
         /// escribiría una línea en el bucle de juego (Debug.Log asigna memoria y los tests de «sin asignaciones» de la intro y de

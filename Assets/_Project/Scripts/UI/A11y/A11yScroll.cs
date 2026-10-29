@@ -105,6 +105,22 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Se ve algo de <paramref name="rect"/> dentro del visor de <paramref name="list"/> (aunque sea en parte): tras desplazar, el
+        /// foco se queda en una fila así (<see cref="UnityScreenReaderHost.RefocusAfterMove"/>).
+        /// </summary>
+        public static bool PartlyShown(ScrollRect list, RectTransform rect)
+        {
+            RectTransform? view = ViewportOf(list);
+            if (view == null || rect == null || !rect.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            Bounds(rect, view, out float top, out float bottom);
+            return top > view.rect.yMin + 0.5f && bottom < view.rect.yMax - 0.5f;
+        }
+
+        /// <summary>
         /// El marco que se publica (píxeles, origen arriba a la izquierda, como <see cref="UnityScreenReaderHost.ScreenFrame"/>) para
         /// <paramref name="rect"/> dentro de <paramref name="list"/>: lo que se ve de él dentro del visor (el recuadro del foco no pisa
         /// los fundidos ni el marco de madera) o, si está recortado del todo, una franja de <see cref="EdgeStripPx"/> en el borde del

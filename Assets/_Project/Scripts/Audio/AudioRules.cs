@@ -202,6 +202,12 @@ namespace AF.Audio
         /// </summary>
         public const float StingerGainDb = -8f;
 
+        /// <summary>
+        /// Ganancia de la música y del ambiente mientras otro suena por encima y deja oír lo de debajo (foco de audio
+        /// <see cref="AudioFocusState.Duck"/>; observación 10 de la jornada 6): el ~20 % [P].
+        /// </summary>
+        public const float FocusDuckGain = 0.2f;
+
         private float _adFade = 1f;
         private float _toadaLeftMs;
         private FaunaClock _fauna;
@@ -220,11 +226,26 @@ namespace AF.Audio
         /// <summary>Hay un modal que atenúa el lecho (Aguas estancadas y el embudo).</summary>
         public bool ModalDuck { get; set; }
 
+        /// <summary>El foco de audio del teléfono (<see cref="SetFocus"/>; observación 10 de la jornada 6).</summary>
+        public AudioFocusState Focus { get; private set; }
+
+        /// <summary>Otro tomó el foco de audio (una alarma, una llamada, otra app de música): la música y los efectos se pausan.</summary>
+        public bool FocusPaused => AudioFocusStates.Pauses(Focus);
+
+        /// <summary>Otro suena por encima un momento: la música y el ambiente bajan a <see cref="FocusDuckGain"/>.</summary>
+        public bool FocusDucked => Focus == AudioFocusState.Duck;
+
+        /// <summary>
+        /// Ya sonaba música de otra app al pasar a primer plano (el dueño, 2026-10-29): la música y el ambiente del juego no suenan;
+        /// los efectos sí.
+        /// </summary>
+        public bool FocusYielded => Focus == AudioFocusState.Yielded;
+
         /// <summary>Los efectos se pueden oír ahora (sin contar el fundido).</summary>
-        public bool SfxAudible => Settings.Sound && Ringer == RingerMode.Normal && !AdActive;
+        public bool SfxAudible => Settings.Sound && Ringer == RingerMode.Normal && !AdActive && !FocusPaused;
 
         /// <summary>La música se puede oír ahora.</summary>
-        public bool MusicAudible => Settings.Music && Ringer == RingerMode.Normal && !AdActive;
+        public bool MusicAudible => Settings.Music && Ringer == RingerMode.Normal && !AdActive && !FocusPaused && !FocusYielded;
 
         /// <summary>Se puede vibrar ahora (Vibración encendida, sin anuncio y el teléfono no en silencio total).</summary>
         public bool HapticsAllowed => Settings.Haptics && Ringer != RingerMode.Silent && !AdActive;
@@ -233,7 +254,7 @@ namespace AF.Audio
         public float SfxGain => SfxAudible ? _adFade : 0f;
 
         /// <summary>Ganancia de la música (0-1), con la atenuación de la toada y de los modales.</summary>
-        public float MusicGain => MusicAudible ? _adFade * (Ducked ? DuckGain : 1f) : 0f;
+        public float MusicGain => MusicAudible ? _adFade * (Ducked ? DuckGain : 1f) * (FocusDucked ? FocusDuckGain : 1f) : 0f;
 
         /// <summary>
         /// Ganancia de un remate (0-1; tarea AU3): va con el ajuste Música [P], con el fundido tras un anuncio y sin la atenuación
@@ -321,7 +342,7 @@ namespace AF.Audio
         /// </summary>
         public bool AdvanceFauna(float dtMs, out SfxId id)
         {
-            if (AdActive || AmbientWorld == 0)
+            if (AdActive || FocusPaused || AmbientWorld == 0)
             {
                 id = default;
                 return false;
@@ -336,7 +357,7 @@ namespace AF.Audio
         /// </summary>
         public bool AdvanceFauna(float dtMs, int choices, out int pick)
         {
-            if (AdActive || AmbientWorld == 0)
+            if (AdActive || FocusPaused || AmbientWorld == 0)
             {
                 pick = 0;
                 return false;
@@ -373,6 +394,21 @@ namespace AF.Audio
             AdActive = active;
         }
 
+        /// <summary>
+        /// Cambia el foco de audio (observación 10 de la jornada 6): con <see cref="AudioFocusState.LossTransient"/> o
+        /// <see cref="AudioFocusState.Loss"/> se calla todo y, al volver, el fundido arranca desde 0 como tras un anuncio; con
+        /// <see cref="AudioFocusState.Duck"/>, la música y el ambiente bajan a <see cref="FocusDuckGain"/>.
+        /// </summary>
+        public void SetFocus(AudioFocusState focus)
+        {
+            if (AudioFocusStates.Pauses(focus))
+            {
+                _adFade = 0f;
+            }
+
+            Focus = focus;
+        }
+
         /// <summary>Suena la toada sin largo conocido: el lecho baja durante <see cref="ToadaDuckMs"/>.</summary>
         public void ToadaStarted()
         {
@@ -392,7 +428,7 @@ namespace AF.Audio
         /// <summary>Avanza el fundido y la atenuación <paramref name="dtMs"/> ms.</summary>
         public void Tick(float dtMs)
         {
-            if (!AdActive && _adFade < 1f)
+            if (!AdActive && !FocusPaused && _adFade < 1f)
             {
                 _adFade = Math.Min(1f, _adFade + (dtMs / AdFadeMs));
             }

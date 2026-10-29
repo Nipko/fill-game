@@ -757,6 +757,8 @@ Música integrada a −20 LUFS, lecho ambiental a −26 LUFS, SFX con picos ≤ 
 
 **Música y Sonido con un toque (D-046, punto 2).** Además de las filas de Ajustes, se apagan y se encienden con un toque desde el menú de pausa (arriba, junto a la X; 02 §5) y desde el inicio (junto al engranaje de Ajustes): dos botones redondos de madera con icono, **Música** (una nota) y **Sonido** (un altavoz), con el icono tachado cuando están apagados y un área táctil de 48 dp (§7.8). Guardan en `settings.music` y `settings.sound`, el mismo sitio que las filas de Ajustes, se aplican en el acto y siempre coinciden con ellas, en los dos sentidos. La **Vibración** se queda solo en Ajustes, y nada de esto va en la barra de juego. TalkBack lee el ajuste y su estado («Música: activada», «Sonido: desactivado») [P], y `af_settings_change` lleva `source` (`settings`, `pause` o `home`; 08 §8.2) [P]. El apagado no depende del color: lo marcan el tachado, con canto oscuro, y el glifo atenuado, así que se distingue igual con Alto contraste [P].
 
+**Interrupciones y otras apps (D-026, añadido del 2026-10-29).** Si al abrir el juego o al volver a él ya suena música de otra app, el juego no pide el foco de audio ni pone su música (los efectos sí suenan); si no suena nada, pide el foco y una alarma o una llamada pausan la música y los efectos hasta que acaban, y un aviso por encima baja la música al 20 %.
+
 ### 9.5 Licencias y originalidad
 
 | Elemento | Decisión | Razón |
