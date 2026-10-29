@@ -40,6 +40,8 @@ Aquí entra todo.
 
 **Antes de publicar:** el Release definitivo no se lanza hasta que N6 confirme en el teléfono la pantalla del sistema hasta la intro (`os_splash_release` = `signal` y `os_splash_by` = `intro` en la primera apertura, en frío y en el ensayo). Si sale `cap`, se anota con su ráfaga y se revierte quitando `AfSplashHold.androidlib`.
 
+**Mientras tanto (el dueño, 2026-10-28):** N6.1 salió `cap` en todos los arranques (observación 1 de la hoja j6), y el escritorio lo arregla en el carril `tanda6/fx-j6-splash`. El portátil **sigue ya, con el build que tiene**, con el resto de N6 que no depende de la pantalla del sistema y con los bloques pendientes (5, 8 a 19, 21, 22 y 23, y lo que hace el dueño). Los ~3 s de más del arranque no son defecto nuevo: no se anotan otra vez. N6.1 (y Reducir movimiento, Inicio durante el icono y abrir en frío desde una notificación) se repite cuando llegue el build con el arreglo. Lo hecho se va añadiendo a la misma hoja `-j6.md`.
+
 ### N6. Lo nuevo de la jornada 6
 
 - **La pantalla del sistema hasta la intro** (carril `tanda6/fx-j5-arranque`; añadido de D-051 del 2026-10-28, el dueño: «si hagamoslo asi»; observaciones 1 y 2 de la jornada 5). El icono v2 sobre el petróleo se queda hasta que el primer fotograma de la intro ya está en la pantalla: se debe ver **icono → escena de la intro**, sin el petróleo liso de en medio. Lo hace el plugin `AfSplashHold.androidlib`, con un tope de 3 s.
