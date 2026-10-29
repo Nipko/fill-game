@@ -13,6 +13,8 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | 0. Preparación y builds | cumple | — |
 | N6.1 La pantalla del sistema hasta la intro | **no cumple: `cap` en todos los arranques** | 1 |
 | N6.2 Los arreglos de UI | cumple en lo probado; el Boto de la pausa, mudo | 2, 3 |
+| 8. Economía, Mercado y Cántaro | cumple | 4, 5 |
+| 12.1 Reto del río | cumple en lo probado | — |
 
 ## Verificación (bloque 0)
 
@@ -103,6 +105,40 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - En pt-BR el «0» ya no toca el texto.
    - **Sin probar (los hace el dueño):** con Reducir movimiento, con TalkBack, y el caso de «Are you sure?» cuando llegan semillas con el modal abierto.
 
+3. **Bloque 8. Economía, Mercado y Cántaro: cumple (observaciones 4 y 5).** Con la tienda falsa (`--ez af_fake_store true`) y 5.000 semillas.
+   - **Las cuatro pestañas** (`b08/mercado-0..3.png`):
+     - **Semillas:** Cántaro (COP 5.900, en gris con «Se puede comprar desde 1,000 semillas»), Puñado 1.000 · 3.900, Bolsa 2.800 · 9.900, Saco 6.000 · 18.900, Costal 13.000 · 36.900 y Cosecha 36.000 · 94.900;
+     - **Comodines:** solo «Canoas infinitas 1 h · COP 3,900»;
+     - **Cuias:** vidrio («Puesta»), Santarém («Poner»), y Encuentro y Totuma como «Premio del mundo · faltan 20/80»;
+     - **Sin anuncios:** COP 9.900 con «+500 semillas».
+   - **Ponerse una skin:** Santarém → `skin_selected` `af_skin_m02`, y pasa a «Puesta».
+   - **Comprar «Sin anuncios»:**
+     - la hoja «Compra simulada» con el precio, «Comprar» y «Cancelar»;
+     - `iap_verification` `verifying` → `credited`, `earn_virtual_currency` +500 una sola vez (5.060 → 5.560), `af_iap_result` ok y `purchase` 9.900 COP;
+     - `no_ads` pasa a true y la fila dice «Ya no ves anuncios entre niveles».
+   - **Comprar «Canoas infinitas 1 h»:** el mismo flujo, `canoes` -1 (`infinite` true) y el HUD con ∞ y 59:55.
+   - **Reabrir la app:** `ledger_restore` con `recredited` 0 y `revoked` 0. El saldo sigue en 5.560 y las canoas siguen infinitas.
+   - **Al 130 % en es-419, en y pt-BR** (`b08/mercado-130-*.png`): las pestañas en una o dos líneas y las filas más altas, sin cortes. En es-419, «Semillas» y «Comodines» casi se tocan (observación 5).
+   - **El Puñado** ya se compró tres veces en la campaña 1-700 de la jornada 5. **El Cántaro lleno**, su tarjeta y la oferta de «Sin anuncios» también salieron allí.
+   - **Sin probar:** que no salgan intersticiales tras «Sin anuncios» mientras los vídeos siguen (bloque 9).
+
+4. **Bloque 12.1. Reto del río: cumple en lo probado** (`b12/`). El tablero de hoy (`d2_n0300`, banda 2) se resolvió con el solver sobre `daily_pool_v1.json`.
+   - **La tarjeta del inicio:**
+     - antes de jugar, «Reto del río · 28 oct / Jugar» (`daily_card` `play`);
+     - a medias, `in_progress`;
+     - ganado, «Sellado» con «1/7».
+   - **El tablero del día:** `load` con `daily` `d2_n0300`. El rótulo dice «Reto del río», los comodines son los de siempre con sus precios y la etiqueta es `normal`.
+   - **Segundo plano:** tras 3 vertidos, Inicio del sistema, 5 s y volver. **El tablero sigue igual.**
+   - **Atrás con el tablero del Reto en juego no hace nada**, igual que en un nivel normal: es lo diseñado (`GameBootstrap`, «como en un nivel», 02 §3 y 04 §6.6).
+   - **Ganar:**
+     - `win` y `daily_challenge` `result` win con `streak_days` 1, y `earn_virtual_currency` `daily_challenge` +60 (5.560 → 5.620);
+     - el calendario «Reto del río · 28 oct» con el 28 sellado, «+60», «Cosecha doble: x2 por video» e «Inicio», dentro de la zona segura (`b12/reto-fin.png`).
+   - **Sin probar:**
+     - perder y reintentar sin gastar canoas, porque el perfil tenía Canoas infinitas compradas;
+     - la racha de 7 (necesita cambiar la fecha, bloque 15);
+     - 320 dp (bloque 16).
+   - **Bloque 12.2, la Liga contra el backend de dev:** sin hacer. Necesita `guion-prueba-telefono-liga.md` y el backend desplegado. La lista falsa, al 130 % y en los tres idiomas, quedó vista en N6.
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -113,6 +149,8 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
    El encargo dice qué hacer en este caso: «Si sale `cap`, se anota con su ráfaga y se revierte quitando `AfSplashHold.androidlib`». **La reversión la decide y la integra el escritorio**; el portátil no toca el código.
 2. **Baja. «Boto Leap» en gris en la pausa no responde al toque:** ni latido, ni `missing_tap` ni aviso. Pasó en el 46, quinto fallo, con 0 semillas y sin tienda. El toque llega a la ventana, pero el juego no escribe nada. Es el mismo «toque mudo» de la observación 6 de la jornada 5, en un botón que el arreglo no cubrió (`PauseMenu`). El encargo lo pedía en la rama D, que no se pudo ver.
 3. **Baja. Con otra app con el foco, Tintalú se queda en el petróleo liso.** Pasó con RCN TV visible a la vez (`topResumedActivity` en otra pantalla) al lanzar la app: Unity escribió `m_RunWithoutFocus: false` y se paró en `UnloadTime` más de 40 s, sin intro. Al cerrarla el dueño, siguió normal. Hay que mirarlo de nuevo con el arreglo de la pantalla del sistema, que toca justo el correr sin foco.
+4. **Baja. Las skins de la pestaña Cuias son círculos de color lisos, sin el dibujo de la cuia** (vidrio, Santarém, Encuentro, Totuma). Es lo mismo que la vasija del Cántaro (observación 7 de la jornada 5). Así, el jugador no ve qué está eligiendo.
+5. **Baja. Al 130 % en es-419, las pestañas «Semillas» y «Comodines» del Mercado casi se tocan** (`b08/mercado-130-es-419.png`).
 
 ## Notas de la herramienta (no son defectos del juego)
 
