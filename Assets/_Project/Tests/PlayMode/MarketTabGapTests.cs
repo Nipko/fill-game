@@ -78,6 +78,12 @@ namespace AF.Tests.PlayMode
 
                 Assert.That(spans.Count, Is.GreaterThanOrEqualTo(2), "al menos Semillas y Comodines");
                 spans.Sort((a, b) => a.row != b.row ? b.row.CompareTo(a.row) : a.min.CompareTo(b.min));
+                if (width == 360)
+                {
+                    // A 360 dp, hasta el 130 %, las pestañas siguen en una sola fila (la rejilla es solo para 320 dp; observación 8).
+                    Assert.That(spans[spans.Count - 1].row, Is.EqualTo(spans[0].row), locale + " al " + percent + " % a 360 dp: una sola fila de pestañas");
+                }
+
                 for (int i = 1; i < spans.Count; i++)
                 {
                     if (spans[i].row != spans[i - 1].row)

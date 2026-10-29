@@ -1058,6 +1058,12 @@ namespace AF.UI
         {
             _canvasW = canvasW;
             _trayTop = trayTop;
+            bool shrink = canvasW < GameScreen.ReferenceWidth - 0.5f; // D-061: el último recurso, solo por debajo de 360 dp
+            for (int i = 0; i < _order.Length; i++)
+            {
+                _order[i].ShrinkAllowed = shrink;
+            }
+
             _slotW = SlotWidthFor(canvasW);
             _grow = 0f;
             for (int i = 0; i < _order.Length; i++)
@@ -1112,8 +1118,8 @@ namespace AF.UI
             {
                 if (_order[i].Active)
                 {
-                    text = Mathf.Max(text, _order[i].LabelTextDp);
-                    word = Mathf.Max(word, _order[i].LabelWordDp);
+                    text = Mathf.Max(text, _order[i].MeasureLabelTextDp());
+                    word = Mathf.Max(word, _order[i].MeasureLabelWordDp());
                 }
             }
 
@@ -1526,8 +1532,9 @@ namespace AF.UI
             private const float PriceBelowLabelDp = 3f;
             private const float LabelTwoLinesSpacing = -20f;
 
-            // Lo menos que encoge una etiqueta cuya palabra más larga no cabe en la ranura (observación 8 de la jornada 6) [P]: 12 sp
-            // sin la escala de texto, los 12 sp de 02 §12 al 100 %. Solo fuera de lo que garantiza 02 §12 (130 % a 360 dp).
+            // Lo menos que encoge una etiqueta cuya palabra más larga no cabe en la ranura (observación 8 de la jornada 6): 12 dp,
+            // los 12 sp de 02 §12 sin la escala de texto. Solo con ShrinkAllowed, en un lienzo de menos de 360 dp (D-061: la
+            // excepción de 02 §12 por debajo de 360 dp); a 360 dp nunca encoge.
             private const float LabelFloorSp = UiBuilder.MinTextSp;
             private const float IconDp = 32f;
             private const float IconTopDp = 6f;
@@ -1661,14 +1668,18 @@ namespace AF.UI
             private readonly float _labelSp;
 
             /// <summary>Ancho de la etiqueta de la ranura en una línea (dp), sin su aire.</summary>
-            public float LabelTextDp
+            /// <summary>
+            /// Mide el ancho de la etiqueta en una línea (dp) a su tamaño de siempre. Es un método, no una propiedad, porque la deja a
+            /// ese tamaño si la última colocación la había encogido (SetLabelLines; D-061): solo se llama al colocar la bandeja.
+            /// </summary>
+            public float MeasureLabelTextDp()
             {
-                get
-                {
-                    BaseLabelSize();
-                    return Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x;
-                }
+                BaseLabelSize();
+                return Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x;
             }
+
+            /// <summary>El último recurso de SetLabelLines está permitido: el lienzo mide menos de 360 dp (D-061; lo pone Layout).</summary>
+            public bool ShrinkAllowed { get; set; }
 
             /// <summary>
             /// Aire a cada lado de la etiqueta en una ranura de <paramref name="w"/> dp: <see cref="LabelNarrowInsetDp"/> en la de
@@ -1686,14 +1697,14 @@ namespace AF.UI
                 _wideInset = wideInset;
             }
 
-            /// <summary>Ancho de la palabra más larga de la etiqueta (dp): lo menos que necesita para no partirla (MO2).</summary>
-            public float LabelWordDp
+            /// <summary>
+            /// Mide el ancho de la palabra más larga de la etiqueta (dp): lo menos que necesita para no partirla (MO2). Como
+            /// <see cref="MeasureLabelTextDp"/>, la deja a su tamaño de siempre antes de medir: solo se llama al colocar la bandeja.
+            /// </summary>
+            public float MeasureLabelWordDp()
             {
-                get
-                {
-                    BaseLabelSize(); // a su tamaño de siempre, aunque la última colocación la encogiera (SetLabelLines)
-                    return UiBuilder.LongestWordWidth(Label);
-                }
+                BaseLabelSize();
+                return UiBuilder.LongestWordWidth(Label);
             }
 
             // La etiqueta vuelve a su tamaño de siempre (lo que se mide para decidir la ranura es siempre lo mismo).
@@ -1909,12 +1920,13 @@ namespace AF.UI
 
             // Una línea si la etiqueta cabe en inner dp; si no, dos con el interlineado apretado. Devuelve si van dos. Si ni la
             // palabra más larga cabe en inner (cinco ranuras a 320 dp con la letra al 130 %: «Deshace / r», observación 8 de la
-            // jornada 6), la etiqueta encoge lo justo para que quepa, sin bajar de LabelFloorSp [P]: nunca se parte una palabra.
+            // jornada 6) y el lienzo mide menos de 360 dp (ShrinkAllowed), la etiqueta encoge lo justo para que quepa, sin bajar de
+            // LabelFloorSp (D-061): nunca se parte una palabra.
             private bool SetLabelLines(float inner)
             {
                 BaseLabelSize(); // cada colocación empieza con su tamaño de siempre
                 float word = UiBuilder.LongestWordWidth(Label);
-                if (word > inner && inner > 0f)
+                if (ShrinkAllowed && word > inner && inner > 0f)
                 {
                     float fit = Mathf.Floor(_labelSp * (inner / word) * 10f) / 10f;
                     Label.fontSize = Mathf.Max(LabelFloorSp, Mathf.Min(_labelSp, fit));
