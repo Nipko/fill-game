@@ -12,6 +12,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 |---|---|---|
 | 0. Preparación y builds | cumple | — |
 | N6.1 La pantalla del sistema hasta la intro | **no cumple: `cap` en todos los arranques** | 1 |
+| N6.1 repetido (build `58be8444`) | la sonda cumple; el icono salta de tamaño | 11 |
 | N6.2 Los arreglos de UI | cumple en lo probado; el Boto de la pausa, mudo | 2, 3 |
 | 8. Economía, Mercado y Cántaro | cumple | 4, 5 |
 | 12.1 Reto del río | cumple en lo probado | — |
@@ -198,6 +199,32 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - **con el teléfono bloqueado más de 5 s, al encender la pantalla sale el juego encima del bloqueo y se puede jugar** (observación 9). Con menos de 5 s es normal: el teléfono tiene `lock_screen_lock_after_timeout` = 5000.
    - **Bloque 18.4 y 18.6, modo avión y ahorro de energía** (el dueño): se juegan niveles y el Reto sin red y con el ahorro activado, todo bien. El Mercado no se ve porque sin tienda está oculto, como debe (8.2).
 
+9. **N6.1 repetido con el build nuevo** (`58be8444`: el velo sin bloqueo y «la intro nace del logo»): **la compuerta de la sonda cumple, pero el icono salta de tamaño al pasar a la intro (observación 11).**
+   - **Builds:**
+     - `dev.apk`, 77,13 MB (`[AF.BuildDev] OK`);
+     - ensayo, `[AF.BuildRelease] OK` y `[AF.LocReleaseGate] OK`: `rehearsal.aab` 59,98 MB y `rehearsal.apk` 65,49 MB.
+   - **Compuertas** (`check-manifest -Mode dev`, `check-16kb`, `check-no-unity-iap` y `check-no-applovin` en los tres; `check-release-classes` en los dos del ensayo; `size-gate` y `check-no-unity-telemetry` en el AAB): todas OK.
+   - **La sonda (`dev.apk`):**
+
+     | Arranque | `TotalTime` | `os_splash_release` | `os_splash_held_ms` | `proc_awake_ms` | `proc_os_splash_ms` | `os_splash_veil` |
+     |---|---|---|---|---|---|---|
+     | Primera apertura | 356 | signal | 877 | 770 | 1.130 | system |
+     | Frío 1 | 368 | signal | 866 | 725 | 1.145 | system |
+     | Frío 2 | — | signal | 855 | 659 | 1.103 | system |
+     | Frío 3 | 355 | signal | 901 | 692 | 1.165 | system |
+     | Frío 4 | 379 | signal | 802 | 698 | 1.068 | system |
+     | Frío 5 | 337 | signal | 791 | 621 | 1.036 | system |
+
+     - En todos, `os_splash_by` = `intro`, el velo dura menos de 3.000 ms y **`proc_awake_ms` llega antes que `proc_os_splash_ms`**.
+     - La intro: 3.500 ms, `visible_by` gpu, `motion_frames` 173-176, `motion_pauses` 0, `cut` false, p95 de 17,0-17,6 ms y `morph_mode` open con `morph_ms` ≈ 702.
+   - **Las ráfagas:**
+     - **Primera apertura** (`n6b-primera_hoja.jpg`): icono de +0,22 a +1,32 s, solo la cuia en +1,43, el círculo abriéndose en +1,58 y la escena en +1,69 s; «Tintalú» a los ~3,7 s. **Ningún fotograma de petróleo liso.** La escena llega ahora a ~1,7 s, frente a ~4,2 s con el build anterior.
+     - **Pero el icono salta de tamaño** al pasar del sistema a la intro: en la ráfaga reducida mide 81 unidades mientras se ve y 68-72 en el primer fotograma de la intro (de ~486 a ~426 px en pantalla, un 12-16 % menos). El fondo pasa además de (20,68,74) a (22,69,73). Sale en la primera apertura, en las 4 ráfagas en frío legibles y en el ensayo.
+     - **Ensayo de release** (`rehearsal.apk`, primera apertura, `n6b-ensayo_hoja.jpg`): `TotalTime` 133, sin petróleo liso, y el mismo salto (81 → 72).
+   - **La opinión del dueño**, literal: «Mejoró, pero no está pro: aparece la primera imagen pero tiene luego otra que se ve y la hace como titilar y luego sigue el efecto… se ve como si fuera un error de sincronía, aparece la imagen y luego un momento se ve que la misma imagen aparece».
+   - **La observación 3, repetida:** con RCN TV con el foco al lanzar (`mCurrentFocus` en RCN), **ahora sale la intro entera** (`brand_intro` completa, `signal`) y el foco pasa al juego. **Queda resuelta.**
+   - **Sin probar con este build:** Reducir movimiento, Inicio durante el icono y abrir en frío desde una notificación.
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -207,7 +234,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 
    El encargo dice qué hacer en este caso: «Si sale `cap`, se anota con su ráfaga y se revierte quitando `AfSplashHold.androidlib`». **La reversión la decide y la integra el escritorio**; el portátil no toca el código.
 2. **Baja. «Boto Leap» en gris en la pausa no responde al toque:** ni latido, ni `missing_tap` ni aviso. Pasó en el 46, quinto fallo, con 0 semillas y sin tienda. El toque llega a la ventana, pero el juego no escribe nada. Es el mismo «toque mudo» de la observación 6 de la jornada 5, en un botón que el arreglo no cubrió (`PauseMenu`). El encargo lo pedía en la rama D, que no se pudo ver.
-3. **Baja. Con otra app con el foco, Tintalú se queda en el petróleo liso.** Pasó con RCN TV visible a la vez (`topResumedActivity` en otra pantalla) al lanzar la app: Unity escribió `m_RunWithoutFocus: false` y se paró en `UnloadTime` más de 40 s, sin intro. Al cerrarla el dueño, siguió normal. Hay que mirarlo de nuevo con el arreglo de la pantalla del sistema, que toca justo el correr sin foco.
+3. **Baja (resuelta con el build `58be8444`, punto 9). Con otra app con el foco, Tintalú se queda en el petróleo liso.** Pasó con RCN TV visible a la vez (`topResumedActivity` en otra pantalla) al lanzar la app: Unity escribió `m_RunWithoutFocus: false` y se paró en `UnloadTime` más de 40 s, sin intro. Al cerrarla el dueño, siguió normal. Hay que mirarlo de nuevo con el arreglo de la pantalla del sistema, que toca justo el correr sin foco.
 4. **Baja. Las skins de la pestaña Cuias son círculos de color lisos, sin el dibujo de la cuia** (vidrio, Santarém, Encuentro, Totuma). Es lo mismo que la vasija del Cántaro (observación 7 de la jornada 5). Así, el jugador no ve qué está eligiendo.
 5. **Baja. Al 130 % en es-419, las pestañas «Semillas» y «Comodines» del Mercado casi se tocan** (`b08/mercado-130-es-419.png`).
 6. **Media. La memoria pasa del presupuesto de 08 §5.4:** RSS de 666 a 724 MB frente a ≤ 400 MB, y Graphics de ~135 MB frente a texturas ≤ 120 MB. Ocupa lo mismo en un nivel, en el ensayo de release y en la pantalla de bloqueo de <13, sin SDK de anuncios. Lo grande es `Unknown` (~210 MB) más `GL mtrack` (~97 MB). En este teléfono, de 12 GB, no da problemas, pero en uno de 3-4 GB, el público de América Latina, Android podría cerrarla en segundo plano.
@@ -218,6 +245,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
    - El manifiesto fusionado no lleva `showWhenLocked`, y nuestro código tampoco lo llama. En el `dev.apk`, `dexdump` lo encuentra en el reproductor de Unity: `Lcom/unity3d/player/A;` llama a `Activity.setShowWhenLocked` y `Activity.setTurnScreenOn`. También está en `com.google.android.gms.ads.internal.overlay.zzm`, pero solo para la pantalla de un anuncio.
    - Hay que ver qué ajuste de Unity lo activa y quitarlo.
 10. **Media. Con una alarma sonando, la música del juego no se para ni baja:** sigue de fondo (lo oyó el dueño, nivel 62). La llamada sí la para.
+11. **Media (la juzgó el dueño: «no está pro»). Al pasar de la pantalla del sistema a la intro, el icono salta un 12-16 % más pequeño y el fondo cambia de tono un poco:** de ~486 a ~426 px y de (20,68,74) a (22,69,73). Se ve como si la imagen parpadeara o apareciera dos veces. La compuerta pide «ningún salto de posición ni de tamaño del icono». Sale en todos los arranques del `dev.apk` y en el ensayo. Lo demás de N6.1 cumple: `signal`, sin petróleo liso y Unity antes del velo.
 
 ## Notas de la herramienta (no son defectos del juego)
 
