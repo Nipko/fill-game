@@ -4515,3 +4515,14 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Sonda de desarrollo:** solo en un build depurable, `AF_LOCK {json}` en logcat en cada reanudación: `window_flags`, `show_when_locked`, `turn_screen_on`, `dismiss_keyguard`, `activity_cleared`, `found` (lo que puso Unity: `0x680000` en el `dev.apk`) y `cleared`.
 - **Compuertas:** `ci/check-manifest.ps1` (punto 6 ter, con casos en `--self-test`) falla si una `<activity>` o `<activity-alias>` lleva `showWhenLocked` o `turnScreenOn` a true, salvo la pantalla de un anuncio de Google; el test EditMode `AfLockGuardPluginTests` vigila que el plugin siga ahí, que quite las tres banderas y el modo en cada paso y que no lo active nunca.
 - **Verificación en el teléfono:** el punto «Repetir 18.3 bloqueando más de 5 s» del encargo de la jornada 6 en `guion-prueba-telefono-completa.md`.
+
+## D-061 · Por debajo de 360 dp, «Reiniciar» y la bandeja pueden encoger hasta 12 dp sin escala
+
+- **Fecha:** 2026-10-29. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat. A la pregunta «¿Qué hacemos con «Reiniciar» y «Deshacer» a 320 dp con la letra al 130 %?», con la opción recomendada «Acepta como excepción de 02 §12 que, solo por debajo de 360 dp, la etiqueta pueda encoger hasta 12 dp sin la escala de texto (el tamaño físico de 12 sp al 100 %), para que no se parta ninguna palabra», respondió: «Suelo de 12 dp».
+- **Contexto:** observación 8 de la jornada 6 (`docs/dev/traspaso/pruebas-telefono-2026-10-28-completa-j6.md`): a 320 dp con la letra del sistema al 130 % se partían «Reinicia/r», «Deshace/r» y «Comodine/s». El carril `tanda6/fx-j6-ui` pasa las pestañas del Mercado a 2×2; en el HUD y la bandeja no hay sitio sin encoger, y 02 §12 decía «ningún texto se encoge por debajo de 12 sp para caber» (12 sp × escala en el proyecto).
+- **Decisión:**
+  1. Solo por debajo de 360 dp de ancho, «Reiniciar» (HUD) y las etiquetas de la bandeja de comodines pueden encoger hasta **12 dp sin la escala de texto** (`RestartLabelFloorSp`, `LabelFloorSp`) para que la palabra no se parta. A 360 dp o más siguen a 12 sp × escala (un test de regresión lo vigila).
+  2. Ninguna palabra se parte a mitad en ningún ancho.
+  3. 02 §12 (fila «Texto») recoge la excepción.
+- **Cómo revertir:** con una decisión nueva del dueño (las alternativas eran solo el icono con etiqueta accesible, textos más cortos o la bandeja en dos filas).
