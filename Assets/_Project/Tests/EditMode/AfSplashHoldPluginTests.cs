@@ -97,7 +97,7 @@ namespace AF.Tests.EditMode
             // Jornada 6, observación 11: el primer fotograma de la intro usa los píxeles del icono que se vio, no los de la guía.
             string hold = Hold.Replace("\r\n", "\n");
             StringAssert.Contains("public static int[] iconBox() {\n        return box.clone();", hold, "JNI: AndroidOsSplash.ReadIcon");
-            StringAssert.Contains("public static final int BOX_LENGTH = 8;", hold);
+            StringAssert.Contains("public static final int BOX_LENGTH = " + SplashIconBox.ArrayLength + ";", hold, "la caja, el marco y los tres radios de la máscara");
             StringAssert.Contains("public static final int OWN_MASK_DP = " + (int)BrandIntroMorph.IconMaskDp + ";", hold, "el círculo de af_launch_window, el de la guía en C#");
 
             // El del sistema: la vista del icono entregada, en px de pantalla con su escala, y el marco de la DecorView.
@@ -107,12 +107,25 @@ namespace AF.Tests.EditMode
             StringAssert.Contains("icon.getLocationOnScreen(at);", hold);
             StringAssert.Contains("Math.round(icon.getWidth() * Math.abs(icon.getScaleX()))", hold);
             StringAssert.Contains("Math.round(icon.getHeight() * Math.abs(icon.getScaleY()))", hold);
-            StringAssert.Contains("publish(new int[] {at[0], at[1], w, h, ref[0], ref[1], root.getWidth(), root.getHeight()});", hold);
+            StringAssert.Contains("int[] m = systemMask();", hold);
+            StringAssert.Contains("publish(new int[] {at[0], at[1], w, h, ref[0], ref[1], root.getWidth(), root.getHeight(), m[0], m[1], m[2]});", hold);
+
+            // Jornada 6, observación 12: la forma de la máscara del sistema (la que recorta el icono de su pantalla de arranque),
+            // medida una vez sobre el Path de AdaptiveIconDrawable.getIconMask(), solo con API de la plataforma.
+            StringAssert.Contains("AdaptiveIconDrawable icon = new AdaptiveIconDrawable(new ColorDrawable(0), new ColorDrawable(0));", hold);
+            StringAssert.Contains("icon.setBounds(0, 0, MASK_SAMPLE, MASK_SAMPLE);", hold);
+            StringAssert.Contains("Path path = icon.getIconMask();", hold);
+            StringAssert.Contains("static final int MASK_SAMPLE = 1000;", hold, "0,5 px en 504 px: basta, y cuesta menos en el hilo principal");
+            StringAssert.Contains("public static long maskMicros() {", hold, "sonda os_splash_mask_ms");
+            StringAssert.Contains("maskMicros = (System.nanoTime() - t0) / 1000L;", hold);
+            Assert.That(AndroidOsSplash.ReadMaskMs(), Is.EqualTo(-1f), "en el Editor no se mide");
+            StringAssert.Contains("shape = new int[] {reach(region, 0.0), reach(region, 45.0), reach(region, 22.5)};", hold);
+            StringAssert.Contains("if (mask != null) {\n            return mask;", hold, "una vez por proceso");
 
             // El propio: la caja conocida de af_launch_window, centrada en la DecorView.
             StringAssert.Contains("view.addOnLayoutChangeListener(OWN_LAYOUT);", hold);
             StringAssert.Contains("int d = Math.round(OWN_MASK_DP * own.getResources().getDisplayMetrics().density);", hold);
-            StringAssert.Contains("publish(new int[] {cx - (d / 2), cy - (d / 2), d, d, ref[0], ref[1], root.getWidth(), root.getHeight()});", hold);
+            StringAssert.Contains("publish(new int[] {cx - (d / 2), cy - (d / 2), d, d, ref[0], ref[1], root.getWidth(), root.getHeight(), 0, 0, 0});", hold, "el anillo de af_launch_window es un círculo: sin máscara");
 
             // La versión: el C# solo copia la caja (un int[] por JNI) cuando cambia; la misma caja no cuenta.
             StringAssert.Contains("public static int iconBoxVersion() {", hold);
@@ -121,7 +134,7 @@ namespace AF.Tests.EditMode
             StringAssert.Contains("removeOnLayoutChangeListener(ICON_LAYOUT)", hold, "al soltar, sin oyentes colgados");
             StringAssert.Contains("removeOnLayoutChangeListener(OWN_LAYOUT)", hold);
 
-            // El C#: los 8 enteros en el mismo orden.
+            // El C#: los enteros en el mismo orden (con 8, de un plugin anterior, sin máscara).
             SplashIconBox b = SplashIconBox.FromArray(new[] { 297, 927, 486, 484, 0, 0, 1080, 2340 });
             Assert.That(b.Measured, Is.True);
             Assert.That(b.Diameter, Is.EqualTo(484f), "el lado menor: el círculo inscrito");

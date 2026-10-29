@@ -18,7 +18,7 @@ namespace AF.Tests.PlayMode
     /// escala de <c>af_font_scale</c> (<see cref="LaunchOptions.FontScaleOverride"/>), en es-419, en y pt-BR: el HUD del nivel
     /// (la píldora de Reiniciar, la bandeja con sus etiquetas, el saldo) y las cuatro pestañas del Mercado; falla si algún
     /// texto visible se parte a media palabra (<see cref="LocInventory.BrokenWordLine"/>): o encoge con su autoajuste, sin bajar
-    /// de 12 sp × escala (o, como último recurso por debajo de 360 dp, de 12 dp: D-061), o pasa a dos líneas por los espacios. Deja
+    /// de 12 sp × escala (o, como último recurso si la palabra no cabe, de 12 dp en cualquier ancho: añadido de D-061), o pasa a dos líneas por los espacios. Deja
     /// en el log el tamaño final de «Reiniciar» y de la bandeja. El perfil es el de <see cref="Fx130OverflowTests"/>.
     /// </summary>
     public sealed class Narrow320WordBreakTests
@@ -28,6 +28,7 @@ namespace AF.Tests.PlayMode
         {
             Fx130Walk.SetUp();
             GameScreen.SimulatedPxPerDp = Canvas320Tests.Density;
+            GameScreen.ShuffleOverride = true; // la Pororoca, como en el teléfono (observación 13 de la jornada 6): cinco ranuras en el 100
         }
 
         [TearDown]
@@ -35,6 +36,7 @@ namespace AF.Tests.PlayMode
         {
             GameScreen.SimulatedPxPerDp = null;
             GameScreen.SimulatedScreen = null;
+            GameScreen.ShuffleOverride = null;
             Fx130Walk.TearDown();
         }
 
@@ -65,6 +67,7 @@ namespace AF.Tests.PlayMode
             yield return null;
 
             // El HUD del nivel (46: Marea, Cuia extra, Pista y Pororoca; 100, con Aguas turbias, también la Luciérnaga: cinco ranuras), en juego.
+            // Hasta la observación 13 de la jornada 6 la Pororoca iba apagada (PlayModeHelpers.NoShuffleUnlessSet) y se miraban cuatro.
             yield return EnterLevel(boot, level);
             GameScreen view = boot.View!;
             Assert.That(view.CanvasWidth, Is.EqualTo(320f).Within(0.01f), "el lienzo de 320 dp");
@@ -86,12 +89,13 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// D-061 (el suelo de 12 dp por debajo de 360 dp): a 360 dp y hasta el 130 %, el último recurso no se dispara nunca
-        /// («Reiniciar» y las etiquetas de la bandeja, a 12 sp × escala, el mínimo de 02 §12); a 320 dp, si se dispara, nunca baja
-        /// de 12 dp. En es-419, en y pt-BR, con las cinco ranuras (el 100).
+        /// D-061 y su añadido del 2026-10-29 (el suelo de 12 dp en cualquier ancho): a 320 y a 360 dp, «Reiniciar» y las etiquetas
+        /// de la bandeja van a 12 sp × escala, el mínimo de 02 §12, y solo encoge la que a ese tamaño no cabe (a 360 dp y al 130 %,
+        /// con las cinco ranuras, «Deshacer» o «Desfazer»), nunca por debajo de 12 dp. Al 100 % no encoge ninguna (12 sp ya son
+        /// 12 dp). En es-419, en y pt-BR, con las cinco ranuras (el 100).
         /// </summary>
         [UnityTest]
-        public IEnumerator LastResortShrink_NeverAt360_AndNeverBelow12At320(
+        public IEnumerator LastResortShrink_OnlyWhenTheWordDoesNotFit_AndNeverBelow12(
             [Values(LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil)] string locale, [Values(100, 130)] int percent,
             [Values(360, 320)] int width)
         {
@@ -111,14 +115,17 @@ namespace AF.Tests.PlayMode
             float normal = UiBuilder.MinTextSp * UiBuilder.TextScale;
             foreach (TextMeshProUGUI label in Labels(view))
             {
-                if (width == 360)
+                Assert.That(label.fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f), at + ": «" + label.text + "» nunca por debajo de 12 dp (D-061)");
+                Assert.That(label.fontSize, Is.LessThanOrEqualTo(normal + 0.01f), at + ": «" + label.text + "» nunca crece");
+                if (percent == 100)
                 {
-                    Assert.That(label.fontSize, Is.EqualTo(normal).Within(0.01f), at + ": «" + label.text + "» a su tamaño de siempre (12 sp × escala)");
+                    Assert.That(label.fontSize, Is.EqualTo(normal).Within(0.01f), at + ": «" + label.text + "» al 100 %, a 12 sp");
                 }
-                else
+                else if (label != view.RestartLabel && label.fontSize < normal - 0.01f)
                 {
-                    Assert.That(label.fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f), at + ": «" + label.text + "» nunca por debajo de 12 dp (D-061)");
-                    Assert.That(label.fontSize, Is.LessThanOrEqualTo(normal + 0.01f), at + ": «" + label.text + "» nunca crece");
+                    // Encoge solo si su palabra, a 12 sp × escala, no cabía en la caja.
+                    float wordAtNormal = UiBuilder.LongestWordWidth(label) * (normal / label.fontSize);
+                    Assert.That(wordAtNormal, Is.GreaterThan(label.rectTransform.rect.width - 0.5f), at + ": «" + label.text + "» encoge aunque cabía");
                 }
             }
         }

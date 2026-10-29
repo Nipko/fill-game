@@ -483,7 +483,7 @@ namespace AF.Tests.PlayMode
             // Añadido de D-051 del 2026-10-28: el velo de la pantalla del sistema se suelta con la intro ya en la pantalla (en el
             // Editor no hay velo, pero el juego dice quién lo soltó).
             Assert.That(boot.OsSplashBy, Is.EqualTo(AndroidOsSplash.ByIntro), "la soltó la intro, no el fin de la carga");
-            StringAssert.Contains("\"proc_visible_ms\":-1,\"os_splash_held_ms\":-1,\"os_splash_release\":\"none\",\"os_splash_by\":\"intro\",\"proc_os_splash_ms\":-1,\"os_splash_focus_ms\":-1,\"os_splash_veil\":\"none\",\"os_splash_icon_px\":[-1,-1],\"os_splash_icon_xy\":[-1,-1],", steps, "sin medida del icono en el Editor");
+            StringAssert.Contains("\"proc_visible_ms\":-1,\"os_splash_held_ms\":-1,\"os_splash_release\":\"none\",\"os_splash_by\":\"intro\",\"proc_os_splash_ms\":-1,\"os_splash_focus_ms\":-1,\"os_splash_veil\":\"none\",\"os_splash_icon_px\":[-1,-1],\"os_splash_icon_xy\":[-1,-1],\"os_splash_mask_ms\":-1,", steps, "sin medida del icono ni de la máscara en el Editor");
             StringAssert.Contains("\"yields\":" + intro.Yields + "}", steps);
 
             // El primer toque tras la intro llega al juego (nada se queda tragando toques).

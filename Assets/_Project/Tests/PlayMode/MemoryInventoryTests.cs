@@ -37,6 +37,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             DevProbe.ResetMem();
+            s_lobby = null;
             GameBootstrap.ResetDailyOverrides();
             LaunchOptions.Reset();
         }
@@ -57,23 +58,23 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(74)));
             GameBootstrap boot = GameBootstrap.Current!;
             yield return Frames(30);
-            Report("lobby", before);
+            s_lobby = Report("lobby", before, null);
 
             Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
             yield return Frames(30);
-            Report("map", before);
+            Report("map", before, s_lobby);
             Assert.That(boot.CloseRiverMap(), Is.True);
             yield return Frames(10);
 
             Assert.That(boot.OpenAvatarScreen("lobby"), Is.True);
             yield return Frames(60);
-            Report("avatars", before);
+            Report("avatars", before, s_lobby);
             Assert.That(boot.CloseAvatarScreen(), Is.True);
             yield return Frames(10);
 
             Assert.That(boot.PressPlay(), Is.True);
             yield return Frames(90);
-            Report("level75", before);
+            Report("level75", before, s_lobby);
         }
 
         private static IEnumerator Frames(int n)
@@ -84,8 +85,19 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        private static void Report(string at, HashSet<int> before)
+        // Texturas del juego vivas en el inicio (para ver cuánto del inicio sigue vivo en el Mapa y en el nivel).
+        private static HashSet<int>? s_lobby;
+
+        /// <summary>
+        /// Escribe las líneas del momento <paramref name="at"/> y devuelve las texturas del juego vivas. Con <paramref name="lobby"/>,
+        /// además, <c>from_lobby_mib</c>: lo que sigue vivo del inicio (observación 14 de la jornada 6: el arte del inicio que no se ve
+        /// mientras se juega), y siempre los shaders cargados (<c>shaders</c>, todos, también los del Editor).
+        /// </summary>
+        private static HashSet<int> Report(string at, HashSet<int> before, HashSet<int>? lobby)
         {
+            var alive = new HashSet<int>();
+            long fromLobby = 0;
+            int fromLobbyCount = 0;
             GC.Collect();
             CultureInfo inv = CultureInfo.InvariantCulture;
             var rows = new List<(long gpu, string line)>();
@@ -99,6 +111,7 @@ namespace AF.Tests.PlayMode
                 }
 
                 count++;
+                alive.Add(t.GetInstanceID());
                 GraphicsFormat fmt = t.graphicsFormat;
                 int mips = t.mipmapCount;
                 long gpu = 0, top = 0;
@@ -127,6 +140,12 @@ namespace AF.Tests.PlayMode
                 bool readable = t.isReadable;
                 long cpu = readable && !rt ? gpu : 0;
                 gpuTotal += gpu;
+                if (lobby != null && lobby.Contains(t.GetInstanceID()))
+                {
+                    fromLobby += gpu;
+                    fromLobbyCount++;
+                }
+
                 cpuTotal += cpu;
                 mipTotal += gpu - top;
                 rows.Add((gpu + cpu, "AF_MEMINV {\"at\":\"" + at + "\",\"name\":\"" + Escape(t.name) + "\",\"type\":\"" + t.GetType().Name
@@ -176,7 +195,19 @@ namespace AF.Tests.PlayMode
                 + ",\"gpu_mib\":" + Mib(gpuTotal).ToString("0.0", inv) + ",\"cpu_copy_mib\":" + Mib(cpuTotal).ToString("0.0", inv)
                 + ",\"mips_mib\":" + Mib(mipTotal).ToString("0.0", inv) + ",\"rt_mib\":" + Mib(rtTotal).ToString("0.0", inv)
                 + ",\"current_texture_mib\":" + Mib((long)Texture.currentTextureMemory).ToString("0.0", inv)
-                + ",\"mono_used_mib\":" + Mib(s.MonoUsed).ToString("0.0", inv) + "}");
+                + ",\"mono_used_mib\":" + Mib(s.MonoUsed).ToString("0.0", inv)
+                + (lobby != null ? ",\"from_lobby\":" + fromLobbyCount.ToString(inv) + ",\"from_lobby_mib\":" + Mib(fromLobby).ToString("0.0", inv) : "")
+                + "}");
+
+            long shaderBytes = 0;
+            Shader[] shaders = Resources.FindObjectsOfTypeAll<Shader>();
+            foreach (Shader sh in shaders)
+            {
+                shaderBytes += Profiler.GetRuntimeMemorySizeLong(sh);
+            }
+
+            Debug.Log("AF_MEMINV {\"at\":\"" + at + "\",\"shaders\":" + shaders.Length.ToString(inv) + ",\"shaders_mib\":" + Mib(shaderBytes).ToString("0.0", inv) + "}");
+            return alive;
         }
 
         private static string Escape(string s)

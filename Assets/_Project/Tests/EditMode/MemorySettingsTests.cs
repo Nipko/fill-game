@@ -58,6 +58,24 @@ namespace AF.Tests.EditMode
             }
         }
 
+        /// <summary>
+        /// El 2D Renderer sin datos de posproceso (observación 14 de la jornada 6; <c>docs/dev/memoria.md</c> §7): el juego no pinta
+        /// posproceso y así el reproductor no carga las texturas de grano, las de SMAA ni los shaders de posproceso.
+        /// </summary>
+        [Test]
+        public void Renderer2D_WithoutPostProcessData_InEveryRendererTheProjectUses()
+        {
+            Assert.That(ProjectSetup.RendererPostProcessData, Is.False);
+            List<ScriptableObject> renderers = ProjectSetup.RendererDatas();
+            Assert.That(renderers, Is.Not.Empty, "el asset de URP tiene su 2D Renderer");
+            foreach (ScriptableObject renderer in renderers)
+            {
+                Assert.That(ProjectSetup.RendererHasPostProcessData(renderer), Is.False, renderer.name + ": ejecuta AF.EditorTools.ProjectSetup.ApplyAndroidDefaults");
+            }
+
+            Assert.That(string.Join("; ", ProjectSetup.Validate()), Does.Not.Contain("renderer.postProcessData"));
+        }
+
         [Test]
         public void FontAtlases_NotReadableOnTheCpu()
         {

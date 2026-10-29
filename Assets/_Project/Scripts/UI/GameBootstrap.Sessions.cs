@@ -156,7 +156,7 @@ namespace AF.UI
             if (!rebuilt)
             {
                 SessionStart start = _sessions!.OnColdStart();
-                OnSessionStarted(in start);
+                OnSessionStarted(in start, true);
             }
 
             SessionRunner runner = gameObject.GetComponent<SessionRunner>();
@@ -212,11 +212,11 @@ namespace AF.UI
             if (resumed.HasValue)
             {
                 SessionStart s = resumed.Value;
-                OnSessionStarted(in s);
+                OnSessionStarted(in s, false);
             }
             else
             {
-                ProbeOpen(notifications.OnForeground());
+                OnNotificationsOpened(notifications.OnForeground(), false);
             }
         }
 
@@ -237,6 +237,7 @@ namespace AF.UI
             }
 
             TickPlatformScheduler();
+            TickPushRoute(); // D-062 (GameBootstrap.PushRoute.cs): el aviso pendiente se descarta si la app va a otra pantalla
             TickPushUi(Mathf.Min(Time.unscaledDeltaTime, 1f) * 1000f);
             LevelFlow? flow = _flow;
             if (flow != null)
@@ -330,7 +331,7 @@ namespace AF.UI
         /// </summary>
         partial void TickPlatformScheduler();
 
-        private void OnSessionStarted(in SessionStart start)
+        private void OnSessionStarted(in SessionStart start, bool coldStart)
         {
             NotificationService? notifications = _notifications;
             if (notifications == null || _push == null || _comebackService == null)
@@ -343,7 +344,7 @@ namespace AF.UI
                 DevProbe.Write(SessionProbeFormat.Session(SessionProbeMs(), in start));
             }
 
-            ProbeOpen(notifications.OnForeground());
+            OnNotificationsOpened(notifications.OnForeground(), coldStart);
             _push.SyncWithSystem();
             _lastComeback = _comebackService.OnSessionStart(in start, _profile?.Streak?.Wins ?? 0);
             if (DevProbe.Enabled)
@@ -379,8 +380,11 @@ namespace AF.UI
             }
         }
 
-        private void ProbeOpen(NotificationOpenReport report)
+        // Al abrir (arranque en frío o vuelta): push_sent de lo entregado y, si se abrió desde un aviso, su destino (D-062;
+        // GameBootstrap.PushRoute.cs), que se toma al llegar al inicio.
+        private void OnNotificationsOpened(NotificationOpenReport report, bool coldStart)
         {
+            NotePushOpened(report.OpenedType, coldStart);
             if (!DevProbe.Enabled)
             {
                 return;

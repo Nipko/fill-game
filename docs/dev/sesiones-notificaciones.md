@@ -84,6 +84,7 @@ Reglas:
 
 - `GameBootstrap.SetUpSessions()` (parcial nuevo) crea los servicios con el perfil, la cartera y el reloj de `Start`, cuenta el arranque en frío y añade `SessionRunner`. El runner lleva `OnApplicationPause`, `OnApplicationQuit` y, cada fotograma, la entrada en la pantalla de victoria (campaña y Reto) para `last_win_at` y el pre-prompt.
 - **Sondas** (`AF_STATE`, solo en desarrollo): `session`, `comeback_gift`, `push_prompt`, `push_plan`, `push_sent` y `push_open` (formato en `SessionProbeFormat`). El integrador puede añadirlas a `docs/dev/prototipo-v0.md`.
+- **Al tocar un aviso (D-062, 2026-10-29):** abre lo que nombra y se salta el takeover del inicio (tabla en 06 §8.3, nota «Al tocarlo»). La tabla y las caídas, sin motor, en `NotificationRouting`; el encaminamiento, en `GameBootstrap.PushRoute.cs`, en la primera entrada al inicio sin nada encima (tras el consentimiento, la edad y la intro). `push_open` sale entonces, con `type` y `dest` (`daily`, `logbook`, `home` o `none`).
 - **UI de los avisos (tanda 5, rama `tanda5/notif-ui`, 2026-10-22): hecha** la tarjeta del pre-prompt y la fila «Avisos» (sección 11). Falta el aviso del Regalo de regreso (`GameBootstrap.LastComeback`), con `comeback_streak_line` y, desde B4, `comeback_logbook_line`, y `comeback_reminder_line`.
 
 ## 7. Parches y orden de aplicación

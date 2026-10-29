@@ -91,6 +91,56 @@ namespace AF.Tests.PlayMode
             Assert.That(line, Does.EndWith("],\"pool_read\":true}"), "lo propio del momento, al final");
         }
 
+        /// <summary>
+        /// Observación 14 de la jornada 6 (<c>docs/dev/memoria.md</c> §7): la línea <c>boot</c> dice con qué se pinta y con qué
+        /// argumentos del reproductor se lanzó (si los hay), y con <c>af_mem_os</c> cada línea lleva el resumen de
+        /// <c>dumpsys meminfo</c>, null si no se pudo leer (en el Editor, siempre).
+        /// </summary>
+        [Test]
+        public void FormatGraphicsInfo_ApiScreenRenderAndUnityArgsOnlyWhenGiven()
+        {
+            Assert.That(DevProbe.FormatGraphicsInfo("Vulkan", "Adreno (TM) 830", "Vulkan 1.3.284 [0x\"1\"]", "NativeGraphicsJobs", 1080, 2340, 1080, 2340, 1,
+                    "-force-gles -memorysetup-main-allocator-block-size=4194304"),
+                Is.EqualTo(",\"gfx_api\":\"Vulkan\",\"gfx_device\":\"Adreno (TM) 830\",\"gfx_version\":\"Vulkan 1.3.284 [0x\\\"1\\\"]\","
+                    + "\"render_thread\":\"NativeGraphicsJobs\",\"screen_px\":[1080,2340],\"render_px\":[1080,2340],\"msaa\":1,"
+                    + "\"unity_args\":\"-force-gles -memorysetup-main-allocator-block-size=4194304\""));
+            Assert.That(DevProbe.FormatGraphicsInfo("OpenGLES3", "x", "y", "MultiThreaded", 720, 1600, -1, -1, 0, null), Does.Not.Contain("unity_args"));
+            Assert.That(DevProbe.FormatGraphicsInfo("OpenGLES3", "x", "y", "MultiThreaded", 720, 1600, -1, -1, 0, ""), Does.EndWith("\"msaa\":0"));
+            Assert.That(DevProbe.FormatGraphicsInfo("OpenGLES3", "a\nb\r\tc\u0001", "y", "MultiThreaded", 720, 1600, -1, -1, 0, null),
+                Does.Contain(",\"gfx_device\":\"a\\nb\\r\\tc\\u0001\","), "los caracteres de control, escapados");
+            Assert.That(DevProbe.GraphicsInfoJson(), Does.StartWith(",\"gfx_api\":\"").And.Contain("\"screen_px\":["));
+        }
+
+        [Test]
+        public void FormatOsMem_MiBFromKb_NullWhenMissing()
+        {
+            var s = new OsMemSummary(611883, 20976, 36824, 101940, 139904, 270696, 36215, 23);
+            Assert.That(DevProbe.FormatOsMem(s), Is.EqualTo(
+                ",\"os_pss_mib\":597.5,\"os_java_mib\":20.5,\"os_native_mib\":36.0,\"os_code_mib\":99.6,\"os_graphics_mib\":136.6,"
+                + "\"os_private_other_mib\":264.4,\"os_system_mib\":35.4,\"os_read_ms\":23"));
+            Assert.That(DevProbe.FormatOsMem(OsMemSummary.Missing), Is.EqualTo(
+                ",\"os_pss_mib\":null,\"os_java_mib\":null,\"os_native_mib\":null,\"os_code_mib\":null,\"os_graphics_mib\":null,"
+                + "\"os_private_other_mib\":null,\"os_system_mib\":null,\"os_read_ms\":0"));
+        }
+
+        [Test]
+        public void Mem_WithOsMem_AddsTheSummaryBeforeTheMomentMembers_AndNotWithout()
+        {
+            try
+            {
+                DevProbe.ResetMemOs(false);
+                Assert.That(DevProbe.Mem("lobby"), Does.Not.Contain("os_pss_mib"));
+                DevProbe.ResetMemOs(true);
+                string? line = DevProbe.Mem("daily", 0, "\"pool_read\":true");
+                Assert.That(MemLine.IsMatch(line!), Is.True, line);
+                Assert.That(line, Does.Contain(",\"os_pss_mib\":null,").And.Contain("\"os_read_ms\":0,\"pool_read\":true}"), "en el Editor no hay meminfo");
+            }
+            finally
+            {
+                DevProbe.ResetMemOs();
+            }
+        }
+
         [Test]
         public void FormatBootStepHeaps_OneValuePerStep_MinusOneWithoutMark()
         {
