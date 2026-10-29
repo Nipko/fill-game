@@ -4,6 +4,7 @@ using AF.Presentation;
 using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 
@@ -25,6 +26,7 @@ namespace AF.Tests.PlayMode
 
         private GameObject? _host;
         private BootSplash? _splash;
+        private bool _snap;
 
         [TearDown]
         public void TearDown()
@@ -34,6 +36,12 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedScreen = null;
             GameScreen.SimulatedPxPerDp = null;
             BrandIntro.FrameVisibleOverrideForTests = null;
+            AndroidOsSplash.IconOverrideForTests = null;
+            if (_snap)
+            {
+                SnapshotKit.Release();
+                _snap = false;
+            }
             if (_host != null)
             {
                 Object.Destroy(_host);
@@ -110,7 +118,8 @@ namespace AF.Tests.PlayMode
             RectTransform iris = intro.Morph.Iris.rectTransform;
             Assert.That(iris.anchoredPosition.x + (iris.sizeDelta.x * 0.5f), Is.EqualTo(180f).Within(0.01f));
             Assert.That(-iris.anchoredPosition.y + (iris.sizeDelta.y * 0.5f), Is.EqualTo(390f).Within(0.01f));
-            Assert.That((Color32)intro.Morph.Iris.color, Is.EqualTo(BrandIntro.Petroleum));
+            Assert.That((Color32)intro.Morph.Iris.color, Is.EqualTo(new Color32(255, 255, 255, 255)), "el petróleo va en la textura, no en el vértice");
+            Assert.That(intro.Morph.Measured, Is.False, "sin medida (el Editor): la caja de la guía");
             Assert.That(intro.Morph.Rim.gameObject.activeSelf, Is.False, "sin el aro de luz: igual que el icono del sistema");
             Assert.That(intro.MorphSceneScale, Is.LessThan(1f), "la cuia, en el encuadre del icono");
             Assert.That(intro.Piece("EmblemCuia")!.GetComponent<Image>().color.a, Is.EqualTo(0f), "solo el icono, tal cual: su propia cuia");
@@ -303,6 +312,174 @@ namespace AF.Tests.PlayMode
             Assert.That(intro.Playing, Is.True, "y en el mismo tick empieza la apertura");
             Assert.That(intro.ClockMs, Is.EqualTo(0f), "desde su instante 0: el icono, igual que el velo");
             Assert.That(intro.MorphDiameterDp, Is.EqualTo(160f).Within(0.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator FirstFrame_UsesTheMeasuredSystemIcon_486PxCentred()
+        {
+            // Jornada 6, observación 11: el SM-S938B pinta el icono del sistema a ~486 px (≈ 185 dp), no a los 420 de la guía. Con la
+            // caja que mide Java, el fotograma 0 tiene ese diámetro y ese centro (1080 × 2340 px: 3 px por unidad del lienzo).
+            AndroidOsSplash.IconOverrideForTests = new SplashIconBox(297, 927, 486, 486, 0, 0, 1080, 2340);
+            BrandIntro intro = NewIntro(PhoneDensity);
+            yield return null;
+            _splash!.Tick(16f);
+            Assert.That(intro.Morph.Measured, Is.True);
+            Assert.That(intro.MorphDiameter, Is.EqualTo(162f).Within(0.01f), "486 px / 3 px por unidad");
+            Assert.That(intro.MorphDiameterDp, Is.EqualTo(486f / PhoneDensity).Within(0.01f), "≈ 185 dp");
+            Assert.That(intro.MorphCenter.x, Is.EqualTo(180f).Within(0.01f));
+            Assert.That(intro.MorphCenter.y, Is.EqualTo(390f).Within(0.01f));
+            Assert.That(intro.Morph.StartDiameterPx, Is.EqualTo(486f).Within(0.01f), "en px de pantalla, los del sistema");
+            Assert.That(intro.Morph.StartCenterPx.x, Is.EqualTo(540f).Within(0.01f));
+            Assert.That(intro.Morph.StartCenterPx.y, Is.EqualTo(1170f).Within(0.01f));
+            AssertIconView(intro, 162f * 1.5f, new Vector2(180f, 390f));
+
+            BrandIntroReport report = _splash.EndIntro()!;
+            Assert.That(report.MorphGeometry, Is.EqualTo("measured"));
+            Assert.That(report.MorphStartDiamPx, Is.EqualTo(486f).Within(0.01f));
+            Assert.That(report.MorphStartCenterPx.x, Is.EqualTo(540f).Within(0.01f));
+            Assert.That(report.MorphStartCenterPx.y, Is.EqualTo(1170f).Within(0.01f));
+            string? line = new DevProbe().FormatBrandIntro(report);
+            StringAssert.Contains("\"morph_geometry\":\"measured\",\"morph_start_diam_px\":486.0,\"morph_start_xy_px\":[540.0,1170.0]", line);
+        }
+
+        [UnityTest]
+        public IEnumerator FirstFrame_FollowsAnOffCentreBox_AndStillOpensToTheCorners()
+        {
+            AndroidOsSplash.IconOverrideForTests = new SplashIconBox(100, 200, 486, 480, 0, 0, 1080, 2340);
+            BrandIntro intro = NewIntro(PhoneDensity);
+            _splash!.BeginIntro(false);
+            yield return null;
+            intro.Seek(0f);
+            Vector2 centre = new Vector2(343f / 3f, 440f / 3f);
+            Assert.That(intro.MorphDiameter, Is.EqualTo(160f).Within(0.01f), "el lado menor: 480 px");
+            Assert.That(intro.MorphCenter.x, Is.EqualTo(centre.x).Within(0.01f));
+            Assert.That(intro.MorphCenter.y, Is.EqualTo(centre.y).Within(0.01f));
+            AssertIconView(intro, 240f, centre);
+            RectTransform iris = intro.Morph.Iris.rectTransform;
+            Assert.That(iris.anchoredPosition.x + (iris.sizeDelta.x * 0.5f), Is.EqualTo(centre.x).Within(0.01f));
+            Assert.That(-iris.anchoredPosition.y + (iris.sizeDelta.y * 0.5f), Is.EqualTo(centre.y).Within(0.01f));
+            intro.Seek(BrandIntro.MorphMs);
+            float fx = 360f - centre.x;
+            float fy = 780f - centre.y;
+            Assert.That(intro.MorphDiameter, Is.GreaterThanOrEqualTo(2f * Mathf.Sqrt((fx * fx) + (fy * fy))), "hasta la esquina más lejana");
+            Assert.That(intro.MorphIrisVisible, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutAMeasure_TheGuideBox_AndALateMeasure_RelaysFrameZeroBeforeTheVeilGoes()
+        {
+            bool visible = false;
+            BrandIntro.FrameVisibleOverrideForTests = () => visible;
+            BrandIntro intro = NewIntro(PhoneDensity);
+            _splash!.BeginIntro(false);
+            yield return null;
+            _splash.Tick(16f);
+            Assert.That(intro.Morph.Measured, Is.False);
+            Assert.That(intro.MorphDiameterDp, Is.EqualTo(160f).Within(0.01f), "sin medida: la guía");
+            Assert.That(intro.Morph.StartDiameterPx, Is.EqualTo(420f).Within(0.01f), "160 dp a 2,625 px por dp");
+            yield return null;
+            _splash.Tick(16f);
+            Assert.That(intro.FenceRequestedAtTick, Is.GreaterThan(0), "ya esperaba a ver el fotograma 0 con la guía");
+
+            // Java midió después (la vista del icono se colocó tarde): se rehace el fotograma 0 y se vuelve a esperar a verlo.
+            AndroidOsSplash.IconOverrideForTests = new SplashIconBox(297, 927, 486, 486, 0, 0, 1080, 2340);
+            visible = true; // la GPU ya terminó el fotograma de la guía, pero ese ya no vale
+            yield return null;
+            _splash.Tick(16f);
+            Assert.That(intro.Morph.Measured, Is.True);
+            Assert.That(intro.MorphDiameter, Is.EqualTo(162f).Within(0.01f));
+            Assert.That(intro.FenceRequestedAtTick, Is.EqualTo(-1), "la espera vuelve a empezar con el fotograma nuevo");
+            Assert.That(intro.OnScreen, Is.False, "el velo no se suelta sobre el fotograma de la guía");
+            Assert.That(intro.Playing, Is.False);
+            yield return null;
+            _splash.Tick(16f);
+            Assert.That(intro.OnScreen, Is.True);
+            Assert.That(intro.Playing, Is.True);
+            BrandIntroReport report = _splash.EndIntro()!;
+            Assert.That(report.MorphStartDiamPx, Is.EqualTo(486f).Within(0.01f), "la sonda dice el círculo con que empezó de verdad");
+        }
+
+        [UnityTest]
+        public IEnumerator ThePetroleum_IsInTheTextures_WithWhiteVertices()
+        {
+            // Jornada 6, observación 11: en el espacio de color lineal, el color de vértice se guarda en lineal a 8 bits y el #14444A
+            // salía (22,69,73). Todo el petróleo de la intro va en texturas sRGB, con el vértice blanco.
+            Assert.That(QualitySettings.activeColorSpace, Is.EqualTo(ColorSpace.Linear), "la causa: el proyecto es lineal");
+            BrandIntro intro = NewIntro(PhoneDensity);
+            yield return null;
+            Sprite petroleum = intro.Morph.PetroleumSprite;
+            Assert.That(petroleum.texture.isDataSRGB, Is.True, "sRGB: la GPU la decodifica sin redondear a 8 bits en lineal");
+            foreach (Color32 c in petroleum.texture.GetPixels32())
+            {
+                Assert.That(c, Is.EqualTo(BrandIntro.Petroleum));
+            }
+
+            foreach (string name in new[] { "Petroleum", "MorphCover", "MorphBar0", "MorphBar1", "MorphBar2", "MorphBar3" })
+            {
+                Image image = intro.Root.Find(name).GetComponent<Image>();
+                Assert.That(image.sprite, Is.SameAs(petroleum), name);
+                Color32 v = image.color;
+                Assert.That(new Color32(v.r, v.g, v.b, 255), Is.EqualTo(new Color32(255, 255, 255, 255)), name + ": vértice blanco");
+            }
+
+            Assert.That(intro.Morph.Iris.sprite!.texture.isDataSRGB, Is.True);
+            Color32 corner = BrandIntroMorph.RingPixel(false, 0, 0);
+            Assert.That(new Color32(corner.r, corner.g, corner.b, 255), Is.EqualTo(BrandIntro.Petroleum), "el círculo lleva el petróleo en su textura");
+            Assert.That(corner.a, Is.EqualTo(255), "fuera del agujero, opaco");
+            int mid = BrandIntroMorph.IrisTextureSize / 2;
+            Assert.That(BrandIntroMorph.RingPixel(false, mid, mid).a, Is.EqualTo(0), "dentro, transparente");
+        }
+
+        [UnityTest]
+        public IEnumerator FrameZero_RendersThePetroleumExactly()
+        {
+            // Lee el fotograma 0 pintado (la cámara de las capturas sobre una RenderTexture sRGB) y compara el petróleo con
+            // (20,68,74) ±1. Sin dispositivo gráfico (-nographics) no se pinta nada: se omite (lo cubre el test de las texturas).
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+            {
+                Assert.Ignore("Sin dispositivo gráfico (-nographics): no hay píxeles que leer.");
+            }
+
+            SnapshotKit.Prepare();
+            _snap = true;
+            GameScreen.SimulatedPxPerDp = PhoneDensity;
+            AndroidOsSplash.IconOverrideForTests = new SplashIconBox(297, 927, 486, 486, 0, 0, 1080, 2340);
+            _host ??= new GameObject("BrandIntroMorphTestHost");
+            _splash = new BootSplash(_host.transform, withSloth: false, withIntro: true);
+            SnapshotKit.AttachOverlay(_splash.Canvas);
+            yield return null;
+            Color32[] px = SnapshotKit.CapturePixels();
+            int w = SnapshotKit.Width;
+            int h = SnapshotKit.Height;
+            Assert.That(px.Length, Is.EqualTo(w * h));
+
+            // Las filas empiezan por abajo. Puntos del petróleo: una banda (esquina), la textura del círculo (en diagonal, fuera del
+            // agujero de 243 px de radio) y otra banda (debajo del círculo).
+            var points = new[] { new Vector2Int(8, 8), new Vector2Int(540 + 200, 1170 + 200), new Vector2Int(540, 1170 + 420), new Vector2Int(w - 8, h - 8) };
+            var target = (Color32)BrandIntro.Petroleum;
+            foreach (Vector2Int p in points)
+            {
+                Color32 c = px[((h - 1 - p.y) * w) + p.x];
+                string where = "(" + p.x + "," + p.y + ") = (" + c.r + "," + c.g + "," + c.b + ")";
+                Assert.That(Mathf.Abs(c.r - target.r), Is.LessThanOrEqualTo(1), where);
+                Assert.That(Mathf.Abs(c.g - target.g), Is.LessThanOrEqualTo(1), where);
+                Assert.That(Mathf.Abs(c.b - target.b), Is.LessThanOrEqualTo(1), where);
+            }
+
+            // Y dentro del círculo, la vista del icono: no es petróleo liso.
+            Color32 inside = px[((h - 1 - 1170) * w) + 540];
+            Assert.That(inside.r != target.r || inside.g != target.g || inside.b != target.b, Is.True, "el centro enseña el icono");
+        }
+
+        // La vista del icono en la pantalla (unidades): su lado y su centro.
+        private static void AssertIconView(BrandIntro intro, float side, Vector2 centre)
+        {
+            RectTransform icon = intro.Morph.Icon.rectTransform;
+            RectTransform top = intro.Morph.Top;
+            float k = top.localScale.x;
+            Assert.That(icon.sizeDelta.x * k, Is.EqualTo(side).Within(0.01f), "la vista del icono: 1,5 veces el círculo");
+            Assert.That(top.anchoredPosition.x + (k * (icon.anchoredPosition.x + (icon.sizeDelta.x * 0.5f))), Is.EqualTo(centre.x).Within(0.01f));
+            Assert.That(-top.anchoredPosition.y + (k * (-icon.anchoredPosition.y + (icon.sizeDelta.y * 0.5f))), Is.EqualTo(centre.y).Within(0.01f));
         }
 
         [UnityTest]

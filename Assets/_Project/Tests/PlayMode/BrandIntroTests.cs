@@ -159,7 +159,10 @@ namespace AF.Tests.PlayMode
             }
 
             Image background = intro.Root.Find("Petroleum").GetComponent<Image>();
-            Assert.That((Color32)background.color, Is.EqualTo(BrandIntro.Petroleum), "el petróleo de la pantalla del sistema");
+            // El petróleo de la pantalla del sistema, en su textura sRGB con el vértice blanco (jornada 6, observación 11: como color
+            // de vértice, en espacio lineal, salía (22,69,73)).
+            Assert.That((Color32)background.color, Is.EqualTo(new Color32(255, 255, 255, 255)), "el vértice, blanco");
+            Assert.That(background.sprite, Is.SameAs(intro.Morph.PetroleumSprite), "el petróleo de la pantalla del sistema");
 
             // Antes de saber si hay Reducir movimiento, el primer fotograma (añadido de D-051 del 2026-10-28, «la intro nace del
             // logo»): el icono de la pantalla del sistema, con el chorro entero y el río ya teñido, en su círculo sobre el petróleo.
@@ -478,7 +481,7 @@ namespace AF.Tests.PlayMode
             // Añadido de D-051 del 2026-10-28: el velo de la pantalla del sistema se suelta con la intro ya en la pantalla (en el
             // Editor no hay velo, pero el juego dice quién lo soltó).
             Assert.That(boot.OsSplashBy, Is.EqualTo(AndroidOsSplash.ByIntro), "la soltó la intro, no el fin de la carga");
-            StringAssert.Contains("\"proc_visible_ms\":-1,\"os_splash_held_ms\":-1,\"os_splash_release\":\"none\",\"os_splash_by\":\"intro\",\"proc_os_splash_ms\":-1,\"os_splash_focus_ms\":-1,\"os_splash_veil\":\"none\",", steps);
+            StringAssert.Contains("\"proc_visible_ms\":-1,\"os_splash_held_ms\":-1,\"os_splash_release\":\"none\",\"os_splash_by\":\"intro\",\"proc_os_splash_ms\":-1,\"os_splash_focus_ms\":-1,\"os_splash_veil\":\"none\",\"os_splash_icon_px\":[-1,-1],\"os_splash_icon_xy\":[-1,-1],", steps, "sin medida del icono en el Editor");
             StringAssert.Contains("\"yields\":" + intro.Yields + "}", steps);
 
             // El primer toque tras la intro llega al juego (nada se queda tragando toques).

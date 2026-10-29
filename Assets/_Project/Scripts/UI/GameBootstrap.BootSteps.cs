@@ -27,6 +27,10 @@ namespace AF.UI
     /// vertido. La sonda <c>boot_steps</c> suma <c>visible_ms</c>, <c>play_ms</c>, <c>motion_hold_ms</c> (lo que la carga esperó al
     /// movimiento), <c>proc_awake_ms</c> (del arranque del proceso de Android al Awake) y <c>proc_visible_ms</c> (del arranque del
     /// proceso al primer fotograma de la intro ya en la pantalla), para comparar con la ráfaga de capturas.</item>
+    /// <item><b>Jornada 6, observación 11 (2026-10-29):</b> <c>os_splash_icon_px</c> ([ancho, alto]) y <c>os_splash_icon_xy</c>
+    /// ([izquierda, arriba]) son la caja en px de pantalla del icono que se vio en el velo (<see cref="AndroidOsSplash.ReadIcon"/>:
+    /// la vista del icono de la pantalla del sistema o el círculo de <c>af_launch_window</c>); [-1,-1] sin medida. Su centro es
+    /// xy + px / 2; se comparan con <c>morph_start_diam_px</c> y <c>morph_start_xy_px</c> de <c>brand_intro</c>.</item>
     /// </list>
     /// </summary>
     public sealed partial class GameBootstrap
@@ -253,6 +257,12 @@ namespace AF.UI
             sb.Append(",\"proc_os_splash_ms\":").Append(os.ProcReleaseMs.ToString(inv));
             sb.Append(",\"os_splash_focus_ms\":").Append(os.FocusAfterMs.ToString(inv));
             sb.Append(",\"os_splash_veil\":\"").Append(os.Veil).Append('"');
+            SplashIconBox icon = AndroidOsSplash.ReadIcon(); // jornada 6, observación 11: la caja del icono que se vio (px)
+            bool measured = icon.Measured;
+            sb.Append(",\"os_splash_icon_px\":[").Append((measured ? icon.Width : -1).ToString(inv)).Append(',')
+                .Append((measured ? icon.Height : -1).ToString(inv)).Append(']');
+            sb.Append(",\"os_splash_icon_xy\":[").Append((measured ? icon.Left : -1).ToString(inv)).Append(',')
+                .Append((measured ? icon.Top : -1).ToString(inv)).Append(']');
             for (int i = 0; i < BootStepNames.Length; i++)
             {
                 sb.Append(",\"").Append(BootStepNames[i]).Append("\":").Append(_bootSteps[i].ToString(inv));
