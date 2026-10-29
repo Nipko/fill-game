@@ -146,6 +146,8 @@ Tras esta rama, el S938B seguiría en unos **650 MB de RSS y 540 MB de PSS**. La
 
 ### Pregunta para el dueño
 
+**Respondida el 2026-10-29 (D-060):** el dueño eligió la opción 1, «PSS ≤ 450 MB». 08 §5.4 ya lo recoge.
+
 **Los 400 MB de RSS de 08 §5.4 no se alcanzan con este stack.** Un proyecto Unity vacío con IL2CPP ya rondaría los 250-300 MB de RSS en Android 14+ (estimación sin fuente: no se ha medido aquí), y Tintalú suma el código de 5 SDK (≈ 90-106 MB de `Code`), el `Unknown` de ~210 MB y las superficies de la pantalla. Aun con R8, el código más pequeño y sin profundidad (−25 a −45 MB entre los tres), el S938B quedaría en ~600 MB de RSS y un teléfono de clase A en ~540-560 MB. ¿Cuál prefieres?
 
 1. **Cambiar la métrica a PSS en un teléfono de clase A:** PSS ≤ 450 MB medido con `dumpsys meminfo` (es lo que usa Android para decidir qué cerrar; el RSS cuenta páginas compartidas con otras apps). Recomendada.

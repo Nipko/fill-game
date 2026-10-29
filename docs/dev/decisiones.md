@@ -4490,3 +4490,15 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   11. **Sondas** (`AF_STATE brand_intro`, antes de `loading_ms`): `morph_mode` (`open`, `fade` o `none`), `morph_ms` (de empezar a moverse a cubrir la pantalla; ≈ 700), `morph_start_diam_dp` (160), `morph_frames`, `morph_units_per_dp` y `morph_build_ms`.
 - **Lo mide** la jornada 6 en el teléfono (`guion-prueba-telefono-completa.md`, N6, «La intro nace del logo»): que no haya salto del velo al primer fotograma, que la apertura sea fluida y sin dos ríos a la vez, y que Reducir movimiento use el fundido. El dueño juzga si queda «muy pro».
 - **Cómo revertir:** con una decisión nueva del dueño.
+
+## D-060 · El presupuesto de memoria se mide en PSS: ≤ 450 MB en clase A
+
+- **Fecha:** 2026-10-29. Registrada por el integrador.
+- **Estado:** decidido por el dueño en el chat. A la pregunta «¿Qué hacemos con el tope de memoria de 400 MB del GDD (08 §5.4)?», con la opción recomendada «Cambia la métrica de 08 §5.4 a PSS ≤ 450 MB medido en un teléfono de clase A», respondió: «PSS ≤ 450 MB».
+- **Contexto:** observación 6 de la jornada 6 (`docs/dev/traspaso/pruebas-telefono-2026-10-28-completa-j6.md`): RSS de 666 a 724 MB en el SM-S938B frente a «RSS ≤ 400 MB». El carril `tanda6/fx-j6-memoria` (`docs/dev/memoria.md`) midió que los recursos del juego suman unos 44-52 MiB y las texturas cumplen ≤ 120 MB; el resto es Unity e IL2CPP (`Unknown`, `Code`, superficies). Con el Blit en `Auto` se estiman ≈ 535-545 MB de PSS en el S938B y ≈ 470-490 MB en clase A (estimación, sin medir en clase A).
+- **Decisión:**
+  1. 08 §5.4, fila «Memoria»: **PSS total ≤ 450 MB en el dispositivo de referencia de clase A** (08 §5.4: Android 8-10, 3 GB de RAM), medido con `dumpsys meminfo` (TOTAL PSS). Sustituye a «RSS total ≤ 400 MB». Texturas ≤ 120 MB y Mono heap ≤ 60 MB siguen igual.
+  2. El S938B (12 GB, 1080p) no es clase A: sus cifras sirven para ver tendencias, no para juzgar el presupuesto.
+  3. Si en clase A pasa de 450 MB, las medidas de `memoria.md` §6 (R8 en el release, IL2CPP «Faster (smaller) builds», quitar profundidad y estencil, bajar el pico del arranque) se abren como carril.
+- **Pendiente:** medir en un teléfono de clase A, que el dueño tiene que conseguir (como la medida del líquido de 08 §5.4).
+- **Cómo revertir:** con una decisión nueva del dueño.
