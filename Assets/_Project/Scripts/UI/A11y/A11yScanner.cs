@@ -263,6 +263,15 @@ namespace AF.UI
                 return label;
             }
 
+            return TextsLabel(button);
+        }
+
+        /// <summary>
+        /// Los textos a la vista de <paramref name="button"/>, en orden, sin mirar la etiqueta registrada (la lectura de siempre;
+        /// <see cref="GreyA11y"/> la completa con lo que falta).
+        /// </summary>
+        public static string TextsLabel(Button button)
+        {
             string text = string.Empty;
             TextMeshProUGUI[] texts = button.GetComponentsInChildren<TextMeshProUGUI>(false);
             for (int i = 0; i < texts.Length; i++)

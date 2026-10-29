@@ -20,10 +20,18 @@ namespace AF.UI
             return status.Unlimited || left <= 0 ? label : A11yText.ButtonRemaining(label, left);
         }
 
-        /// <summary>Cuia extra (04 §2.2): con stock, «+1 cuia, 1 restante»; si no, la etiqueta.</summary>
+        /// <summary>
+        /// Cuia extra (04 §2.2): con stock, «+1 cuia, 1 restante»; lista sin stock y sin saldo (el toque late «Te faltan {n}»), «+1
+        /// cuia, Te faltan {n} semillas» (revisión de <c>tanda6/fx-j6-ui</c>; <see cref="GreyA11y"/>); si no, la etiqueta.
+        /// </summary>
         public static string Extra(string label, ExtraCuiaOffer offer)
         {
-            return offer.FromStock ? A11yText.ButtonRemaining(label, offer.Stock) : label;
+            if (offer.FromStock)
+            {
+                return A11yText.ButtonRemaining(label, offer.Stock);
+            }
+
+            return offer.State == ExtraCuiaState.Ready && offer.Missing > 0 ? A11yText.Append(label, UiText.MissingSeeds(offer.Missing)) : label;
         }
 
         /// <summary>Pista · Morpho (04 §2.3): con stock, «Pista, 2 restantes»; si no, la etiqueta.</summary>

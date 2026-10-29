@@ -63,6 +63,7 @@ namespace AF.UI
             _map = ModalKit.Cta("MapButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RiverMap, 18f, onMap, out _);
             _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, () => OnSkip(onSkip), out _skipLabel);
             _skipPulse = new NotePulse(_skipLabel); // sin línea «Te faltan», late la etiqueta (como «+3 Deshacer»)
+            GreyA11y.Register(_skip.Button, () => SkipMissingSeeds); // TalkBack: «Salto del Boto, 300, Te faltan {n} semillas»
             _skipRosa = UiBuilder.Image("Rosa", _skip.Face, null, Color.white); // el sprite, al enseñarlo (las mascotas, solo si hacen falta)
             _skipRosa.preserveAspect = true;
             _skipPrice = new PriceTag("Price", _skip.Face, art);

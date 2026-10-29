@@ -170,6 +170,34 @@ namespace AF.Tests.PlayMode
             Assert.That(banner.Pulse.ScaleNow, Is.EqualTo(1f), "vuelve a reposo");
         }
 
+        /// <summary>
+        /// Revisión de <c>tanda6/fx-j6-ui</c> (02 §12: etiqueta + estado): los botones en gris por el saldo que ahora responden se
+        /// leen con lo que falta («Salto del Boto, 300, Te faltan 300 semillas»), y la línea «Te faltan» suelta del modal se calla
+        /// mientras tanto; sin nada que falte, la lectura de siempre.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TalkBack_ReadsTheGrayButtons_WithTheMissingSeeds()
+        {
+            GameBootstrap boot = null!;
+            yield return LoadSkipEligible(FunnelSetup.Profile(0), b => boot = b);
+            GameScreen view = boot.View!;
+            string missing = UiText.MissingSeeds(300);
+
+            view.PauseButton.onClick.Invoke();
+            string pause = A11yScanner.ButtonLabel(view.Pause.SkipButton, out _);
+            Assert.That(pause, Does.StartWith(SkipText.Option).And.EndWith(missing), "la pausa: «" + pause + "»");
+            view.Pause.ResumeButton.onClick.Invoke();
+
+            FunnelSetup.GetStuck(boot);
+            string rescue = A11yScanner.ButtonLabel(view.Stuck.RescueButton, out _);
+            Assert.That(rescue, Does.EndWith(missing), "el rescate: «" + rescue + "»");
+            string skip = A11yScanner.ButtonLabel(view.Stuck.SkipButton, out _);
+            Assert.That(skip, Does.EndWith(missing), "la rama D: «" + skip + "»");
+            Assert.That(A11yLabels.TryGet(view.Stuck.RescueButton.transform.parent.Find("RescueNote").gameObject, out string note, out _), Is.True);
+            Assert.That(note, Is.Empty, "la línea «Te faltan» suelta se calla: ya la dice el botón");
+            Assert.That(GreyA11y.Reading(view.Stuck.RescueButton, 0), Does.Not.Contain(missing), "con saldo, la lectura de siempre");
+        }
+
         // El 31 con el tablero 6 del tutorial y el Salto elegible tras cinco fallos (04 §2.6), con Canoas infinitas para que
         // «Rendirse» no pregunte. Con playing, el tablero en juego; si no, en la tarjeta previa (el banner).
         private static IEnumerator LoadSkipEligible(Profile profile, Action<GameBootstrap> done, bool playing = true)
