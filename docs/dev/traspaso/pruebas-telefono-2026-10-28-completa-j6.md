@@ -16,6 +16,8 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | 8. Economía, Mercado y Cántaro | cumple | 4, 5 |
 | 12.1 Reto del río | cumple en lo probado | — |
 | 18. Robustez (lo hecho) | cumple | — |
+| Sesión con el dueño (17 y 16) | cumple, salvo 7 y 8 | 7, 8 |
+| Sesión con el dueño (15, 18.3, 18.4, 18.6) | cumple, salvo 9 y 10 | **9 (alta)**, 10 |
 | 19. Rendimiento (memoria y Morpho) | el Morpho cumple; la memoria pasa del presupuesto | 6 |
 
 ## Verificación (bloque 0)
@@ -168,6 +170,34 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - **en el vertido ganador**, matada 0,25 s después del último toque, antes de que salga la victoria: vuelve al inicio con `profile_integrity` valid, el nivel ganado y **el premio cobrado una sola vez** (0 → 20 semillas).
    - **Sin hacer todavía:** matarla en Nivel fallido, en Sin canoas, con un anuncio y con la hoja de compra. Las interrupciones del sistema, el modo avión y la batería baja los hace el dueño.
 
+7. **Sesión con el dueño (TalkBack, animaciones, dos dedos, 320 dp): cumple, salvo las observaciones 7 y 8.**
+   - **TalkBack** (lo encendió el dueño):
+     - **el botón gris «Continuar: +1 cuia»** (el 36, 0 semillas, tienda falsa) lee «Te faltan 300 semillas». El doble toque lo activa: 4 `missing_tap` `rescue` con `pulsed` true, sin cobrar nada;
+     - **la Liga:** tu fila se lee entera con «Tu avatar». El doble toque sobre ella abre «Tu avatar», y sobre la fila de otro no abre nada. **Al desplazar la lista, el foco se queda en el orden que llevaba y lee un número de puesto que no es el de la fila que se ve** (observación 7);
+     - **Corregir mi edad:** se leen el título, la frase y los dos botones. El dueño confirmó «De 13 a 17»: `consent` `done` con `age_band` 13-17, `npa` true y `double_confirm` true. El perfil de pruebas se rehace con `pm clear`.
+   - **Quitar animaciones** (las tres escalas de animación del sistema a 0 por `adb`, con el permiso del dueño; después se devolvieron a 1.0):
+     - el juego lo lee (`reduce_motion` true);
+     - el toque al rescate gris da `missing_tap` `pulsed` true, pero **la línea no crece**: en la ráfaga solo cambia dentro del ancho del texto (x 238-641, frente a 191-688 con animaciones), se aclara un poco y vuelve en el tercer fotograma (`rm/`).
+   - **Dos dedos** a la vez sobre el tablero (el 20, el dueño): nada raro. Hubo 14 `select`, 8 `pour` y 1 `reject` normal, sin `E/Unity`.
+   - **320 dp y letra del sistema al 130 %** (`wm density 540` y `font_scale` 1.3, con el permiso del dueño; después se volvieron a 420 y 1.0), en `b16/`:
+     - el inicio, la Liga (con la fila «Tú» en 4 líneas) y el Mercado se ven bien;
+     - **pero hay palabras partidas a mitad** (observación 8): en el nivel, «Reinicia/r» bajo el botón y «Deshace/r» en el comodín; en el Mercado, la pestaña «Comodine/s».
+
+8. **Sesión con el dueño (fecha, interrupciones, sin red e icono): cumple, salvo las observaciones 9 y 10.**
+   - **El icono** en el cajón de apps: se ve bien, según el dueño. El monocromo no se miró.
+   - **Bloque 15, un día más** (el dueño quitó la fecha automática y puso el 29; en `b15/`):
+     - el Reto pasa al tablero del 29 (`daily_card` `d2_n0301`, día 301);
+     - las canoas se regeneran de 0 a 5;
+     - el escudo de la Crecida se renueva (`shield` true);
+     - la Bitácora queda en `waiting` hasta jugar un nivel. Tras ganar el 61 pasa a `ready`; la tarjeta del inicio dice «Today's reward!» y la libreta abre la **página 2 de 30**. Al elegir «Tide ×2»: `calendar_claim` día 2, `booster` `{"undo":2}`, `sealed` y `next_day` 3.
+   - **Volver al 28** (la fecha automática otra vez): `profile_integrity` valid. La Bitácora sigue sellada (`next_day` 3, sin otra página que reclamar) y el Reto vuelve al tablero del 28, sin errores de Unity.
+   - **Sin probar:** la racha de 7 Retos, que necesita siete días.
+   - **Bloque 18.3, interrupciones** (el dueño, en el nivel 62):
+     - la llamada, la cortina y apagar y encender la pantalla: el juego sigue donde estaba y el audio vuelve;
+     - **con la alarma, la música del juego sigue sonando de fondo** (observación 10);
+     - **con el teléfono bloqueado más de 5 s, al encender la pantalla sale el juego encima del bloqueo y se puede jugar** (observación 9). Con menos de 5 s es normal: el teléfono tiene `lock_screen_lock_after_timeout` = 5000.
+   - **Bloque 18.4 y 18.6, modo avión y ahorro de energía** (el dueño): se juegan niveles y el Reto sin red y con el ahorro activado, todo bien. El Mercado no se ve porque sin tienda está oculto, como debe (8.2).
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -181,6 +211,13 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 4. **Baja. Las skins de la pestaña Cuias son círculos de color lisos, sin el dibujo de la cuia** (vidrio, Santarém, Encuentro, Totuma). Es lo mismo que la vasija del Cántaro (observación 7 de la jornada 5). Así, el jugador no ve qué está eligiendo.
 5. **Baja. Al 130 % en es-419, las pestañas «Semillas» y «Comodines» del Mercado casi se tocan** (`b08/mercado-130-es-419.png`).
 6. **Media. La memoria pasa del presupuesto de 08 §5.4:** RSS de 666 a 724 MB frente a ≤ 400 MB, y Graphics de ~135 MB frente a texturas ≤ 120 MB. Ocupa lo mismo en un nivel, en el ensayo de release y en la pantalla de bloqueo de <13, sin SDK de anuncios. Lo grande es `Unknown` (~210 MB) más `GL mtrack` (~97 MB). En este teléfono, de 12 GB, no da problemas, pero en uno de 3-4 GB, el público de América Latina, Android podría cerrarla en segundo plano.
+7. **Media (accesibilidad). Con TalkBack, al desplazar la lista de la Liga, el número de puesto que se lee no es el de la fila que se ve:** el foco se queda en el orden que llevaba antes de desplazar (lo vio el dueño).
+8. **Media. A 320 dp con la letra del sistema al 130 % se parten palabras a mitad:** «Reinicia/r» (HUD del nivel), «Deshace/r» (comodín) y «Comodine/s» (pestaña del Mercado), en es-419 (`b16/nivel.png`, `b16/mercado.png`).
+9. **Alta. El juego se muestra encima de la pantalla de bloqueo y se puede jugar sin desbloquear** (lo vio el dueño dos veces, esperando más de 5 s).
+   - La ventana de `UnityPlayerGameActivity` lleva `fl=0x80e90500`, es decir, `FLAG_SHOW_WHEN_LOCKED`, `FLAG_TURN_SCREEN_ON` y `FLAG_DISMISS_KEYGUARD`. El sistema escribe `KeyguardService: setOccluded(true)`.
+   - El manifiesto fusionado no lleva `showWhenLocked`, y nuestro código tampoco lo llama. En el `dev.apk`, `dexdump` lo encuentra en el reproductor de Unity: `Lcom/unity3d/player/A;` llama a `Activity.setShowWhenLocked` y `Activity.setTurnScreenOn`. También está en `com.google.android.gms.ads.internal.overlay.zzm`, pero solo para la pantalla de un anuncio.
+   - Hay que ver qué ajuste de Unity lo activa y quitarlo.
+10. **Media. Con una alarma sonando, la música del juego no se para ni baja:** sigue de fondo (lo oyó el dueño, nivel 62). La llamada sí la para.
 
 ## Notas de la herramienta (no son defectos del juego)
 
