@@ -22,6 +22,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | 19. Rendimiento (memoria y Morpho) | el Morpho cumple; la memoria pasa del presupuesto | 6 |
 | Los arreglos de la hoja j6 (build `d3e601a2`, punto 10) | cumplen 4, 5, 7, 9, 10 y la sonda de 11; quedan 8 y la memoria; el icono cambia de forma | 12, 13, 14, 15 |
 | Botones en gris, 14 y 13 (build `d3e601a2`, punto 11) | cumple: la 2 queda arreglada; el aviso abre la Bitácora | 16 |
+| Bloques 5, 9, 10.1 y 11 (punto 12, lo hecho) | cumple; los banners repiten dibujo | 17 |
 
 ## Verificación (bloque 0)
 
@@ -357,7 +358,34 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - las demás filas de Ajustes, una a una (Sonido, Música, Vibración, Reducir movimiento, Alto contraste, Avisos bloqueados desde el teléfono, Datos del río);
      - los idiomas recorriendo todas las pantallas;
      - 14.2 y 14.3;
-     - los bloques 5, 9, 10-11, 12.2, el resto de 18 y 19, 21, 22 y 23.
+     - los bloques 5, 9, 10-11, 12.2, el resto de 18 y 19, 21, 22 y 23 (lo hecho de 5, 9, 10 y 11, en el punto 12).
+
+12. **Con el mismo build: bloques 5, 9, 10 y 11 (lo hecho). Cumplen; los banners de mundo repiten dibujo (observación 17).**
+   - **Bloque 5, los estrenos de mecánicas** (`b05/hoja-estrenos.png`). Al entrar en cada estreno sale su tarjeta de una pantalla, con el icono y una frase que se entiende sin el GDD: 43 Hoja, 63 Matapi, 83 Liana con fruta, 100 Aguas turbias con la Luciérnaga (en la tarjeta del Muy difícil), 103 Remolino, 123 Barro, 143 Lluvia, 163 Brote, 183 Piraña (con la mini escena del mordisco), 243 Liana de cuenta, 283 Hoja atada, 343 Brote de dos hojas y 403 Flor de vitória-régia.
+     - **El 323 (Tinaja):** sale como nivel normal, sin tarjeta ni mecánica (mundo 7, agua blanca). Es lo que dice la variante B de D-019.
+     - **`--es af_mech_off hoja` en el 43:** el registro dice «mech_enabled apagadas: mech_enabled_hoja… 0 niveles con override y 113 sin él (se sirven publicados, con aviso al cargarlos)». El 43 sale con su Hoja y su tarjeta, que es lo que pide el guion.
+     - **Sin hacer:** jugar cada estreno a mano y con el jugador automático, los niveles de después, y los contadores del 194 y el 200 con en-XA.
+   - **Bloque 9, los vídeos con premio: 4 de 5 cumplen.** En cada uno salen `af_ad_request` `filled`, `af_ad_shown`, `af_ad_reward` e `ad_impression` (AdMob de prueba), con el premio una sola vez. Al cerrar el anuncio, la música vuelve (`audio_focus` gain).
+     - **Morpho** (Pista con «+1 ▶», en el 43, `rv_hint`): la pista sale al cerrar.
+     - **Luciérnaga** (Revelar con «+1 ▶», en el 100, `rv_reveal`, punto 10): una de stock.
+     - **Canoa extra** (Sin canoas tras Reintentar con 0, `rv_extra_canoe`): las canoas pasan de 0 a 1.
+     - **Cosecha doble** (victoria del 43, `rv_double_harvest`): de 20 a 40 semillas, `doubled` true. Después pasa solo al 44, y el intersticial queda bloqueado por el calentamiento (`blocked:Warmup`).
+     - **La recarga de Marea con vídeo, sin hacer:** el jugador que se atasca no se atascó en el 44 (no conoce la regla de la Hoja) ni en el 42 (lo ganó). El botón en gris sin vídeo ya cumple (punto 11).
+     - Sin hacer: cerrar el vídeo antes de tiempo, el teléfono en silencio, la zona segura, los intersticiales, el tope de 15 y `af_ads_fill 0`.
+   - **Bloque 10.1, la Bitácora:**
+     - con un nivel ganado hoy, tocar la página 1 enseña «Elige tu premio»: +60, Marea ×2, o +30 con Marea ×1;
+     - elegido +60, las semillas pasan de 60 a 120, y sale «Página sellada. La siguiente, mañana» con el sello en la casilla 1 (`b09/bitacora1.png`, `b09/bitacora2.png`);
+     - antes de ganar nada hoy, tocar la página no hacía nada;
+     - hasta sellarla, la Bitácora sale como takeover en cada arranque.
+   - **Bloque 11.3, los banners de mundo** (`b11/hoja-entrada.png`), en el 11, 41, 81, 141, 201, 301, 421 y 561. Cada banner lleva su mundo, «Mundo N: {lugar}», la pregunta del mundo, el país y el río, y «Ver mapa». El texto está completo en es-419. Dos cosas (observación 17):
+     - el dibujo, Capi con Rosa en la orilla, **es el mismo en los mundos 3 a 9**; solo cambian la tira del mapa y el agua;
+     - el del mundo 2 (nivel 11) no lleva la tira del mapa ni «Ver mapa».
+   - **Bloque 11.6, los fondos:** los tableros del 11 al 561 (`b11/n*-tablero.png`) tienen fondo, ninguno rosa, negro ni vacío. La línea de la fruta sale arriba en 41, 81, 141, 201 y 301.
+   - **Sin hacer:**
+     - que el banner salga solo en el primer intento;
+     - 11.1, 11.2, 11.4 y 11.5;
+     - una captura por mundo con su rótulo;
+     - 10.2-10.4.
 
 ## Observaciones
 
@@ -400,6 +428,10 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
     - Al tocarlo, el jugador ve primero la Bitácora (el takeover de prioridad 1 del inicio) y tiene que cerrarla para llegar a la tarjeta del Reto.
     - 06 §8.3 no dice qué pantalla abre cada aviso. El guion pide «el sitio correcto».
     - Pregunta para el escritorio y el dueño: ¿un aviso de tipo `daily_ready` debería abrir el Reto, o al menos saltarse el takeover?
+17. **Baja (a decidir: arte). Los banners de mundo repiten dibujo.**
+    - Del mundo 3 al 9 el dibujo es el mismo (Capi con Rosa en la orilla, por código). Solo cambian la tira del mapa, el agua y los textos.
+    - El del mundo 2 (nivel 11) es más corto: sin la tira del mapa ni «Ver mapa».
+    - Si cada mundo debe tener su propio arte, es trabajo del artista. Si el del 2 debe llevar «Ver mapa», lo decide el escritorio (`b11/hoja-entrada.png`).
 
 ## Notas de la herramienta (no son defectos del juego)
 
