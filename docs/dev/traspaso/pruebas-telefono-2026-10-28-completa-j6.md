@@ -20,6 +20,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Sesión con el dueño (17 y 16) | cumple, salvo 7 y 8 | 7, 8 |
 | Sesión con el dueño (15, 18.3, 18.4, 18.6) | cumple, salvo 9 y 10 | **9 (alta)**, 10 |
 | 19. Rendimiento (memoria y Morpho) | el Morpho cumple; la memoria pasa del presupuesto | 6 |
+| Los arreglos de la hoja j6 (build `d3e601a2`, punto 10) | cumplen 4, 5, 7, 9, 10 y la sonda de 11; quedan 8 y la memoria; el icono cambia de forma | 12, 13, 14, 15 |
 
 ## Verificación (bloque 0)
 
@@ -225,6 +226,90 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
    - **La observación 3, repetida:** con RCN TV con el foco al lanzar (`mCurrentFocus` en RCN), **ahora sale la intro entera** (`brand_intro` completa, `signal`) y el foco pasa al juego. **Queda resuelta.**
    - **Sin probar con este build:** Reducir movimiento, Inicio durante el icono y abrir en frío desde una notificación.
 
+10. **El build con los arreglos de la hoja j6** (2026-10-29, `d3e601a2`, que trae `b8d20b1b`, el encargo, y los carriles `fx-j6-icono-salto`, `fx-j6-ui`, `fx-j6-skins`, `fx-j6-memoria`, `fx-j6-bloqueo` y `fx-j6-liga-alarma`): **cumplen el bloqueo, la alarma y Spotify, TalkBack, las pestañas y las skins; la sonda del icono cumple, pero el icono cambia de forma en el relevo (observación 12); siguen las palabras partidas de la bandeja (13) y la memoria no baja (14).**
+   - **Builds y compuertas:**
+     - `dev.apk`, 77,18 MB (`[AF.BuildDev] OK`): `check-manifest -Mode dev`, `check-16kb`, `check-no-unity-iap`, `check-no-applovin` y `check-no-unity-telemetry`, todas OK.
+     - Ensayo, `[AF.BuildRelease] OK`: `rehearsal.aab` 60,02 MB y `rehearsal.apk` 65,53 MB. Las mismas compuertas más `check-release-classes` y `size-gate` (≤ 80 MB), todas OK.
+   - **N6.1, la sonda (`dev.apk`):**
+
+     | Arranque | `TotalTime` | `os_splash_held_ms` | `proc_os_splash_ms` | `os_splash_icon_px` / `_xy` | `morph_start_diam_px` / `_xy_px` | `morph_start_diam_dp` |
+     |---|---|---|---|---|---|---|
+     | Primera apertura | 356 | 896 | 1.150 (`proc_awake_ms` 786) | [504,504] / [288,918] | 504 / [540,1170] | 192,0 |
+     | Frío 1 | 336 | 888 | 1.139 | [504,504] / [288,918] | 504 / [540,1170] | 192,0 |
+     | Frío 2 | 334 | 898 | 1.149 | [504,504] / [288,918] | 504 / [540,1170] | 192,0 |
+     | Frío 3 | 348 | 877 | 1.140 | [504,504] / [288,918] | 504 / [540,1170] | 192,0 |
+
+     - En todos: `signal`, `intro`, `os_splash_veil` system y `morph_geometry` **measured**. La caja que mide el sistema y la de la intro coinciden al píxel: centro (540, 1170) en las dos.
+     - `morph_start_diam_dp` sale 192 (504 px / 2,625), no los ≈ 185 que esperaba el encargo, pero coincide con lo que mide Android en este teléfono. `morph_units_per_dp` 0,875.
+     - La intro: `anim_ms` 3.500, `motion_frames` 175-176, `motion_pauses` 0, `morph_ms` 701-709 y `morph_frames` 44.
+   - **N6.1, las ráfagas** (`screencap` en bruto a resolución completa, cada ~120 ms; `n6c-primera`, `n6c-frio1..3`, `n6c-final` y `n6c-ensayo`). Se compara el último fotograma del sistema con el primero de la intro:
+     - **El fondo cumple:** (20,68,74) exacto en los dos y en todos los fotogramas del relevo. Ya no hay el (22,69,73) de antes.
+     - **El centro cumple:** (539,5, 1169,5) en los dos.
+     - **El tamaño no cumple, por la forma:** Samsung recorta el icono del sistema con su forma de **cuadrado redondeado** (squircle), que mide 497 × 498 px en los ejes (x 291-787, y 921-1418). El primer fotograma de la intro es un **círculo** de 504 px, que en la captura mide 502-510 × 502-510 px (x 283-796 según la ráfaga). En los ejes hay 5-13 px más, y en las diagonales las esquinas del cuadrado redondeado desaparecen de golpe: a 45°, el punto que era icono pasa a ser petróleo (observación 12). El dibujo de dentro (la cuia, el río) cae en el mismo sitio y a la misma escala.
+     - **Un solo icono:** no hay ningún fotograma con el icono a otro tamaño aparte de ese cambio de forma. Tampoco hay petróleo liso ni negro.
+     - **El final de la intro:** con el perfil 18+, la intro con el nombre pasa en un corte limpio al Nivel 1 (`hold_ms` 112, `sloth_idle`). No se ve la pantalla de TiTino ni petróleo en el fotograma siguiente, así que no hay tono que comparar. En la primera apertura pasa al consentimiento de la edad.
+     - **Ensayo de release, primera apertura:** `TotalTime` 168, lo mismo (cuadrado redondeado de 497 px y luego círculo de 502 px), sin petróleo liso.
+     - **El dueño**, tras 4 arranques en frío, literal: «sí está mejor».
+   - **El bloqueo (18.3, observación 9): cumple.**
+     - Con el juego encima, la ventana lleva `fl=0x80810500`, sin `0x80000`, `0x200000` ni `0x400000`.
+     - `AF_LOCK`, en cada reanudación: `show_when_locked`, `turn_screen_on` y `dismiss_keyguard` false, `activity_cleared` true, `found` 0x680000 y `cleared` 1.
+     - **`dev.apk`, tres veces:**
+       - nivel 1, con el botón lateral, 35 s;
+       - con el botón, unos 30 s (el dueño);
+       - con la pantalla apagada sola por el tiempo de espera (`pmSleepReason` 2, el dueño).
+
+       Al encender sale **la pantalla de bloqueo** (`isKeyguardShowing=true`, foco en `NotificationShade`), y un toque donde estaba el tablero no vierte nada. Nunca sale `setOccluded(true)`. Al desbloquear, el juego sigue donde estaba, con su música (`audio_focus` gain).
+     - **Ensayo:** la misma ventana `fl=0x80810500` y, tras 35 s bloqueado y encendida la pantalla, el bloqueo.
+   - **La alarma y Spotify (observación 10): cumple.**
+     - **Alarma** (el dueño): al sonar, `loss_transient`, `paused` true y `music_gain` 0,00; al apagarla, `gain` y 1,00. El dueño: «sonó la alarma y no sonó más la música hasta que la apagué». Hubo además un `duck` (0,20) de 3 s al crear la alarma.
+     - **Con Spotify sonando:** en frío y volviendo de segundo plano, `yielded`, `music_gain` 0,00 y `paused` false. Spotify sigue, la melodía del juego no suena y los efectos sí (el dueño). Con Spotify en pausa, al volver de segundo plano: `gain` y la música del juego entra.
+     - **Tras un anuncio con premio de prueba** (Revelar, cerrado con la X): `gain` y la música vuelve.
+   - **TalkBack (el dueño; observación 7 y botones en gris): cumple.**
+     - En la Liga del top 100: tras desplazar, tocar una fila lee la que se ve. Al perder el foco de vista, pasa a la primera fila visible y sigue en orden. En un desplazamiento rápido solo lee una fila, al parar.
+     - En el 100 con 0 semillas, los botones de la bandeja en gris dicen «Te faltan N semillas» con su nombre.
+   - **Las pestañas del Mercado (observación 5): cumple** (`b08/mercado-{es-419,en,pt-BR}-{100,130}.png`, `b08/pestanas-6.png`). El hueco mínimo entre los textos de dos pestañas es de 16,4 dp (es-419 al 130 %); al 100 %, de 19-32 dp. El encargo pide ≥ 12 dp. Al 130 % cada pestaña encoge su texto por su cuenta y la fila mezcla tamaños (observación 15).
+   - **Las skins (observación 4): cumple** (`b08/cuias-141-46.png`, `b08/cuias-zoom.png`). Cada skin es su cuia sobre una ficha petróleo, con dos dosis:
+     - el vidrio, con cuerda;
+     - Santarém, con banda crema y pie oscuro;
+     - el Encuentro, con banda bicolor;
+     - la Totuma, con asa.
+
+     Ninguna es un círculo. «Poner» en Santarém da `skin_selected` `af_skin_m02`, y el nivel 142 sale con esa cuia (`b08/skin-santarem-tablero.png`). El Cántaro sale ya con su tinaja.
+   - **320 dp con la letra al 130 % (observación 8): el Mercado cumple, la bandeja del nivel no** (observación 13).
+     - Montaje: `wm density 540` y `--ei af_font_scale 130`; la densidad vuelve a 420 al terminar.
+     - **El Mercado** (`b16/mercado-320-3.png`): en es-419 y pt-BR las pestañas van en dos filas de dos; en inglés, en una («No / ads» en dos líneas, entre palabras).
+     - **El nivel 100** (`b16/nivel-320-3.png`, `b16/nivel-320-detalle.png`): «Reiniciar» y «Restart» caben, y «Te faltan / 150» pasa a dos líneas entre palabras. Pero en la bandeja se parten «Deshace/r» (es-419), «Desfaze/r» y «Mistura/r» (pt-BR).
+   - **Botones en gris sin TalkBack, en el 100 con 0 semillas:**
+     - **«+1 cuia»:** sin tienda, `store_unavailable_notice` y `missing_tap` `tray_add_cuia` con `pulsed` true y `store` false; con la tienda falsa, el mismo `missing_tap` con `store` true y sin aviso. **Cumple.**
+     - **Barajar en gris:** `shuffle` `denied` `no_balance`, sin `missing_tap`. El encargo no le pide latido.
+     - **El Salto del Boto de la pausa y del banner (observación 2): sin comprobar.** Cinco «Rendirse» en el 46 no contaron como fallos (la pausa no enseña el Salto; seguramente falta confirmar), y Unity dejó de escribir en logcat dos veces. Queda para la próxima sesión.
+   - **La memoria (19.0 con la sonda nueva, observación 6): `GL mtrack` no baja** (observación 14). En KB (`b19b/meminfo-*.txt`); la sonda `AF_PERF mem` en MiB:
+
+     | Variante | Java Heap | Native Heap | Code | Graphics (GL mtrack) | Private Other | System | TOTAL PSS | TOTAL RSS | Sonda: `unity_reserved` / `unity_unused` / `mono_heap` / `gfx` / `tex_cur` / `audio` / `rt` |
+     |---|---|---|---|---|---|---|---|---|---|
+     | `dev.apk` 18+, nivel 75 | 20.976 | 36.824 | 101.940 | 139.904 (99.616) | 270.696 | 36.215 | 611.883 | 778.240 | 243,3 / 133,8 / 52,9 / 97,2 / 51,8 / 9,8 / 0,0 |
+     | `dev.apk` 18+, nivel 200 | 20.800 | 36.428 | 101.920 | 139.740 (99.452) | 264.128 | 36.074 | 604.634 | 770.888 | 243,3 / 133,7 / 38,7 / 95,4 / 50,4 / 9,8 / 0,0 |
+     | `dev.apk` 18+, inicio | 25.972 | 35.776 | 102.036 | 134.816 (94.528) | 272.100 | 36.044 | 612.240 | 778.332 | 243,3 / 134,8 / 52,6 / 113,8 / 48,5 / 9,8 / 0,0 |
+     | `dev.apk` 18+, Mapa | 21.260 | 35.524 | 102.368 | 137.980 (97.692) | 280.120 | 37.166 | 619.786 | 787.596 | 259,4 / 143,7 / 52,6 / 83,8 / 37,7 / 10,1 / — |
+     | `dev.apk` <13 (bloqueado) | 13.588 | 31.620 | 83.772 | 129.064 (88.776) | 254.580 | 20.618 | 536.610 | 664.052 | 227,3 / — / 54,5 / 94,0 / 49,6 / — / — (`at` boot) |
+     | `rehearsal.apk` 18+, nivel 1 | 12.280 | 37.212 | 82.680 | 137.112 (96.824) | 246.524 | 24.203 | 544.603 | 713.928 | sin sonda |
+
+     - **`GL mtrack` queda igual que en la jornada 6** (de 88,8 a 99,6 MB, frente a 90,8-97,8 MB). El escritorio esperaba de 10 a 20 MB menos con el Blit Type en Auto.
+     - **El PSS del `dev.apk` 18+ sube unos 50 MB** (605-620 MB, frente a 554 MB), sobre todo por `System` (36 MB, frente a 19) y `Code` (102 MB, frente a 90). El de <13 y el del ensayo bajan unos 20 MB.
+     - **Todas las variantes pasan de los 450 MB de PSS de D-060.** Esa cifra es para un teléfono de clase A (3 GB); este es de 12 GB, así que aquí sirve de referencia.
+     - `rt_mib` 0,0 con 2 `rt_top` diminutos: no hay render textures grandes. `unity_unused_mib` (~134 MB reservados por Unity sin usar) es la mayor parte del `Unknown`.
+   - **La imagen con el Blit en Auto: cumple.**
+     - Revisado: el arranque con la intro, el inicio, niveles con vertidos, la pausa, un anuncio de prueba a pantalla completa (`ui/anuncio-revelar.png`) y la vuelta de segundo plano. Nada de parpadeos, franjas negras ni imagen estirada.
+     - **El Mapa en reposo:** 12 capturas seguidas, idénticas; tras desplazar, otras 12 también idénticas. Ningún fotograma viejo se alterna con el actual.
+     - **Los bordes:** el fondo llega a los bordes y a la zona de la cámara.
+   - **Sin hacer en esta tanda:**
+     - el Salto del Boto (arriba);
+     - «+3 Deshacer», «Llenar canoas» y «Continuar: +1 cuia» con este build;
+     - Reducir movimiento;
+     - Inicio durante el icono;
+     - en frío desde una notificación;
+     - los bloques 5, 9, 10-11, 12.2, 13, 14, el resto de 18 y 19, 21, 22 y 23.
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -247,9 +332,28 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 10. **Media. Con una alarma sonando, la música del juego no se para ni baja:** sigue de fondo (lo oyó el dueño, nivel 62). La llamada sí la para.
 11. **Media (la juzgó el dueño: «no está pro»). Al pasar de la pantalla del sistema a la intro, el icono salta un 12-16 % más pequeño y el fondo cambia de tono un poco:** de ~486 a ~426 px y de (20,68,74) a (22,69,73). Se ve como si la imagen parpadeara o apareciera dos veces. La compuerta pide «ningún salto de posición ni de tamaño del icono». Sale en todos los arranques del `dev.apk` y en el ensayo. Lo demás de N6.1 cumple: `signal`, sin petróleo liso y Unity antes del velo.
 
+   **Con el build `d3e601a2` (punto 10):** el tamaño, el centro y el fondo ya coinciden. Queda el cambio de forma (observación 12). El dueño: «sí está mejor».
+
+   Con ese mismo build cumplen también la 4, la 5, la 7, la 9 y la 10 (punto 10). La 2 queda sin comprobar.
+12. **Baja (el dueño: «sí está mejor»). En el relevo, el icono pasa de cuadrado redondeado a círculo.**
+    - One UI recorta el icono adaptativo de la pantalla del sistema con su forma de cuadrado redondeado: 497 × 498 px en los ejes, en la caja de 504 px que mide el plugin. El primer fotograma de la intro dibuja el círculo de 504 px.
+    - En la captura, el borde se mueve de 5 a 13 px en los ejes, y en las diagonales las esquinas desaparecen de un fotograma al siguiente. La compuerta pide «el diámetro ±2 px».
+    - El tamaño, el centro, el dibujo de dentro y el fondo ya coinciden.
+    - Para calcarlo habría que leer la forma de la máscara del sistema (`SplashScreenView.getIconView()` o el `Path` de `AdaptiveIconDrawable.getIconMask()`), o empezar la intro con esa forma y abrirla al círculo.
+    - Sale igual en el `dev.apk` y en el ensayo.
+13. **Media (la observación 8, sin arreglar en la bandeja). A 320 dp con la letra al 130 %, la bandeja del nivel parte palabras:** «Deshace/r» (es-419), «Desfaze/r» y «Mistura/r» (pt-BR), en el nivel 100 (`b16/nivel-320-detalle.png`). El HUD («Reiniciar») y el Mercado ya cumplen. Por D-061, las etiquetas de la bandeja deberían encoger hasta caber, sin bajar de 12 sp.
+14. **Media (la observación 6, sin el efecto esperado). Con el Android Blit Type en Auto, `GL mtrack` no baja**: sigue entre 88,8 y 99,6 MB, igual que antes. El escritorio esperaba de 10 a 20 MB menos.
+    - El PSS del `dev.apk` 18+ sale ahora en 605-620 MB, frente a 554 MB en la jornada 6, por `System` y `Code`. El ensayo da 545 MB y el <13, 537 MB.
+    - Todo pasa de los 450 MB de D-060. Esa cifra es para la clase A; este teléfono es de 12 GB.
+    - La imagen no cambia con Auto: sin parpadeos, franjas ni fotogramas viejos. Así que no hace falta volver a `Always` por la imagen, pero tampoco se gana memoria en este teléfono.
+15. **Baja. Al 130 %, las pestañas del Mercado mezclan tamaños de letra:** cada una encoge su texto por su cuenta. «Comodines» y «Boosters» salen más pequeños que «Cuias», «No ads» o «Sin anuncios» (`b08/pestanas-6.png`). En es-419 pasa también al 100 % («Comodines»). El hueco entre pestañas ya cumple.
+
 ## Notas de la herramienta (no son defectos del juego)
 
 - Tras cada build de Unity el demonio de `adb` se reinicia y el teléfono vuelve con otro puerto (hoy, 41391).
 - `af_font_scale` es un entero (`--ei af_font_scale 130`): con `--ef 1.3` no hace nada.
 - El primer toque en el inicio recién cargado, o en un modal que se está abriendo, a veces se pierde. Sale bien al repetirlo.
 - Para atascarse a propósito, el jugador elige en cada paso el vertido que deja menos vertidos posibles. El de movimientos al azar no se atascaba en el 35.
+- **`ci/size-gate.ps1` reinicia el demonio de `adb`**, y con eso el teléfono se cae de la lista. Se vuelve con `adb connect` al puerto de `adb mdns services` (hoy, 36507).
+- **`input keyevent 224` a veces no despierta la pantalla** si está en AOD (`mWakefulness=Dozing`). Mientras tanto el foco sigue en la app, así que `isKeyguardShowing=false` no quiere decir que el juego esté encima: hay que mirar `mWakefulness` y repetir.
+- Para medir el icono se usan las capturas en bruto a resolución completa: el ancho en la fila 1170, el alto en la columna 540 y un punto a 45° que distingue el cuadrado redondeado del círculo.
