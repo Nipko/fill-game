@@ -1,96 +1,124 @@
 package com.amazonfill.splash;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Application;
+import android.content.res.TypedArray;
+import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
 import android.os.SystemClock;
 import android.view.View;
-import android.view.ViewTreeObserver;
+import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.Window;
-import java.lang.reflect.Method;
+import android.widget.FrameLayout;
+import android.window.SplashScreenView;
 
 /**
- * Retiene la pantalla de arranque del sistema (el icono v2 sobre el petroleo) hasta que la intro de la marca ya esta en la
- * pantalla (anadido de D-051 del 2026-10-28: «si hagamoslo asi»). Sin el, entre el icono y la intro se veia el petroleo liso de
- * la ventana de Unity (jornada 5: ~1,3 s en la primera apertura, ~0,45 s en frio).
+ * Tapa el petroleo liso entre la pantalla de arranque del sistema y la intro de la marca con un velo nativo que no bloquea nada
+ * (anadido de D-051 del 2026-10-28; segundo diseno por la observacion 1 de la jornada 6: la retencion que aplazaba el primer
+ * fotograma de la ventana se esperaba a si misma y la soltaba siempre el tope).
  *
- * <p>Como funciona, solo con API de la plataforma (la misma que usa la biblioteca core-splashscreen de Jetpack para setKeepOnScreenCondition):
+ * <p>Como funciona, solo con API de la plataforma:
  * <ul>
- * <li>Android quita la pantalla del sistema (Android 12+) o la ventana de arranque con el fondo del tema (Android 8-11, el mismo
- * icono sobre el petroleo: af_launch_window) cuando la ventana de la actividad pinta su primer fotograma. Un
- * {@link ViewTreeObserver.OnPreDrawListener} en la ventana de la actividad de Unity que devuelve false aplaza ese fotograma: la
- * pantalla del sistema se queda. La SurfaceView de Unity se crea igual (su propio OnPreDrawListener sigue corriendo) y Unity pinta
- * en ella por detras.</li>
- * <li>Unity solo arranca su bucle con el foco de la ventana, y Android no da el foco a una ventana que aun no se ha pintado: sin
- * mas, la retencion se esperaria a si misma hasta el tope. Por eso, mientras retiene, Unity corre sin foco
- * ({@code UnityPlayer.setRunWithoutFocus(true)}, API publica de Unity, por reflexion) y, en cuanto la ventana recibe el foco tras
- * soltarla (o si la actividad se pausa), vuelve a lo de siempre ({@code false}). Si no se puede (otra actividad, otra version de
- * Unity), no se retiene nada.</li>
- * <li>Se suelta con {@link #release(String)} (el juego, por JNI, cuando la intro ya esta en la pantalla) o, como mucho, a los
- * {@link #CAP_MS} ms: la pantalla nunca se queda colgada.</li>
+ * <li>La ventana de la actividad de Unity se pinta en cuanto Android quiere, como siempre: Android quita su pantalla de arranque,
+ * la ventana recibe el foco y Unity arranca como en la jornada 5. Nada aplaza fotogramas ni toca el foco de Unity.</li>
+ * <li><b>El velo propio:</b> al empezar la actividad ({@code onActivityStarted}, antes de su primer fotograma) se anade a la
+ * DecorView, encima del contenido (y de la SurfaceView de Unity), una {@link View} a pantalla completa cuyo fondo es el
+ * {@code android:windowBackground} del tema de la actividad: {@code af_launch_window} (el icono v2 a 240 dp recortado en un
+ * circulo de 160 dp sobre el petroleo), el mismo dibujable y la misma caja que la ventana de arranque de Android 8-11. Una vista
+ * normal se pinta encima del agujero de la SurfaceView, como la imagen de arranque de la propia Unity.</li>
+ * <li><b>Android 12+, ademas, la propia pantalla del sistema:</b> en {@code onActivityCreated} se pide a Android que entregue su
+ * pantalla de arranque a la actividad ({@code Activity.getSplashScreen().setOnExitAnimationListener}, API 31) en vez de quitarla;
+ * Android la anade como {@code SplashScreenView} encima de la ventana ya pintada, con su icono exactamente donde estaba. Se deja
+ * ahi, encima del velo propio, hasta soltar: el icono no puede saltar porque es la misma vista. Si Android no la entrega (un
+ * arranque sin pantalla del sistema) o la entrega sin icono (Android 13+, de color liso, fuera del lanzador), se quita en el
+ * acto y queda el velo propio.</li>
+ * <li>Se suelta con {@link #release(String)} (el juego, por JNI, cuando la intro ya esta en la pantalla), con el tope de
+ * {@link #CAP_MS} ms o al destruirse la actividad: las vistas se quitan sin fundido (nada se mueve: vale con Reducir
+ * movimiento).</li>
+ * <li>Los velos no se enfocan, no cuentan para la accesibilidad (TalkBack no los lee) y no son pulsables: los toques pasan a
+ * Unity.</li>
  * </ul>
- * Solo la primera actividad que empieza en el proceso (el arranque en frio); nada de red, disco, registros ni identificadores.
+ * Solo la primera actividad del proceso, y solo si es la de Unity (el arranque en frio); nada de red, disco, registros ni
+ * identificadores.
  */
 public final class AfSplashHold {
-    /** Tope de la retencion (ms desde que empieza la actividad de Unity) [P]. AF.UI.AndroidOsSplash.CapMs lo repite. */
+    /** Tope del velo (ms desde que empieza la actividad de Unity) [P]. AF.UI.AndroidOsSplash.CapMs lo repite. */
     public static final long CAP_MS = 3000L;
 
-    /** Sin retencion: aun no empezo la actividad, no es la de Unity o Unity no deja correr sin foco. */
+    /** Sin velo: aun no empezo la actividad, no es la de Unity o su tema no tiene fondo de ventana. */
     public static final String RESULT_NONE = "none";
 
-    /** Reteniendo: la pantalla del sistema sigue delante. */
+    /** Con el velo puesto. */
     public static final String RESULT_PENDING = "pending";
 
-    /** Soltada por el juego ({@link #release(String)}). */
+    /** Soltado por el juego ({@link #release(String)}). */
     public static final String RESULT_SIGNAL = "signal";
 
-    /** Soltada por el tope ({@link #CAP_MS}). */
+    /** Soltado por el tope ({@link #CAP_MS}). */
     public static final String RESULT_CAP = "cap";
 
-    /** Soltada porque la actividad se destruyo antes. */
+    /** Soltado porque la actividad se destruyo antes. */
     public static final String RESULT_GONE = "gone";
+
+    /** {@link #veil()}: sin velo. */
+    public static final String VEIL_NONE = "none";
+
+    /** {@link #veil()}: solo el velo propio (Android 8-11, o Android 12+ sin pantalla del sistema entregada). */
+    public static final String VEIL_OWN = "own";
+
+    /** {@link #veil()}: Android 12+ entrego su pantalla de arranque y se quedo encima del velo propio. */
+    public static final String VEIL_SYSTEM = "system";
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
     // Todo el estado se cambia en el hilo principal; los volatile se leen desde el de Unity (las sondas).
     private static boolean installed;
+    private static boolean seen;
     private static boolean armed;
-    private static boolean runWithoutFocus;
-    private static Activity holder;
-    private static View decor;
+    private static Activity candidate;
+    private static View ownVeil;
+    private static View systemVeil;
     private static long startedAt = -1L;
-    private static long releasedAt = -1L;
     private static volatile String result = RESULT_NONE;
     private static volatile String signal = "";
+    private static volatile String veil = VEIL_NONE;
     private static volatile long heldMs = -1L;
     private static volatile long procReleaseMs = -1L;
-    private static volatile long focusAfterMs = -1L;
-
-    private static final ViewTreeObserver.OnPreDrawListener HOLD = () -> !RESULT_PENDING.equals(result);
-
-    private static final ViewTreeObserver.OnWindowFocusChangeListener FOCUS = hasFocus -> {
-        if (hasFocus) {
-            onFocus();
-        }
-    };
 
     private static final Runnable CAP = () -> finish(RESULT_CAP, "");
-
-    private static final Runnable RESTORE = AfSplashHold::restoreFocusRule;
 
     private static final Application.ActivityLifecycleCallbacks CALLBACKS = new Application.ActivityLifecycleCallbacks() {
         @Override
         public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
+            // Dentro de onCreate (antes del primer fotograma): ahi Android pide que se registre el oyente de su pantalla.
+            if (seen) {
+                return; // solo el arranque en frio: la primera actividad del proceso
+            }
+
+            seen = true;
+            if (!isUnity(activity)) {
+                return; // p. ej., Android restaura otra actividad primero: sin velo
+            }
+
+            candidate = activity;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Api31.keepSystemSplash(activity);
+            }
         }
 
         @Override
         public void onActivityStarted(Activity activity) {
-            // Despues de onCreate (la ventana ya tiene su contenido y Unity su UnityPlayer) y antes de onResume, que es donde Unity
-            // decide si arranca su bucle: ahi ya tiene que poder correr sin foco.
-            arm(activity);
+            // Despues de onCreate (la ventana ya tiene su contenido y la SurfaceView de Unity) y antes de su primer fotograma.
+            if (activity == candidate && !armed) {
+                armed = true;
+                arm(activity);
+            }
         }
 
         @Override
@@ -99,9 +127,6 @@ public final class AfSplashHold {
 
         @Override
         public void onActivityPaused(Activity activity) {
-            if (activity == holder) {
-                restoreFocusRule(); // fuera de la pantalla, Unity se pausa como siempre
-            }
         }
 
         @Override
@@ -114,11 +139,9 @@ public final class AfSplashHold {
 
         @Override
         public void onActivityDestroyed(Activity activity) {
-            if (activity == holder) {
+            if (activity == candidate) {
                 finish(RESULT_GONE, "");
-                restoreFocusRule();
-                holder = null;
-                decor = null;
+                candidate = null;
             }
         }
     };
@@ -137,8 +160,8 @@ public final class AfSplashHold {
     }
 
     /**
-     * Suelta la pantalla del sistema (cualquier hilo; JNI desde AF.UI.AndroidOsSplash). {@code by} dice que la solto en el juego
-     * (intro, splash, no_splash o boot_end). Sin efecto si no esta reteniendo.
+     * Quita el velo (cualquier hilo; JNI desde AF.UI.AndroidOsSplash). {@code by} dice que lo solto en el juego (intro, splash,
+     * no_splash o boot_end). Sin efecto si no hay velo.
      */
     public static void release(String by) {
         final String why = by == null ? "" : by;
@@ -150,45 +173,104 @@ public final class AfSplashHold {
         return result;
     }
 
-    /** Lo que dijo el juego al soltarla ({@link #release(String)}); vacio si no la solto el. */
+    /** Lo que dijo el juego al soltarlo ({@link #release(String)}); vacio si no lo solto el. */
     public static String signal() {
         return signal;
     }
 
-    /** Lo que se retuvo (ms desde que empezo la actividad de Unity hasta soltarla); -1 si no se retuvo o sigue. */
+    /** none, own o system: que velo el arranque. */
+    public static String veil() {
+        return veil;
+    }
+
+    /** Lo que duro el velo (ms desde que empezo la actividad de Unity hasta quitarlo); -1 si no hubo o sigue. */
     public static long heldMs() {
         return heldMs;
     }
 
-    /** Del arranque del proceso a soltarla (ms); -1 si no. */
+    /** Del arranque del proceso a quitar el velo (ms); -1 si no. */
     public static long procReleaseMs() {
         return procReleaseMs;
     }
 
-    /** De soltarla a que la ventana recibio el foco (ms); -1 si aun no. */
+    /**
+     * Siempre -1: el velo no toca el foco de la ventana (la retencion anterior lo media de soltarla al foco). Se queda para no
+     * cambiar el puente con C# ni la sonda os_splash_focus_ms.
+     */
     public static long focusAfterMs() {
-        return focusAfterMs;
+        return -1L;
+    }
+
+    // La actividad de Unity (UnityPlayerGameActivity o UnityPlayerActivity, o una subclase), sin reflexion de metodos.
+    private static boolean isUnity(Activity activity) {
+        for (Class<?> type = activity.getClass(); type != null; type = type.getSuperclass()) {
+            String name = type.getName();
+            if ("com.unity3d.player.UnityPlayerGameActivity".equals(name) || "com.unity3d.player.UnityPlayerActivity".equals(name)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void arm(Activity activity) {
-        if (armed) {
-            return; // solo el arranque en frio: la primera actividad que empieza en el proceso
-        }
-
-        armed = true;
         Window window = activity.getWindow();
-        View view = window == null ? null : window.getDecorView();
-        if (view == null || !setRunWithoutFocus(activity, true)) {
-            return; // no es la actividad de Unity, o no deja correr sin foco: retener la dejaria quieta hasta el tope
+        View decor = window == null ? null : window.getDecorView();
+        Drawable background = windowBackground(activity);
+        if (!(decor instanceof ViewGroup) || background == null) {
+            return; // sin velo: la pantalla del sistema se quita como siempre
         }
 
-        runWithoutFocus = true;
-        holder = activity;
-        decor = view;
+        View view = new View(activity);
+        view.setBackground(background);
+        makeInert(view);
+        ((ViewGroup) decor).addView(view, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        ownVeil = view;
         startedAt = SystemClock.uptimeMillis();
+        if (VEIL_NONE.equals(veil)) {
+            veil = VEIL_OWN;
+        }
+
         result = RESULT_PENDING;
-        view.getViewTreeObserver().addOnPreDrawListener(HOLD);
         MAIN.postDelayed(CAP, CAP_MS);
+    }
+
+    // El fondo de ventana del tema de la actividad (AfLaunchTheme: @drawable/af_launch_window), un dibujable nuevo.
+    private static Drawable windowBackground(Activity activity) {
+        try {
+            TypedArray attrs = activity.getTheme().obtainStyledAttributes(new int[] {android.R.attr.windowBackground});
+            try {
+                return attrs.getDrawable(0);
+            } finally {
+                attrs.recycle();
+            }
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    // Ni foco, ni TalkBack, ni toques: el velo solo se ve.
+    static void makeInert(View view) {
+        view.setFocusable(false);
+        view.setFocusableInTouchMode(false);
+        view.setClickable(false);
+        view.setLongClickable(false);
+        view.setSoundEffectsEnabled(false);
+        view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+    }
+
+    // Android 12+ entrega su pantalla de arranque (hilo principal). Se queda encima mientras haya velo y si trae el icono; si no,
+    // se quita ya. Android 13+ la entrega sin icono, de color liso, en los lanzamientos que no vienen del lanzador (p. ej., desde
+    // una notificacion): ahi manda el velo propio, con el icono (os_splash_veil = own).
+    static void onSystemSplash(View splash) {
+        if (RESULT_PENDING.equals(result) && candidate != null && Api31.hasIcon(splash)) {
+            makeInert(splash);
+            systemVeil = splash;
+            veil = VEIL_SYSTEM;
+            return;
+        }
+
+        Api31.remove(splash);
     }
 
     // En el hilo principal.
@@ -197,79 +279,53 @@ public final class AfSplashHold {
             return;
         }
 
-        long now = SystemClock.uptimeMillis();
-        releasedAt = now;
-        heldMs = now - startedAt;
+        heldMs = SystemClock.uptimeMillis() - startedAt;
         procReleaseMs = SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime();
         signal = by;
         result = why;
         MAIN.removeCallbacks(CAP);
-        View view = decor;
-        if (view == null) {
-            return;
+        View own = ownVeil;
+        View system = systemVeil;
+        ownVeil = null;
+        systemVeil = null;
+        if (system != null) {
+            Api31.remove(system);
         }
 
-        ViewTreeObserver observer = view.getViewTreeObserver();
-        if (observer.isAlive()) {
-            observer.removeOnPreDrawListener(HOLD);
-        }
-
-        view.invalidate(); // el fotograma aplazado sale ya
-        if (RESULT_GONE.equals(why)) {
-            return;
-        }
-
-        if (view.hasWindowFocus()) {
-            onFocus();
-        } else if (observer.isAlive()) {
-            observer.addOnWindowFocusChangeListener(FOCUS);
+        if (own != null) {
+            ViewParent parent = own.getParent();
+            if (parent instanceof ViewGroup) {
+                ((ViewGroup) parent).removeView(own);
+            }
         }
     }
 
-    // La ventana ya tiene el foco. La regla de Unity vuelve despues de que su onWindowFocusChanged lo anote (por eso, en un post).
-    private static void onFocus() {
-        if (releasedAt >= 0L && focusAfterMs < 0L) {
-            focusAfterMs = SystemClock.uptimeMillis() - releasedAt;
+    // Lo de Android 12+ (API 31) aparte, para que Android 8-11 no lo cargue nunca.
+    @TargetApi(31)
+    private static final class Api31 {
+        private Api31() {
         }
 
-        View view = decor;
-        if (view != null) {
-            ViewTreeObserver observer = view.getViewTreeObserver();
-            if (observer.isAlive()) {
-                observer.removeOnWindowFocusChangeListener(FOCUS);
+        static void keepSystemSplash(Activity activity) {
+            try {
+                activity.getSplashScreen().setOnExitAnimationListener(AfSplashHold::onSystemSplash);
+            } catch (RuntimeException e) {
+                // sin la pantalla del sistema entregada: queda el velo propio
             }
         }
 
-        MAIN.post(RESTORE);
-    }
-
-    private static void restoreFocusRule() {
-        if (!runWithoutFocus) {
-            return;
+        static boolean hasIcon(View splash) {
+            return splash instanceof SplashScreenView && ((SplashScreenView) splash).getIconView() != null;
         }
 
-        runWithoutFocus = false;
-        Activity activity = holder;
-        if (activity != null) {
-            setRunWithoutFocus(activity, false);
-        }
-    }
-
-    // UnityPlayerGameActivity.getUnityPlayerConnection().setRunWithoutFocus(on): API publica de Unity, por reflexion para no
-    // compilar contra sus clases. False si la actividad no es la de Unity o falla.
-    private static boolean setRunWithoutFocus(Activity activity, boolean on) {
-        try {
-            Method connection = activity.getClass().getMethod("getUnityPlayerConnection");
-            Object player = connection.invoke(activity);
-            if (player == null) {
-                return false;
+        static void remove(View splash) {
+            try {
+                if (splash instanceof SplashScreenView) {
+                    ((SplashScreenView) splash).remove();
+                }
+            } catch (RuntimeException e) {
+                // la actividad ya se fue: la vista se va con su ventana
             }
-
-            Method set = player.getClass().getMethod("setRunWithoutFocus", boolean.class);
-            set.invoke(player, on);
-            return true;
-        } catch (ReflectiveOperationException | RuntimeException e) {
-            return false;
         }
     }
 }

@@ -4,9 +4,10 @@ namespace AF.UI
 {
     /// <summary>
     /// La pantalla de arranque del sistema hasta la intro (añadido de D-051 del 2026-10-28, «si hagamoslo asi»): el plugin
-    /// <c>AfSplashHold.androidlib</c> retiene el icono v2 sobre el petróleo y este parcial lo suelta (<see cref="AndroidOsSplash"/>)
-    /// en cuanto el primer fotograma de la intro ya está en la pantalla, para que se vea icono → escena sin el petróleo liso de en
-    /// medio. Si no llega la señal, la sueltan el fin de la pantalla de arranque o el tope de Java (3 s). La intro no cambia.
+    /// <c>AfSplashHold.androidlib</c> vela el arranque con el icono v2 sobre el petróleo, sin bloquear el pintado de la ventana, y
+    /// este parcial lo suelta (<see cref="AndroidOsSplash"/>) en cuanto el primer fotograma de la intro ya está en la pantalla, para
+    /// que se vea icono → escena sin el petróleo liso de en medio. Si no llega la señal, la sueltan el fin de la pantalla de
+    /// arranque o el tope de Java (3 s). La intro no cambia.
     /// </summary>
     public sealed partial class GameBootstrap
     {
