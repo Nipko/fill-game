@@ -79,7 +79,7 @@ Después, sigue con lo pendiente en el orden de arriba: el resto de N6 y los blo
     - con TalkBack (lo hace el dueño), el icono del arranque no se enfoca ni se lee.
   - **Android 8-11:** este teléfono no lo tiene. Si hay un emulador o un teléfono viejo, la ventana de arranque (el icono sobre el petróleo, `af_launch_window`) debe quedarse igual hasta la escena (`os_splash_veil` = `own`).
   - **Arranque sin intro** (`os_splash_by` = `boot_end`): ahí la sonda puede decir `os_splash_release: pending`, porque se escribe en el mismo fotograma en que se pide soltarlo; no es un cuelgue si la ráfaga muestra la escena. Anótalo si sale.
-  - **Abrir en frío desde una notificación** (la del Reto del río, si hay; si no, un `am start` con el deep link o la intención de la notificación): durante el velo se ve el icono sobre el petróleo, nunca la pantalla anterior congelada.
+  - **Abrir en frío desde una notificación** (la del Reto del río, si hay; si no, un `am start` con el deep link o la intención de la notificación): durante el velo se ve el icono sobre el petróleo, nunca la pantalla anterior congelada. Ahí `os_splash_veil` puede decir `own`: fuera del lanzador, Android 13+ entrega su pantalla sin icono y el plugin la cambia por el velo propio.
 - **Los arreglos de UI** (carril `tanda6/fx-j5-ui`; observaciones 5 y 6):
   - **«Continuar: +1 cuia» en gris** (observación 6; guion 8.2), con el `dev.apk`, desde el 31 y con 0 semillas:
     - **con la tienda falsa** (`--ez af_fake_store true`), en Aguas estancadas: tocar el botón gris hace latir «Te faltan {n} semillas» (crece un poco y vuelve en ~0,4 s); no se cobra nada, el modal sigue y no sale ningún aviso (debajo están Puñado y Balsa); `AF_STATE missing_tap` con `"option":"rescue","pulsed":true,"store":true`;

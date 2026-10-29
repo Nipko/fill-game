@@ -1,5 +1,6 @@
 package com.amazonfill.splash;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Application;
 import android.content.res.TypedArray;
@@ -35,7 +36,8 @@ import android.window.SplashScreenView;
  * pantalla de arranque a la actividad ({@code Activity.getSplashScreen().setOnExitAnimationListener}, API 31) en vez de quitarla;
  * Android la anade como {@code SplashScreenView} encima de la ventana ya pintada, con su icono exactamente donde estaba. Se deja
  * ahi, encima del velo propio, hasta soltar: el icono no puede saltar porque es la misma vista. Si Android no la entrega (un
- * arranque sin pantalla del sistema), queda el velo propio.</li>
+ * arranque sin pantalla del sistema) o la entrega sin icono (Android 13+, de color liso, fuera del lanzador), se quita en el
+ * acto y queda el velo propio.</li>
  * <li>Se suelta con {@link #release(String)} (el juego, por JNI, cuando la intro ya esta en la pantalla), con el tope de
  * {@link #CAP_MS} ms o al destruirse la actividad: las vistas se quitan sin fundido (nada se mueve: vale con Reducir
  * movimiento).</li>
@@ -257,9 +259,11 @@ public final class AfSplashHold {
         view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
     }
 
-    // Android 12+ entrega su pantalla de arranque (hilo principal). Se queda encima mientras haya velo; si no, se quita ya.
+    // Android 12+ entrega su pantalla de arranque (hilo principal). Se queda encima mientras haya velo y si trae el icono; si no,
+    // se quita ya. Android 13+ la entrega sin icono, de color liso, en los lanzamientos que no vienen del lanzador (p. ej., desde
+    // una notificacion): ahi manda el velo propio, con el icono (os_splash_veil = own).
     static void onSystemSplash(View splash) {
-        if (RESULT_PENDING.equals(result) && candidate != null) {
+        if (RESULT_PENDING.equals(result) && candidate != null && Api31.hasIcon(splash)) {
             makeInert(splash);
             systemVeil = splash;
             veil = VEIL_SYSTEM;
@@ -297,6 +301,7 @@ public final class AfSplashHold {
     }
 
     // Lo de Android 12+ (API 31) aparte, para que Android 8-11 no lo cargue nunca.
+    @TargetApi(31)
     private static final class Api31 {
         private Api31() {
         }
@@ -307,6 +312,10 @@ public final class AfSplashHold {
             } catch (RuntimeException e) {
                 // sin la pantalla del sistema entregada: queda el velo propio
             }
+        }
+
+        static boolean hasIcon(View splash) {
+            return splash instanceof SplashScreenView && ((SplashScreenView) splash).getIconView() != null;
         }
 
         static void remove(View splash) {

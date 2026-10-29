@@ -121,6 +121,13 @@ namespace AF.Tests.EditMode
             StringAssert.Contains("Build.VERSION.SDK_INT >= Build.VERSION_CODES.S", hold);
             StringAssert.Contains("getSplashScreen().setOnExitAnimationListener(AfSplashHold::onSystemSplash)", hold);
             StringAssert.Contains("((SplashScreenView) splash).remove();", hold);
+            StringAssert.Contains("@TargetApi(31)\n    private static final class Api31", hold.Replace("\r\n", "\n"));
+
+            // Sin icono (Android 13+ la entrega de color liso fuera del lanzador, p. ej. desde una notificación) no se queda: se quita
+            // en el acto y manda el velo propio (os_splash_veil = own).
+            StringAssert.Contains("if (RESULT_PENDING.equals(result) && candidate != null && Api31.hasIcon(splash)) {", hold);
+            StringAssert.Contains("return splash instanceof SplashScreenView && ((SplashScreenView) splash).getIconView() != null;", hold);
+            Assert.That(Regex.IsMatch(hold, @"Api31\.hasIcon\(splash\)\) \{\s*makeInert\(splash\);\s*systemVeil = splash;\s*veil = VEIL_SYSTEM;\s*return;\s*\}\s*Api31\.remove\(splash\);"), Is.True, "solo con icono se queda; si no, se quita ya");
 
             // Ni foco, ni TalkBack, ni toques: los dos velos pasan por makeInert.
             foreach (string inert in new[] { "setFocusable(false)", "setFocusableInTouchMode(false)", "setClickable(false)", "setLongClickable(false)", "IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS" })
