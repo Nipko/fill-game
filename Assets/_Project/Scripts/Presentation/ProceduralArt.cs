@@ -245,6 +245,7 @@ namespace AF.Presentation
             _cuiaBack.Clear();
             _cuiaFront.Clear();
             _cuiaMarks.Clear();
+            _skinThumbs.Clear(); // sus sprites y texturas están en _owned (ProceduralArt.SkinThumb.cs)
             _trays.Clear();
         }
 
@@ -446,11 +447,25 @@ namespace AF.Presentation
         // líneas de ≤ 2 dp (marcas, pared): los brillos del líquido los pinta su shader (4.2).
         // ------------------------------------------------------------------------------------------------------------
 
+        // Lienzo de una cuia de capacidad capacity a ppu px por u (2 u de ancho, CuiaGeometry.HeightU de alto), pie abajo.
+        private static PixelCanvas NewCuiaCanvas(int capacity, int ppu)
+        {
+            return new PixelCanvas(Mathf.RoundToInt(CuiaGeometry.WidthU * ppu), Mathf.RoundToInt(CuiaGeometry.HeightU(capacity) * ppu));
+        }
+
         private Sprite BuildCuiaBack(int capacity, int ppu)
         {
-            int w = Mathf.RoundToInt(CuiaGeometry.WidthU * ppu);
-            int h = Mathf.RoundToInt(CuiaGeometry.HeightU(capacity) * ppu);
-            var pc = new PixelCanvas(w, h);
+            PixelCanvas pc = NewCuiaCanvas(capacity, ppu);
+            PaintCuiaBack(pc, capacity, ppu);
+            return MakeSprite(pc, "cuia_back_" + capacity + "_" + ppu, new Vector2(0.5f, 0f), Vector4.zero);
+        }
+
+        // Pinta la capa en un lienzo de la cuia (NewCuiaCanvas): la usan el sprite del tablero y la miniatura de la skin
+        // (SkinThumb, ProceduralArt.SkinThumb.cs), así las dos llevan el mismo vidrio.
+        private void PaintCuiaBack(PixelCanvas pc, int capacity, int ppu)
+        {
+            int w = pc.Width;
+            int h = pc.Height;
             float lip = CuiaGeometry.LipU(capacity);
             float height = CuiaGeometry.HeightU(capacity);
             Color tint = Palette.GlassTint;
@@ -511,15 +526,21 @@ namespace AF.Presentation
                     }
                 }
             }
-
-            return MakeSprite(pc, "cuia_back_" + capacity + "_" + ppu, new Vector2(0.5f, 0f), Vector4.zero);
         }
 
         private Sprite BuildCuiaFront(int capacity, int ppu)
         {
-            int w = Mathf.RoundToInt(CuiaGeometry.WidthU * ppu);
-            int h = Mathf.RoundToInt(CuiaGeometry.HeightU(capacity) * ppu);
-            var pc = new PixelCanvas(w, h);
+            PixelCanvas pc = NewCuiaCanvas(capacity, ppu);
+            PaintCuiaFront(pc, capacity, ppu);
+            return MakeSprite(pc, "cuia_front_" + capacity + "_" + ppu, new Vector2(0.5f, 0f), Vector4.zero);
+        }
+
+        // Pinta la capa en un lienzo de la cuia (NewCuiaCanvas): la usan el sprite del tablero y la miniatura de la skin
+        // (SkinThumb, ProceduralArt.SkinThumb.cs), así las dos llevan el mismo vidrio.
+        private void PaintCuiaFront(PixelCanvas pc, int capacity, int ppu)
+        {
+            int w = pc.Width;
+            int h = pc.Height;
             float height = CuiaGeometry.HeightU(capacity);
             float lip = CuiaGeometry.LipU(capacity);
             float cavityTop = CuiaGeometry.CavityTopU(capacity);
@@ -688,17 +709,23 @@ namespace AF.Presentation
 
                 }
             }
-
-            return MakeSprite(pc, "cuia_front_" + capacity + "_" + ppu, new Vector2(0.5f, 0f), Vector4.zero);
         }
 
         private Sprite BuildCuiaMarks(int capacity, int ppu)
         {
+            PixelCanvas pc = NewCuiaCanvas(capacity, ppu);
+            PaintCuiaMarks(pc, capacity, ppu);
+            return MakeSprite(pc, "cuia_marks_" + capacity + "_" + ppu, new Vector2(0.5f, 0f), Vector4.zero);
+        }
+
+        // Pinta la capa en un lienzo de la cuia (NewCuiaCanvas): la usan el sprite del tablero y la miniatura de la skin
+        // (SkinThumb, ProceduralArt.SkinThumb.cs), así las dos llevan el mismo vidrio.
+        private void PaintCuiaMarks(PixelCanvas pc, int capacity, int ppu)
+        {
             // Marcas de dosis (07 §4.1), encima de todos los brillos (V4): 1 dp, marfil al 25 %, solo dentro de la cavidad;
             // en arco, como las fronteras del líquido y el fondo (D-006; CuiaGeometry.FaceSagU).
-            int w = Mathf.RoundToInt(CuiaGeometry.WidthU * ppu);
-            int h = Mathf.RoundToInt(CuiaGeometry.HeightU(capacity) * ppu);
-            var pc = new PixelCanvas(w, h);
+            int w = pc.Width;
+            int h = pc.Height;
             float lineU = Mathf.Max(1f / ppu, Mathf.Max(0.5f, ScreenScale) / ppu); // 1 dp en u
             var ivory = new Color(0xFF / 255f, 0xF8 / 255f, 0xE6 / 255f, 1f);
             for (int k = 0; k <= capacity; k++)
@@ -729,8 +756,6 @@ namespace AF.Presentation
                     }
                 }
             }
-
-            return MakeSprite(pc, "cuia_marks_" + capacity + "_" + ppu, new Vector2(0.5f, 0f), Vector4.zero);
         }
 
         private Sprite BuildSealCap()

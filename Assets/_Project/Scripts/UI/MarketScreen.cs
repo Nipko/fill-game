@@ -221,6 +221,9 @@ namespace AF.UI
         /// <summary>El botón de la fila <paramref name="index"/> se ve.</summary>
         public bool RowButtonShown(int index) => _rows[index].Cta.Button.gameObject.activeSelf;
 
+        /// <summary>El icono de la fila <paramref name="index"/> (tests: la cuia de la skin, no un círculo liso).</summary>
+        public Image RowIcon(int index) => _rows[index].Icon;
+
         /// <summary>Se compró o se eligió algo: el arranque refresca el inicio (saldo, Cántaro) y las cuias (skin).</summary>
         public event Action<PurchaseResult>? Purchased;
 
@@ -461,13 +464,12 @@ namespace AF.UI
             string? purchaseNote = MarketText.PurchaseNote(noteKind);
             view.Note.text = purchaseNote ?? (!skin && row.Id == StoreCatalog.Starter && row.Number > 0 ? MarketText.StarterLeft(row.Number) : string.Empty);
             view.Note.color = noteKind == PurchaseNoteKind.Failed ? (Color)Palette.UiRedWarning : (Color)Palette.FamilyWood.Base;
-            Sprite? icon = IconOf(row.Id, skin);
-            view.Icon.sprite = icon;
-            view.Icon.color = skin ? CuiaSkin.For(row.Id).Rim : Color.white;
-            if (skin && string.Equals(row.Id, SkinRewards.BaseSkinId, StringComparison.Ordinal))
-            {
-                view.Icon.color = Palette.CapWood; // la base no tiene borde propio: madera clara [P]
-            }
+            // Observación 4 de la jornada 6: cada skin con su cuia (la del tablero en pequeño, ProceduralArt.SkinThumb), no un círculo
+            // de su color; el Cántaro con su tinaja (la del inicio). La miniatura lleva sus colores: sin tinte.
+            view.Icon.sprite = IconOf(row.Id, skin);
+            view.Icon.color = Color.white;
+            view.TallIcon = skin;
+            view.SkinName = skin ? view.Name.text : null; // TalkBack: «Cuia de Santarém, Ponerse» y no solo «Ponerse»
 
             bool hasButton = row.Action != MarketAction.None;
             view.Cta.Button.gameObject.SetActive(hasButton);
@@ -528,11 +530,12 @@ namespace AF.UI
         {
             if (skin)
             {
-                return _art.Disc;
+                return _art.SkinThumb(CuiaSkin.For(id));
             }
 
             switch (id)
             {
+                case StoreCatalog.Piggy: return _art.DockJar;
                 case StoreCatalog.Starter: return _art.IconCuiaPlus;
                 case StoreCatalog.InfiniteCanoes1h: return _art.IconInfinite;
                 case StoreCatalog.NoAds: return _art.IconVideo;
@@ -834,12 +837,19 @@ namespace AF.UI
                 UiBuilder.AutoSize(Note, UiBuilder.MinTextSp, 12f);
                 Cta = ModalKit.Cta("BuyButton", Root, art.CtaLeaf, TextStyle.CtaLeaf, string.Empty, 17f, onPress, out TextMeshProUGUI label);
                 CtaLabel = label;
+                A11yLabels.Set(Cta.Button, () => SkinName == null ? CtaLabel.text : A11yText.Append(SkinName, CtaLabel.text));
                 Root.gameObject.SetActive(false);
             }
 
             public RectTransform Root { get; }
 
             public Image Icon { get; }
+
+            /// <summary>El icono es una cuia (pestaña Cuias): ocupa el alto de la fila en vez de 36 × 36 dp.</summary>
+            public bool TallIcon { get; set; }
+
+            /// <summary>Nombre de la skin de la fila (pestaña Cuias), que el lector dice con el botón; null en las demás.</summary>
+            public string? SkinName { get; set; }
 
             public TextMeshProUGUI Name { get; }
 
@@ -868,7 +878,8 @@ namespace AF.UI
             public void Place(float x, float y, float w, float h)
             {
                 UiBuilder.Place(Root, x, y, w, h);
-                UiBuilder.Place(Icon.rectTransform, 0f, (h - 36f) * 0.5f, 36f, 36f);
+                float iconH = TallIcon ? Mathf.Max(36f, h - 4f) : 36f;
+                UiBuilder.Place(Icon.rectTransform, 0f, (h - iconH) * 0.5f, 36f, iconH);
                 float textX = 44f;
                 float textW = TextWidth(w);
                 float nameH = NameHeight(textW);

@@ -73,6 +73,9 @@ namespace AF.UI
 
         public string BuyText => _buyLabel.text;
 
+        /// <summary>El icono de la tarjeta (tests: la cuia de la skin o la tinaja del Cántaro, no un círculo liso).</summary>
+        public Image Icon => _icon;
+
         public Button BuyButton => _buy.Button;
 
         public Button CloseButton => _close.Button;

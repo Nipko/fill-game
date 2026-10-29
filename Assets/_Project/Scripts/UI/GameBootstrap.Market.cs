@@ -563,13 +563,11 @@ namespace AF.UI
                     }
 
                     buyEnabled &= piggy.CanBuy;
-                    icon = _art.Disc;
-                    iconColor = AF.Presentation.Palette.TinajaClay;
+                    icon = _art.DockJar; // observación 7 de la jornada 5: la tinaja del Cántaro, la del inicio, no un círculo marrón
                     break;
                 default:
                     body = MarketText.SkinName(sku);
-                    icon = _art.Disc;
-                    iconColor = AF.Presentation.CuiaSkin.For(sku).Rim;
+                    icon = _art.SkinThumb(AF.Presentation.CuiaSkin.For(sku)); // observación 4 de la jornada 6: la cuia con la skin
                     break;
             }
 

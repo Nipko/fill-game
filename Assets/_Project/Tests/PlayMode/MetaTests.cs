@@ -187,6 +187,7 @@ namespace AF.Tests.PlayMode
             Assert.That(card.BasketItemText(1), Is.EqualTo("1"));
             Assert.That(card.PrizeText, Is.EqualTo("Premio del mundo · faltan 15"));
             Assert.That(card.PrizeSkin, Is.SameAs(CuiaSkin.Santarem));
+            Assert.That(ProceduralArt.IsSkinThumb(card.PrizeCuiaImage.sprite, "af_skin_m02"), Is.True, "el premio, con la cuia de su skin");
             foreach (TMPro.TextMeshProUGUI t in card.Texts())
             {
                 Assert.That(t.fontSize, Is.GreaterThanOrEqualTo(12f), t.name + " ≥ 12 sp");
