@@ -2,7 +2,7 @@
 
 El portátil sigue el encargo de la jornada 6 de `guion-prueba-telefono-completa.md`. La rama es `integracion-fase1-fase2` en `730abc06`, que trae `a2dd811f` (el encargo) y los carriles `tanda6/fx-j5-arranque` y `tanda6/fx-j5-ui`. Se prueba con el SM-S938B por depuración inalámbrica.
 
-**Lo que entrega por ahora:** el bloque 0 y el primer punto de N6, la pantalla del sistema hasta la intro. **Ese punto falla y bloquea el Release definitivo:** en todos los arranques la pantalla del sistema la suelta el tope de 3 s (`cap`), no el juego (observación 1). Se avisó al dueño en cuanto salió.
+**Lo que entrega por ahora:** el bloque 0 y N6 (la pantalla del sistema hasta la intro y los arreglos de UI). **Ese punto falla y bloquea el Release definitivo:** en todos los arranques la pantalla del sistema la suelta el tope de 3 s (`cap`), no el juego (observación 1). Se avisó al dueño en cuanto salió.
 
 Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). De las ráfagas se borraron los fotogramas en los que se veía la pantalla personal del teléfono.
 
@@ -12,6 +12,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 |---|---|---|
 | 0. Preparación y builds | cumple | — |
 | N6.1 La pantalla del sistema hasta la intro | **no cumple: `cap` en todos los arranques** | 1 |
+| N6.2 Los arreglos de UI | cumple en lo probado; el Boto de la pausa, mudo | 2, 3 |
 
 ## Verificación (bloque 0)
 
@@ -79,6 +80,29 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 
    Quedan a la espera de la decisión sobre el plugin.
 
+2. **Los arreglos de UI: cumplen en lo probado; el Salto del Boto en la pausa, no (observación 2).** Se probaron con el `dev.apk`, 0 semillas y un jugador que se atasca a propósito.
+   - **«Continue: +1 cuia» en gris, en No more pours · Still waters (el 36, con la tienda falsa):**
+     - el toque hace latir «You need 300 more seeds»: en la ráfaga del toque, un fotograma con la línea más grande y el siguiente igual que antes (`ui-rescate-latido-zoom.png`);
+     - `missing_tap` con `"option":"rescue","pulsed":true,"store":true`;
+     - no cobra nada, el modal sigue abierto y no sale ningún aviso (debajo está «Handful of seeds · COP 3,900»).
+   - **El mismo botón sin tienda (el 37):**
+     - el aviso «Purchases aren't available right now» arriba (`store_unavailable_notice`);
+     - `missing_tap` con `"store":false`;
+     - el modal ya no lleva el Puñado (`ui-rescate-sintienda.png`).
+   - **En «Are you sure?»** (Give up con una canoa en juego): con dos toques seguidos salen dos `store_unavailable_notice` y dos `missing_tap` `give_up_rescue`, y no se cobra nada (`ui-seguro-sintienda.png`).
+   - **«+3 Undo · 30 seeds» en gris** (el 38, sin tienda, `af_ads_fill no_fill` y la Marea gastada): el aviso y `missing_tap` `refill_seeds` con latido. El modal enseña la etiqueta con el precio.
+   - **«Refill canoes · 5/5 · 200» en gris** (0 canoas, sin tienda):
+     - **desde el nivel** (Nivel fallido › Retry): el aviso, «You need 200 more seeds» que late y `missing_tap` `refill_canoes`, sin llenar nada;
+     - **desde el inicio** (el contador 0/5): igual, con `level` 0.
+   - **Salto del Boto en gris (el 46, quinto fallo con 0 semillas):**
+     - el banner «Rosa can take you upriver · 300 / You need 300 more seeds» sale al cargar el sexto intento;
+     - en la pausa, «Boto Leap · 300» sale en gris, pero **tocarlo no hace nada** (observación 2);
+     - el caso de la rama D, en el modal de bloqueo, no se pudo ver porque el sexto intento, con el alivio, se ganó.
+   - **Tu fila de la Liga sin seudónimo** (`af_league` y `af_league_fake`, `af_max_level` 60): **cumple** en es-419, en y pt-BR, al 100 % y al 130 % (`--ei af_font_scale 130`; `liga-filas.jpg`).
+     - El texto se para antes de la columna de puntos y pasa a 2 líneas (al 130 %, a 3; en pt-BR, a 4) con la fila más alta.
+     - En pt-BR el «0» ya no toca el texto.
+   - **Sin probar (los hace el dueño):** con Reducir movimiento, con TalkBack, y el caso de «Are you sure?» cuando llegan semillas con el modal abierto.
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -87,7 +111,12 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
    - El petróleo liso de entre medias, que era lo que se quería quitar, sigue ahí: 3 o 4 fotogramas, de 0,25 a 0,5 s.
 
    El encargo dice qué hacer en este caso: «Si sale `cap`, se anota con su ráfaga y se revierte quitando `AfSplashHold.androidlib`». **La reversión la decide y la integra el escritorio**; el portátil no toca el código.
+2. **Baja. «Boto Leap» en gris en la pausa no responde al toque:** ni latido, ni `missing_tap` ni aviso. Pasó en el 46, quinto fallo, con 0 semillas y sin tienda. El toque llega a la ventana, pero el juego no escribe nada. Es el mismo «toque mudo» de la observación 6 de la jornada 5, en un botón que el arreglo no cubrió (`PauseMenu`). El encargo lo pedía en la rama D, que no se pudo ver.
+3. **Baja. Con otra app con el foco, Tintalú se queda en el petróleo liso.** Pasó con RCN TV visible a la vez (`topResumedActivity` en otra pantalla) al lanzar la app: Unity escribió `m_RunWithoutFocus: false` y se paró en `UnloadTime` más de 40 s, sin intro. Al cerrarla el dueño, siguió normal. Hay que mirarlo de nuevo con el arreglo de la pantalla del sistema, que toca justo el correr sin foco.
 
 ## Notas de la herramienta (no son defectos del juego)
 
 - Tras cada build de Unity el demonio de `adb` se reinicia y el teléfono vuelve con otro puerto (hoy, 41391).
+- `af_font_scale` es un entero (`--ei af_font_scale 130`): con `--ef 1.3` no hace nada.
+- El primer toque en el inicio recién cargado, o en un modal que se está abriendo, a veces se pierde. Sale bien al repetirlo.
+- Para atascarse a propósito, el jugador elige en cada paso el vertido que deja menos vertidos posibles. El de movimientos al azar no se atascaba en el 35.
