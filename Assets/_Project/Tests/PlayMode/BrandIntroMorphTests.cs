@@ -96,11 +96,14 @@ namespace AF.Tests.PlayMode
 
             // La vista del icono: 240 dp, con el mismo centro.
             Assert.That(intro.Morph.HasIcon, Is.True, "la vista del icono está en Resources");
+            // La vista va en el grupo de la cuia (escalado y desplazado): su caja en la pantalla.
             RectTransform icon = intro.Morph.Icon.rectTransform;
-            Assert.That(icon.sizeDelta.x, Is.EqualTo(240f * PhoneUnitsPerDp).Within(0.01f));
-            Assert.That(icon.sizeDelta.y, Is.EqualTo(240f * PhoneUnitsPerDp).Within(0.01f));
-            Assert.That(icon.anchoredPosition.x + (icon.sizeDelta.x * 0.5f), Is.EqualTo(180f).Within(0.01f));
-            Assert.That(-icon.anchoredPosition.y + (icon.sizeDelta.y * 0.5f), Is.EqualTo(390f).Within(0.01f));
+            RectTransform top = intro.Morph.Top;
+            float k = top.localScale.x;
+            Assert.That(icon.sizeDelta.x * k, Is.EqualTo(240f * PhoneUnitsPerDp).Within(0.01f));
+            Assert.That(icon.sizeDelta.y * k, Is.EqualTo(240f * PhoneUnitsPerDp).Within(0.01f));
+            Assert.That(top.anchoredPosition.x + (k * (icon.anchoredPosition.x + (icon.sizeDelta.x * 0.5f))), Is.EqualTo(180f).Within(0.01f));
+            Assert.That(-top.anchoredPosition.y + (k * (-icon.anchoredPosition.y + (icon.sizeDelta.y * 0.5f))), Is.EqualTo(390f).Within(0.01f));
             Assert.That(intro.Morph.Icon.sprite!.texture.width, Is.EqualTo(432), "los píxeles de la vista de 432 del icono");
 
             // El agujero del círculo está centrado igual; fuera, el petróleo.
@@ -117,7 +120,7 @@ namespace AF.Tests.PlayMode
             // El icono ya tiene el río teñido y el chorro: la escena de debajo también.
             Assert.That(intro.TintFill, Is.EqualTo(1f));
             Assert.That(intro.StreamFill, Is.EqualTo(1f));
-            Assert.That(intro.ImpactAlpha, Is.EqualTo(1f));
+            Assert.That(intro.ImpactAlpha, Is.EqualTo(0f), "los aros del fotograma 0 son los del icono (los de la escena entran con el corte)");
         }
 
         [UnityTest]
