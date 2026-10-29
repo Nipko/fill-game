@@ -23,6 +23,12 @@ namespace AF.UI
         /// <summary>Lado del icono (dp).</summary>
         public const float IconDp = 56f;
 
+        /// <summary>
+        /// Alto del icono cuando es una ficha alta (la cuia de una skin, <see cref="ProceduralArt.SkinThumb"/>): a 56 dp la cuia
+        /// medía 20 dp de ancho y casi no se leía (revisión de la observación 4 de la jornada 6) [P].
+        /// </summary>
+        public const float TallIconDp = 104f;
+
         private readonly ProceduralArt _art;
         private readonly OverlayCanvas _canvas;
         private readonly RectTransform _panel;
@@ -161,6 +167,12 @@ namespace AF.UI
             rects.Add((RectTransform)_notNow.transform);
         }
 
+        // Un sprite claramente más alto que ancho (la ficha de una skin) usa TallIconDp.
+        private static bool IsTall(Sprite? sprite)
+        {
+            return sprite != null && sprite.rect.height > sprite.rect.width * 1.5f;
+        }
+
         private void Layout()
         {
             float canvasW = _canvas.Width;
@@ -171,8 +183,9 @@ namespace AF.UI
             UiBuilder.Place(_header.rectTransform, 16f, y, inner - 52f, 40f);
             UiBuilder.Place((RectTransform)_close.Button.transform, width - 16f - ModalKit.CloseDp, y - 4f, ModalKit.CloseDp, ModalKit.CloseDp);
             y += 52f;
-            UiBuilder.Place(_icon.rectTransform, (width - IconDp) * 0.5f, y, IconDp, IconDp);
-            y += IconDp + 8f;
+            float iconH = IsTall(_icon.sprite) ? TallIconDp : IconDp;
+            UiBuilder.Place(_icon.rectTransform, (width - IconDp) * 0.5f, y, IconDp, iconH);
+            y += iconH + 8f;
             y += ModalKit.PlaceLine(_body, 16f, y, inner, 44f) + 4f;
             if (_note.gameObject.activeSelf)
             {

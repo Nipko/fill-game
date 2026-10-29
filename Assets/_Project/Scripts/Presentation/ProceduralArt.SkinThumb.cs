@@ -17,13 +17,16 @@ namespace AF.Presentation
     /// <item>dos dosis de líquido (Agua del Tapajós y Taperebá, 07 §3) con su cara de arriba aclarada como el menisco, para que se lea
     /// como una cuia con agua y no como un frasco vacío.</item>
     /// </list>
-    /// Una textura de 64 × 179 px por skin (cuia de 4 a <see cref="SkinThumbPixelsPerU"/> px por u; unos 46 KB), hecha la primera
-    /// vez que se pide y guardada: la sueltan <see cref="Dispose"/> con el resto del arte (memoria, observación 6).
+    /// Va sobre una ficha con el panel del tablero (D-004, azul petróleo, esquinas redondeadas), para que el vidrio se lea como en el
+    /// juego y no como tinta negra sobre el papel crema; la banda del hombro y el asa, más gruesas que en el tablero y todas las
+    /// piezas con un canto, para que cada skin se reconozca a primera vista (revisión de la observación 4).
+    /// Una textura de 104 × 242 px por skin (cuia de 4 a <see cref="SkinThumbPixelsPerU"/> px por u y la ficha; unos 100 KB), hecha
+    /// la primera vez que se pide y guardada: la sueltan <see cref="Dispose"/> con el resto del arte (memoria, observación 6).
     /// </summary>
     public sealed partial class ProceduralArt
     {
-        /// <summary>Densidad de la miniatura (px por u): a 56 dp de alto y 3 px por dp es casi 1:1.</summary>
-        public const int SkinThumbPixelsPerU = 32;
+        /// <summary>Densidad de la miniatura (px por u): la ficha mide 242 px de alto, casi 1:1 a 80 dp y 3 px por dp.</summary>
+        public const int SkinThumbPixelsPerU = 40;
 
         /// <summary>Capacidad de la cuia de la miniatura: la estándar (02 §5).</summary>
         public const int SkinThumbCapacity = 4;
@@ -61,51 +64,112 @@ namespace AF.Presentation
 
         private Sprite BuildSkinThumb(CuiaSkin skin)
         {
+            return MakeSprite(PaintSkinThumb(skin), SkinThumbPrefix + skin.Id, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+        }
+
+        /// <summary>
+        /// El lienzo de la miniatura de <paramref name="skin"/> (la ficha con la cuia), sin hacer la textura (tests: sus píxeles);
+        /// quien lo pide lo suelta con <see cref="PixelCanvas.Release"/>.
+        /// </summary>
+        internal PixelCanvas PaintSkinThumb(CuiaSkin skin)
+        {
             const int cap = SkinThumbCapacity;
             const int ppu = SkinThumbPixelsPerU;
-            PixelCanvas pc = NewCuiaCanvas(cap, ppu);
+            PixelCanvas cuia = NewCuiaCanvas(cap, ppu);
             PixelCanvas layer = NewCuiaCanvas(cap, ppu);
             Color glass = skin.GlassMultiplier;
             PaintCuiaBack(layer, cap, ppu);
-            CompositeLayer(pc, layer, glass);
-            PaintThumbLiquid(pc, cap, ppu);
+            CompositeLayer(cuia, layer, glass, 0, 0);
+            PaintThumbLiquid(cuia, cap, ppu);
             ClearLayer(layer);
             PaintCuiaFront(layer, cap, ppu);
-            CompositeLayer(pc, layer, glass);
+            CompositeLayer(cuia, layer, glass, 0, 0);
             ClearLayer(layer);
             PaintCuiaMarks(layer, cap, ppu);
-            CompositeLayer(pc, layer, Color.white);
+            CompositeLayer(cuia, layer, Color.white, 0, 0);
             layer.Release();
             if (!skin.IsBase)
             {
-                // El orden de CuiaView.BuildSkinParts: pie, borde, banda (o sus dos mitades) y asa.
-                FillSkinPiece(pc, CuiaSkinParts.Foot(cap), skin.Foot, ppu);
-                FillSkinPiece(pc, CuiaSkinParts.Rim(cap), skin.Rim, ppu);
+                // El orden de CuiaView.BuildSkinParts: pie, borde, banda (o sus dos mitades) y asa. La banda y el asa, más gruesas
+                // que en el tablero (ThumbBandHeightU, ThumbHandle*): a 50 dp de alto son lo que distingue una skin de otra.
+                FillSkinPiece(cuia, CuiaSkinParts.Foot(), skin.Foot, ppu);
+                FillSkinPiece(cuia, CuiaSkinParts.Rim(cap), skin.Rim, ppu);
                 if (skin.HasBand && skin.BandBicolor)
                 {
-                    FillSkinPiece(pc, CuiaSkinParts.Band(cap, -1), skin.Band, ppu);
-                    FillSkinPiece(pc, CuiaSkinParts.Band(cap, 1), skin.BandB, ppu);
+                    FillSkinPiece(cuia, Thicker(CuiaSkinParts.Band(cap, -1)), skin.Band, ppu);
+                    FillSkinPiece(cuia, Thicker(CuiaSkinParts.Band(cap, 1)), skin.BandB, ppu);
                 }
                 else if (skin.HasBand)
                 {
-                    FillSkinPiece(pc, CuiaSkinParts.Band(cap, 0), skin.Band, ppu);
+                    FillSkinPiece(cuia, Thicker(CuiaSkinParts.Band(cap, 0)), skin.Band, ppu);
                 }
 
                 if (skin.HasHandle)
                 {
-                    FillSkinPiece(pc, CuiaSkinParts.Handle(cap), skin.Handle, ppu);
+                    Rect h = CuiaSkinParts.Handle(cap);
+                    FillSkinPiece(cuia, new Rect(h.x + ((ThumbHandleWidthU - h.width) * 0.5f), h.y, ThumbHandleWidthU, ThumbHandleHeightU), skin.Handle, ppu);
                 }
             }
 
-            return MakeSprite(pc, SkinThumbPrefix + skin.Id, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            // La ficha: el panel del tablero (D-004, azul petróleo en degradado de panel_alto a panel_bajo) con las esquinas
+            // redondeadas, y la cuia encima, centrada en x y con el pie a ThumbPadU: el vidrio se ve como en el juego, no como tinta
+            // sobre el papel crema del Mercado.
+            int padX = Mathf.RoundToInt(ThumbPadXU * ppu);
+            int padY = Mathf.RoundToInt(ThumbPadYU * ppu);
+            var pc = new PixelCanvas(cuia.Width + (2 * padX), cuia.Height + (2 * padY));
+            PaintPanelTile(pc, ThumbCornerU * ppu);
+            CompositeLayer(pc, cuia, Color.white, padX, padY);
+            cuia.Release();
+            return pc;
         }
 
-        // Compone la capa sobre el lienzo (encima), con su color multiplicado por tint (el Image.color del tablero).
-        private static void CompositeLayer(PixelCanvas into, PixelCanvas layer, Color tint)
+        // Margen de la ficha a los lados (u): deja sitio al asa de la Totuma (0,97 + 0,11 u del eje) y algo de aire.
+        internal const float ThumbPadXU = 0.30f;
+
+        // Margen de la ficha arriba y abajo (u).
+        internal const float ThumbPadYU = 0.22f;
+
+        // Radio de las esquinas de la ficha (u).
+        private const float ThumbCornerU = 0.30f;
+
+        // Alto de la banda del hombro en la miniatura (u; 0,12 en el tablero): cabe en el hombro de 0,40 u sin tapar la cavidad.
+        internal const float ThumbBandHeightU = 0.20f;
+
+        // El asa de la Totuma en la miniatura (u; 0,12 × 0,40 en el tablero).
+        internal const float ThumbHandleWidthU = 0.16f;
+
+        internal const float ThumbHandleHeightU = 0.46f;
+
+        private static Rect Thicker(Rect band)
         {
-            for (int y = 0; y < into.Height; y++)
+            return new Rect(band.x, band.y, band.width, ThumbBandHeightU);
+        }
+
+        private void PaintPanelTile(PixelCanvas pc, float radiusPx)
+        {
+            Color top = _panel.Top;
+            Color bottom = _panel.Bottom;
+            top.a = 1f;
+            bottom.a = 1f;
+            float w = pc.Width;
+            float h = pc.Height;
+            for (int y = 0; y < pc.Height; y++)
             {
-                for (int x = 0; x < into.Width; x++)
+                Color c = Color.Lerp(bottom, top, (y + 0.5f) / h); // y hacia arriba: panel_alto arriba
+                for (int x = 0; x < pc.Width; x++)
+                {
+                    float d = PixelCanvas.RoundedRectDistance(x + 0.5f, y + 0.5f, 0f, 0f, w, h, radiusPx);
+                    pc.Blend(x, y, c, PixelCanvas.Coverage(d));
+                }
+            }
+        }
+
+        // Compone la capa sobre el lienzo (encima) desde (ox, oy), con su color multiplicado por tint (el Image.color del tablero).
+        private static void CompositeLayer(PixelCanvas into, PixelCanvas layer, Color tint, int ox, int oy)
+        {
+            for (int y = 0; y < layer.Height; y++)
+            {
+                for (int x = 0; x < layer.Width; x++)
                 {
                     Color c = layer.Get(x, y);
                     if (c.a <= 0f)
@@ -113,7 +177,7 @@ namespace AF.Presentation
                         continue;
                     }
 
-                    into.Blend(x, y, new Color(c.r * tint.r, c.g * tint.g, c.b * tint.b, c.a), 1f);
+                    into.Blend(x + ox, y + oy, new Color(c.r * tint.r, c.g * tint.g, c.b * tint.b, c.a), 1f);
                 }
             }
         }
@@ -186,6 +250,11 @@ namespace AF.Presentation
             float y1 = (pieceU.y + pieceU.height) * ppu;
             float r = Mathf.Min(CuiaSkinParts.CornerU * ppu, Mathf.Min(x1 - x0, y1 - y0) * 0.5f);
             color.a = 1f;
+            // Un canto de ~1,5 px que la separa del vidrio y del panel: más claro en las piezas oscuras (el cumatê de Santarém
+            // sobre el petróleo) y más oscuro en las claras.
+            Color edge = ColorMath.RelativeLuminance(color) < 0.2f ? ColorMath.Lighten(color, 0.45f) : ColorMath.Darken(color, 0.40f);
+            const float o = 1.5f;
+            pc.FillRoundedRect(x0 - o, y0 - o, x1 + o, y1 + o, r + o, edge);
             pc.FillRoundedRect(x0, y0, x1, y1, r, color);
         }
     }

@@ -191,6 +191,11 @@ namespace AF.UI
                 _prizeCuia.sprite = _art.SkinThumb(_prizeSkin);
                 _prizeCuia.color = Color.white;
             }
+            else if (prize)
+            {
+                _prizeCuia.sprite = _art.MapMiniCuia; // un premio sin skin conocida: la mini cuia de vidrio de siempre
+                _prizeCuia.color = Color.white;
+            }
         }
 
         private void SetBasketItem(Sprite icon, int units)

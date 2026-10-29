@@ -148,7 +148,7 @@ namespace AF.Presentation
         public const float BandHeightU = 0.12f;
 
         /// <summary>El pie: centro en x (desde el eje), pie en y, ancho y alto (u).</summary>
-        public static Rect Foot(int capacity)
+        public static Rect Foot()
         {
             return Piece(0f, 0f, 2f * CuiaGeometry.FootHalfWidthU, CuiaGeometry.FootTopU);
         }

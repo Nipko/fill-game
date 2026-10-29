@@ -1523,7 +1523,7 @@ namespace AF.Presentation
 
             float u = _u;
             float corner = ProceduralArt.RoundedRectRadiusPx / Mathf.Max(0.5f, CuiaSkinParts.CornerU * u);
-            PlaceSkin(_skinFoot, CuiaSkinParts.Foot(Capacity), u, corner);
+            PlaceSkin(_skinFoot, CuiaSkinParts.Foot(), u, corner);
             PlaceSkin(_skinRim, CuiaSkinParts.Rim(Capacity), u, corner);
             if (_skin.BandBicolor)
             {

@@ -85,7 +85,8 @@ namespace AF.Tests.PlayMode
                 Assert.That(icon.sprite, Is.SameAs(art.SkinThumb(CuiaSkin.For(id))), id + ": la miniatura guardada");
                 Assert.That(icon.color, Is.EqualTo(Color.white), id + ": lleva sus colores, sin tinte");
                 Assert.That(icon.preserveAspect, Is.True);
-                Assert.That(icon.rectTransform.rect.height, Is.GreaterThan(36f), id + ": la cuia ocupa el alto de la fila");
+                Assert.That(icon.rectTransform.rect.height, Is.GreaterThanOrEqualTo(MarketScreen.MinRowDp - 4f), id + ": la ficha ocupa el alto de la fila");
+                Assert.That(icon.rectTransform.rect.width, Is.EqualTo(MarketScreen.SkinTileDp), id + ": y el ancho de la ficha");
             }
 
             // TalkBack: el botón «Ponerse» de una skin dice cuál.

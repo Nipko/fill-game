@@ -384,6 +384,7 @@ namespace AF.Tests.PlayMode
             Assert.That(card.Visible, Is.True);
             Assert.That(card.Sku, Is.EqualTo("af_skin_m03"));
             Assert.That(ProceduralArt.IsSkinThumb(card.Icon.sprite, "af_skin_m03"), Is.True, "observación 4 de la jornada 6: la cuia con la skin, no un círculo");
+            Assert.That(card.Icon.rectTransform.rect.height, Is.EqualTo(OfferCard.TallIconDp), "la ficha de la skin, alta: no a 56 dp");
 
             card.BuyButton.onClick.Invoke();
             Assert.That(boot.Profile!.Entitlements.Skins, Does.Contain("af_skin_m03"));
