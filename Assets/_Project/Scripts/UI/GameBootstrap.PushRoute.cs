@@ -15,10 +15,19 @@ namespace AF.UI
     /// <item>la Bitácora: la libreta (<see cref="LogbookOpenSource.Push"/>, sin gastar el cupo de takeovers);</item>
     /// <item>el inicio: esa entrada sin takeover.</item>
     /// </list>
-    /// En los tres casos la cola de takeovers no se toca: el takeover saltado sale en la siguiente vuelta al inicio. Con la app en
-    /// otra pantalla al volver (un nivel, el Reto, Ajustes…), o si sale a segundo plano antes de llegar al inicio, el aviso se
-    /// descarta (<c>dest</c> = <c>none</c>): no se saca al jugador de lo que estaba haciendo. La sonda <c>AF_STATE push_open</c>
-    /// sale al decidirlo, con <c>type</c> y <c>dest</c>.
+    /// En los tres casos la cola de takeovers no se toca: el takeover saltado sale en la siguiente vuelta al inicio. El aviso se
+    /// descarta (<c>dest</c> = <c>none</c>), sin sacar al jugador de lo que estaba haciendo:
+    /// <list type="bullet">
+    /// <item>al volver de segundo plano con la app en otra pantalla que el inicio sin nada encima (un nivel, el Reto, Ajustes, la
+    /// Bitácora…);</item>
+    /// <item>si, antes de tomarse el destino, la app pasa por un nivel o por el Reto (<see cref="TickPushRoute"/>): por ejemplo,
+    /// el arranque en frío que reabre el nivel en curso (<c>level_state</c>, 02 §14) o la primera vez, que empieza en el nivel 1;</item>
+    /// <item>si sale a segundo plano antes de llegar al inicio (<see cref="DropPushRoute"/>);</item>
+    /// <item>con la reconstrucción por idioma (<c>RebuildUi</c>): la escena nueva no hereda el aviso pendiente, que se pierde sin
+    /// sonda (solo puede pasar si se cambia de idioma antes de llegar al inicio, en la práctica nunca).</item>
+    /// </list>
+    /// La secuencia del Mapa del 10 va antes: el destino espera a que acabe. La sonda <c>AF_STATE push_open</c> sale al decidirlo,
+    /// una vez por aviso, con <c>type</c> y <c>dest</c>.
     /// </summary>
     public sealed partial class GameBootstrap
     {
@@ -84,6 +93,29 @@ namespace AF.UI
             }
 
             ReportPushOpen(type, NotificationRouting.IdOf(dest));
+        }
+
+        // Cada fotograma (TickSessions): con un aviso pendiente, la app en un nivel o en el Reto lo descarta (el arranque en frío que
+        // reabre el nivel en curso, o la primera vez). Sin la Bitácora montada (LogbookOverride false o _logbookFailed), TickLogbook
+        // no corre: el aviso se encamina aquí, con la misma condición de entrada al inicio (la Bitácora, si era su destino, cae al
+        // inicio).
+        private void TickPushRoute()
+        {
+            if (_pushRouteType == null || _app == null)
+            {
+                return;
+            }
+
+            if (_app.Screen == AppScreen.Level || (_dailyScreen != null && _dailyScreen.IsOpen))
+            {
+                DropPushRoute();
+                return;
+            }
+
+            if ((_logbook == null || _logbookScreen == null) && LogbookLobbyClear && !_app.L10MapDue)
+            {
+                TakePushRoute();
+            }
         }
 
         // Sale a segundo plano con el aviso aún sin encaminar: se descarta.

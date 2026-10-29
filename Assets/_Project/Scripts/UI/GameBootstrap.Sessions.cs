@@ -237,6 +237,7 @@ namespace AF.UI
             }
 
             TickPlatformScheduler();
+            TickPushRoute(); // D-062 (GameBootstrap.PushRoute.cs): el aviso pendiente se descarta si la app va a otra pantalla
             TickPushUi(Mathf.Min(Time.unscaledDeltaTime, 1f) * 1000f);
             LevelFlow? flow = _flow;
             if (flow != null)

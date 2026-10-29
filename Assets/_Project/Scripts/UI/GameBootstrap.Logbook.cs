@@ -315,7 +315,7 @@ namespace AF.UI
             }
 
             bool lobby = LogbookLobbyClear && !screen.Visible;
-            if (lobby && PushRoutePending)
+            if (lobby && PushRoutePending && (_app == null || !_app.L10MapDue))
             {
                 // Se llega al inicio desde un aviso (D-062; GameBootstrap.PushRoute.cs): abre lo que nombra y esta entrada no saca el
                 // takeover, que queda para la siguiente vuelta al inicio como si no hubiera salido.

@@ -6,20 +6,31 @@ namespace AF.LiveOps.Tests
     /// <summary>D-062: lo que abre cada aviso al tocarlo (<see cref="NotificationRouting"/>), con sus caídas al inicio.</summary>
     public sealed class NotificationRoutingTests
     {
+        // La tabla de D-062, escrita a mano en el orden de NotificationTypes.All: un tipo nuevo hace fallar el test hasta que se
+        // decida qué abre.
+        private static readonly string[] ExpectedIds =
+        {
+            "daily_ready", "daily_streak", "logbook_pending", "streak_waiting", "canoes_full", "new_levels", "comeback_d7",
+            "comeback_d14", "comeback_d30", "comeback_d60",
+        };
+
+        private static readonly NotificationDestination[] ExpectedDestinations =
+        {
+            NotificationDestination.DailyChallenge, NotificationDestination.DailyChallenge, NotificationDestination.Logbook,
+            NotificationDestination.Home, NotificationDestination.Home, NotificationDestination.Home, NotificationDestination.Home,
+            NotificationDestination.Home, NotificationDestination.Home, NotificationDestination.Home,
+        };
+
         [Test]
         public void TheTable_CoversEveryType()
         {
-            Assert.That(NotificationType.DailyReady.Destination(), Is.EqualTo(NotificationDestination.DailyChallenge));
-            Assert.That(NotificationType.DailyStreak.Destination(), Is.EqualTo(NotificationDestination.DailyChallenge));
-            Assert.That(NotificationType.LogbookPending.Destination(), Is.EqualTo(NotificationDestination.Logbook));
-            Assert.That(NotificationType.StreakWaiting.Destination(), Is.EqualTo(NotificationDestination.Home));
-            Assert.That(NotificationType.CanoesFull.Destination(), Is.EqualTo(NotificationDestination.Home));
-            Assert.That(NotificationType.NewLevels.Destination(), Is.EqualTo(NotificationDestination.Home));
-            Assert.That(NotificationType.ComebackD7.Destination(), Is.EqualTo(NotificationDestination.Home));
-            Assert.That(NotificationType.ComebackD14.Destination(), Is.EqualTo(NotificationDestination.Home));
-            Assert.That(NotificationType.ComebackD30.Destination(), Is.EqualTo(NotificationDestination.Home));
-            Assert.That(NotificationType.ComebackD60.Destination(), Is.EqualTo(NotificationDestination.Home));
-            Assert.That(NotificationTypes.All.Count, Is.EqualTo(NotificationTypes.Count), "un tipo nuevo necesita su fila en D-062");
+            Assert.That(NotificationTypes.All.Count, Is.EqualTo(ExpectedIds.Length), "un tipo nuevo necesita su fila en D-062");
+            for (int i = 0; i < NotificationTypes.All.Count; i++)
+            {
+                NotificationType type = NotificationTypes.All[i];
+                Assert.That(type.ToId(), Is.EqualTo(ExpectedIds[i]));
+                Assert.That(type.Destination(), Is.EqualTo(ExpectedDestinations[i]), ExpectedIds[i]);
+            }
         }
 
         [TestCase("daily_ready", DailyCardState.Play, NotificationDestination.DailyChallenge)]
