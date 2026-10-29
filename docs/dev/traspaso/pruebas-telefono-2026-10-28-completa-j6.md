@@ -21,6 +21,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Sesión con el dueño (15, 18.3, 18.4, 18.6) | cumple, salvo 9 y 10 | **9 (alta)**, 10 |
 | 19. Rendimiento (memoria y Morpho) | el Morpho cumple; la memoria pasa del presupuesto | 6 |
 | Los arreglos de la hoja j6 (build `d3e601a2`, punto 10) | cumplen 4, 5, 7, 9, 10 y la sonda de 11; quedan 8 y la memoria; el icono cambia de forma | 12, 13, 14, 15 |
+| Botones en gris, 14 y 13 (build `d3e601a2`, punto 11) | cumple: la 2 queda arreglada | — |
 
 ## Verificación (bloque 0)
 
@@ -310,6 +311,53 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - en frío desde una notificación;
      - los bloques 5, 9, 10-11, 12.2, 13, 14, el resto de 18 y 19, 21, 22 y 23.
 
+11. **Con el mismo build (`d3e601a2`): los botones en gris, el bloque 14 y el 13. Cumplen; la observación 2 queda arreglada.**
+   - **El Salto del Boto en gris (observación 2): cumple.**
+     - Cómo se llega: cinco fallos seguidos en el 47 con 0 semillas, con Pausa › Salir › Salir (cada uno da `fail_hard_canoe`).
+     - Después se relanza sin `af_level` y con `--ei af_canoes 5`, y se toca Reintentar. `fails_level` se conserva (5) y las canoas vuelven a 5.
+     - En ese sexto intento sale el banner «Rosa puede llevarte río arriba · 300 / Te faltan 300 semillas» (`ui/sexto47-entrada.png`), y la pausa enseña «Salto del Boto · 300» en gris (`ui/pausa-salto-latido.png`).
+     - **Sin tienda:** tocar el banner da `store_unavailable_notice` y `missing_tap` `banner_skip` (`pulsed` true, `store` false); tocar el Salto en la pausa, lo mismo con `pause_skip`. Arriba sale «Las compras no están disponibles ahora». No se abre ninguna confirmación ni se cobra.
+     - **Con la tienda falsa:** los dos dan `missing_tap` con `store` true y sin aviso.
+     - **Por qué no salió antes** (punto 10): «Rendirse» pide confirmar («¿Seguro?», `giveup_confirm`) y sin confirmarlo no cuenta. Además, el jugador que se atasca ganó el 46 en el cuarto intento, con el alivio, y en un nivel ya superado el Salto se oculta (`LevelFlow.SkipOffer`: `LevelNumber <= LoadMaxLevel()`). No es un defecto.
+   - **Los otros botones en gris, sin tienda: cumplen.**
+
+     | Botón | Dónde | Resultado |
+     |---|---|---|
+     | «Llenar canoas» | Sin canoas, desde el nivel (Reintentar con 0 canoas) | `missing_tap` `refill_canoes` con el aviso |
+     | «Llenar canoas» | Sin canoas, desde el contador del inicio (0/5) | lo mismo, con `level` 0 |
+     | «Continuar: +1 cuia» | Aguas estancadas, en el 48 | `missing_tap` `rescue` y el aviso |
+     | «+3 Deshacer · 30» (`refill_seeds`) | Aguas estancadas, en el 48, con `--es af_ads_fill no_fill` y las 3 Mareas gastadas | `missing_tap` `refill_seeds` y el aviso |
+
+     En ninguno se cobra nada ni cambia el saldo.
+   - **Bloque 14.1, avisos con `--ei af_dev_push 2`: cumple, salvo tocarlo** (queda para el dueño).
+     - Al lanzar con el extra sale el diálogo del sistema «Allow Tintalú (dev) to send you notifications?». Se pulsó Allow; el permiso estaba sin conceder por el «Ahora no» del principio. Con el permiso concedido, `push_plan` pasa de `allowed` false a true, con 18 avisos.
+     - El primero llega 1-2 min después de pasar a segundo plano, dentro de la ventana inexacta de la alarma (`RTC_WAKEUP` con ventana de 45 s, como deben ser las alarmas inexactas). Lleva el icono de la app y el canal `af_default`.
+     - Los textos, con título «TiTino» en los tres idiomas:
+       - es-419: «El Reto del río de hoy ya está listo. TiTino te espera en su rama.»;
+       - en: «Today's River Challenge is ready. TiTino is waiting on his branch.»;
+       - pt-BR: «O Desafio do Rio de hoje já está pronto. TiTino espera por você no galho dele.».
+     - **Sin probar:** tocar el aviso para ver adónde lleva. Abrir la cortina enseñaría las notificaciones personales del dueño, así que lo hace él.
+   - **Bloque 13, Ajustes (lo hecho): cumple.**
+     - **Privacidad:** con la analítica encendida en Privacidad y datos, los eventos salen como `AF_EVENT` (`af_consent`, `af_settings_change`, `level_start`). Al apagarla vuelven a `AF_EVENT_UNSENT`. Queda apagada, como estaba.
+     - **Corregir mi edad, la confirmación neutral:**
+       - «Menos de 13» y «De 13 a 17» enseñan la misma pantalla: «Corregir mi edad», «Elegiste: {banda}. La edad solo se puede corregir una vez y no se puede deshacer.», «Volver a elegir» y «Confirmar» (`b13/edad-menos13.png`, `b13/edad-13-17.png`).
+       - «Volver a elegir» vuelve a la pantalla de edad.
+       - La X cierra sin cambiar nada: la banda sigue en 18+ y la fila sigue en Ajustes.
+       - Elegir la banda guardada (18 o más) cierra sin confirmación y sin gastar la corrección.
+       - No se confirmó ninguna banda.
+       - Al volver a Ajustes, la lista salta al principio: no es un defecto, pero se nota.
+     - **Toque con la lista en movimiento:** lanzada la lista de Ajustes (60-80 ms), un toque sobre una fila mientras se mueve no la activa: ni cambio de selección ni `settings_change`. Con la lista parada, un toque sobre «Siempre» o «Mensajes de TiTino» sí la cambia. Se dejaron como estaban.
+     - **Código de cuenta:** sale en grupos con guiones; no se copia aquí. Se borraron las capturas que lo enseñaban.
+     - **Eliminar cuenta y datos, sin borrar:**
+       - el primer paso avisa de lo que se borra («Las compras no se reembolsan»), con «Conservar mis datos» y «Continuar»;
+       - el segundo, «¿Eliminar todo?», lleva la nota de Play Juegos («Pedimos borrar tu copia en Google Play Juegos…») y el botón «Eliminar»;
+       - se cerró con la X. La espera visible solo se ve borrando de verdad (bloque 21).
+   - **Sin hacer todavía:**
+     - las demás filas de Ajustes, una a una (Sonido, Música, Vibración, Reducir movimiento, Alto contraste, Avisos bloqueados desde el teléfono, Datos del río);
+     - los idiomas recorriendo todas las pantallas;
+     - tocar el aviso (el dueño), 14.2 y 14.3;
+     - los bloques 5, 9, 10-11, 12.2, el resto de 18 y 19, 21, 22 y 23.
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -318,7 +366,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
    - El petróleo liso de entre medias, que era lo que se quería quitar, sigue ahí: 3 o 4 fotogramas, de 0,25 a 0,5 s.
 
    El encargo dice qué hacer en este caso: «Si sale `cap`, se anota con su ráfaga y se revierte quitando `AfSplashHold.androidlib`». **La reversión la decide y la integra el escritorio**; el portátil no toca el código.
-2. **Baja. «Boto Leap» en gris en la pausa no responde al toque:** ni latido, ni `missing_tap` ni aviso. Pasó en el 46, quinto fallo, con 0 semillas y sin tienda. El toque llega a la ventana, pero el juego no escribe nada. Es el mismo «toque mudo» de la observación 6 de la jornada 5, en un botón que el arreglo no cubrió (`PauseMenu`). El encargo lo pedía en la rama D, que no se pudo ver.
+2. **Baja (resuelta con el build `d3e601a2`, punto 11). «Boto Leap» en gris en la pausa no responde al toque:** ni latido, ni `missing_tap` ni aviso. Pasó en el 46, quinto fallo, con 0 semillas y sin tienda. El toque llega a la ventana, pero el juego no escribe nada. Es el mismo «toque mudo» de la observación 6 de la jornada 5, en un botón que el arreglo no cubrió (`PauseMenu`). El encargo lo pedía en la rama D, que no se pudo ver.
 3. **Baja (resuelta con el build `58be8444`, punto 9). Con otra app con el foco, Tintalú se queda en el petróleo liso.** Pasó con RCN TV visible a la vez (`topResumedActivity` en otra pantalla) al lanzar la app: Unity escribió `m_RunWithoutFocus: false` y se paró en `UnloadTime` más de 40 s, sin intro. Al cerrarla el dueño, siguió normal. Hay que mirarlo de nuevo con el arreglo de la pantalla del sistema, que toca justo el correr sin foco.
 4. **Baja. Las skins de la pestaña Cuias son círculos de color lisos, sin el dibujo de la cuia** (vidrio, Santarém, Encuentro, Totuma). Es lo mismo que la vasija del Cántaro (observación 7 de la jornada 5). Así, el jugador no ve qué está eligiendo.
 5. **Baja. Al 130 % en es-419, las pestañas «Semillas» y «Comodines» del Mercado casi se tocan** (`b08/mercado-130-es-419.png`).
@@ -334,7 +382,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 
    **Con el build `d3e601a2` (punto 10):** el tamaño, el centro y el fondo ya coinciden. Queda el cambio de forma (observación 12). El dueño: «sí está mejor».
 
-   Con ese mismo build cumplen también la 4, la 5, la 7, la 9 y la 10 (punto 10). La 2 queda sin comprobar.
+   Con ese mismo build cumplen también la 4, la 5, la 7, la 9 y la 10 (punto 10), y la 2 (punto 11).
 12. **Baja (el dueño: «sí está mejor»). En el relevo, el icono pasa de cuadrado redondeado a círculo.**
     - One UI recorta el icono adaptativo de la pantalla del sistema con su forma de cuadrado redondeado: 497 × 498 px en los ejes, en la caja de 504 px que mide el plugin. El primer fotograma de la intro dibuja el círculo de 504 px.
     - En la captura, el borde se mueve de 5 a 13 px en los ejes, y en las diagonales las esquinas desaparecen de un fotograma al siguiente. La compuerta pide «el diámetro ±2 px».
@@ -356,4 +404,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 - Para atascarse a propósito, el jugador elige en cada paso el vertido que deja menos vertidos posibles. El de movimientos al azar no se atascaba en el 35.
 - **`ci/size-gate.ps1` reinicia el demonio de `adb`**, y con eso el teléfono se cae de la lista. Se vuelve con `adb connect` al puerto de `adb mdns services` (hoy, 36507).
 - **`input keyevent 224` a veces no despierta la pantalla** si está en AOD (`mWakefulness=Dozing`). Mientras tanto el foco sigue en la app, así que `isKeyguardShowing=false` no quiere decir que el juego esté encima: hay que mirar `mWakefulness` y repetir.
+- **Para llegar al quinto fallo:** Pausa › Salir › Salir cuenta como fallo y es rápido. «Rendirse» en Aguas estancadas pide confirmar. Al relanzar con `af_level`, `fails_level` vuelve a 0; sin `af_level` (y con `af_canoes 5`), se conserva. Hay que usar un nivel no superado.
+- **`AF_LAYOUT` de un nivel solo sale al cargarlo**, no al reintentar ni al reanudar. El jugador automático que sigue en el mismo nivel tiene que reutilizar la disposición guardada.
+- **La Bitácora tapa el inicio en cada arranque** hasta que se sella la página del día; hay que cerrarla antes de tocar el inicio.
 - Para medir el icono se usan las capturas en bruto a resolución completa: el ancho en la fila 1170, el alto en la columna 540 y un punto a 45° que distingue el cuadrado redondeado del círculo.
