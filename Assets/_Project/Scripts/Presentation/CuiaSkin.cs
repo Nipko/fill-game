@@ -124,3 +124,65 @@ namespace AF.Presentation
         }
     }
 }
+
+namespace AF.Presentation
+{
+    /// <summary>
+    /// Dónde van las piezas de una skin en la cuia, en u (<see cref="CuiaGeometry"/>; 07 §4.6): el pie de 1,60 × 0,30 u, el borde de
+    /// 1,10 × 0,25 u en el labio, la banda de 1,90 × 0,12 u justo por encima de la cavidad (en el hombro, D-006: nunca cubre la
+    /// cavidad; bicolor, dos mitades) y el asa de 0,12 × 0,40 u en el hombro derecho, todas con esquinas de 0,06 u. Una sola fuente
+    /// para la cuia del tablero (<see cref="CuiaView"/>) y su miniatura del Mercado (<see cref="ProceduralArt.SkinThumb"/>), para que
+    /// la skin que elige el jugador sea la que verá en el tablero (observación 4 de la jornada 6). Cada pieza es un
+    /// <see cref="Rect"/> en u con <c>x</c> = su centro desde el eje de la cuia, <c>y</c> = su borde de abajo desde el pie, y su
+    /// ancho y alto.
+    /// </summary>
+    public static class CuiaSkinParts
+    {
+        /// <summary>Radio de las esquinas de las piezas (u).</summary>
+        public const float CornerU = 0.06f;
+
+        /// <summary>Ancho de la banda del hombro (u).</summary>
+        public const float BandWidthU = 1.90f;
+
+        /// <summary>Alto de la banda del hombro (u).</summary>
+        public const float BandHeightU = 0.12f;
+
+        /// <summary>El pie: centro en x (desde el eje), pie en y, ancho y alto (u).</summary>
+        public static Rect Foot()
+        {
+            return Piece(0f, 0f, 2f * CuiaGeometry.FootHalfWidthU, CuiaGeometry.FootTopU);
+        }
+
+        /// <summary>El borde, en el labio.</summary>
+        public static Rect Rim(int capacity)
+        {
+            return Piece(0f, CuiaGeometry.LipU(capacity), 2f * CuiaGeometry.RimHalfWidthU, CuiaGeometry.RimU);
+        }
+
+        /// <summary>
+        /// La banda del hombro: entera (<paramref name="half"/> = 0) o, bicolor, su mitad izquierda (−1) o derecha (+1).
+        /// </summary>
+        public static Rect Band(int capacity, int half)
+        {
+            float y = CuiaGeometry.CavityTopU(capacity) + 0.04f;
+            if (half == 0)
+            {
+                return Piece(0f, y, BandWidthU, BandHeightU);
+            }
+
+            return Piece(Math.Sign(half) * BandWidthU * 0.25f, y, BandWidthU * 0.5f, BandHeightU);
+        }
+
+        /// <summary>El asa decorativa, en el hombro derecho (Totuma).</summary>
+        public static Rect Handle(int capacity)
+        {
+            return Piece(0.97f, CuiaGeometry.CavityTopU(capacity) + 0.02f, 0.12f, 0.40f);
+        }
+
+        // x: centro desde el eje; y: abajo (el pivote de las piezas es (0,5; 0)).
+        private static Rect Piece(float centerX, float bottom, float width, float height)
+        {
+            return new Rect(centerX, bottom, width, height);
+        }
+    }
+}

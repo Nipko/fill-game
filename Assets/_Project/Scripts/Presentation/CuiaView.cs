@@ -1512,9 +1512,8 @@ namespace AF.Presentation
             return img;
         }
 
-        // Las piezas en u (CuiaGeometry): el pie de 1,60 × 0,30 u, el borde de 1,10 × 0,25 u en el labio, la banda de 0,12 u justo
-        // por encima de la cavidad (en el hombro, D-006: 4,60-5,00 u en la estándar; nunca cubre la cavidad) y el asa de 0,12 ×
-        // 0,40 u en el hombro derecho.
+        // Las piezas en u, de CuiaSkinParts (la misma fuente que la miniatura del Mercado, ProceduralArt.SkinThumb): el pie, el
+        // borde en el labio, la banda justo por encima de la cavidad (en el hombro, D-006; nunca cubre la cavidad) y el asa.
         private void LayoutSkin()
         {
             if (_skinLayer == null || _skin.IsBase)
@@ -1523,24 +1522,25 @@ namespace AF.Presentation
             }
 
             float u = _u;
-            float corner = ProceduralArt.RoundedRectRadiusPx / Mathf.Max(0.5f, 0.06f * u);
-            float top = CuiaGeometry.CavityTopU(Capacity);
-            PlaceSkin(_skinFoot, 0f, 0f, 2f * CuiaGeometry.FootHalfWidthU * u, CuiaGeometry.FootTopU * u, corner);
-            PlaceSkin(_skinRim, 0f, CuiaGeometry.LipU(Capacity) * u, 2f * CuiaGeometry.RimHalfWidthU * u, CuiaGeometry.RimU * u, corner);
-            float bandW = 1.90f * u;
-            float bandY = (top + 0.04f) * u;
-            float bandH = 0.12f * u;
+            float corner = ProceduralArt.RoundedRectRadiusPx / Mathf.Max(0.5f, CuiaSkinParts.CornerU * u);
+            PlaceSkin(_skinFoot, CuiaSkinParts.Foot(), u, corner);
+            PlaceSkin(_skinRim, CuiaSkinParts.Rim(Capacity), u, corner);
             if (_skin.BandBicolor)
             {
-                PlaceSkin(_skinBand, -bandW * 0.25f, bandY, bandW * 0.5f, bandH, corner);
-                PlaceSkin(_skinBandB, bandW * 0.25f, bandY, bandW * 0.5f, bandH, corner);
+                PlaceSkin(_skinBand, CuiaSkinParts.Band(Capacity, -1), u, corner);
+                PlaceSkin(_skinBandB, CuiaSkinParts.Band(Capacity, 1), u, corner);
             }
             else
             {
-                PlaceSkin(_skinBand, 0f, bandY, bandW, bandH, corner);
+                PlaceSkin(_skinBand, CuiaSkinParts.Band(Capacity, 0), u, corner);
             }
 
-            PlaceSkin(_skinHandle, 0.97f * u, (top + 0.02f) * u, 0.12f * u, 0.40f * u, corner);
+            PlaceSkin(_skinHandle, CuiaSkinParts.Handle(Capacity), u, corner);
+        }
+
+        private static void PlaceSkin(Image img, Rect pieceU, float u, float ppuMultiplier)
+        {
+            PlaceSkin(img, pieceU.x * u, pieceU.y * u, pieceU.width * u, pieceU.height * u, ppuMultiplier);
         }
 
         private static void PlaceSkin(Image img, float x, float y, float w, float h, float ppuMultiplier)

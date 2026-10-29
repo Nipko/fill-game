@@ -202,6 +202,9 @@ namespace AF.UI
             StopMarker pm = _markers[_prizeMarker];
             SkinRewards.TryForWorld(pm.Stop.World, out SkinMilestone milestone);
             CuiaSkin skin = CuiaSkin.For(milestone.SkinId);
+            // La píldora sigue con la mini cuia teñida (PreviewTint) y no con la ficha de la skin (ProceduralArt.SkinThumb) de la
+            // tarjeta de la parada y del Mercado: aquí la cuia mide 10 × 16 dp sobre la boya y la ficha, a ese alto, tendría ~7 dp de
+            // ancho y no se leería; la tarjeta que abre al tocar la parada enseña la skin entera (observación 4 de la jornada 6).
             _prizePillCuia!.color = skin.PreviewTint;
             if (prizeLeft != _prizeLeftShown || _prizePill!.parent != pm.Root)
             {

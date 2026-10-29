@@ -357,6 +357,7 @@ namespace AF.Tests.PlayMode
             OfferCard card = boot.OfferCardView!;
             Assert.That(card.Visible, Is.True, "05 §5: «1 tarjeta al llenarse», en el HUD de victoria");
             Assert.That(card.Sku, Is.EqualTo("af_piggy"));
+            Assert.That(card.Icon.sprite, Is.SameAs(boot.Art!.DockJar), "observación 7 de la jornada 5: la tinaja, no un círculo marrón");
             Assert.That(boot.LastOfferShown, Is.EqualTo(OfferKind.PiggyFull));
             Assert.That(sink.Last("af_piggy")!.Find("state")!.Value.Text, Is.EqualTo("shown_full"));
             Assert.That(card.BuyButton.GetComponent<ReliefButton>().Interactable, Is.True);
@@ -382,6 +383,8 @@ namespace AF.Tests.PlayMode
             boot.TickMarket(16f);
             Assert.That(card.Visible, Is.True);
             Assert.That(card.Sku, Is.EqualTo("af_skin_m03"));
+            Assert.That(ProceduralArt.IsSkinThumb(card.Icon.sprite, "af_skin_m03"), Is.True, "observación 4 de la jornada 6: la cuia con la skin, no un círculo");
+            Assert.That(card.Icon.rectTransform.rect.height, Is.EqualTo(OfferCard.TallIconDp), "la ficha de la skin, alta: no a 56 dp");
 
             card.BuyButton.onClick.Invoke();
             Assert.That(boot.Profile!.Entitlements.Skins, Does.Contain("af_skin_m03"));

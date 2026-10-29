@@ -40,6 +40,15 @@ namespace AF.UI
         /// <summary>Alto mínimo de una fila (dp): el del botón (48 dp de área táctil, 07 §7.8) más un margen.</summary>
         public const float MinRowDp = 56f;
 
+        /// <summary>
+        /// Alto de una fila de la pestaña Cuias (dp) [P]: la ficha de la skin mide el alto de la fila menos 4, y a 64 dp la cuia casi
+        /// no se distinguía (revisión de la observación 4 de la jornada 6). Se encoge hasta <see cref="MinRowDp"/> como las demás.
+        /// </summary>
+        public const float SkinRowDp = 84f;
+
+        /// <summary>Ancho de la caja de la ficha de una skin en su fila (dp); el alto es el de la fila menos 4 [P].</summary>
+        public const float SkinTileDp = 44f;
+
         /// <summary>Ancho del botón de precio de cada fila (dp) [P].</summary>
         public const float BuyWidthDp = 108f;
 
@@ -220,6 +229,9 @@ namespace AF.UI
 
         /// <summary>El botón de la fila <paramref name="index"/> se ve.</summary>
         public bool RowButtonShown(int index) => _rows[index].Cta.Button.gameObject.activeSelf;
+
+        /// <summary>El icono de la fila <paramref name="index"/> (tests: la cuia de la skin, no un círculo liso).</summary>
+        public Image RowIcon(int index) => _rows[index].Icon;
 
         /// <summary>Se compró o se eligió algo: el arranque refresca el inicio (saldo, Cántaro) y las cuias (skin).</summary>
         public event Action<PurchaseResult>? Purchased;
@@ -461,13 +473,12 @@ namespace AF.UI
             string? purchaseNote = MarketText.PurchaseNote(noteKind);
             view.Note.text = purchaseNote ?? (!skin && row.Id == StoreCatalog.Starter && row.Number > 0 ? MarketText.StarterLeft(row.Number) : string.Empty);
             view.Note.color = noteKind == PurchaseNoteKind.Failed ? (Color)Palette.UiRedWarning : (Color)Palette.FamilyWood.Base;
-            Sprite? icon = IconOf(row.Id, skin);
-            view.Icon.sprite = icon;
-            view.Icon.color = skin ? CuiaSkin.For(row.Id).Rim : Color.white;
-            if (skin && string.Equals(row.Id, SkinRewards.BaseSkinId, StringComparison.Ordinal))
-            {
-                view.Icon.color = Palette.CapWood; // la base no tiene borde propio: madera clara [P]
-            }
+            // Observación 4 de la jornada 6: cada skin con su cuia (la del tablero en pequeño, ProceduralArt.SkinThumb), no un círculo
+            // de su color; el Cántaro con su tinaja (la del inicio). La miniatura lleva sus colores: sin tinte.
+            view.Icon.sprite = IconOf(row.Id, skin);
+            view.Icon.color = Color.white;
+            view.TallIcon = skin;
+            view.SkinName = skin ? view.Name.text : null; // TalkBack: «Cuia de Santarém, Poner» y no solo «Poner»
 
             bool hasButton = row.Action != MarketAction.None;
             view.Cta.Button.gameObject.SetActive(hasButton);
@@ -528,11 +539,12 @@ namespace AF.UI
         {
             if (skin)
             {
-                return _art.Disc;
+                return _art.SkinThumb(CuiaSkin.For(id));
             }
 
             switch (id)
             {
+                case StoreCatalog.Piggy: return _art.DockJar;
                 case StoreCatalog.Starter: return _art.IconCuiaPlus;
                 case StoreCatalog.InfiniteCanoes1h: return _art.IconInfinite;
                 case StoreCatalog.NoAds: return _art.IconVideo;
@@ -584,7 +596,8 @@ namespace AF.UI
 
             y += tabH + 8f;
             int count = Math.Min(_model.Count, MaxRows);
-            float rowH = RowDp;
+            float maxRowH = Tab == MarketTab.Cuias ? SkinRowDp : RowDp; // las skins, más altas: su ficha es lo que se elige
+            float rowH = maxRowH;
             if (count > 0)
             {
                 // Cada fila, al alto que pidan sus textos y su botón (D-033, punto 11: al 130 % el contenido va en las líneas que
@@ -595,7 +608,7 @@ namespace AF.UI
                     _rowHeights[i] = _rows[i].Needed(inner);
                 }
 
-                rowH = Mathf.Clamp(Mathf.Floor(room / count), MinRowDp, RowDp);
+                rowH = Mathf.Clamp(Mathf.Floor(room / count), MinRowDp, maxRowH);
 
                 // Si no caben a su alto de siempre, las que no lo necesitan bajan hasta su mínimo (nunca por debajo de lo que piden).
                 while (rowH > MinRowDp && RowsHeight(count, rowH) > room)
@@ -834,12 +847,19 @@ namespace AF.UI
                 UiBuilder.AutoSize(Note, UiBuilder.MinTextSp, 12f);
                 Cta = ModalKit.Cta("BuyButton", Root, art.CtaLeaf, TextStyle.CtaLeaf, string.Empty, 17f, onPress, out TextMeshProUGUI label);
                 CtaLabel = label;
+                A11yLabels.Set(Cta.Button, () => SkinName == null ? CtaLabel.text : A11yText.Append(SkinName, CtaLabel.text));
                 Root.gameObject.SetActive(false);
             }
 
             public RectTransform Root { get; }
 
             public Image Icon { get; }
+
+            /// <summary>El icono es una cuia (pestaña Cuias): ocupa el alto de la fila en vez de 36 × 36 dp.</summary>
+            public bool TallIcon { get; set; }
+
+            /// <summary>Nombre de la skin de la fila (pestaña Cuias), que el lector dice con el botón; null en las demás.</summary>
+            public string? SkinName { get; set; }
 
             public TextMeshProUGUI Name { get; }
 
@@ -868,21 +888,35 @@ namespace AF.UI
             public void Place(float x, float y, float w, float h)
             {
                 UiBuilder.Place(Root, x, y, w, h);
-                UiBuilder.Place(Icon.rectTransform, 0f, (h - 36f) * 0.5f, 36f, 36f);
-                float textX = 44f;
+                float iconW = IconWidth;
+                float iconH = TallIcon ? Mathf.Max(36f, h - 4f) : 36f;
+                UiBuilder.Place(Icon.rectTransform, 0f, (h - iconH) * 0.5f, iconW, iconH);
+                float textX = iconW + 8f;
                 float textW = TextWidth(w);
                 float nameH = NameHeight(textW);
                 float detailH = DetailHeight(textW);
                 float noteH = NoteHeight(textW);
-                float top = 2f + nameH;
-                UiBuilder.Place(Name.rectTransform, textX, 2f, textW, nameH);
-                UiBuilder.Place(Detail.rectTransform, textX, top, textW, noteH > 0f ? detailH : Mathf.Max(detailH, h - top - 4f));
+                float nameY = 2f;
+                if (TallIcon)
+                {
+                    // La skin: el nombre (y su «Premio del mundo · faltan N») centrado con su ficha, no pegado arriba (revisión
+                    // de la observación 4 de la jornada 6).
+                    float block = nameH + (Detail.text.Length > 0 ? detailH : 0f) + noteH;
+                    nameY = Mathf.Max(2f, Mathf.Floor((h - block) * 0.5f));
+                }
+
+                float top = nameY + nameH;
+                UiBuilder.Place(Name.rectTransform, textX, nameY, textW, nameH);
+                UiBuilder.Place(Detail.rectTransform, textX, top, textW, noteH > 0f || TallIcon ? detailH : Mathf.Max(detailH, h - top - 4f));
                 UiBuilder.Place(Note.rectTransform, textX, top + detailH, textW, Mathf.Max(Mathf.Max(14f, noteH), h - top - detailH - 2f));
                 float ctaH = ModalKit.HeightOf(Cta);
                 ModalKit.Place(Cta, w - BuyWidthDp, Mathf.Max(0f, (h - ctaH) * 0.5f), BuyWidthDp);
             }
 
-            private static float TextWidth(float w) => w - 44f - BuyWidthDp - 8f;
+            // La ficha de la skin es más ancha que un icono (SkinTileDp); los demás, 36 dp.
+            private float IconWidth => TallIcon ? SkinTileDp : 36f;
+
+            private float TextWidth(float w) => w - IconWidth - 8f - BuyWidthDp - 8f;
 
             // Los altos de siempre (20, 18 y 14 dp) o, si el texto no cabe ni a su mínimo, lo que pida.
             private float NameHeight(float textW) => Mathf.Max(20f, Mathf.Ceil(UiBuilder.MinTextHeight(Name, textW)));

@@ -36,10 +36,13 @@ namespace AF.UI
         /// <summary>Cantidad junto al icono de la Canasta (sp).</summary>
         public const float BasketCountSp = 15f;
 
-        /// <summary>Lado de la mini cuia del Premio del mundo (dp de ancho; el alto, el de su proporción).</summary>
+        /// <summary>Ancho de la caja de la cuia del Premio del mundo (dp; el alto, el de la mini cuia del Mapa).</summary>
         public const float PrizeCuiaDp = 20f;
 
         private const int MaxBasketItems = 6;
+
+        /// <summary>La cuia del Premio del mundo (tests: la miniatura de la skin).</summary>
+        public Image PrizeCuiaImage => _prizeCuia;
 
         private readonly List<Image> _basketIcons = new List<Image>();
         private readonly List<TextMeshProUGUI> _basketCounts = new List<TextMeshProUGUI>();
@@ -144,7 +147,7 @@ namespace AF.UI
         }
 
         // Pinta las filas (desde ApplyContent): la Canasta con sus cosas en el orden de la Cosecha (semillas y comodines en el orden
-        // de BoosterKind) y el premio con la mini cuia teñida por la skin.
+        // de BoosterKind) y el premio con la cuia de su skin.
         private void ApplyMeta()
         {
             bool future = _mode == StopCardMode.Future;
@@ -183,7 +186,15 @@ namespace AF.UI
             _prizeCuia.gameObject.SetActive(prize);
             if (prize && _prizeSkin != null)
             {
-                _prizeCuia.color = _prizeSkin.PreviewTint;
+                // Observación 4 de la jornada 6: el premio es la cuia con su skin, la misma miniatura que el Mercado
+                // (ProceduralArt.SkinThumb), no la mini cuia teñida; lleva sus colores (sin tinte).
+                _prizeCuia.sprite = _art.SkinThumb(_prizeSkin);
+                _prizeCuia.color = Color.white;
+            }
+            else if (prize)
+            {
+                _prizeCuia.sprite = _art.MapMiniCuia; // un premio sin skin conocida: la mini cuia de vidrio de siempre
+                _prizeCuia.color = Color.white;
             }
         }
 
