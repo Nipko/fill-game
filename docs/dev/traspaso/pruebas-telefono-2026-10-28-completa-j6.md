@@ -15,6 +15,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | N6.2 Los arreglos de UI | cumple en lo probado; el Boto de la pausa, mudo | 2, 3 |
 | 8. Economía, Mercado y Cántaro | cumple | 4, 5 |
 | 12.1 Reto del río | cumple en lo probado | — |
+| 18. Robustez (lo hecho) | cumple | — |
 | 19. Rendimiento (memoria y Morpho) | el Morpho cumple; la memoria pasa del presupuesto | 6 |
 
 ## Verificación (bloque 0)
@@ -159,6 +160,13 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - 29 niveles medidos, del 100 al 700, todos con `outcome` found;
      - **máximo de 7,96 ms** (en frío, 7,97 ms) frente a un presupuesto de 150, con 3.561 nodos como máximo y `cut_runs` 0.
    - **Sin hacer todavía:** la sesión larga de 60 min (en la campaña 1-700 de la jornada 5 ya se midió el PSS cada 25 niveles), el arranque en frío y en caliente (espera al arreglo de la pantalla del sistema) y el tamaño en Almacenamiento.
+
+6. **Bloque 18 (lo hecho): cumple.**
+   - **18.1. Segundo plano** a medias del Reto, tras 3 vertidos: vuelve con el mismo tablero (bloque 12.1).
+   - **18.2. Matar la app** (`am force-stop`) en el 50 y reabrir:
+     - **a medias, tras 3 vertidos:** `profile_integrity` valid, vuelve al nivel 50 con `pours` 3 y el mismo tablero;
+     - **en el vertido ganador**, matada 0,25 s después del último toque, antes de que salga la victoria: vuelve al inicio con `profile_integrity` valid, el nivel ganado y **el premio cobrado una sola vez** (0 → 20 semillas).
+   - **Sin hacer todavía:** matarla en Nivel fallido, en Sin canoas, con un anuncio y con la hoja de compra. Las interrupciones del sistema, el modo avión y la batería baja los hace el dueño.
 
 ## Observaciones
 
