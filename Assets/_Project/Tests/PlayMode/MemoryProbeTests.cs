@@ -106,6 +106,8 @@ namespace AF.Tests.PlayMode
                     + "\"unity_args\":\"-force-gles -memorysetup-main-allocator-block-size=4194304\""));
             Assert.That(DevProbe.FormatGraphicsInfo("OpenGLES3", "x", "y", "MultiThreaded", 720, 1600, -1, -1, 0, null), Does.Not.Contain("unity_args"));
             Assert.That(DevProbe.FormatGraphicsInfo("OpenGLES3", "x", "y", "MultiThreaded", 720, 1600, -1, -1, 0, ""), Does.EndWith("\"msaa\":0"));
+            Assert.That(DevProbe.FormatGraphicsInfo("OpenGLES3", "a\nb\r\tc\u0001", "y", "MultiThreaded", 720, 1600, -1, -1, 0, null),
+                Does.Contain(",\"gfx_device\":\"a\\nb\\r\\tc\\u0001\","), "los caracteres de control, escapados");
             Assert.That(DevProbe.GraphicsInfoJson(), Does.StartWith(",\"gfx_api\":\"").And.Contain("\"screen_px\":["));
         }
 

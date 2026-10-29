@@ -309,7 +309,7 @@ namespace AF.EditorTools
 
         // Quita (o deja) los datos de posproceso de los renderers del proyecto (método versionado: nunca se edita el YAML a mano).
         // Solo quitar: si alguna vez hiciera falta volver a ponerlos, se asignan en el Editor (Renderer2D › Post-processing › Data).
-        static void ApplyRendererPostProcessData(bool keep)
+        static void ApplyRendererPostProcessData(bool hasPostProcessData)
         {
             List<ScriptableObject> renderers = RendererDatas();
             if (renderers.Count == 0)
@@ -326,14 +326,14 @@ namespace AF.EditorTools
                     throw new InvalidOperationException(LogPrefix + renderer.name + " no tiene " + PostProcessDataProperty + " (¿no es el 2D Renderer?).");
                 }
 
-                if (!keep && data.objectReferenceValue != null)
+                if (!hasPostProcessData && data.objectReferenceValue != null)
                 {
                     Debug.Log(LogPrefix + renderer.name + ": postProcessData " + data.objectReferenceValue.name + " -> null");
                     data.objectReferenceValue = null;
                     so.ApplyModifiedPropertiesWithoutUndo();
                     EditorUtility.SetDirty(renderer);
                 }
-                else if (keep && data.objectReferenceValue == null)
+                else if (hasPostProcessData && data.objectReferenceValue == null)
                 {
                     throw new InvalidOperationException(LogPrefix + renderer.name + ": sin datos de posproceso; asígnalos en el Editor.");
                 }

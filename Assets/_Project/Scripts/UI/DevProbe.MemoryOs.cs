@@ -135,25 +135,63 @@ namespace AF.UI
         internal static string FormatOsMem(in OsMemSummary s)
         {
             var sb = new StringBuilder(220);
-            AppendMib(sb, "os_pss_mib", Kib(s.TotalPssKb));
-            AppendMib(sb, "os_java_mib", Kib(s.JavaHeapKb));
-            AppendMib(sb, "os_native_mib", Kib(s.NativeHeapKb));
-            AppendMib(sb, "os_code_mib", Kib(s.CodeKb));
-            AppendMib(sb, "os_graphics_mib", Kib(s.GraphicsKb));
-            AppendMib(sb, "os_private_other_mib", Kib(s.PrivateOtherKb));
-            AppendMib(sb, "os_system_mib", Kib(s.SystemKb));
+            AppendMib(sb, "os_pss_mib", BytesFromKb(s.TotalPssKb));
+            AppendMib(sb, "os_java_mib", BytesFromKb(s.JavaHeapKb));
+            AppendMib(sb, "os_native_mib", BytesFromKb(s.NativeHeapKb));
+            AppendMib(sb, "os_code_mib", BytesFromKb(s.CodeKb));
+            AppendMib(sb, "os_graphics_mib", BytesFromKb(s.GraphicsKb));
+            AppendMib(sb, "os_private_other_mib", BytesFromKb(s.PrivateOtherKb));
+            AppendMib(sb, "os_system_mib", BytesFromKb(s.SystemKb));
             sb.Append(",\"os_read_ms\":").Append(s.ReadMs.ToString(CultureInfo.InvariantCulture));
             return sb.ToString();
         }
 
-        private static long Kib(long kb)
+        private static long BytesFromKb(long kb)
         {
             return kb < 0 ? -1 : kb * 1024;
         }
 
+        // Cadena JSON: escapa la barra, las comillas y los caracteres de control (\n, \r, \t y el resto por debajo de 0x20 como \uXXXX),
+        // que pueden venir en el nombre del driver o en los argumentos del reproductor.
         private static void AppendString(StringBuilder sb, string name, string value)
         {
-            sb.Append(",\"").Append(name).Append("\":\"").Append((value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"")).Append('"');
+            sb.Append(",\"").Append(name).Append("\":\"");
+            string text = value ?? string.Empty;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                switch (c)
+                {
+                    case '\\':
+                        sb.Append("\\\\");
+                        break;
+                    case '"':
+                        sb.Append("\\\"");
+                        break;
+                    case '\n':
+                        sb.Append("\\n");
+                        break;
+                    case '\r':
+                        sb.Append("\\r");
+                        break;
+                    case '\t':
+                        sb.Append("\\t");
+                        break;
+                    default:
+                        if (c < (char)0x20)
+                        {
+                            sb.Append("\\u").Append(((int)c).ToString("x4", CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            sb.Append(c);
+                        }
+
+                        break;
+                }
+            }
+
+            sb.Append('"');
         }
 
         /// <summary>Olvida si el extra <c>af_mem_os</c> ya se leyó (tests).</summary>

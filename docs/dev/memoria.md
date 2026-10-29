@@ -1,6 +1,6 @@
 # Memoria del juego: inventario, ajustes y presupuesto (2026-10-29)
 
-Ramas `tanda6/fx-j6-memoria` (§1-§6 y §8) y `tanda6/fx-j6b-memoria` (§7, la observación 14 de la jornada 6). La primera, `tanda6/fx-j6-memoria` (sobre `58be8444`). Origen: observación 6 de la jornada 6 de la prueba completa (`docs/dev/traspaso/pruebas-telefono-2026-10-28-completa-j6.md`, bloque 19.0). Sigue al informe del 2026-10-26 (`docs/dev/memoria-2026-10-26.md`: el HDR fuera, los lienzos del arte por código reutilizados, el pool del Reto al abrirlo, las fuentes sin copia en CPU y la sonda `AF_PERF mem`), que no se repite aquí.
+Dos ramas: `tanda6/fx-j6-memoria` (sobre `58be8444`; §1-§6 y §8), por la observación 6 de la jornada 6 de la prueba completa (`docs/dev/traspaso/pruebas-telefono-2026-10-28-completa-j6.md`, bloque 19.0), y `tanda6/fx-j6b-memoria` (§7), por la observación 14 de la misma jornada. Siguen al informe del 2026-10-26 (`docs/dev/memoria-2026-10-26.md`: el HDR fuera, los lienzos del arte por código reutilizados, el pool del Reto al abrirlo, las fuentes sin copia en CPU y la sonda `AF_PERF mem`), que no se repite aquí.
 
 ## 1. El problema, con las cifras del teléfono
 
@@ -144,7 +144,7 @@ Tras esta rama, el S938B seguiría en unos **650 MB de RSS y 540 MB de PSS**. La
 - **Quitar profundidad y estencil** (§3): hasta −10 MB a esta resolución, revisando cada pantalla.
 - **Bajar el pico del heap del arranque:** crear arte por código más tarde (al abrir cada pantalla) en lugar de en el bloque `services`; toca el arranque con la intro (D-051) y su fluidez.
 
-**En un teléfono de clase A** (720 × 1600 a 2 px/dp, 3-4 GB), con este mismo build, lo que depende de la pantalla baja (**corregido en §7.3: las texturas del arte por código no dependen de la pantalla, así que no bajan a ~28 MB sino que se quedan en ~40-50 MB, y la estimación sube a ~490-510 MB de PSS**): las texturas del arte por código a ~28 MB, el `EGL mtrack` a ~18 MB y el búfer de `Always` ya no está. Estimado: **unos 580-600 MB de RSS y 470-490 MB de PSS**. El código y el `Unknown` no dependen de la pantalla.
+**En un teléfono de clase A** (720 × 1600 a 2 px/dp, 3-4 GB), con este mismo build: el `EGL mtrack` baja a ~18 MB con la pantalla, pero las texturas del arte por código se quedan en ~40-50 MB, porque se pintan a una densidad fija y no a la del teléfono (§7.3). El código y el `Unknown` tampoco dependen de la pantalla. Estimado: **unos 600-620 MB de RSS y 490-510 MB de PSS**.
 
 ### Pregunta para el dueño
 
