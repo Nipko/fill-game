@@ -105,6 +105,23 @@ namespace AF.EditorTools
         /// </summary>
         public const AndroidBlitType BlitType = AndroidBlitType.Auto;
 
+        /// <summary>
+        /// El 2D Renderer sin <c>PostProcessData</c> (memoria, 2026-10-29; observación 14 de la jornada 6; <c>docs/dev/memoria.md</c> §7).
+        /// La cámara del juego no pinta posproceso (sin <c>UniversalAdditionalCameraData</c> serializado: <c>renderPostProcessing</c>
+        /// a false) y el Bloom del 2D Renderer está prohibido (UUM-150232), pero el asset de datos de posproceso seguía referenciado
+        /// por el renderer, así que el reproductor cargaba al arrancar sus 10 texturas de grano (FilmGrain), las de SMAA y los shaders
+        /// <c>UberPost</c>, <c>Bloom</c>, <c>FinalPost</c> y compañía (≈ 3-4 MB entre texturas y shaders, también en el APK). URP 2D
+        /// comprueba el null (<c>Renderer2DRendergraph</c>: sin datos no crea los pases de posproceso ni la LUT), así que la imagen no
+        /// cambia. Se quita de cada <c>Renderer2DData</c> de los assets de pipeline del proyecto con su propiedad serializada.
+        /// </summary>
+        public const bool RendererPostProcessData = false;
+
+        /// <summary>Propiedad serializada de los datos de posproceso del 2D Renderer (<c>Renderer2DData.postProcessData</c>).</summary>
+        internal const string PostProcessDataProperty = "m_PostProcessData";
+
+        /// <summary>Lista de renderers del asset de URP (<c>UniversalRenderPipelineAsset.m_RendererDataList</c>).</summary>
+        internal const string RendererListProperty = "m_RendererDataList";
+
         const string LogPrefix = "[AF.ProjectSetup] ";
 
         [MenuItem("Amazon Fill/CI/Aplicar ajustes Android (dev)")]
@@ -151,6 +168,7 @@ namespace AF.EditorTools
 
             ApplyPipelineHdr(PipelineHdr);
             PlayerSettings.Android.blitType = BlitType; // memoria (2026-10-29): sin búfer intermedio de pantalla completa
+            ApplyRendererPostProcessData(RendererPostProcessData); // memoria (2026-10-29, obs. 14 de la j6): sin los recursos de posproceso
             FontSetup.SetAtlasReadability(false); // memoria (2026-10-26): los atlas de las fuentes, sin copia en CPU
 
             // Sin firma de release: Unity firma con la clave de depuración. El keystore lo gestiona el dueño.
@@ -208,6 +226,16 @@ namespace AF.EditorTools
                 }
             }
 
+            foreach (ScriptableObject renderer in RendererDatas())
+            {
+                bool? hasPostProcess = RendererHasPostProcessData(renderer);
+                if (hasPostProcess != RendererPostProcessData)
+                {
+                    problems.Add("renderer.postProcessData(" + renderer.name + ")=" + (hasPostProcess.HasValue ? hasPostProcess.Value.ToString() : "?")
+                        + " (esperado " + RendererPostProcessData + ")");
+                }
+            }
+
             List<string> readableAtlases = FontSetup.ReadableAtlases();
             if (readableAtlases.Count > 0)
             {
@@ -238,7 +266,90 @@ namespace AF.EditorTools
                 + ", pantallaUnity=" + PlayerSettings.SplashScreen.show
                 + ", logoUnity=" + PlayerSettings.SplashScreen.showUnityLogo
                 + ", hdr=" + DescribeHdr()
-                + ", blit=" + PlayerSettings.Android.blitType;
+                + ", blit=" + PlayerSettings.Android.blitType
+                + ", posproceso=" + DescribeRendererPostProcess();
+        }
+
+        /// <summary>
+        /// Los assets de datos de los renderers (<see cref="RendererListProperty"/>) de todos los assets de pipeline del proyecto, sin
+        /// repetir (hoy, solo <c>Assets/Settings/Renderer2D.asset</c>).
+        /// </summary>
+        internal static List<ScriptableObject> RendererDatas()
+        {
+            var renderers = new List<ScriptableObject>();
+            foreach (RenderPipelineAsset asset in PipelineAssets())
+            {
+                SerializedProperty? list = new SerializedObject(asset).FindProperty(RendererListProperty);
+                if (list == null || !list.isArray)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < list.arraySize; i++)
+                {
+                    if (list.GetArrayElementAtIndex(i).objectReferenceValue is ScriptableObject renderer && !renderers.Contains(renderer))
+                    {
+                        renderers.Add(renderer);
+                    }
+                }
+            }
+
+            return renderers;
+        }
+
+        /// <summary>
+        /// Si el renderer tiene datos de posproceso (<see cref="PostProcessDataProperty"/>), o null si no es un 2D Renderer (o un
+        /// renderer sin esa propiedad).
+        /// </summary>
+        internal static bool? RendererHasPostProcessData(ScriptableObject renderer)
+        {
+            SerializedProperty? data = new SerializedObject(renderer).FindProperty(PostProcessDataProperty);
+            return data != null && data.propertyType == SerializedPropertyType.ObjectReference ? data.objectReferenceValue != null : (bool?)null;
+        }
+
+        // Quita (o deja) los datos de posproceso de los renderers del proyecto (método versionado: nunca se edita el YAML a mano).
+        // Solo quitar: si alguna vez hiciera falta volver a ponerlos, se asignan en el Editor (Renderer2D › Post-processing › Data).
+        static void ApplyRendererPostProcessData(bool hasPostProcessData)
+        {
+            List<ScriptableObject> renderers = RendererDatas();
+            if (renderers.Count == 0)
+            {
+                throw new InvalidOperationException(LogPrefix + "los assets de pipeline no tienen renderers (" + RendererListProperty + ").");
+            }
+
+            foreach (ScriptableObject renderer in renderers)
+            {
+                var so = new SerializedObject(renderer);
+                SerializedProperty? data = so.FindProperty(PostProcessDataProperty);
+                if (data == null || data.propertyType != SerializedPropertyType.ObjectReference)
+                {
+                    throw new InvalidOperationException(LogPrefix + renderer.name + " no tiene " + PostProcessDataProperty + " (¿no es el 2D Renderer?).");
+                }
+
+                if (!hasPostProcessData && data.objectReferenceValue != null)
+                {
+                    Debug.Log(LogPrefix + renderer.name + ": postProcessData " + data.objectReferenceValue.name + " -> null");
+                    data.objectReferenceValue = null;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    EditorUtility.SetDirty(renderer);
+                }
+                else if (hasPostProcessData && data.objectReferenceValue == null)
+                {
+                    throw new InvalidOperationException(LogPrefix + renderer.name + ": sin datos de posproceso; asígnalos en el Editor.");
+                }
+            }
+        }
+
+        static string DescribeRendererPostProcess()
+        {
+            var parts = new List<string>();
+            foreach (ScriptableObject renderer in RendererDatas())
+            {
+                bool? has = RendererHasPostProcessData(renderer);
+                parts.Add(renderer.name + ":" + (has.HasValue ? has.Value.ToString() : "?"));
+            }
+
+            return string.Join("/", parts);
         }
 
         /// <summary>

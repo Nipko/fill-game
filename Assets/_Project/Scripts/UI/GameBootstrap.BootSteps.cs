@@ -233,7 +233,8 @@ namespace AF.UI
             }
 
             Debug.Log(FormatBootSteps(boot));
-            DevProbe.Mem("boot", 0, DevProbe.FormatBootStepHeaps(_bootStepHeap, _bootStepUsed) + DevProbe.FormatCanvasStats());
+            DevProbe.Mem("boot", 0, DevProbe.FormatBootStepHeaps(_bootStepHeap, _bootStepUsed) + DevProbe.FormatCanvasStats()
+                + DevProbe.GraphicsInfoJson()); // con qué se pinta (obs. 14 de la j6)
         }
 
         /// <summary>La línea <c>AF_PERF boot_steps</c> del último arranque con pantalla (tests).</summary>

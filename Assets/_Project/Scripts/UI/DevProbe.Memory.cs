@@ -118,6 +118,11 @@ namespace AF.UI
             MemSample now = SampleMemory();
             s_memPeak = MemSample.Max(s_memPeak, now);
             string detail = FormatMemDetail(SampleMemDetail());
+            if (OsMemEnabled)
+            {
+                detail += FormatOsMem(SampleOsMemory()); // --ei af_mem_os 1: el resumen de dumpsys meminfo del mismo momento
+            }
+
             string extra = string.IsNullOrEmpty(extraJson) ? detail : detail + "," + extraJson;
             string line = FormatMem(at, (long)(Time.realtimeSinceStartupAsDouble * 1000.0), level, now, s_memPeak, extra);
             LastMemLine = line;

@@ -1,6 +1,6 @@
 # Memoria del juego: inventario, ajustes y presupuesto (2026-10-29)
 
-Rama `tanda6/fx-j6-memoria` (sobre `58be8444`). Origen: observación 6 de la jornada 6 de la prueba completa (`docs/dev/traspaso/pruebas-telefono-2026-10-28-completa-j6.md`, bloque 19.0). Sigue al informe del 2026-10-26 (`docs/dev/memoria-2026-10-26.md`: el HDR fuera, los lienzos del arte por código reutilizados, el pool del Reto al abrirlo, las fuentes sin copia en CPU y la sonda `AF_PERF mem`), que no se repite aquí.
+Dos ramas: `tanda6/fx-j6-memoria` (sobre `58be8444`; §1-§6 y §8), por la observación 6 de la jornada 6 de la prueba completa (`docs/dev/traspaso/pruebas-telefono-2026-10-28-completa-j6.md`, bloque 19.0), y `tanda6/fx-j6b-memoria` (§7), por la observación 14 de la misma jornada. Siguen al informe del 2026-10-26 (`docs/dev/memoria-2026-10-26.md`: el HDR fuera, los lienzos del arte por código reutilizados, el pool del Reto al abrirlo, las fuentes sin copia en CPU y la sonda `AF_PERF mem`), que no se repite aquí.
 
 ## 1. El problema, con las cifras del teléfono
 
@@ -77,7 +77,7 @@ Está bien como está: pasar los efectos a Compressed In Memory ahorraría unos 
 
 | Ajuste | Estado | Efecto en memoria | Decisión |
 |---|---|---|---|
-| **Android Blit Type** | `Always` → **`Auto`** | Con `Always`, Unity pinta cada fotograma en un búfer de color y profundidad del tamaño de la pantalla y lo copia a la superficie: 1080 × 2340 × (4 + 4) B ≈ 19 MiB de `GL mtrack`. Con `Auto`, solo cuando hace falta (escala de resolución, que el juego no usa) | **Aplicado** con `ProjectSetup` (`BlitType`), exigido por `Validate` (BuildSmoke, BuildDev y BuildRelease paran con 2 si vuelve). El fotograma es el mismo; lo comprueba el portátil (guion, encargo de la jornada 6) |
+| **Android Blit Type** | `Always` → **`Auto`** (en el teléfono no bajó nada: §7.2) | Con `Always`, Unity pinta cada fotograma en un búfer de color y profundidad del tamaño de la pantalla y lo copia a la superficie: 1080 × 2340 × (4 + 4) B ≈ 19 MiB de `GL mtrack`. Con `Auto`, solo cuando hace falta (escala de resolución, que el juego no usa) | **Aplicado** con `ProjectSetup` (`BlitType`), exigido por `Validate` (BuildSmoke, BuildDev y BuildRelease paran con 2 si vuelve). El fotograma es el mismo; lo comprueba el portátil (guion, encargo de la jornada 6) |
 | HDR de URP | apagado (2026-10-26) | Sin búfer intermedio | Ya hecho |
 | MSAA de URP | 1× (apagado) | Ninguno | Ya estaba. El 2D con sprites antialiasados no lo necesita; un test lo vigila |
 | Escala de render | 1,0 | Otra escala pediría un búfer intermedio y cambiaría el aspecto | Sin cambios |
@@ -109,6 +109,8 @@ El portátil los mira en el teléfono (guion, encargo de la jornada 6). Si algun
 | Unknown | 212,9 MB | igual | §6 |
 | TOTAL PSS | 554 MB | ≈ 535-545 MB | |
 | TOTAL RSS | 666 MB | ≈ 647-656 MB | |
+
+**Medido después (jornada 6, observación 14): no se cumplió.** `GL mtrack` siguió en 88,8-99,6 MB. Por qué, en §7.2.
 
 ## 5. La sonda
 
@@ -142,7 +144,7 @@ Tras esta rama, el S938B seguiría en unos **650 MB de RSS y 540 MB de PSS**. La
 - **Quitar profundidad y estencil** (§3): hasta −10 MB a esta resolución, revisando cada pantalla.
 - **Bajar el pico del heap del arranque:** crear arte por código más tarde (al abrir cada pantalla) en lugar de en el bloque `services`; toca el arranque con la intro (D-051) y su fluidez.
 
-**En un teléfono de clase A** (720 × 1600 a 2 px/dp, 3-4 GB), con este mismo build, lo que depende de la pantalla baja: las texturas del arte por código a ~28 MB, el `EGL mtrack` a ~18 MB y el búfer de `Always` ya no está. Estimado: **unos 580-600 MB de RSS y 470-490 MB de PSS**. El código y el `Unknown` no dependen de la pantalla.
+**En un teléfono de clase A** (720 × 1600 a 2 px/dp, 3-4 GB), con este mismo build: el `EGL mtrack` baja a ~18 MB con la pantalla, pero las texturas del arte por código se quedan en ~40-50 MB, porque se pintan a una densidad fija y no a la del teléfono (§7.3). El código y el `Unknown` tampoco dependen de la pantalla. Estimado: **unos 600-620 MB de RSS y 490-510 MB de PSS**.
 
 ### Pregunta para el dueño
 
@@ -156,7 +158,99 @@ Tras esta rama, el S938B seguiría en unos **650 MB de RSS y 540 MB de PSS**. La
 
 08 §5.4 no se toca hasta que respondas. Las texturas (≈ 48 MB frente a 120) ya cumplen; el heap gestionado (60 MB) se verá con `mono_heap_mib` de la sonda.
 
-## 7. Verificación (escritorio x64, 2026-10-29)
+## 7. La observación 14 de la jornada 6: `GL mtrack` no bajó (rama `tanda6/fx-j6b-memoria`, 2026-10-29)
+
+Lo medido en el teléfono (hoja j6, punto 10, «La memoria»): con el Blit en `Auto`, `GL mtrack` sigue en 88,8-99,6 MB; el PSS del `dev.apk` 18+ sube a 605-620 MB (por `System`, 36 MB frente a 19, y `Code`, 102 MB frente a 90); el ensayo da 545 MB y el <13, 537 MB. La sonda: `unity_reserved` 243 MiB, `unity_unused` ~134, `mono_heap` 39-53, `gfx` 84-114, `tex_cur` 38-52, `audio` ~10, `rt` 0.
+
+### 7.1 Dónde están los ~95 MB de `GL mtrack`
+
+`gfx_mib` (lo que Unity cuenta que ha pedido al driver) sale casi igual que `GL mtrack`: lo que hay ahí lo pidió Unity. Reparto razonado (no hay un contador por partida):
+
+| Partida | MB | Cómo se sabe |
+|---|---|---|
+| Texturas | 38-52 | `tex_cur_mib`. Unas 130-165 texturas del arte por código (RGBA32; 29-35 MiB las del juego en el inventario), las 5 fuentes (4 MiB), EmojiOne, las de posproceso de URP (≈ 3 MB, ya fuera: §7.4) y las del motor |
+| Profundidad y estencil de la pantalla | ≈ 9,6 | 1080 × 2340 × 4 B (D24S8). Con Vulkan la crea Unity aparte de la cadena de presentación y cuenta aquí; con OpenGL ES va en la superficie (`EGL mtrack`) |
+| Búferes intermedios de URP | 0 | `rt_mib` 0,0 y el código de URP 2D (`Renderer2DRendergraph.GetRenderPassInputs`): sin posproceso, HDR, MSAA, escala ≠ 1, viewport parcial, conversión sRGB ni textura de capas, no crea `_CameraTargetAttachment` ni `_CameraDepthAttachment` |
+| El resto, ≈ 30-45 | | Lo del dispositivo gráfico de Unity: los bloques de memoria del driver (Unity reparte cada bloque entre varios recursos y el sobrante cuenta), los búferes dinámicos de vértices, índices y constantes de la UI (por fotograma en vuelo), los de subida de texturas y los programas de shader |
+
+Las texturas no tienen copia en CPU (salvo el atlas de avatares mientras su pantalla está abierta) ni mipmaps que no se usen (cuatro, a propósito: §2.2), y el juego no crea RenderTextures. **No queda una bajada segura en las texturas sin cambiar la imagen** (§7.5, pregunta 1).
+
+### 7.2 Por qué el Blit en `Auto` no bajó nada
+
+El cálculo de §4 suponía que con `Always` había un búfer de color y profundidad fuera de la pantalla. En el teléfono no estaba (o no contaba en `GL mtrack`). Lo más probable es que el juego pinte con **Vulkan**: la API gráfica está en automático (`m_BuildTargetGraphicsAPIs: []`) y Unity 6 prefiere Vulkan en un Adreno 830. Con Vulkan se pinta directamente en las imágenes de la cadena de presentación (`EGL mtrack` 40,3 MB ≈ 4 × 9,64 MiB), y el Blit Type solo decide si hay una copia en la ruta de OpenGL ES. No se puede comprobar desde el escritorio: desde esta rama, la línea `boot` de la sonda dice `gfx_api` (§7.4). **`Auto` se queda:** no cuesta nada y la imagen cumplió en el teléfono (hoja j6, punto 10).
+
+### 7.3 `Unknown`, `unity_unused` y por qué el `dev.apk` sube por `System` y `Code`
+
+- **`unity_reserved` 243 MiB = ~109 en uso + ~134 sin usar, igual desde `boot` hasta el nivel 200.** La memoria nativa de Unity se fija en el arranque y no vuelve. Lo probable es el pico del arranque:
+  - cada textura nueva (`SetPixels` o `LoadRawTextureData` y `Apply(false, true)`) guarda su imagen RGBA32 en el asignador de Unity hasta que el hilo de render la sube;
+  - el arranque crea ~35-50 MB de texturas en pocos fotogramas;
+  - los bloques que quedan libres (16 MiB por defecto en los asignadores principal y de gráficos) se quedan reservados.
+
+  **Solo las páginas tocadas cuentan en el PSS.** Cuánto de esos 134 es residente lo dicen `app_resident_mib` frente a `app_committed_mib` (ya están en la sonda; la hoja no los anotó) y los experimentos E2 y E3 de §7.6.
+- **`MemorySettings`:** los tamaños de bloque se pueden cambiar (Project Settings › Memory Settings, `ProjectSettings/MemorySettings.asset`, hoy todo por defecto). Unity no tiene API pública para escribirlos; un método de `ProjectSetup` podría hacerlo con `SerializedObject` sobre `m_PlatformMemorySettings`, pero **no se toca a ciegas**. Primero se mide en el teléfono con los mismos ajustes como argumentos del reproductor (`-memorysetup-…`), que `UnityPlayerGameActivity` lee del extra `unity` del intent, sin build nuevo (E2 y E3). Si baja, un carril lo fija en `ProjectSetup` con su `Validate`.
+- **`Code` no lo mueve el código del juego, sino el estado de compilación de ART.** El ensayo de release dio 106 MB de `Code` en la jornada 6 y 83 MB ahora, con la misma configuración: según el dex esté solo verificado, compilado por perfil o con el JIT caliente, `Code` cambia ±20 MB. El `dev.apk` lleva además la variante de desarrollo de `libunity.so` (más grande, con el perfilador), que el release no lleva.
+- **`System`** es la parte del PSS de páginas compartidas con otros procesos: depende de cuántos procesos comparten cada biblioteca en ese momento (después de Spotify, una alarma o la Liga no es lo mismo). Los +17 MB del `dev.apk` no aparecen en el ensayo ni en el <13, y en este carril no hay nada en el código que los explique.
+- **Lo propio del `dev.apk`** (el perfilador y sus asignadores dentro de `unity_reserved`, la variante de desarrollo) no va al release y no se persigue. **D-060 se juzga con el ensayo de release** (o el AAB), no con el `dev.apk`.
+- **Corrección a §6:** el arte por código se pinta a una densidad fija (§7.5, pregunta 1), así que en clase A las texturas no bajan a ~28 MB: se quedan en ~40-50 MB. La estimación de clase A sube a **~490-510 MB de PSS**, por encima de los 450 de D-060.
+
+### 7.4 Lo aplicado en esta rama
+
+| Cambio | Ahorro estimado | Imagen | Cómo |
+|---|---|---|---|
+| **El 2D Renderer sin `PostProcessData`** | ≈ 3-4 MB entre `GL mtrack` (10 texturas de grano de película de 256 KiB cada una y 2 de SMAA) y `Unknown` (los shaders `UberPost`, `Bloom`, `FinalPost`, `TemporalAA`, `LensFlare…`, `…DepthOfField`, `CameraMotionBlur`, `PaniniProjection` y `LutBuilder…`, ≈ 1,3 MB serializados), y en el APK: medido en el build de desarrollo, las texturas de los recursos del build bajan de 7,5 a 4,7 MB, los shaders de 2,3 a 1,1 MB y el `dev.apk` de 73,6 a 71,5 MiB | Igual: la cámara no tiene posproceso (sin `UniversalAdditionalCameraData` serializado, `renderPostProcessing` es false). URP 2D comprueba el null y sin datos no crea los pases de posproceso ni la LUT | `ProjectSetup.RendererPostProcessData` = false, aplicado con `SerializedObject` sobre `m_PostProcessData` de cada `Renderer2DData` y exigido por `Validate` (BuildSmoke, BuildDev y BuildRelease paran con 2 si vuelve). Al guardarlo, Unity reescribió `Renderer2D.asset` con su formato actual: quitó los campos antiguos de shaders y materiales, que URP 17 ya lee de los ajustes globales |
+| **Sonda: con qué se pinta** (línea `boot`) | — | — | `gfx_api`, `gfx_device`, `gfx_version`, `render_thread`, `screen_px`, `render_px` (si difiere de `screen_px`, hay búfer intermedio), `msaa` y `unity_args`: los argumentos del reproductor del extra `unity`, para que cada medida diga con qué se tomó |
+| **Sonda: el resumen de `dumpsys meminfo` en cada línea** (`--ei af_mem_os 1`) | — | — | `os_pss_mib`, `os_java_mib`, `os_native_mib`, `os_code_mib`, `os_graphics_mib`, `os_private_other_mib`, `os_system_mib` y `os_read_ms`, con `android.os.Debug.getMemoryInfo`, en el mismo instante que los contadores de Unity. Va con su extra porque la lectura tarda decenas de ms |
+| **Inventario** (`MemoryInventoryTests`, manual) | — | — | En el Mapa, los avatares y el nivel, `from_lobby` y `from_lobby_mib`: cuánto arte del inicio sigue vivo (candidata 3 de §7.5). En cada momento, los shaders cargados (`shaders`, `shaders_mib`) |
+
+**Total aplicado: ≈ 3-4 MB.** No cambia el orden de magnitud: lo grande está en el motor (§7.3) y en lo que pide decisión (§7.5).
+
+### 7.5 Lo que queda, con quién decide
+
+**Pregunta 1 para el dueño (calidad visible en gama baja).** El arte por código se pinta a una densidad fija (fondos a 2,25 px/dp; follaje, UI y personajes a 3 px/dp; superficies de los modales a 1,5), no a la del teléfono. En clase A (≈ 2 px/dp) ocupa lo mismo que en el S938B (≈ 40-50 MB) y la GPU lo reduce al pintarlo. Pintarlo como mucho a la densidad del teléfono bajaría en clase A unos 15-25 MB de `GL mtrack` (follaje y UI, −55 % de píxeles; fondos, −20 %), sin cambio en el S938B. El píxel final cambia algo: el arte se pinta ya pequeño en lugar de reducirse al dibujarse. Además, la revisión visual del 2026-10-07 pidió subir la densidad porque las orillas salían en escalera al ampliarse. ¿Lo pruebo?
+- (a) sí, con un tope de densidad igual a la del teléfono y la revisión del dueño a 2 px/dp (`wm density 320` en el S938B lo simula). Recomendada: es lo único de las texturas que mueve D-060 en clase A;
+- (b) no: la densidad fija se queda.
+
+**Candidatas técnicas (no cambian la imagen, pero piden un build de prueba en el teléfono), para un carril tras los experimentos de §7.6:**
+
+2. **Sin profundidad ni estencil en la pantalla** (`PlayerSettings.Android.disableDepthAndStencilBuffers` y `m_UseDepthStencilBuffer` del 2D Renderer a 0): −9,6 MB a 1080 × 2340 (−4,4 MB a 720 × 1600).
+   - Revisado en el código: el juego no usa `Mask` (solo `RectMask2D`, sin estencil), ni `SpriteMask`, ni luces 2D, ni shaders que escriban o lean profundidad (los `AF_UI_*` van con `ZWrite Off` y `ZTest [unity_GUIZTestMode]`), y todos los lienzos son Screen Space Overlay.
+   - **Pero** el pase de la UI de URP (`DrawScreenSpaceUIPass`) ata la profundidad de la pantalla, y sin ella el resultado en Vulkan no se puede asegurar desde el escritorio (pantalla negra o errores de validación posibles). No se aplica sin probarlo en el teléfono.
+3. **Soltar el arte del inicio mientras se juega:** las 126 texturas del inicio siguen vivas en el nivel (`from_lobby_mib` 28,9 en el inventario, con los botones y las placas que el nivel también usa); de ellas, el arte de escena propio del inicio (el panorama, el muelle, los 4 follajes, el río y la rama de TiTino) son ≈ 13-15 MiB. Al volver al inicio se leerían de la caché en disco (`Cached`, guía 4.9; unos 20-40 ms en el teléfono). Baja la memoria durante la partida (la que Android mira al pasar a segundo plano), no el pico del inicio.
+4. **Los tamaños de bloque de los asignadores de Unity** (§7.3), si E2 o E3 lo justifican.
+5. Las de §6 (R8 en el release, IL2CPP «Faster (smaller) builds», bajar el pico del arranque) siguen igual. La cadena de presentación con 2 imágenes (−9,6 MB de `EGL mtrack`) empeora el ritmo de fotogramas: decisión del dueño, si hiciera falta.
+
+### 7.6 Experimentos para el portátil (sin build nuevo)
+
+Todos con el mismo `dev.apk` y la misma preparación, para que `Code` no cambie entre medidas:
+
+```
+adb shell cmd package compile -m speed-profile -f com.amazonfill.dev
+adb shell am force-stop com.amazonfill.dev
+adb shell am start -n com.amazonfill.dev/com.unity3d.player.UnityPlayerGameActivity --ei af_mem_os 1 [-e unity "<argumentos>"]
+```
+
+| Experimento | `-e unity "…"` | Qué responde |
+|---|---|---|
+| E0, base | (nada) | La referencia del día |
+| E1, OpenGL ES | `-force-gles` | Cuánto de `GL mtrack` es propio de Vulkan; confirma `gfx_api` |
+| E2, bloques de 4 MiB | `-memorysetup-main-allocator-block-size=4194304 -memorysetup-thread-allocator-block-size=4194304 -memorysetup-gfx-main-allocator-block-size=4194304 -memorysetup-gfx-thread-allocator-block-size=4194304` | Cuánto del `Unknown` es sobrante de los bloques de 16 MiB (`unity_unused_mib`, `os_private_other_mib`) |
+| E3, E2 y los temporales | lo de E2 más `-memorysetup-temp-allocator-size-main=4194304 -memorysetup-job-temp-allocator-block-size=1048576` | Si los asignadores temporales suman |
+
+En cada uno, en el inicio, el Mapa y el nivel 75 (un minuto quieto en cada sitio), la línea `AF_PERF {"event":"mem"` (con `os_*`, `unity_*`, `app_resident_mib`, `app_committed_mib`, `gfx_*` y `tex_cur_mib`) y `dumpsys meminfo -d`. En E1, además, la imagen y los fotogramas de un nivel (`AF_PERF frames` con `--ei af_bench_morpho 1`). El ensayo de release, con E0 y el mejor de E1-E3: los argumentos del reproductor también valen en release (sin sonda: solo `dumpsys`).
+
+**Esperado:** con este build, `GL mtrack` ≈ 3 MB menos que en la jornada 6 (sin las texturas de posproceso) y lo demás igual. E1-E3 dicen qué carril de §7.5 (2-4) vale la pena.
+
+### 7.7 Verificación (escritorio x64, 2026-10-29)
+
+- `scripts/unity-build.ps1 -Method Setup -Architecture x86_64`: OK (`posproceso=Renderer2D:False`); cambia solo `Assets/Settings/Renderer2D.asset`.
+- `scripts/unity-compile.ps1 -Architecture x86_64`: compila.
+- EditMode: 4.837 (4.830 + 7 omitidos), 0 fallos. PlayMode entero (`-TimeoutSec 7200`, por el cambio en el render): 2.436 (2.068 + 368 omitidos o explícitos), 0 fallos, 37 min.
+- `MemoryInventoryTests.Inventory_Moments` (manual): pasa; mismas texturas que en §2 (126 en el inicio, 163 en el nivel), `from_lobby_mib` 28,9 en el Mapa, los avatares y el nivel.
+- `dotnet build -warnaserror`: 0 avisos; `dotnet test`: 1.002 (996 + 6 omitidos); `validate_schema.py`: 116/116.
+- `scripts/unity-build.ps1 -Method Dev -Architecture x86_64`: OK, `dev.apk` de 71,5 MiB, sin `FilmGrain`, `AreaTex` ni `UberPost` en el informe del build; `ci/check-manifest.ps1 Builds/Android/dev.apk -Mode dev`: OK.
+- La sonda nueva y la imagen sin posproceso solo se ven en el teléfono (guion, encargo de la jornada 6, «La memoria otra vez, con experimentos»).
+
+## 8. Verificación del carril anterior (escritorio x64, 2026-10-29)
 
 - `dotnet build dotnet/AmazonFill.slnx -warnaserror`: 0 errores, 0 avisos. `dotnet test`: 1.002 (996 + 6 omitidos), 0 fallos.
 - `python tools/validate_schema.py`: 116/116 PASS.
