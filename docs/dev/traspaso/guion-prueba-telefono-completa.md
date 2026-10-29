@@ -51,6 +51,8 @@ Aquí entra todo.
 
 Después, sigue con lo pendiente en el orden de arriba (el resto de N6 y los bloques que dejó la jornada 5), donde se quedó con el build anterior.
 
+**El build que lo trae todo (2026-10-29).** El commit que integra `tanda6/intro-desde-logo` lleva también el velo: con ese build se repite N6.1 y se prueba el punto «La intro nace del logo» de N6 (el dueño juzga si queda «muy pro»). Además, **se repite la observación 3 de la hoja j6** (otra app con el foco al lanzar: ¿sale la intro o se queda en el petróleo?), porque el velo ya no toca el correr sin foco. Las observaciones 2, 4, 5 y 6 de la hoja j6 se arreglan en carriles aparte: no hace falta volver a anotarlas.
+
 ### N6. Lo nuevo de la jornada 6
 
 - **La pantalla del sistema hasta la intro** (carriles `tanda6/fx-j5-arranque` y `tanda6/fx-j6-splash`; añadido de D-051 del 2026-10-28, el dueño: «si hagamoslo asi»; observaciones 1 y 2 de la jornada 5 y 1 de la jornada 6). El icono v2 sobre el petróleo se queda hasta que el primer fotograma de la intro ya está en la pantalla: se debe ver **icono → escena de la intro**, sin el petróleo liso de en medio. Lo hace el plugin `AfSplashHold.androidlib` con un velo que no bloquea el pintado de la ventana y un tope de 3 s.
