@@ -161,14 +161,16 @@ namespace AF.Tests.PlayMode
             Image background = intro.Root.Find("Petroleum").GetComponent<Image>();
             Assert.That((Color32)background.color, Is.EqualTo(BrandIntro.Petroleum), "el petróleo de la pantalla del sistema");
 
-            // Antes de saber si hay Reducir movimiento, el primer fotograma: la cuia inclinada, el chorro aún en la boca y el río sin
-            // teñir.
+            // Antes de saber si hay Reducir movimiento, el primer fotograma (añadido de D-051 del 2026-10-28, «la intro nace del
+            // logo»): el icono de la pantalla del sistema, con el chorro entero y el río ya teñido, en su círculo sobre el petróleo.
             splash.Tick(16f);
             Assert.That(intro.Begun, Is.False);
             Assert.That(intro.ClockMs, Is.EqualTo(0f));
-            Assert.That(intro.TintFill, Is.EqualTo(0f));
-            Assert.That(intro.StreamFill, Is.EqualTo(0f));
-            Assert.That(intro.Root.Find("EmblemCuia").GetComponent<Image>().sprite, Is.Not.Null, "la cuia del icono, desde el primer fotograma");
+            Assert.That(intro.TintFill, Is.EqualTo(1f));
+            Assert.That(intro.StreamFill, Is.EqualTo(1f));
+            Assert.That(intro.MorphIrisVisible, Is.True, "el círculo del icono");
+            Assert.That(intro.MorphIconAlpha, Is.EqualTo(1f), "la vista del icono, entera");
+            Assert.That(intro.Scene.Find("EmblemCuia").GetComponent<Image>().sprite, Is.Not.Null, "la cuia del icono, desde el primer fotograma");
         }
 
         // Quitarla antes de tiempo solo pasa si el arranque se para (catálogo roto, <13): GameBootstrap la espera siempre.
@@ -248,6 +250,14 @@ namespace AF.Tests.PlayMode
 
             Assert.That(fill, Is.EqualTo(1f));
             Assert.That(stream, Is.EqualTo(1f));
+            double faded = Time.realtimeSinceStartupAsDouble + ((BrandIntro.ReduceMotionFadeMs + 50) / 1000.0);
+            while (Time.realtimeSinceStartupAsDouble < faded)
+            {
+                yield return null;
+                splash.Tick(16f); // añadido de D-051 del 2026-10-28: el icono se funde en la escena quieta en 200 ms
+            }
+
+            Assert.That(intro.TintFill, Is.EqualTo(fill), "nada se movió");
             Assert.That(intro.WordmarkAlpha, Is.EqualTo(1f), "entera: con el nombre");
             Assert.That(splash.Wordmark, Is.Not.Null);
             Assert.That(splash.Wordmark!.color.a, Is.EqualTo(1f));
@@ -311,7 +321,7 @@ namespace AF.Tests.PlayMode
 
             foreach (string piece in pieces)
             {
-                Image a = intro.Root.Find(piece).GetComponent<Image>();
+                Image a = intro.Scene.Find(piece).GetComponent<Image>();
                 Image b = splash.Root.Find(piece).GetComponent<Image>();
                 Assert.That(b.sprite, Is.SameAs(a.sprite), piece + ": la misma textura");
                 Assert.That(b.sprite, Is.Not.Null, piece);
@@ -325,7 +335,7 @@ namespace AF.Tests.PlayMode
 
             Image sky = splash.Root.Find("Sky").GetComponent<Image>();
             Assert.That((Color32)sky.color, Is.EqualTo(BrandIntro.Petroleum), "el mismo petróleo de la intro");
-            Assert.That(intro.Root.Find("EmblemStream").GetComponent<Image>().fillAmount, Is.EqualTo(1f), "el chorro entero");
+            Assert.That(intro.Scene.Find("EmblemStream").GetComponent<Image>().fillAmount, Is.EqualTo(1f), "el chorro entero");
 
             // Al quitarse, el mundo entra fundiéndose (de golpe con Reducir movimiento), sin mover el emblema.
             Assert.That(splash.EndIntro(), Is.Not.Null);
@@ -515,7 +525,7 @@ namespace AF.Tests.PlayMode
             splash.RefreshIntro();
             Assert.That(intro.Playing, Is.True, "empieza sola (AutoPlay) en cuanto puede");
             Assert.That(intro.ClockMs, Is.LessThan(50f), "el vertido, desde su instante 0");
-            Assert.That(intro.StreamFill, Is.LessThan(1f));
+            Assert.That(intro.MorphIrisVisible, Is.True, "el icono, que empieza a abrirse (añadido de D-051 del 2026-10-28)");
             Assert.That(splash.IntroAnimating, Is.True);
 
             // Refresh lleva la animación a ahora sin contar fotograma (GameBootstrap, antes de dejar pintar uno).
@@ -551,7 +561,7 @@ namespace AF.Tests.PlayMode
             Assert.That(intro.OnScreen, Is.False);
             Assert.That(intro.Playing, Is.False, "sin verse aún, quieta");
             Assert.That(intro.ClockMs, Is.EqualTo(0f));
-            Assert.That(intro.StreamFill, Is.EqualTo(0f), "el chorro, aún en la boca de la cuia");
+            Assert.That(intro.StreamFill, Is.EqualTo(1f), "el icono del sistema, con su chorro (añadido de D-051 del 2026-10-28)");
             Assert.That(intro.Done, Is.False);
             Assert.That(splash.IntroPending, Is.True, "el arranque la espera");
 

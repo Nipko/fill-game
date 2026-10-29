@@ -209,7 +209,7 @@ namespace AF.Tests.PlayMode
                 yield return WaitWrite();
                 var second = new BootSplash(host.transform, withSloth: false, withIntro: true);
                 Assert.That(second.EmblemCache, Is.EqualTo(BrandEmblemCacheResult.Hit));
-                Assert.That(second.Intro!.Root.Find("EmblemCuia").GetComponent<UnityEngine.UI.Image>().sprite, Is.Not.Null, "la cuia, desde el primer fotograma");
+                Assert.That(second.Intro!.Scene.Find("EmblemCuia").GetComponent<UnityEngine.UI.Image>().sprite, Is.Not.Null, "la cuia, desde el primer fotograma");
                 Debug.Log("AF_SPLASH pantalla de arranque: escena dibujada " + first.EmblemMs + " ms, leída de la caché " + second.EmblemMs + " ms");
                 BrandIntroReport report = second.EndIntro()!;
                 Assert.That(report.EmblemCache, Is.EqualTo(BrandEmblemCacheResult.Hit), "emblem_cache de la sonda");

@@ -89,6 +89,18 @@ Aquí entra todo.
     - sin tienda, en los tres sale además el aviso «Las compras no están disponibles ahora»; también en el **Reto del río** con «+3 Deshacer» en gris;
     - con Reducir movimiento, solo se atenúan.
   - **Tu fila de la Liga sin seudónimo** (observación 5; `--ez af_league true --ez af_league_fake true --ei af_max_level 60`): «Gana un nivel para entrar en la Liga» se para antes de la columna de puntos, con aire, y si no cabe pasa a dos líneas y la fila crece. En es-419, en y pt-BR, al 100 % y al 130 % (6 capturas); en pt-BR, el «0» ya no toca el texto.
+- **La intro nace del logo** (carril `tanda6/intro-desde-logo`; añadido de D-051 del 2026-10-28, el dueño: «si podriamos hacer que el logo se convierta en la animación actual, algo muy pro»). Va con el build que lleve también el velo nativo de `tanda6/fx-j6-splash`; con el build de ahora solo vale lo de la apertura y Reducir movimiento. El primer fotograma de la intro es el icono de la pantalla del sistema (el círculo de 160 dp con la vista del icono a 240 dp, centrados, sobre el petróleo); en ~0,8 s el círculo se abre a toda la pantalla mientras la escena pasa del encuadre del icono al suyo, el açaí del río se recoge hacia la cuia y empieza el vertido de siempre. La intro entera dura 3,8 s. Capturas de referencia del Editor: `docs/art/intro-desde-logo/`.
+  - **Cómo medirlo:** ráfagas de `screencap` cada ~120 ms, con la marca de tiempo de cada una, desde el `am start` hasta el nombre entero (~5 s), en tres casos:
+    1. **primera apertura** (`pm clear` y `logcat -c` antes);
+    2. **en frío**, tres veces (`force-stop` y lanzar);
+    3. **en el ensayo de release** (`rehearsal.apk`), primera apertura y en frío; ahí solo cuenta la ráfaga.
+  - **El criterio, en cada ráfaga:**
+    - **sin salto del velo al primer fotograma de la intro:** el mismo círculo, en el mismo sitio y del mismo tamaño (compara el último fotograma del velo con el primero de Unity: el centro y el diámetro del círculo, en píxeles, no deben moverse más de 2 px; anota los dos);
+    - **la apertura es fluida:** el círculo crece sin tirones ni saltos, la cuia no salta al fundirse el icono en la escena y no se ve ningún borde recto de la escena dentro del círculo;
+    - **el açaí se recoge y vuelve a verter** como un solo gesto (sin quedarse quieto en medio).
+  - **La sonda** (`AF_STATE brand_intro` del `dev.apk`), campos nuevos: `morph_mode` = `open`; `morph_ms` ≈ 800 (de empezar a moverse a cubrir la pantalla; mucho más quiere decir tirones o pausas); `morph_start_diam_dp` = 160,0; `morph_frames` ≈ 48 a 60 fps; `morph_units_per_dp` (en el SM-S938B, la densidad entre la escala del lienzo; 1,000 querría decir que no se leyó la densidad: es un fallo, anótalo). `anim_ms` = 3.800; `motion_frames`, `frame_p95_ms` (≈ 16,7) y `motion_pauses` (0) como en la jornada 5, ahora con la apertura incluida.
+  - **Con Reducir movimiento** (lo enciende el dueño): ni apertura ni recogida; el icono se funde en la escena quieta en ~200 ms (en la ráfaga, uno o dos fotogramas a medias) y el nombre entra con él. `morph_mode` = `fade` y `morph_ms` = -1.
+  - **El dueño** mira la intro tres o cuatro veces en frío y dice si queda «muy pro»; anota su opinión literal y, si pide cambios, qué parte (el círculo, el fundido del icono, la recogida o el ritmo).
 
 ## Encargo de la jornada 5 (escritorio, 2026-10-28)
 

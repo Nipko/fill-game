@@ -34,6 +34,12 @@ namespace AF.UI
     /// y el máximo del tiempo entre esos fotogramas (a 60 fps, ~16,7; -1 sin datos), sin las pausas de más de 500 ms (volver de
     /// segundo plano), que se cuentan en <c>motion_pauses</c>. La lectura a la GPU se pide en el segundo fotograma de la intro, ya
     /// enviado el primero; si vuelve con error, <c>visible_by</c> es <c>no_readback</c>.</item>
+    /// <item>Añadido de D-051 del 2026-10-28 («la intro nace del logo»; <c>anim_ms</c> 3.800): <c>morph_mode</c> (<c>open</c>, el
+    /// icono se abrió en la escena; <c>fade</c>, Reducir movimiento: fundido de 200 ms; <c>none</c>, ni lo uno ni lo otro),
+    /// <c>morph_ms</c> (de empezar a moverse a que el círculo cubrió la pantalla: ~800; -1 si no se abrió), <c>morph_start_diam_dp</c>
+    /// (el diámetro del círculo en el primer fotograma, en dp de Android: 160, el de la pantalla del sistema), <c>morph_frames</c>
+    /// (fotogramas pintados mientras se abría: ~48 a 60 fps) y <c>morph_units_per_dp</c> (unidades del lienzo por dp de Android;
+    /// 1,000 si no se supo la densidad).</item>
     /// </list>
     /// </summary>
     public sealed partial class DevProbe
@@ -79,6 +85,11 @@ namespace AF.UI
             sb.Append(",\"frame_p95_ms\":").Append(report.FrameP95Ms.ToString("0.0", CultureInfo.InvariantCulture));
             sb.Append(",\"frame_max_ms\":").Append(report.FrameMaxMs.ToString("0.0", CultureInfo.InvariantCulture));
             sb.Append(",\"motion_pauses\":").Append(report.MotionPauses.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_mode\":\"").Append(report.MorphMode).Append('"');
+            sb.Append(",\"morph_ms\":").Append(report.MorphMs.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_start_diam_dp\":").Append(report.MorphStartDiamDp.ToString("0.0", CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_frames\":").Append(report.MorphFrames.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"morph_units_per_dp\":").Append(report.MorphUnitsPerDp.ToString("0.000", CultureInfo.InvariantCulture));
             sb.Append(",\"loading_ms\":").Append(report.LoadingMs.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"wait_capped\":").Append(report.WaitCapped ? "true" : "false");
             sb.Append('}');
