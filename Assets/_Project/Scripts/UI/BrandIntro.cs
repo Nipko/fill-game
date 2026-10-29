@@ -252,6 +252,15 @@ namespace AF.UI
         public const int VisibleWaitCapMs = 1200;
 
         /// <summary>
+        /// Jornada 6, observación 11: cada cuántos fotogramas se mira, mientras se espera a ver el fotograma 0, si cambió la caja del
+        /// icono que mide Java (una llamada JNI; la caja solo se copia si cambió) [P].
+        /// </summary>
+        public const int IconPollFrames = 3;
+
+        /// <summary>Cuántas veces como mucho se rehace el fotograma 0 por una caja nueva del icono [P].</summary>
+        public const int MaxIconRelayouts = 2;
+
+        /// <summary>
         /// El <see cref="Tick"/> en que se pide la lectura a la GPU (y desde el que se mira si ya volvió): el segundo. El primero va
         /// en el mismo fotograma en que se crea la intro, que aún no se ha enviado a la GPU; una lectura pedida entonces se encolaría
         /// antes de los dibujos de la intro y solo probaría que acabó el fotograma anterior.
@@ -312,6 +321,7 @@ namespace AF.UI
         private Vector2 _morphStartCenterPx = new Vector2(-1f, -1f);
         private BrandEmblemArt _art;
         private int _fenceNotBefore;
+        private int _iconRelayouts;
 
         // Tiempos entre fotogramas que se guardan mientras se mueve (unos 3 s a 120 Hz caben).
         private const int MotionDeltaCapacity = 512;
@@ -593,10 +603,13 @@ namespace AF.UI
                 _firstFrameAt = now; // su primer fotograma: desde aquí se espera a verlo en la pantalla
                 NoteMorphStart();
             }
-            else if (_visibleAt < 0.0 && !_playing && !_morph.Measured && AndroidOsSplash.ReadIcon().Measured)
+            else if (_visibleAt < 0.0 && !_playing && _iconRelayouts < MaxIconRelayouts && _frames % IconPollFrames == 0
+                && AndroidOsSplash.ReadIcon().DiffersFrom(_morph.Box, 1))
             {
-                // La caja del icono del sistema llegó después del primer fotograma (Java la mide al colocarse la vista): se rehace el
-                // fotograma 0 con ella y se vuelve a esperar a verlo en la pantalla, para que el velo no se suelte sobre el anterior.
+                // La caja del icono cambió después del primer fotograma: en Android 12+ el velo propio publica primero la suya (160 dp)
+                // y la del sistema llega al colocarse su vista. Se rehace el fotograma 0 con la nueva y se vuelve a esperar a verlo en
+                // la pantalla, para que el velo no se suelte sobre el anterior.
+                _iconRelayouts++;
                 Layout(_art);
                 NoteMorphStart();
                 _firstFrameAt = now;

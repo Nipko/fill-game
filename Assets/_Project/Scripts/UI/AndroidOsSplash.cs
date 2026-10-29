@@ -79,6 +79,12 @@ namespace AF.UI
         /// </summary>
         public static SplashIconBox? IconOverrideForTests { get; set; }
 
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private static AndroidJavaClass? s_bridge;
+        private static int s_iconVersion = -1;
+        private static SplashIconBox s_icon;
+#endif
+
         /// <summary>
         /// La caja del icono de la pantalla del sistema en la pantalla, en px (jornada 6, observación 11): la vista del icono que
         /// entregó Android 12+ (<c>SplashScreenView.getIconView()</c>, el círculo visible) o el círculo de <c>af_launch_window</c>
@@ -96,10 +102,16 @@ namespace AF.UI
 #if UNITY_ANDROID && !UNITY_EDITOR
             try
             {
-                using (var bridge = new AndroidJavaClass(BridgeClass))
+                // El puente se guarda y la caja solo se copia (un int[] de JNI) cuando Java dice que cambió.
+                s_bridge ??= new AndroidJavaClass(BridgeClass);
+                int version = s_bridge.CallStatic<int>("iconBoxVersion");
+                if (version != s_iconVersion)
                 {
-                    return SplashIconBox.FromArray(bridge.CallStatic<int[]>("iconBox"));
+                    s_icon = SplashIconBox.FromArray(s_bridge.CallStatic<int[]>("iconBox"));
+                    s_iconVersion = version;
                 }
+
+                return s_icon;
             }
             catch (Exception)
             {
@@ -191,6 +203,32 @@ namespace AF.UI
 
         /// <summary>Centro del círculo (px de pantalla, desde arriba).</summary>
         public Vector2 Center => new Vector2(Left + (Width * 0.5f), Top + (Height * 0.5f));
+
+        /// <summary>
+        /// Las dos cajas difieren en más de <paramref name="tolerancePx"/> px en algún borde (la del icono o la del marco), o una
+        /// tiene medida y la otra no.
+        /// </summary>
+        public bool DiffersFrom(SplashIconBox other, int tolerancePx)
+        {
+            if (Measured != other.Measured)
+            {
+                return true;
+            }
+
+            if (!Measured)
+            {
+                return false;
+            }
+
+            return Far(Left, other.Left, tolerancePx) || Far(Top, other.Top, tolerancePx) || Far(Width, other.Width, tolerancePx)
+                || Far(Height, other.Height, tolerancePx) || Far(RefLeft, other.RefLeft, tolerancePx) || Far(RefTop, other.RefTop, tolerancePx)
+                || Far(RefWidth, other.RefWidth, tolerancePx) || Far(RefHeight, other.RefHeight, tolerancePx);
+        }
+
+        private static bool Far(int a, int b, int tolerance)
+        {
+            return Math.Abs(a - b) > tolerance;
+        }
 
         /// <summary>La caja desde el arreglo de Java (8 enteros); sin medida si no cuadra.</summary>
         public static SplashIconBox FromArray(int[]? box)

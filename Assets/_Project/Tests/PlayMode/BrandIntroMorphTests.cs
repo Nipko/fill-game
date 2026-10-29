@@ -368,28 +368,84 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator WithoutAMeasure_TheGuideBox_AndALateMeasure_RelaysFrameZeroBeforeTheVeilGoes()
         {
+            yield return LateSystemBox(null);
+        }
+
+        [UnityTest]
+        public IEnumerator TheOwnVeilBoxFirst_ThenTheSystemBox_RelaysFrameZeroBeforeTheVeilGoes()
+        {
+            // El caso real de Android 12+ (revisión de ebfc14c4): el velo propio publica primero la caja de af_launch_window (160 dp,
+            // 420 px, centrada) y la del sistema (486 px) llega al colocarse su vista, ya con el primer fotograma pintado.
+            yield return LateSystemBox(new SplashIconBox(330, 960, 420, 420, 0, 0, 1080, 2340));
+        }
+
+        [UnityTest]
+        public IEnumerator FrameZero_IsRelaidAtMostTwice()
+        {
             bool visible = false;
             BrandIntro.FrameVisibleOverrideForTests = () => visible;
+            AndroidOsSplash.IconOverrideForTests = new SplashIconBox(330, 960, 420, 420, 0, 0, 1080, 2340);
+            BrandIntro intro = NewIntro(PhoneDensity);
+            _splash!.BeginIntro(false);
+            var boxes = new[] { 450, 486, 500 };
+            var expected = new[] { 150f, 162f, 162f };
+            for (int i = 0; i < boxes.Length; i++)
+            {
+                int d = boxes[i];
+                AndroidOsSplash.IconOverrideForTests = new SplashIconBox(540 - (d / 2), 1170 - (d / 2), d, d, 0, 0, 1080, 2340);
+                for (int t = 0; t < BrandIntro.IconPollFrames; t++)
+                {
+                    yield return null;
+                    _splash.Tick(16f);
+                }
+
+                Assert.That(intro.MorphDiameter, Is.EqualTo(expected[i]).Within(0.01f), "caja " + d + " px: como mucho dos rehechos");
+            }
+
+            Assert.That(intro.OnScreen, Is.False);
+            Assert.That(new SplashIconBox(540 - 243, 1170 - 243, 486, 486, 0, 0, 1080, 2340).DiffersFrom(new SplashIconBox(298, 928, 486, 486, 0, 0, 1080, 2340), 1), Is.False, "1 px no cuenta");
+            Assert.That(new SplashIconBox(297, 927, 486, 486, 0, 0, 1080, 2340).DiffersFrom(new SplashIconBox(297, 927, 489, 486, 0, 0, 1080, 2340), 1), Is.True);
+            Assert.That(new SplashIconBox(297, 927, 486, 486, 0, 0, 1080, 2340).DiffersFrom(new SplashIconBox(297, 927, 486, 486, 0, 0, 1080, 2400), 1), Is.True, "el marco también");
+            Assert.That(SplashIconBox.None.DiffersFrom(new SplashIconBox(297, 927, 486, 486, 0, 0, 1080, 2340), 1), Is.True, "de nada a una medida");
+        }
+
+        // El fotograma 0 empieza con start (null: sin medida, la guía) y la caja del sistema llega después del primer fotograma: se
+        // rehace, la espera de la GPU vuelve a empezar y la sonda da los 486 px.
+        private IEnumerator LateSystemBox(SplashIconBox? start)
+        {
+            bool visible = false;
+            BrandIntro.FrameVisibleOverrideForTests = () => visible;
+            AndroidOsSplash.IconOverrideForTests = start;
             BrandIntro intro = NewIntro(PhoneDensity);
             _splash!.BeginIntro(false);
             yield return null;
             _splash.Tick(16f);
-            Assert.That(intro.Morph.Measured, Is.False);
-            Assert.That(intro.MorphDiameterDp, Is.EqualTo(160f).Within(0.01f), "sin medida: la guía");
+            Assert.That(intro.Morph.Measured, Is.EqualTo(start.HasValue));
+            Assert.That(intro.MorphDiameterDp, Is.EqualTo(160f).Within(0.01f), "160 dp: la guía o la caja de af_launch_window");
             Assert.That(intro.Morph.StartDiameterPx, Is.EqualTo(420f).Within(0.01f), "160 dp a 2,625 px por dp");
             yield return null;
             _splash.Tick(16f);
-            Assert.That(intro.FenceRequestedAtTick, Is.GreaterThan(0), "ya esperaba a ver el fotograma 0 con la guía");
+            Assert.That(intro.FenceRequestedAtTick, Is.GreaterThan(0), "ya esperaba a ver el fotograma 0 de 160 dp");
 
-            // Java midió después (la vista del icono se colocó tarde): se rehace el fotograma 0 y se vuelve a esperar a verlo.
+            // Java midió la del sistema (la vista del icono se colocó tarde): se rehace el fotograma 0 y se vuelve a esperar a verlo.
             AndroidOsSplash.IconOverrideForTests = new SplashIconBox(297, 927, 486, 486, 0, 0, 1080, 2340);
-            visible = true; // la GPU ya terminó el fotograma de la guía, pero ese ya no vale
-            yield return null;
-            _splash.Tick(16f);
+            visible = true; // la GPU ya terminó el fotograma de 160 dp, pero ese ya no vale
+            bool relaid = false;
+            for (int t = 0; t < BrandIntro.IconPollFrames && !relaid; t++)
+            {
+                yield return null;
+                _splash.Tick(16f);
+                relaid = Mathf.Abs(intro.MorphDiameter - 162f) < 0.01f;
+                if (!relaid)
+                {
+                    Assert.That(intro.OnScreen, Is.False, "mientras no se mira la caja, la espera tampoco acaba: el velo sigue");
+                }
+            }
+
+            Assert.That(relaid, Is.True, "se rehace en " + BrandIntro.IconPollFrames + " fotogramas como mucho");
             Assert.That(intro.Morph.Measured, Is.True);
-            Assert.That(intro.MorphDiameter, Is.EqualTo(162f).Within(0.01f));
             Assert.That(intro.FenceRequestedAtTick, Is.EqualTo(-1), "la espera vuelve a empezar con el fotograma nuevo");
-            Assert.That(intro.OnScreen, Is.False, "el velo no se suelta sobre el fotograma de la guía");
+            Assert.That(intro.OnScreen, Is.False, "el velo no se suelta sobre el fotograma de 160 dp");
             Assert.That(intro.Playing, Is.False);
             yield return null;
             _splash.Tick(16f);
@@ -397,6 +453,8 @@ namespace AF.Tests.PlayMode
             Assert.That(intro.Playing, Is.True);
             BrandIntroReport report = _splash.EndIntro()!;
             Assert.That(report.MorphStartDiamPx, Is.EqualTo(486f).Within(0.01f), "la sonda dice el círculo con que empezó de verdad");
+            Assert.That(report.MorphStartCenterPx.x, Is.EqualTo(540f).Within(0.01f));
+            Assert.That(report.MorphStartCenterPx.y, Is.EqualTo(1170f).Within(0.01f));
         }
 
         [UnityTest]
@@ -420,6 +478,21 @@ namespace AF.Tests.PlayMode
                 Assert.That(image.sprite, Is.SameAs(petroleum), name);
                 Color32 v = image.color;
                 Assert.That(new Color32(v.r, v.g, v.b, 255), Is.EqualTo(new Color32(255, 255, 255, 255)), name + ": vértice blanco");
+            }
+
+            // Lo que queda al quitarse la intro: el cielo y el velo de la pantalla de arranque, con el mismo petróleo exacto.
+            foreach (string path in new[] { "Sky", "Veil/VeilSky" })
+            {
+                Image image = _splash!.Root.Find(path).GetComponent<Image>();
+                Assert.That(image.sprite, Is.Not.Null, path + ": el petróleo va en una textura");
+                Assert.That(image.sprite!.texture.isDataSRGB, Is.True, path);
+                foreach (Color32 c in image.sprite.texture.GetPixels32())
+                {
+                    Assert.That(c, Is.EqualTo(BrandIntro.Petroleum), path);
+                }
+
+                Color32 v = image.color;
+                Assert.That(new Color32(v.r, v.g, v.b, 255), Is.EqualTo(new Color32(255, 255, 255, 255)), path + ": vértice blanco");
             }
 
             Assert.That(intro.Morph.Iris.sprite!.texture.isDataSRGB, Is.True);

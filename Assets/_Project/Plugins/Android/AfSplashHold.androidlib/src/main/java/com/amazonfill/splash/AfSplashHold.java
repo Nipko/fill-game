@@ -107,6 +107,7 @@ public final class AfSplashHold {
     private static volatile long heldMs = -1L;
     private static volatile long procReleaseMs = -1L;
     private static volatile int[] box = NO_BOX;
+    private static volatile int boxVersion;
     private static View systemIcon;
 
     // La vista del icono del sistema se mide cada vez que se coloca (la entrega puede llegar antes de su primer layout).
@@ -235,6 +236,21 @@ public final class AfSplashHold {
         return box.clone();
     }
 
+    /** Sube cada vez que cambia {@link #iconBox()} (0 sin medida): el C# solo copia la caja cuando cambia. */
+    public static int iconBoxVersion() {
+        return boxVersion;
+    }
+
+    // Publica una caja nueva (hilo principal); la misma caja no cuenta como cambio.
+    private static void publish(int[] next) {
+        if (java.util.Arrays.equals(next, box)) {
+            return;
+        }
+
+        box = next;
+        boxVersion++;
+    }
+
     /**
      * Siempre -1: el velo no toca el foco de la ventana (la retencion anterior lo media de soltarla al foco). Se queda para no
      * cambiar el puente con C# ni la sonda os_splash_focus_ms.
@@ -333,7 +349,7 @@ public final class AfSplashHold {
         root.getLocationOnScreen(ref);
         int w = Math.round(icon.getWidth() * Math.abs(icon.getScaleX()));
         int h = Math.round(icon.getHeight() * Math.abs(icon.getScaleY()));
-        box = new int[] {at[0], at[1], w, h, ref[0], ref[1], root.getWidth(), root.getHeight()};
+        publish(new int[] {at[0], at[1], w, h, ref[0], ref[1], root.getWidth(), root.getHeight()});
         matchOwnVeil(at[0] + (w * 0.5f), at[1] + (h * 0.5f), Math.min(w, h));
     }
 
@@ -349,7 +365,7 @@ public final class AfSplashHold {
         int d = Math.round(OWN_MASK_DP * own.getResources().getDisplayMetrics().density);
         int cx = ref[0] + (root.getWidth() / 2);
         int cy = ref[1] + (root.getHeight() / 2);
-        box = new int[] {cx - (d / 2), cy - (d / 2), d, d, ref[0], ref[1], root.getWidth(), root.getHeight()};
+        publish(new int[] {cx - (d / 2), cy - (d / 2), d, d, ref[0], ref[1], root.getWidth(), root.getHeight()});
     }
 
     // El velo propio de debajo, a la caja del sistema (centro y diametro en px); solo si crece: encogido dejaria ver sus bordes.

@@ -337,7 +337,9 @@ namespace AF.Tests.PlayMode
             }
 
             Image sky = splash.Root.Find("Sky").GetComponent<Image>();
-            Assert.That((Color32)sky.color, Is.EqualTo(BrandIntro.Petroleum), "el mismo petróleo de la intro");
+            // El mismo petróleo de la intro, en una textura sRGB con el vértice blanco (jornada 6, observación 11).
+            Assert.That((Color32)sky.color, Is.EqualTo(new Color32(255, 255, 255, 255)), "el vértice, blanco");
+            Assert.That(sky.sprite!.texture.GetPixels32()[0], Is.EqualTo(BrandIntro.Petroleum), "el mismo petróleo de la intro");
             Assert.That(intro.Piece("EmblemStream")!.GetComponent<Image>().fillAmount, Is.EqualTo(1f), "el chorro entero");
 
             // Al quitarse, el mundo entra fundiéndose (de golpe con Reducir movimiento), sin mover el emblema.

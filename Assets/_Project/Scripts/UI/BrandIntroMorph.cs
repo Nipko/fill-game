@@ -152,6 +152,9 @@ namespace AF.UI
         /// </summary>
         public Sprite PetroleumSprite => _petroleumSprite;
 
+        /// <summary>La caja del icono con que se montó el fotograma 0 (<see cref="SplashIconBox.None"/> si no había medida).</summary>
+        public SplashIconBox Box { get; private set; }
+
         /// <summary>El fotograma 0 usa la caja medida del icono de la pantalla del sistema (no la de la guía).</summary>
         public bool Measured { get; private set; }
 
@@ -223,6 +226,7 @@ namespace AF.UI
             UnitsPerDp = unitsPerDp > 0f ? unitsPerDp : 1f;
             _w = art.Width;
             _h = art.Height;
+            Box = icon;
             Measured = icon.Measured && _w > 0f && _h > 0f;
             if (Measured)
             {
@@ -437,8 +441,11 @@ namespace AF.UI
         /// <summary>Lado de la textura del petróleo liso (px).</summary>
         internal const int SolidTextureSize = 4;
 
-        // Una textura sRGB lisa de color (sin mipmaps, sin filtrar): el color exacto, sin pasar por el color de vértice.
-        private static Texture2D SolidTexture(string name, Color32 color)
+        /// <summary>
+        /// Una textura sRGB lisa de color (sin mipmaps, sin filtrar): el color exacto, sin pasar por el color de vértice (la usa
+        /// también <see cref="BootSplash"/> para su cielo y su velo). Quien la pide la destruye.
+        /// </summary>
+        internal static Texture2D SolidTexture(string name, Color32 color)
         {
             var pixels = new Color32[SolidTextureSize * SolidTextureSize];
             for (int i = 0; i < pixels.Length; i++)

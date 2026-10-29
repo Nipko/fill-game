@@ -107,12 +107,17 @@ namespace AF.Tests.EditMode
             StringAssert.Contains("icon.getLocationOnScreen(at);", hold);
             StringAssert.Contains("Math.round(icon.getWidth() * Math.abs(icon.getScaleX()))", hold);
             StringAssert.Contains("Math.round(icon.getHeight() * Math.abs(icon.getScaleY()))", hold);
-            StringAssert.Contains("box = new int[] {at[0], at[1], w, h, ref[0], ref[1], root.getWidth(), root.getHeight()};", hold);
+            StringAssert.Contains("publish(new int[] {at[0], at[1], w, h, ref[0], ref[1], root.getWidth(), root.getHeight()});", hold);
 
             // El propio: la caja conocida de af_launch_window, centrada en la DecorView.
             StringAssert.Contains("view.addOnLayoutChangeListener(OWN_LAYOUT);", hold);
             StringAssert.Contains("int d = Math.round(OWN_MASK_DP * own.getResources().getDisplayMetrics().density);", hold);
-            StringAssert.Contains("box = new int[] {cx - (d / 2), cy - (d / 2), d, d, ref[0], ref[1], root.getWidth(), root.getHeight()};", hold);
+            StringAssert.Contains("publish(new int[] {cx - (d / 2), cy - (d / 2), d, d, ref[0], ref[1], root.getWidth(), root.getHeight()});", hold);
+
+            // La versión: el C# solo copia la caja (un int[] por JNI) cuando cambia; la misma caja no cuenta.
+            StringAssert.Contains("public static int iconBoxVersion() {", hold);
+            Assert.That(Regex.IsMatch(hold, @"if \(java\.util\.Arrays\.equals\(next, box\)\) \{\s*return;\s*\}\s*box = next;\s*boxVersion\+\+;"), Is.True);
+            Assert.That(Regex.Matches(hold, @"^\s+box = ", RegexOptions.Multiline).Count, Is.EqualTo(1), "solo publish cambia la caja");
             StringAssert.Contains("removeOnLayoutChangeListener(ICON_LAYOUT)", hold, "al soltar, sin oyentes colgados");
             StringAssert.Contains("removeOnLayoutChangeListener(OWN_LAYOUT)", hold);
 
