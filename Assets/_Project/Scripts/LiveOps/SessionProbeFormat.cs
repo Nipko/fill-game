@@ -19,7 +19,9 @@ namespace AF.LiveOps
     /// <item><c>push_prompt</c>: <c>step</c>, <c>result</c> y <c>origin</c>;</item>
     /// <item><c>push_plan</c>: <c>count</c> y <c>first</c> / <c>first_at</c> (el primero programado, hora local) al pasar a segundo
     /// plano, con <c>allowed</c>;</item>
-    /// <item><c>push_sent</c> (uno por entregado: <c>type</c>, <c>id</c>) y <c>push_open</c> (<c>type</c>) al abrir.</item>
+    /// <item><c>push_sent</c> (uno por entregado: <c>type</c>, <c>id</c>) al abrir y <c>push_open</c> (<c>type</c> y <c>dest</c>, el
+    /// destino tomado: <c>daily</c>, <c>logbook</c>, <c>home</c> o <c>none</c>; D-062 [P]) cuando el aviso tocado se encamina al
+    /// llegar al inicio, o se descarta.</item>
     /// </list>
     /// </summary>
     public static class SessionProbeFormat
@@ -85,7 +87,10 @@ namespace AF.LiveOps
             return sb.Append('}').ToString();
         }
 
-        /// <summary>Líneas <c>push_sent</c> y <c>push_open</c> de <paramref name="report"/>, en ese orden.</summary>
+        /// <summary>
+        /// Líneas <c>push_sent</c> de <paramref name="report"/>. La de <c>push_open</c> sale aparte (<see cref="PushOpen"/>), cuando
+        /// se sabe a qué destino llevó el aviso (D-062).
+        /// </summary>
         public static void Open(long t, NotificationOpenReport report, List<string> into)
         {
             if (report == null || into == null)
@@ -100,11 +105,15 @@ namespace AF.LiveOps
                 sb.Append(",\"id\":").Append(report.Delivered[i].Id.ToString(CultureInfo.InvariantCulture));
                 into.Add(sb.Append('}').ToString());
             }
+        }
 
-            if (report.OpenedType != null)
-            {
-                into.Add(Begin("push_open", t).Append(",\"type\":\"").Append(report.OpenedType).Append("\"}").ToString());
-            }
+        /// <summary>
+        /// Línea <c>push_open</c>: el <c>type</c> del aviso tocado y el destino tomado (<c>dest</c>: <see cref="NotificationRouting.IdOf"/>
+        /// o <see cref="NotificationRouting.DroppedId"/>; D-062 [P]).
+        /// </summary>
+        public static string PushOpen(long t, string type, string dest)
+        {
+            return Begin("push_open", t).Append(",\"type\":\"").Append(type).Append("\",\"dest\":\"").Append(dest).Append("\"}").ToString();
         }
 
         /// <summary>Identificador de <see cref="ComebackSegment"/> (<c>none</c>, <c>at_risk</c>, <c>dormant</c>, <c>lost</c>, <c>churn</c>).</summary>

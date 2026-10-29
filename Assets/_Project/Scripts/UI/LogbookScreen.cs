@@ -25,6 +25,9 @@ namespace AF.UI
 
         /// <summary>La fila «Bitácora · elige tu premio» de la victoria (D-033, punto 5; la dibuja el panel de B1b: Q-B11).</summary>
         Victory = 3,
+
+        /// <summary>El aviso «Bitácora sin sellar» tocado (D-062): no gasta el cupo de takeovers, como la tarjeta.</summary>
+        Push = 4,
     }
 
     /// <summary>
