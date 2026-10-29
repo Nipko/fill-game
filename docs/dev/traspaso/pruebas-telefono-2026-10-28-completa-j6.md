@@ -23,6 +23,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Los arreglos de la hoja j6 (build `d3e601a2`, punto 10) | cumplen 4, 5, 7, 9, 10 y la sonda de 11; quedan 8 y la memoria; el icono cambia de forma | 12, 13, 14, 15 |
 | Botones en gris, 14 y 13 (build `d3e601a2`, punto 11) | cumple: la 2 queda arreglada; el aviso abre la Bitácora | 16 |
 | Bloques 5, 9, 10.1 y 11 (punto 12, lo hecho) | cumple; los banners repiten dibujo | 17 |
+| Lo automatizable que quedaba (punto 13) | cumple; el Mapa del 700 dice «Nivel 701» | 18 |
 
 ## Verificación (bloque 0)
 
@@ -387,6 +388,36 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - una captura por mundo con su rótulo;
      - 10.2-10.4.
 
+13. **Con el mismo build: lo que quedaba automatizable. Cumple, salvo el botón del Mapa en el 700 (observación 18).**
+   - **La recarga de Marea con vídeo** (`rv_undo_refill`, en el 48): se gastan las 3 Mareas deshaciendo y rehaciendo el último vertido. Sale «recarga con vídeo» junto a «+3 · semillas». Dan `af_ad_request` `filled`, `af_ad_shown` y `af_ad_reward`, y la Marea vuelve a 3. **Con esto, los cinco vídeos con premio cumplen.**
+   - **Sin relleno** (`--es af_ads_fill no_fill`; el guion dice `--ei af_ads_fill 0`, pero el extra es texto): en el 100, el «+1 ▶» de Revelar desaparece y queda su precio en semillas, sin botones de vídeo vacíos (`b09/bandejas-s.png`). En Aguas estancadas solo queda «+3 · 30 semillas» (punto 11).
+   - **Los intersticiales** (del 61 al 90 en una sesión con el jugador automático, `b09/total/`):
+     - el calentamiento los bloquea hasta el 65 (`blocked:Warmup`, 120 s);
+     - después salen en el 66, 73, 80 y 87 (`allowed`), y entre medias `blocked:MinGap`. A ~21 s por nivel, la separación de 150 s manda sobre el «cada 2 niveles» del 61 (08 §9);
+     - se vieron 4, con `af_ad_request` y `af_ad_shown`, sin ninguna excepción;
+     - sin probar: el tope de 6 por sesión, el de 12 al día y el de 15 vídeos al día (hace falta una sesión más larga), y que no salgan en el Reto, en un reintento ni tras rendirse.
+   - **El banner de mundo solo en el primer intento:** en el 141 sale al entrar; tras Salir y Reintentar ya no sale (`b11/141-reintento.png`).
+   - **Contadores de Lluvia (194) y Piraña (200) junto a Reiniciar** (`b05/contadores-zoom.png`):
+     - en en-XA, al 100 % y al 130 %, «[Réíñíçíár …]» va en dos líneas y el contador queda a su izquierda, sin tocarlo;
+     - en es-419, debajo, a la derecha;
+     - `hud_label`: `counter` lluvia (3) y piraña (4).
+   - **Sonido, Música y Vibración:** al apagarlos salen tres `settings_change` (false). Al reabrir la app siguen apagados. Se volvieron a encender (`b13/s0..s2`).
+   - **en-XA** (`xa/xa-hoja.png`): inicio, cuatro pantallas de Ajustes, Mapa y las cuatro pestañas del Mercado con la tienda falsa. Todo entre corchetes, nada vacío ni recortado. Los precios de la tienda («COP 5,900») van sin corchetes, como deben.
+   - **El Mapa con `af_max_level`** 25, 58, 140, 200, 400 y 700 (`b11/mapas-hoja.png`):
+     - `map_open` y, desde el 58, `stop_arrive` con el viaje hasta la parada (50, 140, 200 y 400);
+     - cabecera con el mundo y su pregunta, el Muestrario (6/73 a 73/73), Mundo y Cuenca, y «Jugar · Nivel N»;
+     - **en el 700, el Mapa dice «Jugar · Nivel 701»** (observación 18). El inicio dice bien «Jugar · Reto del río», y el botón del Mapa abre el Reto (`d3_n0301`).
+   - **Bloque 19, los arranques y el tamaño:**
+     - tres en frío con el perfil 18+: `TotalTime` 312-332 ms, `proc_awake_ms` ~600, `proc_visible_ms` ~930-950 y `splash_end_ms` ~3.870 (intro y carga);
+     - datos de la app 23 MB (`run-as du`: `no_backup` 8,8 MB, `cache` 6,9 MB y el resto < 0,5 MB); el `dev.apk`, 77 MB.
+   - **Sin hacer todavía:**
+     - la sesión de 60 min, la batería y la temperatura (19);
+     - el resto de 18;
+     - 12.2 (la Liga contra el backend de desarrollo);
+     - 10.2-10.4, 11.4 y 11.5;
+     - cerrar un vídeo antes de tiempo, el silencio y la zona segura;
+     - con el dueño: 21, 22 y 23.
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -432,6 +463,9 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
     - Del mundo 3 al 9 el dibujo es el mismo (Capi con Rosa en la orilla, por código). Solo cambian la tira del mapa, el agua y los textos.
     - El del mundo 2 (nivel 11) es más corto: sin la tira del mapa ni «Ver mapa».
     - Si cada mundo debe tener su propio arte, es trabajo del artista. Si el del 2 debe llevar «Ver mapa», lo decide el escritorio (`b11/hoja-entrada.png`).
+18. **Baja. Con el contenido acabado (`max_level` 700), el botón del Mapa dice «Jugar · Nivel 701».**
+    - 06 (D-032, punto 6) pide «nunca «Jugar · Nivel 701»». El inicio sí dice «Jugar · Reto del río».
+    - El botón del Mapa abre el Reto, así que solo falla la etiqueta (`b11/mapa-700-b.png`).
 
 ## Notas de la herramienta (no son defectos del juego)
 
