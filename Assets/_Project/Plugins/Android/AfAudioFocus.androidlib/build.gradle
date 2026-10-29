@@ -2,8 +2,10 @@
 // solo API de la plataforma (android.media): sin androidx, sin dependencias ni permisos (pedir el foco de audio no necesita
 // ninguno). El juego pide el foco con AudioFocusRequest (API 26, el minSdk) y USAGE_GAME, y Android le avisa cuando otro lo toma
 // (una alarma, una llamada, un aviso de voz): AF.Audio.Unity.AndroidAudioFocus lo recibe por un AndroidJavaProxy y
-// UnityAudioService baja la música al 20 % o pausa la música y los efectos. Detalle en docs/dev/decisiones.md (D-026, añadido del 2026-10-29) y en el test
-// AfAudioFocusPluginTests.
+// UnityAudioService baja la música al 20 % o pausa la música y los efectos. Si al pasar a primer plano ya suena música de otra app
+// (AudioManager.isMusicActive, mirado por un proveedor sin exportar antes de que Unity reanude su audio), el juego no pide el foco
+// ni pone su música (el dueño, 2026-10-29). Detalle en docs/dev/decisiones.md (D-026, añadido del 2026-10-29) y en los tests
+// AudioFocusTests (EditMode) y AudioFocusPlayTests (PlayMode).
 apply plugin: 'com.android.library'
 
 android {

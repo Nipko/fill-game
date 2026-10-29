@@ -130,8 +130,45 @@ namespace AF.Tests.EditMode
             Assert.That(tracker.Want(true), Is.True);
             Assert.That(tracker.State, Is.EqualTo(AudioFocusState.Denied));
             port.RequestResult = AudioFocusState.Gain;
-            Assert.That(tracker.Reacquire(), Is.True, "negado: se vuelve a pedir al volver la ventana");
+            Assert.That(tracker.Reacquire(), Is.True, "negado: se vuelve a pedir (al terminar un anuncio)");
             Assert.That(tracker.State, Is.EqualTo(AudioFocusState.Gain));
+        }
+
+        [Test]
+        public void Tracker_WithOtherMusicPlaying_DoesNotRequest_AndYields_TheOwnersRule()
+        {
+            Assert.That(AudioFocusTracker.YieldToOtherMusicDefault, Is.True, "decisión del dueño del 2026-10-29: convivir con la otra música");
+            var port = new FakeAudioFocusPort { OtherMusic = true };
+            var tracker = new AudioFocusTracker(port);
+            Assert.That(tracker.YieldToOtherMusic, Is.True);
+
+            Assert.That(tracker.Want(true), Is.True);
+            Assert.That(tracker.State, Is.EqualTo(AudioFocusState.Yielded), "suena Spotify al abrir: no se pide el foco");
+            Assert.That(port.Requests, Is.EqualTo(0));
+            Assert.That(tracker.Reacquire(), Is.False, "un anuncio que termina no lo pide: solo al volver a primer plano");
+
+            // Vuelve de segundo plano sin otra música: se pide, como siempre.
+            tracker.Want(false);
+            port.OtherMusic = false;
+            Assert.That(tracker.Want(true), Is.True);
+            Assert.That(tracker.State, Is.EqualTo(AudioFocusState.Gain));
+            Assert.That(port.Requests, Is.EqualTo(1));
+
+            // Con la regla apagada (solo tests), se pide aunque suene otra.
+            var forced = new AudioFocusTracker(new FakeAudioFocusPort { OtherMusic = true }) { YieldToOtherMusic = false };
+            forced.Want(true);
+            Assert.That(forced.State, Is.EqualTo(AudioFocusState.Gain));
+
+            var mix = new AudioMix();
+            mix.SetFocus(AudioFocusState.Yielded);
+            Assert.That(mix.FocusYielded, Is.True);
+            Assert.That(mix.MusicAudible, Is.False, "la música del juego no suena");
+            Assert.That(mix.MusicGain, Is.EqualTo(0f));
+            Assert.That(mix.AmbientGain, Is.EqualTo(0f), "ni el ambiente");
+            Assert.That(mix.SfxAudible, Is.True, "los efectos sí");
+            Assert.That(mix.SfxGain, Is.EqualTo(1f));
+            Assert.That(mix.FocusPaused, Is.False);
+            Assert.That(AudioFocusStates.Name(AudioFocusState.Yielded), Is.EqualTo("yielded"));
         }
 
         [Test]
@@ -145,22 +182,25 @@ namespace AF.Tests.EditMode
         {
             Assert.That(Directory.GetFiles(PluginDir, "*.kt", SearchOption.AllDirectories), Is.Empty, "sin Kotlin");
             string[] files = Directory.GetFiles(PluginDir, "*.java", SearchOption.AllDirectories);
-            Assert.That(files, Has.Length.EqualTo(1), "solo AfAudioFocus");
+            Assert.That(files, Has.Length.EqualTo(2), "AfAudioFocus y su proveedor");
             string[] banned =
             {
                 "java.net", "javax.net", "okhttp", "HttpURLConnection", "Socket", "http:", "https:", "WebView", "android.util.Log", "Log.",
                 "System.out", "printStackTrace", "SharedPreferences", "FileOutputStream", "getAdvertisingId", "Settings.Secure", "androidx",
                 "com.unity3d", "Class.forName", "getMethod(",
             };
-            string text = File.ReadAllText(files[0]);
-            foreach (string word in banned)
+            foreach (string file in files)
             {
-                Assert.That(text.Contains(word), Is.False, word);
-            }
+                string text = File.ReadAllText(file);
+                foreach (string word in banned)
+                {
+                    Assert.That(text.Contains(word), Is.False, Path.GetFileName(file) + ": " + word);
+                }
 
-            foreach (Match m in Regex.Matches(text, @"^import\s+([\w\.]+);", RegexOptions.Multiline))
-            {
-                Assert.That(m.Groups[1].Value.StartsWith("android.", StringComparison.Ordinal), Is.True, "importa " + m.Groups[1].Value);
+                foreach (Match m in Regex.Matches(text, @"^import\s+([\w\.]+);", RegexOptions.Multiline))
+                {
+                    Assert.That(m.Groups[1].Value.StartsWith("android.", StringComparison.Ordinal), Is.True, Path.GetFileName(file) + " importa " + m.Groups[1].Value);
+                }
             }
 
             string gradle = File.ReadAllText(Path.Combine(PluginDir, "build.gradle"));
@@ -172,7 +212,11 @@ namespace AF.Tests.EditMode
             Assert.DoesNotThrow(() => new System.Xml.XmlDocument().Load(manifestPath), "XML válido");
             string manifest = File.ReadAllText(manifestPath);
             Assert.That(manifest, Does.Not.Contain("uses-permission"), "el foco de audio no necesita permisos");
-            Assert.That(manifest, Does.Not.Contain("<application"), "sin componentes");
+            Assert.That(manifest, Does.Not.Contain("<activity"), "no sustituye a la actividad de Unity");
+            Assert.That(manifest, Does.Not.Contain("<service").And.Not.Contain("<receiver"));
+            StringAssert.Contains("android:name=\"com.amazonfill.audiofocus.AfAudioFocusProvider\"", manifest);
+            StringAssert.Contains("android:authorities=\"${applicationId}.afaudiofocus\"", manifest);
+            StringAssert.Contains("android:exported=\"false\"", manifest);
 
             string proguard = File.ReadAllText(Path.Combine(PluginDir, "proguard-rules.pro"));
             StringAssert.Contains("-keep class com.amazonfill.audiofocus.** { *; }", proguard);
@@ -204,6 +248,11 @@ namespace AF.Tests.EditMode
             StringAssert.Contains("case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:\n                return LOSS_TRANSIENT;", java.Replace("\r\n", "\n"));
             StringAssert.Contains("case AudioManager.AUDIOFOCUS_LOSS:\n                return LOSS;", java.Replace("\r\n", "\n"));
             StringAssert.Contains("manager.abandonAudioFocusRequest(pending)", java);
+
+            // Convivir con la música de otra app (el dueño, 2026-10-29): se mira al pasar a primer plano, antes del audio de Unity.
+            StringAssert.Contains("public static boolean otherMusicAtForeground()", java);
+            StringAssert.Contains("audio.isMusicActive()", java);
+            StringAssert.Contains("if (started++ == 0) {", java);
         }
     }
 }

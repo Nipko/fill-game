@@ -235,11 +235,17 @@ namespace AF.Audio
         /// <summary>Otro suena por encima un momento: la música y el ambiente bajan a <see cref="FocusDuckGain"/>.</summary>
         public bool FocusDucked => Focus == AudioFocusState.Duck;
 
+        /// <summary>
+        /// Ya sonaba música de otra app al pasar a primer plano (el dueño, 2026-10-29): la música y el ambiente del juego no suenan;
+        /// los efectos sí.
+        /// </summary>
+        public bool FocusYielded => Focus == AudioFocusState.Yielded;
+
         /// <summary>Los efectos se pueden oír ahora (sin contar el fundido).</summary>
         public bool SfxAudible => Settings.Sound && Ringer == RingerMode.Normal && !AdActive && !FocusPaused;
 
         /// <summary>La música se puede oír ahora.</summary>
-        public bool MusicAudible => Settings.Music && Ringer == RingerMode.Normal && !AdActive && !FocusPaused;
+        public bool MusicAudible => Settings.Music && Ringer == RingerMode.Normal && !AdActive && !FocusPaused && !FocusYielded;
 
         /// <summary>Se puede vibrar ahora (Vibración encendida, sin anuncio y el teléfono no en silencio total).</summary>
         public bool HapticsAllowed => Settings.Haptics && Ringer != RingerMode.Silent && !AdActive;

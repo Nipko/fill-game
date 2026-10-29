@@ -99,10 +99,18 @@ namespace AF.UI
         /// <summary>
         /// Lo publicado sigue igual, pero se movió en la pantalla (se desplazó una lista con el dedo, se arrastró el Mapa): vuelve a
         /// leer los marcos de todos los nodos para que el lector toque y lea lo que está ahora en cada sitio (observación 7 de la
-        /// jornada 6). No mueve el foco, salvo que el elemento enfocado sea una fila que el desplazamiento sacó del visor: entonces
-        /// pasa a la primera fila de su lista que se ve, para que el orden del foco siga lo que se ve.
+        /// jornada 6). Es inmediato y no mueve el foco.
         /// </summary>
         void RefreshFrames();
+
+        /// <summary>
+        /// Lo publicado se movió y ya se paró (<see cref="A11yService"/>: un recorrido sin movimiento tras otro con él): si el elemento
+        /// enfocado es una fila que el desplazamiento sacó del visor y su lista ya no se mueve
+        /// (<see cref="UnityScreenReaderHost.SettledSpeed"/>), el foco pasa a la primera fila de su lista que se ve, para que el orden
+        /// del foco siga lo que se ve. Mientras la lista corre, el foco no salta de fila en fila. Devuelve false si la lista aún se
+        /// mueve (se vuelve a intentar en el siguiente recorrido).
+        /// </summary>
+        bool SettleFocus();
     }
 
     /// <summary>
@@ -135,10 +143,23 @@ namespace AF.UI
         /// <summary>Veces que se pidió volver a leer los marcos (<see cref="RefreshFrames"/>).</summary>
         public int FrameRefreshes { get; private set; }
 
+        /// <summary>Veces que se pidió asentar el foco tras parar (<see cref="SettleFocus"/>).</summary>
+        public int FocusSettles { get; private set; }
+
+        /// <summary>Lo que devuelve <see cref="SettleFocus"/> (false: la lista aún se mueve).</summary>
+        public bool Settled { get; set; } = true;
+
         /// <inheritdoc />
         public void RefreshFrames()
         {
             FrameRefreshes++;
+        }
+
+        /// <inheritdoc />
+        public bool SettleFocus()
+        {
+            FocusSettles++;
+            return Settled;
         }
 
         /// <inheritdoc />
@@ -193,10 +214,17 @@ namespace AF.UI
     /// foco (<see cref="AccessibilityNode.focusChanged"/>), desplazan el visor para enseñarse; su marco es lo que se ve de ellos
     /// en el visor (<see cref="A11yScroll.Frame"/>). Unity guarda el marco de cada nodo y solo lo relee con
     /// <see cref="AccessibilityHierarchy.RefreshNodeFrames"/>: se relee al desplazar con el lector y cuando
-    /// <see cref="A11yService"/> ve que lo publicado se movió (<see cref="RefreshFrames"/>; observación 7 de la jornada 6).
+    /// <see cref="A11yService"/> ve que lo publicado se movió (<see cref="RefreshFrames"/>; observación 7 de la jornada 6); el foco
+    /// solo cambia de fila cuando la lista ya paró (<see cref="SettleFocus"/>).
     /// </summary>
     public sealed class UnityScreenReaderHost : IScreenReaderHost
     {
+        /// <summary>
+        /// Velocidad (unidades del contenido por segundo, <see cref="ScrollRect.velocity"/>) por debajo de la cual una lista se da por
+        /// parada: hasta entonces el foco no se mueve de fila (revisión de la observación 7 de la jornada 6) [P].
+        /// </summary>
+        public const float SettledSpeed = 1f;
+
         private static readonly Vector3[] Corners = new Vector3[4];
 
         private readonly List<AccessibilityNode> _nodes = new List<AccessibilityNode>();
@@ -388,6 +416,16 @@ namespace AF.UI
             // vuelve a pedir a frameGetter con RefreshNodeFrames; sin esto, tras desplazar la Liga con el dedo, TalkBack tocaba y
             // leía la fila que había antes en ese sitio. RefreshNodeFrames ya avisa al lector (SendLayoutChanged sin mover el foco).
             _hierarchy.RefreshNodeFrames();
+        }
+
+        /// <inheritdoc />
+        public bool SettleFocus()
+        {
+            if (_hierarchy == null || !ReferenceEquals(AssistiveSupport.activeHierarchy, _hierarchy))
+            {
+                return true;
+            }
+
             int focused = -1;
             for (int i = 0; i < _nodes.Count; i++)
             {
@@ -398,17 +436,31 @@ namespace AF.UI
                 }
             }
 
+            if (focused >= 0 && Moving(_refs[focused].Item))
+            {
+                return false; // la lista aún corre: el foco espera a que pare
+            }
+
             int target = RefocusAfterMove(focused);
             if (target >= 0 && target != focused)
             {
                 AssistiveSupport.notificationDispatcher.SendLayoutChanged(_nodes[target]);
             }
+
+            return true;
+        }
+
+        // La lista de item aún se mueve (inercia o arrastre).
+        private static bool Moving(A11yItem item)
+        {
+            return item.Scroll != null && item.Scroll!.velocity.magnitude > SettledSpeed;
         }
 
         /// <summary>
         /// A dónde va el foco tras moverse la interfaz con el nodo <paramref name="focused"/> enfocado (−1: ninguno): se queda donde
-        /// está, salvo que sea una fila de una lista que se desplaza y ya no se vea nada de ella; entonces, a la primera fila de esa
-        /// lista que se ve entera (o, si no hay, en parte), para que el siguiente gesto siga el orden que se ve. −1 si ninguno.
+        /// está mientras su lista se mueve (<see cref="SettledSpeed"/>), si no es una fila de una lista o si aún se ve algo de ella;
+        /// si la lista ya paró y la fila salió del visor, a la primera fila de esa lista que se ve entera (o, si no hay, en parte),
+        /// para que el siguiente gesto siga el orden que se ve. −1 si ninguno.
         /// </summary>
         internal int RefocusAfterMove(int focused)
         {
@@ -418,7 +470,7 @@ namespace AF.UI
             }
 
             A11yItem item = _refs[focused].Item;
-            if (item.Scroll == null || item.Rect == null || A11yScroll.PartlyShown(item.Scroll!, item.Rect!))
+            if (item.Scroll == null || item.Rect == null || Moving(item) || A11yScroll.PartlyShown(item.Scroll!, item.Rect!))
             {
                 return focused;
             }

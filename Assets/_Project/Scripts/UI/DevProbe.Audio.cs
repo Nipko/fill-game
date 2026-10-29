@@ -29,7 +29,7 @@ namespace AF.UI
     /// <item><c>AF_STATE {"event":"audio_focus","t":…,"state":"loss_transient","music_gain":0.00,"paused":true}</c> en cada cambio del
     /// foco de audio del teléfono (observación 10 de la jornada 6; D-026, añadido del 2026-10-29): <c>gain</c> (el juego lo tiene),
     /// <c>duck</c> (otro suena por encima: la música baja, <c>music_gain</c> 0.20), <c>loss_transient</c> (una alarma, el timbre de
-    /// una llamada: pausa), <c>loss</c> (otra app de música: pausa), <c>denied</c> (Android no lo dio) o <c>none</c> (sin pedir:
+    /// una llamada: pausa), <c>loss</c> (otra app de música: pausa), <c>denied</c> (Android no lo dio), <c>yielded</c> (ya sonaba música de otra app: la del juego calla, los efectos suenan) o <c>none</c> (sin pedir:
     /// segundo plano o Música apagada). <c>music_gain</c> es lo que deja el foco (sin el fundido de vuelta).</item>
     /// </list>
     /// </summary>

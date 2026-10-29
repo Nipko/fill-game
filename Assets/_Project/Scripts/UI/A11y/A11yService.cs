@@ -13,7 +13,8 @@ namespace AF.UI
     /// por fotograma), y al apagarlo quita lo publicado. Lo crea y lo avanza <c>GameBootstrap</c> (parche <c>B9-ui.diff</c>).
     /// En cada recorrido mira también si lo publicado se movió en la pantalla sin cambiar (una lista que se desplaza con el dedo, el
     /// Mapa arrastrado): entonces pide al anfitrión que vuelva a leer los marcos (<see cref="IScreenReaderHost.RefreshFrames"/>;
-    /// observación 7 de la jornada 6, la Liga con TalkBack).
+    /// observación 7 de la jornada 6, la Liga con TalkBack), en el acto; y, cuando un recorrido ya no ve movimiento tras otro que
+    /// sí, le pide asentar el foco (<see cref="IScreenReaderHost.SettleFocus"/>): el foco no salta de fila mientras la lista corre.
     /// </summary>
     public sealed class A11yService
     {
@@ -29,6 +30,7 @@ namespace AF.UI
         private readonly List<A11yItem> _published = new List<A11yItem>();
         private readonly List<Rect> _frames = new List<Rect>();
         private float _sinceMs = float.MaxValue;
+        private bool _settlePending;
         private bool _wasOn;
 
         /// <summary>Crea el servicio sobre <paramref name="host"/> (el real, <see cref="UnityScreenReaderHost"/>, o el falso).</summary>
@@ -56,6 +58,9 @@ namespace AF.UI
         /// <summary>Veces que se pidió volver a leer los marcos porque lo publicado se movió (tests).</summary>
         public int FrameRefreshes { get; private set; }
 
+        /// <summary>Hay que asentar el foco cuando lo publicado deje de moverse (tests).</summary>
+        public bool SettlePending => _settlePending;
+
         /// <summary>Pide recorrer la interfaz en el siguiente <see cref="Tick"/> (cambió el tablero, se abrió una pantalla…).</summary>
         public void Invalidate()
         {
@@ -82,6 +87,7 @@ namespace AF.UI
                     _host.Clear();
                     _published.Clear();
                     _frames.Clear();
+                    _settlePending = false;
                     _wasOn = false;
                 }
 
@@ -126,8 +132,13 @@ namespace AF.UI
 
             if (FramesMoved(publish))
             {
-                _host.RefreshFrames();
+                _host.RefreshFrames(); // en el acto: el lector toca y lee lo que se ve ya
                 FrameRefreshes++;
+                _settlePending = true;
+            }
+            else if (_settlePending && _host.SettleFocus())
+            {
+                _settlePending = false; // dos recorridos seguidos (el que movió y este, quieto): el foco sigue a lo que se ve
             }
 
             return publish;

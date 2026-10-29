@@ -31,12 +31,18 @@ namespace AF.Audio
 
         /// <summary>
         /// Otro toma el foco sin plazo (<c>AUDIOFOCUS_LOSS</c>: otra app de música): se pausa todo; Android no lo devuelve solo y el
-        /// juego lo vuelve a pedir al recuperar la ventana o al terminar un anuncio.
+        /// juego lo vuelve a pedir al volver de segundo plano o al terminar un anuncio.
         /// </summary>
         Loss = 4,
 
         /// <summary>Android no dio el foco al pedirlo (p. ej., durante una llamada): suena como sin foco.</summary>
         Denied = 5,
+
+        /// <summary>
+        /// Al pasar a primer plano ya sonaba música de otra app (el dueño, 2026-10-29: convivir con ella): no se pide el foco y la
+        /// música y el ambiente del juego no suenan; los efectos sí. Se vuelve a mirar al volver de segundo plano.
+        /// </summary>
+        Yielded = 6,
     }
 
     /// <summary>Textos del foco de audio (los del plugin Java y los de la sonda <c>AF_STATE audio_focus</c>), sin asignar.</summary>
@@ -60,6 +66,9 @@ namespace AF.Audio
         /// <summary>Texto de <see cref="AudioFocusState.Denied"/> (<c>AfAudioFocus.DENIED</c>).</summary>
         public const string Denied = "denied";
 
+        /// <summary>Texto de <see cref="AudioFocusState.Yielded"/> (solo la sonda: ya sonaba música de otra app).</summary>
+        public const string Yielded = "yielded";
+
         /// <summary>El texto de <paramref name="state"/>.</summary>
         public static string Name(AudioFocusState state)
         {
@@ -75,6 +84,8 @@ namespace AF.Audio
                     return Loss;
                 case AudioFocusState.Denied:
                     return Denied;
+                case AudioFocusState.Yielded:
+                    return Yielded;
                 default:
                     return None;
             }
@@ -98,6 +109,8 @@ namespace AF.Audio
                     return AudioFocusState.Loss;
                 case Denied:
                     return AudioFocusState.Denied;
+                case Yielded:
+                    return AudioFocusState.Yielded;
                 default:
                     return AudioFocusState.None;
             }
@@ -125,6 +138,12 @@ namespace AF.Audio
 
         /// <summary>El último aviso de Android desde la vez anterior, si llegó alguno (sin asignar).</summary>
         bool TryTake(out AudioFocusState state);
+
+        /// <summary>
+        /// Ya sonaba música de otra app cuando el juego pasó a primer plano por última vez (al arrancar o al volver de segundo plano;
+        /// en Android, <c>AudioManager.isMusicActive</c> mirado antes de que Unity reanude su audio). False si no se sabe.
+        /// </summary>
+        bool OtherMusicAtForeground();
     }
 
     /// <summary>
@@ -146,6 +165,15 @@ namespace AF.Audio
 
         /// <summary>Se tiene pedido (tras un <see cref="Request"/> concedido y sin <see cref="Abandon"/>).</summary>
         public bool Held { get; private set; }
+
+        /// <summary>Lo que devuelve <see cref="OtherMusicAtForeground"/> (simula Spotify sonando al abrir el juego).</summary>
+        public bool OtherMusic { get; set; }
+
+        /// <inheritdoc />
+        public bool OtherMusicAtForeground()
+        {
+            return OtherMusic;
+        }
 
         /// <inheritdoc />
         public AudioFocusState Request()
@@ -191,11 +219,15 @@ namespace AF.Audio
     /// <summary>
     /// Cuándo se pide el foco de audio y en qué estado está (D-026, añadido del 2026-10-29), sin motor y sin asignar:
     /// <list type="bullet">
-    /// <item>Se tiene pedido mientras el juego está en primer plano y con la Música encendida (<see cref="Want"/>): con la Música
-    /// apagada no se pide, para no cortar la música de otra app del jugador [P].</item>
+    /// <item>Se quiere mientras el juego está en primer plano y con la Música encendida (<see cref="Want"/>).</item>
+    /// <item>El dueño (2026-10-29, «hagamoslo asi entonces»): si al pasar a primer plano ya sonaba música de otra app
+    /// (<see cref="IAudioFocusPort.OtherMusicAtForeground"/>), no se pide y el estado es <see cref="AudioFocusState.Yielded"/>: la
+    /// música del juego no suena y los efectos sí. Si no sonaba nada, se pide (<c>AUDIOFOCUS_GAIN</c>) y una alarma lo pausa. Lo
+    /// apaga <see cref="YieldToOtherMusic"/> (tests).</item>
     /// <item>Los avisos de Android (<see cref="Poll"/>) cambian el estado solo con el foco pedido.</item>
     /// <item>Tras un <see cref="AudioFocusState.Loss"/> o un <see cref="AudioFocusState.Denied"/>, Android no lo devuelve solo:
-    /// <see cref="Reacquire"/> lo vuelve a pedir al recuperar la ventana o al terminar un anuncio.</item>
+    /// <see cref="Reacquire"/> lo vuelve a pedir al terminar un anuncio; al volver de segundo plano se pide de nuevo con
+    /// <see cref="Want"/>.</item>
     /// </list>
     /// </summary>
     public sealed class AudioFocusTracker
@@ -208,8 +240,17 @@ namespace AF.Audio
             _port = port ?? throw new ArgumentNullException(nameof(port));
         }
 
+        /// <summary>
+        /// Convivir con la música de otra app (decisión del dueño del 2026-10-29): activado. Solo los tests lo apagan para pedir el
+        /// foco aunque el puerto diga que suena otra.
+        /// </summary>
+        public const bool YieldToOtherMusicDefault = true;
+
         /// <summary>El puerto.</summary>
         public IAudioFocusPort Port => _port;
+
+        /// <summary>Si al quererlo ya sonaba música de otra app, no se pide (<see cref="AudioFocusState.Yielded"/>).</summary>
+        public bool YieldToOtherMusic { get; set; } = YieldToOtherMusicDefault;
 
         /// <summary>El estado de ahora (<see cref="AudioFocusState.None"/> sin pedir).</summary>
         public AudioFocusState State { get; private set; }
@@ -229,7 +270,7 @@ namespace AF.Audio
             AudioFocusState before = State;
             if (want)
             {
-                State = _port.Request();
+                State = YieldToOtherMusic && _port.OtherMusicAtForeground() ? AudioFocusState.Yielded : _port.Request();
             }
             else
             {

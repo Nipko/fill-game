@@ -116,13 +116,16 @@ Después, sigue con lo pendiente en el orden de arriba (el resto de N6 y los blo
   - **El dueño** mira la intro tres o cuatro veces en frío y dice si queda «muy pro»; anota su opinión literal y, si pide cambios, qué parte (el círculo, el fundido del icono, la recogida o el ritmo).
 - **TalkBack al desplazar la Liga** (carril `tanda6/fx-j6-liga-alarma`; observación 7 de la jornada 6). Lo hace el dueño con TalkBack, en la Liga con el top 100 (`--ez af_league true --ez af_league_fake true --ei af_max_level 60`):
   - desplaza la lista con dos dedos hasta la mitad y **toca una fila con un dedo**: se lee el puesto y el nombre de esa fila, la que se ve, no la que estaba antes en ese sitio;
-  - con el foco en una fila de arriba, desplaza hasta que salga del visor: el foco pasa a la primera fila que se ve, y deslizar a la derecha sigue hacia abajo en el orden que se ve (puesto n, n + 1…);
+  - con el foco en una fila de arriba, desplaza hasta que salga del visor: cuando la lista para, el foco pasa a la primera fila que se ve, y deslizar a la derecha sigue hacia abajo en el orden que se ve (puesto n, n + 1…);
+  - **un desplazamiento rápido:** ¿cuántas filas lee antes de parar? Lo esperado es ninguna mientras corre (el foco no salta de fila en fila) y una, la primera que se ve, al parar; anota lo que lee;
   - lo mismo, más corto, en el Mercado (Semillas al 130 %) y en Ajustes: tocar tras desplazar lee lo que se ve.
-- **La música con una alarma** (carril `tanda6/fx-j6-liga-alarma`; observación 10 de la jornada 6; D-026, añadido del 2026-10-29: el plugin propio `AfAudioFocus.androidlib`). En un nivel con la música sonando, el dueño pone una alarma a un minuto:
-  - **la sonda:** al sonar, `AF_STATE audio_focus` con `state` `loss_transient`, `paused` true y `music_gain` 0.00; al apagarla, `state` `gain` y `music_gain` 1.00. Una notificación con sonido o la voz del navegador, si la hay, da `duck` con `music_gain` 0.20;
-  - **el oído del dueño:** con la alarma, la música y los efectos del juego se callan; al apagarla, la música vuelve con un fundido corto. Con un `duck`, la música baja y sigue oyéndose;
-  - **lo que no debe cambiar:** una llamada sigue parando la música y la devuelve al colgar; un anuncio de AdMob suena solo y, al cerrarlo, la música vuelve (`audio_focus` `gain` si el anuncio se quedó el foco); con la Música apagada en Ajustes no sale `audio_focus` salvo un `none`, y la música de otra app (si el dueño pone una) no se corta al abrir el juego;
-  - anota también si la música de otra app se para al abrir el juego con la Música encendida: es lo esperado con el foco pedido [P], pero lo decide el dueño.
+- **La música con una alarma y con otra app** (carril `tanda6/fx-j6-liga-alarma`; observación 10 de la jornada 6; D-026, añadido del 2026-10-29, el dueño: «hagamoslo asi entonces»; plugin propio `AfAudioFocus.androidlib`):
+  - **sin música de otra app, la alarma:** en un nivel con la música sonando, el dueño pone una alarma a un minuto.
+    - La sonda: al sonar, `AF_STATE audio_focus` con `state` `loss_transient`, `paused` true y `music_gain` 0.00; al apagarla, `state` `gain` y `music_gain` 1.00. Una notificación con sonido o la voz del navegador, si la hay, da `duck` con `music_gain` 0.20.
+    - El oído del dueño: con la alarma, la música y los efectos del juego se callan; al apagarla, la música vuelve con un fundido corto. Con un `duck`, la música baja y sigue oyéndose.
+  - **con música de otra app:** el dueño pone Spotify o YouTube Music y después abre el juego (en frío y volviendo de segundo plano). La otra música **sigue sonando**, la del juego no suena y los efectos sí (al tocar una cuia). La sonda da `audio_focus` con `state` `yielded`, `music_gain` 0.00 y `paused` false. Después para la otra música, pasa el juego a segundo plano y vuelve: la música del juego entra (`gain`).
+  - **lo que no debe cambiar:** una llamada sigue parando la música y la devuelve al colgar; un anuncio de AdMob suena solo y, al cerrarlo, la música vuelve (`audio_focus` `gain` si el anuncio se quedó el foco); bajar la cortina y subirla no cambia el foco; con la Música apagada en Ajustes solo sale un `none`.
+  - **si al volver de segundo plano sin otra música sale `yielded`**, el juego se confunde con su propio audio: anótalo con la sonda (es el riesgo de la nota de decisiones).
 
 ## Encargo de la jornada 5 (escritorio, 2026-10-28)
 

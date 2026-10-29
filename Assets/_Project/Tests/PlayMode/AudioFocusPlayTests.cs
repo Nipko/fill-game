@@ -151,6 +151,40 @@ namespace AF.Tests.PlayMode
             Assert.That(s.Mix.MusicAudible, Is.True);
         }
 
+        [UnityTest]
+        public IEnumerator OtherMusicPlaying_AtForeground_GameMusicStaysOff_EffectsSound_WithoutItTheAlarmPauses()
+        {
+            // Spotify suena al abrir el juego (decisión del dueño del 2026-10-29): no se pide el foco ni suena la música del juego.
+            var port = new FakeAudioFocusPort { OtherMusic = true };
+            UnityAudioService s = Take(port);
+            Assert.That(port.Requests, Is.EqualTo(0), "no se pide el foco: la otra música sigue");
+            Assert.That(s.AudioFocus.State, Is.EqualTo(AudioFocusState.Yielded));
+            s.SetMenuMusic();
+            for (int i = 0; i < 30; i++)
+            {
+                yield return null;
+            }
+
+            Assert.That(s.MenuVolume, Is.EqualTo(0f), "la música del juego, callada");
+            Assert.That(s.Mix.SfxAudible, Is.True, "los efectos suenan");
+            if (DevProbe.Enabled)
+            {
+                Assert.That(_probe.LastAudioFocusLine, Does.Contain("\"state\":\"yielded\"").And.Contain("\"music_gain\":0.00").And.Contain("\"paused\":false"));
+            }
+
+            // Vuelve de segundo plano y ya no suena nada: pide el foco, la música entra y una alarma la pausa.
+            s.SetForeground(false);
+            port.OtherMusic = false;
+            s.SetForeground(true);
+            Assert.That(port.Requests, Is.EqualTo(1));
+            Assert.That(s.AudioFocus.State, Is.EqualTo(AudioFocusState.Gain));
+            yield return Wait(() => s.MenuReady && s.MenuPlaying && s.MenuVolume > 0.9f, "el tema de menú", 30f);
+            port.Push(AudioFocusState.LossTransient);
+            yield return null;
+            yield return null;
+            Assert.That(s.MenuPlaying, Is.False, "la alarma la pausa");
+        }
+
         private UnityAudioService Take(FakeAudioFocusPort port)
         {
             _service = UnityAudioService.Ensure();

@@ -522,22 +522,55 @@ namespace AF.Tests.PlayMode
                 int publishes = service.Publishes;
                 Assert.That(service.Refresh(), Is.False, "nada cambió de texto: no se republica");
                 Assert.That(service.Publishes, Is.EqualTo(publishes));
-                Assert.That(service.FrameRefreshes, Is.EqualTo(1), "pero se movió: se releen los marcos");
+                Assert.That(service.FrameRefreshes, Is.EqualTo(1), "pero se movió: se releen los marcos en el acto");
+                Assert.That(service.SettlePending, Is.True, "el foco espera a que la lista pare");
                 AssertNodesReadTheRowsOnScreen(host, service, screen, list, nodeOfRow, "a la mitad");
 
+                // Mientras la lista corre (inercia), el foco no salta de fila; parada, pasa a la primera que se ve.
+                list.velocity = new Vector2(0f, 3000f);
+                Assert.That(host.RefocusAfterMove(nodeOfRow[0]), Is.EqualTo(nodeOfRow[0]), "con la lista en movimiento, el foco se queda");
+                list.velocity = Vector2.zero;
                 int target = host.RefocusAfterMove(nodeOfRow[0]);
                 int firstShown = FirstFullyShownRow(service, list, nodeOfRow);
                 Assert.That(firstShown, Is.GreaterThan(0));
-                Assert.That(target, Is.EqualTo(nodeOfRow[firstShown]), "el foco que salió del visor pasa a la primera fila que se ve");
+                Assert.That(target, Is.EqualTo(nodeOfRow[firstShown]), "parada, el foco que salió del visor pasa a la primera fila que se ve");
                 Assert.That(host.NodeLabel(target), Is.EqualTo(screen.RowA11y(firstShown)));
 
                 Assert.That(service.Refresh(), Is.False);
                 Assert.That(service.FrameRefreshes, Is.EqualTo(1), "quieta, no se vuelve a releer");
+                Assert.That(service.SettlePending, Is.False, "un recorrido quieto tras el que movió: se asienta el foco");
             }
             finally
             {
                 host.Clear();
             }
+
+            // Un desplazamiento largo, a tirones (como la inercia vista cada 250 ms): los marcos se releen en cada recorrido que se
+            // mueve y el foco solo se asienta una vez, cuando para; si la lista aún corre, espera al siguiente recorrido.
+            var fake = new FakeScreenReaderHost(true);
+            var fakeService = new A11yService(fake);
+            list.verticalNormalizedPosition = 1f;
+            Canvas.ForceUpdateCanvases();
+            fakeService.Refresh();
+            for (int step = 1; step <= 4; step++)
+            {
+                list.verticalNormalizedPosition = 1f - (0.2f * step);
+                Canvas.ForceUpdateCanvases();
+                fakeService.Refresh();
+            }
+
+            Assert.That(fake.FrameRefreshes, Is.EqualTo(4), "cuatro recorridos con movimiento: cuatro relecturas");
+            Assert.That(fake.FocusSettles, Is.EqualTo(0), "y ningún salto del foco mientras corre");
+            fake.Settled = false;
+            fakeService.Refresh();
+            Assert.That(fake.FocusSettles, Is.EqualTo(1));
+            Assert.That(fakeService.SettlePending, Is.True, "la lista aún tenía velocidad: se reintenta");
+            fake.Settled = true;
+            fakeService.Refresh();
+            Assert.That(fake.FocusSettles, Is.EqualTo(2));
+            Assert.That(fakeService.SettlePending, Is.False, "parada: el foco se asienta una vez");
+            fakeService.Refresh();
+            Assert.That(fake.FocusSettles, Is.EqualTo(2), "quieta, nada más");
         }
 
         // En el centro de cada fila que se ve entera, el nodo que encuentra el lector (por su marco guardado, como el toque de

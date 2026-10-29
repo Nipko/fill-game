@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sin permisos ni componentes: pedir y soltar el foco de audio (AudioManager.requestAudioFocus) no necesita ninguno.
+<!-- Sin permisos: pedir y soltar el foco de audio (AudioManager.requestAudioFocus) y mirar si suena musica
+     (AudioManager.isMusicActive) no necesitan ninguno. Un proveedor sin exportar que solo registra las
+     ActivityLifecycleCallbacks de AfAudioFocus al arrancar el proceso (no guarda ni sirve datos: sus consultas devuelven null).
      Observacion 10 de la jornada 6 (D-026, anadido del 2026-10-29). -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="com.amazonfill.audiofocus.AfAudioFocusProvider"
+            android:authorities="${applicationId}.afaudiofocus"
+            android:exported="false" />
+    </application>
+</manifest>

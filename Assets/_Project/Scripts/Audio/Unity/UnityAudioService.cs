@@ -177,10 +177,8 @@ namespace AF.Audio.Unity
                 _mix.Ringer = _ringer.Read(); // el modo silencio pudo cambiar fuera del juego
             }
 
-            if (focus && _focus.Reacquire())
-            {
-                ApplyFocus(); // tras perderlo sin plazo (otra app de música), al volver al juego se pide otra vez
-            }
+            // El foco de audio no se vuelve a pedir aquí (la cortina, un diálogo): solo al volver de segundo plano
+            // (OnApplicationPause) y al terminar un anuncio (revisión de la observación 10 de la jornada 6).
         }
 
         private void OnApplicationPause(bool paused)
@@ -193,9 +191,9 @@ namespace AF.Audio.Unity
 
         /// <summary>
         /// Usa <paramref name="port"/> como foco de audio (tests: <see cref="FakeAudioFocusPort"/>): suelta el de antes y, si toca,
-        /// pide el nuevo.
+        /// pide el nuevo; con <paramref name="yieldToOtherMusic"/> en false, lo pide aunque suene música de otra app.
         /// </summary>
-        public void UseFocusPort(IAudioFocusPort port)
+        public void UseFocusPort(IAudioFocusPort port, bool yieldToOtherMusic = AudioFocusTracker.YieldToOtherMusicDefault)
         {
             if (port == null)
             {
@@ -203,7 +201,7 @@ namespace AF.Audio.Unity
             }
 
             _focus.Want(false);
-            _focus = new AudioFocusTracker(port);
+            _focus = new AudioFocusTracker(port) { YieldToOtherMusic = yieldToOtherMusic };
             ApplyFocus();
             WantFocus();
         }
@@ -218,8 +216,8 @@ namespace AF.Audio.Unity
             WantFocus();
         }
 
-        // D-026, añadido del 2026-10-29: el foco se pide en primer plano y con la Música encendida (con ella apagada, no se corta la
-        // música de otra app del jugador) [P].
+        // D-026, añadido del 2026-10-29: el foco se quiere en primer plano y con la Música encendida; si al pasar a primer plano ya
+        // sonaba música de otra app, no se pide y la música del juego calla (los efectos suenan), por decisión del dueño.
         private void WantFocus()
         {
             if (_focus.Want(_foreground && _mix.Settings.Music))
@@ -244,10 +242,15 @@ namespace AF.Audio.Unity
                 StopEffects();
             }
 
+            if (_mix.FocusYielded)
+            {
+                SilenceBackground(); // la música de otra app manda: la del juego se calla (los efectos siguen)
+            }
+
             SyncBackgroundPause();
             if (Probe is IAudioFocusProbe probe)
             {
-                float gain = !_mix.Settings.Music || _mix.FocusPaused ? 0f : _mix.FocusDucked ? AudioMix.FocusDuckGain : 1f;
+                float gain = !_mix.Settings.Music || _mix.FocusPaused || _mix.FocusYielded ? 0f : _mix.FocusDucked ? AudioMix.FocusDuckGain : 1f;
                 probe.AudioFocus(AudioFocusStates.Name(state), gain, _mix.FocusPaused);
             }
         }

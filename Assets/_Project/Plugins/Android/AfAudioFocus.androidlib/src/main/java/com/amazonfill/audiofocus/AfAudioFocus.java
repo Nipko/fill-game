@@ -1,9 +1,12 @@
 package com.amazonfill.audiofocus;
 
+import android.app.Activity;
+import android.app.Application;
 import android.content.Context;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -15,7 +18,11 @@ import android.os.Looper;
  * <ul>
  * <li>El juego pide el foco ({@link #request(Context, Listener)}) con {@code AUDIOFOCUS_GAIN}, {@code USAGE_GAME} y
  * {@code CONTENT_TYPE_MUSIC}, mientras esta en primer plano y con la Musica encendida, y lo suelta ({@link #abandon()}) al pasar a
- * segundo plano o al apagar la Musica (asi no corta la musica de otra app del jugador sin motivo).</li>
+ * segundo plano o al apagar la Musica.</li>
+ * <li>Convive con la musica de otra app (el dueno, 2026-10-29): cada vez que el juego pasa a primer plano (la primera actividad
+ * que empieza, antes de que Unity reanude su audio), {@link AfAudioFocusProvider} hace mirar si ya suena musica
+ * ({@code AudioManager.isMusicActive}); {@link #otherMusicAtForeground()} lo dice y, si suena, el juego no pide el foco ni pone su
+ * musica (los efectos si suenan).</li>
  * <li>Android avisa al {@link Listener} cuando otro toma el foco o lo devuelve: una alarma o el timbre de una llamada
  * ({@code AUDIOFOCUS_LOSS_TRANSIENT}), un aviso que se puede oir por encima ({@code AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK}), otra app
  * de musica ({@code AUDIOFOCUS_LOSS}) y la vuelta ({@code AUDIOFOCUS_GAIN}). El aviso llega como texto ({@link #GAIN},
@@ -58,6 +65,49 @@ public final class AfAudioFocus {
     private static volatile String last = "";
 
     private static final AudioManager.OnAudioFocusChangeListener CHANGES = AfAudioFocus::onChange;
+
+    // Primer plano: actividades empezadas y lo que sonaba al pasar a primer plano (hilo principal; se lee desde el de Unity).
+    private static boolean installed;
+    private static int started;
+    private static volatile boolean otherMusic;
+
+    private static final Application.ActivityLifecycleCallbacks CALLBACKS = new Application.ActivityLifecycleCallbacks() {
+        @Override
+        public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
+        }
+
+        @Override
+        public void onActivityStarted(Activity activity) {
+            // De 0 a 1 actividades: el juego pasa a primer plano (al arrancar o al volver). Unity aun no reanudo su audio (lo hace en
+            // onResume), asi que lo que suena es de otra app. Ir a un anuncio y volver no cuenta: no baja de 1.
+            if (started++ == 0) {
+                otherMusic = musicActive(activity);
+            }
+        }
+
+        @Override
+        public void onActivityResumed(Activity activity) {
+        }
+
+        @Override
+        public void onActivityPaused(Activity activity) {
+        }
+
+        @Override
+        public void onActivityStopped(Activity activity) {
+            if (started > 0) {
+                started--;
+            }
+        }
+
+        @Override
+        public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
+        }
+
+        @Override
+        public void onActivityDestroyed(Activity activity) {
+        }
+    };
 
     private AfAudioFocus() {
     }
@@ -114,6 +164,34 @@ public final class AfAudioFocus {
                     // el sistema ya lo solto
                 }
             }
+        }
+    }
+
+    /** Lo llama {@link AfAudioFocusProvider} al arrancar el proceso, antes de crear ninguna actividad. */
+    static void install(Application app) {
+        if (installed || app == null) {
+            return;
+        }
+
+        installed = true;
+        app.registerActivityLifecycleCallbacks(CALLBACKS);
+    }
+
+    /**
+     * Ya sonaba musica de otra app cuando el juego paso a primer plano por ultima vez (al arrancar o al volver): entonces el juego no
+     * pide el foco ni pone su musica. False si no se pudo mirar.
+     */
+    public static boolean otherMusicAtForeground() {
+        return otherMusic;
+    }
+
+    // Suena algo en el flujo de musica ahora (AudioManager.isMusicActive); false si no se puede mirar.
+    private static boolean musicActive(Context context) {
+        try {
+            AudioManager audio = (AudioManager) context.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+            return audio != null && audio.isMusicActive();
+        } catch (RuntimeException e) {
+            return false;
         }
     }
 

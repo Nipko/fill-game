@@ -82,6 +82,27 @@ namespace AF.Audio.Unity
         }
 
         /// <inheritdoc />
+        public bool OtherMusicAtForeground()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using (var bridge = new AndroidJavaClass(BridgeClass))
+                {
+                    return bridge.CallStatic<bool>("otherMusicAtForeground");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning(LogPrefix + "no se pudo mirar si suena otra música (" + e.GetType().Name + ").");
+                return false;
+            }
+#else
+            return false;
+#endif
+        }
+
+        /// <inheritdoc />
         public bool TryTake(out AudioFocusState state)
         {
             lock (_gate)
