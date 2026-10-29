@@ -115,6 +115,10 @@ namespace AF.Tests.EditMode
             StringAssert.Contains("AdaptiveIconDrawable icon = new AdaptiveIconDrawable(new ColorDrawable(0), new ColorDrawable(0));", hold);
             StringAssert.Contains("icon.setBounds(0, 0, MASK_SAMPLE, MASK_SAMPLE);", hold);
             StringAssert.Contains("Path path = icon.getIconMask();", hold);
+            StringAssert.Contains("static final int MASK_SAMPLE = 1000;", hold, "0,5 px en 504 px: basta, y cuesta menos en el hilo principal");
+            StringAssert.Contains("public static long maskMicros() {", hold, "sonda os_splash_mask_ms");
+            StringAssert.Contains("maskMicros = (System.nanoTime() - t0) / 1000L;", hold);
+            Assert.That(AndroidOsSplash.ReadMaskMs(), Is.EqualTo(-1f), "en el Editor no se mide");
             StringAssert.Contains("shape = new int[] {reach(region, 0.0), reach(region, 45.0), reach(region, 22.5)};", hold);
             StringAssert.Contains("if (mask != null) {\n            return mask;", hold, "una vez por proceso");
 

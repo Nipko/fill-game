@@ -103,8 +103,8 @@ public final class AfSplashHold {
      */
     public static final int BOX_LENGTH = 11;
 
-    /** Lado (px) del cuadro en que se mide la mascara de iconos del sistema: 0,05 % de precision. */
-    static final int MASK_SAMPLE = 2000;
+    /** Lado (px) del cuadro en que se mide la mascara de iconos del sistema: 0,1 % de precision (0,5 px en 504 px). */
+    static final int MASK_SAMPLE = 1000;
 
     private static final int[] NO_BOX = new int[BOX_LENGTH];
 
@@ -112,6 +112,9 @@ public final class AfSplashHold {
 
     // La mascara de iconos del sistema no cambia en el proceso: se mide una vez.
     private static int[] mask;
+
+    // Lo que costo medirla (microsegundos; -1 si aun no se midio). Sonda os_splash_mask_ms de boot_steps.
+    private static volatile long maskMicros = -1L;
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
@@ -259,6 +262,11 @@ public final class AfSplashHold {
         return box.clone();
     }
 
+    /** Lo que costo medir la mascara del sistema en el hilo principal (microsegundos); -1 si no se midio. */
+    public static long maskMicros() {
+        return maskMicros;
+    }
+
     /** Sube cada vez que cambia {@link #iconBox()} (0 sin medida): el C# solo copia la caja cuando cambia. */
     public static int iconBoxVersion() {
         return boxVersion;
@@ -402,6 +410,7 @@ public final class AfSplashHold {
             return mask;
         }
 
+        long t0 = System.nanoTime();
         int[] shape = NO_MASK;
         try {
             AdaptiveIconDrawable icon = new AdaptiveIconDrawable(new ColorDrawable(0), new ColorDrawable(0));
@@ -418,6 +427,7 @@ public final class AfSplashHold {
         }
 
         mask = shape;
+        maskMicros = (System.nanoTime() - t0) / 1000L;
         return shape;
     }
 

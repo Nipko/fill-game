@@ -134,6 +134,44 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void ANearlySquareMask_IsDrawnWithItsCornersOrNotAtAll()
+        {
+            // Un rectángulo redondeado de esquina pequeña: diagonal / ejes = 1,39. Con el tope de antes (n = 20, hasta ≈ 1,367) se
+            // aceptaba y sus esquinas se dibujaban por dentro (icono que pasa a petróleo). Ahora la superelipse llega a ellas.
+            float axis = 0.99f;
+            float diag = axis * 1.39f;
+            IconMaskShape shape = IconMaskShape.From(new SplashIconBox(288, 918, BoxPx, BoxPx, 0, 0, 1080, 2340, Mathf.RoundToInt(axis * 10000f), Mathf.RoundToInt(diag * 10000f), 0));
+            Assert.That(shape.FromMask, Is.True);
+            Assert.That(shape.Exponent, Is.GreaterThan(20f).And.LessThanOrEqualTo(IconMaskShape.MaxExponent));
+            float rho0 = BoxPx * 0.5f;
+            shape.At(rho0, rho0, out float a, out float n, out _);
+            float drawn = IconMaskShape.Radius(a, n, Mathf.PI * 0.25f);
+            Assert.That(drawn, Is.GreaterThanOrEqualTo((shape.Diag * rho0) - 0.01f), "la diagonal dibujada nunca por dentro de la medida");
+            Assert.That(2f * drawn, Is.EqualTo(diag * BoxPx).Within(1f));
+            Assert.That(2f * IconMaskShape.Radius(a, n, 0f), Is.EqualTo(axis * BoxPx).Within(1f));
+
+            // La textura, con n ≈ 40, sin desbordar: el borde a ±1 px en ejes y diagonales.
+            float axisTex = 127f * a / rho0;
+            float screenPerTex = rho0 / 127f;
+            int half = BrandIntroMorph.IrisTextureSize / 2;
+            float axisEdge = Edge(i => BrandIntroMorph.ShapePixelAlpha(half + i, half, axisTex, n), i => i + 0.5f);
+            float diagEdge = Edge(i => BrandIntroMorph.ShapePixelAlpha(half + i, half + i, axisTex, n), i => (i + 0.5f) * Mathf.Sqrt(2f));
+            Assert.That(2f * axisEdge * screenPerTex, Is.EqualTo(axis * BoxPx).Within(1f), "ejes, en la textura");
+            Assert.That(2f * diagEdge * screenPerTex, Is.EqualTo(diag * BoxPx).Within(1f), "diagonales, en la textura");
+            Assert.That(BrandIntroMorph.ShapePixelAlpha(half, half, axisTex, n), Is.EqualTo(0), "el centro, agujero");
+            Assert.That(BrandIntroMorph.ShapePixelAlpha(0, 0, axisTex, n), Is.EqualTo(255), "la esquina de la textura, petróleo");
+
+            // Más cuadrada de lo que la superelipse dibuja (≥ √2 · 2^(−1/80) ≈ 1,402): el círculo, nunca unas esquinas por dentro.
+            foreach (float ratio in new[] { 1.403f, 1.409f })
+            {
+                IconMaskShape square = IconMaskShape.From(new SplashIconBox(288, 918, BoxPx, BoxPx, 0, 0, 1080, 2340, 9900, Mathf.RoundToInt(9900 * ratio), 0));
+                Assert.That(square.FromMask, Is.False, "relación " + ratio);
+            }
+
+            Assert.That(IconMaskShape.MaxRatio, Is.EqualTo(Mathf.Sqrt(2f) * Mathf.Pow(2f, -1f / IconMaskShape.MaxExponent)).Within(1e-6f));
+        }
+
+        [Test]
         public void TheJavaArray_CarriesTheMaskRadii()
         {
             SplashIconBox b = SplashIconBox.FromArray(new[] { 288, 918, 504, 504, 0, 0, 1080, 2340, 9861, 11727, 10512 });

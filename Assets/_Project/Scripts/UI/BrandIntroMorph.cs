@@ -545,8 +545,8 @@ namespace AF.UI
             for (int i = 0; i < half; i++)
             {
                 float v = i + 0.5f;
-                pn[i] = Mathf.Pow(v, n);
-                pn1[i] = Mathf.Pow(v, n - 1f);
+                pn[i] = Mathf.Pow(v / ShapeScale, n); // normalizado: con n hasta 80, 127,5^n no cabe en un float
+                pn1[i] = Mathf.Pow(v / ShapeScale, n - 1f);
             }
 
             Color32 petro = BrandIntro.Petroleum;
@@ -580,7 +580,8 @@ namespace AF.UI
         /// <summary>
         /// La opacidad del petróleo de la forma en un píxel (0 dentro del agujero, 255 fuera, el borde suavizado en 1 px como el del
         /// círculo): <paramref name="sum"/> = |x|^n + |y|^n, y <paramref name="gx"/> y <paramref name="gy"/> = |x|^(n-1) y |y|^(n-1),
-        /// del centro del píxel (px de la textura). La distancia al borde es (F - a) / |grad F|, con F = sum^(1/n), la norma n.
+        /// del centro del píxel, normalizados por <see cref="ShapeScale"/> (con n hasta 80, las potencias en px no caben en un float).
+        /// La distancia al borde es (F - a) / |grad F|, con F = sum^(1/n) · <see cref="ShapeScale"/>, la norma n en px de la textura.
         /// </summary>
         internal static byte ShapeAlpha(float sum, float gx, float gy, float axisTex, float n)
         {
@@ -589,11 +590,22 @@ namespace AF.UI
                 return 0;
             }
 
-            float f = Mathf.Pow(sum, 1f / n);
-            float fn1 = sum / f; // F^(n-1)
-            float ux = gx / fn1;
-            float uy = gy / fn1;
-            float grad = Mathf.Sqrt((ux * ux) + (uy * uy));
+            float fNorm = Mathf.Pow(sum, 1f / n);
+            float f = fNorm * ShapeScale;
+            if (f < axisTex - 2f)
+            {
+                return 0; // bien dentro (|grad F| ≤ 1: la distancia es aún mayor)
+            }
+
+            float fn1 = sum / fNorm; // (F / ShapeScale)^(n-1)
+            float grad = 0f;
+            if (fn1 > 0f)
+            {
+                float ux = gx / fn1;
+                float uy = gy / fn1;
+                grad = Mathf.Sqrt((ux * ux) + (uy * uy));
+            }
+
             float dist = grad > 1e-6f ? (f - axisTex) / grad : f - axisTex;
             return (byte)Mathf.RoundToInt(Mathf.Clamp01(dist + 0.5f) * 255f);
         }
@@ -607,8 +619,13 @@ namespace AF.UI
             int half = IrisTextureSize / 2;
             float vx = Mathf.Abs((x + 0.5f) - half);
             float vy = Mathf.Abs((y + 0.5f) - half);
-            return ShapeAlpha(Mathf.Pow(vx, n) + Mathf.Pow(vy, n), Mathf.Pow(vx, n - 1f), Mathf.Pow(vy, n - 1f), axisTex, n);
+            float nx = vx / ShapeScale;
+            float ny = vy / ShapeScale;
+            return ShapeAlpha(Mathf.Pow(nx, n) + Mathf.Pow(ny, n), Mathf.Pow(nx, n - 1f), Mathf.Pow(ny, n - 1f), axisTex, n);
         }
+
+        /// <summary>La escala (px de la textura) con que se normalizan las potencias de la forma: medio lado de la textura.</summary>
+        internal const float ShapeScale = IrisTextureSize * 0.5f;
 
         private static void PlaceBar(Image bar, float x, float y, float w, float h, Color color)
         {

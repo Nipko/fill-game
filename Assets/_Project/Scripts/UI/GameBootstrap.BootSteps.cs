@@ -31,6 +31,9 @@ namespace AF.UI
     /// ([izquierda, arriba]) son la caja en px de pantalla del icono que se vio en el velo (<see cref="AndroidOsSplash.ReadIcon"/>:
     /// la vista del icono de la pantalla del sistema o el círculo de <c>af_launch_window</c>); [-1,-1] sin medida. Su centro es
     /// xy + px / 2; se comparan con <c>morph_start_diam_px</c> y <c>morph_start_xy_px</c> de <c>brand_intro</c>.</item>
+    /// <item><b>Jornada 6, observación 12 (2026-10-29):</b> <c>os_splash_mask_ms</c>, lo que costó en el hilo principal de Android
+    /// medir la máscara de iconos del sistema (<see cref="AndroidOsSplash.ReadMaskMs"/>, ms con dos decimales); -1 si no se midió
+    /// (Android 8-11, el velo propio o el editor).</item>
     /// </list>
     /// </summary>
     public sealed partial class GameBootstrap
@@ -263,6 +266,8 @@ namespace AF.UI
                 .Append((measured ? icon.Height : -1).ToString(inv)).Append(']');
             sb.Append(",\"os_splash_icon_xy\":[").Append((measured ? icon.Left : -1).ToString(inv)).Append(',')
                 .Append((measured ? icon.Top : -1).ToString(inv)).Append(']');
+            float maskMs = AndroidOsSplash.ReadMaskMs(); // jornada 6, observación 12: lo que costó medir la máscara del sistema
+            sb.Append(",\"os_splash_mask_ms\":").Append(maskMs < 0f ? "-1" : maskMs.ToString("0.00", inv));
             for (int i = 0; i < BootStepNames.Length; i++)
             {
                 sb.Append(",\"").Append(BootStepNames[i]).Append("\":").Append(_bootSteps[i].ToString(inv));

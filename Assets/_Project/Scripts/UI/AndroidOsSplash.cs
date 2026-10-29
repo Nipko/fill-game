@@ -122,6 +122,31 @@ namespace AF.UI
 #endif
         }
 
+        /// <summary>
+        /// Lo que costó en Java medir la máscara de iconos del sistema (<c>AfSplashHold.maskMicros()</c>, en ms; -1 si no se midió:
+        /// el editor, Android 8-11 o el velo propio). Solo para la sonda <c>os_splash_mask_ms</c> de <c>AF_PERF boot_steps</c>
+        /// (jornada 6, observación 12).
+        /// </summary>
+        public static float ReadMaskMs()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using (var bridge = new AndroidJavaClass(BridgeClass))
+                {
+                    long us = bridge.CallStatic<long>("maskMicros");
+                    return us < 0L ? -1f : us / 1000f;
+                }
+            }
+            catch (Exception)
+            {
+                return -1f;
+            }
+#else
+            return -1f;
+#endif
+        }
+
         /// <summary>Lo que hizo el velo (solo para la sonda de desarrollo <c>AF_PERF boot_steps</c>; en el editor, sin velo).</summary>
         public static OsSplashInfo Read()
         {

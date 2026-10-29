@@ -21,8 +21,15 @@ namespace AF.UI
         /// <summary>El círculo: sin máscara del sistema.</summary>
         public static readonly IconMaskShape Circle = new IconMaskShape(1f, 1f, 0f, false);
 
-        /// <summary>Exponente máximo de la superelipse (casi un cuadrado) [P].</summary>
-        public const float MaxExponent = 20f;
+        /// <summary>
+        /// Exponente máximo de la superelipse (casi un cuadrado) [P]: llega a diagonal / ejes = √2 · 2^(−1/80) ≈ 1,402. Una máscara
+        /// más cuadrada (un rectángulo redondeado de esquina muy pequeña) no se dibuja: con la superelipse, sus esquinas quedarían por
+        /// dentro y serían icono que pasa a petróleo; queda el círculo.
+        /// </summary>
+        public const float MaxExponent = 80f;
+
+        /// <summary>La relación diagonal / ejes más alta que dibuja la superelipse (<see cref="MaxExponent"/>).</summary>
+        public static readonly float MaxRatio = Mathf.Sqrt(2f) * Mathf.Pow(2f, -1f / MaxExponent);
 
         /// <summary>
         /// Lo que crece el círculo, como mínimo, mientras la forma pasa al círculo (fracción del radio del fotograma 0) [P]: con el
@@ -64,7 +71,9 @@ namespace AF.UI
 
         /// <summary>
         /// La forma de la máscara de <paramref name="box"/> (diezmilésimas de medio lado); el círculo si no hay, si no es de una
-        /// caja medida o si sale de rango (ejes entre <see cref="MinAxis"/> y 1, diagonal entre los ejes y los ejes × √2).
+        /// caja medida o si sale de rango (ejes entre <see cref="MinAxis"/> y 1, diagonal entre los ejes y los ejes ×
+        /// <see cref="MaxRatio"/>). Nunca acepta una forma cuya diagonal dibujada quede por dentro de la medida: con lo aceptado, ejes y
+        /// diagonales son exactos.
         /// </summary>
         public static IconMaskShape From(SplashIconBox box)
         {
@@ -76,12 +85,19 @@ namespace AF.UI
             float axis = box.MaskAxis / 10000f;
             float diag = box.MaskDiag / 10000f;
             float mid = box.MaskMid > 0 ? box.MaskMid / 10000f : 0f;
-            if (axis < MinAxis || axis > 1.005f || diag < axis * 0.995f || diag >= axis * 1.41f)
+            if (axis < MinAxis || axis > 1.005f || diag < axis * 0.995f || diag >= axis * MaxRatio)
             {
                 return Circle;
             }
 
-            return new IconMaskShape(Mathf.Min(axis, 1f), Mathf.Max(diag, Mathf.Min(axis, 1f)), mid, true);
+            axis = Mathf.Min(axis, 1f);
+            diag = Mathf.Max(diag, axis);
+            if (Radius(axis, ExponentFor(axis, diag), Mathf.PI * 0.25f) < diag - 1e-4f)
+            {
+                return Circle; // la superelipse no llega a las esquinas medidas
+            }
+
+            return new IconMaskShape(axis, diag, mid, true);
         }
 
         /// <summary>
