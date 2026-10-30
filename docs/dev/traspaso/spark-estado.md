@@ -8,6 +8,36 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ## Gráficos de la ficha de Play (D-065)
 
+### 2026-10-30 · Fase 2, concepto A «Gameplay héroe» en los 3 idiomas (`spark/tienda-graficos`): HECHO
+
+- **Entrega:** `docs/store-listing/graficos-v2/`:
+  - `A/<es-419|en|pt-BR>/01-08-*.png` (24 capturas de 1080 × 1920);
+  - `A/feature-graphic.png` (1024 × 500);
+  - `A/manifest.json`, con la procedencia de las 25 piezas;
+  - `README.md`, con qué es, por qué y qué mirar;
+  - `index.html`, la hoja de contactos sin dependencias, con selector de idioma.
+  - Todas, PNG de 24 bits sin transparencia y de menos de 2 MB.
+- **Tomas reales en el teléfono** (SM-S938B):
+  - **Build:** con el `com.amazonfill.dev` ya instalado (10:19 del 30-10), posterior al último cambio de código de la integración (06:57). No hizo falta compilar.
+  - **Cómo:** adb guiado por `AF_LAYOUT` y `AF_STATE`, con los extras `af_lang`, `af_level`, `af_seeds` y `af_max_level`; los vertidos y la victoria, en fotogramas de `screenrecord`.
+  - **Barra de estado:** modo demo de Android durante las tomas; al terminar, `sysui_demo_allowed` volvió a 0, como estaba.
+- **Lo que cambió en el perfil del `dev.apk` del teléfono por las tomas** (no se hizo `pm clear`, para no borrar el estado de las pruebas del escritorio):
+  - `max_level` 58;
+  - semillas 1.310;
+  - la página 1 de la Bitácora sellada el 30-10 (+60);
+  - el nivel 25 en curso, sin salida.
+- **Fondos:** Z-Image Turbo (Apache 2.0) en la 5080.
+  - Prompts de pura naturaleza; se descartaron las semillas con casas, barcas o personas.
+  - Nombrar en el prompt lo que no se quiere («no houses») las hace salir: Z-Image no tiene prompt negativo.
+- **Cómputo:**
+  - unas 51 imágenes de ~11 s en la RTX 5080 (~10 min de GPU);
+  - el montaje con Pillow, en el Spark (segundos).
+- **Preguntas [P], con la recomendada aplicada** (detalle en `graficos-v2/README.md`):
+  - **Q-GT-3:** los rótulos nuevos y más cortos;
+  - **Q-GT-4:** dejar a la vista la fecha del Reto (UI real) en las 5 y 8.
+- **Fuera del repositorio** (encargo: nada de paquetes nuevos): los scripts de las tomas y del montaje, y las grabaciones del teléfono. Las grabaciones de arranque muestran la pantalla de inicio del teléfono, y no se publican.
+- **Siguiente:** que el dueño mire A en `index.html`. Los conceptos B y C quedan pendientes, como variantes de experimento (Q-GT-2).
+
 ### 2026-10-30 · Fase 1, investigación de las fichas que funcionan (`spark/tienda-graficos`): HECHA
 
 - **Encargo:** `docs/dev/traspaso/spark-graficos-tienda.md` §1. **Rama:** `spark/tienda-graficos`, desde `origin/integracion-fase1-fase2` (`38785473`).

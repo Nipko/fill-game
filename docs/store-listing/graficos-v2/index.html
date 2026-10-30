@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gráficos de la ficha v2</title>
+<style>
+  :root { --bg: #f4efe6; --ink: #2b2118; --card: #fffaf1; --line: #dccfbb; --accent: #14444a; --muted: #7a6a58; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #14191a; --ink: #efe7da; --card: #1d2426; --line: #33403f; --accent: #6fb3ad; --muted: #a59a8c; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 16px 8px; max-width: 1400px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p.sub { margin: 0; color: var(--muted); font-size: .92rem; }
+  nav { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); }
+  nav .in { max-width: 1400px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  nav button { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; font: inherit; cursor: pointer; }
+  nav button[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  main { max-width: 1400px; margin: 0 auto; padding: 8px 16px 40px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 16px 0; }
+  section h2 { font-size: 1.1rem; margin: 0 0 2px; }
+  section .why { color: var(--muted); font-size: .9rem; margin: 0 0 12px; }
+  .strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
+  figure { margin: 0; flex: 0 0 auto; scroll-snap-align: start; }
+  figure img { display: block; height: min(62vh, 520px); width: auto; border-radius: 10px; border: 1px solid var(--line); background: #000; }
+  figure.fg img { height: auto; width: min(88vw, 520px); }
+  figcaption { font-size: .8rem; color: var(--muted); margin-top: 4px; max-width: 300px; }
+  .pending { color: var(--muted); font-style: italic; padding: 24px 4px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Gráficos de la ficha de Play · versión 2</h1>
+  <p class="sub">D-065 · Elige el concepto (o una mezcla). Desliza cada fila para ver las 8 capturas y el gráfico de funciones. Investigación: <a href="../investigacion-fichas.md">investigacion-fichas.md</a> · Detalle: <a href="README.md">README.md</a></p>
+</header>
+<nav><div class="in" role="group" aria-label="Idioma">
+  <button type="button" data-l="es-419" aria-pressed="true">Español (es-419)</button>
+  <button type="button" data-l="en" aria-pressed="false">English</button>
+  <button type="button" data-l="pt-BR" aria-pressed="false">Português (pt-BR)</button>
+</div></nav>
+<main>
+  <section>
+    <h2>A · Gameplay héroe</h2>
+    <p class="why">El juego real, grande desde la captura 1; rótulo corto de beneficio; un fondo de cada mundo hecho con IA. Lo que más se parece a lo que convierte en el género.</p>
+    <div class="strip" data-concept="A"></div>
+  </section>
+  <section>
+    <h2>B · Panorámica del río</h2>
+    <p class="why">Las 8 capturas como un solo río continuo. Recomendado como variante de experimento (Q-GT-2).</p>
+    <p class="pending">Pendiente.</p>
+  </section>
+  <section>
+    <h2>C · Cartel con personajes</h2>
+    <p class="why">TiTino, Capi y Rosa en pose de cartel en las 1-2. Recomendado como variante de experimento (Q-GT-2).</p>
+    <p class="pending">Pendiente.</p>
+  </section>
+</main>
+<script>
+  var SHOTS = ["01-vertido-encuentro", "02-todo-encaja", "03-mapa-del-rio", "04-dificil-tarapoto",
+               "05-titino-capi-rosa", "06-patrones", "07-bitacora", "08-reto-del-rio"];
+  function render(lang) {
+    document.querySelectorAll(".strip").forEach(function (strip) {
+      var c = strip.getAttribute("data-concept"), html = "";
+      SHOTS.forEach(function (s, i) {
+        html += '<figure><img loading="lazy" alt="Captura ' + (i + 1) + ', ' + lang + '" src="' + c + "/" + lang + "/" + s + '.png"><figcaption>' + (i + 1) + " · " + s.slice(3) + "</figcaption></figure>";
+      });
+      html += '<figure class="fg"><img loading="lazy" alt="Gráfico de funciones" src="' + c + '/feature-graphic.png"><figcaption>Gráfico de funciones (1024 × 500)</figcaption></figure>';
+      strip.innerHTML = html;
+    });
+    document.querySelectorAll("nav button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-l") === lang)); });
+    try { localStorage.setItem("gv2-lang", lang); } catch (e) {}
+  }
+  document.querySelectorAll("nav button").forEach(function (b) { b.addEventListener("click", function () { render(b.getAttribute("data-l")); }); });
+  var start = "es-419"; try { start = localStorage.getItem("gv2-lang") || start; } catch (e) {}
+  render(start);
+</script>
+</body>
+</html>
