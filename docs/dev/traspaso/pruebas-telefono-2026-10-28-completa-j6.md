@@ -666,6 +666,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
     - **Las opciones no parecen tocables:** las pestañas son solo texto, con un subrayado en la elegida. Hay que marcarlas más claro, para que se sepa que se toca ahí.
     - **El Mercado está muy básico o apagado, sin realce:** hay que hacerlo más visible.
     - **Las cuias se parecen todas:** vidrio, Santarém, Encuentro y Totuma no se distinguen bien en la miniatura pequeña. Propuesta del dueño: tocarlas y verlas en grande.
+    - **No se entiende cuál es la entrada al Mercado:** el botón de la barra de abajo del inicio, a la izquierda de «Inicio», solo enseña una semilla (`market_tab`; `b13/idiomas-es-419.png`). El dueño pide hacerlo más grande o que se entienda mejor que ahí se compra, por ejemplo con un rótulo o un icono de tienda.
 
 ## Notas de la herramienta (no son defectos del juego)
 
