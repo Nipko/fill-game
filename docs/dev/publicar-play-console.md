@@ -218,6 +218,13 @@ Prueba y publicación › Configuración › **Integridad de la app** › Firma 
 
 Las huellas no son secretas, pero cópialas de la consola cada vez, sin reescribirlas a mano.
 
+**Huellas de Tintalú (copiadas de la consola el 2026-10-30, tras la primera subida de la 10000):**
+
+| Certificado | SHA-1 | SHA-256 |
+|---|---|---|
+| Clave de firma de apps (Google) | `70:1F:4B:D9:D6:7A:32:7C:8B:A6:69:D8:ED:3A:0D:52:18:7D:7B:75` | `47:AA:70:B5:B0:65:00:81:D2:17:D8:8E:AD:12:7C:E4:E2:10:D4:6E:92:B9:AA:B8:76:0A:4C:5B:DC:96:CC:5E` |
+| Clave de subida | `22:CE:90:BF:85:54:11:09:17:36:80:42:54:D4:DD:41:1B:CC:FD:06` | `CD:74:93:88:22:33:B5:7D:3C:76:57:85:D9:68:13:3C:F4:D2:FC:60:3D:6F:AC:EC:8C:B7:C1:58:73:F3:7F:DC` (coincide con el `preflight` del release, run 41101628072) |
+
 ### 7.2 A dónde va cada una
 
 | Destino | Huella | Dónde [NV rutas] | Fuente |

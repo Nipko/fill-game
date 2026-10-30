@@ -4323,6 +4323,12 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **`af-prod/firebase-admin-service-account`:** Identity Toolkit API ya estaba habilitada; creada `af-prod-account-deleter@tintalu.iam.gserviceaccount.com` con solo «Administrador de Firebase Authentication» (el rol lo asignó el dueño). Clave cargada igual; `LastChangedDate` 2026-10-30 17:45.
 - Las dos copias locales se borraron; nadie leyó los valores. Que funcionan se prueba en la pista interna (§15 de la guía de publicación): una compra de prueba que se acredita y «Eliminar cuenta y datos» que termina bien.
 
+### D-059, añadido del 2026-10-30: la 1.0.0 (10000) en la pista interna, solo el dueño
+
+- **Hecho:** lista de testers «Solo dueño» (`nirlevin89@gmail.com`, la cuenta del teléfono de pruebas), la misma lista como testers de licencias (RESPOND_NORMALLY), y la versión `1.0.0` con el AAB `android-aab-release-1.0.0-10000` (run 41101628072; manifiesto comprobado con `ci/check-manifest.ps1 -Mode release`). Notas de la versión: las «Novedades» de §5 de las fichas en los 5 idiomas. El dueño subió el AAB y pulsó «Guardar y publicar»; disponible para verificadores internos desde el 2026-10-30 a las 17:55. Enlace para unirse: `https://play.google.com/apps/internaltest/4700234457736332044`.
+- **Play App Signing:** clave de firma generada por Google; las huellas están en `publicar-play-console.md` §7.1. La SHA-256 de la clave de subida coincide con la del `preflight`.
+- **Avisos de la revisión (no bloquean):** sin archivo de desofuscación y sin símbolos nativos de depuración.
+
 ## D-059 · Lanzamiento directo a producción al 100 %, con publicación administrada
 
 - **Fecha:** 2026-10-28. Registrada por el integrador.
