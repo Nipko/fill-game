@@ -1,0 +1,603 @@
+{
+ "decision": "D-065; encargo docs/dev/traspaso/spark-graficos-tienda.md §2",
+ "date": "2026-10-30",
+ "license_note": "Z-Image Turbo: Apache 2.0 (uso comercial permitido). Sin imágenes de referencia de terceros ni prompts «al estilo de».",
+ "concept": "C · Cartel con personajes",
+ "items": [
+  {
+   "file": "es-419/01-vertido-encuentro.png",
+   "sha256": "d2122a85a925ea8482b32c9d8f22d92608a2356afe107c931491a1c19a6e316e",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Vierte y tiñe el río",
+   "game_capture": {
+    "what": "Nivel 42 (Encuentro de las Aguas, mundo 3), a mitad de un vertido (fotograma de la grabación de pantalla)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev (instalado el 2026-10-30 10:19)",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Sunrise over a calm Amazon river framed by giant tropical leaves in the foreground, gentle mist on the water, tall palm trees and dense jungle on the far bank, warm golden rays. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 808,
+    "size": [
+     1088,
+     1920
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "muelle_1088x1920_808.png"
+   },
+   "game_art": [
+    {
+     "what": "TiTino colgado de su rama",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      0,
+      0,
+      735,
+      590
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Rosa, el delfín rosado",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      410,
+      1730,
+      1040,
+      2070
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "es-419/02-todo-encaja.png",
+   "sha256": "246ea1b433635456ec566a592a99f12265382bcb6d014870fd104062638811f6",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "¡Todo encaja!",
+   "game_capture": {
+    "what": "Nivel 42 resuelto con la solución: las seis cuias selladas, con sus anillos y el confeti de plumas de la victoria (fotograma de la grabación)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Bright morning over a wide Amazon river, scarlet macaws flying across a blue sky, sparkles of sunlight on the water, lush rainforest canopy, joyful festive light. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 707,
+    "size": [
+     1088,
+     1920
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "celebra_1088x1920_707.png"
+   },
+   "game_art": [
+    {
+     "what": "TiTino colgado de su rama",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      0,
+      0,
+      735,
+      590
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Rosa, el delfín rosado",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      410,
+      1730,
+      1040,
+      2070
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "es-419/03-mapa-del-rio.png",
+   "sha256": "5f978963c1328dd7275ff1b09a8686bf2678f15629f8319abe18d641115a3a45",
+   "same_as": "../A/es-419/03-mapa-del-rio.png"
+  },
+  {
+   "file": "es-419/04-dificil-tarapoto.png",
+   "sha256": "34a03b038f35bc73458341a19bffe0055fb303923b29bd0efd09dd4a8bfc8ea3",
+   "same_as": "../A/es-419/04-dificil-tarapoto.png"
+  },
+  {
+   "file": "es-419/05-titino-capi-rosa.png",
+   "sha256": "1d40b561d3e29d530f92197bef9bf283484588669eaedcc94584b44726777645",
+   "same_as": "../A/es-419/05-titino-capi-rosa.png"
+  },
+  {
+   "file": "es-419/06-patrones.png",
+   "sha256": "245b0f6f4005ecbf3c708d4fe99ce5641f7f1a70cd49ac905b52ee7607079f35",
+   "same_as": "../A/es-419/06-patrones.png"
+  },
+  {
+   "file": "es-419/07-bitacora.png",
+   "sha256": "4efb37283283ea7ca5798a0faf611820abb33b3ab3a30ed5673cdcb8275f281b",
+   "same_as": "../A/es-419/07-bitacora.png"
+  },
+  {
+   "file": "es-419/08-reto-del-rio.png",
+   "sha256": "a1d72e84ca15beadc3db518a795e2d695fd847af81bb7d2a135accba0a64361c",
+   "same_as": "../A/es-419/08-reto-del-rio.png"
+  },
+  {
+   "file": "en/01-vertido-encuentro.png",
+   "sha256": "e86ffd196f6805819ecd48daaf0360f8d841c64bec0ceadcaf31b9ce0d10bf6c",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Pour and tint the river",
+   "game_capture": {
+    "what": "Nivel 42 (Encuentro de las Aguas, mundo 3), a mitad de un vertido (fotograma de la grabación de pantalla)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev (instalado el 2026-10-30 10:19)",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Sunrise over a calm Amazon river framed by giant tropical leaves in the foreground, gentle mist on the water, tall palm trees and dense jungle on the far bank, warm golden rays. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 808,
+    "size": [
+     1088,
+     1920
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "muelle_1088x1920_808.png"
+   },
+   "game_art": [
+    {
+     "what": "TiTino colgado de su rama",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      0,
+      0,
+      735,
+      590
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Rosa, el delfín rosado",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      410,
+      1730,
+      1040,
+      2070
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "en/02-todo-encaja.png",
+   "sha256": "46d9bb8ecfde8fa871afaf81731f62e5f3145fba08112d864184617dfdfe1e5d",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Everything clicks!",
+   "game_capture": {
+    "what": "Nivel 42 resuelto con la solución: las seis cuias selladas, con sus anillos y el confeti de plumas de la victoria (fotograma de la grabación)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Bright morning over a wide Amazon river, scarlet macaws flying across a blue sky, sparkles of sunlight on the water, lush rainforest canopy, joyful festive light. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 707,
+    "size": [
+     1088,
+     1920
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "celebra_1088x1920_707.png"
+   },
+   "game_art": [
+    {
+     "what": "TiTino colgado de su rama",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      0,
+      0,
+      735,
+      590
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Rosa, el delfín rosado",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      410,
+      1730,
+      1040,
+      2070
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "en/03-mapa-del-rio.png",
+   "sha256": "f3529c82c0f50e634192c3af67ddd56d74a68f082ccf04b7bb44a550458f903b",
+   "same_as": "../A/en/03-mapa-del-rio.png"
+  },
+  {
+   "file": "en/04-dificil-tarapoto.png",
+   "sha256": "958d925efb04decfa2404874f8b27ada149563799c90460549c6d9b347420698",
+   "same_as": "../A/en/04-dificil-tarapoto.png"
+  },
+  {
+   "file": "en/05-titino-capi-rosa.png",
+   "sha256": "7e6bf4a05f46f83279ec084339d3ac8229f7a7cd60f39a3737ea6e4956160277",
+   "same_as": "../A/en/05-titino-capi-rosa.png"
+  },
+  {
+   "file": "en/06-patrones.png",
+   "sha256": "b86e45fdd26fc5a5935311a20eb36db9ec20578348d2e49a8c482faf2c1d0092",
+   "same_as": "../A/en/06-patrones.png"
+  },
+  {
+   "file": "en/07-bitacora.png",
+   "sha256": "5a833bdbdb788caf863efc02b7ecc32407e6a4fb6a9cecc8eec40c70eccd402f",
+   "same_as": "../A/en/07-bitacora.png"
+  },
+  {
+   "file": "en/08-reto-del-rio.png",
+   "sha256": "32a9b73cd52b57f5862db74f3e2fff6112450d583dc5ca6bed08a44263d9946c",
+   "same_as": "../A/en/08-reto-del-rio.png"
+  },
+  {
+   "file": "pt-BR/01-vertido-encuentro.png",
+   "sha256": "0d8aa3297e93a504e145fc018fc728f3a032aff6f4e47c0b5ce6caeead1357d3",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Despeje e tinja o rio",
+   "game_capture": {
+    "what": "Nivel 42 (Encuentro de las Aguas, mundo 3), a mitad de un vertido (fotograma de la grabación de pantalla)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev (instalado el 2026-10-30 10:19)",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Sunrise over a calm Amazon river framed by giant tropical leaves in the foreground, gentle mist on the water, tall palm trees and dense jungle on the far bank, warm golden rays. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 808,
+    "size": [
+     1088,
+     1920
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "muelle_1088x1920_808.png"
+   },
+   "game_art": [
+    {
+     "what": "TiTino colgado de su rama",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      0,
+      0,
+      735,
+      590
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Rosa, el delfín rosado",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      410,
+      1730,
+      1040,
+      2070
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "pt-BR/02-todo-encaja.png",
+   "sha256": "ee150453ec1a7bab883df336ef01cbfbb2e416e64e881cecbd0ef38b695afa35",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Tudo se encaixa!",
+   "game_capture": {
+    "what": "Nivel 42 resuelto con la solución: las seis cuias selladas, con sus anillos y el confeti de plumas de la victoria (fotograma de la grabación)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Bright morning over a wide Amazon river, scarlet macaws flying across a blue sky, sparkles of sunlight on the water, lush rainforest canopy, joyful festive light. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 707,
+    "size": [
+     1088,
+     1920
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "celebra_1088x1920_707.png"
+   },
+   "game_art": [
+    {
+     "what": "TiTino colgado de su rama",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      0,
+      0,
+      735,
+      590
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Rosa, el delfín rosado",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      410,
+      1730,
+      1040,
+      2070
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "pt-BR/03-mapa-del-rio.png",
+   "sha256": "b1c21bdcad8426bbc2577dc8a0f3252ab8c26cc87c5a5a3cb4f4ef4ef9c2f13d",
+   "same_as": "../A/pt-BR/03-mapa-del-rio.png"
+  },
+  {
+   "file": "pt-BR/04-dificil-tarapoto.png",
+   "sha256": "6fa9c5242b460aaa762876575cd82e703aa83201a6fd959edb9667e19391ad11",
+   "same_as": "../A/pt-BR/04-dificil-tarapoto.png"
+  },
+  {
+   "file": "pt-BR/05-titino-capi-rosa.png",
+   "sha256": "7ba04c8d3a9f5147127e85443b358fba016603e5f379e9934395cff5461974fc",
+   "same_as": "../A/pt-BR/05-titino-capi-rosa.png"
+  },
+  {
+   "file": "pt-BR/06-patrones.png",
+   "sha256": "534fb04fe2c69bb149ba4612fc9949700a4ccf82e5c7e5533fb264f1144cae0e",
+   "same_as": "../A/pt-BR/06-patrones.png"
+  },
+  {
+   "file": "pt-BR/07-bitacora.png",
+   "sha256": "076c296efcb9156f7517e221eb13fe8f08d0fcf3f6d6b9301fb341198d342180",
+   "same_as": "../A/pt-BR/07-bitacora.png"
+  },
+  {
+   "file": "pt-BR/08-reto-del-rio.png",
+   "sha256": "56ab439289c4f79213fdf3407073cbb7334f6567a32bca5ec3e37fea57e4afb1",
+   "same_as": "../A/pt-BR/08-reto-del-rio.png"
+  },
+  {
+   "file": "feature-graphic.png",
+   "sha256": "c1513e489a51051af9131fcf2c241cc0820bd9ec1c1be5d0fe1b25e18ea53321",
+   "size": [
+    1024,
+    500
+   ],
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Bright morning over a wide Amazon river, scarlet macaws flying across a blue sky, sparkles of sunlight on the water, lush rainforest canopy, joyful festive light. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 707,
+    "size": [
+     1536,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "celebra_1536x768_707.png"
+   },
+   "logo": "docs/art/marca-oficial/v2/out/png/logo-horizontal-oscuro.png",
+   "game_art": [
+    {
+     "what": "TiTino colgado de su rama",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      0,
+      0,
+      735,
+      590
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Rosa, el delfín rosado",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      410,
+      1730,
+      1040,
+      2070
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    },
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  }
+ ]
+}

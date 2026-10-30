@@ -7,8 +7,10 @@ Conceptos de capturas y gráfico de funciones para la ficha de Google Play, en e
 | Concepto | Estado | Carpeta |
 |---|---|---|
 | **A · Gameplay héroe** | **Hecho** (2026-10-30): 8 capturas × 3 idiomas + gráfico de funciones | `A/` |
-| B · Panorámica del río | Pendiente; como variante de experimento (Q-GT-2) | — |
-| C · Cartel con personajes | Pendiente; como variante de experimento (Q-GT-2) | — |
+| B · Panorámica del río | **Hecho** (2026-10-30), como variante de experimento (Q-GT-2) | `B/` |
+| C · Cartel con personajes | **Hecho** (2026-10-30), como variante de experimento (Q-GT-2) | `C/` |
+
+Los tres conceptos usan las mismas tomas reales y los mismos rótulos, así que una prueba de ficha entre ellos mide solo la presentación.
 
 ## A · Gameplay héroe
 
@@ -50,6 +52,32 @@ Conceptos de capturas y gráfico de funciones para la ficha de Google Play, en e
    - Prompts de pura naturaleza, sin imágenes de referencia ni «al estilo de».
    - Se descartaron las semillas que sacaban casas, barcas o personas.
 4. **Montaje:** con Pillow, en el equipo de Spark. Rótulos en Baloo 2 ExtraBold (OFL, del juego), crema sobre madera.
+
+## B · Panorámica del río
+
+**Qué es.** Un solo río generado con IA que cruza las 8 capturas de izquierda a derecha, del estuario a los Andes. Al deslizarlas en Play se lee como un viaje.
+- **El viaje:** la canoa de Capi (arte real del juego) avanza un poco en cada captura.
+- **Cada captura se sostiene sola:** el tablero entero va dentro de su captura y no se parte entre dos (conclusión 9 de la investigación). La pantalla real ocupa ~61 % del alto, para que se vea el río.
+- Mismas tomas y mismos rótulos que A.
+
+**Lo que conviene mirar:**
+- **Nitidez:** la panorámica se generó a 2.560 × 768 y se amplió ×3,4. Z-Image se rompe por encima de unas 3 veces más ancho que alto. Le puse un desenfoque leve para que se lea como fondo lejano.
+- **El orden del río no es el geográfico exacto:** los Andes salen en el centro, no al final.
+- **Ningún líder de la muestra usa este formato,** así que la recomendada es probarlo como variante (Q-GT-2).
+
+## C · Cartel con personajes
+
+**Qué es.** Las capturas 1 y 2 son carteles: TiTino cuelga de su rama entre el rótulo y la pantalla, y Rosa y Capi en su canoa nadan debajo. La pantalla real va en el centro, sin que nada la tape. Las capturas 3-8 son las de A, idénticas.
+
+**Los personajes no los dibujó la IA.** Son los renders reales del juego (D-058), recortados del fondo plano de `docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png`. Así son fieles a los modelos por construcción (encargo §2). La IA solo hizo el fondo.
+
+**[P] Q-GT-5, con la recomendada aplicada.**
+- El encargo sugería renders y poses nuevas con IA. Preferí el arte real: con las herramientas de hoy, una IA redibujaría los personajes con diferencias, y para generarlos fieles haría falta Qwen-Image-Edit, un modelo nuevo de unos 20 GB.
+- Las poses son las del juego (TiTino colgado, Rosa nadando, Capi remando).
+
+**Lo que conviene mirar:**
+- La pantalla real ocupa algo menos (~55 % del alto) para dejar sitio a los personajes.
+- Los personajes del juego son de estilo «juguete brillante», y los fondos de IA, de selva más realista. Se nota algo el cambio de estilo.
 
 ## Lo que conviene mirar antes de subir A
 

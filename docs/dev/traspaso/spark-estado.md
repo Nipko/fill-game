@@ -8,6 +8,23 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ## Gráficos de la ficha de Play (D-065)
 
+### 2026-10-30 · Fase 2, conceptos B «Panorámica del río» y C «Cartel con personajes» (`spark/tienda-graficos`): HECHOS
+
+- **Entrega:** `graficos-v2/B/` y `graficos-v2/C/`, 8 capturas × 3 idiomas, el gráfico de funciones y `manifest.json` cada uno.
+  - El README y la hoja de contactos `index.html` ya tienen los tres conceptos.
+  - Validadas las 50 piezas nuevas: 1080 × 1920 o 1024 × 500, RGB de 24 bits, menos de 2 MB.
+- **B:**
+  - una panorámica de Z-Image a 2.560 × 768 (por encima de unas 3 veces más ancho que alto, el modelo se rompe), ampliada a 8.640 px y repartida en las 8 capturas;
+  - la canoa de Capi (arte real) avanza en cada captura;
+  - pantalla al ~61 % del alto, con el tablero entero en cada captura.
+- **C:**
+  - las 1-2 como cartel con TiTino, Rosa y Capi alrededor de la pantalla, sin tapar la UI; las 3-8, idénticas a las de A;
+  - los personajes son los renders reales del juego (D-058), recortados del fondo plano de `docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png`.
+- **Pregunta [P], con la recomendada aplicada:** **Q-GT-5**, arte real de los personajes en lugar de renders y poses de IA. Así son fieles al juego, y no hace falta añadir Qwen-Image-Edit (~20 GB).
+- **Cómputo:** 8 imágenes más en la RTX 5080 (~2 min de GPU); el recorte y el montaje, con Pillow en el Spark.
+- **Vista previa privada para el dueño:** https://claude.ai/artifact/77UrrL5iMHp6vQsKgQXxu6 (copias JPEG; los PNG para subir son los del repositorio).
+- **Siguiente:** el dueño elige en la hoja de contactos. La recomendada (investigación, Q-GT-2): A como ficha principal; B o C como variante de una prueba de ficha tras el lanzamiento. La fase 3 (vídeo) queda opcional.
+
 ### 2026-10-30 · Fase 2, concepto A «Gameplay héroe» en los 3 idiomas (`spark/tienda-graficos`): HECHO
 
 - **Entrega:** `docs/store-listing/graficos-v2/`:
