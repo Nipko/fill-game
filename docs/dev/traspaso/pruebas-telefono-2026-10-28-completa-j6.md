@@ -27,6 +27,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Arreglos de la segunda hoja j6 (build `ff3c49c0`, punto 14) | cumplen el icono y la bandeja; el aviso no abre el Reto; la memoria, por encima | 19, 20 |
 | Lo que quedaba del punto 14 y los bloques 9, 10, 11, 12, 13, 14, 18 y 19 (punto 15) | cumple; la 15 queda arreglada; la Liga no se puede probar (App Check) | 20, 21, 22 |
 | Arreglos de la tercera tanda j6 (build `da40034d`, punto 16) y la Liga contra dev (12.2) | cumplen el Mapa, el aviso y la Liga; OpenGL ES 3 rinde igual y gasta 10-30 MB menos | 20 |
+| 22 y 23, gráficos y audio con el dueño (punto 17) | cumple; la música tapa los efectos y el Mercado se ve básico | 17, 23, 24 |
 
 ## Verificación (bloque 0)
 
@@ -581,6 +582,17 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - **Sin hacer:** el 3.3 (matar la app con una victoria sin enviar) y el 4, con 13-17. Los dos piden otra vez el modo avión, y el 4 un `pm clear` que crea otro token de App Check. El 4 con <13 ya cumple (punto 15).
    - **El teléfono queda así:** el `dev.apk` de este build, con un perfil 18+ y el permiso de avisos concedido, en el inicio. Tras el modo avión, la depuración inalámbrica vuelve con otro puerto (`adb mdns services`).
 
+17. **Bloques 22 y 23, gráficos y audio, con el dueño** (mismo build, de noche y por estaciones: el portátil abre cada pantalla y el dueño mira y escucha): **cumplen, salvo las observaciones 23 y 24, y la 17 queda para la próxima versión.**
+   - **El icono, la intro y el inicio** (el dueño abre la app tocando el icono): en la pantalla de inicio, el cajón de apps, Recientes y el monocromo, la intro y el inicio con TiTino dormido (de 20 a 6 duerme por la hora del teléfono) y el tema del menú. El dueño: «está bien».
+   - **El mundo 1 a mano** (el 5, con auriculares): el agua y los animales sin voces que se entiendan en `amb_w01_fauna_02`, la nota de cada fruta, el chorro que sube de tono, el vidrio con sus dosis, el sellado con su capa de música y el confeti de la victoria. El dueño: «todo se escucha bien».
+   - **La variante nocturna** (el 60, Muy difícil): lecho `mus_w03_bed_night`, marco índigo y luz de noche en Manaos. Las capas entran al sellar (`layers` 1 y 2). Se escucha bien, salvo la mezcla (observación 23).
+   - **La lluvia** (el 143, su estreno): `amb_w05_water` con `amb_rain_medium` y el contador «lluvia». El dueño: «se escucha bien la lluvia».
+   - **Tablero de 3 filas** (el 240, Yasuní, kit «dosel de noche»): se ve bien. TiTino no sale, que es lo que pide el guion cuando no cabe.
+   - **Banner de mundo** (el 201, mundo 6): bien por ahora. El dibujo repetido queda para la próxima versión (observación 17).
+   - **Mercado, pestaña Cuias** (`b22/mercado-cuias.png`): observación 24.
+   - **Audio en logcat:** en todos los registros de la prueba, 100.314 líneas `sfx` con `"src":"clip"` y ninguna `synth`.
+   - **Sin escuchar:** los mundos 10-13, con audio por código, y si las capas se desfasan tras muchos bucles. Para eso hace falta un rato largo en un mismo nivel.
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -626,6 +638,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
     - Del mundo 3 al 9 el dibujo es el mismo (Capi con Rosa en la orilla, por código). Solo cambian la tira del mapa, el agua y los textos.
     - El del mundo 2 (nivel 11) es más corto: sin la tira del mapa ni «Ver mapa».
     - Si cada mundo debe tener su propio arte, es trabajo del artista. Si el del 2 debe llevar «Ver mapa», lo decide el escritorio (`b11/hoja-entrada.png`).
+    - **El dueño (punto 17):** «por ahora está bien», pero se marca **para la nueva versión**: un dibujo propio para cada mundo.
 18. **Baja (resuelta con el build `da40034d`, punto 16). Con el contenido acabado (`max_level` 700), el botón del Mapa dice «Jugar · Nivel 701».**
     - 06 (D-032, punto 6) pide «nunca «Jugar · Nivel 701»». El inicio sí dice «Jugar · Reto del río».
     - El botón del Mapa abre el Reto, así que solo falla la etiqueta (`b11/mapa-700-b.png`).
@@ -644,6 +657,15 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
     - 04 §6.6 solo dice que Atrás no cierra el modal de Aguas estancadas ni el «¿Seguro?». Para el Reto, esta hoja ya lo dio por diseñado («como en un nivel», `GameBootstrap`).
     - Pregunta para el escritorio: ¿Atrás en el nivel debe abrir la pausa, como dice el guion, y en la pausa volver al juego?
 22. **Baja. En pt-BR los miles salen con coma, como en inglés:** «1,000 sementes», «2,800 sementes» y el saldo «13,040» (`b13/idiomas-pt-BR.png`). En portugués de Brasil se escribe «1.000». En es-419 también sale «1,000 semillas», que vale para México pero no para Colombia ni Argentina. Los precios de la tienda falsa («COP 5,900») tienen el mismo formato.
+23. **Media (el dueño). La música tapa los efectos en general: no se oyen bien los sonidos de mover y verter** (punto 17).
+    - Lo notó en el 60 y lo aclaró: «osea los sonidos en general».
+    - En el registro: `sfx_select` −36 dB, `sfx_fruit_plip` −32, `sfx_tint`, `sfx_pour_start` y `sfx_pour_end` −30, `sfx_ui_tap` −30. En cambio, `sfx_seal` −17, `sfx_stuck` −20, `sfx_undo` −22 y `sfx_fill` −25.
+    - La música no se agacha al verter (`ducked` false): solo con el modal de atasco.
+    - Para el escritorio: subir los efectos de juego o bajar el lecho (`AudioMix`), o agachar la música durante el vertido.
+24. **Media (el dueño, gráficos; para la nueva versión, salvo que el escritorio lo vea rápido). El Mercado se ve básico y no invita a entrar** (`b22/mercado-cuias.png`).
+    - **Las opciones no parecen tocables:** las pestañas son solo texto, con un subrayado en la elegida. Hay que marcarlas más claro, para que se sepa que se toca ahí.
+    - **El Mercado está muy básico o apagado, sin realce:** hay que hacerlo más visible.
+    - **Las cuias se parecen todas:** vidrio, Santarém, Encuentro y Totuma no se distinguen bien en la miniatura pequeña. Propuesta del dueño: tocarlas y verlas en grande.
 
 ## Notas de la herramienta (no son defectos del juego)
 
