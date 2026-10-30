@@ -28,6 +28,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Lo que quedaba del punto 14 y los bloques 9, 10, 11, 12, 13, 14, 18 y 19 (punto 15) | cumple; la 15 queda arreglada; la Liga no se puede probar (App Check) | 20, 21, 22 |
 | Arreglos de la tercera tanda j6 (build `da40034d`, punto 16) y la Liga contra dev (12.2) | cumplen el Mapa, el aviso y la Liga; OpenGL ES 3 rinde igual y gasta 10-30 MB menos | 20 |
 | 22 y 23, gráficos y audio con el dueño (punto 17) | cumple; la música tapa los efectos y el Mercado se ve básico | 17, 23, 24 |
+| 21, eliminar la cuenta de verdad (punto 18) | cumple | — |
 
 ## Verificación (bloque 0)
 
@@ -592,6 +593,20 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
    - **Mercado, pestaña Cuias** (`b22/mercado-cuias.png`): observación 24.
    - **Audio en logcat:** en todos los registros de la prueba, 100.314 líneas `sfx` con `"src":"clip"` y ninguna `synth`.
    - **Sin escuchar:** los mundos 10-13, con audio por código, y si las capas se desfasan tras muchos bucles. Para eso hace falta un rato largo en un mismo nivel.
+
+18. **Bloque 21, eliminar la cuenta de verdad** (mismo build, perfil de dev 18+ con la Liga, contra el backend de dev; lo pidió el dueño): **cumple** (`b21/`).
+   - **Paso 1** (`b21/paso1-dialogo.png`): «Eliminar cuenta y datos», «Se borrarán tu progreso, tus semillas y tus comodines de este teléfono y de la nube», «Las compras no se reembolsan», con «Conservar mis datos» y «Continuar» (`af_account_delete` `requested`).
+   - **Paso 2** (`b21/paso2-dialogo.png`): «¿Eliminar todo?», «No se puede deshacer. El juego volverá a empezar desde el nivel 1», con la nota de Play Juegos («Pedimos borrar tu copia en Google Play Juegos. Si falla, se reintenta al abrir el juego con Play Juegos. También puedes borrarla allí») y «Eliminar».
+   - **La espera visible** (`b21/rafaga.png`, 20 capturas seguidas, con el código de cuenta tapado): «Eliminando tu cuenta y tus datos…» con los tres puntos animados y «Eliminar» en gris durante ~3,8 s. Después, el aviso «Tu cuenta y tus datos se eliminaron.», y el juego vuelve a empezar con la intro y la pantalla de edad.
+   - **Eventos:** `af_account_delete` `requested` → `confirmed` (t 119.062) → `done` (t 122.911), y después `consent` `step` age. Firebase Auth cierra la sesión.
+   - **Tras el borrado:**
+     - con el perfil nuevo (18+, consentimiento rechazado), el saldo empieza en 0;
+     - la Liga no carga (`league_unavailable` `offline`) hasta la primera victoria, que crea el usuario anónimo nuevo: el 42 da «+10» y `league_wins_sent` `accepted` 1;
+     - en la Liga, **«Coatí 2550» (la cuenta borrada, 30 puntos) ya no sale**: solo el perfil nuevo, «Tapir 3936», con 10 (`b21/liga-tras-borrar.png`);
+     - tras esa victoria salió el aviso previo de avisos y se tocó «Avísame» (`push_prompt` `accepted`).
+   - **Sin secretos en los registros:** en `Logs/device/completa-j6/` no hay `eyJ…`, tokens de depuración de App Check, `uid` ni el código de cuenta. Dos registros llevaban el UID de Firebase en las líneas `FirebaseAuth … about user ( … )` (`b14/lc-menor13.txt`, `liga/lc2.txt`) y se taparon. Las capturas con el código de cuenta se recortaron o se borraron.
+   - **Una nota para el escritorio:** con el perfil recién borrado, la Liga dice «sin conexión» hasta que se gana un nivel. Quizá debería decir «Gana un nivel para entrar en la Liga», como en el primer contacto.
+   - **El teléfono queda así:** el perfil nuevo, en el inicio del 43, con el permiso de avisos concedido y el Reto de hoy sin jugar, listo para ver mañana el aviso real (14.2).
 
 ## Observaciones
 
