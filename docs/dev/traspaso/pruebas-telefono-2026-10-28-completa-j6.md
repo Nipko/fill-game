@@ -26,7 +26,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Lo automatizable que quedaba (punto 13) | cumple; el Mapa del 700 dice «Nivel 701» | 18 |
 | Arreglos de la segunda hoja j6 (build `ff3c49c0`, punto 14) | cumplen el icono y la bandeja; el aviso no abre el Reto; la memoria, por encima | 19, 20 |
 | Lo que quedaba del punto 14 y los bloques 9, 10, 11, 12, 13, 14, 18 y 19 (punto 15) | cumple; la 15 queda arreglada; la Liga no se puede probar (App Check) | 20, 21, 22 |
-| Arreglos de la tercera tanda j6 (build `da40034d`, punto 16) | cumplen el Mapa y el aviso; OpenGL ES 3 rinde igual y gasta 10-30 MB menos | 20 |
+| Arreglos de la tercera tanda j6 (build `da40034d`, punto 16) y la Liga contra dev (12.2) | cumplen el Mapa, el aviso y la Liga; OpenGL ES 3 rinde igual y gasta 10-30 MB menos | 20 |
 
 ## Verificación (bloque 0)
 
@@ -534,7 +534,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - **«Datos del río»:** la fila del açaí abre «Frutas del río» (`fact_page_open`, `from` settings) con su nombre científico, 10 datos numerados y, al final, las fuentes con su dominio (Embrapa, Mongabay, ter Steege et al.…). Más abajo en Ajustes, «Sobre la Amazonía» enseña los datos del río con su «Fuente:».
    - **Bloque 13.3, idiomas** (`b13/idiomas-{es-419,en,pt-BR}.png`): **cumple, salvo la observación 22.** En los tres idiomas se recorrieron el inicio, Ajustes (3 pantallas), el Mapa, el Mercado con la tienda falsa, el calendario del Reto, la Bitácora, el nivel, la pausa, «¿Salir del nivel?» y Nivel fallido. Ningún texto vacío, cortado ni en otro idioma.
    - **Bloque 14.3 y la Liga con <13: cumplen** (`b14/`). Tras `pm clear`, con `--ez af_league true --ei af_dev_push 2`, al elegir «Menos de 13» sale «Pide a un adulto que instale el juego» (`consent` `blocked`, país US por la SIM). Tras 75 s en segundo plano, 0 avisos del paquete, ningún diálogo de permiso y 0 peticiones a `/v1/league`.
-   - **Bloque 12.2, la Liga contra el backend de dev: no se puede probar.** Con `--ez af_league true`, el botón «Liga» sale y la Liga se abre (`af_league_open`), pero responde `league_unavailable` `offline` con la red bien. En logcat aparece `Firebase.FirebaseException … code: 403 body: App attestation failed`.
+   - **Bloque 12.2, la Liga contra el backend de dev: no se puede probar aquí (se probó en el punto 16, tras registrar el token).** Con `--ez af_league true`, el botón «Liga» sale y la Liga se abre (`af_league_open`), pero responde `league_unavailable` `offline` con la red bien. En logcat aparece `Firebase.FirebaseException … code: 403 body: App attestation failed`.
      - Cada `pm clear` crea un secreto de depuración de App Check nuevo, y ese no está en la lista de Firebase.
      - El portátil ni lee ni guarda ese secreto.
      - Lo tiene que registrar el dueño en la consola de App Check del proyecto de dev, con el perfil que quede. Después se repite el guion de la Liga, salvo el modo avión, que lo hace el dueño.
@@ -574,7 +574,12 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - **Morpho** (`--ei af_bench_morpho 1 --ei af_level 106`, 29 niveles): OpenGL ES 3, máximo de 7,29-7,30 ms y mediana de 1,2; Vulkan, máximo de 6,81-7,65 ms y mediana de 1,22-1,26.
      - **Fotogramas en el 106:** 60,07 fps, p95 16,65 ms y 0 tarde con los dos.
      - Así, cambiar a OpenGL ES 3 no cuesta rendimiento en este teléfono, pero sigue lejos de los 450 MB de D-060.
-   - **El teléfono queda así:** el `dev.apk` de este build, con un perfil 18+ y el permiso de avisos concedido, en el inicio.
+   - **Bloque 12.2, la Liga contra el backend de dev (`guion-prueba-telefono-liga.md`): cumple en 1, 2 y 3** (`liga/`). Antes, el dueño registró en App Check el token de depuración del perfil actual: el 403 del punto 15 era eso. El portátil no lo leyó: en las líneas de `DebugAppCheckProvider` lo ocultó.
+     - **1, primer contacto** (`--ez af_league true`, perfil en el 262, sin `af_league_fake`): sale el botón «Liga» y se abre sin 401 ni 403 (`liga-global.png`). Enseña «Liga del río», la pestaña Global, «Semana del 26 oct al 2 nov · Termina en 3 d 3 h», «Aún nadie suma puntos esta semana» y, fija abajo, tu fila «Coatí 2550 · 0 · Tú · Gana un nivel para entrar en la Liga».
+     - **2, una victoria cuenta** (el 263): la victoria enseña «+10 puntos de Liga» (`league_win` `points` 10), y llega `league_wins_sent` `accepted` 1 (`liga-victoria.png`). En la Liga, «Coatí 2550» sale 1.º con 10 puntos y su bandera, igual en la fila fija con «Tú» (`liga-global-2.png`). **La pestaña de país es «Estados Unidos»**, porque el país sale de la SIM (`country_source` sim, US), no Colombia.
+     - **3, sin conexión** (el dueño, con el modo avión): gana el 264 y el 265 sin red (`net` offline). Quedan pendientes (`league_win` con `pending` 1 y 2), con `league_unavailable` `offline` al primero. Al volver la red, `league_wins_sent` `count` 2, `accepted` 2, y la Liga pasa a `pending` 0, en Global y en país. Lo dice el dueño: «listo hice la prueba».
+     - **Sin hacer:** el 3.3 (matar la app con una victoria sin enviar) y el 4, con 13-17. Los dos piden otra vez el modo avión, y el 4 un `pm clear` que crea otro token de App Check. El 4 con <13 ya cumple (punto 15).
+   - **El teléfono queda así:** el `dev.apk` de este build, con un perfil 18+ y el permiso de avisos concedido, en el inicio. Tras el modo avión, la depuración inalámbrica vuelve con otro puerto (`adb mdns services`).
 
 ## Observaciones
 
