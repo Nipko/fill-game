@@ -6,6 +6,28 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## Gráficos de la ficha de Play (D-065)
+
+### 2026-10-30 · Fase 1, investigación de las fichas que funcionan (`spark/tienda-graficos`): HECHA
+
+- **Encargo:** `docs/dev/traspaso/spark-graficos-tienda.md` §1. **Rama:** `spark/tienda-graficos`, desde `origin/integracion-fase1-fase2` (`38785473`).
+- **Entrega:** `docs/store-listing/investigacion-fichas.md`.
+  - 13 fichas de Play vistas en EE. UU., Brasil, México y Colombia, con su tabla por app.
+  - Lo que sale de la muestra, y las guías de ASO y de Google contrastadas.
+  - 10 conclusiones para Tintalú y lo que no podemos copiar.
+- **Las tres conclusiones con más peso:**
+  - la captura 1, un tablero real en pleno vertido al 70-80 % del alto, sin marco (hoy ~40 %);
+  - rótulos de 2-4 palabras;
+  - un momento especial del juego (la cuia que vierte, el Encuentro de las Aguas) ampliado y realzado con IA alrededor.
+- **Preguntas [P], con la recomendada aplicada:**
+  - **Q-GT-1, gráfico de funciones:** foco en el centro (Google) y logotipo fuera del círculo central del botón de reproducir (encargo §2).
+  - **Q-GT-2:** los conceptos B (panorámica) y C (personajes en la 1-2), como variantes de experimento y no como ficha principal. Ningún líder usa panorámica en el teléfono, y el único que abre con personaje es el que menos descargas tiene [NV].
+  - **Q-GT-3:** rótulos más cortos que los de §6 de `ficha.md`, en los 3 idiomas. La versión final irá en `graficos-v2/README.md` con el concepto A.
+- **Capturas de referencia de terceros:** solo en el equipo de Spark, fuera del repositorio.
+- **Cómputo:** ninguno de IA en esta fase.
+- **Teléfono:** emparejado por depuración inalámbrica el 2026-10-30 (SM-S938B), listo para las tomas de la fase 2.
+- **Siguiente:** concepto A en los 3 idiomas, con las tomas nuevas del `dev.apk`.
+
 ## Personajes 3D
 
 ### 2026-10-27 · Fase 2 de los personajes en «3D cartoon, juguete brillante», D-058 (`spark/personajes-3d`): HECHA · verificación completa VERDE · code-reviewer: APROBADO (2.ª ronda)
