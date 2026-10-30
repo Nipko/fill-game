@@ -1,0 +1,1319 @@
+{
+ "decision": "D-065; encargo docs/dev/traspaso/spark-graficos-tienda.md §2",
+ "date": "2026-10-30",
+ "license_note": "Z-Image Turbo: Apache 2.0 (uso comercial permitido). Sin imágenes de referencia de terceros ni prompts «al estilo de».",
+ "concept": "B · Panorámica del río",
+ "items": [
+  {
+   "file": "es-419/01-vertido-encuentro.png",
+   "sha256": "5f47cd2d488a118dfa7bb834993d32783bebe710c329d4f911914af9a3334752",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Vierte y tiñe el río",
+   "game_capture": {
+    "what": "Nivel 42 (Encuentro de las Aguas, mundo 3), a mitad de un vertido (fotograma de la grabación de pantalla)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev (instalado el 2026-10-30 10:19)",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 1 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "es-419/02-todo-encaja.png",
+   "sha256": "d3e91cb4e8e7117d49aedbb9fb5ff5aaa399bd1143aeacfa02753661430535ad",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "¡Todo encaja!",
+   "game_capture": {
+    "what": "Nivel 42 resuelto con la solución: las seis cuias selladas, con sus anillos y el confeti de plumas de la victoria (fotograma de la grabación)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 2 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "es-419/03-mapa-del-rio.png",
+   "sha256": "ccab688e8229c3049fc1c9eea128de1a4e55bf765934d43997a56eb6b5c4de25",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Remonta el Amazonas",
+   "game_capture": {
+    "what": "Mapa del río, vista Cuenca, con af_max_level 58 (canoa entre Manaos y Anavilhanas)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     2240
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 3 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "es-419/04-dificil-tarapoto.png",
+   "sha256": "00f5aa7daf50f31a2db56a006b5ea60262e5d4ef4be1bcd664f524c34ef7e076",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Difícil, pero justo",
+   "game_capture": {
+    "what": "Nivel 129 (Difícil, Tarapoto, mundo 4, Colombia), a mitad de un vertido tras 4 vertidos legales",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 4 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "es-419/05-titino-capi-rosa.png",
+   "sha256": "676be21e23cb0643bdcdefa07f09d09d1f8d6d3ff8be5eb92e03ba0b04a07491",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "TiTino te acompaña",
+   "game_capture": {
+    "what": "Inicio (muelle del río) con TiTino en su rama, Capi en la canoa y Rosa en el río, y las tarjetas del Reto y la Bitácora",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1790
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 5 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "es-419/06-patrones.png",
+   "sha256": "54cf3d1613774e6baa04f97e654d574179a495f1e7f947b7054722c749564292",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Patrones para todos los ojos",
+   "game_capture": {
+    "what": "Nivel 241 (Yasuní, mundo 6, Ecuador), 11 cuias con los patrones de fruta, tras 5 vertidos legales",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1975
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 6 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "es-419/07-bitacora.png",
+   "sha256": "5df3ddb9bb1047eed0aa2e75176972895c7d55bfeb8a69f04764713845cd82dc",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Un reto nuevo cada día",
+   "game_capture": {
+    "what": "Bitácora del río, página 1 sellada con su premio (+60 semillas)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     40,
+     390,
+     1040,
+     1890
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 7 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "es-419/08-reto-del-rio.png",
+   "sha256": "609ba4d9b676e4456721596989b4c78371ba5a80a35d012cb2c666ce13608907",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Sin wifi, a tu ritmo",
+   "game_capture": {
+    "what": "Reto del río del 30 de octubre, tablero al empezar",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 8 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "en/01-vertido-encuentro.png",
+   "sha256": "353a8e6212ce652c6ea0918c09339419965a5cb764295cb242a0ddbb78669c90",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Pour and tint the river",
+   "game_capture": {
+    "what": "Nivel 42 (Encuentro de las Aguas, mundo 3), a mitad de un vertido (fotograma de la grabación de pantalla)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev (instalado el 2026-10-30 10:19)",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 1 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "en/02-todo-encaja.png",
+   "sha256": "0512cea5b7ede2e73b3cd894265e1699d51195d076c13ee983c3e6d2edaca380",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Everything clicks!",
+   "game_capture": {
+    "what": "Nivel 42 resuelto con la solución: las seis cuias selladas, con sus anillos y el confeti de plumas de la victoria (fotograma de la grabación)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 2 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "en/03-mapa-del-rio.png",
+   "sha256": "8a3d29e435cf65cb159422cef44178043480180b94f21c6184a6de3c4f535b27",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Travel up the Amazon",
+   "game_capture": {
+    "what": "Mapa del río, vista Cuenca, con af_max_level 58 (canoa entre Manaos y Anavilhanas)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     2240
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 3 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "en/04-dificil-tarapoto.png",
+   "sha256": "841da70b718f33dfe2c01c23e5ce4c97fbf9f92a2d3d77a17ac0402646dd57be",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Hard, but fair",
+   "game_capture": {
+    "what": "Nivel 129 (Difícil, Tarapoto, mundo 4, Colombia), a mitad de un vertido tras 4 vertidos legales",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 4 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "en/05-titino-capi-rosa.png",
+   "sha256": "b2c3b8a710c8c199811f40a5f39fe1b50286ea0e9fb17ef68b492a6345b76d66",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Meet TiTino",
+   "game_capture": {
+    "what": "Inicio (muelle del río) con TiTino en su rama, Capi en la canoa y Rosa en el río, y las tarjetas del Reto y la Bitácora",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1790
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 5 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "en/06-patrones.png",
+   "sha256": "48b3307fc334e177f2381f07a5854bd95acf0a8c0cf9827a746e7fb55e5ce589",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Patterns for every eye",
+   "game_capture": {
+    "what": "Nivel 241 (Yasuní, mundo 6, Ecuador), 11 cuias con los patrones de fruta, tras 5 vertidos legales",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1975
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 6 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "en/07-bitacora.png",
+   "sha256": "4b1dd56ddfd1dce46b345964b152a9d56c51f1c2f8183ac9936ef55cb9931437",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "A new challenge every day",
+   "game_capture": {
+    "what": "Bitácora del río, página 1 sellada con su premio (+60 semillas)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     40,
+     390,
+     1040,
+     1890
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 7 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "en/08-reto-del-rio.png",
+   "sha256": "746e39923b53e2cbc6eee40db180d41c11142dd4b8e42a9190b3f176e7a85195",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Offline, at your pace",
+   "game_capture": {
+    "what": "Reto del río del 30 de octubre, tablero al empezar",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 8 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "pt-BR/01-vertido-encuentro.png",
+   "sha256": "3960cd8c8887871f58257061473f08aace225f4df293f6a1bc8c0d1e46e428ba",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Despeje e tinja o rio",
+   "game_capture": {
+    "what": "Nivel 42 (Encuentro de las Aguas, mundo 3), a mitad de un vertido (fotograma de la grabación de pantalla)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev (instalado el 2026-10-30 10:19)",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 1 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "pt-BR/02-todo-encaja.png",
+   "sha256": "b7c4350b03e8270c01b7cd02226c20b7cdc7a20c2c537583c1e385870dce40be",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Tudo se encaixa!",
+   "game_capture": {
+    "what": "Nivel 42 resuelto con la solución: las seis cuias selladas, con sus anillos y el confeti de plumas de la victoria (fotograma de la grabación)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 2 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "pt-BR/03-mapa-del-rio.png",
+   "sha256": "5bb440491ebbd3f030f613ab35865ec62a681fc2fedd510f5e08e9dc6a74cd83",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Suba o Amazonas",
+   "game_capture": {
+    "what": "Mapa del río, vista Cuenca, con af_max_level 58 (canoa entre Manaos y Anavilhanas)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     2240
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 3 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "pt-BR/04-dificil-tarapoto.png",
+   "sha256": "075f7a792b681157121387d91931d5931456f10deb5bdf346140fd89ad84b8c3",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Difícil, mas justo",
+   "game_capture": {
+    "what": "Nivel 129 (Difícil, Tarapoto, mundo 4, Colombia), a mitad de un vertido tras 4 vertidos legales",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 4 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "pt-BR/05-titino-capi-rosa.png",
+   "sha256": "fde3a1b86af01904df53adfdd907d25d4f47d46db041c2a1dd41d9ea445ed98e",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "TiTino te acompanha",
+   "game_capture": {
+    "what": "Inicio (muelle del río) con TiTino en su rama, Capi en la canoa y Rosa en el río, y las tarjetas del Reto y la Bitácora",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1790
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 5 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "pt-BR/06-patrones.png",
+   "sha256": "ead593ffff8013d0a26e9c3716fd15fd5f69e9ed29d81446d7051b096dda03ad",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Padrões para todos os olhos",
+   "game_capture": {
+    "what": "Nivel 241 (Yasuní, mundo 6, Ecuador), 11 cuias con los patrones de fruta, tras 5 vertidos legales",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1975
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 6 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "pt-BR/07-bitacora.png",
+   "sha256": "304872fcf75d425865a4c7f7bef873507c27526ba88f5d79a4b68e929a4fd2f3",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Um desafio novo por dia",
+   "game_capture": {
+    "what": "Bitácora del río, página 1 sellada con su premio (+60 semillas)",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     40,
+     390,
+     1040,
+     1890
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 7 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "pt-BR/08-reto-del-rio.png",
+   "sha256": "2f1315889c48f502796956f49390eb64e2918a6d6f6346ff20c060e9014a4f51",
+   "size": [
+    1080,
+    1920
+   ],
+   "caption": "Sem wi-fi, no seu ritmo",
+   "game_capture": {
+    "what": "Reto del río del 30 de octubre, tablero al empezar",
+    "device": "Samsung SM-S938B, 1080 × 2340",
+    "build": "com.amazonfill.dev",
+    "date": "2026-10-30",
+    "crop_px": [
+     0,
+     0,
+     1080,
+     1640
+    ],
+    "note": "Captura real del juego (dev.apk en el teléfono de pruebas); solo se recorta y se escala"
+   },
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png",
+    "use": "tramo 8 de 8 de la panorámica, ampliada a 8.640 px de ancho con Lanczos y un desenfoque leve (profundidad)"
+   },
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  },
+  {
+   "file": "feature-graphic.png",
+   "sha256": "f97d3831bc2de6eadd8f352318b732297e0dd3320298b04bc28a425ae870d923",
+   "size": [
+    1024,
+    500
+   ],
+   "ai_background": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Ultra wide horizontal panorama of one continuous Amazon river flowing across the entire image from left to right, seen from a low aerial angle: on the far left a very wide muddy estuary opening to the sea, then a dark tea-black river meeting a sandy river side by side, then dense green rainforest with oxbow lakes and giant water lilies, then misty hills and cloud forest, and on the far right tall snowy Andes mountains where the river begins as a small bright stream. The river is a single unbroken ribbon that crosses the whole width. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 222,
+    "size": [
+     2560,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "panorama_2560x768_222.png"
+   },
+   "logo": "docs/art/marca-oficial/v2/out/png/logo-horizontal-oscuro.png",
+   "game_art": [
+    {
+     "what": "Capi en su canoa",
+     "source": "docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png",
+     "crop_px": [
+      20,
+      1740,
+      420,
+      1960
+     ],
+     "note": "Arte real del juego (render de los personajes 3D, D-058), recortado del fondo plano; sin redibujar con IA"
+    }
+   ]
+  }
+ ]
+}

@@ -6,6 +6,81 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## Gráficos de la ficha de Play (D-065)
+
+### 2026-10-30 · Elección del dueño: A como ficha, B y C como variantes de prueba
+
+- **Decisión del dueño (Q-GT-2 resuelta, la recomendada):** el concepto **A «Gameplay héroe»** es la ficha principal; **B** y **C** quedan como variantes de una prueba de ficha (experimento de Play Console) después del lanzamiento.
+- Anotado en `graficos-v2/README.md` y en la hoja de contactos `index.html`.
+- **Siguiente, para el integrador:** fusionar `spark/tienda-graficos`; poner al día §6 de `../<idioma>/ficha.md` con los rótulos de A (Q-GT-3); subir A en Play (lo sube el dueño). Siguen abiertas para el dueño Q-GT-1, Q-GT-3, Q-GT-4 y Q-GT-5 (las recomendadas ya aplicadas). La fase 3 (vídeo) queda opcional.
+
+### 2026-10-30 · Fase 2, conceptos B «Panorámica del río» y C «Cartel con personajes» (`spark/tienda-graficos`): HECHOS
+
+- **Entrega:** `graficos-v2/B/` y `graficos-v2/C/`, 8 capturas × 3 idiomas, el gráfico de funciones y `manifest.json` cada uno.
+  - El README y la hoja de contactos `index.html` ya tienen los tres conceptos.
+  - Validadas las 50 piezas nuevas: 1080 × 1920 o 1024 × 500, RGB de 24 bits, menos de 2 MB.
+- **B:**
+  - una panorámica de Z-Image a 2.560 × 768 (por encima de unas 3 veces más ancho que alto, el modelo se rompe), ampliada a 8.640 px y repartida en las 8 capturas;
+  - la canoa de Capi (arte real) avanza en cada captura;
+  - pantalla al ~61 % del alto, con el tablero entero en cada captura.
+- **C:**
+  - las 1-2 como cartel con TiTino, Rosa y Capi alrededor de la pantalla, sin tapar la UI; las 3-8, idénticas a las de A;
+  - los personajes son los renders reales del juego (D-058), recortados del fondo plano de `docs/art/personajes-3d/fase2/despues/p3d_11_lamina_personajes.png`.
+- **Pregunta [P], con la recomendada aplicada:** **Q-GT-5**, arte real de los personajes en lugar de renders y poses de IA. Así son fieles al juego, y no hace falta añadir Qwen-Image-Edit (~20 GB).
+- **Cómputo:** 8 imágenes más en la RTX 5080 (~2 min de GPU); el recorte y el montaje, con Pillow en el Spark.
+- **Vista previa privada para el dueño:** https://claude.ai/artifact/77UrrL5iMHp6vQsKgQXxu6 (copias JPEG; los PNG para subir son los del repositorio).
+- **Siguiente:** el dueño elige en la hoja de contactos. La recomendada (investigación, Q-GT-2): A como ficha principal; B o C como variante de una prueba de ficha tras el lanzamiento. La fase 3 (vídeo) queda opcional.
+
+### 2026-10-30 · Fase 2, concepto A «Gameplay héroe» en los 3 idiomas (`spark/tienda-graficos`): HECHO
+
+- **Entrega:** `docs/store-listing/graficos-v2/`:
+  - `A/<es-419|en|pt-BR>/01-08-*.png` (24 capturas de 1080 × 1920);
+  - `A/feature-graphic.png` (1024 × 500);
+  - `A/manifest.json`, con la procedencia de las 25 piezas;
+  - `README.md`, con qué es, por qué y qué mirar;
+  - `index.html`, la hoja de contactos sin dependencias, con selector de idioma.
+  - Todas, PNG de 24 bits sin transparencia y de menos de 2 MB.
+- **Tomas reales en el teléfono** (SM-S938B):
+  - **Build:** con el `com.amazonfill.dev` ya instalado (10:19 del 30-10), posterior al último cambio de código de la integración (06:57). No hizo falta compilar.
+  - **Cómo:** adb guiado por `AF_LAYOUT` y `AF_STATE`, con los extras `af_lang`, `af_level`, `af_seeds` y `af_max_level`; los vertidos y la victoria, en fotogramas de `screenrecord`.
+  - **Barra de estado:** modo demo de Android durante las tomas; al terminar, `sysui_demo_allowed` volvió a 0, como estaba.
+- **Lo que cambió en el perfil del `dev.apk` del teléfono por las tomas** (no se hizo `pm clear`, para no borrar el estado de las pruebas del escritorio):
+  - `max_level` 58;
+  - semillas 1.310;
+  - la página 1 de la Bitácora sellada el 30-10 (+60);
+  - el nivel 25 en curso, sin salida.
+- **Fondos:** Z-Image Turbo (Apache 2.0) en la 5080.
+  - Prompts de pura naturaleza; se descartaron las semillas con casas, barcas o personas.
+  - Nombrar en el prompt lo que no se quiere («no houses») las hace salir: Z-Image no tiene prompt negativo.
+- **Cómputo:**
+  - unas 51 imágenes de ~11 s en la RTX 5080 (~10 min de GPU);
+  - el montaje con Pillow, en el Spark (segundos).
+- **Preguntas [P], con la recomendada aplicada** (detalle en `graficos-v2/README.md`):
+  - **Q-GT-3:** los rótulos nuevos y más cortos;
+  - **Q-GT-4:** dejar a la vista la fecha del Reto (UI real) en las 5 y 8.
+- **Fuera del repositorio** (encargo: nada de paquetes nuevos): los scripts de las tomas y del montaje, y las grabaciones del teléfono. Las grabaciones de arranque muestran la pantalla de inicio del teléfono, y no se publican.
+- **Siguiente:** que el dueño mire A en `index.html`. Los conceptos B y C quedan pendientes, como variantes de experimento (Q-GT-2).
+
+### 2026-10-30 · Fase 1, investigación de las fichas que funcionan (`spark/tienda-graficos`): HECHA
+
+- **Encargo:** `docs/dev/traspaso/spark-graficos-tienda.md` §1. **Rama:** `spark/tienda-graficos`, desde `origin/integracion-fase1-fase2` (`38785473`).
+- **Entrega:** `docs/store-listing/investigacion-fichas.md`.
+  - 13 fichas de Play vistas en EE. UU., Brasil, México y Colombia, con su tabla por app.
+  - Lo que sale de la muestra, y las guías de ASO y de Google contrastadas.
+  - 10 conclusiones para Tintalú y lo que no podemos copiar.
+- **Las tres conclusiones con más peso:**
+  - la captura 1, un tablero real en pleno vertido al 70-80 % del alto, sin marco (hoy ~40 %);
+  - rótulos de 2-4 palabras;
+  - un momento especial del juego (la cuia que vierte, el Encuentro de las Aguas) ampliado y realzado con IA alrededor.
+- **Preguntas [P], con la recomendada aplicada:**
+  - **Q-GT-1, gráfico de funciones:** foco en el centro (Google) y logotipo fuera del círculo central del botón de reproducir (encargo §2).
+  - **Q-GT-2:** los conceptos B (panorámica) y C (personajes en la 1-2), como variantes de experimento y no como ficha principal. Ningún líder usa panorámica en el teléfono, y el único que abre con personaje es el que menos descargas tiene [NV].
+  - **Q-GT-3:** rótulos más cortos que los de §6 de `ficha.md`, en los 3 idiomas. La versión final irá en `graficos-v2/README.md` con el concepto A.
+- **Capturas de referencia de terceros:** solo en el equipo de Spark, fuera del repositorio.
+- **Cómputo:** ninguno de IA en esta fase.
+- **Teléfono:** emparejado por depuración inalámbrica el 2026-10-30 (SM-S938B), listo para las tomas de la fase 2.
+- **Siguiente:** concepto A en los 3 idiomas, con las tomas nuevas del `dev.apk`.
+
 ## Personajes 3D
 
 ### 2026-10-27 · Fase 2 de los personajes en «3D cartoon, juguete brillante», D-058 (`spark/personajes-3d`): HECHA · verificación completa VERDE · code-reviewer: APROBADO (2.ª ronda)
