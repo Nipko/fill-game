@@ -8,6 +8,12 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ## Gráficos de la ficha de Play (D-065)
 
+### 2026-10-30 · Elección del dueño: A como ficha, B y C como variantes de prueba
+
+- **Decisión del dueño (Q-GT-2 resuelta, la recomendada):** el concepto **A «Gameplay héroe»** es la ficha principal; **B** y **C** quedan como variantes de una prueba de ficha (experimento de Play Console) después del lanzamiento.
+- Anotado en `graficos-v2/README.md` y en la hoja de contactos `index.html`.
+- **Siguiente, para el integrador:** fusionar `spark/tienda-graficos`; poner al día §6 de `../<idioma>/ficha.md` con los rótulos de A (Q-GT-3); subir A en Play (lo sube el dueño). Siguen abiertas para el dueño Q-GT-1, Q-GT-3, Q-GT-4 y Q-GT-5 (las recomendadas ya aplicadas). La fase 3 (vídeo) queda opcional.
+
 ### 2026-10-30 · Fase 2, conceptos B «Panorámica del río» y C «Cartel con personajes» (`spark/tienda-graficos`): HECHOS
 
 - **Entrega:** `graficos-v2/B/` y `graficos-v2/C/`, 8 capturas × 3 idiomas, el gráfico de funciones y `manifest.json` cada uno.

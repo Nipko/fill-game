@@ -2,13 +2,13 @@
 
 Conceptos de capturas y gráfico de funciones para la ficha de Google Play, en es-419, en y pt-BR. Encargo: `docs/dev/traspaso/spark-graficos-tienda.md`. Investigación previa: `../investigacion-fichas.md`. El juego actual de la pista interna sigue en `../graficos/` y no cambia.
 
-**Para elegir:** abre `index.html` en el móvil o en el escritorio. Es la hoja de contactos, con los conceptos lado a lado por idioma.
+**Elegido por el dueño (2026-10-30, Q-GT-2):** **A** es la ficha principal; **B** y **C** quedan como variantes para una prueba de ficha (experimento de Play Console) después del lanzamiento. La hoja de contactos `index.html` enseña los tres lado a lado por idioma.
 
 | Concepto | Estado | Carpeta |
 |---|---|---|
-| **A · Gameplay héroe** | **Hecho** (2026-10-30): 8 capturas × 3 idiomas + gráfico de funciones | `A/` |
-| B · Panorámica del río | **Hecho** (2026-10-30), como variante de experimento (Q-GT-2) | `B/` |
-| C · Cartel con personajes | **Hecho** (2026-10-30), como variante de experimento (Q-GT-2) | `C/` |
+| **A · Gameplay héroe** | **Elegido: ficha principal.** Hecho (2026-10-30): 8 capturas × 3 idiomas + gráfico de funciones | `A/` |
+| B · Panorámica del río | Hecho (2026-10-30). Variante de prueba de ficha | `B/` |
+| C · Cartel con personajes | Hecho (2026-10-30). Variante de prueba de ficha | `C/` |
 
 Los tres conceptos usan las mismas tomas reales y los mismos rótulos, así que una prueba de ficha entre ellos mide solo la presentación.
 
