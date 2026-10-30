@@ -26,6 +26,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Lo automatizable que quedaba (punto 13) | cumple; el Mapa del 700 dice «Nivel 701» | 18 |
 | Arreglos de la segunda hoja j6 (build `ff3c49c0`, punto 14) | cumplen el icono y la bandeja; el aviso no abre el Reto; la memoria, por encima | 19, 20 |
 | Lo que quedaba del punto 14 y los bloques 9, 10, 11, 12, 13, 14, 18 y 19 (punto 15) | cumple; la 15 queda arreglada; la Liga no se puede probar (App Check) | 20, 21, 22 |
+| Arreglos de la tercera tanda j6 (build `da40034d`, punto 16) | cumplen el Mapa y el aviso; OpenGL ES 3 rinde igual y gasta 10-30 MB menos | 20 |
 
 ## Verificación (bloque 0)
 
@@ -540,6 +541,41 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
    - **Bloque 14.2, el aviso real al día siguiente:** sin probar. El perfil se rehízo (18+, consentimiento rechazado, progreso hasta el 262) y aún no tiene el permiso de avisos.
    - **El teléfono queda así:** el `dev.apk` instalado con un perfil 18+ en el inicio, y el progreso hasta el 262 puesto con `af_max_level`. Densidad 420, letra 1,0, animaciones encendidas y TalkBack apagado.
 
+16. **El build de los arreglos de la tercera tanda j6** (`da40034d`, que trae `57b93c10`, el encargo, y los carriles `fx-j6c-mapa-701`, `fx-j6c-aviso-abre` y `fx-j6c-gles`): **cumplen el Mapa (18) y el aviso (19). OpenGL ES 3 rinde como Vulkan y gasta 10-30 MB menos, pero no baja de 450 MB (20).**
+   - **Builds y compuertas:**
+     - builds: `dev.apk` de 74,98 MB (`[AF.BuildDev] OK`), y el ensayo con `[AF.BuildRelease] OK` y `[AF.LocReleaseGate] OK`: `rehearsal.aab` de 57,92 MB y `rehearsal.apk` de 63,43 MB;
+     - en los tres: `check-manifest -Mode dev`, `check-16kb`, `check-no-unity-iap`, `check-no-applovin` y `check-no-unity-telemetry`, todas OK;
+     - en el ensayo: `check-release-classes` OK, y `size-gate` del AAB OK.
+   - **El Mapa con el contenido acabado (observación 18): cumple** (`c/mapa-700.png`, `--ei af_max_level 700`). El botón del Mapa y el del inicio dicen «Jugar · Reto del río», «Play · River Challenge» y «Jogar · Desafio do Rio», nunca «Nivel 701». Al llegar, el Mapa se abre solo en la Cuenca, con «Muestrario · 73/73».
+   - **El aviso del Reto (14.1, observación 19): cumple en los cuatro casos** (`c/aviso/`). Antes se volvió a conceder el permiso desde Ajustes › Avisos (`push_prompt` `granted`, origen settings), porque el `pm clear` del punto 15 lo había quitado. Todos con `--ei af_dev_push 2`, el Reto sin jugar hoy, y el dueño tocando el aviso:
+
+     | Caso | Qué pasa | `AF_STATE` |
+     |---|---|---|
+     | En segundo plano dentro del 263 | sigue en el nivel | `push_intent` id 1000 y `push_open` `dest` `none` |
+     | En segundo plano en el inicio, mismo id (1000) | abre el Reto de hoy (`d3_n0302`) | `push_open` `dest` `daily` y `load` con `daily` |
+     | En frío, cerrado desde Recientes | arranca (`session` `cold`) y abre el Reto | `push_intent` id 1001 y `push_open` `dest` `daily` |
+     | Desde Recientes tras `am kill`, sin tocar ningún aviso | abre el inicio y no cuenta el aviso otra vez | `push_intent` `rejected` `not_fired` y ningún `push_open` |
+
+     - Con la Bitácora ya sellada hoy no hubo takeover, así que no se vio el caso del aviso que cierra la Bitácora encima.
+     - En frío desde el aviso, el juego sale en inglés porque no lleva el extra `af_lang`.
+     - Al publicar el aviso con el proceso muerto, Android arranca el proceso en segundo plano (el receptor de avisos), sin la actividad.
+   - **OpenGL ES 3 frente a `-force-vulkan` (observación 20), con el mismo `dev.apk`.** La sonda da `gfx_api` OpenGLES3 por defecto y Vulkan con `-force-vulkan`.
+     - **Memoria** (`c/mem2/`, alternando V, G, V, G; un minuto quieto, saliendo antes del nivel y con la Bitácora sellada), TOTAL PSS en KB (`GL mtrack`):
+
+       | | OpenGL ES 3 | Vulkan |
+       |---|---|---|
+       | Inicio | 578.389 y 558.183 (79.896) | 585.030 y 586.948 (89.752) |
+       | Mapa | 582.983 y 574.046 (82.040) | 599.893 y 600.235 (92.360) |
+       | Nivel 75 (`c/mem/`, una vez) | 582.613 (85.208) | 597.168 (96.396) |
+
+       OpenGL ES 3 gasta 10-30 MB menos, unos 10 MB de ellos en `GL mtrack`. La primera medida del inicio con Vulkan (610.732) y la del Mapa no valen: la Bitácora del día nuevo tapaba el inicio, y el toque al Mapa no llegaba.
+     - **Arranque en frío** (`am start -W`, dos veces cada uno): OpenGL ES 3 da `TotalTime` 214 y 177 ms, `visible_ms` 283 y `os_splash_held_ms` 614-621; Vulkan, 175 ms, `visible_ms` 297-319 y `os_splash_held_ms` 636-688.
+     - **La intro:** 185-188 fotogramas en sus 3.500 ms con los dos, sin cortes, y `first_frame_ms` 23-27.
+     - **Morpho** (`--ei af_bench_morpho 1 --ei af_level 106`, 29 niveles): OpenGL ES 3, máximo de 7,29-7,30 ms y mediana de 1,2; Vulkan, máximo de 6,81-7,65 ms y mediana de 1,22-1,26.
+     - **Fotogramas en el 106:** 60,07 fps, p95 16,65 ms y 0 tarde con los dos.
+     - Así, cambiar a OpenGL ES 3 no cuesta rendimiento en este teléfono, pero sigue lejos de los 450 MB de D-060.
+   - **El teléfono queda así:** el `dev.apk` de este build, con un perfil 18+ y el permiso de avisos concedido, en el inicio.
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -585,10 +621,10 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
     - Del mundo 3 al 9 el dibujo es el mismo (Capi con Rosa en la orilla, por código). Solo cambian la tira del mapa, el agua y los textos.
     - El del mundo 2 (nivel 11) es más corto: sin la tira del mapa ni «Ver mapa».
     - Si cada mundo debe tener su propio arte, es trabajo del artista. Si el del 2 debe llevar «Ver mapa», lo decide el escritorio (`b11/hoja-entrada.png`).
-18. **Baja. Con el contenido acabado (`max_level` 700), el botón del Mapa dice «Jugar · Nivel 701».**
+18. **Baja (resuelta con el build `da40034d`, punto 16). Con el contenido acabado (`max_level` 700), el botón del Mapa dice «Jugar · Nivel 701».**
     - 06 (D-032, punto 6) pide «nunca «Jugar · Nivel 701»». El inicio sí dice «Jugar · Reto del río».
     - El botón del Mapa abre el Reto, así que solo falla la etiqueta (`b11/mapa-700-b.png`).
-19. **Media. Con D-062, el aviso del Reto no abre el Reto, ni en caliente desde el inicio ni en frío** (punto 14).
+19. **Media (resuelta con el build `da40034d`, punto 16). Con D-062, el aviso del Reto no abre el Reto, ni en caliente desde el inicio ni en frío** (punto 14).
     - El toque llega a la app: `onNewIntent` en caliente, y en frío `START … (has extras)` con el aviso quitado. Pero no sale `push_open`, y el juego abre el inicio con la Bitácora encima.
     - Con la app en un nivel sí sale `push_open` (`dest` `none`).
     - Una pista para el escritorio: `AndroidNotificationScheduler.TakeOpenedType` descarta la intención si `intent.Id == s_lastIntentId`, y los avisos usan siempre el `id` 1001. Eso explicaría el caso en caliente, pero no el de en frío, que es un proceso nuevo. También puede ser que `GetLastNotificationIntent()` vuelva vacío cuando se lee.
