@@ -30,6 +30,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | 22 y 23, gráficos y audio con el dueño (punto 17) | cumple; la música tapa los efectos y el Mercado se ve básico | 17, 23, 24 |
 | 21, eliminar la cuenta de verdad (punto 18) | cumple | — |
 | 14.2, el aviso real al día siguiente (punto 18) | cumple (lo vio el dueño) | — |
+| Arreglos de la cuarta tanda j6 (build `ae555a10`, punto 19) | cumplen Atrás, los miles, el audio, el Mercado y el borrado con la Liga | — |
 
 ## Verificación (bloque 0)
 
@@ -609,6 +610,38 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
    - **Una nota para el escritorio:** con el perfil recién borrado, la Liga dice «sin conexión» hasta que se gana un nivel. Quizá debería decir «Gana un nivel para entrar en la Liga», como en el primer contacto.
    - **El teléfono queda así:** el perfil nuevo, en el inicio del 43, con el permiso de avisos concedido y el Reto de hoy sin jugar, listo para ver mañana el aviso real (14.2).
    - **Bloque 14.2, el aviso real al día siguiente: cumple** (lo vio el dueño el 2026-10-30). Con la app cerrada desde la noche anterior y el Reto sin jugar, llegó solo el aviso del Reto del río, sin el extra `af_dev_push`. Al tocarlo abrió el Reto. Literal: «abrí la notificación del día del río hoy y funcionó bien, me llevó al reto». No hay registro: la depuración inalámbrica ya no estaba conectada.
+
+19. **El build de los arreglos de la cuarta tanda j6** (`ae555a10`, que trae `4bcec795`, el encargo, y los carriles `fx-j6d-atras`, `fx-j6d-miles`, `fx-j6d-audio`, `fx-j6d-mercado` y `fx-j6d-liga`): **cumplen las observaciones 21, 22, 23 y 24 y la nota del punto 18.**
+   - **Builds y compuertas:**
+     - builds: `dev.apk` de 75,01 MB (`[AF.BuildDev] OK`), y el ensayo con `[AF.BuildRelease] OK` y `[AF.LocReleaseGate] OK`: `rehearsal.aab` de 57,96 MB y `rehearsal.apk` de 63,47 MB;
+     - en los tres: `check-manifest -Mode dev`, `check-16kb`, `check-no-unity-iap`, `check-no-applovin` y `check-no-unity-telemetry`, todas OK;
+     - en el ensayo: `check-release-classes` OK, y `size-gate` del AAB OK.
+   - **18.7, Atrás de Android (observación 21, D-063): cumple** (`j6d/`, `input keyevent 4`, sonda `"event":"back"`):
+
+     | Pantalla | `action` | Resultado |
+     |---|---|---|
+     | Nivel | `pause` | se abre la pausa |
+     | Pausa | `resume` | vuelve al juego |
+     | «¿Salir del nivel?» (desde la pausa) | `cancel_to_pause` | vuelve a la pausa |
+     | Nivel fallido | `close` | va al inicio, como su X |
+     | Bitácora (takeover), Mapa, Mercado y Avatar | `close` | vuelve al inicio |
+     | Inicio sin nada encima | `background` | la app se va a segundo plano |
+
+     - Atrás doble y rápido en el nivel: `resume` y `pause`, sin excepciones (0 `E/Unity`).
+     - **Sin probar:** «¿Reiniciar?» y Sin canoas. En el 44 y el 45, «Volver a la orilla» de la pausa y «Reiniciar» de la cabecera reinician directamente, sin preguntar, con 0 o 1 vertidos.
+   - **13.3, los miles (observación 22, añadido de D-025): cumple** (`j6d/miles.png`, con 12.345 semillas y la tienda falsa).
+     - En es-419 y pt-BR van con punto: «12.345», «1.000 semillas» y «1.000 sementes», y «COP 5.900».
+     - En inglés, con coma: «12,345», «1,000 seeds» y «COP 5,900».
+   - **23.1, el audio (observación 23, añadido de D-026): cumple.** El dueño, a media voz y sin auriculares, en el 45: «se escucha mejor». En el registro, elegir pasa de −36 a −24 dB, verter de −30 a −22 dB, y el tinte y la nota de la fruta de −30/−32 a −23 dB. La música se agacha al verter (`music` `ducked` true).
+   - **22, el Mercado (observación 24): cumple** (`j6d/mercado-cuias.png`, `j6d/miles.png`). El dueño: «se ve mejor».
+     - La cabecera «Mercado» es ámbar y las pestañas tienen forma de botón, con la elegida en verde.
+     - Cada cuia lleva una lupa para verla en grande. Las bloqueadas dicen «Premio del mundo · faltan N».
+     - En la barra del inicio, el botón es un puesto de mercado con el rótulo «Mercado», «Market» o «Mercado».
+   - **21, borrar la cuenta con red (nota del punto 18): cumple.**
+     - `af_account_delete` va `requested` → `confirmed` → `done`, y luego sale la pantalla de edad.
+     - Con el perfil nuevo (18+) y **sin ganar ningún nivel**, la Liga abre en el primer contacto sin `league_unavailable`: «Aún nadie suma puntos esta semana» y «Colibrí 3092 · 0 · Gana un nivel para entrar en la Liga» (`j6d/liga-tras-borrar.png`). El perfil borrado, «Tapir 3936», ya no sale.
+     - No hizo falta registrar otro token de App Check.
+   - **El teléfono queda así:** el perfil nuevo (18+, «Colibrí 3092»), con la Liga abierta.
 
 ## Observaciones
 
