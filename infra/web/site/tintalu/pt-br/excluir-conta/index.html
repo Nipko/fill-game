@@ -42,19 +42,19 @@
 <h2 id="app">No jogo (o jeito mais rápido)</h2>
 <ol>
   <li>Abra o Tintalú e entre em Configurações.</li>
-  <li>Toque em «Excluir conta e dados».</li>
+  <li>Toque em “Excluir conta e dados”.</li>
   <li>Confirme duas vezes.</li>
 </ol>
 <p>Assim também são apagados o jogo salvo e os outros dados do jogo guardados no seu celular.</p>
 
 <h2 id="web">Por esta página</h2>
-<p>Se o jogo não estiver mais instalado ou se você preferir fazer aqui, precisa do <strong>código da sua conta</strong>. Ele aparece em Tintalú › Configurações, na linha «Código para excluir sua conta na web». Tem 26 letras e números em grupos separados por hifens, por exemplo <code>3HZ7-M2Q9-XK4T-8VB1-NC6D-RF0-WPE</code> (é só um exemplo).</p>
+<p>Se o jogo não estiver mais instalado ou se você preferir fazer aqui, precisa do <strong>código da sua conta</strong>. Ele aparece em Tintalú › Configurações, na linha “Código para excluir sua conta na web”. Tem 26 letras e números em grupos separados por hifens, por exemplo <code>3HZ7-M2Q9-XK4T-8VB1-NC6D-RF0-WPE</code> (é só um exemplo).</p>
 <ol>
-  <li>Digite seu código e toque em «Continuar».</li>
-  <li>Confira o código e confirme com «Sim, excluir» nos 5 minutos seguintes.</li>
+  <li>Digite seu código e toque em “Continuar”.</li>
+  <li>Confira o código e confirme com “Sim, excluir” nos 5 minutos seguintes.</li>
 </ol>
 <div id="delete-soon" class="notice" hidden>
-  <p>A exclusão por esta página estará disponível em breve. Enquanto isso, exclua sua conta no jogo (Configurações › “Excluir conta e dados”) ou escreva para privacy@tintalu.com e nós fazemos isso por você.</p>
+  <p>A exclusão por esta página não está disponível no momento. Exclua sua conta no jogo (Configurações › “Excluir conta e dados”) ou escreva para privacy@tintalu.com e nós fazemos isso por você.</p>
 </div>
 <form id="delete-form" class="delete-form" method="post" novalidate hidden data-msg-invalid="Esse código não é válido. Confira em Configurações: ele tem 26 letras e números." data-msg-sending="Um momento…" data-msg-not-found="Não encontramos esse código. Confira se é o último que aparece em Configurações." data-msg-expired="A confirmação expirou. Digite seu código de novo." data-msg-rate-limited="Muitas tentativas. Tente de novo em {minutes} min." data-msg-unavailable="Não foi possível concluir agora. Tente mais tarde." data-msg-config="Esta página não está configurada corretamente. Exclua sua conta no jogo ou tente mais tarde." data-msg-cancelled="Nada foi excluído." data-msg-done="Pronto. Sua conta foi excluída.">
   <fieldset id="delete-step-code">
@@ -66,7 +66,7 @@
   </fieldset>
   <fieldset id="delete-step-confirm" hidden>
     <legend>Tem certeza de que quer excluir sua conta?</legend>
-    <p>Sua conta e seus dados na nuvem serão apagados. Não dá para desfazer e as compras não são reembolsadas.</p>
+    <p>Sua conta e seus dados na nuvem serão apagados. Não dá para desfazer, e excluir a conta não dá direito, por si só, a um reembolso do que você comprou.</p>
     <p>Código: <strong id="delete-confirm-code" class="code"></strong></p>
     <div class="actions">
       <button id="delete-yes" type="button" class="danger">Sim, excluir</button>
@@ -81,20 +81,20 @@
 <h2 id="borra">O que é excluído</h2>
 <ul>
   <li>Sua conta anônima, inclusive no Firebase Authentication.</li>
-  <li>Seus dados no nosso servidor: a verificação de integridade, o código da sua conta e o vínculo entre suas compras e sua conta.</li>
+  <li>Seus dados no nosso servidor: a verificação de integridade, o código da sua conta, os prêmios de anúncios conferidos, seu pseudônimo, seu avatar e seus pontos da Liga do Rio, e o vínculo entre suas compras e sua conta.</li>
   <li>Durante 2 horas fica uma marca de conta excluída, com o seu identificador só como hash, para que nada volte a ser gravado em nome da conta; depois ela some.</li>
   <li>Pelo jogo, também seu progresso, suas sementes, seus reforços e suas configurações guardados no celular.</li>
 </ul>
 <p>Por esta página não conseguimos chegar ao seu celular: o jogo salvo nele é apagado quando você desinstala o jogo ou limpa os dados dele nas configurações do Android. Se houver uma cópia no Google Play Games, apague-a no app Play Games (Configurações › excluir os dados deste jogo).</p>
 
 <h2 id="conserva">O que é mantido</h2>
-<p>O histórico de compras, <strong>sem nenhum dado que identifique você</strong>, por 7 anos por obrigações fiscais. As compras <strong>não são reembolsadas</strong> e não podem ser recuperadas. Os dados de análise não estão ligados à sua conta e são apagados sozinhos conforme o prazo de retenção.</p>
+<p>O histórico de compras, <strong>sem nenhum dado que identifique você</strong>, por 7 anos por obrigações fiscais. O que você comprou não pode ser recuperado, e excluir a conta <strong>não dá direito, por si só, a um reembolso</strong>; isso não limita os seus direitos como consumidor nem a política de reembolsos do Google Play. Os dados de análise não estão ligados à sua conta e são apagados sozinhos conforme o prazo de retenção. As cópias de segurança do nosso servidor expiram sozinhas em no máximo 35 dias.</p>
 
 <h2 id="tarda">Quanto tempo leva</h2>
-<p>Na hora: quando você vê «Pronto. Sua conta foi excluída.», a exclusão já foi feita.</p>
+<p>Na hora: quando você vê “Pronto. Sua conta foi excluída.” nesta página, ou “Sua conta e seus dados foram excluídos.” no jogo, a exclusão já foi feita.</p>
 
 <h2 id="sin-codigo">Se você não tem o código</h2>
-<p>Se o jogo estiver instalado, abra-o com conexão à internet e entre em Configurações: o código aparece ali, ou você pode excluir a conta diretamente. Se você não tem mais o jogo, escreva para <a href="mailto:privacy@tintalu.com">privacy@tintalu.com</a>.</p>
+<p>Se o jogo estiver instalado, abra-o com conexão à internet e entre em Configurações: o código aparece ali, ou você pode excluir a conta diretamente. Se o jogo não estiver mais instalado, escreva para <a href="mailto:privacy@tintalu.com">privacy@tintalu.com</a>.</p>
 <p>Mais informações na nossa <a href="/pt-br/privacidade/">política de privacidade</a>.</p>
   </main>
   <footer class="site-footer">
@@ -107,7 +107,7 @@
       <li><a href="/pt-br/creditos/">Créditos e licenças</a></li>
       </ul>
     </nav>
-    <p>Tintalú é um jogo da Parallext, LLC.</p>
+    <p>O Tintalú é um jogo da Parallext, LLC.</p>
     <p>Jogo independente inspirado na bacia amazônica; sem relação com a Amazon.com, Inc.</p>
   </footer>
 </body>

@@ -54,7 +54,7 @@
   <li>Revisa el código y confirma con «Sí, eliminar» en los 5 minutos siguientes.</li>
 </ol>
 <div id="delete-soon" class="notice" hidden>
-  <p>El borrado desde esta página estará disponible pronto. Mientras tanto, borra tu cuenta desde el juego (Ajustes › «Eliminar cuenta y datos») o escríbenos a privacy@tintalu.com y lo hacemos por ti.</p>
+  <p>El borrado desde esta página no está disponible ahora mismo. Borra tu cuenta desde el juego (Ajustes › «Eliminar cuenta y datos») o escríbenos a privacy@tintalu.com y lo hacemos por ti.</p>
 </div>
 <form id="delete-form" class="delete-form" method="post" novalidate hidden data-msg-invalid="Ese código no es válido. Revísalo en Ajustes: tiene 26 letras y números." data-msg-sending="Un momento…" data-msg-not-found="No encontramos ese código. Revisa que sea el último que ves en Ajustes." data-msg-expired="La confirmación caducó. Vuelve a escribir tu código." data-msg-rate-limited="Demasiados intentos. Prueba de nuevo dentro de {minutes} min." data-msg-unavailable="No se pudo completar ahora. Inténtalo más tarde." data-msg-config="Esta página no está bien configurada. Borra tu cuenta desde el juego o inténtalo más tarde." data-msg-cancelled="No se eliminó nada." data-msg-done="Listo. Tu cuenta se eliminó.">
   <fieldset id="delete-step-code">
@@ -66,7 +66,7 @@
   </fieldset>
   <fieldset id="delete-step-confirm" hidden>
     <legend>¿Seguro que quieres eliminar tu cuenta?</legend>
-    <p>Se borrarán tu cuenta y tus datos en la nube. No se puede deshacer y las compras no se reembolsan.</p>
+    <p>Se borrarán tu cuenta y tus datos en la nube. No se puede deshacer, y borrar la cuenta no da derecho por sí solo a un reembolso de lo comprado.</p>
     <p>Código: <strong id="delete-confirm-code" class="code"></strong></p>
     <div class="actions">
       <button id="delete-yes" type="button" class="danger">Sí, eliminar</button>
@@ -81,20 +81,20 @@
 <h2 id="borra">Qué se borra</h2>
 <ul>
   <li>Tu cuenta anónima, también en Firebase Authentication.</li>
-  <li>Tus datos en nuestro servidor: la verificación de integridad, tu código de cuenta y el vínculo entre tus compras y tu cuenta.</li>
+  <li>Tus datos en nuestro servidor: la verificación de integridad, tu código de cuenta, los premios de anuncios comprobados, tu seudónimo, tu avatar y tus puntos de la Liga del río, y el vínculo entre tus compras y tu cuenta.</li>
   <li>Durante 2 horas queda una marca de cuenta borrada, con tu identificador solo como hash, para que nada vuelva a escribirse a nombre de la cuenta; después desaparece.</li>
   <li>Desde el juego, además, tu progreso, tus semillas, tus comodines y tus ajustes guardados en el teléfono.</li>
 </ul>
 <p>Desde esta página no podemos llegar a tu teléfono: la partida guardada en él se borra cuando desinstalas el juego o borras sus datos en Ajustes de Android. La copia en Google Play Juegos, si la hay, bórrala en la app Play Juegos (Ajustes › eliminar los datos de este juego).</p>
 
 <h2 id="conserva">Qué se conserva</h2>
-<p>El historial de compras, <strong>sin ningún dato que te identifique</strong>, durante 7 años por obligaciones fiscales. Las compras <strong>no se reembolsan</strong> y no se pueden recuperar. Los datos de analítica no están unidos a tu cuenta y se borran solos según su plazo de retención.</p>
+<p>El historial de compras, <strong>sin ningún dato que te identifique</strong>, durante 7 años por obligaciones fiscales. Lo comprado no se puede recuperar, y borrar la cuenta <strong>no da derecho por sí solo a un reembolso</strong>; esto no limita tus derechos como consumidor ni la política de reembolsos de Google Play. Los datos de analítica no están unidos a tu cuenta y se borran solos según su plazo de retención. Las copias de seguridad de nuestro servidor caducan solas en 35 días como máximo.</p>
 
 <h2 id="tarda">Cuánto tarda</h2>
-<p>Al momento: cuando ves «Listo. Tu cuenta se eliminó.», el borrado ya está hecho.</p>
+<p>Al momento: cuando ves «Listo. Tu cuenta se eliminó.» en esta página, o «Tu cuenta y tus datos se eliminaron.» en el juego, el borrado ya está hecho.</p>
 
 <h2 id="sin-codigo">Si no tienes el código</h2>
-<p>Si el juego está instalado, ábrelo con conexión a internet y entra en Ajustes: ahí aparece el código, o puedes borrar la cuenta directamente. Si ya no lo tienes, escríbenos a <a href="mailto:privacy@tintalu.com">privacy@tintalu.com</a>.</p>
+<p>Si el juego está instalado, ábrelo con conexión a internet y entra en Ajustes: ahí aparece el código, o puedes borrar la cuenta directamente. Si ya no tienes el juego instalado, escríbenos a <a href="mailto:privacy@tintalu.com">privacy@tintalu.com</a>.</p>
 <p>Más información en nuestra <a href="/privacidad/">política de privacidad</a>.</p>
   </main>
   <footer class="site-footer">

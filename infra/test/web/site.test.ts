@@ -215,6 +215,8 @@ describe('web/site', () => {
       'https://aws.amazon.com/privacy/',
       'https://developer.android.com/studio/terms',
       'https://firebase.google.com/support/privacy',
+      'https://openfontlicense.org',
+      'https://opensource.org/license/bsd-3-clause',
       'https://opensource.org/license/mit',
       'https://parallext.com',
       'https://policies.google.com/privacy',
@@ -335,13 +337,11 @@ describe('web/site', () => {
     expect(() => renderSite({ indexable: true })).toThrow(/indexable/);
   });
 
-  it('app-ads.txt: AdMob (D-049) y Unity Ads (añadido de D-049 del 2026-10-27); las demás redes, comentadas hasta sumarlas', () => {
+  it('app-ads.txt: solo las líneas activas, AdMob (D-049) y Unity Ads (añadido de D-049 del 2026-10-27), sin comentarios (D-064)', () => {
     const ads = site.get('app-ads.txt') ?? '';
     const lines = ads.split('\n').filter((l) => l.trim() !== '');
-    const active = lines.filter((l) => !l.startsWith('#'));
-    expect(active).toEqual(['google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0', 'unity.com, 20067668703382, DIRECT']);
-    expect(ads).not.toContain('# unity.com, ');
-    for (const network of ['facebook.com', 'mintegral.com']) expect(ads).toContain(`# ${network}, `);
-    expect(ads).not.toMatch(/^applovin\.com/m);
+    expect(lines).toEqual(['google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0', 'unity.com, 20067668703382, DIRECT']);
+    expect(ads).not.toMatch(/#|\[\[/);
+    expect(ads).not.toMatch(/applovin/i);
   });
 });

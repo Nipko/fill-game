@@ -1,18 +1,2 @@
-# app-ads.txt de Tintalú (desarrollador: Parallext, LLC; D-041). Vendedores autorizados de su inventario de anuncios.
-# Fuente: este archivo de la web (infra/web/src/static/app-ads.txt); docs/store-listing/app-ads.txt solo apunta aquí. 08 §13.1 #2 y #23. Se publica en la raíz del sitio web del
-# desarrollador que figure en la ficha de Play. Formato IAB de cada línea:
-#   <dominio del sistema de anuncios>, <ID de la cuenta del editor>, <DIRECT|RESELLER>[, <ID de la autoridad de certificación>]
-#
-# Los anuncios los sirve Google AdMob directo (D-049; docs/dev/anuncios-admob.md). La línea de AdMob es la que da la
-# consola de AdMob para la cuenta de editor del dueño:
 google.com, pub-2916158449453694, DIRECT, f08c47fec0942fa0
-#
-# Unity Ads, red de mediación de AdMob por licitación (D-049, añadido del 2026-10-27; docs/dev/anuncios-admob.md §3 bis y §12):
-# la organización de Unity del dueño. Activa desde que el adaptador 3.21.1 está en el build.
 unity.com, 20067668703382, DIRECT
-#
-# Futuras: las demás redes se añaden al sumarlas a la mediación de AdMob, con las líneas exactas que den sus paneles
-# (los IDs NO se escriben a mano ni se inventan; los dominios de abajo son los habituales de cada red [NV]):
-# facebook.com, [[DATO DEL DUEÑO: ID de Meta Audience Network]], DIRECT
-# mintegral.com, [[DATO DEL DUEÑO: ID de Mintegral]], DIRECT
-# AppLovin MAX ya no sirve anuncios (D-049): su línea no se publica.
