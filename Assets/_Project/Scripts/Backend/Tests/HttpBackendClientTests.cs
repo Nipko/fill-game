@@ -450,6 +450,10 @@ namespace AF.Backend.Tests
         private sealed class ThrowingAuth : IAuthTokenProvider
         {
             public void GetIdToken(bool forceRefresh, Action<TokenResult> onDone) => throw new InvalidOperationException("SDK sin iniciar");
+
+            public void SignOut()
+            {
+            }
         }
 
         private sealed class ThrowingIntegrity : IIntegrityTokenProvider

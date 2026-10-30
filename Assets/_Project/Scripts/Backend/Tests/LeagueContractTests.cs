@@ -162,6 +162,33 @@ namespace AF.Backend.Tests
             Assert.Throws<ArgumentException>(() => client.GetLeagueBoard("bucket", _ => { }));
         }
 
+        /// <summary>
+        /// Punto 18 de la jornada 6 (2026-10-30): tras eliminar la cuenta, el servidor da 401 al usuario borrado y renovar su token falla
+        /// (<c>auth_token_failed</c>) mientras el teléfono lo guarde. Con la sesión cerrada (<see cref="IAuthTokenProvider.SignOut"/>), la
+        /// petición siguiente va con el usuario anónimo nuevo y recibe la clasificación.
+        /// </summary>
+        [Test]
+        public void TheClient_AfterTheAccountIsDeleted_FailsUntilSignOut_ThenGetsTheBoard()
+        {
+            var http = new FakeHttpTransport();
+            var auth = new FakeAuthTokenProvider { UserDeleted = true };
+            var client = new HttpBackendClient(BaseUrl, http, auth, new FakeIntegrityTokenProvider(), new ManualBackendScheduler());
+            string deletedToken = auth.CurrentToken;
+            http.Enqueue(401, "{\"error\":{\"code\":\"unauthorized\",\"message\":\"x\"}}");
+            BackendResult<LeagueBoardResponseDto>? result = null;
+            client.GetLeagueBoard("global", r => result = r);
+            Assert.That(result!.IsOk, Is.False);
+            Assert.That(result.Error!.Kind, Is.EqualTo(BackendErrorKind.AuthUnavailable), "renovar el token del usuario borrado falla");
+            Assert.That(result.Error.Detail, Is.EqualTo("auth_token_failed"));
+
+            auth.SignOut();
+            http.Enqueue(200, Example("league-board.response.json"));
+            client.GetLeagueBoard("global", r => result = r);
+            Assert.That(result!.IsOk, Is.True, result.ToString());
+            Assert.That(auth.UsersCreated, Is.EqualTo(1), "el usuario anónimo nuevo, como la primera vez");
+            Assert.That(http.Requests[1].GetHeader("Authorization"), Is.Not.EqualTo("Bearer " + deletedToken), "con el token del usuario nuevo");
+        }
+
         [Test]
         public void TheClient_ReportsTheCountryUnknown404()
         {

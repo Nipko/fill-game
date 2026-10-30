@@ -380,6 +380,8 @@ namespace AF.Tests.PlayMode
         {
             int wipes = 0;
             GameBootstrap.WipePlayerPrefsForTests = () => wipes++;
+            var auth = new AF.Backend.Auth.FakeAuthTokenProvider();
+            GameBootstrap.BackendAuthOverride = auth;
             var store = new MemoryProfileStore(ProfileAt(57));
             yield return PlayModeHelpers.LoadApp(store);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -398,6 +400,8 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.ContinueDeleteAccount(), Is.True);
             Assert.That(boot.ConfirmDeleteAccount(), Is.True);
             Assert.That(boot.AccountDeleted, Is.True);
+            Assert.That(auth.SignOuts, Is.EqualTo(1), "la sesión de Firebase Auth del usuario borrado se cierra (punto 18 de la jornada 6)");
+            Assert.That(auth.SignedIn, Is.False, "la petición siguiente crea el anónimo nuevo");
             Assert.That(league.PendingCount, Is.EqualTo(0), "la cola");
             Assert.That(league.Cached(LeagueScope.Global), Is.Null, "la caché");
             Assert.That(profile.League, Is.Null, "el bloque league del perfil");

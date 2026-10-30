@@ -76,8 +76,39 @@ namespace AF.Backend.Firebase
             });
         }
 
+        /// <inheritdoc />
+        public void SignOut()
+        {
+            // Sin Firebase arrancado en esta sesión no se arranca solo para esto (la banda < 13 nunca lo toca; D-033).
+            if (FirebaseBoot.State == FirebaseBootState.NotStarted || !FirebaseBoot.IsConfigured)
+            {
+                return;
+            }
+
+            FirebaseBoot.WhenReady(ok =>
+            {
+                if (ok)
+                {
+                    SignOutNow();
+                }
+            });
+        }
+
 #if UNITY_ANDROID && !UNITY_EDITOR
         private readonly List<Action<bool>> _signingIn = new List<Action<bool>>();
+
+        // El usuario guardado por el SDK (el de la cuenta borrada) se va; la petición siguiente crea el anónimo nuevo (EnsureUser).
+        private static void SignOutNow()
+        {
+            try
+            {
+                FirebaseAuth.DefaultInstance.SignOut();
+            }
+            catch (Exception)
+            {
+                // Sin sesión que cerrar o el SDK sin iniciar: nada que hacer (no se escribe en los logs).
+            }
+        }
 
         private void EnsureUser(Action<bool> onDone)
         {
@@ -165,6 +196,10 @@ namespace AF.Backend.Firebase
             }
         }
 #else
+        private static void SignOutNow()
+        {
+        }
+
         private void EnsureUser(Action<bool> onDone)
         {
             onDone(false); // nunca llega aquí: FirebaseBoot no está listo fuera del teléfono

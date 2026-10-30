@@ -54,6 +54,14 @@ namespace AF.Backend.Auth
         /// Llama a <paramref name="onDone"/> exactamente una vez, en el hilo principal.
         /// </summary>
         void GetIdToken(bool forceRefresh, Action<TokenResult> onDone);
+
+        /// <summary>
+        /// Cierra la sesión de Firebase Auth en este teléfono (borrado de cuenta, 08 §11). Tras «Eliminar cuenta y datos» el servidor
+        /// borra el usuario y marca su UID como borrado (401), pero el SDK lo guarda: sin cerrar la sesión, cada petición manda su
+        /// token, recibe 401 y renovarlo falla (<c>auth_token_failed</c>). Con la sesión cerrada, la siguiente petición crea el usuario
+        /// anónimo nuevo, como la primera vez (punto 18 de la jornada 6, 2026-10-30). No lanza; sin Firebase no hace nada.
+        /// </summary>
+        void SignOut();
     }
 
     /// <summary>
@@ -72,6 +80,7 @@ namespace AF.Backend.Auth
     {
         private readonly string _prefix;
         private int _version = 1;
+        private bool _signedIn = true;
 
         public FakeAuthTokenProvider(string prefix = "fake-id-token")
         {
@@ -87,7 +96,22 @@ namespace AF.Backend.Auth
         /// <summary>Veces que se pidió con <c>forceRefresh</c>.</summary>
         public int Refreshes { get; private set; }
 
-        /// <summary>Token que se entrega ahora (cambia tras cada refresco).</summary>
+        /// <summary>
+        /// El servidor borró este usuario (la cuenta se eliminó): como el SDK de Firebase, renovar su token falla con
+        /// <c>auth_token_failed</c> hasta que se cierra la sesión (<see cref="SignOut"/>).
+        /// </summary>
+        public bool UserDeleted { get; set; }
+
+        /// <summary>Veces que se cerró la sesión.</summary>
+        public int SignOuts { get; private set; }
+
+        /// <summary>Usuarios anónimos creados tras un cierre de sesión (la petición siguiente crea uno, como el SDK).</summary>
+        public int UsersCreated { get; private set; }
+
+        /// <summary>Hay usuario en la sesión.</summary>
+        public bool SignedIn => _signedIn;
+
+        /// <summary>Token que se entrega ahora (cambia tras cada refresco y con cada usuario nuevo).</summary>
         public string CurrentToken => _prefix + "-" + _version.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         public void GetIdToken(bool forceRefresh, Action<TokenResult> onDone)
@@ -104,13 +128,33 @@ namespace AF.Backend.Auth
                 return;
             }
 
-            if (forceRefresh)
+            if (!_signedIn)
+            {
+                _signedIn = true; // sin usuario, el proveedor real inicia sesión anónima: un usuario nuevo
+                UserDeleted = false;
+                UsersCreated++;
+                _version++;
+            }
+            else if (forceRefresh)
             {
                 Refreshes++;
+                if (UserDeleted)
+                {
+                    onDone(TokenResult.Fail("auth_token_failed"));
+                    return;
+                }
+
                 _version++;
             }
 
             onDone(TokenResult.Ok(CurrentToken));
+        }
+
+        /// <inheritdoc />
+        public void SignOut()
+        {
+            SignOuts++;
+            _signedIn = false;
         }
     }
 

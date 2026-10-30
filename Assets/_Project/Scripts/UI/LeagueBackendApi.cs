@@ -36,7 +36,7 @@ namespace AF.UI
             {
                 if (!r.IsOk)
                 {
-                    onDone(LeagueResult<LeagueWinsResult>.Fail(FailureOf(r.Error!, false)));
+                    onDone(LeagueResult<LeagueWinsResult>.Fail(FailureOf(r.Error!, false), DetailOf(r.Error!)));
                     return;
                 }
 
@@ -56,7 +56,7 @@ namespace AF.UI
             {
                 if (!r.IsOk)
                 {
-                    onDone(LeagueResult<LeagueBoard>.Fail(FailureOf(r.Error!, scope == LeagueScope.Country)));
+                    onDone(LeagueResult<LeagueBoard>.Fail(FailureOf(r.Error!, scope == LeagueScope.Country), DetailOf(r.Error!)));
                     return;
                 }
 
@@ -82,7 +82,7 @@ namespace AF.UI
             {
                 if (!r.IsOk)
                 {
-                    onDone(LeagueResult<LeagueAvatarResult>.Fail(AvatarFailureOf(r.Error!)));
+                    onDone(LeagueResult<LeagueAvatarResult>.Fail(AvatarFailureOf(r.Error!), DetailOf(r.Error!)));
                     return;
                 }
 
@@ -139,6 +139,33 @@ namespace AF.UI
             var me = new LeagueMe(dto.MePoints, dto.MeRank, dto.MePercentile, dto.MeNameKey, dto.MeNameNum, dto.MeCountry, dto.MeAvatar);
             LeagueIds.TryScope(dto.Scope, out LeagueScope scope);
             return new LeagueBoard(dto.Week, dto.StartsAt, dto.EndsAt, dto.Scope == null ? asked : scope, dto.Country, dto.UpdatedAt, top, me);
+        }
+
+        /// <summary>
+        /// El detalle del error para la sonda (punto 18 de la jornada 6, 2026-10-30): con respuesta HTTP, <c>http_{código}</c> (el
+        /// mensaje del servidor es texto libre); si no, el <see cref="BackendError.Detail"/> del proveedor (<c>auth_token_failed</c>,
+        /// <c>appcheck_token_failed</c>, <c>firebase_unavailable:…</c>, el error del transporte…), que nunca lleva tokens, UID ni URL.
+        /// Solo letras, cifras y <c>_:.-</c>, hasta 64 caracteres; null si no queda nada.
+        /// </summary>
+        internal static string? DetailOf(BackendError error)
+        {
+            string? raw = error.Kind == BackendErrorKind.Http
+                ? "http_" + error.HttpStatus.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : error.Detail;
+            if (string.IsNullOrEmpty(raw))
+            {
+                return null;
+            }
+
+            var sb = new System.Text.StringBuilder(Math.Min(raw!.Length, 64));
+            for (int i = 0; i < raw.Length && sb.Length < 64; i++)
+            {
+                char c = raw[i];
+                bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == ':' || c == '.' || c == '-';
+                sb.Append(ok ? c : '_');
+            }
+
+            return sb.ToString();
         }
 
         internal static LeagueFailure FailureOf(BackendError error, bool country)

@@ -24,6 +24,7 @@ Esta especificación es la fuente única de los dos lados. Si hay que cambiar el
     - y sus puntos;
   - el **top 100**: posición, seudónimo, bandera (en Global) y puntos;
   - sin conexión, lo último que se descargó, con «Actualizado hace {tiempo}»; sin nada guardado, «Conéctate para ver la Liga».
+  - **tras eliminar la cuenta** (nota del punto 18 de la jornada 6, 2026-10-30): el borrado cierra la sesión de Firebase Auth en el teléfono (`IAuthTokenProvider.SignOut`, desde `GameBootstrap.SignOutBackendAuth`). Antes no la cerraba: el SDK guardaba el usuario borrado, el servidor respondía 401 a su token (la marca de cuenta borrada), renovarlo fallaba (`auth_token_failed`) y la Liga decía «Conéctate para ver la Liga» (`offline`) hasta que algo soltaba ese usuario. Ahora la petición siguiente crea el usuario anónimo nuevo, el servidor responde 200 con la tabla de la semana y tu fila dice «Gana un nivel para entrar en la Liga», como en el primer contacto. Lo mismo vale para `restoreLedger`, el código de borrado y las compras, que usan el mismo token. La sonda `AF_STATE league_unavailable` lleva ahora `detail` (`auth_token_failed`, `appcheck_token_failed`, `http_401`…, nunca tokens ni el UID); `af_league_unavailable` y sus motivos no cambian (08 §8.2), y un fallo de App Check sigue siendo `offline`.
 - **En la victoria:** una línea pequeña «+{n} puntos de Liga» desde el 41, cuando el nivel suma puntos [P].
 - **Puntos** (06 §6):
   - victoria en un nivel de campaña: Normal 10, Difícil 20, Muy difícil 30;

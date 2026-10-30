@@ -410,6 +410,7 @@ namespace AF.UI
             }
 
             ResetAnalyticsData(); // F3-6 (08 §13.3): resetAnalyticsData() de Firebase, con un ID de instancia nuevo
+            SignOutBackendAuth(); // la sesión de Firebase Auth del usuario borrado (punto 18 de la jornada 6; GameBootstrap.Backend.cs)
 
             // D-042: la marca de borrado pendiente otra vez (PlayerPrefs.DeleteAll la borró), el borrado de af_main si hay sesión y la
             // sesión de nube cerrada: nada más se sube. El arranque siguiente comprueba que el snapshot quedó vacío (CloudErase).

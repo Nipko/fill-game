@@ -335,7 +335,11 @@ namespace AF.UI
             _analytics?.Log(AnalyticsEvent.Create("af_league_unavailable").Add("reason", LeagueIds.Of(failure))); // 08 §8.2 (D-046)
             if (DevProbe.Enabled)
             {
-                MarketProbe("league_unavailable", "\"reason\":\"" + LeagueIds.Of(failure) + "\"");
+                // El detalle técnico (auth_token_failed, appcheck_token_failed, http_401…), nunca el UID ni tokens (punto 18 de la
+                // jornada 6): distingue la sesión de una cuenta borrada de la falta de red.
+                string? detail = _league?.LastFailureDetail;
+                MarketProbe("league_unavailable", "\"reason\":\"" + LeagueIds.Of(failure) + "\""
+                    + (detail != null ? ",\"detail\":\"" + detail + "\"" : string.Empty));
             }
         }
 

@@ -290,21 +290,28 @@ namespace AF.LiveOps
     public sealed class LeagueResult<T>
         where T : class
     {
-        private LeagueResult(T? value, LeagueFailure failure)
+        private LeagueResult(T? value, LeagueFailure failure, string? detail)
         {
             Value = value;
             Failure = failure;
+            Detail = detail;
         }
 
         public T? Value { get; }
 
         public LeagueFailure Failure { get; }
 
+        /// <summary>
+        /// El detalle técnico del fallo para la sonda (p. ej. <c>auth_token_failed</c>, <c>appcheck_token_failed</c> o <c>http_401</c>),
+        /// sin tokens ni UID; null si no se sabe. No va a la analítica (punto 18 de la jornada 6, 2026-10-30).
+        /// </summary>
+        public string? Detail { get; }
+
         public bool IsOk => Value != null;
 
-        public static LeagueResult<T> Ok(T value) => new LeagueResult<T>(value ?? throw new ArgumentNullException(nameof(value)), LeagueFailure.Offline);
+        public static LeagueResult<T> Ok(T value) => new LeagueResult<T>(value ?? throw new ArgumentNullException(nameof(value)), LeagueFailure.Offline, null);
 
-        public static LeagueResult<T> Fail(LeagueFailure failure) => new LeagueResult<T>(null, failure);
+        public static LeagueResult<T> Fail(LeagueFailure failure, string? detail = null) => new LeagueResult<T>(null, failure, detail);
     }
 
     /// <summary>

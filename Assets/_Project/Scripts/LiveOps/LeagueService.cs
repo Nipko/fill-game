@@ -273,6 +273,12 @@ namespace AF.LiveOps
             return _fetching[(int)scope] ? LeagueBoardState.Loading : LeagueBoardState.Offline;
         }
 
+        /// <summary>
+        /// El detalle técnico del último fallo que avisó <see cref="Unavailable"/> (<see cref="LeagueResult{T}.Detail"/>), para la sonda;
+        /// null si no lo hubo o no se sabe.
+        /// </summary>
+        public string? LastFailureDetail { get; private set; }
+
         /// <summary>El último fallo de <paramref name="scope"/> (null tras una descarga buena).</summary>
         public LeagueFailure? LastFailure(LeagueScope scope) => _lastFailure[(int)scope];
 
@@ -334,6 +340,7 @@ namespace AF.LiveOps
             _sending = false;
             if (!result.IsOk)
             {
+                LastFailureDetail = result.Detail;
                 Unavailable?.Invoke(result.Failure);
                 return;
             }
@@ -407,6 +414,7 @@ namespace AF.LiveOps
             if (!result.IsOk)
             {
                 _lastFailure[i] = result.Failure;
+                LastFailureDetail = result.Detail;
                 Unavailable?.Invoke(result.Failure);
                 BoardChanged?.Invoke(scope);
                 return;
