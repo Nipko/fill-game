@@ -4329,6 +4329,13 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **Play App Signing:** clave de firma generada por Google; las huellas están en `publicar-play-console.md` §7.1. La SHA-256 de la clave de subida coincide con la del `preflight`.
 - **Avisos de la revisión (no bloquean):** sin archivo de desofuscación y sin símbolos nativos de depuración.
 
+### D-035, añadido del 2026-10-30 (2): huellas en Firebase, App Check y Play Integrity
+
+- **Firebase** (app `com.parallext.tintalu` del proyecto `tintalu`): añadidas la SHA-1 y la SHA-256 de la **clave de firma de apps** (`publicar-play-console.md` §7.1).
+- **App Check:** la app registrada con **Play Integrity**, con la SHA-256 de la firma de apps y tokens de 1 hora. El dueño autorizó aceptar las Condiciones del Servicio de las API de Google y de la API de Play Integrity («Sí, acepta y guarda»). Sin «aplicación obligatoria» en los productos de Firebase (§7.2); la API de AWS ya verifica los tokens por su cuenta.
+- **Play Console › Protegido con Play › API de Play Integrity:** vinculado el proyecto de Cloud `tintalu` (459140125724), con un límite de 10.000 llamadas al día. Las respuestas del veredicto se quedan con los valores por defecto.
+- **Pendiente del dueño:** volver a descargar el `google-services.json` de prod y compararlo con el suyo. Si cambió, recrear `GOOGLE_SERVICES_JSON_BASE64` antes del release 10001 (§7.2 y §7.5). Ningún agente lo lee. También quedan pendientes las credenciales de Play Games (§7.3 y §7.4).
+
 ## D-059 · Lanzamiento directo a producción al 100 %, con publicación administrada
 
 - **Fecha:** 2026-10-28. Registrada por el integrador.
