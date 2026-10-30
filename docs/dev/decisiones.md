@@ -4523,6 +4523,22 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Pendiente:** medir en un teléfono de clase A, que el dueño tiene que conseguir (como la medida del líquido de 08 §5.4).
 - **Cómo revertir:** con una decisión nueva del dueño.
 
+### Añadido de D-060 del 2026-10-29: OpenGL ES 3 por defecto en Android
+
+- **Estado:** decidido por el dueño (norma del dueño, comunicada por el integrador): toma la opción recomendada tras la observación 20 de la jornada 6. Registrado por la rama `tanda6/fx-j6c-gles`.
+- **Contexto:** punto 14 y observación 20 de `pruebas-telefono-2026-10-28-completa-j6.md`. La sonda dijo que el juego pintaba con **Vulkan** en el Adreno 830 del S938B (la lista de APIs estaba en automático). Con el mismo `dev.apk` lanzado con `-force-gles` (E1), el PSS del nivel 75 bajó de 610,6 a 559,8 MB (−51 MB) y el del ensayo de release, de 530,0 a 494,4 MB (−36 MB), sobre todo por `GL mtrack` (−12 a −18 MB) y Private Other, con la misma imagen. Los bloques de 4 MiB de los asignadores de Unity (E2, E3) bajaron 19-24 MB, dentro del ruido. Ninguno baja de 450 MB en este teléfono, que no es de clase A.
+- **Decisión:**
+  1. En Android, **OpenGL ES 3 primero y Vulkan de respaldo** (`PlayerSettings.SetUseDefaultGraphicsAPIs(Android, false)` y `SetGraphicsAPIs(Android, [OpenGLES3, Vulkan])`), aplicado por `AF.EditorTools.ProjectSetup` (`AndroidGraphicsApis`) y exigido por `Validate`: BuildSmoke, BuildDev y BuildRelease paran con 2 si cambia. Vulkan se queda en la lista para el teléfono que no tenga OpenGL ES 3 y para que el portátil compare con el mismo APK (`-e unity "-force-vulkan"`).
+  2. **Condición:** el rendimiento no puede empeorar. Si el portátil mide con OpenGL ES 3 un Morpho peor (`AF_PERF morpho`, presupuesto de 150 ms), más `motion_pauses` o un `frame_max_ms` peor que con Vulkan, se vuelve a Vulkan.
+- **Comprobado en el código** (`docs/dev/memoria.md` §7.8): nada depende de Vulkan.
+  - Los shaders propios (`AF_UI_*`) piden `#pragma target` 2.0-3.0.
+  - Las texturas son RGBA32, Alpha8 y ETC2.
+  - Los plugins Java (`AfSplashHold`, `AfLockGuard`, `AfAudioFocus`, `AfIcon`) no tocan la API gráfica.
+  - El manifiesto sigue con `<uses-feature android:glEsVersion="0x00030000">` (ya estaba: OpenGL ES 3 iba en la lista automática) y `android.hardware.vulkan.version` con `required="false"`: ningún requisito nuevo para Play.
+  - El Blit Type en `Auto` se queda: con OpenGL ES, Unity solo copia cuando hace falta, y E1 ya se probó con `Auto` sin cambio en la imagen.
+- **Pendiente:** medir el rendimiento y la memoria con el build nuevo en el `dev.apk` y en el ensayo (guion, encargo de la jornada 6); y, como siempre en D-060, medir en un teléfono de clase A.
+- **Cómo revertir:** `ProjectSetup.UseDefaultGraphicsApis = true` (la lista automática de Unity, con Vulkan primero) o `AndroidGraphicsApis` con `GraphicsDeviceType.Vulkan` delante; después `pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup` y commitear `ProjectSettings/ProjectSettings.asset` con el test `MemorySettingsTests.AndroidGraphicsApis_OpenGles3First_VulkanAsFallback`.
+
 ## Nota técnica del 2026-10-29: el juego no se muestra sobre la pantalla de bloqueo (observación 9 de la jornada 6)
 
 - **Estado:** arreglo de build-release (carril `tanda6/fx-j6-bloqueo`) para la observación 9, alta, de `pruebas-telefono-2026-10-28-completa-j6.md`: con el teléfono bloqueado más de 5 s, al encender la pantalla salía el juego encima del bloqueo y se podía jugar. No cambia ninguna decisión del dueño ni añade paquetes, SDK, permisos ni versiones.
