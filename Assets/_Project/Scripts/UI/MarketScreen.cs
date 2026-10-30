@@ -25,6 +25,11 @@ namespace AF.UI
     /// <item><description>«Restaurar compras» no sale hasta el adaptador real de IAP (Q-E5 (a) de D-033).</description></item>
     /// </list>
     /// Sin asignaciones por fotograma: solo se rehace al abrir, al cambiar de pestaña y tras una compra o una elección.
+    /// <para>Más visible desde la observación 24 de la jornada 6 (decisión del dueño del 2026-10-30; «Selva brillante premium»,
+    /// D-003, sin texturas nuevas, D-052): las pestañas son botones (una pastilla con borde; la elegida, rellena de hoja con la letra
+    /// crema; las demás, en tono suave), la cabecera lleva la banda ámbar de luz cálida y el saldo su placa, cada fila es una tarjeta
+    /// con sombra y canto iluminado, y en la pestaña Cuias tocar la tarjeta de una skin abre la vista previa con la cuia en grande, su
+    /// nombre y el mismo botón de la fila (se cierra con la X, tocando fuera y con Atrás: <see cref="PressBack"/>).</para>
     /// </summary>
     internal sealed class MarketScreen
     {
@@ -69,6 +74,36 @@ namespace AF.UI
         /// <summary>Tamaño de la etiqueta de una pestaña (sp, × escala): el tope de su autoajuste; el suelo es 12 sp × escala (02 §12).</summary>
         public const float TabSp = 15f;
 
+        /// <summary>Margen de la pastilla de una pestaña dentro de su área táctil, a los lados (dp): entre dos pastillas quedan 4 dp.</summary>
+        public const float TabChipInsetXDp = 2f;
+
+        /// <summary>Margen de la pastilla de una pestaña dentro de su área táctil, arriba y abajo (dp).</summary>
+        public const float TabChipInsetYDp = 3f;
+
+        /// <summary>Radio de las esquinas de las pastillas y de las tarjetas (dp).</summary>
+        public const float ChipRadiusDp = 12f;
+
+        /// <summary>Margen interior de la tarjeta de cada fila (dp), a los lados.</summary>
+        public const float CardPadDp = 6f;
+
+        /// <summary>Alto máximo de la cuia en la vista previa (dp): casi 1:1 con <see cref="ProceduralArt.SkinPreviewPixelsPerU"/>.</summary>
+        public const float PreviewCuiaDp = 200f;
+
+        /// <summary>Alto mínimo de la cuia en la vista previa (dp), en pantallas bajas.</summary>
+        public const float PreviewCuiaMinDp = 96f;
+
+        /// <summary>Color de la pastilla de la pestaña elegida (el acento: la hoja de 07 §7.2, con la letra crema, 4,8:1).</summary>
+        public static readonly Color TabSelectedFill = Palette.FamilyLeaf.Base;
+
+        /// <summary>Color de la pastilla de las demás pestañas (un tono suave de la madera clara).</summary>
+        public static readonly Color TabIdleFill = Color.Lerp(Palette.PanelLight, Palette.FamilyWood.Light, 0.22f);
+
+        /// <summary>Color de la letra de la pestaña elegida.</summary>
+        public static readonly Color TabSelectedText = Palette.Cream;
+
+        /// <summary>Color de la letra de las demás pestañas.</summary>
+        public static readonly Color TabIdleText = Palette.FamilyWood.Deep;
+
         private readonly ProceduralArt _art;
         private readonly OverlayCanvas _canvas;
         private readonly RectTransform _panel;
@@ -77,10 +112,14 @@ namespace AF.UI
         private readonly TextMeshProUGUI _title;
         private readonly ReliefParts _close;
         private readonly Image _seedIcon;
+        private readonly Image _seedsPillEdge;
+        private readonly Image _seedsPill;
         private readonly TextMeshProUGUI _seeds;
         private readonly TextMeshProUGUI _status;
         private readonly Button[] _tabs = new Button[4];
         private readonly TextMeshProUGUI[] _tabLabels = new TextMeshProUGUI[4];
+        private readonly Image[] _tabEdges = new Image[4];
+        private readonly Image[] _tabChips = new Image[4];
         private readonly RowView[] _rows = new RowView[MaxRows];
         private readonly RectTransform _viewport;
         private readonly RectTransform _content;
@@ -100,6 +139,20 @@ namespace AF.UI
         private bool _laidOut;
         private int _visibleRows = -1; // filas con botón a la vista en el último AF_LAYOUT (máscara de bits; sonda de desarrollo)
 
+        // La vista previa de una skin (observación 24 de la jornada 6), encima de la tarjeta, en el mismo lienzo.
+        private readonly RectTransform _preview;
+        private readonly RectTransform _previewPanel;
+        private readonly Image _previewSurface;
+        private readonly Image _previewHeader;
+        private readonly TextMeshProUGUI _previewTitle;
+        private readonly ReliefParts _previewClose;
+        private readonly Button _previewOutside;
+        private readonly Image _previewCuia;
+        private readonly TextMeshProUGUI _previewDetail;
+        private readonly ReliefParts _previewCta;
+        private readonly TextMeshProUGUI _previewCtaLabel;
+        private string? _previewId;
+
         public MarketScreen(Transform host, ProceduralArt art, MarketDeps deps)
         {
             _art = art ?? throw new ArgumentNullException(nameof(art));
@@ -107,8 +160,14 @@ namespace AF.UI
             _canvas = new OverlayCanvas("MarketCanvas", host, SortingOrder);
             ModalKit.Dim("Dim", _canvas.Root, 0.6f);
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
-            _title = ModalKit.Header(_panel, art, MarketText.Title, out _header);
+            // Observación 24 de la jornada 6: la cabecera con la banda ámbar (luz cálida) y el título en tinta, en vez de la madera oscura.
+            _title = ModalKit.Header(_panel, art, MarketText.Title, out _header, Palette.UiAmber);
             _close = ModalKit.Close("CloseButton", _panel, art, () => Close());
+            // El saldo en su placa (madera clara con canto), como un contador del juego.
+            _seedsPillEdge = UiBuilder.Sliced("SeedsPillEdge", _panel, art.RoundedRect, Palette.FamilyWood.Light);
+            _seedsPill = UiBuilder.Sliced("SeedsPill", _panel, art.RoundedRect, Palette.PanelLight);
+            _seedsPillEdge.pixelsPerUnitMultiplier = ChipPpuMultiplier;
+            _seedsPill.pixelsPerUnitMultiplier = ChipPpuMultiplier;
             _seedIcon = UiBuilder.Image("SeedIcon", _panel, art.IconSeed, Color.white);
             _seedIcon.preserveAspect = true;
             _seeds = UiBuilder.Label("Seeds", _panel, TextStyle.PlainBold, string.Empty, 18f, Palette.FamilyWood.Deep, TextAlignmentOptions.Left);
@@ -121,7 +180,14 @@ namespace AF.UI
             {
                 MarketTab tab = MarketModel.AllTabs[i];
                 _tabs[i] = UiBuilder.BareButton("Tab" + tab, _panel, () => SelectTab(tab));
-                _tabLabels[i] = UiBuilder.Label("Label", _tabs[i].transform, TextStyle.PlainBold, string.Empty, 15f, Palette.FamilyWood.Base, TextAlignmentOptions.Center);
+                // Observación 24 de la jornada 6: cada pestaña, una pastilla con borde que se lee como botón (no solo texto subrayado).
+                _tabEdges[i] = UiBuilder.Sliced("ChipEdge", _tabs[i].transform, art.RoundedRect, Palette.FamilyWood.Light);
+                _tabChips[i] = UiBuilder.Sliced("Chip", _tabs[i].transform, art.RoundedRect, TabIdleFill);
+                _tabEdges[i].pixelsPerUnitMultiplier = ChipPpuMultiplier;
+                _tabChips[i].pixelsPerUnitMultiplier = ChipPpuMultiplier;
+                _tabLabels[i] = UiBuilder.Label("Label", _tabs[i].transform, TextStyle.PlainBold, string.Empty, 15f, TabIdleText, TextAlignmentOptions.Center);
+                int tabIndex = i;
+                A11yLabels.Set(_tabs[i], () => _tabLabels[tabIndex].text, () => Tab == MarketModel.AllTabs[tabIndex]); // TalkBack: «Cuias, seleccionada»
                 UiBuilder.Stretch(_tabLabels[i].rectTransform);
                 // D-033, punto 11: al 130 % «Sin anuncios» no cabía en una línea de su cuarto de fila: va en dos, sin partir palabras.
                 _tabLabels[i].textWrappingMode = TextWrappingModes.Normal;
@@ -143,7 +209,7 @@ namespace AF.UI
             for (int i = 0; i < _rows.Length; i++)
             {
                 int index = i;
-                _rows[i] = new RowView(_content, art, i, () => PressRow(index));
+                _rows[i] = new RowView(_content, art, i, () => PressRow(index), () => OpenPreview(index));
             }
 
             _fadeTop = UiBuilder.Image("FadeTop", _viewport, art.ScrollFade(true), Color.white);
@@ -154,8 +220,33 @@ namespace AF.UI
                 ProbeScrolled();
             });
 
+            // La vista previa de una skin: velo que cierra al tocarlo, tarjeta con el nombre, la X, la cuia en grande, su línea y el
+            // botón de la fila (observación 24 de la jornada 6). Hermana de la tarjeta, encima de ella.
+            _preview = UiBuilder.Rect("Preview", _canvas.Root);
+            UiBuilder.Stretch(_preview);
+            Image previewDim = ModalKit.Dim("Dim", _preview, 0.55f);
+            previewDim.raycastTarget = false;
+            _previewOutside = UiBuilder.BareButton("Outside", _preview, () => ClosePreview());
+            UiBuilder.Stretch((RectTransform)_previewOutside.transform);
+            A11yLabels.Set(_previewOutside, () => A11yText.Close);
+            _previewPanel = ModalKit.Card("PreviewPanel", _preview, art, out _previewSurface);
+            _previewPanel.gameObject.AddComponent<HitArea>().raycastTarget = true; // tocar la tarjeta no la cierra
+            _previewTitle = ModalKit.Header(_previewPanel, art, string.Empty, out _previewHeader, Palette.UiAmber);
+            _previewClose = ModalKit.Close("CloseButton", _previewPanel, art, () => ClosePreview());
+            _previewCuia = UiBuilder.Image("Cuia", _previewPanel, null, Color.white);
+            _previewCuia.preserveAspect = true;
+            _previewDetail = UiBuilder.Label("Detail", _previewPanel, TextStyle.Body, string.Empty, 14f, Palette.FamilyWood.Base, TextAlignmentOptions.Center);
+            _previewDetail.textWrappingMode = TextWrappingModes.Normal;
+            UiBuilder.AutoSize(_previewDetail, UiBuilder.MinTextSp, 14f);
+            _previewCta = ModalKit.Cta("BuyButton", _previewPanel, art.CtaLeaf, TextStyle.CtaLeaf, string.Empty, 17f, () => PressPreview(), out _previewCtaLabel);
+            A11yLabels.Set(_previewCta.Button, () => A11yText.Append(_previewTitle.text, _previewCtaLabel.text));
+            _preview.gameObject.SetActive(false);
+
             _canvas.Canvas.gameObject.SetActive(false);
         }
+
+        // Las pastillas usan RoundedRect (radio de 20 px a 100 px por unidad): este multiplicador deja sus esquinas en ChipRadiusDp.
+        private static float ChipPpuMultiplier => ProceduralArt.RoundedRectRadiusPx / ChipRadiusDp;
 
         /// <summary>Está abierto.</summary>
         public bool Visible => _canvas.Canvas.gameObject.activeSelf;
@@ -209,6 +300,48 @@ namespace AF.UI
         /// <summary>Etiqueta de la pestaña <paramref name="tab"/> (tests del hueco entre pestañas).</summary>
         internal TextMeshProUGUI TabLabel(MarketTab tab) => _tabLabels[(int)tab];
 
+        /// <summary>Botón (área táctil) de la pestaña <paramref name="tab"/> (tests).</summary>
+        internal Button TabButton(MarketTab tab) => _tabs[(int)tab];
+
+        /// <summary>La pastilla de la pestaña <paramref name="tab"/> (su relleno; tests).</summary>
+        internal Image TabChip(MarketTab tab) => _tabChips[(int)tab];
+
+        /// <summary>El borde de la pastilla de la pestaña <paramref name="tab"/> (tests).</summary>
+        internal Image TabChipEdge(MarketTab tab) => _tabEdges[(int)tab];
+
+        /// <summary>La vista previa de una skin está abierta.</summary>
+        public bool PreviewOpen => _preview.gameObject.activeSelf;
+
+        /// <summary>La skin de la vista previa, o null.</summary>
+        public string? PreviewSkinId => _previewId;
+
+        /// <summary>El nombre de la vista previa (tests).</summary>
+        public string PreviewTitle => _previewTitle.text;
+
+        /// <summary>La cuia en grande de la vista previa (tests).</summary>
+        public Image PreviewCuia => _previewCuia;
+
+        /// <summary>El botón de la vista previa (comprar, poner o «Puesta»; tests).</summary>
+        public Button PreviewButton => _previewCta.Button;
+
+        /// <summary>Lo que dice el botón de la vista previa (tests).</summary>
+        public string PreviewButtonText => _previewCtaLabel.text;
+
+        /// <summary>La X de la vista previa (tests).</summary>
+        public Button PreviewCloseButton => _previewClose.Button;
+
+        /// <summary>El velo de la vista previa: tocarlo la cierra (tests).</summary>
+        public Button PreviewOutsideButton => _previewOutside;
+
+        /// <summary>La tarjeta de la vista previa (tests).</summary>
+        public RectTransform PreviewPanel => _previewPanel;
+
+        /// <summary>La lupa de la ficha de la fila <paramref name="index"/> (pestaña Cuias; tests).</summary>
+        public Image RowZoom(int index) => _rows[index].Zoom;
+
+        /// <summary>El área que abre la vista previa de la fila <paramref name="index"/> (pestaña Cuias; tests).</summary>
+        public Button RowCardButton(int index) => _rows[index].CardTap;
+
         /// <summary>La versión de las notas de compra con la que se rehízo por última vez (el arranque lo rehace si cambian; F3-5).</summary>
         public int NotesShown { get; private set; } = -1;
 
@@ -254,6 +387,9 @@ namespace AF.UI
         /// <summary>Se puso otra skin.</summary>
         public event Action<string>? SkinSelected;
 
+        /// <summary>Se abrió la vista previa de una skin, con su nombre (TalkBack lo anuncia).</summary>
+        public event Action<string>? PreviewOpened;
+
         /// <summary>
         /// Se abrió o cambió de pestaña (para <c>AF_LAYOUT</c>); en desarrollo, también cuando al desplazar la lista cambian las filas
         /// que se ven.
@@ -282,10 +418,157 @@ namespace AF.UI
                 return;
             }
 
+            HidePreview();
             _canvas.Canvas.gameObject.SetActive(false);
             Action? done = _onClosed;
             _onClosed = null;
             done?.Invoke();
+        }
+
+        /// <summary>
+        /// Atrás de Android con el Mercado delante (desde <c>PressMarketBack</c>): con la vista previa abierta, la cierra; si no, cierra
+        /// el Mercado como su X. Devuelve si cerró algo.
+        /// </summary>
+        public bool PressBack()
+        {
+            if (!Visible)
+            {
+                return false;
+            }
+
+            if (PreviewOpen)
+            {
+                AF.Audio.AudioCues.Play(AF.Audio.SfxId.UiBack);
+                ClosePreview();
+                return true;
+            }
+
+            Close();
+            return true;
+        }
+
+        /// <summary>
+        /// Abre la vista previa de la skin de la fila <paramref name="index"/> (pestaña Cuias; el toque en su tarjeta): la cuia en
+        /// grande, su nombre y el botón de la fila (observación 24 de la jornada 6). False si no es una fila de skin.
+        /// </summary>
+        public bool OpenPreview(int index)
+        {
+            if (!Visible || Tab != MarketTab.Cuias || index < 0 || index >= _model.Count)
+            {
+                return false;
+            }
+
+            _previewId = _model[index].Id;
+            _preview.gameObject.SetActive(true);
+            _preview.SetAsLastSibling();
+            FillPreview(_model[index], _deps.Store.IsAvailable && !_deps.PurchasesBlocked);
+            PreviewOpened?.Invoke(_previewTitle.text);
+            Shown?.Invoke();
+            return true;
+        }
+
+        /// <summary>Cierra la vista previa (la X, el toque fuera y Atrás) y suelta su cuia en grande.</summary>
+        public void ClosePreview()
+        {
+            if (!PreviewOpen)
+            {
+                return;
+            }
+
+            HidePreview();
+            Shown?.Invoke();
+        }
+
+        private void HidePreview()
+        {
+            _previewId = null;
+            if (_preview.gameObject.activeSelf)
+            {
+                _preview.gameObject.SetActive(false);
+            }
+
+            _previewCuia.sprite = null;
+            _art.ReleaseSkinPreview(); // por la memoria: solo vive mientras se ve (observación 6 de la jornada 6)
+        }
+
+        // El botón de la vista previa hace lo mismo que el de su fila.
+        private bool PressPreview()
+        {
+            int index = PreviewRowIndex();
+            return index >= 0 && PressRow(index);
+        }
+
+        private int PreviewRowIndex()
+        {
+            if (_previewId == null)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < _model.Count; i++)
+            {
+                if (string.Equals(_model[i].Id, _previewId, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private void FillPreview(MarketRow row, bool storeOn)
+        {
+            _previewTitle.text = MarketText.SkinName(row.Id);
+            _previewCuia.sprite = _art.SkinPreview(CuiaSkin.For(row.Id));
+            _previewCuia.color = Color.white;
+            _previewDetail.text = Detail(row, true);
+            bool hasButton = row.Action != MarketAction.None;
+            _previewCta.Button.gameObject.SetActive(hasButton);
+            if (hasButton)
+            {
+                FillCta(_previewCta, _previewCtaLabel, row, storeOn);
+            }
+
+            LayoutPreview();
+        }
+
+        // La tarjeta de la vista previa, centrada en la zona segura: la cabecera con el nombre y la X, la cuia lo más grande que quepa
+        // (entre PreviewCuiaMinDp y PreviewCuiaDp), su línea y el botón.
+        private void LayoutPreview()
+        {
+            float w = Mathf.Min(320f, _canvas.Width - 32f);
+            float inner = w - 32f;
+            float top = _canvas.SafeTop + 8f;
+            float available = _canvas.Height - top - _canvas.SafeBottom - 8f;
+            UiBuilder.Place(_previewHeader.rectTransform, 16f, 16f, inner - 52f, 40f);
+            UiBuilder.Place((RectTransform)_previewClose.Button.transform, w - 16f - ModalKit.CloseDp, 12f, ModalKit.CloseDp, ModalKit.CloseDp);
+            float detailH = _previewDetail.text.Length > 0 ? Mathf.Ceil(UiBuilder.MinTextHeight(_previewDetail, inner)) : 0f;
+            bool cta = _previewCta.Button.gameObject.activeSelf;
+            float ctaH = cta ? ModalKit.HeightOf(_previewCta) : 0f;
+            float fixedH = 68f + 12f + (detailH > 0f ? detailH + 8f : 0f) + (cta ? ctaH + 4f : 0f) + 16f;
+            float cuiaH = Mathf.Clamp(Mathf.Floor(available - fixedH), PreviewCuiaMinDp, PreviewCuiaDp);
+            Sprite? sprite = _previewCuia.sprite;
+            float aspect = sprite != null && sprite.rect.height > 0f ? sprite.rect.width / sprite.rect.height : 0.43f;
+            float cuiaW = Mathf.Floor(cuiaH * aspect);
+            float y = 68f;
+            UiBuilder.Place(_previewCuia.rectTransform, (w - cuiaW) * 0.5f, y, cuiaW, cuiaH);
+            y += cuiaH + 12f;
+            if (detailH > 0f)
+            {
+                UiBuilder.Place(_previewDetail.rectTransform, 16f, y, inner, detailH);
+                y += detailH + 8f;
+            }
+
+            _previewDetail.gameObject.SetActive(detailH > 0f);
+            if (cta)
+            {
+                float ctaW = Mathf.Min(inner, 200f);
+                ModalKit.Place(_previewCta, (w - ctaW) * 0.5f, y, ctaW);
+                y += ctaH + 4f;
+            }
+
+            float h = y + 16f;
+            ModalKit.Size(_previewPanel, _previewSurface, _art, (_canvas.Width - w) * 0.5f, top + Mathf.Max(0f, (available - h) * 0.5f), w, h, sharedSurface: true);
         }
 
         /// <summary>Cambia a la pestaña <paramref name="tab"/> (si se ve).</summary>
@@ -313,6 +596,20 @@ namespace AF.UI
                 return;
             }
 
+            if (PreviewOpen)
+            {
+                // Con la vista previa delante, solo lo suyo: lo de detrás no se puede tocar.
+                ids.Add("market_preview_close");
+                rects.Add((RectTransform)_previewClose.Button.transform);
+                if (_previewCta.Button.gameObject.activeSelf)
+                {
+                    ids.Add("market_preview_cta");
+                    rects.Add((RectTransform)_previewCta.Button.transform);
+                }
+
+                return;
+            }
+
             ids.Add("market_close");
             rects.Add((RectTransform)_close.Button.transform);
             for (int i = 0; i < _tabs.Length; i++)
@@ -331,6 +628,11 @@ namespace AF.UI
                 {
                     ids.Add("market_row_" + _model[i].Id);
                     rects.Add((RectTransform)_rows[i].Cta.Button.transform);
+                    if (_rows[i].CardTap.gameObject.activeSelf)
+                    {
+                        ids.Add("market_card_" + _model[i].Id); // la tarjeta de la skin: abre la vista previa
+                        rects.Add(_rows[i].IconRect);
+                    }
                 }
             }
         }
@@ -418,8 +720,11 @@ namespace AF.UI
                 _tabs[i].gameObject.SetActive(shown);
                 _tabLabels[i].text = MarketText.Tab(tab);
                 bool selected = tab == Tab;
-                _tabLabels[i].color = selected ? Palette.Ink : (Color)Palette.FamilyWood.Base;
-                _tabLabels[i].fontStyle = selected ? FontStyles.Underline : FontStyles.Normal;
+                // Observación 24 de la jornada 6: la elegida, rellena con el acento y la letra crema; las demás, en tono suave.
+                _tabLabels[i].color = selected ? TabSelectedText : TabIdleText;
+                _tabLabels[i].fontStyle = FontStyles.Normal;
+                _tabChips[i].color = selected ? TabSelectedFill : TabIdleFill;
+                _tabEdges[i].color = selected ? (Color)Palette.FamilyLeaf.Deep : (Color)Palette.FamilyWood.Light;
             }
 
             for (int i = 0; i < _rows.Length; i++)
@@ -449,6 +754,19 @@ namespace AF.UI
             }
 
             Layout();
+            if (PreviewOpen)
+            {
+                // Tras poner la skin o comprarla, la vista previa dice lo de ahora; si su fila ya no está, se cierra.
+                int index = Tab == MarketTab.Cuias ? PreviewRowIndex() : -1;
+                if (index < 0)
+                {
+                    HidePreview();
+                }
+                else
+                {
+                    FillPreview(_model[index], storeOn);
+                }
+            }
         }
 
         private bool Buy(string sku)
@@ -494,6 +812,8 @@ namespace AF.UI
             view.Icon.color = Color.white;
             view.TallIcon = skin;
             view.SkinName = skin ? view.Name.text : null; // TalkBack: «Cuia de Santarém, Poner» y no solo «Poner»
+            view.CardTap.gameObject.SetActive(skin); // la tarjeta de la skin abre la vista previa (observación 24 de la jornada 6)
+            view.Zoom.gameObject.SetActive(skin); // con la lupa que lo dice
 
             bool hasButton = row.Action != MarketAction.None;
             view.Cta.Button.gameObject.SetActive(hasButton);
@@ -502,20 +822,26 @@ namespace AF.UI
                 return;
             }
 
+            FillCta(view.Cta, view.CtaLabel, row, storeOn);
+        }
+
+        // El botón de una fila o de la vista previa: «Poner», «Puesta» (en gris) o el precio que da la tienda.
+        private void FillCta(ReliefParts cta, TextMeshProUGUI label, MarketRow row, bool storeOn)
+        {
             switch (row.Action)
             {
                 case MarketAction.Equip:
-                    view.CtaLabel.text = MarketText.SkinEquip;
-                    UiBuilder.SetEnabled(view.Cta.Button, true);
+                    label.text = MarketText.SkinEquip;
+                    UiBuilder.SetEnabled(cta.Button, true);
                     break;
                 case MarketAction.Equipped:
-                    view.CtaLabel.text = MarketText.SkinEquipped;
-                    UiBuilder.SetEnabled(view.Cta.Button, false);
+                    label.text = MarketText.SkinEquipped;
+                    UiBuilder.SetEnabled(cta.Button, false);
                     break;
                 default:
-                    view.CtaLabel.text = _deps.Store.PriceOf(row.Id).ToString();
+                    label.text = _deps.Store.PriceOf(row.Id).ToString();
                     // Mientras una compra se confirma («Confirmando…»), ningún precio responde: no se abre otra (IsPurchasing).
-                    UiBuilder.SetEnabled(view.Cta.Button, storeOn && row.Action == MarketAction.Buy && !_deps.Store.IsPurchasing);
+                    UiBuilder.SetEnabled(cta.Button, storeOn && row.Action == MarketAction.Buy && !_deps.Store.IsPurchasing);
                     break;
             }
         }
@@ -579,6 +905,9 @@ namespace AF.UI
             y += 52f;
             UiBuilder.Place(_seedIcon.rectTransform, 16f, y + 2f, 24f, 24f);
             UiBuilder.Place(_seeds.rectTransform, 46f, y, inner - 30f, 28f);
+            float seedsW = Mathf.Min(inner, 30f + Mathf.Ceil(_seeds.GetPreferredValues(_seeds.text).x) + 14f);
+            UiBuilder.Place(_seedsPillEdge.rectTransform, 10f, y - 2f, seedsW + 2f, 32f);
+            UiBuilder.Place(_seedsPill.rectTransform, 11.5f, y - 0.5f, seedsW - 1f, 29f);
             y += 36f;
             if (_status.gameObject.activeSelf)
             {
@@ -614,6 +943,8 @@ namespace AF.UI
                 }
 
                 UiBuilder.Place((RectTransform)_tabs[i].transform, x, y, _tabWidths[i], tabH);
+                UiBuilder.Place(_tabEdges[i].rectTransform, TabChipInsetXDp, TabChipInsetYDp, _tabWidths[i] - (2f * TabChipInsetXDp), tabH - (2f * TabChipInsetYDp));
+                UiBuilder.Place(_tabChips[i].rectTransform, TabChipInsetXDp + 1.5f, TabChipInsetYDp + 1.5f, _tabWidths[i] - (2f * TabChipInsetXDp) - 3f, tabH - (2f * TabChipInsetYDp) - 3f);
                 UiBuilder.Place(_tabLabels[i].rectTransform, TabPadDp, 0f, _tabWidths[i] - (2f * TabPadDp), tabH);
                 x += _tabWidths[i];
                 placed++;
@@ -941,14 +1272,33 @@ namespace AF.UI
             }
         }
 
-        /// <summary>Una fila: icono, nombre, contenido y botón.</summary>
+        /// <summary>
+        /// Una fila: una tarjeta con sombra y canto iluminado (observación 24 de la jornada 6), y en ella el icono, el nombre, el
+        /// contenido y el botón. En la pestaña Cuias, tocar la tarjeta abre la vista previa (<see cref="CardTap"/>).
+        /// </summary>
         private sealed class RowView
         {
-            public RowView(RectTransform panel, ProceduralArt art, int index, Action onPress)
+            public RowView(RectTransform panel, ProceduralArt art, int index, Action onPress, Action onCard)
             {
                 Root = UiBuilder.Rect("Row" + index.ToString(System.Globalization.CultureInfo.InvariantCulture), panel);
+                float m = ChipPpuMultiplier;
+                Shadow = UiBuilder.Sliced("CardShadow", Root, art.RoundedRect, new Color(0.18f, 0.11f, 0.06f, 0.22f));
+                Edge = UiBuilder.Sliced("CardEdge", Root, art.RoundedRect, ColorMath.Lighten(Palette.FamilyWood.Light, 0.15f));
+                Card = UiBuilder.Sliced("Card", Root, art.RoundedRect, Palette.PanelLight);
+                Shine = UiBuilder.Sliced("CardShine", Root, art.RoundedRect, new Color(1f, 1f, 1f, 0.7f));
+                Shadow.pixelsPerUnitMultiplier = m;
+                Edge.pixelsPerUnitMultiplier = m;
+                Card.pixelsPerUnitMultiplier = m;
+                Shine.pixelsPerUnitMultiplier = m * 3f;
+                CardTap = UiBuilder.BareButton("CardTap", Root, onCard); // debajo del botón de la fila: el botón gana el toque
+                A11yLabels.Set(CardTap, () => SkinName ?? string.Empty);
+                CardTap.gameObject.SetActive(false);
                 Icon = UiBuilder.Image("Icon", Root, art.IconSeed, Color.white);
                 Icon.preserveAspect = true;
+                // La lupa en la esquina de la ficha de una skin: se toca para verla en grande (revisión de la observación 24).
+                Zoom = UiBuilder.Image("Zoom", Root, art.IconZoom, Color.white);
+                Zoom.preserveAspect = true;
+                Zoom.gameObject.SetActive(false);
                 Name = UiBuilder.Label("Name", Root, TextStyle.PlainBold, string.Empty, 16f, Palette.FamilyWood.Deep, TextAlignmentOptions.Left);
                 Name.textWrappingMode = TextWrappingModes.Normal; // un nombre largo va en dos líneas (D-033, punto 11)
                 UiBuilder.AutoSize(Name, UiBuilder.MinTextSp, 16f);
@@ -966,7 +1316,24 @@ namespace AF.UI
 
             public RectTransform Root { get; }
 
+            public Image Shadow { get; }
+
+            public Image Edge { get; }
+
+            public Image Card { get; }
+
+            public Image Shine { get; }
+
+            /// <summary>El área de la tarjeta que abre la vista previa (solo en la pestaña Cuias).</summary>
+            public Button CardTap { get; }
+
             public Image Icon { get; }
+
+            /// <summary>La lupa de la ficha de una skin (la pista de que la tarjeta abre la vista previa).</summary>
+            public Image Zoom { get; }
+
+            /// <summary>El rectángulo de la ficha (sonda: <c>market_card_*</c>).</summary>
+            public RectTransform IconRect => Icon.rectTransform;
 
             /// <summary>El icono es una cuia (pestaña Cuias): ocupa el alto de la fila en vez de 36 × 36 dp.</summary>
             public bool TallIcon { get; set; }
@@ -1001,10 +1368,22 @@ namespace AF.UI
             public void Place(float x, float y, float w, float h)
             {
                 UiBuilder.Place(Root, x, y, w, h);
+                // La tarjeta deja 2 dp arriba y abajo (4 entre dos filas), con su sombra 2 dp más abajo y el canto de luz arriba.
+                UiBuilder.Place(Shadow.rectTransform, 1f, 4f, w - 2f, h - 4f);
+                UiBuilder.Place(Edge.rectTransform, 0f, 2f, w, h - 4f);
+                UiBuilder.Place(Card.rectTransform, 1f, 3f, w - 2f, h - 6f);
+                UiBuilder.Place(Shine.rectTransform, ChipRadiusDp * 0.5f, 3.5f, w - ChipRadiusDp, 2f);
+                UiBuilder.Place((RectTransform)CardTap.transform, 0f, 0f, w, h);
                 float iconW = IconWidth;
                 float iconH = TallIcon ? Mathf.Max(36f, h - 4f) : 36f;
-                UiBuilder.Place(Icon.rectTransform, 0f, (h - iconH) * 0.5f, iconW, iconH);
-                float textX = iconW + 8f;
+                UiBuilder.Place(Icon.rectTransform, CardPadDp, (h - iconH) * 0.5f, iconW, iconH);
+                if (Zoom.gameObject.activeSelf)
+                {
+                    // Abajo a la derecha de la ficha, montada sobre su esquina.
+                    const float z = ProceduralArt.ZoomDp;
+                    UiBuilder.Place(Zoom.rectTransform, CardPadDp + iconW - (z * 0.7f), ((h + iconH) * 0.5f) - z + 2f, z, z);
+                }
+                float textX = CardPadDp + iconW + 8f;
                 float textW = TextWidth(w);
                 float nameH = NameHeight(textW);
                 float detailH = DetailHeight(textW);
@@ -1023,13 +1402,13 @@ namespace AF.UI
                 UiBuilder.Place(Detail.rectTransform, textX, top, textW, noteH > 0f || TallIcon ? detailH : Mathf.Max(detailH, h - top - 4f));
                 UiBuilder.Place(Note.rectTransform, textX, top + detailH, textW, Mathf.Max(Mathf.Max(14f, noteH), h - top - detailH - 2f));
                 float ctaH = ModalKit.HeightOf(Cta);
-                ModalKit.Place(Cta, w - BuyWidthDp, Mathf.Max(0f, (h - ctaH) * 0.5f), BuyWidthDp);
+                ModalKit.Place(Cta, w - CardPadDp - BuyWidthDp, Mathf.Max(0f, (h - ctaH) * 0.5f), BuyWidthDp);
             }
 
             // La ficha de la skin es más ancha que un icono (SkinTileDp); los demás, 36 dp.
             private float IconWidth => TallIcon ? SkinTileDp : 36f;
 
-            private float TextWidth(float w) => w - IconWidth - 8f - BuyWidthDp - 8f;
+            private float TextWidth(float w) => w - (2f * CardPadDp) - IconWidth - 8f - BuyWidthDp - 8f;
 
             // Los altos de siempre (20, 18 y 14 dp) o, si el texto no cabe ni a su mínimo, lo que pida.
             private float NameHeight(float textW) => Mathf.Max(20f, Mathf.Ceil(UiBuilder.MinTextHeight(Name, textW)));

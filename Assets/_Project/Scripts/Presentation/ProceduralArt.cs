@@ -246,6 +246,7 @@ namespace AF.Presentation
             _cuiaFront.Clear();
             _cuiaMarks.Clear();
             _skinThumbs.Clear(); // sus sprites y texturas están en _owned (ProceduralArt.SkinThumb.cs)
+            ReleaseSkinPreview(); // la cuia en grande del Mercado (ProceduralArt.MarketStall.cs), fuera de _owned
             _trays.Clear();
         }
 
