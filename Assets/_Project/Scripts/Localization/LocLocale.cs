@@ -223,8 +223,8 @@ namespace AF.Localization
         }
 
         /// <summary>
-        /// Etiqueta de cifras cuando no se sabe la región del teléfono: es-419 y en-XA → es-CO [P] (lo de hoy, «1.000»;
-        /// notas de la tanda 4, punto 10), pt-BR → pt-BR, en → en; cualquier otra, ella misma.
+        /// Etiqueta de cifras sin país: es-419 y en-XA → es-CO (el punto; notas de la tanda 4, punto 10), pt-BR → pt-BR, en →
+        /// en; cualquier otra, ella misma. Con país, <see cref="NumberTagFor(string, string)"/>.
         /// </summary>
         public static string DefaultNumberTag(string locale)
         {

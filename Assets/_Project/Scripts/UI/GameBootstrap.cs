@@ -34,7 +34,8 @@ namespace AF.UI
     /// <para>Ajustes (tarea L3; <see cref="SettingsScreen"/>): se abre desde el engranaje del inicio y se cierra con su X o con el
     /// Atrás de Android. El idioma se resuelve al arrancar con el de desarrollo (<c>af_lang</c>) &gt; <c>settings.language</c>
     /// &gt; el del teléfono (<see cref="AndroidDeviceLocale"/>; en el Editor, <see cref="SystemDeviceLocale"/>) &gt; en, con el
-    /// respaldo es-419 [P], y las cifras con la región del teléfono (es-CO sin ella [P]). Elegir un idioma lo guarda y, si cambia
+    /// respaldo es-419 [P], y las cifras con el idioma de la UI y, en español, el país de Play o del teléfono (es-CO sin país;
+    /// observación 22 de la jornada 6). Elegir un idioma lo guarda y, si cambia
     /// el de la UI, <see cref="Loc.SetLocale"/> lanza <see cref="Loc.Changed"/> (las cachés de <see cref="UiText"/> se vacían) y
     /// la UI entera se reconstruye volviendo al inicio: la escena se recarga y el arranque siguiente la vuelve a construir en el
     /// idioma nuevo (Q7-A), con Ajustes otra vez abierta (FXT). Los Patrones de fruta se guardan y se aplican al momento

@@ -51,8 +51,8 @@ namespace AF.IAP
         public long MinorUnits { get; }
 
         /// <summary>
-        /// Solo el importe, con los separadores de la región (<see cref="Loc.PriceAmount"/>; D-025), p. ej. <c>1,99</c> en es-CO y
-        /// <c>1.99</c> en en-US.
+        /// Solo el importe, con los separadores del idioma y, en español, del país (<see cref="Loc.PriceAmount"/>; D-025 y su
+        /// añadido del 2026-10-30), p. ej. <c>1,99</c> en pt-BR o en es-419 en Colombia y <c>1.99</c> en en.
         /// </summary>
         public string FormatAmount()
         {

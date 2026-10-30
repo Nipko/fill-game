@@ -5,7 +5,8 @@ using System.Collections.Generic;
 namespace AF.Localization
 {
     /// <summary>
-    /// Separadores de una región para las cifras (D-018, Q8-A: el formato de la región del teléfono, con una sola función):
+    /// Separadores de una fila de la tabla para las cifras (D-018, Q8-A, con una sola función; la fila la eligen el idioma y, en
+    /// español, el país: añadido de D-025 del 2026-10-30):
     /// el de miles (<see cref="Group"/>) y el decimal (<see cref="Decimal"/>). <see cref="Tag"/> es la fila de la tabla de
     /// <see cref="LocNumber"/> que se eligió («es-CO», «en»…).
     /// </summary>

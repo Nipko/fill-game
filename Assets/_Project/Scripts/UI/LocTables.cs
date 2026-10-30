@@ -136,9 +136,8 @@ namespace AF.UI
         /// guardado (<paramref name="savedLanguage"/>, <c>settings.language</c>; <c>auto</c> no cuenta) &gt; el del teléfono
         /// (<paramref name="deviceTag"/>, de <c>IDeviceLocale</c>) &gt; en, y solo un idioma con la UI completa (si no, es-419 [P]:
         /// mientras EN y PT-BR no estén completos, el automático se queda en es-419; notas de la tanda 4, punto 10). Las cifras van
-        /// con la región del teléfono (<paramref name="deviceTag"/>; Q8-A) y, si no la trae («es», «en», «pt») o no hay etiqueta,
-        /// con la del idioma de la UI y, en español, la del país de la región del teléfono (<see cref="Configure(LocCatalog, string,
-        /// string, string, bool, string)"/>). <paramref name="development"/> es también <c>showUnapproved</c>: enseña lo no aprobado,
+        /// con el idioma de la UI y, en español, con el país de la región de <paramref name="deviceTag"/> (aquí no hay país de Play;
+        /// observación 22 de la jornada 6; <see cref="Configure(LocCatalog, string, string, string, bool, string)"/>). <paramref name="development"/> es también <c>showUnapproved</c>: enseña lo no aprobado,
         /// marca las claves que faltan y permite en-XA.
         /// </summary>
         public static LocResolution Configure(LocCatalog catalog, string? devLanguage, string? savedLanguage, string? deviceTag, bool development)

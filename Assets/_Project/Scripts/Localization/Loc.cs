@@ -296,9 +296,9 @@ namespace AF.Localization
         }
 
         /// <summary>
-        /// Precio con el formato de las cifras (D-025): código ISO 4217, un espacio y el importe con los separadores de la región
-        /// y los decimales de la moneda (<see cref="LocPrice"/>: 0 en COP y MXN, 2 en el resto), p. ej. «COP 3,900» con el
-        /// teléfono en en-US. <paramref name="minorUnits"/> va en las unidades de <see cref="LocPrice.DecimalsOf"/> (BRL 4,99 →
+        /// Precio con el formato de las cifras (D-025): código ISO 4217, un espacio y el importe con los separadores del idioma
+        /// del juego y, en español, del país (añadido de D-025 del 2026-10-30) y los decimales de la moneda (<see cref="LocPrice"/>:
+        /// 0 en COP y MXN, 2 en el resto), p. ej. «COP 3,900» con la UI en en. <paramref name="minorUnits"/> va en las unidades de <see cref="LocPrice.DecimalsOf"/> (BRL 4,99 →
         /// 499; COP 3.900 → 3900). Es la única función de precios: ningún precio lleva un formato propio.
         /// </summary>
         public static string Price(string iso4217, long minorUnits)
