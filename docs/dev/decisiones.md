@@ -40,6 +40,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-032 | 2026-10-20 | Las 6 decisiones de 16:9 y del fin de contenido que dejó DC3 | Decidida por el dueño («Acepto tus recomendaciones para las 6 decisiones: compactar Aguas estancadas y la victoria en 16:9, aceptar 3, 4 y 5, y el botón «Jugar · Reto del río» (o «Jugar» sin Reto) tras el fin de contenido.»). Implementada en la ola 8: FX16a (Aguas estancadas compacto) y FX16b (victoria compacta y el botón del inicio). Documentación aplicada con FX16b (02 y 06). Pendiente: la prueba en el teléfono |
 | D-063 | 2026-10-30 | El Atrás de Android en el nivel, la pausa y el inicio | Decidida por el dueño (la recomendada de la observación 21 de la jornada 6); lo de Sin canoas en el nivel (Atrás hace lo de su X), la recomendada, confirmada por el dueño el 2026-10-30. Implementada en `tanda6/fx-j6d-atras`, con la tabla en 02 §3.5. Pendiente: verlo en el teléfono (guion, bloque 18.7) |
 | D-064 | 2026-10-30 | Textos públicos en firme para la 1.0 | Decidida por el dueño (nombres culturales en firme, en la línea de D-054; sin marcas provisionales en la web ni en la ficha); las recomendadas (portada sin enlace a Play hasta publicar, la Liga encendida, EmojiOne en Créditos, el matiz del reembolso al borrar la cuenta, las fichas EN y PT-BR de IA tal cual y las capturas 01-08), aplicadas por el integrador. Implementada en `tanda6/textos-publicacion` |
+| D-065 | 2026-10-30 | Gráficos de la ficha de Play con IA y tomas nuevas | Decidida por el dueño. Encargada a Spark en `docs/dev/traspaso/spark-graficos-tienda.md` (rama `spark/tienda-graficos`). Pendiente: elegir el concepto en la hoja de contactos |
 
 ---
 
@@ -4727,3 +4728,15 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Lo que no cambia:** los textos del juego (`strings.csv`), que siguen con su propio flujo (D-054). El aviso del juego «Las compras no se reembolsan.» (`delete_account_no_refund`) es más tajante que la web: si se quiere el mismo matiz dentro del juego, es una tarea de textos aparte.
 - **Alternativas descartadas:** esperar al asesor cultural o al abogado antes de publicar (D-054 y D-057 ya los sustituyen en la 1.0); publicar con las marcas provisionales; sacar EmojiOne del build en la 1.0.
 - **Cómo revertir:** con una decisión nueva del dueño; los textos anteriores están en la historia de git de la rama `tanda6/textos-publicacion`.
+
+## D-065 · Gráficos de la ficha de Play con IA y tomas nuevas
+
+- **Fecha:** 2026-10-30.
+- **Estado:** decidida por el dueño el 2026-10-30, con sus palabras: «quiero realmente tener unas buenas imágenes de recursos y en los 3 idiomas, como también algunas generadas realzando más o haciendo unas únicas, guiándonos por las apps que funcionan» y «debemos mostrar lo más relevante, algunos tableros, los miquitos, lo bonito, el mapa del río, lo más significativo de la app y realzarlo. El Spark puede conectar el celular para hacer nuevas tomas».
+- **Decisión:**
+  1. Los gráficos de la tienda (capturas, gráfico de funciones y vídeo) pueden usar imágenes generadas o realzadas con IA, además del arte por código (D-052).
+  2. Lo que una captura enseña como juego tiene que existir en el juego tal como se ve. La IA crea o realza el entorno, pero no inventa mecánicas, pantallas, UI ni contenido.
+  3. Spark investiga las fichas que funcionan en el género y entrega tres conceptos (A gameplay héroe, B panorámica del río, C cartel con personajes) en es-419, en y pt-BR, con su hoja de contactos y la procedencia de cada imagen.
+  4. Spark puede conectar el teléfono de pruebas para hacer tomas nuevas con el `dev.apk`.
+- **Lo que no cambia:** la pista interna sale con el juego actual de `docs/store-listing/graficos/`, y las reglas de Play, de cultura (07 §8.1) y de trade dress (07 §1.3).
+- **Cómo revertir:** con una decisión nueva del dueño.
