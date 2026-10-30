@@ -4336,6 +4336,13 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **Play Console › Protegido con Play › API de Play Integrity:** vinculado el proyecto de Cloud `tintalu` (459140125724), con un límite de 10.000 llamadas al día. Las respuestas del veredicto se quedan con los valores por defecto.
 - **Pendiente del dueño:** volver a descargar el `google-services.json` de prod y compararlo con el suyo. Si cambió, recrear `GOOGLE_SERVICES_JSON_BASE64` antes del release 10001 (§7.2 y §7.5). Ningún agente lo lee. También quedan pendientes las credenciales de Play Games (§7.3 y §7.4).
 
+### D-057, añadido del 2026-10-30: los 13 productos en Play Console y el euro con conversión automática
+
+- **Hecho:** los 13 productos de `publicar-play-console.md` §10, activos y con los precios de §10.4.
+- **Decisión del dueño (2026-10-30), sobre la duda 3 de §19:** en la zona euro, **conversión automática desde USD** (la recomendada). Motivo: Play suma el IVA de cada país al precio por lotes, así que «0,99 € en paridad» exigía editar a mano unos 430 precios. Con la conversión, 0,99 USD sale a 1,09 € en Alemania.
+- **Argentina:** se fija en ARS, con el equivalente en USD de 05 §4.2 al cambio de Play del día. Hay que recotizarlo cada mes.
+- **Ecuador:** en USD, con la columna de 05 §4.2.
+
 ## D-059 · Lanzamiento directo a producción al 100 %, con publicación administrada
 
 - **Fecha:** 2026-10-28. Registrada por el integrador.

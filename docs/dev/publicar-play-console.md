@@ -315,6 +315,8 @@ Resultado esperado: **ClassInd 14** en Brasil por las compras; el resto, lo que 
 
 ## 10. Los 13 productos de compra
 
+**Hecho el 2026-10-30** (D-057, añadido del 2026-10-30): los 13 creados como «productos únicos», cada uno con una sola opción de compra `buy` (tipo «Comprar», retrocompatible, la que lee `getOneTimePurchaseOfferDetails()`), sin «compras de varias unidades», como contenido digital, activos y disponibles en los 174 países que ofrece Play. Nombres y descripciones en en-US, es-419, es-ES, pt-BR y pt-PT como en §10.2 y §10.3. Precios: base en USD con conversión automática; a mano los 7 países de LatAm de §10.4 como precio final; **la zona euro con la conversión automática** (decisión del dueño del 2026-10-30, que sustituye a «EUR en paridad»: Play suma el IVA de cada país al precio por lotes, así que 0,99 € exactos exigían editar cada país a mano). **Argentina en ARS**, con el equivalente en USD de §10.4 al cambio que usa Play ese día (unos 1.515 ARS por USD; p. ej. 0,99 USD → 1.500 ARS); hay que recotizarlo cada mes (05 §4.2). Play avisa de que las descripciones de menos de 50 caracteres pueden no mostrarse en todas partes; no bloquea.
+
 Monetizar › Productos › **Productos integrados en la aplicación** (o «Productos únicos») › Crear producto [NV]. Necesita la subida de §6.3 (permiso `BILLING`).
 
 ### 10.1 Reglas para los 13
