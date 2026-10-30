@@ -1181,6 +1181,20 @@ Con auriculares y sin ellos. La lista de qué escuchar está en `prototipo-v0.md
 - en los mundos 10-13, el audio por código, que suena peor por diseño;
 - en logcat, todas las líneas `sfx` con `"src":"clip"` en 1-700: `grep synth` debería salir vacío en los mundos 1-9.
 
+**23.1 Los efectos claros sobre la música (observación 23 de la jornada 6; rama `tanda6/fx-j6d-audio`).** Los efectos de juego suben (elegir +12 dB, gota de fruta +9, teñir +7, inicio y fin del chorro +8, el chorro +6, botones +6, la oleada de la intro +4) y la música y el ambiente bajan 5 dB mientras cae un chorro o suena un sellado. Con el teléfono a media voz y sin auriculares, en el 60 (lecho nocturno con capas), en un nivel con lluvia fuerte y en el 5:
+- **qué escuchar (el dueño):**
+  - cada toque al elegir una cuia y cada chorro se oyen claros sobre la música, sin subir el volumen del teléfono;
+  - el sellado sigue siendo el sonido más brillante del nivel, por encima de los demás;
+  - la música baja un poco al verter y vuelve sola, sin «bombeo»: con 5-6 vertidos seguidos, rápidos, se queda abajo y no sube y baja en cada uno;
+  - en la intro, la gota de cada fruta y el teñido se oyen sobre el lecho, y 6 tintes a la vez no saturan ni chasquean;
+  - los botones (`sfx_ui_tap`, `sfx_ui_back`) se oyen sin molestar;
+  - el foco de audio sigue igual: con una alarma, la música y los efectos se pausan; con un aviso, la música baja al 20 %; con música de otra app al abrir, la del juego no suena y los efectos sí;
+- **qué mirar en el registro (el portátil):**
+  - `AF_STATE sfx` con los picos nuevos: `sfx_select` `"gain_db":-24.0`, `sfx_tint` y `sfx_fruit_plip` `-23.0`, `sfx_pour_start` y `sfx_pour_end` `-22.0`, `sfx_ui_tap` `-24.0`, `sfx_fill` `-21.0`; sin cambios `sfx_seal` `-17.0`, `sfx_stuck` `-20.0`, `sfx_undo` `-22.0`;
+  - `AF_STATE music` con `"ducked":true` en cuanto empieza un vertido (antes solo con el modal de atasco) y `"ducked":false` unos 0,9 s después del último chorro o sellado; con vertidos seguidos, una sola pareja true/false para toda la racha;
+  - con Sonido apagado, verter no pone `ducked` en true (no hay efecto que destacar);
+  - `AF_STATE audio_focus` igual que en la jornada 6 (alarma `loss_transient`, aviso `duck` con `"music_gain":0.20`).
+
 ## Qué devolver
 
 1. **La hoja** `pruebas-telefono-<fecha>-completa.md` con:

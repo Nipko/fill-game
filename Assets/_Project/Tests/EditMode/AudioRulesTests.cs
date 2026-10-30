@@ -93,6 +93,115 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Mix_PourDucksTheMusic5Db_With80MsAttackAnd300MsRelease_AfterAHold()
+        {
+            // Observación 23 de la jornada 6 (decisión del dueño del 2026-10-30): la música baja un poco mientras cae el chorro.
+            Assert.That(AudioMix.ActionDuckDb, Is.InRange(-6f, -4f), "de −4 a −6 dB");
+            Assert.That(AudioMix.ActionDuckAttackMs, Is.EqualTo(80f));
+            Assert.That(AudioMix.ActionDuckReleaseMs, Is.EqualTo(300f));
+            var mix = new AudioMix();
+            Assert.That(mix.ActionDucked, Is.False);
+            mix.SetPouring(true);
+            Assert.That(mix.ActionDucked, Is.True, "la sonda dice ducked en cuanto empieza el chorro");
+            Assert.That(mix.MusicGain, Is.EqualTo(1f), "sin escalón: aún no bajó");
+            Assert.That(mix.CurrentMusic.Ducked, Is.True, "AF_STATE music con ducked al verter");
+            mix.Tick(40f);
+            Assert.That(AudioAnalysis.ToDb(mix.MusicGain), Is.EqualTo(AudioMix.ActionDuckDb * 0.5f).Within(0.01f), "a mitad del ataque");
+            mix.Tick(40f);
+            Assert.That(AudioAnalysis.ToDb(mix.MusicGain), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.01f), "80 ms: del todo");
+            Assert.That(AudioAnalysis.ToDb(mix.AmbientGain), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.01f), "el ambiente baja con ella");
+            Assert.That(mix.SfxGain, Is.EqualTo(1f), "los efectos no se atenúan");
+            mix.Tick(5000f);
+            Assert.That(AudioAnalysis.ToDb(mix.MusicGain), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.01f), "abajo mientras cae, por largo que sea");
+
+            mix.SetPouring(false);
+            mix.Tick(AudioMix.ActionDuckHoldMs - 1f);
+            Assert.That(AudioAnalysis.ToDb(mix.MusicGain), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.01f), "la espera tras el chorro");
+            mix.Tick(1f);
+            mix.Tick(AudioMix.ActionDuckReleaseMs / 2f);
+            Assert.That(AudioAnalysis.ToDb(mix.MusicGain), Is.EqualTo(AudioMix.ActionDuckDb * 0.5f).Within(0.05f), "a mitad de la suelta");
+            Assert.That(mix.ActionDucked, Is.True, "aún vuelve");
+            mix.Tick(AudioMix.ActionDuckReleaseMs / 2f);
+            Assert.That(mix.MusicGain, Is.EqualTo(1f), "300 ms después, a su nivel");
+            Assert.That(mix.ActionDucked || mix.CurrentMusic.Ducked, Is.False, "la sonda vuelve a ducked false");
+        }
+
+        [Test]
+        public void Mix_ConsecutivePours_KeepTheMusicDown_WithoutPumping()
+        {
+            var mix = new AudioMix();
+            float lowest = 0f;
+            float highest = -100f;
+            for (int pour = 0; pour < 6; pour++)
+            {
+                // Un vertido de 0,5 s y 0,5 s hasta el siguiente: un jugador rápido.
+                mix.SetPouring(true);
+                for (int f = 0; f < 30; f++)
+                {
+                    mix.Tick(16.6f);
+                    if (pour > 0 || f >= 5)
+                    {
+                        float db = AudioAnalysis.ToDb(mix.MusicGain);
+                        lowest = Math.Min(lowest, db);
+                        highest = Math.Max(highest, db);
+                    }
+                }
+
+                mix.SetPouring(false);
+                for (int f = 0; f < 30; f++)
+                {
+                    mix.Tick(16.6f);
+                    float db = AudioAnalysis.ToDb(mix.MusicGain);
+                    lowest = Math.Min(lowest, db);
+                    highest = Math.Max(highest, db);
+                }
+            }
+
+            Assert.That(lowest, Is.EqualTo(AudioMix.ActionDuckDb).Within(0.01f));
+            Assert.That(highest - lowest, Is.LessThan(0.01f), "entre vertidos seguidos la música no sube y baja (sin bombeo)");
+        }
+
+        [Test]
+        public void Mix_SealDucksTheMusicWhileItSounds_AndModalsKeepTheirDeeper6Db()
+        {
+            var mix = new AudioMix();
+            mix.SealStarted();
+            mix.Tick(AudioMix.ActionDuckAttackMs);
+            Assert.That(AudioAnalysis.ToDb(mix.MusicGain), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.01f), "durante el sellado");
+            mix.Tick(AudioMix.SealDuckMs - AudioMix.ActionDuckAttackMs + AudioMix.ActionDuckReleaseMs);
+            Assert.That(mix.MusicGain, Is.EqualTo(1f), "vuelve tras el sellado y la suelta");
+
+            mix.ModalDuck = true;
+            mix.SetPouring(true);
+            mix.Tick(AudioMix.ActionDuckAttackMs);
+            Assert.That(AudioAnalysis.ToDb(mix.MusicGain), Is.EqualTo(AudioMix.DuckDb).Within(0.01f), "manda la más honda, sin sumarlas");
+
+            var quiet = new AudioMix { Settings = new SoundSettings(false, true, true) };
+            quiet.SetPouring(true);
+            quiet.Tick(1000f);
+            Assert.That(quiet.MusicGain, Is.EqualTo(1f), "con Sonido apagado no hay efecto que destacar: la música no baja");
+            Assert.That(quiet.ActionDucked, Is.False);
+        }
+
+        [Test]
+        public void SfxLevels_GameEffectsSitNearUndoAndStuck_BelowTheSeal()
+        {
+            // Observación 23 de la jornada 6: los gestos (−36 a −30 dBFS) quedaban tapados por el lecho (−20 dBFS de pico).
+            SfxId[] game = { SfxId.Select, SfxId.FruitPlip, SfxId.Tint, SfxId.PourStart, SfxId.PourEnd, SfxId.PourLoop, SfxId.UiTap, SfxId.UiBack, SfxId.Fill };
+            float seal = SfxCatalog.Get(SfxId.Seal).TargetPeakDb;
+            foreach (SfxId id in game)
+            {
+                float db = SfxCatalog.Get(id).TargetPeakDb;
+                Assert.That(db, Is.InRange(-24f, -21f), SfxCatalog.Name(id) + ": a la altura de undo (−22) y stuck (−20)");
+                Assert.That(db, Is.LessThan(seal - 3f), SfxCatalog.Name(id) + ": el sellado sigue siendo el momento estrella");
+            }
+
+            Assert.That(seal, Is.EqualTo(-17f));
+            Assert.That(SfxCatalog.Get(SfxId.Undo).TargetPeakDb, Is.EqualTo(-22f));
+            Assert.That(SfxCatalog.Get(SfxId.Stuck).TargetPeakDb, Is.EqualTo(-20f));
+        }
+
+        [Test]
         public void Mix_Toada_LastsTheClipLength_NotTheFixedOne_AndStingersWaitUntilItsExactEnd()
         {
             // Tarea FX7 (observación 3 de la prueba de la ola 5): el WAV dura 2,55 s y los remates empezaban 0,3 s antes de su
