@@ -47,6 +47,14 @@ namespace AF.LiveOps
         /// en <c>af_league_unavailable</c> (solo lo usa el envío del avatar, que lo anota en <c>af_error{module=league}</c>).
         /// </summary>
         Rejected = 5,
+
+        /// <summary>
+        /// <c>no_identity</c>: hay red, pero aún no hay identidad de la Liga (sin ID token: el usuario anónimo nuevo no existe todavía,
+        /// como justo tras eliminar la cuenta, o el servidor rechaza la de antes con un 401). No es «sin conexión»: la pantalla enseña
+        /// el primer contacto, con tu fila «Gana un nivel para entrar en la Liga» (nota del punto 18 de la jornada 6, 2026-10-30). No
+        /// sale en <c>af_league_unavailable</c> (08 §8.2): solo en la sonda.
+        /// </summary>
+        NoIdentity = 6,
     }
 
     /// <summary>Ids de <see cref="LeagueScope"/>, <see cref="LeagueWinKind"/> y <see cref="LeagueFailure"/> en el contrato y la analítica.</summary>
@@ -64,6 +72,7 @@ namespace AF.LiveOps
                 case LeagueFailure.Invalid: return "invalid";
                 case LeagueFailure.CountryUnknown: return "country_unknown";
                 case LeagueFailure.NotConfigured: return "not_configured";
+                case LeagueFailure.NoIdentity: return "no_identity";
                 default: return "offline";
             }
         }

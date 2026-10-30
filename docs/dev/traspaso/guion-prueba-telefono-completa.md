@@ -1145,6 +1145,7 @@ Con el perfil de dev de toda la prueba y el backend de dev (`google-services.jso
    - `af_account_delete` `requested` → `confirmed` → `done`.
    - El juego vuelve a la primera ejecución, con la pantalla de edad.
 2. Tras el borrado: la Liga ya no te lista (tu seudónimo desaparece de la pestaña Global tras recargar) y el saldo vuelve a 0.
+   - **Con red y antes de ganar ningún nivel** con el perfil nuevo (`--ez af_league true --ei af_max_level 41`): la Liga enseña el primer contacto, no «Conéctate para ver la Liga». La tabla vacía, sin «Aún nadie suma puntos esta semana», y tu fila con 0 y «Gana un nivel para entrar en la Liga». En logcat, `AF_STATE league_unavailable` con `reason` `no_identity` y ningún `af_league_unavailable`. Con el modo avión, sí «Conéctate para ver la Liga» (`offline`). Tras ganar el 42, la tabla de la semana (nota del punto 18 de la jornada 6, 2026-10-30; `tanda6/fx-j6d-liga`).
 3. Comprueba que el logcat de toda la prueba no lleva secretos (regla de arriba).
 
 ## 22. Gráficos e imágenes: revisión del dueño (≈ 1 h, se puede repartir por bloques)

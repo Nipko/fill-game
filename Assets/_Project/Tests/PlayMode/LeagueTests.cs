@@ -274,6 +274,50 @@ namespace AF.Tests.PlayMode
             Assert.That(screen.StatusText, Is.EqualTo(LeagueText.UpdatedAgo(TimeSpan.FromMinutes(45))));
         }
 
+        /// <summary>
+        /// Nota del punto 18 de la jornada 6 (2026-10-30): con el perfil recién borrado (sin caché ni seudónimo) y sin identidad de la
+        /// Liga todavía, con red, la pantalla enseña el primer contacto (la tabla vacía, sin «Conéctate» ni «Aún nadie suma», y tu fila
+        /// con 0 y «Gana un nivel para entrar en la Liga»), sin <c>af_league_unavailable</c>. Sin red, «Conéctate para ver la Liga».
+        /// Tras la primera victoria, la tabla de la semana.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Screen_WithoutIdentityYet_IsTheFirstContact_AndOfflineOnlyWithoutNetwork()
+        {
+            _api.FailWith = LeagueFailure.NoIdentity;
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
+            yield return Lobby(57);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.OpenLeague(), Is.True);
+            LeagueScreen screen = boot.LeagueView!;
+            Assert.That(boot.League!.StateOf(LeagueScope.Global), Is.EqualTo(LeagueBoardState.NoIdentity));
+            Assert.That(screen.MessageText, Is.Empty, "ni «Conéctate para ver la Liga» ni «Aún nadie suma puntos esta semana»");
+            Assert.That(screen.RowsShown, Is.EqualTo(0));
+            Assert.That(screen.MeShown, Is.True, "tu fila, fija abajo");
+            Assert.That(screen.MeDetailText, Is.EqualTo(LeagueText.NoPoints), "«Gana un nivel para entrar en la Liga»");
+            Assert.That(screen.MePointsText, Is.EqualTo(LeagueText.PointsNumber(0)));
+            Assert.That(screen.MeRankText, Is.Empty);
+            Assert.That(screen.CountryTabShown, Is.False, "sin país todavía, solo Global");
+            Assert.That(screen.WeekText, Is.Not.Empty, "la semana, como en el primer contacto");
+            Assert.That(CountOf(sink, "af_league_unavailable"), Is.EqualTo(0), "no es la Liga caída");
+            boot.CloseLeague();
+
+            _api.FailWith = null;
+            _api.Offline = true;
+            Assert.That(boot.OpenLeague(), Is.True);
+            Assert.That(screen.MessageText, Is.EqualTo(LeagueText.Offline), "sin red, «Conéctate para ver la Liga»");
+            Assert.That(screen.MeShown, Is.False);
+            Assert.That(sink.Last("af_league_unavailable")!.Find("reason")!.Value.Text, Is.EqualTo("offline"));
+            boot.CloseLeague();
+
+            _api.Offline = false;
+            Assert.That(boot.League.RecordCampaignWin(58, RewardTier.Normal), Is.EqualTo(10), "la primera victoria entra en la Liga");
+            Assert.That(boot.League.PendingCount, Is.EqualTo(0));
+            Assert.That(boot.OpenLeague(), Is.True);
+            Assert.That(screen.RowsShown, Is.EqualTo(100), "la tabla de la semana");
+            Assert.That(screen.MessageText, Is.Empty);
+        }
+
         [UnityTest]
         public IEnumerator Under13_NoButton_NoNetwork()
         {

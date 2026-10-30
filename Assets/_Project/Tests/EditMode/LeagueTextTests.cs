@@ -207,6 +207,66 @@ namespace AF.Tests.EditMode
             Assert.That(backend.Calls, Is.EqualTo(0), "sin llamar al backend");
         }
 
+        /// <summary>
+        /// Nota del punto 18 de la jornada 6 (2026-10-30): tras eliminar la cuenta, el ID token falla porque aún no hay usuario anónimo
+        /// (o el servidor da 401 tras renovarlo). Con red es <c>no_identity</c> (el primer contacto); sin red, <c>offline</c>. Un Firebase
+        /// sin arrancar o sin App Check sigue siendo <c>offline</c>.
+        /// </summary>
+        [Test]
+        public void TheRealApiAdapter_WithoutIdentity_IsNoIdentityOnlyWithNetwork()
+        {
+            var noUser = new BackendError(BackendErrorKind.AuthUnavailable, detail: "auth_no_user");
+            Assert.That(LeagueBackendApi.FailureOf(noUser, false, true), Is.EqualTo(LeagueFailure.NoIdentity));
+            Assert.That(LeagueBackendApi.FailureOf(noUser, false, false), Is.EqualTo(LeagueFailure.Offline), "sin red");
+            foreach (string detail in new[] { "auth_sign_in_failed", "auth_token_failed" })
+            {
+                Assert.That(LeagueBackendApi.FailureOf(new BackendError(BackendErrorKind.AuthUnavailable, detail: detail), true, true),
+                    Is.EqualTo(LeagueFailure.NoIdentity), detail);
+            }
+
+            Assert.That(LeagueBackendApi.FailureOf(new BackendError(BackendErrorKind.AuthUnavailable, detail: "firebase_unavailable:dependencies_failed"), false, true),
+                Is.EqualTo(LeagueFailure.Offline), "Firebase sin arrancar no es falta de identidad");
+            Assert.That(LeagueBackendApi.FailureOf(new BackendError(BackendErrorKind.IntegrityUnavailable, detail: "appcheck_token_failed"), false, true),
+                Is.EqualTo(LeagueFailure.Offline));
+            Assert.That(LeagueBackendApi.FailureOf(BackendError.Network("x"), false, true), Is.EqualTo(LeagueFailure.Offline));
+            Assert.That(LeagueBackendApi.FailureOf(BackendError.Http(401, ApiErrorCode.Unknown), true), Is.EqualTo(LeagueFailure.NoIdentity),
+                "401 tras renovar el token: la cuenta borrada");
+            Assert.That(LeagueBackendApi.AvatarFailureOf(noUser, true), Is.EqualTo(LeagueFailure.NoIdentity), "el avatar se queda pendiente");
+
+            bool online = true;
+            var backend = new FailingLeagueBackend(noUser);
+            var api = new LeagueBackendApi(backend, null, () => online);
+            LeagueResult<LeagueBoard>? board = null;
+            api.GetBoard(LeagueScope.Global, r => board = r);
+            Assert.That(board!.Failure, Is.EqualTo(LeagueFailure.NoIdentity), "con red");
+            LeagueResult<LeagueWinsResult>? wins = null;
+            api.SendWins(new LeagueWinsRequest(new[] { LeagueWin.Campaign(42, new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Utc)) }, 42, null), r => wins = r);
+            Assert.That(wins!.Failure, Is.EqualTo(LeagueFailure.NoIdentity));
+            online = false;
+            api.GetBoard(LeagueScope.Global, r => board = r);
+            Assert.That(board!.Failure, Is.EqualTo(LeagueFailure.Offline), "sin red");
+        }
+
+        /// <summary>Un <see cref="ILeagueBackend"/> que falla en el acto con el mismo error.</summary>
+        private sealed class FailingLeagueBackend : ILeagueBackend
+        {
+            private readonly BackendError _error;
+
+            public FailingLeagueBackend(BackendError error)
+            {
+                _error = error;
+            }
+
+            public void SendLeagueWins(LeagueWinsRequestDto request, Action<BackendResult<LeagueWinsResponseDto>> onDone) =>
+                onDone(BackendResult<LeagueWinsResponseDto>.Fail(_error));
+
+            public void GetLeagueBoard(string scope, Action<BackendResult<LeagueBoardResponseDto>> onDone) =>
+                onDone(BackendResult<LeagueBoardResponseDto>.Fail(_error));
+
+            public void SetLeagueAvatar(LeagueAvatarRequestDto request, Action<BackendResult<LeagueAvatarResponseDto>> onDone) =>
+                onDone(BackendResult<LeagueAvatarResponseDto>.Fail(_error));
+        }
+
         /// <summary>Un <see cref="ILeagueBackend"/> que solo cuenta las llamadas (nunca responde).</summary>
         private sealed class CountingLeagueBackend : ILeagueBackend
         {

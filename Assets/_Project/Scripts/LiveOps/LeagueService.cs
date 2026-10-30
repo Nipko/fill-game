@@ -38,6 +38,13 @@ namespace AF.LiveOps
 
         /// <summary>Sin nada guardado y sin poder pedirla: «Conéctate para ver la Liga».</summary>
         Offline = 3,
+
+        /// <summary>
+        /// Sin nada guardado y sin identidad de la Liga todavía, con red (<see cref="LeagueFailure.NoIdentity"/>; tras eliminar la cuenta,
+        /// hasta la primera victoria): el primer contacto, con la tabla vacía y tu fila «Gana un nivel para entrar en la Liga» (nota del
+        /// punto 18 de la jornada 6, 2026-10-30).
+        /// </summary>
+        NoIdentity = 4,
     }
 
     /// <summary>
@@ -270,7 +277,13 @@ namespace AF.LiveOps
                 return IsFresh(scope) ? LeagueBoardState.Fresh : LeagueBoardState.Stale;
             }
 
-            return _fetching[(int)scope] ? LeagueBoardState.Loading : LeagueBoardState.Offline;
+            int i = (int)scope;
+            if (_fetching[i])
+            {
+                return LeagueBoardState.Loading;
+            }
+
+            return _lastFailure[i] == LeagueFailure.NoIdentity ? LeagueBoardState.NoIdentity : LeagueBoardState.Offline;
         }
 
         /// <summary>El último fallo de <paramref name="scope"/> (null tras una descarga buena).</summary>
