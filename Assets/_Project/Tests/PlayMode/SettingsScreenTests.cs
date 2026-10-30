@@ -586,7 +586,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby), "y se queda en el inicio");
             Assert.That(boot.Lobby!.Visible, Is.True);
 
-            // Sin Ajustes abierto, Atrás no hace nada en el inicio.
+            // Sin Ajustes abierto, Atrás manda la app a segundo plano (02 §3.5; en el Editor, el puerto falso): el inicio sigue igual.
             Press(keyboard.escapeKey);
             yield return null;
             Release(keyboard.escapeKey);

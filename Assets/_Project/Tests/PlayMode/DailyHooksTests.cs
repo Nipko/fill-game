@@ -239,7 +239,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator E22_AndroidBack_DoesNothingOnTheBoard_AndClosesTheCalendar()
+        public IEnumerator E22_AndroidBack_PausesOnTheBoard_LikeALevel_AndClosesTheCalendar()
         {
             yield return BootSynthetic();
             GameBootstrap boot = GameBootstrap.Current!;
@@ -247,7 +247,14 @@ namespace AF.Tests.PlayMode
             DailyChallengeScreen daily = boot.DailyScreen!;
             ToPlaying(boot, daily);
 
-            Assert.That(boot.PressAndroidBack(), Is.False, "con el tablero en juego, nada (02 §3)");
+            // 02 §3.5 (observación 21 de la jornada 6): el Reto se comporta como un nivel: Atrás abre la pausa y la cierra.
+            Assert.That(boot.PressAndroidBack(), Is.True, "con el tablero en juego, la pausa");
+            Assert.That(daily.View!.Pause.Visible, Is.True);
+            Assert.That(boot.LastBackAction, Is.EqualTo("pause"));
+            StringAssert.Contains("\"reto\":true", DevProbe.LastBackLine);
+            Assert.That(boot.PressAndroidBack(), Is.True, "en la pausa, «Continuar»");
+            Assert.That(daily.View.Pause.Visible, Is.False);
+            Assert.That(boot.LastBackAction, Is.EqualTo("resume"));
             Assert.That(daily.IsOpen, Is.True);
             Assert.That(boot.Lobby!.Visible, Is.False, "el inicio sigue oculto");
 
