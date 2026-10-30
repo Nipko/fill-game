@@ -76,6 +76,21 @@ namespace AF.Tests.EditMode
             Assert.That(string.Join("; ", ProjectSetup.Validate()), Does.Not.Contain("renderer.postProcessData"));
         }
 
+        /// <summary>
+        /// Añadido de D-060 del 2026-10-29 (observaciones 14 y 20 de la jornada 6; <c>docs/dev/memoria.md</c> §7.8): en Android, OpenGL
+        /// ES 3 primero y Vulkan de respaldo, no la lista automática de Unity.
+        /// </summary>
+        [Test]
+        public void AndroidGraphicsApis_OpenGles3First_VulkanAsFallback()
+        {
+            Assert.That(ProjectSetup.UseDefaultGraphicsApis, Is.False);
+            Assert.That(ProjectSetup.AndroidGraphicsApis, Is.EqualTo(new[] { GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.Vulkan }));
+            Assert.That(UnityEditor.PlayerSettings.GetUseDefaultGraphicsAPIs(UnityEditor.BuildTarget.Android), Is.False, "ejecuta AF.EditorTools.ProjectSetup.ApplyAndroidDefaults");
+            Assert.That(UnityEditor.PlayerSettings.GetGraphicsAPIs(UnityEditor.BuildTarget.Android), Is.EqualTo(ProjectSetup.AndroidGraphicsApis));
+            string problems = string.Join("; ", ProjectSetup.Validate());
+            Assert.That(problems, Does.Not.Contain("android.useDefaultGraphicsAPIs").And.Not.Contain("android.graphicsAPIs"));
+        }
+
         [Test]
         public void FontAtlases_NotReadableOnTheCpu()
         {

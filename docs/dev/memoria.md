@@ -250,6 +250,54 @@ En cada uno, en el inicio, el Mapa y el nivel 75 (un minuto quieto en cada sitio
 - `scripts/unity-build.ps1 -Method Dev -Architecture x86_64`: OK, `dev.apk` de 71,5 MiB, sin `FilmGrain`, `AreaTex` ni `UberPost` en el informe del build; `ci/check-manifest.ps1 Builds/Android/dev.apk -Mode dev`: OK.
 - La sonda nueva y la imagen sin posproceso solo se ven en el teléfono (guion, encargo de la jornada 6, «La memoria otra vez, con experimentos»).
 
+### 7.8 Los experimentos en el teléfono y OpenGL ES 3 por defecto (rama `tanda6/fx-j6c-gles`, 2026-10-29)
+
+**Lo medido** (hoja j6, punto 14 y observación 20; `b19c/`). La sonda: `gfx_api` Vulkan, `gfx_device` Adreno (TM) 830, `screen_px` y `render_px` 1080 × 2340 (sin búfer intermedio, como se esperaba). `dev.apk`, nivel 75, `dumpsys meminfo -d` en KB (`EGL mtrack` 40.288 en todos):
+
+| Experimento | Java Heap | Native Heap | Code | Graphics (GL mtrack) | Private Other | System | TOTAL PSS | `os_pss` / `os_graphics` / `gfx` (MiB) |
+|---|---|---|---|---|---|---|---|---|
+| E0, la base | 36.660 | 42.508 | 88.800 | 136.964 (96.676) | 263.344 | 37.708 | **610.628** | 503,1 / 140,8 / 94,4 |
+| E1, `-force-gles` | 20.324 | 36.888 | 100.192 | 124.932 (84.644) | 234.952 | 37.750 | **559.762** | 491,4 / 137,2 / 49,9 |
+| E2, bloques de 4 MiB | 20.820 | 40.068 | 95.564 | 136.964 (96.676) | 256.140 | 37.787 | **592.051** | 501,2 / 140,8 / 94,4 |
+| E3, E2 y los temporales | 19.816 | 40.044 | 89.676 | 136.964 (96.676) | 259.072 | 36.780 | **586.976** | 500,4 / 140,8 / — |
+
+- **El ensayo de release, nivel 75** (sin sonda): E0 **530.027** (`GL mtrack` 93.756) y E1 **494.404** (`GL mtrack` 75.804): −36 MB.
+- **E0 en el inicio:** 598.183 de PSS y `GL mtrack` 91.972, unos 3-5 MB por debajo de la jornada 6, lo esperado al quitar el posproceso (§7.4).
+- **Lectura:**
+  - E1 es el único que baja de verdad: `GL mtrack` −12 a −18 MB y Private Other −10 a −28 MB. `gfx_mib` pasa de 94 a 50: con OpenGL ES el driver lleva por su cuenta parte de lo que con Vulkan reservaba Unity en bloques (§7.1).
+  - E2 y E3 (bloques de 4 MiB) bajan 19-24 MB, casi todo en Private Other y dentro del ruido entre arranques: **los tamaños de bloque no se tocan** (la candidata 4 de §7.5 queda descartada por ahora).
+  - Nada baja de 450 MB en el S938B, que no es de clase A.
+- **No valen** las medidas de E1-E3 del inicio y del Mapa: se tomaron en el nivel 75, porque al relanzar el juego retomó el nivel a medias. Y **falta el rendimiento con OpenGL ES** (`AF_PERF frames` con `af_bench_morpho` en E1).
+
+**Decisión (añadido de D-060 del 2026-10-29):** OpenGL ES 3 primero y Vulkan de respaldo en Android, a condición de que el rendimiento no empeore.
+- Lo aplica `ProjectSetup.AndroidGraphicsApis` (`SetUseDefaultGraphicsAPIs(Android, false)` y `SetGraphicsAPIs(Android, [OpenGLES3, Vulkan])`), lo exige `Validate` y lo vigila `MemorySettingsTests.AndroidGraphicsApis_OpenGles3First_VulkanAsFallback`. En `ProjectSettings.asset` solo cambia `m_BuildTargetGraphicsAPIs`.
+- Vulkan se queda detrás, en vez de dejar solo OpenGL ES 3, por dos razones: el teléfono sin OpenGL ES 3 arranca igual, y el portátil puede comparar con el mismo APK (`-e unity "-force-vulkan"`).
+
+**Revisado que nada dependa de Vulkan:**
+
+| Qué | Resultado |
+|---|---|
+| Shaders propios (`AF_UI_Additive`, `Glass`, `Liquid`, `Silhouette`, `Stream`) | `#pragma target` 2.0-3.0, sin `only_renderers`, cómputo ni `SV_VertexID`: compilan para OpenGL ES 3 (ya lo hacían: estaba en la lista automática) |
+| Formatos de textura | RGBA32 (arte por código), Alpha8 (fuentes), ETC2 (EmojiOne): todos de OpenGL ES 3 |
+| Espacio de color lineal | Necesita OpenGL ES 3.0, que es el mínimo de la lista |
+| Blit Type en `Auto` | Con OpenGL ES, Unity solo copia cuando hace falta (escala de resolución, que no se usa). E1 ya se midió con `Auto`: misma imagen (`b19c/ensayo-E1.png`) |
+| `AfSplashHold`, `AfLockGuard`, `AfAudioFocus`, `AfIcon` | Java con API de la plataforma, sin nada de gráficos. El velo es una vista de Android encima de la ventana de Unity: no depende de la API |
+| Manifiesto (`aapt2 dump xmltree` del `dev.apk` nuevo) | `<uses-feature android:glEsVersion="0x00030000">` (obligatorio, como ya estaba: OpenGL ES 3 estaba en la lista automática) y `android.hardware.vulkan.version` con `required="false"` (lo pone Unity por tener Vulkan en la lista; no filtra teléfonos en Play). Ningún requisito nuevo. `ci/check-manifest.ps1` no mira `uses-feature` y sigue en OK (§7.9) |
+
+**Riesgos que solo mide el teléfono:**
+- el rendimiento: el Morpho y los fotogramas del vertido y de la intro (`motion_pauses`, `frame_max_ms`);
+- el primer fotograma y el arranque, porque OpenGL ES compila los shaders al usarlos por primera vez;
+- en otros teléfonos, los drivers de OpenGL ES de gama baja (Mali antiguos) suelen ser más maduros que los de Vulkan, pero no se ha probado ninguno.
+
+### 7.9 Verificación de la rama `tanda6/fx-j6c-gles` (escritorio x64, 2026-10-29)
+
+- `scripts/unity-build.ps1 -Method Setup -Architecture x86_64`: OK (`graficos=OpenGLES3>Vulkan`); en `ProjectSettings.asset` solo cambia `m_BuildTargetGraphicsAPIs` (`m_APIs: 0b00000015000000`, OpenGL ES 3 y Vulkan; `m_Automatic: 0`).
+- `scripts/unity-compile.ps1 -Architecture x86_64`: compila.
+- EditMode con `-Filter "ProjectSetup|Memory"`: 26/26, 0 fallos (con el test nuevo).
+- `scripts/unity-build.ps1 -Method Dev -Architecture x86_64`: OK, `dev.apk` de 71,5 MiB (igual que antes: los shaders de OpenGL ES 3 y de Vulkan ya iban los dos).
+- `ci/check-manifest.ps1 Builds/Android/dev.apk -Mode dev`: OK.
+- PlayMode con `-Filter "BrandIntro|BootSplash|MemoryProbe"`: 98 (97 + 1 omitido), 0 fallos. El Editor pinta con Direct3D: la API de Android solo se ve en el teléfono.
+
 ## 8. Verificación del carril anterior (escritorio x64, 2026-10-29)
 
 - `dotnet build dotnet/AmazonFill.slnx -warnaserror`: 0 errores, 0 avisos. `dotnet test`: 1.002 (996 + 6 omitidos), 0 fallos.

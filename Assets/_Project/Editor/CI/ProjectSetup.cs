@@ -116,6 +116,24 @@ namespace AF.EditorTools
         /// </summary>
         public const bool RendererPostProcessData = false;
 
+        /// <summary>
+        /// APIs gráficas de Android, en orden de preferencia (añadido de D-060 del 2026-10-29; observaciones 14 y 20 de la jornada 6;
+        /// <c>docs/dev/memoria.md</c> §7.8): <b>OpenGL ES 3 primero y Vulkan de respaldo</b>, en lugar de la lista automática de Unity
+        /// (que en un Adreno 830 elegía Vulkan). En el S938B, <c>-force-gles</c> bajó el PSS 51 MB en el <c>dev.apk</c> y 36 MB en el
+        /// ensayo de release (sobre todo <c>GL mtrack</c> y Private Other), con la misma imagen. Vulkan se queda en la lista: el teléfono
+        /// que no tenga OpenGL ES 3 (raro con minSdk 26) arranca con Vulkan, y el portátil puede comparar con el mismo APK lanzándolo con
+        /// <c>-e unity "-force-vulkan"</c>.
+        /// <para>Condición de D-060: si en el teléfono empeoran el Morpho (<c>AF_PERF morpho</c>), <c>motion_pauses</c> o
+        /// <c>frame_max_ms</c>, se vuelve a Vulkan. <b>Cómo revertir:</b> <see cref="UseDefaultGraphicsApis"/> a true (la lista
+        /// automática de Unity, con Vulkan primero) o esta lista con <c>GraphicsDeviceType.Vulkan</c> delante; después
+        /// <c>pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup</c> y commitear <c>ProjectSettings/ProjectSettings.asset</c> con
+        /// el test de <c>MemorySettingsTests</c>.</para>
+        /// </summary>
+        public static readonly GraphicsDeviceType[] AndroidGraphicsApis = { GraphicsDeviceType.OpenGLES3, GraphicsDeviceType.Vulkan };
+
+        /// <summary>false: la lista de <see cref="AndroidGraphicsApis"/>, no la automática de Unity (añadido de D-060 del 2026-10-29).</summary>
+        public const bool UseDefaultGraphicsApis = false;
+
         /// <summary>Propiedad serializada de los datos de posproceso del 2D Renderer (<c>Renderer2DData.postProcessData</c>).</summary>
         internal const string PostProcessDataProperty = "m_PostProcessData";
 
@@ -169,6 +187,11 @@ namespace AF.EditorTools
             ApplyPipelineHdr(PipelineHdr);
             PlayerSettings.Android.blitType = BlitType; // memoria (2026-10-29): sin búfer intermedio de pantalla completa
             ApplyRendererPostProcessData(RendererPostProcessData); // memoria (2026-10-29, obs. 14 de la j6): sin los recursos de posproceso
+            PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.Android, UseDefaultGraphicsApis); // añadido de D-060: OpenGL ES 3 primero
+            if (!UseDefaultGraphicsApis)
+            {
+                PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, AndroidGraphicsApis);
+            }
             FontSetup.SetAtlasReadability(false); // memoria (2026-10-26): los atlas de las fuentes, sin copia en CPU
 
             // Sin firma de release: Unity firma con la clave de depuración. El keystore lo gestiona el dueño.
@@ -226,6 +249,17 @@ namespace AF.EditorTools
                 }
             }
 
+            Check(problems, "android.useDefaultGraphicsAPIs", PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android), UseDefaultGraphicsApis);
+            if (!UseDefaultGraphicsApis)
+            {
+                string apis = DescribeGraphicsApis();
+                string expected = string.Join(">", AndroidGraphicsApis);
+                if (!string.Equals(apis, expected, StringComparison.Ordinal))
+                {
+                    problems.Add("android.graphicsAPIs=" + apis + " (esperado " + expected + ")");
+                }
+            }
+
             foreach (ScriptableObject renderer in RendererDatas())
             {
                 bool? hasPostProcess = RendererHasPostProcessData(renderer);
@@ -267,7 +301,14 @@ namespace AF.EditorTools
                 + ", logoUnity=" + PlayerSettings.SplashScreen.showUnityLogo
                 + ", hdr=" + DescribeHdr()
                 + ", blit=" + PlayerSettings.Android.blitType
-                + ", posproceso=" + DescribeRendererPostProcess();
+                + ", posproceso=" + DescribeRendererPostProcess()
+                + ", graficos=" + (PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android) ? "auto" : DescribeGraphicsApis());
+        }
+
+        /// <summary>Las APIs gráficas de Android que tiene el proyecto, en orden, como «OpenGLES3&gt;Vulkan».</summary>
+        internal static string DescribeGraphicsApis()
+        {
+            return string.Join(">", PlayerSettings.GetGraphicsAPIs(BuildTarget.Android));
         }
 
         /// <summary>
