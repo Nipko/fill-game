@@ -223,8 +223,8 @@ namespace AF.Localization
         }
 
         /// <summary>
-        /// Etiqueta de cifras cuando no se sabe la región del teléfono: es-419 y en-XA → es-CO [P] (lo de hoy, «1.000»;
-        /// notas de la tanda 4, punto 10), pt-BR → pt-BR, en → en; cualquier otra, ella misma.
+        /// Etiqueta de cifras sin país: es-419 y en-XA → es-CO (el punto; notas de la tanda 4, punto 10), pt-BR → pt-BR, en →
+        /// en; cualquier otra, ella misma. Con país, <see cref="NumberTagFor(string, string)"/>.
         /// </summary>
         public static string DefaultNumberTag(string locale)
         {
@@ -239,6 +239,90 @@ namespace AF.Localization
             }
 
             return locale;
+        }
+
+        /// <summary>
+        /// Fila de cifras del juego (observación 22 de la jornada 6, decisión del dueño del 2026-10-30): el separador de miles y el
+        /// decimal siguen al <b>idioma del juego</b> y, en español, al <b>país</b>; nunca a <c>CultureInfo.CurrentCulture</c> (en IL2CPP
+        /// Android suele ser invariante) ni a la región del teléfono por sí sola.
+        /// <list type="bullet">
+        /// <item>en → «en»: «1,000» y «1.5».</item>
+        /// <item>pt-BR (y cualquier pt) → «pt-BR»: «1.000» y «1,5».</item>
+        /// <item>es-419 (y en-XA, el español falseado) → «es-» + <paramref name="country"/> en la tabla de <see cref="LocNumber"/>:
+        /// punto de miles en CO, AR, CL, UY, PY, VE, EC, BO, BR (y ES); coma en MX, PE, GT, HN, NI, PA, SV, DO, PR, CU, BZ y US;
+        /// espacio duro en CR (ICU). País desconocido, sin país o fuera de la tabla → es-CO, el punto de la mayoría de LatAm.</item>
+        /// <item>Otro idioma → su propia fila (<see cref="LocNumber.For"/>).</item>
+        /// </list>
+        /// <paramref name="country"/> es ISO 3166-1 alfa-2 (cualquier caja); lo que no son dos letras ASCII cuenta como desconocido.
+        /// </summary>
+        public static string NumberTagFor(string locale, string? country)
+        {
+            if (locale == null)
+            {
+                throw new ArgumentNullException(nameof(locale));
+            }
+
+            if (IsPseudo(locale) || HasLanguage(locale, "es"))
+            {
+                string? code = CountryCode(country);
+                return code == null ? LocNumber.SpanishDefaultTag : "es-" + code;
+            }
+
+            if (HasLanguage(locale, "en"))
+            {
+                return English;
+            }
+
+            if (HasLanguage(locale, "pt"))
+            {
+                return PortugueseBrazil;
+            }
+
+            return locale;
+        }
+
+        /// <summary>
+        /// País para las cifras (observación 22 de la jornada 6), con las fuentes de D-057 que ya usan el <c>geo_tier</c> y los
+        /// precios: el de la cuenta de Play (<paramref name="playCountry"/>, guardado desde la última conexión con Play) y, sin él,
+        /// la región de la etiqueta del teléfono (<paramref name="deviceTag"/>; «es-419» no es un país). Null si no se sabe.
+        /// </summary>
+        public static string? NumberCountry(string? playCountry, string? deviceTag)
+        {
+            string? play = CountryCode(playCountry);
+            if (play != null)
+            {
+                return play;
+            }
+
+            if (string.IsNullOrWhiteSpace(deviceTag))
+            {
+                return null;
+            }
+
+            SplitTag(deviceTag!, out _, out string? region);
+            return CountryCode(region);
+        }
+
+        /// <summary>Dos letras ASCII → mayúsculas; cualquier otra cosa (null, vacío, «419»), null.</summary>
+        internal static string? CountryCode(string? code)
+        {
+            if (code == null)
+            {
+                return null;
+            }
+
+            string t = code.Trim();
+            if (t.Length != 2 || !IsAsciiLetter(t[0]) || !IsAsciiLetter(t[1]))
+            {
+                return null;
+            }
+
+            return t.ToUpperInvariant();
+        }
+
+        private static bool IsAsciiLetter(char c)
+        {
+            return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
         }
 
         /// <summary>Si <paramref name="tag"/> es en-XA (sin distinguir mayúsculas, con «-» o «_»).</summary>

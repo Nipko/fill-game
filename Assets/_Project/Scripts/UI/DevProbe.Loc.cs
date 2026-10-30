@@ -14,7 +14,8 @@ namespace AF.UI
     /// (<see cref="CultureInfo.CurrentCulture"/>; vacía si es la invariante, que es lo que hay que medir en IL2CPP), la etiqueta
     /// que leyó el teléfono (<c>device</c>; vacía si no dio ninguna) y de dónde (<c>device_src</c>: <c>jni</c>, <c>culture</c> o
     /// <c>manual</c>; <see cref="AndroidDeviceLocale.SourceKey"/>) y la fila de cifras en uso (<c>numbers</c>,
-    /// <see cref="Loc.NumberFormat"/>: la región del teléfono o, sin ella, es-CO [P]; Q8-A). Con <c>af_lang</c>
+    /// <see cref="Loc.NumberFormat"/>: la del idioma de la UI y, en español, la del país, o es-CO [P] sin país; observación 22
+    /// de la jornada 6). Con <c>af_lang</c>
     /// (<c>--es af_lang en-XA</c>), source = <c>dev</c>. Solo en desarrollo.
     /// </summary>
     public sealed partial class DevProbe

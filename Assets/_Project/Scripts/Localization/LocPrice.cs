@@ -5,11 +5,11 @@ namespace AF.Localization
 {
     /// <summary>
     /// Precios con el mismo formato que el resto de las cifras (D-025, «un solo formato de cifras, también en los precios»):
-    /// código ISO 4217 de la moneda, un espacio y el importe con los separadores de <see cref="LocNumber"/> (los de la región del
-    /// teléfono, Q8-A de D-018; sin región, es-CO [P]) y los decimales de la moneda (<see cref="DecimalsOf"/>: 0 en COP y MXN, 2
+    /// código ISO 4217 de la moneda, un espacio y el importe con los separadores de <see cref="LocNumber"/> (los del idioma del
+    /// juego y, en español, del país: añadido de D-025 del 2026-10-30, observación 22 de la jornada 6; sin país, es-CO) y los decimales de la moneda (<see cref="DecimalsOf"/>: 0 en COP y MXN, 2
     /// en el resto, 05 §4.2; por el añadido de D-025 de Q-IAP-3, las monedas sin céntimos y las de tres decimales de ISO 4217; y,
-    /// con D-057, la tabla ISO 4217 completa más IDR, HUF y TWD sin decimales, como las escribe Google Play). Los importes de 05 §4.2 no cambian, solo su escritura: con el teléfono en en-US, «COP 3,900»; en
-    /// es-CO, «COP 3.900»; en es-MX, «MXN 19»; en pt-BR, «BRL 4,99».
+    /// con D-057, la tabla ISO 4217 completa más IDR, HUF y TWD sin decimales, como las escribe Google Play). Los importes de 05 §4.2 no cambian, solo su escritura: con la UI en en, «COP 3,900»; en
+    /// es-419 en Colombia, «COP 3.900»; en es-419 en México, «MXN 19»; en pt-BR, «BRL 4,99».
     /// <para>Es la única función de precios: la usan la tienda simulada (<c>AF.IAP</c>: <c>LocalPrice</c>,
     /// <c>FakeStoreService</c>) y, por ella, todos los textos con precio de la UI (<c>GameServices.PriceText</c>). Con la tienda
     /// real (el plugin propio de Play Billing Library 9.0.0, D-040; D-025, punto 3 [P]), <c>AF.IAP.PlayBillingClient</c> compone el

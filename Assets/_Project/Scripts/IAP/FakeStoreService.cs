@@ -41,8 +41,8 @@ namespace AF.IAP
         public LocalPrice Price { get; }
 
         /// <summary>
-        /// Precio como se muestra, con la función única de precios (<c>Loc.Price</c>; D-025): <c>COP 3.900</c> con el teléfono en
-        /// es-CO y <c>COP 3,900</c> en en-US.
+        /// Precio como se muestra, con la función única de precios (<c>Loc.Price</c>; D-025): <c>COP 3.900</c> con la UI en pt-BR o
+        /// en es-419 en Colombia y <c>COP 3,900</c> en en o en es-419 en México (observación 22 de la jornada 6).
         /// </summary>
         public string PriceText => Price.ToString();
     }

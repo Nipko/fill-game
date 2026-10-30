@@ -13,9 +13,11 @@ namespace AF.Localization
     /// «[clave]» en desarrollo y «» en release.</item>
     /// <item><see cref="Fact(string)"/>: textos largos (<c>facts.csv</c>). Da «» si falta la clave, si no hay texto en el idioma
     /// (nunca mezcla idiomas; Q10-A) o si no está aprobado y no se enseña lo no aprobado (<see cref="ShowUnapproved"/>).</item>
-    /// <item>Cifras con los separadores de la región (<see cref="Number(long)"/>, <see cref="WriteNumber"/>; Q8-A): la del
-    /// teléfono si se da (<see cref="SetNumberTag"/>) y, si no, la del idioma (es-419 → es-CO [P]). Los precios, con el mismo
-    /// formato (<see cref="Price"/>; D-025).</item>
+    /// <item>Cifras (<see cref="Number(long)"/>, <see cref="WriteNumber"/>) con los separadores del idioma del juego y, en
+    /// español, del país (<see cref="SetNumberCountry"/>; <see cref="LocLocale.NumberTagFor"/>; observación 22 de la jornada 6,
+    /// decisión del dueño del 2026-10-30): en «1,000», pt-BR «1.000» y es-419 según el país (es-CO [P] si no se sabe). Una fila
+    /// forzada (<see cref="SetNumberTag"/>, tests y desarrollo) manda sobre las dos. Los precios, con el mismo formato
+    /// (<see cref="Price"/>; D-025).</item>
     /// <item><c>showUnapproved</c> es el interruptor de desarrollo: en los builds de desarrollo y en los tests enseña lo no
     /// aprobado, marca las claves que faltan y permite en-XA.</item>
     /// </list>
@@ -30,6 +32,7 @@ namespace AF.Localization
         private static string s_locale = LocLocale.SourceLocale;
         private static bool s_showUnapproved = true;
         private static string? s_numberTag;
+        private static string? s_numberCountry;
         private static LocNumberFormat s_numbers = LocNumber.For(LocLocale.DefaultNumberTag(LocLocale.SourceLocale));
         private static string[] s_uiTemplate = Array.Empty<string>();
         private static string[] s_uiText = Array.Empty<string>();
@@ -55,8 +58,11 @@ namespace AF.Localization
         /// <summary>Si se enseña lo no aprobado, se marcan las claves que faltan y vale en-XA (desarrollo y tests).</summary>
         public static bool ShowUnapproved => s_showUnapproved;
 
-        /// <summary>Etiqueta de región pedida para las cifras (la del teléfono), o null si se deduce del idioma.</summary>
+        /// <summary>Fila de cifras forzada (tests y desarrollo), o null si se deduce del idioma y del país.</summary>
         public static string? RequestedNumberTag => s_numberTag;
+
+        /// <summary>País de las cifras (ISO alfa-2 en mayúsculas), o null si no se sabe (observación 22 de la jornada 6).</summary>
+        public static string? NumberCountry => s_numberCountry;
 
         /// <summary>Formato de cifras en uso (su <see cref="LocNumberFormat.Tag"/> es la fila de la tabla: «es-CO», «en»…).</summary>
         public static LocNumberFormat NumberFormat => s_numbers;
@@ -71,10 +77,19 @@ namespace AF.Localization
         }
 
         /// <summary>
-        /// Como <see cref="Configure(LocCatalog, string, bool)"/>, con la etiqueta del teléfono para las cifras
-        /// (<paramref name="numberTag"/>, como «es-MX»; null = la del idioma).
+        /// Como <see cref="Configure(LocCatalog, string, bool)"/>, con una fila de cifras forzada (<paramref name="numberTag"/>,
+        /// como «es-MX»; null = la del idioma, sin país). Para tests y desarrollo.
         /// </summary>
         public static void Configure(LocCatalog catalog, string locale, bool showUnapproved, string? numberTag)
+        {
+            Configure(catalog, locale, showUnapproved, numberTag, null);
+        }
+
+        /// <summary>
+        /// Como <see cref="Configure(LocCatalog, string, bool, string)"/>, con el país de las cifras (<paramref name="numberCountry"/>,
+        /// ISO alfa-2; null = desconocido): con la UI en español decide el separador (<see cref="LocLocale.NumberTagFor"/>).
+        /// </summary>
+        public static void Configure(LocCatalog catalog, string locale, bool showUnapproved, string? numberTag, string? numberCountry)
         {
             if (catalog == null)
             {
@@ -87,6 +102,7 @@ namespace AF.Localization
             s_locale = locale;
             s_showUnapproved = showUnapproved;
             s_numberTag = Normalize(numberTag);
+            s_numberCountry = LocLocale.CountryCode(numberCountry);
             Rebuild();
         }
 
@@ -98,6 +114,7 @@ namespace AF.Localization
             s_locale = LocLocale.SourceLocale;
             s_showUnapproved = true;
             s_numberTag = null;
+            s_numberCountry = null;
             Rebuild();
         }
 
@@ -118,7 +135,7 @@ namespace AF.Localization
         }
 
         /// <summary>
-        /// Fija la región de las cifras con la etiqueta del teléfono (Q8-A; null o vacío = la del idioma). Si cambian los
+        /// Fuerza la fila de las cifras (tests y desarrollo; null o vacío = la del idioma y el país). Si cambian los
         /// separadores, rehace los textos y lanza <see cref="Changed"/>; si solo cambia la fila (es-CO → es-AR), no.
         /// </summary>
         public static void SetNumberTag(string? tag)
@@ -130,6 +147,27 @@ namespace AF.Localization
             }
 
             s_numberTag = normalized;
+            ApplyNumbers();
+        }
+
+        /// <summary>
+        /// Fija el país de las cifras (ISO alfa-2; null o no válido = desconocido; observación 22 de la jornada 6). Solo cuenta
+        /// con la UI en español. Si cambian los separadores, rehace los textos y lanza <see cref="Changed"/>.
+        /// </summary>
+        public static void SetNumberCountry(string? country)
+        {
+            string? code = LocLocale.CountryCode(country);
+            if (string.Equals(code, s_numberCountry, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            s_numberCountry = code;
+            ApplyNumbers();
+        }
+
+        private static void ApplyNumbers()
+        {
             LocNumberFormat next = ResolveNumbers();
             if (next.Group == s_numbers.Group && next.Decimal == s_numbers.Decimal)
             {
@@ -258,9 +296,9 @@ namespace AF.Localization
         }
 
         /// <summary>
-        /// Precio con el formato de las cifras (D-025): código ISO 4217, un espacio y el importe con los separadores de la región
-        /// y los decimales de la moneda (<see cref="LocPrice"/>: 0 en COP y MXN, 2 en el resto), p. ej. «COP 3,900» con el
-        /// teléfono en en-US. <paramref name="minorUnits"/> va en las unidades de <see cref="LocPrice.DecimalsOf"/> (BRL 4,99 →
+        /// Precio con el formato de las cifras (D-025): código ISO 4217, un espacio y el importe con los separadores del idioma
+        /// del juego y, en español, del país (añadido de D-025 del 2026-10-30) y los decimales de la moneda (<see cref="LocPrice"/>:
+        /// 0 en COP y MXN, 2 en el resto), p. ej. «COP 3,900» con la UI en en. <paramref name="minorUnits"/> va en las unidades de <see cref="LocPrice.DecimalsOf"/> (BRL 4,99 →
         /// 499; COP 3.900 → 3900). Es la única función de precios: ningún precio lleva un formato propio.
         /// </summary>
         public static string Price(string iso4217, long minorUnits)
@@ -323,7 +361,7 @@ namespace AF.Localization
 
         private static LocNumberFormat ResolveNumbers()
         {
-            return LocNumber.For(s_numberTag ?? LocLocale.DefaultNumberTag(s_locale));
+            return LocNumber.For(s_numberTag ?? LocLocale.NumberTagFor(s_locale, s_numberCountry));
         }
 
         private static string Missing(string key)

@@ -34,7 +34,8 @@ namespace AF.UI
     /// <para>Ajustes (tarea L3; <see cref="SettingsScreen"/>): se abre desde el engranaje del inicio y se cierra con su X o con el
     /// Atrás de Android. El idioma se resuelve al arrancar con el de desarrollo (<c>af_lang</c>) &gt; <c>settings.language</c>
     /// &gt; el del teléfono (<see cref="AndroidDeviceLocale"/>; en el Editor, <see cref="SystemDeviceLocale"/>) &gt; en, con el
-    /// respaldo es-419 [P], y las cifras con la región del teléfono (es-CO sin ella [P]). Elegir un idioma lo guarda y, si cambia
+    /// respaldo es-419 [P], y las cifras con el idioma de la UI y, en español, el país de Play o del teléfono (es-CO sin país;
+    /// observación 22 de la jornada 6). Elegir un idioma lo guarda y, si cambia
     /// el de la UI, <see cref="Loc.SetLocale"/> lanza <see cref="Loc.Changed"/> (las cachés de <see cref="UiText"/> se vacían) y
     /// la UI entera se reconstruye volviendo al inicio: la escena se recarga y el arranque siguiente la vuelve a construir en el
     /// idioma nuevo (Q7-A), con Ajustes otra vez abierta (FXT). Los Patrones de fruta se guardan y se aplican al momento
@@ -1690,7 +1691,7 @@ namespace AF.UI
             }
 
             // Textos (D-018; tareas L2b y L3): con el perfil leído y antes de construir ninguna pantalla. Desarrollo (af_lang) >
-            // settings.language > teléfono > en, con el respaldo es-419, y las cifras con la región del teléfono.
+            // settings.language > teléfono > en, con el respaldo es-419, y las cifras con el idioma y, en español, el país.
             _deviceLocale = LaunchOptions.DeviceLocaleOverride ?? AndroidDeviceLocale.ForPlatform();
             _deviceTag = _deviceLocale.LanguageTag ?? string.Empty;
             LocResolution locale = SetUpTexts(profile.Settings.Language, _deviceTag);
@@ -2074,7 +2075,7 @@ namespace AF.UI
         // se pueden leer, LocTables.FromTextsOrEmpty decide sin lanzar (Loc sin textos en es-419, el idioma de respaldo del
         // código, LocLocale.FallbackLocale: en desarrollo cada texto se ve como «[clave]» y en release, vacío; nunca un texto en
         // otro idioma) y aquí solo se registra el aviso o el error. El idioma: af_lang > savedLanguage (settings.language) >
-        // deviceTag (el teléfono) > en, y las cifras con la región de deviceTag (tarea L3).
+        // deviceTag (el teléfono) > en, y las cifras con el idioma y, en español, el país (observación 22 de la jornada 6).
         private LocResolution SetUpTexts(string savedLanguage, string deviceTag)
         {
             bool development = Debug.isDebugBuild;
@@ -2095,7 +2096,9 @@ namespace AF.UI
                 Debug.LogWarning(LogPrefix + warning);
             }
 
-            LocResolution resolution = LocTables.Configure(catalog, devLanguage, savedLanguage, deviceTag, development);
+            // Las cifras, con el idioma de la UI y, en español, el país de Play o del teléfono (observación 22 de la jornada 6). El
+            // país de Play que llegue en esta sesión cuenta desde el arranque siguiente: así las cifras no cambian a media partida.
+            LocResolution resolution = LocTables.Configure(catalog, devLanguage, savedLanguage, deviceTag, development, PlayAccountCountry.CountryIso);
             if (devLanguage != null && resolution.Source != LocSource.Dev)
             {
                 Debug.LogWarning(LogPrefix + LaunchOptions.IntentExtraLanguage + " = \"" + devLanguage + "\" no tiene la UI completa: se usa " + resolution.Locale + ".");

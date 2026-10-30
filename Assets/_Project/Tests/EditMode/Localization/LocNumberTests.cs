@@ -75,7 +75,6 @@ namespace AF.Tests.EditMode
         [TestCase("es_us", "es-US", "1,234,567", "1,234.5")]
         [TestCase("es-CU", "es-CU", "1,234,567", "1,234.5")]
         [TestCase("es-BZ", "es-BZ", "1,234,567", "1,234.5")]
-        [TestCase("es-BR", "es-BR", "1,234,567", "1,234.5")]
         [TestCase("es-MX", "es-MX", "1,234,567", "1,234.5")]
         [TestCase("es-PE", "es-PE", "1,234,567", "1,234.5")]
         [TestCase("es-419", "es-419", "1,234,567", "1,234.5")]
@@ -91,6 +90,7 @@ namespace AF.Tests.EditMode
         [TestCase("es-PY", "es-CO", "1.234.567", "1.234,5")]
         [TestCase("es-UY", "es-CO", "1.234.567", "1.234,5")]
         [TestCase("es-VE", "es-CO", "1.234.567", "1.234,5")]
+        [TestCase("es-BR", "es-CO", "1.234.567", "1.234,5")] // ICU escribe «1,234.5»; el dueño fija el punto (observación 22 de la jornada 6)
         public void SpanishRegions_AsIcuWritesThem(string tag, string row, string integer, string real)
         {
             LocNumberFormat format = LocNumber.For(tag);
