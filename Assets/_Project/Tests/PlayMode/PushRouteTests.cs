@@ -192,17 +192,34 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Resume_WithTheNotebookOpen_Drops_AndKeepsIt()
+        public IEnumerator Resume_WithTheNotebookTakeoverOpen_ClosesIt_AndRoutes()
         {
             yield return Boot();
             GameBootstrap boot = GameBootstrap.Current!;
             Step(boot, Frame);
             Assert.That(boot.LogbookScreen!.Visible, Is.True, "el takeover del arranque, sin aviso");
+            Assert.That(boot.LogbookScreen.Source, Is.EqualTo(LogbookOpenSource.Takeover));
+
+            Resume(boot, "daily_ready"); // observación 19: se dejó la app con el takeover encima del inicio
+            Step(boot, Frame);
+            Assert.That(boot.LogbookScreen.Visible, Is.False, "el aviso se salta el takeover (D-062)");
+            Assert.That(boot.DailyScreen!.IsOpen, Is.True);
+            Assert.That(boot.LastPushDestination, Is.EqualTo("daily"));
+        }
+
+        [UnityTest]
+        public IEnumerator Resume_WithTheNotebookOpenedByHand_Drops_AndKeepsIt()
+        {
+            GameBootstrap.LogbookStoreOverride = new InMemoryLoginCalendarStore(new LoginCalendarRecord());
+            yield return Boot();
+            GameBootstrap boot = GameBootstrap.Current!;
+            Step(boot, Frame);
+            Assert.That(boot.PressLogbookCard(), Is.True, "la libreta abierta desde su tarjeta");
 
             Resume(boot, "daily_ready");
             Step(boot, Frame);
-            Assert.That(boot.LastPushDestination, Is.EqualTo("none"), "b) con la Bitácora a la vista");
-            Assert.That(boot.LogbookScreen.Visible, Is.True);
+            Assert.That(boot.LastPushDestination, Is.EqualTo("none"), "b) con la libreta abierta a mano no se toca");
+            Assert.That(boot.LogbookScreen!.Visible, Is.True);
             Assert.That(boot.DailyScreen!.IsOpen, Is.False);
         }
 

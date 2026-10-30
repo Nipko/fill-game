@@ -990,7 +990,12 @@ Recorre **cada fila** de Ajustes y comprueba que hace lo que dice, al momento y 
      - al salir del Reto al inicio, **sale la Bitácora** (el takeover saltado; `AF_STATE takeover` con `logbook`);
      - con el Reto ya jugado hoy, el mismo aviso deja el inicio sin la Bitácora (`dest` `home`), y la Bitácora sale en la siguiente vuelta al inicio;
      - si al tocarlo el juego estaba en segundo plano dentro de un nivel, sigue en el nivel (`dest` `none`).
-   - En los tres idiomas.
+   - **Repetir los tres casos de la observación 19 de la jornada 6** (arreglo del lector del aviso tocado), cada uno con un aviso nuevo y en este orden, en el mismo proceso los dos primeros:
+     - **en segundo plano dentro de un nivel:** sigue en el nivel; `push_intent` y `push_open` con `dest` `none`;
+     - **en segundo plano en el inicio** (también con la Bitácora del takeover encima al salir): abre el Reto; `AF_STATE push_intent` con `"id":1001,"type":"daily_ready"` y `push_open` con `dest` `daily`. Es el segundo toque con el mismo id en el proceso: antes se perdía;
+     - **en frío** (cerrada desde Recientes): abre el Reto tras la intro; `push_intent` con `"via":"log"` (el paquete ya no reconstruye el aviso: `"package":null` es lo esperado) y `push_open` con `dest` `daily`;
+     - en los tres sale **siempre** un `push_open`; si sale `"type":"unknown"`, anota el `push_intent` entero;
+     - volver a la app desde Recientes sin tocar ningún aviso no da otro `push_open`.
 2. **Avisos reales sin el extra:** deja la app cerrada con el Reto sin jugar y comprueba al día siguiente si llega «tu Reto del río está listo» (06 §8.3), sin pasar del tope del día.
 3. **Con <13:** ningún aviso ni diálogo de permiso.
 

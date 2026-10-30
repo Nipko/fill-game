@@ -19,7 +19,8 @@ namespace AF.UI
     /// descarta (<c>dest</c> = <c>none</c>), sin sacar al jugador de lo que estaba haciendo:
     /// <list type="bullet">
     /// <item>al volver de segundo plano con la app en otra pantalla que el inicio sin nada encima (un nivel, el Reto, Ajustes, la
-    /// Bitácora…);</item>
+    /// Bitácora abierta a mano…). El takeover de la Bitácora no cuenta: se cierra y el aviso se encamina (observación 19 de la
+    /// jornada 6);</item>
     /// <item>si, antes de tomarse el destino, la app pasa por un nivel o por el Reto (<see cref="TickPushRoute"/>): por ejemplo,
     /// el arranque en frío que reabre el nivel en curso (<c>level_state</c>, 02 §14) o la primera vez, que empieza en el nivel 1;</item>
     /// <item>si sale a segundo plano antes de llegar al inicio (<see cref="DropPushRoute"/>);</item>
@@ -43,14 +44,28 @@ namespace AF.UI
         // en el inicio sin nada encima.
         private void NotePushOpened(string? openedType, bool coldStart)
         {
-            _pushRouteType = null;
             if (openedType == null)
             {
-                return;
+                return; // abrir sin aviso no toca uno pendiente (lo descarta la salida a segundo plano)
+            }
+
+            if (_pushRouteType != null)
+            {
+                DropPushRoute(); // un aviso nuevo sustituye al que aún no se había encaminado
             }
 
             if (coldStart || (LogbookLobbyClear && (_logbookScreen == null || !_logbookScreen.Visible)))
             {
+                _pushRouteType = openedType;
+                return;
+            }
+
+            if (LogbookLobbyClear && _logbookScreen != null && _logbookScreen.Source == LogbookOpenSource.Takeover)
+            {
+                // Observación 19 de la jornada 6: se dejó la app con el takeover de la Bitácora encima del inicio y se vuelve tocando
+                // un aviso. El takeover es justo lo que el aviso se salta (D-062): se cierra (ya salió, gastó su cupo) y el aviso se
+                // encamina. La libreta abierta a mano (tarjeta, victoria, la secuencia del 10, otro aviso) no se toca.
+                OnLogbookClose();
                 _pushRouteType = openedType;
                 return;
             }
