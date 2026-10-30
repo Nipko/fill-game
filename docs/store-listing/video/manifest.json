@@ -1,0 +1,993 @@
+{
+ "what": "Vídeo de la ficha de Google Play (fase 3 de D-065, 07 §10.3 y assets-tienda.md §5)",
+ "date": "2026-10-30",
+ "decision": "Concepto A elegido por el dueño (2026-10-30); el vídeo usa su estilo y sus fondos",
+ "game_captures": {
+  "device": "Samsung SM-S938B, 1080 × 2340, 60 fps",
+  "tool": "adb shell screenrecord (40 Mb/s)",
+  "build": "com.amazonfill.dev (dev.apk instalado el 2026-10-30 10:19)",
+  "date": "2026-10-30",
+  "how": "El teléfono juega solo: adb shell input tap guiado por AF_LAYOUT y AF_STATE; extras af_lang, af_level, af_seeds y af_max_level; modo demo de Android y No molestar durante las tomas",
+  "untouched": "Ni la IA ni el montaje tocan los píxeles del juego: solo se recortan (siempre por encima de la marca «Development Build»), se escalan y, en la carga del nivel, se ralentizan ×0,5; en la toma de la Marea, la pantalla entera (de la cabecera a los comodines) va encajada sobre la misma toma desenfocada",
+  "takes": [
+   "v_full42_<idioma>: intro de la marca, Llenar y teñir del nivel 42, sus 13 vertidos y la victoria",
+   "v_marea_<idioma>: nivel 129 (Difícil), un vertido y la Marea que lo deshace",
+   "v_lobby_<idioma>: el muelle con TiTino, Capi y Rosa",
+   "v_mapa_<idioma>: el Mapa del río, de la vista Mundo a la Cuenca"
+  ]
+ },
+ "ai": [
+  {
+   "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080, --use-sage-attention)",
+   "model": "Wan 2.2 14B imagen a vídeo, fp8 (Comfy-Org/Wan_2.2_ComfyUI_Repackaged: wan2.2_i2v_high_noise_14B_fp8_scaled + low_noise), LoRA lightx2v 4 pasos",
+   "license": "Apache 2.0",
+   "text_encoder": "umt5_xxl_fp8_e4m3fn_scaled",
+   "vae": "wan_2.1_vae",
+   "sampler": "euler/simple, 4 pasos (2 + 2), cfg 1, shift 5; 81 fotogramas a 16 fps",
+   "negative_prompt": "色调艳丽，过曝，静态，细节模糊不清，字幕，文字，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，畸形的，杂乱的背景，人物，人，船，房子",
+   "seed": 4242,
+   "date": "2026-10-30",
+   "use_in_video": "escalado, ralentizado ×0,6 y en vaivén; detrás del logotipo (vertical) y en todo el fondo (horizontal)",
+   "file": "encuentro_v (544 × 960)",
+   "size": [
+    544,
+    960
+   ],
+   "prompt": "Static locked-off camera with a very slow gentle push-in. The two rivers flow calmly side by side, soft ripples and glittering sunlight on the water surface, clouds drift slowly, jungle canopy sways slightly in the breeze. Pristine nature, calm and serene.",
+   "reference_images": [
+    "Fondo del concepto A (Z-Image, generado por nosotros): encuentro_1088x1920_808.png"
+   ],
+   "start_image_provenance": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Aerial golden hour view of the Meeting of the Waters in the Amazon: a dark tea-black river and a sandy beige river flowing side by side without mixing, a sharp two-color line, lush rainforest banks, puffy clouds. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 808,
+    "size": [
+     1088,
+     1920
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "encuentro_1088x1920_808.png"
+   }
+  },
+  {
+   "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080, --use-sage-attention)",
+   "model": "Wan 2.2 14B imagen a vídeo, fp8 (Comfy-Org/Wan_2.2_ComfyUI_Repackaged: wan2.2_i2v_high_noise_14B_fp8_scaled + low_noise), LoRA lightx2v 4 pasos",
+   "license": "Apache 2.0",
+   "text_encoder": "umt5_xxl_fp8_e4m3fn_scaled",
+   "vae": "wan_2.1_vae",
+   "sampler": "euler/simple, 4 pasos (2 + 2), cfg 1, shift 5; 81 fotogramas a 16 fps",
+   "negative_prompt": "色调艳丽，过曝，静态，细节模糊不清，字幕，文字，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，畸形的，杂乱的背景，人物，人，船，房子",
+   "seed": 4242,
+   "date": "2026-10-30",
+   "use_in_video": "escalado, ralentizado ×0,6 y en vaivén; detrás del logotipo (vertical) y en todo el fondo (horizontal)",
+   "file": "amanecer_h (960 × 544)",
+   "size": [
+    960,
+    544
+   ],
+   "prompt": "Static locked-off camera with a very slow gentle push-in. Golden sunrise over the calm wide river, glittering light on the water ripples, light rays shimmer, clouds drift slowly, palm silhouettes sway slightly in the breeze. Pristine nature, calm and serene.",
+   "reference_images": [
+    "Fondo del gráfico de funciones del concepto A (Z-Image, generado por nosotros), recortado a 16:9: amanecer_1536x768_808.png"
+   ],
+   "start_image_provenance": {
+    "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+    "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+    "text_encoder": "qwen_3_4b",
+    "vae": "ae",
+    "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+    "prompt": "Golden sunrise over a calm wide Amazon river, palm tree silhouettes on both banks, light rays through clouds, glittering water. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+    "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+    "seed": 808,
+    "size": [
+     1536,
+     768
+    ],
+    "reference_images": [],
+    "date": "2026-10-30",
+    "file": "amanecer_1536x768_808.png"
+   }
+  }
+ ],
+ "logo": "docs/art/marca-oficial/v2/out/png/logo-vertical-oscuro.png y logo-horizontal-oscuro.png (identidad v2, D-045)",
+ "font": "Baloo 2 ExtraBold (OFL), Assets/_Project/Art/Fonts/Baloo2-ExtraBold.ttf",
+ "audio": {
+  "music": "Assets/_Project/Audio/music/menu.wav (mus_menu, CC0, entrega 1), 0-30 s con fundidos",
+  "sfx": [
+   "sfx_fill.wav a 8,05 s (carga del nivel)",
+   "sfx_confetti.wav a 27,3 s (victoria)"
+  ],
+  "license": "CC0 (audio_manifest.json)",
+  "voice": "ninguna"
+ },
+ "assembly": "Pillow + FFmpeg n9.0 (libx264 CRF 17) en el equipo de Spark; scripts fuera del repositorio",
+ "items": [
+  {
+   "file": "tintalu-es-419-vertical-30s.mp4",
+   "sha256": "9a76a5156ee6229f5213b1349bd90b45ffd65902723a135fdb4cae1004ce45ca",
+   "bytes": 12308893,
+   "size": [
+    1080,
+    1920
+   ],
+   "fps": 30,
+   "duration_s": 30.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "es-419",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 14.3,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 25.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 5.25,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 2.1,
+     "speed": 1.0,
+     "text": "Ordenar agua"
+    },
+    {
+     "shot": "marea",
+     "start_s": 15.0,
+     "end_s": 19.0,
+     "source": "v_marea_es.mp4",
+     "source_in_s": 0.6,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "muelle",
+     "start_s": 19.0,
+     "end_s": 23.0,
+     "source": "v_lobby_es.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "mapa",
+     "start_s": 23.0,
+     "end_s": 27.0,
+     "source": "v_mapa_es.mp4",
+     "source_in_s": 3.5,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "victoria",
+     "start_s": 27.0,
+     "end_s": 28.5,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 30.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "cierre",
+     "start_s": 28.5,
+     "end_s": 30.0,
+     "source": null,
+     "source_in_s": null,
+     "speed": 1.0,
+     "text": "Sin wifi, a tu ritmo"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-es-419-vertical-15s.mp4",
+   "sha256": "a426b10f59d839f0bc85df1b5502287ad96241b260b6b815e11b175aa4dba448",
+   "bytes": 6391559,
+   "size": [
+    1080,
+    1920
+   ],
+   "fps": 30,
+   "duration_s": 15.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "es-419",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 14.3,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 25.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 5.25,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 2.1,
+     "speed": 1.0,
+     "text": "Ordenar agua"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-es-419-horizontal-30s.mp4",
+   "sha256": "4a861ed63f836bea5a91da5d0c15de99b362db1710af078f06eee313bcf46961",
+   "bytes": 20004922,
+   "size": [
+    1920,
+    1080
+   ],
+   "fps": 30,
+   "duration_s": 30.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "es-419",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 14.3,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 25.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 5.25,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 2.1,
+     "speed": 1.0,
+     "text": "Ordenar agua"
+    },
+    {
+     "shot": "marea",
+     "start_s": 15.0,
+     "end_s": 19.0,
+     "source": "v_marea_es.mp4",
+     "source_in_s": 0.6,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "muelle",
+     "start_s": 19.0,
+     "end_s": 23.0,
+     "source": "v_lobby_es.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "mapa",
+     "start_s": 23.0,
+     "end_s": 27.0,
+     "source": "v_mapa_es.mp4",
+     "source_in_s": 3.5,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "victoria",
+     "start_s": 27.0,
+     "end_s": 28.5,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 30.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "cierre",
+     "start_s": 28.5,
+     "end_s": 30.0,
+     "source": null,
+     "source_in_s": null,
+     "speed": 1.0,
+     "text": "Sin wifi, a tu ritmo"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-es-419-horizontal-15s.mp4",
+   "sha256": "9807dac628cd9bd279c8771444b438544c1f183d350dd4ec6c3b8dbcd547fe74",
+   "bytes": 10160701,
+   "size": [
+    1920,
+    1080
+   ],
+   "fps": 30,
+   "duration_s": 15.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "es-419",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 14.3,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 25.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 5.25,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_es.mp4",
+     "source_in_s": 2.1,
+     "speed": 1.0,
+     "text": "Ordenar agua"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-en-vertical-30s.mp4",
+   "sha256": "6fdedb95a3154deadf9211c124c578a67e63618588cb2be31d4fcbb97daba22f",
+   "bytes": 12201377,
+   "size": [
+    1080,
+    1920
+   ],
+   "fps": 30,
+   "duration_s": 30.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "en",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 14.06,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 24.59,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 5.15,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": "Water sort"
+    },
+    {
+     "shot": "marea",
+     "start_s": 15.0,
+     "end_s": 19.0,
+     "source": "v_marea_en.mp4",
+     "source_in_s": 0.6,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "muelle",
+     "start_s": 19.0,
+     "end_s": 23.0,
+     "source": "v_lobby_en.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "mapa",
+     "start_s": 23.0,
+     "end_s": 27.0,
+     "source": "v_mapa_en.mp4",
+     "source_in_s": 3.5,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "victoria",
+     "start_s": 27.0,
+     "end_s": 28.5,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 29.51,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "cierre",
+     "start_s": 28.5,
+     "end_s": 30.0,
+     "source": null,
+     "source_in_s": null,
+     "speed": 1.0,
+     "text": "Offline, at your pace"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-en-vertical-15s.mp4",
+   "sha256": "708ecb40d83facbfa6a501a012c01c8ae4bf34c7f59f6b0912b97ee196176cca",
+   "bytes": 6050227,
+   "size": [
+    1080,
+    1920
+   ],
+   "fps": 30,
+   "duration_s": 15.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "en",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 14.06,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 24.59,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 5.15,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": "Water sort"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-en-horizontal-30s.mp4",
+   "sha256": "727050d19fe7f46235df8fad03001198bf37bf7702ba4db1a6de6afe8f1dbcc8",
+   "bytes": 19906590,
+   "size": [
+    1920,
+    1080
+   ],
+   "fps": 30,
+   "duration_s": 30.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "en",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 14.06,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 24.59,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 5.15,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": "Water sort"
+    },
+    {
+     "shot": "marea",
+     "start_s": 15.0,
+     "end_s": 19.0,
+     "source": "v_marea_en.mp4",
+     "source_in_s": 0.6,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "muelle",
+     "start_s": 19.0,
+     "end_s": 23.0,
+     "source": "v_lobby_en.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "mapa",
+     "start_s": 23.0,
+     "end_s": 27.0,
+     "source": "v_mapa_en.mp4",
+     "source_in_s": 3.5,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "victoria",
+     "start_s": 27.0,
+     "end_s": 28.5,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 29.51,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "cierre",
+     "start_s": 28.5,
+     "end_s": 30.0,
+     "source": null,
+     "source_in_s": null,
+     "speed": 1.0,
+     "text": "Offline, at your pace"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-en-horizontal-15s.mp4",
+   "sha256": "6dbf02c226e10031f41e216e052e45bf32a17e3dbcefda19415e1ee3976c3d65",
+   "bytes": 9915565,
+   "size": [
+    1920,
+    1080
+   ],
+   "fps": 30,
+   "duration_s": 15.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "en",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 14.06,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 24.59,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 5.15,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_en.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": "Water sort"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-pt-BR-vertical-30s.mp4",
+   "sha256": "b41e767f161cdf7d175d2fd9a04bebb35760ed158071c57a69ea52ecf34f080f",
+   "bytes": 12185213,
+   "size": [
+    1080,
+    1920
+   ],
+   "fps": 30,
+   "duration_s": 30.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "pt-BR",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 13.99,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 24.44,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 5.15,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": "Classificar água"
+    },
+    {
+     "shot": "marea",
+     "start_s": 15.0,
+     "end_s": 19.0,
+     "source": "v_marea_pt.mp4",
+     "source_in_s": 0.6,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "muelle",
+     "start_s": 19.0,
+     "end_s": 23.0,
+     "source": "v_lobby_pt.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "mapa",
+     "start_s": 23.0,
+     "end_s": 27.0,
+     "source": "v_mapa_pt.mp4",
+     "source_in_s": 3.5,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "victoria",
+     "start_s": 27.0,
+     "end_s": 28.5,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 29.32,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "cierre",
+     "start_s": 28.5,
+     "end_s": 30.0,
+     "source": null,
+     "source_in_s": null,
+     "speed": 1.0,
+     "text": "Sem wi-fi, no seu ritmo"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-pt-BR-vertical-15s.mp4",
+   "sha256": "f7660543a553ec27f322ff01aef4f8c6369d62ecb81c453f45caa735b8fcfa93",
+   "bytes": 6106332,
+   "size": [
+    1080,
+    1920
+   ],
+   "fps": 30,
+   "duration_s": 15.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "pt-BR",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 13.99,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 24.44,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 5.15,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": "Classificar água"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-pt-BR-horizontal-30s.mp4",
+   "sha256": "11cba1498fa866372795fc281b1d1b85b3432050e8a8689735eb87d7df1fe6b3",
+   "bytes": 19960738,
+   "size": [
+    1920,
+    1080
+   ],
+   "fps": 30,
+   "duration_s": 30.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "pt-BR",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 13.99,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 24.44,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 5.15,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": "Classificar água"
+    },
+    {
+     "shot": "marea",
+     "start_s": 15.0,
+     "end_s": 19.0,
+     "source": "v_marea_pt.mp4",
+     "source_in_s": 0.6,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "muelle",
+     "start_s": 19.0,
+     "end_s": 23.0,
+     "source": "v_lobby_pt.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "mapa",
+     "start_s": 23.0,
+     "end_s": 27.0,
+     "source": "v_mapa_pt.mp4",
+     "source_in_s": 3.5,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "victoria",
+     "start_s": 27.0,
+     "end_s": 28.5,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 29.32,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "cierre",
+     "start_s": 28.5,
+     "end_s": 30.0,
+     "source": null,
+     "source_in_s": null,
+     "speed": 1.0,
+     "text": "Sem wi-fi, no seu ritmo"
+    }
+   ]
+  },
+  {
+   "file": "tintalu-pt-BR-horizontal-15s.mp4",
+   "sha256": "27c1830be6cf39176800d495ac72e7baf0fbcd90f26bb43d6978630fa48f674c",
+   "bytes": 9926275,
+   "size": [
+    1920,
+    1080
+   ],
+   "fps": 30,
+   "duration_s": 15.0,
+   "codec": "H.264 (yuv420p) + AAC 48 kHz estéreo, -16 LUFS",
+   "locale": "pt-BR",
+   "timeline": [
+    {
+     "shot": "vertido",
+     "start_s": 0.0,
+     "end_s": 3.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 13.99,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "encadenados",
+     "start_s": 3.0,
+     "end_s": 8.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 24.44,
+     "speed": 1.0,
+     "text": null
+    },
+    {
+     "shot": "llenar_y_tenir",
+     "start_s": 8.0,
+     "end_s": 12.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 5.15,
+     "speed": 0.5,
+     "text": null
+    },
+    {
+     "shot": "intro_marca",
+     "start_s": 12.0,
+     "end_s": 15.0,
+     "source": "v_full42_pt.mp4",
+     "source_in_s": 2.0,
+     "speed": 1.0,
+     "text": "Classificar água"
+    }
+   ]
+  }
+ ]
+}

@@ -8,6 +8,28 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ## Gráficos de la ficha de Play (D-065)
 
+### 2026-10-30 · Fase 3, el vídeo de la ficha (`spark/tienda-graficos`): HECHO
+
+- **Entrega:** `docs/store-listing/video/`, con `README.md` (guion y preguntas) y `manifest.json`.
+  - 12 MP4: 30 s y el corte de 15 s, en horizontal 1920 × 1080 (el de Play) y en vertical 1080 × 1920, en es-419, en y pt-BR.
+  - H.264 + AAC a 30 fps y −16 LUFS, de 6 a 20 MB cada uno.
+- **Contenido:** gameplay real del teléfono, sin voz:
+  - el nivel 42: vertido, encadenados, Llenar y teñir y victoria;
+  - la intro de la marca con el descriptor;
+  - la Marea en un Difícil, el muelle, el Mapa;
+  - el cierre con el logotipo v2.
+  - La IA solo anima los dos fondos del concepto A (Wan 2.2 i2v).
+- **Tomas nuevas en el teléfono** (12, con `screenrecord`), en modo demo.
+  - **Incidencia:** en las primeras tomas del muelle y el Mapa salieron notificaciones de WhatsApp. Se borraron al momento, sin usarlas, y se repitieron con No molestar, que activó el dueño.
+  - **Al terminar:** el modo demo quedó desactivado. No molestar lo apaga el dueño. El perfil del juego no cambió respecto a la fase 2.
+- **Preguntas [P], con la recomendada aplicada** (detalle en el README):
+  - **Q-GV-1:** la música es `mus_menu` (CC0), que el encargo admite; se cambia cuando haya pista con cesión total. Hay que mirar Content ID al subirlo.
+  - **Q-GV-2:** 30 s más el corte de 15 s.
+  - **Q-GV-3:** el cierre usa «Sin wifi, a tu ritmo», sin imperativo.
+  - **Q-GV-4:** el horizontal para Play.
+- **Cómputo:** 2 vídeos de Wan 2.2 en la RTX 5080 (~2,3 min de GPU). El montaje, unos 2 min por idioma en el Spark.
+- **Siguiente:** el dueño los mira, los sube a YouTube y pega el enlace en Play Console.
+
 ### 2026-10-30 · Elección del dueño: A como ficha, B y C como variantes de prueba
 
 - **Decisión del dueño (Q-GT-2 resuelta, la recomendada):** el concepto **A «Gameplay héroe»** es la ficha principal; **B** y **C** quedan como variantes de una prueba de ficha (experimento de Play Console) después del lanzamiento.
