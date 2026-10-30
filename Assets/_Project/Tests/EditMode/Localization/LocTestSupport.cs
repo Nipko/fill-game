@@ -14,9 +14,11 @@ namespace AF.Tests.EditMode
         private readonly string _locale;
         private readonly bool _showUnapproved;
         private readonly string? _numberTag;
+        private readonly string? _numberCountry;
 
-        private LocStateSnapshot(bool configured, LocCatalog catalog, string locale, bool showUnapproved, string? numberTag)
+        private LocStateSnapshot(bool configured, LocCatalog catalog, string locale, bool showUnapproved, string? numberTag, string? numberCountry)
         {
+            _numberCountry = numberCountry;
             _configured = configured;
             _catalog = catalog;
             _locale = locale;
@@ -26,14 +28,14 @@ namespace AF.Tests.EditMode
 
         public static LocStateSnapshot Take()
         {
-            return new LocStateSnapshot(Loc.IsConfigured, Loc.Catalog, Loc.Locale, Loc.ShowUnapproved, Loc.RequestedNumberTag);
+            return new LocStateSnapshot(Loc.IsConfigured, Loc.Catalog, Loc.Locale, Loc.ShowUnapproved, Loc.RequestedNumberTag, Loc.NumberCountry);
         }
 
         public void Restore()
         {
             if (_configured)
             {
-                Loc.Configure(_catalog, _locale, _showUnapproved, _numberTag);
+                Loc.Configure(_catalog, _locale, _showUnapproved, _numberTag, _numberCountry);
             }
             else
             {

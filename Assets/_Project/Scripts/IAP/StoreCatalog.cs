@@ -9,8 +9,9 @@ namespace AF.IAP
 {
     /// <summary>
     /// Precio en una moneda, con el importe de 05 §4.2 y los decimales de la moneda. Se escribe con la función única de precios
-    /// (<see cref="Loc.Price"/>; D-025): código ISO 4217 e importe con los separadores de la región del teléfono, p. ej.
-    /// <c>COP 3.900</c> en es-CO y <c>COP 3,900</c> en en-US.
+    /// (<see cref="Loc.Price"/>; D-025): código ISO 4217 e importe con los separadores del idioma del juego y, en
+    /// español, del país (observación 22 de la jornada 6), p. ej. <c>COP 3.900</c> en pt-BR o en es-419 en Colombia y <c>COP 3,900</c>
+    /// en en.
     /// </summary>
     public readonly struct LocalPrice : IEquatable<LocalPrice>
     {

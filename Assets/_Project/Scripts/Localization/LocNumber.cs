@@ -50,14 +50,17 @@ namespace AF.Localization
     /// de .NET [NV], y así el formato no depende de la cultura del equipo.
     /// <list type="bullet">
     /// <item>«1.234,5»: es-CO, es-AR, es-ES, pt-BR, de y tr.</item>
-    /// <item>«1,234.5»: es-419, es-MX, es-PE, en y ja; y es-US, es-GT, es-HN, es-NI, es-PA, es-SV, es-DO, es-PR, es-CU, es-BZ
-    /// y es-BR.</item>
+    /// <item>«1,234.5»: es-419, es-MX, es-PE, en y ja; y es-US, es-GT, es-HN, es-NI, es-PA, es-SV, es-DO, es-PR, es-CU y
+    /// es-BZ.</item>
     /// <item>«1 234,5» con U+00A0: fr, ru, pt-PT y es-CR (en francés, U+202F se cambia por U+00A0; Q9-A).</item>
     /// </list>
     /// Las filas de español son todas las regiones es-* de ICU cuyo formato no es el de es-CO, medidas con .NET 10.0.13 e ICU
     /// 72.1 (Windows 11, compilación 26200) el 2026-10-14, como la tabla de la propuesta de idiomas §3.6 [V en .NET; en el
     /// teléfono, NV: el ICU de Android puede traer otro CLDR]. Las demás regiones de español de ICU (es-AR, es-BO, es-CL, es-EC,
-    /// es-ES, es-GQ, es-PH, es-PY, es-UY y es-VE) escriben como es-CO.
+    /// es-ES, es-GQ, es-PH, es-PY, es-UY y es-VE) escriben como es-CO; y es-BR también, por decisión del dueño (observación 22
+    /// de la jornada 6, 2026-10-30: el español en Brasil, con el punto de miles de Brasil).
+    /// <para>Qué fila se pide la decide <see cref="LocLocale.NumberTagFor(string, string)"/>: el idioma del juego y, en español, el
+    /// país (observación 22 de la jornada 6), nunca <c>CultureInfo.CurrentCulture</c> ni la región del teléfono por sí sola.</para>
     /// Un idioma sin región toma su fila por defecto: es → es-CO [P] (lo de hoy, «1.000»), pt → pt-BR y el resto, la de su
     /// idioma. Una región que no está en la tabla toma también la de su idioma (es-CL → es-CO, que coincide con ICU; pt-AO →
     /// pt-BR [P]); un idioma que no está, la de en [P]. Siempre agrupa desde 4 cifras («1.000»), como el glosario §10.
@@ -98,7 +101,9 @@ namespace AF.Localization
             new LocNumberFormat("ru", NoBreakSpace, ','),
             new LocNumberFormat("pt-PT", NoBreakSpace, ','),
 
-            // Regiones de español que no escriben como es-CO (ICU 72.1 desde .NET 10.0.13, 2026-10-14; en el teléfono, NV).
+            // Regiones de español que no escriben como es-CO (ICU 72.1 desde .NET 10.0.13, 2026-10-14; en el teléfono, NV). es-BR
+            // (ICU: «1,234.5») ya no tiene fila: el dueño fija el punto de miles para Brasil (observación 22 de la jornada 6,
+            // decisión del dueño del 2026-10-30) y cae en es-CO.
             new LocNumberFormat("es-US", ',', '.'),
             new LocNumberFormat("es-GT", ',', '.'),
             new LocNumberFormat("es-HN", ',', '.'),
@@ -109,7 +114,6 @@ namespace AF.Localization
             new LocNumberFormat("es-PR", ',', '.'),
             new LocNumberFormat("es-CU", ',', '.'),
             new LocNumberFormat("es-BZ", ',', '.'),
-            new LocNumberFormat("es-BR", ',', '.'),
             new LocNumberFormat("es-CR", NoBreakSpace, ','),
         };
 

@@ -545,6 +545,69 @@ namespace AF.Tests.PlayMode
             return false;
         }
 
+        /// <summary>
+        /// Los miles según el idioma y el país (observación 22 de la jornada 6, decisión del dueño del 2026-10-30): con el teléfono
+        /// en en-US (la región que ponía «13,040» en todos los idiomas) y la UI en pt-BR, el saldo del inicio y el del Mercado dicen
+        /// «13.040» y ningún botón del Mercado lleva la coma de miles; en es-419, el país de la cuenta de Play manda sobre la región
+        /// del teléfono (Colombia «13.040», México «13,040»); en en, «13,040».
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Balance_ThousandsFollowTheLanguage_AndInSpanishTheCountry()
+        {
+            try
+            {
+                Profile pt = ProfileAt(26);
+                pt.Wallet.Seeds = 13040;
+                pt.Settings.Language = LocLocale.PortugueseBrazil;
+                LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("en-US");
+                yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(pt));
+                GameBootstrap boot = GameBootstrap.Current!;
+                yield return null;
+                Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.PortugueseBrazil));
+                Assert.That(Loc.NumberFormat.Tag, Is.EqualTo("pt-BR"), "pt-BR, aunque el teléfono esté en en-US");
+                Assert.That(boot.Lobby!.SeedsShown, Is.EqualTo(13040));
+                Assert.That(boot.Lobby.SeedsText, Is.EqualTo("13.040"), "el saldo del inicio en pt-BR");
+
+                Assert.That(boot.SetUpMarket(), Is.True);
+                boot.TickMarket(16f);
+                Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
+                MarketScreen market = boot.Market!;
+                Assert.That(market.SeedsText, Is.EqualTo("13.040"), "el saldo del Mercado en pt-BR");
+                for (int i = 0; i < market.Rows.Count; i++)
+                {
+                    Assert.That(market.RowButtonText(i), Does.Not.Match(@"\d,\d{3}(?!\d)"), "pt-BR sin coma de miles: " + market.RowButtonText(i));
+                }
+
+                foreach ((string? play, string device, string expected) in new[] { ("CO", "es-MX", "13.040"), ((string?)null, "es-MX", "13,040"), ("MX", "es-AR", "13,040"), ((string?)null, "es", "13.040") })
+                {
+                    Profile es = ProfileAt(26);
+                    es.Wallet.Seeds = 13040;
+                    GameBootstrap.PlayAccountCountryOverride = new MemoryPlayAccountCountry(play);
+                    LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale(device);
+                    yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(es));
+                    boot = GameBootstrap.Current!;
+                    yield return null;
+                    string at = " (Play " + (play ?? "-") + ", teléfono " + device + ")";
+                    Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.SourceLocale), at);
+                    Assert.That(boot.Lobby!.SeedsText, Is.EqualTo(expected), "es-419" + at);
+                }
+
+                Profile en = ProfileAt(26);
+                en.Wallet.Seeds = 13040;
+                en.Settings.Language = LocLocale.English;
+                GameBootstrap.PlayAccountCountryOverride = new MemoryPlayAccountCountry("BR");
+                LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("pt-BR");
+                yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(en));
+                boot = GameBootstrap.Current!;
+                yield return null;
+                Assert.That(boot.Lobby!.SeedsText, Is.EqualTo("13,040"), "en siempre con coma, aunque el país sea Brasil");
+            }
+            finally
+            {
+                GameBootstrap.PlayAccountCountryOverride = null;
+            }
+        }
+
         internal static Profile ProfileAt(int nextLevel)
         {
             Profile profile = Wallet.NewProfile(new ManualClock(T0));

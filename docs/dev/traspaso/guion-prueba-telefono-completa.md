@@ -996,6 +996,11 @@ Recorre **cada fila** de Ajustes y comprueba que hace lo que dice, al momento y 
    - con TalkBack (bloque 17) se leen el título, la frase y los dos botones;
    - en el primer arranque, la pantalla de edad no pide confirmación.
 3. **Idiomas:** cambia a cada uno y recorre el inicio, un nivel, la victoria, el Mapa, la Bitácora, el Reto, la Liga, el Mercado (con la tienda falsa) y Ajustes. **Ningún texto vacío, cortado o en otro idioma.** Con en-XA, todo entre corchetes y nada recortado.
+   - **Los miles según el idioma y el país** (observación 22 de la jornada 6, decisión del dueño del 2026-10-30; carril `tanda6/fx-j6d-miles`). Con `--ei af_seeds 13040` y la tienda falsa, mira el saldo del inicio y del Mercado, los premios («1.000 sementes»), los precios simulados y la Liga:
+     - **pt-BR:** siempre punto de miles, «13.040», «1.000 sementes», «COP 5.900», aunque el teléfono esté en inglés o la SIM sea de EE. UU.;
+     - **en:** siempre coma, «13,040», «COP 5,900»;
+     - **es-419:** según el país de la cuenta de Play y, si el juego aún no lo sabe, la región del teléfono. En el teléfono de pruebas (cuenta y SIM de EE. UU.) sale «13,040», que es lo correcto para EE. UU. Para ver el punto: `pm clear`, pon el idioma del teléfono en «Español (Argentina)» o «Español (Colombia)» y abre el juego **una vez** (el primer arranque aún no sabe el país de Play): «13.040». Con «Español (México)», «13,040». Desde el segundo arranque manda el país de Play guardado;
+     - la fila elegida sale en `AF_STATE loc` (`numbers`: `pt-BR`, `en`, `es-US`, `es-AR`…). Captura `b13/miles-{es-419,en,pt-BR}.png` y anota `numbers` en cada una. Los precios de Play reales también usan este formato: el juego los compone con la moneda y los micros, no con la cadena de Play (D-025).
 4. **Eliminar cuenta: se hace al final de la prueba, en el bloque 21**, no aquí. Aquí solo se abre, se ve la espera visible y la nota de Play Juegos, y se cancela.
 
 ## 14. Notificaciones (≈ 45 min, más esperas)

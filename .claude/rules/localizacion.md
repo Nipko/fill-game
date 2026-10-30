@@ -23,6 +23,7 @@ Valen para todo texto que el jugador ve u oye: UI, tutorial, tienda, Ajustes, mo
 - **Números con `Loc.Number` o, en lo que se actualiza por fotograma, con `Loc.WriteNumber`** (sin asignaciones). Hasta que exista `AF.Localization`, con la función única de `UiText`. Nunca un separador fijo ni un formato propio.
   - En los textos largos, toda cifra con separador de miles o con decimales va con `{n}` y el valor en la columna `args` [P] de `facts.csv` (D-018, Q8-A).
   - Sistema métrico sin convertir y U+00A0 entre la cifra y la unidad (08 §4.7).
+  - **Separadores según el idioma y el país** (observación 22 de la jornada 6, decisión del dueño del 2026-10-30; GDD 08 §4.7): en «1,000»; pt-BR «1.000»; es-419 según el país (punto en CO, AR, CL, UY, PY, VE, EC, BO y BR; coma en MX, PE, GT, HN, NI, PA, SV, DO, PR, CU y US; país desconocido, punto). Lo decide `LocLocale.NumberTagFor` con la tabla de `LocNumber`, nunca `CultureInfo.CurrentCulture` ni la región del teléfono por sí sola; el país es el de la cuenta de Play (D-057) o, sin él, la región del teléfono (`LocLocale.NumberCountry`). `Loc.SetNumberTag` fuerza una fila solo en tests y desarrollo.
 - **Precios solo como los da la tienda** (`IStoreService` de AF.IAP; la real los da ya formateados): la UI nunca calcula ni formatea un precio.
 - **Sin `ToUpper` ni `ToLower`** (tampoco sus variantes `Invariant`) sobre texto visible: si una etiqueta va en mayúsculas, se escribe así en la tabla.
 - **La analítica y Remote Config llevan claves o ID, nunca texto** (por ejemplo, el `fact_id` de `af_river_fact_shown`).

@@ -725,6 +725,9 @@ namespace AF.UI
         /// <summary>Semillas que muestra el contador.</summary>
         public int SeedsShown => _seedsShown;
 
+        /// <summary>El texto del contador de semillas tal como está en la etiqueta (tests; observación 22 de la jornada 6).</summary>
+        public string SeedsText => _seedsText.text;
+
         /// <summary>Canoas que muestra el contador («n» de «n/5»; −1 con Canoas infinitas o si no se ve).</summary>
         public int CanoesCountShown => _canoesModeShown == 2 ? -1 : _canoesCountShown;
 
