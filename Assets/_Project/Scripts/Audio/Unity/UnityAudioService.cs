@@ -359,6 +359,10 @@ namespace AF.Audio.Unity
                 AudioClip? toada = EffectClip(index, out _);
                 _mix.ToadaStarted(toada != null ? toada.length * 1000f : AudioMix.ToadaDuckMs);
             }
+            else if (id == SfxId.Seal && _mix.SfxAudible)
+            {
+                _mix.SealStarted(); // la música baja un poco mientras suena el sellado (observación 23 de la jornada 6)
+            }
 
             PlayIndex(index, id, tint);
         }
@@ -690,11 +694,26 @@ namespace AF.Audio.Unity
                 ApplyFocus(); // un aviso de Android (una alarma, una llamada, otra app de música) desde el último fotograma
             }
 
+            _mix.SetPouring(AnyPourFlowing()); // la música baja un poco mientras cae un chorro (observación 23 de la jornada 6)
             _mix.Tick(dtMs);
             CompleteBank();
             PollRinger(dtMs);
             UpdateVoices(dtMs);
             UpdateBackground(dtMs);
+        }
+
+        // Algún chorro cae ahora (pedido y sin cortar).
+        private bool AnyPourFlowing()
+        {
+            for (int i = 0; i < PourVoices; i++)
+            {
+                if (_pourKey[i] >= 0 && !_pourStopping[i])
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void StopEffects()

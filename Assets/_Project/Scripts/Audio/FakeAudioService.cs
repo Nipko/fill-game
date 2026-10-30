@@ -230,6 +230,10 @@ namespace AF.Audio
             {
                 Mix.ToadaStarted();
             }
+            else if (id == SfxId.Seal && Mix.SfxAudible)
+            {
+                Mix.SealStarted();
+            }
 
             _events.Add(new AudioEvent(AudioEventKind.Sfx, id, tint, default, Mix.SfxAudible));
             ReportMusic();
@@ -240,7 +244,9 @@ namespace AF.Audio
         {
             ActivePours++;
             LastPourLevel = level;
+            Mix.SetPouring(true);
             _events.Add(new AudioEvent(AudioEventKind.PourBegin, SfxId.PourLoop, voice, default, Mix.SfxAudible));
+            ReportMusic();
         }
 
         /// <inheritdoc />
@@ -253,7 +259,9 @@ namespace AF.Audio
         public void PourEnd(int voice)
         {
             ActivePours = ActivePours > 0 ? ActivePours - 1 : 0;
+            Mix.SetPouring(ActivePours > 0);
             _events.Add(new AudioEvent(AudioEventKind.PourEnd, SfxId.PourLoop, voice, default, Mix.SfxAudible));
+            ReportMusic();
         }
 
         /// <inheritdoc />

@@ -206,8 +206,9 @@ namespace AF.Tests.EditMode
                 Assert.That(Bank.GainDb(i), Is.EqualTo(peak).Within(0.06f), "gain_db de la sonda");
             }
 
-            // La jerarquía de la lista: el toque, 22 dB por debajo de la toada (en el laboratorio quedaba en unos 4 dB).
-            Assert.That(AudioAnalysis.PeakDb(Bank.Pcm((int)SfxId.WinToada)) - AudioAnalysis.PeakDb(Bank.Pcm((int)SfxId.Select)), Is.EqualTo(22f).Within(0.5f));
+            // La jerarquía de la lista: el toque, 10 dB por debajo de la toada (22 dB hasta la observación 23 de la jornada 6, que
+            // lo dejaba tapado por la música; en el laboratorio quedaba en unos 4 dB).
+            Assert.That(AudioAnalysis.PeakDb(Bank.Pcm((int)SfxId.WinToada)) - AudioAnalysis.PeakDb(Bank.Pcm((int)SfxId.Select)), Is.EqualTo(10f).Within(0.5f));
             Assert.That(AudioAnalysis.PeakDb(Bank.Pcm((int)SfxId.Confetti)), Is.EqualTo(-20f).Within(1.5f), "el confeti sube a su objetivo");
         }
 

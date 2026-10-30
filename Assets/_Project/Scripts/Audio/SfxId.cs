@@ -231,8 +231,9 @@ namespace AF.Audio
 
     /// <summary>
     /// Catálogo de los 61 efectos con su nivel objetivo (la columna dBFS del catálogo del laboratorio, que copia la jerarquía de
-    /// Magic Sort de la lista: gestos a −36/−27, mecánicas y avisos a −24/−18, premios a −17/−12; 07 §9.4: picos ≤ −6 dBTP) y la
-    /// escala de las 14 frutas (07 §3; tabla de la lista). Sin asignaciones tras el arranque.
+    /// Magic Sort de la lista: gestos a −24/−22 desde la observación 23 de la jornada 6 (antes −36/−27, tapados por la música),
+    /// mecánicas y avisos a −24/−18, premios a −17/−12; 07 §9.4: picos ≤ −6 dBTP) y la escala de las 14 frutas (07 §3; tabla de
+    /// la lista). Sin asignaciones tras el arranque.
     /// </summary>
     public static class SfxCatalog
     {
@@ -266,16 +267,16 @@ namespace AF.Audio
         private static readonly SfxEntry[] Entries =
         {
             // §1. Tablero y vertido (13)
-            new SfxEntry(SfxId.Select, "sfx_select", -36f, false, true, true),
-            new SfxEntry(SfxId.PourStart, "sfx_pour_start", -30f, false, true, false),
-            new SfxEntry(SfxId.PourLoop, "sfx_pour_loop", -29f, false, false, false),
-            new SfxEntry(SfxId.PourEnd, "sfx_pour_end", -30f, false, true, false),
+            new SfxEntry(SfxId.Select, "sfx_select", -24f, false, true, true),
+            new SfxEntry(SfxId.PourStart, "sfx_pour_start", -22f, false, true, false),
+            new SfxEntry(SfxId.PourLoop, "sfx_pour_loop", -23f, false, false, false),
+            new SfxEntry(SfxId.PourEnd, "sfx_pour_end", -22f, false, true, false),
             new SfxEntry(SfxId.Illegal, "sfx_illegal", -28f, false, false, false),
             new SfxEntry(SfxId.Seal, "sfx_seal", -17f, false, false, false),
             new SfxEntry(SfxId.RiverRise, "sfx_river_rise", -26f, false, false, false),
-            new SfxEntry(SfxId.Fill, "sfx_fill", -25f, false, false, false),
-            new SfxEntry(SfxId.FruitPlip, "sfx_fruit_plip", -32f, false, true, false),
-            new SfxEntry(SfxId.Tint, "sfx_tint", -30f, false, true, true),
+            new SfxEntry(SfxId.Fill, "sfx_fill", -21f, false, false, false),
+            new SfxEntry(SfxId.FruitPlip, "sfx_fruit_plip", -23f, false, true, false),
+            new SfxEntry(SfxId.Tint, "sfx_tint", -23f, false, true, true),
             new SfxEntry(SfxId.WinToada, "sfx_win_toada", -14f, true, false, false),
             new SfxEntry(SfxId.Confetti, "sfx_confetti", -20f, false, false, false),
             new SfxEntry(SfxId.Stuck, "sfx_stuck", -20f, false, false, false),
@@ -295,8 +296,8 @@ namespace AF.Audio
             new SfxEntry(SfxId.StreakShield, "sfx_streak_shield", -19f, false, false, false),
             new SfxEntry(SfxId.CanoeLost, "sfx_canoe_lost", -21f, false, false, false),
             new SfxEntry(SfxId.CanoeBack, "sfx_canoe_back", -19f, false, false, false),
-            new SfxEntry(SfxId.UiTap, "sfx_ui_tap", -30f, false, true, false),
-            new SfxEntry(SfxId.UiBack, "sfx_ui_back", -30f, false, true, false),
+            new SfxEntry(SfxId.UiTap, "sfx_ui_tap", -24f, false, true, false),
+            new SfxEntry(SfxId.UiBack, "sfx_ui_back", -24f, false, true, false),
             new SfxEntry(SfxId.UiBuy, "sfx_ui_buy", -18f, false, false, false),
 
             // §3. Mecánicas y personajes (21)

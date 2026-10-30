@@ -185,6 +185,64 @@ namespace AF.Tests.PlayMode
             Assert.That(s.MenuPlaying, Is.False, "la alarma la pausa");
         }
 
+        [UnityTest]
+        public IEnumerator Pour_LowersTheMusic5Db_ProbeSaysDucked_AndTheFocusDuckStillApplies()
+        {
+            // Observación 23 de la jornada 6 (decisión del dueño del 2026-10-30): la música baja un poco mientras cae el chorro, con
+            // ataque de 80 ms y suelta de 300 ms tras la espera; el foco de audio sigue igual por encima.
+            var port = new FakeAudioFocusPort();
+            UnityAudioService s = Take(port);
+            DevProbe.AudioLinesInEditor = true;
+            try
+            {
+                s.SetMenuMusic();
+                yield return Wait(() => s.SynthReady && s.MenuReady && s.MenuPlaying && s.MenuVolume > 0.99f, "el tema de menú a todo volumen", 30f);
+                Assert.That(s.Mix.ActionDucked, Is.False);
+
+                s.PourBegin(0, 0.25f);
+                yield return Wait(() => s.Mix.ActionDuckAmount >= 1f, "el ataque de 80 ms", 2f);
+                yield return null;
+                Assert.That(s.Mix.Pouring, Is.True, "el chorro cae");
+                Assert.That(AudioAnalysis.ToDb(s.MenuVolume), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.2f), "la música, −5 dB");
+                Assert.That(s.Mix.SfxGain, Is.EqualTo(1f), "los efectos, enteros");
+                Assert.That(s.Mix.CurrentMusic.Ducked, Is.True);
+                if (DevProbe.Enabled)
+                {
+                    Assert.That(_probe.LastMusicLine, Does.Contain("\"ducked\":true"), "AF_STATE music con ducked al verter");
+                }
+
+                // Un aviso por encima (foco «duck»): las dos atenuaciones, como con un modal.
+                port.Push(AudioFocusState.Duck);
+                yield return null;
+                yield return null;
+                Assert.That(s.MenuVolume, Is.EqualTo(AudioMix.FocusDuckGain * s.Mix.ActionDuckGain).Within(0.01f), "el 20 % del foco, sobre el chorro");
+                port.Push(AudioFocusState.Gain);
+                yield return null;
+                yield return null;
+
+                s.PourEnd(0);
+                yield return new WaitForSecondsRealtime((AudioMix.ActionDuckHoldMs * 0.5f) / 1000f);
+                Assert.That(AudioAnalysis.ToDb(s.MenuVolume), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.2f), "sigue abajo durante la espera");
+                yield return Wait(() => !s.Mix.ActionDucked, "la suelta", 3f);
+                yield return null;
+                Assert.That(s.MenuVolume, Is.EqualTo(1f).Within(0.01f), "vuelve a su nivel");
+                if (DevProbe.Enabled)
+                {
+                    Assert.That(_probe.LastMusicLine, Does.Contain("\"ducked\":false"), "y la sonda lo cuenta");
+                }
+
+                // El sellado también la baja mientras suena.
+                s.Play(SfxId.Seal, 0);
+                yield return Wait(() => s.Mix.ActionDuckAmount >= 1f, "el ataque del sellado", 2f);
+                Assert.That(s.Mix.ActionDucked, Is.True);
+                yield return Wait(() => !s.Mix.ActionDucked, "el final del sellado", 3f);
+            }
+            finally
+            {
+                DevProbe.AudioLinesInEditor = false;
+            }
+        }
+
         private UnityAudioService Take(FakeAudioFocusPort port)
         {
             _service = UnityAudioService.Ensure();

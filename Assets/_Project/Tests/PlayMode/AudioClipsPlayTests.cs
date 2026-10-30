@@ -78,7 +78,7 @@ namespace AF.Tests.PlayMode
             Assert.That(registry.Get(AudioBank.Index(SfxId.Select, 9))!.name, Is.EqualTo("sfx_select_jenipapo"), "el 9 es el Huito (C4)");
             s.Play(SfxId.Select, 0);
             AssertSounding(s, registry.Get((int)SfxId.Select)!);
-            Assert.That(_probe.LastSfxGain, Is.EqualTo(-36f), "el pico de su ficha");
+            Assert.That(_probe.LastSfxGain, Is.EqualTo(-24f), "el pico de su ficha (observación 23 de la jornada 6: antes, −36)");
         }
 
         [UnityTest]

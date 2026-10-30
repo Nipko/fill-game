@@ -42,7 +42,7 @@ Son los sonidos que más se oyen: suenan en cada toque y cada vertido, así que 
 
 | ID | Cuándo suena | Cómo debe sonar (GDD) | Duración | Tu propuesta |
 | --- | --- | --- | --- | --- |
-| `sfx_select` | Tocar una cuia para elegirla | Toque de agua corto, afinado al color de la fruta de arriba: 14 notas de escala pentatónica, una por fruta | 0,12 s | **Gota cristalina + armónico de marimba de chonta** en la nota de la fruta superior (tabla de arriba), muy suave (−36 dBFS, como en *Magic Sort!*). Si se toca la misma cuia para bajarla, suena una variante apagada una quinta más grave (−35 dBFS). *No aplicada en el cliente:* 02 §4.1 deja la deselección sin audio y manda el GDD; queda como propuesta para el dueño (sección 9). |
+| `sfx_select` | Tocar una cuia para elegirla | Toque de agua corto, afinado al color de la fruta de arriba: 14 notas de escala pentatónica, una por fruta | 0,12 s | **Gota cristalina + armónico de marimba de chonta** en la nota de la fruta superior (tabla de arriba), suave (−24 dBFS desde la observación 23 de la jornada 6, decisión del dueño del 2026-10-30; antes −36, como en *Magic Sort!*, y la música lo tapaba). Si se toca la misma cuia para bajarla, suena una variante apagada una quinta más grave (−23 dBFS). *No aplicada en el cliente:* 02 §4.1 deja la deselección sin audio y manda el GDD; queda como propuesta para el dueño (sección 9). |
 | `sfx_pour_start` | Empieza el vertido | Chorro de agua que entra en vidrio | 0,2 s | **«Glup» limpio de cuello de garrafa** + primer impacto de agua fresca en vidrio (sin salpicadura ruidosa, ataque suave de 15 ms). |
 | `sfx_pour_loop` | Mientras cae el chorro | Chorro continuo; sube de tono a medida que se llena la cuia | en bucle | **Corriente ASMR de microburbujas en cavidad de vidrio** (resonancia Helmholtz que sube de 380 Hz con 1 dosis a 920 Hz con 4 dosis). En vertidos por tramo (`run`), dura exactamente lo que el chorro (0,45-0,85 s según 1-3 dosis) con ±3 % de variación orgánica para no sonar robótico. |
 | `sfx_pour_end` | Termina el vertido | Corte del chorro, última gota | 0,2 s | **Corte limpio del hilo de agua + dos gotitas finales («plic-ploc»)** que asientan el menisco en la nota de la fruta vertida. |
@@ -186,7 +186,7 @@ La música crece con el jugador: un lecho tranquilo de 60-90 s en bucle, sin rit
 - **Capas de percusión:** las del laboratorio (maracá del 25 %, madera del 50 % y tambor grave del 75 %), cada una en un bucle de 10,5 s que divide el del lecho y arranca a la vez. Entran y salen con un fundido de 1 s según las cuias selladas (la primera al sellar la primera cuia y otra cada 25 %, 07 §9.3), hasta `audio_music_percussion_layers` (2 por defecto; 08 §9 admite 0-3).
 - **Variante nocturna (Muy difícil):** el mismo pad una octava más grave y sin nada por encima de 1,3 kHz; el peso pasa al segundo armónico para que el altavoz del teléfono la siga dando: al menos una cuarta parte de su energía queda por encima de 300 Hz (−6 dB como mucho; del 27 % de Oriente al 65 % de Trapecio, frente al 54-91 % de día). Las capas no cambian: 07 §9.3 pide la variante del lecho, y las maderas una octava más graves ya no salen por ese altavoz.
 - **Tema de menú (inicio):** un bucle de 8 compases a 94 BPM: pad Do, Sol, La menor y Fa, bajo de cumbia en el 1 y el 3, maracá en corcheas con el acento a contratiempo y una frase de marimba en la pentatónica de Do. El Mercado aún no existe en el cliente: cuando exista, usa el mismo tema.
-- **Mezcla [P]:** toda la música con un pico de −20 dBFS con todas las capas (el lecho, a unos −33 dBFS RMS). Al cambiar de pieza (inicio, otro mundo o la variante nocturna), lo que suena se funde en 0,8 s. Baja 6 dB durante la toada y los modales, se calla durante los anuncios y vuelve en 0,5 s, se calla en el modo silencio del teléfono y el ajuste Música la apaga al momento.
+- **Mezcla [P]:** toda la música con un pico de −20 dBFS con todas las capas (el lecho, a unos −33 dBFS RMS). Al cambiar de pieza (inicio, otro mundo o la variante nocturna), lo que suena se funde en 0,8 s. Baja 6 dB durante la toada y los modales, y 5 dB mientras cae un chorro o suena un sellado (sección 7), se calla durante los anuncios y vuelve en 0,5 s, se calla en el modo silencio del teléfono y el ajuste Música la apaga al momento.
 - **Pendiente (07 §9.4):** si el dueño quiere seguir la letra de 07 §9.4, el lecho de música debe quedar unos 6 dB por debajo de la música completa (lecho a −26 frente a −20 LUFS). Hoy nadie lo mide: las cifras provisionales son RMS y picos en dBFS, no LUFS. Se mide cuando llegue la mezcla del compositor.
 - **Coste (Editor del escritorio x64):** se genera en un hilo de trabajo al pedirla por primera vez y solo si Música está encendida (con Música apagada no se genera nada; al encenderla, se genera entonces). El lecho y sus capas de un mundo tardan unos 170 ms y ocupan 5.426 KiB en float (1,39 millones de muestras); el tema de menú, unos 340 ms y 1.759 KiB; el agua de un mundo, unos 10 ms y 1.723 KiB; la lluvia, 861 KiB. Solo se guarda lo último de cada clase: al ir al inicio, el lecho y el agua se funden, se paran y se guardan, y al volver a un nivel del mismo mundo y variante suenan sin generarse otra vez; se sueltan al pedir otro mundo o variante. En el teléfono, por medir.
 - La sonda `AF_STATE music` y `AF_STATE ambient` está en `docs/dev/prototipo-v0.md`.
@@ -210,10 +210,10 @@ La vibración usa los efectos estándar de Android (tick y click) y se puede apa
 
 - Música a −20 LUFS, lecho de ambiente a −26 LUFS y efectos con picos de −6 dBTP como máximo; la música, 6 dB por debajo de los efectos.
 - **Jerarquía dinámica de efectos (como en *Magic Sort!*):**
-  - *Gestos continuos* (`sfx_select`, `sfx_pour_*`, `sfx_tint`, `sfx_fruit_plip`, `sfx_ui_tap`): **−36 a −27 dBFS** (suaves, nunca cansan).
+  - *Gestos continuos* (`sfx_select`, `sfx_pour_*`, `sfx_tint`, `sfx_fruit_plip`, `sfx_ui_tap`, `sfx_ui_back`) y `sfx_fill`: **−24 a −21 dBFS**, a la altura de `sfx_undo` y `sfx_stuck` y por debajo del sellado (observación 23 de la jornada 6, decisión del dueño del 2026-10-30: a −36/−27 dBFS la música los tapaba).
   - * Mecánicas, avisos y comodines* (`sfx_mech_*`, `sfx_undo`, `sfx_hint`, `sfx_stuck`): **−24 a −18 dBFS**.
   - *Premios y sellados* (`sfx_seal`, `sfx_win_toada`, `sfx_world_banner`, `sfx_basket_open`): **−17 a −12 dBFS** (contraste claro de recompensa).
-- El lecho baja 6 dB durante la toada y los avisos.
+- El lecho baja 6 dB durante la toada y los avisos, y 5 dB, con un ataque de 80 ms y una suelta de 300 ms tras 0,6 s de espera, mientras cae un chorro y mientras suena un sellado (0,46 s; observación 23 de la jornada 6, decisión del dueño del 2026-10-30): vertidos seguidos no lo hacen subir y bajar. Si coinciden, manda la atenuación más honda.
 - Sonido, Música y Vibración vienen encendidos y se apagan por separado en Ajustes.
 - Respeta el modo silencio del teléfono; todo se calla durante los anuncios y vuelve con un fundido de 0,5 s.
 - La piha solo suena en el banner de mundo, nunca en bucle.
@@ -243,12 +243,12 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
 
   | Clase | Carpetas | Carga | Compresión | Por qué |
   | --- | --- | --- | --- | --- |
-  | Efectos, notas, bucles del chorro y fauna | `sfx/`, `sfx/fruit/`, `sfx/pour/` y `amb/fauna/` | «Decompress On Load», mono y precargados | Vorbis, calidad 0,8 | ADPCM comprime fijo a unos 3,5:1, con 4 bits por muestra, y su ruido se oye como un siseo sobre los tonos puros que se apagan (las notas de fruta a −36 y −30 dBFS). Vorbis de calidad alta no deja artefactos audibles y pesa menos. Al descomprimirse al cargar, sonar no cuesta CPU |
+  | Efectos, notas, bucles del chorro y fauna | `sfx/`, `sfx/fruit/`, `sfx/pour/` y `amb/fauna/` | «Decompress On Load», mono y precargados | Vorbis, calidad 0,8 | ADPCM comprime fijo a unos 3,5:1, con 4 bits por muestra, y su ruido se oye como un siseo sobre los tonos puros que se apagan (las notas de fruta a −24 y −23 dBFS; −36 y −30 hasta la observación 23 de la jornada 6). Vorbis de calidad alta no deja artefactos audibles y pesa menos. Al descomprimirse al cargar, sonar no cuesta CPU |
   | Agua, lluvia y tema de menú | `amb/` y `music/menu.wav` | «Streaming» | Vorbis, calidad 0,4 | Una sola fuente cada uno, sin sincronía con otras |
   | Lecho, capas y variante nocturna | `music/wNN_*` | «Compressed In Memory», sin precarga: se cargan al pedir el mundo y se descargan al soltarlo | Vorbis, calidad 0,4 | No van en streaming: las 4 piezas se programan en el mismo instante y tienen que repetirse juntas a la muestra, y el streaming no lo garantiza (cada flujo arranca cuando se llena su búfer y la vuelta del bucle relee del disco) |
   | Remates | `music/stingers/` | «Compressed In Memory», precargados | Vorbis, calidad 0,4 | Son cortos y suenan sin espera |
 
-  «Normalize» se apaga a propósito: con «Force To Mono», Unity llevaría cada efecto a 0 dBFS y se perdería la mezcla de la entrega (`sfx_select` va a −36 dBFS).
+  «Normalize» se apaga a propósito: con «Force To Mono», Unity llevaría cada efecto a 0 dBFS y se perdería la mezcla de la entrega (`sfx_select` va a −24 dBFS).
 - **Vertido:** los 4 bucles `sfx_pour_loop_l1..l4` se funden según el nivel de la cuia de destino (`PourLoopSynth.LevelForDoses`: `l1` con 1 dosis … `l4` llena; posición = nivel × 3). Suenan como mucho dos vecinos, con un fundido de potencia constante, y cada uno se afina como mucho ± 2 semitonos alrededor de su punto, así que el tono sube sin escalones. Ya no se acelera hasta 2,4 veces. `sfx_pour_start` y `sfx_pour_end`, como antes.
 - **Notas de fruta:** `sfx_select` y `sfx_tint` suenan con `sfx_select_<fruta>` y `sfx_tint_<fruta>` (14 cada uno) según la fruta de arriba, sin cambio de tono por código. Sin fruta (agua, Barro o una dosis oculta), con el `sfx_select` o `sfx_tint` genérico.
 - **Ambiente:**
@@ -313,16 +313,16 @@ Las columnas «Tu propuesta» de las secciones 1-7 siguen siendo el encargo para
 
 | ID | Pico (dBFS) | Cola | Dónde suena hoy |
 | --- | --- | --- | --- |
-| `sfx_select` | −36 | ≤ 0,2 s | Al elegir una cuia, con la nota de su fruta de arriba (al bajarla no suena: 02 §4.1) |
-| `sfx_pour_start` | −30 | ≤ 0,2 s | Cuando el chorro empieza a caer |
-| `sfx_pour_loop` | −29 | bucle | Solo de respaldo (AU3): mientras cae el chorro suenan los 4 bucles grabados `sfx_pour_loop_l1..l4`, fundidos por el nivel del destino |
-| `sfx_pour_end` | −30 | ≤ 0,2 s | Al cortarse el caudal |
+| `sfx_select` | −24 | ≤ 0,2 s | Al elegir una cuia, con la nota de su fruta de arriba (al bajarla no suena: 02 §4.1) |
+| `sfx_pour_start` | −22 | ≤ 0,2 s | Cuando el chorro empieza a caer |
+| `sfx_pour_loop` | −23 | bucle | Solo de respaldo (AU3): mientras cae el chorro suenan los 4 bucles grabados `sfx_pour_loop_l1..l4`, fundidos por el nivel del destino |
+| `sfx_pour_end` | −22 | ≤ 0,2 s | Al cortarse el caudal |
 | `sfx_illegal` | −28 | sin cola añadida | En cada rechazo (sin háptico) |
 | `sfx_seal` | −17 | sin cola añadida | Al empezar la tapa de cada sellado, con `haptic_seal` |
 | `sfx_river_rise` | −26 | sin cola añadida | Intro: al empezar |
-| `sfx_fill` | −25 | sin cola añadida | Intro: una por fila |
-| `sfx_fruit_plip` | −32 | ≤ 0,2 s | Intro: en cada impacto |
-| `sfx_tint` | −30 | ≤ 0,2 s | Intro: en cada racha que florece (máx. 6 a la vez) |
+| `sfx_fill` | −21 | sin cola añadida | Intro: una por fila |
+| `sfx_fruit_plip` | −23 | ≤ 0,2 s | Intro: en cada impacto |
+| `sfx_tint` | −23 | ≤ 0,2 s | Intro: en cada racha que florece (máx. 6 a la vez) |
 | `sfx_win_toada` | −14 | dosel | Al empezar la celebración, con `haptic_win` |
 | `sfx_confetti` | −20 | sin cola añadida | Con el confeti (0,5 s después) |
 | `sfx_stuck` | −20 | sin cola añadida | Al abrirse Aguas estancadas |
@@ -340,8 +340,8 @@ Las columnas «Tu propuesta» de las secciones 1-7 siguen siendo el encargo para
 | `sfx_streak_shield` | −19 | sin cola añadida | Sin gancho todavía: Hoja escudo |
 | `sfx_canoe_lost` | −21 | sin cola añadida | Fallo con canoa perdida |
 | `sfx_canoe_back` | −19 | sin cola añadida | El inicio, al volver una canoa |
-| `sfx_ui_tap` | −30 | ≤ 0,2 s | Cualquier botón cuya acción no tiene sonido propio |
-| `sfx_ui_back` | −30 | ≤ 0,2 s | Cerrar (X), Volver y Atrás de Android |
+| `sfx_ui_tap` | −24 | ≤ 0,2 s | Cualquier botón cuya acción no tiene sonido propio |
+| `sfx_ui_back` | −24 | ≤ 0,2 s | Cerrar (X), Volver y Atrás de Android |
 | `sfx_ui_buy` | −18 | sin cola añadida | Compra confirmada en la hoja de compra |
 | `sfx_mech_hoja` | −20 | sin cola añadida | Paso «se abre» de la Hoja |
 | `sfx_mech_matapi` | −19 | sin cola añadida | Sellado del Matapi |

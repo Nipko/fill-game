@@ -119,6 +119,43 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Level1_APour_DucksTheBedSoftly_AndTheProbeSaysDucked_ThenItComesBack()
+        {
+            // Observación 23 de la jornada 6 (decisión del dueño del 2026-10-30): al verter, AF_STATE music sale con ducked true
+            // (antes, solo con el modal de atasco) y la música y el ambiente bajan ActionDuckDb.
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            LevelFlow flow = boot.Flow!;
+            PlayModeHelpers.Step(boot, 1600);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            _audio.Tick(AudioMix.ActionDuckHoldMs + AudioMix.ActionDuckReleaseMs + 1f); // lo que sonó en la intro, ya pasado
+            Assert.That(_probe.Music[_probe.Music.Count - 1].Ducked, Is.False, "antes de verter");
+
+            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
+            Pour move = solution.GetMove(0);
+            Assert.That(boot.TapCuia(move.Source).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(move.Target).Kind, Is.EqualTo(TapKind.Poured));
+            for (int ms = 0; ms < 2000 && _audio.ActivePours == 0; ms += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(_audio.ActivePours, Is.GreaterThan(0), "el chorro cae");
+            Assert.That(_probe.Music[_probe.Music.Count - 1].Ducked, Is.True, "AF_STATE music con ducked al verter");
+            _audio.Tick(AudioMix.ActionDuckAttackMs);
+            Assert.That(AudioAnalysis.ToDb(_audio.Mix.MusicGain), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.01f), "la música, −5 dB");
+            Assert.That(AudioAnalysis.ToDb(_audio.Mix.AmbientGain), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.01f), "el ambiente también");
+            Assert.That(_audio.Mix.SfxGain, Is.EqualTo(1f), "los efectos, enteros");
+
+            PlayModeHelpers.StepUntilIdle(boot, 4000);
+            Assert.That(_audio.ActivePours, Is.EqualTo(0), "el chorro se cortó");
+            _audio.Tick(AudioMix.ActionDuckHoldMs + AudioMix.ActionDuckReleaseMs + AudioMix.SealDuckMs + 1f);
+            Assert.That(_audio.Mix.MusicGain, Is.EqualTo(1f), "vuelve a su nivel");
+            Assert.That(_probe.Music[_probe.Music.Count - 1].Ducked, Is.False, "la sonda lo cuenta al volver");
+        }
+
+        [UnityTest]
         public IEnumerator Level1_WithZeroLayers_TheBedPlaysAlone()
         {
             AudioConfig.MusicPercussionLayers = 0;

@@ -175,7 +175,8 @@ namespace AF.Audio
     /// Reglas de mezcla de 07 §9.4 y 02 §4, sin motor: qué suena y a qué ganancia en cada momento. Sonido y Música se apagan por
     /// separado y al momento; el modo silencio del teléfono (y el de vibración) calla los efectos y la música [P: también calla
     /// la música]; en silencio total tampoco vibra; durante un anuncio se calla todo y al terminar vuelve con un fundido de
-    /// <see cref="AdFadeMs"/>; el lecho baja <see cref="DuckDb"/> durante la toada y los modales. Desde AU2 también guarda qué
+    /// <see cref="AdFadeMs"/>; el lecho baja <see cref="DuckDb"/> durante la toada y los modales, y <see cref="ActionDuckDb"/>, con
+    /// ataque y suelta cortos, durante el vertido y el sellado (observación 23 de la jornada 6). Desde AU2 también guarda qué
     /// música y qué ambiente se piden (<see cref="SetMusic"/>, <see cref="SetMenuMusic"/> y <see cref="SetAmbient"/>), lleva el
     /// reloj de la fauna y dice cuándo cambia la sonda de la música (<see cref="TakeMusicReport"/>). El ambiente va con el
     /// ajuste Música y baja con la misma atenuación [P]. Sin asignaciones.
@@ -208,8 +209,33 @@ namespace AF.Audio
         /// </summary>
         public const float FocusDuckGain = 0.2f;
 
+        /// <summary>
+        /// Atenuación suave de la música y del ambiente mientras cae un chorro y mientras suena un sellado (dB; observación 23 de
+        /// la jornada 6, decisión del dueño del 2026-10-30) [P]: los efectos de juego se oyen claros sobre el lecho. Menos honda
+        /// que la de la toada y los modales (<see cref="DuckDb"/>); si coinciden, manda la más honda.
+        /// </summary>
+        public const float ActionDuckDb = -5f;
+
+        /// <summary>Lo que tarda la música en bajar del todo al empezar un chorro o un sellado (ms) [P].</summary>
+        public const float ActionDuckAttackMs = 80f;
+
+        /// <summary>Lo que tarda la música en volver del todo tras la espera (ms) [P].</summary>
+        public const float ActionDuckReleaseMs = 300f;
+
+        /// <summary>
+        /// Lo que la música sigue abajo tras cortarse el último chorro antes de empezar a volver (ms) [P]: con vertidos seguidos
+        /// no sube y baja en cada uno (sin bombeo).
+        /// </summary>
+        public const float ActionDuckHoldMs = 600f;
+
+        /// <summary>Lo que la música sigue abajo desde que empieza un sellado (ms) [P]: lo que dura <c>sfx_seal</c> (0,46 s).</summary>
+        public const float SealDuckMs = 460f;
+
         private float _adFade = 1f;
         private float _toadaLeftMs;
+        private bool _pouring;
+        private float _actionHoldMs;
+        private float _actionDuck; // 0 = sin atenuar; 1 = a ActionDuckDb
         private FaunaClock _fauna;
         private MusicReport _reported;
         private bool _hasReported;
@@ -253,8 +279,11 @@ namespace AF.Audio
         /// <summary>Ganancia de los efectos (0-1): 0 sin sonido; tras un anuncio, el fundido.</summary>
         public float SfxGain => SfxAudible ? _adFade : 0f;
 
-        /// <summary>Ganancia de la música (0-1), con la atenuación de la toada y de los modales.</summary>
-        public float MusicGain => MusicAudible ? _adFade * (Ducked ? DuckGain : 1f) * (FocusDucked ? FocusDuckGain : 1f) : 0f;
+        /// <summary>
+        /// Ganancia de la música (0-1), con la atenuación de la toada y de los modales o la del vertido y el sellado (la más
+        /// honda de las dos) y la del foco de audio.
+        /// </summary>
+        public float MusicGain => MusicAudible ? _adFade * Math.Min(Ducked ? DuckGain : 1f, ActionDuckGain) * (FocusDucked ? FocusDuckGain : 1f) : 0f;
 
         /// <summary>
         /// Ganancia de un remate (0-1; tarea AU3): va con el ajuste Música [P], con el fundido tras un anuncio y sin la atenuación
@@ -265,8 +294,26 @@ namespace AF.Audio
         /// <summary>Lo que le queda a la toada de la victoria (ms; 0 si no suena): los remates esperan a que termine (tarea AU3).</summary>
         public float ToadaLeftMs => _toadaLeftMs;
 
-        /// <summary>El lecho está atenuado.</summary>
+        /// <summary>El lecho está atenuado <see cref="DuckDb"/> (la toada o un modal).</summary>
         public bool Ducked => ModalDuck || _toadaLeftMs > 0f;
+
+        /// <summary>Cae algún chorro (<see cref="SetPouring"/>).</summary>
+        public bool Pouring => _pouring;
+
+        /// <summary>
+        /// El vertido o el sellado piden bajar la música: cae un chorro o aún dura la espera del último chorro o del sellado, y
+        /// los efectos se oyen (sin Sonido, nada que destacar).
+        /// </summary>
+        public bool ActionDuckWanted => SfxAudible && (_pouring || _actionHoldMs > 0f);
+
+        /// <summary>La música está (o empieza a estar) atenuada por el vertido o el sellado: lo que cuenta la sonda con «ducked».</summary>
+        public bool ActionDucked => ActionDuckWanted || _actionDuck > 0f;
+
+        /// <summary>Cuánto pesa ahora la atenuación del vertido (0-1; tests).</summary>
+        public float ActionDuckAmount => _actionDuck;
+
+        /// <summary>Ganancia lineal de la atenuación del vertido y del sellado de ahora (1 sin atenuar; <see cref="ActionDuckDb"/> del todo).</summary>
+        public float ActionDuckGain => _actionDuck <= 0f ? 1f : (float)AudioAnalysis.FromDb(ActionDuckDb * _actionDuck);
 
         /// <summary>Ganancia lineal de <see cref="DuckDb"/>.</summary>
         public static float DuckGain => (float)AudioAnalysis.FromDb(DuckDb);
@@ -302,7 +349,7 @@ namespace AF.Audio
         public float FaunaLeftMs => _fauna.LeftMs;
 
         /// <summary>Estado de la música de ahora para la sonda.</summary>
-        public MusicReport CurrentMusic => new MusicReport(MusicWorld, MusicLayers, MusicNight, Ducked, MusicMenu);
+        public MusicReport CurrentMusic => new MusicReport(MusicWorld, MusicLayers, MusicNight, Ducked || ActionDucked, MusicMenu);
 
         /// <summary>
         /// Pide el lecho del mundo <paramref name="world"/> (0 = silencio) con <paramref name="layers"/> capas de percusión
@@ -425,9 +472,38 @@ namespace AF.Audio
             _toadaLeftMs = lengthMs > 0f && !float.IsInfinity(lengthMs) ? lengthMs : ToadaDuckMs;
         }
 
-        /// <summary>Avanza el fundido y la atenuación <paramref name="dtMs"/> ms.</summary>
+        /// <summary>
+        /// Empieza (<paramref name="pouring"/>) o termina el último chorro que caía (observación 23 de la jornada 6): la música baja
+        /// <see cref="ActionDuckDb"/> mientras cae y sigue abajo <see cref="ActionDuckHoldMs"/> tras cortarse.
+        /// </summary>
+        public void SetPouring(bool pouring)
+        {
+            if (_pouring && !pouring)
+            {
+                _actionHoldMs = Math.Max(_actionHoldMs, ActionDuckHoldMs);
+            }
+
+            _pouring = pouring;
+        }
+
+        /// <summary>Suena un sellado: la música baja <see cref="ActionDuckDb"/> durante <see cref="SealDuckMs"/> (observación 23 de la jornada 6).</summary>
+        public void SealStarted()
+        {
+            _actionHoldMs = Math.Max(_actionHoldMs, SealDuckMs);
+        }
+
+        /// <summary>Avanza el fundido y las atenuaciones <paramref name="dtMs"/> ms.</summary>
         public void Tick(float dtMs)
         {
+            if (!_pouring && _actionHoldMs > 0f)
+            {
+                _actionHoldMs = Math.Max(0f, _actionHoldMs - dtMs);
+            }
+
+            _actionDuck = ActionDuckWanted
+                ? Math.Min(1f, _actionDuck + (dtMs / ActionDuckAttackMs))
+                : Math.Max(0f, _actionDuck - (dtMs / ActionDuckReleaseMs));
+
             if (!AdActive && !FocusPaused && _adFade < 1f)
             {
                 _adFade = Math.Min(1f, _adFade + (dtMs / AdFadeMs));
