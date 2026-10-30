@@ -813,6 +813,8 @@ Reglas comunes: sin sonrisa/flecha ni naranja #FF9900 sobre negro (research/08 �
 | 7 | TiTino en su rama celebrando; Capi trayendo una cuia y Rosa saltando, al fondo (D-013, T1-A) | "TiTino te acompaña" / "Meet TiTino" / "TiTino te acompanha" [P] (antes: "Capi y Rosa te acompañan") |
 | 8 | Reto del río + Bitácora del río + Canasta abierta con contenido visible | "Juega sin wifi, vuelve cada día" / "Play offline, come back daily" / "Jogue offline, volte todo dia" |
 
+**Actualizado el 2026-10-30 con D-065:** la ficha de la 1.0 usa el concepto A «Gameplay héroe» de `docs/store-listing/graficos-v2/A/` (pantalla real al 75-82 % del alto, fondos de IA por mundo y placa de madera; elegido por el dueño, Q-GT-2), con otro orden y rótulos más cortos (Q-GT-3): 1 vertido en el Encuentro de las Aguas, 2 victoria, 3 Mapa del río, 4 Difícil, 5 TiTino en el inicio, 6 patrones, 7 Bitácora y 8 Reto del río. Los textos en los 3 idiomas están en §6 de `docs/store-listing/<idioma>/ficha.md`; la tabla de arriba queda como historia. Los conceptos B y C quedan para una prueba de ficha tras el lanzamiento.
+
 Las 3 primeras siguen la regla de research/08 §Implicaciones 3 (recipiente autóctono vertiendo río teñido, fondo de un país, texto corto). Gráfico de funciones 1024 × 500: concepto A del icono ampliado con el Encuentro de las Aguas.
 
 ### 10.3 Vídeo de ficha (30 s)

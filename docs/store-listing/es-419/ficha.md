@@ -99,20 +99,22 @@ Te damos la bienvenida al río. Primera versión de Tintalú: remonta el río po
 
 Sin género («te da la bienvenida», nunca «¡Bienvenido!»), como `map_country_welcome` (glosario §10).
 
-## 6. Textos de las 8 capturas (07 §10.2)
+## 6. Textos de las 8 capturas (07 §10.2; D-065)
 
-El arte y la composición están en `../assets-tienda.md`. Texto corto superpuesto, ≤ 36 caracteres [P]: el del texto canónico más largo (la captura 4 en ES, 36), sobre una placa de madera clara o de vidrio del UI kit de D-003 (Q-B13-5 (a)).
+Para la 1.0, la ficha usa el **concepto A «Gameplay héroe»** de `../graficos-v2/A/es-419/` (D-065: lo eligió el dueño el 2026-10-30, Q-GT-2). Los rótulos ya van dibujados en cada imagen y son los de Q-GT-3 (más cortos que los de 07 §10.2; recomendada aplicada). Qué enseña cada captura y cómo se hizo: `../graficos-v2/README.md`.
 
-| # | Texto ES-419 | Estado |
+| # | Archivo | Texto ES-419 |
 |---|---|---|
-| 1 | Ordena el agua del Amazonas | canon 07 §10.2 · en firme (dueño, 2026-10-30; D-064) |
-| 2 | 14 colores de frutas y ríos | Q-B13-23 (a), decidida el 2026-10-20 (sustituye a «14 frutas, 14 colores» de 07 §10.2; el integrador corrige 07 §10.2) |
-| 3 | Mira cómo se tiñe el río | canon 07 §10.2 |
-| 4 | Remonta el Amazonas hasta donde nace | canon 07 §10.2 [P] · en firme (dueño, 2026-10-30; D-064) |
-| 5 | Difícil de verdad, justo siempre | canon 07 §10.2 |
-| 6 | Patrones para todos los ojos | canon 07 §10.2 |
-| 7 | TiTino te acompaña | canon 07 §10.2 [P] · en firme (dueño, 2026-10-30; D-064) |
-| 8 | Juega sin wifi, vuelve cada día | canon 07 §10.2 |
+| 1 | `01-vertido-encuentro.png` | Vierte y tiñe el río |
+| 2 | `02-todo-encaja.png` | ¡Todo encaja! |
+| 3 | `03-mapa-del-rio.png` | Remonta el Amazonas |
+| 4 | `04-dificil-tarapoto.png` | Difícil, pero justo |
+| 5 | `05-titino-capi-rosa.png` | TiTino te acompaña |
+| 6 | `06-patrones.png` | Patrones para todos los ojos |
+| 7 | `07-bitacora.png` | Un reto nuevo cada día |
+| 8 | `08-reto-del-rio.png` | Sin wifi, a tu ritmo |
+
+Los textos anteriores de 07 §10.2 («Ordena el agua del Amazonas», etc.) quedan para las capturas de `../graficos/` de la pista interna y para los conceptos B y C solo si se rehacen.
 
 ## 7. Fichas personalizadas (08 §13.1 #6)
 

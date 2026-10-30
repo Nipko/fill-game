@@ -94,18 +94,22 @@ classificar água, ordenar cores, water sort, quebra-cabeça, sem internet, tubo
 Boas-vindas ao rio. A primeira versão de Tintalú: suba o rio por nove mundos, jogue o Desafio do Rio todo dia e preencha o seu Diário.
 ```
 
-## 6. Textos de las 8 capturas (07 §10.2)
+## 6. Textos de las 8 capturas (07 §10.2; D-065)
 
-| # | Texto PT-BR | Estado |
+Para la 1.0, la ficha usa el **concepto A «Gameplay héroe»** de `../graficos-v2/A/pt-BR/` (D-065: lo eligió el dueño el 2026-10-30, Q-GT-2). Los rótulos ya van dibujados en cada imagen y son los de Q-GT-3 (más cortos que los de 07 §10.2; recomendada aplicada). Qué enseña cada captura y cómo se hizo: `../graficos-v2/README.md`.
+
+| # | Archivo | Texto PT-BR |
 |---|---|---|
-| 1 | Classifique as águas da Amazônia | canon 07 §10.2 · en firme (dueño, 2026-10-30; D-064) |
-| 2 | 14 cores de frutas e rios | Q-B13-23 (a), decidida el 2026-10-20 |
-| 3 | Veja o rio ganhar cor | canon 07 §10.2 |
-| 4 | Suba o Amazonas até onde ele nasce | Q-B13-6 (a), decidida el 2026-10-20: la propuesta de B13, en firme por D-054 y D-064 |
-| 5 | Difícil de verdade, sempre justo | canon 07 §10.2 |
-| 6 | Padrões para todos os olhos | canon 07 §10.2 |
-| 7 | TiTino te acompanha | canon 07 §10.2 [P] · en firme (dueño, 2026-10-30; D-064) |
-| 8 | Jogue offline, volte todo dia | canon 07 §10.2 |
+| 1 | `01-vertido-encuentro.png` | Despeje e tinja o rio |
+| 2 | `02-todo-encaja.png` | Tudo se encaixa! |
+| 3 | `03-mapa-del-rio.png` | Suba o Amazonas |
+| 4 | `04-dificil-tarapoto.png` | Difícil, mas justo |
+| 5 | `05-titino-capi-rosa.png` | TiTino te acompanha |
+| 6 | `06-patrones.png` | Padrões para todos os olhos |
+| 7 | `07-bitacora.png` | Um desafio novo por dia |
+| 8 | `08-reto-del-rio.png` | Sem wi-fi, no seu ritmo |
+
+Los textos anteriores de 07 §10.2 quedan para las capturas de `../graficos/` de la pista interna.
 
 ## 7. Ficha personalizada de Brasil (08 §13.1 #6)
 

@@ -81,8 +81,8 @@ Del añadido de D-049 del 2026-10-27:
 ### 0.7 Material gráfico
 
 - **Icono 512 × 512:** `docs/art/marca-oficial/v2/out/png/google-play-512.png` (D-045).
-- **Gráfico de funciones 1024 × 500:** `docs/art/marca-oficial/v2/out/png/feature-graphic.png`, **final** (D-052: el arte por código es el arte final; D-045; `docs/store-listing/graficos/README.md`).
-- **Capturas de teléfono:** están en `docs/store-listing/graficos/<idioma>/` (`en/`, `es-419/` y `pt-BR/`), 1080 × 1920, hechas con el juego real (D-052). **Sube las 01-08 en cada idioma** (los 8 huecos de 08 §13.1 #5 y 07 §10.2, con los textos de las fichas §6). **La 09 (Mercado) y la 10 (Liga) no se suben** (D-064): enseñan precios en COP y jugadores falsos de la API de prueba. es-ES usa las de es-419 y pt-PT las de pt-BR.
+- **Gráfico de funciones 1024 × 500:** `docs/store-listing/graficos-v2/A/feature-graphic.png` (D-065, concepto A: un fotograma real de la intro de la marca sobre un amanecer en el río hecho con IA). El anterior, `docs/art/marca-oficial/v2/out/png/feature-graphic.png`, queda de respaldo.
+- **Capturas de teléfono:** las del **concepto A** (D-065, elegido por el dueño el 2026-10-30), en `docs/store-listing/graficos-v2/A/<idioma>/` (`en/`, `es-419/` y `pt-BR/`): 8 PNG de 1080 × 1920 con la pantalla real del teléfono, el fondo de IA y el rótulo ya dibujado (textos en §6 de cada ficha). **Sube las 01-08 en cada idioma, en ese orden.** es-ES usa las de es-419 y pt-PT las de pt-BR. Las de `docs/store-listing/graficos/` quedan de respaldo (sin la 09 ni la 10, D-064). Los conceptos B y C (`graficos-v2/B/`, `C/`) son para una prueba de ficha tras el lanzamiento, no para subirlos ahora.
 - **Vídeo (opcional):** una URL de YouTube; 07 §10.3. No usa la música CC0 (`docs/store-listing/README.md` §3 bis).
 
 ### 0.8 Regresión y release firmado
@@ -177,7 +177,7 @@ Crecer › Presencia en la tienda › **Fichas de Play Store** › Ficha princip
 | Nombre (30) | `Tintalú: Water Sort Puzzle` (26) | `Tintalú: Ordenar Agua` (21) | `Tintalú: Classificar Água` (25) | glosario §1.3 |
 | Descripción breve (80) | `Sort river water by Amazonian fruit colors. Relaxing sort puzzle, offline.` (74) | `Ordena el agua del río por colores de frutas amazónicas. Relajante y sin wifi.` (78) | `Classifique a água pelas cores das frutas amazônicas. Relaxante, offline.` (73) | Fichas §2 |
 | Descripción completa (4.000) | `en/ficha.md` §3 | `es-419/ficha.md` §3 | `pt-BR/ficha.md` §3 | El bloque `text` entero |
-| Icono, gráfico, capturas | §0.7: capturas 01-08 de `graficos/en/` | Capturas 01-08 de `graficos/es-419/` | Capturas 01-08 de `graficos/pt-BR/` | `docs/store-listing/graficos/README.md` |
+| Icono, gráfico, capturas | §0.7: capturas 01-08 de `graficos-v2/A/en/` | Capturas 01-08 de `graficos-v2/A/es-419/` | Capturas 01-08 de `graficos-v2/A/pt-BR/` | `docs/store-listing/graficos-v2/README.md` (D-065) |
 
 Al pegar la descripción completa:
 - Se pega **el bloque `text` entero, tal cual**: ya no lleva la línea del asesor cultural (D-064) y la línea de la Liga (`- River League: …`, `- Liga del río: …`, `- Liga do Rio: …`) se queda, porque la Liga sale encendida (§0.4).

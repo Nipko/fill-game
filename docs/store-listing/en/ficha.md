@@ -91,15 +91,19 @@ water sort, color sort, sort puzzle, liquid sort, relaxing games, offline puzzle
 Welcome to the river. The first version of Tintalú: travel upriver through nine worlds, play the River Challenge every day and fill your Logbook.
 ```
 
-## 6. Textos de las 8 capturas (07 §10.2)
+## 6. Textos de las 8 capturas (07 §10.2; D-065)
 
-| # | Texto EN | Estado |
+Para la 1.0, la ficha usa el **concepto A «Gameplay héroe»** de `../graficos-v2/A/en/` (D-065: lo eligió el dueño el 2026-10-30, Q-GT-2). Los rótulos ya van dibujados en cada imagen y son los de Q-GT-3 (más cortos que los de 07 §10.2; recomendada aplicada). Qué enseña cada captura y cómo se hizo: `../graficos-v2/README.md`.
+
+| # | Archivo | Texto EN |
 |---|---|---|
-| 1 | Sort the waters of the Amazon | canon 07 §10.2 · en firme (dueño, 2026-10-30; D-064) |
-| 2 | 14 colors from fruit and rivers | Q-B13-23 (a), decidida el 2026-10-20 |
-| 3 | Watch the river take color | canon 07 §10.2 |
-| 4 | Follow the Amazon to its source | Q-B13-6 (a), decidida el 2026-10-20: la propuesta de B13, en firme por D-054 y D-064 |
-| 5 | Honest hard levels | canon 07 §10.2 |
-| 6 | Patterns for every eye | canon 07 §10.2 |
-| 7 | Meet TiTino | canon 07 §10.2 [P] · en firme (dueño, 2026-10-30; D-064) |
-| 8 | Play offline, come back daily | canon 07 §10.2 |
+| 1 | `01-vertido-encuentro.png` | Pour and tint the river |
+| 2 | `02-todo-encaja.png` | Everything clicks! |
+| 3 | `03-mapa-del-rio.png` | Travel up the Amazon |
+| 4 | `04-dificil-tarapoto.png` | Hard, but fair |
+| 5 | `05-titino-capi-rosa.png` | Meet TiTino |
+| 6 | `06-patrones.png` | Patterns for every eye |
+| 7 | `07-bitacora.png` | A new challenge every day |
+| 8 | `08-reto-del-rio.png` | Offline, at your pace |
+
+Los textos anteriores de 07 §10.2 quedan para las capturas de `../graficos/` de la pista interna.
