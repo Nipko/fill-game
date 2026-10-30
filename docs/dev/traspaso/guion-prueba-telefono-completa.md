@@ -1156,6 +1156,7 @@ Con las capturas de toda la prueba y el teléfono en la mano, el dueño marca lo
 - **La tropa de miquitos:** su entrada y su franja.
 - **Fondos de cada parada y cada mundo:** brillos y polen del río, noche y lluvia.
 - **Tarjetas, banners, skins y el icono v2:** el inicio y el cajón de apps, Recientes y el icono temático monocromo.
+- **Mercado** (observación 24 de la jornada 6, decisión del dueño del 2026-10-30): en la barra de abajo del inicio, a la izquierda de «Inicio», el puesto con toldo a rayas y el rótulo «Mercado» debajo (en EN «Market»), entero en una línea a 320 dp con la letra al 130 % (`market_tab` en `AF_LAYOUT`, ahora más alto). Dentro: la cabecera ámbar, el saldo en su placa, las pestañas como pastillas (la elegida en verde con la letra crema, las demás en tono suave; que se entienda que se tocan) y cada fila como una tarjeta con sombra. En la pestaña Cuias, tocar la tarjeta de una skin (`market_card_<id>`) abre la cuia en grande con su nombre y el botón de la fila (`market_preview_cta`); se cierra con la X (`market_preview_close`), tocando fuera y con Atrás (el primer Atrás solo cierra la vista previa), y TalkBack dice el nombre al abrirla. Que vidrio, Santarém, Encuentro y Totuma se distingan bien en grande, y `AF_STATE market_preview` con la skin. Sin precios de Play donde no los había y sin ofertas nuevas (D-059, D-061).
 - **Textos:** tamaño mínimo, contraste y sin cortes.
 - **Nada provisional que no deba estarlo:** rectángulos sin arte, colores planos de relleno o textos en inglés de desarrollo.
 

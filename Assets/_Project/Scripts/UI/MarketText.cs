@@ -97,6 +97,12 @@ namespace AF.UI
             /// sin backend en este build (release sin URL): no se vende nada.
             /// </summary>
             public const string StoreUnavailable = "market_store_unavailable";
+
+            /// <summary>
+            /// «Mercado» [P]: el rótulo bajo el puesto de la entrada del Mercado en la barra de abajo del inicio (observación 24 de la
+            /// jornada 6, decisión del dueño del 2026-10-30: que se entienda que ahí se compra). Clave propia: no es el título.
+            /// </summary>
+            public const string NavLabel = "market_nav_label";
         }
 
         /// <summary>
@@ -108,11 +114,14 @@ namespace AF.UI
             Keys.Title, Keys.TabSeeds, Keys.TabBoosters, Keys.TabCuias, Keys.TabNoAds, Keys.SeedsAmount, Keys.StarterContent,
             Keys.StarterLeft, Keys.NoAdsContent, Keys.NoAdsOwned, Keys.PiggyContent, Keys.PiggyLocked, Keys.PiggyFull, Keys.PiggyFills,
             Keys.CanoesContent, Keys.SkinEquip, Keys.SkinEquipped, Keys.NotNow, Keys.WorldPrize, Keys.PurchasePending, Keys.PurchaseFailed,
-            Keys.StoreUnavailable, Keys.PurchaseVerifying,
+            Keys.StoreUnavailable, Keys.PurchaseVerifying, Keys.NavLabel,
         };
 
         /// <summary>«Mercado».</summary>
         public static string Title => Loc.T(Keys.Title);
+
+        /// <summary>«Mercado»: el rótulo de la entrada de la barra de abajo del inicio.</summary>
+        public static string NavLabel => Loc.T(Keys.NavLabel);
 
         /// <summary>Nombre de la pestaña <paramref name="tab"/>.</summary>
         public static string Tab(MarketTab tab)

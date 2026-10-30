@@ -73,8 +73,17 @@ namespace AF.Presentation
         /// </summary>
         internal PixelCanvas PaintSkinThumb(CuiaSkin skin)
         {
+            return PaintSkinThumb(skin, SkinThumbPixelsPerU);
+        }
+
+        /// <summary>
+        /// El lienzo de la ficha de <paramref name="skin"/> a <paramref name="ppu"/> px por u: la miniatura
+        /// (<see cref="SkinThumbPixelsPerU"/>) o la cuia en grande de la vista previa del Mercado (<see cref="SkinPreviewPixelsPerU"/>;
+        /// observación 24 de la jornada 6). El mismo dibujo; los cantos de las piezas crecen con la densidad.
+        /// </summary>
+        internal PixelCanvas PaintSkinThumb(CuiaSkin skin, int ppu)
+        {
             const int cap = SkinThumbCapacity;
-            const int ppu = SkinThumbPixelsPerU;
             PixelCanvas cuia = NewCuiaCanvas(cap, ppu);
             PixelCanvas layer = NewCuiaCanvas(cap, ppu);
             Color glass = skin.GlassMultiplier;
@@ -253,7 +262,7 @@ namespace AF.Presentation
             // Un canto de ~1,5 px que la separa del vidrio y del panel: más claro en las piezas oscuras (el cumatê de Santarém
             // sobre el petróleo) y más oscuro en las claras.
             Color edge = ColorMath.RelativeLuminance(color) < 0.2f ? ColorMath.Lighten(color, 0.45f) : ColorMath.Darken(color, 0.40f);
-            const float o = 1.5f;
+            float o = 1.5f * ppu / SkinThumbPixelsPerU;
             pc.FillRoundedRect(x0 - o, y0 - o, x1 + o, y1 + o, r + o, edge);
             pc.FillRoundedRect(x0, y0, x1, y1, r, color);
         }

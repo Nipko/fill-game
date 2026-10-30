@@ -209,6 +209,7 @@ namespace AF.UI
             _market.Purchased += OnMarketPurchased;
             _market.SkinSelected += OnMarketSkinSelected;
             _market.Shown += OnMarketShown;
+            _market.PreviewOpened += OnMarketPreviewOpened;
             _offerCard = new OfferCard(transform, _art);
             _marketIcons = new MarketLobbyIcons(transform, _art, () => OpenMarket(MarketTab.Seeds), () => PressPiggy());
             _marketPhaseSeen = _flow.Phase;
@@ -330,8 +331,7 @@ namespace AF.UI
 
             if (_market != null && _market.Visible)
             {
-                _market.Close();
-                return true;
+                return _market.PressBack(); // con la vista previa de una skin abierta, la cierra; si no, como la X (observación 24 de la jornada 6)
             }
 
             return false;
@@ -669,6 +669,16 @@ namespace AF.UI
             if (DevProbe.Enabled)
             {
                 MarketProbe("skin_selected", "\"skin\":\"" + (_skinService?.Equipped ?? skinId) + "\"");
+            }
+        }
+
+        // La vista previa de una skin (observación 24 de la jornada 6): TalkBack dice su nombre y, en desarrollo, AF_STATE market_preview.
+        private void OnMarketPreviewOpened(string skinName)
+        {
+            _a11y?.Announce(skinName);
+            if (DevProbe.Enabled && _market != null)
+            {
+                MarketProbe("market_preview", "\"skin\":\"" + (_market.PreviewSkinId ?? string.Empty) + "\"");
             }
         }
 

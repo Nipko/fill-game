@@ -13,9 +13,11 @@ namespace AF.UI
     /// Las dos entradas del bloque B5 en el inicio, en un lienzo propio encima de él (orden <see cref="SortingOrder"/>, como la
     /// tarjeta del Reto) y colocadas junto a lo que ya pinta <see cref="LobbyScreen"/>, para no tocar sus archivos:
     /// <list type="bullet">
-    /// <item><description><b>Icono del Mercado</b> (06 §4.7: «iconos Mercado / Mapa del río», sin texto; desde <c>max_level</c> ≥ 10):
-    /// en la barra de abajo, a la izquierda de «Inicio», simétrico al del Mapa [P]. Glifo provisional (la semilla) hasta el «puesto de
-    /// Ver-o-Peso» de 07 §5 (arte del artista).</description></item>
+    /// <item><description><b>Entrada del Mercado</b> (06 §4.7; desde <c>max_level</c> ≥ 10): en la barra de abajo, a la izquierda de
+    /// «Inicio», simétrica al Mapa [P]. Desde la observación 24 de la jornada 6 (decisión del dueño del 2026-10-30), el puesto del
+    /// Mercado por código (<see cref="ProceduralArt.IconStall"/>: toldo a rayas, mostrador y fruta; antes, solo una semilla) y, debajo,
+    /// sobre la barra, el rótulo «Mercado» (<see cref="MarketText.NavLabel"/>), dentro de su área táctil, para que se entienda que
+    /// ahí se compra.</description></item>
     /// <item><description><b>Cántaro</b> (05 §4.1: «icono en el HUD desde el nivel 20»): desde D-050, una tinaja de barro
     /// (<see cref="ProceduralArt.DockJar"/>) apoyada en el muelle del inicio, a la izquierda, en el sitio que le guarda el inicio
     /// (<see cref="LobbyScreen.PiggyAnchorRect"/>), con lo que guarda en su placa a los pies; a 3.000, «¡Lleno!» con un punto. Un
@@ -37,6 +39,12 @@ namespace AF.UI
         /// <summary>Área táctil mínima (07 §7.8): el icono baja hasta tener 48 dp, como el del Mapa (M3.3).</summary>
         public const float MinTouchDp = 48f;
 
+        /// <summary>Tamaño del rótulo «Mercado» (sp, × escala): el tope de su autoajuste; el suelo es 12 sp × escala (02 §12).</summary>
+        public const float LabelSp = 13f;
+
+        /// <summary>Aire mínimo entre el rótulo y el borde de la pantalla o la pestaña «Inicio» (dp).</summary>
+        public const float LabelMarginDp = 4f;
+
         /// <summary>Ancho del Cántaro (dp) [P]: la tinaja de barro apoyada en el muelle y la placa de la cifra (D-050, punto 6).</summary>
         public const float PiggyWidthDp = 64f;
 
@@ -48,6 +56,9 @@ namespace AF.UI
 
         private readonly OverlayCanvas _canvas;
         private readonly ReliefParts _market;
+        private readonly Image _marketGlyph;
+        private readonly TextMeshProUGUI _marketLabel;
+        private readonly float _marketVisualDp;
         private readonly Button _piggy;
         private readonly Image _piggyJar;
         private readonly TextMeshProUGUI _piggyLabel;
@@ -62,10 +73,19 @@ namespace AF.UI
         {
             _canvas = new OverlayCanvas("MarketIconsCanvas", host, SortingOrder);
             _market = UiBuilder.Relief("MarketTab", _canvas.Root, art.CtaWood, onMarket);
-            Image glyph = UiBuilder.Image("Icon", _market.Face, art.IconSeed, Color.white);
-            glyph.preserveAspect = true;
-            UiBuilder.Place(glyph.rectTransform, 16f, 6f, MarketWidthDp - 32f, 32f);
-            _market.Relief.Bind(_market.Face, _market.Base, _market.FaceImage, art.CtaWood, glyph, null, null);
+            _marketVisualDp = art.CtaWood.HeightDp;
+            // Observación 24 de la jornada 6: el puesto del Mercado (toldo, mostrador y fruta), no la semilla, y el rótulo debajo.
+            _marketGlyph = UiBuilder.Image("Icon", _market.Face, art.IconStall, Color.white);
+            _marketGlyph.preserveAspect = true;
+            float faceH = art.CtaWood.FaceHeightDp;
+            float glyphH = Mathf.Min(ProceduralArt.StallHeightDp, faceH - 6f);
+            float glyphW = glyphH * (ProceduralArt.StallWidthDp / ProceduralArt.StallHeightDp);
+            UiBuilder.Place(_marketGlyph.rectTransform, (MarketWidthDp - glyphW) * 0.5f, (faceH - glyphH) * 0.5f, glyphW, glyphH);
+            _market.Relief.Bind(_market.Face, _market.Base, _market.FaceImage, art.CtaWood, _marketGlyph, null, null);
+            _marketLabel = UiBuilder.Label("Label", _market.Button.transform, TextStyle.PillWood, MarketText.NavLabel, LabelSp, Palette.Cream, TextAlignmentOptions.Center);
+            _marketLabel.textWrappingMode = TextWrappingModes.NoWrap; // una palabra: nunca se parte (02 §12)
+            UiBuilder.AutoSize(_marketLabel, UiBuilder.MinTextSp, LabelSp);
+            A11yLabels.Set(_market.Button, () => MarketText.NavLabel); // TalkBack: «Mercado», no un botón sin nombre
             _market.Button.gameObject.SetActive(false);
 
             _piggy = UiBuilder.BareButton("PiggyChip", _canvas.Root, onPiggy);
@@ -111,6 +131,12 @@ namespace AF.UI
 
         public RectTransform MarketRect => (RectTransform)_market.Button.transform;
 
+        /// <summary>El rótulo «Mercado» bajo el puesto (tests).</summary>
+        public TextMeshProUGUI MarketLabel => _marketLabel;
+
+        /// <summary>El icono del puesto (tests).</summary>
+        public Image MarketGlyph => _marketGlyph;
+
         public RectTransform PiggyRect => (RectTransform)_piggy.transform;
 
         /// <summary>
@@ -130,7 +156,7 @@ namespace AF.UI
             if (marketShown)
             {
                 ToCanvas(homeTab!, out float left, out float top, out float height, out _);
-                UiBuilder.Place((RectTransform)_market.Button.transform, left - MarketGapDp - MarketWidthDp, top, MarketWidthDp, Mathf.Max(MinTouchDp, height));
+                PlaceMarket(left, top, height);
             }
 
             bool piggyShown = piggy && settings != null;
@@ -156,6 +182,30 @@ namespace AF.UI
                 _piggyLabel.text = piggyFull ? MarketText.PiggyFull : Loc.Number(piggySeeds); // «¡Lleno!» a eco_piggy_cap (05 §4.1)
                 _piggyDot.gameObject.SetActive(piggyFull);
             }
+        }
+
+        // La entrada del Mercado a la izquierda de «Inicio» (left, top y height: los de la pestaña «Inicio» en dp de este lienzo): el
+        // puesto en su madera, a la altura de «Inicio», y el rótulo debajo, sobre la barra, centrado con el puesto; puede ser más ancho
+        // que la madera, pero no llega al borde de la pantalla ni a «Inicio» (LabelMarginDp). El área táctil cubre los dos.
+        private void PlaceMarket(float left, float top, float height)
+        {
+            float x = left - MarketGapDp - MarketWidthDp;
+            _marketLabel.text = MarketText.NavLabel; // el idioma pudo cambiar en Ajustes
+            float labelH = Mathf.Ceil((LabelSp + 5f) * UiBuilder.TextScale);
+            float visual = Mathf.Max(height, _marketVisualDp);
+            float labelY = visual - 4f;
+            float buttonH = Mathf.Max(MinTouchDp, labelY + labelH);
+            UiBuilder.Place((RectTransform)_market.Button.transform, x, top, MarketWidthDp, buttonH);
+            // Centrado con el puesto si cabe; si el rótulo pide más (un idioma largo, la letra grande), se ensancha y se corre lo justo
+            // para quedar entre el borde de la pantalla y «Inicio».
+            float center = x + (MarketWidthDp * 0.5f);
+            float spanMin = LabelMarginDp;
+            float spanMax = Mathf.Max(spanMin + MarketWidthDp, left - LabelMarginDp);
+            float half = Mathf.Max(MarketWidthDp * 0.5f, Mathf.Min(center - spanMin, spanMax - center));
+            float wanted = Mathf.Ceil(_marketLabel.GetPreferredValues(_marketLabel.text).x) + 4f;
+            float labelW = Mathf.Min(spanMax - spanMin, Mathf.Max(Mathf.Floor(2f * half), wanted));
+            float labelX = Mathf.Clamp(center - (labelW * 0.5f), spanMin, spanMax - labelW);
+            UiBuilder.Place(_marketLabel.rectTransform, labelX - x, labelY, labelW, labelH);
         }
 
         // El rectángulo de otro lienzo en las coordenadas de este (dp desde arriba a la izquierda), por su posición en el mundo:
