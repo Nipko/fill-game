@@ -336,6 +336,9 @@ namespace AF.UI
         /// <summary>La tarjeta de la vista previa (tests).</summary>
         public RectTransform PreviewPanel => _previewPanel;
 
+        /// <summary>La lupa de la ficha de la fila <paramref name="index"/> (pestaña Cuias; tests).</summary>
+        public Image RowZoom(int index) => _rows[index].Zoom;
+
         /// <summary>El área que abre la vista previa de la fila <paramref name="index"/> (pestaña Cuias; tests).</summary>
         public Button RowCardButton(int index) => _rows[index].CardTap;
 
@@ -810,6 +813,7 @@ namespace AF.UI
             view.TallIcon = skin;
             view.SkinName = skin ? view.Name.text : null; // TalkBack: «Cuia de Santarém, Poner» y no solo «Poner»
             view.CardTap.gameObject.SetActive(skin); // la tarjeta de la skin abre la vista previa (observación 24 de la jornada 6)
+            view.Zoom.gameObject.SetActive(skin); // con la lupa que lo dice
 
             bool hasButton = row.Action != MarketAction.None;
             view.Cta.Button.gameObject.SetActive(hasButton);
@@ -1291,6 +1295,10 @@ namespace AF.UI
                 CardTap.gameObject.SetActive(false);
                 Icon = UiBuilder.Image("Icon", Root, art.IconSeed, Color.white);
                 Icon.preserveAspect = true;
+                // La lupa en la esquina de la ficha de una skin: se toca para verla en grande (revisión de la observación 24).
+                Zoom = UiBuilder.Image("Zoom", Root, art.IconZoom, Color.white);
+                Zoom.preserveAspect = true;
+                Zoom.gameObject.SetActive(false);
                 Name = UiBuilder.Label("Name", Root, TextStyle.PlainBold, string.Empty, 16f, Palette.FamilyWood.Deep, TextAlignmentOptions.Left);
                 Name.textWrappingMode = TextWrappingModes.Normal; // un nombre largo va en dos líneas (D-033, punto 11)
                 UiBuilder.AutoSize(Name, UiBuilder.MinTextSp, 16f);
@@ -1320,6 +1328,9 @@ namespace AF.UI
             public Button CardTap { get; }
 
             public Image Icon { get; }
+
+            /// <summary>La lupa de la ficha de una skin (la pista de que la tarjeta abre la vista previa).</summary>
+            public Image Zoom { get; }
 
             /// <summary>El rectángulo de la ficha (sonda: <c>market_card_*</c>).</summary>
             public RectTransform IconRect => Icon.rectTransform;
@@ -1366,6 +1377,12 @@ namespace AF.UI
                 float iconW = IconWidth;
                 float iconH = TallIcon ? Mathf.Max(36f, h - 4f) : 36f;
                 UiBuilder.Place(Icon.rectTransform, CardPadDp, (h - iconH) * 0.5f, iconW, iconH);
+                if (Zoom.gameObject.activeSelf)
+                {
+                    // Abajo a la derecha de la ficha, montada sobre su esquina.
+                    const float z = ProceduralArt.ZoomDp;
+                    UiBuilder.Place(Zoom.rectTransform, CardPadDp + iconW - (z * 0.7f), ((h + iconH) * 0.5f) - z + 2f, z, z);
+                }
                 float textX = CardPadDp + iconW + 8f;
                 float textW = TextWidth(w);
                 float nameH = NameHeight(textW);

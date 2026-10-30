@@ -158,6 +158,7 @@ namespace AF.Tests.PlayMode
             yield return null;
             Assert.That(market.OpenPreview(0), Is.False, "Semillas: no hay vista previa");
             Assert.That(market.RowCardButton(0).gameObject.activeSelf, Is.False, "ni área de tarjeta fuera de Cuias");
+            Assert.That(market.RowZoom(0).gameObject.activeSelf, Is.False, "ni lupa fuera de Cuias");
 
             market.SelectTab(MarketTab.Cuias);
             yield return null;
@@ -169,6 +170,20 @@ namespace AF.Tests.PlayMode
             Assert.That(A11yLabels.TryGet(market.RowCardButton(row).gameObject, out string cardSpoken, out _), Is.True);
             Assert.That(cardSpoken, Is.EqualTo(market.RowNameText(row)), "TalkBack: el nombre de la skin");
             float thumbH = market.RowIcon(row).rectTransform.rect.height;
+
+            // La pista: una lupa pequeña dibujada por código en la esquina de cada ficha de skin, sin texto y sin quitar el toque.
+            for (int i = 0; i < market.Rows.Count; i++)
+            {
+                Image zoom = market.RowZoom(i);
+                Assert.That(zoom.gameObject.activeInHierarchy, Is.True, market.Rows[i].Id + ": la lupa se ve");
+                Assert.That(zoom.sprite, Is.SameAs(art.IconZoom), market.Rows[i].Id + ": la lupa");
+                Assert.That(zoom.raycastTarget, Is.False, market.Rows[i].Id + ": el toque es de la tarjeta");
+                Assert.That(zoom.GetComponentInChildren<TMP_Text>(), Is.Null, market.Rows[i].Id + ": sin texto");
+                RectTransform icon = market.RowIcon(i).rectTransform;
+                Rect zoomRect = Local(zoom.rectTransform, icon);
+                Assert.That(zoomRect.Overlaps(icon.rect), Is.True, market.Rows[i].Id + ": en la esquina de la ficha");
+                Assert.That(zoomRect.width, Is.LessThanOrEqualTo(ProceduralArt.ZoomDp + 0.01f), market.Rows[i].Id + ": pequeña");
+            }
 
             // Abrir: la cuia en grande, su nombre y el botón de la fila; TalkBack anuncia el nombre.
             market.RowCardButton(row).onClick.Invoke();
@@ -283,6 +298,11 @@ namespace AF.Tests.PlayMode
             Assert.That(label.isTextOverflowing, Is.False, tag + ": sin cortarse");
             Assert.That(label.fontSize, Is.GreaterThanOrEqualTo((UiBuilder.MinTextSp * UiBuilder.TextScale) - 0.01f), tag + ": nunca por debajo de 12 sp × escala (02 §12)");
             Assert.That(new LocInventory(locale, scale).ProblemsOf(label), Is.Empty, tag + ": sin problemas de texto");
+
+            // Crema sobre la madera de la barra (la placa de madera oscura, con su barniz aclarado hasta un 10 %): ≥ 4,5:1 (02 §12).
+            float onWood = ColorMath.ContrastRatio(label.color, Palette.WoodDark);
+            float onVarnish = ColorMath.ContrastRatio(label.color, ColorMath.Lighten(Palette.WoodDark, 0.10f));
+            Assert.That(Mathf.Min(onWood, onVarnish), Is.GreaterThanOrEqualTo(4.5f), tag + ": contraste del rótulo sobre la barra");
 
             // Los glifos, dentro de la pantalla y a la izquierda de «Inicio»; la caja del rótulo, dentro del área táctil.
             RectTransform root = (RectTransform)icons.Canvas.transform;

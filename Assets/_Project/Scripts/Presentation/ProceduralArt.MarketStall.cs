@@ -13,6 +13,8 @@ namespace AF.Presentation
     /// <see cref="SkinThumb"/> pintada a <see cref="SkinPreviewPixelsPerU"/> px por u, la misma ficha y el mismo dibujo). Solo una a
     /// la vez: la anterior se suelta al pedir otra y al cerrar la vista (<see cref="ReleaseSkinPreview"/>), por la memoria
     /// (observación 6 de la jornada 6).</item>
+    /// <item><see cref="IconZoom"/>: la lupa pequeña en la esquina de la ficha de cada skin del Mercado, la pista de que la tarjeta se
+    /// toca para ver la cuia en grande (revisión de la observación 24: sin texto nuevo).</item>
     /// </list>
     /// Perezosas: nada se crea al construir <see cref="ProceduralArt"/>.
     /// </summary>
@@ -33,12 +35,19 @@ namespace AF.Presentation
         /// <summary>Prefijo del nombre de los sprites de la vista previa (tests).</summary>
         public const string SkinPreviewPrefix = "skin_preview_";
 
+        /// <summary>Lado de la lupa de la ficha de una skin (dp).</summary>
+        public const float ZoomDp = 18f;
+
         private Sprite? _iconStall;
+        private Sprite? _iconZoom;
         private Sprite? _skinPreview;
         private Texture2D? _skinPreviewTexture;
 
         /// <summary>El puesto del Mercado (toldo a rayas, mostrador de madera y fruta), de <see cref="StallWidthDp"/> × <see cref="StallHeightDp"/> dp.</summary>
         public Sprite IconStall => _iconStall != null ? _iconStall : (_iconStall = BuildIconStall());
+
+        /// <summary>La lupa de la ficha de una skin: disco crema con canto de madera, el aro de la lente y el mango, de <see cref="ZoomDp"/> dp.</summary>
+        public Sprite IconZoom => _iconZoom != null ? _iconZoom : (_iconZoom = BuildIconZoom());
 
         /// <summary>La cuia en grande de la vista previa que está a la vista, o null (tests).</summary>
         public Sprite? CurrentSkinPreview => _skinPreview;
@@ -161,6 +170,26 @@ namespace AF.Presentation
             }
 
             return MakeSprite(pc, "icon_stall", new Vector2(0.5f, 0.5f), Vector4.zero, k);
+        }
+
+        // La lupa en dp (y hacia arriba): el disco crema con canto de madera (se lee sobre el petróleo de la ficha), la lente con su
+        // brillo y el mango en diagonal hacia abajo a la derecha, en tinta.
+        private Sprite BuildIconZoom()
+        {
+            const float k = UiPxPerDp;
+            int n = Mathf.RoundToInt(ZoomDp * k);
+            var pc = new PixelCanvas(n, n);
+            float c = ZoomDp * 0.5f * k;
+            pc.FillCircle(c, c, (ZoomDp * 0.5f * k) - 0.5f, Palette.FamilyWood.Base);
+            pc.FillCircle(c, c, (ZoomDp * 0.5f * k) - (1.6f * k), Palette.Cream);
+            Color ink = Palette.Groove;
+            float lx = c - (1.4f * k);
+            float ly = c + (1.4f * k);
+            pc.FillCapsule(lx + (2.6f * k), ly - (2.6f * k), c + (4.6f * k), c - (4.6f * k), 1.1f * k, ink); // el mango
+            pc.FillCircle(lx, ly, 3.9f * k, ink);
+            pc.FillCircle(lx, ly, 2.6f * k, Color.Lerp(Palette.Cream, new Color(0.55f, 0.85f, 0.95f, 1f), 0.45f)); // la lente
+            pc.FillCircle(lx - (0.9f * k), ly + (0.9f * k), 0.8f * k, Color.white); // su brillo
+            return MakeSprite(pc, "icon_zoom", new Vector2(0.5f, 0.5f), Vector4.zero, k);
         }
 
         private static void DrawStallFruit(PixelCanvas pc, float cxDp, float cyDp, float rDp, Color color, float outlinePx)
