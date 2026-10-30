@@ -29,6 +29,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Arreglos de la tercera tanda j6 (build `da40034d`, punto 16) y la Liga contra dev (12.2) | cumplen el Mapa, el aviso y la Liga; OpenGL ES 3 rinde igual y gasta 10-30 MB menos | 20 |
 | 22 y 23, gráficos y audio con el dueño (punto 17) | cumple; la música tapa los efectos y el Mercado se ve básico | 17, 23, 24 |
 | 21, eliminar la cuenta de verdad (punto 18) | cumple | — |
+| 14.2, el aviso real al día siguiente (punto 18) | cumple (lo vio el dueño) | — |
 
 ## Verificación (bloque 0)
 
@@ -540,7 +541,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - Cada `pm clear` crea un secreto de depuración de App Check nuevo, y ese no está en la lista de Firebase.
      - El portátil ni lee ni guarda ese secreto.
      - Lo tiene que registrar el dueño en la consola de App Check del proyecto de dev, con el perfil que quede. Después se repite el guion de la Liga, salvo el modo avión, que lo hace el dueño.
-   - **Bloque 14.2, el aviso real al día siguiente:** sin probar. El perfil se rehízo (18+, consentimiento rechazado, progreso hasta el 262) y aún no tiene el permiso de avisos.
+   - **Bloque 14.2, el aviso real al día siguiente:** sin probar aquí; cumple en el punto 18. El perfil se rehízo (18+, consentimiento rechazado, progreso hasta el 262) y aún no tiene el permiso de avisos.
    - **El teléfono queda así:** el `dev.apk` instalado con un perfil 18+ en el inicio, y el progreso hasta el 262 puesto con `af_max_level`. Densidad 420, letra 1,0, animaciones encendidas y TalkBack apagado.
 
 16. **El build de los arreglos de la tercera tanda j6** (`da40034d`, que trae `57b93c10`, el encargo, y los carriles `fx-j6c-mapa-701`, `fx-j6c-aviso-abre` y `fx-j6c-gles`): **cumplen el Mapa (18) y el aviso (19). OpenGL ES 3 rinde como Vulkan y gasta 10-30 MB menos, pero no baja de 450 MB (20).**
@@ -607,6 +608,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
    - **Sin secretos en los registros:** en `Logs/device/completa-j6/` no hay `eyJ…`, tokens de depuración de App Check, `uid` ni el código de cuenta. Dos registros llevaban el UID de Firebase en las líneas `FirebaseAuth … about user ( … )` (`b14/lc-menor13.txt`, `liga/lc2.txt`) y se taparon. Las capturas con el código de cuenta se recortaron o se borraron.
    - **Una nota para el escritorio:** con el perfil recién borrado, la Liga dice «sin conexión» hasta que se gana un nivel. Quizá debería decir «Gana un nivel para entrar en la Liga», como en el primer contacto.
    - **El teléfono queda así:** el perfil nuevo, en el inicio del 43, con el permiso de avisos concedido y el Reto de hoy sin jugar, listo para ver mañana el aviso real (14.2).
+   - **Bloque 14.2, el aviso real al día siguiente: cumple** (lo vio el dueño el 2026-10-30). Con la app cerrada desde la noche anterior y el Reto sin jugar, llegó solo el aviso del Reto del río, sin el extra `af_dev_push`. Al tocarlo abrió el Reto. Literal: «abrí la notificación del día del río hoy y funcionó bien, me llevó al reto». No hay registro: la depuración inalámbrica ya no estaba conectada.
 
 ## Observaciones
 
