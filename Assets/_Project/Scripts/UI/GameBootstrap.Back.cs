@@ -5,8 +5,8 @@ using UnityEngine;
 namespace AF.UI
 {
     /// <summary>
-    /// Parcial del Atrás de Android en el nivel, la pausa y el inicio (02 §3.5; observación 21 de la jornada 6, decisión del dueño
-    /// del 2026-10-30): el nivel y el Reto pasan por <see cref="GameScreen.AndroidBack"/>; en el inicio sin nada encima, Atrás manda
+    /// Parcial del Atrás de Android en el nivel, la pausa y el inicio (02 §3.5; D-063: observación 21 de la jornada 6, decisión del
+    /// dueño del 2026-10-30): el nivel y el Reto pasan por <see cref="GameScreen.AndroidBack"/>; en el inicio sin nada encima, Atrás manda
     /// la app a segundo plano (<see cref="IAppTaskPort"/>), sin diálogo. Cada pulsación escribe
     /// <c>AF_STATE {"event":"back","t":…,"screen":"pause","action":"resume","reto":false}</c> (<see cref="DevProbe.Back"/>).
     /// </summary>
@@ -19,6 +19,7 @@ namespace AF.UI
         internal const float MoveToBackRepeatMs = 1000f;
 
         private static readonly FakeAppTaskPort s_editorAppTask = new FakeAppTaskPort();
+        private static readonly AndroidAppTaskPort s_androidAppTask = new AndroidAppTaskPort();
 
         // Lo que hizo la última pulsación de Atrás, para la sonda y el audio (null: lo decide el resultado).
         private string? _backActionNote;
@@ -78,7 +79,7 @@ namespace AF.UI
                 return true;
             }
 
-            IAppTaskPort port = AppTaskPortOverride ?? (Application.isEditor ? s_editorAppTask : (IAppTaskPort)new AndroidAppTaskPort());
+            IAppTaskPort port = AppTaskPortOverride ?? (Application.isEditor ? s_editorAppTask : (IAppTaskPort)s_androidAppTask);
             if (!port.MoveToBack())
             {
                 _backActionNote = "none";

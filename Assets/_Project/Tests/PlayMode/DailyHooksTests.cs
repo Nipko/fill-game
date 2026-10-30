@@ -321,7 +321,111 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator E22_AndroidBack_OnTheRetoStuckModal_IsBlocked_AndVibrates()
+        {
+            // 02 §3.5 (D-063): el Reto se comporta como un nivel: Atrás no cierra Aguas estancadas, vibra corto y la sonda lleva
+            // reto:true. (El Reto no tiene ¿Seguro? ni Nivel fallido: sin canoas en juego, «Rendirse» no existe y su salida es
+            // Volver a la orilla; la rama de Nivel fallido usa la misma GameScreen.AndroidBack con PressLevelFailedClose = Exit.)
+            var audio = new AF.Audio.FakeAudioService();
+            AF.Audio.AudioCues.Override = audio;
+            try
+            {
+                // El pool de la escena: los tableros del pool sintético (dos colores en tres cuias) nunca se estancan.
+                yield return Boot(callSetUp: false);
+                GameBootstrap boot = GameBootstrap.Current!;
+                Assert.That(boot.PressDailyCard(), Is.True);
+                DailyChallengeScreen daily = boot.DailyScreen!;
+                ToPlaying(boot, daily);
+                LevelFlow flow = daily.Flow!;
+                Pour[] line = StuckLine(flow);
+                for (int i = 0; i < line.Length && flow.Phase == FlowPhase.Playing; i++)
+                {
+                    StepUntil(boot, () => flow.AcceptsBoardInput || flow.Phase != FlowPhase.Playing, 6000, "tablero listo");
+                    if (!flow.AcceptsBoardInput)
+                    {
+                        break; // el cliente ya lo dio por estancado (D-014: por bucle, antes del final de la línea)
+                    }
+
+                    daily.Actions.TapCuia(line[i].Source);
+                    daily.Actions.TapCuia(line[i].Target);
+                }
+
+                StepUntil(boot, () => flow.Phase == FlowPhase.StuckModal, 10000, "Aguas estancadas en el Reto");
+                Step(boot, 300);
+                GameScreen view = daily.View!;
+                Assert.That(view.StuckVisible, Is.True);
+
+                audio.Clear();
+                boot.AndroidBackWithAudio();
+                Assert.That(boot.LastBackScreen, Is.EqualTo("stuck"));
+                Assert.That(boot.LastBackAction, Is.EqualTo("blocked"));
+                StringAssert.Contains("\"reto\":true", DevProbe.LastBackLine);
+                Assert.That(flow.Phase, Is.EqualTo(FlowPhase.StuckModal), "no se cierra (04 §6.6)");
+                Assert.That(view.Pause.Visible, Is.False);
+                Assert.That(audio.HapticCount(AF.Audio.HapticKind.BackBlocked), Is.EqualTo(1), "la vibración corta");
+                Assert.That(audio.Requested(AF.Audio.SfxId.UiBack), Is.False);
+                Assert.That(daily.IsOpen, Is.True);
+            }
+            finally
+            {
+                AF.Audio.AudioCues.Override = null;
+                AF.Audio.AudioCues.Install(null);
+            }
+        }
+
         // ---- Ayudas ----
+
+        // Vertidos más cortos hasta un tablero sin salida (búsqueda en anchura con las reglas del núcleo y el modo de la partida).
+        private static Pour[] StuckLine(LevelFlow flow)
+        {
+            AF.Core.Board.BoardState start = flow.Session.Current;
+            AF.Core.Rules.PourMode mode = flow.Session.PourMode;
+            bool futile = flow.Session.FutileRuleEnabled;
+            var parents = new Dictionary<AF.Core.Board.BoardState, (AF.Core.Board.BoardState? Parent, Pour Move)>();
+            var queue = new Queue<AF.Core.Board.BoardState>();
+            parents.Add(start, (null, default));
+            queue.Enqueue(start);
+            while (queue.Count > 0 && parents.Count < 300000)
+            {
+                AF.Core.Board.BoardState current = queue.Dequeue();
+                int n = current.Count;
+                for (int a = 0; a < n; a++)
+                {
+                    for (int b = 0; b < n; b++)
+                    {
+                        if (a == b || !PourRules.IsLegal(current, a, b))
+                        {
+                            continue;
+                        }
+
+                        AF.Core.Board.BoardState next = PourRules.Apply(current, a, b, mode);
+                        if (parents.ContainsKey(next) || next.IsWon())
+                        {
+                            continue;
+                        }
+
+                        parents.Add(next, (current, new Pour(a, b, PourRules.Amount(current, a, b, mode))));
+                        if (PourRules.IsStuck(next, futile))
+                        {
+                            var path = new List<Pour>();
+                            for (AF.Core.Board.BoardState? at = next; at != null && parents[at].Parent != null; at = parents[at].Parent)
+                            {
+                                path.Add(parents[at].Move);
+                            }
+
+                            path.Reverse();
+                            return path.ToArray();
+                        }
+
+                        queue.Enqueue(next);
+                    }
+                }
+            }
+
+            Assert.Fail("no se encontró una línea que bloquee el Reto");
+            return new Pour[0];
+        }
 
         private IEnumerator BootSynthetic()
         {

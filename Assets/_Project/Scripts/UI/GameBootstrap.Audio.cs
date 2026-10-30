@@ -158,11 +158,11 @@ namespace AF.UI
         }
 
         // Atrás de Android: si cierra algo, sfx_ui_back (salvo que lo que cerró ya sonara); si no puede cerrar un aviso obligatorio
-        // (el embudo del nivel, también en el Reto, la compra simulada o el aviso del perfil bloqueado), el háptico corto. Con un anuncio delante
+        // (Aguas estancadas o ¿Seguro?, también en el Reto, la compra simulada o el aviso del perfil bloqueado), el háptico corto. Con un anuncio delante
         // Atrás tampoco cierra, pero no vibra: todo se calla durante el anuncio (07 §9.4; AudioMix.HapticsAllowed). Nunca suena
         // ni vibra si Atrás simplemente no hace nada (la victoria, un vertido que resuelve el nivel), ni suena al mandar la app al fondo desde el
         // inicio (02 §3.5).
-        private void AndroidBackWithAudio()
+        internal void AndroidBackWithAudio()
         {
             int cue = AudioCues.Serial;
             if (PressAndroidBack())
@@ -197,7 +197,7 @@ namespace AF.UI
             }
 
             FlowPhase phase = _flow.Phase;
-            return phase == FlowPhase.StuckModal || phase == FlowPhase.GiveUpConfirm || phase == FlowPhase.LevelFailed || phase == FlowPhase.NoCanoes;
+            return phase == FlowPhase.StuckModal || phase == FlowPhase.GiveUpConfirm; // Nivel fallido y Sin canoas: Atrás es su X (D-063)
         }
     }
 }

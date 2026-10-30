@@ -238,7 +238,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.PressUndo(), Is.True);
             Assert.That(_audio.Heard(SfxId.Undo), Is.True, "Marea");
             Assert.That(_audio.Mix.ModalDuck, Is.False, "el modal se cerró");
-            Assert.That(boot.BackBlocked(), Is.False, "jugando, Atrás simplemente no hace nada");
+            Assert.That(boot.BackBlocked(), Is.False, "jugando, Atrás abre la pausa: no vibra (02 §3.5)");
             yield return PlayModeHelpers.WaitFor(() => boot.View!.IsViewIdle, "cola visual tras Marea");
 
             _audio.Clear();
@@ -812,6 +812,36 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.SettingsView!.Visible, Is.False, "Atrás cierra Ajustes");
             Assert.That(_audio.Count(SfxId.UiBack, true), Is.EqualTo(1), "un solo sfx_ui_back");
             Assert.That(_audio.HapticTotal(), Is.EqualTo(0), "sin háptico");
+        }
+
+        [UnityTest]
+        public IEnumerator AndroidBack_OnTheBareLobby_GoesToTheBackground_WithoutSoundOrHaptic()
+        {
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+            var task = new FakeAppTaskPort();
+            GameBootstrap.AppTaskPortOverride = task;
+            GameBootstrap.DailyPoolDisabledOverride = true;
+            try
+            {
+                yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(20)));
+                GameBootstrap boot = GameBootstrap.Current!;
+                Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+                Assert.That(boot.Lobby!.OverlayVisible, Is.False);
+                yield return null;
+
+                _audio.Clear();
+                yield return PressBack(boot, keyboard);
+                Assert.That(boot.LastBackScreen, Is.EqualTo("lobby"));
+                Assert.That(boot.LastBackAction, Is.EqualTo("background"), "02 §3.5: la app a segundo plano");
+                Assert.That(task.Calls, Is.EqualTo(1));
+                Assert.That(_audio.Requested(SfxId.UiBack), Is.False, "sin sfx_ui_back: la app se va");
+                Assert.That(_audio.HapticTotal(), Is.EqualTo(0), "sin háptico");
+            }
+            finally
+            {
+                GameBootstrap.AppTaskPortOverride = null;
+                GameBootstrap.ResetDailyOverrides();
+            }
         }
 
         // Pulsa y suelta Escape con el bucle del juego en marcha unos fotogramas (como BackButtonTests).

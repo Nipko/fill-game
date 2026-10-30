@@ -39,6 +39,8 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-031 | 2026-10-19 | Reto del río: pool de 729 días, bandas, premio, anti-reloj y partida | Decidida por el dueño (R-Q1-R-Q10 con «Acepto tus propuestas»; R-Q1b, R-Q11-R-Q16 y R-Q12b con la recomendada; R-Q2b, 729 días; R-Q11b, 30 candidatos por fuente). Implementada por el equipo Spark (R0-R11, `spark/reto-del-rio`; el bloque (a) integrado en `fcbbd94`). Documentación aplicada con E11 (03, 05, 06 y 08). Pendientes: los enganches E1-E25, la integración y la prueba en el teléfono |
 | D-032 | 2026-10-20 | Las 6 decisiones de 16:9 y del fin de contenido que dejó DC3 | Decidida por el dueño («Acepto tus recomendaciones para las 6 decisiones: compactar Aguas estancadas y la victoria en 16:9, aceptar 3, 4 y 5, y el botón «Jugar · Reto del río» (o «Jugar» sin Reto) tras el fin de contenido.»). Implementada en la ola 8: FX16a (Aguas estancadas compacto) y FX16b (victoria compacta y el botón del inicio). Documentación aplicada con FX16b (02 y 06). Pendiente: la prueba en el teléfono |
 
+| D-063 | 2026-10-30 | El Atrás de Android en el nivel, la pausa y el inicio | Decidida por el dueño (la recomendada de la observación 21 de la jornada 6); lo de Sin canoas en el nivel, la recomendada aceptada por el integrador. Implementada en `tanda6/fx-j6d-atras`, con la tabla en 02 §3.5. Pendiente: verlo en el teléfono (guion, bloque 18.7) |
+
 ---
 
 ## D-001 · Una dosis por vertido
@@ -4638,3 +4640,31 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   3. la misma intención ya aceptada: la marca `id:ticks` de su hora de entrega se guarda en `PlayerPrefs` (`af_push_intent_mark`) y vale entre procesos (`consumed`).
 - **Salir antes de llegar al inicio:** `SessionsPaused(true)` también descarta el aviso pendiente (sin la Bitácora no hay `LogbookPause`).
 - **Tests:** `NotificationIntentReaderTests` (EditMode: el mismo id dos veces, la misma intención dos veces, el frío sin el paquete, el mismo extra en un proceso nuevo con la lista reprogramada, la intención desde Recientes, la marca persistida, la lectura tardía y el tipo desconocido), `PushIntentTests` (PlayMode con un puerto falso: dos toques con el id 1001 en caliente desde el inicio, volver desde Recientes, el frío, Recientes tras matar el proceso con y sin la marca de Recientes, y el tipo desconocido) y `PushRouteTests` (un aviso nuevo sustituye al pendiente; sin la Bitácora, salir lo descarta). **Lo mide** el portátil (guion, bloque 14.1, los cuatro casos).
+
+## D-063 · El Atrás de Android en el nivel, la pausa y el inicio
+
+- **Fecha:** 2026-10-30. Registrada por el carril `tanda6/fx-j6d-atras`.
+- **Estado:** decidida por el dueño el 2026-10-30 con la opción recomendada a la pregunta de la observación 21 de la jornada 6 («¿Atrás en el nivel debe abrir la pausa, como dice el guion, y en la pausa volver al juego?»). Lo de **Sin canoas dentro del nivel** lo decidió el integrador del carril con la recomendada (norma del dueño: ir con la recomendada) y se le comunica al dueño.
+- **Contexto:** observación 21 y bloque 18.7 de `docs/dev/traspaso/pruebas-telefono-2026-10-28-completa-j6.md`: el botón Atrás no hacía nada en el nivel, la pausa, «¿Salir del nivel?», Nivel fallido ni el inicio (en Ajustes, el Mapa, el Mercado y Avatar ya volvía al inicio). 04 §6.6 solo decía que Atrás no cierra Aguas estancadas ni ¿Seguro?.
+- **Decisión** (la tabla de 02 §3.5):
+
+  | Dónde | Atrás |
+  |---|---|
+  | Nivel jugando (o en la intro), sin modal | Abre la pausa, como su botón. Nada mientras el último vertido resuelve el nivel, en la celebración, la victoria, la tarjeta previa o la ola de Barajar |
+  | Pausa | Vuelve al juego, como «Continuar» |
+  | «¿Salir del nivel?» | Cancela y vuelve a la pausa, sin gastar la canoa |
+  | ¿Reiniciar? | Lo cancela; si se abrió desde la pausa, vuelve a ella |
+  | Salto del Boto, tarjeta de Morpho, hoja y tarjeta de Barajar | Las cierra sin coste |
+  | Nivel fallido | Lo mismo que su X (al inicio) |
+  | Sin canoas en el nivel | Lo mismo que su X (recomendada aceptada), como Nivel fallido y Sin canoas en el inicio |
+  | Aguas estancadas y ¿Seguro? | No los cierra: vibración corta (04 §6.6) |
+  | Reto del río | Como un nivel; su calendario se cierra como «Inicio» |
+  | Edad y consentimiento | No se saltan |
+  | Inicio sin nada encima | La app a segundo plano (`moveTaskToBack`), sin diálogo; un doble Atrás rápido, una sola vez |
+  | Inicio con una hoja o un takeover encima | Lo cierra primero, como su X |
+
+  Un doble Atrás rápido nunca lanza excepciones ni encadena dos acciones raras.
+- **Implementación:** `GameScreen.AndroidBack` (`GameScreen.Back.cs`) para el nivel y el Reto; `GameBootstrap.PressAndroidBack` (`GameBootstrap.Back.cs`) con la sonda y el segundo plano por `IAppTaskPort` (`AndroidAppTaskPort` por el JNI, sin plugin ni permisos; `FakeAppTaskPort` en el Editor); `BackBlocked` ya solo con Aguas estancadas y ¿Seguro? (y las hojas que exigen respuesta).
+- **Sonda:** `AF_STATE {"event":"back","t":…,"screen":…,"action":…,"reto":…}` en cada pulsación (`DevProbe.Back`).
+- **Tests:** `AndroidBackTests`, `BackButtonTests`, `AudioBackTests` (el inicio sin sonido ni háptico) y `DailyHooksTests` (E22: la pausa y Aguas estancadas en el Reto). **Lo mide** el portátil (guion, bloque 18.7).
+- **Cómo revertir:** con una decisión nueva del dueño; técnicamente, que `GameScreen.AndroidBack` devuelva `None` jugando y en la pausa, y `PressAndroidBackCore` deje de llamar a `MoveAppToBack`.

@@ -210,19 +210,21 @@ Tras `hint_idle_delay_s` (12 s [P]) sin toques, en **todos los niveles desde el 
 
 ### 3.5 Atrás de Android
 
-Observación 21 de la jornada 6, decisión del dueño del 2026-10-30. Atrás usa siempre el camino del botón equivalente, y cada pulsación escribe `AF_STATE back` (`screen`, `action`, `reto`) en los builds de desarrollo.
+D-063: observación 21 de la jornada 6, decisión del dueño del 2026-10-30; lo de Sin canoas en el nivel, la recomendada aceptada. Atrás usa siempre el camino del botón equivalente, y cada pulsación escribe `AF_STATE back` (`screen`, `action`, `reto`) en los builds de desarrollo.
 
 | Dónde | Atrás |
 |---|---|
 | Nivel jugando (o en la intro), sin modal | Abre la pausa, como su botón. Si el último vertido está resolviendo el nivel (victoria o Aguas estancadas a la espera de la vista), durante la celebración, la victoria, la tarjeta previa o la ola de Barajar, no hace nada |
 | Pausa | Vuelve al juego, como «Continuar» |
 | «¿Salir del nivel?» | Cancela y vuelve a la pausa, sin gastar la canoa |
-| ¿Reiniciar?, Salto del Boto, tarjeta de Morpho, hoja y tarjeta de Barajar | Las cierra sin coste, como su X o «Cancelar» |
+| ¿Reiniciar? | Lo cancela sin reiniciar; si se abrió desde la pausa, vuelve a ella, como «¿Salir del nivel?» |
+| Salto del Boto, tarjeta de Morpho, hoja y tarjeta de Barajar | Las cierra sin coste, como su X o «Cancelar» |
 | Nivel fallido | Lo mismo que su X (al inicio) |
-| Aguas estancadas, ¿Seguro? y Sin canoas en el nivel | No los cierra: vibración corta (04 §6.6) |
-| Reto del río | Como un nivel; su calendario de sellos se cierra como «Inicio» |
+| Sin canoas en el nivel | Lo mismo que su X («esperar»: vuelve a Nivel fallido o al tablero), como Sin canoas en el inicio |
+| Aguas estancadas y ¿Seguro? | No los cierra: vibración corta (04 §6.6) |
+| Reto del río | Como un nivel (Aguas estancadas, bloqueado y con vibración); su calendario de sellos se cierra como «Inicio» |
 | Edad y consentimiento | No se saltan |
-| Inicio sin nada encima | Manda la app a segundo plano, como Android (`moveTaskToBack`), sin diálogo de confirmación. Un doble Atrás rápido la manda una sola vez |
+| Inicio sin nada encima | Manda la app a segundo plano, como Android (`moveTaskToBack`), sin diálogo de confirmación. Un doble Atrás rápido la manda una sola vez; tras volver de segundo plano, el siguiente Atrás la vuelve a mandar |
 | Inicio con una hoja o un takeover encima (Ajustes, Mapa, Mercado, Liga, Avatar, Bitácora, «El río sigue creciendo», Sin canoas) | Cierra eso primero, como su X |
 
 Un doble Atrás rápido nunca encadena dos acciones raras ni lanza excepciones: dos pulsaciones en el mismo fotograma cuentan como una, y en fotogramas seguidos se aplican por orden (abrir y cerrar la pausa está bien).

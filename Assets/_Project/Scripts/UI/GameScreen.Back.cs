@@ -15,16 +15,16 @@ namespace AF.UI
         /// <summary>Cierra la pausa, como «Continuar».</summary>
         Resume = 2,
 
-        /// <summary>«¿Salir del nivel?»: cancela sin gastar la canoa y vuelve a la pausa.</summary>
+        /// <summary>«¿Salir del nivel?» (o ¿Reiniciar? abierto desde la pausa): cancela sin gastar la canoa y vuelve a la pausa.</summary>
         CancelToPause = 3,
 
         /// <summary>Cierra sin coste lo que está delante (¿Reiniciar?, la tarjeta de Morpho, la hoja o la tarjeta de Barajar).</summary>
         Cancel = 4,
 
-        /// <summary>Nivel fallido: lo mismo que su X.</summary>
+        /// <summary>Nivel fallido y Sin canoas: lo mismo que su X.</summary>
         Close = 5,
 
-        /// <summary>Un modal del embudo que Atrás no cierra (Aguas estancadas, ¿Seguro?, Sin canoas): vibración corta (04 §6.6).</summary>
+        /// <summary>Un modal del embudo que Atrás no cierra (Aguas estancadas, ¿Seguro?): vibración corta (04 §6.6).</summary>
         Blocked = 6,
     }
 
@@ -36,6 +36,9 @@ namespace AF.UI
     /// </summary>
     public sealed partial class GameScreen
     {
+        // ¿Reiniciar? se abrió desde la pausa (OnPauseRestart): Atrás vuelve a ella, como con «¿Salir del nivel?».
+        private bool _restartFromPause;
+
         /// <summary>
         /// Nombre de lo que se ve para la sonda <c>AF_STATE back</c>: la pausa y sus confirmaciones, las hojas del nivel, el embudo
         /// (con los nombres de su <c>AF_LAYOUT</c>) o la fase (<c>level</c> jugando).
@@ -90,10 +93,11 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Atrás de Android en el nivel (02 §3.5): con «¿Salir del nivel?», la cancela y vuelve a la pausa (sin gastar la canoa);
-        /// con ¿Reiniciar?, la cancela; con la pausa, «Continuar»; en Nivel fallido, su X; con la tarjeta de Morpho o la hoja o la
+        /// Atrás de Android en el nivel (02 §3.5; D-063): con «¿Salir del nivel?», la cancela y vuelve a la pausa (sin gastar la
+        /// canoa); con ¿Reiniciar?, la cancela (y vuelve a la pausa si se abrió desde ella); con la pausa, «Continuar»; en Nivel
+        /// fallido y en Sin canoas, su X; con la tarjeta de Morpho o la hoja o la
         /// tarjeta de Barajar, las cierra sin coste; jugando (o en la intro) sin nada delante, abre la pausa como su botón. Aguas
-        /// estancadas, ¿Seguro? y Sin canoas no se cierran (<see cref="LevelBackAction.Blocked"/>: vibración corta, 04 §6.6). Mientras
+        /// estancadas y ¿Seguro? no se cierran (<see cref="LevelBackAction.Blocked"/>: vibración corta, 04 §6.6). Mientras
         /// un vertido resuelve el nivel (victoria o bloqueo a la espera de la vista), durante la ola de Barajar, la celebración, la
         /// victoria y la tarjeta previa no hace nada: así nunca se abre una pausa que la victoria o el modal cerrarían en el
         /// fotograma siguiente. Sin asignaciones.
@@ -108,15 +112,17 @@ namespace AF.UI
 
             if (_confirm.Visible)
             {
-                bool quit = _confirm.Kind == ConfirmKind.Quit;
+                // «¿Salir del nivel?» siempre sale de la pausa; ¿Reiniciar?, solo si se abrió desde ella (no desde la cabecera ni
+                // desde la tarjeta de Morpho): en los dos casos, Atrás vuelve a la pausa.
+                bool toPause = _confirm.Kind == ConfirmKind.Quit || _restartFromPause;
                 OnConfirmCancel();
-                if (!quit)
+                if (!toPause)
                 {
                     return LevelBackAction.Cancel;
                 }
 
-                OnPause(); // de vuelta a la pausa de la que salió «Salir»
-                return LevelBackAction.CancelToPause;
+                OnPause();
+                return _pause.Visible ? LevelBackAction.CancelToPause : LevelBackAction.Cancel;
             }
 
             if (_pause.Visible)
@@ -129,9 +135,11 @@ namespace AF.UI
             {
                 case FlowPhase.LevelFailed:
                     return _failed.Visible && _actions.PressLevelFailedClose() ? LevelBackAction.Close : LevelBackAction.None;
+                case FlowPhase.NoCanoes:
+                    // Sin canoas en el nivel: como su X («esperar»), igual que Nivel fallido y que Sin canoas en el inicio (D-063).
+                    return _noCanoes.Visible && _actions.PressNoCanoesClose() ? LevelBackAction.Close : LevelBackAction.None;
                 case FlowPhase.StuckModal:
                 case FlowPhase.GiveUpConfirm:
-                case FlowPhase.NoCanoes:
                     return LevelBackAction.Blocked;
                 case FlowPhase.Playing:
                 case FlowPhase.Intro:
