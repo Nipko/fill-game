@@ -1,10 +1,10 @@
-# Ficha de Google Play · es-419 (traducción; también es-ES) · BORRADOR
+# Ficha de Google Play · es-419 (traducción; también es-ES) · 1.0
 
-- **Estado:** borrador de la ficha 1.0, actualizado el 2026-10-24 (Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora en Google Play, D-048; Liga según D-046). La identidad visual vigente es v2 (D-045); sin dictamen ni registro de marca por ahora (D-047). Nada se publica sin revisión del dueño, la revisión legal de los textos y comprobación del build y de sus opciones de producción.
+- **Estado:** ficha de la 1.0 en firme (2026-10-30; D-064): Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora en Google Play (D-048); Liga del río según D-046, encendida en producción (D-064). La identidad visual vigente es v2 (D-045); sin dictamen ni registro de marca (D-047). Los textos legales los cerró la investigación propia (D-057) y los nombres culturales están en firme (D-054; D-064). Antes de enviarla, el dueño comprueba el build y sus opciones de producción.
 - **Puesta al día del 2026-10-28 (D-049, D-057 y D-059):** el idioma por defecto de la ficha es **en-US** (`../en/ficha.md`; D-057, P9 (a); 08 §13.1 #5); esta ficha es la traducción **es-419** y, copiada tal cual, la **es-ES** (D-057: «es-ES (copia de es-419)»). La 1.0 sale en todo el mundo salvo RU, BY, VN e ID, directa a producción al 100 % con publicación administrada (D-057; D-059): la ficha no alude a ninguna prueba ni a países limitados. El build lleva anuncios de AdMob (D-049): las frases de anuncios y videos se quedan. El paso a paso para pegarla está en `docs/dev/publicar-play-console.md` §5.
 - **Fuentes:** glosario §1.3 (título y descripción corta, canon), 08 §13.1 #5 (límites y la línea de independencia), 07 §10 (capturas y vídeo), 01 §1-§2 (qué se promete), glosario §5, §7 y §8-§9 (nombres).
 - **Reglas de redacción:** español latino neutro con tuteo; sin «Best», «#1», «Free», mayúsculas sostenidas ni emojis (glosario §1.1); «Tintalú» siempre con tilde; ningún identificador ni nombre propio con la cadena «amazon» (la palabra solo aparece de forma descriptiva y en la línea de independencia, que exige 08 §13.1 #5).
-- **Marcas:** `[PENDIENTE: dueño]`, `[PENDIENTE: abogado]`; **pendiente de revisión** = lo cultural (fauna, lugares, comodines con nombre de fauna o tupí), que revisa el asesor cultural (07 §8.2, fila «Ficha de tienda y creativos de UA»). Las preguntas abiertas están en `../README.md`.
+- **Marcas:** no quedan marcas de pendiente: lo cultural (fauna, lugares, comodines con nombre de fauna o tupí, TiTino, Capi, Rosa, «boto», «Estuario») está en firme (dueño, 2026-10-30; D-064), en la línea de D-054; el asesor cultural, si lo hay, revisa para versiones futuras. Las preguntas, ya cerradas, están en `../README.md`.
 
 ## 1. Datos de la app
 
@@ -58,7 +58,7 @@ Cada día, algo nuevo
 - Bitácora del río: sella una página al día y elige tu premio.
 - Canasta: cada 10 niveles, gratis y con su contenido a la vista. Nada de cajas sorpresa.
 - Crecida: encadena victorias para que suba el río.
-- Liga del río: desde el nivel 41, suma puntos cada semana y consulta las clasificaciones global y de tu país. Otros jugadores verán tu seudónimo automático, la bandera y los puntos.
+- Liga del río: desde el nivel 41, suma puntos cada semana y consulta las clasificaciones global y de tu país. Otros jugadores verán tu seudónimo automático, tu avatar, la bandera y los puntos.
 
 Quién te acompaña
 TiTino, un perezoso que vive en su árbol donde el río entra al mar, te anima desde casa. Capi, la capibara, te trae cuias y rema la canoa. Rosa, la boto, te lleva río arriba.
@@ -74,21 +74,18 @@ La campaña se juega sin conexión. Los videos opcionales y las compras sí nece
 
 Tintalú es gratis, con anuncios y compras opcionales. Puedes quitar los anuncios entre niveles con «Sin anuncios».
 
-[PENDIENTE: dueño] Revisión cultural de [nombre del asesor cultural], con su consentimiento para que aparezca su nombre.
-
 Juego independiente inspirado en la cuenca amazónica; sin relación con Amazon.com, Inc.
 ```
 
-Recuento: `../README.md` §2 (Unicode NFC). La línea del asesor cultural va solo con su consentimiento (Q-B13-12 (a)). Notas de contenido:
+Recuento: `../README.md` §2 (Unicode NFC). Notas de contenido:
 - **Anuncios y videos:** el build de la 1.0 lleva AdMob (D-049), así que «Los videos opcionales […] necesitan internet», «con anuncios» y «Puedes quitar los anuncios entre niveles con «Sin anuncios»» se quedan. (Antes, 2026-10-24, dependían de que el build llevara MAX, D-042.)
-- **La línea de la Liga** llevaba dentro del texto la marca `[[ABOGADO: revisar]]`; el 2026-10-28 se saca del bloque para que no se pegue en Play, y la revisión sigue pendiente aquí `[[ABOGADO: revisar]]` (con D-057, investigación propia). Si la Liga no va a estar encendida en producción (`live_league_enabled`, 08 §9), se quita la línea entera.
-- **La línea del asesor cultural** (`[PENDIENTE: dueño] Revisión cultural de …`) **no se pega** sin su consentimiento por escrito (Q-B13-12 (a)): sin él, se borra del texto antes de enviarlo.
-- **Sin promesas que el juego no cumpla:** cada frase de la descripción se comprueba con la build final antes de enviar (comodines, Reto del río, Bitácora, Canasta, Crecida, Liga, patrones de fruta, Datos del río, Frutas del río y juego sin conexión). La Liga requiere internet, desbloquea en el 41 y solo debe anunciarse si el build y la configuración de producción la habilitan. No se nombra ningún producto de compra ni un precio: los da Google Play.
+- **La línea de la Liga** va en la ficha: la Liga sale encendida en producción (recomendación de D-035, añadido del 2026-10-28; D-064). Su revisión legal la cerró D-057 (investigación propia); el avatar se añadió el 2026-10-30 (D-056; D-064).
+- **Sin promesas que el juego no cumpla:** cada frase de la descripción se comprueba con la build final antes de enviar (comodines, Reto del río, Bitácora, Canasta, Crecida, Liga, patrones de fruta, Datos del río, Frutas del río y juego sin conexión). La Liga requiere internet, desbloquea en el 41 y sale encendida en producción (D-064). No se nombra ningún producto de compra ni un precio: los da Google Play.
 - Los subtítulos van en tipo oración («Cómo se juega»), sin mayúsculas sostenidas (glosario §1.1). Play no admite negritas ni encabezados en la descripción [NV]: un subtítulo es solo una línea propia.
 - «Nueve mundos de cinco países» y la Luciérnaga dependen del alcance de la 1.0 (mundos 1-9; glosario §8): se comprueban con la build final.
 - No se promete el número de niveles ni el peso de descarga hasta la build de release (Q-B13-7, Q-B13-8).
-- **Pendiente de revisión** (asesor cultural): los nombres de comodines con fauna o tupí (Morpho, Pororoca, Luciérnaga, Salto del Boto; glosario §12), TiTino, Capi y Rosa (también pendientes de búsqueda de marca, glosario §3), «boto», «Estuario» y la frase del árbol de TiTino.
-- La línea de independencia es la de 08 §13.1 #5, literal. `[PENDIENTE: abogado]`: confirmar redacción y si va también en EN y PT-BR (ver sus fichas).
+- **En firme (dueño, 2026-10-30; D-064):** los nombres de comodines con fauna o tupí (Morpho, Pororoca, Luciérnaga, Salto del Boto; glosario §12), TiTino, Capi y Rosa (glosario §3), «boto», «Estuario» y la frase del árbol de TiTino.
+- La línea de independencia es la de 08 §13.1 #5, literal, y va también en EN y PT-BR: cerrado por D-057 (investigación propia).
 
 ## 4. Palabras clave de apoyo (no son un campo de Play; guían la redacción)
 
@@ -108,17 +105,17 @@ El arte y la composición están en `../assets-tienda.md`. Texto corto superpues
 
 | # | Texto ES-419 | Estado |
 |---|---|---|
-| 1 | Ordena el agua del Amazonas | canon 07 §10.2 · pendiente de revisión |
+| 1 | Ordena el agua del Amazonas | canon 07 §10.2 · en firme (dueño, 2026-10-30; D-064) |
 | 2 | 14 colores de frutas y ríos | Q-B13-23 (a), decidida el 2026-10-20 (sustituye a «14 frutas, 14 colores» de 07 §10.2; el integrador corrige 07 §10.2) |
 | 3 | Mira cómo se tiñe el río | canon 07 §10.2 |
-| 4 | Remonta el Amazonas hasta donde nace | canon 07 §10.2 [P] · pendiente de revisión |
+| 4 | Remonta el Amazonas hasta donde nace | canon 07 §10.2 [P] · en firme (dueño, 2026-10-30; D-064) |
 | 5 | Difícil de verdad, justo siempre | canon 07 §10.2 |
 | 6 | Patrones para todos los ojos | canon 07 §10.2 |
-| 7 | TiTino te acompaña | canon 07 §10.2 [P] · pendiente de revisión |
+| 7 | TiTino te acompaña | canon 07 §10.2 [P] · en firme (dueño, 2026-10-30; D-064) |
 | 8 | Juega sin wifi, vuelve cada día | canon 07 §10.2 |
 
 ## 7. Fichas personalizadas (08 §13.1 #6)
 
 - **es-ES:** la misma ficha, copiada sin cambios (D-057). Las capturas de es-419 valen para es-ES.
-- **México (es-419, ficha por país; se queda con la salida mundial, 08 §13.1 #6):** misma ficha; si Play ofrece OXXO en México al lanzar, una línea al final de la descripción: «Paga tus compras también en efectivo con OXXO, donde Google Play lo ofrezca.» `[PENDIENTE: dueño]` comprobar en Play Console antes de escribirla (Q-B13-17 (a)).
+- **México (es-419, ficha por país; se queda con la salida mundial, 08 §13.1 #6):** misma ficha; si Play ofrece OXXO en México al lanzar, una línea al final de la descripción: «Paga tus compras también en efectivo con OXXO, donde Google Play lo ofrezca.» el dueño lo comprueba en Play Console antes de escribirla (Q-B13-17 (a)).
 - Colombia y Perú: sin ficha propia en la 1.0 [P].

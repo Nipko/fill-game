@@ -91,7 +91,7 @@ Sin pistas con jugadores (cerrada, abierta) y sin escalonado; la pista interna, 
 3. **En Play Console, antes de enviar nada a revisión:** «Resumen de publicación» › **«Publicación administrada»**, activada. Así, cuando Google apruebe la versión, no sale sola.
 4. **Pista interna, solo tú:** en «Pruebas internas», una lista de testers con **solo tu cuenta** (nunca jugadores) y una versión con el AAB del paso 2. Instálala desde Play con el enlace de participación y prueba, siguiendo `docs/dev/iap.md` §3:
    - las compras con licencia de prueba («Pruebas de licencias» con tu cuenta) y su verificación en el backend **de prod** (el AAB lleva Firebase de prod). Antes de probarlas: `af-prod/play-service-account` cargado en AWS e invitado en Play Console con sus permisos, `af-prod/firebase-admin-service-account` cargado (borrado de cuenta), y App Check con Play Integrity y la SHA-256 de la firma de Play, que aparece tras esta primera subida (`docs/dev/iap.md` §3, paso 3; 08 §13.1 #18). Sin el primero no se acredita ninguna compra;
-   - PAD;
+   - PAD: no aplica en la 1.0 (todo el contenido va en el AAB; no hay Addressables ni Play Asset Delivery en `Packages/manifest.json` ni en el código);
    - Play Games.
 
    Si algo falla, se corrige y se vuelve al paso 1 con un `versionCode` mayor.

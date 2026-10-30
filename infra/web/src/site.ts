@@ -5,7 +5,8 @@
 // Desarrollador y responsable: Parallext, LLC (D-041). Los datos que faltan van como [[DATO DEL DUEÑO: …]] y lo que
 // quedaba para el abogado como [[ABOGADO: …]]; el generador los resalta. Sin abogado (D-057), los textos legales salen de
 // docs/legal/investigacion-legal-mundial.md §9; mientras queden datos del dueño, las páginas llevan el aviso de versión
-// previa a la publicación. en y pt-BR son traducción con IA, pendiente del revisor nativo.
+// previa a la publicación. en y pt-BR son traducción con IA, aceptada para la 1.0 (D-054); los textos públicos están en
+// firme para la 1.0 (D-064).
 
 export const LANGS = ['es-419', 'en', 'pt-BR'] as const;
 export type Lang = (typeof LANGS)[number];
@@ -97,8 +98,8 @@ export interface DeleteFormText {
   readonly confirmNo: string;
   readonly noscript: string;
   /**
-   * Aviso cuando el borrado por web aún no está activo (sin API: modo solo web, D-044). Lleva el correo de privacidad
-   * como marcador hasta que el dueño lo dé.
+   * Aviso cuando el borrado por web no está activo (sin API: modo solo web, D-044), con la vía del juego y el correo de
+   * privacidad.
    */
   readonly soon: string;
   /** Mensajes del script; {minutes} se sustituye en rateLimited. */
@@ -143,12 +144,12 @@ export const UI: Record<Lang, UiText> = {
       hint: 'Lo ves en Tintalú › Ajustes, en «Código para borrar tu cuenta en la web». Puedes escribirlo con o sin guiones.',
       submit: 'Continuar',
       confirmTitle: '¿Seguro que quieres eliminar tu cuenta?',
-      confirmBody: 'Se borrarán tu cuenta y tus datos en la nube. No se puede deshacer y las compras no se reembolsan.',
+      confirmBody: 'Se borrarán tu cuenta y tus datos en la nube. No se puede deshacer, y borrar la cuenta no da derecho por sí solo a un reembolso de lo comprado.',
       confirmCodeLabel: 'Código:',
       confirmYes: 'Sí, eliminar',
       confirmNo: 'Cancelar',
       noscript: 'El formulario necesita JavaScript. Si no puedes activarlo, borra tu cuenta desde el juego (Ajustes › «Eliminar cuenta y datos»).',
-      soon: 'El borrado desde esta página estará disponible pronto. Mientras tanto, borra tu cuenta desde el juego (Ajustes › «Eliminar cuenta y datos») o escríbenos a privacy@tintalu.com y lo hacemos por ti.',
+      soon: 'El borrado desde esta página no está disponible ahora mismo. Borra tu cuenta desde el juego (Ajustes › «Eliminar cuenta y datos») o escríbenos a privacy@tintalu.com y lo hacemos por ti.',
       msg: {
         invalid: 'Ese código no es válido. Revísalo en Ajustes: tiene 26 letras y números.',
         sending: 'Un momento…',
@@ -177,12 +178,12 @@ export const UI: Record<Lang, UiText> = {
       hint: 'You can find it in Tintalú › Settings, under “Code to delete your account on the web”. You can type it with or without hyphens.',
       submit: 'Continue',
       confirmTitle: 'Are you sure you want to delete your account?',
-      confirmBody: 'Your account and your data in the cloud will be deleted. This can’t be undone and purchases are not refunded.',
+      confirmBody: 'Your account and your data in the cloud will be deleted. This can’t be undone, and deleting your account does not by itself entitle you to a refund of what you bought.',
       confirmCodeLabel: 'Code:',
       confirmYes: 'Yes, delete',
       confirmNo: 'Cancel',
       noscript: 'The form needs JavaScript. If you can’t turn it on, delete your account in the game (Settings › “Delete account and data”).',
-      soon: 'Deleting your account from this page will be available soon. In the meantime, delete it in the game (Settings › “Delete account and data”) or write to us at privacy@tintalu.com and we’ll do it for you.',
+      soon: 'Deleting your account from this page isn’t available right now. Delete it in the game (Settings › “Delete account and data”) or write to us at privacy@tintalu.com and we’ll do it for you.',
       msg: {
         invalid: 'That code isn’t valid. Check it in Settings: it has 26 letters and numbers.',
         sending: 'One moment…',
@@ -203,7 +204,7 @@ export const UI: Record<Lang, UiText> = {
     footerNav: 'Páginas do site',
     draft: 'Versão anterior à publicação.',
     draftDetail: 'Faltam alguns dados, marcados entre colchetes duplos.',
-    footerDeveloper: 'Tintalú é um jogo da Parallext, LLC.',
+    footerDeveloper: 'O Tintalú é um jogo da Parallext, LLC.',
     independence: 'Jogo independente inspirado na bacia amazônica; sem relação com a Amazon.com, Inc.',
     deleteForm: {
       legend: 'Excluir com o código da sua conta',
@@ -211,12 +212,12 @@ export const UI: Record<Lang, UiText> = {
       hint: 'Ele aparece em Tintalú › Configurações, em “Código para excluir sua conta na web”. Você pode digitá-lo com ou sem hifens.',
       submit: 'Continuar',
       confirmTitle: 'Tem certeza de que quer excluir sua conta?',
-      confirmBody: 'Sua conta e seus dados na nuvem serão apagados. Não dá para desfazer e as compras não são reembolsadas.',
+      confirmBody: 'Sua conta e seus dados na nuvem serão apagados. Não dá para desfazer, e excluir a conta não dá direito, por si só, a um reembolso do que você comprou.',
       confirmCodeLabel: 'Código:',
       confirmYes: 'Sim, excluir',
       confirmNo: 'Cancelar',
       noscript: 'O formulário precisa de JavaScript. Se não puder ativá-lo, exclua sua conta no jogo (Configurações › “Excluir conta e dados”).',
-      soon: 'A exclusão por esta página estará disponível em breve. Enquanto isso, exclua sua conta no jogo (Configurações › “Excluir conta e dados”) ou escreva para privacy@tintalu.com e nós fazemos isso por você.',
+      soon: 'A exclusão por esta página não está disponível no momento. Exclua sua conta no jogo (Configurações › “Excluir conta e dados”) ou escreva para privacy@tintalu.com e nós fazemos isso por você.',
       msg: {
         invalid: 'Esse código não é válido. Confira em Configurações: ele tem 26 letras e números.',
         sending: 'Um momento…',

@@ -1,8 +1,8 @@
-# Ficha de Google Play · pt-BR (traducción; también pt-PT) · BORRADOR
+# Ficha de Google Play · pt-BR (traducción; también pt-PT) · 1.0
 
-- **Estado:** rascunho da ficha 1.0, atualizado em 24-10-2026 (Parallext, LLC como estúdio; AUTOMATION AI S.A.S como editora no Google Play, D-048; Liga do Rio conforme D-046). A identidade visual vigente é a v2 (D-045); sem parecer nem registro de marca por enquanto (D-047). Nada será publicado sem revisão do responsável, revisão jurídica dos textos e conferência da build e das opções de produção. O restante é tradução com IA da ficha es-419, pendente de revisor nativo.
+- **Estado:** ficha de la 1.0 en firme (2026-10-30; D-064): Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora en Google Play (D-048); Liga do Rio según D-046, encendida en producción (D-064). La identidad visual vigente es v2 (D-045); sin dictamen ni registro de marca (D-047). Los textos legales los cerró la investigación propia (D-057). El resto es traducción con IA de la ficha es-419, aceptada tal cual para la 1.0 (D-054; D-064). Antes de enviarla, el dueño comprueba el build y sus opciones de producción.
 - **Puesta al día del 2026-10-28 (D-049, D-057 y D-059):** el idioma por defecto de la ficha es en-US (`../en/ficha.md`); esta es la traducción **pt-BR** y, copiada tal cual, la **pt-PT** (D-057: «pt-PT (copia de pt-BR)»). La 1.0 sale en todo el mundo salvo RU, BY, VN e ID, al 100 % con publicación administrada (D-057; D-059): la ficha no alude a ninguna prueba ni a países limitados. El paso a paso para pegarla está en `docs/dev/publicar-play-console.md` §5.
-- Mismas reglas, marcas y fuentes que `../es-419/ficha.md`. Portugués con «você» (glosario §10). Nombres PT del glosario §5, §7.1, §9, §10 y §12; lo cultural, **pendiente de revisión** del asesor.
+- Mismas reglas, marcas y fuentes que `../es-419/ficha.md`. Portugués con «você» (glosario §10). Nombres PT del glosario §5, §7.1, §9, §10 y §12; lo cultural, en firme (dueño, 2026-10-30; D-064).
 
 ## 1. Datos de la app
 
@@ -22,7 +22,7 @@
 
 73 caracteres. Canon del glosario §1.3.
 
-## 3. Descrição completa (≤ 4.000) · traducción con IA, pendiente del revisor nativo
+## 3. Descrição completa (≤ 4.000) · traducción con IA, aceptada (D-054; D-064)
 
 ```text
 Despeje a água de uma cuia para outra até que cada uma fique com uma só cor. Simples e relaxante. Em Tintalú, cada cor vem de uma fruta ou da água de um rio da bacia amazônica: açaí, buriti, taperebá, camu-camu…
@@ -53,7 +53,7 @@ Todo dia, uma novidade
 - Diário do Rio: carimbe uma página por dia e escolha o seu prêmio.
 - Cesta: a cada 10 níveis, grátis e com o conteúdo à vista. Nada de caixas-surpresa.
 - Enchente: emende vitórias para o rio subir.
-- Liga do Rio: a partir do nível 41, some pontos por semana e consulte as classificações global e do seu país. Outros jogadores poderão ver seu pseudônimo automático, a bandeira do país e seus pontos.
+- Liga do Rio: a partir do nível 41, some pontos por semana e consulte as classificações global e do seu país. Outros jogadores poderão ver seu pseudônimo automático, seu avatar, a bandeira do país e seus pontos.
 
 Quem vai com você
 TiTino, um bicho-preguiça que vive na sua árvore onde o rio encontra o mar, torce por você de casa. Capi, a capivara, traz cuias e rema a canoa. E Rosa, a boto, leva você rio acima.
@@ -69,23 +69,20 @@ A campanha funciona sem conexão. Os vídeos opcionais e as compras precisam de 
 
 Tintalú é grátis, com anúncios e compras opcionais. Tire os anúncios entre os níveis com Sem anúncios.
 
-[PENDIENTE: dueño] Revisão cultural de [nome do assessor cultural], com o consentimento dele ou dela para ser citado.
-
 Jogo independente inspirado na bacia amazônica; sem relação com a Amazon.com, Inc.
 ```
 
 Notas:
-- **Liga do Rio:** precisa de internet, é liberada no nível 41 e só deve constar se a build e a configuração de produção a habilitarem. Conferir a descrição e os avisos de privacidade com essa build antes do envio.
+- **Liga do Rio:** requiere internet y desbloquea en el 41; la descripción y la política de privacidad la declaran como encendida (D-064).
 - **Aguaje** sale como «buriti», su nombre PT del glosario §9; **camu camu** como «camu-camu».
-- «Nível», como la UI (`level_n` = «Nível {n}», glosario §10). «Fase» es la forma habitual del género en PT-BR [P]: si el revisor nativo la prefiere para la ficha, se cambia en las tres frases.
+- «Nível», como la UI (`level_n` = «Nível {n}», glosario §10). «Fase» es la forma habitual del género en PT-BR [P]: la ficha se queda con «nível», como la UI (D-054; D-064).
 - «Reforços» / «Reforços do rio» por «comodines»: el nombre PT del conjunto (D-033, añadido del 2026-10-22, punto 8; glosario §5).
 - `fact_sheet_title` y `settings_about_amazon` van con su PT de la UI: «Frutas do Rio» y «Sobre a Amazônia» (puntos 3 y 4; glosario §10).
 - **Anúncios e vídeos:** el build de la 1.0 lleva AdMob (D-049): «Os vídeos opcionais […] precisam de internet», «com anúncios» y «Tire os anúncios entre os níveis com Sem anúncios» se quedan. (Antes dependían de MAX, D-042.)
-- La marca `[[ABOGADO: revisar]]` de la línea de la Liga do Rio sale del bloque el 2026-10-28 para que no se pegue en Play; la revisión sigue pendiente `[[ABOGADO: revisar]]`. Sin la Liga encendida en producción, se quita la línea.
-- La línea «[PENDIENTE: dueño] Revisão cultural de …» **no se pega** sin el consentimiento por escrito del asesor (Q-B13-12 (a)).
+- **La línea de la Liga do Rio** va en la ficha: la Liga sale encendida en producción (D-064). Su revisión legal la cerró D-057 (investigación propia); el avatar se añadió el 2026-10-30 (D-056; D-064).
 - **pt-PT:** la misma ficha, copiada sin cambios (D-057). Es portugués de Brasil; un revisor de pt-PT puede ajustarla más adelante [P].
-- **Pendiente de revisión** (asesor): Morpho, Pororoca, Vaga-lume, TiTino, Capi, Rosa, «a boto», «Estuário».
-- `[PENDIENTE: abogado]`: la línea de independencia en PT-BR es traducción propuesta [P] de la de 08 §13.1 #5; la revisa también el abogado brasileño.
+- **En firme (dueño, 2026-10-30; D-064):** Morpho, Pororoca, Vaga-lume, TiTino, Capi, Rosa, «a boto», «Estuário».
+- La línea de independencia en PT-BR es la traducción de la de 08 §13.1 #5: cerrado por D-057 (investigación propia).
 
 ## 4. Palabras clave de apoyo
 
@@ -101,15 +98,15 @@ Boas-vindas ao rio. A primeira versão de Tintalú: suba o rio por nove mundos, 
 
 | # | Texto PT-BR | Estado |
 |---|---|---|
-| 1 | Classifique as águas da Amazônia | canon 07 §10.2 · pendiente de revisión |
+| 1 | Classifique as águas da Amazônia | canon 07 §10.2 · en firme (dueño, 2026-10-30; D-064) |
 | 2 | 14 cores de frutas e rios | Q-B13-23 (a), decidida el 2026-10-20 |
 | 3 | Veja o rio ganhar cor | canon 07 §10.2 |
-| 4 | Suba o Amazonas até onde ele nasce | Q-B13-6 (a), decidida el 2026-10-20: la propuesta de B13 hasta el revisor nativo |
+| 4 | Suba o Amazonas até onde ele nasce | Q-B13-6 (a), decidida el 2026-10-20: la propuesta de B13, en firme por D-054 y D-064 |
 | 5 | Difícil de verdade, sempre justo | canon 07 §10.2 |
 | 6 | Padrões para todos os olhos | canon 07 §10.2 |
-| 7 | TiTino te acompanha | canon 07 §10.2 [P] · pendiente de revisión |
+| 7 | TiTino te acompanha | canon 07 §10.2 [P] · en firme (dueño, 2026-10-30; D-064) |
 | 8 | Jogue offline, volte todo dia | canon 07 §10.2 |
 
 ## 7. Ficha personalizada de Brasil (08 §13.1 #6)
 
-Con Pix: si Play ofrece Pix en Brasil al lanzar, una línea al final de la descripción: «Pague suas compras também com Pix, onde o Google Play oferecer.» `[PENDIENTE: dueño]` comprobar en Play Console antes de escribirla (Q-B13-17 (a)). La ficha de Brasil entra con la fase 5 (01 §8.1; 09). **Nota del 2026-10-28:** con la salida mundial, 08 §13.1 #6 dice que las fichas personalizadas de BR y MX «se quedan con la salida mundial» (D-057); no hace falta esperar a la fase 5 [P].
+Con Pix: si Play ofrece Pix en Brasil al lanzar, una línea al final de la descripción: «Pague suas compras também com Pix, onde o Google Play oferecer.» el dueño lo comprueba en Play Console antes de escribirla (Q-B13-17 (a)). La ficha de Brasil entra con la fase 5 (01 §8.1; 09). **Nota del 2026-10-28:** con la salida mundial, 08 §13.1 #6 dice que las fichas personalizadas de BR y MX «se quedan con la salida mundial» (D-057); no hace falta esperar a la fase 5 [P].

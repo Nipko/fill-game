@@ -17,8 +17,8 @@
 - **Mantener dos versiones las haría divergir**, y la que lee el jugador, el abogado y Play Console es la de la web. Por eso aquí no queda texto legal: cualquier cambio de la política se hace en `infra/web/src/content/*/privacy.html` (y sale con el despliegue de la web).
 - **Historia:** el borrador del Spark sigue en git. Para leerlo: `git show 964b64fb:docs/store-listing/privacidad.md`.
 
-## Lo que sigue pendiente (lo marca la propia web)
+## Estado (2026-10-30)
 
-- Resueltos (D-041, añadido del 2026-10-25): Parallext, LLC de Wyoming con domicilio en Orlando, `support@tintalu.com`, `privacy@tintalu.com`, encargado Nir Levin Bermúdez Perea y sin representante en la UE (`[[ABOGADO]]`). Siguen como `[[DATO DEL DUEÑO]]`: versión y fecha de entrada en vigor y retención de Analytics (Q-B13-19).
-- `[[ABOGADO]]`: bases legales por finalidad, transferencias internacionales, plazo fiscal, plazos de respuesta, adolescentes (LGPD art. 14, ECA Digital) y los registros de diagnóstico de Play Billing (Q-BILL-2).
-- **Al integrar D-042** (MAX con UMP y Play Games): pasar los anuncios y el guardado en la nube de «Lo que todavía no está en el juego» a la tabla de datos, a la vez que `data-safety.md` y 08 §13.3.
+- **La web ya no lleva marcas `[[ABOGADO]]` ni `[[DATO DEL DUEÑO]]`** (lo comprueba `infra/test/web/site.test.ts`): los datos del dueño están puestos (D-041, añadido del 2026-10-25; versión 1, vigente desde el 30 de octubre de 2026; retención de Analytics de 2 meses, Q-B13-19) y lo que quedaba para el abogado lo cerró la investigación propia (D-057; `docs/legal/investigacion-legal-mundial.md` §9).
+- Los textos públicos están en firme para la 1.0 (D-064): sin marcas provisionales, con la Liga encendida (y su avatar), el registro de premios de anuncios de 30 días, Play Age Signals y las copias de seguridad del servidor.
+- Los anuncios (AdMob con Unity Ads en su mediación, D-049) y Play Games (D-042) ya están en la tabla de datos; la sección 5 solo dice qué redes de anuncios hay hoy.
