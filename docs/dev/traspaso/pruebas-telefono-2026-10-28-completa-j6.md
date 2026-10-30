@@ -25,6 +25,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Bloques 5, 9, 10.1 y 11 (punto 12, lo hecho) | cumple; los banners repiten dibujo | 17 |
 | Lo automatizable que quedaba (punto 13) | cumple; el Mapa del 700 dice «Nivel 701» | 18 |
 | Arreglos de la segunda hoja j6 (build `ff3c49c0`, punto 14) | cumplen el icono y la bandeja; el aviso no abre el Reto; la memoria, por encima | 19, 20 |
+| Lo que quedaba del punto 14 y los bloques 9, 10, 11, 12, 13, 14, 18 y 19 (punto 15) | cumple; la 15 queda arreglada; la Liga no se puede probar (App Check) | 20, 21, 22 |
 
 ## Verificación (bloque 0)
 
@@ -424,7 +425,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - `dev.apk`, 74,96 MB (`[AF.BuildDev] OK`);
      - ensayo, `[AF.BuildRelease] OK`, `rehearsal.aab` 57,91 MB y `rehearsal.apk` 63,42 MB;
      - `check-manifest -Mode dev`, `check-16kb`, `check-no-unity-iap`, `check-no-applovin` y `check-no-unity-telemetry` en los dos, y `check-release-classes` en el ensayo: todas OK;
-     - `size-gate` del AAB, pendiente (reinicia adb).
+     - `size-gate` del AAB: OK, en el punto 15.
    - **N6.1, la forma del icono (observación 12): cumple.**
      - **La sonda** (primera apertura): `morph_shape` squircle, `morph_shape_n` 2,67, `morph_shape_px` [493,9, 538,8], `morph_shape_fit_px` 1,2, `os_splash_mask_ms` 0,97, `signal`, `intro`, `system` y `held` 1.121 ms. En frío, `held` 840-1.014 ms.
      - **Las ráfagas** (`n6d-*`, en bruto; ancho en la fila 1170, alto en la columna 540, y alcance en las cuatro diagonales desde el centro):
@@ -435,11 +436,11 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - **El dueño**, tras 4 arranques en frío, literal: «está bien».
      - **Con Reducir movimiento** (el dueño activó «Reduce animations» y luego lo quitó): `reduce_motion` true, `morph_mode` fade, `morph_ms` -1, `motion_frames` 0 y `signal`. Sale el icono de 496-498 px y luego la escena quieta, sin saltos.
      - **Inicio durante el icono:** pulsado Inicio a los 0,5 s y vuelta a los 5 s, la intro termina normal (`anim_ms` 3.500, `cut` false), sin `E/Unity` ni el icono colgado. El velo lo soltó el tope (`cap`, 3.000 ms) porque la app estaba en segundo plano; no es un cuelgue.
-     - **El ensayo:** sin ráfaga todavía.
+     - **El ensayo:** cumple, en el punto 15.
    - **La bandeja a 320 dp con la letra al 130 % (observación 13): cumple** (`b16/bandeja-320b.png`).
      - En el 100, en es-419, en y pt-BR, ya no se parte ninguna palabra: «Deshacer», «Desfazer», «Misturar» y «Barajar» salen enteras, más pequeñas que «Pista» o «Revelar».
      - El dueño, sobre la bandeja con letras de distinto tamaño: «sí está bien».
-     - Sin hacer: 411 dp y las pestañas del Mercado a un solo tamaño (observación 15).
+     - 411 dp y las pestañas del Mercado a un solo tamaño (observación 15): cumplen, en el punto 15.
    - **El aviso del Reto (D-062, observación 16): no cumple** (observación 19). Tres casos, con el dueño tocando el aviso:
      - **En segundo plano dentro de un nivel** (el 100): sigue en el nivel; `push_open` con `type` `daily_ready` y `dest` `none`, que es lo que dice el guion;
      - **En segundo plano en el inicio:** el toque llega (`onNewIntent`, y el aviso se quita), pero no sale `push_open`: el juego vuelve al inicio con la Bitácora encima;
@@ -462,8 +463,82 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
        - E1 (OpenGL ES) es el que más baja: −51 MB en el `dev.apk` y −36 MB en el ensayo, por `GL mtrack` (−12 a −18 MB), Private Other y Graphics;
        - E2 y E3 bajan 19-24 MB, casi todo en Private Other, dentro del ruido entre arranques;
        - nada baja de los 450 MB de D-060 en este teléfono (observación 20).
-     - **Medidas que no valen:** en E1-E3, la del «inicio» y la del «Mapa» se hicieron en el nivel 75. Al relanzar, el juego retoma el nivel a medias del experimento anterior; lo dice la sonda (`at` level). Hay que repetirlas saliendo antes del nivel. Tampoco hay `AF_PERF frames` con `af_bench_morpho` en E1.
+     - **Medidas que no valen:** en E1-E3, la del «inicio» y la del «Mapa» se hicieron en el nivel 75. Al relanzar, el juego retoma el nivel a medias del experimento anterior; lo dice la sonda (`at` level). Se repitieron en el punto 15. Tampoco hay `AF_PERF frames` con `af_bench_morpho` en E1.
      - **La imagen sin posproceso:** el arranque, el inicio, los niveles y la victoria se ven como antes.
+
+15. **Con el mismo build (`ff3c49c0`): lo que quedaba del punto 14 y lo automatizable de los bloques 9, 12 y 19. Cumple; la observación 15 queda arreglada.**
+   - **`size-gate` del `rehearsal.aab`: OK**, 57,91 MB de 80 (sin bundletool, solo el tamaño del archivo).
+   - **N6.1 en el ensayo: cumple** (`n6r-cold`, `n6r-cold2`, `n6r-cold3`; tres arranques en frío en bruto). El último fotograma del sistema mide 496 × 498 px con diagonales de 190-191 px; el primero de la intro, 498 × 498 y 500 × 500, con diagonales de 190-192. Después el eje crece (505, 652, 756, 818…) y el borde no retrocede. `TotalTime` 125-237 ms. El ensayo no escribe las sondas `AF_`.
+   - **La memoria del inicio y del Mapa, repetida (`b19d/`).** Antes se sacó del nivel (Pausa › Salir) y se selló la Bitácora de hoy para que no tapara el inicio. Los primeros intentos no valen y se guardaron aparte (`b19d-invalido/`): la Bitácora tapaba el inicio y el toque al Mapa no llegaba. La sonda confirma `at` lobby y `at` map.
+
+     | Experimento | Inicio, TOTAL PSS (`GL mtrack`) | Mapa, TOTAL PSS (`GL mtrack`) | Sonda del Mapa, `os_pss_mib` / `gfx_mib` |
+     |---|---|---|---|
+     | E0, la base | 587.557 (89.752) | 588.470 (92.232) | 564,3 / 79,2 |
+     | E1, `-force-gles` | **566.889** (79.928) | **575.606** (81.984) | 545,1 / 34,6 |
+     | E2, bloques de 4 MiB | 593.420 (89.752) | 592.729 (92.232) | 569,8 / 79,2 |
+     | E3, E2 más los temporales | 592.166 (89.752) | 592.038 (92.360) | 568,4 / 79,2 |
+
+     E1 vuelve a ser el único que baja: 13-21 MB, de ellos ~10 MB de `GL mtrack`. E2 y E3 no cambian nada. Ninguno baja de 450 MB (observación 20).
+   - **Las pestañas del Mercado (observación 15): cumple** (`merc/pestanas-411-320.png`, `merc/mercado-*.png`). Al 130 %, a 411 dp y a 320 dp (`wm density` 540 y vuelta a 420), en es-419, en y pt-BR, las cuatro pestañas salen con el mismo tamaño de letra en cada fila. A 411 dp, «Sin anuncios» y «Sem anúncios» van en dos líneas. A 320 dp, es-419 y pt-BR van en dos filas de dos, y en inglés en una.
+   - **La bandeja a 411 dp con la letra al 130 %: cumple** (`merc/bandeja-411.png`, nivel 62). «Deshacer», «Undo» y «Desfazer», «+1 cuia», «Pista», «Hint» y «Dica», «Barajar», «Mix» y «Misturar» salen enteras.
+   - **Bloque 9.1, cerrar el vídeo antes de tiempo y la zona segura** (`b09b/`, la Pista del 63 sin semillas, `rv_hint`):
+     - **el anuncio de prueba de Google no deja cerrarlo antes de tiempo:** no hay X hasta «Reward granted», y Atrás al primer segundo no hace nada. A los ~6 s, Atrás sí cierra, pero el premio ya se había dado (`af_ad_reward` `provisional`). Así que «cerrar antes de tiempo: sin premio» no se puede probar con el simulado;
+     - **el premio llega una sola vez** en los dos intentos (`af_ad_request` `filled`, `af_ad_shown` y `af_ad_reward`);
+     - **zona segura:** el rótulo «Test Ad» y la X de «Reward granted» quedan bajo la barra de estado, a la derecha y lejos del recorte de la cámara, e «Install» lejos de la barra de gestos. Una notificación emergente de otra app tapó la X unos segundos (es del sistema, no del juego; la captura se borró).
+     - Las líneas salen como `AF_EVENT_UNSENT`, porque el perfil de 18+ se rehízo rechazando el consentimiento (punto 14).
+   - **Bloque 9.2, nunca en el Reto ni al reintentar: cumple** (`b09b/inter_retry_logcat.txt`, `lc-reto.txt`, `win_next_logcat.txt`).
+     - En el 66, pasado el calentamiento (175 s), salir (fallo) y «Reintentar» no consultan el intersticial: no hay `ad_check` ni anuncio;
+     - **ganar el Reto de hoy** (`d2_n0301`, resuelto con el solver: 19 vertidos) tampoco: `daily_challenge` `win` sin `ad_check`;
+     - **de control**, ganar el 66 y «Siguiente» da `ad_check` `blocked:Cadence`, y ganar el 67, `allowed` y el anuncio simulado «interstitial_post_level · intersticial» con «Cerrar».
+   - **Bloque 12.1, el Reto de hoy:** abierto desde la tarjeta del inicio; tras 3 vertidos, a segundo plano y vuelta, mismo tablero; ganado, sella el 29 en el calendario con «+60» y «Cosecha doble: x2 por video». La racha pasa a 1 (`streak_days` 1).
+   - **La Bitácora de hoy:** la página 1 se selló con «+60» (`calendar_claim`), y desde entonces el inicio abre sin el takeover.
+   - **Bloque 19.1, sesión larga: cumple** (`b19e/`). 60 minutos seguidos con el jugador automático, del 68 al 216 (149 niveles), con Marea, Morpho, Luciérnaga, Cuia extra, Volver a la orilla y Cosecha doble por turnos, y 0 `E/Unity` ni excepciones. Cada 15 minutos:
+
+     | Minuto | TOTAL PSS (KB) | Batería | Temperatura | Estado térmico |
+     |---|---|---|---|---|
+     | 0 | 524.468 | 87 % | 35,2 °C | 0 |
+     | 15 | 583.409 | 85 % | 33,4 °C | 0 |
+     | 30 | 599.367 | 83 % | 32,4 °C | 0 |
+     | 45 | 593.545 | 81 % | 31,9 °C | 0 |
+     | 60 | 609.868 | 79 % | 31,5 °C | 0 |
+
+     - El PSS sube unos 85 MB en la primera media hora y luego se queda en 590-610 MB: no crece sin parar. En el 75, 100… 200, el jugador da 540-611 MB.
+     - **8 % de batería en una hora** y el teléfono se enfría (no estaba cargando). `dumpsys gfxinfo` no da datos con Unity.
+   - **Bloque 19.2, `AF_PERF`:** en 2.979 vertidos, `save_ms` da mediana 0,62 ms (p95 3,74, máximo 13,32) y `bg_ms`, mediana 3,84 ms (p95 6,32, máximo 15,42). El Morpho (14 veces) espera 16-17 ms, frente a un tope de 150. En la sesión, el arranque da `visible_ms` 304 y `os_splash_held_ms` 649.
+   - **Bloque 9.2 y 9.3, los topes de los intersticiales: cumplen.**
+     - **De sesión (6):** en la sesión larga salen 6 (`allowed`), separados por `blocked:MinGap`, y después 106 veces `blocked:SessionCap`. Además, 5 `blocked:Warmup` al principio y 2 `blocked:AfterRewarded`.
+     - **Del día (12):** el perfil llevaba 10 (el `pm clear` del punto 14 borró los 4 de la tarde). En dos sesiones más salen 3 y 2, y desde el 251, `blocked:DailyCap` (`b09c/`, `b09d/`).
+     - En el 250, en lugar del intersticial, sale la oferta de «Sin anuncios» (`af_iap_offer_shown`, `context` `noads_prompt`).
+     - Sin probar: el tope de 15 vídeos al día. Con el anuncio de prueba, cada vídeo tarda ~30 s y cada sitio tiene además su propio tope.
+   - **Bloques 10 y 11, de la sesión larga** (`AF_STATE`):
+     - **Canastas:** se abren en el 70, 80… 250, con 50 semillas y un comodín. En el 100 y el 200 sale la grande: 150 semillas, Marea, Morpho y Cuia extra.
+     - **Crecida:** sus hitos son el 3 (300 semillas), el 6 (cofre con 50 semillas y Morpho) y el 10 (Cuia extra y río crecido). Después, cosecha doble gratis en cada victoria.
+     - **Skin de hito:** al ganar el 140, `af_skin_m04` (`world_milestone`) se pone sola.
+     - **Frutas nuevas** (`fruit_new`): cupuaçu en el 81, lulo en el 111, jenipapo en el 141 y cacao en el 201.
+     - **Banners de mundo:** se cruzaron 3, todos en el primer intento.
+   - **Bloques 18.1 y 18.2, segundo plano y matar la app** (`b18/`, nivel 260): **cumplen.**
+     - **Inicio justo después de tocar el destino:** al volver, el vertido está hecho (`pours` 3) y el tablero sigue igual.
+     - **`force-stop` a mitad de un vertido:** al reabrir, `profile_integrity` `valid` y el mismo nivel con los 4 vertidos (`load` y `ready` con `pours` 4).
+     - **Inicio en la victoria:** al volver sigue la victoria, con «+160» y el saldo de 13.040.
+     - **`force-stop` en la victoria:** reabre en el inicio del 261 con 13.040 semillas. El premio se cobra una sola vez.
+     - **`force-stop` un segundo después de lanzar (en la carga):** reabre bien y `valid`.
+     - Al volver con `am start` sin el extra `af_lang`, el juego pasa al idioma del teléfono (inglés). Es por el extra de desarrollo, no un defecto.
+   - **Bloque 18.7, Atrás en cada pantalla** (`b18/atras.png`): **cumple, salvo la observación 21.**
+     - Desde Ajustes, el Mapa, el Mercado y Avatar, vuelve al inicio.
+     - **En el nivel, la pausa, «¿Salir del nivel?» y Nivel fallido no hace nada.** Tampoco en el inicio: no sale de la app ni pide confirmación.
+     - Atrás doble y rápido no da ninguna excepción (0 `E/Unity`).
+   - **Bloque 13, las filas que faltaban: cumplen** (`b13/`).
+     - **«Reducir movimiento» y «Alto contraste»:** se encienden y se apagan al tocarlas (`settings_change`) y se mantienen al reabrir.
+     - **El efecto del alto contraste** en el 262 (`b13/hc-comparado.png`): el patrón pasa de 0,2 a 0,35 (`patterns.opacity`) y las frutas se distinguen mejor.
+     - **«Datos del río»:** la fila del açaí abre «Frutas del río» (`fact_page_open`, `from` settings) con su nombre científico, 10 datos numerados y, al final, las fuentes con su dominio (Embrapa, Mongabay, ter Steege et al.…). Más abajo en Ajustes, «Sobre la Amazonía» enseña los datos del río con su «Fuente:».
+   - **Bloque 13.3, idiomas** (`b13/idiomas-{es-419,en,pt-BR}.png`): **cumple, salvo la observación 22.** En los tres idiomas se recorrieron el inicio, Ajustes (3 pantallas), el Mapa, el Mercado con la tienda falsa, el calendario del Reto, la Bitácora, el nivel, la pausa, «¿Salir del nivel?» y Nivel fallido. Ningún texto vacío, cortado ni en otro idioma.
+   - **Bloque 14.3 y la Liga con <13: cumplen** (`b14/`). Tras `pm clear`, con `--ez af_league true --ei af_dev_push 2`, al elegir «Menos de 13» sale «Pide a un adulto que instale el juego» (`consent` `blocked`, país US por la SIM). Tras 75 s en segundo plano, 0 avisos del paquete, ningún diálogo de permiso y 0 peticiones a `/v1/league`.
+   - **Bloque 12.2, la Liga contra el backend de dev: no se puede probar.** Con `--ez af_league true`, el botón «Liga» sale y la Liga se abre (`af_league_open`), pero responde `league_unavailable` `offline` con la red bien. En logcat aparece `Firebase.FirebaseException … code: 403 body: App attestation failed`.
+     - Cada `pm clear` crea un secreto de depuración de App Check nuevo, y ese no está en la lista de Firebase.
+     - El portátil ni lee ni guarda ese secreto.
+     - Lo tiene que registrar el dueño en la consola de App Check del proyecto de dev, con el perfil que quede. Después se repite el guion de la Liga, salvo el modo avión, que lo hace el dueño.
+   - **Bloque 14.2, el aviso real al día siguiente:** sin probar. El perfil se rehízo (18+, consentimiento rechazado, progreso hasta el 262) y aún no tiene el permiso de avisos.
+   - **El teléfono queda así:** el `dev.apk` instalado con un perfil 18+ en el inicio, y el progreso hasta el 262 puesto con `af_max_level`. Densidad 420, letra 1,0, animaciones encendidas y TalkBack apagado.
 
 ## Observaciones
 
@@ -501,7 +576,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
     - El PSS del `dev.apk` 18+ sale ahora en 605-620 MB, frente a 554 MB en la jornada 6, por `System` y `Code`. El ensayo da 545 MB y el <13, 537 MB.
     - Todo pasa de los 450 MB de D-060. Esa cifra es para la clase A; este teléfono es de 12 GB.
     - La imagen no cambia con Auto: sin parpadeos, franjas ni fotogramas viejos. Así que no hace falta volver a `Always` por la imagen, pero tampoco se gana memoria en este teléfono.
-15. **Baja. Al 130 %, las pestañas del Mercado mezclan tamaños de letra:** cada una encoge su texto por su cuenta. «Comodines» y «Boosters» salen más pequeños que «Cuias», «No ads» o «Sin anuncios» (`b08/pestanas-6.png`). En es-419 pasa también al 100 % («Comodines»). El hueco entre pestañas ya cumple.
+15. **Baja (resuelta con el build `ff3c49c0`, punto 15). Al 130 %, las pestañas del Mercado mezclan tamaños de letra:** cada una encoge su texto por su cuenta. «Comodines» y «Boosters» salen más pequeños que «Cuias», «No ads» o «Sin anuncios» (`b08/pestanas-6.png`). En es-419 pasa también al 100 % («Comodines»). El hueco entre pestañas ya cumple.
 16. **Baja (a decidir). El aviso «El Reto del río de hoy ya está listo» abre el inicio con la Bitácora encima, no el Reto.**
     - Al tocarlo, el jugador ve primero la Bitácora (el takeover de prioridad 1 del inicio) y tiene que cerrarla para llegar a la tarjeta del Reto.
     - 06 §8.3 no dice qué pantalla abre cada aviso. El guion pide «el sitio correcto».
@@ -521,6 +596,13 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
     - En el nivel 75: el `dev.apk` 560-611 MB y el ensayo 494-530 MB.
     - `-force-gles` (E1) es lo que más baja (−36 a −51 MB) y la imagen no cambia. Los bloques de 4 MiB (E2, E3) bajan poco.
     - Lo que haga falta lo decide el escritorio con el dueño: OpenGL ES por defecto, más recortes o medir en un teléfono de clase A, que es donde cuenta D-060.
+    - **En el inicio y el Mapa** (punto 15): E0 588 MB, E1 567-576 MB, E2 y E3 592-593 MB. Otra vez solo baja E1 (13-21 MB).
+21. **Baja (a decidir). El botón Atrás de Android no hace nada en el nivel ni en el inicio** (punto 15, 18.7).
+    - El guion pide que en el nivel abra la pausa. Hoy no la abre, ni tampoco cierra la pausa, «¿Salir del nivel?» ni Nivel fallido.
+    - En el inicio no sale de la app ni pide confirmación.
+    - 04 §6.6 solo dice que Atrás no cierra el modal de Aguas estancadas ni el «¿Seguro?». Para el Reto, esta hoja ya lo dio por diseñado («como en un nivel», `GameBootstrap`).
+    - Pregunta para el escritorio: ¿Atrás en el nivel debe abrir la pausa, como dice el guion, y en la pausa volver al juego?
+22. **Baja. En pt-BR los miles salen con coma, como en inglés:** «1,000 sementes», «2,800 sementes» y el saldo «13,040» (`b13/idiomas-pt-BR.png`). En portugués de Brasil se escribe «1.000». En es-419 también sale «1,000 semillas», que vale para México pero no para Colombia ni Argentina. Los precios de la tienda falsa («COP 5,900») tienen el mismo formato.
 
 ## Notas de la herramienta (no son defectos del juego)
 
@@ -533,4 +615,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 - **Para llegar al quinto fallo:** Pausa › Salir › Salir cuenta como fallo y es rápido. «Rendirse» en Aguas estancadas pide confirmar. Al relanzar con `af_level`, `fails_level` vuelve a 0; sin `af_level` (y con `af_canoes 5`), se conserva. Hay que usar un nivel no superado.
 - **`AF_LAYOUT` de un nivel solo sale al cargarlo**, no al reintentar ni al reanudar. El jugador automático que sigue en el mismo nivel tiene que reutilizar la disposición guardada.
 - **La Bitácora tapa el inicio en cada arranque** hasta que se sella la página del día; hay que cerrarla antes de tocar el inicio.
+- **El botón X de Nivel fallido** está en (915, 696) con la tarjeta del nivel: el `close` del `AF_LAYOUT` de `level_failed` sale a veces con otra `y` (549).
+- **Un script que se cae sin cerrar su `adb logcat`** deja el proceso vivo y la tubería abierta, y el `timeout` de la consola no lo corta. Hay que matar esos `adb logcat` a mano, sin tocar el servidor.
+- **El intersticial es el simulado del juego** («Anuncio simulado · interstitial_post_level», con «Cerrar»). Los vídeos con premio, en cambio, son los de prueba de AdMob.
 - Para medir el icono se usan las capturas en bruto a resolución completa: el ancho en la fila 1170, el alto en la columna 540 y un punto a 45° que distingue el cuadrado redondeado del círculo.
