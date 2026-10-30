@@ -248,6 +248,7 @@ namespace AF.UI
         private bool _hasCanoe;
         private int _world = 1;
         private int _playLevel = 1;
+        private PlayButtonMode _playMode = PlayButtonMode.Level;
         private bool _answered;
         private bool _remainingReady;
         private bool _nothingToPlay;
@@ -535,6 +536,9 @@ namespace AF.UI
         /// <summary>Texto de «Jugar».</summary>
         public string PlayLabel => _playLabel.text;
 
+        /// <summary>Qué dice «Jugar» (la regla del inicio: <see cref="LobbyScreen.PlayModeFor"/>).</summary>
+        public PlayButtonMode PlayMode => _playMode;
+
         /// <summary>Pestaña Mundo del conmutador.</summary>
         public Button ViewWorldButton => _viewWorld.Button;
 
@@ -660,11 +664,16 @@ namespace AF.UI
         /// <summary>
         /// Abre el Mapa desde <paramref name="source"/> en la vista Mundo, con el estado de <paramref name="progress"/>
         /// (<c>max_level</c> deja la canoa: en la parada recién alcanzada o a la décima del tramo siguiente) y «Jugar» en
-        /// <paramref name="playLevel"/> (<paramref name="playAvailable"/> = el nivel está publicado; si no, sin «Faltan…»). Las
-        /// mallas se construyen aquí (una vez por Mapa) y al cambiar de vista; nunca por fotograma.
+        /// <paramref name="playLevel"/> (<paramref name="playAvailable"/> = el nivel está publicado; si no, sin «Faltan…»). El texto de
+        /// «Jugar» sale de la misma regla que el inicio (<see cref="LobbyScreen.PlayModeFor"/> y <see cref="LobbyScreen.PlayLabelFor"/>;
+        /// D-032, punto 6): con el contenido acabado, «Jugar · Reto del río» si <paramref name="dailyUnlocked"/> y, si no, «Jugar»;
+        /// nunca «Jugar · Nivel 701» (observación 18 de la jornada 6). Las mallas se construyen aquí (una vez por Mapa) y al cambiar
+        /// de vista; nunca por fotograma.
         /// </summary>
-        public void Open(MapOpenSource source, RiverMap map, RiverRoutes routes, RiverStopCatalog stops, IMapProgress progress, int playLevel, bool playAvailable)
+        public void Open(MapOpenSource source, RiverMap map, RiverRoutes routes, RiverStopCatalog stops, IMapProgress progress, int playLevel, bool playAvailable,
+            bool dailyUnlocked = false)
         {
+            _playMode = LobbyScreen.PlayModeFor(playAvailable, !playAvailable && dailyUnlocked);
             _map = map ?? throw new ArgumentNullException(nameof(map));
             _routes = routes ?? throw new ArgumentNullException(nameof(routes));
             _stops = stops ?? throw new ArgumentNullException(nameof(stops));
@@ -1320,7 +1329,7 @@ namespace AF.UI
             _nothingToPlay = !playAvailable;
             _remainingLabel.text = _remainingReady ? UiText.MapStopRemaining(RiverJourney.LevelsLeft(_playLevel), place) : string.Empty;
             _remaining.gameObject.SetActive(_remainingReady);
-            _playLabel.text = UiText.PlayLevel(_playLevel);
+            _playLabel.text = LobbyScreen.PlayLabelFor(_playMode, _playLevel);
         }
 
         /// <summary>

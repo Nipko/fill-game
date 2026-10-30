@@ -1112,7 +1112,7 @@ namespace AF.UI
             }
 
             int play = app.PlayLevel;
-            map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable);
+            map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable, DailyPlayUnlocked); // «Jugar» como en el inicio (D-032, punto 6)
             if (app.Screen != AppScreen.Level)
             {
                 // La ventanita de casa se va ya, antes del siguiente paso de TiTino en el inicio: con la secuencia del Mapa del 10,
