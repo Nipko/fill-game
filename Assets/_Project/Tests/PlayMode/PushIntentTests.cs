@@ -30,6 +30,7 @@ namespace AF.Tests.PlayMode
         private ManualClock _clock = null!;
         private IntentPort _port = null!;
         private PortScheduler _scheduler = null!;
+        private InMemoryIntentMarkStore _marks = null!;
         private readonly List<string> _lines = new List<string>();
 
         [SetUp]
@@ -38,7 +39,8 @@ namespace AF.Tests.PlayMode
             _clock = new ManualClock(Utc(Tuesday), Bogota);
             LaunchOptions.ClockOverride = _clock;
             _port = new IntentPort();
-            _scheduler = new PortScheduler(new FakeNotificationScheduler(_clock), _port);
+            _marks = new InMemoryIntentMarkStore(); // en el teléfono, PlayerPrefs: sobrevive al proceso
+            _scheduler = new PortScheduler(new FakeNotificationScheduler(_clock), _port, _clock, _marks);
             GameBootstrap.NotificationSchedulerOverride = _scheduler;
             GameBootstrap.LogbookOverride = true;
             GameBootstrap.LogbookStoreOverride = new InMemoryLoginCalendarStore(new LoginCalendarRecord()); // sin casilla por sellar
@@ -66,9 +68,9 @@ namespace AF.Tests.PlayMode
             yield return Boot();
             GameBootstrap boot = GameBootstrap.Current!;
             Step(boot, Frame);
-            _scheduler.Reader.Remember(1001, "daily_ready"); // el primero del plan (sin permiso en el test no se programa de verdad)
+            _scheduler.Reader.Remember(1001, "daily_ready", _clock.UtcNow); // el primero del plan (sin permiso en el test no se programa de verdad)
 
-            Background(boot);
+            Background(boot); // pasan 5 min: suena
             _port.Deliver(1001, "daily_ready");
             Foreground(boot);
             Step(boot, Frame);
@@ -77,6 +79,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.DailyScreen.Exit(), Is.True);
             Step(boot, Frame);
 
+            _scheduler.Reader.Remember(1001, "daily_ready", _clock.UtcNow); // la salida siguiente lo reprograma
             Background(boot);
             _port.Deliver(1001, "daily_ready"); // otro aviso con el mismo id: antes se descartaba
             Foreground(boot);
@@ -96,7 +99,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Cold_ThePackageLostTheNotification_StillOpensTheReto()
         {
-            _scheduler.Reader.Remember(1001, "daily_ready"); // la lista de lo programado que dejó el proceso anterior
+            _scheduler.Reader.Remember(1001, "daily_ready", _clock.UtcNow.AddMinutes(-3)); // la lista de lo programado que dejó el proceso anterior
             _port.Deliver(1001, null); // en frío, GetLastNotificationIntent vuelve vacío
             yield return Boot();
             GameBootstrap boot = GameBootstrap.Current!;
@@ -106,6 +109,36 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.LastPushDestination, Is.EqualTo("daily"));
             Assert.That(Find("\"event\":\"push_intent\""), Does.Contain("\"id\":1001,\"type\":\"daily_ready\",\"via\":\"log\",\"package\":null"));
             Assert.That(Count("\"event\":\"push_open\""), Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator RecentsAfterTheProcessWasKilled_DoesNotCountTheSameNotificationAgain()
+        {
+            _scheduler.Reader.Remember(1001, "daily_ready", _clock.UtcNow.AddMinutes(-3));
+            _port.Deliver(1001, null);
+            yield return Boot();
+            GameBootstrap first = GameBootstrap.Current!;
+            Step(first, Frame);
+            Assert.That(first.DailyScreen!.IsOpen, Is.True, "en frío desde el 1001: el Reto");
+            Assert.That(Count("\"event\":\"push_open\""), Is.EqualTo(1));
+
+            // Sale a segundo plano: el plan nuevo reprograma el 1001 para mañana. Android mata el proceso y, al volver desde
+            // Recientes, recrea la actividad con la intención base de la tarea, que aún lleva el extra del aviso.
+            _clock.Advance(TimeSpan.FromMinutes(10));
+            foreach (bool fromHistory in new[] { false, true })
+            {
+                var killed = new PortScheduler(new FakeNotificationScheduler(_clock), _port, _clock, _marks); // proceso nuevo
+                killed.Reader.Remember(1001, "daily_ready", _clock.UtcNow.AddDays(1));
+                GameBootstrap.NotificationSchedulerOverride = killed;
+                _port.Deliver(1001, null, fromHistory);
+                _lines.Clear();
+                yield return Boot();
+                GameBootstrap boot = GameBootstrap.Current!;
+                Step(boot, Frame);
+                Assert.That(Count("\"event\":\"push_open\""), Is.EqualTo(0), "nadie tocó ningún aviso (history = " + fromHistory + ")");
+                Assert.That(boot.DailyScreen!.IsOpen, Is.False);
+                Assert.That(Find("\"event\":\"push_intent\""), Does.Contain(fromHistory ? "\"rejected\":\"history\"" : "\"rejected\":\"not_fired\""));
+            }
         }
 
         [UnityTest]
@@ -204,17 +237,21 @@ namespace AF.Tests.PlayMode
             private int _id;
             private string? _package;
 
-            public void Deliver(int id, string? packageType)
+            private bool _history;
+
+            public void Deliver(int id, string? packageType, bool fromHistory = false)
             {
                 _has = true;
                 _id = id;
                 _package = packageType;
+                _history = fromHistory;
             }
 
-            public bool TryTakeOpened(out int id, out string? packageType)
+            public bool TryTakeOpened(out int id, out string? packageType, out bool fromHistory)
             {
                 id = _id;
                 packageType = _package;
+                fromHistory = _history;
                 if (!_has)
                 {
                     return false;
@@ -233,10 +270,10 @@ namespace AF.Tests.PlayMode
         {
             private readonly FakeNotificationScheduler _inner;
 
-            public PortScheduler(FakeNotificationScheduler inner, INotificationIntentPort port)
+            public PortScheduler(FakeNotificationScheduler inner, INotificationIntentPort port, IClock clock, IIntentMarkStore marks)
             {
                 _inner = inner;
-                Reader = new NotificationIntentReader(port);
+                Reader = new NotificationIntentReader(port, clock, marks);
             }
 
             public NotificationIntentReader Reader { get; }
@@ -250,7 +287,7 @@ namespace AF.Tests.PlayMode
             public void Schedule(LocalNotification notification)
             {
                 _inner.Schedule(notification);
-                Reader.Remember(notification.Id, notification.Type);
+                Reader.Remember(notification.Id, notification.Type, notification.FireAtUtc);
             }
 
             public void CancelAll() => _inner.CancelAll();
@@ -260,7 +297,7 @@ namespace AF.Tests.PlayMode
             public string? TakeOpenedType()
             {
                 string? type = Reader.Take();
-                if (type != null && Reader.LastDiagnostic != null)
+                if (Reader.LastDiagnostic != null)
                 {
                     Debug.Log(Reader.LastDiagnostic);
                 }

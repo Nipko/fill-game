@@ -42,12 +42,13 @@ namespace AF.Platform.Notifications
         private readonly int _sdk;
         private PermissionRequest? _request;
         private Action<PushPermission>? _pending;
-        private readonly NotificationIntentReader _intents = new NotificationIntentReader(new ActivityIntentPort());
+        private readonly NotificationIntentReader _intents;
 
         /// <summary>Inicializa el paquete y registra el canal con su nombre y descripción ya localizados.</summary>
         public AndroidNotificationScheduler(IClock clock, string channelName, string channelDescription)
         {
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            _intents = new NotificationIntentReader(new ActivityIntentPort(), clock, new PrefsIntentMarkStore());
             _sdk = SdkInt();
             AndroidNotificationCenter.Initialize();
             AndroidNotificationCenter.RegisterNotificationChannel(new AndroidNotificationChannel(
@@ -132,7 +133,7 @@ namespace AF.Platform.Notifications
             }
 
             _scheduled.Add(new DeliveredNotification(notification.Id, notification.Type, notification.FireAtUtc));
-            _intents.Remember(notification.Id, notification.Type);
+            _intents.Remember(notification.Id, notification.Type, notification.FireAtUtc);
             Save();
         }
 
@@ -162,7 +163,7 @@ namespace AF.Platform.Notifications
             // nuevo con el mismo id cuenta; la misma intención, al volver de Recientes o tras la reconstrucción por idioma, no) y el
             // tipo sale de la lista de lo programado antes que de la reconstrucción del paquete, que en frío no lo encuentra.
             string? type = _intents.Take();
-            if (type != null && Debug.isDebugBuild && _intents.LastDiagnostic != null)
+            if (Debug.isDebugBuild && _intents.LastDiagnostic != null)
             {
                 Debug.Log(_intents.LastDiagnostic);
             }
@@ -245,7 +246,7 @@ namespace AF.Platform.Notifications
             ScheduledNotificationLog.Parse(PlayerPrefs.GetString(PrefsKey, string.Empty), _scheduled);
             for (int i = 0; i < _scheduled.Count; i++)
             {
-                _intents.Remember(_scheduled[i].Id, _scheduled[i].Type); // en frío, el tipo del aviso tocado sale de aquí
+                _intents.Remember(_scheduled[i].Id, _scheduled[i].Type, _scheduled[i].FireAtUtc); // en frío, el tipo del aviso tocado sale de aquí
             }
         }
 
@@ -256,10 +257,14 @@ namespace AF.Platform.Notifications
         /// </summary>
         private sealed class ActivityIntentPort : INotificationIntentPort
         {
-            public bool TryTakeOpened(out int id, out string? packageType)
+            // Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY: Android relanzó la actividad desde Recientes con la intención base de la tarea.
+            private const int LaunchedFromHistory = 0x00100000;
+
+            public bool TryTakeOpened(out int id, out string? packageType, out bool fromHistory)
             {
                 id = 0;
                 packageType = null;
+                fromHistory = false;
                 using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
                 using (AndroidJavaObject? activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
                 {
@@ -276,6 +281,7 @@ namespace AF.Platform.Notifications
                         }
 
                         id = intent.Call<int>("getIntExtra", NotificationIdExtra, -1);
+                        fromHistory = (intent.Call<int>("getFlags") & LaunchedFromHistory) != 0;
                         try
                         {
                             // Lo que el paquete reconstruya (solo de respaldo): antes de quitar el extra, que es lo que él lee.
@@ -297,6 +303,24 @@ namespace AF.Platform.Notifications
         {
             PlayerPrefs.SetString(PrefsKey, ScheduledNotificationLog.Format(_scheduled));
             PlayerPrefs.Save();
+        }
+
+        /// <summary>La marca de la última intención aceptada, en <c>PlayerPrefs</c> (sobrevive al proceso; solo id y hora).</summary>
+        private sealed class PrefsIntentMarkStore : IIntentMarkStore
+        {
+            private const string Key = "af_push_intent_mark";
+
+            public string? Load()
+            {
+                string mark = PlayerPrefs.GetString(Key, string.Empty);
+                return mark.Length == 0 ? null : mark;
+            }
+
+            public void Save(string mark)
+            {
+                PlayerPrefs.SetString(Key, mark);
+                PlayerPrefs.Save();
+            }
         }
     }
 }

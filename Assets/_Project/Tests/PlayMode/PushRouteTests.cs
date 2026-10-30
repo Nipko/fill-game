@@ -224,6 +224,45 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ANewNotification_ReplacesThePendingOne()
+        {
+            GameBootstrap.LogbookStoreOverride = new InMemoryLoginCalendarStore(new LoginCalendarRecord());
+            yield return Boot();
+            GameBootstrap boot = GameBootstrap.Current!;
+            Step(boot, Frame);
+
+            Resume(boot, "canoes_full");
+            Assert.That(boot.PushRoutePending, Is.True);
+            _scheduler.SimulateOpenFrom("daily_ready"); // otro aviso tocado antes de que el bucle encamine el primero
+            boot.SessionsPaused(false);
+            Assert.That(Find("\"event\":\"push_open\""), Does.Contain("\"type\":\"canoes_full\",\"dest\":\"none\""), "el primero se descarta");
+            Step(boot, Frame);
+            Assert.That(boot.DailyScreen!.IsOpen, Is.True, "y el nuevo se encamina");
+            Assert.That(boot.LastPushDestination, Is.EqualTo("daily"));
+            Assert.That(Count("\"event\":\"push_open\""), Is.EqualTo(2));
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutTheLogbook_GoingToBackground_DropsThePendingOne()
+        {
+            GameBootstrap.LogbookOverride = false; // sin Bitácora no hay LogbookRunner ni LogbookPause
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(NewProfile(MaxLevel, MaxLevel)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.DailyRunner!.enabled = false;
+            Assert.That(boot.LogbookRunner, Is.Null);
+
+            boot.SessionsPaused(true);
+            _clock.Advance(TimeSpan.FromMinutes(5));
+            _scheduler.SimulateOpenFrom("daily_ready");
+            boot.SessionsPaused(false);
+            Assert.That(boot.PushRoutePending, Is.True);
+            boot.SessionsPaused(true);
+            Assert.That(boot.PushRoutePending, Is.False, "SessionsPaused(true) lo descarta");
+            Assert.That(boot.LastPushDestination, Is.EqualTo("none"));
+        }
+
+        [UnityTest]
         public IEnumerator BackgroundBeforeReachingTheLobby_Drops()
         {
             GameBootstrap.LogbookStoreOverride = new InMemoryLoginCalendarStore(new LoginCalendarRecord());
