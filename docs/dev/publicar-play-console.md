@@ -391,6 +391,8 @@ Notas:
 
 ## 11. Las dos cuentas de servicio (AWS Secrets Manager)
 
+**Hecho el 2026-10-30** (D-035, añadido del 2026-10-30): las dos claves están cargadas y la web redesplegada. Lo que queda es probarlas en §15.
+
 El CDK de prod creó los dos secretos con un relleno: mientras lo lleven, las funciones fallan cerradas y **no se acredita ninguna compra ni se borra ninguna cuenta** (`infra/README.md` §5; D-035, añadido del 2026-10-27).
 
 **Reglas para las dos** (`CLAUDE.md`, regla dura 5; `infra/README.md` §5):

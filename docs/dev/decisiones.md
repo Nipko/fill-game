@@ -4315,6 +4315,14 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - App Check con Play Integrity y la huella SHA-256 de la firma de Play, cuando exista la app en Play Console.
 - **Pendiente técnico:** `release.yml` no coloca `google-services.json`, así que un release firmado hoy sale sin Firebase (`UnavailableBackendClient`: la tienda no vende). Hace falta un secreto de CI que cree el dueño y un paso que lo escriba en `Assets/_LocalSecrets/` antes del build.
 
+### D-035, añadido del 2026-10-30: las dos cuentas de servicio cargadas en AWS prod y la web redesplegada
+
+- **Estado:** hecho por el escritorio con el dueño, en sus sesiones de Google Cloud (`support@parallext.com`), Play Console y AWS (`af-prod`).
+- **Web:** `cdk deploy AfProdWeb` con los contextos de prod, con el sí literal del dueño al `cdk diff` («Sí, despliega»). El diff solo cambiaba el contenido del sitio; `AfProdGlobal`, `AfProdData` y `AfProdApi` sin cambios. Comprobado en `tintalu.com`: los textos de D-064 (EmojiOne en los créditos de los 3 idiomas, «Lo publica en Google Play AUTOMATION AI S.A.S»), `app-ads.txt` con las 2 líneas activas y el borrado de cuenta en 200.
+- **`af-prod/play-service-account`:** habilitada la Google Play Android Developer API en `tintalu`; creada `af-prod-play-verifier@tintalu.iam.gserviceaccount.com`, sin roles de Cloud; invitada en Play Console solo para Tintalú, con «Ver los datos financieros» y «Administrar los pedidos y las suscripciones» (más los dos de solo lectura que pone Play). La clave la creó el dueño y la cargó desde el archivo; `LastChangedDate` 2026-10-30 17:35 (UTC−5).
+- **`af-prod/firebase-admin-service-account`:** Identity Toolkit API ya estaba habilitada; creada `af-prod-account-deleter@tintalu.iam.gserviceaccount.com` con solo «Administrador de Firebase Authentication» (el rol lo asignó el dueño). Clave cargada igual; `LastChangedDate` 2026-10-30 17:45.
+- Las dos copias locales se borraron; nadie leyó los valores. Que funcionan se prueba en la pista interna (§15 de la guía de publicación): una compra de prueba que se acredita y «Eliminar cuenta y datos» que termina bien.
+
 ## D-059 · Lanzamiento directo a producción al 100 %, con publicación administrada
 
 - **Fecha:** 2026-10-28. Registrada por el integrador.
