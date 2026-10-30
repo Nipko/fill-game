@@ -425,7 +425,7 @@ Magic Sort cobra 13+ en iOS por "Messaging and Chat" y las reseñas elogian equi
 | Regreso (`comeback_d7`, `_d14`, `_d30`, `_d60`) | El inicio sin takeover; el regalo de regreso (sección 9) ya se acreditó al abrir |
 | Evento termina, Liga cierra, Premio por reclamar (1.2); Canoa prestada (2.0) | Sin decidir: llegan con sus sistemas |
 
-El aviso no cambia la pantalla si la app vuelve de segundo plano en otra que el inicio (un nivel, el Reto, Ajustes, la Bitácora) ni si el arranque va antes a un nivel (el nivel en curso que se reabre, 02 §14, o el nivel 1 de la primera vez): en esos casos se descarta. La secuencia del Mapa del 10 (sección 2.3) va antes que el destino.
+El aviso no cambia la pantalla si la app vuelve de segundo plano en otra que el inicio (un nivel, el Reto, Ajustes, la Bitácora abierta a mano; el takeover de la Bitácora sí se cierra, porque es lo que el aviso se salta) ni si el arranque va antes a un nivel (el nivel en curso que se reabre, 02 §14, o el nivel 1 de la primera vez): en esos casos se descarta. La secuencia del Mapa del 10 (sección 2.3) va antes que el destino.
 
 Redacción según glosario §10: tuteo en ES-419, "você" en PT-BR, imperativo en EN, sin exclamaciones dobles, sin emojis en el título. **Con D-013 (2026-10-13, T1-A) la voz de los avisos es TiTino**, con su retrato como icono grande del aviso; Capi solo se nombra cuando trae algo (el regalo de Cuia extra del regreso). Los textos PT-BR y EN que cambian son borrador para el revisor nativo; los del Mapa del río no añaden avisos.
 

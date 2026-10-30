@@ -182,6 +182,13 @@ namespace AF.UI
                 return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).
             }
 
+            if (paused)
+            {
+                // D-062: el aviso tocado que aún no llegó al inicio se descarta al salir. LogbookPause también lo hace, pero sin la
+                // Bitácora montada no hay LogbookRunner.
+                DropPushRoute();
+            }
+
             SessionTracker? sessions = _sessions;
             NotificationService? notifications = _notifications;
 

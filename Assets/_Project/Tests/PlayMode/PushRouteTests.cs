@@ -192,18 +192,74 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Resume_WithTheNotebookOpen_Drops_AndKeepsIt()
+        public IEnumerator Resume_WithTheNotebookTakeoverOpen_ClosesIt_AndRoutes()
         {
             yield return Boot();
             GameBootstrap boot = GameBootstrap.Current!;
             Step(boot, Frame);
             Assert.That(boot.LogbookScreen!.Visible, Is.True, "el takeover del arranque, sin aviso");
+            Assert.That(boot.LogbookScreen.Source, Is.EqualTo(LogbookOpenSource.Takeover));
+
+            Resume(boot, "daily_ready"); // observación 19: se dejó la app con el takeover encima del inicio
+            Step(boot, Frame);
+            Assert.That(boot.LogbookScreen.Visible, Is.False, "el aviso se salta el takeover (D-062)");
+            Assert.That(boot.DailyScreen!.IsOpen, Is.True);
+            Assert.That(boot.LastPushDestination, Is.EqualTo("daily"));
+        }
+
+        [UnityTest]
+        public IEnumerator Resume_WithTheNotebookOpenedByHand_Drops_AndKeepsIt()
+        {
+            GameBootstrap.LogbookStoreOverride = new InMemoryLoginCalendarStore(new LoginCalendarRecord());
+            yield return Boot();
+            GameBootstrap boot = GameBootstrap.Current!;
+            Step(boot, Frame);
+            Assert.That(boot.PressLogbookCard(), Is.True, "la libreta abierta desde su tarjeta");
 
             Resume(boot, "daily_ready");
             Step(boot, Frame);
-            Assert.That(boot.LastPushDestination, Is.EqualTo("none"), "b) con la Bitácora a la vista");
-            Assert.That(boot.LogbookScreen.Visible, Is.True);
+            Assert.That(boot.LastPushDestination, Is.EqualTo("none"), "b) con la libreta abierta a mano no se toca");
+            Assert.That(boot.LogbookScreen!.Visible, Is.True);
             Assert.That(boot.DailyScreen!.IsOpen, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator ANewNotification_ReplacesThePendingOne()
+        {
+            GameBootstrap.LogbookStoreOverride = new InMemoryLoginCalendarStore(new LoginCalendarRecord());
+            yield return Boot();
+            GameBootstrap boot = GameBootstrap.Current!;
+            Step(boot, Frame);
+
+            Resume(boot, "canoes_full");
+            Assert.That(boot.PushRoutePending, Is.True);
+            _scheduler.SimulateOpenFrom("daily_ready"); // otro aviso tocado antes de que el bucle encamine el primero
+            boot.SessionsPaused(false);
+            Assert.That(Find("\"event\":\"push_open\""), Does.Contain("\"type\":\"canoes_full\",\"dest\":\"none\""), "el primero se descarta");
+            Step(boot, Frame);
+            Assert.That(boot.DailyScreen!.IsOpen, Is.True, "y el nuevo se encamina");
+            Assert.That(boot.LastPushDestination, Is.EqualTo("daily"));
+            Assert.That(Count("\"event\":\"push_open\""), Is.EqualTo(2));
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutTheLogbook_GoingToBackground_DropsThePendingOne()
+        {
+            GameBootstrap.LogbookOverride = false; // sin Bitácora no hay LogbookRunner ni LogbookPause
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(NewProfile(MaxLevel, MaxLevel)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.DailyRunner!.enabled = false;
+            Assert.That(boot.LogbookRunner, Is.Null);
+
+            boot.SessionsPaused(true);
+            _clock.Advance(TimeSpan.FromMinutes(5));
+            _scheduler.SimulateOpenFrom("daily_ready");
+            boot.SessionsPaused(false);
+            Assert.That(boot.PushRoutePending, Is.True);
+            boot.SessionsPaused(true);
+            Assert.That(boot.PushRoutePending, Is.False, "SessionsPaused(true) lo descarta");
+            Assert.That(boot.LastPushDestination, Is.EqualTo("none"));
         }
 
         [UnityTest]
