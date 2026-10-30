@@ -38,7 +38,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-030 | 2026-10-19 | Respuestas a las 19 preguntas sin recomendación: la parte 2 de la 66 de `docs/GDD.md` §6.3, P12 de D-006, las dos de D-021, las #2, #9, #14 y #20 de la propuesta de Magic Sort y las observaciones de las pruebas y revisiones de las olas 2-6 | Decidida por el dueño («Acepto tus propuestas para las 19 preguntas sin recomendada: 1a, 2c, 3a, 4c, 5a, 6b, 7a, 8b, 9b, 10a, 11a, 12a, 13b, 14a, 15b, 16b, 17b, 18b y 19a»), después de D-029; las de Magic Sort, con la letra de la fuente: #2 A, #9 C, #14 C y #20 C. Documentación aplicada el 2026-10-19 (DC1c). Diez ya estaban aplicadas (la 11, en DC2); código en la ola 7 de la tanda 4: DC17-DC25. Fuera: el espacio del AAB y `INTERNET` |
 | D-031 | 2026-10-19 | Reto del río: pool de 729 días, bandas, premio, anti-reloj y partida | Decidida por el dueño (R-Q1-R-Q10 con «Acepto tus propuestas»; R-Q1b, R-Q11-R-Q16 y R-Q12b con la recomendada; R-Q2b, 729 días; R-Q11b, 30 candidatos por fuente). Implementada por el equipo Spark (R0-R11, `spark/reto-del-rio`; el bloque (a) integrado en `fcbbd94`). Documentación aplicada con E11 (03, 05, 06 y 08). Pendientes: los enganches E1-E25, la integración y la prueba en el teléfono |
 | D-032 | 2026-10-20 | Las 6 decisiones de 16:9 y del fin de contenido que dejó DC3 | Decidida por el dueño («Acepto tus recomendaciones para las 6 decisiones: compactar Aguas estancadas y la victoria en 16:9, aceptar 3, 4 y 5, y el botón «Jugar · Reto del río» (o «Jugar» sin Reto) tras el fin de contenido.»). Implementada en la ola 8: FX16a (Aguas estancadas compacto) y FX16b (victoria compacta y el botón del inicio). Documentación aplicada con FX16b (02 y 06). Pendiente: la prueba en el teléfono |
-| D-063 | 2026-10-30 | El Atrás de Android en el nivel, la pausa y el inicio | Decidida por el dueño (la recomendada de la observación 21 de la jornada 6); lo de Sin canoas en el nivel, la recomendada aceptada por el integrador. Implementada en `tanda6/fx-j6d-atras`, con la tabla en 02 §3.5. Pendiente: verlo en el teléfono (guion, bloque 18.7) |
+| D-063 | 2026-10-30 | El Atrás de Android en el nivel, la pausa y el inicio | Decidida por el dueño (la recomendada de la observación 21 de la jornada 6); lo de Sin canoas en el nivel (Atrás hace lo de su X), la recomendada, confirmada por el dueño el 2026-10-30. Implementada en `tanda6/fx-j6d-atras`, con la tabla en 02 §3.5. Pendiente: verlo en el teléfono (guion, bloque 18.7) |
 
 ---
 
@@ -4677,7 +4677,7 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 ## D-063 · El Atrás de Android en el nivel, la pausa y el inicio
 
 - **Fecha:** 2026-10-30. Registrada por el carril `tanda6/fx-j6d-atras`.
-- **Estado:** decidida por el dueño el 2026-10-30 con la opción recomendada a la pregunta de la observación 21 de la jornada 6 («¿Atrás en el nivel debe abrir la pausa, como dice el guion, y en la pausa volver al juego?»). Lo de **Sin canoas dentro del nivel** lo decidió el integrador del carril con la recomendada (norma del dueño: ir con la recomendada) y se le comunica al dueño.
+- **Estado:** decidida por el dueño el 2026-10-30 con la opción recomendada a la pregunta de la observación 21 de la jornada 6 («¿Atrás en el nivel debe abrir la pausa, como dice el guion, y en la pausa volver al juego?»). Lo de **Sin canoas dentro del nivel** lo decidió el integrador del carril con la recomendada (norma del dueño: ir con la recomendada) y el dueño lo confirmó el 2026-10-30 («Sí, como su X»).
 - **Contexto:** observación 21 y bloque 18.7 de `docs/dev/traspaso/pruebas-telefono-2026-10-28-completa-j6.md`: el botón Atrás no hacía nada en el nivel, la pausa, «¿Salir del nivel?», Nivel fallido ni el inicio (en Ajustes, el Mapa, el Mercado y Avatar ya volvía al inicio). 04 §6.6 solo decía que Atrás no cierra Aguas estancadas ni ¿Seguro?.
 - **Decisión** (la tabla de 02 §3.5):
 
@@ -4689,7 +4689,7 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   | ¿Reiniciar? | Lo cancela; si se abrió desde la pausa, vuelve a ella |
   | Salto del Boto, tarjeta de Morpho, hoja y tarjeta de Barajar | Las cierra sin coste |
   | Nivel fallido | Lo mismo que su X (al inicio) |
-  | Sin canoas en el nivel | Lo mismo que su X (recomendada aceptada), como Nivel fallido y Sin canoas en el inicio |
+  | Sin canoas en el nivel | Lo mismo que su X (recomendada, confirmada por el dueño), como Nivel fallido y Sin canoas en el inicio |
   | Aguas estancadas y ¿Seguro? | No los cierra: vibración corta (04 §6.6) |
   | Reto del río | Como un nivel; su calendario se cierra como «Inicio» |
   | Edad y consentimiento | No se saltan |
