@@ -47,14 +47,6 @@ namespace AF.LiveOps
         /// en <c>af_league_unavailable</c> (solo lo usa el envío del avatar, que lo anota en <c>af_error{module=league}</c>).
         /// </summary>
         Rejected = 5,
-
-        /// <summary>
-        /// <c>no_identity</c>: hay red, pero aún no hay identidad de la Liga (sin ID token: el usuario anónimo nuevo no existe todavía,
-        /// como justo tras eliminar la cuenta, o el servidor rechaza la de antes con un 401). No es «sin conexión»: la pantalla enseña
-        /// el primer contacto, con tu fila «Gana un nivel para entrar en la Liga» (nota del punto 18 de la jornada 6, 2026-10-30). No
-        /// sale en <c>af_league_unavailable</c> (08 §8.2): solo en la sonda.
-        /// </summary>
-        NoIdentity = 6,
     }
 
     /// <summary>Ids de <see cref="LeagueScope"/>, <see cref="LeagueWinKind"/> y <see cref="LeagueFailure"/> en el contrato y la analítica.</summary>
@@ -72,7 +64,6 @@ namespace AF.LiveOps
                 case LeagueFailure.Invalid: return "invalid";
                 case LeagueFailure.CountryUnknown: return "country_unknown";
                 case LeagueFailure.NotConfigured: return "not_configured";
-                case LeagueFailure.NoIdentity: return "no_identity";
                 default: return "offline";
             }
         }
@@ -299,21 +290,28 @@ namespace AF.LiveOps
     public sealed class LeagueResult<T>
         where T : class
     {
-        private LeagueResult(T? value, LeagueFailure failure)
+        private LeagueResult(T? value, LeagueFailure failure, string? detail)
         {
             Value = value;
             Failure = failure;
+            Detail = detail;
         }
 
         public T? Value { get; }
 
         public LeagueFailure Failure { get; }
 
+        /// <summary>
+        /// El detalle técnico del fallo para la sonda (p. ej. <c>auth_token_failed</c>, <c>appcheck_token_failed</c> o <c>http_401</c>),
+        /// sin tokens ni UID; null si no se sabe. No va a la analítica (punto 18 de la jornada 6, 2026-10-30).
+        /// </summary>
+        public string? Detail { get; }
+
         public bool IsOk => Value != null;
 
-        public static LeagueResult<T> Ok(T value) => new LeagueResult<T>(value ?? throw new ArgumentNullException(nameof(value)), LeagueFailure.Offline);
+        public static LeagueResult<T> Ok(T value) => new LeagueResult<T>(value ?? throw new ArgumentNullException(nameof(value)), LeagueFailure.Offline, null);
 
-        public static LeagueResult<T> Fail(LeagueFailure failure) => new LeagueResult<T>(null, failure);
+        public static LeagueResult<T> Fail(LeagueFailure failure, string? detail = null) => new LeagueResult<T>(null, failure, detail);
     }
 
     /// <summary>

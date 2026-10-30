@@ -250,38 +250,6 @@ namespace AF.LiveOps.Tests
             Assert.That(_api.Points, Is.EqualTo(10), "idempotente por win_id");
         }
 
-        /// <summary>
-        /// Nota del punto 18 de la jornada 6 (2026-10-30): tras eliminar la cuenta no hay identidad de la Liga hasta la primera victoria.
-        /// Con red, la descarga falla con <c>no_identity</c> y el ámbito queda en el primer contacto (<see cref="LeagueBoardState.NoIdentity"/>),
-        /// no «sin conexión»; sin red, <see cref="LeagueBoardState.Offline"/>. Con una victoria aceptada, la siguiente descarga es la buena.
-        /// </summary>
-        [Test]
-        public void Service_WithoutIdentity_IsTheFirstContact_AndOfflineOnlyWithoutNetwork()
-        {
-            LeagueService league = Service();
-            var failures = new List<LeagueFailure>();
-            league.Unavailable += failures.Add;
-            Assert.That(LeagueIds.Of(LeagueFailure.NoIdentity), Is.EqualTo("no_identity"));
-
-            _api.FailWith = LeagueFailure.NoIdentity;
-            Assert.That(league.RequestBoard(LeagueScope.Global), Is.True);
-            Assert.That(league.StateOf(LeagueScope.Global), Is.EqualTo(LeagueBoardState.NoIdentity), "con red y sin identidad: el primer contacto");
-            Assert.That(league.LastFailure(LeagueScope.Global), Is.EqualTo(LeagueFailure.NoIdentity));
-            Assert.That(failures, Is.EqualTo(new[] { LeagueFailure.NoIdentity }));
-
-            _api.FailWith = null;
-            _api.Offline = true;
-            Assert.That(league.RequestBoard(LeagueScope.Global), Is.True);
-            Assert.That(league.StateOf(LeagueScope.Global), Is.EqualTo(LeagueBoardState.Offline), "sin red, «sin conexión»");
-
-            _api.Offline = false;
-            Assert.That(league.RecordCampaignWin(60, RewardTier.Normal), Is.EqualTo(10), "la primera victoria crea la identidad y suma");
-            Assert.That(league.PendingCount, Is.EqualTo(0));
-            Assert.That(league.RequestBoard(LeagueScope.Global), Is.True);
-            Assert.That(league.StateOf(LeagueScope.Global), Is.EqualTo(LeagueBoardState.Fresh));
-            Assert.That(league.LastFailure(LeagueScope.Global), Is.Null);
-        }
-
         [Test]
         public void Service_CachesEachScope_ForTheConfiguredMinutes()
         {

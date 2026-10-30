@@ -344,30 +344,22 @@ namespace AF.UI
             }
 
             RowsShown = shown;
-            // Sin identidad todavía y con red (tras eliminar la cuenta, hasta la primera victoria): el primer contacto, no «Conéctate»
-            // (nota del punto 18 de la jornada 6, 2026-10-30). La tabla de la semana no se puede leer sin identidad: queda vacía, sin
-            // decir que nadie suma, y tu fila dice «Gana un nivel para entrar en la Liga».
-            bool firstContact = board == null && state == LeagueBoardState.NoIdentity;
             string message = board == null
-                ? (state == LeagueBoardState.Loading ? LeagueText.Loading : (firstContact ? string.Empty : LeagueText.Offline))
+                ? (state == LeagueBoardState.Loading ? LeagueText.Loading : LeagueText.Offline)
                 : (shown == 0 ? LeagueText.EmptyWeek : string.Empty);
             _message.text = message;
             _message.gameObject.SetActive(message.Length > 0);
 
-            LeagueMe? me = board?.Me ?? (firstContact ? FirstContactMe : null);
-            _me.Root.gameObject.SetActive(me != null);
-            if (me != null)
+            _me.Root.gameObject.SetActive(board != null);
+            if (board != null)
             {
-                _me.FillMe(me, global);
+                _me.FillMe(board.Me, global);
                 _me.ApplyMyAvatar(Atlas != null ? MyAvatar : null);
             }
 
             Layout();
             EmitLayout();
         }
-
-        /// <summary>Tu fila sin identidad todavía: 0 puntos, sin puesto, sin seudónimo y sin país (el primer contacto).</summary>
-        private static readonly LeagueMe FirstContactMe = new LeagueMe(0, null, null, null, 0, null);
 
         private void SelectTab(LeagueScope scope)
         {

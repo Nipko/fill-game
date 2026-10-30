@@ -11,26 +11,18 @@ namespace AF.UI
     /// <summary>
     /// <see cref="ILeagueApi"/> real de la Liga (D-046): el cliente HTTP de <c>AF.Backend</c> (<see cref="ILeagueBackend"/>, con el
     /// autorizador de siempre: ID token de Firebase y App Check) traducido a los tipos de <c>AF.LiveOps</c>, que no conoce el
-    /// backend (08 §2.2). Con <c>biz_backend_enabled</c> apagado no llama: falla con <see cref="LeagueFailure.NotConfigured"/>. Sin
-    /// identidad todavía y con red (sin ID token porque el usuario anónimo nuevo aún no existe, o un 401 tras renovarlo, como justo
-    /// después de eliminar la cuenta), el fallo es <see cref="LeagueFailure.NoIdentity"/> y no «sin conexión» (nota del punto 18 de la
-    /// jornada 6, 2026-10-30).
+    /// backend (08 §2.2). Con <c>biz_backend_enabled</c> apagado no llama: falla con <see cref="LeagueFailure.NotConfigured"/>.
     /// </summary>
     internal sealed class LeagueBackendApi : ILeagueApi
     {
         private readonly ILeagueBackend _backend;
         private readonly IBackendSwitch? _switch;
-        private readonly Func<bool>? _online;
 
-        /// <param name="online">Hay red ahora (<c>Application.internetReachability</c>); null: se supone que sí.</param>
-        public LeagueBackendApi(ILeagueBackend backend, IBackendSwitch? backendSwitch, Func<bool>? online = null)
+        public LeagueBackendApi(ILeagueBackend backend, IBackendSwitch? backendSwitch)
         {
             _backend = backend ?? throw new ArgumentNullException(nameof(backend));
             _switch = backendSwitch;
-            _online = online;
         }
-
-        private bool Online => _online == null || _online();
 
         public void SendWins(LeagueWinsRequest request, Action<LeagueResult<LeagueWinsResult>> onDone)
         {
@@ -44,7 +36,7 @@ namespace AF.UI
             {
                 if (!r.IsOk)
                 {
-                    onDone(LeagueResult<LeagueWinsResult>.Fail(FailureOf(r.Error!, false, Online)));
+                    onDone(LeagueResult<LeagueWinsResult>.Fail(FailureOf(r.Error!, false), DetailOf(r.Error!)));
                     return;
                 }
 
@@ -64,7 +56,7 @@ namespace AF.UI
             {
                 if (!r.IsOk)
                 {
-                    onDone(LeagueResult<LeagueBoard>.Fail(FailureOf(r.Error!, scope == LeagueScope.Country, Online)));
+                    onDone(LeagueResult<LeagueBoard>.Fail(FailureOf(r.Error!, scope == LeagueScope.Country), DetailOf(r.Error!)));
                     return;
                 }
 
@@ -90,7 +82,7 @@ namespace AF.UI
             {
                 if (!r.IsOk)
                 {
-                    onDone(LeagueResult<LeagueAvatarResult>.Fail(AvatarFailureOf(r.Error!, Online)));
+                    onDone(LeagueResult<LeagueAvatarResult>.Fail(AvatarFailureOf(r.Error!), DetailOf(r.Error!)));
                     return;
                 }
 
@@ -100,14 +92,14 @@ namespace AF.UI
 
         // D-056 (avatares.md §4.4): un 400 es un índice que el servidor no admite (se descarta); el resto (sin red, 404 de una ruta aún
         // sin desplegar, 429…) deja el pendiente para la siguiente apertura.
-        internal static LeagueFailure AvatarFailureOf(BackendError error, bool online = true)
+        internal static LeagueFailure AvatarFailureOf(BackendError error)
         {
             if (error.HttpStatus == 400 || error.Code == ApiErrorCode.BadRequest)
             {
                 return LeagueFailure.Rejected;
             }
 
-            return FailureOf(error, false, online);
+            return FailureOf(error, false);
         }
 
         internal static LeagueWinsRequestDto ToDto(LeagueWinsRequest request)
@@ -150,17 +142,38 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// El motivo de la Liga para un error del backend. <paramref name="online"/>: hay red ahora. Sin ID token por falta de usuario
-        /// (<see cref="IsIdentityMissing"/>) y con red, o con un 401 que sigue tras renovar el token (el servidor ya no acepta esa
-        /// identidad: la cuenta se borró), es <see cref="LeagueFailure.NoIdentity"/>; sin red, <see cref="LeagueFailure.Offline"/>.
+        /// El detalle del error para la sonda (punto 18 de la jornada 6, 2026-10-30): con respuesta HTTP, <c>http_{código}</c> (el
+        /// mensaje del servidor es texto libre); si no, el <see cref="BackendError.Detail"/> del proveedor (<c>auth_token_failed</c>,
+        /// <c>appcheck_token_failed</c>, <c>firebase_unavailable:…</c>, el error del transporte…), que nunca lleva tokens, UID ni URL.
+        /// Solo letras, cifras y <c>_:.-</c>, hasta 64 caracteres; null si no queda nada.
         /// </summary>
-        internal static LeagueFailure FailureOf(BackendError error, bool country, bool online = true)
+        internal static string? DetailOf(BackendError error)
+        {
+            string? raw = error.Kind == BackendErrorKind.Http
+                ? "http_" + error.HttpStatus.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : error.Detail;
+            if (string.IsNullOrEmpty(raw))
+            {
+                return null;
+            }
+
+            var sb = new System.Text.StringBuilder(Math.Min(raw!.Length, 64));
+            for (int i = 0; i < raw.Length && sb.Length < 64; i++)
+            {
+                char c = raw[i];
+                bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == ':' || c == '.' || c == '-';
+                sb.Append(ok ? c : '_');
+            }
+
+            return sb.ToString();
+        }
+
+        internal static LeagueFailure FailureOf(BackendError error, bool country)
         {
             switch (error.Kind)
             {
-                case BackendErrorKind.AuthUnavailable:
-                    return online && IsIdentityMissing(error.Detail) ? LeagueFailure.NoIdentity : LeagueFailure.Offline;
                 case BackendErrorKind.Network:
+                case BackendErrorKind.AuthUnavailable:
                 case BackendErrorKind.IntegrityUnavailable:
                     return LeagueFailure.Offline;
                 case BackendErrorKind.InvalidResponse:
@@ -168,22 +181,8 @@ namespace AF.UI
                 case BackendErrorKind.NotConfigured:
                     return LeagueFailure.NotConfigured;
                 default:
-                    if (error.HttpStatus == 401)
-                    {
-                        return LeagueFailure.NoIdentity; // HttpBackendClient ya renovó el token una vez: esa identidad no vale
-                    }
-
                     return country && (error.Code == ApiErrorCode.CountryUnknown || error.HttpStatus == 404) ? LeagueFailure.CountryUnknown : LeagueFailure.Server;
             }
-        }
-
-        /// <summary>
-        /// El fallo del ID token es de identidad (no hay usuario, no se pudo crear o su token ya no se renueva: <c>auth_no_user</c>,
-        /// <c>auth_sign_in_failed</c>, <c>auth_token_failed</c> de <c>FirebaseAuthTokenProvider</c>), no de un Firebase sin arrancar.
-        /// </summary>
-        internal static bool IsIdentityMissing(string? detail)
-        {
-            return detail == "auth_no_user" || detail == "auth_sign_in_failed" || detail == "auth_token_failed";
         }
     }
 }

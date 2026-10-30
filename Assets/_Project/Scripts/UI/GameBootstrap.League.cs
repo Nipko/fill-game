@@ -159,8 +159,7 @@ namespace AF.UI
 
             if (_backend is HttpBackendClient http)
             {
-                // Con red y sin identidad todavía, el primer contacto y no «sin conexión» (nota del punto 18 de la jornada 6, 2026-10-30).
-                return new LeagueBackendApi(http, _backendSwitch, () => Application.internetReachability != NetworkReachability.NotReachable);
+                return new LeagueBackendApi(http, _backendSwitch);
             }
 
             if (_backend is FakeBackendClient)
@@ -248,7 +247,6 @@ namespace AF.UI
                 case LeagueBoardState.Fresh: return "fresh";
                 case LeagueBoardState.Stale: return "stale";
                 case LeagueBoardState.Loading: return "loading";
-                case LeagueBoardState.NoIdentity: return "no_identity";
                 default: return "offline";
             }
         }
@@ -334,17 +332,14 @@ namespace AF.UI
             }
 
             _leagueLastFailure = failure;
-            // Sin identidad todavía (con red; tras eliminar la cuenta, hasta la primera victoria) la Liga no está caída: enseña el primer
-            // contacto. No cuenta en af_league_unavailable (08 §8.2: disponibilidad del backend); solo la sonda lo dice, con no_identity
-            // (nota del punto 18 de la jornada 6, 2026-10-30).
-            if (failure != LeagueFailure.NoIdentity)
-            {
-                _analytics?.Log(AnalyticsEvent.Create("af_league_unavailable").Add("reason", LeagueIds.Of(failure))); // 08 §8.2 (D-046)
-            }
-
+            _analytics?.Log(AnalyticsEvent.Create("af_league_unavailable").Add("reason", LeagueIds.Of(failure))); // 08 §8.2 (D-046)
             if (DevProbe.Enabled)
             {
-                MarketProbe("league_unavailable", "\"reason\":\"" + LeagueIds.Of(failure) + "\"");
+                // El detalle técnico (auth_token_failed, appcheck_token_failed, http_401…), nunca el UID ni tokens (punto 18 de la
+                // jornada 6): distingue la sesión de una cuenta borrada de la falta de red.
+                string? detail = _league?.LastFailureDetail;
+                MarketProbe("league_unavailable", "\"reason\":\"" + LeagueIds.Of(failure) + "\""
+                    + (detail != null ? ",\"detail\":\"" + detail + "\"" : string.Empty));
             }
         }
 

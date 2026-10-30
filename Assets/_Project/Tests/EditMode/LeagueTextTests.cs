@@ -2,9 +2,12 @@
 using System;
 using System.Collections.Generic;
 using AF.Backend;
+using AF.Backend.Auth;
 using AF.Backend.Contract;
+using AF.Backend.Http;
 using AF.LiveOps;
 using AF.Localization;
+using AF.Platform;
 using AF.UI;
 using NUnit.Framework;
 
@@ -208,63 +211,55 @@ namespace AF.Tests.EditMode
         }
 
         /// <summary>
-        /// Nota del punto 18 de la jornada 6 (2026-10-30): tras eliminar la cuenta, el ID token falla porque aún no hay usuario anónimo
-        /// (o el servidor da 401 tras renovarlo). Con red es <c>no_identity</c> (el primer contacto); sin red, <c>offline</c>. Un Firebase
-        /// sin arrancar o sin App Check sigue siendo <c>offline</c>.
+        /// Punto 18 de la jornada 6 (2026-10-30): el motivo no cambia (sin token sigue siendo <c>offline</c>; un 401, <c>server</c>), pero
+        /// el resultado lleva el detalle para la sonda: <c>auth_token_failed</c>, <c>appcheck_token_failed</c> o <c>http_401</c>, sin
+        /// texto libre. Tras eliminar la cuenta y cerrar la sesión, la Liga real descarga bien la siguiente clasificación: la del
+        /// primer contacto, con 0 puntos y sin puesto («Gana un nivel para entrar en la Liga»).
         /// </summary>
         [Test]
-        public void TheRealApiAdapter_WithoutIdentity_IsNoIdentityOnlyWithNetwork()
+        public void TheRealApiAdapter_CarriesTheDetail_AndAfterSignOutTheNextBoardIsTheFirstContact()
         {
-            var noUser = new BackendError(BackendErrorKind.AuthUnavailable, detail: "auth_no_user");
-            Assert.That(LeagueBackendApi.FailureOf(noUser, false, true), Is.EqualTo(LeagueFailure.NoIdentity));
-            Assert.That(LeagueBackendApi.FailureOf(noUser, false, false), Is.EqualTo(LeagueFailure.Offline), "sin red");
-            foreach (string detail in new[] { "auth_sign_in_failed", "auth_token_failed" })
-            {
-                Assert.That(LeagueBackendApi.FailureOf(new BackendError(BackendErrorKind.AuthUnavailable, detail: detail), true, true),
-                    Is.EqualTo(LeagueFailure.NoIdentity), detail);
-            }
+            var tokenFailed = new BackendError(BackendErrorKind.AuthUnavailable, detail: "auth_token_failed");
+            Assert.That(LeagueBackendApi.FailureOf(tokenFailed, false), Is.EqualTo(LeagueFailure.Offline), "como antes");
+            Assert.That(LeagueBackendApi.FailureOf(BackendError.Http(401, ApiErrorCode.Unknown), false), Is.EqualTo(LeagueFailure.Server), "como antes");
+            Assert.That(LeagueBackendApi.FailureOf(new BackendError(BackendErrorKind.IntegrityUnavailable, detail: "appcheck_token_failed"), false),
+                Is.EqualTo(LeagueFailure.Offline), "App Check sigue siendo offline");
+            Assert.That(LeagueBackendApi.DetailOf(tokenFailed), Is.EqualTo("auth_token_failed"));
+            Assert.That(LeagueBackendApi.DetailOf(new BackendError(BackendErrorKind.IntegrityUnavailable, detail: "appcheck_token_failed")), Is.EqualTo("appcheck_token_failed"));
+            Assert.That(LeagueBackendApi.DetailOf(BackendError.Http(401, ApiErrorCode.Unknown, "Falta la identidad \"x\"")), Is.EqualTo("http_401"), "sin el mensaje libre");
+            Assert.That(LeagueBackendApi.DetailOf(new BackendError(BackendErrorKind.AuthUnavailable, detail: "firebase_unavailable:a b\"c")),
+                Is.EqualTo("firebase_unavailable:a_b_c"), "nada que rompa el JSON de la sonda");
+            Assert.That(LeagueBackendApi.DetailOf(new BackendError(BackendErrorKind.Network)), Is.Null);
 
-            Assert.That(LeagueBackendApi.FailureOf(new BackendError(BackendErrorKind.AuthUnavailable, detail: "firebase_unavailable:dependencies_failed"), false, true),
-                Is.EqualTo(LeagueFailure.Offline), "Firebase sin arrancar no es falta de identidad");
-            Assert.That(LeagueBackendApi.FailureOf(new BackendError(BackendErrorKind.IntegrityUnavailable, detail: "appcheck_token_failed"), false, true),
-                Is.EqualTo(LeagueFailure.Offline));
-            Assert.That(LeagueBackendApi.FailureOf(BackendError.Network("x"), false, true), Is.EqualTo(LeagueFailure.Offline));
-            Assert.That(LeagueBackendApi.FailureOf(BackendError.Http(401, ApiErrorCode.Unknown), true), Is.EqualTo(LeagueFailure.NoIdentity),
-                "401 tras renovar el token: la cuenta borrada");
-            Assert.That(LeagueBackendApi.AvatarFailureOf(noUser, true), Is.EqualTo(LeagueFailure.NoIdentity), "el avatar se queda pendiente");
+            var clock = new ManualClock(new DateTime(2026, 10, 30, 15, 0, 0, DateTimeKind.Utc));
+            var http = new FakeHttpTransport();
+            var auth = new FakeAuthTokenProvider { UserDeleted = true };
+            var client = new HttpBackendClient("https://api.example.test/dev", http, auth, new FakeIntegrityTokenProvider(), new ManualBackendScheduler());
+            var league = new LeagueService(new InMemoryLeagueStore(), new LeagueBackendApi(client, null), clock,
+                new LeagueConfig { LiveLeagueEnabled = true }, () => 41, () => null, () => true);
+            var failures = new List<LeagueFailure>();
+            league.Unavailable += failures.Add;
 
-            bool online = true;
-            var backend = new FailingLeagueBackend(noUser);
-            var api = new LeagueBackendApi(backend, null, () => online);
-            LeagueResult<LeagueBoard>? board = null;
-            api.GetBoard(LeagueScope.Global, r => board = r);
-            Assert.That(board!.Failure, Is.EqualTo(LeagueFailure.NoIdentity), "con red");
-            LeagueResult<LeagueWinsResult>? wins = null;
-            api.SendWins(new LeagueWinsRequest(new[] { LeagueWin.Campaign(42, new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Utc)) }, 42, null), r => wins = r);
-            Assert.That(wins!.Failure, Is.EqualTo(LeagueFailure.NoIdentity));
-            online = false;
-            api.GetBoard(LeagueScope.Global, r => board = r);
-            Assert.That(board!.Failure, Is.EqualTo(LeagueFailure.Offline), "sin red");
-        }
+            http.Enqueue(401, "{\"error\":{\"code\":\"unauthorized\",\"message\":\"La cuenta se ha borrado.\"}}");
+            Assert.That(league.RequestBoard(LeagueScope.Global), Is.True);
+            Assert.That(failures, Is.EqualTo(new[] { LeagueFailure.Offline }), "con la sesión del usuario borrado: lo que veía el teléfono");
+            Assert.That(league.LastFailureDetail, Is.EqualTo("auth_token_failed"), "la sonda dice por qué");
 
-        /// <summary>Un <see cref="ILeagueBackend"/> que falla en el acto con el mismo error.</summary>
-        private sealed class FailingLeagueBackend : ILeagueBackend
-        {
-            private readonly BackendError _error;
-
-            public FailingLeagueBackend(BackendError error)
-            {
-                _error = error;
-            }
-
-            public void SendLeagueWins(LeagueWinsRequestDto request, Action<BackendResult<LeagueWinsResponseDto>> onDone) =>
-                onDone(BackendResult<LeagueWinsResponseDto>.Fail(_error));
-
-            public void GetLeagueBoard(string scope, Action<BackendResult<LeagueBoardResponseDto>> onDone) =>
-                onDone(BackendResult<LeagueBoardResponseDto>.Fail(_error));
-
-            public void SetLeagueAvatar(LeagueAvatarRequestDto request, Action<BackendResult<LeagueAvatarResponseDto>> onDone) =>
-                onDone(BackendResult<LeagueAvatarResponseDto>.Fail(_error));
+            auth.SignOut(); // lo que hace ahora el borrado de cuenta (GameBootstrap.SignOutBackendAuth)
+            const string firstContact = "{\"week\":\"2026-W44\",\"starts_at\":\"2026-10-26T12:00:00Z\",\"ends_at\":\"2026-11-02T12:00:00Z\","
+                + "\"scope\":\"global\",\"country\":null,\"updated_at\":\"2026-10-30T14:00:00Z\",\"top\":[{\"rank\":1,\"name_key\":\"league_name_jaguar\","
+                + "\"name_num\":1203,\"country\":\"CO\",\"points\":980}],\"me\":{\"points\":0,\"rank\":null,\"percentile\":null,"
+                + "\"name_key\":\"league_name_tapir\",\"name_num\":3936,\"country\":null}}";
+            http.Enqueue(200, firstContact);
+            Assert.That(league.RequestBoard(LeagueScope.Global), Is.True);
+            Assert.That(league.StateOf(LeagueScope.Global), Is.EqualTo(LeagueBoardState.Fresh), "la descarga siguiente es buena");
+            Assert.That(league.LastFailure(LeagueScope.Global), Is.Null);
+            LeagueBoard board = league.Cached(LeagueScope.Global)!.Board;
+            Assert.That(board.Top.Count, Is.EqualTo(1), "la tabla de la semana");
+            Assert.That(board.Me.Points, Is.EqualTo(0));
+            Assert.That(board.Me.Rank, Is.Null);
+            Assert.That(board.Me.Percentile, Is.Null, "tu fila: «Gana un nivel para entrar en la Liga»");
+            Assert.That(auth.UsersCreated, Is.EqualTo(1));
         }
 
         /// <summary>Un <see cref="ILeagueBackend"/> que solo cuenta las llamadas (nunca responde).</summary>

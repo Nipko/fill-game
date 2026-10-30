@@ -3,6 +3,7 @@ using System;
 using System.Globalization;
 using AF.Analytics;
 using AF.Backend;
+using AF.Backend.Auth;
 using AF.Backend.Firebase;
 using AF.Backend.Unity;
 using AF.Economy;
@@ -71,9 +72,16 @@ namespace AF.UI
         /// </summary>
         internal static IPlayStorePort? PlayStorePortOverride { get; set; }
 
+        /// <summary>
+        /// La sesión de Firebase Auth para los tests (un <see cref="FakeAuthTokenProvider"/>): la que cierra el borrado de cuenta
+        /// (<see cref="SignOutBackendAuth"/>). Null: la real (<see cref="FirebaseTokenProviders"/>), que en el editor no existe.
+        /// </summary>
+        internal static IAuthTokenProvider? BackendAuthOverride { get; set; }
+
         /// <summary>Limpia los ganchos de test del backend.</summary>
         internal static void ResetBackendOverrides()
         {
+            BackendAuthOverride = null;
             BackendModeOverride = null;
             BackendClientOverride = null;
             PlayStorePortOverride = null;
@@ -284,6 +292,29 @@ namespace AF.UI
         internal static BackendMode StoreBackendMode(BackendMode mode, bool fakeStore)
         {
             return fakeStore ? BackendMode.Fake : mode;
+        }
+
+        /// <summary>
+        /// Borrado de cuenta (08 §11; punto 18 de la jornada 6, 2026-10-30): cierra la sesión de Firebase Auth. El servidor ya borró el
+        /// usuario y marcó su UID (401), pero el SDK lo guardaba: la Liga, <c>restoreLedger</c>, el código de borrado y las compras
+        /// mandaban su token, recibían 401, renovarlo fallaba (<c>auth_token_failed</c>) y la Liga decía «sin conexión» hasta que el SDK
+        /// lo soltaba. Con la sesión cerrada, la petición siguiente crea el usuario anónimo nuevo, como en la primera ejecución. Sin
+        /// borrado remoto (banda &lt; 13: nada de Firebase, D-033) no se toca.
+        /// </summary>
+        private void SignOutBackendAuth()
+        {
+            if (!RemoteAccountAllowed)
+            {
+                return;
+            }
+
+            IAuthTokenProvider? auth = BackendAuthOverride;
+            if (auth == null && FirebaseTokenProviders.TryGet(out IAuthTokenProvider? real, out _))
+            {
+                auth = real;
+            }
+
+            auth?.SignOut();
         }
 
         private static IBackendClient CreateBackendClient(BackendMode mode, IClock clock)
