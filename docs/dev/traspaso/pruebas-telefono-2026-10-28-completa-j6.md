@@ -701,18 +701,18 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
     - `-force-gles` (E1) es lo que más baja (−36 a −51 MB) y la imagen no cambia. Los bloques de 4 MiB (E2, E3) bajan poco.
     - Lo que haga falta lo decide el escritorio con el dueño: OpenGL ES por defecto, más recortes o medir en un teléfono de clase A, que es donde cuenta D-060.
     - **En el inicio y el Mapa** (punto 15): E0 588 MB, E1 567-576 MB, E2 y E3 592-593 MB. Otra vez solo baja E1 (13-21 MB).
-21. **Baja (a decidir). El botón Atrás de Android no hace nada en el nivel ni en el inicio** (punto 15, 18.7).
+21. **Baja (resuelta con el build `ae555a10`, punto 19). El botón Atrás de Android no hace nada en el nivel ni en el inicio** (punto 15, 18.7).
     - El guion pide que en el nivel abra la pausa. Hoy no la abre, ni tampoco cierra la pausa, «¿Salir del nivel?» ni Nivel fallido.
     - En el inicio no sale de la app ni pide confirmación.
     - 04 §6.6 solo dice que Atrás no cierra el modal de Aguas estancadas ni el «¿Seguro?». Para el Reto, esta hoja ya lo dio por diseñado («como en un nivel», `GameBootstrap`).
     - Pregunta para el escritorio: ¿Atrás en el nivel debe abrir la pausa, como dice el guion, y en la pausa volver al juego?
-22. **Baja. En pt-BR los miles salen con coma, como en inglés:** «1,000 sementes», «2,800 sementes» y el saldo «13,040» (`b13/idiomas-pt-BR.png`). En portugués de Brasil se escribe «1.000». En es-419 también sale «1,000 semillas», que vale para México pero no para Colombia ni Argentina. Los precios de la tienda falsa («COP 5,900») tienen el mismo formato.
-23. **Media (el dueño). La música tapa los efectos en general: no se oyen bien los sonidos de mover y verter** (punto 17).
+22. **Baja (resuelta con el build `ae555a10`, punto 19). En pt-BR los miles salen con coma, como en inglés:** «1,000 sementes», «2,800 sementes» y el saldo «13,040» (`b13/idiomas-pt-BR.png`). En portugués de Brasil se escribe «1.000». En es-419 también sale «1,000 semillas», que vale para México pero no para Colombia ni Argentina. Los precios de la tienda falsa («COP 5,900») tienen el mismo formato.
+23. **Media (resuelta con el build `ae555a10`, punto 19). La música tapa los efectos en general: no se oyen bien los sonidos de mover y verter** (punto 17).
     - Lo notó en el 60 y lo aclaró: «osea los sonidos en general».
     - En el registro: `sfx_select` −36 dB, `sfx_fruit_plip` −32, `sfx_tint`, `sfx_pour_start` y `sfx_pour_end` −30, `sfx_ui_tap` −30. En cambio, `sfx_seal` −17, `sfx_stuck` −20, `sfx_undo` −22 y `sfx_fill` −25.
     - La música no se agacha al verter (`ducked` false): solo con el modal de atasco.
     - Para el escritorio: subir los efectos de juego o bajar el lecho (`AudioMix`), o agachar la música durante el vertido.
-24. **Media (el dueño, gráficos; para la nueva versión, salvo que el escritorio lo vea rápido). El Mercado se ve básico y no invita a entrar** (`b22/mercado-cuias.png`).
+24. **Media (resuelta con el build `ae555a10`, punto 19). El Mercado se ve básico y no invita a entrar** (`b22/mercado-cuias.png`).
     - **Las opciones no parecen tocables:** las pestañas son solo texto, con un subrayado en la elegida. Hay que marcarlas más claro, para que se sepa que se toca ahí.
     - **El Mercado está muy básico o apagado, sin realce:** hay que hacerlo más visible.
     - **Las cuias se parecen todas:** vidrio, Santarém, Encuentro y Totuma no se distinguen bien en la miniatura pequeña. Propuesta del dueño: tocarlas y verlas en grande.
