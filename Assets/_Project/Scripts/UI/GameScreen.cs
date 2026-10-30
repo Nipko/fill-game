@@ -2074,6 +2074,7 @@ namespace AF.UI
         // 04 §2.7: con ≥ restart_confirm_min_pours vertidos, confirmación de una línea con atajo a Deshacer.
         private void OnHudRestart()
         {
+            _restartFromPause = false;
             LevelFlow? flow = _flow;
             if (flow != null && flow.RestartNeedsConfirm)
             {
@@ -2175,6 +2176,7 @@ namespace AF.UI
         {
             _pause.Hide();
             OnHudRestart();
+            _restartFromPause = _confirm.Visible; // Atrás en ¿Reiniciar? vuelve a la pausa (02 §3.5; D-063)
         }
 
         // D-008: desde el 31 «Salir» pregunta «¿Salir del nivel? Perderás 1 canoa» [P] (sin la línea de canoa si no hay canoa

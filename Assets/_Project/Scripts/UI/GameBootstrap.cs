@@ -976,14 +976,17 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Atrás de Android (Escape en el Input System) fuera del nivel: el único camino de Atrás para las hojas del inicio (FXT).
-        /// Con Ajustes abierta, la cierra (<see cref="CloseSettings"/>); en «El río sigue creciendo» o Sin canoas, vuelve al inicio
-        /// como su botón Volver (<see cref="PressBack"/>). Con el Mapa del río abierto, cierra su tarjeta de la parada o su Muestrario
-        /// (M4.1) y, si no hay, el Mapa, en cualquier pantalla, también encima del nivel (<see cref="CloseRiverMap"/>; M3.3). Fuera
-        /// de eso, no hace nada en el nivel (02 §3; 04 §6.6: el embudo no se cierra con Atrás), ni con la hoja «Compra simulada», un anuncio o el aviso del perfil bloqueado delante (tampoco
-        /// con el Mapa abierto debajo), ni en el inicio sin hoja.
+        /// Atrás de Android (Escape en el Input System; lo envuelve <see cref="PressAndroidBack"/> con la sonda): el único camino de
+        /// Atrás (FXT). Con Ajustes abierta, la cierra (<see cref="CloseSettings"/>); en «El río sigue creciendo» o Sin canoas, vuelve
+        /// al inicio como su botón Volver (<see cref="PressBack"/>). Con el Mapa del río abierto, cierra su tarjeta de la parada o su
+        /// Muestrario (M4.1) y, si no hay, el Mapa, en cualquier pantalla, también encima del nivel (<see cref="CloseRiverMap"/>;
+        /// M3.3). En el nivel y en el Reto, lo que diga <see cref="GameScreen.AndroidBack"/> (02 §3.5; observación 21 de la jornada
+        /// 6): abre la pausa, la cierra, cancela «¿Salir del nivel?» volviendo a la pausa o cierra Nivel fallido como su X; Aguas
+        /// estancadas y ¿Seguro? no se cierran (04 §6.6). Con la hoja «Compra simulada», un anuncio o el aviso del perfil bloqueado
+        /// delante no hace nada (tampoco con el Mapa abierto debajo). En el inicio sin nada encima, manda la app a segundo plano
+        /// (<see cref="MoveAppToBack"/>), sin diálogo.
         /// </summary>
-        public bool PressAndroidBack()
+        private bool PressAndroidBackCore()
         {
             if (_app == null || _app.Screen == AppScreen.Boot)
             {
@@ -1036,7 +1039,8 @@ namespace AF.UI
             // nivel (02 §3; 04 §6.6). HandleBack devuelve false si no hay calendario abierto.
             if (_dailyScreen != null && _dailyScreen.IsOpen)
             {
-                return _dailyScreen.HandleBack();
+                // Con el tablero del Reto, como un nivel (02 §3.5): la pausa, Nivel fallido, el embudo.
+                return _dailyScreen.HandleBack() || LevelBack(_dailyScreen.Calendar.Visible ? null : _dailyScreen.View, true);
             }
 
             // Mercado y tarjeta de oferta (B5): Atrás cierra la tarjeta como «Ahora no» (también encima de la victoria) y el Mercado
@@ -1054,7 +1058,15 @@ namespace AF.UI
 
             if (_app.Screen == AppScreen.Level)
             {
-                return false;
+                // La confirmación del Salto del Boto (desde la pausa o el banner): Atrás es su «Cancelar», sin coste.
+                if (_skipConfirm != null && _skipConfirm.Visible)
+                {
+                    CancelSkip();
+                    _backActionNote = "cancel";
+                    return true;
+                }
+
+                return LevelBack(_screen, false);
             }
 
             // «Eliminar cuenta y datos» (B8), encima de Ajustes: Atrás lo cierra sin borrar y deja Ajustes abierta; con «Eliminando…»
@@ -1069,7 +1081,13 @@ namespace AF.UI
                 return CloseSettings();
             }
 
-            return PressBack();
+            if (PressBack())
+            {
+                return true;
+            }
+
+            // El inicio sin nada encima: la app a segundo plano, como Android, sin «¿Salir?» (02 §3.5).
+            return _app.Screen == AppScreen.Lobby && _lobby != null && _lobby.Visible && !_lobby.OverlayVisible && MoveAppToBack();
         }
 
         /// <inheritdoc />
@@ -2013,6 +2031,11 @@ namespace AF.UI
 
         private void OnApplicationPause(bool paused)
         {
+            if (!paused)
+            {
+                BackResumed(); // 02 §3.5: de vuelta del fondo, Atrás en el inicio vuelve a mandar la app al fondo
+            }
+
             if (AccountDeleted)
             {
                 return; // Nada tras «Eliminar cuenta y datos»: el perfil ya no existe (GameBootstrap.Account.cs).

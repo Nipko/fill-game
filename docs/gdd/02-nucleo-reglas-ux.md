@@ -208,6 +208,27 @@ Consecuencias: el jugador puede tocar origen-destino-origen-destino sin esperar;
 
 Tras `hint_idle_delay_s` (12 s [P]) sin toques, en **todos los niveles desde el 3** (`hint_idle_from_level` = 3, sin tope superior; claves y defaults en el cap. 08 §9; ratificado el 2026-10-19 frente a la propuesta de Magic Sort, que la limitaba a 3-30: 10.2 #2 A, D-030), un origen de la ruta del solver pulsa suavemente una vez (escala 1,04, 600 ms). Solo si el solver (presupuesto `hint_budget_nodes` = 40.000 nodos, <50 ms en móvil, research/02 §2.5 [E]) confirma solución desde el estado actual; nunca en posición perdida (research/01 Esp. 15 [V]). En Aguas turbias solo propone vertidos seguros (sección 11, T5); si no hay ninguno demostrable dentro de `hint_timeout_ms`, no pulsa nada. No es Morpho: no muestra el destino ni cobra. El jugador puede apagarla en Ajustes con el interruptor "Pista por inactividad" (sección 12), que equivale a `hint_idle_delay_s` = 0 en ese dispositivo.
 
+### 3.5 Atrás de Android
+
+D-063: observación 21 de la jornada 6, decisión del dueño del 2026-10-30; lo de Sin canoas en el nivel, la recomendada aceptada. Atrás usa siempre el camino del botón equivalente, y cada pulsación escribe `AF_STATE back` (`screen`, `action`, `reto`) en los builds de desarrollo.
+
+| Dónde | Atrás |
+|---|---|
+| Nivel jugando (o en la intro), sin modal | Abre la pausa, como su botón. Si el último vertido está resolviendo el nivel (victoria o Aguas estancadas a la espera de la vista), durante la celebración, la victoria, la tarjeta previa o la ola de Barajar, no hace nada |
+| Pausa | Vuelve al juego, como «Continuar» |
+| «¿Salir del nivel?» | Cancela y vuelve a la pausa, sin gastar la canoa |
+| ¿Reiniciar? | Lo cancela sin reiniciar; si se abrió desde la pausa, vuelve a ella, como «¿Salir del nivel?» |
+| Salto del Boto, tarjeta de Morpho, hoja y tarjeta de Barajar | Las cierra sin coste, como su X o «Cancelar» |
+| Nivel fallido | Lo mismo que su X (al inicio) |
+| Sin canoas en el nivel | Lo mismo que su X («esperar»: vuelve a Nivel fallido o al tablero), como Sin canoas en el inicio |
+| Aguas estancadas y ¿Seguro? | No los cierra: vibración corta (04 §6.6) |
+| Reto del río | Como un nivel (Aguas estancadas, bloqueado y con vibración); su calendario de sellos se cierra como «Inicio» |
+| Edad y consentimiento | No se saltan |
+| Inicio sin nada encima | Manda la app a segundo plano, como Android (`moveTaskToBack`), sin diálogo de confirmación. Un doble Atrás rápido la manda una sola vez; tras volver de segundo plano, el siguiente Atrás la vuelve a mandar |
+| Inicio con una hoja o un takeover encima (Ajustes, Mapa, Mercado, Liga, Avatar, Bitácora, «El río sigue creciendo», Sin canoas) | Cierra eso primero, como su X |
+
+Un doble Atrás rápido nunca encadena dos acciones raras ni lanza excepciones: dos pulsaciones en el mismo fotograma cuentan como una, y en fotogramas seguidos se aplican por orden (abrir y cerrar la pausa está bien).
+
 ## 4. Feedback y *juice*: duraciones
 
 Ningún líder publica tiempos (research/01 §3 [E]; research/09 §Arte [E]). Desde D-006 (decisión del dueño del 2026-10-08), la selección y el vertido copian los tiempos medidos en Magic Sort (`docs/research/magic-sort/ficha-magic-sort.md` §2.4 y §2.6). Los valores siguientes son **[P]**. Las horquillas estimadas de research/01 §3 [E] (elevación 0,15-0,25 s, traslado 0,25-0,35 s, caudal 0,3-0,5 s por 1-2 dosis, retorno 0,25 s) y de research/06 §2 [E] (0,4-0,7 s por vertido y onda amortiguada 0,5-0,8 s) se conservan como referencia histórica. Varias quedan por debajo de lo medido: el caudal con 2 dosis, el retorno y el vertido completo. Con la elevación pasa al revés: la medida, 100 ms, queda por debajo de su horquilla. Todas las duraciones se multiplican por `anim_speed_factor_early` / `anim_speed_factor_late` (1,0 en todos los niveles, también desde el 21: los tiempos de Magic Sort de D-006; D-033, Q-N1, corrige el 0,8 anterior) y por `anim_reduce_motion_factor` (0,5) si el jugador activa "Reducir movimiento" (claves `anim_*` del cap. 08 §9).

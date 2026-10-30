@@ -23,7 +23,8 @@ namespace AF.Tests.PlayMode
     /// sin ningún teclado, se añade el teclado y se encolan la bajada y la subida de Escape antes del mismo fotograma, como
     /// <c>adb shell input keyevent 4</c>: Ajustes se cierra a la primera y sale <c>AF_STATE settings_closed</c>. Atrás es un solo
     /// camino para las hojas del inicio (<see cref="GameBootstrap.PressAndroidBack"/>): también vuelve de «El río sigue
-    /// creciendo» y de Sin canoas abierta desde el inicio, y en el inicio sin hoja no hace nada. Con la hoja «Compra simulada»,
+    /// creciendo» y de Sin canoas abierta desde el inicio, y en el inicio sin hoja manda la app a segundo plano (02 §3.5; en el Editor,
+    /// el puerto falso). Con la hoja «Compra simulada»,
     /// un anuncio simulado o el aviso del perfil bloqueado delante, Atrás no hace nada (revisión de FXT): no cierra lo que hay
     /// debajo, para que la compra o el anuncio no terminen sobre una pantalla ya cerrada.
     /// </summary>
@@ -93,7 +94,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.SettingsView.Visible, Is.False, "segunda apertura: también a la primera");
             Assert.That(Count(SettingsClosed), Is.EqualTo(2));
 
-            // Sin hoja abierta, Atrás no hace nada en el inicio.
+            // Sin hoja abierta, Atrás manda la app a segundo plano (02 §3.5; en el Editor, el puerto falso): nada cambia aquí.
             Press(keyboard.escapeKey);
             Release(keyboard.escapeKey);
             yield return null;
@@ -122,7 +123,8 @@ namespace AF.Tests.PlayMode
 
             Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby), "Atrás vuelve al inicio, como su botón Volver");
             Assert.That(boot.Lobby!.OverlayVisible, Is.False);
-            Assert.That(boot.PressAndroidBack(), Is.False, "en el inicio sin hoja, nada");
+            Assert.That(boot.PressAndroidBack(), Is.True, "en el inicio sin hoja, la app a segundo plano (02 §3.5)");
+            Assert.That(boot.LastBackAction, Is.EqualTo("background"));
             Assert.That(Count(SettingsClosed), Is.EqualTo(0), "Ajustes no estaba abierta");
         }
 
