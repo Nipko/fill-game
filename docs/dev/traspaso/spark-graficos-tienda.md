@@ -55,6 +55,7 @@ Con lo que salga de la fase 1, haz **tres conceptos**. Cada uno con 8 capturas d
 - **los miquitos** (la fauna que celebra y acompaña: `Data/Fauna/miquitos_v0.json`);
 - **el Mapa del río**, con la canoa de Capi y el río de vidrio lleno de agua real;
 - TiTino, Capi y Rosa;
+- **la intro de la marca** (D-051: la cuia que vierte, el río que se tiñe y el logotipo «Tintalú», 3,5 s al abrir). Es la mejor base para el gráfico de funciones y para abrir el vídeo de la fase 3. Puede ser también una captura, la 1 o la 8, si la fase 1 lo justifica. Grábala en el teléfono con `adb shell screenrecord`, o sácala fotograma a fotograma;
 - y lo más significativo de la app: el Reto del río, la Bitácora, la Liga, los patrones de fruta y las skins de cuia.
 
 **El orden de las 8 capturas**, salvo que la fase 1 diga otra cosa con datos:

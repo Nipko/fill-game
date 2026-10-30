@@ -4732,7 +4732,7 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 ## D-065 · Gráficos de la ficha de Play con IA y tomas nuevas
 
 - **Fecha:** 2026-10-30.
-- **Estado:** decidida por el dueño el 2026-10-30, con sus palabras: «quiero realmente tener unas buenas imágenes de recursos y en los 3 idiomas, como también algunas generadas realzando más o haciendo unas únicas, guiándonos por las apps que funcionan» y «debemos mostrar lo más relevante, algunos tableros, los miquitos, lo bonito, el mapa del río, lo más significativo de la app y realzarlo. El Spark puede conectar el celular para hacer nuevas tomas».
+- **Estado:** decidida por el dueño el 2026-10-30, con sus palabras: «quiero realmente tener unas buenas imágenes de recursos y en los 3 idiomas, como también algunas generadas realzando más o haciendo unas únicas, guiándonos por las apps que funcionan» y «debemos mostrar lo más relevante, algunos tableros, los miquitos, lo bonito, el mapa del río, lo más significativo de la app y realzarlo. El Spark puede conectar el celular para hacer nuevas tomas» y «el intro también» (la intro de la marca, D-051).
 - **Decisión:**
   1. Los gráficos de la tienda (capturas, gráfico de funciones y vídeo) pueden usar imágenes generadas o realzadas con IA, además del arte por código (D-052).
   2. Lo que una captura enseña como juego tiene que existir en el juego tal como se ve. La IA crea o realza el entorno, pero no inventa mecánicas, pantallas, UI ni contenido.
