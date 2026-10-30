@@ -24,6 +24,7 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 | Botones en gris, 14 y 13 (build `d3e601a2`, punto 11) | cumple: la 2 queda arreglada; el aviso abre la Bitácora | 16 |
 | Bloques 5, 9, 10.1 y 11 (punto 12, lo hecho) | cumple; los banners repiten dibujo | 17 |
 | Lo automatizable que quedaba (punto 13) | cumple; el Mapa del 700 dice «Nivel 701» | 18 |
+| Arreglos de la segunda hoja j6 (build `ff3c49c0`, punto 14) | cumplen el icono y la bandeja; el aviso no abre el Reto; la memoria, por encima | 19, 20 |
 
 ## Verificación (bloque 0)
 
@@ -418,6 +419,52 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
      - cerrar un vídeo antes de tiempo, el silencio y la zona segura;
      - con el dueño: 21, 22 y 23.
 
+14. **El build de los arreglos de la segunda hoja j6** (`ff3c49c0`, que trae `1a6abaf8`, el encargo, y los carriles `fx-j6b-icono-forma`, `fx-j6b-bandeja`, `fx-j6b-memoria` y `fx-j6b-aviso-destino`): **cumplen la forma del icono (12) y la bandeja (13); el aviso no abre el Reto (observación 19); la memoria sigue por encima de D-060 y E1 es el experimento que más baja (20).**
+   - **Builds y compuertas:**
+     - `dev.apk`, 74,96 MB (`[AF.BuildDev] OK`);
+     - ensayo, `[AF.BuildRelease] OK`, `rehearsal.aab` 57,91 MB y `rehearsal.apk` 63,42 MB;
+     - `check-manifest -Mode dev`, `check-16kb`, `check-no-unity-iap`, `check-no-applovin` y `check-no-unity-telemetry` en los dos, y `check-release-classes` en el ensayo: todas OK;
+     - `size-gate` del AAB, pendiente (reinicia adb).
+   - **N6.1, la forma del icono (observación 12): cumple.**
+     - **La sonda** (primera apertura): `morph_shape` squircle, `morph_shape_n` 2,67, `morph_shape_px` [493,9, 538,8], `morph_shape_fit_px` 1,2, `os_splash_mask_ms` 0,97, `signal`, `intro`, `system` y `held` 1.121 ms. En frío, `held` 840-1.014 ms.
+     - **Las ráfagas** (`n6d-*`, en bruto; ancho en la fila 1170, alto en la columna 540, y alcance en las cuatro diagonales desde el centro):
+       - el último fotograma del sistema mide 496 × 498 px, con diagonales de 190-191 px;
+       - el primero de la intro, 498 × 500 px, con diagonales de 190-192 px. Coinciden dentro de ±2 px en los ejes y en las diagonales;
+       - después el eje crece (508-524, 596-690, ~1.000) y las diagonales se quedan en 190-191 hasta que el círculo las pasa: **el borde no retrocede**;
+       - igual en la primera apertura y en los tres arranques en frío.
+     - **El dueño**, tras 4 arranques en frío, literal: «está bien».
+     - **Con Reducir movimiento** (el dueño activó «Reduce animations» y luego lo quitó): `reduce_motion` true, `morph_mode` fade, `morph_ms` -1, `motion_frames` 0 y `signal`. Sale el icono de 496-498 px y luego la escena quieta, sin saltos.
+     - **Inicio durante el icono:** pulsado Inicio a los 0,5 s y vuelta a los 5 s, la intro termina normal (`anim_ms` 3.500, `cut` false), sin `E/Unity` ni el icono colgado. El velo lo soltó el tope (`cap`, 3.000 ms) porque la app estaba en segundo plano; no es un cuelgue.
+     - **El ensayo:** sin ráfaga todavía.
+   - **La bandeja a 320 dp con la letra al 130 % (observación 13): cumple** (`b16/bandeja-320b.png`).
+     - En el 100, en es-419, en y pt-BR, ya no se parte ninguna palabra: «Deshacer», «Desfazer», «Misturar» y «Barajar» salen enteras, más pequeñas que «Pista» o «Revelar».
+     - El dueño, sobre la bandeja con letras de distinto tamaño: «sí está bien».
+     - Sin hacer: 411 dp y las pestañas del Mercado a un solo tamaño (observación 15).
+   - **El aviso del Reto (D-062, observación 16): no cumple** (observación 19). Tres casos, con el dueño tocando el aviso:
+     - **En segundo plano dentro de un nivel** (el 100): sigue en el nivel; `push_open` con `type` `daily_ready` y `dest` `none`, que es lo que dice el guion;
+     - **En segundo plano en el inicio:** el toque llega (`onNewIntent`, y el aviso se quita), pero no sale `push_open`: el juego vuelve al inicio con la Bitácora encima;
+     - **En frío**, cerrado desde Recientes: arranca desde el aviso (`START … (has extras)` desde el propio paquete), con `push_sent` y sin `push_open`, y abre el inicio con la Bitácora;
+     - en los tres, el permiso de avisos se volvió a conceder en el diálogo del sistema, porque la primera apertura (`pm clear`) lo había quitado.
+   - **La memoria con los experimentos (observación 14), `b19c/`.** Preparación de cada medida: `cmd package compile -m speed-profile -f`, `force-stop`, lanzar con `--ei af_mem_os 1` y un minuto quieto. La sonda del arranque da `gfx_api` Vulkan, `gfx_device` Adreno (TM) 830, y `screen_px` y `render_px` 1080 × 2340. En E2 y E3, `unity_args` con los argumentos completos.
+
+     **Nivel 75** (`dumpsys meminfo -d`, en KB; `EGL mtrack` es 40.288 en todos):
+
+     | Experimento | Java Heap | Native Heap | Code | Graphics (GL mtrack) | Private Other | System | TOTAL PSS | Sonda `os_pss_mib` / `os_graphics_mib` / `gfx_mib` |
+     |---|---|---|---|---|---|---|---|---|
+     | E0, la base | 36.660 | 42.508 | 88.800 | 136.964 (96.676) | 263.344 | 37.708 | **610.628** | 503,1 / 140,8 / 94,4 |
+     | E1, `-force-gles` | 20.324 | 36.888 | 100.192 | 124.932 (84.644) | 234.952 | 37.750 | **559.762** | 491,4 / 137,2 / 49,9 |
+     | E2, bloques de 4 MiB | 20.820 | 40.068 | 95.564 | 136.964 (96.676) | 256.140 | 37.787 | **592.051** | 501,2 / 140,8 / 94,4 |
+     | E3, E2 más los temporales | 19.816 | 40.044 | 89.676 | 136.964 (96.676) | 259.072 | 36.780 | **586.976** | 500,4 / 140,8 / — |
+
+     - **E0, el inicio:** PSS 598.183 y `GL mtrack` 91.972, unos 3-5 MB por debajo de la jornada 6, como se esperaba al quitar el posproceso.
+     - **El ensayo de release, nivel 75** (retomado, sin sonda): E0 **530.027** (`GL mtrack` 93.756, Code 79.272, Private Other 225.788) y E1 **494.404** (`GL mtrack` 75.804, Code 80.100, Private Other 215.132). Con `-force-gles` la imagen se ve igual (`b19c/ensayo-E1.png`).
+     - **Lo que dicen:**
+       - E1 (OpenGL ES) es el que más baja: −51 MB en el `dev.apk` y −36 MB en el ensayo, por `GL mtrack` (−12 a −18 MB), Private Other y Graphics;
+       - E2 y E3 bajan 19-24 MB, casi todo en Private Other, dentro del ruido entre arranques;
+       - nada baja de los 450 MB de D-060 en este teléfono (observación 20).
+     - **Medidas que no valen:** en E1-E3, la del «inicio» y la del «Mapa» se hicieron en el nivel 75. Al relanzar, el juego retoma el nivel a medias del experimento anterior; lo dice la sonda (`at` level). Hay que repetirlas saliendo antes del nivel. Tampoco hay `AF_PERF frames` con `af_bench_morpho` en E1.
+     - **La imagen sin posproceso:** el arranque, el inicio, los niveles y la victoria se ven como antes.
+
 ## Observaciones
 
 1. **Bloqueante para el Release definitivo. La pantalla del sistema la suelta el tope de 3 s en todos los arranques (`os_splash_release` = `cap`), no la intro.**
@@ -466,6 +513,14 @@ Capturas y ráfagas en el portátil: `Logs/device/completa-j6/` (fuera de git). 
 18. **Baja. Con el contenido acabado (`max_level` 700), el botón del Mapa dice «Jugar · Nivel 701».**
     - 06 (D-032, punto 6) pide «nunca «Jugar · Nivel 701»». El inicio sí dice «Jugar · Reto del río».
     - El botón del Mapa abre el Reto, así que solo falla la etiqueta (`b11/mapa-700-b.png`).
+19. **Media. Con D-062, el aviso del Reto no abre el Reto, ni en caliente desde el inicio ni en frío** (punto 14).
+    - El toque llega a la app: `onNewIntent` en caliente, y en frío `START … (has extras)` con el aviso quitado. Pero no sale `push_open`, y el juego abre el inicio con la Bitácora encima.
+    - Con la app en un nivel sí sale `push_open` (`dest` `none`).
+    - Una pista para el escritorio: `AndroidNotificationScheduler.TakeOpenedType` descarta la intención si `intent.Id == s_lastIntentId`, y los avisos usan siempre el `id` 1001. Eso explicaría el caso en caliente, pero no el de en frío, que es un proceso nuevo. También puede ser que `GetLastNotificationIntent()` vuelva vacío cuando se lee.
+20. **Media (a decidir, D-060). La memoria sigue por encima de 450 MB de PSS en todos los experimentos** (punto 14).
+    - En el nivel 75: el `dev.apk` 560-611 MB y el ensayo 494-530 MB.
+    - `-force-gles` (E1) es lo que más baja (−36 a −51 MB) y la imagen no cambia. Los bloques de 4 MiB (E2, E3) bajan poco.
+    - Lo que haga falta lo decide el escritorio con el dueño: OpenGL ES por defecto, más recortes o medir en un teléfono de clase A, que es donde cuenta D-060.
 
 ## Notas de la herramienta (no son defectos del juego)
 
