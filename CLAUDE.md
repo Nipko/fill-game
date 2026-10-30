@@ -135,5 +135,5 @@ tech-lead descompone → agente dev en su worktree → pruebas → code-reviewer
 ## Humanos
 - **Dueño:** producto y prioridades; cuentas (Unity, GitHub, Google Play, Firebase, AppLovin); licencias; firma y keystore; pagos; secretos de CI. Aprueba SDK, paquetes, permisos, versiones, merges y `.claude/settings.json`, y publica.
 - **Artista 2D freelance:** todo el arte nuevo (PNG/PSD por Git LFS). Los agentes solo lo integran.
-- **Asesor cultural:** nombres y textos de fauna, flora, pueblos y lugares. Hasta su visto bueno quedan "pendiente de revisión".
+- **Asesor cultural:** nombres y textos de fauna, flora, pueblos y lugares. Para la 1.0, los nombres culturales están en firme por D-054 y D-064 (ya no son "pendiente de revisión"); el asesor, si lo hay, revisa para versiones futuras.
 - **Abogado de marcas:** aplazado por D-047 (sin dictamen ni registro por ahora). Cuando el juego dé resultados, o si aparece un conflicto con el nombre, presenta el registro de "Tintalú" (`docs/legal/paquete-abogado.md`, `marca.md` §3 y §5). Ya no bloquea la subida a Play.

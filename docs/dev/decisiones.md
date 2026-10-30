@@ -39,6 +39,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-031 | 2026-10-19 | Reto del río: pool de 729 días, bandas, premio, anti-reloj y partida | Decidida por el dueño (R-Q1-R-Q10 con «Acepto tus propuestas»; R-Q1b, R-Q11-R-Q16 y R-Q12b con la recomendada; R-Q2b, 729 días; R-Q11b, 30 candidatos por fuente). Implementada por el equipo Spark (R0-R11, `spark/reto-del-rio`; el bloque (a) integrado en `fcbbd94`). Documentación aplicada con E11 (03, 05, 06 y 08). Pendientes: los enganches E1-E25, la integración y la prueba en el teléfono |
 | D-032 | 2026-10-20 | Las 6 decisiones de 16:9 y del fin de contenido que dejó DC3 | Decidida por el dueño («Acepto tus recomendaciones para las 6 decisiones: compactar Aguas estancadas y la victoria en 16:9, aceptar 3, 4 y 5, y el botón «Jugar · Reto del río» (o «Jugar» sin Reto) tras el fin de contenido.»). Implementada en la ola 8: FX16a (Aguas estancadas compacto) y FX16b (victoria compacta y el botón del inicio). Documentación aplicada con FX16b (02 y 06). Pendiente: la prueba en el teléfono |
 | D-063 | 2026-10-30 | El Atrás de Android en el nivel, la pausa y el inicio | Decidida por el dueño (la recomendada de la observación 21 de la jornada 6); lo de Sin canoas en el nivel (Atrás hace lo de su X), la recomendada, confirmada por el dueño el 2026-10-30. Implementada en `tanda6/fx-j6d-atras`, con la tabla en 02 §3.5. Pendiente: verlo en el teléfono (guion, bloque 18.7) |
+| D-064 | 2026-10-30 | Textos públicos en firme para la 1.0 | Decidida por el dueño (nombres culturales en firme, en la línea de D-054; sin marcas provisionales en la web ni en la ficha); las recomendadas (portada sin enlace a Play hasta publicar, la Liga encendida, EmojiOne en Créditos, el matiz del reembolso al borrar la cuenta, las fichas EN y PT-BR de IA tal cual y las capturas 01-08), aplicadas por el integrador. Implementada en `tanda6/textos-publicacion` |
 
 ---
 
@@ -4701,3 +4702,28 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Sonda:** `AF_STATE {"event":"back","t":…,"screen":…,"action":…,"reto":…}` en cada pulsación (`DevProbe.Back`).
 - **Tests:** `AndroidBackTests`, `BackButtonTests`, `AudioHooksTests.cs` (el inicio sin sonido ni háptico) y `DailyHooksTests` (E22: la pausa y Aguas estancadas en el Reto). **Lo mide** el portátil (guion, bloque 18.7).
 - **Cómo revertir:** con una decisión nueva del dueño; técnicamente, que `GameScreen.AndroidBack` devuelva `None` jugando y en la pausa, y `PressAndroidBackCore` deje de llamar a `MoveAppToBack`.
+
+## D-064 · Textos públicos en firme para la 1.0
+
+- **Fecha:** 2026-10-30. Registrada por el carril `tanda6/textos-publicacion`.
+- **Estado:** decidida por el dueño el 2026-10-30 (el dueño publica ahora la 1.0 en Google Play y ningún texto público puede quedar provisional ni inexacto). Las recomendadas de la lista de abajo las aplicó el integrador por la norma del dueño (ir con la recomendada).
+- **Contexto:** tres auditorías de los textos públicos (la web de `infra/web/`, la ficha de Play de `docs/store-listing/` y `docs/dev/publicar-play-console.md`) encontraron marcas provisionales («pendiente de revisión» del asesor cultural, `[PENDIENTE: …]`, `[[ABOGADO: …]]`, «prevista», «Todavía no está en Google Play») y frases que ya no eran exactas: la Liga descrita como opcional y sin el avatar (D-056), sin el registro de premios de anuncios (`infra/functions/rewarded-ssv/handler.ts`, `REWARD_TTL_S` = 30 días), sin Play Age Signals (D-057), sin las copias de seguridad del servidor (PITR de `infra/lib/data-stack.ts`) y créditos incompletos (`docs/legal/avisos-de-licencia.md` §2).
+- **Decisión:**
+  1. **Nombres culturales en firme:** el dueño da en firme para la 1.0 los nombres culturales (fauna, flora, lugares, comodines con nombre de fauna o tupí, TiTino, Capi, Rosa, «boto», «Estuario»). Ya no son «pendiente de revisión» del asesor cultural, en la línea de D-054 (Gemini sustituye al asesor en la 1.0). El asesor, si lo hay, revisa para versiones futuras.
+  2. **Ningún texto público lleva marcas provisionales:** ni la web ni la ficha de Play.
+  3. **Recomendadas que aplica el integrador** (norma del dueño: ir con la recomendada):
+     1. la portada de la web no enlaza a Play hasta «Publicar cambios», con un texto neutro y verdadero antes y después de publicar; el integrador añade el enlace al publicar;
+     2. la Liga del río sale **encendida** en producción (la recomendación de D-035, añadido del 2026-10-28): la línea de la Liga, con el avatar, va en las tres fichas, Data Safety declara sus filas y el IARC contesta «sí» a la interacción y al país;
+     3. EmojiOne se acredita en Créditos (no se saca del build en la 1.0);
+     4. borrar la cuenta no da derecho por sí solo a un reembolso de lo comprado, sin negar los derechos del consumidor ni la política de reembolsos de Google Play (términos §5, página de borrado y privacidad §11);
+     5. las fichas EN y PT-BR traducidas con IA se aceptan tal cual (D-054);
+     6. en la ficha se suben las capturas 01-08 de cada idioma; la 09 (Mercado) y la 10 (Liga) no, porque enseñan precios en COP y jugadores falsos.
+  4. **Vigencia** de la política de privacidad y de los términos: «30 de octubre de 2026» (versión 1), como ya decían.
+- **Consecuencias:**
+  - la web (`infra/web/src/content/*`, `site.ts`, `static/app-ads.txt`) en los tres idiomas: sin la frase del asesor, sin «prevista», la Liga activa desde el nivel 41 con el avatar, el registro de premios de anuncios (30 días), Play Age Signals, las copias de seguridad (hasta 35 días), «Redes de anuncios» como sección 5, App Check también en la Liga, créditos completos (Play Age Signals, OkHttp, Okio, Protocol Buffers, EmojiOne, la música CC0, el arte por código y la editora) y `app-ads.txt` solo con las líneas activas;
+  - las fichas (`docs/store-listing/*/ficha.md`) sin la línea del asesor y con el avatar en la línea de la Liga; `data-safety.md`, `iarc.md`, `assets-tienda.md` y `README.md` de la ficha, al día; Q-B13-3, -4, -9, -12, -19, -22 y -24 cerradas;
+  - `docs/dev/publicar-play-console.md`: la Liga encendida (§0.4), las capturas 01-08 (§0.7), el perfil de pagos comprobado (§0.1), el bloqueante de la URL de prod resuelto (§0.2) y PAD sin aplicar en la 1.0 (§15);
+  - `CLAUDE.md`, «Humanos»: el asesor cultural ya no bloquea la 1.0.
+- **Lo que no cambia:** los textos del juego (`strings.csv`), que siguen con su propio flujo (D-054). El aviso del juego «Las compras no se reembolsan.» (`delete_account_no_refund`) es más tajante que la web: si se quiere el mismo matiz dentro del juego, es una tarea de textos aparte.
+- **Alternativas descartadas:** esperar al asesor cultural o al abogado antes de publicar (D-054 y D-057 ya los sustituyen en la 1.0); publicar con las marcas provisionales; sacar EmojiOne del build en la 1.0.
+- **Cómo revertir:** con una decisión nueva del dueño; los textos anteriores están en la historia de git de la rama `tanda6/textos-publicacion`.
