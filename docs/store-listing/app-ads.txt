@@ -2,14 +2,13 @@
 #
 # La copia que se publica es la de la web: infra/web/src/static/app-ads.txt
 # (desarrollador: Parallext, LLC; D-041), que la web sirve en la raíz del sitio,
-# https://tintalu.com/app-ads.txt, cuando el dueño conecte el dominio (D-041).
+# https://tintalu.com/app-ads.txt (dominio conectado: D-044, añadido del 2026-10-25).
 # Se edita allí; este archivo solo apunta a ella para no tener dos versiones.
 #
-# Lo que sigue pendiente (lo dice la propia plantilla de la web):
-# - los IDs de AppLovin MAX y de las redes que media (AdMob, Unity Ads, Meta Audience
-#   Network y Mintegral) los da el panel de MAX cuando exista la cuenta del dueño
-#   (Q-B13-16 (a), decidida el 2026-10-20); no se escriben a mano ni se inventan;
-# - hoy el juego no muestra anuncios: las líneas se descomentan al integrar D-042
-#   (MAX con UMP) y tener los IDs reales; se rellena tras publicar (08 §13.1 #23).
+# Estado (2026-10-30; D-064): la copia pública lleva solo las líneas activas, sin
+# comentarios: AdMob (D-049) y Unity Ads, red de su mediación (añadido de D-049 del
+# 2026-10-27). Si se suma otra red a la mediación de AdMob, su línea exacta la da su
+# panel (no se escribe a mano ni se inventa) y se añade allí, con su test en
+# infra/test/web/site.test.ts. Google la comprueba tras publicar (08 §13.1 #23).
 #
 # Historia: el borrador de B13 sigue en git (git show 964b64fb:docs/store-listing/app-ads.txt).

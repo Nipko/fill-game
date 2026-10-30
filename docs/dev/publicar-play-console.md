@@ -1,10 +1,10 @@
 # Publicar la 1.0 en Play Console: guía paso a paso del dueño
 
 - **Para quién:** el dueño, con Play Console abierta. Los agentes no suben nada a Google Play ni tocan las consolas (`CLAUDE.md`, reglas duras 5 y 6); esta guía solo reúne lo que tienes que hacer y qué contestar.
-- **Fecha:** 2026-10-28, sobre `integracion-fase1-fase2` en 7ca60990.
-- **Plan de lanzamiento (D-059):** la pista interna, **solo contigo** como único tester, para probar las compras, PAD y Play Games con la app instalada desde Play; después, la **misma versión** se promociona a **producción al 100 %**, con la **publicación administrada** activada antes de enviar nada a revisión. Sin prueba cerrada ni abierta y sin escalonado. En todos los países de Play salvo Rusia, Bielorrusia, Vietnam e Indonesia (D-057).
+- **Fecha:** 2026-10-30, en la rama `tanda6/textos-publicacion` (la web en firme en 041b18ff, sobre b81abca9 de `integracion-fase1-fase2`), con los textos públicos en firme (D-064). Antes: 2026-10-28, en 7ca60990.
+- **Plan de lanzamiento (D-059):** la pista interna, **solo contigo** como único tester, para probar las compras y Play Games con la app instalada desde Play (PAD no aplica en la 1.0: §15); después, la **misma versión** se promociona a **producción al 100 %**, con la **publicación administrada** activada antes de enviar nada a revisión. Sin prueba cerrada ni abierta y sin escalonado. En todos los países de Play salvo Rusia, Bielorrusia, Vietnam e Indonesia (D-057).
 - **De dónde sale cada respuesta:** se cita el § del GDD o la decisión (D-xxx) de `docs/dev/decisiones.md`. Los textos largos ya están en el repositorio y se copian de ahí: fichas en `docs/store-listing/<idioma>/ficha.md`, Data Safety en `docs/store-listing/data-safety.md`, IARC en `docs/store-listing/iarc.md`. Esta guía repite las respuestas para que no tengas que abrirlos; si alguna vez no coinciden, mandan esos archivos y avisas para corregir esta guía.
-- **Marcas:** [NV] = un nombre de menú, botón, límite o comportamiento de Play Console (o de Firebase o Google Cloud) que el repositorio no puede comprobar: contrástalo con lo que ves en pantalla. [P] = propuesta de esta guía, no decisión. [E] = estimación. `[PENDIENTE: abogado]` = con D-057 lo cierra la investigación propia o queda como riesgo aceptado.
+- **Marcas:** [NV] = un nombre de menú, botón, límite o comportamiento de Play Console (o de Firebase o Google Cloud) que el repositorio no puede comprobar: contrástalo con lo que ves en pantalla. [P] = propuesta de esta guía, no decisión. [E] = estimación. Lo que quedaba para el abogado lo cerró la investigación propia (D-057) o queda como riesgo aceptado.
 - **Nunca** pegues en el chat, en un issue ni en el repositorio una clave JSON, el keystore, una contraseña ni el `google-services.json`.
 
 ## Lista de casillas, en orden
@@ -12,13 +12,13 @@
 Marca cada una al hacerla. Entre paréntesis, la sección de esta guía.
 
 **Antes de abrir Play Console**
-- [ ] Perfil de pagos verificado (banco aprobado) en la cuenta de AUTOMATION AI S.A.S (§0.1)
-- [ ] Bloqueante técnico resuelto: la URL del backend de prod compilada en el cliente (§0.2)
+- [x] Perfil de pagos verificado (banco aprobado) en la cuenta de AUTOMATION AI S.A.S (§0.1; comprobado el 2026-10-30)
+- [x] Bloqueante técnico resuelto: la URL del backend de prod compilada en el cliente (§0.2)
 - [ ] Licencia de Parallext, LLC a AUTOMATION AI S.A.S firmada (§0.3)
-- [ ] Decidido si la Liga del río sale encendida en producción (§0.4)
+- [x] Decidido si la Liga del río sale encendida en producción: **sí** (§0.4; D-064)
 - [ ] Plantilla de Remote Config de prod publicada en Firebase `tintalu` (§0.5)
 - [ ] Unity Ads en los partners de los mensajes de RGPD y de EE. UU. de AdMob, y Parallext en la organización de Unity (§0.6)
-- [ ] Capturas de pantalla listas (§0.7)
+- [x] Capturas de pantalla listas: las 01-08 de cada idioma (§0.7)
 - [ ] Regresión de release en el teléfono y release firmado `1.0.0` desde `main` (§0.8)
 
 **En Play Console**
@@ -47,34 +47,30 @@ Marca cada una al hacerla. Entre paréntesis, la sección de esta guía.
 
 ## 0. Antes de abrir Play Console
 
-### 0.1 El perfil de pagos tiene que estar verificado
+### 0.1 El perfil de pagos está verificado
 
-- En `docs/dev/pendientes-del-dueno.md` (2026-10-20) la cuenta Bancolombia de AUTOMATION AI S.A.S estaba **«En revisión»**.
-- **Sin un perfil de pagos verificado no se pueden vender productos** [NV: Play Console puede dejarte crear los productos, pero no cobrarlos]. Comprueba en Play Console › Configuración › Perfil de pagos [NV] que el banco está aprobado y que no hay avisos pendientes. Si sigue en revisión, todo lo demás se puede preparar, pero no publiques hasta que esté verificado: el Mercado saldría sin poder vender.
-- Cobra AUTOMATION AI S.A.S (D-048). El programa de cargos del 15 % quedó aplazado (`pendientes-del-dueno.md`, resumen): inscribirte antes del lanzamiento te ahorra el 15 % de diferencia desde el primer día [NV: que el 15 % solo se aplique a partir de la inscripción].
+- **Comprobado el 2026-10-30 en Play Console:** cuenta de organización «Automation AI» (ID 8269379304370913565, correo `support@parallext.com`); forma de pago, transferencia bancaria a la cuenta ••••056 de AUTOMATION AI SAS; sin avisos. (El 2026-10-20, en `docs/dev/pendientes-del-dueno.md`, la cuenta estaba «En revisión»: ya no.)
+- Cobra AUTOMATION AI S.A.S (D-048).
+- **Recomendado antes de publicar:** inscribirte en el programa de cargos del 15 % (lo haces tú: hay que aceptar sus términos en Play Console [NV ruta]). Quedó aplazado (`pendientes-del-dueno.md`, resumen); hacerlo antes del lanzamiento te ahorra la diferencia desde el primer día [NV: que el 15 % solo se aplique a partir de la inscripción].
 
-### 0.2 Bloqueante técnico: el release no tiene la URL del backend de prod
+### 0.2 La URL del backend de prod en el release: resuelto
 
-- `Assets/_Project/Scripts/Backend/Unity/BackendSetup.cs` tiene `BackendEndpoints.Prod = ""` («Vacía hasta F5-1»), y el test `BackendSetupTests` exige que siga vacía. En un build de release, con la URL vacía, el juego usa `UnavailableBackendClient`: **no verifica compras (la tienda no vende), no restaura, no borra la cuenta desde la app y la Liga no funciona**, aunque el AAB lleve el Firebase de prod.
-- La URL es la salida `ApiUrl` del stack de prod: `https://vsublt4swh.execute-api.sa-east-1.amazonaws.com` (D-035, añadido del 2026-10-27; no es secreta).
-- **Encárgalo** (es código: un agente de Unity cambia la constante y el test, en un PR) **antes** de lanzar el release firmado de §0.8. Sin esto, la prueba de compras de §15 no puede pasar.
+- **Resuelto:** `Assets/_Project/Scripts/Backend/Unity/BackendSetup.cs:31` ya tiene `BackendEndpoints.Prod = "https://vsublt4swh.execute-api.sa-east-1.amazonaws.com"`, la salida `ApiUrl` del stack de prod (D-035, añadido del 2026-10-27; no es secreta). El release verifica compras, restaura, borra la cuenta desde la app y habla con la Liga de prod.
+- Antes estaba vacía («hasta F5-1») y el release usaba `UnavailableBackendClient`; ya no hace falta encargar nada.
 
 ### 0.3 Licencia de Parallext a la editora
 
 - D-057 (añadido del 2026-10-27), riesgo R9: **firmar la licencia de Parallext, LLC a AUTOMATION AI S.A.S antes de publicar** (el DDA de Google exige que quien publica tenga derecho a monetizar; D-048).
 
-### 0.4 La Liga del río: ¿encendida en producción?
+### 0.4 La Liga del río: encendida en producción (D-064)
 
-- La Liga es de la 1.0 (D-046), pero su interruptor `live_league_enabled` vale **`false`** por defecto (08 §9) y en la plantilla de Remote Config de prod. El backend de prod ya existe (D-035, añadido del 2026-10-27).
-- Decide antes de rellenar la ficha, Data Safety e IARC, porque cambian:
-  - **Encendida en la 1.0** (o encendible por Remote Config sin publicar otra versión): la ficha lleva la línea de la Liga, Data Safety declara sus filas y el IARC contesta «sí» a la interacción y al país (§5, §8 y §9).
-  - **Apagada hasta otra versión:** se quita la línea de la ficha y sus filas de Data Safety; antes de encenderla, se vuelve a enviar Data Safety. **El IARC contesta «sí» igualmente** (§9): la Liga va en el build y se enciende por Remote Config sin publicar otra versión (08 §13.1 #10).
-- [P] Si dudas, declara como si estuviera encendida: declarar de más está permitido; declarar de menos, no.
+- **Decidido el 2026-10-30 (D-064, la recomendación de D-035, añadido del 2026-10-28):** la Liga sale **encendida** en producción. Su interruptor `live_league_enabled` vale `false` por defecto (08 §9), así que lo enciendes en la plantilla de Remote Config de prod (§0.5). El backend de prod ya existe (D-035, añadido del 2026-10-27).
+- Por eso la ficha lleva la línea de la Liga (con el avatar), Data Safety declara sus filas y el IARC contesta «sí» a la interacción y al país (§5, §8 y §9). La política de privacidad de la web ya la describe así.
 
 ### 0.5 Remote Config de prod
 
 - La plantilla `tools/out/remote_config_template_prod.json` (250 de las 256 claves de 08 §9) la publicas tú en el proyecto `tintalu` (D-035, añadido del 2026-10-27; `docs/dev/remote-config-analytics.md` §9). Publicarla no cambia el comportamiento: son los defaults compilados. Hazlo antes del lanzamiento para poder frenar sistemas sin publicar otra versión (`biz_feature_*`, `mech_enabled_*`; `docs/dev/release.md` §4 bis, paso 7).
-- Si decides la Liga encendida (§0.4), cambia ahí `live_league_enabled` a `true`.
+- Como la Liga sale encendida (§0.4; D-064), cambia ahí `live_league_enabled` a `true` antes de publicar.
 
 ### 0.6 Pendientes de AdMob y Unity Ads
 
@@ -85,8 +81,8 @@ Del añadido de D-049 del 2026-10-27:
 ### 0.7 Material gráfico
 
 - **Icono 512 × 512:** `docs/art/marca-oficial/v2/out/png/google-play-512.png` (D-045).
-- **Gráfico de funciones 1024 × 500:** `docs/art/marca-oficial/v2/out/png/feature-graphic.png` (provisional, D-045; `docs/store-listing/assets-tienda.md`).
-- **Capturas de teléfono:** 08 §13.1 #5 pide **8 por idioma**, de gameplay real, con los textos de las fichas §6. **No están en el repositorio** (`docs/store-listing/assets/` no existe). Play exige un mínimo para publicar [NV: 2 capturas]. Encárgalas o hazlas antes de §5.
+- **Gráfico de funciones 1024 × 500:** `docs/art/marca-oficial/v2/out/png/feature-graphic.png`, **final** (D-052: el arte por código es el arte final; D-045; `docs/store-listing/graficos/README.md`).
+- **Capturas de teléfono:** están en `docs/store-listing/graficos/<idioma>/` (`en/`, `es-419/` y `pt-BR/`), 1080 × 1920, hechas con el juego real (D-052). **Sube las 01-08 en cada idioma** (los 8 huecos de 08 §13.1 #5 y 07 §10.2, con los textos de las fichas §6). **La 09 (Mercado) y la 10 (Liga) no se suben** (D-064): enseñan precios en COP y jugadores falsos de la API de prueba. es-ES usa las de es-419 y pt-PT las de pt-BR.
 - **Vídeo (opcional):** una URL de YouTube; 07 §10.3. No usa la música CC0 (`docs/store-listing/README.md` §3 bis).
 
 ### 0.8 Regresión y release firmado
@@ -160,7 +156,7 @@ Contenido de la app (Política › Contenido de la app [NV]):
 ### 4.1 Acceso a la app (08 §13.1 #9)
 
 - **«Todas las funciones o la mayoría están disponibles sin restricciones de acceso»** [NV texto]: no hay inicio de sesión obligatorio; la cuenta es anónima y se crea sola (08 §11).
-- Si Play pide instrucciones de todos modos [P]: «No login needed. The Market opens from the home screen; purchases use Google Play. The River League unlocks after level 41.» (la Liga, solo si va encendida, §0.4).
+- Si Play pide instrucciones de todos modos [P]: «No login needed. The Market opens from the home screen; purchases use Google Play. The River League unlocks after level 41.» (la Liga sale encendida, §0.4).
 
 ### 4.2 Anuncios (08 §13.1 #8)
 
@@ -181,12 +177,11 @@ Crecer › Presencia en la tienda › **Fichas de Play Store** › Ficha princip
 | Nombre (30) | `Tintalú: Water Sort Puzzle` (26) | `Tintalú: Ordenar Agua` (21) | `Tintalú: Classificar Água` (25) | glosario §1.3 |
 | Descripción breve (80) | `Sort river water by Amazonian fruit colors. Relaxing sort puzzle, offline.` (74) | `Ordena el agua del río por colores de frutas amazónicas. Relajante y sin wifi.` (78) | `Classifique a água pelas cores das frutas amazônicas. Relaxante, offline.` (73) | Fichas §2 |
 | Descripción completa (4.000) | `en/ficha.md` §3 | `es-419/ficha.md` §3 | `pt-BR/ficha.md` §3 | El bloque `text` entero |
-| Icono, gráfico, capturas | §0.7 | (opcionales por idioma; si no, se usan las de en-US [NV]) | ídem | `assets-tienda.md` |
+| Icono, gráfico, capturas | §0.7: capturas 01-08 de `graficos/en/` | Capturas 01-08 de `graficos/es-419/` | Capturas 01-08 de `graficos/pt-BR/` | `docs/store-listing/graficos/README.md` |
 
 Al pegar la descripción completa:
-- **Borra la línea del asesor cultural** (`[PENDIENTE: dueño] …`) salvo que tengas su consentimiento por escrito (Q-B13-12 (a)).
-- **La línea de la Liga** (`- River League: …`, `- Liga del río: …`, `- Liga do Rio: …`) va solo si la Liga sale encendida (§0.4).
-- Longitudes medidas el 2026-10-28 (NFC), sin la línea del asesor: en 2.404, es 2.548, pt 2.493 caracteres; sin el asesor ni la Liga: 2.239, 2.365 y 2.292. Todas por debajo de 4.000 (`docs/store-listing/README.md` §2).
+- Se pega **el bloque `text` entero, tal cual**: ya no lleva la línea del asesor cultural (D-064) y la línea de la Liga (`- River League: …`, `- Liga del río: …`, `- Liga do Rio: …`) se queda, porque la Liga sale encendida (§0.4).
+- Longitudes medidas el 2026-10-30 (NFC): en 2.412, es 2.559, pt 2.505 caracteres. Todas por debajo de 4.000 (`docs/store-listing/README.md` §2).
 - Sin emojis ni mayúsculas sostenidas (08 §13.1 #5; glosario §1.1). La prohibición de «Best», «#1» y «Free» del glosario (`00-glosario.md`, fila del título) es **solo para el título**; la descripción puede decir «free», como ya hace («Tintalú is free to play»). La línea final de independencia («…not affiliated with Amazon.com, Inc.») se queda (08 §13.1 #5).
 
 **Fichas personalizadas** (08 §13.1 #6; se quedan con la salida mundial, D-057): Brasil (Pix) y México (OXXO), solo si Play ofrece esos métodos al lanzar (Q-B13-17 (a)). Las frases están en `pt-BR/ficha.md` §7 y `es-419/ficha.md` §7. Son opcionales para el lanzamiento [P].
@@ -274,12 +269,12 @@ Contenido de la app › **Seguridad de los datos** › Empezar [NV]. Versión la
 
 ### 8.2 Tipos de datos
 
-Marca solo estos tipos. Para cada uno, Play pregunta si se recoge, si se comparte, si es efímero (siempre **No**), si es obligatorio u opcional y las finalidades. Las filas «(Liga)» solo si la Liga va encendida (§0.4).
+Marca solo estos tipos. Para cada uno, Play pregunta si se recoge, si se comparte, si es efímero (siempre **No**), si es obligatorio u opcional y las finalidades. La Liga sale encendida (§0.4; D-064): marca también lo que dice «(Liga)».
 
 | Categoría › tipo [NV] | Recogido | Compartido | Obligatorio / opcional | Finalidades |
 |---|---|---|---|---|
 | Ubicación › **Ubicación aproximada** | Sí | **Sí** | Obligatorio [E] | Publicidad o marketing; prevención de fraude, seguridad y cumplimiento; (Liga) funcionalidad de la app |
-| Información personal › **ID de usuario** | Sí | **Sí**: el UID va a Google (AdMob) como `user_id` del SSV de los recompensados (08 §13.3, fila de Google Mobile Ads); y, con la Liga, el seudónimo visible | Obligatorio | Funcionalidad de la app; prevención de fraude, seguridad y cumplimiento; gestión de cuentas |
+| Información personal › **ID de usuario** | Sí | **Sí**: el UID va a Google (AdMob) como `user_id` del SSV de los recompensados (08 §13.3, fila de Google Mobile Ads); y, con la Liga, el seudónimo y el avatar visibles; el backend guarda 30 días el registro de cada premio comprobado | Obligatorio | Funcionalidad de la app; prevención de fraude, seguridad y cumplimiento; gestión de cuentas |
 | Información financiera › **Historial de compras** | Sí | No | Opcional | Funcionalidad de la app; prevención de fraude, seguridad y cumplimiento |
 | Actividad en la app › **Interacciones en la app** | Sí | **Sí** (con los anuncios) | Obligatorio [E] (la analítica sola sería opcional) | Analítica; publicidad o marketing |
 | Actividad en la app › **Otras acciones del usuario** | Sí | (Liga) **Sí**; sin Liga, **No** | Obligatorio [E] | Funcionalidad de la app |
@@ -289,7 +284,7 @@ Marca solo estos tipos. Para cada uno, Play pregunta si se recoge, si se compart
 | ID de dispositivo u otros › **ID de dispositivo u otros identificadores** | Sí | **Sí** (ID de publicidad) | Obligatorio [E] | Funcionalidad de la app; analítica; publicidad o marketing; prevención de fraude, seguridad y cumplimiento |
 
 - **No marques** nombre, correo, teléfono, dirección, ubicación precisa, mensajes, fotos, vídeos, audio, archivos, calendario, contactos, salud, navegación ni apps instaladas (`data-safety.md` §3, «No se recoge»).
-- Siguen `[PENDIENTE: abogado]` (D-057: investigación propia o riesgo aceptado): la IP de los registros, los diagnósticos de Play Billing (Q-BILL-2), el ID de publicidad con `npa` y la categoría de los datos visibles de la Liga (`data-safety.md` §6).
+- Cerrado por D-057 (investigación propia o riesgo aceptado): la IP de los registros, los diagnósticos de Play Billing (Q-BILL-2), el ID de publicidad con `npa` y la categoría de los datos visibles de la Liga (`data-safety.md` §6).
 - Guardar › Enviar [NV]. La vista previa que da Play es la que verá el jugador: léela entera.
 
 ## 9. Clasificación de contenido (IARC)
@@ -302,8 +297,8 @@ Contenido de la app › **Clasificación de contenido** › Empezar cuestionario
 | Categoría | **Juego** | 08 §13.1 #1 |
 | Violencia; sangre; miedo; contenido sexual; lenguaje soez; drogas, alcohol y tabaco; discriminación | **No** en todas | `iarc.md` §2 (Q-B13-11 (a): la Piraña no es violencia) |
 | Juegos de azar simulados; apuestas con dinero real | **No** | 05 §7; `iarc.md` §2 |
-| Los usuarios pueden interactuar o intercambiar contenido | **Sí**, aunque la Liga salga apagada: va en el build y se enciende por Remote Config (08 §13.1 #10). Otros jugadores ven el seudónimo automático, el avatar, la bandera y los puntos; sin chat ni texto libre. Si la pregunta se limita a texto, voz, imágenes o audio aportados por los usuarios, **No**. La alternativa «No» con la Liga apagada, en la duda 9 de §19 | 08 §13.1 #10; `iarc.md` §3 |
-| Comparte la ubicación del usuario con otros usuarios | **Sí, a nivel de país** (la bandera de la Liga), aunque la Liga salga apagada, por lo mismo. Si la pregunta se limita a la ubicación física actual o precisa, **No**. Alternativa con la Liga apagada: duda 9 de §19 | 08 §13.1 #10; `iarc.md` §3 |
+| Los usuarios pueden interactuar o intercambiar contenido | **Sí**: la Liga sale encendida (§0.4; D-064; 08 §13.1 #10). Otros jugadores ven el seudónimo automático, el avatar, la bandera y los puntos; sin chat ni texto libre. Si la pregunta se limita a texto, voz, imágenes o audio aportados por los usuarios, **No** | 08 §13.1 #10; `iarc.md` §3 |
+| Comparte la ubicación del usuario con otros usuarios | **Sí, a nivel de país** (la bandera de la Liga, encendida: D-064). Si la pregunta se limita a la ubicación física actual o precisa, **No** | 08 §13.1 #10; `iarc.md` §3 |
 | Compras digitales | **Sí** | 08 §13.1 #10 y #14 |
 | Compras de elementos aleatorios (cajas de botín) | **No** (contestar «sí» por error daría ClassInd 18 en Brasil) | 05 §7; 09 R2 |
 | Acceso a internet sin restricciones (navegador) | **No** (los enlaces abren el navegador del sistema) | `iarc.md` §3 |
@@ -478,7 +473,7 @@ Con la versión de §7.5 (D-059, punto 5; `iap.md` §3; `release.md` §4 bis, pa
 1. En el teléfono, con la cuenta de §6, abre el **enlace para unirse** de §6.2, acepta e instala Tintalú **desde Play**.
 2. Antes de comprar: §11 hecho (las dos cuentas de servicio) y §7.2 hecho (App Check con Play Integrity): la API exige el token de integridad.
 3. Casos de `iap.md` §3, paso 5: precio en tu moneda; tarjeta que siempre aprueba («Confirmando…», crédito una vez); la que rechaza; las lentas; cerrar la app tras pagar; modo avión; «Sin anuncios» y reinstalar (vuelve una vez); banda 13-17 (doble confirmación); banda `<13` (no vende).
-4. **PAD:** el contenido de `world_w05` y de los mundos 6-9 se descarga e instala (08 §13.1 #17).
+4. **PAD: no aplica en la 1.0** (todo el contenido va en el AAB): no hay Addressables ni Play Asset Delivery en `Packages/manifest.json` ni en el código, así que no hay nada que descargar aparte (08 §13.1 #17 lo preveía para `world_w05` y los mundos 6-9).
 5. **Play Games:** inicio de sesión silencioso sin ventana; primera subida; reinstalar y recuperar la partida; «Eliminar cuenta y datos» con y sin red (`play-games.md` §9, paso 4).
 6. **Eliminar cuenta y datos** desde Ajustes termina bien (prueba la cuenta de servicio de §11.2) y el código de cuenta funciona en `https://tintalu.com/tintalu/en/delete-account/`.
 7. Si algo falla: se corrige, vuelta a §0.8 con un `versionCode` mayor y otra subida a la pista interna.
@@ -525,7 +520,7 @@ Pruebas internas › la versión probada › **Promocionar versión › Producci
 ## 19. Dudas abiertas (no resueltas aquí)
 
 1. **Nombre del desarrollador en Play.** La cuenta muestra «Automation AI» (`pendientes-del-dueno.md`, 2026-10-20), y las fichas ponen «Parallext, LLC» como desarrollador (D-041). D-048 separa editora (AUTOMATION AI S.A.S) y desarrollador (Parallext). ¿Qué nombre público quieres en la cuenta? Es un ajuste de la cuenta, no de la app [NV].
-2. **Liga del río en producción** (§0.4): ¿sale encendida en la 1.0?
+2. ~~Liga del río en producción~~ **Resuelta (D-064):** sale encendida (§0.4).
 3. **Precios** (§10.4): Argentina en ARS o en USD; a qué países se aplica el EUR en paridad.
 4. **Packs de skin:** 05 §4.1 promete «la escena de la gran parada del mundo como marco del Mapa del río», pero `StoreCatalog.cs` solo da la skin y 300 semillas. ¿Se corrige 05 o falta código? La descripción de §10.3 no promete la escena.
 5. **Exportación a BigQuery: ¿antes del lanzamiento?** 09, «Preguntas abiertas», pregunta 7, se decidió con «paneles nativos hasta confirmar la cuota de BigQuery», así que hoy no se activa. Propuesta [P] para que decidas:
@@ -534,6 +529,5 @@ Pruebas internas › la versión probada › **Promocionar versión › Producci
    - **Coherencia con la política [P]:** la web promete 2 meses de analítica: caducidad de tablas de 60 días en el conjunto de datos, o cambiar la política antes.
    - **Ubicación del conjunto de datos:** ¿EE. UU. (multirregión) [P], donde ya trata los datos Google Analytics, o `southamerica-east1`, junto a AWS `sa-east-1` (D-057, P8)? Afecta a lo que dice la política sobre transferencias.
 6. **Logros de Play Games:** 08 §13.1 #16 dice «logros básicos», pero `play-games.md` §10 y 08 §13.3 dicen «sin logros». Esta guía sigue a `play-games.md` (sin logros).
-7. **Bloqueante de §0.2** (`BackendEndpoints.Prod` vacío): el GDD y los documentos dan la URL de prod como desplegada (D-035, añadido del 2026-10-27), pero el cliente no la tiene y su test exige que siga vacía («llega con F5-1»).
-8. **Orden de Play Games:** D-059 y `release.md` §4 bis prevén probar Play Games en la pista interna con el AAB de §0.8, pero el `APP_ID` solo existe tras crear el proyecto de Play Games, que necesita las huellas de la primera subida. Esta guía propone dos subidas internas (10000 y 10001) y promocionar la segunda [P].
-9. **IARC con la Liga apagada** (§9): la guía recomienda «Sí» a la interacción entre usuarios y a compartir la ubicación a nivel de país aunque la Liga salga apagada, como 08 §13.1 #10. Alternativa: contestar «No» mientras esté apagada y repetir el cuestionario antes de encenderla (`iarc.md` §5); el riesgo es encenderla por Remote Config y olvidar el cuestionario.
+7. **Orden de Play Games:** D-059 y `release.md` §4 bis prevén probar Play Games en la pista interna con el AAB de §0.8, pero el `APP_ID` solo existe tras crear el proyecto de Play Games, que necesita las huellas de la primera subida. Esta guía propone dos subidas internas (10000 y 10001) y promocionar la segunda [P].
+8. ~~IARC con la Liga apagada~~ **Resuelta (D-064):** la Liga sale encendida, así que el IARC contesta «Sí» a la interacción y al país (§9).

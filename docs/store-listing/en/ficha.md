@@ -1,8 +1,8 @@
-# Ficha de Google Play · en-US (idioma predeterminado) · BORRADOR
+# Ficha de Google Play · en-US (idioma predeterminado) · 1.0
 
-- **Estado:** borrador de la ficha 1.0, actualizado el 2026-10-24 (Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora en Google Play, D-048; River League per D-046). La identidad visual vigente es v2 (D-045); sin dictamen ni registro de marca por ahora (D-047). Nada se publica sin revisión del dueño, la revisión legal de los textos y comprobación del build y de las opciones de producción. El resto es traducción con IA de la ficha es-419, pendiente del revisor nativo.
-- **Puesta al día del 2026-10-28 (D-049, D-057 y D-059):** esta es la ficha del **idioma por defecto, en-US** (D-057, P9 (a); 08 §13.1 #5): la ven todos los jugadores cuyo idioma no tiene traducción (Francia, Alemania, Japón, India…). Por eso la revisión nativa del inglés es compuerta de release (`docs/dev/lanzamiento-mundial.md` §3.1). Las traducciones son es-419 (con es-ES como copia) y pt-BR (con pt-PT como copia). La 1.0 sale en todo el mundo salvo RU, BY, VN e ID, al 100 % con publicación administrada (D-057; D-059): la ficha no alude a ninguna prueba ni a países limitados. El paso a paso para pegarla está en `docs/dev/publicar-play-console.md` §5.
-- Mismas reglas, marcas y fuentes que `../es-419/ficha.md`. Inglés en imperativo (glosario §10). Los nombres de comodines y sistemas son los EN del glosario §5, §7.1, §10 y §12; lo cultural, **pendiente de revisión** del asesor.
+- **Estado:** ficha de la 1.0 en firme (2026-10-30; D-064): Parallext, LLC como estudio; AUTOMATION AI S.A.S como editora en Google Play (D-048); River League según D-046, encendida en producción (D-064). La identidad visual vigente es v2 (D-045); sin dictamen ni registro de marca (D-047). Los textos legales los cerró la investigación propia (D-057). El resto es traducción con IA de la ficha es-419, aceptada tal cual para la 1.0 (D-054; D-064). Antes de enviarla, el dueño comprueba el build y sus opciones de producción.
+- **Puesta al día del 2026-10-28 (D-049, D-057 y D-059):** esta es la ficha del **idioma por defecto, en-US** (D-057, P9 (a); 08 §13.1 #5): la ven todos los jugadores cuyo idioma no tiene traducción (Francia, Alemania, Japón, India…). La traducción con IA se acepta tal cual para la 1.0 (D-054; D-064), en lugar de la revisión nativa de `docs/dev/lanzamiento-mundial.md` §3.1. Las traducciones son es-419 (con es-ES como copia) y pt-BR (con pt-PT como copia). La 1.0 sale en todo el mundo salvo RU, BY, VN e ID, al 100 % con publicación administrada (D-057; D-059): la ficha no alude a ninguna prueba ni a países limitados. El paso a paso para pegarla está en `docs/dev/publicar-play-console.md` §5.
+- Mismas reglas, marcas y fuentes que `../es-419/ficha.md`. Inglés en imperativo (glosario §10). Los nombres de comodines y sistemas son los EN del glosario §5, §7.1, §10 y §12; lo cultural, en firme (dueño, 2026-10-30; D-064).
 
 ## 1. Datos de la app
 
@@ -22,7 +22,7 @@
 
 74 caracteres, medidos en NFC (el glosario §1.3 dice 77). Canon del glosario §1.3.
 
-## 3. Full description (≤ 4.000) · traducción con IA, pendiente del revisor nativo
+## 3. Full description (≤ 4.000) · traducción con IA, aceptada (D-054; D-064)
 
 ```text
 Pour water from one cuia to another until each one holds a single color. Simple and relaxing. In Tintalú, every color comes from a fruit or from the water of a river in the Amazon basin: açaí, aguaje, hog plum, camu camu…
@@ -53,7 +53,7 @@ Something new every day
 - River Logbook: stamp a page a day and pick your reward.
 - Basket: every 10 levels, free, with its contents in plain sight. No surprise boxes.
 - Rising River: chain wins to make the river rise.
-- River League: from level 41, earn weekly points and view the global and country rankings. Other players can see your automatic pseudonym, country flag and points.
+- River League: from level 41, earn weekly points and view the global and country rankings. Other players can see your automatic pseudonym, avatar, country flag and points.
 
 Who comes along
 TiTino, a sloth who lives in his tree where the river meets the sea, cheers you on from home. Capi the capybara brings you cuias and paddles the canoe. Rosa the river dolphin takes you upriver.
@@ -67,9 +67,7 @@ Every stop on the Map brings a River fact, and River Fruits tells where each col
 Play offline
 The campaign works without a connection. Optional videos and purchases need internet.
 
-Tintalú is free to play, with ads and optional purchases. Remove the ads between levels with No ads.
-
-[PENDIENTE: dueño] Cultural review by [cultural advisor's name], with their consent to be named.
+Tintalú is free to play, with ads and optional purchases. Remove the ads between levels with No Ads.
 
 Independent game inspired by the Amazon basin; not affiliated with Amazon.com, Inc.
 ```
@@ -77,12 +75,11 @@ Independent game inspired by the Amazon basin; not affiliated with Amazon.com, I
 Notas:
 - **Taperebá** sale como «hog plum», su nombre EN del glosario §9; los demás tintes citados conservan su nombre (glosario §9).
 - «Frutas del río» (`fact_sheet_title`) y «Sobre la Amazonía» (`settings_about_amazon`) van con su EN de la UI: «River Fruits» y «About the Amazon» (D-033, añadido del 2026-10-22, puntos 3 y 4; glosario §10). «River boosters» usa «Boosters», el nombre EN del conjunto de comodines (punto 8; glosario §5).
-- **Anuncios y videos:** el build de la 1.0 lleva AdMob (D-049): «Optional videos […] need internet», «with ads» y «Remove the ads between levels with No ads» se quedan. (Antes dependían de MAX, D-042.)
-- La marca `[[ABOGADO: revisar]]` de la línea de la River League sale del bloque el 2026-10-28 para que no se pegue en Play; la revisión sigue pendiente `[[ABOGADO: revisar]]`. Sin la Liga encendida en producción, se quita la línea.
-- La línea «[PENDIENTE: dueño] Cultural review by …» **no se pega** sin el consentimiento por escrito del asesor (Q-B13-12 (a)).
-- **River League:** the feature requires internet, unlocks at level 41, and belongs in the listing only if the release build and production configuration enable it. Confirm the description and privacy disclosures against that build before submission.
-- **Pendiente de revisión** (asesor): Morpho, Pororoca, Firefly, Boto Leap (no se cita), TiTino, Capi, Rosa, «river dolphin» por boto (glosario §12, `fauna.river_dolphin`), «Estuary».
-- `[PENDIENTE: abogado]`: la línea de independencia en inglés es traducción propuesta [P] de la de 08 §13.1 #5.
+- **Anuncios y videos:** el build de la 1.0 lleva AdMob (D-049): «Optional videos […] need internet», «with ads» y «Remove the ads between levels with No Ads» se quedan. (Antes dependían de MAX, D-042.) «No Ads» es el nombre del producto (`iap_af_noads_name`).
+- **La línea de la River League** va en la ficha: la Liga sale encendida en producción (D-064). Su revisión legal la cerró D-057 (investigación propia); el avatar se añadió el 2026-10-30 (D-056; D-064).
+- **River League:** requiere internet y desbloquea en el 41; la descripción y la política de privacidad la declaran como encendida (D-064).
+- **En firme (dueño, 2026-10-30; D-064):** Morpho, Pororoca, Firefly, Boto Leap (no se cita), TiTino, Capi, Rosa, «river dolphin» por boto (glosario §12, `fauna.river_dolphin`), «Estuary».
+- La línea de independencia en inglés es la traducción de la de 08 §13.1 #5: cerrado por D-057 (investigación propia).
 
 ## 4. Palabras clave de apoyo
 
@@ -98,11 +95,11 @@ Welcome to the river. The first version of Tintalú: travel upriver through nine
 
 | # | Texto EN | Estado |
 |---|---|---|
-| 1 | Sort the waters of the Amazon | canon 07 §10.2 · pendiente de revisión |
+| 1 | Sort the waters of the Amazon | canon 07 §10.2 · en firme (dueño, 2026-10-30; D-064) |
 | 2 | 14 colors from fruit and rivers | Q-B13-23 (a), decidida el 2026-10-20 |
 | 3 | Watch the river take color | canon 07 §10.2 |
-| 4 | Follow the Amazon to its source | Q-B13-6 (a), decidida el 2026-10-20: la propuesta de B13 hasta el revisor nativo |
+| 4 | Follow the Amazon to its source | Q-B13-6 (a), decidida el 2026-10-20: la propuesta de B13, en firme por D-054 y D-064 |
 | 5 | Honest hard levels | canon 07 §10.2 |
 | 6 | Patterns for every eye | canon 07 §10.2 |
-| 7 | Meet TiTino | canon 07 §10.2 [P] · pendiente de revisión |
+| 7 | Meet TiTino | canon 07 §10.2 [P] · en firme (dueño, 2026-10-30; D-064) |
 | 8 | Play offline, come back daily | canon 07 §10.2 |

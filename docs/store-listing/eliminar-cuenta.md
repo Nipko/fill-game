@@ -8,7 +8,7 @@
 | en | `infra/web/src/content/en/delete.html` | `/tintalu/en/delete-account/` |
 | pt-BR | `infra/web/src/content/pt-BR/delete.html` | `/tintalu/pt-br/excluir-conta/` |
 
-El formulario en dos pasos lo hacen `infra/web/src/browser/delete-flow.ts` y `account-code.ts` contra `/v1/account/delete-request` y `/v1/account/delete-confirm` (contrato `infra/contracts/v1`). La URL pública final es `https://tintalu.com/tintalu/eliminar-cuenta/` cuando el dueño conecte el dominio (D-041); hoy solo se sirve en la URL de CloudFront de dev.
+El formulario en dos pasos lo hacen `infra/web/src/browser/delete-flow.ts` y `account-code.ts` contra `/v1/account/delete-request` y `/v1/account/delete-confirm` (contrato `infra/contracts/v1`). La URL pública es `https://tintalu.com/tintalu/eliminar-cuenta/` (dominio conectado y comprobado el 2026-10-25: D-044, añadido del 2026-10-25).
 
 ## Por qué este archivo es ahora solo un puntero
 
@@ -19,8 +19,8 @@ El formulario en dos pasos lo hacen `infra/web/src/browser/delete-flow.ts` y `ac
 - **Mantener dos versiones las haría divergir.** Cualquier cambio se hace en `infra/web/src/content/*/delete.html`.
 - **Historia:** el borrador del Spark sigue en git: `git show 964b64fb:docs/store-listing/eliminar-cuenta.md`.
 
-## Lo que sigue pendiente (lo marca la propia web)
+## Estado (2026-10-30)
 
-- `[[ABOGADO]]`: el texto sobre los datos del teléfono cuando el borrado llega por la web (Q-B13-22) y el plazo fiscal del libro de compras.
+- **La web ya no lleva marcas `[[ABOGADO]]`**: el texto sobre la partida del teléfono y la de Play Games cuando el borrado llega por la web (Q-B13-22) y el plazo fiscal del libro de compras (7 años) los cerró la investigación propia (D-057).
 - Correo de privacidad: `privacy@tintalu.com` (D-041, añadido del 2026-10-25).
-- **Al integrar D-042:** añadir la partida de Play Games (snapshot `af_main`), que el cliente borra la próxima vez que se abre el juego, y que el jugador puede borrar su perfil de Play Games (Q-B13-22 (a)).
+- «Qué se borra» lista lo que borra `infra/functions/delete-account/handler.ts`: la verificación de integridad, el código de cuenta, los premios de anuncios comprobados, el seudónimo, el avatar y los puntos de la Liga del río, y el vínculo entre las compras y la cuenta. Borrar la cuenta no da derecho por sí solo a un reembolso, sin limitar los derechos del consumidor ni la política de reembolsos de Google Play (D-064).
