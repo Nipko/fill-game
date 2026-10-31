@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delete your account · Tintalú</title>
+  <meta name="description" content="How to delete your Tintalú account and its data, in the game or from this page.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="/assets/site.css">
+  <link rel="canonical" href="https://tintalu.com/tintalu/en/delete-account/">
+  <link rel="alternate" hreflang="es-419" href="https://tintalu.com/tintalu/eliminar-cuenta/">
+  <link rel="alternate" hreflang="en" href="https://tintalu.com/tintalu/en/delete-account/">
+  <link rel="alternate" hreflang="pt-BR" href="https://tintalu.com/tintalu/pt-br/excluir-conta/">
+  <link rel="alternate" hreflang="x-default" href="https://tintalu.com/tintalu/eliminar-cuenta/">
+  <script src="/assets/delete-account.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="/en/">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="/assets/brand/logo-horizontal-oscuro.svg">
+        <img src="/assets/brand/logo-horizontal-claro.svg" alt="Tintalú" width="142" height="40">
+      </picture>
+    </a>
+    <nav class="lang" aria-label="Language">
+      <ul>
+      <li><a href="/tintalu/eliminar-cuenta/" hreflang="es-419" lang="es-419">Español</a></li>
+      <li><a href="/tintalu/en/delete-account/" hreflang="en" lang="en" aria-current="page">English</a></li>
+      <li><a href="/tintalu/pt-br/excluir-conta/" hreflang="pt-BR" lang="pt-BR">Português</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main id="main" tabindex="-1">
+<h1>Delete your Tintalú account</h1>
+<p class="lead">You can delete your Tintalú account and its data at any time, free of charge. Tintalú is a game by Parallext, LLC.</p>
+
+<h2 id="app">In the game (the quickest way)</h2>
+<ol>
+  <li>Open Tintalú and go to Settings.</li>
+  <li>Tap “Delete account and data”.</li>
+  <li>Confirm twice.</li>
+</ol>
+<p>This also deletes your saved game and the other game data stored on your phone.</p>
+
+<h2 id="web">From this page</h2>
+<p>If the game is no longer installed or you prefer to do it here, you need your <strong>account code</strong>. You can find it in Tintalú › Settings, on the line “Code to delete your account on the web”. It has 26 letters and numbers in groups separated by hyphens, for example <code>3HZ7-M2Q9-XK4T-8VB1-NC6D-RF0-WPE</code> (this is only an example).</p>
+<ol>
+  <li>Enter your code and tap “Continue”.</li>
+  <li>Check the code and confirm with “Yes, delete” within the next 5 minutes.</li>
+</ol>
+<div id="delete-soon" class="notice" hidden>
+  <p>Deleting your account from this page isn’t available right now. Delete it in the game (Settings › “Delete account and data”) or write to us at privacy@tintalu.com and we’ll do it for you.</p>
+</div>
+<form id="delete-form" class="delete-form" method="post" novalidate hidden data-msg-invalid="That code isn’t valid. Check it in Settings: it has 26 letters and numbers." data-msg-sending="One moment…" data-msg-not-found="We couldn’t find that code. Make sure it’s the latest one shown in Settings." data-msg-expired="The confirmation expired. Please enter your code again." data-msg-rate-limited="Too many attempts. Try again in {minutes} min." data-msg-unavailable="This couldn’t be completed right now. Please try again later." data-msg-config="This page isn’t set up correctly. Delete your account in the game or try again later." data-msg-cancelled="Nothing was deleted." data-msg-done="Done. Your account was deleted.">
+  <fieldset id="delete-step-code">
+    <legend>Delete with your account code</legend>
+    <label for="account-code">Account code</label>
+    <input id="account-code" name="code" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="64" required aria-describedby="account-code-hint delete-status">
+    <p id="account-code-hint" class="hint">You can find it in Tintalú › Settings, under “Code to delete your account on the web”. You can type it with or without hyphens.</p>
+    <button id="delete-submit" type="submit">Continue</button>
+  </fieldset>
+  <fieldset id="delete-step-confirm" hidden>
+    <legend>Are you sure you want to delete your account?</legend>
+    <p>Your account and your data in the cloud will be deleted. This can’t be undone, and deleting your account does not by itself entitle you to a refund of what you bought.</p>
+    <p>Code: <strong id="delete-confirm-code" class="code"></strong></p>
+    <div class="actions">
+      <button id="delete-yes" type="button" class="danger">Yes, delete</button>
+      <button id="delete-no" type="button" class="secondary">Cancel</button>
+    </div>
+  </fieldset>
+</form>
+<p id="delete-status" class="status" role="status" aria-live="polite" tabindex="-1"></p>
+<noscript><p class="notice">The form needs JavaScript. If you can’t turn it on, delete your account in the game (Settings › “Delete account and data”).</p></noscript>
+<p>Use the latest code you saw in Settings: when the game requests a new one (for example, after reinstalling it), the previous one stops working. We will never ask you for this code by email or phone.</p>
+
+<h2 id="borra">What is deleted</h2>
+<ul>
+  <li>Your anonymous account, including in Firebase Authentication.</li>
+  <li>Your data on our server: the integrity check, your account code, verified ad rewards, your River League pseudonym, avatar and points, and the link between your purchases and your account.</li>
+  <li>For 2 hours a deleted-account mark remains, with your identifier only as a hash, so that nothing is written again in the account’s name; then it disappears.</li>
+  <li>In the game, also your progress, seeds, boosters and settings stored on the phone.</li>
+</ul>
+<p>From this page we can’t reach your phone: the saved game on it is deleted when you uninstall the game or clear its data in Android settings. If there is a copy in Google Play Games, delete it in the Play Games app (Settings › delete this game’s data).</p>
+
+<h2 id="conserva">What is kept</h2>
+<p>Your purchase history, <strong>with nothing that identifies you</strong>, for 7 years for tax purposes. What you bought can’t be recovered, and deleting your account <strong>does not by itself entitle you to a refund</strong>; this doesn’t limit your rights as a consumer or Google Play’s refund policy. Analytics data isn’t linked to your account and is deleted automatically according to its retention period. Backups of our server expire automatically within 35 days at most.</p>
+
+<h2 id="tarda">How long it takes</h2>
+<p>Right away: when you see “Done. Your account was deleted.” on this page, or “Your account and data have been deleted.” in the game, the deletion is complete.</p>
+
+<h2 id="sin-codigo">If you don’t have the code</h2>
+<p>If the game is installed, open it with an internet connection and go to Settings: the code appears there, or you can delete the account directly. If the game is no longer installed, write to <a href="mailto:privacy@tintalu.com">privacy@tintalu.com</a>.</p>
+<p>More information in our <a href="/en/privacy/">privacy policy</a>.</p>
+  </main>
+  <footer class="site-footer">
+    <nav aria-label="Site pages">
+      <ul>
+      <li><a href="/en/">Tintalú</a></li>
+      <li><a href="/en/privacy/">Privacy policy</a></li>
+      <li><a href="/en/terms/">Terms of use</a></li>
+      <li><a href="/tintalu/en/delete-account/" aria-current="page">Delete your account</a></li>
+      <li><a href="/en/credits/">Credits and licenses</a></li>
+      </ul>
+    </nav>
+    <p>Tintalú is a game by Parallext, LLC.</p>
+    <p>Independent game inspired by the Amazon basin; not affiliated with Amazon.com, Inc.</p>
+  </footer>
+</body>
+</html>

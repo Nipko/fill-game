@@ -4879,3 +4879,13 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   - quitar las restricciones de tamaño y orientación para pantallas grandes;
   - optimización con R8.
 - **Queda §18:** vincular la app en AdMob con su ficha de Play; la URL de la tienda en Unity; las alertas de Crashlytics y de Android vitals; archivar los textos legales; vigilar fallos y ANR. Además, el plan Blaze antes del 15 de noviembre.
+
+### D-059, añadido del 2026-10-31: lo de después de publicar (§18)
+
+- **AdMob:** la app quedó vinculada con su ficha de Google Play (`com.parallext.tintalu`). La verificación de `app-ads.txt` aún falla porque AdMob sigue leyendo la ficha con el nombre provisional «(unreviewed)». El archivo de `https://tintalu.com/app-ads.txt` y el sitio web de la ficha están bien. Se vuelve a comprobar en AdMob › Apps › Tintalú en 24-48 h.
+- **Textos legales archivados:** `docs/legal/archivo/2026-10-31-lanzamiento/`. Coinciden con `infra/web` @ `041b18ff`.
+- **Pendiente del dueño:**
+  - **Unity:** la URL de la tienda en la app «Tintalú» y Parallext, LLC como organización. El panel pide iniciar sesión y los agentes no inician sesión en cuentas.
+  - **Alertas:** las de Crashlytics llegan por defecto a los miembros del proyecto. Mandarlas a `support@tintalu.com` exige añadir esa cuenta al proyecto. Las de Android vitals, en las preferencias de notificación de Play Console.
+  - Confirmar la suscripción a las alarmas de AWS que llegó a `support@tintalu.com`.
+  - El plan Blaze antes del 15 de noviembre.
