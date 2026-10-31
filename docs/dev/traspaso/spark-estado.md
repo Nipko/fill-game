@@ -42,7 +42,7 @@ Encargo: `docs/dev/traspaso/spark-marketing.md`. Rama `spark/marketing-investiga
   - Nuevas:
     - **Q-MK-S0-1:** ¿la música generada con IA cuenta como «propia» (§0.5)? Recomendada: sí, con ACE-Step. **Sin aplicar**, porque amplía §0.
     - **Q-MK-S0-2 [P]:** las descargas de la semana 2, cada una con el permiso del dueño.
-    - **Tarea programada de los lunes [P]:** pide el permiso del dueño.
+    - **Tarea programada de los lunes:** creada el 2026-10-31 con el permiso del dueño (`tintalu-tendencias-lunes`, lunes a las 9:00).
 - **Cómputo:** ninguno de GPU. Navegación e investigación, unas 3 h de sesión.
 - **Siguiente:** S2 (estrategia: calendario de 4 semanas, presupuesto y KPIs). Las conclusiones ya ordenan los conceptos de S5.
 - **Enganches para el integrador:**

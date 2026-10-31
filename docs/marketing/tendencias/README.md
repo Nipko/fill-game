@@ -42,11 +42,14 @@ Cada **lunes**, Spark pone al día la biblioteca de referencias, las puntúa y e
    - los hashtags por idioma y pilar, cuando estén las cuentas (S3).
 6. **Entrega:** el informe va en la rama `spark/marketing-*`, con commit y push, y una línea en `spark-estado.md`.
 
-## Cómo se pone en marcha cada semana [P]
+## Cómo se pone en marcha cada semana
 
-- **Recomendada:** una tarea programada de Claude en el Spark, los lunes a las 9:00 (hora local del equipo), que sigue esta receta con el navegador.
-- **Hace falta el permiso del dueño:** es una tarea periódica en su equipo.
-- **Mientras no exista,** se lanza a mano: «haz las tendencias de la semana».
+- **Tarea programada de Claude en el Spark:** `tintalu-tendencias-lunes`, los lunes a las 9:00 (hora local del equipo). La creó Spark el 2026-10-31 con el permiso del dueño. Sigue esta receta con el navegador integrado.
+- **Dónde entrega:**
+  - el informe va a la rama `spark/marketing-tendencias`, en su propio worktree;
+  - la línea de estado, a `spark-estado.md`.
+- **Cuándo corre:** solo con la app abierta; si estaba cerrada, corre al abrirla.
+- **Se para** creando `C:\AI\marketing	endencias\PAUSA`, o desactivándola en la sección «Scheduled» de la app.
 
 ## Límites de la versión 1
 
