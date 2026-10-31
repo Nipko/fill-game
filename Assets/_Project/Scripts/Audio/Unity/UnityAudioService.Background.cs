@@ -26,7 +26,7 @@ namespace AF.Audio.Unity
     /// Al ir al inicio, el lecho y el agua se funden y se paran sin soltarse, y al volver a un nivel del mismo mundo (y variante)
     /// suenan otra vez sin cargarse ni generarse; solo se sueltan cuando se pide otro mundo o variante (los grabados se descargan
     /// de memoria; los generados se destruyen). Todo va con la ganancia de <see cref="AudioMix.MusicGain"/> (ajuste Música, modo
-    /// silencio, anuncio y atenuación de 6 dB). Sin asignaciones por fotograma: solo al cambiar de pieza.
+    /// silencio, anuncio y atenuación de 6 dB), 3 dB por debajo de sus clips (<see cref="AudioMix.MusicLevelDb"/>). Sin asignaciones por fotograma: solo al cambiar de pieza.
     /// </summary>
     public sealed partial class UnityAudioService
     {
@@ -485,7 +485,7 @@ namespace AF.Audio.Unity
                 }
             }
 
-            float gain = _adPaused ? 0f : _mix.MusicGain;
+            float gain = _adPaused ? 0f : _mix.MusicVolume;
             float step = dtMs / LayerFadeMs;
             for (int l = 0; l < MusicVoices; l++)
             {
@@ -744,7 +744,7 @@ namespace AF.Audio.Unity
                 }
             }
 
-            _menu.volume = _menuVolume * (_adPaused ? 0f : _mix.MusicGain);
+            _menu.volume = _menuVolume * (_adPaused ? 0f : _mix.MusicVolume);
         }
 
         // El agua del mundo y la lluvia del nivel. Como el lecho: en el inicio (0) el agua se funde y se para sin soltarse, y
@@ -843,7 +843,7 @@ namespace AF.Audio.Unity
             }
 
             UpdateRain(wanted, fade);
-            float gain = _adPaused ? 0f : _mix.AmbientGain;
+            float gain = _adPaused ? 0f : _mix.AmbientVolume;
             _water.volume = _waterWorld == 0 ? 0f : _waterVolume * gain;
             _rain.volume = _rainVolume * gain;
         }
@@ -934,12 +934,12 @@ namespace AF.Audio.Unity
             {
                 _fauna.Stop();
                 _fauna.clip = clip;
-                _fauna.volume = _mix.FaunaGain;
+                _fauna.volume = _mix.FaunaVolume;
                 _fauna.Play();
             }
             else if (_fauna.isPlaying)
             {
-                _fauna.volume = _mix.FaunaGain; // sigue la atenuación y el ajuste Música mientras suena
+                _fauna.volume = _mix.FaunaVolume; // sigue la atenuación y el ajuste Música mientras suena
             }
         }
 

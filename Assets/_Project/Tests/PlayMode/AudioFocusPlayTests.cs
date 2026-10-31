@@ -48,7 +48,7 @@ namespace AF.Tests.PlayMode
             Assert.That(port.Requests, Is.EqualTo(1), "con la Música encendida y en primer plano, se pide el foco");
             Assert.That(s.AudioFocus.State, Is.EqualTo(AudioFocusState.Gain));
             s.SetMenuMusic();
-            yield return Wait(() => s.MenuReady && s.MenuPlaying && s.MenuVolume > 0.9f, "el tema de menú a todo volumen", 30f);
+            yield return Wait(() => s.MenuReady && s.MenuPlaying && s.MenuVolume > 0.9f * AudioMix.MusicLevel, "el tema de menú a todo volumen", 30f);
 
             // La alarma.
             port.Push(AudioFocusState.LossTransient);
@@ -79,7 +79,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(_probe.LastAudioFocusLine, Does.Contain("\"state\":\"gain\"").And.Contain("\"music_gain\":1.00"));
             }
 
-            yield return Wait(() => s.MenuVolume > 0.9f, "con el fundido, hasta arriba", 5f);
+            yield return Wait(() => s.MenuVolume > 0.9f * AudioMix.MusicLevel, "con el fundido, hasta arriba", 5f);
 
             // Un aviso que se puede oír por encima: la música baja al 20 %, los efectos siguen.
             port.Push(AudioFocusState.Duck);
@@ -87,7 +87,7 @@ namespace AF.Tests.PlayMode
             yield return null;
             Assert.That(s.Mix.FocusDucked, Is.True);
             Assert.That(s.MenuPlaying, Is.True, "no se pausa");
-            Assert.That(s.MenuVolume, Is.EqualTo(AudioMix.FocusDuckGain).Within(0.02f), "al ~20 %");
+            Assert.That(s.MenuVolume, Is.EqualTo(AudioMix.FocusDuckGain * AudioMix.MusicLevel).Within(0.02f), "al ~20 %");
             Assert.That(s.Mix.SfxAudible, Is.True);
             if (DevProbe.Enabled)
             {
@@ -97,7 +97,7 @@ namespace AF.Tests.PlayMode
             port.Push(AudioFocusState.Gain);
             yield return null;
             yield return null;
-            Assert.That(s.MenuVolume, Is.EqualTo(1f).Within(0.02f), "vuelve al 100 %");
+            Assert.That(s.MenuVolume, Is.EqualTo(AudioMix.MusicLevel).Within(0.02f), "vuelve al 100 % (a su nivel, 3 dB bajo el clip)");
         }
 
         [UnityTest]
@@ -178,7 +178,7 @@ namespace AF.Tests.PlayMode
             s.SetForeground(true);
             Assert.That(port.Requests, Is.EqualTo(1));
             Assert.That(s.AudioFocus.State, Is.EqualTo(AudioFocusState.Gain));
-            yield return Wait(() => s.MenuReady && s.MenuPlaying && s.MenuVolume > 0.9f, "el tema de menú", 30f);
+            yield return Wait(() => s.MenuReady && s.MenuPlaying && s.MenuVolume > 0.9f * AudioMix.MusicLevel, "el tema de menú", 30f);
             port.Push(AudioFocusState.LossTransient);
             yield return null;
             yield return null;
@@ -196,14 +196,14 @@ namespace AF.Tests.PlayMode
             try
             {
                 s.SetMenuMusic();
-                yield return Wait(() => s.SynthReady && s.MenuReady && s.MenuPlaying && s.MenuVolume > 0.99f, "el tema de menú a todo volumen", 30f);
+                yield return Wait(() => s.SynthReady && s.MenuReady && s.MenuPlaying && s.MenuVolume > 0.99f * AudioMix.MusicLevel, "el tema de menú a todo volumen", 30f);
                 Assert.That(s.Mix.ActionDucked, Is.False);
 
                 s.PourBegin(0, 0.25f);
                 yield return Wait(() => s.Mix.ActionDuckAmount >= 1f, "el ataque de 80 ms", 2f);
                 yield return null;
                 Assert.That(s.Mix.Pouring, Is.True, "el chorro cae");
-                Assert.That(AudioAnalysis.ToDb(s.MenuVolume), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.2f), "la música, −5 dB");
+                Assert.That(AudioAnalysis.ToDb(s.MenuVolume), Is.EqualTo(AudioMix.ActionDuckDb + AudioMix.MusicLevelDb).Within(0.2f), "la música, −5 dB");
                 Assert.That(s.Mix.SfxGain, Is.EqualTo(1f), "los efectos, enteros");
                 Assert.That(s.Mix.CurrentMusic.Ducked, Is.True);
                 if (DevProbe.Enabled)
@@ -215,17 +215,17 @@ namespace AF.Tests.PlayMode
                 port.Push(AudioFocusState.Duck);
                 yield return null;
                 yield return null;
-                Assert.That(s.MenuVolume, Is.EqualTo(AudioMix.FocusDuckGain * s.Mix.ActionDuckGain).Within(0.01f), "el 20 % del foco, sobre el chorro");
+                Assert.That(s.MenuVolume, Is.EqualTo(AudioMix.FocusDuckGain * s.Mix.ActionDuckGain * AudioMix.MusicLevel).Within(0.01f), "el 20 % del foco, sobre el chorro");
                 port.Push(AudioFocusState.Gain);
                 yield return null;
                 yield return null;
 
                 s.PourEnd(0);
                 yield return new WaitForSecondsRealtime((AudioMix.ActionDuckHoldMs * 0.5f) / 1000f);
-                Assert.That(AudioAnalysis.ToDb(s.MenuVolume), Is.EqualTo(AudioMix.ActionDuckDb).Within(0.2f), "sigue abajo durante la espera");
+                Assert.That(AudioAnalysis.ToDb(s.MenuVolume), Is.EqualTo(AudioMix.ActionDuckDb + AudioMix.MusicLevelDb).Within(0.2f), "sigue abajo durante la espera");
                 yield return Wait(() => !s.Mix.ActionDucked, "la suelta", 3f);
                 yield return null;
-                Assert.That(s.MenuVolume, Is.EqualTo(1f).Within(0.01f), "vuelve a su nivel");
+                Assert.That(s.MenuVolume, Is.EqualTo(AudioMix.MusicLevel).Within(0.01f), "vuelve a su nivel");
                 if (DevProbe.Enabled)
                 {
                     Assert.That(_probe.LastMusicLine, Does.Contain("\"ducked\":false"), "y la sonda lo cuenta");

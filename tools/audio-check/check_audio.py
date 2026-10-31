@@ -186,6 +186,65 @@ def pulse_strength(x, sr):
     return best
 
 
+DROPOUT_DEPTH_DB = 15.0   # un hueco: 15 dB o más por debajo de la mediana de su entorno
+DROPOUT_MIN_MS = 30       # durante 30 ms o más
+DROPOUT_WIN_MS = 10       # medido en ventanas de 10 ms
+DROPOUT_CONTEXT_S = 1.0   # entorno: 1 s a cada lado, circular (el bucle sigue)
+DROPOUT_FLOOR_DB = -60.0  # entornos más callados no cuentan (capas de percusión, colas)
+
+
+def window_levels(x, sr, win_ms=DROPOUT_WIN_MS):
+    """Nivel RMS (dBFS) de cada ventana de win_ms ms."""
+    w = max(1, int(sr * win_ms / 1000))
+    out = []
+    for s in range(0, len(x) - w + 1, w):
+        acc = 0.0
+        for v in x[s:s + w]:
+            acc += v * v
+        out.append(10.0 * math.log10(acc / w + 1e-20))
+    return out
+
+
+def context_levels(r, half):
+    """Mediana circular de r en 2·half + 1 ventanas alrededor de cada una."""
+    k = len(r)
+    if k == 0:
+        return []
+    span = min(k, 2 * half + 1)
+    out = []
+    for i in range(k):
+        vals = sorted(r[(i - half + j) % k] for j in range(span))
+        out.append(vals[len(vals) // 2])
+    return out
+
+
+def dropouts(x, sr, depth_db=DROPOUT_DEPTH_DB, min_ms=DROPOUT_MIN_MS):
+    """
+    Huecos de un sonido sostenido (lecho, agua): tramos de min_ms ms o más con el nivel depth_db dB o más por debajo de la
+    mediana de su entorno de ±1 s (circular, porque es un bucle). Devuelve [(inicio s, duración ms, hondura dB, i0, i1)], con
+    i0 e i1 en ventanas de DROPOUT_WIN_MS ms. Un lecho «sin pulso marcado» no puede tener ninguno: se oye como un tropiezo.
+    """
+    r = window_levels(x, sr)
+    ctx = context_levels(r, int(DROPOUT_CONTEXT_S * 1000 / DROPOUT_WIN_MS))
+    need = max(1, int(math.ceil(min_ms / DROPOUT_WIN_MS)))
+    out = []
+    i = 0
+    k = len(r)
+    while i < k:
+        if ctx[i] > DROPOUT_FLOOR_DB and ctx[i] - r[i] >= depth_db:
+            j = i
+            worst = 0.0
+            while j < k and ctx[j] > DROPOUT_FLOOR_DB and ctx[j] - r[j] >= depth_db:
+                worst = max(worst, ctx[j] - r[j])
+                j += 1
+            if j - i >= need:
+                out.append((i * DROPOUT_WIN_MS / 1000.0, (j - i) * DROPOUT_WIN_MS, worst, i, j))
+            i = j
+        else:
+            i += 1
+    return out
+
+
 def tonal_peaks(x, sr):
     """Picos tonales sostenidos (zumbido) en 80-4000 Hz: dB por encima de la mediana de su entorno de 1/3 de octava."""
     n = 16384
@@ -307,6 +366,12 @@ def check_entry(e, root, spec, rep, lengths):
         ps = pulse_strength(x, sr)
         if ps > 0.6:
             rep.add(e['id'], 'FALLO', 'pulso marcado en el lecho (autocorrelación %.2f; máximo 0,60): el lecho no puede llevar golpes regulares' % ps)
+    if (e.get('no_pulse') or e.get('clean_bed')) and x:
+        holes = dropouts(x, sr)
+        if holes:
+            rep.add(e['id'], 'FALLO', '%d hueco(s) en un sonido sostenido (el primero a %.2f s, %d ms, %.0f dB por debajo de su entorno; '
+                    'máximo %.0f dB durante %d ms): se oye como un tropiezo (tools/audio-check/fill_dropouts.py los rellena)'
+                    % (len(holes), holes[0][0], holes[0][1], holes[0][2], DROPOUT_DEPTH_DB, DROPOUT_MIN_MS))
     if e.get('clean_bed') and x:
         exc, f = tonal_peaks(x, sr)
         if exc > 15:
@@ -403,6 +468,19 @@ def tone(f, dur, peak_db, sr=48000, fade=0.004, harmonics=(1.0, 0.5, 0.3)):
     return [v * a / m for v in x]
 
 
+def pad(dur, gap_at=None, sr=48000):
+    """Pad sostenido sin pulso (ciclos enteros: bucle sin costura); con gap_at, un hueco de 250 ms con fundidos de 40 ms."""
+    n = int(dur * sr)
+    x = [0.08 * (math.sin(2 * math.pi * 220 * i / sr) + 0.6 * math.sin(2 * math.pi * 330 * i / sr)
+                 + 0.4 * math.sin(2 * math.pi * 440 * i / sr)) for i in range(n)]
+    if gap_at is not None:
+        a, f, h = int(gap_at * sr), int(0.04 * sr), int(0.25 * sr)
+        for i in range(a - f, a + h + f):
+            g = 0.0 if a <= i < a + h else (a - i) / f if i < a else (i - a - h) / f
+            x[i] *= max(0.0, min(1.0, g)) if not (a <= i < a + h) else 0.0
+    return x
+
+
 def self_test():
     spec = {'version': 1, 'format': {'sample_rate': 48000, 'bit_depth': 24},
             'global': {'true_peak_max_dbfs': -1.0, 'dc_offset_max': 0.002, 'leading_silence_max_s': 0.010,
@@ -425,9 +503,11 @@ def self_test():
             'music': [
                 {'id': 'bed', 'file': 'music/bed.wav', 'loop': True, 'min_s': 1, 'max_s': 10, 'no_pulse': True},
                 {'id': 'perc', 'file': 'music/perc.wav', 'loop': True, 'same_length_as': 'bed'},
+                {'id': 'pad_ok', 'file': 'music/pad_ok.wav', 'loop': True, 'min_s': 1, 'max_s': 10, 'no_pulse': True},
+                {'id': 'pad_gap', 'file': 'music/pad_gap.wav', 'loop': True, 'min_s': 1, 'max_s': 10, 'no_pulse': True},
             ]}
     expect = {'ok_tap': False, 'loud_tap': True, 'bass_tap': True, 'cut_tail': True, 'wrong_fmt': True, 'note_ok': False,
-              'note_off': True, 'bad_seam': True, 'drone': True, 'bed': True, 'perc': True}
+              'note_off': True, 'bad_seam': True, 'drone': True, 'bed': True, 'perc': True, 'pad_ok': False, 'pad_gap': True}
     sr = 48000
     with tempfile.TemporaryDirectory() as d:
         for sub in ('sfx/fruit', 'amb', 'music'):
@@ -453,6 +533,8 @@ def self_test():
             bed.append(0.3 * hit * math.sin(2 * math.pi * 600 * t))
         write_wav(os.path.join(d, 'music/bed.wav'), [bed])
         write_wav(os.path.join(d, 'music/perc.wav'), [bed[:-100]])
+        write_wav(os.path.join(d, 'music/pad_ok.wav'), [pad(4.0)])
+        write_wav(os.path.join(d, 'music/pad_gap.wav'), [pad(4.0, gap_at=2.0)])
         sp = os.path.join(d, 'spec.json')
         json.dump(spec, open(sp, 'w', encoding='utf-8'))
         import io
