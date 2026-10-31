@@ -4352,6 +4352,11 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - la categoría es «Habilidad mental», porque la lista de Play Games no tiene «Rompecabezas».
 - **Siguiente:** el `APP_ID` en el proyecto de Unity (`play-games.md` §9, paso 3), en un PR propio y revisado, y el release 10001 (§7.5).
 
+### D-059, añadido del 2026-10-30 (2): la 1.0.0 (10001) con Play Games en la pista interna
+
+- **Release:** `Release firmado` run 41155490471, desde `main` en 94d079e6, con `versionCode` 10001. El preflight dio OK: `com.parallext.tintalu`, Firebase `1:459140125724:android:810c83a65d0ff611f07bd9` y SHA-256 de subida `CD:74:…:7F:DC`. `ci/check-manifest.ps1 -Mode release` OK; el manifiesto lleva el `APP_ID` de Play Games 459140125724 y no lleva `PlayGamesInitProvider`.
+- **Publicación:** el dueño subió el AAB y pulsó «Guardar y publicar». La versión está disponible para los verificadores internos desde el 2026-10-30 a las 23:15. Es la que se prueba en §15 y la que se promociona en §17.
+
 ## D-059 · Lanzamiento directo a producción al 100 %, con publicación administrada
 
 - **Fecha:** 2026-10-28. Registrada por el integrador.
