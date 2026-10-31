@@ -31,7 +31,7 @@ Canon:
 | Puerto | `Scripts/Save/ISavedGamesPort.cs` (nuevo) | Lo mínimo de Saved Games, sin tipos del plugin |
 | Puerto real | `Scripts/Save/PlayGames/PlayGamesSavedGamesPort.cs` (asmdef nuevo `AF.Save.PlayGames`, con `Google.Play.Games`) | El plugin. Solo `UNITY_ANDROID && !UNITY_EDITOR` y con `APP_ID` |
 
-En el editor, en los tests y en un build sin `APP_ID`, `PlayGamesSavedGamesPort.TryCreate()` devuelve null y la nube es `FakeCloudSave.WithoutSession()`: el juego se comporta como antes. Desde la rama `tanda6/play-games-appid` (2026-10-30) el proyecto lleva el `APP_ID` **459140125724** (§9, paso 3): los builds de Android (dev, ensayo y release) ya crean la nube real con 13-17 o 18+; el editor y los tests siguen con la falsa.
+En el editor, en los tests y en un build sin `APP_ID`, `PlayGamesSavedGamesPort.TryCreate()` devuelve null y la nube es `FakeCloudSave.WithoutSession()`: el juego se comporta como antes. Desde la rama `tanda6/play-games-appid` (2026-10-30) el proyecto lleva el `APP_ID` **459140125724** (§9, paso 3): los builds de Android (dev, ensayo y release) ya crean la nube real con 13-17 o 18+; el editor y los tests siguen con la falsa. **Solo inicia sesión el release `com.parallext.tintalu` firmado por Play (o con la clave de subida)**: las credenciales OAuth de Play Games son de ese paquete; en el `dev.apk` (`com.amazonfill.dev`) el inicio de sesión falla y la nube se queda sin sesión.
 
 ### 1.1 Cuándo arranca la nube
 
@@ -234,7 +234,7 @@ No hacen falta para construir: sin ellos, el build va sin Play Games (nube falsa
    **No** se usa la ventana ni la variante con el XML de recursos: tras leer el XML, el plugin llama a `CheckBundleId`, que cambia el `applicationId` del proyecto al `package_name` del XML si el usuario acepta un diálogo (en batchmode no hay diálogo). Los builds de prueba llevan `com.amazonfill.dev` y el definitivo solo vive en la variable de CI (regla dura 6). Por lo mismo, el `package_name` no se guarda en los ajustes del plugin. El XML no trae logros ni marcadores, así que no hay clase de constantes; y las dependencias de EDM4U ya estaban resueltas (§8).
 
    El `APP_ID` no es secreto (va en el manifiesto de la app). `PlayGamesProjectSetupTests` (EditMode) comprueba que los tres archivos versionados lo llevan, sin Web Client ID, sin Nearby y sin el `applicationId` definitivo. Si alguna vez cambia el `app_id`, se cambia la constante `PlayGamesProjectSetup.AppId` y se vuelve a lanzar el método.
-4. **Probar en el teléfono** (build de desarrollo con una cuenta de prueba de Play Games):
+4. **Probar en el teléfono** con el release de la pista interna (`com.parallext.tintalu`, instalado desde Play con la cuenta de prueba de Play Games; el `dev.apk` no inicia sesión):
    - inicio de sesión silencioso sin ventana;
    - primera subida;
    - reinstalar y recuperar la partida;
