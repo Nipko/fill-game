@@ -4746,6 +4746,14 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Tests:** `AndroidBackTests`, `BackButtonTests`, `AudioHooksTests.cs` (el inicio sin sonido ni háptico) y `DailyHooksTests` (E22: la pausa y Aguas estancadas en el Reto). **Lo mide** el portátil (guion, bloque 18.7).
 - **Cómo revertir:** con una decisión nueva del dueño; técnicamente, que `GameScreen.AndroidBack` devuelva `None` jugando y en la pausa, y `PressAndroidBackCore` deje de llamar a `MoveAppToBack`.
 
+### D-063, añadido del 2026-10-31: engranaje en lugar de pausa (observación de la prueba de la 10001)
+
+- **Pedido del dueño** (prueba en el teléfono del release 10001): «el pause cambiemos por una rueda de configuración, queda mejor que pause».
+- **Cambio:** el botón de pausa del nivel (arriba a la izquierda, disco de madera de 40 dp en un área de 48) dibuja el engranaje de Ajustes del inicio (`ProceduralArt.IconGear`, el mismo sprite, tamaño y sitio en el disco) en lugar de las dos barras; `IconPause` sale del arte por código. Abre la misma pausa (con Música y Sonido, D-046, punto 2), y Atrás de Android (la tabla de arriba), la pausa del juego y el área táctil no cambian. El menú se sigue titulando «Pausa» (`pause`).
+- **TalkBack:** «Pausa y ajustes» (`a11y_pause_settings`, clave nueva; en «Pause and settings», pt-BR «Pausa e configurações», con las formas del glosario §10), porque el menú también tiene los ajustes de audio.
+- **GDD:** 02 §5 (cabecera) y 07 §7.4 (fila superior). **Tests:** `HudGearTests` (PlayMode) y el de la etiqueta en `A11yScannerTests`.
+- **Cómo revertir:** volver a dibujar las dos barras en `GameScreen` y la etiqueta `pause`; con una decisión nueva del dueño.
+
 ## D-064 · Textos públicos en firme para la 1.0
 
 - **Fecha:** 2026-10-30. Registrada por el carril `tanda6/textos-publicacion`.

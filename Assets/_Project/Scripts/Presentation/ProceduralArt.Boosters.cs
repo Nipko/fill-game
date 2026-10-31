@@ -20,9 +20,6 @@ namespace AF.Presentation
         /// <summary>Icono «Ver video» (07 §7.3: 20 dp): pantalla redondeada con triángulo de reproducción, en crema.</summary>
         public Sprite IconVideo { get; private set; } = null!;
 
-        /// <summary>Glifo de pausa (dos barras) en <c>crema</c>, 26 dp, para el disco de madera de la cabecera (02 §5).</summary>
-        public Sprite IconPause { get; private set; } = null!;
-
         /// <summary>Glifo de cierre (X) en <c>crema</c>, 22 dp, para el disco de madera de los modales.</summary>
         public Sprite IconClose { get; private set; } = null!;
 
@@ -34,7 +31,6 @@ namespace AF.Presentation
             IconCuiaPlus = BuildIconCuiaPlus(Palette.Cream, Palette.FamilyWater.Edge, "icon_cuia_plus");
             IconCuiaPlusDisabled = BuildIconCuiaPlus(Palette.DisabledGlyph, Color.clear, "icon_cuia_plus_disabled");
             IconVideo = BuildIconVideo();
-            IconPause = BuildIconPause();
             IconClose = BuildIconClose();
             EmptyBasket = BuildEmptyBasket();
         }
@@ -78,20 +74,6 @@ namespace AF.Presentation
             pc.FillRoundedRect(6.5f, 12.5f, 53.5f, 47.5f, 6f, Palette.Cream);
             pc.FillTriangle(new Vector2(24f, 20f), new Vector2(24f, 40f), new Vector2(41f, 30f), Palette.FamilyWater.Base);
             return MakeSprite(pc, "icon_video", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
-        }
-
-        private Sprite BuildIconPause()
-        {
-            var pc = new PixelCanvas(78, 78);
-            for (int pass = 0; pass < 2; pass++)
-            {
-                Color c = pass == 0 ? Palette.FamilyWood.Edge : Palette.Cream;
-                float oy = pass == 0 ? -3f : 0f;
-                pc.FillRoundedRect(20f, 16f + oy, 33f, 62f + oy, 4f, c);
-                pc.FillRoundedRect(45f, 16f + oy, 58f, 62f + oy, 4f, c);
-            }
-
-            return MakeSprite(pc, "icon_pause", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
         }
 
         private Sprite BuildIconClose()
