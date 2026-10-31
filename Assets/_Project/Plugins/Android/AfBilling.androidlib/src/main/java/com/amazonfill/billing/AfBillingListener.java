@@ -1,8 +1,10 @@
 package com.amazonfill.billing;
 
 /**
- * Avisos de {@link AfBilling} hacia C# (AF.IAP.PlayBilling.BillingListenerProxy, un AndroidJavaProxy). Se llaman siempre en el
- * hilo principal de Android; C# los pasa al hilo de Unity. Solo enteros y cadenas, para que la conversión por JNI sea directa.
+ * Avisos de {@link AfBilling} hacia C# (AF.IAP.PlayBilling.BillingListenerProxy, un AndroidJavaProxy). Se llaman siempre, en orden,
+ * en el hilo de fondo {@code AfBilling-callbacks} y nunca en el principal de Android (con Unity en pausa, eso era un interbloqueo:
+ * el ANR de la 1.0.0 (10001); ver {@link AfBilling}); C# los pasa al hilo de Unity. Solo enteros y cadenas, para que la conversión
+ * por JNI sea directa.
  *
  * <p>Las listas van como texto: una fila por línea ('\n') y campos separados por tabuladores ('\t').
  * <ul>

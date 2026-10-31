@@ -249,6 +249,14 @@ namespace AF.Tests.EditMode
             StringAssert.Contains("case AudioManager.AUDIOFOCUS_LOSS:\n                return LOSS;", java.Replace("\r\n", "\n"));
             StringAssert.Contains("manager.abandonAudioFocusRequest(pending)", java);
 
+            // Los avisos al AndroidJavaProxy de C# nunca salen del hilo principal de Android (una alarma pausa Unity cuando llega su
+            // LOSS_TRANSIENT): el mismo interbloqueo que el ANR de Play Billing de la 1.0.0 (10001), 2026-10-31 (docs/dev/iap.md).
+            StringAssert.Contains("static final String CALLBACK_THREAD = \"AfAudioFocus-callbacks\";", java);
+            StringAssert.Contains("callbackThread = new HandlerThread(CALLBACK_THREAD);", java);
+            StringAssert.Contains(".setOnAudioFocusChangeListener(CHANGES, new Handler(callbackLooper()))", java);
+            StringAssert.DoesNotContain("getMainLooper", java);
+            StringAssert.DoesNotContain("runOnUiThread", java);
+
             // Convivir con la música de otra app (el dueño, 2026-10-29): se mira al pasar a primer plano, antes del audio de Unity.
             StringAssert.Contains("public static boolean otherMusicAtForeground()", java);
             StringAssert.Contains("audio.isMusicActive()", java);

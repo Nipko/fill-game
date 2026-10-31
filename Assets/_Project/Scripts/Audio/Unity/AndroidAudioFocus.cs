@@ -8,7 +8,8 @@ namespace AF.Audio.Unity
     /// El foco de audio en Android (observación 10 de la jornada 6; D-026, añadido del 2026-10-29): llama por JNI al plugin propio
     /// <c>com.amazonfill.audiofocus.AfAudioFocus</c> (<c>Assets/_Project/Plugins/Android/AfAudioFocus.androidlib</c>, solo API de la
     /// plataforma, sin permisos), que pide el foco con <c>AudioFocusRequest</c> y <c>USAGE_GAME</c> y avisa de sus cambios por un
-    /// <see cref="AndroidJavaProxy"/> en el hilo principal de Android. Aquí solo se guarda el último aviso (con un candado, sin
+    /// <see cref="AndroidJavaProxy"/> desde un hilo de fondo del plugin (<c>AfAudioFocus-callbacks</c>), nunca desde el principal de
+    /// Android: con Unity en pausa, llamar al proxy desde ahí sería el interbloqueo del ANR de Play Billing (docs/dev/iap.md). Aquí solo se guarda el último aviso (con un candado, sin
     /// asignar al tomarlo): <see cref="UnityAudioService"/> lo toma en su fotograma. En el Editor y en otras plataformas,
     /// <see cref="FakeAudioFocusPort"/>, que da el foco y no avisa nunca.
     /// </summary>
@@ -135,7 +136,7 @@ namespace AF.Audio.Unity
         }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
-        // AfAudioFocus.Listener: un solo método, onFocus(String), en el hilo principal de Android.
+        // AfAudioFocus.Listener: un solo método, onFocus(String), en el hilo AfAudioFocus-callbacks (nunca el principal de Android).
         private sealed class Listener : AndroidJavaProxy
         {
             private readonly AndroidAudioFocus _owner;

@@ -10,8 +10,9 @@ namespace AF.UI
     /// <c>com.amazonfill.agesignals.AfAgeSignals.request(context, listener)</c> (<c>AfAgeSignals.androidlib</c>, sobre
     /// <c>com.google.android.play:age-signals:0.0.4</c>), que traduce la respuesta de la API al formato de
     /// <see cref="AgeSignal.Parse"/> (<c>adult</c>, <c>range:&lt;inferior&gt;[:&lt;superior&gt;]</c>, <c>none</c> o <c>error</c>) y la
-    /// entrega en cualquier hilo. Vive en <c>AF.UI</c> porque necesita el motor, como <see cref="AndroidSimCountry"/>. En el editor y
-    /// en cualquier otra plataforma, «sin señal»; si el puente no está o falla, <see cref="AgeSignal.Error"/>: en los dos casos manda la
+    /// entrega en su hilo de fondo <c>AfAgeSignals-callbacks</c>, nunca en el principal de Android (con Unity en pausa, llamar al proxy
+    /// desde ahí sería el interbloqueo del ANR de Play Billing; docs/dev/iap.md). Vive en <c>AF.UI</c> porque necesita el motor, como
+    /// <see cref="AndroidSimCountry"/>. En el editor y en cualquier otra plataforma, «sin señal»; si el puente no está o falla, <see cref="AgeSignal.Error"/>: en los dos casos manda la
     /// banda autodeclarada. Nada de la respuesta va a los logs ni a la analítica (T-L4).
     /// </summary>
     public sealed class AndroidAgeSignals : IAgeSignals
@@ -83,7 +84,7 @@ namespace AF.UI
         }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
-        // AfAgeSignals.Listener: un solo método, onResult(String), en cualquier hilo.
+        // AfAgeSignals.Listener: un solo método, onResult(String), en el hilo AfAgeSignals-callbacks (o en el de Unity si falla al pedir).
         private sealed class Listener : AndroidJavaProxy
         {
             private readonly AndroidAgeSignals _owner;

@@ -51,7 +51,7 @@ namespace AF.IAP.PlayBilling.Tests
                     string import = m.Groups[1].Value;
                     bool allowed = import.StartsWith("com.android.billingclient.api.", StringComparison.Ordinal)
                         || import == "android.app.Activity" || import == "android.content.Context"
-                        || import == "android.os.Handler" || import == "android.os.Looper"
+                        || import == "android.os.Handler" || import == "android.os.HandlerThread" || import == "android.os.Looper"
                         || import.StartsWith("java.util.", StringComparison.Ordinal);
                     Assert.That(allowed, Is.True, Path.GetFileName(file) + " importa " + import);
                 }
@@ -136,8 +136,9 @@ namespace AF.IAP.PlayBilling.Tests
             string query = Between(plugin, "public void queryBillingConfig(", "public void queryPurchases(");
             StringAssert.Contains("client.getBillingConfigAsync(GetBillingConfigParams.newBuilder().build(),", query);
             StringAssert.Contains("code == OK && config != null ? config.getCountryCode() : null", query);
-            StringAssert.Contains("listener.onBillingConfig(requestId, code, clean(country) ? country : null);", query);
-            StringAssert.Contains("listener.onBillingConfig(requestId, BillingClient.BillingResponseCode.ERROR, null);", query);
+            StringAssert.Contains("final String countryCode = clean(country) ? country : null;", query);
+            StringAssert.Contains("deliver(() -> listener.onBillingConfig(requestId, code, countryCode));", query);
+            StringAssert.Contains("deliver(() -> listener.onBillingConfig(requestId, BillingClient.BillingResponseCode.ERROR, null));", query);
             Assert.That(Regex.Matches(query, @"config\.get\w+\(").Count, Is.EqualTo(1), "nada más de BillingConfig que el país");
             StringAssert.DoesNotContain(" = country", query, "no se guarda en el plugin");
             StringAssert.Contains("import com.android.billingclient.api.GetBillingConfigParams;", plugin);
@@ -164,6 +165,61 @@ namespace AF.IAP.PlayBilling.Tests
             Assert.That(stale, Is.GreaterThanOrEqualTo(0));
             Assert.That(firstWrite, Is.GreaterThan(stale), "la respuesta de una consulta anterior sale antes de tocar los productos");
             Assert.That(Regex.Matches(plugin, @"details\.clear\(\)").Count, Is.EqualTo(1), "solo release() los vacía en el sitio");
+        }
+
+        [Test]
+        public void ListenerCalls_NeverLeaveTheMainLooper_TheyGoThroughOneCallbackThread()
+        {
+            // ANR de la 1.0.0 (10001) en la pista interna (Crashlytics, 2026-10-31): Play llama a onPurchasesUpdated con la hoja de compra
+            // aún encima y Unity en pausa; llamar al AndroidJavaProxy de C# desde el hilo principal de Android esperaba al hilo de Unity,
+            // que solo se reanuda cuando el principal procesa onResume: interbloqueo. Cada aviso a C# sale, en orden y ya calculado, por
+            // deliver(), que lo encola en un HandlerThread propio; release() lo suelta con quitSafely tras el último aviso encolado.
+            string plugin = Read(JavaDir, "AfBilling.java").Replace("\r\n", "\n");
+
+            var methods = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (Match m in Regex.Matches(plugin, @"listener(?:\.|::)(on\w+)"))
+            {
+                methods.Add(m.Groups[1].Value);
+                int lineStart = plugin.LastIndexOf('\n', m.Index) + 1;
+                string before = plugin.Substring(lineStart, m.Index - lineStart).TrimStart();
+                Assert.That(before, Is.EqualTo("deliver(() -> ").Or.EqualTo("deliver("), "aviso fuera de deliver(): " + m.Value);
+            }
+
+            Assert.That(methods, Has.Count.EqualTo(9), "los nueve avisos de AfBillingListener, todos por deliver()");
+
+            foreach (Match m in Regex.Matches(plugin, @"deliver\(\(\) -> ([^;]*)\);"))
+            {
+                string call = m.Groups[1].Value;
+                foreach (string word in new[] { "rows(", "code(", "details", "result", "client", "config" })
+                {
+                    Assert.That(call.Contains(word), Is.False, "el aviso lleva valores ya calculados en el hilo principal: " + call);
+                }
+            }
+
+            StringAssert.Contains("import android.os.HandlerThread;", plugin);
+            StringAssert.Contains("static final String CALLBACK_THREAD = \"AfBilling-callbacks\";", plugin);
+            StringAssert.Contains("callbackThread = new HandlerThread(CALLBACK_THREAD);", plugin);
+            StringAssert.Contains("callbacks = new Handler(callbackThread.getLooper());", plugin);
+            Assert.That(Regex.Matches(plugin, @"new Handler\(").Count, Is.EqualTo(2), "el principal (estado) y el de avisos");
+
+            string deliver = Between(plugin, "private void deliver(", "private void create(");
+            int guard = deliver.IndexOf("if (released) {", StringComparison.Ordinal);
+            int post = deliver.IndexOf("callbacks.post(", StringComparison.Ordinal);
+            Assert.That(guard, Is.GreaterThanOrEqualTo(0), "tras release no se encola nada");
+            Assert.That(post, Is.GreaterThan(guard));
+            StringAssert.DoesNotContain("main.", deliver, "nunca al Looper principal");
+
+            string release = Between(plugin, "public void release(", "public void onPurchasesUpdated(");
+            int released = release.IndexOf("released = true;", StringComparison.Ordinal);
+            int quit = release.IndexOf("callbackThread.quitSafely();", StringComparison.Ordinal);
+            Assert.That(released, Is.GreaterThanOrEqualTo(0));
+            Assert.That(quit, Is.GreaterThan(released), "se suelta tras cerrar la puerta, sin perder lo ya encolado");
+            StringAssert.DoesNotContain("callbackThread.quit()", plugin, "quit() descartaría avisos encolados");
+
+            string updated = Between(plugin, "public void onPurchasesUpdated(", "private static String rows(");
+            StringAssert.Contains("main.post(() -> {", updated, "en orden con el resto de avisos");
+            StringAssert.Contains("final String purchaseRows = code == OK ? rows(purchases) : null;", updated);
+            StringAssert.Contains("deliver(() -> listener.onPurchasesUpdated(code, purchaseRows));", updated);
         }
 
         private static string Between(string text, string start, string end)
