@@ -272,6 +272,8 @@ Si alguna falla, la pieza vuelve a edición con el motivo; si falla 2 veces, va 
 | Q-MK-9 [dueño] | ¿Contamos que el juego lo hacen agentes de IA? | sí, como pilar secundario en LinkedIn, X y YouTube (desarrolladores); no en los anuncios para jugadores |
 | Q-MK-10 [dueño] | Creadores e influencers pagados | más adelante, con datos (fase B), y solo con contrato y la marca de «publicidad» que exija cada red |
 
+**Decididas por el dueño el 2026-10-31 («Yes, recommended»): las diez, con la recomendada.** Q-MK-2: las cuentas `@tintalugame` las crea el dueño. Q-MK-4: el primer tramo es de 1.000 US$. Q-MK-7: el repositorio privado `fill-game-marketing` lo crea el dueño. Q-MK-9: «hecho con agentes de IA» como pilar secundario, solo para desarrolladores. Q-MK-10: creadores pagados más adelante. Hasta que existan las cuentas, el token y el repositorio, Spark avanza con S0-S6 en local y deja S7 y S9 listos para encender.
+
 ## 10. Orden de trabajo y calendario orientativo [P]
 
 | Semana | Spark | Escritorio | Dueño |
