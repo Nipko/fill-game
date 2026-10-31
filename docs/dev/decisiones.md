@@ -4343,6 +4343,15 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **Argentina:** se fija en ARS, con el equivalente en USD de 05 §4.2 al cambio de Play del día. Hay que recotizarlo cada mes.
 - **Ecuador:** en USD, con la columna de 05 §4.2.
 
+### D-035, añadido del 2026-10-30 (3): Play Games configurado en la consola
+
+- **Hecho, con el sí del dueño a las condiciones:** se aceptaron las de los Servicios de juego de Play, Google Cloud Platform y las API de Google («Sí, acepta y crea»), y la Política de Datos del Usuario de las API de Google («Sí, acepta»). Detalle en `publicar-play-console.md` §7.3.
+- **`app_id` de Play Games: 459140125724.** Es el número del proyecto `tintalu`; no es secreto.
+- **Desviaciones de la guía:**
+  - el correo de la pantalla de OAuth es `support@parallext.com`, porque `support@tintalu.com` no es una cuenta de Google;
+  - la categoría es «Habilidad mental», porque la lista de Play Games no tiene «Rompecabezas».
+- **Siguiente:** el `APP_ID` en el proyecto de Unity (`play-games.md` §9, paso 3), en un PR propio y revisado, y el release 10001 (§7.5).
+
 ## D-059 · Lanzamiento directo a producción al 100 %, con publicación administrada
 
 - **Fecha:** 2026-10-28. Registrada por el integrador.

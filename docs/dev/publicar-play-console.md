@@ -239,6 +239,8 @@ Las huellas no son secretas, pero cópialas de la consola cada vez, sin reescrib
 
 ### 7.3 El proyecto de Play Games con Saved Games
 
+**Hecho el 2026-10-30** (D-035, añadido del 2026-10-30, 3): proyecto de Play Games sobre el proyecto de Cloud `tintalu`, con **`app_id` 459140125724**. Propiedades: nombre «Tintalú», categoría «Habilidad mental» (la lista de Play Games no tiene «Rompecabezas»), **juegos guardados activados**, icono y gráfico de la ficha, sin logros ni marcadores. Pantalla de consentimiento de OAuth: «Tintalú», usuarios externos, correo de asistencia y de contacto `support@parallext.com` (el selector solo admite cuentas de Google; `support@tintalu.com` no lo es). Dos clientes de OAuth Android en Cloud, «Tintalu Android (firma de Play)» con la SHA-1 de la firma de apps y «Tintalu Android (subida)» con la de subida, y sus dos credenciales Android en Play Games (antipiratería desactivada, el valor por defecto). Testers: el segmento `internal` y `nirlevin89@gmail.com`. **Falta:** §7.4 (el `APP_ID` en el proyecto de Unity, en un PR) y «Publicar» la configuración de Play Games en §17.
+
 Crecer › **Servicios de juegos de Play** › Configuración y administración › Configuración [NV] (`play-games.md` §9; 08 §13.1 #16):
 1. **Crear el proyecto de juegos** para esta app. Si pregunta por un proyecto de Google Cloud, usa [P] el de Firebase `tintalu`, para tener Play Games, Firebase y Play Integrity en el mismo sitio.
 2. Si pide la **pantalla de consentimiento de OAuth** del proyecto de Cloud [NV]: nombre «Tintalú», correo de asistencia `support@tintalu.com`, dominio `tintalu.com`, enlaces a la política y los términos de §3.
