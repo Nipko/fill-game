@@ -6,6 +6,49 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## Motor de marketing (D-066)
+
+Encargo: `docs/dev/traspaso/spark-marketing.md`. Rama `spark/marketing-investigacion`.
+
+### 2026-10-31 · S0 (inventario del stack) y S1 (investigación y trabajo semanal de tendencias): HECHOS
+
+- **S0 · `docs/marketing/stack-spark.md`:**
+  - las dos máquinas, con lo instalado, las licencias comerciales y los tiempos medidos;
+  - lo que falta y su coste.
+  - **Lo que falta, todo de pesos comerciales:**
+    - voz neutra (Qwen3-TTS VoiceDesign);
+    - visión para el control de calidad (Qwen3-VL-8B);
+    - edición de personajes (Qwen-Image-Edit-2511);
+    - música (ACE-Step 1.5 XL);
+    - montaje con plantillas (HyperFrames);
+    - Buffer, ~20 US$/mes.
+  - Coste fijo: ~20 US$/mes. Descargas: ~45 GB, cada una con el permiso del dueño.
+- **S1 · `docs/marketing/investigacion-creatividades.md`:**
+  - 34 referencias: 28 anuncios activos de Meta Ad Library en BR y MX (Magic Sort, Nut Sort, Water Sort, Ball Sort y MagiMatch) y 6 Shorts de YouTube;
+  - la taxonomía de ganchos G1-G12 y los vetados X;
+  - 15 conclusiones;
+  - lo que no se puede copiar;
+  - el orden propuesto de los 5 conceptos para S5.
+  - **Lo nuevo:** el «espejo de fruta», con pulpa real que tiñe el agua y corte al juego.
+- **S1 · trabajo semanal, versión 1:**
+  - la receta, en `docs/marketing/tendencias/README.md`;
+  - el primer informe, en `docs/marketing/tendencias/2026-44.md`;
+  - `tendencias.py` (biblioteca, puntuación e informe; autoprueba; interruptor `PAUSA`) y la biblioteca de 34 referencias viven en el Spark, en `C:\AI\marketing\tendencias\`, hasta que exista `fill-game-marketing` (Q-MK-7).
+- **Navegación (excepción del encargo):**
+  - solo se miraron fotogramas en el navegador; no se descargó ningún vídeo de terceros;
+  - **sin sesión no se pudo usar:** TikTok Creative Center (solo enseña 4 anuncios) ni la ficha de anunciante del Centro de transparencia de Google.
+- **Preguntas:**
+  - Q-MK-1 a Q-MK-10: decididas por el dueño (con la recomendada); las cuentas, el repositorio y el presupuesto los pone él.
+  - Nuevas:
+    - **Q-MK-S0-1:** ¿la música generada con IA cuenta como «propia» (§0.5)? Recomendada: sí, con ACE-Step. **Sin aplicar**, porque amplía §0.
+    - **Q-MK-S0-2 [P]:** las descargas de la semana 2, cada una con el permiso del dueño.
+    - **Tarea programada de los lunes [P]:** pide el permiso del dueño.
+- **Cómputo:** ninguno de GPU. Navegación e investigación, unas 3 h de sesión.
+- **Siguiente:** S2 (estrategia: calendario de 4 semanas, presupuesto y KPIs). Las conclusiones ya ordenan los conceptos de S5.
+- **Enganches para el integrador:**
+  - **E1 (modo de captura):** prioridad al **audio del juego** en las tomas, que `screenrecord` no graba, a un tablero grande a la carta y al Mapa entero que se llena.
+  - **Al fusionar:** `spark/tienda-graficos` también añade una entrada arriba de este archivo (el vídeo de la ficha), así que puede salir un conflicto trivial de orden.
+
 ## Gráficos de la ficha de Play (D-065)
 
 ### 2026-10-30 · Elección del dueño: A como ficha, B y C como variantes de prueba
