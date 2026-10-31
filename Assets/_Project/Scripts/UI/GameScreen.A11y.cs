@@ -66,9 +66,10 @@ namespace AF.UI
                 _a11y?.Scanner.AddSource(this);
                 if (value != null)
                 {
-                    // 02 §12: la pausa es un botón de solo icono (su etiqueta funcional, «Pausa»); el fondo del tablero (C7, deseleccionar)
+                    // 02 §12: la pausa es un botón de solo icono, el engranaje (su etiqueta funcional, «Pausa y ajustes», porque el menú
+                    // también tiene Música y Sonido; observación de la prueba de la 10001); el fondo del tablero (C7, deseleccionar)
                     // no se publica: con el lector se deselecciona tocando otra vez la cuia elegida (C3).
-                    A11yLabels.Set(_pauseButton.Button, () => UiText.Pause);
+                    A11yLabels.Set(_pauseButton.Button, () => A11yText.PauseSettings);
                     Transform? background = _root.Find("BackgroundCatcher");
                     if (background != null)
                     {

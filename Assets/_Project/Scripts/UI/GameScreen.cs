@@ -636,7 +636,7 @@ namespace AF.UI
                 () => _actions.PressInfiniteCanoes(), () => _actions.PressNoCanoesMap(), () => _actions.PressNoCanoesClose());
             _noCanoes.RefillMissing = () => OnMissingTap("refill_canoes", reduce => _noCanoes.PulseRefillMissing(reduce), _noCanoes.RefillMissingSeeds);
 
-            // ---- Capa superior: pausa (02 §5: izquierda de la fila superior; disco de 40 dp) y saldos del embudo (D-008). ----
+            // ---- Capa superior: pausa (02 §5: izquierda de la fila superior; disco de 40 dp con el engranaje) y saldos (D-008). ----
             _topLayer = UiBuilder.Rect("TopLayer", _root);
             _pauseButton = UiBuilder.Relief("PauseButton", _topLayer, art.DiscWood, OnPause);
             RectTransform pauseVisual = (RectTransform)_pauseButton.Face.parent;
@@ -644,7 +644,9 @@ namespace AF.UI
             pauseVisual.anchorMax = new Vector2(0.5f, 1f);
             pauseVisual.sizeDelta = new Vector2(art.DiscWood.Painted ? art.DiscWood.HeightDp : 40f, art.DiscWood.HeightDp);
             pauseVisual.anchoredPosition = new Vector2(0f, -4f);
-            Image pauseIcon = UiBuilder.Image("Icon", _pauseButton.Face, art.IconPause, Color.white);
+            // Observación de la prueba de la 10001 (2026-10-31): el engranaje de Ajustes del inicio en lugar de las dos barras de
+            // pausa, porque el menú también tiene Música y Sonido; el mismo sprite, tamaño y sitio en el disco. Abre la misma pausa.
+            Image pauseIcon = UiBuilder.Image("Icon", _pauseButton.Face, art.IconGear, Color.white);
             UiBuilder.Place(pauseIcon.rectTransform, 7f, 7f, 26f, 26f);
             _pauseButton.Relief.Bind(_pauseButton.Face, _pauseButton.Base, _pauseButton.FaceImage, art.DiscWood, pauseIcon, null, null);
             _walletBar = new WalletBar(_topLayer, art);

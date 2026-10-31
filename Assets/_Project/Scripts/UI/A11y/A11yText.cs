@@ -33,7 +33,7 @@ namespace AF.UI
             Keys.Cuia, Keys.CuiaFull, Keys.CuiaEmpty, Keys.List, Keys.Murky, Keys.Mud, Keys.Tinaja, Keys.TinajaEmpty,
             Keys.Cucharon, Keys.CucharonFull, Keys.CucharonEmpty, Keys.Selected, Keys.ButtonRemaining, Keys.NamesJoin,
             Keys.SettingsReduceMotion, Keys.SettingsHighContrast, Keys.FruitUnnamed, Keys.Close, Keys.TapToContinue,
-            Keys.CuiaMechanic, Keys.MapJourney,
+            Keys.CuiaMechanic, Keys.MapJourney, Keys.PauseSettings,
         };
 
         /// <summary>
@@ -161,6 +161,12 @@ namespace AF.UI
         /// <summary>Etiqueta del lector de un velo que se toca para seguir (tarjeta previa, banner del mundo) [P]: «Continuar».</summary>
         public static string TapToContinue => Loc.T(Keys.TapToContinue);
 
+        /// <summary>
+        /// Etiqueta del lector del engranaje del nivel, que abre el menú de pausa con Música y Sonido [P]: «Pausa y ajustes»
+        /// (observación de la prueba de la 10001, 2026-10-31).
+        /// </summary>
+        public static string PauseSettings => Loc.T(Keys.PauseSettings);
+
         /// <summary>Etiqueta del lector del área que cubre el Mapa mientras la canoa sube el tramo (D-053) [P].</summary>
         public static string MapJourney => Loc.T(Keys.MapJourney);
 
@@ -202,6 +208,9 @@ namespace AF.UI
 
             /// <summary>«Cerrar», la X de los modales [P].</summary>
             public const string Close = "a11y_close";
+
+            /// <summary>«Pausa y ajustes», el engranaje del nivel [P].</summary>
+            public const string PauseSettings = "a11y_pause_settings";
 
             /// <summary>«Continuar», un velo que se toca para seguir [P].</summary>
             public const string TapToContinue = "a11y_tap_to_continue";

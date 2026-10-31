@@ -476,8 +476,10 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(host.Find(A11yText.TapToContinue), Is.Null, "el fondo del tablero (C7) no se publica como «Continuar»");
-            A11yItem? pause = host.Find(UiText.Pause);
-            Assert.That(pause, Is.Not.Null, "02 §12: la pausa, botón de solo icono, dice «Pausa»");
+            Assert.That(host.Find(UiText.Pause), Is.Null, "el engranaje ya no dice solo «Pausa» (observación de la prueba de la 10001)");
+            A11yItem? pause = host.Find(A11yText.PauseSettings);
+            Assert.That(pause, Is.Not.Null, "02 §12: la pausa, botón de solo icono (el engranaje), dice «Pausa y ajustes»");
+            Assert.That(pause!.Label, Is.EqualTo("Pausa y ajustes"));
             Assert.That(pause!.Role, Is.EqualTo(AccessibilityRole.Button));
 
             // Un velo en otro lienzo de encima (como el Mercado o un anuncio): el lector se para en él y una cuia no se toca a través.

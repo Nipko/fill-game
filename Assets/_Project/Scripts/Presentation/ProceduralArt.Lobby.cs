@@ -32,7 +32,10 @@ namespace AF.Presentation
         /// <summary>Canoa vacía: silueta gris volcada con la línea de agua por encima (glosario §2.2), 44 × 26 dp.</summary>
         public Sprite IconCanoeEmpty { get; private set; } = null!;
 
-        /// <summary>Engranaje de Ajustes en <c>crema</c> (07 §7.6: «engranaje de madera» sobre el disco de madera), 26 dp.</summary>
+        /// <summary>
+        /// Engranaje de Ajustes en <c>crema</c> (07 §7.6: «engranaje de madera» sobre el disco de madera), 26 dp. También es el
+        /// botón de pausa del nivel (observación de la prueba de la 10001, 2026-10-31).
+        /// </summary>
         public Sprite IconGear { get; private set; } = null!;
 
         /// <summary>Engranaje deshabilitado (<c>deshabilitado_glifo</c>).</summary>
