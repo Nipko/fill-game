@@ -40,7 +40,7 @@ Marca cada una al hacerla. Entre paréntesis, la sección de esta guía.
 - [ ] Noticias, gobierno, finanzas, salud y demás declaraciones (§14)
 - [ ] Prueba completa en la pista interna (§15)
 - [x] Países y regiones de producción (§16)
-- [ ] Promoción a producción al 100 %, envío a revisión y «Publicar cambios» (§17) — **promoción y envío hechos el 2026-10-31 con la 10003; falta «Publicar cambios» tras la aprobación**
+- [x] Promoción a producción al 100 %, envío a revisión y «Publicar cambios» (§17) — **promoción y envío hechos el 2026-10-31 con la 10003; publicada el mismo día**
 - [ ] Lo de después de publicar (§18)
 
 ---

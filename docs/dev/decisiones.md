@@ -4869,3 +4869,13 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Para que lo sepa el dueño:**
   - el segmento incluye **Google Play Games para PC** («habilitado en la Configuración avanzada», que Play Console activa por defecto); no se decidió ni se probó: el AAB solo trae arm64-v8a y el juego es vertical. Si prefieres no salir en PC, se quita en Configuración avanzada › Factores de forma;
   - Play avisa de que faltan el archivo de desofuscación y los símbolos nativos (sin efecto en la revisión).
+
+### D-059, añadido del 2026-10-31: la 1.0.0 (10003) publicada en producción
+
+- Google aprobó el envío 1 (producción, fichas, contenido de la app, distribución avanzada y configuración de la tienda) el mismo 2026-10-31, sin problemas de políticas. Con la orden del dueño («Publicar ahora»), el integrador pulsó «Publicar 16 cambios». Producción: **Activo · 10003 (1.0.0) · 174 países o regiones**, al 100 %.
+- **Para la siguiente versión**, las 4 acciones recomendadas de Play Console sobre la 10003:
+  - borde a borde que puede no verse para todos;
+  - APIs obsoletas de borde a borde;
+  - quitar las restricciones de tamaño y orientación para pantallas grandes;
+  - optimización con R8.
+- **Queda §18:** vincular la app en AdMob con su ficha de Play; la URL de la tienda en Unity; las alertas de Crashlytics y de Android vitals; archivar los textos legales; vigilar fallos y ANR. Además, el plan Blaze antes del 15 de noviembre.
