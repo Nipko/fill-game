@@ -4828,3 +4828,14 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   - el engranaje.
   - De la 10001 queda comprobado el borrado de cuenta, que funcionó.
 - **La versión que se promociona a producción (§17) es ya la 10002, no la 10001.**
+
+### D-059, añadido del 2026-10-31: la prueba de la 10002 y dos cambios para la siguiente versión
+
+- **Comprobado por el dueño en la 10002:** la compra ya no se bloquea y acredita las semillas; el Reto del río, los anuncios y el volumen están bien. Crashlytics no tiene fallos ni ANR de la 10002: los dos ANR de `AfBillingListener.onPurchasesUpdated` son de la 10001. Sigue probando hasta la Liga.
+- **Para la siguiente versión, no para la 1.0 (decisión del dueño):**
+  1. **Aguas estancadas solo cuando el jugador repite (cambia D-014).** En el nivel 26 el modal «No hay más vertidos» salió con vertidos todavía legales: el dueño, numerando las cuias de arriba abajo y de izquierda a derecha, aún podía hacer 2 → 9, 1 → 2 y 6 → 7. El cierre de `DeadEndProbe` era correcto: 12 estados alcanzables, ninguno ganado, y el solver lo da por irresoluble. Pero cortarlo antes de que el jugador agote esos vertidos rompe la ilusión de que puede seguir. Regla nueva: con el cierre perdido, el modal espera a que **todo vertido legal lleve a un tablero ya visto en el intento** (movimiento repetitivo). Tablero de regresión, de abajo arriba y con la Cuia chica de 2 en el 4.º puesto (Y amarillo, P rosa, W blanco, B azul, M morado, R rojo, O naranja):
+     - fila de arriba: `[Y,P,P,W]`, `[W,W,W,P]`, `[Y,Y,Y]`, `[B,B]` (cap 2) y `[B,M,M]`;
+     - fila de abajo: `[B,R,O,R]`, `[R]`, `[M,M,O,O]` y `[R,O,P]`.
+     
+     Toca `DeadEndProbe` o `LevelSession` (núcleo), sus tests (nivel 66 y nivel 26), 02 R13 y R14, y los tests de Unity del modal (`StuckLoopTests`).
+  2. **La música.** Tras los lechos rellenados y los −3 dB del añadido de D-026, el dueño la ve aceptable para la 1.0, pero aún no le convence y quiere cambiarla. Falta concretar el cambio (nuevas pistas o arreglo, mezcla o carácter).
