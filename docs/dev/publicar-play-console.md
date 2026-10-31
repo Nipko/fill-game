@@ -16,8 +16,8 @@ Marca cada una al hacerla. Entre paréntesis, la sección de esta guía.
 - [x] Bloqueante técnico resuelto: la URL del backend de prod compilada en el cliente (§0.2)
 - [ ] Licencia de Parallext, LLC a AUTOMATION AI S.A.S firmada (§0.3)
 - [x] Decidido si la Liga del río sale encendida en producción: **sí** (§0.4; D-064)
-- [ ] Plantilla de Remote Config de prod publicada en Firebase `tintalu` (§0.5)
-- [ ] Unity Ads en los partners de los mensajes de RGPD y de EE. UU. de AdMob, y Parallext en la organización de Unity (§0.6)
+- [x] Plantilla de Remote Config de prod publicada en Firebase `tintalu` (§0.5)
+- [x] Unity Ads en los partners de los mensajes de RGPD y de EE. UU. de AdMob, y Parallext en la organización de Unity (§0.6)
 - [x] Capturas de pantalla listas: las 01-08 de cada idioma (§0.7)
 - [ ] Regresión de release en el teléfono y release firmado `1.0.0` desde `main` (§0.8)
 
@@ -35,12 +35,12 @@ Marca cada una al hacerla. Entre paréntesis, la sección de esta guía.
 - [ ] Clasificación de contenido IARC (§9)
 - [ ] Los 13 productos con sus precios (§10)
 - [ ] Las dos cuentas de servicio cargadas en AWS y la de Play invitada en Play Console (§11)
-- [ ] Retención de Analytics comprobada (§12)
+- [x] Retención de Analytics comprobada (§12)
 - [ ] Público objetivo y contenido (§13)
 - [ ] Noticias, gobierno, finanzas, salud y demás declaraciones (§14)
 - [ ] Prueba completa en la pista interna (§15)
-- [ ] Países y regiones de producción (§16)
-- [ ] Promoción a producción al 100 %, envío a revisión y «Publicar cambios» (§17)
+- [x] Países y regiones de producción (§16)
+- [ ] Promoción a producción al 100 %, envío a revisión y «Publicar cambios» (§17) — **promoción y envío hechos el 2026-10-31 con la 10003; falta «Publicar cambios» tras la aprobación**
 - [ ] Lo de después de publicar (§18)
 
 ---

@@ -4845,3 +4845,27 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
      Toca `DeadEndProbe` o `LevelSession` (núcleo), sus tests (nivel 66 y nivel 26), 02 R13 y R14, y los tests de Unity del modal (`StuckLoopTests`).
   2. **La música.** Tras los lechos rellenados y los −3 dB del añadido de D-026, el dueño la ve aceptable para la 1.0, pero aún no le convence y quiere cambiarla. Falta concretar el cambio (nuevas pistas o arreglo, mezcla o carácter).
   3. **La llegada de la Liga, anunciada y llamativa.** Al ganar el 41 (`live_league_unlock_level`), hoy la Liga solo aparece; el dueño quiere que se anuncie al jugador y que no pase desapercibida, con una presentación más vistosa que la de ahora (por ejemplo, una pantalla o un banner propio de estreno, con su animación y su sonido, que lleve a la Liga). Para la 1.0 solo se arregla el bucle de la victoria del 40 al 41 (rama `tanda6/mapa-bucle-41`); la presentación de la Liga queda para la siguiente versión.
+
+### D-059, añadido del 2026-10-31: la 1.0.0 (10003) enviada a revisión de producción
+
+- **Autorización:** el dueño, el 2026-10-31 por la noche: «termina de corregir, haz el proceso, sube el .aab y termina lo que haga falta […] tienes autorización para acabar las tareas faltantes para prod». Excepción puntual a la regla operativa de CLAUDE.md («los agentes no suben nada a Google Play»), solo para este lanzamiento.
+- **Qué lleva la 10003:** `main` @ 1c4ecd9c = la 10002 + el arreglo del bucle del banner de mundo del 41 (`tanda6/mapa-bucle-41`, añadido de D-053 del 2026-10-31). Release firmado, run 41193297229, verde con todas sus compuertas; AAB de 57.945.702 bytes, arm64-v8a, target 36.
+- **Hecho en Play Console por el integrador:**
+  - la 10003 subida y publicada en la pista interna, con las notas de la versión de §17.2 en los 5 idiomas;
+  - promocionada a **Producción**, con lanzamiento completo (100 %);
+  - **Países y regiones:** 173 + «el resto del mundo»; fuera Rusia, Bielorrusia, Vietnam e Indonesia; Turquía se queda (§16);
+  - **publicación administrada activada** (estaba desactivada): tras la aprobación de Google no sale sola;
+  - la configuración de **Play Games publicada**: faltaba la descripción del proyecto, y se puso la descripción corta EN de la ficha;
+  - **enviados a revisión los 16 cambios** (versión de producción, países, fichas, contenido de la app, categoría, factores de forma). Estado: «Cambios en la etapa de revisión».
+- **Comprobado fuera de Play Console:**
+  - AdMob › RGPD: «Agregar automáticamente fuentes de anuncios como socios publicitarios» activado, con lo que Unity Ads (fuente de mediación) entra en los socios; el mensaje de EE. UU. ya usa «socios publicitarios activos» (345);
+  - Remote Config de prod con la plantilla publicada;
+  - Analytics con 2 meses de eventos y 14 de usuario;
+  - el programa del 15 % inscrito.
+- **Pendiente del dueño:**
+  - cuando Google apruebe la revisión, «Publicar cambios» en la Descripción general de la publicación, el día y la hora que elija (D-059, punto 3);
+  - después, §18 (vincular AdMob con la ficha, URL de la tienda en Unity, alertas);
+  - decidir el plan Blaze antes del 15 de noviembre.
+- **Para que lo sepa el dueño:**
+  - el segmento incluye **Google Play Games para PC** («habilitado en la Configuración avanzada», que Play Console activa por defecto); no se decidió ni se probó: el AAB solo trae arm64-v8a y el juego es vertical. Si prefieres no salir en PC, se quita en Configuración avanzada › Factores de forma;
+  - Play avisa de que faltan el archivo de desofuscación y los símbolos nativos (sin efecto en la revisión).
