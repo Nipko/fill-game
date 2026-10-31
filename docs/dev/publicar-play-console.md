@@ -69,6 +69,8 @@ Marca cada una al hacerla. Entre paréntesis, la sección de esta guía.
 
 ### 0.5 Remote Config de prod
 
+**Hecho el 2026-10-30:** `live_league_enabled = true` publicado en el proyecto `tintalu` (decisión del dueño: «encendámosla de una vez»; D-064). La app lo aplica en el arranque siguiente al primer fetch (intervalo mínimo de 12 h).
+
 - La plantilla `tools/out/remote_config_template_prod.json` (250 de las 256 claves de 08 §9) la publicas tú en el proyecto `tintalu` (D-035, añadido del 2026-10-27; `docs/dev/remote-config-analytics.md` §9). Publicarla no cambia el comportamiento: son los defaults compilados. Hazlo antes del lanzamiento para poder frenar sistemas sin publicar otra versión (`biz_feature_*`, `mech_enabled_*`; `docs/dev/release.md` §4 bis, paso 7).
 - Como la Liga sale encendida (§0.4; D-064), cambia ahí `live_league_enabled` a `true` antes de publicar.
 
