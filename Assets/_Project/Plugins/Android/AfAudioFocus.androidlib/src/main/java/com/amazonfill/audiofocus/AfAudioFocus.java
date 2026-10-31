@@ -8,6 +8,7 @@ import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 
 /**
@@ -26,8 +27,11 @@ import android.os.Looper;
  * <li>Android avisa al {@link Listener} cuando otro toma el foco o lo devuelve: una alarma o el timbre de una llamada
  * ({@code AUDIOFOCUS_LOSS_TRANSIENT}), un aviso que se puede oir por encima ({@code AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK}), otra app
  * de musica ({@code AUDIOFOCUS_LOSS}) y la vuelta ({@code AUDIOFOCUS_GAIN}). El aviso llega como texto ({@link #GAIN},
- * {@link #DUCK}, {@link #LOSS_TRANSIENT} o {@link #LOSS}), en el hilo principal de Android; C# lo guarda y lo aplica en su
- * fotograma (AF.Audio.Unity.AndroidAudioFocus).</li>
+ * {@link #DUCK}, {@link #LOSS_TRANSIENT} o {@link #LOSS}) desde un hilo de fondo propio ({@value #CALLBACK_THREAD}), nunca
+ * desde el hilo principal de Android; C# lo guarda y lo aplica en su fotograma (AF.Audio.Unity.AndroidAudioFocus). El oyente es
+ * un AndroidJavaProxy y llamarlo espera al hilo de Unity: una alarma que tapa el juego pausa Unity justo cuando llega su
+ * {@code AUDIOFOCUS_LOSS_TRANSIENT}, y desde el hilo principal eso seria el mismo interbloqueo (y ANR) que el de Play Billing
+ * en la 1.0.0 (10001) (AfBilling, 2026-10-31; docs/dev/iap.md). Que el hilo de avisos espere a Unity no bloquea nada.</li>
  * <li>{@code setWillPauseWhenDucked(true)}: con un aviso que se puede oir por encima, Android no baja el volumen el solo (el
  * ducking automatico de Android 8+), sino que avisa y el juego baja la musica al 20 %; asi lo decide y lo dice la sonda.</li>
  * </ul>
@@ -54,11 +58,16 @@ public final class AfAudioFocus {
 
     /** Lo que avisa de los cambios del foco (lo implementa C# con un AndroidJavaProxy). */
     public interface Listener {
-        /** {@link #GAIN}, {@link #DUCK}, {@link #LOSS_TRANSIENT} o {@link #LOSS}, en el hilo principal. */
+        /** {@link #GAIN}, {@link #DUCK}, {@link #LOSS_TRANSIENT} o {@link #LOSS}, en el hilo {@value #CALLBACK_THREAD}. */
         void onFocus(String state);
     }
 
+    /** Nombre del hilo de fondo que entrega los cambios del foco al {@link Listener} (nunca el principal). */
+    static final String CALLBACK_THREAD = "AfAudioFocus-callbacks";
+
     private static final Object LOCK = new Object();
+    /** El hilo de los avisos: uno para todo el proceso, creado con el primer pedido y vivo mientras viva el proceso. */
+    private static HandlerThread callbackThread;
     private static AudioManager manager;
     private static AudioFocusRequest pending;
     private static volatile Listener listener;
@@ -138,7 +147,7 @@ public final class AfAudioFocus {
                         .setAudioAttributes(attributes)
                         .setWillPauseWhenDucked(true)
                         .setAcceptsDelayedFocusGain(false)
-                        .setOnAudioFocusChangeListener(CHANGES, new Handler(Looper.getMainLooper()))
+                        .setOnAudioFocusChangeListener(CHANGES, new Handler(callbackLooper()))
                         .build();
                 }
 
@@ -150,6 +159,16 @@ public final class AfAudioFocus {
                 return ERROR;
             }
         }
+    }
+
+    // El Looper del hilo de avisos (con LOCK): Android llama ahi a CHANGES, y de ahi sale el aviso a C#.
+    private static Looper callbackLooper() {
+        if (callbackThread == null) {
+            callbackThread = new HandlerThread(CALLBACK_THREAD);
+            callbackThread.start();
+        }
+
+        return callbackThread.getLooper();
     }
 
     /** Suelta el foco (cualquier hilo); sin efecto si no se pidio. Despues no llega ningun aviso. */
@@ -219,7 +238,7 @@ public final class AfAudioFocus {
         }
     }
 
-    // En el hilo principal (el Handler del pedido).
+    // En el hilo de avisos (el Handler del pedido), nunca en el principal.
     private static void onChange(int change) {
         String state = name(change);
         Listener target = listener;

@@ -3,6 +3,7 @@ package com.amazonfill.billing;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 
 import com.android.billingclient.api.AcknowledgePurchaseParams;
@@ -33,8 +34,16 @@ import java.util.Map;
  * no guarda nada en disco y no escribe nada en el log. <b>Solo habla con Play</b> (el servicio de facturación de la Play Store, a
  * través de la biblioteca); no abre ninguna conexión propia ni conoce ningún otro host.
  *
- * <p>Todas las llamadas pasan al hilo principal de Android, donde también llegan los avisos de {@link BillingClient}; así el estado
- * de esta clase solo se toca en un hilo. Las respuestas salen por {@link AfBillingListener}.
+ * <p>Hilos. Todas las llamadas pasan al hilo principal de Android, donde también llegan los avisos de {@link BillingClient}; así el
+ * estado de esta clase ({@code details}, {@code connecting}, {@code released}…) solo se toca en un hilo, y ahí se calcula todo lo
+ * que lleva cada respuesta (filas y códigos). Pero las respuestas a {@link AfBillingListener} <b>nunca salen del hilo principal</b>:
+ * {@link #deliver(Runnable)} las entrega, ya calculadas y en el mismo orden, desde un único hilo de fondo propio
+ * ({@value #CALLBACK_THREAD}, un {@link HandlerThread}). El oyente es un AndroidJavaProxy de C#, y llamarlo espera al hilo de Unity.
+ * Con Unity en pausa (la hoja de compra de Play aún tapa la actividad cuando llega {@code onPurchasesUpdated}), el hilo principal se
+ * quedaba esperando a Unity, y Unity solo se reanuda cuando el hilo principal procesa {@code onResume}: un interbloqueo y un ANR en
+ * cada compra (Crashlytics, 1.0.0 (10001) en la pista interna, 2026-10-31: «ANR triggered by slow operations in main thread», con el
+ * hilo principal en {@code ReflectionHelper.nativeProxyInvoke} desde {@code onPurchasesUpdated}; docs/dev/iap.md). Que el hilo de
+ * avisos espere a que Unity se reanude no bloquea nada. {@link #release()} lo suelta después del último aviso ya encolado.
  *
  * <p>Productos integrados ({@code INAPP}) solamente; compras pendientes de pago habilitadas
  * ({@code enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts())}) y reconexión automática
@@ -48,7 +57,13 @@ public final class AfBilling implements PurchasesUpdatedListener {
     /** Antes de abrir la hoja sin conexión: hasta 10 vueltas de 500 ms (5 s). */
     private static final int LAUNCH_POLLS = 10;
 
+    /** Nombre del hilo de fondo que entrega los avisos a {@link AfBillingListener}. */
+    static final String CALLBACK_THREAD = "AfBilling-callbacks";
+
     private final Handler main = new Handler(Looper.getMainLooper());
+    /** El único hilo que llama a {@link #listener} (nunca el principal; ver el javadoc de la clase). */
+    private final HandlerThread callbackThread;
+    private final Handler callbacks;
     private final Context context;
     private final AfBillingListener listener;
     /**
@@ -74,7 +89,29 @@ public final class AfBilling implements PurchasesUpdatedListener {
 
         this.context = context.getApplicationContext();
         this.listener = listener;
+        callbackThread = new HandlerThread(CALLBACK_THREAD);
+        callbackThread.start();
+        callbacks = new Handler(callbackThread.getLooper());
         main.post(this::create);
+    }
+
+    /**
+     * Encola un aviso a {@link #listener} en el hilo {@value #CALLBACK_THREAD}, en orden. Solo se llama en el hilo principal y solo con
+     * valores ya calculados (el aviso no lee el estado de esta clase ni objetos de Play). Tras {@link #release()} no encola nada: lo ya
+     * encolado sale antes de soltar el hilo.
+     */
+    private void deliver(final Runnable call) {
+        if (released) {
+            return;
+        }
+
+        callbacks.post(() -> {
+            try {
+                call.run();
+            } catch (RuntimeException e) {
+                // C# ya no escucha (la escena se recargó): el hilo de avisos sigue con los demás
+            }
+        });
     }
 
     private void create() {
@@ -98,7 +135,7 @@ public final class AfBilling implements PurchasesUpdatedListener {
 
             create();
             if (client.isReady()) {
-                listener.onSetupFinished(OK);
+                deliver(() -> listener.onSetupFinished(OK));
                 return;
             }
 
@@ -117,7 +154,7 @@ public final class AfBilling implements PurchasesUpdatedListener {
         }
 
         if (client.isReady()) {
-            listener.onSetupFinished(OK);
+            deliver(() -> listener.onSetupFinished(OK));
             return;
         }
 
@@ -129,7 +166,7 @@ public final class AfBilling implements PurchasesUpdatedListener {
                 waitingReconnect = true;
                 main.postDelayed(() -> startOrWait(polls + 1), RECONNECT_POLL_MS);
             } else {
-                listener.onSetupFinished(BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE);
+                deliver(() -> listener.onSetupFinished(BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE));
             }
 
             return;
@@ -142,9 +179,8 @@ public final class AfBilling implements PurchasesUpdatedListener {
                 public void onBillingSetupFinished(BillingResult result) {
                     main.post(() -> {
                         connecting = false;
-                        if (!released) {
-                            listener.onSetupFinished(code(result));
-                        }
+                        final int code = code(result);
+                        deliver(() -> listener.onSetupFinished(code));
                     });
                 }
 
@@ -152,15 +188,13 @@ public final class AfBilling implements PurchasesUpdatedListener {
                 public void onBillingServiceDisconnected() {
                     main.post(() -> {
                         connecting = false;
-                        if (!released) {
-                            listener.onDisconnected();
-                        }
+                        deliver(listener::onDisconnected);
                     });
                 }
             });
         } catch (RuntimeException e) {
             connecting = false;
-            listener.onSetupFinished(BillingClient.BillingResponseCode.ERROR);
+            deliver(() -> listener.onSetupFinished(BillingClient.BillingResponseCode.ERROR));
         }
     }
 
@@ -186,7 +220,7 @@ public final class AfBilling implements PurchasesUpdatedListener {
 
             if (products.isEmpty()) {
                 details = new HashMap<>(); // nada pedido: nada que vender
-                listener.onProducts(requestId, OK, "");
+                deliver(() -> listener.onProducts(requestId, OK, ""));
                 return;
             }
 
@@ -195,7 +229,7 @@ public final class AfBilling implements PurchasesUpdatedListener {
                         QueryProductDetailsParams.newBuilder().setProductList(products).build(),
                         (result, found) -> main.post(() -> onProductDetails(requestId, result, found)));
             } catch (RuntimeException e) {
-                listener.onProducts(requestId, BillingClient.BillingResponseCode.ERROR, null);
+                deliver(() -> listener.onProducts(requestId, BillingClient.BillingResponseCode.ERROR, null));
             }
         });
     }
@@ -207,13 +241,14 @@ public final class AfBilling implements PurchasesUpdatedListener {
 
         int code = code(result);
         if (requestId != latestProductsRequest) {
-            listener.onProducts(requestId, code, null); // una consulta anterior: C# ya no la espera y no toca los productos
+            deliver(() -> listener.onProducts(requestId, code, null)); // una consulta anterior: C# ya no la espera y no toca los productos
             return;
         }
 
         if (code != OK || found == null) {
             details = new HashMap<>(); // la consulta más reciente falló: no se vende nada (C# queda sin Play hasta otro intento)
-            listener.onProducts(requestId, code == OK ? BillingClient.BillingResponseCode.ERROR : code, null);
+            final int failed = code == OK ? BillingClient.BillingResponseCode.ERROR : code;
+            deliver(() -> listener.onProducts(requestId, failed, null));
             return;
         }
 
@@ -235,7 +270,8 @@ public final class AfBilling implements PurchasesUpdatedListener {
         }
 
         details = fresh;
-        listener.onProducts(requestId, OK, rows.toString());
+        final String productRows = rows.toString();
+        deliver(() -> listener.onProducts(requestId, OK, productRows));
     }
 
     /**
@@ -257,12 +293,13 @@ public final class AfBilling implements PurchasesUpdatedListener {
                                 return;
                             }
 
-                            int code = code(result);
+                            final int code = code(result);
                             String country = code == OK && config != null ? config.getCountryCode() : null;
-                            listener.onBillingConfig(requestId, code, clean(country) ? country : null);
+                            final String countryCode = clean(country) ? country : null;
+                            deliver(() -> listener.onBillingConfig(requestId, code, countryCode));
                         }));
             } catch (RuntimeException e) {
-                listener.onBillingConfig(requestId, BillingClient.BillingResponseCode.ERROR, null);
+                deliver(() -> listener.onBillingConfig(requestId, BillingClient.BillingResponseCode.ERROR, null));
             }
         });
     }
@@ -283,11 +320,12 @@ public final class AfBilling implements PurchasesUpdatedListener {
                                 return;
                             }
 
-                            int code = code(result);
-                            listener.onPurchases(requestId, code, code == OK ? rows(purchases) : null);
+                            final int code = code(result);
+                            final String purchaseRows = code == OK ? rows(purchases) : null;
+                            deliver(() -> listener.onPurchases(requestId, code, purchaseRows));
                         }));
             } catch (RuntimeException e) {
-                listener.onPurchases(requestId, BillingClient.BillingResponseCode.ERROR, null);
+                deliver(() -> listener.onPurchases(requestId, BillingClient.BillingResponseCode.ERROR, null));
             }
         });
     }
@@ -320,7 +358,7 @@ public final class AfBilling implements PurchasesUpdatedListener {
 
         ProductDetails pd = sku == null ? null : details.get(sku);
         if (pd == null || activity == null) {
-            listener.onLaunchFailed(sku, BillingClient.BillingResponseCode.ITEM_UNAVAILABLE);
+            deliver(() -> listener.onLaunchFailed(sku, BillingClient.BillingResponseCode.ITEM_UNAVAILABLE));
             return;
         }
 
@@ -340,12 +378,12 @@ public final class AfBilling implements PurchasesUpdatedListener {
                 flow.setObfuscatedAccountId(obfuscatedAccountId);
             }
 
-            int code = code(client.launchBillingFlow(activity, flow.build()));
+            final int code = code(client.launchBillingFlow(activity, flow.build()));
             if (code != OK) {
-                listener.onLaunchFailed(sku, code);
+                deliver(() -> listener.onLaunchFailed(sku, code));
             }
         } catch (RuntimeException e) {
-            listener.onLaunchFailed(sku, BillingClient.BillingResponseCode.ERROR);
+            deliver(() -> listener.onLaunchFailed(sku, BillingClient.BillingResponseCode.ERROR));
         }
     }
 
@@ -358,19 +396,18 @@ public final class AfBilling implements PurchasesUpdatedListener {
 
             create();
             if (!clean(token)) {
-                listener.onConsumed(token, BillingClient.BillingResponseCode.DEVELOPER_ERROR);
+                deliver(() -> listener.onConsumed(token, BillingClient.BillingResponseCode.DEVELOPER_ERROR));
                 return;
             }
 
             try {
                 client.consumeAsync(ConsumeParams.newBuilder().setPurchaseToken(token).build(),
                         (result, consumedToken) -> main.post(() -> {
-                            if (!released) {
-                                listener.onConsumed(token, code(result));
-                            }
+                            final int code = code(result);
+                            deliver(() -> listener.onConsumed(token, code));
                         }));
             } catch (RuntimeException e) {
-                listener.onConsumed(token, BillingClient.BillingResponseCode.ERROR);
+                deliver(() -> listener.onConsumed(token, BillingClient.BillingResponseCode.ERROR));
             }
         });
     }
@@ -384,24 +421,26 @@ public final class AfBilling implements PurchasesUpdatedListener {
 
             create();
             if (!clean(token)) {
-                listener.onAcknowledged(token, BillingClient.BillingResponseCode.DEVELOPER_ERROR);
+                deliver(() -> listener.onAcknowledged(token, BillingClient.BillingResponseCode.DEVELOPER_ERROR));
                 return;
             }
 
             try {
                 client.acknowledgePurchase(AcknowledgePurchaseParams.newBuilder().setPurchaseToken(token).build(),
                         result -> main.post(() -> {
-                            if (!released) {
-                                listener.onAcknowledged(token, code(result));
-                            }
+                            final int code = code(result);
+                            deliver(() -> listener.onAcknowledged(token, code));
                         }));
             } catch (RuntimeException e) {
-                listener.onAcknowledged(token, BillingClient.BillingResponseCode.ERROR);
+                deliver(() -> listener.onAcknowledged(token, BillingClient.BillingResponseCode.ERROR));
             }
         });
     }
 
-    /** Suelta la conexión con Play (al recargar la escena); después no avisa de nada más. */
+    /**
+     * Suelta la conexión con Play (al recargar la escena); después no avisa de nada más. Los avisos ya encolados en el hilo
+     * {@value #CALLBACK_THREAD} salen antes de soltarlo ({@code quitSafely}); {@link #deliver(Runnable)} ya no encola ninguno nuevo.
+     */
     public void release() {
         main.post(() -> {
             if (released) {
@@ -409,6 +448,7 @@ public final class AfBilling implements PurchasesUpdatedListener {
             }
 
             released = true;
+            callbackThread.quitSafely(); // después del último aviso encolado; lo que se encolara luego se descarta
             details.clear();
             if (client != null) {
                 try {
@@ -422,12 +462,13 @@ public final class AfBilling implements PurchasesUpdatedListener {
 
     @Override
     public void onPurchasesUpdated(BillingResult result, List<Purchase> purchases) {
-        // Play lo llama en el hilo principal; se encola igual para conservar el orden con el resto de avisos.
+        // Play lo llama en el hilo principal, a menudo con la hoja de compra aún encima y Unity en pausa: el aviso sale por el hilo de
+        // avisos (deliver), nunca de aquí (el ANR de la 1.0.0 (10001); ver el javadoc de la clase). Se encola en el principal para
+        // conservar el orden con el resto de avisos, y las filas se calculan ahí.
         main.post(() -> {
-            if (!released) {
-                int code = code(result);
-                listener.onPurchasesUpdated(code, code == OK ? rows(purchases) : null);
-            }
+            final int code = code(result);
+            final String purchaseRows = code == OK ? rows(purchases) : null;
+            deliver(() -> listener.onPurchasesUpdated(code, purchaseRows));
         });
     }
 

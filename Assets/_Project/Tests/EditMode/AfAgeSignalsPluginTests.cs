@@ -41,9 +41,26 @@ namespace AF.Tests.EditMode
             foreach (Match m in Regex.Matches(text, @"^import\s+([\w\.]+);", RegexOptions.Multiline))
             {
                 string import = m.Groups[1].Value;
-                bool allowed = import.StartsWith("com.google.android.play.agesignals.", StringComparison.Ordinal) || import == "android.content.Context";
+                bool allowed = import.StartsWith("com.google.android.play.agesignals.", StringComparison.Ordinal) || import == "android.content.Context"
+                    || import == "android.os.Handler" || import == "android.os.HandlerThread";
                 Assert.That(allowed, Is.True, "importa " + import);
             }
+        }
+
+        [Test]
+        public void TheAnswer_NeverLeavesTheMainLooper()
+        {
+            // Como el ANR de Play Billing de la 1.0.0 (10001), 2026-10-31 (docs/dev/iap.md): llamar al AndroidJavaProxy de C# desde el
+            // hilo principal de Android con Unity en pausa es un interbloqueo. La Task de Play entrega por defecto en el principal: sus
+            // oyentes van con el Executor del hilo propio AfAgeSignals-callbacks.
+            string text = File.ReadAllText(JavaFile);
+            StringAssert.Contains("static final String CALLBACK_THREAD = \"AfAgeSignals-callbacks\";", text);
+            StringAssert.Contains("HandlerThread thread = new HandlerThread(CALLBACK_THREAD);", text);
+            StringAssert.Contains(".addOnSuccessListener(handler::post, result -> deliver(listener, toWire(result)))", text);
+            StringAssert.Contains(".addOnFailureListener(handler::post, e -> deliver(listener, errorWire(e)))", text);
+            Assert.That(Regex.Matches(text, @"\.addOn\w+Listener\(").Count, Is.EqualTo(2), "ningún oyente sin Executor");
+            StringAssert.DoesNotContain("getMainLooper", text);
+            StringAssert.DoesNotContain("addOnCompleteListener", text);
         }
 
         [Test]
