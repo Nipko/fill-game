@@ -297,10 +297,10 @@ namespace AF.UI
         /// <summary>Pide el inmersivo; true si se pudo pedir (en el teléfono).</summary>
         public static bool Apply()
         {
-            Screen.fullScreen = true;
 #if UNITY_ANDROID && !UNITY_EDITOR
             try
             {
+                Screen.fullScreen = true; // solo en el teléfono: en el Editor no toca la ventana del juego
                 AndroidJavaObject activity = UnityEngine.Android.AndroidApplication.currentActivity;
                 if (activity == null)
                 {
