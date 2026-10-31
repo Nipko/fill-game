@@ -4083,6 +4083,11 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Cambia el GDD:** 06 §2.3 (fila 3: «hasta toque» pasa a «la canoa sube enseguida y "Jugar · Nivel 11" sale al llegar») y 06 §4.5 (Entradas).
 - **Cómo revertir:** con una decisión nueva del dueño; técnicamente, `RiverMapScreen.JourneySource` y las constantes `Journey*` de `RiverMapScreen.Journey.cs`.
 
+### D-053, añadido del 2026-10-31: «Jugar» del Mapa abierto desde el banner de mundo lleva al nivel
+
+- **Fallo** (prueba del dueño con la 1.0.0 (10002)): «pasé el 40, se quedó en un loop en ver mapa e iniciar el próximo juego»; solo salió por el engranaje. En el banner del 41 (viaje de mundo, Q4-D), «Ver mapa» abría el Mapa encima (`world_change`) con «Jugar · Nivel 41» (la etiqueta del inicio, D-032, punto 6), pero ese botón solo cerraba el Mapa y devolvía al banner (`GameBootstrap.PressMapPlay`), cuyo único botón a la vista era otra vez «Ver mapa». Que un toque en cualquier otro punto cierre el banner no se ve. Pasaba igual en el 81, el 141 y los demás bancos con viaje, desde la victoria y desde el inicio.
+- **Arreglo:** ese «Jugar» cierra el Mapa y empieza la salida del banner (como un toque, `GameScreen.CloseWorldBannerToPlay`), y el nivel sigue con la tarjeta previa o la intro: 06, tabla del Mapa del río («Jugar · Nivel {n}» siempre a la vista); propuesta del Mapa, fila «Cambio de mundo, con Q4-D» (Mapa → Fruta nueva → Llenar y teñir); 02 §6 (no se apilan Mapa y banner). La ← y el Atrás de Android siguen volviendo al banner. Pausa, victoria y fin de contenido, sin cambios. Tests: `WorldChangeMapLoopTests`.
+
 ## D-054 · La revisión de los textos la hace Gemini (español cultural, inglés y portugués de Brasil)
 
 - **Fecha:** 2026-10-26. Registrada por el integrador.
