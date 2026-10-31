@@ -10,7 +10,7 @@
 
 | Campo | Valor | Origen |
 |---|---|---|
-| Nombre de la app (≤ 30) | **Tintalú: Ordenar Agua** (21) | glosario §1.3; 08 §13.1 #1 |
+| Nombre de la app (≤ 30) | **Tintalu: Ordenar Agua** (21) | glosario §1.3; 08 §13.1 #1 |
 | Nombre del desarrollador | **Parallext, LLC** (parallext.com) | D-041 |
 | `applicationId` | **`com.parallext.tintalu`** (confirmado por el dueño el 2026-10-25; inmutable tras la primera subida) | D-047; 08 §13.1 #1; `CLAUDE.md`, regla 6 |
 | Cuenta de Play Console | La de **AUTOMATION AI S.A.S**, editora en Google Play y beneficiaria de los cobros; Parallext, LLC desarrolla y responde de los datos (D-048, que resuelve la duda de D-041, «Consecuencias») | D-048 |
@@ -74,8 +74,6 @@ La campaña se juega sin conexión. Los videos opcionales y las compras sí nece
 
 Tintalú es gratis, con anuncios y compras opcionales. Puedes quitar los anuncios entre niveles con «Sin anuncios».
 
-Búscanos como Tintalú o Tintalu.
-
 Juego independiente inspirado en la cuenca amazónica; sin relación con Amazon.com, Inc.
 ```
 
@@ -87,7 +85,6 @@ Recuento: `../README.md` §2 (Unicode NFC). Notas de contenido:
 - «Nueve mundos de cinco países» y la Luciérnaga dependen del alcance de la 1.0 (mundos 1-9; glosario §8): se comprueban con la build final.
 - No se promete el número de niveles ni el peso de descarga hasta la build de release (Q-B13-7, Q-B13-8).
 - **En firme (dueño, 2026-10-30; D-064):** los nombres de comodines con fauna o tupí (Morpho, Pororoca, Luciérnaga, Salto del Boto; glosario §12), TiTino, Capi y Rosa (glosario §3), «boto», «Estuario» y la frase del árbol de TiTino.
-- **«Búscanos como Tintalú o Tintalu.»** (2026-10-31): Play no encuentra la app al buscar «tintalu» sin tilde; esta línea da una mención natural de la forma ASCII (la del `applicationId`).
 - La línea de independencia es la de 08 §13.1 #5, literal, y va también en EN y PT-BR: cerrado por D-057 (investigación propia).
 
 ## 4. Palabras clave de apoyo (no son un campo de Play; guían la redacción)

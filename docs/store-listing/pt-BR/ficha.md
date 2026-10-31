@@ -8,7 +8,7 @@
 
 | Campo | Valor | Origen |
 |---|---|---|
-| Nome do app (≤ 30) | **Tintalú: Classificar Água** (25) | glosario §1.3 |
+| Nome do app (≤ 30) | **Tintalu: Classificar Água** (25) | glosario §1.3 |
 | Desenvolvedor | **Parallext, LLC** (parallext.com) | D-041 |
 | `applicationId`, cuenta de Play Console | Los de `../es-419/ficha.md` §1 (`com.parallext.tintalu`; cuenta de AUTOMATION AI S.A.S) | D-047; D-048 |
 | E-mail de contato | `support@tintalu.com` | D-041, añadido del 2026-10-25 |
@@ -69,8 +69,6 @@ A campanha funciona sem conexão. Os vídeos opcionais e as compras precisam de 
 
 Tintalú é grátis, com anúncios e compras opcionais. Tire os anúncios entre os níveis com Sem anúncios.
 
-Procure por Tintalú ou Tintalu.
-
 Jogo independente inspirado na bacia amazônica; sem relação com a Amazon.com, Inc.
 ```
 
@@ -84,7 +82,6 @@ Notas:
 - **La línea de la Liga do Rio** va en la ficha: la Liga sale encendida en producción (D-064). Su revisión legal la cerró D-057 (investigación propia); el avatar se añadió el 2026-10-30 (D-056; D-064).
 - **pt-PT:** la misma ficha, copiada sin cambios (D-057). Es portugués de Brasil; un revisor de pt-PT puede ajustarla más adelante [P].
 - **En firme (dueño, 2026-10-30; D-064):** Morpho, Pororoca, Vaga-lume, TiTino, Capi, Rosa, «a boto», «Estuário».
-- **«Procure por Tintalú ou Tintalu.»** (2026-10-31): Play no encuentra la app al buscar «tintalu» sin tilde; esta línea da una mención natural de la forma ASCII (la del `applicationId`).
 - La línea de independencia en PT-BR es la traducción de la de 08 §13.1 #5: cerrado por D-057 (investigación propia).
 
 ## 4. Palabras clave de apoyo
