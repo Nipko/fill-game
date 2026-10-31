@@ -69,6 +69,8 @@ The campaign works without a connection. Optional videos and purchases need inte
 
 Tintalú is free to play, with ads and optional purchases. Remove the ads between levels with No Ads.
 
+Find us as Tintalú or Tintalu.
+
 Independent game inspired by the Amazon basin; not affiliated with Amazon.com, Inc.
 ```
 
@@ -79,6 +81,7 @@ Notas:
 - **La línea de la River League** va en la ficha: la Liga sale encendida en producción (D-064). Su revisión legal la cerró D-057 (investigación propia); el avatar se añadió el 2026-10-30 (D-056; D-064).
 - **River League:** requiere internet y desbloquea en el 41; la descripción y la política de privacidad la declaran como encendida (D-064).
 - **En firme (dueño, 2026-10-30; D-064):** Morpho, Pororoca, Firefly, Boto Leap (no se cita), TiTino, Capi, Rosa, «river dolphin» por boto (glosario §12, `fauna.river_dolphin`), «Estuary».
+- **«Find us as Tintalú or Tintalu.»** (2026-10-31): Play no encuentra la app al buscar «tintalu» sin tilde; esta línea da una mención natural de la forma ASCII (la del `applicationId`).
 - La línea de independencia en inglés es la traducción de la de 08 §13.1 #5: cerrado por D-057 (investigación propia).
 
 ## 4. Palabras clave de apoyo
