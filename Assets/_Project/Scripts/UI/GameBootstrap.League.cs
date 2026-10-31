@@ -151,7 +151,7 @@ namespace AF.UI
 
         private ILeagueApi CreateLeagueApi(IClock clock, bool development)
         {
-            if (LaunchOptions.ResolveLeagueFake(development))
+            if (LaunchOptions.ResolveLeagueFake(development, _capture.Active)) // D-066 E1: una toma no puntúa en la Liga real
             {
                 Debug.LogWarning("AF_LEAGUE " + LaunchOptions.IntentExtraLeagueFake + " (solo desarrollo): la Liga con datos falsos, sin red.");
                 return SampleLeagueApi(clock);

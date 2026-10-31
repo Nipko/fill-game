@@ -270,9 +270,10 @@ namespace AF.UI
         {
             EndVictoryView();
             _stopCelebrationMs = 0f;
-            RiverStop? stop = StopForLevel(RiverStops, flow.LevelNumber, MapConfig.UiBgPerStop);
+            int backdropLevel = BackdropLevelFor(flow.LevelNumber); // modo de captura (D-066 E1): el fondo de otro nivel, si se pidió
+            RiverStop? stop = StopForLevel(RiverStops, backdropLevel, MapConfig.UiBgPerStop);
             string water = flow.Level.WaterBase;
-            Season season = SeasonFor(Seasons, flow.LevelNumber);
+            Season season = SeasonFor(Seasons, backdropLevel);
             Color light = DifficultyLightFor(flow.Level.DifficultyLabel); // B14: noche de Muy difícil y tarde de Difícil (07 §7.7 [P])
             RiverStop? before = _stopBackdrop.Stop;
             // Sin parada antes ni después no cambia nada visible, aunque cambie el agua del mundo (sin catálogo), salvo la luz de
