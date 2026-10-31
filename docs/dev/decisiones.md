@@ -4892,4 +4892,4 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Unity, 2026-10-31 (el dueño inició sesión):**
   - en la app «Tintalú» (Game ID 800412912) quedó puesto el ID de tienda `com.parallext.tintalu`, con la ficha de Google Play;
   - la organización ya es **Parallext, LLC**, con su dirección de Orlando (FL);
-  - **falta el perfil de cobro** (Monetización › Pagos › «Set up your payout profile») y el consentimiento para los formularios fiscales electrónicos: piden datos bancarios y fiscales, así que los pone el dueño. Sin perfil, Unity guarda el saldo y no paga.
+  - **perfil de cobro completado por el dueño el 2026-10-31** (Monetización › Pagos; «You are all set»). Falta que Unity lo verifique y aceptar «Manage consent» para los formularios fiscales electrónicos.
