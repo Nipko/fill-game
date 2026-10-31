@@ -14,8 +14,10 @@ namespace AF.UI
     /// Modo de captura para el marketing (D-066; <c>docs/dev/traspaso/spark-marketing.md</c> §6, enganche E1), solo en builds de
     /// desarrollo (<see cref="CaptureOptions.Resolve"/>: en release, siempre apagado). Con cualquier extra <c>af_capture*</c>:
     /// <list type="bullet">
-    /// <item>el perfil se lee y no se guarda (<see cref="CaptureProfileStore"/>), sin nube (la falsa sin sesión) y con la Liga de
-    /// datos falsos: la toma no toca el perfil del teléfono, ni la nube, ni la clasificación real;</item>
+    /// <item>el perfil se lee y no se guarda (<see cref="CaptureProfileStore"/>), sin nube (la falsa sin sesión), con la Liga de
+    /// datos falsos y con la tienda simulada y el backend falso (como <c>af_fake_store</c>): la toma no toca el perfil del teléfono,
+    /// ni la nube, ni la clasificación real, ni compra nada. Tampoco migra el progreso de v0 (<see cref="MigratesLegacyProgress"/>)
+    /// ni deja usar «Eliminar cuenta y datos»;</item>
     /// <item>inmersivo total, sin barra de estado ni de navegación (<see cref="CaptureImmersive"/>), también al volver de segundo plano;</item>
     /// <item>un paquete <c>af-level/1</c> del extra o de un archivo sustituye a los de la escena (validado con
     /// <see cref="LevelPackReader"/>: <c>BoardBuilder</c> y <c>LevelValidation</c> del núcleo; si no vale, error y los de siempre),
@@ -68,6 +70,8 @@ namespace AF.UI
             }
 
             CaptureLog.Write("start", _capture.Describe());
+            // Si Android recrea la actividad desde Recientes, el intent vuelve a llegar y la app entra otra vez en el modo: que se vea en logcat.
+            Debug.LogWarning("[AF.Capture] modo de captura activo (solo desarrollo): perfil en memoria, sin nube, Liga y tienda simuladas. Para salir, cierra la app y ábrela desde el icono.");
             for (int i = 0; i < _capture.Problems.Count; i++)
             {
                 CaptureLog.Error("extra", _capture.Problems[i]);
@@ -127,6 +131,29 @@ namespace AF.UI
             {
                 CaptureLog.Error("board", "el paquete no es válido: " + e.Message);
             }
+        }
+
+        /// <summary>
+        /// Se migra el progreso de v0 (<c>af_v0_level</c> de PlayerPrefs) al leer el perfil: solo con el almacén real del juego y nunca
+        /// en una toma (<paramref name="capture"/>), porque la migración borra la clave antigua tras «guardar», y el almacén de la toma
+        /// descarta lo guardado: el progreso se perdería.
+        /// </summary>
+        internal static bool MigratesLegacyProgress(bool storeOverride, bool directoryOverride, bool capture)
+        {
+            return !storeOverride && !directoryOverride && !capture;
+        }
+
+        // «Eliminar cuenta y datos» durante una toma: no se puede (llamaría al servidor y borraría PlayerPrefs, la sesión, la
+        // analítica y la nube del teléfono de pruebas). Lo dice AF_CAPTURE error con what = account.
+        private bool CaptureBlocksAccountDelete()
+        {
+            if (!_capture.Active)
+            {
+                return false;
+            }
+
+            CaptureLog.Error("account", "«Eliminar cuenta y datos» no está disponible en el modo de captura: no se borra nada");
+            return true;
         }
 
         // El almacén del arranque en frío: con el modo de captura, solo lectura.

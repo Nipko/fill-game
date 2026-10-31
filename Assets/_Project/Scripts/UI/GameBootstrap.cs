@@ -1660,7 +1660,7 @@ namespace AF.UI
             }
             else
             {
-                bool migrateLegacy = LaunchOptions.ProfileStoreOverride == null && LaunchOptions.ProfileDirectoryOverride == null;
+                bool migrateLegacy = MigratesLegacyProgress(LaunchOptions.ProfileStoreOverride != null, LaunchOptions.ProfileDirectoryOverride != null, _capture.Active);
                 profile = LoadProfile(store, clock, migrateLegacy, out firstRun, out _profileStatus);
                 _splash?.BeginIntro(ResolveReduceMotion(profile)); // D-051: la intro anima (o queda quieta) desde que se sabe; no espera a nada
                 VerifyBootProfile(profile); // B8 (GameBootstrap.Cloud.cs): la firma tal como se leyó, antes de los extras de desarrollo

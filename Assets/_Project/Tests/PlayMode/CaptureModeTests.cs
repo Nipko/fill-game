@@ -37,6 +37,8 @@ namespace AF.Tests.PlayMode
         {
             LaunchOptions.Reset();
             CaptureLog.Reset();
+            GameBootstrap.ResetCloudOverrides();
+            GameBootstrap.AnalyticsResetOverride = null;
         }
 
         [UnityTest]
@@ -184,6 +186,46 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View.CaptureBackdropLevel, Is.EqualTo(WorldTable.FirstLevel(3)));
             Assert.That(boot.View.StopBackdrop.Stop, Is.Not.Null);
             Assert.That(boot.View.StopBackdrop.Stop!.World, Is.EqualTo(3), "el fondo de la gran parada del mundo 3");
+        }
+
+        [UnityTest]
+        public IEnumerator DeleteAccount_IsBlocked_AndTouchesNothing()
+        {
+            var flags = new MemoryCloudSaveFlags();
+            GameBootstrap.CloudFlagsOverride = flags;
+            int wipes = 0;
+            int analyticsResets = 0;
+            GameBootstrap.WipePlayerPrefsForTests = () => wipes++;
+            GameBootstrap.AnalyticsResetOverride = () => analyticsResets++;
+            var store = new MemoryProfileStore(ProfileAt(40));
+            string? before = store.Json;
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[AF\.Capture\] account:"));
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[AF\.Capture\] account:"));
+            yield return LoadCapture(new CaptureOptions { Active = true }, store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            var server = new DeleteAccountWaitTests.SlowServer();
+            boot.ServerAccountDelete = server.Ask;
+            Assert.That(boot.PressSettings(), Is.True);
+
+            Assert.That(boot.OpenDeleteAccount(), Is.False, "el diálogo no se abre durante una toma");
+            Assert.That(boot.DeleteAccountOpen, Is.False);
+            StringAssert.Contains("\"what\":\"account\"", CaptureLog.LastLine);
+            Assert.That(boot.ConfirmDeleteAccount(), Is.False, "ni confirmando directamente");
+            Assert.That(server.Calls, Is.EqualTo(0), "no se llama a deleteAccount");
+            Assert.That(wipes, Is.EqualTo(0), "PlayerPrefs intactas");
+            Assert.That(analyticsResets, Is.EqualTo(0), "la analítica, también");
+            Assert.That(flags.DeletePending, Is.False, "sin borrado pendiente de la nube");
+            Assert.That(boot.AccountDeleted, Is.False);
+            Assert.That(store.SaveCount, Is.EqualTo(0));
+            Assert.That(store.Json, Is.EqualTo(before), "el perfil guardado sigue igual");
+        }
+
+        [UnityTest]
+        public IEnumerator Capture_AlwaysUsesTheFakeStore()
+        {
+            yield return LoadCapture(new CaptureOptions { Active = true }, ProfileAt(Level));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Backend, Is.InstanceOf<AF.Backend.FakeBackendClient>(), "la verificación falsa, como af_fake_store");
         }
 
         // Carga la escena con el modo de captura y el perfil dado (en un almacén en memoria del test).

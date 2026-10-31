@@ -81,7 +81,7 @@ namespace AF.UI
         /// <summary>Entero (%): velocidad de la presentación (100 = normal; 25 = cuatro veces más lento).</summary>
         public const string ExtraSlowMo = "af_capture_slowmo";
 
-        /// <summary>Entero (1-9): el fondo de la gran parada de ese mundo, en lugar del de la parada del nivel.</summary>
+        /// <summary>Entero (1-13, <see cref="WorldTable.WorldCount"/>): el fondo de la gran parada de ese mundo, en lugar del de la parada del nivel.</summary>
         public const string ExtraWorld = "af_capture_world";
 
         /// <summary>Entero (1-1.000): el fondo (parada, temporada) de ese nivel de campaña.</summary>
@@ -114,8 +114,11 @@ namespace AF.UI
         /// <summary>Tope del paquete en el extra o en el archivo (bytes del JSON).</summary>
         public const int MaxBoardBytes = 512 * 1024;
 
-        /// <summary>El modo apagado: lo que se usa siempre en release.</summary>
-        public static readonly CaptureOptions Inactive = new CaptureOptions();
+        /// <summary>Un modo apagado nuevo (cada vez uno: nadie comparte un objeto que se pueda cambiar); el de release.</summary>
+        public static CaptureOptions Inactive => new CaptureOptions();
+
+        // Valor de un extra entero que no llegó (ningún valor real lo usa).
+        private const int Missing = int.MinValue;
 
         private readonly List<string> _problems = new List<string>();
 
@@ -207,16 +210,32 @@ namespace AF.UI
             }
 
             var o = new CaptureOptions();
+            // Cualquier extra af_capture* que llegue enciende el modo (también uno del ritmo solo, o uno que no se entienda).
             bool any = readBool(ExtraCapture);
+            int Int(string name)
+            {
+                int value = readInt(name, Missing);
+                any |= value != Missing;
+                return value;
+            }
+
+            string? Str(string name)
+            {
+                string? value = readString(name);
+                any |= value != null;
+                return Blank(value);
+            }
+
             o.HideHud = readBool(ExtraNoHud);
             o.Autoplay = readBool(ExtraAutoplay);
-            o.BoardBase64 = Blank(readString(ExtraBoard));
-            o.BoardPath = Blank(readString(ExtraBoardPath));
-            o.PauseMs = o.Rhythm(readInt(ExtraPauseMs, -1), DefaultPauseMs, ExtraPauseMs);
-            o.JitterMs = o.Rhythm(readInt(ExtraJitterMs, -1), DefaultJitterMs, ExtraJitterMs);
-            o.SelectMs = o.Rhythm(readInt(ExtraSelectMs, -1), DefaultSelectMs, ExtraSelectMs);
-            o.StartMs = o.Rhythm(readInt(ExtraStartMs, -1), DefaultStartMs, ExtraStartMs);
-            int stopBefore = readInt(ExtraStopBefore, 0);
+            o.BoardBase64 = Str(ExtraBoard);
+            o.BoardPath = Str(ExtraBoardPath);
+            o.PauseMs = o.Rhythm(Int(ExtraPauseMs), DefaultPauseMs, ExtraPauseMs);
+            o.JitterMs = o.Rhythm(Int(ExtraJitterMs), DefaultJitterMs, ExtraJitterMs);
+            o.SelectMs = o.Rhythm(Int(ExtraSelectMs), DefaultSelectMs, ExtraSelectMs);
+            o.StartMs = o.Rhythm(Int(ExtraStartMs), DefaultStartMs, ExtraStartMs);
+            int stopBefore = Int(ExtraStopBefore);
+            stopBefore = stopBefore == Missing ? 0 : stopBefore;
             if (stopBefore < 0)
             {
                 o._problems.Add(ExtraStopBefore + " < 0: se usa 0");
@@ -224,8 +243,10 @@ namespace AF.UI
             }
 
             o.StopBefore = stopBefore;
-            o.Seed = readInt(ExtraSeed, 1);
-            int slowMo = readInt(ExtraSlowMo, 0);
+            int seed = Int(ExtraSeed);
+            o.Seed = seed == Missing ? 1 : seed;
+            int slowMo = Int(ExtraSlowMo);
+            slowMo = slowMo == Missing ? 0 : slowMo;
             if (slowMo != 0)
             {
                 int clamped = Math.Max(MinSlowMoPercent, Math.Min(100, slowMo));
@@ -238,7 +259,8 @@ namespace AF.UI
                 o.TimeScale = clamped / 100f;
             }
 
-            int world = readInt(ExtraWorld, 0);
+            int world = Int(ExtraWorld);
+            world = world == Missing ? 0 : world;
             if (world != 0 && (world < 1 || world > WorldTable.WorldCount))
             {
                 o._problems.Add(ExtraWorld + " fuera de 1-" + WorldTable.WorldCount.ToString(CultureInfo.InvariantCulture) + ": se ignora");
@@ -246,7 +268,8 @@ namespace AF.UI
             }
 
             o.World = world;
-            int bgLevel = readInt(ExtraBgLevel, 0);
+            int bgLevel = Int(ExtraBgLevel);
+            bgLevel = bgLevel == Missing ? 0 : bgLevel;
             if (bgLevel != 0 && (bgLevel < 1 || bgLevel > WorldTable.LastLevel))
             {
                 o._problems.Add(ExtraBgLevel + " fuera de 1-" + WorldTable.LastLevel.ToString(CultureInfo.InvariantCulture) + ": se ignora");
@@ -254,8 +277,8 @@ namespace AF.UI
             }
 
             o.BgLevel = bgLevel;
-            o.Skin = Blank(readString(ExtraSkin));
-            string? screen = Blank(readString(ExtraScreen));
+            o.Skin = Str(ExtraSkin);
+            string? screen = Str(ExtraScreen);
             if (screen != null)
             {
                 if (TryParseScreen(screen, out CaptureScreen parsed))
@@ -268,8 +291,7 @@ namespace AF.UI
                 }
             }
 
-            o.Active = any || o.HideHud || o.Autoplay || o.HasBoard || o.StopBefore > 0 || slowMo != 0 || o.World > 0 || o.BgLevel > 0
-                || o.Skin != null || o.Screen != CaptureScreen.None || o._problems.Count > 0;
+            o.Active = any || o.HideHud || o.Autoplay || o._problems.Count > 0;
             return o.Active ? o : Inactive;
         }
 
@@ -339,6 +361,12 @@ namespace AF.UI
         public static string? DecodeBase64(string text, out string? error)
         {
             error = null;
+            if (text.Length > ((MaxBoardBytes + 2) / 3 * 4) + 8)
+            {
+                error = ExtraBoard + ": el paquete pasa de " + MaxBoardBytes.ToString(CultureInfo.InvariantCulture) + " bytes";
+                return null; // sin decodificar nada
+            }
+
             string s = text.Trim().Replace('-', '+').Replace('_', '/');
             int pad = s.Length % 4;
             if (pad == 2)
@@ -402,13 +430,20 @@ namespace AF.UI
                     return null;
                 }
 
-                if (new FileInfo(full).Length > MaxBoardBytes)
+                var info = new FileInfo(full);
+                if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    error = ExtraBoardPath + ": " + relative + " es un enlace: no se sigue";
+                    return null;
+                }
+
+                if (info.Length > MaxBoardBytes)
                 {
                     error = ExtraBoardPath + ": el paquete pasa de " + MaxBoardBytes.ToString(CultureInfo.InvariantCulture) + " bytes";
                     return null;
                 }
 
-                return File.ReadAllText(full, Encoding.UTF8);
+                return File.ReadAllText(full, new UTF8Encoding(false, true)); // UTF-8 estricto: un byte inválido es un error, no un «?»
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException || e is NotSupportedException)
             {

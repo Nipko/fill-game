@@ -169,6 +169,11 @@ namespace AF.UI
                 return false;
             }
 
+            if (CaptureBlocksAccountDelete())
+            {
+                return false; // D-066 E1: durante una toma no se borra nada (GameBootstrap.Capture.cs)
+            }
+
             dialog.ShowWarn(settings.CanvasWidth, settings.CanvasHeight);
             _probe?.AccountDelete("requested");
             EmitDeleteAccountLayout();
@@ -213,9 +218,9 @@ namespace AF.UI
         public bool ConfirmDeleteAccount()
         {
             DeleteAccountDialog? dialog = _deleteAccountDialog;
-            if (dialog == null)
+            if (dialog == null || CaptureBlocksAccountDelete())
             {
-                return false;
+                return false; // D-066 E1: ni el servidor, ni PlayerPrefs, ni la nube durante una toma
             }
 
             if (AccountDeleteInFlight)

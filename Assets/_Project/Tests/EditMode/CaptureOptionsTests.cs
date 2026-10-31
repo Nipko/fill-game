@@ -32,7 +32,9 @@ namespace AF.Tests.EditMode
         {
             LaunchOptions.CaptureOverride = new CaptureOptions { Active = true, HideHud = true, Autoplay = true };
             CaptureOptions release = CaptureOptions.Resolve(false);
-            Assert.That(release, Is.SameAs(CaptureOptions.Inactive), "en release no hay modo de captura");
+            Assert.That(release.Active, Is.False, "en release no hay modo de captura");
+            Assert.That(release, Is.Not.SameAs(LaunchOptions.CaptureOverride));
+            Assert.That(CaptureOptions.Resolve(false), Is.Not.SameAs(release), "cada vez un objeto nuevo: nadie comparte uno que se pueda cambiar");
             Assert.That(release.Active || release.HideHud || release.Autoplay || release.HasBoard, Is.False);
             Assert.That(LaunchOptions.ResolveLeagueFake(false, true), Is.False, "en release, la Liga nunca es la falsa");
         }
@@ -60,7 +62,8 @@ namespace AF.Tests.EditMode
         public void NoExtras_IsInactive()
         {
             CaptureOptions o = Read(new Dictionary<string, object>());
-            Assert.That(o, Is.SameAs(CaptureOptions.Inactive));
+            Assert.That(o.Active, Is.False);
+            Assert.That(o.HideHud || o.Autoplay || o.HasBoard || o.Screen != CaptureScreen.None, Is.False);
         }
 
         [TestCase(CaptureOptions.ExtraCapture)]
@@ -69,6 +72,63 @@ namespace AF.Tests.EditMode
         public void EachBoolExtra_TurnsTheModeOn(string extra)
         {
             Assert.That(Read(new Dictionary<string, object> { { extra, true } }).Active, Is.True);
+        }
+
+        [TestCase(CaptureOptions.ExtraPauseMs, 500)]
+        [TestCase(CaptureOptions.ExtraJitterMs, 0)]
+        [TestCase(CaptureOptions.ExtraSelectMs, 100)]
+        [TestCase(CaptureOptions.ExtraStartMs, 0)]
+        [TestCase(CaptureOptions.ExtraSeed, 7)]
+        [TestCase(CaptureOptions.ExtraStopBefore, 0)]
+        [TestCase(CaptureOptions.ExtraSlowMo, 100)]
+        [TestCase(CaptureOptions.ExtraWorld, 2)]
+        [TestCase(CaptureOptions.ExtraBgLevel, 58)]
+        public void AnyIntExtra_TurnsTheModeOn(string extra, int value)
+        {
+            Assert.That(Read(new Dictionary<string, object> { { extra, value } }).Active, Is.True, "cualquier af_capture* enciende el modo");
+        }
+
+        [TestCase(CaptureOptions.ExtraBoard)]
+        [TestCase(CaptureOptions.ExtraBoardPath)]
+        [TestCase(CaptureOptions.ExtraSkin)]
+        [TestCase(CaptureOptions.ExtraScreen)]
+        public void AnyStringExtra_TurnsTheModeOn(string extra)
+        {
+            Assert.That(Read(new Dictionary<string, object> { { extra, "x" } }).Active, Is.True);
+        }
+
+        [Test]
+        public void LegacyProgress_IsNeverMigratedDuringACapture()
+        {
+            Assert.That(GameBootstrap.MigratesLegacyProgress(false, false, false), Is.True, "el juego de siempre migra af_v0_level");
+            Assert.That(GameBootstrap.MigratesLegacyProgress(false, false, true), Is.False, "una toma no: borraría la clave sin guardar");
+            Assert.That(GameBootstrap.MigratesLegacyProgress(true, false, false), Is.False);
+            Assert.That(GameBootstrap.MigratesLegacyProgress(false, true, false), Is.False);
+        }
+
+        [Test]
+        public void Base64_TooLong_IsRejectedBeforeDecoding()
+        {
+            string huge = new string('A', (CaptureOptions.MaxBoardBytes / 3 * 4) + 100);
+            Assert.That(CaptureOptions.DecodeBase64(huge, out string? error), Is.Null);
+            Assert.That(error, Does.Contain("pasa de"));
+        }
+
+        [Test]
+        public void BoardFile_WithInvalidUtf8_IsAnError()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "af_capture_utf8_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                File.WriteAllBytes(Path.Combine(root, "bad.json"), new byte[] { 0x7B, 0xFF, 0xFE, 0x7D });
+                Assert.That(CaptureOptions.ReadBoardFile(root, "bad.json", out string? error), Is.Null);
+                Assert.That(error, Does.Contain("no se pudo leer"));
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
         }
 
         [Test]

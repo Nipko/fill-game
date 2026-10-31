@@ -112,7 +112,8 @@ namespace AF.UI
         // La tienda del arranque (Start): verificada siempre (F3-5), con el cliente que toque.
         private IStoreService CreateStore(Profile profile, StoreLedger ledger, ISimulatedPurchasePresenter presenter, IClock deviceClock, IClock capsClock, ProfileSaveBatch batch)
         {
-            bool fakeStore = LaunchOptions.ResolveFakeStore(Debug.isDebugBuild);
+            // D-066 E1: una toma del modo de captura usa siempre la tienda simulada con el backend falso: nunca una compra real.
+            bool fakeStore = LaunchOptions.ResolveFakeStore(Debug.isDebugBuild) || (Debug.isDebugBuild && _capture.Active);
             BackendMode mode = StoreBackendMode(BackendModeOverride ?? BackendEndpoints.Mode, fakeStore);
             if (fakeStore)
             {
