@@ -4812,3 +4812,19 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **El problema:** en la pista interna, con la 1.0.0 (10001) en un SM-S938B (Android 16), cada compra real terminaba en «La app no responde» y las semillas no se acreditaban hasta el siguiente arranque (las recuperaba la restauración). Crashlytics: «ANR triggered by slow operations in main thread», con el hilo `main` en `ReflectionHelper.nativeProxyInvoke` desde `AfBillingListener.onPurchasesUpdated` (`AfBilling.java:429`) y `UnityMain` en pausa. Play llama a `onPurchasesUpdated` con la hoja de compra aún encima y Unity en pausa; el plugin llamaba al `AndroidJavaProxy` de C# desde el hilo principal de Android, que esperaba a Unity, y Unity solo se reanuda cuando el principal procesa `onResume`: interbloqueo.
 - **Qué cambia:** `AfBilling` entrega los nueve avisos a C# desde un único `HandlerThread` propio (`AfBilling-callbacks`), en orden y con los valores ya calculados en el hilo principal, donde sigue el estado del plugin. `release()` lo suelta con `quitSafely()` tras el último aviso encolado y no encola ninguno después. El mismo arreglo en `AfAudioFocus` (`AfAudioFocus-callbacks`) y `AfAgeSignals` (`AfAgeSignals-callbacks`), que también llamaban a su proxy desde el hilo principal. C# no cambia: `BillingListenerProxy` ya pasaba cada aviso al hilo de Unity. Detalle en `docs/dev/iap.md` §1.3 («Hilos»).
 - **Verificación pendiente del dueño:** una compra real en la pista interna con un build que lleve el arreglo, sin ANR y con las semillas acreditadas en el acto.
+
+### D-059, añadido del 2026-10-31: la 1.0.0 (10002) en la pista interna
+
+- **Qué lleva:** `main` @ 0084711c, que añade a la 10001 cuatro cambios:
+  - los avisos de los plugins salen de un hilo propio (el ANR de cada compra; añadido de D-040);
+  - los tests de la tapa de sellado;
+  - el engranaje en lugar de pausa (añadido de D-063);
+  - los lechos de música sin huecos y la música 3 dB más baja (añadido de D-026).
+- **Build:** Release firmado, run 41175877504, verde con todas sus compuertas. El AAB pesa 58 MB.
+- **Pista interna:** el dueño la subió y la publicó el 2026-10-31. La consola muestra «Activo · Versión más reciente: 10002 (1.0.0)».
+- **Pendiente del dueño en el teléfono:**
+  - una compra real sin «La app no responde» y con las semillas acreditadas en el acto;
+  - la música sin tropiezos y con un nivel que le parezca bien;
+  - el engranaje.
+  - De la 10001 queda comprobado el borrado de cuenta, que funcionó.
+- **La versión que se promociona a producción (§17) es ya la 10002, no la 10001.**
