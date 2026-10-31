@@ -350,7 +350,8 @@ namespace AF.UI
         }
 
         // «Ver mapa» del viaje (M3.6; P-M2): completa el viaje y abre el Mapa del río encima del banner (MapOpenSource.WorldChange);
-        // al cerrarlo, el banner sigue ahí, quieto, y un toque lo cierra.
+        // al cerrarlo con ← o Atrás, el banner sigue ahí, quieto, y un toque lo cierra; con su «Jugar · Nivel {n}», el banner sale
+        // también y sigue el nivel (CloseWorldBannerToPlay; prueba del dueño del 2026-10-31).
         private void OnWorldBannerMapPressed()
         {
             if (!_worldBanner.Visible || !_worldBanner.CardShown || _worldBanner.Dismissing || _worldBanner.Travel == null)
@@ -363,6 +364,28 @@ namespace AF.UI
             {
                 _bannerMapOpened++;
             }
+        }
+
+        /// <summary>
+        /// «Jugar · Nivel {n}» del Mapa abierto con «Ver mapa» del banner (<see cref="MapOpenSource.WorldChange"/>): el banner
+        /// empieza su salida, como con un toque, y después sigue la tarjeta previa o la intro. El Mapa lleva «Jugar · Nivel {n}»
+        /// siempre a la vista (06, tabla del Mapa del río) y, tras él, sigue el nivel (propuesta del Mapa, fila «Cambio de mundo,
+        /// con Q4-D»: «Ver mapa» abre el Mapa entero → Fruta nueva, si toca → Llenar y teñir; 02 §6: no se apilan Mapa y banner).
+        /// Antes solo cerraba el Mapa y devolvía al banner, cuyo único botón era otra vez «Ver mapa»: el bucle de la prueba del
+        /// dueño del 2026-10-31 (release 10002, tras ganar el 40). False sin el banner a la vista, o si ya sale.
+        /// </summary>
+        internal bool CloseWorldBannerToPlay()
+        {
+            LevelFlow? flow = _flow;
+            if (flow == null || !flow.HasLevel || flow.Phase != FlowPhase.LevelCard || flow.WorldBanner == 0
+                || !_worldBanner.Visible || !_worldBanner.CardShown || _worldBanner.Dismissing)
+            {
+                return false;
+            }
+
+            _worldBanner.CompleteTravel(); // ya completado por «Ver mapa»; sin efecto si no
+            StartBannerExit(flow);
+            return true;
         }
 
         // El viaje de mundo del banner del nivel level (M3.6), o null: el banner de siempre (apagado por el test, no toca por

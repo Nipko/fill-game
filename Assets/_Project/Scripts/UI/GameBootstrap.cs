@@ -1194,9 +1194,12 @@ namespace AF.UI
         }
 
         // «Jugar» del Mapa: desde la pestaña del inicio o en la secuencia del Mapa del 10 (que vive sobre el inicio: «Jugar · Nivel
-        // 11»; M4.2), cierra y abre el nivel (o Sin canoas, como el «Jugar» del inicio); abierto encima de otra pantalla (pausa,
-        // victoria, banner o fin de contenido), solo cierra y se vuelve a ella: «Volver al nivel» desde la pausa y «Volver» desde la
-        // victoria y el fin de contenido (M4.3; RiverMapScreen.Modes.cs).
+        // 11»; M4.2), cierra y abre el nivel (o Sin canoas, como el «Jugar» del inicio); desde «Ver mapa» del banner de mundo
+        // («Jugar · Nivel 41», el nivel que ya espera debajo), cierra el Mapa y el banner, y el nivel sigue (tarjeta previa o
+        // intro): 06, tabla del Mapa del río, y la fila «Cambio de mundo, con Q4-D» de la propuesta del Mapa (Mapa → Fruta nueva →
+        // Llenar y teñir); antes volvía al banner y su «Ver mapa» cerraba el bucle (prueba del dueño del 2026-10-31, tras el 40).
+        // Abierto encima de otra pantalla (pausa, victoria o fin de contenido), solo cierra y se vuelve a ella: «Volver al nivel»
+        // desde la pausa y «Volver» desde la victoria y el fin de contenido (M4.3; RiverMapScreen.Modes.cs).
         private void PressMapPlay()
         {
             RiverMapScreen? map = _mapScreen;
@@ -1205,11 +1208,16 @@ namespace AF.UI
                 return;
             }
 
-            bool fromLobby = map.Source == MapOpenSource.Lobby || map.Source == MapOpenSource.L10;
+            MapOpenSource source = map.Source;
+            bool fromLobby = source == MapOpenSource.Lobby || source == MapOpenSource.L10;
             CloseRiverMap();
             if (fromLobby && _app != null && _app.Screen == AppScreen.Lobby)
             {
                 PressPlay();
+            }
+            else if (source == MapOpenSource.WorldChange && _app != null && _app.Screen == AppScreen.Level)
+            {
+                _screen?.CloseWorldBannerToPlay();
             }
         }
 
