@@ -231,6 +231,15 @@ namespace AF.Audio
         /// <summary>Lo que la música sigue abajo desde que empieza un sellado (ms) [P]: lo que dura <c>sfx_seal</c> (0,46 s).</summary>
         public const float SealDuckMs = 460f;
 
+        /// <summary>
+        /// Nivel de la música y de su ambiente (dB) sobre el de sus clips (observación de la prueba de la 10001, 2026-10-31: «le
+        /// bajamos un poquito») [P]: el lecho, sus capas, el tema de menú, el agua, la lluvia y la fauna suenan 3 dB por debajo de
+        /// sus WAV (el lecho de la entrega mide −24,8 LUFS y el menú −20), así que los efectos quedan 3 dB más claros. Juntos, para
+        /// que el agua siga a la misma distancia del lecho (07 §9.4). Los remates no cambian (ya van a <see cref="StingerGainDb"/>).
+        /// Se aplica encima de <see cref="MusicGain"/>, que sigue yendo de 0 a 1 (la sonda la cuenta igual).
+        /// </summary>
+        public const float MusicLevelDb = -3f;
+
         private float _adFade = 1f;
         private float _toadaLeftMs;
         private bool _pouring;
@@ -344,6 +353,18 @@ namespace AF.Audio
 
         /// <summary>Ganancia de un animal sobre el pico de su efecto (<see cref="AmbientPlan.FaunaGainDb"/>).</summary>
         public float FaunaGain => AmbientGain * (float)AudioAnalysis.FromDb(AmbientPlan.FaunaGainDb);
+
+        /// <summary>Ganancia lineal de <see cref="MusicLevelDb"/> (≈ 0,708).</summary>
+        public static float MusicLevel => (float)AudioAnalysis.FromDb(MusicLevelDb);
+
+        /// <summary>Volumen de las fuentes de la música (lecho, capas y menú): <see cref="MusicGain"/> por <see cref="MusicLevel"/>.</summary>
+        public float MusicVolume => MusicGain * MusicLevel;
+
+        /// <summary>Volumen de las fuentes del agua y de la lluvia: <see cref="AmbientGain"/> por <see cref="MusicLevel"/>.</summary>
+        public float AmbientVolume => AmbientGain * MusicLevel;
+
+        /// <summary>Volumen de la fuente de la fauna: <see cref="FaunaGain"/> por <see cref="MusicLevel"/>.</summary>
+        public float FaunaVolume => FaunaGain * MusicLevel;
 
         /// <summary>Lo que falta para el próximo animal (ms; tests).</summary>
         public float FaunaLeftMs => _fauna.LeftMs;

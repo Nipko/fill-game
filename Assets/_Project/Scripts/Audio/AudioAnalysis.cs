@@ -294,6 +294,83 @@ namespace AF.Audio
             return rise;
         }
 
+        /// <summary>Hondura mínima de un hueco (dB por debajo de la mediana de su entorno).</summary>
+        public const double DropoutDepthDb = 15.0;
+
+        /// <summary>Lo que dura un hueco como mínimo (ms).</summary>
+        public const double DropoutMinMs = 30.0;
+
+        /// <summary>Ventana de la envolvente con la que se buscan los huecos (s).</summary>
+        public const double DropoutWindowSeconds = 0.01;
+
+        /// <summary>Entorno con el que se compara cada ventana (s a cada lado, circular: el bucle sigue).</summary>
+        public const double DropoutContextSeconds = 1.0;
+
+        /// <summary>Entornos más callados que esto (dBFS) no cuentan: colas y silencios de una capa de percusión.</summary>
+        public const double DropoutFloorDb = -60.0;
+
+        /// <summary>
+        /// Huecos de un sonido sostenido (un lecho, el agua): tramos de <see cref="DropoutMinMs"/> ms o más en que el nivel (RMS en
+        /// ventanas de <see cref="DropoutWindowSeconds"/> s) queda <see cref="DropoutDepthDb"/> dB o más por debajo de la mediana
+        /// de su entorno de ±<see cref="DropoutContextSeconds"/> s. En un lecho sin pulso se oyen como un tropiezo de la música
+        /// (observación de la prueba de la 10001, 2026-10-31: los lechos de la entrega 1 llevaban hasta 270 ms a −70 dBFS en cada
+        /// unión de sus tramos). El mismo detector que <c>tools/audio-check/check_audio.py</c>. Devuelve cuántos hay, el más largo
+        /// (ms) y dónde empieza el primero (s; −1 sin huecos).
+        /// </summary>
+        public static int Dropouts(float[] loop, int sampleRate, out double longestMs, out double firstAtSeconds)
+        {
+            longestMs = 0.0;
+            firstAtSeconds = -1.0;
+            double[] env = EnvelopeDb(loop, sampleRate, DropoutWindowSeconds);
+            int k = env.Length;
+            if (k == 0)
+            {
+                return 0;
+            }
+
+            int half = (int)Math.Round(DropoutContextSeconds / DropoutWindowSeconds);
+            int span = Math.Min(k, (2 * half) + 1);
+            var scratch = new double[span];
+            var ctx = new double[k];
+            for (int i = 0; i < k; i++)
+            {
+                for (int j = 0; j < span; j++)
+                {
+                    scratch[j] = env[(((i - half + j) % k) + k) % k];
+                }
+
+                Array.Sort(scratch);
+                ctx[i] = scratch[span / 2];
+            }
+
+            int need = Math.Max(1, (int)Math.Ceiling((DropoutMinMs / (DropoutWindowSeconds * 1000.0)) - 1e-9));
+            int count = 0;
+            int run = 0;
+            for (int i = 0; i <= k; i++)
+            {
+                bool low = i < k && ctx[i] > DropoutFloorDb && ctx[i] - env[i] >= DropoutDepthDb;
+                if (low)
+                {
+                    run++;
+                    continue;
+                }
+
+                if (run >= need)
+                {
+                    count++;
+                    longestMs = Math.Max(longestMs, run * DropoutWindowSeconds * 1000.0);
+                    if (firstAtSeconds < 0.0)
+                    {
+                        firstAtSeconds = (i - run) * DropoutWindowSeconds;
+                    }
+                }
+
+                run = 0;
+            }
+
+            return count;
+        }
+
         /// <summary>Huella FNV-1a de 64 bits de las muestras (sus bits exactos): la misma síntesis da la misma huella.</summary>
         public static ulong Hash(float[] buf)
         {
