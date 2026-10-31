@@ -49,7 +49,7 @@ Cada **lunes**, Spark pone al día la biblioteca de referencias, las puntúa y e
   - el informe va a la rama `spark/marketing-tendencias`, en su propio worktree;
   - la línea de estado, a `spark-estado.md`.
 - **Cuándo corre:** solo con la app abierta; si estaba cerrada, corre al abrirla.
-- **Se para** creando `C:\AI\marketing	endencias\PAUSA`, o desactivándola en la sección «Scheduled» de la app.
+- **Se para** creando `C:\AI\marketing\tendencias\PAUSA`, o desactivándola en la sección «Scheduled» de la app.
 
 ## Límites de la versión 1
 
