@@ -254,6 +254,7 @@ Crecer › **Servicios de juegos de Play** › Configuración y administración 
 
 - Configuración › **Obtener recursos** › Android: copia el XML (`games-ids.xml`, con `app_id`). **No es secreto** (va en el manifiesto de la app; `play-games.md` §9, paso 2).
 - Pásalo a un agente (o hazlo tú con el Editor abierto, una sola instancia): `Window › Google Play Games › Setup › Android setup`, sin Web Client ID, «Setup», y commit de los archivos que cambia, con sus `.meta`, en un **PR propio y revisado** (`play-games.md` §9, paso 3). Sin este `APP_ID` el build no tiene Play Games: la nube no hace nada.
+- **Hecho el 2026-10-30 en la rama `tanda6/play-games-appid`** (pendiente de PR y merge): `APP_ID` **459140125724**, sin Web Client ID, aplicado con `AF.EditorTools.PlayGamesProjectSetup.Apply` (el Setup del plugin en batchmode, sin tocar el `applicationId`); el `dev.apk` lleva `com.google.android.gms.games.APP_ID` = 459140125724 en el manifiesto fusionado. Cuando esté en `main`, sigue con §7.5.
 
 ### 7.5 Segunda versión interna
 

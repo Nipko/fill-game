@@ -31,7 +31,7 @@ Canon:
 | Puerto | `Scripts/Save/ISavedGamesPort.cs` (nuevo) | Lo mínimo de Saved Games, sin tipos del plugin |
 | Puerto real | `Scripts/Save/PlayGames/PlayGamesSavedGamesPort.cs` (asmdef nuevo `AF.Save.PlayGames`, con `Google.Play.Games`) | El plugin. Solo `UNITY_ANDROID && !UNITY_EDITOR` y con `APP_ID` |
 
-En el editor, en los tests y en un build sin `APP_ID` (hoy todos: D-034), `PlayGamesSavedGamesPort.TryCreate()` devuelve null y la nube es `FakeCloudSave.WithoutSession()`: el juego se comporta como antes.
+En el editor, en los tests y en un build sin `APP_ID`, `PlayGamesSavedGamesPort.TryCreate()` devuelve null y la nube es `FakeCloudSave.WithoutSession()`: el juego se comporta como antes. Desde la rama `tanda6/play-games-appid` (2026-10-30) el proyecto lleva el `APP_ID` **459140125724** (§9, paso 3): los builds de Android (dev, ensayo y release) ya crean la nube real con 13-17 o 18+; el editor y los tests siguen con la falsa.
 
 ### 1.1 Cuándo arranca la nube
 
@@ -146,7 +146,7 @@ En el editor y en los tests, en memoria (`MemoryCloudSaveFlags`; `GameBootstrap.
 
 ## 6. Edad, borrado y `PlayGamesInitProvider`
 
-- **`<13`:** no se crea `PlayGamesPlatform`, no se inicia sesión y no se lee ni se escribe la nube (§1.1). **`PlayGamesInitProvider` se quita** con `tools:node="remove"` en `Assets/Plugins/Android/LauncherManifest.xml`: inicia PGS v2 al arrancar el proceso, y PGS v2 intenta iniciar sesión solo («a sign-in attempt will be made automatically when your game's application started», según la documentación del plugin), antes de saber la edad. Sin el proveedor, el plugin llama a `PlayGamesSdk.initialize` al crear su cliente (`AndroidClient`), y `AF.Save.PlayGames` solo lo crea con 13-17 o 18+ y con `APP_ID`. Quitar un proveedor no añade nada. **Hay que probarlo en el teléfono** cuando haya `APP_ID` (§9).
+- **`<13`:** no se crea `PlayGamesPlatform`, no se inicia sesión y no se lee ni se escribe la nube (§1.1). **`PlayGamesInitProvider` se quita** con `tools:node="remove"` en `Assets/Plugins/Android/LauncherManifest.xml`: inicia PGS v2 al arrancar el proceso, y PGS v2 intenta iniciar sesión solo («a sign-in attempt will be made automatically when your game's application started», según la documentación del plugin), antes de saber la edad. Sin el proveedor, el plugin llama a `PlayGamesSdk.initialize` al crear su cliente (`AndroidClient`), y `AF.Save.PlayGames` solo lo crea con 13-17 o 18+ y con `APP_ID`. Quitar un proveedor no añade nada. **Hay que probarlo en el teléfono** con el `APP_ID` (ya en el proyecto: §9, paso 4).
 - **Borrado de la cuenta (08 §11; D-033 B8):** tras borrar lo local, `CloudSession.EraseForAccountDelete`:
   1. pone la marca de borrado pendiente;
   2. pide el borrado de `af_main` si hay sesión;
@@ -194,7 +194,7 @@ Actualizado:
   - `<queries>` de `com.google.android.gms` y `com.android.vending`;
   - `GamesResolutionActivity` y `PlayGamesAppShortcutsActivity` (exportada, de Play Games);
   - `GenericResolutionActivity` y `NativeBridgeActivity` (del puente del plugin);
-  - la meta-data `com.google.android.gms.games.version`, `com.google.android.gms.games.APP_ID` (vacía, sin `APP_ID`) y `com.google.android.gms.games.unityVersion`.
+  - la meta-data `com.google.android.gms.games.version`, `com.google.android.gms.games.APP_ID` (vacía hasta el Setup de §9; desde el 2026-10-30, `459140125724`) y `com.google.android.gms.games.unityVersion`.
 - **No entran:**
   - `PlayGamesInitProvider`;
   - ningún componente `com.google.android.gms.nearby.*` (`check-manifest` 6 bis);
@@ -202,7 +202,7 @@ Actualizado:
 - **16 KB:** sin `.so` nuevos (18 bibliotecas de 64 bits alineadas en los dos artefactos).
 - **Peso:** `rehearsal.aab` 54,33 MB (el anterior de referencia, `rehearsal-before.aab` del 2026-10-21, 53,49 MB) y `dev.apk` 70,51 MB (antes 69,41 MB): **≈ +0,9-1,1 MB**, dentro de los 80 MB.
 - **Archivos que escribe el plugin al abrir el Editor** (`GPGSUpgrader`, `[InitializeOnLoad]`, con Android como plataforma activa), aunque no haya configuración:
-  - `Assets/Plugins/Android/GooglePlayGamesManifest.androidlib/AndroidManifest.xml`, con el `APP_ID` vacío;
+  - `Assets/Plugins/Android/GooglePlayGamesManifest.androidlib/AndroidManifest.xml`, con el `APP_ID` vacío (o el de `ProjectSettings/GooglePlayGameSettings.txt`, si ya está; tras el Setup de §9, 459140125724);
   - `Assets/GooglePlayGames/Resources/PlayGamesSettings.asset`, con su `.meta`;
   - `ProjectSettings/GooglePlayGameSettings.txt`.
 
@@ -216,16 +216,24 @@ Actualizado:
 
 ## 9. Pasos del dueño
 
-Hoy no hacen falta para construir: sin ellos, el build va sin Play Games (nube falsa sin sesión). Cuando exista la app en Play Console (tras el dictamen de marca, D-034):
+No hacen falta para construir: sin ellos, el build va sin Play Games (nube falsa sin sesión). **Estado (2026-10-30):** pasos 1 y 2 hechos por el dueño (`publicar-play-console.md` §7.3; `app_id` 459140125724); paso 3 hecho en la rama `tanda6/play-games-appid` con `AF.EditorTools.PlayGamesProjectSetup.Apply`; faltan el 4 y el 5.
 
-1. **Play Console › Play Games Services › Configuración:** crear el proyecto de juegos de la app con el `applicationId` definitivo (`com.<estudio>.tintalu`), activar **Saved Games** y crear la credencial Android (OAuth) con el SHA-1 de la clave de firma de Play App Signing y el de la clave de subida (08 §13.1 #16). No hace falta Web Client ID (§10).
+1. **Play Console › Play Games Services › Configuración:** crear el proyecto de juegos de la app con el `applicationId` definitivo (`com.parallext.tintalu`, D-047), activar **Saved Games** y crear la credencial Android (OAuth) con el SHA-1 de la clave de firma de Play App Signing y el de la clave de subida (08 §13.1 #16). No hace falta Web Client ID (§10).
 2. **Recursos:** en «Configuración › Obtener recursos», copiar el XML de Android (el `games-ids.xml`, con `app_id`).
-3. **En el Editor** (con el proyecto abierto y una sola instancia), `Window › Google Play Games › Setup › Android setup`: pegar el XML, sin Web Client ID, y «Setup». El Setup escribe:
-   - `Assets/Plugins/Android/GooglePlayGamesManifest.androidlib/AndroidManifest.xml` y `project.properties` (con el `APP_ID`);
-   - `Assets/GooglePlayGames/Resources/PlayGamesSettings.asset` (un ScriptableObject que crea Unity: no se edita a mano);
-   - sus ajustes de proyecto.
+3. **El Setup del plugin** con el `app_id`, sin Web Client ID. **Hecho** (2026-10-30, rama `tanda6/play-games-appid`) con un método de Editor versionado, en batchmode y repetible:
 
-   Son los archivos que ya están commiteados con el `APP_ID` vacío (§8): el Setup los sustituye. Commitear el cambio, con sus `.meta`. El `APP_ID` no es secreto (va en el manifiesto de la app), pero se commitea en un PR propio y revisado.
+   ```
+   unity run <repo> --architecture <arm64|x86_64> --log-file Logs/pg-setup.log --no-tail --non-interactive -- -nographics -buildTarget Android -executeMethod AF.EditorTools.PlayGamesProjectSetup.Apply
+   ```
+
+   (o el menú `Amazon Fill › CI › Aplicar el APP_ID de Play Games`). Llama a `GPGSAndroidSetupUI.PerformSetup(webClientId: "", appId: "459140125724", nearbySvcId: null)`, el punto de entrada del plugin para builds automáticos, y escribe `[AF.PlayGamesProjectSetup] OK`:
+   - `Assets/Plugins/Android/GooglePlayGamesManifest.androidlib/AndroidManifest.xml`, con la meta-data `com.google.android.gms.games.APP_ID` = `459140125724` (el `\u003` hace que Android lo lea como texto); la 2.3.0 no escribe `project.properties`;
+   - `Assets/GooglePlayGames/Resources/PlayGamesSettings.asset` (`mAppId`; `mWebClientId` y `mNearbyServiceId` vacíos);
+   - `ProjectSettings/GooglePlayGameSettings.txt` (`proj.AppId`, `and.ClientId` vacío y el Setup hecho).
+
+   **No** se usa la ventana ni la variante con el XML de recursos: tras leer el XML, el plugin llama a `CheckBundleId`, que cambia el `applicationId` del proyecto al `package_name` del XML si el usuario acepta un diálogo (en batchmode no hay diálogo). Los builds de prueba llevan `com.amazonfill.dev` y el definitivo solo vive en la variable de CI (regla dura 6). Por lo mismo, el `package_name` no se guarda en los ajustes del plugin. El XML no trae logros ni marcadores, así que no hay clase de constantes; y las dependencias de EDM4U ya estaban resueltas (§8).
+
+   El `APP_ID` no es secreto (va en el manifiesto de la app). `PlayGamesProjectSetupTests` (EditMode) comprueba que los tres archivos versionados lo llevan, sin Web Client ID, sin Nearby y sin el `applicationId` definitivo. Si alguna vez cambia el `app_id`, se cambia la constante `PlayGamesProjectSetup.AppId` y se vuelve a lanzar el método.
 4. **Probar en el teléfono** (build de desarrollo con una cuenta de prueba de Play Games):
    - inicio de sesión silencioso sin ventana;
    - primera subida;
