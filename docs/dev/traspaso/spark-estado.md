@@ -19,7 +19,7 @@ Encargo: `docs/dev/traspaso/spark-marketing.md`. Rama `spark/marketing-investiga
   - S2 se hará sin presupuesto de pago.
 - **`fill-game-marketing`:**
   - **Hecho en local:** clon en el Spark, en `C:\AI\marketing\fill-game-marketing\`, con un commit (`00d8346`) que lleva `tendencias/tendencias.py` (los datos siguen fuera de git, en `C:\AI\marketing\tendencias\`), los scripts de la ficha de D-065 en `tienda/`, `README.md` y un `.gitignore` que bloquea referencias de terceros, secretos y medios.
-  - **Sin push:** la primera subida al `main` vacío del repositorio nuevo necesita el visto bueno del dueño.
+  - **Subido** a `main` el 2026-10-31, con el visto bueno del dueño.
 - **E1 (modo de captura):** cubre el tablero a la carta y el Mapa directo. **El audio del juego sigue sin tomas;** en S4 se volverán a poner los efectos sincronizados con `AF_CAPTURE pour`, o se pedirá al escritorio una salida de audio.
 - **Recetas:** `stack-spark.md` y `tendencias/README.md` apuntan ya al repositorio nuevo.
 
