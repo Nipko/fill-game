@@ -86,7 +86,7 @@ Todo con pesos de licencia comercial verificada (investigación del 2026-10-31, 
 | Montaje programático con plantillas | **HyperFrames** (HTML/CSS/GSAP a MP4, de forma determinista, pensado para agentes) sobre FFmpeg. Remotion es gratis solo hasta 3 empleados | Apache 2.0 | npm | 0 | S3 y S4: plantillas de 9:16, 1:1 y 16:9 con zona segura y subtítulos |
 | Programador de publicaciones con API (Q-MK-3) | **Buffer Essentials**: API GraphQL en todos los planes, que publica en IG, FB, TikTok y YouTube Shorts. Ayrshare (149 US$/mes) si hace falta más | — | — | ~5 US$ por canal y mes: **~20 US$/mes con 4 canales** [NV] | S7. **La cuenta y el token los pone el dueño** |
 | Sesión en TikTok for Business | Para ver todos los Top Ads de TikTok Creative Center: sin iniciar sesión solo se ven 4 | — | — | 0 | S1, trabajo semanal. **La cuenta la crea el dueño** (Q-MK-2) |
-| Repositorio de la fábrica | `fill-game-marketing`, privado (Q-MK-7) | — | — | 0 | S4 a S9. **Lo crea el dueño**. Hasta entonces, los scripts viven en el Spark, fuera de git |
+| Repositorio de la fábrica | `fill-game-marketing`, privado (Q-MK-7) | — | — | 0 | S4 a S9. **Ya existe** (lo creó el dueño, D-067). Clon en el Spark: `C:\AI\marketing\fill-game-marketing\`, con `tendencias/` y los scripts de la ficha (`tienda/`). Los datos de terceros siguen fuera de git |
 
 - **Total mensual fijo:** ~20 US$ (Buffer). El resto es software libre en hardware propio.
 - **Descargas:** ~45 GB en total. Caben en las dos máquinas (358 y 140 GB libres).

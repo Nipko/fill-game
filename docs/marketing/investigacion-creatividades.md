@@ -158,6 +158,7 @@ Encargo: `docs/dev/traspaso/spark-marketing.md` §3. Fecha de la muestra: **2026
 
 ## 4. Lo que esto cambia en la estrategia (para S2) [P]
 
+- **Reajuste del dueño (D-067, 2026-10-31):** sin publicidad pagada hasta que Tintalú esté en iOS. Los cinco conceptos se producen primero como **contenido orgánico** (Shorts, Reels y TikTok) y la longevidad orgánica decide cuáles pasan a pago cuando se encienda S9. Las pruebas que dependen del pago (IPM, «sin manos» frente a «manos reales») esperan.
 - **Orden de los conceptos de anuncio del primer lote (S5):**
   1. **«De negro a color»** (gancho 2): «Llenar y teñir» a pantalla llena.
   2. **«Espejo de fruta»** (nuevo, conclusión 4): la pulpa real que tiñe el agua → el mismo tinte en el juego.
@@ -166,10 +167,10 @@ Encargo: `docs/dev/traspaso/spark-marketing.md` §3. Fecha de la muestra: **2026
   5. **«Fallo honesto»** (gancho 4): Aguas estancadas y la Marea.
 
   «El personaje» (gancho 6) queda para orgánico y para la renovación.
-- **Para el escritorio, E1 (modo de captura):**
-  - es prioritario que la toma lleve el **audio** del juego (conclusión 7);
-  - un **tablero grande** a la carta;
-  - el **Mapa entero** que se llena.
+- **Para el escritorio, E1 (modo de captura):** hecho el 2026-10-31 (`596f6931`, extras `af_capture*` en `docs/dev/prototipo-v0.md`):
+  - **tablero a la carta:** cubierto por `af_capture_board` y `af_capture_board_path`, con la solución a ritmo humano, la parada a N del final y la cámara lenta;
+  - **Mapa:** se abre directo con `af_capture_screen map` y el progreso de `af_max_level`; que se vaya llenando sigue siendo una toma de varias partidas;
+  - **audio del juego: sigue sin resolver.** `screenrecord` no lo graba, y E1 no lo añade. En S4, los efectos reales se vuelven a poner sincronizados con las líneas `AF_CAPTURE pour`, o se pide al escritorio una salida de audio (conclusión 7).
 - **Prueba de «sin manos» frente a «manos reales»** cuando haya pago (conclusión 12).
 
 ## 5. Fuentes

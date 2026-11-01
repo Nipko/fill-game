@@ -7,7 +7,7 @@ Cada **lunes**, Spark pone al día la biblioteca de referencias, las puntúa y e
 | Qué | Dónde | Por qué |
 |---|---|---|
 | Biblioteca (`biblioteca.json`), semillas semanales, notas y fotogramas | Equipo de Spark, `C:\AI\marketing\tendencias\` | Son referencias de terceros (§3 y §11 del encargo). No entran en el repositorio |
-| Script `tendencias.py` | Ídem. Pasará al repositorio privado `fill-game-marketing` cuando el dueño lo cree (Q-MK-7) | Solo usa la biblioteca estándar de Python |
+| Script `tendencias.py` | Repositorio privado `fill-game-marketing` (Q-MK-7), carpeta `tendencias/`. Clon en el Spark: `C:\AI\marketing\fill-game-marketing\`. Lee y escribe los datos en `C:\AI\marketing\tendencias\` (o en la carpeta de la variable `TINTALU_TENDENCIAS`) | Solo usa la biblioteca estándar de Python. Los datos son de terceros y no entran en git |
 | El informe | Aquí, en `docs/marketing/tendencias/` | Es lo que sirve para decidir |
 
 ## Qué hace cada lunes
@@ -26,7 +26,8 @@ Cada **lunes**, Spark pone al día la biblioteca de referencias, las puntúa y e
    - si es adaptable honestamente: ✓, ~ o ✗.
 4. **Puntuación e informe:**
    ```
-   python tendencias.py importar semilla-AAAA-SS.json --visto AAAA-MM-DD
+   cd C:\AI\marketing\fill-game-marketing\tendencias
+   python tendencias.py importar C:\AI\marketing\tendencias\semilla-AAAA-SS.json --visto AAAA-MM-DD
    python tendencias.py informe --semana AAAA-SS --salida <repo>/docs/marketing/tendencias/AAAA-SS.md
    ```
    - **Puntuación de pago (0-100):**
