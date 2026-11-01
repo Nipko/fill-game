@@ -10,6 +10,22 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 Encargo: `docs/dev/traspaso/spark-marketing.md`. Rama `spark/marketing-investigacion`.
 
+### 2026-11-01 · Validación de la fábrica en el teléfono con E1: HECHA
+
+- **dev.apk con E1, compilado en el Spark** desde esta rama (`scripts/unity-build.ps1 -Method Dev`: `[AF.BuildDev] OK`), e instalado en el SM-S938B junto a la app de Play.
+  - El primer intento falló por la licencia de Unity («No valid Unity Editor license found»).
+  - El segundo pasó.
+- **Tomas con `tomar.py`:** el nivel 42 sin HUD, resuelto a ritmo humano, en es-419, pt-BR y en. Cada una tiene 18 líneas `AF_CAPTURE`: 13 vertidos y la victoria.
+- **Arreglos en `tomar.py`:**
+  - el logcat se vuelca al final de la grabación, porque leído en vivo se perdían las líneas;
+  - avisa si sale la pantalla de edad: el modo de captura no guarda el perfil, así que el dueño responde una vez la edad y el consentimiento del dev sin extras.
+- **Calibración de la sincronía:**
+  - `screenrecord` tarda unos **0,35 s** en arrancar (medido con los fotogramas del primer vertido);
+  - los efectos del vertido se movieron a lo que se ve: el chorro empieza unos 0,22 s después del toque y acaba hacia los 0,68 s.
+- **Pieza `e1-l42-se-tine`** (3 idiomas, 30,8 s, 9:16): 13 vertidos con sus efectos y la victoria, colocados por los eventos reales. Pasa todo el control de calidad: −13,8 LUFS. La revisión con el modelo de visión sigue pendiente.
+- **Código:** `fill-game-marketing`. **Documento:** `fabrica.md`, en su sección «Antes de la primera toma».
+- **Enganche para el integrador:** sigue en pie el **audio en el modo de captura**: el real o, como mínimo, líneas `AF_CAPTURE` del sellado y del teñido.
+
 ### 2026-11-01 · S3 (kit de redes) y S4 (la fábrica mínima): HECHOS
 
 - **S3 · `docs/marketing/kit-redes.md` y `docs/marketing/kit/`:** 23 PNG finales con su `manifest.json`, generados por `kit/generar_kit.py` de `fill-game-marketing`:

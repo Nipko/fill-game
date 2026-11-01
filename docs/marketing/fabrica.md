@@ -14,14 +14,25 @@ brief (JSON) ─► tomar.py (teléfono, modo de captura E1) ─► montar.py (p
 
 | Paso | Script | Qué hace | Probado |
 |---|---|---|---|
-| Toma | `tomar.py <nombre> -s <segundos> -- <extras af_capture*>` | <ul><li>Lanza el juego con los extras de E1 y graba la pantalla con `screenrecord`.</li><li>Guarda las líneas `AF_CAPTURE` con su segundo de vídeo, en `<nombre>.json`.</li><li>**No graba si «No molestar» está apagado.**</li></ul> | El análisis de las líneas, con su autoprueba. **La grabación con E1 está pendiente:** el teléfono no estaba conectado y hay que instalar un dev.apk con E1 (`596f6931`) |
-| Montaje | `montar.py <brief.json>` | Encuadre, gancho, subtítulos, tarjeta final y sonido (§3 y §4 abajo), por idioma y formato | Sí: la pieza de prueba en los 3 idiomas, con las tomas del 2026-10-30 |
+| Toma | `tomar.py <nombre> -s <segundos> -- <extras af_capture*>` | <ul><li>Lanza el juego con los extras de E1 y graba la pantalla con `screenrecord`.</li><li>Guarda las líneas `AF_CAPTURE` con su segundo de vídeo, en `<nombre>.json`.</li><li>**No graba si «No molestar» está apagado.**</li></ul> | Sí, en el SM-S938B el 2026-11-01 con un dev.apk con E1 compilado en el Spark: nivel 42 en los tres idiomas, con 13 vertidos y la victoria por toma |
+| Montaje | `montar.py <brief.json>` | Encuadre, gancho, subtítulos, tarjeta final y sonido (§3 y §4 abajo), por idioma y formato | Sí: `e1-l42-se-tine` en los 3 idiomas (30,8 s) con los efectos colocados por las líneas `AF_CAPTURE` (13 vertidos y la victoria) |
 | Control de calidad | `calidad.py <pieza>` | Las pruebas de §5 abajo; deja `calidad.json` y el estado | Sí: las 3 salidas pasan; además, detectó que pt-BR y en usaban la toma en español (§5) |
 | Cola | `cola.py estado / aprobar / rechazar / hoja / publicables` | Estados, aprobación, hoja de contactos local e interruptor de parada | Sí, con autoprueba |
 
 - **Intérprete:** el Python de ComfyUI, que trae Pillow y numpy: `C:\AI\ComfyUI_windows_portable\python_embeded\python.exe`.
 - **ffmpeg:** el de `C:\AI\ffmpeg\`.
 - **Autopruebas:** cada script tiene `--self-test`, salvo el generador del kit.
+
+### Antes de la primera toma en un teléfono
+
+- **El dev.apk tiene que llevar E1** (`596f6931` o posterior). Se compila con `scripts/unity-build.ps1 -Method Dev`; en el Spark hace falta la licencia de Unity activa.
+- **Hay que abrir el juego una vez sin extras `af_capture*`** y responder la edad y el consentimiento. Los responde el dueño, no un agente. El modo de captura lee el perfil pero no lo guarda: con un perfil vacío, cada toma se quedaría en esa pantalla (`tomar.py` lo avisa).
+- **«No molestar»**, activo.
+- **Sincronía:**
+  - `t_video` = la hora de la línea de logcat − (la hora del teléfono al lanzar `screenrecord` + **0,35 s**). Ese 0,35 es lo que tarda en arrancar `screenrecord`: se midió en el SM-S938B con los fotogramas del primer vertido;
+  - con otro teléfono, se vuelve a medir y se pasa con `--ajuste`;
+  - **el volcado de logcat es al final de la grabación.** Leído en vivo, se perdían las líneas.
+- **El build de Unity reinicia adb**, y la depuración inalámbrica se cae: hay que reactivarla en el teléfono.
 
 ## 2. El brief
 
@@ -72,11 +83,11 @@ Un JSON por pieza en `C:\AI\marketing\briefs\`. Ejemplo real (la pieza de prueba
   | Momento | Efecto |
   |---|---|
   | −0,26 s | `sfx_select` (el primer toque) |
-  | 0 s | `sfx_pour_start` |
-  | +0,12 s | `sfx_pour_loop` (0,55 s) |
-  | +0,67 s | `sfx_pour_end` |
+  | +0,22 s | `sfx_pour_start` |
+  | +0,30 s | `sfx_pour_loop` (0,40 s) |
+  | +0,68 s | `sfx_pour_end` |
 
-  Los desfases se estiran con `slowmo` y con `velocidad`. **Es una aproximación** al sonido real: el sellado y el teñido aún no tienen línea `AF_CAPTURE` y no suenan.
+  Los desfases salen de una toma de E1 del 2026-11-01: la cuia viaja unos 0,22 s y el chorro dura hasta unos 0,68 s. Se estiran con `slowmo` y con `velocidad`. **Es una aproximación** al sonido real: el sellado y el teñido aún no tienen línea `AF_CAPTURE` y no suenan.
 - **La victoria** (`autoplay_end` con `won`): `sfx_win_toada`, +0,35 s.
 - **La mezcla:** a −14 LUFS, con un pico real ≤ −1,5 dBTP (`loudnorm`).
 - **Para el escritorio:** sería mejor una salida de audio en el modo de captura (el audio real, o líneas `AF_CAPTURE` del sellado y del teñido). Va en «Enganches para el integrador» de `spark-estado.md`.
@@ -116,7 +127,6 @@ Un JSON por pieza en `C:\AI\marketing\briefs\`. Ejemplo real (la pieza de prueba
 
 | Qué | Cuándo |
 |---|---|
-| Probar `tomar.py` en el teléfono con un dev.apk con E1: calibrar la sincronía (`--ajuste`) y los desfases del vertido | Al reconectar el teléfono (depuración inalámbrica), semana 45 |
 | Formatos 1:1 y 16:9 con piezas reales (el código ya los admite) | Con el lote 1 |
 | Voz en off con TTS neutra (Q-MK-6) | Cuando haya un TTS con licencia comercial instalado (Q-MK-S0-2) |
 | La revisión con el modelo de visión | Con Qwen3-VL-8B (Q-MK-S0-2) |
