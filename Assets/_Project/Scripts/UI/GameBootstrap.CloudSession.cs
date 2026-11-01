@@ -94,7 +94,8 @@ namespace AF.UI
         {
             if (_cloudSession == null)
             {
-                ICloudSave cloud = CloudSaveOverride ?? CreatePlatformCloud() ?? FakeCloudSave.WithoutSession();
+                // Modo de captura (D-066 E1): la nube falsa sin sesión; una toma no baja ni sube nada.
+                ICloudSave cloud = CloudSaveOverride ?? (_capture.Active ? null : CreatePlatformCloud()) ?? FakeCloudSave.WithoutSession();
                 _cloudSession = new CloudSession(cloud, CloudFlags, DeviceIdentity);
             }
 

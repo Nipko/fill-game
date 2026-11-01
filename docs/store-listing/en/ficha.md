@@ -8,7 +8,7 @@
 
 | Campo | Valor | Origen |
 |---|---|---|
-| App name (≤ 30) | **Tintalú: Water Sort Puzzle** (26) | glosario §1.3 |
+| App name (≤ 30) | **Tintalu: Water Sort Puzzle** (26) | glosario §1.3 |
 | Developer | **Parallext, LLC** (parallext.com) | D-041 |
 | `applicationId`, cuenta de Play Console | Los de `../es-419/ficha.md` §1 (`com.parallext.tintalu`; cuenta de AUTOMATION AI S.A.S) | D-047; D-048 |
 | Contact email | `support@tintalu.com` | D-041, añadido del 2026-10-25 |

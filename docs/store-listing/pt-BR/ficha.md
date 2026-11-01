@@ -8,7 +8,7 @@
 
 | Campo | Valor | Origen |
 |---|---|---|
-| Nome do app (≤ 30) | **Tintalú: Classificar Água** (25) | glosario §1.3 |
+| Nome do app (≤ 30) | **Tintalu: Classificar Água** (25) | glosario §1.3 |
 | Desenvolvedor | **Parallext, LLC** (parallext.com) | D-041 |
 | `applicationId`, cuenta de Play Console | Los de `../es-419/ficha.md` §1 (`com.parallext.tintalu`; cuenta de AUTOMATION AI S.A.S) | D-047; D-048 |
 | E-mail de contato | `support@tintalu.com` | D-041, añadido del 2026-10-25 |

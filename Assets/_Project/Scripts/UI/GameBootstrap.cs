@@ -1613,6 +1613,7 @@ namespace AF.UI
         private IEnumerator Start()
         {
             AF.Presentation.PixelBuffers.BeginPooling(); // memoria (2026-10-26): los lienzos del arranque comparten búferes hasta EndPooling
+            SetUpCapture(); // modo de captura (D-066 E1; GameBootstrap.Capture.cs): solo en desarrollo, antes de leer el perfil
             _bootInProgress = true; // hasta ResumeBackend(false): la reanudación de OnApplicationPause espera (GameBootstrap.BootSteps.cs)
             if (!s_rebuildToLobby && BootSplash.Enabled)
             {
@@ -1633,9 +1634,10 @@ namespace AF.UI
             // sigue bloqueado si lo estaba) y sin los extras de desarrollo de la cartera, que son del arranque en frío (revisión
             // de L3).
             IProfileStore? carriedStore = s_rebuildToLobby ? s_rebuildStore : null;
-            bool sameStore = carriedStore != null && (LaunchOptions.ProfileStoreOverride != null
-                ? ReferenceEquals(carriedStore, LaunchOptions.ProfileStoreOverride)
-                : carriedStore is LocalProfileStore local && string.Equals(local.DirectoryPath, profileDirectory, StringComparison.Ordinal));
+            IProfileStore? carriedInner = UnwrapCaptureStore(carriedStore); // el de verdad bajo el de solo lectura de la captura
+            bool sameStore = carriedInner != null && (LaunchOptions.ProfileStoreOverride != null
+                ? ReferenceEquals(carriedInner, LaunchOptions.ProfileStoreOverride)
+                : carriedInner is LocalProfileStore local && string.Equals(local.DirectoryPath, profileDirectory, StringComparison.Ordinal));
             Profile? carried = sameStore ? s_rebuildProfile : null;
             bool rebuilt = carried != null;
             bool reopenSettings = rebuilt && s_rebuildReopenSettings;
@@ -1646,7 +1648,8 @@ namespace AF.UI
             s_rebuildStore = null;
             _cloudSession = rebuilt ? s_rebuildCloud : null; // D-042: la nube de la sesión sigue tras la recarga (ya fusionada)
             s_rebuildCloud = null;
-            IProfileStore store = rebuilt ? carriedStore! : (LaunchOptions.ProfileStoreOverride ?? new LocalProfileStore(profileDirectory));
+            // Con el modo de captura (D-066 E1), el perfil se lee y no se guarda: la toma no toca el del teléfono.
+            IProfileStore store = rebuilt ? carriedStore! : CaptureStore(LaunchOptions.ProfileStoreOverride ?? new LocalProfileStore(profileDirectory));
             Profile profile;
             bool firstRun;
             if (carried != null)
@@ -1657,7 +1660,7 @@ namespace AF.UI
             }
             else
             {
-                bool migrateLegacy = LaunchOptions.ProfileStoreOverride == null && LaunchOptions.ProfileDirectoryOverride == null;
+                bool migrateLegacy = MigratesLegacyProgress(LaunchOptions.ProfileStoreOverride != null, LaunchOptions.ProfileDirectoryOverride != null, _capture.Active);
                 profile = LoadProfile(store, clock, migrateLegacy, out firstRun, out _profileStatus);
                 _splash?.BeginIntro(ResolveReduceMotion(profile)); // D-051: la intro anima (o queda quieta) desde que se sabe; no espera a nada
                 VerifyBootProfile(profile); // B8 (GameBootstrap.Cloud.cs): la firma tal como se leyó, antes de los extras de desarrollo
@@ -1880,12 +1883,18 @@ namespace AF.UI
             SetUpLeague(); // D-046 (GameBootstrap.League.cs): la Liga del río, tras la edad y el consentimiento (nada con <13 ni sin contestar)
             SetUpAvatars(); // D-056 (GameBootstrap.Avatars.cs): los avatares del jugador, tras la Liga (le mandan el índice elegido)
             ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
+            ApplyCaptureAfterSetUp(); // D-066 E1: HUD oculto, fondo y skin de la toma (GameBootstrap.Capture.cs)
             _bootInProgress = false; // desde aquí, volver de segundo plano reanuda lo de siempre
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
             if (requested <= 0 && !rebuilt)
             {
                 requested = LaunchOptions.ReadIntentLevel();
+            }
+
+            if (!rebuilt)
+            {
+                requested = CaptureStartLevel(requested, catalog); // D-066 E1: el paquete de la toma arranca en su primer nivel
             }
 
             MarkBootStep(StepSystems);
@@ -1979,6 +1988,11 @@ namespace AF.UI
                 dt = 0f;
             }
 
+            // Modo de captura (D-066 E1; GameBootstrap.Capture.cs): la pantalla pedida y la solución con el reloj real; la cámara
+            // lenta escala el paso de la presentación y del flujo (no Time.timeScale: aquí todo va con el reloj sin escalar).
+            TickCapture(Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs));
+            dt = CaptureScaled(dt);
+
             _adOverlay?.Tick(Time.unscaledDeltaTime * 1000f);
             bool back = _backPresses > 0;
             _backPresses = 0;
@@ -2042,6 +2056,7 @@ namespace AF.UI
             if (!paused)
             {
                 BackResumed(); // 02 §3.5: de vuelta del fondo, Atrás en el inicio vuelve a mandar la app al fondo
+                CaptureResumed(); // D-066 E1: el inmersivo de la toma otra vez
             }
 
             if (AccountDeleted)
@@ -2233,7 +2248,7 @@ namespace AF.UI
             var packs = new List<LevelPack>();
             try
             {
-                string? packJson = LaunchOptions.LevelPackJsonOverride;
+                string? packJson = LaunchOptions.LevelPackJsonOverride ?? _captureBoardJson; // el de la toma (D-066 E1), ya validado
                 if (packJson != null)
                 {
                     packs.Add(LevelPackReader.Read(packJson));

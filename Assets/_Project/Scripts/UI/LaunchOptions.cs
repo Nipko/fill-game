@@ -156,6 +156,12 @@ namespace AF.UI
         /// <summary><c>af_league</c> forzado por un test; null = el extra. Fuera de desarrollo no cuenta.</summary>
         public static bool? LeagueEnabledOverride { get; set; }
 
+        /// <summary>
+        /// Opciones del modo de captura (D-066; spark-marketing §6 E1; extras <c>af_capture*</c>, <see cref="CaptureOptions"/>) forzadas
+        /// por un test; null = las de los extras. Fuera de desarrollo no cuentan (<see cref="CaptureOptions.Resolve"/>).
+        /// </summary>
+        public static CaptureOptions? CaptureOverride { get; set; }
+
         /// <summary><c>af_league_fake</c> forzado por un test; null = el extra. Fuera de desarrollo no cuenta.</summary>
         public static bool? LeagueFakeOverride { get; set; }
 
@@ -169,6 +175,15 @@ namespace AF.UI
         public static bool ResolveLeagueFake(bool development)
         {
             return development && (LeagueFakeOverride ?? ReadIntentBool(IntentExtraLeagueFake));
+        }
+
+        /// <summary>
+        /// La Liga usa la API falsa (<c>af_league_fake</c>) o la partida es una toma del modo de captura (D-066 E1; <paramref name="capture"/>):
+        /// las victorias de una toma no llegan a la clasificación real. Solo en desarrollo.
+        /// </summary>
+        public static bool ResolveLeagueFake(bool development, bool capture)
+        {
+            return development && (capture || ResolveLeagueFake(development));
         }
 
         /// <summary>
@@ -378,6 +393,7 @@ namespace AF.UI
             FakeStoreOverride = null;
             LeagueEnabledOverride = null;
             LeagueFakeOverride = null;
+            CaptureOverride = null;
         }
 
         /// <summary>

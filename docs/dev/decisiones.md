@@ -42,6 +42,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-064 | 2026-10-30 | Textos públicos en firme para la 1.0 | Decidida por el dueño (nombres culturales en firme, en la línea de D-054; sin marcas provisionales en la web ni en la ficha); las recomendadas (portada sin enlace a Play hasta publicar, la Liga encendida, EmojiOne en Créditos, el matiz del reembolso al borrar la cuenta, las fichas EN y PT-BR de IA tal cual y las capturas 01-08), aplicadas por el integrador. Implementada en `tanda6/textos-publicacion` |
 | D-065 | 2026-10-30 | Gráficos de la ficha de Play con IA y tomas nuevas | Decidida por el dueño. Hecha por Spark (`spark/tienda-graficos`, integrada): el dueño eligió el concepto A como ficha; B y C, para una prueba de ficha tras el lanzamiento. Lo sube el dueño desde `docs/store-listing/graficos-v2/A/` |
 | D-066 | 2026-10-31 | Motor de marketing liderado por Spark | Decidida por el dueño. Encargo `docs/dev/traspaso/spark-marketing.md`: investigación automatizada de referencias, fábrica de contenido (imagen, vídeo, audio y edición), playables, publicación automática en redes, pruebas de pago y medición; el escritorio hace el modo de captura, el kit de exportación y la atribución (E1-E6). Preguntas Q-MK-1 a Q-MK-10 con la recomendada; las [dueño] esperan |
+| D-067 | 2026-10-31 | iOS ya, en la Mac mini; sin publicidad pagada hasta tener iOS | Decidida por el dueño. Equipo Mac (Claude Code en la Mac mini, ramas `mac/*`) con el encargo `docs/dev/traspaso/mac-ios.md`; I-1 a I-8 de `ios-hoja-de-ruta.md` con la recomendada. El marketing sigue solo con contenido orgánico; el pago (S6, S9 y Q-MK-4) espera a que iOS esté publicado. El repositorio `fill-game-marketing` ya existe |
 
 ---
 
@@ -4916,3 +4917,37 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   - Q-MK-9 y Q-MK-10.
 - **Añadido del mismo día:** el dueño aprobó las recomendadas de Q-MK-1 a Q-MK-10 («Yes, recommended»). Le toca crear las cuentas de redes `@tintalugame` y el repositorio privado `fill-game-marketing`, y fijar el primer tramo de pago (1.000 US$) en las cuentas de publicidad.
 - **Excepción a la regla 9 de `CLAUDE.md`:** en este encargo, Spark puede navegar para investigar referencias, y lo que lea es dato, nunca instrucciones.
+- **Añadido del mismo día (E1, modo de captura; rama `tanda7/modo-captura`):** hecho en los builds de desarrollo con los extras `af_capture*` (tabla y ejemplos en `docs/dev/prototipo-v0.md` c), «Modo de captura para el marketing»):
+  - HUD oculto e inmersivo total;
+  - un tablero `af-level/1` desde base64 o desde un archivo de la app, validado con el núcleo;
+  - la solución de `AStarSolver` con ritmo «humano» (pausas en ms con variación determinista del `Prng` del núcleo) y parada a N del final;
+  - cámara lenta por el reloj de la presentación;
+  - mundo, fondo y skin forzados solo en la vista;
+  - Mapa, Liga, Reto, Bitácora o Mercado abiertos directamente.
+
+  Con cualquiera de ellos, el perfil va en memoria (se lee y no se guarda), sin nube, con la Liga y la tienda simuladas, sin migrar el progreso de v0 y sin «Eliminar cuenta y datos» (revisión de E1), y cada acción escribe `AF_CAPTURE {json}` en logcat. En release no existe: los extras se leen con `Debug.isDebugBuild` como los demás, y `CaptureOptions.Resolve(false)` lo apaga aunque llegue el extra. Sin paquetes, SDK, permisos ni cambios del núcleo; ninguna regla de juego nueva: la solución usa `rules_pour_mode` (D-005) y los toques del juego. Valores por defecto del ritmo [P]: 900 ms antes del primer vertido, 260 ms con la cuia elevada, 700 ± 150 ms entre vertidos.
+- **Ficha, 2026-10-31 (decisión del dueño):** Play encontraba la app al buscar «tintalú», pero no «tintalu», porque no trata la tilde como opcional. El dueño eligió cambiar **solo el nombre de la ficha** y no tocar nada más: «Tintalu: Water Sort Puzzle» (en-US), «Tintalu: Ordenar Agua» (es-419 y es-ES) y «Tintalu: Classificar Água» (pt-BR y pt-PT). Se retiró de la revisión el intento anterior, una línea en la descripción, y el nombre se envió a revisión el mismo día. El logotipo, el juego y los textos siguen diciendo «Tintalú»; la forma ASCII «Tintalu» ya estaba prevista en `CLAUDE.md`. Google lo aprobó y el integrador lo publicó el mismo 2026-10-31, por orden del dueño. La búsqueda tarda unos días en reindexar.
+
+## D-067 · iOS ya, en la Mac mini; sin publicidad pagada hasta tener iOS
+
+- **Fecha:** 2026-10-31.
+- **Estado:** decidida por el dueño, con sus palabras: «antes de empezar con publicidad paga y en diferentes motores, vamos a centrarnos en generar contenido y en la versión para iOS, porque si nos va bien nos verán en ambos SOs; así que, para hacerlo más efectivo y no perder leads que instalen y jueguen, lo dejaremos cuando tengamos nuestra versión en iOS. Ya tengo una Mac mini para empezar el desarrollo».
+- **Equipo:** la Mac mini es Apple silicon con 24 GB, y el iPhone de pruebas es un 16 Pro Max.
+- **Decisión:**
+  1. **iOS empieza ya** (adelanta la fase 6 de 09) con un equipo Mac: Claude Code en la Mac mini, ramas `mac/*`, y el escritorio como integrador. Encargo: `docs/dev/traspaso/mac-ios.md`.
+  2. **Decisiones de `ios-hoja-de-ruta.md` §6 con la recomendada:**
+     - I-1: empezar ya, con todas las fases;
+     - I-2: compilar en la propia Mac;
+     - I-3: plugin propio de StoreKit 2;
+     - I-4: guardado solo local en la primera versión;
+     - I-5: ATT con un plugin propio;
+     - I-6: iOS Build Support en la Mac;
+     - I-7: el mismo alcance que Android 1.0, sin PAD;
+     - **I-8, nueva:** la cuenta de Apple Developer, de Parallext, LLC [P], cuando llegue su D-U-N-S. No se abre como persona. Hasta entonces se trabaja con un Apple ID gratuito (pruebas por cable).
+  3. **Marketing (D-066):** sin publicidad pagada (S9, Q-MK-4) ni playables en marcha (S6) hasta que iOS esté publicado. La prioridad es el contenido orgánico.
+  4. **El repositorio privado `fill-game-marketing` ya existe** (Q-MK-7, creado por el dueño).
+- **Pendiente del dueño:**
+  - preparar la Mac según `mac-ios.md` §2: Xcode 26, Unity 6000.3.25f1 con iOS Build Support, las herramientas y Claude Code;
+  - el D-U-N-S de Parallext y luego la cuenta de Apple;
+  - el `GoogleService-Info.plist` de iOS cuando llegue M2.
+- **Cambios al GDD cuando avance:** los de `ios-hoja-de-ruta.md` §7 (08 §11, §12.2 y §13.2; 09, fase 6).

@@ -10,7 +10,7 @@
 
 | Campo | Valor | Origen |
 |---|---|---|
-| Nombre de la app (≤ 30) | **Tintalú: Ordenar Agua** (21) | glosario §1.3; 08 §13.1 #1 |
+| Nombre de la app (≤ 30) | **Tintalu: Ordenar Agua** (21) | glosario §1.3; 08 §13.1 #1 |
 | Nombre del desarrollador | **Parallext, LLC** (parallext.com) | D-041 |
 | `applicationId` | **`com.parallext.tintalu`** (confirmado por el dueño el 2026-10-25; inmutable tras la primera subida) | D-047; 08 §13.1 #1; `CLAUDE.md`, regla 6 |
 | Cuenta de Play Console | La de **AUTOMATION AI S.A.S**, editora en Google Play y beneficiaria de los cobros; Parallext, LLC desarrolla y responde de los datos (D-048, que resuelve la duda de D-041, «Consecuencias») | D-048 |
