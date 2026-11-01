@@ -10,6 +10,31 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 Encargo: `docs/dev/traspaso/spark-marketing.md`. Rama `spark/marketing-investigacion`.
 
+### 2026-11-01 · S3 (kit de redes) y S4 (la fábrica mínima): HECHOS
+
+- **S3 · `docs/marketing/kit-redes.md` y `docs/marketing/kit/`:** 23 PNG finales con su `manifest.json`, generados por `kit/generar_kit.py` de `fill-game-marketing`:
+  - la foto de perfil (el icono v2);
+  - los banners de YouTube, Facebook y X;
+  - 9 tarjetas finales (3 idiomas × 9:16, 1:1 y 16:9);
+  - las portadas de carrusel;
+  - las guías de zona segura y muestras sobre una toma real.
+
+  El documento recoge además las biografías por red (en los tres idiomas, con su recuento de caracteres), los enlaces con UTM, la paleta, la tipografía, el tono y los hashtags por idioma y pilar.
+- **S4 · `docs/marketing/fabrica.md`, con el código en `fill-game-marketing/fabrica/` (`214df53`):**
+  - `tomar.py`: toma con el modo de captura E1; no graba si «No molestar» está apagado;
+  - `montar.py`: la pantalla del juego entera, el gancho, los subtítulos, la tarjeta final y el sonido del juego (CC0) sincronizado con `AF_CAPTURE`, a −14 LUFS;
+  - `calidad.py`: las pruebas del §5 del encargo, más el idioma de la toma;
+  - `cola.py`: los estados, la aprobación y el interruptor `C:\AI\marketing\PAUSA`.
+- **Prueba de punta a punta:** una pieza del nivel 42 en es-419, pt-BR y en (9:16, 27-28 s) pasa todas las pruebas automáticas: −13,7 LUFS, rótulos dentro de la zona segura y sin frases prohibidas.
+  - El control detectó un fallo real: las versiones pt-BR y en usaban la toma en español. Se corrigió con una toma por idioma (`por_idioma`).
+  - La revisión con el modelo de visión sigue pendiente (Qwen3-VL-8B, Q-MK-S0-2).
+- **Sin probar:** la grabación con E1. El teléfono no estaba conectado y hace falta un dev.apk con E1 (`596f6931`).
+- **Preguntas:** **Q-MK-S3-1:** la insignia oficial de Google Play en la tarjeta final. Recomendada: descargarla con el permiso del dueño. Hasta entonces, el texto en Baloo 2.
+- **Siguiente:** S5, el lote 1 de la semana 45, con tomas nuevas de E1.
+- **Enganches para el integrador:**
+  - un **dev.apk con E1** instalado en el teléfono de pruebas;
+  - **audio en el modo de captura**: el audio real o, como mínimo, líneas `AF_CAPTURE` del sellado y del teñido, para que suenen en el montaje.
+
 ### 2026-10-31 · S2 (estrategia de las 4 primeras semanas): HECHO
 
 - **`docs/marketing/estrategia.md`**, solo orgánica por D-067:
