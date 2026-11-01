@@ -10,6 +10,27 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 Encargo: `docs/dev/traspaso/spark-marketing.md`. Rama `spark/marketing-investigacion`.
 
+### 2026-10-31 · S2 (estrategia de las 4 primeras semanas): HECHO
+
+- **`docs/marketing/estrategia.md`**, solo orgánica por D-067:
+  - objetivos;
+  - mercados, idiomas y cuentas (una por red, con un núcleo neutro de idioma y piezas que alternan es-419 y pt-BR);
+  - la parrilla semanal de pilares y ganchos;
+  - el calendario de las semanas ISO 45 a 48 con temas: presentación, frutas, reto y viaje;
+  - el primer lote de 7 piezas y 2 carruseles con sus tomas de E1;
+  - los KPIs por pieza y por canal, y las reglas de decisión;
+  - el presupuesto: ~20 US$/mes de Buffer y 0 de pago;
+  - S10 (experimento de ficha A frente a B y C desde la semana 2, lo pone el dueño);
+  - lo que necesita el dueño cada semana.
+- **Preguntas nuevas, con la recomendada aplicada [P]:**
+  - Q-MK-S2-1: una cuenta por red;
+  - Q-MK-S2-2: el gancho «sin vidas» queda fuera hasta verificar `biz_feature_lives` en producción;
+  - Q-MK-S2-3: publicar con los efectos del juego vueltos a poner hasta que haya audio en E1.
+- **Siguiente:** S3 (kit de redes y plantillas) y S4 (la fábrica mínima) en la semana 45. La publicación empieza cuando el dueño cree las cuentas y ponga el token de Buffer.
+- **Enganches para el integrador:**
+  - E4 (enlaces UTM `utm_medium=organic&utm_campaign=bio` por red) y E2 en la semana 45, y E3 en la 46;
+  - confirmar en Firebase el valor publicado de `biz_feature_lives`.
+
 ### 2026-10-31 · Puesta al día con D-067 y E1
 
 - **D-067 (sin pago hasta iOS):** aplicado.
