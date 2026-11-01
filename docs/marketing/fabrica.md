@@ -32,6 +32,7 @@ brief (JSON) ─► tomar.py (teléfono, modo de captura E1) ─► montar.py (p
   - `t_video` = la hora de la línea de logcat − (la hora del teléfono al lanzar `screenrecord` + **0,35 s**). Ese 0,35 es lo que tarda en arrancar `screenrecord`: se midió en el SM-S938B con los fotogramas del primer vertido;
   - con otro teléfono, se vuelve a medir y se pasa con `--ajuste`;
   - **el volcado de logcat es al final de la grabación.** Leído en vivo, se perdían las líneas.
+- **La toma sigue al menos 9 s después de ganar.** El panel de victoria («¡Perfecto!», la cosecha y el Dato del río) se queda quieto unos 2,6 s después de `autoplay_end`, y debe leerse 4 s o más antes de la tarjeta final. El control de calidad lo exige (`victoria_visible`).
 - **El build de Unity reinicia adb**, y la depuración inalámbrica se cae: hay que reactivarla en el teléfono.
 
 ## 2. El brief
@@ -104,6 +105,7 @@ Un JSON por pieza en `C:\AI\marketing\briefs\`. Ejemplo real (la pieza de prueba
 | Derechos | Todo el audio sale del manifiesto del juego, con licencia CC0 o propia | Vuelve a montaje |
 | Manifiesto | `pilar`, `objetivo` y `etiqueta_ia`; si hay `planos_ia`, `etiqueta_ia` es `true` | Vuelve a montaje |
 | Idioma de la toma | Una toma por idioma, salvo `toma_neutra` | Vuelve a montaje |
+| Victoria visible | Si la pieza llega a la victoria, el panel queda ≥ 4 s en pantalla [P] | Vuelve a montaje (o se graba una toma más larga) |
 | Visión | Comparar los planos con capturas reales usando Qwen3-VL-8B | **Pendiente:** el modelo no está instalado (Q-MK-S0-2). La suple la revisión de la hoja de contactos |
 
 - **Estados:** si una pieza falla 2 veces seguidas, pasa a `revision_humana`.
