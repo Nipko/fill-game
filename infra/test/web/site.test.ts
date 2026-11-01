@@ -191,10 +191,15 @@ describe('web/site', () => {
     const externalLinks = new Set<string>();
     for (const f of HTML_FILES) {
       const doc = site.get(f) ?? '';
-      // Scripts propios y el logo de la marca (SVG del mismo origen, identidad v2); nada más.
-      for (const s of attrs(doc, 'src')) expect(s, f).toMatch(/^\/assets\/([a-z-]+\.js|brand\/[a-z0-9-]+\.svg)$/);
+      // Scripts propios, el logo de la marca (SVG del mismo origen, identidad v2) y las imágenes propias de la portada
+      // (la animación y las capturas del juego, del mismo origen); nada más.
+      for (const s of attrs(doc, 'src')) {
+        expect(s, f).toMatch(/^\/assets\/([a-z-]+\.js|brand\/[a-z0-9-]+\.svg|img\/hero\.svg|img\/(es-419|en|pt-BR)\/\d{2}\.webp)$/);
+      }
       for (const s of attrs(doc, 'srcset')) expect(s, f).toMatch(/^\/assets\/brand\/[a-z0-9-]+\.svg$/);
-      for (const m of doc.matchAll(/<(img|source)\b[^>]*>/g)) expect(m[0], f).toMatch(/(src|srcset)="\/assets\/brand\/[a-z0-9-]+\.svg"/);
+      for (const m of doc.matchAll(/<(img|source)\b[^>]*>/g)) {
+        expect(m[0], f).toMatch(/(src|srcset)="\/assets\/(brand\/[a-z0-9-]+\.svg|img\/[a-zA-Z0-9/.-]+)"/);
+      }
       for (const m of doc.matchAll(/<link\b[^>]*>/g)) {
         const href = /href="([^"]*)"/.exec(m[0])?.[1] ?? '';
         expect(href.startsWith('/') && !href.startsWith('//'), `${f}: ${m[0]}`).toBe(true);
@@ -219,6 +224,9 @@ describe('web/site', () => {
       'https://opensource.org/license/bsd-3-clause',
       'https://opensource.org/license/mit',
       'https://parallext.com',
+      'https://play.google.com/store/apps/details?id=com.parallext.tintalu&amp;hl=en&amp;referrer=utm_source%3Dtintalu.com%26utm_medium%3Dweb',
+      'https://play.google.com/store/apps/details?id=com.parallext.tintalu&amp;hl=es_419&amp;referrer=utm_source%3Dtintalu.com%26utm_medium%3Dweb',
+      'https://play.google.com/store/apps/details?id=com.parallext.tintalu&amp;hl=pt_BR&amp;referrer=utm_source%3Dtintalu.com%26utm_medium%3Dweb',
       'https://policies.google.com/privacy',
       'https://policies.google.com/technologies/partner-sites',
       'https://unity.com/legal',

@@ -17,7 +17,7 @@
   <link rel="alternate" hreflang="pt-BR" href="/pt-br/">
   <link rel="alternate" hreflang="x-default" href="/">
 </head>
-<body>
+<body class="page-home">
   <a class="skip" href="#main">Pular para o conteúdo</a>
   <header class="site-header">
     <a class="brand" href="/pt-br/">
@@ -35,19 +35,146 @@
     </nav>
   </header>
   <main id="main" tabindex="-1">
-<h1>Tintalú</h1>
-<p class="lead">Tintalú é um quebra-cabeça para celulares Android em que você despeja a água de uma cuia para outra até que cada uma fique com uma só cor. Cada cor vem de uma fruta ou da água de um rio da bacia amazônica, e você sobe o rio parada por parada, do estuário à nascente, no seu ritmo e sem limite de tempo.</p>
-<p>O Tintalú é desenvolvido pela <strong>Parallext, LLC</strong> (<a href="https://parallext.com" rel="noopener">parallext.com</a>).</p>
-<p>O jogo é publicado no Google Play pela <strong>AUTOMATION AI S.A.S</strong>.</p>
-<h2>Informações legais</h2>
-<ul>
+<section class="hero" aria-labelledby="hero-title">
+  <div>
+    <h1 id="hero-title">Tintalú</h1>
+    <p class="tagline">Classifique a água da Amazônia</p>
+    <p class="lead">Despeje a água de uma cuia para outra até que cada uma fique com uma só cor. Simples e relaxante. Cada cor vem de uma fruta ou da água de um rio da bacia amazônica: açaí, buriti, taperebá, camu-camu…</p>
+    <div class="stores">
+      <a class="store play" href="https://play.google.com/store/apps/details?id=com.parallext.tintalu&amp;hl=pt_BR&amp;referrer=utm_source%3Dtintalu.com%26utm_medium%3Dweb" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3.5v17a1 1 0 0 0 1.5.86l14.5-8.5a1 1 0 0 0 0-1.72L6.5 2.64A1 1 0 0 0 5 3.5Z"/></svg><span><small>Disponível no</small>Google Play</span></a>
+      <span class="store soon" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18" r="1.2" fill="currentColor"/></svg><span><small>Em breve</small>no iPhone</span></span>
+    </div>
+    <p class="fine">Grátis, com anúncios e compras opcionais. Android 8.0 ou superior.</p>
+  </div>
+  <div class="art" role="img" aria-label="Animação: uma cuia despeja sua água vermelha em outra, a completa e a cuia é selada."><svg class="hero-svg" xmlns="http://www.w3.org/2000/svg" viewBox="-10 0 420 300" width="400" height="300" aria-hidden="true" focusable="false">
+  <!-- Portada de tintalu.com: una cuia vierte su capa roja en otra hasta completarla, y se sella (02 §1, modo run, D-005).
+       Va en línea en la portada (marcador hero-art); la animación está en site.css (.hero-svg), porque la CSP no deja estilos
+       en línea. Sin movimiento si el sistema lo pide (prefers-reduced-motion). -->
+  <defs>
+    <path id="tube" d="M0 0 H50 V128 a25 25 0 0 1 -50 0 Z"/>
+    <clipPath id="in1" clipPathUnits="userSpaceOnUse"><use href="#tube" x="40" y="100"/></clipPath>
+    <clipPath id="in2" clipPathUnits="userSpaceOnUse"><use href="#tube" x="130" y="100"/></clipPath>
+    <clipPath id="in3" clipPathUnits="userSpaceOnUse"><use href="#tube" x="220" y="100"/></clipPath>
+    <clipPath id="in4" clipPathUnits="userSpaceOnUse"><use href="#tube" x="310" y="100"/></clipPath>
+  </defs>
+
+  <rect class="shelf" x="20" y="262" width="360" height="12" rx="6"/>
+
+  <!-- Cuia 2: tres rojas; recibe la cuarta y se sella -->
+  <g clip-path="url(#in2)">
+    <rect x="130" y="216" width="50" height="40" fill="#c9373a"/>
+    <rect x="130" y="180" width="50" height="36" fill="#c9373a"/>
+    <rect x="130" y="144" width="50" height="36" fill="#c9373a"/>
+    <rect class="take" x="130" y="108" width="50" height="36" fill="#c9373a"/>
+    <circle class="bubble" cx="146" cy="240" r="3" fill="#ffffff" fill-opacity="0.6"/>
+  </g>
+  <use href="#tube" x="130" y="100" class="glass"/>
+  <rect class="shine" x="137" y="110" width="6" height="110" rx="3"/>
+  <g class="seal"><rect class="cork" x="128" y="86" width="54" height="16" rx="5"/></g>
+  <path class="spark" fill="#ffe08a" d="M155 50 l4 12 12 4 -12 4 -4 12 -4 -12 -12 -4 12 -4 Z"/>
+
+  <!-- Cuia 3: mezclada -->
+  <g clip-path="url(#in3)">
+    <rect x="220" y="216" width="50" height="40" fill="#5a2d6e"/>
+    <rect x="220" y="180" width="50" height="36" fill="#f2a33a"/>
+    <rect x="220" y="144" width="50" height="36" fill="#3f9e5a"/>
+    <rect x="220" y="108" width="50" height="36" fill="#5a2d6e"/>
+    <circle class="bubble b2" cx="238" cy="240" r="3" fill="#ffffff" fill-opacity="0.6"/>
+  </g>
+  <use href="#tube" x="220" y="100" class="glass"/>
+  <rect class="shine" x="227" y="110" width="6" height="110" rx="3"/>
+
+  <!-- Cuia 4: a medias -->
+  <g clip-path="url(#in4)">
+    <rect x="310" y="216" width="50" height="40" fill="#3f9e5a"/>
+    <rect x="310" y="180" width="50" height="36" fill="#f2a33a"/>
+    <circle class="bubble b3" cx="330" cy="240" r="3" fill="#ffffff" fill-opacity="0.6"/>
+  </g>
+  <use href="#tube" x="310" y="100" class="glass"/>
+  <rect class="shine" x="317" y="110" width="6" height="110" rx="3"/>
+
+  <!-- El chorro, de la boca de la cuia 1 a la cuia 2 -->
+  <rect class="stream" x="151" y="82" width="7" height="62" rx="3.5" fill="#c9373a"/>
+
+  <!-- Cuia 1: naranja, morada y roja arriba; se inclina sobre la cuia 2 y vierte la roja -->
+  <g class="pour">
+    <g clip-path="url(#in1)">
+      <rect x="40" y="216" width="50" height="40" fill="#f2a33a"/>
+      <rect x="40" y="180" width="50" height="36" fill="#5a2d6e"/>
+      <rect class="give" x="40" y="144" width="50" height="36" fill="#c9373a"/>
+    </g>
+    <use href="#tube" x="40" y="100" class="glass"/>
+    <rect class="shine" x="47" y="110" width="6" height="110" rx="3"/>
+  </g>
+</svg></div>
+</section>
+
+<section class="section" aria-labelledby="how">
+  <h2 id="how">Como jogar</h2>
+  <p class="intro">Um toque, um despejo. Sem limite de tempo nem de jogadas: jogue no seu ritmo.</p>
+  <ol class="steps">
+    <li><strong>Toque em uma cuia</strong> e depois em outra para despejar a água de cima.</li>
+    <li><strong>Despeje com lógica</strong> só sobre a mesma cor ou em uma cuia vazia.</li>
+    <li><strong>Sele cada cor</strong> você vence quando cada cuia tiver uma só cor.</li>
+  </ol>
+</section>
+
+<section class="section" aria-labelledby="why">
+  <h2 id="why">Por que você vai gostar</h2>
+  <p class="intro">Um quebra-cabeça tranquilo com alma de rio.</p>
+  <div class="cards">
+    <div class="card"><span class="ico" aria-hidden="true">🌊</span><h3>Suba o Amazonas</h3><p>Do Estuário, no Brasil, por nove mundos em cinco países. No Mapa do Rio, a canoa do Capi avança de parada em parada.</p></div>
+    <div class="card"><span class="ico" aria-hidden="true">🍇</span><h3>Cores de fruta</h3><p>Cada cor é uma fruta ou a água de um rio. Frutas do Rio e as Curiosidades do rio contam de onde vem cada uma.</p></div>
+    <div class="card"><span class="ico" aria-hidden="true">⚖️</span><h3>Um jogo justo</h3><p>Todo tabuleiro tem solução sem reforços, e as etiquetas Difícil e Muito difícil dizem a verdade antes de começar.</p></div>
+    <div class="card"><span class="ico" aria-hidden="true">📅</span><h3>Todo dia, uma novidade</h3><p>O Desafio do Rio traz um tabuleiro novo a cada dia, e no Diário do Rio você carimba uma página por dia e escolhe o seu prêmio.</p></div>
+    <div class="card"><span class="ico" aria-hidden="true">🏆</span><h3>Liga do Rio</h3><p>A partir do nível 41, some pontos toda semana e compare-se nas classificações global e do seu país.</p></div>
+    <div class="card"><span class="ico" aria-hidden="true">🦥</span><h3>Quem vai com você</h3><p>TiTino, o bicho-preguiça; Capi, a capivara; e Rosa, a boto, que leva você rio acima.</p></div>
+    <div class="card"><span class="ico" aria-hidden="true">👁️</span><h3>Para todos os olhos</h3><p>Ative os padrões de fruta: cada cor tem o seu próprio desenho, para você não depender só da cor.</p></div>
+    <div class="card"><span class="ico" aria-hidden="true">📴</span><h3>Jogue offline</h3><p>A campanha funciona sem conexão. Os vídeos opcionais e as compras precisam de internet.</p></div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="gallery">
+  <h2 id="gallery">Veja como é</h2>
+  <p class="intro">Capturas do jogo do jeito que você joga.</p>
+  <div class="gallery">
+    <figure><img src="/assets/img/pt-BR/01.webp" alt="Despeje e tinja o rio" width="540" height="960" loading="lazy" decoding="async"><figcaption>Despeje e tinja o rio</figcaption></figure>
+    <figure><img src="/assets/img/pt-BR/02.webp" alt="Tudo se encaixa!" width="540" height="960" loading="lazy" decoding="async"><figcaption>Tudo se encaixa!</figcaption></figure>
+    <figure><img src="/assets/img/pt-BR/03.webp" alt="Suba o Amazonas" width="540" height="960" loading="lazy" decoding="async"><figcaption>Suba o Amazonas</figcaption></figure>
+    <figure><img src="/assets/img/pt-BR/04.webp" alt="Difícil, mas justo" width="540" height="960" loading="lazy" decoding="async"><figcaption>Difícil, mas justo</figcaption></figure>
+    <figure><img src="/assets/img/pt-BR/05.webp" alt="TiTino te acompanha" width="540" height="960" loading="lazy" decoding="async"><figcaption>TiTino te acompanha</figcaption></figure>
+    <figure><img src="/assets/img/pt-BR/06.webp" alt="Padrões para todos os olhos" width="540" height="960" loading="lazy" decoding="async"><figcaption>Padrões para todos os olhos</figcaption></figure>
+    <figure><img src="/assets/img/pt-BR/07.webp" alt="Um desafio novo por dia" width="540" height="960" loading="lazy" decoding="async"><figcaption>Um desafio novo por dia</figcaption></figure>
+    <figure><img src="/assets/img/pt-BR/08.webp" alt="Sem wi-fi, no seu ritmo" width="540" height="960" loading="lazy" decoding="async"><figcaption>Sem wi-fi, no seu ritmo</figcaption></figure>
+  </div>
+</section>
+
+<section class="section band" aria-labelledby="ios">
+  <div>
+    <h2 id="ios">Tem iPhone?</h2>
+    <p>Estamos preparando o Tintalú para iOS. Em breve também na App Store.</p>
+  </div>
+  <a class="store play" href="https://play.google.com/store/apps/details?id=com.parallext.tintalu&amp;hl=pt_BR&amp;referrer=utm_source%3Dtintalu.com%26utm_medium%3Dweb" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3.5v17a1 1 0 0 0 1.5.86l14.5-8.5a1 1 0 0 0 0-1.72L6.5 2.64A1 1 0 0 0 5 3.5Z"/></svg><span><small>Android</small>Baixar grátis</span></a>
+</section>
+
+<section class="section" aria-labelledby="who">
+  <h2 id="who">Quem faz</h2>
+  <div class="studio">
+    <div class="card"><strong>Desenvolvimento</strong><p>O Tintalú é criado pela <strong>Parallext, LLC</strong>, um estúdio independente de jogos.</p><p><a href="https://parallext.com" rel="noopener">parallext.com →</a></p></div>
+    <div class="card"><strong>Publicação</strong><p>Publicado no Google Play pela <strong>AUTOMATION AI S.A.S</strong>.</p></div>
+    <div class="card"><strong>Contato</strong><p>Escreva para <a href="mailto:support@tintalu.com">support@tintalu.com</a>.</p></div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="legal">
+  <h2 id="legal">Informações legais</h2>
+  <ul class="legal-links">
   <li><a href="/pt-br/privacidade/">Política de privacidade</a></li>
   <li><a href="/pt-br/termos/">Termos de uso</a></li>
   <li><a href="/tintalu/pt-br/excluir-conta/">Excluir sua conta e seus dados</a></li>
   <li><a href="/pt-br/creditos/">Créditos e licenças</a></li>
-</ul>
-<h2>Contato</h2>
-<p>Escreva para <a href="mailto:support@tintalu.com">support@tintalu.com</a>.</p>
+  </ul>
+</section>
   </main>
   <footer class="site-footer">
     <nav aria-label="Páginas do site">

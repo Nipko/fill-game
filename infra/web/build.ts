@@ -31,6 +31,13 @@ const BINARY_SITE_ASSETS = new Set([
   'assets/favicon-32.png',
   'assets/apple-touch-icon.png',
 ]);
+/** Imágenes de la portada (capturas del juego en WebP, src/static/img/): se copian tal cual, en binario. */
+const IMG_DIR = path.join(SRC_DIR, 'static', 'img');
+
+/** Archivo binario del sitio: se guarda en base64 dentro del mapa y se escribe como bytes. */
+function isBinary(f: string): boolean {
+  return BINARY_SITE_ASSETS.has(f) || /\.(webp|png|jpe?g)$/.test(f);
+}
 
 export const MARKER_RE = /\[\[(DATO DEL DUEÑO|ABOGADO): [^\]]+\]\]/g;
 
@@ -117,6 +124,8 @@ function renderContent(page: PageDef, lang: Lang): string {
     return pagePath(id as PageId, lang);
   });
   if (html.includes('{{delete-form}}')) html = html.replace('{{delete-form}}', deleteForm(lang));
+  // Animación de la portada, en línea (la CSP no deja estilos en línea ni en un SVG suelto; sus estilos van en site.css).
+  if (html.includes('{{hero-art}}')) html = html.replace('{{hero-art}}', readSrc('static', 'hero.svg').trim());
   const leftover = /\{\{[^}]*\}\}/.exec(html);
   if (leftover) throw new Error(`${lang}/${page.id}: marcador sin resolver ${leftover[0]}`);
   return html.replace(MARKER_RE, (m) => `<mark class="pending">${m}</mark>`);
@@ -159,7 +168,7 @@ function renderPage(page: PageDef, lang: Lang, opts: SiteOptions): string {
   <link rel="stylesheet" href="/assets/site.css">
 ${alternates}${script}
 </head>
-<body>
+<body class="page-${page.id}">
   <a class="skip" href="#main">${escapeHtml(ui.skip)}</a>
   <header class="site-header">
     <a class="brand" href="${pagePath('home', lang)}">
@@ -225,6 +234,7 @@ export function renderSite(opts: SiteOptions = {}): Map<string, string> {
   out.set('assets/apple-touch-icon.png', readBrandPngBase64('apple-touch-icon.png'));
   out.set('assets/brand/logo-horizontal-claro.svg', readBrandSvg('logo-horizontal-claro.svg'));
   out.set('assets/brand/logo-horizontal-oscuro.svg', readBrandSvg('logo-horizontal-oscuro.svg'));
+  for (const f of listFiles(IMG_DIR)) out.set(`assets/img/${f}`, readFileSync(path.join(IMG_DIR, f)).toString('base64'));
   out.set('app-ads.txt', readSrc('static', 'app-ads.txt'));
   out.set('robots.txt', robotsTxt(opts));
   return out;
@@ -250,7 +260,7 @@ export function diffSite(site = renderSite()): string[] {
     const full = path.join(OUT_DIR, f);
     if (!existsSync(full)) problems.push(`falta ${f}`);
     else {
-      const actual = BINARY_SITE_ASSETS.has(f)
+      const actual = isBinary(f)
         ? readFileSync(full).toString('base64')
         : readFileSync(full, 'utf8').replace(/\r\n/g, '\n');
       if (actual !== content) problems.push(`distinto ${f}`);
@@ -265,7 +275,7 @@ export function writeSiteTo(dir: string, site: Map<string, string>): void {
   for (const [f, content] of site) {
     const full = path.join(dir, f);
     mkdirSync(path.dirname(full), { recursive: true });
-    if (BINARY_SITE_ASSETS.has(f)) writeFileSync(full, Buffer.from(content, 'base64'));
+    if (isBinary(f)) writeFileSync(full, Buffer.from(content, 'base64'));
     else writeFileSync(full, content, 'utf8');
   }
   // Carpetas vacías que quedaron tras borrar páginas.
