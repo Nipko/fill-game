@@ -1,6 +1,8 @@
 # Tintalú en iOS sin Mac: investigación y hoja de ruta
 
 Fecha: 2026-10-28. Estado: **propuesta**, pendiente de las decisiones del dueño (§6). Hasta que el dueño decida, nada de esto cambia el GDD.
+
+> **Actualización del 2026-10-31 (D-067):** el dueño tiene ya una **Mac mini** (Apple silicon, 24 GB) y un **iPhone 16 Pro Max**, y decide empezar iOS ahora. Con Mac, la compilación pasa a la propia Mac (I-2) y lo de «sin Mac» de §2 y §3 queda de respaldo. Las decisiones I-1 a I-7, más la I-8 (la cuenta de Apple, de Parallext, LLC cuando tenga su D-U-N-S), quedan con la recomendada. El plan de trabajo vigente es `docs/dev/traspaso/mac-ios.md`.
 Marcas de evidencia: [V] verificado en una fuente oficial o en el repositorio; [E] estimación o fuente de terceros; [NV] sin verificar.
 
 ## 1. Resumen
