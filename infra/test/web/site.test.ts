@@ -192,9 +192,9 @@ describe('web/site', () => {
     for (const f of HTML_FILES) {
       const doc = site.get(f) ?? '';
       // Scripts propios, el logo de la marca (SVG del mismo origen, identidad v2) y las imágenes propias de la portada
-      // (la animación y las capturas del juego, del mismo origen); nada más.
+      // (el tablero real de la portada y las capturas del juego, del mismo origen); nada más.
       for (const s of attrs(doc, 'src')) {
-        expect(s, f).toMatch(/^\/assets\/([a-z-]+\.js|brand\/[a-z0-9-]+\.svg|img\/hero\.svg|img\/(es-419|en|pt-BR)\/\d{2}\.webp)$/);
+        expect(s, f).toMatch(/^\/assets\/([a-z-]+\.js|brand\/[a-z0-9-]+\.svg|img\/tablero\.webp|img\/(es-419|en|pt-BR)\/\d{2}\.webp)$/);
       }
       for (const s of attrs(doc, 'srcset')) expect(s, f).toMatch(/^\/assets\/brand\/[a-z0-9-]+\.svg$/);
       for (const m of doc.matchAll(/<(img|source)\b[^>]*>/g)) {

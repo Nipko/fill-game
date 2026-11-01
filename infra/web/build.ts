@@ -124,8 +124,6 @@ function renderContent(page: PageDef, lang: Lang): string {
     return pagePath(id as PageId, lang);
   });
   if (html.includes('{{delete-form}}')) html = html.replace('{{delete-form}}', deleteForm(lang));
-  // Animación de la portada, en línea (la CSP no deja estilos en línea ni en un SVG suelto; sus estilos van en site.css).
-  if (html.includes('{{hero-art}}')) html = html.replace('{{hero-art}}', readSrc('static', 'hero.svg').trim());
   const leftover = /\{\{[^}]*\}\}/.exec(html);
   if (leftover) throw new Error(`${lang}/${page.id}: marcador sin resolver ${leftover[0]}`);
   return html.replace(MARKER_RE, (m) => `<mark class="pending">${m}</mark>`);

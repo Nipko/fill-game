@@ -88,33 +88,9 @@ button.secondary { background: transparent; color: var(--fg); border-color: var(
 .hero p { margin: 0 0 1rem; }
 .hero .lead { color: #dcefe9; }
 .hero .art { width: 100%; max-width: 30rem; justify-self: center; filter: drop-shadow(0 10px 18px rgba(0,0,0,0.35)); }
-/* Animación de la portada (static/hero.svg, en línea): una cuia vierte su capa roja en otra y se sella; bucle de 8 s. */
-.hero-svg { display: block; width: 100%; height: auto; }
-.hero-svg .glass { fill: rgba(255,255,255,0.16); stroke: rgba(255,255,255,0.85); stroke-width: 3; }
-.hero-svg .shine { fill: rgba(255,255,255,0.28); }
-.hero-svg .cork { fill: #a8763e; stroke: #6e4a22; stroke-width: 2; }
-.hero-svg .shelf { fill: #6e4a22; }
-.hero-svg .pour { transform-box: view-box; transform-origin: 65px 100px; animation: af-pour 8s ease-in-out infinite; }
-.hero-svg .give { transform-box: fill-box; transform-origin: 50% 0%; animation: af-give 8s ease-in-out infinite; }
-.hero-svg .take { transform-box: fill-box; transform-origin: 50% 100%; animation: af-take 8s ease-in-out infinite; }
-.hero-svg .stream { transform-box: fill-box; transform-origin: 50% 0%; animation: af-stream 8s ease-in-out infinite; }
-.hero-svg .seal { animation: af-seal 8s ease-in-out infinite; }
-.hero-svg .spark { transform-box: fill-box; transform-origin: 50% 50%; animation: af-spark 8s ease-out infinite; }
-.hero-svg .bubble { animation: af-bubble 4s ease-in infinite; }
-.hero-svg .bubble.b2 { animation-delay: 1.3s; }
-.hero-svg .bubble.b3 { animation-delay: 2.6s; }
-@keyframes af-pour { 0%, 12% { transform: translate(0, 0) rotate(0deg); } 22%, 38% { transform: translate(85px, -24px) rotate(100deg); } 46%, 100% { transform: translate(0, 0) rotate(0deg); } }
-@keyframes af-give { 0%, 22% { transform: scaleY(1); } 36%, 92% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
-@keyframes af-take { 0%, 22% { transform: scaleY(0); } 36%, 92% { transform: scaleY(1); } 100% { transform: scaleY(0); } }
-@keyframes af-stream { 0%, 21% { transform: scaleY(0); opacity: 0; } 24%, 34% { transform: scaleY(1); opacity: 1; } 38%, 100% { transform: scaleY(0); opacity: 0; } }
-@keyframes af-seal { 0%, 46% { transform: translateY(-60px); opacity: 0; } 54%, 90% { transform: translateY(0); opacity: 1; } 96%, 100% { transform: translateY(0); opacity: 0; } }
-@keyframes af-spark { 0%, 52% { transform: scale(0); opacity: 0; } 56% { transform: scale(1); opacity: 1; } 70%, 100% { transform: scale(1.6); opacity: 0; } }
-@keyframes af-bubble { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 0.8; } 100% { transform: translateY(-110px); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) {
-  .hero-svg .take { transform: scaleY(1); }
-  .hero-svg .give { transform: scaleY(0); }
-  .hero-svg .stream, .hero-svg .spark, .hero-svg .bubble { opacity: 0; }
-}
+/* Imagen de la portada: el tablero real del juego en pleno vertido (captura del concepto A, D-065), con un balanceo suave. */
+.hero .art.board { height: auto; max-width: 26rem; border-radius: 1.25rem; box-shadow: 0 18px 40px rgba(0,0,0,0.45), 0 0 0 6px rgba(255,224,138,0.18); animation: af-float 6s ease-in-out infinite; }
+@keyframes af-float { 0%, 100% { transform: translateY(0) rotate(-1.2deg); } 50% { transform: translateY(-10px) rotate(1.2deg); } }
 .stores { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1.25rem 0 0.75rem; }
 .store { display: inline-flex; align-items: center; gap: 0.6rem; min-height: 3.25rem; padding: 0.55rem 1.1rem; border-radius: 0.8rem; text-decoration: none; font-weight: 700; line-height: 1.15; }
 .store small { display: block; font-weight: 500; font-size: 0.75rem; opacity: 0.85; }
