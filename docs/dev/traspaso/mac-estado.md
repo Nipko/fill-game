@@ -7,7 +7,29 @@ Encargo: `docs/dev/traspaso/mac-ios.md` (D-067). La Mac mini (Apple silicon, 24 
 - **M0 hecha** (2026-10-31, rama `mac/m0-setup`): la Mac tiene Xcode 27.2, Unity 6000.3.25f1 arm64 con iOS Build Support, .NET 10.0.403, CocoaPods 1.17.0, PowerShell 7.6.9, git-lfs y gh. El proyecto compila con el Editor de macOS; `dotnet test`, EditMode y PlayMode en verde (con el arreglo de un test de audio). Informe: `docs/dev/mac-setup.md`.
 - **M1 hecha** (2026-11-01, rama `mac/m1-hola-iphone`, sobre `mac/m0-setup`): Tintalú corre en el iPhone 16 Pro Max (iOS 26.6) por cable con el Apple ID gratuito. El dueño jugó los niveles 1-10; la Dynamic Island no tapa nada; el interruptor de silencio funciona. Pasos y arreglos: `docs/dev/mac-setup.md` §6.
 - **Fallo abierto, del código común (no de iOS): Rosa sale como un cuadro blanco en el inicio** tras cerrar el banner de un mundo (abajo, M1). Espera la decisión del dueño o del integrador.
-- **Siguiente: M2 Plataforma** (Firebase iOS, notificaciones, hápticos, escala de texto, idioma, ajustes, país desde la tienda, icono definitivo).
+- **Rosa en blanco: arreglado** en `mac/fix-rosa-banner` (`043d0b0b`, desde la integración), con test y comprobado en el iPhone.
+- **M2 en curso** (rama `mac/m2-sistema`, sobre `mac/m1-hola-iphone`): hápticos, escala de texto, «Reducir movimiento» y ajustes de la app, ya instalados en el iPhone; **falta la prueba del dueño** (abajo). Después: notificaciones, país desde la tienda, icono definitivo y Firebase iOS (cuando el dueño ponga el `GoogleService-Info.plist`).
+
+## Para retomar (2026-11-01)
+
+1. **Pruebas pendientes en el iPhone** (el build de `mac/m2-sistema` ya está instalado):
+   - hápticos: un toque suave al sellar cada cuia y uno medio al ganar;
+   - Ajustes › Pantalla y brillo › Tamaño del texto más grande, cerrar el juego del todo y abrirlo: textos más grandes (tope 130 %);
+   - Ajustes › Accesibilidad › Movimiento › Reducir movimiento, cerrar y abrir: intro y animaciones quietas.
+2. **La firma del Apple ID gratuito caduca a los 7 días** (instalado el 2026-11-01). Para reinstalar: `mac-setup.md` §6 (exportar con `BuildIos.ExportXcode` y `xcodebuild` + `devicectl` desde una terminal normal, con el equipo de firma del dueño).
+3. **En la Mac, solo local:** la rama `mac/prueba-rosa` (M1 + el arreglo de Rosa, solo para probar en el iPhone) y dos `stash`: el checkout a medias de cuando `git-lfs` no estaba en el PATH (sin valor) y los huecos de iconos de iOS que Unity añade a `ProjectSettings.asset`. Se pueden borrar.
+
+## M2: plataforma (en curso) — 2026-11-01
+
+Rama `mac/m2-sistema` desde `mac/m1-hola-iphone`.
+
+- **Plugin propio `Assets/_Project/Plugins/iOS/AfPlatform.mm`** (Objective-C, solo UIKit, sin permisos ni SDK): `AfHapticImpact` (`UIImpactFeedbackGenerator`) y `AfReduceMotionEnabled` (`UIAccessibilityIsReduceMotionEnabled`).
+- **`IosHaptics`** (`AF.Audio.Unity`): ligero, medio y corto (ligero al 60 %), los tres de `HapticStrength`; lo da `AndroidHaptics.ForPlatform` en el iPhone.
+- **`IosSystemScale`** (`AF.UI`): escala de fuente con `AccessibilitySettings.fontScale` (Dynamic Type) y «Reducir movimiento» como escala de animaciones 0; lo da `AndroidSystemScale.ForPlatform` en el iPhone.
+- **`AndroidAppSettings.OpenNotificationSettings`** en el iPhone abre `app-settings:` (la ficha de la app en Ajustes).
+- **Idioma:** sin cambios; en el iPhone la cultura de .NET ya da `es-CO` (`AF_STATE loc`, `device_src: culture`).
+- Android no cambia: lo nuevo va detrás de `UNITY_IOS` o de `RuntimePlatform.IPhonePlayer`.
+- **Verificación:** EditMode 4.996 (4.989 pasan, 7 omitidos, 0 fallan); export, `xcodebuild` firmado e instalación en el iPhone, correctos. PlayMode sin correr todavía con estos cambios.
 
 ## M1: «Hola, iPhone» — 2026-11-01
 
