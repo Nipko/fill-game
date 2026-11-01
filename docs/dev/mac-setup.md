@@ -66,3 +66,38 @@ Informe de la fase M0 de `docs/dev/traspaso/mac-ios.md` (D-067): qué hay instal
 3. **Python 3.14 con `jsonschema`** (lo pide `CLAUDE.md` para `tools/*.py`) no está. M0 y M1 no lo necesitan; si hiciera falta, `brew install python@3.14` y `jsonschema` en un entorno virtual, con permiso del dueño.
 4. **CocoaPods avisa de que la terminal no usa UTF-8.** Para `pod install` (M1/M2) se pondrá `LANG=en_US.UTF-8` en el propio comando; añadirlo a `~/.zprofile` lo decide el dueño.
 5. **Android Build Support** no está instalado en la Mac (opcional según `mac-ios.md` §1).
+
+## 6. El juego en el iPhone por cable (M1)
+
+Con el Apple ID gratuito del dueño en Xcode › Settings › Accounts, el Modo de desarrollador activado en el iPhone y el perfil de desarrollador marcado como de confianza (Ajustes › General › VPN y gestión de dispositivos; hay que repetirlo si se borra la app). La firma caduca a los 7 días: se vuelve a instalar con los mismos pasos.
+
+1. **Ajustes de iOS** (una vez, o tras cambiarlos; `ProjectSettings/ProjectSettings.asset` lleva el resultado):
+   ```
+   Unity -batchmode -nographics -quit -buildTarget iOS -projectPath . -logFile Logs/project-setup-ios.log -executeMethod AF.EditorTools.ProjectSetup.ApplyIosDefaults
+   ```
+   donde `Unity` es `/Applications/Unity/Hub/Editor/6000.3.25f1/Unity.app/Contents/MacOS/Unity`. Línea final `[AF.ProjectSetup] OK (iOS)`.
+2. **Exportar el proyecto de Xcode** a `Builds/iOS/Xcode` (ignorado por git; con `-buildTarget iOS` para que cargue el post-proceso):
+   ```
+   Unity -batchmode -nographics -buildTarget iOS -projectPath . -logFile Logs/build-ios.log -executeMethod AF.EditorTools.BuildIos.ExportXcode
+   ```
+   Códigos: 0 OK · 2 ajustes de iOS distintos · 3 sin módulo iOS · 4 build fallido · 5 sin la escena del juego. El plugin de Google Mobile Ads deja en el log `iOS Google Mobile Ads app ID is empty` (y el build cuenta 3 errores) aunque el resultado es `Succeeded`: es esperado hasta M3 (abajo).
+3. **Compilar, firmar, instalar y abrir**, desde una terminal normal (no desde una sandbox):
+   ```
+   cd Builds/iOS/Xcode
+   LANG=en_US.UTF-8 xcodebuild -workspace Unity-iPhone.xcworkspace -scheme Unity-iPhone -configuration Debug -destination "id=<UDID>" -derivedDataPath ../DerivedData -allowProvisioningUpdates DEVELOPMENT_TEAM=<equipo> CODE_SIGN_STYLE=Automatic build
+   xcrun devicectl device install app --device <UDID> ../DerivedData/Build/Products/Debug-iphoneos/Tintaldev.app
+   xcrun devicectl device process launch --device <UDID> --console com.amazonfill.dev
+   ```
+   `<equipo>` es el Team ID del Apple ID del dueño (lo da `security find-identity -v -p codesigning` tras la primera firma desde Xcode) y `<UDID>` el del iPhone (`xcrun devicectl list devices`). La primera vez codesign pide la contraseña **de la Mac** para usar la clave del llavero («Permitir siempre»). Capturas: `xcrun devicectl device capture screenshot --device <UDID> --destination Logs/device-ios/<nombre>.png`.
+
+**Lo que arregla el post-proceso de `BuildIos`** (solo en el proyecto exportado; Android no cambia):
+
+| Problema con Xcode 27.2 | Arreglo |
+|---|---|
+| Los Pods de Google Mobile Ads, UMP y Unity Ads piden iOS 12-13 y Xcode 27 solo admite desde 15 | `IPHONEOS_DEPLOYMENT_TARGET` de los Pods a 15.0 (36 ajustes) |
+| «Crashlytics Run Script» falla sin `GoogleService-Info.plist` (secreto del dueño, M2) | el paso termina sin hacer nada mientras falte el archivo |
+| La sandbox de scripts de Xcode (`ENABLE_USER_SCRIPT_SANDBOXING`) no deja a IL2CPP leer su `il2cpp` ni escribir sus temporales | `NO` en las 20 configuraciones del proyecto |
+| Sin `GADApplicationIdentifier`, el SDK de Google Mobile Ads cierra la app al arrancar (`GADInvalidInitializationException`) | el App ID de **ejemplo** de Google (`ca-app-pub-3940256099942544~1458002511`) mientras el de iOS esté vacío; el real llega en M3 [P] |
+| Icono | el de App Store de la identidad v2 (`app-store-1024.png`) como único icono de 1024 [P, provisional] |
+
+**Decisiones aplicadas con la recomendada [P]:** iOS 15 mínimo; solo iPhone (en iPad iOS pediría todas las orientaciones); Metal (Unity 6 no ofrece otra en iOS y deja el ajuste en automático); el equipo de firma nunca en el repositorio (se pasa a `xcodebuild`); **60 fps**, como fija 08 §5.4 (el encargo pide comprobar 120 Hz: subirlo cambiaría el GDD y lo decide el dueño).
