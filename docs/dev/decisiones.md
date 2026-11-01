@@ -4951,3 +4951,16 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   - el D-U-N-S de Parallext y luego la cuenta de Apple;
   - el `GoogleService-Info.plist` de iOS cuando llegue M2.
 - **Cambios al GDD cuando avance:** los de `ios-hoja-de-ruta.md` §7 (08 §11, §12.2 y §13.2; 09, fase 6).
+
+### D-041, añadido del 2026-11-01: la portada nueva de tintalu.com
+
+- **Petición del dueño:** «hagamos una actualización de la página, agregando información del juego, en qué consiste la mecánica, imágenes, algo llamativo, creamos una animación, enlace para descargar en la Play Store, que próximamente en iOS […] vínculos a desarrollador Parallext.com».
+- **Qué se hizo** (`infra/web`, 19b5d088; textos sacados de las fichas de Play, así que no promete nada que el juego no tenga), en es-419, en y pt-BR:
+  - portada con una animación de una cuia que vierte, completa a otra y se sella (SVG en línea, con los estilos en `site.css` porque la CSP no deja estilos en línea; sin movimiento con `prefers-reduced-motion`);
+  - el enlace a Google Play con `utm_source=tintalu.com` y «Próximamente en iPhone» (D-067);
+  - «Cómo se juega» en 3 pasos y 8 tarjetas con lo que hace especial al juego;
+  - la galería con las 8 capturas del concepto A en WebP;
+  - «Quién lo hace», con Parallext (parallext.com), el publicador y el contacto.
+- **Verificación:** `npm test` en verde (400), `typecheck`, `lint` y `web:check`.
+- **Despliegue:** con el sí del dueño al diff («Yes, deploy»), `cdk deploy AfProdWeb --exclusively`. Los contextos de prod son `firebaseProjectId=tintalu`, `firebaseAppIds` de la app de prod, `domain=tintalu.com` y `alertEmail`. Comprobado en `tintalu.com`: 200 en las 3 portadas, las WebP como `image/webp`, `app-ads.txt` y la página de borrado de cuenta.
+- **Ojo para el próximo despliegue:** sin `-c firebaseProjectId=tintalu`, el diff cambia el emisor del JWT de `AfProdApi` a `amazon-fill-prod` y rompería el inicio de sesión. Hay que usar siempre ese contexto y `--exclusively` para desplegar solo la web.
