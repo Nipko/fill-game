@@ -98,6 +98,6 @@ Con el Apple ID gratuito del dueño en Xcode › Settings › Accounts, el Modo 
 | «Crashlytics Run Script» falla sin `GoogleService-Info.plist` (secreto del dueño, M2) | el paso termina sin hacer nada mientras falte el archivo |
 | La sandbox de scripts de Xcode (`ENABLE_USER_SCRIPT_SANDBOXING`) no deja a IL2CPP leer su `il2cpp` ni escribir sus temporales | `NO` en las 20 configuraciones del proyecto |
 | Sin `GADApplicationIdentifier`, el SDK de Google Mobile Ads cierra la app al arrancar (`GADInvalidInitializationException`) | el App ID de **ejemplo** de Google (`ca-app-pub-3940256099942544~1458002511`) mientras el de iOS esté vacío; el real llega en M3 [P] |
-| Icono | el de App Store de la identidad v2 (`app-store-1024.png`) como único icono de 1024 [P, provisional] |
+| Icono | el de App Store de la identidad v2 (`app-store-1024.png`) y, desde M2, sus apariencias oscura y tintada (`ios-oscuro-1024.png`, `ios-tintado-1024.png`, de `exportar.py --ios`) en el catálogo de Xcode |
 
 **Decisiones aplicadas con la recomendada [P]:** iOS 15 mínimo; solo iPhone (en iPad iOS pediría todas las orientaciones); Metal (Unity 6 no ofrece otra en iOS y deja el ajuste en automático); el equipo de firma nunca en el repositorio (se pasa a `xcodebuild`); **60 fps**, como fija 08 §5.4 (el encargo pide comprobar 120 Hz: subirlo cambiaría el GDD y lo decide el dueño).

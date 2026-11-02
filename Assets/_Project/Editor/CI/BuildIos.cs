@@ -40,10 +40,18 @@ namespace AF.EditorTools
         public const string XcodeDir = OutputDir + "/Xcode";
 
         /// <summary>
-        /// Icono PROVISIONAL de iOS (<c>mac-ios.md</c> §4, M1): el de App Store de la identidad v2 (D-045), 1024 × 1024 sin alfa. El
-        /// definitivo, con las variantes oscura y tintada, llega en M2 con <c>exportar.py --ios</c>.
+        /// Icono de iOS, apariencia clara: el de App Store de la identidad v2 (D-045), 1024 × 1024 sin alfa (mac-ios.md, M2).
         /// </summary>
-        public const string ProvisionalIconPath = "docs/art/marca-oficial/v2/out/png/app-store-1024.png";
+        public const string IconPath = "docs/art/marca-oficial/v2/out/png/app-store-1024.png";
+
+        /// <summary>
+        /// Apariencia oscura: el icono sin el cielo ni la selva, sobre transparente (<c>generar.py</c>, <c>ios_oscuro</c>; lo exporta
+        /// <c>exportar.py --ios</c>). iOS pone su degradado oscuro.
+        /// </summary>
+        public const string DarkIconPath = "docs/art/marca-oficial/v2/out/png/ios-oscuro-1024.png";
+
+        /// <summary>Apariencia tintada: la monocroma oficial, blanca sobre transparente (<c>ios_tintado</c>); iOS la tiñe.</summary>
+        public const string TintedIconPath = "docs/art/marca-oficial/v2/out/png/ios-tintado-1024.png";
 
         /// <summary>El catálogo de iconos del proyecto de Xcode que exporta Unity.</summary>
         public const string AppIconSetDir = "Unity-iPhone/Images.xcassets/AppIcon.appiconset";
@@ -165,8 +173,9 @@ namespace AF.EditorTools
         }
 
         /// <summary>
-        /// Tras exportar para iOS, pone el icono provisional (<see cref="ProvisionalIconPath"/>) como único icono de 1024 del catálogo
-        /// (Xcode 14+ genera los demás tamaños). Sin el PNG solo avisa: el proyecto se exporta con el icono por defecto de Unity.
+        /// Tras exportar para iOS, pone el icono de 1024 del catálogo en sus tres apariencias (<see cref="IconPath"/>,
+        /// <see cref="DarkIconPath"/> y <see cref="TintedIconPath"/>; Xcode 14+ genera los demás tamaños). Sin el claro solo avisa: el
+        /// proyecto se exporta con el icono por defecto de Unity; sin una de las otras dos, iOS la genera del claro.
         /// </summary>
         [PostProcessBuild(100)]
         public static void OnPostprocessBuild(BuildTarget target, string pathToBuiltProject)
@@ -182,9 +191,9 @@ namespace AF.EditorTools
             EnsureGadApplicationId(pathToBuiltProject);
 
             string iconSet = Path.Combine(pathToBuiltProject, AppIconSetDir);
-            if (!File.Exists(ProvisionalIconPath) || !Directory.Exists(iconSet))
+            if (!File.Exists(IconPath) || !Directory.Exists(iconSet))
             {
-                Debug.LogWarning(LogPrefix + "sin icono provisional (" + ProvisionalIconPath + " o " + iconSet + " no existen): queda el de Unity.");
+                Debug.LogWarning(LogPrefix + "sin icono (" + IconPath + " o " + iconSet + " no existen): queda el de Unity.");
                 return;
             }
 
@@ -193,12 +202,32 @@ namespace AF.EditorTools
                 File.Delete(old);
             }
 
-            File.Copy(ProvisionalIconPath, Path.Combine(iconSet, "Icon-1024.png"), true);
+            string images = IconEntry(IconPath, iconSet, "Icon-1024.png", null)
+                + IconEntry(DarkIconPath, iconSet, "Icon-1024-dark.png", "dark")
+                + IconEntry(TintedIconPath, iconSet, "Icon-1024-tinted.png", "tinted");
             File.WriteAllText(Path.Combine(iconSet, "Contents.json"),
-                "{\n  \"images\" : [\n    {\n      \"filename\" : \"Icon-1024.png\",\n      \"idiom\" : \"universal\",\n"
-                + "      \"platform\" : \"ios\",\n      \"size\" : \"1024x1024\"\n    }\n  ],\n"
+                "{\n  \"images\" : [\n" + images.TrimEnd(',', '\n') + "\n  ],\n"
                 + "  \"info\" : {\n    \"author\" : \"xcode\",\n    \"version\" : 1\n  }\n}\n");
-            Debug.Log(LogPrefix + "icono provisional: " + ProvisionalIconPath + " -> " + iconSet);
+            Debug.Log(LogPrefix + "icono: " + IconPath + (File.Exists(DarkIconPath) ? ", oscuro" : string.Empty)
+                + (File.Exists(TintedIconPath) ? ", tintado" : string.Empty) + " -> " + iconSet);
+        }
+
+        // Copia el PNG de 1024 al catálogo y devuelve su entrada de Contents.json (con la apariencia, si la tiene); vacía si no existe.
+        private static string IconEntry(string source, string iconSet, string fileName, string? luminosity)
+        {
+            if (!File.Exists(source))
+            {
+                Debug.LogWarning(LogPrefix + "sin " + source + ": iOS genera esa apariencia del icono claro.");
+                return string.Empty;
+            }
+
+            File.Copy(source, Path.Combine(iconSet, fileName), true);
+            string appearance = luminosity == null
+                ? string.Empty
+                : "      \"appearances\" : [\n        {\n          \"appearance\" : \"luminosity\",\n          \"value\" : \"" + luminosity
+                    + "\"\n        }\n      ],\n";
+            return "    {\n" + appearance + "      \"filename\" : \"" + fileName + "\",\n      \"idiom\" : \"universal\",\n"
+                + "      \"platform\" : \"ios\",\n      \"size\" : \"1024x1024\"\n    },\n";
         }
 
         /// <summary>

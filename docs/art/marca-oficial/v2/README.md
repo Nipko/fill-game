@@ -16,6 +16,7 @@
 | Favicon y web de iOS | `png/favicon-16.png`, `png/favicon-32.png`, `png/apple-touch-icon.png` (180 × 180) |
 | Gráfico de funciones provisional | `feature-graphic.svg`, `png/feature-graphic.png` (1024 × 500); logotipo horizontal y río teñido, generado con las piezas de esta identidad |
 | Android adaptativo, 108 dp a 4× | `png/android-fondo-432.png` y `png/android-frente-432.png` (el primer plano llega a 32,1 dp del centro; zona segura de 33 dp) |
+| iOS oscuro y tintado (18+) | `ios-oscuro-1024.svg` y `png/ios-oscuro-1024.png`: el icono sin el cielo ni la selva, sobre transparente (iOS pone su degradado oscuro); `ios-tintado-1024.svg` y `png/ios-tintado-1024.png`: la monocroma a tamaño completo, blanca sobre transparente (iOS la tiñe). `python exportar.py --ios` exporta solo estos dos PNG. Aprobados por el dueño en el iPhone (2026-11-01); los integra `BuildIos` (fase M2 de `docs/dev/traspaso/mac-ios.md`) |
 | Android temático (13+) | `png/android-monocromo-432.png`: una sola tinta; el río teñido va lleno y el de agua blanca, solo con sus orillas |
 | Android clásico | `png/legacy-48 … 192.png` |
 | Logo con el nombre | `logo-horizontal-{claro,oscuro}` y `logo-vertical-{claro,oscuro}` (SVG y PNG con transparencia); «claro» = letras oscuras para fondo claro |
