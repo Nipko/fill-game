@@ -22,10 +22,24 @@ namespace AF.UI
         {
         }
 
-        /// <summary>El almacén de esta plataforma: <c>PlayerPrefs</c> en Android; en memoria en el resto (el Editor).</summary>
+        /// <summary>
+        /// El almacén de esta plataforma: <c>PlayerPrefs</c> en Android y en el iPhone; en memoria en el resto (el Editor). En el
+        /// iPhone guarda al crearse el país de la cuenta del App Store (<see cref="IosStorefrontCountry"/>; fase M2 de
+        /// <c>mac-ios.md</c>), que allí ocupa el sitio del de Google Play.
+        /// </summary>
         public static IPlayAccountCountryStore ForPlatform()
         {
-            return Application.platform == RuntimePlatform.Android ? new PlayerPrefsPlayAccountCountry() : new MemoryPlayAccountCountry();
+            switch (Application.platform)
+            {
+                case RuntimePlatform.Android:
+                    return new PlayerPrefsPlayAccountCountry();
+                case RuntimePlatform.IPhonePlayer:
+                    var store = new PlayerPrefsPlayAccountCountry();
+                    IosStorefrontCountry.SaveInto(store);
+                    return store;
+                default:
+                    return new MemoryPlayAccountCountry();
+            }
         }
 
         /// <inheritdoc />
