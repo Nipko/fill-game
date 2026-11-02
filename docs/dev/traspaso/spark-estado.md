@@ -6,6 +6,136 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-02 · Tendencias semana 2026-45: HECHO
+
+- **Muestra:** 23 referencias nuevas y 24 de la semana 44 que siguen activas (57 en la biblioteca). Se miró Meta Ad Library en BR, MX y CO con las 6 búsquedas fijas. Informe: `docs/marketing/tendencias/2026-45.md`.
+- **Los ganchos que suben:**
+  - G8, el espejo real: ya lo usan Magic Sort y Nut Color Game, un anunciante nuevo con unos 20 anuncios.
+  - G10, el recipiente con forma: los dos anuncios con más días activos de la semana.
+  - Los cortes de 15 s sin texto: Goods Sort lleva uno activo desde febrero de 2025.
+- **Primeros textos en español** en el nicho del agua, los dos con un reto del ego (G3).
+- **No se pudo ver:**
+  - YouTube, que salió en blanco dos veces;
+  - TikTok Creative Center y Google Ads Transparency, porque no había sesión abierta.
+
+## Motor de marketing (D-066)
+
+Encargo: `docs/dev/traspaso/spark-marketing.md`. Rama `spark/marketing-investigacion`.
+
+### 2026-11-01 · Validación de la fábrica en el teléfono con E1: HECHA
+
+- **dev.apk con E1, compilado en el Spark** desde esta rama (`scripts/unity-build.ps1 -Method Dev`: `[AF.BuildDev] OK`), e instalado en el SM-S938B junto a la app de Play.
+  - El primer intento falló por la licencia de Unity («No valid Unity Editor license found»).
+  - El segundo pasó.
+- **Tomas con `tomar.py`:** el nivel 42 sin HUD, resuelto a ritmo humano, en es-419, pt-BR y en. Cada una tiene 18 líneas `AF_CAPTURE`: 13 vertidos y la victoria.
+- **Arreglos en `tomar.py`:**
+  - el logcat se vuelca al final de la grabación, porque leído en vivo se perdían las líneas;
+  - avisa si sale la pantalla de edad: el modo de captura no guarda el perfil, así que el dueño responde una vez la edad y el consentimiento del dev sin extras.
+- **Calibración de la sincronía:**
+  - `screenrecord` tarda unos **0,35 s** en arrancar (medido con los fotogramas del primer vertido);
+  - los efectos del vertido se movieron a lo que se ve: el chorro empieza unos 0,22 s después del toque y acaba hacia los 0,68 s.
+- **Pieza `e1-l42-se-tine`** (3 idiomas, 30,8 s, 9:16): 13 vertidos con sus efectos y la victoria, colocados por los eventos reales. Pasa todo el control de calidad: −13,8 LUFS. La revisión con el modelo de visión sigue pendiente.
+- **Código:** `fill-game-marketing`. **Documento:** `fabrica.md`, en su sección «Antes de la primera toma».
+- **Enganche para el integrador:** sigue en pie el **audio en el modo de captura**: el real o, como mínimo, líneas `AF_CAPTURE` del sellado y del teñido.
+
+### 2026-11-01 · S3 (kit de redes) y S4 (la fábrica mínima): HECHOS
+
+- **S3 · `docs/marketing/kit-redes.md` y `docs/marketing/kit/`:** 23 PNG finales con su `manifest.json`, generados por `kit/generar_kit.py` de `fill-game-marketing`:
+  - la foto de perfil (el icono v2);
+  - los banners de YouTube, Facebook y X;
+  - 9 tarjetas finales (3 idiomas × 9:16, 1:1 y 16:9);
+  - las portadas de carrusel;
+  - las guías de zona segura y muestras sobre una toma real.
+
+  El documento recoge además las biografías por red (en los tres idiomas, con su recuento de caracteres), los enlaces con UTM, la paleta, la tipografía, el tono y los hashtags por idioma y pilar.
+- **S4 · `docs/marketing/fabrica.md`, con el código en `fill-game-marketing/fabrica/` (`214df53`):**
+  - `tomar.py`: toma con el modo de captura E1; no graba si «No molestar» está apagado;
+  - `montar.py`: la pantalla del juego entera, el gancho, los subtítulos, la tarjeta final y el sonido del juego (CC0) sincronizado con `AF_CAPTURE`, a −14 LUFS;
+  - `calidad.py`: las pruebas del §5 del encargo, más el idioma de la toma;
+  - `cola.py`: los estados, la aprobación y el interruptor `C:\AI\marketing\PAUSA`.
+- **Prueba de punta a punta:** una pieza del nivel 42 en es-419, pt-BR y en (9:16, 27-28 s) pasa todas las pruebas automáticas: −13,7 LUFS, rótulos dentro de la zona segura y sin frases prohibidas.
+  - El control detectó un fallo real: las versiones pt-BR y en usaban la toma en español. Se corrigió con una toma por idioma (`por_idioma`).
+  - La revisión con el modelo de visión sigue pendiente (Qwen3-VL-8B, Q-MK-S0-2).
+- **Sin probar:** la grabación con E1. El teléfono no estaba conectado y hace falta un dev.apk con E1 (`596f6931`).
+- **Preguntas:** **Q-MK-S3-1:** la insignia oficial de Google Play en la tarjeta final. Recomendada: descargarla con el permiso del dueño. Hasta entonces, el texto en Baloo 2.
+- **Siguiente:** S5, el lote 1 de la semana 45, con tomas nuevas de E1.
+- **Enganches para el integrador:**
+  - un **dev.apk con E1** instalado en el teléfono de pruebas;
+  - **audio en el modo de captura**: el audio real o, como mínimo, líneas `AF_CAPTURE` del sellado y del teñido, para que suenen en el montaje.
+
+### 2026-10-31 · S2 (estrategia de las 4 primeras semanas): HECHO
+
+- **`docs/marketing/estrategia.md`**, solo orgánica por D-067:
+  - objetivos;
+  - mercados, idiomas y cuentas (una por red, con un núcleo neutro de idioma y piezas que alternan es-419 y pt-BR);
+  - la parrilla semanal de pilares y ganchos;
+  - el calendario de las semanas ISO 45 a 48 con temas: presentación, frutas, reto y viaje;
+  - el primer lote de 7 piezas y 2 carruseles con sus tomas de E1;
+  - los KPIs por pieza y por canal, y las reglas de decisión;
+  - el presupuesto: ~20 US$/mes de Buffer y 0 de pago;
+  - S10 (experimento de ficha A frente a B y C desde la semana 2, lo pone el dueño);
+  - lo que necesita el dueño cada semana.
+- **Preguntas nuevas, con la recomendada aplicada [P]:**
+  - Q-MK-S2-1: una cuenta por red;
+  - Q-MK-S2-2: el gancho «sin vidas» queda fuera hasta verificar `biz_feature_lives` en producción;
+  - Q-MK-S2-3: publicar con los efectos del juego vueltos a poner hasta que haya audio en E1.
+- **Siguiente:** S3 (kit de redes y plantillas) y S4 (la fábrica mínima) en la semana 45. La publicación empieza cuando el dueño cree las cuentas y ponga el token de Buffer.
+- **Enganches para el integrador:**
+  - E4 (enlaces UTM `utm_medium=organic&utm_campaign=bio` por red) y E2 en la semana 45, y E3 en la 46;
+  - confirmar en Firebase el valor publicado de `biz_feature_lives`.
+
+### 2026-10-31 · Puesta al día con D-067 y E1
+
+- **D-067 (sin pago hasta iOS):** aplicado.
+  - La prioridad es el contenido orgánico (S2-S5, S7 y S8).
+  - S6 (playables) y S9 (pruebas de pago) quedan para cuando sobre tiempo, y se encienden con iOS publicado.
+  - Los cinco conceptos de S5 se producen primero como orgánico (`investigacion-creatividades.md` §4).
+  - S2 se hará sin presupuesto de pago.
+- **`fill-game-marketing`:**
+  - **Hecho en local:** clon en el Spark, en `C:\AI\marketing\fill-game-marketing\`, con un commit (`00d8346`) que lleva `tendencias/tendencias.py` (los datos siguen fuera de git, en `C:\AI\marketing\tendencias\`), los scripts de la ficha de D-065 en `tienda/`, `README.md` y un `.gitignore` que bloquea referencias de terceros, secretos y medios.
+  - **Subido** a `main` el 2026-10-31, con el visto bueno del dueño.
+- **E1 (modo de captura):** cubre el tablero a la carta y el Mapa directo. **El audio del juego sigue sin tomas;** en S4 se volverán a poner los efectos sincronizados con `AF_CAPTURE pour`, o se pedirá al escritorio una salida de audio.
+- **Recetas:** `stack-spark.md` y `tendencias/README.md` apuntan ya al repositorio nuevo.
+
+### 2026-10-31 · S0 (inventario del stack) y S1 (investigación y trabajo semanal de tendencias): HECHOS
+
+- **S0 · `docs/marketing/stack-spark.md`:**
+  - las dos máquinas, con lo instalado, las licencias comerciales y los tiempos medidos;
+  - lo que falta y su coste.
+  - **Lo que falta, todo de pesos comerciales:**
+    - voz neutra (Qwen3-TTS VoiceDesign);
+    - visión para el control de calidad (Qwen3-VL-8B);
+    - edición de personajes (Qwen-Image-Edit-2511);
+    - música (ACE-Step 1.5 XL);
+    - montaje con plantillas (HyperFrames);
+    - Buffer, ~20 US$/mes.
+  - Coste fijo: ~20 US$/mes. Descargas: ~45 GB, cada una con el permiso del dueño.
+- **S1 · `docs/marketing/investigacion-creatividades.md`:**
+  - 34 referencias: 28 anuncios activos de Meta Ad Library en BR y MX (Magic Sort, Nut Sort, Water Sort, Ball Sort y MagiMatch) y 6 Shorts de YouTube;
+  - la taxonomía de ganchos G1-G12 y los vetados X;
+  - 15 conclusiones;
+  - lo que no se puede copiar;
+  - el orden propuesto de los 5 conceptos para S5.
+  - **Lo nuevo:** el «espejo de fruta», con pulpa real que tiñe el agua y corte al juego.
+- **S1 · trabajo semanal, versión 1:**
+  - la receta, en `docs/marketing/tendencias/README.md`;
+  - el primer informe, en `docs/marketing/tendencias/2026-44.md`;
+  - `tendencias.py` (biblioteca, puntuación e informe; autoprueba; interruptor `PAUSA`) y la biblioteca de 34 referencias viven en el Spark, en `C:\AI\marketing\tendencias\`, hasta que exista `fill-game-marketing` (Q-MK-7).
+- **Navegación (excepción del encargo):**
+  - solo se miraron fotogramas en el navegador; no se descargó ningún vídeo de terceros;
+  - **sin sesión no se pudo usar:** TikTok Creative Center (solo enseña 4 anuncios) ni la ficha de anunciante del Centro de transparencia de Google.
+- **Preguntas:**
+  - Q-MK-1 a Q-MK-10: decididas por el dueño (con la recomendada); las cuentas, el repositorio y el presupuesto los pone él.
+  - Nuevas:
+    - **Q-MK-S0-1:** ¿la música generada con IA cuenta como «propia» (§0.5)? Recomendada: sí, con ACE-Step. **Sin aplicar**, porque amplía §0.
+    - **Q-MK-S0-2 [P]:** las descargas de la semana 2, cada una con el permiso del dueño.
+    - **Tarea programada de los lunes:** creada el 2026-10-31 con el permiso del dueño (`tintalu-tendencias-lunes`, lunes a las 9:00).
+- **Cómputo:** ninguno de GPU. Navegación e investigación, unas 3 h de sesión.
+- **Siguiente:** S2 (estrategia: calendario de 4 semanas, presupuesto y KPIs). Las conclusiones ya ordenan los conceptos de S5.
+- **Enganches para el integrador:**
+  - **E1 (modo de captura):** prioridad al **audio del juego** en las tomas, que `screenrecord` no graba, a un tablero grande a la carta y al Mapa entero que se llena.
+  - **Al fusionar:** `spark/tienda-graficos` también añade una entrada arriba de este archivo (el vídeo de la ficha), así que puede salir un conflicto trivial de orden.
+
 ## Gráficos de la ficha de Play (D-065)
 
 ### 2026-10-30 · Elección del dueño: A como ficha, B y C como variantes de prueba
