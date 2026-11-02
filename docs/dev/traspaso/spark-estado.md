@@ -6,6 +6,18 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-02 · Tendencias semana 2026-45: HECHO
+
+- **Muestra:** 23 referencias nuevas y 24 de la semana 44 que siguen activas (57 en la biblioteca). Se miró Meta Ad Library en BR, MX y CO con las 6 búsquedas fijas. Informe: `docs/marketing/tendencias/2026-45.md`.
+- **Los ganchos que suben:**
+  - G8, el espejo real: ya lo usan Magic Sort y Nut Color Game, un anunciante nuevo con unos 20 anuncios.
+  - G10, el recipiente con forma: los dos anuncios con más días activos de la semana.
+  - Los cortes de 15 s sin texto: Goods Sort lleva uno activo desde febrero de 2025.
+- **Primeros textos en español** en el nicho del agua, los dos con un reto del ego (G3).
+- **No se pudo ver:**
+  - YouTube, que salió en blanco dos veces;
+  - TikTok Creative Center y Google Ads Transparency, porque no había sesión abierta.
+
 ## Motor de marketing (D-066)
 
 Encargo: `docs/dev/traspaso/spark-marketing.md`. Rama `spark/marketing-investigacion`.
