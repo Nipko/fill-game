@@ -75,6 +75,13 @@ namespace AF.EditorTools
             // de Parallext, I-8) se pasa a xcodebuild con DEVELOPMENT_TEAM al compilar (docs/dev/mac-setup.md §6).
             PlayerSettings.iOS.appleEnableAutomaticSigning = true;
 
+            // Avisos locales (M2): el permiso solo tras «Avísame» o desde Ajustes (06 §8.1), nunca al abrir; sin notificaciones
+            // remotas ni sus capacidades (solo locales, como en Android: 06 §8.2).
+            Unity.Notifications.NotificationSettings.iOSSettings.RequestAuthorizationOnAppLaunch = false;
+            Unity.Notifications.NotificationSettings.iOSSettings.AddRemoteNotificationCapability = false;
+            Unity.Notifications.NotificationSettings.iOSSettings.NotificationRequestAuthorizationForRemoteNotificationsOnAppLaunch = false;
+            Unity.Notifications.NotificationSettings.iOSSettings.AddTimeSensitiveEntitlement = false;
+
             AssetDatabase.SaveAssets();
 
             List<string> problems = ValidateIos();
@@ -107,6 +114,14 @@ namespace AF.EditorTools
             Check(problems, "ios.automaticSigning", PlayerSettings.iOS.appleEnableAutomaticSigning, true);
             Check(problems, "splashScreen.show", PlayerSettings.SplashScreen.show, ShowUnitySplash);
             Check(problems, "splashScreen.backgroundColor", (Color32)PlayerSettings.SplashScreen.backgroundColor, BrandPetroleum);
+            Check(problems, "notifications.ios.requestAuthorizationOnAppLaunch",
+                Unity.Notifications.NotificationSettings.iOSSettings.RequestAuthorizationOnAppLaunch, false);
+            Check(problems, "notifications.ios.addRemoteNotificationCapability",
+                Unity.Notifications.NotificationSettings.iOSSettings.AddRemoteNotificationCapability, false);
+            Check(problems, "notifications.ios.requestRemoteAuthorizationOnAppLaunch",
+                Unity.Notifications.NotificationSettings.iOSSettings.NotificationRequestAuthorizationForRemoteNotificationsOnAppLaunch, false);
+            Check(problems, "notifications.ios.addTimeSensitiveEntitlement",
+                Unity.Notifications.NotificationSettings.iOSSettings.AddTimeSensitiveEntitlement, false);
             return problems;
         }
 

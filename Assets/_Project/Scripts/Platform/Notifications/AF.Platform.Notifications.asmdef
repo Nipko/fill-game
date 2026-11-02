@@ -3,7 +3,8 @@
   "rootNamespace": "AF.Platform.Notifications",
   "references": [
     "AF.Platform",
-    "Unity.Notifications.Android"
+    "Unity.Notifications.Android",
+    "Unity.Notifications.iOS"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

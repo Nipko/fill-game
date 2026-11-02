@@ -8,14 +8,11 @@ Encargo: `docs/dev/traspaso/mac-ios.md` (D-067). La Mac mini (Apple silicon, 24 
 - **M1 hecha** (2026-11-01, rama `mac/m1-hola-iphone`, sobre `mac/m0-setup`): Tintalú corre en el iPhone 16 Pro Max (iOS 26.6) por cable con el Apple ID gratuito. El dueño jugó los niveles 1-10; la Dynamic Island no tapa nada; el interruptor de silencio funciona. Pasos y arreglos: `docs/dev/mac-setup.md` §6.
 - **Fallo abierto, del código común (no de iOS): Rosa sale como un cuadro blanco en el inicio** tras cerrar el banner de un mundo (abajo, M1). Espera la decisión del dueño o del integrador.
 - **Rosa en blanco: arreglado** en `mac/fix-rosa-banner` (`043d0b0b`, desde la integración), con test y comprobado en el iPhone.
-- **M2 en curso** (rama `mac/m2-sistema`, sobre `mac/m1-hola-iphone`): hápticos, escala de texto, «Reducir movimiento» y ajustes de la app, ya instalados en el iPhone; **falta la prueba del dueño** (abajo). Después: notificaciones, país desde la tienda, icono definitivo y Firebase iOS (cuando el dueño ponga el `GoogleService-Info.plist`).
+- **M2 en curso** (rama `mac/m2-sistema`, sobre `mac/m1-hola-iphone`): hápticos, escala de texto, «Reducir movimiento», ajustes de la app y notificaciones locales, probados por el dueño en el iPhone. Falta: país desde la tienda, icono definitivo y Firebase iOS (cuando el dueño ponga el `GoogleService-Info.plist`).
 
 ## Para retomar (2026-11-01)
 
-1. **Pruebas pendientes en el iPhone** (el build de `mac/m2-sistema` ya está instalado):
-   - hápticos: un toque suave al sellar cada cuia y uno medio al ganar;
-   - Ajustes › Pantalla y brillo › Tamaño del texto más grande, cerrar el juego del todo y abrirlo: textos más grandes (tope 130 %);
-   - Ajustes › Accesibilidad › Movimiento › Reducir movimiento, cerrar y abrir: intro y animaciones quietas.
+1. **Siguiente en M2:** el país desde la tienda (`Storefront`) y el icono definitivo; Firebase cuando esté el plist. Guiones para compilar e instalar (locales, ignorados): `Logs/ios-scripts/ios-setup.sh` y `ios-all.sh <equipo> <udid> ['{"af_dev_push":"2"}']`.
 2. **La firma del Apple ID gratuito caduca a los 7 días** (instalado el 2026-11-01). Para reinstalar: `mac-setup.md` §6 (exportar con `BuildIos.ExportXcode` y `xcodebuild` + `devicectl` desde una terminal normal, con el equipo de firma del dueño).
 3. **En la Mac, solo local:** la rama `mac/prueba-rosa` (M1 + el arreglo de Rosa, solo para probar en el iPhone) y dos `stash`: el checkout a medias de cuando `git-lfs` no estaba en el PATH (sin valor) y los huecos de iconos de iOS que Unity añade a `ProjectSettings.asset`. Se pueden borrar.
 
@@ -28,8 +25,13 @@ Rama `mac/m2-sistema` desde `mac/m1-hola-iphone`.
 - **`IosSystemScale`** (`AF.UI`): escala de fuente con `AccessibilitySettings.fontScale` (Dynamic Type) y «Reducir movimiento» como escala de animaciones 0; lo da `AndroidSystemScale.ForPlatform` en el iPhone.
 - **`AndroidAppSettings.OpenNotificationSettings`** en el iPhone abre `app-settings:` (la ficha de la app en Ajustes).
 - **Idioma:** sin cambios; en el iPhone la cultura de .NET ya da `es-CO` (`AF_STATE loc`, `device_src: culture`).
+- **Probado por el dueño en el iPhone (2026-11-01):** hápticos al sellar y al ganar, Tamaño del texto más grande y Reducir movimiento.
+- **Notificaciones locales** (`IosNotificationScheduler`, en `AF.Platform.Notifications`, con la parte de iOS del mismo `com.unity.mobile.notifications` 2.4.3: sin paquetes nuevos): hora UTC (disparador de calendario), permiso solo en `RequestPermission` (un rechazo en iOS es `Blocked`), entregados y abierto como en Android (`ScheduledNotificationLog` y `GetLastRespondedNotification`, con una marca para no contar dos veces el mismo). `DeviceNotifications` lo crea en el iPhone.
+- **Ajustes del paquete en iOS** (`ApplyIosDefaults`, que también los valida): «Request Authorization on App Launch» pasa de `True` a `False` (06 §8.1: el permiso solo tras «Avísame» o desde Ajustes), y siguen apagadas las notificaciones remotas, su permiso al abrir y el entitlement Time Sensitive. Solo cambia la parte de iOS de `ProjectSettings/NotificationsSettings.asset`.
+- **Extras de desarrollo en iOS:** `LaunchOptions.ReadIntentInt/Bool/String` leen en el iPhone las variables de entorno del arranque con el mismo nombre que los extras de Android, solo en builds de desarrollo: `xcrun devicectl device process launch --environment-variables '{"af_dev_push":"2"}' …`. Con `af_dev_push=2` el dueño vio el diálogo de permiso, el aviso a los 60 s y el juego abierto al tocarlo.
+- **Pendiente de M2:** el país desde la tienda (`Storefront`), el icono definitivo con las variantes de iOS y Firebase iOS (espera el `GoogleService-Info.plist` del dueño).
 - Android no cambia: lo nuevo va detrás de `UNITY_IOS` o de `RuntimePlatform.IPhonePlayer`.
-- **Verificación:** EditMode 4.996 (4.989 pasan, 7 omitidos, 0 fallan); export, `xcodebuild` firmado e instalación en el iPhone, correctos. PlayMode sin correr todavía con estos cambios.
+- **Verificación:** EditMode 4.996 (4.989 pasan, 7 omitidos, 0 fallan), también con las notificaciones; PlayMode 2.612 (2.235 pasan, 377 omitidos, 0 fallan) con los hápticos y la escala; export, `xcodebuild` firmado e instalación en el iPhone, correctos.
 
 ## M1: «Hola, iPhone» — 2026-11-01
 
