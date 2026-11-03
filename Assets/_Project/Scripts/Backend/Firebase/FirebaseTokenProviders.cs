@@ -1,7 +1,7 @@
 #nullable enable
 using System;
 using AF.Backend.Auth;
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
 using System.Collections.Generic;
 using Firebase.AppCheck;
 using Firebase.Auth;
@@ -94,7 +94,7 @@ namespace AF.Backend.Firebase
             });
         }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
         private readonly List<Action<bool>> _signingIn = new List<Action<bool>>();
 
         // El usuario guardado por el SDK (el de la cuenta borrada) se va; la petición siguiente crea el anónimo nuevo (EnsureUser).
@@ -239,7 +239,7 @@ namespace AF.Backend.Firebase
             });
         }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
         private static void Request(Action<TokenResult> onDone)
         {
             try
