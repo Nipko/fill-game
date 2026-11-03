@@ -4965,3 +4965,21 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Despliegue:** con el sí del dueño al diff («Yes, deploy»), `cdk deploy AfProdWeb --exclusively`. Los contextos de prod son `firebaseProjectId=tintalu`, `firebaseAppIds` de la app de prod, `domain=tintalu.com` y `alertEmail`. Comprobado en `tintalu.com`: 200 en las 3 portadas, las WebP como `image/webp`, `app-ads.txt` y la página de borrado de cuenta.
 - **Ojo para el próximo despliegue:** sin `-c firebaseProjectId=tintalu`, el diff cambia el emisor del JWT de `AfProdApi` a `amazon-fill-prod` y rompería el inicio de sesión. Hay que usar siempre ese contexto y `--exclusively` para desplegar solo la web.
 - **Corrección del mismo día (74cd6805, desplegada con el sí del dueño):** a petición del dueño («la imagen principal es muy pobre […] las cuias ahí están inventadas»), la portada usa el **tablero real del juego** en pleno vertido, recortado de la captura 1 del concepto A, en lugar del dibujo SVG. «Quién lo hace» deja solo a Parallext y el contacto: el publicador queda en las políticas («en la página principal solo decir Parallext»).
+
+### D-066, añadido del 2026-11-03: publicar con Postiz autoalojado, no con Buffer (Q-MK-3)
+
+- **Petición del dueño:** «¿hay posibilidad de algo que podamos instalar local […] sin que incurramos en costos?». Trajo además una guía (`guia_automatizacion_redes_sociales.md`, en sus descargas) y pidió revisarla. Decidido con «Sí, actualízalo».
+- **Decisión:** Q-MK-3 pasa de Buffer (~20 US$/mes) a **Postiz autoalojado en el Spark**, con costo 0:
+  - Docker con Postiz y `cloudflared`;
+  - Cloudflare Tunnel en `social.tintalu.com` y R2 en `media.tintalu.com`. El DNS ya está en Cloudflare (D-044); solo se añaden registros y no se toca ninguno de los existentes;
+  - apps de desarrollador propias de Meta, Google y TikTok, creadas por el dueño, con las claves solo en el Spark;
+  - YouTube y TikTok con publicación privada o en borrador hasta que pasen sus auditorías gratuitas.
+  
+  El detalle está en `docs/dev/traspaso/spark-marketing.md` §7.
+- **De la guía se toma:** Postiz, el túnel con R2, el modo borrador de TikTok y la API o el MCP de Postiz para la fábrica.
+- **De la guía se corrige:** YouTube también deja privado lo que sube un proyecto sin auditar [NV].
+- **De la guía se descarta:**
+  - los navegadores «stealth»: esquivan la detección de bots y arriesgan suspender las cuentas;
+  - Mixpost Lite, PostSider y Posthive;
+  - n8n y Ollama, por ahora.
+- **Respaldo:** Buffer, si Postiz no se sostiene.

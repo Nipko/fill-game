@@ -216,9 +216,27 @@ Si alguna falla, la pieza vuelve a edición con el motivo; si falla 2 veces, va 
 
 ## 7. Publicación automática
 
-- **Cómo** (Q-MK-3):
-  - **recomendado [P]:** un programador de publicaciones con API (Metricool, Buffer o similar, unos 20-50 US$/mes [NV]) que publique en TikTok, Instagram, YouTube y Facebook. Las APIs oficiales de TikTok (Content Posting, que pide auditoría) y de Meta (Graph, que pide la verificación de empresa) tardan semanas en aprobarse; se pasa a ellas después si hace falta.
-  - El token lo pone el dueño en tu equipo.
+- **Cómo** (Q-MK-3; **cambiada por el dueño el 2026-11-03**: «Sí, actualízalo», añadido de D-066): **Postiz autoalojado en el Spark, a costo 0**, en lugar de Buffer. Viene de la guía `guia_automatizacion_redes_sociales.md` que trajo el dueño, revisada por el integrador: se toma lo que encaja y se descarta lo que arriesga las cuentas.
+  1. **Stack en Docker** (Docker Desktop con WSL2; `restart: always`): Postiz (`gitroomhq/postiz-app`, AGPL-3.0) con su Postgres, Redis y Temporal, más `cloudflared`. Registro público cerrado (`DISABLE_REGISTRATION=true`) y un solo usuario administrador. La configuración (compose sin secretos y scripts de arranque) va versionada en `fill-game-marketing`; el `.env` se queda solo en el Spark, fuera de git.
+  2. **Cloudflare, que ya tiene el DNS de `tintalu.com` (D-044, opción A):**
+     - un túnel de Cloudflare Zero Trust para `social.tintalu.com` (panel, API y retornos OAuth de Postiz), sin abrir puertos del router;
+     - un bucket de **R2** (capa gratuita) en `media.tintalu.com` para los vídeos e imágenes: Instagram y TikTok los descargan desde una URL pública al publicar;
+     - **no se tocan los registros que ya existen:** `tintalu.com` y `www` (CloudFront), los CNAME de validación de ACM y los MX, SPF y DKIM del correo. Solo se **añaden** los dos subdominios y el TXT de verificación de TikTok;
+     - los cambios en Cloudflare los hace el dueño o el Spark con su permiso, y los tokens del túnel y de R2 los pone el dueño en el Spark, **nunca en el chat ni en git**.
+  3. **Apps de desarrollador (gratis; las crea el dueño con guía, y sus claves van al `.env` del Spark):**
+     - **Meta** (una app tipo Business para la página de Facebook y el Instagram profesional vinculado): publica en las cuentas propias del dueño desde el primer día;
+     - **Google Cloud** con YouTube Data API v3 (~6 subidas al día con la cuota gratis [NV]). **Mientras Google no audite el proyecto, lo subido por API queda privado** [NV]: hasta entonces, Postiz sube y el dueño lo hace público con un clic, o se programa en YouTube Studio;
+     - **TikTok for Developers** (Login Kit y Content Posting, con el dominio verificado). Sin auditoría, la publicación directa sale privada (`SELF_ONLY`) [NV]: hasta entonces, el modo **borrador o bandeja** (`UPLOAD`) deja el vídeo en la app de TikTok del dueño y él lo publica con un toque. Comprobar al crear la app si ese modo también pide su aprobación.
+  4. **Auditorías gratuitas de YouTube y TikTok:** se piden en cuanto existan las apps. Cuando se aprueben, todo sale automático en las 4 redes.
+  5. **La fábrica programa en Postiz por su API o su servidor MCP** desde `cola.py`, con la aprobación del lote (Q-MK-5) y el interruptor `PAUSA` delante.
+  - **Descartado:**
+    - **navegadores «stealth» y subidas por sesión web** (Patchright, uploaders de TikTok sin API): esquivan a propósito la detección de bots, van contra las condiciones de TikTok y Meta y arriesgan que suspendan las cuentas;
+    - **Mixpost Lite:** la versión gratis solo publica en Facebook;
+    - **PostSider y Posthive:** sin madurez comprobada; Postiz es el estándar;
+    - **n8n y Ollama, por ahora:** la fábrica ya redacta y monta (`stack-spark.md`). Se pueden reconsiderar para la bandeja de comentarios.
+  - **Más adelante (fase 2):** bandeja de comentarios y DMs (Chatwoot CE o flujos propios), con las reglas de «Comunidad» de abajo: las respuestas con IA salen como borrador que aprueba el dueño, salvo las preguntas frecuentes con texto aprobado.
+  - **Respaldo:** si Postiz no se sostiene, Buffer Essentials (~20 US$/mes [NV]) con el dueño de acuerdo.
+  - **Lo que actualiza Spark:** `stack-spark.md` (el programador y el total mensual a 0), `estrategia.md` (presupuesto y tareas del dueño de la semana 1) y `fabrica.md` (S7 con Postiz en lugar de la API de Buffer).
 - **Calendario** [P]: 1 publicación al día por red. Horas de mayor uso por mercado (el informe de §3 las ajusta): la tarde-noche local de CO, MX y BR. Carruseles e imágenes 2-3 veces por semana.
 - **Aprobación** (Q-MK-5):
   - **recomendado [P]:** durante las 2 primeras semanas, el dueño aprueba cada lote semanal en una hoja de contactos (un Artifact privado con «aprobar» y «rechazar» por pieza, o una carpeta y un resumen diario);
@@ -265,7 +283,7 @@ Si alguna falla, la pieza vuelve a edición con el motivo; si falla 2 veces, va 
 |---|---|---|
 | Q-MK-1 | Canales orgánicos | TikTok, Instagram, YouTube Shorts y Facebook desde el día 1; Kwai en Brasil en la fase B |
 | Q-MK-2 [dueño] | Nombres de las cuentas: crearlas, con verificación en dos pasos | `@tintalugame` (o `@tintalu.game` donde no quepa), igual en todas, con `support@tintalu.com` como correo de las cuentas. Las crea el dueño |
-| Q-MK-3 | Cómo publicar | programador con API (unos 20-50 US$/mes [NV]) al principio; APIs oficiales después |
+| Q-MK-3 | Cómo publicar | ~~programador con API (unos 20-50 US$/mes [NV]) al principio; APIs oficiales después~~ **Cambiada el 2026-11-03:** Postiz autoalojado en el Spark con las APIs oficiales, Cloudflare Tunnel y R2, a costo 0 (§7) |
 | Q-MK-4 [dueño] | Presupuesto de pago | primer tramo de **1.000 US$** en 4-6 semanas (dentro de la UA de medición de 09 §5, de 1.300-5.400): ~40 % Google App Campaigns, ~30 % Unity, ~30 % Meta o TikTok; solo LatAm y BR; ampliar con datos |
 | Q-MK-5 | Aprobación | el dueño aprueba los lotes 2 semanas; después, automático con resumen diario e interruptor; los anuncios de pago siempre los aprueba el dueño |
 | Q-MK-6 | Voz | TTS neutra por idioma, etiquetada si la red lo pide; sin clonar voces de personas reales |
