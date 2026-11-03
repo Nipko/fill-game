@@ -399,6 +399,35 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Rosa_InTheVoyage_ComesBack_AfterTheWorldBannerReleasesItsArt()
+        {
+            // Prueba de M1 en el iPhone (2026-11-01): el banner del mundo, al cerrarse, destruye con ReleaseBannerArt el sprite de
+            // Rosa, que es el mismo de la travesía del inicio; el Image se quedaba con el sprite destruido (un rectángulo blanco).
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(58)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            boot.GetComponent<MarketRunner>().enabled = false;
+            LobbyScreen lobby = boot.Lobby!;
+            yield return null;
+            Image guide = lobby.Voyage.GuideRect.GetComponent<Image>();
+            ProceduralArt art = boot.Art!;
+            Assert.That(lobby.Voyage.Visible, Is.True);
+            Assert.That(guide.sprite, Is.SameAs(art.Rosa), "en el 58 guía Rosa, con el sprite compartido");
+
+            art.ReleaseBannerArt(); // lo que hace WorldBannerView al cerrarse
+            yield return null; // Destroy actúa al final del fotograma
+            Assert.That(guide.sprite == null, Is.True, "el sprite que tenía la travesía ya no existe");
+
+            // Vuelta al inicio (aquí, con el Mercado: al cerrarlo el inicio vuelve a enseñar la travesía).
+            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
+            yield return null;
+            boot.Market!.Close();
+            yield return null;
+            Assert.That(lobby.Voyage.Visible, Is.True);
+            Assert.That(guide.sprite != null, Is.True, "Rosa vuelve a tener sprite");
+            Assert.That(guide.sprite, Is.SameAs(art.Rosa), "el que ProceduralArt vuelve a generar");
+        }
+
+        [UnityTest]
         public IEnumerator AfLayout_OfTheLobby_PublishesStopRemainingAndHomeWindow()
         {
             using var layout = new AfLayoutLog();
