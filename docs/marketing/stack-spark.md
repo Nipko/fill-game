@@ -92,7 +92,8 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
 - **Comprobado el 2026-11-03 [V]:**
   - los 7 contenedores están sanos;
   - `http://127.0.0.1:4007/auth` responde 200;
-  - con la imagen ya bajada, arranca en menos de 1 minuto.
+  - con la imagen ya bajada, arranca en menos de 1 minuto;
+  - el túnel registra 4 conexiones (sjc05 y sjc06) con la ruta `social.tintalu.com` → `http://postiz:5000`. A través de Cloudflare: `/auth` → 200 («Postiz Register») y `/api/` → 200.
 - **Ojo, WSL se apaga solo** cuando no queda ningún proceso de Windows usándolo, y con él se paran los contenedores. `instalar-arranque.ps1` crea en la carpeta Inicio un acceso directo con `conhost --headless wsl -d Ubuntu --exec sleep infinity`. **Lo ejecuta el dueño:** el modo automático de Claude no deja crear tareas de inicio de sesión. Sin él, Postiz solo funciona mientras haya una sesión de WSL abierta.
 - **Pendiente del dueño, en este orden:**
   1. en Cloudflare: el túnel con la ruta pública `social.tintalu.com` → `HTTP` `postiz:5000`, y su token en `.env`; luego `postiz.sh reiniciar`;
