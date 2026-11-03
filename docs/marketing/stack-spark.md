@@ -107,11 +107,14 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
     | TikTok | TikTok for Developers `Tintalu Postiz`, organización Parallext, tipo Other, en Sandbox | Lo publicado sale `SELF_ONLY`. `tintalu.com` está verificado con un TXT (añadido; no se tocó ningún registro existente) |
 
 - **Los scopes de TikTok** que pide Postiz v2.25.3 en su código son `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.list`, `video.upload` y `video.publish`. La guía de Postiz cita además `video.create`, que ya no existe en TikTok.
+- **R2, hecho el 2026-11-03** [V]:
+  - el bucket `tintalu-media` (ENAM), con el dominio propio `media.tintalu.com` (Active) y sin URL `r2.dev`;
+  - un token limitado a ese bucket (Object Read & Write), con `STORAGE_PROVIDER=cloudflare`;
+  - `postiz.sh prueba-r2` sube un archivo con el SDK de Postiz, lo lee por `https://media.tintalu.com/` (200, con el contenido correcto) y lo borra.
 - **Pendiente:**
-  1. el bucket R2 en `media.tintalu.com` con sus claves en `.env` y `STORAGE_PROVIDER=cloudflare`. Sin él no se puede publicar en Instagram ni en TikTok, que descargan los medios desde una URL pública;
-  2. `instalar-arranque.ps1`;
-  3. las auditorías de YouTube (verificación de OAuth y auditoría de cumplimiento) y de TikTok (revisión en Production). Spark prepara el texto y el vídeo de demostración;
-  4. conectar `cola.py` con la API de Postiz (S7).
+  1. `instalar-arranque.ps1`;
+  2. las auditorías de YouTube (verificación de OAuth y auditoría de cumplimiento) y de TikTok (revisión en Production). Spark prepara el texto y el vídeo de demostración;
+  3. conectar `cola.py` con la API de Postiz (S7).
 
 ## 3. Tiempos medidos (en caliente) [V]
 

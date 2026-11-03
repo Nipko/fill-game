@@ -12,8 +12,8 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   - el dueño puso el túnel y creó el administrador; el registro quedó cerrado;
   - creó las apps de Meta (Live), Google (en prueba) y TikTok (Sandbox, organización Parallext) y conectó Facebook, Instagram, YouTube y TikTok;
   - el panel está en `https://social.tintalu.com`.
+- **R2 hecho:** `media.tintalu.com` sirve el bucket `tintalu-media`, y la prueba de subida, lectura y borrado pasa.
 - **Falta:**
-  - R2 (`media.tintalu.com`), necesario para publicar en Instagram y TikTok;
   - `instalar-arranque.ps1`;
   - las auditorías de YouTube y TikTok;
   - S7 con `cola.py`.
