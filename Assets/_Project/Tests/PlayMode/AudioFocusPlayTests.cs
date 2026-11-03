@@ -79,7 +79,8 @@ namespace AF.Tests.PlayMode
                 Assert.That(_probe.LastAudioFocusLine, Does.Contain("\"state\":\"gain\"").And.Contain("\"music_gain\":1.00"));
             }
 
-            yield return Wait(() => s.MenuVolume > 0.9f * AudioMix.MusicLevel, "con el fundido, hasta arriba", 5f);
+            // Hasta el final del fundido: con 0,9 el resto dependía de los fotogramas por segundo (en la Mac fallaba).
+            yield return Wait(() => s.MenuVolume > 0.999f * AudioMix.MusicLevel, "con el fundido, hasta arriba", 5f);
 
             // Un aviso que se puede oír por encima: la música baja al 20 %, los efectos siguen.
             port.Push(AudioFocusState.Duck);

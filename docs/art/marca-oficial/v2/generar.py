@@ -775,6 +775,18 @@ def monocroma():
     return _OF.monocroma()
 
 
+def ios_oscuro():
+    """Apariencia oscura del icono de iOS (fase M2 de docs/dev/traspaso/mac-ios.md; pendiente de D-045): el icono oficial sin el
+    cielo ni la selva (el río con sus orillas, la cuia, el chorro y los aros) sobre transparente; iOS pone su degradado oscuro."""
+    return f"{DEFS_MEANDRO}\n  {rio_svg(_OF.rio, _OF.r0, _OF.abre)}\n  {frente()}"
+
+
+def ios_tintado():
+    """Apariencia tintada del icono de iOS: la monocroma oficial (la del icono temático de Android) a tamaño completo, blanca sobre
+    transparente; iOS la tiñe con el color que elija el usuario."""
+    return monocroma()
+
+
 def zona_segura_dp(pieza=None):
     """Distancia máxima (dp) al centro del icono adaptativo de la cuia (vidrio, pie y borde), con la escala de ADAPT; la zona
     segura de Android es un círculo de 33 dp de radio."""
@@ -821,6 +833,9 @@ def main(argv=None):
     w("adaptativo-frente.svg", svg(f"<g {ADAPT}>{fr()}</g>"))
     w("adaptativo-monocromo.svg", svg(f"<g {ADAPT}>{mo()}</g>"))
     w("adaptativo-vista.svg", svg(f"<g {ADAPT}>{fo()}\n{fr()}</g>"))
+    if pieza is None:
+        w("ios-oscuro-1024.svg", svg(ios_oscuro()))
+        w("ios-tintado-1024.svg", svg(ios_tintado()))
     font = TTF(FONT)
     for tema, color in (("claro", PETROLEO_TXT), ("oscuro", MARFIL_TXT)):
         d, tw = texto_a_path(font, "Tintalú", 0, 0, 300, track=-0.005)

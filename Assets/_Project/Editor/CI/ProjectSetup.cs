@@ -21,7 +21,7 @@ namespace AF.EditorTools
     /// Código de salida: 0 si todo queda aplicado; 1 si algo falla (la excepción aborta el batchmode).
     /// También está en el menú "Amazon Fill/CI" del Editor.
     /// </summary>
-    public static class ProjectSetup
+    public static partial class ProjectSetup
     {
         /// <summary>
         /// Identificador PROVISIONAL de los builds de prueba. Usa el nombre interno del proyecto (Amazon Fill),

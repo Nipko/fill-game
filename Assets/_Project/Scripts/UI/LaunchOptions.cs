@@ -748,6 +748,13 @@ namespace AF.UI
         /// </summary>
         public static int ReadIntentInt(string name, int missing)
         {
+            if (Debug.isDebugBuild && Application.platform == RuntimePlatform.IPhonePlayer)
+            {
+                string? raw = ReadLaunchEnvironment(name);
+                return raw != null && int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int value)
+                    ? value : missing;
+            }
+
             if (!Debug.isDebugBuild || Application.platform != RuntimePlatform.Android)
             {
                 return missing;
@@ -774,6 +781,12 @@ namespace AF.UI
         /// <summary>Extra de intent booleano <paramref name="name"/> (<c>--ez</c>; solo Android y solo en builds de desarrollo); false si no hay.</summary>
         public static bool ReadIntentBool(string name)
         {
+            if (Debug.isDebugBuild && Application.platform == RuntimePlatform.IPhonePlayer)
+            {
+                string? raw = ReadLaunchEnvironment(name);
+                return raw != null && (raw == "1" || string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase));
+            }
+
             if (!Debug.isDebugBuild || Application.platform != RuntimePlatform.Android)
             {
                 return false;
@@ -809,6 +822,11 @@ namespace AF.UI
         /// <summary>Extra de intent de texto <paramref name="name"/> (solo Android y solo en builds de desarrollo); null si no hay.</summary>
         public static string? ReadIntentString(string name)
         {
+            if (Debug.isDebugBuild && Application.platform == RuntimePlatform.IPhonePlayer)
+            {
+                return ReadLaunchEnvironment(name);
+            }
+
             if (!Debug.isDebugBuild || Application.platform != RuntimePlatform.Android)
             {
                 return null;
@@ -830,6 +848,25 @@ namespace AF.UI
 #else
             return null;
 #endif
+        }
+
+        /// <summary>
+        /// En el iPhone (fase M2 de <c>mac-ios.md</c>), los mismos extras de desarrollo que en Android llegan como variables de entorno
+        /// del arranque, con el mismo nombre: <c>xcrun devicectl device process launch --environment-variables '{"af_dev_push":"2"}' …</c>.
+        /// Solo en builds de desarrollo (quien llama lo comprueba); null si no está o está vacía.
+        /// </summary>
+        private static string? ReadLaunchEnvironment(string name)
+        {
+            try
+            {
+                string? value = Environment.GetEnvironmentVariable(name);
+                return string.IsNullOrEmpty(value) ? null : value;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[AF.LaunchOptions] no se pudo leer la variable " + name + ": " + e.Message);
+                return null;
+            }
         }
 
 #if UNITY_ANDROID

@@ -56,12 +56,20 @@ namespace AF.UI
         public float AnimatorDurationScale => ReadAnimatorDurationScale();
 
         /// <summary>
-        /// Las escalas de esta plataforma: <see cref="AndroidSystemScale"/> en Android y <see cref="FakeSystemScale"/> (100 % y
-        /// animaciones normales) en el resto, el Editor incluido.
+        /// Las escalas de esta plataforma: <see cref="AndroidSystemScale"/> en Android, <see cref="IosSystemScale"/> en el iPhone y
+        /// <see cref="FakeSystemScale"/> (100 % y animaciones normales) en el resto, el Editor incluido.
         /// </summary>
         public static ISystemScale ForPlatform()
         {
-            return Application.platform == RuntimePlatform.Android ? new AndroidSystemScale() : new FakeSystemScale();
+            switch (Application.platform)
+            {
+                case RuntimePlatform.Android:
+                    return new AndroidSystemScale();
+                case RuntimePlatform.IPhonePlayer:
+                    return new IosSystemScale(); // fase M2 de iOS (mac-ios.md)
+                default:
+                    return new FakeSystemScale();
+            }
         }
 
         // Settings.Global.getFloat(activity.getContentResolver(), "animator_duration_scale", 1f); NaN si falla.

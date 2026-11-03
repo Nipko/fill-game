@@ -9,15 +9,27 @@ namespace AF.UI
     /// <c>EXTRA_APP_PACKAGE</c>, API 26+, el <c>minSdk</c> del juego) y, si el teléfono no tiene esa pantalla, la ficha de la app
     /// (<c>ACTION_APPLICATION_DETAILS_SETTINGS</c>). Para la fila «Avisos» de Ajustes con los avisos bloqueados en el teléfono (06 §8.1:
     /// el diálogo nativo ya no sale). Por el JNI de Unity, sin plugin y <b>sin permiso</b>; vive en <c>AF.UI</c> porque necesita el
-    /// motor, como <see cref="AndroidSimCountry"/>. Fuera de Android (el Editor, los tests) no hace nada y devuelve false.
+    /// motor, como <see cref="AndroidSimCountry"/>. En el iPhone abre la ficha de la app en Ajustes (<see cref="IosAppSettingsUrl"/>).
+    /// En el resto (el Editor, los tests) no hace nada y devuelve false.
     /// </summary>
     public static class AndroidAppSettings
     {
         private const string LogPrefix = "[AF.AndroidAppSettings] ";
 
+        /// <summary>El valor de <c>UIApplicationOpenSettingsURLString</c> de iOS: abre la ficha de la app en Ajustes.</summary>
+        public const string IosAppSettingsUrl = "app-settings:";
+
         /// <summary>Abre los ajustes de notificaciones de la app; true si Android aceptó alguna de las dos pantallas.</summary>
         public static bool OpenNotificationSettings()
         {
+            if (Application.platform == RuntimePlatform.IPhonePlayer)
+            {
+                // iOS (fase M2 de mac-ios.md): la ficha de la app en Ajustes, con su fila «Notificaciones»
+                // (UIApplicationOpenSettingsURLString), sin plugin ni permiso.
+                Application.OpenURL(IosAppSettingsUrl);
+                return true;
+            }
+
             if (Application.platform != RuntimePlatform.Android)
             {
                 return false;

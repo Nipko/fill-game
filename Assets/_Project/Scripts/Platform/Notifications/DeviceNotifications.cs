@@ -7,7 +7,8 @@ namespace AF.Platform.Notifications
     /// Entrada única a las notificaciones locales del teléfono (Q-M5 de D-033 y su añadido del 2026-10-21: paquete
     /// <c>com.unity.mobile.notifications</c> 2.4.3 y permiso <c>POST_NOTIFICATIONS</c>; nota <c>docs/dev/sesiones-notificaciones.md</c>
     /// §8). Todo lo que toca el paquete vive en este ensamblado, tras <c>AF_MOBILE_NOTIFICATIONS</c> (el <c>versionDefines</c> de
-    /// <c>AF.Platform.Notifications.asmdef</c>), <c>UNITY_ANDROID</c> y <c>!UNITY_EDITOR</c>: en el editor, en los tests y sin el
+    /// <c>AF.Platform.Notifications.asmdef</c>), <c>UNITY_ANDROID</c> (o <c>UNITY_IOS</c>, desde la fase M2 de <c>mac-ios.md</c>:
+    /// <see cref="IosNotificationScheduler"/>) y <c>!UNITY_EDITOR</c>: en el editor, en los tests y sin el
     /// paquete, <see cref="Available"/> es false, <see cref="Create"/> devuelve null y el juego sigue con
     /// <see cref="FakeNotificationScheduler"/> (08 §2.1, principio 6: cada SDK detrás de su interfaz con una falsa para el editor).
     /// </summary>
@@ -16,12 +17,12 @@ namespace AF.Platform.Notifications
         /// <summary>Canal único de los avisos [P] (B6-Q8: su nombre visible es <c>push_channel_name</c>).</summary>
         public const string ChannelId = "af_default";
 
-        /// <summary>El programador real existe en este build (Android, fuera del editor y con el paquete).</summary>
+        /// <summary>El programador real existe en este build (Android o iOS, fuera del editor y con el paquete).</summary>
         public static bool Available
         {
             get
             {
-#if AF_MOBILE_NOTIFICATIONS && UNITY_ANDROID && !UNITY_EDITOR
+#if AF_MOBILE_NOTIFICATIONS && (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
                 return true;
 #else
                 return false;
@@ -43,6 +44,8 @@ namespace AF.Platform.Notifications
 
 #if AF_MOBILE_NOTIFICATIONS && UNITY_ANDROID && !UNITY_EDITOR
             return new AndroidNotificationScheduler(clock, channelName, channelDescription);
+#elif AF_MOBILE_NOTIFICATIONS && UNITY_IOS && !UNITY_EDITOR
+            return new IosNotificationScheduler(clock); // iOS no tiene canales
 #else
             return null;
 #endif
@@ -53,6 +56,8 @@ namespace AF.Platform.Notifications
         {
 #if AF_MOBILE_NOTIFICATIONS && UNITY_ANDROID && !UNITY_EDITOR
             (scheduler as AndroidNotificationScheduler)?.Poll();
+#elif AF_MOBILE_NOTIFICATIONS && UNITY_IOS && !UNITY_EDITOR
+            (scheduler as IosNotificationScheduler)?.Poll();
 #endif
         }
 
@@ -65,6 +70,8 @@ namespace AF.Platform.Notifications
         {
 #if AF_MOBILE_NOTIFICATIONS && UNITY_ANDROID && !UNITY_EDITOR
             AndroidNotificationScheduler.CancelEverything();
+#elif AF_MOBILE_NOTIFICATIONS && UNITY_IOS && !UNITY_EDITOR
+            IosNotificationScheduler.CancelEverything();
 #endif
         }
     }

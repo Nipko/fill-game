@@ -17,6 +17,8 @@ Uso: python exportar.py   (antes: python generar.py)
        (añadido de D-051), sin Chrome: del SVG de generar.py, la cuia con sus dosis, el chorro, los aros y las palmeras
        en capas de polígonos (emblema_unity.py), para Assets/_Project/Scripts/Presentation/BrandEmblem.Generated.cs.
        Con --check no escribe nada: compara y sale con 1 si difiere.
+     python exportar.py --ios   solo las apariencias oscura y tintada del icono de iOS (png/ios-{oscuro,tintado}-1024.png, de
+       los SVG que escribe generar.py), sin tocar los demás PNG; la clara es png/app-store-1024.png (fase M2 de mac-ios.md).
 Códigos: 0 hecho (o idéntico con --check) · 1 fallo o diferencia · 2 argumentos o sin Chrome.
 """
 import math
@@ -29,7 +31,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
 PNG = os.path.join(OUT, "png")
 CHROME = next((p for p in (r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-                           r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe") if os.path.exists(p)), None)
+                           r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+                           "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome") if os.path.exists(p)), None)
 
 # (svg, png, ancho, alto)
 TRABAJOS = [
@@ -44,6 +47,12 @@ TRABAJOS = [
     ("adaptativo-monocromo.svg", "android-monocromo-432.png", 432, 432),
     ("adaptativo-vista.svg", "android-vista-432.png", 432, 432),
 ]
+# Apariencias de iOS (fase M2 de docs/dev/traspaso/mac-ios.md): la clara es app-store-1024.png.
+IOS = [
+    ("ios-oscuro-1024.svg", "ios-oscuro-1024.png", 1024, 1024),
+    ("ios-tintado-1024.svg", "ios-tintado-1024.png", 1024, 1024),
+]
+TRABAJOS.extend(IOS)
 for n in (48, 72, 96, 144, 192):
     TRABAJOS.append(("icono-1024.svg", f"legacy-{n}.png", n, n))
 for f in sorted(os.listdir(OUT)):
@@ -292,6 +301,8 @@ def main():
                 trabajos.append((svg, os.path.join(carpeta, f"af_launcher_{capa}.png"), px, px))
         if android_xml(sys.argv[2], False) != 0:
             return 1
+    elif len(sys.argv) == 2 and sys.argv[1] == "--ios":
+        trabajos = [(svg, os.path.join(PNG, png), w, h) for svg, png, w, h in IOS]
     elif len(sys.argv) > 1:
         print(__doc__)
         return 2

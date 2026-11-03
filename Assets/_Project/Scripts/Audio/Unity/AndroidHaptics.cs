@@ -50,12 +50,17 @@ namespace AF.Audio.Unity
 #endif
         }
 
-        /// <summary>Los hápticos de esta plataforma: los de Android en el teléfono; si no, <see cref="NullHaptics"/>.</summary>
+        /// <summary>
+        /// Los hápticos de esta plataforma: los de Android en el teléfono, <see cref="IosHaptics"/> en el iPhone; si no,
+        /// <see cref="NullHaptics"/>.
+        /// </summary>
         public static IHaptics ForPlatform()
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
             var haptics = new AndroidHaptics();
             return haptics._vibrator != null ? haptics : (IHaptics)NullHaptics.Instance;
+#elif UNITY_IOS && !UNITY_EDITOR
+            return new IosHaptics();
 #else
             return NullHaptics.Instance;
 #endif
