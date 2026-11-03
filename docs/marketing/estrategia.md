@@ -54,11 +54,11 @@ Los pilares del encargo §2, con la parrilla semanal que los cumple [P]:
 
 ## 4. Calendario de las 4 semanas
 
-La semana ISO 45 empieza el lunes 2 de noviembre de 2026. La publicación empieza el día en que el dueño cree las cuentas y ponga el token del programador (Q-MK-2 y Q-MK-3). Hasta entonces, cada semana deja su lote producido y aprobado en la cola, y el calendario se corre sin perder piezas.
+La semana ISO 45 empieza el lunes 2 de noviembre de 2026. La publicación empieza el día en que el dueño cree las cuentas y conecte Postiz con ellas: túnel, apps de Meta, Google y TikTok, y sus claves en el Spark (Q-MK-2 y Q-MK-3, cambiada el 2026-11-03 a Postiz autoalojado). En YouTube y TikTok, hasta que pasen sus auditorías, lo subido queda privado o en borrador y el dueño lo publica con un toque. Hasta entonces, cada semana deja su lote producido y aprobado en la cola, y el calendario se corre sin perder piezas.
 
 | Semana | Tema | Spark | Piezas | Escritorio | Dueño |
 |---|---|---|---|---|---|
-| **1 · 2026-45** (2-8 nov) | **Presentación:** el vertido, el teñido y la marca | <ul><li>S3: kit de redes, biografías en 3 idiomas, plantillas 9:16 con zona segura y tarjeta final</li><li>S4: la fábrica mínima (toma con E1 → plantilla → control de calidad → manifiesto)</li><li>los cortes del vídeo de la ficha (D-065) como primeras piezas</li></ul> | **7 + 2 carruseles**, a la hoja de contactos para aprobar: <ul><li>«De negro a color» (nivel 42)</li><li>la intro de la marca</li><li>3 de vertidos en bucle</li><li>«¿Lo resuelves?» (nivel 129)</li><li>el Mapa del río</li></ul> | E4 (enlaces UTM), E2 (kit de exportación) | crear las cuentas; el token de Buffer; aprobar el lote 1 |
+| **1 · 2026-45** (2-8 nov) | **Presentación:** el vertido, el teñido y la marca | <ul><li>S3: kit de redes, biografías en 3 idiomas, plantillas 9:16 con zona segura y tarjeta final</li><li>S4: la fábrica mínima (toma con E1 → plantilla → control de calidad → manifiesto)</li><li>los cortes del vídeo de la ficha (D-065) como primeras piezas</li></ul> | **7 + 2 carruseles**, a la hoja de contactos para aprobar: <ul><li>«De negro a color» (nivel 42)</li><li>la intro de la marca</li><li>3 de vertidos en bucle</li><li>«¿Lo resuelves?» (nivel 129)</li><li>el Mapa del río</li></ul> | E4 (enlaces UTM), E2 (kit de exportación) | crear las cuentas; Cloudflare (túnel y R2) y las apps de Meta, Google y TikTok para Postiz; aprobar el lote 1 |
 | **2 · 2026-46** (9-15 nov) | **Las frutas:** «una fruta, un tinte» | <ul><li>empieza la publicación diaria si ya hay cuentas</li><li>S5 completo: los 5 conceptos</li><li>la serie de frutas (açaí, camu camu, cupuaçu…)</li></ul> | 7 + 3 carruseles del Dato del río | E3 (atribución) | aprobar el lote 2 |
 | **3 · 2026-47** (16-22 nov) | **El reto:** tableros reales difíciles y el Reto del río | <ul><li>publicación diaria</li><li>la cola con aprobación y el resumen diario</li><li>la primera lectura de datos: la tasa de gancho por pilar</li><li>3 variaciones de la mejor pieza</li></ul> | 7 + 2 carruseles | E5 (cohortes por campaña) | aprobar el lote 3 (el último que aprueba pieza a pieza, Q-MK-5) |
 | **4 · 2026-48** (23-29 nov) | **El viaje:** el río de la desembocadura a la naciente y los estrenos de mecánicas | <ul><li>S8: el primer informe semanal</li><li>se renueva el 30 % de los formatos que no funcionaron</li><li>pasa a automático, con resumen diario e interruptor</li></ul> | 7 + 2 carruseles | E6 | revisar el informe (15 min) |
@@ -116,10 +116,10 @@ Las metas en porcentaje son [P] sin fuente de terceros. Se recalibran en el info
 
 | Partida | Mes 1 | Nota |
 |---|---|---|
-| Buffer Essentials, 4 canales (Q-MK-3) | ~20 US$ [NV] | El único coste fijo. Lo contrata el dueño y pone el token en el Spark |
+| Publicación (Q-MK-3) | **0** | **Cambiada el 2026-11-03** (añadido de D-066): Postiz autoalojado en el Spark, con Cloudflare Tunnel y R2 en su capa gratuita, sustituye a Buffer (~20 US$/mes). Las apps de desarrollador de Meta, Google y TikTok son gratis. Respaldo: Buffer, con el dueño de acuerdo |
 | Generación (imagen, vídeo, voz y música) | 0 | Modelos con licencia comercial en el Spark y la 5080 (S0). Las descargas que faltan, con el permiso del dueño (Q-MK-S0-2) |
 | Publicidad pagada | **0** | D-067. El tramo de 1.000 US$ (Q-MK-4) espera a iOS |
-| **Total** | **~20 US$/mes** | |
+| **Total** | **0 US$/mes** | |
 
 **Para cuando haya iOS** [P]. El reparto del encargo (Q-MK-4: ~40 % Google App Campaigns, ~30 % Unity y ~30 % Meta o TikTok) se pensó solo para Android. Con iOS publicado, la propuesta será:
 - partir cada red entre las dos tiendas según el CPI de las 2 primeras semanas;
@@ -142,7 +142,7 @@ Las fichas personalizadas por campaña esperan al pago.
 
 | Cuándo | Qué |
 |---|---|
-| Semana 1 | <ul><li>crear las cuentas `@tintalugame` en TikTok, Instagram, YouTube y Facebook, con la verificación en dos pasos y `support@tintalu.com` (Q-MK-2)</li><li>contratar Buffer y poner su token en el Spark, nunca en el chat (Q-MK-3)</li><li>aprobar el lote 1</li></ul> |
+| Semana 1 | <ul><li>crear las cuentas `@tintalugame` en TikTok, Instagram, YouTube y Facebook, con la verificación en dos pasos y `support@tintalu.com` (Q-MK-2)</li><li>Postiz (Q-MK-3, `stack-spark.md` §2.4), siempre en el Spark y nunca en el chat: el túnel de Cloudflare a `social.tintalu.com` con su token en `publicacion\.env`, el bucket R2 en `media.tintalu.com`, el usuario administrador y las apps de Meta, Google y TikTok con sus claves</li><li>pedir las auditorías gratuitas de YouTube y TikTok en cuanto existan las apps</li><li>aprobar el lote 1</li></ul> |
 | Semanas 2-3 | <ul><li>aprobar los lotes 2 y 3 en la hoja de contactos</li><li>las descargas de modelos que falten (Q-MK-S0-2)</li><li>decidir Q-MK-S0-1 (la música de IA)</li><li>arrancar el experimento de ficha (§8)</li></ul> |
 | Semana 4 | revisar el primer informe (15 min) y confirmar el paso a publicación automática (Q-MK-5) |
 

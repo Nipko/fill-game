@@ -6,6 +6,21 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-03 · Postiz autoalojado (Q-MK-3, añadido de D-066): MONTADO, falta lo del dueño
+
+- **Stack:** el Docker Engine que ya había en el Ubuntu de WSL (sin Docker Desktop). Lleva Postiz v2.25.3 con Postgres, Redis y Temporal, más `cloudflared` en el perfil `tunel`. Configuración en `fill-game-marketing/publicacion/` (commit 83a05e6): compose sin secretos, `postiz.sh` y `env.ejemplo`. Detalle: `docs/marketing/stack-spark.md` §2.4.
+- **Comprobado:** los 7 contenedores sanos y `http://127.0.0.1:4007/auth` → 200.
+- **Claves:**
+  - las internas se generan en un volumen de Docker y nadie las ha leído;
+  - las del dueño van en `publicacion\.env`, que está fuera de git. El archivo se creó vacío desde la plantilla, a petición del dueño, para que pegue el token del túnel.
+- **Documentos actualizados:** `stack-spark.md` (el total mensual a 0), `estrategia.md` (el presupuesto y la semana 1 del dueño) y `fabrica.md` (S7).
+- **Falta, del dueño:**
+  - la ruta pública del túnel `social.tintalu.com` → `HTTP` `postiz:5000`, y su token;
+  - R2 en `media.tintalu.com`;
+  - el administrador de Postiz;
+  - las apps de Meta, Google y TikTok;
+  - ejecutar `instalar-arranque.ps1`, porque el modo automático no dejó crear el acceso directo de inicio. Sin él, WSL se apaga y para los contenedores.
+
 ### 2026-11-02 · Tendencias semana 2026-45: HECHO
 
 - **Muestra:** 23 referencias nuevas y 24 de la semana 44 que siguen activas (57 en la biblioteca). Se miró Meta Ad Library en BR, MX y CO con las 6 búsquedas fijas. Informe: `docs/marketing/tendencias/2026-45.md`.

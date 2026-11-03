@@ -132,4 +132,4 @@ Un JSON por pieza en `C:\AI\marketing\briefs\`. Ejemplo real (la pieza de prueba
 | Formatos 1:1 y 16:9 con piezas reales (el código ya los admite) | Con el lote 1 |
 | Voz en off con TTS neutra (Q-MK-6) | Cuando haya un TTS con licencia comercial instalado (Q-MK-S0-2) |
 | La revisión con el modelo de visión | Con Qwen3-VL-8B (Q-MK-S0-2) |
-| La publicación por la API de Buffer (S7) | Con las cuentas y el token del dueño |
+| La publicación con Postiz (S7; Q-MK-3, cambiada el 2026-11-03) | **El stack ya está montado** en el Spark (`stack-spark.md` §2.4). Falta lo que pone el dueño: el túnel, R2, el administrador y las apps de Meta, Google y TikTok. Después se conecta `cola.py` (§8) |
