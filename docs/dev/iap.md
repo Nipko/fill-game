@@ -370,3 +370,20 @@ y en la cabecera del workflow, junto a `check-release-classes`, la compuerta nue
 - **EDM4U 1.2.189 se archiva el 26-10-2026** (08 §7 #7): `AfBillingDependencies.xml` sigue el formato que lee también `com.unity.external-dependency-manager` 2.1.0, así que la migración no lo toca.
 - **Builds de Android**: PBL 9 llega por Gradle desde Google Maven (necesita red en el build, como Firebase). Verificado en los builds locales (§6); la referencia es el CI Linux.
 - **El runtime de Unity 6.3** (Engine Diagnostics o Insights): **cerrado por Q-B13-9** (`docs/dev/decisiones.md`, añadido de D-040 del 2026-10-28). El AAB de release no lleva `UnityConnectSettings` ni hosts de datos de Unity, y lo vigila `ci/check-no-unity-telemetry.ps1` (en `ci.yml` y `release.yml`); `check-no-unity-iap` sigue vigilando solo el host de compras y las clases de Unity IAP. Quedan dos propuestas pendientes del dueño: apagar Engine Diagnostics y `submitAnalytics` con un método versionado de `ProjectSetup`, y quitar `com.unity.modules.unityanalytics` del manifiesto.
+
+## 8. iOS: StoreKit 2 (fase M3 de `docs/dev/traspaso/mac-ios.md`, 2026-11-03)
+
+I-3 de D-067: plugin propio de StoreKit 2, como el de Play de D-040. **Mismo camino que Android:** el plugin Swift `Assets/_Project/Plugins/iOS/AfStoreKit.swift` habla el protocolo del plugin Java (`IBillingBridge`/`IBillingBridgeListener`, códigos de `BillingCodes`, filas de `BillingRows`), y `IosBillingBridge` (con `StoreKitBridgeEvents`, que reparte los avisos) lo conecta a `NativePlayStorePort`. `PlayBillingClient`, `BillingReadyStoreService`, `VerifiedStoreService`, el libro mayor y `LedgerRestore` son los mismos. Lo crea `PlayBillingFactory` en el iPhone.
+
+**Decisiones [P]** (revisadas por code-reviewer, sin bloqueantes):
+- **Token = id de la transacción de StoreKit:** estable, para que el `token_hash` del libro mayor no cambie entre consultas (el JWS sí cambia). Cumple `ContractRules.IsPurchaseToken`.
+- **Consume = `finish()`. Acknowledge = `finish()` en los no consumibles**; en los consumibles (el `deferred_ack` de Play) solo marca, para no perder una compra que el servidor aún no acreditó.
+- **Sin `appAccountToken`:** StoreKit pide un UUID y el UID de Firebase no lo es; el servidor ata la compra al UID del ID token de Firebase de la llamada. Alternativa pendiente: un UUID derivado del UID.
+- **Ask to Buy:** fila pendiente con el token `pending.<sku>` (la hoja responde «pendiente»; la transacción aprobada llega luego por `Transaction.updates` con su id).
+- **No consumibles terminados** (Sin anuncios, skins): vuelven de `Transaction.currentEntitlements` como reconocidos (`Confirmed`). Los reembolsados (`revocationDate`) y los no verificados se ignoran.
+- **País de la cuenta:** `QueryBillingConfig` responde «no soportado»; el país de la tienda lo lee `AfStorefront.swift` (M2).
+
+**El servidor aún solo verifica Play.** Hasta que `verifyPurchase` tenga la rama del App Store, `GameBootstrap.ServerVerifiesAppStore` = false y el iPhone con el backend real **no vende** (`UnavailablePlayStorePort`: el Mercado no sale), para no cobrar compras que el servidor rechazaría. Pendiente de decidir: cómo verifica el servidor (App Store Server API con una clave `.p8` del dueño, o el JWS de la transacción contra la raíz de Apple), si el contrato gana un campo de tienda y cómo se calcula el `token_hash`.
+
+**Pruebas sin la cuenta de pago:** `af_storekit_local` (solo iPhone y `DEVELOPMENT_BUILD`; variable del arranque): StoreKit con el `.storekit` local que `BuildIos` genera del catálogo (`Tintalu.storekit`, añadido al proyecto y al esquema de Xcode) y el backend falso. Se lanza con ▶ desde Xcode. **En el iPhone 16 Pro Max (iOS 26.6) con Xcode 27.2, Xcode no activó el entorno local** (`AppTransaction` error `unknown`, 0 productos), así que la compra real queda para la prueba con un usuario *Sandbox* cuando exista la cuenta de Apple de Parallext (I-8). Tests: `StoreKitBridgeTests` (avisos y filas del Swift sobre `NativePlayStorePort`) y `LocalStoreKitTests` (el `.storekit` sale del catálogo).
+

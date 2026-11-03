@@ -8,11 +8,12 @@ Encargo: `docs/dev/traspaso/mac-ios.md` (D-067). La Mac mini (Apple silicon, 24 
 - **M1 hecha** (2026-11-01, rama `mac/m1-hola-iphone`, sobre `mac/m0-setup`): Tintalú corre en el iPhone 16 Pro Max (iOS 26.6) por cable con el Apple ID gratuito. El dueño jugó los niveles 1-10; la Dynamic Island no tapa nada; el interruptor de silencio funciona. Pasos y arreglos: `docs/dev/mac-setup.md` §6.
 - **Fallo abierto, del código común (no de iOS): Rosa sale como un cuadro blanco en el inicio** tras cerrar el banner de un mundo (abajo, M1). Espera la decisión del dueño o del integrador.
 - **Rosa en blanco: arreglado** en `mac/fix-rosa-banner` (`043d0b0b`, desde la integración), con test y comprobado en el iPhone.
+- **M3 en curso** (rama `mac/m3-storekit`, sobre `mac/m2-sistema`): el cliente de compras con StoreKit 2 por el mismo camino que Play (`docs/dev/iap.md` §8). Compila y conecta en el iPhone; la compra real espera a un usuario *Sandbox* (cuenta de pago) porque Xcode no activa el `.storekit` local en el iPhone. El iPhone con el backend real no vende hasta que el servidor verifique el App Store. Falta: esa verificación en el servidor, y los anuncios de iOS (ATT, SKAdNetwork, UMP).
 - **M2 hecha** (rama `mac/m2-sistema`, sobre `mac/m1-hola-iphone`): hápticos, escala de texto, «Reducir movimiento», ajustes de la app, notificaciones locales, país desde el App Store, icono con sus apariencias de iOS y Firebase, todo probado en el iPhone.
 
 ## Para retomar (2026-11-01)
 
-1. **Siguiente: M3** (StoreKit 2 con un `.storekit` local, sin cuenta de pago). Guiones para compilar e instalar (locales, ignorados): `Logs/ios-scripts/ios-setup.sh` y `ios-all.sh <equipo> <udid> ['{"af_dev_push":"2"}']`.
+1. **Siguiente en M3:** decidir cómo verifica el servidor las compras del App Store (`iap.md` §8) y los anuncios de iOS. Guiones para compilar e instalar (locales, ignorados): `Logs/ios-scripts/ios-setup.sh` y `ios-all.sh <equipo> <udid> ['{"af_dev_push":"2"}']`.
 2. **La firma del Apple ID gratuito caduca a los 7 días** (instalado el 2026-11-01). Para reinstalar: `mac-setup.md` §6 (exportar con `BuildIos.ExportXcode` y `xcodebuild` + `devicectl` desde una terminal normal, con el equipo de firma del dueño).
 3. **En la Mac, solo local:** la rama `mac/prueba-rosa` (M1 + el arreglo de Rosa, solo para probar en el iPhone) y dos `stash`: el checkout a medias de cuando `git-lfs` no estaba en el PATH (sin valor) y los huecos de iconos de iOS que Unity añade a `ProjectSettings.asset`. Se pueden borrar.
 
