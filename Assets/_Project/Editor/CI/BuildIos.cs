@@ -258,6 +258,13 @@ namespace AF.EditorTools
                 return;
             }
 
+            // El ID de ejemplo solo vale en desarrollo: un build de release sin el App ID real de iOS falla aquí (revisión de M2).
+            if (!EditorUserBuildSettings.development)
+            {
+                throw new BuildFailedException(LogPrefix + "build de release sin GADApplicationIdentifier: pon adMobIOSAppId en "
+                    + "GoogleMobileAdsSettings.asset (M3).");
+            }
+
             int end = text.LastIndexOf("</dict>", StringComparison.Ordinal);
             if (end < 0)
             {
