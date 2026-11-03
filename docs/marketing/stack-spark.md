@@ -60,6 +60,62 @@ Hecho y entregado en `spark/tienda-graficos` (D-065):
   - audio a −16 LUFS.
 - **Lo que costó:** el vídeo de la ficha en 3 idiomas × 2 formatos × 2 duraciones, unos 2 min de montaje por idioma y ~2,3 min de GPU.
 
+### 2.4 Publicación: Postiz autoalojado (Q-MK-3, añadido de D-066 del 2026-11-03)
+
+Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.md` §7.
+
+- **Dónde:** Docker Engine 29.9.1 con Compose v5.6.0 dentro del Ubuntu 26.04 de WSL2 (arm64), que ya estaba instalado. No hace falta Docker Desktop.
+- **Configuración versionada** en `fill-game-marketing/publicacion/`:
+  - `docker-compose.yaml`: el oficial de Postiz con versiones fijadas;
+  - `env.ejemplo`: la lista de las claves que pone el dueño;
+  - `postiz.sh` (`arrancar`, `parar`, `reiniciar`, `estado`, `esperar`, `logs`, `prueba`);
+  - `instalar-arranque.ps1`, que mantiene WSL vivo al iniciar sesión;
+  - un `README.md`.
+- **Servicios** (todas las imágenes arm64 [V]):
+
+  | Servicio | Imagen | Para qué |
+  |---|---|---|
+  | `postiz` | `ghcr.io/gitroomhq/postiz-app:v2.25.3` (AGPL-3.0) | Panel, API y retornos OAuth, en `127.0.0.1:4007` |
+  | `postiz-postgres`, `postiz-redis` | `postgres:17-alpine`, `redis:7.2` | Datos y colas de Postiz |
+  | `temporal`, `temporal-postgresql`, `temporal-elasticsearch`, `temporal-ui` | `temporalio/auto-setup:1.28.1`, `postgres:16`, `elasticsearch:7.17.27`, `temporalio/ui:2.34.0` | Flujos de Postiz (obligatorio desde la 2.12). El panel de Temporal solo está en `127.0.0.1:8080` |
+  | `cloudflared` (perfil `tunel`) | `cloudflare/cloudflared:2026.10.5` | Túnel `social.tintalu.com` → `http://postiz:5000`. Arranca solo cuando `.env` tiene el token |
+  | `secretos` (de un solo uso) | la de Postiz | Genera la clave JWT y la contraseña de Postgres en un volumen de Docker la primera vez |
+
+- **Sin secretos en git:**
+  - las claves internas viven solo en el volumen `postiz_secretos` (permisos 600; nadie las ha leído);
+  - las del dueño (el túnel, R2, Meta, Google y TikTok) van en `publicacion\.env`, que bloquea `.gitignore`;
+  - `postiz.sh estado` solo dice si cada clave está «puesta» o «falta».
+- **Seguridad:**
+  - ningún puerto fuera de `127.0.0.1`, así que solo se entra desde fuera por el túnel;
+  - `DISABLE_REGISTRATION=true`: solo vale el primer registro, el del administrador (lo crea el dueño), y desactiva el inicio de sesión con OAuth.
+- **Medios:** se guardan en local hasta que el dueño ponga las claves de R2 y cambie `STORAGE_PROVIDER=cloudflare`. Después, en el bucket `tintalu-media`, servido en `https://media.tintalu.com/`.
+- **Comprobado el 2026-11-03 [V]:**
+  - los 7 contenedores están sanos;
+  - `http://127.0.0.1:4007/auth` responde 200;
+  - con la imagen ya bajada, arranca en menos de 1 minuto;
+  - el túnel registra 4 conexiones (sjc05 y sjc06) con la ruta `social.tintalu.com` → `http://postiz:5000`. A través de Cloudflare: `/auth` → 200 («Postiz Register») y `/api/` → 200.
+- **Ojo, WSL se apaga solo** cuando no queda ningún proceso de Windows usándolo, y con él se paran los contenedores. `instalar-arranque.ps1` crea en la carpeta Inicio un acceso directo con `conhost --headless wsl -d Ubuntu --exec sleep infinity`. **Lo ejecuta el dueño:** el modo automático de Claude no deja crear tareas de inicio de sesión. Sin él, Postiz solo funciona mientras haya una sesión de WSL abierta.
+- **Hecho por el dueño el 2026-11-03** [V]:
+  - el túnel y su ruta;
+  - el administrador de Postiz, con el registro ya cerrado (`can-register` → `false`);
+  - las 4 redes conectadas y activas en Postiz:
+
+    | Red | App | Modo |
+    |---|---|---|
+    | Facebook e Instagram | Meta `tintalu-postiz`, de tipo Negocio, en Live | Acceso estándar con las cuentas del dueño |
+    | YouTube | Google Cloud `tintalu-postiz` | Prueba sin verificar: las subidas salen privadas y hay que reconectar cada 7 días |
+    | TikTok | TikTok for Developers `Tintalu Postiz`, organización Parallext, tipo Other, en Sandbox | Lo publicado sale `SELF_ONLY`. `tintalu.com` está verificado con un TXT (añadido; no se tocó ningún registro existente) |
+
+- **Los scopes de TikTok** que pide Postiz v2.25.3 en su código son `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.list`, `video.upload` y `video.publish`. La guía de Postiz cita además `video.create`, que ya no existe en TikTok.
+- **R2, hecho el 2026-11-03** [V]:
+  - el bucket `tintalu-media` (ENAM), con el dominio propio `media.tintalu.com` (Active) y sin URL `r2.dev`;
+  - un token limitado a ese bucket (Object Read & Write), con `STORAGE_PROVIDER=cloudflare`;
+  - `postiz.sh prueba-r2` sube un archivo con el SDK de Postiz, lo lee por `https://media.tintalu.com/` (200, con el contenido correcto) y lo borra.
+- **Pendiente:**
+  1. `instalar-arranque.ps1`;
+  2. las auditorías de YouTube (verificación de OAuth y auditoría de cumplimiento) y de TikTok (revisión en Production). Spark prepara el texto y el vídeo de demostración;
+  3. conectar `cola.py` con la API de Postiz (S7).
+
 ## 3. Tiempos medidos (en caliente) [V]
 
 | Tarea | 5080 | Spark |
@@ -84,11 +140,11 @@ Todo con pesos de licencia comercial verificada (investigación del 2026-10-31, 
 | Editar imagen con personajes fieles (poses de cartel, D-058) | **Qwen-Image-Edit-2511** en fp8. Para variantes rápidas, FLUX.2 klein 4B | Apache 2.0 | ~20 GB / ~13 GB | 0 | S3 y S5: personajes en cartel. Hay que evitar FLUX.2 klein 9B, FLUX.2 dev, Kontext dev y Qwen-Image-2.1, que no son comerciales |
 | Visión local para el control de calidad (§5 del encargo) | **Qwen3-VL-8B** en la 5080, para comparar fotogramas con capturas reales y leer el texto de la imagen. Gemma 4 26B en el Spark para la revisión fina | Apache 2.0 | ~9 GB (Q8) / ~16 GB | 0 | S4 |
 | Montaje programático con plantillas | **HyperFrames** (HTML/CSS/GSAP a MP4, de forma determinista, pensado para agentes) sobre FFmpeg. Remotion es gratis solo hasta 3 empleados | Apache 2.0 | npm | 0 | S3 y S4: plantillas de 9:16, 1:1 y 16:9 con zona segura y subtítulos |
-| Programador de publicaciones con API (Q-MK-3) | **Buffer Essentials**: API GraphQL en todos los planes, que publica en IG, FB, TikTok y YouTube Shorts. Ayrshare (149 US$/mes) si hace falta más | — | — | ~5 US$ por canal y mes: **~20 US$/mes con 4 canales** [NV] | S7. **La cuenta y el token los pone el dueño** |
+| Programador de publicaciones con API (Q-MK-3) | ~~Buffer Essentials (~20 US$/mes)~~. **Cambiado el 2026-11-03 (añadido de D-066): Postiz autoalojado en el Spark**, con las APIs oficiales de Meta, YouTube y TikTok, Cloudflare Tunnel y R2 (§2.4). Buffer queda de respaldo | AGPL-3.0 (Postiz) | ~4 GB de imágenes Docker [V] | 0 | S7. **Ya montado** (§2.4). Las apps de desarrollador, los tokens y el DNS los pone el dueño |
 | Sesión en TikTok for Business | Para ver todos los Top Ads de TikTok Creative Center: sin iniciar sesión solo se ven 4 | — | — | 0 | S1, trabajo semanal. **La cuenta la crea el dueño** (Q-MK-2) |
 | Repositorio de la fábrica | `fill-game-marketing`, privado (Q-MK-7) | — | — | 0 | S4 a S9. **Ya existe** (lo creó el dueño, D-067). Clon en el Spark: `C:\AI\marketing\fill-game-marketing\`, con `tendencias/` y los scripts de la ficha (`tienda/`). Los datos de terceros siguen fuera de git |
 
-- **Total mensual fijo:** ~20 US$ (Buffer). El resto es software libre en hardware propio.
+- **Total mensual fijo: 0 US$.** Postiz, Cloudflare Tunnel y R2 (capa gratuita) sustituyen a Buffer (~20 US$/mes). El resto es software libre en hardware propio. Si Postiz no se sostiene, el respaldo es Buffer Essentials (~20 US$/mes [NV]), con el dueño de acuerdo.
 - **Descargas:** ~45 GB en total. Caben en las dos máquinas (358 y 140 GB libres).
 
 **Descartados, con su motivo:**
@@ -122,7 +178,8 @@ Todo con pesos de licencia comercial verificada (investigación del 2026-10-31, 
   - HyperFrames: github.com/heygen-com/hyperframes
   - Resolve 21.1: notas de Blackmagic
   - CapCut: capcut.com/clause/material-license-agreement
-  - Buffer: buffer.com/pricing
+  - Buffer (respaldo): buffer.com/pricing
+  - Postiz: docs.postiz.com (instalación con Docker Compose y referencia de configuración) y github.com/gitroomhq/postiz-docker-compose
   - Ayrshare: ayrshare.com/pricing
 - **Requisitos de los playables** (para S6):
   - Google Ads: support.google.com/google-ads/answer/9981650
