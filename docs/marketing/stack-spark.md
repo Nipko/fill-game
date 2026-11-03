@@ -95,13 +95,23 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
   - con la imagen ya bajada, arranca en menos de 1 minuto;
   - el túnel registra 4 conexiones (sjc05 y sjc06) con la ruta `social.tintalu.com` → `http://postiz:5000`. A través de Cloudflare: `/auth` → 200 («Postiz Register») y `/api/` → 200.
 - **Ojo, WSL se apaga solo** cuando no queda ningún proceso de Windows usándolo, y con él se paran los contenedores. `instalar-arranque.ps1` crea en la carpeta Inicio un acceso directo con `conhost --headless wsl -d Ubuntu --exec sleep infinity`. **Lo ejecuta el dueño:** el modo automático de Claude no deja crear tareas de inicio de sesión. Sin él, Postiz solo funciona mientras haya una sesión de WSL abierta.
-- **Pendiente del dueño, en este orden:**
-  1. en Cloudflare: el túnel con la ruta pública `social.tintalu.com` → `HTTP` `postiz:5000`, y su token en `.env`; luego `postiz.sh reiniciar`;
-  2. el bucket R2 con el dominio `media.tintalu.com` y sus claves en `.env`;
-  3. crear el usuario administrador en `https://social.tintalu.com`;
-  4. las apps de Meta, Google y TikTok (`spark-marketing.md` §7.3).
+- **Hecho por el dueño el 2026-11-03** [V]:
+  - el túnel y su ruta;
+  - el administrador de Postiz, con el registro ya cerrado (`can-register` → `false`);
+  - las 4 redes conectadas y activas en Postiz:
 
-  No se toca ningún registro DNS que ya exista.
+    | Red | App | Modo |
+    |---|---|---|
+    | Facebook e Instagram | Meta `tintalu-postiz`, de tipo Negocio, en Live | Acceso estándar con las cuentas del dueño |
+    | YouTube | Google Cloud `tintalu-postiz` | Prueba sin verificar: las subidas salen privadas y hay que reconectar cada 7 días |
+    | TikTok | TikTok for Developers `Tintalu Postiz`, organización Parallext, tipo Other, en Sandbox | Lo publicado sale `SELF_ONLY`. `tintalu.com` está verificado con un TXT (añadido; no se tocó ningún registro existente) |
+
+- **Los scopes de TikTok** que pide Postiz v2.25.3 en su código son `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.list`, `video.upload` y `video.publish`. La guía de Postiz cita además `video.create`, que ya no existe en TikTok.
+- **Pendiente:**
+  1. el bucket R2 en `media.tintalu.com` con sus claves en `.env` y `STORAGE_PROVIDER=cloudflare`. Sin él no se puede publicar en Instagram ni en TikTok, que descargan los medios desde una URL pública;
+  2. `instalar-arranque.ps1`;
+  3. las auditorías de YouTube (verificación de OAuth y auditoría de cumplimiento) y de TikTok (revisión en Production). Spark prepara el texto y el vídeo de demostración;
+  4. conectar `cola.py` con la API de Postiz (S7).
 
 ## 3. Tiempos medidos (en caliente) [V]
 

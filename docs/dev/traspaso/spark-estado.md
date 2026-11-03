@@ -6,7 +6,20 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
-### 2026-11-03 · Postiz autoalojado (Q-MK-3, añadido de D-066): MONTADO, falta lo del dueño
+### 2026-11-03 · Postiz autoalojado (Q-MK-3, añadido de D-066): EN MARCHA con las 4 redes conectadas
+
+- **Actualización de la tarde:**
+  - el dueño puso el túnel y creó el administrador; el registro quedó cerrado;
+  - creó las apps de Meta (Live), Google (en prueba) y TikTok (Sandbox, organización Parallext) y conectó Facebook, Instagram, YouTube y TikTok;
+  - el panel está en `https://social.tintalu.com`.
+- **Falta:**
+  - R2 (`media.tintalu.com`), necesario para publicar en Instagram y TikTok;
+  - `instalar-arranque.ps1`;
+  - las auditorías de YouTube y TikTok;
+  - S7 con `cola.py`.
+
+  Detalle en `stack-spark.md` §2.4.
+- **TikTok:** el dueño no verificó la cuenta como empresa, porque la API no lo necesita. Si algún día se hace, va con la razón social de Parallext, no con «Tintalú».
 
 - **Stack:** el Docker Engine que ya había en el Ubuntu de WSL (sin Docker Desktop). Lleva Postiz v2.25.3 con Postgres, Redis y Temporal, más `cloudflared` en el perfil `tunel`. Configuración en `fill-game-marketing/publicacion/` (commit 83a05e6): compose sin secretos, `postiz.sh` y `env.ejemplo`. Detalle: `docs/marketing/stack-spark.md` §2.4.
 - **Comprobado:** los 7 contenedores sanos y `http://127.0.0.1:4007/auth` → 200.
