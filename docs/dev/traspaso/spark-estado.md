@@ -15,7 +15,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 - **R2 hecho:** `media.tintalu.com` sirve el bucket `tintalu-media`, y la prueba de subida, lectura y borrado pasa.
 - **Falta:**
   - `instalar-arranque.ps1`;
-  - las auditorías de YouTube;
+  - pasar la app de Google a «In production» y reconectar YouTube. No hace falta revisión: desde el 2026-11-02, YouTube ya no fuerza a privado lo que se sube desde proyectos sin verificar, y la verificación de OAuth es opcional con menos de 100 usuarios;
   - S7 con `cola.py`.
 
   Detalle en `stack-spark.md` §2.4.

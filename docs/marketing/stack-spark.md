@@ -103,7 +103,7 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
     | Red | App | Modo |
     |---|---|---|
     | Facebook e Instagram | Meta `tintalu-postiz`, de tipo Negocio, en Live | Acceso estándar con las cuentas del dueño |
-    | YouTube | Google Cloud `tintalu-postiz` | Prueba sin verificar: las subidas salen privadas y hay que reconectar cada 7 días |
+    | YouTube | Google Cloud `tintalu-postiz` | Sin verificar y para uso personal, sin revisión (ver abajo). En «Testing» hay que reconectar cada 7 días; el dueño la pasa a «In production» |
     | TikTok | TikTok for Developers `Tintalu Postiz`, organización Parallext, tipo Other, en Sandbox **para siempre** (ver abajo) | Postiz envía en modo `UPLOAD`: el vídeo llega a los borradores de la app de TikTok y el dueño lo publica desde allí. `tintalu.com` está verificado con un TXT (añadido; no se tocó ningún registro existente) |
 
 - **Los scopes de TikTok** que pide Postiz v2.25.3 en su código son `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.list`, `video.upload` y `video.publish`. La guía de Postiz cita además `video.create`, que ya no existe en TikTok.
@@ -112,13 +112,17 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
   - **En cada publicación de TikTok**, Postiz usa `content_posting_method = UPLOAD` (ajuste de la red en Postiz). El vídeo llega a la bandeja de borradores; el dueño elige allí el sonido y lo publica en público. Así da el último visto bueno (Q-MK-5).
   - **Sin comprobar** [no V]: si una app en Sandbox puede dejar borradores en una cuenta pública. Lo dirá la primera prueba.
   - **Respaldo si falla:** el programador de TikTok Studio en la web, gratis y hasta 10 días de antelación. La fábrica deja los MP4 y el dueño los programa allí.
+- **YouTube no necesita revisión** (comprobado el 2026-11-03 [V]):
+  - **Auditoría de cumplimiento:** desde el 2026-11-02, los vídeos que sube `videos.insert` desde proyectos sin verificar ya no quedan forzados a privado (revision history de la YouTube Data API, que revierte la norma del 2020-07-28). Solo haría falta para ampliar la cuota de 10.000 unidades al día.
+  - **Verificación de OAuth:** es opcional para uso personal, con menos de 100 usuarios (Google Cloud Help, «When is verification not needed»). Con la app «In production» y sin verificar, al conectar aparece el aviso «app no verificada», que se salta en «Configuración avanzada». Los tokens ya no caducan a los 7 días, porque eso solo pasa en «Testing».
+  - **Lo hace el dueño:** en Google Auth Platform › Audiencia, pulsar «Publicar app» sin enviar la verificación y reconectar YouTube en Postiz.
 - **R2, hecho el 2026-11-03** [V]:
   - el bucket `tintalu-media` (ENAM), con el dominio propio `media.tintalu.com` (Active) y sin URL `r2.dev`;
   - un token limitado a ese bucket (Object Read & Write), con `STORAGE_PROVIDER=cloudflare`;
   - `postiz.sh prueba-r2` sube un archivo con el SDK de Postiz, lo lee por `https://media.tintalu.com/` (200, con el contenido correcto) y lo borra.
 - **Pendiente:**
   1. `instalar-arranque.ps1`;
-  2. las auditorías de YouTube (verificación de OAuth y auditoría de cumplimiento). Spark prepara el texto y el vídeo de demostración. TikTok no lleva revisión (ver arriba);
+  2. pasar la app de Google a «In production» y reconectar YouTube. Ni YouTube ni TikTok llevan revisión (ver arriba);
   3. conectar `cola.py` con la API de Postiz (S7).
 
 ## 3. Tiempos medidos (en caliente) [V]
