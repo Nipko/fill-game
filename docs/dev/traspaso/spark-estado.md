@@ -15,10 +15,11 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 - **R2 hecho:** `media.tintalu.com` sirve el bucket `tintalu-media`, y la prueba de subida, lectura y borrado pasa.
 - **Falta:**
   - `instalar-arranque.ps1`;
-  - las auditorías de YouTube y TikTok;
+  - las auditorías de YouTube;
   - S7 con `cola.py`.
 
   Detalle en `stack-spark.md` §2.4.
+- **TikTok, sin revisión de Production** (decisión del dueño): sus pautas rechazan las apps de uso privado, y Postiz lo es. La app se queda en Sandbox, Postiz envía en modo `UPLOAD` a los borradores y el dueño publica desde la app de TikTok. El respaldo es el programador de TikTok Studio. Falta probar los borradores en Sandbox.
 - **TikTok:** el dueño no verificó la cuenta como empresa, porque la API no lo necesita. Si algún día se hace, va con la razón social de Parallext, no con «Tintalú».
 
 - **Stack:** el Docker Engine que ya había en el Ubuntu de WSL (sin Docker Desktop). Lleva Postiz v2.25.3 con Postgres, Redis y Temporal, más `cloudflared` en el perfil `tunel`. Configuración en `fill-game-marketing/publicacion/` (commit 83a05e6): compose sin secretos, `postiz.sh` y `env.ejemplo`. Detalle: `docs/marketing/stack-spark.md` §2.4.

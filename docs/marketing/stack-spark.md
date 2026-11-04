@@ -104,16 +104,21 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
     |---|---|---|
     | Facebook e Instagram | Meta `tintalu-postiz`, de tipo Negocio, en Live | Acceso estándar con las cuentas del dueño |
     | YouTube | Google Cloud `tintalu-postiz` | Prueba sin verificar: las subidas salen privadas y hay que reconectar cada 7 días |
-    | TikTok | TikTok for Developers `Tintalu Postiz`, organización Parallext, tipo Other, en Sandbox | Lo publicado sale `SELF_ONLY`. `tintalu.com` está verificado con un TXT (añadido; no se tocó ningún registro existente) |
+    | TikTok | TikTok for Developers `Tintalu Postiz`, organización Parallext, tipo Other, en Sandbox **para siempre** (ver abajo) | Postiz envía en modo `UPLOAD`: el vídeo llega a los borradores de la app de TikTok y el dueño lo publica desde allí. `tintalu.com` está verificado con un TXT (añadido; no se tocó ningún registro existente) |
 
 - **Los scopes de TikTok** que pide Postiz v2.25.3 en su código son `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.list`, `video.upload` y `video.publish`. La guía de Postiz cita además `video.create`, que ya no existe en TikTok.
+- **TikTok se queda en Sandbox y publica por borradores** (decisión del dueño, 2026-11-03):
+  - **No se pide la revisión de Production.** Las pautas de TikTok rechazan las apps de uso privado (*"Apps must not be for private or personal use"*, App Review Guidelines). Las de Content Posting excluyen también las herramientas que suben contenido a las cuentas propias o del equipo (*"internal groups/private use"*). Postiz en el Spark es justo eso, y presentarlo como app pública sería falsear la solicitud.
+  - **En cada publicación de TikTok**, Postiz usa `content_posting_method = UPLOAD` (ajuste de la red en Postiz). El vídeo llega a la bandeja de borradores; el dueño elige allí el sonido y lo publica en público. Así da el último visto bueno (Q-MK-5).
+  - **Sin comprobar** [no V]: si una app en Sandbox puede dejar borradores en una cuenta pública. Lo dirá la primera prueba.
+  - **Respaldo si falla:** el programador de TikTok Studio en la web, gratis y hasta 10 días de antelación. La fábrica deja los MP4 y el dueño los programa allí.
 - **R2, hecho el 2026-11-03** [V]:
   - el bucket `tintalu-media` (ENAM), con el dominio propio `media.tintalu.com` (Active) y sin URL `r2.dev`;
   - un token limitado a ese bucket (Object Read & Write), con `STORAGE_PROVIDER=cloudflare`;
   - `postiz.sh prueba-r2` sube un archivo con el SDK de Postiz, lo lee por `https://media.tintalu.com/` (200, con el contenido correcto) y lo borra.
 - **Pendiente:**
   1. `instalar-arranque.ps1`;
-  2. las auditorías de YouTube (verificación de OAuth y auditoría de cumplimiento) y de TikTok (revisión en Production). Spark prepara el texto y el vídeo de demostración;
+  2. las auditorías de YouTube (verificación de OAuth y auditoría de cumplimiento). Spark prepara el texto y el vídeo de demostración. TikTok no lleva revisión (ver arriba);
   3. conectar `cola.py` con la API de Postiz (S7).
 
 ## 3. Tiempos medidos (en caliente) [V]
