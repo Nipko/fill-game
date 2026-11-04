@@ -6,6 +6,23 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-03 · Revisión visual con Qwen3-VL-8B (Q-MK-S0-2): HECHA, y encontró un fallo en las tomas
+
+- **Descarga** con el permiso del dueño:
+  - `Qwen/Qwen3-VL-8B-Instruct` en bf16 (commit `0c351dd0`, 17,5 GB);
+  - el SHA-256 de los 4 safetensors coincide con el de Hugging Face;
+  - en `C:\AI\ComfyUI_windows_portable\ComfyUI\models\LLM\Qwen3-VL-8B-Instruct\`, en el Spark.
+- **Código:** `fabrica/vision.py`, que usa `calidad.py` (`fill-game-marketing`, `baad957`). No se instaló nada más.
+- **Prueba con `e1-l42-se-tine`:**
+  - lee bien el gancho y los subtítulos en los 3 idiomas, reconoce el juego y no inventa defectos;
+  - **la marca «Development Build» sale en la esquina inferior derecha de todos los planos de juego**, porque las tomas vienen de `com.amazonfill.dev`;
+  - las 3 salidas fallan la visión. El estado de la cola no se ha tocado: sigue en `calidad_ok`.
+- **Para el dueño:** lo más probable es que les pase a las 9 piezas, porque todas salen de las tomas de E1.
+  - **Opción 1:** volver a grabar con un build sin la marca, por ejemplo el ensayo de release (`-afRehearsal`), si conserva el modo demo de E1.
+  - **Opción 2:** taparla en el montaje.
+  - La prueba privada en YouTube (no listado) y TikTok (borradores) puede hacerse igual; ninguna pieza debería salir en público con la marca.
+- **Detalle y lo aprendido al ajustar la pregunta:** `docs/marketing/stack-spark.md` §2.5.
+
 ### 2026-11-03 · Postiz autoalojado (Q-MK-3, añadido de D-066): EN MARCHA con las 4 redes conectadas
 
 - **Actualización de la tarde:**

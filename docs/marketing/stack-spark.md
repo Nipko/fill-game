@@ -125,6 +125,30 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
   2. pasar la app de Google a «In production» y reconectar YouTube. Ni YouTube ni TikTok llevan revisión (ver arriba);
   3. conectar `cola.py` con la API de Postiz (S7).
 
+### 2.5 Revisión visual con Qwen3-VL-8B (Q-MK-S0-2, 2026-11-03)
+
+- **Instalado en el Spark** con el permiso del dueño. Va en el Spark y no en la 5080 que proponía §4, porque la 5080 está ocupada con las pruebas de Unity y en el Spark el modelo cabe de sobra:
+  - fuente: `Qwen/Qwen3-VL-8B-Instruct` (Hugging Face oficial, commit `0c351dd0`, Apache 2.0);
+  - formato: bf16 sin cuantizar, 4 safetensors, 17,5 GB. El SHA-256 de los 4 coincide con el de Hugging Face [V];
+  - en `C:\AI\ComfyUI_windows_portable\ComfyUI\models\LLM\Qwen3-VL-8B-Instruct\`.
+- **Sin instalar nada más:** lo carga el Python de ComfyUI (transformers 5.21 y torch cu134). Sin `accelerate`, así que se carga en la CPU y se pasa a la GPU con `.to("cuda")`. El GGUF Q8 (8,7 + 0,75 GB) habría exigido instalar llama.cpp.
+- **Código:** `fabrica/vision.py`, que usa `calidad.py` cuando están los pesos (commit `baad957` de `fill-game-marketing`).
+  - **Qué fotogramas mira:** 5 por salida (gancho, cada subtítulo, el centro y la tarjeta final).
+  - **Qué le pregunta:** el texto superpuesto, las marcas o textos de depuración y los defectos de montaje.
+  - **Una pregunta aparte** compara cada fotograma con uno de la toma real: «¿es el juego?».
+  - **Cuándo pasa:** si lee el gancho y los subtítulos (parecido ≥ 0,8), no hay marcas ni defectos y los planos de juego son el juego.
+- **Tiempo:** ~25 s de carga y ~35 s por salida (10 preguntas). Una pieza de 3 idiomas tarda ~2 min [V].
+- **Prueba con `e1-l42-se-tine`** (las 3 salidas) [V]:
+  - lee bien los 3 ganchos y los 6 subtítulos, ve el juego en los 12 planos de juego y no inventa ningún defecto;
+  - **encontró un fallo real que el ojo y las demás pruebas pasaron por alto:** la marca **«Development Build»** de Unity sale en la esquina inferior derecha de todos los planos de juego, porque las tomas son de un build de desarrollo (`com.amazonfill.dev`);
+  - así que las 3 salidas FALLAN la visión. No se ha pasado `calidad.py`, y el estado de la cola sigue en `calidad_ok` hasta que el dueño decida.
+- **Lo aprendido al ajustar la pregunta:**
+  - sin aclararle qué es juego normal, toma por defecto la cuia inclinada del vertido y la superposición de capas;
+  - «el rótulo tapa las cuias» es demasiado subjetivo: lo marcaba aunque no tapara nada. Se quitó, porque la zona segura ya lo comprueba;
+  - si la pregunta pone un ejemplo literal («Development Build»), lo repite donde no está;
+  - con la referencia y la pieza en la misma pregunta, copia a la pieza las marcas de la referencia. Por eso la referencia va en una pregunta aparte;
+  - el texto pequeño puede leerlo mal: en la tarjeta leyó «Búscalolo» donde pone «Búscalo». No cuenta para el veredicto, porque solo se comprueban el gancho y los subtítulos.
+
 ## 3. Tiempos medidos (en caliente) [V]
 
 | Tarea | 5080 | Spark |
@@ -147,7 +171,7 @@ Todo con pesos de licencia comercial verificada (investigación del 2026-10-31, 
 | Voz en off neutra en es-419, pt-BR y en (Q-MK-6) | **Qwen3-TTS 1.7B VoiceDesign**: voces inventadas a partir de una descripción, sin clonar a nadie. Alternativa: Chatterbox Multilingual V3, que tiene ajustes `es-mx-latam` y `pt-br` y lleva marca de agua; nunca con `audio_prompt`, que es clonar | Apache 2.0 / MIT | ~4 GB [NV] / ~2 GB [NV] | 0 | S5: el pilar «El viaje» |
 | Música para anuncios distinta del juego | **ACE-Step 1.5 XL** (nativo en ComfyUI). Respaldo: Stable Audio 3 (gratis por debajo de 1 M US$ de ingresos) | MIT | ~10 GB [NV] | 0 | **No se usa hasta que lo apruebe el dueño** (Q-MK-S0-1) |
 | Editar imagen con personajes fieles (poses de cartel, D-058) | **Qwen-Image-Edit-2511** en fp8. Para variantes rápidas, FLUX.2 klein 4B | Apache 2.0 | ~20 GB / ~13 GB | 0 | S3 y S5: personajes en cartel. Hay que evitar FLUX.2 klein 9B, FLUX.2 dev, Kontext dev y Qwen-Image-2.1, que no son comerciales |
-| Visión local para el control de calidad (§5 del encargo) | **Qwen3-VL-8B** en la 5080, para comparar fotogramas con capturas reales y leer el texto de la imagen. Gemma 4 26B en el Spark para la revisión fina | Apache 2.0 | ~9 GB (Q8) / ~16 GB | 0 | S4 |
+| Visión local para el control de calidad (§5 del encargo) | **Qwen3-VL-8B** en la 5080, para comparar fotogramas con capturas reales y leer el texto de la imagen. Gemma 4 26B en el Spark para la revisión fina | Apache 2.0 | ~9 GB (Q8) / ~16 GB | 0 | S4. **Ya instalado** en el Spark, en bf16 (17,5 GB, §2.5) |
 | Montaje programático con plantillas | **HyperFrames** (HTML/CSS/GSAP a MP4, de forma determinista, pensado para agentes) sobre FFmpeg. Remotion es gratis solo hasta 3 empleados | Apache 2.0 | npm | 0 | S3 y S4: plantillas de 9:16, 1:1 y 16:9 con zona segura y subtítulos |
 | Programador de publicaciones con API (Q-MK-3) | ~~Buffer Essentials (~20 US$/mes)~~. **Cambiado el 2026-11-03 (añadido de D-066): Postiz autoalojado en el Spark**, con las APIs oficiales de Meta, YouTube y TikTok, Cloudflare Tunnel y R2 (§2.4). Buffer queda de respaldo | AGPL-3.0 (Postiz) | ~4 GB de imágenes Docker [V] | 0 | S7. **Ya montado** (§2.4). Las apps de desarrollador, los tokens y el DNS los pone el dueño |
 | Sesión en TikTok for Business | Para ver todos los Top Ads de TikTok Creative Center: sin iniciar sesión solo se ven 4 | — | — | 0 | S1, trabajo semanal. **La cuenta la crea el dueño** (Q-MK-2) |
@@ -171,6 +195,7 @@ Todo con pesos de licencia comercial verificada (investigación del 2026-10-31, 
 - **Q-MK-S0-2, las descargas de §4.**
   - **Recomendada:** bajar Qwen3-TTS, Qwen3-VL-8B y Qwen-Image-Edit-2511 en la semana 2 (S3 y S4), y ACE-Step si se aprueba Q-MK-S0-1. Todo en la 5080, comprobando el SHA-256, como en la fase 0.
   - Cada descarga se pide al dueño antes de hacerla.
+  - **Qwen3-VL-8B:** bajado el 2026-11-03 con el permiso del dueño (§2.5). Faltan Qwen3-TTS y Qwen-Image-Edit-2511.
 
 ## 6. Fuentes
 
