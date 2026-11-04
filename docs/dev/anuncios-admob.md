@@ -261,3 +261,12 @@ Escritorio x64, `unity-build.ps1 -Method Dev` y `-Method Release -Rehearsal`, so
 2. En Unity, poner Parallext, LLC como organización, con dirección y cobro.
 3. Publicar `app-ads.txt` con las dos líneas activas (AdMob y `unity.com, 20067668703382, DIRECT`).
 4. Probar en el teléfono con un `dev.apk` que el arranque no inicia Unity Ads antes de la edad (logcat sin `UnityAds` hasta `MobileAds.Initialize`) y, con el inspector de anuncios de AdMob, que los grupos de mediación sirven.
+
+## iOS (fase M3 de `docs/dev/traspaso/mac-ios.md`, 2026-11-04)
+
+- **El mismo código que Android:** `GoogleAdProvider` y `NativeGmaPort` usan el API de C# de Google Mobile Ads 11.5.0, igual en las dos plataformas; solo cambia la puerta (`(UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR`). UMP y la mediación de Unity Ads (pod `GoogleMobileAdsMediationUnity`) entran por el mismo camino.
+- **Bloques:** los de prueba de Google para iOS (`GoogleAdUnits.IosTestRewarded` `…/1712485313` e `IosTestInterstitial` `…/4411468910`). **Los de producción de iOS aún no existen** (`IosProductionRewarded`/`IosProductionInterstitial` = null): hasta que el dueño cree la app de iOS en AdMob (con la cuenta de Apple de Parallext, M5), iOS usa los de prueba también en release, nunca los simulados (que concederían recompensas gratis). Hay que ponerlos antes de publicar.
+- **App ID de iOS:** el de ejemplo de Google (`GoogleAdUnits.IosAppId`, `ca-app-pub-3940256099942544~1458002511`) en `GoogleMobileAdsSettings.asset` (`GoogleAdsProjectSetup.ApplyIos`, desde `ProjectSetup.ApplyIosDefaults`; Android no cambia). Con él, el post-proceso del plugin escribe en el `Info.plist` el `GADApplicationIdentifier` y **la lista de SKAdNetwork de Google** (`GoogleMobileAdsSKAdNetworkItems.xml`: 50 redes, Unity Ads incluida); sin App ID se paraba antes de escribirla.
+- **Probado en el iPhone:** `[AF.Ads] proveedor: google (bloques de prueba)`; intersticiales y recompensados «Test Ad» con la recompensa concedida.
+- **Pendiente:** el aviso de rastreo (ATT) con su aviso previo propio (I-5 de D-067: plugin propio), que necesita los textos aprobados por el dueño.
+

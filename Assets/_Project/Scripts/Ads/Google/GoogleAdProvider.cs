@@ -8,7 +8,7 @@ namespace AF.Ads.Google
     /// <summary>
     /// Qué proveedor de anuncios usa este build (D-049: AdMob directo con Google Mobile Ads; MAX salió del proyecto, añadido del 2026-10-27):
     /// <list type="bullet">
-    /// <item>En un teléfono Android: <see cref="GoogleAdService"/> sobre <see cref="NativeGmaPort"/>, con los bloques de
+    /// <item>En un teléfono Android o en el iPhone (fase M3 de <c>mac-ios.md</c>): <see cref="GoogleAdService"/> sobre <see cref="NativeGmaPort"/>, con los bloques de
     /// <see cref="GoogleAdUnits.Choose"/> (los de prueba de Google en desarrollo y con <c>com.amazonfill.dev</c>). No toca el SDK hasta
     /// que el consentimiento lo permite (<see cref="ConsentAdService"/>).</item>
     /// <item>En el editor y los tests: null, y quien arranca usa los anuncios simulados (<see cref="FakeAdService"/>; 08 §2.1,
@@ -32,8 +32,8 @@ namespace AF.Ads.Google
         /// <summary>El proveedor real, o null para usar el simulado.</summary>
         public static IAdService? Create(IClock clock, Func<string?> uid, Func<int> nextLevel, Func<AdsConfig>? config)
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            GoogleAdUnits units = GoogleAdUnits.Choose(Debug.isDebugBuild, Application.identifier);
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+            GoogleAdUnits units = GoogleAdUnits.Choose(Debug.isDebugBuild, Application.identifier, Application.platform == RuntimePlatform.IPhonePlayer);
             LastReason = ReasonGoogle;
             LastProductionUnits = units.Production;
             return new GoogleAdService(new NativeGmaPort(units), clock, uid, nextLevel, config);

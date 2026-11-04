@@ -82,6 +82,9 @@ namespace AF.EditorTools
             Unity.Notifications.NotificationSettings.iOSSettings.NotificationRequestAuthorizationForRemoteNotificationsOnAppLaunch = false;
             Unity.Notifications.NotificationSettings.iOSSettings.AddTimeSensitiveEntitlement = false;
 
+            // Anuncios (M3): el App ID de iOS en el asset de Google Mobile Ads, para que su post-proceso escriba también SKAdNetwork.
+            AF.Ads.Google.Editor.GoogleAdsProjectSetup.ApplyIos();
+
             AssetDatabase.SaveAssets();
 
             List<string> problems = ValidateIos();
@@ -120,6 +123,12 @@ namespace AF.EditorTools
                 Unity.Notifications.NotificationSettings.iOSSettings.AddRemoteNotificationCapability, false);
             Check(problems, "notifications.ios.requestRemoteAuthorizationOnAppLaunch",
                 Unity.Notifications.NotificationSettings.iOSSettings.NotificationRequestAuthorizationForRemoteNotificationsOnAppLaunch, false);
+            string? gma = AF.Ads.Google.Editor.GoogleAdsProjectSetup.ValidateIos();
+            if (gma != null)
+            {
+                problems.Add("googleMobileAds.ios: " + gma);
+            }
+
             Check(problems, "notifications.ios.addTimeSensitiveEntitlement",
                 Unity.Notifications.NotificationSettings.iOSSettings.AddTimeSensitiveEntitlement, false);
             return problems;

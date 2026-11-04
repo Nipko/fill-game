@@ -58,6 +58,45 @@ namespace AF.Ads.Google.Editor
             Debug.Log(LogPrefix + "OK. App ID de Android fijado, SDK Standard, pre-proceso de Gradle encendido.");
         }
 
+        /// <summary>
+        /// iOS (fase M3 de <c>mac-ios.md</c>): solo el App ID de iOS del asset (<see cref="GoogleAdUnits.IosAppId"/>); lo de Android no se
+        /// toca. Con él, el post-proceso del plugin escribe en el <c>Info.plist</c> el <c>GADApplicationIdentifier</c> y la lista de
+        /// SKAdNetwork de Google (<c>GoogleMobileAdsSKAdNetworkItems.xml</c>, Unity Ads incluida). Lo llama <c>ProjectSetup.ApplyIosDefaults</c>.
+        /// </summary>
+        public static void ApplyIos()
+        {
+            ScriptableObject settings = LoadOrCreate();
+            var so = new SerializedObject(settings);
+            Set(so, "adMobIOSAppId", GoogleAdUnits.IosAppId);
+            if (so.ApplyModifiedPropertiesWithoutUndo())
+            {
+                EditorUtility.SetDirty(settings);
+                AssetDatabase.SaveAssets();
+            }
+
+            string? problem = ValidateIos();
+            if (problem != null)
+            {
+                throw new InvalidOperationException(LogPrefix + problem);
+            }
+
+            Debug.Log(LogPrefix + "OK (iOS). App ID de iOS fijado.");
+        }
+
+        /// <summary>Null si el asset tiene el App ID de iOS de <see cref="GoogleAdUnits.IosAppId"/>; si no, qué falla.</summary>
+        public static string? ValidateIos()
+        {
+            ScriptableObject? settings = AssetDatabase.LoadAssetAtPath<ScriptableObject>(SettingsAssetPath);
+            if (settings == null)
+            {
+                return "falta " + SettingsAssetPath + ".";
+            }
+
+            return string.Equals(Str(new SerializedObject(settings), "adMobIOSAppId"), GoogleAdUnits.IosAppId, StringComparison.Ordinal)
+                ? null
+                : "App ID de iOS distinto del fijado (sin él, el post-proceso del plugin no escribe la lista de SKAdNetwork).";
+        }
+
         /// <summary>Null si el asset del proyecto tiene los ajustes de D-049; si no, qué falla.</summary>
         public static string? Validate()
         {
