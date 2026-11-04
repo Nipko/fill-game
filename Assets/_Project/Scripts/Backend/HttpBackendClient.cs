@@ -71,9 +71,48 @@ namespace AF.Backend
             _timeoutSeconds = timeoutSeconds;
         }
 
+        /// <summary>
+        /// Prepara cada petición de <c>verifyPurchase</c> antes de enviarla, o null (Android: tal cual). En el iPhone le añade la
+        /// transacción firmada de StoreKit 2 (<see cref="VerifyPurchaseRequest.WithAppStore"/>; fase M3 de <c>mac-ios.md</c>). Si
+        /// devuelve null o lanza, la petición no sale y responde un error de red (transitorio: la cola la reintenta), nunca la manda
+        /// como de otra tienda.
+        /// </summary>
+        public Func<VerifyPurchaseRequest, VerifyPurchaseRequest?>? PrepareVerify { get; set; }
+
+        /// <summary>Motivo del error de red cuando <see cref="PrepareVerify"/> no deja enviar la petición.</summary>
+        public const string PrepareUnavailable = "verify_request_not_ready";
+
         public void VerifyPurchase(VerifyPurchaseRequest request, Action<BackendResult<VerifyPurchaseResponse>> onDone)
         {
-            string body = (request ?? throw new ArgumentNullException(nameof(request))).ToJson();
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            Func<VerifyPurchaseRequest, VerifyPurchaseRequest?>? prepare = PrepareVerify;
+            if (prepare != null)
+            {
+                VerifyPurchaseRequest? prepared;
+                try
+                {
+                    prepared = prepare(request);
+                }
+                catch (Exception)
+                {
+                    prepared = null;
+                }
+
+                if (prepared == null)
+                {
+                    (onDone ?? throw new ArgumentNullException(nameof(onDone)))(
+                        BackendResult<VerifyPurchaseResponse>.Fail(BackendError.Network(PrepareUnavailable)));
+                    return;
+                }
+
+                request = prepared;
+            }
+
+            string body = request.ToJson();
             string expectedHash = PurchaseTokenHash.Of(request.Token);
             Start<VerifyPurchaseResponse>(BackendOperation.VerifyPurchase, body, (string? json, out VerifyPurchaseResponse? value, out string? error) =>
             {

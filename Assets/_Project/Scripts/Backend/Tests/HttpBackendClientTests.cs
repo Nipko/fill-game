@@ -56,6 +56,31 @@ namespace AF.Backend.Tests
         }
 
         [Test]
+        public void PrepareVerify_AddsTheAppStoreTransaction_OrHoldsTheRequestAsANetworkError()
+        {
+            // Fase M3 de mac-ios.md: en el iPhone el hook añade el JWS de StoreKit; sin él, la petición no sale (nunca como de Play).
+            const string Jws = "eyJhbGciOiJFUzI1NiJ9.eyJ0cmFuc2FjdGlvbklkIjoiMjAwMDAwMDk4NzY1NDMyMSJ9.c2lnbmF0dXJl";
+            var ios = new VerifyPurchaseRequest("2000000987654321", "af_coins_2");
+            _client.PrepareVerify = r => r.WithAppStore(Jws);
+            _http.Enqueue(200, VerifyPurchaseResponse.Ok(PurchaseTokenHash.Of(ios.Token), new PurchaseGrant(1200)).ToJson(), ServerDate);
+            BackendResult<VerifyPurchaseResponse> ok = Capture<VerifyPurchaseResponse>(cb => _client.VerifyPurchase(ios, cb));
+            Assert.That(ok.IsOk, Is.True, ok.ToString());
+            StringAssert.Contains("\"store\":\"app_store\"", _http.Requests[0].Body);
+            StringAssert.Contains("\"signed_transaction\":\"" + Jws + "\"", _http.Requests[0].Body);
+
+            _client.PrepareVerify = _ => null;
+            BackendResult<VerifyPurchaseResponse> held = Capture<VerifyPurchaseResponse>(cb => _client.VerifyPurchase(ios, cb));
+            Assert.That(held.IsOk, Is.False);
+            Assert.That(held.Error!.Kind, Is.EqualTo(BackendErrorKind.Network), "transitorio: la cola la reintenta");
+            Assert.That(_http.Requests.Count, Is.EqualTo(1), "sin JWS no se envía nada");
+
+            _client.PrepareVerify = _ => throw new ArgumentException("JWS fuera del contrato");
+            BackendResult<VerifyPurchaseResponse> broken = Capture<VerifyPurchaseResponse>(cb => _client.VerifyPurchase(ios, cb));
+            Assert.That(broken.Error!.Kind, Is.EqualTo(BackendErrorKind.Network), "un hook que falla tampoco atasca la cola");
+            Assert.That(_http.Requests.Count, Is.EqualTo(1));
+        }
+
+        [Test]
         public void VerifyPurchaseSendsTheContractRequest()
         {
             _http.Enqueue(200, OkBody(), ServerDate);

@@ -46,6 +46,19 @@ namespace AF.Backend.Contract
         /// <summary>Longitud máxima de <c>obfuscated_account_id</c>.</summary>
         public const int ObfuscatedAccountIdMaxLength = 64;
 
+        /// <summary>Longitud máxima de <c>signed_transaction</c> (el JWS de StoreKit 2; fase M3 de <c>mac-ios.md</c>).</summary>
+        public const int SignedTransactionMaxLength = 16384;
+
+        /// <summary><c>store</c> de <c>verifyPurchase</c>: Google Play (si falta) o el App Store.</summary>
+        public const string StoreGooglePlay = "google_play";
+
+        /// <summary><c>store</c> de una compra de StoreKit 2: <c>token</c> es el id de la transacción.</summary>
+        public const string StoreAppStore = "app_store";
+
+        private static readonly Regex AppStoreTransactionIdRe = new Regex(@"\A[0-9]{1,20}\z", Options);
+
+        private static readonly Regex SignedTransactionRe = new Regex(@"\A[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\z", Options);
+
         /// <summary>Máximo de nonces en <c>pending_nonces</c> y <c>confirmed_nonces</c>.</summary>
         public const int MaxNonces = 200;
 
@@ -76,6 +89,16 @@ namespace AF.Backend.Contract
 
         /// <summary>Id de un ítem de <c>grant.items</c> o de una skin.</summary>
         public static bool IsItemId(string? value) => value != null && ItemIdRe.IsMatch(value);
+
+        /// <summary><c>store</c>: <see cref="StoreGooglePlay"/> o <see cref="StoreAppStore"/>.</summary>
+        public static bool IsStore(string? value) => value == StoreGooglePlay || value == StoreAppStore;
+
+        /// <summary>Con <c>store = app_store</c>, <c>token</c> es el id de la transacción de StoreKit: de 1 a 20 dígitos.</summary>
+        public static bool IsAppStoreTransactionId(string? value) => value != null && AppStoreTransactionIdRe.IsMatch(value);
+
+        /// <summary><c>signed_transaction</c>: JWS compacto de StoreKit 2, hasta <see cref="SignedTransactionMaxLength"/> caracteres.</summary>
+        public static bool IsSignedTransaction(string? value) =>
+            value != null && value.Length <= SignedTransactionMaxLength && SignedTransactionRe.IsMatch(value);
 
         /// <summary><c>obfuscated_account_id</c>: de 1 a 64 caracteres.</summary>
         public static bool IsObfuscatedAccountId(string? value) =>

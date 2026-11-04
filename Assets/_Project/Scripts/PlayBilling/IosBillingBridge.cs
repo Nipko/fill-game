@@ -28,6 +28,7 @@ namespace AF.IAP.PlayBilling
         [DllImport("__Internal")] private static extern void AfSkAcknowledge(string token);
         [DllImport("__Internal")] private static extern void AfSkQueryBillingConfig(int requestId);
         [DllImport("__Internal")] private static extern void AfSkRelease();
+        [DllImport("__Internal")] private static extern string? AfSkSignedTransaction(string token);
 
         // El plugin es uno por proceso: sus avisos van al puente vivo (una recarga de la escena suelta el anterior con Dispose).
         private static IosBillingBridge? s_current;
@@ -58,6 +59,12 @@ namespace AF.IAP.PlayBilling
         public void Acknowledge(string token) => AfSkAcknowledge(token);
 
         public void QueryBillingConfig(int requestId) => AfSkQueryBillingConfig(requestId); // responde «no soportado», en otro paso
+
+        /// <summary>
+        /// El JWS de la transacción <paramref name="token"/> que StoreKit dio en este proceso (para verifyPurchase con
+        /// <c>store = app_store</c>), o null.
+        /// </summary>
+        internal static string? SignedTransaction(string token) => AfSkSignedTransaction(token);
 
         public void Dispose()
         {

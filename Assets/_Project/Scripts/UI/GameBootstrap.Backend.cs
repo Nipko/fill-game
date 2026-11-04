@@ -156,6 +156,22 @@ namespace AF.UI
 
             IBackendClient client = BackendClientOverride ?? CreateBackendClient(mode, deviceClock);
             _backend = client;
+            if (client is HttpBackendClient http && Application.platform == RuntimePlatform.IPhonePlayer)
+            {
+                // iOS (fase M3 de mac-ios.md): cada verifyPurchase lleva la transacción firmada de StoreKit 2 (store = app_store), que
+                // el servidor verifica contra la raíz de Apple. Sin ella (StoreKit aún no ha entregado esa transacción en este proceso),
+                // no se envía: error de red y la cola la reintenta (nunca como de Google Play).
+                http.PrepareVerify = r =>
+                {
+                    if (r.Store != null)
+                    {
+                        return r;
+                    }
+
+                    string? jws = PlayBillingFactory.AppStoreSignedTransaction(r.Token);
+                    return jws != null ? r.WithAppStore(jws) : null;
+                };
+            }
             if (client is FakeBackendClient fake)
             {
                 // Como el servidor (infra/functions/shared/catalog.ts, espejo de 05 §4.1 y 08 §9): el contenido del catálogo de esta sesión.

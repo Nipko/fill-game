@@ -24,6 +24,19 @@ namespace AF.IAP.PlayBilling
             }
         }
 
+        /// <summary>
+        /// iOS (fase M3 de <c>mac-ios.md</c>): el JWS de la transacción de StoreKit 2 cuyo id es <paramref name="token"/>, para
+        /// verifyPurchase con <c>store = app_store</c>; null fuera del iPhone o si este proceso no la ha visto.
+        /// </summary>
+        public static string? AppStoreSignedTransaction(string token)
+        {
+#if UNITY_IOS && !UNITY_EDITOR
+            return IosBillingBridge.SignedTransaction(token);
+#else
+            return null;
+#endif
+        }
+
         /// <summary>La tienda real sin arrancar (<see cref="PlayBillingClient.Start"/>), o null si este build no la tiene.</summary>
         /// <param name="catalog">Catálogo de 1.0.</param>
         /// <param name="fallbackCurrency">Moneda de los precios de 05 §4.2 mientras Play no dé los suyos.</param>

@@ -38,6 +38,7 @@ private final class AfStoreKit {
     private var products: [String: Product] = [:]
     private var open: [String: Transaction] = [:]   // token → transacción sin terminar
     private var acknowledged = Set<String>()         // consumibles marcados sin terminar
+    private var signed: [String: String] = [:]       // token → JWS de la transacción (lo verifica el servidor)
     private var updates: Task<Void, Never>?
 
     func emit(_ kind: Int32, _ request: Int32, _ code: Int32, _ a: String?, _ b: String?) {
@@ -96,6 +97,7 @@ private final class AfStoreKit {
             for await result in Transaction.currentEntitlements {
                 if case .verified(let t) = result, t.productType == .nonConsumable, t.revocationDate == nil,
                    seen.insert(String(t.id)).inserted {
+                    signed[String(t.id)] = result.jwsRepresentation
                     rows.append(row(t, state: Row.purchased, acknowledged: true))
                 }
             }
@@ -157,7 +159,13 @@ private final class AfStoreKit {
         Task { @MainActor in emit(8, request, Code.featureNotSupported, nil, nil) }
     }
 
+    /// El JWS de la transacción (para verifyPurchase con store = app_store), o nil si este proceso no la ha visto.
+    func signedTransaction(_ token: String) -> String? {
+        signed[token]
+    }
+
     func release() {
+        signed.removeAll()
         updates?.cancel()
         updates = nil
         callback = nil
@@ -173,6 +181,7 @@ private final class AfStoreKit {
             await t.finish()
             open[token] = nil
             acknowledged.remove(token)
+            signed[token] = nil // ya acreditada: el servidor no la vuelve a pedir
             emit(kind, 0, Code.ok, token, nil)
         }
     }
@@ -189,6 +198,7 @@ private final class AfStoreKit {
         guard case .verified(let t) = result, t.revocationDate == nil else { return nil }
         let token = String(t.id)
         open[token] = t
+        signed[token] = result.jwsRepresentation
         return row(t, state: Row.purchased, acknowledged: acknowledged.contains(token))
     }
 
@@ -240,6 +250,16 @@ public func AfSkAcknowledge(_ token: UnsafePointer<CChar>) {
 @_cdecl("AfSkQueryBillingConfig")
 public func AfSkQueryBillingConfig(_ request: Int32) {
     MainActor.assumeIsolated { AfStoreKit.shared.queryBillingConfig(request) }
+}
+
+// El JWS de la transacción `token`, o NULL. La cadena es nueva (strdup): la libera el marshaling de IL2CPP.
+@_cdecl("AfSkSignedTransaction")
+public func AfSkSignedTransaction(_ token: UnsafePointer<CChar>) -> UnsafeMutablePointer<CChar>? {
+    let t = String(cString: token)
+    return MainActor.assumeIsolated {
+        guard let jws = AfStoreKit.shared.signedTransaction(t) else { return nil }
+        return strdup(jws)
+    }
 }
 
 @_cdecl("AfSkRelease")

@@ -62,6 +62,13 @@ export interface AfConfig {
    */
   readonly packageName?: string;
   /**
+   * bundleId de iOS cuyas transacciones firmadas del App Store (StoreKit 2) acepta verifyPurchase (`AF_IOS_BUNDLE_IDS`). En
+   * dev, el provisional `com.amazonfill.dev`; en prod, el de `-c iosBundleIds` o, si falta, el `packageName` (la app de iOS
+   * usa el mismo id que la de Android). Nunca la marca en el código (regla 6 de CLAUDE.md) ni el provisional en prod.
+   * Vacía: ninguna compra de iOS pasa (falla cerrada).
+   */
+  readonly iosBundleIds: readonly string[];
+  /**
    * Bloques recompensados de AdMob cuyo SSV acepta `/v1/ssv` (D-049), con el número del bloque (sin `ca-app-pub-…/`). Las
    * claves de firma de Google son las mismas para todos los editores: sin esta lista, cualquiera podría apuntar su propio
    * bloque a nuestra URL y confirmar nonces. Por defecto: prod, el bloque de producción; dev, además el de prueba de Google.
@@ -105,8 +112,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const ZONE_RE = /^Z[A-Z0-9]{5,32}$/;
 const FIREBASE_PROJECT_RE = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
-const FIREBASE_APP_ID_RE = /^1:\d{1,20}:android:[0-9a-f]{6,64}$/;
+// Android o iOS (fase M3 de mac-ios.md: el token de App Check de la app de iOS lleva su id de app de Firebase).
+const FIREBASE_APP_ID_RE = /^1:\d{1,20}:(android|ios):[0-9a-f]{6,64}$/;
 const PACKAGE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
+/** bundleId de iOS: como un identificador DNS inverso (Apple admite mayúsculas y guiones). */
+const BUNDLE_ID_RE = /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/;
 /** Bloque de AdMob: el número (`1182085615`) o el id completo (`ca-app-pub-<editor>/<número>`), que se reduce al número. */
 const AD_UNIT_RE = /^(?:ca-app-pub-\d{1,20}\/)?(\d{1,20})$/;
 /** applicationId provisional de los builds de prueba (CLAUDE.md, regla 6): nunca en prod. */
@@ -136,6 +146,7 @@ function str(ctx: ContextReader, key: string): string | undefined {
  *
  * Contexto admitido: `env` (obligatorio: dev | prod), `account`, `alertEmail`, `firebaseProjectId`,
  * `firebaseAppIds` (separados por comas; obligatorio en prod salvo con `webOnly`), `packageName`, `domain`,
+ * `iosBundleIds` (bundleId de iOS separados por comas; por defecto, el provisional en dev y `packageName` en prod),
  * `hostedZoneId` (solo con `domain`: DNS en Route 53; sin él, DNS externo), `domainExtras` (`cdn`, `api`; solo con
  * DNS externo), `webOnly` (true: solo los stacks de la web), `noDomain` (true: prod sin dominio a propósito; sin él,
  * prod exige `domain`, D-044) y `admobRewardedAdUnits` (bloques recompensados de AdMob del SSV, separados por comas; por
@@ -167,7 +178,7 @@ export function loadConfig(ctx: ContextReader): AfConfig {
 
   const firebaseAppIds = (str(ctx, 'firebaseAppIds') ?? '').split(',').map((a) => a.trim()).filter(Boolean);
   for (const a of firebaseAppIds) {
-    if (!FIREBASE_APP_ID_RE.test(a)) throw new Error('El contexto "firebaseAppIds" debe ser una lista de ids de app Android de Firebase.');
+    if (!FIREBASE_APP_ID_RE.test(a)) throw new Error('El contexto "firebaseAppIds" debe ser una lista de ids de app de Firebase (Android o iOS).');
   }
   if (isProd && firebaseAppIds.length === 0 && !webOnly) {
     // Sin la lista, cualquier app del proyecto de Firebase (p. ej. una web o una de pruebas) emitiría tokens de
@@ -189,6 +200,17 @@ export function loadConfig(ctx: ContextReader): AfConfig {
   if (packageName !== undefined) {
     if (!PACKAGE_RE.test(packageName)) throw new Error('El contexto "packageName" no es un applicationId válido.');
     if (isProd && packageName === DEV_PACKAGE_NAME) {
+      throw new Error(`"${DEV_PACKAGE_NAME}" es provisional y no puede llegar a prod (CLAUDE.md, regla 6).`);
+    }
+  }
+
+  const iosRaw = str(ctx, 'iosBundleIds');
+  const iosBundleIds = iosRaw === undefined
+    ? (isProd ? (packageName === undefined ? [] : [packageName]) : [DEV_PACKAGE_NAME])
+    : iosRaw.split(',').map((b) => b.trim()).filter(Boolean);
+  for (const b of iosBundleIds) {
+    if (!BUNDLE_ID_RE.test(b)) throw new Error('El contexto "iosBundleIds" debe ser una lista de bundleId de iOS.');
+    if (isProd && b === DEV_PACKAGE_NAME) {
       throw new Error(`"${DEV_PACKAGE_NAME}" es provisional y no puede llegar a prod (CLAUDE.md, regla 6).`);
     }
   }
@@ -248,6 +270,7 @@ export function loadConfig(ctx: ContextReader): AfConfig {
     firebaseProjectId,
     firebaseAppIds,
     packageName,
+    iosBundleIds: [...new Set(iosBundleIds)],
     admobRewardedAdUnits: [...new Set(admobRewardedAdUnits)],
     alertEmail,
     budgetUsd: isProd ? 50 : 10,

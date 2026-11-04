@@ -1,0 +1,6 @@
+{
+  "token": "2000000123456789",
+  "sku": "af_noads",
+  "store": "app_store",
+  "signed_transaction": "eyJhbGciOiJFUzI1NiIsIng1YyI6WyJleGFtcGxlIl19.eyJ0cmFuc2FjdGlvbklkIjoiMjAwMDAwMDEyMzQ1Njc4OSJ9.Example_Only-NotARealSignature0123456789"
+}

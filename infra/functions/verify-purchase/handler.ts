@@ -19,6 +19,15 @@
 // Google con otro UID (reinstalar sin recuperar el UID) ya no se queda en 409: el servidor reasigna la fila del libro
 // mayor al UID nuevo y responde `duplicate` (el cliente lo trata como restauración), o `ok` si ningún UID la había
 // verificado. Reglas y límites en `reassignNonConsumable` y en docs/dev/iap.md §4.3.
+// App Store (StoreKit 2; mac-ios.md, M3): con `store` = `app_store`, `token` es el transactionId y la compra se verifica
+// sin red con el JWS `signed_transaction` (shared/appStore.ts: cadena hasta Apple Root CA - G3, bundleId del entorno,
+// productId = sku, transactionId = token, sin revocar, Production o Sandbox). No se llama a Play ni se reconoce
+// (StoreKit no reconoce en servidor: `finish()` es del cliente). Todo lo demás es igual: libro mayor por el hash del
+// token (el transactionId), duplicate, 409, lápidas, once_per_account, cuenta borrada, límite e integridad. Un JWS que
+// no pasa → 400 bad_request genérico (el motivo, solo en el log). Limitaciones: sin appAccountToken no hay cuenta
+// ofuscada, así que la reasignación de no consumibles (Q-IAP-4) no aplica (409 como antes; una reinstalación de iOS
+// con otro UID no recupera Sin anuncios por aquí: solución futura, appAccountToken = UUID derivado del UID); y
+// voidedPurchasesJob solo mira Play, así que los reembolsos del App Store no se retiran todavía.
 import { GetCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { CATALOG, grantFor, onceKey } from '../shared/catalog.ts';
@@ -26,20 +35,23 @@ import { sha256hex, tokenHash as hashToken } from '../shared/crypto.ts';
 import { cancellationCodes, epochS, isConditionalCheckFailed } from '../shared/ddb.ts';
 import type { Env } from '../shared/env.ts';
 import { requireEnv } from '../shared/env.ts';
-import { HttpError, badRequest, rateLimited } from '../shared/errors.ts';
+import { ConfigError, HttpError, badRequest, rateLimited } from '../shared/errors.ts';
 import type { HttpEvent, HttpHandler } from '../shared/http.ts';
 import { header, json, jsonBody, requireUid, withErrors } from '../shared/http.ts';
 import type { IntegrityVerifier } from '../shared/integrity.ts';
 import { INTEGRITY_HEADER, requireIntegrity } from '../shared/integrity.ts';
 import { log, metric, uidHash } from '../shared/log.ts';
+import type { AppStoreVerifier } from '../shared/appStore.ts';
 import type { PlayApi, ProductPurchase } from '../shared/playApi.ts';
 import { enforce, isDeleted, notDeletedCheck, peekQuota, quotaTxUpdate, windowOf } from '../shared/rateLimit.ts';
-import { lazy, realDdb, realIntegrityVerifier, realPlayApi } from '../shared/runtime.ts';
+import { lazy, realAppStoreVerifier, realDdb, realIntegrityVerifier, realPlayApi } from '../shared/runtime.ts';
 import { parseVerifyPurchase } from '../shared/validate.ts';
 
 export interface VerifyPurchaseDeps {
   readonly ddb: DynamoDBDocumentClient;
   readonly play: PlayApi;
+  /** Compras del App Store (StoreKit 2). Opcional para los tests que solo prueban Play; en runtime siempre está. */
+  readonly appStore?: AppStoreVerifier;
   readonly integrity: IntegrityVerifier;
   readonly env: Env;
   readonly now: () => number;
@@ -103,6 +115,8 @@ const accountDeleted = (): HttpError => new HttpError(401, 'unauthorized', 'La c
 const voidedTombstone = (): HttpError => badRequest('La compra está anulada en Google Play.');
 /** Segunda compra de un SKU `once_per_account` (contrato v1: 400 bad_request; no concede ni reconoce). */
 const alreadyOwned = (): HttpError => badRequest('Este producto solo se puede comprar una vez por cuenta.');
+/** JWS del App Store que no pasa (firma, cadena, app, SKU, transacción, revocado o Xcode): sin detalles al cliente. */
+const appStoreRejected = (): HttpError => badRequest('El App Store no confirma esa compra.');
 
 /**
  * ¿La cuenta ofuscada que guarda Play es la de este UID? 08 §10.1 pide setObfuscatedAccountId = UID; se admite
@@ -144,7 +158,8 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
     );
 
     const th = hashToken(req.token);
-    const fields = { uid_hash: uidHash(uid), sku: req.sku, token_hash: th.slice(0, 12) };
+    const appStore = req.store === 'app_store';
+    const fields = { uid_hash: uidHash(uid), sku: req.sku, token_hash: th.slice(0, 12), ...(appStore ? { store: req.store } : {}) };
     const envName = deps.env.AF_ENV ?? 'dev';
 
     const readLedger = async (): Promise<LedgerItem | undefined> =>
@@ -196,6 +211,11 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
       const rf = { ...fields, anonymized: item.uid === undefined };
       if (product.kind !== 'non_consumable' || item.state !== 'ok' || item.sku !== req.sku) {
         log.warn('purchase_other_user', rf);
+        throw otherUser();
+      }
+      if (appStore) {
+        // Sin appAccountToken no se sabe qué cuenta compró: como un token de Play sin cuenta ofuscada, 409.
+        log.warn('purchase_reassign_rejected', { ...rf, obfuscated: false });
         throw otherUser();
       }
       const p = await deps.play.getProduct(req.sku, req.token);
@@ -306,15 +326,33 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
       return json(200, { status: 'duplicate', token_hash: th });
     };
 
+    /** StoreKit 2: verifica el JWS sin red (shared/appStore.ts). Solo se llega aquí si el token no está en el libro mayor. */
+    const verifyAppStore = async (): Promise<ProductPurchase> => {
+      if (!deps.appStore) throw new ConfigError('Falta el verificador del App Store.');
+      const check = await deps.appStore.verify(req.signedTransaction ?? '', { sku: req.sku, transactionId: req.token });
+      if (!check.ok) {
+        log.warn('purchase_app_store_rejected', { ...fields, reason: check.reason });
+        metric('AppStoreRejected', envName, { Reason: check.reason });
+        throw appStoreRejected();
+      }
+      if (check.transaction.environment === 'Sandbox' && envName === 'prod') {
+        // [P] Sandbox se admite en prod por la revisión de Apple (que compra en sandbox con la app de producción); se
+        // anota como prueba (purchase_type 0) y deja una métrica para vigilarlo.
+        log.warn('purchase_app_store_sandbox', fields);
+        metric('AppStoreSandboxPurchase', envName);
+      }
+      return check.purchase;
+    };
+
     const existing = await readLedger();
     if (existing) {
       if (existing.tombstone !== true && existing.uid !== uid) return reassignNonConsumable(existing);
       return answerExisting(existing);
     }
 
-    const p: ProductPurchase | null = await deps.play.getProduct(req.sku, req.token);
+    const p: ProductPurchase | null = appStore ? await verifyAppStore() : await deps.play.getProduct(req.sku, req.token);
     if (!p) throw badRequest('Google Play no reconoce esa compra.');
-    if (p.obfuscatedAccountId === undefined) {
+    if (p.obfuscatedAccountId === undefined && !appStore) {
       // 08 §10.1 pide setObfuscatedAccountId = UID; sin él no se puede atar la compra a la cuenta [P: exigirlo].
       log.warn('purchase_without_obfuscated_account', fields);
       metric('PurchaseWithoutObfuscatedAccount', envName);
@@ -362,7 +400,7 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
         throw alreadyOwned();
       }
     }
-    if (!p.acknowledged) await deps.play.acknowledge(req.sku, req.token);
+    if (!appStore && !p.acknowledged) await deps.play.acknowledge(req.sku, req.token);
 
     const nowMs = deps.now();
     try {
@@ -383,6 +421,7 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
                   quantity: p.quantity,
                   purchase_type: p.purchaseType,
                   state: 'ok',
+                  ...(appStore ? { store: req.store } : {}),
                   ...(claim
                     ? {
                         reassign_seq: 1,
@@ -461,6 +500,7 @@ const deps = lazy(
   (): VerifyPurchaseDeps => ({
     ddb: realDdb(),
     play: realPlayApi(process.env),
+    appStore: realAppStoreVerifier(process.env),
     integrity: realIntegrityVerifier(process.env),
     env: process.env,
     now: Date.now,
