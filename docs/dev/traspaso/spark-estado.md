@@ -18,8 +18,8 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   - **la marca «Development Build» sale en la esquina inferior derecha de todos los planos de juego**, porque las tomas vienen de `com.amazonfill.dev`;
   - las 3 salidas fallan la visión. El estado de la cola no se ha tocado: sigue en `calidad_ok`.
 - **Para el dueño:** lo más probable es que les pase a las 9 piezas, porque todas salen de las tomas de E1.
-  - **Opción 1:** volver a grabar con un build sin la marca, por ejemplo el ensayo de release (`-afRehearsal`), si conserva el modo demo de E1.
-  - **Opción 2:** taparla en el montaje.
+  - **El ensayo de release no sirve:** `BuildRelease` (con `-afRehearsal`) y `BuildSmoke` compilan sin la marca, pero E1 y los extras `af_*` exigen `Debug.isDebugBuild` (`CaptureOptions.cs:190-198`, `LaunchOptions.cs:749-833`). Hoy no hay ningún build sin la marca que grabe con E1.
+  - **Opciones:** taparla en el montaje (la propuesta de `C:\AI\marketing\plan\plan-tomas-y-videos.md` §5, punto 1) o un cambio del integrador en el juego. Decide el dueño.
   - La prueba privada en YouTube (no listado) y TikTok (borradores) puede hacerse igual; ninguna pieza debería salir en público con la marca.
 - **Detalle y lo aprendido al ajustar la pregunta:** `docs/marketing/stack-spark.md` §2.5.
 
