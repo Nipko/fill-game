@@ -268,5 +268,19 @@ Escritorio x64, `unity-build.ps1 -Method Dev` y `-Method Release -Rehearsal`, so
 - **Bloques:** los de prueba de Google para iOS (`GoogleAdUnits.IosTestRewarded` `…/1712485313` e `IosTestInterstitial` `…/4411468910`). **Los de producción de iOS aún no existen** (`IosProductionRewarded`/`IosProductionInterstitial` = null): hasta que el dueño cree la app de iOS en AdMob (con la cuenta de Apple de Parallext, M5), iOS usa los de prueba también en release, nunca los simulados (que concederían recompensas gratis). Hay que ponerlos antes de publicar.
 - **App ID de iOS:** el de ejemplo de Google (`GoogleAdUnits.IosAppId`, `ca-app-pub-3940256099942544~1458002511`) en `GoogleMobileAdsSettings.asset` (`GoogleAdsProjectSetup.ApplyIos`, desde `ProjectSetup.ApplyIosDefaults`; Android no cambia). Con él, el post-proceso del plugin escribe en el `Info.plist` el `GADApplicationIdentifier` y **la lista de SKAdNetwork de Google** (`GoogleMobileAdsSKAdNetworkItems.xml`: 50 redes, Unity Ads incluida); sin App ID se paraba antes de escribirla.
 - **Probado en el iPhone:** `[AF.Ads] proveedor: google (bloques de prueba)`; intersticiales y recompensados «Test Ad» con la recompensa concedida.
-- **Pendiente:** el aviso de rastreo (ATT) con su aviso previo propio (I-5 de D-067: plugin propio), que necesita los textos aprobados por el dueño.
+- **Aviso de rastreo (ATT)**, con un plugin propio (I-5 de D-067: `Plugins/iOS/AfAtt.m`, solo `AppTrackingTransparency`, sin `com.unity.ads.ios-support`). Regla aprobada por el dueño el 2026-11-04 (`AF.UI.IosTracking.ShouldAsk`):
+  - se pregunta una sola vez, tras la edad y el consentimiento del arranque (`GameBootstrap.FinishConsentAtBoot`);
+  - solo a 18+ con anuncios personalizados (por nuestra pantalla o por UMP) y mientras iOS no lo haya preguntado;
+  - nunca con 13-17, <13, `npa` ni fuera del iPhone.
+
+  Antes del aviso de Apple sale el nuestro (`AttPrePromptCard`: «Anuncios a tu medida», el texto y un solo botón, «Continuar», sin «No» ni X por la directriz 5.1.1). Los textos están en `strings.csv` (`att_preprompt_*`).
+
+  El texto de dentro del aviso de Apple (`att_usage_description`) lo escribe `BuildIos.WriteTrackingUsageDescription`:
+  - en el `Info.plist`, `NSUserTrackingUsageDescription` en inglés;
+  - en `es-419`, `es`, `en` y `pt-BR`, como `<idioma>.lproj/InfoPlist.strings`, referencias de carpeta en el proyecto de Xcode.
+
+  Falla cerrado si falta un texto. Tests: `IosTrackingTests` (EditMode) y `AttBootTests` (PlayMode).
+
+  Probado en el iPhone el 2026-11-04: la tarjeta, el aviso del sistema con nuestra frase y «Permitir»; al volver a abrir, no se pregunta de nuevo. Tras «Permitir» salió una vez un error que no se repitió ni dejó informe de fallo (sin aclarar).
+- **Para el dueño:** en la consola de AdMob, **no actives el «mensaje explicativo de IDFA» de UMP**. Si se activa, UMP enseñaría su propio aviso previo y se sumaría al nuestro.
 

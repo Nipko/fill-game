@@ -550,6 +550,13 @@ namespace AF.Tests.EditMode
             keys.Add(AF.LiveOps.PrePromptRequest.AcceptKey);
             keys.Add(AF.LiveOps.PrePromptRequest.DeclineKey);
 
+            // M3 (iOS): el aviso previo al de rastreo de Apple (AttPrePromptCard) y el texto que iOS pone en el suyo (BuildIos lo
+            // escribe en NSUserTrackingUsageDescription).
+            keys.Add(AttPrePromptCard.TitleKey);
+            keys.Add(AttPrePromptCard.BodyKey);
+            keys.Add(AttPrePromptCard.ContinueKey);
+            keys.Add(AF.EditorTools.BuildIos.TrackingUsageKey);
+
             // B6, con la UI pendiente (docs/dev/sesiones-notificaciones.md): el canal de Android (lo usa el programador real,
             // B6-notifications-real) y el aviso del Regalo de regreso. Se quitan de aquí cuando su pantalla los pinte.
             keys.AddRange(new[]

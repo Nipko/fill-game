@@ -203,6 +203,7 @@ namespace AF.EditorTools
             DisableUserScriptSandboxing(pathToBuiltProject);
             EnsureGadApplicationId(pathToBuiltProject);
             ApplyConsentDefaults(pathToBuiltProject);
+            WriteTrackingUsageDescription(pathToBuiltProject);
             if (s_development)
             {
                 WriteLocalStoreKit(pathToBuiltProject);
@@ -373,6 +374,135 @@ namespace AF.EditorTools
             sb.Append("\n  ],\n  \"settings\" : { \"_locale\" : \"en_US\", \"_storefront\" : \"USA\" },\n  \"subscriptionGroups\" : [],\n")
                 .Append("  \"version\" : { \"major\" : 4, \"minor\" : 0 }\n}\n");
             return sb.ToString();
+        }
+
+        /// <summary>Clave de <c>strings.csv</c> con el texto que iOS pone dentro de su aviso de rastreo (ATT, fase M3).</summary>
+        public const string TrackingUsageKey = "att_usage_description";
+
+        /// <summary>Tabla de textos de la UI (contrato 32).</summary>
+        public const string StringsCsvPath = "Assets/_Project/Data/Loc/strings.csv";
+
+        /// <summary>
+        /// Carpeta <c>.lproj</c> de cada idioma del juego (D-018) con su columna de <c>strings.csv</c>. El español va dos veces:
+        /// <c>es-419</c> y <c>es</c>, para que un iPhone en español de España (u otro sin fila propia) no caiga al inglés.
+        /// </summary>
+        public static readonly KeyValuePair<string, string>[] TrackingLocales =
+        {
+            new KeyValuePair<string, string>("es-419", "es-419"),
+            new KeyValuePair<string, string>("es", "es-419"),
+            new KeyValuePair<string, string>("en", "en"),
+            new KeyValuePair<string, string>("pt-BR", "pt-BR"),
+        };
+
+        /// <summary>
+        /// <c>NSUserTrackingUsageDescription</c> (sin ella, pedir el ATT cierra la app): en el <c>Info.plist</c>, en inglés (el idioma
+        /// base del proyecto de Unity), y en <c>&lt;idioma&gt;.lproj/InfoPlist.strings</c> de cada idioma, desde
+        /// <see cref="TrackingUsageKey"/> de <c>strings.csv</c> (los textos no viven en el código). Las carpetas entran en el proyecto
+        /// de Xcode como referencias de carpeta, para que la app las lleve tal cual. Falla cerrado si falta un texto.
+        /// </summary>
+        internal static void WriteTrackingUsageDescription(string pathToBuiltProject)
+        {
+            Dictionary<string, string> texts = TrackingUsageTexts(File.ReadAllBytes(StringsCsvPath));
+            string plist = Path.Combine(pathToBuiltProject, "Info.plist");
+            if (!File.Exists(plist))
+            {
+                throw new InvalidOperationException(LogPrefix + "falta " + plist + ".");
+            }
+
+            File.WriteAllText(plist, SetPlistString(File.ReadAllText(plist), "NSUserTrackingUsageDescription", texts["en"]));
+#if UNITY_IOS
+            string pbxPath = UnityEditor.iOS.Xcode.PBXProject.GetPBXProjectPath(pathToBuiltProject);
+            var pbx = new UnityEditor.iOS.Xcode.PBXProject();
+            pbx.ReadFromFile(pbxPath);
+            string target = pbx.GetUnityMainTargetGuid();
+#endif
+            foreach (KeyValuePair<string, string> locale in TrackingLocales)
+            {
+                string folder = locale.Key + ".lproj";
+                Directory.CreateDirectory(Path.Combine(pathToBuiltProject, folder));
+                File.WriteAllText(Path.Combine(pathToBuiltProject, folder, "InfoPlist.strings"),
+                    "/* " + TrackingUsageKey + " (strings.csv): lo escribe AF.EditorTools.BuildIos */\n"
+                    + "\"NSUserTrackingUsageDescription\" = \"" + EscapeStrings(texts[locale.Value]) + "\";\n",
+                    new System.Text.UTF8Encoding(false));
+#if UNITY_IOS
+                if (pbx.FindFileGuidByProjectPath(folder) == null)
+                {
+                    string guid = pbx.AddFolderReference(folder, folder);
+                    pbx.AddFileToBuild(target, guid);
+                }
+#endif
+            }
+
+#if UNITY_IOS
+            pbx.WriteToFile(pbxPath);
+#endif
+            Debug.Log(LogPrefix + "NSUserTrackingUsageDescription: Info.plist (en) e InfoPlist.strings de " + TrackingLocales.Length + " idiomas.");
+        }
+
+        /// <summary>El texto de <see cref="TrackingUsageKey"/> por columna de idioma; lanza si falta la fila o una traducción.</summary>
+        public static Dictionary<string, string> TrackingUsageTexts(byte[] csv)
+        {
+            IReadOnlyList<AF.Localization.LocCsvRow> rows = AF.Localization.LocCsv.Parse(AF.Localization.LocCsv.Decode(csv, StringsCsvPath), StringsCsvPath);
+            IReadOnlyList<string> header = rows[0].Fields;
+            foreach (AF.Localization.LocCsvRow row in rows)
+            {
+                if (row.Fields.Count == 0 || row.Fields[0] != TrackingUsageKey)
+                {
+                    continue;
+                }
+
+                var texts = new Dictionary<string, string>();
+                foreach (KeyValuePair<string, string> locale in TrackingLocales)
+                {
+                    int column = -1;
+                    for (int i = 0; i < header.Count; i++)
+                    {
+                        if (header[i] == locale.Value)
+                        {
+                            column = i;
+                            break;
+                        }
+                    }
+
+                    string text = column >= 0 && column < row.Fields.Count ? row.Fields[column] : string.Empty;
+                    if (text.Length == 0)
+                    {
+                        throw new InvalidOperationException(LogPrefix + TrackingUsageKey + " sin texto en " + locale.Value + " (strings.csv).");
+                    }
+
+                    texts[locale.Value] = text;
+                }
+
+                return texts;
+            }
+
+            throw new InvalidOperationException(LogPrefix + "strings.csv sin la fila " + TrackingUsageKey + ".");
+        }
+
+        // Comillas y barras escapadas para un .strings; los saltos de línea, como \n.
+        private static string EscapeStrings(string text)
+        {
+            return text.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
+        }
+
+        /// <summary>La clave de texto con su valor (escapado para XML): la cambia si está; si no, la añade antes del último &lt;/dict&gt;.</summary>
+        public static string SetPlistString(string plist, string key, string value)
+        {
+            string escaped = System.Security.SecurityElement.Escape(value) ?? string.Empty;
+            var existing = new System.Text.RegularExpressions.Regex(
+                "<key>" + System.Text.RegularExpressions.Regex.Escape(key) + @"</key>\s*<string>[^<]*</string>");
+            if (existing.IsMatch(plist))
+            {
+                return existing.Replace(plist, _ => "<key>" + key + "</key>\n    <string>" + escaped + "</string>", 1);
+            }
+
+            int end = plist.LastIndexOf("</dict>", StringComparison.Ordinal);
+            if (end < 0)
+            {
+                throw new InvalidOperationException(LogPrefix + "Info.plist sin </dict>.");
+            }
+
+            return plist.Substring(0, end) + "  <key>" + key + "</key>\n  <string>" + escaped + "</string>\n" + plist.Substring(end);
         }
 
         /// <summary>
