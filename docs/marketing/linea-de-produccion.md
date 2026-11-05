@@ -19,6 +19,33 @@ Pedido del dueño: con lo que funciona en el mercado (cualquier género), dar fo
 5. **Texto mínimo y en su sitio.** Un rótulo de gancho de 2 s como mucho, o subtítulos de una palabra al ritmo. Los textos del propio juego («¡Sellada!», victoria) valen como subtítulos.
 6. **Cierre corto:** 2-4 s de tarjeta final. En orgánico, a veces sin cierre (bucle o final abierto).
 
+## 1 bis. La duración (pregunta del dueño del 2026-11-05: «¿30 s es lo mejor?»)
+
+**No.** La investigación no apoya 30 s como base para el orgánico. Datos de los 33 anuncios con cifra de la semilla 2026-45b: el alcance en la UE para Meta y los «me gusta» para TikTok, que no son comparables entre sí, así que solo sirven como orientación.
+
+| Duración | Anuncios | Mediana | Máximo |
+|---|---|---|---|
+| ≤ 30 s | 13 | ~130 k | Water Sort 1,05 M (29 s) y Attack Hole 748 k (30 s) |
+| 31-45 s | 7 | ~550 k | Block Blast TikTok 1,02 M (37 s) |
+| 46-64 s | 13 | ~210 k | Magic Sort 2,15 M (56 s) y Royal Match 1,17 M (60 s) |
+
+Qué significa:
+- **Los largos (37-60 s) son anuncios pagados.** Ahí la red reparte por coste y el anunciante paga cada impresión. Además, la mitad de ese tiempo es una sola toma de juego en bucle. Por D-067 no hay pago hasta tener iOS, así que no son nuestro caso hoy.
+- **En orgánico** (lo que vamos a publicar), los que funcionan van de **8 a 30 s**:
+  - el meme de Block Blast dura 15 s y consiguió 2,25 M;
+  - Party Bus, 8 s y 1,37 M;
+  - el reto de Coloring Match, 22 s y 319 k.
+  El algoritmo premia el porcentaje visto y la repetición, y un vídeo corto lo gana más fácil.
+- **La duración la pide el formato, no una base fija:**
+  - bucle (F2), 8-12 s;
+  - reto (F4), 10-15 s;
+  - meme (F7), 8-15 s;
+  - atasco (F5), 15-20 s;
+  - premio y cambio de fase (F1 y F3), 18-25 s.
+- **Lo decide la medición, no la suposición:** con H10, a las 2 semanas se compara la retención de cada duración. Cuando haya pago (después de iOS), se cortan versiones de 30-45 s de los formatos que ganen.
+
+Por eso se descartan los 30 s del himno (F8) como base.
+
 ## 2. Los ocho formatos de Tintalú
 
 Cada formato tiene su referencia medida, su eje y su material del banco de tomas (`C:\AI\marketing\tomas\2026-11-04`).
@@ -32,7 +59,7 @@ Cada formato tiene su referencia medida, su eje y su material del banco de tomas
 | F5 | **Más difícil de lo que parece** (atasco real) | Coloring Match 319 k; Stacky Dash 948 k | reto | `atasco.py` (jugada obvia que bloquea) + `resolver.py` (la buena), con `director.py` | 15-20 s | Reto · viernes |
 | F6 | **Mismo río, dos jugadas** (pantalla partida) | sortingsim 144 k en Instagram | reto | el Reto del río del día dos veces: solución larga y la mínima del solver | 15-20 s | Reto o comunidad · sábado |
 | F7 | **Microhistoria de un personaje** (meme o rótulos) | Cuenta de Block Blast 2,25 M; Rent Please 239 k | microhistoria | TiTino en casa, Capi remando, Rosa río arriba, con un rótulo «relatable» por golpe | 8-15 s | Personajes · sábado (impares) |
-| F8 | **Viaje sobre el himno** (los 5 ya montados) | Merge and Dig 403 k (bucle de progreso) | progreso | `s1-llegada-*` + Mapa + himno B con s33 | 30 s | Viaje · miércoles |
+| ~~F8~~ | ~~**Viaje sobre el himno**~~: **descartado por el dueño el 2026-11-05** (los 5 montados no se publican) | Merge and Dig 403 k | progreso | — | — | el miércoles pasa a F3 |
 
 **Público:** el agua llega a mujeres de 35-64; el flujo y los rescates, a hombres de 25-44.
 - Para el público de mujeres: F1, F2 y F3.
@@ -45,16 +72,16 @@ Orden pensado para salir con lo que ya existe y sumar formatos según lleguen la
 
 | Orden | Vídeo | Formato | Estado | Herramienta |
 |---|---|---|---|---|
-| 1-5 | **Los 5 del viaje** | F8 | montados y con QA aprobado (`C:\AI\marketing\revision\viaje-es`); esperan tu revisión | ya existe |
-| 6 | **«Sella a los 2 s»**: nivel 50 o 70 desde un tablero casi resuelto, 22 s, sin texto, tarjeta final | F1 | por montar | `montar.py` (ya existe); falta el contador (H1), opcional en la v1 |
-| 7 | **«De gris a color»**: sellado lento del nivel 42, 10 s, en bucle | F2 | por montar | `montar.py` + el bucle sin costura (H4) |
-| 8 | **«¿Lo resuelves?»**: el nivel 46 del reto, parado a 1 vertido, 12 s, rótulo «¿Cuál es el último?» | F4 | por montar | `montar.py`; la parte 2 con la solución |
-| 9 | **«Más difícil de lo que parece»**: tablero real con atasco, 18 s | F5 | por grabar (`director.py` con la secuencia de `atasco.py`) | ya existe |
-| 10 | **«El río sube»**: cambio de mundo cada 4 s, 22 s | F3 | por montar | `montar_himno.py` con cortes secos; mejor con la transición de color (H2) |
-| 11 | **«Mismo río, dos jugadas»** | F6 | por montar | falta la pantalla partida (H3) |
-| 12 | **TiTino «cuando por fin…»** | F7 | por grabar | faltan las tomas de personajes (H6) |
+| — | ~~Los 5 del viaje (F8, 30 s)~~ | — | **descartados por el dueño** (2026-11-05); quedan en `C:\AI\marketing\revision\viaje-es` solo como archivo | — |
+| 1 | **«Sella a los 2 s»**: nivel 50 o 70 desde un tablero casi resuelto, 22 s, sin texto, contador de vertidos, tarjeta final | F1 | por montar | `montar.py` y el contador (H1) |
+| 2 | **«De gris a color»**: sellado lento del nivel 42, 10 s, en bucle | F2 | por montar | `montar.py` y el bucle sin costura (H4) |
+| 3 | **«¿Lo resuelves?»**: el nivel 46 del reto, parado a 1 vertido, 12 s, rótulo «¿Cuál es el último?» | F4 | por montar | `montar.py`; la parte 2 con la solución y el toque dibujado (H8) |
+| 4 | **«Más difícil de lo que parece»**: tablero real con atasco, 18 s, con el toque dibujado | F5 | por grabar (`director.py` con la secuencia de `atasco.py`) | ya existe; H8 |
+| 5 | **«El río sube»**: cambio de mundo cada 4 s con la marea, 22 s, palabras al ritmo | F3 | por montar | `montar_himno.py` con la marea (H2) y las palabras (H5) |
+| 6 | **«Mismo río, dos jugadas»**, 18 s | F6 | por montar | falta la pantalla partida (H3) |
+| 7 | **TiTino «Yo esperando a que vuelvas…»**, 10 s, tono ligero | F7 | por grabar | tomas de personajes (H6); voz narrada opcional (H7) |
 
-pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04).
+pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada vídeo, una vez montado, pasa por tu visto bueno antes de ir a la cola. Nada se publica sin él.
 
 ## 4. La parrilla de cada semana
 
@@ -62,7 +89,7 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04).
 |---|---|---|
 | Lunes | F1 | Satisfying |
 | Martes | F4 | Reto |
-| Miércoles | F3 o F8 | Viaje |
+| Miércoles | F3 | Viaje |
 | Jueves | F2 | Satisfying |
 | Viernes | F5 | Reto |
 | Sábado | F7 (semanas impares) o F6 (pares) | Personajes o comunidad |
@@ -90,16 +117,16 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04).
 | **H9. Sonido del juego en la toma** | se reponen los efectos con los eventos `pour` | — | — | — |
 | **H10. Medir lo publicado** (tasa de gancho y retención por formato) | la tabla `Post` de Postiz; sin analítica de vuelta | sí | S7 (`cola.py` con la API de Postiz) y lectura semanal de la analítica de cada red, a mano las dos primeras semanas | medio |
 
-**Prioridad propuesta:**
+**Prioridad (actualizada el 2026-11-05 con las decisiones del dueño):**
 1. ~~H5, H1 y H2~~: hechas el 2026-11-05 (`fabrica.md` §3.1).
-2. H4 (F2).
-3. H3 (F6).
-4. H6 y H7, que dependen de decisiones.
+2. H8, el toque dibujado (pequeño; lo usan los vídeos 3 y 4) y H4, el bucle (vídeo 2).
+3. H3 (vídeo 6).
+4. H6 y H7 (vídeo 7). Ya no dependen de decisiones.
 5. H10 antes de la semana 3.
 
-## 6. Decisiones que necesito del dueño
+## 6. Decisiones del dueño (todas tomadas el 2026-11-05; registro en `decisiones.md`, añadido de D-066)
 
-1. **El dedo dibujado (H8):** ¿vale un icono de toque en pantalla o lo consideramos «persona»?
-2. **Voz narrada con IA (H7):** dejar por escrito Q-MK-S0-1 (la música y la voz de IA en marketing) en `decisiones.md`.
-3. **Memes de personajes (F7):** ¿el tono «relatable» con TiTino y Capi encaja con la marca? Por ejemplo, «Yo esperando a que vuelvas al nivel 42» con TiTino en casa.
-4. **El orden del lote 1:** revisar los 5 del viaje y aprobar que se monten los vídeos 6 a 10.
+1. **Toque dibujado (H8):** sí, como icono estilizado (un círculo que pulsa o un puntero plano), nunca una mano realista.
+2. **Q-MK-S0-1:** voz y música de IA permitidas, siempre con la etiqueta de cada red. La voz es diseñada y no clona a nadie.
+3. **Memes de personajes (F7):** sí, con tono ligero, sin burla ni presión para volver.
+4. **Lote 1:** los 5 del viaje quedan descartados. Se rehace con los formatos F1-F7 y con la duración de §1 bis.
