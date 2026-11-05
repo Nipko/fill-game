@@ -17,7 +17,8 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 - **Lo resuelto:**
   - YouTube ya carga si la pestaña está en primer plano;
   - TikTok funciona con la sesión del dueño.
-- **Pendiente:** Google Ads Transparency, Instagram y el alcance de los anuncios agrupados de Meta.
+- **Guiones:** después se desmontaron segundo a segundo 8 anuncios de varios géneros (bloques, Magic Sort, Water Sort 3D, Attack Hole), con 5 plantillas para Tintalú. Están en `docs/marketing/tendencias/guiones-que-funcionan.md`.
+- **Instagram y Google Ads Transparency, hechos:** Instagram con la sesión del dueño, dando «me gusta» y comentarios; Google buscando por razón social (Grand Games tiene unos 900 anuncios de Magic Sort en Brasil). Queda pendiente el alcance de los anuncios agrupados de Meta.
 
 ### 2026-11-02 · Tendencias semana 2026-45: HECHO
 

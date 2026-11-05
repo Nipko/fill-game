@@ -68,10 +68,13 @@ El dueño pidió cifras de lo que funciona, no solo longevidad, y mirar también
   - Si la sesión caducó, se anota y se sigue.
 - **Géneros añadidos a Meta:** `magic sort`, `screw jam`, `puzzle game` (que trae bloques y tornillos: Block Blast, Ivy Color Block, Take Off Bolts), además de los de siempre.
 - **YouTube:** la pestaña tiene que estar en primer plano (`tabs_select`). En segundo plano la página sale en blanco, que fue el fallo del 2026-11-02.
-- **Pendiente:**
-  - Google Ads Transparency, entrando por la página de cada anunciante;
-  - Instagram, que pide sesión;
-  - ver los vídeos de TikTok, no solo su texto.
+- **Instagram:** usa la sesión del dueño. La búsqueda por palabra (`/explore/search/keyword/?q=…`) da los «me gusta» y los comentarios de las respuestas de la página. Las reproducciones no se ven.
+- **Google Ads Transparency:**
+  - se busca por la razón social del estudio (por ejemplo, «Grand Games» para Magic Sort), no por el nombre del juego;
+  - da los formatos, las fechas, las variaciones y el público;
+  - en la UE, las veces que se mostró un anuncio se publican solo 3 meses después de la primera vez que se mostró.
+- **TikTok, los vídeos:** la página de detalle devuelve a la lista. El vídeo de cada anuncio se ve desde la respuesta de la lista, en el mismo visor de fotogramas que se usa con Meta.
+- **Guiones:** cada semana se desmontan segundo a segundo los 6-8 anuncios con más cifra, de cualquier género (planos, transiciones, textos y cierre). Las plantillas para Tintalú se ponen al día en `guiones-que-funcionan.md`.
 
 ## Límites de la versión 1
 
