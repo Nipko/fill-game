@@ -6,6 +6,26 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-05 · Decisiones de la línea de vídeos y lote 1 (vídeos 1, 3 y 5): MONTADOS, esperan el visto bueno del dueño
+
+- **Decisiones del dueño** (añadido de D-066 en `decisiones.md`):
+  - toque dibujado estilizado;
+  - voz y música de IA, siempre etiquetadas (Q-MK-S0-1);
+  - memes ligeros de personajes;
+  - los 5 vídeos del viaje (F8, 30 s), descartados.
+- **Duración:** en orgánico, de 8 a 25 s según el formato (`linea-de-produccion.md` §1 bis).
+- **H8 hecho:** `efectos.py`, commit `c7bdad8` de `fill-game-marketing`. `montar_himno.py` admite `audio_juego`, `toques` y `y` en las palabras; los cambios siguen sin commit, junto con los archivos sin seguimiento de la sesión ideas-piezas.
+- **Piezas** en `C:\AI\marketing\piezas\`, las tres con `calidad_ok`:
+  - `n1-01-sella`, 24,7 s;
+  - `n1-03-lo-resuelves`, 11,5 s;
+  - `n1-05-el-rio-sube`, 22,2 s.
+- **Sigue:**
+  - H4 (vídeo 2);
+  - grabar el atasco (vídeo 4);
+  - H3 (vídeo 6);
+  - H6 y H7 (vídeo 7);
+  - la parte 2 del reto.
+
 ### 2026-11-05 · Tendencias ampliadas con cifras reales (semana 2026-45): HECHO
 
 - **Pedido del dueño:** cifras de lo que funciona y más géneros. Se añadieron 28 referencias nuevas, con 85 en la biblioteca. Informe: `docs/marketing/tendencias/2026-45-ampliado.md`; la receta v2 está en `tendencias/README.md`.

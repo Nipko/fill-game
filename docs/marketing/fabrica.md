@@ -84,6 +84,17 @@ Salen de `linea-de-produccion.md` §5. Los usa `montar_himno.py` y son opcionale
 | **H5 · palabras** | `"palabras": [{"desde": 2.5, "hasta": 3.5, "texto": {"es-419": "¡Tiñe!"}}]` | Una o dos palabras grandes en crema con contorno, en el tercio alto de la zona segura. Entran con un «pop» (135 % → 100 % en 0,18 s) y se apagan en 0,12 s. Se ponen en los golpes del himno (0 · 2,5 · 7,6 · 12,6 · 15,2 · 17,7) | Hole and Fill |
 | **H1 · contador** | `"contador": {"etiqueta": {"es-419": "Vertidos"}, "modo": "vertidos"}` (o `"quedan"`) | Placa de madera arriba a la izquierda, con el número de vertidos de la pieza (o los que faltan, el campo `left`). Late al llegar cada vertido. Lee los eventos `pour` del `.json` de cada toma, así que el número es real | Block Blast, el tubo de Magic Sort |
 | **H2 · marea** | en un plano: `"entrada": {"tipo": "marea", "dur": 0.45, "color": "auto"}` | El agua del color del plano nuevo sube por la pantalla con una franja ondulada y lo descubre. Con `auto`, el color es el más saturado del agua (no el de la madera) | Block Blast en TikTok (cambio de color de fase) |
+| **H8 · toque** | `"toques": true` | Un círculo crema que se hunde, con un anillo que se abre, en el origen (−0,26 s) y el destino de cada vertido. Nunca una mano: el dueño lo decidió el 2026-11-05. Las tomas no guardan `AF_LAYOUT`, así que la posición de las cuias se deduce del vídeo: la cuia de origen se eleva al tocarla y luego se ajusta la rejilla de filas centradas (D-006) | Bus Fever, Attack Hole |
+
+En las palabras, `"y": 0.93` las pone sobre la tarima, entre las cuias y la bandeja, para que no tapen el tablero. Es lo que conviene con tomas del juego con HUD.
+
+**Sonido del juego en lugar del himno:** con `"audio_juego": {"musica": "mus_w02_bed", "volumen_db": -9}` en vez de `audio_marca`, `montar_himno.py` arma la mezcla con el sonido del juego para piezas de cualquier duración. La mezcla lleva:
+- el lecho de música;
+- los vertidos y la victoria, sacados de los eventos de cada plano (tabla de §4);
+- `sfx_river_rise` en cada marea;
+- los `"efectos"` explícitos, por ejemplo `sfx_seal` en los vertidos que sellan, vistos en la hoja de contactos.
+
+Lote 1 de la línea (2026-11-05): los briefs están en `C:\AI\marketing\briefs\linea-1\` y salen de `generar.py`; las piezas, en `piezas\n1-*`.
 
 `python efectos.py --self-test` prueba los tres efectos. `python efectos.py --muestra <carpeta>` deja un PNG de cada uno para revisarlo. Las cajas de las palabras y del contador van al manifiesto (`que`: `palabra` o `contador`), así `calidad.py` comprueba que están en la zona segura y que no llevan frases prohibidas.
 

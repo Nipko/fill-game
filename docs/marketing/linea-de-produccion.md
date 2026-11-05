@@ -73,11 +73,11 @@ Orden pensado para salir con lo que ya existe y sumar formatos según lleguen la
 | Orden | Vídeo | Formato | Estado | Herramienta |
 |---|---|---|---|---|
 | — | ~~Los 5 del viaje (F8, 30 s)~~ | — | **descartados por el dueño** (2026-11-05); quedan en `C:\AI\marketing\revision\viaje-es` solo como archivo | — |
-| 1 | **«Sella a los 2 s»**: nivel 50 o 70 desde un tablero casi resuelto, 22 s, sin texto, contador de vertidos, tarjeta final | F1 | por montar | `montar.py` y el contador (H1) |
+| 1 | **«Sella a los 2 s»**: nivel 50 desde el primer vertido que sella (a los 0,9 s) hasta la victoria; contador «Quedan», toques y «¡Sella!»; 24,7 s | F1 | **montado, `calidad_ok`** (`piezas/n1-01-sella`); espera tu visto bueno | `montar_himno.py` con `audio_juego` |
 | 2 | **«De gris a color»**: sellado lento del nivel 42, 10 s, en bucle | F2 | por montar | `montar.py` y el bucle sin costura (H4) |
-| 3 | **«¿Lo resuelves?»**: el nivel 46 del reto, parado a 1 vertido, 12 s, rótulo «¿Cuál es el último?» | F4 | por montar | `montar.py`; la parte 2 con la solución y el toque dibujado (H8) |
+| 3 | **«¿Lo resuelves?»**: el nivel 46 del reto, 3 vertidos con toques y parado a 1 del final; «Quedan 1» y «¿Cuál es el último vertido?»; 11,5 s | F4 | **montado, `calidad_ok`** (`piezas/n1-03-lo-resuelves`); falta la parte 2 con la solución | `montar_himno.py` |
 | 4 | **«Más difícil de lo que parece»**: tablero real con atasco, 18 s, con el toque dibujado | F5 | por grabar (`director.py` con la secuencia de `atasco.py`) | ya existe; H8 |
-| 5 | **«El río sube»**: cambio de mundo cada 4 s con la marea, 22 s, palabras al ritmo | F3 | por montar | `montar_himno.py` con la marea (H2) y las palabras (H5) |
+| 5 | **«El río sube»**: niveles 30, 70, 130, 160 y 220, 4 s cada uno y cada uno acaba en su vertido ganador; marea, palabras y toques; 22,2 s | F3 | **montado, `calidad_ok`** (`piezas/n1-05-el-rio-sube`) | `montar_himno.py` |
 | 6 | **«Mismo río, dos jugadas»**, 18 s | F6 | por montar | falta la pantalla partida (H3) |
 | 7 | **TiTino «Yo esperando a que vuelvas…»**, 10 s, tono ligero | F7 | por grabar | tomas de personajes (H6); voz narrada opcional (H7) |
 
@@ -113,13 +113,13 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada ví
 | **H5. Subtítulos cinéticos de una palabra** al ritmo del himno o de la voz | **hecho 2026-11-05** (`efectos.py`, `"palabras"` en el brief) | — | Plantilla de palabra grande (Baloo 2 ExtraBold) con un «pop» de escala, colocada en los golpes del himno (tiempos ya conocidos) | pequeño |
 | **H6. Tomas de personajes** (TiTino, Capi, Rosa) para F7 | solo el muelle y el viaje de Capi en el Mapa | sí | 1) Grabar el inicio (muelle) y el Mapa con `af_capture_screen`. 2) Si hace falta más, un extra nuevo de E1 para poner a un personaje en primer plano: es un cambio del juego y lo decide el integrador | medio, con dependencia del juego |
 | **H7. Voz narrada** para microhistorias (estilo Hole and Fill) | voz s33 de marca; Qwen3-TTS VoiceDesign en la 5080, sin integrar | parcial | Integrar Qwen3-TTS en la fábrica con una voz de diseño propia y etiqueta de IA. Antes, la decisión Q-MK-S0-1 por escrito | medio |
-| **H8. Dedo o cursor que toca** (Bus Fever, Attack Hole) | no; el juego no muestra los toques | sí | Icono de toque dibujado (no una mano real) en las coordenadas de `AF_LAYOUT` en cada `pour`. **Necesita tu visto bueno**, porque §0 prohíbe personas y un dedo dibujado es dudoso | pequeño |
+| **H8. Toque dibujado** (Bus Fever, Attack Hole) | **hecho 2026-11-05** (`efectos.py`, `"toques": true` en el brief) | — | Icono de toque dibujado (no una mano real) en las coordenadas de `AF_LAYOUT` en cada `pour`. **Necesita tu visto bueno**, porque §0 prohíbe personas y un dedo dibujado es dudoso | pequeño |
 | **H9. Sonido del juego en la toma** | se reponen los efectos con los eventos `pour` | — | — | — |
 | **H10. Medir lo publicado** (tasa de gancho y retención por formato) | la tabla `Post` de Postiz; sin analítica de vuelta | sí | S7 (`cola.py` con la API de Postiz) y lectura semanal de la analítica de cada red, a mano las dos primeras semanas | medio |
 
 **Prioridad (actualizada el 2026-11-05 con las decisiones del dueño):**
 1. ~~H5, H1 y H2~~: hechas el 2026-11-05 (`fabrica.md` §3.1).
-2. H8, el toque dibujado (pequeño; lo usan los vídeos 3 y 4) y H4, el bucle (vídeo 2).
+2. ~~H8~~ (hecho el 2026-11-05) y H4, el bucle (vídeo 2).
 3. H3 (vídeo 6).
 4. H6 y H7 (vídeo 7). Ya no dependen de decisiones.
 5. H10 antes de la semana 3.
