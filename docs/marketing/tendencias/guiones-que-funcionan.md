@@ -88,6 +88,29 @@ Método:
 - **Bead Sort, en YouTube:** 1,4 M en un mes, con la consigna «hecho para verse dos veces».
 - **Los Shorts del juego en pantalla:** se quedan en 10-35 k.
 
+### I. Más allá de los puzles: los grandes de otros géneros
+
+Segunda pasada del mismo día. Fuentes: TikTok Top Ads del sector Games (180 días, por alcance; Brasil y Estados Unidos dan casi la misma lista, porque las creatividades son globales) y Meta UE de Royal Match, Candy Crush y los juegos de atascos.
+
+| Anuncio | Cifra | Material | Construcción | Qué tomamos |
+|---|---|---|---|---|
+| **Stacky Dash** (corredor) | 2,28 M «me gusta» | Juego 3D | Recoge aros que se apilan detrás del personaje (un contador hecho de objetos). Camino sinuoso, primer premio antes de 1 s y sin texto | El **medidor físico**: algo que crece a la vista con cada acción |
+| **Cuenta de Block Blast** (meme) | 2,25 M «me gusta», 15 s | Vídeo de un gato en un coche de juguete con un rótulo «relatable» | **Contenido de marca sin juego**: humor con un texto en el centro. Objetivo: vistas, no instalaciones | Memes con **nuestros personajes** (TiTino, Capi, Rosa) y un rótulo «relatable» |
+| **Party Bus** (aplicación) | 1,37 M, 8 s | Móvil en la mano y una reacción | 8 s: pantalla del juego, cara y un rótulo | Lo corto: 8 s bastan |
+| **Royal Match** (match-3) | 1,17 M en la UE (70 % hombres), 60 s | Juego y animación propia | **0-6 s:** ASMR, limpieza con agua a presión de la estatua sucia del rey (de sucio a limpio). **6 s:** corte al tablero con el rey atrapado detrás de rocas. **8-58 s:** juego en el que cada jugada acerca el rescate. **Cierre:** «Choose the next level!» con opciones | **Antegancho de transformación** con nuestro propio «Sumergir y teñir». **Lo que está en juego** visible y **cierre con elección** («¿Qué mundo sigue?») |
+| **Traffic Jam Fever** (atascos) | 661 k en la UE (87 % hombres), 29 s | Juego visto desde arriba | Filas de coches que fluyen por carreteras que se abren, cámara lenta, sin texto | **Flujo** como satisfying: un público de hombres jóvenes al que el agua no llega |
+| **Clean It / Attack Hole** (agujero) | 602 k y 748 k | Juego con una mano real | Un dedo sobre cientos de objetos, la escala crece cada 3-5 s y cierra con el personaje | El cambio de escala cada 3-5 s |
+| **Candy Crush** | 585 k en la UE, 60 s | Tablero casi quieto | **Reto estático**: «Can you complete all the moves?», con logotipo y «Play Now» | Tablero congelado con una pregunta: nuestro `af_capture_stop_before` |
+| **Hole and Fill** | 416 k, 35 s | Juego, voz y una cara en un recuadro | **Subtítulos de una palabra**, grandes, al ritmo de la voz («SO TIGHT», «FITS», «MORE», «COME ON»). Frutas colocadas en espirales de colores | **Subtítulos cinéticos de una palabra** sobre el himno o la voz s33 |
+| **Merge and Dig** | 403 k, 24 s | Juego | **Bucle de mejora**: fabrica un pico, cava, fabrica otro mejor y cava más | Progreso que se ve |
+| **Bus Fever** | 287 k en la UE, 60 s | Juego, un rótulo arriba y un dedo dibujado | Cinta circular de autobuses de colores sobre un mar de coches; el dedo toca | El dedo que toca (si el dueño lo acepta) y la consigna arriba |
+| **Rent Please** (simulación) | 239 k | Juego | **Microhistoria con un rótulo cada 2-3 s** («301 room inspection», «what's going on?»), zoom a una habitación y un botón «EXPEL» | Microhistorias de TiTino o Capi con rótulos por golpe |
+
+**Lo nuevo frente a la primera pasada:**
+- **Lo que más «me gusta» suma en TikTok no es un anuncio de juego**, sino contenido de la cuenta del juego con aspecto de vídeo normal: un meme, una reacción. Está pensado para vistas.
+- **Los atascos y Royal Match llegan a hombres**, del 70 al 87 %; el agua llega a mujeres. El formato (flujo, rescate) decide el público tanto como el género.
+- **Antegancho de transformación** (Royal Match): 6 s de algo que pasa de sucio a limpio o de gris a color, y luego el juego. Lo tenemos de serie: «Sumergir y teñir».
+
 ## 2. Lo que se repite en los que más alcanzan
 
 1. **El primer premio visible llega antes de 1-4 s**: un vertido, una explosión o un combo. Ninguno empieza con un logotipo ni con una pantalla de título.
@@ -97,7 +120,9 @@ Método:
 5. **Sin texto propio en el vídeo** en los de juego puro. El reto va en el pie del anuncio o en un rótulo de 6 s como mucho.
 6. **Los textos del juego** («Combo 2», «Good! +220», «+40») funcionan como subtítulos y dan ritmo.
 7. **Cierre corto** de 2-10 s: logotipo, botón y, a veces, una mano. Los de agua a menudo no tienen cierre y acaban a medias.
-8. **Duración:** 29-64 s en pago y 10-30 s en orgánico.
+8. **Duración:** 29-64 s en pago y 8-30 s en orgánico.
+9. **Un solo eje por vídeo:** progreso (medidor), escala, transformación, reto o microhistoria. Ninguno mezcla dos.
+10. **El contenido de la cuenta no es el anuncio:** en orgánico ganan el meme, la reacción y lo que se puede compartir, aunque el juego salga poco.
 
 ## 3. Plantillas de guion para Tintalú (orgánico, con tomas reales)
 
