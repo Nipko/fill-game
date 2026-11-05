@@ -75,6 +75,18 @@ Un JSON por pieza en `C:\AI\marketing\briefs\`. Ejemplo real (la pieza de prueba
 - **Tarjeta final:** fundido de 0,3 s y 1,8 s de tarjeta del idioma (`kit/tarjeta-final/`). Los bucles de *satisfying* la apagan (`"tarjeta_final": false`).
 - **Salida:** H.264 a 30 fps (CRF 18, yuv420p, `faststart`) y AAC a 192 kbps, en 48 kHz y estéreo.
 
+### 3.1 Efectos de los guiones que funcionan (`fabrica/efectos.py`, 2026-11-05)
+
+Salen de `linea-de-produccion.md` §5. Los usa `montar_himno.py` y son opcionales en el brief:
+
+| Efecto | En el brief | Qué hace | Referencia |
+|---|---|---|---|
+| **H5 · palabras** | `"palabras": [{"desde": 2.5, "hasta": 3.5, "texto": {"es-419": "¡Tiñe!"}}]` | Una o dos palabras grandes en crema con contorno, en el tercio alto de la zona segura. Entran con un «pop» (135 % → 100 % en 0,18 s) y se apagan en 0,12 s. Se ponen en los golpes del himno (0 · 2,5 · 7,6 · 12,6 · 15,2 · 17,7) | Hole and Fill |
+| **H1 · contador** | `"contador": {"etiqueta": {"es-419": "Vertidos"}, "modo": "vertidos"}` (o `"quedan"`) | Placa de madera arriba a la izquierda, con el número de vertidos de la pieza (o los que faltan, el campo `left`). Late al llegar cada vertido. Lee los eventos `pour` del `.json` de cada toma, así que el número es real | Block Blast, el tubo de Magic Sort |
+| **H2 · marea** | en un plano: `"entrada": {"tipo": "marea", "dur": 0.45, "color": "auto"}` | El agua del color del plano nuevo sube por la pantalla con una franja ondulada y lo descubre. Con `auto`, el color es el más saturado del agua (no el de la madera) | Block Blast en TikTok (cambio de color de fase) |
+
+`python efectos.py --self-test` prueba los tres efectos. `python efectos.py --muestra <carpeta>` deja un PNG de cada uno para revisarlo. Las cajas de las palabras y del contador van al manifiesto (`que`: `palabra` o `contador`), así `calidad.py` comprueba que están en la zona segura y que no llevan frases prohibidas.
+
 ## 4. Sonido
 
 `screenrecord` no graba el audio y E1 no lo añade, así que la fábrica **vuelve a poner el sonido del juego**:

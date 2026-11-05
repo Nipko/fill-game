@@ -79,11 +79,11 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04).
 | Encontrar el «premio» y cortar en él | `momentos.py` y los eventos `AF_CAPTURE pour` | — | — | — |
 | Montaje sobre el himno, rótulos y tarjeta final | `montar.py`, `montar_himno.py` y `plantillas.py` | — | — | — |
 | Control de calidad y aprobación | `calidad.py`, `vision.py`, `cola.py` y `hoja_lote.py` | — | — | — |
-| **H1. Contador en pantalla** (vertidos o cuias selladas) | no | sí | Rótulo animado en `plantillas.py`, alimentado por los eventos `pour` de la toma | pequeño |
-| **H2. Transición por cambio de color** (barrido o fundido de paleta entre mundos) | solo cortes secos | sí | Filtro de ffmpeg (`xfade` con `wipe`/`fade` y un tinte del color del mundo) en `montar_himno.py` | pequeño |
+| **H1. Contador en pantalla** (vertidos o cuias selladas) | **hecho 2026-11-05** (`efectos.py`, `"contador"` en el brief) | — | Rótulo animado en `plantillas.py`, alimentado por los eventos `pour` de la toma | pequeño |
+| **H2. Transición por cambio de color** (barrido o fundido de paleta entre mundos) | **hecho 2026-11-05**: la «marea» (`"entrada"` de un plano) | — | Filtro de ffmpeg (`xfade` con `wipe`/`fade` y un tinte del color del mundo) en `montar_himno.py` | pequeño |
 | **H3. Pantalla partida** (dos tomas sincronizadas con contadores) | no | sí | Modo `partida` en `montar.py`: dos tomas escaladas a media pantalla, alineadas por el primer `pour` | medio |
 | **H4. Bucle sin costura** | no | sí | Buscar con `momentos.py` un fotograma final parecido al inicial y fundir 6-10 fotogramas | pequeño |
-| **H5. Subtítulos cinéticos de una palabra** al ritmo del himno o de la voz | rótulos fijos | sí | Plantilla de palabra grande (Baloo 2 ExtraBold) con un «pop» de escala, colocada en los golpes del himno (tiempos ya conocidos) | pequeño |
+| **H5. Subtítulos cinéticos de una palabra** al ritmo del himno o de la voz | **hecho 2026-11-05** (`efectos.py`, `"palabras"` en el brief) | — | Plantilla de palabra grande (Baloo 2 ExtraBold) con un «pop» de escala, colocada en los golpes del himno (tiempos ya conocidos) | pequeño |
 | **H6. Tomas de personajes** (TiTino, Capi, Rosa) para F7 | solo el muelle y el viaje de Capi en el Mapa | sí | 1) Grabar el inicio (muelle) y el Mapa con `af_capture_screen`. 2) Si hace falta más, un extra nuevo de E1 para poner a un personaje en primer plano: es un cambio del juego y lo decide el integrador | medio, con dependencia del juego |
 | **H7. Voz narrada** para microhistorias (estilo Hole and Fill) | voz s33 de marca; Qwen3-TTS VoiceDesign en la 5080, sin integrar | parcial | Integrar Qwen3-TTS en la fábrica con una voz de diseño propia y etiqueta de IA. Antes, la decisión Q-MK-S0-1 por escrito | medio |
 | **H8. Dedo o cursor que toca** (Bus Fever, Attack Hole) | no; el juego no muestra los toques | sí | Icono de toque dibujado (no una mano real) en las coordenadas de `AF_LAYOUT` en cada `pour`. **Necesita tu visto bueno**, porque §0 prohíbe personas y un dedo dibujado es dudoso | pequeño |
@@ -91,7 +91,7 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04).
 | **H10. Medir lo publicado** (tasa de gancho y retención por formato) | la tabla `Post` de Postiz; sin analítica de vuelta | sí | S7 (`cola.py` con la API de Postiz) y lectura semanal de la analítica de cada red, a mano las dos primeras semanas | medio |
 
 **Prioridad propuesta:**
-1. H5, H1 y H2, que son pequeñas y mejoran F1, F3 y F8 de golpe.
+1. ~~H5, H1 y H2~~: hechas el 2026-11-05 (`fabrica.md` §3.1).
 2. H4 (F2).
 3. H3 (F6).
 4. H6 y H7, que dependen de decisiones.
