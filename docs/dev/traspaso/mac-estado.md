@@ -13,7 +13,8 @@ Encargo: `docs/dev/traspaso/mac-ios.md` (D-067). La Mac mini (Apple silicon, 24 
 
 ## Para retomar (2026-11-01)
 
-1. **Siguiente en M3:** la app de iOS en AdMob, con la cuenta de pago (el ATT ya está hecho, el 2026-11-04). Pendiente del dueño: la huella de Apple Root CA - G3, el despliegue de `infra/` y las decisiones abiertas de `iap.md` §8. Guiones para compilar e instalar (locales, ignorados): `Logs/ios-scripts/ios-setup.sh` y `ios-all.sh <equipo> <udid> ['{"af_dev_push":"2"}']`.
+1. **Siguiente en M3:** la app de iOS en AdMob, con la cuenta de pago (el ATT ya está hecho, el 2026-11-04).
+   - **Cuenta de Apple (I-8), 2026-11-05:** el dueño ya tiene el D-U-N-S y confirmó que la cuenta de Apple Developer se abre como organización a nombre de **Parallext, LLC**. La inscripción, el pago y los acuerdos los hace el dueño. Cuando Apple apruebe: acuerdo de apps de pago con los datos fiscales y bancarios, Small Business Program, estatus de comerciante de la DSA, Bundle ID `com.parallext.tintalu` y un usuario Sandbox. Después, los agentes pasan los builds al equipo de pago, prueban las compras en Sandbox y ponen App Attest. Pendiente del dueño: la huella de Apple Root CA - G3, el despliegue de `infra/` y las decisiones abiertas de `iap.md` §8. Guiones para compilar e instalar (locales, ignorados): `Logs/ios-scripts/ios-setup.sh` y `ios-all.sh <equipo> <udid> ['{"af_dev_push":"2"}']`.
 2. **La firma del Apple ID gratuito caduca a los 7 días** (instalado el 2026-11-01). Para reinstalar: `mac-setup.md` §6 (exportar con `BuildIos.ExportXcode` y `xcodebuild` + `devicectl` desde una terminal normal, con el equipo de firma del dueño).
 3. **En la Mac, solo local:** la rama `mac/prueba-rosa` (M1 + el arreglo de Rosa, solo para probar en el iPhone) y dos `stash`: el checkout a medias de cuando `git-lfs` no estaba en el PATH (sin valor) y los huecos de iconos de iOS que Unity añade a `ProjectSettings.asset`. Se pueden borrar.
 
