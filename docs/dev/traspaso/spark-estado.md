@@ -6,6 +6,19 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-05 · Tendencias ampliadas con cifras reales (semana 2026-45): HECHO
+
+- **Pedido del dueño:** cifras de lo que funciona y más géneros. Se añadieron 28 referencias nuevas, con 85 en la biblioteca. Informe: `docs/marketing/tendencias/2026-45-ampliado.md`; la receta v2 está en `tendencias/README.md`.
+- **Cifras:**
+  - el alcance en la UE de Meta: Magic Sort llega a 2,15 M con un solo anuncio; Water Sort, a 1,05 M con 29 s de botellas 3D; Block Blast e Ivy Color Block, a 0,55-0,6 M con juego puro y marcador;
+  - TikTok Brasil: Block Blast alcanza 1,02 M de «me gusta»;
+  - el público del agua es entre el 80 y el 86 % mujeres de 35 a 64 años.
+- **El drama falso con IA** suma 1,09 M en tres anuncios de Water Sort iOS y sigue vetado (§0). En YouTube, ordenar objetos físicos llega a 1,4-68 M de vistas y los Shorts con el juego en pantalla se quedan en 10-35 k.
+- **Lo resuelto:**
+  - YouTube ya carga si la pestaña está en primer plano;
+  - TikTok funciona con la sesión del dueño.
+- **Pendiente:** Google Ads Transparency, Instagram y el alcance de los anuncios agrupados de Meta.
+
 ### 2026-11-02 · Tendencias semana 2026-45: HECHO
 
 - **Muestra:** 23 referencias nuevas y 24 de la semana 44 que siguen activas (57 en la biblioteca). Se miró Meta Ad Library en BR, MX y CO con las 6 búsquedas fijas. Informe: `docs/marketing/tendencias/2026-45.md`.

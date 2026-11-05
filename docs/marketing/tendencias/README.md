@@ -52,6 +52,27 @@ Cada **lunes**, Spark pone al día la biblioteca de referencias, las puntúa y e
 - **Cuándo corre:** solo con la app abierta; si estaba cerrada, corre al abrirla.
 - **Se para** creando `C:\AI\marketing\tendencias\PAUSA`, o desactivándola en la sección «Scheduled» de la app.
 
+## Versión 2 (2026-11-05): cifras reales y más géneros
+
+El dueño pidió cifras de lo que funciona, no solo longevidad, y mirar también los juegos parecidos. Primera pasada: `2026-45-ampliado.md`.
+
+- **Alcance real en Meta:**
+  - Se busca con `country=ES`. De los anuncios servidos en la UE, Meta publica el alcance (personas distintas) con el desglose por país, edad y sexo, en «See ad details» › «Transparency by location».
+  - En BR y MX ese dato no existe.
+  - Los anuncios agrupados («N ads use this creative») solo dan el alcance abriendo cada versión por su ID (`/ads/library/?id=…`).
+  - El script guarda `alcance_ue`, `ue_mujeres`, `ue_edad`, `ue_paises` y `genero`, y el informe lo saca en «Cifras medidas».
+- **TikTok Top Ads:**
+  - Con la sesión de TikTok for Business que dejó abierta el dueño en el navegador integrado; yo no la abro ni meto credenciales.
+  - Se busca por palabra en Brasil (`sort puzzle`, `puzzle game`, `water sort`, `screw`, `jam`, `match 3d`, `wool`) y se leen el número de «me gusta», el presupuesto y el objetivo de la respuesta de la propia página.
+  - El script guarda `likes`, `presupuesto` y `texto`.
+  - Si la sesión caducó, se anota y se sigue.
+- **Géneros añadidos a Meta:** `magic sort`, `screw jam`, `puzzle game` (que trae bloques y tornillos: Block Blast, Ivy Color Block, Take Off Bolts), además de los de siempre.
+- **YouTube:** la pestaña tiene que estar en primer plano (`tabs_select`). En segundo plano la página sale en blanco, que fue el fallo del 2026-11-02.
+- **Pendiente:**
+  - Google Ads Transparency, entrando por la página de cada anunciante;
+  - Instagram, que pide sesión;
+  - ver los vídeos de TikTok, no solo su texto.
+
 ## Límites de la versión 1
 
 - **Sin las API oficiales.** La API de Meta Ad Library pide verificar la identidad del dueño. La de datos de YouTube pide una clave del dueño. Se pasará a ellas en la versión 2 si hacen falta.
