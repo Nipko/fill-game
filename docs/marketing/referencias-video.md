@@ -110,6 +110,14 @@ Lo común: **Claude como orquestador** y modelos generativos o scripts como ejec
         - Las 5 piezas `-hf` están copiadas en `C:\AI\marketing\piezas\`: v01, v02 y v04 en `calidad_ok`.
         - v03 y v05 repitieron el mismo fallo de visión en la segunda pasada y quedan en `revision_humana`, el estado que la fábrica da tras 2 fallos seguidos. `cola.py aprobar` solo aprueba `calidad_ok`, así que esas 2 esperan al ojo del dueño o al recorte de arriba.
         - Las 5 de Pillow (`v01-…` a `v05-…` sin `-hf`) pasan a `rechazado` con ese motivo; sus archivos se quedan donde estaban.
+      - **Visión ajustada (2026-11-06, con el sí del dueño):** las 15 salidas `-hf` pasan `calidad.py` y las 5 piezas quedan en `calidad_ok`, listas para `cola.py aprobar`.
+        - `montar_hf.py` guarda en cada salida `"pantalla"`: la caja de la pantalla del teléfono en reposo (`fill-game-marketing` `00e5f97`). A los 5 manifiestos ya montados se les añadió con la misma geometría, sin volver a renderizar.
+        - Con esa caja, `vision.py` hace la pregunta «¿es el juego?» solo con el recorte de la pantalla, con 24 px de margen por el giro.
+        - La referencia es la toma en ese mismo instante, no el primer plano. Solo con el recorte, v03 seguía fallando en los 3 idiomas: su gancho es el arranque del nivel, con el agua del río entrando en las cuias, y la referencia antigua era el tablero ya con sus colores.
+        - Así la pregunta comprueba justo lo que pide §0.1: que la pantalla enseñe la toma tal cual.
+        - **Comprobación en negativo:** el fondo del río frente a la toma da `false`; la toma frente a sí misma, `true`.
+        - Sin `"pantalla"` (Pillow, `montar_himno.py`), la visión no cambia.
+        - Esos cambios de `vision.py` están sin commitear, junto con los de la sesión ideas-piezas, que lleva ese archivo y ya está avisada.
     - **No se editó `montar_himno.py`:** otra sesión lo estaba cambiando y aún no está en git. `montar_hf.py` lo importa (planos anclados, audio y sello), así que hay que commitearlo para que el repositorio funcione en un clon limpio.
   - **Qué gana frente a Pillow:** 3D real con perspectiva, desenfoque de fondo (`backdrop-filter`), curvas de GSAP y capturas de control (`snapshot`) en segundos. **Qué no hace:** el audio por eventos `AF_CAPTURE`, el manifiesto ni la cola. Eso sigue en `montar*.py`, que llamaría a HyperFrames para la capa visual [P].
 
