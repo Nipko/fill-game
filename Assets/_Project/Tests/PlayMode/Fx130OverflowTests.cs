@@ -246,7 +246,7 @@ namespace AF.Tests.PlayMode
         {
             Canvas canvas = market.Canvas;
             Canvas.ForceUpdateCanvases();
-            RectTransform panel = (RectTransform)canvas.transform.Find("Panel");
+            RectTransform panel = (RectTransform)canvas.transform.Find("Column/Panel");
             Assert.That(panel, Is.Not.Null);
             foreach (TMP_Text text in panel.GetComponentsInChildren<TMP_Text>(false))
             {

@@ -64,7 +64,7 @@ namespace AF.Tests.PlayMode
             Margins(sheet.Canvas, screen, out float safeTop, out float safeBottom, out float canvasH);
             Rect cancel = StopCardTests.CanvasRect((RectTransform)sheet.CancelButton.transform, sheet.Canvas);
             Rect buy = StopCardTests.CanvasRect((RectTransform)sheet.BuyButton.transform, sheet.Canvas);
-            Rect panel = StopCardTests.CanvasRect((RectTransform)sheet.Canvas.transform.Find("Panel"), sheet.Canvas);
+            Rect panel = StopCardTests.CanvasRect((RectTransform)sheet.Canvas.transform.Find("Column/Panel"), sheet.Canvas);
             Debug.Log("AF_SAFE_STORE " + where + ": lienzo de " + canvasH.ToString("0.0") + " dp, zona segura de abajo " + safeBottom.ToString("0.0")
                 + " dp; Cancelar " + cancel + ", Comprar " + buy + ", hoja " + panel);
             Assert.That(safeBottom, Is.GreaterThan(70f), where + ": condición del test, la barra de 73,3 dp");
@@ -92,7 +92,7 @@ namespace AF.Tests.PlayMode
 
             string where = "el anuncio simulado a 360 × " + height + " con 220 px de barra";
             Margins(overlay.Canvas, screen, out float safeTop, out float safeBottom, out float canvasH);
-            Rect title = StopCardTests.CanvasRect((RectTransform)overlay.Canvas.transform.Find("Title"), overlay.Canvas);
+            Rect title = StopCardTests.CanvasRect((RectTransform)overlay.Canvas.transform.Find("Column/Title"), overlay.Canvas);
             Rect close = StopCardTests.CanvasRect((RectTransform)overlay.CloseButton.transform, overlay.Canvas);
             Debug.Log("AF_SAFE_AD " + where + ": zona segura " + safeTop.ToString("0.0") + " / " + safeBottom.ToString("0.0") + " dp; rótulo "
                 + title + ", Cerrar " + close);
@@ -125,7 +125,7 @@ namespace AF.Tests.PlayMode
             Canvas.ForceUpdateCanvases();
 
             Margins(overlay.Canvas, screen, out float safeTop, out float safeBottom, out float canvasH);
-            Rect title = StopCardTests.CanvasRect((RectTransform)overlay.Canvas.transform.Find("Title"), overlay.Canvas);
+            Rect title = StopCardTests.CanvasRect((RectTransform)overlay.Canvas.transform.Find("Column/Title"), overlay.Canvas);
             Rect close = StopCardTests.CanvasRect((RectTransform)overlay.CloseButton.transform, overlay.Canvas);
             string where = "el anuncio con " + (edge == "top" ? "660 px de recorte arriba" : "450 px de barra en 1080 × 1600 px");
             Debug.Log("AF_SAFE_AD_BOUND " + where + ": lienzo de " + canvasH.ToString("0.0") + " dp, zona segura " + safeTop.ToString("0.0") + " / "

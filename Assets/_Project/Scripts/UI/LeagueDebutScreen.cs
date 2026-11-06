@@ -116,7 +116,7 @@ namespace AF.UI
             _onLater = onLater ?? throw new ArgumentNullException(nameof(onLater));
             _canvas = new OverlayCanvas("LeagueDebutCanvas", host, SortingOrder);
             _backdrop = UiBuilder.Image("Backdrop", _canvas.Root, null, BackdropColor, true); // recibe los toques: lo de debajo no se toca
-            UiBuilder.Stretch(_backdrop.rectTransform);
+            ScreenColumn.Bleed(_backdrop.rectTransform); // de borde a borde (añadido de D-059)
             _rays = UiBuilder.Image("Rays", _canvas.Root, null, new Color(Gold.r, Gold.g, Gold.b, 0f));
             _glow = UiBuilder.Image("Glow", _canvas.Root, art.Glow, new Color(Gold.r, Gold.g, Gold.b, 0f));
             _confettiRoot = UiBuilder.Rect("Confetti", _canvas.Root);

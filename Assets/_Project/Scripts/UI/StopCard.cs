@@ -228,9 +228,9 @@ namespace AF.UI
             _root = UiBuilder.Rect("StopCard", parent);
 
             _scrim = UiBuilder.Image("Scrim", _root, null, ScrimColor);
-            UiBuilder.Stretch(_scrim.rectTransform);
+            ScreenColumn.Bleed(_scrim.rectTransform);
             Button scrimButton = UiBuilder.BareButton("ScrimButton", _root, Hide);
-            UiBuilder.Stretch((RectTransform)scrimButton.transform);
+            ScreenColumn.Bleed((RectTransform)scrimButton.transform);
 
             _panel = UiBuilder.Sliced("Panel", _root, art.WoodPlate, Color.white);
             _panel.raycastTarget = true; // la placa se queda con sus toques: no cierran la tarjeta

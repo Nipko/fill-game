@@ -41,6 +41,14 @@ namespace AF.EditorTools
         /// <summary>Orientación vertical bloqueada, sin autorrotación (GDD 02 §5: "Orientación: vertical bloqueada").</summary>
         public const UIOrientation Orientation = UIOrientation.Portrait;
 
+        /// <summary>
+        /// «Render outside safe area» (añadido de D-059 del 2026-11-06, borde a borde): el juego pinta de borde a borde, también bajo
+        /// los recortes, y Unity pone <c>LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS</c> (el modo vigente desde Android 15; con <c>false</c>
+        /// pondría <c>DEFAULT</c>). La interfaz se queda dentro de <c>Screen.safeArea</c> (<c>AF.UI.ScreenFrame</c>). Ya estaba así en
+        /// ProjectSettings; aquí queda fijado y comprobado.
+        /// </summary>
+        public const bool RenderOutsideSafeArea = true;
+
         /// <summary>minSdk 26 (CLAUDE.md, stack fijado).</summary>
         public const AndroidSdkVersions MinSdk = AndroidSdkVersions.AndroidApiLevel26;
 
@@ -167,6 +175,7 @@ namespace AF.EditorTools
             PlayerSettings.allowedAutorotateToLandscapeLeft = false;
             PlayerSettings.allowedAutorotateToLandscapeRight = false;
             PlayerSettings.useAnimatedAutorotation = false;
+            PlayerSettings.Android.renderOutsideSafeArea = RenderOutsideSafeArea;
             PlayerSettings.SetApplicationIdentifier(android, ApplicationId);
             PlayerSettings.SetScriptingBackend(android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.minSdkVersion = MinSdk;
@@ -222,6 +231,7 @@ namespace AF.EditorTools
             var problems = new List<string>();
             Check(problems, "productName", PlayerSettings.productName, ProductName);
             Check(problems, "defaultInterfaceOrientation", PlayerSettings.defaultInterfaceOrientation, Orientation);
+            Check(problems, "renderOutsideSafeArea", PlayerSettings.Android.renderOutsideSafeArea, RenderOutsideSafeArea);
             Check(problems, "applicationId", PlayerSettings.GetApplicationIdentifier(android), ApplicationId);
             Check(problems, "scriptingBackend", PlayerSettings.GetScriptingBackend(android), ScriptingImplementation.IL2CPP);
             Check(problems, "minSdk", PlayerSettings.Android.minSdkVersion, MinSdk);

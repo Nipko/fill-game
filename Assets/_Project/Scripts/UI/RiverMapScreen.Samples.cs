@@ -896,7 +896,7 @@ namespace AF.UI
 
             _samplesSheet = UiBuilder.Rect("SamplesSheet", _root);
             Image back = UiBuilder.Image("Background", _samplesSheet, null, BackgroundColor, true); // tapa el Mapa y sus toques
-            UiBuilder.Stretch(back.rectTransform);
+            ScreenColumn.Bleed(back.rectTransform);
 
             _samplesHeader = UiBuilder.Sliced("HeaderPlate", _samplesSheet, _art.WoodPlate, Color.white);
             _samplesBack = UiBuilder.Relief("BackButton", _samplesHeader.transform, _art.DiscWood, CloseSamples);

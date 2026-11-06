@@ -290,7 +290,7 @@ namespace AF.UI
 
             // Fondo: tapa lo de detrás y se queda con sus toques.
             _background = UiBuilder.Image("Background", _root, null, BackgroundColor, true);
-            UiBuilder.Stretch(_background.rectTransform);
+            ScreenColumn.Bleed(_background.rectTransform); // de borde a borde también fuera de la columna (añadido de D-059)
 
             // ---- Zona del mapa: marco de madera, máscara, tierra de fondo, contenido (dos lienzos anidados) y «Volver a la canoa». ----
             _frame = UiBuilder.Sliced("Frame", _root, art.RoundedRect, Palette.Frame);
@@ -1375,7 +1375,7 @@ namespace AF.UI
             _canvas.Measure();
             _canvasW = _canvas.Width;
             _canvasH = _canvas.Height;
-            _scale = Mathf.Max(0.01f, _screenW / _canvasW);
+            _scale = Mathf.Max(0.01f, _canvas.Scale); // px por dp (la columna puede ser más estrecha que la pantalla: añadido de D-059)
             _safeTop = Mathf.Max(GameScreen.MinSafeTop, (_screenH - _safeArea.yMax) / _scale);
             _safeBottom = Mathf.Max(GameScreen.MinSafeBottom, _safeArea.yMin / _scale);
             Layout();
