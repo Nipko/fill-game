@@ -570,14 +570,16 @@ namespace AF.Tests.PlayMode
 
         // Revisión final de FX4, (1), con DC24: el número de filas solo cambia a mitad de nivel si cambia la pantalla (con 11-12
         // cuias, 2 o 3 filas según el ancho del lienzo; con 13-16, siempre 3: P12 de D-006 c); «+1 cuia» no lo cambia. En el 131,
-        // de 360 a 600 dp de ancho pasa de 3 filas a 2 con la placa a la vista, y al revés: como la placa es la misma con cualquier
+        // de 360 × 780 a 360 × 640 dp (16:9) pasa de 3 filas a 2 con la placa a la vista, y al revés: como la placa es la misma con cualquier
         // número de filas, se vuelve a colocar con el tablero nuevo, clavada al marco y sin roce con la fila 1, y sigue a la vista
         // (sin stop_label_off).
         [UnityTest]
         public IEnumerator Level131_TheScreenChangesTheRows_ThePlateIsPlacedAgain()
         {
             var narrow = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp
-            var wide = new Vector4(1800f, 1920f, 96f, 48f); // 600 × 640 dp (DC3: un lienzo de más de 360 dp de ancho mide 640 de alto)
+            // 360 × 640 dp (16:9): con 11 cuias, 2 filas (02 §5). Antes era 600 × 640 dp, que con la columna (añadido de D-059 del
+            // 2026-11-06) ya no existe: el ancho de maquetación no pasa de 400 dp.
+            var wide = new Vector4(1080f, 1920f, 96f, 48f);
             var probes = new List<string>();
             Application.LogCallback capture = CaptureProbes(probes, "stop_label_off");
             Application.logMessageReceived += capture;
@@ -593,13 +595,13 @@ namespace AF.Tests.PlayMode
                 Assert.That(view.StopLabelMode, Is.EqualTo("plate"), "condición del test");
                 GameScreen.SimulatedScreen = wide;
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
-                Assert.That(view.CanvasWidth, Is.EqualTo(600f).Within(0.01f), "condición del test");
-                Assert.That(view.Layout!.Rows, Is.EqualTo(2), "condición del test: 600 dp de ancho, 2 filas");
+                Assert.That(view.CardCanvasHeight, Is.EqualTo(640f).Within(0.01f), "condición del test");
+                Assert.That(view.Layout!.Rows, Is.EqualTo(2), "condición del test: 360 × 640 dp, 2 filas");
                 PlayModeHelpers.Step(boot, 700); // el re-layout
                 Assert.That(label.Visible, Is.True, "otro número de filas: se vuelve a colocar");
                 Assert.That(view.StopLabelMode, Is.EqualTo("plate"));
-                AssertPlateClearsRowOne(boot, 131, false, " a 600 dp (2 filas)");
-                AssertPlateClearOfHeroAndHud(view, "131 a 600 dp (2 filas)");
+                AssertPlateClearsRowOne(boot, 131, false, " a 360 × 640 dp (2 filas)");
+                AssertPlateClearOfHeroAndHud(view, "131 a 360 × 640 dp (2 filas)");
                 Assert.That(probes.Count, Is.EqualTo(0), string.Join("\n", probes));
 
                 // De 2 filas a 3.
@@ -816,8 +818,8 @@ namespace AF.Tests.PlayMode
 
         // DC24: la placa no tapa el héroe del sitio (su rectángulo del panorama, StopBackdrop.HeroRect, que no está vacío en las
         // paradas del rótulo) ni el HUD de arriba (el pie de su fila y los bordes que se ven de los discos y de las píldoras). Del
-        // héroe cuenta lo que se ve, sobre el canto de arriba del panel: en un lienzo ancho (600 dp) el horizonte escala con el
-        // ancho y baja de ese canto, y el panel, opaco, ya tapa la parte de abajo del héroe. En 360 × 780 dp el héroe queda entero
+        // héroe cuenta lo que se ve, sobre el canto de arriba del panel: en un lienzo bajo (16:9) o ancho el horizonte baja de ese
+        // canto, y el panel, opaco, ya tapa la parte de abajo del héroe. En 360 × 780 dp el héroe queda entero
         // sobre el panel (con 1-2 filas, el horizonte va 64 dp por encima, o en su mínimo de 118 dp).
         internal static void AssertPlateClearOfHeroAndHud(GameScreen view, string at)
         {
@@ -826,7 +828,9 @@ namespace AF.Tests.PlayMode
             float panelTop = view.Layout!.PanelY;
             TestContext.WriteLine(at + ": placa " + plate + ", héroe " + hero + ", horizonte " + view.HorizonY + ", panel " + panelTop);
             Assert.That(hero.width, Is.GreaterThan(0f), at + ": condición del test: la parada tiene héroe");
-            if (Mathf.Approximately(view.CanvasWidth, 360f))
+            // Solo en 360 × 780 dp: en 16:9 (360 × 640, el que usa ahora Level131_TheScreenChangesTheRows; añadido de D-059 del
+            // 2026-11-06) el panel sube y tapa la parte de abajo del héroe, como antes en el lienzo ancho.
+            if (Mathf.Approximately(view.CanvasWidth, 360f) && view.CardCanvasHeight >= 780f - 0.01f)
             {
                 Assert.That(hero.yMax, Is.LessThanOrEqualTo(panelTop + 0.01f), at + ": a 360 dp, el héroe entero sobre el panel");
             }

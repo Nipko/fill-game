@@ -341,7 +341,7 @@ namespace AF.Tests.PlayMode
 
             // Dentro del lienzo (en dp desde su borde izquierdo: con una pantalla simulada el lienzo real puede ser otro).
             float scale = lobby.ScaleFactor;
-            float left = ScreenRect((RectTransform)lobby.Canvas.transform).xMin;
+            float left = ScreenRect((RectTransform)lobby.Canvas.transform.Find(ScreenColumn.ObjectName)).xMin; // la columna (añadido de D-059)
             Assert.That((chip.xMin - left) / scale, Is.GreaterThanOrEqualTo(-0.5f), "dentro de la pantalla");
             Assert.That((chip.xMax - left) / scale, Is.LessThanOrEqualTo(lobby.CanvasWidth + 0.5f), "dentro de la pantalla");
             Assert.That(chip.height / scale, Is.EqualTo(DifficultyChip.HeightDp).Within(0.5f));

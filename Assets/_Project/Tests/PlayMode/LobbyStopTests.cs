@@ -502,7 +502,7 @@ namespace AF.Tests.PlayMode
         // Rectángulo de rt en dp del lienzo del inicio, con origen en su esquina superior izquierda y la y hacia abajo.
         private static Rect CanvasRect(RectTransform rt, LobbyScreen lobby)
         {
-            var root = (RectTransform)lobby.Canvas.transform;
+            var root = (RectTransform)lobby.Canvas.transform.Find(ScreenColumn.ObjectName); // la columna (añadido de D-059 del 2026-11-06)
             var corners = new Vector3[4];
             rt.GetWorldCorners(corners);
             Rect bounds = root.rect;

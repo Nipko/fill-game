@@ -1162,7 +1162,8 @@ namespace AF.Tests.PlayMode
             IntroChoreography plan = intro.Plan;
             Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch));
             float w = view.CanvasWidth;
-            Assert.That(w, wide ? (NUnit.Framework.Constraints.IResolveConstraint)Is.GreaterThan(600f) : Is.EqualTo(360f).Within(0.5f), "lienzo");
+            // Con la ventana del Editor (apaisada), la columna de ScreenFrame (añadido de D-059 del 2026-11-06).
+            Assert.That(w, wide ? (NUnit.Framework.Constraints.IResolveConstraint)Is.EqualTo(ScreenFrame.Current.ColumnWidth).Within(0.5f) : Is.EqualTo(360f).Within(0.5f), "lienzo");
             int short_ = 0;
             for (int m = 0; m < plan.MonkeyCount; m++)
             {
@@ -1170,7 +1171,8 @@ namespace AF.Tests.PlayMode
                 short_ += end > 0f && end < w ? 1 : 0;
             }
 
-            Assert.That(short_ > 0, Is.EqualTo(wide), wide ? "en el lienzo ancho alguno no llega a su esquina" : "en el teléfono todos llegan a su esquina");
+            // Con la columna (añadido de D-059 del 2026-11-06) ya no hay lienzo ancho: también en la ventana del Editor llegan todos.
+            Assert.That(short_ > 0, Is.False, "todos llegan a su esquina");
             float exit = plan.ExitStartMs;
             intro.Seek(exit);
             var y0 = new float[plan.MonkeyCount];

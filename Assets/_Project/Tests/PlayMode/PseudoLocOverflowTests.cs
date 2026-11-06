@@ -364,7 +364,9 @@ namespace AF.Tests.PlayMode
             // Al 130 %, en el lienzo de 438,9 × 640 dp (DC3), la píldora en dos líneas roza (0,6 dp) el sitio al que sube la cuia
             // de arriba al seleccionarla, como antes a 360 dp (RestartPill_360_At130_ClearsTheLiftedCuia, que allí ya no roza).
             // Sin ese margen, nada se cruza.
-            LongLabelSetup.AssertRestart(view, scale, percent == 100 ? 1 : 2, percent == 100);
+            // Con la columna (añadido de D-059 del 2026-11-06), este lienzo se maqueta a 400 dp, no a 438,9: la etiqueta larga ya va
+            // en dos líneas al 100 %.
+            LongLabelSetup.AssertRestart(view, scale, 2, percent == 100);
         }
 
         [UnityTest]
@@ -704,6 +706,7 @@ namespace AF.Tests.PlayMode
         /// que la ranura y la píldora crecieran; desde DC3 (D-028) el 16:9 mide 360 × 640 dp, y este lienzo conserva el ancho que
         /// prueban estos repliegues.
         /// </summary>
+        // Con la columna (añadido de D-059 del 2026-11-06), el lienzo sigue midiendo 438,9 dp pero la interfaz se maqueta en 400.
         internal static readonly Vector4 Screen438 = new Vector4(1080f, 1575f, 79f, 40f);
 
         // Lo que sube una cuia al seleccionarla (guía 6.1: 16 dp, con el rebote hasta 17,6).

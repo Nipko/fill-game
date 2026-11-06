@@ -130,7 +130,7 @@ namespace AF.Tests.PlayMode
             Assert.That(veil.name, Is.EqualTo("NightVeil"));
             Assert.That(veil.raycastTarget, Is.False);
             Transform scene = veil.transform.parent;
-            Transform canvasRoot = view.Canvas.transform;
+            Transform canvasRoot = view.Canvas.transform.Find(ScreenColumn.ObjectName); // la columna (añadido de D-059 del 2026-11-06)
             Assert.That(scene.parent, Is.SameAs(canvasRoot), "en la escena");
             Assert.That(scene.GetSiblingIndex(), Is.LessThan(view.BoardContainer.GetSiblingIndex()), "detrás del panel");
             Assert.That(veil.transform.GetSiblingIndex(), Is.GreaterThan(scene.Find("SceneVeil").GetSiblingIndex()), "su propio velo, delante del de la escena");
