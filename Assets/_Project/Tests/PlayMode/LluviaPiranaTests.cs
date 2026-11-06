@@ -466,6 +466,10 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Pirana183_BiteFromCave()
         {
+            // En el teléfono de referencia (360 × 780 dp). Antes corría en el lienzo ancho de la ventana del Editor (853 dp), con las
+            // cuias al tope; con la columna (añadido de D-059 del 2026-11-06) el lienzo ancho ya no existe. Los puntos miden PipU u
+            // (≈ 7 dp con la cuia de 48 dp): con las 12 cuias del 183 en el teléfono, unos 5,8 dp (abierto para el dueño).
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
             yield return MechanicTestKit.LoadPlaying(183);
             GameBootstrap boot = GameBootstrap.Current!;
             LevelFlow flow = boot.Flow!;
@@ -489,7 +493,8 @@ namespace AF.Tests.PlayMode
                 Assert.That(school.FilledPips, Is.EqualTo(flow.Session.Current[cave].MechanicCounter), "vertido " + i + ": los puntos siguen al contador");
                 Assert.That(MechanicTestKit.TryFindRecord(boot.View.Animator, MechanicStepKind.Bite, cave, out _), Is.False, "vertido " + i + ": aún no muerde");
                 Assert.That(MechanicTestKit.TryFindRecord(boot.View.Animator, MechanicStepKind.BiteLost, cave, out _), Is.False, "vertido " + i + ": ni pierde un mordisco");
-                AssertPipsLegible(school.Pips, ProceduralArt.Pearl, school.Dimmed ? PiranaOverlay.DimAlpha : 1f, PiranaOverlay.EmptyPipAlpha, "vertido " + i);
+                AssertPipsLegible(school.Pips, ProceduralArt.Pearl, school.Dimmed ? PiranaOverlay.DimAlpha : 1f, PiranaOverlay.EmptyPipAlpha, "vertido " + i,
+                    PiranaPhoneMinPipDp);
             }
 
             boot.View.Animator.Steps.ClearLog();
@@ -1253,7 +1258,11 @@ namespace AF.Tests.PlayMode
         // Puntos del contador legibles a 48 dp (02 §5; revisión de T17): de ≈ 7 dp, los llenos en su color con opacidad alpha
         // y los vacíos (el aro) a emptyAlpha de esa opacidad, así que se distinguen por contraste y no por un hueco de menos de
         // 2 dp.
-        private static void AssertPipsLegible(PipRow row, Color color, float alpha, float emptyAlpha, string label)
+        // Cota de los puntos de la Piraña en el 183 en el teléfono de referencia (12 cuias: unos 5,8 dp, por debajo del «≈ 7 dp» de T17;
+        // pendiente del dueño en el añadido de D-059 del 2026-11-06). Fija, para que avise si encogen más.
+        private const float PiranaPhoneMinPipDp = 5.5f;
+
+        private static void AssertPipsLegible(PipRow row, Color color, float alpha, float emptyAlpha, string label, float minDp = 6.4f)
         {
             Assert.That(row.Count, Is.GreaterThan(0), label + ": puntos a la vista");
             for (int i = 0; i < row.Count; i++)
@@ -1261,7 +1270,7 @@ namespace AF.Tests.PlayMode
                 Image pip = row.Pip(i);
                 Vector2 size = pip.rectTransform.sizeDelta;
                 Assert.That(pip.gameObject.activeInHierarchy, Is.True, label + ": punto " + i + " a la vista");
-                Assert.That(Mathf.Min(size.x, size.y), Is.GreaterThanOrEqualTo(6.4f), label + ": punto " + i + " de ≈ 7 dp");
+                Assert.That(Mathf.Min(size.x, size.y), Is.GreaterThanOrEqualTo(minDp), label + ": punto " + i + " de ≈ 7 dp");
                 float expected = i < row.Filled ? alpha : alpha * emptyAlpha;
                 Assert.That(pip.color.a, Is.EqualTo(expected).Within(1e-3f), label + ": opacidad del punto " + i);
                 Assert.That(pip.color.r, Is.EqualTo(color.r).Within(1e-3f), label + ": color del punto " + i);

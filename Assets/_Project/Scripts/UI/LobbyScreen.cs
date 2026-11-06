@@ -98,6 +98,7 @@ namespace AF.UI
         private readonly Canvas _canvas;
         private readonly CanvasScaler _scaler;
         private readonly RectTransform _root;
+        private readonly ScreenColumn _column;
 
         private readonly Image _skyFill;
         private readonly Image _panorama;
@@ -211,12 +212,14 @@ namespace AF.UI
             _scaler = canvasGo.GetComponent<CanvasScaler>();
             _scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
             _scaler.referencePixelsPerUnit = 100f;
-            _root = (RectTransform)canvasGo.transform;
+            // La interfaz va en la columna (añadido de D-059 del 2026-11-06; ScreenFrame): en los teléfonos, el lienzo entero.
+            _column = ScreenColumn.Create((RectTransform)canvasGo.transform);
+            _root = _column.Rect;
 
             // ---- Escena: el panorama, la parada de «Jugar», el río vivo, el muelle, la rama de TiTino y el follaje (D-003; D-050). ----
             RectTransform scene = UiBuilder.Rect("Scene", _root);
             Image baseFill = UiBuilder.Image("BaseFill", scene, null, Palette.RiverFar);
-            UiBuilder.Stretch(baseFill.rectTransform);
+            ScreenColumn.Bleed(baseFill.rectTransform); // el agua del río llena los lados de la columna
             _skyFill = UiBuilder.Image("SkyFill", scene, null, Palette.SkyTop);
             _panorama = UiBuilder.Image("Panorama", scene, art.Panorama, Color.white);
 
@@ -335,7 +338,7 @@ namespace AF.UI
             // ---- Superposición: «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3), con el inicio atenuado detrás. ----
             _overlay = UiBuilder.Rect("Overlay", _root);
             Image dim = UiBuilder.Image("Dim", _overlay, null, new Color(0.04f, 0.06f, 0.05f, 0.62f), true);
-            UiBuilder.Stretch(dim.rectTransform);
+            ScreenColumn.Bleed(dim.rectTransform);
             _overlayPanel = UiBuilder.Rect("Panel", _overlay);
             _overlaySurface = UiBuilder.ModalBody(_overlayPanel, art);
             _overlayHeader = UiBuilder.Image("HeaderPlate", _overlayPanel, art.HeaderPlate, Color.white);
@@ -1108,12 +1111,14 @@ namespace AF.UI
 
             // La escala de la pantalla de nivel (GameScreen.CanvasScale): 360 dp de ancho (de 320 a 360 en los teléfonos de ese ancho,
             // Q-B11-5 (a)); si la pantalla es tan ancha que quedarían menos de 640 dp de alto, manda el alto.
-            float scale = GameScreen.CurrentCanvasScale(_screenW, _screenH);
-            _scaler.scaleFactor = scale;
-            _canvasW = _screenW / scale;
-            _canvasH = _screenH / scale;
-            _safeTop = Mathf.Max(GameScreen.MinSafeTop, (_screenH - _safeArea.yMax) / scale);
-            _safeBottom = Mathf.Max(GameScreen.MinSafeBottom, _safeArea.yMin / scale);
+            // En una ventana ancha, la columna (ScreenFrame; añadido de D-059 del 2026-11-06).
+            ScreenFrame frame = ScreenFrame.Compute(_screenW, _screenH, _safeArea, GameScreen.ReadPxPerDp());
+            _scaler.scaleFactor = frame.Scale;
+            _column.Apply(frame);
+            _canvasW = frame.ColumnWidth;
+            _canvasH = frame.CanvasHeight;
+            _safeTop = Mathf.Max(GameScreen.MinSafeTop, frame.InsetTop);
+            _safeBottom = Mathf.Max(GameScreen.MinSafeBottom, frame.InsetBottom);
             Layout();
         }
 

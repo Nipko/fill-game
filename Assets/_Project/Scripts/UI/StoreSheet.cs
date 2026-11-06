@@ -11,7 +11,8 @@ namespace AF.UI
 {
     /// <summary>
     /// Lienzo propio por encima de las pantallas de nivel y de inicio (anuncio y compra simulados), a 360 dp de ancho y al menos
-    /// 640 de alto, como la pantalla de inicio.
+    /// 640 de alto, como la pantalla de inicio. Su contenido cuelga de <see cref="Root"/>, la columna de <see cref="ScreenFrame"/>
+    /// (añadido de D-059 del 2026-11-06): en los teléfonos, el lienzo entero; en una ventana ancha, centrada.
     /// </summary>
     internal sealed class OverlayCanvas
     {
@@ -32,14 +33,24 @@ namespace AF.UI
             _scaler = go.GetComponent<CanvasScaler>();
             _scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
             _scaler.referencePixelsPerUnit = 100f;
-            Root = (RectTransform)go.transform;
+            Column = ScreenColumn.Create((RectTransform)go.transform);
+            Root = Column.Rect;
+            Column.Polled = OnPolled;
             Measure();
         }
 
         public Canvas Canvas { get; }
 
+        /// <summary>La columna de la interfaz (de ella cuelga todo; <see cref="ScreenColumn"/>).</summary>
         public RectTransform Root { get; }
 
+        /// <summary>La columna con sus fondos que llegan al borde.</summary>
+        public ScreenColumn Column { get; }
+
+        /// <summary>La geometría de la última medida (lienzo entero y columna).</summary>
+        public ScreenFrame Frame { get; private set; }
+
+        /// <summary>Ancho de maquetación (dp): el de la columna.</summary>
         public float Width { get; private set; } = 360f;
 
         public float Height { get; private set; } = 780f;
@@ -53,6 +64,23 @@ namespace AF.UI
         /// <summary>Margen inferior del safe area (barra de navegación o gestos), en unidades del lienzo (08 §13.1 #4).</summary>
         public float SafeBottom { get; private set; }
 
+        /// <summary>
+        /// Con el lienzo a la vista, la pantalla cambió (giro, pantalla dividida, ventana redimensionada; añadido de D-059 del
+        /// 2026-11-06): el lienzo ya se volvió a medir y la pantalla se vuelve a maquetar. Solo para las pantallas que no miran
+        /// <see cref="Measure"/> por su cuenta: con alguien suscrito, el lienzo se mide solo en cada fotograma.
+        /// </summary>
+        public event Action? Changed;
+
+        // Cada fotograma con el lienzo activo (ScreenColumn.LateUpdate).
+        private void OnPolled()
+        {
+            Action? changed = Changed;
+            if (changed != null && Measure())
+            {
+                changed();
+            }
+        }
+
         /// <summary>Recalcula la escala si cambió la pantalla; devuelve true si cambió.</summary>
         public bool Measure()
         {
@@ -65,13 +93,15 @@ namespace AF.UI
             _screenW = sw;
             _screenH = sh;
             _safe = safe;
-            float scale = GameScreen.CurrentCanvasScale(sw, sh); // la de la pantalla de nivel (Q-B11-5 (a))
-            _scaler.scaleFactor = scale;
-            Scale = scale;
-            Width = sw / scale;
-            Height = sh / scale;
-            SafeTop = Mathf.Max(0f, (sh - safe.yMax) / scale);
-            SafeBottom = Mathf.Max(0f, safe.yMin / scale);
+            ScreenFrame frame = ScreenFrame.Compute(sw, sh, safe, GameScreen.ReadPxPerDp()); // la de la pantalla de nivel (Q-B11-5 (a))
+            Frame = frame;
+            _scaler.scaleFactor = frame.Scale;
+            Scale = frame.Scale;
+            Width = frame.ColumnWidth;
+            Height = frame.CanvasHeight;
+            SafeTop = frame.InsetTop;
+            SafeBottom = frame.InsetBottom;
+            Column.Apply(frame);
             return true;
         }
     }
@@ -102,6 +132,7 @@ namespace AF.UI
         {
             _art = art;
             _canvas = new OverlayCanvas("StoreSheetCanvas", host, 50);
+            _canvas.Changed += LayoutSheet;
             ModalKit.Dim("Dim", _canvas.Root, 0.6f);
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
             _title = ModalKit.Header(_panel, art, UiText.SimulatedPurchaseTitle, out _header);
@@ -138,6 +169,12 @@ namespace AF.UI
             _canvas.Measure();
             _name.text = Loc.T(purchase.NameKey); // el nombre de tienda, de strings.csv (iap_<sku>_name; tarea L3)
             _price.text = purchase.PriceText;
+            LayoutSheet();
+        }
+
+        // Al presentar y al cambiar la pantalla (giro o ventana; añadido de D-059 del 2026-11-06).
+        private void LayoutSheet()
+        {
             float w = Mathf.Min(360f, _canvas.Width);
             float inner = w - 32f;
             float y = 16f;

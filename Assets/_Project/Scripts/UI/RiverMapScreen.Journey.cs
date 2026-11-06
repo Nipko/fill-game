@@ -155,7 +155,7 @@ namespace AF.UI
         partial void JourneyBuild(RectTransform root)
         {
             _journeyTouch = UiBuilder.BareButton("JourneyTouch", root, () => TapJourney());
-            UiBuilder.Stretch((RectTransform)_journeyTouch.transform);
+            ScreenColumn.Bleed((RectTransform)_journeyTouch.transform); // también en los lados de la columna (añadido de D-059)
             A11yLabels.Set(_journeyTouch, () => A11yText.MapJourney); // TalkBack: qué pasa y qué hace el toque (D-053)
             _journeyTouch.gameObject.SetActive(false);
             _playGroup = Group(_play.Button.gameObject);

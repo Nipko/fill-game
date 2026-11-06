@@ -32,8 +32,9 @@ namespace AF.UI
         public AdOverlay(Transform host, ProceduralArt art)
         {
             _canvas = new OverlayCanvas("AdOverlayCanvas", host, 60);
+            _canvas.Changed += LayoutAd;
             Image back = UiBuilder.Image("Back", _canvas.Root, null, new Color(0.02f, 0.03f, 0.03f, 1f), true); // opaco, como un anuncio real a pantalla completa (ficha §6.2)
-            UiBuilder.Stretch(back.rectTransform);
+            ScreenColumn.Bleed(back.rectTransform); // de borde a borde (añadido de D-059)
             _title = UiBuilder.Label("Title", _canvas.Root, TextStyle.ModalTitle, UiText.SimulatedAdTitle, 28f, Palette.Cream, TextAlignmentOptions.Center);
             _placement = UiBuilder.Label("Placement", _canvas.Root, TextStyle.PlainBold, string.Empty, 16f, Palette.Cream, TextAlignmentOptions.Center);
             _countdown = UiBuilder.Label("Countdown", _canvas.Root, TextStyle.ModalTitle, string.Empty, 64f, Palette.Cream, TextAlignmentOptions.Center);
@@ -64,6 +65,13 @@ namespace AF.UI
             _canvas.Canvas.gameObject.SetActive(true);
             _canvas.Measure();
             _placement.text = UiText.SimulatedAdLabel(ad.Placement.ToId(), ad.Format == AdFormat.Rewarded);
+            LayoutAd();
+            Tick(0f);
+        }
+
+        // Al presentar y al cambiar la pantalla (giro o ventana; añadido de D-059 del 2026-11-06).
+        private void LayoutAd()
+        {
             float w = _canvas.Width;
             float h = _canvas.Height;
 
@@ -77,7 +85,6 @@ namespace AF.UI
             UiBuilder.Place(_countdown.rectTransform, 16f, Mathf.Max(titleY + 74f, (h * 0.45f) - 40f), w - 32f, 80f);
             float cw = Mathf.Min(220f, w - 64f);
             ModalKit.Place(_close, (w - cw) * 0.5f, Mathf.Min(h * 0.68f, bottom - ModalKit.HeightOf(_close)), cw);
-            Tick(0f);
         }
 
         /// <summary>Avanza la cuenta atrás (la llama <c>GameBootstrap.Update</c>).</summary>

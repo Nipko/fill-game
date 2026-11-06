@@ -360,7 +360,7 @@ namespace AF.UI
             // Velo propio (no _sceneVeil): en la escena, delante del follaje y detrás de las luces de victoria y del tablero.
             Transform scene = _sceneVeil.transform.parent;
             _nightVeil = UiBuilder.Image("NightVeil", scene, null, new Color(0f, 0f, 0f, NightVeilAlpha));
-            UiBuilder.Stretch(_nightVeil.rectTransform);
+            ScreenColumn.Bleed(_nightVeil.rectTransform);
             _nightVeil.transform.SetSiblingIndex(_sceneVeil.transform.GetSiblingIndex() + 1);
             _nightVeil.gameObject.SetActive(false);
 

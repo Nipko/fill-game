@@ -129,7 +129,7 @@ namespace AF.UI
         public static Image Dim(string name, Transform parent, float alpha)
         {
             Image dim = UiBuilder.Image(name, parent, null, new Color(0.04f, 0.06f, 0.05f, alpha), true);
-            UiBuilder.Stretch(dim.rectTransform);
+            ScreenColumn.Bleed(dim.rectTransform); // hasta los bordes de la pantalla, también fuera de la columna (añadido de D-059)
             return dim;
         }
 

@@ -29,6 +29,7 @@ namespace AF.UI
         {
             _art = art;
             _canvas = new OverlayCanvas("ProfileLockedCanvas", host, 70);
+            _canvas.Changed += LayoutNotice;
             ModalKit.Dim("Dim", _canvas.Root, 0.62f);
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
             ModalKit.Header(_panel, art, UiText.ProfileLockedTitle, out _header);
@@ -52,6 +53,12 @@ namespace AF.UI
             _body.text = status == ProfileLoadStatus.TooNew ? UiText.ProfileLockedTooNew : UiText.ProfileLockedMigration;
             _canvas.Canvas.gameObject.SetActive(true);
             _canvas.Measure();
+            LayoutNotice();
+        }
+
+        // Al mostrar y al cambiar la pantalla (giro o ventana; añadido de D-059 del 2026-11-06).
+        private void LayoutNotice()
+        {
             float w = Mathf.Min(328f, _canvas.Width - 32f);
             float inner = w - 32f;
             float y = 16f;

@@ -204,6 +204,7 @@ namespace AF.UI
         private readonly Canvas _canvas;
         private readonly CanvasScaler _scaler;
         private readonly RectTransform _root;
+        private readonly ScreenColumn _column;
 
         private readonly Image _baseFill;
         private readonly Image _skyFill;
@@ -398,12 +399,14 @@ namespace AF.UI
             _scaler = canvasGo.GetComponent<CanvasScaler>();
             _scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
             _scaler.referencePixelsPerUnit = 100f;
-            _root = (RectTransform)canvasGo.transform;
+            // La interfaz va en la columna (añadido de D-059 del 2026-11-06; ScreenFrame): en los teléfonos, el lienzo entero.
+            _column = ScreenColumn.Create((RectTransform)canvasGo.transform);
+            _root = _column.Rect;
 
             // ---- Escena (capas 0-3): panorama, ambiente lejano, muelle, follaje y velo de escena. ----
             RectTransform scene = UiBuilder.Rect("Scene", _root);
             _baseFill = UiBuilder.Image("BaseFill", scene, null, Palette.RiverFar);
-            UiBuilder.Stretch(_baseFill.rectTransform);
+            ScreenColumn.Bleed(_baseFill.rectTransform); // el agua del río llena los lados de la columna
             _skyFill = UiBuilder.Image("SkyFill", scene, null, Palette.SkyTop); // cielo sobre el panorama si el horizonte baja
             _panorama = UiBuilder.Image("Panorama", scene, art.Panorama, Color.white);
 
@@ -431,7 +434,7 @@ namespace AF.UI
                 _foliage[i].gameObject.AddComponent<Canvas>();
             }
             _sceneVeil = UiBuilder.Image("SceneVeil", scene, null, new Color(0x6B / 255f, 0x6B / 255f, 0x6B / 255f, 0f));
-            UiBuilder.Stretch(_sceneVeil.rectTransform);
+            ScreenColumn.Bleed(_sceneVeil.rectTransform);
 
             // Victoria (revisión visual del 2026-10-07): la escena se atenúa al 30 % salvo bajo los rayos (velo con un hueco
             // centrado en la cinta) y, detrás del tablero, un brillo radial cálido y 12 rayos aditivos de destello que
@@ -555,7 +558,7 @@ namespace AF.UI
             // ---- Aguas estancadas (02 §7; 07 §7.5; guía 5.3): tablero atenuado detrás; panel de madera clara abajo. ----
             _stuckOverlay = UiBuilder.Rect("StuckOverlay", _root);
             _stuckDim = UiBuilder.Image("Dim", _stuckOverlay, null, new Color(0f, 0f, 0f, 0f), true);
-            UiBuilder.Stretch(_stuckDim.rectTransform);
+            ScreenColumn.Bleed(_stuckDim.rectTransform);
             _stuck = new StuckModal(_stuckOverlay, art, actions);
             _stuck.RescueMissing = () => OnMissingTap("rescue", reduce => _stuck.PulseRescueMissing(reduce), _stuck.View?.RescueMissing ?? 0);
             _stuck.RefillSeedsMissing = () => OnMissingTap("refill_seeds", reduce => _stuck.PulseRefillSeedsMissing(reduce), _stuck.View?.UndoRefillMissing ?? 0);
@@ -566,7 +569,7 @@ namespace AF.UI
             // tiempo, salvo tras la Cosecha doble, que avanza sola por el camino de Siguiente (D-011, punto 4; TickAutoNext). ----
             _victoryOverlay = UiBuilder.Rect("VictoryOverlay", _root);
             _victoryDim = UiBuilder.Image("Dim", _victoryOverlay, null, new Color(0f, 0f, 0f, 0f), true);
-            UiBuilder.Stretch(_victoryDim.rectTransform);
+            ScreenColumn.Bleed(_victoryDim.rectTransform);
 
             _victoryPanel = UiBuilder.Rect("Panel", _victoryOverlay);
             _victorySurface = UiBuilder.ModalBody(_victoryPanel, art);
@@ -684,6 +687,12 @@ namespace AF.UI
         /// visuales de prueba en el Editor; null = <see cref="Screen"/> real. No se usa en el juego.
         /// </summary>
         public static Vector4? SimulatedScreen { get; set; }
+
+        /// <summary>
+        /// Solo tests: lo que tapa el sistema a la izquierda y a la derecha de <see cref="SimulatedScreen"/> (px; recorte o barra de
+        /// navegación en apaisado; añadido de D-059 del 2026-11-06); null = nada.
+        /// </summary>
+        internal static Vector2? SimulatedSideInsets { get; set; }
 
         /// <summary>La cola visual está vacía (02 §3.2).</summary>
         public bool IsViewIdle => _animator.IsIdle;
@@ -2722,13 +2731,16 @@ namespace AF.UI
         {
             ReadScreen(out _screenW, out _screenH, out _safeArea);
 
-            float scale = CurrentCanvasScale(_screenW, _screenH); // de 320 a 360 dp de ancho con 1 dp físico por dp (Q-B11-5 (a))
+            // De 320 a 360 dp de ancho con 1 dp físico por dp (Q-B11-5 (a)); en una ventana ancha, la columna (ScreenFrame).
+            ScreenFrame frame = ScreenFrame.Compute(_screenW, _screenH, _safeArea, ReadPxPerDp());
+            float scale = frame.Scale;
             _scaler.scaleFactor = scale;
             _art.ScreenScale = scale;
-            _canvasW = _screenW / scale;
-            _canvasH = _screenH / scale;
-            float insetTop = (_screenH - _safeArea.yMax) / scale;
-            float insetBottom = _safeArea.yMin / scale;
+            _column.Apply(frame);
+            _canvasW = frame.ColumnWidth;
+            _canvasH = frame.CanvasHeight;
+            float insetTop = frame.InsetTop;
+            float insetBottom = frame.InsetBottom;
             _safeTop = Mathf.Max(MinSafeTop, insetTop);
             _safeBottom = Mathf.Max(MinSafeBottom, insetBottom);
 
@@ -3725,7 +3737,8 @@ namespace AF.UI
                 Vector4 sim = SimulatedScreen.Value;
                 width = Mathf.Max(1, (int)sim.x);
                 height = Mathf.Max(1, (int)sim.y);
-                safeArea = new Rect(0f, sim.w, width, height - sim.z - sim.w);
+                Vector2 sides = SimulatedSideInsets ?? Vector2.zero;
+                safeArea = new Rect(sides.x, sim.w, width - sides.x - sides.y, height - sim.z - sim.w);
                 return;
             }
 
@@ -3739,7 +3752,7 @@ namespace AF.UI
             var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(HitArea));
             go.transform.SetParent(parent, false);
             var rt = (RectTransform)go.transform;
-            UiBuilder.Stretch(rt);
+            ScreenColumn.Bleed(rt); // también en los lados de la columna
             go.GetComponent<HitArea>().raycastTarget = true;
             return rt;
         }
