@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using AF.Core.Board;
 using AF.Core.Rules;
 
@@ -10,7 +11,10 @@ namespace AF.Core.Session
     /// está igualmente perdido si todos los estados que se alcanzan desde él con todos los vertidos legales (opción (a) de la
     /// pregunta 46 de <c>docs/GDD.md</c> §6.3, decidida el 2026-10-13; D-020) son pocos (como mucho
     /// <see cref="MaxStates"/>) y ninguno es victoria (R12). Es el caso del nivel 66 (prueba en el teléfono del 2026-10-13): dos
-    /// vaivenes parciales útiles que llevan siempre a los mismos tableros, sin salida.
+    /// vaivenes parciales útiles que llevan siempre a los mismos tableros, sin salida. Desde el añadido de D-014 del 2026-11-06
+    /// (punto 1 del añadido de D-059 del 2026-10-31, el nivel 26), <see cref="LevelSession"/> solo declara Aguas estancadas con
+    /// el cierre perdido si, además, todo vertido legal lleva a un tablero ya visto en el intento
+    /// (<see cref="IsStagnant"/>); <see cref="IsDeadEnd(BoardState, PourMode)"/> sigue siendo la condición necesaria.
     /// </summary>
     /// <remarks>
     /// <para><b>Recorrido.</b> En anchura desde S, en orden determinista (vertidos (A, B) ascendentes sobre el tablero en orden
@@ -100,13 +104,43 @@ namespace AF.Core.Session
             Add(BoardCanon.Hash(_child, 0, width));
             for (int head = 0; head < _count; head++)
             {
-                if (!Expand(head, units, mode))
+                if (!Expand(head, units, mode, null))
                 {
                     return false; // victoria alcanzable o más de MaxStates estados: no se declara (conservador)
                 }
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Aguas estancadas por repetición (02 R13 ampliada; D-014 con su añadido del 2026-11-06, que aplica el punto 1 del
+        /// añadido de D-059 del 2026-10-31): el cierre da el tablero por perdido (<see cref="IsDeadEnd(Cuia[], int, int, int[], PourMode)"/>)
+        /// <b>y</b> todo vertido legal desde él (útil o fútil, como en el cierre) lleva a un tablero cuyo hash canónico está en
+        /// <paramref name="seen"/> (los tableros ya vistos en el intento). Sin vertidos legales también da true, pero ese caso ya
+        /// lo declara R13 antes. No modifica el array ni <paramref name="seen"/> y no valida argumentos (bucle caliente: solo
+        /// <see cref="HashSet{T}.Contains"/> sobre <c>ulong</c>, sin boxing ni asignaciones).
+        /// </summary>
+        /// <remarks>
+        /// La pertenencia a <paramref name="seen"/> se decide solo por el hash FNV-1a de 64 bits (<see cref="CanonicalHash"/>):
+        /// una colisión haría pasar por visto un tablero nuevo, pero solo en un tablero que el cierre ya da por perdido, así que
+        /// nunca rompe R14 (P1) [P].
+        /// </remarks>
+        internal bool IsStagnant(Cuia[] cuias, int offset, int width, int[] units, PourMode mode, HashSet<ulong> seen)
+        {
+            // Tras un veredicto true, el estado 0 del cierre es S en orden canónico.
+            return IsDeadEnd(cuias, offset, width, units, mode) && Expand(0, units, mode, seen);
+        }
+
+        /// <summary>
+        /// Hash canónico de 64 bits del tablero (cuias ordenadas con <see cref="BoardCanon.Sort"/> y <see cref="BoardCanon.Hash"/>),
+        /// el mismo que usa el cierre para sus estados. Usa el búfer del tablero hijo: no asigna.
+        /// </summary>
+        internal ulong CanonicalHash(Cuia[] cuias, int offset, int width)
+        {
+            Array.Copy(cuias, offset, _child, 0, width);
+            BoardCanon.Sort(_child, 0, width);
+            return BoardCanon.Hash(_child, 0, width);
         }
 
         /// <summary>Prepara los búferes para un tablero de <paramref name="width"/> cuias y vacía el cierre.</summary>
@@ -123,10 +157,11 @@ namespace AF.Core.Session
         }
 
         /// <summary>
-        /// Aplica cada vertido del estado <paramref name="node"/> y guarda los hijos nuevos. Devuelve false si un hijo es victoria
-        /// o si no cabe (el cierre pasaría de <see cref="MaxStates"/>).
+        /// Aplica cada vertido del estado <paramref name="node"/>. Sin <paramref name="seen"/>, guarda los hijos nuevos y devuelve
+        /// false si un hijo es victoria o si no cabe (el cierre pasaría de <see cref="MaxStates"/>). Con <paramref name="seen"/>,
+        /// no guarda nada y devuelve false en cuanto un hijo no está en él (un vertido lleva a un tablero no visto).
         /// </summary>
-        private bool Expand(int node, int[] units, PourMode mode)
+        private bool Expand(int node, int[] units, PourMode mode, HashSet<ulong>? seen)
         {
             int width = _width;
             int offset = node * width;
@@ -170,6 +205,16 @@ namespace AF.Core.Session
                     BoardRules.Apply(in child, a, b, mode, futile, ref events);
                     BoardCanon.Sort(_child, 0, width);
                     ulong hash = BoardCanon.Hash(_child, 0, width);
+                    if (seen != null)
+                    {
+                        if (!seen.Contains(hash))
+                        {
+                            return false;
+                        }
+
+                        continue;
+                    }
+
                     if (Contains(hash))
                     {
                         continue;

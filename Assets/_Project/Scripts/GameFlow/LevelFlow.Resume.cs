@@ -175,8 +175,17 @@ namespace AF.GameFlow
             _introMs = 0;
             _listener.OnLevelLoaded(number);
 
-            bool stuck = session.Status == LevelStatus.Stuck;
             SavedPhase phase = history.Phase;
+
+            // Añadido de D-014 del 2026-11-06 (estancado solo al repetir): la sesión rehecha no conoce los tableros que se
+            // deshicieron antes de cerrar la app, así que un bloqueo por bucle guardado puede quedar en Playing. Si el modal ya
+            // estaba abierto y el cierre sigue dando el tablero por perdido, se reabre (nunca con un tablero que se gana, R14).
+            if (phase == SavedPhase.StuckModal || phase == SavedPhase.GiveUpConfirm)
+            {
+                session.ResumeStuck();
+            }
+
+            bool stuck = session.Status == LevelStatus.Stuck;
             if ((phase == SavedPhase.StuckModal || phase == SavedPhase.GiveUpConfirm) && !stuck)
             {
                 phase = SavedPhase.Playing;
