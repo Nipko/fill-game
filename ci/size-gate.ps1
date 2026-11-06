@@ -9,7 +9,8 @@
       1. Tamano del archivo .aab (siempre), sin BUNDLE-METADATA/. Es una cota superior: el AAB lleva
          todas las ABI y todos los asset packs install-time. BUNDLE-METADATA/ (el mapping de R8 y la
          tabla de simbolos nativos, D-059 anadido del 2026-11-06) no cuenta: Play lo lee al subir el AAB
-         y nunca lo sirve a un telefono. Se informa aparte, con el tamano del archivo entero.
+         y no lo sirve a un telefono (salvo el perfil de referencia, ~2 KB, que la medida 2 ya cuenta).
+         Se informa aparte, con el tamano del archivo entero.
       2. Descarga maxima real segun Google Play: "bundletool get-size total" sobre el conjunto de
          APK que genera "bundletool build-apks". Es la metrica de la compuerta del GDD (08 sec. 6.1
          y 12.1). Se ejecuta si hay bundletool (parametro -Bundletool o variable BUNDLETOOL_JAR) y java.

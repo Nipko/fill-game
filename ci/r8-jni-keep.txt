@@ -33,6 +33,8 @@ com.google.firebase.auth.FirebaseAuth
 com.google.firebase.remoteconfig.FirebaseRemoteConfig
 com.google.firebase.appcheck.FirebaseAppCheck
 com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
+# Ojo: Firebase.Installations (C#) no tiene regla keep y R8 renombra com.google.firebase.installations.*; el juego no la
+# usa. Si se usa algun dia, anadir su clase aqui y su regla en AfKeepRules.androidlib/proguard-rules.pro.
 # FirebaseAnalyticsSink.StopNative/DeleteUnsentNative la llaman desde C# (y su fallo se traga en silencio).
 com.google.firebase.crashlytics.FirebaseCrashlytics
 

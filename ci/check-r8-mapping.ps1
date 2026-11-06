@@ -153,7 +153,7 @@ function Test-Aab([string]$File, $Keep) {
         $zip = [System.IO.Compression.ZipFile]::OpenRead($File)
     }
     catch {
-        Write-Host "ERROR ${File}: no se puede leer como ZIP ($($_.Exception.Message))"
+        Write-Host "ERROR ${File}: no se puede leer como ZIP ($($_.Exception.GetType().Name))"
         return 2
     }
 
