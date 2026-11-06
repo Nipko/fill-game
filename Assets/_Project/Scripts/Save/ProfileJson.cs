@@ -146,6 +146,15 @@ namespace AF.Save
             progress.Set("content_version", JsonNode.FromString(p.Progress.ContentVersion));
             progress.Set("map_seen_level", JsonNode.FromInt(p.Progress.ClampedMapSeenLevel));
             progress.Set("undo_tip_seen", JsonNode.FromBool(p.Progress.UndoTipSeen));
+            if (p.Progress.LeagueDebutSeen)
+            {
+                progress.Set("league_debut_seen", JsonNode.FromBool(true)); // añadido de D-046 del 2026-11-06 [P]: solo si es cierta
+            }
+
+            if (p.Progress.LeagueOpened)
+            {
+                progress.Set("league_opened", JsonNode.FromBool(true));
+            }
             root.Set("progress", progress);
 
             if (p.Streak != null)
@@ -414,6 +423,8 @@ namespace AF.Save
                 g.MapSeenLevel = TolerantInt(progress, "map_seen_level", g.MapSeenLevel);
                 g.MapSeenLevel = g.ClampedMapSeenLevel;
                 g.UndoTipSeen = TolerantBool(progress, "undo_tip_seen", g.UndoTipSeen);
+                g.LeagueDebutSeen = TolerantBool(progress, "league_debut_seen", g.LeagueDebutSeen);
+                g.LeagueOpened = TolerantBool(progress, "league_opened", g.LeagueOpened);
             }
 
             // streak (Crecida; Q-M9 (a)): es economía (sus hitos pagan), así que un tipo equivocado es corrupción, como en wallet.

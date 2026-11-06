@@ -516,13 +516,19 @@ namespace AF.UI
         public bool PressNext()
         {
             AppFlow? app = _app;
-            if (app == null || PrePromptHoldsLeave)
+            if (app == null || PrePromptHoldsLeave || LeagueDebutVisible)
             {
-                return false; // con la tarjeta del pre-prompt (o su diálogo nativo) delante, la victoria espera
+                return false; // con la tarjeta del pre-prompt (o su diálogo nativo) o el estreno de la Liga delante, la victoria espera
             }
 
             // 06 §8.1 (B6-Q16 (a)): si esta victoria lleva el pre-prompt de push, sale antes del nivel siguiente (GameBootstrap.PushUi.cs).
             if (VictoryOnScreen() && TryPrePromptOnLeave(false, false, () => app.PressNext()))
+            {
+                return true;
+            }
+
+            // Añadido de D-046 del 2026-11-06: el estreno de la Liga, si está pendiente (GameBootstrap.LeagueDebut.cs).
+            if (VictoryOnScreen() && TryLeagueDebutOnLeave(false, () => app.PressNext()))
             {
                 return true;
             }
@@ -534,12 +540,17 @@ namespace AF.UI
         public bool PressHome()
         {
             AppFlow? app = _app;
-            if (app == null || PrePromptHoldsLeave)
+            if (app == null || PrePromptHoldsLeave || LeagueDebutVisible)
             {
                 return false;
             }
 
             if (VictoryOnScreen() && TryPrePromptOnLeave(false, true, () => app.PressHome()))
+            {
+                return true;
+            }
+
+            if (VictoryOnScreen() && TryLeagueDebutOnLeave(true, () => app.PressHome()))
             {
                 return true;
             }
@@ -1002,6 +1013,12 @@ namespace AF.UI
 
             // La tarjeta del pre-prompt de push, encima de la victoria: Atrás es «Ahora no» (B6).
             if (PressPrePromptBack())
+            {
+                return true;
+            }
+
+            // El estreno de la Liga (añadido de D-046 del 2026-11-06), encima de la victoria o del inicio: Atrás es «Luego».
+            if (PressLeagueDebutBack())
             {
                 return true;
             }

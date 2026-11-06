@@ -3874,6 +3874,35 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
   El integrador acepta las ediciones del GDD de la rama (06 §6, 08 §2.2, §4.3, §8.2 y §9, 09, GDD.md §2 y glosario), que siguen D-046 y `docs/dev/liga.md`.
 
+### D-046, añadido del 2026-11-06: el estreno de la Liga (1.1)
+
+- **Origen:** D-059, añadido del 2026-10-31, punto 3 («la llegada de la Liga, anunciada y llamativa»). Al ganar el 41 la Liga «solo aparecía»; el dueño quiere que se anuncie, que no pase desapercibida y que se vea mejor. Rama `v11/liga-estreno`. Lo de abajo es la propuesta [P] del equipo, aplicada; el dueño la puede cambiar.
+- **Qué ve el jugador:** una pantalla completa de estreno (`LeagueDebutScreen`), una sola vez:
+  - un velo índigo casi opaco, rayos de luz de oro que giran despacio y un halo;
+  - el emblema de la Liga dibujado por código (`ProceduralArt.LeagueEmblem`): una copa de oro con su estrella en un medallón índigo con canto de oro y una corona de hojas genéricas. Entra con escala y rebote, con destellos y una lluvia ligera de hojas, pétalos y plumas (la del estallido de la victoria) que cae una vez;
+  - «¡Llegó la Liga del río!», una línea que explica qué es («Gana niveles y el Reto del río para sumar puntos cada semana. Compite con jugadores de tu país y de todo el mundo.»), «Ver la Liga» (Hoja) y «Luego» (enlace);
+  - suena una fanfarria hecha con efectos que ya existen, sin audio nuevo: `sfx_streak_up`, `sfx_confetti` y el remate `sting_arrival`, este solo con Música;
+  - los botones reciben toques desde los 700 ms, cuando ya se ven.
+- **Cuándo sale:** con la Liga activa (`live_league_enabled`, el 41 ganado, la edad contestada y no &lt; 13, el perfil escribible) y sin `progress.league_debut_seen` ni `progress.league_opened`, en el primer momento tranquilo:
+  1. al dejar la victoria de campaña (Siguiente, Inicio o el avance solo tras la Cosecha doble): tapa la victoria entera, nunca sale con ella a la vista. Si esa victoria lleva el pre-prompt de push, sale el pre-prompt y el estreno espera al siguiente momento, así nunca hay dos pantallas seguidas. Por lo mismo, la victoria que deja el estreno pendiente no apunta ninguna oferta (ni encima de la victoria ni al volver al inicio): pasa a la siguiente victoria, como con el pre-prompt;
+  2. si no, al entrar al inicio, como la pantalla de esa entrada. Es un hito, así que no gasta el cupo de `ui_max_takeovers_per_session`; la libreta pendiente sale en la siguiente entrada. Nunca con un aviso por abrir (D-062) ni en la secuencia del 10.
+
+  El banner de mundo del 41 sale al entrar al 41, antes de jugarlo, así que el orden es: banner del 41 → partida → victoria del 41 → estreno. El bucle arreglado en el añadido de D-053 del 2026-10-31 no se toca. Tampoco sale en una toma de capturas (D-066 E1). Por la regla 2 le sale también, una vez, a quien ya pasó el 41 cuando llega la 1.1 o cuando se enciende la Liga en Remote Config.
+- **Respuestas:**
+  - «Ver la Liga» va al inicio (desde la victoria, como Inicio) y abre la Liga, con el `af_league_open` de siempre;
+  - «Ver la Liga» con el inicio despejado abre la Liga en el acto; si ya no puede abrirse (la Liga apagada en ese momento), se olvida;
+  - «Luego» y el Atrás de Android siguen el camino que se pulsó. Atrás vale también en los primeros 700 ms. La tarjeta «Liga» del muelle lleva entonces la píldora «Nueva» (`league_new`, que TalkBack lee tras el título) hasta que el jugador abre la Liga.
+- **Perfil** (08 §4.3) [P]: `progress.league_debut_seen` (se apunta al salir el estreno) y `progress.league_opened` (al abrir la Liga). Son bool, solo se escriben si son ciertos, entran sin migración (un perfil de la 1.0 los lee como false) y en la fusión de la nube (08 §11) van por «o». Por eso el estreno no vuelve tras reinstalar si el perfil viene de la nube. Van en `progress` y no en `league`, que es solo del dispositivo.
+- **Accesibilidad:**
+  - con Reducir movimiento sale entera y quieta: sin escala, giro, pulso, parpadeo ni lluvia;
+  - TalkBack anuncia el título y lee la pantalla (el velo tapa lo de debajo);
+  - al 130 %, en ES, EN y PT-BR y a 360 × 640, todo cabe: la columna crece y el emblema se encoge hasta 88 dp si hace falta.
+- **Textos nuevos** (`strings.csv`): `league_debut_title`, `league_debut_body`, `league_debut_open`, `league_debut_later` y `league_new`. El ES va en `borrador`; EN y PT-BR, traducidos por el agente, en `traducido`. **Antes del release de la 1.1 necesitan la revisión nativa** (D-054): `LocReleaseGate` los cuenta como problema y para el build de release.
+- **Preguntas al dueño:**
+  - Q-LD-1, analítica: 08 §8.2 no tiene un evento del estreno y no se inventa. Si se quiere medir (salió, «Ver la Liga» o «Luego»), propuesta: `af_league_debut` con `answer ∈ {open, later}` y `source ∈ {victory, lobby}`.
+  - Q-LD-2: ¿el estreno también para quien ya usaba la Liga en la 1.0? Hoy le sale una vez, porque la 1.0 no apuntaba si se abrió.
+  - Q-LD-3: ¿la fanfarria con los efectos de ahora, o un audio propio encargado (07 §9.5)?
+
 ## D-047 · Publicar sin dictamen ni registro de marca; el registro, cuando haya resultados
 
 - **Fecha:** 2026-10-25. Registrada por el integrador.

@@ -462,7 +462,10 @@ namespace AF.Save
         public List<int> SkinCards { get; } = new List<int>();
     }
 
-    /// <summary><c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013, y <c>undo_tip_seen</c> [P], DC23).</summary>
+    /// <summary>
+    /// <c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013; <c>undo_tip_seen</c> [P], DC23; <c>league_debut_seen</c> y
+    /// <c>league_opened</c> [P], añadido de D-046 del 2026-11-06).
+    /// </summary>
     public sealed class ProgressData
     {
         /// <summary><c>max_level</c>: nivel más alto superado (0 = ninguno).</summary>
@@ -529,6 +532,37 @@ namespace AF.Save
             }
 
             UndoTipSeen = UndoTipSeen || other.UndoTipSeen;
+        }
+
+        /// <summary>
+        /// <c>league_debut_seen</c> [P] (añadido de D-046 del 2026-11-06, el estreno de la Liga de la 1.1): la pantalla «¡Llegó la
+        /// Liga del río!» ya salió. Sale una sola vez por jugador, también tras reinstalar si el perfil vuelve de la nube. False por
+        /// defecto (también sin la clave: entra sin migración y solo se escribe si es cierta); en la fusión de la nube basta con que
+        /// uno de los dos la haya visto (<see cref="MergeLeagueDebut"/>).
+        /// </summary>
+        public bool LeagueDebutSeen { get; set; }
+
+        /// <summary>
+        /// <c>league_opened</c> [P] (añadido de D-046 del 2026-11-06): el jugador ya abrió la pantalla de la Liga alguna vez. Con el
+        /// estreno visto y sin abrirla, la tarjeta «Liga» del inicio lleva «Nueva». Como <see cref="LeagueDebutSeen"/>: false por
+        /// defecto, solo se escribe si es cierta y en la fusión de la nube va por «o».
+        /// </summary>
+        public bool LeagueOpened { get; set; }
+
+        /// <summary>
+        /// Fusión de 08 §11 (<c>ResolveConflict</c>): sobre el progreso del perfil ganador, <c>league_debut_seen</c> y
+        /// <c>league_opened</c> quedan ciertos si lo son en cualquiera de los dos (el estreno no vuelve por perder un conflicto) [P].
+        /// </summary>
+        /// <param name="other">El progreso del otro perfil (el perdedor).</param>
+        public void MergeLeagueDebut(ProgressData other)
+        {
+            if (other == null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            LeagueDebutSeen = LeagueDebutSeen || other.LeagueDebutSeen;
+            LeagueOpened = LeagueOpened || other.LeagueOpened;
         }
 
         private static int ClampMapSeen(int value, int maxLevel)

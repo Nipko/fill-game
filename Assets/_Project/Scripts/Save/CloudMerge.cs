@@ -112,7 +112,7 @@ namespace AF.Save
     /// <c>shield_available</c> solo si los dos lo tienen, <c>streak_hits</c> por unión y <c>streak_seeds</c> por máximo) o, si
     /// no, el del día más reciente [P]; <c>entitlements</c> por «o» (<c>no_ads</c>, <c>starter_bought</c>) y unión
     /// (<c>skins</c>); la fauna por unión (como <c>album</c>); <c>map_seen_level</c> por máximo (D-013);
-    /// <c>undo_tip_seen</c> por «o»; <c>skipped_levels</c> por unión (B3, Q-S1); <c>stats</c> por máximo [P]; <c>ads.last_iap</c>
+    /// <c>undo_tip_seen</c>, <c>league_debut_seen</c> y <c>league_opened</c> por «o»; <c>skipped_levels</c> por unión (B3, Q-S1); <c>stats</c> por máximo [P]; <c>ads.last_iap</c>
     /// por máximo [P]. Con el parche del perfil de B8, <c>applied_purchases</c> es la lista del ganador (D-033, Q-B8-1; 08 §11) y lo demás de
     /// <c>integrity</c> (<see cref="MergeAddedFields"/>). <c>purchase_queue</c> (F3-3) es solo local: no se compara, no sube y
     /// el fusionado lleva siempre la del dispositivo (<see cref="SharedJson"/>).</item>
@@ -410,6 +410,7 @@ namespace AF.Save
 
             merged.Progress.MergeMapSeenLevel(other.Progress); // D-013: máximo, recortado al max_level del ganador
             merged.Progress.MergeUndoTipSeen(other.Progress); // DC23: visto si lo vio cualquiera
+            merged.Progress.MergeLeagueDebut(other.Progress); // añadido de D-046 del 2026-11-06: el estreno de la Liga, por «o»
             UnionSorted(merged.Progress.SkippedLevels, other.Progress.SkippedLevels); // B3, Q-S1: unión
 
             merged.Entitlements.NoAds = merged.Entitlements.NoAds || other.Entitlements.NoAds;

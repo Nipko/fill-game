@@ -413,7 +413,7 @@ namespace AF.UI
         // El inicio está a la vista y sin nada encima: ni Ajustes, el Mapa, la tienda, un anuncio, Sin canoas ni el Reto.
         private bool LogbookLobbyClear => _app != null && _app.Screen == AppScreen.Lobby && _lobby != null && _lobby.Visible
             && !_lobby.OverlayVisible && !HomeWindowCovered && (_settingsScreen == null || !_settingsScreen.Visible)
-            && (_dailyScreen == null || !_dailyScreen.IsOpen);
+            && (_dailyScreen == null || !_dailyScreen.IsOpen) && !LeagueDebutVisible;
 
         // La Bitácora pendiente para la cola (06 §4.7): la casilla de hoy se puede sellar. Sin asignaciones (método, no lambda).
         private bool LogbookPending()
@@ -437,6 +437,14 @@ namespace AF.UI
             {
                 // Se llega al inicio tras el pre-prompt de push (GameBootstrap.PushUi.cs): esta entrada no apila la libreta encima;
                 // sale en la siguiente entrada de la sesión, sin gastar el cupo [P].
+                LastTakeover = TakeoverKind.None;
+                return;
+            }
+
+            if (TryLeagueDebutAtLobby())
+            {
+                // Añadido de D-046 del 2026-11-06: el estreno de la Liga es la pantalla de esta entrada (un hito: no gasta el cupo);
+                // la libreta sale en la siguiente entrada de la sesión (GameBootstrap.LeagueDebut.cs).
                 LastTakeover = TakeoverKind.None;
                 return;
             }
