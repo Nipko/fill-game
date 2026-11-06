@@ -172,7 +172,8 @@ Todo con pesos de licencia comercial verificada (investigación del 2026-10-31, 
 | Música para anuncios distinta del juego | **ACE-Step 1.5 XL** (nativo en ComfyUI). Respaldo: Stable Audio 3 (gratis por debajo de 1 M US$ de ingresos) | MIT | ~10 GB [NV] | 0 | **No se usa hasta que lo apruebe el dueño** (Q-MK-S0-1) |
 | Editar imagen con personajes fieles (poses de cartel, D-058) | **Qwen-Image-Edit-2511** en fp8. Para variantes rápidas, FLUX.2 klein 4B | Apache 2.0 | ~20 GB / ~13 GB | 0 | S3 y S5: personajes en cartel. Hay que evitar FLUX.2 klein 9B, FLUX.2 dev, Kontext dev y Qwen-Image-2.1, que no son comerciales |
 | Visión local para el control de calidad (§5 del encargo) | **Qwen3-VL-8B** en la 5080, para comparar fotogramas con capturas reales y leer el texto de la imagen. Gemma 4 26B en el Spark para la revisión fina | Apache 2.0 | ~9 GB (Q8) / ~16 GB | 0 | S4. **Ya instalado** en el Spark, en bf16 (17,5 GB, §2.5) |
-| Montaje programático con plantillas | **HyperFrames** (HTML/CSS/GSAP a MP4, de forma determinista, pensado para agentes) sobre FFmpeg. Remotion es gratis solo hasta 3 empleados | Apache 2.0 | npm | 0 | S3 y S4: plantillas de 9:16, 1:1 y 16:9 con zona segura y subtítulos |
+| Montaje programático con plantillas | **HyperFrames** (HTML/CSS/GSAP a MP4, de forma determinista, pensado para agentes) sobre FFmpeg. Remotion es gratis solo hasta 3 empleados | Apache 2.0 | npm | 0 | S3 y S4: plantillas de 9:16, 1:1 y 16:9 con zona segura y subtítulos. **2026-11-05:** propuesta una prueba con 3 efectos (Giro 3D, Glass type y Zoom out) y sin comprobar que su Chrome sin ventana corra en Windows ARM64; respaldo, WSL o la 5080 (`referencias-video.md`, referencia 2) |
+| Leer el rendimiento de los anuncios de Meta (S9) | **Meta Ads MCP oficial** (`mcp.facebook.com/ads`, beta abierta desde el 2026-04-29 [NV]), como conector de Claude, **solo para leer** | De Meta, gratis en la beta | — | 0 | S9, cuando haya pago (D-067). Lo conecta el dueño con su cuenta; las campañas las activa siempre él (`referencias-video.md`, referencia 1) |
 | Programador de publicaciones con API (Q-MK-3) | ~~Buffer Essentials (~20 US$/mes)~~. **Cambiado el 2026-11-03 (añadido de D-066): Postiz autoalojado en el Spark**, con las APIs oficiales de Meta, YouTube y TikTok, Cloudflare Tunnel y R2 (§2.4). Buffer queda de respaldo | AGPL-3.0 (Postiz) | ~4 GB de imágenes Docker [V] | 0 | S7. **Ya montado** (§2.4). Las apps de desarrollador, los tokens y el DNS los pone el dueño |
 | Sesión en TikTok for Business | Para ver todos los Top Ads de TikTok Creative Center: sin iniciar sesión solo se ven 4 | — | — | 0 | S1, trabajo semanal. **La cuenta la crea el dueño** (Q-MK-2) |
 | Repositorio de la fábrica | `fill-game-marketing`, privado (Q-MK-7) | — | — | 0 | S4 a S9. **Ya existe** (lo creó el dueño, D-067). Clon en el Spark: `C:\AI\marketing\fill-game-marketing\`, con `tendencias/` y los scripts de la ficha (`tienda/`). Los datos de terceros siguen fuera de git |
@@ -185,6 +186,12 @@ Todo con pesos de licencia comercial verificada (investigación del 2026-10-31, 
 - **VibeVoice:** retirado por Microsoft.
 - **CapCut:** sus términos ceden una licencia amplia sobre el contenido, y su música no vale para anuncios.
 - **DaVinci Resolve gratis:** desde la 21.1, el scripting exige Studio.
+- **Del lote de referencias del 2026-11-05** (`referencias-video.md`):
+  - **MiniMax H3:** su licencia excluye EE. UU., y además hace personas que hablan;
+  - **Veo 3.1 Lite en Google Flow:** de pago y en la nube, y el uso que enseñaba era un portavoz sintético (§0.3);
+  - **Blackdark Reels:** sin verificar y con clonación de voz;
+  - **Silero VAD:** no hay voz grabada que limpiar;
+  - **Apple Vision:** solo en macOS, y no recortamos el juego.
 
 ## 5. Preguntas [P]
 
