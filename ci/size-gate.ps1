@@ -6,8 +6,11 @@
 .DESCRIPTION
     Comprueba cada .aab indicado (archivo, carpeta o comodin) en dos niveles:
 
-      1. Tamano del archivo .aab (siempre). Es una cota superior: el AAB lleva todas las ABI y
-         todos los asset packs install-time.
+      1. Tamano del archivo .aab (siempre), sin BUNDLE-METADATA/. Es una cota superior: el AAB lleva
+         todas las ABI y todos los asset packs install-time. BUNDLE-METADATA/ (el mapping de R8 y la
+         tabla de simbolos nativos, D-059 anadido del 2026-11-06) no cuenta: Play lo lee al subir el AAB
+         y no lo sirve a un telefono (salvo el perfil de referencia, ~2 KB, que la medida 2 ya cuenta).
+         Se informa aparte, con el tamano del archivo entero.
       2. Descarga maxima real segun Google Play: "bundletool get-size total" sobre el conjunto de
          APK que genera "bundletool build-apks". Es la metrica de la compuerta del GDD (08 sec. 6.1
          y 12.1). Se ejecuta si hay bundletool (parametro -Bundletool o variable BUNDLETOOL_JAR) y java.
@@ -167,14 +170,35 @@ function Write-AabBreakdown([System.IO.FileInfo]$Aab) {
     Write-Output ('    {0,-40} {1,8}' -f 'cabeceras y directorio del ZIP', (Format-MB ($Aab.Length - $entriesTotal)))
 }
 
+# Bytes del .aab sin las entradas de BUNDLE-METADATA/ (las cuenta comprimidas, como ocupan en el archivo).
+function Get-MetadataBytes([System.IO.FileInfo]$Aab) {
+    try {
+        $zip = [System.IO.Compression.ZipFile]::OpenRead($Aab.FullName)
+    }
+    catch {
+        Stop-WithCode 2 "ERROR: no se puede leer '$($Aab.FullName)' como ZIP: $($_.Exception.Message)"
+    }
+    try {
+        $meta = [long]0
+        foreach ($e in $zip.Entries) {
+            if ($e.FullName.StartsWith('BUNDLE-METADATA/', [StringComparison]::Ordinal)) { $meta += $e.CompressedLength }
+        }
+        return $meta
+    }
+    finally {
+        $zip.Dispose()
+    }
+}
+
 $failed = $false
 $limitText = $limitMB.ToString('0.##', [System.Globalization.CultureInfo]::InvariantCulture)
 Write-Output "Presupuesto: $limitText MB ($limitBytes bytes)"
 foreach ($aab in $aabs) {
-    $size = $aab.Length
+    $meta = Get-MetadataBytes $aab
+    $size = $aab.Length - $meta
     $status = if ($size -le $limitBytes) { 'OK' } else { 'SUPERA' }
     if ($status -ne 'OK') { $failed = $true }
-    Write-Output ("[{0}] archivo .aab: {1} MB - {2}" -f $status, (Format-MB $size), $aab.FullName)
+    Write-Output ("[{0}] archivo .aab sin BUNDLE-METADATA: {1} MB (archivo {2} MB; BUNDLE-METADATA {3} MB, que Play no sirve) - {4}" -f $status, (Format-MB $size), (Format-MB $aab.Length), (Format-MB $meta), $aab.FullName)
     if ($Breakdown) { Write-AabBreakdown $aab }
 
     if ($canBundletool) {
