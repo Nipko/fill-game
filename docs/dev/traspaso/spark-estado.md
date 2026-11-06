@@ -6,6 +6,16 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-05 · Primera publicación: imagen de lanzamiento en Facebook e Instagram (PUBLICADA, aprobada por el dueño)
+
+- **Publicada** con Postiz, con la aprobación expresa del dueño («Aprobado, publica» y «Sí, publica»):
+  - Facebook: https://www.facebook.com/122098426725542202/posts/122098426719542202
+  - Instagram: https://www.instagram.com/p/DfYUGrLFCQg/
+- **Imagen:** `fabrica/lanzamiento.py`, commit `570f263` de `fill-game-marketing`.
+- **Arreglo:** `CLOUDFLARE_BUCKET_URL` va sin barra final en `docker-compose.yaml`. Con la barra, las URL salían con «//» y daban 404.
+- **TikTok, pendiente del dueño.** La app de TikTok no está aprobada para publicar en público (le falta la auditoría). El envío al buzón (`UPLOAD`) falla con «You have to upload the picture/video to Postiz when sending a URL», probablemente porque `media.tintalu.com` no está verificado como propiedad de URL en el portal de desarrolladores de TikTok.
+- **WSL:** el proceso que lo mantiene encendido se había caído (error 1033 del túnel). Se relanzó a mano.
+
 ### 2026-11-05 · Decisiones de la línea de vídeos y lote 1 (vídeos 1, 3 y 5): MONTADOS, esperan el visto bueno del dueño
 
 - **Decisiones del dueño** (añadido de D-066 en `decisiones.md`):
