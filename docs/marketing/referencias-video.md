@@ -17,7 +17,7 @@ Lo que el dueño trae como referencia (enlaces, archivos o capturas) y lo que sa
 | 5 | Claude edita con 6 herramientas gratis | **Cambiar enfoque** | Las palabras del himno colocadas por el pulso y por whisper.cpp, no a mano |
 | 6 | Anuncio de gimnasio con modelo de IA | **Descartar** | Nada: es justo lo que prohíbe §0.3 |
 
-**Lo que cambia en el stack:** nada instalado. Una prueba propuesta (HyperFrames, sin coste y con licencia Apache 2.0, a falta del visto bueno del dueño para la descarga) y un cambio de método en `montar_himno.py` sin piezas nuevas. Los descartes quedan en `stack-spark.md` §4.
+**Lo que cambia en el stack:** HyperFrames, instalado y probado el 2026-11-06 con el visto bueno del dueño (referencia 2, abajo), y un cambio de método en `montar_himno.py` sin piezas nuevas. Los descartes quedan en `stack-spark.md` §4.
 
 ---
 
@@ -70,7 +70,7 @@ Lo común: **Claude como orquestador** y modelos generativos o scripts como ejec
   | UI world | Sí, con piezas reales | Cuias, frutas y botones recortados de capturas reales que flotan alrededor del teléfono |
   | Frame break | Sí, con cuidado | Una cuia o un render de personaje (D-058) que sale del marco del teléfono. Fuera del juego, como escenografía (§0.1) |
   | Vértigo | Quizá | El fondo de IA se aleja mientras el teléfono se acerca. Prueba barata con un fondo de Wan 2.2 |
-  | Zoom digital | **Cambiar regla** | Hoy `fabrica.md` §3 enseña la pantalla entera y nunca recorta. Un acercamiento breve al chorro sigue siendo el juego real (§0.1). Lo decide el dueño [P] |
+  | Zoom digital | Sí, ya existe | `montar_himno.py` ya tiene `zoom` (recorta la pantalla sin tocar sus píxeles) y `empuje` (acercamiento lento). `fabrica.md` §3, que dice «nunca se recorta», se ha quedado atrás (corregido el 2026-11-06) |
   | Cover story | Solo con portada propia | Una «portada» de la Bitácora con nuestra marca. Nunca imitar una revista real, porque sugeriría prensa que no hubo |
   | Doodle ball | Poco | Garabatos a mano: chocan con «Selva brillante premium» |
   | Paper cut | No | D-003: sin papel ni acuarela |
@@ -88,7 +88,16 @@ Lo común: **Claude como orquestador** y modelos generativos o scripts como ejec
     4. compararlas con la misma pieza en Pillow, en la hoja de contactos.
 
     Si gana, `montar*.py` deja a HyperFrames los efectos de capa y sigue haciendo el audio y la mezcla con FFmpeg.
-  - **El zoom digital** se lleva al dueño como cambio de `fabrica.md` §3.
+  - **El zoom digital** no necesita decisión: ya está en `montar_himno.py`.
+- **Prueba hecha el 2026-11-06** con el visto bueno del dueño (`fill-game-marketing`, commit `5cdb36a`, carpeta `hyperframes/`) [V]:
+  - **Instalado:** `hyperframes` 0.8.186 y `gsap` 3.13.0, fijados (99 MB en `node_modules`). Se eligió una versión de hace 2 semanas, porque la 0.9.x sale varias veces al día.
+  - **No hizo falta bajar ningún navegador:** usa el Chrome ARM64 del sistema, que corre nativo en el Spark. FFmpeg es el nuestro.
+  - **Tiene telemetría activa por defecto.** Se apaga con `hf.sh` (`DO_NOT_TRACK` y `HYPERFRAMES_NO_TELEMETRY`), que también corta la comprobación de versiones y las instalaciones automáticas. `publish`, `cloud`, `lambda` y `auth` no se usan: suben a HeyGen o a terceros.
+  - **La pieza** (`prueba-01`): 9:16 de 30 s sobre la toma real `s1-llegada-l30-es` y el himno B + s33, con Giro 3D (entrada y tapando el corte entre planos), Glass type (gancho y «¡Tintalú!» con la voz) y Zoom out a la tarjeta final.
+  - **Render:** 62-107 s por pieza. Salida H.264 1080 × 1920 a 30 fps, −13,9 LUFS y −1,4 dBTP: cumple las pruebas técnica y de sonido de `fabrica.md` §5. `montar.py` tarda ~100 s, pero en dos formatos, así que el tiempo es parecido.
+  - **Revisión visual con Qwen3-VL-8B:** pasa. Ve el juego en los 4 planos, también con el teléfono girado a media vuelta, sin marcas ni defectos. «¡Tintalú!» solo lo lee en el recorte de su caja, como pasa en `vision.py` con los rótulos sobre mucho texto del juego.
+  - **Hallazgo para la fábrica:** la píldora que tapa «Development Build» en `montar_himno.py` es petróleo al 92 %, y al ampliar se transparenta «Developm…». En la prueba va opaca. Conviene hacer lo mismo en `montar_himno.py` [P].
+  - **Qué gana frente a Pillow:** 3D real con perspectiva, desenfoque de fondo (`backdrop-filter`), curvas de GSAP y capturas de control (`snapshot`) en segundos. **Qué no hace:** el audio por eventos `AF_CAPTURE`, el manifiesto ni la cola. Eso sigue en `montar*.py`, que llamaría a HyperFrames para la capa visual [P].
 
 ### 3. «MiniMax H3, el modelo de vídeo open-source», BenCorde, 2 de noviembre
 
@@ -166,8 +175,8 @@ Lo común: **Claude como orquestador** y modelos generativos o scripts como ejec
 
 ### Lo que se pide al dueño
 
-1. **El visto bueno para la prueba de HyperFrames** (referencia 2): paquete de npm y un Chrome sin ventana de ~150-200 MB [NV], Apache 2.0, coste 0, en `fill-game-marketing`.
-2. **¿Se permite un zoom breve sobre el juego** (un acercamiento al chorro o al sellado) en `fabrica.md` §3? Hoy la regla es la pantalla entera siempre.
+1. ~~El visto bueno para la prueba de HyperFrames~~: dado el 2026-11-06; prueba hecha (arriba). Queda decidir si `montar_himno.py` pasa a usarlo para la capa visual.
+2. ~~¿Se permite un zoom breve sobre el juego?~~ Ya existe en `montar_himno.py` (`zoom` y `empuje`).
 3. **¿Hago las palabras y los cortes al pulso del himno** (referencia 5) y la receta de ritmo de las referencias (referencia 4)? Ninguna de las dos necesita descargas.
 4. **Meta Ads MCP**, cuando llegue S9: conectarlo en modo solo lectura. Lo conecta el dueño con su cuenta.
 

@@ -149,6 +149,18 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
   - con la referencia y la pieza en la misma pregunta, copia a la pieza las marcas de la referencia. Por eso la referencia va en una pregunta aparte;
   - el texto pequeño puede leerlo mal: en la tarjeta leyó «Búscalolo» donde pone «Búscalo». No cuenta para el veredicto, porque solo se comprueban el gancho y los subtítulos.
 
+### 2.6 Montaje con HyperFrames (prueba del 2026-11-06)
+
+- **Instalado en el Spark** con el permiso del dueño, en `fill-game-marketing/hyperframes/` (commit `5cdb36a`):
+  - `hyperframes` 0.8.186 (Apache 2.0) y `gsap` 3.13.0 (licencia estándar gratuita, también comercial), fijados con `--save-exact`;
+  - 99 MB en `node_modules`, fuera de git.
+- **Navegador:** el Chrome ARM64 del sistema, nativo; no se bajó ninguno. FFmpeg es el de `C:\AI\ffmpeg\`. Sin Docker: el modo `--docker` no se usa.
+- **Telemetría activa por defecto:** siempre se lanza con `hf.sh`, que la apaga y corta las comprobaciones de versión y las instalaciones automáticas. `publish`, `cloud`, `lambda` y `auth` no se usan.
+- **Medido [V]:**
+  - un 9:16 de 30 s con giro 3D, vidrio y zoom out sobre una toma real se renderiza en 62-107 s (unos 50 s son la captura de 900 fotogramas en Chrome, con 5 workers);
+  - pasa la revisión visual de Qwen3-VL-8B.
+- **Detalle:** `referencias-video.md`, referencia 2.
+
 ## 3. Tiempos medidos (en caliente) [V]
 
 | Tarea | 5080 | Spark |
@@ -159,6 +171,7 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
 | Wan 2.2 de un fondo de 544 × 960 o 960 × 544 | 66-68 s | — |
 | LTX-2.5, 5 s a 1280 × 704 con audio | 48,3 s (67,5 en frío) | 94 s (116 en frío) |
 | Montaje de 30 s en 9:16 + 16:9 con Pillow y FFmpeg | — | ~100 s |
+| Render de 30 s en 9:16 con HyperFrames (3D, vidrio y zoom out) | — | 62-107 s |
 
 **Capacidad orientativa por día de GPU de la 5080:** ~6.000 imágenes, o ~1.200 clips de Wan de 5 s, o ~1.700 de LTX-2.5. Sobra para el volumen de §4 del encargo. El cuello de botella son las tomas reales y la revisión, no la GPU.
 
@@ -172,7 +185,7 @@ Todo con pesos de licencia comercial verificada (investigación del 2026-10-31, 
 | Música para anuncios distinta del juego | **ACE-Step 1.5 XL** (nativo en ComfyUI). Respaldo: Stable Audio 3 (gratis por debajo de 1 M US$ de ingresos) | MIT | ~10 GB [NV] | 0 | **No se usa hasta que lo apruebe el dueño** (Q-MK-S0-1) |
 | Editar imagen con personajes fieles (poses de cartel, D-058) | **Qwen-Image-Edit-2511** en fp8. Para variantes rápidas, FLUX.2 klein 4B | Apache 2.0 | ~20 GB / ~13 GB | 0 | S3 y S5: personajes en cartel. Hay que evitar FLUX.2 klein 9B, FLUX.2 dev, Kontext dev y Qwen-Image-2.1, que no son comerciales |
 | Visión local para el control de calidad (§5 del encargo) | **Qwen3-VL-8B** en la 5080, para comparar fotogramas con capturas reales y leer el texto de la imagen. Gemma 4 26B en el Spark para la revisión fina | Apache 2.0 | ~9 GB (Q8) / ~16 GB | 0 | S4. **Ya instalado** en el Spark, en bf16 (17,5 GB, §2.5) |
-| Montaje programático con plantillas | **HyperFrames** (HTML/CSS/GSAP a MP4, de forma determinista, pensado para agentes) sobre FFmpeg. Remotion es gratis solo hasta 3 empleados | Apache 2.0 | npm | 0 | S3 y S4: plantillas de 9:16, 1:1 y 16:9 con zona segura y subtítulos. **2026-11-05:** propuesta una prueba con 3 efectos (Giro 3D, Glass type y Zoom out) y sin comprobar que su Chrome sin ventana corra en Windows ARM64; respaldo, WSL o la 5080 (`referencias-video.md`, referencia 2) |
+| Montaje programático con plantillas | **HyperFrames** (HTML/CSS/GSAP a MP4, de forma determinista, pensado para agentes) sobre FFmpeg. Remotion es gratis solo hasta 3 empleados | Apache 2.0 | npm | 0 | S3 y S4: plantillas de 9:16, 1:1 y 16:9 con zona segura y subtítulos. **Instalado el 2026-11-06** con el permiso del dueño (§2.6) |
 | Leer el rendimiento de los anuncios de Meta (S9) | **Meta Ads MCP oficial** (`mcp.facebook.com/ads`, beta abierta desde el 2026-04-29 [NV]), como conector de Claude, **solo para leer** | De Meta, gratis en la beta | — | 0 | S9, cuando haya pago (D-067). Lo conecta el dueño con su cuenta; las campañas las activa siempre él (`referencias-video.md`, referencia 1) |
 | Programador de publicaciones con API (Q-MK-3) | ~~Buffer Essentials (~20 US$/mes)~~. **Cambiado el 2026-11-03 (añadido de D-066): Postiz autoalojado en el Spark**, con las APIs oficiales de Meta, YouTube y TikTok, Cloudflare Tunnel y R2 (§2.4). Buffer queda de respaldo | AGPL-3.0 (Postiz) | ~4 GB de imágenes Docker [V] | 0 | S7. **Ya montado** (§2.4). Las apps de desarrollador, los tokens y el DNS los pone el dueño |
 | Sesión en TikTok for Business | Para ver todos los Top Ads de TikTok Creative Center: sin iniciar sesión solo se ven 4 | — | — | 0 | S1, trabajo semanal. **La cuenta la crea el dueño** (Q-MK-2) |

@@ -66,7 +66,7 @@ Un JSON por pieza en `C:\AI\marketing\briefs\`. Ejemplo real (la pieza de prueba
 
 ## 3. Montaje
 
-- **Encuadre:** la pantalla del juego **entera**, escalada a la altura del formato, sobre una copia desenfocada con velo petróleo. Nunca se recorta el tablero ni se tocan los píxeles del juego (§0.1). `toma.recorte` solo quita bordes que no son del juego.
+- **Encuadre:** la pantalla del juego **entera**, escalada a la altura del formato, sobre una copia desenfocada con velo petróleo. Nunca se tocan los píxeles del juego (§0.1). En `montar.py`, `toma.recorte` solo quita bordes que no son del juego. `montar_himno.py` sí acerca la cámara: `zoom` recorta una zona de la pantalla y `empuje` la acerca poco a poco, siempre con el juego real (anotado el 2026-11-06).
 - **Rótulos:**
   - el gancho, en la placa de madera, arriba de la zona segura y con fundido de 0,15 s;
   - los subtítulos, abajo de la zona segura.
