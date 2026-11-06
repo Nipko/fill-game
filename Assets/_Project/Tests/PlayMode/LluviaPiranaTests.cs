@@ -494,7 +494,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(MechanicTestKit.TryFindRecord(boot.View.Animator, MechanicStepKind.Bite, cave, out _), Is.False, "vertido " + i + ": aún no muerde");
                 Assert.That(MechanicTestKit.TryFindRecord(boot.View.Animator, MechanicStepKind.BiteLost, cave, out _), Is.False, "vertido " + i + ": ni pierde un mordisco");
                 AssertPipsLegible(school.Pips, ProceduralArt.Pearl, school.Dimmed ? PiranaOverlay.DimAlpha : 1f, PiranaOverlay.EmptyPipAlpha, "vertido " + i,
-                    (PiranaOverlay.PipU * boot.View.Views[cave].Unit) - 0.05f);
+                    PiranaPhoneMinPipDp);
             }
 
             boot.View.Animator.Steps.ClearLog();
@@ -1258,6 +1258,10 @@ namespace AF.Tests.PlayMode
         // Puntos del contador legibles a 48 dp (02 §5; revisión de T17): de ≈ 7 dp, los llenos en su color con opacidad alpha
         // y los vacíos (el aro) a emptyAlpha de esa opacidad, así que se distinguen por contraste y no por un hueco de menos de
         // 2 dp.
+        // Cota de los puntos de la Piraña en el 183 en el teléfono de referencia (12 cuias: unos 5,8 dp, por debajo del «≈ 7 dp» de T17;
+        // pendiente del dueño en el añadido de D-059 del 2026-11-06). Fija, para que avise si encogen más.
+        private const float PiranaPhoneMinPipDp = 5.5f;
+
         private static void AssertPipsLegible(PipRow row, Color color, float alpha, float emptyAlpha, string label, float minDp = 6.4f)
         {
             Assert.That(row.Count, Is.GreaterThan(0), label + ": puntos a la vista");
