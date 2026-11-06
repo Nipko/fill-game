@@ -101,6 +101,11 @@ Lo común: **Claude como orquestador** y modelos generativos o scripts como ejec
     - Lee el mismo brief que `montar_himno.py` y deja el mismo manifiesto, así que `calidad.py`, `vision.py` y `cola.py` no cambian.
     - Hace los 3 efectos de la prueba y redibuja en HyperFrames los de `efectos.py`: palabras (H5) y contador (H1) en vidrio, toque (H8) y marea (H2) dentro de la pantalla.
     - **Primera pieza:** `v01-remonta-el-amazonas` en es-419, pt-BR y en, en 78-92 s por idioma. Las 3 pasan todo `calidad.py`, también la visión. Están en `C:\AI\marketing\revision\hf\`, fuera de la cola.
+    - **Lote del viaje entero (v01 a v05, 2026-11-06):** 15 salidas en `C:\AI\marketing\revision\hf\`, con la hoja `hoja_viaje_hf_es.jpg`.
+      - **Pasan `calidad.py`:** 13 de 15.
+      - **La primera vuelta encontró un fallo nuestro:** las palabras largas a 150 px se salían de la zona segura, porque el ajuste no contaba el margen del vidrio. Corregido (`fill-game-marketing`, commit de «Ajusta los rótulos de vidrio»).
+      - **Las 2 que fallan** (v03 en el gancho y v05 pt-BR en el centro) solo fallan por la visión: dice «no parece el juego» en fotogramas que sí son el juego (comprobado a ojo). La causa probable es que `vision.py` compara la pieza con un fotograma crudo de la toma, y aquí el juego va más pequeño, dentro del teléfono y sobre el río.
+      - **Propuesta** [P]: en las piezas de `montar_hf.py`, recortar la pantalla del teléfono antes de la pregunta «¿es el juego?». Toca `vision.py`, que lleva otra sesión. Mientras tanto, esas 2 las revisa el dueño en la hoja.
     - **No se editó `montar_himno.py`:** otra sesión lo estaba cambiando y aún no está en git. `montar_hf.py` lo importa (planos anclados, audio y sello), así que hay que commitearlo para que el repositorio funcione en un clon limpio.
   - **Qué gana frente a Pillow:** 3D real con perspectiva, desenfoque de fondo (`backdrop-filter`), curvas de GSAP y capturas de control (`snapshot`) en segundos. **Qué no hace:** el audio por eventos `AF_CAPTURE`, el manifiesto ni la cola. Eso sigue en `montar*.py`, que llamaría a HyperFrames para la capa visual [P].
 
