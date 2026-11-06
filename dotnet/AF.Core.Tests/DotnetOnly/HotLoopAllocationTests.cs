@@ -694,6 +694,19 @@ namespace AF.Core.Tests.DotnetOnly
                 seen.Add(probe.CanonicalHash(boards[i].CuiasArray, 0, boards[i].Count));
             }
 
+            // Los hijos del 66 final también vistos: ahí la comprobación recorre todos los vertidos y declara (camino completo).
+            BoardState loop = boards[0];
+            for (int a = 0; a < loop.Count; a++)
+            {
+                for (int b = 0; b < loop.Count; b++)
+                {
+                    if (a != b && PourRules.IsLegal(loop, a, b))
+                    {
+                        seen.Add(PourRules.Apply(loop, a, b, PourMode.Run).CanonicalHash());
+                    }
+                }
+            }
+
             int warm = 0;
             for (int i = 0; i < boards.Length; i++)
             {
@@ -715,6 +728,7 @@ namespace AF.Core.Tests.DotnetOnly
                 }
             }, 1);
 
+            Assert.That(warm, Is.EqualTo(1), "el 66 final, con sus hijos vistos, declara; el 26 y el de 14 cuias no");
             Assert.That(total, Is.EqualTo(20 * warm));
             Assert.That(allocated.Bytes, Is.EqualTo(0), allocated.Describe("repetición"));
         }

@@ -166,15 +166,71 @@ namespace AF.Core.Tests
             Assert.That(session.Undo(), Is.True);
             oracle.Check(session, "Marea");
             Assert.That(session.SeenBoardCount, Is.EqualTo(seen), "el tablero deshecho sigue visto");
-            if (session.Status == LevelStatus.Playing)
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck), "el tablero del 11.º también está agotado");
+            for (int pours = Level66Board.PourCount - 2; pours >= 8; pours--)
             {
-                Assert.That(session.TryPour(Level66Board.Source(11), Level66Board.Target(11), out PourResult again), Is.True);
-                Assert.That(again.Status, Is.EqualTo(LevelStatus.Stuck));
+                Assert.That(session.Undo(), Is.True);
+                oracle.Check(session, "Marea al vertido " + pours);
+                LevelStatus expected = pours == 8 ? LevelStatus.Playing : LevelStatus.Stuck;
+                Assert.That(session.Status, Is.EqualTo(expected), "Marea al vertido " + pours + " (el 8.º se gana)");
             }
+
+            Assert.That(session.TryPour(Level66Board.Source(8), Level66Board.Target(8), out PourResult again), Is.True);
+            Assert.That(again.Status, Is.EqualTo(LevelStatus.Stuck), "el 9.º lleva a un tablero visto y agotado");
 
             session.Restart();
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
             Assert.That(session.SeenBoardCount, Is.EqualTo(1), "Volver a la orilla: intento nuevo");
+        }
+
+        [Test]
+        public void R13b_ResumeStuck_OnlyDeclaresALostBoard()
+        {
+            // 02 §14 con el añadido de D-014 del 2026-11-06: al reanudar con el modal abierto, ResumeStuck lo reabre solo si el
+            // cierre sigue perdido; nunca con un tablero que se gana (R14), y no hace nada fuera de Playing.
+            var lost = new LevelSession(Level26Board.Lost(), true, PourMode.Run);
+            Assert.That(lost.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(lost.ResumeStuck(), Is.True);
+            Assert.That(lost.Status, Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(lost.ResumeStuck(), Is.False, "ya en Stuck");
+            Assert.That(lost.TryPour(1, 8, out _), Is.False, "R15");
+
+            var winnable = new LevelSession(UniformBoard(Tutorial[5]), true, PourMode.Run);
+            Assert.That(winnable.ResumeStuck(), Is.False, "R14: un tablero que se gana no se declara");
+            Assert.That(winnable.Status, Is.EqualTo(LevelStatus.Playing));
+
+            var won = new LevelSession(new BoardState(new[] { C(4, 1, 1, 1, 1), Cuia.Empty(4) }), true, PourMode.Run);
+            Assert.That(won.ResumeStuck(), Is.False);
+            Assert.That(won.Status, Is.EqualTo(LevelStatus.Won));
+        }
+
+        [Test]
+        public void R13b_TheFireflyAndThePororoca_KeepTheSeenBoards()
+        {
+            // I6 de LevelSession (añadido de D-014 del 2026-11-06 [P]; 04 §2.4 y §2.5): la Luciérnaga y la Pororoca no vacían
+            // los tableros vistos; su tablero nuevo entra como visto al quedar en pantalla.
+            var murky = new LevelSession(new BoardState(new[] { Cuia.Create(4, new[] { 3, 1, 1, 1 }, 0x1), C(4, 2, 2, 2), Cuia.Empty(3) }), true, PourMode.Run);
+            var oracle = new StagnationOracle();
+            oracle.Check(murky, "inicio");
+            Assert.That(murky.TryPour(1, 2, out _), Is.True);
+            oracle.Check(murky, "vertido");
+            Assert.That(murky.Reveal(0), Is.EqualTo(1));
+            oracle.Check(murky, "Luciérnaga");
+            Assert.That(murky.SeenBoardCount, Is.EqualTo(3));
+
+            BoardState start = Board(C(4, 2, 1, 1, 2), C(4, 2, 1, 1, 2), Cuia.Empty(4));
+            var shuffled = new LevelSession(start, true, PourMode.Run);
+            var shuffleOracle = new StagnationOracle();
+            shuffleOracle.Check(shuffled, "inicio");
+            Assert.That(shuffled.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(shuffled.ApplyShuffle(Board(C(4, 1, 2, 2, 1), C(4, 1, 2, 2, 1), Cuia.Empty(4))), Is.True);
+            shuffleOracle.Check(shuffled, "Pororoca");
+            Assert.That(shuffled.SeenBoardCount, Is.EqualTo(2), "el tablero de antes sigue visto y entra el barajado");
+        }
+
+        private static BoardState Board(params Cuia[] cuias)
+        {
+            return new BoardState(cuias);
         }
 
         [Test]

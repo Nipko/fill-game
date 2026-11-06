@@ -27,7 +27,9 @@ namespace AF.Core.Session
     /// (el del cierre: cuias ordenadas, así que el orden en pantalla no cuenta). Lo deshecho con <see cref="Undo"/> sigue
     /// visto, porque el jugador ya lo vio [P]. <see cref="Restart"/> (Volver a la orilla: un intento nuevo, 04 §2.7) los
     /// olvida [P]. La Pororoca (<see cref="ApplyShuffle"/>), la Luciérnaga (<see cref="Reveal"/>) y
-    /// <see cref="RestoreRevealed"/> los conservan y su tablero nuevo entra como visto al quedar en pantalla, no antes. Una
+    /// <see cref="RestoreRevealed"/> los conservan y su tablero nuevo entra como visto al quedar en pantalla, no antes (en un
+    /// nivel turbio, la Pororoca anota además el tablero de antes con todo revelado, que su <see cref="RevealAll"/> evalúa; no
+    /// cambia nada, porque tras el barajado no se vuelve a él). Una
     /// sesión rehecha (la Cuia extra o de rescate, reanudar) solo conoce los tableros de su historial rehecho: más
     /// conservador; para reabrir el modal al reanudar está <see cref="ResumeStuck"/> [P].</description></item>
     /// <item><description>I2: un vertido ilegal (R11) o con <see cref="Status"/> distinto de
