@@ -159,6 +159,7 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
 - **Medido [V]:**
   - un 9:16 de 30 s con giro 3D, vidrio y zoom out sobre una toma real se renderiza en 62-107 s (unos 50 s son la captura de 900 fotogramas en Chrome, con 5 workers);
   - pasa la revisión visual de Qwen3-VL-8B.
+- **En la fábrica desde el 2026-11-06:** `fabrica/montar_hf.py` (commit `78ec154`), el motor de montaje del himno con HyperFrames; ver `fabrica.md` §1.
 - **Detalle:** `referencias-video.md`, referencia 2.
 
 ## 3. Tiempos medidos (en caliente) [V]

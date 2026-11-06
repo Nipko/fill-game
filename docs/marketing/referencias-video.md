@@ -97,6 +97,11 @@ Lo común: **Claude como orquestador** y modelos generativos o scripts como ejec
   - **Render:** 62-107 s por pieza. Salida H.264 1080 × 1920 a 30 fps, −13,9 LUFS y −1,4 dBTP: cumple las pruebas técnica y de sonido de `fabrica.md` §5. `montar.py` tarda ~100 s, pero en dos formatos, así que el tiempo es parecido.
   - **Revisión visual con Qwen3-VL-8B:** pasa. Ve el juego en los 4 planos, también con el teléfono girado a media vuelta, sin marcas ni defectos. «¡Tintalú!» solo lo lee en el recorte de su caja, como pasa en `vision.py` con los rótulos sobre mucho texto del juego.
   - **Hallazgo para la fábrica:** la píldora que tapa «Development Build» en `montar_himno.py` es petróleo al 92 %, y al ampliar se transparenta «Developm…». En la prueba va opaca. Conviene hacer lo mismo en `montar_himno.py` [P].
+  - **Integrado el 2026-11-06** con el sí del dueño (`fill-game-marketing` `78ec154`): `fabrica/montar_hf.py`.
+    - Lee el mismo brief que `montar_himno.py` y deja el mismo manifiesto, así que `calidad.py`, `vision.py` y `cola.py` no cambian.
+    - Hace los 3 efectos de la prueba y redibuja en HyperFrames los de `efectos.py`: palabras (H5) y contador (H1) en vidrio, toque (H8) y marea (H2) dentro de la pantalla.
+    - **Primera pieza:** `v01-remonta-el-amazonas` en es-419, pt-BR y en, en 78-92 s por idioma. Las 3 pasan todo `calidad.py`, también la visión. Están en `C:\AI\marketing\revision\hf\`, fuera de la cola.
+    - **No se editó `montar_himno.py`:** otra sesión lo estaba cambiando y aún no está en git. `montar_hf.py` lo importa (planos anclados, audio y sello), así que hay que commitearlo para que el repositorio funcione en un clon limpio.
   - **Qué gana frente a Pillow:** 3D real con perspectiva, desenfoque de fondo (`backdrop-filter`), curvas de GSAP y capturas de control (`snapshot`) en segundos. **Qué no hace:** el audio por eventos `AF_CAPTURE`, el manifiesto ni la cola. Eso sigue en `montar*.py`, que llamaría a HyperFrames para la capa visual [P].
 
 ### 3. «MiniMax H3, el modelo de vídeo open-source», BenCorde, 2 de noviembre
