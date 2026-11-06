@@ -139,7 +139,7 @@ Tras esta rama, el S938B seguiría en unos **650 MB de RSS y 540 MB de PSS**. La
 
 **Qué lo bajaría, con decisión del dueño (no aplicado):**
 
-- **R8 (Minify) en el release:** `AndroidMinifyRelease` está en 0. Reduciría el `.dex mmap` (estimado −10 a −20 MB), pero pide reglas `keep` para los plugins propios que se llaman por JNI (`AfBilling`, `AfSplashHold`, `AfAgeSignals`, `AfIcon`) y probar todos los SDK en el teléfono. Tarea de build-release.
+- **R8 (Minify) en el release: aplicado en la 1.1** (D-059, añadido del 2026-11-06; rama `v11/r8-release`; `docs/dev/release.md` §8). `AndroidMinifyRelease` pasa a 1 por `ProjectSetup`, con las reglas `keep` de los plugins propios, las de los AAR de los SDK y las de Play Games en `AfKeepRules.androidlib`. En el ensayo, el dex baja de 28,98 MB a 12,07 MB sin comprimir (−58 %; de 4 a 2 `classes*.dex`) y la descarga de Play de 57,00 a 51,30 MB. Lo que eso baje el `.dex mmap` del teléfono (estimado −10 a −20 MB) **está sin medir**: lo dirá la sonda `AF_PERF mem` con el ensayo en el S938B, junto con la lista de humo de §8 de `release.md`.
 - **IL2CPP Code Generation «Faster (smaller) builds»:** `libil2cpp.so` más pequeño (estimado −5 a −15 MB de `.so mmap`), con algo de coste de CPU en código genérico; pide medir los fotogramas.
 - **Quitar profundidad y estencil** (§3): hasta −10 MB a esta resolución, revisando cada pantalla.
 - **Bajar el pico del heap del arranque:** crear arte por código más tarde (al abrir cada pantalla) en lugar de en el bloque `services`; toca el arranque con la intro (D-051) y su fluidez.

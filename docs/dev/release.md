@@ -81,7 +81,7 @@ Qué hace el workflow con él:
 1. **Actions › Release firmado › Run workflow**, rama `main`; con otra rama, el workflow falla.
 2. `versionName`: `MAYOR.MENOR.PARCHE`, por ejemplo `1.0.0`.
 3. `versionCode`: vacío aplica la regla `MAYOR*10000 + MENOR*100 + PARCHE`; `1.0.0` da 10000. Para reconstruir la misma versión hace falta un código mayor: Play rechaza un `versionCode` ya subido. Con MENOR o PARCHE por encima de 99, indícalo a mano.
-4. Al terminar, descarga el artefacto `android-aab-release-<versionName>-<versionCode>`, que se guarda 30 días, y súbelo tú a Play Console.
+4. Al terminar, descarga el artefacto `android-aab-release-<versionName>-<versionCode>`, que se guarda 30 días, y súbelo tú a Play Console. El AAB ya lleva dentro el mapping de R8 y los símbolos nativos (§8): no hay que subir nada más. El artefacto `android-mapping-release-<versionName>-<versionCode>` (90 días) es la copia suelta del mapping.
 
 ## 4 bis. Lanzamiento de la 1.0: pista interna solo con el dueño y producción al 100 % con publicación administrada (D-059)
 
@@ -118,6 +118,7 @@ Sin pistas con jugadores (cerrada, abierta) y sin escalonado; la pista interna, 
 | `build` | `FirebaseApp.androidlib` existe | el editor de Firebase no generó la configuración |
 | | `ci/check-firebase-config.sh` | el AAB no lleva `google_app_id` y `gcm_defaultSenderId`, o no son los del preflight (1); bundletool no lee el AAB (3) |
 | | `size-gate -RequireBundletool`, `check-16kb` con `CHECK16_REQUIRE_ZIPALIGN=1`, `check-manifest -Mode release -RequireBilling`, `check-release-classes`, `check-no-unity-iap`, `check-no-applovin` | las compuertas de release de 08 §12.1 etapa 4 |
+| | `ci/check-r8-mapping.ps1` (D-059, añadido del 2026-11-06; §8) | el AAB no lleva el mapping de R8 en `BUNDLE-METADATA` (2); una clase de `ci/r8-jni-keep.txt` falta o sale renombrada, o el mapping lleva una clase de `com.google.firebase.appcheck.debug`, `com.applovin` o `com.unity.purchasing` (1) |
 | | `ci/check-no-unity-telemetry.ps1` (Q-B13-9, añadido de D-040 del 2026-10-28) | el AAB lleva `UnityConnectSettings` (clase 310 en `globalgamemanagers`: la configuración de Unity Analytics, Cloud Diagnostics y Performance Reporting) o un host de datos de Unity (`cloud.unity3d.com`, `analytics.unity3d.com`, `operate-sdk-telemetry.unity3d.com`, `services.api.unity.com`) (1); sin `globalgamemanagers`, con un formato distinto del comprobado (22) o con tablas que no cuadran (2). Unity Ads (`unityads.unity3d.com`) no cuenta: se declara con los anuncios |
 
 ## 5. Cómo se protege la clave
@@ -139,3 +140,20 @@ Sin pistas con jugadores (cerrada, abierta) y sin escalonado; la pista interna, 
 - El build de Unity terminó bien: `[AF.BuildRelease] OK`, AAB de 59,18 MB, firmado con la clave de subida y con `LocReleaseGate` en OK. Aun así, game-ci v6 salió con 1 al devolver la licencia Personal («Serial number unavailable for ULF return»), y su `validateBuild` cortó el job antes de las compuertas.
 - Desde entonces, el paso de game-ci lleva `continue-on-error: true`. El veredicto lo dan el paso «Un solo AAB» y las compuertas siguientes, que un AAB ausente o a medias no pasa.
 
+## 8. R8 y símbolos (D-059, añadido del 2026-11-06)
+
+Play Console recomendó la «optimización con R8» y avisó de que la 10003 no traía el archivo de desofuscación ni los símbolos nativos. Desde la 1.1:
+
+- **R8 en la variante `release` de Gradle** (`AndroidMinifyRelease: 1`; `ProjectSetup.MinifyRelease`, que exige `ProjectSetup.Validate`). Unity usa esa variante en todo build sin Development Build: el release, el ensayo `-afRehearsal` y el de humo salen igual. El `dev.apk` sigue sin R8 (`MinifyDebug = false`).
+- **Reglas keep** (lo que C#, el manifiesto o un SDK buscan por nombre):
+  - plugins propios: cada `.androidlib` con código lleva su `proguard-rules.pro` como `consumerProguardFiles` (`-keep class <namespace>.** { *; }`); `AfIcon` no tiene código;
+  - Firebase 13.17.0, Google Mobile Ads 11.5.0 + UMP, la mediación de Unity Ads, Play Billing 9.0.0 y Mobile Notifications traen sus reglas en sus AAR (las de Firebase, en los `firebase-*-unity.srcaar`); no se repiten;
+  - **Play Games 2.3.0 no trae ninguna**: el plugin publica las suyas en `Proguard/games.txt` y pide copiarlas. Están en `Assets/_Project/Plugins/Android/AfKeepRules.androidlib` (solo reglas), sin Nearby (añadido de D-042) y con los subpaquetes `gamessignin` y `playergameevent` que su C# también nombra;
+  - el reproductor de Unity añade `proguard-unity.txt` (`com.unity3d.player.*`, `bitter.jnibridge.*`).
+- **Compuerta `ci/check-r8-mapping.ps1`** (ci.yml y release.yml): lee el mapping del AAB y exige que cada clase de `ci/r8-jni-keep.txt` conserve su nombre, y que no haya clases de paquetes prohibidos (con R8 renombradas, las compuertas del dex no las verían). **Al añadir un `AndroidJavaClass`, `AndroidJavaObject` o `AndroidJavaProxy` nuevo en C#, añade su clase a esa lista** (y, si es de un plugin propio, el test `R8ReleaseTests` lo exige).
+- **Desofuscación en Play:** el Android Gradle Plugin mete el mapping en el AAB (`BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`) y Play Console lo toma al subir el AAB: no hay que subirlo aparte. Para comprobarlo tras subir: Play Console › Explorador de app bundles › la versión › «Descargas», donde debe figurar el archivo de desofuscación (y desaparecer el aviso de la 10003). Si no figurara, ahí mismo se sube a mano el `<nombre>_mapping.txt` que deja Unity junto al AAB (artefacto `android-mapping-release-…` del workflow; en local, `Builds/Android/rehearsal_mapping.txt`).
+- **Símbolos nativos:** `BuildRelease` pone, solo durante el build de release y de ensayo, la tabla de símbolos dentro del bundle (`ReleaseDebugSymbols`: `SymbolTable` + `IncludeInBundle`, en `BUNDLE-METADATA/com.android.tools.build.debugsymbols`), y Play simboliza con ella los fallos y ANR nativos. No lleva secretos ni cambia la descarga. El ajuste es de `Library/` (por equipo), así que se restaura al terminar. Se comprueba en la misma pantalla de «Descargas» (los símbolos de depuración nativos) y en que el aviso de Play desaparezca.
+- **Tamaño:** el mapping y los símbolos suman ~27 MB al archivo AAB, pero Play nunca los sirve. `ci/size-gate.ps1` mide por eso el archivo **sin `BUNDLE-METADATA/`** (y lo dice en la línea, con el tamaño del archivo entero); la medida de Play (`bundletool get-size total`) no cambia de criterio.
+- **Crashlytics:** los fallos de C# no cambian (se informan desde IL2CPP). Un fallo de Java en Crashlytics saldría ofuscado: el plugin de Gradle de Crashlytics que sube el mapping no se usa con Unity. Play Console (Android vitals) sí lo desofusca.
+- **Cómo revertir** (si algo falla en el teléfono y no hay tiempo de encontrar la regla): `ProjectSetup.MinifyRelease = false`, `pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup` y commitear `ProjectSettings/ProjectSettings.asset`; quitar entonces el paso `check-r8-mapping` de los workflows (un AAB sin R8 no lleva mapping y la compuerta sale con 2).
+- **Medida del ensayo (escritorio x64, 2026-11-06, mismo commit):** dex de 28,98 MB a 12,07 MB sin comprimir (4 → 2 `classes*.dex`; 10,78 → 5,07 MB comprimidos); descarga de Play (`bundletool get-size total`, máx.) de 57,00 MB a 51,30 MB; archivo AAB de 58,01 MB a 79,49 MB (52,29 MB sin `BUNDLE-METADATA`).

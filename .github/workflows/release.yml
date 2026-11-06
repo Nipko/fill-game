@@ -15,7 +15,8 @@
 #              Development Build) y las compuertas: size-gate -RequireBundletool, check-16kb con
 #              CHECK16_REQUIRE_ZIPALIGN=1, check-manifest -Mode release -RequireBilling, check-release-classes,
 #              check-no-unity-iap, check-no-applovin (D-049, anadido del 2026-10-27), check-no-unity-telemetry
-#              (Q-B13-9, anadido de D-040 del 2026-10-28), applicationId y version del
+#              (Q-B13-9, anadido de D-040 del 2026-10-28), check-r8-mapping (R8; D-059, anadido del 2026-11-06),
+#              applicationId y version del
 #              manifiesto, la firma (ci/check-release-signature.sh) y la configuracion de Firebase de prod
 #              (ci/check-firebase-config.sh: google_app_id y gcm_defaultSenderId del AAB; anadido de D-035 del 2026-10-27).
 #
@@ -313,6 +314,11 @@ jobs:
       - name: Compuerta sin servicios de datos de Unity (Analytics, Cloud Diagnostics, Performance Reporting, UGS)
         run: pwsh -NoProfile -File ci/check-no-unity-telemetry.ps1 build/Android
 
+      # D-059, anadido del 2026-11-06: R8 en el release. El AAB lleva el mapping y la tabla de simbolos nativos en
+      # BUNDLE-METADATA (Play Console los toma al subirlo); las clases JNI (ci/r8-jni-keep.txt) conservan su nombre.
+      - name: Compuerta del mapping de R8 (clases JNI con su nombre)
+        run: pwsh -NoProfile -File ci/check-r8-mapping.ps1 build/Android
+
       # Artefacto de la ejecucion; NO se sube a Google Play (lo hace el dueno a mano).
       - name: AAB de release
         uses: actions/upload-artifact@v4.6.2
@@ -320,6 +326,16 @@ jobs:
           name: android-aab-release-${{ needs.preflight.outputs.version_name }}-${{ needs.preflight.outputs.version_code }}
           path: build/Android/*.aab
           retention-days: 30
+          if-no-files-found: error
+
+      # La copia suelta del mapping de R8 de esta version (el mismo que va dentro del AAB), por si hiciera falta subirlo a
+      # mano a Play Console o desofuscar un informe fuera de Play (docs/dev/release.md, "R8 y simbolos"). No es secreto.
+      - name: Mapping de R8
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: android-mapping-release-${{ needs.preflight.outputs.version_name }}-${{ needs.preflight.outputs.version_code }}
+          path: build/Android/*_mapping.txt
+          retention-days: 90
           if-no-files-found: error
 
       - name: Borrar el keystore

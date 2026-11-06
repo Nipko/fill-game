@@ -1,0 +1,20 @@
+// Reglas keep de R8 del build de release que ningun AAR trae por su cuenta (D-059, anadido del 2026-11-06: R8 en el release;
+// docs/dev/release.md, "R8"). Solo reglas, sin codigo ni recursos: Unity la anade a unityLibrary como cualquier .androidlib y el
+// Android Gradle Plugin aplica su consumerProguardFiles al R8 del launcher. Las reglas de cada plugin propio viven en su
+// proguard-rules.pro; las de Firebase, Google Mobile Ads, UMP, Unity Ads, Play Billing y Mobile Notifications, en sus AAR.
+// La compuerta ci/check-r8-mapping.ps1 comprueba en el mapping del AAB que las clases JNI (ci/r8-jni-keep.txt) no cambian.
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.amazonfill.keeprules'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    lint {
+        abortOnError false
+    }
+}

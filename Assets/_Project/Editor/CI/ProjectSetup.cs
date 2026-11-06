@@ -134,6 +134,23 @@ namespace AF.EditorTools
         /// <summary>false: la lista de <see cref="AndroidGraphicsApis"/>, no la automática de Unity (añadido de D-060 del 2026-10-29).</summary>
         public const bool UseDefaultGraphicsApis = false;
 
+        /// <summary>
+        /// R8 (Minify) en la variante <c>release</c> de Gradle (D-059, añadido del 2026-11-06: la «optimización con R8» que recomendó
+        /// Play Console; <c>docs/dev/release.md</c>, «R8», y <c>docs/dev/memoria.md</c> §6). Unity usa esa variante en todo build sin
+        /// Development Build: el release, el ensayo (<c>BuildRelease -afRehearsal</c>) y el de humo, así que el ensayo mide y prueba lo
+        /// mismo que se publica. Quita y renombra el Java que nadie usa y deja el <c>mapping.txt</c> dentro del AAB
+        /// (<c>BUNDLE-METADATA</c>), del que Play saca la desofuscación. Lo que C# o el manifiesto buscan por nombre lo guardan las
+        /// reglas keep: las de cada plugin propio (<c>proguard-rules.pro</c>), las de los AAR de los SDK y las de
+        /// <c>AfKeepRules.androidlib</c> (Play Games). Compuerta: <c>ci/check-r8-mapping.ps1</c> con <c>ci/r8-jni-keep.txt</c>.
+        /// <para><b>Cómo revertir</b> (si algo falla en el teléfono y no hay tiempo de buscar la regla): esta constante a false,
+        /// <c>pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup</c> y commitear <c>ProjectSettings/ProjectSettings.asset</c>
+        /// con <c>R8ReleaseTests</c>; la compuerta del mapping deja de aplicar (un AAB sin R8 no lleva mapping).</para>
+        /// </summary>
+        public const bool MinifyRelease = true;
+
+        /// <summary>Sin R8 en los Development Build (<c>dev.apk</c>): se depuran con los nombres de verdad.</summary>
+        public const bool MinifyDebug = false;
+
         /// <summary>Propiedad serializada de los datos de posproceso del 2D Renderer (<c>Renderer2DData.postProcessData</c>).</summary>
         internal const string PostProcessDataProperty = "m_PostProcessData";
 
@@ -193,6 +210,8 @@ namespace AF.EditorTools
                 PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, AndroidGraphicsApis);
             }
             FontSetup.SetAtlasReadability(false); // memoria (2026-10-26): los atlas de las fuentes, sin copia en CPU
+            PlayerSettings.Android.minifyRelease = MinifyRelease; // añadido de D-059 del 2026-11-06: R8 en la variante release
+            PlayerSettings.Android.minifyDebug = MinifyDebug;
 
             // Sin firma de release: Unity firma con la clave de depuración. El keystore lo gestiona el dueño.
             PlayerSettings.Android.useCustomKeystore = false;
@@ -240,6 +259,8 @@ namespace AF.EditorTools
             Check(problems, "splashScreen.showUnityLogo", PlayerSettings.SplashScreen.showUnityLogo, ShowUnitySplash);
             Check(problems, "splashScreen.backgroundColor", (Color32)PlayerSettings.SplashScreen.backgroundColor, BrandPetroleum);
             Check(problems, "android.blitType", PlayerSettings.Android.blitType, BlitType);
+            Check(problems, "android.minifyRelease", PlayerSettings.Android.minifyRelease, MinifyRelease);
+            Check(problems, "android.minifyDebug", PlayerSettings.Android.minifyDebug, MinifyDebug);
             foreach (RenderPipelineAsset asset in PipelineAssets())
             {
                 bool? hdr = PipelineHdrOf(asset);
@@ -301,6 +322,8 @@ namespace AF.EditorTools
                 + ", logoUnity=" + PlayerSettings.SplashScreen.showUnityLogo
                 + ", hdr=" + DescribeHdr()
                 + ", blit=" + PlayerSettings.Android.blitType
+                + ", r8Release=" + PlayerSettings.Android.minifyRelease
+                + ", r8Debug=" + PlayerSettings.Android.minifyDebug
                 + ", posproceso=" + DescribeRendererPostProcess()
                 + ", graficos=" + (PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android) ? "auto" : DescribeGraphicsApis());
         }

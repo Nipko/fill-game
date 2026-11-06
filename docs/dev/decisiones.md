@@ -4941,6 +4941,18 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   - **perfil de cobro completado por el dueño el 2026-10-31** (Monetización › Pagos; «You are all set»). Falta que Unity lo verifique y aceptar «Manage consent» para los formularios fiscales electrónicos.
 - **Alarmas de AWS, 2026-10-31:** la suscripción por correo que creó `AfProdOps` caducó sin confirmar y AWS la borró a los 3 días. El integrador la volvió a crear con `aws sns subscribe` sobre `af-prod-alarms` y el dueño la confirmó: ahora está **confirmada** a `support@tintalu.com`. CloudFormation todavía guarda la suscripción antigua (`AlarmTopicsupporttintalucom…`, con su ARN ya borrado). No afecta a las alarmas, pero si algún día se borra o se rehace el stack, la nueva suscripción hecha a mano hay que quitarla a mano.
 
+### D-059, añadido del 2026-11-06: R8 y símbolos en el release (1.1)
+
+- **Origen:** la «optimización con R8» de las 4 acciones recomendadas de Play Console sobre la 10003, y su aviso de que faltaban el archivo de desofuscación y los símbolos nativos (añadidos del 2026-10-31); `docs/dev/memoria.md` §6. Rama `v11/r8-release`. Encargo del coordinador al build-release; no cambia ninguna decisión del dueño ni añade SDK, paquetes, permisos ni versiones.
+- **Aplicado:**
+  - R8 en la variante `release` de Gradle por `ProjectSetup` (`MinifyRelease = true`, `MinifyDebug = false`; `AndroidMinifyRelease: 1`): release, ensayo `-afRehearsal` y humo salen igual; `dev.apk`, sin R8;
+  - reglas keep: las de cada plugin propio (ya estaban), las de los AAR de Firebase, Google Mobile Ads, UMP, Unity Ads, Play Billing y Mobile Notifications (sin tocar) y, nuevas, las de Play Games 2.3.0 (`games.txt` del plugin, sin Nearby) en `AfKeepRules.androidlib`, que no trae ningún AAR;
+  - la tabla de símbolos nativos dentro del AAB (`ReleaseDebugSymbols`, solo durante el build de release y de ensayo) y el mapping de R8, que el AGP ya mete en el AAB; `BuildRelease` exige el `<nombre>_mapping.txt` que deja Unity junto al AAB y `release.yml` lo guarda como artefacto 90 días;
+  - compuerta nueva `ci/check-r8-mapping.ps1` con `ci/r8-jni-keep.txt` (40 clases que C#, el manifiesto o un SDK buscan por nombre) en ci.yml y release.yml;
+  - `ci/size-gate.ps1` mide el archivo sin `BUNDLE-METADATA/` (mapping y símbolos, ~27 MB que Play nunca sirve); la medida de Play no cambia.
+- **Medida del ensayo** (escritorio x64, mismo commit): dex 28,98 → 12,07 MB sin comprimir; descarga de Play (máx.) 57,00 → 51,30 MB; archivo AAB 58,01 → 79,49 MB (52,29 MB sin `BUNDLE-METADATA`). Todas las compuertas en verde.
+- **Pendiente:** la prueba de humo en el teléfono con el ensayo (`docs/dev/release.md` §8 y la lista del informe: compra de prueba, recompensado, Liga y App Check, aviso, Age Signals, guardado en la nube, borrado de cuenta, splash, foco de audio, Play Games); medir el `.dex mmap` con `AF_PERF mem`; tras subir la 1.1, comprobar en Play Console › Explorador de app bundles › «Descargas» que figuran el archivo de desofuscación y los símbolos. **Cómo revertir:** `MinifyRelease = false`, `-Method Setup` y quitar `check-r8-mapping` de los workflows.
+
 ## D-066 · Motor de marketing liderado por Spark
 
 - **Fecha:** 2026-10-31, el día del lanzamiento de la 1.0.0 (10003).
