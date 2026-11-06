@@ -22,8 +22,21 @@ namespace AF.UI
         private ScreenFrame _frame;
         private bool _applied;
 
-        /// <summary>Se llama en cada fotograma con el lienzo activo (después de los Update; lo usa <see cref="OverlayCanvas"/>).</summary>
-        public System.Action? Polled { get; set; }
+        private System.Action? _polled;
+
+        /// <summary>
+        /// Se llama en cada fotograma con el lienzo activo (después de los Update; lo usa <see cref="OverlayCanvas"/>). Sin nadie, el
+        /// componente se apaga y no cuesta nada.
+        /// </summary>
+        public System.Action? Polled
+        {
+            get => _polled;
+            set
+            {
+                _polled = value;
+                enabled = value != null;
+            }
+        }
 
         /// <summary>La geometría con la que se colocó la columna por última vez.</summary>
         public ScreenFrame Frame => _frame;
@@ -37,7 +50,9 @@ namespace AF.UI
             var go = new GameObject(ObjectName, typeof(RectTransform));
             go.transform.SetParent(canvasRoot, false);
             UiBuilder.Stretch((RectTransform)go.transform);
-            return go.AddComponent<ScreenColumn>();
+            ScreenColumn column = go.AddComponent<ScreenColumn>();
+            column.enabled = false; // sin Polled, sin LateUpdate
+            return column;
         }
 
         /// <summary>Coloca la columna y los fondos que llegan al borde con <paramref name="frame"/>.</summary>
@@ -74,7 +89,7 @@ namespace AF.UI
 
         private void LateUpdate()
         {
-            Polled?.Invoke();
+            _polled?.Invoke();
         }
 
         /// <summary>

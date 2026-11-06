@@ -259,9 +259,11 @@ namespace AF.UI
         /// vista del icono a 1,5 veces su diámetro (<see cref="IconCanvasDp"/> / <see cref="IconMaskDp"/>); sin medida (el Editor,
         /// Android 8-11 sin velo o sin entrega), la caja de la guía: el icono centrado, de <see cref="IconCanvasDp"/> dp, con el
         /// círculo de <see cref="IconMaskDp"/>. <paramref name="screenPxPerUnit"/> (px de pantalla por unidad) solo sirve para la
-        /// sonda en px sin medida.
+        /// sonda en px sin medida. En una ventana ancha la escena es la columna de <see cref="ScreenFrame"/> (añadido de D-059 del
+        /// 2026-11-06): <paramref name="columnX"/> es su borde izquierdo en el lienzo y <paramref name="canvasWidth"/> el ancho del
+        /// lienzo entero, que es lo que mide la DecorView (0 = la escena es el lienzo entero, como en los teléfonos).
         /// </summary>
-        public void Layout(BrandEmblemArt art, float unitsPerDp, SplashIconBox icon, float screenPxPerUnit)
+        public void Layout(BrandEmblemArt art, float unitsPerDp, SplashIconBox icon, float screenPxPerUnit, float columnX = 0f, float canvasWidth = 0f)
         {
             UnitsPerDp = unitsPerDp > 0f ? unitsPerDp : 1f;
             _w = art.Width;
@@ -270,20 +272,21 @@ namespace AF.UI
             Measured = icon.Measured && _w > 0f && _h > 0f;
             if (Measured)
             {
-                float unitsPerPx = _w / icon.RefWidth;
+                float fullW = canvasWidth > 0f ? canvasWidth : _w; // la DecorView mide el lienzo entero, no la columna
+                float unitsPerPx = fullW / icon.RefWidth;
                 float unitsPerPxY = _h / icon.RefHeight;
                 Vector2 c = icon.Center;
-                _center = new Vector2((c.x - icon.RefLeft) * unitsPerPx, (c.y - icon.RefTop) * unitsPerPxY);
+                _center = new Vector2(((c.x - icon.RefLeft) * unitsPerPx) - columnX, (c.y - icon.RefTop) * unitsPerPxY);
                 _d0 = icon.Diameter * unitsPerPx;
-                _pxPerUnit = icon.RefWidth / _w;
-                _pxOrigin = new Vector2(icon.RefLeft, icon.RefTop);
+                _pxPerUnit = icon.RefWidth / fullW;
+                _pxOrigin = new Vector2(icon.RefLeft + (columnX * _pxPerUnit), icon.RefTop);
             }
             else
             {
                 _center = new Vector2(_w * 0.5f, _h * 0.5f);
                 _d0 = IconMaskDp * UnitsPerDp;
                 _pxPerUnit = screenPxPerUnit > 0f ? screenPxPerUnit : 1f;
-                _pxOrigin = Vector2.zero;
+                _pxOrigin = new Vector2(columnX * _pxPerUnit, 0f);
             }
 
             _shape = Measured ? IconMaskShape.From(icon) : IconMaskShape.Circle;

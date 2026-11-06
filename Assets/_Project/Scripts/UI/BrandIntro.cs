@@ -699,7 +699,9 @@ namespace AF.UI
         {
             _art = art;
             _images.Place(art);
-            _morph.Layout(art, UnitsPerDp(art), AndroidOsSplash.ReadIcon(), ScreenPxPerUnit(art));
+            ScreenFrame frame = ScreenFrame.Current; // en una ventana ancha, la escena es la columna (añadido de D-059)
+            _morph.Layout(art, UnitsPerDp(art), AndroidOsSplash.ReadIcon(), ScreenPxPerUnit(art), frame.IsFullWidth ? 0f : frame.ColumnX,
+                frame.IsFullWidth ? 0f : frame.CanvasWidth);
             Apply(_clockMs);
             if (_reduceMotion && _begun)
             {

@@ -228,7 +228,7 @@ namespace AF.UI
             Image previewDim = ModalKit.Dim("Dim", _preview, 0.55f);
             previewDim.raycastTarget = false;
             _previewOutside = UiBuilder.BareButton("Outside", _preview, () => ClosePreview());
-            UiBuilder.Stretch((RectTransform)_previewOutside.transform);
+            ScreenColumn.Bleed((RectTransform)_previewOutside.transform); // también en los lados de la columna (añadido de D-059)
             A11yLabels.Set(_previewOutside, () => A11yText.Close);
             _previewPanel = ModalKit.Card("PreviewPanel", _preview, art, out _previewSurface);
             _previewPanel.gameObject.AddComponent<HitArea>().raycastTarget = true; // tocar la tarjeta no la cierra
