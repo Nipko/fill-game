@@ -6,6 +6,12 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-05 · Vídeos 1, 3 y 5 del lote 1 en inglés y portugués, programados para el 2026-11-06 (PROGRAMADOS, aprobados por el dueño: «Aprobado, programa»)
+
+- **Piezas:** `C:\AI\marketing\piezas\n1-0{1,3,5}-*-{en,pt}` (6), de `C:\AI\marketing\briefs\linea-1\generar_idiomas.py`: los mismos cortes que en español, con la toma del juego en cada idioma y los tiempos leídos de los eventos de esa toma (los vertidos caen a otra hora en cada grabación). Términos del glosario: «cuia» no se traduce; pour/despejar, tint/tingir, seal/selar. Las 6, `calidad_ok` (a la de Sella EN se le bajó el audio 0,8 dB por el pico real: −1,3 dBFS, −14,8 LUFS).
+- **Programación en Postiz** (hora del Pacífico; cada vídeo, a la vez en YouTube, Instagram y Facebook con el enlace de Play `&hl=en|pt_BR`, y en TikTok como borrador a la bandeja, `UPLOAD`, con «link in bio» o «link na bio»): 09:00 Sella PT · 11:00 Sella EN · 13:00 Reto PT · 15:00 Reto EN · 17:00 Río PT · 19:00 Río EN. 24 publicaciones en `QUEUE`.
+- **TikTok:** los borradores llegan a la bandeja de la app; el dueño los publica (caducan a las 24 h; máximo 5 pendientes). Los 3 en español del lote 1 se enviaron a la bandeja el 2026-11-05: los vídeos van por `FILE_UPLOAD` y no necesitan la propiedad de URL verificada; solo las fotos (`PULL_FROM_URL`) la necesitan. Publicar directo desde Postiz sigue esperando la auditoría de la app de TikTok.
+
 ### 2026-11-05 · Vídeos 1, 3 y 5 del lote 1 publicados en YouTube, Instagram y Facebook (PUBLICADOS, aprobados por el dueño: «Públicos, los 3 ya»)
 
 | Vídeo | YouTube | Instagram | Facebook |
