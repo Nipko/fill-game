@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using AF.GameFlow;
+using AF.LiveOps;
 using AF.Save;
 using UnityEngine;
 
@@ -66,6 +67,26 @@ namespace AF.UI
                     && !AccountDeleted && _league != null && _league.Active && !profile.Progress.LeagueDebutSeen
                     && !profile.Progress.LeagueOpened;
             }
+        }
+
+        /// <summary>
+        /// La victoria de campaña de <paramref name="wonLevel"/> deja el estreno pendiente al salir (la Liga encendida y permitida,
+        /// desbloqueada con esta victoria o antes, y sin el estreno visto): entonces esa victoria no apunta ninguna oferta, ni encima
+        /// de la victoria ni al volver al inicio (<c>GameBootstrap.Market.cs</c>), como con el pre-prompt de push: nunca dos pantallas
+        /// seguidas. Se llama en la victoria, antes de que el progreso guardado sepa del nivel ganado.
+        /// </summary>
+        internal bool LeagueDebutDueAtCampaignVictory(int wonLevel)
+        {
+            Profile? profile = _profile;
+            LeagueService? league = _league;
+            if (LeagueDebutOverride == false || _leagueDebut == null || _capture.Active || profile == null || league == null || ProfileLocked
+                || AccountDeleted || profile.Progress.LeagueDebutSeen || profile.Progress.LeagueOpened)
+            {
+                return false;
+            }
+
+            int maxLevel = Math.Max(_progress?.MaxLevel ?? 0, wonLevel);
+            return league.Config.LiveLeagueEnabled && LeagueAllowed() && LeagueRules.IsUnlocked(maxLevel, league.Config);
         }
 
         /// <summary>«Nueva» en la tarjeta «Liga» del inicio: la Liga activa, el estreno visto y la Liga aún sin abrir.</summary>
@@ -200,8 +221,11 @@ namespace AF.UI
                 return;
             }
 
-            if (LobbyClear() && OpenLeague())
+            if (LobbyClear())
             {
+                // Con el inicio despejado, se abre ahora o nunca: si la Liga ya no puede abrirse (Remote Config, la edad), se olvida
+                // en lugar de abrirse sola mucho después.
+                OpenLeague();
                 _leagueDebutOpenPending = false;
             }
         }
@@ -241,7 +265,7 @@ namespace AF.UI
 
             // Sin la Bitácora (sin su TakeoverAtLobby), la entrada al inicio se detecta aquí.
             bool lobby = LobbyClear();
-            if (_logbookScreen == null && lobby && !_leagueDebutLobbyWas)
+            if ((_logbook == null || _logbookScreen == null) && lobby && !_leagueDebutLobbyWas)
             {
                 bool skip = _skipLobbyTakeover;
                 _skipLobbyTakeover = false;
@@ -259,7 +283,10 @@ namespace AF.UI
             }
         }
 
-        /// <summary>Atrás de Android con el estreno delante: «Luego». False si no se ve.</summary>
+        /// <summary>
+        /// Atrás de Android con el estreno delante: «Luego», también antes de que los botones reciban toques (Atrás es un gesto
+        /// deliberado, no un toque impaciente) [P]. False si no se ve.
+        /// </summary>
         public bool PressLeagueDebutBack()
         {
             if (!LeagueDebutVisible)

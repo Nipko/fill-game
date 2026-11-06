@@ -4,6 +4,7 @@ using System.Collections;
 using AF.Analytics;
 using AF.Audio;
 using AF.Economy;
+using AF.IAP;
 using AF.GameFlow;
 using AF.LiveOps;
 using AF.Localization;
@@ -49,6 +50,10 @@ namespace AF.Tests.PlayMode
         {
             GameBootstrap.ResetLeagueOverrides();
             GameBootstrap.ResetTelemetryOverrides();
+            GameBootstrap.ResetSessionOverrides();
+            GameBootstrap.ResetMarketOverrides();
+            GameBootstrap.ResetLogbookOverrides();
+            GameBootstrap.A11yHostOverride = null;
             GameBootstrap.AgeUnder13Override = null;
             GameBootstrap.LogbookOverride = null;
             AudioCues.Override = null;
@@ -315,6 +320,204 @@ namespace AF.Tests.PlayMode
 
             Assert.That(boot.LeagueOpen, Is.True, "y allí la Liga");
             Assert.That(boot.Profile!.Progress.LeagueOpened, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator Victory41_WithThePushPrePrompt_ThePrePromptGoesFirst_TheDebutWaits()
+        {
+            // 06 §8.1: la 1.ª victoria de la 2.ª sesión pasado el 11 lleva el pre-prompt de push. El estreno no sale justo después
+            // (nunca dos pantallas seguidas): espera al siguiente momento tranquilo, aquí la entrada al inicio.
+            var clock = new ManualClock(T0, TimeSpan.FromHours(-5));
+            LaunchOptions.ClockOverride = clock;
+            GameBootstrap.NotificationSchedulerOverride = new FakeNotificationScheduler(clock);
+            GameBootstrap.PushSettingsStoreOverride = new InMemoryPushSettingsStore();
+            GameBootstrap.SessionStoreOverride = new InMemorySessionStore(new SessionRecord { Sessions = 1, LastSeenAt = T0.AddHours(-20) });
+            GameBootstrap.PrePromptCardOverride = true;
+            Profile profile = VictorySetup.Profile(100);
+            profile.Progress.MaxLevel = 40;
+            profile.Progress.NextLevel = 41;
+            LaunchOptions.LevelOffsetOverride = 40;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
+            yield return PlayModeHelpers.LoadGame(41, new MemoryProgressStore(41, 40));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.GetComponent<SessionRunner>().enabled = false;
+            boot.GetComponent<LeagueRunner>().enabled = false;
+            VictorySetup.WinToVictoryScreen(boot);
+            boot.TickSessions();
+            Assert.That(boot.PrePromptPending, Is.Not.EqualTo(PrePromptKind.None), "condición: esta victoria lleva el pre-prompt");
+
+            Assert.That(boot.PressHome(), Is.True);
+            Assert.That(boot.PrePromptCard!.Visible, Is.True, "primero el pre-prompt");
+            Assert.That(boot.LeagueDebutVisible, Is.False);
+            boot.PrePromptCard.DeclineButton.onClick.Invoke();
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby), "«Ahora no» sigue a Inicio");
+            boot.TickLeague(16f);
+            Assert.That(boot.LeagueDebutVisible, Is.False, "ni justo después: esa entrada al inicio no saca otra pantalla");
+            Assert.That(boot.LeagueDebutPending, Is.True, "queda pendiente");
+
+            Assert.That(boot.PressSettings(), Is.True);
+            boot.TickLeague(16f);
+            Assert.That(boot.CloseSettings(), Is.True);
+            Tick(boot, 300f);
+            Assert.That(boot.LeagueDebutVisible, Is.True, "en la siguiente entrada al inicio");
+        }
+
+        [UnityTest]
+        public IEnumerator Lobby_WithANotificationToOpen_TheNotificationWins_TheDebutComesNext()
+        {
+            // D-062: la entrada al inicio que viene de un aviso abre lo que nombra; el estreno espera a la siguiente entrada.
+            var clock = new ManualClock(T0, TimeSpan.FromHours(-5));
+            LaunchOptions.ClockOverride = clock;
+            var scheduler = new FakeNotificationScheduler(clock);
+            GameBootstrap.NotificationSchedulerOverride = scheduler;
+            GameBootstrap.LogbookOverride = true;
+            GameBootstrap.LogbookStoreOverride = new InMemoryLoginCalendarStore(new LoginCalendarRecord { PlayedDate = "2026-11-06" });
+            scheduler.SimulateOpenFrom("logbook_pending");
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(45)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.LogbookRunner!.enabled = false;
+            boot.GetComponent<LeagueRunner>().enabled = false;
+            boot.TickSessions();
+            boot.TickLogbook(16f);
+            boot.TickLeague(16f);
+            Assert.That(boot.LogbookScreen!.Visible, Is.True, "el aviso abre la libreta");
+            Assert.That(boot.LogbookScreen.Source, Is.EqualTo(LogbookOpenSource.Push));
+            Assert.That(boot.LeagueDebutVisible, Is.False, "sin el estreno encima");
+
+            Assert.That(boot.PressLogbookBack(), Is.True);
+            boot.TickLogbook(16f);
+            boot.TickLeague(16f);
+            Assert.That(boot.LeagueDebutVisible, Is.False, "cerrar la libreta no es una entrada nueva al inicio");
+
+            Assert.That(boot.PressSettings(), Is.True);
+            boot.TickLogbook(16f);
+            boot.TickLeague(16f);
+            Assert.That(boot.CloseSettings(), Is.True);
+            boot.TickLogbook(16f);
+            boot.TickLeague(16f);
+            Assert.That(boot.LeagueDebutVisible, Is.True, "el estreno, en la siguiente entrada al inicio");
+            Assert.That(boot.LogbookScreen.Visible, Is.False, "sin la libreta encima");
+        }
+
+        [UnityTest]
+        public IEnumerator TalkBack_ReadsOnlyTheDebut_AnnouncesTheTitle_AndTheCardSaysNew()
+        {
+            var host = new FakeScreenReaderHost(true);
+            GameBootstrap.A11yHostOverride = host;
+            yield return Lobby(new MemoryProfileStore(ProfileAt(45)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.LeagueDebutVisible, Is.True);
+            Tick(boot, 1200f);
+            boot.A11y!.Refresh();
+            Assert.That(host.Announcements, Does.Contain(LeagueText.DebutTitle), "TalkBack anuncia el título al salir");
+            Assert.That(host.Find(LeagueText.DebutOpen), Is.Not.Null, "«Ver la Liga», con su etiqueta");
+            Assert.That(host.Find(LeagueText.DebutLater), Is.Not.Null, "«Luego»");
+            Assert.That(host.Find(LeagueText.DebutTitle), Is.Not.Null, "el título se lee");
+            Assert.That(host.Find(boot.Lobby!.PlayLabel), Is.Null, "el velo tapa el inicio: lo de debajo no se publica");
+            Assert.That(host.Find(UiText.Settings), Is.Null);
+
+            boot.LeagueDebutView!.LaterButton.onClick.Invoke();
+            boot.TickLeague(16f);
+            boot.A11y.Refresh();
+            A11yItem? card = null;
+            foreach (A11yItem item in host.Items)
+            {
+                if (item.Role == UnityEngine.Accessibility.AccessibilityRole.Button && item.Label.StartsWith(LeagueText.Button, StringComparison.Ordinal))
+                {
+                    card = item;
+                }
+            }
+
+            Assert.That(card, Is.Not.Null, "la tarjeta «Liga» del inicio");
+            Assert.That(card!.Label, Does.EndWith(LeagueText.New), "TalkBack lee «Nueva» tras el título: " + card.Label);
+        }
+
+        [UnityTest]
+        public IEnumerator Victory41_DoubleHarvestAdvancesAlone_TheDebutShows_ThenLaterGoesOn()
+        {
+            // D-011, punto 4: tras la Cosecha doble la victoria pasa sola por el camino de Siguiente; el estreno sale ahí y «Luego» sigue.
+            FunnelSetup.Hooks();
+            LaunchOptions.LevelOffsetOverride = 40;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(100));
+            yield return PlayModeHelpers.LoadGame(41, new MemoryProgressStore(41, 40));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.GetComponent<LeagueRunner>().enabled = false;
+            GameScreen view = boot.View!;
+            FunnelSetup.Clock.Advance(TimeSpan.FromSeconds(200));
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 900);
+            Assert.That(view.DoubleHarvestShown, Is.True, "condición: la Cosecha doble se ofrece");
+            view.DoubleHarvestButton.onClick.Invoke();
+            Assert.That(view.AutoNextPending, Is.True);
+            for (int ms = 0; ms < 3000 && !boot.LeagueDebutVisible; ms += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(boot.LeagueDebutVisible, Is.True, "el avance solo pasa por el estreno");
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.VictoryScreen));
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(41));
+            boot.LeagueDebutView!.LaterButton.onClick.Invoke();
+            for (int ms = 0; ms < 15000 && boot.Flow.LevelNumber != 42; ms += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(42), "«Luego» sigue al 42");
+        }
+
+        [UnityTest]
+        public IEnumerator Victory41_WithASkinOfferForTheLobby_TheOfferWaitsForTheNextVictory()
+        {
+            // Q-B5-6: la skin del mundo sale al volver al inicio tras la victoria del 41. Con el estreno pendiente, esa victoria no
+            // apunta ninguna oferta (como con el pre-prompt): Inicio → estreno → «Luego» → el inicio, sin la tarjeta de oferta.
+            yield return WinSkinVictory41();
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressHome(), Is.True);
+            Assert.That(boot.LeagueDebutVisible, Is.True);
+            boot.TickMarket(16f);
+            Assert.That(boot.OfferCardView == null || !boot.OfferCardView.Visible, Is.True, "no antes del estreno ni encima");
+            boot.LeagueDebutView!.LaterButton.onClick.Invoke();
+            boot.TickMarket(16f);
+            boot.TickLeague(16f);
+            boot.TickMarket(16f);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(boot.OfferCardView == null || !boot.OfferCardView.Visible, Is.True, "ni justo después: nunca dos pantallas seguidas");
+
+            // Control: sin el estreno, la misma victoria saca la skin al volver al inicio.
+            GameBootstrap.ResetMarketOverrides();
+            GameBootstrap.ResetSessionOverrides();
+            GameBootstrap.LeagueDebutOverride = false;
+            yield return WinSkinVictory41();
+            boot = GameBootstrap.Current!;
+            Assert.That(boot.PressHome(), Is.True);
+            boot.TickMarket(16f);
+            Assert.That(boot.OfferCardView!.Visible, Is.True, "condición: sin el estreno, la oferta sale");
+        }
+
+        private static IEnumerator WinSkinVictory41()
+        {
+            GameBootstrap.SkinSalesOverride = true;
+            GameBootstrap.SessionStoreOverride = new InMemorySessionStore(new SessionRecord { Sessions = 1 });
+            LaunchOptions.ClockOverride = new ManualClock(T0);
+            LaunchOptions.PurchasePresenterOverride = new ImmediatePurchasePresenter();
+            Profile profile = Wallet.NewProfile(new ManualClock(T0));
+            profile.Progress.MaxLevel = 40;
+            profile.Progress.NextLevel = 41;
+            profile.Wallet.Seeds = 340;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
+            yield return PlayModeHelpers.LoadGame(41, new MemoryProgressStore(41, 40));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.SetUpMarket(), Is.True);
+            boot.GetComponent<MarketRunner>().enabled = false;
+            boot.GetComponent<LeagueRunner>().enabled = false;
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            boot.TickMarket(16f);
+            boot.TickMarket(GameBootstrap.OfferCardDelayMs + 16f);
         }
 
         [UnityTest]
