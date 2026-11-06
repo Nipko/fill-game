@@ -6,6 +6,18 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-05 · Vídeos 1, 3 y 5 del lote 1 publicados en YouTube, Instagram y Facebook (PUBLICADOS, aprobados por el dueño: «Públicos, los 3 ya»)
+
+| Vídeo | YouTube | Instagram | Facebook |
+|---|---|---|---|
+| «Sella» | https://www.youtube.com/watch?v=Yga0mUdINO8 | https://www.instagram.com/reel/DfYXiUgiuZu/ | https://www.facebook.com/reel/2581226485693208 |
+| «¿Lo resuelves?» | https://www.youtube.com/watch?v=9ZemX9DIlUo | https://www.instagram.com/reel/DfYXe18DG1_/ | https://www.facebook.com/reel/1080148211749051 |
+| «El río sube» | https://www.youtube.com/watch?v=uYaoFbHnQRI | https://www.instagram.com/reel/DfYXezqFC0u/ | https://www.facebook.com/reel/1119249044184041 |
+
+- **Textos:** la frase de cada vídeo, la llamada a la descarga y los hashtags. En YouTube y Facebook va el enlace de Play; en Instagram, «busca «Tintalu»».
+- **TikTok, a mano:** el dueño los sube desde el teléfono (`DCIM/Camera/tintalu-n1-*.mp4`), porque la app de TikTok sigue sin auditoría.
+- **Medición:** la tasa de gancho y la retención a las 48 h y a los 7 días, según `estrategia.md` §6. Se leerá a mano hasta S7 (H10).
+
 ### 2026-11-05 · Primera publicación: imagen de lanzamiento en Facebook e Instagram (PUBLICADA, aprobada por el dueño)
 
 - **Publicada** con Postiz, con la aprobación expresa del dueño («Aprobado, publica» y «Sí, publica»):
