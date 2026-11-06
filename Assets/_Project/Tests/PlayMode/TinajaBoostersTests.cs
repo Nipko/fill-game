@@ -8,6 +8,7 @@ using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
+using AF.Core.Session;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Platform;
@@ -329,16 +330,33 @@ namespace AF.Tests.PlayMode
             view.HintAnswerCard.CloseButton.onClick.Invoke();
             Assert.That(boot.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(2), "no cobra");
 
-            // En la partida: el vertido que pierde (N1 → N2) abre Aguas estancadas; Morpho ya no se puede pedir ni cobra.
+            // En la partida: el vertido que pierde (N1 → N2) deja el cierre sin victoria (R13 con D-014), pero desde el añadido
+            // de D-014 del 2026-11-06 Aguas estancadas espera a que el jugador repita: sacar dos veces de la tinaja aún lleva a
+            // tableros nuevos y, tras el segundo, todo vertido lleva a uno ya visto. Ahí Morpho ya no se puede pedir ni cobra.
             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
             Assert.That(boot.TapCuia(1).Kind, Is.EqualTo(TapKind.Poured));
+            PlayModeHelpers.StepUntilIdle(boot, 8000);
+            Assert.That(flow.HasActiveHint, Is.False, "la pista se apaga al verter otra cosa");
+            Assert.That(new DeadEndProbe().IsDeadEnd(flow.Session.Current, PourMode.Run), Is.True, "perdido");
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing), "perdido, pero con vertidos a tableros nuevos");
+            for (int draw = 0; draw < 2; draw++)
+            {
+                Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Selected), "sacar de la tinaja (la 3 en S0) " + (draw + 1));
+                Assert.That(boot.TapCuia(4).Kind, Is.EqualTo(TapKind.Poured), "sacar " + (draw + 1));
+                if (draw == 0)
+                {
+                    PlayModeHelpers.StepUntilIdle(boot, 8000);
+                    Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing), "tras sacar una vez");
+                }
+            }
+
             for (int t = 0; t < 8000 && flow.Phase == FlowPhase.Playing; t += PlayModeHelpers.FrameMs)
             {
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
             }
 
-            Assert.That(flow.HasActiveHint, Is.False, "la pista se apaga al verter otra cosa");
-            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.StuckModal), "R13 con D-014: el cierre se agota sin victoria");
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.StuckModal), "R13 con D-014: perdido y el jugador repite");
             FunnelSetup.Clock.Advance(TimeSpan.FromMilliseconds(BoosterConfig.HintCooldownMs + 1));
             Assert.That(flow.Hint.CanUse, Is.False, "en Aguas estancadas Morpho no está (04 §2.3)");
             Assert.That(boot.PressHint(), Is.False);

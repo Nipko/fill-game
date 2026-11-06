@@ -244,9 +244,17 @@ y los pares son idénticos (`--check` del tutorial y de la campaña 11-200).
   distintas sí puede cambiarlo (P2, 02 R16). Así que, sin mecánicas y con capacidades iguales, los dos cierres son idénticos en `run`.
   Por eso tampoco depende de `futile_rule_enabled`: el kill-switch devuelve R13 al criterio clásico, pero el cierre sigue.
   Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada, aplicada por el dueño el 2026-10-13. R14 se reformula con D-014 («mientras exista progreso posible») y P1 se sigue exigiendo (`DeadEndProbePropertyTests`).
-- **Nivel 66:** Aguas estancadas sale justo tras el 9.º vertido (`1>5`), cuando el nivel queda perdido de verdad (4 estados
-  alcanzables; A* con todos los legales: irresoluble); los vertidos 10-12 del dueño ya eran vueltas del bucle y ahora no entran
-  (R15). Hasta el 8.º el nivel se gana.
+- **Nivel 66:** el 9.º vertido (`1>5`) deja el nivel perdido de verdad (4 estados alcanzables; A* con todos los legales:
+  irresoluble). Con D-014 Aguas estancadas salía justo ahí; desde su añadido del 2026-11-06 (sección siguiente) sale justo tras el
+  12.º, porque los vertidos 10 y 11 del dueño aún llevaban a tableros nuevos. Hasta el 8.º el nivel se gana.
+- **Estancado solo al repetir (añadido de D-014 del 2026-11-06, 1.1; punto 1 del añadido de D-059 del 2026-10-31).** Con el
+  cierre perdido, `LevelSession` solo da `Stuck` si **todo vertido legal** (útil o fútil) lleva a un tablero ya visto en el intento
+  (`DeadEndProbe.IsStagnant`, que reutiliza el estado 0 del cierre y no asigna). Los vistos son un `HashSet<ulong>` con el hash
+  canónico del cierre (`DeadEndProbe.CanonicalHash`) de todo tablero que fue `Current`; solo se consulta con `Contains`. Lo deshecho
+  con Marea sigue visto [P]; `Restart` los olvida (intento nuevo) [P]; la Pororoca, la Luciérnaga y `RestoreRevealed` los conservan.
+  `SeenBoardCount` es diagnóstico y `ResumeStuck()` reabre el modal al reanudar si el cierre sigue perdido [P]. Regresión: el nivel
+  26 (`Level26Board`, 12 estados, sigue en `Playing` con 2 → 9, 1 → 2 y 6 → 7); propiedades con un oráculo independiente
+  (`StagnationOracle`, `DotnetOnly/StagnationPropertyTests`) y `HotLoopAllocationTests.WarmStagnationCheck_DoesNotAllocate`.
 - **Coste** (.NET 10 Release, equipo de escritorio x64, 2026-10-13; `DeadEndProbePerformanceTests`, comando de la tabla de arriba):
   0,015 ms en el tablero del 66 (cierre entero), 0,093 ms en el de 14 cuias (se llena) y, en 4.026 estados de partidas al azar sobre
   los 36 tableros de referencia, 0,043 ms de media y 0,322 ms en el peor (Tu, 64 estados): objetivo < 1 ms. Sin asignaciones tras

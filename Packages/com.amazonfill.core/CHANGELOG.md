@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Sin publicar]
 
+### Aguas estancadas solo al repetir (añadido de D-014 del 2026-11-06, 1.1)
+
+- **`LevelSession` espera a que el jugador repita** (punto 1 del añadido de D-059 del 2026-10-31, el nivel 26): con el cierre de
+  `DeadEndProbe` perdido, la partida solo pasa a `Stuck` si todo vertido legal lleva a un tablero ya visto en el intento (hash
+  canónico de 64 bits). Nuevo: `DeadEndProbe.IsStagnant` y `CanonicalHash` (internos, sin asignaciones),
+  `LevelSession.SeenBoardCount` y `LevelSession.ResumeStuck()`. Lo deshecho con Marea cuenta como visto y `Restart` lo olvida [P].
+  El 66 da Aguas estancadas tras el vertido 12 del dueño (antes, tras el 9). Solver, bot, generador, level-qa y packs sin cambios.
+
 ### Pruebas de asignaciones estables (FX9)
 
 - **Las pruebas «sin asignaciones» ya no fallan de vez en cuando** (CLAUDE.md, regla dura 2). Con la suite completa,

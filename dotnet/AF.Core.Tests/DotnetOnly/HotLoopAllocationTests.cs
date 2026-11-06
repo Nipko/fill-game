@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
@@ -677,6 +678,59 @@ namespace AF.Core.Tests.DotnetOnly
             Assert.That(level66, Is.True);
             Assert.That(total, Is.EqualTo(20 * warm));
             Assert.That(allocated.Bytes, Is.EqualTo(0), allocated.Describe("cierre acotado"));
+        }
+
+        [Test]
+        public void WarmStagnationCheck_DoesNotAllocate()
+        {
+            // Añadido de D-014 del 2026-11-06 (CLAUDE.md, regla dura 2): la comprobación de repetición (todo vertido lleva a un
+            // tablero ya visto) y el hash canónico del tablero en pantalla no asignan una vez calentados: solo Contains sobre un
+            // HashSet<ulong>, sin boxing.
+            BoardState[] boards = { Level66Board.Final(), Level26Board.Lost(), Board() };
+            var probe = new DeadEndProbe();
+            var seen = new HashSet<ulong>();
+            for (int i = 0; i < boards.Length; i++)
+            {
+                seen.Add(probe.CanonicalHash(boards[i].CuiasArray, 0, boards[i].Count));
+            }
+
+            // Los hijos del 66 final también vistos: ahí la comprobación recorre todos los vertidos y declara (camino completo).
+            BoardState loop = boards[0];
+            for (int a = 0; a < loop.Count; a++)
+            {
+                for (int b = 0; b < loop.Count; b++)
+                {
+                    if (a != b && PourRules.IsLegal(loop, a, b))
+                    {
+                        seen.Add(PourRules.Apply(loop, a, b, PourMode.Run).CanonicalHash());
+                    }
+                }
+            }
+
+            int warm = 0;
+            for (int i = 0; i < boards.Length; i++)
+            {
+                warm += probe.IsStagnant(boards[i].CuiasArray, 0, boards[i].Count, boards[i].UnitsTable, PourMode.Run, seen) ? 1 : 0;
+            }
+
+            int total = 0;
+            ulong hashes = 0;
+            AllocationReading allocated = AllocationMeter.Measure(() =>
+            {
+                total = 0;
+                for (int repeat = 0; repeat < 20; repeat++)
+                {
+                    for (int i = 0; i < boards.Length; i++)
+                    {
+                        hashes ^= probe.CanonicalHash(boards[i].CuiasArray, 0, boards[i].Count);
+                        total += probe.IsStagnant(boards[i].CuiasArray, 0, boards[i].Count, boards[i].UnitsTable, PourMode.Run, seen) ? 1 : 0;
+                    }
+                }
+            }, 1);
+
+            Assert.That(warm, Is.EqualTo(1), "el 66 final, con sus hijos vistos, declara; el 26 y el de 14 cuias no");
+            Assert.That(total, Is.EqualTo(20 * warm));
+            Assert.That(allocated.Bytes, Is.EqualTo(0), allocated.Describe("repetición"));
         }
 
         [Test]

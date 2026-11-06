@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using AF.Core.Board;
 using AF.Core.Rules;
 using AF.Core.Session;
@@ -74,40 +75,49 @@ namespace AF.Core.Tests
             Assert.That(proof.Status, Is.EqualTo(SolveStatus.Unsolvable));
             Assert.That(probe.IsDeadEnd(state, PourMode.Run), Is.True);
             Assert.That(probe.LastStateCount, Is.InRange(2, DeadEndProbe.MaxStates));
-            Assert.That(new LevelSession(state, true, PourMode.Run).Status, Is.EqualTo(LevelStatus.Stuck));
+
+            // Añadido de D-014 del 2026-11-06: perdido no basta; el modal espera a que todo vertido lleve a un tablero ya visto.
+            var session = new LevelSession(state, true, PourMode.Run);
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(StagnationOracle.TryEveryPourAndUndo(session), Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(session.Current.Equals(state), Is.True);
         }
 
         [Test]
-        public void R13b_Level66_TheOwnersSequence_IsStuckRightAfterTheNinthPour()
+        public void R13b_Level66_TheOwnersSequence_IsStuckRightAfterTheTwelfthPour()
         {
             // Reproducción completa del nivel 66. El 9.º vertido (1 → 5) deja el nivel perdido de verdad: desde ahí solo se
-            // alcanzan 4 estados (los vertidos 10-12 del dueño ya eran vueltas del bucle) y la búsqueda con todos los vertidos
-            // legales lo confirma. Aguas estancadas sale justo tras él y no antes; el resto de la secuencia ya no entra (R15).
+            // alcanzan 4 estados y la búsqueda con todos los vertidos legales lo confirma. Con D-014 el modal salía justo tras
+            // él; con su añadido del 2026-11-06 (estancado solo al repetir) espera a que todo vertido lleve a un tablero ya
+            // visto: los vertidos 10-12 del dueño eran vueltas del bucle y Aguas estancadas sale justo tras el 12.º, no antes.
             BoardState initial = Level66Board.Initial();
             Assert.That(LevelValidation.Validate(initial), Is.Null);
             var session = new LevelSession(initial, true, PourMode.Run);
             var solver = new AStarSolver();
+            var probe = new DeadEndProbe();
             var allLegal = new SolverOptions(SolverOptions.PipelineNodeBudget, 1, false, PourMode.Run);
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
 
-            for (int i = 0; i < 9; i++)
+            for (int i = 0; i < Level66Board.PourCount; i++)
             {
-                Assert.That(solver.Solve(session.Current, allLegal).IsSolved, Is.True, "antes del vertido " + (i + 1));
+                if (i < 9)
+                {
+                    Assert.That(solver.Solve(session.Current, allLegal).IsSolved, Is.True, "antes del vertido " + (i + 1));
+                }
+
                 bool ok = session.TryPour(Level66Board.Source(i), Level66Board.Target(i), out PourResult result);
 
                 Assert.That(ok, Is.True, "vertido " + (i + 1));
-                LevelStatus expected = i == 8 ? LevelStatus.Stuck : LevelStatus.Playing;
+                Assert.That(probe.IsDeadEnd(session.Current, PourMode.Run), Is.EqualTo(i >= 8), "perdido tras el vertido " + (i + 1));
+                LevelStatus expected = i == Level66Board.PourCount - 1 ? LevelStatus.Stuck : LevelStatus.Playing;
                 Assert.That(session.Status, Is.EqualTo(expected), "tras el vertido " + (i + 1));
                 Assert.That(result.Status, Is.EqualTo(expected), "tras el vertido " + (i + 1));
             }
 
+            Assert.That(session.Current.Equals(Level66Board.Final()), Is.True);
             Assert.That(solver.Solve(session.Current, allLegal).Status, Is.EqualTo(SolveStatus.Unsolvable));
-            for (int i = 9; i < Level66Board.PourCount; i++)
-            {
-                Assert.That(session.TryPour(Level66Board.Source(i), Level66Board.Target(i), out _), Is.False, "vertido " + (i + 1));
-            }
-
-            Assert.That(session.AppliedPours, Is.EqualTo(9));
+            Assert.That(session.TryPour(2, 1, out _), Is.False, "R15: input bloqueado aunque 2 → 1 sea útil");
+            Assert.That(session.AppliedPours, Is.EqualTo(Level66Board.PourCount));
         }
 
         [Test]
@@ -136,25 +146,183 @@ namespace AF.Core.Tests
         [Test]
         public void R13b_Level66_MareaAndRestart_ReevaluateTheLoop()
         {
-            // 04 §2.1 y §2.7 con D-014: Marea desde el bloqueo por bucle vuelve a Playing (el estado se evalúa otra vez), el
-            // mismo vertido lo vuelve a declarar y Volver a la orilla parte de un tablero que se gana.
+            // 04 §2.1 y §2.7 con D-014 y su añadido del 2026-11-06: Marea desde el bloqueo por bucle evalúa otra vez el tablero
+            // anterior con lo ya visto (lo deshecho sigue visto [P]); rehacer el mismo vertido lleva a un tablero visto cuyos
+            // vertidos llevan todos a vistos, así que lo vuelve a declarar; Volver a la orilla empieza un intento nuevo y olvida
+            // lo visto [P].
             var session = new LevelSession(Level66Board.Initial(), true, PourMode.Run);
-            for (int i = 0; i < 9; i++)
+            var oracle = new StagnationOracle();
+            oracle.Check(session, "inicio");
+            for (int i = 0; i < Level66Board.PourCount; i++)
             {
                 Assert.That(session.TryPour(Level66Board.Source(i), Level66Board.Target(i), out _), Is.True, "vertido " + (i + 1));
+                oracle.Check(session, "vertido " + (i + 1));
             }
 
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
             Assert.That(PourRules.IsStuck(session.Current, true), Is.False);
-            Assert.That(session.TryPour(2, 1, out _), Is.False); // R15: input bloqueado aunque 2 → 1 sea útil
+            int seen = session.SeenBoardCount;
 
             Assert.That(session.Undo(), Is.True);
-            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
-            Assert.That(session.TryPour(1, 5, out PourResult again), Is.True);
-            Assert.That(again.Status, Is.EqualTo(LevelStatus.Stuck));
+            oracle.Check(session, "Marea");
+            Assert.That(session.SeenBoardCount, Is.EqualTo(seen), "el tablero deshecho sigue visto");
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck), "el tablero del 11.º también está agotado");
+            for (int pours = Level66Board.PourCount - 2; pours >= 8; pours--)
+            {
+                Assert.That(session.Undo(), Is.True);
+                oracle.Check(session, "Marea al vertido " + pours);
+                LevelStatus expected = pours == 8 ? LevelStatus.Playing : LevelStatus.Stuck;
+                Assert.That(session.Status, Is.EqualTo(expected), "Marea al vertido " + pours + " (el 8.º se gana)");
+            }
+
+            Assert.That(session.TryPour(Level66Board.Source(8), Level66Board.Target(8), out PourResult again), Is.True);
+            Assert.That(again.Status, Is.EqualTo(LevelStatus.Stuck), "el 9.º lleva a un tablero visto y agotado");
 
             session.Restart();
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(session.SeenBoardCount, Is.EqualTo(1), "Volver a la orilla: intento nuevo");
+        }
+
+        [Test]
+        public void R13b_ResumeStuck_OnlyDeclaresALostBoard()
+        {
+            // 02 §14 con el añadido de D-014 del 2026-11-06: al reanudar con el modal abierto, ResumeStuck lo reabre solo si el
+            // cierre sigue perdido; nunca con un tablero que se gana (R14), y no hace nada fuera de Playing.
+            var lost = new LevelSession(Level26Board.Lost(), true, PourMode.Run);
+            Assert.That(lost.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(lost.ResumeStuck(), Is.True);
+            Assert.That(lost.Status, Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(lost.ResumeStuck(), Is.False, "ya en Stuck");
+            Assert.That(lost.TryPour(1, 8, out _), Is.False, "R15");
+
+            var winnable = new LevelSession(UniformBoard(Tutorial[5]), true, PourMode.Run);
+            Assert.That(winnable.ResumeStuck(), Is.False, "R14: un tablero que se gana no se declara");
+            Assert.That(winnable.Status, Is.EqualTo(LevelStatus.Playing));
+
+            var won = new LevelSession(new BoardState(new[] { C(4, 1, 1, 1, 1), Cuia.Empty(4) }), true, PourMode.Run);
+            Assert.That(won.ResumeStuck(), Is.False);
+            Assert.That(won.Status, Is.EqualTo(LevelStatus.Won));
+        }
+
+        [Test]
+        public void R13b_TheFireflyAndThePororoca_KeepTheSeenBoards()
+        {
+            // I6 de LevelSession (añadido de D-014 del 2026-11-06 [P]; 04 §2.4 y §2.5): la Luciérnaga y la Pororoca no vacían
+            // los tableros vistos; su tablero nuevo entra como visto al quedar en pantalla.
+            var murky = new LevelSession(new BoardState(new[] { Cuia.Create(4, new[] { 3, 1, 1, 1 }, 0x1), C(4, 2, 2, 2), Cuia.Empty(3) }), true, PourMode.Run);
+            var oracle = new StagnationOracle();
+            oracle.Check(murky, "inicio");
+            Assert.That(murky.TryPour(1, 2, out _), Is.True);
+            oracle.Check(murky, "vertido");
+            Assert.That(murky.Reveal(0), Is.EqualTo(1));
+            oracle.Check(murky, "Luciérnaga");
+            Assert.That(murky.SeenBoardCount, Is.EqualTo(3));
+
+            BoardState start = Board(C(4, 2, 1, 1, 2), C(4, 2, 1, 1, 2), Cuia.Empty(4));
+            var shuffled = new LevelSession(start, true, PourMode.Run);
+            var shuffleOracle = new StagnationOracle();
+            shuffleOracle.Check(shuffled, "inicio");
+            Assert.That(shuffled.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(shuffled.ApplyShuffle(Board(C(4, 1, 2, 2, 1), C(4, 1, 2, 2, 1), Cuia.Empty(4))), Is.True);
+            shuffleOracle.Check(shuffled, "Pororoca");
+            Assert.That(shuffled.SeenBoardCount, Is.EqualTo(2), "el tablero de antes sigue visto y entra el barajado");
+        }
+
+        private static BoardState Board(params Cuia[] cuias)
+        {
+            return new BoardState(cuias);
+        }
+
+        [Test]
+        public void R13b_Level26_LostButWithPoursToNewBoards_IsPlaying()
+        {
+            // Punto 1 del añadido de D-059 del 2026-10-31 (añadido de D-014 del 2026-11-06): el cierre era correcto (12 estados
+            // alcanzables, ninguno ganado; el solver lo da por irresoluble), pero el modal salió con vertidos todavía legales
+            // (2 → 9 y 6 → 7 del dueño) que llevan a tableros nuevos. Ahora la partida sigue en Playing.
+            BoardState state = Level26Board.Lost();
+            var probe = new DeadEndProbe();
+            SolveResult proof = new AStarSolver().Solve(state, new SolverOptions(SolverOptions.PipelineNodeBudget, 1, false, PourMode.Run));
+
+            Assert.That(probe.IsDeadEnd(state, PourMode.Run), Is.True);
+            Assert.That(probe.LastStateCount, Is.EqualTo(12));
+            Assert.That(proof.Status, Is.EqualTo(SolveStatus.Unsolvable));
+            Assert.That(PourRules.IsLegal(state, 1, 8), Is.True, "2 → 9");
+            Assert.That(PourRules.IsLegal(state, 5, 6), Is.True, "6 → 7");
+            Assert.That(new LevelSession(state, true, PourMode.Run).Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(new LevelSession(state, false, PourMode.Run).Status, Is.EqualTo(LevelStatus.Playing));
+        }
+
+        [Test]
+        public void R13b_Level26_TheOwnersPours_KeepPlaying()
+        {
+            // Los tres vertidos que el dueño aún podía hacer (2 → 9, 1 → 2 y 6 → 7) llevan cada uno a un tablero nuevo: la
+            // partida sigue en Playing tras cada uno.
+            var session = new LevelSession(Level26Board.Lost(), true, PourMode.Run);
+            var oracle = new StagnationOracle();
+            oracle.Check(session, "inicio");
+            int[][] pours = { new[] { 1, 8 }, new[] { 0, 1 }, new[] { 5, 6 } };
+            for (int i = 0; i < pours.Length; i++)
+            {
+                Assert.That(session.TryPour(pours[i][0], pours[i][1], out PourResult result), Is.True, "vertido " + (i + 1));
+                oracle.Check(session, "vertido " + (i + 1));
+                Assert.That(result.Status, Is.EqualTo(LevelStatus.Playing), "vertido " + (i + 1));
+            }
+
+            Assert.That(session.SeenBoardCount, Is.EqualTo(4));
+        }
+
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void R13b_Level26_ExhaustiveWalk_IsStuckExactlyWhenEveryPourRepeats(PourMode mode)
+        {
+            // Recorre el cierre entero del 26 en profundidad, con vertidos y Marea, y compara la partida con el oráculo en cada
+            // paso: Stuck si y solo si el tablero está perdido y todo vertido legal lleva a un tablero ya visto. Al acabar se han
+            // visto todos los estados alcanzables y el tablero de partida da Aguas estancadas.
+            BoardState start = Level26Board.Lost();
+            var session = new LevelSession(start, true, mode);
+            var oracle = new StagnationOracle();
+            oracle.Check(session, "inicio");
+            var walked = new HashSet<ulong> { start.CanonicalHash() };
+            int stuck = Walk(session, oracle, walked, 0);
+            var probe = new DeadEndProbe();
+            Assert.That(probe.IsDeadEnd(start, mode), Is.True);
+
+            Assert.That(session.Current.Equals(start), Is.True);
+            Assert.That(session.SeenBoardCount, Is.EqualTo(probe.LastStateCount));
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(stuck, Is.GreaterThan(0));
+        }
+
+        /// <summary>Vertidos en profundidad con Marea, comprobando cada paso con el oráculo; devuelve cuántas veces salió Stuck.</summary>
+        private static int Walk(LevelSession session, StagnationOracle oracle, HashSet<ulong> walked, int depth)
+        {
+            Assert.That(depth, Is.LessThan(DeadEndProbe.MaxStates));
+            int stuck = 0;
+            int count = session.Current.Count;
+            for (int a = 0; a < count; a++)
+            {
+                for (int b = 0; b < count; b++)
+                {
+                    if (session.Status != LevelStatus.Playing || a == b || !PourRules.IsLegal(session.Current, a, b))
+                    {
+                        continue;
+                    }
+
+                    Assert.That(session.TryPour(a, b, out _), Is.True);
+                    oracle.Check(session, "vertido " + a + " → " + b + " en profundidad " + depth);
+                    stuck += session.Status == LevelStatus.Stuck ? 1 : 0;
+                    if (walked.Add(session.Current.CanonicalHash()))
+                    {
+                        stuck += Walk(session, oracle, walked, depth + 1);
+                    }
+
+                    Assert.That(session.Undo(), Is.True);
+                    oracle.Check(session, "Marea en profundidad " + depth);
+                    stuck += session.Status == LevelStatus.Stuck ? 1 : 0;
+                }
+            }
+
+            return stuck;
         }
 
         [Test]
@@ -261,7 +429,11 @@ namespace AF.Core.Tests
             Assert.That(PourRules.IsStuck(winnable, true), Is.False);
             Assert.That(PourRules.IsStuck(lost, true), Is.False);
             Assert.That(new LevelSession(winnable, true, PourMode.Run).Status, Is.EqualTo(LevelStatus.Playing));
-            Assert.That(new LevelSession(lost, true, PourMode.Run).Status, Is.EqualTo(LevelStatus.Stuck));
+            var session = new LevelSession(lost, true, PourMode.Run);
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing), "perdido, pero con vertidos a tableros nuevos");
+            Assert.That(StagnationOracle.TryEveryPourAndUndo(session), Is.EqualTo(LevelStatus.Stuck));
+            var winning = new LevelSession(winnable, true, PourMode.Run);
+            Assert.That(StagnationOracle.TryEveryPourAndUndo(winning), Is.EqualTo(LevelStatus.Playing), "R14: repetir no declara un tablero ganable");
         }
 
         [TestCase(PourMode.Run)]

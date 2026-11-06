@@ -240,14 +240,17 @@ namespace AF.Core.Tests
         public void R13b_AnUnsolvableBoardWithFewReachableStates_IsStuck()
         {
             // 02 R13 ampliada (D-014): el tablero que antes ilustraba R14 tiene vertidos útiles, pero desde él solo se alcanzan
-            // unos pocos estados y ninguno es victoria: Aguas estancadas, aunque R13 sin ampliar no lo declare.
+            // unos pocos estados y ninguno es victoria: Aguas estancadas, aunque R13 sin ampliar no lo declare. Con el añadido de
+            // D-014 del 2026-11-06, solo cuando todo vertido legal lleva a un tablero ya visto en el intento (el jugador repite).
             BoardState state = Board(C(4, 2, 1, 1, 2), C(4, 2, 1, 1, 2), Cuia.Empty(4));
 
             SolveResult proof = new AStarSolver().Solve(state, SolverOptions.Pipeline);
 
             Assert.That(proof.Status, Is.EqualTo(SolveStatus.Unsolvable));
             Assert.That(PourRules.IsStuck(state, true), Is.False);
-            Assert.That(new LevelSession(state, true).Status, Is.EqualTo(LevelStatus.Stuck));
+            var session = new LevelSession(state, true);
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(StagnationOracle.TryEveryPourAndUndo(session), Is.EqualTo(LevelStatus.Stuck));
         }
 
         [Test]
@@ -255,11 +258,13 @@ namespace AF.Core.Tests
         {
             // 02 R15 (parte del núcleo): input bloqueado desde el instante lógico del bloqueo, aunque quede un vertido legal
             // (aquí, incluso útil: el vaivén parcial 0 ↔ 1 de R13 ampliada, D-014); Marea restaura el estado. El retraso de
-            // 400 ms y el modal son de la UI. El tablero inicial se gana en 5; el vertido 2 → 0 lo pierde.
+            // 400 ms y el modal son de la UI. El tablero inicial se gana en 5; el vertido 2 → 0 lo pierde, y Aguas estancadas sale
+            // cuando el jugador ya probó sus vertidos y todos llevan a tableros vistos (añadido de D-014 del 2026-11-06).
             var session = new LevelSession(Board(C(4, 2, 1, 2), C(4, 1, 1, 2), C(4, 1, 2)), true);
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
             Assert.That(session.TryPour(2, 0, out _), Is.True);
-            Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(StagnationOracle.TryEveryPourAndUndo(session), Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(session.AppliedPours, Is.EqualTo(1));
             Assert.That(PourRules.IsLegal(session.Current, 0, 1), Is.True);
 
             Assert.That(session.TryPour(0, 1, out _), Is.False);
