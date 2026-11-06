@@ -106,6 +106,10 @@ Lo común: **Claude como orquestador** y modelos generativos o scripts como ejec
       - **La primera vuelta encontró un fallo nuestro:** las palabras largas a 150 px se salían de la zona segura, porque el ajuste no contaba el margen del vidrio. Corregido (`fill-game-marketing`, commit de «Ajusta los rótulos de vidrio»).
       - **Las 2 que fallan** (v03 en el gancho y v05 pt-BR en el centro) solo fallan por la visión: dice «no parece el juego» en fotogramas que sí son el juego (comprobado a ojo). La causa probable es que `vision.py` compara la pieza con un fotograma crudo de la toma, y aquí el juego va más pequeño, dentro del teléfono y sobre el río.
       - **Propuesta** [P]: en las piezas de `montar_hf.py`, recortar la pantalla del teléfono antes de la pregunta «¿es el juego?». Toca `vision.py`, que lleva otra sesión. Mientras tanto, esas 2 las revisa el dueño en la hoja.
+      - **A la cola (2026-11-06):** el dueño eligió la versión de HyperFrames para el viaje.
+        - Las 5 piezas `-hf` están copiadas en `C:\AI\marketing\piezas\`: v01, v02 y v04 en `calidad_ok`.
+        - v03 y v05 repitieron el mismo fallo de visión en la segunda pasada y quedan en `revision_humana`, el estado que la fábrica da tras 2 fallos seguidos. `cola.py aprobar` solo aprueba `calidad_ok`, así que esas 2 esperan al ojo del dueño o al recorte de arriba.
+        - Las 5 de Pillow (`v01-…` a `v05-…` sin `-hf`) pasan a `rechazado` con ese motivo; sus archivos se quedan donde estaban.
     - **No se editó `montar_himno.py`:** otra sesión lo estaba cambiando y aún no está en git. `montar_hf.py` lo importa (planos anclados, audio y sello), así que hay que commitearlo para que el repositorio funcione en un clon limpio.
   - **Qué gana frente a Pillow:** 3D real con perspectiva, desenfoque de fondo (`backdrop-filter`), curvas de GSAP y capturas de control (`snapshot`) en segundos. **Qué no hace:** el audio por eventos `AF_CAPTURE`, el manifiesto ni la cola. Eso sigue en `montar*.py`, que llamaría a HyperFrames para la capa visual [P].
 
