@@ -715,7 +715,8 @@ namespace AF.UI
                 && !HomeWindowCovered && !MarketCommerceOpen && (_settingsScreen == null || !_settingsScreen.Visible)
                 && (_dailyScreen == null || !_dailyScreen.IsOpen) && (_lockedNotice == null || !_lockedNotice.Visible) && !FruitSheetOpen
                 && !LeagueOpen // D-046: la pantalla de la Liga tapa el inicio
-                && !AvatarScreenOpen; // D-056: «Tu avatar» también
+                && !AvatarScreenOpen // D-056: «Tu avatar» también
+                && !LeagueDebutVisible; // añadido de D-046 del 2026-11-06: el estreno de la Liga tapa el inicio
         }
 
         // La victoria de campaña sin nada encima (ni el Mapa, ni la ficha de una fruta, ni un anuncio o la hoja de compra, ni otra

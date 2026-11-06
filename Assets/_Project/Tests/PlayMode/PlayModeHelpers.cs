@@ -171,6 +171,21 @@ namespace AF.Tests.PlayMode
             NoShuffleUnlessSet();
             NoLogbookUnlessSet();
             NoPrePromptUnlessSet();
+            NoLeagueDebutUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga el estreno de la Liga (añadido de D-046 del 2026-11-06) si el test no lo fijó
+        /// (<see cref="GameBootstrap.LeagueDebutOverride"/> = null): los tests que no tratan de él entran al inicio con la Liga y dejan la
+        /// victoria del 41 como antes de que existiera. Los que lo prueban (<c>LeagueDebutTests</c>) lo encienden y lo vuelven a null
+        /// en su TearDown (<see cref="GameBootstrap.ResetLeagueOverrides"/>).
+        /// </summary>
+        public static void NoLeagueDebutUnlessSet()
+        {
+            if (GameBootstrap.LeagueDebutOverride == null)
+            {
+                GameBootstrap.LeagueDebutOverride = false;
+            }
         }
 
         /// <summary>

@@ -56,6 +56,7 @@ namespace AF.UI
             LeagueApiOverride = null;
             LeagueConfigOverride = null;
             LeagueClockOverride = null;
+            LeagueDebutOverride = null;
         }
 
         /// <summary>El servicio de la Liga (null antes del arranque).</summary>
@@ -135,6 +136,7 @@ namespace AF.UI
             }
 
             runner.Bind(this);
+            SetUpLeagueDebut(); // el estreno de la Liga (añadido de D-046 del 2026-11-06; GameBootstrap.LeagueDebut.cs)
         }
 
         // Las cifras de la sesión en una copia (el extra de desarrollo no toca las de Remote Config).
@@ -201,6 +203,7 @@ namespace AF.UI
             _leagueButton?.Hide();
             _leagueButtonShown = false;
             LogLeagueOpen(LeagueScope.Global);
+            MarkLeagueOpened(); // progress.league_opened: fuera «Nueva» (GameBootstrap.LeagueDebut.cs)
             _skipNextDelta = true;
             return true;
         }
@@ -405,6 +408,7 @@ namespace AF.UI
         private void WipeLeague()
         {
             _league?.Wipe();
+            WipeLeagueDebut();
             _leagueScreen?.Close();
             _leagueButton?.Hide();
             _leagueButtonShown = false;
@@ -420,6 +424,7 @@ namespace AF.UI
             }
 
             _leagueScreen?.Tick(dtMs);
+            TickLeagueDebut(dtMs); // el estreno de la Liga y «Nueva» (añadido de D-046 del 2026-11-06)
             SyncLeagueButton(league);
             if (league.PendingCount == 0 || league.Sending)
             {

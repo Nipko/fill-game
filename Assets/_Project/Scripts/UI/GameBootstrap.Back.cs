@@ -115,6 +115,11 @@ namespace AF.UI
                 return "push_prompt";
             }
 
+            if (LeagueDebutVisible)
+            {
+                return "league_debut";
+            }
+
             if ((_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || (_lockedNotice != null && _lockedNotice.Visible))
             {
                 return "blocking_sheet";

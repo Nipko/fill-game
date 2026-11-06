@@ -15,6 +15,7 @@ Esta especificación es la fuente única de los dos lados. Si hay que cambiar el
 
 - **Desbloqueo:** la Liga aparece al ganar el nivel 41. Hasta entonces, nada.
 - **Entrada:** un botón «Liga» en el inicio, desde el 41, con su icono. Al pulsarlo se abre la pantalla de la Liga.
+- **Estreno (1.1; añadido de D-046 del 2026-11-06):** una pantalla completa «¡Llegó la Liga del río!», una vez por jugador, en el primer momento tranquilo tras desbloquearse: al dejar la victoria (tras el pre-prompt de push, si lo hay, en el siguiente momento) o al entrar al inicio. Tiene el emblema de la copa, una animación y una fanfarria con los efectos del proyecto. «Ver la Liga» abre la Liga; «Luego» deja «Nueva» en la tarjeta del inicio hasta abrirla. Perfil: `progress.league_debut_seen` y `progress.league_opened`.
 - **Pantalla de la Liga:**
   - pestañas **Global** y **{país}** (bandera y nombre del país del jugador). Con el país desconocido, solo Global;
   - cabecera con «Semana del {inicio} al {fin}» y «Termina en {tiempo}»;
