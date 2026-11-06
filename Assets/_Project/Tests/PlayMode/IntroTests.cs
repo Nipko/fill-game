@@ -1144,9 +1144,9 @@ namespace AF.Tests.PlayMode
         /// <summary>
         /// Salida de la tropa (revisión: parecían monos fantasma a media salida): trepan hacia el follaje de la esquina más
         /// cercana, con alfa 1 hasta los últimos 80 ms, y la capa de la tropa está detrás del follaje de las esquinas. En un
-        /// teléfono (360 dp) llegan a su esquina y trepan junto a ella; en un lienzo ancho (el de 853 dp del Editor sin
-        /// pantalla simulada, como una tableta), a 450 dp/s no llegan en los 500 ms de la salida y trepan igual mientras se
-        /// funden (revisión del 2026-10-11: antes salían andando en plano). En la rama baja, un manojo de hojas en cada extremo,
+        /// teléfono (360 dp) llegan a su esquina y trepan junto a ella; con la ventana apaisada del Editor, también: desde el
+        /// añadido de D-059 del 2026-11-06 el nivel va en la columna de 400 dp (antes, en un lienzo de 853 dp no llegaban en los
+        /// 500 ms de la salida y trepaban igual mientras se fundían; revisión del 2026-10-11). En la rama baja, un manojo de hojas en cada extremo,
         /// por delante de la tropa, de la rama hacia arriba y sin pasar sobre el HUD.
         /// </summary>
         [UnityTest]
