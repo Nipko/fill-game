@@ -82,6 +82,15 @@ Rama `mac/m0-setup` desde `origin/integracion-fase1-fase2` (`f10cba52`).
      - Si falla, refresca al cerrar `WorldBannerView`, con un test que lo cierre de verdad.
   2. Actualiza el resumen: el país desde la tienda ya está hecho (`b727ebaf`). El docstring de `generar.py` todavía dice «pendiente de D-045».
 
+## Integración del escritorio (2026-11-07): la orientación cambia también en iOS
+
+- **Qué cambió:** con Q-BB-1 (b) (añadido de D-059 del 2026-11-06 (2), en `decisiones.md`), los Player Settings de orientación, que comparten Android e iOS, pasan a autorrotación con las cuatro orientaciones. Lo aplica `ProjectSetup`. El vertical lo pide el código: `AF.UI.OrientationPolicy`, en `BeforeSplashScreen`. En iOS (`iPhoneOnly`) siempre pide vertical.
+- **Efecto en iOS:** el Info.plist declarará las cuatro orientaciones.
+- **Para la Mac:**
+  1. Prueba en el iPhone 16 Pro Max que el juego no gira en ningún momento, incluido abrir con el iPhone tumbado. La pantalla de arranque de iOS puede salir girada un instante.
+  2. Si el arranque girado molesta, una opción es fijar `UISupportedInterfaceOrientations` a vertical en el post-proceso de `BuildIos`, porque solo hay iPhone. Va con su test, para que Android no cambie.
+  3. Actualiza el comentario de `ProjectSetup.Ios.cs` (`IosTargetDevice`), que todavía dice que el juego es vertical en el manifiesto.
+
 ## Enganches para el integrador
 
 - Fusionar `mac/m1-hola-iphone` (incluye `mac/m0-setup`): `ProjectSetup.Ios.cs`, `BuildIos.cs` (con sus `.meta`), `ProjectSetup` como `partial` y las claves de iPhone de `ProjectSettings.asset`. En Windows sin el módulo iOS compila igual: no usa `UnityEditor.iOS.Xcode`.
