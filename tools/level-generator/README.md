@@ -19,6 +19,7 @@ ejecuciones den los mismos bytes.
 | `--seasons <campaign.json> [...] --out <tabla.json> [--until <nivel>] [--check]` | Tabla de temporada del cliente (pregunta 32 b), hasta el último nivel publicado | `Assets/_Project/Data/Levels/seasons_v1.json` |
 | `--daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <md>] [--check] [--threads n]` | Pool del Reto del río (03 §16): un tablero por banda y día | `<carpeta>/daily_pool_v1.json` y el informe (la muestra: `tools/out/daily_sample/` y `tools/out/daily_sample_report.md`) |
 | `--reserve <mundo_NN_v1.json> [...] --spec <campaign.json> [--variant a\|b] --out <carpeta> [--report <md>] [--check]` | La reserva del 20 % (D-033, Q-B11-7 (a); 03 §17): un pack de reserva por mundo desde el pack de campaña publicado | `Assets/_Project/Data/Levels/reserva_0N_v1.json` y `tools/out/reserve_campaign_v1.md` / `reserve_campaign_v2.md` |
+| `--measure --spec <campaign.json> --levels a-b [--variant a\|b] --report <md>` | Medida de la fase F1 de D-068 (curva de la 1.1): fases 1-3 de `--spec` sin alivio ni packs y sin detenerse en un ciclo sin colocación | `tools/out/curva_f1/medida_*.md` |
 | `--self-test [tinaja\|seasons\|variants\|registry\|curation\|holgura\|reserve\|daily]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
@@ -577,6 +578,30 @@ la curación pide cambios, se cambian la especificación o el generador y se reg
 ciclo de 20 con la escalera estricta es sensible a todo el mundo (el índice D se calcula con todos los candidatos del rango):
 un cambio en un ciclo puede mover otro, así que cualquier cambio de celda, de K o del factor de Morpho (PF1) obliga a regenerar
 el mundo entero, y puede salir otro bloqueo.
+
+## Medida de la curva de la 1.1 (`--measure`; fase F1 de D-068)
+
+La fase F1 de D-068 (`docs/dev/propuesta-curva-1.1.md` §7) mide, antes de escribir código de reglas, si los topes de cuias por
+papel de §4.1 colocan con las mecánicas de la 1.0. Informe y conclusiones: `docs/dev/curva-1.1-f1-medicion.md`.
+
+- `--measure` (`Generation/MeasureRunner.cs`) hace las fases 1-3 de `--spec` con el mismo código (`CampaignRunner.Generate`
+  con `keepGoing`): un ciclo sin colocación se anota y la colocación sigue con el siguiente; no hay alivio ni packs. El informe
+  (sin tiempos) da T, K, cuias libres, bot ×40 y ventana por papel (recuperación, estreno, comodidad, reto, remanso, hito y la
+  cúspide, el hito de la firma del mundo), los topes de T de D-068 (P2 A), los ciclos y los retos e hitos uno a uno.
+- `specs/experimental/` (no son de producción, no generan packs): `campaign_v3_f1.json` extiende `campaign_v2.json` con el
+  `k_plan` de los topes (301-420: recuperación 8, comodidad 8, reto 10, hito 11 y el 420 con 12), el remanso (p19) con el K de
+  recovery y las turbias en comodidad (`murky_normal`); `campaign_v3_f1_k9.json`, lo mismo con los retos en K 9.
+- `murky_normal` (`{"from_level", "max_per_cycle"}`, opcional; D-068 P7 A): con ella MURKY-SLOT admite Aguas turbias en
+  comodidades sin estrella desde `from_level`, MURKY-2 sube a `max_per_cycle` y el paso «Tu» pone una sola cuia turbia (1-2
+  dosis) en comodidad. Sin la clave (campaign_v1 y campaign_v2) nada cambia: los packs publicados siguen idénticos (`--check`).
+- Fixtures de `murky_normal` en `specs/tests/`: `murky_normal_max.json` (6 niveles turbios en 301-320 con `max_per_cycle` = 5:
+  MURKY-2) y `murky_comfort_without_rule.json` (turbias en la comodidad 304 sin la clave: MURKY-SLOT, como hasta ahora).
+
+```
+dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b --report tools/out/curva_f1/medida_v2_b_301-420.md
+dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/experimental/campaign_v3_f1.json --levels 301-420 --variant b --report tools/out/curva_f1/medida_f1_301-420.md
+dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/experimental/campaign_v3_f1_k9.json --levels 301-420 --variant b --report tools/out/curva_f1/medida_f1_k9_301-420.md
+```
 
 ## Tinaja (M13; D-019, Q-Ti1 A; 03 §8 y §9; propuesta de la tinaja c.3)
 

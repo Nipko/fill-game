@@ -114,6 +114,13 @@ internal sealed record MechanicInfo(string Code, string Id, string Kind, int Deb
 
 internal sealed record CapacityInfo(string Code, string Id, int Cap, int Debut);
 
+/// <summary>
+/// Aguas turbias en comodidad (<c>murky_normal</c>; D-068, P7 A): desde <paramref name="FromLevel"/>, también en las
+/// comodidades que no son tablero de estreno, con una sola cuia turbia (1-2 dosis ocultas), y como mucho
+/// <paramref name="MaxPerCycle"/> niveles turbios por ciclo (sustituye a los 2 de MURKY-2).
+/// </summary>
+internal sealed record MurkyNormalRule(int FromLevel, int MaxPerCycle);
+
 /// <summary>Celda del calendario d.4 ya interpretada.</summary>
 internal sealed record CalendarCell(
     int Level,
@@ -371,6 +378,14 @@ internal sealed class CampaignSpec
     /// visto» desde el 201), o null si la especificación no lo trae (campaign_v1: la regla NOVELTY-60 no se aplica).
     /// </summary>
     public int? NoveltyMaxGap { get; init; }
+
+    /// <summary>
+    /// Aguas turbias también en comodidad (clave opcional <c>murky_normal</c>; D-068, P7 A: «1-2 dosis en unos 20 % de los
+    /// niveles» desde el 301; propuesta de la curva de la 1.1 §4.2 b). Solo la usan las especificaciones experimentales de la
+    /// fase F1 (<c>specs/experimental/</c>); sin la clave (campaign_v1, campaign_v2) MURKY-SLOT y MURKY-2 no cambian y el
+    /// generador nunca pone turbias en comodidad. Null si no está.
+    /// </summary>
+    public MurkyNormalRule? MurkyNormal { get; init; }
 
     /// <summary>Tope de Cuias chicas por nivel, con la cueva de la Piraña (<c>capacities_per_level.max_chica</c>; 02 §8).</summary>
     public int MaxChicas { get; init; } = DefaultMaxChicas;
@@ -937,6 +952,9 @@ internal sealed class CampaignSpec
             AllMechanics = allMechanics,
             Previous = previous,
             NoveltyMaxGap = root["novelty_max_gap"]?.GetValue<int>(),
+            MurkyNormal = root["murky_normal"] is JsonObject murkyNormal
+                ? new MurkyNormalRule(Int(murkyNormal, "from_level"), Int(murkyNormal, "max_per_cycle"))
+                : null,
             MaxChicas = root["capacities_per_level"]?["max_chica"]?.GetValue<int>() ?? DefaultMaxChicas,
             MaxAltas = root["capacities_per_level"]?["max_alta"]?.GetValue<int>() ?? DefaultMaxAltas,
             CapacityLimitsBefore = root["capacities_per_level"]?["before_level"]?.GetValue<int>() ?? DefaultCapacityLimitsBefore,

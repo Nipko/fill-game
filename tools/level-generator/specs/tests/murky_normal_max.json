@@ -1,0 +1,9 @@
+{
+  "extends": "../experimental/campaign_v3_f1.json",
+  "description": "Fixture negativo de murky_normal (D-068 P7 A, fase F1): 6 niveles turbios en el ciclo 301-320 (304, 305, 307, 311, 314 y 315) con max_per_cycle = 5 falla MURKY-2 en las dos variantes; las comodidades turbias sin estrella no fallan MURKY-SLOT.",
+  "expect_rule": "MURKY-2",
+  "calendar": {
+    "305": "Br+Tu",
+    "307": "Tu"
+  }
+}

@@ -34,6 +34,7 @@ const string Usage = """
       dotnet run --project tools/level-generator -- --seasons <campaign.json> [<campaign.json> ...] --out <tabla.json> [--until <nivel>] [--check]
       dotnet run --project tools/level-generator -c Release -- --reserve <mundo_NN_v1.json> [<mundo_NN_v1.json> ...] --spec <campaign.json> [--variant a|b] --out <carpeta> [--report <informe.md>] [--check]
       dotnet run --project tools/level-generator -c Release -- --daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <informe.md>] [--check] [--threads n]
+      dotnet run --project tools/level-generator -c Release -- --measure --spec <campaign.json> --levels a-b [--variant a|b] --report <informe.md>
       dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura|reserve|cvd|daily]
       dotnet run --project tools/level-generator -- --help
 
@@ -130,6 +131,10 @@ const string Usage = """
       QA es level-qa --daily. Codigos: 0 = generado o identico (tambien con avisos: dias fuera de la ventana del bot o con
       pares por encima del tope); 1 = algun dia sin tablero, un tablero que no cumple lo que promete el pack o --check
       distinto; 2 = uso o especificacion ilegible.
+    --measure: medida de la fase F1 de D-068 (curva de la 1.1; docs/dev/curva-1.1-f1-medicion.md): las fases 1-3 de
+      --spec (candidatos, indice D y colocacion) sin alivio ni packs y sin detenerse en un ciclo sin colocacion; el
+      informe da T, K, bot x40 y ventana por papel, los ciclos que no colocan y los retos e hitos. Codigos: 0 = medido;
+      1 = la especificacion no pasa --validate-spec; 2 = uso o especificacion ilegible.
     Codigos de salida: 0 = correcto o ayuda; 1 = la generacion o las comprobaciones fallaron;
     2 = uso incorrecto (sin argumentos, faltan opciones, u opcion desconocida o repetida).
     """;
@@ -154,6 +159,45 @@ if (args.Length >= 1 && args[0] == "--validate-spec")
 if (args.Length >= 1 && (args[0] == "--daily" || (args.Length == 2 && args[0] == "--self-test" && args[1] == "daily")))
 {
     return AmazonFill.Tools.LevelGenerator.Daily.DailyCommand.Run(args);
+}
+
+// Medida de la fase F1 de D-068 (curva de la 1.1): fases 1-3 de --spec sin detenerse en un ciclo sin colocación; solo informe.
+if (args.Length >= 1 && args[0] == "--measure")
+{
+    string? measureSpec = null;
+    string? measureLevels = null;
+    string? measureVariant = null;
+    string? measureReport = null;
+    for (int i = 1; i < args.Length; i++)
+    {
+        if (args[i] == "--spec" && i + 1 < args.Length && measureSpec is null)
+        {
+            measureSpec = args[++i];
+        }
+        else if (args[i] == "--levels" && i + 1 < args.Length && measureLevels is null)
+        {
+            measureLevels = args[++i];
+        }
+        else if (args[i] == "--variant" && i + 1 < args.Length && measureVariant is null)
+        {
+            measureVariant = args[++i];
+        }
+        else if (args[i] == "--report" && i + 1 < args.Length && measureReport is null)
+        {
+            measureReport = args[++i];
+        }
+        else
+        {
+            return UsageError($"--measure: argumento no valido, repetido o sin valor: {args[i]}");
+        }
+    }
+
+    if (measureSpec is null || measureLevels is null || measureReport is null)
+    {
+        return UsageError("--measure lleva --spec, --levels y --report.");
+    }
+
+    return MeasureRunner.Run(measureSpec, measureVariant, measureLevels, measureReport);
 }
 
 if (args.Length >= 1 && args[0] == "--reserve")
