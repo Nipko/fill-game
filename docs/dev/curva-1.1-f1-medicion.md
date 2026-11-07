@@ -19,13 +19,14 @@
    113 de 120 (con retos en K 9) [V].
 3. **Retos: mejor K 9 que K 10.** Con K 10 el reto sale con 12 cuias (la cuia a medias de su mecánica suma una): justo el
    «12 como mucho». Con K 9 sale con 10-11, dentro del tope, y coloca igual (26 de 30 en los dos casos) [V].
-4. **Lo que falla son 4 retos de una sola palanca,** casi todos cerca del 75 % (68-73 %). El 369 (Piraña + Brote de dos hojas)
-   falla también en la curva publicada: es un problema de su celda, no de los topes [V].
+4. **Lo que falla son 4 retos, casi todos cerca del 75 %.** Con K 9: 329 (Ma, 68 %), 346 (B2+Ln, 68 %), 349 (B2, 73 %) y 369
+   (Pi+B2, 43 %) [V]; con K 10 fallan otros cuatro (355, 358, 369 y 412). El 369 falla también en la curva publicada [V]; por
+   eso lo atribuimos a su celda y no a los topes [E].
 5. **Los hitos siguen saturados.** Todos miden 90-100 % con el bot casual, como hoy; con esta medida no se puede ver si un
    hito es más duro que el anterior. Antes de fijar el `pressure_plan` hace falta el bot atento de §6.4 [V].
 6. **Ocultas en Normal:** las 14 comodidades con 1-2 dosis ocultas quedan en su ventana (20-58 %). Con las 4 de los retos son
    18 de 120 niveles (15 %); para llegar al ~20 % falta una comodidad turbia más por ciclo [V].
-7. **Ajuste propuesto [P]:** reto en K 9; K 10 solo en los retos de una sola mecánica de p6 y p9; estreno del Brote de dos
+7. **Ajuste propuesto [P]:** reto en K 9; K 10 solo en los retos de p6 y p9 que no llegan con K 9 (329, 346 y 349); estreno del Brote de dos
    hojas en K 7; recalendarizar el 369; 3 comodidades turbias por ciclo. Detalle en la sección 5.
 
 ---
@@ -114,7 +115,9 @@ Notas:
 - **Estreno:** el del Brote de dos hojas (343-345) sale con 11 cuias (K 8, 2 vacíos y la cuia a medias del brote) y el bot no
   falla nunca (0 %); los de la Flor (403-405), con 10. Son los 3 «fuera del tope».
 - **Comodidades turbias:** las 14 entran en su ventana, con el bot entre el 20 % y el 58 %. Ninguna se publicó sin turbias.
-- **Comodidad y recuperación son idénticas en K 10 y K 9:** mismas semillas y mismo K; solo cambian los retos.
+- **Comodidad y recuperación tienen el mismo T y K en K 10 y en K 9** (mismas semillas y mismo K, y los mismos candidatos),
+  pero la colocación depende de los retos del ciclo: 7 de los 84 niveles que no son reto (307, 319, 327, 359, 373, 394 y 411)
+  eligen otro tablero, y la mediana del bot en comodidad pasa del 33 % al 35 %.
 
 ### 3.3 Retos por ciclo
 
@@ -173,7 +176,9 @@ T 11 dan una mediana del 80 %.
 
 ## 4. Conclusión
 
-**¿Colocan los retos con K 9-10 y los hitos de 12-13 cuias sin Aguapé ni Lancha? Sí.**
+**¿Colocan los retos con K 9-10 y los hitos de 12-13 cuias sin Aguapé ni Lancha? Sí en el mundo 7 (301-420, variante b),**
+con la semilla de cada slot de la 1.0. Los mundos 8 y 9 (421-700), con más retos de 3 mecánicas y los hitos de K 12-13 de la
+1.0, están sin medir (§5, punto 8): la respuesta no se extiende a ellos sin medirlos.
 
 - Ningún ciclo se queda sin colocación; la escalera de D-009 se cumple como hoy (el último recurso solo en el 401-420, que
   también lo necesita la curva publicada).
@@ -189,10 +194,10 @@ T 11 dan una mediana del 80 %.
 
 1. **Retos en K 9 (10-11 cuias), no en K 10.** Con K 10 casi todos salen con 12 cuias. Con K 9 colocan igual y quedan
    dentro del tope de 10-11.
-2. **K 10 solo en los retos de una sola palanca de p6 y p9** (329 Ma, 349 B2 y 346 B2+Ln): son los que se quedan en 68-73 %
+2. **K 10 solo en los retos de p6 y p9 que no llegan con K 9** (329 Ma, 349 B2 y 346 B2+Ln): son los que se quedan en 68-73 %
    con K 9 y en 75-88 % con K 10. Necesita un K por celda en `campaign_v3.json` (como el «K = 13» de los hitos de 14 cuias,
-   HITO-14), que se hace en F3. Alternativa sin K más alto: una segunda palanca en esos retos (2 dosis turbias con el
-   Matapi; la Hoja atada donde no hay Brote).
+   HITO-14), que se hace en F3. Alternativa sin K más alto: una palanca más en esos retos (2 dosis turbias con el
+   Matapi del 329; en los del Brote de dos hojas no, porque no va con turbias, d.5.1).
 3. **Recalendarizar el reto 369 (Pi+B2):** falla en las tres medidas, también en la 1.0.
 4. **Hitos: K 11 (13 cuias) y la cúspide K 12 (14 cuias),** como se midió. El `pressure_plan` de los hitos se fija cuando
    exista el bot atento; hasta entonces el escalón de presión solo puede guiar al generador, no comprobarse.
@@ -243,7 +248,10 @@ dotnet run --project tools/level-generator -c Release -- --measure --spec tools/
 dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/experimental/campaign_v3_f1_k9.json --levels 301-420 --variant b --report tools/out/curva_f1/medida_f1_k9_301-420.md
 ```
 
-La medida es determinista: repetir la de K 9 en otra carpeta da los mismos bytes [V].
+La medida es determinista: repetir la de K 9 en otra carpeta da los mismos bytes [V]. La línea «último recurso» de §3.1 sale
+del log de consola de la medida («colocado sin exigir la bajada de banda tras cada etiqueta»), no del informe generado. Si un
+ciclo no coloca, `--measure` sigue con el siguiente contra un historial sin ese ciclo: sus cifras serían aproximadas (no pasó
+en ninguna de las tres medidas).
 
 ---
 
@@ -251,7 +259,7 @@ La medida es determinista: repetir la de K 9 en otra carpeta da los mismos bytes
 
 | # | Pregunta | Opciones | Recomendada |
 |---|---|---|---|
-| F1-1 | ¿Con cuántos colores van los retos? | **A. K 9 (10-11 cuias), con K 10 solo en los retos de una sola palanca de p6 y p9** · B. K 10 en todos (12 cuias) · C. K 9 en todos | **A** |
+| F1-1 | ¿Con cuántos colores van los retos? | **A. K 9 (10-11 cuias), con K 10 solo en los retos de p6 y p9 que no llegan a Difícil con K 9** · B. K 10 en todos (12 cuias) · C. K 9 en todos | **A** |
 | F1-2 | ¿Se acepta que algún reto salga sin etiqueta Difícil (hoy 1 de 30 en el mundo 7; con los topes, 3-4)? | **A. Sí, como en la 1.0 (c.2), y la curación del dueño decide** · B. No: se ajustan las celdas hasta 30 de 30 | **A** |
 | F1-3 | ¿Se cambia la celda del reto 369 (Pi+B2), que no llega a Difícil en ninguna medida? | **A. Sí, en `campaign_v3.json`** · B. No | **A** |
 | F1-4 | Falta el dato de Analytics de cuántos jugadores pasan del 300 (D-068, pendiente del dueño) | — | — |

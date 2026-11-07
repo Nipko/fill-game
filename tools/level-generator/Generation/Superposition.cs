@@ -431,8 +431,9 @@ internal static class Superposition
         int wanted = ctx.MurkyDebut ? 1 : 1 + rng.NextInt(2);
 
         // Turbias en comodidad (murky_normal; D-068, P7 A: 1-2 dosis): una sola cuia turbia, que oculta 1-2 dosis. El número
-        // aleatorio se consume igual; sin murky_normal la comodidad nunca lleva turbias (MURKY-SLOT) y nada cambia.
-        if (ctx.Spec.MurkyNormal is not null && ctx.Plan.Role == SlotRole.Comfort)
+        // aleatorio se consume igual; misma condición que MURKY-SLOT (desde from_level, sin estrella). Sin murky_normal la
+        // comodidad nunca lleva turbias (MURKY-SLOT) y nada cambia.
+        if (ctx.Spec.MurkyNormal is { } murkyNormal && ctx.Plan.Level >= murkyNormal.FromLevel && ctx.Plan.Role == SlotRole.Comfort && !ctx.Plan.DebutBoard)
         {
             wanted = 1;
         }

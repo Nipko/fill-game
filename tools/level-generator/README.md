@@ -595,7 +595,10 @@ papel de §4.1 colocan con las mecánicas de la 1.0. Informe y conclusiones: `do
   comodidades sin estrella desde `from_level`, MURKY-2 sube a `max_per_cycle` y el paso «Tu» pone una sola cuia turbia (1-2
   dosis) en comodidad. Sin la clave (campaign_v1 y campaign_v2) nada cambia: los packs publicados siguen idénticos (`--check`).
 - Fixtures de `murky_normal` en `specs/tests/`: `murky_normal_max.json` (6 niveles turbios en 301-320 con `max_per_cycle` = 5:
-  MURKY-2) y `murky_comfort_without_rule.json` (turbias en la comodidad 304 sin la clave: MURKY-SLOT, como hasta ahora).
+  MURKY-2), `murky_normal_before_from.json` (la comodidad turbia 304 con `from_level` = 305: MURKY-SLOT, y MURKY-2 en 301-320) y
+  `murky_comfort_without_rule.json` (turbias en la comodidad 304 sin la clave: MURKY-SLOT, como hasta ahora).
+- Si un ciclo no coloca, `--measure` sigue con el siguiente contra un historial sin ese ciclo (anti-repetición y bajada de
+  banda): las cifras de los ciclos posteriores son entonces aproximadas.
 
 ```
 dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b --report tools/out/curva_f1/medida_v2_b_301-420.md
