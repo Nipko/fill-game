@@ -21,8 +21,8 @@ internal static class ReserveQaCommand
 {
     public static readonly (string Id, string Rule)[] Ids =
     [
-        ("QA-RES-HEADER", "pack_schema 4, kind reserve, pack_id reserva_{mm}_v1 del mundo del pack de campana (contrato 21)"),
-        ("QA-RES-SLOT", "replaces = el id de campana del mismo level y mundo, presente en el pack de campana; id = replaces + _r1; seed = la del slot + :r1"),
+        ("QA-RES-HEADER", "pack_schema 4, kind reserve, pack_id reserva_{mm}_v1 del mundo del pack de campana (contrato 21); en la curva 2, pack_schema 5 y reserva_curva_{mm}_v1 (D-068)"),
+        ("QA-RES-SLOT", "replaces = el id de campana (en la curva 2, el de la curva: _c2) del mismo level y mundo, presente en el pack de campana; id = replaces + _r1; seed = la del slot + :r1"),
         ("QA-RES-MECH", "el sustituido usa una mecanica con kill switch (mech_enabled_*, 08 sec. 9); el de reserva no lleva ninguna mecanica ni Barro (tampoco su alivio), ni ocultas ni intro_mechanic [P]"),
         ("QA-RES-WINDOW", "bot_fail en la ventana del slot, etiqueta permitida en el slot y band del slot (03 sec. 12; D-009)"),
         ("QA-RES-COUNT", "como mucho el 20 % de los niveles del mundo; aviso si hay menos que min(tope, niveles con mecanica)"),
@@ -138,7 +138,7 @@ internal static class ReserveQaCommand
 
     /// <summary>Ids de todas las comprobaciones de --reserve, para el resumen y el informe.</summary>
     public static List<(string Id, string Rule)> AllIds() =>
-        BaseChecks.Ids.Concat(ReliefChecks.Ids).Concat(MurkyChecks.Ids).Concat(TinajaChecks.Ids).Concat(Ids)
+        BaseChecks.Ids.Concat(ReliefChecks.Ids).Concat(MurkyChecks.Ids).Concat(TinajaChecks.Ids).Concat(CurveChecks.Ids.Where(c => c.Id == "QA-T-ROLE")).Concat(Ids)
             .Concat(GateChecks.Ids.Where(g => g.Id == "QA-SCHEMA")).ToList();
 
     /// <summary>
@@ -189,6 +189,7 @@ internal static class ReserveQaCommand
             issues.AddRange(MurkyChecks.Run(e));
             issues.AddRange(TinajaChecks.Run(e));
             issues.AddRange(ReliefChecks.Run(e));
+            issues.AddRange(CurveChecks.TRole(spec, e, "reserve"));
             QaPack pack = packs.First(p => p.Path == e.Level.Pack);
             if (campaignByWorld.TryGetValue(pack.World, out var campaign))
             {
@@ -300,9 +301,11 @@ internal static class ReserveQaCommand
     private static IEnumerable<QaIssue> Header(CampaignSpec spec, QaPack pack)
     {
         QaIssue Fail(string msg) => new("QA-RES-HEADER", pack.Path, 0, msg);
-        if (pack.PackSchema != ReserveRunner.PackSchema)
+        WorldInfo? w = spec.Worlds.FirstOrDefault(x => x.World == pack.World);
+        int schema = w is null ? ReserveRunner.PackSchema : ReserveRunner.PackSchemaFor(spec, w);
+        if (pack.PackSchema != schema)
         {
-            yield return Fail(string.Create(CultureInfo.InvariantCulture, $"pack_schema {pack.PackSchema}; la reserva va con el {ReserveRunner.PackSchema}"));
+            yield return Fail(string.Create(CultureInfo.InvariantCulture, $"pack_schema {pack.PackSchema}; la reserva va con el {schema}"));
         }
 
         if (pack.Kind != "reserve")
@@ -315,9 +318,9 @@ internal static class ReserveQaCommand
         {
             yield return Fail(string.Create(CultureInfo.InvariantCulture, $"el mundo {pack.World} no esta en la especificacion {spec.SpecId}"));
         }
-        else if (pack.PackId != ReserveRunner.PackId(world, spec.Lap))
+        else if (pack.PackId != ReserveRunner.PackIdFor(spec, world))
         {
-            yield return Fail($"pack_id {pack.PackId}; se espera {ReserveRunner.PackId(world, spec.Lap)}");
+            yield return Fail($"pack_id {pack.PackId}; se espera {ReserveRunner.PackIdFor(spec, world)}");
         }
     }
 
@@ -375,9 +378,9 @@ internal static class ReserveQaCommand
         }
 
         LevelPlan plan = ReserveRunner.Plan(spec, lv.Level);
-        if (lv.Replaces != plan.CampaignId)
+        if (lv.Replaces != plan.ReplacesId)
         {
-            yield return Fail("QA-RES-SLOT", $"replaces {lv.Replaces ?? "(falta)"}; el slot {lv.Level} es {plan.CampaignId}");
+            yield return Fail("QA-RES-SLOT", $"replaces {lv.Replaces ?? "(falta)"}; el slot {lv.Level} es {plan.ReplacesId}");
         }
 
         if (lv.Id != plan.Id || lv.Seed != plan.SeedText)

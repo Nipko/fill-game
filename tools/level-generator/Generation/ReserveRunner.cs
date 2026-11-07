@@ -15,6 +15,10 @@
 //   - Un slot sin ningún candidato válido tras las rondas se salta (queda en el informe) y entra el siguiente del orden.
 //   - D no se publica: depende del pool del rango (03 §7) y la reserva no se coloca en el ciclo; band es la del slot.
 // Cada slot depende solo de su semilla: el pack no depende de los hilos. --check compara byte a byte con el disco.
+// Reserva de la curva 2 (D-068; 03 §17; 08 §4.1): desde un pack curva_{mm}_v{v} (kind curve) y su especificación (campaign_v3),
+// el pack reserva_curva_{mm}_v{v} con pack_schema 5, ids _c{c}_r1, semillas :c{c}:r1 y replaces = el id de la curva 2 del slot;
+// los kill switches suman el Aguapé y la Lancha (mech_enabled_aguape y mech_enabled_lancha, 08 §9), los topes de T y K del
+// papel valen igual (SlotGenerator.Config) y el par solo pide par >= 2K (03 §11: el par por rango no vale en la curva 2).
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
@@ -57,12 +61,23 @@ internal static class ReserveRunner
     public const int ReliefTriesPerRound = 3;
 
     /// <summary>Kill switches de 08 §9 (<c>mech_enabled_*</c>), en el orden de la tabla: el orden de las rondas.</summary>
-    public static readonly string[] Switches = ["hoja", "matapi", "liana", "remolino", "barro", "lluvia", "brote", "pirana", "tinaja"];
+    public static readonly string[] Switches = ["hoja", "matapi", "liana", "remolino", "barro", "lluvia", "brote", "pirana", "tinaja", "aguape", "lancha"];
+
+    /// <summary>pack_schema de la reserva de la curva 2 (D-068).</summary>
+    public const int CurvePackSchema = 5;
 
     /// <summary>Tableros de reserva como mucho en el mundo: el 20 % de sus niveles, hacia abajo [P].</summary>
     public static int Cap(WorldInfo world) => (world.Last - world.First + 1) * SharePercent / 100;
 
     public static string PackId(WorldInfo world, int lap) => string.Create(CultureInfo.InvariantCulture, $"reserva_{world.World:00}_v{lap}");
+
+    /// <summary>Id del pack de reserva del mundo: <c>reserva_curva_{mm}_v{v}</c> en la curva 2 (08 §4.1), si no el de siempre.</summary>
+    public static string PackIdFor(CampaignSpec spec, WorldInfo world) => spec.IsCurveLevel(world.First)
+        ? string.Create(CultureInfo.InvariantCulture, $"reserva_curva_{world.World:00}_v{spec.Lap}")
+        : PackId(world, spec.Lap);
+
+    /// <summary>pack_schema de la reserva del mundo: 5 en la curva 2, 4 en la curva 1.</summary>
+    public static int PackSchemaFor(CampaignSpec spec, WorldInfo world) => spec.IsCurveLevel(world.First) ? CurvePackSchema : PackSchema;
 
     /// <summary>Bit del kill switch de un tipo de attrs (las variantes cuentan como su base, como en el cliente; 08 §9).</summary>
     public static int SwitchBit(string type) => type switch
@@ -75,6 +90,8 @@ internal static class ReserveRunner
         "brote" => 1 << 6,
         "pirana" => 1 << 7,
         "tinaja" or "cucharon" => 1 << 8,
+        "aguape" => 1 << 9,
+        "lancha" => 1 << 10,
         _ => 0,
     };
 
@@ -89,10 +106,14 @@ internal static class ReserveRunner
         string.Join("+", Switches.Where((_, i) => (mask & (1 << i)) != 0));
 
     /// <summary>Niveles del pack de campaña con su máscara de kill switches (attrs y Barro del tablero base).</summary>
-    public static (int World, List<ReserveSource> Levels) ReadCampaign(string path)
+    public static (int World, List<ReserveSource> Levels) ReadCampaign(string path) => ReadCampaign(path, out _);
+
+    /// <summary>Como <see cref="ReadCampaign(string)"/>, con el <c>kind</c> del pack (campaign o curve).</summary>
+    public static (int World, List<ReserveSource> Levels) ReadCampaign(string path, out string kind)
     {
         using JsonDocument doc = JsonDocument.Parse(File.ReadAllBytes(path));
         JsonElement root = doc.RootElement;
+        kind = root.TryGetProperty("kind", out JsonElement k) ? k.GetString() ?? "campaign" : "campaign";
         int world = root.GetProperty("world").GetInt32();
         var list = new List<ReserveSource>();
         foreach (JsonElement lv in root.GetProperty("levels").EnumerateArray())
@@ -190,12 +211,14 @@ internal static class ReserveRunner
             MaxRiskPairs = p.MaxRiskPairs,
             Season = p.Season,
             Reserve = ReserveIndex,
+            Curve = p.Curve,
         };
     }
 
     /// <summary>Par dentro del objetivo del rango ±30 % (03 §17 #2; QA-PAR).</summary>
+    /// <remarks>En la curva 2 el par por rango no vale (03 §11): solo par >= 2K, que el generador ya exige.</remarks>
     public static bool ParInRange(LevelPlan plan, int par) =>
-        par >= (plan.Range.ParMin * 0.7) - 1e-9 && par <= (plan.Range.ParMax * 1.3) + 1e-9;
+        plan.Curve > 0 || (par >= (plan.Range.ParMin * 0.7) - 1e-9 && par <= (plan.Range.ParMax * 1.3) + 1e-9);
 
     /// <summary>Tablero de reserva de un slot, o null (con el motivo) si ninguna ronda da uno válido.</summary>
     public static ReserveLevel? GenerateSlot(SlotGenerator gen, CampaignSpec spec, ReserveSource src, out string why)
@@ -254,11 +277,18 @@ internal static class ReserveRunner
     /// </summary>
     public static ReserveResult? Generate(CampaignSpec spec, string campaignPath, Action<string> log, out string error)
     {
-        (int worldNumber, List<ReserveSource> levels) = ReadCampaign(campaignPath);
+        (int worldNumber, List<ReserveSource> levels) = ReadCampaign(campaignPath, out string kind);
         WorldInfo? world = spec.Worlds.FirstOrDefault(w => w.World == worldNumber);
         if (world is null || world.First < spec.FirstLevel || world.Last > spec.LastLevel)
         {
             error = string.Create(CultureInfo.InvariantCulture, $"{campaignPath}: el mundo {worldNumber} no esta entero en la especificacion {spec.SpecId}");
+            return null;
+        }
+
+        string expectedKind = spec.IsCurveLevel(world.First) ? "curve" : "campaign";
+        if (kind != expectedKind || (spec.Curve is { } curve && world.First < curve.FromLevel && world.Last >= curve.FromLevel))
+        {
+            error = $"{campaignPath}: pack de kind {kind}; con la especificacion {spec.SpecId} el mundo {worldNumber} es {expectedKind}";
             return null;
         }
 
@@ -314,12 +344,12 @@ internal static class ReserveRunner
         error = "";
         if (chosen.Count == 0)
         {
-            return new ReserveResult(world, campaignPath, PackId(world, spec.Lap), [], cap, withMechanics, order, chosen, skipped);
+            return new ReserveResult(world, campaignPath, PackIdFor(spec, world), [], cap, withMechanics, order, chosen, skipped);
         }
 
         List<ReserveLevel> sorted = chosen.OrderBy(r => r.Plan.Level).ToList();
         string text = Write(spec, world, sorted);
-        return new ReserveResult(world, campaignPath, PackId(world, spec.Lap), PackWriter.Bytes(text), cap, withMechanics, order, sorted, skipped);
+        return new ReserveResult(world, campaignPath, PackIdFor(spec, world), PackWriter.Bytes(text), cap, withMechanics, order, sorted, skipped);
     }
 
     /// <summary>Pack de reserva af-level/1 (pack_schema 4, kind reserve), con el formato de los packs de campaña (PackWriter).</summary>
@@ -327,9 +357,9 @@ internal static class ReserveRunner
     {
         var header = new JObj
         {
-            { "pack_schema", PackSchema },
+            { "pack_schema", PackSchemaFor(spec, world) },
             { "schema_file", PackWriter.SchemaFile },
-            { "pack_id", PackId(world, spec.Lap) },
+            { "pack_id", PackIdFor(spec, world) },
             { "kind", "reserve" },
             { "generator", new JObj { { "tool", "level-generator" }, { "version", PackWriter.GeneratorVersion } } },
             { "world", world.World },
@@ -382,7 +412,7 @@ internal static class ReserveRunner
             result.Add(kv);
             if (kv.Key == "id")
             {
-                result.Add("replaces", r.Plan.CampaignId);
+                result.Add("replaces", r.Plan.ReplacesId);
             }
         }
 

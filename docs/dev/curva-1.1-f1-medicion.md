@@ -263,3 +263,102 @@ en ninguna de las tres medidas).
 | F1-2 | ¿Se acepta que algún reto salga sin etiqueta Difícil (hoy 1 de 30 en el mundo 7; con los topes, 3-4)? | **A. Sí, como en la 1.0 (c.2), y la curación del dueño decide** · B. No: se ajustan las celdas hasta 30 de 30 | **A** |
 | F1-3 | ¿Se cambia la celda del reto 369 (Pi+B2), que no llega a Difícil en ninguna medida? | **A. Sí, en `campaign_v3.json`** · B. No | **A** |
 | F1-4 | Falta el dato de Analytics de cuántos jugadores pasan del 300 (D-068, pendiente del dueño) | — | — |
+
+---
+
+## 8. Fase F3: los mundos 8 y 9 con los topes del dueño (2026-11-07)
+
+- **Autor:** level-pipeline-dev (agente). **Rama:** `v11/curva-f3-pipeline`. **Especificación:** `tools/level-generator/specs/campaign_v3.json`
+  (producción, curva 2), con los topes del añadido de D-068 tras F1: comodidad y respiros K 8, retos K 9 (K 10 en 329, 346 y 349),
+  hitos K 11, cúspides K 12, estreno del Brote de dos hojas K 7, 3 comodidades turbias por ciclo y la celda nueva del 369.
+- **Semillas:** las de la curva 2 de cada slot (`amazonfill:v1:m{mm}:v1:n{nnnn}:c2`), las que usará F5; no las de la 1.0 de la
+  sección 3. Sin el Aguapé ni la Lancha (F2): sus slots se miden con la celda del calendario.
+- **Informes completos:** `tools/out/curva_f3/medida_v3_421-560.md`, `medida_v3_561-700.md` y `medida_v3_301-420.md`; la prueba de
+  K 10 en `medida_k10_*.md` (especificación experimental `specs/experimental/campaign_v3_f3_k10.json`).
+
+### 8.1 Resumen [V]
+
+| Medida | Mundo 8 (421-560) | Mundo 9 (561-700) | Mundo 7 (301-420), con las semillas `:c2` |
+|---|---|---|---|
+| Ciclos sin colocación | 0 de 7 | 0 de 7 | **1 de 6 (401-420)** |
+| Ciclos que necesitan el último recurso | 0 | 0 | — |
+| Retos en su ventana (75-89 %) | 32 de 35 | **26 de 35** | 23 de 25 colocados |
+| Hitos en su ventana (≥ 90 %) | 7 de 7 (cúspide incluida) | 7 de 7 (cúspide incluida) | 5 de 5 colocados |
+| T media / mediana | 10,3 / 10 | 10,3 / 10 | 10,4 / 10 |
+| K media / mediana | 8,4 / 8 | 8,4 / 8 | 8,4 / 8 |
+| Niveles con T ≤ 11 / ≥ 12 / ≥ 13 | 132 / 8 / 5 | 129 / 11 / 5 | 91 / 9 / 5 (de 100 colocados) |
+| Fuera del tope de T y K de su papel | 0 | 0 | 0 |
+| Niveles con ocultas (dosis) | 28, el 20 % (50) | 27, el 19 % (46) | 15 de 100 (24) |
+| Comodidades turbias publicadas con turbias | 21 de 21 | 21 de 21 | — |
+
+Por papel (mundos 8 y 9): comodidad T 9-11 (mediana 10), K 8 y bot 35 %; reto T 10-12 (mediana 11), K 9 y bot 80 %; hito T 12-13,
+K 11 y bot 95-100 %; cúspide 560 con 13 cuias (K 12, 100 %) y 700 con 14 (K 12, 93 %); recuperación y remanso con 10 cuias y K 8.
+
+**Colocan.** Los 14 ciclos de los mundos 8 y 9 colocan con los topes del dueño, sin el último recurso, y todos los hitos miden Muy
+difícil. **El mundo 9 pierde etiquetas Difícil:** 9 de sus 35 retos quedan entre el 43 % y el 73 % (en la curva publicada eran 8 de
+35, sección 3 y `tools/level-generator/README.md`). El mundo 7 con las semillas de la curva 2 no coloca el ciclo 401-420 (abajo).
+
+### 8.2 Retos que no miden Difícil (K 9)
+
+| Reto | Celda | Bot (K 9) | Bot con K 10 (prueba) | Lectura |
+|---|---|---|---|---|
+| 429 | Ma+Re | 73 % | **80 %** | K 10 lo arregla |
+| 452 | Pi+Br | 45 % | — (K 10 no cabe en 12 cuias) | Piraña con Brote |
+| 466 | Li+B2 | 73 % | 70 % | K 10 no ayuda |
+| 566 | Ma+Re | 73 % | **75 %** | K 10 lo arregla, justo |
+| 592 | Pi+B2 | 63 % | — (no cabe) | Piraña con Brote de dos hojas |
+| 632 | Ma+Ho | 70 % | **88 %** | K 10 lo arregla |
+| 646 | Pi+Br+Ha | 43 % | — (no cabe) | Piraña con Brote; el primer reto de tres mecánicas (03 §11) |
+| 649 | Pi+Ha | 73 % | **83 %** | K 10 lo arregla |
+| 652 | Br+Re | 65 % | **78 %** | K 10 lo arregla |
+| 672 | Li+Re | 70 % | sin colocar | Con K 10 el ciclo 661-680 deja de colocar |
+| 686 | Ma+Ho | 73 % | **88 %** | K 10 lo arregla |
+| 698 | Ha+B2 | 73 % | **83 %** | K 10 lo arregla |
+
+- Con K 10 en 429, 566, 632, 649, 652, 686 y 698 (la regla de F1-1 para 329, 346 y 349), el mundo 8 pasa a 33 de 35 retos en su
+  ventana y el 9 a 28 de 35 con 661-680 sin colocar por el 672; sin el 672, se espera 30-31 de 35 en el 9 [E].
+- **La Piraña con el Brote no llega a Difícil con K 9** (369 de F1, 452, 592 y 646: 43-65 %). Con K 10 no caben en el tope del
+  reto: K 10 + 1 vacío + la cueva + la cuia a medias del Brote = 13 cuias. Es su celda, no el tope [E].
+
+### 8.3 El mundo 7 con las semillas de la curva 2: 401-420 no coloca
+
+Con las semillas `:c2`, el ciclo 401-420 no tiene colocación, ni con el último recurso. La medida de F1 (semillas de la 1.0) ya
+lo colocaba solo con el último recurso (sección 3.1). Diagnóstico [V] (stderr de `--spec`): el reto 418 (Ba+Tu) tiene 1 candidato
+en su ventana de 360 intentos (2 de 720 con K 10), y la escalera de D-009 no cierra: el 409 (la Flor sola) solo tiene candidatos
+con D ≥ 0,96, y el 415 (Fl+Ll), ninguno por encima de 0,96. Pruebas: 418 en Br+Tu (17 candidatos en ventana) y 415 y 418 con K 10:
+el ciclo sigue sin colocar. Es la escalera del ciclo de estreno de la Flor, no los topes [E]. Los demás ciclos del mundo 7 colocan; el
+369 (Pi+Ma, la celda nueva) mide 65 %, y el 346 y el 349 con K 10 miden 85 % y 80 %.
+
+### 8.4 Escalón de presión de los hitos [V]
+
+Sin el Aguapé, en los mundos 8 y 9 solo el hito 480 llega al escalón de `pressure_plan` (5 de 5): el 440 da 3 de 4, el 500 3 de
+6, el 540 4 de 7, el 560 5 de 8, el 640 3 de 7 y el 700 5 de 9 (tablas de los informes; en el mundo 7 solo el 320). Las palancas de 1.0 dan 3-5 escalones; el plan
+pide 4-9. El hueco es el que deben llenar las congeladas (Aguapé y espeso, 0-2 escalones) y las ocultas en los hitos: con
+la escala de 03 §12 el plan de los mundos 8 y 9 no se alcanza sin F2 [E].
+
+### 8.5 Propuestas [P]
+
+1. **K 10 en los retos 429, 566, 632, 649, 652, 686 y 698** (`k_cells`), como F1-1. No en 466 ni en 672.
+2. **Cambiar la celda de los retos con la Piraña y el Brote** (452 Pi+Br, 592 Pi+B2 y 646 Pi+Br+Ha), como se hizo con el 369, o
+   aceptarlos sin la etiqueta Difícil (F1-2). El 646 es «el primer reto con tres mecánicas» de 03 §11: si se cambia, otra celda
+   tiene que hacer de primer trío.
+3. **Rehacer el ciclo 401-420 de la curva 2** antes de F5: la escalera del estreno de la Flor (409 Fl, 412 Fl+Ba, 415 Fl+Ll) y el
+   reto turbio 418. Opciones: cambiar el 418 a Br+Tu y bajar el 409 a un reto con otra palanca, o reordenar los retos de la Flor. Se
+   prueba con `--measure` antes de tocar la especificación.
+4. **Revisar `pressure_plan` de los mundos 8 y 9 cuando exista el Aguapé** y el bot atento (03 §17 #20): con las mecánicas de la
+   1.0 los hitos se quedan en 3-5.
+
+### 8.6 Para reproducir
+
+```
+dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/campaign_v3.json --levels 421-560 --report tools/out/curva_f3/medida_v3_421-560.md
+dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/campaign_v3.json --levels 561-700 --report tools/out/curva_f3/medida_v3_561-700.md
+dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/campaign_v3.json --levels 301-420 --report tools/out/curva_f3/medida_v3_301-420.md
+dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/experimental/campaign_v3_f3_k10.json --levels 421-560 --report tools/out/curva_f3/medida_k10_421-560.md
+dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/experimental/campaign_v3_f3_k10.json --levels 561-700 --report tools/out/curva_f3/medida_k10_561-700.md
+dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/experimental/campaign_v3_f3_k10.json --levels 301-420 --report tools/out/curva_f3/medida_k10_301-420.md
+```
+
+Pool de prueba (no son los packs finales de F5): `tools/out/curva_f3/curva_08_v1.json` (140 niveles, `kind` = `curve`,
+`pack_schema` 5) y su reserva `reserva_curva_08_v1.json` (28 tableros), con level-qa en 0 fallos (`qa_curva_08.md` y
+`qa_reserva_curva_08.md`; QA-REPRO y QA-RES-REPRO reproducen los dos packs byte a byte).

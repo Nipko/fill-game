@@ -26,7 +26,7 @@ const string Usage = """
       dotnet run --project tools/level-qa -c Release -- <paquete.json> [<paquete.json> ...] [--report <informe.md>] [--spec <campaign.json>] [--levels a-b] [--variant a|b] [--no-reproduce]
       dotnet run --project tools/level-qa -c Release -- --daily <daily_pool_v1.json> [--spec <daily_v1.json>] [--partial] [--no-reproduce]
       dotnet run --project tools/level-qa -c Release -- --reserve <reserva_NN_v1.json> ... --campaign <mundo_NN_v1.json> ... --spec <campaign.json> [--variant a|b] [--report <informe.md>] [--no-reproduce]
-      dotnet run --project tools/level-qa -- --self-test [key2|reglas|variante|daily]
+      dotnet run --project tools/level-qa -- --self-test [key2|reglas|variante|reserve|cvd|curva|daily]
       dotnet run --project tools/level-qa -- --help
 
     Recalcula cada nivel con AF.Core y AF.Solver y comprueba: estructura, U_c, selladas, Aguas estancadas al inicio, par
@@ -83,7 +83,12 @@ const string Usage = """
     avisos de R-Q10 y el tope de tamano. Sale con 0, 1 (algun FAIL) o 2.
     --self-test cvd (Q-B9-13 bis): QA-CVD-ADJ falla con el fixture del 7 sobre el 10 en el tablero base, es aviso si el
     contacto solo esta en una variante de relief, y GateChecks.CvdUnavoidable solo lo baja a aviso con el pack reproducido
-    y Tints.CvdAdjacent > 0. Sale con 0, 1 (algun FAIL) o 2. El --self-test sin nombre suma key2, daily, reserve y cvd.
+    y Tints.CvdAdjacent > 0. Sale con 0, 1 (algun FAIL) o 2. El --self-test sin nombre suma key2, daily, reserve, cvd y curva.
+    Curva 2 de la 1.1 (D-068, fase F3): con una especificacion con curve (tools/level-generator/specs/campaign_v3.json) los
+    packs curva_{mm}_v1 (kind curve, pack_schema 5) pasan ademas QA-T-ROLE, QA-MURKY-NORMAL, QA-AGUAPE y QA-LANCHA (estos
+    dos, esqueleto que se activa con F2); QA-PAR solo pide par >= 2K. --levels empieza en curve.from_level.
+    --self-test curva: los topes por papel, los ids y replaces de la curva, las turbias en Normal y los esqueletos de
+    QA-AGUAPE y QA-LANCHA sobre tableros sinteticos (sin el nucleo). Sale con 0, 1 (algun FAIL) o 2.
 
     Codigos de salida: 0 = todo cumple (los avisos no fallan) o ayuda; 1 = algun nivel no cumple, el esquema falla, un
     pack no se reproduce o falta Python; 2 = uso incorrecto, sin paquetes o archivos ilegibles.
@@ -124,9 +129,14 @@ if (args[0] == "--reserve")
 
 if (args[0] == "--self-test")
 {
-    if (args.Length > 2 || (args.Length == 2 && args[1] != "key2" && args[1] != "reglas" && args[1] != "variante" && args[1] != "reserve" && args[1] != "cvd"))
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "key2" && args[1] != "reglas" && args[1] != "variante" && args[1] != "reserve" && args[1] != "cvd" && args[1] != "curva"))
     {
-        return UsageError("--self-test solo admite: key2, reglas, variante, reserve, cvd o daily.");
+        return UsageError("--self-test solo admite: key2, reglas, variante, reserve, cvd, curva o daily.");
+    }
+
+    if (args.Length == 2 && args[1] == "curva")
+    {
+        return CurveQaSelfTest.Run();
     }
 
     if (args.Length == 2 && args[1] == "reserve")
@@ -157,8 +167,9 @@ if (args[0] == "--self-test")
 
     // E17 (Spark): el --self-test sin nombre suma el del Reto del río (--self-test daily) y el de la reserva (--self-test reserve).
     // Q-B9-13 bis: también el de QA-CVD-ADJ (--self-test cvd).
-    return args.Length == 2 ? key2 : Math.Max(Math.Max(Math.Max(key2, AmazonFill.Tools.LevelQa.Daily.DailyQaCommand.Run(["--self-test", "daily"])),
-        AmazonFill.Tools.LevelQa.Reserve.ReserveQaCommand.SelfTest()), CvdQaSelfTest.Run());
+    // F3 de D-068: también el de la curva 2 (--self-test curva).
+    return args.Length == 2 ? key2 : Math.Max(Math.Max(Math.Max(Math.Max(key2, AmazonFill.Tools.LevelQa.Daily.DailyQaCommand.Run(["--self-test", "daily"])),
+        AmazonFill.Tools.LevelQa.Reserve.ReserveQaCommand.SelfTest()), CvdQaSelfTest.Run()), CurveQaSelfTest.Run());
 }
 
 var packages = new List<string>();
@@ -216,11 +227,12 @@ catch (CampaignSpecException e)
     return 2;
 }
 
-int genFirst = spec.FirstLevel;
+// En la curva 2 (campaign_v3) lo anterior a curve.from_level es historia y no se genera.
+int genFirst = CampaignRunner.GenerationFirst(spec);
 int genLast = spec.LastLevel;
 if (levelsArg is not null && !TryParseLevels(levelsArg, spec, out genFirst, out genLast))
 {
-    return UsageError($"--levels debe ser a-b dentro de {spec.FirstLevel}-{spec.LastLevel}: {levelsArg}");
+    return UsageError($"--levels debe ser a-b dentro de {CampaignRunner.GenerationFirst(spec)}-{spec.LastLevel}: {levelsArg}");
 }
 
 if (levelsArg is not null && !reproduce)
@@ -259,9 +271,11 @@ foreach (LevelEval e in evals)
     issues.AddRange(TinajaChecks.Run(e));
     issues.AddRange(VariantChecks.Run(e));
     issues.AddRange(ReliefChecks.Run(e));
+    issues.AddRange(CurveChecks.Run(ctx, e));
 }
 
 issues.AddRange(CycleChecks.Run(ctx));
+issues.AddRange(CurveChecks.RunCampaign(ctx));
 issues.AddRange(RepetitionChecks.Run(ctx));
 issues.AddRange(MechanicChecks.RunCampaign(ctx));
 
@@ -303,7 +317,7 @@ foreach (QaIssue i in ordered)
 
 int failures = issues.Count(i => !i.Warning);
 var allIds = BaseChecks.Ids.Concat(CycleChecks.Ids).Concat(ReliefChecks.Ids).Concat(RepetitionChecks.Ids)
-    .Concat(MechanicChecks.Ids).Concat(MurkyChecks.Ids).Concat(TinajaChecks.Ids).Concat(VariantChecks.Ids).Concat(GateChecks.Ids).ToList();
+    .Concat(MechanicChecks.Ids).Concat(MurkyChecks.Ids).Concat(TinajaChecks.Ids).Concat(VariantChecks.Ids).Concat(CurveChecks.Ids).Concat(GateChecks.Ids).ToList();
 Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
     $"{evals.Count} niveles, {allIds.Count} comprobaciones: {failures} fallo(s), {issues.Count(i => i.Warning)} aviso(s)"));
 if (report is not null)
@@ -356,7 +370,7 @@ static bool TryParseLevels(string text, CampaignSpec spec, out int first, out in
     return parts.Length == 2
         && int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out first)
         && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out last)
-        && first >= spec.FirstLevel && last <= spec.LastLevel && first <= last;
+        && first >= CampaignRunner.GenerationFirst(spec) && last <= spec.LastLevel && first <= last;
 }
 
 static int UsageError(string message)

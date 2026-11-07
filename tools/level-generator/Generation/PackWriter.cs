@@ -12,6 +12,9 @@
 //     (bot_fail con 3, branching, traps y D con 2);
 //   - UTF-8 sin BOM y LF; minificado (03 §2) con un nivel por línea [P] para que los diffs se lean;
 //   - sin solution, safe_path ni qa (08 §4.1).
+// Curva 2 de la 1.1 (D-068; 08 §4.1 y §4.4): los niveles con LevelPlan.Curve > 0 salen en un pack curva_{mm}_v{v} con
+// pack_schema 5 y kind curve; cada nivel lleva replaces (el id de la curva 1 del slot) tras id, el id con _c{c}, la semilla con
+// :c{c} y difficulty.pressure (el escalón de presión de 03 §12, Pressure.OfBoard) tras band. Sin curva nada cambia.
 using System.Globalization;
 using System.Text;
 using AF.Core.Board;
@@ -56,14 +59,36 @@ internal static class PackWriter
 
     public static string PackId(WorldInfo world, int lap) => string.Create(CultureInfo.InvariantCulture, $"mundo_{world.World:00}_v{lap}");
 
+    /// <summary>pack_schema de la curva 2 (el 4 más la curva de la 1.1; D-068, contrato 21).</summary>
+    public const int CurvePackSchema = 5;
+
+    /// <summary>Id del pack de la curva 2 de un mundo (08 §4.1: <c>curva_{mm}_v{v}</c>).</summary>
+    public static string CurvePackId(WorldInfo world, int lap) => string.Create(CultureInfo.InvariantCulture, $"curva_{world.World:00}_v{lap}");
+
+    /// <summary>Id del pack de un mundo: el de la curva 2 si sus niveles lo son, o el de campaña.</summary>
+    public static string PackIdFor(CampaignSpec spec, WorldInfo world) =>
+        spec.IsCurveLevel(world.First) ? CurvePackId(world, spec.Lap) : PackId(world, spec.Lap);
+
     public static string Write(CampaignSpec spec, WorldInfo world, IReadOnlyList<PackLevel> levels)
     {
+        bool curve = levels[0].Plan.Curve > 0;
+        if (levels.Any(l => (l.Plan.Curve > 0) != curve))
+        {
+            throw new InvalidOperationException($"el mundo {world.World} mezcla niveles de la curva 1 y de la curva 2");
+        }
+
+        if (!curve && levels.Any(l => NeedsPack5(l.Chosen.Board.Attrs) || l.Relief.Any(r => NeedsPack5(r.Board.Attrs))))
+        {
+            // D-068 (contrato 21): el Aguapé y la Lancha solo van con pack_schema 5, en los packs de la curva 2.
+            throw new InvalidOperationException($"el mundo {world.World} lleva el Aguape o la Lancha fuera de la curva 2 (pack_schema 5)");
+        }
+
         var header = new JObj
         {
-            { "pack_schema", PackSchemaFor(levels) },
+            { "pack_schema", curve ? CurvePackSchema : PackSchemaFor(levels) },
             { "schema_file", SchemaFile },
-            { "pack_id", PackId(world, spec.Lap) },
-            { "kind", "campaign" },
+            { "pack_id", curve ? CurvePackId(world, spec.Lap) : PackId(world, spec.Lap) },
+            { "kind", curve ? "curve" : "campaign" },
             { "generator", new JObj { { "tool", "level-generator" }, { "version", GeneratorVersion } } },
             { "world", world.World },
             { "world_id", world.WorldId },
@@ -99,6 +124,9 @@ internal static class PackWriter
         levels.Any(l => NeedsPack3(l.Chosen.Board.Attrs) || l.Relief.Any(r => NeedsPack3(r.Board.Attrs))
             || (l.Plan.Intro is string intro && Pack3Intros.Contains(intro))) ? TinajaPackSchema : PackSchema;
 
+    /// <summary>Tipos de la curva 2 (D-068), que solo admite el <c>pack_schema</c> 5; por su clave, para compilar con y sin F2.</summary>
+    public static bool NeedsPack5(MechanicSpec[] attrs) => attrs.Any(a => !a.IsNone && MechanicTypes.ToKey(a.Type) is "aguape" or "lancha");
+
     /// <summary>Tipos y campos que solo admite el <c>pack_schema</c> 3: tinaja, cucharon, hoja_atada, flor (key2) y brote con n = 2.</summary>
     private static bool NeedsPack3(MechanicSpec[] attrs) => attrs.Any(a =>
         a.Type is MechanicType.Tinaja or MechanicType.Cucharon or MechanicType.HojaAtada or MechanicType.Flor
@@ -132,7 +160,12 @@ internal static class PackWriter
             { "D", new JNum(Fixed(c.D, 2)) },
             { "band", plan.Band },
         };
-        return new JObj
+        if (plan.Curve > 0)
+        {
+            difficulty.Add("pressure", Pressure.OfBoard(b, c.K, plan.Role == SlotRole.Milestone));
+        }
+
+        var level = new JObj
         {
             { "schema", "af-level/1" },
             { "id", plan.Id },
@@ -156,6 +189,13 @@ internal static class PackWriter
             { "hint_supported", true },
             { "relief", pl.Relief.Select(r => (object?)Relief(r)).ToList() },
         };
+        if (plan.Curve > 0 && plan.Reserve == 0)
+        {
+            // replaces tras id (08 §4.1), como en la reserva: el id de la curva 1 del slot.
+            level.Insert(2, new KeyValuePair<string, object?>("replaces", plan.ReplacesId));
+        }
+
+        return level;
     }
 
     private static JObj Relief(ReliefBoard r)

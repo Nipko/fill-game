@@ -3,6 +3,8 @@
 // colocación, y escribe un informe Markdown con T (cuias), K (colores), el bot casual ×40 y la ventana por papel del ciclo
 // de 20, los ciclos que no colocan y los retos e hitos uno a uno. No escribe packs ni alivio: es una medida, no contenido.
 // El informe no lleva tiempos: dos ejecuciones dan los mismos bytes.
+// Fase F3 (curva 2, campaign_v3): los topes salen de role_caps de la especificación (si no, los de D-068 de abajo), y el informe
+// suma el escalón de presión de cada hito (pressure_plan frente a Pressure.OfBoard) y los slots de F2 sin colocar.
 using System.Globalization;
 using System.Text;
 using AmazonFill.Tools.LevelGenerator.Campaign;
@@ -25,6 +27,22 @@ internal static class MeasureRunner
         ("hito", 12, 13),
         ("cuspide", 13, 14),
     ];
+
+    /// <summary>Clave de role_caps de cada papel de la medida (LevelPlan.CapRole).</summary>
+    private static string CapKey(string role) => role switch
+    {
+        "recuperacion" or "remanso" => "respite",
+        "estreno" => "debut",
+        "comodidad" => "comfort",
+        "reto" => "challenge",
+        "hito" => "milestone",
+        _ => "summit",
+    };
+
+    /// <summary>Topes de T por papel: los de role_caps de la especificación o, sin ella, <see cref="Caps"/>.</summary>
+    public static (string Role, int Min, int Max)[] CapsFor(CampaignSpec spec) => spec.RoleCaps.Count == 0
+        ? Caps
+        : Caps.Select(c => spec.RoleCaps.TryGetValue(CapKey(c.Role), out RoleCap? r) ? (c.Role, r.TMin, r.TMax) : c).ToArray();
 
     /// <summary>Papel del nivel para la medida: el de su posición, con el estreno aparte y la cúspide (hito de la firma).</summary>
     public static string RoleOf(LevelPlan plan) =>
@@ -55,7 +73,7 @@ internal static class MeasureRunner
         if (parts.Length != 2
             || !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int first)
             || !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int last)
-            || first < spec.FirstLevel || last > spec.LastLevel || first > last)
+            || first < CampaignRunner.GenerationFirst(spec) || last > spec.LastLevel || first > last)
         {
             Console.Error.WriteLine($"level-generator: --levels debe ser a-b dentro de {spec.FirstLevel}-{spec.LastLevel}: {levelsArg}");
             return 2;
@@ -119,7 +137,7 @@ internal static class MeasureRunner
             W(F($"| Niveles con T ≤ 11 / T ≥ 12 / T ≥ 13 | {ts.Count(t => t <= 11)} / {ts.Count(t => t >= 12)} / {ts.Count(t => t >= 13)} |"));
             int murky = placed.Count(l => l.Chosen!.Murky);
             W(F($"| Niveles con ocultas (dosis) | {murky} ({100.0 * murky / placed.Count:0} %; {placed.Sum(l => l.Chosen!.Murky ? l.Chosen.Board.Hidden.Length : 0)} dosis) |"));
-            int outside = placed.Count(l => !InCap(l));
+            int outside = placed.Count(l => !InCap(spec, l));
             W(F($"| Fuera del tope de T de su papel | {outside} |"));
         }
 
@@ -130,7 +148,7 @@ internal static class MeasureRunner
         W();
         W("| Papel | Tope T | Niveles | T mín-med-máx | T (recuento) | K mín-med-máx | Libres (med.) | Bot (mediana) | Bot mín-máx | En ventana | Fuera del tope | Con ocultas |");
         W("|---|---|---|---|---|---|---|---|---|---|---|---|");
-        foreach ((string role, int min, int max) in Caps)
+        foreach ((string role, int min, int max) in CapsFor(spec))
         {
             List<GeneratedLevel> rows = placed.Where(l => RoleOf(l.Plan) == role).ToList();
             int total = levels.Count(l => RoleOf(l.Plan) == role);
@@ -150,7 +168,7 @@ internal static class MeasureRunner
             int[] free = rows.Select(l => l.Chosen!.FreeEmpties).OrderBy(x => x).ToArray();
             double[] bot = rows.Select(l => l.Chosen!.Bot).OrderBy(x => x).ToArray();
             string hist = string.Join(" · ", t.GroupBy(x => x).OrderBy(g => g.Key).Select(g => F($"{g.Key}: {g.Count()}")));
-            W(F($"| {role} | {min}-{max} | {rows.Count}{(rows.Count == total ? "" : F($" de {total}"))} | {t[0]}-{Median(t):0.#}-{t[^1]} | {hist} | {k[0]}-{Median(k):0.#}-{k[^1]} | {Median(free):0.#} | {Pct(Median(bot))} | {Pct(bot[0])}-{Pct(bot[^1])} | {rows.Count(l => l.Chosen!.InWindow)} | {rows.Count(l => !InCap(l))} | {rows.Count(l => l.Chosen!.Murky)} |"));
+            W(F($"| {role} | {min}-{max} | {rows.Count}{(rows.Count == total ? "" : F($" de {total}"))} | {t[0]}-{Median(t):0.#}-{t[^1]} | {hist} | {k[0]}-{Median(k):0.#}-{k[^1]} | {Median(free):0.#} | {Pct(Median(bot))} | {Pct(bot[0])}-{Pct(bot[^1])} | {rows.Count(l => l.Chosen!.InWindow)} | {rows.Count(l => !InCap(spec, l))} | {rows.Count(l => l.Chosen!.Murky)} |"));
         }
 
         W();
@@ -190,6 +208,45 @@ internal static class MeasureRunner
         }
 
         W();
+
+        // Escalón de presión de los hitos (curva 2; 03 §12): el plan de la especificación y el del tablero elegido.
+        if (spec.PressurePlan.Count > 0)
+        {
+            W("## Escalón de presión de los hitos");
+            W();
+            W("Plan = `pressure_plan` de la especificación; tablero = palancas del elegido (`Pressure.OfBoard`, sin el Aguapé, que llega con F2); celda = lo que se espera de la celda (`Pressure.OfCell`).");
+            W();
+            W("| Hito | Celda | Plan | Celda (esperado) | Tablero | Bot |");
+            W("|---|---|---|---|---|---|");
+            foreach (GeneratedLevel l in milestones)
+            {
+                string planned = spec.PressurePlan.TryGetValue(l.Plan.Level, out int pp) ? pp.ToString(CultureInfo.InvariantCulture) : "—";
+                int fromCell = Pressure.OfCell(l.Plan.Cell, l.Plan.K, milestone: true);
+                string board = l.Chosen is null ? "—" : Pressure.OfBoard(l.Chosen.Board, l.Chosen.K, milestone: true).ToString(CultureInfo.InvariantCulture);
+                W(F($"| {l.Plan.Level} | {l.Plan.Cell.Short} | {planned} | {fromCell} | {board} | {(l.Chosen is null ? "—" : Pct(l.Chosen.Bot))} |"));
+            }
+
+            W();
+        }
+
+        // Slots de F2 (Aguapé y Lancha): declarados en la especificación, sin colocar hasta que F2 esté integrado.
+        List<GeneratedLevel> f2 = levels.Where(l => spec.F2Slots.ContainsKey(l.Plan.Level)).ToList();
+        if (f2.Count > 0)
+        {
+            W("## Slots de F2 sin colocar");
+            W();
+            W("El núcleo aún no tiene el Aguapé ni la Lancha (D-068, fase F2): estos slots se midieron con la celda del calendario.");
+            W();
+            W("| Nivel | Celda de F2 | Celda medida |");
+            W("|---|---|---|");
+            foreach (GeneratedLevel l in f2)
+            {
+                W(F($"| {l.Plan.Level} | {spec.F2Slots[l.Plan.Level].Literal} | {l.Plan.Cell.Short} |"));
+            }
+
+            W();
+        }
+
         W("## Todos los niveles");
         W();
         W("| Nivel | p | Papel | Celda | K plan | T | K | Libres | Ocultas | Par | Bot | Etiqueta | En ventana | Candidatos |");
@@ -219,11 +276,11 @@ internal static class MeasureRunner
             $"| {l.Plan.Level} | {l.Plan.Position} | {RoleOf(l.Plan)} | {cell} | {l.Plan.K} | {c.Board.Caps.Length} | {c.K} | {c.FreeEmpties} | {(c.Murky ? c.Board.Hidden.Length : 0)} | {c.Par} | {Pct(c.Bot)} | {c.MeasuredLabel} | {(c.InWindow ? "sí" : "no")} | {counts} |");
     }
 
-    private static bool InCap(GeneratedLevel l)
+    private static bool InCap(CampaignSpec spec, GeneratedLevel l)
     {
         string role = RoleOf(l.Plan);
         int t = l.Chosen!.Board.Caps.Length;
-        return Caps.Where(c => c.Role == role).All(c => t >= c.Min && t <= c.Max);
+        return CapsFor(spec).Where(c => c.Role == role).All(c => t >= c.Min && t <= c.Max);
     }
 
     private static double Median(int[] sorted) =>

@@ -5168,3 +5168,13 @@ Medición: `docs/dev/curva-1.1-f1-medicion.md` (mundo 7, variante b). El dueño 
 - **F1-3:** la celda del reto 369 se cambia en `campaign_v3`.
 - **F1-4:** sigue pendiente del dueño el dato de Analytics de cuántos jugadores pasan del 300.
 - **En F3:** medir los mundos 8 y 9 con estos topes, antes de generar los packs.
+
+### D-068, añadido del 2026-11-07: la fase F3 (especificación, generador y QA de la curva 2)
+
+Hecho por level-pipeline-dev en `v11/curva-f3-pipeline`, la parte de F3 que no depende de F2. Detalle y medida: `docs/dev/curva-1.1-f1-medicion.md`, sección 8.
+- **Especificación de producción** `tools/level-generator/specs/campaign_v3.json`: 201-300 es historia (la variante «b» de `campaign_v2.json`, que no se genera) y 301-700 la curva 2, con los topes del añadido anterior (`k_plan`, `k_cells` y `role_caps`), `murky_normal` (estreno en 323-324 y 3 comodidades turbias por ciclo), el 369 en Pi+Ma, `pressure_plan` y los slots del Aguapé (303-305), del espeso (347-348) y de la Lancha (363-365) declarados para F2, que el generador aún no coloca y avisa.
+- **Generador:** packs `curva_{mm}_v1` (`kind` = `curve`, `pack_schema` 5, ids `_c2`, semillas `:c2`, `replaces` y `difficulty.pressure`) y su reserva `reserva_curva_{mm}_v1`; ningún tablero fuera del tope de su papel. `campaign_v1` y `campaign_v2` dan los mismos bytes (`--check`).
+- **level-qa:** QA-T-ROLE, QA-MURKY-NORMAL, QA-PAR de la curva 2 (solo par ≥ 2K) y los esqueletos de QA-AGUAPE y QA-LANCHA, que fallan cerrado hasta F2 (y rechazan esos tipos, `rows` y `pressure` con un `pack_schema` menor que 5). Las trampas tempranas (0 en Normal y 1 en Difícil) ya las comprobaba QA-EARLY-TRAPS.
+- **Medida de los mundos 8 y 9:** colocan los 14 ciclos y todos los hitos miden Muy difícil; retos en su ventana, 32 de 35 en el 8 y 26 de 35 en el 9. Con las semillas de la curva 2, el ciclo 401-420 del mundo 7 no coloca.
+- **Decisiones [P] de la herramienta, pendientes del dueño:** el ciclo 301-320 sin comodidades turbias (es anterior al estreno de las turbias en Normal, 323); K 7 en 323-324 (el tope de estreno); 351 y 368 a Ba+Tu y 417 a Ho+Tu, para que su ciclo tenga 3 comodidades turbias sin bajar del 30 % de puros; el 369 en Pi+Ma (una combinación ya vista, para no mover las primeras veces); los escalones de presión de los mundos 8 y 9; las palancas del escalón (`Generation/Pressure.cs`).
+- **Preguntas al dueño (sección 8.5):** K 10 en los retos 429, 566, 632, 649, 652, 686 y 698; qué hacer con los retos de la Piraña con el Brote (452, 592 y 646); cómo rehacer el ciclo 401-420 de la curva 2.

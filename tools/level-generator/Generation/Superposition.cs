@@ -433,7 +433,9 @@ internal static class Superposition
         // Turbias en comodidad (murky_normal; D-068, P7 A: 1-2 dosis): una sola cuia turbia, que oculta 1-2 dosis. El número
         // aleatorio se consume igual; misma condición que MURKY-SLOT (desde from_level, sin estrella). Sin murky_normal la
         // comodidad nunca lleva turbias (MURKY-SLOT) y nada cambia.
-        if (ctx.Spec.MurkyNormal is { } murkyNormal && ctx.Plan.Level >= murkyNormal.FromLevel && ctx.Plan.Role == SlotRole.Comfort && !ctx.Plan.DebutBoard)
+        // En la curva 2, también sus tableros de estreno (murky_normal.debut: 323-324).
+        if (ctx.Spec.MurkyNormal is { } murkyNormal && ctx.Plan.Level >= murkyNormal.FromLevel && ctx.Plan.Role == SlotRole.Comfort
+            && (!ctx.Plan.DebutBoard || murkyNormal.Debut.Contains(ctx.Plan.Level)))
         {
             wanted = 1;
         }
