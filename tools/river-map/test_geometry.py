@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""test_geometry.py - pruebas de tools/river-map/geometry.py y shapefile.py (geometria af-river-map/1 y at y leg de las
+"""test_geometry.py - pruebas de tools/river-map/geometry.py y shapefile.py (geometria af-river-map/2 y at y leg de las
 paradas; M2.6, con la geometria de produccion de M5.1).
 
 Ejecutar desde la raiz del repositorio:
@@ -26,6 +26,10 @@ reparacion de la costa que se corta y su fallo al agotar las rondas, production_
 vertice del anfitrion, boca fuera de vertice llevada al mas cercano y arranque del ramal), main con un archivo de mas de
 MAX_BYTES, los archivos cerrados al fallar el lector, las paradas en una confluencia (confluence_s), los km que no vuelven rio
 arriba y el aviso de las lineas que siguen siendo el esbozo de la investigacion.
+M2-1 (af-river-map/2; D-069): las orillas (la playa en la orilla de dentro de una curva sintetica, sin solapes y sus fallos),
+las zonas (canopy primero, shade de un byte por vertice, nucleo y difuminado, el modo commiteado de ida y vuelta y sus
+fallos), la vegetacion (determinista: los mismos bytes en dos ejecuciones y con otro PYTHONHASHSEED en un subproceso; el
+lod de su celda, fuera del mar, de la nieve y de los puntos de paso) y el nuevo MAX_BYTES.
 Solo biblioteca estandar.
 """
 from __future__ import annotations
@@ -493,7 +497,7 @@ class ProductionGeometryTests(unittest.TestCase):
         self.assertEqual([frame.quant(-5.6, -60.3), frame.quant(-5.03, -60.25)], geo.lines["itaya"][1],
                          "las lineas de la investigacion, tal cual")
         verts, tris, zones = geo.land
-        self.assertEqual([{"id": "land", "tile": "canopy", "first": 0, "count": len(tris) // 3}], zones)
+        self.assertEqual([{"id": "canopy", "tile": "canopy", "first": 0, "count": len(tris) // 3}], zones)
         self.assertEqual([], geometry.land_problems(verts, tris, zones))
 
     def test_hydrorivers_mouth_off_its_host_vertex_fails_and_is_taken_to_it(self):
@@ -626,11 +630,10 @@ class LandTests(Base):
 
     def test_land_of_the_file_is_the_continent_and_its_islands(self):
         land = self.doc["land"]
-        verts = geometry.decode_points(land["verts"])
-        tris = geometry.decode_indices(land["tris"])
-        self.assertEqual([], geometry.land_problems(verts, tris, land["zones"]))
-        self.assertEqual([{"id": "land", "tile": "canopy", "first": 0, "count": len(tris) // 3}], land["zones"],
-                         "una sola zona hasta la mascara del artista (land_zones)")
+        verts, tris, canopy = geometry.canopy_of(land)
+        self.assertEqual([], geometry.land_problems(verts, tris, [canopy]))
+        self.assertEqual({"id": "canopy", "tile": "canopy", "first": 0, "count": len(tris) // 3}, land["zones"][0],
+                         "la tierra de Natural Earth, una sola zona hasta la mascara del artista (land_zones)")
 
         def inside(p):
             return any(geometry._in_triangle(p, *(verts[i] for i in tris[k:k + 3])) for k in range(0, len(tris), 3))
@@ -639,7 +642,7 @@ class LandTests(Base):
         self.assertTrue(inside(frame.quant(-1.0, -49.5)), "Marajo, una isla")
         self.assertFalse(inside(frame.quant(5.0, -48.0)), "el Atlantico")
         self.assertFalse(inside(frame.quant(-10.0, -79.5)), "el Pacifico")
-        self.assertEqual([("land", "canopy", ["a"])], geometry.land_zones(["a"]))
+        self.assertEqual([("canopy", "canopy", ["a"])], geometry.land_zones(["a"]))
 
 
 class LinesTests(Base):
@@ -817,8 +820,8 @@ class FileTests(Base):
         self.assertFalse(data.startswith(b"\xef\xbb\xbf"))
         self.assertNotIn(b"\r", data)
         self.assertTrue(data.endswith(b"\n"))
-        self.assertLessEqual(len(data), geometry.MAX_BYTES, "<= 90 KB (M5.1; 08 §4.5)")
-        self.assertEqual(90 * 1024, geometry.MAX_BYTES)
+        self.assertLessEqual(len(data), geometry.MAX_BYTES, "<= 160 KB (M2-1; antes 90 KB, M5.1 y 08 §4.5)")
+        self.assertEqual(160 * 1024, geometry.MAX_BYTES)
 
     def test_main_fails_when_the_file_would_pass_max_bytes(self):
         # Revision de M5.1: main falla (y no escribe) si el documento pasa de MAX_BYTES.
@@ -1251,6 +1254,255 @@ class CheckTests(Base):
         doc, model, errors = geometry.build_map(src)
         errors += geometry.validate_map(doc, model, src)
         self.assertTrue(any("mide 1 km y la linea recta" in e for e in errors), errors)
+
+
+# --------------------------------------------------------------------------------------------- M2-1: el rio vivo
+
+def _plane_line(frame, pts_km: list) -> list:
+    """Puntos del plano de pantalla en km -> (X, Y) cuantizados."""
+    ku = geometry._km_per_unit(frame)
+    return [(round(x / ku * geometry.Q), round(y / (ku * frame.aspect) * geometry.Q)) for x, y in pts_km]
+
+
+def _turn(frame, sign: int) -> list:
+    """Linea sintetica en el centro del marco: 60 km hacia la derecha de la pantalla (x creciente), un cuarto de circulo
+    de 20 km de radio que gira hacia arriba (sign = -1: a la izquierda, y decreciente) o hacia abajo (sign = 1) y otros
+    60 km rectos."""
+    ku = geometry._km_per_unit(frame)
+    x0, y0 = ku / 2, ku * frame.aspect / 2
+    pts = [(x0 + k * 5.0, y0) for k in range(13)]
+    cx, cy, r = x0 + 60.0, y0 + sign * 20.0, 20.0
+    for k in range(1, 31):
+        a = k / 30 * geometry.math.pi / 2
+        pts.append((cx + r * geometry.math.sin(a), cy - sign * r * geometry.math.cos(a)))
+    ex, ey = pts[-1]
+    pts += [(ex, ey + sign * 5.0 * k) for k in range(1, 13)]
+    return _plane_line(frame, pts)
+
+
+class BanksTests(Base):
+    def test_beach_on_the_inner_bank_of_a_left_and_a_right_turn(self):
+        frame = self.model.frame
+        for sign, inner, outer in ((-1, "left", "right"), (1, "right", "left")):
+            with self.subTest(sign=sign):
+                banks = geometry.line_banks(frame, "x", _turn(frame, sign))
+                self.assertEqual(2, len(banks), banks)
+                beach = next(b for b in banks if b["kind"] == "beach")
+                bluff = next(b for b in banks if b["kind"] == "bluff")
+                self.assertEqual(inner, beach["side"], "la playa, en la orilla de dentro")
+                self.assertEqual(outer, bluff["side"], "el barranco, en la de fuera")
+                self.assertEqual((beach["s0"], beach["s1"]), (bluff["s0"], bluff["s1"]))
+                self.assertTrue(0.3 < beach["s0"] < 0.5 < beach["s1"] < 0.7, beach)
+                self.assertTrue(6 <= beach["w"] <= 16 and 4 <= bluff["w"] <= 8)
+
+    def test_straight_lines_and_short_lines_have_no_banks(self):
+        frame = self.model.frame
+        ku = geometry._km_per_unit(frame)
+        straight = _plane_line(frame, [(ku / 2 + 10.0 * k, ku / 2 + 3.0 * k) for k in range(30)])
+        self.assertEqual([], geometry.line_banks(frame, "x", straight))
+        self.assertEqual([], geometry.line_banks(frame, "x", _turn(frame, 1)[:2]), "menos de 3 puntos")
+
+    def test_banks_of_the_file(self):
+        banks = self.doc["banks"]
+        self.assertTrue(150 <= len(banks) <= 400, len(banks))
+        self.assertEqual([], geometry.banks_problems(banks, self.model))
+        self.assertEqual(len(banks) // 2, sum(1 for b in banks if b["kind"] == "beach"))
+        for b in banks:
+            lo, hi = geometry.BEACH_W if b["kind"] == "beach" else geometry.BLUFF_W
+            self.assertTrue(lo <= b["w"] <= hi, b)
+            self.assertGreaterEqual(len(self.model.lines[b["line"]].q), 3)
+            self.assertEqual(["line", "s0", "s1", "side", "kind", "w"], list(b))
+        self.assertIn("amazonas", {b["line"] for b in banks})
+
+    def test_banks_problems(self):
+        good = [{"line": "amazonas", "s0": 0.1, "s1": 0.2, "side": "left", "kind": "beach", "w": 8},
+                {"line": "amazonas", "s0": 0.1, "s1": 0.2, "side": "right", "kind": "bluff", "w": 5}]
+        self.assertEqual([], geometry.banks_problems(good, self.model))
+        overlap = good + [dict(good[0], s0=0.15, s1=0.3)]
+        self.assertIn("banks[2] (amazonas): se solapa con el tramo anterior de la orilla left",
+                      geometry.banks_problems(overlap, self.model))
+        self.assertIn("banks[0] (nada): linea desconocida",
+                      geometry.banks_problems([dict(good[0], line="nada")], self.model))
+        self.assertIn("banks[0] (amazonas): s0 y s1 fuera de 0 <= s0 < s1 <= 1",
+                      geometry.banks_problems([dict(good[0], s0=0.3)], self.model))
+        self.assertIn("banks[0] (amazonas): side o kind desconocido",
+                      geometry.banks_problems([dict(good[0], side="north")], self.model))
+        self.assertIn("banks[1] (amazonas): fuera de orden (linea, s0, side)",
+                      geometry.banks_problems(list(reversed(good)), self.model))
+
+
+class ZonesTests(Base):
+    def test_canopy_first_then_the_patches_and_the_varzea_band(self):
+        zones = self.doc["land"]["zones"]
+        self.assertEqual(["canopy", "savanna", "rock", "snow", "varzea"], [z["id"] for z in zones])
+        self.assertEqual({"id": "varzea", "tile": "varzea", "band": 40}, zones[-1])
+        first = 0
+        for z in zones[:-1]:
+            self.assertEqual(z["id"], z["tile"])
+            self.assertEqual(first, z["first"])
+            self.assertGreater(z["count"], 0)
+            first += z["count"]
+        self.assertEqual(first, len(geometry.decode_indices(self.doc["land"]["tris"])) // 3)
+        self.assertEqual([], geometry.zones_problems(self.doc["land"]))
+
+    def test_shade_one_byte_per_vertex(self):
+        land = self.doc["land"]
+        verts = geometry.decode_points(land["verts"])
+        shade = geometry.base64.b64decode(land["shade"])
+        self.assertEqual(len(verts), len(shade))
+        canopy_verts, _, _ = geometry.canopy_of(land)
+        self.assertEqual({255}, set(shade[:len(canopy_verts)]), "canopy, 255")
+        self.assertEqual({0, 255}, set(shade[len(canopy_verts):]), "nucleo 255 y borde difuminado 0")
+
+    def test_patches_are_positive_and_in_range(self):
+        land = self.doc["land"]
+        verts = geometry.decode_points(land["verts"])
+        tris = geometry.decode_indices(land["tris"])
+        for z in land["zones"][1:-1]:
+            for k in range(z["first"], z["first"] + z["count"]):
+                a, b, c = (verts[i] for i in tris[3 * k:3 * k + 3])
+                self.assertGreater(geometry._cross(a, b, c), 0, z["id"])
+
+    def test_snow_core_on_its_peaks_and_savanna_on_moxos(self):
+        frame = self.model.frame
+        _, _, _, _, cores = geometry.overlay_zones(frame, 0)
+
+        def inside(zone, lat, lon):
+            p = frame.quant(lat, lon)
+            return any(geometry._in_triangle(p, *tri) for tri in cores[zone])
+        for lat, lon in geometry.SNOW_PEAKS:
+            self.assertTrue(inside("snow", lat, lon), (lat, lon))
+        self.assertFalse(inside("snow", -3.1189, -60.0217), "Manaos")
+        self.assertTrue(inside("savanna", -14.0, -65.0), "los Llanos de Moxos")
+        self.assertTrue(inside("rock", -9.5, -77.4), "la cordillera Blanca")
+        self.assertFalse(inside("rock", -3.1189, -60.0217), "Manaos")
+
+    def test_committed_round_trip_keeps_canopy(self):
+        geo = geometry.committed_geometry(MAP_PATH)
+        verts, tris, zones = geo.land
+        file_land = load_json(MAP_PATH)["land"]
+        file_verts, file_tris, canopy = geometry.canopy_of(file_land)
+        self.assertEqual((file_verts, file_tris, [canopy]), (verts, tris, zones))
+        self.assertEqual(file_land, self.doc["land"], "las zonas de encima, regeneradas igual")
+
+    def test_zones_problems(self):
+        land = copy.deepcopy(self.doc["land"])
+        want = land["zones"][2]["first"]
+        land["zones"][2]["first"] += 1
+        self.assertIn(f"la zona rock empieza en el triangulo {want + 1} y no en el {want}", geometry.zones_problems(land))
+        land = copy.deepcopy(self.doc["land"])
+        land["shade"] = geometry.base64.b64encode(b"\xff" * 3).decode("ascii")
+        self.assertTrue(any(e.startswith("shade lleva 3 bytes") for e in geometry.zones_problems(land)))
+        land = copy.deepcopy(self.doc["land"])
+        land["zones"].insert(1, land["zones"].pop())
+        self.assertIn("la zona savanna va despues de una zona de banda", geometry.zones_problems(land))
+        land = copy.deepcopy(self.doc["land"])
+        land["zones"][0]["id"] = "land"
+        with self.assertRaisesRegex(geometry.GeometryError, "la primera zona no es canopy"):
+            geometry.canopy_of(land)
+
+    def test_committed_file_with_the_zone_name_of_v1_fails(self):
+        data = MAP_PATH.read_bytes().replace(b'"zones": [{"id": "canopy"', b'"zones": [{"id": "land"', 1)
+        self.assertNotEqual(data, MAP_PATH.read_bytes())
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "river_map_v1.json"
+            path.write_bytes(data)
+            with self.assertRaisesRegex(geometry.GeometryError, "la primera zona no es canopy"):
+                geometry.committed_geometry(path)
+
+
+VEG_DIGEST = "\n".join([
+    "import hashlib, json, sys",
+    "sys.path.insert(0, sys.argv[1])",
+    "import geometry",
+    "from riverdata import MAP_PATH, SOURCE_PATH, load_json",
+    "doc, _, _ = geometry.build_map(load_json(SOURCE_PATH), geometry.committed_geometry(MAP_PATH))",
+    "print(hashlib.sha256(json.dumps([doc['veg'], doc['banks'], doc['land']]).encode()).hexdigest())",
+])
+
+
+class VegTests(Base):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.veg = cls.doc["veg"]
+        cls.pts = geometry.decode_points(cls.veg["pts"])
+        cls.info = geometry.base64.b64decode(cls.veg["info"])
+
+    def test_cell_rng_is_a_fixed_sequence(self):
+        rng = geometry.CellRng(3, 4)
+        self.assertEqual(0.9580994967932273, rng.u())
+        self.assertEqual(0.9337630972998284, rng.u())
+        self.assertEqual(0.013807917247077861, geometry.CellRng(-1, 0).u())
+
+    def test_same_bytes_twice(self):
+        verts, tris, _ = geometry.canopy_of(self.doc["land"])
+        _, _, _, _, cores = geometry.overlay_zones(self.model.frame, len(verts))
+        clear = [(p["line"], p["s"]) for p in self.doc["passing"]] + [(self.doc["home"]["on"], self.doc["home"]["s"])]
+        one = geometry.build_veg(self.model, (verts, tris), cores, clear)
+        two = geometry.build_veg(self.model, (verts, tris), cores, clear)
+        self.assertEqual(one, two)
+        self.assertEqual(self.veg, one)
+
+    def test_same_bytes_with_another_hash_seed(self):
+        digests = set()
+        for seed in ("0", "98765"):
+            env = dict(os.environ, PYTHONHASHSEED=seed)
+            proc = subprocess.run([sys.executable, "-c", VEG_DIGEST, str(HERE)], cwd=ROOT, capture_output=True, env=env,
+                                  timeout=600)
+            self.assertEqual(0, proc.returncode, proc.stderr)
+            digests.add(proc.stdout.strip())
+        want = hashlib.sha256(json.dumps([self.doc["veg"], self.doc["banks"], self.doc["land"]]).encode()).hexdigest()
+        self.assertEqual({want.encode("ascii")}, digests)
+
+    def test_counts_layout_and_limits(self):
+        self.assertEqual(30, self.veg["cell"])
+        self.assertTrue(8500 <= len(self.pts) <= 11000, len(self.pts))
+        self.assertEqual(2 * len(self.pts), len(self.info))
+        self.assertEqual([], geometry.veg_problems(self.veg, self.model.frame))
+        kinds = [self.info[2 * i] & 3 for i in range(len(self.pts))]
+        flowers = kinds.count(2) / len(kinds)
+        self.assertTrue(0.005 < flowers < 0.02, flowers)
+        self.assertGreater(kinds.count(1), 0)
+        coarse = sum(1 for i in range(len(self.pts)) if not self.info[2 * i] >> 4 & 1)
+        self.assertTrue(0.2 < coarse / len(self.pts) < 0.3, coarse)
+
+    def test_points_on_land_away_from_snow_and_passing_points(self):
+        frame = self.model.frame
+        verts, tris, _ = geometry.canopy_of(self.doc["land"])
+        land = geometry._TriGrid([tuple(verts[i] for i in tris[k:k + 3]) for k in range(0, len(tris), 3)], 1024)
+        _, _, _, _, cores = geometry.overlay_zones(frame, 0)
+        snow = geometry._TriGrid(cores["snow"], 1024)
+        clear = [geometry._plane_km(frame, *geometry._point_on(self.model.lines[p["line"]], p["s"]))
+                 for p in self.doc["passing"]]
+        for p in self.pts:
+            self.assertTrue(land.contains(p), p)
+            self.assertFalse(snow.contains(p), p)
+            pk = geometry._plane_km(frame, *p)
+            self.assertTrue(all(geometry.math.hypot(pk[0] - c[0], pk[1] - c[1]) > geometry.VEG_CLEAR_KM for c in clear))
+
+    def test_palms_near_the_river_and_bigger_trees_far_from_it(self):
+        near = [i for i in range(len(self.pts)) if self.info[2 * i + 1] * 2 <= 40]
+        far = [i for i in range(len(self.pts)) if self.info[2 * i + 1] * 2 > 150]
+        self.assertTrue(near and far)
+
+        def share(idx, test):
+            return sum(1 for i in idx if test(self.info[2 * i])) / len(idx)
+        self.assertGreater(share(near, lambda b: b & 3 == 1), share(far, lambda b: b & 3 == 1))
+        self.assertGreater(sum((self.info[2 * i] >> 2) & 3 for i in far) / len(far),
+                           sum((self.info[2 * i] >> 2) & 3 for i in near) / len(near))
+
+    def test_veg_problems(self):
+        frame = self.model.frame
+        bad = dict(self.veg, info=geometry.base64.b64encode(self.info[:-2]).decode("ascii"))
+        self.assertTrue(any("2 por punto" in e for e in geometry.veg_problems(bad, frame)))
+        flipped = bytearray(self.info)
+        flipped[0] ^= 1 << 4
+        self.assertIn("veg: 1 puntos con un lod que no es el de su celda",
+                      geometry.veg_problems(dict(self.veg, info=geometry.base64.b64encode(bytes(flipped)).decode()), frame))
+        swapped = geometry.encode_points([self.pts[1], self.pts[0]] + self.pts[2:])
+        self.assertIn("veg: el punto 1 no sigue el orden (iy, ix) o repite celda",
+                      geometry.veg_problems(dict(self.veg, pts=swapped), frame))
 
 
 if __name__ == "__main__":
