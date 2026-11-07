@@ -304,6 +304,13 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         }
 
         c.Par = par.Par;
+        if (CurveBoards.SolutionProblem(c.State, par.Solution) is string curve)
+        {
+            // Aguapé y Lancha (03 §17 #17 y #18): cada grupo se suelta y la lancha atraca en la solución del par.
+            c.Reject = curve;
+            return;
+        }
+
         if (c.Par < 2 * c.K)
         {
             c.Reject = string.Create(CultureInfo.InvariantCulture, $"par {c.Par} < 2K = {2 * c.K}");
@@ -330,6 +337,15 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             PathMetrics path = _metrics.Path(c.State, par.Solution);
             c.Branching = path.Branching;
             c.Traps = path.Traps;
+        }
+
+        if (full && plan.Level >= 31 && c.Board.Attrs.Any(a => a.Type is MechanicType.Aguape or MechanicType.Lancha)
+            && Relief.Compute(_metrics, c.Board, c.Par, c.Bot, plan.SeedText).Published.Count == 0)
+        {
+            // Aguapé y Lancha (D-068, F3b) [P]: la mata y la carga a menudo dejan un tablero sin alivio que baje el bot 0,20 (03 §17 #8;
+            // la fase 4 no publicaría el mundo); esos candidatos se descartan al medirlos, como los filtros de la tinaja.
+            c.Reject = "Aguape o Lancha: ninguna variante de alivio cumple 03 sec. 17 #8";
+            return;
         }
 
         if (c.IsTinaja)
@@ -554,13 +570,32 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             : (hardSlot && (stage == 0 || harder || hito14)) || (!hardSlot && harder) ? Math.Max(0, occupying - standard)
             : occupying;
         int baseEmpties = standard + extra;
+        if (hardSlot && occupying > 0 && mechs.Any(m => m.Code is MechanicCodes.Aguape or MechanicCodes.AguapeThick))
+        {
+            // Aguapé (D-068) en un reto o un hito con una mecánica que ocupa el vacío del rol (Hoja, Matapi, Lluvia): sin otro vacío
+            // el grupo no tiene cuia que selle solo recibiendo (la regla 6 de M8). Un vacío más, que la mata ocupa [P] (03 §12:
+            // «1 vacío, y ocupado por un Aguapé»).
+            baseEmpties++;
+            notes.Add("Aguape con una mecanica que ocupa el vacio: un vacio mas, bajo la mata");
+        }
+
+        if (mechs.Any(m => m.Code == MechanicCodes.AguapeThick) && baseEmpties < 2)
+        {
+            // Aguapé espeso (D-068, P13 A): dos cuias del grupo que sellen solo recibiendo con frutas distintas; las dan dos vacíos
+            // (02 §9.1 M8, regla 6), los dos bajo la mata [P] (03 §12: «1 vacío, y ocupado por un Aguapé»).
+            baseEmpties = 2;
+            notes.Add("Aguape espeso: dos vacios, bajo la mata");
+        }
+
         // Cuia de holgura para tener cuias a medias: el Brote (también el de dos hojas) y las Aguas turbias la necesitan
         // siempre; el Barro solo fuera de retos e hitos (en ellos la dosis desplazada va al vacío y el tablero queda más
         // apretado) [P].
         bool slack = mechs.Any(m => MechanicCodes.NeedsPartial(m.Code) || m.Code == "Tu") || (mechs.Any(m => m.Code == "Ba") && !hardSlot);
         int caves = mechs.Count(m => m.Code == "Pi");
         int pair = tinaja ? 2 : 0; // la tinaja y su cuia chica (M13)
-        int total = k + baseEmpties + chicas.Count + (slack ? 1 : 0) + caves + pair;
+        // La carga de la Lancha (D-068) es una cuia más que la superposición añade al tablero base (Superposition.Lancha).
+        int cargo = mechs.Any(m => m.Code == MechanicCodes.Lancha) ? 1 : 0;
+        int total = k + baseEmpties + chicas.Count + (slack ? 1 : 0) + caves + pair + cargo;
         if (tinaja && total > Superposition.TinajaMaxCuias)
         {
             // Como mucho 12 cuias con tinaja (02 §5, fila «Tinaja y su cuia»; d.3: «K alto … dentro del tope de 12 cuias con
@@ -954,7 +989,7 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         {
             MechanicSpec x = a.Attrs[i];
             MechanicSpec y = b.Attrs[i];
-            if (x.Type != y.Type || x.Partner != y.Partner || x.N != y.N || x.K != y.K
+            if (x.Type != y.Type || x.Partner != y.Partner || x.N != y.N || x.K != y.K || x.Group != y.Group
                 || (x.Key == 0) != (y.Key == 0) || (x.Key != 0 && !SameColor(map, x.Key, y.Key))
                 || (x.Key2 == 0) != (y.Key2 == 0) || (x.Key2 != 0 && !SameColor(map, x.Key2, y.Key2)))
             {
@@ -995,7 +1030,17 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         why = null;
         board.MapColors(tints.Map);
         // Con tinaja, su cuia queda contigua y en la misma fila (b.2 regla 1); en los demás slots, el barajado de siempre.
-        board = tinaja ? Superposition.ShuffledWithTinaja(board, new Prng(Prng.SubSeed(seed, 3))) : board.Shuffled(new Prng(Prng.SubSeed(seed, 3)));
+        // Con Aguapé (D-068), cada grupo contiguo y en una fila (CurveBoards.ShuffledWithGroups); los demás, como siempre.
+        GenBoard? ordered = tinaja ? Superposition.ShuffledWithTinaja(board, new Prng(Prng.SubSeed(seed, 3)))
+            : CurveBoards.HasAguape(board.Attrs) ? CurveBoards.ShuffledWithGroups(board, new Prng(Prng.SubSeed(seed, 3)))
+            : board.Shuffled(new Prng(Prng.SubSeed(seed, 3)));
+        if (ordered is null)
+        {
+            why = "Aguape: ningun orden visual deja cada grupo en una fila";
+            return null;
+        }
+
+        board = ordered;
         BoardData data = board.ToData();
         BoardBuildResult built = data.Build();
         if (!built.IsValid)

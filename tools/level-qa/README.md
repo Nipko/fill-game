@@ -334,8 +334,9 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-TINAJA-MORPHO | coste de Morpho (w = 2, 40.000 nodos por realidad) en S0, la ruta y los paseos: tope de nodos = 150 ms × nodos/ms del PC ÷ factor del teléfono (8× [P] hasta PF1), el mismo que P1 | propuesta de la tinaja c.3 punto 3; 08 §9 |
 | QA-T-ROLE | Curva 2 (D-068): T (cuias) y K (colores) dentro del tope de su papel (`role_caps` de la especificación: respiro, estreno, comodidad, reto, hito y cúspide, el último hito del mundo); en un pack `kind` = `curve`, `replaces` = el id de la curva 1 del mismo slot y el `id` y la `seed` con `_c{c}` y `:c{c}`; la cabecera de un pack con niveles de la curva 2, `kind` `curve` (o `reserve`), `pack_schema` 5 y `pack_id` `curva_{mm}_v{v}` (o `reserva_curva_{mm}_v{v}`), también con `--no-reproduce`; aviso si `difficulty.pressure` no es el que dan las palancas del tablero (`Pressure.OfBoard`). En `--reserve`, solo los topes | 03 §12 y §17 #16; 08 §4.1 |
 | QA-MURKY-NORMAL | Curva 2: un nivel Normal con Aguas turbias va en comodidad (nunca en recuperación ni en remanso), desde `murky_normal.from_level`, con 1 cuia turbia y ≤ `max_hidden_units` (2) dosis ocultas; su estreno (`murky_normal.debut`, 323-324) con exactamente 1 dosis, e `intro_mechanic` `murky` solo en el primero; un reto turbio con 2-4 dosis en ≤ 2 cuias y un hito con 3-4 en ≤ 3; por ciclo, ≤ `comfort_per_cycle` comodidades turbias y al menos 2 (con 2, aviso: el respaldo de T1 publica sin turbias), ≤ 2 retos y ≤ 1 hito cada 2 ciclos. Con la curva 2, QA-MURKY-T1 y QA-MURKY-Q9 dejan estos niveles a esta comprobación | 02 §11 T1; 03 §17 #19 |
-| QA-AGUAPE | Esqueleto que se activa con F2: cada `group` con 2-5 cuias contiguas en la misma fila y sin Barro (el espeso, `n` = 2, con 4-5); con 11 cuias o más, `rows`; `rows` suma las cuias y respeta 02 §5 (1 fila de ≤ 5, 2 de ≤ 7, 3 de ≤ 5 y 3 filas desde 13 cuias), sin partir un grupo, también en `relief`; sin `rows` y con 10 cuias o menos, las filas de 02 §5 [P] (1 fila con ≤ 5; ⌈T/2⌉ + ⌊T/2⌋ con 6-10); al integrar F2 lo sustituye `LevelValidation.ValidateRows` del núcleo, en el nivel y en cada `relief`; `intro_mechanic` `aguape` o `aguape_n2` solo en su estreno; nunca con la tinaja. Mientras el núcleo no conozca el Aguapé, el nivel no se construye (QA-STRUCT) y QA-AGUAPE falla: «sella solo recibiendo» y `atascado(S0)` llegan con F2 | 03 §17 #17; 08 §4.1 |
-| QA-LANCHA | Esqueleto que se activa con F2: una lancha por nivel; carga de 1-3 dosis visibles sin Barro; `k` ≥ 2 y ≥ vacíos + 1; sin Aguas turbias; con la Liana o la Flor solo desde el 401; `intro_mechanic` `lancha` solo en su estreno (`f2_mechanics`, 363). `PackReader` rechaza el Aguapé, la Lancha, `rows` y `difficulty.pressure` con un `pack_schema` menor que 5 (falla cerrado, con F2 o sin él). Sin F2, falla cerrado como QA-AGUAPE; «atraca en la solución» llega con F2 | 03 §17 #18 |
+| QA-AGUAPE | Cada `group` con 2-5 cuias contiguas y sin Barro (el espeso, `n` = 2, con 4-5); con 11 cuias o más, `rows`; `rows` suma las cuias y respeta 02 §5 (1 fila de ≤ 5, 2 de ≤ 7, 3 de ≤ 5 y 3 filas desde 13 cuias); con el núcleo, `LevelValidation.ValidateRows` en el nivel y en cada variante de `relief` (con sus `rows` o, con 10 cuias o menos, las filas fijas de 02 §5: 1 fila con ≤ 5, ⌈T/2⌉ + ⌊T/2⌋ con 6-10), una cuia del grupo que sella solo recibiendo (dos con frutas distintas en el espeso; `CurveMechanics.SealableByReceiving`), `atascado(S0)` = false y cada grupo se suelta en la solución del par (repetida con `PourRules`, `CurveBoards.Replay`); `intro_mechanic` `aguape` o `aguape_n2` solo en su estreno; nunca con la tinaja | 03 §17 #17; 08 §4.1 |
+| QA-LANCHA | Una lancha por nivel; carga de 1-3 dosis visibles sin Barro; `k` ≥ 2 y ≥ vacíos + 1 (toda cuia sin dosis menos la lancha, como el núcleo); sin Aguas turbias; con la Liana o la Flor solo desde el 401; `intro_mechanic` `lancha` solo en su estreno (363); `atascado(S0)` = false y la lancha atraca en la solución del par. `PackReader` rechaza el Aguapé, la Lancha, `rows` y `difficulty.pressure` con un `pack_schema` menor que 5 | 03 §17 #18 |
+| QA-BOT-ATENTO | Aviso, solo informe: dentro de cada mundo de la curva 2, el bot atento ×40 (`AttentiveBot`, semilla propia) del hito n+1 ≥ el del hito n; el informe (`--report`) lleva el bot casual y el atento de cada reto e hito de la curva 2. Nunca decide la etiqueta | 03 §17 #20 |
 | QA-SCHEMA | JSON válido contra `schemas/af-level-1.schema.json` (`python tools/validate_schema.py --pack`); sin Python o sin `jsonschema`, falla | 08 §4.1; 03 §17 #11 |
 | QA-REPRO | la especificación y las semillas reproducen cada pack byte a byte (campaña regenerada en memoria) | 03 §17 #10; 08 §2.4 y §4.1 |
 | QA-BAND-Q | banda medida (cuantil de D en el pool regenerado) acorde al rol: comodidad, estreno, remanso y rampa ≤ 0,70; recuperación ≤ 0,10 o, como mínimo, D por debajo de la comodidad más fácil del ciclo; hito > 0,95 o, como mínimo, par − 2K ≥ la media del pool del rango. Cumplir solo el mínimo es aviso. Un pack que no se reproduce se mide con su D publicada (aproximado) | 03 §7; c.3 reglas 3 y 5 |
@@ -352,6 +353,8 @@ Con una especificación de la curva 2 (`tools/level-generator/specs/campaign_v3.
 (`kind` = `curve`, `pack_schema` 5) pasan las comprobaciones de siempre más QA-T-ROLE, QA-MURKY-NORMAL, QA-AGUAPE y QA-LANCHA;
 `--levels` empieza en `curve.from_level` (301), porque lo anterior es historia. La reserva de la curva (`reserva_curva_{mm}_v1`,
 `pack_schema` 5) se comprueba con `--reserve` igual que la de la curva 1, con su pack `curva_` como `--campaign`, y QA-T-ROLE.
+Con el núcleo de F2 (fase F3b) QA-AGUAPE y QA-LANCHA miran también las reglas del núcleo y la solución, y el informe suma el bot
+atento ×40 (QA-BOT-ATENTO, solo aviso).
 
 ```
 dotnet run --project tools/level-qa -c Release -- tools/out/curva_f3/curva_08_v1.json --spec tools/level-generator/specs/campaign_v3.json --levels 421-560
@@ -359,10 +362,10 @@ dotnet run --project tools/level-qa -c Release -- --reserve tools/out/curva_f3/r
 dotnet run --project tools/level-qa -- --self-test curva
 ```
 
-`--self-test curva` (`Checks/CurveQaSelfTest.cs`) prueba sobre tableros sintéticos, sin el núcleo: los topes por papel (el reto
-306, la cúspide 420 frente al hito 400), los ids, la semilla y `replaces` de la curva, las turbias en Normal (dos cuias, tres dosis,
-una recuperación y antes del estreno fallan), los grupos y las filas del Aguapé, la Lancha y la lectura de un pack con el Aguapé
-(`rows`, `attrs` en bruto y, sin F2, el nivel sin construir).
+`--self-test curva` (`Checks/CurveQaSelfTest.cs`) prueba sobre tableros sintéticos: los topes por papel (el reto 306, la cúspide
+420 frente al hito 400), los ids, la semilla y `replaces` de la curva, las turbias en Normal (dos cuias, tres dosis, una
+recuperación y antes del estreno fallan), los grupos del Aguapé, sus filas con `LevelValidation.ValidateRows` (un grupo partido
+con `rows` y sin ellas con 9 cuias), la Lancha y la lectura de un pack con el Aguapé (`rows` y `attrs` en bruto).
 
 ## Fixtures negativos: `fixtures/*.json`
 

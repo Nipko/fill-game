@@ -181,8 +181,9 @@ internal static class VariantsSelfTest
 
     private static void Order(CampaignSpec campaign, Action<bool, string> check)
     {
-        check(Superposition.Order.Where(c => !MechanicCodes.Variants.Contains(c)).SequenceEqual(Superposition.OrderBeforeVariants),
-            "superposicion: sin las variantes, el orden de siempre (Re Ho Ma Ll Li Br Ba Pi Ti Tu)");
+        // Las mecánicas de la 1.1 (Ag, A2 y La; D-068) solo consumen números en sus slots (la comprobación de abajo con 43, 123 y 163).
+        check(Superposition.Order.Where(c => !MechanicCodes.Variants.Contains(c) && !MechanicCodes.Curve.Contains(c)).SequenceEqual(Superposition.OrderBeforeVariants),
+            "superposicion: sin las variantes ni las mecanicas de la 1.1, el orden de siempre (Re Ho Ma Ll Li Br Ba Pi Ti Tu)");
         check(Superposition.Order.Order(StringComparer.Ordinal).SequenceEqual(MechanicCodes.All),
             "superposicion: un paso por cada codigo conocido, y ninguno de mas");
 

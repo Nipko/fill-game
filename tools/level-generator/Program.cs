@@ -139,12 +139,12 @@ const string Usage = """
       --spec (candidatos, indice D y colocacion) sin alivio ni packs y sin detenerse en un ciclo sin colocacion; el
       informe da T, K, bot x40 y ventana por papel, los ciclos que no colocan y los retos e hitos. Con una especificacion de
       la curva 2 (specs/campaign_v3.json, fase F3) los topes son los de role_caps, las semillas las de la curva (:c2) y el
-      informe suma el escalon de presion de cada hito y los slots de F2 sin colocar. Codigos: 0 = medido;
+      informe suma el escalon de presion de cada hito con el bot atento x40. Codigos: 0 = medido;
       1 = la especificacion no pasa --validate-spec; 2 = uso o especificacion ilegible.
     Curva 2 de la 1.1 (D-068, fase F3; specs/campaign_v3.json con "curve"): --spec genera desde curve.from_level (lo
       anterior es historia) packs curva_{mm}_v1 (kind curve, pack_schema 5, ids _c2, semillas :c2, replaces y
-      difficulty.pressure), sin construir tableros fuera del tope de T y K de su papel (role_caps), y avisa de los slots de
-      F2 (Aguape y Lancha) que aun no coloca. --reserve con esos packs da reserva_curva_{mm}_v1 (pack_schema 5, _c2_r1).
+      difficulty.pressure), sin construir tableros fuera del tope de T y K de su papel (role_caps), con el Aguape, el
+      Aguape espeso y la Lancha (fase F3b: grupo contiguo en una fila, rows con 11 cuias o mas, carga con k = vacios + 1). --reserve con esos packs da reserva_curva_{mm}_v1 (pack_schema 5, _c2_r1).
     Codigos de salida: 0 = correcto o ayuda; 1 = la generacion o las comprobaciones fallaron;
     2 = uso incorrecto (sin argumentos, faltan opciones, u opcion desconocida o repetida).
     """;
