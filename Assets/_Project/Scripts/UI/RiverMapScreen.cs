@@ -728,6 +728,7 @@ namespace AF.UI
             ApplyScreenMetrics();
             ApplyView(view);
             JourneyOpen(source); // D-053: con viaje, «Jugar» y «←» esperan a que la canoa llegue
+            CapiOpen(source); // D-069, M2-3: Capi al remo (RiverMapScreen.Capi.cs)
             EmitLayout();
         }
 
@@ -753,6 +754,7 @@ namespace AF.UI
             NorthUpClose();
             LiveClose(); // D-069, M2-1: suelta el arte del Mapa v2 y escribe AF_PERF map_frames
             TownsClose(); // D-069, M2-2: suelta el atlas de los pueblos
+            CapiClose(); // D-069, M2-3: suelta el atlas del rig de Capi
 
             _dragging = false;
             _activeMs = 0f;
@@ -853,6 +855,7 @@ namespace AF.UI
             SequenceTick(dtMs, ref animating);
             NorthUpTick(dtMs, ref animating);
             JourneyTick(dtMs, ref animating); // tras «ponerse al día» y «Norte arriba»: el balanceo, sobre la canoa ya colocada
+            CapiTick(dtMs, ref animating); // D-069, M2-3: los gestos, la cámara y la luz
             LiveTick(dtMs); // D-069, M2-1: la corriente, las nubes y el brillo de la siguiente, sin pedir 60 fps
             if (_activeMs > 0f)
             {
@@ -1336,7 +1339,7 @@ namespace AF.UI
                 rt.anchorMax = new Vector2(0f, 1f);
                 rt.pivot = new Vector2(0.5f, CanoePivotY);
                 rt.anchoredPosition = local;
-                rt.sizeDelta = new Vector2(ProceduralArt.MapCanoeWidthDp, ProceduralArt.MapCanoeHeightDp);
+                rt.sizeDelta = new Vector2(CanoeWidthDp, CanoeHeightDp); // D-069, M2-3: 60 × 44 dp en la vista Mundo del Mapa v2
             }
 
             ProgressSpace(space);
@@ -1542,6 +1545,7 @@ namespace AF.UI
 
             UiBuilder.Place(_samplesSlot, 16f, samplesTop, w - 32f, SamplesRowDp);
             SamplesLayout(_samplesSlot);
+            CapiFooter(playTop, ref samplesTop); // D-069, M2-3: con el Mapa v2, una sola fila (RiverMapScreen.Capi.cs)
 
             // Zona del mapa: entre la cabecera y el pie (y la fila del Muestrario), en su marco. Con el Mapa v2 (D-069, P2 (a)), a
             // pantalla completa: de la cabecera a la barra de madera de abajo, sin placa ni marco (RiverMapScreen.Live.cs).
@@ -1562,6 +1566,7 @@ namespace AF.UI
             float buttonW = Mathf.Min(_viewW - 16f, Mathf.Max(MinTouchDp * 2f, canoeLabelW + 32f));
             UiBuilder.Place((RectTransform)_backToCanoe.Button.transform, pad + _viewW - buttonW - 8f, pad + _viewH - MinTouchDp - 8f, buttonW, MinTouchDp);
             LiveLayout(frameTop, frameBottom); // D-069, M2-1
+            CapiLayout(frameTop); // D-069, M2-3: «Faltan N» en el Mapa
             SequenceLayout();
             NorthUpLayout();
         }
@@ -1687,6 +1692,21 @@ namespace AF.UI
 
         /// <summary>D-069, M2-1: al abrir, tras la geometría, el Mapa v2 o el de la 1.0 (RiverMapScreen.Live.cs).</summary>
         partial void LiveOpen(RiverMap map);
+
+        /// <summary>D-069, M2-3: al final de la apertura, Capi al remo (RiverMapScreen.Capi.cs).</summary>
+        partial void CapiOpen(MapOpenSource source);
+
+        /// <summary>D-069, M2-3: cada fotograma, los gestos, la cámara y la luz.</summary>
+        partial void CapiTick(float dtMs, ref bool animating);
+
+        /// <summary>D-069, M2-3: al cerrar, suelta el rig.</summary>
+        partial void CapiClose();
+
+        /// <summary>D-069, M2-3: el pie del Mapa v2 en una fila.</summary>
+        partial void CapiFooter(float playTop, ref float samplesTop);
+
+        /// <summary>D-069, M2-3: «Faltan N» en el Mapa v2.</summary>
+        partial void CapiLayout(float frameTop);
 
         /// <summary>D-069, M2-1: la vista cambió de escala.</summary>
         partial void LiveSpace(MapSpace space);

@@ -1160,7 +1160,7 @@ namespace AF.UI
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
-            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() + map.TownsMemJson() : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
+            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() + map.TownsMemJson() + map.CapiMemJson() : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
             TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;
@@ -2658,6 +2658,7 @@ namespace AF.UI
             RiverMapScreen.RestoreFullRenderRate();
             _mapScreen?.ReleaseLiveArt(); // D-069, M2-1: las texturas del Mapa v2 no sobreviven a la escena (DontSave)
             _mapScreen?.ReleaseTownArt(); // D-069, M2-2: ni el atlas de los pueblos
+            _mapScreen?.ReleaseCapiArt(); // D-069, M2-3: ni el del rig de Capi
             if (_backAction != null)
             {
                 _backAction.performed -= OnBackPerformed;

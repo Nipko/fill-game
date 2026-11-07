@@ -52,6 +52,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             _layout?.Dispose();
+            GameBootstrap.MapLiveConfigOverride = null;
             RiverMapScreen.PlateTestNoNearSpotWorld = 0;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
@@ -382,6 +383,10 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator BasinPlates_NoRoomNextToTheStop_FindAGridSpot_WithinReach_ClearOfTheControls()
         {
+            // La geometría de la búsqueda forzada (PlateTestNoNearSpotWorld) es la de la Cuenca de la 1.0: con el pie del Mapa v2 (D-069,
+            // M2-3) la zona del mapa es más alta y, con max 300 y la placa del mundo 8 forzada a la rejilla, a la del mundo 9 no le queda
+            // sitio junto a su parada (cae en su respaldo, bajo el mástil). Ese caso del Mapa v2 queda anotado en el añadido de M2-3 [P].
+            GameBootstrap.MapLiveConfigOverride = new AF.GameFlow.MapLiveConfig { UiMapV2 = false };
             yield return MapMarkersTests.OpenApp(201);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;

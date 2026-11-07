@@ -1020,6 +1020,10 @@ namespace AF.UI
             else
             {
                 SetCompactRowDrop(space, 0f);
+                if (_live)
+                {
+                    CollectObstacles(space); // D-069, M2-3: con el Mapa v2, la caja del equipo de la canoa también en la Cuenca (PlateBlocked; la 1.0, intacta)
+                }
             }
 
             PlaceHouse(space);
@@ -1132,7 +1136,7 @@ namespace AF.UI
             // afina con FrameStepDp alrededor de la mejor. Solo al cambiar de vista o de encuadre; sin asignaciones.
             _frameWindow = _homeWindow != null && _homeWindow.Ready;
             _frameWin = _frameWindow ? HomeWindowInView() : default;
-            _frameAndes = FixedViewRect(AndesLabel);
+            _frameAndes = WithRemainingChip(FixedViewRect(AndesLabel)); // D-069, M2-3: con «Faltan N» en el Mapa v2
             _frameAtlantic = FixedViewRect(AtlanticLabel);
             _frameButton = FixedViewRect((RectTransform)_backToCanoe.Button.transform);
             Vector2 start = new Vector2(ClampAxis(offset.x, _contentW, _viewW), ClampAxis(offset.y, _contentH, _viewH));
@@ -2330,10 +2334,10 @@ namespace AF.UI
         }
 
         // Caja de la canoa (su imagen, con su pivote) con el mástil y las banderas, que ondean hacia popa.
-        private static Rect GearBox(Vector2 canoe, Vector2 foot, float mastH, float facing)
+        private Rect GearBox(Vector2 canoe, Vector2 foot, float mastH, float facing)
         {
-            float w = ProceduralArt.MapCanoeWidthDp;
-            float h = ProceduralArt.MapCanoeHeightDp;
+            float w = CanoeWidthDp;
+            float h = CanoeHeightDp;
             var box = new Rect(canoe.x - (w * 0.5f), canoe.y - (h * CanoePivotY), w, h);
             if (mastH > 0f)
             {
@@ -2734,7 +2738,7 @@ namespace AF.UI
                 // GuideMastClearDp por delante del mástil de popa, hacia la proa, para que el mástil y las banderas no lo tapen.
                 RiverStopRoute? goal = _routes!.Goal;
                 bool atGoal = goal != null && level >= goal.N * RiverStopCatalog.LevelsPerStop;
-                float side = atGoal ? facing * (GuideMastClearDp - (ProceduralArt.MapCanoeWidthDp * SternFraction)) : 0f;
+                float side = atGoal ? facing * (GuideMastClearDp - (CanoeWidthDp * SternFraction)) : 0f;
                 guideLocal = canoe + new Vector2(side, GuideAboveDp);
                 guideMap = new Vector2(canoeMap.x + (side / dpu), canoeMap.y - (GuideAboveDp / dpu));
             }
@@ -2754,7 +2758,7 @@ namespace AF.UI
             guideLocal = ClearGoalBuoys(space, route, fraction, guideLocal);
             float fh = ProceduralArt.MapFlagHeightDp * CanoeFlagScale;
             mastH = flags > 0 ? (2f * MastPadDp) + (flags * (fh + CanoeFlagGapDp)) : 0f;
-            mastFoot = canoe + new Vector2(-facing * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
+            mastFoot = canoe + new Vector2(-facing * CanoeWidthDp * SternFraction, 2f);
         }
 
         // Revisión final de FX13: en el tramo de la meta (691-700; las boyas que «Faltan N» invita a contar), el guía que nada por

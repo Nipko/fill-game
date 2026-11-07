@@ -1008,7 +1008,7 @@ namespace AF.UI
                 for (int s = 0; s < 2; s++)
                 {
                     float f = s == 0 ? -1f : 1f;
-                    var foot = canoe + new Vector2(-f * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
+                    var foot = canoe + new Vector2(-f * CanoeWidthDp * SternFraction, 2f);
                     Rect box = GearBox(canoe, foot, mastH, f);
                     gear = s == 0 ? box : Rect.MinMaxRect(Mathf.Min(gear.xMin, box.xMin), Mathf.Min(gear.yMin, box.yMin),
                         Mathf.Max(gear.xMax, box.xMax), Mathf.Max(gear.yMax, box.yMax));
@@ -1403,7 +1403,7 @@ namespace AF.UI
                 for (int side = 0; side < 2; side++)
                 {
                     float f = side == 0 ? -1f : 1f;
-                    var foot = canoe + new Vector2(-f * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
+                    var foot = canoe + new Vector2(-f * CanoeWidthDp * SternFraction, 2f);
                     Rect box = GearBox(canoe, foot, mastH, f);
                     gear = side == 0 ? box : Rect.MinMaxRect(Mathf.Min(gear.xMin, box.xMin), Mathf.Min(gear.yMin, box.yMin),
                         Mathf.Max(gear.xMax, box.xMax), Mathf.Max(gear.yMax, box.yMax));

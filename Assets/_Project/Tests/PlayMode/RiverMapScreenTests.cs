@@ -46,6 +46,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.MapLiveConfigOverride = null;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
@@ -183,6 +184,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator StopRemaining_KeepsItsAirFromTheFillet_InTwoLines()
         {
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false }; // el pie de la 1.0 (con el Mapa v2, MapCapiPlayTests; D-069, M2-3)
             yield return OpenAt(58);
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Canvas.ForceUpdateCanvases();
@@ -279,6 +281,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Basin_At360x640_DoesNotFit_AndOffersBackToCanoe()
         {
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false }; // el pie de la 1.0 (con el Mapa v2, MapCapiPlayTests; D-069, M2-3)
             // A 360 × 640 la cuenca a 1× (≈ 431 dp de alto) no cabe en la zona del mapa (≈ 354 dp): se arrastra en vertical y la
             // canoa puede quedar fuera, así que «Volver a la canoa» sale también en la Cuenca (M3.3, punto 2; propuesta §3.2).
             GameScreen.SimulatedScreen = new Vector4(1080f, 1920f, 96f, 48f); // un teléfono de 360 × 640 dp
@@ -625,6 +628,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator ViewSwitch_IsOneWoodCapsule_WithTheChosenTabInCream_AndNoGreen()
         {
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false }; // el pie de la 1.0 (con el Mapa v2, MapCapiPlayTests; D-069, M2-3)
             yield return OpenAt(58);
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Assert.That(map.ViewSwitch.color, Is.EqualTo(RiverMapScreen.SegmentSwitchColor));
@@ -701,7 +705,7 @@ namespace AF.Tests.PlayMode
             yield return OpenAt(58);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
-            yield return SnapshotKit.Wait(0.5f);
+            yield return SnapshotKit.Wait(0.5f + (CapiDirector.DurationMs(CapiGesture.Wave) / 1000f)); // y el saludo de Capi de la sesión (D-069, M2-3)
             Assert.That(map.Dragging, Is.False);
             Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(RiverMapScreen.RestRenderInterval));
             if (Application.targetFrameRate == 60)
@@ -822,6 +826,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Layout_HasNoOverlaps_At360x640And360x780_AlsoAt130Percent()
         {
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false }; // el pie de la 1.0 (con el Mapa v2, MapCapiPlayTests; D-069, M2-3)
             foreach (float scale in new[] { 1f, 1.3f })
             {
                 foreach (Vector2Int size in new[] { new Vector2Int(1080, 1920), new Vector2Int(1080, 2340) })
