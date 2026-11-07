@@ -38,7 +38,7 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
         otros campos; intro_mechanic aguape, aguape_n2 y lancha; rows en el nivel y en relief; difficulty.pressure 0-9;
         el pack de la curva 2 (kind curve, pack_id curva_{mm}_v{v}, replaces con el id de la curva 1, id con _c{c} y
         seed con :c{c}, c de 2 a 9) y su reserva (reserva_curva_{mm}_v{v}, _c{c}_r{k} y :c{c}:r{k}); con pack_schema
-        1-4 nada de eso valida, y fuera de kind curve no hay pack_id curva_ ni sufijos _c{c}. Una version que el esquema
+        1-4 nada de eso valida, fuera de kind curve no hay pack_id curva_ ni sufijos _c{c}, y el Reto del rio no lleva rows. Una version que el esquema
         no conoce (pack_schema 6) falla (caso e9).
 
 Imprime PASS/FAIL por caso y termina con codigo 1 si alguno falla. Requiere jsonschema >= 4.18.
@@ -748,6 +748,14 @@ def main() -> int:
     d = curve_reserve()
     d["levels"][0].update({"id": "m07_v1_n0306_r1", "seed": "amazonfill:v1:m07:v1:n0306:r1"})
     check(validator, "i42", "pack 5: reserva de la curva 2 sin _c2 en id y seed", d, False)
+    d = curve_pack()
+    d["levels"][0].update({"id": "m07_v1_n0306_c2_r1", "seed": "amazonfill:v1:m07:v1:n0306:c2:r1"})
+    check(validator, "i45", "pack 5: curva 2 con el id y la semilla de su reserva (_c2_r1 solo en kind reserve)", d, False)
+    d = copy.deepcopy(daily)
+    d["pack_schema"] = 5
+    check(validator, "i46", "pack 5: tablero diario (el 5 no cambia el Reto del rio)", copy.deepcopy(d), True)
+    d["levels"][0]["rows"] = [5, 4]
+    check(validator, "i47", "pack 5: rows en un tablero diario (el Reto del rio no cambia con D-068, P11 A)", d, False)
     check(attr_validator, "i43", "attr {type: aguape, group: 0, n: 2} contra $defs/attr", {"type": "aguape", "group": 0, "n": 2}, True)
     check(attr_validator, "i44", "attr {type: lancha, k: 3} contra $defs/attr", {"type": "lancha", "k": 3}, True)
 
