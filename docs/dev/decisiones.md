@@ -5270,3 +5270,25 @@ Hecho por level-pipeline-dev en `v11/curva-f3b-superposicion`, la parte de F3 qu
 - **Hallazgo:** la Lancha necesita T ≥ K + k + 1 (la carga, la holgura y sus k vacías): su estreno solo cabe en 10 cuias con K 6, y no va en hitos ni en la cúspide.
 - **Respuestas recomendadas a las 5 preguntas de F3 [P], aplicadas en `campaign_v3` en un commit aparte:** sin K 10 (el Aguapé lleva a Difícil el 429, el 566 y el 698; el 686 va sin chip); el Aguapé como tercera mecánica en 452 y 592; el Aguapé en 652 y 658 y el espeso en el hito 660; el ciclo 401-420 con 409 Fl+Ll, 415 Fl y 418 Br+Tu; las turbias no cuentan en el «0-1 mecánicas» de la comodidad.
 - **Pendiente del dueño:** esas 5 respuestas; K 6 en el estreno de la Lancha (o 11 cuias con K 7); la Lancha eximida de SEASONS en el ciclo 361-380 (de aguas bajas); el escalón 8-9 de 660, 680 y 700; y las decisiones [P] de la herramienta de la sección 9.5.
+
+### D-068, añadido del 2026-11-07: las preguntas de F3 y F3b (`docs/dev/curva-1.1-f1-medicion.md` §9.5)
+
+El dueño las decidió con las recomendadas («Sí, recomendadas»):
+- **Las 5 respuestas de F3**, aplicadas en `campaign_v3.json` (e4a30f5d):
+  1. sin K 10: el Aguapé lleva a Difícil el 429, el 566 y el 698, y el 686 queda sin la etiqueta (F1-2);
+  2. el 452 y el 592 llevan el Aguapé como tercera mecánica;
+  3. en el ciclo 641-660, el Aguapé va en el 652 y el 658, y el espeso en el hito 660;
+  4. el ciclo 401-420 queda con 409 Fl+Ll, 415 Fl y 418 Br+Tu;
+  5. las turbias no cuentan en el tope «0-1 mecánicas» de la comodidad, pero sí en MAX-2.
+- **Estreno de la Lancha:** con K 6, en un tablero de 10 cuias. El tope del papel de estreno pasa a K 6-8. La Lancha queda fuera de los hitos y de la cúspide, porque necesita T ≥ K + k + 1.
+- **Temporadas:** `season_debut_exempt` para la Lancha en el ciclo 361-380, en lugar de cambiar la temporada de ese ciclo.
+- **Escalón de presión:** el plan de los hitos 660, 680 y 700 baja a 7, 7 y 8, que es lo que dan los tableros. No se añaden dosis ocultas.
+- **Decisiones [P] de la herramienta, aceptadas:**
+  - grupos de 2-3 cuias (4-5 en el espeso);
+  - una vacía más con Hoja, Matapi o Lluvia;
+  - tres `rows` con 11-14 cuias;
+  - `k` = vacías + 1;
+  - el Aguapé no cuenta como «mecánica distinta» en el escalón; se precisa en 03 §12;
+  - los candidatos sin alivio se descartan;
+  - los estrenos van primero en la reserva.
+- **Siguiente paso:** F5, generar los packs `curva_07..09_v1` y su reserva con la curación del dueño.
