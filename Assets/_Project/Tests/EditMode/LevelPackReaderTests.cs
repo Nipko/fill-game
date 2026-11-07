@@ -88,12 +88,12 @@ namespace AF.Tests.EditMode
         }
 
         [TestCase("\"pack_schema\": 0", "t: pack_schema 0 no admitido")]
-        [TestCase("\"pack_schema\": 5", "t: pack_schema 5 no admitido")]
+        [TestCase("\"pack_schema\": 6", "t: pack_schema 6 no admitido")]
         [TestCase("\"subset_of\": \"af-level/2\"", "t: el paquete no declara pack_schema")]
         [TestCase("\"note\": \"sin esquema\"", "t: el paquete no declara pack_schema")]
         public void Reader_RejectsUnknownSchema(string header, string expected)
         {
-            // 08 §4.4: el cliente rechaza un paquete con un pack_schema que no conoce (lee del 1 al 4, contrato 21). El mensaje
+            // 08 §4.4: el cliente rechaza un paquete con un pack_schema que no conoce (lee del 1 al 5, contrato 21). El mensaje
             // empieza por el id del paquete ("t") y dice por qué: la versión que no admite o que no declara ninguna.
             Assert.That(() => LevelPackReader.Read(TestPacks.MinimalPack(null, header)),
                 Throws.TypeOf<LevelFormatException>().With.Message.Contains("pack_schema").And.Message.Contains(expected));
@@ -188,7 +188,8 @@ namespace AF.Tests.EditMode
             Invalid("units objeto vacío", TestPacks.Schema2Pack(units: "{}"), "'units_per_color' debe ser un entero de 1 a 6 o un objeto"),
             Invalid("units que no cuadra", TestPacks.Schema2Pack(units: "{\"8\": 5}"), "units_per_color: el color 8 tiene 4 dosis y se declararon 5"),
             Invalid("color 16", TestPacks.Schema2Pack(cuias: "[[8, 8, 8, 4], [4, 4, 4, 8], [16], []]"), "color 16 fuera de 1..15"),
-            Invalid("intro desconocida", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"aguape\""), "'intro_mechanic' debe ser null o"),
+            Invalid("intro desconocida", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"palizada\""), "'intro_mechanic' debe ser null o"),
+            Invalid("intro aguape con pack_schema 2", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"aguape\""), "'intro_mechanic' aguape necesita pack_schema 5"),
             Invalid("banda desconocida", TestPacks.Schema2Pack().Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"par\": 3, \"band\": \"easy\" }"), "'difficulty.band' debe ser"),
             Invalid("matapi con pack_schema 1", TestPacks.Schema2Pack("[null, null, null, {\"type\": \"matapi\"}]", schema: 1), "el tipo matapi necesita pack_schema 2"),
             Invalid("intro chica con pack_schema 1", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"chica\"", schema: 1), "'intro_mechanic' chica necesita pack_schema 2"),

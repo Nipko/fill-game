@@ -15,7 +15,7 @@ namespace AF.Save.Tests
         [Test]
         public void NewProfile_ReduceMotionAuto_AndHighContrastOff_AndNeitherIsWritten()
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3}");
             Assert.That(p.Settings.ReduceMotion, Is.EqualTo(ReduceMotionSetting.Auto));
             Assert.That(p.Settings.HighContrast, Is.False);
             string json = ProfileJson.Serialize(p);
@@ -27,7 +27,7 @@ namespace AF.Save.Tests
         [TestCase(ReduceMotionSetting.Off, "off")]
         public void ReduceMotion_RoundTrips(ReduceMotionSetting value, string text)
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3}");
             p.Settings.ReduceMotion = value;
             p.Settings.HighContrast = true;
             string json = ProfileJson.Serialize(p);
@@ -44,7 +44,7 @@ namespace AF.Save.Tests
         [TestCase("null")]
         public void AnInvalidReduceMotion_IsAuto(string raw)
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"settings\": {\"reduce_motion\": " + raw + ", \"sound\": false}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"settings\": {\"reduce_motion\": " + raw + ", \"sound\": false}}");
             Assert.That(p.Settings.ReduceMotion, Is.EqualTo(ReduceMotionSetting.Auto));
             Assert.That(p.Settings.Sound, Is.False, "los demás ajustes se leen igual");
         }
@@ -52,14 +52,14 @@ namespace AF.Save.Tests
         [Test]
         public void AnInvalidHighContrast_IsOff()
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"settings\": {\"high_contrast\": \"sí\"}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"settings\": {\"high_contrast\": \"sí\"}}");
             Assert.That(p.Settings.HighContrast, Is.False);
         }
 
         [Test]
         public void ReduceMotion_RejectsAValueOutsideTheEnum()
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3}");
             Assert.Throws<ArgumentOutOfRangeException>(() => p.Settings.ReduceMotion = (ReduceMotionSetting)7);
         }
     }

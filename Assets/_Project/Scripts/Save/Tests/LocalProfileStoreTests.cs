@@ -209,7 +209,7 @@ namespace AF.Save.Tests
         public void NewerSchema_IsNotOverwritten()
         {
             var store = new LocalProfileStore(_dir);
-            const string future = "{\"profile_schema\": 3, \"wallet\": {\"seeds\": 5000}}";
+            const string future = "{\"profile_schema\": 4, \"wallet\": {\"seeds\": 5000}}";
             File.WriteAllText(store.MainPath, future, Utf8NoBom);
 
             ProfileLoadResult result = store.Load();
@@ -642,7 +642,7 @@ namespace AF.Save.Tests
                     File.WriteAllBytes(path, bytes);
                     break;
                 case "wrong-type":
-                    File.WriteAllText(path, "{\"profile_schema\": 2, \"wallet\": {\"seeds\": \"mil\"}}", Utf8NoBom);
+                    File.WriteAllText(path, "{\"profile_schema\": 3, \"wallet\": {\"seeds\": \"mil\"}}", Utf8NoBom);
                     break;
                 default:
                     throw new ArgumentException(corruption);

@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Rules;
@@ -177,6 +178,24 @@ namespace AF.GameFlow
 
         /// <summary>Cuias generadas del tablero del intento (sin las añadidas): fijan las filas (D-006).</summary>
         public int GeneratedCuias => _session == null ? 0 : _session.Current.Count - _attempt.Added.Count;
+
+        /// <summary>
+        /// <c>rows</c> del tablero del intento (08 §4.1, <c>pack_schema</c> 5; 02 §5; D-068): las de la variante de <c>relief</c>
+        /// servida o, en el tablero base, las del nivel; null si no las trae (manda la regla de filas de 02 §5).
+        /// </summary>
+        public IReadOnlyList<int>? BoardRows
+        {
+            get
+            {
+                if (_level == null)
+                {
+                    return null;
+                }
+
+                int relief = _attempt.ReliefIndex;
+                return relief >= 0 && relief < _level.Relief.Count ? _level.Relief[relief].Rows : _level.Rows;
+            }
+        }
 
         /// <summary>El tablero acepta toques: PLAYING sin victoria ni bloqueo lógico pendiente (R15).</summary>
         public bool AcceptsBoardInput => Phase == FlowPhase.Playing && _pending == Outcome.None && _session != null;

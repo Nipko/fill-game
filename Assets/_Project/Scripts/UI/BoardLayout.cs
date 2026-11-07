@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Presentation;
@@ -330,6 +331,48 @@ namespace AF.UI
         /// </summary>
         public static BoardLayoutResult Compute(int count, int generatedCount, float heightU, float canvasWidth, float boardTop, float boardBottom, int pairStart, int tinajaIndex)
         {
+            return Compute(count, generatedCount, heightU, canvasWidth, boardTop, boardBottom, pairStart, tinajaIndex, null);
+        }
+
+        /// <summary>
+        /// <paramref name="fixedRows"/> son válidas como filas fijas de <paramref name="generatedCount"/> cuias generadas (02 §5; 08
+        /// §4.1 <c>rows</c>, <c>pack_schema</c> 5; D-068): 1-3 filas de 1-7 que suman las generadas. El lector ya lo comprobó
+        /// (<c>LevelValidation.ValidateRows</c>); aquí se mira otra vez porque el tablero del intento puede ser otro (una variante de
+        /// <c>relief</c> sin <c>rows</c>). Sin asignaciones.
+        /// </summary>
+        public static bool FixedRowsFit(IReadOnlyList<int>? fixedRows, int generatedCount)
+        {
+            if (fixedRows == null || fixedRows.Count < 1 || fixedRows.Count > 3)
+            {
+                return false;
+            }
+
+            int total = 0;
+            for (int r = 0; r < fixedRows.Count; r++)
+            {
+                if (fixedRows[r] < 1 || fixedRows[r] > 7)
+                {
+                    return false;
+                }
+
+                total += fixedRows[r];
+            }
+
+            return total == generatedCount;
+        }
+
+        /// <summary>
+        /// Como <see cref="Compute(int, int, float, float, float, float, int, int)"/>, con las filas fijas del nivel
+        /// (<paramref name="fixedRows"/>: <c>rows</c> de 08 §4.1, <c>pack_schema</c> 5; 02 §5; D-068), si las trae y valen
+        /// (<see cref="FixedRowsFit"/>): mandan sobre la regla de filas en cualquier proporción, cuias por fila de arriba abajo en
+        /// el orden del tablero. Las filas siguen fijas todo el nivel: la Cuia extra y la Cuia de rescate van, como siempre, a la
+        /// derecha de la fila más corta, así que nunca parten un grupo del Aguapé (los grupos son contiguos en las generadas). Sin
+        /// <paramref name="fixedRows"/> (o si no valen), la regla de siempre.
+        /// </summary>
+        public static BoardLayoutResult Compute(
+            int count, int generatedCount, float heightU, float canvasWidth, float boardTop, float boardBottom, int pairStart, int tinajaIndex,
+            IReadOnlyList<int>? fixedRows)
+        {
             if (count < 1 || count > 16)
             {
                 throw new ArgumentOutOfRangeException(nameof(count), count, "Entre 1 y 16 cuias (02 R1).");
@@ -340,7 +383,8 @@ namespace AF.UI
                 throw new ArgumentOutOfRangeException(nameof(generatedCount), generatedCount, "Entre 1 y las cuias en pantalla.");
             }
 
-            int rows = RowsFor(generatedCount, heightU, canvasWidth, boardTop, boardBottom);
+            bool useFixed = FixedRowsFit(fixedRows, generatedCount);
+            int rows = useFixed ? fixedRows!.Count : RowsFor(generatedCount, heightU, canvasWidth, boardTop, boardBottom);
             var result = new BoardLayoutResult(count, rows);
 
             // Asignación en dos pasos (D-006; prueba del 2026-10-09, T-C). Mientras se reparte, CenterX guarda la columna de
@@ -350,13 +394,14 @@ namespace AF.UI
             for (int r = 0; r < rows; r++)
             {
                 int left = rows - r;
-                int n = (remaining + left - 1) / left;
+                int n = useFixed ? fixedRows![r] : (remaining + left - 1) / left; // rows del nivel (D-068) o ⌈restantes/filas⌉
                 result.PerRow[r] = n;
                 remaining -= n;
             }
 
-            // La Tinaja y su cuia, en la misma fila (02 §5; 07 §4.5): si el corte cae entre las dos, otro reparto.
-            if (pairStart >= 0 && pairStart + 1 < generatedCount && SplitsPair(result.PerRow, rows, pairStart))
+            // La Tinaja y su cuia, en la misma fila (02 §5; 07 §4.5): si el corte cae entre las dos, otro reparto. Con rows, mandan
+            // las filas del nivel (el validador ya las comprobó).
+            if (!useFixed && pairStart >= 0 && pairStart + 1 < generatedCount && SplitsPair(result.PerRow, rows, pairStart))
             {
                 KeepPairTogether(result.PerRow, rows, generatedCount, pairStart);
             }

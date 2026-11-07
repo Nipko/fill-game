@@ -36,9 +36,10 @@ namespace AF.Save
     {
         /// <summary>
         /// Versión del esquema que escribe esta build (08 §4.4: solo avanza). 2 desde DC15: <c>fauna.sighted</c>, con el paso
-        /// 1 → 2 de <see cref="ProfileMigrations"/>.
+        /// 1 → 2 de <see cref="ProfileMigrations"/>. 3 desde la 1.1 (D-068, fase F4; 08 §4.3 y §4.4):
+        /// <c>progress.curve2_from_level</c>, con el paso 2 → 3.
         /// </summary>
-        public const int CurrentSchema = 2;
+        public const int CurrentSchema = 3;
 
         /// <summary><c>profile_schema</c>: siempre <see cref="CurrentSchema"/> en memoria (las migraciones van antes).</summary>
         public int ProfileSchema => CurrentSchema;
@@ -563,6 +564,29 @@ namespace AF.Save
 
             LeagueDebutSeen = LeagueDebutSeen || other.LeagueDebutSeen;
             LeagueOpened = LeagueOpened || other.LeagueOpened;
+        }
+
+        /// <summary>
+        /// <c>curve2_from_level</c> (esquema 3; D-068, P1 B; 08 §4.3) [P]: el primer nivel que el jugador juega con la curva 2 de la
+        /// 1.1. Lo fija una sola vez la migración 2 → 3 (<see cref="ProfileMigrations"/>) con el siguiente nivel que no había jugado
+        /// (1 en un perfil nuevo) y no cambia nunca: lo de antes sigue con los tableros de la 1.0, también al rejugarlo. En la
+        /// fusión con la nube gana el mínimo (<see cref="MergeCurve2FromLevel"/>; pregunta 15 de 03, decidida el 2026-11-07).
+        /// </summary>
+        public int Curve2FromLevel { get; set; } = 1;
+
+        /// <summary>
+        /// Fusión de 08 §11 (<c>ResolveConflict</c>): <c>curve2_from_level</c> pasa a ser el mínimo de los dos (más niveles nuevos;
+        /// D-068, pregunta 15 de 03). Los dos perfiles ya llegan migrados (<c>CloudSync</c> migra el de la nube antes de fusionar).
+        /// </summary>
+        /// <param name="other">El progreso del otro perfil (el perdedor).</param>
+        public void MergeCurve2FromLevel(ProgressData other)
+        {
+            if (other == null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            Curve2FromLevel = Math.Max(1, Math.Min(Curve2FromLevel, other.Curve2FromLevel));
         }
 
         private static int ClampMapSeen(int value, int maxLevel)

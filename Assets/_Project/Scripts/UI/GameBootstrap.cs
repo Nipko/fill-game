@@ -2290,7 +2290,21 @@ namespace AF.UI
                 // paquetes de campaña y en los de reserva (D-033, Q-B11-7 a; GameBootstrap.Reserve.cs).
                 MechanicSwitches switches = ResolveCatalogSwitches();
                 string overridesJson = ResolveCatalogOverridesJson();
-                LevelOverrides overrides = LevelOverrides.Create(overridesJson, OverridePool(packs, overridesJson));
+
+                // La curva 2 de la 1.1 (D-068; GameBootstrap.Curve.cs): sus paquetes, su reserva (solo con alguna mecánica apagada o
+                // con level_overrides) y el selector con lvl_curve2_enabled y curve2_from_level.
+                List<LevelPack> curvePacks = LoadCurvePacks(curve: true);
+                bool anyOverride = HasEntries(overridesJson);
+                List<LevelPack> curveReserve = curvePacks.Count > 0 && (switches.AnyOff || anyOverride) ? LoadCurvePacks(curve: false) : new List<LevelPack>();
+                CurveSelection curve = ResolveCurveSelection();
+                List<LevelPack> pool = OverridePool(packs, overridesJson);
+                if (anyOverride)
+                {
+                    pool.AddRange(curvePacks); // level_overrides puede pedir un tablero _c{c} o _c{c}_r{k} de su slot (08 §9)
+                    pool.AddRange(curveReserve);
+                }
+
+                LevelOverrides overrides = LevelOverrides.Create(overridesJson, pool);
                 for (int i = 0; i < overrides.Problems.Count; i++)
                 {
                     Debug.LogWarning(LogPrefix + overrides.Problems[i]);
@@ -2298,7 +2312,12 @@ namespace AF.UI
 
                 // lvl_label_override (08 §9; B11): el de Remote Config (SetUpRemoteConfig, antes de cargar el catálogo).
                 LevelLabelOverrides labels = LevelLabelSource.Create(_rcConfigs, w => Debug.LogWarning(LogPrefix + w));
-                LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w), labels);
+                LevelCatalog catalog = LevelCatalog.Create(
+                    packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w), labels, curvePacks, curve, curveReserve);
+                if (curvePacks.Count > 0)
+                {
+                    Debug.Log(LogPrefix + curve + ": " + catalog.Curve2Levels.Count + " niveles con la curva 2 (" + curvePacks.Count + " paquetes).");
+                }
                 watch.Stop();
                 if (DevProbe.Enabled)
                 {

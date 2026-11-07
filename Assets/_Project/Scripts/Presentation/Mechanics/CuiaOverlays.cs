@@ -38,6 +38,10 @@ namespace AF.Presentation.Mechanics
                     return new HojaOverlay(true); // la variante atada de la Hoja (VA1a), en el mismo archivo
                 case MechanicType.Flor:
                     return new FlorOverlay(); // la Flor de vitória-régia (VA1b); el Brote de dos hojas va en BroteOverlay (n = 2)
+                case MechanicType.Aguape:
+                    return new AguapeOverlay(); // M8 Aguapé y el espeso (n = 2; D-068, F4)
+                case MechanicType.Lancha:
+                    return new LanchaOverlay(); // M11 Lancha (D-068, F4)
                 default:
                     return null;
             }

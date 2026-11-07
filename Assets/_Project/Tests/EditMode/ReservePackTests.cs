@@ -179,7 +179,7 @@ namespace AF.Tests.EditMode
             string campaign = File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_03_v1.json"));
             Assert.That(() => LevelPackReader.Read(campaign.Replace(
                     "\"id\":\"m03_v1_n0041\",", "\"id\":\"m03_v1_n0041\",\"replaces\":\"m03_v1_n0041\",")),
-                Throws.TypeOf<LevelFormatException>().With.Message.Contains("'replaces' solo va en un paquete de reserva"));
+                Throws.TypeOf<LevelFormatException>().With.Message.Contains("'replaces' solo va en un paquete de reserva o de la curva 2"));
         }
 
         [Test]

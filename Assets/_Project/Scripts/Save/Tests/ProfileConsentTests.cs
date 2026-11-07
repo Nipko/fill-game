@@ -56,10 +56,10 @@ namespace AF.Save.Tests
             Assert.That(back.TextVersion, Is.EqualTo(2));
         }
 
-        [TestCase("{\"profile_schema\": 2, \"consent\": 7}")]
-        [TestCase("{\"profile_schema\": 2, \"consent\": {\"analytics\": true}}")]
-        [TestCase("{\"profile_schema\": 2, \"consent\": {\"profile\": 3, \"age_band\": \"18+\"}}")]
-        [TestCase("{\"profile_schema\": 2, \"consent\": null}")]
+        [TestCase("{\"profile_schema\": 3, \"consent\": 7}")]
+        [TestCase("{\"profile_schema\": 3, \"consent\": {\"analytics\": true}}")]
+        [TestCase("{\"profile_schema\": 3, \"consent\": {\"profile\": 3, \"age_band\": \"18+\"}}")]
+        [TestCase("{\"profile_schema\": 3, \"consent\": null}")]
         public void ABrokenBlock_IsAskedAgain_NeverCorruption(string json)
         {
             Profile p = ProfileJson.Deserialize(json);
@@ -70,7 +70,7 @@ namespace AF.Save.Tests
         public void AnUnknownBandOrVersion_ForcesTheQuestion()
         {
             Profile p = ProfileJson.Deserialize(
-                "{\"profile_schema\": 2, \"consent\": {\"profile\": \"co_1581\", \"text_version\": \"x\", \"age_band\": \"12\", \"at\": 5}}");
+                "{\"profile_schema\": 3, \"consent\": {\"profile\": \"co_1581\", \"text_version\": \"x\", \"age_band\": \"12\", \"at\": 5}}");
 
             Assert.That(p.Consent, Is.Not.Null);
             Assert.That(p.Consent!.AgeBand, Is.EqualTo(AgeBand.Unknown));

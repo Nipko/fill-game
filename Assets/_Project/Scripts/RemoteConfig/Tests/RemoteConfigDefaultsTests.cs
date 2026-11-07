@@ -59,6 +59,12 @@ namespace AF.RemoteConfig.Tests
         [TestCase("biz_feature_shop", "true")]
         [TestCase("mech_debut_level_tinaja", "323")]
         [TestCase("mech_enabled_matapi", "true")]
+        [TestCase("mech_enabled_aguape", "true")] // D-068 (F4): las 6 claves de la 1.1
+        [TestCase("mech_enabled_lancha", "true")]
+        [TestCase("mech_debut_level_aguape", "303")]
+        [TestCase("mech_debut_level_lancha", "363")]
+        [TestCase("lvl_curve2_enabled", "true")]
+        [TestCase("lvl_murky_normal_max_hidden_units", "2")]
         [TestCase("ads_rv_cap_daily_chest", "1")]
         [TestCase("ads_rv_cooldown_s_extra_canoe", "90")]
         [TestCase("ads_rv_cooldown_s_hint", "60")]

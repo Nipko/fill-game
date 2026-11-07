@@ -16,8 +16,8 @@ namespace AF.Save.Tests
         public void Default_IsNotSeen_AlsoWithoutTheField()
         {
             Profile fresh = Profile.CreateNew(new ManualClock(SampleProfiles.T0), 5);
-            Profile old = ProfileJson.Deserialize("{\"profile_schema\": 2, \"progress\": {\"max_level\": 4, \"next_level\": 5}}");
-            Profile noProgress = ProfileJson.Deserialize("{\"profile_schema\": 2}");
+            Profile old = ProfileJson.Deserialize("{\"profile_schema\": 3, \"progress\": {\"max_level\": 4, \"next_level\": 5}}");
+            Profile noProgress = ProfileJson.Deserialize("{\"profile_schema\": 3}");
 
             Assert.That(fresh.Progress.UndoTipSeen, Is.False);
             Assert.That(old.Progress.UndoTipSeen, Is.False);
@@ -68,7 +68,7 @@ namespace AF.Save.Tests
         [TestCase("{}")]
         public void InvalidValue_IsNotSeen_WithoutCorruptingTheProfile(string value)
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"progress\": {\"max_level\": 7, \"undo_tip_seen\": " + value + "}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"progress\": {\"max_level\": 7, \"undo_tip_seen\": " + value + "}}");
 
             Assert.That(p.Progress.UndoTipSeen, Is.False);
             Assert.That(p.Progress.MaxLevel, Is.EqualTo(7));

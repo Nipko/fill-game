@@ -218,6 +218,34 @@ namespace AF.Levels
             Action<string>? warn,
             LevelLabelOverrides? labels = null)
         {
+            return Create(packs, levelOffset, overrides, switches, warn, labels, null, CurveSelection.Off, null);
+        }
+
+        /// <summary>
+        /// Como <see cref="Create(IReadOnlyList{LevelPack}, int, LevelOverrides?, MechanicSwitches, Action{string}?, LevelLabelOverrides?)"/>,
+        /// con la curva 2 de la 1.1 (D-068, P1 B; 08 §4.4): cada nivel de 301-700 desde <see cref="CurveSelection.FromLevel"/> con
+        /// <see cref="CurveSelection.Enabled"/> se sirve con el tablero de <paramref name="curvePacks"/> (<c>kind</c> =
+        /// <c>curve</c>) cuyo <c>replaces</c> es el id publicado del slot, si lo hay. El kill switch va después, sobre el tablero que
+        /// toca al jugador: si usa una mecánica apagada, (1) su entrada de <c>level_overrides</c> si es de su misma curva y no está
+        /// bloqueada (08 §9: «se aplica encima de la curva que toque al jugador»); con la curva 2, además, (2) el tablero de
+        /// <paramref name="curveReservePacks"/> (<c>reserva_curva_</c>) cuyo <c>replaces</c> es el suyo [P] y (3) el de la curva 1
+        /// del slot, si no está bloqueado y tampoco su override [P]; y si nada vale, el aviso de siempre. Los paquetes de la curva
+        /// fuera de 301-700 o sin slot publicado se ignoran con un aviso.
+        /// </summary>
+        /// <exception cref="ArgumentException">No hay paquetes o alguno es null.</exception>
+        /// <exception cref="LevelFormatException">Un nivel está en dos paquetes, o un paquete es de reserva o de la curva (solo se
+        /// sirven en lugar de otro).</exception>
+        public static LevelCatalog Create(
+            IReadOnlyList<LevelPack> packs,
+            int levelOffset,
+            LevelOverrides? overrides,
+            MechanicSwitches switches,
+            Action<string>? warn,
+            LevelLabelOverrides? labels,
+            IReadOnlyList<LevelPack>? curvePacks,
+            CurveSelection curve,
+            IReadOnlyList<LevelPack>? curveReservePacks)
+        {
             if (packs == null || packs.Count == 0)
             {
                 throw new ArgumentException("El catálogo necesita al menos un paquete.", nameof(packs));
@@ -237,6 +265,12 @@ namespace AF.Levels
                 {
                     throw new LevelFormatException(packArray[p].PackId + " es un paquete de reserva: sus tableros solo se sirven desde "
                         + LevelOverrides.Key + ", nunca como niveles de campaña (D-033, Q-B11-7 a).");
+                }
+
+                if (packArray[p].IsCurve)
+                {
+                    throw new LevelFormatException(packArray[p].PackId + " es un paquete de la curva 2: sus tableros solo se sirven en lugar de los "
+                        + "de la curva 1 desde progress.curve2_from_level, nunca como niveles de campaña (D-068; 08 §4.4).");
                 }
 
                 total += packArray[p].Count;
@@ -285,45 +319,96 @@ namespace AF.Levels
                 }
             }
 
-            // Kill switch (KS1): con todo encendido no se mira nada y ningún nivel cambia.
+            // La curva 2 (D-068): el tablero que toca al jugador en cada slot, antes del kill switch.
             LevelDefinition[] served = sortedDefinitions;
+            var curve2 = new List<int>();
+            if (curvePacks != null && curvePacks.Count > 0)
+            {
+                Dictionary<string, LevelDefinition> byReplaces = IndexByReplaces(curvePacks, isCurve: true, warn);
+                served = (LevelDefinition[])sortedDefinitions.Clone();
+                var used = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < total; i++)
+                {
+                    if (!byReplaces.TryGetValue(sortedDefinitions[i].Id, out LevelDefinition curved))
+                    {
+                        continue;
+                    }
+
+                    used.Add(sortedDefinitions[i].Id);
+                    if (!CurveSelection.InRange(numbers[i]))
+                    {
+                        warn?.Invoke("curva 2: " + curved.Id + " es del nivel " + numbers[i].ToString(CultureInfo.InvariantCulture)
+                            + ", fuera de 301-700; se ignora (D-068, P1 B).");
+                        continue;
+                    }
+
+                    if (curve.UsesCurve2(numbers[i]))
+                    {
+                        served[i] = curved;
+                        curve2.Add(numbers[i]);
+                    }
+                }
+
+                foreach (KeyValuePair<string, LevelDefinition> entry in byReplaces)
+                {
+                    if (!used.Contains(entry.Key))
+                    {
+                        warn?.Invoke("curva 2: " + entry.Value.Id + " sustituye a " + entry.Key + ", que no está en el catálogo; se ignora.");
+                    }
+                }
+            }
+
+            // Kill switch (KS1): con todo encendido no se mira nada y ningún nivel cambia.
             string?[]? warnings = null;
             var overridden = new List<int>();
             var fallbacks = new List<int>();
             if (switches.AnyOff)
             {
-                served = (LevelDefinition[])sortedDefinitions.Clone();
+                LevelDefinition[] chosen = served;
+                served = (LevelDefinition[])chosen.Clone();
                 LevelOverrides table = overrides ?? LevelOverrides.Empty;
+                Dictionary<string, LevelDefinition>? curveReserve = curveReservePacks != null && curveReservePacks.Count > 0
+                    ? IndexByReplaces(curveReservePacks, isCurve: false, warn)
+                    : null;
                 for (int i = 0; i < total; i++)
                 {
-                    int blocked = switches.BlockedMask(sortedDefinitions[i]);
+                    LevelDefinition current = chosen[i];
+                    int blocked = switches.BlockedMask(current);
                     if (blocked == 0)
                     {
                         continue;
                     }
 
-                    string reason;
-                    if (table.TryGet(numbers[i], out LevelDefinition replacement))
+                    LevelDefinition? substitute = SubstituteFor(current, numbers[i], table, switches, out string reason);
+                    if (substitute == null && current.Curve != LevelDefinition.Curve1)
                     {
-                        int stillBlocked = switches.BlockedMask(replacement);
-                        if (stillBlocked == 0)
+                        // La curva 2 [P]: su reserva (reserva_curva_) y, si tampoco, el tablero de la curva 1 del slot o su override.
+                        if (curveReserve != null && curveReserve.TryGetValue(current.Id, out LevelDefinition reserve) && switches.BlockedMask(reserve) == 0)
                         {
-                            served[i] = replacement;
-                            overridden.Add(numbers[i]);
-                            continue;
+                            substitute = reserve;
                         }
-
-                        reason = "su override " + replacement.Id + " también usa " + MechanicSwitches.Describe(stillBlocked) + " = false";
+                        else
+                        {
+                            LevelDefinition first = sortedDefinitions[i];
+                            substitute = switches.BlockedMask(first) == 0 ? first : SubstituteFor(first, numbers[i], table, switches, out _);
+                            if (substitute == null)
+                            {
+                                reason += "; tampoco hay respaldo en la reserva de la curva 2 ni en la curva 1";
+                            }
+                        }
                     }
-                    else
+
+                    if (substitute != null)
                     {
-                        reason = "no tiene override en " + LevelOverrides.Key;
+                        served[i] = substitute;
+                        overridden.Add(numbers[i]);
+                        continue;
                     }
 
                     warnings ??= new string?[total];
-                    warnings[i] = "nivel " + numbers[i].ToString(CultureInfo.InvariantCulture) + " (" + sortedDefinitions[i].Id + "): usa "
+                    warnings[i] = "nivel " + numbers[i].ToString(CultureInfo.InvariantCulture) + " (" + current.Id + "): usa "
                         + MechanicSwitches.Describe(blocked) + " = false y " + reason
-                        + "; se sirve el publicado [P] (el respaldo por slot es de la 1.1, D-020).";
+                        + "; se sirve el publicado [P] (D-020).";
                     fallbacks.Add(numbers[i]);
                 }
             }
@@ -356,8 +441,93 @@ namespace AF.Levels
                 fallbacks.ToArray(),
                 relabeled.ToArray(),
                 switches,
-                warn);
+                warn)
+            {
+                Curve = curve,
+                _curve2 = curve2.ToArray(),
+            };
         }
+
+        // Entrada de level_overrides del slot que vale para current (KS1): de su misma curva (08 §9) y sin mecánica apagada. Null
+        // si no la hay, con el motivo en reason.
+        private static LevelDefinition? SubstituteFor(LevelDefinition current, int slot, LevelOverrides table, MechanicSwitches switches, out string reason)
+        {
+            if (!table.TryGet(slot, out LevelDefinition replacement))
+            {
+                reason = "no tiene override en " + LevelOverrides.Key;
+                return null;
+            }
+
+            if (replacement.Curve != current.Curve)
+            {
+                reason = "su override " + replacement.Id + " es de la curva " + replacement.Curve.ToString(CultureInfo.InvariantCulture)
+                    + " y el jugador va por la " + current.Curve.ToString(CultureInfo.InvariantCulture);
+                return null;
+            }
+
+            int stillBlocked = switches.BlockedMask(replacement);
+            if (stillBlocked != 0)
+            {
+                reason = "su override " + replacement.Id + " también usa " + MechanicSwitches.Describe(stillBlocked) + " = false";
+                return null;
+            }
+
+            reason = string.Empty;
+            return replacement;
+        }
+
+        // Tableros de los paquetes indexados por su replaces: los de la curva 2 (kind curve) o los de su reserva (reserva_curva_).
+        // Un paquete de otro tipo o un replaces repetido se ignora con un aviso (vale el primero).
+        private static Dictionary<string, LevelDefinition> IndexByReplaces(IReadOnlyList<LevelPack> packs, bool isCurve, Action<string>? warn)
+        {
+            var result = new Dictionary<string, LevelDefinition>(StringComparer.Ordinal);
+            for (int p = 0; p < packs.Count; p++)
+            {
+                LevelPack? pack = packs[p];
+                if (pack == null)
+                {
+                    continue;
+                }
+
+                bool ok = isCurve ? pack.IsCurve : pack.IsReserve;
+                if (!ok)
+                {
+                    warn?.Invoke(pack.PackId + " no es un paquete " + (isCurve ? "de la curva 2 (kind curve)" : "de reserva de la curva 2") + "; se ignora.");
+                    continue;
+                }
+
+                IReadOnlyList<LevelDefinition> levels = pack.Levels;
+                for (int i = 0; i < levels.Count; i++)
+                {
+                    LevelDefinition level = levels[i];
+                    if (level.Replaces == null || (!isCurve && level.Curve == LevelDefinition.Curve1))
+                    {
+                        continue; // la reserva de la curva 1 no sustituye tableros de la curva 2
+                    }
+
+                    if (result.ContainsKey(level.Replaces))
+                    {
+                        warn?.Invoke(level.Id + ": " + level.Replaces + " ya tiene otro tablero en " + pack.PackId + "; vale el primero.");
+                        continue;
+                    }
+
+                    result.Add(level.Replaces, level);
+                }
+            }
+
+            return result;
+        }
+
+        private int[] _curve2 = new int[0];
+
+        /// <summary>Selector de la curva 2 con el que se creó el catálogo (<see cref="CurveSelection.Off"/> por defecto; D-068).</summary>
+        public CurveSelection Curve { get; private set; }
+
+        /// <summary>
+        /// Niveles cuyo tablero sale de la curva 2 (antes del kill switch), de menor a mayor: los de 301-700 con tablero de la curva 2
+        /// desde <see cref="CurveSelection.FromLevel"/> con <c>lvl_curve2_enabled</c> (D-068).
+        /// </summary>
+        public IReadOnlyList<int> Curve2Levels => _curve2;
 
         /// <summary>El nivel de campaña <paramref name="level"/> está en el catálogo.</summary>
         public bool Contains(int level)

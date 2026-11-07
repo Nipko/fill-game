@@ -29,20 +29,20 @@ namespace AF.Tests.EditMode
         [Test]
         public void Reader_AcceptsPackSchema3_08_4_4()
         {
-            // El 4 (D-033, Q-B11-7 a) es el 3 más el paquete de reserva: el cliente lee del 1 al 4.
-            Assert.That(LevelPackReader.SupportedPackSchema, Is.EqualTo(4));
+            // El 4 (D-033, Q-B11-7 a) es el 3 más el paquete de reserva y el 5 (D-068), la curva de la 1.1: el cliente lee del 1 al 5.
+            Assert.That(LevelPackReader.SupportedPackSchema, Is.EqualTo(5));
             Assert.That(LevelPackReader.Read(TestPacks.MinimalPack(null, "\"pack_schema\": 3")).Count, Is.EqualTo(1));
         }
 
         [Test]
-        public void Reader_RejectsPackSchema5_WithAClearMessage_08_4_4()
+        public void Reader_RejectsPackSchema6_WithAClearMessage_08_4_4()
         {
             // 08 §4.4: el cliente rechaza un paquete con un pack_schema mayor del que conoce; el mensaje dice el paquete, la
             // versión que no admite y las que sí lee.
-            Assert.That(() => LevelPackReader.Read(TestPacks.MinimalPack(null, "\"pack_schema\": 5")),
+            Assert.That(() => LevelPackReader.Read(TestPacks.MinimalPack(null, "\"pack_schema\": 6")),
                 Throws.TypeOf<LevelFormatException>()
-                    .With.Message.Contains("t: pack_schema 5 no admitido")
-                    .And.Message.Contains("versiones 1 a 4")
+                    .With.Message.Contains("t: pack_schema 6 no admitido")
+                    .And.Message.Contains("versiones 1 a 5")
                     .And.Message.Contains("08 §4.4: hace falta una versión más nueva del juego"));
         }
 
@@ -63,7 +63,7 @@ namespace AF.Tests.EditMode
 
             Assert.That(message, Is.Not.Null);
             Assert.That(message, Does.Contain("t: pack_schema " + schema.ToString(System.Globalization.CultureInfo.InvariantCulture) + " no admitido"));
-            Assert.That(message, Does.Contain("versiones 1 a 4"));
+            Assert.That(message, Does.Contain("versiones 1 a 5"));
             Assert.That(message, Does.Not.Contain("más nueva"));
         }
 

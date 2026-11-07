@@ -35,7 +35,7 @@ namespace AF.Save.Tests
             Profile p = Profile.CreateNew(new ManualClock(SampleProfiles.T0), 5);
 
             Assert.That(p.Fauna.Sighted, Is.Empty);
-            Assert.That(Profile.CurrentSchema, Is.EqualTo(2));
+            Assert.That(Profile.CurrentSchema, Is.EqualTo(3));
             StringAssert.EndsWith("  \"fauna\": {\n    \"sighted\": []\n  }\n}\n", ProfileJson.Serialize(p));
         }
 
@@ -175,7 +175,7 @@ namespace AF.Save.Tests
         [Test]
         public void Reading_DropsInvalidEntries_KeepsTheLowestLevelOfARepeat_AndNeverCorrupts()
         {
-            const string json = "{\"profile_schema\": 2, \"wallet\": {\"seeds\": 30}, \"fauna\": {\"sighted\": ["
+            const string json = "{\"profile_schema\": 3, \"wallet\": {\"seeds\": 30}, \"fauna\": {\"sighted\": ["
                 + "{\"species_id\": \"saimiri_collinsi\", \"level\": 9},"
                 + "{\"species_id\": \"saimiri_collinsi\", \"level\": 5},"
                 + "{\"species_id\": \"Mico argentatus\", \"level\": 21},"
@@ -194,9 +194,9 @@ namespace AF.Save.Tests
             Assert.That(p.Fauna.Sighted[1].SpeciesId, Is.EqualTo("saimiri_collinsi"));
             Assert.That(p.Fauna.Sighted[1].Level, Is.EqualTo(5), "una especie repetida se queda con su nivel más bajo");
 
-            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2, \"fauna\": []}").Fauna.Sighted, Is.Empty);
-            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2, \"fauna\": {\"sighted\": {}}}").Fauna.Sighted, Is.Empty);
-            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2}").Fauna.Sighted, Is.Empty);
+            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 3, \"fauna\": []}").Fauna.Sighted, Is.Empty);
+            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 3, \"fauna\": {\"sighted\": {}}}").Fauna.Sighted, Is.Empty);
+            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 3}").Fauna.Sighted, Is.Empty);
         }
 
         [Test]

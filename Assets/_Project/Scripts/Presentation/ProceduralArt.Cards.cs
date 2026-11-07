@@ -150,6 +150,8 @@ namespace AF.Presentation
                     return BuildHeroPixels(name, DrawMudGlyph);
                 case LianaCountIconKey:
                     return BuildHeroPixels(name, DrawLianaCountGlyph);
+                case AguapeThickIconKey:
+                    return BuildHeroPixels(name, (pc, sz) => DrawAguapeGlyph(pc, sz, true)); // el Aguapé espeso (ProceduralArt.Aguape.cs; D-068)
                 case BroteTwoLeavesIconKey:
                     return BuildHeroPixels(name, DrawBroteTwoLeavesGlyph); // ProceduralArt.BroteDosHojas.cs (VA1b)
                 case StreakHeroIconKey:
