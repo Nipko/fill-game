@@ -21,7 +21,7 @@ Eres el responsable del pipeline offline de niveles de Amazon Fill: genera, vali
 ## Archivos que puedes tocar
 - `tools/level-generator/**`, `tools/level-qa/**`, `tools/solver-bench/**` (C# 14 permitido: no los compila Unity).
 - `tools/*.py` y sus salidas en `tools/out/` y `tools/out_inverse/`, solo regeneradas ejecutando los scripts (nunca editadas a mano).
-- `schemas/**`: cualquier cambio del formato de nivel sube `pack_schema` (y la versión del esquema), actualiza `tools/validate_schema.py` y se avisa al tech-lead y al dueño, porque es un contrato (GDD.md §7, contratos 12 y 21). Los esquemas del Mapa (`schemas/af-river-map-1.schema.json` y `af-river-stops-1.schema.json`, contratos 29 y 30) se validan en `tools/river-map/test_schemas.py`, nunca en `validate_schema.py`; cambiar su formato también es cambiar un contrato.
+- `schemas/**`: cualquier cambio del formato de nivel sube `pack_schema` (y la versión del esquema), actualiza `tools/validate_schema.py` y se avisa al tech-lead y al dueño, porque es un contrato (GDD.md §7, contratos 12 y 21). Los esquemas del Mapa (`schemas/af-river-map-2.schema.json` y `af-river-stops-2.schema.json`, contratos 29 y 30) se validan en `tools/river-map/test_schemas.py`, nunca en `validate_schema.py`; cambiar su formato también es cambiar un contrato.
 - Cuando exista el proyecto Unity: `Assets/_Project/Data/Levels/**` y `Assets/_Project/Data/Daily/**` (JSON generados por la herramienta, nunca a mano).
 - Mapa del río (D-013):
   - `tools/river-map/**`: Python 3.14; generadores solo con la biblioteca estándar (08 §4.5); `jsonschema`, que ya está en el stack, solo en `test_schemas.py`;
