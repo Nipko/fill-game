@@ -294,7 +294,7 @@ en ninguna de las tres medidas).
 | Comodidades turbias publicadas con turbias | 21 de 21 | 21 de 21 | — |
 
 Por papel (mundos 8 y 9): comodidad T 9-11 (mediana 10), K 8 y bot 35 %; reto T 10-12 (mediana 11), K 9 y bot 80-83 %; hito
-T 12-13 y K 11, con el bot entre el 95 % y el 100 % salvo el 660 (73 %); cúspide 560 con 13 cuias (K 12, 100 %) y 700 con 14 (K 12,
+T 12-13 y K 11, con el bot entre el 90 % y el 100 % salvo el 660 (73 %); cúspide 560 con 13 cuias (K 12, 100 %) y 700 con 14 (K 12,
 93 %); recuperación y remanso con 10 cuias y K 8.
 
 **Colocan.** Los 14 ciclos de los mundos 8 y 9 colocan con los topes del dueño, sin el último recurso. **Pierden etiquetas:** el
