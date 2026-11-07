@@ -152,13 +152,20 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(ids, Is.EquivalentTo(new[] { "hoja", "hoja_atada", "brote", "brote_n2", "liana", "liana_n", "matapi", "remolino", "lluvia", "pirana", "flor" }),
-                "todas menos la Tinaja y su cuia chica, que ya se nombran");
+            Assert.That(ids, Is.EquivalentTo(new[] { "hoja", "hoja_atada", "brote", "brote_n2", "liana", "liana_n", "matapi", "remolino", "lluvia", "pirana", "flor", "aguape", "aguape_n2", "lancha" }),
+                "todas menos la Tinaja y su cuia chica, que ya se nombran (con el Aguapé, el espeso y la Lancha de la 1.1, D-068)");
             LocCatalog catalog = B9Loc.Catalog();
             foreach (string id in ids)
             {
                 foreach (string locale in new[] { LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil })
                 {
+                    // El Aguapé y el espeso (D-068) siguen pendientes del asesor: sin traducción hasta aprobar el español (08 §4.7), así
+                    // que en EN y PT-BR la etiqueta va sin el nombre (WithoutTheMechanicName_TheLabelIsAsIn02_12).
+                    if (locale != LocLocale.SourceLocale && (id == "aguape" || id == "aguape_n2"))
+                    {
+                        continue;
+                    }
+
                     Loc.Configure(catalog, locale, true);
                     Assert.That(A11yText.MechanicName(id), Is.Not.Empty, "mechanic." + id + " en " + locale);
                 }

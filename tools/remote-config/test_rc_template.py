@@ -149,7 +149,7 @@ class RcTemplateTests(unittest.TestCase):
             self.assertEqual(params["mech_enabled_" + mech]["valueType"], "BOOLEAN", mech)
             self.assertEqual(params["mech_debut_level_" + mech]["valueType"], "NUMBER", mech)
         self.assertEqual(params["mech_debut_level_chica"]["defaultValue"]["value"], "14")
-        self.assertEqual(len(params), 253)  # D-056 y D-057: + ui_avatars_enabled y consent_digital_age_by_country; D-069: + ui_map_v2, ui_map_crew y ui_map_towns
+        self.assertEqual(len(params), 259)  # D-056 y D-057: + ui_avatars_enabled y consent_digital_age_by_country; D-069: + ui_map_v2, ui_map_crew y ui_map_towns; D-068 (F4): + 6 claves de la 1.1
 
     def test_numbers_never_use_an_exponent(self):
         for key, p in _template()["parameters"].items():

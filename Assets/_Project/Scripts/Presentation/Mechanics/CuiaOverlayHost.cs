@@ -94,5 +94,12 @@ namespace AF.Presentation.Mechanics
         /// selección); mientras un trabajo mueve la cuia no cuenta. El overlay lo deja a 0 al terminar o saltar su paso.
         /// </summary>
         public float BodyNudgeDp { get; set; }
+
+        /// <summary>
+        /// Reducir movimiento de la partida (07 §7.8; 02 §12; B9) para lo que un overlay anima en reposo, fuera de los pasos (el
+        /// cabeceo de la Lancha; D-068): sin vaivenes. Lo fija la pantalla al construir el tablero; en los pasos manda
+        /// <see cref="MechanicStepContext.ReduceMotion"/>.
+        /// </summary>
+        public bool ReduceMotion { get; set; }
     }
 }

@@ -560,6 +560,12 @@ namespace AF.Presentation
                 case MechanicType.Tinaja:
                     DrawTinajaGlyph(pc, s); // ProceduralArt.Tinaja.cs (TJ4)
                     break;
+                case MechanicType.Aguape:
+                    DrawAguapeGlyph(pc, s, false); // ProceduralArt.Aguape.cs (D-068, F4)
+                    break;
+                case MechanicType.Lancha:
+                    DrawLanchaGlyph(pc, s); // ProceduralArt.Lancha.cs (D-068, F4)
+                    break;
             }
         }
 

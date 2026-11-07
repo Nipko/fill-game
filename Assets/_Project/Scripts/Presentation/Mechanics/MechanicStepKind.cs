@@ -59,6 +59,19 @@ namespace AF.Presentation.Mechanics
         /// (<see cref="TinajaOverlay"/>); la otra cuia es su cuia.
         /// </summary>
         Upend = 12,
+
+        /// <summary>
+        /// Suelta del Aguapé, etapa (d) de R10 (02 §9.1 M8, regla 3; D-068): la mata del grupo se parte en trozos que se alejan
+        /// flotando (unos 700 ms). Un paso por cuia del grupo, todos a la vez; lo ejecuta el overlay de cada una
+        /// (<see cref="AguapeOverlay"/>), sin otra cuia; la primera del grupo lleva <see cref="MechanicStepPlan.LoosenLeadTint"/> y es la que suena.
+        /// </summary>
+        Loosen = 13,
+
+        /// <summary>
+        /// Atraque de la Lancha, etapa (f) de R10 (02 §9.1 M11, regla 2; D-068): la lancha llega al muelle y se amarra (unos
+        /// 1,4 s); después la cuia es normal. Lo ejecuta su overlay (<see cref="LanchaOverlay"/>).
+        /// </summary>
+        Dock = 14,
     }
 
     /// <summary>

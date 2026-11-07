@@ -147,8 +147,9 @@ INTERPRETATIONS = {
         _interp_legal_profile),
     "biz_ua_paid_enabled_by_country": ("map país→bool / bool", "todos false / false", _interp_ua_paid),
     "biz_kpi_targets": ("json", "01 §KPIs / 09 tabla 6.1", _interp_pending_all),
-    "mech_debut_level_{chica,alta,hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja}": ("int",
-        "chica 14, alta 27, hoja 43, matapi 63, liana 83, remolino 103, barro 123, lluvia 143, brote 163, pirana 183, tinaja 323",
+    "mech_debut_level_{chica,alta,hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja,aguape,lancha}": ("int",
+        "chica 14, alta 27, hoja 43, matapi 63, liana 83, remolino 103, barro 123, lluvia 143, brote 163, pirana 183, tinaja 323, "
+        "aguape 303, lancha 363",
         _interp_mech_debut),
     "ads_rv_cap_<placement>": ("int",
         "double_harvest 5 · undo_refill 4 · hint 3 · reveal 3 · extra_canoe 3 · daily_chest 1 (ubicación apagada en 1.0: "

@@ -85,11 +85,11 @@ namespace AF.Analytics
             E("af_push_sent", "type"),
             E("af_push_open", "type"),
             E("af_asset_pack", "pack", "state", "bytes", "ms"),
-            E("level_start", "level_name", "variant", "band"),
+            E("level_start", "level_name", "variant", "band", "curve", "pressure"), // curve y pressure: D-068 (F4)
             E("af_level_win", "pours", "par", "pours_over_par", "undo_used", "boosters_json", "t_ms", "reward_seeds", "double_harvest", "rescued"),
             E("af_level_fail", "kind", "canoe_lost", "streak_broken", "shield_used", "relief_served", "pours", "t_ms"),
             E("af_level_abandon", "pours", "t_ms", "reason"),
-            E("level_end", "success", "level_name"),
+            E("level_end", "success", "level_name", "curve", "pressure"),
             E("af_anim_skipped", "anim", "at_ms", "duration_cfg_ms"),
             E("af_river_lowered", "variant", "fails_level"),
             E("af_dda_applied", "reason", "variant"),

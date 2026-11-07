@@ -19,12 +19,12 @@ namespace AF.Save.Tests
         private static readonly int[] NoLines = { -1, -1, -1, -1, -1, -1, -1, -1 };
 
         // Perfil sin settings, sloth ni map_seen_level (como el de la build anterior a S12), ya en el esquema actual.
-        private const string PreS12Json = "{\"profile_schema\": 2, \"created_at\": \"2026-10-05T13:10:00Z\","
+        private const string PreS12Json = "{\"profile_schema\": 3, \"created_at\": \"2026-10-05T13:10:00Z\","
             + " \"wallet\": {\"seeds\": 120, \"canoes\": {\"count\": 4}},"
             + " \"progress\": {\"max_level\": 12, \"next_level\": 13, \"skipped_levels\": [], \"content_version\": \"1.0.0\"}}";
 
         // El mismo perfil tal como lo escribía la build anterior a S12: esquema 1.
-        private static readonly string PreS12JsonV1 = PreS12Json.Replace("\"profile_schema\": 2,", "\"profile_schema\": 1,");
+        private static readonly string PreS12JsonV1 = PreS12Json.Replace("\"profile_schema\": 3,", "\"profile_schema\": 1,");
 
         private string? _dir;
 
@@ -57,7 +57,7 @@ namespace AF.Save.Tests
             Assert.That(p.Wallet.Seeds, Is.EqualTo(120));
             Assert.That(p.Progress.MaxLevel, Is.EqualTo(12));
             string json = ProfileJson.Serialize(p);
-            StringAssert.Contains("\"profile_schema\": 2,", json);
+            StringAssert.Contains("\"profile_schema\": 3,", json);
             StringAssert.Contains("\"settings\": {\n    \"sound\": true,\n    \"music\": true,\n    \"haptics\": true,\n    \"patterns\": \"auto\",\n    \"language\": \"auto\",\n    \"sloth_messages\": true,\n    \"idle_hint\": true\n  }", json);
             StringAssert.Contains("\"last_line\": [-1, -1, -1, -1, -1, -1, -1, -1]", json);
             StringAssert.Contains("\"map_seen_level\": 0", json);
@@ -124,7 +124,7 @@ namespace AF.Save.Tests
         [TestCase("", PatternsSetting.Auto)]
         public void Patterns_UnknownText_IsAuto(string text, PatternsSetting expected)
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"settings\": {\"patterns\": \"" + text + "\"}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"settings\": {\"patterns\": \"" + text + "\"}}");
 
             Assert.That(p.Settings.Patterns, Is.EqualTo(expected));
         }
@@ -143,21 +143,21 @@ namespace AF.Save.Tests
         [TestCase("", null)]
         public void Language_IsAutoOrASupportedCode(string text, string? canonical)
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"settings\": {\"language\": \"" + text + "\"}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"settings\": {\"language\": \"" + text + "\"}}");
 
             Assert.That(SettingsData.NormalizeLanguage(text), Is.EqualTo(canonical));
             Assert.That(p.Settings.Language, Is.EqualTo(canonical ?? "auto"), "un código que no se admite vuelve a auto");
         }
 
-        [TestCase("{\"profile_schema\": 2, \"settings\": 5, \"sloth\": \"x\"}")]
-        [TestCase("{\"profile_schema\": 2, \"settings\": [], \"sloth\": []}")]
-        [TestCase("{\"profile_schema\": 2, \"settings\": null, \"sloth\": null}")]
-        [TestCase("{\"profile_schema\": 2, \"settings\": {\"patterns\": 1, \"language\": 5, \"sloth_messages\": \"no\", \"idle_hint\": 0, \"sound\": \"off\", \"music\": 0, \"haptics\": []}}")]
-        [TestCase("{\"profile_schema\": 2, \"settings\": {\"patterns\": null, \"language\": null, \"sloth_messages\": null, \"idle_hint\": null, \"sound\": null, \"music\": null, \"haptics\": null}}")]
-        [TestCase("{\"profile_schema\": 2, \"sloth\": {\"last_line\": 3, \"last_greeting_date\": 20261005, \"last_seen_date\": true}}")]
-        [TestCase("{\"profile_schema\": 2, \"sloth\": {\"last_line\": null, \"last_greeting_date\": \"ayer\", \"last_seen_date\": \"2026-02-30\"}}")]
-        [TestCase("{\"profile_schema\": 2, \"sloth\": {\"last_line\": [\"1\", 1.5, -2, null, true, 3000000000, [], {}], \"last_seen_date\": \"2026-10-5\"}}")]
-        [TestCase("{\"profile_schema\": 2, \"sloth\": {\"last_greeting_date\": \"2026-10-05T00:00:00Z\", \"last_seen_date\": \"2026/10/05\"}}")]
+        [TestCase("{\"profile_schema\": 3, \"settings\": 5, \"sloth\": \"x\"}")]
+        [TestCase("{\"profile_schema\": 3, \"settings\": [], \"sloth\": []}")]
+        [TestCase("{\"profile_schema\": 3, \"settings\": null, \"sloth\": null}")]
+        [TestCase("{\"profile_schema\": 3, \"settings\": {\"patterns\": 1, \"language\": 5, \"sloth_messages\": \"no\", \"idle_hint\": 0, \"sound\": \"off\", \"music\": 0, \"haptics\": []}}")]
+        [TestCase("{\"profile_schema\": 3, \"settings\": {\"patterns\": null, \"language\": null, \"sloth_messages\": null, \"idle_hint\": null, \"sound\": null, \"music\": null, \"haptics\": null}}")]
+        [TestCase("{\"profile_schema\": 3, \"sloth\": {\"last_line\": 3, \"last_greeting_date\": 20261005, \"last_seen_date\": true}}")]
+        [TestCase("{\"profile_schema\": 3, \"sloth\": {\"last_line\": null, \"last_greeting_date\": \"ayer\", \"last_seen_date\": \"2026-02-30\"}}")]
+        [TestCase("{\"profile_schema\": 3, \"sloth\": {\"last_line\": [\"1\", 1.5, -2, null, true, 3000000000, [], {}], \"last_seen_date\": \"2026-10-5\"}}")]
+        [TestCase("{\"profile_schema\": 3, \"sloth\": {\"last_greeting_date\": \"2026-10-05T00:00:00Z\", \"last_seen_date\": \"2026/10/05\"}}")]
         public void InvalidValues_TakeTheDefaults_WithoutCorruptingTheProfile(string json)
         {
             Profile p = ProfileJson.Deserialize(json);
@@ -168,9 +168,9 @@ namespace AF.Save.Tests
         [Test]
         public void LastLine_OfAnotherLength_KeepsWhatFits()
         {
-            Profile shorter = ProfileJson.Deserialize("{\"profile_schema\": 2, \"sloth\": {\"last_line\": [3, 0, -1]}}");
-            Profile longer = ProfileJson.Deserialize("{\"profile_schema\": 2, \"sloth\": {\"last_line\": [1, 2, 3, 4, 5, 6, 7, 0, 9, 9]}}");
-            Profile mixed = ProfileJson.Deserialize("{\"profile_schema\": 2, \"sloth\": {\"last_line\": [2, \"x\", 4, -5, 1]}}");
+            Profile shorter = ProfileJson.Deserialize("{\"profile_schema\": 3, \"sloth\": {\"last_line\": [3, 0, -1]}}");
+            Profile longer = ProfileJson.Deserialize("{\"profile_schema\": 3, \"sloth\": {\"last_line\": [1, 2, 3, 4, 5, 6, 7, 0, 9, 9]}}");
+            Profile mixed = ProfileJson.Deserialize("{\"profile_schema\": 3, \"sloth\": {\"last_line\": [2, \"x\", 4, -5, 1]}}");
 
             Assert.That(shorter.Sloth.LastLine, Is.EqualTo(new[] { 3, 0, -1, -1, -1, -1, -1, -1 }));
             Assert.That(longer.Sloth.LastLine, Is.EqualTo(new[] { 1, 2, 3, 4, 5, 6, 7, 0 }));
@@ -181,7 +181,7 @@ namespace AF.Save.Tests
         [Test]
         public void ValidFields_SurviveNextToInvalidOnes()
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2,"
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3,"
                 + " \"settings\": {\"patterns\": \"on\", \"language\": \"klingon\", \"sloth_messages\": false, \"idle_hint\": \"no\"},"
                 + " \"sloth\": {\"last_line\": [4], \"last_greeting_date\": \"2026-10-05\", \"last_seen_date\": 7}}");
 

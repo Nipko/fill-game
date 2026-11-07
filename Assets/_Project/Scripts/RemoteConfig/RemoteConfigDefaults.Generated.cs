@@ -270,6 +270,14 @@ namespace AF.RemoteConfig
       ""type"": ""bool"",
       ""default"": true
     },
+    ""mech_enabled_aguape"": {
+      ""type"": ""bool"",
+      ""default"": true
+    },
+    ""mech_enabled_lancha"": {
+      ""type"": ""bool"",
+      ""default"": true
+    },
     ""mech_debut_level_chica"": {
       ""type"": ""int"",
       ""default"": 14
@@ -313,6 +321,14 @@ namespace AF.RemoteConfig
     ""mech_debut_level_tinaja"": {
       ""type"": ""int"",
       ""default"": 323
+    },
+    ""mech_debut_level_aguape"": {
+      ""type"": ""int"",
+      ""default"": 303
+    },
+    ""mech_debut_level_lancha"": {
+      ""type"": ""int"",
+      ""default"": 363
     },
     ""lluvia_k_pours"": {
       ""type"": ""int"",
@@ -567,6 +583,14 @@ namespace AF.RemoteConfig
     ""lvl_label_override"": {
       ""type"": ""json"",
       ""default"": {}
+    },
+    ""lvl_curve2_enabled"": {
+      ""type"": ""bool"",
+      ""default"": true
+    },
+    ""lvl_murky_normal_max_hidden_units"": {
+      ""type"": ""int"",
+      ""default"": 2
     },
     ""lvl_murky_from_level"": {
       ""type"": ""int"",

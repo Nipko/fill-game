@@ -209,7 +209,7 @@ namespace AF.Save.Tests
         public void NewerSchema_IsNotOverwritten()
         {
             var store = new LocalProfileStore(_dir);
-            const string future = "{\"profile_schema\": 3, \"wallet\": {\"seeds\": 5000}}";
+            const string future = "{\"profile_schema\": 4, \"wallet\": {\"seeds\": 5000}}";
             File.WriteAllText(store.MainPath, future, Utf8NoBom);
 
             ProfileLoadResult result = store.Load();
@@ -225,9 +225,9 @@ namespace AF.Save.Tests
         [Test]
         public void OlderSchema_IsMigratedInMemory_AfterBackingItUp()
         {
-            // Esquema 0 sintético con una clave renombrada, seguido del paso real 1 → 2 de la build (DC15).
+            // Esquema 0 sintético con una clave renombrada, seguido de los pasos reales 1 → 2 (DC15) y 2 → 3 (D-068) de la build.
             const string v0 = "{\"profile_schema\": 0, \"coins\": 7}";
-            var migrations = new ProfileMigrations(2, ProfileMigrations.Step(0, RenameCoinsToSeeds), ProfileMigrations.Step(1, ProfileMigrations.MigrateV1ToV2));
+            var migrations = new ProfileMigrations(3, ProfileMigrations.Step(0, RenameCoinsToSeeds), ProfileMigrations.Step(1, ProfileMigrations.MigrateV1ToV2), ProfileMigrations.Step(2, ProfileMigrations.MigrateV2ToV3));
             var store = new LocalProfileStore(_dir, migrations);
             File.WriteAllText(store.MainPath, v0, Utf8NoBom);
 
@@ -248,7 +248,7 @@ namespace AF.Save.Tests
         public void FailedMigration_KeepsThePreviousProfile_AndBlocksWrites()
         {
             const string v0 = "{\"profile_schema\": 0, \"coins\": 7}";
-            var migrations = new ProfileMigrations(2, ProfileMigrations.Step(0, _ => throw new InvalidOperationException("paso roto")), ProfileMigrations.Step(1, ProfileMigrations.MigrateV1ToV2));
+            var migrations = new ProfileMigrations(3, ProfileMigrations.Step(0, _ => throw new InvalidOperationException("paso roto")), ProfileMigrations.Step(1, ProfileMigrations.MigrateV1ToV2), ProfileMigrations.Step(2, ProfileMigrations.MigrateV2ToV3));
             var store = new LocalProfileStore(_dir, migrations);
             File.WriteAllText(store.MainPath, v0, Utf8NoBom);
 
@@ -642,7 +642,7 @@ namespace AF.Save.Tests
                     File.WriteAllBytes(path, bytes);
                     break;
                 case "wrong-type":
-                    File.WriteAllText(path, "{\"profile_schema\": 2, \"wallet\": {\"seeds\": \"mil\"}}", Utf8NoBom);
+                    File.WriteAllText(path, "{\"profile_schema\": 3, \"wallet\": {\"seeds\": \"mil\"}}", Utf8NoBom);
                     break;
                 default:
                     throw new ArgumentException(corruption);

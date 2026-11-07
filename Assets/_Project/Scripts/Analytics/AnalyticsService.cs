@@ -211,7 +211,7 @@ namespace AF.Analytics
                 start.Add("band", e.Band); // Q-B7-23 (a) [P]
             }
 
-            Log(start);
+            Log(AddCurve(start, e.Curve, e.Pressure));
         }
 
         private void OnLevelWon(LevelWon e)
@@ -226,7 +226,7 @@ namespace AF.Analytics
                 .Add("reward_seeds", e.RewardSeeds)
                 .Add("double_harvest", e.DoubleHarvest)
                 .Add("rescued", e.Rescued));
-            Log(AnalyticsEvent.Create("level_end").Add("success", true).Add("level_name", e.LevelName));
+            Log(AddCurve(AnalyticsEvent.Create("level_end").Add("success", true).Add("level_name", e.LevelName), e.Curve, e.Pressure));
         }
 
         private void OnLevelFailed(LevelFailed e)
@@ -242,8 +242,25 @@ namespace AF.Analytics
             if (e.Hard)
             {
                 // 08 §8.2: level_end en «Victoria, fallo duro o salto»; el fallo blando no termina el nivel.
-                Log(AnalyticsEvent.Create("level_end").Add("success", false).Add("level_name", e.LevelName));
+                Log(AddCurve(AnalyticsEvent.Create("level_end").Add("success", false).Add("level_name", e.LevelName), e.Curve, e.Pressure));
             }
+        }
+
+        // curve (1 o 2) y pressure (0-9) de level_start y level_end (08 §8.2; D-068 [P]), para el A/B de lvl_curve2_enabled (09 §6):
+        // solo en la campaña (curve > 0) y pressure solo si el paquete la trae.
+        private static AnalyticsEvent AddCurve(AnalyticsEvent e, int curve, int pressure)
+        {
+            if (curve > 0)
+            {
+                e.Add("curve", curve);
+            }
+
+            if (pressure >= 0)
+            {
+                e.Add("pressure", pressure);
+            }
+
+            return e;
         }
 
         private void OnLevelAbandoned(LevelAbandoned e)

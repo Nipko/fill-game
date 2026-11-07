@@ -1043,6 +1043,12 @@ namespace AF.UI
                 return; // el estreno de la Hoja sin hoja en el tablero (mech_enabled_hoja apagada): sin dedo (DC7)
             }
 
+            if ((lesson == FingerLesson.AguapeSeal && IndexOfMechanic(session.Current, MechanicType.Aguape) < 0)
+                || (lesson == FingerLesson.LanchaEmpty && IndexOfMechanic(session.Current, MechanicType.Lancha) < 0))
+            {
+                return; // el estreno sin su mecánica (su kill switch apagado: la reserva de la curva 2): sin dedo (D-068)
+            }
+
             if (lesson == FingerLesson.TinajaScoop)
             {
                 _fingerTinaja = IndexOfMechanic(session.Current, MechanicType.Tinaja);
@@ -1396,9 +1402,14 @@ namespace AF.UI
         // El vertido last, hecho sobre before, es el de la lección que se espera (el parcial del 2 o la hoja del 43).
         private bool IsFingerLessonPour(BoardState before, Pour last, PourMode mode)
         {
-            return _fingerLesson == FingerLesson.HojaKey
-                ? TutorialInstruction.IsHojaLesson(before, last.Source, last.Target)
-                : _fingerLesson == FingerLesson.PartialRun && TutorialInstruction.IsPartialRunLesson(before, last.Source, last.Target, mode);
+            switch (_fingerLesson)
+            {
+                case FingerLesson.HojaKey: return TutorialInstruction.IsHojaLesson(before, last.Source, last.Target);
+                case FingerLesson.AguapeSeal: return TutorialInstruction.IsAguapeLesson(before, last.Source, last.Target); // D-068
+                case FingerLesson.LanchaEmpty: return TutorialInstruction.IsLanchaLesson(before, last.Source, last.Target, mode); // D-068
+                default:
+                    return _fingerLesson == FingerLesson.PartialRun && TutorialInstruction.IsPartialRunLesson(before, last.Source, last.Target, mode);
+            }
         }
 
         // La primera cuia del tablero con la mecánica type, o −1.
@@ -1422,6 +1433,8 @@ namespace AF.UI
             {
                 case FingerLesson.PartialRun: return _fingerSetup ? "partial_setup" : "partial";
                 case FingerLesson.HojaKey: return "hoja";
+                case FingerLesson.AguapeSeal: return "aguape";
+                case FingerLesson.LanchaEmpty: return "lancha";
                 case FingerLesson.TinajaScoop: return _fingerStep == 2 ? "tinaja_pour" : "tinaja_scoop";
                 default: return "first";
             }

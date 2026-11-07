@@ -16,7 +16,7 @@ namespace AF.Save.Tests
         public void Default_IsFalse_AndNotWritten()
         {
             Profile fresh = Profile.CreateNew(new ManualClock(SampleProfiles.T0), 5);
-            Profile old = ProfileJson.Deserialize("{\"profile_schema\": 2, \"progress\": {\"max_level\": 45, \"next_level\": 46}}");
+            Profile old = ProfileJson.Deserialize("{\"profile_schema\": 3, \"progress\": {\"max_level\": 45, \"next_level\": 46}}");
 
             Assert.That(fresh.Progress.LeagueDebutSeen, Is.False);
             Assert.That(fresh.Progress.LeagueOpened, Is.False);
@@ -51,7 +51,7 @@ namespace AF.Save.Tests
         [TestCase("{}")]
         public void InvalidValue_IsFalse_WithoutCorruptingTheProfile(string value)
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"progress\": {\"max_level\": 50, \"league_debut_seen\": " + value
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"progress\": {\"max_level\": 50, \"league_debut_seen\": " + value
                 + ", \"league_opened\": " + value + "}}");
 
             Assert.That(p.Progress.LeagueDebutSeen, Is.False);

@@ -1815,6 +1815,7 @@ namespace AF.UI
 
             _views = views;
             _generatedCount = Mathf.Max(1, flow.GeneratedCuias); // cuias generadas: fijan las filas (D-006); las añadidas van a la más corta
+            _boardRows = flow.BoardRows; // rows del tablero del intento (pack_schema 5; D-068), o null
             _tinajaPair = BindTinajaPair(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
             OrderBoardLayers();
             float f = GameConfig.SpeedFactor(flow.LevelNumber);
@@ -1828,6 +1829,11 @@ namespace AF.UI
             _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours, _mechanicBackLayer, _mechanicFrontLayer);
             _animator.SpeedFactor = f;
             _animator.ReduceMotion = flow.ReduceMotion;
+            for (int i = 0; i < _views.Length; i++)
+            {
+                _views[i].OverlayHost.ReduceMotion = flow.ReduceMotion; // lo que un overlay anima en reposo (la Lancha; D-068)
+            }
+
             _animator.ReduceMotionFactor = (float)ReduceMotionFactor; // B9: el de los pasos de mecánica, el mismo que el de los vertidos
             _fx.ReduceMotion = flow.ReduceMotion;
             ApplyLevelPatterns(flow.LevelNumber); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3); Alto contraste, 35 % (B9)
@@ -3328,7 +3334,8 @@ namespace AF.UI
             // [P]), ninguna cuia cambia de fila (T-C) y solo se recalcula el ancho con el T en pantalla (re-layout de 300 ms,
             // 02 §4.1; tope de D-004).
             int generated = _generatedCount > 0 ? Mathf.Min(_generatedCount, _views.Length) : _views.Length;
-            _layout = BoardLayout.Compute(_views.Length, generated, heightU, w, BoardTop, BoardBottom, _tinajaPair, LayoutTinajaIndex);
+            // rows del nivel (pack_schema 5; 02 §5; D-068): las filas fijas del tablero del intento, si las trae.
+            _layout = BoardLayout.Compute(_views.Length, generated, heightU, w, BoardTop, BoardBottom, _tinajaPair, LayoutTinajaIndex, _boardRows);
             BoardLayoutResult l = _layout;
             for (int i = 0; i < _views.Length; i++)
             {
