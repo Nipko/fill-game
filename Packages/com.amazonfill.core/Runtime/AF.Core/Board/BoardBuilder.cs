@@ -24,6 +24,11 @@ namespace AF.Core.Board
     /// la Flor.</description></item>
     /// <item><description>Tinaja y su cuia (M13): <c>{"type":"tinaja"}</c> y <c>{"type":"cucharon"}</c>, sin campos ni id de
     /// pareja (una tinaja por nivel); las ocultas de la tinaja llegan por <c>hidden</c>, como las de Aguas turbias.</description></item>
+    /// <item><description>Mecánicas de la 1.1 con <c>pack_schema</c> 5 (D-068 [P]; 02 §9.1 M8 y M11): el Aguapé,
+    /// <c>{"type":"aguape","group":g,"n":1|2}</c>, con su grupo (0-7) en los bits de pareja y <c>n</c> (1, o 2 en el espeso; sin
+    /// <c>n</c> es 1) igual en todo el grupo; y la Lancha, <c>{"type":"lancha","k":k}</c>, con <c>k</c> de 2 a 7. <c>group</c> solo
+    /// lo lleva el Aguapé. Las reglas de diseño (grupo contiguo de 2-5, una lancha por nivel, <c>k</c> ≥ vacíos + 1…) las comprueba
+    /// <see cref="LevelValidation"/>.</description></item>
     /// <item><description><c>k</c> ausente en Lluvia o Piraña toma el valor por defecto que pasa el llamante
     /// (<c>lluvia_k_pours</c> / <c>pirana_k_pours</c> de Remote Config, 08 §9; 3 y 4 por defecto).</description></item>
     /// <item><description>Falla cerrado: rechaza las mecánicas cuyas reglas aún no están portadas al núcleo (se jugarían como
@@ -244,7 +249,7 @@ namespace AF.Core.Board
                 MechanicSpec spec = attrs[i];
                 if (spec.IsNone)
                 {
-                    if (spec.Key != 0 || spec.Partner >= 0 || spec.N != 0 || spec.K != 0 || spec.Key2 != 0)
+                    if (spec.Key != 0 || spec.Partner >= 0 || spec.N != 0 || spec.K != 0 || spec.Key2 != 0 || spec.Group >= 0)
                     {
                         return "attrs[" + Num(i) + "]: campos sin type";
                     }
@@ -256,6 +261,11 @@ namespace AF.Core.Board
                 if (spec.Key2 != 0 && spec.Type != MechanicType.Flor)
                 {
                     return where + "key2 solo lo lleva la Flor de vitória-régia (D-023, punto 5)";
+                }
+
+                if (spec.Group >= 0 && spec.Type != MechanicType.Aguape)
+                {
+                    return where + "group solo lo lleva el Aguapé (pack_schema 5, D-068)";
                 }
 
                 int flags = 0;
@@ -374,6 +384,37 @@ namespace AF.Core.Board
                         key = spec.Key;
                         n = spec.N;
                         k = spec.K != 0 ? spec.K : lluviaKPours;
+                        break;
+                    case MechanicType.Aguape:
+                        // 1.1 (D-068 [P]; 08 §4.1, pack_schema 5): aguape {group 0-7, n 1 o 2}; sin n es 1. El mismo n en todo el
+                        // grupo: la suelta lo lee de cualquiera de sus cuias.
+                        if (spec.Key != 0 || spec.Partner >= 0 || spec.K != 0 || spec.Group < 0 || spec.Group > Cuia.MaxMechanicField
+                            || spec.N < 0 || spec.N > AguapeMechanic.ThickSeals)
+                        {
+                            return where + "lleva group (0-7) y como mucho n, 1 o 2 (Aguapé espeso) (02 §9.1 M8; D-068)";
+                        }
+
+                        n = spec.N == AguapeMechanic.ThickSeals ? AguapeMechanic.ThickSeals : 1;
+                        pair = spec.Group;
+                        for (int j = 0; j < i; j++)
+                        {
+                            MechanicSpec other = attrs[j];
+                            if (other.Type == MechanicType.Aguape && other.Group == spec.Group
+                                && (other.N == AguapeMechanic.ThickSeals) != (n == AguapeMechanic.ThickSeals))
+                            {
+                                return where + "todas las cuias del grupo " + Num(spec.Group) + " llevan el mismo n (02 §9.1 M8; D-068)";
+                            }
+                        }
+
+                        break;
+                    case MechanicType.Lancha:
+                        // 1.1 (D-068 [P]; 08 §4.1, pack_schema 5): lancha {k}, las cuias vacías con que atraca (≥ 2; 3 bits).
+                        if (spec.Key != 0 || spec.Partner >= 0 || spec.N != 0 || spec.K < 2 || spec.K > Cuia.MaxMechanicField)
+                        {
+                            return where + "lleva solo k, de 2 a 7 (02 §9.1 M11; D-068)";
+                        }
+
+                        k = spec.K;
                         break;
                     case MechanicType.Pirana:
                         if (spec.Key != 0 || spec.Partner >= 0 || spec.N != 0)

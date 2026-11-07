@@ -100,6 +100,34 @@ namespace AF.Core.Tests.DotnetOnly
             Assert.That(report.Declared, Is.GreaterThan(0));
         }
 
+        [TestCase(PourMode.Run, false)]
+        [TestCase(PourMode.Run, true)]
+        [TestCase(PourMode.Single, false)]
+        [TestCase(PourMode.Single, true)]
+        public void R13b_CurveBoards_ADeclaredDeadEndIsUnsolvable(PourMode mode, bool lancha)
+        {
+            // D-068 (F2; añadido de D-014 del 2026-11-06): con el Aguapé («bloqueado hasta sellar») y la Lancha («faltan
+            // vacías»), todo estado que el cierre declara perdido es irresoluble. Tableros de 7 cuias que pasan LevelValidation,
+            // con capacidades uniformes y mixtas (la lección de C1-9 con la Liana).
+            var report = new Report();
+            var rng = new Prng(lancha ? 0xDEAD_3631UL : 0xDEAD_3031UL);
+            AF.Solver.Tests.IMechanicInjector injector = lancha ? new AF.Solver.Tests.LanchaInjector() : new AF.Solver.Tests.AguapeInjector();
+            for (int attempt = 0; attempt < 600 && report.Boards < 60; attempt++)
+            {
+                BoardState? start = FutilePropertyTests.CurveStart(rng, (attempt & 1) != 0, injector);
+                if (start != null)
+                {
+                    string name = injector.Name + " " + attempt.ToString(CultureInfo.InvariantCulture);
+                    Play(start, mode, Prng.SeedFrom("amazonfill:deadend:curve:" + name), name, report);
+                }
+            }
+
+            TestContext.WriteLine(mode + " " + injector.Name + ": " + report);
+            Assert.That(report.Boards, Is.EqualTo(60));
+            Assert.That(report.Violations, Is.Empty);
+            Assert.That(report.Declared + report.R13Stuck, Is.GreaterThan(0));
+        }
+
         private static string[] CheapReferenceNames()
         {
             var names = new List<string>();

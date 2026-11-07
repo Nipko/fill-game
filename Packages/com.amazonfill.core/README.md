@@ -498,3 +498,58 @@ key ≠ key2). Estreno en el 403.
   solo dotnet `FutilePropertyTests` (P1-P3 en `run` y `single` con capacidades uniformes; las mixtas, bloqueadas, y su
   contraejemplo), `HotLoopAllocationTests.FlorBoard_HotLoop_DoesNotAllocate` (0 bytes en reglas, en el vertido que la abre y en el
   bot; < 1 KB por `Solve`) y la fila Fl de `ReferenceBoards` y `MechanicsPerformanceTests`.
+
+## Mecánicas de la 1.1: Aguapé, Aguapé espeso y Lancha (D-068, fase F2)
+
+Fuente: D-068 (`docs/dev/decisiones.md`, con sus añadidos del 2026-11-07), 02 §9.1 M8 y M11, 03 §3 y §9, 08 §4.1
+(`pack_schema` 5). Lo que necesitan F3 (`tools/`) y F4 (cliente); la API es estable.
+
+**Formato y carga** (`BoardBuilder.Build`, que ya usan el cliente y las herramientas):
+
+- `MechanicType.Aguape` (código 12, clave `"aguape"`) y `MechanicType.Lancha` (13, `"lancha"`); `MechanicTypes.Last` = `Lancha`.
+- `MechanicSpec` gana `Group` (0-7, −1 si falta) con el parámetro opcional `group` al final del constructor:
+  `new MechanicSpec(MechanicType.Aguape, n: 2, group: g)` y `new MechanicSpec(MechanicType.Lancha, k: k)`. Los lectores de
+  JSON solo tienen que leer el campo `group` (como `key2`).
+- Aguapé: `group` obligatorio (0-7), `n` 1 o 2 (sin `n` es 1), el mismo `n` en todo el grupo; `group` solo en el Aguapé. Lancha:
+  solo `k`, de 2 a 7 (3 bits).
+- En la cuia: `Cuia.MechanicGroup` (el id de grupo, en los bits del id de pareja; tras canonicalizar está renumerado, así que
+  sirve para saber qué cuias van juntas, no como nombre), `MechanicN` (1 o 2) y `MechanicK` (la `k` de la Lancha).
+
+**Reglas** (todas en `BoardRules`; nadie más las reimplementa):
+
+- Aguapé: no es origen mientras lleva la mata; como destino, la regla normal y la `futil` normal (sin exención). Se suelta todo el
+  grupo en la etapa (d) de R10 en el vertido en que `n` cuias del grupo quedan selladas (las cuias selladas siguen con la
+  mecánica hasta la suelta). `ReleaseBySeals` decide todas las sueltas de una pasada antes de aplicarlas.
+- Lancha: no es origen ni destino hasta atracar; atraca en la etapa (f) en cuanto el tablero tiene `k` o más cuias vacías (toda
+  cuia sin dosis, de cualquier capacidad y mecánica, sin contar la lancha [P]) y queda normal (sin mecánica: es el bit «atracada»).
+- `PourRules.Settle(state, out events)`: (d) y (f) sin vertido. `LevelSession` lo aplica a su tablero inicial y al de la Pororoca
+  si llevan una lancha sin atracar: con la Cuia extra o de rescate (la sesión rehecha con una vacía más) la lancha atraca al
+  momento [P]. En un nivel válido no cambia nada.
+- Eventos: `PourEvents.AguapeReleasedMask` y `LanchaDockedMask` (también en `ReleasedMask`).
+- Consultas para la presentación y las herramientas (`CurveMechanics`): `AguapeSeals(state, group)` (1 = el espeso ya se
+  aclaró), `SealableByReceiving(state, i)` (máscara de frutas con que la cuia sellaría solo recibiendo; la regla 6 de M8) y
+  `LanchaEmpties(state, lancha)` (las vacías que cuentan para `k`), con las constantes de tamaños y cargas.
+
+**Validación** (`LevelValidation.Validate`): grupo contiguo (índices consecutivos), de 2-5 cuias (4-5 en el espeso), con una cuia
+(dos con frutas distintas en el espeso) que sella solo recibiendo; el Aguapé va con Aguas turbias y nunca con la Tinaja. Lancha:
+una por nivel, carga de 1-3 dosis y no llena, `k` ≥ vacíos iniciales + 1 y `k` ≤ T − 1, nunca con Aguas turbias ni con la
+Tinaja. Lo que depende del número de nivel (Lancha con Liana solo desde el 401, estrenos) es de level-qa.
+`LevelValidation.ValidateRows(state, rows)`: 1-3 filas de 1-7 que suman las cuias y ningún grupo partido entre filas (los
+topes de 02 §5 por número de filas son de level-qa).
+
+**Clave canónica:** `BoardCanon.Sort` renumera los grupos del Aguapé en orden canónico (los grupos se ordenan por la lista
+ordenada de los `Packed` de sus cuias sin el id). Sin Aguapé no cambia nada: el golden de todos los packs publicados
+(`DotnetOnly/CanonicalHashGoldenTests`, calculado en 1830df08) y el compartido de `AguapeTests` lo fijan. El solver traduce
+su solución a índices reales con los grupos renumerados (`AStarSolver.CanonicalOrder`).
+
+**Solver y bots:** la heurística no cambia (filtros; admisible y consistente en `CurveSolverTests`). Pororoca: las cuias con
+mecánica quedan fijas (`Shuffler.IsFixed`), así que la mata y la carga sin atracar no se mueven. Nuevo **bot atento ×40** [P]
+(`AF.Solver.Bot.AttentiveBot`, propuesta §6.4): el casual con lookahead de 2 vertidos (puntuación casual del vertido más la
+mejor del siguiente, +1.000 si gana) y sin los vertidos que dejan el tablero en Aguas estancadas (si todos bloquean, juega
+entre todos). Misma `BotOptions` y misma `BotResult`; semilla `AttentiveBot.SeedFor(seed)` (flujo `0xA7E07`). Solo para el
+informe de level-qa, nunca para la etiqueta. Sin asignaciones una vez calentado.
+
+**Pruebas:** `AguapeTests`, `LanchaTests` y `CurveSolverTests` (compartidas); en `DotnetOnly/`, P1-P3 con capacidades uniformes
+y mixtas (`FutilePropertyTests`, también sobre tableros de 7 cuias que pasan la validación), el cierre de D-014
+(`DeadEndProbePropertyTests.R13b_CurveBoards_…`), la clave canónica con permutaciones y renumeraciones, el bucle caliente sin
+asignaciones, Pororoca, Luciérnaga, Morpho y la carga de un nivel con `pack_schema` 5 (`CurveMechanicsTests`).

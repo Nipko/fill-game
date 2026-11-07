@@ -5168,3 +5168,34 @@ Medición: `docs/dev/curva-1.1-f1-medicion.md` (mundo 7, variante b). El dueño 
 - **F1-3:** la celda del reto 369 se cambia en `campaign_v3`.
 - **F1-4:** sigue pendiente del dueño el dato de Analytics de cuántos jugadores pasan del 300.
 - **En F3:** medir los mundos 8 y 9 con estos topes, antes de generar los packs.
+
+### D-068, añadido del 2026-11-07: la fase F2 (núcleo)
+
+Hecha en la rama `v11/curva-f2-nucleo` (core-dev). Lo que fija el núcleo para F3 (herramientas) y F4 (cliente), con la API en
+`Packages/com.amazonfill.core/README.md` («Mecánicas de la 1.1»):
+- **Aguapé y Aguapé espeso** (02 §9.1 M8): `MechanicType.Aguape` (código 12), con el grupo en los bits del id de pareja y `n`
+  (1 o 2) en los de `n`. Filtro de origen; la suelta de todo el grupo va en R10 (d), en el vertido en que `n` cuias del grupo
+  quedan selladas, y se deduce del estado. `BoardRules` decide ahora todas las sueltas de la etapa (d) antes de aplicarlas (sin
+  cambio para la Liana y la Flor).
+- **Lancha** (02 §9.1 M11): `MechanicType.Lancha` (código 13), con `k` (2-7). Atraca en R10 (f); «atracada» es la ausencia de la
+  mecánica, que entra en la clave canónica y Marea restaura.
+- **Clave canónica:** `BoardCanon.Sort` renumera los grupos del Aguapé en orden canónico (forma canónica completa para los
+  grupos). Los hashes de la 1.0 no cambian: golden de los 4.609 tableros publicados (packs de campaña, reserva, tutorial y Reto
+  del río), calculado antes del cambio.
+- **Carga y validación:** `aguape {group, n?}` y `lancha {k}` (`pack_schema` 5) en `BoardBuilder`; reglas de grupo, de la lancha y
+  de combinación en `LevelValidation`, y `LevelValidation.ValidateRows` para `rows`.
+- **Comprobado:** P1-P3 con capacidades uniformes y mixtas (sin contraejemplos, también con el espeso y dos grupos), el cierre de
+  D-014 con «bloqueado hasta sellar» y «faltan vacías», la heurística del solver (admisible y consistente) y el bucle caliente
+  sin asignaciones.
+- **Decisiones [P] de F2**, con la recomendada aplicada:
+  - para `k` cuentan todas las cuias sin dosis (de cualquier capacidad y con o sin mecánica, también la Cuia extra y la de
+    rescate), sin contar la lancha;
+  - si la vacía que falta llega sin un vertido (la Cuia extra o de rescate, la Pororoca), la partida asienta el tablero y la
+    lancha atraca en ese momento (`PourRules.Settle`, que `LevelSession` aplica solo con una lancha sin atracar);
+  - el espeso exige dos cuias del grupo que puedan sellar solo recibiendo con frutas distintas; ninguna cuia del grupo empieza
+    sellada (03 §17 #5);
+  - el **bot atento ×40** (`AttentiveBot`): valor = puntuación casual del vertido + la mejor del vertido siguiente (+1.000 si
+    gana); descarta los vertidos que dejan Aguas estancadas, salvo que bloqueen todos; semilla propia. Solo informe.
+- **GDD:** cerradas en 02 y 03 las preguntas 11, 12, 13 y 15 de 03 (espeso en 347-348; Tinaja fuera de la 1.1; Aguapé con Aguas
+  turbias; dos dispositivos con el mínimo), con la Cocha en la 1.2. Las copias de la lista de estrenos en 08 §9, 00 §6.5 y el
+  contrato 1 (la Tinaja) quedan para el carril de documentación.

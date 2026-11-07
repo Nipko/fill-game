@@ -170,7 +170,9 @@ namespace AF.Tests.EditMode
         // solo no basta para saber que el caso falla por lo que dice su nombre. El nombre del test es el motivo, no el JSON.
         private static readonly TestCaseData[] InvalidSchema2Levels =
         {
-            Invalid("tipo desconocido", TestPacks.Schema2Pack("[null, null, {\"type\": \"aguape\"}, null]"), "desconocido 'aguape'"),
+            Invalid("tipo desconocido", TestPacks.Schema2Pack("[null, null, {\"type\": \"palizada\"}, null]"), "desconocido 'palizada'"),
+            Invalid("aguape con pack_schema 2", TestPacks.Schema2Pack("[null, null, {\"type\": \"aguape\", \"group\": 0}, null]"), "el tipo aguape necesita pack_schema 5"),
+            Invalid("lancha con pack_schema 2", TestPacks.Schema2Pack("[null, null, {\"type\": \"lancha\", \"k\": 2}, null]"), "el tipo lancha necesita pack_schema 5"),
             Invalid("barro no es un type", TestPacks.Schema2Pack("[null, null, {\"type\": \"barro\"}, null]"), "desconocido 'barro'"),
             Invalid("hoja sin key", TestPacks.Schema2Pack("[null, null, {\"type\": \"hoja\"}, null]"), "(hoja): lleva solo key"),
             Invalid("partner incoherente", TestPacks.Schema2Pack("[null, null, {\"type\": \"remolino\", \"partner\": 3}, null]"), "la pareja tiene que ser un Remolino"),

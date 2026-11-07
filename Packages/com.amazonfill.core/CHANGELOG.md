@@ -4,6 +4,21 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Sin publicar]
 
+### Curva de la 1.1, fase F2: Aguapé, Aguapé espeso, Lancha y bot atento (D-068)
+
+- **Aguapé (M8) y Aguapé espeso:** `MechanicType.Aguape` (12), filtro de origen; suelta de todo el grupo en R10 (d) con `n` sellos
+  del grupo (1, o 2 en el espeso); grupo en los bits del id de pareja y `n` en los de `n`. `BoardRules.ReleaseBySeals` decide las
+  sueltas de una pasada antes de aplicarlas (sin cambio para la Liana y la Flor).
+- **Lancha (M11):** `MechanicType.Lancha` (13), ni origen ni destino hasta atracar en R10 (f) con `k` cuias vacías; atracada =
+  sin mecánica. `PourRules.Settle` y `LevelSession` asientan el tablero inicial y el de la Pororoca con una lancha [P].
+- **Carga `pack_schema` 5:** `MechanicSpec.Group` (parámetro opcional `group`); `BoardBuilder` lee `aguape {group, n?}` y
+  `lancha {k}`. `LevelValidation`: reglas de grupo y de lancha, combinaciones con Aguas turbias y la Tinaja, y
+  `ValidateRows`. `CurveMechanics`: consultas para el cliente y las herramientas.
+- **Clave canónica:** `BoardCanon.Sort` renumera los grupos del Aguapé (`RelabelGroups`, sin asignaciones en el montón). Los
+  hashes de la 1.0 no cambian (golden de todos los packs publicados).
+- **Bot atento ×40 [P]** (`AttentiveBot`): lookahead de 2 y sin vertidos que bloquean; solo informe.
+- Eventos `AguapeReleasedMask` y `LanchaDockedMask`. Pruebas P1-P3, D-014, golden, asignaciones y ayudas.
+
 ### Aguas estancadas solo al repetir (añadido de D-014 del 2026-11-06, 1.1)
 
 - **`LevelSession` espera a que el jugador repita** (punto 1 del añadido de D-059 del 2026-10-31, el nivel 26): con el cierre de

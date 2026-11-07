@@ -51,6 +51,8 @@ namespace AF.Core.Mechanics
             table[(int)MechanicType.Cucharon] = new CucharonMechanic();
             table[(int)MechanicType.HojaAtada] = new HojaAtadaMechanic();
             table[(int)MechanicType.Flor] = new FlorMechanic();
+            table[(int)MechanicType.Aguape] = new AguapeMechanic();
+            table[(int)MechanicType.Lancha] = new LanchaMechanic();
             return table;
         }
 

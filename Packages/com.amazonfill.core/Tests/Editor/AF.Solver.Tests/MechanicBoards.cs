@@ -818,4 +818,127 @@ namespace AF.Solver.Tests
             return true;
         }
     }
+
+    /// <summary>
+    /// Aguapé (1.1, D-068; 02 §9.1 M8): <paramref name="groups"/> grupos de cuias contiguas sin mecánica y sin sellar, con un id de
+    /// grupo al azar (0-7, distinto por grupo; la canonicalización lo renumera). Normal: grupos de 2-3 cuias; espeso
+    /// (<c>n</c> = 2): uno de 4. No exige que el grupo pueda sellar: los tests de propiedad recorren tableros cualesquiera.
+    /// </summary>
+    internal sealed class AguapeInjector : IMechanicInjector
+    {
+        private readonly bool _thick;
+        private readonly int _groups;
+
+        public AguapeInjector(bool thick = false, int groups = 1)
+        {
+            _thick = thick;
+            _groups = groups;
+        }
+
+        public string Name => _thick ? "aguape espeso" : _groups == 1 ? "aguape" : "aguape x" + _groups;
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            int firstId = rng.NextInt(8);
+            for (int g = 0; g < _groups; g++)
+            {
+                int size = _thick ? 4 : 2 + rng.NextInt(2);
+                var starts = new List<int>();
+                for (int i = 0; i + size <= caps.Length; i++)
+                {
+                    bool free = true;
+                    for (int j = i; j < i + size && free; j++)
+                    {
+                        free = attrs[j].IsNone && !SealedStart(caps[j], doses[j], doses);
+                    }
+
+                    if (free)
+                    {
+                        starts.Add(i);
+                    }
+                }
+
+                if (starts.Count == 0)
+                {
+                    return false;
+                }
+
+                int start = starts[rng.NextInt(starts.Count)];
+                int id = (firstId + (g * 3)) % 8;
+                for (int j = start; j < start + size; j++)
+                {
+                    attrs[j] = new MechanicSpec(MechanicType.Aguape, n: _thick ? 2 : 0, group: id);
+                }
+            }
+
+            return true;
+        }
+
+        private static bool SealedStart(int cap, List<int> d, List<int>[] all)
+        {
+            if (d.Count != cap || MechanicBoards.Colors(new[] { d }).Count != 1)
+            {
+                return false;
+            }
+
+            int units = 0;
+            for (int i = 0; i < all.Length; i++)
+            {
+                for (int k = 0; k < all[i].Count; k++)
+                {
+                    if (all[i][k] == d[0])
+                    {
+                        units++;
+                    }
+                }
+            }
+
+            return units == cap;
+        }
+    }
+
+    /// <summary>
+    /// Lancha (1.1, D-068; 02 §9.1 M11): una cuia sin mecánica con 1-3 dosis y sin llenar pasa a ser la carga, con <c>k</c> =
+    /// vacíos actuales + 1 (o + 2, si cabe en el tablero).
+    /// </summary>
+    internal sealed class LanchaInjector : IMechanicInjector
+    {
+        public string Name => "lancha";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            var candidates = new List<int>();
+            int empties = 0;
+            for (int i = 0; i < caps.Length; i++)
+            {
+                if (doses[i].Count == 0)
+                {
+                    empties++;
+                }
+                else if (attrs[i].IsNone && doses[i].Count <= 3 && doses[i].Count < caps[i])
+                {
+                    candidates.Add(i);
+                }
+            }
+
+            if (candidates.Count == 0)
+            {
+                return false;
+            }
+
+            int k = empties + 1 + rng.NextInt(2);
+            if (k > caps.Length - 1)
+            {
+                k = caps.Length - 1;
+            }
+
+            if (k < 2 || k < empties + 1)
+            {
+                return false;
+            }
+
+            attrs[candidates[rng.NextInt(candidates.Count)]] = new MechanicSpec(MechanicType.Lancha, k: k);
+            return true;
+        }
+    }
 }
