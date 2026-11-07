@@ -2340,7 +2340,8 @@ namespace AF.UI
                 r.anchorMax = new Vector2(0.5f, 0.5f);
                 r.pivot = ProceduralArt.CrewPivot(CrewPiece.Tucuxi);
                 RectInt c = ProceduralArt.CrewCell(CrewPiece.Tucuxi);
-                r.sizeDelta = new Vector2(RiverCrew.TucuxiDp, RiverCrew.TucuxiDp * c.height / c.width);
+                float tw = RiverCrew.TucuxiDp * ProceduralArt.MapCanoeWidthDp / ProceduralArt.CapiCanoeDesignWidthDp; // a la escala de la canoa de 40 dp, como el tucán
+                r.sizeDelta = new Vector2(tw, tw * c.height / c.width);
             }
 
             _crewTucuxi!.transform.SetSiblingIndex(_guideA.transform.GetSiblingIndex()); // detrás del guía
