@@ -1,5 +1,5 @@
 // --self-test curva (D-068, fase F3): las comprobaciones de la curva 2 (Checks/CurveChecks.cs) sobre tableros sintéticos, sin el
-// núcleo (QA-AGUAPE y QA-LANCHA son el esqueleto que se activa con F2): QA-T-ROLE (topes por papel con la especificación
+// núcleo salvo las filas de QA-AGUAPE, que llaman a LevelValidation.ValidateRows: QA-T-ROLE (topes por papel con la especificación
 // campaign_v3, ids, semillas y replaces de la curva), QA-MURKY-NORMAL, los grupos y las filas de QA-AGUAPE, QA-LANCHA y la
 // lectura de un pack con el Aguapé (rows, attrs en bruto y PendingTypes mientras el núcleo no lo conozca). Desde la raíz del
 // repositorio. Códigos: 0 = todo PASS; 1 = algún FAIL; 2 = falta la especificación.
@@ -70,25 +70,26 @@ internal static class CurveQaSelfTest
         Expect("murky_estreno_dos_dosis", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(debut, [[2, 0], [2, 1]]))), "QA-MURKY-NORMAL");
         Expect("murky_intro_fuera_del_estreno", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(comfort, [[2, 0]]) with { Intro = "murky" })), "QA-MURKY-NORMAL");
 
-        // QA-AGUAPE: grupos y filas (esqueleto F2). 9 cuias: el grupo 0 en 4-5.
+        // QA-AGUAPE: grupos y filas. 9 cuias (filas 5 + 4): el grupo 0 en 2-3.
         QaLevel ag = Aguape(Level(spec, 450, 9, 8), [(2, 0, null), (3, 0, null)]);
         Expect("aguape_valido", CurveChecks.Aguape(spec, ag), null);
         Expect("aguape_no_contiguo", CurveChecks.Aguape(spec, Aguape(ag, [(1, 0, null), (3, 0, null)])), "QA-AGUAPE");
         Expect("aguape_una_cuia", CurveChecks.Aguape(spec, Aguape(ag, [(2, 0, null)])), "QA-AGUAPE");
         Expect("aguape_espeso_3", CurveChecks.Aguape(spec, Aguape(ag, [(1, 1, 2), (2, 1, 2), (3, 1, 2)])), "QA-AGUAPE");
         Expect("aguape_espeso_4", CurveChecks.Aguape(spec, Aguape(ag, [(0, 1, 2), (1, 1, 2), (2, 1, 2), (3, 1, 2)])), null);
-        Expect("aguape_pendiente_f2", CurveChecks.Aguape(spec, ag with { PendingTypes = ["aguape"] }), "QA-AGUAPE");
         QaLevel big = Aguape(Level(spec, 460, 12, 11), [(4, 0, null), (5, 0, null)]);
         Expect("aguape_11_sin_rows", CurveChecks.Aguape(spec, big), "QA-AGUAPE");
         Expect("aguape_rows_validas", CurveChecks.Aguape(spec, big with { Rows = [4, 4, 4] }), null);
-        Expect("aguape_grupo_partido", CurveChecks.Aguape(spec, Aguape(big, [(3, 0, null), (4, 0, null)]) with { Rows = [4, 4, 4] }), "QA-AGUAPE");
+        // Con el núcleo (F2): LevelValidation.ValidateRows con rows o, con 10 cuias o menos, las filas fijas de 02 sec. 5.
+        Expect("aguape_grupo_partido", CurveChecks.AguapeCore(Core(spec, Aguape(big, [(3, 0, null), (4, 0, null)]) with { Rows = [4, 4, 4] })), "QA-AGUAPE");
+        Expect("aguape_grupo_en_su_fila", CurveChecks.AguapeCore(Core(spec, big with { Rows = [4, 4, 4] })).Where(i => i.Message.Contains("fila", StringComparison.Ordinal)), null);
         Expect("aguape_rows_no_suman", CurveChecks.Aguape(spec, big with { Rows = [4, 4, 3] }), "QA-AGUAPE");
         // Sin rows y con 10 cuias o menos, las filas de 02 sec. 5 [P]: 9 cuias = 5 + 4; un grupo en 4-5 queda partido.
-        Expect("aguape_partido_sin_rows", CurveChecks.Aguape(spec, Aguape(ag, [(3, 0, null), (4, 0, null), (5, 0, null)])), "QA-AGUAPE");
+        Expect("aguape_partido_sin_rows", CurveChecks.AguapeCore(Core(spec, Aguape(ag, [(3, 0, null), (4, 0, null), (5, 0, null)]))), "QA-AGUAPE");
         Check("rows: 2 filas de 7 valen, 3 de 6 no, 13 cuias en 2 filas no", CurveChecks.RowsProblem([7, 5], 12) is null
             && CurveChecks.RowsProblem([6, 6, 2], 14) is not null && CurveChecks.RowsProblem([7, 6], 13) is not null && CurveChecks.RowsProblem([5, 4, 4], 13) is null);
 
-        // QA-LANCHA (esqueleto F2): la carga de 1-3 dosis en la cuia 3, k >= 2 y >= vacíos + 1 (1 vacío: k 3 vale y k 1 no).
+        // QA-LANCHA (estructura): la carga de 1-3 dosis en la cuia 3, k >= 2 y >= vacíos + 1 (1 vacío: k 3 vale y k 1 no).
         QaLevel boat = Lancha(Level(spec, 450, 9, 8), 3, 3);
         Expect("lancha_valida", CurveChecks.Lancha(spec, boat), null);
         Expect("lancha_k_corto", CurveChecks.Lancha(spec, Lancha(boat, 3, 1)), "QA-LANCHA");
@@ -149,6 +150,23 @@ internal static class CurveQaSelfTest
             fails += ok ? 0 : 1;
             Console.WriteLine(AsciiText.Of($"{(ok ? "PASS" : "FAIL")}  curva: {what}"));
         }
+    }
+
+    /// <summary>
+    /// Evaluación con el estado del núcleo: el tablero sintético con el Aguapé de sus attrs en bruto (sin medir; QA-AGUAPE con el
+    /// núcleo solo necesita el estado y las filas).
+    /// </summary>
+    private static LevelEval Core(CampaignSpec spec, QaLevel lv)
+    {
+        MechanicSpec[] attrs = [.. lv.RawAttrs.Select(a => a?.Type == "aguape"
+            ? new MechanicSpec(MechanicType.Aguape, n: a.N == 2 ? 2 : 0, group: a.Group ?? 0) : MechanicSpec.None)];
+        AF.Core.Board.BoardBuildResult built = (lv.Board with { Attrs = attrs }).Build();
+        if (!built.IsValid)
+        {
+            throw new InvalidOperationException("tablero sintetico no valido: " + built.Error);
+        }
+
+        return new LevelEval { Level = lv, Plan = spec.Plan(lv.Level), State = built.State };
     }
 
     private static LevelEval Eval(CampaignSpec spec, QaLevel lv) =>

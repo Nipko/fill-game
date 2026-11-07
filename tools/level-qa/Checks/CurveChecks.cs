@@ -6,22 +6,23 @@
 //                   murky_normal.max_hidden_units (2) dosis ocultas, desde murky_normal.from_level; por ciclo, como mucho
 //                   comfort_per_cycle comodidades turbias (aviso si hay menos: el generador puede publicar sin turbias por T1),
 //                   2 retos turbios y 1 hito turbio cada 2 ciclos (02 §11, T1).
-//   QA-AGUAPE       esqueleto que se activa con F2: cada group con 2-5 cuias contiguas, en la misma fila (con rows), sin Barro; el
-//                   espeso (n = 2) con 4-5; con 11 cuias o más, rows obligatorio; rows suma las cuias, con los topes de 02 §5 y sin
-//                   partir un grupo (también en relief); intro aguape/aguape_n2 solo en su estreno; nunca con la tinaja. Lo que
-//                   necesita las reglas del núcleo (una cuia del grupo sella solo recibiendo; atascado(S0)) llega con F2: hasta
-//                   entonces un nivel con el Aguapé falla cerrado (el núcleo no lo conoce).
-//   QA-LANCHA       esqueleto que se activa con F2: una lancha por nivel; carga de 1-3 dosis visibles, sin Barro; k >= vacíos
-//                   iniciales + 1; nunca con Aguas turbias; con la Liana solo desde el 401; intro lancha solo en su estreno. La
-//                   atracada en la solución llega con F2; hasta entonces un nivel con la Lancha falla cerrado.
-// Al integrar F2 (rama v11/curva-f2-nucleo; Packages/com.amazonfill.core/README.md): QA-AGUAPE llama a
-// LevelValidation.ValidateRows(state, rows) para el nivel y para cada variante de relief (Validate no la llama), y el informe
-// suma el bot atento (AF.Solver.Bot.AttentiveBot; 03 §17 #20). PackReader ya rechaza el Aguapé, la Lancha, rows y pressure con
-// un pack_schema menor que 5.
+//   QA-AGUAPE       cada group con 2-5 cuias contiguas, sin Barro; el espeso (n = 2) con 4-5; con 11 cuias o más, rows
+//                   obligatorio; rows suma las cuias, con los topes de 02 §5; intro aguape/aguape_n2 solo en su estreno; nunca con la
+//                   tinaja. Con el núcleo (F2): LevelValidation.ValidateRows en el nivel y en cada variante de relief (con rows o,
+//                   con 10 cuias o menos, las filas fijas de 02 §5), una cuia del grupo (dos con frutas distintas en el espeso) que
+//                   sella solo recibiendo, atascado(S0) = false y cada grupo se suelta en la solución del par (03 §17 #17).
+//   QA-LANCHA       una lancha por nivel; carga de 1-3 dosis visibles, sin Barro; k >= vacíos iniciales + 1 (toda cuia sin dosis,
+//                   como el núcleo); nunca con Aguas turbias; con la Liana solo desde el 401; intro lancha solo en su estreno; con
+//                   el núcleo, atascado(S0) = false y la lancha atraca en la solución del par (03 §17 #18).
+//   QA-BOT-ATENTO   aviso (informe; 03 §17 #20): dentro de cada mundo de la curva 2, bot_atento(hito n+1) >= bot_atento(hito n),
+//                   con el bot atento ×40 (AF.Solver.Bot.AttentiveBot, semilla propia del nivel). Nunca decide la etiqueta.
+// PackReader rechaza el Aguapé, la Lancha, rows y pressure con un pack_schema menor que 5.
 // La comprobación de par de la curva 2 (QA-PAR: solo par >= 2K) y las trampas tempranas (QA-EARLY-TRAPS: 0 en Normal y 1 en
 // Difícil) viven en BaseChecks y valen igual aquí.
 using System.Globalization;
 using AF.Core.Board;
+using AF.Core.Mechanics;
+using AF.Core.Rules;
 using AmazonFill.Tools.LevelGenerator.Campaign;
 using AmazonFill.Tools.LevelGenerator.Generation;
 using AmazonFill.Tools.LevelGenerator.Metrics;
@@ -34,8 +35,9 @@ internal static class CurveChecks
     [
         ("QA-T-ROLE", "curva 2: T y K dentro del tope de su papel (role_caps; 03 sec. 12 y sec. 17 #16); en kind curve, replaces = el id de la curva 1 del mismo slot e id/seed con _c{c}/:c{c}; aviso si difficulty.pressure no es el de las palancas del tablero (D-068)"),
         ("QA-MURKY-NORMAL", "curva 2: Normal con turbias solo en comodidad, con 1 cuia y <= 2 dosis ocultas, desde murky_normal.from_level; por ciclo <= comfort_per_cycle comodidades, <= 2 retos y <= 1 hito cada 2 ciclos con turbias (02 sec. 11 T1; 03 sec. 17 #19)"),
-        ("QA-AGUAPE", "esqueleto F2: grupos de 2-5 cuias contiguas en la misma fila, sin Barro (espeso n = 2: 4-5); rows con >= 11 cuias, que suma las cuias y respeta 02 sec. 5 sin partir un grupo (tambien en relief); estreno solo en su nivel; nunca con la tinaja; las reglas del nucleo llegan con F2 (03 sec. 17 #17)"),
-        ("QA-LANCHA", "esqueleto F2: una lancha por nivel; carga de 1-3 dosis visibles sin Barro; k >= vacios + 1; sin Aguas turbias; con la Liana solo desde el 401; estreno solo en su nivel; la atracada en la solucion llega con F2 (03 sec. 17 #18)"),
+        ("QA-AGUAPE", "grupos de 2-5 cuias contiguas sin Barro (espeso n = 2: 4-5); rows con >= 11 cuias, que suma las cuias y respeta 02 sec. 5; LevelValidation.ValidateRows en el nivel y en cada relief; una cuia que sella solo recibiendo (dos en el espeso); atascado(S0) = false; el grupo se suelta en la solucion; estreno solo en su nivel; nunca con la tinaja (03 sec. 17 #17)"),
+        ("QA-LANCHA", "una lancha por nivel; carga de 1-3 dosis visibles sin Barro; k >= vacios + 1; sin Aguas turbias; con la Liana solo desde el 401; estreno solo en su nivel; atascado(S0) = false y la lancha atraca en la solucion (03 sec. 17 #18)"),
+        ("QA-BOT-ATENTO", "aviso: dentro de cada mundo de la curva 2, bot atento x40 del hito n+1 >= el del hito n (03 sec. 17 #20; solo informe)"),
     ];
 
     /// <summary>Primer nivel en que la Lancha puede ir con la Liana (03 §11, fila 401-700).</summary>
@@ -48,7 +50,9 @@ internal static class CurveChecks
         return TRole(ctx.Spec, e, pack?.Kind ?? "campaign")
             .Concat(MurkyNormal(ctx.Spec, e))
             .Concat(Aguape(ctx.Spec, e.Level))
-            .Concat(Lancha(ctx.Spec, e.Level));
+            .Concat(AguapeCore(e))
+            .Concat(Lancha(ctx.Spec, e.Level))
+            .Concat(LanchaCore(e));
     }
 
     public static IEnumerable<QaIssue> TRole(CampaignSpec spec, LevelEval e, string kind)
@@ -280,32 +284,6 @@ internal static class CurveChecks
         return cuias >= 13 && rows.Length != 3 ? "con 13 cuias o mas, 3 filas (02 sec. 5; D-030)" : null;
     }
 
-    /// <summary>
-    /// Fila de cada cuia según <paramref name="rows"/> o, sin filas fijas y con 10 cuias o menos, las de la regla de 02 §5 [P]: 1
-    /// fila con 5 o menos y ⌈T/2⌉ + ⌊T/2⌋ con 6-10. Null si no se puede saber (11 o más cuias sin rows, que ya falla).
-    /// Esqueleto hasta F2: al integrarlo, QA-AGUAPE llama a LevelValidation.ValidateRows, que lleva la regla al núcleo.
-    /// </summary>
-    private static int[]? RowOf(int[]? rows, int cuias)
-    {
-        rows ??= cuias <= 5 ? [cuias] : cuias <= 10 ? [(cuias + 1) / 2, cuias / 2] : null;
-        if (rows is null || rows.Sum() != cuias)
-        {
-            return null;
-        }
-
-        var row = new int[cuias];
-        int i = 0;
-        for (int r = 0; r < rows.Length; r++)
-        {
-            for (int k = 0; k < rows[r]; k++)
-            {
-                row[i++] = r;
-            }
-        }
-
-        return row;
-    }
-
     public static IEnumerable<QaIssue> Aguape(CampaignSpec spec, QaLevel lv)
     {
         QaIssue Fail(string msg) => new("QA-AGUAPE", lv.Pack, lv.Level, msg);
@@ -323,7 +301,7 @@ internal static class CurveChecks
             }
         }
 
-        if (lv.Intro is "aguape" or "aguape_n2" && spec.F2Mechanics.FirstOrDefault(m => m.Intro == lv.Intro) is { } m && m.Debut != lv.Level)
+        if (lv.Intro is "aguape" or "aguape_n2" && spec.MechanicTable.FirstOrDefault(m => m.Id == lv.Intro) is { } m && m.Debut != lv.Level)
         {
             yield return Fail($"intro_mechanic {lv.Intro} fuera de su estreno ({m.Debut})");
         }
@@ -372,7 +350,6 @@ internal static class CurveChecks
             yield return string.Create(CultureInfo.InvariantCulture, $"{where}: {cuias.Length} cuias con Aguape y sin rows (08 sec. 4.1)");
         }
 
-        int[]? rowOf = RowOf(rows, cuias.Length);
         foreach (IGrouping<int, int> g in groups)
         {
             int[] idx = [.. g.Order()];
@@ -387,11 +364,6 @@ internal static class CurveChecks
             if (idx[^1] - idx[0] != idx.Length - 1)
             {
                 yield return $"{name}: cuias no contiguas ({string.Join(", ", idx)})";
-            }
-
-            if (rowOf is not null && idx.Select(i => rowOf[i]).Distinct().Count() > 1)
-            {
-                yield return $"{name}: partido entre filas";
             }
 
             if (idx.Any(i => cuias[i].Contains(Cuia.MudColor)))
@@ -415,7 +387,7 @@ internal static class CurveChecks
             yield return Fail("intro_mechanic lancha y el nivel no la lleva");
         }
 
-        if (lv.Intro == "lancha" && spec.F2Mechanics.FirstOrDefault(m => m.Intro == "lancha") is { } debut && debut.Debut != lv.Level)
+        if (lv.Intro == "lancha" && spec.MechanicTable.FirstOrDefault(m => m.Id == "lancha") is { } debut && debut.Debut != lv.Level)
         {
             yield return Fail(string.Create(CultureInfo.InvariantCulture, $"intro_mechanic lancha fuera de su estreno ({debut.Debut})"));
         }
@@ -435,9 +407,10 @@ internal static class CurveChecks
             yield return Fail(string.Create(CultureInfo.InvariantCulture, $"{boats.Length} lanchas (una por nivel)"));
         }
 
-        int empties = Enumerable.Range(0, lv.Board.Cuias.Length).Count(i => lv.Board.Cuias[i].Length == 0 && lv.RawAttrs[i] is null);
         foreach (int b in boats)
         {
+            // Vacías para k: toda cuia sin dosis menos la lancha, de cualquier capacidad y mecánica (como el núcleo; 02 §9.1 M11).
+            int empties = Enumerable.Range(0, lv.Board.Cuias.Length).Count(i => i != b && lv.Board.Cuias[i].Length == 0);
             int[] load = lv.Board.Cuias[b];
             if (load.Length is < 1 or > 3 || load.Contains(Cuia.MudColor) || lv.Board.Hidden.Any(h => h.Length > 0 && h[0] == b))
             {
@@ -459,6 +432,125 @@ internal static class CurveChecks
         if (lv.Level < LanchaWithLianaFrom && lv.RawAttrs.Any(a => a?.Type is "liana" or "flor"))
         {
             yield return Fail(string.Create(CultureInfo.InvariantCulture, $"Lancha con la Liana antes del {LanchaWithLianaFrom} (03 sec. 11)"));
+        }
+    }
+
+    /// <summary>
+    /// QA-AGUAPE con el núcleo (03 §17 #17): LevelValidation.ValidateRows en el nivel y en cada variante de relief (con sus rows o,
+    /// con 10 cuias o menos, las filas fijas de 02 §5: CurveBoards.LayoutRows), una cuia de cada grupo que sella solo recibiendo
+    /// (dos con frutas distintas en el espeso), atascado(S0) = false y cada grupo se suelta en la solución del par.
+    /// </summary>
+    public static IEnumerable<QaIssue> AguapeCore(LevelEval e)
+    {
+        QaLevel lv = e.Level;
+        if (e.State is not BoardState state || !Enumerable.Range(0, state.Count).Any(i => state[i].Mechanic == MechanicType.Aguape))
+        {
+            yield break;
+        }
+
+        QaIssue Fail(string msg) => new("QA-AGUAPE", lv.Pack, lv.Level, msg);
+        if (RowsCheck(state, lv.Rows) is string bad)
+        {
+            yield return Fail("nivel: " + bad);
+        }
+
+        foreach (ReliefEval r in e.Relief.Where(r => r.State is not null))
+        {
+            if (RowsCheck(r.State!, r.Relief.Rows) is string rb)
+            {
+                yield return Fail($"relief {r.Relief.Type}: {rb}");
+            }
+        }
+
+        foreach (IGrouping<int, int> g in Enumerable.Range(0, state.Count).Where(i => state[i].Mechanic == MechanicType.Aguape)
+            .GroupBy(i => state[i].MechanicPairId).OrderBy(g => g.Key))
+        {
+            int[] masks = [.. g.Select(i => CurveMechanics.SealableByReceiving(state, i)).Where(m => m != 0)];
+            bool thick = state[g.First()].MechanicN == CurveMechanics.AguapeThickSeals;
+            bool ok = thick
+                ? Enumerable.Range(0, masks.Length).Any(a => Enumerable.Range(a + 1, masks.Length - a - 1)
+                    .Any(b => masks[a] != masks[b] || (masks[a] & (masks[a] - 1)) != 0))
+                : masks.Length >= 1;
+            if (!ok)
+            {
+                yield return Fail(string.Create(CultureInfo.InvariantCulture,
+                    $"grupo {g.Key}: {(thick ? "no hay dos cuias que sellen solo recibiendo con frutas distintas" : "ninguna cuia sella solo recibiendo")} (02 sec. 9.1 M8, regla 6)"));
+            }
+        }
+
+        if (PourRules.IsStuck(state, true))
+        {
+            yield return Fail("el nivel empieza atascado (02 sec. 9.2 regla 1)");
+        }
+
+        if (e.Par is { Status: AF.Solver.Search.SolveStatus.Solved } par)
+        {
+            if (CurveBoards.Replay(state, par.Solution, out string? error) is not (int[] unreleased, _))
+            {
+                yield return Fail("no se puede repetir la solucion del par: " + error);
+            }
+            else if (unreleased.Length > 0)
+            {
+                yield return Fail($"el grupo {string.Join(", ", unreleased)} no se suelta en la solucion del par");
+            }
+        }
+    }
+
+    /// <summary>LevelValidation.ValidateRows con las filas del tablero (rows o las fijas de 02 §5); null si valen o si no se saben.</summary>
+    private static string? RowsCheck(BoardState state, int[]? rows)
+    {
+        int[]? layout = rows ?? CurveBoards.LayoutRows(state.Count, aguape: false);
+        return layout is null ? null : LevelValidation.ValidateRows(state, layout);
+    }
+
+    /// <summary>QA-LANCHA con el núcleo (03 §17 #18): atascado(S0) = false y la lancha atraca en la solución del par.</summary>
+    public static IEnumerable<QaIssue> LanchaCore(LevelEval e)
+    {
+        QaLevel lv = e.Level;
+        if (e.State is not BoardState state || !Enumerable.Range(0, state.Count).Any(i => state[i].Mechanic == MechanicType.Lancha))
+        {
+            yield break;
+        }
+
+        QaIssue Fail(string msg) => new("QA-LANCHA", lv.Pack, lv.Level, msg);
+        if (PourRules.IsStuck(state, true))
+        {
+            yield return Fail("el nivel empieza atascado (02 sec. 9.2 regla 1)");
+        }
+
+        if (e.Par is { Status: AF.Solver.Search.SolveStatus.Solved } par)
+        {
+            if (CurveBoards.Replay(state, par.Solution, out string? error) is not (_, bool docked))
+            {
+                yield return Fail("no se puede repetir la solucion del par: " + error);
+            }
+            else if (!docked)
+            {
+                yield return Fail("la lancha no atraca en la solucion del par");
+            }
+        }
+    }
+
+    /// <summary>
+    /// QA-BOT-ATENTO (aviso; 03 §17 #20): en cada mundo de la curva 2, los hitos en orden con el bot atento que no baja.
+    /// </summary>
+    public static IEnumerable<QaIssue> AttentiveLadder(QaContext ctx)
+    {
+        foreach (IGrouping<int, LevelEval> world in ctx.Levels
+            .Where(e => e.Plan is { Curve: > 0, Role: SlotRole.Milestone, Reserve: 0 } && e.Attentive is not null && ctx.Packs.Any(p => p.Path == e.Level.Pack && p.Kind == "curve"))
+            .GroupBy(e => e.Plan!.World.World).OrderBy(g => g.Key))
+        {
+            LevelEval? previous = null;
+            foreach (LevelEval e in world.OrderBy(e => e.Level.Level))
+            {
+                if (previous is not null && e.Attentive < previous.Attentive - 1e-9)
+                {
+                    yield return new QaIssue("QA-BOT-ATENTO", e.Level.Pack, e.Level.Level, string.Create(CultureInfo.InvariantCulture,
+                        $"bot atento {e.Attentive * 100:0} % en el hito {e.Level.Level}, por debajo del hito {previous.Level.Level} ({previous.Attentive * 100:0} %): el pico no crece (para la curacion)"), Warning: true);
+                }
+
+                previous = e;
+            }
         }
     }
 }

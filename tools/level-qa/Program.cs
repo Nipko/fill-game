@@ -85,10 +85,11 @@ const string Usage = """
     contacto solo esta en una variante de relief, y GateChecks.CvdUnavoidable solo lo baja a aviso con el pack reproducido
     y Tints.CvdAdjacent > 0. Sale con 0, 1 (algun FAIL) o 2. El --self-test sin nombre suma key2, daily, reserve, cvd y curva.
     Curva 2 de la 1.1 (D-068, fase F3): con una especificacion con curve (tools/level-generator/specs/campaign_v3.json) los
-    packs curva_{mm}_v1 (kind curve, pack_schema 5) pasan ademas QA-T-ROLE, QA-MURKY-NORMAL, QA-AGUAPE y QA-LANCHA (estos
-    dos, esqueleto que se activa con F2); QA-PAR solo pide par >= 2K. --levels empieza en curve.from_level.
-    --self-test curva: los topes por papel, los ids y replaces de la curva, las turbias en Normal y los esqueletos de
-    QA-AGUAPE y QA-LANCHA sobre tableros sinteticos (sin el nucleo). Sale con 0, 1 (algun FAIL) o 2.
+    packs curva_{mm}_v1 (kind curve, pack_schema 5) pasan ademas QA-T-ROLE, QA-MURKY-NORMAL, QA-AGUAPE y QA-LANCHA (con el
+    nucleo: filas con ValidateRows, sello, atascado(S0) y la solucion) y el aviso QA-BOT-ATENTO (bot atento x40 de los hitos,
+    tambien en el informe); QA-PAR solo pide par >= 2K. --levels empieza en curve.from_level.
+    --self-test curva: los topes por papel, los ids y replaces de la curva, las turbias en Normal, QA-AGUAPE (con las
+    filas del nucleo) y QA-LANCHA sobre tableros sinteticos. Sale con 0, 1 (algun FAIL) o 2.
 
     Codigos de salida: 0 = todo cumple (los avisos no fallan) o ayuda; 1 = algun nivel no cumple, el esquema falla, un
     pack no se reproduce o falta Python; 2 = uso incorrecto, sin paquetes o archivos ilegibles.
@@ -277,6 +278,7 @@ foreach (LevelEval e in evals)
 
 issues.AddRange(CycleChecks.Run(ctx));
 issues.AddRange(CurveChecks.RunCampaign(ctx));
+issues.AddRange(CurveChecks.AttentiveLadder(ctx));
 issues.AddRange(RepetitionChecks.Run(ctx));
 issues.AddRange(MechanicChecks.RunCampaign(ctx));
 
@@ -338,6 +340,19 @@ if (report is not null)
     foreach ((string id, string rule) in allIds)
     {
         sb.Append(string.Create(CultureInfo.InvariantCulture, $"| `{id}` | {rule} | {issues.Count(i => i.Check == id && !i.Warning)} |\n"));
+    }
+
+    List<LevelEval> attentive = evals.Where(e => e.Attentive is not null && e.Plan!.Role is SlotRole.Challenge or SlotRole.Milestone).ToList();
+    if (attentive.Count > 0)
+    {
+        // 03 §17 #20 (D-068): el bot atento solo va en el informe, nunca en la etiqueta.
+        sb.Append("\n## Bot atento ×40 de los retos y los hitos (03 §17 #20; solo informe)\n\n");
+        sb.Append("| Nivel | Papel | Etiqueta | Bot casual | Bot atento |\n|---|---|---|---|---|\n");
+        foreach (LevelEval e in attentive)
+        {
+            sb.Append(string.Create(CultureInfo.InvariantCulture,
+                $"| {e.Level.Level} | {e.Plan!.RoleName} | {e.Level.Label} | {e.Bot * 100:0} % | {e.Attentive!.Value * 100:0} % |\n"));
+        }
     }
 
     sb.Append("\n## Incidencias\n\n");

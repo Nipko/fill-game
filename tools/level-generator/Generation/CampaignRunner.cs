@@ -205,11 +205,6 @@ internal static class CampaignRunner
         List<LevelPlan> plans = Enumerable.Range(first, last - first + 1).Select(spec.Plan).ToList();
         var levels = plans.Select(p => new GeneratedLevel { Plan = p, Slot = null! }).ToList();
         log($"campana {spec.SpecId}: niveles {first}-{last} ({levels.Count}), {Environment.ProcessorCount} hilos");
-        foreach (LevelPlan p in plans.Where(p => spec.F2Slots.ContainsKey(p.Level)))
-        {
-            // Slots del Aguapé y la Lancha (D-068, F2): declarados en la especificación, sin colocar hasta que F2 esté integrado.
-            log(AsciiText.Of($"  aviso: nivel {p.Level}: slot de F2 '{spec.F2Slots[p.Level].Literal}' sin colocar (el nucleo aun no tiene la mecanica); se genera con la celda del calendario '{p.Cell.Literal}'"));
-        }
 
         // Fase 1: candidatos.
         var phase = Stopwatch.StartNew();

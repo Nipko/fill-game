@@ -61,6 +61,9 @@ internal sealed class LevelEval
     public int TinajaS0Unproven { get; init; } = -1;
 
     public List<ReliefEval> Relief { get; init; } = [];
+
+    /// <summary>Bot atento ×40 (03 §17 #20; solo informe) en los niveles de la curva 2 con tablero válido; null en los demás.</summary>
+    public double? Attentive { get; init; }
 }
 
 internal sealed class QaContext
@@ -179,6 +182,7 @@ internal static class Evaluator
             Level = lv,
             Plan = plan,
             State = state,
+            Attentive = plan is { Curve: > 0 } && validation is null ? metrics.AttentiveFail(state, lv.Seed) : null,
             ValidationError = validation,
             Par = par,
             Bot = bot,

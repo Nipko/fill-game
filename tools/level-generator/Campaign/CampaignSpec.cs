@@ -110,6 +110,12 @@ internal sealed record MechanicInfo(string Code, string Id, string Kind, int Deb
 
     /// <summary>Variante de la campaña en la que existe (<c>only_variant</c>: la Tinaja, solo en la «a»), o null en las dos.</summary>
     public string? OnlyVariant { get; init; }
+
+    /// <summary>
+    /// Motivo por el que su ciclo de estreno no toma su temporada (<c>season_debut_exempt</c>; SEASONS, d.2 regla 7), o null: la
+    /// Lancha, que el dueño estrena en el 363 (D-068, P8 A), en un ciclo de aguas bajas de la 1.0 (361-380) [P].
+    /// </summary>
+    public string? SeasonDebutExempt { get; init; }
 }
 
 internal sealed record CapacityInfo(string Code, string Id, int Cap, int Debut);
@@ -149,16 +155,6 @@ internal sealed record CurveInfo(int C, int FromLevel, string BaseSpec, string? 
 
 /// <summary>Tope de cuias (T) y colores (K) de un papel del ciclo (03 §12, «Topes por papel»; D-068, P2 A).</summary>
 internal sealed record RoleCap(int TMin, int TMax, int KMin, int KMax);
-
-/// <summary>
-/// Mecánica de la 1.1 que aún no existe en el núcleo (<c>f2_mechanics</c>; D-068, fase F2): el Aguapé, el Aguapé espeso y la
-/// Lancha. Su código no es de <see cref="MechanicCodes"/>: sus slots (<c>f2_slots</c>) quedan declarados y la superposición los
-/// rellenará cuando F2 esté integrado; hasta entonces el generador usa la celda del calendario y lo dice.
-/// </summary>
-internal sealed record F2Mechanic(string Code, string Id, int Debut, string Intro);
-
-/// <summary>Slot declarado para una mecánica de F2: la celda que llevará (<c>f2_slots</c>) y sus códigos.</summary>
-internal sealed record F2Slot(int Level, string Literal, bool Star, IReadOnlyList<string> Codes);
 
 /// <summary>Celda del calendario d.4 ya interpretada.</summary>
 internal sealed record CalendarCell(
@@ -468,12 +464,6 @@ internal sealed class CampaignSpec
 
     /// <summary>Escalón de presión objetivo de cada hito (clave <c>pressure_plan</c>; 03 §12, escala larga): nivel → escalón.</summary>
     public IReadOnlyDictionary<int, int> PressurePlan { get; init; } = new Dictionary<int, int>();
-
-    /// <summary>Mecánicas de F2 (Aguapé, Aguapé espeso y Lancha; clave <c>f2_mechanics</c>).</summary>
-    public IReadOnlyList<F2Mechanic> F2Mechanics { get; init; } = [];
-
-    /// <summary>Slots declarados para las mecánicas de F2 (clave <c>f2_slots</c>), por nivel.</summary>
-    public IReadOnlyDictionary<int, F2Slot> F2Slots { get; init; } = new Dictionary<int, F2Slot>();
 
     /// <summary>El nivel es de la curva 2 (desde <c>curve.from_level</c>).</summary>
     public bool IsCurveLevel(int level) => Curve is { } c && level >= c.FromLevel;
@@ -960,6 +950,7 @@ internal sealed class CampaignSpec
             NotWith = m["not_with"]?.AsArray().Select(x => x!.GetValue<string>()).ToArray() ?? Array.Empty<string>(),
             OnlyWith = m["only_with"]?.AsArray().Select(x => x!.GetValue<string>()).ToArray(),
             OnlyVariant = m["only_variant"]?.GetValue<string>(),
+            SeasonDebutExempt = m["season_debut_exempt"]?.GetValue<string>(),
         }).ToList();
         foreach (MechanicInfo m in allMechanics.Where(m => !MechanicCodes.IsKnown(m.Code)))
         {
@@ -1027,13 +1018,6 @@ internal sealed class CampaignSpec
             }
         }
 
-        List<F2Mechanic> f2Mechanics = root["f2_mechanics"]?.AsArray().Select(m => new F2Mechanic(
-            Str(m!, "code"), Str(m!, "id"), Int(m!, "debut"), Str(m!, "intro"))).ToList() ?? [];
-        foreach (F2Mechanic m in f2Mechanics.Where(m => MechanicCodes.IsKnown(m.Code) || allMechanics.Any(x => x.Code == m.Code)))
-        {
-            throw new CampaignSpecException($"{path}: f2_mechanics: el codigo '{m.Code}' ya es una mecanica del calendario");
-        }
-
         var spec = new CampaignSpec
         {
             Path = path,
@@ -1093,8 +1077,6 @@ internal sealed class CampaignSpec
                     kv.Value!["t"]![0]!.GetValue<int>(), kv.Value["t"]![1]!.GetValue<int>(),
                     kv.Value["k"]![0]!.GetValue<int>(), kv.Value["k"]![1]!.GetValue<int>()))
                 : new Dictionary<string, RoleCap>(),
-            F2Mechanics = f2Mechanics,
-            F2Slots = F2SlotsOf(path, root["f2_slots"], f2Mechanics),
             MaxChicas = root["capacities_per_level"]?["max_chica"]?.GetValue<int>() ?? DefaultMaxChicas,
             MaxAltas = root["capacities_per_level"]?["max_alta"]?.GetValue<int>() ?? DefaultMaxAltas,
             CapacityLimitsBefore = root["capacities_per_level"]?["before_level"]?.GetValue<int>() ?? DefaultCapacityLimitsBefore,
@@ -1174,39 +1156,6 @@ internal sealed class CampaignSpec
         }
 
         return map;
-    }
-
-    /// <summary>
-    /// Slots de F2 (<c>f2_slots</c>): {"nivel": "[★]Ag[+...]"} con códigos de <c>f2_mechanics</c> y, si acaso, del calendario.
-    /// </summary>
-    private static Dictionary<int, F2Slot> F2SlotsOf(string path, JsonNode? node, List<F2Mechanic> f2)
-    {
-        var slots = new Dictionary<int, F2Slot>();
-        if (node is not JsonObject obj)
-        {
-            return slots;
-        }
-
-        foreach (KeyValuePair<string, JsonNode?> kv in obj.Where(kv => !kv.Key.EndsWith("note", StringComparison.Ordinal)))
-        {
-            if (!int.TryParse(kv.Key, NumberStyles.None, CultureInfo.InvariantCulture, out int level))
-            {
-                throw new CampaignSpecException($"{path}: f2_slots: clave no numerica '{kv.Key}'");
-            }
-
-            string literal = kv.Value!.GetValue<string>().Trim();
-            bool star = literal.StartsWith(Star, StringComparison.Ordinal);
-            string body = star ? literal[Star.Length..] : literal;
-            string[] codes = body.Split(' ')[0].Split('+');
-            if (!codes.Any(c => f2.Any(m => m.Code == c)))
-            {
-                throw new CampaignSpecException($"{path}: f2_slots: el {level} ('{literal}') no lleva ninguna mecanica de f2_mechanics");
-            }
-
-            slots[level] = new F2Slot(level, literal, star, codes);
-        }
-
-        return slots;
     }
 
     private static int MaxRisk(JsonNode row, int riskPairCount)
@@ -1364,6 +1313,18 @@ internal static class MechanicCodes
     public const string HojaAtada = "Ha";
     public const string Flor = "Fl";
 
+    /// <summary>Aguapé (M8; D-068, fase F2): <c>{"type":"aguape","group":g}</c>, estreno en el 303 (<c>intro_mechanic</c> aguape).</summary>
+    public const string Aguape = "Ag";
+
+    /// <summary>Aguapé espeso (D-068, P13 A): <c>{"type":"aguape","group":g,"n":2}</c>, estreno en el 347 (aguape_n2).</summary>
+    public const string AguapeThick = "A2";
+
+    /// <summary>Lancha (M11; D-068, P8 A): <c>{"type":"lancha","k":k}</c>, estreno en el 363 (lancha).</summary>
+    public const string Lancha = "La";
+
+    /// <summary><c>n</c> del Aguapé espeso (02 §9.1 M8: dos sellos dentro del grupo; <c>CurveMechanics.AguapeThickSeals</c>).</summary>
+    public const int AguapeThickSeals = AF.Core.Mechanics.CurveMechanics.AguapeThickSeals;
+
     /// <summary><c>n</c> del Brote de dos hojas (b.3; firma de <c>pack_schema</c> 3: brote con n ∈ {1, 2}).</summary>
     public const int BroteTwoLeaves = 2;
 
@@ -1372,7 +1333,11 @@ internal static class MechanicCodes
     /// Fl, y Ln y B2 distintos de Li y Br.
     /// </summary>
     public static readonly string[] All =
-        [.. new[] { Hoja, Matapi, Liana, LianaCount, Murky, Remolino, Barro, Lluvia, Brote, BroteTwo, Pirana, Tinaja, HojaAtada, Flor }.Order(StringComparer.Ordinal)];
+        [.. new[] { Hoja, Matapi, Liana, LianaCount, Murky, Remolino, Barro, Lluvia, Brote, BroteTwo, Pirana, Tinaja, HojaAtada, Flor, Aguape, AguapeThick, Lancha }
+            .Order(StringComparer.Ordinal)];
+
+    /// <summary>Mecánicas de la 1.1 (D-068): solo en la curva 2, con <c>pack_schema</c> 5.</summary>
+    public static readonly string[] Curve = [Aguape, AguapeThick, Lancha];
 
     /// <summary>Variantes de la 1.0 (b.3): las que exigen <c>pack_schema</c> 3 en su estreno (su <c>intro_mechanic</c>).</summary>
     public static readonly string[] Variants = [LianaCount, HojaAtada, BroteTwo, Flor];
@@ -1385,8 +1350,12 @@ internal static class MechanicCodes
     /// </summary>
     public static bool IsMixedCapacityBlocked(string code) => code is Liana or LianaCount or Flor;
 
-    /// <summary>Necesita cuias a medias en el tablero base (cuia de holgura; fill no las deja): el Brote y el de dos hojas.</summary>
-    public static bool NeedsPartial(string code) => code is Brote or BroteTwo;
+    /// <summary>
+    /// Necesita cuias a medias en el tablero base (cuia de holgura; fill no las deja): el Brote y el de dos hojas; en la 1.1
+    /// (D-068), la Lancha: para atracar, el tablero sin la carga guarda todas las dosis en T - 1 - k cuias, y la holgura es la
+    /// cuia que lo permite con k = vacíos + 1 (Superposition.Lancha) [P].
+    /// </summary>
+    public static bool NeedsPartial(string code) => code is Brote or BroteTwo or Lancha;
 
     /// <summary>
     /// Código del calendario de una entrada de <c>attrs</c> (la tinaja y su cuia dan Ti), o null sin mecánica. El Barro (Ba) y
@@ -1405,6 +1374,8 @@ internal static class MechanicCodes
         MechanicType.Tinaja or MechanicType.Cucharon => Tinaja,
         MechanicType.HojaAtada => HojaAtada,
         MechanicType.Flor => Flor,
+        MechanicType.Aguape => a.N == AguapeThickSeals ? AguapeThick : Aguape,
+        MechanicType.Lancha => Lancha,
         _ => throw new ArgumentOutOfRangeException(nameof(a), a.Type, "mecanica sin codigo de calendario"),
     };
 }

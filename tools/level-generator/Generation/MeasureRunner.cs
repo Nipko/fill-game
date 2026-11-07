@@ -4,7 +4,7 @@
 // de 20, los ciclos que no colocan y los retos e hitos uno a uno. No escribe packs ni alivio: es una medida, no contenido.
 // El informe no lleva tiempos: dos ejecuciones dan los mismos bytes.
 // Fase F3 (curva 2, campaign_v3): los topes salen de role_caps de la especificación (si no, los de D-068 de abajo), y el informe
-// suma el escalón de presión de cada hito (pressure_plan frente a Pressure.OfBoard) y los slots de F2 sin colocar.
+// suma el escalón de presión de cada hito (pressure_plan frente a Pressure.OfBoard) con el bot atento ×40 (03 §17 #20).
 using System.Globalization;
 using System.Text;
 using AmazonFill.Tools.LevelGenerator.Campaign;
@@ -214,34 +214,17 @@ internal static class MeasureRunner
         {
             W("## Escalón de presión de los hitos");
             W();
-            W("Plan = `pressure_plan` de la especificación; tablero = palancas del elegido (`Pressure.OfBoard`, sin el Aguapé, que llega con F2); celda = lo que se espera de la celda (`Pressure.OfCell`).");
+            W("Plan = `pressure_plan` de la especificación; tablero = palancas del elegido (`Pressure.OfBoard`, con el Aguapé); celda = lo que se espera de la celda (`Pressure.OfCell`); bot atento = `AttentiveBot` ×40 del elegido (03 §17 #20, solo informe).");
             W();
-            W("| Hito | Celda | Plan | Celda (esperado) | Tablero | Bot |");
-            W("|---|---|---|---|---|---|");
+            W("| Hito | Celda | Plan | Celda (esperado) | Tablero | Bot | Bot atento |");
+            W("|---|---|---|---|---|---|---|");
             foreach (GeneratedLevel l in milestones)
             {
                 string planned = spec.PressurePlan.TryGetValue(l.Plan.Level, out int pp) ? pp.ToString(CultureInfo.InvariantCulture) : "—";
                 int fromCell = Pressure.OfCell(l.Plan.Cell, l.Plan.K, milestone: true);
                 string board = l.Chosen is null ? "—" : Pressure.OfBoard(l.Chosen.Board, l.Chosen.K, milestone: true).ToString(CultureInfo.InvariantCulture);
-                W(F($"| {l.Plan.Level} | {l.Plan.Cell.Short} | {planned} | {fromCell} | {board} | {(l.Chosen is null ? "—" : Pct(l.Chosen.Bot))} |"));
-            }
-
-            W();
-        }
-
-        // Slots de F2 (Aguapé y Lancha): declarados en la especificación, sin colocar hasta que F2 esté integrado.
-        List<GeneratedLevel> f2 = levels.Where(l => spec.F2Slots.ContainsKey(l.Plan.Level)).ToList();
-        if (f2.Count > 0)
-        {
-            W("## Slots de F2 sin colocar");
-            W();
-            W("El núcleo aún no tiene el Aguapé ni la Lancha (D-068, fase F2): estos slots se midieron con la celda del calendario.");
-            W();
-            W("| Nivel | Celda de F2 | Celda medida |");
-            W("|---|---|---|");
-            foreach (GeneratedLevel l in f2)
-            {
-                W(F($"| {l.Plan.Level} | {spec.F2Slots[l.Plan.Level].Literal} | {l.Plan.Cell.Short} |"));
+                string attentive = l.Chosen is null ? "—" : Pct(Attentive.Value!.AttentiveFail(l.Chosen.State, l.Plan.SeedText));
+                W(F($"| {l.Plan.Level} | {l.Plan.Cell.Short} | {planned} | {fromCell} | {board} | {(l.Chosen is null ? "—" : Pct(l.Chosen.Bot))} | {attentive} |"));
             }
 
             W();
@@ -258,6 +241,9 @@ internal static class MeasureRunner
 
         return sb.ToString();
     }
+
+    /// <summary>Motor de métricas del bot atento del informe (uno por hilo; el informe se escribe en uno solo).</summary>
+    private static readonly ThreadLocal<Metrics.MetricsEngine> Attentive = new(() => new Metrics.MetricsEngine());
 
     private static string Row(GeneratedLevel l)
     {

@@ -144,6 +144,18 @@ internal static class Relief
             [.. board.Cuias, []],
             [.. board.Attrs, MechanicSpec.None],
             board.Hidden);
+        if (board.Attrs.Any(a => a.Type is MechanicType.Aguape or MechanicType.Lancha))
+        {
+            // Curva 2 (D-068): el vacío en una ranura que deja cada grupo del Aguapé en una fila y la lancha con k >= vacíos + 1.
+            BoardData? curve = CurveBoards.PlusEmpty(board);
+            if (curve is null)
+            {
+                return new ReliefBoard("plus_empty", data, null, null, 1, false, "Aguape o Lancha: ninguna ranura deja los grupos en una fila o k no cabe");
+            }
+
+            data = curve;
+        }
+
         if (board.HasTinaja)
         {
             if (data.Caps.Length > Superposition.TinajaReliefMaxCuias)
@@ -285,7 +297,13 @@ internal static class Relief
         foreach (int color in colors)
         {
             var cuias = board.Cuias.Select(c => c.Where(x => x != color).ToArray()).ToArray();
-            var data = board with { Cuias = cuias };
+            // Con la Lancha (D-068), k sube lo justo si la eliminación deja más vacías (CurveBoards.WithLanchaK); sin ella, igual.
+            BoardData? data = CurveBoards.WithLanchaK(board with { Cuias = cuias });
+            if (data is null)
+            {
+                continue;
+            }
+
             BoardBuildResult built = data.Build();
             if (!built.IsValid || LevelValidation.Validate(built.State!) is not null)
             {

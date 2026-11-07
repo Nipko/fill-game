@@ -1,0 +1,17 @@
+{
+  "extends": "../campaign_v3.json",
+  "spec": "campaign_v3_f3b_q",
+  "description": "Especificacion EXPERIMENTAL de la fase F3b de D-068 (docs/dev/curva-1.1-f1-medicion.md, seccion 9): campaign_v3.json con las respuestas recomendadas a las preguntas 1, 3 y 4 de F3 para medirlas antes de aplicarlas: K 10 en los retos 429 (sin el Aguape) y 686; el Aguape en el reto 652 del ciclo 641-660; y el ciclo 401-420 con los retos de la Flor reordenados (409 Fl+Ll y 415 Fl) y el reto turbio 418 en Br+Tu. Solo --measure: no genera packs.",
+  "k_cells": {
+    "note": "Los de campaign_v3.json mas 429 y 686 con K 10 (pregunta 1).",
+    "323": 7, "324": 7, "329": 10, "343": 7, "344": 7, "345": 7, "346": 10, "349": 10, "363": 6, "364": 6, "365": 6, "420": 12, "560": 12, "700": 12,
+    "429": 10, "686": 10
+  },
+  "calendar": {
+    "409": "Fl+Ll (D)",
+    "415": "Fl (D)",
+    "418": "Br+Tu (D)",
+    "429": "Ma+Re (D)",
+    "652": "Ag+Br+Re (D)"
+  }
+}
