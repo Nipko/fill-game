@@ -51,7 +51,7 @@ namespace AF.Tests.PlayMode
         [Test]
         public void LoadRiverStops_WithAnInvalidFile_LogsAnErrorWithThePathAndGivesNull()
         {
-            var broken = new TextAsset("{\"format\": \"af-river-stops/1\", \"source\": \"x\", \"stops\": [{\"n\": 3}]}");
+            var broken = new TextAsset("{\"format\": \"af-river-stops/2\", \"source\": \"x\", \"stops\": [{\"n\": 3}]}");
             LogAssert.Expect(LogType.Error, new Regex(@"stops\[0\]\.n.*El juego sigue sin el Mapa"));
             Assert.That(GameBootstrap.LoadRiverStops(broken), Is.Null);
             Object.DestroyImmediate(broken);

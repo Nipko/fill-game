@@ -67,7 +67,7 @@ namespace AF.Presentation
 
     /// <summary>
     /// Cursor sobre una polilínea del Mapa del río (08 §2.2; propuesta del Mapa §11.1 y §11.4): posición y tangente por longitud
-    /// de arco o por s (la fracción de la longitud, como en <c>af-river-map/1</c>), con búsqueda binaria sobre la longitud
+    /// de arco o por s (la fracción de la longitud, como en <c>af-river-map/2</c>), con búsqueda binaria sobre la longitud
     /// acumulada (<see cref="RiverLine.Cumulative"/>). Lo usan la canoa, Rosa, la cámara y las cintas
     /// (<see cref="RiverRibbonGraphic"/>). Trabaja en unidades del marco (W = 1, y hacia abajo); <see cref="MapSpace"/> las pasa
     /// a dp. Monotónico: con s creciente, el tramo (<see cref="Locate"/>) y la posición dentro de él nunca retroceden. Recorre los

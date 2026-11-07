@@ -722,6 +722,27 @@
       "description": "Rango 08 §9: off · victory · map. «¿Verdad o mito?» del Mapa del río: experimento de la 1.1, apagado en la 1.0 (D-013, Q12-A); en la 1.0, el dato simple [P]",
       "valueType": "STRING"
     },
+    "ui_map_v2": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Mapa del río v2 de la 1.1 (D-069, P8 (a); docs/dev/propuesta-mapa-rio-v2.md): el Mapa a pantalla completa con el río vivo (M2-1: tierra por zonas, orillas, ríos de 26/14/6 dp, corriente, selva, luz del mundo, niebla y primer plano; boyas e…",
+      "valueType": "BOOLEAN"
+    },
+    "ui_map_crew": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Mapa v2 (D-069, P8 (a)): la tripulación que se une al viaje (M2-4: tucán y tucuxi, cameos de los miquitos) y los pueblos de paso con su viñeta (M2-2). Solo cuentan con ui_map_v2 encendida; hasta que entre su bloque, sin efecto [P]",
+      "valueType": "BOOLEAN"
+    },
+    "ui_map_towns": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Rango 08 §9: —. Mapa v2 (D-069, P8 (a)): la tripulación que se une al viaje (M2-4: tucán y tucuxi, cameos de los miquitos) y los pueblos de paso con su viñeta (M2-2). Solo cuentan con ui_map_v2 encendida; hasta que entre su bloque, sin efecto [P]",
+      "valueType": "BOOLEAN"
+    },
     "ui_avatars_enabled": {
       "defaultValue": {
         "value": "true"

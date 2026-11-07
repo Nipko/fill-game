@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""test_stops.py - pruebas de tools/river-map/stops.py (paradas af-river-stops/1 de 1-200, M1.1, y de 201-420, M4.5a, y sus
+"""test_stops.py - pruebas de tools/river-map/stops.py (paradas af-river-stops/2 de 1-200, M1.1, y de 201-420, M4.5a, y sus
 textos, M1.1t).
 
 Ejecutar desde la raiz del repositorio:
@@ -101,7 +101,7 @@ class FieldTests(unittest.TestCase):
                 self.assertEqual(value, stop[key])
 
     def test_seventy_stops_with_the_fields_of_08_4_5_in_fixed_order(self):
-        self.assertEqual("af-river-stops/1", self.doc["format"])
+        self.assertEqual("af-river-stops/2", self.doc["format"])
         self.assertEqual("docs/research/mapa-del-rio/rio-amazonas.json", self.doc["source"])
         self.assertEqual(list(range(70)), [s["n"] for s in self.doc["stops"]], "1-700: k = 0-69 (M4.5b)")
         for s in self.doc["stops"]:

@@ -303,7 +303,7 @@ namespace AF.UI
         public TextAsset? RiverStopsAsset => riverStops;
 
         /// <summary>
-        /// Paradas del Mapa del río leídas al arrancar (<c>af-river-stops/1</c>; D-013; 08 §4.5). Null si falta el archivo o no
+        /// Paradas del Mapa del río leídas al arrancar (<c>af-river-stops/2</c>; D-013; 08 §4.5). Null si falta el archivo o no
         /// valida: se avisa y el juego sigue igual, sin el Mapa.
         /// </summary>
         public RiverStopCatalog? RiverStops { get; private set; }
@@ -324,7 +324,7 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Geometría del Mapa del río (<c>af-river-map/1</c>; 08 §4.5), leída y decodificada la primera vez que se abre el Mapa
+        /// Geometría del Mapa del río (<c>af-river-map/2</c>; 08 §4.5), leída y decodificada la primera vez que se abre el Mapa
         /// (null hasta entonces, o si falta o no valida).
         /// </summary>
         public RiverMap? RiverMapData => _riverMapData;
@@ -1148,6 +1148,7 @@ namespace AF.UI
             }
 
             int play = app.PlayLevel;
+            map.LiveRequested = MapLiveSettings.UiMapV2; // D-069, P8 (a): el Mapa v2 o, apagada, el de la 1.0 (GameBootstrap.MapLive.cs)
             map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable, DailyPlayUnlocked); // «Jugar» como en el inicio (D-032, punto 6)
             if (app.Screen != AppScreen.Level)
             {
@@ -1158,7 +1159,7 @@ namespace AF.UI
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
-            DevProbe.Mem("map", play); // AF_PERF mem (DevProbe.Memory.cs)
+            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
             TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;
@@ -1175,6 +1176,7 @@ namespace AF.UI
             }
 
             MapCloseStats stats = map.Close();
+            DevProbe.Mem("map_close"); // D-069, M2-1: el arte del Mapa v2 se soltó (DevProbe.MapLive.cs)
             IProgressStore? progress = _progress;
             if (progress != null)
             {
@@ -2191,7 +2193,7 @@ namespace AF.UI
             }
         }
 
-        // Paradas del Mapa del río de la escena (af-river-stops/1; 08 §4.5), como los miquitos: si falta el archivo, un aviso; si no
+        // Paradas del Mapa del río de la escena (af-river-stops/2; 08 §4.5), como los miquitos: si falta el archivo, un aviso; si no
         // valida, un error con la ruta del valor. En los dos casos, null y el juego queda como sin el Mapa (nada visible depende aún
         // de ellas).
         internal static RiverStopCatalog? LoadRiverStops(TextAsset? stops)
@@ -2653,6 +2655,7 @@ namespace AF.UI
             // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya
             // destruida en este punto.
             RiverMapScreen.RestoreFullRenderRate();
+            _mapScreen?.ReleaseLiveArt(); // D-069, M2-1: las texturas del Mapa v2 no sobreviven a la escena (DontSave)
             if (_backAction != null)
             {
                 _backAction.performed -= OnBackPerformed;

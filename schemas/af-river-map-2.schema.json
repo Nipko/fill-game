@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:amazonfill:schemas:af-river-map-1",
-  "title": "Amazon Fill · geometría del Mapa del río af-river-map/1",
-  "description": "JSON Schema del formato af-river-map/1 (Mapa del río, D-013; contrato 29 de docs/GDD.md §7.4; sintaxis en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.5, con la codificación y los extras [P] de P-M1 firmados en D-023: labels, viewpoints y passing). Junto con 08 §4.5 es la copia única del formato. Lo emite tools/river-map/geometry.py en Assets/_Project/Data/Map/river_map_v1.json y lo valida tools/river-map/test_schemas.py (nunca tools/validate_schema.py, que es solo de af-level/1). Marco: equirrectangular con el factor cos(lat0), girado 90° en el sentido de las agujas del reloj y sin espejo (Andes arriba, Atlántico abajo y norte a la derecha; 06 §4.5): x = (lat − lat_min) / (lat_max − lat_min) e y = (lon − lon_min) / (lon_max − lon_min), y en pantalla px = x · W y py = y · W · aspecto, con aspecto = (lon_max − lon_min) · cos(lat0) / (lat_max − lat_min). Cada punto es un par uint16 (X, Y) = (round(65535 x), round(65535 y)). pts y verts son base64 (RFC 4648) de uint16 little-endian con el primer par absoluto y los demás como deltas módulo 65.536; tris son índices absolutos. s es la fracción de la longitud de una línea medida en pantalla (X / 65535, Y / 65535 · aspecto) desde su primer punto; los puntos van de la cabecera a la boca (en el cauce, del Mismi al Atlántico; en el ramal del Pará, de Gurupá a la bahía), así que s crece río abajo [P]: es una desviación, sin registrar todavía, de los valores del ejemplo de 08 §4.5, que en el cauce miden s desde el mar (aunque el leg de iquitos del mismo ejemplo va en este sentido), pendiente de que se alinee 08 §4.5 o de que el dueño elija. Solo claves, nunca textos: los nombres van por convención en map.stop.<id>.name (puntos de paso y miradores) y map.country.<iso2>.name (rótulos), y los datos con su clave, en el bloque map.* de Assets/_Project/Data/Loc/facts.csv (contrato 32). Lo que el esquema no puede expresar lo comprueba tools/river-map/geometry.py --check: puntos de control a ≤ 2 dp de su vista (≤ 15 km en la vista Cuenca), bocas sobre su río, water que cubre [0, 1] en tramos seguidos, la tierra como polígono simple bien triangulado, ids únicos, ningún «Belén» y las rutas de river_stops_v1.json de acuerdo con estas líneas. Cambiar este archivo es cambiar un contrato.",
+  "$id": "urn:amazonfill:schemas:af-river-map-2",
+  "title": "Amazon Fill · geometría del Mapa del río af-river-map/2",
+  "description": "JSON Schema del formato af-river-map/2 (Mapa del río, D-013; contrato 29 de docs/GDD.md §7.4; /2 desde el Mapa v2 de la 1.1, D-069, P7 (a), bloque M2-1 «El río vivo»: land con zonas por código y shade, banks y veg, propuesta del Mapa v2 §3.1 y §9.1; sintaxis en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.5, con la codificación y los extras [P] de P-M1 firmados en D-023: labels, viewpoints y passing). Junto con 08 §4.5 es la copia única del formato. Lo emite tools/river-map/geometry.py en Assets/_Project/Data/Map/river_map_v1.json y lo valida tools/river-map/test_schemas.py (nunca tools/validate_schema.py, que es solo de af-level/1). Marco: equirrectangular con el factor cos(lat0), girado 90° en el sentido de las agujas del reloj y sin espejo (Andes arriba, Atlántico abajo y norte a la derecha; 06 §4.5): x = (lat − lat_min) / (lat_max − lat_min) e y = (lon − lon_min) / (lon_max − lon_min), y en pantalla px = x · W y py = y · W · aspecto, con aspecto = (lon_max − lon_min) · cos(lat0) / (lat_max − lat_min). Cada punto es un par uint16 (X, Y) = (round(65535 x), round(65535 y)). pts y verts son base64 (RFC 4648) de uint16 little-endian con el primer par absoluto y los demás como deltas módulo 65.536; tris son índices absolutos. s es la fracción de la longitud de una línea medida en pantalla (X / 65535, Y / 65535 · aspecto) desde su primer punto; los puntos van de la cabecera a la boca (en el cauce, del Mismi al Atlántico; en el ramal del Pará, de Gurupá a la bahía), así que s crece río abajo [P]: es una desviación, sin registrar todavía, de los valores del ejemplo de 08 §4.5, que en el cauce miden s desde el mar (aunque el leg de iquitos del mismo ejemplo va en este sentido), pendiente de que se alinee 08 §4.5 o de que el dueño elija. Solo claves, nunca textos: los nombres van por convención en map.stop.<id>.name (puntos de paso y miradores) y map.country.<iso2>.name (rótulos), y los datos con su clave, en el bloque map.* de Assets/_Project/Data/Loc/facts.csv (contrato 32). Lo que el esquema no puede expresar lo comprueba tools/river-map/geometry.py --check: puntos de control a ≤ 2 dp de su vista (≤ 15 km en la vista Cuenca), bocas sobre su río, water que cubre [0, 1] en tramos seguidos, la tierra canopy como polígono simple bien triangulado, las zonas seguidas que cubren tris y shade de un byte por vértice, las orillas sin solapes en la misma orilla de la misma línea, la vegetación con un punto por celda y el lod de su celda, ids únicos, ningún «Belén» y las rutas de river_stops_v1.json de acuerdo con estas líneas. Cambiar este archivo es cambiar un contrato.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["format", "frame", "lines", "land", "insets", "home", "labels", "viewpoints", "passing"],
+  "required": ["format", "frame", "lines", "land", "banks", "veg", "insets", "home", "labels", "viewpoints", "passing"],
   "properties": {
-    "format": { "type": "string", "const": "af-river-map/1" },
+    "format": { "type": "string", "const": "af-river-map/2" },
     "frame": {
       "type": "object",
       "additionalProperties": false,
@@ -28,26 +28,35 @@
     "land": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["verts", "tris", "zones"],
+      "required": ["verts", "tris", "zones", "shade"],
       "properties": {
-        "verts": { "$ref": "#/$defs/b64", "description": "Vértices del polígono de la tierra (pares uint16 con deltas)." },
-        "tris": { "type": "string", "pattern": "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$", "description": "Triángulos (índices uint16 absolutos de verts, de tres en tres), todos en el mismo sentido que el polígono." },
+        "verts": { "$ref": "#/$defs/b64", "description": "Vértices de la tierra (pares uint16 con deltas): primero los de canopy (los anillos de la costa) y después los de las zonas de encima." },
+        "tris": { "type": "string", "pattern": "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$", "description": "Triángulos (índices uint16 absolutos de verts, de tres en tres), todos en el mismo sentido que el polígono, seguidos por zona (first y count)." },
         "zones": {
           "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["id", "tile", "first", "count"],
-            "properties": {
-              "id": { "$ref": "#/$defs/slug" },
-              "tile": { "$ref": "#/$defs/slug", "description": "Mosaico del terreno [P] (en la 1.0, canopy: una sola zona hasta la máscara del artista)." },
-              "first": { "type": "integer", "minimum": 0, "description": "[P] Primer triángulo de la zona: extensión de M2.6 sobre la forma de 08 §4.5 ({id, tile}), pendiente de llevar a 08 §4.5." },
-              "count": { "type": "integer", "minimum": 0, "description": "[P] Triángulos de la zona, seguidos desde first: extensión de M2.6 sobre la forma de 08 §4.5 ({id, tile}), pendiente de llevar a 08 §4.5." }
-            }
-          }
-        }
+          "minItems": 2,
+          "prefixItems": [{ "$ref": "#/$defs/canopy_zone" }],
+          "items": { "oneOf": [{ "$ref": "#/$defs/tri_zone" }, { "$ref": "#/$defs/band_zone" }] },
+          "description": "[P] Zonas del terreno (propuesta del Mapa v2 §3.1, capa 1): canopy primero (la tierra de Natural Earth; en /1, land), después savanna, rock y snow (manchas por código con su difuminado; las que no tienen triángulos no salen) y al final varzea, una banda sin triángulos que dibuja el cliente bajo el río."
+        },
+        "shade": { "type": "string", "pattern": "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$", "description": "Base64 (RFC 4648) de un byte por vértice de verts, sin deltas: el peso del color de su zona (255 dentro, 0 en el borde difuminado; 255 en canopy)." }
       }
+    },
+    "banks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/bank" },
+      "description": "[P] Orillas de los meandros (propuesta del Mapa v2 §3.1, capa 2), por línea (en el orden de lines), s0 y side: en cada curva, playa (beach) en la orilla de dentro y barranco (bluff) en la de fuera; sin solapes en la misma orilla de la misma línea."
+    },
+    "veg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cell", "pts", "info"],
+      "properties": {
+        "cell": { "type": "integer", "minimum": 1, "description": "[P] Lado de la celda en km del plano de pantalla (km a lo largo de los dos ejes del marco, con cos(lat0)); un punto por celda como mucho." },
+        "pts": { "type": "string", "pattern": "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$", "description": "Puntos de vegetación como pts (pares uint16, el primero absoluto y los demás deltas módulo 65.536), en el orden de sus celdas: iy y después ix." },
+        "info": { "type": "string", "pattern": "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$", "description": "Base64 de 2 bytes por punto. info[2i]: bits 0-1 tipo (0 copa, 1 palmera, 2 flor o ipê), bits 2-3 tamaño (0-2), bit 4 lod (0 si ix e iy son pares: la capa gruesa), bits 5-7 tono (0-7). info[2i + 1]: distancia del punto al eje de la línea más cercana en unidades de 2 km, redondeada, tope 255." }
+      },
+      "description": "[P] Vegetación (propuesta del Mapa v2 §3.1, capa 5): dispersión determinista por celda (un PRNG propio por celda), solo sobre la tierra canopy, fuera del núcleo de la nieve y lejos de los puntos de paso y de casa."
     },
     "insets": {
       "type": "array",
@@ -103,6 +112,51 @@
     }
   },
   "$defs": {
+    "canopy_zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tile", "first", "count"],
+      "properties": {
+        "id": { "const": "canopy" },
+        "tile": { "const": "canopy" },
+        "first": { "const": 0 },
+        "count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "tri_zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tile", "first", "count"],
+      "properties": {
+        "id": { "type": "string", "enum": ["savanna", "rock", "snow"] },
+        "tile": { "$ref": "#/$defs/slug", "description": "Mosaico del terreno [P] (hoy igual que id)." },
+        "first": { "type": "integer", "minimum": 0, "description": "Primer triángulo de la zona en tris." },
+        "count": { "type": "integer", "minimum": 1, "description": "Triángulos de la zona, seguidos desde first." }
+      }
+    },
+    "band_zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tile", "band"],
+      "properties": {
+        "id": { "const": "varzea" },
+        "tile": { "const": "varzea" },
+        "band": { "type": "integer", "minimum": 1, "maximum": 200, "description": "[P] dp de la banda desde la orilla del agua hacia fuera en la vista Mundo." }
+      }
+    },
+    "bank": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["line", "s0", "s1", "side", "kind", "w"],
+      "properties": {
+        "line": { "$ref": "#/$defs/slug", "description": "Id de una línea." },
+        "s0": { "$ref": "#/$defs/unit" },
+        "s1": { "$ref": "#/$defs/unit" },
+        "side": { "type": "string", "enum": ["left", "right"], "description": "Orilla mirando río abajo (s creciente) en pantalla, con x a la derecha e y hacia abajo: left es el lado de la normal (dy, −dx)." },
+        "kind": { "type": "string", "enum": ["beach", "bluff"], "description": "Playa (orilla de dentro de la curva) o barranco (la de fuera)." },
+        "w": { "type": "integer", "minimum": 1, "maximum": 16, "description": "[P] Ancho en dp: playa 6-16 y barranco 4-8, más ancho cuanto más cerrada la curva." }
+      }
+    },
     "slug": { "type": "string", "pattern": "^[a-z0-9_]+$", "not": { "pattern": "belen" } },
     "unit": { "type": "number", "minimum": 0, "maximum": 1 },
     "range": {

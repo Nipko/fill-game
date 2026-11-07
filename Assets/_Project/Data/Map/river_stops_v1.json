@@ -1,5 +1,5 @@
 {
-  "format": "af-river-stops/1",
+  "format": "af-river-stops/2",
   "source": "docs/research/mapa-del-rio/rio-amazonas.json",
   "stops": [
     {"n": 0, "levels": [1, 10], "world": 1, "id": "belem", "kind": "gate", "country": "BR", "country_name": null, "at": {"line": "para", "s": 0.728669}, "km_from_sea": null, "km_home": 0, "sample": "white", "flag_raise": "BR", "arrival_fact": null, "facts": ["map.stop.belem.dato_01", "map.stop.belem.dato_02"], "world_question": null, "answers_world_question": false, "bg": {"kit": "bg_kit_w01", "hero": "bg_hero_ver_o_peso", "code": null, "lut": null}, "leg": {"path": [{"line": "para", "s0": 0.728669, "s1": 0.728669}], "via": [], "mouths": ["tocantins"]}},

@@ -203,6 +203,14 @@ namespace AF.RemoteConfig.Binding
             B<AvatarConfig>("ui_avatars_enabled", (c, v) => c.UiAvatarsEnabled = v),
         };
 
+        // D-069: el Mapa del río v2 de la 1.1 (P8 (a); docs/dev/propuesta-mapa-rio-v2.md).
+        private static readonly Entry<MapLiveConfig>[] MapLiveEntries =
+        {
+            B<MapLiveConfig>("ui_map_v2", (c, v) => c.UiMapV2 = v),
+            B<MapLiveConfig>("ui_map_crew", (c, v) => c.UiMapCrew = v),
+            B<MapLiveConfig>("ui_map_towns", (c, v) => c.UiMapTowns = v),
+        };
+
         /// <summary>Las claves que lee cada clase, en orden (para los tests de cobertura).</summary>
         public static IReadOnlyDictionary<Type, IReadOnlyList<string>> BoundKeys { get; } = new Dictionary<Type, IReadOnlyList<string>>
         {
@@ -221,6 +229,7 @@ namespace AF.RemoteConfig.Binding
             { typeof(LoginCalendarConfig), KeysOf(LoginCalendarEntries) },
             { typeof(LeagueConfig), KeysOf(LeagueEntries) },
             { typeof(AvatarConfig), KeysOf(AvatarEntries) },
+            { typeof(MapLiveConfig), KeysOf(MapLiveEntries) }, // D-069
             { typeof(ConsentConfig), ConsentConfigBinder.Keys }, // B12: su lector propio (ConsentConfigBinder)
             { typeof(A11yConfig), A11yConfigBinder.Keys }, // B9: su lector propio (A11yConfigBinder)
         };
@@ -253,6 +262,7 @@ namespace AF.RemoteConfig.Binding
             LoginCalendarConfig calendar = Fill(new LoginCalendarConfig(), LoginCalendarEntries, rc, errors, c => c.Validate(), () => LoginCalendarConfig.Defaults);
             LeagueConfig league = Fill(new LeagueConfig(), LeagueEntries, rc, errors, c => c.Validate(), () => LeagueConfig.Defaults); // D-046
             AvatarConfig avatars = Fill(new AvatarConfig(), AvatarEntries, rc, errors, c => c.Validate(), () => AvatarConfig.Defaults); // D-056
+            MapLiveConfig mapLive = Fill(new MapLiveConfig(), MapLiveEntries, rc, errors, c => c.Validate(), () => MapLiveConfig.Defaults); // D-069
             ConsentConfig consent = ConsentConfigBinder.Bind(rc, errors);
             A11yConfig a11y = A11yConfigBinder.Bind(rc, errors); // B9
 
@@ -278,6 +288,7 @@ namespace AF.RemoteConfig.Binding
                 LoginCalendar = calendar,
                 League = league,
                 Avatars = avatars,
+                MapLive = mapLive,
                 BackendSwitch = new RcBackendSwitch(rc),
                 Consent = consent,
                 DragPourEnabled = RcGameplayBinder.DragPourEnabled(rc, errors), // B11: C10 (RcGameplayBinder)
@@ -566,6 +577,9 @@ namespace AF.RemoteConfig.Binding
 
         /// <summary>Los avatares del jugador (D-056): <c>ui_avatars_enabled</c>.</summary>
         public AvatarConfig Avatars { get; internal set; } = AvatarConfig.Defaults;
+
+        /// <summary>El Mapa del río v2 (D-069): <c>ui_map_v2</c>, <c>ui_map_crew</c> y <c>ui_map_towns</c>.</summary>
+        public MapLiveConfig MapLive { get; internal set; } = MapLiveConfig.Defaults;
 
         /// <summary><c>drag_pour_enabled</c> (C10, el arrastre; 08 §9; B11; <see cref="RcGameplayBinder"/>).</summary>
         public bool DragPourEnabled { get; internal set; } = AF.GameFlow.DragPour.EnabledDefault;

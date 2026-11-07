@@ -162,7 +162,7 @@ namespace AF.Tests.PlayMode
             {
                 RiverRibbonGraphic ribbon = map.Glass(i);
                 classes.Add(ribbon.Line!.Class);
-                Assert.That(ribbon.WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.World, ribbon.Line.Class)), ribbon.name + " en Mundo");
+                Assert.That(ribbon.WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.World, ribbon.Line.Class, map.LiveActive)), ribbon.name + " en Mundo (D-069: 26/14/6 dp con el Mapa v2)");
             }
 
             Assert.That(classes, Is.SupersetOf(new[] { 1, 2 }), "el cauce y los afluentes");
@@ -177,7 +177,7 @@ namespace AF.Tests.PlayMode
 
             map.ViewWorldButton.onClick.Invoke();
             yield return null;
-            Assert.That(map.Glass(0).WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.World, map.Glass(0).Line!.Class)), "de vuelta a Mundo");
+            Assert.That(map.Glass(0).WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.World, map.Glass(0).Line!.Class, map.LiveActive)), "de vuelta a Mundo");
         }
 
         [UnityTest]
@@ -260,7 +260,7 @@ namespace AF.Tests.PlayMode
             Assert.That(map.View, Is.EqualTo(MapView.Basin));
             Assert.That(map.Zoom, Is.EqualTo(1f));
             Assert.That(map.Space.DpPerUnit, Is.EqualTo(MapSpace.BasinWidthDp).Within(0.01f), "1×: 328 dp, el ancho útil (360 − 2 × 16)");
-            Assert.That(map.ViewportSize.x, Is.EqualTo(MapSpace.BasinWidthDp).Within(0.5f));
+            Assert.That(map.ViewportSize.x, Is.EqualTo(map.LiveActive ? map.CanvasWidth : MapSpace.BasinWidthDp).Within(0.5f), "D-069: el Mapa v2, de borde a borde");
             Assert.That(map.ContentSize.y, Is.LessThanOrEqualTo(map.ViewportSize.y + 0.5f), "a 360 × 780 la cuenca entera cabe");
             Assert.That(map.CanoeInView, Is.True);
             Assert.That(map.BackToCanoeShown, Is.False, "con la cuenca entera a la vista no hace falta (a 360 × 640, sí: Basin_At360x640_…)");
@@ -668,7 +668,9 @@ namespace AF.Tests.PlayMode
             RiverMapScreen map = boot.RiverMapView!;
             Assert.That(map.Canvas.isRootCanvas, Is.True);
             Assert.That(map.Canvas.sortingOrder, Is.GreaterThan(40).And.LessThan(50), "sobre Ajustes y bajo la hoja de compra (50), el anuncio (60) y el aviso (70)");
-            Assert.That(map.Canvas.GetComponentsInChildren<Canvas>(true).Length, Is.EqualTo(3), "3 lienzos (propuesta del Mapa §11.4)");
+            // 3 lienzos (propuesta del Mapa §11.4) y, con el Mapa v2 (D-069, M2-1), 3 más que solo cambian transformaciones y
+            // opacidades: la atmósfera (luz, nubes y niebla), la corriente y el primer plano.
+            Assert.That(map.Canvas.GetComponentsInChildren<Canvas>(true).Length, Is.EqualTo(map.LiveActive ? 6 : 3), "3 lienzos (propuesta del Mapa §11.4), 6 con el Mapa v2");
             foreach (Canvas nested in new[] { map.StaticCanvas, map.DynamicCanvas })
             {
                 Assert.That(nested.isRootCanvas, Is.False);
