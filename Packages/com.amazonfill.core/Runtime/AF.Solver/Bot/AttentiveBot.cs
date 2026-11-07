@@ -20,7 +20,7 @@ namespace AF.Solver.Bot
     /// (R13: sin vertidos útiles y sin victoria). Si todos bloquean, juega entre todos (y pierde en el paso siguiente).</para>
     /// <para><b>Lookahead de 2</b> [P]: el valor de un vertido m es <c>PUNTUACION_CASUAL(m)</c> (la de 03 §6 ×4, la misma función
     /// que el casual) más la mejor <c>PUNTUACION_CASUAL</c> de los vertidos de <c>M</c> en el tablero que deja m; si m gana, más
-    /// <see cref="WinBonus"/>. Con el 85 % elige el de mayor valor, con el mismo ruido entero que el casual (solo desempata), y con
+    /// <see cref="WinBonus"/>. Con el 85 % elige el de mayor valor, con el mismo ruido entero que el casual ([0, 2) unidades de la puntuación ×4: desempata en la escala de 03 §6, pero puede invertir diferencias de 1 en la escala ×4), y con
     /// el 15 %, uno al azar de los que no bloquean.</para>
     /// <para><b>Partida:</b> la de 03 §6 con <see cref="BotOptions"/> (40 partidas, 85/15, tope de 400 vertidos; fallo en Aguas
     /// estancadas o al agotar el tope), con su propia sub-semilla (<see cref="SeedFor"/>, flujo <see cref="SeedStream"/>). La
