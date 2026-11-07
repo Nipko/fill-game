@@ -136,6 +136,10 @@ internal static class CurveSelfTest
         int pressure = Pressure.OfCell(v3.Plan(320).Cell, v3.Plan(320).K, milestone: true);
         Check(pressure == 5, string.Create(CultureInfo.InvariantCulture, $"escalon del hito 320: {pressure} (se espera 5)"));
 
+        // pack_schema de un pack de la curva 2 en los informes (PackWriter.PackSchemaFor): 5, como el que escribe el pack.
+        Check(PackWriter.PackSchemaFor([new PackLevel(v3.Plan(303), gen.Generate(v3.Plan(303)).Candidates.First(x => x.PoolMember), [])]) == PackWriter.CurvePackSchema,
+            "PackSchemaFor de un nivel de la curva 2: 5 (el del pack)");
+
         // La curva 1 no cambia: campaign_v2 sin curva, ids de siempre y sin topes.
         LevelPlan old = v2.Plan(306);
         Check(old.Curve == 0 && old.Id == "m07_v1_n0306" && old.ReplacesId is null && v2.CapOf(old) is null && PackWriter.PackIdFor(v2, v2.WorldOf(306)) == "mundo_07_v1",

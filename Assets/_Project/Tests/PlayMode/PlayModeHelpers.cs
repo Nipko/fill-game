@@ -172,6 +172,23 @@ namespace AF.Tests.PlayMode
             NoLogbookUnlessSet();
             NoPrePromptUnlessSet();
             NoLeagueDebutUnlessSet();
+            NoCurve2UnlessSet();
+        }
+
+        /// <summary>
+        /// Juega la curva 1 de 301-700 (los packs <c>mundo_07..09_v1</c> de la 1.0) si el test no fijó <c>lvl_curve2_enabled</c>
+        /// (<see cref="LaunchOptions.Curve2EnabledOverride"/> = null) ni trae sus propios packs de la curva
+        /// (<see cref="LaunchOptions.CurvePackJsonOverride"/>): desde F5 (D-068) la escena enlaza los packs de la curva 2 y la clave
+        /// está encendida por defecto (08 §9), así que un perfil nuevo jugaría su tablero. Los tests que no tratan de la curva 2
+        /// (Tinaja del 323, variantes, filas de 374 y 640…) siguen con los tableros de la 1.0, que siguen sirviéndose a quien ya los
+        /// alcanzó (08 §4.4); los que la prueban (<c>CurveBootTests</c>, <c>CurvePlayTests</c>) la fijan.
+        /// </summary>
+        public static void NoCurve2UnlessSet()
+        {
+            if (LaunchOptions.Curve2EnabledOverride == null && LaunchOptions.CurvePackJsonOverride == null)
+            {
+                LaunchOptions.Curve2EnabledOverride = false;
+            }
         }
 
         /// <summary>

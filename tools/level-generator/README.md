@@ -630,8 +630,9 @@ Especificación de producción de los tableros de sustitución de 301-700 (D-068
   - las mecánicas de la 1.1 en la tabla `mechanics` (fase F3b, con el núcleo de F2): `Ag` (Aguapé, `aguape`, filtro, estreno
     303-305), `A2` (Aguapé espeso, `aguape_n2`, variante de `Ag` con `n` = 2, estreno 347-348) y `La` (Lancha, `lancha`,
     disparador, estreno 363-365, con `season_debut_exempt`: el ciclo 361-380 es de aguas bajas en la 1.0 y la Lancha de aguas
-    altas [P]); el resto de su ciclo de vida va en el calendario (`calendar_note`). `role_caps.debut` admite K 6 [P] y
-    `k_cells` lleva K 7 en 347-348 y K 6 en 363-365.
+    altas, decidido por el dueño); el resto de su ciclo de vida va en el calendario (`calendar_note`). `role_caps.debut` admite K 6
+    (decidido por el dueño: D-068, añadido «las preguntas de F3 y F3b») y
+    `k_cells` lleva K 7 en 343-345 (el Brote de dos hojas) y K 6 en 363-365.
 - **`t_plan` de 03 §12:** la especificación no lleva un `t_plan`: los topes de T van en `role_caps` (por papel, con el de K) y
   el K de cada posición sale del `k_plan` (por papel, que es por posición del ciclo) y de `k_cells`.
 - **Aguas turbias de la curva 2 (02 §11, T1):** el estreno en Normal (323-324) oculta exactamente 1 dosis; los retos turbios,
@@ -670,8 +671,8 @@ Especificación de producción de los tableros de sustitución de 301-700 (D-068
   - **Presión** (`Pressure.cs`): la palanca de congeladas (1 grupo, 1; 2 grupos o el espeso, 2) y el vacío bajo la mata (palanca
     de vacíos en 2); el Aguapé no cuenta en «mecánicas distintas», como las turbias [P]. `--measure` suma el bot atento ×40 a la
     tabla de los hitos.
-- **Pool de prueba (no son los packs finales; F5 los genera tras la curación):** `tools/out/curva_f3b/` (el de F3, sin la 1.1,
-  en `tools/out/curva_f3/`).
+- **Pool de prueba de F3b:** `tools/out/curva_f3b/` (el de F3, sin la 1.1, en `tools/out/curva_f3/`). Los packs de F5 (abajo)
+  dan los mismos bytes.
 - `campaign_v1` y `campaign_v2` dan exactamente lo mismo (`--check` de 11-700, de las reservas, del registro y de la tabla de
   temporada).
 
@@ -682,6 +683,35 @@ dotnet run --project tools/level-generator -c Release -- --reserve tools/out/cur
 dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/campaign_v3.json --levels 421-560 --report tools/out/curva_f3/medida_v3_421-560.md
 dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/campaign_v3.json --levels 561-700 --report tools/out/curva_f3/medida_v3_561-700.md
 dotnet run --project tools/level-generator -- --self-test curve
+```
+
+### Packs de la curva 2 (fase F5 de D-068)
+
+Con las respuestas del dueño a F3 y F3b (D-068, añadido «las preguntas de F3 y F3b»): el estreno de la Lancha con K 6 en 10
+cuias (tope de estreno K 6-8), la Lancha nunca en un hito ni en la cúspide (CURVE-MECH en `--validate-spec`, con el fixture
+`specs/tests/lancha_in_milestone.json`, y QA-LANCHA en `tools/level-qa`), `season_debut_exempt` de la Lancha en 361-380 y el
+plan de presión de 660, 680 y 700 a 7, 7 y 8 (`--validate-spec`: 27 reglas, 0 fallos y 0 avisos). Los packs que lee el cliente
+(D-068, F4; `GameSceneBuilder.CreateGameScene` los enlaza):
+
+- `Assets/_Project/Data/Levels/curva_07_v1.json`, `curva_08_v1.json` y `curva_09_v1.json` (400 niveles de 301-700, `pack_schema` 5);
+- `Assets/_Project/Data/Levels/reserva_curva_07_v1.json`, `reserva_curva_08_v1.json` y `reserva_curva_09_v1.json` (80 tableros);
+- `specs/combinations_registry_curva2_v1.json`: el registro de combinaciones de la curva 2 (11-700 con `campaign_v3`; 126 entradas),
+  aparte del de la 1.0 (`combinations_registry_v1.json`, que no cambia);
+- informes en `tools/out/curva2/` (`curva_report.md`, `curacion_curva2.md`, `reserva_curva_report.md`, `qa_curva2.md` y
+  `qa_reserva_curva2.md`); el material de curación para el dueño, en `docs/dev/curva-1.1-curacion.md`.
+
+La generación de 301-700 tarda unos 22 min en el escritorio (24 hilos) y la reserva, menos de 1 min; level-qa con reproducción,
+lo que la generación. `--check` no escribe ni los packs ni los informes.
+
+```
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v3.json --levels 301-700 --out Assets/_Project/Data/Levels --report tools/out/curva2/curva_report.md --curation tools/out/curva2/curacion_curva2.md
+dotnet run --project tools/level-generator -c Release -- --reserve Assets/_Project/Data/Levels/curva_07_v1.json Assets/_Project/Data/Levels/curva_08_v1.json Assets/_Project/Data/Levels/curva_09_v1.json --spec tools/level-generator/specs/campaign_v3.json --out Assets/_Project/Data/Levels --report tools/out/curva2/reserva_curva_report.md
+dotnet run --project tools/level-generator -c Release -- --registry tools/level-generator/specs/campaign_v3.json --out tools/level-generator/specs/combinations_registry_curva2_v1.json
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v3.json --levels 301-700 --out Assets/_Project/Data/Levels --check
+dotnet run --project tools/level-generator -c Release -- --reserve Assets/_Project/Data/Levels/curva_07_v1.json Assets/_Project/Data/Levels/curva_08_v1.json Assets/_Project/Data/Levels/curva_09_v1.json --spec tools/level-generator/specs/campaign_v3.json --out Assets/_Project/Data/Levels --check
+dotnet run --project tools/level-generator -c Release -- --registry tools/level-generator/specs/campaign_v3.json --out tools/level-generator/specs/combinations_registry_curva2_v1.json --check
+dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/curva_07_v1.json Assets/_Project/Data/Levels/curva_08_v1.json Assets/_Project/Data/Levels/curva_09_v1.json --spec tools/level-generator/specs/campaign_v3.json --levels 301-700 --report tools/out/curva2/qa_curva2.md
+dotnet run --project tools/level-qa -c Release -- --reserve Assets/_Project/Data/Levels/reserva_curva_07_v1.json Assets/_Project/Data/Levels/reserva_curva_08_v1.json Assets/_Project/Data/Levels/reserva_curva_09_v1.json --campaign Assets/_Project/Data/Levels/curva_07_v1.json Assets/_Project/Data/Levels/curva_08_v1.json Assets/_Project/Data/Levels/curva_09_v1.json --spec tools/level-generator/specs/campaign_v3.json --report tools/out/curva2/qa_reserva_curva2.md
 ```
 
 ## Tinaja (M13; D-019, Q-Ti1 A; 03 §8 y §9; propuesta de la tinaja c.3)

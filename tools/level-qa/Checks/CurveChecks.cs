@@ -12,7 +12,8 @@
 //                   con 10 cuias o menos, las filas fijas de 02 §5), una cuia del grupo (dos con frutas distintas en el espeso) que
 //                   sella solo recibiendo, atascado(S0) = false y cada grupo se suelta en la solución del par (03 §17 #17).
 //   QA-LANCHA       una lancha por nivel; carga de 1-3 dosis visibles, sin Barro; k >= vacíos iniciales + 1 (toda cuia sin dosis,
-//                   como el núcleo); nunca con Aguas turbias; con la Liana solo desde el 401; intro lancha solo en su estreno; con
+//                   como el núcleo); nunca con Aguas turbias; con la Liana solo desde el 401; nunca en un hito ni en la cúspide
+//                   (T >= K + k + 1 no cabe en su tope; D-068, preguntas de F3 y F3b); intro lancha solo en su estreno; con
 //                   el núcleo, atascado(S0) = false y la lancha atraca en la solución del par (03 §17 #18).
 //   QA-BOT-ATENTO   aviso (informe; 03 §17 #20): dentro de cada mundo de la curva 2, bot_atento(hito n+1) >= bot_atento(hito n),
 //                   con el bot atento ×40 (AF.Solver.Bot.AttentiveBot, semilla propia del nivel). Nunca decide la etiqueta.
@@ -36,7 +37,7 @@ internal static class CurveChecks
         ("QA-T-ROLE", "curva 2: T y K dentro del tope de su papel (role_caps; 03 sec. 12 y sec. 17 #16); en kind curve, replaces = el id de la curva 1 del mismo slot e id/seed con _c{c}/:c{c}; aviso si difficulty.pressure no es el de las palancas del tablero (D-068)"),
         ("QA-MURKY-NORMAL", "curva 2: Normal con turbias solo en comodidad, con 1 cuia y <= 2 dosis ocultas, desde murky_normal.from_level; por ciclo <= comfort_per_cycle comodidades, <= 2 retos y <= 1 hito cada 2 ciclos con turbias (02 sec. 11 T1; 03 sec. 17 #19)"),
         ("QA-AGUAPE", "grupos de 2-5 cuias contiguas sin Barro (espeso n = 2: 4-5); rows con >= 11 cuias, que suma las cuias y respeta 02 sec. 5; LevelValidation.ValidateRows en el nivel y en cada relief; una cuia que sella solo recibiendo (dos en el espeso); atascado(S0) = false; el grupo se suelta en la solucion; estreno solo en su nivel; nunca con la tinaja (03 sec. 17 #17)"),
-        ("QA-LANCHA", "una lancha por nivel; carga de 1-3 dosis visibles sin Barro; k >= vacios + 1; sin Aguas turbias; con la Liana solo desde el 401; estreno solo en su nivel; atascado(S0) = false y la lancha atraca en la solucion (03 sec. 17 #18)"),
+        ("QA-LANCHA", "una lancha por nivel; carga de 1-3 dosis visibles sin Barro; k >= vacios + 1; sin Aguas turbias; con la Liana solo desde el 401; nunca en un hito ni en la cuspide (D-068); estreno solo en su nivel; atascado(S0) = false y la lancha atraca en la solucion (03 sec. 17 #18)"),
         ("QA-BOT-ATENTO", "aviso: dentro de cada mundo de la curva 2, bot atento x40 del hito n+1 >= el del hito n (03 sec. 17 #20; solo informe)"),
     ];
 
@@ -432,6 +433,11 @@ internal static class CurveChecks
         if (lv.Level < LanchaWithLianaFrom && lv.RawAttrs.Any(a => a?.Type is "liana" or "flor"))
         {
             yield return Fail(string.Create(CultureInfo.InvariantCulture, $"Lancha con la Liana antes del {LanchaWithLianaFrom} (03 sec. 11)"));
+        }
+
+        if (spec.Curve is { } curve && lv.Level >= curve.FromLevel && lv.Level <= spec.LastLevel && spec.Plan(lv.Level).Role == SlotRole.Milestone)
+        {
+            yield return Fail("Lancha en un hito o en la cuspide: necesita T >= K + k + 1 y no cabe en su tope (D-068)");
         }
     }
 

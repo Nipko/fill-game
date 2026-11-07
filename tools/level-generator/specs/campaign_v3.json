@@ -1,7 +1,7 @@
 {
   "spec": "campaign_v3",
   "spec_schema": 1,
-  "description": "Especificación de producción de la curva 2 de la 1.1 (D-068 y sus añadidos del 2026-11-07; fase F3; docs/dev/propuesta-curva-1.1.md §6.3; 03 §11-§12 y §17; 08 §4.1): los tableros de sustitución de 301-700 (packs curva_{mm}_v1, kind curve, ids _c2 y semillas :c2, replaces = el id de la curva 1) y su reserva (reserva_curva_{mm}_v1). 201-300 es historia: copia de la variante publicada («b») de campaign_v2.json, que no se genera (curve.from_level; CURVE-BASE). 301-700 parte de la variante «b» de campaign_v2.json (sin la Tinaja, fuera de la 1.1: pregunta 12 (a)) con los topes del dueño tras F1 (k_plan, k_cells y role_caps), las Aguas turbias en Normal (murky_normal: estreno en 323-324 y 3 comodidades turbias por ciclo), la celda nueva del reto 369, el escalón de presión por mundo (pressure_plan) y el Aguapé, el Aguapé espeso y la Lancha (fase F3b, con el núcleo de F2): estrenos en 303-305, 347-348 y 363-365 y el resto de su ciclo de vida (calendar_note). Los packs finales (F5) se generan tras la curación del dueño.",
+  "description": "Especificación de producción de la curva 2 de la 1.1 (D-068 y sus añadidos del 2026-11-07; fase F3; docs/dev/propuesta-curva-1.1.md §6.3; 03 §11-§12 y §17; 08 §4.1): los tableros de sustitución de 301-700 (packs curva_{mm}_v1, kind curve, ids _c2 y semillas :c2, replaces = el id de la curva 1) y su reserva (reserva_curva_{mm}_v1). 201-300 es historia: copia de la variante publicada («b») de campaign_v2.json, que no se genera (curve.from_level; CURVE-BASE). 301-700 parte de la variante «b» de campaign_v2.json (sin la Tinaja, fuera de la 1.1: pregunta 12 (a)) con los topes del dueño tras F1 (k_plan, k_cells y role_caps), las Aguas turbias en Normal (murky_normal: estreno en 323-324 y 3 comodidades turbias por ciclo), la celda nueva del reto 369, el escalón de presión por mundo (pressure_plan) y el Aguapé, el Aguapé espeso y la Lancha (fase F3b, con el núcleo de F2): estrenos en 303-305, 347-348 y 363-365 y el resto de su ciclo de vida (calendar_note). Fase F5 (D-068, añadido sobre F5): los packs Assets/_Project/Data/Levels/curva_0{7,8,9}_v1.json, su reserva reserva_curva_0{7,8,9}_v1.json y el registro specs/combinations_registry_curva2_v1.json salen de esta especificación; la curación del dueño decide qué niveles se rehacen.",
   "lap": 1,
   "first_level": 201,
   "last_level": 700,
@@ -284,7 +284,7 @@
     "note": "D-068 P1 B; 08 §4.1 (convención _c{c} y :c{c}) y §4.4. Desde from_level: kind curve, pack curva_{mm}_v1, id m{mm}_v1_n{nnnn}_c2, seed amazonfill:v1:m{mm}:v1:n{nnnn}:c2 y replaces = m{mm}_v1_n{nnnn}; la reserva, reserva_curva_{mm}_v1 con _c2_r1 y :c2:r1. Antes de from_level la especificación solo es historia (no se genera) y sus celdas son las de base_spec en base_variant (CURVE-BASE)."
   },
   "role_caps": {
-    "note": "Topes por papel de 03 §12 (D-068 P2 A): t = cuias del tablero y k = colores, [mínimo, máximo]. respite = recuperación (p1-p2) y remanso (p19); debut = tableros de estreno (p3-p5 del ciclo de debut); summit = la cúspide, el último hito de cada mundo (su firma; P3 A). El reto, 10-11 cuias con 12 como mucho. El generador no construye un tablero fuera del tope (SlotGenerator.Config), level-qa lo comprueba (QA-T-ROLE) y --validate-spec comprueba el K (ROLE-CAPS). Debut con K 6-8 [P] (F3b, D-068): la Lancha necesita T >= K + k + 1 (sus k vacías y una cuia de holgura, además de la carga), así que su estreno con 2 vacíos (k = 3) solo cabe en 10 cuias con K 6 (363-365).",
+    "note": "Topes por papel de 03 §12 (D-068 P2 A): t = cuias del tablero y k = colores, [mínimo, máximo]. respite = recuperación (p1-p2) y remanso (p19); debut = tableros de estreno (p3-p5 del ciclo de debut); summit = la cúspide, el último hito de cada mundo (su firma; P3 A). El reto, 10-11 cuias con 12 como mucho. El generador no construye un tablero fuera del tope (SlotGenerator.Config), level-qa lo comprueba (QA-T-ROLE) y --validate-spec comprueba el K (ROLE-CAPS). Debut con K 6-8 (decidido por el dueño: D-068, añadido «las preguntas de F3 y F3b»): la Lancha necesita T >= K + k + 1 (sus k vacías y una cuia de holgura, además de la carga), así que su estreno con 2 vacíos (k = 3) solo cabe en 10 cuias con K 6 (363-365), y nunca va en un hito (K 11) ni en la cúspide (K 12): CURVE-MECH y QA-LANCHA.",
     "respite": {
       "t": [
         8,
@@ -370,7 +370,7 @@
     }
   ],
   "k_cells": {
-    "note": "K por celda (añadido de D-068 del 2026-11-07, F1-1): manda sobre el k_plan. 329, 346 y 349: los retos de p6 y p9 que con K 9 no llegaban a Difícil en F1, con K 10. 343-345: el estreno del Brote de dos hojas con K 7 (con K 8 salía con 11 cuias, por encima del tope de estreno). 323-324: el estreno de las Aguas turbias en Normal con K 7 [P], por el mismo tope (2 vacíos y la cuia de holgura de las turbias: 10 cuias). 363-365 (estreno de la Lancha) con K 6 [P] (F3b): la carga es una cuia más y la Lancha necesita T >= K + k + 1 (role_caps.debut). 420, 560 y 700: las cúspides, con K 12.",
+    "note": "K por celda (añadido de D-068 del 2026-11-07, F1-1): manda sobre el k_plan. 329, 346 y 349: los retos de p6 y p9 que con K 9 no llegaban a Difícil en F1, con K 10. 343-345: el estreno del Brote de dos hojas con K 7 (con K 8 salía con 11 cuias, por encima del tope de estreno). 323-324: el estreno de las Aguas turbias en Normal con K 7 [P], por el mismo tope (2 vacíos y la cuia de holgura de las turbias: 10 cuias). 363-365 (estreno de la Lancha) con K 6, decidido por el dueño (D-068, añadido «las preguntas de F3 y F3b»): la carga es una cuia más y la Lancha necesita T >= K + k + 1 (role_caps.debut). 420, 560 y 700: las cúspides, con K 12.",
     "323": 7,
     "324": 7,
     "329": 10,
@@ -387,7 +387,7 @@
     "700": 12
   },
   "pressure_plan": {
-    "note": "Escalón de presión objetivo de cada hito (03 §12, escala larga; P3 A): el mundo 7, del 3 al 7, como dice 03 §12; los mundos 8 (del 4 al 8) y 9 (del 5 al 9), escalón a escalón [P] de esta especificación. Solo guía e informe (difficulty.pressure; aviso PRESSURE de --validate-spec): no decide la etiqueta. La palanca de las congeladas (Aguapé) llega con F2.",
+    "note": "Escalón de presión objetivo de cada hito (03 §12, escala larga; P3 A): el mundo 7, del 3 al 7, como dice 03 §12; los mundos 8 (del 4 al 8) y 9 (del 5 al 8), escalón a escalón [P] de esta especificación. Los hitos 660, 680 y 700 van a 7, 7 y 8, decidido por el dueño (D-068, añadido «las preguntas de F3 y F3b»): es lo que dan los tableros con el Aguapé espeso, sin añadir dosis ocultas. Solo guía e informe (difficulty.pressure; aviso PRESSURE de --validate-spec): no decide la etiqueta.",
     "320": 3,
     "340": 4,
     "360": 5,
@@ -405,9 +405,9 @@
     "600": 6,
     "620": 6,
     "640": 7,
-    "660": 8,
-    "680": 8,
-    "700": 9
+    "660": 7,
+    "680": 7,
+    "700": 8
   },
   "cycle": {
     "from_level": 201,
@@ -651,7 +651,7 @@
       "kind": "trigger",
       "debut": 363,
       "season": "A",
-      "season_debut_exempt": "D-068 P8 A: el dueño estrena la Lancha en el 363, p3 del ciclo 361-380, que es de aguas bajas (B) en la 1.0; la temporada solo pesa en la bolsa (03 §12) y no se cambia en la curva 2 [P]."
+      "season_debut_exempt": "D-068 P8 A: el dueño estrena la Lancha en el 363, p3 del ciclo 361-380, que es de aguas bajas (B) en la 1.0; la temporada solo pesa en la bolsa (03 §12) y no se cambia en la curva 2: decidido por el dueño (D-068, añadido «las preguntas de F3 y F3b»), season_debut_exempt en lugar de cambiar la temporada del ciclo."
     }
   ],
   "mechanics_note": "Las de campaign_v2.json sin la Tinaja, que queda fuera de la 1.1 (D-068, pregunta 12 (a)), más las de la 1.1 con el núcleo de F2 (D-068, fase F3b): el Aguapé (Ag, M8, filtro de origen, estreno 303-305), el Aguapé espeso (A2, variante del Aguapé con n = 2, estreno 347-348: p7-p8 del ciclo 341-360, excepción declarada a la regla 2 de 02 §9.2, pregunta 11 (a)) y la Lancha (La, M11, disparador, estreno 363-365, con season_debut_exempt). Temporada A las tres (03 §12). Solo en la curva 2 (CURVE-MECH).",
@@ -728,7 +728,7 @@
   },
   "seasons_note": "Temporadas A (aguas altas) y B (aguas bajas) por ciclo de d.5, punto 4 (las mismas en las dos variantes): solo metadato; no cambian la generación ni pasan al pack. La tabla del cliente (Assets/_Project/Data/Levels/seasons_v1.json) las copia con --seasons campaign_v1.json campaign_v2.json (SE1; la amplía P7).",
   "report_sources": "D-009 (ciclo escalonado), D-007 (debuts) y la tabla de novedades de 201-700 de D2 (D-023 punto 10) con la propuesta `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` (c.1-c.4, d.1-d.3 y d.5), D-019 (Tinaja) y D-023 punto 5 (variantes de la 1.0); GDD 03 §2, §4, §7-§13 y §17; 02 §8-§11; 08 §4.1",
-  "calendar_note": "201-300: la variante «b» de campaign_v2.json (historia; CURVE-BASE). 301-700: la variante «b» de campaign_v2.json con estos cambios (D-068, F3): Aguas turbias en Normal en 323-324 (estreno; antes Ma y C) y en 3 comodidades por ciclo, sobre comodidades de un filtro o puras donde el ciclo conserva el 30 % de puros (351 Ln y 368 Ha pasan a Ba+Tu, y 417 Ha a Ho+Tu, para que su ciclo tenga las tres sin bajar del 30 %); el reto 369 pasa de Pi+B2 a Pi+Ma (F1-3); los hitos 620 y 680 sin la nota K = 13. Fase F3b (Aguapé, espeso y Lancha; propuesta §4.3; 03 §12): el Aguapé titular del ciclo 301-320 con 8 niveles (303-305 con estrella, 308, 309, 312, 314 y 318) y después 2-4 por ciclo, en comodidades de una mecánica, en retos y en hitos (los retos 429, 452, 566, 592, 658 y 698, que con las mecánicas de la 1.0 no medían Difícil, y los hitos 340, 360, 380, 400, 440, 460, 580 y 620 como palanca de presión); el espeso en 347-348 (estreno) y en los hitos 420, 500, 520, 540, 560, 600, 640, 660, 680 y 700 (la palanca 2 de congeladas); la Lancha titular del ciclo 361-380 con 8 niveles (363-365 con estrella, 371, 372, 374, 375 y 378; nunca en un hito de K 11 o 12: su carga es una cuia más y pasaría del tope) y después 2 por ciclo, sobre todo en comodidad (con la Liana solo desde el 401; en un reto la carga y la holgura dejan 12 cuias con K 9); el 354 pasa a C y el 355 a B2+Re para que el ciclo 341-360 conserve sus 6 puros y los 8 niveles del Brote de dos hojas. Respuestas recomendadas a las preguntas de F3 (sección 9 de docs/dev/curva-1.1-f1-medicion.md) [P], pendientes del dueño: (1) sin K 10 en los retos 429, 566, 686 y 698: el Aguapé lleva a Difícil el 429 (75 %), el 566 (75 %) y el 698 (88 %), y el 686 (Ma+Ho, 73 %) no llega ni con K 10 ni con el Aguapé: va sin chip (F1-2); (2) los retos 452 (Pi+Br) y 592 (Pi+B2) con el Aguapé como tercera mecánica (83 % y 78 %); (3) el ciclo 641-660 con el Aguapé en el 658 y el 652 (Ag+Br+Re) y el espeso en el hito 660; (4) el ciclo 401-420 con los retos de la Flor reordenados (409 Fl+Ll y 415 Fl) y el reto turbio 418 en Br+Tu.",
+  "calendar_note": "201-300: la variante «b» de campaign_v2.json (historia; CURVE-BASE). 301-700: la variante «b» de campaign_v2.json con estos cambios (D-068, F3): Aguas turbias en Normal en 323-324 (estreno; antes Ma y C) y en 3 comodidades por ciclo, sobre comodidades de un filtro o puras donde el ciclo conserva el 30 % de puros (351 Ln y 368 Ha pasan a Ba+Tu, y 417 Ha a Ho+Tu, para que su ciclo tenga las tres sin bajar del 30 %); el reto 369 pasa de Pi+B2 a Pi+Ma (F1-3); los hitos 620 y 680 sin la nota K = 13. Fase F3b (Aguapé, espeso y Lancha; propuesta §4.3; 03 §12): el Aguapé titular del ciclo 301-320 con 8 niveles (303-305 con estrella, 308, 309, 312, 314 y 318) y después 2-4 por ciclo, en comodidades de una mecánica, en retos y en hitos (los retos 429, 452, 566, 592, 658 y 698, que con las mecánicas de la 1.0 no medían Difícil, y los hitos 340, 360, 380, 400, 440, 460, 580 y 620 como palanca de presión); el espeso en 347-348 (estreno) y en los hitos 420, 500, 520, 540, 560, 600, 640, 660, 680 y 700 (la palanca 2 de congeladas); la Lancha titular del ciclo 361-380 con 8 niveles (363-365 con estrella, 371, 372, 374, 375 y 378; nunca en un hito de K 11 o 12: su carga es una cuia más y pasaría del tope) y después 2 por ciclo, sobre todo en comodidad (con la Liana solo desde el 401; en un reto la carga y la holgura dejan 12 cuias con K 9); el 354 pasa a C y el 355 a B2+Re para que el ciclo 341-360 conserve sus 6 puros y los 8 niveles del Brote de dos hojas. Respuestas a las preguntas de F3 (sección 9 de docs/dev/curva-1.1-f1-medicion.md), decididas por el dueño con las recomendadas (D-068, añadido «las preguntas de F3 y F3b»): (1) sin K 10 en los retos 429, 566, 686 y 698: el Aguapé lleva a Difícil el 429 (75 %), el 566 (75 %) y el 698 (88 %), y el 686 (Ma+Ho, 73 %) no llega ni con K 10 ni con el Aguapé: va sin chip (F1-2); (2) los retos 452 (Pi+Br) y 592 (Pi+B2) con el Aguapé como tercera mecánica (83 % y 78 %); (3) el ciclo 641-660 con el Aguapé en el 658 y el 652 (Ag+Br+Re) y el espeso en el hito 660; (4) el ciclo 401-420 con los retos de la Flor reordenados (409 Fl+Ll y 415 Fl) y el reto turbio 418 en Br+Tu.",
   "calendar": {
     "201": "R (tinte Cacao)",
     "202": "R",

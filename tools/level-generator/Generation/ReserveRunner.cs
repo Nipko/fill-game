@@ -585,7 +585,8 @@ internal static class ReserveRunner
         W(F($"Generado por `dotnet run --project tools/level-generator -c Release -- --reserve {packs} --spec {specPath.Replace('\\', '/')}{variantArg} --out {outDir.Replace('\\', '/')} --report {reportPath.Replace('\\', '/')}`: no se edita a mano."));
         W(F($"QA: `dotnet run --project tools/level-qa -c Release -- --reserve <reserva_NN_v1.json> --campaign <mundo_NN_v1.json> --spec {specPath.Replace('\\', '/')}{variantArg}`."));
         W();
-        W("Fuente: D-033, añadido «la reserva del 20 %» (Q-B11-7 (a)); 03 §17; D-020 (pregunta 31 b). Un pack por mundo (`kind` = `reserve`, `pack_schema` 4) con, para los niveles que usan una mecánica con kill switch (`mech_enabled_*`, 08 §9), otro tablero del mismo slot sin mecánicas y en su ventana, hasta el 20 % de los niveles del mundo. El cliente solo los usa desde `level_overrides`.");
+        string schemas = string.Join(" o ", results.Select(r => PackSchemaFor(spec, r.World)).Distinct().Order().Select(x => x.ToString(CultureInfo.InvariantCulture)));
+        W("Fuente: D-033, añadido «la reserva del 20 %» (Q-B11-7 (a)); 03 §17; D-020 (pregunta 31 b). Un pack por mundo (`kind` = `reserve`, `pack_schema` " + schemas + ") con, para los niveles que usan una mecánica con kill switch (`mech_enabled_*`, 08 §9), otro tablero del mismo slot sin mecánicas y en su ventana, hasta el 20 % de los niveles del mundo. El cliente solo los usa desde `level_overrides`.");
         W();
         W("Reglas [P] de esta herramienta: orden por rondas sobre los kill switches de 08 §9 (cada mecánica toma su primer nivel aún sin elegir); tablero con la celda sin mecánicas (ni Aguas turbias) y con sus capacidades; entre los candidatos en la ventana con el par en el objetivo del rango ±30 %, el de la misma etiqueta que el publicado y el `bot_fail` más cercano; alivio desde el 31; sin `D` (no entra en el pool del rango).");
         W();
