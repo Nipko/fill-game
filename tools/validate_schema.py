@@ -18,7 +18,7 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
     (e) pack_schema 2 (D-007, contrato 21): tipo matapi, Liana con key o n (uno y solo uno), campos obligatorios por
         tipo (hoja: key; remolino: partner; lluvia: key y n), intro_mechanic matapi/chica/alta/murky [P] y
         difficulty.par_approx [P]; con pack_schema 1 nada de eso valida y todo lo demas sigue igual; una version que
-        el esquema no conoce (pack_schema 4) falla;
+        el esquema no conoce (pack_schema 6) falla;
     (f) pack_schema 3 (D-019, punto 9; contrato 21): la Tinaja (M13) con los tipos tinaja y cucharon, sin campos, e
         intro_mechanic tinaja; murky = true y hidden con las capas de la tinaja menos la boca (como mucho 4 pares, como
         siempre); el 3 conserva todo lo del 2 (campos obligatorios por tipo, matapi, intro_mechanic y par_approx); tinaja,
@@ -33,7 +33,13 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
         del Brote);
     (h) pack_schema 4 (D-033, anadido "la reserva del 20 %", Q-B11-7 a; contrato 21): el pack de reserva (kind reserve,
         pack_id reserva_{mm}_v{v}, replaces, id con _r{k} y seed con :r{k}, sin intro_mechanic) solo valida con el 4;
-        replaces, los sufijos y el pack_id reserva_ fallan fuera de kind reserve; un pack de campana con el 4 valida.
+        replaces, los sufijos y el pack_id reserva_ fallan fuera de kind reserve; un pack de campana con el 4 valida;
+    (i) pack_schema 5 (D-068, la curva de la 1.1 [P]; contrato 21): aguape {group 0-7, n 1 o 2} y lancha {k >= 2}, sin
+        otros campos; intro_mechanic aguape, aguape_n2 y lancha; rows en el nivel y en relief; difficulty.pressure 0-9;
+        el pack de la curva 2 (kind curve, pack_id curva_{mm}_v{v}, replaces con el id de la curva 1, id con _c{c} y
+        seed con :c{c}, c de 2 a 9) y su reserva (reserva_curva_{mm}_v{v}, _c{c}_r{k} y :c{c}:r{k}); con pack_schema
+        1-4 nada de eso valida, fuera de kind curve no hay pack_id curva_ ni sufijos _c{c}, y el Reto del rio no lleva rows. Una version que el esquema
+        no conoce (pack_schema 6) falla (caso e9).
 
 Imprime PASS/FAIL por caso y termina con codigo 1 si alguno falla. Requiere jsonschema >= 4.18.
 
@@ -316,8 +322,8 @@ def main() -> int:
     check(validator, "e8", "pack 1: intro_mechanic = matapi",
           pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja", "key": 4}, "matapi", pack=1), False)
     d = copy.deepcopy(example)
-    d["pack_schema"] = 5
-    check(validator, "e9", "pack_schema = 5, una version que el esquema no conoce (el cliente lo rechazaria, 08 §4.4)", d, False)
+    d["pack_schema"] = 6
+    check(validator, "e9", "pack_schema = 6, una version que el esquema no conoce (el cliente lo rechazaria, 08 §4.4)", d, False)
     check(validator, "e10", "pack 2: Hoja sin key",
           pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja"}, "hoja"), False)
     d = pack2_level(4, "w04_trapecio", "white", 103, {"type": "remolino", "partner": 8}, "remolino")
@@ -598,6 +604,160 @@ def main() -> int:
     d = copy.deepcopy(daily)
     d["levels"][0]["replaces"] = "m03_v1_n0043"
     check(validator, "h13", "tablero diario con replaces", d, False)
+
+    # (i) pack_schema 5: la curva de la 1.1 (D-068 [P]; contrato 21; 08 §4.1 y §4.4; propuesta de la curva, §6.2 y §6.6)
+    def set_attrs(p: dict, cells: dict) -> dict:
+        """Pone cells {indice: attr} en attrs del nivel y de cada variante de relief (con attrs completos)."""
+        lv = p["levels"][0]
+        for board in [lv] + lv["relief"]:
+            if board.get("attrs") is None:
+                board["attrs"] = [None] * len(board["cuias"])
+            for i, a in cells.items():
+                board["attrs"][i] = copy.deepcopy(a)
+        return p
+
+    def p5_level(level: int, cells: dict, intro, pack: int = 5) -> dict:
+        """El ejemplo de 08 §4.1 en el mundo 7 (o 10 desde el 701) con pack_schema 5 y las attrs de cells, sin la Hoja."""
+        if level > 700:
+            p = pack2_level(10, "w10_alto_negro", "black", level, None, intro, pack=pack)
+        else:
+            p = variant_level(level, None, intro, pack=pack)
+        return set_attrs(p, cells)
+
+    aguape2 = {1: {"type": "aguape", "group": 0}, 2: {"type": "aguape", "group": 0}}
+    espeso = {i: {"type": "aguape", "group": 1, "n": 2} for i in (4, 5, 6, 7)}
+    lancha = {0: {"type": "lancha", "k": 3}}
+
+    def curve_pack(level: int = 306, c: int = 2, pack: int = 5) -> dict:
+        """El nivel como tablero de la curva 2 de su slot (kind curve, curva_07_v1, _c{c} y :c{c}, replaces)."""
+        p = p5_level(level, {}, None, pack=pack)
+        p.update({"pack_id": "curva_07_v1", "kind": "curve"})
+        lv = p["levels"][0]
+        lv.update({"id": f"m07_v1_n{level:04d}_c{c}", "seed": f"amazonfill:v1:m07:v1:n{level:04d}:c{c}",
+                   "replaces": f"m07_v1_n{level:04d}"})
+        return p
+
+    def curve_reserve(pack: int = 5) -> dict:
+        """Reserva de la curva 2: reserva_curva_07_v1, replaces con _c2, id _c2_r1 y seed :c2:r1, sin mecanicas."""
+        p = curve_pack(pack=pack)
+        p.update({"pack_id": "reserva_curva_07_v1", "kind": "reserve"})
+        p.pop("cycle20", None)
+        lv = p["levels"][0]
+        lv.update({"id": "m07_v1_n0306_c2_r1", "seed": "amazonfill:v1:m07:v1:n0306:c2:r1",
+                   "replaces": "m07_v1_n0306_c2", "intro_mechanic": None, "skippable": True})
+        return p
+
+    check(validator, "i1", "pack 5: estreno del Aguape en el 303 (grupo 0 de 2 cuias; intro_mechanic aguape)",
+          p5_level(303, aguape2, "aguape"), True)
+    check(validator, "i2", "pack 5: Aguape espeso {type: aguape, group: 1, n: 2} en 4 cuias (intro_mechanic aguape_n2)",
+          p5_level(343, espeso, "aguape_n2"), True)
+    check(validator, "i3", "pack 5: estreno de la Lancha en el 363 {type: lancha, k: 3} (intro_mechanic lancha)",
+          p5_level(363, lancha, "lancha"), True)
+    d = p5_level(320, aguape2, None)
+    lv = d["levels"][0]
+    lv["rows"] = [5, 4]
+    lv["difficulty"].update({"pressure": 3, "band": "milestone"})
+    lv["relief"][0]["rows"] = [5, 4]
+    lv["relief"][1]["rows"] = [5, 5]
+    check(validator, "i4", "pack 5: rows en el nivel y en relief, y difficulty.pressure = 3", d, True)
+    d = p5_level(323, {}, "murky")
+    d["levels"][0].update({"murky": True, "hidden": [[0, 0]]})
+    check(validator, "i5", "pack 5: Aguas turbias en un Normal con 1 dosis oculta (intro_mechanic murky, 02 §11 T1)", d, True)
+    d = p5_level(326, aguape2, None)
+    d["levels"][0].update({"murky": True, "hidden": [[0, 0], [5, 1]]})
+    check(validator, "i6", "pack 5: Aguape junto a Aguas turbias (02 §9.2 regla 7; las variantes, sin hidden)", d, True)
+    check(validator, "i7", "pack 5: campana desde el 701 (mundo_10_v1) con el Aguape", p5_level(705, aguape2, None), True)
+    d = p5_level(343, {}, "brote_n2")
+    set_attrs(d, {1: {"type": "brote", "n": 2}})
+    check(validator, "i8", "pack 5: el Brote de dos hojas del 3 sigue valiendo", d, True)
+    check(validator, "i9", "pack 5: pack de la curva 2 (kind curve, curva_07_v1, m07_v1_n0306_c2, :c2, replaces m07_v1_n0306)",
+          curve_pack(), True)
+    check(validator, "i10", "pack 5: reserva de la curva 2 (reserva_curva_07_v1, _c2_r1, :c2:r1, replaces m07_v1_n0306_c2)",
+          curve_reserve(), True)
+    d = reserve_pack(pack=5)
+    check(validator, "i11", "pack 5: la reserva de la 1.0 (reserva_03_v1) con pack_schema 5", d, True)
+
+    check(validator, "i12", "pack 5: Aguape sin group", p5_level(303, {1: {"type": "aguape"}}, "aguape"), False)
+    check(validator, "i13", "pack 5: Aguape con n = 3 (1 o 2)",
+          p5_level(343, {i: {"type": "aguape", "group": 1, "n": 3} for i in (4, 5, 6, 7)}, None), False)
+    check(validator, "i14", "pack 5: Aguape con key", p5_level(303, {1: {"type": "aguape", "group": 0, "key": 4}}, None), False)
+    check(validator, "i15", "pack 5: group 8 (0-7)", p5_level(303, {1: {"type": "aguape", "group": 8}}, None), False)
+    check(validator, "i16", "pack 5: group en una Hoja {type: hoja, key: 4, group: 0}",
+          p5_level(303, {3: {"type": "hoja", "key": 4, "group": 0}}, None), False)
+    check(validator, "i17", "pack 5: Lancha sin k", p5_level(363, {0: {"type": "lancha"}}, "lancha"), False)
+    check(validator, "i18", "pack 5: Lancha con k = 1 (atraca con >= 2 vacias)", p5_level(363, {0: {"type": "lancha", "k": 1}}, None), False)
+    check(validator, "i19", "pack 5: Lancha con n", p5_level(363, {0: {"type": "lancha", "k": 3, "n": 2}}, None), False)
+    check(validator, "i20", "pack 4: Aguape en attrs (solo pack_schema 5)", p5_level(303, aguape2, None, pack=4), False)
+    check(validator, "i21", "pack 3: intro_mechanic = lancha sin la mecanica (solo pack_schema 5)",
+          p5_level(363, {}, "lancha", pack=3), False)
+    d = p5_level(363, {}, None, pack=4)
+    d["levels"][0]["relief"][1]["attrs"][0] = {"type": "lancha", "k": 3}
+    check(validator, "i22", "pack 4: Lancha solo en attrs de relief[1]", d, False)
+    d = p5_level(320, {}, None, pack=4)
+    d["levels"][0]["rows"] = [5, 4]
+    check(validator, "i23", "pack 4: rows en el nivel (solo pack_schema 5)", d, False)
+    d = p5_level(320, {}, None, pack=4)
+    d["levels"][0]["relief"][1]["rows"] = [5, 5]
+    check(validator, "i24", "pack 4: rows en una variante de relief", d, False)
+    d = p5_level(320, {}, None, pack=4)
+    d["levels"][0]["difficulty"]["pressure"] = 3
+    check(validator, "i25", "pack 4: difficulty.pressure (solo pack_schema 5)", d, False)
+    d = p5_level(320, {}, None)
+    d["levels"][0]["difficulty"]["pressure"] = 10
+    check(validator, "i26", "pack 5: difficulty.pressure = 10 (0-9)", d, False)
+    d = p5_level(320, {}, None)
+    d["levels"][0]["rows"] = [3, 2, 2, 2]
+    check(validator, "i27", "pack 5: rows con 4 filas (1-3)", d, False)
+    d = p5_level(320, {}, None)
+    d["levels"][0]["rows"] = [8, 1]
+    check(validator, "i28", "pack 5: rows con 8 cuias en una fila (<= 7)", d, False)
+    check(validator, "i29", "pack 4: pack de la curva 2 (kind curve solo con pack_schema 5)", curve_pack(pack=4), False)
+    d = curve_pack()
+    del d["levels"][0]["replaces"]
+    check(validator, "i30", "pack 5: curva 2 sin replaces", d, False)
+    d = curve_pack()
+    d["levels"][0]["replaces"] = "m07_v1_n0306_c2"
+    check(validator, "i31", "pack 5: curva 2 con replaces de curva 2 (replaces es el id de la curva 1)", d, False)
+    d = curve_pack()
+    d["levels"][0].update({"id": "m07_v1_n0306", "seed": "amazonfill:v1:m07:v1:n0306"})
+    check(validator, "i32", "pack 5: curva 2 con el id y la semilla de la curva 1 (prohibido por 08 §4.4)", d, False)
+    check(validator, "i33", "pack 5: curva 2 con _c1 y :c1 (c es de 2 a 9)", curve_pack(c=1), False)
+    d = curve_pack()
+    d["pack_id"] = "mundo_07_v1"
+    check(validator, "i34", "pack 5: curva 2 con pack_id mundo_07_v1", d, False)
+    d = curve_pack()
+    d["levels"][0]["id"] = "m07_v2_n0306"
+    d["levels"][0]["seed"] = "amazonfill:v1:m07:v2:n0306"
+    check(validator, "i35", "pack 5: curva 2 con la vuelta 2 (v2) en lugar de _c2", d, False)
+    d = p5_level(306, {}, None)
+    d["levels"][0].update({"id": "m07_v1_n0306_c2", "seed": "amazonfill:v1:m07:v1:n0306:c2"})
+    check(validator, "i36", "pack 5: nivel de campana con id y seed de curva 2", d, False)
+    d = p5_level(306, {}, None)
+    d["pack_id"] = "curva_07_v1"
+    check(validator, "i37", "pack 5: pack de campana con pack_id curva_07_v1", d, False)
+    d = p5_level(306, {}, None)
+    d["levels"][0]["replaces"] = "m07_v1_n0306"
+    check(validator, "i38", "pack 5: nivel de campana con replaces", d, False)
+    check(validator, "i39", "pack 4: reserva de la curva 2 (reserva_curva_ solo con pack_schema 5)", curve_reserve(pack=4), False)
+    d = curve_reserve()
+    d["levels"][0]["replaces"] = "m07_v1_n0306"
+    check(validator, "i40", "pack 5: reserva de la curva 2 con replaces de la curva 1", d, False)
+    d = curve_reserve()
+    d["pack_id"] = "reserva_07_v1"
+    check(validator, "i41", "pack 5: reserva de la 1.0 (reserva_07_v1) con id _c2_r1", d, False)
+    d = curve_reserve()
+    d["levels"][0].update({"id": "m07_v1_n0306_r1", "seed": "amazonfill:v1:m07:v1:n0306:r1"})
+    check(validator, "i42", "pack 5: reserva de la curva 2 sin _c2 en id y seed", d, False)
+    d = curve_pack()
+    d["levels"][0].update({"id": "m07_v1_n0306_c2_r1", "seed": "amazonfill:v1:m07:v1:n0306:c2:r1"})
+    check(validator, "i45", "pack 5: curva 2 con el id y la semilla de su reserva (_c2_r1 solo en kind reserve)", d, False)
+    d = copy.deepcopy(daily)
+    d["pack_schema"] = 5
+    check(validator, "i46", "pack 5: tablero diario (el 5 no cambia el Reto del rio)", copy.deepcopy(d), True)
+    d["levels"][0]["rows"] = [5, 4]
+    check(validator, "i47", "pack 5: rows en un tablero diario (el Reto del rio no cambia con D-068, P11 A)", d, False)
+    check(attr_validator, "i43", "attr {type: aguape, group: 0, n: 2} contra $defs/attr", {"type": "aguape", "group": 0, "n": 2}, True)
+    check(attr_validator, "i44", "attr {type: lancha, k: 3} contra $defs/attr", {"type": "lancha", "k": 3}, True)
 
     failed = RESULTS.count(False)
     print(f"\n{len(RESULTS) - failed}/{len(RESULTS)} casos PASS" + (f"; {failed} FAIL" if failed else ""))
