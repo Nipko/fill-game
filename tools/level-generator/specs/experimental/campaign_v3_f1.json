@@ -1,0 +1,203 @@
+{
+  "extends": "../campaign_v2.json",
+  "spec": "campaign_v3_f1",
+  "description": "Especificacion EXPERIMENTAL de la fase F1 de D-068 (curva de la 1.1 por ciclos; docs/dev/propuesta-curva-1.1.md §4.1 y §7; informe docs/dev/curva-1.1-f1-medicion.md). No es de produccion: no se generan packs con ella, solo se mide con --measure (tools/level-generator/README.md). Extiende campaign_v2.json (variante b, mundo 7: 301-420) y cambia solo tres cosas: (1) los topes de cuias por papel con el k_plan (respiro K 8 con 2 vacios = 10 cuias; comodidad K 8 con 1-2 vacios = 9-11; reto K 10 con 1 vacio = 11; hito K 11 = 12-13; cupide del 420 K 12 = 13-14), con el remanso (p19) en el K de los respiros; (2) las Aguas turbias tambien en comodidad (murky_normal, D-068 P7 A: una cuia, 1-2 dosis) en 2-3 comodidades por ciclo, para acercarse al ~20 % de niveles con ocultas; (3) nada mas: mismas mecanicas de la 1.0 (sin Aguape ni Lancha), mismos retos, hitos, ventanas y escalera de D-009.",
+  "murky_normal": {
+    "from_level": 301,
+    "max_per_cycle": 5,
+    "note": "D-068 P7 A (propuesta §4.2 b): turbias tambien en comodidad desde el 301 con 1-2 dosis (una cuia); hasta 5 niveles turbios por ciclo en lugar de los 2 de MURKY-2. Solo en specs/experimental/: el GDD (02 §11, T1) aun no lo recoge (F0)."
+  },
+  "k_plan_note": "F1 de D-068 (P2 A): 301-420 con recuperacion 8, comodidad 8, reto 10 e hito 11, y el 420 (cupide, la firma del mundo 7) con 12. El resto, el de campaign_v2.json (no se mide).",
+  "k_plan": [
+    {
+      "levels": [
+        420,
+        420
+      ],
+      "recovery": 8,
+      "comfort": 8,
+      "challenge": 10,
+      "milestone": 12
+    },
+    {
+      "levels": [
+        301,
+        420
+      ],
+      "recovery": 8,
+      "comfort": 8,
+      "challenge": 10,
+      "milestone": 11
+    },
+    {
+      "levels": [
+        201,
+        300
+      ],
+      "recovery": 9,
+      "comfort": 10,
+      "challenge": 10,
+      "milestone": 10
+    },
+    {
+      "levels": [
+        421,
+        560
+      ],
+      "recovery": 10,
+      "comfort": 11,
+      "challenge": 10,
+      "milestone": 11
+    },
+    {
+      "levels": [
+        620,
+        620
+      ],
+      "recovery": 10,
+      "comfort": 11,
+      "challenge": 10,
+      "milestone": 13
+    },
+    {
+      "levels": [
+        680,
+        680
+      ],
+      "recovery": 10,
+      "comfort": 11,
+      "challenge": 10,
+      "milestone": 13
+    },
+    {
+      "levels": [
+        561,
+        700
+      ],
+      "recovery": 10,
+      "comfort": 11,
+      "challenge": 10,
+      "milestone": 12
+    }
+  ],
+  "cycle": {
+    "from_level": 201,
+    "length": 20,
+    "note": "Copia del cycle de campaign_v2.json con un solo cambio (F1 de D-068): el remanso (p19) toma el K de recovery, el de los respiros (D-068 P2 A: respiro 8-10 cuias, K 6-8; propuesta de la curva de la 1.1, §4.1). Ciclo de D-009 (03 §12; propuesta c.3 y c.4), el mismo de campaign_v1 desde el 201: p = ((n - 1) mod 20) + 1; retos en p6, p9, p12, p15 y p18 (Difícil), remanso puro en p19 e hito en p20 (Muy difícil); 2 vacíos en recuperación y en los tableros de estreno (02 §9.2 regla 2) y 1 en el resto (03 §11). Ventanas y etiquetas copiadas de campaign_v1 (desde el 61: retos 75-89 % y hito ≥ 90 %).",
+    "positions": [
+      {
+        "p": [
+          1,
+          2
+        ],
+        "role": "recovery",
+        "empties": 2,
+        "source": "walk",
+        "k": "recovery"
+      },
+      {
+        "p": [
+          3,
+          4,
+          5
+        ],
+        "role": "comfort",
+        "empties": 1,
+        "source": "walk",
+        "k": "comfort",
+        "debut_slot": true
+      },
+      {
+        "p": [
+          6,
+          9,
+          12,
+          15,
+          18
+        ],
+        "role": "challenge",
+        "empties": 1,
+        "source": "challenge",
+        "k": "challenge"
+      },
+      {
+        "p": [
+          7,
+          8,
+          10,
+          11,
+          13,
+          14,
+          16,
+          17
+        ],
+        "role": "comfort",
+        "empties": 1,
+        "source": "walk",
+        "k": "comfort"
+      },
+      {
+        "p": [
+          19
+        ],
+        "role": "remanso",
+        "empties": 1,
+        "source": "walk",
+        "k": "recovery"
+      },
+      {
+        "p": [
+          20
+        ],
+        "role": "milestone",
+        "empties": 1,
+        "source": "deep",
+        "k": "milestone"
+      }
+    ],
+    "empties_two_until_level": 30,
+    "challenge_two_empties_until_level": 39,
+    "windows": {
+      "recovery": "[0.00, 0.30)",
+      "comfort": "[0.20, 0.60]",
+      "debut": "[0.00, 0.20)",
+      "remanso": "[0.20, 0.40]",
+      "challenge_21_40": "[0.50, 0.70]",
+      "challenge_41_59_labeled": "[0.75, 0.90)",
+      "challenge_41_59_soft": "[0.50, 0.75)",
+      "challenge_61": "[0.75, 0.90)",
+      "milestone_40": "[0.75, 0.85]",
+      "milestone_60": "[0.90, 1.00]"
+    },
+    "labels": {
+      "first_hard": 40,
+      "first_very_hard": 60,
+      "labeled_41_59": [
+        6,
+        12,
+        18
+      ],
+      "thresholds": {
+        "hard": 0.75,
+        "very_hard": 0.9
+      }
+    }
+  },
+  "calendar_note_f1": "Celdas cambiadas respecto a campaign_v2.json (en las dos variantes; ninguna es de la Tinaja): turbias en comodidad en 304, 311, 314, 328, 331, 337, 350, 357, 364, 377, 384, 388, 410 y 414 (sin las que d.5.1 no admite: Brote de dos hojas y Hoja atada no van con turbias). Con las 4 de la 1.0 (315, 366, 386 y 418) son 18 de 120 niveles (15 %).",
+  "calendar": {
+    "304": "Tu",
+    "311": "Ba+Tu",
+    "314": "Ho+Tu",
+    "328": "Tu",
+    "331": "Ma+Tu",
+    "337": "Ba+Tu",
+    "350": "Tu",
+    "357": "Br+Tu",
+    "364": "Tu",
+    "377": "Br+Tu",
+    "384": "Tu",
+    "388": "Br+Tu",
+    "410": "Tu",
+    "414": "Br+Tu"
+  }
+}

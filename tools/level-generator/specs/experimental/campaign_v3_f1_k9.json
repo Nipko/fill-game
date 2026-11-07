@@ -1,0 +1,77 @@
+{
+  "extends": "campaign_v3_f1.json",
+  "spec": "campaign_v3_f1_k9",
+  "description": "Especificacion EXPERIMENTAL de la fase F1 de D-068: la misma que campaign_v3_f1.json con los retos de 301-420 en K 9 (10 cuias con su vacio) en lugar de 10, para medir si los retos de K 9 colocan (propuesta §4.1: reto K 9-10). Solo --measure.",
+  "k_plan": [
+    {
+      "levels": [
+        420,
+        420
+      ],
+      "recovery": 8,
+      "comfort": 8,
+      "challenge": 9,
+      "milestone": 12
+    },
+    {
+      "levels": [
+        301,
+        420
+      ],
+      "recovery": 8,
+      "comfort": 8,
+      "challenge": 9,
+      "milestone": 11
+    },
+    {
+      "levels": [
+        201,
+        300
+      ],
+      "recovery": 9,
+      "comfort": 10,
+      "challenge": 10,
+      "milestone": 10
+    },
+    {
+      "levels": [
+        421,
+        560
+      ],
+      "recovery": 10,
+      "comfort": 11,
+      "challenge": 10,
+      "milestone": 11
+    },
+    {
+      "levels": [
+        620,
+        620
+      ],
+      "recovery": 10,
+      "comfort": 11,
+      "challenge": 10,
+      "milestone": 13
+    },
+    {
+      "levels": [
+        680,
+        680
+      ],
+      "recovery": 10,
+      "comfort": 11,
+      "challenge": 10,
+      "milestone": 13
+    },
+    {
+      "levels": [
+        561,
+        700
+      ],
+      "recovery": 10,
+      "comfort": 11,
+      "challenge": 10,
+      "milestone": 12
+    }
+  ]
+}

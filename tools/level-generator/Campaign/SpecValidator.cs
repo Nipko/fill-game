@@ -190,7 +190,9 @@ internal static class SpecValidator
             }
 
             // MURKY-SLOT
-            if (c.Has("Tu") && c.Mark is not ("D" or "MD"))
+            // Con murky_normal (D-068, P7 A; solo specs/experimental/), también en comodidad sin estrella desde su nivel.
+            bool murkyNormal = spec.MurkyNormal is { } mn && n >= mn.FromLevel && role == SlotRole.Comfort && !c.Star;
+            if (c.Has("Tu") && c.Mark is not ("D" or "MD") && !murkyNormal)
             {
                 Fail("MURKY-SLOT", n, "Aguas turbias en un slot sin etiqueta");
             }
@@ -392,9 +394,10 @@ internal static class SpecValidator
             }
 
             int murky = cycle.Count(c => c.Has("Tu"));
-            if (murky > 2)
+            int murkyMax = spec.MurkyNormal is { } rule && start >= rule.FromLevel ? rule.MaxPerCycle : 2;
+            if (murky > murkyMax)
             {
-                Fail("MURKY-2", start, $"ciclo {name}: {murky} niveles con Aguas turbias (como mucho 2)");
+                Fail("MURKY-2", start, $"ciclo {name}: {murky} niveles con Aguas turbias (como mucho {murkyMax})");
             }
 
             foreach (MechanicInfo m in spec.MechanicTable.Where(m => m.Code != "Tu"))

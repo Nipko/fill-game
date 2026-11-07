@@ -37,7 +37,14 @@ internal sealed record GeneratedPack(WorldInfo World, string PackId, byte[] Byte
 
 /// <summary>Resultado de <see cref="CampaignRunner.Generate"/>: niveles colocados, estadísticos del pool y packs.</summary>
 internal sealed record CampaignResult(
-    List<GeneratedLevel> Levels, Dictionary<RangeInfo, RangeStats> Stats, List<GeneratedPack> Packs, List<GeneratedLevel> NoRelief);
+    List<GeneratedLevel> Levels, Dictionary<RangeInfo, RangeStats> Stats, List<GeneratedPack> Packs, List<GeneratedLevel> NoRelief)
+{
+    /// <summary>
+    /// Primer nivel de cada bloque sin colocación (solo con <c>keepGoing</c>, el modo --measure de la fase F1 de D-068): sus
+    /// niveles quedan sin <see cref="GeneratedLevel.Chosen"/>. Vacío en la generación normal, que se detiene en el primero.
+    /// </summary>
+    public List<int> UnplacedBlocks { get; init; } = [];
+}
 
 internal static class CampaignRunner
 {
@@ -188,7 +195,12 @@ internal static class CampaignRunner
     /// mensajes de progreso van a <paramref name="log"/> (uno por nivel y por ronda de banda solo con
     /// <paramref name="verbose"/>).
     /// </summary>
-    public static CampaignResult? Generate(CampaignSpec spec, int first, int last, Action<string> log, bool verbose)
+    /// <remarks>
+    /// Con <paramref name="keepGoing"/> (solo --measure, la medición de la fase F1 de D-068) un bloque sin colocación no detiene
+    /// la generación: se anota en <see cref="CampaignResult.UnplacedBlocks"/>, sus niveles quedan sin elegido, la colocación
+    /// sigue con el bloque siguiente y no se hacen el alivio ni los packs (fases 4-5). Sin él, nada cambia.
+    /// </remarks>
+    public static CampaignResult? Generate(CampaignSpec spec, int first, int last, Action<string> log, bool verbose, bool keepGoing = false)
     {
         List<LevelPlan> plans = Enumerable.Range(first, last - first + 1).Select(spec.Plan).ToList();
         var levels = plans.Select(p => new GeneratedLevel { Plan = p, Slot = null! }).ToList();
@@ -240,6 +252,7 @@ internal static class CampaignRunner
         // Fase 3: colocación por bloques.
         phase.Restart();
         var history = new List<Candidate>();
+        var unplaced = new List<int>();
         foreach (List<GeneratedLevel> block in Blocks(spec, levels))
         {
             // Rondas de banda (03 §7: «la banda coloca»): cada slot necesita algún candidato de la banda de su rol.
@@ -361,6 +374,12 @@ internal static class CampaignRunner
                         $"  {l.Plan.Level} {l.Plan.RoleName,-12} opciones {opts.Count}: {string.Join(" ", opts.Select(c => $"{c.MeasuredLabel[0]}/D{Placement.Rounded(c.D):0.00}/q{c.Quantile:0.00}{(c.InWindow ? "" : "/fuera")}"))}"));
                 }
 
+                if (keepGoing)
+                {
+                    unplaced.Add(block[0].Plan.Level);
+                    continue;
+                }
+
                 return null;
             }
 
@@ -378,6 +397,10 @@ internal static class CampaignRunner
         }
 
         log($"fase 3 (colocacion): {phase.Elapsed.TotalSeconds:0.0} s");
+        if (keepGoing)
+        {
+            return new CampaignResult(levels, stats, [], []) { UnplacedBlocks = unplaced };
+        }
 
         // Fase 4: alivio.
         phase.Restart();
