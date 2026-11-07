@@ -709,6 +709,8 @@ namespace AF.UI
             _canvas.Canvas.gameObject.SetActive(true);
             EnsureGeometry(map);
             LiveOpen(map); // D-069, M2-1: el Mapa v2 o, con ui_map_v2 apagada, el de la 1.0 (RiverMapScreen.Live.cs)
+            TownsRoutes(ref routes); // D-069, M2-2: con ui_map_towns, la excursión local de los tramos de 0 km (RiverMapScreen.Towns.cs)
+            _routes = routes;
             _hasCanoe = TryCanoePoint(map, routes, progress.MaxLevel, out _canoeMap);
             _canoe.sprite = _art.MapCanoe;
             _canoe.gameObject.SetActive(_hasCanoe);
@@ -750,6 +752,7 @@ namespace AF.UI
             JourneyClose();
             NorthUpClose();
             LiveClose(); // D-069, M2-1: suelta el arte del Mapa v2 y escribe AF_PERF map_frames
+            TownsClose(); // D-069, M2-2: suelta el atlas de los pueblos
 
             _dragging = false;
             _activeMs = 0f;
@@ -899,10 +902,19 @@ namespace AF.UI
 
         /// <summary>
         /// Punto a la fracción <paramref name="fraction"/> (0-1, por longitud de arco) de la ruta <paramref name="route"/>, por sus
-        /// tramos de agua en orden (también los que remontan). Sin largo, la parada. Sin asignaciones.
+        /// tramos de agua en orden (también los que remontan). Sin largo, la parada; o, con la excursión local en uso (D-069, M2-2:
+        /// <c>ui_map_towns</c>, <see cref="RiverRoutes.WithExcursions"/>), su punto de la vuelta (<see cref="RiverTowns.ExcursionPoint"/>).
+        /// Sin asignaciones.
         /// </summary>
         public static Vector2 RoutePoint(RiverMap map, RiverStopRoute route, float fraction)
         {
+            RiverExcursion? excursion = route.Excursion;
+            if (excursion != null)
+            {
+                RiverTowns.ExcursionPoint(map, excursion, fraction, out float x, out float y);
+                return new Vector2(x, y);
+            }
+
             return PlacePoint(map, RoutePlace(map, route, fraction));
         }
 
@@ -1693,6 +1705,12 @@ namespace AF.UI
 
         /// <summary>D-069, M2-1: tras pintar los marcadores con <paramref name="max"/> niveles ganados.</summary>
         partial void LiveMarkers(int max);
+
+        /// <summary>D-069, M2-2: al abrir, tras LiveOpen, las rutas con la excursión local si van los pueblos (RiverMapScreen.Towns.cs).</summary>
+        partial void TownsRoutes(ref RiverRoutes routes);
+
+        /// <summary>D-069, M2-2: al cerrar, suelta el arte de los pueblos.</summary>
+        partial void TownsClose();
 
         /// <summary>M3.4: al construir la geometría de un Mapa (una vez), sus capas del lleno y del frente.</summary>
         partial void ProgressBuild(RectTransform staticLayer, RectTransform dynamicLayer);

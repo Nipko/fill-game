@@ -602,6 +602,9 @@ namespace AF.Tests.EditMode
             // D-056: los avatares del jugador («Tu avatar», Ajustes, el inicio, los hitos y TalkBack): AF.UI.AvatarText.
             keys.AddRange(AvatarText.AllKeys);
 
+            // D-069, M2-2: TalkBack de los pueblos de paso del Mapa v2: AF.UI.TownText.
+            keys.AddRange(TownText.AllKeys);
+
             return keys;
         }
 

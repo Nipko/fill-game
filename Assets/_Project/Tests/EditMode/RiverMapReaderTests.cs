@@ -86,7 +86,7 @@ namespace AF.Tests.EditMode
             Assert.That(map.Viewpoints[0].Id, Is.EqualTo("boca_del_amazonas"));
             Assert.That(map.Viewpoints[0].RevealOn, Is.EqualTo(10));
             Assert.That(map.Viewpoints[0].Fact, Is.EqualTo("map.stop.estuario.dato_01"));
-            Assert.That(map.Passing.Count, Is.EqualTo(18), "17 de 1-200 y teotonio (M4.5a)");
+            Assert.That(map.Passing.Count, Is.EqualTo(30), "17 de 1-200, teotonio (M4.5a) y los 12 pueblos nuevos (D-069, M2-2)");
             Assert.That(map.Passing[17].Id, Is.EqualTo("teotonio"));
             Assert.That(map.Lines[map.Passing[17].At.Line].Id, Is.EqualTo("madeira"));
             Assert.That(map.Passing[17].Fact, Is.EqualTo("map.stop.teotonio.dato_01"));
@@ -182,7 +182,8 @@ namespace AF.Tests.EditMode
             Assert.That(santarem.Path[0].S1, Is.EqualTo(0f), "el ramal hasta Gurupá");
             Assert.That(map.Lines[santarem.Path[1].Line].Id, Is.EqualTo("amazonas"));
             Assert.That(santarem.Path[1].S1, Is.LessThan(santarem.Path[1].S0), "río arriba, s decrece");
-            Assert.That(santarem.Via, Is.EqualTo(new[] { "breves", "gurupa", "boca_del_xingu", "monte_alegre" }));
+            Assert.That(santarem.Via, Is.EqualTo(new[] { "breves", "gurupa", "boca_del_xingu", "almeirim", "prainha", "monte_alegre" }), "con los pueblos nuevos de M2-2");
+            Assert.That(santarem.ViaFraction(3), Is.EqualTo(0.6133f).Within(1e-5f), "Almeirim, al 61 % del tramo en km (M2-2)");
             // Santarém está en la confluencia: se ancla en la boca del Tapajós (geometry.confluence_s, revisión de M5.1; D-030, 1 a) y
             // al llegar se llena.
             Assert.That(santarem.Mouths.Count, Is.EqualTo(2));
@@ -215,7 +216,8 @@ namespace AF.Tests.EditMode
 
             RiverStopRoute heath = routes.At(30)!;
             Assert.That(heath.Id, Is.EqualTo("puerto_heath"));
-            Assert.That(heath.Via[heath.Via.Count - 1], Is.EqualTo("teotonio"), "el relevo del guía en el viaje del 300 (Q18-A)");
+            Assert.That(heath.Via[heath.Via.Count - 2], Is.EqualTo("teotonio"), "el relevo del guía en el viaje del 300 (Q18-A), el último del Madeira");
+            Assert.That(heath.Via[heath.Via.Count - 1], Is.EqualTo("cachuela_esperanza"), "M2-2: Cachuela Esperanza, ya en el Beni");
             // M4.5b: el 500 baja el Beni y sube el Mamoré por Villa Bella (en HydroRIVERS, M5.1, sus bocas quedan a un tramo
             // de ~0,5 km del Madeira), y el viaje del 560 vuelve a pasar por Teotônio, Madeira abajo.
             RiverStopRoute guayaramerin = routes.At(50)!;
@@ -226,7 +228,7 @@ namespace AF.Tests.EditMode
             Assert.That(map.Lines[guayaramerin.Path[2].Line].Id, Is.EqualTo("mamore"));
             RiverStopRoute jenaro = routes.At(56)!;
             Assert.That(jenaro.Id, Is.EqualTo("jenaro_herrera"));
-            Assert.That(jenaro.Via[0], Is.EqualTo("teotonio"), "Rosa vuelve en el viaje del 560 (Q18-A)");
+            Assert.That(jenaro.Via[1], Is.EqualTo("teotonio"), "Rosa vuelve en el viaje del 560 (Q18-A); antes, Guajará-Mirim (M2-2)");
             Assert.That(routes.At(69)!.Id, Is.EqualTo("tambo"));
             Assert.That(routes.At(70)!.Id, Is.EqualTo(RiverRoutes.SourceGoalId), "tras la última parada, la meta (FX13)");
             Assert.That(routes.At(71), Is.Null);
@@ -311,8 +313,8 @@ namespace AF.Tests.EditMode
             // map.stop.*.dato_NN, así que las de país, mito y general se prueban aquí.
             string viewpoints = "[" + Viewpoint(fact: "\"map.country.br.dato_01\"") + ", "
                 + "{\"id\": \"mirador_boto\", \"xy\": [20, 20], \"reveal_on\": 20, \"fact\": \"map.myth.boto\"}]";
-            string passing = "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": \"map.general.cuenca\"}, "
-                + "{\"id\": \"breves\", \"line\": \"amazonas\", \"s\": 0.7, \"fact\": \"map.stop.breves.dato_02\"}]";
+            string passing = "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": \"map.general.cuenca\", \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}, "
+                + "{\"id\": \"breves\", \"line\": \"amazonas\", \"s\": 0.7, \"fact\": \"map.stop.breves.dato_02\", \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]";
             RiverMap map = RiverMapReader.Read(Doc(viewpoints: viewpoints, passing: passing));
             Assert.That(map.Viewpoints[0].Fact, Is.EqualTo("map.country.br.dato_01"));
             Assert.That(map.Viewpoints[1].Fact, Is.EqualTo("map.myth.boto"));
@@ -369,9 +371,9 @@ namespace AF.Tests.EditMode
             yield return Case("zonas solapadas", Doc(land: Land(zones: "[{\"id\": \"a\", \"tile\": \"canopy\", \"first\": 0, \"count\": 2}, "
                 + "{\"id\": \"b\", \"tile\": \"rock\", \"first\": 1, \"count\": 1}]")), "land.zones[1]");
             yield return Case("casa en una linea desconocida", Doc(home: "{\"on\": \"nadie\", \"s\": 0.9}"), "home.on");
-            yield return Case("punto de paso en una linea desconocida", Doc(passing: "[{\"id\": \"gurupa\", \"line\": \"nadie\", \"s\": 0.8, \"fact\": null}]"),
+            yield return Case("punto de paso en una linea desconocida", Doc(passing: "[{\"id\": \"gurupa\", \"line\": \"nadie\", \"s\": 0.8, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]"),
                 "passing[0].line");
-            yield return Case("punto de paso con el id de un mirador", Doc(passing: "[{\"id\": \"boca\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null}]"),
+            yield return Case("punto de paso con el id de un mirador", Doc(passing: "[{\"id\": \"boca\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]"),
                 "passing[0].id");
             yield return Case("dato de mirador fuera de map.*", Doc(viewpoints: "[{\"id\": \"boca\", \"xy\": [10, 10], \"reveal_on\": 10, \"fact\": \"fruta.acai\"}]"),
                 "viewpoints[0].fact");
@@ -388,8 +390,8 @@ namespace AF.Tests.EditMode
             yield return Case("zona fuera de los triangulos", Doc(land: Land(zones: "[{\"id\": \"a\", \"tile\": \"canopy\", \"first\": 1, \"count\": 2}]")),
                 "land.zones[0]");
             yield return Case("id de mirador repetido", Doc(viewpoints: "[" + Viewpoint() + ", " + Viewpoint() + "]"), "viewpoints[1].id");
-            yield return Case("id de punto de paso repetido", Doc(passing: "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null}, "
-                + "{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.7, \"fact\": null}]"), "passing[1].id");
+            yield return Case("id de punto de paso repetido", Doc(passing: "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}, "
+                + "{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.7, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]"), "passing[1].id");
             yield return Case("mirador revelado despues del 1000", Doc(viewpoints: "[" + Viewpoint(reveal: "1001") + "]"), "viewpoints[0].reveal_on");
             yield return Case("mirador sin fact", Doc(viewpoints: "[{\"id\": \"boca\", \"xy\": [10, 10], \"reveal_on\": 10}]"), "viewpoints[0].fact");
             yield return Case("fact con belen", Doc(viewpoints: "[" + Viewpoint(fact: "\"map.stop.belen.dato_01\"") + "]"), "viewpoints[0].fact");
@@ -605,7 +607,7 @@ namespace AF.Tests.EditMode
         internal static string Doc(string format = RiverMap.Format, string? frame = null, string? lines = null, string? land = null,
             string insets = "[]", string home = "{\"on\": \"amazonas\", \"s\": 0.9}", string labels = "[{\"country\": \"BR\", \"xy\": [100, 200]}]",
             string viewpoints = "[{\"id\": \"boca\", \"xy\": [10, 10], \"reveal_on\": 10, \"fact\": \"map.stop.estuario.dato_01\"}]",
-            string passing = "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null}]", string? banks = null,
+            string passing = "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]", string? banks = null,
             string? veg = null)
         {
             var sb = new StringBuilder();
@@ -732,7 +734,7 @@ namespace AF.Tests.EditMode
             path ??= n == 0
                 ? "[{\"line\": \"amazonas\", \"s0\": 0.9, \"s1\": 0.9}]"
                 : "[{\"line\": \"amazonas\", \"s0\": 0.9, \"s1\": 0.3}, {\"line\": \"negro\", \"s0\": 1.0, \"s1\": 0.5}]";
-            via ??= n == 0 ? "[]" : "[\"gurupa\"]";
+            via ??= n == 0 ? "[]" : "[{\"id\": \"gurupa\", \"f\": 0.5}]"; // M2-2: cada via, {id, f}
             mouths ??= n == 0 ? "[]" : "[\"negro\"]";
             leg ??= "{\"path\": " + path + ", \"via\": " + via + ", \"mouths\": " + mouths + "}";
             if (id != null && id.Length == 0)

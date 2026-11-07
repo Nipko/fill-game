@@ -110,7 +110,9 @@ class FieldTests(unittest.TestCase):
             record = self.records[s["n"]]
             self.assertEqual([o["clave"] for o in record["otros_datos"]], s["facts"], "facts[] = otros_datos (M2.6)")
             self.assertEqual(["line", "s"], list(s["at"].keys()))
-            self.assertEqual(["path", "via", "mouths"], list(s["leg"].keys()))
+            # M2-2 (D-069, P5 (a)): los tramos de 0 km llevan ademas su excursion local.
+            keys = ["path", "via", "mouths"] + (["excursion"] if "excursion" in s["leg"] else [])
+            self.assertEqual(keys, list(s["leg"].keys()))
 
     def test_n0_belem(self):
         self.assertStop(0, levels=[1, 10], world=1, id="belem", kind="gate", country="BR", country_name=None,
@@ -203,10 +205,12 @@ class FieldTests(unittest.TestCase):
         leg = self.by_n[30]["leg"]
         self.assertEqual(["napo", "amazonas", "madeira", "beni", "madre_de_dios"], [p["line"] for p in leg["path"]],
                          "Napo abajo, Amazonas abajo, Madeira, Beni y Madre de Dios (viaje del 300)")
-        self.assertIn("teotonio", leg["via"], "el punto de paso teotonio en el viaje del 300 (Q18-A)")
-        self.assertEqual("teotonio", leg["via"][-1], "teotonio, el ultimo: es el unico del Madeira")
+        via = [v["id"] for v in leg["via"]]
+        self.assertIn("teotonio", via, "el punto de paso teotonio en el viaje del 300 (Q18-A)")
+        self.assertEqual("teotonio", via[-2], "teotonio, el ultimo del Madeira (M2-2: despues, Cachuela Esperanza, en el Beni)")
         # El mismo punto de paso solo en otro leg: el del 560 (n = 56; M4.5b), que vuelve a bajar el Madeira.
-        self.assertEqual([56], [s["n"] for s in self.doc["stops"] if s["n"] != 30 and "teotonio" in s["leg"]["via"]])
+        self.assertEqual([56], [s["n"] for s in self.doc["stops"]
+                                if s["n"] != 30 and "teotonio" in [v["id"] for v in s["leg"]["via"]]])
 
     def test_n31_lake_sandoval_raises_the_flag_of_peru_again(self):
         self.assertStop(31, levels=[311, 320], world=7, id="sandoval", kind="stop", country="PE", flag_raise="PE",
@@ -301,8 +305,10 @@ class FieldTests(unittest.TestCase):
         leg = self.by_n[56]["leg"]
         self.assertEqual(["mamore", "madeira", "amazonas"], [p["line"] for p in leg["path"]],
                          "Mamore abajo, Madeira abajo y el cauce arriba por Nauta y el Ucayali (viaje del 560)")
-        self.assertEqual("teotonio", leg["via"][0], "teotonio, el primero: Rosa vuelve al bajar el Madeira (Q18-A)")
-        self.assertEqual(1, leg["via"].count("teotonio"))
+        via = [v["id"] for v in leg["via"]]
+        self.assertEqual("teotonio", via[1], "teotonio, el primero del Madeira: Rosa vuelve al bajar el Madeira (Q18-A); antes, "
+                         "Guajara-Mirim, en el Mamore (M2-2)")
+        self.assertEqual(1, via.count("teotonio"))
         self.assertEqual([], leg["mouths"], "todo ya lleno hasta Nauta")
 
     def test_n56_to_69_go_up_the_main_river(self):
@@ -946,13 +952,17 @@ class TextBlockTests(unittest.TestCase):
         river_map = json.loads(MAP_PATH.read_text(encoding="utf-8"))
         map_keys = ({f"map.stop.{p['id']}.name" for p in river_map["passing"] + river_map["viewpoints"]}
                     | {f"map.country.{lab['country'].lower()}.name" for lab in river_map["labels"]})
-        self.assertEqual(25, len(map_keys - set(cited)), "18 puntos de paso, 3 miradores y 4 paises solo de los rotulos")
+        self.assertEqual(37, len(map_keys - set(cited)), "30 puntos de paso (M2-2), 3 miradores y 4 paises solo de los "
+                         "rotulos")
         # Los datos de los puntos de paso con texto final en la investigacion (M4.5a: el de teotonio).
         passing_facts = {p["fact"] for p in river_map["passing"] if p["fact"] in self.table}
         self.assertEqual({"map.stop.teotonio.dato_01"}, passing_facts)
         # DC9 (D-028, pregunta 57 a): una fila .source por dato de llegada y «Otro dato» (todos tienen fuente con URL).
         self.assertEqual(128, len(self.source_rows), "68 datos de llegada, map.myth.source y 59 «Otro dato»")
-        self.assertEqual(sorted(set(cited) | map_keys | passing_facts | self.source_rows), sorted(block),
+        # M2-2 (D-069): el rio de la ficha de cada pueblo de paso (tier town o city), map.stop.<id>.river.
+        town_rivers = {f"map.stop.{p['id']}.river" for p in river_map["passing"] if p["tier"] != "mark"}
+        self.assertEqual(25, len(town_rivers))
+        self.assertEqual(sorted(set(cited) | map_keys | passing_facts | self.source_rows | town_rivers), sorted(block),
                          "el bloque tiene justo las claves que citan river_stops_v1.json y river_map_v1.json, y las .source")
 
     def test_rows_are_ordinal_and_the_block_is_contiguous(self):
@@ -1474,7 +1484,8 @@ class FactsCheckTests(unittest.TestCase):
     def test_check_passes_on_the_committed_table(self):
         proc = self.check(FACTS_PATH.read_bytes())
         self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
-        self.assertIn(b"436 textos map.* validos", proc.stdout, "308 y las 128 filas .source de DC9")
+        self.assertIn(b"473 textos map.* validos", proc.stdout,
+                      "308, las 128 filas .source de DC9 y, desde M2-2, 12 nombres y 25 rios de pueblos")
 
     def test_edited_row_is_drift(self):
         # Solo en la fila del Mapa: desde F1F2, la linea 14 del Agua del Tapajos (fact.*, antes del bloque) tambien la nombra.

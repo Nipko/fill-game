@@ -608,7 +608,7 @@ namespace AF.Tests.EditMode
             string main = RiverMapReaderTests.Main(pts: pts, water: RiverMapReaderTests.Water("0.0", "1.0", "white"), splits: string.Empty);
             string doc = RiverMapReaderTests.Doc(lines: RiverMapReaderTests.Lines(main, RiverMapReaderTests.Trib()),
                 banks: RiverMapReaderTests.Banks(bank ?? string.Empty), home: "{\"on\": \"amazonas\", \"s\": 0.9}",
-                passing: "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null}]");
+                passing: "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]");
             return RiverMapReader.Read(doc);
         }
 

@@ -759,10 +759,11 @@ class LinesTests(Base):
         self.assertEqual(3, len(self.doc["viewpoints"]))
         self.assertTrue(all(v["reveal_on"] == 10 for v in self.doc["viewpoints"]))
         passing = {p["id"]: p for p in self.doc["passing"]}
-        self.assertEqual(18, len(passing), "17 de 1-200 y teotonio (M4.5a)")
+        self.assertEqual(30, len(passing), "17 de 1-200, teotonio (M4.5a) y los 12 pueblos nuevos de M2-2 (D-069, P4 (a))")
         self.assertEqual("madeira", passing["teotonio"]["line"], "el relevo del guia del viaje del 300 (Q18-A, P-M8)")
         self.assertEqual("map.stop.teotonio.dato_01", passing["teotonio"]["fact"])
-        self.assertEqual("teotonio", self.doc["passing"][-1]["id"], "despues de los de 1-200")
+        self.assertEqual("teotonio", self.doc["passing"][17]["id"], "despues de los de 1-200")
+        self.assertEqual("guajara_mirim", self.doc["passing"][-1]["id"], "los pueblos nuevos de M2-2, al final")
         self.assertEqual("map.stop.obidos.dato_01", passing["obidos"]["fact"])
         self.assertEqual("para", passing["breves"]["line"])
         # En la union con su anfitrion, el punto va en el anfitrion (M5.1): Gurupa, en el arranque del ramal, y las bocas.
@@ -872,7 +873,8 @@ class RouteTests(Base):
 
     def test_leg_of_41_passes_obidos_parintins_itacoatiara_and_the_madeira_mouth(self):
         leg = self.by_n[4]["leg"]
-        self.assertEqual(["obidos", "parintins", "itacoatiara", "boca_del_madeira"], leg["via"])
+        self.assertEqual(["obidos", "parintins", "itacoatiara", "boca_del_madeira"], [v["id"] for v in leg["via"]])
+        self.assertEqual([0.3165, 0.5098, 0.7892, 0.84], [v["f"] for v in leg["via"]], "M2-2: la fraccion del tramo en km")
         self.assertIn("madeira", leg["mouths"])
         self.assertEqual(["trombetas", "madeira", "negro"], leg["mouths"])
         self.assertEqual(["tapajos", "amazonas"], [p["line"] for p in leg["path"]], "baja el Tapajos y sube el cauce")
@@ -881,9 +883,11 @@ class RouteTests(Base):
         # Viaje del 300 (propuesta §5.4 ter): Napo abajo, Amazonas abajo (repaso), Madeira, Beni y Madre de Dios.
         leg = self.by_n[30]["leg"]
         self.assertEqual(["napo", "amazonas", "madeira", "beni", "madre_de_dios"], [p["line"] for p in leg["path"]])
-        self.assertIn("boca_del_madeira", leg["via"])
-        self.assertEqual("teotonio", leg["via"][-1])
-        self.assertLess(leg["via"].index("boca_del_madeira"), leg["via"].index("teotonio"))
+        via = [v["id"] for v in leg["via"]]
+        self.assertIn("boca_del_madeira", via)
+        self.assertEqual(["teotonio", "cachuela_esperanza"], via[-2:], "teotonio, el ultimo del Madeira; Cachuela, en el Beni")
+        self.assertLess(via.index("boca_del_madeira"), via.index("manicore"))
+        self.assertLess(via.index("humaita"), via.index("teotonio"))
         # El desvio a Cuyabeno es una ida y vuelta por las confluencias del Aguarico.
         self.assertEqual(["napo", "aguarico", "cuyabeno"], [p["line"] for p in self.by_n[25]["leg"]["path"]])
         self.assertEqual(["cuyabeno", "aguarico", "napo"], [p["line"] for p in self.by_n[27]["leg"]["path"]])
@@ -906,8 +910,10 @@ class RouteTests(Base):
         self.assertEqual(["itenez", "mamore"], lines[53])
         self.assertEqual(["mamore", "madeira", "amazonas"], lines[56])
         leg56 = self.by_n[56]["leg"]
-        self.assertEqual("teotonio", leg56["via"][0], "Madeira abajo: los rapidos de Teotonio, antes que su boca")
-        self.assertLess(leg56["via"].index("boca_del_madeira"), leg56["via"].index("tamshiyacu"))
+        via56 = [v["id"] for v in leg56["via"]]
+        self.assertEqual(["guajara_mirim", "teotonio"], via56[:2],
+                         "Mamore abajo por Guajara-Mirim (M2-2); Madeira abajo: los rapidos de Teotonio, antes que su boca")
+        self.assertLess(via56.index("boca_del_madeira"), via56.index("tamshiyacu"))
         self.assertEqual("madeira", leg56["path"][1]["line"])
         self.assertEqual(1.0, leg56["path"][1]["s1"], "el Madeira hasta su boca")
         # El Beni y el Mamore entran en el Madeira junto a Villa Bella, a un tramo de HydroRIVERS el uno del otro.
@@ -921,7 +927,8 @@ class RouteTests(Base):
         self.assertEqual(["amazonas", "nanay"], [p["line"] for p in self.by_n[16]["leg"]["path"]])
         self.assertEqual(["nanay", "amazonas"], [p["line"] for p in self.by_n[17]["leg"]["path"]])
         self.assertEqual(["para", "amazonas"], [p["line"] for p in self.by_n[1]["leg"]["path"]])
-        self.assertEqual(["breves", "gurupa", "boca_del_xingu", "monte_alegre"], self.by_n[1]["leg"]["via"])
+        self.assertEqual(["breves", "gurupa", "boca_del_xingu", "almeirim", "prainha", "monte_alegre"],
+                         [v["id"] for v in self.by_n[1]["leg"]["via"]])
 
     def test_first_map_fills_the_tocantins_and_each_mouth_once(self):
         self.assertEqual(["tocantins"], self.by_n[0]["leg"]["mouths"])
@@ -1108,7 +1115,7 @@ class CheckTests(Base):
         code, out = self.check()
         self.assertEqual(0, code, out)
         self.assertIn("AVISO sin las descargas en", out)
-        self.assertIn("31 lineas, 18 puntos de paso y 3 miradores", out)
+        self.assertIn("31 lineas, 30 puntos de paso y 3 miradores", out)
 
     def test_stop_moved_20_km_fails(self):
         src = copy.deepcopy(self.source)
@@ -1172,12 +1179,17 @@ class CheckTests(Base):
         pts[45]["lat"] = round(pts[45]["lat"] - 0.2, 4)
         self.assertFails("lines[0] (amazonas): el punto de control 45 ('Tamshiyacu') queda a 5.1 km de la linea (vista "
                          "Mundo: maximo 1 km, <= 2 dp en la vista Mundo)", source=src)
-        # Vista Cuenca (lejos de las paradas): Amatura (60), llevado a 23,0 km.
+        # Vista Cuenca (lejos de las paradas): la boca del Tonantins (62), llevada al norte. Desde M2-2, Amatura (60) es un
+        # pueblo de paso (towns de overrides.json): moverlo falla antes por su anclaje (TOWN_ANCHOR_KM).
+        src = copy.deepcopy(self.source)
+        pts = next(r for r in src["rios"] if r["id"] == "amazonas")["puntos"]
+        pts[62]["lat"] = round(pts[62]["lat"] + 0.2, 4)
+        self.assertFails("lines[0] (amazonas): el punto de control 62 ('Boca del Tonantins') queda a", source=src)
+        self.assertFails("(vista Cuenca: maximo 15 km, <= 2 dp en la vista Cuenca)", source=src)
         src = copy.deepcopy(self.source)
         pts = next(r for r in src["rios"] if r["id"] == "amazonas")["puntos"]
         pts[60]["lat"] = round(pts[60]["lat"] + 0.2, 4)
-        self.assertFails("lines[0] (amazonas): el punto de control 60 ('Amatura') queda a 23.0 km de la linea (vista "
-                         "Cuenca: maximo 15 km, <= 2 dp en la vista Cuenca)", source=src)
+        self.assertFails("towns.places.amatura: 'Amatura' se ancla a", source=src)
 
     def test_mouth_outside_its_river_fails(self):
         # La boca de la investigacion del Madeira, ~33 km al sur del cauce: su ultimo punto de control ya no esta en su linea.
@@ -1205,6 +1217,7 @@ class CheckTests(Base):
         s = round(stops["stops"][8]["at"]["s"] + 0.00074, 6)
         stops["stops"][9]["at"]["s"] = s
         stops["stops"][9]["leg"]["path"][-1]["s1"] = s
+        del stops["stops"][9]["leg"]["excursion"]   # M2-2: el tramo ya no es de 0 km, asi que sin excursion local
         stops["stops"][10]["leg"]["path"][0]["s0"] = s
         self.assertOnlyFailure("parada n=9 ('leticia_atardecer'): retrocede rio abajo por amazonas desde la parada 8 "
                                "(los km no retroceden)", stops=stops)

@@ -198,7 +198,10 @@ namespace AF.Tests.PlayMode
 
                 // Un tramo sin largo a la escala de la vista: las 10 boyas en la fila corta bajo la parada, con el radio de la
                 // vista, separadas y fuera de la caja de la canoa (que va en la parada).
-                bool shortLeg = c.Max == 85 || c.Max == 145 || c.Max == 185;
+                // D-069, M2-2: con ui_map_towns (encendida por defecto), los tramos de 0 km (85 y 185) llevan la excursión local y,
+                // en la vista Mundo, sus boyas van por su lazo; el de Itaya (145), de unos metros, sigue en la fila corta.
+                bool shortLeg = c.Max == 145;
+                bool excursion = c.Max == 85 || c.Max == 185;
                 foreach (MapView v in new[] { MapView.World, MapView.Basin })
                 {
                     map.SetView(v);
@@ -207,6 +210,11 @@ namespace AF.Tests.PlayMode
                     if (shortLeg)
                     {
                         Assert.That(map.BuoysCompact, Is.True, at);
+                    }
+
+                    if (excursion && v == MapView.World)
+                    {
+                        Assert.That(map.BuoysCompact, Is.False, at + ": las boyas por el lazo de la excursión (M2-2)");
                     }
 
                     if (!map.BuoysCompact)

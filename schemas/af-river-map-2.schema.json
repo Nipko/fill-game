@@ -100,15 +100,24 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "line", "s", "fact"],
+        "required": ["id", "line", "s", "fact", "vignette", "country", "tier"],
         "properties": {
-          "id": { "$ref": "#/$defs/slug", "description": "Id del punto de paso (lo citan los leg.via de river_stops_v1.json); su nombre es map.stop.<id>.name." },
+          "id": { "$ref": "#/$defs/slug", "not": { "pattern": "boca_?colorado" }, "description": "Id del punto de paso (lo citan los leg.via de river_stops_v1.json); su nombre es map.stop.<id>.name y, en un pueblo, el río de su ficha, map.stop.<id>.river." },
           "line": { "$ref": "#/$defs/slug" },
           "s": { "$ref": "#/$defs/unit" },
-          "fact": { "oneOf": [{ "$ref": "#/$defs/fact_key" }, { "type": "null" }], "description": "Clave de su dato, si lo tiene." }
-        }
+          "fact": { "oneOf": [{ "$ref": "#/$defs/fact_key" }, { "type": "null" }], "description": "Clave de su dato, si lo tiene. Un pueblo nuevo de M2-2 solo lo lleva si es [V] y lo revisó Gemini (D-054; P4 (a))." },
+          "vignette": {
+            "oneOf": [{ "type": "string", "enum": ["stilts", "church", "port", "market"] }, { "type": "null" }],
+            "description": "[P] Viñeta por código del pueblo (D-069, M2-2; propuesta del Mapa v2 §4.2): stilts (muelle y palafitos), church (iglesia y plaza), port (puerto con barco de línea) o market (mercado del muelle); null en un mark (una boca o unos rápidos, con el punto de la 1.0). Nunca una maloca ni arquitectura indígena."
+          },
+          "country": { "type": "string", "pattern": "^[A-Z]{2}$", "description": "País del punto de paso (ISO 3166-1 alfa-2): su nombre es map.country.<iso2>.name (ficha y TalkBack, «Coari · pueblo de paso · Brasil»)." },
+          "tier": { "type": "string", "enum": ["town", "city", "mark"], "description": "[P] town (pueblo), city (ciudad: los puertos grandes) o mark (una boca o unos rápidos, sin viñeta); la cadencia de la propuesta del Mapa v2 §4.1 cuenta town y city." }
+        },
+        "allOf": [
+          { "if": { "properties": { "tier": { "const": "mark" } } }, "then": { "properties": { "vignette": { "type": "null" } } }, "else": { "properties": { "vignette": { "type": "string" } } } }
+        ]
       },
-      "description": "[P-M1] Puntos de paso: un nombre en el río que sale al pasar durante un viaje y, si tiene dato, lo cuenta al tocarlo (propuesta del Mapa §5.2)."
+      "description": "[P-M1] Puntos de paso: un nombre en el río que sale al pasar durante un viaje y, si tiene dato, lo cuenta al tocarlo (propuesta del Mapa §5.2). Desde M2-2 (D-069; propuesta del Mapa v2 §4 y §9.1), los pueblos de paso con su viñeta, su país y su tier: los 18 de la 1.0 y los candidatos de la propuesta §4.3 que tools/river-map ancla a 5 km o menos y cuyo nombre verifica la investigación (P4 (a)). Ningún «Belén» ni «Boca Colorado» (§9.5)."
     }
   },
   "$defs": {

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using AF.Economy;
 using AF.Levels;
+using AF.Localization;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -376,9 +377,14 @@ namespace AF.UI
                 for (int v = 0; v < route.Via.Count; v++)
                 {
                     RiverPassingPoint? point = map.PassingPoint(route.Via[v]);
-                    if (point == null || HasPassing(point))
+                    if (point == null || HasPassing(point) || (TownsActive && point.IsTown)) // M2-2: los pueblos, con su viñeta
                     {
                         continue;
+                    }
+
+                    if (Loc.Fact(point.NameKey).Length == 0)
+                    {
+                        continue; // D-069, M2-2: sin nombre aprobado (en release, hasta la revisión de Gemini), ni punto ni ficha vacía
                     }
 
                     PassingMarker marker = PassingSlot(_passingCount++);
