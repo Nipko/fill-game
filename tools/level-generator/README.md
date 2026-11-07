@@ -643,8 +643,10 @@ Especificación de producción de los tableros de sustitución de 301-700 (D-068
   se espera de la celda del hito, con el Aguapé, frente al plan). Los estrenos de la 1.1 los comprueban DEBUT-LEVEL y DEBUT-SLOT,
   y su ciclo de vida TITULAR-8, RETURN, CAP-CYCLE, NO-3-ROW, GAP-120, MAX-2 y el registro de combinaciones (FIRST-TIME y
   NOVELTY-60), como los de cualquier mecánica de la tabla. Fixtures: `curve_base_changed.json`, `curve_k_out_of_caps.json`,
-  `murky_normal_two_in_cycle.json`, `lancha_liana_before_401.json` (CURVE-MECH) y `aguape_in_challenge_debut.json`
-  (DEBUT-SLOT).
+  `murky_normal_two_in_cycle.json`, `lancha_liana_before_401.json` (CURVE-MECH), `aguape_in_challenge_debut.json`
+  (DEBUT-SLOT) y `lancha_season_without_exempt.json` (SEASONS: sin `season_debut_exempt`, la Lancha estrena en un ciclo de
+  aguas bajas). `--self-test curve` prueba además la superposición de los tres estrenos, la solución repetida
+  (`CurveBoards.SolutionProblem`), `rows` y `group` en el JSON y el orden de la reserva de la curva.
 - **Reserva de la curva:** `--reserve` con los packs `curva_{mm}_v1` y `--spec campaign_v3.json` escribe
   `reserva_curva_{mm}_v1.json` (`pack_schema` 5, ids `_c2_r1`, semillas `:c2:r1`, `replaces` = el id de la curva 2), con los
   kill switches del Aguapé y la Lancha en el orden de 08 §9, los mismos topes por papel y, como en la curva 2, solo par ≥ 2K.

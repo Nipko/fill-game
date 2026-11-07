@@ -135,7 +135,7 @@ internal static class ReliefChecks
     /// <summary>
     /// <paramref name="variant"/> es <paramref name="board"/> con una cuia vacía de 4 sin mecánica de más: al final o, con
     /// <paramref name="anySlot"/> (tinaja o Aguapé), en cualquier ranura; caps, cuias y attrs del resto, iguales, salvo la <c>k</c>
-    /// de la Lancha, que puede subir (CurveBoards.WithLanchaK; D-068). Las ocultas no se comparan aquí (QA-RELIEF-MASK).
+    /// de la Lancha, que sube lo justo: max(k, vacías + 1) (CurveBoards.WithLanchaK; D-068). Las ocultas no se comparan aquí (QA-RELIEF-MASK).
     /// </summary>
     public static bool IsPlusEmptyOf(BoardData board, BoardData variant, bool anySlot)
     {
@@ -159,7 +159,8 @@ internal static class ReliefChecks
                 int j = i < at ? i : i + 1;
                 same = board.Caps[i] == variant.Caps[j] && board.Cuias[i].AsSpan().SequenceEqual(variant.Cuias[j])
                     && (board.Attrs[i].Equals(variant.Attrs[j])
-                        || (board.Attrs[i].Type == MechanicType.Lancha && variant.Attrs[j].Type == MechanicType.Lancha && variant.Attrs[j].K >= board.Attrs[i].K));
+                        || (board.Attrs[i].Type == MechanicType.Lancha && variant.Attrs[j].Type == MechanicType.Lancha
+                            && variant.Attrs[j].K == Math.Max(board.Attrs[i].K, variant.Cuias.Where((c, x) => x != j && c.Length == 0).Count() + 1)));
             }
 
             if (same)

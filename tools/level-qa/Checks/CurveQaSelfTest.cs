@@ -6,6 +6,8 @@
 using System.Globalization;
 using System.Text;
 using AF.Core.Mechanics;
+using AF.Core.Rules;
+using AF.Solver.Search;
 using AmazonFill.Tools.LevelGenerator.Campaign;
 using AmazonFill.Tools.LevelGenerator.Metrics;
 
@@ -86,6 +88,37 @@ internal static class CurveQaSelfTest
         Expect("aguape_rows_no_suman", CurveChecks.Aguape(spec, big with { Rows = [4, 4, 3] }), "QA-AGUAPE");
         // Sin rows y con 10 cuias o menos, las filas de 02 sec. 5 [P]: 9 cuias = 5 + 4; un grupo en 4-5 queda partido.
         Expect("aguape_partido_sin_rows", CurveChecks.AguapeCore(Core(spec, Aguape(ag, [(3, 0, null), (4, 0, null), (5, 0, null)]))), "QA-AGUAPE");
+        // Con el núcleo: un grupo sin cuia que selle solo recibiendo (dos cuias llenas mezcladas), un espeso con dos cuias que
+        // sellan con la misma fruta, un tablero atascado en S0 y un grupo que la solución del par no suelta.
+        QaLevel mixed = Board(Level(spec, 450, 9, 8), c => { c[2] = [3, 4, 3, 4]; c[3] = [4, 3, 4, 3]; });
+        Expect("aguape_sin_cuia_que_selle", OnlyCore(Aguape(mixed, [(2, 0, null), (3, 0, null)]), spec, "sella"), "QA-AGUAPE");
+        QaLevel sameFruit = Board(mixed, c => { c[4] = [5, 5]; c[5] = [5, 5]; c[8] = [6, 6, 6, 6]; });
+        Expect("aguape_espeso_misma_fruta", OnlyCore(Aguape(sameFruit, [(2, 1, 2), (3, 1, 2), (4, 1, 2), (5, 1, 2)]), spec, "frutas distintas"), "QA-AGUAPE");
+        QaLevel stuck = Board(Level(spec, 450, 8, 8), c => { c[0] = [1, 2, 1, 2]; c[1] = [2, 1, 2, 1]; });
+        Expect("aguape_atascado", OnlyCore(Aguape(stuck, [(0, 0, null), (1, 0, null)]), spec, "atascado"), "QA-AGUAPE");
+        QaLevel loose = Board(Level(spec, 450, 5, 2), c => { c[0] = [1, 1, 2, 2]; c[1] = [2, 2, 1, 1]; });
+        Pour[] neverSeals = [new(0, 2, 2), new(1, 0, 2), new(1, 2, 2)];
+        LevelEval looseEval = Core(spec, Aguape(loose, [(3, 0, null), (4, 0, null)]));
+        looseEval = new LevelEval { Level = looseEval.Level, Plan = looseEval.Plan, State = looseEval.State, Par = new ParResult(SolveStatus.Solved, 3, 0, neverSeals) };
+        Expect("aguape_no_se_suelta", CurveChecks.AguapeCore(looseEval).Where(i => i.Message.Contains("no se suelta", StringComparison.Ordinal)), "QA-AGUAPE");
+        Expect("aguape_se_suelta_si_sella", CurveChecks.AguapeCore(new LevelEval { Level = looseEval.Level, Plan = looseEval.Plan, State = looseEval.State,
+            Par = new ParResult(SolveStatus.Solved, 3, 0, [new(0, 3, 2), new(1, 0, 2), new(1, 3, 2)]) }).Where(i => i.Message.Contains("suelta", StringComparison.Ordinal)), null);
+
+        // QA-LANCHA con el núcleo: una carga de 3 dosis sin hueco donde mover nada (S0 atascado). Una lancha que no atraca no puede
+        // ganar (su carga no se mueve ni se llena antes de atracar), así que la solución del par siempre la atraca.
+        int[][] stuckBoat = [[1, 2, 1, 2], [2, 1, 2, 1], [3, 3, 3], [4, 4, 4, 3], [4]];
+        var boatBoard = new BoardData([4, 4, 4, 4, 4], stuckBoat, [MechanicSpec.None, MechanicSpec.None, new MechanicSpec(MechanicType.Lancha, k: 2), MechanicSpec.None, MechanicSpec.None], []);
+        AF.Core.Board.BoardBuildResult boatBuilt = boatBoard.Build();
+        Check("el tablero sintetico de la lancha atascada se construye", boatBuilt.IsValid);
+        if (boatBuilt.IsValid)
+        {
+            QaLevel boatLevel = Level(spec, 450, 5, 4) with { Board = boatBoard };
+            Expect("lancha_atascada", CurveChecks.LanchaCore(new LevelEval { Level = boatLevel, Plan = spec.Plan(450), State = boatBuilt.State }), "QA-LANCHA");
+        }
+
+        // QA-BOT-ATENTO: aviso si el hito siguiente del mismo mundo baja; ninguno si sube.
+        Check("bot atento: aviso si el 460 baja frente al 440, ninguno si sube", Ladder(spec, 0.9, 0.8) == 1 && Ladder(spec, 0.8, 0.9) == 0);
+
         Check("rows: 2 filas de 7 valen, 3 de 6 no, 13 cuias en 2 filas no", CurveChecks.RowsProblem([7, 5], 12) is null
             && CurveChecks.RowsProblem([6, 6, 2], 14) is not null && CurveChecks.RowsProblem([7, 6], 13) is not null && CurveChecks.RowsProblem([5, 4, 4], 13) is null);
 
@@ -167,6 +200,28 @@ internal static class CurveQaSelfTest
         }
 
         return new LevelEval { Level = lv, Plan = spec.Plan(lv.Level), State = built.State };
+    }
+
+    /// <summary>El nivel con sus cuias cambiadas por <paramref name="edit"/> (una copia).</summary>
+    private static QaLevel Board(QaLevel lv, Action<int[][]> edit)
+    {
+        int[][] cuias = [.. lv.Board.Cuias.Select(c => (int[])c.Clone())];
+        edit(cuias);
+        return lv with { Board = lv.Board with { Cuias = cuias } };
+    }
+
+    /// <summary>QA-AGUAPE con el núcleo, solo los fallos cuyo mensaje lleva <paramref name="fragment"/>.</summary>
+    private static IEnumerable<QaIssue> OnlyCore(QaLevel lv, CampaignSpec spec, string fragment) =>
+        CurveChecks.AguapeCore(Core(spec, lv)).Where(i => i.Message.Contains(fragment, StringComparison.Ordinal));
+
+    /// <summary>Avisos de QA-BOT-ATENTO con los hitos 440 y 460 (mundo 8) de bot atento <paramref name="a"/> y <paramref name="b"/>.</summary>
+    private static int Ladder(CampaignSpec spec, double a, double b)
+    {
+        var pack = new QaPack("p.json", 5, "curva_08_v1", 8, "w08_madidi", "white", [], 0, 0, 0, [], 0, 0, 0, "curve");
+        LevelEval Hito(int level, double attentive) =>
+            new() { Level = Level(spec, level, 13, 11) with { Pack = "p.json" }, Plan = spec.Plan(level), Attentive = attentive };
+        var ctx = new QaContext { Spec = spec, Packs = [pack], Levels = [Hito(440, a), Hito(460, b)] };
+        return CurveChecks.AttentiveLadder(ctx).Count(i => i.Check == "QA-BOT-ATENTO" && i.Warning);
     }
 
     private static LevelEval Eval(CampaignSpec spec, QaLevel lv) =>

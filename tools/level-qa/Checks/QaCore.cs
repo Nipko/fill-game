@@ -62,7 +62,7 @@ internal sealed class LevelEval
 
     public List<ReliefEval> Relief { get; init; } = [];
 
-    /// <summary>Bot atento ×40 (03 §17 #20; solo informe) en los niveles de la curva 2 con tablero válido; null en los demás.</summary>
+    /// <summary>Bot atento ×40 (03 §17 #20; solo informe) en los retos e hitos de la curva 2 con tablero válido; null en los demás.</summary>
     public double? Attentive { get; init; }
 }
 
@@ -182,7 +182,7 @@ internal static class Evaluator
             Level = lv,
             Plan = plan,
             State = state,
-            Attentive = plan is { Curve: > 0 } && validation is null ? metrics.AttentiveFail(state, lv.Seed) : null,
+            Attentive = plan is { Curve: > 0, Role: SlotRole.Challenge or SlotRole.Milestone } && validation is null ? metrics.AttentiveFail(state, lv.Seed) : null,
             ValidationError = validation,
             Par = par,
             Bot = bot,

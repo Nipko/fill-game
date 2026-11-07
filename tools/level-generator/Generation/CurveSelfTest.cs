@@ -95,6 +95,43 @@ internal static class CurveSelfTest
                 $"el {level} ({code}) da un candidato en la ventana con su mecanica, el grupo en una fila y la solucion que suelta o atraca"));
         }
 
+        // La solución del par repetida (CurveBoards.SolutionProblem): sin Aguapé ni Lancha, null; un grupo de dos vacíos que la
+        // solución nunca sella, «no se suelta». (Una lancha que no atraca no puede ganar: su carga no se mueve ni se llena antes.)
+        int[] caps5 = [4, 4, 4, 4, 4];
+        int[][] cuias5 = [[1, 1, 2, 2], [2, 2, 1, 1], [], [], []];
+        AF.Core.Rules.Pour[] solution5 = [new(0, 2, 2), new(1, 0, 2), new(1, 2, 2)];
+        AF.Core.Board.BoardState plain5 = new Metrics.BoardData(caps5, cuias5, [no, no, no, no, no], []).Build().State!;
+        AF.Core.Board.BoardState group5 = new Metrics.BoardData(caps5, cuias5, [no, no, no, ag, ag], []).Build().State!;
+        Check(CurveBoards.SolutionProblem(plain5, solution5) is null
+            && CurveBoards.SolutionProblem(group5, solution5)?.Contains("no se suelta", StringComparison.Ordinal) == true,
+            "la solucion repetida: sin la 1.1, nada; con un grupo que nunca sella, «no se suelta»");
+
+        // Filas que escribe el pack (RowsToWrite) y el JSON de un nivel con el Aguapé (PackWriter): group en attrs, rows tras hidden.
+        var eleven = new Metrics.BoardData([.. Enumerable.Repeat(4, 11)], [.. Enumerable.Range(0, 11).Select(_ => Array.Empty<int>())],
+            [ag, ag, .. Enumerable.Repeat(no, 9)], []);
+        Check(CurveBoards.RowsToWrite(eleven) is [4, 4, 3] && CurveBoards.RowsToWrite(eleven with { Attrs = [.. Enumerable.Repeat(no, 11)] }) is null
+            && CurveBoards.RowsToWrite(eleven with { Rows = [6, 5] }) is [6, 5],
+            "rows: 4/4/3 con un grupo y 11 cuias, ninguna sin grupo, las fijadas por el alivio si las hay");
+        foreach (int level in new[] { 303, 312 })
+        {
+            LevelPlan plan = v3.Plan(level);
+            Candidate? c = gen.Generate(plan).Candidates.FirstOrDefault(x => x.PoolMember);
+            string json = c is null ? "" : PackWriter.Min(PackWriter.Level(v3, new PackLevel(plan, c, [])));
+            bool rows = c is not null && c.Board.Caps.Length >= CurveBoards.RowsFrom;
+            int hidden = json.IndexOf("\"hidden\":", StringComparison.Ordinal);
+            int at = json.IndexOf("\"rows\":", StringComparison.Ordinal);
+            Check(c is not null && json.Contains("{\"type\":\"aguape\",\"group\":0}", StringComparison.Ordinal)
+                && (rows ? at > hidden && at < json.IndexOf("\"difficulty\":", StringComparison.Ordinal) : at < 0),
+                string.Create(CultureInfo.InvariantCulture, $"el JSON del {level}: group en attrs y rows {(rows ? "tras hidden" : "ausente (10 cuias o menos)")}"));
+        }
+
+        // La reserva de la curva: los estrenos de la 1.1 primero; sin ellos (la curva 1), el orden de siempre.
+        ReserveSource[] sources = [new(301, "a", 1, "normal", 0), new(302, "b", 1 << 9, "normal", 0), new(303, "c", 1 << 3, "normal", 0), new(304, "d", 1 << 9, "normal", 0)];
+        string Levels(IEnumerable<ReserveSource> s) => string.Join(",", s.Select(x => x.Level.ToString(CultureInfo.InvariantCulture)));
+        Check(Levels(ReserveRunner.Order(sources, [304])) == "304,301,303,302" && Levels(ReserveRunner.Order(sources, [])) == Levels(ReserveRunner.Order(sources))
+            && Levels(ReserveRunner.Order(sources)) == "301,303,302,304",
+            $"reserva: estrenos primero ({Levels(ReserveRunner.Order(sources, [304]))}); sin ellos, el orden por rondas");
+
         // Escalón de presión de una celda: el 320 (Ha+Ll+Br, K 11) = vacío 1 + 3 mecánicas 2 + Lluvia 1 + K 11 1 = 5.
         int pressure = Pressure.OfCell(v3.Plan(320).Cell, v3.Plan(320).K, milestone: true);
         Check(pressure == 5, string.Create(CultureInfo.InvariantCulture, $"escalon del hito 320: {pressure} (se espera 5)"));
