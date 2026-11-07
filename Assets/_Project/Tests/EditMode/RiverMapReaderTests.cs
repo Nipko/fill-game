@@ -746,7 +746,7 @@ namespace AF.Tests.EditMode
 
         private static string Routes(params string[] stops)
         {
-            return "{\"format\": \"af-river-stops/1\", \"stops\": [" + string.Join(", ", stops) + "]}";
+            return "{\"format\": \"af-river-stops/2\", \"stops\": [" + string.Join(", ", stops) + "]}";
         }
 
         // El lector escribe «Mapa del río, <ruta>: …» (y las rutas, «Rutas del Mapa, <ruta>: …»): se compara ese prefijo exacto,

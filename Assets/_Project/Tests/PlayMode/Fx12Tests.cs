@@ -636,6 +636,8 @@ namespace AF.Tests.PlayMode
                 // D-069, M2-1: con el Mapa v2 el trazo se calcula con una forma más larga que sus anclas (RiverMapScreen.LiveShapeFactor),
                 // así que la holgura crece en la misma proporción (en la 1.0, 1×): en un río de 14 o 26 dp sigue muy dentro del agua.
                 float scale = Mathf.Max(1f, glass.ShapeWidthDp / glass.AnchorWidthDp);
+                Assert.That(!strict || apart <= Mathf.Max(MaxStopApartDp, 0.25f * glass.WidthDp), Is.True,
+                    at + ": " + where + ", dentro del cuarto central del agua dibujada");
                 if (apart / scale > worst)
                 {
                     worst = apart / scale;

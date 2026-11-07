@@ -1159,7 +1159,7 @@ namespace AF.UI
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
-            DevProbe.Mem("map", play, map.LiveMemJson()); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
+            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
             TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;

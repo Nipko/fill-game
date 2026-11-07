@@ -441,7 +441,8 @@ namespace AF.Presentation
         /// <summary>
         /// Ancho con el que se calcula la forma del trazo suave y curvo (los puntos que se quedan, las anclas y el desvío máximo de la
         /// curva; D-069, M2-1): el fijado con <see cref="SetShapeWidth"/> o, sin él, <see cref="WidthDp"/>. El Mapa v2 dibuja los ríos
-        /// más anchos con la forma de los de la 1.0, para que la canoa, las paradas y las boyas sigan sobre el mismo trazo.
+        /// más anchos con una forma de algo menos de su ancho (el 70 %; <c>RiverMapScreen.LiveShapeFactor</c>) y las anclas de la 1.0
+        /// (<see cref="SetAnchorWidth"/>), para que el río no se pliegue en los codos y las paradas sigan en el eje dibujado.
         /// </summary>
         public float ShapeWidthDp => _shapeWidthDp > 0f ? _shapeWidthDp : WidthDp;
 

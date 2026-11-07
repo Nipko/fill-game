@@ -39,6 +39,8 @@ namespace AF.Tests.PlayMode
         {
             GameBootstrap.MapLiveConfigOverride = null;
             GameScreen.SimulatedScreen = null;
+            GameScreen.SimulatedSideInsets = null;
+            GameScreen.SimulatedPxPerDp = null;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
         }
@@ -198,6 +200,81 @@ namespace AF.Tests.PlayMode
             map.Tick(16f);
             map.Tick(400f);
             Assert.That(() => map.Tick(16f), Is.Not.AllocatingGCMemory(), "el Mapa v2 quieto: la corriente y las nubes sin asignar memoria");
+            boot.CloseRiverMap();
+        }
+
+        [UnityTest]
+        public IEnumerator NorthUp_HidesTheAtmosphere_AndBringsItBack_WithAndWithoutReduceMotion()
+        {
+            yield return OpenAt(58);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            map.ViewBasinButton.onClick.Invoke();
+            yield return null;
+            Assert.That(map.AtmosphereShown, Is.True, "en la Cuenca, la luz y la niebla");
+            foreach (bool still in new[] { false, true })
+            {
+                map.ProgressReduceMotion = still;
+                map.NorthUpButton.onClick.Invoke();
+                for (int i = 0; i < 120 && map.NorthUpTurning; i++)
+                {
+                    map.Tick(16f);
+                }
+
+                map.Tick(16f);
+                Assert.That(map.NorthUpOn, Is.True);
+                Assert.That(map.AtmosphereShown, Is.False, "con el norte arriba no sale (giraría con el contenido)");
+                map.NorthUpButton.onClick.Invoke();
+                for (int i = 0; i < 120 && map.NorthUpTurning; i++)
+                {
+                    map.Tick(16f);
+                }
+
+                map.Tick(16f);
+                Assert.That(map.NorthUpOn, Is.False);
+                Assert.That(map.AtmosphereShown, Is.True,
+                    "al acabar el giro de vuelta, vuelve" + (still ? " (Reducir movimiento: corte)" : string.Empty));
+            }
+
+            GameBootstrap.Current!.CloseRiverMap();
+        }
+
+        [UnityTest]
+        public IEnumerator WideScreen_TheMapReachesTheEdges_TheControlsStayInTheColumn_AndTheForestCoversTheBands()
+        {
+            WideScreenLayoutTests.TabletLandscape.Use();
+            Profile profile = Wallet.NewProfile(new ManualClock(T0));
+            profile.Progress.NextLevel = 58;
+            profile.Progress.MaxLevel = 57;
+            profile.Progress.MapSeenLevel = 57;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            yield return null;
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+            yield return null;
+            yield return null;
+            RiverMapScreen map = boot.RiverMapView!;
+            ScreenFrame frame = ScreenFrame.Current;
+            Assert.That(frame.IsFullWidth, Is.False, "la tableta en apaisado tiene columna");
+            Assert.That(map.LiveActive, Is.True);
+            RectMask2D mask = map.ViewportRect.GetComponent<RectMask2D>();
+            Assert.That(mask.padding.x, Is.EqualTo(-frame.ColumnX).Within(0.01f), "la máscara se abre hasta el borde izquierdo");
+            Assert.That(mask.padding.z, Is.EqualTo(-frame.RightBand).Within(0.01f), "y hasta el derecho");
+            Assert.That(ScreenColumn.BleedOf(map.FooterPanel!.rectTransform).x, Is.EqualTo(frame.ColumnX).Within(0.01f), "la barra de abajo, de borde a borde");
+            Assert.That(ScreenColumn.BleedOf(map.FooterPanel.rectTransform).y, Is.EqualTo(frame.RightBand).Within(0.01f));
+            Assert.That(-map.Ground.rectTransform.offsetMin.x, Is.EqualTo(frame.ColumnX).Within(0.01f), "el fondo del visor también");
+
+            // Los controles, en la columna (la zona del mapa mide la columna).
+            Assert.That(map.ViewportSize.x, Is.EqualTo(frame.ColumnWidth).Within(0.5f));
+            var back = (RectTransform)map.BackToCanoeButton.transform;
+            Assert.That(back.anchoredPosition.x, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(back.anchoredPosition.x + back.sizeDelta.x, Is.LessThanOrEqualTo(frame.ColumnWidth + 0.5f), "«Volver a la canoa», dentro de la columna");
+
+            // La selva cubre lo que se ve, también las bandas de los lados.
+            Rect visible = map.VisibleMapRect();
+            Assert.That(visible.width * map.Space.DpPerUnit, Is.EqualTo(frame.ColumnWidth + frame.ColumnX + frame.RightBand).Within(0.5f));
+            Rect region = map.Canopy!.Region;
+            Assert.That(region.xMin <= visible.xMin && region.xMax >= visible.xMax && region.yMin <= visible.yMin && region.yMax >= visible.yMax, Is.True,
+                "la región de la selva cubre la vista entera, de borde a borde");
             boot.CloseRiverMap();
         }
 

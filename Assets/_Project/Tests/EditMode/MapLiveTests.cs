@@ -288,6 +288,131 @@ namespace AF.Tests.EditMode
             Assert.That(RiverMapScreen.RibbonWidthDp(MapView.Basin, 1, true), Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.Basin, 1)));
         }
 
+        [Test]
+        public void Meeting_TheSecondWaterFadesIntoTheNextOne_InTheLast150Dp_WithACapOnShortStrips()
+        {
+            // Una franja de 600 dp (s 0,3-0,9 en una línea de 1.000 dp): la izquierda negra se funde en el agua blanca de después en sus
+            // últimos 150 dp (propuesta del Mapa v2 §3.1, capa 3).
+            AssertMeeting("0.3", "0.9", 600f, 750f, 900f);
+
+            // Una franja de 100 dp: la fusión ocupa como mucho el 60 % (desde 340 dp), no los 150 dp (que serían la franja entera).
+            AssertMeeting("0.3", "0.4", 330f, 340f, 400f);
+        }
+
+        // La izquierda (agua negra) en cada sección: sin fundir en «black», empieza a fundirse en «start» y llega al blanco en «end».
+        private void AssertMeeting(string s0, string s1, float black, float start, float end)
+        {
+            var xy = new ushort[202];
+            for (int i = 0; i <= 100; i++)
+            {
+                xy[2 * i] = (ushort)(i == 100 ? 65535 : i * 655);
+                xy[(2 * i) + 1] = 20000;
+            }
+
+            string main = RiverMapReaderTests.Main(pts: RiverMapReaderTests.EncodePoints(xy), water: RiverMapReaderTests.Water("0.0", "1.0", "white"),
+                splits: RiverMapReaderTests.Split(s0, s1));
+            RiverMap map = RiverMapReader.Read(RiverMapReaderTests.Doc(lines: RiverMapReaderTests.Lines(main, RiverMapReaderTests.Trib())));
+            RiverRibbonGraphic core = Ribbon(map, RibbonPart.Core, 20f);
+            core.SetLook(RibbonLook.Water);
+            core.SetLive(true);
+            List<UIVertex> mesh = Mesh(core);
+            Assert.That(mesh.Count % 6, Is.EqualTo(0), "tres bandas por sección, con pareja de aguas o sin ella");
+            float length = map.Lines[0].Length * 1000f;
+            float scale = length / 1000f;
+            Color blackWater = Palette.WaterBlack;
+            Color whiteWater = Palette.WaterWhite;
+            bool sawBlack = false;
+            bool sawWhite = false;
+            for (int q = 0; q < mesh.Count; q += 6)
+            {
+                float x = mesh[q].position.x / scale;
+                Color32 left = mesh[q + 3].color; // la orilla izquierda (u = +1) de la mitad A, la de la segunda agua
+                if (x > black - 30f && x <= black + 0.5f && x > float.Parse(s0, System.Globalization.CultureInfo.InvariantCulture) * 1000f)
+                {
+                    Assert.That(Close(left, blackWater), Is.True, "a " + x + " dp, aún el agua negra");
+                    sawBlack = true;
+                }
+
+                if (x <= start + 0.5f && x > float.Parse(s0, System.Globalization.CultureInfo.InvariantCulture) * 1000f + 1f)
+                {
+                    Assert.That(Close(left, blackWater), Is.True, "a " + x + " dp, antes de fundirse");
+                }
+
+                if (x >= end - 1f && x <= end + 1f)
+                {
+                    sawWhite |= Close(left, whiteWater);
+                }
+
+                if (x > start + (0.3f * (end - start)) && x < end - 1f)
+                {
+                    Assert.That(Close(left, blackWater), Is.False, "a " + x + " dp ya se funde");
+                }
+            }
+
+            Assert.That(sawBlack, Is.True, "la franja negra antes de fundirse");
+            Assert.That(sawWhite, Is.True, "al final de la franja, el agua que sigue (sin escalón)");
+        }
+
+        [Test]
+        public void ShapeWidth_WithTheProductionValues_KeepsTheStopsOnTheDrawnAxis()
+        {
+            // El Mapa v2: el cauce de 26 dp con la forma de LiveShapeFactor × 26 dp y las anclas de 8 dp (las de la 1.0), con cuatro
+            // paradas como anclas ajustadas. Cada una, a ≤ 1,5 dp × (forma / ancla) del eje dibujado y siempre en el cuarto central del
+            // agua; y el eje, a menos de medio ancho de la polilínea de los datos (la canoa va por ella).
+            RiverLine line = _map.Lines[0];
+            var space = new MapSpace(MapSpace.BasinWidthDp * 8f, Vector2.zero);
+            float[] s = { 0.30f, 0.50f, 0.62f, 0.70f };
+            var points = new Vector2[s.Length];
+            var tight = new bool[s.Length];
+            for (int i = 0; i < s.Length; i++)
+            {
+                line.PointAt(s[i], out float x, out float y);
+                points[i] = new Vector2(x, y);
+                tight[i] = true;
+            }
+
+            RiverRibbonGraphic wide = Make<RiverRibbonGraphic>();
+            wide.Setup();
+            wide.SetLine(line);
+            wide.SetSpace(space);
+            wide.SetSmooth(true);
+            wide.SetCurve(true);
+            wide.SetWidth(RiverMapScreen.LiveWidthClass1Dp);
+            wide.SetShapeWidth(RiverMapScreen.ShapeWidthDp(MapView.World, 1, true));
+            wide.SetAnchorWidth(RiverMapScreen.WorldWidthClass1Dp);
+            wide.SetAnchors(RiverRibbonGraphic.MergeAnchors(RiverRibbonGraphic.MouthAnchorsOf(_map, line),
+                new List<(float S, Vector2 Point, bool Tight)> { (s[0], points[0], true), (s[1], points[1], true), (s[2], points[2], true), (s[3], points[3], true) }));
+            Mesh(wide);
+            Assert.That(wide.ShapeWidthDp, Is.EqualTo(RiverMapScreen.LiveWidthClass1Dp * RiverMapScreen.LiveShapeFactor).Within(1e-4f));
+            float allowed = 1.5f * wide.ShapeWidthDp / wide.AnchorWidthDp;
+            for (int i = 0; i < s.Length; i++)
+            {
+                float best = float.MaxValue;
+                for (int k = 1; k < wide.LastSectionPointCount; k++)
+                {
+                    best = Mathf.Min(best, SegmentDistance(points[i], wide.LastSectionPoint(k - 1), wide.LastSectionPoint(k)));
+                }
+
+                float apart = best * space.DpPerUnit;
+                Assert.That(apart, Is.LessThanOrEqualTo(allowed), "parada en s " + s[i] + " sobre el eje dibujado");
+                Assert.That(apart, Is.LessThanOrEqualTo(0.25f * wide.WidthDp), "en el cuarto central del agua");
+            }
+
+            // Lejos de las anclas, el eje se aparta de la polilínea de los datos (también en la 1.0, con su forma de 8 dp): medido en
+            // anchos de su río, el Mapa v2 no se aparta más que la 1.0. La canoa va por los tramos con boyas, que son anclas.
+            RiverRibbonGraphic old = Make<RiverRibbonGraphic>();
+            old.Setup();
+            old.SetLine(line);
+            old.SetSpace(space);
+            old.SetSmooth(true);
+            old.SetCurve(true);
+            old.SetWidth(RiverMapScreen.WorldWidthClass1Dp);
+            Mesh(old);
+            float v2 = WorstApart(wide, line, space) / wide.WidthDp;
+            float v1 = WorstApart(old, line, space) / old.WidthDp;
+            Assert.That(v2, Is.LessThanOrEqualTo(v1 + 0.05f), "en anchos del río, no más lejos de los datos que en la 1.0 (" + v2 + " frente a " + v1 + ")");
+        }
+
         // ---------------------------------------------------------------------------------------------- tierra
 
         [Test]
@@ -539,6 +664,24 @@ namespace AF.Tests.EditMode
             }
 
             return list;
+        }
+
+        private static float WorstApart(RiverRibbonGraphic ribbon, RiverLine line, MapSpace space)
+        {
+            float worst = 0f;
+            for (int k = 0; k < ribbon.LastSectionPointCount; k += 5)
+            {
+                Vector2 p = ribbon.LastSectionPoint(k);
+                float best = float.MaxValue;
+                for (int i = 1; i < line.PointCount; i++)
+                {
+                    best = Mathf.Min(best, SegmentDistance(p, new Vector2(line.X(i - 1), line.Y(i - 1)), new Vector2(line.X(i), line.Y(i))));
+                }
+
+                worst = Mathf.Max(worst, best * space.DpPerUnit);
+            }
+
+            return worst;
         }
 
         private static float SegmentDistance(Vector2 p, Vector2 a, Vector2 b)

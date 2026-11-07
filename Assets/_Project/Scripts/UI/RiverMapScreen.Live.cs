@@ -22,9 +22,10 @@ namespace AF.UI
     /// <item><description>(5) la <b>selva</b> (<see cref="CanopyGraphic"/>, limitada a la vista con un margen);</description></item>
     /// <item><description>(2) las <b>orillas</b> (<see cref="RibbonPart.Banks"/>: playas, barrancos y hierba);</description></item>
     /// <item><description>(3) los <b>ríos</b> de <see cref="LiveWidthClass1Dp"/>/<see cref="LiveWidthClass2Dp"/>/<see cref="LiveWidthClass3Dp"/>
-    /// dp con color por vértice y la franja del Encuentro (<see cref="RiverRibbonGraphic.SetLive"/>), sobre la forma de la 1.0
-    /// (<see cref="RiverRibbonGraphic.SetShapeWidth"/>, <see cref="ShapeWidthDp"/>): las paradas quedan en el eje dibujado y la canoa
-    /// y las boyas sobre el agua;</description></item>
+    /// dp con color por vértice y la franja del Encuentro (<see cref="RiverRibbonGraphic.SetLive"/>), con el trazo calculado con
+    /// <see cref="LiveShapeFactor"/> del ancho dibujado y las anclas del ancho de la 1.0 (<see cref="RiverRibbonGraphic.SetShapeWidth"/>,
+    /// <see cref="RiverRibbonGraphic.SetAnchorWidth"/>): sin pliegues en los codos, las paradas en el eje dibujado y la canoa y las
+    /// boyas sobre el agua;</description></item>
     /// <item><description>(0 y 8) la <b>luz del mundo</b> (<see cref="WorldLight"/>), las <b>sombras de dos nubes</b> que derivan y la
     /// <b>niebla</b> del cuarto de arriba con los Andes lejanos, en un lienzo entre el estático y el dinámico (debajo de la canoa y de
     /// los marcadores);</description></item>
@@ -109,6 +110,7 @@ namespace AF.UI
         private RectTransform? _bankLayer;
         private CanopyGraphic? _canopy;
         private Canvas? _atmoCanvas;
+        private CanvasGroup? _atmoGroup;
         private RectTransform? _atmoRoot;
         private Image? _light;
         private Image? _fog;
@@ -187,6 +189,9 @@ namespace AF.UI
 
         /// <summary>La barra de madera de abajo del Mapa v2.</summary>
         internal Image? FooterPanel => _footerPanel;
+
+        /// <summary>La luz, las nubes y la niebla se ven (con «Norte arriba», no).</summary>
+        internal bool AtmosphereShown => _live && _atmoRoot != null && _atmoRoot.gameObject.activeInHierarchy && _atmoGroup != null && _atmoGroup.alpha > 0f;
 
         /// <summary>Lienzo de la luz, las nubes y la niebla.</summary>
         internal Canvas? AtmosphereCanvas => _atmoCanvas;
@@ -382,11 +387,7 @@ namespace AF.UI
             RectTransform atmo = _atmoRoot!;
             atmo.anchoredPosition = new Vector2(-_offset.x - _bleedLeft, _offset.y);
             atmo.sizeDelta = new Vector2(w, _viewH);
-            bool upright = !_northUpOn && !NorthUpTurning;
-            if (atmo.gameObject.activeSelf != upright)
-            {
-                atmo.gameObject.SetActive(upright); // con el norte arriba, la niebla y la luz no tienen sentido
-            }
+            UpdateAtmosphere();
 
             if (_parallaxReset)
             {
@@ -416,6 +417,7 @@ namespace AF.UI
             }
 
             SampleFrame(dtMs);
+            UpdateAtmosphere(); // «Norte arriba» gira el contenido sin pasar por SetOffset
             bool still = ProgressReduceMotion;
             _liveClockMs = AdvanceClock(_liveClockMs, dtMs, still);
             _flowPhaseDp = AdvanceFlow(_flowPhaseDp, dtMs, still);
@@ -423,6 +425,25 @@ namespace AF.UI
             PlaceFlow(still);
             PlaceClouds(still);
             PulseNext(still);
+        }
+
+        /// <summary>
+        /// La luz, las nubes y la niebla están en el contenido, que «Norte arriba» gira: con el norte arriba (o girando) no salen, y
+        /// vuelven al acabar el giro de vuelta. Una comparación por fotograma, sin asignar.
+        /// </summary>
+        private void UpdateAtmosphere()
+        {
+            RectTransform? atmo = _atmoRoot;
+            if (atmo == null)
+            {
+                return;
+            }
+
+            float alpha = _live && !_northUpOn && !NorthUpTurning ? 1f : 0f;
+            if (_atmoGroup != null && _atmoGroup.alpha != alpha)
+            {
+                _atmoGroup.alpha = alpha; // sin activar ni desactivar el lienzo: el giro no asigna memoria
+            }
         }
 
         /// <summary>
@@ -774,6 +795,9 @@ namespace AF.UI
             _atmoRoot.pivot = new Vector2(0f, 1f);
             _atmoRoot.SetSiblingIndex(_dynamicCanvas.transform.GetSiblingIndex());
             _atmoCanvas = atmoGo.GetComponent<Canvas>();
+            _atmoGroup = atmoGo.AddComponent<CanvasGroup>();
+            _atmoGroup.interactable = false;
+            _atmoGroup.blocksRaycasts = false;
             _atmoCanvas.overrideSorting = false;
             _light = LiveImage("WorldLight", _atmoRoot);
             _cloudA = LiveImage("CloudShadowA", _atmoRoot);
@@ -947,7 +971,7 @@ namespace AF.UI
             _frameCount = Mathf.Min(MapFrameSamples, _frameCount + 1);
         }
 
-        // AF_PERF {"event":"map_frames","v2":1,"world":…,"view":…,"frames":…,"rest_frames":…,"avg_ms":…,"p95_ms":…,"max_ms":…,
+        // AF_PERF {"event":"map_frames","world":…,"view":…,"frames":…,"rest_frames":…,"avg_ms":…,"p95_ms":…,"max_ms":…,
         // "fps":…,"veg_quads":…,"live_tex_kib":…}: al cerrar el Mapa v2 en desarrollo (D-069: medir 60 fps en el teléfono de pruebas
         // y ≥ 30 en gama baja antes de cerrar M2-1).
         private void EmitMapFrames()

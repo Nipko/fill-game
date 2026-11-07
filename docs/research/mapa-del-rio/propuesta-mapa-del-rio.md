@@ -1402,7 +1402,7 @@ Cálculo con ASTC, bloque de 128 bits: 6×6 = 3,56 bpp y 8×8 = 2 bpp [V Wikiped
 
 ### 11.1 Arquitectura (sin escena nueva, sin prefabs y sin YAML a mano)
 
-> **Cambio de D-069 (Mapa v2, bloque M2-1):** las piezas nuevas del río vivo (`CanopyGraphic`, `MapLiveArt`, las partes `Varzea` y `Banks` de `RiverRibbonGraphic` y el parcial `RiverMapScreen.Live.cs`) están en la nota del añadido de D-069 en `docs/dev/decisiones.md`; los anchos de 8/5/3 dp de abajo son los de la 1.0 (con `ui_map_v2` apagada).
+> **Cambio de D-069 (Mapa v2, bloque M2-1):** las piezas nuevas del río vivo (`CanopyGraphic`, `MapLiveArt`, las partes `Varzea` y `Banks` de `RiverRibbonGraphic` y el parcial `RiverMapScreen.Live.cs`) están en la nota del añadido de D-069 en `docs/dev/decisiones.md`; los anchos de 8/5/3 dp de abajo son los de la 1.0 (con `ui_map_v2` apagada). Los 3 lienzos de §11.4 son 6 con el Mapa v2: la atmósfera (luz, nubes y niebla), la corriente y el primer plano, cada uno en su lienzo para que lo que se mueve no rehaga el resto.
 
 | Pieza | Ensamblado | Qué hace |
 |---|---|---|
