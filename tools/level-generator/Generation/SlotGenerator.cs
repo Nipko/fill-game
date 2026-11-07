@@ -339,6 +339,15 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             c.Traps = path.Traps;
         }
 
+        if (full && plan.Level >= 31 && c.Board.Attrs.Any(a => a.Type is MechanicType.Aguape or MechanicType.Lancha)
+            && Relief.Compute(_metrics, c.Board, c.Par, c.Bot, plan.SeedText).Published.Count == 0)
+        {
+            // Aguapé y Lancha (D-068, F3b) [P]: la mata y la carga a menudo dejan un tablero sin alivio que baje el bot 0,20 (03 §17 #8;
+            // la fase 4 no publicaría el mundo); esos candidatos se descartan al medirlos, como los filtros de la tinaja.
+            c.Reject = "Aguape o Lancha: ninguna variante de alivio cumple 03 sec. 17 #8";
+            return;
+        }
+
         if (c.IsTinaja)
         {
             // Tinaja (03 §8; propuesta de la tinaja c.3 punto 3): ruta segura, paseos seguros y casuales, «S0 sin trampas»

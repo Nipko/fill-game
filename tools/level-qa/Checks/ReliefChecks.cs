@@ -28,7 +28,7 @@ internal static class ReliefChecks
         ("QA-RELIEF-MIN", "relief con al menos una variante desde el nivel 31 (03 sec. 13; 08 sec. 4.1)"),
         ("QA-RELIEF-VALID", "cada variante es un tablero valido (BoardBuilder y LevelValidation; con tinaja, su forma: una, su cuia contigua y en la misma fila, <= 13 cuias (D-027), T4 y combinaciones)"),
         ("QA-RELIEF-MINUS", "minus_color resoluble (A* w = 1 a 2.000.000: la segunda pasada del generador, Q-N2 (a); la primera, a 100.000) con el par entero publicado y sin el color removed, que nunca es una fruta de la tinaja (03 sec. 13; propuesta de la tinaja c.3 punto 4)"),
-        ("QA-RELIEF-PLUS", "plus_empty = el tablero base con exactamente un vacio de 4 mas (al final; con tinaja, en la ranura que deja la pareja en la misma fila) (03 sec. 13)"),
+        ("QA-RELIEF-PLUS", "plus_empty = el tablero base con exactamente un vacio de 4 mas (al final; con tinaja o Aguape, en la ranura que deja la pareja o cada grupo en una fila; con la Lancha, k puede subir) (03 sec. 13; D-068)"),
         ("QA-RELIEF-BOT", "bot_fail de la variante recalculado; baja >= 0,20, o con base < 0,20 par menor (minus_color) o el vacio extra (plus_empty) (03 sec. 17 #8)"),
         ("QA-RELIEF-MASK", "variante de un nivel con tinaja: la conserva y su hidden es la mascara (todas sus capas menos la boca); variante sin tinaja: sin hidden (08 sec. 4.1)"),
         ("QA-RELIEF-SAFE", "variante con tinaja: ruta segura y paseos seguros y casuales (03 sec. 13; propuesta de la tinaja c.3 punto 4; opciones de Morpho [P])"),
@@ -107,7 +107,8 @@ internal static class ReliefChecks
                     yield return Fail("QA-RELIEF-MINUS", "minus_color: removed no es un color del base que la variante quite entero");
                 }
             }
-            else if (!IsPlusEmptyOf(baseBoard, board, anySlot: baseTinaja) || MechanicChecks.FreeEmpties(board) != baseEmpties + 1)
+            else if (!IsPlusEmptyOf(baseBoard, board, anySlot: baseTinaja || baseBoard.Attrs.Any(a => a.Type == MechanicType.Aguape))
+                || MechanicChecks.FreeEmpties(board) != baseEmpties + 1)
             {
                 yield return Fail("QA-RELIEF-PLUS", baseTinaja
                     ? "plus_empty no es el base con un vacio de 4 mas en una ranura"
@@ -133,8 +134,8 @@ internal static class ReliefChecks
 
     /// <summary>
     /// <paramref name="variant"/> es <paramref name="board"/> con una cuia vacía de 4 sin mecánica de más: al final o, con
-    /// <paramref name="anySlot"/> (tinaja), en cualquier ranura; caps, cuias y attrs del resto, iguales. Las ocultas no se
-    /// comparan aquí (QA-RELIEF-MASK).
+    /// <paramref name="anySlot"/> (tinaja o Aguapé), en cualquier ranura; caps, cuias y attrs del resto, iguales, salvo la <c>k</c>
+    /// de la Lancha, que puede subir (CurveBoards.WithLanchaK; D-068). Las ocultas no se comparan aquí (QA-RELIEF-MASK).
     /// </summary>
     public static bool IsPlusEmptyOf(BoardData board, BoardData variant, bool anySlot)
     {
@@ -156,7 +157,9 @@ internal static class ReliefChecks
             for (int i = 0; i < n && same; i++)
             {
                 int j = i < at ? i : i + 1;
-                same = board.Caps[i] == variant.Caps[j] && board.Cuias[i].AsSpan().SequenceEqual(variant.Cuias[j]) && board.Attrs[i].Equals(variant.Attrs[j]);
+                same = board.Caps[i] == variant.Caps[j] && board.Cuias[i].AsSpan().SequenceEqual(variant.Cuias[j])
+                    && (board.Attrs[i].Equals(variant.Attrs[j])
+                        || (board.Attrs[i].Type == MechanicType.Lancha && variant.Attrs[j].Type == MechanicType.Lancha && variant.Attrs[j].K >= board.Attrs[i].K));
             }
 
             if (same)

@@ -662,8 +662,9 @@ Especificación de producción de los tableros de sustitución de 301-700 (D-068
   - **Verificación:** `BoardBuilder`, `LevelValidation` (grupo, sello, carga, `k`), A* y, con la solución del par repetida
     (`CurveBoards.SolutionProblem`), cada grupo se suelta y la lancha atraca; si no, el candidato se rechaza.
   - **Alivio:** `plus_empty` pone el vacío en la última ranura que deja cada grupo en una fila y sube `k` lo justo
-    (`CurveBoards.PlusEmpty` y `WithLanchaK`); `minus_color` no mueve cuias (y sube `k` si deja más vacías). Las variantes con
-    un grupo y 11 cuias o más escriben sus `rows`.
+    (`CurveBoards.PlusEmpty` y `WithLanchaK`; con 11 cuias o más, unas `rows` que no partan ningún grupo, que la variante
+    publica); `minus_color` no mueve cuias, puede quitar un color de las cuias del Aguapé (no tiene llave) y sube `k` si deja más
+    vacías. Un candidato con Aguapé o Lancha sin ninguna variante de alivio que cumpla 03 §17 #8 se descarta al medirlo [P].
   - **Presión** (`Pressure.cs`): la palanca de congeladas (1 grupo, 1; 2 grupos o el espeso, 2) y el vacío bajo la mata (palanca
     de vacíos en 2); el Aguapé no cuenta en «mecánicas distintas», como las turbias [P]. `--measure` suma el bot atento ×40 a la
     tabla de los hitos.

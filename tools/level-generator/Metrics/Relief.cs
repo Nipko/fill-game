@@ -7,7 +7,9 @@
 // el criterio de level-qa: si el base tiene bot_fail ≥ 0,20, cada variante lo baja ≥ 0,20; si no, basta par menor en
 // minus_color y el vacío extra en plus_empty. Una variante que no lo cumple no se publica (lo registra el informe).
 // Nunca se quita un color que sea llave de una mecánica (también la key2 de la Flor, P5) o esté dentro de una cuia con
-// mecánica [P]. En un nivel con Aguas turbias las variantes van sin ocultos (el esquema no los admite en relief sin la tinaja
+// mecánica [P] (salvo el Aguapé, que no tiene llave: LevelValidation decide si el grupo sigue sellando; D-068, F3b). Con el
+// Aguapé y la Lancha, plus_empty sigue CurveBoards.PlusEmpty (grupos en una fila, rows propias con 11 cuias o más, k ajustado) y
+// minus_color sube k lo justo (CurveBoards.WithLanchaK). En un nivel con Aguas turbias las variantes van sin ocultos (el esquema no los admite en relief sin la tinaja
 // [P]).
 // Segunda pasada de minus_color (Q-N2 (a) de D-033; tarea B11; V3): desde el 31 el generador publica siempre una variante
 // minus_color para el alivio con la Cuia extra (04 §2.2, caso b: con la Cuia extra aplicada se sirve la −1 color, nunca la de
@@ -34,6 +36,12 @@ namespace AmazonFill.Tools.LevelGenerator.Metrics;
 internal sealed record BoardData(int[] Caps, int[][] Cuias, MechanicSpec[] Attrs, int[][] Hidden)
 {
     public bool HasMechanics => Attrs.Any(a => !a.IsNone);
+
+    /// <summary>
+    /// Filas fijas elegidas para este tablero (pack_schema 5; D-068), o null: el pack escribe entonces las de
+    /// <c>CurveBoards.RowsToWrite</c>. Solo las fija el alivio plus_empty con un grupo de Aguapé (CurveBoards.PlusEmpty).
+    /// </summary>
+    public int[]? Rows { get; init; }
 
     public BoardBuildResult Build() => BoardBuilder.Build(Caps, Cuias, HasMechanics ? Attrs : null, Hidden.Length > 0 ? Hidden : null);
 
@@ -283,6 +291,13 @@ internal static class Relief
             {
                 // La segunda llave de la Flor (P5): tampoco se quita.
                 excluded.Add(a.Key2);
+            }
+
+            if (a.Type == MechanicType.Aguape)
+            {
+                // El Aguapé (D-068) no tiene llave: sus cuias pueden perder un color; LevelValidation decide si el grupo sigue
+                // teniendo una cuia que sella solo recibiendo [P].
+                continue;
             }
 
             foreach (int c in board.Cuias[i])

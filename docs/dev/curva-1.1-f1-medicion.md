@@ -368,3 +368,143 @@ Pool de prueba (no son los packs finales de F5): `tools/out/curva_f3/curva_08_v1
 `pack_schema` 5) y su reserva `reserva_curva_08_v1.json` (28 tableros), con level-qa en 0 fallos (`qa_curva_08.md` y
 `qa_reserva_curva_08.md`; QA-REPRO y QA-RES-REPRO reproducen los dos packs byte a byte). El estreno de las turbias en Normal se
 comprobó aparte, generando 321-340 fuera del repositorio: el 323 y el 324 salen con 1 dosis oculta y level-qa da 0 fallos.
+
+## 9. Fase F3b: el Aguapé, el espeso y la Lancha con el núcleo de F2 (2026-11-07)
+
+- **Autor:** level-pipeline-dev (agente). **Rama:** `v11/curva-f3b-superposicion` (desde a528db54, con F0, F1, F2 y F3).
+- **Especificación:** `tools/level-generator/specs/campaign_v3.json`, con el Aguapé (`Ag`), el espeso (`A2`) y la Lancha (`La`) en
+  la tabla de mecánicas y en el calendario (ya no hay `f2_mechanics` ni `f2_slots`) y las respuestas recomendadas de 9.4 [P].
+- **Semillas:** las de la curva 2 (`:c2`). **Pool de prueba (no son los packs de F5):** `tools/out/curva_f3b/curva_0{7,8,9}_v1.json`
+  (400 niveles) y `reserva_curva_0{7,8,9}_v1.json` (80 tableros), con el informe de generación (`curva_report.md`), el de curación
+  para el dueño (`curacion_curva2.md`) y level-qa en 0 fallos (`qa_curva2.md`, con el bot atento, y `qa_reserva_curva2.md`). El
+  pool de F3 (`tools/out/curva_f3/`) era sin la 1.1 y ya no se reproduce con `campaign_v3.json`.
+
+### 9.1 Cómo se colocan [V]
+
+- **Aguapé:** un grupo de 2-3 cuias [P] (el espeso, 4-5 con `n` = 2) sin otra mecánica, sin Barro y sin empezar selladas (las
+  llenas mezcladas sí: la mata las congela), con una cuia (dos con frutas distintas en el espeso) que sella solo recibiendo. El
+  espeso lleva dos vacíos bajo la mata [P], y el Aguapé de un reto o un hito con la Hoja, el Matapi o la Lluvia, un vacío más [P]:
+  sin eso no hay cuia que selle solo recibiendo. El orden visual deja cada grupo contiguo y en una fila; con 11 cuias o más el
+  nivel escribe `rows` (las 3 filas de D-006: 4/4/3, 4/4/4, 5/4/4, 5/5/4) [P] y la variante `plus_empty`, unas que no partan
+  ningún grupo. Se verifica con `BoardBuilder`, `LevelValidation`, A* y la solución del par repetida: cada grupo se suelta.
+- **Lancha:** «saca una cuia del tablero base y la sube a la carga»: 1-3 dosis de las cimas pasan a una cuia de carga nueva, con
+  `k` = vacíos + 1 [P] (3 en el estreno, el del texto del tutorial). **Hallazgo [V]:** para atracar, las T − 1 − k cuias que quedan
+  tienen que guardar las 4K − c dosis de fuera de la carga, así que **T ≥ K + k + 1**: la Lancha necesita la carga, la holgura y
+  sus k vacías, y `k` = vacíos + 1 es el único `k` posible con una cuia de holgura. Consecuencias: su estreno con 2 vacíos solo cabe
+  en el tope de 10 cuias con K 6 (`role_caps.debut.k` pasa a 6-8 y `k_cells` lleva K 6 en 363-365) [P]; en un reto con K 9 llega a
+  12 cuias; y no cabe en ningún hito de K 11 (14 cuias > 13) ni en la cúspide de K 12.
+- **Alivio:** las variantes no parten grupos y suben `k` lo justo; un candidato con Aguapé o Lancha sin ninguna variante que baje el
+  bot 0,20 (03 §17 #8) se descarta al medirlo [P] (sin eso, 6 niveles del pool se quedaban sin alivio y no se escribía ningún pack).
+- **Reparto:** el Aguapé titular del ciclo 301-320 con 8 niveles y después 2-4 por ciclo (retos de la 1.0 que no llegaban a Difícil
+  y hitos como palanca); el espeso en 347-348 y en 10 hitos (420, 500, 520, 540, 560, 600, 640, 660, 680 y 700); la Lancha titular
+  del ciclo 361-380 con 8 y después 2 por ciclo, sobre todo en comodidad. `--validate-spec`: 27 reglas, 0 fallos, 3 avisos PRESSURE
+  (660, 680 y 700). Las primeras medidas (`medida_base_*.md`, sin las respuestas de 9.4) llevaron a quitar el Aguapé de los retos donde
+  no ayudaba (466 con el espeso, 50 %; 509 y 558, Fl+Ag, 65-70 %; 672; 686, 60 %) y la Lancha de los retos 398, 449 y 572 (48-70 %).
+
+### 9.2 El pool de prueba 301-700 [V]
+
+| Medida | Mundo 7 (301-420) | Mundo 8 (421-560) | Mundo 9 (561-700) | F3, sin la 1.1 (8 / 9) |
+|---|---|---|---|---|
+| Ciclos que colocan | 6 de 6 | 7 de 7 | 7 de 7 | 7 / 7 (el 7: 5 de 6) |
+| Retos con Difícil | **28 de 30** | **32 de 35** | **33 de 35** | 32 / 29 de 35 |
+| Hitos con Muy difícil | **6 de 6** | **7 de 7** | **7 de 7** | 7 / 6 de 7 (660: 73 %) |
+| T media / mediana | 10,4 / 10 | 10,4 / 10 | 10,4 / 10 | 10,3 / 10,3 |
+| K media | 8,3 | 8,4 | 8,4 | 8,4 |
+| Niveles con T ≤ 11 / ≥ 12 / ≥ 13 | 104 / 16 / 6 | 127 / 13 / 7 | 128 / 12 / 7 | 132 / 8 / 5 y 130 / 10 / 5 |
+| Niveles con Aguapé / espeso / Lancha | 22 / 3 / 11 | 14 / 4 / 14 | 17 / 5 / 13 | — |
+| Niveles con `rows` | 13 | 9 | 14 | — |
+| Niveles con ocultas | 19 | 28 | 27 | 28 / 27 |
+
+Retos sin chip: 329 (Ma, K 10, 72 %) y 352 (B2+Re, 57 %) en el 7; 449 (Br+Re, 72 %), 509 (Fl, 72 %) y 549 (La+Ln, 72 %) en el 8; 672
+(Li+Re, 70 %) y 686 (Ma+Ho, 72 %) en el 9. Son 2-3 por mundo, dentro de lo que aceptó F1-2 (3-4).
+
+### 9.3 Los retos y los hitos que no colocaban, y el escalón [V]
+
+| Reto | Celda en F3 | Bot en F3 (K 9 / K 10) | Celda en F3b | Bot en el pool |
+|---|---|---|---|---|
+| 429 | Ma+Re | 73 % / 80 % | Ag+Ma+Re | **75 %** |
+| 452 | Pi+Br | 45 % / no cabe | Pi+Br+Ag | **82 %** |
+| 466 | Li+B2 | 73 % / 70 % | Li+B2 (con el espeso: 50 %) | **88 %** |
+| 566 | Ma+Re | 73 % / 75 % | Ag+Ma+Re | **75 %** |
+| 592 | Pi+B2 | 63 % / no cabe | Pi+B2+Ag | **78 %** |
+| 646, 649, 652 | Pi+Br+Ha, Pi+Ha, Br+Re | 80 %, 83 %, 83 % | igual; 652 Ag+Br+Re | **80 %, 82 %, 82 %** |
+| 658 | Ha+Re | 28 % / 28 % | Ag+Ha+Re | **85 %** |
+| 672 | Li+Re | 70 % / sin colocar | Li+Re (con el Aguapé: 68 %) | 70 % |
+| 686 | Ma+Ho | 73 % / 88 % | Ma+Ho (con el Aguapé: 60 %; con K 10 en F3b: 68 %) | 72 % |
+| 698 | Ha+B2 | 73 % / 83 % | Ag+Ha+B2 | **88 %** |
+| 409, 412, 415, 418 | Fl, Fl+Ba, Fl+Ll, Ba+Tu | ciclo sin colocar | Fl+Ll, Fl+La, Fl, Br+Tu | **75 %, 78 %, 85 %, 88 %** |
+
+Escalón de presión de los hitos (plan / tablero) y bot atento ×40 (03 §17 #20; solo informe):
+
+| Hito | Celda | Plan | Tablero | Bot | Bot atento |
+|---|---|---|---|---|---|
+| 320 | Ha+Ll+Br | 3 | 5 | 93 % | 90 % |
+| 340 | Ag+Br+Ba | 4 | 5 | 100 % | 100 % |
+| 360 | B2+Ln+Ag | 5 | 6 | 100 % | 83 % |
+| 380 | Pi+Ba+Ag | 5 | 5 | 93 % | 43 % |
+| 400 | Li+Ha+Ag | 6 | 6 | 100 % | 100 % |
+| 420 | Fl+Ba+A2 | 7 | 8 | 100 % | 100 % |
+| 440 | Ag+Ho+Re | 4 | 5 | 100 % | 100 % |
+| 460 | Pi+Ba+Ag | 5 | 5 | 100 % | 85 % |
+| 480 | Li+B2+Ho | 5 | 5 | 100 % | 100 % |
+| 500 | Re+Ha+A2 | 6 | 6 | 95 % | 95 % |
+| 520 | Li+Ha+A2 | 7 | 7 | 100 % | 73 % |
+| 540 | Ln+Ha+A2 | 7 | 7 | 98 % | 93 % |
+| 560 | Fl+Re+A2 | 8 | 8 | 93 % | 78 % |
+| 580 | Ba+B2+Ag | 5 | 5 | 100 % | 90 % |
+| 600 | Ha+Ba+A2 | 6 | 6 | 100 % | 75 % |
+| 620 | Ln+Ll+Ag | 6 | 6 | 100 % | 98 % |
+| 640 | Li+Ba+A2 | 7 | 7 | 95 % | 93 % |
+| 660 | Ln+Ha+A2 | 8 | **7** | 98 % | 95 % |
+| 680 | Li+Ha+A2 | 8 | **7** | 100 % | 100 % |
+| 700 | Fl+Ha+A2 | 9 | **8** | 100 % | 100 % |
+
+**Lectura.** El Aguapé y el espeso sí arreglan los hitos: los 20 colocan con Muy difícil y 17 llegan al escalón del plan (en F3,
+solo el 320 y el 480 en los mundos 8-9); los tres que no (660, 680, 700) se quedan a 1 escalón, porque el 8 y el 9 piden ocultas
+(que no van con la Hoja atada) o un K que la cúspide no tiene. En los retos el Aguapé arregla los que se quedaban por la celda
+(452, 592, 658) y lleva justo al 75 % los de 73 % (429, 566), pero **no ayuda donde ya hay un filtro que ocupa el vacío** (686) ni con
+la Liana (672), y el espeso en un reto lo hace más fácil (sus dos vacíos). El bot atento no crece hito a hito en 8 sitios (360, 380,
+460, 500, 520, 560, 600 y 640; aviso QA-BOT-ATENTO): el 380 (Pi+Ba+Ag, 43 %) es el más bajo; para la curación.
+
+### 9.4 Las 5 preguntas de F3: respuesta recomendada [P]
+
+Aplicadas en `campaign_v3.json` en un commit aparte («Aplica en campaign_v3 las respuestas recomendadas…»); el dueño solo dice sí o no.
+
+1. **K 10 en 429, 566, 686 y 698: no.** El Aguapé lleva a Difícil el 429 (75 %), el 566 (75 %) y el 698 (88 %, mejor que el 83 % de
+   K 10), sin cuia de más (la pregunta de la curva es «menos cuias»). El 686 no llega ni con K 10 (68 % en F3b; el 88 % de F3 era otra
+   colocación) ni con el Aguapé (60 %): va sin chip (F1-2) y la curación decide.
+2. **452 y 592: el Aguapé como tercera mecánica** (Pi+Br+Ag 82 %, Pi+B2+Ag 78 %). No hace falta cambiar la celda ni K.
+3. **Ciclo 641-660: el Aguapé en el 658 (Ag+Ha+Re, 85 %) y el 652 (Ag+Br+Re, 82 %) y el espeso en el hito 660 (Ln+Ha+A2, 98 %).**
+   Así el ciclo entero queda en su ventana (sin el 652, el 646 y el 652 salían a 25 % y 55 %).
+4. **Ciclo 401-420: los retos de la Flor reordenados (409 Fl+Ll y 415 Fl) y el 418 en Br+Tu.** El ciclo coloca, con los cinco
+   retos en Difícil (75-88 %) y la cúspide 420 (Fl+Ba+A2) en el 100 %. La Flor conserva sus 8 niveles.
+5. **Las Aguas turbias no cuentan en el «0-1 mecánicas» de la comodidad (03 §12)**, que es guía del calendario: son un modificador
+   con su propia palanca y las 3 comodidades turbias por ciclo (F1-1) van con un filtro. Sí cuentan en MAX-2 (2 en una comodidad),
+   como hasta ahora. Sin cambio de celdas; queda en la nota de `mechanics_per_level`.
+
+### 9.5 Preguntas para el dueño
+
+1. Las 5 respuestas de 9.4, ya aplicadas como [P].
+2. **La Lancha y el tope de cuias (hallazgo de 9.1):** ¿se acepta K 6 en su estreno (363-365, el tope de estreno pasa a K 6-8), o se
+   prefiere 11 cuias con K 7? ¿Y que no vaya en hitos (con K 11 serían 14 cuias) ni en la cúspide?
+3. **La Lancha en un ciclo de aguas bajas:** el 361-380 es de temporada B en la 1.0 y la Lancha de aguas altas; se exime a su estreno
+   de SEASONS (`season_debut_exempt`) [P] en lugar de cambiar la temporada del ciclo.
+4. **El escalón 8-9 de 660, 680 y 700:** con el espeso llegan a 7, 7 y 8. ¿Se baja el plan a 7-7-8 o se ponen ocultas en esos hitos
+   (sin la Hoja atada)?
+5. **Decisiones [P] de la herramienta:** grupos de 2-3 cuias (4-5 el espeso); el espeso con dos vacíos bajo la mata; un vacío más
+   con la Hoja, el Matapi o la Lluvia; `rows` de 3 filas con 11-14 cuias; `k` = vacíos + 1; el Aguapé fuera de «mecánicas
+   distintas» en el escalón; candidatos sin alivio descartados; los estrenos de la 1.1 primero en la reserva de la curva.
+
+### 9.6 Para reproducir
+
+```
+dotnet run --project tools/level-generator -c Release -- --validate-spec tools/level-generator/specs/campaign_v3.json
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v3.json --levels 301-700 --out tools/out/curva_f3b --report tools/out/curva_f3b/curva_report.md --curation tools/out/curva_f3b/curacion_curva2.md
+dotnet run --project tools/level-generator -c Release -- --reserve tools/out/curva_f3b/curva_07_v1.json tools/out/curva_f3b/curva_08_v1.json tools/out/curva_f3b/curva_09_v1.json --spec tools/level-generator/specs/campaign_v3.json --out tools/out/curva_f3b --report tools/out/curva_f3b/reserva_curva_report.md
+dotnet run --project tools/level-qa -c Release -- tools/out/curva_f3b/curva_07_v1.json tools/out/curva_f3b/curva_08_v1.json tools/out/curva_f3b/curva_09_v1.json --spec tools/level-generator/specs/campaign_v3.json --levels 301-700 --report tools/out/curva_f3b/qa_curva2.md
+dotnet run --project tools/level-qa -c Release -- --reserve tools/out/curva_f3b/reserva_curva_07_v1.json tools/out/curva_f3b/reserva_curva_08_v1.json tools/out/curva_f3b/reserva_curva_09_v1.json --campaign tools/out/curva_f3b/curva_07_v1.json tools/out/curva_f3b/curva_08_v1.json tools/out/curva_f3b/curva_09_v1.json --spec tools/level-generator/specs/campaign_v3.json --report tools/out/curva_f3b/qa_reserva_curva2.md
+dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/experimental/campaign_v3_f3b_q.json --levels 561-700 --report tools/out/curva_f3b/medida_q_561-700.md
+```
+
+Las `medida_base_*.md` se midieron con el reparto anterior a las respuestas de 9.4 (commit a043f849) y las `medida_q_*.md` con
+`specs/experimental/campaign_v3_f3b_q.json` (las respuestas más K 10 en 429 y 686); con la especificación de hoy ya no salen igual.

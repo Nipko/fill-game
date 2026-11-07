@@ -50,9 +50,53 @@ internal static class CurveBoards
         : count <= 10 ? [(count + 1) / 2, count / 2]
         : aguape ? ThreeRows(count) : null;
 
-    /// <summary>rows que escribe el pack: con un grupo de Aguapé y 11 cuias o más (08 §4.1), las 3 filas de D-006; si no, null.</summary>
+    /// <summary>
+    /// rows que escribe el pack: las que fijó el tablero (<see cref="BoardData.Rows"/>, las del alivio) o, con un grupo de Aguapé y
+    /// 11 cuias o más (08 §4.1), las 3 filas de D-006; si no, null.
+    /// </summary>
     public static int[]? RowsToWrite(BoardData board) =>
-        board.Caps.Length >= RowsFrom && HasAguape(board.Attrs) ? ThreeRows(board.Caps.Length) : null;
+        board.Rows ?? (board.Caps.Length >= RowsFrom && HasAguape(board.Attrs) ? ThreeRows(board.Caps.Length) : null);
+
+    /// <summary>
+    /// Filas para un tablero de 11 o más cuias con grupos de Aguapé que no parten ningún grupo, en orden de preferencia [P]: las 3
+    /// filas de D-006, con 11-12 cuias las 2 de ⌈T/2⌉ / ⌊T/2⌋, y después cualquier reparto dentro de los topes de 02 §5 (3 filas de
+    /// ≤ 5, de arriba abajo de la más larga a la más corta; 2 filas de ≤ 7 solo con 12 cuias o menos: con 13, 3 filas, D-030).
+    /// Null si ninguno vale.
+    /// </summary>
+    public static int[]? RowsKeepingGroups(IReadOnlyList<MechanicSpec> attrs, int count)
+    {
+        var options = new List<int[]> { ThreeRows(count) };
+        if (count <= 12)
+        {
+            options.Add([(count + 1) / 2, count / 2]);
+        }
+
+        for (int a = 5; a >= 1; a--)
+        {
+            for (int b = a; b >= 1; b--)
+            {
+                int c = count - a - b;
+                if (c >= 1 && c <= b)
+                {
+                    options.Add([a, b, c]);
+                }
+            }
+        }
+
+        if (count <= 12)
+        {
+            for (int a = 7; a >= 1; a--)
+            {
+                int b = count - a;
+                if (b >= 1 && b <= 7)
+                {
+                    options.Add([a, b]);
+                }
+            }
+        }
+
+        return options.FirstOrDefault(rows => GroupsInRows(attrs, rows));
+    }
 
     /// <summary>Ningún grupo de Aguapé cruza el límite entre dos filas de <paramref name="rows"/> (02 §9.1 M8, regla 6).</summary>
     public static bool GroupsInRows(IReadOnlyList<MechanicSpec> attrs, int[] rows)
@@ -166,7 +210,8 @@ internal static class CurveBoards
 
     /// <summary>
     /// plus_empty de un tablero con Aguapé (03 §13): el vacío de más en la última ranura (de atrás adelante) que no parte ningún
-    /// grupo ni lo deja cruzando una fila del tablero de T + 1 cuias [P], con la lancha ajustada (<see cref="WithLanchaK"/>).
+    /// grupo ni lo deja cruzando una fila del tablero de T + 1 cuias (con 11 o más, con las rows de <see cref="RowsKeepingGroups"/>,
+    /// que la variante publica) [P], con la lancha ajustada (<see cref="WithLanchaK"/>).
     /// Sin Aguapé, al final, como siempre. Null si ninguna ranura lo consigue.
     /// </summary>
     public static BoardData? PlusEmpty(BoardData board)
@@ -181,16 +226,25 @@ internal static class CurveBoards
             }
 
             MechanicSpec[] attrs = Insert(board.Attrs, at, MechanicSpec.None);
-            if (aguape && (InsideGroup(board.Attrs, at) || !GroupsInRows(attrs, LayoutRows(n + 1, aguape: true)!)))
+            int[]? rows = null;
+            if (aguape)
             {
-                continue;
+                // Con 10 cuias o menos, las filas fijas de 02 §5; con 11 o más, unas rows que no partan ningún grupo.
+                rows = n + 1 >= RowsFrom ? RowsKeepingGroups(attrs, n + 1) : null;
+                if (InsideGroup(board.Attrs, at) || (n + 1 >= RowsFrom ? rows is null : !GroupsInRows(attrs, LayoutRows(n + 1, aguape: true)!)))
+                {
+                    continue;
+                }
             }
 
             var data = new BoardData(
                 Insert(board.Caps, at, Cuia.DefaultCapacity),
                 Insert(board.Cuias, at, []),
                 attrs,
-                [.. board.Hidden.Select(h => new[] { h[0] >= at ? h[0] + 1 : h[0], h[1] })]);
+                [.. board.Hidden.Select(h => new[] { h[0] >= at ? h[0] + 1 : h[0], h[1] })])
+            {
+                Rows = rows,
+            };
             return WithLanchaK(data);
         }
 
