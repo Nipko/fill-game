@@ -60,6 +60,13 @@ namespace AF.Levels
         // Primera versión de pack_schema con la Tinaja y las variantes de la 1.0 (D-019, punto 9; D-023, punto 5).
         private const int TinajaPackSchema = 3;
 
+        /// <summary>
+        /// <c>pack_schema</c> de la curva de la 1.1 (D-068 [P]; 08 §4.1; contrato 21): los tipos <c>aguape</c> y <c>lancha</c>. El
+        /// núcleo ya los reconoce (fase F2), así que el lector los rechaza en los packs 1-4 para seguir fallando cerrado; este
+        /// build aún no lee packs con el 5 (<see cref="SupportedPackSchema"/>).
+        /// </summary>
+        private const int CurvePackSchema = 5;
+
         // n del Brote de dos hojas (02 §9.1, b.3; BroteMechanic.TwoLeaves del núcleo, que es interno).
         private const int BroteTwoLeaves = 2;
 
@@ -412,6 +419,11 @@ namespace AF.Levels
                 if (type == MechanicType.Matapi && version < 2)
                 {
                     throw new LevelFormatException(at + ": el tipo matapi necesita pack_schema 2 (D-007; contrato 21).");
+                }
+
+                if (version < CurvePackSchema && (type == MechanicType.Aguape || type == MechanicType.Lancha))
+                {
+                    throw new LevelFormatException(at + ": el tipo " + typeKey + " necesita pack_schema 5 (D-068; contrato 21).");
                 }
 
                 if (version < TinajaPackSchema && IsPackSchema3Type(type))
