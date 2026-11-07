@@ -630,7 +630,8 @@ Especificación de producción de los tableros de sustitución de 301-700 (D-068
   - las mecánicas de la 1.1 en la tabla `mechanics` (fase F3b, con el núcleo de F2): `Ag` (Aguapé, `aguape`, filtro, estreno
     303-305), `A2` (Aguapé espeso, `aguape_n2`, variante de `Ag` con `n` = 2, estreno 347-348) y `La` (Lancha, `lancha`,
     disparador, estreno 363-365, con `season_debut_exempt`: el ciclo 361-380 es de aguas bajas en la 1.0 y la Lancha de aguas
-    altas [P]); el resto de su ciclo de vida va en el calendario (`calendar_note`). `role_caps.debut` admite K 6 [P] y
+    altas, decidido por el dueño); el resto de su ciclo de vida va en el calendario (`calendar_note`). `role_caps.debut` admite K 6
+    (decidido por el dueño: D-068, añadido «las preguntas de F3 y F3b») y
     `k_cells` lleva K 7 en 343-345 (el Brote de dos hojas) y K 6 en 363-365.
 - **`t_plan` de 03 §12:** la especificación no lleva un `t_plan`: los topes de T van en `role_caps` (por papel, con el de K) y
   el K de cada posición sale del `k_plan` (por papel, que es por posición del ciclo) y de `k_cells`.
