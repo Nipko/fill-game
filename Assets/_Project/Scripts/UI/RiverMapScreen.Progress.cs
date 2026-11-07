@@ -1228,8 +1228,8 @@ namespace AF.UI
             }
 
             Vector2 at = space.ToLocal(_canoeMap);
-            const float w = ProceduralArt.MapCanoeWidthDp;
-            const float h = ProceduralArt.MapCanoeHeightDp;
+            float w = CanoeWidthDp;
+            float h = CanoeHeightDp;
             return new Rect(at.x - (0.5f * w), at.y - (CanoePivotY * h), w, h);
         }
 
@@ -2101,7 +2101,7 @@ namespace AF.UI
             float half = step * (BuoysPerLeg - 1) * 0.5f;
             float contentW = _map != null ? space.DpPerUnit * _map.Width : float.MaxValue;
             float x0 = Mathf.Clamp(stop.x - half, radius + LabelEdgeDp, Mathf.Max(radius + LabelEdgeDp, contentW - radius - LabelEdgeDp - (2f * half)));
-            float below = ProceduralArt.MapCanoeHeightDp * CanoePivotY;
+            float below = CanoeHeightDp * CanoePivotY;
             return new Vector2(x0 + (i * step), stop.y - below - BuoyCompactGapDp - radius - _compactDropDp);
         }
 

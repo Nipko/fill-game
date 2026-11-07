@@ -1576,7 +1576,7 @@ Todo el arte nuevo es del artista (CLAUDE.md, «Humanos»).
 | 4 | Follaje | `foliage_<juego>_tl/tr/bl/br` | ≤ 480 × 510 | 1 juego nuevo × 4 (el de Brasil es el del canon) | El açaí solo en el juego de Brasil; el nuevo, de Amazonia occidental, con aguaje |
 | 5 | Texturas de terreno | `map_tile_canopy/varzea/savanna/rock/snow` | 512², sin costuras | 5 | Brillantes, de juego; nada de papel |
 | 6 | Máscara de zonas del terreno | Dato de `tools/river-map` | PNG o SVG por zonas, sobre la guía de F2 | 1 | Natural Earth no trae dosel, várzea, sabana, roca ni nieve: las dibuja el artista y la herramienta las vectoriza (11.3) |
-| 7 | Canoa con Capi remando | `map_canoe` (rig de Capi) | Bucle de 12 fotogramas a 32-40 dp; cuias atadas con cuerda | 1 | Del bucle de `capi_rescue`; mástil con anclaje para la bandera; sin personas |
+| 7 | Canoa con Capi remando | `map_canoe` (rig de Capi) | Bucle de 12 fotogramas a 32-40 dp; cuias atadas con cuerda. Con el Mapa v2 (D-069, M2-3), 60 × 44 dp en la vista Mundo, rig por código con 6 gestos | 1 | Del bucle de `capi_rescue`; mástil con anclaje para la bandera; sin personas |
 | 8 | Rosa en el Mapa | Poses del canon reducidas, más `rosa_farewell`; con Q18-A, la paleta del bufeo boliviano | Rig de Rosa | +1 pose (+1 paleta) | La despedida del 961; el bufeo, sin nombre propio |
 | 9 | Mini cuia y su etiqueta | `map_minicuia` | 96 × 160, vidrio en capas | 1 | Silueta de D-006, **nunca un tubo**; el líquido lo pinta el código; las siluetas de los sitios se hornean en el atlas (10.7) |
 | 10 | Repisa del Muestrario | `map_rack` | 9 cortes | 1 | Madera tallada y repisa (guía §4.4 y §4.5) |
