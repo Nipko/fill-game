@@ -38,8 +38,17 @@ namespace AF.EditorTools
         /// </summary>
         public const string ProductName = "Tintalú (dev)";
 
-        /// <summary>Orientación vertical bloqueada, sin autorrotación (GDD 02 §5: "Orientación: vertical bloqueada").</summary>
-        public const UIOrientation Orientation = UIOrientation.Portrait;
+        /// <summary>
+        /// Autorrotación con las cuatro orientaciones (añadido de D-059 del 2026-11-06, Q-BB-1 (b), decidida por el dueño): el
+        /// manifiesto ya no restringe la orientación, como pide Play para las pantallas grandes. El juego sigue vertical en los
+        /// teléfonos por código (<c>AF.UI.OrientationPolicy</c> y el plugin <c>AfSplashHold</c>); tabletas, plegables y Chromebooks
+        /// giran con la columna de 02 §5. Antes, <c>Portrait</c> («Orientación: vertical bloqueada»). Es común con iOS (solo iPhone:
+        /// allí <c>OrientationPolicy</c> pide siempre vertical).
+        /// </summary>
+        public const UIOrientation Orientation = UIOrientation.AutoRotation;
+
+        /// <summary>Las cuatro orientaciones de la autorrotación (vertical, vertical invertida y las dos apaisadas).</summary>
+        public const bool AutorotateAll = true;
 
         /// <summary>
         /// «Render outside safe area» (añadido de D-059 del 2026-11-06, borde a borde): el juego pinta de borde a borde, también bajo
@@ -188,9 +197,9 @@ namespace AF.EditorTools
             PlayerSettings.productName = ProductName;
             PlayerSettings.defaultInterfaceOrientation = Orientation;
             PlayerSettings.allowedAutorotateToPortrait = true;
-            PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
-            PlayerSettings.allowedAutorotateToLandscapeLeft = false;
-            PlayerSettings.allowedAutorotateToLandscapeRight = false;
+            PlayerSettings.allowedAutorotateToPortraitUpsideDown = AutorotateAll;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = AutorotateAll;
+            PlayerSettings.allowedAutorotateToLandscapeRight = AutorotateAll;
             PlayerSettings.useAnimatedAutorotation = false;
             PlayerSettings.Android.renderOutsideSafeArea = RenderOutsideSafeArea;
             PlayerSettings.SetApplicationIdentifier(android, ApplicationId);
@@ -250,6 +259,10 @@ namespace AF.EditorTools
             var problems = new List<string>();
             Check(problems, "productName", PlayerSettings.productName, ProductName);
             Check(problems, "defaultInterfaceOrientation", PlayerSettings.defaultInterfaceOrientation, Orientation);
+            Check(problems, "allowedAutorotateToPortrait", PlayerSettings.allowedAutorotateToPortrait, true);
+            Check(problems, "allowedAutorotateToPortraitUpsideDown", PlayerSettings.allowedAutorotateToPortraitUpsideDown, AutorotateAll);
+            Check(problems, "allowedAutorotateToLandscapeLeft", PlayerSettings.allowedAutorotateToLandscapeLeft, AutorotateAll);
+            Check(problems, "allowedAutorotateToLandscapeRight", PlayerSettings.allowedAutorotateToLandscapeRight, AutorotateAll);
             Check(problems, "renderOutsideSafeArea", PlayerSettings.Android.renderOutsideSafeArea, RenderOutsideSafeArea);
             Check(problems, "applicationId", PlayerSettings.GetApplicationIdentifier(android), ApplicationId);
             Check(problems, "scriptingBackend", PlayerSettings.GetScriptingBackend(android), ScriptingImplementation.IL2CPP);

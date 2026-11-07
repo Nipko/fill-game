@@ -4982,6 +4982,20 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 
   **Recomendación: (b)** para la 1.1. Retira el aviso de Play, los teléfonos siguen en vertical (02 §5) y la interfaz ya funciona en apaisado. Toca `ProjectSettings` por `ProjectSetup` y 02 §5 («Orientación»).
 
+### D-059, añadido del 2026-11-06 (2): Q-BB-1 decidida, (b)
+
+- **Decisión del dueño (2026-11-06):** opción (b), con sus palabras: «Sí, opción b». Rama `v11/orientacion-tabletas`.
+- **Manifiesto sin restricción de orientación:**
+  - `ProjectSetup.Orientation` pasa a autorrotación con las cuatro orientaciones (`AutorotateAll`), aplicado con `scripts/unity-build.ps1 -Method Setup` (`ProjectSettings.asset`: `defaultScreenOrientation: 4` y las cuatro `allowedAutorotateTo*` a 1).
+  - Con autorrotación, Unity escribe `android:screenOrientation="fullUser"` (13), que no restringe. Aun así, `Assets/Plugins/Android/LauncherManifest.xml` lo quita de `UnityPlayerGameActivity` (`tools:remove`), así que el manifiesto fusionado no lleva `screenOrientation`. Sigue `resizeableActivity="true"`, sin `maxAspectRatio`.
+  - `ci/check-manifest.ps1` comprueba ahora (punto 6 quater) que la actividad de Unity no restringe la orientación, es redimensionable y no lleva `maxAspectRatio` ni `minAspectRatio`. Rechaza el `dev.apk` anterior (`screenOrientation=1`).
+- **Vertical por código, solo en los teléfonos** (lado menor de la pantalla física del dispositivo < 600 dp, con las barras del sistema y truncado, la frontera teléfono/tableta de Android, aunque no exactamente el calificador `sw600dp`; en pantalla dividida cuenta la pantalla entera, no la ventana):
+  - **Java, lo antes posible:** el plugin `AfSplashHold` pide `SCREEN_ORIENTATION_PORTRAIT` en `onActivityCreated` de cada actividad de Unity, dentro de su `onCreate` y antes de su primer fotograma. Mide la ventana máxima (`getMaximumWindowMetrics`, Android 11+; `getRealMetrics` antes). Solo API de la plataforma.
+  - **C#:** `AF.UI.OrientationPolicy` lo pide otra vez al arrancar el reproductor (`BeforeSplashScreen`), siempre, para que Unity no vuelva a la autorrotación de los Player Settings. Decide con lo último que pidió, nunca con `Screen.orientation`, que con autorrotación da la orientación física (revisión del carril). Después lo decide otra vez cada vez que cambia la pantalla (tamaño o densidad): un plegable que se abre gira; al cerrarlo vuelve a vertical.
+  - En iOS (solo iPhone en la primera versión) pide siempre vertical. La orientación de los Player Settings es común a Android e iOS.
+- **Tabletas, plegables abiertos y Chromebooks giran,** con la interfaz en la columna de 02 §5.
+- **Pendiente de probar en el teléfono y en una tableta o un emulador** (lista en el informe del carril): abrir con el teléfono tumbado, girar en una tableta, abrir y cerrar un plegable, y la pantalla dividida.
+
 ## D-066 · Motor de marketing liderado por Spark
 
 - **Fecha:** 2026-10-31, el día del lanzamiento de la 1.0.0 (10003).
