@@ -21,6 +21,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   - la cola coincide (60 en cola, 58 publicadas, 2 con error);
   - Temporal tiene 63 flujos en marcha.
 - **En el Spark** Postiz queda parado, sin reinicio automático y con los datos intactos (`migrar-a-vps.sh volver`). El dueño puede quitar el acceso directo que mantiene vivo WSL (`instalar-arranque.ps1 -Quitar`).
+- **TikTok, directo en TikTok Studio** (decisión del dueño, 2026-11-07): por Postiz no llegan completos la descripción ni los ajustes. Postiz queda para Facebook, Instagram y YouTube.
 - Detalle en `stack-spark.md` §2.4.
 
 ### 2026-11-03 · Revisión visual con Qwen3-VL-8B (Q-MK-S0-2): HECHA, y encontró un fallo en las tomas
