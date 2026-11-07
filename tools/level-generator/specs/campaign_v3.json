@@ -1,0 +1,1242 @@
+{
+  "spec": "campaign_v3",
+  "spec_schema": 1,
+  "description": "Especificación de producción de la curva 2 de la 1.1 (D-068 y sus añadidos del 2026-11-07; fase F3; docs/dev/propuesta-curva-1.1.md §6.3; 03 §11-§12 y §17; 08 §4.1): los tableros de sustitución de 301-700 (packs curva_{mm}_v1, kind curve, ids _c2 y semillas :c2, replaces = el id de la curva 1) y su reserva (reserva_curva_{mm}_v1). 201-300 es historia: copia de la variante publicada («b») de campaign_v2.json, que no se genera (curve.from_level; CURVE-BASE). 301-700 parte de la variante «b» de campaign_v2.json (sin la Tinaja, fuera de la 1.1: pregunta 12 (a)) con los topes del dueño tras F1 (k_plan, k_cells y role_caps), las Aguas turbias en Normal (murky_normal: estreno en 323-324 y 3 comodidades turbias por ciclo), la celda nueva del reto 369, el escalón de presión por mundo (pressure_plan) y los slots del Aguapé y la Lancha declarados para F2 (f2_mechanics y f2_slots), que el generador aún no coloca. Los packs finales (F5) se generan después de F2, de la superposición y de la curación del dueño.",
+  "lap": 1,
+  "first_level": 201,
+  "last_level": 700,
+  "pour_mode": "run",
+  "previous": "campaign_v1.json",
+  "previous_note": "La especificación anterior (11-200): las reglas de --validate-spec que necesitan historia (GAP-120, NO-3-ROW, SEASONS, RETURN de la Piraña en 201-220, FIRST-TIME y NOVELTY-60) la cuentan, pero solo fallan en 201-700; el registro de combinaciones se genera desde las dos (d.5.6).",
+  "tints": [
+    {
+      "id": "guanabana",
+      "engine": 1,
+      "name_es": "Guanábana",
+      "debut": 4
+    },
+    {
+      "id": "cupuacu",
+      "engine": 2,
+      "name_es": "Copoazú",
+      "debut": 81
+    },
+    {
+      "id": "tapereba",
+      "engine": 3,
+      "name_es": "Taperebá",
+      "debut": 2
+    },
+    {
+      "id": "aguaje",
+      "engine": 4,
+      "name_es": "Aguaje",
+      "debut": 1
+    },
+    {
+      "id": "urucum",
+      "engine": 5,
+      "name_es": "Achiote",
+      "debut": 41
+    },
+    {
+      "id": "camu_camu",
+      "engine": 6,
+      "name_es": "Camu camu",
+      "debut": 21
+    },
+    {
+      "id": "bacaba",
+      "engine": 7,
+      "name_es": "Bacaba",
+      "debut": 7
+    },
+    {
+      "id": "acai",
+      "engine": 8,
+      "name_es": "Açaí",
+      "debut": 1
+    },
+    {
+      "id": "jenipapo",
+      "engine": 9,
+      "name_es": "Huito",
+      "debut": 141
+    },
+    {
+      "id": "agua_tapajos",
+      "engine": 10,
+      "name_es": "Agua del Tapajós",
+      "debut": 11
+    },
+    {
+      "id": "lulo",
+      "engine": 11,
+      "name_es": "Lulo",
+      "debut": 111
+    },
+    {
+      "id": "araza",
+      "engine": 12,
+      "name_es": "Arazá",
+      "debut": 301
+    },
+    {
+      "id": "cacao",
+      "engine": 13,
+      "name_es": "Cacao",
+      "debut": 201
+    },
+    {
+      "id": "agua_negro",
+      "engine": 14,
+      "name_es": "Agua del Río Negro",
+      "debut": 61
+    }
+  ],
+  "risk_pairs": [
+    [
+      4,
+      5
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      6,
+      13
+    ],
+    [
+      13,
+      14
+    ],
+    [
+      14,
+      4
+    ],
+    [
+      3,
+      12
+    ],
+    [
+      12,
+      11
+    ],
+    [
+      11,
+      10
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      1,
+      2
+    ]
+  ],
+  "cvd_pairs": [
+    [
+      7,
+      10
+    ],
+    [
+      5,
+      14
+    ]
+  ],
+  "cvd_pairs_note": "Pares del simulador de daltonismo (Q-B9-13 bis; D-033, añadido de B9, punto 10; 07 §3 y glosario §9): 7-10 en protanopía y 5-14 en deuteranopía. No cuentan en risk_pairs ni en max_risk_pairs; el generador evita que queden juntos en una cuia y level-qa lo comprueba (QA-CVD-ADJ).",
+  "max_risk_pairs": [
+    {
+      "levels": [
+        201,
+        700
+      ],
+      "max": "libre"
+    }
+  ],
+  "max_risk_pairs_note": "03 §11: max_pares_riesgo «libre» desde el 201. El lector lo toma como todos los pares de riesgo que existen (10, el máximo que admite la cabecera del pack): ningún tope propio.",
+  "mechanics_per_level": {
+    "max": 2,
+    "raised_from_level": 301,
+    "raised_milestone_from_level": 320,
+    "raised_max": 3,
+    "note": "02 §9.2 regla 4 y d.5.1: como mucho 2 mecánicas distintas por nivel antes del 300 y 3 después, 3 solo en retos e hitos: los retos, hasta 3 desde el 301, y los hitos, desde el 320 (el primer trío; 03 §12, fila p20); las capacidades no cuentan [P]. Lo leen --validate-spec (MAX-2) y level-qa (QA-MECH-COUNT)."
+  },
+  "capacities_per_level": {
+    "max_chica": 2,
+    "max_alta": 1,
+    "before_level": 200,
+    "note": "02 §8: como mucho 2 Cuias chicas (con la cueva de la Piraña) y 1 Cuia alta por nivel antes del 200; desde el 201 no hay tope por nivel (03 §11: capacidades 4-6), salvo los hitos de 14 cuias, sin capacidades (HITO-14). Lo lee --validate-spec (CAPACITIES)."
+  },
+  "novelty_max_gap": 60,
+  "novelty_note": "D-009 punto 8 (03 §11): desde el 201, nunca más de 60 niveles sin algo nunca visto. --validate-spec (NOVELTY-60) mide la distancia entre dos primeras veces seguidas (entradas del registro de combinaciones o tintes nuevos, d.5.6), desde la última de 11-200 (el 200) hasta el 700, en cada variante con su propio registro: 34 como mucho en las dos (526 → 560).",
+  "worlds": [
+    {
+      "world": 6,
+      "world_id": "w06_oriente",
+      "name": "Oriente",
+      "levels": [
+        201,
+        300
+      ],
+      "water_base": "white",
+      "water_tint": "agua_tapajos"
+    },
+    {
+      "world": 7,
+      "world_id": "w07_madre_de_dios",
+      "name": "Madre de Dios",
+      "levels": [
+        301,
+        420
+      ],
+      "water_base": "white",
+      "water_tint": "agua_tapajos"
+    },
+    {
+      "world": 8,
+      "world_id": "w08_madidi",
+      "name": "Madidi",
+      "levels": [
+        421,
+        560
+      ],
+      "water_base": "white",
+      "water_tint": "agua_tapajos"
+    },
+    {
+      "world": 9,
+      "world_id": "w09_ucayali",
+      "name": "Ucayali",
+      "levels": [
+        561,
+        700
+      ],
+      "water_base": "white",
+      "water_tint": "agua_tapajos"
+    }
+  ],
+  "worlds_note": "Glosario §8: Oriente 201-300, Madre de Dios 301-420, Madidi 421-560 y Ucayali 561-700, los cuatro de agua base blanca. Los world_id siguen la forma w{nn}_{nombre} del glosario §11 [P] (los de 6 y 7 ya los usaban las muestras de P1 y P5). water_tint, el tinte del agua de la Lluvia, es el de campaign_v1 en los mundos de agua blanca (Trapecio y Loreto) [P].",
+  "ranges": [
+    {
+      "levels": [
+        201,
+        400
+      ],
+      "k": [
+        9,
+        11
+      ],
+      "cuias": [
+        11,
+        13
+      ],
+      "empties": 1,
+      "par": [
+        22,
+        36
+      ],
+      "pct_hard": [
+        25,
+        25
+      ],
+      "pct_very_hard": [
+        5,
+        5
+      ]
+    },
+    {
+      "levels": [
+        401,
+        700
+      ],
+      "k": [
+        10,
+        12
+      ],
+      "cuias": [
+        12,
+        14
+      ],
+      "empties": 1,
+      "par": [
+        25,
+        42
+      ],
+      "pct_hard": [
+        25,
+        25
+      ],
+      "pct_very_hard": [
+        5,
+        5
+      ]
+    }
+  ],
+  "ranges_note": "Filas de 03 §11 (las de campaign_v2.json). En la curva 2 (desde curve.from_level) sus columnas de K, cuias y par no se usan: mandan los topes por papel (role_caps; 03 §12), y la comprobación 2 de 03 §17 solo exige par ≥ 2K hasta que se fije el par por papel (03 §11; pregunta 14). D sigue calculándose con el pool de cada fila.",
+  "curve": {
+    "c": 2,
+    "from_level": 301,
+    "base_spec": "campaign_v2.json",
+    "base_variant": "b",
+    "note": "D-068 P1 B; 08 §4.1 (convención _c{c} y :c{c}) y §4.4. Desde from_level: kind curve, pack curva_{mm}_v1, id m{mm}_v1_n{nnnn}_c2, seed amazonfill:v1:m{mm}:v1:n{nnnn}:c2 y replaces = m{mm}_v1_n{nnnn}; la reserva, reserva_curva_{mm}_v1 con _c2_r1 y :c2:r1. Antes de from_level la especificación solo es historia (no se genera) y sus celdas son las de base_spec en base_variant (CURVE-BASE)."
+  },
+  "role_caps": {
+    "note": "Topes por papel de 03 §12 (D-068 P2 A): t = cuias del tablero y k = colores, [mínimo, máximo]. respite = recuperación (p1-p2) y remanso (p19); debut = tableros de estreno (p3-p5 del ciclo de debut); summit = la cúspide, el último hito de cada mundo (su firma; P3 A). El reto, 10-11 cuias con 12 como mucho. El generador no construye un tablero fuera del tope (SlotGenerator.Config), level-qa lo comprueba (QA-T-ROLE) y --validate-spec comprueba el K (ROLE-CAPS).",
+    "respite": {
+      "t": [
+        8,
+        10
+      ],
+      "k": [
+        6,
+        8
+      ]
+    },
+    "debut": {
+      "t": [
+        9,
+        10
+      ],
+      "k": [
+        7,
+        8
+      ]
+    },
+    "comfort": {
+      "t": [
+        9,
+        11
+      ],
+      "k": [
+        7,
+        9
+      ]
+    },
+    "challenge": {
+      "t": [
+        10,
+        12
+      ],
+      "k": [
+        9,
+        10
+      ]
+    },
+    "milestone": {
+      "t": [
+        12,
+        13
+      ],
+      "k": [
+        10,
+        12
+      ]
+    },
+    "summit": {
+      "t": [
+        13,
+        14
+      ],
+      "k": [
+        11,
+        12
+      ]
+    }
+  },
+  "k_plan_note": "Añadido de D-068 del 2026-11-07 (F1-1): comodidad y respiros (recuperación y remanso, que toma el K de recovery: cycle) con K 8, retos con K 9 e hitos con K 11; las excepciones por celda van en k_cells. 201-300, el de campaign_v2.json (historia). Sin hitos de K 13: los de 14 cuias de la curva 1 (620 y 680) pasan a ser hitos normales; las cúspides llevan 14 cuias con K 12.",
+  "k_plan": [
+    {
+      "levels": [
+        201,
+        300
+      ],
+      "recovery": 9,
+      "comfort": 10,
+      "challenge": 10,
+      "milestone": 10
+    },
+    {
+      "levels": [
+        301,
+        700
+      ],
+      "recovery": 8,
+      "comfort": 8,
+      "challenge": 9,
+      "milestone": 11
+    }
+  ],
+  "k_cells": {
+    "note": "K por celda (añadido de D-068 del 2026-11-07, F1-1): manda sobre el k_plan. 329, 346 y 349: los retos de p6 y p9 que con K 9 no llegaban a Difícil en F1, con K 10. 343-345: el estreno del Brote de dos hojas con K 7 (con K 8 salía con 11 cuias, por encima del tope de estreno). 323-324: el estreno de las Aguas turbias en Normal con K 7 [P], por el mismo tope (2 vacíos y la cuia de holgura de las turbias: 10 cuias). 420, 560 y 700: las cúspides, con K 12.",
+    "323": 7,
+    "324": 7,
+    "329": 10,
+    "343": 7,
+    "344": 7,
+    "345": 7,
+    "346": 10,
+    "349": 10,
+    "420": 12,
+    "560": 12,
+    "700": 12
+  },
+  "pressure_plan": {
+    "note": "Escalón de presión objetivo de cada hito (03 §12, escala larga; P3 A): el mundo 7, del 3 al 7, como dice 03 §12; los mundos 8 (del 4 al 8) y 9 (del 5 al 9), escalón a escalón [P] de esta especificación. Solo guía e informe (difficulty.pressure; aviso PRESSURE de --validate-spec): no decide la etiqueta. La palanca de las congeladas (Aguapé) llega con F2.",
+    "320": 3,
+    "340": 4,
+    "360": 5,
+    "380": 5,
+    "400": 6,
+    "420": 7,
+    "440": 4,
+    "460": 5,
+    "480": 5,
+    "500": 6,
+    "520": 7,
+    "540": 7,
+    "560": 8,
+    "580": 5,
+    "600": 6,
+    "620": 6,
+    "640": 7,
+    "660": 8,
+    "680": 8,
+    "700": 9
+  },
+  "cycle": {
+    "from_level": 201,
+    "length": 20,
+    "note": "Ciclo de D-009 (03 §12), el de campaign_v2.json con un cambio de la curva 2 (D-068 P2 A): el remanso (p19) toma el K de recovery, el de los respiros. Ventanas y etiquetas, las de campaign_v2.json.",
+    "positions": [
+      {
+        "p": [
+          1,
+          2
+        ],
+        "role": "recovery",
+        "empties": 2,
+        "source": "walk",
+        "k": "recovery"
+      },
+      {
+        "p": [
+          3,
+          4,
+          5
+        ],
+        "role": "comfort",
+        "empties": 1,
+        "source": "walk",
+        "k": "comfort",
+        "debut_slot": true
+      },
+      {
+        "p": [
+          6,
+          9,
+          12,
+          15,
+          18
+        ],
+        "role": "challenge",
+        "empties": 1,
+        "source": "challenge",
+        "k": "challenge"
+      },
+      {
+        "p": [
+          7,
+          8,
+          10,
+          11,
+          13,
+          14,
+          16,
+          17
+        ],
+        "role": "comfort",
+        "empties": 1,
+        "source": "walk",
+        "k": "comfort"
+      },
+      {
+        "p": [
+          19
+        ],
+        "role": "remanso",
+        "empties": 1,
+        "source": "walk",
+        "k": "recovery"
+      },
+      {
+        "p": [
+          20
+        ],
+        "role": "milestone",
+        "empties": 1,
+        "source": "deep",
+        "k": "milestone"
+      }
+    ],
+    "empties_two_until_level": 30,
+    "challenge_two_empties_until_level": 39,
+    "windows": {
+      "recovery": "[0.00, 0.30)",
+      "comfort": "[0.20, 0.60]",
+      "debut": "[0.00, 0.20)",
+      "remanso": "[0.20, 0.40]",
+      "challenge_21_40": "[0.50, 0.70]",
+      "challenge_41_59_labeled": "[0.75, 0.90)",
+      "challenge_41_59_soft": "[0.50, 0.75)",
+      "challenge_61": "[0.75, 0.90)",
+      "milestone_40": "[0.75, 0.85]",
+      "milestone_60": "[0.90, 1.00]"
+    },
+    "labels": {
+      "first_hard": 40,
+      "first_very_hard": 60,
+      "labeled_41_59": [
+        6,
+        12,
+        18
+      ],
+      "thresholds": {
+        "hard": 0.75,
+        "very_hard": 0.9
+      }
+    }
+  },
+  "mechanics": [
+    {
+      "code": "Ho",
+      "id": "hoja",
+      "kind": "filter",
+      "debut": 43,
+      "season": "all",
+      "debut_key": "aguaje"
+    },
+    {
+      "code": "Ma",
+      "id": "matapi",
+      "kind": "filter",
+      "debut": 63,
+      "season": "B"
+    },
+    {
+      "code": "Li",
+      "id": "liana",
+      "kind": "trigger",
+      "debut": 83,
+      "season": "A",
+      "debut_key": "tapereba"
+    },
+    {
+      "code": "Tu",
+      "id": "murky",
+      "kind": "modifier",
+      "debut": 100,
+      "season": "none"
+    },
+    {
+      "code": "Re",
+      "id": "remolino",
+      "kind": "pair",
+      "debut": 103,
+      "season": "all"
+    },
+    {
+      "code": "Ba",
+      "id": "barro",
+      "kind": "filter",
+      "debut": 123,
+      "season": "all"
+    },
+    {
+      "code": "Ll",
+      "id": "lluvia",
+      "kind": "counter",
+      "debut": 143,
+      "season": "A",
+      "k": 3
+    },
+    {
+      "code": "Br",
+      "id": "brote",
+      "kind": "filter",
+      "debut": 163,
+      "season": "all",
+      "debut_key": "camu_camu"
+    },
+    {
+      "code": "Pi",
+      "id": "pirana",
+      "kind": "counter",
+      "debut": 183,
+      "season": "B",
+      "k": 4,
+      "cave_cap": 2
+    },
+    {
+      "code": "Ln",
+      "id": "liana_n",
+      "kind": "trigger",
+      "debut": 243,
+      "season": "A",
+      "variant_of": "Li",
+      "not_with": [
+        "Fl",
+        "Pi",
+        "Tu"
+      ]
+    },
+    {
+      "code": "Ha",
+      "id": "hoja_atada",
+      "kind": "filter",
+      "debut": 283,
+      "season": "all",
+      "variant_of": "Ho",
+      "not_with": [
+        "Tu"
+      ]
+    },
+    {
+      "code": "B2",
+      "id": "brote_n2",
+      "kind": "filter",
+      "debut": 343,
+      "season": "all",
+      "variant_of": "Br",
+      "not_with": [
+        "Tu"
+      ]
+    },
+    {
+      "code": "Fl",
+      "id": "flor",
+      "kind": "trigger",
+      "debut": 403,
+      "season": "A",
+      "variant_of": "Li",
+      "not_with": [
+        "Ln",
+        "Pi",
+        "Tu"
+      ]
+    }
+  ],
+  "mechanics_note": "Las de campaign_v2.json sin la Tinaja, que queda fuera de la 1.1 (D-068, pregunta 12 (a)). El Aguapé y la Lancha van en f2_mechanics hasta que F2 esté en el núcleo.",
+  "f2_mechanics": [
+    {
+      "code": "Ag",
+      "id": "aguape",
+      "debut": 303,
+      "intro": "aguape",
+      "note": "Aguapé (M8; D-068 P4-P5): estreno en 303-305 (03 §12)."
+    },
+    {
+      "code": "A2",
+      "id": "aguape_n2",
+      "debut": 347,
+      "intro": "aguape_n2",
+      "note": "Aguapé espeso (P13 A; pregunta 11 (a)): estreno en p7-p8 del ciclo 341-360 (347-348), excepción declarada a la regla 2 de 02 §9.2."
+    },
+    {
+      "code": "La",
+      "id": "lancha",
+      "debut": 363,
+      "intro": "lancha",
+      "note": "Lancha (M11; P8 A): estreno en 363-365."
+    }
+  ],
+  "f2_slots": {
+    "note": "Slots declarados para F2 (los estrenos de 03 §12): la celda que llevarán cuando el núcleo tenga el Aguapé y la Lancha y la superposición los coloque. Hasta entonces el generador usa la celda del calendario y lo dice (--spec y --measure). El resto de su ciclo de vida (8 niveles en su ciclo de debut y luego 3-5 o 2-3 por ciclo; propuesta §4.3) se reparte con la tabla de novedades de la curva 2, antes de F5.",
+    "303": "★Ag",
+    "304": "★Ag",
+    "305": "★Ag",
+    "347": "★A2",
+    "348": "★A2",
+    "363": "★La",
+    "364": "★La",
+    "365": "★La"
+  },
+  "murky_normal": {
+    "from_level": 323,
+    "max_per_cycle": 5,
+    "comfort_per_cycle": 3,
+    "debut": [
+      323,
+      324
+    ],
+    "max_hidden_units": 2,
+    "note": "D-068 P7 A y añadido del 2026-11-07 (F1-1): Aguas turbias también en Normal, en comodidad, con una cuia turbia y 1-2 dosis (lvl_murky_normal_max_hidden_units = 2; 02 §11 T1). Estreno en 2 tableros fáciles de p3-p5 del ciclo 321-340 (323-324, con estrella; 03 §12 [P]; el 323 lleva intro_mechanic murky) y, desde ese ciclo, 3 comodidades turbias por ciclo contando el estreno (MURKY-NORMAL); hasta 5 niveles turbios por ciclo con los retos (MURKY-2). El ciclo 301-320 no lleva comodidades turbias: es anterior al estreno [P]."
+  },
+  "capacities": [
+    {
+      "code": "Ch",
+      "id": "chica",
+      "cap": 2,
+      "debut": 14
+    },
+    {
+      "code": "Ch1",
+      "id": "chica",
+      "cap": 1,
+      "debut": 18
+    },
+    {
+      "code": "Ch3",
+      "id": "chica",
+      "cap": 3,
+      "debut": 22
+    },
+    {
+      "code": "Al",
+      "id": "alta",
+      "cap": 5,
+      "debut": 27
+    },
+    {
+      "code": "Al6",
+      "id": "alta",
+      "cap": 6,
+      "debut": 160
+    }
+  ],
+  "capacities_note": "Las de campaign_v1 (02 §8 y 03 §9), para leer las celdas: «Ch» = Cuia chica de 2 [P] y «Al» = Cuia alta de 5. En 201-700 salen en comodidades, solas o con una mecánica, y en el hito 220 (d.5.1), nunca con la Liana, la Liana de cuenta ni la Flor (LIANA-CAPS) ni en los hitos de 14 cuias (HITO-14); la Cuia alta de 6 sigue solo en hitos y este calendario no la usa.",
+  "seasons": {
+    "201": "A",
+    "221": "A",
+    "241": "B",
+    "261": "B",
+    "281": "A",
+    "301": "A",
+    "321": "B",
+    "341": "A",
+    "361": "B",
+    "381": "A",
+    "401": "A",
+    "421": "B",
+    "441": "B",
+    "461": "A",
+    "481": "B",
+    "501": "A",
+    "521": "B",
+    "541": "A",
+    "561": "B",
+    "581": "B",
+    "601": "A",
+    "621": "B",
+    "641": "B",
+    "661": "A",
+    "681": "B"
+  },
+  "seasons_note": "Temporadas A (aguas altas) y B (aguas bajas) por ciclo de d.5, punto 4 (las mismas en las dos variantes): solo metadato; no cambian la generación ni pasan al pack. La tabla del cliente (Assets/_Project/Data/Levels/seasons_v1.json) las copia con --seasons campaign_v1.json campaign_v2.json (SE1; la amplía P7).",
+  "report_sources": "D-009 (ciclo escalonado), D-007 (debuts) y la tabla de novedades de 201-700 de D2 (D-023 punto 10) con la propuesta `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` (c.1-c.4, d.1-d.3 y d.5), D-019 (Tinaja) y D-023 punto 5 (variantes de la 1.0); GDD 03 §2, §4, §7-§13 y §17; 02 §8-§11; 08 §4.1",
+  "calendar_note": "201-300: la variante «b» de campaign_v2.json (historia; CURVE-BASE). 301-700: la variante «b» de campaign_v2.json con estos cambios (D-068, F3): Aguas turbias en Normal en 323-324 (estreno; antes Ma y C) y en 3 comodidades por ciclo, sobre comodidades de un filtro o puras donde el ciclo conserva el 30 % de puros (351 Ln y 368 Ha pasan a Ba+Tu, y 417 Ha a Ho+Tu, para que su ciclo tenga las tres sin bajar del 30 %); el reto 369 pasa de Pi+B2 a Pi+Ma (F1-3); los hitos 620 y 680 sin la nota K = 13.",
+  "calendar": {
+    "201": "R (tinte Cacao)",
+    "202": "R",
+    "203": "Li",
+    "204": "C",
+    "205": "Re",
+    "206": "Pi+Ba (D)",
+    "207": "C",
+    "208": "Br",
+    "209": "Li+Re (D)",
+    "210": "C",
+    "211": "Li",
+    "212": "Pi (D)",
+    "213": "C",
+    "214": "Ch",
+    "215": "Re+Ba (D)",
+    "216": "C",
+    "217": "Ho",
+    "218": "Li+Ba (D)",
+    "219": "S",
+    "220": "Ba+Tu+Ch (MD)",
+    "221": "R",
+    "222": "R",
+    "223": "Ll",
+    "224": "C",
+    "225": "Ho",
+    "226": "Ll+Ho (D)",
+    "227": "C",
+    "228": "Ba",
+    "229": "Br+Ll (D)",
+    "230": "C",
+    "231": "Ll",
+    "232": "Ma+Ho (D)",
+    "233": "C",
+    "234": "Al",
+    "235": "Br+Tu (D)",
+    "236": "C",
+    "237": "Re",
+    "238": "Ll+Ho (D)",
+    "239": "S",
+    "240": "Ho+Br (MD)",
+    "241": "R",
+    "242": "R",
+    "243": "★Ln",
+    "244": "★Ln",
+    "245": "★Ln",
+    "246": "Ma+Re (D)",
+    "247": "Ln",
+    "248": "C",
+    "249": "Ln (D)",
+    "250": "C",
+    "251": "Ma",
+    "252": "Ln+Re (D)",
+    "253": "C",
+    "254": "Ho",
+    "255": "Ma+Tu (D)",
+    "256": "C",
+    "257": "C",
+    "258": "Ln+Ma (D)",
+    "259": "S",
+    "260": "Ln+Ba (MD)",
+    "261": "R",
+    "262": "R",
+    "263": "Pi",
+    "264": "C",
+    "265": "Ba",
+    "266": "Pi+Br (D)",
+    "267": "C",
+    "268": "Re",
+    "269": "Ln+Br (D)",
+    "270": "C",
+    "271": "Pi",
+    "272": "Pi+Ba (D)",
+    "273": "C",
+    "274": "Al",
+    "275": "Ba+Tu (D)",
+    "276": "C",
+    "277": "Ho",
+    "278": "Ln+Ba (D)",
+    "279": "S",
+    "280": "Pi+Br (MD)",
+    "281": "R",
+    "282": "R",
+    "283": "★Ha",
+    "284": "★Ha",
+    "285": "★Ha",
+    "286": "Li+Re (D)",
+    "287": "Ha",
+    "288": "C",
+    "289": "Ha (D)",
+    "290": "C",
+    "291": "Li",
+    "292": "Ha+Re (D)",
+    "293": "C",
+    "294": "Ba",
+    "295": "Br+Tu (D)",
+    "296": "C",
+    "297": "Ch",
+    "298": "Ha+Br (D)",
+    "299": "S",
+    "300": "Ha+Li (MD) «Cuyabeno» [P]",
+    "301": "R (tinte Arazá)",
+    "302": "R",
+    "303": "Ll",
+    "304": "C",
+    "305": "Br",
+    "306": "Ha+Ll (D)",
+    "307": "C",
+    "308": "Re",
+    "309": "Br+Ll (D)",
+    "310": "C",
+    "311": "Ba",
+    "312": "Ha+Br (D)",
+    "313": "C",
+    "314": "Ho",
+    "315": "Br+Tu (D)",
+    "316": "C",
+    "317": "Ll",
+    "318": "Ln+Ll (D)",
+    "319": "S",
+    "320": "Ha+Ll+Br (MD)",
+    "321": "R",
+    "322": "R",
+    "323": "★Tu",
+    "324": "★Tu",
+    "325": "Ba",
+    "326": "Br+Ma (D)",
+    "327": "C",
+    "328": "C",
+    "329": "Ma (D)",
+    "330": "C",
+    "331": "Ma+Tu",
+    "332": "Ba+Ho (D)",
+    "333": "C",
+    "334": "Re",
+    "335": "Ma+Ho (D)",
+    "336": "C",
+    "337": "Ba",
+    "338": "Ma+Ba (D)",
+    "339": "S",
+    "340": "Br+Ba (MD)",
+    "341": "R",
+    "342": "R",
+    "343": "★B2",
+    "344": "★B2",
+    "345": "★B2",
+    "346": "B2+Ln (D)",
+    "347": "B2",
+    "348": "C",
+    "349": "B2 (D)",
+    "350": "Tu",
+    "351": "Ba+Tu",
+    "352": "B2+Re (D)",
+    "353": "C",
+    "354": "Ha+Al",
+    "355": "Re (D)",
+    "356": "C",
+    "357": "Br+Tu",
+    "358": "Ln+Re (D)",
+    "359": "S",
+    "360": "B2+Ln (MD)",
+    "361": "R",
+    "362": "R",
+    "363": "Pi",
+    "364": "C",
+    "365": "Ho",
+    "366": "Ho+Tu (D)",
+    "367": "C",
+    "368": "Ba+Tu",
+    "369": "Pi+Ma (D)",
+    "370": "Tu",
+    "371": "Re",
+    "372": "B2+Ho (D)",
+    "373": "C",
+    "374": "Al",
+    "375": "Pi+Ba (D)",
+    "376": "C",
+    "377": "Br+Tu",
+    "378": "Pi+Ho (D)",
+    "379": "S",
+    "380": "Pi+Ho (MD)",
+    "381": "R",
+    "382": "R",
+    "383": "Li",
+    "384": "Tu",
+    "385": "Ha",
+    "386": "Ba+Tu (D)",
+    "387": "C",
+    "388": "Br+Tu",
+    "389": "Li+Ha (D)",
+    "390": "C",
+    "391": "Li",
+    "392": "Ba (D)",
+    "393": "C",
+    "394": "Ch",
+    "395": "Li+Ba (D)",
+    "396": "C",
+    "397": "Ho+Tu",
+    "398": "Ha+Ba (D)",
+    "399": "S",
+    "400": "Li+Ha+Ba (MD)",
+    "401": "R",
+    "402": "R",
+    "403": "★Fl",
+    "404": "★Fl",
+    "405": "★Fl",
+    "406": "Ba+Ll (D)",
+    "407": "Fl",
+    "408": "Tu",
+    "409": "Fl (D)",
+    "410": "C",
+    "411": "Re",
+    "412": "Fl+Ba (D)",
+    "413": "C",
+    "414": "Br+Tu",
+    "415": "Fl+Ll (D)",
+    "416": "C",
+    "417": "Ho+Tu",
+    "418": "Ba+Tu (D)",
+    "419": "S",
+    "420": "Fl+B2 (MD) «Zafra» [P]",
+    "421": "R",
+    "422": "R",
+    "423": "Ma+Tu",
+    "424": "C",
+    "425": "Ho",
+    "426": "Fl+Ma (D)",
+    "427": "C",
+    "428": "Ba+Tu",
+    "429": "Ma+Re (D)",
+    "430": "C",
+    "431": "B2",
+    "432": "Fl+Ho (D)",
+    "433": "Tu",
+    "434": "Al",
+    "435": "Ma+Tu (D)",
+    "436": "C",
+    "437": "Ha",
+    "438": "Ho+Re (D)",
+    "439": "S",
+    "440": "Ma+Ho (MD)",
+    "441": "R",
+    "442": "R",
+    "443": "Pi",
+    "444": "C",
+    "445": "Br+Tu",
+    "446": "Pi+Ba (D)",
+    "447": "C",
+    "448": "Ho+Tu",
+    "449": "Br+Re (D)",
+    "450": "C",
+    "451": "Pi",
+    "452": "Pi+Br (D)",
+    "453": "Tu",
+    "454": "C",
+    "455": "Br+Tu (D)",
+    "456": "C",
+    "457": "Ha",
+    "458": "Ba+Re (D)",
+    "459": "S",
+    "460": "Pi+Ba (MD)",
+    "461": "R",
+    "462": "R",
+    "463": "Li",
+    "464": "Tu",
+    "465": "B2",
+    "466": "Li+B2 (D)",
+    "467": "C",
+    "468": "Re",
+    "469": "Ln+B2 (D)",
+    "470": "C",
+    "471": "Br+Tu",
+    "472": "Li+Ho (D)",
+    "473": "C",
+    "474": "Ch",
+    "475": "Ho+Tu (D)",
+    "476": "C",
+    "477": "Ba+Tu",
+    "478": "Ln+Ho (D)",
+    "479": "S",
+    "480": "Li+B2+Ho (MD)",
+    "481": "R",
+    "482": "R",
+    "483": "Ma+Tu",
+    "484": "C",
+    "485": "Ha",
+    "486": "Ma+Ha (D)",
+    "487": "Tu",
+    "488": "Re",
+    "489": "Ma+Ba (D)",
+    "490": "C",
+    "491": "Br+Tu",
+    "492": "Ha+Ba (D)",
+    "493": "C",
+    "494": "C",
+    "495": "Ma+Tu (D)",
+    "496": "C",
+    "497": "B2",
+    "498": "Fl+Ha (D)",
+    "499": "S",
+    "500": "Ma+Ha (MD)",
+    "501": "R",
+    "502": "R",
+    "503": "Ll",
+    "504": "C",
+    "505": "Ba+Tu",
+    "506": "Ll+Ba (D)",
+    "507": "C",
+    "508": "Ho+Tu",
+    "509": "Fl (D)",
+    "510": "C",
+    "511": "Li",
+    "512": "Ll+Ha (D)",
+    "513": "Tu",
+    "514": "Ll+Al",
+    "515": "Ba+Tu (D)",
+    "516": "C",
+    "517": "B2",
+    "518": "Fl+Ba (D)",
+    "519": "S",
+    "520": "Ll+Ba+Ha (MD)",
+    "521": "R",
+    "522": "R",
+    "523": "Pi",
+    "524": "Tu",
+    "525": "Re",
+    "526": "Pi+Ha (D)",
+    "527": "C",
+    "528": "Br+Tu",
+    "529": "Ho+Re (D)",
+    "530": "C",
+    "531": "Tu",
+    "532": "Pi+Ho (D)",
+    "533": "C",
+    "534": "Ch",
+    "535": "Ho+Tu (D)",
+    "536": "C",
+    "537": "B2",
+    "538": "Ha+Re (D)",
+    "539": "S",
+    "540": "Pi+Ha (MD)",
+    "541": "R",
+    "542": "R",
+    "543": "Fl",
+    "544": "C",
+    "545": "Ho+Tu",
+    "546": "Fl+Ho (D)",
+    "547": "C",
+    "548": "Ba+Tu",
+    "549": "Ln+Ho (D)",
+    "550": "C",
+    "551": "Ll",
+    "552": "Ln+Re (D)",
+    "553": "C",
+    "554": "Al",
+    "555": "Ho+Tu (D)",
+    "556": "C",
+    "557": "Br+Tu",
+    "558": "Fl (D)",
+    "559": "S",
+    "560": "Fl+Re (MD) «Riberalta» [P]",
+    "561": "R",
+    "562": "R",
+    "563": "Ma+Tu",
+    "564": "C",
+    "565": "B2",
+    "566": "Ma+Re (D)",
+    "567": "C",
+    "568": "Ha",
+    "569": "B2+Ba (D)",
+    "570": "C",
+    "571": "Ho+Tu",
+    "572": "Ma+Ba (D)",
+    "573": "C",
+    "574": "C",
+    "575": "Ma+Tu (D)",
+    "576": "C",
+    "577": "Br+Tu",
+    "578": "B2+Re (D)",
+    "579": "S",
+    "580": "Ma+B2 (MD)",
+    "581": "R",
+    "582": "R",
+    "583": "Pi",
+    "584": "Tu",
+    "585": "Ha",
+    "586": "Pi+Ha (D)",
+    "587": "C",
+    "588": "Ho+Tu",
+    "589": "Ha+B2 (D)",
+    "590": "C",
+    "591": "C",
+    "592": "Pi+B2 (D)",
+    "593": "C",
+    "594": "Al",
+    "595": "Ba+Tu (D)",
+    "596": "C",
+    "597": "Br+Tu",
+    "598": "Pi+Ba (D)",
+    "599": "S",
+    "600": "Ha+B2+Ba (MD)",
+    "601": "R",
+    "602": "R",
+    "603": "Ln",
+    "604": "Tu",
+    "605": "Re",
+    "606": "Ln+Re (D)",
+    "607": "C",
+    "608": "Ho+Tu",
+    "609": "Li+Ll (D)",
+    "610": "C",
+    "611": "Br+Tu",
+    "612": "Ll+Re (D)",
+    "613": "C",
+    "614": "Ch",
+    "615": "Li+Re (D)",
+    "616": "C",
+    "617": "Fl",
+    "618": "Ln+Ll (D)",
+    "619": "S",
+    "620": "Ln+Ll+Re (MD)",
+    "621": "R",
+    "622": "R",
+    "623": "Ma+Tu",
+    "624": "C",
+    "625": "Ba",
+    "626": "Ma+Ba (D)",
+    "627": "Tu",
+    "628": "B2",
+    "629": "Ll+Ma (D)",
+    "630": "C",
+    "631": "Tu",
+    "632": "Ma+Ho (D)",
+    "633": "C",
+    "634": "Al",
+    "635": "Ma+Tu (D)",
+    "636": "C",
+    "637": "Ha",
+    "638": "Ba+Ho (D)",
+    "639": "S",
+    "640": "Ma+Ba (MD)",
+    "641": "R",
+    "642": "R",
+    "643": "Pi",
+    "644": "C",
+    "645": "Br+Tu",
+    "646": "Pi+Br+Ha (D)",
+    "647": "C",
+    "648": "Br+Al",
+    "649": "Pi+Ha (D)",
+    "650": "Tu",
+    "651": "C",
+    "652": "Br+Re (D)",
+    "653": "Tu",
+    "654": "Pi",
+    "655": "Br+Tu (D)",
+    "656": "C",
+    "657": "B2",
+    "658": "Ha+Re (D)",
+    "659": "S",
+    "660": "Br+Ha+Re (MD)",
+    "661": "R",
+    "662": "R",
+    "663": "Li",
+    "664": "Tu",
+    "665": "Ha",
+    "666": "Li+Ha (D)",
+    "667": "C",
+    "668": "Ho+Tu",
+    "669": "Li+Br (D)",
+    "670": "C",
+    "671": "Ba+Tu",
+    "672": "Li+Re (D)",
+    "673": "C",
+    "674": "Ch",
+    "675": "Br+Tu (D)",
+    "676": "C",
+    "677": "B2",
+    "678": "Ha+Re (D)",
+    "679": "S",
+    "680": "Li+Ha+Re (MD)",
+    "681": "R",
+    "682": "R",
+    "683": "Ma+Tu",
+    "684": "C",
+    "685": "Ho",
+    "686": "Ma+Ho (D)",
+    "687": "C",
+    "688": "Re",
+    "689": "Ho+B2 (D)",
+    "690": "Tu",
+    "691": "C",
+    "692": "Ma+Ha (D)",
+    "693": "C",
+    "694": "Ma+Ch",
+    "695": "Ho+Tu (D)",
+    "696": "C",
+    "697": "Ba+Tu",
+    "698": "Ha+B2 (D)",
+    "699": "S",
+    "700": "Ma+Ha+B2 (MD) «Yarinacocha» [P]"
+  }
+}

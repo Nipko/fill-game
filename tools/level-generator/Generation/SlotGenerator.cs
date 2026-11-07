@@ -288,6 +288,13 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         }
 
         c.Measured = true;
+        if (spec.CapOf(plan) is RoleCap roleCap && (c.Board.Caps.Length < roleCap.TMin || c.Board.Caps.Length > roleCap.TMax || c.K < roleCap.KMin || c.K > roleCap.KMax))
+        {
+            // Defensa de la curva 2 (Config ya no construye fuera del tope): QA-T-ROLE lo exige en el pack.
+            c.Reject = string.Create(CultureInfo.InvariantCulture, $"T = {c.Board.Caps.Length} y K = {c.K} fuera del tope de {plan.CapRole} (D-068)");
+            return;
+        }
+
         ParResult par = _metrics.Par(c.State);
         c.Expanded = par.Expanded;
         if (par.Status != SolveStatus.Solved)
@@ -644,6 +651,13 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             return null;
         }
 
+        // Curva 2 (D-068, P2 A; 03 sec. 12): ninguna etapa construye un tablero fuera del tope de T y K de su papel (role_caps);
+        // si la del plan o una relajacion se sale, no aplica (la colocacion usa las demas). Sin role_caps, nada cambia.
+        if (spec.CapOf(plan) is RoleCap cap && (total < cap.TMin || total > cap.TMax || k < cap.KMin || k > cap.KMax))
+        {
+            return null;
+        }
+
         return new StageConfig(stage, k, baseEmpties, source, [.. chicas], alta, slack, mechs, notes, deepNodes, split);
     }
 
@@ -804,7 +818,8 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             Spec = spec,
             Colors = k,
             Units = units,
-            MurkyDebut = plan.DebutBoard && plan.Mechanics.Any(m => m.Code == "Tu"),
+            // Q9 (el estreno del hito 100, 2 dosis) solo en la curva 1; el estreno en Normal de la curva 2 lleva 1 dosis (Superposition).
+            MurkyDebut = plan.DebutBoard && plan.Mechanics.Any(m => m.Code == "Tu") && plan.Curve == 0,
         };
         var rng = new Prng(Prng.SubSeed(seed, 1));
         foreach (string code in Superposition.Order)

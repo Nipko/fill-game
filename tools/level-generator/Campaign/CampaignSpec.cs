@@ -119,7 +119,46 @@ internal sealed record CapacityInfo(string Code, string Id, int Cap, int Debut);
 /// comodidades que no son tablero de estreno, con una sola cuia turbia (1-2 dosis ocultas), y como mucho
 /// <paramref name="MaxPerCycle"/> niveles turbios por ciclo (sustituye a los 2 de MURKY-2).
 /// </summary>
-internal sealed record MurkyNormalRule(int FromLevel, int MaxPerCycle);
+internal sealed record MurkyNormalRule(int FromLevel, int MaxPerCycle)
+{
+    /// <summary>
+    /// Comodidades turbias por ciclo (<c>comfort_per_cycle</c>; añadido de D-068 del 2026-11-07, F1-1: «3 comodidades turbias
+    /// por ciclo»), contando los tableros de estreno, desde el primer ciclo que contiene <see cref="FromLevel"/>; null si la
+    /// especificación no lo fija (las experimentales de F1). Lo comprueba MURKY-NORMAL.
+    /// </summary>
+    public int? ComfortPerCycle { get; init; }
+
+    /// <summary>
+    /// Tableros de estreno de las Aguas turbias en Normal (<c>debut</c>; 03 §12: «en 2 tableros fáciles de p3-p5 de un ciclo de
+    /// 321-340 sin otro estreno», 323-324 [P]): llevan estrella, una sola cuia turbia y la ventana de estreno; el primero lleva
+    /// <c>intro_mechanic</c> <c>murky</c> (08 §4.1). Vacío si no hay estreno propio.
+    /// </summary>
+    public IReadOnlyList<int> Debut { get; init; } = [];
+
+    /// <summary>Dosis ocultas como mucho en un nivel Normal (<c>max_hidden_units</c>; <c>lvl_murky_normal_max_hidden_units</c> = 2, 02 §11 T1).</summary>
+    public int MaxHiddenUnits { get; init; } = 2;
+}
+
+/// <summary>
+/// Curva 2 de la 1.1 (clave <c>curve</c>; D-068, P1 B; 08 §4.1 y §4.4): desde <paramref name="FromLevel"/> los niveles son
+/// tableros de sustitución, con <c>kind</c> <c>curve</c>, el sufijo <c>_c{C}</c> en el id, <c>:c{C}</c> en la semilla y
+/// <c>replaces</c> = el id de la curva 1 del slot. Los niveles anteriores de la especificación son historia, copiada de
+/// <paramref name="BaseSpec"/> (variante <paramref name="BaseVariant"/>), y no se generan (CURVE-BASE).
+/// </summary>
+internal sealed record CurveInfo(int C, int FromLevel, string BaseSpec, string? BaseVariant);
+
+/// <summary>Tope de cuias (T) y colores (K) de un papel del ciclo (03 §12, «Topes por papel»; D-068, P2 A).</summary>
+internal sealed record RoleCap(int TMin, int TMax, int KMin, int KMax);
+
+/// <summary>
+/// Mecánica de la 1.1 que aún no existe en el núcleo (<c>f2_mechanics</c>; D-068, fase F2): el Aguapé, el Aguapé espeso y la
+/// Lancha. Su código no es de <see cref="MechanicCodes"/>: sus slots (<c>f2_slots</c>) quedan declarados y la superposición los
+/// rellenará cuando F2 esté integrado; hasta entonces el generador usa la celda del calendario y lo dice.
+/// </summary>
+internal sealed record F2Mechanic(string Code, string Id, int Debut, string Intro);
+
+/// <summary>Slot declarado para una mecánica de F2: la celda que llevará (<c>f2_slots</c>) y sus códigos.</summary>
+internal sealed record F2Slot(int Level, string Literal, bool Star, IReadOnlyList<string> Codes);
 
 /// <summary>Celda del calendario d.4 ya interpretada.</summary>
 internal sealed record CalendarCell(
@@ -197,14 +236,38 @@ internal sealed class LevelPlan
     /// </summary>
     public int Reserve { get; init; }
 
-    public string SeedText => Reserve == 0
-        ? string.Create(CultureInfo.InvariantCulture, $"amazonfill:v1:m{World.World:00}:v1:n{Level:0000}")
-        : string.Create(CultureInfo.InvariantCulture, $"amazonfill:v1:m{World.World:00}:v1:n{Level:0000}:r{Reserve}");
+    /// <summary>
+    /// Curva del tablero (2-9; D-068, 08 §4.1: sufijos <c>_c{c}</c> y <c>:c{c}</c>) o 0 en la curva 1. Con la reserva, los dos
+    /// sufijos van en ese orden (<c>_c2_r1</c>, <c>:c2:r1</c>).
+    /// </summary>
+    public int Curve { get; init; }
 
-    public string Id => Reserve == 0 ? CampaignId : string.Create(CultureInfo.InvariantCulture, $"{CampaignId}_r{Reserve}");
+    /// <summary>Papel del tope de T y K (03 §12; D-068): respite, debut, comfort, challenge, milestone o summit (la cúspide).</summary>
+    public string CapRole => Role switch
+    {
+        SlotRole.Recovery or SlotRole.Remanso => "respite",
+        SlotRole.Milestone => Level == World.Last ? "summit" : "milestone",
+        SlotRole.Challenge => "challenge",
+        _ => DebutBoard ? "debut" : "comfort",
+    };
 
-    /// <summary>Id de campaña del slot (<c>m{mm}_v1_n{nnnn}</c>): el <c>replaces</c> de un tablero de reserva.</summary>
+    public string SeedText => string.Create(CultureInfo.InvariantCulture, $"amazonfill:v1:m{World.World:00}:v1:n{Level:0000}")
+        + (Curve == 0 ? "" : string.Create(CultureInfo.InvariantCulture, $":c{Curve}"))
+        + (Reserve == 0 ? "" : string.Create(CultureInfo.InvariantCulture, $":r{Reserve}"));
+
+    public string Id => Reserve == 0 ? SlotId : string.Create(CultureInfo.InvariantCulture, $"{SlotId}_r{Reserve}");
+
+    /// <summary>Id de campaña del slot (<c>m{mm}_v1_n{nnnn}</c>): el <c>replaces</c> de un tablero de la curva 2.</summary>
     public string CampaignId => string.Create(CultureInfo.InvariantCulture, $"m{World.World:00}_v1_n{Level:0000}");
+
+    /// <summary>Id del slot en su curva (<c>m{mm}_v1_n{nnnn}</c> o, en la curva 2, con <c>_c{c}</c>): el <c>replaces</c> de la reserva.</summary>
+    public string SlotId => Curve == 0 ? CampaignId : string.Create(CultureInfo.InvariantCulture, $"{CampaignId}_c{Curve}");
+
+    /// <summary>
+    /// <c>replaces</c> del tablero (08 §4.1): en la reserva, el id del slot en su curva; en la curva 2, el de la curva 1; null en
+    /// la campaña.
+    /// </summary>
+    public string? ReplacesId => Reserve > 0 ? SlotId : Curve > 0 ? CampaignId : null;
 
     /// <summary>Banda del JSON (03 §12; el remanso es comfort [P]: el esquema no tiene otro valor).</summary>
     public string Band => Role switch
@@ -387,6 +450,38 @@ internal sealed class CampaignSpec
     /// </summary>
     public MurkyNormalRule? MurkyNormal { get; init; }
 
+    /// <summary>Curva 2 de la 1.1 (clave <c>curve</c>; D-068; solo campaign_v3), o null en la curva 1.</summary>
+    public CurveInfo? Curve { get; init; }
+
+    /// <summary>
+    /// K por celda (clave <c>k_cells</c>; añadido de D-068 del 2026-11-07, F1-1): manda sobre el <c>k_plan</c> del nivel (los retos
+    /// 329, 346 y 349 con K 10, el estreno del Brote de dos hojas con K 7, las cúspides con K 12). Vacío sin la clave.
+    /// </summary>
+    public IReadOnlyDictionary<int, int> KCells { get; init; } = new Dictionary<int, int>();
+
+    /// <summary>
+    /// Topes de T y K por papel (clave <c>role_caps</c>; 03 §12; D-068, P2 A) con las claves de <see cref="LevelPlan.CapRole"/>.
+    /// Con ellos el generador no construye un tablero fuera del tope de su papel (SlotGenerator.Config) y level-qa lo comprueba
+    /// (QA-T-ROLE). Vacío sin la clave: nada cambia.
+    /// </summary>
+    public IReadOnlyDictionary<string, RoleCap> RoleCaps { get; init; } = new Dictionary<string, RoleCap>();
+
+    /// <summary>Escalón de presión objetivo de cada hito (clave <c>pressure_plan</c>; 03 §12, escala larga): nivel → escalón.</summary>
+    public IReadOnlyDictionary<int, int> PressurePlan { get; init; } = new Dictionary<int, int>();
+
+    /// <summary>Mecánicas de F2 (Aguapé, Aguapé espeso y Lancha; clave <c>f2_mechanics</c>).</summary>
+    public IReadOnlyList<F2Mechanic> F2Mechanics { get; init; } = [];
+
+    /// <summary>Slots declarados para las mecánicas de F2 (clave <c>f2_slots</c>), por nivel.</summary>
+    public IReadOnlyDictionary<int, F2Slot> F2Slots { get; init; } = new Dictionary<int, F2Slot>();
+
+    /// <summary>El nivel es de la curva 2 (desde <c>curve.from_level</c>).</summary>
+    public bool IsCurveLevel(int level) => Curve is { } c && level >= c.FromLevel;
+
+    /// <summary>Tope de T y K del papel del plan, o null sin <see cref="RoleCaps"/> o fuera de la curva 2.</summary>
+    public RoleCap? CapOf(LevelPlan plan) =>
+        plan.Curve > 0 && !plan.Ramp && RoleCaps.TryGetValue(plan.CapRole, out RoleCap? cap) ? cap : null;
+
     /// <summary>Tope de Cuias chicas por nivel, con la cueva de la Piraña (<c>capacities_per_level.max_chica</c>; 02 §8).</summary>
     public int MaxChicas { get; init; } = DefaultMaxChicas;
 
@@ -448,6 +543,11 @@ internal sealed class CampaignSpec
         if (level >= RampFirst && level <= RampLast)
         {
             return RampRows.TryGetValue(level, out RampRow? row) ? row.K : RampK;
+        }
+
+        if (KCells.TryGetValue(level, out int cellK))
+        {
+            return cellK;
         }
 
         KPlanRow? kp = KPlan.FirstOrDefault(r => r.First <= level && level <= r.Last);
@@ -530,6 +630,13 @@ internal sealed class CampaignSpec
                 intro[g.Min(c => c.Debut)] = g.Key;
             }
 
+            // Estreno de las Aguas turbias en Normal (curva 2; 08 §4.1: «en la curva 2 murky marca también el estreno de las Aguas
+            // turbias en los niveles Normales»): el primero de sus tableros.
+            if (MurkyNormal is { Debut.Count: > 0 } mn)
+            {
+                intro[mn.Debut[0]] = "murky";
+            }
+
             return intro;
         }
     }
@@ -566,8 +673,9 @@ internal sealed class CampaignSpec
         {
             KPlanRow kp = KPlan.FirstOrDefault(r => r.First <= level && level <= r.Last)
                 ?? throw new CampaignSpecException($"k_plan no cubre el nivel {level}");
-            k = KOf(kp, rule!.KKey) ?? throw new CampaignSpecException($"k desconocido '{rule.KKey}'");
-            empties = rule.Empties;
+            k = KCells.TryGetValue(level, out int cellK) ? cellK
+                : KOf(kp, rule!.KKey) ?? throw new CampaignSpecException($"k desconocido '{rule.KKey}'");
+            empties = rule!.Empties;
             if (level <= TwoEmptiesUntil || (role == SlotRole.Challenge && level <= ChallengeTwoEmptiesUntil) || mechanicDebutBoard)
             {
                 empties = Math.Max(empties, 2);
@@ -617,6 +725,7 @@ internal sealed class CampaignSpec
             Intro = intro,
             MaxRiskPairs = MaxRiskPairsAt(level),
             Season = SeasonOf(level),
+            Curve = IsCurveLevel(level) ? Curve!.C : 0,
         };
     }
 
@@ -762,6 +871,13 @@ internal sealed class CampaignSpec
         {
             obj["previous"] = System.IO.Path.GetFullPath(System.IO.Path.Combine(
                 System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path)) ?? ".", previous.GetValue<string>()));
+        }
+
+        // curve.base_spec (curva 2, D-068), igual: desde el archivo que lo declara.
+        if (obj["curve"] is JsonObject curveNode && curveNode["base_spec"] is JsonValue baseSpec)
+        {
+            curveNode["base_spec"] = System.IO.Path.GetFullPath(System.IO.Path.Combine(
+                System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path)) ?? ".", baseSpec.GetValue<string>()));
         }
 
         if (obj["extends"] is not JsonValue ext)
@@ -911,6 +1027,13 @@ internal sealed class CampaignSpec
             }
         }
 
+        List<F2Mechanic> f2Mechanics = root["f2_mechanics"]?.AsArray().Select(m => new F2Mechanic(
+            Str(m!, "code"), Str(m!, "id"), Int(m!, "debut"), Str(m!, "intro"))).ToList() ?? [];
+        foreach (F2Mechanic m in f2Mechanics.Where(m => MechanicCodes.IsKnown(m.Code) || allMechanics.Any(x => x.Code == m.Code)))
+        {
+            throw new CampaignSpecException($"{path}: f2_mechanics: el codigo '{m.Code}' ya es una mecanica del calendario");
+        }
+
         var spec = new CampaignSpec
         {
             Path = path,
@@ -954,7 +1077,24 @@ internal sealed class CampaignSpec
             NoveltyMaxGap = root["novelty_max_gap"]?.GetValue<int>(),
             MurkyNormal = root["murky_normal"] is JsonObject murkyNormal
                 ? new MurkyNormalRule(Int(murkyNormal, "from_level"), Int(murkyNormal, "max_per_cycle"))
+                {
+                    ComfortPerCycle = murkyNormal["comfort_per_cycle"]?.GetValue<int>(),
+                    Debut = murkyNormal["debut"]?.AsArray().Select(x => x!.GetValue<int>()).ToArray() ?? [],
+                    MaxHiddenUnits = murkyNormal["max_hidden_units"]?.GetValue<int>() ?? 2,
+                }
                 : null,
+            Curve = root["curve"] is JsonObject curve
+                ? new CurveInfo(Int(curve, "c"), Int(curve, "from_level"), Str(curve, "base_spec"), curve["base_variant"]?.GetValue<string>())
+                : null,
+            KCells = IntMap(root["k_cells"]),
+            PressurePlan = IntMap(root["pressure_plan"]),
+            RoleCaps = root["role_caps"] is JsonObject caps
+                ? caps.Where(kv => !kv.Key.EndsWith("note", StringComparison.Ordinal)).ToDictionary(kv => kv.Key, kv => new RoleCap(
+                    kv.Value!["t"]![0]!.GetValue<int>(), kv.Value["t"]![1]!.GetValue<int>(),
+                    kv.Value["k"]![0]!.GetValue<int>(), kv.Value["k"]![1]!.GetValue<int>()))
+                : new Dictionary<string, RoleCap>(),
+            F2Mechanics = f2Mechanics,
+            F2Slots = F2SlotsOf(path, root["f2_slots"], f2Mechanics),
             MaxChicas = root["capacities_per_level"]?["max_chica"]?.GetValue<int>() ?? DefaultMaxChicas,
             MaxAltas = root["capacities_per_level"]?["max_alta"]?.GetValue<int>() ?? DefaultMaxAltas,
             CapacityLimitsBefore = root["capacities_per_level"]?["before_level"]?.GetValue<int>() ?? DefaultCapacityLimitsBefore,
@@ -1012,6 +1152,61 @@ internal sealed class CampaignSpec
         }
 
         return spec;
+    }
+
+    /// <summary>Objeto {"nivel": entero} (k_cells, pressure_plan); las claves que acaban en «note» son comentarios.</summary>
+    private static Dictionary<int, int> IntMap(JsonNode? node)
+    {
+        var map = new Dictionary<int, int>();
+        if (node is not JsonObject obj)
+        {
+            return map;
+        }
+
+        foreach (KeyValuePair<string, JsonNode?> kv in obj.Where(kv => !kv.Key.EndsWith("note", StringComparison.Ordinal)))
+        {
+            if (!int.TryParse(kv.Key, NumberStyles.None, CultureInfo.InvariantCulture, out int level))
+            {
+                throw new CampaignSpecException($"clave no numerica '{kv.Key}' (se espera un nivel)");
+            }
+
+            map[level] = kv.Value!.GetValue<int>();
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    /// Slots de F2 (<c>f2_slots</c>): {"nivel": "[★]Ag[+...]"} con códigos de <c>f2_mechanics</c> y, si acaso, del calendario.
+    /// </summary>
+    private static Dictionary<int, F2Slot> F2SlotsOf(string path, JsonNode? node, List<F2Mechanic> f2)
+    {
+        var slots = new Dictionary<int, F2Slot>();
+        if (node is not JsonObject obj)
+        {
+            return slots;
+        }
+
+        foreach (KeyValuePair<string, JsonNode?> kv in obj.Where(kv => !kv.Key.EndsWith("note", StringComparison.Ordinal)))
+        {
+            if (!int.TryParse(kv.Key, NumberStyles.None, CultureInfo.InvariantCulture, out int level))
+            {
+                throw new CampaignSpecException($"{path}: f2_slots: clave no numerica '{kv.Key}'");
+            }
+
+            string literal = kv.Value!.GetValue<string>().Trim();
+            bool star = literal.StartsWith(Star, StringComparison.Ordinal);
+            string body = star ? literal[Star.Length..] : literal;
+            string[] codes = body.Split(' ')[0].Split('+');
+            if (!codes.Any(c => f2.Any(m => m.Code == c)))
+            {
+                throw new CampaignSpecException($"{path}: f2_slots: el {level} ('{literal}') no lleva ninguna mecanica de f2_mechanics");
+            }
+
+            slots[level] = new F2Slot(level, literal, star, codes);
+        }
+
+        return slots;
     }
 
     private static int MaxRisk(JsonNode row, int riskPairCount)

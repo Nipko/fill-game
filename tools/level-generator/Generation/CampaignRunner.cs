@@ -106,10 +106,10 @@ internal static class CampaignRunner
             }
         }
 
-        levelsArg ??= string.Create(CultureInfo.InvariantCulture, $"{spec.FirstLevel}-{spec.LastLevel}");
+        levelsArg ??= string.Create(CultureInfo.InvariantCulture, $"{GenerationFirst(spec)}-{spec.LastLevel}");
         if (!TryParseLevels(levelsArg, spec, out int first, out int last))
         {
-            Console.Error.WriteLine($"level-generator: --levels debe ser a-b dentro de {spec.FirstLevel}-{spec.LastLevel}: {levelsArg}");
+            Console.Error.WriteLine($"level-generator: --levels debe ser a-b dentro de {GenerationFirst(spec)}-{spec.LastLevel}: {levelsArg}");
             return 2;
         }
 
@@ -205,6 +205,11 @@ internal static class CampaignRunner
         List<LevelPlan> plans = Enumerable.Range(first, last - first + 1).Select(spec.Plan).ToList();
         var levels = plans.Select(p => new GeneratedLevel { Plan = p, Slot = null! }).ToList();
         log($"campana {spec.SpecId}: niveles {first}-{last} ({levels.Count}), {Environment.ProcessorCount} hilos");
+        foreach (LevelPlan p in plans.Where(p => spec.F2Slots.ContainsKey(p.Level)))
+        {
+            // Slots del Aguapé y la Lancha (D-068, F2): declarados en la especificación, sin colocar hasta que F2 esté integrado.
+            log(AsciiText.Of($"  aviso: nivel {p.Level}: slot de F2 '{spec.F2Slots[p.Level].Literal}' sin colocar (el nucleo aun no tiene la mecanica); se genera con la celda del calendario '{p.Cell.Literal}'"));
+        }
 
         // Fase 1: candidatos.
         var phase = Stopwatch.StartNew();
@@ -434,7 +439,7 @@ internal static class CampaignRunner
             }
 
             string text = PackWriter.Write(spec, world, inWorld.Select(l => new PackLevel(l.Plan, l.Chosen!, l.Relief)).ToList());
-            packs.Add(new GeneratedPack(world, PackWriter.PackId(world, spec.Lap), PackWriter.Bytes(text), inWorld.Count));
+            packs.Add(new GeneratedPack(world, PackWriter.PackIdFor(spec, world), PackWriter.Bytes(text), inWorld.Count));
         }
 
         return new CampaignResult(levels, stats, packs, noRelief);
@@ -502,6 +507,9 @@ internal static class CampaignRunner
         return parts.Length == 2
             && int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out first)
             && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out last)
-            && first >= spec.FirstLevel && last <= spec.LastLevel && first <= last;
+            && first >= GenerationFirst(spec) && last <= spec.LastLevel && first <= last;
     }
+
+    /// <summary>Primer nivel que se genera: el de la especificación o, en la curva 2, curve.from_level (lo anterior es historia).</summary>
+    public static int GenerationFirst(CampaignSpec spec) => spec.Curve is { } c ? c.FromLevel : spec.FirstLevel;
 }

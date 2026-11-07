@@ -1,0 +1,16 @@
+{
+  "extends": "../campaign_v3.json",
+  "description": "Fixture negativo de la curva 2 (D-068, F2): un tablero de estreno del Aguape declarado en el reto 306 falla F2-SLOTS (nada estrena en un reto, c.3 regla 6; y el estreno pasa a tener 4 tableros).",
+  "expect_rule": "F2-SLOTS",
+  "f2_slots": {
+    "303": "★Ag",
+    "304": "★Ag",
+    "305": "★Ag",
+    "306": "★Ag",
+    "347": "★A2",
+    "348": "★A2",
+    "363": "★La",
+    "364": "★La",
+    "365": "★La"
+  }
+}

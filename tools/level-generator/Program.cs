@@ -35,7 +35,7 @@ const string Usage = """
       dotnet run --project tools/level-generator -c Release -- --reserve <mundo_NN_v1.json> [<mundo_NN_v1.json> ...] --spec <campaign.json> [--variant a|b] --out <carpeta> [--report <informe.md>] [--check]
       dotnet run --project tools/level-generator -c Release -- --daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <informe.md>] [--check] [--threads n]
       dotnet run --project tools/level-generator -c Release -- --measure --spec <campaign.json> --levels a-b [--variant a|b] --report <informe.md>
-      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura|reserve|cvd|daily]
+      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura|reserve|cvd|curve|daily]
       dotnet run --project tools/level-generator -- --help
 
     --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json, 11-200, y campaign_v2.json,
@@ -86,7 +86,11 @@ const string Usage = """
       specs/daily_v1.json y sus rechazos, y la generacion de 3 dias por banda (determinismo byte a byte con 1 hilo y en
       paralelo; la semilla reproduce el tablero). "reserve" (la reserva del 20 %): el orden por rondas, el tope del 20 % de los
       mundos 2-9, el plan sin mecanicas (con sus capacidades, ids y semillas de reserva y la ventana del slot) y el mundo 3
-      generado dos veces con los mismos bytes. Desde la raiz del repositorio.
+      generado dos veces con los mismos bytes. "curve" (fase F3 de D-068): specs/campaign_v3.json sin fallos de
+      --validate-spec, K por papel y por celda, el papel del tope (cuspide en la firma), ids, semillas y replaces de la
+      curva 2 y de su reserva, los packs curva_ y reserva_curva_ (pack_schema 5), el estreno de las turbias en Normal, los
+      slots de F2, alguna etapa dentro del tope en cada slot de 301-700 y la curva 1 sin cambios. Desde la raiz del
+      repositorio.
       Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
@@ -133,8 +137,14 @@ const string Usage = """
       distinto; 2 = uso o especificacion ilegible.
     --measure: medida de la fase F1 de D-068 (curva de la 1.1; docs/dev/curva-1.1-f1-medicion.md): las fases 1-3 de
       --spec (candidatos, indice D y colocacion) sin alivio ni packs y sin detenerse en un ciclo sin colocacion; el
-      informe da T, K, bot x40 y ventana por papel, los ciclos que no colocan y los retos e hitos. Codigos: 0 = medido;
+      informe da T, K, bot x40 y ventana por papel, los ciclos que no colocan y los retos e hitos. Con una especificacion de
+      la curva 2 (specs/campaign_v3.json, fase F3) los topes son los de role_caps, las semillas las de la curva (:c2) y el
+      informe suma el escalon de presion de cada hito y los slots de F2 sin colocar. Codigos: 0 = medido;
       1 = la especificacion no pasa --validate-spec; 2 = uso o especificacion ilegible.
+    Curva 2 de la 1.1 (D-068, fase F3; specs/campaign_v3.json con "curve"): --spec genera desde curve.from_level (lo
+      anterior es historia) packs curva_{mm}_v1 (kind curve, pack_schema 5, ids _c2, semillas :c2, replaces y
+      difficulty.pressure), sin construir tableros fuera del tope de T y K de su papel (role_caps), y avisa de los slots de
+      F2 (Aguape y Lancha) que aun no coloca. --reserve con esos packs da reserva_curva_{mm}_v1 (pack_schema 5, _c2_r1).
     Codigos de salida: 0 = correcto o ayuda; 1 = la generacion o las comprobaciones fallaron;
     2 = uso incorrecto (sin argumentos, faltan opciones, u opcion desconocida o repetida).
     """;
@@ -261,7 +271,13 @@ if (args.Length >= 1 && args[0] == "--self-test")
         int daily = AmazonFill.Tools.LevelGenerator.Daily.DailyCommand.Run(["--self-test", "daily"]);
         int reserve = ReserveRunner.SelfTest();
         int cvd = CvdSelfTest.Run();
-        return Math.Max(Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura)), Math.Max(Math.Max(daily, reserve), cvd));
+        int curve = CurveSelfTest.Run();
+        return Math.Max(Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura)), Math.Max(Math.Max(daily, reserve), Math.Max(cvd, curve)));
+    }
+
+    if (args.Length == 2 && args[1] == "curve")
+    {
+        return CurveSelfTest.Run();
     }
 
     if (args.Length == 2 && args[1] == "cvd")
@@ -304,7 +320,7 @@ if (args.Length >= 1 && args[0] == "--self-test")
         return SeasonTableWriter.SelfTest();
     }
 
-    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry, curation, holgura, reserve, cvd o daily.");
+    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry, curation, holgura, reserve, cvd, curve o daily.");
 }
 
 if (args.Length >= 1 && args[0] == "--seasons")

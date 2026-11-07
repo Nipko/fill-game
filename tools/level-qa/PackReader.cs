@@ -4,6 +4,10 @@
 // opción a de la revisión de P2a; 08 §4.1): se lee y se recuerda si la clave está, para QA-RELIEF-MASK.
 // key2 de la Flor de vitória-régia (firma de pack_schema 3, D-023 punto 5; P5): se lee en el nivel y en las variantes de
 // relief, para que LevelValidation, el par y el hash del tablero sean los del pack.
+// Curva 2 de la 1.1 (pack_schema 5; D-068; 08 §4.1): se leen rows (en el nivel y en relief), difficulty.pressure y, en bruto,
+// cada entrada de attrs (RawAttr: type, group, n y k), para que QA-AGUAPE y QA-LANCHA comprueben su estructura sin el núcleo.
+// Mientras el núcleo no conozca el Aguapé ni la Lancha (fase F2), esos tipos se leen como «sin mecánica» y el nivel queda en
+// PendingTypes: el evaluador no lo construye (falla cerrado con QA-STRUCT, QA-AGUAPE o QA-LANCHA).
 using System.Text;
 using System.Text.Json;
 using AF.Core.Mechanics;
@@ -12,7 +16,17 @@ using AmazonFill.Tools.LevelGenerator.Metrics;
 namespace AmazonFill.Tools.LevelQa;
 
 /// <summary>Variante de alivio; <paramref name="HiddenPresent"/>: la variante publica la clave hidden (solo con la tinaja).</summary>
-internal sealed record QaRelief(string Type, int? Removed, BoardData Board, int? Par, double BotFail, bool HiddenPresent);
+internal sealed record QaRelief(string Type, int? Removed, BoardData Board, int? Par, double BotFail, bool HiddenPresent)
+{
+    /// <summary>Filas fijas de la variante (pack_schema 5) o null.</summary>
+    public int[]? Rows { get; init; }
+
+    /// <summary>attrs de la variante en bruto (null en una cuia sin mecánica).</summary>
+    public RawAttr?[] RawAttrs { get; init; } = [];
+}
+
+/// <summary>Una entrada de attrs leída del JSON, sin pasar por el núcleo (QA-AGUAPE y QA-LANCHA).</summary>
+internal sealed record RawAttr(string Type, int? Group, int? N, int? K);
 
 internal sealed record QaLevel(
     string Pack, int Index, string Id, int Level, int World, string Seed, string WaterBase,
@@ -22,6 +36,18 @@ internal sealed record QaLevel(
     bool HintSupported, List<QaRelief> Relief, string[] ForbiddenKeys, string Source, string? Replaces = null, bool HasD = true)
 {
     public int K => Palette.Length;
+
+    /// <summary>Filas fijas del nivel (pack_schema 5) o null.</summary>
+    public int[]? Rows { get; init; }
+
+    /// <summary>attrs del nivel en bruto (null en una cuia sin mecánica).</summary>
+    public RawAttr?[] RawAttrs { get; init; } = [];
+
+    /// <summary>Tipos de attrs que el núcleo de esta rama no conoce (aguape, lancha: F2), en el nivel o en su alivio.</summary>
+    public string[] PendingTypes { get; init; } = [];
+
+    /// <summary>difficulty.pressure (pack_schema 5) o null.</summary>
+    public int? Pressure { get; init; }
 }
 
 internal sealed record QaPack(
@@ -35,6 +61,22 @@ internal static class PackReader
 {
     private static readonly string[] Forbidden = ["solution", "safe_path", "qa"];
 
+    /// <summary>Tipos de la 1.1 (D-068) que se leen aunque el núcleo aún no los conozca (fase F2).</summary>
+    public static readonly string[] CurveTypes = ["aguape", "lancha"];
+
+    /// <summary>pack_schema que admite los tipos y campos de la curva 2 (D-068).</summary>
+    public const int CurvePackSchema = 5;
+
+    /// <summary>Qué lleva el nivel que solo admite el pack_schema 5 (aguape, lancha, rows, pressure), o null.</summary>
+    public static string? Pack5Only(QaLevel lv)
+    {
+        string? type = lv.RawAttrs.Concat(lv.Relief.SelectMany(r => r.RawAttrs)).FirstOrDefault(a => a is not null && CurveTypes.Contains(a.Type))?.Type;
+        return type is not null ? "el tipo " + type
+            : lv.Rows is not null || lv.Relief.Any(r => r.Rows is not null) ? "rows"
+            : lv.Pressure is not null ? "difficulty.pressure"
+            : null;
+    }
+
     public static QaPack Read(string path)
     {
         byte[] bytes = File.ReadAllBytes(path);
@@ -42,10 +84,19 @@ internal static class PackReader
         JsonElement root = doc.RootElement;
         var levels = new List<QaLevel>();
         string packId = Str(root, "pack_id");
+        int packSchema = root.GetProperty("pack_schema").GetInt32();
         int index = 0;
         foreach (JsonElement lv in root.GetProperty("levels").EnumerateArray())
         {
-            levels.Add(Level(path, packId, index++, lv));
+            QaLevel level = Level(path, packId, index++, lv);
+            if (packSchema < CurvePackSchema && Pack5Only(level) is string what)
+            {
+                // D-068 (contrato 21): el Aguapé, la Lancha, rows y difficulty.pressure solo existen con pack_schema 5; en un
+                // pack más bajo el lector falla cerrado, también cuando el núcleo (F2) ya conoce los tipos.
+                throw new PackFormatException($"nivel {level.Level}: {what} con pack_schema {packSchema} (solo con el {CurvePackSchema})");
+            }
+
+            levels.Add(level);
         }
 
         return new QaPack(
@@ -121,7 +172,8 @@ internal static class PackReader
             }
         }
 
-        BoardData board = Board(lv.GetProperty("caps"), lv.GetProperty("cuias"), lv.GetProperty("attrs"), lv.GetProperty("hidden"));
+        var pending = new SortedSet<string>(StringComparer.Ordinal);
+        BoardData board = Board(lv.GetProperty("caps"), lv.GetProperty("cuias"), lv.GetProperty("attrs"), lv.GetProperty("hidden"), pending);
         var relief = new List<QaRelief>();
         if (lv.TryGetProperty("relief", out JsonElement rel))
         {
@@ -132,10 +184,14 @@ internal static class PackReader
                 relief.Add(new QaRelief(
                     Str(r, "type"),
                     r.TryGetProperty("removed", out JsonElement rm) ? rm.GetInt32() : null,
-                    Board(r.GetProperty("caps"), r.GetProperty("cuias"), attrs, hiddenPresent ? rh : default),
+                    Board(r.GetProperty("caps"), r.GetProperty("cuias"), attrs, hiddenPresent ? rh : default, pending),
                     r.GetProperty("par").ValueKind == JsonValueKind.Number ? r.GetProperty("par").GetInt32() : null,
                     r.GetProperty("bot_fail").GetDouble(),
-                    hiddenPresent));
+                    hiddenPresent)
+                {
+                    Rows = Rows(r),
+                    RawAttrs = Raw(attrs, r.GetProperty("cuias").GetArrayLength()),
+                });
             }
         }
 
@@ -170,10 +226,48 @@ internal static class PackReader
             Forbidden.Where(f => lv.TryGetProperty(f, out _)).ToArray(),
             lv.GetProperty("gen").TryGetProperty("source", out JsonElement src) ? src.GetString() ?? "" : "",
             lv.TryGetProperty("replaces", out JsonElement replaces) ? replaces.GetString() : null,
-            diff.TryGetProperty("D", out _));
+            diff.TryGetProperty("D", out _))
+        {
+            Rows = Rows(lv),
+            RawAttrs = Raw(lv.GetProperty("attrs"), lv.GetProperty("cuias").GetArrayLength()),
+            PendingTypes = [.. pending],
+            Pressure = diff.TryGetProperty("pressure", out JsonElement pr) ? pr.GetInt32() : null,
+        };
     }
 
-    private static BoardData Board(JsonElement caps, JsonElement cuias, JsonElement attrs, JsonElement hidden)
+    private static int[]? Rows(JsonElement e) =>
+        e.TryGetProperty("rows", out JsonElement rows) && rows.ValueKind == JsonValueKind.Array
+            ? rows.EnumerateArray().Select(x => x.GetInt32()).ToArray()
+            : null;
+
+    /// <summary>attrs en bruto (todas null si attrs es null o no está).</summary>
+    private static RawAttr?[] Raw(JsonElement attrs, int count)
+    {
+        var raw = new RawAttr?[count];
+        if (attrs.ValueKind != JsonValueKind.Array)
+        {
+            return raw;
+        }
+
+        int i = 0;
+        foreach (JsonElement a in attrs.EnumerateArray())
+        {
+            if (i < count && a.ValueKind == JsonValueKind.Object)
+            {
+                raw[i] = new RawAttr(
+                    Str(a, "type"),
+                    a.TryGetProperty("group", out JsonElement g) ? g.GetInt32() : null,
+                    a.TryGetProperty("n", out JsonElement n) ? n.GetInt32() : null,
+                    a.TryGetProperty("k", out JsonElement k) ? k.GetInt32() : null);
+            }
+
+            i++;
+        }
+
+        return raw;
+    }
+
+    private static BoardData Board(JsonElement caps, JsonElement cuias, JsonElement attrs, JsonElement hidden, ISet<string> pending)
     {
         int[] c = caps.EnumerateArray().Select(e => e.GetInt32()).ToArray();
         int[][] doses = cuias.EnumerateArray().Select(x => x.EnumerateArray().Select(e => e.GetInt32()).ToArray()).ToArray();
@@ -188,7 +282,7 @@ internal static class PackReader
                     throw new PackFormatException("attrs mas largo que cuias");
                 }
 
-                specs[i++] = a.ValueKind == JsonValueKind.Null ? MechanicSpec.None : Attr(a);
+                specs[i++] = a.ValueKind == JsonValueKind.Null ? MechanicSpec.None : Attr(a, pending);
             }
 
             if (i != specs.Length)
@@ -203,10 +297,17 @@ internal static class PackReader
         return new BoardData(c, doses, specs, hid);
     }
 
-    private static MechanicSpec Attr(JsonElement a)
+    private static MechanicSpec Attr(JsonElement a, ISet<string> pending)
     {
         if (!MechanicTypes.TryParse(Str(a, "type"), out MechanicType type))
         {
+            if (CurveTypes.Contains(Str(a, "type")))
+            {
+                // Mecánica de la 1.1 que el núcleo de esta rama aún no conoce (F2): sin mecánica y pendiente.
+                pending.Add(Str(a, "type"));
+                return MechanicSpec.None;
+            }
+
             throw new PackFormatException($"tipo de mecanica desconocido: {Str(a, "type")}");
         }
 
