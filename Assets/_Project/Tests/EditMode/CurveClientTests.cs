@@ -323,17 +323,17 @@ namespace AF.Tests.EditMode
         public void TalkBack_NamesTheCurveMechanics()
         {
             BoardState aguape = CurvePack().Find(303)!.CreateBoard();
-            Assert.That(AF.UI.A11y.CuiaSpeech.MechanicId(aguape[0]), Is.EqualTo("aguape"));
+            Assert.That(CuiaSpeech.MechanicId(aguape[0]), Is.EqualTo("aguape"));
             BoardState thick = LevelPackReader.Read(CurveFixtures.Pack("mundo_10_v1", "campaign", 5, 10,
                 CurveFixtures.Level(10, 701, CurveFixtures.ThickCuias, CurveFixtures.ThickAttrs))).First.CreateBoard();
-            Assert.That(AF.UI.A11y.CuiaSpeech.MechanicId(thick[0]), Is.EqualTo("aguape_n2"));
+            Assert.That(CuiaSpeech.MechanicId(thick[0]), Is.EqualTo("aguape_n2"));
             BoardState lancha = LevelPackReader.Read(CurveFixtures.Pack("mundo_10_v1", "campaign", 5, 10,
                 CurveFixtures.Level(10, 702, CurveFixtures.LanchaCuias, CurveFixtures.LanchaAttrs))).First.CreateBoard();
-            Assert.That(AF.UI.A11y.CuiaSpeech.MechanicId(lancha[0]), Is.EqualTo("lancha"));
+            Assert.That(CuiaSpeech.MechanicId(lancha[0]), Is.EqualTo("lancha"));
 
             LocSetUpFixture.ConfigureEs419();
-            StringAssert.EndsWith("Aguapé", AF.UI.A11y.CuiaSpeech.Label(aguape, 0));
-            StringAssert.EndsWith("Lancha", AF.UI.A11y.CuiaSpeech.Label(lancha, 0));
+            StringAssert.EndsWith("Aguapé", CuiaSpeech.Label(aguape, 0));
+            StringAssert.EndsWith("Lancha", CuiaSpeech.Label(lancha, 0));
         }
 
         // ---- Pasos de mecánica (R10 d y f) ----

@@ -22,7 +22,7 @@ namespace AF.Tests.EditMode
 
         private static readonly string StreakJson = string.Join("\n", new[]
         {
-            "    \"undo_tip_seen\": false",
+            "    \"curve2_from_level\": 1",
             "  },",
             "  \"streak\": {",
             "    \"wins\": 7,",

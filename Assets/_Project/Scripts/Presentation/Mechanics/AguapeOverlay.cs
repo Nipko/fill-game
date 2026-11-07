@@ -100,14 +100,19 @@ namespace AF.Presentation.Mechanics
         }
 
         /// <summary>
-        /// La suelta (<see cref="MechanicStepKind.Loosen"/>): los trozos se alejan flotando y la mata se funde. Sin la mata a la
-        /// vista (otro estado), 0 (salto). Sin asignaciones.
+        /// La suelta (<see cref="MechanicStepKind.Loosen"/>): los trozos se alejan flotando y la mata se funde. Si la cuia de antes
+        /// del paso no lleva la mata, 0 (salto). Sin asignaciones.
         /// </summary>
         public override float PlayStep(in MechanicStepContext ctx)
         {
-            if (ctx.Kind != MechanicStepKind.Loosen || !Visible)
+            if (ctx.Kind != MechanicStepKind.Loosen || ctx.Before.Mechanic != MechanicType.Aguape)
             {
                 return 0f;
+            }
+
+            if (!Visible)
+            {
+                Show(ctx.Before, false); // la mata del estado de antes de la suelta
             }
 
             _stepping = true;

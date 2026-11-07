@@ -24,14 +24,14 @@ namespace AF.Tests
         public const string AguapeAttrs = "[{\"type\": \"aguape\", \"group\": 3}, {\"type\": \"aguape\", \"group\": 3}, null, null, null, null, null]";
 
         /// <summary>
-        /// Aguapé espeso (02 §9.1 M8, variante; n = 2): el grupo 0 en las cuias 0-3, con dos cuias que sellan recibiendo con frutas
-        /// distintas (la 1 con un 1 y la 3 con un 3; el tablero válido de <c>AguapeTests</c>).
+        /// Aguapé espeso (02 §9.1 M8, variante; n = 2): el grupo 0 en las cuias 0-3, que sellan recibiendo con frutas distintas. Se
+        /// gana: 4→2 (primer sello: se aclara), 4→1 (segundo: se suelta), 4→0 y 5→3.
         /// </summary>
-        public const string ThickCuias = "[[1, 1], [2, 2], [2, 3], [3, 1], [1, 3, 3, 2], []]";
+        public const string ThickCuias = "[[1, 1, 1], [2, 2, 2], [3, 3], [4, 4], [1, 2, 3, 3], [4, 4], []]";
 
         /// <summary>attrs del espeso de <see cref="ThickCuias"/>.</summary>
         public const string ThickAttrs = "[{\"type\": \"aguape\", \"group\": 0, \"n\": 2}, {\"type\": \"aguape\", \"group\": 0, \"n\": 2}, "
-            + "{\"type\": \"aguape\", \"group\": 0, \"n\": 2}, {\"type\": \"aguape\", \"group\": 0, \"n\": 2}, null, null]";
+            + "{\"type\": \"aguape\", \"group\": 0, \"n\": 2}, {\"type\": \"aguape\", \"group\": 0, \"n\": 2}, null, null, null]";
 
         /// <summary>
         /// Lancha (02 §9.1 M11): carga de 2 taperebá con k = 2; un vacío al empezar. Se gana: 1→2 (sella y deja la 1 vacía: la

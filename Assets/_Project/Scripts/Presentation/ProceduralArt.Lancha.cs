@@ -10,7 +10,7 @@ namespace AF.Presentation
     /// icono de la mecánica (32 dp y el grande del estreno).
     /// </summary>
     /// <remarks>
-    /// Color (direccion-visual-v2 §2.4, regla 1): el casco <see cref="LanchaHullColor"/> (#6E5A4A, ΔE00 14,4 del tinte más
+    /// Color (direccion-visual-v2 §2.4, regla 1): el casco <see cref="LanchaHullColor"/> (#A8885E, ΔE00 13,0 del tinte más
     /// cercano) con la regala <see cref="LanchaTrim"/> (#3E3A36, 16,7); el muelle, con la madera del jirau
     /// (<see cref="JirauWood"/> y <see cref="JirauShade"/>). Perezosos, a <see cref="MechanicPxPerU"/> px por u; los sustituye el
     /// arte del artista.
@@ -32,8 +32,11 @@ namespace AF.Presentation
         /// <summary>Alto del muelle (u), desde el pie.</summary>
         public const float LanchaDockHeightU = 2.1f;
 
-        /// <summary>Casco de la lancha [P]: #6E5A4A.</summary>
-        public static readonly Color LanchaHullColor = Palette.Hex(0x6E5A4A);
+        /// <summary>
+        /// Casco de la lancha [P]: #A8885E, madera clara que se lee sobre el panel oscuro (revisión de las capturas de F4: con
+        /// #6E5A4A se perdía), a ΔE00 13,0 del tinte más cercano.
+        /// </summary>
+        public static readonly Color LanchaHullColor = Palette.Hex(0xA8885E);
 
         /// <summary>Regala y motor de la lancha [P]: #3E3A36.</summary>
         public static readonly Color LanchaTrim = Palette.Hex(0x3E3A36);
@@ -76,8 +79,8 @@ namespace AF.Presentation
         // Casco en la caja (x0, y0, w, h) px: fondo de tablas, regala oscura, proa alzada a la derecha, motor a la izquierda.
         private static void DrawLanchaHull(PixelCanvas pc, float x0, float y0, float w, float h, float k)
         {
-            float bottom = y0 + (h * 0.08f);
-            float top = y0 + (h * 0.62f);
+            float bottom = y0 + (h * 0.06f);
+            float top = y0 + (h * 0.74f);
             float sternX = x0 + (w * 0.10f);
             float bowX = x0 + (w * 0.97f);
 
@@ -114,14 +117,14 @@ namespace AF.Presentation
             for (int side = -1; side <= 1; side += 2)
             {
                 float px = x0 + (w * 0.5f) + (side * w * 0.42f);
-                pc.FillRoundedRect(px - (9f * k), y0, px + (9f * k), y0 + (h * 0.92f), 5f * k, JirauShade);
-                pc.FillRoundedRect(px - (6.5f * k), y0 + (2f * k), px + (6.5f * k), y0 + (h * 0.90f), 4f * k, JirauWood);
-                pc.FillEllipseSoft(px, y0 + (h * 0.92f), 11f * k, 4.5f * k, 1.2f * k, JirauShade);
+                pc.FillRoundedRect(px - (13f * k), y0, px + (13f * k), y0 + (h * 0.92f), 6f * k, JirauShade);
+                pc.FillRoundedRect(px - (10f * k), y0 + (2.5f * k), px + (10f * k), y0 + (h * 0.90f), 5f * k, JirauWood);
+                pc.FillEllipseSoft(px, y0 + (h * 0.92f), 15f * k, 5.5f * k, 1.2f * k, JirauShade);
                 pc.FillCapsule(px - (2f * k), y0 + (h * 0.15f), px - (2f * k), y0 + (h * 0.80f), 1f * k, ColorMath.WithAlpha(Palette.Glint, 0.35f));
             }
 
-            pc.FillRoundedRect(x0 + (w * 0.05f), plankY - (8f * k), x0 + (w * 0.95f), plankY + (8f * k), 4f * k, JirauShade);
-            pc.FillRoundedRect(x0 + (w * 0.05f) + (2f * k), plankY - (5.5f * k), x0 + (w * 0.95f) - (2f * k), plankY + (6f * k), 3f * k, JirauWood);
+            pc.FillRoundedRect(x0 + (w * 0.04f), plankY - (11f * k), x0 + (w * 0.96f), plankY + (11f * k), 5f * k, JirauShade);
+            pc.FillRoundedRect(x0 + (w * 0.04f) + (2.5f * k), plankY - (8f * k), x0 + (w * 0.96f) - (2.5f * k), plankY + (8.5f * k), 4f * k, JirauWood);
         }
 
         // Icono de la mecánica en un lienzo cuadrado de s px (k = s / 96): la lancha con una cuia pequeña a bordo, junto a un

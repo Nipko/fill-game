@@ -102,12 +102,23 @@ namespace AF.Presentation.Mechanics
             return kind == MechanicStepKind.Dock ? DockMs : 0f;
         }
 
-        /// <summary>El atraque (<see cref="MechanicStepKind.Dock"/>). Sin la lancha a la vista, 0 (salto). Sin asignaciones.</summary>
+        /// <summary>El atraque (<see cref="MechanicStepKind.Dock"/>). Si la cuia de antes del paso no es la lancha, 0 (salto). Sin asignaciones.</summary>
         public override float PlayStep(in MechanicStepContext ctx)
         {
-            if (ctx.Kind != MechanicStepKind.Dock || !Visible)
+            if (ctx.Kind != MechanicStepKind.Dock || ctx.Before.Mechanic != MechanicType.Lancha)
             {
                 return 0f;
+            }
+
+            if (_stepping)
+            {
+                _stepping = false; // un atraque arrancado por el overlay: manda el paso de la cola
+                _selfDock = false;
+            }
+
+            if (!Visible)
+            {
+                Show(ctx.Before, false); // la lancha del estado de antes del atraque
             }
 
             BeginDock(DockMs * Mathf.Max(0.01f, ctx.SpeedFactor), ctx.ReduceMotion, false);
@@ -327,7 +338,7 @@ namespace AF.Presentation.Mechanics
         {
             OverlayParts.Place(_dock, 0f, -0.25f, ProceduralArt.LanchaDockWidthU, ProceduralArt.LanchaDockHeightU, _u);
             OverlayParts.Place(_hull, 0.15f, HullWaterlineU, ProceduralArt.LanchaHullWidthU, ProceduralArt.LanchaHullHeightU, _u);
-            _pips.Layout(0f, PipsY, 0.22f, 0.30f, _u);
+            _pips.Layout(0f, PipsY, 0.30f, 0.40f, _u);
         }
     }
 }

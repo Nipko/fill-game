@@ -53,7 +53,7 @@ namespace AF.Save.Tests
             Assert.That(doc.Members.Count, Is.EqualTo(before + 1), "solo se añade fauna");
             Assert.That(doc.Members[doc.Members.Count - 1].Key, Is.EqualTo("fauna"));
             Assert.That(doc.Get("fauna")!.Get("sighted")!.Items, Is.Empty);
-            doc.Set(ProfileJson.SchemaKey, JsonNode.FromInt(2));
+            doc.Set(ProfileJson.SchemaKey, JsonNode.FromInt(Profile.CurrentSchema)); // el 2 → 3 (D-068) no añade nada: AsV1 conserva curve2_from_level
             Assert.That(JsonText.Write(doc), Is.EqualTo(current), "el documento migrado es el que escribe esta build");
         }
 

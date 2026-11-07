@@ -225,9 +225,9 @@ namespace AF.Save.Tests
         [Test]
         public void OlderSchema_IsMigratedInMemory_AfterBackingItUp()
         {
-            // Esquema 0 sintético con una clave renombrada, seguido del paso real 1 → 2 de la build (DC15).
+            // Esquema 0 sintético con una clave renombrada, seguido de los pasos reales 1 → 2 (DC15) y 2 → 3 (D-068) de la build.
             const string v0 = "{\"profile_schema\": 0, \"coins\": 7}";
-            var migrations = new ProfileMigrations(2, ProfileMigrations.Step(0, RenameCoinsToSeeds), ProfileMigrations.Step(1, ProfileMigrations.MigrateV1ToV2));
+            var migrations = new ProfileMigrations(3, ProfileMigrations.Step(0, RenameCoinsToSeeds), ProfileMigrations.Step(1, ProfileMigrations.MigrateV1ToV2), ProfileMigrations.Step(2, ProfileMigrations.MigrateV2ToV3));
             var store = new LocalProfileStore(_dir, migrations);
             File.WriteAllText(store.MainPath, v0, Utf8NoBom);
 
@@ -248,7 +248,7 @@ namespace AF.Save.Tests
         public void FailedMigration_KeepsThePreviousProfile_AndBlocksWrites()
         {
             const string v0 = "{\"profile_schema\": 0, \"coins\": 7}";
-            var migrations = new ProfileMigrations(2, ProfileMigrations.Step(0, _ => throw new InvalidOperationException("paso roto")), ProfileMigrations.Step(1, ProfileMigrations.MigrateV1ToV2));
+            var migrations = new ProfileMigrations(3, ProfileMigrations.Step(0, _ => throw new InvalidOperationException("paso roto")), ProfileMigrations.Step(1, ProfileMigrations.MigrateV1ToV2), ProfileMigrations.Step(2, ProfileMigrations.MigrateV2ToV3));
             var store = new LocalProfileStore(_dir, migrations);
             File.WriteAllText(store.MainPath, v0, Utf8NoBom);
 

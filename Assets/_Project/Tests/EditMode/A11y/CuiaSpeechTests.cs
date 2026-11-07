@@ -152,8 +152,8 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(ids, Is.EquivalentTo(new[] { "hoja", "hoja_atada", "brote", "brote_n2", "liana", "liana_n", "matapi", "remolino", "lluvia", "pirana", "flor" }),
-                "todas menos la Tinaja y su cuia chica, que ya se nombran");
+            Assert.That(ids, Is.EquivalentTo(new[] { "hoja", "hoja_atada", "brote", "brote_n2", "liana", "liana_n", "matapi", "remolino", "lluvia", "pirana", "flor", "aguape", "aguape_n2", "lancha" }),
+                "todas menos la Tinaja y su cuia chica, que ya se nombran (con el Aguapé, el espeso y la Lancha de la 1.1, D-068)");
             LocCatalog catalog = B9Loc.Catalog();
             foreach (string id in ids)
             {
