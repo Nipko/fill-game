@@ -20,7 +20,7 @@ El archivo de traducciones va en UTF-8 sin BOM, LF, RFC 4180 y en orden ordinal 
 nombre: strings*.csv va a strings.csv y facts*.csv a facts.csv.
 
 Uso (desde la raíz del repositorio):
-    python tools/loc/apply_translations.py                 # aplica strings.csv, strings_p14.csv, strings_t2b.csv, facts_mapa.csv y facts_mapa_2.csv de la carpeta de entrega
+    python tools/loc/apply_translations.py                 # aplica strings.csv, strings_p14.csv, strings_t2b.csv, facts_mapa.csv, facts_mapa_2.csv y facts_mapa_m22.csv (D-069, M2-2) de la carpeta de entrega
     python tools/loc/apply_translations.py --check         # no escribe; código 1 si aplicar cambiaría algo o hay conflictos
     python tools/loc/apply_translations.py <archivos.csv>  # solo esos archivos (strings_mapa.csv, strings_glosario.csv, facts*.csv)
     python tools/loc/apply_translations.py --self-test     # pruebas propias, en memoria
@@ -92,7 +92,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_LOC = REPO / "Assets" / "_Project" / "Data" / "Loc"
 DEFAULT_DIR = REPO / "docs" / "dev" / "traspaso" / "spark-traducciones"
-DEFAULT_FILES = ("strings.csv", "strings_p14.csv", "strings_t2b.csv", "facts_mapa.csv", "facts_mapa_2.csv")
+DEFAULT_FILES = ("strings.csv", "strings_p14.csv", "strings_t2b.csv", "facts_mapa.csv", "facts_mapa_2.csv", "facts_mapa_m22.csv")
 REVIEW_DIR = REPO / "docs" / "dev" / "traspaso" / "gemini-revision"
 REVIEW_VERDICTS = "revision_es.csv"
 REVIEW_FILES = ("strings_revision.csv", "facts_revision.csv")

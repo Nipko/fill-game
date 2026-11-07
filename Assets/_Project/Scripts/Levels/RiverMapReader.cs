@@ -639,7 +639,7 @@ namespace AF.Levels
 
                 int line = RequireLineId(RequireSlug(p, "line", w), ids, w + ".line");
                 double s = RequireUnit(p, "s", w);
-                passing[k] = new RiverPassingPoint(id, new RiverMapPlace(line, (float)s), OptionalFact(p, w));
+                passing[k] = ReadTown(p, w, id, new RiverMapPlace(line, (float)s), OptionalFact(p, w)); // M2-2 (RiverMapReader.Towns.cs)
             }
 
             return passing;
@@ -755,9 +755,10 @@ namespace AF.Levels
                         + Flt(last.S1) + " y la parada está en " + map.Lines[place.Line].Id + " s=" + Flt(place.S));
                 }
 
-                string[] via = ReadVia(leg, at, map);
+                string[] via = ReadVia(leg, at, map, out float[] viaF);
                 int[] mouths = ReadMouths(leg, at, map);
-                routes[i] = new RiverStopRoute(i, idValue.AsString(), place, path, via, mouths);
+                RiverExcursion? excursion = ReadExcursion(leg, at, map, place, path); // M2-2 (RiverMapReader.Towns.cs)
+                routes[i] = new RiverStopRoute(i, idValue.AsString(), place, path, via, viaF, mouths, excursion, false);
             }
 
             return new RiverRoutes(routes, SourceGoal(map, routes));
@@ -896,7 +897,8 @@ namespace AF.Levels
             return d;
         }
 
-        private static string[] ReadVia(JsonValue leg, string at, RiverMap map)
+        // Desde M2-2 (D-069), cada via es {id, f}: el punto de paso y la fracción del tramo hasta él, en (0, 1] y sin bajar.
+        private static string[] ReadVia(JsonValue leg, string at, RiverMap map, out float[] viaF)
         {
             JsonValue? list = leg.Get("via");
             if (list == null || list.Kind != JsonKind.Array)
@@ -905,15 +907,28 @@ namespace AF.Levels
             }
 
             var via = new string[list.Items.Count];
+            viaF = new float[via.Length];
+            double last = 0.0;
             for (int k = 0; k < via.Length; k++)
             {
+                string w = at + ".leg.via[" + Num(k) + "]";
                 JsonValue v = list.Items[k];
-                if (v.Kind != JsonKind.String || map.PassingPoint(v.AsString()) == null)
+                JsonValue? id = v.Kind == JsonKind.Object ? v.Get("id") : null;
+                if (id == null || id.Kind != JsonKind.String || map.PassingPoint(id.AsString()) == null)
                 {
-                    throw FailRoute(at + ".leg.via[" + Num(k) + "]", "no es un punto de paso del Mapa (passing)");
+                    throw FailRoute(w, "no es {id, f} con un punto de paso del Mapa (passing)");
                 }
 
-                via[k] = v.AsString();
+                JsonValue? f = v.Get("f");
+                double fraction = f != null && f.Kind == JsonKind.Number ? f.AsDouble() : double.NaN;
+                if (!(fraction > 0.0 && fraction <= 1.0) || fraction < last)
+                {
+                    throw FailRoute(w + ".f", "debe ser una fracción en (0, 1] que no baja en el orden del viaje");
+                }
+
+                last = fraction;
+                via[k] = id.AsString();
+                viaF[k] = (float)fraction;
             }
 
             return via;

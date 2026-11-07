@@ -1149,6 +1149,7 @@ namespace AF.UI
 
             int play = app.PlayLevel;
             map.LiveRequested = MapLiveSettings.UiMapV2; // D-069, P8 (a): el Mapa v2 o, apagada, el de la 1.0 (GameBootstrap.MapLive.cs)
+            map.TownsRequested = MapLiveSettings.UiMapTowns; // D-069, M2-2: los pueblos de paso y la excursión local
             map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable, DailyPlayUnlocked); // «Jugar» como en el inicio (D-032, punto 6)
             if (app.Screen != AppScreen.Level)
             {
@@ -1159,7 +1160,7 @@ namespace AF.UI
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
-            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
+            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() + map.TownsMemJson() : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
             TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;
@@ -2637,6 +2638,7 @@ namespace AF.UI
             // destruida en este punto.
             RiverMapScreen.RestoreFullRenderRate();
             _mapScreen?.ReleaseLiveArt(); // D-069, M2-1: las texturas del Mapa v2 no sobreviven a la escena (DontSave)
+            _mapScreen?.ReleaseTownArt(); // D-069, M2-2: ni el atlas de los pueblos
             if (_backAction != null)
             {
                 _backAction.performed -= OnBackPerformed;

@@ -161,7 +161,7 @@
                 "s0": { "$ref": "#/$defs/unit" },
                 "s1": { "$ref": "#/$defs/unit" }
               },
-              "description": "[P] Excursión local de un tramo de 0 km (D-069, P5 (a); propuesta del Mapa v2 §4.4): la canoa sale de la parada (s0, su at) por su línea hasta s1 y vuelve, con las 10 boyas repartidas por la vuelta; río arriba si caben 25 km y, si no, río abajo, sin llegar a otra parada. Solo en los tramos de 0 km (n > 0); Q1-A no cambia."
+              "description": "[P] Excursión local de un tramo de 0 km (D-069, P5 (a); propuesta del Mapa v2 §4.4): la canoa sale de la parada (s0, su at) por su línea hasta s1 y vuelve, con las 10 boyas repartidas por la vuelta; río arriba si caben 40 km y, si no, río abajo, sin llegar a otra parada. Solo en los tramos de 0 km (n > 0); Q1-A no cambia."
             }
           },
           "description": "Ruta del tramo que lleva a esta parada desde la anterior, por agua y con ida y vuelta por las confluencias: tramos de línea (path, de s0 a s1 en el sentido del viaje), puntos de paso que se cruzan (via: {id, f}, ids de passing de river_map_v1.json con la fracción del tramo hasta cada uno, desde M2-2) y afluentes cuya boca se llena por primera vez (mouths); en un tramo de 0 km, su excursión local (excursion, desde M2-2). En n = 0, sin viaje, un tramo de longitud cero en Belém con lo que va lleno desde el primer Mapa (el Tocantins). Desde M2.6."

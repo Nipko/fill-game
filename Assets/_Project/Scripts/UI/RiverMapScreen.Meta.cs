@@ -376,7 +376,7 @@ namespace AF.UI
                 for (int v = 0; v < route.Via.Count; v++)
                 {
                     RiverPassingPoint? point = map.PassingPoint(route.Via[v]);
-                    if (point == null || HasPassing(point))
+                    if (point == null || HasPassing(point) || (TownsActive && point.IsTown)) // M2-2: los pueblos, con su viñeta
                     {
                         continue;
                     }

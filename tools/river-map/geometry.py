@@ -884,7 +884,7 @@ CADENCE_RULES = ((400.0, 2), (150.0, 1))
 # Excursion local de los tramos de 0 km (P5 (a); propuesta §4.4) [P]: ida y vuelta por el rio de la parada, hasta
 # EXCURSION_KM por su linea (el lado con mas sitio: rio arriba si cabe), sin llegar a otra parada (como mucho
 # EXCURSION_GAP de la distancia hasta ella) y con al menos EXCURSION_MIN_KM.
-EXCURSION_KM = 25.0
+EXCURSION_KM = 40.0
 EXCURSION_MIN_KM = 6.0
 EXCURSION_GAP = 0.6
 

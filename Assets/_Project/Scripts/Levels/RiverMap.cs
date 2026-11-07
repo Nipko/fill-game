@@ -543,17 +543,49 @@ namespace AF.Levels
         public string NameKey { get; }
     }
 
-    /// <summary>Punto de paso (08 §4.5, <c>passing[]</c>): un nombre en el río que sale al pasar durante un viaje.</summary>
+    /// <summary>
+    /// Punto de paso (08 §4.5, <c>passing[]</c>): un nombre en el río que sale al pasar durante un viaje. Desde M2-2 (D-069), con
+    /// su viñeta, su país y su tier (<see cref="RiverTownVignette"/>, <see cref="RiverTownTier"/>): los pueblos de paso.
+    /// </summary>
     public sealed class RiverPassingPoint
     {
-        /// <summary>Crea el punto de paso.</summary>
+        /// <summary>Crea el punto de paso (un <see cref="RiverTownTier.Mark"/> sin viñeta ni país: el de la 1.0).</summary>
         public RiverPassingPoint(string id, RiverMapPlace at, string? fact)
+            : this(id, at, fact, RiverTownVignette.None, string.Empty, RiverTownTier.Mark)
+        {
+        }
+
+        /// <summary>Crea el punto de paso con su viñeta, su país (ISO2) y su tier (D-069, M2-2).</summary>
+        public RiverPassingPoint(string id, RiverMapPlace at, string? fact, RiverTownVignette vignette, string country, RiverTownTier tier)
         {
             Id = id;
             At = at;
             Fact = fact;
             NameKey = "map.stop." + id + ".name";
+            RiverKey = "map.stop." + id + ".river";
+            Vignette = vignette;
+            Country = country ?? string.Empty;
+            CountryNameKey = Country.Length == 2 ? "map.country." + Country.ToLowerInvariant() + ".name" : string.Empty;
+            Tier = tier;
         }
+
+        /// <summary>Viñeta del pueblo (<see cref="RiverTownVignette.None"/> en una boca o unos rápidos).</summary>
+        public RiverTownVignette Vignette { get; }
+
+        /// <summary>País (ISO2), o «» sin él.</summary>
+        public string Country { get; }
+
+        /// <summary>Clave del nombre del país (<c>map.country.&lt;iso2&gt;.name</c>; la clave, no un texto), o «».</summary>
+        public string CountryNameKey { get; }
+
+        /// <summary>Pueblo, ciudad o marca (una boca o unos rápidos).</summary>
+        public RiverTownTier Tier { get; }
+
+        /// <summary>Es un pueblo de paso con viñeta (town o city).</summary>
+        public bool IsTown => Tier != RiverTownTier.Mark && Vignette != RiverTownVignette.None;
+
+        /// <summary>Clave del río de su ficha, por convención: <c>map.stop.&lt;id&gt;.river</c> (solo los pueblos).</summary>
+        public string RiverKey { get; }
 
         /// <summary>Id del punto de paso (lo citan los <c>leg.via</c> de las paradas).</summary>
         public string Id { get; }
@@ -709,17 +741,59 @@ namespace AF.Levels
     {
         private readonly RiverPathPiece[] _path;
         private readonly string[] _via;
+        private readonly float[] _viaF;
         private readonly int[] _mouths;
 
-        /// <summary>Crea la ruta (el lector ya la validó contra el Mapa).</summary>
+        /// <summary>Crea la ruta (el lector ya la validó contra el Mapa), sin fracciones ni excursión.</summary>
         public RiverStopRoute(int n, string id, RiverMapPlace at, RiverPathPiece[] path, string[] via, int[] mouths)
+            : this(n, id, at, path, via, null, mouths, null, false)
+        {
+        }
+
+        /// <summary>
+        /// Crea la ruta con la fracción de cada punto de paso (<paramref name="viaF"/>; null: todos al final del tramo) y la
+        /// excursión local de un tramo de 0 km (D-069, M2-2). Con <paramref name="excursionActive"/>, la canoa y las boyas van por
+        /// la excursión (<see cref="Excursion"/>).
+        /// </summary>
+        public RiverStopRoute(int n, string id, RiverMapPlace at, RiverPathPiece[] path, string[] via, float[]? viaF, int[] mouths,
+            RiverExcursion? excursion, bool excursionActive)
         {
             N = n;
             Id = id;
             At = at;
             _path = path;
             _via = via;
+            _viaF = viaF != null && viaF.Length == via.Length ? viaF : FallbackF(via.Length);
             _mouths = mouths;
+            ExcursionData = excursion;
+            Excursion = excursionActive ? excursion : null;
+        }
+
+        /// <summary>
+        /// Fracción del tramo hasta el punto de paso <paramref name="i"/> de <see cref="Via"/> (en (0, 1]; D-069, M2-2): se pasa al
+        /// ganar el nivel <c>10(n − 1) + ⌈10 f⌉</c> (<see cref="RiverTowns.PassLevel"/>).
+        /// </summary>
+        public float ViaFraction(int i)
+        {
+            return _viaF[i];
+        }
+
+        /// <summary>La excursión local de los datos (en los tramos de 0 km), esté o no en uso.</summary>
+        public RiverExcursion? ExcursionData { get; }
+
+        /// <summary>La excursión en uso (con <c>ui_map_towns</c>: <see cref="RiverRoutes.WithExcursions"/>), o null.</summary>
+        public RiverExcursion? Excursion { get; }
+
+        // Sin fracciones (rutas hechas en el cliente, como la meta): todos al final del tramo.
+        private static float[] FallbackF(int count)
+        {
+            var f = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                f[i] = 1f;
+            }
+
+            return f;
         }
 
         /// <summary>k de la parada.</summary>
@@ -773,6 +847,48 @@ namespace AF.Levels
 
         /// <summary>Paradas con ruta (sin la meta).</summary>
         public int Count => _routes.Length;
+
+        /// <summary>
+        /// La misma tabla con la excursión local en uso en los tramos de 0 km que la llevan (D-069, M2-2; con <c>ui_map_towns</c>):
+        /// la canoa y las boyas de esos tramos van por ella (<see cref="RiverStopRoute.Excursion"/>). Asigna: solo al llamarla.
+        /// </summary>
+        public RiverRoutes WithExcursions()
+        {
+            var routes = new RiverStopRoute[_routes.Length];
+            for (int i = 0; i < routes.Length; i++)
+            {
+                RiverStopRoute r = _routes[i];
+                if (r.ExcursionData == null)
+                {
+                    routes[i] = r;
+                    continue;
+                }
+
+                var path = new RiverPathPiece[r.Path.Count];
+                var via = new string[r.Via.Count];
+                var viaF = new float[r.Via.Count];
+                var mouths = new int[r.Mouths.Count];
+                for (int k = 0; k < path.Length; k++)
+                {
+                    path[k] = r.Path[k];
+                }
+
+                for (int k = 0; k < via.Length; k++)
+                {
+                    via[k] = r.Via[k];
+                    viaF[k] = r.ViaFraction(k);
+                }
+
+                for (int k = 0; k < mouths.Length; k++)
+                {
+                    mouths[k] = r.Mouths[k];
+                }
+
+                routes[i] = new RiverStopRoute(r.N, r.Id, r.At, path, via, viaF, mouths, r.ExcursionData, true);
+            }
+
+            return new RiverRoutes(routes, _goal);
+        }
 
         /// <summary>
         /// Tramos del viaje: <see cref="Count"/> más la meta si la hay. El tramo n es el que se recorre jugando los niveles

@@ -238,6 +238,7 @@ namespace AF.UI
         private float[] _fillFrom = Array.Empty<float>();
         private float[] _seenFrom = Array.Empty<float>();
         private RiverMap? _progressMap;
+        private RiverRoutes? _progressRoutes;
         private int _progressLevel = -1;
         private int _progressBuilds;
         private bool _silhouettesPlaced;
@@ -695,13 +696,14 @@ namespace AF.UI
             }
 
             int max = Mathf.Clamp(maxLevel, 0, WorldTable.LastLevel);
-            if (ReferenceEquals(map, _progressMap) && max == _progressLevel)
+            if (ReferenceEquals(map, _progressMap) && ReferenceEquals(routes, _progressRoutes) && max == _progressLevel)
             {
                 RefreshBuoyStates();
                 return;
             }
 
             _progressMap = map;
+            _progressRoutes = routes; // D-069, M2-2: con o sin la excursión local (ui_map_towns), otras boyas
             _progressLevel = max;
             _progressBuilds++;
             bool ahead = FrontAheadNow(max);
