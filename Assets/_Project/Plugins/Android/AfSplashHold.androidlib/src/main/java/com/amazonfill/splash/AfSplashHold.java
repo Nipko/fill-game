@@ -309,10 +309,10 @@ public final class AfSplashHold {
         return -1L;
     }
 
-    // La actividad de Unity (UnityPlayerGameActivity o UnityPlayerActivity, o una subclase), sin reflexion de metodos.
     /**
      * Lado menor de la pantalla del dispositivo en dp (la ventana maxima: en pantalla dividida, la pantalla entera; en un plegable,
-     * la pantalla que esta en uso), o 0 si no se puede leer. Lo usa tambien C# por JNI.
+     * la pantalla que esta en uso), o 0 si no se puede leer. Lo usa tambien C# por JNI. Es la pantalla fisica entera, con las barras
+     * del sistema, y se trunca como {@code smallestScreenWidthDp}: no es exactamente el calificador {@code sw600dp}.
      */
     public static int deviceSmallestWidthDp(Activity activity) {
         if (activity == null) {
@@ -337,7 +337,7 @@ public final class AfSplashHold {
                 h = metrics.heightPixels;
             }
 
-            return Math.round(Math.min(w, h) / density);
+            return (int) (Math.min(w, h) / density); // truncado, como Android (599,5 dp es un telefono)
         } catch (RuntimeException e) {
             return 0;
         }
@@ -362,6 +362,7 @@ public final class AfSplashHold {
         return metrics;
     }
 
+    // La actividad de Unity (UnityPlayerGameActivity o UnityPlayerActivity, o una subclase), sin reflexion de metodos.
     private static boolean isUnity(Activity activity) {
         for (Class<?> type = activity.getClass(); type != null; type = type.getSuperclass()) {
             String name = type.getName();

@@ -39,21 +39,25 @@ namespace AF.UI
         /// <summary>La pantalla a la que se pide la orientación (la de Unity; una falsa en los tests).</summary>
         public interface ITarget
         {
-            /// <summary>La orientación pedida ahora.</summary>
-            ScreenOrientation Requested { get; }
+            /// <summary>
+            /// Lo último que pidió esta política (null: nada todavía). Nunca la lectura de <c>Screen.orientation</c>: con
+            /// autorrotación devuelve la orientación física del dispositivo, y el reproductor puede haber pedido otra cosa por su cuenta
+            /// (revisión del carril).
+            /// </summary>
+            ScreenOrientation? Requested { get; }
 
             /// <summary>Pide <paramref name="orientation"/>; con autorrotación, las cuatro orientaciones permitidas.</summary>
             void Request(ScreenOrientation orientation);
         }
 
         /// <summary>
-        /// Pide a <paramref name="target"/> lo de <see cref="Decide"/> si cambia algo; devuelve lo pedido (null si no se sabe el
-        /// lado menor o ya estaba así).
+        /// Pide a <paramref name="target"/> lo de <see cref="Decide"/> si la decisión cambia respecto a lo último que pidió (la primera
+        /// vez, siempre); devuelve lo pedido (null si no se sabe el lado menor o la decisión es la misma).
         /// </summary>
         public static ScreenOrientation? Apply(int smallestWidthDp, ITarget target)
         {
             ScreenOrientation? wanted = Decide(smallestWidthDp);
-            if (wanted == null || target.Requested == wanted.Value)
+            if (wanted == null || target.Requested == wanted)
             {
                 return null;
             }
@@ -65,10 +69,11 @@ namespace AF.UI
         /// <summary>La pantalla de Unity.</summary>
         internal sealed class UnityScreenTarget : ITarget
         {
-            public ScreenOrientation Requested => Screen.orientation;
+            public ScreenOrientation? Requested { get; private set; }
 
             public void Request(ScreenOrientation orientation)
             {
+                Requested = orientation;
                 if (orientation == ScreenOrientation.AutoRotation)
                 {
                     Screen.autorotateToPortrait = true;
@@ -136,16 +141,19 @@ namespace AF.UI
         {
             private int _width;
             private int _height;
+            private float _dpi;
 
             private void Update()
             {
-                if (Screen.width == _width && Screen.height == _height)
+                // También la densidad: «Tamaño de pantalla» en los ajustes cambia los dp sin cambiar los px (revisión del carril).
+                if (Screen.width == _width && Screen.height == _height && Screen.dpi == _dpi)
                 {
                     return;
                 }
 
                 _width = Screen.width;
                 _height = Screen.height;
+                _dpi = Screen.dpi;
                 Apply(ReadDeviceSmallestWidthDp(), s_screen);
             }
         }

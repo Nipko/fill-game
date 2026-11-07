@@ -20,14 +20,10 @@ namespace AF.Tests.EditMode
         private static string SplashJava => File.ReadAllText(Path.Combine(Application.dataPath, "_Project", "Plugins", "Android", "AfSplashHold.androidlib",
             "src", "main", "java", "com", "amazonfill", "splash", "AfSplashHold.java"));
 
+        // Lo último que pidió la política (como UnityScreenTarget): null al empezar, aunque el dispositivo esté en vertical.
         private sealed class FakeTarget : OrientationPolicy.ITarget
         {
-            public FakeTarget(ScreenOrientation start)
-            {
-                Requested = start;
-            }
-
-            public ScreenOrientation Requested { get; private set; }
+            public ScreenOrientation? Requested { get; private set; }
 
             public List<ScreenOrientation> Requests { get; } = new List<ScreenOrientation>();
 
@@ -59,34 +55,37 @@ namespace AF.Tests.EditMode
         {
             Assert.That(OrientationPolicy.Decide(0), Is.Null);
             Assert.That(OrientationPolicy.Decide(-1), Is.Null);
-            var target = new FakeTarget(ScreenOrientation.Portrait);
+            var target = new FakeTarget();
             Assert.That(OrientationPolicy.Apply(0, target), Is.Null);
             Assert.That(target.Requests, Is.Empty, "sin lectura no se toca: manda lo que pidió el plugin");
         }
 
         [Test]
-        public void AtLaunch_APhoneLyingDown_AsksForPortrait()
+        public void AtLaunch_ItAlwaysAsks_PortraitOnAPhone_RotationOnATablet()
         {
-            // El reproductor arranca con la autorrotación de los Player Settings (el manifiesto no restringe): en un teléfono tumbado,
-            // OnLaunch pide vertical; en una tableta deja la autorrotación.
-            var phone = new FakeTarget(ScreenOrientation.AutoRotation);
+            // El reproductor arranca con la autorrotación de los Player Settings (el manifiesto no restringe) y, con autorrotación,
+            // Screen.orientation da la orientación física: un teléfono que ya está en vertical también tiene que pedir vertical, o se
+            // quedaría girando (revisión del carril). OnLaunch pide siempre, con o sin el teléfono tumbado.
+            var phone = new FakeTarget();
             Assert.That(OrientationPolicy.Apply(393, phone), Is.EqualTo(ScreenOrientation.Portrait));
             Assert.That(phone.Requests, Is.EqualTo(new[] { ScreenOrientation.Portrait }));
+            Assert.That(OrientationPolicy.Apply(393, phone), Is.Null, "el vigía, con la misma decisión, no vuelve a pedir");
 
-            var tablet = new FakeTarget(ScreenOrientation.AutoRotation);
-            Assert.That(OrientationPolicy.Apply(800, tablet), Is.Null, "ya en autorrotación: nada que pedir");
-            Assert.That(tablet.Requests, Is.Empty);
+            var tablet = new FakeTarget();
+            Assert.That(OrientationPolicy.Apply(800, tablet), Is.EqualTo(ScreenOrientation.AutoRotation), "también la tableta pide la suya");
+            Assert.That(tablet.Requests, Is.EqualTo(new[] { ScreenOrientation.AutoRotation }));
         }
 
         [Test]
         public void AFoldable_OpeningAndClosing_SwitchesBetweenRotationAndPortrait()
         {
-            var screen = new FakeTarget(ScreenOrientation.Portrait);
-            Assert.That(OrientationPolicy.Apply(411, screen), Is.Null, "cerrado: ya vertical");
+            var screen = new FakeTarget();
+            Assert.That(OrientationPolicy.Apply(411, screen), Is.EqualTo(ScreenOrientation.Portrait), "cerrado al arrancar: vertical");
             Assert.That(OrientationPolicy.Apply(673, screen), Is.EqualTo(ScreenOrientation.AutoRotation), "al abrirlo, gira");
             Assert.That(OrientationPolicy.Apply(673, screen), Is.Null, "girar abierto no pide nada más");
+            // Cerrado estando en vertical: la pantalla física ya está en vertical, pero lo pedido era autorrotación, así que pide vertical.
             Assert.That(OrientationPolicy.Apply(411, screen), Is.EqualTo(ScreenOrientation.Portrait), "al cerrarlo, otra vez vertical");
-            Assert.That(screen.Requests, Is.EqualTo(new[] { ScreenOrientation.AutoRotation, ScreenOrientation.Portrait }));
+            Assert.That(screen.Requests, Is.EqualTo(new[] { ScreenOrientation.Portrait, ScreenOrientation.AutoRotation, ScreenOrientation.Portrait }));
         }
 
         [Test]
