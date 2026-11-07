@@ -60,6 +60,7 @@ namespace AF.Tests.PlayMode
         {
             Application.logMessageReceived -= OnLog;
             GameBootstrap.ContentEndMapOverride = null;
+            GameBootstrap.MapLiveConfigOverride = null;
             RiverMapScreen.PlateTestObstacle = null;
             RiverMapScreen.PlateTestObstacleWorld = 0;
             MapArtRule.ForceProvisional = null;
@@ -490,6 +491,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator WorldView_APlateWithNoRoom_IsHidden_IsNoObstacle_ComesBackOnDrag_AndIsWeighedAgainWithTheView()
         {
+            // La geometría de esta prueba (una placa que no cabe con 299) es la de la zona del Mapa de la 1.0, con su marco: en el Mapa
+            // v2 (D-069), a pantalla completa, la placa cabe. La regla de la placa es la misma en los dos.
+            GameBootstrap.MapLiveConfigOverride = new AF.GameFlow.MapLiveConfig { UiMapV2 = false };
             LaunchOptions.LanguageOverride = LocLocale.Pseudo;
             LaunchOptions.FontScaleOverride = UiBuilder.MaxTextScale;
             MapArtRule.ForceProvisional = true;

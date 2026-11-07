@@ -633,10 +633,13 @@ namespace AF.Tests.PlayMode
                 float dp = glass.Space.DpPerUnit;
                 float apart = DistanceToSections(glass, RiverMapScreen.PlacePoint(data, route.At)) * dp;
                 string where = "parada " + n + " en " + glass.name + ", a " + apart.ToString("0.00", CultureInfo.InvariantCulture) + " dp";
-                if (apart > worst)
+                // D-069, M2-1: con el Mapa v2 el trazo se calcula con una forma más larga que sus anclas (RiverMapScreen.LiveShapeFactor),
+                // así que la holgura crece en la misma proporción (en la 1.0, 1×): en un río de 14 o 26 dp sigue muy dentro del agua.
+                float scale = Mathf.Max(1f, glass.ShapeWidthDp / glass.AnchorWidthDp);
+                if (apart / scale > worst)
                 {
-                    worst = apart;
-                    worstAt = where;
+                    worst = apart / scale;
+                    worstAt = where + (scale > 1f ? " (holgura ×" + scale.ToString("0.00", CultureInfo.InvariantCulture) + ")" : string.Empty);
                 }
 
                 // La boca o la boya (anclas no ajustadas) de su línea a menos de CurveAnchorMergeWidths anchos de arco: comparten ancla.

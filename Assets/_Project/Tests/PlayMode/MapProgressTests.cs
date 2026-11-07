@@ -886,7 +886,7 @@ namespace AF.Tests.PlayMode
             Assert.That(front.GetSiblingIndex(), Is.LessThan(map.Canoe.transform.GetSiblingIndex()), "detrás de la canoa");
             Assert.That(map.BuoysAheadLayer!.GetSiblingIndex(), Is.GreaterThan(map.Canoe.transform.GetSiblingIndex()), "las boyas por ganar, encima de la canoa");
             Assert.That(map.RosaLayer!.GetSiblingIndex(), Is.GreaterThan(map.BuoysAheadLayer.GetSiblingIndex()), "Rosa, encima de todo");
-            Assert.That(map.Canvas.GetComponentsInChildren<Canvas>(true).Length, Is.EqualTo(3), "sin lienzos nuevos");
+            Assert.That(map.Canvas.GetComponentsInChildren<Canvas>(true).Length, Is.EqualTo(map.LiveActive ? 6 : 3), "sin lienzos nuevos (los 3 del Mapa v2, D-069)");
 
             // Las orlas (del lleno y del frente) en el lienzo estático, debajo del agua de todas las líneas: en una confluencia, el
             // afluente entra en el cauce sin costura.
