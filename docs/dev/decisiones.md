@@ -5292,3 +5292,33 @@ El dueño las decidió con las recomendadas («Sí, recomendadas»):
   - los candidatos sin alivio se descartan;
   - los estrenos van primero en la reserva.
 - **Siguiente paso:** F5, generar los packs `curva_07..09_v1` y su reserva con la curación del dueño.
+
+### D-068, añadido del 2026-11-07: la fase F5 (los packs de la curva 2)
+
+Hecha por level-pipeline-dev (con la escena como unity-gameplay-dev) en `v11/curva-f5-packs`. Material de curación para el dueño:
+`docs/dev/curva-1.1-curacion.md`.
+- **`campaign_v3.json` con las respuestas del añadido anterior:** el plan de presión de 660, 680 y 700 baja a 7, 7 y 8
+  (`--validate-spec`: 27 reglas, 0 fallos y ya sin avisos PRESSURE); la Lancha nunca en un hito ni en la cúspide, con regla en
+  CURVE-MECH (fixture `specs/tests/lancha_in_milestone.json`) y en QA-LANCHA; las notas de `role_caps` (estreno con K 6-8),
+  `k_cells` (K 6 en 363-365), `season_debut_exempt` (la Lancha en 361-380) y `calendar_note` (las 5 respuestas de F3) dicen que
+  están decididas. 03 §12 precisa que el Aguapé no cuenta como «mecánica distinta» en el escalón, que el estreno de la Lancha va
+  con K 6 (tope de estreno K 6-8) y fuera de los hitos, y que el mundo 9 va del escalón 5 al 8.
+- **Packs** (`Assets/_Project/Data/Levels/`): `curva_07_v1.json`, `curva_08_v1.json` y `curva_09_v1.json` (400 niveles de 301-700,
+  `pack_schema` 5; 549.736 bytes) y `reserva_curva_07_v1.json` … `reserva_curva_09_v1.json` (80 tableros; 100.949 bytes); con
+  gzip, 57.783 bytes los seis. Son byte a byte los del pool de prueba de F3b: el cambio de presión, las notas y la regla de la
+  Lancha no mueven ningún tablero. Registro de combinaciones de la curva 2: `specs/combinations_registry_curva2_v1.json` (126
+  entradas); el de la 1.0 no cambia. Informes en `tools/out/curva2/`. level-qa con reproducción: 0 fallos (281 avisos en la curva y
+  73 en la reserva: 7 QA-WINDOW, 8 QA-BOT-ATENTO, 2 QA-BAND-Q y el resto QA-CVD-ADJ).
+- **Medida:** retos con Difícil 28 de 30, 32 de 35 y 33 de 35; los 20 hitos con Muy difícil y en su escalón del plan o por
+  encima; T media 10,4 y K 8,3-8,4. Retos sin chip (para la curación): 329, 352, 449, 509, 549, 672 y 686.
+- **Cliente:** `Game.unity` regenerada con `GameSceneBuilder.CreateGameScene` (método de Editor en batch): enlaza los tres packs de la
+  curva y los tres de su reserva. `CurveBootTests` (PlayMode) lo comprueba con los packs reales: con `lvl_curve2_enabled` el 303 es
+  `m07_v1_n0303_c2` con el estreno del Aguapé y el 363 `m07_v1_n0363_c2` con el de la Lancha (10 cuias); con la clave apagada,
+  `m07_v1_n0303` y `m07_v1_n0363`, sin las mecánicas de la 1.1. `CurveSnapshotTests.CaptureTheF5Packs` (`[Explicit]`, con
+  gráficos) captura 303, 347, 363, 380, 560 y 700.
+- **Arreglo de informe:** el informe de generación y el de curación decían `pack_schema` 3 en los packs de la curva (el pack ya
+  llevaba el 5): `PackWriter.PackSchemaFor` da el 5 a un pack de la curva 2. Los packs no cambian.
+- **Decisiones [P] de F5:** el nombre del registro de la curva 2 (`combinations_registry_curva2_v1.json`, aparte del de la 1.0);
+  los informes en `tools/out/curva2/`; los tres hitos de las capturas (380, el de bot atento más bajo, y las cúspides 560 y 700).
+- **Pendiente del dueño:** la curación (qué retos sin chip se aceptan, si se rehacen los hitos cuyo bot atento no crece: 360, 380,
+  460, 500, 520, 560, 600 y 640) y, después, F6 (el teléfono y el A/B).

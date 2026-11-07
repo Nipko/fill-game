@@ -92,6 +92,32 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow!.Session.Current[0].Mechanic, Is.EqualTo(MechanicType.None));
         }
 
+        /// <summary>
+        /// Fase F5 (D-068): los tableros de los packs reales de la curva 2 (la escena, sin paquetes del test) para la curación del
+        /// dueño (<c>docs/dev/curva-1.1-curacion.md</c>): los estrenos del Aguapé (303), del espeso (347) y de la Lancha (363), y tres
+        /// hitos (380, el de bot atento más bajo; 560 y 700, cúspides). PNG <c>f5_l{nivel}</c> en <c>Logs/snapshots/es-419/</c>.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CaptureTheF5Packs()
+        {
+            string dir = SnapshotKit.Prepare();
+            foreach (int level in new[] { 303, 347, 363, 380, 560, 700 })
+            {
+                LaunchOptions.Curve2EnabledOverride = true;
+                LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
+                yield return MechanicTestKit.LoadPlaying(level);
+                GameBootstrap boot = GameBootstrap.Current!;
+                Assert.That(boot.Flow!.Level.Curve, Is.EqualTo(AF.Levels.LevelDefinition.Curve2), "el " + level + " de la curva 2");
+                SnapshotKit.Attach(boot);
+                PlayModeHelpers.Step(boot, 600);
+                yield return SnapshotKit.Wait(0.3f);
+                Save(dir, "f5_l" + level);
+                LaunchOptions.Reset();
+                FunnelSetup.Hooks();
+                SnapshotKit.Prepare();
+            }
+        }
+
         private static string Campaign303()
         {
             return CurveFixtures.Pack("mundo_07_v1", "campaign", 5, 7, CurveFixtures.AguapeCurveLevel(303)

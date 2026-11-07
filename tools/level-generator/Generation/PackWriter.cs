@@ -85,7 +85,7 @@ internal static class PackWriter
 
         var header = new JObj
         {
-            { "pack_schema", curve ? CurvePackSchema : PackSchemaFor(levels) },
+            { "pack_schema", PackSchemaFor(levels) },
             { "schema_file", SchemaFile },
             { "pack_id", curve ? CurvePackId(world, spec.Lap) : PackId(world, spec.Lap) },
             { "kind", curve ? "curve" : "campaign" },
@@ -119,9 +119,11 @@ internal static class PackWriter
     /// <summary>
     /// 3 si algún nivel del pack (o alguna de sus variantes de alivio) lleva la tinaja o una variante de la 1.0 que solo admite
     /// el 3 (Hoja atada, Flor o Brote de dos hojas), o si su <c>intro_mechanic</c> es del 3 (<see cref="Pack3Intros"/>); si no, 2.
+    /// Un pack de la curva 2 (D-068) lleva siempre el 5 (<see cref="CurvePackSchema"/>), también en los informes.
     /// </summary>
     public static int PackSchemaFor(IReadOnlyList<PackLevel> levels) =>
-        levels.Any(l => NeedsPack3(l.Chosen.Board.Attrs) || l.Relief.Any(r => NeedsPack3(r.Board.Attrs))
+        levels.Count > 0 && levels[0].Plan.Curve > 0 ? CurvePackSchema
+        : levels.Any(l => NeedsPack3(l.Chosen.Board.Attrs) || l.Relief.Any(r => NeedsPack3(r.Board.Attrs))
             || (l.Plan.Intro is string intro && Pack3Intros.Contains(intro))) ? TinajaPackSchema : PackSchema;
 
     /// <summary>Tipos de la curva 2 (D-068), que solo admite el <c>pack_schema</c> 5; por su clave, para compilar con y sin F2.</summary>
