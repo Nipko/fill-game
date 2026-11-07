@@ -43,7 +43,7 @@ namespace AF.Tests.EditMode
             Assert.That(tucuxi.JoinLevel, Is.EqualTo(71));
             Assert.That(tucuxi.World, Is.EqualTo(3));
             Assert.That(tucuxi.Mode, Is.EqualTo(CrewMode.Swim));
-            Assert.That(tucuxi.SizeDp, Is.LessThan(RiverMapScreen.GuideWorldDp), "más pequeño que Rosa, como el animal");
+            Assert.That(tucuxi.SizeDp, Is.EqualTo(34f), "§6.2: nada junto a Rosa, 34 dp (pendiente del dueño: pregunta 1 de M2-4)");
         }
 
         [TestCase(0, false)]

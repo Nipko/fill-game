@@ -459,17 +459,17 @@ En la 1.1 (propuesta b.2; con D-068, en la 1.1 solo el Aguapé, con el espeso, y
 
 ### 6.3 Elenco de fondo
 
-Guacamayos (confeti de victoria), nutria gigante (chillido al subir un hito de Crecida), morpho (Morpho), luciérnaga (Luciérnaga), rana dardo (icono Difícil), jaguar (icono Muy difícil, solo animal), hoatzin (Volver a la orilla en el mundo 11), tucán (vertido del tutorial) y, desde D-010, los **miquitos** de la intro, una especie por tramo del río (6.4) (glosario §3.3).
+Guacamayos (confeti de victoria), nutria gigante (chillido al subir un hito de Crecida), morpho (Morpho), luciérnaga (Luciérnaga), rana dardo (icono Difícil), jaguar (icono Muy difícil, solo animal), hoatzin (Volver a la orilla en el mundo 11), tucán (vertido del tutorial) y, desde D-010, los **miquitos** de la intro, una especie por tramo del río (6.4) (glosario §3.3). Descartados: anaconda como personaje, jaguar-hombre, seres mitológicos, pueblos indígenas como personajes o skins (research/07 §5-6.1 [V]). El perezoso del elenco pasa a ser **TiTino**, el personaje principal (6.5; D-013): no hay un segundo perezoso de ambiente.
 
 **Compañeros de viaje del Mapa del río v2** (D-069, M2-4, P6 (a); propuesta del Mapa v2 §6; detrás de `ui_map_crew`): animales del elenco o de la fauna real del tramo, sin nombre propio ni voz (como el bufeo, Q18-A), sin economía y deducidos de `max_level` (sin campo nuevo en el guardado). Como mucho 2 a bordo, más Rosa o el bufeo nadando delante; al cambiar de mundo, el compañero se queda en su tramo (en la parada donde se unió) y se le ve allí en la vista Mundo. TiTino no viaja (D-013) y los miquitos no suben a la canoa (D-010). Todo por código (D-052), en un atlas de 256 × 128 (128 KiB) que se pinta al abrir el Mapa y se suelta al cerrarlo.
 
 | Compañero | Se une | Cómo va | Llegada a una parada |
 |---|---|---|---|
 | **Tucán** | Al ganar el 21 (sale de Alter do Chão, mundo 2) | Polizón en la proa, 18 dp con el pico, mirando hacia delante | Un saltito, abre el pico y aletea (400 ms, a la vez que el remo en alto) |
-| **Tucuxi** (*Sotalia fluviatilis*) | Al ganar el 71 (mundo 3) | Nada junto a Rosa, un poco por detrás; el rig de Rosa con una paleta gris de dorso oscuro y vientre rosado, 18 dp [P] (más pequeño que Rosa, como el animal) | Salta con Rosa (8 dp, 400 ms) |
+| **Tucuxi** (*Sotalia fluviatilis*) | Al ganar el 71 (mundo 3) | Nada junto a Rosa, un poco por detrás, 34 dp (§6.2; el tamaño, pendiente del dueño: Rosa mide 22 dp y el tucuxi real es más pequeño que el boto); el rig de Rosa con una paleta gris de dorso oscuro y vientre rosado | Salta con Rosa (8 dp, 400 ms) |
 | Miquito del tramo (cameo) | — | Nunca a bordo: a mitad de un viaje, uno saluda desde un árbol de la orilla (1,2 s; si alguien se une en ese viaje, no sale) | — |
 
-**Presentación:** la primera vez que se abre el Mapa tras su punto (`map_seen_level` < su nivel ≤ `max_level`, y aún a bordo), el compañero llega volando o nadando y se acomoda en 700 ms al cruzar su nivel en el viaje, sale el chip «¡Se une al viaje! · {especie}» 2 s arriba en el centro, Capi hace ♥ y TalkBack dice «Se une al viaje: {especie}». Con Reducir movimiento, aparece en su sitio y sale el chip. Descartados: anaconda como personaje, jaguar-hombre, seres mitológicos, pueblos indígenas como personajes o skins (research/07 §5-6.1 [V]). El perezoso del elenco pasa a ser **TiTino**, el personaje principal (6.5; D-013): no hay un segundo perezoso de ambiente.
+**Presentación:** la primera vez que se abre el Mapa tras su punto (`map_seen_level` < su nivel ≤ `max_level`, y aún a bordo), el compañero llega volando o nadando y se acomoda en 700 ms al cruzar su nivel en el viaje, sale el chip «¡Se une al viaje! · {especie}» 2 s arriba en el centro, Capi hace ♥ y TalkBack dice «Se une al viaje: {especie}». Con Reducir movimiento, aparece en su sitio y sale el chip.
 
 ### 6.4 Miquitos: la tropa de Llenar y teñir (D-010)
 

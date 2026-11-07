@@ -91,11 +91,10 @@ namespace AF.GameFlow
         public const float ToucanDp = 18f;
 
         /// <summary>
-        /// Largo del tucuxi en la vista Mundo (dp) [P]: el 80 % del guía (Rosa mide 22 dp), como en la maqueta (0,72 frente a 0,95) y como
-        /// el animal real, más pequeño que el boto (<c>fact.agua_tapajos.15</c>). Los «34 dp» de §6.2 son la distancia a la que nada por
-        /// delante de la canoa, junto a Rosa (35 dp en el código): ver el añadido de M2-4 en D-069.
+        /// Largo del tucuxi en la vista Mundo (dp; §6.2: «nada junto a Rosa, 34 dp»). Pendiente del dueño (pregunta 1 del añadido de
+        /// M2-4 en D-069): Rosa mide 22 dp en el Mapa y el animal real es más pequeño que el boto (<c>fact.agua_tapajos.15</c>).
         /// </summary>
-        public const float TucuxiDp = 18f;
+        public const float TucuxiDp = 34f;
 
         private static readonly CrewMember[] Members =
         {

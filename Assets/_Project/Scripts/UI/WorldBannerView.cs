@@ -2058,6 +2058,12 @@ namespace AF.UI
         /// <summary>El atlas de la tripulación de la franja (tests: se suelta al ocultarla).</summary>
         internal MapCrewArt CrewArt => _crewArt;
 
+        /// <summary>Suelta el atlas de la tripulación sin tocar la pantalla (la escena se va con el banner abierto).</summary>
+        internal void ReleaseCrewArt()
+        {
+            _crewArt.Release();
+        }
+
         /// <summary>Fracción del tramo en que va la canoa (0 al salir, 1 en la gran parada).</summary>
         public float CanoeFraction => _fraction;
 
@@ -2364,7 +2370,7 @@ namespace AF.UI
             {
                 RectTransform g = _guideA.rectTransform;
                 RectTransform t = _crewTucuxi.rectTransform;
-                CrewDraw.SetPos(t, g.anchoredPosition + new Vector2(-9f * _canoeFacing, -6f));
+                CrewDraw.SetPos(t, g.anchoredPosition + new Vector2(-16f * _canoeFacing, -9f));
                 CrewDraw.SetScale(t, new Vector3(-_canoeFacing, 1f, 1f));
                 CrewDraw.SetAlpha(_crewTucuxi, appear * _guideAAlpha);
             }

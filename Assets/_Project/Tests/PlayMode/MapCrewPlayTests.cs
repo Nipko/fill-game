@@ -104,7 +104,20 @@ namespace AF.Tests.PlayMode
             map.Tick(PlayModeHelpers.FrameMs);
             Assert.That(map.ToucanAboardShown, Is.False, "en el mundo 3 ya no va a bordo");
             Assert.That(map.ToucanHomeShown, Is.True, "se quedó en su tramo y se le ve allí (§6.1, regla 7)");
+            Vector2 alter = map.Space.ToLocal(RiverMapScreen.CanoeAt(boot.RiverMapData!, boot.RiverRoutes!, RiverCrew.ToucanJoinLevel));
+            Assert.That(Vector2.Distance(map.ToucanHomeRect!.anchoredPosition, alter), Is.LessThan(30f), "junto a donde se unió, al salir de Alter do Chão");
             Assert.That(map.TucuxiAboardShown, Is.False, "el tucuxi, en el 71");
+            map.Close();
+
+            // Con el 81, el tucuxi se queda en el cauce del Solimões al salir de Tefé: nunca en el lago (D-069, puntos sensibles).
+            MapMarkersTests.Reopen(boot, new MemoryProgressStore(82, 81, 81), 82);
+            map.Tick(PlayModeHelpers.FrameMs);
+            Assert.That(map.TucuxiAboardShown, Is.False);
+            Assert.That(map.TucuxiHomeShown, Is.True);
+            RiverStopRoute leg = boot.RiverRoutes!.At(8)!;
+            Assert.That(boot.RiverMapData!.Lines[leg.Path[0].Line].Id, Is.EqualTo("amazonas"), "el tramo de salida de Tefé va por el cauce");
+            Vector2 channel = map.Space.ToLocal(RiverMapScreen.CanoeAt(boot.RiverMapData, boot.RiverRoutes, RiverCrew.TucuxiJoinLevel));
+            Assert.That(Vector2.Distance(map.TucuxiHomeRect!.anchoredPosition, channel), Is.LessThan(0.5f), "en el cauce, donde la canoa iba con el 71");
             map.Close();
         }
 
@@ -323,6 +336,29 @@ namespace AF.Tests.PlayMode
             Assert.That(map.StopRemainingInLabel, Is.False);
             Assert.That(map.StopRemainingText, Is.EqualTo(UiText.MapStopRemaining(RiverJourney.LevelsLeft(58), place)));
             boot.CloseRiverMap();
+        }
+
+        [UnityTest]
+        public IEnumerator Faltan_TowardsTheSource_KeepsThePlate_InsideTheMap_ClearOfAndes()
+        {
+            // Hacia la naciente (691-700) no hay parada siguiente que lleve el rótulo: la placa de M2-3 de respaldo [P].
+            yield return MapMarkersTests.OpenApp(695);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            Assert.That(map.LiveActive, Is.True);
+            Assert.That(map.StopRemainingInLabel, Is.False);
+            Assert.That(map.StopRemainingShown, Is.True);
+            Rect viewport = StopCardTests.CanvasRect(map.ViewportRect, map.Canvas);
+            Rect chip = StopCardTests.CanvasRect(map.StopRemainingRect, map.Canvas);
+            Assert.That(viewport.Contains(chip.min) && viewport.Contains(chip.max - new Vector2(0.01f, 0.01f)), Is.True, "la placa, en el Mapa");
+            Assert.That(map.RemainingChipViewRect.width, Is.GreaterThan(0f), "el encuadre de las mini cuias la cuenta");
+            if (map.AndesLabel != null && map.AndesLabel.gameObject.activeInHierarchy && map.AndesLabel.text.Length > 0)
+            {
+                Assert.That(chip.Overlaps(StopCardTests.CanvasRect(map.AndesLabel.rectTransform, map.Canvas)), Is.False, "«Andes ↑»");
+            }
+
+            map.Close();
         }
 
         [UnityTest]

@@ -74,12 +74,11 @@ namespace AF.UI
         private const float ToucanScale = RiverCrew.ToucanDp / 19.8f;
 
         // El tucuxi junto a Rosa: un poco por detrás y más abajo (dp de la vista Mundo) [P].
-        private static readonly Vector2 TucuxiBesideRosa = new Vector2(-9f, -6f);
+        private static readonly Vector2 TucuxiBesideRosa = new Vector2(-16f, -9f);
 
-        // Dónde se quedan en su tramo, respecto de la parada donde se unieron (dp de la vista Mundo) [P]: el tucán en la orilla y el
-        // tucuxi en el agua, sin pisar la mini cuia (24 × 36 dp).
+        // Dónde se quedan en su tramo [P]: donde se unieron, en el punto de la canoa con su nivel ganado (por el agua: el tucuxi en el
+        // cauce, nunca en el lago de Tefé, D-069 «Puntos sensibles»), el tucán apartado a la orilla (dp de la vista Mundo).
         private static readonly Vector2 ToucanHomeOffset = new Vector2(18f, -14f);
-        private static readonly Vector2 TucuxiHomeOffset = new Vector2(-20f, -10f);
 
         private readonly MapCrewArt _crewArt = new MapCrewArt();
         private bool _crewOn;
@@ -513,10 +512,10 @@ namespace AF.UI
                 _cameoTree.rectTransform.anchoredPosition = Vector2.zero;
                 SetActive(_cameoTree, true);
                 Place(_cameoBody, perch, 0f);
-                foreach (Image monkey in new[] { _cameoBody, _cameoHead, _cameoArm })
-                {
-                    monkey.rectTransform.localScale = new Vector3(CameoMonkeyScale, CameoMonkeyScale, 1f); // que se lea junto al árbol
-                }
+                var monkey = new Vector3(CameoMonkeyScale, CameoMonkeyScale, 1f); // que se lea junto al árbol
+                _cameoBody.rectTransform.localScale = monkey;
+                _cameoHead.rectTransform.localScale = monkey;
+                _cameoArm.rectTransform.localScale = monkey;
 
                 Place(_cameoHead, perch + (((ProceduralArt.MonkeyNeck - new Vector2(5f, 6f)) + new Vector2(0f, 3.4f)) * CameoMonkeyScale), 0f);
                 Place(_cameoArm, perch + ((ProceduralArt.MonkeyShoulder - new Vector2(5f, 6f)) * CameoMonkeyScale), 70f);
@@ -797,19 +796,24 @@ namespace AF.UI
                     RectTransform r = _tucuxiHome.rectTransform;
                     float w = RiverCrew.TucuxiDp;
                     CrewDraw.SetSize(r, new Vector2(w, w * (ProceduralArt.CrewCell(CrewPiece.Tucuxi).height / (float)ProceduralArt.CrewCell(CrewPiece.Tucuxi).width)));
-                    CrewDraw.SetPos(r, HomePoint(map!, routes!, RiverCrew.TucuxiJoinLevel) + TucuxiHomeOffset);
+                    CrewDraw.SetPos(r, HomePoint(map!, routes!, RiverCrew.TucuxiJoinLevel)); // en el cauce
                     CrewDraw.SetRotation(r, _figureAngle);
                 }
             }
         }
 
-        // La parada donde se unió (la del 10k anterior a su nivel), en coordenadas locales del contenido.
+        // Donde se unió: el punto de la canoa con su nivel ganado (21: saliendo de Alter do Chão; 71: saliendo de Tefé por el Solimões),
+        // por el agua, en coordenadas locales del contenido.
         private Vector2 HomePoint(RiverMap map, RiverRoutes routes, int joinLevel)
         {
-            int stop = (joinLevel - 1) / RiverStopCatalog.LevelsPerStop;
-            RiverStopRoute? at = routes.At(Mathf.Min(stop, routes.LegCount - 1));
-            return at != null ? _space.ToLocal(PlacePoint(map, at.At)) : Vector2.zero;
+            return _space.ToLocal(CanoeAt(map, routes, joinLevel));
         }
+
+        /// <summary>El tucuxi que se quedó en su tramo (tests: dónde está), o null.</summary>
+        internal RectTransform? TucuxiHomeRect => _tucuxiHome != null ? _tucuxiHome.rectTransform : null;
+
+        /// <summary>El tucán que se quedó en su tramo (tests), o null.</summary>
+        internal RectTransform? ToucanHomeRect => _toucanHome?.Root;
 
         private void ApplyCameo()
         {

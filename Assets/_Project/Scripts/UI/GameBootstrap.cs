@@ -2662,6 +2662,7 @@ namespace AF.UI
             _mapScreen?.ReleaseTownArt(); // D-069, M2-2: ni el atlas de los pueblos
             _mapScreen?.ReleaseCapiArt(); // D-069, M2-3: ni el del rig de Capi
             _mapScreen?.ReleaseCrewArt(); // D-069, M2-4: ni el de la tripulación
+            _screen?.WorldBannerView.TravelStrip.ReleaseCrewArt(); // ni el de la tripulación del banner de mundo
             if (_backAction != null)
             {
                 _backAction.performed -= OnBackPerformed;
