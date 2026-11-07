@@ -44,6 +44,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-066 | 2026-10-31 | Motor de marketing liderado por Spark | Decidida por el dueño. Encargo `docs/dev/traspaso/spark-marketing.md`: investigación automatizada de referencias, fábrica de contenido (imagen, vídeo, audio y edición), playables, publicación automática en redes, pruebas de pago y medición; el escritorio hace el modo de captura, el kit de exportación y la atribución (E1-E6). Preguntas Q-MK-1 a Q-MK-10 con la recomendada; las [dueño] esperan |
 | D-067 | 2026-10-31 | iOS ya, en la Mac mini; sin publicidad pagada hasta tener iOS | Decidida por el dueño. Equipo Mac (Claude Code en la Mac mini, ramas `mac/*`) con el encargo `docs/dev/traspaso/mac-ios.md`; I-1 a I-8 de `ios-hoja-de-ruta.md` con la recomendada. El marketing sigue solo con contenido orgánico; el pago (S6, S9 y Q-MK-4) espera a que iOS esté publicado. El repositorio `fill-game-marketing` ya existe |
 | D-068 | 2026-11-07 | Curva de la 1.1 por ciclos: menos cuias, más retos | Decidida por el dueño con las 13 recomendadas de `docs/dev/propuesta-curva-1.1.md` §8 (Aguapé y espeso, Lancha en el 363, turbias en Normal, A/B con `lvl_curve2_enabled`). Plan F0-F6. |
+| D-069 | 2026-11-07 | Mapa del río v2 (1.1) | Decidida por el dueño con las recomendadas de `docs/dev/propuesta-mapa-rio-v2.md` §8: los 4 bloques M2-1 a M2-4 en la 1.1, pantalla completa, Capi con emociones sin texto, contratos 29 y 30 en `/2`, `ui_map_v2`. |
 
 ---
 
@@ -5114,3 +5115,37 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Pendiente del dueño:**
   - el dato de Analytics de cuántos jugadores pasan del 300 (F1);
   - la curación de los packs (F5).
+
+## D-069 · Mapa del río v2 (1.1): el río vivo, pueblos de paso, Capi al remo y la tripulación
+
+- **Fecha:** 2026-11-07.
+- **Origen:** petición del dueño: «mejorar la visualización del río, realmente subirlo de nivel, que se vea mejor, mejorar las orillas, pasar por más ciudades intermedias, tener más participación de Capi; luego se pueden unir más personajes subiendo el río». Propuesta: `docs/dev/propuesta-mapa-rio-v2.md`, con la maqueta en `docs/research/mapa-del-rio/v2/` (e7360931).
+- **Estado:** decidida por el dueño el 2026-11-07 con las recomendadas («Sí, el Mapa v2»):
+  - **P1 (a):** los 4 bloques en la 1.1, unos 29 días de agente:
+    - M2-1, el río vivo;
+    - M2-2, pueblos de paso;
+    - M2-3, Capi al remo;
+    - M2-4, la tripulación.
+  - **P2 (a):** el Mapa ocupa la pantalla completa, sin la placa ni el marco.
+  - **P3 (a):** Capi muestra emociones sin texto, en una burbuja. Q3-A no cambia; las frases quedan para la 1.2 detrás de una clave.
+  - **P4 (a):** de los 22 pueblos candidatos entran los que `tools/river-map` ancle a 5 km o menos y tengan el nombre verificado. El dato del pueblo solo sale si es [V] y lo revisó Gemini (D-054); sin dato, solo el nombre.
+  - **P5 (a):** la excursión local en los 25 tramos de 0 km. Q1-A no cambia.
+  - **P6 (a):** se unen el tucán (nivel 21) y el tucuxi (nivel 71), con los cameos de los miquitos. Los demás compañeros, en la 1.2.
+  - **P7 (a):** los contratos 29 y 30 pasan a `/2` (`af-river-map/2` y `af-river-stops/2`).
+  - **P8 (a):** claves de Remote Config `ui_map_v2` (encendida por defecto, con respaldo al Mapa de la 1.0), `ui_map_crew` y `ui_map_towns`, en 08 §9.
+  - **P9 (a):** todo el arte por código (D-052). El encargo al artista, solo si las capturas de la ficha lo piden.
+  - **P10 (a), condicionada:** si el mundo 10 (701-820) llega en la 1.1, llega con sus 6 pueblos del río Negro y con São Gabriel revisado por el asesor. Depende del contenido (D-068, F7).
+  - **P11 (a):** ningún evento de analítica nuevo.
+- **Puntos sensibles** (propuesta §9.5):
+  - Parintins sin los bois;
+  - Belén y Boca Colorado fuera;
+  - sin malocas en la 1.1;
+  - Rosa nada en el cauce, nunca en el lago de Tefé;
+  - un pueblo sin verificar no entra.
+- **Plan** (propuesta §7.1):
+  - M2-1 primero (herramientas y contratos `/2`, luego Unity);
+  - M2-2 y M2-3 después;
+  - M2-4 al final.
+  
+  Como mucho 2 carriles con Editor a la vez (regla dura 7). Los cambios al canon de §9.4 los hace cada bloque cuando los aplica.
+- **Objetivo de rendimiento:** 60 fps en el teléfono de pruebas y 30 fps o más en gama baja, medidos con la sonda `AF_PERF` antes de cerrar M2-1. Las texturas suman 6 MiB más, solo con el Mapa abierto.
