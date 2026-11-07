@@ -27,6 +27,12 @@ namespace AF.Presentation
         /// <summary>Rampa de entrada y salida de un tramo de orilla, en fracción de su largo [P].</summary>
         public const float BankRamp = 0.25f;
 
+        /// <summary>Un tramo de orilla más corto que esto en pantalla no sale (dp) [P]: sería un pico.</summary>
+        public const float BankMinDp = 24f;
+
+        /// <summary>Desde <see cref="BankMinDp"/>, el tramo crece hasta su ancho en este largo (dp) [P].</summary>
+        public const float BankFullDp = 48f;
+
         /// <summary>Opacidad de la várzea junto al agua [P]; hacia fuera se apaga a 0.</summary>
         public const float VarzeaAlpha = 0.5f;
 
@@ -137,7 +143,9 @@ namespace AF.Presentation
 
                 float t = (s - bank.S0) / Mathf.Max(1e-6f, bank.S1 - bank.S0);
                 float ramp = Mathf.SmoothStep(0f, 1f, Mathf.Min(t, 1f - t) / BankRamp);
-                float w = bank.WidthDp * ramp;
+                // Un tramo más corto que unas pocas secciones en pantalla sería un pico, no una orilla: sale con el zoom.
+                float lengthDp = (bank.S1 - bank.S0) * _arcLength * _space.DpPerUnit;
+                float w = bank.WidthDp * ramp * Mathf.Clamp01((lengthDp - BankMinDp) / BankFullDp);
                 if (w > best)
                 {
                     best = w;

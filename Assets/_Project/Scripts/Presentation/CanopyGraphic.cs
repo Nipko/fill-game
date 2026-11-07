@@ -38,13 +38,13 @@ namespace AF.Presentation
         public const float MaxCopaDp = 48f;
 
         /// <summary>Con menos de estos dp por celda, solo la capa gruesa (lod 0) [P].</summary>
-        public const float FineLodCellDp = 22f;
+        public const float FineLodCellDp = 12f;
 
         /// <summary>Las palmeras pueden quedar a este tanto del borde del agua (dp) [P]; las copas, a <see cref="CopaClearDp"/>.</summary>
         public const float PalmClearDp = 3f;
 
         /// <summary>Hueco entre el borde del agua (con su orilla) y una copa (dp) [P].</summary>
-        public const float CopaClearDp = 12f;
+        public const float CopaClearDp = 6f;
 
         /// <summary>Tinte de las copas más lejanas del río [P].</summary>
         public const float FarTint = 0.80f;
@@ -58,7 +58,7 @@ namespace AF.Presentation
             new Vector3(0f, 0f, 1f), new Vector3(0.30f, 0.16f, 0.86f), new Vector3(-0.28f, 0.20f, 0.9f), new Vector3(0.04f, -0.30f, 0.8f),
         };
 
-        private static readonly float[] ClusterScale = { 1.05f, 0.80f, 0.68f, 0.60f };
+        private static readonly float[] ClusterScale = { 1.15f, 0.85f, 0.72f, 0.62f };
         private static readonly float[] SizeScale = { 0.86f, 1f, 1.14f };
 
         private RiverVegetation? _veg;
@@ -134,7 +134,7 @@ namespace AF.Presentation
             float cellDp = cellKm * dpPerKm;
             lodMax = cellDp < FineLodCellDp ? 0 : 1;
             spacingDp = lodMax == 0 ? 2f * cellDp : cellDp;
-            cluster = spacingDp < 24f ? 1 : spacingDp < 36f ? 2 : spacingDp < 52f ? 3 : MaxCluster;
+            cluster = spacingDp < 20f ? 1 : spacingDp < 30f ? 2 : spacingDp < 45f ? 3 : MaxCluster;
         }
 
         /// <inheritdoc />
@@ -153,24 +153,34 @@ namespace AF.Presentation
             Density(dpPerKm, veg.CellKm, out int lodMax, out int cluster, out float spacingDp);
             float[] xy = veg.Xy;
             float alpha = color.a;
+
+            // Primera pasada: cuántos puntos salen, para repartir el tope entre todos (sin ella, el tope cortaría la selva de abajo:
+            // los puntos van por filas de arriba abajo).
+            int eligible = 0;
+            for (int i = 0; i < veg.Count; i++)
+            {
+                if (Shows(veg, i, lodMax, cluster, spacingDp, dpPerKm))
+                {
+                    eligible++;
+                }
+            }
+
+            cluster = Mathf.Clamp(eligible > 0 ? MaxQuads / eligible : cluster, 1, cluster);
+            int stride = Mathf.Max(1, Mathf.CeilToInt(eligible / (float)MaxQuads)); // la Cuenca entera: uno de cada «stride», repartidos
+            int seen = 0;
             for (int i = 0; i < veg.Count && _quads < MaxQuads; i++)
             {
-                float x = xy[2 * i];
-                float y = xy[(2 * i) + 1];
-                if (!_region.Contains(new Vector2(x, y)) || veg.Lod(i) > lodMax)
+                if (!Shows(veg, i, lodMax, cluster, spacingDp, dpPerKm) || (seen++ % stride) != 0)
                 {
                     continue;
                 }
 
+                float x = xy[2 * i];
+                float y = xy[(2 * i) + 1];
                 RiverVegKind kind = veg.Kind(i);
                 float distDp = veg.DistanceKm(i) * dpPerKm;
                 int copies = kind == RiverVegKind.Palm ? 1 : cluster;
                 float baseDp = spacingDp * ClusterScale[copies - 1] * SizeScale[veg.Size(i)];
-                float clear = _riverHalfDp + (kind == RiverVegKind.Palm ? PalmClearDp : CopaClearDp);
-                if (veg.DistanceKm(i) < RiverVegetation.MaxDistanceKm && distDp - (0.5f * baseDp) < clear)
-                {
-                    continue; // bajo el agua o la orilla a este zoom
-                }
 
                 _points++;
                 float far = Mathf.Clamp01((distDp - FarFromDp) / (3f * FarFromDp));
@@ -187,6 +197,21 @@ namespace AF.Presentation
                     Quad(vh, c, ps, piece, new Color(tint, tint, tint, alpha));
                 }
             }
+        }
+
+        // El punto i sale: de una capa visible, en la región y, a este zoom, fuera del agua y de las orillas.
+        private bool Shows(RiverVegetation veg, int i, int lodMax, int cluster, float spacingDp, float dpPerKm)
+        {
+            if (veg.Lod(i) > lodMax || !_region.Contains(new Vector2(veg.Xy[2 * i], veg.Xy[(2 * i) + 1])))
+            {
+                return false;
+            }
+
+            RiverVegKind kind = veg.Kind(i);
+            int copies = kind == RiverVegKind.Palm ? 1 : cluster;
+            float baseDp = spacingDp * ClusterScale[copies - 1] * SizeScale[veg.Size(i)];
+            float clear = _riverHalfDp + (kind == RiverVegKind.Palm ? PalmClearDp : CopaClearDp);
+            return veg.DistanceKm(i) >= RiverVegetation.MaxDistanceKm || (veg.DistanceKm(i) * dpPerKm) - (0.35f * baseDp) >= clear;
         }
 
         private static int PieceOf(RiverVegKind kind, int tone, int copy, int index)

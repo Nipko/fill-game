@@ -386,20 +386,21 @@ namespace AF.Presentation
                 pc.FillCapsule(corner.x + (dir.x * 12f), corner.y + (dir.y * 12f), tip.x, tip.y, 1.6f, new Color(0.55f, 0.75f, 0.45f, 0.5f));
             }
 
-            // La heliconia: brácteas rojas en zigzag con la punta amarilla.
-            Vector2 stem = corner + (new Vector2(sign * 70f, sign * 46f));
+            // La heliconia: un tallo con brácteas rojas alternas, como barcas, con el borde amarillo.
+            Vector2 stem = corner + new Vector2(sign * 64f, sign * 40f);
+            Vector2 top = stem + new Vector2(sign * 44f, sign * 86f);
             Color red = Palette.Hex(0xD9342B);
             Color yellow = Palette.Hex(0xF2C230);
+            pc.FillCapsule(stem.x, stem.y, top.x, top.y, 2.2f, Palette.Hex(0x2F6B2E));
             for (int k = 0; k < 4; k++)
             {
-                Vector2 b = stem + new Vector2(sign * k * 16f, sign * k * 22f);
+                Vector2 b = Vector2.Lerp(stem, top, (k + 0.5f) / 4f);
                 float side = k % 2 == 0 ? 1f : -1f;
-                Vector2 p0 = b;
-                Vector2 p1 = b + new Vector2(side * 26f, sign * 6f);
-                Vector2 p2 = b + new Vector2(sign * 4f, sign * 18f);
-                pc.FillTriangle(p0, p1, p2, red);
-                pc.FillTriangle(p0, p2, p1, red);
-                pc.FillCircle(p1.x, p1.y, 4f, yellow);
+                float angle = (topRight ? Mathf.PI : 0f) + 1.05f + (side * 0.75f);
+                var dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+                Vector2 c = b + (dir * 12f);
+                Leaf(pc, c, 14f, 5.5f, angle, 1.5f, red);
+                Leaf(pc, c + (dir * 2f) + new Vector2(0f, 2f), 11f, 1.6f, angle, 1f, yellow);
             }
 
             return pc;
@@ -429,6 +430,11 @@ namespace AF.Presentation
                     {
                         pc.Blend(x, y, near, Mathf.Clamp01(nearH - fy));
                     }
+
+                    // El pie se funde con la niebla: sin borde de abajo.
+                    Color c = pc.Get(x, y);
+                    c.a *= Mathf.SmoothStep(0f, 1f, fy / (AndesHeightPx * 0.45f));
+                    pc.Set(x, y, c);
                 }
             }
 

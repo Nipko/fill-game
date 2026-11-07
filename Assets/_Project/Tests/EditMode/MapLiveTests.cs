@@ -325,10 +325,13 @@ namespace AF.Tests.EditMode
         [Test]
         public void Canopy_Density_ByZoom()
         {
-            CanopyGraphic.Density(0.47f, 30f, out int lod, out int cluster, out float spacing);
-            Assert.That(lod, Is.EqualTo(0), "a 4× (14 dp por celda), solo la capa gruesa");
-            Assert.That(spacing, Is.EqualTo(28.2f).Within(0.1f));
-            Assert.That(cluster, Is.EqualTo(2));
+            CanopyGraphic.Density(0.30f, 30f, out int lod, out int cluster, out float spacing);
+            Assert.That(lod, Is.EqualTo(0), "con 9 dp por celda, solo la capa gruesa");
+            Assert.That(spacing, Is.EqualTo(18f).Within(0.1f));
+            Assert.That(cluster, Is.EqualTo(1));
+            CanopyGraphic.Density(0.47f, 30f, out lod, out cluster, out spacing);
+            Assert.That(lod, Is.EqualTo(1), "a 4× (14 dp por celda), las dos capas");
+            Assert.That(spacing, Is.EqualTo(14.1f).Within(0.1f));
             CanopyGraphic.Density(1.77f, 30f, out lod, out cluster, out spacing);
             Assert.That(lod, Is.EqualTo(1), "a 15×, las dos capas");
             Assert.That(cluster, Is.EqualTo(CanopyGraphic.MaxCluster));
@@ -389,7 +392,7 @@ namespace AF.Tests.EditMode
             canopy.SetRegion(new Rect(0f, 0f, 1f, _map.Height));
             CanopyMesh(canopy);
             Assert.That(canopy.LastQuadCount, Is.LessThanOrEqualTo(CanopyGraphic.MaxQuads));
-            Assert.That(canopy.LastQuadCount, Is.EqualTo(CanopyGraphic.MaxQuads), "la cuenca entera llega al tope");
+            Assert.That(canopy.LastQuadCount, Is.GreaterThan(CanopyGraphic.MaxQuads / 2), "la cuenca entera, repartida hasta el tope (no cortada por abajo)");
         }
 
         // ---------------------------------------------------------------------------------------------- arte

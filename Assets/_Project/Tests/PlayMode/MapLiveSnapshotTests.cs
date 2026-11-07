@@ -17,7 +17,7 @@ namespace AF.Tests.PlayMode
     /// Capturas del Mapa del río v2, bloque M2-1 (D-069; propuesta del Mapa v2 §9.3: «capturas de antes y después en 3 tramos
     /// (Estuario, Encuentro y Madre de Dios) a 320, 360 y 412 dp»): cada tramo con <c>ui_map_v2</c> apagada (<c>antes</c>, el Mapa de
     /// la 1.0 con los datos <c>/2</c>) y encendida (<c>despues</c>), en la captura de siempre (1080 × 2340 px) con 3,375, 3 y 2,62
-    /// px/dp. Estuario: «Jugar · Nivel 11» con la vista llevada a la casa de TiTino, en Belém; Encuentro: el 46, camino del Encuentro de
+    /// px/dp (el de 412 dp tiene el lienzo de 360 dp, a 2,62 px/dp: <see cref="GameScreen.CanvasScale"/>). Estuario: «Jugar · Nivel 11» con la vista llevada a la casa de TiTino, en Belém; Encuentro: el 46, camino del Encuentro de
     /// las Aguas; Madre de Dios: el 346. Los PNG quedan en <c>Logs/snapshots/es-419/m21_&lt;tramo&gt;_&lt;ancho&gt;dp_&lt;antes|despues&gt;.png</c>
     /// y cada uno escribe su línea <c>AF_MAP</c>. Explícito: necesita gráficos (sin <c>-nographics</c>).
     /// </summary>
@@ -82,7 +82,9 @@ namespace AF.Tests.PlayMode
                             yield return SnapshotKit.Wait(0.3f);
                         }
 
-                        Assert.That(map.CanvasWidth, Is.EqualTo(dp).Within(0.6f), "lienzo de " + dp + " dp");
+                        // Un teléfono de 412 dp tiene el lienzo de 360 dp de siempre, más grande (GameScreen.CanvasScale: solo los de
+                        // menos de 360 dp lo estrechan).
+                        Assert.That(map.CanvasWidth, Is.EqualTo(Mathf.Min(dp, GameScreen.ReferenceWidth)).Within(0.6f), "lienzo de " + dp + " dp");
                         string file = "m21_" + name + "_" + dp.ToString(CultureInfo.InvariantCulture) + "dp_" + (live ? "despues" : "antes");
                         SnapshotKit.Save(dir, file);
                         Debug.Log("AF_MAP " + file + ": v2 " + map.LiveActive + ", vista " + map.View + ", zoom "

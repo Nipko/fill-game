@@ -45,10 +45,10 @@ namespace AF.Presentation
         public static readonly Color SavannaLive = Palette.Hex(0xC8B65A);
 
         /// <summary>Roca andina del Mapa v2 (<c>rock</c>) [P].</summary>
-        public static readonly Color RockLive = Palette.Hex(0x8F7E68);
+        public static readonly Color RockLive = new Color(0x84 / 255f, 0x80 / 255f, 0x60 / 255f, 0.72f);
 
         /// <summary>Nieve del Mapa v2 (<c>snow</c>) [P].</summary>
-        public static readonly Color SnowLive = Palette.Hex(0xEEF4F6);
+        public static readonly Color SnowLive = new Color(0xE2 / 255f, 0xEB / 255f, 0xEE / 255f, 0.8f);
 
         /// <summary>
         /// Acabado del Mapa v2 (D-069, M2-1): cada zona con su color del Mapa v2 y la opacidad de su vértice

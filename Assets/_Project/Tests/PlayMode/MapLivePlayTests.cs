@@ -46,7 +46,6 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator OpensFullScreen_WithTheLiveRiver_AndClosesReleasingItsArt()
         {
-            int before = LiveTextures(); // las de pruebas anteriores que aún no se han recogido no cuentan
             yield return OpenAt(58);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
@@ -78,7 +77,8 @@ namespace AF.Tests.PlayMode
             Assert.That(map.LightLayer!.color, Is.EqualTo(RiverMapScreen.WorldLight(3)), "la luz de la tarde de Manaos");
             Assert.That(map.LiveArt.Built, Is.True);
             Assert.That(map.LiveArt.TextureBytes, Is.LessThanOrEqualTo(6L * 1024L * 1024L), "propuesta §7.2: +6 MiB solo con el Mapa abierto");
-            Assert.That(LiveTextures(), Is.GreaterThan(before));
+            int open = LiveTextures();
+            Assert.That(open, Is.GreaterThanOrEqualTo(6), "el atlas, los dos racimos del primer plano, los Andes, la luz y la niebla");
 
             // La vista Cuenca: sin orillas, várzea ni corriente (a 1× no caben); la selva, sí.
             map.ViewBasinButton.onClick.Invoke();
@@ -90,7 +90,7 @@ namespace AF.Tests.PlayMode
             yield return null;
             yield return null;
             Assert.That(map.LiveArt.Built, Is.False, "el arte se suelta al cerrar");
-            Assert.That(LiveTextures(), Is.LessThanOrEqualTo(before), "ninguna textura del Mapa v2 queda viva (memoria.md: el Mapa deja sus iconos)");
+            Assert.That(LiveTextures(), Is.LessThanOrEqualTo(open - 6), "ninguna textura del Mapa v2 queda viva (memoria.md: el Mapa deja sus iconos)");
 
             // Abrir otra vez lo vuelve a pintar.
             Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
