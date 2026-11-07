@@ -53,7 +53,7 @@ internal static class SpecValidator
         ("CURVE-BASE", "curva 2 (D-068; 08 sec. 4.1): las celdas anteriores a curve.from_level son las de base_spec en base_variant (historia, no se generan) y from_level abre un ciclo de 20"),
         ("ROLE-CAPS", "curva 2: K de cada nivel (k_plan o k_cells) dentro del tope de su papel y K + vacios del plan <= el tope de cuias (role_caps; 03 sec. 12; D-068 P2 A)"),
         ("MURKY-NORMAL", "curva 2: estreno de las turbias en Normal en sus tableros (murky_normal.debut: comodidad de p3-p5, con estrella y sin otra mecanica) y comfort_per_cycle comodidades turbias por ciclo desde el ciclo del estreno (D-068 P7 A; F1-1)"),
-        ("CURVE-MECH", "curva 2: el Aguape, el Aguape espeso y la Lancha solo desde curve.from_level (pack_schema 5), y la Lancha con la Liana o la Flor solo desde el 401 (02 sec. 9.2 regla 7; D-068)"),
+        ("CURVE-MECH", "curva 2: el Aguape, el Aguape espeso y la Lancha solo desde curve.from_level (pack_schema 5), la Lancha con la Liana o la Flor solo desde el 401 (02 sec. 9.2 regla 7) y nunca en un hito ni en la cuspide (necesita T >= K + k + 1; D-068, preguntas de F3 y F3b)"),
         ("PRESSURE", "aviso: cada hito de la curva 2 tiene escalon en pressure_plan, que sube (o se queda) dentro del mundo hasta la cuspide; aviso si el escalon que se espera de la celda (con el Aguape) no llega al del plan (03 sec. 12)"),
     ];
 
@@ -666,7 +666,7 @@ internal static class SpecValidator
             }
         }
 
-        // CURVE-MECH: las mecánicas de la 1.1 (Aguapé, Aguapé espeso y Lancha; D-068) solo en la curva 2, y la Lancha con la Liana
+        // CURVE-MECH: las mecánicas de la 1.1 (Aguapé, Aguapé espeso y Lancha; D-068) solo en la curva 2, la Lancha fuera de los hitos y la Lancha con la Liana
         // (con fruta o de cuenta) o la Flor solo desde el 401 (02 §9.2 regla 7; 03 §11). Los estrenos (303-305, 347-348 y 363-365)
         // los comprueban DEBUT-LEVEL y DEBUT-SLOT como los de cualquier mecánica de la tabla.
         foreach (CalendarCell c in cells)
@@ -680,6 +680,13 @@ internal static class SpecValidator
                 && c.Mechanics.Any(m => m.Code is MechanicCodes.Liana or MechanicCodes.LianaCount or MechanicCodes.Flor))
             {
                 Fail("CURVE-MECH", c.Level, $"Lancha con la Liana antes del {LanchaWithLianaFrom} ({c.Short}; 02 sec. 9.2 regla 7)");
+            }
+
+            // La Lancha nunca en un hito ni en la cúspide (D-068, añadido «las preguntas de F3 y F3b»): necesita T >= K + k + 1 (la
+            // carga, la holgura y sus k vacías), y con K 11-12 pasa del tope de 13-14 cuias.
+            if (c.Has(MechanicCodes.Lancha) && c.Level >= curve.FromLevel && RoleAt(c.Level) == SlotRole.Milestone)
+            {
+                Fail("CURVE-MECH", c.Level, $"Lancha en un hito o en la cuspide ({c.Short}): necesita T >= K + k + 1 y no cabe en su tope (D-068)");
             }
         }
 

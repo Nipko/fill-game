@@ -132,6 +132,8 @@ internal static class CurveQaSelfTest
         Expect("lancha_con_liana_desde_el_401", CurveChecks.Lancha(spec, Lancha(Liana(Level(spec, 450, 9, 8), 6), 3, 3)), null);
         Expect("lancha_intro_en_su_estreno", CurveChecks.Lancha(spec, Lancha(Level(spec, 363, 9, 8), 3, 3) with { Intro = "lancha" }), null);
         Expect("lancha_intro_fuera_de_su_estreno", CurveChecks.Lancha(spec, boat with { Intro = "lancha" }), "QA-LANCHA");
+        Expect("lancha_en_un_hito", CurveChecks.Lancha(spec, Lancha(Level(spec, 440, 13, 11), 3, 3)), "QA-LANCHA");
+        Expect("lancha_en_la_cuspide", CurveChecks.Lancha(spec, Lancha(Level(spec, 560, 14, 12), 3, 3)), "QA-LANCHA");
 
         // Lectura: un pack con el Aguapé y rows (pack_schema 5).
         string path = Path.Combine(Path.GetTempPath(), "af_curve_selftest.json");
