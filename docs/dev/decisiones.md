@@ -4952,6 +4952,7 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   - `ci/size-gate.ps1` mide el archivo sin `BUNDLE-METADATA/` (mapping y símbolos, ~27 MB que Play nunca sirve); la medida de Play no cambia.
 - **Medida del ensayo** (escritorio x64, mismo commit): dex 28,98 → 12,07 MB sin comprimir; descarga de Play (máx.) 57,00 → 51,30 MB; archivo AAB 58,01 → 79,49 MB (52,29 MB sin `BUNDLE-METADATA`). Todas las compuertas en verde.
 - **Pendiente:** la prueba de humo en el teléfono con el ensayo (`docs/dev/release.md` §8 y la lista del informe: compra de prueba, recompensado, Liga y App Check, aviso, Age Signals, guardado en la nube, borrado de cuenta, splash, foco de audio, Play Games); medir el `.dex mmap` con `AF_PERF mem`; tras subir la 1.1, comprobar en Play Console › Explorador de app bundles › «Descargas» que figuran el archivo de desofuscación y los símbolos. **Cómo revertir:** `MinifyRelease = false`, `-Method Setup` y quitar `check-r8-mapping` de los workflows.
+- **Aprobado por el dueño el 2026-11-07** («Sí, apruebo»): R8 en el release de la 1.1 y que `ci/size-gate.ps1` mida el archivo sin `BUNDLE-METADATA/`. La medida de Play no cambia.
 
 ### D-059, añadido del 2026-11-06: borde a borde y pantallas grandes (1.1)
 
