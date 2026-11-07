@@ -83,19 +83,18 @@ namespace AF.Save.Tests
             Assert.That(p.Clone().Progress.Curve2FromLevel, Is.EqualTo(312));
         }
 
-        [TestCase(301, 351, 301)]
-        [TestCase(351, 301, 301)]
-        [TestCase(1, 400, 1)]
-        public void Merge_TakesTheMinimum(int winner, int loser, int expected)
+        // (from, jugado) de cada perfil → el resultado.
+        [TestCase(301, 320, 301, 310, 301, TestName = "Merge_TwoCurve2Players_TheMinimum")]
+        [TestCase(1, 0, 451, 450, 451, TestName = "Merge_Reinstall_EmptyProfileDoesNotLowerTheOther")]
+        [TestCase(451, 450, 1, 0, 451, TestName = "Merge_Reinstall_EitherSide")]
+        [TestCase(1, 12, 451, 450, 451, TestName = "Merge_NewPhoneWithAFewEarlyLevels_KeepsTheOldBoards")]
+        [TestCase(321, 320, 451, 450, 451, TestName = "Merge_TwoCurve1Players_ProtectsBothCurve1Boards")]
+        [TestCase(201, 200, 1, 0, 1, TestName = "Merge_NothingPlayedIn301To700_TheMinimum")]
+        [TestCase(301, 350, 451, 450, 301, TestName = "Merge_EachDeviceWithACurve_TheAcceptedEdgeCase_TheMinimum")]
+        public void Merge_TakesTheMinimum_WithoutChangingPlayedBoards(int fromA, int playedA, int fromB, int playedB, int expected)
         {
-            var a = new ProgressData { Curve2FromLevel = winner };
-            var b = new ProgressData { Curve2FromLevel = loser };
-
-            a.MergeCurve2FromLevel(b);
-
-            Assert.That(a.Curve2FromLevel, Is.EqualTo(expected));
-            Assert.That(b.Curve2FromLevel, Is.EqualTo(loser), "el perdedor no cambia");
-            Assert.That(() => a.MergeCurve2FromLevel(null!), Throws.ArgumentNullException);
+            Assert.That(ProgressData.MergedCurve2FromLevel(fromA, playedA, fromB, playedB), Is.EqualTo(expected));
+            Assert.That(ProgressData.MergedCurve2FromLevel(fromB, playedB, fromA, playedA), Is.EqualTo(expected), "simétrico");
         }
 
         [Test]
@@ -110,7 +109,21 @@ namespace AF.Save.Tests
 
             CloudMergeResult result = CloudMerge.Resolve(local, cloud);
 
-            Assert.That(result.Merged.Progress.Curve2FromLevel, Is.EqualTo(301), "08 §4.3: en la fusión gana el mínimo (más niveles nuevos)");
+            Assert.That(result.Merged.Progress.Curve2FromLevel, Is.EqualTo(301), "08 §4.3: en la fusión gana el mínimo (el caso límite aceptado)");
+        }
+
+        [Test]
+        public void CloudResolve_ReinstallWithAMigratedCloud_KeepsTheCloudValue()
+        {
+            // Revisión de F4: un perfil nuevo (1, nada jugado) no baja el de la nube migrada a 451, gane quien gane.
+            Profile local = Profile.CreateNew(new ManualClock(SampleProfiles.T0), 5);
+            Profile cloud = Profile.CreateNew(new ManualClock(SampleProfiles.T0), 5);
+            cloud.Progress.MaxLevel = 450;
+            cloud.Progress.NextLevel = 451;
+            cloud.Progress.Curve2FromLevel = 451;
+
+            Assert.That(CloudMerge.Resolve(local, cloud).Merged.Progress.Curve2FromLevel, Is.EqualTo(451));
+            Assert.That(CloudMerge.Resolve(cloud, local).Merged.Progress.Curve2FromLevel, Is.EqualTo(451));
         }
     }
 }

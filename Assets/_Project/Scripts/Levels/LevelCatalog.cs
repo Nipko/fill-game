@@ -349,11 +349,17 @@ namespace AF.Levels
                     }
                 }
 
-                foreach (KeyValuePair<string, LevelDefinition> entry in byReplaces)
+                // Los huérfanos, en el orden de los paquetes (un registro determinista).
+                for (int p = 0; p < curvePacks.Count; p++)
                 {
-                    if (!used.Contains(entry.Key))
+                    IReadOnlyList<LevelDefinition> levels = curvePacks[p] == null || !curvePacks[p].IsCurve ? NoLevels : curvePacks[p].Levels;
+                    for (int i = 0; i < levels.Count; i++)
                     {
-                        warn?.Invoke("curva 2: " + entry.Value.Id + " sustituye a " + entry.Key + ", que no está en el catálogo; se ignora.");
+                        string? replaces = levels[i].Replaces;
+                        if (replaces != null && !used.Contains(replaces) && ReferenceEquals(byReplaces[replaces], levels[i]))
+                        {
+                            warn?.Invoke("curva 2: " + levels[i].Id + " sustituye a " + replaces + ", que no está en el catálogo; se ignora.");
+                        }
                     }
                 }
             }
@@ -517,6 +523,8 @@ namespace AF.Levels
 
             return result;
         }
+
+        private static readonly LevelDefinition[] NoLevels = new LevelDefinition[0];
 
         private int[] _curve2 = new int[0];
 

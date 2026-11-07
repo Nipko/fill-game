@@ -5221,7 +5221,9 @@ Hecha en la rama `v11/curva-f4-cliente` (unity-gameplay-dev). Lo que deja el cli
   de la curva 1 del slot. Los pasos (2) y (3) son [P]: 08 §9 solo nombra `level_overrides`.
 - **Perfil:** `profile_schema` 3 con el paso 2 → 3, que fija `curve2_from_level` = `max_level` + 1 o, si el nivel en curso
   (`level_state`) va más allá, ese + 1 [P]. Un perfil nuevo empieza en 1; un documento del 3 sin el campo lee `max_level` + 1,
-  nunca 1 [P]. En la fusión, el mínimo.
+  nunca 1 [P]. En la fusión, el mínimo, llevado dentro de lo que cada perfil ya jugó en 301-700 [P] (revisión de F4): una
+  reinstalación o un teléfono nuevo (1, nada jugado) no bajan el valor de la nube; el choque de dos dispositivos con cada curva
+  sigue siendo el caso límite aceptado (pregunta 15 de 03), y ahí gana el mínimo.
 - **Remote Config:** las 6 claves de la 1.1 pasan de la nota a la tabla de 08 §9, regeneradas con `rc_defaults.py` y
   `rc_template.py` sobre la integración del Mapa v2 (265 claves; 259 parámetros en la plantilla). `lvl_murky_normal_max_hidden_units`
   la comprueba `tools/level-qa`; el cliente no la lee [P].
@@ -5236,5 +5238,6 @@ Hecha en la rama `v11/curva-f4-cliente` (unity-gameplay-dev). Lo que deja el cli
 - **Tutoriales:** `tutorial_aguape`, `tutorial_aguape_n2` y `tutorial_lancha` (con el k del nivel), en `pendiente_asesor` como todo
   tutorial, con EN y PT-BR traducidos con IA (pendientes de la revisión de D-054); dedo guía `AguapeSeal` (un vertido a la mata) y
   `LanchaEmpty` (un vertido que vacía una cuia) [P]. Las ocultas en Normal reutilizan T4 (`tutorial_murky`). TalkBack dice
-  «Aguapé», «Aguapé espeso» y «Lancha» (`mechanic.*` de `facts.csv` y el glosario).
+  «Aguapé», «Aguapé espeso» y «Lancha» (`mechanic.*` de `facts.csv` y el glosario); los dos del Aguapé, en `pendiente_asesor`
+  (flora), sin EN ni PT-BR hasta aprobar el español.
 - **GDD:** las copias de la lista de estrenos de 08 §9, 00 §6.5 y el contrato 1 dicen que la Tinaja no entra en la 1.1.
