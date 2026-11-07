@@ -43,6 +43,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-065 | 2026-10-30 | Gráficos de la ficha de Play con IA y tomas nuevas | Decidida por el dueño. Hecha por Spark (`spark/tienda-graficos`, integrada): el dueño eligió el concepto A como ficha; B y C, para una prueba de ficha tras el lanzamiento. Lo sube el dueño desde `docs/store-listing/graficos-v2/A/` |
 | D-066 | 2026-10-31 | Motor de marketing liderado por Spark | Decidida por el dueño. Encargo `docs/dev/traspaso/spark-marketing.md`: investigación automatizada de referencias, fábrica de contenido (imagen, vídeo, audio y edición), playables, publicación automática en redes, pruebas de pago y medición; el escritorio hace el modo de captura, el kit de exportación y la atribución (E1-E6). Preguntas Q-MK-1 a Q-MK-10 con la recomendada; las [dueño] esperan |
 | D-067 | 2026-10-31 | iOS ya, en la Mac mini; sin publicidad pagada hasta tener iOS | Decidida por el dueño. Equipo Mac (Claude Code en la Mac mini, ramas `mac/*`) con el encargo `docs/dev/traspaso/mac-ios.md`; I-1 a I-8 de `ios-hoja-de-ruta.md` con la recomendada. El marketing sigue solo con contenido orgánico; el pago (S6, S9 y Q-MK-4) espera a que iOS esté publicado. El repositorio `fill-game-marketing` ya existe |
+| D-068 | 2026-11-07 | Curva de la 1.1 por ciclos: menos cuias, más retos | Decidida por el dueño con las 13 recomendadas de `docs/dev/propuesta-curva-1.1.md` §8 (Aguapé y espeso, Lancha en el 363, turbias en Normal, A/B con `lvl_curve2_enabled`). Plan F0-F6. |
 
 ---
 
@@ -5083,3 +5084,33 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   - Mixpost Lite, PostSider y Posthive;
   - n8n y Ollama, por ahora.
 - **Respaldo:** Buffer, si Postiz no se sostiene.
+
+## D-068 · Curva de la 1.1 por ciclos: menos cuias, más retos
+
+- **Fecha:** 2026-11-07.
+- **Origen:** petición del dueño: «la estrategia de agregar y agregar más cuias no es viable, debemos ver cómo lo hacen otros, como Magic, que es como por ciclos […] colocando cuias congeladas que toca descongelarlas, tapadas, únicamente con colores […] pero a la vez en la cúspide de esos niveles va subiendo de dificultad». Propuesta: `docs/dev/propuesta-curva-1.1.md` (53581056).
+- **Estado:** decidida por el dueño el 2026-11-07, con todas las recomendadas («Sí, la curva»):
+  - P1 B: cambian los niveles 301-700, a partir del siguiente nivel que el jugador no haya jugado, y los niveles desde el 701.
+  - P2 A: topes de cuias por papel. Respiro 8-10, comodidad 9-11, reto 10-11, hito 12-13 y cúspide 13-14.
+  - P3 A: la cúspide es la firma de cada mundo (420, 560, 700…), y los hitos suben hasta ella.
+  - P4 A: la cuia congelada es el Aguapé (una mata de hojas que la sujeta).
+  - P5 A: la cuia congelada recibe vertidos, pero no da.
+  - P6 A, con B como variante: «únicamente con colores» es la Hoja atada, más frecuente. El Brote es la variante.
+  - P7 A: Aguas turbias también en Normal desde el 301, con 1-2 dosis en unos 20 % de los niveles. La tela que tapa la cuia entera queda para la 1.2, si se hace.
+  - P8 A: la Lancha entra en la 1.1 y se estrena en el 363.
+  - P9 B: la Palizada pasa a la 1.2.
+  - P10 A: prueba A/B 50/50 durante 2 semanas con `lvl_curve2_enabled`.
+  - P11 A: el Reto del río no cambia.
+  - P12 A: el premio por nivel no cambia. Se vigilan las Semillas por hora y los intersticiales con `econ_sim.py`.
+  - P13 A: Aguapé espeso (pide 2 sellos) desde el ciclo 341-360.
+- **Plan** (propuesta §7):
+  - F0: cambios al GDD de §6.7, por el carril de documentación.
+  - F1: medición previa; si los retos con K 9-10 no colocan, se ajustan los topes antes de escribir código.
+  - F2 (núcleo) y F3 (esquema, generador y QA), en paralelo.
+  - F4: cliente.
+  - F5: generar 301-700 de sustitución, con la curación del dueño.
+  - F6: prueba en el teléfono y A/B.
+  - Los identificadores de los packs de sustitución (§6.6) los fija el tech-lead con 08 §4.1.
+- **Pendiente del dueño:**
+  - el dato de Analytics de cuántos jugadores pasan del 300 (F1);
+  - la curación de los packs (F5).
