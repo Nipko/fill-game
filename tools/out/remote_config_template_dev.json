@@ -733,14 +733,14 @@
       "defaultValue": {
         "value": "true"
       },
-      "description": "Rango 08 §9: —. Mapa v2 (D-069, P8 (a)): la tripulación que se une al viaje (M2-4: tucán y tucuxi, cameos de los miquitos) y los pueblos de paso con su viñeta (M2-2). Solo cuentan con ui_map_v2 encendida; hasta que entre su bloque, sin efecto [P]",
+      "description": "Rango 08 §9: —. Mapa v2 (D-069, P8 (a)): la tripulación que se une al viaje (M2-4: tucán y tucuxi, cameos de los miquitos) y los pueblos de paso con su viñeta (M2-2). Solo cuentan con ui_map_v2 encendida. ui_map_towns tiene efecto desde M2-2 (los pueblos…",
       "valueType": "BOOLEAN"
     },
     "ui_map_towns": {
       "defaultValue": {
         "value": "true"
       },
-      "description": "Rango 08 §9: —. Mapa v2 (D-069, P8 (a)): la tripulación que se une al viaje (M2-4: tucán y tucuxi, cameos de los miquitos) y los pueblos de paso con su viñeta (M2-2). Solo cuentan con ui_map_v2 encendida; hasta que entre su bloque, sin efecto [P]",
+      "description": "Rango 08 §9: —. Mapa v2 (D-069, P8 (a)): la tripulación que se une al viaje (M2-4: tucán y tucuxi, cameos de los miquitos) y los pueblos de paso con su viñeta (M2-2). Solo cuentan con ui_map_v2 encendida. ui_map_towns tiene efecto desde M2-2 (los pueblos…",
       "valueType": "BOOLEAN"
     },
     "ui_avatars_enabled": {
