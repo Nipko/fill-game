@@ -408,7 +408,7 @@ En la 1.1 (propuesta b.2; con D-068, en la 1.1 solo el Aguapé, con el espeso, y
 
 ### 6.1 Capi (capibara, el que trae cuias)
 
-**Desde D-013 (2026-10-13, T1-A de la propuesta de TiTino) Capi deja de ser la mascota principal:** el protagonista es TiTino (6.5). Capi conserva todo lo que es «traer o guardar cosas» (Cuia extra, Cuia de rescate, Canasta y Bitácora), presenta el banner de mundo (D-012) y rema la canoa del Mapa del río. La celebración de la victoria pasa a TiTino y, **con D-016 (2026-10-13, T2-A y T5-B)**, también el arranque, el tutorial (salvo el regalo de la Cuia extra en el 8) y el aviso tras Volver a la orilla. Ninguna mascota se queda fija en el muelle durante la partida (conflicto C4 cerrado). Capi queda con 7 poses (`capi_idle`, `capi_present` en el banner de mundo, `capi_carry`, `capi_rescue`, `capi_wave` en la Bitácora, `capi_basket` y `capi_stamp`), más `capi_paddle` en el Mapa del río.
+**Desde D-013 (2026-10-13, T1-A de la propuesta de TiTino) Capi deja de ser la mascota principal:** el protagonista es TiTino (6.5). Capi conserva todo lo que es «traer o guardar cosas» (Cuia extra, Cuia de rescate, Canasta y Bitácora), presenta el banner de mundo (D-012) y rema la canoa del Mapa del río. La celebración de la victoria pasa a TiTino y, **con D-016 (2026-10-13, T2-A y T5-B)**, también el arranque, el tutorial (salvo el regalo de la Cuia extra en el 8) y el aviso tras Volver a la orilla. Ninguna mascota se queda fija en el muelle durante la partida (conflicto C4 cerrado). Capi queda con 7 poses (`capi_idle`, `capi_present` en el banner de mundo, `capi_carry`, `capi_rescue`, `capi_wave` en la Bitácora, `capi_basket` y `capi_stamp`), más `capi_paddle` en el Mapa del río. **Con D-069 (M2-3, el Mapa v2)**, Capi reacciona en el Mapa: los gestos `capi_lookout`, `capi_wave`, `capi_paddle_hard`, `capi_cheer_oar`, `capi_tie` y `capi_lean`, todos por código (D-052), y emociones sin texto en una burbuja (♪, ♥, !, ? o una cuia; una como mucho por viaje, 1,2 s). Sigue sin hablar (Q3-A).
 
 **Personalidad**: guía amable, tranquila, servicial; comunica amistad y compartir (research/07 §5 [V dato, E uso]; dirección 22). Nunca regaña, nunca llora para vender: en el bloqueo se preocupa y actúa (trae una cuia), no culpa.
 
@@ -424,8 +424,13 @@ En la 1.1 (propuesta b.2; con D-068, en la 1.1 solo el Aguapé, con el espeso, y
 | `capi_think` | Se rasca la cabeza, mira el tablero | Retirada (D-016; f.2 de la propuesta de TiTino): Aguas estancadas va sin ilustración (D-008) | 14 f |
 | `capi_shrug` | Encoge hombros y señala "otra vez" | Retirada: tras Volver a la orilla, el aviso de TiTino (`sloth_encourage`; D-016) | 12 f |
 | `capi_sleep` | Dormita | Retirada: en el Mapa del río dormita TiTino (`sloth_sleep`; D-013) | 20 f loop |
-| `capi_paddle` [P] | Rema la canoa cargada de cuias atadas con cuerda (sin cestas, que serían la Canasta) | Mapa del río (D-013, Q3-A); el bucle de `capi_rescue` reducido a 32-40 dp, sin pieza nueva, con un mástil para la bandera de cortesía; en el 961 la canoa queda amarrada | Bucle de 12 f |
-| `capi_wave` | Saluda | Bitácora día nuevo (el arranque es de TiTino: `sloth_wake`; D-016) | 12 f |
+| `capi_paddle` [P] | Rema la canoa cargada de cuias atadas con cuerda (sin cestas, que serían la Canasta) | Mapa del río (D-013, Q3-A); el bucle de `capi_rescue` reducido a 32-40 dp, sin pieza nueva, con un mástil para la bandera de cortesía; en el 961 la canoa queda amarrada. **Con el Mapa v2 (D-069, M2-3):** canoa de 60 × 44 dp en la vista Mundo (40 en la Cuenca), Capi en un rig por código con la cabeza 1,4 veces la de antes, y a popa una cuia atada por cada mundo completado (como mucho 5, con el agua de su mundo) | Bucle de 12 f |
+| `capi_lookout` [P] | La pata de visera | Mapa del río v2 (D-069, M2-3): la anticipación de D-053 y la boca de un afluente | 250 ms |
+| `capi_paddle_hard` [P] | Rema fuerte, con salpicaduras | Mapa del río v2: los rápidos (Teotônio) | Bucle (3 golpes) |
+| `capi_cheer_oar` [P] | El remo en alto | Mapa del río v2: la llegada a una parada | 500 ms |
+| `capi_tie` [P] | Sube la mini cuia nueva y la ata a popa | Mapa del río v2: tras la llegada | 400 ms |
+| `capi_lean` [P] | Se asoma por la borda | Mapa del río v2: el Encuentro de las Aguas y cualquier parada con otra agua | 700 ms |
+| `capi_wave` | Saluda | Bitácora día nuevo (el arranque es de TiTino: `sloth_wake`; D-016). En el Mapa del río v2 (D-069, M2-3): al pasar un pueblo, a la bandera nueva y al abrir el Mapa sin viaje (una vez por sesión) | 12 f (600 ms en el Mapa) |
 | `capi_point` | Señala a la derecha | Retirada: en el tutorial acompaña TiTino (`sloth_present`; D-016), y la victoria de los hitos es de TiTino (`sloth_cheer_big`; D-013, T1-A) | 10 f |
 | `capi_basket` | Carga la Canasta | Apertura de Canasta cada 10 niveles | 18 f |
 | `capi_stamp` | Sella la página con la pata | Reclamo diario de la Bitácora del río | 12 f |

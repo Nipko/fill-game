@@ -262,7 +262,16 @@ namespace AF.Tests.PlayMode
 
             // Sin nada que jugar, el conmutador Mundo/Cuenca va centrado en la fila (revisión de FX13, ronda 2; solo en este caso).
             Rect capsule = StopCardTests.CanvasRect(map.ViewSwitch.rectTransform, map.Canvas);
-            Assert.That(capsule.center.x, Is.EqualTo(map.CanvasWidth * 0.5f).Within(0.5f), "el conmutador, centrado");
+            if (map.LiveActive && map.SamplesTabShown)
+            {
+                // Con el Mapa v2 (D-069, M2-3), el conmutador y el Muestrario comparten la fila: va centrada la pareja.
+                Rect tab = StopCardTests.CanvasRect((RectTransform)map.SamplesTabButton!.transform, map.Canvas);
+                Assert.That((capsule.xMin + tab.xMax) * 0.5f, Is.EqualTo(map.CanvasWidth * 0.5f).Within(0.5f), "la fila del pie, centrada");
+            }
+            else
+            {
+                Assert.That(capsule.center.x, Is.EqualTo(map.CanvasWidth * 0.5f).Within(0.5f), "el conmutador, centrado");
+            }
 
             // FX12 en el tramo de la meta: al acabar el viaje, en Mundo, las 10 boyas, la canoa y el hito, sobre la curva dibujada.
             AssertOnTheDrawnRiver(map, data, routes, "Mundo, fin de contenido del 700 al acabar");
