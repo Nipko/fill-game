@@ -1020,7 +1020,10 @@ namespace AF.UI
             else
             {
                 SetCompactRowDrop(space, 0f);
-                CollectObstacles(space); // D-069, M2-3: la caja del equipo de la canoa también en la Cuenca (PlateBlocked la usa; antes quedaba la del Mundo)
+                if (_live)
+                {
+                    CollectObstacles(space); // D-069, M2-3: con el Mapa v2, la caja del equipo de la canoa también en la Cuenca (PlateBlocked; la 1.0, intacta)
+                }
             }
 
             PlaceHouse(space);

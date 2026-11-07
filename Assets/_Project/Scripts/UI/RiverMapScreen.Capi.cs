@@ -187,6 +187,8 @@ namespace AF.UI
             _evNext = 0;
             _capiDeparted = false;
             _capiFollowed = false;
+            _capiSnap = false;
+            _capiRestShown = false;
             _capi.Begin(ProgressReduceMotion, CapiEmotion.None);
             if (!_live || !_hasCanoe)
             {
@@ -335,9 +337,11 @@ namespace AF.UI
             }
             else if (_capiTraveling)
             {
-                // Llegó (por tiempo, con un toque, al cerrar o al volver de segundo plano): lo que quedaba por cruzar se salta, salvo lo
-                // de la llegada final (el remo en alto, la muestra, el agua, la bandera y el mundo nuevo).
-                for (int i = _evNext; i < _evCount; i++)
+                // Llegó (por tiempo, con un toque o al cerrar): lo que quedaba por cruzar se salta, salvo lo de la llegada final (el remo
+                // en alto, la muestra, el agua, la bandera y el mundo nuevo). Al volver de segundo plano (02 §14), nada se anima: Capi
+                // quieto, la cámara en su encuadre y la luz ya en la del mundo de «Jugar».
+                bool snap = _capiSnap;
+                for (int i = _evNext; i < _evCount && !snap; i++)
                 {
                     if (_evLevel[i] >= _catchTo - 1e-4f && _evMoment[i] != CapiMoment.TownPass && _evMoment[i] != CapiMoment.Mouth && _evMoment[i] != CapiMoment.Rapids)
                     {
@@ -346,6 +350,14 @@ namespace AF.UI
                 }
 
                 _evNext = _evCount;
+                SettleLight(snap);
+                if (snap)
+                {
+                    _capi.Stop();
+                    ResetCamera();
+                }
+
+                _capiSnap = false;
                 SetCargo(_catchTo);
                 if (_capiFollowed)
                 {
@@ -381,10 +393,23 @@ namespace AF.UI
                 return;
             }
 
+            // Quieto y sin burbuja, una vez basta (el lienzo no se rehace a 30 fps en reposo); el volteo y la escala lo rehacen.
+            bool rest = _capi.Current == CapiGesture.Rest && _capi.Emotion == CapiEmotion.None;
+            if (rest && _capiRestShown && _capiRestFacing == _canoeFacing && _capiRestScale == CapiScale)
+            {
+                return;
+            }
+
             CapiPose pose = CapiDirector.Pose(_capi.Current, _capi.Phase);
             float bubble = CapiDirector.BubbleScale(_capi.EmotionElapsedMs, _capi.Still);
             _capiRig.Apply(pose, _capi.Emotion, bubble, _sampleWater, _canoeFacing, CapiScale);
+            _capiRestShown = rest;
+            _capiRestFacing = _canoeFacing;
+            _capiRestScale = CapiScale;
         }
+
+        private float _capiRestFacing;
+        private float _capiRestScale;
 
         private bool _capiHold;
         private CapiGesture _holdGesture;
@@ -398,6 +423,7 @@ namespace AF.UI
         internal void HoldCapiPose(CapiGesture gesture, float phase, CapiEmotion emotion)
         {
             _capiHold = true;
+            _capiRestShown = false;
             _holdGesture = gesture;
             _holdPhase = phase;
             _holdEmotion = emotion;
@@ -408,6 +434,7 @@ namespace AF.UI
         internal void ReleaseCapiPose()
         {
             _capiHold = false;
+            _capiRestShown = false;
             ApplyCapiPose();
         }
 
@@ -686,7 +713,13 @@ namespace AF.UI
 
             Rect visible = VisibleMapRect();
             Rect r = visible;
-            r = Union(r, FollowRect(CanoeAt(_map, _routes, _catchFrom), visible.size));
+            int samples = Mathf.Max(2, (_catchTo - _catchFrom) * JourneyRegionSamplesPerLevel);
+            for (int i = 0; i <= samples; i++)
+            {
+                float level = Mathf.Lerp(_catchFrom, _catchTo, i / (float)samples);
+                r = Union(r, FollowRect(CanoeAt(_map, _routes, level), visible.size)); // por el agua, también en los meandros
+            }
+
             r = Union(r, FollowRect(_canoeMap, visible.size));
             float mx = visible.width * RegionMargin;
             float my = visible.height * RegionMargin;
@@ -696,6 +729,8 @@ namespace AF.UI
         }
 
         // La vista de tamaño size (unidades del marco) con la canoa en p, en el centro a lo ancho y en el tercio de abajo.
+        private const int JourneyRegionSamplesPerLevel = 4;
+
         private static Rect FollowRect(Vector2 p, Vector2 size)
         {
             return new Rect(p.x - (size.x * 0.5f), p.y - (size.y * CamFollowY), size.x, size.y);
@@ -721,6 +756,29 @@ namespace AF.UI
         }
 
         private bool _capiFollowed;
+        private bool _capiSnap;
+        private bool _capiRestShown;
+
+        // Al acabar el viaje, la luz acaba en la del mundo de «Jugar» aunque ninguna parada lo marcara (un toque que salta el cambio de
+        // mundo, el fin de contenido): con su fundido o, al volver de segundo plano, de golpe.
+        private void SettleLight(bool snap)
+        {
+            if (_light == null)
+            {
+                return;
+            }
+
+            Color target = WorldLight(_world);
+            if (snap)
+            {
+                _lightMs = -1f;
+                _light.color = target;
+            }
+            else if (_lightMs < 0f && _light.color != target)
+            {
+                StartLightFade();
+            }
+        }
 
         private void StartCamera(int phase)
         {
@@ -745,7 +803,7 @@ namespace AF.UI
                 return;
             }
 
-            if (!CameraAllowed)
+            if (!CameraAllowed || _dragging)
             {
                 ResetCamera();
                 return;

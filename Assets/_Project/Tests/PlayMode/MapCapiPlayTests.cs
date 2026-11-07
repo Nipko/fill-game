@@ -135,7 +135,12 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(lead, Is.GreaterThan(1.08f).And.LessThanOrEqualTo(RiverMapScreen.CamLeadZoom + 0.001f), "§5.5: de 1 a 1,12 en la anticipación");
-            Level10MapTests.Tick(map, (int)RiverMapScreen.CamLeadOutMs + 200);
+            Canvas.ForceUpdateCanvases();
+            for (int ms = 0; ms < (int)RiverMapScreen.CamLeadOutMs + 200; ms += PlayModeHelpers.FrameMs)
+            {
+                AssertNoAllocWhileFollowing(map, "saliendo, a " + ms + " ms");
+            }
+
             Assert.That(map.CameraZoom, Is.EqualTo(1f), "vuelve al salir");
             Assert.That(map.JourneyLocked, Is.True, "aún remando");
             Debug.Log("AF_MAP m23 follow: canoa " + map.CanoeShownInViewport + " vista " + map.ViewportSize + " offset " + map.ContentOffset + " contenido " + map.ContentSize + " mapa " + map.CanoeMapPoint);
@@ -147,7 +152,7 @@ namespace AF.Tests.PlayMode
             for (int ms = 0; ms < 6000 && readyAt < 0f; ms += PlayModeHelpers.FrameMs)
             {
                 bool before = map.CatchingUp;
-                map.Tick(PlayModeHelpers.FrameMs);
+                AssertNoAllocWhileFollowing(map, "remando, a " + ms + " ms");
                 if (before && !map.CatchingUp)
                 {
                     arrivedAt = ms;
@@ -174,6 +179,50 @@ namespace AF.Tests.PlayMode
             Assert.That(map.LightColor, Is.EqualTo(RiverMapScreen.WorldLight(3)), "a la del mundo 3 en 600 ms");
             Assert.That(lean, Is.True, "se asoma por la borda en el Encuentro");
             boot.CloseRiverMap();
+        }
+
+        [UnityTest]
+        public IEnumerator ATouchCompletesTheJourney_OnlyTheFinalArrival_AndTheLightReachesThePlayWorld()
+        {
+            yield return MapMarkersTests.OpenApp(41, 30); // de Flona Tapajós (30) al Encuentro (40), por Óbidos, Parintins e Itacoatiara
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(map.CatchingUp, Is.True);
+            Assert.That(CountEvents(map, CapiMoment.TownPass), Is.GreaterThan(0));
+            Assert.That(map.LightColor, Is.EqualTo(RiverMapScreen.WorldLight(2)));
+            Assert.That(map.CapiRig!.CargoShown, Is.EqualTo(1), "a la salida, el mundo 1");
+            Assert.That(map.CatchUpTouch(), Is.True, "un toque completa el viaje");
+            bool wave = false;
+            bool glow = false;
+            bool cheer = false;
+            bool tie = false;
+            for (int ms = 0; ms < 2000; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+                wave |= map.Capi.Current == CapiGesture.Wave;
+                glow |= map.TownGlowing;
+                cheer |= map.Capi.Current == CapiGesture.CheerOar;
+                tie |= map.Capi.Current == CapiGesture.Tie;
+            }
+
+            Assert.That(wave, Is.False, "los pueblos que quedaban, saltados");
+            Assert.That(glow, Is.False);
+            Assert.That(cheer && tie, Is.True, "lo de la llegada final, sí");
+            Assert.That(map.CapiRig.CargoShown, Is.EqualTo(2), "la carga, la de la llegada: los mundos 1 y 2");
+            Assert.That(map.LightColor, Is.EqualTo(RiverMapScreen.WorldLight(3)), "la luz acaba en la del mundo de «Jugar»");
+            map.Close();
+
+            // Al volver de segundo plano (02 §14), salta al final sin animar: ni gestos ni cámara, y la luz ya en su mundo.
+            MapMarkersTests.Reopen(boot, new MemoryProgressStore(41, 40, 30), 41);
+            Assert.That(map.CatchingUp, Is.True);
+            Assert.That(map.ResumeFromBackground(), Is.True);
+            map.Tick(PlayModeHelpers.FrameMs);
+            Assert.That(map.Capi.Current, Is.EqualTo(CapiGesture.Rest));
+            Assert.That(map.Capi.Emotion, Is.EqualTo(CapiEmotion.None));
+            Assert.That(map.CameraZoom, Is.EqualTo(1f));
+            Assert.That(map.LightFading, Is.False);
+            Assert.That(map.LightColor, Is.EqualTo(RiverMapScreen.WorldLight(3)));
+            map.Close();
         }
 
         [UnityTest]
@@ -266,6 +315,115 @@ namespace AF.Tests.PlayMode
             Assert.That(oldTab.yMax, Is.LessThanOrEqualTo(oldCapsule.yMin + 0.5f), "la pestaña, en su fila de encima");
             Assert.That(viewport.height, Is.GreaterThan(oldViewport.height + 40f), "el Mapa v2 gana la fila del Muestrario");
             boot.CloseRiverMap();
+        }
+
+        [UnityTest]
+        public IEnumerator Footer_NoOverlaps_At360x640And360x780_AlsoAt130Percent()
+        {
+            foreach (float scale in new[] { 1f, 1.3f })
+            {
+                foreach (Vector4 size in new[] { new Vector4(1080f, 1920f, 96f, 48f), new Vector4(1080f, 2340f, 96f, 48f) })
+                {
+                    GameScreen.SimulatedScreen = size;
+                    LaunchOptions.FontScaleOverride = scale;
+                    yield return MapMarkersTests.OpenApp(58);
+                    GameBootstrap boot = GameBootstrap.Current!;
+                    RiverMapScreen map = boot.RiverMapView!;
+                    yield return null;
+                    Canvas.ForceUpdateCanvases();
+                    string where = size.x + " × " + size.y + " al " + Mathf.RoundToInt(scale * 100f) + " %";
+                    Assert.That(map.LiveActive, Is.True, where);
+                    var named = new System.Collections.Generic.List<(string Name, Rect Box)>
+                    {
+                        ("←", StopCardTests.CanvasRect((RectTransform)map.BackButton.transform, map.Canvas)),
+                        ("título", StopCardTests.CanvasRect(map.TitleLabel.rectTransform, map.Canvas)),
+                        ("mundo", StopCardTests.CanvasRect((RectTransform)map.ViewWorldButton.transform, map.Canvas)),
+                        ("cuenca", StopCardTests.CanvasRect((RectTransform)map.ViewBasinButton.transform, map.Canvas)),
+                        ("muestrario", StopCardTests.CanvasRect((RectTransform)map.SamplesTabButton!.transform, map.Canvas)),
+                        ("jugar", StopCardTests.CanvasRect((RectTransform)map.PlayButton.transform, map.Canvas)),
+                        ("faltan", StopCardTests.CanvasRect(map.StopRemainingRect, map.Canvas)),
+                    };
+                    for (int i = 0; i < named.Count; i++)
+                    {
+                        Rect r = named[i].Box;
+                        Assert.That(r.xMin, Is.GreaterThanOrEqualTo(-0.5f), where + ": " + named[i].Name);
+                        Assert.That(r.xMax, Is.LessThanOrEqualTo(map.CanvasWidth + 0.5f), where + ": " + named[i].Name);
+                        Assert.That(r.yMax, Is.LessThanOrEqualTo(map.CanvasHeight - map.SafeBottom + 0.5f), where + ": " + named[i].Name);
+                        for (int j = i + 1; j < named.Count; j++)
+                        {
+                            Assert.That(Shrink(r).Overlaps(Shrink(named[j].Box)), Is.False, where + ": " + named[i].Name + " y " + named[j].Name);
+                        }
+                    }
+
+                    foreach (UnityEngine.UI.Button b in new[] { map.ViewWorldButton, map.ViewBasinButton, map.SamplesTabButton!, map.PlayButton })
+                    {
+                        Rect r = StopCardTests.CanvasRect((RectTransform)b.transform, map.Canvas);
+                        Assert.That(Mathf.Min(r.width, r.height), Is.GreaterThanOrEqualTo(RiverMapScreen.MinTouchDp - 0.5f), where + ": " + b.name + " ≥ 48 dp");
+                    }
+
+                    // «Faltan N», dentro de la zona del mapa, sin pisar «Andes ↑», en dos líneas si no cabe, con su texto dentro.
+                    Rect viewport = StopCardTests.CanvasRect(map.ViewportRect, map.Canvas);
+                    Rect chip = StopCardTests.CanvasRect(map.StopRemainingRect, map.Canvas);
+                    Assert.That(viewport.Contains(chip.min) && viewport.Contains(chip.max - new Vector2(0.01f, 0.01f)), Is.True, where + ": la placa, en el Mapa");
+                    if (map.AndesLabel != null && map.AndesLabel.gameObject.activeInHierarchy && map.AndesLabel.text.Length > 0)
+                    {
+                        Assert.That(chip.Overlaps(StopCardTests.CanvasRect(map.AndesLabel.rectTransform, map.Canvas)), Is.False, where + ": «Andes ↑»");
+                    }
+
+                    TMPro.TextMeshProUGUI label = map.StopRemainingLabel;
+                    label.ForceMeshUpdate();
+                    Assert.That(label.isTextOverflowing, Is.False, where + ": el texto cabe");
+                    Assert.That(label.textInfo.lineCount, Is.LessThanOrEqualTo(2), where);
+                    map.SetView(MapView.Basin);
+                    Canvas.ForceUpdateCanvases();
+                    if (map.NorthUpShown)
+                    {
+                        Rect chipBasin = StopCardTests.CanvasRect(map.StopRemainingRect, map.Canvas);
+                        Rect north = StopCardTests.CanvasRect((RectTransform)map.NorthUpButton.transform, map.Canvas);
+                        Assert.That(chipBasin.Overlaps(north), Is.False, where + ": «Norte arriba»");
+                    }
+
+                    map.Drag(new Vector2(0f, -100000f));
+                    Canvas.ForceUpdateCanvases();
+                    if (map.BackToCanoeShown)
+                    {
+                        Rect back = StopCardTests.CanvasRect((RectTransform)map.BackToCanoeButton.transform, map.Canvas);
+                        Assert.That(StopCardTests.CanvasRect(map.StopRemainingRect, map.Canvas).Overlaps(back), Is.False, where + ": «Volver a la canoa»");
+                    }
+
+                    boot.CloseRiverMap();
+                    LaunchOptions.Reset();
+                }
+            }
+        }
+
+        // Los bordes de dos controles vecinos pueden tocarse (medio dp).
+        private static Rect Shrink(Rect r)
+        {
+            return new Rect(r.x + 0.5f, r.y + 0.5f, Mathf.Max(0f, r.width - 1f), Mathf.Max(0f, r.height - 1f));
+        }
+
+        // Un fotograma del viaje: sin asignar memoria salvo cuando cambia el llenado (una boya o la llegada), con la cámara siguiendo.
+        private static void AssertNoAllocWhileFollowing(RiverMapScreen map, string at)
+        {
+            float fill = map.FrontFraction;
+            bool before = map.CatchingUp;
+            int blocks = AllocBlocks(() => map.Tick(PlayModeHelpers.FrameMs)) + AllocBlocks(Canvas.ForceUpdateCanvases);
+            bool changed = map.FrontFraction != fill || before != map.CatchingUp;
+            Assert.That(changed || blocks == 0, Is.True, at + ", sin cambio del llenado: " + blocks + " bloques de GC.Alloc");
+        }
+
+        private static int AllocBlocks(Action action)
+        {
+            UnityEngine.Profiling.Recorder recorder = UnityEngine.Profiling.Recorder.Get("GC.Alloc");
+            recorder.FilterToCurrentThread();
+            recorder.enabled = false;
+            recorder.enabled = true;
+            action();
+            recorder.enabled = false;
+            int n = recorder.sampleBlockCount;
+            recorder.CollectFromAllThreads();
+            return n;
         }
 
         [UnityTest]
