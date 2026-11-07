@@ -2357,7 +2357,7 @@ namespace AF.UI
             int n = travel.PassingCount;
             for (int i = 0; i < n; i++)
             {
-                float a = arrived ? 0f : Mathf.Clamp01((PassingWindowDp - Mathf.Abs(arc - _passingDp[i])) / PassingFadeDp);
+                float a = arrived || !_passingPlaced[i] ? 0f : Mathf.Clamp01((PassingWindowDp - Mathf.Abs(arc - _passingDp[i])) / PassingFadeDp);
                 if (i == _relayLabel && !arrived && !reduceMotion && arc < _passingDp[i])
                 {
                     a = Mathf.Max(a, Mathf.Clamp01((ms - (_relayStopMs - RelayLabelFadeMs)) / RelayLabelFadeMs));
@@ -2591,7 +2591,9 @@ namespace AF.UI
 
                 pill.rectTransform.anchoredPosition = at;
                 _passingRect[i] = new Rect(at.x - (w * 0.5f), at.y - (h * 0.5f), w, h);
-                _passingPlaced[i] = true;
+                // D-069, M2-2: con los pueblos de paso hay tramos con varios nombres juntos; uno que no cabe sin pisar a otro que se
+                // ve a la vez no sale (el del relevo, siempre).
+                _passingPlaced[i] = i == _relayLabel || !BoxHitsPills(i, at.x, at.y, w * 0.5f, h * 0.5f);
                 label.canvasRenderer.SetAlpha(0f);
                 pill.canvasRenderer.SetAlpha(0f);
             }
@@ -2814,7 +2816,8 @@ namespace AF.UI
         /// </summary>
         public bool Overlaps(int i, int j)
         {
-            return _passingFrom[i] < _passingDp[j] + PassingWindowDp && _passingFrom[j] < _passingDp[i] + PassingWindowDp;
+            return _passingPlaced[i] && _passingPlaced[j] // uno que no sale (M2-2) no se ve con nadie
+                && _passingFrom[i] < _passingDp[j] + PassingWindowDp && _passingFrom[j] < _passingDp[i] + PassingWindowDp;
         }
 
         // La caja de centro (x, y) y medios lados hw × hh corta alguna línea del Mapa a la vista, ensanchada con su medio ancho de
