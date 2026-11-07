@@ -197,7 +197,10 @@ Todo con pesos de licencia comercial verificada (investigación del 2026-10-31, 
 
 **Descartados, con su motivo:**
 - **Pesos no comerciales:** Higgs Audio v3, Fish Audio S2, F5-TTS y XTTS-v2 (voz); MusicGen y YuE2-3B (música); FLUX.2 dev y klein 9B, FLUX.1 Kontext dev y Qwen-Image-2.1 (imagen).
-- **VibeVoice:** retirado por Microsoft.
+- **VibeVoice** (revisado el 2026-11-06, `referencias-video.md`, entrada del 2026-11-06):
+  - el TTS largo lo retiró Microsoft;
+  - el Realtime-0.5B es solo inglés, con español y portugués experimentales, y «para investigación»;
+  - el ASR no mejora a whisper.cpp para lo nuestro.
 - **CapCut:** sus términos ceden una licencia amplia sobre el contenido, y su música no vale para anuncios.
 - **DaVinci Resolve gratis:** desde la 21.1, el scripting exige Studio.
 - **Del lote de referencias del 2026-11-05** (`referencias-video.md`):

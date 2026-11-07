@@ -16,6 +16,7 @@ Lo que el dueño trae como referencia (enlaces, archivos o capturas) y lo que sa
 | 4 | Blackdark Reels | **Descartar** la herramienta | La idea de «clonar el ritmo» de un reel, con lo que ya tenemos |
 | 5 | Claude edita con 6 herramientas gratis | **Cambiar enfoque** | Las palabras del himno colocadas por el pulso y por whisper.cpp, no a mano |
 | 6 | Anuncio de gimnasio con modelo de IA | **Descartar** | Nada: es justo lo que prohíbe §0.3 |
+| 7 | VibeVoice de Microsoft (GitHub, 2026-11-06) | **Descartar** para Tintalú; **Más adelante** para otros proyectos | Nada hoy: Qwen3-TTS y whisper.cpp ya cubren lo nuestro, con mejor licencia |
 
 **Lo que cambia en el stack:** HyperFrames, instalado y probado el 2026-11-06 con el visto bueno del dueño (referencia 2, abajo), y un cambio de método en `montar_himno.py` sin piezas nuevas. Los descartes quedan en `stack-spark.md` §4.
 
@@ -208,3 +209,55 @@ Lo común: **Claude como orquestador** y modelos generativos o scripts como ejec
 - **MiniMax H3:** [NYU Shanghai RITS](https://rits.shanghai.nyu.edu/ai/minimax-ships-h3-weights-with-the-us-and-eu-excluded/), [The Batch](https://www.deeplearning.ai/the-batch/minimaxs-state-of-the-art-video-model-is-only-minimally-open), [Runpod](https://www.runpod.io/blog/minimax-h3-the-open-weight-omni-modal-video-model-and-what-it-takes-to-run-it).
 - **Remotion:** [licencia](https://remotion.dev/docs/license) y [precios](https://www.remotion.dev/docs/license/pricing).
 - **HyperFrames:** [análisis](https://themenonlab.blog/blog/heygen-hyperframes-video-as-code) y [guía](https://autoae.online/blog/what-is-hyperframes).
+
+---
+
+## 2026-11-06 · VibeVoice de Microsoft (repositorio de GitHub)
+
+**Cómo llegó:** el dueño pidió revisar si conviene sumarlo al stack, para este proyecto o para otros. Leímos el README, los documentos de ASR y de Realtime del repositorio y la ficha de Hugging Face del modelo de streaming (fuentes al final). No instalamos ni descargamos nada.
+
+### Qué hay publicado hoy [V]
+
+| Modelo | Qué hace | Tamaño | Fecha | Estado |
+|---|---|---|---|---|
+| VibeVoice-TTS-1.5B | Voz larga con hasta 4 locutores | 1,5 B | 2025-08-25 | **Deshabilitado**: Microsoft quitó el código del TTS el 2025-09-05 |
+| VibeVoice-Realtime-0.5B | TTS en streaming, ~200-300 ms hasta el primer audio | 0,5 B | 2025-12-03 | Publicado |
+| VibeVoice-ASR-7B | Transcripción de hasta 60 min de una vez, con locutores, marcas de tiempo y palabras clave | ~7 B | 2026-01-21 | Publicado; también en Transformers |
+| VibeVoice-ASR-BitNet | El ASR comprimido a 1,58 GB, en CPU y en tiempo real | — | 2026-07-23 | Publicado (repositorio `VibeASR.cpp`) |
+| VibeVoice-ASR-Streaming | ASR en streaming, con locutores y palabras clave, en 10 idiomas | ~9 B en BF16 | 2026-09-03 | Publicado |
+
+- **Licencia:** MIT en el código y en las fichas.
+  - Pero el propio README dice que es «para investigación y desarrollo» y no recomienda usarlo en aplicaciones comerciales o reales sin más pruebas.
+  - Pide avisar cuando se comparte contenido generado con IA. No menciona marca de agua.
+- **Idiomas:**
+  - El ASR largo cubre más de 50: español con 8 % de errores por palabra y portugués con 21,5 % (MLC-Challenge).
+  - El de streaming cubre 10, español y portugués incluidos.
+  - El TTS Realtime es **solo para inglés**; el español y el portugués son «experimentales», sin probar a fondo. Trae voces fijas y no deja clonar (para voces propias, «contactar con el equipo»).
+- **Máquina:** las guías dan por hecho NVIDIA con CUDA en Linux o Docker (contenedores NGC de PyTorch). No dicen nada de ARM64 ni de Windows, ni dan cifras de memoria de vídeo. El de streaming pesa ~18 GB solo en pesos (9 B en BF16; cuenta nuestra).
+- **Música y canto:** el TTS Realtime «solo hace habla», sin música ni efectos. El canto espontáneo de las demos era del TTS-1.5B, que está deshabilitado.
+
+### Frente a lo que ya tenemos
+
+| Necesidad de Tintalú | Lo que usamos | Lo que aportaría VibeVoice | Veredicto |
+|---|---|---|---|
+| Voz en off neutra en es-419, pt-BR y en (Q-MK-6, `stack-spark.md` §4) | Qwen3-TTS 1.7B VoiceDesign (Apache 2.0, voces inventadas, multilingüe); Chatterbox como respaldo | Realtime-0.5B: inglés de verdad y español o portugués experimentales, voces fijas, «no comercial» como recomendación | **Peor**: no es nuestro idioma y no conviene en una pieza que se publica |
+| Subtítulos y tiempos por palabra (la voz s33, H5 de la referencia 5) | whisper.cpp con large-v3-turbo en la GPU del Spark (MIT, ya instalado) | Locutores y palabras clave («Tintalú», «cuia», «Anavilhanas») | **No hace falta**: los textos los escribimos nosotros y solo pedimos tiempos. Las marcas de VibeVoice parecen por tramo, no por palabra (el documento no lo aclara) |
+| Locutores en conversaciones | No hay: nuestras piezas no llevan diálogo ni personas (§0.3) | Es su punto fuerte | No aplica |
+
+**Para Tintalú no aporta nada nuevo**, y el TTS choca con lo que pedimos a un modelo que publica: licencia comercial clara y voz en nuestros 3 idiomas. Queda descartado; ya estaba en la lista de descartes de `stack-spark.md` §4, con el motivo corregido.
+
+### Para otros proyectos [P]
+
+Donde sí puede servir, si alguno lo pide:
+- **Transcribir reuniones, entrevistas o pódcasts largos:** 60 min de una pasada, con quién habla y cuándo, y palabras clave para nombres propios. whisper.cpp no separa locutores sin un modelo aparte. Es lo más nuevo que trae.
+- **Transcribir en un equipo sin GPU:** la variante BitNet va en CPU en tiempo real, en 1,58 GB.
+- **Prototipos de agentes de voz en inglés:** Realtime-0.5B responde en ~300 ms, pero solo como demo interna, por su propia advertencia.
+
+Antes de usarlo en serio habría que probar en el Spark si corre en ARM64 con CUDA: los contenedores NGC tienen versión ARM64, pero el repositorio no lo menciona. Habría que medir también la memoria de vídeo y si las marcas de tiempo son por palabra. Nada de eso hace falta hoy.
+
+### Fuentes (2026-11-06)
+
+- Repositorio: <https://github.com/microsoft/VibeVoice>
+- Documento del ASR: <https://github.com/microsoft/VibeVoice/blob/main/docs/vibevoice-asr.md>
+- Documento del Realtime: <https://github.com/microsoft/VibeVoice/blob/main/docs/vibevoice-realtime-0.5b.md>
+- Ficha del ASR de streaming: <https://huggingface.co/microsoft/VibeVoice-ASR-Streaming-7B>
