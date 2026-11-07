@@ -6,6 +6,23 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-07 · Postiz mudado al VPS del dueño (Q-MK-3): HECHO
+
+- **Por qué:** para que la cola siga publicando aunque el Spark esté apagado (decisión del dueño). Los medios ya salían de R2; lo único que dependía del Spark era Postiz, con su programación en Temporal.
+- **Cómo:** `fill-game-marketing/publicacion/migrar-a-vps.sh corte` (commit 18aa3c9), a las 01:35-01:37 UTC:
+  - las bases con `pg_dump`;
+  - los volúmenes, como tar sin abrir;
+  - el `.env` lo copió el dueño;
+  - el mismo túnel, sin tocar el DNS.
+- **Comprobado [V]:**
+  - en `tintalu-vps:/opt/postiz`, los 8 contenedores están sanos;
+  - `/auth` responde 200 y el túnel tiene 4 conexiones;
+  - siguen los 4 canales sin reconexión;
+  - la cola coincide (60 en cola, 58 publicadas, 2 con error);
+  - Temporal tiene 63 flujos en marcha.
+- **En el Spark** Postiz queda parado, sin reinicio automático y con los datos intactos (`migrar-a-vps.sh volver`). El dueño puede quitar el acceso directo que mantiene vivo WSL (`instalar-arranque.ps1 -Quitar`).
+- Detalle en `stack-spark.md` §2.4.
+
 ### 2026-11-03 · Revisión visual con Qwen3-VL-8B (Q-MK-S0-2): HECHA, y encontró un fallo en las tomas
 
 - **Descarga** con el permiso del dueño:

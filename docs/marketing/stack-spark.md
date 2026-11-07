@@ -64,6 +64,18 @@ Hecho y entregado en `spark/tienda-graficos` (D-065):
 
 Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.md` §7.
 
+**Desde el 2026-11-07 corre en el VPS del dueño, no en el Spark** (decisión del dueño, para que publique aunque el Spark esté apagado):
+- **El VPS:** alias SSH `tintalu-vps` en el Spark, con una clave propia que creó el dueño. Es un Ubuntu 24.04 x86_64 con 2 vCPU, 7,8 GB de RAM más 4 GB de swap y Docker 29.6.1; comparte máquina con `app-ingles-ia`. El cortafuegos solo abre SSH. Postiz vive en `/opt/postiz`, con el mismo compose y el `.env` que copió el dueño.
+- **Cómo se hizo:** con `publicacion/migrar-a-vps.sh` (`comprobar`, `corte`, `volver`):
+  - las bases de Postiz y de Temporal viajaron con `pg_dump` (de arm64 a x86_64);
+  - los volúmenes (las claves internas, Elasticsearch, Redis y lo subido) viajaron como tar, sin abrirse;
+  - el corte duró 2 minutos, de las 01:35 a las 01:37 UTC;
+  - se conservan la cola (60 en cola, 58 publicadas, 2 con error y 1 borrador), los 4 canales y 63 flujos vivos en Temporal [V].
+- **No cambia nada fuera:** el mismo túnel y el mismo token (4 conexiones), sin tocar el DNS ni los retornos OAuth, y R2 sigue igual.
+- **El Spark:** los contenedores de Postiz están parados y sin reinicio automático, con los datos intactos para `migrar-a-vps.sh volver`. Ya no hace falta mantener WSL vivo.
+- **Manejo:** `ssh tintalu-vps "cd /opt/postiz && ./postiz.sh estado"`. Lo que sigue en esta sección describe el montaje original en el Spark; el compose es el mismo.
+- **El flujo:** el Spark genera y la fábrica pasa calidad; el dueño aprueba; la pieza sube a `social.tintalu.com` (el dueño en el panel o, con S7, `cola.py` por la API), y el VPS publica a su hora desde R2.
+
 - **Dónde:** Docker Engine 29.9.1 con Compose v5.6.0 dentro del Ubuntu 26.04 de WSL2 (arm64), que ya estaba instalado. No hace falta Docker Desktop.
 - **Configuración versionada** en `fill-game-marketing/publicacion/`:
   - `docker-compose.yaml`: el oficial de Postiz con versiones fijadas;
@@ -121,7 +133,7 @@ Montado el 2026-11-03 en el Spark. Encargo: `docs/dev/traspaso/spark-marketing.m
   - un token limitado a ese bucket (Object Read & Write), con `STORAGE_PROVIDER=cloudflare`;
   - `postiz.sh prueba-r2` sube un archivo con el SDK de Postiz, lo lee por `https://media.tintalu.com/` (200, con el contenido correcto) y lo borra.
 - **Pendiente:**
-  1. `instalar-arranque.ps1`;
+  1. ~~`instalar-arranque.ps1`~~: ya no hace falta con Postiz en el VPS. El dueño lo quita con `instalar-arranque.ps1 -Quitar`;
   2. pasar la app de Google a «In production» y reconectar YouTube. Ni YouTube ni TikTok llevan revisión (ver arriba);
   3. conectar `cola.py` con la API de Postiz (S7).
 
@@ -173,7 +185,7 @@ Todo con pesos de licencia comercial verificada (investigación del 2026-10-31, 
 | Editar imagen con personajes fieles (poses de cartel, D-058) | **Qwen-Image-Edit-2511** en fp8. Para variantes rápidas, FLUX.2 klein 4B | Apache 2.0 | ~20 GB / ~13 GB | 0 | S3 y S5: personajes en cartel. Hay que evitar FLUX.2 klein 9B, FLUX.2 dev, Kontext dev y Qwen-Image-2.1, que no son comerciales |
 | Visión local para el control de calidad (§5 del encargo) | **Qwen3-VL-8B** en la 5080, para comparar fotogramas con capturas reales y leer el texto de la imagen. Gemma 4 26B en el Spark para la revisión fina | Apache 2.0 | ~9 GB (Q8) / ~16 GB | 0 | S4. **Ya instalado** en el Spark, en bf16 (17,5 GB, §2.5) |
 | Montaje programático con plantillas | **HyperFrames** (HTML/CSS/GSAP a MP4, de forma determinista, pensado para agentes) sobre FFmpeg. Remotion es gratis solo hasta 3 empleados | Apache 2.0 | npm | 0 | S3 y S4: plantillas de 9:16, 1:1 y 16:9 con zona segura y subtítulos |
-| Programador de publicaciones con API (Q-MK-3) | ~~Buffer Essentials (~20 US$/mes)~~. **Cambiado el 2026-11-03 (añadido de D-066): Postiz autoalojado en el Spark**, con las APIs oficiales de Meta, YouTube y TikTok, Cloudflare Tunnel y R2 (§2.4). Buffer queda de respaldo | AGPL-3.0 (Postiz) | ~4 GB de imágenes Docker [V] | 0 | S7. **Ya montado** (§2.4). Las apps de desarrollador, los tokens y el DNS los pone el dueño |
+| Programador de publicaciones con API (Q-MK-3) | ~~Buffer Essentials (~20 US$/mes)~~. **Cambiado el 2026-11-03 (añadido de D-066): Postiz autoalojado** (en el Spark; desde el 2026-11-07, en el VPS del dueño), con las APIs oficiales de Meta, YouTube y TikTok, Cloudflare Tunnel y R2 (§2.4). Buffer queda de respaldo | AGPL-3.0 (Postiz) | ~4 GB de imágenes Docker [V] | 0 | S7. **Ya montado** (§2.4). Las apps de desarrollador, los tokens y el DNS los pone el dueño |
 | Sesión en TikTok for Business | Para ver todos los Top Ads de TikTok Creative Center: sin iniciar sesión solo se ven 4 | — | — | 0 | S1, trabajo semanal. **La cuenta la crea el dueño** (Q-MK-2) |
 | Repositorio de la fábrica | `fill-game-marketing`, privado (Q-MK-7) | — | — | 0 | S4 a S9. **Ya existe** (lo creó el dueño, D-067). Clon en el Spark: `C:\AI\marketing\fill-game-marketing\`, con `tendencias/` y los scripts de la ficha (`tienda/`). Los datos de terceros siguen fuera de git |
 
