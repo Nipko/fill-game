@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v3.json",
+  "description": "Fixture negativo de la curva 2 (D-068, F3): una celda de la historia (el 250, una comodidad pura de 201-300, con la Hoja) distinta de la variante b de campaign_v2.json falla CURVE-BASE.",
+  "expect_rule": "CURVE-BASE",
+  "calendar": {
+    "250": "Ho"
+  }
+}

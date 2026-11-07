@@ -22,7 +22,7 @@ namespace AF.Tests.EditMode
 
         private static readonly string StreakJson = string.Join("\n", new[]
         {
-            "    \"undo_tip_seen\": false",
+            "    \"curve2_from_level\": 1",
             "  },",
             "  \"streak\": {",
             "    \"wins\": 7,",
@@ -49,7 +49,7 @@ namespace AF.Tests.EditMode
             Assert.That(json.Contains("streak"), Is.False, "streak, streak_hits y streak_seeds faltan hasta tener valor");
             Assert.That(p.Daily.StreakHits, Is.Empty);
             Assert.That(p.Daily.StreakSeeds, Is.EqualTo(0));
-            Assert.That(Profile.CurrentSchema, Is.EqualTo(2), "sin migración: el esquema no se ha publicado (08 §4.3)");
+            Assert.That(Profile.CurrentSchema, Is.EqualTo(3), "la Crecida no sube el esquema: el 3 es el de la curva 2 (D-068)");
 
             DailyCounters.RollOver(p.Daily, "2026-10-19");
             Assert.That(ProfileJson.Serialize(p).Contains("streak"), Is.False, "tras el cambio de día siguen en su default");
@@ -94,29 +94,29 @@ namespace AF.Tests.EditMode
         [Test]
         public void MissingKeys_TakeDefaults()
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"streak\": {\"wins\": 4}, \"daily\": {\"date_local\": \"2026-10-19\"}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"streak\": {\"wins\": 4}, \"daily\": {\"date_local\": \"2026-10-19\"}}");
             Assert.That(p.Streak!.Wins, Is.EqualTo(4));
             Assert.That(p.Streak.RiverFull, Is.False);
             Assert.That(p.Daily.StreakHits, Is.Empty);
             Assert.That(p.Daily.StreakSeeds, Is.EqualTo(0));
 
-            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2, \"streak\": null}").Streak, Is.Null);
-            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2}").Streak, Is.Null);
-            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2, \"daily\": {\"streak_hits\": null}}").Daily.StreakHits, Is.Empty);
+            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 3, \"streak\": null}").Streak, Is.Null);
+            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 3}").Streak, Is.Null);
+            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 3, \"daily\": {\"streak_hits\": null}}").Daily.StreakHits, Is.Empty);
         }
 
-        [TestCase("{\"profile_schema\": 2, \"streak\": []}")]
-        [TestCase("{\"profile_schema\": 2, \"streak\": 4}")]
-        [TestCase("{\"profile_schema\": 2, \"streak\": {\"wins\": \"4\"}}")]
-        [TestCase("{\"profile_schema\": 2, \"streak\": {\"wins\": 4.5}}")]
-        [TestCase("{\"profile_schema\": 2, \"streak\": {\"river_full\": 1}}")]
-        [TestCase("{\"profile_schema\": 2, \"streak\": {\"river_full\": \"true\"}}")]
-        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_hits\": 3}}")]
-        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_hits\": {\"3\": true}}}")]
-        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_hits\": [3, \"6\"]}}")]
-        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_seeds\": \"350\"}}")]
-        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_seeds\": true}}")]
-        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_seeds\": null}}")]
+        [TestCase("{\"profile_schema\": 3, \"streak\": []}")]
+        [TestCase("{\"profile_schema\": 3, \"streak\": 4}")]
+        [TestCase("{\"profile_schema\": 3, \"streak\": {\"wins\": \"4\"}}")]
+        [TestCase("{\"profile_schema\": 3, \"streak\": {\"wins\": 4.5}}")]
+        [TestCase("{\"profile_schema\": 3, \"streak\": {\"river_full\": 1}}")]
+        [TestCase("{\"profile_schema\": 3, \"streak\": {\"river_full\": \"true\"}}")]
+        [TestCase("{\"profile_schema\": 3, \"daily\": {\"streak_hits\": 3}}")]
+        [TestCase("{\"profile_schema\": 3, \"daily\": {\"streak_hits\": {\"3\": true}}}")]
+        [TestCase("{\"profile_schema\": 3, \"daily\": {\"streak_hits\": [3, \"6\"]}}")]
+        [TestCase("{\"profile_schema\": 3, \"daily\": {\"streak_seeds\": \"350\"}}")]
+        [TestCase("{\"profile_schema\": 3, \"daily\": {\"streak_seeds\": true}}")]
+        [TestCase("{\"profile_schema\": 3, \"daily\": {\"streak_seeds\": null}}")]
         public void WrongTypes_AreFormatErrors(string json)
         {
             Assert.Throws<FormatException>(() => ProfileJson.Deserialize(json));
@@ -373,7 +373,7 @@ namespace AF.Tests.EditMode
         public void Load_ClampsOutOfRangeValuesFromTheFile()
         {
             var clock = Clock(new DateTime(2026, 10, 19, 10, 0, 0));
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"streak\": {\"wins\": 15, \"river_full\": true},"
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"streak\": {\"wins\": 15, \"river_full\": true},"
                 + " \"daily\": {\"date_local\": \"2026-10-19\", \"streak_hits\": [6, 3, 3, 7], \"streak_seeds\": -3}}");
             Assert.That(p.Daily.StreakHits, Is.EqualTo(new[] { 6, 3, 3, 7 }), "AF.Save guarda lo que lee; recorta AF.Economy");
 

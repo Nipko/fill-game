@@ -70,11 +70,19 @@ namespace AF.Levels
             bool hintSupported = true,
             string? band = null,
             bool parApprox = false,
-            string? replaces = null)
+            string? replaces = null,
+            int[]? rows = null,
+            int pressure = NoPressure,
+            int curve = Curve1)
         {
             if (attrs.Length != caps.Length)
             {
                 throw new ArgumentException("attrs debe tener una entrada por cuia.", nameof(attrs));
+            }
+
+            if (curve < Curve1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(curve), curve, "La curva empieza en 1.");
             }
 
             Id = id;
@@ -99,17 +107,64 @@ namespace AF.Levels
             Band = band;
             ParApprox = parApprox;
             Replaces = replaces;
+            _rows = rows;
+            Pressure = pressure;
+            Curve = curve;
+            // En la curva 1, todo lo que lleva replaces es de reserva (pack_schema 4); en la curva 2, solo lo que acaba en _r{k}.
+            IsReserve = replaces != null && (curve == Curve1 || IsReserveId(id));
         }
 
+        /// <summary><see cref="Pressure"/> cuando el paquete no trae <c>difficulty.pressure</c>.</summary>
+        public const int NoPressure = -1;
+
+        /// <summary>La curva de la 1.0 (todos los packs con <c>pack_schema</c> 1-4 y la campaña desde el 701).</summary>
+        public const int Curve1 = 1;
+
+        /// <summary>La curva 2 de la 1.1 (D-068, P1 B; 08 §4.1 y §4.4): los packs <c>curva_{mm}_v{v}</c> y su reserva.</summary>
+        public const int Curve2 = 2;
+
+        private readonly int[]? _rows;
+
         /// <summary>
-        /// <c>replaces</c> (solo en un paquete de reserva, <c>kind</c> = <c>reserve</c>, <c>pack_schema</c> 4; D-033, añadido «la
-        /// reserva del 20 %», Q-B11-7 a; 08 §4.1): el id de campaña del slot (<c>m{mm}_v{v}_n{nnnn}</c>) al que sustituye este
-        /// tablero desde <c>level_overrides</c>; null en los niveles de campaña y del Reto del río.
+        /// <c>replaces</c> (08 §4.1): en un paquete de reserva (<c>kind</c> = <c>reserve</c>, <c>pack_schema</c> 4 o 5; D-033,
+        /// añadido «la reserva del 20 %», Q-B11-7 a), el id del slot (<c>m{mm}_v{v}_n{nnnn}</c>, o el de la curva 2 con
+        /// <c>_c{c}</c> en <c>reserva_curva_</c>) al que sustituye desde <c>level_overrides</c> o el kill switch; en un paquete de
+        /// la curva 2 (<c>kind</c> = <c>curve</c>, <c>pack_schema</c> 5; D-068 [P]), el id de la curva 1 del mismo slot, al que
+        /// sustituye desde <c>progress.curve2_from_level</c>. Null en los niveles de campaña y del Reto del río.
         /// </summary>
         public string? Replaces { get; }
 
-        /// <summary>Tablero de reserva (<see cref="Replaces"/> no es null): solo se sirve desde <c>level_overrides</c>.</summary>
-        public bool IsReserve => Replaces != null;
+        /// <summary>
+        /// Tablero de reserva (<c>_r{k}</c>): solo se sirve en lugar de otro (<c>level_overrides</c> o el kill switch). Un tablero de
+        /// la curva 2 (<c>_c{c}</c>) también lleva <see cref="Replaces"/> y no es de reserva.
+        /// </summary>
+        public bool IsReserve { get; }
+
+        /// <summary>
+        /// Curva del tablero (D-068; analítica <c>curve</c> de 08 §8.2): <see cref="Curve2"/> en los packs <c>curva_</c> y en su
+        /// reserva; <see cref="Curve1"/> en todo lo demás.
+        /// </summary>
+        public int Curve { get; }
+
+        /// <summary>
+        /// <c>difficulty.pressure</c> (<c>pack_schema</c> 5; D-068 [P]; 03 §12): el escalón de presión 0-9, para el informe y la
+        /// analítica (no decide la etiqueta); <see cref="NoPressure"/> si el paquete no lo trae.
+        /// </summary>
+        public int Pressure { get; }
+
+        /// <summary>
+        /// <c>rows</c> (<c>pack_schema</c> 5; D-068 [P]; 02 §5): las cuias de cada fila, de arriba abajo, en el orden de
+        /// <c>cuias</c>; null si el nivel no lo trae (entonces manda la regla de filas de 02 §5). El lector ya comprobó que suma
+        /// las cuias y que ningún grupo del Aguapé queda partido (<see cref="LevelValidation.ValidateRows"/>).
+        /// </summary>
+        public IReadOnlyList<int>? Rows => _rows;
+
+        // Id de reserva: acaba en _r{k} (08 §4.1).
+        private static bool IsReserveId(string id)
+        {
+            int n = id.Length;
+            return n >= 3 && id[n - 3] == '_' && id[n - 2] == 'r' && id[n - 1] >= '1' && id[n - 1] <= '9';
+        }
 
         /// <summary>
         /// <c>relief</c> (08 §4.1; 03 §13): tableros de alivio en orden de prioridad (vacía antes del 31 y en el subconjunto v0).
@@ -308,7 +363,7 @@ namespace AF.Levels
 
             return new LevelDefinition(
                 Id, Level, World, WaterBase, _palette, Units, _caps, _cuias, _attrs, HasHiddenDoses, _hidden.Length == 0 ? null : _hidden,
-                Par, canonical, _relief, IntroMechanic, Skippable, HintSupported, Band, ParApprox, Replaces);
+                Par, canonical, _relief, IntroMechanic, Skippable, HintSupported, Band, ParApprox, Replaces, _rows, Pressure, Curve);
         }
 
         /// <summary>Capacidad de la cuia <paramref name="index"/>.</summary>
@@ -383,7 +438,8 @@ namespace AF.Levels
             AF.Core.Board.UnitsPerColor units,
             int? par,
             string where,
-            int[][]? hidden = null)
+            int[][]? hidden = null,
+            int[]? rows = null)
         {
             if (attrs.Length != caps.Length)
             {
@@ -398,7 +454,16 @@ namespace AF.Levels
             _hidden = hidden ?? NoHidden;
             Par = par;
             _where = where;
+            _rows = rows;
         }
+
+        private readonly int[]? _rows;
+
+        /// <summary>
+        /// <c>rows</c> de la variante (<c>pack_schema</c> 5; D-068 [P]; 02 §5), o null: como en el nivel, las cuias de cada fila de
+        /// arriba abajo.
+        /// </summary>
+        public IReadOnlyList<int>? Rows => _rows;
 
         /// <summary>
         /// <c>hidden</c> de la variante: la máscara de la Tinaja <c>[cuia, capa]</c> con los índices de la variante, si la lleva

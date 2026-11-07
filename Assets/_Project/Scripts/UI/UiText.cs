@@ -794,6 +794,15 @@ namespace AF.UI
             /// <summary><c>tray_missing</c> [P].</summary>
             public const string TrayMissing = "tray_missing";
 
+            /// <summary><c>tutorial_aguape</c> [P] (D-068, F4).</summary>
+            public const string TutorialAguape = "tutorial_aguape";
+
+            /// <summary><c>tutorial_aguape_n2</c> [P] (D-068, F4).</summary>
+            public const string TutorialAguapeN2 = "tutorial_aguape_n2";
+
+            /// <summary><c>tutorial_lancha</c> [P] (D-068, F4), con <c>{n}</c> = el <c>k</c> del nivel.</summary>
+            public const string TutorialLancha = "tutorial_lancha";
+
             /// <summary><c>tutorial_alta</c> [P].</summary>
             public const string TutorialAlta = "tutorial_alta";
 

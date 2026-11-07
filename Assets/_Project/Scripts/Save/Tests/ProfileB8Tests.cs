@@ -64,7 +64,7 @@ namespace AF.Save.Tests
                 StringAssert.DoesNotContain("\"" + key + "\"", json, key);
             }
 
-            Profile old = ProfileJson.Deserialize("{\"profile_schema\": 2}");
+            Profile old = ProfileJson.Deserialize("{\"profile_schema\": 3}");
             Assert.That(old.FirstAppVersion, Is.Null, "no se inventa una versión");
             Assert.That(old.AppliedPurchases, Is.Empty);
             Assert.That(old.Integrity.IsEmpty, Is.True);
@@ -73,10 +73,10 @@ namespace AF.Save.Tests
         [Test]
         public void PurchaseLists_AreEconomy_AWrongTypeIsCorruption_ButIdentityAndIntegrityAreTolerant()
         {
-            Assert.Throws<FormatException>(() => ProfileJson.Deserialize("{\"profile_schema\": 2, \"applied_purchases\": \"GPA.1\"}"));
-            Assert.Throws<FormatException>(() => ProfileJson.Deserialize("{\"profile_schema\": 2, \"pending_rewards\": [{\"placement\": \"x\"}]}"));
+            Assert.Throws<FormatException>(() => ProfileJson.Deserialize("{\"profile_schema\": 3, \"applied_purchases\": \"GPA.1\"}"));
+            Assert.Throws<FormatException>(() => ProfileJson.Deserialize("{\"profile_schema\": 3, \"pending_rewards\": [{\"placement\": \"x\"}]}"));
 
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"locale\": 5, \"country_first\": null, \"integrity\": {\"hmac\": 7, \"fraud_flag\": -3}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"locale\": 5, \"country_first\": null, \"integrity\": {\"hmac\": 7, \"fraud_flag\": -3}}");
             Assert.That(p.Locale, Is.Null);
             Assert.That(p.CountryFirst, Is.Null);
             Assert.That(p.Integrity.Hmac, Is.Null);

@@ -94,6 +94,12 @@ internal static class Evaluator
             ? UnitsPerColor.Uniform(lv.UnitsDefault)
             : UnitsPerColor.FromObject(lv.UnitsOverrides);
         BoardData b = lv.Board;
+        if (lv.PendingTypes.Length > 0)
+        {
+            // Aguapé o Lancha con un núcleo sin F2: no se construye ni se mide (QA-AGUAPE y QA-LANCHA lo dicen).
+            return new LevelEval { Level = lv, Plan = plan, BuildError = $"el nucleo aun no conoce {string.Join(", ", lv.PendingTypes)} (D-068, F2)" };
+        }
+
         BoardBuildResult built = BoardBuilder.Build(
             b.Caps, b.Cuias, b.HasMechanics ? b.Attrs : null, b.Hidden.Length > 0 ? b.Hidden : null, units);
         if (!built.IsValid)

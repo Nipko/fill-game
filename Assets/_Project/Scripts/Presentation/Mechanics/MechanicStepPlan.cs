@@ -201,8 +201,9 @@ namespace AF.Presentation.Mechanics
                 }
             }
 
-            // (d) Lianas que suelta un sellado de (c).
+            // (d) Lianas que suelta un sellado de (c), y el Aguapé (D-068).
             count = AddReleases(in v, StepStage.D, buffer, count);
+            count = AddAguapeReleases(in v, StepStage.D, buffer, count);
 
             // (e) Contadores: la cuia de la Lluvia y la cueva de la Piraña.
             for (int i = 0; i < n; i++)
@@ -241,6 +242,12 @@ namespace AF.Presentation.Mechanics
                         count = Add(buffer, count, new StepEntry(MechanicStepKind.Upend, StepStage.F, jar, i, 0, 0));
                     }
                 }
+
+                // La Lancha atraca (02 §9.1 M11; D-068): su overlay la lleva al muelle.
+                if (Has(ev.LanchaDockedMask, i) && before[i].Mechanic == MechanicType.Lancha)
+                {
+                    count = Add(buffer, count, new StepEntry(MechanicStepKind.Dock, StepStage.F, i, -1, 0, 0));
+                }
             }
 
             // (c′) y (d′): lo que sella o suelta el punto fijo tras la gota o el mordisco.
@@ -253,6 +260,83 @@ namespace AF.Presentation.Mechanics
             }
 
             count = AddReleases(in v, StepStage.DPrime, buffer, count);
+            count = AddAguapeReleases(in v, StepStage.DPrime, buffer, count);
+            return count;
+        }
+
+        /// <summary>
+        /// Etapa en la que se suelta el Aguapé de la cuia <paramref name="index"/> en este vertido (02 §9.1 M8, regla 3; D-068):
+        /// <see cref="StepStage.D"/> si las cuias de su grupo selladas en <c>Before</c> más las selladas en (c) ya llegan a su
+        /// <c>n</c>; si no, <see cref="StepStage.DPrime"/> (las suelta un sellado del punto fijo). Sin asignaciones.
+        /// </summary>
+        public static StepStage AguapeReleaseStage(in PourVisual v, int index)
+        {
+            if (!v.HasEvents)
+            {
+                return StepStage.D;
+            }
+
+            BoardState before = v.Before;
+            if ((uint)index >= (uint)before.Count || before[index].Mechanic != MechanicType.Aguape)
+            {
+                return StepStage.D;
+            }
+
+            PourEvents ev = v.Events;
+            int cSeal = ev.SealedMask & ~FixedPointSealMask(in v);
+            int group = before[index].MechanicGroup;
+            int need = Math.Max(1, before[index].MechanicN);
+            int sealedSoFar = 0;
+            for (int j = 0; j < before.Count; j++)
+            {
+                if (before[j].Mechanic == MechanicType.Aguape && before[j].MechanicGroup == group && (before.IsSealed(j) || Has(cSeal, j)))
+                {
+                    sealedSoFar++;
+                }
+            }
+
+            return sealedSoFar >= need ? StepStage.D : StepStage.DPrime;
+        }
+
+        /// <summary>
+        /// <see cref="StepEntry.Tint"/> del paso <see cref="MechanicStepKind.Loosen"/> de la primera cuia de cada grupo del Aguapé: la
+        /// que suena (las demás llevan 0; un sonido por grupo). No es un tinte.
+        /// </summary>
+        public const int LoosenLeadTint = 1;
+
+        // Pasos Loosen de la etapa stage: uno por cuia del grupo que se suelta (AguapeReleasedMask), todos a la vez, sin otra cuia.
+        // La primera de cada grupo lleva LoosenLeadTint.
+        private static int AddAguapeReleases(in PourVisual v, StepStage stage, StepEntry[] buffer, int count)
+        {
+            PourEvents ev = v.Events;
+            int released = ev.AguapeReleasedMask;
+            if (released == 0)
+            {
+                return count;
+            }
+
+            BoardState before = v.Before;
+            int n = Math.Min(before.Count, v.After.Count);
+            for (int i = 0; i < n; i++)
+            {
+                if (!Has(released, i) || before[i].Mechanic != MechanicType.Aguape || AguapeReleaseStage(in v, i) != stage)
+                {
+                    continue;
+                }
+
+                int lead = -1;
+                for (int j = 0; j < i; j++)
+                {
+                    if (Has(released, j) && before[j].Mechanic == MechanicType.Aguape && before[j].MechanicGroup == before[i].MechanicGroup)
+                    {
+                        lead = j;
+                        break;
+                    }
+                }
+
+                count = Add(buffer, count, new StepEntry(MechanicStepKind.Loosen, stage, i, -1, lead < 0 ? LoosenLeadTint : 0, 0));
+            }
+
             return count;
         }
 
@@ -433,7 +517,8 @@ namespace AF.Presentation.Mechanics
                 return true;
             }
 
-            if ((ev.LluviaDropMask | ev.LluviaWaitingMask | ev.PiranaCaveMask | ev.PiranaBiteLostMask | ev.CucharonReleasedMask) != 0)
+            if ((ev.LluviaDropMask | ev.LluviaWaitingMask | ev.PiranaCaveMask | ev.PiranaBiteLostMask | ev.CucharonReleasedMask
+                | ev.AguapeReleasedMask | ev.LanchaDockedMask) != 0)
             {
                 return true;
             }

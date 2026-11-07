@@ -25,6 +25,9 @@ namespace AF.UI
         // Primera cuia de la pareja de la Tinaja del nivel (BoardLayout.TinajaPairStart), o −1 sin tinaja.
         private int _tinajaPair = -1;
 
+        // rows del tablero del intento (pack_schema 5; 02 §5; D-068), o null: las filas fijas del nivel.
+        private System.Collections.Generic.IReadOnlyList<int>? _boardRows;
+
         // La tinaja de esa pareja (_tinajaPair o _tinajaPair + 1), o −1 sin tinaja.
         private int _tinajaIndex = -1;
 

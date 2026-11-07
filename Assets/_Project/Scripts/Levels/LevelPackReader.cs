@@ -14,9 +14,14 @@ namespace AF.Levels
     /// <see cref="LevelPack"/>.
     /// </summary>
     /// <remarks>
-    /// <para>Acepta <c>pack_schema</c> 1 a 4 (<see cref="MinPackSchema"/>-<see cref="SupportedPackSchema"/>) o
-    /// <c>subset_of</c> = <c>af-level/1</c>, que se lee como <c>pack_schema</c> 1; rechaza cualquier otra versión, también un
-    /// paquete 5 (08 §4.4: el cliente rechaza esquemas que no conoce). El 4 es el 3 más el paquete de reserva (D-033, añadido
+    /// <para>Acepta <c>pack_schema</c> 1 a 5 (<see cref="MinPackSchema"/>-<see cref="SupportedPackSchema"/>) o
+    /// <c>subset_of</c> = <c>af-level/1</c>, que se lee como <c>pack_schema</c> 1; rechaza cualquier otra versión (08 §4.4: el
+    /// cliente rechaza esquemas que no conoce). El 5 (D-068 [P]; fase F4) es el 4 más la curva de la 1.1: los tipos
+    /// <c>aguape</c> (<c>group</c> 0-7 y <c>n</c> 1-2) y <c>lancha</c> (<c>k</c>), <c>intro_mechanic</c> <c>aguape</c>,
+    /// <c>aguape_n2</c> y <c>lancha</c>, <c>rows</c> en el nivel y en <c>relief</c> (validado con
+    /// <see cref="LevelValidation.ValidateRows"/>), <c>difficulty.pressure</c> (0-9) y el paquete de la curva 2 (<c>kind</c> =
+    /// <c>curve</c>, ids <c>_c{c}</c> con <c>replaces</c> = el id de la curva 1 del slot) con su reserva (<c>_c{c}_r{k}</c>,
+    /// <c>reserva_curva_</c>). Con 1-4 rechaza todo eso, como el esquema. El 4 es el 3 más el paquete de reserva (D-033, añadido
     /// «la reserva del 20 %», Q-B11-7 a; contrato 21): <c>kind</c> = <c>reserve</c> solo con el 4, <c>replaces</c> obligatorio
     /// en cada nivel de reserva y prohibido fuera de ella, y sin <c>intro_mechanic</c> (<see cref="LevelDefinition.Replaces"/>). Con <c>pack_schema</c> 1 rechaza lo que el esquema solo
     /// admite desde el 2 (allOf): el tipo <c>matapi</c>, <c>intro_mechanic</c> <c>chica</c>, <c>alta</c>, <c>matapi</c> o
@@ -45,8 +50,10 @@ namespace AF.Levels
         /// <summary>Valor de <c>subset_of</c> que admite el cliente v0.</summary>
         public const string SubsetOf = "af-level/1";
 
-        /// <summary>Última versión de <c>pack_schema</c> que admite el cliente (D-007, D-019, D-023 y D-033, Q-B11-7 a; contrato 21).</summary>
-        public const int SupportedPackSchema = 4;
+        /// <summary>
+        /// Última versión de <c>pack_schema</c> que admite el cliente (D-007, D-019, D-023, D-033 Q-B11-7 a y D-068; contrato 21).
+        /// </summary>
+        public const int SupportedPackSchema = 5;
 
         /// <summary>Primera versión de <c>pack_schema</c> con el paquete de reserva (<c>kind</c> = <c>reserve</c>; D-033, Q-B11-7 a).</summary>
         public const int ReservePackSchema = 4;
@@ -61,11 +68,26 @@ namespace AF.Levels
         private const int TinajaPackSchema = 3;
 
         /// <summary>
-        /// <c>pack_schema</c> de la curva de la 1.1 (D-068 [P]; 08 §4.1; contrato 21): los tipos <c>aguape</c> y <c>lancha</c>. El
-        /// núcleo ya los reconoce (fase F2), así que el lector los rechaza en los packs 1-4 para seguir fallando cerrado; este
-        /// build aún no lee packs con el 5 (<see cref="SupportedPackSchema"/>).
+        /// <c>pack_schema</c> de la curva de la 1.1 (D-068 [P]; 08 §4.1; contrato 21): los tipos <c>aguape</c> y <c>lancha</c>,
+        /// <c>rows</c>, <c>difficulty.pressure</c>, sus estrenos y el paquete de la curva 2 (<c>kind</c> = <c>curve</c>).
         /// </summary>
-        private const int CurvePackSchema = 5;
+        public const int CurvePackSchema = 5;
+
+        /// <summary>Escalón de presión más alto de <c>difficulty.pressure</c> (08 §4.1: 0-9).</summary>
+        public const int MaxPressure = 9;
+
+        // pack_id de la reserva de la curva 2 (08 §4.1).
+        private const string CurveReservePrefix = "reserva_curva_";
+
+        // Paquete de campaña (o de eventos), de reserva de la curva 1, de la curva 2 o de reserva de la curva 2: decide replaces,
+        // los sufijos del id y la curva del tablero.
+        private enum PackKind
+        {
+            Campaign = 0,
+            Reserve = 1,
+            Curve = 2,
+            CurveReserve = 3,
+        }
 
         // n del Brote de dos hojas (02 §9.1, b.3; BroteMechanic.TwoLeaves del núcleo, que es interno).
         private const int BroteTwoLeaves = 2;
@@ -75,6 +97,9 @@ namespace AF.Levels
         private static readonly string[] IntroMechanics1 = { "hoja", "brote", "liana", "remolino", "barro", "lluvia", "pirana" };
         private static readonly string[] IntroMechanics2 = { "matapi", "chica", "alta", "murky" };
         private static readonly string[] IntroMechanics3 = { "tinaja", "liana_n", "hoja_atada", "brote_n2", "flor" };
+
+        // Las de pack_schema 5 (D-068 [P]): el Aguapé (303), el Aguapé espeso (ciclo 341-360) y la Lancha (363).
+        private static readonly string[] IntroMechanics5 = { "aguape", "aguape_n2", "lancha" };
 
         private static readonly string[] Bands =
         {
@@ -109,6 +134,20 @@ namespace AF.Levels
                 throw new LevelFormatException(packId + ": un paquete de reserva (kind reserve) necesita pack_schema 4 (D-033, Q-B11-7 a; contrato 21).");
             }
 
+            bool curve = string.Equals(kind, LevelPack.KindCurve, StringComparison.Ordinal);
+            if (curve && version < CurvePackSchema)
+            {
+                throw new LevelFormatException(packId + ": un paquete de la curva 2 (kind curve) necesita pack_schema 5 (D-068; contrato 21).");
+            }
+
+            bool curveReserve = reserve && packId.StartsWith(CurveReservePrefix, StringComparison.Ordinal);
+            if (curveReserve && version < CurvePackSchema)
+            {
+                throw new LevelFormatException(packId + ": la reserva de la curva 2 (reserva_curva_) necesita pack_schema 5 (D-068; contrato 21).");
+            }
+
+            PackKind packKind = curve ? PackKind.Curve : curveReserve ? PackKind.CurveReserve : reserve ? PackKind.Reserve : PackKind.Campaign;
+
             int world = RequireInt(root, "world", packId);
             string worldId = RequireString(root, "world_id", packId);
             string waterBase = RequireWaterBase(root, packId);
@@ -122,7 +161,7 @@ namespace AF.Levels
             var levels = new List<LevelDefinition>(levelsNode.Items.Count);
             for (int i = 0; i < levelsNode.Items.Count; i++)
             {
-                LevelDefinition level = ReadLevel(levelsNode.Items[i], packId, i, version, reserve);
+                LevelDefinition level = ReadLevel(levelsNode.Items[i], packId, i, version, packKind);
                 for (int k = 0; k < levels.Count; k++)
                 {
                     if (levels[k].Level == level.Level)
@@ -171,10 +210,10 @@ namespace AF.Levels
                 return MinPackSchema;
             }
 
-            throw new LevelFormatException(where + ": el paquete no declara pack_schema (1 a 4) ni subset_of = \"" + SubsetOf + "\".");
+            throw new LevelFormatException(where + ": el paquete no declara pack_schema (1 a 5) ni subset_of = \"" + SubsetOf + "\".");
         }
 
-        private static LevelDefinition ReadLevel(JsonValue node, string packId, int position, int version, bool reserve)
+        private static LevelDefinition ReadLevel(JsonValue node, string packId, int position, int version, PackKind packKind)
         {
             string where = packId + ".levels[" + position.ToString(CultureInfo.InvariantCulture) + "]";
             if (node.Kind != JsonKind.Object)
@@ -197,6 +236,7 @@ namespace AF.Levels
             ReadBoard(node, where, out int[] caps, out int[][] cuias);
             MechanicSpec[] attrs = ReadAttrs(node, caps.Length, version, where);
             bool murky = ReadMurky(node, caps.Length, HasTinaja(attrs), where, out int[][] hidden);
+            int[]? rows = ReadRows(node, version, where);
 
             JsonValue? difficulty = node.Get("difficulty");
             if (difficulty == null || difficulty.Kind != JsonKind.Object)
@@ -213,28 +253,108 @@ namespace AF.Levels
             string label = ReadDifficultyLabel(difficulty, where);
             string? band = ReadBand(difficulty, where);
             bool parApprox = ReadParApprox(difficulty, version, where);
+            int pressure = ReadPressure(difficulty, version, where);
             string? intro = ReadIntroMechanic(node, version, where);
-            string? replaces = ReadReplaces(node, reserve, intro, where);
+            string? replaces = ReadReplaces(node, packKind, id, intro, where);
             bool skippable = ReadOptionalBool(node, "skippable", true, where);
             bool hintSupported = ReadOptionalBool(node, "hint_supported", true, where);
 
-            BuildAndValidate(caps, cuias, attrs, hidden.Length == 0 ? null : hidden, units, where);
+            BuildAndValidate(caps, cuias, attrs, hidden.Length == 0 ? null : hidden, units, rows, where);
             ReliefBoard[] relief = ReadRelief(node, units, version, where);
+            int curve = packKind == PackKind.Curve || packKind == PackKind.CurveReserve ? CurveOf(id, where) : LevelDefinition.Curve1;
             return new LevelDefinition(
-                id, level, world, waterBase, palette, units, caps, cuias, attrs, murky, hidden, par, label, relief, intro, skippable, hintSupported, band, parApprox, replaces);
+                id, level, world, waterBase, palette, units, caps, cuias, attrs, murky, hidden, par, label, relief, intro, skippable, hintSupported, band, parApprox, replaces,
+                rows, pressure, curve);
         }
 
-        // replaces (pack_schema 4; D-033, Q-B11-7 a; contrato 21): en un paquete de reserva, la cadena obligatoria con el id de
-        // campaña del slot (que sea el del mismo level lo comprueba LevelOverrides al resolver level_overrides) y sin
-        // intro_mechanic; fuera de la reserva no se admite.
-        private static string? ReadReplaces(JsonValue node, bool reserve, string? intro, string where)
+        // La c de _c{c} en el id de la curva 2 (o de su reserva, _c{c}_r{k}): de 2 a 9 (08 §4.1).
+        private static int CurveOf(string id, string where)
+        {
+            int end = id.Length;
+            if (end >= 3 && id[end - 3] == '_' && id[end - 2] == 'r')
+            {
+                end -= 3; // el _r{k} de la reserva
+            }
+
+            if (end >= 3 && id[end - 3] == '_' && id[end - 2] == 'c' && id[end - 1] >= '2' && id[end - 1] <= '9')
+            {
+                return id[end - 1] - '0';
+            }
+
+            throw new LevelFormatException(where + ": un tablero de la curva 2 lleva el id de su slot con _c{c}, c de 2 a 9 (08 §4.1).");
+        }
+
+        // El id acaba en _c{c}, c de 2 a 9 (curva 2; 08 §4.1).
+        private static bool HasCurveSuffix(string id)
+        {
+            int n = id.Length;
+            return n >= 3 && id[n - 3] == '_' && id[n - 2] == 'c' && id[n - 1] >= '2' && id[n - 1] <= '9';
+        }
+
+        // rows (pack_schema 5; D-068 [P]; 02 §5): null si falta; si no, una lista de enteros que BuildAndValidate comprueba con
+        // LevelValidation.ValidateRows (1-3 filas de 1-7 que suman las cuias, sin partir ningún grupo del Aguapé).
+        private static int[]? ReadRows(JsonValue node, int version, string where)
+        {
+            JsonValue? value = node.Get("rows");
+            if (value == null || value.IsNull)
+            {
+                return null;
+            }
+
+            if (version < CurvePackSchema)
+            {
+                throw new LevelFormatException(where + ": 'rows' necesita pack_schema 5 (D-068; contrato 21).");
+            }
+
+            if (value.Kind != JsonKind.Array)
+            {
+                throw new LevelFormatException(where + ": 'rows' debe ser una lista de cuias por fila (08 §4.1).");
+            }
+
+            return ReadIntList(value, "rows", where);
+        }
+
+        // difficulty.pressure (pack_schema 5; D-068 [P]): entero 0-9, opcional; NoPressure si falta.
+        private static int ReadPressure(JsonValue difficulty, int version, string where)
+        {
+            JsonValue? value = difficulty.Get("pressure");
+            if (value == null || value.IsNull)
+            {
+                return LevelDefinition.NoPressure;
+            }
+
+            if (version < CurvePackSchema)
+            {
+                throw new LevelFormatException(where + ": 'difficulty.pressure' necesita pack_schema 5 (D-068; contrato 21).");
+            }
+
+            int pressure = AsInt(value, "difficulty.pressure", where);
+            if (pressure < 0 || pressure > MaxPressure)
+            {
+                throw new LevelFormatException(where + ": 'difficulty.pressure' debe ir de 0 a 9 (08 §4.1).");
+            }
+
+            return pressure;
+        }
+
+        // replaces (pack_schema 4 y 5; D-033, Q-B11-7 a, y D-068; contrato 21). En un paquete de reserva, la cadena obligatoria
+        // con el id del slot (que sea el del mismo level lo comprueba LevelOverrides al resolverlo) y sin intro_mechanic; en la
+        // reserva de la curva 2 (reserva_curva_), ese id lleva _c{c} y, en la de la curva 1, no. En un paquete de la curva 2, el
+        // id de la curva 1 del slot: el propio id sin _c{c} (mismo mundo, vuelta y número; 08 §4.1), con intro_mechanic si
+        // estrena algo. Fuera de esos paquetes no se admite, ni el sufijo _c{c} en el id.
+        private static string? ReadReplaces(JsonValue node, PackKind packKind, string id, string? intro, string where)
         {
             JsonValue? value = node.Get("replaces");
-            if (!reserve)
+            if (packKind == PackKind.Campaign)
             {
                 if (value != null)
                 {
-                    throw new LevelFormatException(where + ": 'replaces' solo va en un paquete de reserva (kind reserve; contrato 21).");
+                    throw new LevelFormatException(where + ": 'replaces' solo va en un paquete de reserva o de la curva 2 (kind reserve o curve; contrato 21).");
+                }
+
+                if (HasCurveSuffix(id))
+                {
+                    throw new LevelFormatException(where + ": el sufijo _c{c} solo va en un paquete de la curva 2 (kind curve; 08 §4.1).");
                 }
 
                 return null;
@@ -242,7 +362,19 @@ namespace AF.Levels
 
             if (value == null || value.Kind != JsonKind.String || value.AsString().Length == 0)
             {
-                throw new LevelFormatException(where + ": un nivel de reserva necesita 'replaces' con el id de campaña de su slot (contrato 21).");
+                throw new LevelFormatException(where + ": un nivel de reserva o de la curva 2 necesita 'replaces' con el id de su slot (contrato 21).");
+            }
+
+            string replaces = value.AsString();
+            if (packKind == PackKind.Curve)
+            {
+                if (!HasCurveSuffix(id) || !string.Equals(replaces, id.Substring(0, id.Length - 3), StringComparison.Ordinal))
+                {
+                    throw new LevelFormatException(where + ": un tablero de la curva 2 lleva el id de su slot de la curva 1 más _c{c}, y 'replaces' = ese id, no "
+                        + replaces + " (08 §4.1).");
+                }
+
+                return replaces;
             }
 
             if (intro != null)
@@ -250,12 +382,21 @@ namespace AF.Levels
                 throw new LevelFormatException(where + ": un nivel de reserva no estrena nada: 'intro_mechanic' debe ser null (contrato 21).");
             }
 
-            return value.AsString();
+            bool curveReplaces = HasCurveSuffix(replaces);
+            if (packKind == PackKind.CurveReserve ? !curveReplaces : curveReplaces)
+            {
+                throw new LevelFormatException(where + (packKind == PackKind.CurveReserve
+                    ? ": la reserva de la curva 2 sustituye a un tablero de la curva 2 ('replaces' con _c{c}; 08 §4.1)."
+                    : ": un tablero de la curva 2 se sustituye desde su propia reserva (reserva_curva_; 08 §4.1)."));
+            }
+
+            return replaces;
         }
 
         // BoardBuilder (formato y campos de cada mecánica, U_c con las gotas de la Lluvia) y LevelValidation (03 §17 #5-#6;
-        // 02 §8, §9.1, §9.2 regla 1 y §11), con el patrón de tools/level-qa/Checks/QaCore.cs. Falla cerrado.
-        private static void BuildAndValidate(int[] caps, int[][] cuias, MechanicSpec[] attrs, int[][]? hidden, UnitsPerColor units, string where)
+        // 02 §8, §9.1, §9.2 regla 1 y §11), con el patrón de tools/level-qa/Checks/QaCore.cs, y con rows (pack_schema 5)
+        // LevelValidation.ValidateRows. Falla cerrado.
+        private static void BuildAndValidate(int[] caps, int[][] cuias, MechanicSpec[] attrs, int[][]? hidden, UnitsPerColor units, int[]? rows, string where)
         {
             BoardBuildResult built = BoardBuilder.Build(caps, cuias, attrs, hidden, units);
             if (built.State == null)
@@ -264,6 +405,11 @@ namespace AF.Levels
             }
 
             string? reason = LevelValidation.Validate(built.State);
+            if (reason == null && rows != null)
+            {
+                reason = LevelValidation.ValidateRows(built.State, rows); // D-068: 1-3 filas que suman las cuias, sin partir un grupo
+            }
+
             if (reason != null)
             {
                 throw new LevelFormatException(where + ": " + reason);
@@ -437,6 +583,14 @@ namespace AF.Levels
                     throw new LevelFormatException(at + ": 'key2' necesita pack_schema 3 (Flor de vitória-régia; D-023, punto 5).");
                 }
 
+                JsonValue? groupNode = entry.Get("group");
+                if (groupNode != null && version < CurvePackSchema)
+                {
+                    throw new LevelFormatException(at + ": 'group' necesita pack_schema 5 (Aguapé; D-068; contrato 21).");
+                }
+
+                int group = groupNode == null ? -1 : AsInt(groupNode, "group", at);
+
                 int key = OptionalInt(entry, "key", 0, at);
                 int key2 = key2Node == null ? 0 : AsInt(key2Node, "key2", at);
                 int partner = OptionalInt(entry, "partner", -1, at);
@@ -461,7 +615,7 @@ namespace AF.Levels
 
                 try
                 {
-                    specs[i] = new MechanicSpec(type, key, partner, n, k, key2);
+                    specs[i] = new MechanicSpec(type, key, partner, n, k, key2, group);
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
@@ -607,6 +761,7 @@ namespace AF.Levels
                 ReadBoard(entry, at, out int[] caps, out int[][] cuias);
                 MechanicSpec[] attrs = ReadAttrs(entry, caps.Length, version, at);
                 int[][] hidden = ReadReliefHidden(entry, caps.Length, HasTinaja(attrs), version, at);
+                int[]? rows = ReadRows(entry, version, at);
                 JsonValue? parNode = entry.Get("par");
                 int? par = parNode == null || parNode.IsNull ? (int?)null : AsInt(parNode, "par", at);
                 if (par == null && type == ReliefBoard.TypeMinusColor)
@@ -614,8 +769,8 @@ namespace AF.Levels
                     throw new LevelFormatException(at + ": minus_color lleva siempre par (03 §13).");
                 }
 
-                BuildAndValidate(caps, cuias, attrs, hidden.Length == 0 ? null : hidden, units, at);
-                result[i] = new ReliefBoard(type, caps, cuias, attrs, units, par, at, hidden);
+                BuildAndValidate(caps, cuias, attrs, hidden.Length == 0 ? null : hidden, units, rows, at);
+                result[i] = new ReliefBoard(type, caps, cuias, attrs, units, par, at, hidden, rows);
             }
 
             return result;
@@ -744,9 +899,19 @@ namespace AF.Levels
 
                     return intro;
                 }
+
+                if (Array.IndexOf(IntroMechanics5, intro) >= 0)
+                {
+                    if (version < CurvePackSchema)
+                    {
+                        throw new LevelFormatException(where + ": 'intro_mechanic' " + intro + " necesita pack_schema 5 (D-068; contrato 21).");
+                    }
+
+                    return intro;
+                }
             }
 
-            throw new LevelFormatException(where + ": 'intro_mechanic' debe ser null o hoja, brote, liana, matapi, remolino, barro, lluvia, pirana, chica, alta, murky, tinaja, liana_n, hoja_atada, brote_n2 o flor.");
+            throw new LevelFormatException(where + ": 'intro_mechanic' debe ser null o hoja, brote, liana, matapi, remolino, barro, lluvia, pirana, chica, alta, murky, tinaja, liana_n, hoja_atada, brote_n2, flor, aguape, aguape_n2 o lancha.");
         }
 
         private static bool ReadOptionalBool(JsonValue node, string key, bool fallback, string where)

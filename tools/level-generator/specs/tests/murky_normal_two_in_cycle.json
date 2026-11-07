@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v3.json",
+  "description": "Fixture negativo de la curva 2 (D-068, F1-1): el ciclo 321-340 con solo 2 comodidades turbias (el 331 sin turbias) falla MURKY-NORMAL (comfort_per_cycle = 3).",
+  "expect_rule": "MURKY-NORMAL",
+  "calendar": {
+    "331": "Ma"
+  }
+}

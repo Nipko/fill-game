@@ -5213,3 +5213,50 @@ Hecha en la rama `v11/curva-f2-nucleo` (core-dev). Lo que fija el núcleo para F
 - **GDD:** cerradas en 02 y 03 las preguntas 11, 12, 13 y 15 de 03 (espeso en 347-348; Tinaja fuera de la 1.1; Aguapé con Aguas
   turbias; dos dispositivos con el mínimo), con la Cocha en la 1.2. Las copias de la lista de estrenos en 08 §9, 00 §6.5 y el
   contrato 1 (la Tinaja) quedan para el carril de documentación.
+
+### D-068, añadido del 2026-11-07: la fase F3 (especificación, generador y QA de la curva 2)
+
+Hecho por level-pipeline-dev en `v11/curva-f3-pipeline`, la parte de F3 que no depende de F2. Detalle y medida: `docs/dev/curva-1.1-f1-medicion.md`, sección 8.
+- **Especificación de producción** `tools/level-generator/specs/campaign_v3.json`: 201-300 es historia (la variante «b» de `campaign_v2.json`, que no se genera) y 301-700 la curva 2, con los topes del añadido anterior (`k_plan`, `k_cells` y `role_caps`), `murky_normal` (estreno en 323-324 y 3 comodidades turbias por ciclo), el 369 en Pi+Ma, `pressure_plan` y los slots del Aguapé (303-305), del espeso (347-348) y de la Lancha (363-365) declarados para F2, que el generador aún no coloca y avisa.
+- **Generador:** packs `curva_{mm}_v1` (`kind` = `curve`, `pack_schema` 5, ids `_c2`, semillas `:c2`, `replaces` y `difficulty.pressure`) y su reserva `reserva_curva_{mm}_v1`; ningún tablero fuera del tope de su papel. `campaign_v1` y `campaign_v2` dan los mismos bytes (`--check`).
+- **Aguas turbias de la curva 2 (02 §11, T1):** el estreno en Normal con 1 dosis, los retos turbios con 2-4 dosis en 2 cuias como mucho y los hitos turbios con 3-4 en 3 (generador y QA-MURKY-NORMAL); la regla Q9 (2 dosis) queda para el hito 100.
+- **level-qa:** QA-T-ROLE, QA-MURKY-NORMAL, QA-PAR de la curva 2 (solo par ≥ 2K) y los esqueletos de QA-AGUAPE y QA-LANCHA, que fallan cerrado hasta F2 (y rechazan esos tipos, `rows` y `pressure` con un `pack_schema` menor que 5). Las trampas tempranas (0 en Normal y 1 en Difícil) ya las comprobaba QA-EARLY-TRAPS.
+- **Medida de los mundos 8 y 9:** colocan los 14 ciclos; retos en su ventana, 32 de 35 en el 8 y 29 de 35 en el 9; todos los hitos miden Muy difícil salvo el 660 (73 %). Con las semillas de la curva 2, el ciclo 401-420 del mundo 7 no coloca.
+- **Decisiones [P] de la herramienta, pendientes del dueño:** el ciclo 301-320 sin comodidades turbias (es anterior al estreno de las turbias en Normal, 323); K 7 en 323-324 (el tope de estreno); 351 y 368 a Ba+Tu y 417 a Ho+Tu, para que su ciclo tenga 3 comodidades turbias sin bajar del 30 % de puros; el 369 en Pi+Ma (una combinación ya vista, para no mover las primeras veces); los escalones de presión de los mundos 8 y 9; las palancas del escalón (`Generation/Pressure.cs`).
+- **Preguntas al dueño (sección 8.5):** K 10 en los retos 429, 566, 686 y 698; qué hacer con los retos de la Piraña con el Brote (452 y 592) y con el ciclo 641-660 (el reto 658 y el hito 660 fuera de su ventana); cómo rehacer el ciclo 401-420 de la curva 2; si las Aguas turbias cuentan en el tope de «0-1 mecánicas» de la comodidad (03 §12), porque las comodidades turbias van como Ma+Tu, Br+Tu, Ho+Tu o Ba+Tu.
+
+### D-068, añadido del 2026-11-07: la fase F4 (cliente)
+
+Hecha en la rama `v11/curva-f4-cliente` (unity-gameplay-dev). Lo que deja el cliente para F5 (los packs) y F6 (el teléfono):
+- **AF.Levels:** `LevelPackReader` lee `pack_schema` 1-5 (`SupportedPackSchema` = 5): `group`, `n`, `k`, `rows` (en el nivel y en
+  `relief`, con `LevelValidation.ValidateRows`), `difficulty.pressure` (0-9), `intro_mechanic` `aguape`, `aguape_n2` y `lancha`, y
+  el pack de la curva 2 (`kind` = `curve`, ids `_c{c}` con `replaces` = el id de la curva 1 del slot) con su reserva
+  (`reserva_curva_`, `_c{c}_r{k}`). `LevelDefinition` gana `Rows`, `Pressure` y `Curve` (1 o 2). El selector es `CurveSelection`
+  (`lvl_curve2_enabled` y `progress.curve2_from_level`, solo 301-700); `LevelCatalog` sirve el tablero de la curva 2 por `replaces`
+  y rechaza un pack de la curva como campaña. `GameSceneBuilder` enlaza los `curva_*.json` y `reserva_curva_*.json` que haya en
+  `Data/Levels/` (hoy ninguno: sin ellos, nada cambia).
+- **Kill switches** `mech_enabled_aguape` y `mech_enabled_lancha`: sobre el tablero que toca al jugador, (1) su entrada de
+  `level_overrides` si es de su misma curva, (2) con la curva 2, el tablero de `reserva_curva_` cuyo `replaces` es el suyo y (3) el
+  de la curva 1 del slot. Los pasos (2) y (3) son [P]: 08 §9 solo nombra `level_overrides`.
+- **Perfil:** `profile_schema` 3 con el paso 2 → 3, que fija `curve2_from_level` = `max_level` + 1 o, si el nivel en curso
+  (`level_state`) va más allá, ese + 1 [P]. Un perfil nuevo empieza en 1; un documento del 3 sin el campo lee `max_level` + 1,
+  nunca 1 [P]. En la fusión, el mínimo, llevado dentro de lo que cada perfil ya jugó en 301-700 [P] (revisión de F4): una
+  reinstalación o un teléfono nuevo (1, nada jugado) no bajan el valor de la nube; el choque de dos dispositivos con cada curva
+  sigue siendo el caso límite aceptado (pregunta 15 de 03), y ahí gana el mínimo.
+- **Remote Config:** las 6 claves de la 1.1 pasan de la nota a la tabla de 08 §9, regeneradas con `rc_defaults.py` y
+  `rc_template.py` sobre la integración del Mapa v2 (265 claves; 259 parámetros en la plantilla). `lvl_murky_normal_max_hidden_units`
+  la comprueba `tools/level-qa`; el cliente no la lee [P].
+- **Analítica:** `curve` y `pressure` en `level_start` y `level_end` (catálogo de AF.Analytics y 08 §8.2), solo en la campaña;
+  `pressure` solo si el paquete la trae.
+- **Presentación (arte por código, D-052) [P]:** `AguapeOverlay` (la mata detrás y en los cantos del vidrio, el puente entre cuias
+  del grupo, la capa del espeso que se aclara con el primer sello y la suelta en 700 ms en trozos que flotan) y `LanchaOverlay` (el
+  muelle, la fila de k puntos en la repisa, la lancha que sube con cada vacía y el atraque en 1,4 s; también cuando atraca sin
+  vertido, `PourRules.Settle`). Pasos nuevos `Loosen` (etapa d o d′) y `Dock` (f). Iconos de 32 dp y grandes del estreno (con el
+  espeso). Las filas fijas de `rows` mandan en `BoardLayout`. Sonidos: sin audio nuevo, la suelta reutiliza `sfx_mech_remolino` y el
+  atraque `sfx_capi_paddle` [P] (la lista de sonidos deja los propios para la 1.1).
+- **Tutoriales:** `tutorial_aguape`, `tutorial_aguape_n2` y `tutorial_lancha` (con el k del nivel), en `pendiente_asesor` como todo
+  tutorial, con EN y PT-BR traducidos con IA (pendientes de la revisión de D-054); dedo guía `AguapeSeal` (un vertido a la mata) y
+  `LanchaEmpty` (un vertido que vacía una cuia) [P]. Las ocultas en Normal reutilizan T4 (`tutorial_murky`). TalkBack dice
+  «Aguapé», «Aguapé espeso» y «Lancha» (`mechanic.*` de `facts.csv` y el glosario); los dos del Aguapé, en `pendiente_asesor`
+  (flora), sin EN ni PT-BR hasta aprobar el español.
+- **GDD:** las copias de la lista de estrenos de 08 §9, 00 §6.5 y el contrato 1 dicen que la Tinaja no entra en la 1.1.

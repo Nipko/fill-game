@@ -27,7 +27,7 @@ namespace AF.Save.Tests
         [Test]
         public void NewProfile_SendsCrashReports_AndTheFieldIsNotWritten()
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3}");
             Assert.That(p.Settings.CrashReports, Is.True, "activado por defecto (D-057)");
             StringAssert.DoesNotContain("crash_reports", ProfileJson.Serialize(p), "con su default no se escribe");
         }
@@ -35,7 +35,7 @@ namespace AF.Save.Tests
         [Test]
         public void Off_RoundTrips()
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3}");
             p.Settings.CrashReports = false;
             string json = ProfileJson.Serialize(p);
             StringAssert.Contains("\"crash_reports\": false", json);
@@ -48,7 +48,7 @@ namespace AF.Save.Tests
         [TestCase("null")]
         public void AnInvalidValue_IsTheDefault(string raw)
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"settings\": {\"crash_reports\": " + raw + ", \"music\": false}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"settings\": {\"crash_reports\": " + raw + ", \"music\": false}}");
             Assert.That(p.Settings.CrashReports, Is.True);
             Assert.That(p.Settings.Music, Is.False, "los demás ajustes se leen igual");
         }

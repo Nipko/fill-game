@@ -36,9 +36,10 @@ namespace AF.Save
     {
         /// <summary>
         /// Versión del esquema que escribe esta build (08 §4.4: solo avanza). 2 desde DC15: <c>fauna.sighted</c>, con el paso
-        /// 1 → 2 de <see cref="ProfileMigrations"/>.
+        /// 1 → 2 de <see cref="ProfileMigrations"/>. 3 desde la 1.1 (D-068, fase F4; 08 §4.3 y §4.4):
+        /// <c>progress.curve2_from_level</c>, con el paso 2 → 3.
         /// </summary>
-        public const int CurrentSchema = 2;
+        public const int CurrentSchema = 3;
 
         /// <summary><c>profile_schema</c>: siempre <see cref="CurrentSchema"/> en memoria (las migraciones van antes).</summary>
         public int ProfileSchema => CurrentSchema;
@@ -563,6 +564,63 @@ namespace AF.Save
 
             LeagueDebutSeen = LeagueDebutSeen || other.LeagueDebutSeen;
             LeagueOpened = LeagueOpened || other.LeagueOpened;
+        }
+
+        /// <summary>
+        /// <c>curve2_from_level</c> (esquema 3; D-068, P1 B; 08 §4.3) [P]: el primer nivel que el jugador juega con la curva 2 de la
+        /// 1.1. Lo fija una sola vez la migración 2 → 3 (<see cref="ProfileMigrations"/>) con el siguiente nivel que no había jugado
+        /// (1 en un perfil nuevo) y no cambia nunca: lo de antes sigue con los tableros de la 1.0, también al rejugarlo. En la
+        /// fusión con la nube gana el mínimo que no cambia ningún tablero ya jugado (<see cref="MergedCurve2FromLevel"/>; pregunta
+        /// 15 de 03, decidida el 2026-11-07, con la precisión [P] de la fase F4 para un perfil sin nada jugado en 301-700).
+        /// </summary>
+        public int Curve2FromLevel { get; set; } = 1;
+
+        /// <summary>
+        /// Fusión de 08 §11 (<c>ResolveConflict</c>) de <c>curve2_from_level</c> (D-068; pregunta 15 de 03: «gana el mínimo») [P].
+        /// Cada perfil dice qué tableros de 301-700 ya jugó: con la curva 1, los de 301 hasta <c>min(jugado, from − 1)</c>, que
+        /// piden un valor mayor que ese; con la curva 2, los de <c>max(from, 301)</c> hasta lo jugado, que piden un valor no mayor
+        /// que <c>max(from, 301)</c>. El resultado es el mínimo de los dos valores, llevado dentro de esos límites; así un perfil
+        /// sin nada jugado en 301-700 (una reinstalación o un teléfono nuevo, que nace con 1) no baja el del otro y ningún tablero
+        /// jugado cambia. Si los límites chocan (dos dispositivos que avanzaron por separado, uno con cada curva: el caso límite
+        /// aceptado de la pregunta 15), gana el mínimo, como dice 08 §4.3. Los dos perfiles ya llegan migrados.
+        /// </summary>
+        /// <param name="fromA">curve2_from_level de un perfil.</param>
+        /// <param name="playedA">Nivel más alto jugado en ese perfil (max_level o el nivel en curso, el mayor).</param>
+        /// <param name="fromB">curve2_from_level del otro.</param>
+        /// <param name="playedB">Nivel más alto jugado en el otro.</param>
+        public static int MergedCurve2FromLevel(int fromA, int playedA, int fromB, int playedB)
+        {
+            fromA = Math.Max(1, fromA);
+            fromB = Math.Max(1, fromB);
+            int low = 1;
+            int high = int.MaxValue;
+            Bounds(fromA, playedA, ref low, ref high);
+            Bounds(fromB, playedB, ref low, ref high);
+            int min = Math.Min(fromA, fromB);
+            if (low > high)
+            {
+                return min; // dos dispositivos con cada curva: el caso límite aceptado (pregunta 15 de 03)
+            }
+
+            return min < low ? low : min > high ? high : min;
+        }
+
+        // Los límites que pone un perfil (ver MergedCurve2FromLevel).
+        private static void Bounds(int from, int played, ref int low, ref int high)
+        {
+            const int first = 301; // CurveSelection.FirstLevel (AF.Levels; AF.Save no lo referencia)
+            const int last = 700; // CurveSelection.LastLevel
+            int curve1Top = Math.Min(Math.Min(played, from - 1), last);
+            if (curve1Top >= first)
+            {
+                low = Math.Max(low, curve1Top + 1);
+            }
+
+            int curve2From = Math.Max(from, first);
+            if (curve2From <= last && played >= curve2From)
+            {
+                high = Math.Min(high, curve2From);
+            }
         }
 
         private static int ClampMapSeen(int value, int maxLevel)
