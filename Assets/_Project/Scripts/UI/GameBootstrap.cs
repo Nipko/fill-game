@@ -1150,6 +1150,7 @@ namespace AF.UI
             int play = app.PlayLevel;
             map.LiveRequested = MapLiveSettings.UiMapV2; // D-069, P8 (a): el Mapa v2 o, apagada, el de la 1.0 (GameBootstrap.MapLive.cs)
             map.TownsRequested = MapLiveSettings.UiMapTowns; // D-069, M2-2: los pueblos de paso y la excursión local
+            map.CrewRequested = MapLiveSettings.UiMapCrew; // D-069, M2-4: la tripulación (el tucán, el tucuxi y el cameo de los miquitos)
             map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable, DailyPlayUnlocked); // «Jugar» como en el inicio (D-032, punto 6)
             if (app.Screen != AppScreen.Level)
             {
@@ -1160,7 +1161,7 @@ namespace AF.UI
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
-            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() + map.TownsMemJson() + map.CapiMemJson() : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
+            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() + map.TownsMemJson() + map.CapiMemJson() + map.CrewMemJson() : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
             TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;
@@ -1832,6 +1833,7 @@ namespace AF.UI
             RiverStops = LoadRiverStops(riverStops);
             _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013): fondo, llegada y rótulo del lugar
             _screen.RiverGeometry = TryRiverGeometry; // la geometría del Mapa para el viaje de mundo del banner (M3.6)
+            _screen.BannerCrewOn = () => MapLiveSettings.UiMapV2 && MapLiveSettings.UiMapCrew; // D-069, M2-4: la tripulación en el plano final
             _screen.RiverMapOpenable = RiverMapAvailable; // «Mapa del río» en la pausa y «Ver mapa» en la victoria (M4.3)
             FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017)
             _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
@@ -2659,6 +2661,7 @@ namespace AF.UI
             _mapScreen?.ReleaseLiveArt(); // D-069, M2-1: las texturas del Mapa v2 no sobreviven a la escena (DontSave)
             _mapScreen?.ReleaseTownArt(); // D-069, M2-2: ni el atlas de los pueblos
             _mapScreen?.ReleaseCapiArt(); // D-069, M2-3: ni el del rig de Capi
+            _mapScreen?.ReleaseCrewArt(); // D-069, M2-4: ni el de la tripulación
             if (_backAction != null)
             {
                 _backAction.performed -= OnBackPerformed;

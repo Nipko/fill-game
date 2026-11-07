@@ -108,8 +108,18 @@ namespace AF.Tests.PlayMode
             Assert.That(map.Title, Is.EqualTo("Manaos · ¿Por qué el río Negro es negro?"), "map_world_question (glosario §10)");
             Assert.That(map.QuestionAnswered, Is.False, "se responde al llegar a Anavilhanas (el 60)");
             Assert.That(map.CheckShown, Is.False);
-            Assert.That(map.StopRemainingShown, Is.True);
             Assert.That(map.StopRemainingText, Is.EqualTo("Faltan 3 niveles para Anavilhanas"));
+            if (map.LiveActive)
+            {
+                // Con el Mapa v2 (D-069, pregunta 2 de M2-3, hecha en M2-4), «Faltan N» va en el rótulo de la parada siguiente.
+                Assert.That(map.StopRemainingInLabel, Is.True);
+                Assert.That(map.StopLabelText(6), Is.EqualTo("Anavilhanas\nfaltan 3 niveles"));
+            }
+            else
+            {
+                Assert.That(map.StopRemainingShown, Is.True);
+            }
+
             Assert.That(map.PlayLabel, Is.EqualTo(UiText.PlayLevel(58)));
             Assert.That(map.ViewWorldLabel, Is.EqualTo("Mundo"));
             Assert.That(map.ViewBasinLabel, Is.EqualTo("Cuenca"));

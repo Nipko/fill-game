@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using AF.GameFlow;
 using AF.Levels;
 using AF.Localization;
 using AF.Presentation;
@@ -256,6 +257,12 @@ namespace AF.UI
                 }
 
                 HideStopLabels();
+                if (_live && _markerLayer != null)
+                {
+                    BuildStopLabels(max); // D-069, M2-4: sin los pueblos, solo el rótulo de la parada siguiente con «Faltan N»
+                }
+
+                SyncRemainingPlate();
                 return;
             }
 
@@ -383,6 +390,17 @@ namespace AF.UI
 
         // Tras PlacePassing (SamplesSpace): en la vista Mundo, cada viñeta en su orilla y a la medida del zoom, sin pisarse.
         private void TownsSpace(MapSpace space)
+        {
+            TownsSpaceCore(space);
+            if (!_towns)
+            {
+                RemainingLabelFanned(); // D-069, M2-4: sin los pueblos, el rótulo de la parada siguiente también se calla en abanico
+            }
+
+            SyncRemainingPlate();
+        }
+
+        private void TownsSpaceCore(MapSpace space)
         {
             if (_townLayer == null)
             {
@@ -531,7 +549,7 @@ namespace AF.UI
             label.fontSize = TownLabelSp * UiBuilder.TextScale;
             label.textWrappingMode = TextWrappingModes.NoWrap;
             float textW = Mathf.Ceil(label.GetPreferredValues(label.text).x) + 2f; // la línea entera, sin partir ni cortar
-            float textH = Mathf.Ceil(label.GetPreferredValues("Ág").y);
+            float textH = Mathf.Ceil(label.GetPreferredValues(label.text.IndexOf('\n') >= 0 ? label.text : "Ág").y); // M2-4: el rótulo con «Faltan N», en dos líneas
             pill.anchorMin = new Vector2(0.5f, 0.5f);
             pill.anchorMax = new Vector2(0.5f, 0.5f);
             pill.pivot = new Vector2(0.5f, 0.5f);
@@ -568,8 +586,12 @@ namespace AF.UI
         // ============================================================================================ rótulos de las paradas
 
         // La última parada alcanzada y la siguiente llevan su nombre bajo la mini cuia (§9.5): una píldora hija de su marcador.
+        // Con el Mapa v2 (respuesta del dueño a la pregunta 2 de M2-3, en M2-4), el rótulo de la parada siguiente lleva «Faltan N»
+        // dentro (map_stop_label_remaining), como en la maqueta; sin los pueblos (ui_map_towns apagada), solo ese rótulo.
         private void BuildStopLabels(int max)
         {
+            int remain = RemainingStopN();
+            bool nextOnly = !_towns;
             for (int i = 0; i < _markerCount; i++)
             {
                 StopMarker m = _markers[i];
@@ -588,7 +610,13 @@ namespace AF.UI
                     s.Pill.SetParent(m.Root, false);
                 }
 
-                string name = RiverTowns.StopLabelShown(m.N, max) ? UiText.StopName(m.Stop) : string.Empty;
+                bool shown = nextOnly ? m.N == remain : RiverTowns.StopLabelShown(m.N, max);
+                string name = shown ? UiText.StopName(m.Stop) : string.Empty;
+                if (name.Length > 0 && m.N == remain)
+                {
+                    name = UiText.MapStopLabelRemaining(name, RiverJourney.LevelsLeft(_playLevel));
+                }
+
                 s.Label.text = name;
                 bool on = name.Length > 0;
                 if (s.Pill.gameObject.activeSelf != on)
@@ -607,6 +635,8 @@ namespace AF.UI
             {
                 _stopLabels[i].Pill.gameObject.SetActive(false);
             }
+
+            SyncRemainingPlate();
         }
 
         private void HideStopLabels()

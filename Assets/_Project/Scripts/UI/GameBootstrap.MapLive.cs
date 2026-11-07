@@ -6,8 +6,8 @@ namespace AF.UI
     /// <summary>
     /// El Mapa del río v2 (D-069, P8 (a)): <c>ui_map_v2</c> de Remote Config (08 §9) llega a <see cref="RiverMapScreen.LiveRequested"/>
     /// antes de cada apertura; apagada, el Mapa de la 1.0 con los mismos datos <c>/2</c>. <c>ui_map_towns</c> llega a
-    /// <see cref="RiverMapScreen.TownsRequested"/> (M2-2: los pueblos de paso y la excursión local); <c>ui_map_crew</c> es de M2-4
-    /// (sin efecto hasta entonces).
+    /// <see cref="RiverMapScreen.TownsRequested"/> (M2-2: los pueblos de paso y la excursión local); <c>ui_map_crew</c> llega a
+    /// <see cref="RiverMapScreen.CrewRequested"/> (M2-4: la tripulación y el cameo de los miquitos).
     /// </summary>
     public sealed partial class GameBootstrap
     {

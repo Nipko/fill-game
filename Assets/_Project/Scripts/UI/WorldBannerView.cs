@@ -62,6 +62,12 @@ namespace AF.UI
     /// </remarks>
     internal sealed class WorldBannerView
     {
+        /// <summary>
+        /// La tripulación en el plano final del viaje de mundo (D-069, M2-4): con el Mapa v2 y <c>ui_map_crew</c>; lo pone la pantalla del
+        /// nivel antes de <see cref="Show"/>.
+        /// </summary>
+        public bool CrewOn { get; set; }
+
         /// <summary>Opacidad del velo (la de la tarjeta previa).</summary>
         public const float DimAlpha = LevelCardView.DimAlpha;
 
@@ -733,6 +739,7 @@ namespace AF.UI
                 // Tan ancha como la viñeta de debajo, con el mismo margen y el mismo canto (revisión de M3.6: dos marcos apilados
                 // con anchos distintos se leían como un desajuste).
                 _strip.Place(PadDp, y, inner, StripHeightDp);
+                _strip.CrewOn = CrewOn; // D-069, M2-4: la tripulación en el plano final
                 _strip.Build(_travel, _reduceMotion, _fontScale);
                 y += StripHeightDp + StripGapDp;
             }
@@ -1946,6 +1953,11 @@ namespace AF.UI
         private float _guideBAlpha;
         private int _canoeFacing = -1;
         private double _buildMs;
+        private readonly MapCrewArt _crewArt = new MapCrewArt();
+        private CrewToucanView? _crewToucan;
+        private Image? _crewTucuxi;
+        private bool _toucanAboard;
+        private bool _tucuxiAboard;
 
         /// <summary>Crea la franja, oculta, en el cuerpo <paramref name="panel"/> del banner. Ninguna malla hasta <see cref="Build"/>.</summary>
         public BannerTravelStrip(RectTransform panel, ProceduralArt art)
@@ -2030,6 +2042,21 @@ namespace AF.UI
 
         /// <summary>La canoa de Capi.</summary>
         public Image Canoe => _canoe;
+
+        /// <summary>
+        /// La tripulación en el plano final (D-069, M2-4; propuesta del Mapa v2 §5.5 y §6.3): con el Mapa v2 y <c>ui_map_crew</c>
+        /// (lo pone el banner antes de <see cref="Build"/>).
+        /// </summary>
+        public bool CrewOn { get; set; }
+
+        /// <summary>El tucán va en la proa en el plano final (se ve).</summary>
+        public bool ToucanShown => _crewToucan != null && _crewToucan.Root.gameObject.activeInHierarchy && _crewToucan.Body.canvasRenderer.GetAlpha() > 0f;
+
+        /// <summary>El tucuxi nada junto al guía en el plano final (se ve).</summary>
+        public bool TucuxiShown => _crewTucuxi != null && _crewTucuxi.gameObject.activeInHierarchy && _crewTucuxi.canvasRenderer.GetAlpha() > 0f;
+
+        /// <summary>El atlas de la tripulación de la franja (tests: se suelta al ocultarla).</summary>
+        internal MapCrewArt CrewArt => _crewArt;
 
         /// <summary>Fracción del tramo en que va la canoa (0 al salir, 1 en la gran parada).</summary>
         public float CanoeFraction => _fraction;
@@ -2251,6 +2278,7 @@ namespace AF.UI
             SetActive(_flag.gameObject, _flagSprite != null);
             SetActive(_mast.gameObject, _flagSprite != null);
             ApplyGuideSprites();
+            BuildCrew(travel);
             _buildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
             Apply(0f, reduceMotion); // el instante 0 (con Reducir movimiento, el final aún sin fundir)
         }
@@ -2266,6 +2294,80 @@ namespace AF.UI
             _flag.sprite = null;
             _fraction = 0f;
             _flagRaise = 0f;
+            _toucanAboard = false;
+            _tucuxiAboard = false;
+            _crewToucan?.SetArt(null);
+            _crewToucan?.SetVisible(false);
+            CrewDraw.SetSprite(_crewTucuxi, null);
+            _crewArt.Release(); // D-069, M2-4: el atlas de la tripulación solo vive con la franja a la vista
+        }
+
+        // El plano final del cambio de mundo (D-069, M2-4; §5.5: «Capi, la tripulación y la bandera»): quién va a bordo al llegar a la
+        // gran parada (con el nivel anterior al del banner, el de max_level). Asigna: solo aquí, al abrir el banner.
+        private void BuildCrew(BannerTravel travel)
+        {
+            int max = Mathf.Clamp(travel.Level - 1, 0, WorldTable.LastLevel);
+            _toucanAboard = CrewOn && RiverCrew.IsAboardCapped(CrewKind.Toucan, max, true);
+            _tucuxiAboard = CrewOn && RiverCrew.IsAboardCapped(CrewKind.Tucuxi, max, true);
+            if (!_toucanAboard && !_tucuxiAboard)
+            {
+                _crewArt.Release();
+                _crewToucan?.SetVisible(false);
+                if (_crewTucuxi != null && _crewTucuxi.gameObject.activeSelf)
+                {
+                    _crewTucuxi.gameObject.SetActive(false);
+                }
+
+                return;
+            }
+
+            _crewArt.Build(null);
+            if (_crewToucan == null)
+            {
+                _crewToucan = new CrewToucanView("Toucan", _overlay);
+                _crewToucan.Root.anchorMin = new Vector2(0.5f, 0.5f);
+                _crewToucan.Root.anchorMax = new Vector2(0.5f, 0.5f);
+                _crewTucuxi = UiBuilder.Image("Tucuxi", _overlay, null, Color.white);
+                _crewTucuxi.raycastTarget = false;
+                RectTransform r = _crewTucuxi.rectTransform;
+                r.anchorMin = new Vector2(0.5f, 0.5f);
+                r.anchorMax = new Vector2(0.5f, 0.5f);
+                r.pivot = ProceduralArt.CrewPivot(CrewPiece.Tucuxi);
+                RectInt c = ProceduralArt.CrewCell(CrewPiece.Tucuxi);
+                r.sizeDelta = new Vector2(RiverCrew.TucuxiDp, RiverCrew.TucuxiDp * c.height / c.width);
+            }
+
+            _crewTucuxi!.transform.SetSiblingIndex(_guideA.transform.GetSiblingIndex()); // detrás del guía
+            _crewToucan.Root.SetSiblingIndex(_canoe.transform.GetSiblingIndex() + 1); // delante de la canoa
+            _crewToucan.SetArt(_crewArt);
+            CrewDraw.SetSprite(_crewTucuxi, _crewArt.Piece(CrewPiece.Tucuxi));
+            _crewToucan.SetVisible(_toucanAboard);
+            if (_crewTucuxi.gameObject.activeSelf != _tucuxiAboard)
+            {
+                _crewTucuxi.gameObject.SetActive(_tucuxiAboard);
+            }
+        }
+
+        // La tripulación sobre la canoa de 40 dp: el tucán en la proa y el tucuxi junto al guía, que entran con un fundido al llegar
+        // (con la bandera); con Reducir movimiento, el final. Sin asignaciones.
+        private void ApplyCrew(Vector2 canoe, float appear)
+        {
+            const float k = ProceduralArt.MapCanoeWidthDp / ProceduralArt.CapiCanoeDesignWidthDp;
+            if (_toucanAboard && _crewToucan != null)
+            {
+                float s = k * RiverCrew.ToucanDp / 19.8f;
+                Vector2 feet = canoe + new Vector2(_canoeFacing * 12f, 3f);
+                _crewToucan.Pose(feet, s, 0f, 0f, appear, _canoeFacing); // mira hacia la proa
+            }
+
+            if (_tucuxiAboard && _crewTucuxi != null)
+            {
+                RectTransform g = _guideA.rectTransform;
+                RectTransform t = _crewTucuxi.rectTransform;
+                CrewDraw.SetPos(t, g.anchoredPosition + new Vector2(-9f * _canoeFacing, -6f));
+                CrewDraw.SetScale(t, new Vector3(-_canoeFacing, 1f, 1f));
+                CrewDraw.SetAlpha(_crewTucuxi, appear * _guideAAlpha);
+            }
         }
 
         /// <summary>
@@ -2352,6 +2454,8 @@ namespace AF.UI
                 _guideBAlpha = 0f;
                 PlaceGuide(_guideA, travel, lead, rest, canoe, 1f);
             }
+
+            ApplyCrew(canoe, arrived ? (reduceMotion ? 1f : Mathf.Clamp01(flagT * 3f)) : 0f); // D-069, M2-4: el plano final con la tripulación
 
             // Los nombres de paso: salen al acercarse la canoa, se leen enteros y se van al dejarlos atrás, sin pararse. El del
             // relevo (Teotônio) entra antes, cuando la canoa se para, y se queda entero hasta que la canoa lo pasa.

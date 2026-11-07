@@ -48,6 +48,9 @@ namespace AF.Tests.EditMode
         // B14 (tanda 5; 06 §4.4-§4.5): la Canasta de una parada futura y el Premio del mundo.
         private static readonly string[] B14Keys = { "map_card_basket", "map_world_prize" };
 
+        // D-069, M2-4: el chip de la tripulación (§6.2) y «Faltan N» en el rótulo de la parada siguiente (pregunta 2 de M2-3).
+        private static readonly string[] M24Keys = { "map_crew_join_toucan", "map_crew_join_tucuxi", "map_stop_label_remaining" };
+
         private static RiverStopCatalog? s_stops;
         private LocStateSnapshot _loc;
 
@@ -77,9 +80,10 @@ namespace AF.Tests.EditMode
             expected.AddRange(PM2Keys);
             expected.AddRange(Fx13Keys);
             expected.AddRange(B14Keys);
+            expected.AddRange(M24Keys);
             expected.Sort(StringComparer.Ordinal);
-            Assert.That(expected, Has.Count.EqualTo(24));
-            Assert.That(new HashSet<string>(expected), Has.Count.EqualTo(24), "sin repetidas");
+            Assert.That(expected, Has.Count.EqualTo(27));
+            Assert.That(new HashSet<string>(expected), Has.Count.EqualTo(27), "sin repetidas");
 
             LocTable strings = LocSetUpFixture.Catalog.Strings;
             var found = new List<string>();
@@ -92,7 +96,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(found, Is.EqualTo(expected), "las 24 claves del Mapa, en orden ordinal, y ninguna map_* más");
+            Assert.That(found, Is.EqualTo(expected), "las 27 claves del Mapa, en orden ordinal, y ninguna map_* más");
 
             var typed = new List<string>();
             foreach (FieldInfo f in typeof(UiText.Keys).GetFields(BindingFlags.Public | BindingFlags.Static))
@@ -367,6 +371,11 @@ namespace AF.Tests.EditMode
             }
 
             foreach (string key in B14Keys)
+            {
+                yield return key;
+            }
+
+            foreach (string key in M24Keys)
             {
                 yield return key;
             }
