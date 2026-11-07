@@ -5149,3 +5149,13 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
   
   Como mucho 2 carriles con Editor a la vez (regla dura 7). Los cambios al canon de §9.4 los hace cada bloque cuando los aplica.
 - **Objetivo de rendimiento:** 60 fps en el teléfono de pruebas y 30 fps o más en gama baja, medidos con la sonda `AF_PERF` antes de cerrar M2-1. Las texturas suman 6 MiB más, solo con el Mapa abierto.
+
+### D-068, añadido del 2026-11-07: las preguntas abiertas de F0 (03, preguntas 11-13 y 15)
+
+Decididas por el dueño con las recomendadas («Sí, recomendadas»):
+- **11:** el Aguapé espeso se estrena en las posiciones p7-p8 del ciclo 341-360 (347-348). Es una excepción declarada: p3-p5 son del Brote de dos hojas.
+- **12:** la Tinaja (D-019) se queda fuera de la 1.1. Así no choca con el estreno de las ocultas en Normal (323-324).
+- **13:** Aguapé con Aguas turbias, aplicado en F0 (02 §9.2, regla 7). Deshace Q14 A de D-007.
+- **15:** `curve2_from_level` con dos dispositivos: en la fusión gana el mínimo. Se acepta el caso límite: la garantía vale por dispositivo.
+- **La Cocha pasa a la 1.2,** junto con la Palizada (P9 B). Se quita el [P].
+- La pregunta 14 (el par objetivo de la curva 2) la decide la medición de F1.
