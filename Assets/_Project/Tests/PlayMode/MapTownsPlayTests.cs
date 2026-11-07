@@ -5,6 +5,7 @@ using System.Globalization;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Localization;
 using AF.Platform;
 using AF.Save;
 using AF.UI;
@@ -199,6 +200,58 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.CloseRiverMap(), Is.True);
             yield return null;
             Assert.That(map.TownArt.Built, Is.False, "se suelta al cerrar");
+        }
+
+        [UnityTest]
+        public IEnumerator UnapprovedNames_AreNeitherVignettesNorDots_WithOrWithoutTowns()
+        {
+            yield return OpenAt(76, true);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(boot.CloseRiverMap(), Is.True);
+            LocCatalog catalog = Loc.Catalog;
+            string locale = Loc.Locale;
+            try
+            {
+                // Como en release: los nombres nuevos (pendiente_asesor, hasta la revisión de Gemini, D-054) son «».
+                Loc.Configure(catalog, locale, false);
+                Assert.That(Loc.Fact("map.stop.manacapuru.name"), Is.Empty);
+                Assert.That(Loc.Fact("map.stop.coari.name"), Is.EqualTo("Coari"), "los de la 1.0, aprobados");
+                foreach (bool towns in new[] { true, false })
+                {
+                    GameBootstrap.MapLiveConfigOverride = towns ? null : new MapLiveConfig { UiMapTowns = false };
+                    Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+                    yield return null;
+                    string where = towns ? "con ui_map_towns" : "sin ui_map_towns";
+                    Assert.That(map.TownIndexOf("manacapuru"), Is.EqualTo(-1), where + ": sin viñeta");
+                    for (int i = 0; i < map.PassingCount; i++)
+                    {
+                        Assert.That(map.PassingAt(i).Id, Is.Not.EqualTo("manacapuru"), where + ": ni punto de la 1.0");
+                        Assert.That(Loc.Fact(map.PassingAt(i).NameKey), Is.Not.Empty, where + ": ningún punto sin nombre");
+                    }
+
+                    Assert.That(towns ? map.TownIndexOf("coari") >= 0 : HasDot(map, "coari"), Is.True, where + ": Coari sí");
+                    Assert.That(boot.CloseRiverMap(), Is.True);
+                    yield return null;
+                }
+            }
+            finally
+            {
+                Loc.Configure(catalog, locale, true);
+            }
+        }
+
+        private static bool HasDot(RiverMapScreen map, string id)
+        {
+            for (int i = 0; i < map.PassingCount; i++)
+            {
+                if (map.PassingAt(i).Id == id)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static IEnumerator OpenAt(int playLevel, bool towns)

@@ -1916,6 +1916,7 @@ namespace AF.UI
         private float[] _passingFrom = Array.Empty<float>();
         private Rect[] _passingRect = Array.Empty<Rect>();
         private bool[] _passingPlaced = Array.Empty<bool>();
+        private bool[] _passingDropped = Array.Empty<bool>();
         private Vector2[] _nearA = Array.Empty<Vector2>();
         private Vector2[] _nearB = Array.Empty<Vector2>();
         private float[] _nearGrow = Array.Empty<float>();
@@ -2357,7 +2358,7 @@ namespace AF.UI
             int n = travel.PassingCount;
             for (int i = 0; i < n; i++)
             {
-                float a = arrived || !_passingPlaced[i] ? 0f : Mathf.Clamp01((PassingWindowDp - Mathf.Abs(arc - _passingDp[i])) / PassingFadeDp);
+                float a = arrived || _passingDropped[i] ? 0f : Mathf.Clamp01((PassingWindowDp - Mathf.Abs(arc - _passingDp[i])) / PassingFadeDp);
                 if (i == _relayLabel && !arrived && !reduceMotion && arc < _passingDp[i])
                 {
                     a = Mathf.Max(a, Mathf.Clamp01((ms - (_relayStopMs - RelayLabelFadeMs)) / RelayLabelFadeMs));
@@ -2532,6 +2533,7 @@ namespace AF.UI
                 _passingFrom = new float[n];
                 _passingRect = new Rect[n];
                 _passingPlaced = new bool[n];
+                _passingDropped = new bool[n];
             }
 
             // Primero dónde está cada punto y desde dónde se ve (para que las píldoras que se ven a la vez no se pisen).
@@ -2551,6 +2553,7 @@ namespace AF.UI
             for (int k = 0; k < _passingPlaced.Length; k++)
             {
                 _passingPlaced[k] = false;
+                _passingDropped[k] = false;
             }
 
             for (int k = 0; k < _passing.Count; k++)
@@ -2593,7 +2596,8 @@ namespace AF.UI
                 _passingRect[i] = new Rect(at.x - (w * 0.5f), at.y - (h * 0.5f), w, h);
                 // D-069, M2-2: con los pueblos de paso hay tramos con varios nombres juntos; uno que no cabe sin pisar a otro que se
                 // ve a la vez no sale (el del relevo, siempre).
-                _passingPlaced[i] = i == _relayLabel || !BoxHitsPills(i, at.x, at.y, w * 0.5f, h * 0.5f);
+                _passingDropped[i] = i != _relayLabel && BoxHitsPills(i, at.x, at.y, w * 0.5f, h * 0.5f);
+                _passingPlaced[i] = !_passingDropped[i];
                 label.canvasRenderer.SetAlpha(0f);
                 pill.canvasRenderer.SetAlpha(0f);
             }
@@ -2816,7 +2820,7 @@ namespace AF.UI
         /// </summary>
         public bool Overlaps(int i, int j)
         {
-            return _passingPlaced[i] && _passingPlaced[j] // uno que no sale (M2-2) no se ve con nadie
+            return !_passingDropped[i] && !_passingDropped[j] // uno que no sale (M2-2) no se ve con nadie
                 && _passingFrom[i] < _passingDp[j] + PassingWindowDp && _passingFrom[j] < _passingDp[i] + PassingWindowDp;
         }
 

@@ -238,11 +238,9 @@ namespace AF.Tests.PlayMode
             int town = map.TownIndexOf("breves");
             Assert.That(town, Is.GreaterThanOrEqualTo(0));
             Assert.That(map.TownPassed(town), Is.True);
-            if (map.TownShown(town))
-            {
-                Assert.That(map.TapTown(town), Is.True);
-                StringAssert.StartsWith("Breves", map.Card!.TitleText);
-            }
+            Assert.That(map.TownShown(town), Is.True, "Breves, con su viñeta (nada más importante la pisa)");
+            Assert.That(map.TapTown(town), Is.True);
+            StringAssert.StartsWith("Breves", map.Card!.TitleText);
         }
 
         [UnityTest]
