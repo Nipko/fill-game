@@ -629,6 +629,11 @@ Especificación de producción de los tableros de sustitución de 301-700 (D-068
   - `pressure_plan`: el escalón de presión objetivo de cada hito (`Generation/Pressure.cs` lee las palancas de 03 §12);
   - `f2_mechanics` y `f2_slots`: el Aguapé (303-305), el Aguapé espeso (347-348) y la Lancha (363-365), declarados para F2. El
     generador aún no los coloca: `--spec` y `--measure` avisan de cada slot y lo generan con la celda del calendario.
+- **`t_plan` de 03 §12:** la especificación no lleva un `t_plan`: los topes de T van en `role_caps` (por papel, con el de K) y
+  el K de cada posición sale del `k_plan` (por papel, que es por posición del ciclo) y de `k_cells`.
+- **Aguas turbias de la curva 2 (02 §11, T1):** el estreno en Normal (323-324) oculta exactamente 1 dosis; los retos turbios,
+  2-4 dosis en ≤ 2 cuias, y los hitos turbios, 3-4 en ≤ 3 (el paso «Tu» añade cuias si el sorteo se queda corto y, si no llega,
+  rechaza el candidato). La regla Q9 (2 dosis) queda para el estreno del 100, en la curva 1.
 - **Reglas de `--validate-spec`** (solo con `curve`): CURVE-BASE, ROLE-CAPS (K del plan dentro del tope y K + vacíos ≤ el
   tope de cuias), MURKY-NORMAL (el estreno y 3 comodidades turbias por ciclo desde el 321-340), F2-SLOTS y el aviso PRESSURE
   (el escalón que se espera de la celda del hito frente al plan; sin el Aguapé, los hitos no llegan: 18 avisos). Con
@@ -643,8 +648,8 @@ Especificación de producción de los tableros de sustitución de 301-700 (D-068
 
 ```
 dotnet run --project tools/level-generator -c Release -- --validate-spec tools/level-generator/specs/campaign_v3.json
-dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v3.json --levels 301-420 --out tools/out/curva_f3 --report tools/out/curva_f3/curva_07_report.md
-dotnet run --project tools/level-generator -c Release -- --reserve tools/out/curva_f3/curva_07_v1.json --spec tools/level-generator/specs/campaign_v3.json --out tools/out/curva_f3
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v3.json --levels 421-560 --out tools/out/curva_f3 --report tools/out/curva_f3/curva_08_report.md
+dotnet run --project tools/level-generator -c Release -- --reserve tools/out/curva_f3/curva_08_v1.json --spec tools/level-generator/specs/campaign_v3.json --out tools/out/curva_f3
 dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/campaign_v3.json --levels 421-560 --report tools/out/curva_f3/medida_v3_421-560.md
 dotnet run --project tools/level-generator -c Release -- --measure --spec tools/level-generator/specs/campaign_v3.json --levels 561-700 --report tools/out/curva_f3/medida_v3_561-700.md
 dotnet run --project tools/level-generator -- --self-test curve

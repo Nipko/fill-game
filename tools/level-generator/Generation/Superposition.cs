@@ -400,6 +400,10 @@ internal static class Superposition
 
     private static string? Murky(GenBoard b, SuperpositionContext ctx, Prng rng)
     {
+        // Curva 2 (02 §11, T1; D-068): el estreno en Normal (murky_normal.debut) oculta exactamente 1 dosis.
+        bool curve = ctx.Plan.Curve > 0;
+        bool normalDebut = curve && ctx.Spec.MurkyNormal is { } debutRule && debutRule.Debut.Contains(ctx.Plan.Level);
+
         // Cuias que pueden ser turbias: sin mecánica, sin Barro, 2-3 dosis (T3) y T4 en las capas que se ocultan.
         var options = new List<(int Cuia, int Hidden)>();
         for (int i = 0; i < b.Count; i++)
@@ -417,7 +421,7 @@ internal static class Superposition
                 t4 &= c[k] != c[k + 1];
             }
 
-            if (t4 && (!ctx.MurkyDebut || hide == 2))
+            if (t4 && (!ctx.MurkyDebut || hide == 2) && (!normalDebut || hide == 1))
             {
                 options.Add((i, hide));
             }
@@ -457,8 +461,49 @@ internal static class Superposition
             total += hide;
         }
 
-        return total == 0 ? "Aguas turbias: ninguna cuia cabe en el tope de 4 dosis" : null;
+        if (total == 0)
+        {
+            return "Aguas turbias: ninguna cuia cabe en el tope de 4 dosis";
+        }
+
+        // Curva 2 (02 §11, T1): en los retos, 2-4 dosis en 2 cuias como mucho; en los hitos, 3-4 dosis en 3 cuias como mucho. Si el
+        // sorteo se queda corto se añaden cuias (solo en la curva 2: la curva 1 consume los mismos números que antes).
+        if (curve && ctx.Plan.Role is SlotRole.Challenge or SlotRole.Milestone)
+        {
+            (int min, int maxCuias) = ctx.Plan.Role == SlotRole.Challenge ? (CurveChallengeMinHidden, 2) : (CurveMilestoneMinHidden, 3);
+            int used = b.Hidden.Select(h => h.Cuia).Distinct().Count();
+            while (total < min && used < maxCuias && options.Count > 0)
+            {
+                (int cuia, int hide) = Pick(options, rng);
+                options.RemoveAll(o => o.Cuia == cuia);
+                if (total + hide > MaxHiddenGenerated)
+                {
+                    continue;
+                }
+
+                for (int k = 0; k < hide; k++)
+                {
+                    b.Hidden.Add((cuia, k));
+                }
+
+                total += hide;
+                used++;
+            }
+
+            if (total < min)
+            {
+                return $"Aguas turbias: la curva 2 pide {min} dosis ocultas como minimo en {(ctx.Plan.Role == SlotRole.Challenge ? "un reto" : "un hito")} (02 sec. 11, T1)";
+            }
+        }
+
+        return null;
     }
+
+    /// <summary>Dosis ocultas como mínimo en un reto turbio de la curva 2 (02 §11, T1: «en los retos, 2-4 dosis en ≤ 2 cuias»).</summary>
+    public const int CurveChallengeMinHidden = 2;
+
+    /// <summary>Dosis ocultas como mínimo en un hito turbio de la curva 2 (02 §11, T1: «en los hitos, 3-4 dosis en ≤ 3 cuias»).</summary>
+    public const int CurveMilestoneMinHidden = 3;
 
     /// <summary>
     /// Dosis de la tinaja por tipo de nivel (D-019, Q-Ti1 A; 02 §9.1 M13; 03 §8): estreno (p3-p5), comodidad y práctica, 3

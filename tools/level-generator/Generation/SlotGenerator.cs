@@ -818,7 +818,8 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             Spec = spec,
             Colors = k,
             Units = units,
-            MurkyDebut = plan.DebutBoard && plan.Mechanics.Any(m => m.Code == "Tu"),
+            // Q9 (el estreno del hito 100, 2 dosis) solo en la curva 1; el estreno en Normal de la curva 2 lleva 1 dosis (Superposition).
+            MurkyDebut = plan.DebutBoard && plan.Mechanics.Any(m => m.Code == "Tu") && plan.Curve == 0,
         };
         var rng = new Prng(Prng.SubSeed(seed, 1));
         foreach (string code in Superposition.Order)

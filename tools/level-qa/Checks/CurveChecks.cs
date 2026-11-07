@@ -48,7 +48,7 @@ internal static class CurveChecks
         return TRole(ctx.Spec, e, pack?.Kind ?? "campaign")
             .Concat(MurkyNormal(ctx.Spec, e))
             .Concat(Aguape(ctx.Spec, e.Level))
-            .Concat(Lancha(e.Level));
+            .Concat(Lancha(ctx.Spec, e.Level));
     }
 
     public static IEnumerable<QaIssue> TRole(CampaignSpec spec, LevelEval e, string kind)
@@ -106,9 +106,18 @@ internal static class CurveChecks
     public static IEnumerable<QaIssue> MurkyNormal(CampaignSpec spec, LevelEval e)
     {
         QaLevel lv = e.Level;
-        if (e.Plan is not { Curve: > 0 } plan || lv.Label != "normal")
+        if (e.Plan is not { Curve: > 0 } plan)
         {
             yield break;
+        }
+
+        QaIssue Fail(string msg) => new("QA-MURKY-NORMAL", lv.Pack, lv.Level, msg);
+        MurkyNormalRule? rule = spec.MurkyNormal;
+        int debutLevel = rule is { Debut.Count: > 0 } ? rule.Debut[0] : -1;
+        if (lv.Intro == "murky" && lv.Level != debutLevel)
+        {
+            yield return Fail(string.Create(CultureInfo.InvariantCulture,
+                $"intro_mechanic murky fuera del estreno de las turbias en Normal ({(debutLevel < 0 ? "sin murky_normal.debut" : debutLevel.ToString(CultureInfo.InvariantCulture))})"));
         }
 
         int[][] murky = MechanicChecks.MurkyHidden(lv.Board);
@@ -117,8 +126,21 @@ internal static class CurveChecks
             yield break;
         }
 
-        QaIssue Fail(string msg) => new("QA-MURKY-NORMAL", lv.Pack, lv.Level, msg);
-        MurkyNormalRule? rule = spec.MurkyNormal;
+        int cuias = murky.Select(h => h.Length > 0 ? h[0] : -1).Distinct().Count();
+
+        // Retos e hitos turbios de la curva 2 (02 §11, T1): 2-4 dosis en <= 2 cuias y 3-4 dosis en <= 3 cuias.
+        if (lv.Label != "normal")
+        {
+            (int min, int maxCuias) = plan.Role == SlotRole.Milestone ? (3, 3) : (2, 2);
+            if (plan.Role is SlotRole.Challenge or SlotRole.Milestone && (murky.Length < min || murky.Length > 4 || cuias > maxCuias))
+            {
+                yield return Fail(string.Create(CultureInfo.InvariantCulture,
+                    $"{murky.Length} dosis ocultas en {cuias} cuias en un {plan.RoleName}; la curva 2 pide {min}-4 dosis en {maxCuias} cuias como mucho (02 sec. 11, T1)"));
+            }
+
+            yield break;
+        }
+
         if (rule is null || lv.Level < rule.FromLevel)
         {
             yield return Fail(string.Create(CultureInfo.InvariantCulture,
@@ -131,11 +153,45 @@ internal static class CurveChecks
             yield return Fail($"Aguas turbias en un nivel Normal de {plan.RoleName}: en Normal solo en comodidad (nunca en recuperacion ni en remanso)");
         }
 
-        int cuias = murky.Select(h => h.Length > 0 ? h[0] : -1).Distinct().Count();
         if (cuias != 1 || murky.Length > rule.MaxHiddenUnits)
         {
             yield return Fail(string.Create(CultureInfo.InvariantCulture,
                 $"{murky.Length} dosis ocultas en {cuias} cuias; en Normal, 1 cuia con como mucho {rule.MaxHiddenUnits}"));
+        }
+
+        if (rule.Debut.Contains(lv.Level) && murky.Length != 1)
+        {
+            yield return Fail(string.Create(CultureInfo.InvariantCulture,
+                $"estreno de las turbias en Normal con {murky.Length} dosis ocultas; lleva 1 (02 sec. 11, T1)"));
+        }
+    }
+
+    /// <summary>
+    /// Cabecera de un pack con niveles de la curva 2: kind curve (o reserve), pack_schema 5 y pack_id curva_{mm}_v{v} (o
+    /// reserva_curva_{mm}_v{v}); y un pack curve solo con niveles de la curva 2 (QA-T-ROLE, también con --no-reproduce).
+    /// </summary>
+    public static IEnumerable<QaIssue> RunPack(CampaignSpec spec, QaPack pack)
+    {
+        QaIssue Fail(string msg) => new("QA-T-ROLE", pack.Path, 0, msg);
+        bool curveLevels = pack.Levels.Any(l => spec.IsCurveLevel(l.Level) && spec.Calendar.ContainsKey(l.Level));
+        WorldInfo? world = spec.Worlds.FirstOrDefault(w => w.World == pack.World);
+        if (curveLevels && pack.Kind is not ("curve" or "reserve"))
+        {
+            yield return Fail($"niveles de la curva 2 en un pack de kind {pack.Kind} (se espera curve)");
+        }
+
+        if (pack.Kind == "curve" || (curveLevels && pack.Kind == "reserve"))
+        {
+            if (pack.PackSchema != PackReader.CurvePackSchema)
+            {
+                yield return Fail(string.Create(CultureInfo.InvariantCulture, $"pack_schema {pack.PackSchema}; la curva 2 va con el {PackReader.CurvePackSchema}"));
+            }
+
+            string? expected = world is null ? null : pack.Kind == "curve" ? PackWriter.CurvePackId(world, spec.Lap) : ReserveRunner.PackIdFor(spec, world);
+            if (expected is not null && pack.PackId != expected)
+            {
+                yield return Fail($"pack_id {pack.PackId}; se espera {expected}");
+            }
         }
     }
 
@@ -170,6 +226,12 @@ internal static class CurveChecks
                 {
                     yield return new QaIssue("QA-MURKY-NORMAL", pack, start, string.Create(CultureInfo.InvariantCulture,
                         $"ciclo {start}-{start + 19}: {comfort} comodidades turbias (como mucho {per})"));
+                }
+                else if (comfort < 2)
+                {
+                    // 02 §11, T1: «en 2-3 niveles por ciclo»; menos de 2 falla (el dueño pidió 3: F1-1).
+                    yield return new QaIssue("QA-MURKY-NORMAL", pack, start, string.Create(CultureInfo.InvariantCulture,
+                        $"ciclo {start}-{start + 19}: {comfort} comodidades turbias (02 sec. 11, T1: 2-3 por ciclo)"));
                 }
                 else if (comfort < per)
                 {
@@ -218,9 +280,14 @@ internal static class CurveChecks
         return cuias >= 13 && rows.Length != 3 ? "con 13 cuias o mas, 3 filas (02 sec. 5; D-030)" : null;
     }
 
-    /// <summary>Fila de cada cuia según <paramref name="rows"/> (null sin filas fijas).</summary>
+    /// <summary>
+    /// Fila de cada cuia según <paramref name="rows"/> o, sin filas fijas y con 10 cuias o menos, las de la regla de 02 §5 [P]: 1
+    /// fila con 5 o menos y ⌈T/2⌉ + ⌊T/2⌋ con 6-10. Null si no se puede saber (11 o más cuias sin rows, que ya falla).
+    /// Esqueleto hasta F2: al integrarlo, QA-AGUAPE llama a LevelValidation.ValidateRows, que lleva la regla al núcleo.
+    /// </summary>
     private static int[]? RowOf(int[]? rows, int cuias)
     {
+        rows ??= cuias <= 5 ? [cuias] : cuias <= 10 ? [(cuias + 1) / 2, cuias / 2] : null;
         if (rows is null || rows.Sum() != cuias)
         {
             return null;
@@ -284,7 +351,7 @@ internal static class CurveChecks
             }
         }
 
-        if (lv.RawAttrs.Any(a => a?.Type is "tinaja" or "cucharon"))
+        if (lv.RawAttrs.Concat(lv.Relief.SelectMany(r => r.RawAttrs)).Any(a => a?.Type is "tinaja" or "cucharon"))
         {
             yield return Fail("Aguape con la tinaja (02 sec. 9.2, regla 7)");
         }
@@ -339,13 +406,18 @@ internal static class CurveChecks
         }
     }
 
-    public static IEnumerable<QaIssue> Lancha(QaLevel lv)
+    public static IEnumerable<QaIssue> Lancha(CampaignSpec spec, QaLevel lv)
     {
         QaIssue Fail(string msg) => new("QA-LANCHA", lv.Pack, lv.Level, msg);
         int[] boats = Enumerable.Range(0, lv.RawAttrs.Length).Where(i => lv.RawAttrs[i]?.Type == "lancha").ToArray();
         if (lv.Intro == "lancha" && boats.Length == 0)
         {
             yield return Fail("intro_mechanic lancha y el nivel no la lleva");
+        }
+
+        if (lv.Intro == "lancha" && spec.F2Mechanics.FirstOrDefault(m => m.Intro == "lancha") is { } debut && debut.Debut != lv.Level)
+        {
+            yield return Fail(string.Create(CultureInfo.InvariantCulture, $"intro_mechanic lancha fuera de su estreno ({debut.Debut})"));
         }
 
         if (boats.Length == 0)

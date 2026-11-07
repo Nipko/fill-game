@@ -75,7 +75,7 @@ internal static class MeasureRunner
             || !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int last)
             || first < CampaignRunner.GenerationFirst(spec) || last > spec.LastLevel || first > last)
         {
-            Console.Error.WriteLine($"level-generator: --levels debe ser a-b dentro de {spec.FirstLevel}-{spec.LastLevel}: {levelsArg}");
+            Console.Error.WriteLine($"level-generator: --levels debe ser a-b dentro de {CampaignRunner.GenerationFirst(spec)}-{spec.LastLevel}: {levelsArg}");
             return 2;
         }
 

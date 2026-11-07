@@ -273,6 +273,8 @@ en ninguna de las tres medidas).
   hitos K 11, cúspides K 12, estreno del Brote de dos hojas K 7, 3 comodidades turbias por ciclo y la celda nueva del 369.
 - **Semillas:** las de la curva 2 de cada slot (`amazonfill:v1:m{mm}:v1:n{nnnn}:c2`), las que usará F5; no las de la 1.0 de la
   sección 3. Sin el Aguapé ni la Lancha (F2): sus slots se miden con la celda del calendario.
+- **Aguas turbias de la curva 2 (02 §11, T1):** el estreno en Normal (323-324) con 1 dosis oculta, los retos turbios con 2-4
+  dosis en 2 cuias como mucho y los hitos turbios con 3-4 en 3 cuias como mucho.
 - **Informes completos:** `tools/out/curva_f3/medida_v3_421-560.md`, `medida_v3_561-700.md` y `medida_v3_301-420.md`; la prueba de
   K 10 en `medida_k10_*.md` (especificación experimental `specs/experimental/campaign_v3_f3_k10.json`).
 
@@ -282,43 +284,47 @@ en ninguna de las tres medidas).
 |---|---|---|---|
 | Ciclos sin colocación | 0 de 7 | 0 de 7 | **1 de 6 (401-420)** |
 | Ciclos que necesitan el último recurso | 0 | 0 | — |
-| Retos en su ventana (75-89 %) | 32 de 35 | **26 de 35** | 23 de 25 colocados |
-| Hitos en su ventana (≥ 90 %) | 7 de 7 (cúspide incluida) | 7 de 7 (cúspide incluida) | 5 de 5 colocados |
+| Retos en su ventana (75-89 %) | 32 de 35 | **29 de 35** | 23 de 25 colocados |
+| Hitos en su ventana (≥ 90 %) | 7 de 7 (cúspide incluida) | **6 de 7** (el 660, 73 %) | 5 de 5 colocados |
 | T media / mediana | 10,3 / 10 | 10,3 / 10 | 10,4 / 10 |
 | K media / mediana | 8,4 / 8 | 8,4 / 8 | 8,4 / 8 |
-| Niveles con T ≤ 11 / ≥ 12 / ≥ 13 | 132 / 8 / 5 | 129 / 11 / 5 | 91 / 9 / 5 (de 100 colocados) |
+| Niveles con T ≤ 11 / ≥ 12 / ≥ 13 | 132 / 8 / 5 | 130 / 10 / 5 | 91 / 9 / 5 (de 100 colocados) |
 | Fuera del tope de T y K de su papel | 0 | 0 | 0 |
-| Niveles con ocultas (dosis) | 28, el 20 % (50) | 27, el 19 % (46) | 15 de 100 (24) |
+| Niveles con ocultas (dosis) | 28, el 20 % (51) | 27, el 19 % (48) | 15 de 100 (24) |
 | Comodidades turbias publicadas con turbias | 21 de 21 | 21 de 21 | — |
 
-Por papel (mundos 8 y 9): comodidad T 9-11 (mediana 10), K 8 y bot 35 %; reto T 10-12 (mediana 11), K 9 y bot 80 %; hito T 12-13,
-K 11 y bot 95-100 %; cúspide 560 con 13 cuias (K 12, 100 %) y 700 con 14 (K 12, 93 %); recuperación y remanso con 10 cuias y K 8.
+Por papel (mundos 8 y 9): comodidad T 9-11 (mediana 10), K 8 y bot 35 %; reto T 10-12 (mediana 11), K 9 y bot 80-83 %; hito
+T 12-13 y K 11, con el bot entre el 95 % y el 100 % salvo el 660 (73 %); cúspide 560 con 13 cuias (K 12, 100 %) y 700 con 14 (K 12,
+93 %); recuperación y remanso con 10 cuias y K 8.
 
-**Colocan.** Los 14 ciclos de los mundos 8 y 9 colocan con los topes del dueño, sin el último recurso, y todos los hitos miden Muy
-difícil. **El mundo 9 pierde etiquetas Difícil:** 9 de sus 35 retos quedan entre el 43 % y el 73 % (en la curva publicada eran 8 de
-35, sección 3 y `tools/level-generator/README.md`). El mundo 7 con las semillas de la curva 2 no coloca el ciclo 401-420 (abajo).
+**Colocan.** Los 14 ciclos de los mundos 8 y 9 colocan con los topes del dueño, sin el último recurso. **Pierden etiquetas:** el
+mundo 8 publica 3 de sus 35 retos sin Difícil y el 9, 6 retos y el hito 660 (en la curva publicada eran 4 y 8 retos; sección 3 y
+`tools/level-generator/README.md`). El mundo 7 con las semillas de la curva 2 no coloca el ciclo 401-420 (8.3).
 
-### 8.2 Retos que no miden Difícil (K 9)
+### 8.2 Retos que no miden Difícil (K 9) y la prueba con K 10
 
 | Reto | Celda | Bot (K 9) | Bot con K 10 (prueba) | Lectura |
 |---|---|---|---|---|
 | 429 | Ma+Re | 73 % | **80 %** | K 10 lo arregla |
-| 452 | Pi+Br | 45 % | — (K 10 no cabe en 12 cuias) | Piraña con Brote |
+| 452 | Pi+Br | 45 % | — (K 10 no cabe en 12 cuias) | La Piraña con el Brote |
 | 466 | Li+B2 | 73 % | 70 % | K 10 no ayuda |
 | 566 | Ma+Re | 73 % | **75 %** | K 10 lo arregla, justo |
-| 592 | Pi+B2 | 63 % | — (no cabe) | Piraña con Brote de dos hojas |
-| 632 | Ma+Ho | 70 % | **88 %** | K 10 lo arregla |
-| 646 | Pi+Br+Ha | 43 % | — (no cabe) | Piraña con Brote; el primer reto de tres mecánicas (03 §11) |
-| 649 | Pi+Ha | 73 % | **83 %** | K 10 lo arregla |
-| 652 | Br+Re | 65 % | **78 %** | K 10 lo arregla |
+| 592 | Pi+B2 | 63 % | — (no cabe) | La Piraña con el Brote de dos hojas |
+| 658 | Ha+Re | 28 % | 28 % | Elegido por la escalera del ciclo 641-660 (con el hito 660 en el 73 %) |
 | 672 | Li+Re | 70 % | sin colocar | Con K 10 el ciclo 661-680 deja de colocar |
 | 686 | Ma+Ho | 73 % | **88 %** | K 10 lo arregla |
 | 698 | Ha+B2 | 73 % | **83 %** | K 10 lo arregla |
 
-- Con K 10 en 429, 566, 632, 649, 652, 686 y 698 (la regla de F1-1 para 329, 346 y 349), el mundo 8 pasa a 33 de 35 retos en su
-  ventana y el 9 a 28 de 35 con 661-680 sin colocar por el 672; sin el 672, se espera 30-31 de 35 en el 9 [E].
-- **La Piraña con el Brote no llega a Difícil con K 9** (369 de F1, 452, 592 y 646: 43-65 %). Con K 10 no caben en el tope del
-  reto: K 10 + 1 vacío + la cueva + la cuia a medias del Brote = 13 cuias. Es su celda, no el tope [E].
+- Con K 9 miden Difícil, entre otros, el 632 (80 %), el 646 (Pi+Br+Ha, 80 %), el 649 (83 %) y el 652 (83 %); con K 10 siguen en su
+  ventana (88 %, 80 %, 78 % y 80 %), así que no lo necesitan.
+- Con K 10 en los retos de la prueba (429, 466, 566, 632, 649, 652, 672, 686 y 698), el mundo 8 pasa a 33 de 35 retos en su
+  ventana y el 9 deja el ciclo 661-680 sin colocar (por el 672). Sin el 466 ni el 672, se espera 33 de 35 en el 8 y 31-32 de 35
+  en el 9 [E].
+- **La Piraña con el Brote no llega a Difícil con K 9** en dos de los tres retos (452: 45 %; 592: 63 %; el 646, con la Hoja atada,
+  sí: 80 %), como el 369 de F1 (Pi+B2, 43 %). Con K 10 no caben en el tope del reto: K 10 + 1 vacío + la cueva + la cuia a medias
+  del Brote = 13 cuias. Es su celda, no el tope [E].
+- **El ciclo 641-660** coloca con el reto 658 en el 28 % y el hito 660 (Br+Ha+Re) en el 73 %: la escalera se cierra con dos
+  slots fuera de su ventana (c.2). La curación del dueño (F5) los vería sin chip.
 
 ### 8.3 El mundo 7 con las semillas de la curva 2: 401-420 no coloca
 
@@ -332,21 +338,20 @@ el ciclo sigue sin colocar. Es la escalera del ciclo de estreno de la Flor, no l
 ### 8.4 Escalón de presión de los hitos [V]
 
 Sin el Aguapé, en los mundos 8 y 9 solo el hito 480 llega al escalón de `pressure_plan` (5 de 5): el 440 da 3 de 4, el 500 3 de
-6, el 540 4 de 7, el 560 5 de 8, el 640 3 de 7 y el 700 5 de 9 (tablas de los informes; en el mundo 7 solo el 320). Las palancas de 1.0 dan 3-5 escalones; el plan
-pide 4-9. El hueco es el que deben llenar las congeladas (Aguapé y espeso, 0-2 escalones) y las ocultas en los hitos: con
-la escala de 03 §12 el plan de los mundos 8 y 9 no se alcanza sin F2 [E].
+6, el 540 4 de 7, el 560 5 de 8, el 640 3 de 7 y el 700 5 de 9 (tablas de los informes; en el mundo 7, solo el 320). Las palancas
+de la 1.0 dan 3-5 escalones y el plan pide 4-9: el hueco es el que deben llenar las congeladas (el Aguapé y el espeso, 0-2
+escalones) y las ocultas en los hitos. Con la escala de 03 §12, el plan de los mundos 8 y 9 no se alcanza sin F2 [E].
 
 ### 8.5 Propuestas [P]
 
-1. **K 10 en los retos 429, 566, 632, 649, 652, 686 y 698** (`k_cells`), como F1-1. No en 466 ni en 672.
-2. **Cambiar la celda de los retos con la Piraña y el Brote** (452 Pi+Br, 592 Pi+B2 y 646 Pi+Br+Ha), como se hizo con el 369, o
-   aceptarlos sin la etiqueta Difícil (F1-2). El 646 es «el primer reto con tres mecánicas» de 03 §11: si se cambia, otra celda
-   tiene que hacer de primer trío.
-3. **Rehacer el ciclo 401-420 de la curva 2** antes de F5: la escalera del estreno de la Flor (409 Fl, 412 Fl+Ba, 415 Fl+Ll) y el
-   reto turbio 418. Opciones: cambiar el 418 a Br+Tu y bajar el 409 a un reto con otra palanca, o reordenar los retos de la Flor. Se
-   prueba con `--measure` antes de tocar la especificación.
-4. **Revisar `pressure_plan` de los mundos 8 y 9 cuando exista el Aguapé** y el bot atento (03 §17 #20): con las mecánicas de la
-   1.0 los hitos se quedan en 3-5.
+1. **K 10 en los retos 429, 566, 686 y 698** (`k_cells`), como F1-1. No en 466 ni en 672.
+2. **Cambiar la celda de los retos 452 (Pi+Br) y 592 (Pi+B2)**, como se hizo con el 369, o aceptarlos sin la etiqueta Difícil (F1-2).
+3. **Revisar el ciclo 641-660** (el reto 658 y el hito 660 fuera de su ventana) en la curación de F5, o cambiar la celda del 658.
+4. **Rehacer el ciclo 401-420 de la curva 2** antes de F5: la escalera del estreno de la Flor (409 Fl, 412 Fl+Ba, 415 Fl+Ll) y el
+   reto turbio 418. Opciones: cambiar el 418 a Br+Tu y el 409 a un reto con otra palanca, o reordenar los retos de la Flor. Se prueba
+   con `--measure` antes de tocar la especificación.
+5. **Revisar `pressure_plan` de los mundos 8 y 9 cuando existan el Aguapé** y el bot atento (03 §17 #20): con las mecánicas de la
+   1.0, los hitos se quedan en 3-5.
 
 ### 8.6 Para reproducir
 
@@ -361,4 +366,5 @@ dotnet run --project tools/level-generator -c Release -- --measure --spec tools/
 
 Pool de prueba (no son los packs finales de F5): `tools/out/curva_f3/curva_08_v1.json` (140 niveles, `kind` = `curve`,
 `pack_schema` 5) y su reserva `reserva_curva_08_v1.json` (28 tableros), con level-qa en 0 fallos (`qa_curva_08.md` y
-`qa_reserva_curva_08.md`; QA-REPRO y QA-RES-REPRO reproducen los dos packs byte a byte).
+`qa_reserva_curva_08.md`; QA-REPRO y QA-RES-REPRO reproducen los dos packs byte a byte). El estreno de las turbias en Normal se
+comprobó aparte, generando 321-340 fuera del repositorio: el 323 y el 324 salen con 1 dosis oculta y level-qa da 0 fallos.

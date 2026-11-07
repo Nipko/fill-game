@@ -58,32 +58,46 @@ internal static class CurveQaSelfTest
         Expect("murky_normal_tres_dosis", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(comfort, [[2, 0], [2, 1], [2, 2]]))), "QA-MURKY-NORMAL");
         Expect("murky_normal_recuperacion", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(Level(spec, 341, 10, 8), [[2, 0]]))), "QA-MURKY-NORMAL");
         Expect("murky_normal_antes_del_estreno", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(Level(spec, 304, 10, 8), [[2, 0]]))), "QA-MURKY-NORMAL");
-        Expect("murky_normal_dificil_no_aplica", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(reto, [[2, 0], [3, 0]]) with { Label = "hard" })), null);
+        Expect("murky_reto_dos_dosis", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(reto, [[2, 0], [3, 0]]) with { Label = "hard" })), null);
+        Expect("murky_reto_una_dosis", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(reto, [[2, 0]]) with { Label = "hard" })), "QA-MURKY-NORMAL");
+        Expect("murky_reto_tres_cuias", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(reto, [[2, 0], [3, 0], [4, 0]]) with { Label = "hard" })), "QA-MURKY-NORMAL");
+        QaLevel hito = Level(spec, 400, 13, 11);
+        Expect("murky_hito_dos_dosis", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(hito, [[2, 0], [3, 0]]) with { Label = "very_hard" })), "QA-MURKY-NORMAL");
+        Expect("murky_hito_tres_dosis", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(hito, [[2, 0], [2, 1], [3, 0]]) with { Label = "very_hard" })), null);
+        // Estreno en Normal (323-324): 1 dosis; intro murky solo en el 323.
+        QaLevel debut = Level(spec, 323, 10, 7) with { Intro = "murky", Skippable = false };
+        Expect("murky_estreno_una_dosis", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(debut, [[2, 0]]))), null);
+        Expect("murky_estreno_dos_dosis", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(debut, [[2, 0], [2, 1]]))), "QA-MURKY-NORMAL");
+        Expect("murky_intro_fuera_del_estreno", CurveChecks.MurkyNormal(spec, Eval(spec, Hidden(comfort, [[2, 0]]) with { Intro = "murky" })), "QA-MURKY-NORMAL");
 
         // QA-AGUAPE: grupos y filas (esqueleto F2). 9 cuias: el grupo 0 en 4-5.
-        QaLevel ag = Aguape(Level(spec, 450, 9, 8), [(4, 0, null), (5, 0, null)]);
+        QaLevel ag = Aguape(Level(spec, 450, 9, 8), [(2, 0, null), (3, 0, null)]);
         Expect("aguape_valido", CurveChecks.Aguape(spec, ag), null);
-        Expect("aguape_no_contiguo", CurveChecks.Aguape(spec, Aguape(ag, [(4, 0, null), (6, 0, null)])), "QA-AGUAPE");
-        Expect("aguape_una_cuia", CurveChecks.Aguape(spec, Aguape(ag, [(4, 0, null)])), "QA-AGUAPE");
-        Expect("aguape_espeso_3", CurveChecks.Aguape(spec, Aguape(ag, [(3, 1, 2), (4, 1, 2), (5, 1, 2)])), "QA-AGUAPE");
-        Expect("aguape_espeso_4", CurveChecks.Aguape(spec, Aguape(ag, [(2, 1, 2), (3, 1, 2), (4, 1, 2), (5, 1, 2)])), null);
+        Expect("aguape_no_contiguo", CurveChecks.Aguape(spec, Aguape(ag, [(1, 0, null), (3, 0, null)])), "QA-AGUAPE");
+        Expect("aguape_una_cuia", CurveChecks.Aguape(spec, Aguape(ag, [(2, 0, null)])), "QA-AGUAPE");
+        Expect("aguape_espeso_3", CurveChecks.Aguape(spec, Aguape(ag, [(1, 1, 2), (2, 1, 2), (3, 1, 2)])), "QA-AGUAPE");
+        Expect("aguape_espeso_4", CurveChecks.Aguape(spec, Aguape(ag, [(0, 1, 2), (1, 1, 2), (2, 1, 2), (3, 1, 2)])), null);
         Expect("aguape_pendiente_f2", CurveChecks.Aguape(spec, ag with { PendingTypes = ["aguape"] }), "QA-AGUAPE");
         QaLevel big = Aguape(Level(spec, 460, 12, 11), [(4, 0, null), (5, 0, null)]);
         Expect("aguape_11_sin_rows", CurveChecks.Aguape(spec, big), "QA-AGUAPE");
         Expect("aguape_rows_validas", CurveChecks.Aguape(spec, big with { Rows = [4, 4, 4] }), null);
         Expect("aguape_grupo_partido", CurveChecks.Aguape(spec, Aguape(big, [(3, 0, null), (4, 0, null)]) with { Rows = [4, 4, 4] }), "QA-AGUAPE");
         Expect("aguape_rows_no_suman", CurveChecks.Aguape(spec, big with { Rows = [4, 4, 3] }), "QA-AGUAPE");
+        // Sin rows y con 10 cuias o menos, las filas de 02 sec. 5 [P]: 9 cuias = 5 + 4; un grupo en 4-5 queda partido.
+        Expect("aguape_partido_sin_rows", CurveChecks.Aguape(spec, Aguape(ag, [(3, 0, null), (4, 0, null), (5, 0, null)])), "QA-AGUAPE");
         Check("rows: 2 filas de 7 valen, 3 de 6 no, 13 cuias en 2 filas no", CurveChecks.RowsProblem([7, 5], 12) is null
             && CurveChecks.RowsProblem([6, 6, 2], 14) is not null && CurveChecks.RowsProblem([7, 6], 13) is not null && CurveChecks.RowsProblem([5, 4, 4], 13) is null);
 
         // QA-LANCHA (esqueleto F2): la carga de 1-3 dosis en la cuia 3, k >= 2 y >= vacíos + 1 (1 vacío: k 3 vale y k 1 no).
         QaLevel boat = Lancha(Level(spec, 450, 9, 8), 3, 3);
-        Expect("lancha_valida", CurveChecks.Lancha(boat), null);
-        Expect("lancha_k_corto", CurveChecks.Lancha(Lancha(boat, 3, 1)), "QA-LANCHA");
-        Expect("lancha_dos", CurveChecks.Lancha(Lancha(boat, 4, 3, keep: true)), "QA-LANCHA");
-        Expect("lancha_turbia", CurveChecks.Lancha(Hidden(boat, [[5, 0]])), "QA-LANCHA");
-        Expect("lancha_con_liana_antes_del_401", CurveChecks.Lancha(Lancha(Liana(Level(spec, 380, 9, 8), 6), 3, 3)), "QA-LANCHA");
-        Expect("lancha_con_liana_desde_el_401", CurveChecks.Lancha(Lancha(Liana(Level(spec, 450, 9, 8), 6), 3, 3)), null);
+        Expect("lancha_valida", CurveChecks.Lancha(spec, boat), null);
+        Expect("lancha_k_corto", CurveChecks.Lancha(spec, Lancha(boat, 3, 1)), "QA-LANCHA");
+        Expect("lancha_dos", CurveChecks.Lancha(spec, Lancha(boat, 4, 3, keep: true)), "QA-LANCHA");
+        Expect("lancha_turbia", CurveChecks.Lancha(spec, Hidden(boat, [[5, 0]])), "QA-LANCHA");
+        Expect("lancha_con_liana_antes_del_401", CurveChecks.Lancha(spec, Lancha(Liana(Level(spec, 380, 9, 8), 6), 3, 3)), "QA-LANCHA");
+        Expect("lancha_con_liana_desde_el_401", CurveChecks.Lancha(spec, Lancha(Liana(Level(spec, 450, 9, 8), 6), 3, 3)), null);
+        Expect("lancha_intro_en_su_estreno", CurveChecks.Lancha(spec, Lancha(Level(spec, 363, 9, 8), 3, 3) with { Intro = "lancha" }), null);
+        Expect("lancha_intro_fuera_de_su_estreno", CurveChecks.Lancha(spec, boat with { Intro = "lancha" }), "QA-LANCHA");
 
         // Lectura: un pack con el Aguapé y rows (pack_schema 5).
         string path = Path.Combine(Path.GetTempPath(), "af_curve_selftest.json");

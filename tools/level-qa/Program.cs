@@ -261,6 +261,7 @@ var issues = new List<QaIssue>();
 foreach (QaPack pack in packs)
 {
     issues.AddRange(BaseChecks.RunPack(pack));
+    issues.AddRange(CurveChecks.RunPack(spec, pack));
 }
 
 foreach (LevelEval e in evals)

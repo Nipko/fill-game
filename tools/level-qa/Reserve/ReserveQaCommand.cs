@@ -169,6 +169,7 @@ internal static class ReserveQaCommand
         foreach (QaPack pack in packs)
         {
             issues.AddRange(BaseChecks.RunPack(pack));
+            issues.AddRange(CurveChecks.RunPack(spec, pack));
             if (!campaignByWorld.TryGetValue(pack.World, out var campaign))
             {
                 issues.Add(new QaIssue("QA-RES-HEADER", pack.Path, 0, string.Create(CultureInfo.InvariantCulture, $"no se ha dado el pack de campana del mundo {pack.World} (--campaign)")));
