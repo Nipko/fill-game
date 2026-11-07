@@ -46,6 +46,7 @@ internal sealed class MetricsEngine
     private readonly AStarSolver _solver = new();
     private readonly AStarSolver _trapSolver = new();
     private readonly CasualBot _bot = new();
+    private readonly AttentiveBot _attentive = new();
     private readonly EarlyTraps _early = new();
     private readonly SolverMove[] _moves = new SolverMove[SolverMoves.MaxMoves];
     private readonly int[] _units = new int[CuiaRules.UnitsTableLength];
@@ -58,6 +59,13 @@ internal sealed class MetricsEngine
 
     public double BotFail(BoardState state, string seedText) =>
         _bot.FailRate(state, CasualBot.SeedFor(seedText), BotOptions.ForPipeline(PourMode.Run)).Rate;
+
+    /// <summary>
+    /// Bot atento ×40 (D-068, fase F2; 03 §17 #20; AF.Solver.Bot.AttentiveBot) con su propia semilla del nivel: solo informe,
+    /// nunca la etiqueta.
+    /// </summary>
+    public double AttentiveFail(BoardState state, string seedText) =>
+        _attentive.FailRate(state, AttentiveBot.SeedFor(seedText), BotOptions.ForPipeline(PourMode.Run)).Rate;
 
     public int EarlyTraps(BoardState state) => _early.Count(state, PourMode.Run);
 

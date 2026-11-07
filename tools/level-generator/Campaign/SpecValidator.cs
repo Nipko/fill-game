@@ -53,9 +53,12 @@ internal static class SpecValidator
         ("CURVE-BASE", "curva 2 (D-068; 08 sec. 4.1): las celdas anteriores a curve.from_level son las de base_spec en base_variant (historia, no se generan) y from_level abre un ciclo de 20"),
         ("ROLE-CAPS", "curva 2: K de cada nivel (k_plan o k_cells) dentro del tope de su papel y K + vacios del plan <= el tope de cuias (role_caps; 03 sec. 12; D-068 P2 A)"),
         ("MURKY-NORMAL", "curva 2: estreno de las turbias en Normal en sus tableros (murky_normal.debut: comodidad de p3-p5, con estrella y sin otra mecanica) y comfort_per_cycle comodidades turbias por ciclo desde el ciclo del estreno (D-068 P7 A; F1-1)"),
-        ("F2-SLOTS", "curva 2: los slots de f2_slots estan en la curva 2, con codigos de f2_mechanics, el estreno en su debut, con estrella y sin otra mecanica, nunca en un reto ni en un hito, y cada mecanica de F2 con slot de estreno (D-068, F2)"),
-        ("PRESSURE", "aviso: cada hito de la curva 2 tiene escalon en pressure_plan, que sube (o se queda) dentro del mundo hasta la cuspide; aviso si el escalon que se espera de la celda (sin el Aguape, F2) no llega al del plan (03 sec. 12)"),
+        ("CURVE-MECH", "curva 2: el Aguape, el Aguape espeso y la Lancha solo desde curve.from_level (pack_schema 5), y la Lancha con la Liana o la Flor solo desde el 401 (02 sec. 9.2 regla 7; D-068)"),
+        ("PRESSURE", "aviso: cada hito de la curva 2 tiene escalon en pressure_plan, que sube (o se queda) dentro del mundo hasta la cuspide; aviso si el escalon que se espera de la celda (con el Aguape) no llega al del plan (03 sec. 12)"),
     ];
+
+    /// <summary>Primer nivel en que la Lancha puede ir con la Liana o la Flor (02 §9.2 regla 7; 03 §11, fila 401-700).</summary>
+    public const int LanchaWithLianaFrom = 401;
 
     /// <summary>Hueco máximo entre dos apariciones de una mecánica o capacidad (resumen, punto 6; d.2 regla 4).</summary>
     public const int MaxGap = 120;
@@ -72,7 +75,7 @@ internal static class SpecValidator
         "HITO-14" => spec.KPlan.Any(r => Math.Max(Math.Max(r.Recovery, r.Comfort), Math.Max(r.Challenge, r.Milestone)) >= HitoK)
             || spec.Calendar.Values.Any(c => NoteK(c) is not null),
         "NOVELTY-60" => spec.NoveltyMaxGap is not null,
-        "CURVE-BASE" or "ROLE-CAPS" or "F2-SLOTS" or "PRESSURE" => spec.Curve is not null,
+        "CURVE-BASE" or "ROLE-CAPS" or "CURVE-MECH" or "PRESSURE" => spec.Curve is not null,
         "MURKY-NORMAL" => spec.Curve is not null && spec.MurkyNormal is not null,
         _ => true,
     };
@@ -513,7 +516,8 @@ internal static class SpecValidator
                 Fail("SEASONS", s, $"{same} ciclos seguidos de temporada {season} (como mucho 2)");
             }
 
-            foreach (MechanicInfo m in spec.MechanicTable.Where(m => m.Debut >= s && m.Debut < s + 20 && m.Season is "A" or "B" && m.VariantOf is null))
+            foreach (MechanicInfo m in spec.MechanicTable.Where(m => m.Debut >= s && m.Debut < s + 20 && m.Season is "A" or "B" && m.VariantOf is null
+                && m.SeasonDebutExempt is null))
             {
                 if (m.Season != season)
                 {
@@ -549,7 +553,7 @@ internal static class SpecValidator
     }
 
     /// <summary>
-    /// Reglas de la curva 2 (D-068): CURVE-BASE, ROLE-CAPS, MURKY-NORMAL, F2-SLOTS y el aviso PRESSURE. Solo con la clave
+    /// Reglas de la curva 2 (D-068): CURVE-BASE, ROLE-CAPS, MURKY-NORMAL, CURVE-MECH y el aviso PRESSURE. Solo con la clave
     /// <c>curve</c> (campaign_v3); campaign_v1, campaign_v2 y las experimentales no las ven.
     /// </summary>
     private static List<SpecIssue> CurveIssues(CampaignSpec spec, List<CalendarCell> cells)
@@ -662,46 +666,20 @@ internal static class SpecValidator
             }
         }
 
-        // F2-SLOTS: los slots declarados para el Aguapé y la Lancha.
-        foreach (F2Slot slot in spec.F2Slots.Values.OrderBy(s => s.Level))
+        // CURVE-MECH: las mecánicas de la 1.1 (Aguapé, Aguapé espeso y Lancha; D-068) solo en la curva 2, y la Lancha con la Liana
+        // (con fruta o de cuenta) o la Flor solo desde el 401 (02 §9.2 regla 7; 03 §11). Los estrenos (303-305, 347-348 y 363-365)
+        // los comprueban DEBUT-LEVEL y DEBUT-SLOT como los de cualquier mecánica de la tabla.
+        foreach (CalendarCell c in cells)
         {
-            if (slot.Level < curve.FromLevel || slot.Level > spec.LastLevel)
+            foreach (MechanicInfo m in c.Mechanics.Where(m => MechanicCodes.Curve.Contains(m.Code) && c.Level < curve.FromLevel))
             {
-                Fail("F2-SLOTS", slot.Level, "slot de F2 fuera de la curva 2");
-                continue;
+                Fail("CURVE-MECH", c.Level, $"{m.Id} antes de la curva 2 ({curve.FromLevel}; pack_schema 5)");
             }
 
-            SlotRole role = RoleAt(slot.Level);
-            if (role is SlotRole.Challenge or SlotRole.Milestone && slot.Star)
+            if (c.Has(MechanicCodes.Lancha) && c.Level < LanchaWithLianaFrom
+                && c.Mechanics.Any(m => m.Code is MechanicCodes.Liana or MechanicCodes.LianaCount or MechanicCodes.Flor))
             {
-                Fail("F2-SLOTS", slot.Level, $"estreno de F2 ({slot.Literal}) en un reto o un hito (c.3 regla 6)");
-            }
-
-            foreach (string code in slot.Codes.Where(code => spec.F2Mechanics.All(m => m.Code != code) && spec.MechanicTable.All(m => m.Code != code)))
-            {
-                Fail("F2-SLOTS", slot.Level, $"codigo desconocido '{code}' ({slot.Literal})");
-            }
-
-            foreach (F2Mechanic m in spec.F2Mechanics.Where(m => slot.Codes.Contains(m.Code)))
-            {
-                if (slot.Level < m.Debut)
-                {
-                    Fail("F2-SLOTS", slot.Level, $"{m.Id} antes de su estreno ({m.Debut})");
-                }
-
-                if (slot.Star && (slot.Codes.Count != 1 || slot.Level > m.Debut + 2))
-                {
-                    Fail("F2-SLOTS", slot.Level, $"estreno de {m.Id}: 2-3 tableros desde el {m.Debut}, con la mecanica sola ({slot.Literal}; 02 sec. 9.2 regla 2)");
-                }
-            }
-        }
-
-        foreach (F2Mechanic m in spec.F2Mechanics)
-        {
-            List<int> stars = spec.F2Slots.Values.Where(s => s.Star && s.Codes.Contains(m.Code)).Select(s => s.Level).Order().ToList();
-            if (stars.Count is < 2 or > 3 || stars[0] != m.Debut || !stars.SequenceEqual(Enumerable.Range(m.Debut, stars.Count)))
-            {
-                Fail("F2-SLOTS", m.Debut, string.Create(CultureInfo.InvariantCulture, $"{m.Id}: {stars.Count} tableros de estreno en f2_slots; 2-3 seguidos desde el {m.Debut}"));
+                Fail("CURVE-MECH", c.Level, $"Lancha con la Liana antes del {LanchaWithLianaFrom} ({c.Short}; 02 sec. 9.2 regla 7)");
             }
         }
 
@@ -729,7 +707,7 @@ internal static class SpecValidator
                 if (expected < planned)
                 {
                     Fail("PRESSURE", c.Level, string.Create(CultureInfo.InvariantCulture,
-                        $"la celda {c.Short} da un escalon de {expected} y el plan pide {planned} (sin el Aguape; F2)"), warning: true);
+                        $"la celda {c.Short} da un escalon de {expected} y el plan pide {planned} (03 sec. 12)"), warning: true);
                 }
             }
         }

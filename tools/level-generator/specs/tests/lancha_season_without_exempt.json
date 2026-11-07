@@ -1,0 +1,146 @@
+{
+  "extends": "../campaign_v3.json",
+  "description": "Fixture negativo de la curva 2 (D-068, F3b): la Lancha sin season_debut_exempt estrena en el ciclo 361-380, de aguas bajas (B), y falla SEASONS (d.2 regla 7); con la exención, campaign_v3.json pasa. El Aguapé (ciclo 301-320, de aguas altas) no la necesita.",
+  "expect_rule": "SEASONS",
+  "mechanics": [
+    {
+      "code": "Ho",
+      "id": "hoja",
+      "kind": "filter",
+      "debut": 43,
+      "season": "all",
+      "debut_key": "aguaje"
+    },
+    {
+      "code": "Ma",
+      "id": "matapi",
+      "kind": "filter",
+      "debut": 63,
+      "season": "B"
+    },
+    {
+      "code": "Li",
+      "id": "liana",
+      "kind": "trigger",
+      "debut": 83,
+      "season": "A",
+      "debut_key": "tapereba"
+    },
+    {
+      "code": "Tu",
+      "id": "murky",
+      "kind": "modifier",
+      "debut": 100,
+      "season": "none"
+    },
+    {
+      "code": "Re",
+      "id": "remolino",
+      "kind": "pair",
+      "debut": 103,
+      "season": "all"
+    },
+    {
+      "code": "Ba",
+      "id": "barro",
+      "kind": "filter",
+      "debut": 123,
+      "season": "all"
+    },
+    {
+      "code": "Ll",
+      "id": "lluvia",
+      "kind": "counter",
+      "debut": 143,
+      "season": "A",
+      "k": 3
+    },
+    {
+      "code": "Br",
+      "id": "brote",
+      "kind": "filter",
+      "debut": 163,
+      "season": "all",
+      "debut_key": "camu_camu"
+    },
+    {
+      "code": "Pi",
+      "id": "pirana",
+      "kind": "counter",
+      "debut": 183,
+      "season": "B",
+      "k": 4,
+      "cave_cap": 2
+    },
+    {
+      "code": "Ln",
+      "id": "liana_n",
+      "kind": "trigger",
+      "debut": 243,
+      "season": "A",
+      "variant_of": "Li",
+      "not_with": [
+        "Fl",
+        "Pi",
+        "Tu"
+      ]
+    },
+    {
+      "code": "Ha",
+      "id": "hoja_atada",
+      "kind": "filter",
+      "debut": 283,
+      "season": "all",
+      "variant_of": "Ho",
+      "not_with": [
+        "Tu"
+      ]
+    },
+    {
+      "code": "B2",
+      "id": "brote_n2",
+      "kind": "filter",
+      "debut": 343,
+      "season": "all",
+      "variant_of": "Br",
+      "not_with": [
+        "Tu"
+      ]
+    },
+    {
+      "code": "Fl",
+      "id": "flor",
+      "kind": "trigger",
+      "debut": 403,
+      "season": "A",
+      "variant_of": "Li",
+      "not_with": [
+        "Ln",
+        "Pi",
+        "Tu"
+      ]
+    },
+    {
+      "code": "Ag",
+      "id": "aguape",
+      "kind": "filter",
+      "debut": 303,
+      "season": "A"
+    },
+    {
+      "code": "A2",
+      "id": "aguape_n2",
+      "kind": "filter",
+      "debut": 347,
+      "season": "A",
+      "variant_of": "Ag"
+    },
+    {
+      "code": "La",
+      "id": "lancha",
+      "kind": "trigger",
+      "debut": 363,
+      "season": "A"
+    }
+  ]
+}

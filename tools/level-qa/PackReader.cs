@@ -317,7 +317,8 @@ internal static class PackReader
             a.TryGetProperty("partner", out JsonElement p) ? p.GetInt32() : -1,
             a.TryGetProperty("n", out JsonElement n) ? n.GetInt32() : 0,
             a.TryGetProperty("k", out JsonElement kk) ? kk.GetInt32() : 0,
-            a.TryGetProperty("key2", out JsonElement k2) ? k2.GetInt32() : 0);
+            a.TryGetProperty("key2", out JsonElement k2) ? k2.GetInt32() : 0,
+            a.TryGetProperty("group", out JsonElement g) ? g.GetInt32() : -1);
     }
 
     private static string Str(JsonElement e, string key) =>

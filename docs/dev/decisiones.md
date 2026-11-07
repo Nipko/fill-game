@@ -5260,3 +5260,13 @@ Hecha en la rama `v11/curva-f4-cliente` (unity-gameplay-dev). Lo que deja el cli
   «Aguapé», «Aguapé espeso» y «Lancha» (`mechanic.*` de `facts.csv` y el glosario); los dos del Aguapé, en `pendiente_asesor`
   (flora), sin EN ni PT-BR hasta aprobar el español.
 - **GDD:** las copias de la lista de estrenos de 08 §9, 00 §6.5 y el contrato 1 dicen que la Tinaja no entra en la 1.1.
+
+### D-068, añadido del 2026-11-07: la fase F3b (el Aguapé, el espeso y la Lancha en el generador y en level-qa)
+
+Hecho por level-pipeline-dev en `v11/curva-f3b-superposicion`, la parte de F3 que dependía de F2. Detalle y medida: `docs/dev/curva-1.1-f1-medicion.md`, sección 9.
+- **Generador:** superposición del Aguapé (grupo de 2-3 cuias, 4-5 en el espeso, con una cuia que sella solo recibiendo; dos en el espeso, con dos vacíos bajo la mata) y de la Lancha (1-3 dosis de las cimas a una cuia de carga nueva, `k` = vacíos + 1); cada grupo contiguo y en una fila, `rows` con 11 cuias o más, alivio que no parte grupos y sube `k` lo justo, y rechazo del candidato si un grupo no se suelta, la lancha no atraca en la solución o no hay alivio. `campaign_v3`: `Ag`, `A2` y `La` en la tabla de mecánicas, sus estrenos (303-305, 347-348 y 363-365) y su ciclo de vida en el calendario, con la regla CURVE-MECH; la reserva de la curva cubre antes los estrenos de la 1.1.
+- **level-qa:** QA-AGUAPE con `LevelValidation.ValidateRows` en el nivel y en cada `relief`, el sello, `atascado(S0)` y la suelta en la solución; QA-LANCHA con la atracada; el bot atento ×40 en el informe y el aviso QA-BOT-ATENTO (03 §17 #20).
+- **Pool de prueba 301-700** en `tools/out/curva_f3b/` (no son los packs de F5), level-qa con 0 fallos: retos con Difícil 28 de 30, 32 de 35 y 33 de 35; los 20 hitos con Muy difícil, 17 en el escalón del plan (660, 680 y 700, uno por debajo).
+- **Hallazgo:** la Lancha necesita T ≥ K + k + 1 (la carga, la holgura y sus k vacías): su estreno solo cabe en 10 cuias con K 6, y no va en hitos ni en la cúspide.
+- **Respuestas recomendadas a las 5 preguntas de F3 [P], aplicadas en `campaign_v3` en un commit aparte:** sin K 10 (el Aguapé lleva a Difícil el 429, el 566 y el 698; el 686 va sin chip); el Aguapé como tercera mecánica en 452 y 592; el Aguapé en 652 y 658 y el espeso en el hito 660; el ciclo 401-420 con 409 Fl+Ll, 415 Fl y 418 Br+Tu; las turbias no cuentan en el «0-1 mecánicas» de la comodidad.
+- **Pendiente del dueño:** esas 5 respuestas; K 6 en el estreno de la Lancha (o 11 cuias con K 7); la Lancha eximida de SEASONS en el ciclo 361-380 (de aguas bajas); el escalón 8-9 de 660, 680 y 700; y las decisiones [P] de la herramienta de la sección 9.5.

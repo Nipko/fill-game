@@ -148,11 +148,22 @@ internal static class ReserveRunner
     /// Orden de los slots de la reserva [P]: por rondas sobre los kill switches de 08 §9; en cada ronda, cada mecánica toma su
     /// primer nivel (de menor a mayor) aún sin elegir. Todos los niveles con mecánica salen una vez.
     /// </summary>
-    public static List<ReserveSource> Order(IReadOnlyList<ReserveSource> levels)
+    /// <remarks>
+    /// Curva 2 (D-068, F3b) [P]: antes de las rondas, los tableros de estreno de las mecánicas de la 1.1 (<paramref name="first"/>:
+    /// el Aguapé 303-305, el espeso 347-348 y la Lancha 363-365), en orden, para que su kill switch tenga siempre su tablero sin
+    /// la mecánica. Sin <paramref name="first"/> (la curva 1) nada cambia.
+    /// </remarks>
+    public static List<ReserveSource> Order(IReadOnlyList<ReserveSource> levels, IReadOnlyCollection<int>? first = null)
     {
         var withMechanics = levels.Where(l => l.Mask != 0).OrderBy(l => l.Level).ToList();
         var order = new List<ReserveSource>();
         var taken = new HashSet<int>();
+        foreach (ReserveSource l in withMechanics.Where(l => first?.Contains(l.Level) == true))
+        {
+            taken.Add(l.Level);
+            order.Add(l);
+        }
+
         while (order.Count < withMechanics.Count)
         {
             for (int s = 0; s < Switches.Length; s++)
@@ -299,7 +310,10 @@ internal static class ReserveRunner
         }
 
         int cap = Cap(world);
-        List<ReserveSource> order = Order(levels);
+        // Curva 2: los estrenos del Aguapé, el espeso y la Lancha van primero (sus kill switches; 03 §17).
+        int[] debuts = [.. levels.Select(l => l.Level).Where(l => spec.IsCurveLevel(l) && spec.Calendar.TryGetValue(l, out CalendarCell? c)
+            && c.Star && c.Mechanics.Any(m => MechanicCodes.Curve.Contains(m.Code)))];
+        List<ReserveSource> order = Order(levels, debuts);
         var withMechanics = levels.Where(l => l.Mask != 0).ToList();
         log(string.Create(CultureInfo.InvariantCulture,
             $"reserva del mundo {world.World} ({world.First}-{world.Last}): {withMechanics.Count} niveles con mecanica, tope {cap} (20 %)"));

@@ -627,22 +627,51 @@ Especificación de producción de los tableros de sustitución de 301-700 (D-068
   - `murky_normal` con `comfort_per_cycle` (3), `debut` (323-324, con estrella e `intro_mechanic` `murky` en el 323) y
     `max_hidden_units` (2);
   - `pressure_plan`: el escalón de presión objetivo de cada hito (`Generation/Pressure.cs` lee las palancas de 03 §12);
-  - `f2_mechanics` y `f2_slots`: el Aguapé (303-305), el Aguapé espeso (347-348) y la Lancha (363-365), declarados para F2. El
-    generador aún no los coloca: `--spec` y `--measure` avisan de cada slot y lo generan con la celda del calendario.
+  - las mecánicas de la 1.1 en la tabla `mechanics` (fase F3b, con el núcleo de F2): `Ag` (Aguapé, `aguape`, filtro, estreno
+    303-305), `A2` (Aguapé espeso, `aguape_n2`, variante de `Ag` con `n` = 2, estreno 347-348) y `La` (Lancha, `lancha`,
+    disparador, estreno 363-365, con `season_debut_exempt`: el ciclo 361-380 es de aguas bajas en la 1.0 y la Lancha de aguas
+    altas [P]); el resto de su ciclo de vida va en el calendario (`calendar_note`). `role_caps.debut` admite K 6 [P] y
+    `k_cells` lleva K 7 en 347-348 y K 6 en 363-365.
 - **`t_plan` de 03 §12:** la especificación no lleva un `t_plan`: los topes de T van en `role_caps` (por papel, con el de K) y
   el K de cada posición sale del `k_plan` (por papel, que es por posición del ciclo) y de `k_cells`.
 - **Aguas turbias de la curva 2 (02 §11, T1):** el estreno en Normal (323-324) oculta exactamente 1 dosis; los retos turbios,
   2-4 dosis en ≤ 2 cuias, y los hitos turbios, 3-4 en ≤ 3 (el paso «Tu» añade cuias si el sorteo se queda corto y, si no llega,
   rechaza el candidato). La regla Q9 (2 dosis) queda para el estreno del 100, en la curva 1.
 - **Reglas de `--validate-spec`** (solo con `curve`): CURVE-BASE, ROLE-CAPS (K del plan dentro del tope y K + vacíos ≤ el
-  tope de cuias), MURKY-NORMAL (el estreno y 3 comodidades turbias por ciclo desde el 321-340), F2-SLOTS y el aviso PRESSURE
-  (el escalón que se espera de la celda del hito frente al plan; sin el Aguapé, los hitos no llegan: 18 avisos). Con
-  `campaign_v3.json`: 27 reglas, 0 fallos. Fixtures: `curve_base_changed.json`, `curve_k_out_of_caps.json`,
-  `murky_normal_two_in_cycle.json` y `f2_slot_in_challenge.json`.
+  tope de cuias), MURKY-NORMAL (el estreno y 3 comodidades turbias por ciclo desde el 321-340), CURVE-MECH (el Aguapé, el
+  espeso y la Lancha solo en la curva 2, y la Lancha con la Liana o la Flor solo desde el 401) y el aviso PRESSURE (el escalón que
+  se espera de la celda del hito, con el Aguapé, frente al plan). Los estrenos de la 1.1 los comprueban DEBUT-LEVEL y DEBUT-SLOT,
+  y su ciclo de vida TITULAR-8, RETURN, CAP-CYCLE, NO-3-ROW, GAP-120, MAX-2 y el registro de combinaciones (FIRST-TIME y
+  NOVELTY-60), como los de cualquier mecánica de la tabla. Fixtures: `curve_base_changed.json`, `curve_k_out_of_caps.json`,
+  `murky_normal_two_in_cycle.json`, `lancha_liana_before_401.json` (CURVE-MECH), `aguape_in_challenge_debut.json`
+  (DEBUT-SLOT) y `lancha_season_without_exempt.json` (SEASONS: sin `season_debut_exempt`, la Lancha estrena en un ciclo de
+  aguas bajas). `--self-test curve` prueba además la superposición de los tres estrenos, la solución repetida
+  (`CurveBoards.SolutionProblem`), `rows` y `group` en el JSON y el orden de la reserva de la curva.
 - **Reserva de la curva:** `--reserve` con los packs `curva_{mm}_v1` y `--spec campaign_v3.json` escribe
   `reserva_curva_{mm}_v1.json` (`pack_schema` 5, ids `_c2_r1`, semillas `:c2:r1`, `replaces` = el id de la curva 2), con los
   kill switches del Aguapé y la Lancha en el orden de 08 §9, los mismos topes por papel y, como en la curva 2, solo par ≥ 2K.
-- **Pool de prueba (no son los packs finales; F5 los genera tras F2 y la curación):** `tools/out/curva_f3/`.
+  Antes de las rondas van los tableros de estreno de la 1.1 (303-305, 347-348 y 363-365) [P], para que sus kill switches
+  tengan siempre tablero.
+- **Superposición de la 1.1 (fase F3b; `Generation/Superposition.cs` y `Generation/CurveBoards.cs`):**
+  - **Aguapé** (`Ag`; paso tras el Barro): un grupo de 2-3 cuias [P] (el espeso, 4-5 con `n` = 2) libres, sin Barro y sin empezar
+    selladas (las llenas mezcladas sí: la mata las congela), con una cuia (dos con frutas distintas en el espeso) que sella solo
+    recibiendo (vacía, o de un solo color c con cap = U_c). En un reto o un hito con una mecánica que ocupa el vacío (Hoja, Matapi,
+    Lluvia) el tablero lleva un vacío más, bajo la mata [P]. El orden visual (`CurveBoards.ShuffledWithGroups`) deja cada grupo
+    contiguo y en una fila; con 11 cuias o más el nivel escribe `rows`, las 3 filas de D-006 (4/4/3, 4/4/4, 5/4/4 y 5/5/4) [P].
+  - **Lancha** (`La`; paso tras la Piraña): sube 1-3 dosis de las cimas a una cuia de carga nueva (una cuia más en el tope de
+    T) con `k` = vacíos + 1 [P]: para atracar hacen falta T ≥ K + k + 1 cuias, así que con la cuia de holgura es el único `k`
+    posible; 3 en el estreno (sus 2 vacíos), el del texto del tutorial.
+  - **Verificación:** `BoardBuilder`, `LevelValidation` (grupo, sello, carga, `k`), A* y, con la solución del par repetida
+    (`CurveBoards.SolutionProblem`), cada grupo se suelta y la lancha atraca; si no, el candidato se rechaza.
+  - **Alivio:** `plus_empty` pone el vacío en la última ranura que deja cada grupo en una fila y sube `k` lo justo
+    (`CurveBoards.PlusEmpty` y `WithLanchaK`; con 11 cuias o más, unas `rows` que no partan ningún grupo, que la variante
+    publica); `minus_color` no mueve cuias, puede quitar un color de las cuias del Aguapé (no tiene llave) y sube `k` si deja más
+    vacías. Un candidato con Aguapé o Lancha sin ninguna variante de alivio que cumpla 03 §17 #8 se descarta al medirlo [P].
+  - **Presión** (`Pressure.cs`): la palanca de congeladas (1 grupo, 1; 2 grupos o el espeso, 2) y el vacío bajo la mata (palanca
+    de vacíos en 2); el Aguapé no cuenta en «mecánicas distintas», como las turbias [P]. `--measure` suma el bot atento ×40 a la
+    tabla de los hitos.
+- **Pool de prueba (no son los packs finales; F5 los genera tras la curación):** `tools/out/curva_f3b/` (el de F3, sin la 1.1,
+  en `tools/out/curva_f3/`).
 - `campaign_v1` y `campaign_v2` dan exactamente lo mismo (`--check` de 11-700, de las reservas, del registro y de la tabla de
   temporada).
 

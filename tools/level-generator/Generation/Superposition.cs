@@ -30,6 +30,17 @@
 //                  color es la cima; n = 2.
 //   Flor (Fl)      como la Liana con fruta, sobre una cuia de 4 con contenido y sin Barro, con dos frutas de 4 dosis distintas
 //                  que no están dentro (key ≠ key2).
+// Mecánicas de la 1.1 (D-068, fase F3b; 02 §9.1 M8 y M11; 03 §9), solo en la curva 2 (pack_schema 5) y solo con números
+// aleatorios en los slots que las llevan:
+//   Aguapé (Ag)    un grupo de 2-3 cuias [P] sin mecánica, sin Barro ni ocultas y sin empezar selladas, con al menos una que sella solo
+//                  recibiendo (vacía o de un solo color c con cap = U_c; la regla 6 de M8, la de AguapeMechanic); el orden
+//                  visual (CurveBoards.ShuffledWithGroups) lo deja contiguo y en una fila. Va antes del Barro (que nunca cae en
+//                  una cuia con mecánica); el paso «Tu» no toca sus cuias.
+//   Aguapé espeso (A2)  lo mismo con 4-5 cuias, n = 2 y dos cuias que sellan solo recibiendo con frutas distintas.
+//   Lancha (La)    «saca una cuia del tablero base y la sube a la carga» (b.2 M11): 1-3 dosis de las cimas de cuias libres
+//                  pasan a una cuia de carga nueva (la cuia de más que cuenta SlotGenerator.Config), con k = vacíos + 1 (3 en los
+//                  estrenos, con sus 2 vacíos: el texto del tutorial) [P]; va tras el Barro y la Piraña (su cueva vacía cuenta para
+//                  k) y nunca con turbias.
 using AF.Core.Board;
 using AF.Core.Determinism;
 using AF.Core.Mechanics;
@@ -59,7 +70,7 @@ internal static class Superposition
     /// consume los mismos números aleatorios que antes (--check de los packs 11-200). La Hoja atada va antes del Barro (el Barro
     /// nunca cae en una cuia con mecánica) y de la tinaja (que solo saca de cuias sin mecánica).
     /// </remarks>
-    public static readonly string[] Order = ["Re", "Ho", "Ma", "Ll", "Li", "Ln", "Fl", "Br", "B2", "Ha", "Ba", "Pi", "Ti", "Tu"];
+    public static readonly string[] Order = ["Re", "Ho", "Ma", "Ll", "Li", "Ln", "Fl", "Br", "B2", "Ha", "Ba", "Ag", "A2", "Pi", "La", "Ti", "Tu"];
 
     /// <summary>El orden de colocación de antes de las variantes (P5): <see cref="Order"/> sin Ln, Fl, B2 ni Ha.</summary>
     public static readonly string[] OrderBeforeVariants = ["Re", "Ho", "Ma", "Ll", "Li", "Br", "Ba", "Pi", "Ti", "Tu"];
@@ -82,6 +93,9 @@ internal static class Superposition
             "Ha" => HojaAtada(b, rng),
             "B2" => BroteTwo(b, m, ctx, rng),
             "Fl" => Flor(b, ctx, rng),
+            "Ag" => Aguape(b, ctx, rng, thick: false),
+            "A2" => Aguape(b, ctx, rng, thick: true),
+            "La" => Lancha(b, rng),
             _ => $"mecanica sin superposicion: {m.Code}",
         };
     }
@@ -317,6 +331,124 @@ internal static class Superposition
         FixDebutKey(ctx, m, b.Top(i));
         return null;
     }
+
+    /// <summary>
+    /// Máscara de las frutas (bit c, colores abstractos) con las que la cuia sellaría solo recibiendo (02 §9.1 M8, regla 6; la
+    /// misma condición que <c>CurveMechanics.SealableByReceiving</c>): vacía, toda fruta con U_c = su capacidad; de un solo color
+    /// c sin llenar, c si U_c = su capacidad.
+    /// </summary>
+    private static int SealableMask(GenBoard b, SuperpositionContext ctx, int i)
+    {
+        List<int> c = b.Cuias[i];
+        int cap = b.Caps[i];
+        int mask = 0;
+        if (c.Count == 0)
+        {
+            for (int color = 1; color <= ctx.Colors; color++)
+            {
+                if (ctx.Units[color - 1] == cap)
+                {
+                    mask |= 1 << color;
+                }
+            }
+
+            return mask;
+        }
+
+        return c.Count < cap && c.All(x => x == c[0]) && c[0] != Cuia.MudColor && ctx.Units[c[0] - 1] == cap ? 1 << c[0] : 0;
+    }
+
+    /// <summary>Dos máscaras de <see cref="SealableMask"/> dan dos frutas distintas (la condición del espeso de AguapeMechanic).</summary>
+    private static bool DistinctFruits(int a, int b) => a != 0 && b != 0 && (a != b || (a & (a - 1)) != 0);
+
+    /// <summary>
+    /// Aguapé (Ag) y Aguapé espeso (A2) (02 §9.1 M8; D-068, P4 A, P5 A y P13 A): un grupo de cuias libres (sin mecánica, Barro ni
+    /// ocultas, ninguna sellada) con 2-3 cuias [P] (el espeso, 4-5 y n = 2) y una (dos con frutas distintas) que sella solo
+    /// recibiendo. El orden visual lo hace contiguo y en una fila (CurveBoards.ShuffledWithGroups).
+    /// </summary>
+    private static string? Aguape(GenBoard b, SuperpositionContext ctx, Prng rng, bool thick)
+    {
+        // Ninguna empieza sellada (03 §17 #5): fuera las llenas de un solo color; las llenas mezcladas sí (la mata las congela).
+        var free = Enumerable.Range(0, b.Count).Where(i => Free(b, i) && !b.Cuias[i].Contains(Cuia.MudColor)
+            && !(b.Cuias[i].Count == b.Caps[i] && b.Cuias[i].All(x => x == b.Cuias[i][0]))).ToList();
+        int size = thick ? CurveMechanics.AguapeMinThickGroupSize + rng.NextInt(2) : CurveMechanics.AguapeMinGroupSize + rng.NextInt(2);
+        var anchors = free.Where(i => SealableMask(b, ctx, i) != 0).ToList();
+        if (free.Count < size || anchors.Count == 0)
+        {
+            return thick ? "Aguape espeso: faltan cuias libres o una que selle solo recibiendo" : "Aguape: faltan cuias libres o una que selle solo recibiendo";
+        }
+
+        int first = Pick(anchors, rng);
+        var group = new List<int> { first };
+        if (thick)
+        {
+            var seconds = anchors.Where(i => i != first && DistinctFruits(SealableMask(b, ctx, first), SealableMask(b, ctx, i))).ToList();
+            if (seconds.Count == 0)
+            {
+                return "Aguape espeso: no hay dos cuias que sellen solo recibiendo con frutas distintas";
+            }
+
+            group.Add(Pick(seconds, rng));
+        }
+
+        var rest = free.Where(i => !group.Contains(i)).ToList();
+        while (group.Count < size)
+        {
+            int j = Pick(rest, rng);
+            rest.Remove(j);
+            group.Add(j);
+        }
+
+        int id = b.Attrs.Where(a => a.Type == MechanicType.Aguape).Select(a => a.Group).Distinct().Count();
+        foreach (int i in group)
+        {
+            b.Attrs[i] = new MechanicSpec(MechanicType.Aguape, n: thick ? CurveMechanics.AguapeThickSeals : 0, group: id);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Lancha (La; 02 §9.1 M11; b.2 M11: «saca una cuia del tablero base y la sube a la carga»): sube 1-3 dosis de las cimas de
+    /// cuias libres del tablero base (sin dejar el Barro a la vista) a una cuia de carga nueva, con k = vacíos + 1 (vacías: toda
+    /// cuia sin dosis menos la carga, como el núcleo; con la cueva de la Piraña) [P]. Es el único k posible con una cuia de holgura:
+    /// para atracar, las T − 1 − k cuias que quedan tienen que guardar las 4K − c dosis de fuera de la carga, así que
+    /// T ≥ K + k + 1; con el tablero base de K + vacíos + 1 cuias, k = vacíos + 1 (lo comprueban A* y la repetición de la solución).
+    /// </summary>
+    private static string? Lancha(GenBoard b, Prng rng)
+    {
+        int doses = LanchaMinCargo + rng.NextInt(LanchaMaxCargo - LanchaMinCargo + 1);
+        var load = new List<int>(doses);
+        for (int t = 0; t < doses; t++)
+        {
+            var tops = Enumerable.Range(0, b.Count).Where(i => Free(b, i) && b.Cuias[i].Count > 0 && b.Cuias[i][^1] != Cuia.MudColor
+                && (b.Cuias[i].Count < 2 || b.Cuias[i][^2] != Cuia.MudColor)).ToList();
+            if (tops.Count == 0)
+            {
+                return "Lancha: no quedan cimas que subir a la carga";
+            }
+
+            List<int> from = b.Cuias[Pick(tops, rng)];
+            load.Add(from[^1]);
+            from.RemoveAt(from.Count - 1);
+        }
+
+        int cargo = b.AddEmpty(Cuia.DefaultCapacity, MechanicSpec.None);
+        b.Cuias[cargo].AddRange(load);
+        int empties = Enumerable.Range(0, b.Count).Count(i => i != cargo && b.Cuias[i].Count == 0);
+        int k = empties + 1;
+        if (k > Math.Min(CurveBoards.MaxLanchaK, b.Count - 1))
+        {
+            return "Lancha: k = vacios + 1 pasa de 7 o de T - 1";
+        }
+
+        b.Attrs[cargo] = new MechanicSpec(MechanicType.Lancha, k: k);
+        return null;
+    }
+
+    private const int LanchaMinCargo = CurveMechanics.LanchaMinCargo;
+
+    private const int LanchaMaxCargo = CurveMechanics.LanchaMaxCargo;
 
     private static string? Remolino(GenBoard b, Prng rng)
     {

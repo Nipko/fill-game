@@ -182,13 +182,22 @@ internal static class PackWriter
             { "attrs", Attrs(b.Attrs) },
             { "murky", b.Hidden.Length > 0 },
             { "hidden", Hidden(b.Hidden) },
+        };
+        if (CurveBoards.RowsToWrite(b) is int[] rows)
+        {
+            // Filas fijas (pack_schema 5; 08 §4.1): con un grupo de Aguapé y 11 cuias o más, tras hidden.
+            level.Add("rows", rows.Select(x => (object?)x).ToList());
+        }
+
+        level.AddRange(new JObj
+        {
             { "difficulty", difficulty },
             { "risk_pairs", c.Tints.RiskPairs },
             { "intro_mechanic", plan.Intro },
             { "skippable", plan.Intro is null },
             { "hint_supported", true },
             { "relief", pl.Relief.Select(r => (object?)Relief(r)).ToList() },
-        };
+        });
         if (plan.Curve > 0 && plan.Reserve == 0)
         {
             // replaces tras id (08 §4.1), como en la reserva: el id de la curva 1 del slot.
@@ -213,6 +222,11 @@ internal static class PackWriter
         {
             // La máscara de la tinaja en la variante (todas sus capas menos la boca), con los índices de la variante.
             o.Add("hidden", Hidden(r.Board.Hidden));
+        }
+
+        if (CurveBoards.RowsToWrite(r.Board) is int[] rows)
+        {
+            o.Add("rows", rows.Select(x => (object?)x).ToList());
         }
 
         o.Add("par", r.Par);
@@ -261,6 +275,12 @@ internal static class PackWriter
         if (a.Partner >= 0)
         {
             o.Add("partner", a.Partner);
+        }
+
+        if (a.Group >= 0)
+        {
+            // Grupo del Aguapé (pack_schema 5; D-068): {"type":"aguape","group":g} o, en el espeso, con "n":2.
+            o.Add("group", a.Group);
         }
 
         if (a.N != 0)
