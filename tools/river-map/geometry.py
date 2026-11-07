@@ -135,11 +135,13 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     WorldTable,
     ascii_text,
     fact_key_of,
+    fold,
     has_belen,
     iter_strings,
     load_json,
     parse_csv_record,
     place_id,
+    place_name,
     split_csv_records,
     stop_records,
     travel_passing_mismatches,
@@ -689,10 +691,11 @@ class Model:
         return out
 
 
-def build_model(source: dict, geo: "Geometry | None" = None) -> tuple:
+def build_model(source: dict, geo: "Geometry | None" = None, towns: dict | None = None) -> tuple:
     """Lineas del Mapa en el marco cuantizado, con sus bocas. Sin geo, los puntos de rio-amazonas.json (el respaldo,
     src = rio_amazonas); con geo (M5.1), los de la geometria de produccion o los de lo commiteado, y los puntos de la
-    investigacion quedan como puntos de control (sus s y sus km). Devuelve (Model, errores)."""
+    investigacion quedan como puntos de control (sus s y sus km). towns: la tabla de los pueblos de paso (D-069, M2-2;
+    towns de overrides.json, que se lee si no se da). Devuelve (Model, errores)."""
     errors: list = []
     frame = Frame.from_source(source)
     model = Model(frame)
@@ -855,7 +858,255 @@ def build_model(source: dict, geo: "Geometry | None" = None) -> tuple:
             errors.append(f"punto de paso {name!r}: a {d:.1f} km de la linea mas cercana ({rid}; maximo {TOLERANCE_KM:g})")
         model.passing.append({"id": pid, "line": rid, "s": _round_s(model.lines[rid].s_of(i, t)),
                               "fact": fact_key_of(p.get("dato")), "lat": lat, "lon": lon, "name": name})
+    # Pueblos de paso (D-069, M2-2): los candidatos de la propuesta del Mapa v2 §4.3 que entran (P4 (a)) y el pais, el tier
+    # y la vinneta de cada punto de paso.
+    errors.extend(add_towns(model, source, load_towns() if towns is None else towns))
     return model, errors
+
+
+# --------------------------------------------------------------------------------------------- pueblos de paso (M2-2)
+# D-069, bloque M2-2 «Pueblos de paso» (propuesta del Mapa v2 §4 y §9.1; P4 (a), P5 (a)). La tabla [P] es towns de
+# overrides.json: el pais, el tier y la vinneta de cada punto de paso, los candidatos de la propuesta §4.3 que entran (from:
+# su punto de control de la investigacion), los que no entran (excluded) y las excepciones de la cadencia (cadence).
+
+# P4 (a): un candidato entra si tools/river-map lo ancla a <= 5 km de su linea (y su nombre se verifica: un punto de control
+# de rio-amazonas.json con conf V o E en un rio con fuentes con URL).
+TOWN_ANCHOR_KM = 5.0
+TOWN_TIERS = ("town", "city", "mark")
+TOWN_VIGNETTES = ("stilts", "church", "port", "market")
+TOWN_FIELDS = frozenset({"country", "tier", "vignette", "river", "from", "name", "why"})
+TOWNS_FIELDS = frozenset({"why", "places", "excluded", "cadence"})
+# Vetos de la propuesta del Mapa v2 §9.5 (y D-013, punto 11): ningun punto de paso con estos nombres (plegados, sin tildes).
+TOWN_VETOES = ("belen", "boca colorado")
+# Cadencia (propuesta §4.1, regla 2): un tramo de >= 150 km lleva al menos 1 pueblo; uno de >= 400 km, 2 (la propuesta dice
+# «2 o 3»: el minimo).
+CADENCE_RULES = ((400.0, 2), (150.0, 1))
+# Excursion local de los tramos de 0 km (P5 (a); propuesta §4.4) [P]: ida y vuelta por el rio de la parada, hasta
+# EXCURSION_KM por su linea (el lado con mas sitio: rio arriba si cabe), sin llegar a otra parada (como mucho
+# EXCURSION_GAP de la distancia hasta ella) y con al menos EXCURSION_MIN_KM.
+EXCURSION_KM = 25.0
+EXCURSION_MIN_KM = 6.0
+EXCURSION_GAP = 0.6
+
+
+def load_towns(path: Path = OVERRIDES_PATH) -> dict:
+    """towns de overrides.json ({} si no esta). Errores de lectura: SourceError (load_json)."""
+    towns = load_json(path).get("towns")
+    return towns if isinstance(towns, dict) else {}
+
+
+def town_places(towns: dict) -> dict:
+    places = towns.get("places") if isinstance(towns, dict) else None
+    return places if isinstance(places, dict) else {}
+
+
+def _vetoed(text: str) -> str | None:
+    folded = re.sub(r"[^a-z0-9]+", " ", fold(text)).strip()
+    return next((v for v in TOWN_VETOES if v in folded), None)
+
+
+def _river_has_url_source(rec: dict, fuentes: dict) -> bool:
+    return any(isinstance(fuentes.get(f), dict) and str(fuentes[f].get("url", "")).startswith("http")
+               for f in rec.get("fuentes") or [])
+
+
+def add_towns(model: Model, source: dict, towns: dict) -> list:
+    """Los pueblos candidatos que entran (from) en model.passing, y el pais, el tier y la vinneta de cada punto de paso
+    (town_places). Devuelve los errores (tabla mal formada, candidato sin verificar o anclado a mas de TOWN_ANCHOR_KM, vetos,
+    excluidos que aparecen, puntos de paso sin entrada o entradas sin punto de paso)."""
+    errors: list = []
+    if not isinstance(towns, dict):
+        return ["overrides.json: towns tiene que ser un objeto {why, places, excluded, cadence}"]
+    unknown = sorted(set(towns) - TOWNS_FIELDS)
+    if unknown:
+        errors.append(f"overrides.json: towns lleva campos desconocidos {unknown}")
+    if towns and not (isinstance(towns.get("why"), str) and "[P]" in towns["why"]):
+        errors.append("overrides.json: towns.why tiene que decir por que, con [P]")
+    places = town_places(towns)
+    excluded = towns.get("excluded") or {}
+    if not isinstance(excluded, dict) or not all(isinstance(v, str) and v.strip() for v in excluded.values()):
+        errors.append("overrides.json: towns.excluded tiene que ser {id: motivo}")
+        excluded = {}
+    rivers = {}
+    for name in RIVER_LISTS:
+        for r in source.get(name, []) or []:
+            if isinstance(r, dict) and isinstance(r.get("id"), str):
+                rivers[r["id"]] = r
+    fuentes = {f.get("id"): f for f in source.get("fuentes", []) or [] if isinstance(f, dict)}
+    for pid, entry in places.items():
+        if not isinstance(entry, dict):
+            errors.append(f"towns.places.{pid}: no es un objeto")
+            continue
+        bad = sorted(set(entry) - TOWN_FIELDS)
+        if bad:
+            errors.append(f"towns.places.{pid}: campos desconocidos {bad}")
+        if pid in excluded:
+            errors.append(f"towns.places.{pid}: esta tambien en towns.excluded")
+        frm = entry.get("from")
+        if frm is None:
+            continue
+        # Un candidato nuevo: su punto de control de la investigacion, verificado y anclado a <= TOWN_ANCHOR_KM.
+        rec = rivers.get(frm.get("rio")) if isinstance(frm, dict) else None
+        if rec is None:
+            errors.append(f"towns.places.{pid}: from.rio {frm!r} no es ningun rio de rio-amazonas.json")
+            continue
+        point = next((p for p in rec.get("puntos") or [] if isinstance(p, dict) and p.get("nombre") == frm.get("punto")), None)
+        if point is None:
+            errors.append(f"towns.places.{pid}: {frm.get('punto')!r} no es ningun punto de {rec['id']} en rio-amazonas.json "
+                          "(un pueblo que no se verifica no entra, P4 (a))")
+            continue
+        if point.get("conf") not in ("V", "E") or not _river_has_url_source(rec, fuentes):
+            errors.append(f"towns.places.{pid}: su punto lleva conf {point.get('conf')!r} o su rio no cita ninguna fuente con "
+                          "URL: nombre sin verificar (P4 (a))")
+            continue
+        name = entry.get("name") if isinstance(entry.get("name"), str) else place_name(str(point["nombre"]))
+        if place_id(name) != pid:
+            errors.append(f"towns.places.{pid}: su nombre {name!r} da el id {place_id(name)!r}")
+            continue
+        try:
+            lat, lon = float(point["lat"]), float(point["lon"])
+        except (TypeError, KeyError, ValueError):
+            errors.append(f"towns.places.{pid}: su punto no tiene lat ni lon")
+            continue
+        best = None
+        for rid in model.order:
+            i, t, d = model.lines[rid].project(lat, lon)
+            if best is None or d < best[0] - TIE_KM:
+                best = (d, rid, i, t)
+        d, rid, i, t = best
+        if d > TOWN_ANCHOR_KM:
+            errors.append(f"towns.places.{pid}: {name!r} se ancla a {d:.1f} km de {rid} (maximo {TOWN_ANCHOR_KM:g} km, P4 "
+                          "(a)): no entra; pasalo a towns.excluded")
+            continue
+        if any(p["id"] == pid for p in model.passing):
+            errors.append(f"towns.places.{pid}: ya es un punto de paso de la investigacion; sobra from")
+            continue
+        model.passing.append({"id": pid, "line": rid, "s": _round_s(model.lines[rid].s_of(i, t)), "fact": None,
+                              "lat": lat, "lon": lon, "name": name, "from": (rec["id"], point["nombre"]),
+                              "anchor_km": d})
+    ids = set()
+    for p in model.passing:
+        ids.add(p["id"])
+        entry = places.get(p["id"])
+        veto = _vetoed(p["id"].replace("_", " ")) or _vetoed(p.get("name", ""))
+        if veto:
+            errors.append(f"punto de paso {p['id']}: cae en el veto de {veto!r} (propuesta del Mapa v2 §9.5; D-013, punto 11)")
+        if p["id"] in excluded:
+            errors.append(f"punto de paso {p['id']}: esta en towns.excluded ({excluded[p['id']]})")
+        if not isinstance(entry, dict):
+            errors.append(f"punto de paso {p['id']}: sin entrada en towns.places de overrides.json (pais, tier y vinneta)")
+            p.update({"country": None, "tier": None, "vignette": None, "river": None})
+            continue
+        country, tier, vignette, river = entry.get("country"), entry.get("tier"), entry.get("vignette"), entry.get("river")
+        if not (isinstance(country, str) and re.fullmatch(r"[A-Z]{2}", country) and country in COUNTRY_NAMES):
+            errors.append(f"towns.places.{p['id']}: country {country!r} no es un pais de COUNTRY_NAMES")
+        if tier not in TOWN_TIERS:
+            errors.append(f"towns.places.{p['id']}: tier {tier!r} no es town, city ni mark")
+        if tier == "mark":
+            if vignette is not None or river is not None:
+                errors.append(f"towns.places.{p['id']}: un mark no lleva vinneta ni rio")
+        else:
+            if vignette not in TOWN_VIGNETTES:
+                errors.append(f"towns.places.{p['id']}: vignette {vignette!r} no es stilts, church, port ni market")
+            if not (isinstance(river, str) and river.strip()):
+                errors.append(f"towns.places.{p['id']}: un pueblo lleva el rio de su ficha (river)")
+        p.update({"country": country, "tier": tier, "vignette": vignette, "river": river})
+    for pid in places:
+        if pid not in ids:
+            errors.append(f"towns.places.{pid}: no es ningun punto de paso del Mapa")
+    for pid in excluded:
+        if _vetoed(pid.replace("_", " ")) is None and not re.fullmatch(r"[a-z0-9_]+", pid):
+            errors.append(f"towns.excluded: {pid!r} no es un id [a-z0-9_]+")
+    return errors
+
+
+def _arc_at(line: Line, s: float) -> float:
+    """Km por la propia linea (geodesica, sobre los puntos cuantizados) desde su primer punto hasta s."""
+    if len(line.ll) == 1:
+        return 0.0
+    i, t = line.locate(s)
+    if i >= len(line.seg_km):
+        return line.arc_km[-1]
+    return line.arc_km[i] + t * line.seg_km[i]
+
+
+def _s_at_arc(line: Line, arc: float) -> float:
+    """s del punto a arc km por la propia linea desde su primer punto (inversa de _arc_at)."""
+    if len(line.ll) == 1 or line.arc_km[-1] <= 0:
+        return 0.0
+    arc = min(max(arc, 0.0), line.arc_km[-1])
+    for i, d in enumerate(line.seg_km):
+        if line.arc_km[i + 1] >= arc and d > 0:
+            return line.s_of(i, min(1.0, max(0.0, (arc - line.arc_km[i]) / d)))
+    return 1.0
+
+
+def path_km(model: Model, path: list) -> float:
+    """Largo del viaje en km por las lineas (geodesica sobre los puntos cuantizados)."""
+    return sum(abs(_arc_at(model.lines[p["line"]], p["s1"]) - _arc_at(model.lines[p["line"]], p["s0"])) for p in path)
+
+
+def town_f(km: float, total: float) -> float:
+    """Fraccion del tramo hasta un pueblo (propuesta §4.1, regla 3: se pasa al ganar el nivel 10k + ceil(10 f)) [P]: 4
+    decimales, nunca 0 (el punto de partida no se cuenta) ni mas de 1."""
+    if total <= 0:
+        return 1.0
+    return min(1.0, max(0.0001, round(km / total, 4)))
+
+
+def town_cadence_problems(stops_doc: dict, model: Model, towns: dict) -> list:
+    """Cadencia de la propuesta del Mapa v2 §4.1, regla 2 (CADENCE_RULES): cada tramo largo con sus pueblos (los via de tier
+    town o city), salvo las excepciones de towns.cadence ({n: motivo}); una excepcion que sobra tambien falla."""
+    errors: list = []
+    cadence = towns.get("cadence") if isinstance(towns, dict) else None
+    cadence = cadence if isinstance(cadence, dict) else {}
+    tiers = {p["id"]: p.get("tier") for p in model.passing}
+    used = set()
+    for s in stops_doc.get("stops", []):
+        leg = s.get("leg") or {}
+        path = leg.get("path") or []
+        if not path or any(p.get("line") not in model.lines for p in path):
+            continue
+        km = path_km(model, path)
+        need = next((n for limit, n in CADENCE_RULES if km >= limit), 0)
+        have = sum(1 for v in leg.get("via") or [] if isinstance(v, dict) and tiers.get(v.get("id")) in ("town", "city"))
+        key = str(s.get("n"))
+        if have >= need:
+            continue
+        why = cadence.get(key)
+        if isinstance(why, str) and why.strip():
+            used.add(key)
+            continue
+        errors.append(f"parada n={s.get('n')} ({s.get('id')}): su tramo mide {km:.0f} km y pasa {have} pueblos (la cadencia "
+                      f"de la propuesta del Mapa v2 §4.1 pide {need}); sin excepcion en towns.cadence de overrides.json")
+    for key in sorted(set(cadence) - used, key=lambda k: (len(k), k)):
+        errors.append(f"towns.cadence: la excepcion del tramo {key} sobra (ya cumple la cadencia o no existe)")
+    return errors
+
+
+def excursion_of(model: Model, at: dict, others: list) -> tuple:
+    """Excursion local de un tramo de 0 km (P5 (a); propuesta §4.4) [P]: {line, s0, s1}, ida y vuelta por la linea de la
+    parada desde su punto (s0) hasta s1, rio arriba si caben EXCURSION_KM y si no rio abajo, sin llegar a otra parada de la
+    misma linea (others: sus s). Devuelve (excursion o None, error o None)."""
+    line = model.lines[at["line"]]
+    here = _arc_at(line, at["s"])
+    best = None
+    for sign in (-1.0, 1.0):   # rio arriba (s baja) primero
+        room = here if sign < 0 else line.arc_km[-1] - here
+        for s_other in others:
+            a = _arc_at(line, s_other)
+            gap = (here - a) if sign < 0 else (a - here)
+            if gap > 1e-6:
+                room = min(room, gap * EXCURSION_GAP)
+        length = min(EXCURSION_KM, room)
+        if length >= EXCURSION_MIN_KM and (best is None or length > best[0] + 1e-9):
+            best = (length, sign)
+        if length >= EXCURSION_KM:
+            break
+    if best is None:
+        return None, f"sin sitio para la excursion local en {at['line']} (menos de {EXCURSION_MIN_KM:g} km a cada lado)"
+    length, sign = best
+    return {"line": at["line"], "s0": at["s"], "s1": _round_s(_s_at_arc(line, here + sign * length))}, None
 
 
 # --------------------------------------------------------------------------------------------- documento
@@ -1071,10 +1322,11 @@ def land_ring(source: dict, frame: Frame) -> list:
     return clean
 
 
-def build_map(source: dict, geo: Geometry | None = None) -> tuple:
+def build_map(source: dict, geo: Geometry | None = None, towns: dict | None = None) -> tuple:
     """Documento af-river-map/2 y su modelo: sin geo, con el respaldo de la investigacion; con geo (M5.1), con sus lineas
-    y su tierra. Devuelve (doc, model, errores)."""
-    model, errors = build_model(source, geo)
+    y su tierra; towns, la tabla de los pueblos de paso (towns de overrides.json si no se da). Devuelve (doc, model,
+    errores)."""
+    model, errors = build_model(source, geo, towns)
     frame = model.frame
     lines = []
     for rid in model.order:
@@ -1133,7 +1385,9 @@ def build_map(source: dict, geo: Geometry | None = None) -> tuple:
             continue
         viewpoints.append({"id": place_id(r["nombre"]), "xy": list(frame.quant(float(r["lat"]), float(r["lon"]))),
                            "reveal_on": VIEWPOINT_REVEAL_ON, "fact": fact_key_of(r.get("dato"))})
-    passing = [{"id": p["id"], "line": p["line"], "s": p["s"], "fact": p["fact"]} for p in model.passing]
+    # passing (M2-2, D-069): con su vinneta, su pais y su tier (town_places).
+    passing = [{"id": p["id"], "line": p["line"], "s": p["s"], "fact": p["fact"], "vignette": p.get("vignette"),
+                "country": p.get("country"), "tier": p.get("tier")} for p in model.passing]
     # Orillas y vegetacion (M2-1).
     banks = build_banks(model)
     clear = [(p["line"], p["s"]) for p in passing] + ([(home["on"], home["s"])] if home else [])
@@ -1880,17 +2134,24 @@ def _order_key(s: float, piece: dict) -> float:
 
 
 def leg_extras(model: Model, path: list, filled: set) -> tuple:
-    """via (puntos de paso) y mouths (bocas que se llenan por primera vez) de un tramo, en el orden del viaje."""
+    """via (puntos de paso, cada uno {id, f} con la fraccion del tramo en km hasta el, town_f; M2-2) y mouths (bocas que se
+    llenan por primera vez) de un tramo, en el orden del viaje."""
     via: list = []
+    seen: set = set()
     mouths: list = []
     in_path = {p["line"] for p in path}
+    total = path_km(model, path)
+    before = 0.0
     for k, piece in enumerate(path):
         first = k == 0
+        line = model.lines[piece["line"]]
+        start = _arc_at(line, piece["s0"])
         here = sorted((p for p in model.passing if p["line"] == piece["line"] and _on_piece(p["s"], piece, first)),
                       key=lambda p: (_order_key(p["s"], piece), p["id"]))
         for p in here:
-            if p["id"] not in via:
-                via.append(p["id"])
+            if p["id"] not in seen:
+                seen.add(p["id"])
+                via.append({"id": p["id"], "f": town_f(before + abs(_arc_at(line, p["s"]) - start), total)})
         kids = sorted((model.lines[c] for c in model.order
                        if model.lines[c].host == piece["line"] and model.lines[c].kind != "main"
                        and _on_piece(model.lines[c].host_s, piece, first)),
@@ -1898,6 +2159,7 @@ def leg_extras(model: Model, path: list, filled: set) -> tuple:
         for c in kids:
             if c.id not in in_path and c.id not in filled and c.id not in mouths:
                 mouths.append(c.id)
+        before += abs(_arc_at(line, piece["s1"]) - start)
     return via, mouths
 
 
@@ -1912,9 +2174,14 @@ def build_routes(model: Model, records: list) -> tuple:
     out: dict = {}
     filled: set = set()
     prev_at = None
-    for r in sorted((r for r in records if isinstance(r.get("k"), int)), key=lambda r: r["k"]):
+    ordered = sorted((r for r in records if isinstance(r.get("k"), int)), key=lambda r: r["k"])
+    ats: dict = {}
+    for r in ordered:
         at, errs = stop_at(model, r)
         errors += errs
+        ats[r["k"]] = at
+    for r in ordered:
+        at = ats[r["k"]]
         if at is None:
             prev_at = None
             continue
@@ -1930,7 +2197,17 @@ def build_routes(model: Model, records: list) -> tuple:
             via, mouths = leg_extras(model, path, filled)
         filled.update(p["line"] for p in path)
         filled.update(mouths)
-        out[r["k"]] = (at, {"path": path, "via": via, "mouths": mouths})
+        leg = {"path": path, "via": via, "mouths": mouths}
+        if r["k"] > 0 and path_km(model, path) == 0.0:
+            # M2-2 (P5 (a)): un tramo de 0 km lleva su excursion local, sin llegar a otra parada de su linea.
+            others = [a["s"] for k, a in ats.items() if a is not None and k != r["k"] and a["line"] == at["line"]
+                      and abs(a["s"] - at["s"]) > S_EPS]
+            excursion, err = excursion_of(model, at, others)
+            if err:
+                errors.append(f"parada k={r['k']} ({r.get('id')}): {err}")
+            else:
+                leg["excursion"] = excursion
+        out[r["k"]] = (at, leg)
         prev_at = at
     return out, errors
 
@@ -2215,9 +2492,32 @@ def validate_routes(stops_doc: dict, model: Model, records: list) -> list:
                         errors.append(f"{tag}: leg roto entre path[{k}] ({a[0]} s = {a[1]}) y path[{k + 1}] ({b[0]} s = "
                                       f"{b[1]}): no es una confluencia, salto de {gap(a, b):.1f} km por tierra (las rutas "
                                       "no cruzan tierra)")
+            ids = {p["id"] for p in model.passing}
+            last_f = 0.0
             for v in leg.get("via", []):
-                if v not in {p["id"] for p in model.passing}:
-                    errors.append(f"{tag}: via {v!r} no es ningun punto de paso del Mapa")
+                # M2-2 (D-069): cada via es {id, f}, con f en (0, 1] y sin bajar en el orden del viaje.
+                if not (isinstance(v, dict) and tuple(v.keys()) == ("id", "f") and isinstance(v["f"], (int, float))):
+                    errors.append(f"{tag}: via {v!r} no es {{id, f}}")
+                    continue
+                if v["id"] not in ids:
+                    errors.append(f"{tag}: via {v['id']!r} no es ningun punto de paso del Mapa")
+                if not 0 < v["f"] <= 1 or v["f"] < last_f:
+                    errors.append(f"{tag}: via {v['id']!r} con f = {v['f']} fuera de (0, 1] o antes que el anterior")
+                last_f = v["f"] if isinstance(v["f"], (int, float)) else last_f
+            # M2-2 (P5 (a)): la excursion local, en todo tramo de 0 km (salvo n = 0) y solo en ellos, desde la parada.
+            zero = ok and n != 0 and path_km(model, path) == 0.0
+            exc = leg.get("excursion")
+            if zero and exc is None:
+                errors.append(f"{tag}: tramo de 0 km sin excursion local (P5 (a))")
+            elif exc is not None and not zero:
+                errors.append(f"{tag}: excursion en un tramo que no es de 0 km")
+            elif exc is not None:
+                if not (isinstance(exc, dict) and tuple(exc.keys()) == ("line", "s0", "s1")):
+                    errors.append(f"{tag}: excursion no es {{line, s0, s1}}")
+                elif exc["line"] != at["line"] or abs(exc["s0"] - at["s"]) > S_EPS or not 0 <= exc["s1"] <= 1:
+                    errors.append(f"{tag}: la excursion no sale de la parada ({exc})")
+                elif abs(exc["s1"] - exc["s0"]) <= S_EPS:
+                    errors.append(f"{tag}: excursion sin largo")
             for m in leg.get("mouths", []):
                 if m not in model.lines or model.lines[m].kind == "main":
                     errors.append(f"{tag}: mouths {m!r} no es ningun afluente del Mapa")
@@ -3179,7 +3479,7 @@ def main(argv: list | None = None) -> int:
             for err in errors:
                 emit(f"FAIL  {err}")
             return 1
-        doc, model, errs = build_map(source, geo)
+        doc, model, errs = build_map(source, geo, load_towns(args.overrides))
         errors += errs
     except (SourceError, GeometryError, ShapefileError) as e:
         emit(f"FAIL  {e}")

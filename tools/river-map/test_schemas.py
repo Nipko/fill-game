@@ -76,7 +76,7 @@ INVALID = [
     ("falta leg (obligatorio desde M2.6)", _drop_field(0, "leg")),
     ("leg sin tramos", _set((4, "leg", "path"), [])),
     ("at con s fuera de [0, 1]", _set((6, "at", "s"), 1.5)),
-    ("via con Belen", _set((1, "leg", "via"), ["belen"])),
+    ("via con Belen", _set((1, "leg", "via"), [{"id": "belen", "f": 0.5}])),
 ]
 
 
@@ -113,7 +113,7 @@ class StopsSchemaTests(unittest.TestCase):
         # Forma de at y leg del ejemplo de 08 §4.5 (los añade M2.6).
         iquitos["at"] = {"line": "amazonas", "s": 0.437}
         iquitos["leg"] = {"path": [{"line": "amazonas", "s0": 0.49, "s1": 0.437}],
-                          "via": ["caballococha", "pebas"], "mouths": ["napo"]}
+                          "via": [{"id": "caballococha", "f": 0.2}, {"id": "pebas", "f": 0.5}], "mouths": ["napo"]}
         iquitos["facts"] = ["map.stop.iquitos.dato_01"]
         self.assertEqual([], [e.message for e in self.errors(doc)])
 

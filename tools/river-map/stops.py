@@ -655,8 +655,8 @@ def validate(doc: dict, wt: WorldTable, model: "geometry.Model | None" = None, r
         at, leg = s.get("at"), s.get("leg")
         if not (isinstance(at, dict) and tuple(at.keys()) == ("line", "s")):
             errors.append(f"{tag}: at tiene que ser {{line, s}} (M2.6)")
-        if not (isinstance(leg, dict) and tuple(leg.keys()) == LEG_FIELDS):
-            errors.append(f"{tag}: leg tiene que ser {{path, via, mouths}} (M2.6)")
+        if not (isinstance(leg, dict) and tuple(leg.keys()) in (LEG_FIELDS, LEG_FIELDS + ("excursion",))):
+            errors.append(f"{tag}: leg tiene que ser {{path, via, mouths}} y, en un tramo de 0 km, excursion (M2.6; M2-2)")
 
     # El documento termina en el ultimo nivel de un mundo (1-200: el 200 del mundo 5; vale igual para 1-700). Con n
     # contiguos y levels = [10n+1, 10n+10], asi cada mundo presente esta completo: su gate y, si tiene mas de un
@@ -697,6 +697,12 @@ def validate(doc: dict, wt: WorldTable, model: "geometry.Model | None" = None, r
     return errors
 
 
+def towns_of(overrides: dict) -> dict:
+    """towns de overrides.json (D-069, M2-2): la tabla de los pueblos de paso; {} si no esta."""
+    towns = overrides.get("towns") if isinstance(overrides, dict) else None
+    return towns if isinstance(towns, dict) else {}
+
+
 def build(source: dict, overrides: dict, wt: WorldTable, geo: "geometry.Geometry | None" = None,
           map_path: Path = MAP_PATH) -> tuple[dict | None, list[str]]:
     """Paradas con sus rutas (geometry.py) y todas las reglas, candidatos de la propuesta §5.1 bis incluidos. Las rutas van
@@ -705,7 +711,7 @@ def build(source: dict, overrides: dict, wt: WorldTable, geo: "geometry.Geometry
     try:
         if geo is None:
             geo = geometry.committed_geometry(map_path)
-        model, errors = geometry.build_model(source, geo)
+        model, errors = geometry.build_model(source, geo, towns_of(overrides))
     except geometry.GeometryError as e:
         return None, [f"geometria: {e}"]
     errors = [f"geometria: {e}" for e in errors]
@@ -718,6 +724,9 @@ def build(source: dict, overrides: dict, wt: WorldTable, geo: "geometry.Geometry
         except SourceError as e:
             return doc, errors + [str(e)]
         errors += validate(doc, wt, model, records, candidates)
+        if not errors:
+            # M2-2 (D-069): la cadencia de los pueblos de paso (propuesta del Mapa v2 §4.1, regla 2).
+            errors += geometry.town_cadence_problems(doc, model, towns_of(overrides))
     return doc, errors
 
 
@@ -1331,6 +1340,53 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                    f"Fuente: {SOURCE_REL}, {origin} (dato). {sources}{nota} {NO_CAPTURE}")
         add(final["clave"], final["texto"], FACT_MAX_CHARS, context,
             f"[{final['etiqueta']}] Dato de punto de paso del Mapa del río.")
+
+    # Pueblos de paso (D-069, M2-2; propuesta del Mapa v2 §4; P4 (a)): el nombre de los candidatos que entran (from: su punto
+    # de control de la investigacion, que verifica el nombre) y el rio de la ficha de cada pueblo (map.stop.<id>.river, en
+    # {rio} de map_arrived). Nacen pendientes de la revision de Gemini (D-054) y del asesor: en release no salen hasta
+    # entonces (Loc solo enseña lo aprobado), y el cliente no dibuja un pueblo sin nombre.
+    towns = towns_of(overrides)
+    places_t = towns.get("places") if isinstance(towns.get("places"), dict) else {}
+    rios = {r.get("id"): r for name in ("rios", "rios_locales_201_700") for r in source.get(name, []) or []
+            if isinstance(r, dict)}
+    town_where = ("pueblo de paso del Mapa del río v2 (D-069, M2-2; propuesta del Mapa v2 §4): su rótulo junto a su viñeta "
+                  "en el Mapa cuando la canoa está a un tramo o menos, {place} de map_arrived («{lugar} · {país} · río "
+                  "{río}») en su ficha al tocarlo, y {place} de a11y_map_town o a11y_map_city (TalkBack, «Coari · pueblo de "
+                  "paso · Brasil»); sin fondo, Canasta ni muestra")
+    pending_gemini = "Pendiente de la revisión de Gemini (D-054)."
+    for pid, entry in places_t.items():
+        if not isinstance(entry, dict):
+            continue
+        frm = entry.get("from")
+        if isinstance(frm, dict):
+            rec = rios.get(frm.get("rio")) or {}
+            point = next((x for x in rec.get("puntos") or [] if isinstance(x, dict) and x.get("nombre") == frm.get("punto")),
+                         None)
+            if point is None:
+                errors.append(f"towns.places.{pid}: {frm!r} no es ningun punto de rio-amazonas.json")
+                continue
+            name = entry.get("name") if isinstance(entry.get("name"), str) else place_name(point["nombre"])
+            cites = "; ".join(f"{fid} [{fuentes[fid].get('etiqueta')}]: {fuentes[fid].get('nombre')}, {fuentes[fid].get('url')}"
+                              for fid in rec.get("fuentes") or [] if isinstance(fuentes.get(fid), dict))
+            how = ("el nombre de la investigación sin su paréntesis final [P]" if "name" not in entry else
+                   f"«{name}», de tools/river-map/overrides.json (towns.places.{pid}.name), en lugar de «{point['nombre']}» [P]")
+            context = (f"Nombre del {town_where}. Es {how}. Fuente: {SOURCE_REL}, rios.{rec.get('id')}.puntos («"
+                       f"{point['nombre']}», conf {point.get('conf')}): el nombre verificado de P4 (a), con las fuentes del "
+                       f"río: {cites}. Candidato de la propuesta del Mapa v2 §4.3; tools/river-map/geometry.py lo ancla a "
+                       f"5 km o menos de su línea. {NO_CAPTURE}")
+            add(f"map.stop.{pid}.name", name, NAME_MAX_CHARS, context,
+                f"[P] Nombre del pueblo de paso (rio-amazonas.json, rios[].puntos). {pending_gemini}")
+        river = entry.get("river")
+        if entry.get("tier") in ("town", "city") and isinstance(river, str):
+            problem = river_problem(river.strip())
+            if problem:
+                errors.append(f"towns.places.{pid}.river: {river!r} {problem}; va en {{rio}} de map_arrived")
+            context = (f"Río de la ficha del {town_where}: {{río}} de map_arrived («{{lugar}} · {{país}} · río {{río}}»), así "
+                       f"que va sin la palabra «río» (glosario §10; 08 §4.5). Fuente: tools/river-map/overrides.json "
+                       f"(towns.places.{pid}.river) [P]: el nombre del río en ese tramo, como en las paradas vecinas. "
+                       f"{NO_CAPTURE}")
+            add(f"map.stop.{pid}.river", river, NAME_MAX_CHARS, context,
+                f"[P] Río del pueblo de paso, de overrides.json (towns). {pending_gemini}")
 
     # Preguntas del mundo (50 caracteres).
     for s in stops:

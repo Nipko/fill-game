@@ -1,5 +1,5 @@
 {
-  "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: arrival_text, country, country_name, name, river y why). name y river sustituyen al nombre y al río de la investigación en las filas map.stop.<id>.name y map.stop.<id>.river de facts.csv (M1.1t): el río va en {río} de map_arrived («{lugar} · {país} · río {río}», glosario §10), así que es solo el nombre del río, sin «río» ni descripciones (--check falla si el río lleva paréntesis, empieza por «río» o por minúscula). arrival_text (M4.5a) sustituye al texto es-419 del dato de llegada de la parada (su arrival_fact) en su fila de facts.csv, con la misma clave, la misma etiqueta y las mismas fuentes, sin tocar rio-amazonas.json: la fila lo marca con [P] y su contexto cita el texto de la investigación (--check falla si la parada no tiene dato de llegada). es_revision (D-054): {why, texts}, el español aprobado en la revisión cultural que sustituye al de la investigación en una fila del bloque ({clave: {from, to}}); --check falla si la clave no es del bloque o si la investigación ya no dice «from». source_short (DC9; D-028, pregunta 57 a): {why, names}, el nombre corto de cada fuente que nombra una fila <clave del dato>.source de facts.csv (id de rio-amazonas.json, fuentes -> nombre corto); --check falla si un dato con fuente no tiene nombre corto, si un id no está en fuentes o no lo nombra ninguna fila, o si un nombre pasa de 40 caracteres.",
+  "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: arrival_text, country, country_name, name, river y why). name y river sustituyen al nombre y al río de la investigación en las filas map.stop.<id>.name y map.stop.<id>.river de facts.csv (M1.1t): el río va en {río} de map_arrived («{lugar} · {país} · río {río}», glosario §10), así que es solo el nombre del río, sin «río» ni descripciones (--check falla si el río lleva paréntesis, empieza por «río» o por minúscula). arrival_text (M4.5a) sustituye al texto es-419 del dato de llegada de la parada (su arrival_fact) en su fila de facts.csv, con la misma clave, la misma etiqueta y las mismas fuentes, sin tocar rio-amazonas.json: la fila lo marca con [P] y su contexto cita el texto de la investigación (--check falla si la parada no tiene dato de llegada). es_revision (D-054): {why, texts}, el español aprobado en la revisión cultural que sustituye al de la investigación en una fila del bloque ({clave: {from, to}}); --check falla si la clave no es del bloque o si la investigación ya no dice «from». source_short (DC9; D-028, pregunta 57 a): {why, names}, el nombre corto de cada fuente que nombra una fila <clave del dato>.source de facts.csv (id de rio-amazonas.json, fuentes -> nombre corto); --check falla si un dato con fuente no tiene nombre corto, si un id no está en fuentes o no lo nombra ninguna fila, o si un nombre pasa de 40 caracteres. towns (D-069, M2-2): la tabla [P] de los pueblos de paso (places, excluded y cadence), que leen geometry.py (passing[] y las comprobaciones de P4 (a)) y stops.py (via con f, la cadencia y los textos); su why la explica.",
   "stops": {
     "atalaya": {
       "river": "Ucayali",
@@ -173,6 +173,74 @@
         "from": "De natural, el Tapajós es claro: baja de rocas muy viejas que sueltan poco barro.",
         "to": "Por naturaleza, el Tapajós es claro: baja de rocas muy viejas que sueltan poco barro."
       }
+    }
+  },
+  "towns": {
+    "why": "[P] Pueblos de paso del Mapa v2 (D-069, bloque M2-2; propuesta del Mapa v2 §4; P4 (a)). places: cada punto de passing[] de river_map_v1.json con su país (ISO2), su tier (town, pueblo; city, ciudad: los puertos grandes de la tabla de la propuesta §4.2; mark, una boca o unos rápidos, sin viñeta) y su viñeta (stilts, muelle y palafitos; church, iglesia y plaza; port, puerto con barco de línea; market, mercado del muelle; null en los mark), y en los town y city el río de su ficha ({río} de map_arrived, solo el nombre). Con from {rio, punto}, un pueblo candidato de la propuesta §4.3 que no está en los puntos de paso de la investigación: su punto de control de rio-amazonas.json (rios[].puntos, por su nombre exacto), con conf V o E en un río con fuentes con URL (el nombre verificado, P4 (a)), que geometry.py ancla a <= 5 km (TOWN_ANCHOR_KM) de su línea; si no, --check falla. name, solo si el nombre de la investigación no es el del pueblo. Ningún pueblo nuevo lleva dato: el dato solo sale si es [V] y lo revisó Gemini (D-054), y ninguno lo tiene todavía. excluded: los candidatos que no entran, con el motivo (un id de excluded nunca puede estar en passing[]). cadence: los tramos (n de la parada a la que llegan) que no cumplen la cadencia de la propuesta §4.1, regla 2 (>= 150 km, 1 pueblo; >= 400 km, 2), con el motivo; --check falla si un tramo no la cumple sin excepción o si una excepción sobra. Parintins va sin los bois ni los colores de Garantido o Caprichoso (glosario §3.3); ninguna viñeta es una maloca ni arquitectura indígena (§4.2).",
+    "places": {
+      "breves": {"country": "BR", "tier": "town", "vignette": "stilts", "river": "Pará"},
+      "gurupa": {"country": "BR", "tier": "town", "vignette": "stilts", "river": "Amazonas"},
+      "boca_del_xingu": {"country": "BR", "tier": "mark", "vignette": null},
+      "monte_alegre": {"country": "BR", "tier": "town", "vignette": "church", "river": "Amazonas"},
+      "obidos": {"country": "BR", "tier": "town", "vignette": "church", "river": "Amazonas"},
+      "parintins": {"country": "BR", "tier": "city", "vignette": "port", "river": "Amazonas"},
+      "itacoatiara": {"country": "BR", "tier": "city", "vignette": "port", "river": "Amazonas"},
+      "boca_del_madeira": {"country": "BR", "tier": "mark", "vignette": null},
+      "boca_del_purus": {"country": "BR", "tier": "mark", "vignette": null},
+      "coari": {"country": "BR", "tier": "town", "vignette": "church", "river": "Solimões"},
+      "fonte_boa": {"country": "BR", "tier": "town", "vignette": "church", "river": "Solimões"},
+      "santo_antonio_do_ica": {"country": "BR", "tier": "town", "vignette": "stilts", "river": "Solimões"},
+      "tabatinga": {"country": "BR", "tier": "city", "vignette": "port", "river": "Solimões"},
+      "caballococha": {"country": "PE", "tier": "town", "vignette": "stilts", "river": "Amazonas"},
+      "pebas": {"country": "PE", "tier": "town", "vignette": "stilts", "river": "Amazonas"},
+      "boca_del_napo": {"country": "PE", "tier": "mark", "vignette": null},
+      "tamshiyacu": {"country": "PE", "tier": "town", "vignette": "market", "river": "Amazonas"},
+      "teotonio": {"country": "BR", "tier": "mark", "vignette": null},
+      "almeirim": {"from": {"rio": "amazonas", "punto": "Almeirim"}, "country": "BR", "tier": "town", "vignette": "stilts", "river": "Amazonas"},
+      "prainha": {"from": {"rio": "amazonas", "punto": "Prainha"}, "country": "BR", "tier": "town", "vignette": "stilts", "river": "Amazonas"},
+      "manacapuru": {"from": {"rio": "amazonas", "punto": "Manacapuru"}, "country": "BR", "tier": "town", "vignette": "market", "river": "Solimões"},
+      "codajas": {"from": {"rio": "amazonas", "punto": "Codajás"}, "country": "BR", "tier": "town", "vignette": "church", "river": "Solimões"},
+      "amatura": {"from": {"rio": "amazonas", "punto": "Amaturá"}, "country": "BR", "tier": "town", "vignette": "stilts", "river": "Solimões"},
+      "sao_paulo_de_olivenca": {"from": {"rio": "amazonas", "punto": "São Paulo de Olivença (boca del Jandiatuba)"}, "country": "BR", "tier": "town", "vignette": "church", "river": "Solimões"},
+      "indiana": {"from": {"rio": "amazonas", "punto": "Indiana"}, "country": "PE", "tier": "town", "vignette": "stilts", "river": "Amazonas"},
+      "orellana": {"from": {"rio": "amazonas", "punto": "Orellana"}, "country": "PE", "tier": "town", "vignette": "stilts", "river": "Ucayali"},
+      "humaita": {"from": {"rio": "madeira", "punto": "Humaitá"}, "country": "BR", "tier": "town", "vignette": "market", "river": "Madeira"},
+      "manicore": {"from": {"rio": "madeira", "punto": "Manicoré"}, "country": "BR", "tier": "town", "vignette": "church", "river": "Madeira"},
+      "cachuela_esperanza": {"from": {"rio": "beni", "punto": "Cachuela Esperanza"}, "country": "BO", "tier": "town", "vignette": "stilts", "river": "Beni"},
+      "guajara_mirim": {"from": {"rio": "mamore", "punto": "Guayaramerín (BO) / Guajará-Mirim (BR)"}, "name": "Guajará-Mirim", "country": "BR", "tier": "city", "vignette": "port", "river": "Mamoré"}
+    },
+    "excluded": {
+      "porto_velho": "Su punto de rio-amazonas.json (madeira, «Porto Velho») queda a 6,5 km del Madeira de HydroRIVERS: más de los 5 km de P4 (a).",
+      "borba": "Su punto de rio-amazonas.json (madeira, «Borba») queda a 6,6 km del Madeira de HydroRIVERS: más de los 5 km de P4 (a).",
+      "costa_marques": "Su punto de rio-amazonas.json (itenez, «Boca del São Domingos / Costa Marques») queda a 6,1 km del Iténez de HydroRIVERS: más de los 5 km de P4 (a).",
+      "cabo_pantoja": "No está en rio-amazonas.json, sources.json ni docs/research/mapa-del-rio/: nombre sin verificar (P4 (a)).",
+      "tiputini": "La investigación solo da la boca del río Tiputini (napo, «Boca del Tiputini»), no el pueblo: nombre sin verificar (P4 (a)).",
+      "panacocha": "No está en rio-amazonas.json, sources.json ni docs/research/mapa-del-rio/: nombre sin verificar (P4 (a)).",
+      "laberinto": "No está en rio-amazonas.json, sources.json ni docs/research/mapa-del-rio/: nombre sin verificar (P4 (a)).",
+      "masisea": "No está en rio-amazonas.json, sources.json ni docs/research/mapa-del-rio/: nombre sin verificar (P4 (a)).",
+      "novo_airao": "Mundo 10 (701-820): sus paradas no están en los datos de 1-700 (P10 (a), condicionada al contenido de la 1.1).",
+      "barcelos": "Mundo 10 (701-820): sus paradas no están en los datos de 1-700 (P10 (a), condicionada al contenido de la 1.1).",
+      "santa_isabel_do_rio_negro": "Mundo 10 (701-820): sus paradas no están en los datos de 1-700 (P10 (a), condicionada al contenido de la 1.1).",
+      "sao_gabriel_da_cachoeira": "Mundo 10 (701-820) y, si llega, con el asesor cultural (D-013, punto 11; P10 (a)).",
+      "cucui": "Mundo 10 (701-820): sus paradas no están en los datos de 1-700 (P10 (a), condicionada al contenido de la 1.1).",
+      "san_carlos_de_rio_negro": "Mundo 10 (701-820): sus paradas no están en los datos de 1-700 (P10 (a), condicionada al contenido de la 1.1).",
+      "belen": "Veto de D-013, punto 11: nunca como nombre, rótulo, nivel ni ranura.",
+      "boca_colorado": "Veto de la propuesta del Mapa v2 §4.3 (minería ilegal de oro): nunca."
+    },
+    "cadence": {
+      "18": "Nauta -> Pacaya-Samiria (Marañón arriba, ~196 km): la propuesta §4.3 no tiene candidato en este tramo.",
+      "21": "Mazán -> Santa Clotilde (Napo arriba, ~173 km): la propuesta §4.3 no tiene candidato en este tramo.",
+      "22": "Santa Clotilde -> Nuevo Rocafuerte (Napo arriba, ~312 km): su candidato, Cabo Pantoja, no se verifica en las fuentes del repositorio.",
+      "25": "Yasuní -> Cuyabeno (Napo, Aguarico y Cuyabeno, ~312 km): la propuesta §4.3 no tiene candidato en este tramo.",
+      "27": "Cuyabeno -> la boca del Coca (~430 km): sus candidatos, Tiputini y Pañacocha, no se verifican en las fuentes del repositorio.",
+      "38": "Collpa del Tambopata -> Boca Manu (Madre de Dios arriba, ~459 km): su candidato, Laberinto, no se verifica en las fuentes del repositorio.",
+      "42": "Manu -> Riberalta (Madre de Dios abajo, ~934 km): la propuesta §4.3 no tiene candidato en este tramo.",
+      "45": "Riberalta -> Rurrenabaque (Beni arriba, ~592 km): la propuesta §4.3 no tiene candidato en este tramo.",
+      "51": "Guayaramerín -> Noel Kempff (Mamoré e Iténez, ~767 km): su candidato, Costa Marques, se ancla a más de 5 km (6,1 km); Guajará-Mirim es el punto de salida.",
+      "53": "Noel Kempff -> Trinidad (Iténez y Mamoré, ~1.044 km): su candidato, Costa Marques, se ancla a más de 5 km (6,1 km).",
+      "59": "Requena -> Contamana (Ucayali arriba, ~549 km): solo Orellana; Masisea, el otro candidato del Ucayali, no se verifica y queda río arriba de Pucallpa.",
+      "61": "Contamana -> Pucallpa (Ucayali arriba, ~225 km): la propuesta §4.3 no tiene candidato en este tramo.",
+      "64": "Pucallpa -> Bolognesi (Ucayali arriba, ~328 km): su candidato, Masisea, no se verifica en las fuentes del repositorio."
     }
   }
 }
