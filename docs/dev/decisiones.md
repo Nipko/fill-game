@@ -5159,3 +5159,12 @@ Decididas por el dueño con las recomendadas («Sí, recomendadas»):
 - **15:** `curve2_from_level` con dos dispositivos: en la fusión gana el mínimo. Se acepta el caso límite: la garantía vale por dispositivo.
 - **La Cocha pasa a la 1.2,** junto con la Palizada (P9 B). Se quita el [P].
 - La pregunta 14 (el par objetivo de la curva 2) la decide la medición de F1.
+
+### D-068, añadido del 2026-11-07: los topes tras la medición de F1
+
+Medición: `docs/dev/curva-1.1-f1-medicion.md` (mundo 7, variante b). El dueño la decidió con las recomendadas («Sí, recomendadas»):
+- **F1-1:** los retos van con K 9. Llevan K 10 solo los retos de p6 y p9 que con K 9 no llegan a Difícil (329, 346, 349); para eso F3 necesita K por celda. Los hitos van con K 11, la cúspide con K 12, y la comodidad y los respiros con K 8. El estreno del Brote de dos hojas va con K 7. Hay 3 comodidades turbias por ciclo, para llegar a ~20 % de niveles con ocultas.
+- **F1-2:** se aceptan unos 3-4 retos por mundo sin la etiqueta Difícil. Los decide la curación del dueño (F5).
+- **F1-3:** la celda del reto 369 se cambia en `campaign_v3`.
+- **F1-4:** sigue pendiente del dueño el dato de Analytics de cuántos jugadores pasan del 300.
+- **En F3:** medir los mundos 8 y 9 con estos topes, antes de generar los packs.
