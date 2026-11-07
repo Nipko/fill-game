@@ -3,7 +3,9 @@ package com.amazonfill.splash;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Application;
+import android.content.pm.ActivityInfo;
 import android.content.res.TypedArray;
+import android.graphics.Rect;
 import android.graphics.Path;
 import android.graphics.Region;
 import android.graphics.drawable.AdaptiveIconDrawable;
@@ -15,6 +17,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
 import android.os.SystemClock;
+import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
@@ -65,6 +68,14 @@ import android.window.SplashScreenView;
  * </ul>
  * Solo la primera actividad del proceso, y solo si es la de Unity (el arranque en frio); nada de red, disco, registros ni
  * identificadores.
+ *
+ * <p><b>Vertical en los telefonos</b> (anadido de D-059 del 2026-11-06, Q-BB-1 (b)): el manifiesto ya no restringe la
+ * orientacion (Play recomienda quitarla para las pantallas grandes) y el juego se bloquea en vertical por codigo solo en los
+ * telefonos: si el lado menor de la pantalla del dispositivo ({@link #deviceSmallestWidthDp(Activity)}: la ventana maxima, no la
+ * de la pantalla dividida) mide menos de {@link #TABLET_MIN_SMALLEST_WIDTH_DP} dp, en {@code onActivityCreated} de cada actividad
+ * de Unity (dentro de su {@code onCreate}, antes de su primer fotograma) se pide {@code SCREEN_ORIENTATION_PORTRAIT}. Asi, con
+ * el telefono tumbado, el juego apenas se ve en apaisado al abrir. Despues manda {@code AF.UI.OrientationPolicy} (C#), que
+ * vuelve a decidir si cambia la pantalla (un plegable que se abre o se cierra). Tabletas, plegables abiertos y Chromebooks giran.
  */
 public final class AfSplashHold {
     /** Tope del velo (ms desde que empieza la actividad de Unity) [P]. AF.UI.AndroidOsSplash.CapMs lo repite. */
@@ -102,6 +113,9 @@ public final class AfSplashHold {
      * mascara a 0, 45 y 22,5 grados, en diezmilesimas de medio lado).
      */
     public static final int BOX_LENGTH = 11;
+
+    /** Lado menor de la pantalla desde el que el dispositivo gira (dp; la frontera telefono/tableta de Android). */
+    public static final int TABLET_MIN_SMALLEST_WIDTH_DP = 600;
 
     /** Lado (px) del cuadro en que se mide la mascara de iconos del sistema: 0,1 % de precision (0,5 px en 504 px). */
     static final int MASK_SAMPLE = 1000;
@@ -154,6 +168,11 @@ public final class AfSplashHold {
     private static final Application.ActivityLifecycleCallbacks CALLBACKS = new Application.ActivityLifecycleCallbacks() {
         @Override
         public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
+            // Vertical en los telefonos (Q-BB-1 (b)): en cada actividad de Unity, tambien al recrearla, antes de su primer fotograma.
+            if (activity != null && isUnity(activity)) {
+                lockPortraitOnPhones(activity);
+            }
+
             // Dentro de onCreate (antes del primer fotograma): ahi Android pide que se registre el oyente de su pantalla.
             if (seen) {
                 return; // solo el arranque en frio: la primera actividad del proceso
@@ -291,6 +310,58 @@ public final class AfSplashHold {
     }
 
     // La actividad de Unity (UnityPlayerGameActivity o UnityPlayerActivity, o una subclase), sin reflexion de metodos.
+    /**
+     * Lado menor de la pantalla del dispositivo en dp (la ventana maxima: en pantalla dividida, la pantalla entera; en un plegable,
+     * la pantalla que esta en uso), o 0 si no se puede leer. Lo usa tambien C# por JNI.
+     */
+    public static int deviceSmallestWidthDp(Activity activity) {
+        if (activity == null) {
+            return 0;
+        }
+
+        try {
+            float density = activity.getResources().getDisplayMetrics().density;
+            if (density <= 0f) {
+                return 0;
+            }
+
+            int w;
+            int h;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Rect bounds = Api30.maximumBounds(activity);
+                w = bounds.width();
+                h = bounds.height();
+            } else {
+                DisplayMetrics metrics = realMetrics(activity);
+                w = metrics.widthPixels;
+                h = metrics.heightPixels;
+            }
+
+            return Math.round(Math.min(w, h) / density);
+        } catch (RuntimeException e) {
+            return 0;
+        }
+    }
+
+    /** True si el dispositivo es un telefono (lado menor de 1 a 599 dp): ahi el juego va en vertical. */
+    public static boolean isPhone(int smallestWidthDp) {
+        return smallestWidthDp > 0 && smallestWidthDp < TABLET_MIN_SMALLEST_WIDTH_DP;
+    }
+
+    // En un telefono, vertical antes del primer fotograma; en lo demas no se toca (el manifiesto no restringe).
+    private static void lockPortraitOnPhones(Activity activity) {
+        if (isPhone(deviceSmallestWidthDp(activity))) {
+            activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static DisplayMetrics realMetrics(Activity activity) {
+        DisplayMetrics metrics = new DisplayMetrics();
+        activity.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
+        return metrics;
+    }
+
     private static boolean isUnity(Activity activity) {
         for (Class<?> type = activity.getClass(); type != null; type = type.getSuperclass()) {
             String name = type.getName();
@@ -515,6 +586,17 @@ public final class AfSplashHold {
             if (parent instanceof ViewGroup) {
                 ((ViewGroup) parent).removeView(own);
             }
+        }
+    }
+
+    // Lo de Android 11+ (API 30) aparte, para que Android 8-10 no lo cargue nunca.
+    @TargetApi(30)
+    private static final class Api30 {
+        private Api30() {
+        }
+
+        static Rect maximumBounds(Activity activity) {
+            return activity.getWindowManager().getMaximumWindowMetrics().getBounds();
         }
     }
 
