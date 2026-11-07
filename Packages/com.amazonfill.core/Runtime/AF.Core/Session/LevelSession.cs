@@ -98,6 +98,7 @@ namespace AF.Core.Session
             }
 
             _revealed = new int[initial.Count];
+            initial = SettleLancha(initial);
             Initial = initial;
             Current = initial;
             FutileRuleEnabled = futileRuleEnabled;
@@ -365,6 +366,7 @@ namespace AF.Core.Session
             RevealAll();
             _previous.Clear();
             _pours.Clear();
+            shuffled = SettleLancha(shuffled);
             Current = shuffled;
             Status = Evaluate(shuffled);
             return true;
@@ -458,6 +460,28 @@ namespace AF.Core.Session
             {
                 _revealed[i] |= before.CuiaAt(i).HiddenMask & ~after.CuiaAt(i).HiddenMask;
             }
+        }
+
+        /// <summary>
+        /// La Lancha (1.1, D-068 [P]; 02 §9.1 M11) atraca «en cuanto el tablero tiene k o más cuias vacías», también cuando la
+        /// vacía que falta no llega con un vertido: la Cuia extra o la de rescate, que el cliente añade rehaciendo la sesión desde
+        /// el tablero inicial con la cuia nueva (04 §2.2 y §6), o el tablero de la Pororoca. Por eso la partida asienta su tablero
+        /// inicial y el de la ola (R10 d-f′, <see cref="PourRules.Settle"/>) si llevan una lancha sin atracar. En un nivel válido
+        /// no cambia nada (<c>k</c> ≥ vacíos + 1), así que solo actúa con una cuia vacía de más; rehacer el historial sobre un
+        /// tablero con la lancha ya atracada sigue siendo legal, porque atracar solo añade vertidos. Las demás mecánicas no lo
+        /// necesitan: ningún nivel válido empieza con sellos (03 §17 #5).
+        /// </summary>
+        private static BoardState SettleLancha(BoardState state)
+        {
+            for (int i = 0; i < state.Count; i++)
+            {
+                if (state.CuiaAt(i).Mechanic == AF.Core.Mechanics.MechanicType.Lancha)
+                {
+                    return PourRules.Settle(state, out _);
+                }
+            }
+
+            return state;
         }
 
         private static bool HasRemolino(BoardState state)

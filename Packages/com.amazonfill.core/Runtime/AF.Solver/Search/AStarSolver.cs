@@ -70,6 +70,7 @@ namespace AF.Solver.Search
         private readonly Cuia[] _parentBuf = new Cuia[BoardState.MaxCuias];
         private readonly Cuia[] _childBuf = new Cuia[BoardState.MaxCuias];
         private readonly Cuia[] _realBuf = new Cuia[BoardState.MaxCuias];
+        private readonly Cuia[] _labelBuf = new Cuia[BoardState.MaxCuias];
         private readonly int[] _perm = new int[BoardState.MaxCuias];
         private readonly SolverMove[] _moves = new SolverMove[SolverMoves.MaxMoves];
 
@@ -446,10 +447,14 @@ namespace AF.Solver.Search
 
         /// <summary>
         /// <see cref="_perm"/>[posición canónica] = índice real: orden de <see cref="_realBuf"/> por
-        /// (<see cref="Cuia.Packed"/>, índice), el mismo que da <see cref="BoardCanon.Sort"/>.
+        /// (<see cref="Cuia.Packed"/>, índice), el mismo que da <see cref="BoardCanon.Sort"/>. Con Aguapé (1.1, D-068) ordena los
+        /// <c>Packed</c> con los grupos ya renumerados en orden canónico (<see cref="BoardCanon.RelabelGroups"/>), que son los
+        /// que guardan los nodos; las cuias con el mismo <c>Packed</c> renumerado son idénticas, así que el desempate no importa.
         /// </summary>
         private void CanonicalOrder(int width)
         {
+            Array.Copy(_realBuf, _labelBuf, width);
+            BoardCanon.RelabelGroups(_labelBuf, 0, width);
             for (int i = 0; i < width; i++)
             {
                 _perm[i] = i;
@@ -458,9 +463,9 @@ namespace AF.Solver.Search
             for (int i = 1; i < width; i++)
             {
                 int index = _perm[i];
-                ulong packed = _realBuf[index].Packed;
+                ulong packed = _labelBuf[index].Packed;
                 int j = i - 1;
-                while (j >= 0 && _realBuf[_perm[j]].Packed > packed)
+                while (j >= 0 && _labelBuf[_perm[j]].Packed > packed)
                 {
                     _perm[j + 1] = _perm[j];
                     j--;

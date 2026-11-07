@@ -91,6 +91,18 @@ namespace AF.Core.Rules
         /// </summary>
         public int CucharonReleasedMask { get; internal set; }
 
+        /// <summary>
+        /// (d) Cuias de un Aguapé que se soltaron en este vertido (1.1, D-068; 02 §9.1 M8): su grupo llegó a <c>n</c> cuias
+        /// selladas y se suelta entero, también la cuia que selló. También están en <see cref="ReleasedMask"/>.
+        /// </summary>
+        public int AguapeReleasedMask { get; internal set; }
+
+        /// <summary>
+        /// (f) La Lancha que atracó en este vertido (1.1, D-068; 02 §9.1 M11): el tablero llegó a <c>k</c> cuias vacías y la carga
+        /// pasa a ser una cuia normal. También está en <see cref="ReleasedMask"/>.
+        /// </summary>
+        public int LanchaDockedMask { get; internal set; }
+
         /// <summary>(e) Los contadores avanzaron (vertido no fútil con alguna mecánica de contador).</summary>
         public bool CountersAdvanced { get; internal set; }
 
@@ -169,6 +181,8 @@ namespace AF.Core.Rules
             ReleasedMask = 0;
             LianaReleasedMask = 0;
             CucharonReleasedMask = 0;
+            AguapeReleasedMask = 0;
+            LanchaDockedMask = 0;
             CountersAdvanced = false;
             ChangedMask = (1 << source) | (1 << target);
             LluviaDropMask = 0;
@@ -224,6 +238,14 @@ namespace AF.Core.Rules
             else if (type == Mechanics.MechanicType.Cucharon)
             {
                 CucharonReleasedMask |= bit;
+            }
+            else if (type == Mechanics.MechanicType.Aguape)
+            {
+                AguapeReleasedMask |= bit;
+            }
+            else if (type == Mechanics.MechanicType.Lancha)
+            {
+                LanchaDockedMask |= bit;
             }
         }
 

@@ -54,6 +54,12 @@ namespace AF.Core.Board
     /// <c>U_c</c> de su llave y como mucho una por fruta (D-024); el Brote de dos hojas, con espacio ≥ 2; y la Flor de
     /// vitória-régia (K3b), con dos llaves distintas en el tablero que pueden sellar fuera de ella a la vez y, mientras dure el
     /// bloqueo C1-9 de la Liana (pregunta 24 b), sin capacidades mixtas.</description></item>
+    /// <item><description>Mecánicas de la 1.1 (D-068 [P]; 02 §9.1 M8 y M11): el Aguapé, filtro de origen, va con Aguas turbias
+    /// (02 §9.2 regla 7; añadido de D-068 del 2026-11-07) y nunca con la Tinaja; sus reglas de grupo (contiguo, 2-5 cuias, 4-5 en
+    /// el espeso, una o dos que sellan solo recibiendo) son de <c>AguapeMechanic</c>, y que ningún grupo se parta entre filas lo
+    /// comprueba <see cref="ValidateRows"/> cuando el nivel lleva <c>rows</c>. La Lancha es un disparador: nunca con Aguas turbias
+    /// ni con la Tinaja; una por nivel y <c>k</c> ≥ vacíos + 1 son de <c>LanchaMechanic</c>; con la Liana solo desde el 401 (depende
+    /// del número de nivel: level-qa).</description></item>
     /// <item><description><c>atascado(S0)</c> = false con la <c>futil</c> única (02 §9.2 regla 1).</description></item>
     /// </list>
     /// </remarks>
@@ -258,6 +264,68 @@ namespace AF.Core.Board
             return null;
         }
 
+        /// <summary>Filas mínimas y máximas de <c>rows</c> (08 §4.1, <c>pack_schema</c> 5: «1-3 filas de 1-7»).</summary>
+        public const int MaxRows = 3;
+
+        /// <summary>Cuias máximas por fila de <c>rows</c> (08 §4.1).</summary>
+        public const int MaxCuiasPerRow = 7;
+
+        /// <summary>
+        /// Filas fijas de un nivel (<c>rows</c>, <c>pack_schema</c> 5; D-068 [P]; 02 §5; 08 §4.1) o null si son válidas para el
+        /// núcleo: de 1 a 3 filas de 1 a 7 cuias que suman las del tablero y, sobre todo, ningún grupo de Aguapé partido entre dos
+        /// filas (02 §9.1 M8, regla 6: «el grupo no se parte entre filas»). Los topes de 02 §5 por número de filas (2 filas de ≤ 7,
+        /// 3 de ≤ 5 y 3 filas desde 13 cuias, D-030) son reglas de diseño del pack: las comprueba level-qa.
+        /// </summary>
+        /// <param name="state">Tablero del nivel o de una variante de <c>relief</c>.</param>
+        /// <param name="rows">Cuias por fila, de arriba abajo, en el orden de <c>cuias</c>.</param>
+        public static string? ValidateRows(BoardState state, int[] rows)
+        {
+            if (state == null || rows == null)
+            {
+                return "faltan el tablero o rows";
+            }
+
+            if (rows.Length < 1 || rows.Length > MaxRows)
+            {
+                return "rows: de 1 a 3 filas, no " + Num(rows.Length) + " (08 §4.1)";
+            }
+
+            int total = 0;
+            for (int r = 0; r < rows.Length; r++)
+            {
+                if (rows[r] < 1 || rows[r] > MaxCuiasPerRow)
+                {
+                    return "rows: la fila " + Num(r) + " tiene " + Num(rows[r]) + " cuias; de 1 a 7 (08 §4.1)";
+                }
+
+                total += rows[r];
+            }
+
+            if (total != state.Count)
+            {
+                return "rows suma " + Num(total) + " cuias y el tablero tiene " + Num(state.Count) + " (08 §4.1)";
+            }
+
+            int start = 0;
+            for (int r = 0; r < rows.Length; r++)
+            {
+                int end = start + rows[r]; // la fila r son las cuias [start, end)
+                if (end < state.Count)
+                {
+                    Cuia left = state[end - 1];
+                    Cuia right = state[end];
+                    if (left.Mechanic == MechanicType.Aguape && right.Mechanic == MechanicType.Aguape && left.MechanicPairId == right.MechanicPairId)
+                    {
+                        return "02 §9.1 M8 (regla 6): el grupo de Aguapé de las cuias " + Num(end - 1) + " y " + Num(end) + " se parte entre las filas " + Num(r) + " y " + Num(r + 1);
+                    }
+                }
+
+                start = end;
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// La fruta de la que la cuia solo puede ser la casa (02 §8 y 03 §3: «cada color puede sellar en una cuia propia con
         /// cap = U_c»), o <see cref="Cuia.NoColor"/> si puede serlo de cualquier fruta de su capacidad:
@@ -425,8 +493,9 @@ namespace AF.Core.Board
                 Cuia cuia = state[i];
                 MechanicType type = cuia.Mechanic;
                 if (tinaja >= 0 && (type == MechanicType.Liana || type == MechanicType.Remolino || type == MechanicType.Lluvia || type == MechanicType.Pirana
-                    || type == MechanicType.Flor))
+                    || type == MechanicType.Flor || type == MechanicType.Aguape || type == MechanicType.Lancha))
                 {
+                    // La tinaja tampoco va con las mecánicas de la 1.1, Aguapé y Lancha (02 §9.2 regla 7; D-019 y D-068).
                     // M13 (b.2, combinaciones prohibidas: «LevelValidation ya lo prohíbe con ocultos»): la única comprobación de
                     // estas combinaciones en un nivel con tinaja, porque sus ocultas siempre llegan aquí (TinajaMechanic no la
                     // repite). El informe nombra la tinaja, no Aguas turbias. La Flor es un disparador y la tinaja va «solo con
@@ -434,8 +503,11 @@ namespace AF.Core.Board
                     return "M13 (b.2, combinaciones; Q14 A): la tinaja no se combina con " + MechanicTypes.ToKey(type) + " (cuia " + Num(i) + ")";
                 }
 
-                if (type == MechanicType.Liana || type == MechanicType.Lluvia || type == MechanicType.Pirana || type == MechanicType.Flor)
+                if (type == MechanicType.Liana || type == MechanicType.Lluvia || type == MechanicType.Pirana || type == MechanicType.Flor
+                    || type == MechanicType.Lancha)
                 {
+                    // La Lancha (1.1, D-068) es un disparador: nunca con Aguas turbias (02 §9.1 M11, regla 4; 02 T1). El Aguapé sí va
+                    // con ellas: es un filtro de origen (02 §9.2 regla 7; añadido de D-068 del 2026-11-07, pregunta 13).
                     // 02 T1: «nunca con mecánicas con disparador (Liana, Flor, …) ni contadores (Lluvia, Piraña…)» (Q14 A; K3b).
                     return "D-007, Q14 A: Aguas turbias no se combina con " + MechanicTypes.ToKey(type) + " (cuia " + Num(i) + ")";
                 }

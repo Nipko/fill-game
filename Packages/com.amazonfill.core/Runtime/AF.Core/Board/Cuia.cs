@@ -22,10 +22,12 @@ namespace AF.Core.Board
     /// <item><description>36-38: capacidad (1..6).</description></item>
     /// <item><description>39-42: tipo de mecánica (<see cref="MechanicType"/>; 0 = ninguna).</description></item>
     /// <item><description>43-46: <c>key</c>, tinte − 1 (Hoja, Hoja atada, Liana con fruta, Lluvia, Flor de vitória-régia).</description></item>
-    /// <item><description>47-49: id de la pareja del Remolino (0..7), asignado por el constructor de tableros.</description></item>
+    /// <item><description>47-49: id de la pareja del Remolino (0..7), asignado por el constructor de tableros; en el Aguapé (1.1,
+    /// D-068), el id de su grupo (0..7), que la canonicalización renumera (<see cref="BoardCanon"/>).</description></item>
     /// <item><description>50-52: <c>n</c> (Liana de cuenta: sellos; Lluvia: gotas pendientes; Brote de dos hojas: hojas cerradas
-    /// que le faltan, 2 o 1, y 0 en el Brote normal).</description></item>
-    /// <item><description>53-55: <c>k</c>, ritmo en vertidos de Lluvia y Piraña (2-5, 08 §9).</description></item>
+    /// que le faltan, 2 o 1, y 0 en el Brote normal; Aguapé: sellos del grupo que lo sueltan, 1 o 2 en el espeso).</description></item>
+    /// <item><description>53-55: <c>k</c>, ritmo en vertidos de Lluvia y Piraña (2-5, 08 §9); en la Lancha (1.1, D-068), las cuias
+    /// vacías con que atraca (2-7).</description></item>
     /// <item><description>En la Flor de vitória-régia, que no usa <c>n</c> ni <c>k</c>, los bits 50-53 guardan <c>key2</c>, tinte
     /// − 1, y los 54-55 valen 0 (K3b; firma de <c>pack_schema</c> 3, D-023, punto 5). Las demás mecánicas no cambian de bits ni de
     /// hash.</description></item>
@@ -93,6 +95,7 @@ namespace AF.Core.Board
         private const int KShift = 53;
         private const int Key2Shift = 50; // solo en la Flor, que no usa n ni k: reutiliza sus bits (50-53)
         private const int FlorCode = (int)MechanicType.Flor;
+        private const int AguapeCode = (int)MechanicType.Aguape;
         private const int CounterShift = 56;
         private const int FlagsShift = 59;
         private const ulong FlagsMask = 0x3UL;
@@ -235,8 +238,18 @@ namespace AF.Core.Board
         /// </summary>
         public int MechanicKey2 => MechanicCode == FlorCode ? (int)((_bits >> Key2Shift) & DoseMask) + 1 : NoColor;
 
-        /// <summary>Id de la pareja del Remolino (0..7); el constructor de tableros lo deduce de <c>partner</c>.</summary>
+        /// <summary>
+        /// Id de la pareja del Remolino (0..7); el constructor de tableros lo deduce de <c>partner</c>. En el Aguapé guarda el id
+        /// de su grupo (<see cref="MechanicGroup"/>).
+        /// </summary>
         public int MechanicPairId => (int)((_bits >> PairShift) & ThreeBitMask);
+
+        /// <summary>
+        /// Id del grupo del Aguapé (0..7; 1.1, D-068; 02 §9.1 M8), en los bits del id de pareja. Al construir el tablero es el
+        /// <c>group</c> del JSON; la canonicalización lo renumera en orden canónico (<see cref="BoardCanon.Sort"/>), así que solo
+        /// sirve para saber qué cuias van juntas, nunca como nombre estable. 0 en cualquier otra mecánica.
+        /// </summary>
+        public int MechanicGroup => MechanicCode == AguapeCode ? (int)((_bits >> PairShift) & ThreeBitMask) : 0;
 
         /// <summary>
         /// <c>n</c>: sellos de la Liana de cuenta, gotas pendientes de la Lluvia u hojas cerradas que le faltan al Brote de dos
@@ -249,6 +262,12 @@ namespace AF.Core.Board
         /// esos bits.
         /// </summary>
         public int MechanicK => MechanicCode == FlorCode ? 0 : (int)((_bits >> KShift) & ThreeBitMask);
+
+        /// <summary>La misma cuia con otro id en los bits de pareja o de grupo (47-49). Bucle caliente: no valida.</summary>
+        internal Cuia WithMechanicPairBits(int id)
+        {
+            return new Cuia((_bits & ~(ThreeBitMask << PairShift)) | ((ulong)id << PairShift));
+        }
 
         /// <summary>Contador de vertidos de Lluvia o Piraña (0..7).</summary>
         public int MechanicCounter => (int)((_bits >> CounterShift) & ThreeBitMask);
@@ -604,7 +623,7 @@ namespace AF.Core.Board
                 sb.Append(" | ").Append(MechanicTypes.ToKey(Mechanic));
                 AppendField(sb, "key", MechanicKey);
                 AppendField(sb, "key2", MechanicKey2);
-                AppendField(sb, "pair", MechanicPairId);
+                AppendField(sb, Mechanic == MechanicType.Aguape ? "group" : "pair", MechanicPairId);
                 AppendField(sb, "n", MechanicN);
                 AppendField(sb, "k", MechanicK);
                 AppendField(sb, "counter", MechanicCounter);
