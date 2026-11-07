@@ -26,7 +26,8 @@ namespace AF.Tests.PlayMode
     /// <item>el viaje de «Ver mapa» al Encuentro (D-053): la pata de visera y el acercamiento en la anticipación, la cámara que sigue a
     /// la canoa en el tercio de abajo, «Jugar» que entra al llegar sin esperar a los gestos y la luz que se funde al mundo 3;</item>
     /// <item>Reducir movimiento: el gesto y la emoción quietos 1,2 s y sin cámara;</item>
-    /// <item>el pie del Mapa v2 en una fila con «Faltan N» en el Mapa, y el respaldo de la 1.0 con <c>ui_map_v2</c> apagada.</item>
+    /// <item>el pie del Mapa v2 en una fila con «Faltan N» en el Mapa (desde M2-4, en el rótulo de la parada siguiente: respuesta del
+    /// dueño a la pregunta 2), y el respaldo de la 1.0 con <c>ui_map_v2</c> apagada.</item>
     /// </list>
     /// </summary>
     public sealed class MapCapiPlayTests
@@ -270,7 +271,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Footer_OneRow_RemainingInTheMap_AndTheMapGrows()
+        public IEnumerator Footer_OneRow_RemainingInTheNextStopLabel_AndTheMapGrows()
         {
             yield return MapMarkersTests.OpenApp(58);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -281,15 +282,16 @@ namespace AF.Tests.PlayMode
             Rect capsule = StopCardTests.CanvasRect(map.ViewSwitch.rectTransform, map.Canvas);
             Rect tab = StopCardTests.CanvasRect((RectTransform)map.SamplesTabButton!.transform, map.Canvas);
             Rect play = StopCardTests.CanvasRect((RectTransform)map.PlayButton.transform, map.Canvas);
-            Rect remaining = StopCardTests.CanvasRect(map.StopRemainingRect, map.Canvas);
-            Assert.That(map.StopRemainingShown, Is.True);
+            Assert.That(map.StopRemainingShown, Is.False, "sin la placa: «Faltan N» va en el rótulo de la parada siguiente (M2-4)");
+            Assert.That(map.StopRemainingInLabel, Is.True);
+            Rect remaining = StopCardTests.CanvasRect(map.StopLabelOf(map.RemainingStopN())!.rectTransform, map.Canvas);
             Assert.That(tab.yMin, Is.EqualTo(capsule.yMin).Within(0.5f), "el conmutador y el Muestrario, en la misma fila");
             Assert.That(tab.xMin, Is.GreaterThanOrEqualTo(capsule.xMax - 0.5f));
             Assert.That(tab.xMax, Is.LessThanOrEqualTo(map.CanvasWidth + 0.5f));
             Assert.That(Mathf.Min(tab.width, tab.height), Is.GreaterThanOrEqualTo(RiverMapScreen.MinTouchDp - 0.5f));
             Assert.That(capsule.yMax, Is.LessThanOrEqualTo(play.yMin + 0.5f));
             Assert.That(viewport.yMax, Is.LessThanOrEqualTo(capsule.yMin + 0.5f), "el Mapa llega a la fila");
-            Assert.That(remaining.yMin, Is.GreaterThanOrEqualTo(viewport.yMin - 0.5f), "«Faltan N», dentro de la zona del mapa");
+            Assert.That(remaining.yMin, Is.GreaterThanOrEqualTo(viewport.yMin - 0.5f), "«Faltan N», en el rótulo, dentro de la zona del mapa");
             Assert.That(remaining.yMax, Is.LessThanOrEqualTo(viewport.yMax + 0.5f));
             Assert.That(remaining.xMax, Is.LessThanOrEqualTo(viewport.xMax + 0.5f));
             float share = viewport.height / map.CanvasHeight;
@@ -341,7 +343,6 @@ namespace AF.Tests.PlayMode
                         ("cuenca", StopCardTests.CanvasRect((RectTransform)map.ViewBasinButton.transform, map.Canvas)),
                         ("muestrario", StopCardTests.CanvasRect((RectTransform)map.SamplesTabButton!.transform, map.Canvas)),
                         ("jugar", StopCardTests.CanvasRect((RectTransform)map.PlayButton.transform, map.Canvas)),
-                        ("faltan", StopCardTests.CanvasRect(map.StopRemainingRect, map.Canvas)),
                     };
                     for (int i = 0; i < named.Count; i++)
                     {
@@ -361,36 +362,13 @@ namespace AF.Tests.PlayMode
                         Assert.That(Mathf.Min(r.width, r.height), Is.GreaterThanOrEqualTo(RiverMapScreen.MinTouchDp - 0.5f), where + ": " + b.name + " ≥ 48 dp");
                     }
 
-                    // «Faltan N», dentro de la zona del mapa, sin pisar «Andes ↑», en dos líneas si no cabe, con su texto dentro.
-                    Rect viewport = StopCardTests.CanvasRect(map.ViewportRect, map.Canvas);
-                    Rect chip = StopCardTests.CanvasRect(map.StopRemainingRect, map.Canvas);
-                    Assert.That(viewport.Contains(chip.min) && viewport.Contains(chip.max - new Vector2(0.01f, 0.01f)), Is.True, where + ": la placa, en el Mapa");
-                    if (map.AndesLabel != null && map.AndesLabel.gameObject.activeInHierarchy && map.AndesLabel.text.Length > 0)
-                    {
-                        Assert.That(chip.Overlaps(StopCardTests.CanvasRect(map.AndesLabel.rectTransform, map.Canvas)), Is.False, where + ": «Andes ↑»");
-                    }
-
-                    TMPro.TextMeshProUGUI label = map.StopRemainingLabel;
+                    // «Faltan N», en el rótulo de la parada siguiente (M2-4; pregunta 2): sin la placa, con su texto dentro, en dos líneas.
+                    Assert.That(map.StopRemainingShown, Is.False, where + ": sin la placa");
+                    Assert.That(map.StopRemainingInLabel, Is.True, where);
+                    TMPro.TextMeshProUGUI label = map.StopLabelOf(map.RemainingStopN())!;
                     label.ForceMeshUpdate();
                     Assert.That(label.isTextOverflowing, Is.False, where + ": el texto cabe");
-                    Assert.That(label.textInfo.lineCount, Is.LessThanOrEqualTo(2), where);
-                    map.SetView(MapView.Basin);
-                    Canvas.ForceUpdateCanvases();
-                    if (map.NorthUpShown)
-                    {
-                        Rect chipBasin = StopCardTests.CanvasRect(map.StopRemainingRect, map.Canvas);
-                        Rect north = StopCardTests.CanvasRect((RectTransform)map.NorthUpButton.transform, map.Canvas);
-                        Assert.That(chipBasin.Overlaps(north), Is.False, where + ": «Norte arriba»");
-                    }
-
-                    map.Drag(new Vector2(0f, -100000f));
-                    Canvas.ForceUpdateCanvases();
-                    if (map.BackToCanoeShown)
-                    {
-                        Rect back = StopCardTests.CanvasRect((RectTransform)map.BackToCanoeButton.transform, map.Canvas);
-                        Assert.That(StopCardTests.CanvasRect(map.StopRemainingRect, map.Canvas).Overlaps(back), Is.False, where + ": «Volver a la canoa»");
-                    }
-
+                    Assert.That(label.textInfo.lineCount, Is.EqualTo(2), where);
                     boot.CloseRiverMap();
                     LaunchOptions.Reset();
                 }

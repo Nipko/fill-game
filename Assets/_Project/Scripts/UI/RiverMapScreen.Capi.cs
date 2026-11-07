@@ -190,6 +190,7 @@ namespace AF.UI
             _capiSnap = false;
             _capiRestShown = false;
             _capi.Begin(ProgressReduceMotion, CapiEmotion.None);
+            CrewBegin(); // D-069, M2-4: quién va a bordo y quién se presenta (RiverMapScreen.Crew.cs)
             if (!_live || !_hasCanoe)
             {
                 _canoe.enabled = true;
@@ -343,7 +344,8 @@ namespace AF.UI
                 bool snap = _capiSnap;
                 for (int i = _evNext; i < _evCount && !snap; i++)
                 {
-                    if (_evLevel[i] >= _catchTo - 1e-4f && _evMoment[i] != CapiMoment.TownPass && _evMoment[i] != CapiMoment.Mouth && _evMoment[i] != CapiMoment.Rapids)
+                    bool final = _evLevel[i] >= _catchTo - 1e-4f && _evMoment[i] != CapiMoment.TownPass && _evMoment[i] != CapiMoment.Mouth && _evMoment[i] != CapiMoment.Rapids;
+                    if (final || _evMoment[i] == CapiMoment.Join) // M2-4: quien se une, también si el toque salta el viaje
                     {
                         FireCapiEvent(i);
                     }
@@ -520,6 +522,8 @@ namespace AF.UI
                 mask |= AddCapiEvent(_catchTo, CapiMoment.ContentEnd, -1); // ? ante la niebla del fin de contenido
             }
 
+            CrewPlanEvents(ref mask); // D-069, M2-4: el compañero que se une, con ♥
+
             SortCapiEvents();
             return mask;
         }
@@ -627,6 +631,7 @@ namespace AF.UI
                     break;
             }
 
+            CrewReact(m, _evArg[i]); // D-069, M2-4: la tripulación salta o aletea en la llegada; quien se une, llega
             _capi.React(m);
         }
 
@@ -1011,9 +1016,10 @@ namespace AF.UI
         partial void CapiLayout(float frameTop)
         {
             _remainingChipView = default;
-            if (!_live)
+            _capiFrameTop = frameTop;
+            if (!_live || !_remaining.gameObject.activeSelf)
             {
-                return;
+                return; // con el Mapa v2, «Faltan N» suele ir en el rótulo de la parada siguiente (SyncRemainingPlate): sin placa
             }
 
             float maxW = Mathf.Max(RemainingChipMinDp, Mathf.Min(RemainingChipMaxDp, (_viewW * RemainingChipMaxFraction) - RemainingChipInsetDp));
@@ -1052,6 +1058,84 @@ namespace AF.UI
         }
 
         private Rect _remainingChipView;
+        private float _capiFrameTop;
+        private bool _remainingMerged;
+
+        /// <summary>
+        /// Con el Mapa v2, «Faltan N» va dentro del rótulo de la parada siguiente (<c>map_stop_label_remaining</c>; respuesta del dueño
+        /// a la pregunta 2 de M2-3, hecha en M2-4) y no en la placa.
+        /// </summary>
+        public bool StopRemainingInLabel => _remainingMerged;
+
+        /// <summary>El texto del rótulo de la parada <paramref name="n"/> («» si no lleva).</summary>
+        internal string StopLabelText(int n)
+        {
+            int i = StopMarkerIndexOf(n);
+            return i >= 0 && i < _stopLabels.Count && _stopLabels[i].Pill.gameObject.activeSelf ? _stopLabels[i].Label.text : string.Empty;
+        }
+
+        /// <summary>El rótulo de la parada <paramref name="n"/> (tests: su caja y su texto), o null.</summary>
+        internal TMPro.TextMeshProUGUI? StopLabelOf(int n)
+        {
+            int i = StopMarkerIndexOf(n);
+            return i >= 0 && i < _stopLabels.Count ? _stopLabels[i].Label : null;
+        }
+
+        /// <summary>La parada siguiente cuyo rótulo lleva «Faltan N» con el Mapa v2, o −1 (sin el Mapa v2, sin «Faltan N» o hacia la naciente).</summary>
+        internal int RemainingStopN()
+        {
+            if (!_live || !_remainingReady || _stops == null)
+            {
+                return -1;
+            }
+
+            RiverStop? current = _stops.StopOf(_playLevel);
+            RiverStop? next = current != null ? _stops.At(current.N + 1) : null;
+            return next != null ? next.N : -1; // tras la última parada, hacia la naciente, la placa de M2-3 [P]
+        }
+
+        // La placa de «Faltan N» sale solo si el rótulo de la parada siguiente no lo puede llevar (la naciente, una parada en abanico,
+        // un nombre sin aprobar); si cambia, se recoloca. Con el Mapa de la 1.0, como siempre.
+        private void SyncRemainingPlate()
+        {
+            int n = RemainingStopN();
+            int i = n >= 0 ? StopMarkerIndexOf(n) : -1;
+            bool merged = i >= 0 && i < _stopLabels.Count && _stopLabels[i].Pill.gameObject.activeSelf && _markers[i].Root.gameObject.activeSelf
+                && _stopLabels[i].Label.text.Length > 0;
+            _remainingMerged = merged;
+            bool want = _remainingReady && !merged;
+            if (_remaining.gameObject.activeSelf == want)
+            {
+                return;
+            }
+
+            _remaining.gameObject.SetActive(want);
+            if (want)
+            {
+                CapiLayout(_capiFrameTop);
+            }
+            else
+            {
+                _remainingChipView = default;
+            }
+        }
+
+        // Sin los pueblos, el rótulo de la parada siguiente se calla si su parada va en abanico (se pisarían), como con ellos.
+        private void RemainingLabelFanned()
+        {
+            int n = RemainingStopN();
+            int i = n >= 0 ? StopMarkerIndexOf(n) : -1;
+            if (i < 0 || i >= _stopLabels.Count)
+            {
+                return;
+            }
+
+            bool on = _stopLabels[i].Label.text.Length > 0 && !_markers[i].Fanned;
+            if (_stopLabels[i].Pill.gameObject.activeSelf != on)
+            {
+                _stopLabels[i].Pill.gameObject.SetActive(on);
+            }
+        }
 
         /// <summary>La placa de «Faltan N» en el Mapa v2, en la zona visible (dp, y hacia abajo); vacía si no sale.</summary>
         internal Rect RemainingChipViewRect => _remainingChipView;

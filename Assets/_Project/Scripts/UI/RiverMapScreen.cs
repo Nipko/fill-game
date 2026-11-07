@@ -729,6 +729,7 @@ namespace AF.UI
             ApplyView(view);
             JourneyOpen(source); // D-053: con viaje, «Jugar» y «←» esperan a que la canoa llegue
             CapiOpen(source); // D-069, M2-3: Capi al remo (RiverMapScreen.Capi.cs)
+            CrewOpen(source); // D-069, M2-4: la tripulación (RiverMapScreen.Crew.cs)
             EmitLayout();
         }
 
@@ -754,6 +755,7 @@ namespace AF.UI
             NorthUpClose();
             LiveClose(); // D-069, M2-1: suelta el arte del Mapa v2 y escribe AF_PERF map_frames
             TownsClose(); // D-069, M2-2: suelta el atlas de los pueblos
+            CrewClose(); // D-069, M2-4: suelta el atlas de la tripulación y devuelve a Rosa a su sitio
             CapiClose(); // D-069, M2-3: suelta el atlas del rig de Capi
 
             _dragging = false;
@@ -856,6 +858,7 @@ namespace AF.UI
             NorthUpTick(dtMs, ref animating);
             JourneyTick(dtMs, ref animating); // tras «ponerse al día» y «Norte arriba»: el balanceo, sobre la canoa ya colocada
             CapiTick(dtMs, ref animating); // D-069, M2-3: los gestos, la cámara y la luz
+            CrewTick(dtMs, ref animating); // D-069, M2-4: la tripulación, el cameo del miquito y el chip
             LiveTick(dtMs); // D-069, M2-1: la corriente, las nubes y el brillo de la siguiente, sin pedir 60 fps
             if (_activeMs > 0f)
             {
@@ -1566,7 +1569,8 @@ namespace AF.UI
             float buttonW = Mathf.Min(_viewW - 16f, Mathf.Max(MinTouchDp * 2f, canoeLabelW + 32f));
             UiBuilder.Place((RectTransform)_backToCanoe.Button.transform, pad + _viewW - buttonW - 8f, pad + _viewH - MinTouchDp - 8f, buttonW, MinTouchDp);
             LiveLayout(frameTop, frameBottom); // D-069, M2-1
-            CapiLayout(frameTop); // D-069, M2-3: «Faltan N» en el Mapa
+            CapiLayout(frameTop); // D-069, M2-3: «Faltan N» en el Mapa (o, desde M2-4, en el rótulo de la parada siguiente)
+            CrewLayout(); // D-069, M2-4: el chip «¡Se une al viaje!»
             SequenceLayout();
             NorthUpLayout();
         }
@@ -1604,6 +1608,11 @@ namespace AF.UI
             {
                 ids.Add("stop_remaining");
                 rects.Add(_remaining);
+            }
+            else if (_remainingMerged && StopLabelOf(RemainingStopN()) is TextMeshProUGUI merged)
+            {
+                ids.Add("stop_remaining"); // D-069, M2-4: con el Mapa v2, «Faltan N» va en el rótulo de la parada siguiente
+                rects.Add(merged.rectTransform);
             }
 
             MarkersLayoutIds(ids, rects);
@@ -1701,6 +1710,18 @@ namespace AF.UI
 
         /// <summary>D-069, M2-3: al cerrar, suelta el rig.</summary>
         partial void CapiClose();
+
+        /// <summary>D-069, M2-4: la tripulación al abrir (RiverMapScreen.Crew.cs).</summary>
+        partial void CrewOpen(MapOpenSource source);
+
+        /// <summary>D-069, M2-4: la tripulación cada fotograma.</summary>
+        partial void CrewTick(float dtMs, ref bool animating);
+
+        /// <summary>D-069, M2-4: suelta el atlas de la tripulación.</summary>
+        partial void CrewClose();
+
+        /// <summary>D-069, M2-4: el chip de la tripulación al recolocar la pantalla.</summary>
+        partial void CrewLayout();
 
         /// <summary>D-069, M2-3: el pie del Mapa v2 en una fila.</summary>
         partial void CapiFooter(float playTop, ref float samplesTop);

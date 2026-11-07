@@ -6,7 +6,7 @@ namespace AF.GameFlow
     /// <summary>
     /// Interruptores del Mapa del río v2 de la 1.1 (D-069, P8 (a); <c>docs/dev/propuesta-mapa-rio-v2.md</c>) con los defaults
     /// compilados de la tabla única de 08 §9. <see cref="UiMapV2"/> enciende el río vivo (M2-1); apagada, el Mapa de la 1.0 con los
-    /// mismos datos <c>/2</c>. <see cref="UiMapTowns"/> enciende los pueblos de paso y la excursión local (M2-2); <see cref="UiMapCrew"/> es de M2-4: hasta que entre, sin efecto.
+    /// mismos datos <c>/2</c>. <see cref="UiMapTowns"/> enciende los pueblos de paso y la excursión local (M2-2); <see cref="UiMapCrew"/> enciende la tripulación (M2-4: el tucán, el tucuxi y el cameo de los miquitos).
     /// </summary>
     public sealed class MapLiveConfig
     {
