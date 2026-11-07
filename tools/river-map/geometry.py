@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""geometry.py - Mapa del rio (D-013): genera y comprueba la geometria af-river-map/1.
+"""geometry.py - Mapa del rio (D-013): genera y comprueba la geometria af-river-map/2.
 
 Escribe Assets/_Project/Data/Map/river_map_v1.json (contrato 29; 08 §4.5 con los extras [P] de P-M1, D-023) desde la
 geometria de produccion (M5.1; D-013, punto 5, Q11-A; propuesta del Mapa §3.6 y §11.3): las descargas de Natural Earth
@@ -14,8 +14,9 @@ Uso (desde la raiz del repositorio):
 
 Tres geometrias (Geometry; las tres pasan por el mismo build_map):
 - produccion (las descargas completas y con su SHA-256): se regenera todo. Lo usa el escritorio.
-- commiteado (sin ninguna descarga, solo con --check): los puntos de cada linea y la tierra (verts, tris y zones) se toman
-  de river_map_v1.json tal cual, y todo lo demas (s, bocas, aguas, franjas, km, puntos de paso, rutas...) se regenera y se
+- commiteado (sin ninguna descarga, solo con --check): los puntos de cada linea y la tierra canopy (los triangulos de la
+  zona canopy y los vertices que usan) se toman de river_map_v1.json tal cual, y todo lo demas (las zonas de encima, las
+  orillas y la vegetacion de M2-1 incluidas) (s, bocas, aguas, franjas, km, puntos de paso, rutas...) se regenera y se
   compara byte a byte, con todas las validaciones. Lo usa el portatil, que no tiene las descargas; tambien stops.py, que
   saca las rutas del Mapa commiteado. Sin las descargas y sin --check no se escribe nada (FAIL).
 - respaldo (build_map sin geometria; solo las pruebas): los puntos de la investigacion (src = rio_amazonas), la geometria
@@ -75,7 +76,11 @@ Que escribe:
   de paso y los locales; en los afluentes, la fraccion de sus primeros MOUTH_FILL_KM km desde la boca [P]).
 - splits: las dos aguas lado a lado de Santarem y del Encuentro (propuesta §3.4), desde la confluencia SPLIT_KM km rio
   abajo [P], con el agua de cada orilla mirando rio abajo (left y right).
-- land: la tierra (verts, tris y zones), con una sola zona [P] hasta la mascara del artista.
+- land: la tierra (verts, tris, zones y shade; af-river-map/2, M2-1, D-069): la zona canopy (la de Natural Earth; en /1,
+  land) y encima las manchas por codigo [P] de savanna, rock y snow (nucleo con shade 255 y borde difuminado con shade 0)
+  y la banda de varzea (band, en dp; sin triangulos).
+- banks (M2-1): los tramos de orilla de los meandros (playa dentro, barranco fuera) por la curvatura con signo.
+- veg (M2-1): los puntos de vegetacion, uno por celda de 30 km como mucho, con un PRNG propio por celda (determinista).
 - home: la casa de TiTino, en Belem, en la orilla de la bahia de Guajara (notas de la parada 0).
 - labels (los paises en su region, rotulos_de_pais), viewpoints (los miradores, reveal_on = 10 [P]) y passing (los puntos
   de paso de 1-200 y, desde M4.5a, los de los viajes de entrada que llevan id, como teotonio en el del 300, con su linea,
@@ -84,8 +89,10 @@ Que escribe:
 
 --check (codigo 1 si algo falla): lo commiteado es lo que se regenera (desfase); cada punto de control de la investigacion
 queda a <= 2 dp de su linea en su vista (la Mundo, <= MUNDO_TOLERANCE_KM; la Cuenca, <= TOLERANCE_KM); cada tramo del cauce
-mide al menos la linea recta; cada boca cae sobre su rio; la tierra esta bien triangulada (land_problems: sus aristas sin
-pareja son anillos simples que no se cortan y suman el area de los triangulos); el archivo mide <= MAX_BYTES; y las rutas
+mide al menos la linea recta; cada boca cae sobre su rio; la tierra canopy esta bien triangulada (land_problems: sus
+aristas sin pareja son anillos simples que no se cortan y suman el area de los triangulos) y las demas zonas siguen sus
+reglas (zones_problems); las orillas no se solapan (banks_problems); la vegetacion va por celdas con su lod
+(veg_problems); el archivo mide <= MAX_BYTES; y las rutas
 de river_stops_v1.json (at y leg) son las de este Mapa: paradas a <= TOLERANCE_KM km de su punto del rio (medidos desde su
 punto de atraque si la investigacion lo da), km de acuerdo con km_from_sea y que no retroceden, tramos continuos que no
 cruzan tierra (dos tramos solo se unen en el mismo (line, s) o en una confluencia: la boca de un afluente, o el arranque
@@ -139,7 +146,7 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     travel_passing_points,
 )
 
-FORMAT = "af-river-map/1"
+FORMAT = "af-river-map/2"
 SRC = "rio_amazonas"   # la geometria de respaldo (D-013, punto 5) y las lineas de la investigacion (LINE_SRC; M5.1)
 Q = 65535              # uint16: X = round(Q * x), Y = round(Q * y)
 EARTH_KM = 6371.0
@@ -240,8 +247,9 @@ SPLITS = (("encontro", "negro"), ("santarem", "tapajos"))   # (id, afluente que 
 SPLIT_SIDE_KM = 10.0   # de que orilla llega el afluente: su punto a 10 km de la boca frente al cauce +-10 km (revision de M5.1)
 # [P] Los miradores de 1-200 estan en el estuario: el primer Mapa (nivel 10) ya los revela (propuesta §5.2).
 VIEWPOINT_REVEAL_ON = 10
-# [P] Una sola zona de tierra hasta la mascara del artista (su punto de entrada: land_zones; M5.1).
-LAND_ZONE = {"id": "land", "tile": "canopy"}
+# [P] La tierra de Natural Earth es una sola zona, canopy (la que en af-river-map/1 se llamaba land), hasta la mascara del
+# artista (su punto de entrada: land_zones; M5.1). Encima, las zonas por codigo de M2-1 (land_with_zones).
+LAND_ZONE = {"id": "canopy", "tile": "canopy"}
 # Casa de TiTino: Belem, en la bahia de Guajara (rio-amazonas.json, notas de la parada 0; propuesta §3.3, punto 7).
 HOME_STOP = 0
 
@@ -1064,7 +1072,7 @@ def land_ring(source: dict, frame: Frame) -> list:
 
 
 def build_map(source: dict, geo: Geometry | None = None) -> tuple:
-    """Documento af-river-map/1 y su modelo: sin geo, con el respaldo de la investigacion; con geo (M5.1), con sus lineas
+    """Documento af-river-map/2 y su modelo: sin geo, con el respaldo de la investigacion; con geo (M5.1), con sus lineas
     y su tierra. Devuelve (doc, model, errores)."""
     model, errors = build_model(source, geo)
     frame = model.frame
@@ -1081,19 +1089,18 @@ def build_map(source: dict, geo: Geometry | None = None) -> tuple:
             entry["mouth"] = {"on": line.host, "s": line.host_s}
             entry["fill_on_pass"] = _fill_on_pass(line)
         lines.append(entry)
+    # Tierra canopy (la de la 1.0) y, encima, las zonas por codigo (M2-1).
     if geo is not None:
-        verts, tris, zones = geo.land
-        land = {"verts": encode_points(verts), "tris": encode_indices(tris), "zones": [dict(z) for z in zones]}
+        verts, tris, _ = geo.land
     else:
-        ring = land_ring(source, frame)
-        problems = polygon_problems(ring)
+        verts = land_ring(source, frame)
+        problems = polygon_problems(verts)
         if problems:
             errors.append("tierra: el anillo de costas no es un poligono simple (" + "; ".join(problems) + ")")
             tris = []
         else:
-            tris = triangulate(ring)
-        land = {"verts": encode_points(ring), "tris": encode_indices(tris),
-                "zones": [{"id": LAND_ZONE["id"], "tile": LAND_ZONE["tile"], "first": 0, "count": len(tris) // 3}]}
+            tris = triangulate(verts)
+    land, cores = land_with_zones(frame, verts, tris)
     # Casa de TiTino.
     records = [r for r in source.get("paradas_1_200", []) if isinstance(r, dict)]
     home_rec = next((r for r in records if r.get("k") == HOME_STOP), None)
@@ -1127,8 +1134,12 @@ def build_map(source: dict, geo: Geometry | None = None) -> tuple:
         viewpoints.append({"id": place_id(r["nombre"]), "xy": list(frame.quant(float(r["lat"]), float(r["lon"]))),
                            "reveal_on": VIEWPOINT_REVEAL_ON, "fact": fact_key_of(r.get("dato"))})
     passing = [{"id": p["id"], "line": p["line"], "s": p["s"], "fact": p["fact"]} for p in model.passing]
-    doc = {"format": FORMAT, "frame": frame.to_json(), "lines": lines, "land": land, "insets": [], "home": home,
-           "labels": labels, "viewpoints": viewpoints, "passing": passing}
+    # Orillas y vegetacion (M2-1).
+    banks = build_banks(model)
+    clear = [(p["line"], p["s"]) for p in passing] + ([(home["on"], home["s"])] if home else [])
+    veg = build_veg(model, (verts, tris), cores, clear)
+    doc = {"format": FORMAT, "frame": frame.to_json(), "lines": lines, "land": land, "banks": banks, "veg": veg,
+           "insets": [], "home": home, "labels": labels, "viewpoints": viewpoints, "passing": passing}
     return doc, model, errors
 
 
@@ -1146,6 +1157,8 @@ def render(doc: dict) -> str:
     lines = ["{", f'  "format": {dumps(doc["format"])},', f'  "frame": {dumps(doc["frame"])},']
     lines += block("lines", doc["lines"])
     lines.append(f'  "land": {dumps(doc["land"])},')
+    lines += block("banks", doc["banks"])
+    lines.append(f'  "veg": {dumps(doc["veg"])},')
     lines += block("insets", doc["insets"])
     lines.append(f'  "home": {dumps(doc["home"])},')
     lines += block("labels", doc["labels"])
@@ -1153,6 +1166,610 @@ def render(doc: dict) -> str:
     lines += block("passing", doc["passing"], last=True)
     lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+# --------------------------------------------------------------------------------------------- el rio vivo (M2-1)
+# Zonas de la tierra, orillas de los meandros y vegetacion (af-river-map/2; D-069, P7 (a); propuesta del Mapa v2 §3.1,
+# capas 1, 2 y 5, y §9.1). Todo por codigo desde constantes [P] y la geometria de las lineas y de la tierra canopy: sin
+# descargas nuevas, asi que el modo commiteado lo regenera igual que el de produccion y lo compara byte a byte.
+
+def _km_per_unit(frame: Frame) -> float:
+    """km por unidad de x del marco (x = 1 son los grados de latitud de la caja): el plano de pantalla en km, con la misma
+    escala en los dos ejes (y en km = Y / Q * aspecto * esto). Lo usan las orillas (ventanas en km) y la vegetacion."""
+    return math.radians(frame.lat_max - frame.lat_min) * EARTH_KM
+
+
+def _plane_km(frame: Frame, X: float, Y: float) -> tuple:
+    k = _km_per_unit(frame)
+    return (X / Q * k, Y / Q * frame.aspect * k)
+
+
+# --- zonas de la tierra [P] (propuesta v2 §3.1, capa 1; hasta la mascara del artista, si llega, que las sustituye).
+# Manchas por codigo: un anillo interior (shade 255, el color pleno de su zona) y un anillo exterior de difuminado
+# (shade 0), trianguladas en abanico desde el centro (el nucleo) y una tira entre los dos anillos (el difuminado). El
+# cliente las dibuja encima de canopy, mezclando el color de su zona con el peso shade / 255.
+# Radios de los anillos respecto al tamanno nominal de cada mancha [P]: el nucleo, al 70 %, y el borde difuminado, al 115 %,
+# para que la zona no acabe en una linea dura.
+ZONE_INNER = 0.70
+ZONE_OUTER = 1.15
+# Ondulacion del contorno [P] (r * (1 + a sin(k theta + fase))): sin ella una elipse se ve dibujada con compas. Las fases
+# cambian con el indice de la mancha (ZONE_WOBBLE_STEP) para que dos nevados no tengan la misma silueta.
+ZONE_WOBBLE = ((3, 0.10, 0.6), (5, 0.05, 2.1))
+ZONE_WOBBLE_STEP = 1.3
+# Sabana de los Llanos de Moxos (Beni, Bolivia; el mundo 8 la cruza por el Mamore) [P]: una elipse que cubre la
+# llanura inundable entre el Mamore, el Itenez y el Beni (propuesta v2 §3.1). Centro (lat, lon), semieje en latitud y
+# semieje en longitud, en grados; SAVANNA_SIDES lados.
+SAVANNA_BLOBS = (((-13.8, -65.2), 2.2, 2.3),)
+SAVANNA_SIDES = 32
+# Roca de los Andes [P]: una banda a lo largo de una cresta aproximada de la cordillera, de Antioquia al altiplano
+# boliviano (los puntos, en (lat, lon), dentro de la caja del marco), con ROCK_HALF_DEG grados de medio ancho (en el plano
+# de pantalla: la longitud por cos(lat0)) que se afina en las puntas en ROCK_TAPER_DEG (punta redondeada), muestreada
+# cada ROCK_STEP_DEG. No es un mapa de altitud: es el «roca y nieve de los Andes al fondo» de la maqueta.
+ROCK_CREST = ((7.0, -75.6), (4.5, -75.8), (2.0, -76.8), (0.0, -78.2), (-2.0, -78.9), (-4.5, -79.3), (-7.0, -78.3),
+              (-9.5, -77.4), (-12.0, -75.5), (-13.6, -72.0), (-15.5, -70.5), (-16.5, -68.2), (-18.0, -66.5))
+ROCK_HALF_DEG = 1.2
+ROCK_TAPER_DEG = 2.0
+ROCK_STEP_DEG = 0.5
+# Nieve [P]: manchas pequennas de SNOW_RADIUS_DEG de radio nominal (isotropas en pantalla) en cumbres nevadas conocidas de
+# la cordillera dentro de la caja, de norte a sur.
+SNOW_PEAKS = ((4.9, -75.32),      # Nevado del Ruiz
+              (-0.68, -78.44),    # Cotopaxi
+              (-1.47, -78.82),    # Chimborazo
+              (-9.12, -77.6),     # Huascaran
+              (-13.33, -72.54),   # Salcantay
+              (-13.79, -71.23),   # Ausangate
+              (-15.52, -72.65),   # Coropuna
+              (-16.65, -67.78))   # Illimani
+SNOW_RADIUS_DEG = 0.3
+SNOW_SIDES = 12
+# Varzea [P]: no lleva triangulos; el cliente la dibuja como una banda de VARZEA_BAND_DP dp desde la orilla del agua
+# hacia fuera, bajo el rio, en la vista Mundo (propuesta v2 §3.1, capa 1: «varzea mas clara en una banda de unos 40 dp»).
+VARZEA_BAND_DP = 40
+CANOPY_ZONE = LAND_ZONE
+
+
+def _wobble(theta: float, k: int) -> float:
+    return 1.0 + sum(a * math.sin(n * theta + phase + k * ZONE_WOBBLE_STEP) for n, a, phase in ZONE_WOBBLE)
+
+
+class _Patch:
+    """Una mancha antes de cuantizar: vertices (lat, lon, shade), triangulos (indices locales) y los del nucleo."""
+
+    def __init__(self):
+        self.pts: list = []
+        self.tris: list = []
+        self.core: list = []    # triangulos (de tres en tres) del nucleo: shade 255 en sus tres vertices
+
+    def add(self, lat: float, lon: float, shade: int) -> int:
+        self.pts.append((lat, lon, shade))
+        return len(self.pts) - 1
+
+
+def _blob(center: tuple, semi_lat: float, semi_lon: float, sides: int, k: int) -> _Patch:
+    """Mancha eliptica ondulada: el centro, el anillo interior (ZONE_INNER) y el exterior (ZONE_OUTER); abanico + tira."""
+    p = _Patch()
+    c = p.add(center[0], center[1], 255)
+    inner, outer = [], []
+    for j in range(sides):
+        th = 2 * math.pi * j / sides
+        r = _wobble(th, k)
+        dl, dn = math.cos(th) * semi_lat * r, math.sin(th) * semi_lon * r
+        inner.append(p.add(center[0] + dl * ZONE_INNER, center[1] + dn * ZONE_INNER, 255))
+        outer.append(p.add(center[0] + dl * ZONE_OUTER, center[1] + dn * ZONE_OUTER, 0))
+    for j in range(sides):
+        a, b = j, (j + 1) % sides
+        p.core += [c, inner[a], inner[b]]
+        p.tris += [c, inner[a], inner[b], inner[a], outer[a], outer[b], inner[a], outer[b], inner[b]]
+    return p
+
+
+def _rock_band(frame: Frame) -> _Patch:
+    """Banda de roca a lo largo de ROCK_CREST: por cada muestra de la cresta, cinco vertices de un lado al otro (exterior,
+    interior, cresta, interior, exterior; shade 0, 255, 255, 255, 0) y una tira de cuadrilateros entre muestras seguidas.
+    Una banda curva no admite un abanico desde un centro (se solaparia): es solo tira, y el nucleo son sus dos tiras de
+    dentro. Las puntas (medio ancho 0) son un solo vertice con shade 0."""
+    c0 = math.cos(math.radians(frame.lat0))
+    crest = [(lat, lon * c0) for lat, lon in ROCK_CREST]     # plano isotropo: (lat, lon * cos(lat0))
+    cum = [0.0]
+    for a, b in zip(crest, crest[1:]):
+        cum.append(cum[-1] + math.hypot(b[0] - a[0], b[1] - a[1]))
+    total = cum[-1]
+    n = max(2, round(total / ROCK_STEP_DEG))
+
+    def at(d: float) -> tuple:
+        for i in range(len(crest) - 1):
+            if d <= cum[i + 1] or i == len(crest) - 2:
+                t = 0.0 if cum[i + 1] == cum[i] else (d - cum[i]) / (cum[i + 1] - cum[i])
+                a, b = crest[i], crest[i + 1]
+                return (a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]))
+        return crest[-1]
+
+    p = _Patch()
+    rows = []
+    for k in range(n + 1):
+        d = total * k / n
+        u, v = at(d)
+        ua, va = at(max(0.0, d - ROCK_STEP_DEG))
+        ub, vb = at(min(total, d + ROCK_STEP_DEG))
+        tl = math.hypot(ub - ua, vb - va)
+        nu, nv = (-(vb - va) / tl, (ub - ua) / tl) if tl > 0 else (0.0, 0.0)
+        f = min(1.0, d / ROCK_TAPER_DEG, (total - d) / ROCK_TAPER_DEG)
+        w = ROCK_HALF_DEG * math.sqrt(max(0.0, 1.0 - (1.0 - f) ** 2))   # punta redondeada (un cuarto de elipse)
+        if w <= 0:
+            rows.append([p.add(u, v / c0, 0)] * 5)
+            continue
+        rows.append([p.add(u + nu * w * m, (v + nv * w * m) / c0, shade)
+                     for m, shade in ((-ZONE_OUTER, 0), (-ZONE_INNER, 255), (0.0, 255), (ZONE_INNER, 255),
+                                      (ZONE_OUTER, 0))])
+    for ra, rb in zip(rows, rows[1:]):
+        for j in range(4):
+            quad = [ra[j], rb[j], rb[j + 1], ra[j], rb[j + 1], ra[j + 1]]
+            p.tris += quad
+            if j in (1, 2):
+                p.core += quad
+    return p
+
+
+def _overlay_patches(frame: Frame) -> list:
+    """[(zona, [manchas])] de las zonas de encima de canopy, en su orden: savanna, rock y snow."""
+    c0 = math.cos(math.radians(frame.lat0))
+    return [("savanna", [_blob(c, sl, sn, SAVANNA_SIDES, k) for k, (c, sl, sn) in enumerate(SAVANNA_BLOBS)]),
+            ("rock", [_rock_band(frame)]),
+            ("snow", [_blob(c, SNOW_RADIUS_DEG, SNOW_RADIUS_DEG / c0, SNOW_SIDES, k) for k, c in enumerate(SNOW_PEAKS)])]
+
+
+def _quant_patch(frame: Frame, patch: _Patch) -> tuple:
+    """Cuantiza una mancha (frame.quant recorta al marco [0, 65535]) y quita los triangulos que quedan sin area (los
+    recortados contra el borde, las puntas); cada triangulo, en sentido positivo, como canopy; solo los vertices usados,
+    en su orden. Devuelve (vertices, shades, triangulos, triangulos del nucleo), con indices locales."""
+    q = [frame.quant(lat, lon) for lat, lon, _ in patch.pts]
+
+    def clean(tris: list) -> list:
+        out = []
+        for k in range(0, len(tris), 3):
+            a, b, c = tris[k:k + 3]
+            cr = _cross(q[a], q[b], q[c])
+            if cr > 0:
+                out += [a, b, c]
+            elif cr < 0:
+                out += [a, c, b]
+        return out
+    tris, core = clean(patch.tris), clean(patch.core)
+    used = sorted(set(tris))
+    remap = {i: k for k, i in enumerate(used)}
+    return ([q[i] for i in used], [patch.pts[i][2] for i in used], [remap[i] for i in tris], [remap[i] for i in core])
+
+
+def overlay_zones(frame: Frame, base: int) -> tuple:
+    """Las zonas de encima de canopy (savanna, rock y snow) cuantizadas: (verts, shades, tris, zones, nucleos), con los
+    indices desde base (los vertices de canopy van antes), zones = [(id, n de triangulos)] y nucleos = {zona: [triangulos
+    del nucleo como tres (X, Y)]} para la vegetacion. Una zona sin triangulos no sale."""
+    verts, shades, tris, zones = [], [], [], []
+    cores: dict = {}
+    for zid, patches in _overlay_patches(frame):
+        count = 0
+        cores[zid] = []
+        for patch in patches:
+            v, s, t, c = _quant_patch(frame, patch)
+            off = base + len(verts)
+            verts += v
+            shades += s
+            tris += [off + i for i in t]
+            count += len(t) // 3
+            cores[zid] += [tuple(v[c[k + j]] for j in range(3)) for k in range(0, len(c), 3)]
+        if count:
+            zones.append((zid, count))
+    return verts, shades, tris, zones, cores
+
+
+def land_with_zones(frame: Frame, verts: list, tris: list) -> tuple:
+    """La tierra de af-river-map/2 desde la tierra canopy (verts, tris): canopy primero, despues las zonas de encima y al
+    final la banda de varzea; shade, un byte por vertice (255 en canopy). Devuelve (land, nucleos)."""
+    ov_verts, ov_shades, ov_tris, ov_zones, cores = overlay_zones(frame, len(verts))
+    zones = [{"id": CANOPY_ZONE["id"], "tile": CANOPY_ZONE["tile"], "first": 0, "count": len(tris) // 3}]
+    first = len(tris) // 3
+    for zid, count in ov_zones:
+        zones.append({"id": zid, "tile": zid, "first": first, "count": count})
+        first += count
+    zones.append({"id": "varzea", "tile": "varzea", "band": VARZEA_BAND_DP})
+    all_verts = list(verts) + ov_verts
+    if len(all_verts) > Q + 1:
+        raise GeometryError(f"tierra: {len(all_verts)} vertices no caben en indices uint16")
+    shade = bytes([255] * len(verts) + ov_shades)
+    land = {"verts": encode_points(all_verts), "tris": encode_indices(list(tris) + ov_tris), "zones": zones,
+            "shade": base64.b64encode(shade).decode("ascii")}
+    return land, cores
+
+
+def canopy_of(land: dict) -> tuple:
+    """(verts, tris, zona) de canopy dentro de una tierra af-river-map/2: los triangulos de la zona canopy (la primera,
+    desde el 0) y los vertices hasta el mayor indice que usan (el modo commiteado y validate_map)."""
+    zones = land.get("zones") or []
+    z = zones[0] if zones else {}
+    if z.get("id") != CANOPY_ZONE["id"] or z.get("first") != 0 or not isinstance(z.get("count"), int):
+        raise GeometryError("land: la primera zona no es canopy desde el triangulo 0")
+    verts = decode_points(land["verts"])
+    tris = decode_indices(land["tris"])[:3 * z["count"]]
+    n = max(tris) + 1 if tris else 0
+    return verts[:n], tris, {"id": z["id"], "tile": z["tile"], "first": 0, "count": z["count"]}
+
+
+def zones_problems(land: dict) -> list:
+    """Reglas de la tierra fuera de canopy (canopy: land_problems): canopy primero; las zonas con first y count seguidos
+    que cubren tris, con los indices en rango; las de banda (varzea) al final y sin triangulos; shade, un byte por
+    vertice."""
+    out: list = []
+    try:
+        verts = decode_points(land["verts"])
+        tris = decode_indices(land["tris"])
+        shade = base64.b64decode(land["shade"].encode("ascii"), validate=True)
+    except (KeyError, ValueError, TypeError, AttributeError) as e:
+        return [f"no se decodifica ({e})"]
+    if len(shade) != len(verts):
+        out.append(f"shade lleva {len(shade)} bytes y verts {len(verts)} vertices")
+    if len(tris) % 3 or any(i >= len(verts) for i in tris):
+        out.append("tris no son triples de indices de verts")
+    zones = land.get("zones") or []
+    if not zones or zones[0].get("id") != CANOPY_ZONE["id"]:
+        out.append("la primera zona no es canopy")
+    first = 0
+    banded = False
+    ids = set()
+    for z in zones:
+        if z.get("id") in ids:
+            out.append(f"la zona {z.get('id')} esta repetida")
+        ids.add(z.get("id"))
+        if "band" in z:
+            banded = True
+            if "first" in z or "count" in z:
+                out.append(f"la zona de banda {z.get('id')} lleva first o count")
+            continue
+        if banded:
+            out.append(f"la zona {z.get('id')} va despues de una zona de banda")
+        if z.get("first") != first:
+            out.append(f"la zona {z.get('id')} empieza en el triangulo {z.get('first')} y no en el {first}")
+        first += z.get("count", 0)
+    if first != len(tris) // 3:
+        out.append("las zonas no cubren todos los triangulos")
+    return out
+
+
+# --- orillas de los meandros [P] (propuesta v2 §3.1, capa 2): playa en la orilla de dentro de cada curva y barranco en la
+# de fuera. Curvatura con signo de la linea en el plano de pantalla (en km): se remuestrea por arco cada BANK_STEP_KM, se
+# mide el angulo de cada paso, la curvatura (rad/km) se suaviza con una media de BANK_SMOOTH_KM y una curva es un tramo
+# donde |curvatura| > BANK_MIN_CURV con el mismo signo durante al menos BANK_MIN_KM. El ancho crece de la curva abierta
+# (BANK_MIN_CURV) a la cerrada (BANK_HIGH_CURV). Calibrado con la geometria de produccion para unos 150-400 tramos en total
+# (README, notas de M2-1).
+BANK_STEP_KM = 1.0
+BANK_SMOOTH_KM = 30.0
+BANK_MIN_CURV = 0.03
+BANK_HIGH_CURV = 0.08
+BANK_MIN_KM = 15.0
+BEACH_W = (6, 16)          # dp, de la curva abierta a la cerrada (propuesta v2 §3.1: playa de <= 16 dp)
+BLUFF_W = (4, 8)           # dp (barranco de <= 8 dp)
+SIDES = ("left", "right")
+BANK_KINDS = ("beach", "bluff")
+
+
+def _resample(pts: list, step: float) -> tuple:
+    """Puntos cada ~step por arco (el primero y el ultimo incluidos; paso real total / n) y la longitud total."""
+    cum = [0.0]
+    for a, b in zip(pts, pts[1:]):
+        cum.append(cum[-1] + math.hypot(b[0] - a[0], b[1] - a[1]))
+    total = cum[-1]
+    if total <= 0:
+        return [], 0.0
+    n = max(2, round(total / step))
+    out = []
+    i = 0
+    for k in range(n + 1):
+        d = total * k / n
+        while i < len(pts) - 2 and cum[i + 1] < d:
+            i += 1
+        seg = cum[i + 1] - cum[i]
+        t = 0.0 if seg <= 0 else min(1.0, max(0.0, (d - cum[i]) / seg))
+        a, b = pts[i], pts[i + 1]
+        out.append((a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])))
+    return out, total
+
+
+def line_curvature(frame: Frame, q: list) -> tuple:
+    """(curvatura con signo suavizada en cada muestra, en rad/km: > 0 gira a la derecha en pantalla, con y hacia abajo;
+    la s de cada muestra; el paso en km). Vacio si la linea mide 0."""
+    pts, total = _resample([_plane_km(frame, x, y) for x, y in q], BANK_STEP_KM)
+    if not pts:
+        return [], [], 0.0
+    n = len(pts) - 1
+    step = total / n
+    heads: list = []
+    for a, b in zip(pts, pts[1:]):
+        h = math.atan2(b[1] - a[1], b[0] - a[0])
+        if heads:
+            while h - heads[-1] > math.pi:
+                h -= 2 * math.pi
+            while h - heads[-1] < -math.pi:
+                h += 2 * math.pi
+        heads.append(h)
+    raw = [0.0] * (n + 1)
+    for k in range(1, n):
+        raw[k] = (heads[k] - heads[k - 1]) / step
+    half = max(1, round(BANK_SMOOTH_KM / step / 2))
+    acc = [0.0]
+    for v in raw:
+        acc.append(acc[-1] + v)
+    smooth = []
+    for k in range(n + 1):
+        lo, hi = max(0, k - half), min(n, k + half)
+        smooth.append((acc[hi + 1] - acc[lo]) / (hi + 1 - lo))
+    return smooth, [k / n for k in range(n + 1)], step
+
+
+def _width(lo_hi: tuple, curv: float) -> int:
+    t = min(1.0, max(0.0, (curv - BANK_MIN_CURV) / (BANK_HIGH_CURV - BANK_MIN_CURV)))
+    return int(round(lo_hi[0] + t * (lo_hi[1] - lo_hi[0])))
+
+
+def line_banks(frame: Frame, rid: str, q: list) -> list:
+    """Tramos de orilla de una linea con >= 3 puntos: por cada curva, la playa en la orilla de dentro y el barranco en la
+    de fuera. Lado mirando rio abajo (s creciente) en pantalla, con x a la derecha e y hacia abajo: left es el de la
+    normal (dy, -dx); al girar a la izquierda (curvatura < 0) la orilla de dentro es left."""
+    if len(q) < 3:
+        return []
+    curv, ss, step = line_curvature(frame, q)
+    out = []
+    n = len(curv)
+    k = 0
+    while k < n:
+        if abs(curv[k]) <= BANK_MIN_CURV:
+            k += 1
+            continue
+        sign = 1 if curv[k] > 0 else -1
+        j = k
+        while j + 1 < n and curv[j + 1] * sign > BANK_MIN_CURV:
+            j += 1
+        if (j - k) * step >= BANK_MIN_KM:
+            peak = max(abs(c) for c in curv[k:j + 1])
+            inner, outer = ("right", "left") if sign > 0 else ("left", "right")
+            s0, s1 = _round_s(ss[k]), _round_s(ss[j])
+            if s0 < s1:
+                out.append({"line": rid, "s0": s0, "s1": s1, "side": inner, "kind": "beach", "w": _width(BEACH_W, peak)})
+                out.append({"line": rid, "s0": s0, "s1": s1, "side": outer, "kind": "bluff", "w": _width(BLUFF_W, peak)})
+        k = j + 1
+    return out
+
+
+def build_banks(model: "Model") -> list:
+    """Todos los tramos de orilla: por linea (en el orden de lines), despues s0 y side."""
+    out = []
+    for rid in model.order:
+        out += sorted(line_banks(model.frame, rid, model.lines[rid].q), key=lambda b: (b["s0"], b["side"]))
+    return out
+
+
+def banks_problems(banks: list, model: "Model") -> list:
+    """Linea existente, 0 <= s0 < s1 <= 1, side y kind validos, el orden (linea, s0, side) y sin solapes en la misma orilla
+    de la misma linea."""
+    out = []
+    order = {rid: i for i, rid in enumerate(model.order)}
+    last: dict = {}
+    prev = None
+    for k, b in enumerate(banks):
+        tag = f"banks[{k}] ({b.get('line')})"
+        if b.get("line") not in model.lines:
+            out.append(f"{tag}: linea desconocida")
+            continue
+        s0, s1 = b.get("s0"), b.get("s1")
+        if not (isinstance(s0, (int, float)) and isinstance(s1, (int, float)) and 0 <= s0 < s1 <= 1):
+            out.append(f"{tag}: s0 y s1 fuera de 0 <= s0 < s1 <= 1")
+            continue
+        if b.get("side") not in SIDES or b.get("kind") not in BANK_KINDS:
+            out.append(f"{tag}: side o kind desconocido")
+            continue
+        key = (order[b["line"]], s0, b["side"])
+        if prev is not None and key < prev:
+            out.append(f"{tag}: fuera de orden (linea, s0, side)")
+        prev = key
+        side = (b["line"], b["side"])
+        if side in last and s0 < last[side]:
+            out.append(f"{tag}: se solapa con el tramo anterior de la orilla {b['side']}")
+        last[side] = max(last.get(side, 0.0), s1)
+    return out
+
+
+# --- vegetacion [P] (propuesta v2 §3.1, capa 5): un punto por celda de VEG_CELL_KM km del plano de pantalla, con jitter
+# (margen VEG_MARGIN de la celda) y un PRNG por celda (splitmix64 sembrado con (ix, iy) y VEG_SALT; nunca hash() ni
+# random: los mismos bytes en cualquier maquina y con cualquier PYTHONHASHSEED). Sin punto fuera de la tierra canopy, en
+# el nucleo de una mancha de nieve o a <= VEG_CLEAR_KM de un punto de paso o de casa; en el nucleo de la roca se queda
+# VEG_ROCK_KEEP. Con celdas de 30 km salen ~9.500 puntos, que el cliente limita a lo visible (<= 600 copas en pantalla,
+# propuesta v2 §7.2); la capa gruesa (lod 0: ix e iy pares) es la cuarta parte, para la vista Cuenca.
+VEG_CELL_KM = 30
+VEG_MARGIN = 0.15
+VEG_SALT = 0x5EEDA11E7A11C0DE
+VEG_CLEAR_KM = 8.0
+VEG_ROCK_KEEP = 0.30
+VEG_FLOWER = 0.01          # ipe amarillo o rosa (~1 %)
+VEG_PALM_KM = 40.0         # palmeras de acai o aguaje junto al agua...
+VEG_PALM_NEAR = 0.35       # ...con esta probabilidad
+VEG_PALM_SAVANNA = 0.50    # en el nucleo de la sabana (aguaje, motacu), cerca o lejos del rio
+VEG_FAR_KM = 150.0         # el tamanno medio crece con la distancia al rio hasta aqui
+VEG_DIST_UNIT_KM = 2.0     # info[2i + 1]: distancia a la linea mas cercana en unidades de 2 km, tope 255 (510 km)
+VEG_SEG_CELL_KM = 60.0     # rejilla de segmentos de las lineas para esa distancia
+VEG_TRI_CELL = 1024        # rejilla de triangulos (canopy y nucleos), en unidades de Q
+VEG_KINDS = ("canopy", "palm", "flower")
+_M64 = (1 << 64) - 1
+
+
+def _splitmix64(state: int) -> tuple:
+    state = (state + 0x9E3779B97F4A7C15) & _M64
+    z = state
+    z = ((z ^ (z >> 30)) * 0xBF58476D1CE4E5B9) & _M64
+    z = ((z ^ (z >> 27)) * 0x94D049BB133111EB) & _M64
+    return state, z ^ (z >> 31)
+
+
+class CellRng:
+    """PRNG de una celda (ix, iy): splitmix64 sembrado con un entero propio de la celda (determinista)."""
+
+    def __init__(self, ix: int, iy: int):
+        _, self.state = _splitmix64((((ix & 0xFFFFFFFF) << 32) | (iy & 0xFFFFFFFF)) ^ VEG_SALT)
+
+    def u(self) -> float:
+        """Uniforme en [0, 1) con 53 bits."""
+        self.state, z = _splitmix64(self.state)
+        return (z >> 11) / 9007199254740992.0
+
+
+class _TriGrid:
+    """Rejilla de aceleracion de triangulos (en sentido positivo) en coordenadas (X, Y) enteras."""
+
+    def __init__(self, tris: list, cell: int):
+        self.cell = cell
+        self.cells: dict = {}
+        for t in tris:
+            xs, ys = [p[0] for p in t], [p[1] for p in t]
+            for cx in range(min(xs) // cell, max(xs) // cell + 1):
+                for cy in range(min(ys) // cell, max(ys) // cell + 1):
+                    self.cells.setdefault((cx, cy), []).append(t)
+
+    def contains(self, p: tuple) -> bool:
+        return any(_in_triangle(p, *t) for t in self.cells.get((p[0] // self.cell, p[1] // self.cell), ()))
+
+
+class _SegGrid:
+    """Distancia (km del plano) de un punto a la linea mas cercana: rejilla de segmentos y busqueda por anillos."""
+
+    def __init__(self, segments: list, cell: float):
+        self.cell = cell
+        self.cells: dict = {}
+        for s in segments:
+            (ax, ay), (bx, by) = s
+            for cx in range(math.floor(min(ax, bx) / cell), math.floor(max(ax, bx) / cell) + 1):
+                for cy in range(math.floor(min(ay, by) / cell), math.floor(max(ay, by) / cell) + 1):
+                    self.cells.setdefault((cx, cy), []).append(s)
+
+    def distance(self, p: tuple, cap: float) -> float:
+        """La distancia, o una mayor que cap si no hay ninguna linea a <= cap."""
+        cx, cy = math.floor(p[0] / self.cell), math.floor(p[1] / self.cell)
+        best = math.inf
+        r = 0
+        while True:
+            for gx in range(cx - r, cx + r + 1):
+                for gy in range(cy - r, cy + r + 1):
+                    if max(abs(gx - cx), abs(gy - cy)) != r:
+                        continue
+                    for (ax, ay), (bx, by) in self.cells.get((gx, gy), ()):
+                        dx, dy = bx - ax, by - ay
+                        l2 = dx * dx + dy * dy
+                        t = 0.0 if l2 == 0 else max(0.0, min(1.0, ((p[0] - ax) * dx + (p[1] - ay) * dy) / l2))
+                        best = min(best, math.hypot(p[0] - ax - t * dx, p[1] - ay - t * dy))
+            # Todo lo que queda fuera del anillo r esta a mas de r celdas del punto.
+            if best <= r * self.cell or r * self.cell > cap:
+                return best
+            r += 1
+
+
+def _point_on(line: Line, s: float) -> tuple:
+    """(X, Y) en float del punto s de una linea, sobre sus puntos cuantizados."""
+    i, t = line.locate(s)
+    a, b = line.q[i], line.q[min(i + 1, len(line.q) - 1)]
+    return (a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]))
+
+
+def veg_cell_of(frame: Frame, X: int, Y: int) -> tuple:
+    """(ix, iy) de la celda de vegetacion de un punto cuantizado (el jitter deja un margen de 4,5 km al borde: la
+    cuantizacion, ~0,04 km, no cambia la celda)."""
+    x, y = _plane_km(frame, X, Y)
+    return (math.floor(x / VEG_CELL_KM), math.floor(y / VEG_CELL_KM))
+
+
+def build_veg(model: "Model", canopy: tuple, cores: dict, clear_points: list) -> dict:
+    """veg = {cell, pts, info}: los puntos de vegetacion (orden iy y despues ix) y sus dos bytes (info[2i]: bits 0-1 tipo,
+    2-3 tamanno, 4 lod, 5-7 tono; info[2i + 1]: distancia a la linea mas cercana en unidades de VEG_DIST_UNIT_KM, tope
+    255). canopy = (verts, tris) de la tierra canopy; cores, los nucleos de overlay_zones; clear_points, (line, s) de los
+    puntos de paso y de casa."""
+    frame = model.frame
+    verts, tris = canopy
+    land = _TriGrid([tuple(verts[i] for i in tris[k:k + 3]) for k in range(0, len(tris), 3)], VEG_TRI_CELL)
+    snow = _TriGrid(cores.get("snow", []), VEG_TRI_CELL)
+    rock = _TriGrid(cores.get("rock", []), VEG_TRI_CELL)
+    savanna = _TriGrid(cores.get("savanna", []), VEG_TRI_CELL)
+    segs = []
+    for rid in model.order:
+        pk = [_plane_km(frame, x, y) for x, y in model.lines[rid].q]
+        segs += list(zip(pk, pk[1:])) or [(pk[0], pk[0])]
+    lines = _SegGrid(segs, VEG_SEG_CELL_KM)
+    clear = [_plane_km(frame, *_point_on(model.lines[rid], s)) for rid, s in clear_points]
+    width = _km_per_unit(frame)
+    height = width * frame.aspect
+    cap = 255 * VEG_DIST_UNIT_KM
+    pts, info = [], bytearray()
+    for iy in range(math.ceil(height / VEG_CELL_KM)):
+        for ix in range(math.ceil(width / VEG_CELL_KM)):
+            rng = CellRng(ix, iy)
+            ux, uy, u_keep, u_type, u_palm, u_size, u_tone = (rng.u() for _ in range(7))
+            xk = (ix + VEG_MARGIN + (1 - 2 * VEG_MARGIN) * ux) * VEG_CELL_KM
+            yk = (iy + VEG_MARGIN + (1 - 2 * VEG_MARGIN) * uy) * VEG_CELL_KM
+            X, Y = round(xk / width * Q), round(yk / height * Q)
+            if not (0 <= X <= Q and 0 <= Y <= Q):
+                continue
+            p = (X, Y)
+            if not land.contains(p) or snow.contains(p):
+                continue
+            pk = _plane_km(frame, X, Y)
+            if any(math.hypot(pk[0] - c[0], pk[1] - c[1]) <= VEG_CLEAR_KM for c in clear):
+                continue
+            if rock.contains(p) and u_keep >= VEG_ROCK_KEEP:
+                continue
+            dist = lines.distance(pk, cap)
+            in_savanna = savanna.contains(p)
+            if u_type < VEG_FLOWER:
+                kind = 2
+            elif u_palm < (VEG_PALM_SAVANNA if in_savanna else (VEG_PALM_NEAR if dist <= VEG_PALM_KM else 0.0)):
+                kind = 1
+            else:
+                kind = 0
+            f = min(1.0, dist / VEG_FAR_KM)
+            small, big = 0.5 - 0.35 * f, 0.1 + 0.4 * f
+            size = 0 if u_size < small else (2 if u_size >= 1 - big else 1)
+            lod = 0 if ix % 2 == 0 and iy % 2 == 0 else 1
+            tone = min(7, int(u_tone * 8))
+            pts.append(p)
+            info.append(kind | size << 2 | lod << 4 | tone << 5)
+            info.append(min(255, int(round(dist / VEG_DIST_UNIT_KM))) if dist <= cap else 255)
+    return {"cell": VEG_CELL_KM, "pts": encode_points(pts), "info": base64.b64encode(bytes(info)).decode("ascii")}
+
+
+def veg_problems(veg: dict, frame: Frame) -> list:
+    """cell, info de 2 bytes por punto, un punto por celda en el orden (iy, ix), el lod de su celda y tipo y tamanno en
+    0-2."""
+    out: list = []
+    try:
+        pts = decode_points(veg["pts"]) if veg["pts"] else []
+        info = base64.b64decode(veg["info"].encode("ascii"), validate=True)
+    except (KeyError, ValueError, TypeError, AttributeError) as e:
+        return [f"veg: no se decodifica ({e})"]
+    if veg.get("cell") != VEG_CELL_KM:
+        out.append(f"veg: cell {veg.get('cell')} y se esperaba {VEG_CELL_KM}")
+    if len(info) != 2 * len(pts):
+        return out + [f"veg: info lleva {len(info)} bytes y hacen falta {2 * len(pts)} (2 por punto)"]
+    prev = None
+    bad_lod = bad_kind = 0
+    for i, (X, Y) in enumerate(pts):
+        ix, iy = veg_cell_of(frame, X, Y)
+        if prev is not None and (iy, ix) <= prev:
+            out.append(f"veg: el punto {i} no sigue el orden (iy, ix) o repite celda")
+            break
+        prev = (iy, ix)
+        b = info[2 * i]
+        if (b >> 4 & 1) != (0 if ix % 2 == 0 and iy % 2 == 0 else 1):
+            bad_lod += 1
+        if (b & 3) > 2 or (b >> 2 & 3) > 2:
+            bad_kind += 1
+    if bad_lod:
+        out.append(f"veg: {bad_lod} puntos con un lod que no es el de su celda")
+    if bad_kind:
+        out.append(f"veg: {bad_kind} puntos con un tipo o un tamanno fuera de 0-2")
+    return out
 
 
 # --------------------------------------------------------------------------------------------- paradas: at y leg
@@ -1399,11 +2016,13 @@ def validate_map(doc: dict, model: Model, source: dict) -> list:
     # Tierra.
     land = doc.get("land", {})
     try:
-        verts = decode_points(land["verts"])
-        tris = decode_indices(land["tris"])
-    except (KeyError, ValueError, TypeError) as e:
+        verts, tris, canopy = canopy_of(land)
+    except (KeyError, ValueError, TypeError, GeometryError) as e:
         return errors + [f"land: no se decodifica ({e})"]
-    errors += ["land: " + e for e in land_problems(verts, tris, land.get("zones", []))]
+    errors += ["land: " + e for e in land_problems(verts, tris, [canopy])]
+    errors += ["land: " + e for e in zones_problems(land)]
+    errors += banks_problems(doc.get("banks", []), model)
+    errors += veg_problems(doc.get("veg", {}), frame)
     home = doc.get("home")
     if not isinstance(home, dict) or home.get("on") not in model.lines:
         errors.append("home: on no es una linea del Mapa")
@@ -1672,8 +2291,11 @@ MUNDO_TOLERANCE_KM = 1.0
 # Mexiana...); las menores no llegan a 3 dp2 en la vista Cuenca.
 MIN_ISLAND_KM2 = 500.0
 LAND_REPAIR_ROUNDS = 12
-# Tope del archivo (M5.1, criterio de aceptacion; 08 §4.5: «unos 70-90 KB»).
-MAX_BYTES = 90 * 1024
+# Tope del archivo (M5.1, criterio de aceptacion; 08 §4.5: «unos 70-90 KB»). M2-1 (af-river-map/2; D-069, P7 (a)) lo sube a
+# 160 KB: las orillas (~250 tramos, ~20 KB), la vegetacion (~9.600 puntos de 6 bytes en base64, ~77 KB) y las zonas
+# (~2 KB) llevan el archivo de ~26 a ~140 KB; el margen (~20 KB) es para la calibracion de las constantes [P]. En memoria,
+# decodificado, son unos +150 KB de heap, los de la propuesta del Mapa v2 §7.2; en el AAB, comprimido, ~+0,1 MB.
+MAX_BYTES = 160 * 1024
 
 
 class SourcesState:
@@ -2346,7 +2968,8 @@ def land_zones(rings_q: list) -> list:
     """Zonas del terreno: [(id, tile, anillos)]. PUNTO DE ENTRADA DE LA MASCARA DEL ARTISTA (pendiente; encargo del Mapa,
     seccion 4, y propuesta §11.3, punto 2): cuando llegue (PNG o SVG pintado sobre la guia de proyeccion, con dosel, varzea,
     sabana, roca y nieve), se vectoriza en poligonos por mosaico, se cortan con estos anillos y cada zona se triangula
-    aparte; el documento ya lleva first y count por zona. Hasta entonces, una sola zona [P] (LAND_ZONE)."""
+    aparte; el documento ya lleva first y count por zona. Hasta entonces, una sola zona [P] (LAND_ZONE, canopy), con las
+    manchas por codigo de M2-1 encima (land_with_zones)."""
     return [(LAND_ZONE["id"], LAND_ZONE["tile"], rings_q)]
 
 
@@ -2476,13 +3099,14 @@ def committed_geometry(path: Path = MAP_PATH) -> Geometry:
     try:
         doc = json.loads(Path(path).read_bytes().decode("utf-8"))
         lines = {e["id"]: (e["src"], decode_points(e["pts"])) for e in doc["lines"]}
-        land = doc["land"]
-        geo_land = (decode_points(land["verts"]), decode_indices(land["tris"]),
-                    [{"id": z["id"], "tile": z["tile"], "first": z["first"], "count": z["count"]} for z in land["zones"]])
+        # La tierra base es la zona canopy (sus triangulos y los vertices hasta el mayor indice que usan); las zonas de
+        # encima, las orillas y la vegetacion se regeneran desde las constantes y se comparan byte a byte (M2-1).
+        verts, tris, canopy = canopy_of(doc["land"])
+        geo_land = (verts, tris, [canopy])
     except FileNotFoundError as e:
         raise GeometryError(f"falta {_rel(path)}") from e
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
-        raise GeometryError(f"{_rel(path)} no se puede leer como af-river-map/1 ({e})") from e
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError, GeometryError) as e:
+        raise GeometryError(f"{_rel(path)} no se puede leer como {FORMAT} ({e})") from e
     return Geometry("commiteado", lines, geo_land)
 
 
@@ -2533,7 +3157,7 @@ def load_geometry(source: dict, sources: Path, manifest_path: Path, out: Path, c
 
 
 def main(argv: list | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Genera o comprueba river_map_v1.json (af-river-map/1).")
+    ap = argparse.ArgumentParser(description=f"Genera o comprueba river_map_v1.json ({FORMAT}).")
     ap.add_argument("--check", action="store_true",
                     help="valida el Mapa y las rutas de river_stops_v1.json y compara con lo commiteado; codigo 1 si algo falla")
     ap.add_argument("--source", type=Path, default=SOURCE_PATH, help="rio-amazonas.json (por defecto, el de docs/research)")

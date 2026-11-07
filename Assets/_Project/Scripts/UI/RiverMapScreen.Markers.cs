@@ -1441,11 +1441,11 @@ namespace AF.UI
             return FixedViewRect(label.rectTransform);
         }
 
-        private static Rect FixedViewRect(RectTransform rt)
+        private Rect FixedViewRect(RectTransform rt)
         {
             Vector2 p = rt.anchoredPosition;
             Vector2 size = rt.sizeDelta;
-            return new Rect(p.x - FramePadDp, -p.y - FramePadDp, size.x, size.y);
+            return new Rect(p.x - ViewPadDp, -p.y - ViewPadDp, size.x, size.y);
         }
 
         // Caja local (y hacia arriba) en coordenadas de la zona visible (y hacia abajo) con el contenido en o.
@@ -1608,6 +1608,7 @@ namespace AF.UI
             }
 
             MetaShowMarkers(max); // B14: la Canasta (cestita o ✓) y el Premio del mundo (RiverMapScreen.Meta.cs)
+            LiveMarkers(max); // D-069, M2-1: las paradas futuras, boyas (RiverMapScreen.Live.cs)
             PlaceCanoeGear(_space);
         }
 
@@ -2224,7 +2225,7 @@ namespace AF.UI
                 pen += Crowding(c, _fanPos[k], fan);
             }
 
-            if (river && pen < budget && LineClearance(_map!, space, _view, box, MarkerLineClearanceDp) < MarkerLineClearanceDp)
+            if (river && pen < budget && LineClearance(_map!, space, _view, box, MarkerLineClearanceDp, _live) < MarkerLineClearanceDp)
             {
                 pen += 10f;
             }
@@ -2564,7 +2565,7 @@ namespace AF.UI
                 {
                     float x = home.x + (s == 0 ? -d : d);
                     var box = new Rect(x - half, home.y, 2f * half, h);
-                    if (LineClearance(_map, space, _view, box, HomeLineClearanceDp) >= HomeLineClearanceDp && !OverlapsShownMarker(box))
+                    if (LineClearance(_map, space, _view, box, HomeLineClearanceDp, _live) >= HomeLineClearanceDp && !OverlapsShownMarker(box))
                     {
                         return s == 0 ? -d : d;
                     }
@@ -2600,7 +2601,7 @@ namespace AF.UI
                     }
 
                     var box = new Rect(foot.x, foot.y - half, h, 2f * half);
-                    if (LineClearance(_map, space, _view, box, HomeLineClearanceDp) >= HomeLineClearanceDp)
+                    if (LineClearance(_map, space, _view, box, HomeLineClearanceDp, _live) >= HomeLineClearanceDp)
                     {
                         return side;
                     }
@@ -2858,15 +2859,15 @@ namespace AF.UI
                 return;
             }
 
-            float bottom = FramePadDp + _viewH - MinTouchDp - 8f; // la fila de «Volver a la canoa»
+            float bottom = ViewPadDp + _viewH - MinTouchDp - 8f; // la fila de «Volver a la canoa»
             TMPro.TextMeshProUGUI? atlantic = AtlanticLabel;
             if (atlantic != null && atlantic.gameObject.activeSelf)
             {
                 bottom = Mathf.Min(bottom, -atlantic.rectTransform.anchoredPosition.y);
             }
 
-            float top = Mathf.Max(FramePadDp + OrientationInsetDp, bottom - HomeWindowGapDp - _homeWindow.HeightDp);
-            _homeWindow.Place(FramePadDp + OrientationInsetDp, top, FramePadDp + _viewW - OrientationInsetDp);
+            float top = Mathf.Max(ViewPadDp + OrientationInsetDp, bottom - HomeWindowGapDp - _homeWindow.HeightDp);
+            _homeWindow.Place(ViewPadDp + OrientationInsetDp, top, ViewPadDp + _viewW - OrientationInsetDp);
         }
 
         // La ventanita sale cuando la casa queda fuera de la vista (con su arte; nunca sin parada). Devuelve si se ve. Sin
@@ -2894,12 +2895,12 @@ namespace AF.UI
             return vx >= m && vx <= _viewW - m && vy >= m && vy <= _viewH - m;
         }
 
-        // La ventanita con su píldora en coordenadas de la zona visible (dp, y hacia abajo): la zona empieza FramePadDp dentro del
+        // La ventanita con su píldora en coordenadas de la zona visible (dp, y hacia abajo): la zona empieza ViewPadDp dentro del
         // marco.
         private Rect HomeWindowInView()
         {
             Rect b = _homeWindow!.Bounds;
-            return new Rect(b.x - FramePadDp, b.y - FramePadDp, b.width, b.height);
+            return new Rect(b.x - ViewPadDp, b.y - ViewPadDp, b.width, b.height);
         }
 
         // ============================================================================================ toques y sueño
@@ -3476,6 +3477,12 @@ namespace AF.UI
             public bool Fanned { get; set; }
 
             public bool BeaconLit { get; set; }
+
+            /// <summary>La boya de vidrio del Mapa v2 (D-069, M2-1), creada la primera vez que hace falta.</summary>
+            public Image? Buoy { get; set; }
+
+            /// <summary>El brillo que late de la parada siguiente en el Mapa v2.</summary>
+            public Image? Glow { get; set; }
         }
 
         /// <summary>

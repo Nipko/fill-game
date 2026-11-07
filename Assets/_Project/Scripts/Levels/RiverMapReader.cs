@@ -7,8 +7,8 @@ using AF.Levels.Json;
 namespace AF.Levels
 {
     /// <summary>
-    /// Lee, valida y decodifica una sola vez la geometría del Mapa del río <c>af-river-map/1</c> (08 §2.2 y §4.5; contrato 29;
-    /// esquema <c>schemas/af-river-map-1.schema.json</c>; codificación de P-M1, D-023) con el lector JSON del cliente
+    /// Lee, valida y decodifica una sola vez la geometría del Mapa del río <c>af-river-map/2</c> (08 §2.2 y §4.5; contrato 29;
+    /// esquema <c>schemas/af-river-map-2.schema.json</c>; codificación de P-M1, D-023) con el lector JSON del cliente
     /// (<see cref="JsonParser"/>), sin motor:
     /// <list type="bullet">
     /// <item><description><c>format</c> = <see cref="RiverMap.Format"/>; <c>frame</c> con <c>rotation</c> = <c>cw90</c>,
@@ -32,9 +32,9 @@ namespace AF.Levels
     /// <c>tools/river-map/geometry.py --check</c>. Al decodificar, cada punto (X, Y) pasa a unidades del marco con W = 1
     /// (X / 65535, Y / 65535 · aspecto) y se acumula la longitud de cada línea en doble precisión, como la herramienta, para que
     /// la s del cliente sea la del archivo. <see cref="ReadRoutes"/> lee los campos <c>at</c> y <c>leg</c> de
-    /// <c>af-river-stops/1</c> contra este Mapa. Las asignaciones son solo de la carga (una vez al abrir el Mapa).
+    /// <c>af-river-stops/2</c> contra este Mapa. Las asignaciones son solo de la carga (una vez al abrir el Mapa).
     /// </summary>
-    public static class RiverMapReader
+    public static partial class RiverMapReader
     {
         /// <summary>Valor máximo de una coordenada uint16 (X = round(65535 x)).</summary>
         public const int Quantum = 65535;
@@ -133,7 +133,9 @@ namespace AF.Levels
             RiverMapLabel[] labels = ReadLabels(root, aspect);
             RiverViewpoint[] viewpoints = ReadViewpoints(root, aspect);
             RiverPassingPoint[] passing = ReadPassing(root, ids, viewpoints);
-            return new RiverMap(frame, lines, land, insets, home, labels, viewpoints, passing);
+            RiverBanks banks = ReadBanks(root, ids); // D-069, M2-1 (RiverMapReader.Live.cs)
+            RiverVegetation vegetation = ReadVegetation(root, frame, aspect);
+            return new RiverMap(frame, lines, land, insets, home, labels, viewpoints, passing, banks, vegetation);
         }
 
         private static RiverMapFrame ReadFrame(JsonValue root)
@@ -369,7 +371,7 @@ namespace AF.Levels
             JsonValue? land = root.Get("land");
             if (land == null || land.Kind != JsonKind.Object)
             {
-                throw Fail("land", "debe ser un objeto {verts, tris, zones}");
+                throw Fail("land", "debe ser un objeto {verts, tris, zones, shade}");
             }
 
             ushort[] raw = DecodePoints(RequireBase64(land, "verts", "land"), "land.verts");
@@ -425,6 +427,12 @@ namespace AF.Levels
 
                 string id = RequireSlug(zone, "id", w);
                 string tile = RequireSlug(zone, "tile", w);
+                if (zone.Get("band") != null)
+                {
+                    zones[k] = ReadBandZone(zone, w, id, tile); // D-069, M2-1: la várzea, sin triángulos
+                    continue;
+                }
+
                 int first = RequireInt(zone, "first", w);
                 int n = RequireInt(zone, "count", w);
                 if (first < 0 || n < 0 || first + n > triangles)
@@ -451,7 +459,7 @@ namespace AF.Levels
                 throw Fail("land.zones", "cubren " + Num(total) + " de los " + Num(triangles) + " triángulos");
             }
 
-            return new RiverLand(xy, tris, zones);
+            return new RiverLand(xy, tris, zones, ReadShade(land, vertices));
         }
 
         private static RiverInset[] ReadInsets(JsonValue root, string[] ids)
@@ -640,7 +648,7 @@ namespace AF.Levels
         // ============================================================================================ rutas de las paradas
 
         /// <summary>
-        /// Lee las rutas de las paradas (los campos <c>at</c> y <c>leg</c> de <c>af-river-stops/1</c>; 08 §4.5) contra el Mapa
+        /// Lee las rutas de las paradas (los campos <c>at</c> y <c>leg</c> de <c>af-river-stops/2</c>; 08 §4.5) contra el Mapa
         /// <paramref name="map"/>: líneas del Mapa, s en [0, 1], cada ruta continua desde la parada anterior (su primer tramo
         /// empieza en el <c>at</c> de la anterior, cada tramo sale de donde acaba el anterior y el último acaba en el suyo; en
         /// n = 0, sobre la propia parada), contando como el mismo punto la boca de un afluente y su s sobre el anfitrión, como

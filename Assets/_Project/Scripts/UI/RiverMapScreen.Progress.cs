@@ -1006,13 +1006,13 @@ namespace AF.UI
                             blocked = true;
                             if (underClearance < 0f)
                             {
-                                underClearance = Mathf.Max(underClearance, LineClearance(map, space, _view, box, 0f));
+                                underClearance = Mathf.Max(underClearance, LineClearance(map, space, _view, box, 0f, _live));
                             }
 
                             continue;
                         }
 
-                        float clearance = LineClearance(map, space, _view, box, CountryLineClearanceDp);
+                        float clearance = LineClearance(map, space, _view, box, CountryLineClearanceDp, _live);
                         if (clearance > bestClearance)
                         {
                             bestClearance = clearance;
@@ -1040,7 +1040,7 @@ namespace AF.UI
                         var c = new Vector2(xMax - (size.x * 0.5f), home.y);
                         var box = new Rect(xMax - size.x, c.y - (size.y * 0.5f), size.x, size.y);
                         hidden = box.xMin < LabelEdgeDp || OverlapsPlaced(box) || HitsBasinControl(box)
-                            || LineClearance(map, space, _view, box, CountryLineClearanceDp) < 0f;
+                            || LineClearance(map, space, _view, box, CountryLineClearanceDp, _live) < 0f;
                         if (!hidden)
                         {
                             best = c;
@@ -1179,7 +1179,7 @@ namespace AF.UI
                         // Como los países: el sitio libre más cercano que no tape el curso de los ríos (ni el frente, que va por
                         // ellos) ni el lleno. Si ninguno lo consigue, el respaldo es el que tapa menos líneas del lleno y, a
                         // igualdad, el de más hueco (salvo que en la Cuenca FarSpot encuentre uno fuera del lleno).
-                        float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp);
+                        float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp, _live);
                         int fillHits = FillLinesUnder(map, space, _view, box);
                         if (!any || fillHits < bestFillHits || (fillHits == bestFillHits && clearance > bestClearance))
                         {
@@ -1288,7 +1288,7 @@ namespace AF.UI
                         continue;
                     }
 
-                    float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp);
+                    float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp, _live);
                     if (!any || hits < bestFill || distance < bestDistance - 0.01f || clearance > bestClearance)
                     {
                         any = true;
@@ -1397,7 +1397,7 @@ namespace AF.UI
         /// de clase 1-2 del Mapa, con su ancho en la vista <paramref name="view"/>; negativo si la pisa. Deja de buscar por encima de
         /// <paramref name="enough"/> (devuelve como mucho ese valor). Sin asignaciones.
         /// </summary>
-        internal static float LineClearance(RiverMap map, MapSpace space, MapView view, Rect box, float enough)
+        internal static float LineClearance(RiverMap map, MapSpace space, MapView view, Rect box, float enough, bool live = false)
         {
             float clearance = enough;
             IReadOnlyList<RiverLine> lines = map.Lines;
@@ -1409,7 +1409,7 @@ namespace AF.UI
                     continue;
                 }
 
-                float half = (RibbonWidthDp(view, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp; // con la orla del lleno
+                float half = (RibbonWidthDp(view, line.Class, live) * 0.5f) + RiverRibbonGraphic.CasingDp; // con la orla del lleno (D-069: con el ancho del Mapa v2)
                 float reach = half + clearance;
                 Rect near = Rect.MinMaxRect(box.xMin - reach, box.yMin - reach, box.xMax + reach, box.yMax + reach);
                 Vector2 a = space.ToLocal(line.X(0), line.Y(0));
@@ -1451,7 +1451,7 @@ namespace AF.UI
                 }
 
                 RiverLine line = lines[l];
-                float half = (RibbonWidthDp(view, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp;
+                float half = (MapRibbonWidthDp(view, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp;
                 Rect near = Rect.MinMaxRect(box.xMin - half, box.yMin - half, box.xMax + half, box.yMax + half);
                 float[] cumulative = line.Cumulative;
                 float start = from * line.Length;
@@ -1745,7 +1745,7 @@ namespace AF.UI
 
                 int sections = floor + extra;
                 used += sections * FrontSectionVertices(line, piece);
-                _frontCoreBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core);
+                _frontCoreBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core, _live);
                 _frontCasingBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing);
             }
 
@@ -1768,9 +1768,9 @@ namespace AF.UI
         public const int FrontMinSections = 24;
 
         // Vértices de una sección de la pieza del frente: el agua y la orla.
-        private static int FrontSectionVertices(RiverLine line, RiverPathPiece piece)
+        private int FrontSectionVertices(RiverLine line, RiverPathPiece piece)
         {
-            return RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core)
+            return RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core, _live)
                 + RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing);
         }
 
@@ -1845,7 +1845,10 @@ namespace AF.UI
             if (ribbon.Line != null)
             {
                 ribbon.SetSpace(space);
-                ribbon.SetWidth(RibbonWidthDp(_view, ribbon.Line.Class));
+                ribbon.SetWidth(MapRibbonWidthDp(_view, ribbon.Line.Class));
+                ribbon.SetShapeWidth(MapShapeWidthDp(_view, ribbon.Line.Class)); // D-069: la forma del trazo
+                ribbon.SetAnchorWidth(MapAnchorWidthDp(_view, ribbon.Line.Class));
+                ribbon.SetLive(_live);
                 ribbon.SetCurve(_view == MapView.World); // FX12: la misma curva que el vidrio
             }
         }
@@ -2254,12 +2257,12 @@ namespace AF.UI
 
             float andesRoom = _viewW - (2f * OrientationInsetDp);
             Vector2 andes = FitOrientationLabel(_andesLabel, andesRoom);
-            UiBuilder.Place(_andesLabel.rectTransform, FramePadDp + ((_viewW - andes.x) * 0.5f), FramePadDp + OrientationInsetDp, andes.x, andes.y);
+            UiBuilder.Place(_andesLabel.rectTransform, ViewPadDp + ((_viewW - andes.x) * 0.5f), ViewPadDp + OrientationInsetDp, andes.x, andes.y);
 
             float buttonW = ((RectTransform)_backToCanoe.Button.transform).sizeDelta.x;
             float atlanticRoom = Mathf.Max(MinTouchDp, _viewW - (3f * OrientationInsetDp) - buttonW);
             Vector2 atlantic = FitOrientationLabel(_atlanticLabel, atlanticRoom);
-            UiBuilder.Place(_atlanticLabel.rectTransform, FramePadDp + OrientationInsetDp, FramePadDp + _viewH - OrientationInsetDp - atlantic.y, atlantic.x, atlantic.y);
+            UiBuilder.Place(_atlanticLabel.rectTransform, ViewPadDp + OrientationInsetDp, ViewPadDp + _viewH - OrientationInsetDp - atlantic.y, atlantic.x, atlantic.y);
         }
 
         // Caja de un rótulo de orientación en «room» dp: la de su texto a OrientationLabelSp o, si no cabe, «room» con el texto

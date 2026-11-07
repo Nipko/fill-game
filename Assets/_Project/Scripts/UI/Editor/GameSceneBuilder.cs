@@ -77,13 +77,13 @@ namespace AF.UI.Editor
         /// <summary>Catálogo de miquitos de la intro «Llenar y teñir» (<c>af-fauna/0</c>; guion de la intro §4.3).</summary>
         public const string FaunaCatalogPath = "Assets/_Project/Data/Fauna/miquitos_v0.json";
 
-        /// <summary>Paradas del Mapa del río (<c>af-river-stops/1</c>; D-013; 08 §4.5; las genera <c>tools/river-map/stops.py</c>).</summary>
+        /// <summary>Paradas del Mapa del río (<c>af-river-stops/2</c>; D-013; 08 §4.5; las genera <c>tools/river-map/stops.py</c>).</summary>
         public const string RiverStopsPath = "Assets/_Project/Data/Map/river_stops_v1.json";
 
         /// <summary>Pool del Reto del río (<c>kind: daily</c>, af-level/1; 06 §4.1; 08 §6.2; lo genera <c>tools/level-generator --daily</c>; enganche E3).</summary>
         public const string DailyPoolPath = "Assets/_Project/Data/Daily/daily_pool_v1.json";
 
-        /// <summary>Geometría del Mapa del río (<c>af-river-map/1</c>; D-013; 08 §4.5; la genera <c>tools/river-map/geometry.py</c>; tarea M3.3).</summary>
+        /// <summary>Geometría del Mapa del río (<c>af-river-map/2</c>; D-013; 08 §4.5; la genera <c>tools/river-map/geometry.py</c>; tarea M3.3).</summary>
         public const string RiverMapPath = "Assets/_Project/Data/Map/river_map_v1.json";
 
         /// <summary>Calendario de Frutas del río (<c>af-facts/1</c>; D-017; 08 §4.6; contrato 31).</summary>

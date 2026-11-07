@@ -474,6 +474,18 @@ namespace AF.RemoteConfig
       ""type"": ""string"",
       ""default"": ""off""
     },
+    ""ui_map_v2"": {
+      ""type"": ""bool"",
+      ""default"": true
+    },
+    ""ui_map_crew"": {
+      ""type"": ""bool"",
+      ""default"": true
+    },
+    ""ui_map_towns"": {
+      ""type"": ""bool"",
+      ""default"": true
+    },
     ""ui_avatars_enabled"": {
       ""type"": ""bool"",
       ""default"": true

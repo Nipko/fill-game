@@ -7,11 +7,12 @@ Ejecutar desde la raiz del repositorio:
 Es el unico sitio de tools/river-map que usa jsonschema (ya esta en el stack); los generadores solo usan la biblioteca
 estandar (08 §4.5). Estos esquemas nunca se validan en tools/validate_schema.py, que es solo de af-level/1.
 
-af-river-stops/1: el esquema es un JSON Schema draft 2020-12 valido, el archivo real valida (con at y leg, obligatorios
+af-river-stops/2 (D-069, P7 (a); en M2-1, como /1 salvo format): el esquema es un JSON Schema draft 2020-12 valido, el archivo real valida (con at y leg, obligatorios
 desde M2.6), una parada con at y leg en la forma del ejemplo de 08 §4.5 valida y los fixtures invalidos fallan cada uno por
 su motivo.
 
-af-river-map/1 (M2.6): lo mismo para la geometria, river_map_v1.json, con sus fixtures invalidos.
+af-river-map/2 (M2.6; /2 desde M2-1, D-069): lo mismo para la geometria, river_map_v1.json, con sus fixtures invalidos,
+tambien de los campos nuevos de M2-1 (land.zones y land.shade, banks y veg).
 """
 from __future__ import annotations
 
@@ -62,7 +63,8 @@ def _root(key: str, value):
 
 # Fixtures invalidos: (nombre, mutacion del archivo real). Cada uno tiene que fallar.
 INVALID = [
-    ("formato desconocido", _root("format", "af-river-stops/2")),
+    ("formato desconocido", _root("format", "af-river-stops/3")),
+    ("formato anterior", _root("format", "af-river-stops/1")),
     ("kind fuera de gate/stop/close", _set((3, "kind"), "castle")),
     ("country en minusculas", _set((8, "country"), "co")),
     ("kit sin el mundo con 2 cifras", _set((14, "bg", "kit"), "bg_kit_w5")),
@@ -91,7 +93,7 @@ class StopsSchemaTests(unittest.TestCase):
     def test_schema_is_valid_draft_2020_12(self):
         Draft202012Validator.check_schema(self.schema)
         self.assertEqual(self.schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
-        self.assertEqual(self.schema["properties"]["format"]["const"], "af-river-stops/1")
+        self.assertEqual(self.schema["properties"]["format"]["const"], "af-river-stops/2")
 
     def test_real_file_validates(self):
         errs = self.errors(self.real)
@@ -125,7 +127,7 @@ class StopsSchemaTests(unittest.TestCase):
 
 
 
-# af-river-map/1 (M2.6): fixtures invalidos sobre una copia del archivo real.
+# af-river-map/2 (M2.6 y M2-1): fixtures invalidos sobre una copia del archivo real.
 def _line(lid: str, key: str, value):
     def mutate(doc: dict) -> None:
         next(line for line in doc["lines"] if line["id"] == lid)[key] = value
@@ -154,7 +156,8 @@ def _first(key: str, field: str, value):
 INSET_08 = {"id": "orinoco", "rect": [0.78, 0.05, 0.98, 0.30], "lines": ["orinoco"], "link": "casiquiare"}
 
 MAP_INVALID = [
-    ("formato desconocido", _map_root("format", "af-river-map/2")),
+    ("formato desconocido", _map_root("format", "af-river-map/3")),
+    ("formato anterior", _map_root("format", "af-river-map/1")),
     ("giro distinto de cw90", lambda d: d["frame"].update(rotation="ccw90")),
     ("kind desconocido", _line("xingu", "kind", "river")),
     ("class fuera de 1-3", _line("xingu", "class", 4)),
@@ -176,6 +179,24 @@ MAP_INVALID = [
     ("campo de texto suelto en una linea (solo claves)", _line("tapajos", "name", "Tapajos")),
     ("casa sin linea", _map_root("home", {"s": 0.5})),
     ("id con Belen", _first("passing", "id", "belen")),
+    # M2-1 (af-river-map/2).
+    ("sin banks", lambda d: d.pop("banks")),
+    ("sin veg", lambda d: d.pop("veg")),
+    ("tierra sin shade", lambda d: d["land"].pop("shade")),
+    ("shade que no es base64", lambda d: d["land"].update(shade="no es base64!")),
+    ("la primera zona no es canopy", lambda d: d["land"]["zones"].insert(0, d["land"]["zones"].pop(1))),
+    ("la zona de la 1.0 con su nombre de /1 (land)", lambda d: d["land"]["zones"][0].update(id="land")),
+    ("zona desconocida", lambda d: d["land"]["zones"][1].update(id="desert")),
+    ("varzea con first y count", lambda d: d["land"]["zones"][-1].update(first=0, count=1)),
+    ("varzea sin band", lambda d: d["land"]["zones"][-1].pop("band")),
+    ("orilla de un lado desconocido", _first("banks", "side", "north")),
+    ("orilla de un tipo desconocido", _first("banks", "kind", "cliff")),
+    ("orilla con s fuera de [0, 1]", _first("banks", "s1", 1.5)),
+    ("orilla de mas de 16 dp", _first("banks", "w", 40)),
+    ("orilla sin w", lambda d: d["banks"][0].pop("w")),
+    ("vegetacion sin info", lambda d: d["veg"].pop("info")),
+    ("vegetacion con cell de 0", lambda d: d["veg"].update(cell=0)),
+    ("vegetacion con un campo de mas", lambda d: d["veg"].update(seed=1)),
 ]
 
 
@@ -192,12 +213,21 @@ class MapSchemaTests(unittest.TestCase):
     def test_schema_is_valid_draft_2020_12(self):
         Draft202012Validator.check_schema(self.schema)
         self.assertEqual(self.schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
-        self.assertEqual(self.schema["properties"]["format"]["const"], "af-river-map/1")
+        self.assertEqual(self.schema["properties"]["format"]["const"], "af-river-map/2")
 
     def test_real_file_validates(self):
         errs = self.errors(self.real)
         self.assertEqual([], [f"{list(e.absolute_path)}: {e.message}" for e in errs])
         self.assertEqual(31, len(self.real["lines"]), "27 de 1-200 y 4 locales de 201-420 (M4.5a)")
+
+    def test_real_file_has_the_fields_of_m2_1(self):
+        self.assertEqual(["format", "frame", "lines", "land", "banks", "veg", "insets", "home", "labels", "viewpoints",
+                          "passing"], list(self.real))
+        zones = self.real["land"]["zones"]
+        self.assertEqual(["canopy", "savanna", "rock", "snow", "varzea"], [z["id"] for z in zones])
+        self.assertEqual({"id": "varzea", "tile": "varzea", "band": 40}, zones[-1])
+        self.assertTrue(self.real["banks"])
+        self.assertEqual(30, self.real["veg"]["cell"])
 
     def test_inset_of_08_validates(self):
         # La 1.0 deja insets vacio (un dato), pero el formato admite el recuadro con la forma de 08 §4.5.

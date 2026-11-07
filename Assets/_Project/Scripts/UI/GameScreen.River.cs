@@ -11,7 +11,7 @@ namespace AF.UI
     public sealed partial class GameScreen
     {
         /// <summary>
-        /// Paradas del Mapa del río (<c>af-river-stops/1</c>; null = sin el archivo o inválido: el juego sigue como sin el Mapa).
+        /// Paradas del Mapa del río (<c>af-river-stops/2</c>; null = sin el archivo o inválido: el juego sigue como sin el Mapa).
         /// </summary>
         public RiverStopCatalog? RiverStops { get; set; }
     }

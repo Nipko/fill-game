@@ -382,7 +382,7 @@ namespace AF.UI
         internal NoCanoesPanel NoCanoes => _noCanoes;
 
         /// <summary>
-        /// Paradas del Mapa del río (<c>af-river-stops/1</c>; M2.1). Null = sin el archivo o inválido: el inicio sin fondo de parada,
+        /// Paradas del Mapa del río (<c>af-river-stops/2</c>; M2.1). Null = sin el archivo o inválido: el inicio sin fondo de parada,
         /// sin travesía y sin TiTino. Al cambiarlo, el inicio se rehace en el siguiente fotograma.
         /// </summary>
         public RiverStopCatalog? RiverStops

@@ -352,13 +352,23 @@ namespace AF.Levels
     public sealed class RiverLandZone
     {
         /// <summary>Crea la zona.</summary>
-        public RiverLandZone(string id, string tile, int first, int count)
+        public RiverLandZone(string id, string tile, int first, int count, float bandDp = 0f)
         {
             Id = id;
             Tile = tile;
             First = first;
             Count = count;
+            BandDp = bandDp;
         }
+
+        /// <summary>
+        /// Zona de banda de <c>af-river-map/2</c> (D-069, M2-1: <c>varzea</c>, <c>{id, tile, band}</c>): sin triángulos, la dibuja el
+        /// cliente como una banda de <see cref="BandDp"/> dp desde la orilla del agua hacia fuera en la vista Mundo [P].
+        /// </summary>
+        public bool IsBand => BandDp > 0f;
+
+        /// <summary>Ancho de la banda en dp (0 en las zonas de triángulos).</summary>
+        public float BandDp { get; }
 
         /// <summary>Id de la zona.</summary>
         public string Id { get; }
@@ -384,11 +394,40 @@ namespace AF.Levels
         private readonly RiverLandZone[] _zones;
 
         /// <summary>Crea la tierra (el lector ya la validó).</summary>
-        public RiverLand(float[] xy, int[] triangles, RiverLandZone[] zones)
+        public RiverLand(float[] xy, int[] triangles, RiverLandZone[] zones, byte[]? shade = null)
         {
             _xy = xy;
             _triangles = triangles;
             _zones = zones;
+            _shade = shade ?? Array.Empty<byte>();
+        }
+
+        private readonly byte[] _shade;
+
+        /// <summary>
+        /// Peso del color de su zona en cada vértice (<c>land.shade</c> de <c>af-river-map/2</c>; D-069, M2-1): 255 dentro y 0 en el
+        /// borde difuminado de las manchas de sabana, roca y nieve. Vacío en una tierra sin él (tests): todo 255. No lo modifiques.
+        /// </summary>
+        public byte[] Shade => _shade;
+
+        /// <summary>Peso del vértice <paramref name="vertex"/> (0-1).</summary>
+        public float ShadeOf(int vertex)
+        {
+            return vertex < _shade.Length ? _shade[vertex] / 255f : 1f;
+        }
+
+        /// <summary>La zona <paramref name="id"/>, o null. Sin asignaciones.</summary>
+        public RiverLandZone? Zone(string id)
+        {
+            for (int i = 0; i < _zones.Length; i++)
+            {
+                if (string.Equals(_zones[i].Id, id, StringComparison.Ordinal))
+                {
+                    return _zones[i];
+                }
+            }
+
+            return null;
         }
 
         /// <summary>Vértices.</summary>
@@ -403,7 +442,7 @@ namespace AF.Levels
         /// <summary>Índices de los triángulos, de tres en tres. No lo modifiques.</summary>
         public int[] Triangles => _triangles;
 
-        /// <summary>Zonas, que cubren todos los triángulos una sola vez.</summary>
+        /// <summary>Zonas: las de triángulos los cubren todos una sola vez; las de banda (<see cref="RiverLandZone.IsBand"/>), ninguno.</summary>
         public IReadOnlyList<RiverLandZone> Zones => _zones;
     }
 
@@ -530,14 +569,14 @@ namespace AF.Levels
     }
 
     /// <summary>
-    /// Geometría del Mapa del río (<c>af-river-map/1</c>; 08 §2.2 y §4.5; contrato 29; esquema
-    /// <c>schemas/af-river-map-1.schema.json</c>), sin motor: la lee, la valida y la decodifica una sola vez
+    /// Geometría del Mapa del río (<c>af-river-map/2</c>; 08 §2.2 y §4.5; contrato 29; esquema
+    /// <c>schemas/af-river-map-2.schema.json</c>), sin motor: la lee, la valida y la decodifica una sola vez
     /// <see cref="RiverMapReader"/>. Las búsquedas por id (<see cref="LineIndexOf"/>…) no asignan memoria. Inmutable.
     /// </summary>
     public sealed class RiverMap
     {
         /// <summary>Formato que lee este cliente.</summary>
-        public const string Format = "af-river-map/1";
+        public const string Format = "af-river-map/2";
 
         /// <summary>
         /// Id de la línea del cauce (id <c>amazonas</c>, <see cref="RiverLineKind.Main"/>): va de la naciente del Mismi (s = 0;
@@ -553,8 +592,11 @@ namespace AF.Levels
 
         /// <summary>Crea el Mapa (el lector ya lo validó).</summary>
         public RiverMap(RiverMapFrame frame, RiverLine[] lines, RiverLand land, RiverInset[] insets, RiverMapPlace home,
-            RiverMapLabel[] labels, RiverViewpoint[] viewpoints, RiverPassingPoint[] passing)
+            RiverMapLabel[] labels, RiverViewpoint[] viewpoints, RiverPassingPoint[] passing, RiverBanks? banks = null,
+            RiverVegetation? vegetation = null)
         {
+            Banks = banks ?? RiverBanks.Empty;
+            Vegetation = vegetation ?? RiverVegetation.Empty;
             Frame = frame;
             _lines = lines;
             Land = land;
@@ -567,6 +609,12 @@ namespace AF.Levels
 
         /// <summary>Marco y proyección.</summary>
         public RiverMapFrame Frame { get; }
+
+        /// <summary>Orillas de los meandros (<c>banks</c>; D-069, M2-1).</summary>
+        public RiverBanks Banks { get; }
+
+        /// <summary>Vegetación (<c>veg</c>; D-069, M2-1).</summary>
+        public RiverVegetation Vegetation { get; }
 
         /// <summary>Ancho del Mapa en unidades del marco (1).</summary>
         public float Width => 1f;
@@ -653,7 +701,7 @@ namespace AF.Levels
     }
 
     /// <summary>
-    /// Ruta de la canoa hasta una parada (los campos <c>at</c> y <c>leg</c> de <c>af-river-stops/1</c>; 08 §4.5): dónde está la
+    /// Ruta de la canoa hasta una parada (los campos <c>at</c> y <c>leg</c> de <c>af-river-stops/2</c>; 08 §4.5): dónde está la
     /// parada, los tramos por agua desde la anterior (con ida y vuelta por las confluencias), los puntos de paso y las bocas que
     /// pasa. Inmutable.
     /// </summary>

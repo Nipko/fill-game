@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""stops.py - Mapa del rio (D-013): genera las paradas af-river-stops/1 desde la investigacion.
+"""stops.py - Mapa del rio (D-013): genera las paradas af-river-stops/2 desde la investigacion.
 
 Lee docs/research/mapa-del-rio/rio-amazonas.json (sin modificarlo) y tools/river-map/overrides.json, y escribe
 Assets/_Project/Data/Map/river_stops_v1.json: una entrada por parada (k = n, niveles 10n+1 ... 10n+10) con los campos
@@ -124,7 +124,7 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     travel_passing_points,
 )
 
-FORMAT = "af-river-stops/1"
+FORMAT = "af-river-stops/2"
 
 # paradas_1_200 cubre los niveles 1-200 (D-013, punto 3): 20 paradas, k = 0..19.
 LAST_LEVEL_1_200 = 200
@@ -369,7 +369,7 @@ def _other_facts(record: dict, tag: str) -> tuple[list[str], list[str]]:
 
 
 def convert(source: dict, overrides: dict, model: "geometry.Model | None" = None) -> tuple[dict | None, list[str]]:
-    """paradas_1_200 y paradas_201_700 de rio-amazonas.json -> documento af-river-stops/1 (sin validar todavia). Con el modelo de
+    """paradas_1_200 y paradas_201_700 de rio-amazonas.json -> documento af-river-stops/2 (sin validar todavia). Con el modelo de
     geometry.py, cada parada lleva at y leg; sin el, el documento sale sin rutas y validate() lo rechaza."""
     first_list = source.get("paradas_1_200")
     if not isinstance(first_list, list) or not first_list:
@@ -1582,7 +1582,7 @@ def emit(message: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Genera o comprueba river_stops_v1.json (af-river-stops/1) y el bloque map.* de facts.csv.")
+    ap = argparse.ArgumentParser(description="Genera o comprueba river_stops_v1.json (af-river-stops/2) y el bloque map.* de facts.csv.")
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true",
                       help="valida y compara con river_stops_v1.json y con el bloque map.* de facts.csv; codigo 1 si algo falla")

@@ -662,8 +662,8 @@ namespace AF.UI
                 FrameL10();
             }
 
-            float left = FrameInsetDp + FramePadDp;
-            float top = _safeTop + HeaderDp + 8f + FramePadDp;
+            float left = _live ? 0f : FrameInsetDp + FramePadDp; // D-069: el Mapa v2, de borde a borde y bajo la cabecera
+            float top = _live ? _safeTop + HeaderDp : _safeTop + HeaderDp + 8f + FramePadDp;
             if (_seqWithPlate && _seqPlate != null)
             {
                 PlaceL10Plate(left + L10InsetDp, top + L10InsetDp, Mathf.Max(96f, _viewW - (2f * L10InsetDp)));
