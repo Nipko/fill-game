@@ -139,7 +139,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.CatchUpElapsedMs, Is.GreaterThanOrEqualTo(map.ContentEndJourneyMs - 1f), "recorrió el tramo entero");
                 Assert.That(between, Is.GreaterThanOrEqualTo(5), "se ve a medio tramo en varios fotogramas");
 
-                // dt de GameBootstrap.Update va topado a 100 ms por fotograma: el viaje de 1,5 s no puede durar menos de ~1,5 s reales
+                // dt de GameBootstrap.Update va topado a 100 ms por fotograma: el viaje de 4,5 s no puede durar menos de ~4,5 s reales
                 // salvo por el primer fotograma, que se salta (_skipNextDelta).
                 Assert.That(lasted, Is.GreaterThanOrEqualTo((map.ContentEndJourneyMs / 1000f) - 0.1f), "el viaje se ve entero, en tiempo real");
                 Assert.That(Vector2.Distance(map.CanoeShownMapPoint, source), Is.LessThan(Near), "al acabar, la canoa en la naciente");

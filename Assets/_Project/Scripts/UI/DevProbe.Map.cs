@@ -197,9 +197,9 @@ namespace AF.UI
         /// <c>end</c>, <c>crew_joined</c> (D-069, M2-4; propuesta del Mapa v2 §9.3): el compañero que se presentó en ese Mapa
         /// (<c>toucan</c> o <c>tucuxi</c>) o null.
         /// </summary>
-        public void MapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by, string? crewJoined = null)
+        public void MapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by, string? crewJoined = null, int perBuoyMs = 0)
         {
-            string? line = FormatMapJourney(source, phase, from, to, ms, elapsedMs, by, crewJoined);
+            string? line = FormatMapJourney(source, phase, from, to, ms, elapsedMs, by, crewJoined, perBuoyMs);
             if (line != null)
             {
                 Write(line);
@@ -212,8 +212,12 @@ namespace AF.UI
             return FormatMapJourney(MapOpenSource.ContentEnd, phase, from, to, ms, elapsedMs, by);
         }
 
-        /// <summary>Texto de la línea <c>AF_STATE map_journey</c> con su <c>source</c>; null si la sonda no escribe.</summary>
-        public string? FormatMapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by, string? crewJoined = null)
+        /// <summary>
+        /// Texto de la línea <c>AF_STATE map_journey</c> con su <c>source</c>; null si la sonda no escribe. Con
+        /// <paramref name="perBuoyMs"/> &gt; 0, tras <c>ms</c>, <c>per_buoy_ms</c>: lo que tarda la canoa en cada boya (añadido de D-069
+        /// del 2026-11-08: 450 en un Mapa con viaje, 150 al ponerse al día).
+        /// </summary>
+        public string? FormatMapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by, string? crewJoined = null, int perBuoyMs = 0)
         {
             if (!Enabled)
             {
@@ -229,6 +233,11 @@ namespace AF.UI
             sb.Append(",\"from\":").Append(from.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"to\":").Append(to.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
+            if (perBuoyMs > 0)
+            {
+                sb.Append(",\"per_buoy_ms\":").Append(perBuoyMs.ToString(CultureInfo.InvariantCulture));
+            }
+
             sb.Append(",\"elapsed_ms\":").Append(Mathf.RoundToInt(Mathf.Max(0f, elapsedMs)).ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"by\":");
             if (by.Length == 0)

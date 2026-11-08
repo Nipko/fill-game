@@ -1094,14 +1094,15 @@ namespace AF.UI
             return next != null ? next.N : -1; // tras la última parada, hacia la naciente, la placa de M2-3 [P]
         }
 
-        // La placa de «Faltan N» sale solo si el rótulo de la parada siguiente no lo puede llevar (la naciente, una parada en abanico,
-        // un nombre sin aprobar); si cambia, se recoloca. Con el Mapa de la 1.0, como siempre.
+        // La placa de «Faltan N» sale solo si el rótulo de la parada siguiente no lo puede llevar (la naciente, un nombre sin aprobar
+        // o, desde el añadido de D-069 del 2026-11-08, una parada en abanico sin ningún sitio libre para su rótulo, o un rótulo que no
+        // cabe entero a la vista con el encuadre de apertura); si cambia, se recoloca. Con el Mapa de la 1.0, como siempre.
         private void SyncRemainingPlate()
         {
             int n = RemainingStopN();
             int i = n >= 0 ? StopMarkerIndexOf(n) : -1;
             bool merged = i >= 0 && i < _stopLabels.Count && _stopLabels[i].Pill.gameObject.activeSelf && _markers[i].Root.gameObject.activeSelf
-                && _stopLabels[i].Label.text.Length > 0;
+                && _stopLabels[i].Label.text.Length > 0 && !_remainingOffView;
             _remainingMerged = merged;
             bool want = _remainingReady && !merged;
             if (_remaining.gameObject.activeSelf == want)
@@ -1117,23 +1118,6 @@ namespace AF.UI
             else
             {
                 _remainingChipView = default;
-            }
-        }
-
-        // Sin los pueblos, el rótulo de la parada siguiente se calla si su parada va en abanico (se pisarían), como con ellos.
-        private void RemainingLabelFanned()
-        {
-            int n = RemainingStopN();
-            int i = n >= 0 ? StopMarkerIndexOf(n) : -1;
-            if (i < 0 || i >= _stopLabels.Count)
-            {
-                return;
-            }
-
-            bool on = _stopLabels[i].Label.text.Length > 0 && !_markers[i].Fanned;
-            if (_stopLabels[i].Pill.gameObject.activeSelf != on)
-            {
-                _stopLabels[i].Pill.gameObject.SetActive(on);
             }
         }
 

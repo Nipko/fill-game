@@ -1077,10 +1077,12 @@ namespace AF.UI
         /// paradas del mundo <paramref name="world"/> (y de la canoa, si la hay) ocupa <see cref="WorldFill"/> de la zona, entre
         /// <see cref="WorldZoomMin"/> y <see cref="WorldZoomMax"/>; a 1× la cuenca mide <see cref="MapSpace.BasinWidthDp"/> dp de
         /// ancho (13,1 dp por grado; propuesta del Mapa §3.1).
-        /// <paramref name="center"/> es el centro de esa caja, en unidades del marco.
+        /// <paramref name="center"/> es el centro de esa caja, en unidades del marco. Con <paramref name="alsoStop"/> ≥ 0, la caja
+        /// cuenta también esa parada (añadido de D-069 del 2026-11-08: con el Mapa v2, la parada siguiente que abre el mundo que
+        /// viene, para que su rótulo con «Faltan N» se vea).
         /// </summary>
         public static float WorldZoom(RiverMap map, RiverRoutes routes, RiverStopCatalog stops, int world, bool hasCanoe, Vector2 canoe,
-            float viewW, float viewH, out Vector2 center)
+            float viewW, float viewH, out Vector2 center, int alsoStop = -1)
         {
             float x0 = float.MaxValue;
             float y0 = float.MaxValue;
@@ -1090,7 +1092,7 @@ namespace AF.UI
             {
                 RiverStop? stop = stops.At(n);
                 RiverStopRoute? route = routes.At(n);
-                if (stop == null || route == null || stop.World != world)
+                if (stop == null || route == null || (stop.World != world && n != alsoStop))
                 {
                     continue;
                 }
@@ -1306,7 +1308,7 @@ namespace AF.UI
                 RiverStopRoute? goal = _routes.Goal;
                 _zoom = goal != null && _progress != null && OnGoalLeg(_routes, _progress.MaxLevel)
                     ? GoalZoom(map, goal, _hasCanoe, _canoeMap, _viewW, _viewH, out center) // FX13: el tramo hasta la naciente
-                    : WorldZoom(map, _routes, _stops, _world, _hasCanoe, _canoeMap, _viewW, _viewH, out center);
+                    : WorldZoom(map, _routes, _stops, _world, _hasCanoe, _canoeMap, _viewW, _viewH, out center, NextWorldStop(_stops));
                 SamplesFrame(ref _zoom, ref center);
             }
             else
@@ -1354,8 +1356,10 @@ namespace AF.UI
             Vector2 c = space.ToLocal(center);
             Vector2 offset = new Vector2((_viewW * 0.5f) - c.x, (_viewH * 0.5f) + c.y);
             MarkersFrame(ref offset);
+            FrameRemaining(ref offset); // añadido de D-069 del 2026-11-08: la parada siguiente con «Faltan N» y la canoa, a la vista
             SetOffset(offset);
             PlatesFitView(); // FX10: las placas de los mundos futuros, enteras a la vista con este encuadre
+            RemainingLabelFitView(); // añadido de D-069 del 2026-11-08: el rótulo con «Faltan N», entero a la vista (RiverMapScreen.Towns.cs)
         }
 
         // Coloca el contenido con su esquina en offset (dp, y hacia abajo), sin salirse del mapa, y decide «Volver a la canoa»: en

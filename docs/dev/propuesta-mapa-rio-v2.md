@@ -216,6 +216,7 @@ Capi **no habla en el Mapa** (Q3-A de D-013: la voz es de TiTino). Se propone qu
 - **Llegada:** un acercamiento de 1,15 y una vuelta de 300 ms al encuadre.
 - **Cambio de mundo:** el travelling largo que ya existe en el banner (≤ 4 s), con un plano final de Capi, la tripulación y la bandera.
 - **Tiempo:** ningún momento retrasa «Jugar» más de **400 ms** sobre D-053 (amarrar la muestra), y el toque lo acelera ×2, como hoy.
+  - *Nota del 2026-11-08 (añadido de D-069, observación 3 de la prueba de la 1.1):* el viaje de los Mapas con viaje pasa a 450 ms por boya (4,5 s un tramo, entre 3 y 6 s), y el toque acelera ×3 para que con un toque «Jugar» llegue a los 1,5 s de antes.
 - **Reducir movimiento:** sin movimientos de cámara: cortes.
 
 ---

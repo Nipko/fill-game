@@ -412,9 +412,13 @@ namespace AF.Tests.PlayMode
         public IEnumerator PauseMap_At41_ThePlatesWholeInTheView_ClearOfTheHomeWindow_AlsoWhileCatchingUp()
         {
             MapArtRule.ForceProvisional = true; // la casa con su arte: la ventanita sale (como en el teléfono)
-            foreach ((int max, int seen) in new[] { (40, 30), (40, 0), (40, 40), (39, 39), (20, 20), (58, 58) })
+            // Añadido de D-069 del 2026-11-08: con el Mapa v2, «Faltan N» va en el rótulo de la parada siguiente (también en un
+            // abanico) y su placa ya no empuja el encuadre: la del mundo 4 cabe sin moverse. El caso del teléfono, que pide mover una
+            // placa, se repite con el Mapa de la 1.0 (ui_map_v2 apagada), que es donde se vio.
+            foreach ((int max, int seen, bool v2) in new[] { (40, 30, true), (40, 0, true), (40, 40, true), (39, 39, true), (20, 20, true), (58, 58, true), (40, 30, false) })
             {
-                string at = "pausa del 41 con max " + max + " y map_seen_level " + seen;
+                string at = "pausa del 41 con max " + max + " y map_seen_level " + seen + (v2 ? string.Empty : ", Mapa de la 1.0");
+                GameBootstrap.MapLiveConfigOverride = v2 ? null : new MapLiveConfig { UiMapV2 = false };
                 yield return OpenFromPause41(max, seen);
                 RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
                 Assert.That(map.Source, Is.EqualTo(MapOpenSource.Pause));
@@ -431,7 +435,7 @@ namespace AF.Tests.PlayMode
                     Assert.That(Worlds(map), Does.Contain(4), at + ": la placa del mundo 4 (Trapecio)");
                 }
 
-                if (phone)
+                if (phone && !v2)
                 {
                     // El caso del teléfono (observación 3): la placa del 4 heredaba el sitio de la del 3, cortada por la derecha.
                     Assert.That(moves, Is.GreaterThan(0), at + ": al abrir, el arreglo mueve alguna placa para que quede entera");

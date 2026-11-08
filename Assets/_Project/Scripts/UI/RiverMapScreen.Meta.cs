@@ -248,18 +248,112 @@ namespace AF.UI
             StopMarker m = _markers[_prizeMarker];
             // Contra el visor, en mundo: el encuadre (MarkersFrame) corre la vista después de colocar las mini cuias, así que se
             // vuelve a mirar en cada Tick (sin asignar memoria; solo escribe si cambia de lado).
-            bool left = _viewport.InverseTransformPoint(m.Root.position).x < _viewport.rect.center.x;
+            Vector2 mv = _viewport.InverseTransformPoint(m.Root.position);
+            bool left = mv.x < _viewport.rect.center.x;
             float edge = ProceduralArt.MiniCuiaWidthDp * 0.5f;
             var pivot = new Vector2(left ? 0f : 1f, 0f);
+            var at = new Vector2(left ? -edge : edge, PrizePillAboveDp);
+
+            // Añadido de D-069 del 2026-11-08 (observación 4 de la prueba de la 1.1), con el Mapa v2: encima de su mini cuia hacia el
+            // centro de la vista, como siempre; si ahí pisa «Andes ↑» (fijo arriba de la vista), la canoa con su tripulación, una placa
+            // de mundo o un pueblo con su rótulo, hacia el otro lado y, si no, debajo (y debajo del rótulo de la parada, si lo lleva
+            // ahí), el primero libre y entero a lo ancho de la vista; si ninguno lo está, el primero que no pisa «Andes ↑».
+            if (_live)
+            {
+                Vector2 c = m.Root.anchoredPosition;
+                Vector2 size = _prizePill.sizeDelta;
+                int pick = -1;
+                int fallback = -1;
+                for (int k = 0; k < 4 && pick < 0; k++)
+                {
+                    bool side = (k & 1) == 0 ? left : !left;
+                    var pv = new Vector2(side ? 0f : 1f, k < 2 ? 0f : 1f);
+                    var a = new Vector2(side ? -edge : edge, k < 2 ? PrizePillAboveDp : PrizePillBelowY(_prizeMarker));
+                    if (PrizePillHitsAndes(mv, m.Root, pv, a))
+                    {
+                        continue;
+                    }
+
+                    if (fallback < 0)
+                    {
+                        fallback = k;
+                    }
+
+                    var local = new Rect(c.x + a.x - (pv.x * size.x), c.y + a.y - (pv.y * size.y), size.x, size.y);
+                    if (!PrizeSpotTaken(local) && !PrizePillOutOfView(mv, m.Root, pv, a))
+                    {
+                        pick = k;
+                    }
+                }
+
+                int use = pick >= 0 ? pick : (fallback >= 0 ? fallback : 0);
+                bool useLeft = (use & 1) == 0 ? left : !left;
+                pivot = new Vector2(useLeft ? 0f : 1f, use < 2 ? 0f : 1f);
+                at = new Vector2(useLeft ? -edge : edge, use < 2 ? PrizePillAboveDp : PrizePillBelowY(_prizeMarker));
+            }
+
             if (_prizePill.pivot != pivot)
             {
                 _prizePill.pivot = pivot;
-                _prizePill.anchoredPosition = new Vector2(left ? -edge : edge, PrizePillAboveDp);
             }
-            else if (_prizePill.anchoredPosition.y != PrizePillAboveDp)
+
+            if ((_prizePill.anchoredPosition - at).sqrMagnitude > 1e-6f)
             {
-                _prizePill.anchoredPosition = new Vector2(left ? -edge : edge, PrizePillAboveDp);
+                _prizePill.anchoredPosition = at;
             }
+        }
+
+        /// <summary>La píldora del Premio del mundo va debajo de su mini cuia (pisaría «Andes ↑» encima; tests).</summary>
+        internal bool PrizePillBelow => _prizePill != null && _prizePill.pivot.y > 0.5f;
+
+        private static readonly Vector3[] s_prizeCorners = new Vector3[4];
+
+        // La píldora con pivot y at sobre la mini cuia (en mv, coordenadas del visor) pisaría «Andes ↑». Sin asignaciones.
+        private bool PrizePillHitsAndes(Vector2 mv, RectTransform marker, Vector2 pivot, Vector2 at)
+        {
+            TextMeshProUGUI? andes = AndesLabel;
+            if (_prizePill == null || andes == null || !andes.gameObject.activeInHierarchy || andes.text.Length == 0)
+            {
+                return false;
+            }
+
+            float k = _viewport.lossyScale.x > 1e-6f ? marker.lossyScale.x / _viewport.lossyScale.x : 1f;
+            Vector2 size = _prizePill.sizeDelta * k;
+            Vector2 p = mv + (at * k);
+            var pill = new Rect(p.x - (pivot.x * size.x), p.y - (pivot.y * size.y), size.x, size.y);
+            andes.rectTransform.GetWorldCorners(s_prizeCorners);
+            Vector2 a = _viewport.InverseTransformPoint(s_prizeCorners[0]);
+            Vector2 b = _viewport.InverseTransformPoint(s_prizeCorners[2]);
+            Rect r = Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+            return pill.Overlaps(r);
+        }
+
+        // La píldora con pivot y at sobre la mini cuia (en mv, coordenadas del visor) se saldría por un lado de la vista.
+        private bool PrizePillOutOfView(Vector2 mv, RectTransform marker, Vector2 pivot, Vector2 at)
+        {
+            if (_prizePill == null)
+            {
+                return false;
+            }
+
+            float k = _viewport.lossyScale.x > 1e-6f ? marker.lossyScale.x / _viewport.lossyScale.x : 1f;
+            float w = _prizePill.sizeDelta.x * k;
+            float x = mv.x + (at.x * k) - (pivot.x * w);
+            Rect view = _viewport.rect;
+            return x < view.xMin || x + w > view.xMax;
+        }
+
+        // Debajo de la mini cuia i o, si su rótulo de parada va debajo, debajo de él.
+        private float PrizePillBelowY(int i)
+        {
+            float y = -(ProceduralArt.MiniCuiaHeightDp * 0.5f) - 4f;
+            if (i >= 0 && i < _stopLabels.Count && _stopLabels[i].Pill.gameObject.activeSelf && _stopLabels[i].Pill.anchoredPosition.y < 0f)
+            {
+                RectTransform l = _stopLabels[i].Pill;
+                y = Mathf.Min(y, l.anchoredPosition.y - (l.sizeDelta.y * 0.5f) - 2f);
+            }
+
+            return y;
         }
 
         private void EnsureBadges(int i, RectTransform root)

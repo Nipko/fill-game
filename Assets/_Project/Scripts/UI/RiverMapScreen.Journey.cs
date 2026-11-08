@@ -41,8 +41,11 @@ namespace AF.UI
         /// <summary>Anticipación antes de que la canoa salga (ms) [P]: el viaje empieza a moverse en ≤ 300 ms (D-053).</summary>
         public const int JourneyLeadMs = 250;
 
-        /// <summary>Un toque durante el viaje lo acelera a este ritmo (×) [P]; nunca lo salta (D-053).</summary>
-        public const float JourneyTapSpeed = 2f;
+        /// <summary>
+        /// Un toque durante el viaje lo acelera a este ritmo (×) [P]; nunca lo salta (D-053). Con el viaje de 4,5 s (añadido de D-069
+        /// del 2026-11-08), un toque al abrir deja «Jugar» a los 1,5 s, como antes del cambio (era 2× sobre 1,5 s).
+        /// </summary>
+        public const float JourneyTapSpeed = 3f;
 
         /// <summary>Entrada de «Jugar» y «←» al llegar la canoa (ms) [P].</summary>
         public const float JourneyButtonInMs = 250f;
