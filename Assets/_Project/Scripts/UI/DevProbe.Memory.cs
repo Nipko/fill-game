@@ -38,6 +38,9 @@ namespace AF.UI
     /// Memory» (<c>null</c> si la plataforma no los tiene); <c>rt</c>, <c>rt_count</c> y <c>rt_top</c>, los RenderTexture vivos (el
     /// búfer intermedio de la cámara, si lo hubiera, sale aquí con su tamaño) y los cuatro mayores como <c>"nombre AnchoxAlto MiB"</c>.
     /// Van al final de la línea, antes de los miembros propios del momento.</item>
+    /// <item>Inventario (observación 5 de la prueba de la 1.1): <c>gfx_tex2d</c>, <c>gfx_tex2d_kib</c>, <c>gfx_mesh</c>,
+    /// <c>gfx_mesh_kib</c>, <c>gfx_mat</c>, <c>gfx_mat_kib</c>, <c>gfx_sprite</c>, <c>gfx_canvas</c> y <c>gfx_canvas_kib</c>, justo
+    /// antes del detalle (<see cref="FormatGfxInventory"/>).</item>
     /// </list>
     /// Para leerlas en el teléfono: <c>adb logcat -d -s Unity | grep "AF_PERF {\"event\":\"mem\""</c>; junto a
     /// <c>adb shell dumpsys meminfo -d com.amazonfill.dev</c> en los mismos momentos.
@@ -117,7 +120,8 @@ namespace AF.UI
 
             MemSample now = SampleMemory();
             s_memPeak = MemSample.Max(s_memPeak, now);
-            string detail = FormatMemDetail(SampleMemDetail());
+            // gfx_* (DevProbe.GfxInventory.cs), delante del detalle: rt_top sigue cerrando la parte común.
+            string detail = FormatGfxInventory(SampleGfxInventory()).Substring(1) + "," + FormatMemDetail(SampleMemDetail());
             if (OsMemEnabled)
             {
                 detail += FormatOsMem(SampleOsMemory()); // --ei af_mem_os 1: el resumen de dumpsys meminfo del mismo momento
