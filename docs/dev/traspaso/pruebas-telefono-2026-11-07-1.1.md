@@ -4,7 +4,7 @@ El portátil sigue `guion-prueba-telefono-1.1.md` en `integracion-fase1-fase2`, 
 
 Capturas y logcat en el portátil: `Logs/device/v11/` (fuera de git).
 
-**Lo que entrega por ahora:** los bloques 0, 1, 2 (sin el 2.4), 3 y 4. El 2.4, la tripulación, se hace con un build nuevo que ya trae `v11/mapa-m2-4b-ajustes` (`17f4a25b`, integrado mientras se probaba).
+**Lo que entrega:** los bloques 0 a 4. El 2.4, la tripulación, se hizo con un `dev.apk` nuevo, compilado desde `5dfa8efb`, que ya trae `v11/mapa-m2-4b-ajustes` (`17f4a25b`, integrado mientras se probaba).
 
 ## Resumen
 
@@ -13,7 +13,7 @@ Capturas y logcat en el portátil: `Logs/device/v11/` (fuera de git).
 | 0. Preparación, builds y compuertas | cumple | 1 |
 | 1. La curva 2 (301-700) | cumple | — |
 | 2. El Mapa v2 (2.1-2.3, 2.5-2.7) | cumple, salvo el viaje demasiado rápido y la memoria | 2, 3, 4, 5 |
-| 2.4 La tripulación | pendiente, con el build nuevo | — |
+| 2.4 La tripulación (build con M2-4b) | se unen, pero no se distinguen | 8, 9 |
 | 3. Liga, Aguas estancadas, borde a borde y orientación | cumple; Aguas estancadas, a aclarar | 6 |
 | 4. R8, humo del ensayo de release | cumple | 1, 7 |
 
@@ -80,7 +80,13 @@ Se jugó cada nivel con el jugador automático, con la solución del solver de A
    - El dueño lo miró las dos veces. Literal: «es demasiado rápido la subida de Capi, no sé si estaba en cámara rápida» y «por ser tan rápido no se apreciaron gestos ni notarlo».
    - **Preguntas abiertas:** si marea la cámara y si el ritmo de los gestos se siente bien. **No se pueden contestar,** porque el viaje es tan corto que no se ve ni la cámara ni los gestos. En la ráfaga de capturas tampoco se distinguen las burbujas.
    - **«Faltan N»:** dentro del rótulo de la parada siguiente, en dos líneas, cuando la parada está a la vista: «Lago de Tefé · faltan 4 niveles». Pero tras el viaje del 70, con la parada siguiente fuera de la vista, sale una placa arriba a la izquierda: «Faltan 10 niveles para Leticia». Queda además la placa «Premio del mundo · faltan N», encima del río (observación 4).
-4. **La tripulación (M2-4):** pendiente, con el build que trae M2-4b.
+4. **La tripulación (M2-4, con el `dev.apk` de `5dfa8efb`, que trae M2-4b): se unen, pero no se distinguen** (observaciones 8 y 9). Cada compañero se une una sola vez por perfil, así que para que lo viera el dueño se usaron perfiles nuevos con `pm clear`.
+   - **Tucán** (`af_max_level 21`): al abrir el Mapa en la vista Mundo, Capi hace ♥ (`mapa/tucan.png`). El Mapa abre muy alejado, con la canoa diminuta. **Pregunta 5 de M2-4, el dueño:** «vi el tucán muy pequeño, el remo es casi indistinguible; ahí debería hacerse como un zoom y luego volver a verlo al tamaño normal».
+   - **Tucuxi:** al ganar el 60 desde el 59, el viaje del 50 al 60 da `map_journey` `end` con `crew_joined` tucuxi, en 1,5 s. El dueño, en la segunda vez: «no se ve claro, no sé que sea un tucuxi, no se ve bien». Pide lo mismo: un zoom al trayecto y volver a la vista normal.
+   - **El río ya recorrido** (`mapa/rio-recorrido.png`; el dueño: «el río de atrás respecto al recorrido se ve raro»): el tramo hecho se dibuja como una franja marrón oscura con puntos encima del agua. Donde se une al río claro sale un bloque oscuro de borde recto, como un parche cuadrado (observación 9).
+   - **Rosa y el tucuxi junto a la parada:** van diminutos bajo la canoa, y la canoa con la bandera tapa el rótulo «Anavilhanas» (lo que avisaba el escritorio para el 56; observación 2).
+   - **Miquito:** en el viaje del 60 al 70, sin compañero nuevo (`crew_joined` null), a la escala del Mapa no se distingue ningún miquito en los árboles de la ráfaga (`mapa/viaje70b.png`).
+   - **Cambio de mundo, el 40:** sin ver. El perfil ya había pasado por el 41, y el banner se cerró al instante (`world_banner_closed`, `next` intro). Hace falta un perfil nuevo que llegue al 41 por primera vez.
 5. **Reducir movimiento: cumple.** Con la fila de Ajustes encendida y el 90 ganado, `map_journey` termina al instante, con `by` reduce (`elapsed_ms` 0). Después se apagó.
 6. **TalkBack (el dueño): cumple.** Lee los rótulos de los pueblos y anuncia la parada siguiente con lo que falta, y no lee los gestos de Capi. «Se une al viaje» queda para el 2.4.
 7. **Memoria** (`--ei af_mem_os 1`, un minuto quieto en cada sitio, `mapa/mem/`):
@@ -135,6 +141,9 @@ El dueño recorrió a mano el `rehearsal.apk`, con `pm clear`, porque el ensayo 
    - En el 95, la misma secuencia lo saca en los dos casos, como manda el código.
    - Hay que decidir cuál vale.
 7. **Baja. En el ensayo no se vio llegar un aviso programado.** Sin `af_dev_push`, el primero va a su hora y las alarmas son inexactas. Se puede comprobar dejando el ensayo instalado hasta el día siguiente, como el 14.2 de la jornada 6.
+
+8. **Media (el dueño). El tucán y el tucuxi no se distinguen al unirse al viaje:** el Mapa los enseña muy alejados y el viaje dura 1,5 s. El remo de Capi casi no se ve. Propuesta del dueño: cuando se une un compañero, hacer un zoom a la canoa y al trayecto y luego volver a la vista normal.
+9. **Baja (el dueño). El tramo de río ya recorrido se ve raro:** una franja marrón oscura con puntos sobre el agua, y al final un bloque oscuro de borde recto sobre el río claro (`mapa/rio-recorrido.png`).
 
 ## Notas de la herramienta (no son defectos del juego)
 
