@@ -1697,6 +1697,11 @@ namespace AF.UI
                     store.TrySave(profile); // extra af_max_level de los builds de desarrollo [P] (M3.3)
                 }
 
+                if (ApplyDevLogbookDay(profile, clock, DevLogbookDay()))
+                {
+                    store.TrySave(profile); // extra af_logbook_day (Q-M6, GameBootstrap.AvatarFrames.cs)
+                }
+
                 // B8 (GameBootstrap.Cloud.cs): la firma del perfil y la fusión con la nube, antes de crear ningún servicio. Con <13
                 // guardado, sin nube (B12).
                 _dataServicesAtBoot = DataServicesAllowedAtBoot(profile);
@@ -2657,6 +2662,7 @@ namespace AF.UI
             PersistNow("destruir la escena");
             ClearA11y(); // B9: TalkBack no se queda con los nodos de esta escena (recarga por idioma o por borrar la cuenta)
             DisposeBilling(); // D-040: la tienda de Play de esta escena suelta su conexión con Play (GameBootstrap.Backend.cs)
+            _avatarScreen?.ReleaseFrameArt(); // Q-M6: los marcos de las celdas de «Tu avatar» (DontSave) no sobreviven a la escena
 
             // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
             // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya

@@ -794,6 +794,29 @@ namespace AF.Save
 
             node.Set("unlocked", unlocked);
             node.Set("seen", seen);
+
+            // Q-M6 (añadido del 2026-11-08) [P]: el marco de país, solo si hay algo (un perfil de la 1.0 se escribe igual).
+            if (a.Frame != null)
+            {
+                node.Set("frame", JsonNode.FromString(a.Frame));
+            }
+
+            if (a.FrameAt.HasValue)
+            {
+                node.Set("frame_at", Timestamp(a.FrameAt));
+            }
+
+            if (a.FramesSeen.Count > 0)
+            {
+                JsonNode framesSeen = JsonNode.NewArray();
+                for (int i = 0; i < a.FramesSeen.Count; i++)
+                {
+                    framesSeen.Add(JsonNode.FromString(a.FramesSeen[i]));
+                }
+
+                node.Set("frames_seen", framesSeen);
+            }
+
             return node;
         }
 
@@ -822,6 +845,19 @@ namespace AF.Save
                 if (AvatarData.IsId(list[i]))
                 {
                     a.AddSeen(list[i]);
+                }
+            }
+
+            // Q-M6 [P]: el marco, tolerante como el resto (un id con otra forma queda sin marco; una hora mal escrita, sin decidir).
+            string? frame = TolerantString(node, "frame");
+            a.Frame = AvatarData.IsId(frame) ? frame : null;
+            a.FrameAt = TolerantTimestamp(node, "frame_at");
+            TolerantStringList(node, "frames_seen", list);
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (AvatarData.IsId(list[i]))
+                {
+                    a.AddFrameSeen(list[i]);
                 }
             }
         }
