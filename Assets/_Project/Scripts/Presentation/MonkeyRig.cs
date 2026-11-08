@@ -116,6 +116,24 @@ namespace AF.Presentation
 
         /// <summary>Se balancea colgado (modelo <c>cuelga</c>; la firma de los de cola prensil, <c>cola_enrollada</c>).</summary>
         SwingBody = 5,
+
+        /// <summary>
+        /// Segundo gesto <c>duo</c> (F13; añadido de D-029 del 2026-11-08): la cabeza sube y el pecho late al compás, a la vez en
+        /// toda la tropa (sin el desfase de medio ciclo de los demás gestos).
+        /// </summary>
+        Duet = 6,
+
+        /// <summary>Segundo gesto <c>brincos</c>: dos brincos en su sitio de la rama, en ola por la tropa (TroopLayer los eleva).</summary>
+        Hop = 7,
+
+        /// <summary>Segundo gesto <c>colgado_de_la_cola</c>: suelta la liana con la mano, cuelga de la cola con los brazos abiertos y se mece ±16°.</summary>
+        TailHang = 8,
+
+        /// <summary>Segundo gesto <c>desperezo</c>: se estira a lo largo de la rama, las manos delante y la cabeza a nivel (nunca hacia abajo).</summary>
+        Stretch = 9,
+
+        /// <summary>Segundo gesto <c>vuelo</c>: un salto largo por la rama y vuelta a su sitio (TroopLayer lo desplaza; pose de <see cref="MonkeyRig.Leap"/>).</summary>
+        Leap = 10,
     }
 
     /// <summary>
@@ -542,6 +560,30 @@ namespace AF.Presentation
         /// <summary>Recorrido de la mano al rascarse (S, de su centro a cada extremo).</summary>
         public const float ScratchAmplitudeS = 0.08f;
 
+        /// <summary>Dúo: la cabeza sube 20° y late otros 8° al compás (28° como mucho, como mirar al cielo: <see cref="LookUpDeg"/>).</summary>
+        public const float DuetHeadDeg = 20f;
+
+        /// <summary>Dúo: lo que late la cabeza en cada golpe (grados).</summary>
+        public const float DuetBeatDeg = 8f;
+
+        /// <summary>Dúo: golpes por segundo del canto.</summary>
+        public const float DuetHz = 2.2f;
+
+        /// <summary>Dúo: el pecho se hincha hasta un 10 % de ancho en cada golpe.</summary>
+        public const float DuetPuff = 0.10f;
+
+        /// <summary>Desperezo: el torso se inclina hasta 32° hacia delante (la grupa arriba; la cabeza sigue a nivel).</summary>
+        public const float StretchLeanDeg = 32f;
+
+        /// <summary>Colgado de la cola: se mece ±16° alrededor del agarre (TroopLayer gira la raíz; el balanceo de siempre, ±10°).</summary>
+        public const float TailHangSwingDeg = 16f;
+
+        /// <summary>Golpe del dúo (0..1) en el reloj <paramref name="clockMs"/>: sube y baja <see cref="DuetHz"/> veces por segundo.</summary>
+        public static float DuetBeat(float clockMs)
+        {
+            return 0.5f + (0.5f * Mathf.Sin(clockMs * (Mathf.PI * 2f * DuetHz / 1000f)));
+        }
+
         /// <summary>
         /// Onda de los gestos lentos en el reloj <paramref name="clockMs"/>: −1 en 0 (y cada <see cref="GestureCycleMs"/>) y
         /// +1 a mitad de ciclo; suave en los extremos.
@@ -586,9 +628,69 @@ namespace AF.Presentation
                 case RestGesture.SwingTail:
                     RotateTail(ref p, a * SwingTailDeg * Wave(clockMs));
                     break;
+                case RestGesture.Duet:
+                    Duet(ref p, art, a, clockMs);
+                    break;
+                case RestGesture.Stretch:
+                    Stretch(ref p, a * (0.6f + (0.4f * Wave(clockMs))));
+                    break;
             }
 
             return p;
+        }
+
+        /// <summary>
+        /// Brinco (<see cref="RestGesture.Hop"/>): en el aire, <paramref name="air"/> (0..1) recoge las piernas bajo el cuerpo y
+        /// adelanta un poco las manos; en la rama, la pose sentada de siempre. La altura la pone TroopLayer.
+        /// </summary>
+        public static void HopTuck(ref MonkeyPose p, float air)
+        {
+            float a = Mathf.Clamp01(air);
+            p.BackLegTo += new Vector2(-0.04f, 0.08f) * a;
+            p.FrontLegTo += new Vector2(-0.02f, 0.08f) * a;
+            p.FrontArmTo += new Vector2(0.04f, 0.04f) * a;
+            p.BackArmTo += new Vector2(0.04f, 0.04f) * a;
+        }
+
+        /// <summary>
+        /// En pleno vuelo (<see cref="RestGesture.Leap"/>), <paramref name="k"/> de 0 (despega) a 1 (aterriza): el cuerpo
+        /// estirado, las manos por delante hacia donde aterriza, las piernas atrás y la cola de timón; el torso pasa de +12° a
+        /// −12° y la cabeza va a nivel o un poco arriba, nunca hacia abajo (D-002).
+        /// </summary>
+        public static MonkeyPose Leap(MonkeyArt art, float k)
+        {
+            MonkeyPose p = Walk(art, Mathf.PI * 0.5f, 0f);
+            float q = Mathf.Clamp01(k);
+            p.TorsoAngle = 12f - (24f * q);
+            p.HeadAngle = 4f * (1f - q);
+            p.FrontArmTo = new Vector2(0.36f, 0.30f);
+            p.BackArmTo = new Vector2(0.30f, 0.24f);
+            p.FrontLegTo = new Vector2(-0.38f, 0.16f);
+            p.BackLegTo = new Vector2(-0.44f, 0.20f);
+            return p;
+        }
+
+        // Dúo: la cabeza sube y late al compás y el pecho se hincha; la cabeza baja lo justo para no pasar de su caja de siempre.
+        private static void Duet(ref MonkeyPose p, MonkeyArt art, float a, float clockMs)
+        {
+            float beat = DuetBeat(clockMs);
+            TiltHeadUp(ref p, art, a * (DuetHeadDeg + (DuetBeatDeg * beat)));
+            p.TorsoSize.x *= 1f + (a * DuetPuff * beat);
+        }
+
+        // Desperezo: el torso se inclina hacia delante, las manos se estiran por la rama y las patas de atrás se alargan; la cabeza
+        // avanza con el torso, a nivel.
+        private static void Stretch(ref MonkeyPose p, float k)
+        {
+            p.TorsoAngle -= StretchLeanDeg * k;
+            p.TorsoCenter += new Vector2(0.06f, -0.04f) * k;
+            p.HeadCenter += new Vector2(0.14f, -0.12f) * k;
+            p.FrontArmFrom += new Vector2(0.04f, -0.04f) * k;
+            p.BackArmFrom += new Vector2(0.04f, -0.04f) * k;
+            p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, new Vector2(0.46f, 0.03f), k);
+            p.BackArmTo = Vector2.Lerp(p.BackArmTo, new Vector2(0.38f, 0.02f), k);
+            p.BackLegTo = Vector2.Lerp(p.BackLegTo, new Vector2(-0.16f, 0.02f), k);
+            p.FrontLegTo = Vector2.Lerp(p.FrontLegTo, new Vector2(0.02f, 0.01f), k);
         }
 
         /// <summary>
@@ -622,9 +724,24 @@ namespace AF.Presentation
                     p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, HangEatHand(p, clockMs), a);
                     p.HeadAngle = a * 4f * Bite(clockMs);
                     break;
+                case RestGesture.TailHang:
+                    TailHang(ref p, a, clockMs);
+                    break;
+                case RestGesture.Duet:
+                    Duet(ref p, art, a, clockMs);
+                    break;
             }
 
             return p;
+        }
+
+        // Colgado de la cola: la mano que agarraba suelta la liana y los dos brazos se abren a los lados, a la altura de los
+        // hombros (nada baja de la mano de soltar, A7), con un vaivén lento; la cola sigue enroscada en el agarre.
+        private static void TailHang(ref MonkeyPose p, float a, float clockMs)
+        {
+            float w = 0.04f * Wave(clockMs);
+            p.BackArmTo = Vector2.Lerp(p.BackArmTo, p.BackArmFrom + new Vector2(-0.34f, 0.12f + w), a);
+            p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, p.FrontArmFrom + new Vector2(0.30f, 0.10f - w), a);
         }
 
         /// <summary>Bocado (0 masticando, 1 en la boca): sube y baja en <see cref="EatCycleMs"/>.</summary>
@@ -653,13 +770,9 @@ namespace AF.Presentation
         private static void LookAround(ref MonkeyPose p, MonkeyArt art, float a, float clockMs)
         {
             float w = Wave(clockMs);
-            float half = 0.5f * art.HeadS;
             if (w >= 0f)
             {
-                p.HeadAngle = a * LookUpDeg * w;
-                float r = p.HeadAngle * Mathf.Deg2Rad;
-                float grow = half * ((Mathf.Cos(r) + Mathf.Sin(r)) - LookAroundBoxBefore);
-                p.HeadCenter.y -= Mathf.Max(0f, grow);
+                TiltHeadUp(ref p, art, a * LookUpDeg * w);
                 return;
             }
 
@@ -669,6 +782,15 @@ namespace AF.Presentation
                 p.HeadBack = true;
                 p.HeadCenter.x -= 2f * SkullOffsetS * art.HeadS; // el cráneo (4 px detrás del centro de la celda) no salta
             }
+        }
+
+        // La cabeza sube deg grados y baja lo justo para que su caja girada no pase de la de antes (la misma altura sentado).
+        private static void TiltHeadUp(ref MonkeyPose p, MonkeyArt art, float deg)
+        {
+            p.HeadAngle = deg;
+            float r = deg * Mathf.Deg2Rad;
+            float grow = 0.5f * art.HeadS * ((Mathf.Cos(r) + Mathf.Sin(r)) - LookAroundBoxBefore);
+            p.HeadCenter.y -= Mathf.Max(0f, grow);
         }
 
         // Caja de la cabeza girada 14° (el mirar al cielo de antes), en medios lados: cos 14° + sin 14°.
