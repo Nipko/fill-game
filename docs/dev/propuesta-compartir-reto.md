@@ -2,7 +2,7 @@
 
 - **Fecha:** 2026-11-07.
 - **Origen:** `docs/marketing/promocion-organica.md` §3.1. El dueño eligió esta palanca la primera («Compartir el Reto»).
-- **Estado:** propuesta. **No cambia el GDD ni el código hasta que el dueño responda §7.** Después, el GDD lo edita el carril de documentación y el código, el escritorio.
+- **Estado:** **aceptada por el dueño el 2026-11-07 con las recomendadas de §7** («Sí, las recomendadas»). La entrada de `decisiones.md` está lista en §9 para que el carril de documentación la pase (número propuesto D-070, el siguiente libre en `origin/main`), junto con los cambios del GDD; el código lo hace el escritorio.
 - Convención: [V] comprobado en el repositorio o en una fuente primaria · [NV] sin confirmar · [P] propuesta.
 
 ## 1. Resumen para el dueño
@@ -130,3 +130,34 @@ Una imagen con la silueta del tablero resuelto y el logotipo llama más que el t
 - El patrón de Wordle (la tarjeta sin destripes como motor de crecimiento): `docs/marketing/promocion-organica.md` §3.1 y sus fuentes.
 - El uso de WhatsApp en Brasil: la misma, §4.1 [NV, fuentes de proveedores].
 - El código citado: `DailyChallengeScreen.cs`, `DailyStampCalendar.cs` y `AndroidAppSettings.cs` en `origin/main` del 2026-11-07.
+
+## 9. Decisión del dueño (para `decisiones.md`)
+
+Texto listo para pegar. El número es el siguiente libre en `origin/main` el 2026-11-07; si otra decisión lo ocupa antes, se corre.
+
+```markdown
+## D-070 · Compartir el Reto del río al estilo Wordle (1.1)
+
+- **Fecha:** 2026-11-07.
+- **Origen:** `docs/marketing/promocion-organica.md` §3.1, la palanca que el dueño eligió primero. Propuesta: `docs/dev/propuesta-compartir-reto.md`.
+- **Estado:** decidida por el dueño el 2026-11-07 con las recomendadas («Sí, las recomendadas»):
+  - **P1 (a):** la primera versión comparte texto con cuadrados de color. La imagen, en la siguiente y con datos.
+  - **P2 (a):** el texto lleva los vertidos, las ayudas y la racha (la racha solo desde 2). Sin el tiempo.
+  - **P3 (a):** el botón «Compartir» sale en el calendario de sellos tras ganar y en el del Reto ya sellado. Nunca tras perder ni en la campaña.
+  - **P4 (a):** el enlace es `tintalu.com/r`, que hace una 302 a la ficha de Play con `referrer=utm_source=share&utm_medium=reto&utm_campaign=daily`. Ruta nueva en `infra/web`, que despliega el dueño.
+  - **P5 (a):** compartir no da premio.
+  - **P6 (a):** clave de Remote Config `ui_share_daily_enabled` (bool, default `true`) en 08 §9.
+  - **P7 (a):** entra en la 1.1 si no retrasa D-068 ni D-069; si no, en la 1.2.
+  - **P8 (a):** las bandas del Reto no cambian (decisión cerrada 2 de 06). Las olas del texto dicen la banda.
+- **Sin SDK, paquete ni permiso nuevos:** se comparte con un `Intent.ACTION_SEND` (`text/plain`, con `createChooser`) lanzado desde C#, como `AndroidAppSettings`. El manifiesto no cambia.
+- **Nunca se comparten** el nombre, el avatar, el país, el puesto de la Liga ni ningún dato de la cuenta.
+- **Analítica:** evento nuevo `af_share {surface: "daily", date, band, result: "win", pours, aids}` en 08 §8.2, que se emite al tocar «Compartir».
+- **Cambios del GDD** (carril de documentación): 06 §4.1 (la pantalla y la fila de Analítica), 08 §8.2 y 08 §9.
+- **Plan** (propuesta §6):
+  - el constructor del texto en AF.LiveOps, con la tabla de colores y sus tests;
+  - `IShareSheet` y `AndroidShareSheet`;
+  - el botón en `DailyStampCalendar`;
+  - los contadores de vertidos y ayudas, que se guardan en `daily_challenge.in_progress` si se reanuda;
+  - los textos `daily_share_*` en es-419, en y pt-BR, revisados como pide D-054;
+  - la ruta `/r`.
+```
