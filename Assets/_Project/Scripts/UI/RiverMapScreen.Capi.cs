@@ -60,10 +60,10 @@ namespace AF.UI
         /// </summary>
         public const float CamCloseUpZoom = 2.5f;
 
-        /// <summary>Constante de tiempo de la entrada del primer plano (ms) [P]: a los ~600 ms está casi del todo.</summary>
+        /// <summary>Constante de tiempo de la entrada del primer plano (ms) [P]: a los ~900 ms está del todo.</summary>
         public const float CamCloseUpInMs = 200f;
 
-        /// <summary>Constante de tiempo de la vuelta suave del primer plano a la vista normal (ms) [P]: unos 900 ms.</summary>
+        /// <summary>Constante de tiempo de la vuelta suave del primer plano a la vista normal (ms) [P]: desde ×2,5, unos 1,5 s.</summary>
         public const float CamCloseUpOutMs = 300f;
 
         /// <summary>Fundido de la luz al cambiar de mundo dentro del Mapa (ms; propuesta §3.3, pendiente de M2-1).</summary>
@@ -835,7 +835,7 @@ namespace AF.UI
             {
                 float tc = want > _closeZoom ? CamCloseUpInMs : CamCloseUpOutMs;
                 _closeZoom += (want - _closeZoom) * (1f - Mathf.Exp(-Mathf.Max(0f, dtMs) / tc));
-                if (Mathf.Abs(_closeZoom - want) < 0.003f || !closeOk)
+                if (Mathf.Abs(_closeZoom - want) < 0.01f || !closeOk)
                 {
                     _closeZoom = want;
                 }
