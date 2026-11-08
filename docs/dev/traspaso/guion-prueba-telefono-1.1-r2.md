@@ -22,7 +22,7 @@ adb install -r Builds/Android/dev.apk
   - `v11/mapa-j1-memoria`;
   - `v11/mapa-j1-arreglos`;
   - `v11/miquitos-segundo-gesto`;
-  - y, si el dueño lo confirma (Q-M6 frente a Q-AV-11), `v11/marco-de-pais`. Si no está, salta el punto 5.
+  - `v11/marco-de-pais` (el dueño confirmó el 2026-11-08 adelantar el marco a la 1.1).
 - `<act>` = `com.amazonfill.dev/com.unity3d.player.UnityPlayerGameActivity`.
 - **Perfil limpio:** `pm clear` borra el progreso; lo repone `--ei af_max_level N`. Cada compañero de la tripulación se une una sola vez por perfil, así que para repetir algo hay que hacer otro `pm clear`.
 
@@ -92,7 +92,7 @@ Con `pm clear` y `--ei af_mem_os 1 --ei af_max_level 66`, en OpenGL ES 3:
 - **Es fuga** si sube más de 3 MB por vuelta.
 - Anota lo que el v2 suma frente al de la 1.0.
 
-## 5. El marco de país (Q-M6; solo si `v11/marco-de-pais` está integrado)
+## 5. El marco de país (Q-M6)
 
 1. **El marco de la Bitácora:** `--ei af_max_level 57 --ei af_logbook_day 30`. Abre la libreta, sella la casilla 30 y comprueba:
    - el retrato con el marco de Manaos;
@@ -133,7 +133,7 @@ Solo si el dueño ya dio de alta la huella SHA-1 de la clave de depuración del 
 ## 8. Qué devolver
 
 - Cumple o no cumple en 1-7, con su captura o su línea de logcat.
-- Las respuestas a las preguntas: la cámara, el ritmo, el tiempo del viaje, el tucán, el tucuxi, el miquito, los gestos de los miquitos y, si está integrado, el marco.
+- Las respuestas a las preguntas: la cámara, el ritmo, el tiempo del viaje, el tucán, el tucuxi, el miquito, los gestos de los miquitos y el marco.
 - La tabla de memoria de las tres vueltas, del v2 y de la 1.0.
 - Las observaciones numeradas.
 
