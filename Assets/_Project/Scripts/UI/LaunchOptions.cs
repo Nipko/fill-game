@@ -153,6 +153,22 @@ namespace AF.UI
         /// </summary>
         public const string IntentExtraLeagueFake = "af_league_fake";
 
+        /// <summary>
+        /// Extra de intent (booleano) de los builds de desarrollo (observación 5 de la prueba de la 1.1; añadido de D-069 del
+        /// 2026-11-08): con <c>--ez af_map_v1 true</c>, el Mapa del río se abre como el de la 1.0, como con <c>ui_map_v2</c> apagada en
+        /// Remote Config, para medir la memoria de referencia en el teléfono. Nunca se lee en release (<see cref="ResolveMapV1"/>).
+        /// </summary>
+        public const string IntentExtraMapV1 = "af_map_v1";
+
+        /// <summary><c>af_map_v1</c> forzado por un test; null = el extra. Fuera de desarrollo no cuenta.</summary>
+        public static bool? MapV1Override { get; set; }
+
+        /// <summary>El Mapa de la 1.0 por la sonda (<c>af_map_v1</c>): solo en desarrollo.</summary>
+        public static bool ResolveMapV1(bool development)
+        {
+            return development && (MapV1Override ?? ReadIntentBool(IntentExtraMapV1));
+        }
+
         /// <summary><c>af_league</c> forzado por un test; null = el extra. Fuera de desarrollo no cuenta.</summary>
         public static bool? LeagueEnabledOverride { get; set; }
 
@@ -411,6 +427,7 @@ namespace AF.UI
             FakeStoreOverride = null;
             LeagueEnabledOverride = null;
             LeagueFakeOverride = null;
+            MapV1Override = null;
             CaptureOverride = null;
         }
 

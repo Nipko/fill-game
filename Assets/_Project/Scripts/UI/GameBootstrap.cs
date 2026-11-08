@@ -1151,7 +1151,7 @@ namespace AF.UI
             map.LiveRequested = MapLiveSettings.UiMapV2; // D-069, P8 (a): el Mapa v2 o, apagada, el de la 1.0 (GameBootstrap.MapLive.cs)
             map.TownsRequested = MapLiveSettings.UiMapTowns; // D-069, M2-2: los pueblos de paso y la excursión local
             map.CrewRequested = MapLiveSettings.UiMapCrew; // D-069, M2-4: la tripulación (el tucán, el tucuxi y el cameo de los miquitos)
-            map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable, DailyPlayUnlocked); // «Jugar» como en el inicio (D-032, punto 6)
+            OpenMapPooled(map, source, stops, progress, play, app.PlayLevelAvailable); // «Jugar» como en el inicio (D-032, punto 6); GameBootstrap.MapMemory.cs
             if (app.Screen != AppScreen.Level)
             {
                 // La ventanita de casa se va ya, antes del siguiente paso de TiTino en el inicio: con la secuencia del Mapa del 10,
@@ -1161,7 +1161,8 @@ namespace AF.UI
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
-            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() + map.TownsMemJson() + map.CapiMemJson() + map.CrewMemJson() : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
+            MapMemOpened(play); // la vuelta y la línea map_settled (GameBootstrap.MapMemory.cs; observación 5 de la prueba de la 1.1)
+            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() + map.TownsMemJson() + map.CapiMemJson() + map.CrewMemJson() + map.GfxMemJson(_mapOpens) : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
             TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;
@@ -1178,7 +1179,8 @@ namespace AF.UI
             }
 
             MapCloseStats stats = map.Close();
-            DevProbe.Mem("map_close"); // D-069, M2-1: el arte del Mapa v2 se soltó (DevProbe.MapLive.cs)
+            MapMemClosed();
+            DevProbe.Mem("map_close", 0, DevProbe.Enabled ? map.GfxMemJson(_mapOpens).Substring(1) : null); // D-069, M2-1: el arte del Mapa v2 se soltó; map_* a cero (RiverMapScreen.Memory.cs)
             IProgressStore? progress = _progress;
             if (progress != null)
             {
@@ -2028,6 +2030,8 @@ namespace AF.UI
             {
                 _mapScreen.Tick(dt);
             }
+
+            MapMemTick(Time.unscaledDeltaTime * 1000f); // AF_PERF mem map_settled y map_after (GameBootstrap.MapMemory.cs)
 
             if (_settingsScreen != null && _settingsScreen.Visible)
             {

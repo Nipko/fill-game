@@ -38,6 +38,9 @@ namespace AF.UI
     /// Memory» (<c>null</c> si la plataforma no los tiene); <c>rt</c>, <c>rt_count</c> y <c>rt_top</c>, los RenderTexture vivos (el
     /// búfer intermedio de la cámara, si lo hubiera, sale aquí con su tamaño) y los cuatro mayores como <c>"nombre AnchoxAlto MiB"</c>.
     /// Van al final de la línea, antes de los miembros propios del momento.</item>
+    /// <item>Inventario (observación 5 de la prueba de la 1.1): <c>obj_tex2d</c>, <c>obj_tex2d_kib</c>, <c>obj_mesh</c>,
+    /// <c>obj_mesh_kib</c>, <c>obj_mat</c>, <c>obj_mat_kib</c>, <c>obj_sprite</c>, <c>obj_canvas</c> y <c>obj_canvas_kib</c>, justo
+    /// antes del detalle (<see cref="FormatGfxInventory"/>), en todos los momentos salvo <c>level</c> y <c>daily</c>.</item>
     /// </list>
     /// Para leerlas en el teléfono: <c>adb logcat -d -s Unity | grep "AF_PERF {\"event\":\"mem\""</c>; junto a
     /// <c>adb shell dumpsys meminfo -d com.amazonfill.dev</c> en los mismos momentos.
@@ -117,7 +120,13 @@ namespace AF.UI
 
             MemSample now = SampleMemory();
             s_memPeak = MemSample.Max(s_memPeak, now);
+            // obj_* (DevProbe.GfxInventory.cs), delante del detalle: rt_top sigue cerrando la parte común. Recorre todos los objetos:
+            // no en las de nivel ni del Reto, que no lo necesitan y medirían también ese tirón.
             string detail = FormatMemDetail(SampleMemDetail());
+            if (GfxInventoryAt(at))
+            {
+                detail = FormatGfxInventory(SampleGfxInventory()).Substring(1) + "," + detail;
+            }
             if (OsMemEnabled)
             {
                 detail += FormatOsMem(SampleOsMemory()); // --ei af_mem_os 1: el resumen de dumpsys meminfo del mismo momento
@@ -128,6 +137,12 @@ namespace AF.UI
             LastMemLine = line;
             Write(line);
             return line;
+        }
+
+        /// <summary>Si la línea <c>mem</c> del momento <paramref name="at"/> lleva el inventario <c>obj_*</c>: todas salvo <c>level</c> y <c>daily</c>.</summary>
+        internal static bool GfxInventoryAt(string at)
+        {
+            return at != "level" && at != "daily";
         }
 
         /// <summary>
