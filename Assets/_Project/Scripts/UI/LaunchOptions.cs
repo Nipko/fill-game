@@ -160,6 +160,28 @@ namespace AF.UI
         /// </summary>
         public const string IntentExtraMapV1 = "af_map_v1";
 
+        /// <summary>
+        /// Extra de intent (int) de los builds de desarrollo (F13; añadido de D-029 del 2026-11-08): con <c>--ei af_troop_gesture 2</c>
+        /// la tropa hace el segundo gesto de su especie en todos los niveles que lo admiten, y con 1 el primero; sin él (o con 0), la
+        /// regla de <see cref="FaunaGestureRule"/>. Nunca se lee en release (<see cref="ResolveTroopGesture"/>).
+        /// </summary>
+        public const string IntentExtraTroopGesture = "af_troop_gesture";
+
+        /// <summary><c>af_troop_gesture</c> forzado por un test (0, 1 o 2); null = el extra. Fuera de desarrollo no cuenta.</summary>
+        public static int? TroopGestureOverride { get; set; }
+
+        /// <summary>El gesto de la tropa forzado por la sonda (<c>af_troop_gesture</c>: 1 o 2; 0 la regla): solo en desarrollo.</summary>
+        public static int ResolveTroopGesture(bool development)
+        {
+            if (!development)
+            {
+                return 0;
+            }
+
+            int v = TroopGestureOverride ?? ReadIntentInt(IntentExtraTroopGesture);
+            return v == 1 || v == 2 ? v : 0;
+        }
+
         /// <summary><c>af_map_v1</c> forzado por un test; null = el extra. Fuera de desarrollo no cuenta.</summary>
         public static bool? MapV1Override { get; set; }
 
@@ -428,6 +450,7 @@ namespace AF.UI
             LeagueEnabledOverride = null;
             LeagueFakeOverride = null;
             MapV1Override = null;
+            TroopGestureOverride = null;
             CaptureOverride = null;
         }
 

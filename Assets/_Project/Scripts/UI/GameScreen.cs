@@ -2383,13 +2383,20 @@ namespace AF.UI
                 input.Pair = species.HasTrait("colas_entrelazadas"); // la pareja se sienta junta con las colas trenzadas
             }
 
-            _troop.Prepare(species);
+            // F13 (añadido de D-029 del 2026-11-08): el segundo gesto de la especie, desde la mitad de su primer mundo largo y en
+            // niveles alternos; en desarrollo, af_troop_gesture lo fuerza.
+            int forcedGesture = LaunchOptions.ResolveTroopGesture(Debug.isDebugBuild);
+            _troop.Prepare(species, FaunaGestureRule.UsesSecond(species, flow.LevelNumber, forcedGesture));
             _intro.ReduceMotion = flow.ReduceMotion;
 
             // El agua del mundo del nivel (07 §2.1; mundo 3, agua negra), no la del primer paquete del catálogo.
             Color water = Palette.WaterBase(flow.Level.WaterBase);
             IntroWaterColor = water;
             _intro.Start(_views, flow.Session.Current, water, durationMs);
+            if (species != null)
+            {
+                _probe.TroopGesture(flow.LevelNumber, species, _troop, _intro.Plan, flow.ReduceMotion, forcedGesture);
+            }
         }
 
         // D-021: ¿va este intento con la tropa lateral? Solo en primer intento, con el tablero en 3 filas sin la franja de la

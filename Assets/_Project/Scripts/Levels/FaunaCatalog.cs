@@ -193,6 +193,19 @@ namespace AF.Levels
         /// </summary>
         public FaunaPalette? PairPalette { get; internal set; }
 
+        /// <summary>
+        /// <c>segundo_gesto</c> (F13; añadido de D-029 del 2026-11-08) [P]: lo que hace la tropa en el reposo de los niveles que
+        /// le tocan (<see cref="FaunaGestureRule.UsesSecond(FaunaSpecies?, int)"/>); <see cref="FaunaSecondGesture.None"/> en las
+        /// especies que no viven en ningún mundo largo (6-11).
+        /// </summary>
+        public FaunaSecondGesture SecondGesture { get; internal set; }
+
+        /// <summary>
+        /// Primer nivel del segundo gesto: la mitad del primer mundo largo de la especie (<see cref="FaunaGestureRule.FromLevel"/>);
+        /// 0 sin segundo gesto. No va en el catálogo: sale de <c>mundos</c> y de la tabla de mundos.
+        /// </summary>
+        public int SecondGestureFrom { get; internal set; }
+
         /// <summary><c>iluminacion</c>.</summary>
         public FaunaLighting Lighting { get; }
 

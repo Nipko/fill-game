@@ -57,6 +57,39 @@ namespace AF.Presentation
         /// <summary>La fruta que come mide el 75 % de la de vuelo y mengua hasta el 60 % de eso a bocados.</summary>
         public const float EatFruitScale = 0.75f;
 
+        /// <summary>Brincos (segundo gesto <c>brincos</c>, F13): cada brinco dura 340 ms…</summary>
+        public const float HopMs = 340f;
+
+        /// <summary>…empieza 110 ms después que el del vecino (la ola por la tropa)…</summary>
+        public const float HopStaggerMs = 110f;
+
+        /// <summary>…sube 0,35 S (nunca sobre el HUD)…</summary>
+        public const float HopHeightS = 0.35f;
+
+        /// <summary>…y son dos por miquito (menos si el reposo no los deja terminar antes de fundirse).</summary>
+        public const int MaxHops = 2;
+
+        /// <summary>Vuelo (segundo gesto <c>vuelo</c>, F13): cada salto dura 320 ms…</summary>
+        public const float LeapFlightMs = 320f;
+
+        /// <summary>…se queda 100 ms en el otro sitio antes de volver…</summary>
+        public const float LeapPauseMs = 100f;
+
+        /// <summary>…el segundo de la pareja despega 120 ms después…</summary>
+        public const float LeapStaggerMs = 120f;
+
+        /// <summary>…recorre 1,4 S por la rama…</summary>
+        public const float LeapAlongS = 1.4f;
+
+        /// <summary>…y sube 0,5 S en el centro del salto (nunca sobre el HUD).</summary>
+        public const float LeapUpS = 0.5f;
+
+        /// <summary>Ida, pausa y vuelta del vuelo (ms).</summary>
+        public const float LeapSpanMs = (2f * LeapFlightMs) + LeapPauseMs;
+
+        /// <summary>Lo que se aparta de la esquina el sitio al que salta (S): nunca se sale de la rama.</summary>
+        public const float LeapEdgeS = 0.75f;
+
         /// <summary>Medias ondas de la trenza de la pareja: 4 cruces, dos vueltas (revisión del 2026-10-09).</summary>
         public const float BraidHalfWaves = 4f;
 
@@ -158,6 +191,8 @@ namespace AF.Presentation
         private readonly RestGesture[] _restGesture = new RestGesture[IntroChoreography.MaxMonkeys];
         private readonly int[] _restTint = new int[IntroChoreography.MaxMonkeys];
         private readonly bool[] _reachesCorner = new bool[IntroChoreography.MaxMonkeys];
+        private readonly int[] _hops = new int[IntroChoreography.MaxMonkeys];
+        private readonly float[] _leapDx = new float[IntroChoreography.MaxMonkeys];
         private readonly Vector3[] _corners = new Vector3[4];
         private readonly RectTransform _side;
         private readonly BezierStripGraphic[] _sideLianas = new BezierStripGraphic[IntroChoreography.SideMonkeys];
@@ -173,6 +208,8 @@ namespace AF.Presentation
         private MonkeyArt? _look;
         private MonkeyArt? _lookPair;
         private FaunaSpecies? _species;
+        private bool _second;
+        private FaunaSecondGesture _secondShown;
         private IntroChoreography? _plan;
         private float _canvasW = 360f;
         private float _hudBottom = 88f;
@@ -460,6 +497,28 @@ namespace AF.Presentation
         /// <summary>Especie preparada.</summary>
         public FaunaSpecies? Species => _species;
 
+        /// <summary>A este nivel le toca el segundo gesto de la especie (F13; <see cref="FaunaGestureRule"/>), salga o no la tropa en la rama.</summary>
+        public bool SecondChosen => _second;
+
+        /// <summary>
+        /// Segundo gesto que hace la tropa en el reposo de esta intro (F13); <see cref="FaunaSecondGesture.None"/> si no le toca,
+        /// si la tropa no va en la rama (dosel o lateral, sin reposo) o si el modelo de suelta no lo admite (colgado o sentado).
+        /// </summary>
+        public FaunaSecondGesture SecondShown => _active ? _secondShown : FaunaSecondGesture.None;
+
+        /// <summary>
+        /// Con Reducir movimiento: el segundo gesto del miquito quieto si tiene pose quieta (dúo, desperezo, colgado de la cola);
+        /// <see cref="FaunaSecondGesture.None"/> con brincos y vuelo, que se quedan sentados.
+        /// </summary>
+        public FaunaSecondGesture SecondStill
+        {
+            get
+            {
+                FaunaSecondGesture g = SecondShown;
+                return g == FaunaSecondGesture.Hops || g == FaunaSecondGesture.Leap ? FaunaSecondGesture.None : g;
+            }
+        }
+
         /// <summary>Miquitos en pantalla.</summary>
         public int MonkeyCount => _active && _plan != null ? _plan.MonkeyCount : 0;
 
@@ -529,7 +588,17 @@ namespace AF.Presentation
         /// </summary>
         public void Prepare(FaunaSpecies? species)
         {
+            Prepare(species, false);
+        }
+
+        /// <summary>
+        /// Como <see cref="Prepare(FaunaSpecies?)"/>, con el segundo gesto de la especie en el reposo si <paramref name="second"/>
+        /// (F13; lo decide <see cref="FaunaGestureRule.UsesSecond(FaunaSpecies?, int, int)"/> con el número de nivel).
+        /// </summary>
+        public void Prepare(FaunaSpecies? species, bool second)
+        {
             _species = species;
+            _second = second && species != null && species.SecondGesture != FaunaSecondGesture.None;
             _look = species != null ? _art.MonkeyArtFor(species) : null;
             _lookPair = species != null && species.PairPalette != null ? _art.MonkeyArtFor(species, true) : null;
         }
@@ -541,6 +610,7 @@ namespace AF.Presentation
         public void Begin(IntroChoreography plan, IntroInput input)
         {
             _plan = plan;
+            _secondShown = FaunaSecondGesture.None;
             _canvasW = input.CanvasWidth;
             _hudBottom = input.HudBottom;
             _trayTop = input.TrayTop;
@@ -683,7 +753,179 @@ namespace AF.Presentation
                 MonkeyArt look = LookOf(m);
                 bool swingTail = _species != null && _species.HasTrait("cola_balancin");
                 _restGesture[m] = ChooseRest(plan.RestVariant, m, plan.MonkeyCount, plan.Model, plan.Pair, swingTail, look.HugsFruit, look.TailCurls);
+                _hops[m] = 0;
+                _leapDx[m] = 0f;
             }
+
+            if (_second && _species != null)
+            {
+                BeginSecond(plan, _species.SecondGesture);
+            }
+        }
+
+        /// <summary>
+        /// Gesto de reposo con el que la tropa hace el segundo gesto <paramref name="second"/> (F13) con el modelo
+        /// <paramref name="model"/>; <see cref="RestGesture.None"/> si ese modelo no lo admite (colgarse de la cola exige
+        /// <c>cuelga</c>; desperezarse, brincar y volar, estar sentado en la rama; el dúo, cualquiera).
+        /// </summary>
+        public static RestGesture SecondRest(FaunaSecondGesture second, TroopModel model)
+        {
+            bool hanging = model == TroopModel.Hang;
+            switch (second)
+            {
+                case FaunaSecondGesture.Duet:
+                    return RestGesture.Duet;
+                case FaunaSecondGesture.Hops:
+                    return hanging ? RestGesture.None : RestGesture.Hop;
+                case FaunaSecondGesture.TailHang:
+                    return hanging ? RestGesture.TailHang : RestGesture.None;
+                case FaunaSecondGesture.Stretch:
+                    return hanging ? RestGesture.None : RestGesture.Stretch;
+                case FaunaSecondGesture.Leap:
+                    return hanging ? RestGesture.None : RestGesture.Leap;
+                default:
+                    return RestGesture.None;
+            }
+        }
+
+        /// <summary>
+        /// Brincos que caben en el reposo de <paramref name="windowMs"/> del miquito <paramref name="monkey"/>: los que acaban
+        /// antes de que el gesto empiece a fundirse (<see cref="RestBlendMs"/> al entrar y al salir), hasta <see cref="MaxHops"/>.
+        /// </summary>
+        public static int HopsFor(int monkey, float windowMs)
+        {
+            float room = windowMs - (2f * RestBlendMs) - ((monkey % 3) * HopStaggerMs);
+            return Mathf.Clamp(Mathf.FloorToInt(room / HopMs), 0, MaxHops);
+        }
+
+        /// <summary>
+        /// Altura del brinco (0..1 de <see cref="HopHeightS"/>) del miquito <paramref name="monkey"/> a <paramref name="localMs"/>
+        /// de su reposo, con <paramref name="hops"/> brincos: arcos de seno de <see cref="HopMs"/>, tras el fundido de entrada y
+        /// en ola por la tropa. 0 en la rama.
+        /// </summary>
+        public static float HopAir(float localMs, int monkey, int hops)
+        {
+            float u = localMs - RestBlendMs - ((monkey % 3) * HopStaggerMs);
+            if (hops <= 0 || u <= 0f || u >= hops * HopMs)
+            {
+                return 0f;
+            }
+
+            return Mathf.Sin(Mathf.PI * ((u % HopMs) / HopMs));
+        }
+
+        /// <summary>El vuelo del miquito <paramref name="monkey"/> cabe en su reposo de <paramref name="windowMs"/>.</summary>
+        public static bool LeapFits(int monkey, float windowMs)
+        {
+            return windowMs - (2f * RestBlendMs) - ((monkey % 2) * LeapStaggerMs) >= LeapSpanMs;
+        }
+
+        /// <summary>
+        /// Vuelo del miquito <paramref name="monkey"/> a <paramref name="localMs"/> de su reposo: devuelve cuánto del recorrido
+        /// lleva (0 en su sitio, 1 en el otro); <paramref name="air"/>, la altura (0..1 de <see cref="LeapUpS"/>);
+        /// <paramref name="k"/>, el avance del salto en curso (0 despega, 1 aterriza; 0 en la rama) y <paramref name="back"/>, si
+        /// es el de vuelta.
+        /// </summary>
+        public static float LeapAt(float localMs, int monkey, out float air, out float k, out bool back)
+        {
+            air = 0f;
+            k = 0f;
+            back = false;
+            float u = localMs - RestBlendMs - ((monkey % 2) * LeapStaggerMs);
+            if (u <= 0f || u >= LeapSpanMs)
+            {
+                return 0f;
+            }
+
+            if (u < LeapFlightMs)
+            {
+                k = u / LeapFlightMs;
+                air = Mathf.Sin(Mathf.PI * k);
+                return k;
+            }
+
+            if (u < LeapFlightMs + LeapPauseMs)
+            {
+                return 1f;
+            }
+
+            back = true;
+            k = (u - LeapFlightMs - LeapPauseMs) / LeapFlightMs;
+            air = Mathf.Sin(Mathf.PI * k);
+            return 1f - k;
+        }
+
+        // F13: toda la tropa hace el segundo gesto de la especie; quien no tiene sitio o tiempo para él (brincos o vuelo que no
+        // acabarían antes de fundirse, o un salto sin rama libre) se queda con su gesto de reposo de siempre.
+        private void BeginSecond(IntroChoreography plan, FaunaSecondGesture second)
+        {
+            RestGesture g = SecondRest(second, plan.Model);
+            if (g == RestGesture.None)
+            {
+                return;
+            }
+
+            float s = plan.BodyDp;
+            bool any = false;
+            for (int m = 0; m < plan.MonkeyCount; m++)
+            {
+                float window = plan.ExitStartMs - _restFrom[m];
+                if (g == RestGesture.Hop)
+                {
+                    _hops[m] = HopsFor(m, window);
+                    if (_hops[m] == 0)
+                    {
+                        continue;
+                    }
+                }
+                else if (g == RestGesture.Leap)
+                {
+                    float dx = LeapFits(m, window) ? LeapOffset(plan, m, s) : 0f;
+                    if (dx == 0f)
+                    {
+                        continue;
+                    }
+
+                    _leapDx[m] = dx;
+                }
+
+                _restGesture[m] = g;
+                any = true;
+            }
+
+            _secondShown = any ? second : FaunaSecondGesture.None;
+        }
+
+        // Hacia dónde y cuánto salta el miquito m (dp, con signo): lejos de su vecino de tropa (o hacia el centro si va solo),
+        // 1,4 S, sin acercarse a menos de 0,75 S del borde; si por ahí no hay 0,5 S de rama, hacia el otro lado; 0 si tampoco.
+        private float LeapOffset(IntroChoreography plan, int m, float s)
+        {
+            float x = plan.MonkeyX(m, _restFrom[m]);
+            int other = (m & 1) == 0 ? m + 1 : m - 1;
+            float dir;
+            if (other < plan.MonkeyCount)
+            {
+                float xo = plan.MonkeyX(other, _restFrom[other]);
+                dir = Mathf.Abs(x - xo) < 0.5f ? (m < other ? -1f : 1f) : Mathf.Sign(x - xo);
+            }
+            else
+            {
+                dir = x < 0.5f * _canvasW ? 1f : -1f;
+            }
+
+            for (int tries = 0; tries < 2; tries++)
+            {
+                float target = Mathf.Clamp(x + (dir * LeapAlongS * s), LeapEdgeS * s, _canvasW - (LeapEdgeS * s));
+                float dx = target - x;
+                if (Mathf.Abs(dx) >= 0.5f * s && Mathf.Sign(dx) == dir)
+                {
+                    return dx;
+                }
+
+                dir = -dir;
+            }
+
+            return 0f;
         }
 
         /// <summary>
@@ -763,16 +1005,19 @@ namespace AF.Presentation
                 MonkeyArt look = LookOf(m);
                 float facing = plan.MonkeySeatFacing(m); // ya en su sitio: sin entrada ni salida
                 float x = plan.MonkeySeatX(m);
+                // Con el segundo gesto (F13), su pose quieta si la tiene (dúo, desperezo, colgado de la cola); brincos y vuelo,
+                // que solo son movimiento, se quedan sentados.
+                RestGesture still = _second && _species != null ? SecondRest(_species.SecondGesture, plan.Model) : RestGesture.None;
                 if (plan.Model == TroopModel.Hang)
                 {
                     rig.Place(x, plan.HangGripY, facing);
-                    rig.Apply(MonkeyRig.Hang(look, 0f, 0f));
+                    rig.Apply(still == RestGesture.TailHang || still == RestGesture.Duet ? MonkeyRig.HangRest(look, 0f, still, 1f, 0f) : MonkeyRig.Hang(look, 0f, 0f));
                     SetLiana(m, x, plan.HangGripY, alpha);
                 }
                 else
                 {
                     rig.Place(x, plan.BranchCurveY(x), facing);
-                    rig.Apply(MonkeyRig.Sit(look, 1f, 0f, -1, 0f));
+                    rig.Apply(still == RestGesture.Duet || still == RestGesture.Stretch ? MonkeyRig.SitRest(look, 1f, still, 1f, 0f) : MonkeyRig.Sit(look, 1f, 0f, -1, 0f));
                 }
 
                 rig.Hold(null, Vector2.zero, 0f);
@@ -1404,7 +1649,7 @@ namespace AF.Presentation
 
             // Reloj de los gestos de reposo: el de la tropa desde su última suelta, con medio ciclo de desfase entre vecinos
             // (MonkeyRig.GestureCycleMs): en cada instante, cada gesto está en uno de sus extremos.
-            float clock = t - plan.LastReleaseMs + ((m & 1) == 1 ? 0.5f * MonkeyRig.GestureCycleMs : 0f);
+            float clock = t - plan.LastReleaseMs + ((m & 1) == 1 && gesture != RestGesture.Duet ? 0.5f * MonkeyRig.GestureCycleMs : 0f);
             float breathe = 1f + (0.01f * (1f - Mathf.Cos(t * (Mathf.PI * 2f / 1600f))));
             bool blink = !moving && Mathf.Repeat(t + (m * 731f), 2400f) < 120f;
             bool idle = !moving && lift <= 0f && t < _firstRelease[m] && !plan.IsLong;
@@ -1436,8 +1681,9 @@ namespace AF.Presentation
                 pose = rest > 0f ? MonkeyRig.HangRest(look, sway, gesture, rest, clock) : MonkeyRig.Hang(look, lift, sway);
                 pose.Blink = blink;
 
-                // Se balancea colgado (SwingBody): el cuerpo gira ±10° alrededor de la mano que agarra.
-                float swing = gesture == RestGesture.SwingBody ? rest * MonkeyRig.SwingBodyDeg * MonkeyRig.Wave(clock) : 0f;
+                // Se balancea colgado (SwingBody): el cuerpo gira ±10° alrededor de la mano que agarra; colgado de la cola (F13), ±16°.
+                float swingDeg = gesture == RestGesture.SwingBody ? MonkeyRig.SwingBodyDeg : (gesture == RestGesture.TailHang ? MonkeyRig.TailHangSwingDeg : 0f);
+                float swing = rest * swingDeg * MonkeyRig.Wave(clock);
                 rig.Place(x, gripY, facing, swing);
                 SetLiana(m, x, gripY, alpha);
             }
@@ -1477,9 +1723,33 @@ namespace AF.Presentation
                         tilt = -EnterTiltDeg * Mathf.Clamp01(down * 2f) * Mathf.Clamp01(room / (0.1f * s));
                     }
                 }
+                else if (gesture == RestGesture.Leap && t >= _restFrom[m] && _leapDx[m] != 0f)
+                {
+                    // Vuelo (F13): salta por la rama lejos de su vecino y vuelve a su sitio, de cara a donde va; en el aire, la pose
+                    // estirada, y nunca sube sobre el HUD.
+                    float along = LeapAt(t - _restFrom[m], m, out float air, out float k, out bool back);
+                    float dir = Mathf.Sign(_leapDx[m]);
+                    x += along * _leapDx[m];
+                    if (along > 0f)
+                    {
+                        facing = back ? -dir : dir;
+                    }
+
+                    float room = plan.BranchCurveY(x) - (1.1f * s) - _hudBottom - 1f;
+                    rise = Mathf.Clamp(LeapUpS * s, 0f, Mathf.Max(0f, room)) * air;
+                    pose = air > 0f ? MonkeyRig.Leap(look, k) : MonkeyRig.Sit(look, breathe, 0f, -1, 0f);
+                }
                 else if (rest > 0f)
                 {
                     pose = MonkeyRig.SitRest(look, breathe, gesture, rest, clock);
+                    if (gesture == RestGesture.Hop)
+                    {
+                        // Brincos (F13): dos en su sitio, en ola por la tropa; nunca sube sobre el HUD.
+                        float air = HopAir(t - _restFrom[m], m, _hops[m]);
+                        float room = plan.BranchCurveY(x) - (1.1f * s) - _hudBottom - 1f;
+                        rise = Mathf.Clamp(HopHeightS * s, 0f, Mathf.Max(0f, room)) * air;
+                        MonkeyRig.HopTuck(ref pose, air);
+                    }
                 }
                 else
                 {
