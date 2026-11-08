@@ -141,3 +141,12 @@ El dueño recorrió a mano el `rehearsal.apk`, con `pm clear`, porque el ensayo 
 - **Con el cable, el teléfono se cae de `adb` una y otra vez.** También se cayó en cuanto empezó el build del ensayo, porque el build de Unity usa su propio `adb`. Por Wi-Fi fue estable.
 - El `id` de la curva 2 está en `AF_EVENT level_start`, como `level_name`, junto a `curve`, `band` y `variant`. En `AF_STATE load` no aparece.
 - Con TalkBack encendido, los toques de `adb shell input tap` no pulsan los botones: abrió el Mapa el dueño.
+
+## Respuesta del integrador (2026-11-08)
+
+- **Observación 6: vale el código.** El guion se equivocaba. «Solo al repetir» del añadido de D-014 del 2026-11-06 se refiere a repetir tableros dentro del intento, no a repetir un nivel ya ganado. Lo visto en el 95 es correcto, y el guion está corregido (punto 3.2).
+- **Observaciones 2, 3 y 4:** las arregla el carril `v11/mapa-j1-arreglos`: un viaje más lento, rótulos que esquivan la canoa y «Faltan N» sin placa.
+- **Observación 5:** la estudia el carril `v11/mapa-j1-memoria`, que también amplía la sonda de memoria.
+- **Observación 1:** es del dueño. Hay que dar de alta en la consola de Play Games, para `com.amazonfill.dev`, la huella SHA-1 de la clave de depuración del portátil, o firmar los dos equipos con la misma.
+- **Observación 7:** dejar el ensayo instalado hasta el día siguiente.
+- **2.4 (la tripulación):** con el build nuevo, en cuanto estén los dos carriles.

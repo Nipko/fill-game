@@ -100,9 +100,10 @@ Abre el Mapa desde el inicio. Los niveles se fijan con `--ei af_max_level <N>`, 
    - con `pm clear` y `--ez af_league true --ez af_league_fake true --ei af_max_level 41`, gana el 42;
    - en el primer momento tranquilo del inicio sale el estreno, una sola vez;
    - no vuelve al relanzar.
-2. **Aguas estancadas solo al repetir:**
-   - en el primer intento de un nivel, aunque te quedes sin movimientos útiles, no sale el aviso;
-   - al repetir un nivel ya ganado, sí.
+2. **Aguas estancadas solo al repetir** (corregido el 2026-11-08; el guion de antes se equivocaba):
+   - «al repetir» quiere decir que todo vertido legal lleva a un tablero ya visto en el mismo intento (añadido de D-014 del 2026-11-06), no que el nivel ya se haya ganado;
+   - en el primer intento puede salir, si se cumple esa condición;
+   - no tiene que salir mientras quede algún vertido que dé un tablero nuevo, aunque sea fútil.
 3. **Borde a borde:**
    - el fondo llega bajo la barra de estado y la de navegación;
    - nada interactivo queda debajo de ellas ni del recorte de la cámara (inicio, nivel, Mapa, Mercado, Ajustes).
