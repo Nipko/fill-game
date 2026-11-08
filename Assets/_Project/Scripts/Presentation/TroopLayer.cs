@@ -506,6 +506,19 @@ namespace AF.Presentation
         /// </summary>
         public FaunaSecondGesture SecondShown => _active ? _secondShown : FaunaSecondGesture.None;
 
+        /// <summary>
+        /// Con Reducir movimiento: el segundo gesto del miquito quieto si tiene pose quieta (dúo, desperezo, colgado de la cola);
+        /// <see cref="FaunaSecondGesture.None"/> con brincos y vuelo, que se quedan sentados.
+        /// </summary>
+        public FaunaSecondGesture SecondStill
+        {
+            get
+            {
+                FaunaSecondGesture g = SecondShown;
+                return g == FaunaSecondGesture.Hops || g == FaunaSecondGesture.Leap ? FaunaSecondGesture.None : g;
+            }
+        }
+
         /// <summary>Miquitos en pantalla.</summary>
         public int MonkeyCount => _active && _plan != null ? _plan.MonkeyCount : 0;
 
@@ -1724,7 +1737,7 @@ namespace AF.Presentation
 
                     float room = plan.BranchCurveY(x) - (1.1f * s) - _hudBottom - 1f;
                     rise = Mathf.Clamp(LeapUpS * s, 0f, Mathf.Max(0f, room)) * air;
-                    pose = air > 0f ? MonkeyRig.Leap(look, k) : MonkeyRig.SitRest(look, breathe, RestGesture.Hop, rest, clock);
+                    pose = air > 0f ? MonkeyRig.Leap(look, k) : MonkeyRig.Sit(look, breathe, 0f, -1, 0f);
                 }
                 else if (rest > 0f)
                 {

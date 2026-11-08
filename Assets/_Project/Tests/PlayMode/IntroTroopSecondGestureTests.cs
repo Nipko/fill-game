@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections;
+using System.Collections.Generic;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Presentation;
@@ -178,6 +179,85 @@ namespace AF.Tests.PlayMode
             for (int m = 0; m < view.Intro.Plan.MonkeyCount; m++)
             {
                 Assert.That(view.Troop.RestGestureOf(m), Is.Not.EqualTo(g), "nivel " + (level + 1) + ": sin el segundo gesto");
+            }
+        }
+
+        /// <summary>
+        /// Con la franja justa de 3 filas (D-046, punto 3: 56 dp, a 360 × 780 y 360 × 800 dp), el segundo gesto de cada especie
+        /// (forzado con <c>af_troop_gesture</c> = 2 por si el nivel no le tocara) nunca sube sobre el HUD, no entra en el panel y
+        /// queda a ≥ 8 dp de toda cuia en todos los fotogramas muestreados del reposo: brincos y vuelo se recortan a la
+        /// franja; el dúo hincha el pecho, el desperezo baja la cabeza y colgado de la cola se mece ±16°, siempre dentro.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SecondGesture_InTheTightThreeRowBand_StaysClearOfHudPanelAndCuias([ValueSource(nameof(MidIndex))] int index, [Values(1080, 720)] int widthPx)
+        {
+            (int world, string worldId, int level, FaunaSecondGesture expected) = Mids[index];
+            LaunchOptions.TroopGestureOverride = 2;
+            GameScreen.SimulatedScreen = widthPx == 1080 ? IntroSideTroopTests.Screen1080 : IntroSideTroopTests.Screen720;
+            string[] ids = { "guanabana", "cupuacu", "tapereba", "aguaje", "urucum", "camu_camu", "bacaba", "acai", "jenipapo", "agua_tapajos", "lulo", "araza", "cacao", "agua_negro" };
+            var sixteen = new int[16][];
+            for (int i = 0; i < 16; i++)
+            {
+                sixteen[i] = i < 14 ? new[] { (i % 14) + 1, ((i + 3) % 14) + 1, ((i + 6) % 14) + 1, ((i + 9) % 14) + 1 } : new int[0];
+            }
+
+            yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.BoardPack(world, worldId, "white", level, ids, sixteen), level,
+                new MemoryProgressStore(level, level - 1));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            BoardLayoutResult l = view.Layout!;
+            Assert.That(l.Rows, Is.EqualTo(3), "tablero de 3 filas");
+            Assert.That(l.TroopBand, Is.True, "la franja de la tropa (D-046)");
+            float hudBottom = view.HudBottomDp;
+            var rects = new List<Rect>();
+            int moved = 0;
+            foreach (int duration in new[] { Short, 1400 })
+            {
+                view.DebugReplayIntro(duration, false);
+                IntroChoreography plan = view.Intro.Plan;
+                string what = "nivel " + level + ", " + widthPx + " px, T " + duration;
+                Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch), what);
+                FaunaSecondGesture shown = view.Troop.SecondShown;
+                Assert.That(shown == expected || shown == FaunaSecondGesture.None, Is.True, what + ": su gesto o, si no cabe, el de siempre (" + shown + ")");
+                moved += shown == expected ? 1 : 0;
+                float panelTop = view.Intro.Input.PanelTop;
+                // El reposo, donde va el gesto (la entrada y la salida no cambian con F13: las cubren IntroThreeRowBranchTests).
+                float start = plan.ExitStartMs;
+                for (int m = 0; m < plan.MonkeyCount; m++)
+                {
+                    start = Mathf.Min(start, view.Troop.RestFromMs(m));
+                }
+
+                for (int t = Mathf.CeilToInt(start); t <= plan.ExitStartMs; t += 10)
+                {
+                    view.Intro.Seek(t);
+                    rects.Clear();
+                    view.Troop.CollectRects(rects);
+                    foreach (Rect r in rects)
+                    {
+                        if (r.xMax < 0f || r.xMin > view.CanvasWidth)
+                        {
+                            continue; // en el follaje, fuera de la pantalla
+                        }
+
+                        string where = what + " (" + shown + "), t " + t + ", " + r;
+                        Assert.That(r.yMin, Is.GreaterThanOrEqualTo(hudBottom - 0.5f), "nada sobre el HUD: " + where);
+                        Assert.That(r.yMax, Is.LessThanOrEqualTo(panelTop + 0.5f), "nada dentro del panel: " + where);
+                        for (int i = 0; i < view.Views.Length; i++)
+                        {
+                            Assert.That(IntroSideTroopTests.Distance(r, IntroSideTroopTests.CuiaRect(view.Views[i])), Is.GreaterThanOrEqualTo(IntroChoreography.CuiaClearanceDp),
+                                "≥ 8 dp de la cuia " + i + ": " + where);
+                        }
+                    }
+                }
+
+                Debug.Log("AF_F13_BAND " + what + ": " + plan.MonkeyCount + " miquitos, modelo " + plan.Model + ", gesto " + shown);
+            }
+
+            if (expected != FaunaSecondGesture.TailHang)
+            {
+                Assert.That(moved, Is.GreaterThan(0), "nivel " + level + ": el gesto sale también con la franja justa");
             }
         }
 

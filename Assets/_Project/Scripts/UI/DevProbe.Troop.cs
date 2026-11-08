@@ -13,7 +13,8 @@ namespace AF.UI
     /// "gesture":"duo|brincos|colgado_de_la_cola|desperezo|vuelo|first","perch":"branch|side|canopy","monkeys":M,"still":true|false}</c>.
     /// <c>chosen</c> es la regla (o el extra <c>af_troop_gesture</c>, en <c>forced</c>); <c>gesture</c>, lo que hace de verdad la
     /// tropa en el reposo: el segundo gesto o <c>first</c> (sus gestos de siempre: el nivel no le toca, la tropa no va en la rama
-    /// o el modelo de suelta no lo admite). Con <c>still</c> (Reducir movimiento), un solo miquito quieto en la pose del gesto.
+    /// o el modelo de suelta no lo admite). Con <c>still</c> (Reducir movimiento), un solo miquito quieto en la pose del gesto;
+    /// con brincos y vuelo, que se quedan sentados, <c>first</c>.
     /// Solo identificadores (regla de localización).
     /// </summary>
     public sealed partial class DevProbe
@@ -45,7 +46,7 @@ namespace AF.UI
             sb.Append(",\"second_from\":").Append(species.SecondGestureFrom.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"chosen\":").Append(troop.SecondChosen ? "true" : "false");
             sb.Append(",\"forced\":").Append(forced.ToString(CultureInfo.InvariantCulture));
-            FaunaSecondGesture shown = troop.SecondShown;
+            FaunaSecondGesture shown = still ? troop.SecondStill : troop.SecondShown; // quieto: brincos y vuelo, sentado
             sb.Append(",\"gesture\":");
             AppendKey(sb, shown == FaunaSecondGesture.None ? "first" : FaunaGestureRule.NameOf(shown));
             sb.Append(",\"perch\":\"").Append(plan.Perch == IntroPerch.Branch ? "branch" : (plan.Perch == IntroPerch.Side ? "side" : "canopy")).Append('"');
