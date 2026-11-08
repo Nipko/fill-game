@@ -155,6 +155,7 @@ namespace AF.UI
                     TitleKey, SettingsRowKey, HomeA11yKey, HomeNewA11yKey, NewKey, CellA11yKey, ChosenA11yKey, CellNewA11yKey,
                     LockedA11yKey, LeagueAliasKey, HeaderA11yKey,
                 };
+                keys.AddRange(FrameKeys); // Q-M6 (añadido del 2026-11-08): los marcos de país (AvatarText.Frames.cs)
                 for (int i = 0; i < GoalIds.Length; i++)
                 {
                     keys.Add(GoalPrefix + GoalIds[i]);

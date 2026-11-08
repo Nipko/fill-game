@@ -85,7 +85,7 @@ Cada retrato se dibuja con `PixelCanvas`, como la fauna y las banderas, en un ar
    - **proporciones de adulto:** ojos ≤ 12 % del ancho de la cara, sin cabezas gigantes ni rubor de peluche (08 §13.1 #11: «no atractivo para niños»; sección 2.4);
    - sin ropa ni accesorios (07 §8.1; guía v2 §7, «Cultura»);
    - comportamiento real: el caimán con la boca cerrada, el jaguar sin rasgos humanos (07 §8.1), la rana sin nada que diga «veneno» (glosario §3.3).
-4. **Aro de madera** del 7 % del diámetro: canto #2E2018, luz #BF8F62, con un filete `crema` #FFF8E6 por dentro. Es el sitio que ocupará el **marco** de la 1.2 (`entitlements.frames`, 06 §6): el retrato no cambia cuando lleguen los marcos.
+4. **Aro de madera** del 7 % del diámetro: canto #2E2018, luz #BF8F62, con un filete `crema` #FFF8E6 por dentro. Es el sitio que ocupará el **marco** de la 1.2 (`entitlements.frames`, 06 §6): el retrato no cambia cuando lleguen los marcos. **Desde la 1.1** lo ocupan los marcos de país de la Bitácora (Q-M6 de D-033, añadido del 2026-11-08, `ProceduralArt.AvatarFrames.cs`); los de la Liga siguen en la 1.2.
 
 **Bloqueado:**
 - el fondo se desatura al 40 %;

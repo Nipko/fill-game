@@ -132,6 +132,7 @@ Tintalú 1.0 se define por una lista cerrada de 31 sistemas "dentro" y 24 "fuera
 | Logros de Play Games | 1.1 | Coste casi nulo pero sin impacto medido (research/05 §3 [V]) |
 | Aguas turbias · Bonus (tarjeta con premio doble) | 1.1 | El modo ya existe en 1.0 en la ruta; la tarjeta bonus requiere Reto del río maduro (cap. 06 §3) |
 | Mochila de regreso 1,99 · sumidero cosmético por Semillas | 1.1 | Cap. 06 §9 y cap. 05 pregunta 2 |
+| Marco de país del día 30 de la Bitácora, a la vista alrededor del avatar | 1.1 (en la 1.0 solo se guarda como derecho; D-033, Q-M6 y su añadido del 2026-11-08) [P] | Cap. 06 §4.2, regla 4; los marcos de la Liga siguen en la 1.2 |
 | Pase Expedición 6,99 | 1.2 | dir. 14 |
 | Liga del río: País y Global con puntos semanales, seudónimo automático y top 100 | **1.0, recortada** (D-046, 2026-10-23; `docs/dev/liga.md`), con `live_league_enabled` apagado hasta que haya backend en prod | Lo pidió el dueño; backend en AWS (D-035), sin Unity Leaderboards ni Cloud Code |
 | Liga del río completa (cubeta semanal de 50, tiers, premios, marcos, archivo de semanas, editar seudónimo y país), Travesía, Temporada de lluvias | 1.2 | glosario §7.2; cap. 06 §6 |

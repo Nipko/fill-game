@@ -177,6 +177,7 @@ namespace AF.UI
             _logbookClock = clock;
             _logbook = service;
             _logbookScreen = new LogbookScreen(transform, _art, OnLogbookChoose, OnLogbookClose);
+            WireLogbookFrames(_logbookScreen); // Q-M6: el icono del marco y «Ver tu avatar» (GameBootstrap.AvatarFrames.cs)
             _logbookCardCanvas = new OverlayCanvas("LogbookCardCanvas", transform, LogbookCardSortingOrder);
             _logbookCard = new LogbookCard(_logbookCardCanvas.Root, _art, () => OpenLogbook(LogbookOpenSource.Card));
             bool sameSession = ReferenceEquals(s_takeoversProfile, profile) && s_carriedTakeovers != null;
@@ -476,11 +477,13 @@ namespace AF.UI
                 {
                     batch.RequireDurable();
                     claim = service.Claim(choice, maxLevel, unlocks, world);
+                    OnLogbookFrameEarned(claim); // Q-M6: el marco de la 30 se pone solo, en la misma escritura
                 }
             }
             else
             {
                 claim = service.Claim(choice, maxLevel, unlocks, world);
+                OnLogbookFrameEarned(claim);
             }
 
             if (claim == null)
@@ -498,6 +501,7 @@ namespace AF.UI
             DevProbe.LogbookClaim(claim);
             DevProbe.LogbookState(LoginCalendarProbeFormat.CauseClaim, LogbookState, service.Record);
             screen.ShowClaimed(claim, service.Peek(maxLevel, unlocks, world));
+            ShowLogbookFrameReveal(screen, claim); // Q-M6: el momento del marco, dentro de la libreta
         }
 
         private void OnLogbookClose()

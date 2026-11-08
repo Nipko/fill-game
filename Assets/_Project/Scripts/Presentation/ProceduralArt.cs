@@ -224,6 +224,7 @@ namespace AF.Presentation
         {
             AbandonBannerArt(); // el arte del banner que aún se pinta en otro hilo para y se descarta (ProceduralArt.Mascots.cs)
             ForgetAvatarPortrait(); // D-056: el retrato elegido (ProceduralArt.Avatars.cs)
+            ForgetAvatarFrameOverlay(); // Q-M6: el marco suelto de la libreta (ProceduralArt.AvatarFrames.cs)
             for (int i = 0; i < _owned.Count; i++)
             {
                 if (_owned[i] != null)

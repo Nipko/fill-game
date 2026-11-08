@@ -1697,6 +1697,11 @@ namespace AF.UI
                     store.TrySave(profile); // extra af_max_level de los builds de desarrollo [P] (M3.3)
                 }
 
+                if (ApplyDevLogbookDay(profile, clock, DevLogbookDay()))
+                {
+                    store.TrySave(profile); // extra af_logbook_day (Q-M6, GameBootstrap.AvatarFrames.cs)
+                }
+
                 // B8 (GameBootstrap.Cloud.cs): la firma del perfil y la fusión con la nube, antes de crear ningún servicio. Con <13
                 // guardado, sin nube (B12).
                 _dataServicesAtBoot = DataServicesAllowedAtBoot(profile);

@@ -45,7 +45,7 @@ namespace AF.UI
     /// con la frase entera del hito. TalkBack lee cada celda entera («{animal}, elegido», «{animal}, bloqueado. {hito}»…) y la cabecera.
     /// Las celdas pintan sus retratos del atlas perezoso (<see cref="AvatarAtlas"/>), que pone y libera <c>GameBootstrap</c>.
     /// </summary>
-    internal sealed class AvatarScreen
+    internal sealed partial class AvatarScreen
     {
         /// <summary>Orden del lienzo: encima de Ajustes (40), desde donde también se abre.</summary>
         public const int SortingOrder = 42;
@@ -148,6 +148,7 @@ namespace AF.UI
             _scroll.vertical = true;
             _scroll.movementType = ScrollRect.MovementType.Clamped;
 
+            BuildFrames(art); // Q-M6 (añadido del 2026-11-08): la fila de los marcos, encima de los animales (AvatarScreen.Frames.cs)
             for (int i = 0; i < AvatarCatalog.Count; i++)
             {
                 _cells.Add(new Cell(this, i, _content, art));
@@ -276,6 +277,11 @@ namespace AF.UI
             {
                 yield return _balloonText;
             }
+
+            foreach (TextMeshProUGUI t in FrameTexts())
+            {
+                yield return t;
+            }
         }
 
         /// <summary>El fondo del retrato de <paramref name="avatar"/>.</summary>
@@ -351,7 +357,7 @@ namespace AF.UI
             _country.gameObject.SetActive(country);
             _country.text = country ? LeagueText.Country(league.Country!) : string.Empty;
             _flag.Show(country ? league.Country : null, 21f, 14f);
-            _headerA11y = AvatarText.HeaderA11y(current, league.NameKey, league.NameNum, league.Country);
+            _headerA11y = AvatarText.HeaderA11y(current, _frames?.Current, league.NameKey, league.NameNum, league.Country);
 
             for (int i = 0; i < _cells.Count; i++)
             {
@@ -371,6 +377,7 @@ namespace AF.UI
                 cell.Fill(atlas.Cell(a.Index), chosen, isNew, locked, maxLevel);
             }
 
+            RefreshFrames(atlas, current);
             if (_balloonCell >= 0 && !_cells[_balloonCell].Locked)
             {
                 _balloonCell = -1;
@@ -407,6 +414,7 @@ namespace AF.UI
             _balloonCell = -1;
             _service = null;
             _atlas = null;
+            ReleaseFrames();
         }
 
         /// <summary>Cada fotograma con la pantalla abierta: las animaciones (el atlas lo avanza <c>GameBootstrap</c>).</summary>
@@ -559,7 +567,7 @@ namespace AF.UI
                 balloonH = Mathf.Ceil(UiBuilder.MinTextHeight(_balloonText, gridW - 28f)) + 16f;
             }
 
-            float cy = 0f;
+            float cy = LayoutFrames(colW, gridW, s); // los marcos (si hay) y el subtítulo de los animales
             float minRowH = float.MaxValue;
             float balloonTop = 0f;
             for (int r = 0; r * _columns < shown.Count; r++)
@@ -653,6 +661,8 @@ namespace AF.UI
                     rects.Add(_cells[i].Root);
                 }
             }
+
+            AddFrameProbeIds(ids, rects); // frame_none y frame_wNN (Q-M6)
 
             _probe.Layout(ProbeScreen, 0, null, ids.ToArray(), rects.ToArray());
         }
