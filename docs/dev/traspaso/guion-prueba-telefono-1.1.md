@@ -11,7 +11,9 @@ Lo escribió el integrador el 2026-11-07. Es para el portátil, con el SM-S938B 
 
 El A/B de F6 (`lvl_curve2_enabled` al 50 %) no se prueba aquí: lo configura el dueño en Firebase al publicar. En el teléfono solo se ve el lado por defecto, con la curva 2 encendida.
 
-**Antes de compilar:** en `git log` tiene que estar el commit que integra `v11/mapa-m2-4b-ajustes`. Trae el tucuxi de unos 18 dp, que se une en el 51 (Manaos), y a Rosa que solo asoma (D-069, respuesta del dueño). Si aún no está, haz la prueba igual y salta el punto 2.4.
+**Antes de compilar:** en `git log` tiene que estar el commit que integra `v11/mapa-m2-4b-ajustes`. Trae el tucuxi de 17 dp (el 75 % de Rosa), que se une en el 51 (Manaos), y a Rosa que solo asoma (D-069, respuesta del dueño). Si aún no está, haz la prueba igual y salta el punto 2.4.
+
+Ya está integrado (2026-11-07). Además, la línea `end` de `AF_STATE map_journey` lleva `"crew_joined":"toucan"|"tucuxi"|null`: anótala en los puntos 2.3 y 2.4.
 
 La hoja va en `docs/dev/traspaso/pruebas-telefono-<fecha>-1.1.md`, con el formato de las jornadas. Capturas y logcat en `Logs/device/v11/`, fuera de git.
 
@@ -79,7 +81,7 @@ Abre el Mapa desde el inicio. Los niveles se fijan con `--ei af_max_level <N>`, 
    - «Faltan N» va dentro del rótulo de la parada siguiente, en dos líneas, y no en una placa arriba a la izquierda.
 4. **La tripulación (M2-4):**
    - **Tucán:** con `af_max_level 21` (el 21 recién ganado), al abrir el Mapa llega y se pone en la proa; sale el chip «¡Se une al viaje! · Tucán» 2 s y Capi hace ♥. **¿Se distingue el tucán (18 dp) junto a Capi y el remo?** Es la pregunta 5 de M2-4.
-   - **Tucuxi:** con `af_max_level 51`, llega y nada junto a Rosa, más pequeño que ella. Gana un nivel terminado en 0 para ver la llegada: salta el tucuxi y Rosa solo asoma.
+   - **Tucuxi:** con `af_max_level 51`, llega y nada junto a Rosa, más pequeño que ella. Gana un nivel terminado en 0 para ver la llegada: salta el tucuxi y Rosa solo asoma. Mira también, jugando el 56, si Rosa y el tucuxi tapan el rótulo de la parada (en la captura del escritorio, a 360 dp, pisan en parte «Anavilhanas · faltan 3 niveles»).
    - **Miquito:** en un viaje sin compañero nuevo, uno saluda desde un árbol de la orilla.
    - **Cambio de mundo:** gana el 40 (`af_max_level 39 --ei af_level 40`). En el plano final del banner salen Capi, el tucán y la bandera.
 5. **Reducir movimiento** (Ajustes del juego): sin cámara ni bucles, el gesto y la burbuja quietos 1,2 s y el chip igual.
