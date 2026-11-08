@@ -10,7 +10,7 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// El marco de la tripulación del Mapa del río v2 (D-069, M2-4; propuesta del Mapa v2 §6.1-§6.2), sin Unity: los umbrales del
-    /// tucán (20/21) y del tucuxi (70/71), el cambio de mundo (se quedan en su tramo), <c>ui_map_crew</c> apagada, como mucho dos a bordo,
+    /// tucán (20/21) y del tucuxi (50/51, a la salida de Manaos), el cambio de mundo (se quedan en su tramo), <c>ui_map_crew</c> apagada, como mucho dos a bordo,
     /// los miquitos nunca a bordo, la presentación deducida de <c>map_seen_level</c>, el cameo, el atlas por código y los textos nuevos.
     /// </summary>
     public sealed class RiverCrewTests
@@ -31,7 +31,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void TheTable_IsTheToucanAt21InWorld2_AndTheTucuxiAt71InWorld3()
+        public void TheTable_IsTheToucanAt21InWorld2_AndTheTucuxiAt51InWorld3()
         {
             Assert.That(RiverCrew.Count, Is.EqualTo(2), "P6 (a): en la 1.1, el tucán y el tucuxi");
             CrewMember toucan = RiverCrew.Of(CrewKind.Toucan);
@@ -40,10 +40,11 @@ namespace AF.Tests.EditMode
             Assert.That(toucan.World, Is.EqualTo(2));
             Assert.That(toucan.Mode, Is.EqualTo(CrewMode.Bow));
             Assert.That(toucan.SizeDp, Is.EqualTo(18f), "§6.2: polizón en la proa, 18 dp");
-            Assert.That(tucuxi.JoinLevel, Is.EqualTo(71));
+            Assert.That(tucuxi.JoinLevel, Is.EqualTo(51), "la salida de Manaos (pregunta 2 de M2-4)");
             Assert.That(tucuxi.World, Is.EqualTo(3));
             Assert.That(tucuxi.Mode, Is.EqualTo(CrewMode.Swim));
-            Assert.That(tucuxi.SizeDp, Is.EqualTo(34f), "§6.2: nada junto a Rosa, 34 dp (pendiente del dueño: pregunta 1 de M2-4)");
+            Assert.That(tucuxi.SizeDp, Is.InRange(16.5f, 18f), "unos 17 dp, el 75 % de Rosa (pregunta 1 de M2-4)");
+            Assert.That(tucuxi.SizeDp, Is.LessThan(RiverMapScreen.GuideWorldDp), "más pequeño que Rosa, como el animal");
         }
 
         [TestCase(0, false)]
@@ -60,11 +61,12 @@ namespace AF.Tests.EditMode
             Assert.That(RiverCrew.StaysBehind(toucan, max, true), Is.EqualTo(max > 40), "en su tramo al cambiar de mundo (max " + max + ")");
         }
 
-        [TestCase(70, false)]
+        [TestCase(50, false)]
+        [TestCase(51, true)]
         [TestCase(71, true)]
         [TestCase(80, true)]
         [TestCase(81, false)]
-        public void TheTucuxi_JoinsAt71_AndStaysInWorld3(int max, bool aboard)
+        public void TheTucuxi_JoinsAt51_AndStaysInWorld3(int max, bool aboard)
         {
             CrewMember tucuxi = RiverCrew.Of(CrewKind.Tucuxi);
             Assert.That(RiverCrew.IsAboard(tucuxi, max, true), Is.EqualTo(aboard), "max " + max);
@@ -128,8 +130,9 @@ namespace AF.Tests.EditMode
             Assert.That(RiverCrew.IntroPending(toucan, 5, 45, true), Is.False, "ya se quedó en su tramo: no se une a este viaje");
             Assert.That(RiverCrew.IntroPending(toucan, 20, 21, false), Is.False, "ui_map_crew apagada");
             CrewMember tucuxi = RiverCrew.Of(CrewKind.Tucuxi);
-            Assert.That(RiverCrew.IntroPending(tucuxi, 70, 71, true), Is.True);
-            Assert.That(RiverCrew.IntroPending(tucuxi, 71, 72, true), Is.False);
+            Assert.That(RiverCrew.IntroPending(tucuxi, 50, 51, true), Is.True);
+            Assert.That(RiverCrew.IntroPending(tucuxi, 51, 52, true), Is.False);
+            Assert.That(RiverCrew.IntroPending(tucuxi, 50, 81, true), Is.False, "ya se quedó en su tramo");
         }
 
         [Test]

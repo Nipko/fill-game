@@ -2371,7 +2371,7 @@ namespace AF.UI
             {
                 RectTransform g = _guideA.rectTransform;
                 RectTransform t = _crewTucuxi.rectTransform;
-                CrewDraw.SetPos(t, g.anchoredPosition + new Vector2(-16f * _canoeFacing, -9f));
+                CrewDraw.SetPos(t, g.anchoredPosition + new Vector2(-10f * _canoeFacing, -6f));
                 CrewDraw.SetScale(t, new Vector3(-_canoeFacing, 1f, 1f));
                 CrewDraw.SetAlpha(_crewTucuxi, appear * _guideAAlpha);
             }

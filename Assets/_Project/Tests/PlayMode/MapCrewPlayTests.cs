@@ -16,9 +16,9 @@ namespace AF.Tests.PlayMode
     /// El Mapa del río v2, bloque M2-4 «La tripulación» (D-069, P6 (a); <c>docs/dev/propuesta-mapa-rio-v2.md</c> §6, §7.2 y §7.3), en
     /// la escena <c>Game</c> real:
     /// <list type="bullet">
-    /// <item>la presentación del tucán (21) y del tucuxi (71) la primera vez que se abre el Mapa tras su punto: llega, el chip de 2 s,
+    /// <item>la presentación del tucán (21) y del tucuxi (51, a la salida de Manaos) la primera vez que se abre el Mapa tras su punto: llega, el chip de 2 s,
     /// ♥ de Capi y TalkBack; la segunda vez, ya a bordo y sin presentación (sin campo nuevo en el guardado);</item>
-    /// <item>la llegada: el tucán abre el pico y el tucuxi y Rosa saltan juntos, sin retrasar «Jugar»;</item>
+    /// <item>la llegada: el tucán abre el pico y el tucuxi salta (Rosa solo asoma, D-029), sin retrasar «Jugar»;</item>
     /// <item>al cambiar de mundo, el compañero se queda en su tramo; el cameo del miquito en un viaje (nunca a bordo);</item>
     /// <item>Reducir movimiento (aparece en su sitio y sale el chip), <c>ui_map_crew</c> apagada (el Mapa de M2-3) y la memoria (el
     /// atlas se suelta al cerrar; sin asignaciones por fotograma);</item>
@@ -106,25 +106,28 @@ namespace AF.Tests.PlayMode
             Assert.That(map.ToucanHomeShown, Is.True, "se quedó en su tramo y se le ve allí (§6.1, regla 7)");
             Vector2 alter = map.Space.ToLocal(RiverMapScreen.CanoeAt(boot.RiverMapData!, boot.RiverRoutes!, RiverCrew.ToucanJoinLevel));
             Assert.That(Vector2.Distance(map.ToucanHomeRect!.anchoredPosition, alter), Is.LessThan(30f), "junto a donde se unió, al salir de Alter do Chão");
-            Assert.That(map.TucuxiAboardShown, Is.False, "el tucuxi, en el 71");
+            Assert.That(map.TucuxiAboardShown, Is.False, "el tucuxi, en el 51");
             map.Close();
 
-            // Con el 81, el tucuxi se queda en el cauce del Solimões al salir de Tefé: nunca en el lago (D-069, puntos sensibles).
+            // Con el 81, el tucuxi se queda en el cauce del Negro, a la salida de Manaos: nunca junto al lago de Tefé (D-069, puntos
+            // sensibles).
             MapMarkersTests.Reopen(boot, new MemoryProgressStore(82, 81, 81), 82);
             map.Tick(PlayModeHelpers.FrameMs);
             Assert.That(map.TucuxiAboardShown, Is.False);
             Assert.That(map.TucuxiHomeShown, Is.True);
-            RiverStopRoute leg = boot.RiverRoutes!.At(8)!;
-            Assert.That(boot.RiverMapData!.Lines[leg.Path[0].Line].Id, Is.EqualTo("amazonas"), "el tramo de salida de Tefé va por el cauce");
+            RiverStopRoute leg = boot.RiverRoutes!.At(6)!;
+            Assert.That(boot.RiverMapData!.Lines[leg.Path[0].Line].Id, Is.EqualTo("negro"), "el tramo de salida de Manaos va por el cauce del Negro");
             Vector2 channel = map.Space.ToLocal(RiverMapScreen.CanoeAt(boot.RiverMapData, boot.RiverRoutes, RiverCrew.TucuxiJoinLevel));
-            Assert.That(Vector2.Distance(map.TucuxiHomeRect!.anchoredPosition, channel), Is.LessThan(0.5f), "en el cauce, donde la canoa iba con el 71");
+            Assert.That(Vector2.Distance(map.TucuxiHomeRect!.anchoredPosition, channel), Is.LessThan(0.5f), "en el cauce, donde la canoa iba con el 51");
+            Vector2 tefe = map.Space.ToLocal(RiverMapScreen.PlacePoint(boot.RiverMapData, boot.RiverRoutes.At(7)!.At));
+            Assert.That(Vector2.Distance(map.TucuxiHomeRect.anchoredPosition, tefe), Is.GreaterThan(200f), "lejos del lago de Tefé");
             map.Close();
         }
 
         [UnityTest]
-        public IEnumerator TheTucuxi_JoinsAt71_SwimsBesideRosa_AndTheyJumpTogetherAtTheArrival_WithoutDelayingPlay()
+        public IEnumerator TheTucuxi_JoinsAt51_SwimsBesideRosa_AndJumpsAlone_RosaOnlySurfaces_WithoutDelayingPlay()
         {
-            yield return MapMarkersTests.OpenApp(72, 70); // max 71
+            yield return MapMarkersTests.OpenApp(52, 50); // max 51: a la salida de Manaos
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
             Assert.That(map.CrewIntroKind, Is.EqualTo(CrewKind.Tucuxi));
@@ -137,7 +140,7 @@ namespace AF.Tests.PlayMode
             Assert.That(map.ToucanAboardShown, Is.False, "el tucán se quedó en el mundo 2");
             map.Close();
 
-            // Llegada a Leticia (80) con el tucuxi ya presentado: saltan juntos (≤ 400 ms) y «Jugar» no espera.
+            // Llegada a Leticia (80) con el tucuxi ya presentado: salta él (≤ 400 ms), Rosa solo asoma (D-029) y «Jugar» no espera.
             MapMarkersTests.Reopen(boot, new MemoryProgressStore(81, 80, 75), 81);
             Assert.That(map.CatchingUp, Is.True);
             Assert.That(map.CrewIntroKind, Is.Null);
@@ -145,6 +148,8 @@ namespace AF.Tests.PlayMode
             float hopEnd = -1f;
             float arrivedAt = -1f;
             float hopTop = float.MinValue;
+            float rosaLow = float.MaxValue;
+            float rosaHigh = float.MinValue;
             for (int ms = 0; ms < 5000; ms += PlayModeHelpers.FrameMs)
             {
                 bool before = map.CatchingUp;
@@ -167,19 +172,21 @@ namespace AF.Tests.PlayMode
 
                 if (map.CrewHopping)
                 {
-                    hopTop = Mathf.Max(hopTop, map.GuideImage!.rectTransform.anchoredPosition.y);
+                    RectTransform rosa = map.GuideImage!.rectTransform;
+                    hopTop = Mathf.Max(hopTop, map.TucuxiImage!.rectTransform.anchoredPosition.y - rosa.anchoredPosition.y);
+                    float rel = rosa.anchoredPosition.y - map.Canoe.rectTransform.anchoredPosition.y; // Rosa respecto de la canoa
+                    rosaLow = Mathf.Min(rosaLow, rel);
+                    rosaHigh = Mathf.Max(rosaHigh, rel);
                 }
             }
 
-            Vector2 rest = map.GuideImage!.rectTransform.anchoredPosition;
+            float restOffset = map.TucuxiImage!.rectTransform.anchoredPosition.y - map.GuideImage!.rectTransform.anchoredPosition.y;
             Assert.That(hopStart, Is.GreaterThanOrEqualTo(0f), "la tripulación salta en la llegada");
             Assert.That(hopEnd - hopStart, Is.LessThanOrEqualTo(RiverMapScreen.CrewHopMs + PlayModeHelpers.FrameMs), "≤ 400 ms (§6.3)");
-            Assert.That(hopTop - rest.y, Is.GreaterThan(2f), "Rosa salta con el tucuxi");
+            Assert.That(hopTop - restOffset, Is.GreaterThan(2f), "el tucuxi salta");
+            Assert.That(rosaHigh - rosaLow, Is.LessThan(1f), "Rosa no salta (el tucuxi sube 8 dp): asoma, como el boto real (D-029, F11)");
             Assert.That(arrivedAt, Is.GreaterThanOrEqualTo(0f));
             Assert.That(map.PlayShown, Is.True, "«Jugar» a la vista: el salto no lo retrasa");
-            map.SetView(MapView.Basin);
-            map.SetView(MapView.World); // la canoa y su guía, colocados de nuevo por la vista: Rosa no se quedó en el aire
-            Assert.That(map.GuideImage.rectTransform.anchoredPosition.y, Is.EqualTo(rest.y).Within(0.01f), "y Rosa vuelve a su sitio");
             map.Close();
         }
 
@@ -463,7 +470,7 @@ namespace AF.Tests.PlayMode
             string dir = SnapshotKit.Prepare();
             GameScreen.SimulatedPxPerDp = 3f;
 
-            // El tucán a bordo (jugando el 26) y el tucuxi con Rosa (jugando el 73), ya presentados.
+            // El tucán a bordo (jugando el 26) y el tucuxi con Rosa (jugando el 56, río arriba de Manaos), ya presentados.
             yield return Open(26, 25, 25);
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             yield return SnapshotKit.Wait(1.0f);
@@ -474,7 +481,7 @@ namespace AF.Tests.PlayMode
             SaveCrop(dir, "m24_tucan_a_bordo_360dp_zoom", map);
             GameBootstrap.Current!.CloseRiverMap();
 
-            yield return Open(73, 72, 72);
+            yield return Open(56, 55, 55);
             map = GameBootstrap.Current!.RiverMapView!;
             yield return SnapshotKit.Wait(1.0f);
             Assert.That(map.TucuxiAboardShown, Is.True);
