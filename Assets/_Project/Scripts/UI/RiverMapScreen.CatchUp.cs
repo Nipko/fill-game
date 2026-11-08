@@ -49,6 +49,8 @@ namespace AF.UI
         private float _catchMs;
         private float _catchHoldMs; // D-053: la anticipación antes de remar (RiverMapScreen.Journey.cs)
         private float _catchSpeed = 1f; // D-053: un toque durante el viaje lo acelera un poco
+        private bool _catchJourney; // añadido de D-069 del 2026-11-08: el viaje de un Mapa con viaje, a su ritmo (JourneyPerBuoyMs)
+        private float _catchPerBuoyMs = MapConfig.CatchUpPerBuoyMs;
         private int _catchArrivals;
         private bool _lastCatchArrivalSkipped;
         private int _lastCatchArrivalLevel;
@@ -69,8 +71,14 @@ namespace AF.UI
         /// <summary>Boyas que enciende «ponerse al día» en el último <see cref="Open"/>.</summary>
         public int CatchUpBuoys => _catchTo - _catchFrom;
 
-        /// <summary>Lo que dura (ms): <see cref="RiverJourney.CatchUpMs"/>.</summary>
-        public int CatchUpDurationMs => Mathf.Min(CatchUpBuoys * MapConfig.CatchUpPerBuoyMs, MapConfig.CatchUpMaxMs);
+        /// <summary>
+        /// Lo que dura (ms): <see cref="RiverJourney.CatchUpMs"/> o, en un Mapa con viaje (D-053), <see cref="RiverJourney.JourneyMs"/>
+        /// (añadido de D-069 del 2026-11-08: 4,5 s un tramo).
+        /// </summary>
+        public int CatchUpDurationMs => _catchJourney ? RiverJourney.JourneyMs(CatchUpBuoys) : Mathf.Min(CatchUpBuoys * MapConfig.CatchUpPerBuoyMs, MapConfig.CatchUpMaxMs);
+
+        /// <summary>Lo que tarda la canoa en cada boya en esta apertura (ms): el ritmo del viaje o el de «ponerse al día».</summary>
+        public float CatchUpPerBuoyMs => _catchPerBuoyMs;
 
         /// <summary>Milisegundos de «ponerse al día» transcurridos.</summary>
         public float CatchUpElapsedMs => _catchMs;
@@ -122,6 +130,8 @@ namespace AF.UI
             _catchTo = max;
             _catchSeen = seen;
             _catchStep = max;
+            _catchJourney = false;
+            _catchPerBuoyMs = MapConfig.CatchUpPerBuoyMs;
             if (_map == null || _routes == null || FillLayer == null)
             {
                 return;
@@ -134,6 +144,13 @@ namespace AF.UI
             }
 
             _catchFrom = from;
+            if (JourneySource(_source))
+            {
+                // Añadido de D-069 del 2026-11-08 (observación 3 de la prueba de la 1.1): el viaje, a un ritmo que deja ver los gestos.
+                _catchJourney = true;
+                _catchPerBuoyMs = RiverJourney.JourneyMs(max - from) / (float)(max - from);
+            }
+
             if (ProgressReduceMotion)
             {
                 // Sin viaje ni llenado animado: el estado final ya está pintado y lo que cambió desde «from» entra con un fundido
@@ -188,7 +205,7 @@ namespace AF.UI
             }
 
             _catchMs += dtMs * _catchSpeed;
-            float x = _catchFrom + (_catchMs / MapConfig.CatchUpPerBuoyMs);
+            float x = _catchFrom + (_catchMs / _catchPerBuoyMs);
             int level = Mathf.Min(_catchTo, Mathf.FloorToInt(x));
             while (_catchStep < level)
             {
@@ -441,8 +458,8 @@ namespace AF.UI
         }
 
         // FX15: AF_STATE map_journey del viaje del tramo repetido (el del fin de contenido y, con D-053, el de «Ver mapa» de la
-        // victoria; DevProbe.MapJourney), para comprobar en el teléfono por logcat que la canoa hizo el viaje: dura 1,5 s y en
-        // capturas cada 2 s no se ve.
+        // victoria; DevProbe.MapJourney), para comprobar en el teléfono por logcat que la canoa hizo el viaje: dura 4,5 s un tramo
+        // (añadido de D-069 del 2026-11-08; antes 1,5 s, que en capturas cada 2 s no se veía).
         private void ProbeJourney(string phase, string by)
         {
             if (_modesReplayFrom < 0 || !DevProbe.Enabled)
@@ -450,7 +467,8 @@ namespace AF.UI
                 return;
             }
 
-            _probe.MapJourney(_source, phase, _catchFrom, _catchTo, CatchUpDurationMs, phase == "start" ? 0f : _catchMs, by, CrewJoinedId()); // D-069, M2-4: crew_joined
+            _probe.MapJourney(_source, phase, _catchFrom, _catchTo, CatchUpDurationMs, phase == "start" ? 0f : _catchMs, by, CrewJoinedId(), // D-069, M2-4: crew_joined
+                Mathf.RoundToInt(_catchPerBuoyMs)); // añadido de D-069 del 2026-11-08: el ritmo del viaje
         }
 
         // af_stop_arrive con view = map (08 §8.2): solo con parada en el catálogo.

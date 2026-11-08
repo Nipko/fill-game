@@ -134,7 +134,7 @@ namespace AF.Tests.PlayMode
                 GameBootstrap boot = GameBootstrap.Current!;
                 RiverMapScreen map = boot.RiverMapView!;
                 int duration = map.CatchUpDurationMs;
-                Assert.That(duration, Is.EqualTo(RiverJourney.CatchUpMs(10, 20)));
+                Assert.That(duration, Is.EqualTo(RiverJourney.JourneyMs(10)), "4,5 s el tramo (añadido de D-069 del 2026-11-08)");
                 Level10MapTests.Tick(map, 100);
 
                 // En la anticipación, un toque hace salir la canoa ya; remando, la acelera. Nunca la salta.

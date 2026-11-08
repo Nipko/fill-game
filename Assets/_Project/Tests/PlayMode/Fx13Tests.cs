@@ -33,6 +33,9 @@ namespace AF.Tests.PlayMode
     {
         private const float Near = 1e-4f;
 
+        // Lo que la canoa puede alejarse de la naciente en un recodo del cauce entre dos fotogramas (unidades del marco; 10 veces Near).
+        private const float BendSlack = 1e-3f;
+
         private static readonly DateTime T0 = new DateTime(2026, 10, 19, 15, 0, 0, DateTimeKind.Utc);
 
         [TearDown]
@@ -214,9 +217,11 @@ namespace AF.Tests.PlayMode
                 Assert.That(changed || blocks == 0, Is.True, at + ", sin cambio del llenado: " + blocks + " bloques de GC.Alloc");
                 Fx10Tests.AssertPlatesFit(map, at);
 
-                // Río arriba hasta la naciente: la canoa nunca se aleja de ella.
+                // Río arriba hasta la naciente: la canoa nunca se aleja de ella (más que un recodo del cauce: con el viaje de
+                // 4,5 s del añadido de D-069 del 2026-11-08, los pasos de 16 ms son tres veces más cortos y ven un meandro del cauce
+                // de 1,7e-4 unidades que con 1,5 s se saltaban).
                 float now = Vector2.Distance(map.CanoeShownMapPoint, source);
-                Assert.That(now, Is.LessThanOrEqualTo(distance + Near), at + ": la canoa sube hacia la naciente");
+                Assert.That(now, Is.LessThanOrEqualTo(distance + BendSlack), at + ": la canoa sube hacia la naciente (" + now + " > " + distance + ")");
                 distance = now;
                 if (map.FrontStop == 70)
                 {

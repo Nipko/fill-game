@@ -34,6 +34,11 @@ namespace AF.Tests.PlayMode
     {
         private const float Near = 1e-4f;
 
+        // Lo que la canoa puede alejarse de la naciente en un recodo del cauce entre dos fotogramas (unidades del marco; 10 veces
+        // Near): con el viaje de 4,5 s del añadido de D-069 del 2026-11-08, los pasos son tres veces más cortos y ven un meandro
+        // que con 1,5 s se saltaban (como en Fx13Tests).
+        private const float BendSlack = 1e-3f;
+
         [TearDown]
         public void TearDown()
         {
@@ -123,7 +128,7 @@ namespace AF.Tests.PlayMode
                     yield return null;
                     frames++;
                     float now = Vector2.Distance(map.CanoeShownMapPoint, source);
-                    Assert.That(now, Is.LessThanOrEqualTo(distance + Near), "a los " + frames + " fotogramas: la canoa sube hacia la naciente");
+                    Assert.That(now, Is.LessThanOrEqualTo(distance + BendSlack), "a los " + frames + " fotogramas: la canoa sube hacia la naciente");
                     distance = now;
                     if (map.CatchingUp && now > Near && now < leg - Near)
                     {
@@ -139,7 +144,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.CatchUpElapsedMs, Is.GreaterThanOrEqualTo(map.ContentEndJourneyMs - 1f), "recorrió el tramo entero");
                 Assert.That(between, Is.GreaterThanOrEqualTo(5), "se ve a medio tramo en varios fotogramas");
 
-                // dt de GameBootstrap.Update va topado a 100 ms por fotograma: el viaje de 1,5 s no puede durar menos de ~1,5 s reales
+                // dt de GameBootstrap.Update va topado a 100 ms por fotograma: el viaje de 4,5 s no puede durar menos de ~4,5 s reales
                 // salvo por el primer fotograma, que se salta (_skipNextDelta).
                 Assert.That(lasted, Is.GreaterThanOrEqualTo((map.ContentEndJourneyMs / 1000f) - 0.1f), "el viaje se ve entero, en tiempo real");
                 Assert.That(Vector2.Distance(map.CanoeShownMapPoint, source), Is.LessThan(Near), "al acabar, la canoa en la naciente");

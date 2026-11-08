@@ -95,12 +95,17 @@ namespace AF.Tests.PlayMode
                 map.Tick(PlayModeHelpers.FrameMs);
                 cheer |= map.Capi.Current == CapiGesture.CheerOar;
                 tie |= map.Capi.Current == CapiGesture.Tie && map.CapiRig.SampleShown;
-                zoom = Mathf.Max(zoom, map.CameraZoom);
+                zoom = Mathf.Max(zoom, map.CameraPhaseZoom); // la de §5.5, sin el primer plano del miquito (añadido de D-069 del 2026-11-08)
             }
 
             Assert.That(cheer, Is.True, "el remo en alto al llegar");
             Assert.That(tie, Is.True, "amarra la muestra");
             Assert.That(zoom, Is.GreaterThan(1.1f).And.LessThanOrEqualTo(RiverMapScreen.CamArrivalZoom + 0.001f), "§5.5: acercamiento de 1,15");
+            for (int ms = 0; ms < 4000 && map.CameraCloseUp > 1f; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs); // el primer plano del saludo del miquito, que vuelve suave (añadido de D-069 del 2026-11-08)
+            }
+
             Assert.That(map.CameraZoom, Is.EqualTo(1f), "y vuelta al encuadre");
             Assert.That(map.ContentRect.localScale, Is.EqualTo(Vector3.one));
             Assert.That(map.Capi.Current, Is.EqualTo(CapiGesture.Rest), "quieto al acabar");

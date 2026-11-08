@@ -137,6 +137,21 @@ namespace AF.GameFlow
         }
 
         /// <summary>
+        /// Lo que dura el viaje del tramo de un Mapa con viaje (D-053) de <paramref name="buoys"/> boyas, en ms:
+        /// <paramref name="buoys"/> · <see cref="MapConfig.JourneyPerBuoyMs"/>, entre <see cref="MapConfig.JourneyMinMs"/> y
+        /// <see cref="MapConfig.AnimMapWorldMs"/> (añadido de D-069 del 2026-11-08: 4,5 s un tramo de 10). 0 sin boyas.
+        /// </summary>
+        public static int JourneyMs(int buoys)
+        {
+            if (buoys <= 0)
+            {
+                return 0;
+            }
+
+            return Math.Max(MapConfig.JourneyMinMs, Math.Min(buoys * MapConfig.JourneyPerBuoyMs, MapConfig.AnimMapWorldMs));
+        }
+
+        /// <summary>
         /// Guía del Mapa en el mundo <paramref name="world"/> (D-013, Q18-A; P-M8: se deduce del mundo, sin campo en los datos):
         /// <see cref="GuideBufeo"/> en los mundos 7 y 8 y <see cref="GuideRosa"/> en el resto. Son identificadores, no texto.
         /// </summary>

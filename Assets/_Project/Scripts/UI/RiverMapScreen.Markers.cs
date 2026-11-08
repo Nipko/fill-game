@@ -1703,6 +1703,27 @@ namespace AF.UI
 
         // Una mini cuia por parada con ruta de los mundos abiertos hasta el de «Jugar» (las de los mundos futuros van en su silueta,
         // M3.4). Solo asigna al crecer la reserva; el agua y la baliza se fijan aquí, al abrir.
+        // La parada n es la siguiente a la del nivel en juego y, con el Mapa v2, se dibuja aunque sea de otro mundo (añadido de D-069
+        // del 2026-11-08).
+        private bool NextStopOfNextWorld(RiverStopCatalog stops, int n)
+        {
+            return n >= 0 && n == NextWorldStop(stops);
+        }
+
+        // Con el Mapa v2, la parada siguiente a la del nivel en juego si abre el mundo que viene (la dibuja la vista Mundo y la
+        // encuadra su zoom, para que su rótulo con «Faltan N» se vea; añadido de D-069 del 2026-11-08); −1 si no.
+        private int NextWorldStop(RiverStopCatalog stops)
+        {
+            if (!_live || !_remainingReady)
+            {
+                return -1; // sin «Faltan N» (nada que jugar o sin nombre), nada que enseñar
+            }
+
+            RiverStop? current = stops.StopOf(_playLevel);
+            RiverStop? next = current != null ? stops.At(current.N + 1) : null;
+            return next != null && next.World > _world ? next.N : -1;
+        }
+
         private void BuildStopMarkers(RiverMap map, RiverRoutes routes, RiverStopCatalog stops)
         {
             _hasRim = ArtSlots.Find(ProceduralArt.MiniCuiaSlot) == null; // el canto es de la silueta provisional
@@ -1711,7 +1732,9 @@ namespace AF.UI
             {
                 RiverStop? stop = stops.At(n);
                 RiverStopRoute? route = routes.At(n);
-                if (stop == null || route == null || stop.World > _world || !ModesShowsStop(stop)) // ui_map_mode = worlds (M4.3)
+                // Añadido de D-069 del 2026-11-08 (observación 4): con el Mapa v2, también la parada siguiente aunque abra el mundo
+                // que viene (la del 80, Leticia, jugando el 71-80), para que lleve «Faltan N» en su rótulo y no en la placa.
+                if (stop == null || route == null || (stop.World > _world && !NextStopOfNextWorld(stops, n)) || !ModesShowsStop(stop)) // ui_map_mode = worlds (M4.3)
                 {
                     continue;
                 }

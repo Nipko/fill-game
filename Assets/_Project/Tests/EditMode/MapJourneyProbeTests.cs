@@ -57,6 +57,22 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void MapJourney_Line_CarriesThePerBuoyPace_D069Addendum()
+        {
+            var probe = new DevProbe();
+            string? line = probe.FormatMapJourney(MapOpenSource.Victory, "start", 60, 70, 4500, 0f, string.Empty, null, 450);
+            string? none = probe.FormatMapJourney(MapOpenSource.Victory, "start", 60, 70, 4500, 0f, string.Empty);
+            if (!DevProbe.Enabled)
+            {
+                Assert.That(line, Is.Null);
+                return;
+            }
+
+            StringAssert.Contains("\"from\":60,\"to\":70,\"ms\":4500,\"per_buoy_ms\":450,\"elapsed_ms\":0", line);
+            Assert.That(none, Does.Not.Contain("per_buoy_ms"));
+        }
+
+        [Test]
         public void MapJourney_End_CarriesCrewJoined_D069M24()
         {
             var probe = new DevProbe();

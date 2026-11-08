@@ -92,6 +92,22 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void JourneyMs_ATenLevelLeg_Takes4500ms_ScalesWithTheBuoys_Between3And6s()
+        {
+            // Añadido de D-069 del 2026-11-08 (observación 3 de la prueba de la 1.1): el viaje de un Mapa con viaje, más lento que
+            // «ponerse al día» para que se vean los gestos de Capi, la burbuja (1,2 s) y la cámara.
+            Assert.That(RiverJourney.JourneyMs(10), Is.EqualTo(4500), "un tramo de 10 niveles, 4,5 s");
+            Assert.That(RiverJourney.JourneyMs(10), Is.InRange(4000, 5000), "del orden de 4-5 s");
+            Assert.That(RiverJourney.JourneyMs(1), Is.EqualTo(MapConfig.JourneyMinMs), "como poco 3 s");
+            Assert.That(RiverJourney.JourneyMs(8), Is.EqualTo(3600), "escala con la distancia");
+            Assert.That(RiverJourney.JourneyMs(20), Is.EqualTo(MapConfig.AnimMapWorldMs), "como mucho anim_map_world_ms (08 §9)");
+            Assert.That(RiverJourney.JourneyMs(0), Is.EqualTo(0));
+            Assert.That(RiverJourney.JourneyMs(10), Is.GreaterThan(RiverJourney.CatchUpMs(0, 10)), "más lento que ponerse al día (1,5 s)");
+            Assert.That(RiverJourney.JourneyMs(10) / AF.UI.RiverMapScreen.JourneyTapSpeed, Is.LessThanOrEqualTo(RiverJourney.CatchUpMs(0, 10) / 2f),
+                "con un toque al abrir, «Jugar» llega tan pronto como con un toque antes del cambio (×2 sobre 1,5 s)");
+        }
+
+        [Test]
         public void MemoryStore_SaveMapSeenLevel_NeverGoesDown_AndCountsOnlyChanges()
         {
             var store = new MemoryProgressStore(59, 58);

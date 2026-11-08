@@ -108,7 +108,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.CatchUpFromLevel, Is.EqualTo(690));
                 Assert.That(map.CatchUpToLevel, Is.EqualTo(700));
                 int journey = map.ContentEndJourneyMs;
-                Assert.That(journey, Is.EqualTo(RiverJourney.CatchUpMs(690, 700)));
+                Assert.That(journey, Is.EqualTo(RiverJourney.JourneyMs(10)), "el ritmo del viaje: 4,5 s el tramo (añadido de D-069 del 2026-11-08)");
                 Assert.That(journey, Is.GreaterThan(0));
                 Assert.That(journey, Is.LessThanOrEqualTo(MapConfig.AnimMapWorldMs), "tope de anim_map_world_ms (08 §9)");
 
