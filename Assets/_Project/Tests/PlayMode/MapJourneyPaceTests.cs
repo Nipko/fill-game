@@ -262,6 +262,31 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator WithTheBackupPlate_GoingToTheBasinAndBack_FaltanIsNeverLost()
+        {
+            // Revisión: con la placa de respaldo (la parada siguiente fuera del encuadre, jugando el 292), ir a la Cuenca y volver a
+            // Mundo no deja «Faltan N» sin rótulo ni placa.
+            yield return MapMarkersTests.OpenApp(292);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Canvas.ForceUpdateCanvases();
+            Assert.That(map.RemainingLabelOffView, Is.True, "premisa: el 292 es uno de los casos con la placa");
+            Assert.That(map.StopRemainingShown, Is.True);
+            for (int round = 0; round < 2; round++)
+            {
+                map.SetView(MapView.Basin);
+                Canvas.ForceUpdateCanvases();
+                map.SetView(MapView.World);
+                Canvas.ForceUpdateCanvases();
+                string label = map.StopLabelText(map.RemainingStopN());
+                bool inLabel = map.StopRemainingInLabel && label.Contains("faltan");
+                Assert.That(inLabel || map.StopRemainingShown, Is.True, "vuelta " + round + ": «Faltan N» en el rótulo («" + label + "») o en la placa");
+                Assert.That(inLabel && map.StopRemainingShown, Is.False, "vuelta " + round + ": no dos veces");
+            }
+
+            map.Close();
+        }
+
+        [UnityTest]
         public IEnumerator TheToucanAndTheTucuxi_JoinInACloseUp_ThatGoesBackSmoothly_AndNotWithReduceMotion()
         {
             // Observación 8: el primer plano de la canoa cuando se une un compañero (propuesta del dueño), y vuelta a la vista normal.

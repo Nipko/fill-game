@@ -109,8 +109,8 @@ namespace AF.UI
         private Color _sampleWater = Color.white;
         private float _camZoom = 1f;
         private int _camPhase; // 0 nada, 1 anticipación, 2 vuelta de la anticipación, 3 llegada
-        private float _closeZoom = 1f;
-        private float _camPhaseZoom = 1f; // la escala de _camPhase sola, sin el primer plano // el primer plano de la tripulación (añadido de D-069 del 2026-11-08), que multiplica al de _camPhase
+        private float _closeZoom = 1f; // el primer plano de la tripulación (añadido de D-069 del 2026-11-08), que multiplica al de _camPhase
+        private float _camPhaseZoom = 1f; // la escala de _camPhase sola, sin el primer plano
         private float _camMs;
         private float _camFrom = 1f;
         private Color _lightFrom;

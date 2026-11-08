@@ -760,11 +760,11 @@ namespace AF.UI
         {
             int n = RemainingStopN();
             int i = n >= 0 ? StopMarkerIndexOf(n) : -1;
-            if (!_live || _view != MapView.World || i < 0 || i >= _stopLabels.Count || i >= _markerCount || !_stopLabels[i].Pill.gameObject.activeSelf)
+            bool valid = i >= 0 && i < _stopLabels.Count && i < _markerCount;
+            if (!_live || _view != MapView.World || !valid || !_stopLabels[i].Pill.gameObject.activeSelf)
             {
-                if (_remainingOffView)
+                if (ClearRemainingOffView(valid ? i : -1))
                 {
-                    _remainingOffView = false;
                     SyncRemainingPlate();
                 }
 
@@ -776,14 +776,9 @@ namespace AF.UI
             Rect old = PillRect(c, pill);
             Rect placedRect = old; // su caja en _stopLabelPlaced y _townPlaced, tal como la dejó TownsSpace
             _labelView = new Rect(2f, 2f, _viewW - 4f, _viewH - 4f);
-            if (_remainingOffView)
+            if (ClearRemainingOffView(i))
             {
-                // Venía de la placa (otro encuadre de esta apertura): el rótulo vuelve a llevar «Faltan N» antes de mirar si cabe.
-                _remainingOffView = false;
-                TextMeshProUGUI full = _stopLabels[i].Label;
-                full.text = UiText.MapStopLabelRemaining(UiText.StopName(_markers[i].Stop), RiverJourney.LevelsLeft(_playLevel));
-                SizePill(pill, full);
-                old = PillRect(c, pill);
+                old = PillRect(c, pill); // venía de la placa (otro encuadre de esta apertura): con «Faltan N» otra vez, ¿cabe?
             }
 
             if (Inside(InView(old, _offset), _labelView) && !HitsPlate(old)) // las placas se encajan tras el encuadre (PlatesFitView)
@@ -922,6 +917,26 @@ namespace AF.UI
                     r.SetAlpha(a);
                 }
             }
+        }
+
+        // Baja la placa de respaldo de RemainingLabelFitView: el rótulo de la parada i (si i ≥ 0 y lleva texto) vuelve a llevar
+        // «Faltan N». True si estaba puesta.
+        private bool ClearRemainingOffView(int i)
+        {
+            if (!_remainingOffView)
+            {
+                return false;
+            }
+
+            _remainingOffView = false;
+            if (i >= 0 && _stopLabels[i].Label.text.Length > 0)
+            {
+                TextMeshProUGUI full = _stopLabels[i].Label;
+                full.text = UiText.MapStopLabelRemaining(UiText.StopName(_markers[i].Stop), RiverJourney.LevelsLeft(_playLevel));
+                SizePill(_stopLabels[i].Pill, full);
+            }
+
+            return true;
         }
 
         // El rótulo de la parada siguiente no cabe entero a la vista con el encuadre de apertura (RemainingLabelFitView).
