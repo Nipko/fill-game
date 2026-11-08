@@ -25,7 +25,7 @@ Convenciones: **dp**, unidad de la interfaz (unos 2,6-3 px por dp en el teléfon
 | **M2-1 · El río vivo** | Mapa a pantalla completa; río 3-4 veces más ancho, con profundidad, brillo y corriente; **orillas** con playas en las curvas interiores, barrancos rojos en las exteriores y várzea clara; selva en capas; niebla y Andes al fondo; luz propia de cada mundo; primer plano con parallax | 10 días de agente |
 | **M2-2 · Pueblos de paso** | Unos **40 pueblos y ciudades** en 1-700 (los 18 de los datos más 22 candidatos), uno cada 3-5 niveles en los tramos largos, cada uno con su viñeta (muelle y palafitos, iglesia, barco de línea, mercado del muelle), su rótulo y, si está verificado, un dato. En los tramos que no se mueven, una **excursión local** | 9 días |
 | **M2-3 · Capi al remo** | Canoa de 60 dp (hoy 40), 5 gestos nuevos (saluda, mira, celebra, amarra la muestra, rema fuerte), emociones sin texto, la carga de cuias crece con el Muestrario, momentos de cámara | 6 días |
-| **M2-4 · La tripulación** | Animales que **se unen al viaje** río arriba: en la 1.1, el tucán (Alter do Chão, 21) y el tucuxi (Manaos, 71); los miquitos saludan desde su árbol en su tramo | 4 días |
+| **M2-4 · La tripulación** | Animales que **se unen al viaje** río arriba: en la 1.1, el tucán (Alter do Chão, 21) y el tucuxi (Manaos, 51; D-069); los miquitos saludan desde su árbol en su tramo | 4 días |
 
 Total de la 1.1: **unos 29 días de agente** (3-4 semanas con dos carriles de Editor). Memoria: **+6 MiB** de texturas solo con el Mapa abierto (hoy 48 MiB en el Mapa frente a un tope de 120). AAB: **+0,1 MB** (todo por código). En la 1.2: guacamayos, nutrias y hoatzin; la lluvia de la Temporada de lluvias en el Mapa; la noche; el fin de contenido con toda la tripulación; y, si quieres, frases de Capi.
 
@@ -237,7 +237,7 @@ Capi **no habla en el Mapa** (Q3-A de D-013: la voz es de TiTino). Se propone qu
 | Compañero | Se une | Cómo va | Por qué ahí | Versión |
 |---|---|---|---|---|
 | **Tucán** | Alter do Chão (21, mundo 2) | Polizón en la proa, 18 dp; mira hacia delante y abre el pico en las llegadas | Reservado en el elenco (07 §6.3) y común en la región [E] | **1.1** |
-| **Tucuxi** (delfín gris, *Sotalia fluviatilis*) | Salida de Manaos (71, mundo 3) | Nada junto a Rosa, 34 dp; saltan juntos en las llegadas | Vive en el Amazonas y el Negro [E]; ya salta en las celebraciones (D-029), así que es **el rig de Rosa con otra paleta** | **1.1** |
+| **Tucuxi** (delfín gris, *Sotalia fluviatilis*) | Salida de Manaos (51, mundo 3) | Nada junto a Rosa, 17 dp (el 75 % de Rosa, como en la maqueta); salta en las llegadas y Rosa asoma (D-029). *Corregido por D-069 (respuestas del dueño a las preguntas de M2-4): antes decía 71 y 34 dp, y que saltaban juntos* | Vive en el Amazonas y el Negro [E]; ya salta en las celebraciones (D-029), así que es **el rig de Rosa con otra paleta** | **1.1** |
 | **Hoatzin** | Cuyabeno (251, mundo 6) | Posado en la popa, 20 dp; despliega las alas en las llegadas | Ave típica de las lagunas de Cuyabeno [E]. Hoy reservado para Volver a la orilla en el mundo 11: compatible | 1.2 |
 | **Pareja de guacamayos** | Collpa de Tambopata (361, mundo 7) | Vuelan en círculos sobre la canoa, 14 dp | La collpa es su sitio (parada 36) [E] | 1.2 |
 | **Familia de nutrias gigantes** | Cochas del Manu (411, mundo 7) | Nadan alrededor de la canoa, 3 de 16 dp | Cocha Salvador del Manu [E]; ya están en el elenco (la Crecida) | 1.2 |

@@ -2055,6 +2055,9 @@ namespace AF.UI
         /// <summary>El tucuxi nada junto al guía en el plano final (se ve).</summary>
         public bool TucuxiShown => _crewTucuxi != null && _crewTucuxi.gameObject.activeInHierarchy && _crewTucuxi.canvasRenderer.GetAlpha() > 0f;
 
+        /// <summary>El tucuxi del plano final (tests: su tamaño), o null.</summary>
+        internal Image? TucuxiImage => _crewTucuxi;
+
         /// <summary>El atlas de la tripulación de la franja (tests: se suelta al ocultarla).</summary>
         internal MapCrewArt CrewArt => _crewArt;
 
@@ -2371,7 +2374,7 @@ namespace AF.UI
             {
                 RectTransform g = _guideA.rectTransform;
                 RectTransform t = _crewTucuxi.rectTransform;
-                CrewDraw.SetPos(t, g.anchoredPosition + new Vector2(-16f * _canoeFacing, -9f));
+                CrewDraw.SetPos(t, g.anchoredPosition + new Vector2(RiverMapScreen.TucuxiBesideRosa.x * _canoeFacing, RiverMapScreen.TucuxiBesideRosa.y));
                 CrewDraw.SetScale(t, new Vector3(-_canoeFacing, 1f, 1f));
                 CrewDraw.SetAlpha(_crewTucuxi, appear * _guideAAlpha);
             }

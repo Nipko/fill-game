@@ -450,7 +450,7 @@ namespace AF.UI
                 return;
             }
 
-            _probe.MapJourney(_source, phase, _catchFrom, _catchTo, CatchUpDurationMs, phase == "start" ? 0f : _catchMs, by);
+            _probe.MapJourney(_source, phase, _catchFrom, _catchTo, CatchUpDurationMs, phase == "start" ? 0f : _catchMs, by, CrewJoinedId()); // D-069, M2-4: crew_joined
         }
 
         // af_stop_arrive con view = map (08 §8.2): solo con parada en el catálogo.

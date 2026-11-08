@@ -192,10 +192,14 @@ namespace AF.UI
             MapJourney(MapOpenSource.ContentEnd, phase, from, to, ms, elapsedMs, by);
         }
 
-        /// <summary><see cref="MapJourney(string, int, int, int, float, string)"/> con el <c>source</c> del Mapa (D-053).</summary>
-        public void MapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by)
+        /// <summary>
+        /// <see cref="MapJourney(string, int, int, int, float, string)"/> con el <c>source</c> del Mapa (D-053) y, en la línea de
+        /// <c>end</c>, <c>crew_joined</c> (D-069, M2-4; propuesta del Mapa v2 §9.3): el compañero que se presentó en ese Mapa
+        /// (<c>toucan</c> o <c>tucuxi</c>) o null.
+        /// </summary>
+        public void MapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by, string? crewJoined = null)
         {
-            string? line = FormatMapJourney(source, phase, from, to, ms, elapsedMs, by);
+            string? line = FormatMapJourney(source, phase, from, to, ms, elapsedMs, by, crewJoined);
             if (line != null)
             {
                 Write(line);
@@ -209,7 +213,7 @@ namespace AF.UI
         }
 
         /// <summary>Texto de la línea <c>AF_STATE map_journey</c> con su <c>source</c>; null si la sonda no escribe.</summary>
-        public string? FormatMapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by)
+        public string? FormatMapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by, string? crewJoined = null)
         {
             if (!Enabled)
             {
@@ -234,6 +238,19 @@ namespace AF.UI
             else
             {
                 sb.Append('"').Append(by).Append('"');
+            }
+
+            if (phase == "end")
+            {
+                sb.Append(",\"crew_joined\":");
+                if (string.IsNullOrEmpty(crewJoined))
+                {
+                    sb.Append("null");
+                }
+                else
+                {
+                    sb.Append('"').Append(crewJoined).Append('"');
+                }
             }
 
             sb.Append('}');

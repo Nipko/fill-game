@@ -19,7 +19,8 @@ namespace AF.UI
     /// nivel), al cruzarlo en el viaje (o al salir, si el viaje empieza más allá), llega volando o nadando y se acomoda en
     /// <see cref="CrewIntroMs"/> ms; sale el chip «¡Se une al viaje! · {especie}» <see cref="CrewChipMs"/> ms, Capi hace ♥ y TalkBack
     /// lo anuncia («Se une al viaje: {especie}»). Con Reducir movimiento aparece en su sitio y sale el chip.</description></item>
-    /// <item><description><b>Llegada</b> (§6.3): el tucán abre el pico y aletea, y el tucuxi y Rosa saltan juntos, en
+    /// <item><description><b>Llegada</b> (§6.3): el tucán abre el pico y aletea, y el tucuxi salta (Rosa solo asoma, como el boto real:
+    /// D-029, F11; respuesta del dueño a la pregunta 3 de M2-4), en
     /// <see cref="CrewHopMs"/> ms, a la vez que el remo en alto de Capi: «Jugar» no espera nada más (0 ms sobre D-053).</description></item>
     /// <item><description><b>Cameo de los miquitos</b> (§6.1, regla 4): a mitad de un viaje, uno del tramo saluda desde un árbol de la
     /// orilla; nunca sube a la canoa.</description></item>
@@ -44,7 +45,7 @@ namespace AF.UI
         /// <summary>El salto o el aleteo de la tripulación en la llegada (ms; §6.3: ≤ 400 ms, a la vez que el remo en alto).</summary>
         public const float CrewHopMs = 400f;
 
-        /// <summary>Lo que sube el tucuxi (y Rosa) en el salto de la llegada (dp de la vista Mundo) [P].</summary>
+        /// <summary>Lo que sube el tucuxi en el salto de la llegada (dp de la vista Mundo) [P].</summary>
         public const float CrewJumpDp = 8f;
 
         /// <summary>Lo que dura el saludo del miquito desde su árbol (ms) [P].</summary>
@@ -73,11 +74,11 @@ namespace AF.UI
         private static readonly Vector2 ToucanFeet = new Vector2(52.5f, 15.2f);
         private const float ToucanScale = RiverCrew.ToucanDp / 19.8f;
 
-        // El tucuxi junto a Rosa: un poco por detrás y más abajo (dp de la vista Mundo) [P].
-        private static readonly Vector2 TucuxiBesideRosa = new Vector2(-16f, -9f);
+        /// <summary>El tucuxi junto a Rosa: un poco por detrás (× la orientación de la canoa) y más abajo (dp de la vista Mundo; también en el banner) [P].</summary>
+        internal static readonly Vector2 TucuxiBesideRosa = new Vector2(-10f, -6f);
 
         // Dónde se quedan en su tramo [P]: donde se unieron, en el punto de la canoa con su nivel ganado (por el agua: el tucuxi en el
-        // cauce, nunca en el lago de Tefé, D-069 «Puntos sensibles»), el tucán apartado a la orilla (dp de la vista Mundo).
+        // cauce del Negro, lejos del lago de Tefé, D-069 «Puntos sensibles»), el tucán apartado a la orilla (dp de la vista Mundo).
         private static readonly Vector2 ToucanHomeOffset = new Vector2(18f, -14f);
 
         private readonly MapCrewArt _crewArt = new MapCrewArt();
@@ -106,9 +107,6 @@ namespace AF.UI
         private RectTransform? _crewChip;
         private Image? _crewChipPlate;
         private TextMeshProUGUI? _crewChipLabel;
-        private Vector2 _guideBase;
-        private Vector2 _guideApplied;
-        private bool _guideHopping;
 
         /// <summary><c>ui_map_crew</c> (08 §9) antes de cada apertura (lo pone <see cref="GameBootstrap"/>); solo cuenta con el Mapa v2.</summary>
         public bool CrewRequested { get; set; } = true;
@@ -188,7 +186,6 @@ namespace AF.UI
             _cameoMs = -1f;
             _cameoStill = false;
             _crewAnnounced = -1;
-            _guideHopping = false;
             _crewOn = _live && CrewRequested && _hasCanoe && _progress != null;
             if (!_crewOn)
             {
@@ -295,7 +292,6 @@ namespace AF.UI
 
         partial void CrewClose()
         {
-            RestoreGuide();
             HideCrew();
             ClearCrewSprites();
             _crewArt.Release();
@@ -312,6 +308,30 @@ namespace AF.UI
         internal string CrewMemJson()
         {
             return ",\"crew_tex_kib\":" + (_crewArt.TextureBytes / 1024L).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        // AF_STATE map_journey (D-069, M2-4; §9.3): el compañero que se presenta en este Mapa («toucan» o «tucuxi»), o null. Se deduce
+        // como en CrewBegin, sin esperar a él: la sonda escribe al abrir (Reducir movimiento) o al acabar el viaje, antes que la tripulación.
+        private string? CrewJoinedId()
+        {
+            if (!_live || !CrewRequested || !_hasCanoe || _progress == null)
+            {
+                return null;
+            }
+
+            int max = Mathf.Clamp(_progress.MaxLevel, 0, WorldTable.LastLevel);
+            int seen = ModesCatchUpSeen(Mathf.Clamp(_catchSeen, 0, max));
+            string? id = null;
+            for (int i = 0; i < RiverCrew.Count; i++)
+            {
+                CrewMember m = RiverCrew.At(i);
+                if (RiverCrew.IntroPending(m, seen, max, true))
+                {
+                    id = m.Kind == CrewKind.Tucuxi ? "tucuxi" : "toucan";
+                }
+            }
+
+            return id;
         }
 
         // ============================================================================================ cada fotograma
@@ -708,67 +728,34 @@ namespace AF.UI
 
             bool on = Present(CrewKind.Tucuxi, level) && tx.sprite != null && guide != null && guide.gameObject.activeInHierarchy && _guideShown;
             SetActive(tx, on);
-            float hop = HopT;
             if (!on)
             {
-                RestoreGuide();
                 return;
             }
 
+            // Nada junto a Rosa; al presentarse, llega nadando desde atrás y aparece; en la llegada salta él solo y Rosa asoma, como el
+            // boto real (D-029, F11; respuesta del dueño a la pregunta 3 de M2-4): Rosa no se mueve.
             float k = _view == MapView.World ? 1f : GuideBasinDp / GuideWorldDp;
-            RectTransform g = guide!.rectTransform;
-            Vector2 now = g.anchoredPosition;
-            if (!_guideHopping || now != _guideApplied)
-            {
-                _guideBase = now; // la canoa movió al guía (PlaceCanoeGear): esa es la base
-            }
-
-            // Nada junto a Rosa; al presentarse, llega nadando desde atrás y aparece; en la llegada, saltan juntos (§6.2-§6.3).
             float intro = IntroT(CrewKind.Tucuxi);
             float ease = Ease.OutCubic(intro);
             Vector2 offset = new Vector2(TucuxiBesideRosa.x * _canoeFacing, TucuxiBesideRosa.y) * k;
-            offset += new Vector2(-_canoeFacing * 34f * k * (1f - ease), 0f);
-            Vector2 jump = Vector2.zero;
+            offset += new Vector2(-_canoeFacing * 30f * k * (1f - ease), 0f);
             float tilt = 0f;
-            if (hop >= 0f && !_rosaJumpPlaying)
+            float hop = HopT;
+            if (hop >= 0f)
             {
                 float s = Mathf.Sin(hop * Mathf.PI);
-                jump = new Vector2(0f, CrewJumpDp * k * s);
+                offset += new Vector2(0f, CrewJumpDp * k * s);
                 tilt = 22f * Mathf.Cos(hop * Mathf.PI) * -_canoeFacing;
-                Vector2 rosa = _guideBase + Turn(jump, _figureAngle);
-                CrewDraw.SetPos(g, rosa);
-                _guideApplied = rosa;
-                _guideHopping = true;
-            }
-            else
-            {
-                RestoreGuide();
             }
 
             RectTransform r = tx.rectTransform;
             float w = RiverCrew.TucuxiDp * k;
             CrewDraw.SetSize(r, new Vector2(w, w * (ProceduralArt.CrewCell(CrewPiece.Tucuxi).height / (float)ProceduralArt.CrewCell(CrewPiece.Tucuxi).width)));
-            CrewDraw.SetPos(r, _guideBase + Turn(offset + jump, _figureAngle));
+            CrewDraw.SetPos(r, guide!.rectTransform.anchoredPosition + Turn(offset, _figureAngle));
             CrewDraw.SetScale(r, new Vector3(-_canoeFacing, 1f, 1f));
             CrewDraw.SetRotation(r, _figureAngle + tilt);
             CrewDraw.SetAlpha(tx, intro < 1f ? Mathf.Clamp01(intro * 2f) : 1f);
-        }
-
-        // Rosa vuelve a su sitio tras el salto (la base que dejó la canoa).
-        private void RestoreGuide()
-        {
-            if (!_guideHopping || _guide == null)
-            {
-                return;
-            }
-
-            RectTransform g = _guide.rectTransform;
-            if (g.anchoredPosition == _guideApplied)
-            {
-                g.anchoredPosition = _guideBase;
-            }
-
-            _guideHopping = false;
         }
 
         private void ApplyHomes(int level, bool world)
@@ -802,7 +789,7 @@ namespace AF.UI
             }
         }
 
-        // Donde se unió: el punto de la canoa con su nivel ganado (21: saliendo de Alter do Chão; 71: saliendo de Tefé por el Solimões),
+        // Donde se unió: el punto de la canoa con su nivel ganado (21: saliendo de Alter do Chão; 51: saliendo de Manaos por el Negro),
         // por el agua, en coordenadas locales del contenido.
         private Vector2 HomePoint(RiverMap map, RiverRoutes routes, int joinLevel)
         {

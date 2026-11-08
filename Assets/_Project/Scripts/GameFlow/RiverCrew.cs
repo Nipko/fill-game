@@ -9,7 +9,7 @@ namespace AF.GameFlow
         /// <summary>El tucán: polizón en la proa (se une en Alter do Chão, nivel 21, mundo 2).</summary>
         Toucan = 0,
 
-        /// <summary>El tucuxi (<i>Sotalia fluviatilis</i>): nada junto a Rosa (se une en el nivel 71, mundo 3).</summary>
+        /// <summary>El tucuxi (<i>Sotalia fluviatilis</i>): nada junto a Rosa (se une en el nivel 51, a la salida de Manaos, mundo 3).</summary>
         Tucuxi = 1,
 
         /// <summary>Un miquito de la tropa: solo un cameo desde un árbol de la orilla; nunca sube a la canoa (D-010; §6.1, regla 4).</summary>
@@ -84,17 +84,17 @@ namespace AF.GameFlow
         /// <summary>Nivel en que se une el tucán (Alter do Chão; §6.2 y D-069, P6 (a)).</summary>
         public const int ToucanJoinLevel = 21;
 
-        /// <summary>Nivel en que se une el tucuxi (§6.2 y D-069, P6 (a)).</summary>
-        public const int TucuxiJoinLevel = 71;
+        /// <summary>Nivel en que se une el tucuxi: la salida de Manaos (§6.2; respuesta del dueño a la pregunta 2 de M2-4, D-069).</summary>
+        public const int TucuxiJoinLevel = 51;
 
         /// <summary>Largo del tucán en la vista Mundo (dp; §6.2).</summary>
         public const float ToucanDp = 18f;
 
         /// <summary>
-        /// Largo del tucuxi en la vista Mundo (dp; §6.2: «nada junto a Rosa, 34 dp»). Pendiente del dueño (pregunta 1 del añadido de
-        /// M2-4 en D-069): Rosa mide 22 dp en el Mapa y el animal real es más pequeño que el boto (<c>fact.agua_tapajos.15</c>).
+        /// Largo del tucuxi en la vista Mundo (dp): unos 17, el 75 % de Rosa (22 dp), como en la maqueta y como el animal real, más
+        /// pequeño que el boto (<c>fact.agua_tapajos.15</c>; respuesta del dueño a la pregunta 1 de M2-4, D-069).
         /// </summary>
-        public const float TucuxiDp = 34f;
+        public const float TucuxiDp = 17f;
 
         private static readonly CrewMember[] Members =
         {
