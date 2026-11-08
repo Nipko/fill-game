@@ -74,8 +74,8 @@ namespace AF.UI
         private static readonly Vector2 ToucanFeet = new Vector2(52.5f, 15.2f);
         private const float ToucanScale = RiverCrew.ToucanDp / 19.8f;
 
-        // El tucuxi junto a Rosa: un poco por detrás y más abajo (dp de la vista Mundo) [P].
-        private static readonly Vector2 TucuxiBesideRosa = new Vector2(-10f, -6f);
+        /// <summary>El tucuxi junto a Rosa: un poco por detrás (× la orientación de la canoa) y más abajo (dp de la vista Mundo; también en el banner) [P].</summary>
+        internal static readonly Vector2 TucuxiBesideRosa = new Vector2(-10f, -6f);
 
         // Dónde se quedan en su tramo [P]: donde se unieron, en el punto de la canoa con su nivel ganado (por el agua: el tucuxi en el
         // cauce del Negro, lejos del lago de Tefé, D-069 «Puntos sensibles»), el tucán apartado a la orilla (dp de la vista Mundo).

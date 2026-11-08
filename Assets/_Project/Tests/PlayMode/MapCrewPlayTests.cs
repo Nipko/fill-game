@@ -133,6 +133,7 @@ namespace AF.Tests.PlayMode
             Assert.That(map.CrewIntroKind, Is.EqualTo(CrewKind.Tucuxi));
             Level10MapTests.Tick(map, 3000);
             Assert.That(map.TucuxiAboardShown, Is.True, "nada junto a Rosa");
+            Assert.That(map.TucuxiImage!.rectTransform.sizeDelta.x, Is.EqualTo(RiverCrew.TucuxiDp).Within(0.01f), "unos 17 dp, el 75 % de Rosa");
             Assert.That(map.CrewChipText, Is.EqualTo("¡Se une al viaje! · Tucuxi"));
             Assert.That(map.GuideId, Is.EqualTo(RiverJourney.GuideRosa));
             Assert.That(Vector2.Distance(map.TucuxiImage!.rectTransform.anchoredPosition, map.GuideImage!.rectTransform.anchoredPosition),
@@ -409,6 +410,10 @@ namespace AF.Tests.PlayMode
                     strip.Apply(float.MaxValue, false);
                     Assert.That(strip.ToucanShown, Is.EqualTo(toucan), where + ": el tucán en la proa");
                     Assert.That(strip.TucuxiShown, Is.EqualTo(tucuxi), where + ": el tucuxi junto al guía");
+                    if (tucuxi)
+                    {
+                        Assert.That(strip.TucuxiImage!.rectTransform.sizeDelta.x, Is.EqualTo(RiverCrew.TucuxiDp * 2f / 3f).Within(0.01f), where + ": a la escala de la canoa de 40 dp");
+                    }
                     Assert.That(strip.CrewArt.Built, Is.True, where);
                     banner.HideNow();
                     Assert.That(strip.CrewArt.Built, Is.False, where + ": el atlas se suelta con la franja");
