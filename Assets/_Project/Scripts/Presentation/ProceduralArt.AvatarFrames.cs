@@ -186,7 +186,7 @@ namespace AF.Presentation
             DestroyNow(tex);
         }
 
-        /// <summary>Destruye el marco suelto de la caché (al cerrar la libreta y la escena).</summary>
+        /// <summary>Destruye el marco suelto de la caché (al cerrar la libreta y en <see cref="Dispose"/>).</summary>
         public void ForgetAvatarFrameOverlay()
         {
             DestroyAvatarFrameSprite(_frameOverlay);

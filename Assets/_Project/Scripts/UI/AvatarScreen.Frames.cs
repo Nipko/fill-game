@@ -160,6 +160,20 @@ namespace AF.UI
             return sprite;
         }
 
+        /// <summary>
+        /// Destruye los marcos de las celdas sin tocar la UI (que puede estar ya destruida): al destruir la escena con «Tu avatar»
+        /// abierta (una recarga), cuando su <see cref="Close"/> no llega.
+        /// </summary>
+        public void ReleaseFrameArt()
+        {
+            foreach (KeyValuePair<int, Sprite> pair in _frameSprites)
+            {
+                ProceduralArt.DestroyAvatarFrameSprite(pair.Value);
+            }
+
+            _frameSprites.Clear();
+        }
+
         private void ReleaseFrames()
         {
             for (int i = 0; i < _frameCells.Count; i++)

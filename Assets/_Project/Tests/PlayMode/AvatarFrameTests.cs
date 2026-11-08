@@ -99,7 +99,7 @@ namespace AF.Tests.PlayMode
             LobbyScreen lobby = boot.Lobby!;
             Assert.That(boot.FrameService!.Current!.Id, Is.EqualTo("frame_w02"), "sin decisión: el del mundo más alto [P]");
             Assert.That(lobby.AvatarDotShown, Is.True, "marcos sin ver: el punto del inicio");
-            Assert.That(lobby.AvatarA11y, Is.EqualTo("Tu avatar: Tucán con el marco de Tapajós. Hay un avatar nuevo. Toca para cambiarlo"));
+            Assert.That(lobby.AvatarA11y, Is.EqualTo("Tu avatar: Tucán con el marco de Tapajós. Hay un marco nuevo. Toca para cambiarlo"));
             Assert.That(lobby.AvatarSprite!.name, Does.Contain("frame_w02"), "el retrato del inicio lleva el marco");
 
             Assert.That(boot.OpenAvatarScreen("home"), Is.True);

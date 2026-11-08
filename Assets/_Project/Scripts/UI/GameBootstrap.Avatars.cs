@@ -348,11 +348,13 @@ namespace AF.UI
             bool shown = AvatarsShownInHome;
             Sprite? portrait = shown || AvatarScreenOpen || (AvatarsEnabled && LeagueActive) ? AvatarPortraitNow() : null;
             int maxLevel = _profile?.Progress.MaxLevel ?? 0;
-            bool dot = AvatarRules.DotShown(avatars.Data, maxLevel) || AvatarFrameDot(maxLevel);
+            bool avatarDot = AvatarRules.DotShown(avatars.Data, maxLevel);
+            bool frameDot = AvatarFrameDot(maxLevel);
+            bool dot = avatarDot || frameDot;
             AvatarInfo current = avatars.Current;
             AvatarFrameInfo? frame = AvatarFrameNow;
-            _lobby?.SetAvatar(shown ? portrait : null, shown, dot, AvatarText.HomeA11y(current, frame, dot));
-            _settingsScreen?.SetAvatarRow(shown ? portrait : null, shown, AvatarText.HomeA11y(current, frame, false));
+            _lobby?.SetAvatar(shown ? portrait : null, shown, dot, AvatarText.HomeA11y(current, frame, avatarDot, frameDot));
+            _settingsScreen?.SetAvatarRow(shown ? portrait : null, shown, AvatarText.HomeA11y(current, frame, false, false));
             if (_screen != null)
             {
                 _screen.LeagueAvatar = AvatarsEnabled ? portrait : null;

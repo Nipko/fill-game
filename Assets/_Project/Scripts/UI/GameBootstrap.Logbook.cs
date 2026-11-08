@@ -507,6 +507,7 @@ namespace AF.UI
         private void OnLogbookClose()
         {
             _logbookScreen?.Hide();
+            _art?.ForgetAvatarFrameOverlay(); // Q-M6: el icono del marco solo vive con la libreta abierta
             Action? after = _logbookAfterClose;
             _logbookAfterClose = null;
             _logbookCardShown = false;

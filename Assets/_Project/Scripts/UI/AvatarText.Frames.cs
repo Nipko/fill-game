@@ -19,12 +19,13 @@ namespace AF.UI
         public const string FrameChosenA11yKey = "avatar_frame_chosen_a11y";
         public const string FrameNewA11yKey = "avatar_frame_new_a11y";
         public const string WithFrameA11yKey = "avatar_with_frame_a11y";
+        public const string HomeNewFrameA11yKey = "avatar_home_new_frame_a11y";
 
         /// <summary>Las claves de los marcos (entran en <see cref="AllKeys"/>).</summary>
         public static readonly string[] FrameKeys =
         {
             FramesTitleKey, AnimalsTitleKey, FrameNoneKey, FrameNoneA11yKey, FrameNoneChosenA11yKey, FrameCellA11yKey,
-            FrameChosenA11yKey, FrameNewA11yKey, WithFrameA11yKey,
+            FrameChosenA11yKey, FrameNewA11yKey, WithFrameA11yKey, HomeNewFrameA11yKey,
         };
 
         /// <summary>«Marcos de país».</summary>
@@ -57,10 +58,14 @@ namespace AF.UI
             return frame == null ? Name(avatar) : Loc.T(WithFrameA11yKey, LocArgs.Of("animal", Name(avatar)).And("world", UiText.WorldName(frame.World)));
         }
 
-        /// <summary>«Tu avatar: Tucán con el marco de Estuario. Toca para cambiarlo» (con el punto, la frase con «Hay un avatar nuevo»).</summary>
-        public static string HomeA11y(AvatarInfo avatar, AvatarFrameInfo? frame, bool dot)
+        /// <summary>
+        /// «Tu avatar: Tucán con el marco de Estuario. Toca para cambiarlo»; con el punto, la frase de su causa: «Hay un avatar nuevo»
+        /// (<paramref name="avatarDot"/>, que manda) o «Hay un marco nuevo» (<paramref name="frameDot"/>).
+        /// </summary>
+        public static string HomeA11y(AvatarInfo avatar, AvatarFrameInfo? frame, bool avatarDot, bool frameDot)
         {
-            return Loc.T(dot ? HomeNewA11yKey : HomeA11yKey, LocArgs.Of("animal", NameWithFrame(avatar, frame)));
+            string key = avatarDot ? HomeNewA11yKey : (frameDot ? HomeNewFrameA11yKey : HomeA11yKey);
+            return Loc.T(key, LocArgs.Of("animal", NameWithFrame(avatar, frame)));
         }
 
         /// <summary>La cabecera de «Tu avatar» para TalkBack, con el marco si lo lleva.</summary>

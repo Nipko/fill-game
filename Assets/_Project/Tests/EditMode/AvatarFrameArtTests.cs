@@ -96,6 +96,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        [Explicit("Lámina de los marcos para el dueño: escribe PNG en Logs/art/frames/.")]
         public void ExportsTheSheet()
         {
             string dir = Path.Combine(Directory.GetCurrentDirectory(), "Logs", "art", "frames");
