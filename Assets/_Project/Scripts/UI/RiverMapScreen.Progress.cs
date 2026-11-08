@@ -717,6 +717,7 @@ namespace AF.UI
             }
 
             BuildFront(map, routes, max, ahead);
+            FillLiveEnds(lines);
             if (BuildSilhouettes(map, routes, max) && _silhouettesPlaced)
             {
                 ReplaceSilhouettes(); // «ponerse al día» cruzó una gran parada: las placas, cada una junto a la de su mundo (FX8)
@@ -1619,6 +1620,7 @@ namespace AF.UI
                     }
 
                     float t = Mathf.Clamp01(left / length);
+                    bool last = left <= length || i == path.Count - 1;
                     left -= length;
                     int k = _frontCount++;
                     float end = piece.S0 + ((piece.S1 - piece.S0) * t);
@@ -1632,6 +1634,7 @@ namespace AF.UI
                     SetFrontPiece(_frontCasing[k], line, _frontCasingBudget[i], piece.S0, end);
                     _front[k].SetAnchors(LineAnchors(line)); // FX12: la misma curva que el vidrio
                     _frontCasing[k].SetAnchors(LineAnchors(line));
+                    FrontLiveLook(k, i == 0, last, piece.S0 <= end);
 
                     // FX11: el espacio y el ancho de la vista al montarla. ProgressSpace solo ajusta las cintas que ya había al
                     // cambiar de vista; si «ponerse al día» llega a un tramo con más piezas que el de partida (en el 41, el de la
@@ -1788,6 +1791,51 @@ namespace AF.UI
             }
 
             return _front[i];
+        }
+
+        /// <summary>
+        /// Opacidad del agua del tramo en curso con el Mapa v2 [P] (añadido de D-069 del 2026-11-08, observación 9 de la prueba de la
+        /// 1.1: el tramo recorrido se veía como una franja oscura sobre el río): un tinte del agua sobre el vidrio, no una franja.
+        /// </summary>
+        public const float FrontLiveAlpha = 0.6f;
+
+        /// <summary>Largo de las puntas difuminadas del tramo en curso con el Mapa v2 (dp) [P]: sin el bloque de borde recto.</summary>
+        public const float FrontLiveFadeDp = 28f;
+
+        // Añadido de D-069 del 2026-11-08 (observación 9): con el Mapa v2, el lleno de cada línea se difumina en sus puntas abiertas,
+        // sin el bloque de borde recto sobre el vidrio: río arriba (s menor), salvo donde sigue el tramo en curso, y, en un afluente,
+        // en su boca (s = 1) sobre el río al que llega. Con la 1.0, como siempre.
+        private void FillLiveEnds(IReadOnlyList<RiverLine> lines)
+        {
+            int frontLine = _frontCount > 0 && _frontRoute != null ? _frontRoute.Path[_frontPathIndex[0]].Line : -1;
+            for (int i = 0; i < _fill.Count; i++)
+            {
+                bool used = i < lines.Count && _fillFrom[i] < 1f;
+                bool up = _live && used && _fillFrom[i] > 0f && i != frontLine;
+                bool mouth = _live && used && lines[i].Kind != RiverLineKind.Main;
+                float fade = up || mouth ? FrontLiveFadeDp : 0f;
+                _fill[i].SetEndFade(fade, up, mouth);
+                _fillCasing[i].SetEndFade(fade, up, mouth);
+            }
+        }
+
+        // Con el Mapa v2, la cinta k del frente (y su orla): el tinte del agua y las puntas del tramo difuminadas (la de la parada de
+        // partida en la primera pieza, la de la canoa en la última). forward: la pieza va de s menor a s mayor. Con la 1.0, como siempre.
+        private void FrontLiveLook(int k, bool first, bool last, bool forward)
+        {
+            float alpha = _live ? FrontLiveAlpha : 1f;
+            float fade = _live ? FrontLiveFadeDp : 0f;
+            bool atMin = forward ? first : last;
+            bool atMax = forward ? last : first;
+            var tint = new Color(1f, 1f, 1f, alpha);
+            if (_front[k].color != tint)
+            {
+                _front[k].color = tint;
+                _frontCasing[k].color = tint;
+            }
+
+            _front[k].SetEndFade(fade, atMin, atMax);
+            _frontCasing[k].SetEndFade(fade, atMin, atMax);
         }
 
         private static void SetFrontPiece(RiverRibbonGraphic ribbon, RiverLine line, int budget, float s0, float s1)

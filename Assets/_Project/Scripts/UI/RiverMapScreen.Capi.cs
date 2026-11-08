@@ -53,6 +53,19 @@ namespace AF.UI
         /// <summary>Vuelta de la llegada al encuadre (ms; §5.5).</summary>
         public const float CamArrivalBackMs = 300f;
 
+        /// <summary>
+        /// Primer plano de la canoa cuando se une un compañero o saluda el miquito (×) [P] (añadido de D-069 del 2026-11-08,
+        /// observación 8 de la prueba de la 1.1, propuesta del dueño: «ahí debería hacerse como un zoom y luego volver a verlo al
+        /// tamaño normal»): la canoa de 60 dp, a 150; el tucán de 18, a 45; el tucuxi de 17, a 42.
+        /// </summary>
+        public const float CamCloseUpZoom = 2.5f;
+
+        /// <summary>Constante de tiempo de la entrada del primer plano (ms) [P]: a los ~600 ms está casi del todo.</summary>
+        public const float CamCloseUpInMs = 200f;
+
+        /// <summary>Constante de tiempo de la vuelta suave del primer plano a la vista normal (ms) [P]: unos 900 ms.</summary>
+        public const float CamCloseUpOutMs = 300f;
+
         /// <summary>Fundido de la luz al cambiar de mundo dentro del Mapa (ms; propuesta §3.3, pendiente de M2-1).</summary>
         public const float LightFadeMs = 600f;
 
@@ -96,6 +109,8 @@ namespace AF.UI
         private Color _sampleWater = Color.white;
         private float _camZoom = 1f;
         private int _camPhase; // 0 nada, 1 anticipación, 2 vuelta de la anticipación, 3 llegada
+        private float _closeZoom = 1f;
+        private float _camPhaseZoom = 1f; // la escala de _camPhase sola, sin el primer plano // el primer plano de la tripulación (añadido de D-069 del 2026-11-08), que multiplica al de _camPhase
         private float _camMs;
         private float _camFrom = 1f;
         private Color _lightFrom;
@@ -117,6 +132,15 @@ namespace AF.UI
 
         /// <summary>Acercamiento de la cámara ahora (1 sin acercar).</summary>
         public float CameraZoom => _camZoom;
+
+        /// <summary>La escala de la cámara de §5.5 sola (anticipación y llegada), sin el primer plano de la tripulación.</summary>
+        public float CameraPhaseZoom => _camPhaseZoom;
+
+        /// <summary>El primer plano de la tripulación en este fotograma (1 sin él; añadido de D-069 del 2026-11-08).</summary>
+        public float CameraCloseUp => _closeZoom;
+
+        // Se pide el primer plano: un compañero llega o enseña su chip, o el miquito saluda (RiverMapScreen.Crew.cs).
+        private bool CloseUpWanted => CrewArriving || CrewChipShown || CameoWaving;
 
         /// <summary>Centro de la canoa que se pinta ahora (al ponerse al día, por el agua) en la zona visible, en dp (y hacia abajo).</summary>
         internal Vector2 CanoeShownInViewport
@@ -375,7 +399,7 @@ namespace AF.UI
             TickLight(dtMs);
             TickTownGlow(dtMs);
             ApplyCapiPose();
-            if (_capi.Animating || _camPhase != 0 || _lightMs >= 0f || _townGlowMs >= 0f)
+            if (_capi.Animating || _camPhase != 0 || _closeZoom != 1f || _lightMs >= 0f || _townGlowMs >= 0f)
             {
                 animating = true;
             }
@@ -787,7 +811,7 @@ namespace AF.UI
 
         private void StartCamera(int phase)
         {
-            _camFrom = _camZoom;
+            _camFrom = _camPhaseZoom;
             _camPhase = phase;
             _camMs = 0f;
         }
@@ -803,8 +827,24 @@ namespace AF.UI
                 FollowOffset(_offset + ((target - _offset) * k));
             }
 
+            // Añadido de D-069 del 2026-11-08 (observación 8): el primer plano de la canoa mientras un compañero se une o el miquito
+            // saluda, que entra y vuelve suave a la vista normal. Sin él con Reducir movimiento, en la Cuenca o arrastrando.
+            bool closeOk = CameraAllowed && !_dragging;
+            float want = closeOk && CloseUpWanted ? CamCloseUpZoom : 1f;
+            if (_closeZoom != want)
+            {
+                float tc = want > _closeZoom ? CamCloseUpInMs : CamCloseUpOutMs;
+                _closeZoom += (want - _closeZoom) * (1f - Mathf.Exp(-Mathf.Max(0f, dtMs) / tc));
+                if (Mathf.Abs(_closeZoom - want) < 0.003f || !closeOk)
+                {
+                    _closeZoom = want;
+                }
+            }
+
+            CloseUpLabels(); // los rótulos se apagan en el primer plano: a ×2 serían enormes (RiverMapScreen.Towns.cs)
             if (_camPhase == 0)
             {
+                ApplyCloseUp(1f);
                 return;
             }
 
@@ -847,7 +887,18 @@ namespace AF.UI
                     break;
             }
 
-            ApplyCameraZoom(_camPhase == 0 ? 1f : z);
+            ApplyCloseUp(_camPhase == 0 ? 1f : z);
+        }
+
+        // La escala de la fase de la cámara por el primer plano; en reposo (las dos a 1) no escribe nada.
+        private void ApplyCloseUp(float phaseZoom)
+        {
+            _camPhaseZoom = phaseZoom;
+            float z = phaseZoom * _closeZoom;
+            if (z != 1f || _camZoom != 1f)
+            {
+                ApplyCameraZoom(z);
+            }
         }
 
         // El contenido a la escala z alrededor de la canoa (la canoa no se mueve en pantalla); con 1, vuelve a su sitio de siempre.
@@ -871,6 +922,9 @@ namespace AF.UI
         {
             _camPhase = 0;
             _camMs = 0f;
+            _closeZoom = 1f;
+            _camPhaseZoom = 1f;
+            CloseUpLabels();
             if (_camZoom != 1f || _content.localScale != Vector3.one)
             {
                 ApplyCameraZoom(1f);

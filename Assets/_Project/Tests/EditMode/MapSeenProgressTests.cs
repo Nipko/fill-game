@@ -103,8 +103,8 @@ namespace AF.Tests.EditMode
             Assert.That(RiverJourney.JourneyMs(20), Is.EqualTo(MapConfig.AnimMapWorldMs), "como mucho anim_map_world_ms (08 §9)");
             Assert.That(RiverJourney.JourneyMs(0), Is.EqualTo(0));
             Assert.That(RiverJourney.JourneyMs(10), Is.GreaterThan(RiverJourney.CatchUpMs(0, 10)), "más lento que ponerse al día (1,5 s)");
-            Assert.That(RiverJourney.JourneyMs(10) / AF.UI.RiverMapScreen.JourneyTapSpeed, Is.LessThanOrEqualTo(RiverJourney.CatchUpMs(0, 10)),
-                "con un toque al abrir, «Jugar» llega tan pronto como antes del cambio");
+            Assert.That(RiverJourney.JourneyMs(10) / AF.UI.RiverMapScreen.JourneyTapSpeed, Is.LessThanOrEqualTo(RiverJourney.CatchUpMs(0, 10) / 2f),
+                "con un toque al abrir, «Jugar» llega tan pronto como con un toque antes del cambio (×2 sobre 1,5 s)");
         }
 
         [Test]

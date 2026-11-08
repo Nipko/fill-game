@@ -181,7 +181,7 @@ namespace AF.Presentation
             Color right = left;
             if (look.Split)
             {
-                right = BodyColor(look.B);
+                right = Color.Lerp(left, BodyColor(look.B), MeetingFadeIn()); // añadido de D-069 del 2026-11-08: sin borde recto al empezar
                 float t = MeetingFade(out Color after);
                 left = Color.Lerp(left, after, t);
                 right = Color.Lerp(right, after, t);
@@ -229,6 +229,87 @@ namespace AF.Presentation
             float fade = Mathf.Min(MeetingFadeDp / _space.DpPerUnit, span * MeetingFadeMaxFraction);
             float start = (split.S1 * _arcLength) - fade;
             return fade <= 0f || _sectionArc <= start ? 0f : Mathf.SmoothStep(0f, 1f, (_sectionArc - start) / fade);
+        }
+
+        /// <summary>
+        /// Las puntas que se difuminan del intervalo dibujado (añadido de D-069 del 2026-11-08, observación 9 de la prueba de la
+        /// 1.1: el tramo recorrido acababa en un bloque de borde recto sobre el río): en las <paramref name="dp"/> dp de la punta de
+        /// s menor (<paramref name="atMin"/>) y de la de s mayor (<paramref name="atMax"/>), la cinta va de transparente a su color.
+        /// 0 o ninguna punta, como siempre. Solo reconstruye si cambia; sin asignaciones.
+        /// </summary>
+        public void SetEndFade(float dp, bool atMin, bool atMax)
+        {
+            if (dp == _endFadeDp && atMin == _endFadeMin && atMax == _endFadeMax)
+            {
+                return;
+            }
+
+            _endFadeDp = dp;
+            _endFadeMin = atMin;
+            _endFadeMax = atMax;
+            SetVerticesDirty();
+        }
+
+        private float _endFadeDp;
+        private bool _endFadeMin;
+        private bool _endFadeMax;
+
+        // La opacidad de la sección en el arco arc por las puntas que se difuminan (1 sin SetEndFade).
+        private float EndFadeAt(float arc)
+        {
+            if (_endFadeDp <= 0f || (!_endFadeMin && !_endFadeMax) || _space.DpPerUnit <= 0f)
+            {
+                return 1f;
+            }
+
+            float a0 = _s0 * _arcLength;
+            float a1 = _s1 * _arcLength;
+            int ends = (_endFadeMin ? 1 : 0) + (_endFadeMax ? 1 : 0);
+            float fade = Mathf.Min(_endFadeDp / _space.DpPerUnit, (a1 - a0) / ends);
+            if (fade <= 0f)
+            {
+                return 1f;
+            }
+
+            float t = 1f;
+            if (_endFadeMin)
+            {
+                t = Mathf.Min(t, (arc - a0) / fade);
+            }
+
+            if (_endFadeMax)
+            {
+                t = Mathf.Min(t, (a1 - arc) / fade);
+            }
+
+            return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
+        }
+
+        /// <summary>
+        /// La segunda agua de una pareja entra fundiéndose en sus primeros dp [P] (añadido de D-069 del 2026-11-08, observación 9 de
+        /// la prueba de la 1.1: el agua negra empezaba en un bloque de borde recto en la boca del río Negro).
+        /// </summary>
+        public const float MeetingFadeInDp = 28f;
+
+        // Cuánto ha entrado ya la segunda agua de la pareja en la sección (0-1): en los primeros MeetingFadeInDp dp de su franja.
+        private float MeetingFadeIn()
+        {
+            RiverLine? line = _line;
+            if (line == null || _arcLength <= 0f || _space.DpPerUnit <= 0f)
+            {
+                return 1f;
+            }
+
+            float s = _sectionArc / _arcLength;
+            if (!line.TryGetSplitAt(Mathf.Min(1f, s), out RiverSplit split))
+            {
+                return 1f;
+            }
+
+            float span = (split.S1 - split.S0) * _arcLength;
+            float fade = Mathf.Min(MeetingFadeInDp / _space.DpPerUnit, span * (1f - MeetingFadeMaxFraction));
+            float into = _sectionArc - (split.S0 * _arcLength);
+            return fade <= 0f ? 1f : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(into / fade));
         }
 
         private static Color Deep(Color c)

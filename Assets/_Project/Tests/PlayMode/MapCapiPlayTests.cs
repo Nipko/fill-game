@@ -95,7 +95,7 @@ namespace AF.Tests.PlayMode
                 map.Tick(PlayModeHelpers.FrameMs);
                 cheer |= map.Capi.Current == CapiGesture.CheerOar;
                 tie |= map.Capi.Current == CapiGesture.Tie && map.CapiRig.SampleShown;
-                zoom = Mathf.Max(zoom, map.CameraZoom);
+                zoom = Mathf.Max(zoom, map.CameraPhaseZoom); // la de §5.5, sin el primer plano del miquito (añadido de D-069 del 2026-11-08)
             }
 
             Assert.That(cheer, Is.True, "el remo en alto al llegar");

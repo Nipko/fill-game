@@ -1714,9 +1714,9 @@ namespace AF.UI
         // encuadra su zoom, para que su rótulo con «Faltan N» se vea; añadido de D-069 del 2026-11-08); −1 si no.
         private int NextWorldStop(RiverStopCatalog stops)
         {
-            if (!_live)
+            if (!_live || !_remainingReady)
             {
-                return -1;
+                return -1; // sin «Faltan N» (nada que jugar o sin nombre), nada que enseñar
             }
 
             RiverStop? current = stops.StopOf(_playLevel);

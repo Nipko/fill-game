@@ -16,7 +16,7 @@ namespace AF.Tests.PlayMode
     /// Los arreglos del Mapa v2 tras la prueba de la 1.1 en el teléfono (añadido de D-069 del 2026-11-08;
     /// <c>docs/dev/traspaso/pruebas-telefono-2026-11-07-1.1.md</c>), en la escena <c>Game</c> real:
     /// <list type="bullet">
-    /// <item>observación 3: el viaje de un Mapa con viaje dura 4,5 s el tramo (450 ms por boya), un toque lo deja en 1,5 s y la
+    /// <item>observación 3: el viaje de un Mapa con viaje dura 4,5 s el tramo (450 ms por boya), un toque lo deja en 0,75 s y la
     /// pestaña sigue poniéndose al día a 150 ms por boya;</item>
     /// <item>observación 2: ningún rótulo de pueblo o de parada ni ninguna viñeta pisa la canoa con Capi, su bandera, el guía y el
     /// tucuxi (como quedan con <c>max_level</c>), en toda la campaña;</item>
@@ -58,7 +58,7 @@ namespace AF.Tests.PlayMode
             Assert.That(map.PlayShown, Is.True);
             map.Close();
 
-            // Con un toque al abrir, «Jugar» llega tan pronto como antes del cambio (1,5 s).
+            // Con un toque al abrir, «Jugar» llega tan pronto como con un toque antes del cambio (0,75 s: ×2 sobre 1,5 s).
             Assert.That(boot.View!.VictoryMapButton, Is.Not.Null);
             boot.View.VictoryMapButton.onClick.Invoke();
             Assert.That(map.Visible, Is.True);
@@ -70,7 +70,7 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(map.JourneyLocked, Is.False);
-            Assert.That(map.JourneyReadyMs, Is.LessThanOrEqualTo(1500f + (2f * PlayModeHelpers.FrameMs)), "con un toque, como antes");
+            Assert.That(map.JourneyReadyMs, Is.LessThanOrEqualTo(750f + (2f * PlayModeHelpers.FrameMs)), "con un toque, como antes");
             map.Close();
 
             // La pestaña (ponerse al día, sin viaje de D-053): como siempre, 150 ms por boya.
@@ -122,6 +122,11 @@ namespace AF.Tests.PlayMode
                     {
                         AssertClear(map, vignette, at + ", viñeta del pueblo «" + map.TownLabelText(i) + "»");
                     }
+                }
+
+                if (map.RemainingLabelOffView)
+                {
+                    StringAssert.DoesNotContain("faltan", map.StopLabelText(map.RemainingStopN()), at + ": con la placa, el rótulo sin «Faltan N»");
                 }
 
                 // «Faltan N» sigue en el rótulo de la parada siguiente (salvo hacia la naciente): esquivar la canoa no lo calla.
@@ -256,6 +261,90 @@ namespace AF.Tests.PlayMode
             map.Close();
         }
 
+        [UnityTest]
+        public IEnumerator TheToucanAndTheTucuxi_JoinInACloseUp_ThatGoesBackSmoothly_AndNotWithReduceMotion()
+        {
+            // Observación 8: el primer plano de la canoa cuando se une un compañero (propuesta del dueño), y vuelta a la vista normal.
+            yield return MapMarkersTests.OpenApp(22, 20); // max 21: el tucán se une
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            foreach ((int play, int max, int seen, CrewKind kind) in new[] { (22, 21, 20, CrewKind.Toucan), (52, 51, 50, CrewKind.Tucuxi) })
+            {
+                RiverMapScreen.ResetCapiSession();
+                OpenLobby(boot, new MemoryProgressStore(play, max, seen), play);
+                Assert.That(map.CrewIntroKind, Is.EqualTo(kind));
+                float top = 1f;
+                float topScale = 1f;
+                float labelsAtTop = 1f;
+                bool chipAtTop = false;
+                for (int ms = 0; ms < 2500; ms += PlayModeHelpers.FrameMs)
+                {
+                    map.Tick(PlayModeHelpers.FrameMs);
+                    topScale = Mathf.Max(topScale, map.CameraZoom);
+                    if (map.CameraCloseUp > top)
+                    {
+                        top = map.CameraCloseUp;
+                        chipAtTop = map.CrewChipShown || map.CrewArriving;
+                        labelsAtTop = map.CloseUpLabelAlpha;
+                    }
+                }
+
+                Assert.That(top, Is.GreaterThan(RiverMapScreen.CamCloseUpZoom * 0.9f), kind + ": el primer plano llega a ×" + RiverMapScreen.CamCloseUpZoom);
+                Assert.That(chipAtTop, Is.True, kind + ": durante la llegada o el chip");
+                Assert.That(labelsAtTop, Is.LessThan(0.1f), kind + ": los rótulos se apagan en el primer plano");
+                Assert.That(topScale, Is.GreaterThan(1.5f), kind + ": el contenido, a esa escala");
+                for (int ms = 0; ms < 6000 && map.CameraCloseUp > 1f; ms += PlayModeHelpers.FrameMs)
+                {
+                    map.Tick(PlayModeHelpers.FrameMs);
+                }
+
+                Assert.That(map.CrewChipShown, Is.False);
+                Assert.That(map.CameraCloseUp, Is.EqualTo(1f), kind + ": vuelve a la vista normal");
+                Assert.That(map.CameraZoom, Is.EqualTo(1f));
+                Assert.That(map.CloseUpLabelAlpha, Is.EqualTo(1f), kind + ": y vuelven");
+                map.Close();
+            }
+
+            // Con Reducir movimiento: sin primer plano (el compañero aparece en su sitio y sale el chip).
+            RiverMapScreen.ResetCapiSession();
+            map.ProgressReduceMotion = true;
+            OpenLobby(boot, new MemoryProgressStore(22, 21, 20), 22);
+            Assert.That(map.CrewChipShown, Is.True);
+            for (int ms = 0; ms < 1500; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+                Assert.That(map.CameraCloseUp, Is.EqualTo(1f), "Reducir movimiento: sin zoom");
+            }
+
+            map.ProgressReduceMotion = false;
+            map.Close();
+        }
+
+        [UnityTest]
+        public IEnumerator TheLegInProgress_IsATintOfTheWater_WithFadedEnds_AndThe10MapIsAsBefore()
+        {
+            // Observación 9: el tramo recorrido, un tinte del agua con las puntas difuminadas, sin el bloque de borde recto.
+            yield return MapMarkersTests.OpenApp(56);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(map.FrontPieceCount, Is.GreaterThan(0));
+            for (int k = 0; k < map.FrontPieceCount; k++)
+            {
+                Assert.That(map.FrontRibbon(k).color.a, Is.EqualTo(RiverMapScreen.FrontLiveAlpha).Within(1e-4f));
+                Assert.That(map.FrontCasingRibbon(k).color.a, Is.EqualTo(RiverMapScreen.FrontLiveAlpha).Within(1e-4f));
+            }
+
+            map.Close();
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false };
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+            for (int k = 0; k < map.FrontPieceCount; k++)
+            {
+                Assert.That(map.FrontRibbon(k).color.a, Is.EqualTo(1f), "el Mapa de la 1.0, como siempre");
+            }
+
+            map.Close();
+        }
+
         internal static void OpenLobby(GameBootstrap boot, IMapProgress progress, int playLevel)
         {
             RiverMapScreen map = boot.RiverMapView!;
@@ -290,6 +379,45 @@ namespace AF.Tests.PlayMode
             LaunchOptions.Reset();
             SnapshotKit.Release();
             OnDemandRendering.renderFrameInterval = 1;
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureTheCloseUpOfTheToucanAndTheTucuxi_At360dp()
+        {
+            string dir = SnapshotKit.Prepare();
+            GameScreen.SimulatedPxPerDp = 3f;
+            foreach ((int play, int max, int seen, string name) in new[] { (22, 21, 20, "tucan_21"), (52, 51, 50, "tucuxi_51") })
+            {
+                RiverMapScreen.ResetCapiSession();
+                Profile profile = AF.Economy.Wallet.NewProfile(new ManualClock(T0));
+                profile.Progress.NextLevel = play;
+                profile.Progress.MaxLevel = max;
+                profile.Progress.MapSeenLevel = seen;
+                profile.Wallet.Seeds = 1250;
+                yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+                GameBootstrap boot = GameBootstrap.Current!;
+                SnapshotKit.AttachLobby(boot);
+                yield return null;
+                Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+                RiverMapScreen map = boot.RiverMapView!;
+                SnapshotKit.AttachOverlay(map.Canvas);
+                for (int i = 0; i < 240 && !(map.CrewChipShown && map.CameraCloseUp > RiverMapScreen.CamCloseUpZoom * 0.95f); i++)
+                {
+                    yield return null;
+                }
+
+                yield return SnapshotKit.Wait(0.2f);
+                SnapshotKit.Save(dir, "d069b_primer_plano_" + name + "_360dp");
+                for (int i = 0; i < 600 && map.CameraCloseUp > 1f; i++)
+                {
+                    yield return null;
+                }
+
+                yield return SnapshotKit.Wait(0.3f);
+                SnapshotKit.Save(dir, "d069b_primer_plano_" + name + "_vuelta_360dp");
+                Debug.Log("AF_MAP d069b primer plano " + name + ": chip " + map.CrewChipShown + ", zoom " + map.CameraZoom);
+                boot.CloseRiverMap();
+            }
         }
 
         [UnityTest]

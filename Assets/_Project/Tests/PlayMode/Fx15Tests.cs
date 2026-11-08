@@ -34,6 +34,11 @@ namespace AF.Tests.PlayMode
     {
         private const float Near = 1e-4f;
 
+        // Lo que la canoa puede alejarse de la naciente en un recodo del cauce entre dos fotogramas (unidades del marco; 10 veces
+        // Near): con el viaje de 4,5 s del añadido de D-069 del 2026-11-08, los pasos son tres veces más cortos y ven un meandro
+        // que con 1,5 s se saltaban (como en Fx13Tests).
+        private const float BendSlack = 1e-3f;
+
         [TearDown]
         public void TearDown()
         {
@@ -123,7 +128,7 @@ namespace AF.Tests.PlayMode
                     yield return null;
                     frames++;
                     float now = Vector2.Distance(map.CanoeShownMapPoint, source);
-                    Assert.That(now, Is.LessThanOrEqualTo(distance + Near), "a los " + frames + " fotogramas: la canoa sube hacia la naciente");
+                    Assert.That(now, Is.LessThanOrEqualTo(distance + BendSlack), "a los " + frames + " fotogramas: la canoa sube hacia la naciente");
                     distance = now;
                     if (map.CatchingUp && now > Near && now < leg - Near)
                     {

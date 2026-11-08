@@ -774,21 +774,27 @@ namespace AF.UI
             RectTransform pill = _stopLabels[i].Pill;
             Vector2 c = _markers[i].Root.anchoredPosition;
             Rect old = PillRect(c, pill);
+            Rect placedRect = old; // su caja en _stopLabelPlaced y _townPlaced, tal como la dejó TownsSpace
             _labelView = new Rect(2f, 2f, _viewW - 4f, _viewH - 4f);
+            if (_remainingOffView)
+            {
+                // Venía de la placa (otro encuadre de esta apertura): el rótulo vuelve a llevar «Faltan N» antes de mirar si cabe.
+                _remainingOffView = false;
+                TextMeshProUGUI full = _stopLabels[i].Label;
+                full.text = UiText.MapStopLabelRemaining(UiText.StopName(_markers[i].Stop), RiverJourney.LevelsLeft(_playLevel));
+                SizePill(pill, full);
+                old = PillRect(c, pill);
+            }
+
             if (Inside(InView(old, _offset), _labelView) && !HitsPlate(old)) // las placas se encajan tras el encuadre (PlatesFitView)
             {
-                if (_remainingOffView)
-                {
-                    _remainingOffView = false;
-                    SyncRemainingPlate();
-                }
-
+                SyncRemainingPlate();
                 return;
             }
 
             Vector2 before = pill.anchoredPosition;
-            _labelOld = old;
-            int own = _stopLabelPlaced.IndexOf(old);
+            _labelOld = placedRect;
+            int own = _stopLabelPlaced.IndexOf(placedRect);
             if (own >= 0)
             {
                 _stopLabelPlaced.RemoveAt(own);
@@ -802,8 +808,16 @@ namespace AF.UI
                 pill.anchoredPosition = before;
             }
 
-            _stopLabelPlaced.Add(PillRect(c, pill));
             _remainingOffView = !placed; // ni así se ve entero (la parada queda fuera del encuadre): la placa de respaldo
+            if (_remainingOffView)
+            {
+                // «Faltan N» va entonces en la placa: el rótulo, solo con el nombre, para no decirlo dos veces.
+                TextMeshProUGUI label = _stopLabels[i].Label;
+                label.text = UiText.StopName(_markers[i].Stop);
+                SizePill(pill, label);
+            }
+
+            _stopLabelPlaced.Add(PillRect(c, pill));
             SyncRemainingPlate();
         }
 
@@ -851,6 +865,63 @@ namespace AF.UI
             float dx = v.xMin < m ? m - v.xMin : (v.xMax > _viewW - m ? _viewW - m - v.xMax : 0f);
             float dy = v.yMin < top ? top - v.yMin : (v.yMax > _viewH - m ? _viewH - m - v.yMax : 0f);
             offset += new Vector2(dx, dy);
+        }
+
+        private float _closeUpLabelAlpha = 1f;
+
+        /// <summary>Opacidad de los rótulos del Mapa por el primer plano de la tripulación (1 sin él; tests).</summary>
+        internal float CloseUpLabelAlpha => _closeUpLabelAlpha;
+
+        // Añadido de D-069 del 2026-11-08 (observación 8): en el primer plano de la tripulación, los rótulos de los pueblos y de las
+        // paradas y la píldora del Premio del mundo se apagan (a ×2 taparían la escena) y vuelven con él. Solo escribe si cambia; sin
+        // asignaciones.
+        private void CloseUpLabels()
+        {
+            float a = 1f - Mathf.Clamp01((_closeZoom - 1f) / (CamCloseUpZoom - 1f));
+            if (Mathf.Abs(a - _closeUpLabelAlpha) < 0.01f && (a < 1f || _closeUpLabelAlpha == 1f))
+            {
+                return;
+            }
+
+            _closeUpLabelAlpha = a;
+            for (int i = 0; i < _stopLabels.Count; i++)
+            {
+                SetPillAlpha(_stopLabels[i].Pill, a);
+            }
+
+            for (int i = 0; i < _townMarkers.Count; i++)
+            {
+                SetPillAlpha(_townMarkers[i].Pill, a);
+            }
+
+            if (_prizePill != null)
+            {
+                SetPillAlpha(_prizePill, a);
+            }
+
+            if (_buoysAhead != null)
+            {
+                _buoysAhead.canvasRenderer.SetAlpha(a); // las boyas por ganar van encima de Rosa y del tucuxi
+            }
+        }
+
+        // La píldora y lo que lleva dentro (su texto y, en la del premio, la mini cuia), a la opacidad a.
+        private static void SetPillAlpha(RectTransform pill, float a)
+        {
+            CanvasRenderer? own = pill.GetComponent<CanvasRenderer>();
+            if (own != null)
+            {
+                own.SetAlpha(a);
+            }
+
+            for (int c = 0; c < pill.childCount; c++)
+            {
+                CanvasRenderer? r = pill.GetChild(c).GetComponent<CanvasRenderer>();
+                if (r != null)
+                {
+                    r.SetAlpha(a);
+                }
+            }
         }
 
         // El rótulo de la parada siguiente no cabe entero a la vista con el encuadre de apertura (RemainingLabelFitView).

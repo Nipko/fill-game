@@ -1272,7 +1272,7 @@ namespace AF.Presentation
                 return -1;
             }
 
-            float alpha = color.a;
+            float alpha = color.a * EndFadeAt(_sectionArc); // añadido de D-069 del 2026-11-08: las puntas difuminadas del frente
             int start = vh.currentVertCount;
             for (int k = 0; k < bands; k++)
             {
