@@ -1151,7 +1151,7 @@ namespace AF.UI
             map.LiveRequested = MapLiveSettings.UiMapV2; // D-069, P8 (a): el Mapa v2 o, apagada, el de la 1.0 (GameBootstrap.MapLive.cs)
             map.TownsRequested = MapLiveSettings.UiMapTowns; // D-069, M2-2: los pueblos de paso y la excursión local
             map.CrewRequested = MapLiveSettings.UiMapCrew; // D-069, M2-4: la tripulación (el tucán, el tucuxi y el cameo de los miquitos)
-            map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable, DailyPlayUnlocked); // «Jugar» como en el inicio (D-032, punto 6)
+            OpenMapPooled(map, source, stops, progress, play, app.PlayLevelAvailable); // «Jugar» como en el inicio (D-032, punto 6); GameBootstrap.MapMemory.cs
             if (app.Screen != AppScreen.Level)
             {
                 // La ventanita de casa se va ya, antes del siguiente paso de TiTino en el inicio: con la secuencia del Mapa del 10,

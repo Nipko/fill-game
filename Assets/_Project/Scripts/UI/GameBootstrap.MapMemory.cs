@@ -1,4 +1,7 @@
 #nullable enable
+using AF.GameFlow;
+using AF.Levels;
+using AF.Presentation;
 
 namespace AF.UI
 {
@@ -10,7 +13,7 @@ namespace AF.UI
     /// <item><c>map_settled</c>, <see cref="MapSettledMs"/> después de abrir, con el Mapa aún abierto (la de <c>map</c> sale antes del
     /// primer fotograma, cuando los lienzos aún no tienen sus lotes ni la geometría sus vértices);</item>
     /// <item><c>map_after</c>, <see cref="MapAfterMs"/> después de cerrar, si no se volvió a abrir: la de <c>map_close</c> sale en el
-    /// mismo fotograma del cierre y sus <c>gfx_*</c> aún cuentan las texturas que <c>Object.Destroy</c> suelta al final del
+    /// mismo fotograma del cierre y sus <c>obj_*</c> aún cuentan las texturas que <c>Object.Destroy</c> suelta al final del
     /// fotograma; esta, no.</item>
     /// </list>
     /// </summary>
@@ -26,6 +29,34 @@ namespace AF.UI
         private float _mapMemMs = -1f;
         private bool _mapMemOpen;
         private int _mapMemLevel;
+
+        /// <summary>
+        /// Abre el Mapa con los búferes de los lienzos del arte por código en préstamo (<see cref="PixelBuffers"/>; añadido de D-069 del
+        /// 2026-11-08): el río vivo, los pueblos, el rig de Capi y la tripulación pintan en lienzos de 16 bytes por píxel que se tiran
+        /// al subir a la GPU (unos 17 MiB por apertura). Con IL2CPP el heap gestionado crece hasta el pico y no se devuelve: mientras se
+        /// abre, cada lienzo reutiliza el búfer del anterior si le sirve, y al acabar se sueltan todos (ninguno queda vivo con el Mapa
+        /// abierto ni cerrado). Si ya se estaban guardando (el arranque), no lo toca.
+        /// </summary>
+        private void OpenMapPooled(RiverMapScreen map, MapOpenSource source, RiverStopCatalog stops, IProgressStore progress, int play, bool playAvailable)
+        {
+            bool pool = !PixelBuffers.Pooling;
+            if (pool)
+            {
+                PixelBuffers.BeginPooling();
+            }
+
+            try
+            {
+                map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, playAvailable, DailyPlayUnlocked);
+            }
+            finally
+            {
+                if (pool)
+                {
+                    PixelBuffers.EndPooling();
+                }
+            }
+        }
 
         /// <summary>Aperturas del Mapa en esta sesión (la vuelta de la medida).</summary>
         internal int MapOpens => _mapOpens;

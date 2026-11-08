@@ -14,7 +14,23 @@ namespace AF.UI
         /// <summary>Interruptores del Mapa v2 para los tests (ganan a Remote Config).</summary>
         internal static MapLiveConfig? MapLiveConfigOverride { get; set; }
 
-        /// <summary>Los interruptores del Mapa v2 de esta sesión: los del test, los de Remote Config o los defaults de 08 §9.</summary>
-        public MapLiveConfig MapLiveSettings => MapLiveConfigOverride ?? _rcConfigs?.MapLive ?? MapLiveConfig.Defaults;
+        /// <summary>
+        /// Los interruptores del Mapa v2 de esta sesión: los del test, los de Remote Config o los defaults de 08 §9. En desarrollo, el
+        /// extra <c>af_map_v1</c> (<see cref="LaunchOptions.ResolveMapV1"/>) apaga <c>ui_map_v2</c> (la medida de referencia de la
+        /// memoria con el Mapa de la 1.0; añadido de D-069 del 2026-11-08).
+        /// </summary>
+        public MapLiveConfig MapLiveSettings
+        {
+            get
+            {
+                MapLiveConfig config = MapLiveConfigOverride ?? _rcConfigs?.MapLive ?? MapLiveConfig.Defaults;
+                if (MapLiveConfigOverride == null && config.UiMapV2 && LaunchOptions.ResolveMapV1(UnityEngine.Debug.isDebugBuild))
+                {
+                    return new MapLiveConfig { UiMapV2 = false, UiMapTowns = config.UiMapTowns, UiMapCrew = config.UiMapCrew };
+                }
+
+                return config;
+            }
+        }
     }
 }

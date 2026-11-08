@@ -40,6 +40,8 @@ grep AF_MEMINV Logs/meminv.log
 
 Entre paréntesis, cuántos objetos. Al cerrar el Mapa y los avatares sus texturas se van (el atlas de avatares desaparece al entrar en el nivel); el Mapa deja 0,4 MiB de iconos.
 
+El Mapa del río v2 (2026-11-08, observación 5 de la prueba de la 1.1): abrirlo y cerrarlo tres veces deja las mismas texturas, mallas, materiales y lienzos que la primera vuelta, y lo suyo (5,3 MiB de texturas, 0,5 MiB de lotes, 31.512 vértices) vuelve a cero al cerrar; sus lienzos por código piden 17,3 MiB de búferes por apertura y desde entonces se reutilizan mientras se abre (12,1 MiB nuevos). Cifras, hipótesis sobre `GL mtrack` y la medida del teléfono: añadido de D-069 del 2026-11-08 en `decisiones.md` y `MapMemoryCycleTests`.
+
 ### 2.2 Texturas más grandes (inicio, Editor)
 
 | Textura | px | Formato | Mips | MiB GPU | Nota |

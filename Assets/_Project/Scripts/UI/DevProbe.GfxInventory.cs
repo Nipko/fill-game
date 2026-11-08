@@ -81,9 +81,10 @@ namespace AF.UI
 
     /// <summary>
     /// El inventario de objetos gráficos de la sonda <c>AF_PERF mem</c> (observación 5 de la prueba de la 1.1 del 2026-11-07:
-    /// <c>GL mtrack</c> no vuelve al cerrar el Mapa v2). Cada línea <c>mem</c> lleva, justo antes del detalle, <c>gfx_tex2d</c>,
-    /// <c>gfx_tex2d_kib</c>, <c>gfx_mesh</c>, <c>gfx_mesh_kib</c>, <c>gfx_mat</c>, <c>gfx_mat_kib</c>, <c>gfx_sprite</c>,
-    /// <c>gfx_canvas</c> y <c>gfx_canvas_kib</c>: los <see cref="Texture2D"/>, <see cref="Mesh"/>, <see cref="Material"/>,
+    /// <c>GL mtrack</c> no vuelve al cerrar el Mapa v2). Cada línea <c>mem</c> (salvo las de <c>level</c> y <c>daily</c>) lleva,
+    /// justo antes del detalle, <c>obj_tex2d</c>,
+    /// <c>obj_tex2d_kib</c>, <c>obj_mesh</c>, <c>obj_mesh_kib</c>, <c>obj_mat</c>, <c>obj_mat_kib</c>, <c>obj_sprite</c>,
+    /// <c>obj_canvas</c> y <c>obj_canvas_kib</c>: los <see cref="Texture2D"/>, <see cref="Mesh"/>, <see cref="Material"/>,
     /// <see cref="Sprite"/> y <see cref="Canvas"/> vivos en el proceso, con lo que Unity les cuenta
     /// (<see cref="Profiler.GetRuntimeMemorySizeLong"/>). Si al cerrar el Mapa estas cifras vuelven a las de la vuelta anterior y
     /// <c>GL mtrack</c> no, lo que queda no es un objeto nuestro. Las del Mapa (<c>map_*</c>) las da
@@ -107,15 +108,15 @@ namespace AF.UI
         {
             CultureInfo inv = CultureInfo.InvariantCulture;
             var sb = new StringBuilder(200);
-            sb.Append(",\"gfx_tex2d\":").Append(g.Texture2DCount.ToString(inv));
-            sb.Append(",\"gfx_tex2d_kib\":").Append((g.Texture2DBytes / 1024L).ToString(inv));
-            sb.Append(",\"gfx_mesh\":").Append(g.MeshCount.ToString(inv));
-            sb.Append(",\"gfx_mesh_kib\":").Append((g.MeshBytes / 1024L).ToString(inv));
-            sb.Append(",\"gfx_mat\":").Append(g.MaterialCount.ToString(inv));
-            sb.Append(",\"gfx_mat_kib\":").Append((g.MaterialBytes / 1024L).ToString(inv));
-            sb.Append(",\"gfx_sprite\":").Append(g.SpriteCount.ToString(inv));
-            sb.Append(",\"gfx_canvas\":").Append(g.CanvasCount.ToString(inv));
-            sb.Append(",\"gfx_canvas_kib\":").Append((g.CanvasBytes / 1024L).ToString(inv));
+            sb.Append(",\"obj_tex2d\":").Append(g.Texture2DCount.ToString(inv));
+            sb.Append(",\"obj_tex2d_kib\":").Append((g.Texture2DBytes / 1024L).ToString(inv));
+            sb.Append(",\"obj_mesh\":").Append(g.MeshCount.ToString(inv));
+            sb.Append(",\"obj_mesh_kib\":").Append((g.MeshBytes / 1024L).ToString(inv));
+            sb.Append(",\"obj_mat\":").Append(g.MaterialCount.ToString(inv));
+            sb.Append(",\"obj_mat_kib\":").Append((g.MaterialBytes / 1024L).ToString(inv));
+            sb.Append(",\"obj_sprite\":").Append(g.SpriteCount.ToString(inv));
+            sb.Append(",\"obj_canvas\":").Append(g.CanvasCount.ToString(inv));
+            sb.Append(",\"obj_canvas_kib\":").Append((g.CanvasBytes / 1024L).ToString(inv));
             return sb.ToString();
         }
 

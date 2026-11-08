@@ -8,6 +8,7 @@ using AF.Economy;
 using AF.GameFlow;
 using AF.Platform;
 using AF.Save;
+using AF.Presentation;
 using AF.UI;
 using NUnit.Framework;
 using Unity.Profiling;
@@ -53,8 +54,8 @@ namespace AF.Tests.PlayMode
         {
             var g = new GfxInventory(318, 56552 * KiB + 500, 445, 859 * KiB, 40, 110 * KiB, 143, 42, 208 * KiB);
             Assert.That(DevProbe.FormatGfxInventory(g), Is.EqualTo(
-                ",\"gfx_tex2d\":318,\"gfx_tex2d_kib\":56552,\"gfx_mesh\":445,\"gfx_mesh_kib\":859,\"gfx_mat\":40,\"gfx_mat_kib\":110,"
-                + "\"gfx_sprite\":143,\"gfx_canvas\":42,\"gfx_canvas_kib\":208"));
+                ",\"obj_tex2d\":318,\"obj_tex2d_kib\":56552,\"obj_mesh\":445,\"obj_mesh_kib\":859,\"obj_mat\":40,\"obj_mat_kib\":110,"
+                + "\"obj_sprite\":143,\"obj_canvas\":42,\"obj_canvas_kib\":208"));
         }
 
         [Test]
@@ -103,7 +104,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(Resources.FindObjectsOfTypeAll<RenderTexture>().Length, Is.EqualTo(rtLobby), "el Mapa no crea RenderTexture");
                 string? line = DevProbe.LastMemLine;
                 Assert.That(line, Does.Contain("\"at\":\"map_close\"").And.Contain("\"map_open_n\":" + (opensBefore + round).ToString(CultureInfo.InvariantCulture))
-                    .And.Contain("\"map_tex_kib\":0,").And.Contain("\"map_renderers\":0,\"map_verts\":0").And.Contain("\"gfx_tex2d\":"));
+                    .And.Contain("\"map_tex_kib\":0,").And.Contain("\"map_renderers\":0,\"map_verts\":0").And.Contain("\"obj_tex2d\":"));
 
                 GfxInventory now = Inventory();
                 if (round == 1)
@@ -135,15 +136,67 @@ namespace AF.Tests.PlayMode
             string settled = DevProbe.LastMemLine!;
             Assert.That(settled, Does.Contain("\"level\":58").And.Contain("\"map_open_n\":1,").And.Not.Contain("\"map_verts\":0}"));
             Assert.That(boot.CloseRiverMap(), Is.True);
-            int texAtClose = Inventory().Texture2DCount; // aún con el arte del Mapa: Object.Destroy lo suelta al final del fotograma
-            yield return null;
-            int texAfterClose = Inventory().Texture2DCount;
-            Assert.That(texAfterClose, Is.LessThan(texAtClose), "el arte del Mapa v2 se destruye al final del fotograma del cierre");
+            string close = DevProbe.LastMemLine!; // aún con el arte del Mapa: Object.Destroy lo suelta al final del fotograma
+            Assert.That(close, Does.Contain("\"at\":\"map_close\""));
             yield return WaitForLine("map_after", GameBootstrap.MapAfterMs + 2000f);
             string after = DevProbe.LastMemLine!;
             Assert.That(after, Does.Contain("\"map_open_n\":1,\"map_tex_kib\":0,").And.EndWith("\"map_renderers\":0,\"map_verts\":0}"));
-            Assert.That(after, Does.Contain("\"gfx_tex2d\":" + texAfterClose.ToString(CultureInfo.InvariantCulture) + ","),
-                "map_after cuenta las texturas ya destruidas");
+            Assert.That(Member(after, "obj_tex2d"), Is.LessThanOrEqualTo(Member(close, "obj_tex2d") - 6),
+                "map_after ya no cuenta el arte del Mapa v2 (el atlas, los primeros planos, los Andes, la luz y la niebla, como poco)");
+        }
+
+        [UnityTest]
+        public IEnumerator Opening_BorrowsTheCanvasBuffers_AndKeepsNone()
+        {
+            yield return LoadAt(58);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(PixelBuffers.Pooling, Is.False, "el arranque ya soltó sus búferes");
+            long asked = PixelBuffers.CanvasBytes;
+            long fresh = PixelBuffers.NewBytes;
+            int reused = PixelBuffers.Reused;
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+            long askedOpen = PixelBuffers.CanvasBytes - asked;
+            long freshOpen = PixelBuffers.NewBytes - fresh;
+            Debug.Log("AF_MAPMEM {\"at\":\"pixel_buffers\",\"asked_kib\":" + (askedOpen / KiB).ToString(CultureInfo.InvariantCulture)
+                + ",\"new_kib\":" + (freshOpen / KiB).ToString(CultureInfo.InvariantCulture)
+                + ",\"reused\":" + (PixelBuffers.Reused - reused).ToString(CultureInfo.InvariantCulture) + "}");
+            Assert.That(askedOpen, Is.GreaterThan(8L * 1024L * KiB), "el río vivo, los pueblos, Capi y la tripulación pintan al abrir");
+            Assert.That(PixelBuffers.Reused - reused, Is.GreaterThan(0), "los lienzos del Mapa reutilizan búferes mientras se abre");
+            Assert.That(freshOpen, Is.LessThan(askedOpen));
+            Assert.That(PixelBuffers.Pooling, Is.False, "al acabar de abrir ya no se guardan");
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L), "ningún búfer queda vivo");
+            Assert.That(boot.CloseRiverMap(), Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator AfMapV1_OpensTheMapOf10_ForTheReferenceMeasure()
+        {
+            LaunchOptions.MapV1Override = true;
+            yield return LoadAt(58);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.MapLiveSettings.UiMapV2, Is.False, "af_map_v1 apaga ui_map_v2 en desarrollo");
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+            yield return null;
+            Assert.That(boot.RiverMapView!.LiveActive, Is.False, "el Mapa de la 1.0");
+            Assert.That(boot.RiverMapView.SampleGfx(boot.MapOpens).TextureBytes, Is.EqualTo(0L), "sin el arte del Mapa v2");
+            Assert.That(boot.CloseRiverMap(), Is.True);
+            Assert.That(LaunchOptions.ResolveMapV1(false), Is.False, "nunca en release");
+        }
+
+        // El valor entero del miembro "name" de una línea de la sonda.
+        private static long Member(string line, string name)
+        {
+            string key = "\"" + name + "\":";
+            int i = line.IndexOf(key, StringComparison.Ordinal);
+            Assert.That(i, Is.GreaterThanOrEqualTo(0), name + " en " + line);
+            i += key.Length;
+            int j = i;
+            while (j < line.Length && (char.IsDigit(line[j]) || line[j] == '-'))
+            {
+                j++;
+            }
+
+            return long.Parse(line.Substring(i, j - i), CultureInfo.InvariantCulture);
         }
 
         private static IEnumerator WaitForLine(string at, float maxMs)
@@ -252,6 +305,8 @@ namespace AF.Tests.PlayMode
             sb.Append(DevProbe.FormatMapGfx(boot.RiverMapView!.SampleGfx(boot.MapOpens)));
             sb.Append(",\"rt\":").Append(Resources.FindObjectsOfTypeAll<RenderTexture>().Length.ToString(inv));
             sb.Append(",\"unity_alloc_mib\":").Append((Profiler.GetTotalAllocatedMemoryLong() / 1048576.0).ToString("0.0", inv));
+            sb.Append(",\"mono_heap_mib\":").Append((Profiler.GetMonoHeapSizeLong() / 1048576.0).ToString("0.0", inv));
+            sb.Append(",\"pixel_new_mib\":").Append((PixelBuffers.NewBytes / 1048576.0).ToString("0.0", inv));
             sb.Append(",\"mono_used_mib\":").Append((Profiler.GetMonoUsedSizeLong() / 1048576.0).ToString("0.0", inv));
             for (int i = 0; i < Counters.Length; i++)
             {
