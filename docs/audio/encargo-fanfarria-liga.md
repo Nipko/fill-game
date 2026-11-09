@@ -2,6 +2,8 @@
 
 2026-11-09 · Encargo breve para el músico (o el agente) que produzca el audio. Lo decide el dueño: Q-LD-3 del estreno de la Liga (añadido de D-046 del 2026-11-06, `docs/dev/decisiones.md`), respondida con «Encargar audio propio». **El encargo lo hace el dueño.** Hasta que llegue y pase el comprobador, el estreno sigue con la fanfarria de ahora, hecha con efectos que ya existen: `sfx_streak_up` y `sfx_confetti` (Sonido) y el remate `sting_arrival` (Música).
 
+> **Encargado a Gemini (2026-11-09):** el dueño lo pasa al agente de Gemini del equipo Spark con los otros dos audios nuevos de la 1.1 («encarga a gemini los audios nuevos»). El encargo conjunto, con la ficha de esta pieza para el comprobador, está en `docs/audio/encargo-audios-1-1.md`; la entrega llega en la rama `spark/audio-1-1`.
+
 Manda todo lo técnico de `docs/audio/encargo-sonidos.md` (§4 formato, §5 reglas para el teléfono, §8 lo prohibido en la música y §9 licencias y manifiesto) y 07 §9.5 del GDD. Una entrega solo se acepta si pasa `tools/audio-check/check_audio.py` sin ningún FALLO y la escucha del dueño en el teléfono.
 
 ## 1. Qué es
