@@ -1202,6 +1202,42 @@
    "max_s": 3.0,
    "min_energy_above_300hz": 0.5,
    "mono": true
+  },
+  {
+   "id": "sfx_mech_aguape",
+   "file": "sfx/sfx_mech_aguape.wav",
+   "category": "mecanicas_personajes",
+   "when": "Se suelta el Aguapé: la mata deja libres sus cuias",
+   "gdd": "Agua que se abre (02 §9.1 M8, regla 9)",
+   "duration_text": "0,6 s",
+   "direction": "**Roce húmedo de hojas flotantes de aguapé que se apartan + agua que se abre con un «shhh-plash» suave y una burbuja redonda** al quedar libre el grupo. Nunca hielo, escarcha ni cristal que se rompe.",
+   "hook_today": "Paso «se suelta» del Aguapé (Loosen); hoy reutiliza sfx_mech_remolino",
+   "peak_dbfs": -20.0,
+   "peak_tolerance_db": 1.5,
+   "gesture": false,
+   "canopy_tail": false,
+   "fruit_tuned": false,
+   "max_total_s": 1.0,
+   "min_energy_above_300hz": 0.5,
+   "mono": true
+  },
+  {
+   "id": "sfx_mech_lancha",
+   "file": "sfx/sfx_mech_lancha.wav",
+   "category": "mecanicas_personajes",
+   "when": "Atraca la Lancha con su fruta",
+   "gdd": "La lancha atraca (02 §9.1 M11)",
+   "duration_text": "0,9 s",
+   "direction": "**Motor de popa pequeño que llega y baja de vueltas («puc-puc» breve y lejano) + golpe sordo de madera contra el muelle + chapoteo de la ola que llega a la orilla.** Cálido y cercano; nunca remo, que es Capi.",
+   "hook_today": "Paso «atraca» de la Lancha (Dock); hoy reutiliza sfx_capi_paddle",
+   "peak_dbfs": -19.0,
+   "peak_tolerance_db": 1.5,
+   "gesture": false,
+   "canopy_tail": false,
+   "fruit_tuned": false,
+   "max_total_s": 1.3,
+   "min_energy_above_300hz": 0.5,
+   "mono": true
   }
  ],
  "fruit_notes": [
@@ -2592,6 +2628,17 @@
    "loop": false,
    "min_s": 1.0,
    "max_s": 2.5,
+   "peak_dbfs": -16.0,
+   "peak_tolerance_db": 2.0,
+   "stereo_allowed": true
+  },
+  {
+   "id": "sting_league_debut",
+   "file": "music/stingers/sting_league_debut.wav",
+   "when": "Estreno de la Liga del río (una vez por jugador)",
+   "loop": false,
+   "min_s": 2.0,
+   "max_s": 3.0,
    "peak_dbfs": -16.0,
    "peak_tolerance_db": 2.0,
    "stereo_allowed": true
