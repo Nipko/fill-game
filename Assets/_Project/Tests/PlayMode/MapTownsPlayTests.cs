@@ -203,7 +203,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator UnapprovedNames_AreNeitherVignettesNorDots_WithOrWithoutTowns()
+        public IEnumerator ReviewedNames_AreVignettesWithTowns_AndDotsWithout()
         {
             yield return OpenAt(76, true);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -213,9 +213,9 @@ namespace AF.Tests.PlayMode
             string locale = Loc.Locale;
             try
             {
-                // Como en release: los nombres nuevos (pendiente_asesor, hasta la revisión de Gemini, D-054) son «».
+                // Como en release: los nombres nuevos, aprobados en la revisión 4 de Gemini (D-054, 2026-11-09), ya salen.
                 Loc.Configure(catalog, locale, false);
-                Assert.That(Loc.Fact("map.stop.manacapuru.name"), Is.Empty);
+                Assert.That(Loc.Fact("map.stop.manacapuru.name"), Is.EqualTo("Manacapuru"), "revisión 4 de D-054");
                 Assert.That(Loc.Fact("map.stop.coari.name"), Is.EqualTo("Coari"), "los de la 1.0, aprobados");
                 foreach (bool towns in new[] { true, false })
                 {
@@ -223,10 +223,11 @@ namespace AF.Tests.PlayMode
                     Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
                     yield return null;
                     string where = towns ? "con ui_map_towns" : "sin ui_map_towns";
-                    Assert.That(map.TownIndexOf("manacapuru"), Is.EqualTo(-1), where + ": sin viñeta");
+                    Assert.That(map.TownIndexOf("manacapuru") >= 0, Is.EqualTo(towns), where + ": viñeta solo con los pueblos");
+                    // Con nombre aprobado, sin los pueblos sale como punto de la 1.0 (RiverMapScreen.BuildPassing); con ellos, solo su viñeta.
+                    Assert.That(HasDot(map, "manacapuru"), Is.EqualTo(!towns), where + ": punto de la 1.0 solo sin los pueblos");
                     for (int i = 0; i < map.PassingCount; i++)
                     {
-                        Assert.That(map.PassingAt(i).Id, Is.Not.EqualTo("manacapuru"), where + ": ni punto de la 1.0");
                         Assert.That(Loc.Fact(map.PassingAt(i).NameKey), Is.Not.Empty, where + ": ningún punto sin nombre");
                     }
 
