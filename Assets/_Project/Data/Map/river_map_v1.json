@@ -338,6 +338,7 @@
     {"id": "humaita", "line": "madeira", "s": 0.42179, "fact": null, "vignette": "market", "country": "BR", "tier": "town"},
     {"id": "manicore", "line": "madeira", "s": 0.661804, "fact": null, "vignette": "church", "country": "BR", "tier": "town"},
     {"id": "cachuela_esperanza", "line": "beni", "s": 0.961991, "fact": null, "vignette": "stilts", "country": "BO", "tier": "town"},
-    {"id": "guajara_mirim", "line": "mamore", "s": 0.949533, "fact": null, "vignette": "port", "country": "BR", "tier": "city"}
+    {"id": "guajara_mirim", "line": "mamore", "s": 0.949533, "fact": null, "vignette": "port", "country": "BR", "tier": "city"},
+    {"id": "porto_velho", "line": "madeira", "s": 0.245901, "fact": null, "vignette": "port", "country": "BR", "tier": "city"}
   ]
 }

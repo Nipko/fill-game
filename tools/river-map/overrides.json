@@ -207,10 +207,10 @@
       "humaita": {"from": {"rio": "madeira", "punto": "Humaitá"}, "country": "BR", "tier": "town", "vignette": "market", "river": "Madeira"},
       "manicore": {"from": {"rio": "madeira", "punto": "Manicoré"}, "country": "BR", "tier": "town", "vignette": "church", "river": "Madeira"},
       "cachuela_esperanza": {"from": {"rio": "beni", "punto": "Cachuela Esperanza"}, "country": "BO", "tier": "town", "vignette": "stilts", "river": "Beni"},
-      "guajara_mirim": {"from": {"rio": "mamore", "punto": "Guayaramerín (BO) / Guajará-Mirim (BR)"}, "name": "Guajará-Mirim", "country": "BR", "tier": "city", "vignette": "port", "river": "Mamoré"}
+      "guajara_mirim": {"from": {"rio": "mamore", "punto": "Guayaramerín (BO) / Guajará-Mirim (BR)"}, "name": "Guajará-Mirim", "country": "BR", "tier": "city", "vignette": "port", "river": "Mamoré"},
+      "porto_velho": {"from": {"rio": "madeira", "punto": "Porto Velho"}, "country": "BR", "tier": "city", "vignette": "port", "river": "Madeira", "why": "Se ancla a 6,5 km del Madeira de HydroRIVERS (6,53 km medidos), por encima de los 5 km de P4 (a): excepción medida aceptada por el dueño el 2026-11-09 (D-069, M2-2, pregunta 1: «Excepción medida», como D-028), con el tope de 6,6 km de TOWN_ANCHOR_EXCEPTION_KM en geometry.py. Solo él: Borba y Costa Marques siguen fuera. Tier city y viñeta port: la propuesta §4.2 lo pone entre los puertos grandes."}
     },
     "excluded": {
-      "porto_velho": "Su punto de rio-amazonas.json (madeira, «Porto Velho») queda a 6,5 km del Madeira de HydroRIVERS: más de los 5 km de P4 (a).",
       "borba": "Su punto de rio-amazonas.json (madeira, «Borba») queda a 6,6 km del Madeira de HydroRIVERS: más de los 5 km de P4 (a).",
       "costa_marques": "Su punto de rio-amazonas.json (itenez, «Boca del São Domingos / Costa Marques») queda a 6,1 km del Iténez de HydroRIVERS: más de los 5 km de P4 (a).",
       "cabo_pantoja": "No está en rio-amazonas.json, sources.json ni docs/research/mapa-del-rio/: nombre sin verificar (P4 (a)).",

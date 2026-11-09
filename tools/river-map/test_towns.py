@@ -60,8 +60,41 @@ class AnchorTests(TownsBase):
             with self.subTest(town=pid):
                 p = self.model_passing[pid]
                 self.assertLessEqual(p["anchor_km"], geometry.TOWN_ANCHOR_KM)
+                self.assertNotIn(pid, geometry.TOWN_ANCHOR_EXCEPTION_KM)
                 self.assertIsNone(p["fact"], "ningun dato: solo [V] revisado por Gemini (D-054), y ninguno lo tiene")
-        self.assertEqual(30, len(self.passing), "los 18 de la 1.0 y los 12 que entran")
+        self.assertEqual(31, len(self.passing), "los 18 de la 1.0, los 12 que entran y Porto Velho")
+
+    def test_porto_velho_enters_with_its_measured_exception_and_only_it(self):
+        # D-069, M2-2, pregunta 1 (2026-11-09): «Excepcion medida», como D-028; Borba y Costa Marques siguen fuera.
+        self.assertEqual({"porto_velho": 6.6}, geometry.TOWN_ANCHOR_EXCEPTION_KM)
+        p = self.model_passing["porto_velho"]
+        self.assertGreater(p["anchor_km"], geometry.TOWN_ANCHOR_KM)
+        self.assertLessEqual(p["anchor_km"], 6.6)
+        self.assertAlmostEqual(6.53, p["anchor_km"], delta=0.01)
+        self.assertEqual("madeira", p["line"])
+        self.assertIsNone(p["fact"])
+        self.assertEqual(("BR", "city", "port"), (self.passing["porto_velho"]["country"], self.passing["porto_velho"]["tier"],
+                                                  self.passing["porto_velho"]["vignette"]))
+        self.assertEqual("porto_velho", self.doc["passing"][-1]["id"], "el ultimo de places, al final de passing[]")
+        warnings = geometry.pending_town_anchors(self.model)
+        self.assertEqual(1, len(warnings), warnings)
+        self.assertIn("porto_velho: se ancla a 6.5 km de madeira (canon 5 km; excepcion medida 6.6 km", warnings[0])
+
+    def test_porto_velho_moved_beyond_its_exception_does_not_enter(self):
+        src = copy.deepcopy(self.source)
+        pts = next(r for r in src["rios"] if r["id"] == "madeira")["puntos"]
+        pv = next(p for p in pts if p["nombre"] == "Porto Velho")
+        pv["lon"] = round(pv["lon"] + 0.03, 4)   # al este: a ~9,4 km del Madeira
+        errors = self.model_errors(source=src)
+        self.assertTrue(any("towns.places.porto_velho: 'Porto Velho' se ancla a" in e and "excepcion medida 6.6 km" in e
+                            for e in errors), errors)
+
+    def test_the_exception_only_covers_a_candidate(self):
+        towns = copy.deepcopy(self.towns)
+        del towns["places"]["porto_velho"]
+        towns["excluded"]["porto_velho"] = "prueba"
+        errors = self.model_errors(towns)
+        self.assertTrue(any("TOWN_ANCHOR_EXCEPTION_KM: 'porto_velho' no es ningun candidato" in e for e in errors), errors)
 
     def test_a_candidate_moved_beyond_5_km_does_not_enter(self):
         src = copy.deepcopy(self.source)
@@ -81,14 +114,14 @@ class AnchorTests(TownsBase):
 
     def test_the_excluded_ones_are_not_on_the_map(self):
         excluded = self.towns["excluded"]
-        for pid in ("porto_velho", "borba", "costa_marques", "cabo_pantoja", "tiputini", "panacocha", "laberinto",
+        for pid in ("borba", "costa_marques", "cabo_pantoja", "tiputini", "panacocha", "laberinto",
                     "masisea", "sao_gabriel_da_cachoeira", "belen", "boca_colorado"):
             with self.subTest(town=pid):
                 self.assertIn(pid, excluded)
                 self.assertTrue(excluded[pid].strip())
                 self.assertNotIn(pid, self.passing)
-        # Los tres que no se anclan a 5 km: lo dice la geometria, no solo la tabla.
-        for rid, name, pid in (("madeira", "Porto Velho", "porto_velho"), ("madeira", "Borba", "borba"),
+        # Los dos que no se anclan a 5 km (Porto Velho entra con su excepcion medida): lo dice la geometria, no solo la tabla.
+        for rid, name, pid in (("madeira", "Borba", "borba"),
                                ("itenez", "Boca del São Domingos / Costa Marques", "costa_marques")):
             towns = copy.deepcopy(self.towns)
             del towns["excluded"][pid]
@@ -271,6 +304,11 @@ class TextTests(TownsBase):
                 self.assertIn("Pendiente de la revisión de Gemini (D-054)", row["notes"])
                 self.assertIn("https://", row["context"], "el nombre, verificado con las fuentes del río (P4 (a))")
         self.assertEqual("Guajará-Mirim", rows["map.stop.guajara_mirim.name"]["es-419"])
+        pv = rows["map.stop.porto_velho.name"]
+        self.assertEqual(("Porto Velho", "pendiente_asesor"), (pv["es-419"], pv["status"]))
+        self.assertIn("Pendiente de la revisión de Gemini (D-054)", pv["notes"])
+        self.assertIn("excepción medida de TOWN_ANCHOR_EXCEPTION_KM", pv["context"])
+        self.assertEqual("Madeira", rows["map.stop.porto_velho.river"]["es-419"])
         self.assertEqual("São Paulo de Olivença", rows["map.stop.sao_paulo_de_olivenca.name"]["es-419"])
         self.assertEqual("Solimões", rows["map.stop.coari.river"]["es-419"])
         self.assertNotIn("map.stop.teotonio.river", rows, "un mark no lleva rio de ficha")

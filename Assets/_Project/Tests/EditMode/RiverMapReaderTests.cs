@@ -86,7 +86,7 @@ namespace AF.Tests.EditMode
             Assert.That(map.Viewpoints[0].Id, Is.EqualTo("boca_del_amazonas"));
             Assert.That(map.Viewpoints[0].RevealOn, Is.EqualTo(10));
             Assert.That(map.Viewpoints[0].Fact, Is.EqualTo("map.stop.estuario.dato_01"));
-            Assert.That(map.Passing.Count, Is.EqualTo(30), "17 de 1-200, teotonio (M4.5a) y los 12 pueblos nuevos (D-069, M2-2)");
+            Assert.That(map.Passing.Count, Is.EqualTo(31), "17 de 1-200, teotonio (M4.5a), los 12 pueblos nuevos (D-069, M2-2) y Porto Velho");
             Assert.That(map.Passing[17].Id, Is.EqualTo("teotonio"));
             Assert.That(map.Lines[map.Passing[17].At.Line].Id, Is.EqualTo("madeira"));
             Assert.That(map.Passing[17].Fact, Is.EqualTo("map.stop.teotonio.dato_01"));
