@@ -4523,6 +4523,33 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - el español no cambia y sigue en `borrador` hasta el abogado (Q-B12-5).
 - **Resultado:** no queda ninguna fila en `traducido`, así que `LocReleaseGate` deja pasar el Release definitivo en inglés y portugués de Brasil.
 
+### D-054, añadido del 2026-11-09: encargo de la revisión 4 de Gemini (los textos de la 1.1)
+
+- **Encargo del dueño (2026-11-09):** «Revisión 4 con Gemini» (D-069, M2-2, respuesta a la pregunta 2). Lo prepara el integrador en la rama `v11/gemini-revision-4`:
+  - encargo: `docs/dev/traspaso/gemini-revision-textos-4.md`;
+  - filas a revisar: `docs/dev/traspaso/gemini-revision-4-entrada/`;
+  - entrega: `docs/dev/traspaso/gemini-revision-4/`.
+- **Qué cubre:** 72 filas. Son las que cuenta `LocReleaseGate` (52 problemas) y las que tienen alguna celda en `traducido` o `pendiente_asesor`:
+  - **`strings.csv`, 30 filas.** 21 tienen el español en `borrador` y el inglés y el portugués en `traducido`: el estreno de la Liga (5), los marcos de país (12) y las 4 etiquetas de TalkBack de los pueblos. Las otras 9 tienen además el español en `pendiente_asesor`: los tutoriales del Aguapé, del Aguapé espeso y de la Lancha (3), la tripulación (4), `map_stop_label_remaining` y `map_stop_label_prize`.
+  - **`facts.csv`, 42 filas.** 41 tienen el español en `pendiente_asesor`:
+    - los 13 nombres de los pueblos de M2-2 (Porto Velho incluido) y los 26 ríos de las fichas, con el inglés y el portugués en `traducido`;
+    - `mechanic.aguape` y `mechanic.aguape_n2`, sin inglés ni portugués.
+
+    La fila 42 es `mechanic.lancha`, con el español ya aprobado y el inglés y el portugués en `traducido`; no bloquea el release.
+  - **Un dato [V] para cada uno de los 13 pueblos nuevos,** en `datos_pueblos.csv`. Es una propuesta: el modo de revisión no lo aplica. Si el dueño lo aprueba, lo incorpora un carril de `tools/river-map`.
+- **Lo que Gemini no puede aprobar** (D-054 y D-064; encargo §3):
+  - no cambia los nombres que ya están en firme;
+  - en las filas `map.*` no usa `cambia`, sino `duda` con la corrección: las filas las genera `stops.py`;
+  - los nombres de mecánica en español solo pueden ir `ok` o `duda`; en inglés y portugués puede proponer otros, y el integrador pone al día `glossary.csv`;
+  - el español en `borrador` no lleva veredicto.
+
+  El dueño aprueba la entrega antes de aplicarla con `apply_translations.py --review`.
+- **Comprobado:** una entrega de prueba (las 72 filas en `revisado_nativo` y los 50 veredictos en `ok`) aplicada sobre una copia de las tablas da:
+  - `--check` antes de aplicar: código 1, sin conflictos;
+  - aplicar: 194 celdas o estados;
+  - `--check` después: código 0;
+  - el criterio de `LocReleaseGate`: 0 problemas.
+
 ### D-051, añadido del 2026-10-28: la intro de la marca dura unos 3,5 s y el vertido va fluido
 
 - **Estado:** pedido por el dueño en el chat el 2026-10-28: «podemos dejar la animación del principio también un poco más fluida, se siente muy tosca el vertido como pocos fotogramas, y podemos dejarla un segundo más para apreciarla mejor». Cambia la duración del añadido del 2026-10-26 (2,5 s); lo demás de ese añadido sigue.
