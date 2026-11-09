@@ -216,7 +216,7 @@ namespace AF.UI
                 LayoutPrizePill();
             }
 
-            SetActive(_prizePill!, _prizePillLabel!.text.Length > 0);
+            SetActive(_prizePill!, _prizePillLabel!.text.Length > 0 && !PrizeInStopLabel); // añadido de D-069 del 2026-11-09: junto al rótulo, sin píldora
         }
 
         // Tras colocar las mini cuias (PlaceStopMarkers): la marca de la Canasta en la esquina de arriba del lado contrario al de la

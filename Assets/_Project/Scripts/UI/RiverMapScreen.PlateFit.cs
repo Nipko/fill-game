@@ -172,9 +172,13 @@ namespace AF.UI
 
             _plateFitWorlds = worlds;
             _placed.Clear();
+            CuiasRestore();
             PlaceCountries(_space);
             PlaceSilhouettes(_space);
             PlatesFit();
+            CuiasYieldToPlates(); // añadido de D-069 del 2026-11-09
+            HeroesAfterFrame();
+            TownLabelsAfterFrame(); // añadido de D-069 del 2026-11-09
         }
 
         // Arrastrar el mapa: las placas que no salían con el encuadre de apertura vuelven, en su sitio (no las de la Cuenca que pisaban
@@ -183,9 +187,28 @@ namespace AF.UI
         {
             for (int k = 0; k < _plateFitHidden.Length && k < _silhouettes.Count; k++)
             {
-                if (_plateFitHidden[k] && !(k < _plateStacked.Length && _plateStacked[k]))
+                if (_plateFitHidden[k] && !(k < _plateStacked.Length && _plateStacked[k]) && !PlateKeptHidden(PlateBox(_silhouettes[k].Root)))
                 {
                     ShowPlate(k, true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Para los tests (revisión del añadido de D-069 del 2026-11-09): pone la placa <paramref name="i"/> (orden de
+        /// <see cref="SilhouetteCount"/>) con su esquina izquierda y su centro vertical en <paramref name="anchored"/> y la oculta
+        /// como FX10 (una placa que no cabía con el encuadre de apertura), para ver qué hace <c>PlatesDragged</c>.
+        /// </summary>
+        internal void HidePlateForTests(int i, Vector2 anchored)
+        {
+            int seen = 0;
+            for (int k = 0; k < _silhouettes.Count; k++)
+            {
+                if (_silhouettes[k].Root.gameObject.activeSelf && seen++ == i)
+                {
+                    _silhouettes[k].Root.anchoredPosition = anchored;
+                    ShowPlate(k, false);
+                    return;
                 }
             }
         }
@@ -269,7 +292,8 @@ namespace AF.UI
 
                 Rect local = PlateBox(root);
                 Rect seen = InView(local, o);
-                if (!seen.Overlaps(full) || (Inside(seen, inner) && !PlateFixedHit(_silhouettes[k].World, local, seen, window, button, basin)))
+                if (!seen.Overlaps(full) || (Inside(seen, inner) && !PlateFixedHit(_silhouettes[k].World, local, seen, window, button, basin)
+                    && !PlateHitsLabels(local))) // añadido de D-069 del 2026-11-09: ni las boyas del tramo ni los rótulos de las paradas
                 {
                     continue; // entera fuera de la vista (no se ve) o entera dentro y libre
                 }
@@ -491,7 +515,8 @@ namespace AF.UI
             }
 
             Rect seen = InView(box, o);
-            if (!Inside(seen, inner) || PlateFixedHit(_silhouettes[k].World, box, seen, window, button, basin) || PlateBlocked(k, box) || CountryUnder(box))
+            if (!Inside(seen, inner) || PlateFixedHit(_silhouettes[k].World, box, seen, window, button, basin) || PlateBlocked(k, box) || CountryUnder(box)
+                || PlateHitsLabels(box))
             {
                 return false;
             }

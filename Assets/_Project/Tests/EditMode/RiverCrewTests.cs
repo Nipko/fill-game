@@ -191,6 +191,16 @@ namespace AF.Tests.EditMode
             Assert.That(UiText.MapStopLabelRemaining("Tefé", -2), Is.EqualTo("Tefé\nfaltan 0 niveles"));
         }
 
+        [Test]
+        public void ThePrizeJoinsFaltanInTheLabel_AsInTheMockUp_WithThePlural()
+        {
+            // Añadido de D-069 del 2026-11-09 (respuesta 1 del dueño, «Juntarlos»): map_stop_label_prize, como la maqueta.
+            Assert.That(UiText.MapStopLabelPrize("Leticia", 10), Is.EqualTo("Leticia\nPremio del mundo · faltan 10"));
+            Assert.That(UiText.MapStopLabelPrize("Leticia", 1), Is.EqualTo("Leticia\nPremio del mundo · falta 1"), "nunca «faltan 1»");
+            Assert.That(UiText.MapStopLabelPrize("Leticia", -3), Is.EqualTo("Leticia\nPremio del mundo · faltan 0"));
+            Assert.That(UiText.Keys.MapStopLabelPrize, Is.EqualTo("map_stop_label_prize"));
+        }
+
         private static int Opaque(Color32[] px, CrewPiece piece)
         {
             RectInt r = ProceduralArt.CrewCell(piece);

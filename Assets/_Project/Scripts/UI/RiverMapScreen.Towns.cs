@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using AF.Economy;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Localization;
@@ -237,6 +238,11 @@ namespace AF.UI
                 _townMarkers[i].Vignette.sprite = null;
             }
 
+            for (int k = 0; k < _heroVignettes.Count; k++)
+            {
+                _heroVignettes[k].sprite = null;
+            }
+
             _townArt.Release();
         }
 
@@ -344,7 +350,515 @@ namespace AF.UI
                 _townMarkers[i].Root.gameObject.SetActive(false);
             }
 
+            HeroesBuild(max);
             BuildStopLabels(max);
+        }
+
+        // ============================================================================================ la ciudad con hito
+
+        // Añadido de D-069 del 2026-11-09 (pregunta 4 de M2-2, «Ya en la 1.1»): la viñeta de ciudad con hito del atlas de los
+        // pueblos, junto a la mini cuia de cada parada con un héroe de ciudad (RiverTowns.CityHeroes), una vez por héroe (Leticia y
+        // «Leticia al atardecer» comparten el malecón). Como los pueblos: a la medida del zoom, en una orilla, sin pisar mini cuias,
+        // rótulos, pueblos, la canoa ni su tripulación; en color si ya se alcanzó la parada y apagada si no. Sin toque ni rótulo
+        // propios: la nombra el rótulo de su parada y la abre su mini cuia.
+        private readonly List<Image> _heroVignettes = new List<Image>();
+        private readonly List<int> _heroMarker = new List<int>();
+        private int _heroCount;
+
+        /// <summary>Viñetas de ciudad con hito de esta apertura (las paradas con héroe de ciudad dibujadas; tests).</summary>
+        internal int HeroVignetteCount => _towns ? _heroCount : 0;
+
+        /// <summary>La parada (n) de la viñeta de ciudad con hito <paramref name="k"/>.</summary>
+        internal int HeroVignetteStop(int k)
+        {
+            return _markers[_heroMarker[k]].N;
+        }
+
+        /// <summary>La viñeta de ciudad con hito <paramref name="k"/> se ve (vista Mundo, con sitio libre).</summary>
+        internal bool HeroVignetteShown(int k)
+        {
+            return k >= 0 && k < HeroVignetteCount && _heroVignettes[k].gameObject.activeInHierarchy;
+        }
+
+        /// <summary>Caja de la viñeta de ciudad con hito <paramref name="k"/> en coordenadas locales del contenido; vacía si no sale.</summary>
+        internal Rect HeroVignetteLocalRect(int k)
+        {
+            if (!HeroVignetteShown(k))
+            {
+                return default;
+            }
+
+            RectTransform rt = _heroVignettes[k].rectTransform;
+            Vector2 c = rt.anchoredPosition;
+            Vector2 sz = rt.sizeDelta;
+            return new Rect(c.x - (sz.x * 0.5f), c.y - (sz.y * 0.5f), sz.x, sz.y);
+        }
+
+        /// <summary>La viñeta de ciudad con hito <paramref name="k"/> (tests: su sprite y su color).</summary>
+        internal Image HeroVignette(int k)
+        {
+            return _heroVignettes[k];
+        }
+
+        private void HeroesBuild(int max)
+        {
+            _heroCount = 0;
+            for (int i = 0; i < _markerCount; i++)
+            {
+                StopMarker m = _markers[i];
+                string? hero = m.Stop.Backdrop.Hero;
+                if (!RiverTowns.IsCityHero(hero) || HeroSeen(hero!))
+                {
+                    continue;
+                }
+
+                while (_heroVignettes.Count <= _heroCount)
+                {
+                    Image image = UiBuilder.Image("Hero_" + _heroVignettes.Count, _townLayer!, null, Color.white);
+                    image.raycastTarget = false; // la toca su mini cuia
+                    image.preserveAspect = true;
+                    RectTransform rt = image.rectTransform;
+                    rt.anchorMin = new Vector2(0f, 1f);
+                    rt.anchorMax = new Vector2(0f, 1f);
+                    rt.pivot = new Vector2(0.5f, 0.5f);
+                    _heroVignettes.Add(image);
+                    _heroMarker.Add(-1);
+                }
+
+                Image v = _heroVignettes[_heroCount];
+                _heroMarker[_heroCount] = i;
+                v.sprite = _townArt.Piece(RiverTownVignette.Landmark, VariantOf(m.Stop.Id));
+                bool reached = max >= m.N * RiverStopCatalog.LevelsPerStop;
+                v.color = reached ? Color.white : new Color(0.80f, 0.86f, 0.84f, TownAheadAlpha);
+                v.gameObject.name = "Hero_" + m.Stop.Id;
+                _heroCount++;
+            }
+
+            for (int k = _heroCount; k < _heroVignettes.Count; k++)
+            {
+                if (_heroVignettes[k].gameObject.activeSelf)
+                {
+                    _heroVignettes[k].gameObject.SetActive(false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Radio alrededor del centro de cada boya del tramo que no pisa ningún rótulo ni placa (dp): media boya de vidrio del Mapa v2
+        /// (<see cref="LiveBuoyDp"/>) y 1 dp de hueco [P] (añadido de D-069 del 2026-11-09).
+        /// </summary>
+        internal float BuoyClearRadiusDp => (_live ? LiveBuoyDp * 0.5f : BuoyRadiusWorldDp) + 1f;
+
+        // La caja r (local) pisa una boya del tramo en curso (van encima de rótulos y viñetas). Sin asignaciones.
+        private bool HitsBuoys(Rect r)
+        {
+            float radius = BuoyClearRadiusDp;
+            for (int b = 0; b < _buoyCount; b++)
+            {
+                Vector2 p = _buoyLocal[b];
+                if (r.Overlaps(new Rect(p.x - radius, p.y - radius, 2f * radius, 2f * radius)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // ============================================================================================ rótulos, placas y boyas
+
+        // Añadido de D-069 del 2026-11-09 (pregunta abierta 4 del rótulo junto, fallo de las capturas: «Fonte B●a» y «Mundo 8 ·
+        // Madidi» tapado por «Cachuela Esperanza»): con el encuadre decidido y las placas de los mundos futuros encajadas, en la
+        // vista Mundo del Mapa v2, los pueblos ceden ante lo que manda más [P]: 1, el rótulo de la parada siguiente; 2, la placa de
+        // mundo; 3, el pueblo. Una viñeta de pueblo debajo de una placa no sale (con su rótulo). Un rótulo de pueblo que pisa una
+        // boya del tramo, una placa, un rótulo de parada, la canoa con su tripulación o el rótulo o la viñeta de otro pueblo o una
+        // ciudad con hito pasa al otro lado de su viñeta (encima o debajo) y, si allí también, no sale. Sin asignaciones.
+        private void TownLabelsAfterFrame()
+        {
+            if (!_towns || _view != MapView.World)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _townCount; i++)
+            {
+                TownMarker m = _townMarkers[i];
+                if (m.Root.gameObject.activeSelf && HitsPlate(TownVignetteLocalRect(i)))
+                {
+                    SetTownActive(m, false);
+                }
+            }
+
+            for (int i = 0; i < _townCount; i++)
+            {
+                TownMarker m = _townMarkers[i];
+                if (!m.Root.gameObject.activeSelf || !m.Pill.gameObject.activeSelf || !TownLabelTaken(i, TownLabelLocalRect(i)))
+                {
+                    continue;
+                }
+
+                Vector2 before = m.Pill.anchoredPosition;
+                m.Pill.anchoredPosition = new Vector2(before.x, -before.y); // al otro lado de su viñeta
+                if (TownLabelTaken(i, TownLabelLocalRect(i)))
+                {
+                    m.Pill.anchoredPosition = before;
+                    m.Pill.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        // El rótulo del pueblo self en r (local) pisa algo que manda más que él o a otro pueblo (ver TownLabelsAfterFrame).
+        private bool TownLabelTaken(int self, Rect r)
+        {
+            if (HitsBuoys(r) || HitsPlate(r) || HitsCrew(r))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
+            {
+                if (_markers[i].Root.gameObject.activeSelf && _stopLabels[i].Pill.gameObject.activeSelf
+                    && r.Overlaps(PillRect(_markers[i].Root.anchoredPosition, _stopLabels[i].Pill)))
+                {
+                    return true;
+                }
+            }
+
+            for (int i = 0; i < _townCount; i++)
+            {
+                if (i == self || !_townMarkers[i].Root.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (r.Overlaps(TownVignetteLocalRect(i)) || (_townMarkers[i].Pill.gameObject.activeSelf && r.Overlaps(TownLabelLocalRect(i))))
+                {
+                    return true;
+                }
+            }
+
+            for (int k = 0; k < _heroCount; k++)
+            {
+                if (_heroVignettes[k].gameObject.activeSelf && r.Overlaps(HeroVignetteBox(k)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Añadido de D-069 del 2026-11-09: una placa de mundo en box (local), en la vista Mundo del Mapa v2, pisa una boya del tramo
+        // o un rótulo de parada (que mandan más que ella; PlatesFit la cambia de sitio o, sin sitio, no sale con este encuadre).
+        private bool PlateHitsLabels(Rect box)
+        {
+            if (!_live || _view != MapView.World)
+            {
+                return false;
+            }
+
+            if (HitsBuoys(box))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
+            {
+                if (_markers[i].Root.gameObject.activeSelf && _stopLabels[i].Pill.gameObject.activeSelf
+                    && box.Overlaps(PillRect(_markers[i].Root.anchoredPosition, _stopLabels[i].Pill)))
+                {
+                    return true;
+                }
+            }
+
+            for (int i = 0; i < _markerCount; i++)
+            {
+                if (CuiaOverPlate(i) && box.Overlaps(CuiaBox(_markers[i].Shown)))
+                {
+                    return true; // la mini cuia que manda más que la placa (CuiaOverPlate)
+                }
+            }
+
+            return false;
+        }
+
+        // ============================================================================================ mini cuias, placas y países
+
+        // Añadido de D-069 del 2026-11-09 (fallo de d069c_zoom_292_360dp.png: con el zoom alejado, mini cuias de otros mundos
+        // asomaban sobre «Mundo 9 · Ucayali · Nivel 561» y sobre «Perú»): la regla de las placas de M3.4 (ninguna placa pisa una
+        // mini cuia) también para las mini cuias que entran en la vista con el zoom alejado. Las placas se colocan antes que las mini
+        // cuias de cada encuadre (ProgressSpace va antes que MarkersSpace), así que la comprobación se hace al final. Ganan la
+        // placa y el rótulo de país [P]: una mini cuia que pisaría una placa o un país no sale con este encuadre, salvo la de la
+        // parada siguiente, la que lleva su rótulo (la última alcanzada) y la del Premio del mundo, que mandan más que la placa
+        // (CuiaOverPlate: la placa busca otro sitio o no sale, PlateHitsLabels). Al volver a encuadrar, vuelven (CuiasRestore).
+        private bool[] _cuiaYielded = new bool[0];
+
+        // Los rótulos de país que no salen con este encuadre porque pisarían una de las mini cuias que mandan (CuiaOverPlate).
+        private bool[] _countryYielded = new bool[0];
+
+        // La mini cuia i manda más que una placa: la de la parada siguiente, la que lleva su rótulo y la del Premio del mundo.
+        private bool CuiaOverPlate(int i)
+        {
+            if (i < 0 || i >= _markerCount || !_markers[i].Root.gameObject.activeSelf)
+            {
+                return false;
+            }
+
+            return _markers[i].N == RemainingStopN() || i == _prizeMarker
+                || (i < _stopLabels.Count && _stopLabels[i].Pill.gameObject.activeSelf);
+        }
+
+        // Añadido de D-069 del 2026-11-09 (revisión): una placa oculta con el encuadre de apertura no vuelve al arrastrar ni al
+        // encuadrar el viaje (PlatesDragged) si en su sitio pisa lo que manda más que ella (PlateHitsLabels: una boya, un rótulo de
+        // parada o una de las mini cuias de CuiaOverPlate) o, en la vista Mundo del Mapa v2, cualquier mini cuia que sale (las que
+        // entraron con el zoom alejado). Sin recolocar nada.
+        private bool PlateKeptHidden(Rect box)
+        {
+            if (!_live || _view != MapView.World)
+            {
+                return false;
+            }
+
+            if (PlateHitsLabels(box))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < _markerCount; i++)
+            {
+                if (_markers[i].Root.gameObject.activeSelf && box.Overlaps(CuiaBox(_markers[i].Shown)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Las líneas finas del abanico, de las mini cuias que salen (tras ocultar o devolver alguna).
+        private void RebuildLeaders()
+        {
+            if (_leaders == null || _leaderLines == null)
+            {
+                return;
+            }
+
+            _leaders.Clear();
+            _leaderLines.Clear();
+            for (int i = 0; i < _markerCount; i++)
+            {
+                StopMarker m = _markers[i];
+                if (m.Root.gameObject.activeSelf && m.HasLeader && LeaderFoot(m.Shown, m.Real, out Vector2 foot))
+                {
+                    _leaders.Add(foot, m.Real);
+                    _leaderLines.Add(foot, m.Real);
+                }
+            }
+
+            _leaders.Commit();
+            _leaderLines.Commit();
+        }
+
+        // Al empezar un encuadre: las mini cuias y los países que cedieron en el anterior vuelven (las mini cuias, con su línea).
+        private void CuiasRestore()
+        {
+            bool back = false;
+            for (int i = 0; i < _countryYielded.Length && i < _countries.Count; i++)
+            {
+                if (_countryYielded[i])
+                {
+                    _countryYielded[i] = false;
+                    _countries[i].gameObject.SetActive(true);
+                }
+            }
+
+            for (int i = 0; i < _cuiaYielded.Length && i < _markers.Count; i++)
+            {
+                if (_cuiaYielded[i])
+                {
+                    _cuiaYielded[i] = false;
+                    if (i < _markerCount)
+                    {
+                        _markers[i].Root.gameObject.SetActive(true);
+                        back = true;
+                    }
+                }
+            }
+
+            if (back)
+            {
+                RebuildLeaders(); // la mini cuia que vuelve, con su línea fina (revisión)
+            }
+        }
+
+        // Con el encuadre decidido y las placas encajadas: en la vista Mundo del Mapa v2, la mini cuia que pisa una placa que sale o
+        // un país no sale (salvo las de CuiaOverPlate), y las líneas finas del abanico se rehacen sin ella. Sin asignaciones (salvo
+        // la tabla si crece el número de mini cuias).
+        private void CuiasYieldToPlates()
+        {
+            if (!_live || _view != MapView.World || _markerLayer == null || _leaders == null || _leaderLines == null)
+            {
+                return;
+            }
+
+            if (_cuiaYielded.Length < _markers.Count)
+            {
+                System.Array.Resize(ref _cuiaYielded, _markers.Count);
+            }
+
+            if (_countryYielded.Length < _countries.Count)
+            {
+                System.Array.Resize(ref _countryYielded, _countries.Count);
+            }
+
+            bool any = false;
+            for (int i = 0; i < _markerCount; i++)
+            {
+                StopMarker m = _markers[i];
+                if (!m.Root.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (CuiaOverPlate(i))
+                {
+                    // La parada siguiente, la que lleva rótulo y la del premio mandan también sobre el rótulo de un país: no sale.
+                    Rect own = CuiaBox(m.Shown);
+                    for (int c = 0; c < _countries.Count; c++)
+                    {
+                        TextMeshProUGUI country = _countries[c];
+                        if (country.gameObject.activeSelf && !CountryBasinHidden(c) && own.Overlaps(CountryLocalBox(c)))
+                        {
+                            country.gameObject.SetActive(false);
+                            _countryYielded[c] = true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                Rect box = CuiaBox(m.Shown);
+                if (HitsPlate(box) || CountryUnder(box))
+                {
+                    m.Root.gameObject.SetActive(false);
+                    _cuiaYielded[i] = true;
+                    any = true;
+                }
+            }
+
+            if (any)
+            {
+                RebuildLeaders();
+            }
+        }
+
+        /// <summary>La mini cuia <paramref name="i"/> no sale con este encuadre: pisaría una placa o un país (añadido de D-069 del 2026-11-09; tests).</summary>
+        internal bool StopMarkerYielded(int i)
+        {
+            return i >= 0 && i < _cuiaYielded.Length && _cuiaYielded[i];
+        }
+
+        /// <summary>Caja de la mini cuia <paramref name="i"/> en coordenadas locales del contenido; vacía si no sale (tests).</summary>
+        internal Rect StopMarkerBox(int i)
+        {
+            return i >= 0 && i < _markerCount && _markers[i].Root.gameObject.activeInHierarchy ? CuiaBox(_markers[i].Shown) : default;
+        }
+
+        /// <summary>Caja del rótulo de país <paramref name="i"/> (orden de <c>labels</c>) si se ve en esta vista; vacía si no (tests).</summary>
+        internal Rect CountryVisibleBox(int i)
+        {
+            return i >= 0 && i < _countries.Count && _countries[i].gameObject.activeInHierarchy && !CountryBasinHidden(i) ? CountryLocalBox(i) : default;
+        }
+
+        /// <summary>Rótulos de país del Mapa (visibles o no; tests).</summary>
+        internal int CountrySlotCount => _countries.Count;
+
+        // Con el encuadre decidido (las placas de los mundos futuros ya encajadas a la vista, PlatesFitView), una ciudad con hito
+        // que quede debajo de una placa no sale.
+        private void HeroesAfterFrame()
+        {
+            for (int k = 0; k < _heroCount; k++)
+            {
+                Image v = _heroVignettes[k];
+                if (v.gameObject.activeSelf && (HitsPlate(HeroVignetteBox(k)) || !_markers[_heroMarker[k]].Root.gameObject.activeSelf))
+                {
+                    v.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        private Rect HeroVignetteBox(int k)
+        {
+            RectTransform rt = _heroVignettes[k].rectTransform;
+            Vector2 c = rt.anchoredPosition;
+            Vector2 sz = rt.sizeDelta;
+            return new Rect(c.x - (sz.x * 0.5f), c.y - (sz.y * 0.5f), sz.x, sz.y);
+        }
+
+        private bool HeroSeen(string hero)
+        {
+            for (int k = 0; k < _heroCount; k++)
+            {
+                if (string.Equals(_markers[_heroMarker[k]].Stop.Backdrop.Hero, hero, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // En la vista Mundo, tras las mini cuias y sus rótulos y antes de los pueblos (la ciudad de una parada gana el sitio): en la
+        // orilla de su parada, a un lado y al otro, pegada a la mini cuia y un paso más allá, el primer sitio libre [P]; si ninguno
+        // lo está, sin viñeta.
+        private void HeroesSpace(MapSpace space, float w, float h)
+        {
+            for (int k = 0; k < _heroCount; k++)
+            {
+                Image v = _heroVignettes[k];
+                StopMarker m = _markers[_heroMarker[k]];
+                bool free = false;
+                Vector2 center = default;
+                Rect rect = default;
+                RiverStopRoute? route = _routes != null ? _routes.At(m.N) : null;
+                if (m.Root.gameObject.activeSelf && _map != null && route != null)
+                {
+                    Vector2 c = m.Root.anchoredPosition;
+                    RiverMapPlace at = route.At;
+                    float lineW = MapRibbonWidthDp(_view, _map.Lines[at.Line].Class) * 0.5f;
+                    for (int spot = 0; spot < 4 && !free; spot++)
+                    {
+                        // A lo largo de la normal: fuera del río y de la caja de la mini cuia (24 × 36 dp en _townPlaced), con el
+                        // hueco de los pueblos y media viñeta; el segundo paso, media viñeta más allá.
+                        Vector2 normal = BankNormalAt(_map, at, (spot & 1) == 0 ? 1f : -1f);
+                        float nx = Mathf.Abs(normal.x);
+                        float ny = Mathf.Abs(normal.y);
+                        float half = (nx * w * 0.5f) + (ny * h * 0.5f);
+                        float reach = Mathf.Max(lineW, (nx * 12f) + (ny * 18f)) + TownBankGapDp + half;
+                        center = c + (normal * (reach + ((spot >> 1) * half)));
+                        rect = new Rect(center.x - (w * 0.5f), center.y - (h * 0.5f), w, h);
+                        free = !HitsCrew(rect) && !HitsPlate(rect) && !HitsBuoys(rect);
+                        for (int j = 0; j < _townPlaced.Count && free; j++)
+                        {
+                            free = !_townPlaced[j].Overlaps(rect);
+                        }
+                    }
+                }
+
+                if (v.gameObject.activeSelf != free)
+                {
+                    v.gameObject.SetActive(free);
+                }
+
+                if (!free)
+                {
+                    continue;
+                }
+
+                _townPlaced.Add(rect);
+                v.rectTransform.anchoredPosition = center;
+                v.rectTransform.sizeDelta = new Vector2(w, h);
+            }
         }
 
         private int TownSlotOf(RiverPassingPoint point)
@@ -463,6 +977,8 @@ namespace AF.UI
                 }
             }
 
+            HeroesSpace(space, w, h); // añadido de D-069 del 2026-11-09: la ciudad con hito de las paradas con héroe de ciudad
+
             for (int k = 0; k < _townOrder.Count; k++)
             {
                 TownMarker m = _townMarkers[_townOrder[k]];
@@ -526,10 +1042,16 @@ namespace AF.UI
         // Normal del río en el punto del pueblo (local, dp), hacia el lado side (±1).
         private Vector2 BankNormal(RiverMap map, RiverPassingPoint point, float side)
         {
-            RiverLine line = map.Lines[point.At.Line];
+            return BankNormalAt(map, point.At, side);
+        }
+
+        // Normal del río en el sitio at (local, dp), hacia el lado side (±1).
+        private static Vector2 BankNormalAt(RiverMap map, RiverMapPlace at, float side)
+        {
+            RiverLine line = map.Lines[at.Line];
             float eps = Mathf.Max(1e-4f, 0.002f);
-            line.PointAt(Mathf.Clamp01(point.At.S + eps), out float ax, out float ay);
-            line.PointAt(Mathf.Clamp01(point.At.S - eps), out float bx, out float by);
+            line.PointAt(Mathf.Clamp01(at.S + eps), out float ax, out float ay);
+            line.PointAt(Mathf.Clamp01(at.S - eps), out float bx, out float by);
             Vector2 d = MapSpace.DirectionToLocal(new Vector2(ax - bx, ay - by));
             if (d.sqrMagnitude < 1e-12f)
             {
@@ -555,7 +1077,7 @@ namespace AF.UI
                     m.Pill.anchoredPosition = new Vector2(0f, side == 0 ? -dy : dy);
                     Vector2 at = center + m.Pill.anchoredPosition;
                     var rect = new Rect(at.x - (m.Pill.sizeDelta.x * 0.5f), at.y - (m.Pill.sizeDelta.y * 0.5f), m.Pill.sizeDelta.x, m.Pill.sizeDelta.y);
-                    on = !HitsCrew(rect);
+                    on = !HitsCrew(rect) && !HitsBuoys(rect); // añadido de D-069 del 2026-11-09: ni las boyas del tramo
                     for (int j = 0; j < _townPlaced.Count - 1 && on; j++)
                     {
                         on = !_townPlaced[j].Overlaps(rect); // la última es su propia viñeta
@@ -731,9 +1253,10 @@ namespace AF.UI
             StopLabel s = _stopLabels[i];
             StopMarker sm = _markers[i];
             bool on = s.Label.text.Length > 0 && (!sm.Fanned || sm.N == RemainingStopN());
-            if (on && !PlaceStopLabel(i) && sm.Fanned)
+            if (on && !PlaceStopLabel(i) && (sm.Fanned
+                || (_live && sm.N != RemainingStopN() && HitsBuoys(PillRect(sm.Root.anchoredPosition, s.Pill)))))
             {
-                on = false;
+                on = false; // añadido de D-069 del 2026-11-09: la última alcanzada, sin sitio fuera de las boyas, sin rótulo
             }
 
             if (s.Pill.gameObject.activeSelf != on)
@@ -768,6 +1291,7 @@ namespace AF.UI
                     SyncRemainingPlate();
                 }
 
+                SyncPrizePill(); // añadido de D-069 del 2026-11-09: sin el rótulo junto (la Cuenca), la píldora vuelve
                 return;
             }
 
@@ -809,6 +1333,7 @@ namespace AF.UI
                 // «Faltan N» va entonces en la placa: el rótulo, solo con el nombre, para no decirlo dos veces.
                 TextMeshProUGUI label = _stopLabels[i].Label;
                 label.text = UiText.StopName(_markers[i].Stop);
+                _remainingPrizeWorld = 0; // y el Premio del mundo, en su píldora (SyncRemainingPlate)
                 SizePill(pill, label);
             }
 
@@ -819,25 +1344,46 @@ namespace AF.UI
         /// <summary>Margen del encuadre de la parada siguiente con su rótulo y la canoa (dp) [P] (añadido de D-069 del 2026-11-08).</summary>
         public const float RemainingFrameMarginDp = 8f;
 
+        /// <summary>
+        /// Tope del zoom de la vista Mundo cuando se aleja para que quepan la parada siguiente y la canoa [P] (añadido de D-069 del
+        /// 2026-11-09, respuesta 2 del dueño: «Bajar el zoom»): ×1,75, menos de la mitad de <see cref="WorldZoomMin"/> (×4). Basta para
+        /// los tramos largos de los mundos 7 y 8 (Puerto Heath jugando el 292 pide ×1,79; Rurrenabaque, ×2,2) y deja la vista con
+        /// las mini cuias de tres mundos aún separadas; más lejos (las «Orillas de Rurrenabaque», jugando el 452-457, piden ×1,5) se
+        /// amontonan, y la placa de respaldo sigue siendo el último recurso.
+        /// </summary>
+        public const float RemainingZoomFloor = 1.75f;
+
+        /// <summary>Holgura del zoom alejado para que quepan la parada siguiente y la canoa (×) [P]: los rótulos se recolocan con él.</summary>
+        public const float RemainingZoomSlack = 0.97f;
+
+        /// <summary>
+        /// Paso del zoom alejado (×) [P] cuando la parada siguiente y la canoa ya caben pero el rótulo con «Faltan N» aún no se ve
+        /// entero (una parada en abanico o junto al borde): se aleja de este tanto en este tanto hasta el tope.
+        /// </summary>
+        public const float RemainingZoomStep = 0.85f;
+
         // Añadido de D-069 del 2026-11-08 (observación 4): con el Mapa v2, el encuadre de apertura de la vista Mundo se corre lo justo
         // para que se vean enteras la mini cuia de la parada siguiente con su rótulo («Faltan N») y la canoa con su equipo, debajo de
-        // «Andes ↑»; si las dos no caben a la vez, no se corre (y «Faltan N» sale en la placa de respaldo). Tras MarkersFrame.
-        private void FrameRemaining(ref Vector2 offset)
+        // «Andes ↑». Si las dos no caben a la vez, no se corre y devuelve el zoom con que cabrían (añadido de D-069 del 2026-11-09,
+        // respuesta 2: LayoutView vuelve a encuadrar con él), −1 si caben y −2 si ni con RemainingZoomFloor caben (y «Faltan N» sale
+        // en la placa de respaldo). Tras MarkersFrame.
+        private float FrameRemaining(ref Vector2 offset)
         {
             int n = RemainingStopN();
             int i = n >= 0 ? StopMarkerIndexOf(n) : -1;
             if (!_live || _view != MapView.World || i < 0 || i >= _markerCount || i >= _stopLabels.Count)
             {
-                return;
+                return -1f;
             }
 
             Vector2 c = _markers[i].Root.anchoredPosition;
-            Rect want = CuiaBox(c);
+            Rect stopBox = CuiaBox(c);
             if (_stopLabels[i].Pill.gameObject.activeSelf)
             {
-                want = Union(want, PillRect(c, _stopLabels[i].Pill));
+                stopBox = Union(stopBox, PillRect(c, _stopLabels[i].Pill));
             }
 
+            Rect want = stopBox;
             if (_gearBox.width > 0f)
             {
                 want = Union(want, _gearBox);
@@ -852,14 +1398,70 @@ namespace AF.UI
             }
 
             Rect v = InView(want, offset);
-            if (v.width > _viewW - (2f * m) || v.height > _viewH - top - m)
+            float availW = _viewW - (2f * m);
+            float availH = _viewH - top - m;
+            if (v.width > availW || v.height > availH)
             {
-                return;
+                return _gearBox.width > 0f ? RemainingFitZoom(c, stopBox, _gearBox, availW, availH) : -1f;
             }
 
             float dx = v.xMin < m ? m - v.xMin : (v.xMax > _viewW - m ? _viewW - m - v.xMax : 0f);
             float dy = v.yMin < top ? top - v.yMin : (v.yMax > _viewH - m ? _viewH - m - v.yMax : 0f);
             offset += new Vector2(dx, dy);
+            return -1f;
+        }
+
+        // Añadido de D-069 del 2026-11-09 (respuesta 2): el rótulo de la parada siguiente tiene texto pero no salió (una parada en
+        // abanico sin ningún sitio libre): «Faltan N» iría en la placa; alejarse puede darle sitio.
+        private bool RemainingLabelHidden()
+        {
+            int i = StopMarkerIndexOf(RemainingStopN());
+            return _live && i >= 0 && i < _markerCount && i < _stopLabels.Count && _markers[i].Root.gameObject.activeSelf
+                && _stopLabels[i].Label.text.Length > 0 && !_stopLabels[i].Pill.gameObject.activeSelf;
+        }
+
+        // Añadido de D-069 del 2026-11-09 (respuesta 2): el mayor zoom, entre RemainingZoomFloor y el actual, con que la caja de la
+        // parada siguiente (stopBox, con su mini cuia en c) y la de la canoa (gear) caben juntas en availW × availH dp, con
+        // RemainingZoomSlack; −2 si ni con el tope caben. Las posiciones del contenido escalan con el zoom (MapSpace sin origen) y
+        // las cajas, en dp, no: se escala la distancia entre la mini cuia y la canoa. Sin asignaciones.
+        private float RemainingFitZoom(Vector2 c, Rect stopBox, Rect gear, float availW, float availH)
+        {
+            float z0 = _zoom;
+            float floor = Mathf.Min(RemainingZoomFloor, z0);
+            Vector2 canoe = _space.ToLocal(_canoeMap);
+            if (!PairFits(c, stopBox, canoe, gear, floor / z0, availW, availH))
+            {
+                return -2f; // ni con el tope caben
+            }
+
+            float lo = floor / z0;
+            float hi = 1f;
+            for (int k = 0; k < 24; k++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                if (PairFits(c, stopBox, canoe, gear, mid, availW, availH))
+                {
+                    lo = mid;
+                }
+                else
+                {
+                    hi = mid;
+                }
+            }
+
+            return Mathf.Max(floor, z0 * lo * RemainingZoomSlack);
+        }
+
+        // Las dos cajas, con las posiciones del contenido a la escala s del zoom actual, caben juntas en availW × availH.
+        private static bool PairFits(Vector2 c, Rect stopBox, Vector2 canoe, Rect gear, float s, float availW, float availH)
+        {
+            Vector2 dc = (c * s) - c;
+            Vector2 dg = (canoe * s) - canoe;
+            float x0 = Mathf.Min(stopBox.xMin + dc.x, gear.xMin + dg.x);
+            float x1 = Mathf.Max(stopBox.xMax + dc.x, gear.xMax + dg.x);
+            float y0 = Mathf.Min(stopBox.yMin + dc.y, gear.yMin + dg.y);
+            float y1 = Mathf.Max(stopBox.yMax + dc.y, gear.yMax + dg.y);
+            return x1 - x0 <= availW && y1 - y0 <= availH;
         }
 
         private float _closeUpLabelAlpha = 1f;
@@ -932,7 +1534,7 @@ namespace AF.UI
             if (i >= 0 && _stopLabels[i].Label.text.Length > 0)
             {
                 TextMeshProUGUI full = _stopLabels[i].Label;
-                full.text = UiText.MapStopLabelRemaining(UiText.StopName(_markers[i].Stop), RiverJourney.LevelsLeft(_playLevel));
+                full.text = RemainingLabelText(i, _progress != null ? _progress.MaxLevel : 0);
                 SizePill(_stopLabels[i].Pill, full);
             }
 
@@ -941,6 +1543,76 @@ namespace AF.UI
 
         // El rótulo de la parada siguiente no cabe entero a la vista con el encuadre de apertura (RemainingLabelFitView).
         private bool _remainingOffView;
+
+        // Añadido de D-069 del 2026-11-09 (respuesta 1 del dueño, «Juntarlos»): el rótulo de la parada siguiente lleva también el
+        // Premio del mundo (map_stop_label_prize) y la píldora aparte no sale. Es el mundo de ese premio (0 si no va junto).
+        private int _remainingPrizeWorld;
+
+        // El texto del rótulo de la parada siguiente (índice i) con max niveles ganados: «Tefé» y «faltan 5 niveles»
+        // (map_stop_label_remaining) o, si al llegar a esa parada se gana el último nivel de un mundo con su skin aún sin ganar (la
+        // parada que cierra el mundo: Leticia, con el 80, cierra el mundo 3), los dos juntos, como en la maqueta: «Leticia» y
+        // «Premio del mundo · faltan 10» (map_stop_label_prize). Lo que falta para llegar y lo que falta para el premio son entonces
+        // la misma cifra (si no lo fueran, por un nivel en juego que no es max + 1, no se juntan). Anota si van juntos. Asigna su
+        // cadena: solo al abrir y al cambiar de encuadre.
+        private string RemainingLabelText(int i, int max)
+        {
+            RiverStop stop = _markers[i].Stop;
+            int left = RiverJourney.LevelsLeft(_playLevel);
+            string name = UiText.StopName(stop);
+            _remainingPrizeWorld = 0;
+            int reachedAt = stop.N * RiverStopCatalog.LevelsPerStop;
+            int world = reachedAt >= 1 && reachedAt <= WorldTable.LastLevel ? WorldTable.WorldOf(reachedAt) : 0;
+            if (world > 0 && WorldTable.LastLevelOf(world) == reachedAt && SkinRewards.TryForWorld(world, out SkinMilestone skin)
+                && max < skin.Level && skin.Level - Mathf.Max(0, max) == left)
+            {
+                _remainingPrizeWorld = world;
+                return UiText.MapStopLabelPrize(name, left);
+            }
+
+            return UiText.MapStopLabelRemaining(name, left);
+        }
+
+        /// <summary>
+        /// El Premio del mundo va dentro del rótulo de la parada siguiente, junto a «Faltan N», y no en su píldora (añadido de D-069
+        /// del 2026-11-09, respuesta 1 del dueño: la parada siguiente cierra el mundo; tests).
+        /// </summary>
+        internal bool PrizeInStopLabel
+        {
+            get
+            {
+                int p = _prizeMarker;
+                if (_remainingPrizeWorld <= 0 || _remainingOffView || p < 0 || p >= _markerCount || _markers[p].Stop.World != _remainingPrizeWorld)
+                {
+                    return false;
+                }
+
+                int i = StopMarkerIndexOf(RemainingStopN());
+                return i >= 0 && i < _markerCount && i < _stopLabels.Count && _stopLabels[i].Pill.gameObject.activeSelf
+                    && _markers[i].Root.gameObject.activeSelf && _stopLabels[i].Label.text.Length > 0;
+            }
+        }
+
+        // La píldora del Premio del mundo sale si lo lleva una parada y no va ya dentro del rótulo de la parada siguiente. Solo
+        // escribe si cambia; al volver a salir, se recoloca. Sin asignaciones.
+        private void SyncPrizePill()
+        {
+            if (_prizePill == null || _prizePillLabel == null)
+            {
+                return;
+            }
+
+            bool want = _prizeMarker >= 0 && _prizePillLabel.text.Length > 0 && !PrizeInStopLabel;
+            if (_prizePill.gameObject.activeSelf == want)
+            {
+                return;
+            }
+
+            _prizePill.gameObject.SetActive(want);
+            if (want)
+            {
+                PlacePrizePill();
+            }
+        }
 
         /// <summary>
         /// El rótulo de la parada siguiente no cabe entero a la vista con el encuadre de apertura y «Faltan N» sale en la placa de
@@ -1094,6 +1766,16 @@ namespace AF.UI
                 }
             }
 
+            if (_live)
+            {
+                // Añadido de D-069 del 2026-11-09: los rótulos de las paradas, fuera de las boyas del tramo, que van encima (con el
+                // rótulo largo del Premio del mundo se leía «Let●cia»).
+                if (HitsBuoys(rect))
+                {
+                    return false;
+                }
+            }
+
             return !HitsPlate(rect);
         }
 
@@ -1150,6 +1832,7 @@ namespace AF.UI
         // dentro (map_stop_label_remaining), como en la maqueta; sin los pueblos (ui_map_towns apagada), solo ese rótulo.
         private void BuildStopLabels(int max)
         {
+            _remainingPrizeWorld = 0;
             int remain = RemainingStopN();
             bool nextOnly = !_towns;
             for (int i = 0; i < _markerCount; i++)
@@ -1174,7 +1857,7 @@ namespace AF.UI
                 string name = shown ? UiText.StopName(m.Stop) : string.Empty;
                 if (name.Length > 0 && m.N == remain)
                 {
-                    name = UiText.MapStopLabelRemaining(name, RiverJourney.LevelsLeft(_playLevel));
+                    name = RemainingLabelText(i, max); // con el Premio del mundo dentro si esta parada cierra el mundo
                 }
 
                 s.Label.text = name;

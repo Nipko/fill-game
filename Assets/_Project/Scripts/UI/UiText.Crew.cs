@@ -32,6 +32,16 @@ namespace AF.UI
             return Format(Keys.MapStopLabelRemaining, LocArgs.Of("n", NonNegative(levels)).And("place", place));
         }
 
+        /// <summary>
+        /// <c>map_stop_label_prize</c> [P]: el rótulo de la parada siguiente cuando cierra el mundo y su skin aún no se ganó, con
+        /// «Faltan N» y el Premio del mundo juntos («Tefé» y «Premio del mundo · faltan 5»; añadido de D-069 del 2026-11-09,
+        /// respuesta 1 del dueño: «Juntarlos»). <paramref name="levels"/> con las cifras del idioma y del país; un negativo, 0.
+        /// </summary>
+        public static string MapStopLabelPrize(string place, int levels)
+        {
+            return Format(Keys.MapStopLabelPrize, LocArgs.Of("n", NonNegative(levels)).And("place", place));
+        }
+
         public static partial class Keys
         {
             /// <summary><c>map_crew_join_toucan</c> [P] (D-069, M2-4).</summary>
@@ -48,6 +58,9 @@ namespace AF.UI
 
             /// <summary><c>map_stop_label_remaining</c> [P] (D-069, pregunta 2 de M2-3).</summary>
             public const string MapStopLabelRemaining = "map_stop_label_remaining";
+
+            /// <summary><c>map_stop_label_prize</c> [P] (añadido de D-069 del 2026-11-09, respuesta 1).</summary>
+            public const string MapStopLabelPrize = "map_stop_label_prize";
         }
     }
 }

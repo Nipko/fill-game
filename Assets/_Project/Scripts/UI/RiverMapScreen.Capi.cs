@@ -1158,6 +1158,7 @@ namespace AF.UI
             bool merged = i >= 0 && i < _stopLabels.Count && _stopLabels[i].Pill.gameObject.activeSelf && _markers[i].Root.gameObject.activeSelf
                 && _stopLabels[i].Label.text.Length > 0 && !_remainingOffView;
             _remainingMerged = merged;
+            SyncPrizePill(); // añadido de D-069 del 2026-11-09: con el Premio del mundo en el rótulo, sin su píldora
             bool want = _remainingReady && !merged;
             if (_remaining.gameObject.activeSelf == want)
             {
