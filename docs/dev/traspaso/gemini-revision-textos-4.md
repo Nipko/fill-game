@@ -77,7 +77,7 @@ Por D-054, Gemini sustituye al asesor cultural y a la revisión nativa, pero **e
 
 ## 4. Qué entregar
 
-Entrégalo en la carpeta `docs/dev/traspaso/gemini-revision-4/`, o en una rama `spark/revision-textos-4` creada desde `v11/gemini-revision-4`. Todos los archivos en UTF-8 sin BOM, con fin de línea LF y en formato RFC 4180, con las filas en orden ordinal por clave. Lo más fácil es partir de las copias de `gemini-revision-4-entrada/`.
+Entrégalo en la carpeta `docs/dev/traspaso/gemini-revision-4/`, o en una rama `spark/revision-textos-4` creada desde `integracion-fase1-fase2`. Todos los archivos en UTF-8 sin BOM, con fin de línea LF y en formato RFC 4180, con las filas en orden ordinal por clave. Lo más fácil es partir de las copias de `gemini-revision-4-entrada/`.
 
 1. **`revision_es.csv`**: las mismas 50 filas que la plantilla, con la cabecera:
    ```

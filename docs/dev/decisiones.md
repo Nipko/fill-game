@@ -5406,6 +5406,8 @@ Hecha en la rama `v11/curva-f4-cliente` (unity-gameplay-dev). Lo que deja el cli
   (flora), sin EN ni PT-BR hasta aprobar el español.
 - **GDD:** las copias de la lista de estrenos de 08 §9, 00 §6.5 y el contrato 1 dicen que la Tinaja no entra en la 1.1.
 
+- **Confirmación del dueño (2026-11-09):** las decisiones [P] de F4 (el orden de los kill switches de la Lancha y el Aguapé, `curve2_from_level` con su migración y su fusión, la comprobación de `lvl_murky_normal_max_hidden_units` solo en `level-qa`, sin audio nuevo y el dedo guía de los tutoriales) quedan decididas: «Confirmarlas todas», tras el «cumple» de la curva 2 en la prueba del 2026-11-07.
+
 ### D-068, añadido del 2026-11-07: la fase F3b (el Aguapé, el espeso y la Lancha en el generador y en level-qa)
 
 Hecho por level-pipeline-dev en `v11/curva-f3b-superposicion`, la parte de F3 que dependía de F2. Detalle y medida: `docs/dev/curva-1.1-f1-medicion.md`, sección 9.
