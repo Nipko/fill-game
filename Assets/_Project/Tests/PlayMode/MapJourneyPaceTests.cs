@@ -92,6 +92,7 @@ namespace AF.Tests.PlayMode
             var missing = new System.Collections.Generic.List<string>();
             var unseen = new System.Collections.Generic.List<string>();
             var offView = new System.Collections.Generic.List<string>();
+            var zoomedOut = new System.Collections.Generic.List<string>();
             for (int play = 2; play <= 700; play += 5)
             {
                 OpenLobby(boot, new MemoryProgressStore(play, play - 1, play - 1), play);
@@ -152,9 +153,19 @@ namespace AF.Tests.PlayMode
                     }
                 }
 
+                if (map.RemainingZoomedOut)
+                {
+                    // Respuesta 2 del dueño (2026-11-09, «Bajar el zoom»): la cámara se alejó, nunca por debajo del tope.
+                    Assert.That(map.Zoom, Is.GreaterThanOrEqualTo(RiverMapScreen.RemainingZoomFloor - 1e-3f), at + ": el zoom alejado, con el tope");
+                    zoomedOut.Add(play + " (×" + map.Zoom.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ")");
+                }
+
                 if (play <= 690 && map.RemainingLabelOffView)
                 {
                     Assert.That(map.StopRemainingShown, Is.True, at + ": con la parada siguiente fuera del encuadre, la placa de respaldo");
+                    // La placa solo es el último recurso: ni con el zoom en el tope cabían (y la vista vuelve al zoom del mundo).
+                    Assert.That(map.RemainingNeedsBelowFloor, Is.True, at + ": la placa de respaldo sin haber probado el zoom hasta el tope");
+                    Assert.That(map.RemainingZoomedOut, Is.False, at + ": con la placa, el zoom del mundo");
                     offView.Add(play + " (parada " + map.RemainingStopN() + ")");
                 }
                 else if (play <= 690 && (!map.StopRemainingInLabel || map.StopRemainingShown))
@@ -169,7 +180,12 @@ namespace AF.Tests.PlayMode
 
             Debug.Log("AF_MAP d069b: con la parada siguiente fuera del encuadre de apertura (la placa de respaldo), " + offView.Count + " de "
                 + ((690 - 2) / 5 + 1) + " aperturas: " + string.Join("; ", offView));
-            Assert.That(offView.Count, Is.LessThanOrEqualTo(8), "la placa de respaldo es la excepción: " + string.Join("; ", offView));
+            Debug.Log("AF_MAP d069c: con el zoom alejado para que quepan la parada siguiente y la canoa, " + zoomedOut.Count + " aperturas: "
+                + string.Join("; ", zoomedOut));
+            // Respuesta 2 del dueño: con el zoom alejado, la placa solo queda donde haría falta bajar del tope (×1,75 [P]): las
+            // «Orillas de Rurrenabaque» jugando el 452 y el 457 (piden ×1,5).
+            Assert.That(offView.Count, Is.LessThanOrEqualTo(2), "la placa de respaldo, solo por debajo del tope: " + string.Join("; ", offView));
+            Assert.That(zoomedOut.Count, Is.GreaterThanOrEqualTo(1), "los tramos largos de los mundos 7 y 8 alejan el zoom");
             Assert.That(unseen, Is.Empty, "el rótulo con «Faltan N» queda fuera del Mapa al abrirlo jugando el " + string.Join("; ", unseen));
             Assert.That(missing, Is.Empty, "«Faltan N» fuera del rótulo de la parada siguiente (con la placa) jugando el " + string.Join("; ", missing));
 
@@ -224,7 +240,9 @@ namespace AF.Tests.PlayMode
             Assert.That(next, Is.EqualTo(8));
             Assert.That(map.StopRemainingInLabel, Is.True, "observación 4: en el rótulo de la parada siguiente, aunque vaya en abanico");
             Assert.That(map.StopRemainingShown, Is.False, "sin la placa «Faltan 10 niveles para Leticia»");
-            StringAssert.Contains("faltan 10 niveles", map.StopLabelText(next));
+            // Leticia (el 80) cierra el mundo 3: «Faltan N» y el Premio del mundo en un solo rótulo (respuesta 1 del dueño, 2026-11-09).
+            Assert.That(map.StopLabelText(next), Is.EqualTo(UiText.MapStopLabelPrize("Leticia", 10)));
+            Assert.That(map.PrizeInStopLabel, Is.True);
             Rect view = StopCardTests.CanvasRect(map.ViewportRect, map.Canvas);
             Rect leticia = StopCardTests.CanvasRect(map.StopLabelOf(next)!.rectTransform, map.Canvas);
             Assert.That(view.Contains(leticia.min) && view.Contains(leticia.max - new Vector2(0.01f, 0.01f)), Is.True,
@@ -264,13 +282,25 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator WithTheBackupPlate_GoingToTheBasinAndBack_FaltanIsNeverLost()
         {
-            // Revisión: con la placa de respaldo (la parada siguiente fuera del encuadre, jugando el 292), ir a la Cuenca y volver a
-            // Mundo no deja «Faltan N» sin rótulo ni placa.
+            // Revisión: jugando el 292 (la parada siguiente y la canoa no caben con el zoom del mundo), ir a la Cuenca y volver a
+            // Mundo no deja «Faltan N» sin rótulo ni placa. Desde la respuesta 2 del dueño (2026-11-09, «Bajar el zoom»), la cámara se
+            // aleja lo justo y la placa no sale; el zoom alejado se queda quieto con el Mapa abierto.
             yield return MapMarkersTests.OpenApp(292);
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Canvas.ForceUpdateCanvases();
-            Assert.That(map.RemainingLabelOffView, Is.True, "premisa: el 292 es uno de los casos con la placa");
-            Assert.That(map.StopRemainingShown, Is.True);
+            Assert.That(map.RemainingZoomedOut, Is.True, "premisa: el 292 es uno de los casos del zoom alejado");
+            Assert.That(map.Zoom, Is.LessThan(RiverMapScreen.WorldZoomMin).And.GreaterThanOrEqualTo(RiverMapScreen.RemainingZoomFloor - 1e-3f));
+            Assert.That(map.RemainingLabelOffView, Is.False, "sin la placa de respaldo");
+            Assert.That(map.StopRemainingShown, Is.False);
+            StringAssert.Contains("faltan", map.StopLabelText(map.RemainingStopN()));
+            float zoom = map.Zoom;
+            for (int ms = 0; ms < 3000; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(map.Zoom, Is.EqualTo(zoom), "el zoom alejado no se pierde con el Mapa quieto");
+            Assert.That(map.CameraZoom, Is.EqualTo(1f), "sin primer plano");
             for (int round = 0; round < 2; round++)
             {
                 map.SetView(MapView.Basin);
@@ -365,6 +395,76 @@ namespace AF.Tests.PlayMode
             for (int k = 0; k < map.FrontPieceCount; k++)
             {
                 Assert.That(map.FrontRibbon(k).color.a, Is.EqualTo(1f), "el Mapa de la 1.0, como siempre");
+            }
+
+            map.Close();
+        }
+
+        [UnityTest]
+        public IEnumerator ThePrizeOfTheWorld_GoesInTheLabelOfTheStopThatClosesIt_InOneReading_AndElsewhereAsBefore()
+        {
+            // Añadido de D-069 del 2026-11-09 (respuesta 1 del dueño, «Juntarlos»): cuando la parada siguiente cierra el mundo (se
+            // llega a ella con el último nivel del mundo: el Encuentro con el 40, Leticia con el 80, Iquitos con el 140) y su skin
+            // no se ha ganado, «Premio del mundo» y «Faltan N» van en su rótulo y la píldora aparte no sale. Si no, como antes.
+            yield return MapMarkersTests.OpenApp(71);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            int joined = 0;
+            for (int play = 2; play <= 160; play += 3)
+            {
+                OpenLobby(boot, new MemoryProgressStore(play, play - 1, play - 1), play);
+                map.Tick(PlayModeHelpers.FrameMs);
+                Canvas.ForceUpdateCanvases();
+                string at = "jugando el " + play;
+                int next = map.RemainingStopN();
+                RiverStop stop = boot.RiverStops!.At(next)!;
+                int left = RiverJourney.LevelsLeft(play);
+                bool closes = (play >= 31 && play <= 40) || (play >= 71 && play <= 80) || (play >= 131 && play <= 140);
+                Assert.That(map.PrizeInStopLabel, Is.EqualTo(closes), at);
+                if (closes)
+                {
+                    joined++;
+                    Assert.That(map.StopLabelText(next), Is.EqualTo(UiText.MapStopLabelPrize(UiText.StopName(stop), left)), at);
+                    Assert.That(map.PrizeMarker, Is.EqualTo(-1), at + ": sin la píldora aparte");
+                    Assert.That(map.StopRemainingShown, Is.False, at + ": ni la placa");
+                }
+                else if (map.StopRemainingInLabel)
+                {
+                    Assert.That(map.StopLabelText(next), Is.EqualTo(UiText.MapStopLabelRemaining(UiText.StopName(stop), left)), at);
+                }
+
+                // TalkBack: «Premio del mundo» nunca se lee suelto mientras va en el rótulo (lo que el lector publique del Mapa).
+                var items = new System.Collections.Generic.List<A11yItem>();
+                new A11yScanner().Scan(items);
+                foreach (A11yItem item in items)
+                {
+                    if (closes && item.Label.Contains("Premio del mundo"))
+                    {
+                        StringAssert.Contains(UiText.StopName(stop), item.Label, at + ": el rótulo se lee junto");
+                    }
+                }
+            }
+
+            Assert.That(joined, Is.GreaterThanOrEqualTo(9), "los tres cierres con skin");
+
+            // Tefé (el 70) es el cierre de la cuenca del mundo 3, pero su premio llega con el 80: jugando el 65, cada cosa en lo suyo.
+            OpenLobby(boot, new MemoryProgressStore(65, 64, 64), 65);
+            Assert.That(map.PrizeInStopLabel, Is.False);
+            Assert.That(map.PrizeMarker, Is.EqualTo(map.StopMarkerIndexOf(7)), "la píldora en Tefé");
+            Assert.That(map.PrizeText, Is.EqualTo(UiText.MapWorldPrize(16)));
+
+            // En la Cuenca y de vuelta, el premio nunca se pierde ni sale dos veces.
+            OpenLobby(boot, new MemoryProgressStore(75, 74, 74), 75);
+            Assert.That(map.PrizeInStopLabel, Is.True);
+            for (int round = 0; round < 2; round++)
+            {
+                map.SetView(MapView.Basin);
+                Canvas.ForceUpdateCanvases();
+                Assert.That(map.PrizeInStopLabel ^ (map.PrizeMarker >= 0), Is.True, "Cuenca, vuelta " + round + ": en el rótulo o en la píldora, una vez");
+                map.SetView(MapView.World);
+                Canvas.ForceUpdateCanvases();
+                Assert.That(map.PrizeInStopLabel, Is.True, "Mundo, vuelta " + round);
+                Assert.That(map.PrizeMarker, Is.EqualTo(-1));
             }
 
             map.Close();
@@ -470,6 +570,37 @@ namespace AF.Tests.PlayMode
                 SnapshotKit.Save(dir, "d069b_rotulos_jugando_" + play.ToString("000") + "_360dp");
                 Debug.Log("AF_MAP d069b " + play + ": parada siguiente «" + map.StopLabelText(map.RemainingStopN()).Replace("\n", " / ")
                     + "», placa " + map.StopRemainingShown + ", premio debajo " + map.PrizePillBelow);
+                boot.CloseRiverMap();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureThePrizeInTheLabel_TheZoomOutOfTheLongLegs_AndTheLandmarkCities_At360dp()
+        {
+            // Añadido de D-069 del 2026-11-09: el rótulo junto (Leticia tras el 70), el zoom alejado de los tramos largos (292, 442,
+            // 452 y 482), en Logs/snapshots/es-419/d069c_*.png.
+            string dir = SnapshotKit.Prepare();
+            GameScreen.SimulatedPxPerDp = 3f;
+            foreach ((int play, string name) in new[] { (72, "rotulo_premio"), (292, "zoom_292"), (442, "zoom_442"), (452, "zoom_452"), (482, "zoom_482") })
+            {
+                Profile profile = AF.Economy.Wallet.NewProfile(new ManualClock(T0));
+                profile.Progress.NextLevel = play;
+                profile.Progress.MaxLevel = play - 1;
+                profile.Progress.MapSeenLevel = play - 1;
+                profile.Wallet.Seeds = 1250;
+                yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+                GameBootstrap boot = GameBootstrap.Current!;
+                SnapshotKit.AttachLobby(boot);
+                yield return null;
+                Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+                RiverMapScreen map = boot.RiverMapView!;
+                SnapshotKit.AttachOverlay(map.Canvas);
+                yield return SnapshotKit.Wait(1.0f);
+                map.HoldCapiPose(CapiGesture.Rest, 0f, CapiEmotion.None);
+                yield return SnapshotKit.Wait(0.2f);
+                SnapshotKit.Save(dir, "d069c_" + name + "_360dp");
+                Debug.Log("AF_MAP d069c " + play + ": zoom " + map.Zoom + ", alejado " + map.RemainingZoomedOut + ", placa " + map.StopRemainingShown
+                    + ", rótulo «" + map.StopLabelText(map.RemainingStopN()).Replace("\n", " / ") + "»");
                 boot.CloseRiverMap();
             }
         }

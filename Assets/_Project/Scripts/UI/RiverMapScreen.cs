@@ -1317,6 +1317,37 @@ namespace AF.UI
                 center = new Vector2(map.Width * 0.5f, map.Height * 0.5f);
             }
 
+            _remainingZoomedOut = false;
+            _remainingZoomFrom = _zoom;
+            _remainingZoomBlocked = false;
+            LayoutView(map, view, center, 0);
+        }
+
+        // El zoom del mundo antes de alejarse y si ya no se aleja más (vuelve a él: la placa de respaldo).
+        private float _remainingZoomFrom;
+        private bool _remainingZoomBlocked;
+
+        /// <summary>Vueltas de encuadre como mucho al alejar el zoom para la parada siguiente (las del paso y la vuelta atrás).</summary>
+        private const int RemainingZoomPasses = 10;
+
+        private bool _remainingZoomedOut;
+
+        /// <summary>
+        /// La vista Mundo se alejó del zoom del mundo para que quepan juntas la parada siguiente con «Faltan N» y la canoa (añadido
+        /// de D-069 del 2026-11-09, respuesta 2 del dueño; tests).
+        /// </summary>
+        internal bool RemainingZoomedOut => _remainingZoomedOut;
+
+        /// <summary>
+        /// Ni alejándose hasta <see cref="RemainingZoomFloor"/> se veían juntas la parada siguiente con su rótulo y la canoa: la vista
+        /// volvió al zoom del mundo y «Faltan N» sale en la placa de respaldo (añadido de D-069 del 2026-11-09; tests).
+        /// </summary>
+        internal bool RemainingNeedsBelowFloor => _remainingZoomBlocked;
+
+        // Escala, mallas a esa escala, la canoa y el encuadre con _zoom y center. Si la parada siguiente y la canoa no caben juntas
+        // (FrameRemaining), otra vuelta, como mucho dos más, con el zoom con que caben (añadido de D-069 del 2026-11-09).
+        private void LayoutView(RiverMap map, MapView view, Vector2 center, int pass)
+        {
             var space = new MapSpace(MapSpace.BasinWidthDp * _zoom, Vector2.zero);
             _space = space;
             _contentW = space.DpPerUnit * map.Width;
@@ -1356,10 +1387,55 @@ namespace AF.UI
             Vector2 c = space.ToLocal(center);
             Vector2 offset = new Vector2((_viewW * 0.5f) - c.x, (_viewH * 0.5f) + c.y);
             MarkersFrame(ref offset);
-            FrameRemaining(ref offset); // añadido de D-069 del 2026-11-08: la parada siguiente con «Faltan N» y la canoa, a la vista
+            float fit = FrameRemaining(ref offset); // añadido de D-069 del 2026-11-08: la parada siguiente con «Faltan N» y la canoa, a la vista
+            if (fit < -1.5f)
+            {
+                _remainingZoomBlocked = true; // ni con el tope caben: la placa de respaldo, con el zoom del mundo
+                if (_remainingZoomedOut && pass < RemainingZoomPasses)
+                {
+                    ZoomBackForRemaining(map, view, center, pass);
+                    return;
+                }
+            }
+            else if (fit > 0f && fit < _zoom - 1e-3f && pass < RemainingZoomPasses && !_remainingZoomBlocked)
+            {
+                // Respuesta 2 del dueño (2026-11-09, «Bajar el zoom»): la cámara se aleja lo justo para que quepan las dos, con
+                // margen, hasta RemainingZoomFloor; sin la placa de respaldo.
+                _zoom = fit;
+                _remainingZoomedOut = true;
+                LayoutView(map, view, center, pass + 1);
+                return;
+            }
+
             SetOffset(offset);
             PlatesFitView(); // FX10: las placas de los mundos futuros, enteras a la vista con este encuadre
             RemainingLabelFitView(); // añadido de D-069 del 2026-11-08: el rótulo con «Faltan N», entero a la vista (RiverMapScreen.Towns.cs)
+            if (!(_remainingOffView || RemainingLabelHidden()) || view != MapView.World || pass >= RemainingZoomPasses)
+            {
+                return;
+            }
+
+            // El rótulo de la parada siguiente aún no se ve entero (una parada junto al borde, en abanico o con el rótulo largo del
+            // Premio del mundo): un paso más lejos, hasta el tope; si con el tope tampoco, vuelta al zoom del mundo y la placa.
+            if (!_remainingZoomBlocked && _zoom > RemainingZoomFloor + 1e-3f)
+            {
+                _zoom = Mathf.Max(RemainingZoomFloor, _zoom * RemainingZoomStep);
+                _remainingZoomedOut = true;
+                LayoutView(map, view, center, pass + 1);
+            }
+            else if (_remainingZoomedOut)
+            {
+                ZoomBackForRemaining(map, view, center, pass);
+            }
+        }
+
+        // Ni con el tope se ve la parada siguiente: vuelve al zoom del mundo (la placa de respaldo es el último recurso).
+        private void ZoomBackForRemaining(RiverMap map, MapView view, Vector2 center, int pass)
+        {
+            _remainingZoomBlocked = true;
+            _remainingZoomedOut = false;
+            _zoom = _remainingZoomFrom;
+            LayoutView(map, view, center, pass + 1);
         }
 
         // Coloca el contenido con su esquina en offset (dp, y hacia abajo), sin salirse del mapa, y decide «Volver a la canoa»: en

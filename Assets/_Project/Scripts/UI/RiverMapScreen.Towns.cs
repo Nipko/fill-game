@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using AF.Economy;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Localization;
@@ -768,6 +769,7 @@ namespace AF.UI
                     SyncRemainingPlate();
                 }
 
+                SyncPrizePill(); // añadido de D-069 del 2026-11-09: sin el rótulo junto (la Cuenca), la píldora vuelve
                 return;
             }
 
@@ -809,6 +811,7 @@ namespace AF.UI
                 // «Faltan N» va entonces en la placa: el rótulo, solo con el nombre, para no decirlo dos veces.
                 TextMeshProUGUI label = _stopLabels[i].Label;
                 label.text = UiText.StopName(_markers[i].Stop);
+                _remainingPrizeWorld = 0; // y el Premio del mundo, en su píldora (SyncRemainingPlate)
                 SizePill(pill, label);
             }
 
@@ -819,25 +822,46 @@ namespace AF.UI
         /// <summary>Margen del encuadre de la parada siguiente con su rótulo y la canoa (dp) [P] (añadido de D-069 del 2026-11-08).</summary>
         public const float RemainingFrameMarginDp = 8f;
 
+        /// <summary>
+        /// Tope del zoom de la vista Mundo cuando se aleja para que quepan la parada siguiente y la canoa [P] (añadido de D-069 del
+        /// 2026-11-09, respuesta 2 del dueño: «Bajar el zoom»): ×1,75, menos de la mitad de <see cref="WorldZoomMin"/> (×4). Basta para
+        /// los tramos largos de los mundos 7 y 8 (Puerto Heath jugando el 292 pide ×1,79; Rurrenabaque, ×2,2) y deja la vista con
+        /// las mini cuias de tres mundos aún separadas; más lejos (las «Orillas de Rurrenabaque», jugando el 452-457, piden ×1,5) se
+        /// amontonan, y la placa de respaldo sigue siendo el último recurso.
+        /// </summary>
+        public const float RemainingZoomFloor = 1.75f;
+
+        /// <summary>Holgura del zoom alejado para que quepan la parada siguiente y la canoa (×) [P]: los rótulos se recolocan con él.</summary>
+        public const float RemainingZoomSlack = 0.97f;
+
+        /// <summary>
+        /// Paso del zoom alejado (×) [P] cuando la parada siguiente y la canoa ya caben pero el rótulo con «Faltan N» aún no se ve
+        /// entero (una parada en abanico o junto al borde): se aleja de este tanto en este tanto hasta el tope.
+        /// </summary>
+        public const float RemainingZoomStep = 0.85f;
+
         // Añadido de D-069 del 2026-11-08 (observación 4): con el Mapa v2, el encuadre de apertura de la vista Mundo se corre lo justo
         // para que se vean enteras la mini cuia de la parada siguiente con su rótulo («Faltan N») y la canoa con su equipo, debajo de
-        // «Andes ↑»; si las dos no caben a la vez, no se corre (y «Faltan N» sale en la placa de respaldo). Tras MarkersFrame.
-        private void FrameRemaining(ref Vector2 offset)
+        // «Andes ↑». Si las dos no caben a la vez, no se corre y devuelve el zoom con que cabrían (añadido de D-069 del 2026-11-09,
+        // respuesta 2: LayoutView vuelve a encuadrar con él), −1 si caben y −2 si ni con RemainingZoomFloor caben (y «Faltan N» sale
+        // en la placa de respaldo). Tras MarkersFrame.
+        private float FrameRemaining(ref Vector2 offset)
         {
             int n = RemainingStopN();
             int i = n >= 0 ? StopMarkerIndexOf(n) : -1;
             if (!_live || _view != MapView.World || i < 0 || i >= _markerCount || i >= _stopLabels.Count)
             {
-                return;
+                return -1f;
             }
 
             Vector2 c = _markers[i].Root.anchoredPosition;
-            Rect want = CuiaBox(c);
+            Rect stopBox = CuiaBox(c);
             if (_stopLabels[i].Pill.gameObject.activeSelf)
             {
-                want = Union(want, PillRect(c, _stopLabels[i].Pill));
+                stopBox = Union(stopBox, PillRect(c, _stopLabels[i].Pill));
             }
 
+            Rect want = stopBox;
             if (_gearBox.width > 0f)
             {
                 want = Union(want, _gearBox);
@@ -852,14 +876,70 @@ namespace AF.UI
             }
 
             Rect v = InView(want, offset);
-            if (v.width > _viewW - (2f * m) || v.height > _viewH - top - m)
+            float availW = _viewW - (2f * m);
+            float availH = _viewH - top - m;
+            if (v.width > availW || v.height > availH)
             {
-                return;
+                return _gearBox.width > 0f ? RemainingFitZoom(c, stopBox, _gearBox, availW, availH) : -1f;
             }
 
             float dx = v.xMin < m ? m - v.xMin : (v.xMax > _viewW - m ? _viewW - m - v.xMax : 0f);
             float dy = v.yMin < top ? top - v.yMin : (v.yMax > _viewH - m ? _viewH - m - v.yMax : 0f);
             offset += new Vector2(dx, dy);
+            return -1f;
+        }
+
+        // Añadido de D-069 del 2026-11-09 (respuesta 2): el rótulo de la parada siguiente tiene texto pero no salió (una parada en
+        // abanico sin ningún sitio libre): «Faltan N» iría en la placa; alejarse puede darle sitio.
+        private bool RemainingLabelHidden()
+        {
+            int i = StopMarkerIndexOf(RemainingStopN());
+            return _live && i >= 0 && i < _markerCount && i < _stopLabels.Count && _markers[i].Root.gameObject.activeSelf
+                && _stopLabels[i].Label.text.Length > 0 && !_stopLabels[i].Pill.gameObject.activeSelf;
+        }
+
+        // Añadido de D-069 del 2026-11-09 (respuesta 2): el mayor zoom, entre RemainingZoomFloor y el actual, con que la caja de la
+        // parada siguiente (stopBox, con su mini cuia en c) y la de la canoa (gear) caben juntas en availW × availH dp, con
+        // RemainingZoomSlack; −2 si ni con el tope caben. Las posiciones del contenido escalan con el zoom (MapSpace sin origen) y
+        // las cajas, en dp, no: se escala la distancia entre la mini cuia y la canoa. Sin asignaciones.
+        private float RemainingFitZoom(Vector2 c, Rect stopBox, Rect gear, float availW, float availH)
+        {
+            float z0 = _zoom;
+            float floor = Mathf.Min(RemainingZoomFloor, z0);
+            Vector2 canoe = _space.ToLocal(_canoeMap);
+            if (!PairFits(c, stopBox, canoe, gear, floor / z0, availW, availH))
+            {
+                return -2f; // ni con el tope caben
+            }
+
+            float lo = floor / z0;
+            float hi = 1f;
+            for (int k = 0; k < 24; k++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                if (PairFits(c, stopBox, canoe, gear, mid, availW, availH))
+                {
+                    lo = mid;
+                }
+                else
+                {
+                    hi = mid;
+                }
+            }
+
+            return Mathf.Max(floor, z0 * lo * RemainingZoomSlack);
+        }
+
+        // Las dos cajas, con las posiciones del contenido a la escala s del zoom actual, caben juntas en availW × availH.
+        private static bool PairFits(Vector2 c, Rect stopBox, Vector2 canoe, Rect gear, float s, float availW, float availH)
+        {
+            Vector2 dc = (c * s) - c;
+            Vector2 dg = (canoe * s) - canoe;
+            float x0 = Mathf.Min(stopBox.xMin + dc.x, gear.xMin + dg.x);
+            float x1 = Mathf.Max(stopBox.xMax + dc.x, gear.xMax + dg.x);
+            float y0 = Mathf.Min(stopBox.yMin + dc.y, gear.yMin + dg.y);
+            float y1 = Mathf.Max(stopBox.yMax + dc.y, gear.yMax + dg.y);
+            return x1 - x0 <= availW && y1 - y0 <= availH;
         }
 
         private float _closeUpLabelAlpha = 1f;
@@ -932,7 +1012,7 @@ namespace AF.UI
             if (i >= 0 && _stopLabels[i].Label.text.Length > 0)
             {
                 TextMeshProUGUI full = _stopLabels[i].Label;
-                full.text = UiText.MapStopLabelRemaining(UiText.StopName(_markers[i].Stop), RiverJourney.LevelsLeft(_playLevel));
+                full.text = RemainingLabelText(i, _progress != null ? _progress.MaxLevel : 0);
                 SizePill(_stopLabels[i].Pill, full);
             }
 
@@ -941,6 +1021,76 @@ namespace AF.UI
 
         // El rótulo de la parada siguiente no cabe entero a la vista con el encuadre de apertura (RemainingLabelFitView).
         private bool _remainingOffView;
+
+        // Añadido de D-069 del 2026-11-09 (respuesta 1 del dueño, «Juntarlos»): el rótulo de la parada siguiente lleva también el
+        // Premio del mundo (map_stop_label_prize) y la píldora aparte no sale. Es el mundo de ese premio (0 si no va junto).
+        private int _remainingPrizeWorld;
+
+        // El texto del rótulo de la parada siguiente (índice i) con max niveles ganados: «Tefé» y «faltan 5 niveles»
+        // (map_stop_label_remaining) o, si al llegar a esa parada se gana el último nivel de un mundo con su skin aún sin ganar (la
+        // parada que cierra el mundo: Leticia, con el 80, cierra el mundo 3), los dos juntos, como en la maqueta: «Leticia» y
+        // «Premio del mundo · faltan 10» (map_stop_label_prize). Lo que falta para llegar y lo que falta para el premio son entonces
+        // la misma cifra (si no lo fueran, por un nivel en juego que no es max + 1, no se juntan). Anota si van juntos. Asigna su
+        // cadena: solo al abrir y al cambiar de encuadre.
+        private string RemainingLabelText(int i, int max)
+        {
+            RiverStop stop = _markers[i].Stop;
+            int left = RiverJourney.LevelsLeft(_playLevel);
+            string name = UiText.StopName(stop);
+            _remainingPrizeWorld = 0;
+            int reachedAt = stop.N * RiverStopCatalog.LevelsPerStop;
+            int world = reachedAt >= 1 && reachedAt <= WorldTable.LastLevel ? WorldTable.WorldOf(reachedAt) : 0;
+            if (world > 0 && WorldTable.LastLevelOf(world) == reachedAt && SkinRewards.TryForWorld(world, out SkinMilestone skin)
+                && max < skin.Level && skin.Level - Mathf.Max(0, max) == left)
+            {
+                _remainingPrizeWorld = world;
+                return UiText.MapStopLabelPrize(name, left);
+            }
+
+            return UiText.MapStopLabelRemaining(name, left);
+        }
+
+        /// <summary>
+        /// El Premio del mundo va dentro del rótulo de la parada siguiente, junto a «Faltan N», y no en su píldora (añadido de D-069
+        /// del 2026-11-09, respuesta 1 del dueño: la parada siguiente cierra el mundo; tests).
+        /// </summary>
+        internal bool PrizeInStopLabel
+        {
+            get
+            {
+                int p = _prizeMarker;
+                if (_remainingPrizeWorld <= 0 || _remainingOffView || p < 0 || p >= _markerCount || _markers[p].Stop.World != _remainingPrizeWorld)
+                {
+                    return false;
+                }
+
+                int i = StopMarkerIndexOf(RemainingStopN());
+                return i >= 0 && i < _markerCount && i < _stopLabels.Count && _stopLabels[i].Pill.gameObject.activeSelf
+                    && _markers[i].Root.gameObject.activeSelf && _stopLabels[i].Label.text.Length > 0;
+            }
+        }
+
+        // La píldora del Premio del mundo sale si lo lleva una parada y no va ya dentro del rótulo de la parada siguiente. Solo
+        // escribe si cambia; al volver a salir, se recoloca. Sin asignaciones.
+        private void SyncPrizePill()
+        {
+            if (_prizePill == null || _prizePillLabel == null)
+            {
+                return;
+            }
+
+            bool want = _prizeMarker >= 0 && _prizePillLabel.text.Length > 0 && !PrizeInStopLabel;
+            if (_prizePill.gameObject.activeSelf == want)
+            {
+                return;
+            }
+
+            _prizePill.gameObject.SetActive(want);
+            if (want)
+            {
+                PlacePrizePill();
+            }
+        }
 
         /// <summary>
         /// El rótulo de la parada siguiente no cabe entero a la vista con el encuadre de apertura y «Faltan N» sale en la placa de
@@ -1054,6 +1204,22 @@ namespace AF.UI
             return off;
         }
 
+        // La caja r (local) pisa una boya del tramo en curso (van encima de rótulos y viñetas). Sin asignaciones.
+        private bool HitsBuoys(Rect r)
+        {
+            float radius = BuoyRadiusWorldDp + 3f;
+            for (int b = 0; b < _buoyCount; b++)
+            {
+                Vector2 p = _buoyLocal[b];
+                if (r.Overlaps(new Rect(p.x - radius, p.y - radius, 2f * radius, 2f * radius)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private bool StopLabelFree(int self, Rect rect)
         {
             if (HitsCrew(rect))
@@ -1089,6 +1255,16 @@ namespace AF.UI
             for (int j = 0; j < _stopLabelPlaced.Count; j++)
             {
                 if (rect.Overlaps(_stopLabelPlaced[j]))
+                {
+                    return false;
+                }
+            }
+
+            if (_live && self >= 0 && self < _markerCount && _markers[self].N == RemainingStopN())
+            {
+                // Añadido de D-069 del 2026-11-09: el rótulo de la parada siguiente, fuera de las boyas del tramo, que van encima
+                // (con el rótulo largo del Premio del mundo se leía «Let●cia»).
+                if (HitsBuoys(rect))
                 {
                     return false;
                 }
@@ -1150,6 +1326,7 @@ namespace AF.UI
         // dentro (map_stop_label_remaining), como en la maqueta; sin los pueblos (ui_map_towns apagada), solo ese rótulo.
         private void BuildStopLabels(int max)
         {
+            _remainingPrizeWorld = 0;
             int remain = RemainingStopN();
             bool nextOnly = !_towns;
             for (int i = 0; i < _markerCount; i++)
@@ -1174,7 +1351,7 @@ namespace AF.UI
                 string name = shown ? UiText.StopName(m.Stop) : string.Empty;
                 if (name.Length > 0 && m.N == remain)
                 {
-                    name = UiText.MapStopLabelRemaining(name, RiverJourney.LevelsLeft(_playLevel));
+                    name = RemainingLabelText(i, max); // con el Premio del mundo dentro si esta parada cierra el mundo
                 }
 
                 s.Label.text = name;
