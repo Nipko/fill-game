@@ -175,6 +175,7 @@ namespace AF.UI
             PlaceCountries(_space);
             PlaceSilhouettes(_space);
             PlatesFit();
+            TownLabelsAfterFrame(); // añadido de D-069 del 2026-11-09
         }
 
         // Arrastrar el mapa: las placas que no salían con el encuadre de apertura vuelven, en su sitio (no las de la Cuenca que pisaban
@@ -269,7 +270,8 @@ namespace AF.UI
 
                 Rect local = PlateBox(root);
                 Rect seen = InView(local, o);
-                if (!seen.Overlaps(full) || (Inside(seen, inner) && !PlateFixedHit(_silhouettes[k].World, local, seen, window, button, basin)))
+                if (!seen.Overlaps(full) || (Inside(seen, inner) && !PlateFixedHit(_silhouettes[k].World, local, seen, window, button, basin)
+                    && !PlateHitsLabels(local))) // añadido de D-069 del 2026-11-09: ni las boyas del tramo ni los rótulos de las paradas
                 {
                     continue; // entera fuera de la vista (no se ve) o entera dentro y libre
                 }
@@ -491,7 +493,8 @@ namespace AF.UI
             }
 
             Rect seen = InView(box, o);
-            if (!Inside(seen, inner) || PlateFixedHit(_silhouettes[k].World, box, seen, window, button, basin) || PlateBlocked(k, box) || CountryUnder(box))
+            if (!Inside(seen, inner) || PlateFixedHit(_silhouettes[k].World, box, seen, window, button, basin) || PlateBlocked(k, box) || CountryUnder(box)
+                || PlateHitsLabels(box))
             {
                 return false;
             }

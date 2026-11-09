@@ -443,14 +443,129 @@ namespace AF.UI
             }
         }
 
+        /// <summary>
+        /// Radio alrededor del centro de cada boya del tramo que no pisa ningún rótulo ni placa (dp): media boya de vidrio del Mapa v2
+        /// (<see cref="LiveBuoyDp"/>) y 1 dp de hueco [P] (añadido de D-069 del 2026-11-09).
+        /// </summary>
+        internal float BuoyClearRadiusDp => (_live ? LiveBuoyDp * 0.5f : BuoyRadiusWorldDp) + 1f;
+
         // La caja r (local) pisa una boya del tramo en curso (van encima de rótulos y viñetas). Sin asignaciones.
         private bool HitsBuoys(Rect r)
         {
-            float radius = BuoyRadiusWorldDp + 3f;
+            float radius = BuoyClearRadiusDp;
             for (int b = 0; b < _buoyCount; b++)
             {
                 Vector2 p = _buoyLocal[b];
                 if (r.Overlaps(new Rect(p.x - radius, p.y - radius, 2f * radius, 2f * radius)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // ============================================================================================ rótulos, placas y boyas
+
+        // Añadido de D-069 del 2026-11-09 (pregunta abierta 4 del rótulo junto, fallo de las capturas: «Fonte B●a» y «Mundo 8 ·
+        // Madidi» tapado por «Cachuela Esperanza»): con el encuadre decidido y las placas de los mundos futuros encajadas, en la
+        // vista Mundo del Mapa v2, los pueblos ceden ante lo que manda más [P]: 1, el rótulo de la parada siguiente; 2, la placa de
+        // mundo; 3, el pueblo. Una viñeta de pueblo debajo de una placa no sale (con su rótulo). Un rótulo de pueblo que pisa una
+        // boya del tramo, una placa, un rótulo de parada, la canoa con su tripulación o el rótulo o la viñeta de otro pueblo o una
+        // ciudad con hito pasa al otro lado de su viñeta (encima o debajo) y, si allí también, no sale. Sin asignaciones.
+        private void TownLabelsAfterFrame()
+        {
+            if (!_towns || _view != MapView.World)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _townCount; i++)
+            {
+                TownMarker m = _townMarkers[i];
+                if (m.Root.gameObject.activeSelf && HitsPlate(TownVignetteLocalRect(i)))
+                {
+                    SetTownActive(m, false);
+                }
+            }
+
+            for (int i = 0; i < _townCount; i++)
+            {
+                TownMarker m = _townMarkers[i];
+                if (!m.Root.gameObject.activeSelf || !m.Pill.gameObject.activeSelf || !TownLabelTaken(i, TownLabelLocalRect(i)))
+                {
+                    continue;
+                }
+
+                Vector2 before = m.Pill.anchoredPosition;
+                m.Pill.anchoredPosition = new Vector2(before.x, -before.y); // al otro lado de su viñeta
+                if (TownLabelTaken(i, TownLabelLocalRect(i)))
+                {
+                    m.Pill.anchoredPosition = before;
+                    m.Pill.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        // El rótulo del pueblo self en r (local) pisa algo que manda más que él o a otro pueblo (ver TownLabelsAfterFrame).
+        private bool TownLabelTaken(int self, Rect r)
+        {
+            if (HitsBuoys(r) || HitsPlate(r) || HitsCrew(r))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
+            {
+                if (_markers[i].Root.gameObject.activeSelf && _stopLabels[i].Pill.gameObject.activeSelf
+                    && r.Overlaps(PillRect(_markers[i].Root.anchoredPosition, _stopLabels[i].Pill)))
+                {
+                    return true;
+                }
+            }
+
+            for (int i = 0; i < _townCount; i++)
+            {
+                if (i == self || !_townMarkers[i].Root.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (r.Overlaps(TownVignetteLocalRect(i)) || (_townMarkers[i].Pill.gameObject.activeSelf && r.Overlaps(TownLabelLocalRect(i))))
+                {
+                    return true;
+                }
+            }
+
+            for (int k = 0; k < _heroCount; k++)
+            {
+                if (_heroVignettes[k].gameObject.activeSelf && r.Overlaps(HeroVignetteBox(k)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Añadido de D-069 del 2026-11-09: una placa de mundo en box (local), en la vista Mundo del Mapa v2, pisa una boya del tramo
+        // o un rótulo de parada (que mandan más que ella; PlatesFit la cambia de sitio o, sin sitio, no sale con este encuadre).
+        private bool PlateHitsLabels(Rect box)
+        {
+            if (!_live || _view != MapView.World)
+            {
+                return false;
+            }
+
+            if (HitsBuoys(box))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
+            {
+                if (_markers[i].Root.gameObject.activeSelf && _stopLabels[i].Pill.gameObject.activeSelf
+                    && box.Overlaps(PillRect(_markers[i].Root.anchoredPosition, _stopLabels[i].Pill)))
                 {
                     return true;
                 }
@@ -763,7 +878,7 @@ namespace AF.UI
                     m.Pill.anchoredPosition = new Vector2(0f, side == 0 ? -dy : dy);
                     Vector2 at = center + m.Pill.anchoredPosition;
                     var rect = new Rect(at.x - (m.Pill.sizeDelta.x * 0.5f), at.y - (m.Pill.sizeDelta.y * 0.5f), m.Pill.sizeDelta.x, m.Pill.sizeDelta.y);
-                    on = !HitsCrew(rect);
+                    on = !HitsCrew(rect) && !HitsBuoys(rect); // añadido de D-069 del 2026-11-09: ni las boyas del tramo
                     for (int j = 0; j < _townPlaced.Count - 1 && on; j++)
                     {
                         on = !_townPlaced[j].Overlaps(rect); // la última es su propia viñeta
@@ -939,9 +1054,10 @@ namespace AF.UI
             StopLabel s = _stopLabels[i];
             StopMarker sm = _markers[i];
             bool on = s.Label.text.Length > 0 && (!sm.Fanned || sm.N == RemainingStopN());
-            if (on && !PlaceStopLabel(i) && sm.Fanned)
+            if (on && !PlaceStopLabel(i) && (sm.Fanned
+                || (_live && sm.N != RemainingStopN() && HitsBuoys(PillRect(sm.Root.anchoredPosition, s.Pill)))))
             {
-                on = false;
+                on = false; // añadido de D-069 del 2026-11-09: la última alcanzada, sin sitio fuera de las boyas, sin rótulo
             }
 
             if (s.Pill.gameObject.activeSelf != on)
@@ -1451,10 +1567,10 @@ namespace AF.UI
                 }
             }
 
-            if (_live && self >= 0 && self < _markerCount && _markers[self].N == RemainingStopN())
+            if (_live)
             {
-                // Añadido de D-069 del 2026-11-09: el rótulo de la parada siguiente, fuera de las boyas del tramo, que van encima
-                // (con el rótulo largo del Premio del mundo se leía «Let●cia»).
+                // Añadido de D-069 del 2026-11-09: los rótulos de las paradas, fuera de las boyas del tramo, que van encima (con el
+                // rótulo largo del Premio del mundo se leía «Let●cia»).
                 if (HitsBuoys(rect))
                 {
                     return false;

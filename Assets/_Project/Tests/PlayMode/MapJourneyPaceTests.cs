@@ -540,6 +540,96 @@ namespace AF.Tests.PlayMode
             map.Close();
         }
 
+        [UnityTest]
+        public IEnumerator NoLabelNorPlate_CrossesABuoyOrAnotherLabel_From2To298_AndInTheCaptures()
+        {
+            // Añadido de D-069 del 2026-11-09 (fallo de las capturas: «Fonte B●a», y «Mundo 8 · Madidi» tapado por «Cachuela
+            // Esperanza» jugando el 292): en la vista Mundo, a la vista, ningún rótulo de parada o de pueblo ni ninguna placa de mundo
+            // se cruza con una boya del tramo ni con otro de ellos. Manda la parada siguiente, luego la placa y luego el pueblo [P].
+            yield return MapMarkersTests.OpenApp(58);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            var plays = new System.Collections.Generic.List<int> { 292, 442, 452, 482, 56, 67, 71, 96, 72 };
+            for (int play = 2; play <= 298; play += 4)
+            {
+                plays.Add(play);
+            }
+
+            int boxes = 0;
+            int plates = 0;
+            var items = new System.Collections.Generic.List<(Rect Box, string What)>();
+            foreach (int play in plays)
+            {
+                OpenLobby(boot, new MemoryProgressStore(play, play - 1, play - 1), play);
+                Canvas.ForceUpdateCanvases();
+                string at = "jugando el " + play;
+                Vector2 o = map.ContentOffset;
+                Vector2 size = map.ViewportSize;
+                var view = new Rect(0f, 0f, size.x, size.y);
+                items.Clear();
+                for (int n = 0; n <= 70; n++)
+                {
+                    Rect r = map.StopLabelLocalRect(n);
+                    if (r.width > 0f)
+                    {
+                        items.Add((r, "el rótulo de la parada " + n + " «" + map.StopLabelText(n).Replace("\n", " / ") + "»"));
+                    }
+                }
+
+                for (int i = 0; i < map.TownMarkerCount; i++)
+                {
+                    Rect r = map.TownLabelLocalRect(i);
+                    if (r.width > 0f)
+                    {
+                        items.Add((r, "el rótulo del pueblo «" + map.TownLabelText(i) + "»"));
+                    }
+                }
+
+                for (int k = 0; k < map.SilhouetteCount; k++)
+                {
+                    UnityEngine.UI.Image plate = map.SilhouettePlate(k);
+                    if (plate.enabled && plate.gameObject.activeInHierarchy)
+                    {
+                        items.Add((map.SilhouetteLocalBox(k), "la placa «" + map.SilhouetteText(k) + "»"));
+                    }
+                }
+
+                // Solo lo que asoma a la vista con el encuadre de apertura.
+                for (int a = items.Count - 1; a >= 0; a--)
+                {
+                    Rect local = items[a].Box;
+                    var seen = Rect.MinMaxRect(o.x + local.xMin, o.y - local.yMax, o.x + local.xMax, o.y - local.yMin);
+                    if (!seen.Overlaps(view))
+                    {
+                        items.RemoveAt(a);
+                    }
+                }
+
+                float radius = map.BuoyClearRadiusDp - 0.01f;
+                for (int a = 0; a < items.Count; a++)
+                {
+                    boxes++;
+                    plates += items[a].What.StartsWith("la placa", System.StringComparison.Ordinal) ? 1 : 0;
+                    for (int b = 0; b < map.BuoyCount; b++)
+                    {
+                        Vector2 p = map.BuoyLocalPoint(b);
+                        Assert.That(items[a].Box.Overlaps(new Rect(p.x - radius, p.y - radius, 2f * radius, 2f * radius)), Is.False,
+                            at + ": " + items[a].What + " pisa la boya " + b);
+                    }
+
+                    for (int c = a + 1; c < items.Count; c++)
+                    {
+                        Assert.That(items[a].Box.Overlaps(items[c].Box), Is.False, at + ": " + items[a].What + " y " + items[c].What + " se pisan");
+                    }
+                }
+            }
+
+            Debug.Log("AF_MAP d069d: " + plays.Count + " aperturas, " + boxes + " rótulos y placas a la vista, " + plates + " placas");
+            Assert.That(boxes, Is.GreaterThan(plays.Count * 2), "se miraron rótulos de verdad");
+            Assert.That(plates, Is.GreaterThan(10), "y placas");
+            map.Close();
+        }
+
         internal static void OpenLobby(GameBootstrap boot, IMapProgress progress, int playLevel)
         {
             RiverMapScreen map = boot.RiverMapView!;
