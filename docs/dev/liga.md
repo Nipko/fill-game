@@ -149,7 +149,8 @@ Entran en `infra/contracts/v1` con sus esquemas, sus ejemplos y su entrada en `i
 **Eventos nuevos en 08 §8.2:**
 - `af_league_open` (`scope`);
 - `af_league_wins_sent` (`count`, `accepted`, `rejected`);
-- `af_league_unavailable` (`reason`).
+- `af_league_unavailable` (`reason`);
+- `af_league_debut` (`answer`, `source`), el estreno de la 1.1 (Q-LD-1, decidida el 2026-11-09).
 
 Nunca llevan seudónimo ni país, solo claves (regla de `localizacion.md`).
 

@@ -158,6 +158,10 @@ namespace AF.Analytics.Tests
         {
             // D-046 (docs/dev/liga.md §5): nunca llevan seudónimo ni país, solo claves.
             AssertParams("af_league_open", "scope");
+            AssertParams("af_league_debut", "answer", "source"); // Q-LD-1 (2026-11-09)
+            Dictionary<string, string> rows = Rows(Section(Chapter("08-arquitectura-tecnica-publicacion.md"), "### 8.2 Tabla de eventos", "\n## 9. "));
+            Assert.That(ValuesOf(rows["af_league_debut"], "answer"), Is.EqualTo(new[] { "open", "later" }));
+            Assert.That(ValuesOf(rows["af_league_debut"], "source"), Is.EqualTo(new[] { "victory", "lobby" }));
             AssertParams("af_league_wins_sent", "count", "accepted", "rejected");
             AssertParams("af_league_unavailable", "reason");
         }

@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using AF.Analytics;
 using AF.GameFlow;
 using AF.LiveOps;
 using AF.Save;
@@ -28,8 +29,11 @@ namespace AF.UI
     /// hasta que el jugador la abra.</item>
     /// <item>Se apunta como vista al salir (antes de responder), así un cierre de la app no la repite.</item>
     /// </list>
-    /// Analítica: el catálogo de 08 §8.2 no tiene evento del estreno y no se inventa (pregunta abierta del añadido); «Ver la Liga»
-    /// escribe el <c>af_league_open</c> de siempre. Sonda: <c>AF_STATE league_debut</c> y <c>AF_LAYOUT league_debut</c>.
+    /// Analítica (08 §8.2; Q-LD-1, decidida el 2026-11-09): <c>af_league_debut</c> con <c>answer</c> (<c>open</c> con «Ver la Liga»,
+    /// <c>later</c> con «Luego» y con el Atrás de Android) y <c>source</c> (<c>victory</c> o <c>lobby</c>), una vez por estreno, por
+    /// <c>_analytics?.Log</c> (respeta el consentimiento y la edad como el resto); si la pantalla se cierra sin respuesta (borrado de
+    /// cuenta, la app cerrada) no se escribe [P]. «Ver la Liga» escribe además el <c>af_league_open</c> de siempre. Sonda:
+    /// <c>AF_STATE league_debut</c> y <c>AF_LAYOUT league_debut</c>.
     /// </summary>
     public sealed partial class GameBootstrap
     {
@@ -38,6 +42,7 @@ namespace AF.UI
         private bool _leagueDebutLeaveToLobby;
         private bool _leagueDebutOpenPending;
         private bool _leagueDebutLobbyWas;
+        private string? _leagueDebutSource; // victory o lobby mientras el estreno espera respuesta (af_league_debut, una vez)
 
         /// <summary>
         /// El estreno en los tests: false lo apaga (<c>PlayModeHelpers.NoLeagueDebutUnlessSet</c>: los tests que no tratan de él
@@ -152,6 +157,7 @@ namespace AF.UI
 
             profile.Progress.LeagueDebutSeen = true;
             SaveLeagueMarks(profile);
+            _leagueDebutSource = source;
             view.Open(ReduceMotionNow);
             AF.Audio.AudioCues.Play(AF.Audio.SfxId.StreakUp); // la fanfarria con los efectos del proyecto (sin audio nuevo)
             AF.Audio.AudioCues.Play(AF.Audio.SfxId.Confetti);
@@ -177,6 +183,7 @@ namespace AF.UI
             Action? leave = _leagueDebutLeave;
             bool toLobby = _leagueDebutLeaveToLobby;
             _leagueDebutLeave = null;
+            LogLeagueDebut(open);
             if (DevProbe.Enabled)
             {
                 MarketProbe("league_debut_answer", "\"answer\":\"" + (open ? "open" : "later") + "\"");
@@ -205,6 +212,19 @@ namespace AF.UI
             }
 
             _a11y?.Invalidate();
+        }
+
+        // af_league_debut (08 §8.2; Q-LD-1): la respuesta y dónde salió el estreno, una sola vez por estreno.
+        private void LogLeagueDebut(bool open)
+        {
+            string? source = _leagueDebutSource;
+            _leagueDebutSource = null;
+            if (source == null)
+            {
+                return;
+            }
+
+            _analytics?.Log(AnalyticsEvent.Create("af_league_debut").Add("answer", open ? "open" : "later").Add("source", source));
         }
 
         // «Ver la Liga» pendiente: la abre en cuanto el inicio está despejado; si el jugador vuelve a un nivel antes, se olvida.
@@ -303,6 +323,7 @@ namespace AF.UI
         {
             _leagueDebutLeave = null;
             _leagueDebutOpenPending = false;
+            _leagueDebutSource = null; // cerrado sin respuesta: sin af_league_debut [P]
             _leagueDebut?.Close();
             _leagueButton?.SetNew(false);
         }

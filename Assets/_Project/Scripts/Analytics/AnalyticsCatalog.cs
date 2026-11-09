@@ -134,6 +134,7 @@ namespace AF.Analytics
             E("af_event_milestone", "event_id", "n"),
             E("af_event_claim", "event_id", "n"),
             E("af_league_open", "scope"), // D-046: Liga del río de la 1.0
+            E("af_league_debut", "answer", "source"), // Q-LD-1 del estreno de la Liga (añadido de D-046 del 2026-11-06)
             E("af_league_wins_sent", "count", "accepted", "rejected"),
             E("af_league_unavailable", "reason"),
             E("af_league_rank", "week", "bucket_rank", "tier"),

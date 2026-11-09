@@ -77,6 +77,26 @@ namespace AF.Tests.PlayMode
             boot.TickLeague(16f);
         }
 
+        // af_league_debut (08 §8.2; Q-LD-1, 2026-11-09): cuántos llegaron y que el último lleva esa respuesta y ese origen.
+        private static int DebutEvents(FakeAnalyticsSink sink)
+        {
+            int n = 0;
+            foreach (string name in sink.Names)
+            {
+                n += name == "af_league_debut" ? 1 : 0;
+            }
+
+            return n;
+        }
+
+        private static void AssertDebutEvent(FakeAnalyticsSink sink, string answer, string source)
+        {
+            Assert.That(DebutEvents(sink), Is.EqualTo(1), "af_league_debut, una sola vez");
+            AnalyticsEvent e = sink.Last("af_league_debut")!;
+            Assert.That(e.Find("answer")!.Value.Text, Is.EqualTo(answer));
+            Assert.That(e.Find("source")!.Value.Text, Is.EqualTo(source));
+        }
+
         private static void Tick(GameBootstrap boot, float ms)
         {
             for (float t = 0f; t < ms; t += 16f)
@@ -88,6 +108,8 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Lobby_Past41_ShowsOnce_LaterLeavesNew_UntilOpened()
         {
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
             var store = new MemoryProfileStore(ProfileAt(45));
             yield return Lobby(store);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -120,6 +142,9 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.LastBackScreen, Is.EqualTo("league_debut"));
             Assert.That(boot.LeagueDebutVisible, Is.False);
             Assert.That(boot.LeagueOpen, Is.False, "«Luego» no abre la Liga");
+            AssertDebutEvent(sink, "later", "lobby"); // Atrás cuenta como «Luego» [P]
+            Assert.That(boot.PressLeagueDebutBack(), Is.False, "cerrado, otro Atrás no lo responde otra vez");
+            Assert.That(DebutEvents(sink), Is.EqualTo(1));
             boot.TickLeague(16f);
             Assert.That(boot.LeagueButton.Shown, Is.True);
             Assert.That(boot.LeagueButton.NewShown, Is.True, "«Nueva» en la tarjeta hasta abrirla");
@@ -132,6 +157,7 @@ namespace AF.Tests.PlayMode
             Tick(boot, 100f);
             Assert.That(boot.LeagueDebutVisible, Is.False, "una sola vez por jugador");
             Assert.That(boot.LeagueButton!.NewShown, Is.True);
+            Assert.That(DebutEvents(sink), Is.EqualTo(1), "ni al volver a abrir la app");
 
             Assert.That(boot.OpenLeague(), Is.True);
             Assert.That(boot.Profile!.Progress.LeagueOpened, Is.True);
@@ -154,6 +180,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.LeagueDebutVisible, Is.False);
             Assert.That(boot.LeagueOpen, Is.True, "«Ver la Liga» abre la Liga");
             Assert.That(sink.Last("af_league_open")!.Find("scope")!.Value.Text, Is.EqualTo("global"), "con el evento de siempre (08 §8.2)");
+            AssertDebutEvent(sink, "open", "lobby");
             Assert.That(boot.Profile!.Progress.LeagueOpened, Is.True);
             boot.CloseLeague();
             boot.TickLeague(16f);
@@ -240,6 +267,8 @@ namespace AF.Tests.PlayMode
         {
             // El 41 abre el mundo 3 (Manaos): su banner sale al entrar, antes de jugar. La Liga se desbloquea al ganarlo. El estreno
             // no sale con el banner ni con la victoria a la vista: sale al dejar la victoria («Siguiente»), y «Luego» sigue al 42.
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
             FunnelSetup.Hooks();
             LaunchOptions.LevelCardsOverride = true;
             LaunchOptions.BannerArtSyncOverride = true;
@@ -291,11 +320,14 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.LeagueDebutVisible, Is.False);
             Assert.That(boot.Profile!.Progress.LeagueDebutSeen, Is.True);
             Assert.That(boot.LeagueDebutPending, Is.False, "una sola vez");
+            AssertDebutEvent(sink, "later", "victory");
         }
 
         [UnityTest]
         public IEnumerator Victory41_Home_SeeTheLeague_GoesHomeAndOpensIt()
         {
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
             FunnelSetup.Hooks();
             LaunchOptions.LevelOffsetOverride = 40;
             Profile profile = VictorySetup.Profile(100);
@@ -320,6 +352,7 @@ namespace AF.Tests.PlayMode
 
             Assert.That(boot.LeagueOpen, Is.True, "y allí la Liga");
             Assert.That(boot.Profile!.Progress.LeagueOpened, Is.True);
+            AssertDebutEvent(sink, "open", "victory");
         }
 
         [UnityTest]
