@@ -571,8 +571,164 @@ namespace AF.UI
                 }
             }
 
+            for (int i = 0; i < _markerCount; i++)
+            {
+                if (CuiaOverPlate(i) && box.Overlaps(CuiaBox(_markers[i].Shown)))
+                {
+                    return true; // la mini cuia que manda más que la placa (CuiaOverPlate)
+                }
+            }
+
             return false;
         }
+
+        // ============================================================================================ mini cuias, placas y países
+
+        // Añadido de D-069 del 2026-11-09 (fallo de d069c_zoom_292_360dp.png: con el zoom alejado, mini cuias de otros mundos
+        // asomaban sobre «Mundo 9 · Ucayali · Nivel 561» y sobre «Perú»): la regla de las placas de M3.4 (ninguna placa pisa una
+        // mini cuia) también para las mini cuias que entran en la vista con el zoom alejado. Las placas se colocan antes que las mini
+        // cuias de cada encuadre (ProgressSpace va antes que MarkersSpace), así que la comprobación se hace al final. Ganan la
+        // placa y el rótulo de país [P]: una mini cuia que pisaría una placa o un país no sale con este encuadre, salvo la de la
+        // parada siguiente, la que lleva su rótulo (la última alcanzada) y la del Premio del mundo, que mandan más que la placa
+        // (CuiaOverPlate: la placa busca otro sitio o no sale, PlateHitsLabels). Al volver a encuadrar, vuelven (CuiasRestore).
+        private bool[] _cuiaYielded = new bool[0];
+
+        // Los rótulos de país que no salen con este encuadre porque pisarían una de las mini cuias que mandan (CuiaOverPlate).
+        private bool[] _countryYielded = new bool[0];
+
+        // La mini cuia i manda más que una placa: la de la parada siguiente, la que lleva su rótulo y la del Premio del mundo.
+        private bool CuiaOverPlate(int i)
+        {
+            if (i < 0 || i >= _markerCount || !_markers[i].Root.gameObject.activeSelf)
+            {
+                return false;
+            }
+
+            return _markers[i].N == RemainingStopN() || i == _prizeMarker
+                || (i < _stopLabels.Count && _stopLabels[i].Pill.gameObject.activeSelf);
+        }
+
+        // Al empezar un encuadre: las mini cuias y los países que cedieron en el anterior vuelven.
+        private void CuiasRestore()
+        {
+            for (int i = 0; i < _countryYielded.Length && i < _countries.Count; i++)
+            {
+                if (_countryYielded[i])
+                {
+                    _countryYielded[i] = false;
+                    _countries[i].gameObject.SetActive(true);
+                }
+            }
+
+            for (int i = 0; i < _cuiaYielded.Length && i < _markers.Count; i++)
+            {
+                if (_cuiaYielded[i])
+                {
+                    _cuiaYielded[i] = false;
+                    if (i < _markerCount)
+                    {
+                        _markers[i].Root.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+
+        // Con el encuadre decidido y las placas encajadas: en la vista Mundo del Mapa v2, la mini cuia que pisa una placa que sale o
+        // un país no sale (salvo las de CuiaOverPlate), y las líneas finas del abanico se rehacen sin ella. Sin asignaciones (salvo
+        // la tabla si crece el número de mini cuias).
+        private void CuiasYieldToPlates()
+        {
+            if (!_live || _view != MapView.World || _markerLayer == null || _leaders == null || _leaderLines == null)
+            {
+                return;
+            }
+
+            if (_cuiaYielded.Length < _markers.Count)
+            {
+                System.Array.Resize(ref _cuiaYielded, _markers.Count);
+            }
+
+            if (_countryYielded.Length < _countries.Count)
+            {
+                System.Array.Resize(ref _countryYielded, _countries.Count);
+            }
+
+            bool any = false;
+            for (int i = 0; i < _markerCount; i++)
+            {
+                StopMarker m = _markers[i];
+                if (!m.Root.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (CuiaOverPlate(i))
+                {
+                    // La parada siguiente, la que lleva rótulo y la del premio mandan también sobre el rótulo de un país: no sale.
+                    Rect own = CuiaBox(m.Shown);
+                    for (int c = 0; c < _countries.Count; c++)
+                    {
+                        TextMeshProUGUI country = _countries[c];
+                        if (country.gameObject.activeSelf && !CountryBasinHidden(c) && own.Overlaps(CountryLocalBox(c)))
+                        {
+                            country.gameObject.SetActive(false);
+                            _countryYielded[c] = true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                Rect box = CuiaBox(m.Shown);
+                if (HitsPlate(box) || CountryUnder(box))
+                {
+                    m.Root.gameObject.SetActive(false);
+                    _cuiaYielded[i] = true;
+                    any = true;
+                }
+            }
+
+            if (!any)
+            {
+                return;
+            }
+
+            _leaders.Clear();
+            _leaderLines.Clear();
+            for (int i = 0; i < _markerCount; i++)
+            {
+                StopMarker m = _markers[i];
+                if (m.Root.gameObject.activeSelf && m.HasLeader && LeaderFoot(m.Shown, m.Real, out Vector2 foot))
+                {
+                    _leaders.Add(foot, m.Real);
+                    _leaderLines.Add(foot, m.Real);
+                }
+            }
+
+            _leaders.Commit();
+            _leaderLines.Commit();
+        }
+
+        /// <summary>La mini cuia <paramref name="i"/> no sale con este encuadre: pisaría una placa o un país (añadido de D-069 del 2026-11-09; tests).</summary>
+        internal bool StopMarkerYielded(int i)
+        {
+            return i >= 0 && i < _cuiaYielded.Length && _cuiaYielded[i];
+        }
+
+        /// <summary>Caja de la mini cuia <paramref name="i"/> en coordenadas locales del contenido; vacía si no sale (tests).</summary>
+        internal Rect StopMarkerBox(int i)
+        {
+            return i >= 0 && i < _markerCount && _markers[i].Root.gameObject.activeInHierarchy ? CuiaBox(_markers[i].Shown) : default;
+        }
+
+        /// <summary>Caja del rótulo de país <paramref name="i"/> (orden de <c>labels</c>) si se ve en esta vista; vacía si no (tests).</summary>
+        internal Rect CountryVisibleBox(int i)
+        {
+            return i >= 0 && i < _countries.Count && _countries[i].gameObject.activeInHierarchy && !CountryBasinHidden(i) ? CountryLocalBox(i) : default;
+        }
+
+        /// <summary>Rótulos de país del Mapa (visibles o no; tests).</summary>
+        internal int CountrySlotCount => _countries.Count;
 
         // Con el encuadre decidido (las placas de los mundos futuros ya encajadas a la vista, PlatesFitView), una ciudad con hito
         // que quede debajo de una placa no sale.
@@ -581,7 +737,7 @@ namespace AF.UI
             for (int k = 0; k < _heroCount; k++)
             {
                 Image v = _heroVignettes[k];
-                if (v.gameObject.activeSelf && HitsPlate(HeroVignetteBox(k)))
+                if (v.gameObject.activeSelf && (HitsPlate(HeroVignetteBox(k)) || !_markers[_heroMarker[k]].Root.gameObject.activeSelf))
                 {
                     v.gameObject.SetActive(false);
                 }

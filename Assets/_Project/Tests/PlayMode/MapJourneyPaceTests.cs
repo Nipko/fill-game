@@ -557,6 +557,8 @@ namespace AF.Tests.PlayMode
 
             int boxes = 0;
             int plates = 0;
+            int cuias = 0;
+            int yielded = 0;
             var items = new System.Collections.Generic.List<(Rect Box, string What)>();
             foreach (int play in plays)
             {
@@ -622,9 +624,45 @@ namespace AF.Tests.PlayMode
                         Assert.That(items[a].Box.Overlaps(items[c].Box), Is.False, at + ": " + items[a].What + " y " + items[c].What + " se pisan");
                     }
                 }
+
+                // Ninguna mini cuia a la vista pisa una placa, un rótulo de parada o de pueblo ni un rótulo de país (la regla de las
+                // placas de M3.4, también con el zoom alejado; ganan la placa y el rótulo [P]).
+                for (int c = 0; c < map.CountrySlotCount; c++)
+                {
+                    Rect r = map.CountryVisibleBox(c);
+                    var seen = Rect.MinMaxRect(o.x + r.xMin, o.y - r.yMax, o.x + r.xMax, o.y - r.yMin);
+                    if (r.width > 0f && seen.Overlaps(view))
+                    {
+                        items.Add((r, "el país «" + map.CountryLabel(c).text + "»"));
+                    }
+                }
+
+                for (int i = 0; i < map.StopMarkerCount; i++)
+                {
+                    Rect cuia = map.StopMarkerBox(i);
+                    var seen = Rect.MinMaxRect(o.x + cuia.xMin, o.y - cuia.yMax, o.x + cuia.xMax, o.y - cuia.yMin);
+                    if (cuia.width <= 0f || !seen.Overlaps(view))
+                    {
+                        continue;
+                    }
+
+                    cuias++;
+                    for (int a = 0; a < items.Count; a++)
+                    {
+                        Assert.That(cuia.Overlaps(items[a].Box), Is.False,
+                            at + ": la mini cuia de la parada " + map.StopMarkerStop(i) + " pisa " + items[a].What);
+                    }
+                }
+
+                for (int i = 0; i < map.StopMarkerCount; i++)
+                {
+                    yielded += map.StopMarkerYielded(i) ? 1 : 0;
+                }
             }
 
-            Debug.Log("AF_MAP d069d: " + plays.Count + " aperturas, " + boxes + " rótulos y placas a la vista, " + plates + " placas");
+            Debug.Log("AF_MAP d069d: " + plays.Count + " aperturas, " + boxes + " rótulos y placas a la vista, " + plates + " placas, "
+                + cuias + " mini cuias a la vista, " + yielded + " que no salen por una placa o un país");
+            Assert.That(cuias, Is.GreaterThan(plays.Count), "se miraron mini cuias de verdad");
             Assert.That(boxes, Is.GreaterThan(plays.Count * 2), "se miraron rótulos de verdad");
             Assert.That(plates, Is.GreaterThan(10), "y placas");
             map.Close();

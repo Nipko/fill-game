@@ -1348,6 +1348,7 @@ namespace AF.UI
         // (FrameRemaining), otra vuelta, como mucho dos más, con el zoom con que caben (añadido de D-069 del 2026-11-09).
         private void LayoutView(RiverMap map, MapView view, Vector2 center, int pass)
         {
+            CuiasRestore(); // añadido de D-069 del 2026-11-09: las mini cuias que cedieron ante una placa en el encuadre anterior
             var space = new MapSpace(MapSpace.BasinWidthDp * _zoom, Vector2.zero);
             _space = space;
             _contentW = space.DpPerUnit * map.Width;
@@ -1410,6 +1411,7 @@ namespace AF.UI
             SetOffset(offset);
             PlatesFitView(); // FX10: las placas de los mundos futuros, enteras a la vista con este encuadre
             RemainingLabelFitView(); // añadido de D-069 del 2026-11-08: el rótulo con «Faltan N», entero a la vista (RiverMapScreen.Towns.cs)
+            CuiasYieldToPlates(); // añadido de D-069 del 2026-11-09: ninguna mini cuia sobre una placa ni un país
             HeroesAfterFrame(); // añadido de D-069 del 2026-11-09: la ciudad con hito, nunca debajo de una placa
             TownLabelsAfterFrame(); // añadido de D-069 del 2026-11-09: el pueblo cede ante las boyas, las placas y los rótulos
             if (!(_remainingOffView || RemainingLabelHidden()) || view != MapView.World || pass >= RemainingZoomPasses)

@@ -172,9 +172,11 @@ namespace AF.UI
 
             _plateFitWorlds = worlds;
             _placed.Clear();
+            CuiasRestore();
             PlaceCountries(_space);
             PlaceSilhouettes(_space);
             PlatesFit();
+            CuiasYieldToPlates(); // añadido de D-069 del 2026-11-09
             TownLabelsAfterFrame(); // añadido de D-069 del 2026-11-09
         }
 
