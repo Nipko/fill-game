@@ -111,6 +111,99 @@ Segunda pasada del mismo día. Fuentes: TikTok Top Ads del sector Games (180 dí
 - **Los atascos y Royal Match llegan a hombres**, del 70 al 87 %; el agua llega a mujeres. El formato (flujo, rescate) decide el público tanto como el género.
 - **Antegancho de transformación** (Royal Match): 6 s de algo que pasa de sucio a limpio o de gris a color, y luego el juego. Lo tenemos de serie: «Sumergir y teñir».
 
+### Semana 2026-46 (2026-11-09): los que más alcanzan, vistos fotograma a fotograma
+
+Se vio el vídeo de todos, sin sonido. Notas completas en `C:\AI\marketing\tendencias\notas-2026-46.md`.
+
+#### J. Magic Sort, el nivel enorme: 2,91 M, 2,04 M y 1,98 M en la UE, 60 s (nuestro género)
+Son tres versiones de grupos que la semana pasada no se podían leer. Se abrieron por su ID.
+
+| Tramo | Plano | Texto | Transición |
+|---|---|---|---|
+| 0-0,7 s | Un nivel enorme, ya mezclado: 4 estantes y de 30 a 40 botellas, en horizontal 16:9 | ninguno | — |
+| 0,7 s | **Primer vertido** (la botella se inclina con su chorro) | ninguno | sin corte |
+| 1-58 s | Toma continua. Las botellas completas se tapan y **un tubo alto en el centro se llena de rosa** durante todo el vídeo: es el medidor | ninguno | sin cortes |
+| 59-60 s | Logotipo y «Play Now» | — | corte seco |
+
+Público: del 56 al 78 % mujeres, de 25 a 54 años; M18 tiene un 44 % de hombres. Es el anuncio con más alcance de la semana, sin persona, sin texto y sin historia.
+
+#### K. Royal Match: 1,25 M en la UE (70 % hombres), 60 s; y 846 k (74 % hombres), 120 s
+| Tramo | Plano | Texto | Transición |
+|---|---|---|---|
+| 0-0,7 s | Plano físico de una figura del rey cubierta de barro (o de hielo, en la otra versión) | ninguno | — |
+| 1,5-4 s | **Agua a presión (o un soplete)** que limpia la figura: el revelado | ninguno | — |
+| 7 s | El puzle: el rey atrapado en una cavidad y el tablero abajo | — | **corte seco** |
+| 12-30 s | El tablero se rompe y el nivel baja | — | sin cortes |
+| 58 s | «Choose the next level» con dos puertas | — | corte |
+
+Texto del anuncio: «No ADS 🤯 · Think you can solve it?». La segunda versión solo cambia el material del revelado (barro → hielo): **se varía el antegancho, no el juego**.
+
+#### L. Hole.io: 1,17 M y 766 k en la UE (80-89 % hombres), 60 s
+| Tramo | Plano | Primer premio |
+|---|---|---|
+| 0,1 s | **Un agujero diminuto junto a un depósito gigante encadenado**: la promesa en el primer fotograma | — |
+| 0,7-4 s | Traga cosas pequeñas y crece | continuo |
+| 7 s | **Se traga el depósito** | 7 s |
+| 12-30 s | Zoom out a la ciudad entera (escala) | — |
+| 58 s | El agujero enorme se traga un rascacielos | cierre |
+
+Juego puro, sin texto y sin persona.
+
+#### M. Block Blast (P07): 790 k en la UE en 6 días (67 % mujeres, 25-44), 54 s
+| Tramo | Plano | Transición |
+|---|---|---|
+| 0-4 s | **Plano físico ASMR:** una rasqueta verde que arrastra un líquido rojo espeso (una mano sin cara) | — |
+| 7 s | Tablero con «Combo 30» y bloques que estallan | **corte seco** |
+| 20 s | «Combo 33» | sin cortes |
+| 53 s | Tarjeta con capturas de la tienda y «Play» | corte |
+
+#### N. Nut Sort y Nut Color (tuercas): de 397 k a 494 k en la UE (del 60 al 64 % hombres), 30-60 s
+- **N07 (494 k), el tablero se arma:**
+  - 0,1 s: varillas vacías.
+  - 0,7-1,5 s: las tuercas llueven desde arriba y llenan el tablero.
+  - 2,5 s: rótulo arriba.
+  - En el juego, cada varilla completa estalla en blanco; cierre con «PLAY NOW».
+- **N03 y N02 (397 k y 396 k):**
+  - 0-2,5 s: un vídeo físico ajeno (una broca que atraviesa madera, una canica en un circuito tallado).
+  - **Corte seco** a un tablero de madera cuyas rampas curvas dejan caer las tuercas en las varillas.
+- **N05 (419 k):** 0-2,5 s, un hombre real con un tablero físico; luego el juego, con un medidor de «cerebro» arriba (✗ por la persona).
+
+#### O. Ball Sort: de 418 k a 484 k en la UE, 30-60 s
+- **Ball Sort GP (484 k, 81 % mujeres de 55 a 64):**
+  - Desde 0,1 s, en juego: una campana de vidrio sobre tierra agrietada, con una criatura dentro.
+  - **Cada tubo completado echa agua azul en la campana**, que se llena (el medidor es el agua).
+  - Lleva rescate implícito (✗), pero la mecánica de «llenar el recipiente central» es la de J.
+- **Color Ball Game (418 k):**
+  - Desde 0,1 s, en juego, con el rótulo «I can't Reach Apple».
+  - **Medidor «Dumb · Normal · Smart · Genius»** arriba.
+- **Ball Sort Genius (462 k):** 0-2,5 s, una mujer real con tarros; corte seco a «Only 3 % can solve this» con el mismo medidor (✗).
+
+#### P. Otros con más de 600 k
+- **Traffic Jam Fever (663 k, 87 % hombres, 29 s, horizontal):**
+  - Vista aérea de una carretera de desierto llena de filas de coches, que se vacía tramo a tramo.
+  - Sin texto ni medidor: el premio es **ver vaciarse el atasco**.
+- **Candy Crush (654 k y 332 k, 60 s):**
+  - Un solo plano casi fijo del tablero, con «Can you complete all the moves? 🏆» en el pie.
+  - Logotipo y «Play Now» a los 58 s.
+  - Abrió cinco versiones nuevas el 2 de noviembre con el mismo guion y públicos distintos (del 31 al 67 % mujeres).
+- **Screw Jam Master (774 k, solo España, 68 % hombres):**
+  - 0-2,5 s: testimonio escenificado con un rótulo en español de España.
+  - Después, tableros con forma (un perro, una camisa) que se desatornillan con un lápiz.
+  - Cierre: «Maestro del Screw Jam · Juega ahora». Es ✗ por el testimonio, pero el idioma local rinde.
+- **Wood Crush (1,13 M):**
+  - 0-4 s: sketch con actores en un andén (✗).
+  - Después, el marcador de 5.302 a 61.934 y una explosión que barre el tablero.
+- **Ivy Color Block (578 k, sube de 549 k):**
+  - El marcador desde el primer fotograma (786 → 2.293) y «Combo 4» a 1,5 s.
+  - Tarjeta de capturas a los 38 s.
+
+**Lo nuevo de la semana 46:**
+- **Gana un nivel enorme en una sola toma con un medidor que se llena** (J), por delante del «Only 1 %» con persona.
+- **El antegancho físico de 2-4 s** (limpieza, rasqueta, broca o canica) se ha extendido a seis anuncios grandes. Nosotros lo hacemos con una mecánica propia que revela: la Luciérnaga sobre aguas turbias.
+- **Lo pequeño frente a lo grande en el primer fotograma** (L) es la promesa más clara que se vio.
+- **El tablero que se arma** (N07: las piezas caen y lo llenan) da un primer segundo con movimiento antes del primer vertido.
+- **El horizontal 16:9 aparece en la cima** (J, Traffic Jam): Meta lo sirve en el feed. Para Shorts y Reels seguimos en vertical.
+
 ## 2. Lo que se repite en los que más alcanzan
 
 1. **El primer premio visible llega antes de 1-4 s**: un vertido, una explosión o un combo. Ninguno empieza con un logotipo ni con una pantalla de título.
@@ -121,8 +214,13 @@ Segunda pasada del mismo día. Fuentes: TikTok Top Ads del sector Games (180 dí
 6. **Los textos del juego** («Combo 2», «Good! +220», «+40») funcionan como subtítulos y dan ritmo.
 7. **Cierre corto** de 2-10 s: logotipo, botón y, a veces, una mano. Los de agua a menudo no tienen cierre y acaban a medias.
 8. **Duración:** 29-64 s en pago y 8-30 s en orgánico.
+   - Semana 46: lo más alto (de 1 a 2,9 M) dura 54-60 s.
+   - De 29 a 39 s se queda en 0,5-1 M.
 9. **Un solo eje por vídeo:** progreso (medidor), escala, transformación, reto o microhistoria. Ninguno mezcla dos.
+   - Excepción de la semana 46: el **antegancho de 2-4 s** pone un segundo eje (revelado o ASMR físico) **solo antes del corte**, y luego el juego sigue con su eje.
 10. **El contenido de la cuenta no es el anuncio:** en orgánico ganan el meme, la reacción y lo que se puede compartir, aunque el juego salga poco.
+11. **El tamaño del reto se ve en el primer fotograma** (semana 46): el nivel de 40 botellas, el agujero diminuto junto al depósito gigante o la carretera llena de coches. El espectador entiende la tarea antes del primer movimiento.
+12. **Se varía el antegancho, no el juego** (semana 46): Royal Match cambia barro por hielo y Candy Crush lanza cinco públicos con el mismo plano. Para probar, se cambian los 2-4 primeros segundos y se mantiene la toma.
 
 ## 3. Plantillas de guion para Tintalú (orgánico, con tomas reales)
 
@@ -164,6 +262,29 @@ Contador: el número de vertidos sale de las tomas y del solver. No es una cifra
 - El último vertido sella la última cuia y el corte cae en el **mismo tablero del principio**, de modo que al repetirse no se nota la costura.
 - Sin texto.
 
+### Plantilla 6. «El nivel enorme» (de J, semana 46), 40-60 s
+| Tramo | Plano | Texto |
+|---|---|---|
+| 0-0,7 s | El nivel grande entero, ya mezclado (`s2-grande-l303`, saltando la intro de 5 s) | ninguno |
+| 0,7 s | Primer vertido | ninguno |
+| 1-55 s | **Toma continua, sin cortes.** Medidor: el contador H1 en modo «quedan» bajando hasta 0 (es nuestro «tubo que se llena») | solo los del juego |
+| 55-60 s | Sellado final, victoria del juego y tarjeta | «Tintalú» |
+
+- En vertical para Shorts y Reels. Si algún día hay pago con iOS (D-067), también en 16:9.
+- Sin acelerar la toma: el ritmo real es parte del «relax».
+- Si 90 s de toma no caben en 60, se corta al principio del nivel, nunca en medio.
+
+### Plantilla 7. «Antegancho de revelado» (de K y M, semana 46), 20-30 s
+| Tramo | Plano | Texto | Transición |
+|---|---|---|---|
+| 0-3 s | **Lo que se revela, con nuestra mecánica:** la cuia turbia con su «?» y la Luciérnaga que la ilumina (`s3-luciernaga-l100`), o la cuia con Barro (`s2-mec-barro-l123`) | ninguno | — |
+| 3 s | El tablero entero de ese nivel | — | corte seco |
+| 3-25 s | Los vertidos que lo resuelven | solo los del juego | sin cortes |
+| final | Victoria del juego y tarjeta | — | corte |
+
+- **Variación (regla 12):** se cambia solo el tramo de 0-3 s (Luciérnaga, Barro, Remolino, Lluvia) y se mantiene el resto. Así se mide qué revelado engancha más.
+- Nada de material físico ajeno (rasquetas, brocas, figuras): cada revelado es una mecánica que existe en la 1.0.
+
 ## 4. Lo que no copiamos (§0)
 
 - Las personas reales o generadas con tablero físico (Magic Sort «Only 1 %», Nut Sort).
@@ -171,10 +292,24 @@ Contador: el número de vertidos sale de las tomas y del solver. No es una cifra
 - Los dibujos a mano ajenos al juego (Family Savior).
 - Las cifras de reto sin fuente («99 %», «1 %»).
 - La escala en 3D que no existe en el juego (el pasillo de tinajas de W12): la escala la hacemos con muchos niveles reales.
+- Semana 46:
+  - los testimonios escenificados (Screw Jam Master: «Mi hija…», «Mi novia…»);
+  - los sketches con actores (Wood Crush);
+  - los anteganchos con material físico ajeno (rasqueta, broca, agua a presión sobre figuras);
+  - el «rescate» de una criatura (Ball Sort GP);
+  - los medidores de «IQ» o «Genius» sin fuente;
+  - «No ADS» (Royal Match): para nosotros es falso, porque hay anuncios.
 
 ## 5. Fuentes y límites de esta pasada
 
 - **Meta, con el país en ES:** da el alcance real en la UE. Los anuncios agrupados no se pueden leer sin abrir cada versión.
+  - Semana 46: abrir `https://www.facebook.com/ads/library/?id=<ID>` funciona aunque redirija a `country=US`, porque el diálogo trae «EU transparency» con el alcance.
+  - El vídeo de ese diálogo se ve con un visor que reciba la URL.
+- **Navegador con el panel oculto (semana 46):**
+  - Meta y Google funcionan.
+  - YouTube sale en blanco, pero `window.ytInitialData` trae los resultados (ID, título, vistas, antigüedad y canal).
+  - Instagram carga solo las 4 primeras publicaciones.
+  - TikTok perdió la sesión del dueño: con «Log in» solo enseña 4 tarjetas.
 - **TikTok Creative Center, con la sesión del dueño:** «me gusta», presupuesto y vídeo. La página de detalle, con el análisis por segundo, devuelve a la lista. Los vídeos se ven desde la lista.
 - **Instagram, con la sesión del dueño:** «me gusta» y comentarios por búsqueda. Las reproducciones no se ven.
   - Los juegos de agua tienen poco orgánico: de 50 a 130 «me gusta».

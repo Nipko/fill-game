@@ -60,6 +60,12 @@ Cada formato tiene su referencia medida, su eje y su material del banco de tomas
 | F6 | **Mismo río, dos jugadas** (pantalla partida) | sortingsim 144 k en Instagram | reto | el Reto del río del día dos veces: solución larga y la mínima del solver | 15-20 s | Reto o comunidad · sábado |
 | F7 | **Microhistoria de un personaje** (meme o rótulos) | Cuenta de Block Blast 2,25 M; Rent Please 239 k | microhistoria | TiTino en casa, Capi remando, Rosa río arriba, con un rótulo «relatable» por golpe | 8-15 s | Personajes · sábado (impares) |
 | ~~F8~~ | ~~**Viaje sobre el himno**~~: **descartado por el dueño el 2026-11-05** (los 5 montados no se publican) | Merge and Dig 403 k | progreso | — | — | el miércoles pasa a F3 |
+| F9 | **El nivel enorme** (una toma sin cortes; semana 46) | Magic Sort 2,91 M, 2,04 M y 1,98 M en la UE (el más visto del género) | medidor | `s2-grande-l303` (90 s, 22 vertidos) sin la intro y con H1 en «quedan»; plantilla 6 de `guiones-que-funcionan.md` | 40-60 s | Satisfying · domingo (sustituye a «F1 lento») |
+
+**Antegancho de revelado (semana 46), variante de F2:**
+- Royal Match (1,25 M) y Block Blast P07 (790 k) abren con 2-4 s de algo que se revela o se limpia.
+- Nosotros lo hacemos con una mecánica propia: la Luciérnaga sobre aguas turbias (`s3-luciernaga-l100`) o el Barro (`s2-mec-barro-l123`), con un corte seco al tablero.
+- Es la plantilla 7. Para probar, se cambia solo el antegancho.
 
 **Público:** el agua llega a mujeres de 35-64; el flujo y los rescates, a hombres de 25-44.
 - Para el público de mujeres: F1, F2 y F3.
@@ -80,6 +86,8 @@ Orden pensado para salir con lo que ya existe y sumar formatos según lleguen la
 | 5 | **«El río sube»**: niveles 30, 70, 130, 160 y 220, 4 s cada uno y cada uno acaba en su vertido ganador; marea, palabras y toques; 22,2 s | F3 | **montado, `calidad_ok`** (`piezas/n1-05-el-rio-sube`) | `montar_himno.py` |
 | 6 | **«Mismo río, dos jugadas»**, 18 s | F6 | por montar | falta la pantalla partida (H3) |
 | 7 | **TiTino «Yo esperando a que vuelvas…»**, 10 s, tono ligero | F7 | por grabar | tomas de personajes (H6); voz narrada opcional (H7) |
+| 8 | **«El nivel enorme»**: el nivel 303 entero en una toma, del primer vertido a la victoria, con «Quedan» bajando; 40-60 s (propuesto en la semana 46) | F9 | por montar (la toma es-ES ya existe; faltan en y pt) | `montar_himno.py` con una sola toma larga y `contador` en «quedan» |
+| 9 | **«Se aclara el río»**: la Luciérnaga ilumina la cuia turbia (0-3 s) y corte seco a los vertidos del nivel 100; 20-25 s (semana 46) | F2 (antegancho de revelado) | por montar | `montar_himno.py`; la toma `s3-luciernaga-l100` ya existe en los tres idiomas |
 
 pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada vídeo, una vez montado, pasa por tu visto bueno antes de ir a la cola. Nada se publica sin él.
 
@@ -93,7 +101,7 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada ví
 | Jueves | F2 | Satisfying |
 | Viernes | F5 | Reto |
 | Sábado | F7 (semanas impares) o F6 (pares) | Personajes o comunidad |
-| Domingo | F1 lento o F2 largo | Satisfying |
+| Domingo | F9 (el nivel enorme) o F2 largo | Satisfying |
 
 - **Lunes:** el informe de tendencias pone al día las cifras y los guiones. Si un formato de fuera sube, se prueba como variación la semana siguiente.
 - **A las 2 semanas,** cada formato se compara por la tasa de gancho y la retención (`estrategia.md` §6.3). El peor pierde su día en favor del mejor.
@@ -116,6 +124,11 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada ví
 | **H8. Toque dibujado** (Bus Fever, Attack Hole) | **hecho 2026-11-05** (`efectos.py`, `"toques": true` en el brief) | — | Icono de toque dibujado (no una mano real) en las coordenadas de `AF_LAYOUT` en cada `pour`. **Necesita tu visto bueno**, porque §0 prohíbe personas y un dedo dibujado es dudoso | pequeño |
 | **H9. Sonido del juego en la toma** | se reponen los efectos con los eventos `pour` | — | — | — |
 | **H10. Medir lo publicado** (tasa de gancho y retención por formato) | la tabla `Post` de Postiz; sin analítica de vuelta | sí | S7 (`cola.py` con la API de Postiz) y lectura semanal de la analítica de cada red, a mano las dos primeras semanas | medio |
+| **H11. Toma larga del nivel grande en los tres idiomas** (F9, semana 46) | solo `s2-grande-l303-es` | sí | Grabar `l303` en en y pt con `tomar.py`/`director.py` (las mismas opciones que la de es); `calidad.py` exige una toma por idioma | pequeño |
+
+**Revisión del 2026-11-09:**
+- **H3 (pantalla partida):** sigue sin hacer; no hay modo `partida` en `montar.py` ni en `montar_himno.py`.
+- **H4 (bucle sin costura):** parcial. `montar_himno.py` admite `"bucle"` en el audio (sin fundidos), pero aún no busca el fotograma final parecido al inicial ni funde las imágenes.
 
 **Prioridad (actualizada el 2026-11-05 con las decisiones del dueño):**
 1. ~~H5, H1 y H2~~: hechas el 2026-11-05 (`fabrica.md` §3.1).

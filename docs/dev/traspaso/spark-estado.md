@@ -6,6 +6,24 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-09 · Tendencias semana 2026-46: HECHO
+- **47 referencias** en `semilla-2026-46.json`: 26 nuevas o con cifra nueva y 21 puestas al día; 116 en la biblioteca. Informe: `docs/marketing/tendencias/2026-46.md`. Hay 17 anuncios desmontados con el visor (`guiones-que-funcionan.md` §1 J-P), y nuevas las plantillas 6 y 7, F9 y H11 en `linea-de-produccion.md`.
+- **Cifras más altas (alcance en la UE, Meta):**
+  - Magic Sort, un nivel enorme en una sola toma de 60 s con un tubo-medidor que se llena: **2,91 M**, 2,04 M y 1,98 M. Son los grupos abiertos por ID por primera vez.
+  - Royal Match, 1,25 M; Hole.io, 1,17 M; Wood Crush, 1,13 M; Block Blast, 790 k en 6 días.
+  - YouTube: el puzle físico de una hora, 148 M (orgánico, ✗).
+- **Ganchos que suben:**
+  - G9, el nivel o la escala enormes (de 549 a 939 de peso).
+  - El antegancho de revelado o ASMR físico de 2-4 s antes del corte al juego.
+  - Lo pequeño frente a lo grande en el primer fotograma.
+  - El idioma local: Screw Jam Master llega a 774 k solo en España (con testimonio, ✗).
+- **No se pudo ver:**
+  - TikTok sin sesión: «Log in», solo 4 tarjetas. El dueño tiene que volver a abrirla en el navegador integrado.
+  - Instagram: solo 4 publicaciones con el panel oculto.
+  - El vídeo de Google Ads, que va dentro de un iframe.
+  - Wool, hexa y goods sort.
+  - YouTube salió en blanco con el panel oculto, pero se leyó de `ytInitialData`.
+
 ### 2026-11-05 · Vídeos 1, 3 y 5 del lote 1 en inglés y portugués, programados para el 2026-11-06 (PROGRAMADOS, aprobados por el dueño: «Aprobado, programa»)
 
 - **Piezas:** `C:\AI\marketing\piezas\n1-0{1,3,5}-*-{en,pt}` (6), de `C:\AI\marketing\briefs\linea-1\generar_idiomas.py`: los mismos cortes que en español, con la toma del juego en cada idioma y los tiempos leídos de los eventos de esa toma (los vertidos caen a otra hora en cada grabación). Términos del glosario: «cuia» no se traduce; pour/despejar, tint/tingir, seal/selar. Las 6, `calidad_ok` (a la de Sella EN se le bajó el audio 0,8 dB por el pico real: −1,3 dBFS, −14,8 LUFS).
