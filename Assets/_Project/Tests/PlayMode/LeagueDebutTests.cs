@@ -122,8 +122,11 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Profile!.Progress.LeagueDebutSeen, Is.True, "apuntado al salir: un cierre de la app no lo repite");
             Assert.That(store.Json, Does.Contain("\"league_debut_seen\": true"), "y guardado");
             Assert.That(boot.LeagueButton!.Shown, Is.False, "el estreno tapa el inicio");
-            Assert.That(_audio.Requested(SfxId.StreakUp) && _audio.Requested(SfxId.Confetti), Is.True, "la fanfarria con los efectos del proyecto");
-            Assert.That(_audio.StingerCount(StingerId.Arrival, false), Is.EqualTo(1), "con su remate");
+            // Su fanfarria de la 1.1 (encargo-fanfarria-liga.md §3): el remate propio (Música) y el confeti (Sonido).
+            Assert.That(_audio.StingerCount(StingerId.LeagueDebut, false), Is.EqualTo(1), "con su remate");
+            Assert.That(_audio.Requested(SfxId.Confetti), Is.True, "el confeti, para quien tiene la música apagada");
+            Assert.That(_audio.Requested(SfxId.StreakUp), Is.False, "ya no la racha prestada");
+            Assert.That(_audio.StingerCount(StingerId.Arrival, false), Is.EqualTo(0), "ni el remate de llegada prestado");
 
             // La entrada: el emblema entra con escala y rebote, los rayos giran, la lluvia cae y los botones esperan a verse.
             Assert.That(debut.ButtonsLive, Is.False, "los botones aún no reciben toques en t = 0");

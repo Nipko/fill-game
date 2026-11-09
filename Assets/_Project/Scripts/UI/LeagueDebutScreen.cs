@@ -14,8 +14,8 @@ namespace AF.UI
     /// una sola vez por jugador. Sobre un velo índigo casi opaco, los rayos de luz que giran despacio, el halo de oro, el emblema de
     /// la Liga (<see cref="ProceduralArt.LeagueEmblem"/>: la copa de oro en el medallón índigo con su corona de hojas) que entra con
     /// escala y rebote, destellos, una lluvia ligera de hojas, pétalos y plumas, el título «¡Llegó la Liga del río!», la línea que
-    /// explica qué es, «Ver la Liga» (Hoja, el principal) y «Luego» (enlace). Suena la fanfarria con los efectos del proyecto
-    /// (<c>sfx_streak_up</c> y <c>sfx_confetti</c>, con el remate de llegada <c>sting_arrival</c>; ningún audio nuevo).
+    /// explica qué es, «Ver la Liga» (Hoja, el principal) y «Luego» (enlace). Suena su fanfarria de la 1.1: el remate
+    /// <c>sting_league_debut</c> (con Música) y <c>sfx_confetti</c> (con Sonido; <c>docs/audio/encargo-fanfarria-liga.md</c> §3).
     /// </summary>
     /// <remarks>
     /// <para>Sin X: el velo no la cierra; el Atrás de Android es «Luego» (<c>GameBootstrap.PressLeagueDebutBack</c>). Los botones

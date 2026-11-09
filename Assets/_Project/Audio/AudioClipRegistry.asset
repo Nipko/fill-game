@@ -74,6 +74,8 @@ MonoBehaviour:
   - sfx_mech_card
   - sfx_morpho_idle
   - sfx_store_open
+  - sfx_mech_aguape
+  - sfx_mech_lancha
   - sfx_select_guanabana
   - sfx_select_cupuacu
   - sfx_select_tapereba
@@ -186,6 +188,7 @@ MonoBehaviour:
   - sting_fruit_new
   - sting_mech_card
   - sting_level_failed
+  - sting_league_debut
   clips:
   - {fileID: 8300000, guid: 54223f68d16a3c841b1a71dc9d31f2a1, type: 3}
   - {fileID: 8300000, guid: 0388ea49ba2751e4b8082485186bd73d, type: 3}
@@ -248,6 +251,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 1e57973811cdb3d43a966bf8d5a5b670, type: 3}
   - {fileID: 8300000, guid: 650c449febdbb4040a121f9df1ecf956, type: 3}
   - {fileID: 8300000, guid: 43cd894eb28bcd74c9843ffde32b3275, type: 3}
+  - {fileID: 8300000, guid: 5b497671fae2fd248b086eed47fbc6ad, type: 3}
+  - {fileID: 8300000, guid: c912ece96620d2243ba6bc6caa38b914, type: 3}
   - {fileID: 8300000, guid: 3ed0d07452bfc254897c66231cac01b5, type: 3}
   - {fileID: 8300000, guid: bf9640d1275f2f44383986b010a2e792, type: 3}
   - {fileID: 8300000, guid: 3a307c3563eecc7429b4be94e053dcc6, type: 3}
@@ -360,3 +365,4 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 95533f68ef79d5d43a9e96227c47b232, type: 3}
   - {fileID: 8300000, guid: 20d92e6a06cc9dc4b800af375ec7f0c4, type: 3}
   - {fileID: 8300000, guid: bdff2ecc51bf0544798c10dfe9c502e5, type: 3}
+  - {fileID: 8300000, guid: ec4421548c7b1f34d81ed4fa4cf2da75, type: 3}

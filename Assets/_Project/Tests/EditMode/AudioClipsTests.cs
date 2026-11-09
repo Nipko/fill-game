@@ -14,7 +14,7 @@ using UnityEngine;
 namespace AF.Tests.EditMode
 {
     /// <summary>
-    /// Audio definitivo de la entrega 1 (tarea AU3): los 173 ids de la especificación con su ranura y su archivo, el registro de
+    /// Audio definitivo de la entrega 1 (tarea AU3) y de la 1.1: los 176 ids de la especificación con su ranura y su archivo, el registro de
     /// clips completo y fuera de <c>Resources</c>, los ajustes de importación por carpeta, las capas de cada lecho del mismo largo
     /// que él, el fundido de los 4 bucles del chorro sin pasar de ± 2 semitonos, la intensidad de la lluvia por nivel, la fauna
     /// grabada de cada mundo y los remates (bajo los efectos y nunca encima de la toada).
@@ -24,11 +24,11 @@ namespace AF.Tests.EditMode
         private static readonly string SpecPath = Path.Combine(Application.dataPath, "..", "docs", "audio", "especificacion-sonidos.json");
 
         [Test]
-        public void Ids_AreThe173OfTheSpecification_WithTheirFiles()
+        public void Ids_AreThe176OfTheSpecification_WithTheirFiles()
         {
             string json = File.ReadAllText(SpecPath);
             MatchCollection pairs = Regex.Matches(json, "\"id\":\\s*\"([^\"]+)\",\\s*\"file\":\\s*\"([^\"]+)\"");
-            Assert.That(pairs.Count, Is.EqualTo(AudioClipIds.Count), "173 piezas en la especificación");
+            Assert.That(pairs.Count, Is.EqualTo(AudioClipIds.Count), "176 piezas en la especificación (173 de la entrega 1 y 3 de la 1.1)");
             var seen = new HashSet<int>();
             foreach (Match m in pairs)
             {
@@ -67,7 +67,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Registry_Has173Clips_OutsideResources_AndEveryWavIsImportedAsItsFolderSays()
+        public void Registry_Has176Clips_OutsideResources_AndEveryWavIsImportedAsItsFolderSays()
         {
             List<string> problems = AudioAssetSetup.Problems();
             Assert.That(problems, Is.Empty, "AudioAssetSetup.Apply: " + string.Join("; ", problems));
@@ -265,6 +265,9 @@ namespace AF.Tests.EditMode
             }
 
             Assert.That(AudioClipIds.Id(AudioClipIds.StingerSlot(StingerId.FruitNew)), Is.EqualTo("sting_fruit_new"), "en el registro (su gancho, la tarjeta «Fruta nueva»: AudioHooksTests)");
+            Assert.That(AudioClipIds.Id(AudioClipIds.StingerSlot(StingerId.LeagueDebut)), Is.EqualTo("sting_league_debut"), "el de la 1.1 (su gancho, el estreno de la Liga: LeagueDebutTests)");
+            Assert.That(AudioClipIds.File(AudioClipIds.StingerSlot(StingerId.LeagueDebut)), Is.EqualTo("music/stingers/sting_league_debut.wav"));
+            Assert.That(AudioClipIds.ClassOf(AudioClipIds.StingerSlot(StingerId.LeagueDebut)), Is.EqualTo(AudioClipClass.Stinger), "importado como sus vecinos");
         }
 
         [Test]

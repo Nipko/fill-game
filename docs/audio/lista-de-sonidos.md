@@ -110,7 +110,14 @@ Cada mecánica suena cuando se desbloquea, en el golpe de la tapa al sellar. Las
 | `sfx_rosa_surface` | Rosa (delfín rosado) asoma | Exhalación real de boto | 1,0 s | **Ondulación de agua + soplo de espiráculo de boto (*Inia geoffrensis*; grabación con licencia, 07 §9.5; hoy, provisional por código)**, cálido y cercano, seguido de chapoteo suave al sumergirse. |
 | `sfx_monkey_chirp` | Tropa de miquitos en la intro | Chillido corto de mono ardilla, muy bajo; uno como mucho | 0,15 s | **Trino agudo y dulce de mono ardilla (*Saimiri*), parecido a un pajarito** (3,2-4,5 kHz, muy bajo a −18 dB, solo al entrar en la rama). |
 
-Para la 1.1 quedan tres más: Aguapé (agua que se abre), Palizada (chapoteo y madera que cruje) y Cocha (agua que se corta). Ningún personaje habla: solo sonidos, para no doblar a cada idioma.
+**La 1.1 (D-068)** trae dos mecánicas con su sonido propio, grabado en la entrega de la 1.1 (`docs/audio/encargo-audios-1-1.md`; ver «Estado en el cliente»). Antes tomaban prestado el de otra mecánica:
+
+| ID | Cuándo suena | Cómo debe sonar (GDD) | Duración | Propuesta del encargo |
+| --- | --- | --- | --- | --- |
+| `sfx_mech_aguape` | Se suelta el Aguapé: la mata deja libres sus cuias | Agua que se abre (02 §9.1 M8, regla 9) | 0,6 s | **Roce húmedo de hojas flotantes que se apartan + agua que se abre con un «shhh-plash» suave y una burbuja redonda.** Nunca hielo ni cristal que se rompe. |
+| `sfx_mech_lancha` | Atraca la Lancha con su fruta | La lancha atraca (02 §9.1 M11) | 0,9 s | **Motor de popa pequeño que llega y baja de vueltas + golpe sordo de madera contra el muelle + chapoteo de la ola en la orilla.** Nunca remo, que es Capi. |
+
+La Palizada (chapoteo y madera que cruje) y la Cocha (agua que se corta) pasan a la 1.2 (D-068), con su sonido. Ningún personaje habla: solo sonidos, para no doblar a cada idioma.
 
 ## 4. Mapa del río, llegadas y pantallas especiales
 
@@ -227,7 +234,7 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
 | Bloque | Cantidad 1.0 | Quién | Presupuesto del GDD |
 | --- | --- | --- | --- |
 | Efectos de tablero, comodines e interfaz (§1-2) | 30 | Diseñador de sonido, con foley propio y biblioteca comercial | 600-1.500 USD (calculado para unos 35 efectos) |
-| Efectos de mecánicas, personajes y Mapa (§3-4) | 31 (+3 en la 1.1) | Diseñador de sonido; los 11 que estaban sin definir ya tienen propuesta arriba | dentro de la fila anterior, a revisar |
+| Efectos de mecánicas, personajes y Mapa (§3-4) | 31 (+2 en la 1.1, grabados; +2 en la 1.2) | Diseñador de sonido; los 11 que estaban sin definir ya tienen propuesta arriba | dentro de la fila anterior, a revisar |
 | Ambiente (§5) | 9 aguas, 2-3 lluvias, unos 25 animales | Biblioteca con licencia comercial; la piha conviene grabarla | partida «grabaciones de fauna», sin cifra propia |
 | Música (§6) | 9 lechos, 36 capas de percusión, 9 variantes nocturnas, toada, tema de menú y 5 stingers | Compositor, con cesión total de derechos; músicos regionales si se puede | 1.500-4.000 USD |
 
@@ -237,7 +244,15 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
 
 **Desde el 2026-10-17 (tarea AU3), el juego suena con los 173 WAV de la entrega 1** (`Assets/_Project/Audio/`, con su `audio_manifest.json`; encargo de sonidos §3 y §11). El audio por código de AU1 y AU2 queda solo como respaldo de un id sin clip.
 
-- **Registro de clips:** `Assets/_Project/Audio/AudioClipRegistry.asset`, con los 173 ids de `especificacion-sonidos.json` y su clip. Lo genera el método de Editor `AF.EditorTools.AudioAssetSetup.Apply` (nunca se edita a mano), lo cuelga de la escena `GameSceneBuilder` (en `GameBootstrap`) y no pasa por `Resources`. Cada id tiene una ranura fija (`AF.Audio.AudioClipIds`): los efectos y las notas de fruta usan la misma que el audio por código, así que un id se busca igual en los dos.
+**Desde el 2026-11-09, también con los 3 WAV de la 1.1** (`docs/audio/encargo-audios-1-1.md` y `encargo-fanfarria-liga.md`; entrega de Gemini en `docs/audio/entrega-1-1.md`), 176 en total:
+
+- `sfx_mech_aguape` (`SfxId.MechAguape`): la suelta del Aguapé (paso `Loosen` de `AudioBoard.Step`). Antes tomaba prestado `sfx_mech_remolino`.
+- `sfx_mech_lancha` (`SfxId.MechLancha`): el atraque de la Lancha (paso `Dock`). Antes tomaba prestado `sfx_capi_paddle`.
+- `sting_league_debut` (`StingerId.LeagueDebut`): el estreno de la Liga del río (`GameBootstrap.ShowLeagueDebut`). Suena con `sfx_confetti`, que va con el ajuste Sonido, para que quien tiene la música apagada oiga algo. Antes sonaban `sfx_streak_up`, `sfx_confetti` y `sting_arrival`.
+
+Los dos efectos van al final de `SfxId` y el remate al final de `StingerId`, para no mover los valores de la entrega 1. Sin clip, los efectos suenan con la receta por código de lo que tomaban prestado (el Remolino y el remo de Capi), como antes; el remate, como los demás, no tiene respaldo por código. `AudioAssetSetup.Apply` los importa con los ajustes de su clase y los suma al registro.
+
+- **Registro de clips:** `Assets/_Project/Audio/AudioClipRegistry.asset`, con los 176 ids de `especificacion-sonidos.json` y su clip. Lo genera el método de Editor `AF.EditorTools.AudioAssetSetup.Apply` (nunca se edita a mano), lo cuelga de la escena `GameSceneBuilder` (en `GameBootstrap`) y no pasa por `Resources`. Cada id tiene una ranura fija (`AF.Audio.AudioClipIds`): los efectos y las notas de fruta usan la misma que el audio por código, así que un id se busca igual en los dos.
 - **Prioridad:** el clip grabado, si existe; si no, el del audio por código. El respaldo solo se genera si falta algún efecto, bucle del chorro o animal grabado (o en los tests sin escena): con la entrega completa no se genera nada y no sale la línea `AF_PERF audio_build`. Los mundos 10-13 no tienen WAV: suenan con el agua y el lecho por código y sin fauna, como en AU2.
 - **Importación** (08 §6; todo con «Load In Background», sin «Normalize» y sin ajustes por plataforma):
 
@@ -262,7 +277,7 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
   - fuera del nivel, `mus_menu`: en el inicio con sus hojas (también la de compra), «El río sigue creciendo» y Sin canoas. La Crecida aún no tiene pantalla;
   - la atenuación y el silencio en los anuncios no cambian.
 - **Remates:**
-  - con gancho: `sting_world_banner` (con la piha del banner de mundo), `sting_arrival` (con `sfx_fact`, en la llegada a la parada), `sting_mech_card` (con la tarjeta previa de un estreno, sola o junto a la dificultad como en el 100; las tarjetas que solo anuncian la dificultad, como el 60 o el 80, suenan con `sfx_mech_card` y sin remate), `sting_level_failed` (en la transición a Nivel fallido; no al volver de Sin canoas ni al reanudar con la pantalla ya abierta) y `sting_fruit_new` (con `sfx_fruit_new`, al salir la tarjeta «Fruta nueva», F5; gancho desde FX6);
+  - con gancho: `sting_world_banner` (con la piha del banner de mundo), `sting_arrival` (con `sfx_fact`, en la llegada a la parada), `sting_mech_card` (con la tarjeta previa de un estreno, sola o junto a la dificultad como en el 100; las tarjetas que solo anuncian la dificultad, como el 60 o el 80, suenan con `sfx_mech_card` y sin remate), `sting_level_failed` (en la transición a Nivel fallido; no al volver de Sin canoas ni al reanudar con la pantalla ya abierta) y `sting_fruit_new` (con `sfx_fruit_new`, al salir la tarjeta «Fruta nueva», F5; gancho desde FX6) y `sting_league_debut` (con `sfx_confetti`, en el estreno de la Liga del río; 1.1);
   - suenan a −8 dB de su pico, hacia −24 dBFS, por debajo del efecto al que acompañan [P];
   - van con el ajuste Música [P];
   - si suena la toada, esperan a que termine: la llegada a la parada nunca se solapa con ella.
@@ -374,8 +389,10 @@ Las columnas «Tu propuesta» de las secciones 1-7 siguen siendo el encargo para
 | `sfx_mech_card` | −20 | sin cola añadida | Tarjeta previa |
 | `sfx_morpho_idle` | −28 | sin cola añadida | En cada pulso de la pista por inactividad sobre el origen (MO3, ola 6) |
 | `sfx_store_open` | −19 | sin cola añadida | Al abrirse la hoja de compra |
+| `sfx_mech_aguape` | −20 | sin cola añadida | Paso «se suelta» del Aguapé (Loosen), con su clip de la 1.1. Antes, prestado de `sfx_mech_remolino`; sin clip, suena con su receta |
+| `sfx_mech_lancha` | −19 | sin cola añadida | Paso «atraca» de la Lancha (Dock), con su clip de la 1.1. Antes, prestado de `sfx_capi_paddle`; sin clip, suena con su receta |
 
-**Ganchos de los remates (AU3):** junto a `sfx_world_banner` (`sting_world_banner`), `sfx_fact` (`sting_arrival`), `sfx_mech_card` en la tarjeta previa de un estreno (`sting_mech_card`; no en las que solo anuncian la dificultad), en la transición a Nivel fallido (`sting_level_failed`; no al reanudar con la pantalla abierta) y junto a `sfx_fruit_new` en la tarjeta «Fruta nueva» (`sting_fruit_new`; desde FX6). Si la toada de la victoria suena, el remate espera al final exacto de su clip: el WAV `sfx_win_toada` dura 2,55 s y el del respaldo por código, unos 2,27 s (tarea FX7; antes esperaba 2,25 s fijos y empezaba 0,17-0,31 s antes del final del WAV). Lo mismo dura la atenuación del lecho por la toada.
+**Ganchos de los remates (AU3):** junto a `sfx_world_banner` (`sting_world_banner`), `sfx_fact` (`sting_arrival`), `sfx_mech_card` en la tarjeta previa de un estreno (`sting_mech_card`; no en las que solo anuncian la dificultad), en la transición a Nivel fallido (`sting_level_failed`; no al reanudar con la pantalla abierta) junto a `sfx_fruit_new` en la tarjeta «Fruta nueva» (`sting_fruit_new`; desde FX6) y junto a `sfx_confetti` en el estreno de la Liga del río (`sting_league_debut`; 1.1). Si la toada de la victoria suena, el remate espera al final exacto de su clip: el WAV `sfx_win_toada` dura 2,55 s y el del respaldo por código, unos 2,27 s (tarea FX7; antes esperaba 2,25 s fijos y empezaba 0,17-0,31 s antes del final del WAV). Lo mismo dura la atenuación del lecho por la toada.
 
 ### Peso del audio (AU3, 2026-10-17)
 

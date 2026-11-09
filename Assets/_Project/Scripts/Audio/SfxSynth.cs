@@ -4,8 +4,9 @@ using System;
 namespace AF.Audio
 {
     /// <summary>
-    /// Síntesis «en crudo» de cada uno de los 61 efectos, portada 1:1 del laboratorio (<c>synthesizeSfx</c>, sección 4 de
-    /// <c>docs/audio/laboratorio-sonidos.html</c>): las mismas primitivas (<see cref="Dsp"/>), tiempos, frecuencias, amplitudes y
+    /// Síntesis «en crudo» de cada uno de los 63 efectos, portada 1:1 del laboratorio (<c>synthesizeSfx</c>, sección 4 de
+    /// <c>docs/audio/laboratorio-sonidos.html</c>; los 2 de la 1.1, el Aguapé y la Lancha, que el laboratorio no tiene, reutilizan
+    /// la receta del Remolino y la del remo de Capi): las mismas primitivas (<see cref="Dsp"/>), tiempos, frecuencias, amplitudes y
     /// semillas. Lo único que cambia está fuera, en <see cref="SfxMaster"/> (los arreglos de la revisión del 2026-10-16: sin el
     /// <c>tanh</c> global, cada efecto a su pico, graves al 50 % por encima de 300 Hz y la cola de dosel solo donde va) y en
     /// <see cref="PourLoopSynth"/> (el bucle continuo del chorro). Determinista; se llama al construir los clips, en un hilo de
@@ -186,6 +187,7 @@ namespace AF.Audio
                     break;
 
                 case SfxId.CapiPaddle:
+                case SfxId.MechLancha: // 1.1: sin clip, la Lancha suena con el remo de Capi, el que tomaba prestado
                     buf = Dsp.Buffer(0.85);
                     Dsp.LeafRustle(buf, 0.02, 0.08, 0.35, 1400, 1.5);
                     Dsp.LeafRustle(buf, 0.14, 0.08, 0.38, 1550, 1.5);
@@ -393,6 +395,7 @@ namespace AF.Audio
                     break;
 
                 case SfxId.MechRemolino:
+                case SfxId.MechAguape: // 1.1: sin clip, el Aguapé suena con el Remolino, el que tomaba prestado
                     buf = Dsp.Buffer(0.52);
                     Dsp.Bubble(buf, 0.01, 520, 0.10, 0.40, 0.62);
                     Dsp.Bubble(buf, 0.08, 340, 0.10, 0.42, 0.68);

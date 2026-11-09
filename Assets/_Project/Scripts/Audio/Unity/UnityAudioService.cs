@@ -92,7 +92,7 @@ namespace AF.Audio.Unity
         /// <summary>El registro de clips grabados en uso (null: solo el audio por código).</summary>
         public AudioClipRegistry? Clips => _registry;
 
-        /// <summary>Los 61 efectos y las 28 notas de fruta tienen clip grabado.</summary>
+        /// <summary>Los 63 efectos y las 28 notas de fruta tienen clip grabado.</summary>
         public bool EffectsRecorded => _sfxRecorded;
 
         /// <summary>Lo que costó crear los clips del respaldo en el hilo principal (ms).</summary>

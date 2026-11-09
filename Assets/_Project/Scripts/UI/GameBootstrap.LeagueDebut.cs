@@ -159,9 +159,10 @@ namespace AF.UI
             SaveLeagueMarks(profile);
             _leagueDebutSource = source;
             view.Open(ReduceMotionNow);
-            AF.Audio.AudioCues.Play(AF.Audio.SfxId.StreakUp); // la fanfarria con los efectos del proyecto (sin audio nuevo)
+            // La fanfarria de la 1.1 (docs/audio/encargo-fanfarria-liga.md §3): su remate, con el ajuste Música, y el confeti, con
+            // el ajuste Sonido, para que quien tiene la música apagada oiga algo.
             AF.Audio.AudioCues.Play(AF.Audio.SfxId.Confetti);
-            AF.Audio.AudioCues.Stinger(AF.Audio.StingerId.Arrival); // su remate (con Música)
+            AF.Audio.AudioCues.Stinger(AF.Audio.StingerId.LeagueDebut);
             _a11y?.Announce(LeagueText.DebutTitle);
             _a11y?.Invalidate();
             if (DevProbe.Enabled)
