@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using AF.Analytics;
 using AF.Economy;
 using AF.LiveOps;
 using AF.Localization;
@@ -42,6 +43,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap.ResetAvatarOverrides();
             GameBootstrap.ResetLogbookOverrides();
             GameBootstrap.LogbookOverride = null;
+            GameBootstrap.ResetTelemetryOverrides();
             GameScreen.SimulatedScreen = null;
             GameScreen.SimulatedPxPerDp = null;
             LaunchOptions.Reset();
@@ -94,6 +96,8 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator A10ProfileWithFrames_WearsTheHighest_ShowsTheDot_AndTheScreenPutsAndTakesThemOff()
         {
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
             yield return Lobby(ProfileAt(57, "frame_w02", "frame_w01"));
             GameBootstrap boot = GameBootstrap.Current!;
             LobbyScreen lobby = boot.Lobby!;
@@ -121,6 +125,13 @@ namespace AF.Tests.PlayMode
             Assert.That(screen.FrameCellChosen("frame_w01"), Is.True);
             Assert.That(screen.PortraitSprite!.name, Does.Contain("frame_w01"), "la cabecera cambia en el acto");
             Assert.That(screen.Animating, Is.True, "el rebote del retrato");
+            AnalyticsEvent picked = sink.Last("af_avatar_frame_select")!;
+            Assert.That(picked, Is.Not.Null, "08 §8.2: af_avatar_frame_select al elegirlo en «Tu avatar» («Medir ya»)");
+            Assert.That(picked.Find("frame")!.Value.Text, Is.EqualTo("frame_w01"));
+            Assert.That(picked.Find("auto")!.Value.Bool, Is.False, "lo eligió el jugador");
+            int selects = Count(sink, "af_avatar_frame_select");
+            Assert.That(boot.ChooseAvatarFrame("frame_w01"), Is.EqualTo(AvatarFrameSelectResult.AlreadyChosen));
+            Assert.That(Count(sink, "af_avatar_frame_select"), Is.EqualTo(selects), "el que ya llevaba: sin evento");
 
             Assert.That(boot.ChooseAvatarFrame(null), Is.EqualTo(AvatarFrameSelectResult.Selected));
             Assert.That(boot.Profile.Avatar.Frame, Is.Null);
@@ -128,6 +139,8 @@ namespace AF.Tests.PlayMode
             Assert.That(screen.FrameCellChosen(AvatarScreen.FrameNoneId), Is.True);
             Assert.That(screen.FrameCellA11y(AvatarScreen.FrameNoneId), Is.EqualTo("Sin marco, elegido"));
             Assert.That(screen.PortraitSprite!.name, Does.Not.Contain("frame_w"), "sin marco: el aro de madera");
+            Assert.That(sink.Last("af_avatar_frame_select")!.Find("frame")!.Value.Text, Is.EqualTo(AnalyticsCatalog.AvatarFrameNone), "«Sin marco» = none [P]");
+            Assert.That(sink.Last("af_avatar_frame_select")!.Find("auto")!.Value.Bool, Is.False);
             Assert.That(boot.ChooseAvatarFrame("frame_w07"), Is.EqualTo(AvatarFrameSelectResult.NotOwned));
 
             Assert.That(boot.PressAndroidBack(), Is.True);
@@ -139,6 +152,8 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Day30OfTheLogbook_PutsTheFrameOn_ShowsIt_AndLeadsToYourAvatar()
         {
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
             GameBootstrap.LogbookOverride = true;
             Profile profile = ProfileAt(57);
             profile.Calendar = new CalendarData { Cycle = 1, NextDay = 30, PlayedDate = _clock.LocalDateKey() };
@@ -161,6 +176,11 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Profile.Avatar.Frame, Is.EqualTo("frame_w03"), "se pone solo (como la skin ganada, Q-M8)");
             Profile onDisk = ProfileJson.Deserialize(store.Json!);
             Assert.That(onDisk.Avatar.Frame, Is.EqualTo("frame_w03"), "en la misma escritura que el cobro");
+            AnalyticsEvent earned = sink.Last("af_avatar_frame_select")!;
+            Assert.That(earned, Is.Not.Null, "08 §8.2: af_avatar_frame_select al ponerse solo («Medir ya»)");
+            Assert.That(earned.Find("frame")!.Value.Text, Is.EqualTo("frame_w03"));
+            Assert.That(earned.Find("auto")!.Value.Bool, Is.True, "se puso solo al ganarlo en la Bitácora");
+            Assert.That(Count(sink, "af_avatar_open"), Is.EqualTo(0));
             Assert.That(screen.FrameRevealShown, Is.True);
             Assert.That(screen.FrameRevealText, Is.EqualTo("Marco de Manaos: ya lo lleva tu avatar"));
             Assert.That(screen.FrameRevealPortrait!.name, Does.Contain("frame_w03"));
@@ -173,6 +193,62 @@ namespace AF.Tests.PlayMode
             Assert.That(screen.Visible, Is.False, "«Ver tu avatar» cierra la libreta");
             Assert.That(boot.AvatarScreenOpen, Is.True);
             Assert.That(boot.AvatarView!.FrameCellChosen("frame_w03"), Is.True);
+            Assert.That(Count(sink, "af_avatar_open"), Is.EqualTo(1));
+            Assert.That(sink.Last("af_avatar_open")!.Find("source")!.Value.Text, Is.EqualTo("logbook"), "«Ver tu avatar»: source = logbook");
+        }
+
+        [UnityTest]
+        public IEnumerator Day30_WithTheContentFinished_GivesTheFrameOfTheLastWorldWithLevels()
+        {
+            // Pregunta 4 del añadido de Q-M6 («Limitar al mundo 9»): con max_level en el último nivel publicado (700), el marco es el
+            // del mundo 9 (Ucayali) y no el del 10, el del 701, que no tiene niveles.
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
+            GameBootstrap.LogbookOverride = true;
+            Profile profile = ProfileAt(700);
+            profile.Calendar = new CalendarData { Cycle = 1, NextDay = 30, PlayedDate = _clock.LocalDateKey() };
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            boot.GetComponent<AvatarRunner>().enabled = false;
+            Assert.That(boot.App!.Catalog.LastLevel, Is.EqualTo(700), "el contenido de hoy acaba en el 700");
+            LogbookScreen screen = boot.LogbookScreen!;
+            if (!screen.Visible)
+            {
+                Assert.That(boot.OpenLogbook(LogbookOpenSource.Card), Is.True);
+            }
+
+            Assert.That(screen.PressToday(), Is.True);
+            screen.CardButton(LoginCalendarChoice.Seeds).onClick.Invoke();
+            Assert.That(boot.Profile!.Entitlements.Frames, Is.EqualTo(new[] { "frame_w09" }), "el del último mundo con niveles");
+            Assert.That(boot.Profile.Avatar.Frame, Is.EqualTo("frame_w09"));
+            Assert.That(screen.FrameRevealText, Is.EqualTo("Marco de Ucayali: ya lo lleva tu avatar"));
+            Assert.That(sink.Last("af_avatar_frame_select")!.Find("frame")!.Value.Text, Is.EqualTo("frame_w09"));
+        }
+
+        [Test]
+        public void TheLogbookWorld_IsThatOfTheNextLevel_UpToTheLastPublished()
+        {
+            Assert.That(GameBootstrap.LogbookWorld(57, 700), Is.EqualTo(3), "el 58: Manaos");
+            Assert.That(GameBootstrap.LogbookWorld(300, 700), Is.EqualTo(7), "el 301: su mundo, por debajo del último");
+            Assert.That(GameBootstrap.LogbookWorld(699, 700), Is.EqualTo(9));
+            Assert.That(GameBootstrap.LogbookWorld(700, 700), Is.EqualTo(9), "contenido acabado: el 9, no el 10 del 701");
+            Assert.That(GameBootstrap.LogbookWorld(800, 1000), Is.EqualTo(10), "con niveles del mundo 10, vuelve a ser el suyo");
+            Assert.That(GameBootstrap.LogbookWorld(700, 0), Is.EqualTo(10), "sin catálogo: el del nivel siguiente, como antes");
+            Assert.That(GameBootstrap.LogbookWorld(0, 700), Is.EqualTo(1));
+        }
+
+        private static int Count(FakeAnalyticsSink sink, string name)
+        {
+            int n = 0;
+            foreach (AnalyticsEvent e in sink.Events)
+            {
+                if (e.Name == name)
+                {
+                    n++;
+                }
+            }
+
+            return n;
         }
 
         [UnityTest]

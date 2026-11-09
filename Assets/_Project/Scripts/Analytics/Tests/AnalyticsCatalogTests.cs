@@ -120,6 +120,16 @@ namespace AF.Analytics.Tests
             Assert.That(AnalyticsCatalog.Find("af_push_prompt")!.Allows("origin"), Is.True);
         }
 
+        [Test]
+        public void TheAvatarFrameEvents_AreThoseOf08_2() // Q-M6 de D-033, añadido del 2026-11-08 («Medir ya»)
+        {
+            Dictionary<string, string> rows = Rows(Section(Chapter("08-arquitectura-tecnica-publicacion.md"), "### 8.2 Tabla de eventos", "\n## 9. "));
+            Assert.That(ValuesOf(rows["af_avatar_open"], "source"), Is.EqualTo(AnalyticsCatalog.AvatarOpenSources));
+            Assert.That(AnalyticsCatalog.AvatarOpenSources, Does.Contain("logbook"));
+            AssertParams("af_avatar_frame_select", "frame", "auto");
+            StringAssert.Contains("`" + AnalyticsCatalog.AvatarFrameNone + "`", rows["af_avatar_frame_select"], "el valor de «Sin marco»");
+        }
+
         // Los valores de «`param ∈ {a, b, c}`» de una celda.
         private static List<string> ValuesOf(string cell, string param)
         {
