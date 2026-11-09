@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using AF.Analytics;
 using AF.Audio;
 using AF.LiveOps;
 using AF.Platform;
@@ -24,7 +25,10 @@ namespace AF.UI
     /// enlace «Ver tu avatar» (<see cref="OnLogbookFrameEarned"/> y <see cref="ShowLogbookFrameReveal"/>);</item>
     /// <item>el punto «nuevo» del retrato del inicio, con un marco sin ver.</item>
     /// </list>
-    /// Sin analítica nueva: el catálogo de 08 §8 no tiene un evento para el marco (pregunta al dueño en el añadido de Q-M6).
+    /// Analítica (08 §8.2; pregunta 2 del añadido de Q-M6, «Medir ya»): <c>af_avatar_frame_select</c> con <c>auto</c> true al ganarlo en la
+    /// Bitácora y false al elegirlo en «Tu avatar» (<see cref="LogAvatarFrameSelect"/>), y <c>af_avatar_open</c> con <c>source</c> =
+    /// <c>logbook</c> desde «Ver tu avatar». Como todos los eventos del catálogo, pasan por <c>AnalyticsService</c>: sin consentimiento
+    /// (ni, en la banda &lt;13, sin el SDK) no salen a Firebase.
     /// </summary>
     public sealed partial class GameBootstrap
     {
@@ -197,6 +201,7 @@ namespace AF.UI
 
             if (result == AvatarFrameSelectResult.Selected)
             {
+                LogAvatarFrameSelect(frameId, auto: false);
                 AudioCues.Play(SfxId.UiTap);
                 _avatarScreen?.FrameChosen();
                 AvatarProbe("frame");
@@ -217,7 +222,19 @@ namespace AF.UI
                 return;
             }
 
-            _avatarFrames.PutOnEarned(claim.FrameId);
+            if (_avatarFrames.PutOnEarned(claim.FrameId))
+            {
+                LogAvatarFrameSelect(claim.FrameId, auto: true);
+            }
+        }
+
+        /// <summary>
+        /// <c>af_avatar_frame_select</c> (08 §8.2; Q-M6, añadido del 2026-11-08, «Medir ya»): <c>frame</c> = el id del marco o
+        /// <see cref="AnalyticsCatalog.AvatarFrameNone"/> con «Sin marco» [P]; <c>auto</c> = se puso solo al ganarlo en la Bitácora.
+        /// </summary>
+        private void LogAvatarFrameSelect(string? frameId, bool auto)
+        {
+            _analytics?.Log(AnalyticsEvent.Create("af_avatar_frame_select").Add("frame", frameId ?? AnalyticsCatalog.AvatarFrameNone).Add("auto", auto));
         }
 
         /// <summary>
@@ -251,29 +268,12 @@ namespace AF.UI
             AvatarProbe("frame_earned");
         }
 
-        // «Ver tu avatar» de la libreta: la cierra (con lo que tuviera pendiente detrás) y abre «Tu avatar». Sin af_avatar_open: su
-        // source no tiene «logbook» en 08 §8.2 (pregunta al dueño).
+        // «Ver tu avatar» de la libreta: la cierra (con lo que tuviera pendiente detrás) y abre «Tu avatar», con af_avatar_open y
+        // source = logbook (08 §8.2; pregunta 2 del añadido de Q-M6, «Medir ya»).
         private void OpenAvatarFromLogbook()
         {
             OnLogbookClose();
-            AvatarService? avatars = _avatars;
-            AvatarScreen? screen = _avatarScreen;
-            if (avatars == null || screen == null || screen.Visible || !AvatarsShownInHome || AccountDeleted)
-            {
-                return;
-            }
-
-            Sprite? portrait = AvatarPortraitNow();
-            if (portrait == null)
-            {
-                return;
-            }
-
-            screen.ReduceMotion = ReduceMotionNow;
-            PrepareAvatarScreenFrames(screen);
-            screen.Open(avatars, portrait, AvatarAtlasForUi(), LeagueEnabledForAvatars, _profile?.Progress.MaxLevel ?? 0, AvatarLeagueNow());
-            AvatarProbe("open");
-            _skipNextDelta = true;
+            OpenAvatarScreen(AvatarOpenSourceLogbook);
         }
 
         // El icono del marco en las filas de premio de la libreta (22 dp).

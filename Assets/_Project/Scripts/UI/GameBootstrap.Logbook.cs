@@ -554,11 +554,30 @@ namespace AF.UI
             return LoginCalendarUnlocks.AtLevel(maxLevel, boosters.HintUnlockLevel, LogbookRevealUnlockLevel, boosters.ExtraCuiaUnlockLevel);
         }
 
-        // El mundo donde está el jugador (06 §4.2, regla 4): el del nivel que va a jugar.
-        private static int LogbookWorld(int maxLevel)
+        // El mundo donde está el jugador (06 §4.2, regla 4), con el último nivel publicado del catálogo.
+        private int LogbookWorld(int maxLevel)
         {
-            int level = Mathf.Clamp(maxLevel + 1, 1, WorldTable.LastLevel);
-            return WorldTable.WorldOf(level);
+            LevelCatalog? catalog = _app?.Catalog;
+            return LogbookWorld(maxLevel, catalog != null && catalog.Count > 0 ? catalog.LastLevel : 0);
+        }
+
+        /// <summary>
+        /// El mundo de la Bitácora (06 §4.2, regla 4: el marco de la casilla 30 es el del mundo en que está el jugador): el del nivel que
+        /// va a jugar, sin pasar del último publicado (<paramref name="lastPublished"/>; 0 = sin catálogo). Con el contenido acabado
+        /// (<c>max_level</c> = 700), el del 700 (Ucayali, el 9) y no el del 701 (el 10, sin niveles): pregunta 4 del añadido de Q-M6 de
+        /// D-033 del 2026-11-08, «Limitar al mundo 9». Sale del catálogo, como el «Jugar» del inicio y del Mapa (observación 18 de la
+        /// jornada 6): con niveles del mundo 10 vuelve a ser el suyo sin tocar nada. Solo lo usa el marco de país (la Canasta grande
+        /// sale de <c>max_level</c>).
+        /// </summary>
+        internal static int LogbookWorld(int maxLevel, int lastPublished)
+        {
+            int level = maxLevel + 1;
+            if (lastPublished >= 1 && level > lastPublished)
+            {
+                level = lastPublished;
+            }
+
+            return WorldTable.WorldOf(Mathf.Clamp(level, 1, WorldTable.LastLevel));
         }
 
         // La de la Bitácora va en la fila de las tarjetas del día del muelle (D-050, punto 6), tras la del Reto: PlaceDayCards.

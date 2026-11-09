@@ -310,9 +310,10 @@ La elección es una preferencia, así que gana la más reciente y no la del blob
 
 | Evento | Parámetros | Cuándo |
 |---|---|---|
-| `af_avatar_open` | `source ∈ {home, settings, league}` | Se abre el perfil |
+| `af_avatar_open` | `source ∈ {home, settings, league, logbook}` (`logbook`: «Ver tu avatar» de la libreta de la Bitácora; añadido de Q-M6 de D-033 del 2026-11-08) | Se abre el perfil |
 | `af_avatar_select` | `avatar` (id), `free` (bool), `first` (bool: la primera elección del jugador) | Elige un avatar distinto del que tenía |
 | `af_avatar_unlock` | `avatar` (id), `milestone ∈ {hard_win, very_hard_win, world_3, world_4, world_5, world_6, streak_10, daily_streak_7, daily_stamps_20, league_50}`, `retro` (bool: desbloqueado al cargar un perfil anterior) | Se desbloquea un avatar |
+| `af_avatar_frame_select` | `frame` (`frame_wNN`, o `none` con «Sin marco» [P]), `auto` (bool: true si se pone solo al ganarlo en la Bitácora; false si se elige en «Tu avatar») | Se pone un marco de país: al ganarlo en la Bitácora o al elegir en «Tu avatar» uno distinto del que llevaba (1.1; Q-M6 de D-033, añadido del 2026-11-08, «Medir ya») |
 
 - Llevan los 15 comunes y ≤ 3 propios (08 §8.1).
 - El id del avatar no es dato personal: es uno de 16 dibujos del juego.

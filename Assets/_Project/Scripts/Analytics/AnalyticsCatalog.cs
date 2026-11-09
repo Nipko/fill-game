@@ -70,6 +70,18 @@ namespace AF.Analytics
         /// <summary>Valores de <c>origin</c> de <c>af_push_prompt</c> (08 §8.2; B6-Q17): el primer pre-prompt, el segundo o Ajustes.</summary>
         public static readonly IReadOnlyList<string> PushPromptOrigins = new[] { "first", "second", "settings" };
 
+        /// <summary>
+        /// Valores de <c>source</c> de <c>af_avatar_open</c> (08 §8.2, en su orden; D-056): el inicio, Ajustes, la Liga y, con el añadido
+        /// de Q-M6 de D-033 del 2026-11-08, <c>logbook</c> («Ver tu avatar» de la libreta al ganar un marco de país).
+        /// </summary>
+        public static readonly IReadOnlyList<string> AvatarOpenSources = new[] { "home", "settings", "league", "logbook" };
+
+        /// <summary>
+        /// Valor de <c>frame</c> de <c>af_avatar_frame_select</c> con «Sin marco» (08 §8.2 [P]; Q-M6 de D-033, añadido del 2026-11-08).
+        /// Los demás valores son el id del marco (<c>frame_wNN</c>).
+        /// </summary>
+        public const string AvatarFrameNone = "none";
+
         /// <summary>Propiedades de usuario de 08 §8.1, en su orden.</summary>
         public static readonly IReadOnlyList<string> UserProperties = new[]
         {
@@ -140,6 +152,7 @@ namespace AF.Analytics
             E("af_avatar_open", "source"), // D-056: avatares del jugador
             E("af_avatar_select", "avatar", "free", "first"),
             E("af_avatar_unlock", "avatar", "milestone", "retro"),
+            E("af_avatar_frame_select", "frame", "auto"), // Q-M6 de D-033, añadido del 2026-11-08 («Medir ya»)
             E("af_world_enter", "world", "days_since_install", "pack_ready"),
             E("af_ad_request", "placement", "format", "result", "ms", "network"),
             E("af_ad_shown", "placement", "format", "gap_since_last_s", "levels_since_last", "session_count", "day_count"),

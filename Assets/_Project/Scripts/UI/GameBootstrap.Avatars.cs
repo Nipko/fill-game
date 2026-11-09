@@ -430,7 +430,14 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Abre «Tu avatar» desde <paramref name="source"/> (<c>home</c>, <c>settings</c> o <c>league</c>), con <c>af_avatar_open</c>.
+        /// <c>source</c> de <c>af_avatar_open</c> desde «Ver tu avatar» de la libreta de la Bitácora (08 §8.2; añadido de Q-M6 de D-033
+        /// del 2026-11-08).
+        /// </summary>
+        internal const string AvatarOpenSourceLogbook = "logbook";
+
+        /// <summary>
+        /// Abre «Tu avatar» desde <paramref name="source"/> (<c>home</c>, <c>settings</c>, <c>league</c> o <c>logbook</c>, el de
+        /// <see cref="AnalyticsCatalog.AvatarOpenSources"/>), con <c>af_avatar_open</c>.
         /// False si los avatares están apagados, si ya está abierta o (desde el inicio y Ajustes) antes del 10.
         /// </summary>
         public bool OpenAvatarScreen(string source)
