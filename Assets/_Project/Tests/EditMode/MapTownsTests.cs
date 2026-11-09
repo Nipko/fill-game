@@ -189,6 +189,28 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void CityHeroes_AreTheFourUrbanLandmarks_AndNoLandscapeHero()
+        {
+            // Añadido de D-069 del 2026-11-09 (pregunta 4 de M2-2, «Ya en la 1.1»): la ciudad con hito, solo con un héroe urbano.
+            Assert.That(RiverTowns.CityHeroes, Is.EqualTo(new[] { "bg_hero_iquitos", "bg_hero_leticia", "bg_hero_teatro_amazonas", "bg_hero_ver_o_peso" }));
+            var sorted = new List<string>(RiverTowns.CityHeroes);
+            sorted.Sort(StringComparer.Ordinal);
+            Assert.That(RiverTowns.CityHeroes, Is.EqualTo(sorted), "orden ordinal");
+            foreach (string hero in RiverTowns.CityHeroes)
+            {
+                Assert.That(RiverTowns.IsCityHero(hero), Is.True, hero);
+            }
+
+            foreach (string hero in new[] { "bg_hero_anavilhanas", "bg_hero_lago_tefe", "bg_hero_alter_do_chao", "bg_hero_amacayacu", "bg_hero_pacaya_samiria", "bg_hero_itaya_creciente" })
+            {
+                Assert.That(RiverTowns.IsCityHero(hero), Is.False, hero + ": paisaje, no ciudad");
+            }
+
+            Assert.That(RiverTowns.IsCityHero(null), Is.False);
+            Assert.That(RiverTowns.IsCityHero("BG_HERO_IQUITOS"), Is.False, "ordinal");
+        }
+
+        [Test]
         public void VignetteLod_GrowsWithTheZoom()
         {
             Assert.That(RiverMapScreen.TownWidthDp(RiverMapScreen.WorldZoomMin), Is.EqualTo(RiverMapScreen.TownMinDp));

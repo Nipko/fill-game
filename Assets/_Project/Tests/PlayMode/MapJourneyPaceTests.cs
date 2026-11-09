@@ -470,6 +470,76 @@ namespace AF.Tests.PlayMode
             map.Close();
         }
 
+        [UnityTest]
+        public IEnumerator TheCityWithItsLandmark_IsDrawnAtTheStopsWithACityHero_AndNowhereElse_ClearOfLabelsAndTheCanoe()
+        {
+            // Añadido de D-069 del 2026-11-09 (pregunta 4 de M2-2, «Ya en la 1.1»): la viñeta de ciudad con hito del atlas, junto a
+            // las paradas cuyo héroe es una ciudad (Belém, Manaos, Leticia, Iquitos), una vez por héroe, y en ninguna otra.
+            yield return MapMarkersTests.OpenApp(58);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(map.TownsActive, Is.True);
+            var shownStops = new System.Collections.Generic.HashSet<int>();
+            for (int play = 2; play <= 300; play += 4)
+            {
+                OpenLobby(boot, new MemoryProgressStore(play, play - 1, play - 1), play);
+                Canvas.ForceUpdateCanvases();
+                string at = "jugando el " + play;
+                var expected = new System.Collections.Generic.List<int>();
+                var heroes = new System.Collections.Generic.HashSet<string>();
+                for (int n = 0; n <= 70; n++)
+                {
+                    RiverStop? stop = boot.RiverStops!.At(n);
+                    if (stop != null && map.StopMarkerIndexOf(n) >= 0 && RiverTowns.IsCityHero(stop.Backdrop.Hero) && heroes.Add(stop.Backdrop.Hero!))
+                    {
+                        expected.Add(n);
+                    }
+                }
+
+                var actual = new System.Collections.Generic.List<int>();
+                for (int k = 0; k < map.HeroVignetteCount; k++)
+                {
+                    actual.Add(map.HeroVignetteStop(k));
+                    Assert.That(map.HeroVignette(k).sprite, Is.Not.Null, at + ": la viñeta del atlas");
+                    Assert.That(map.HeroVignette(k).color.a, Is.EqualTo(play - 1 >= map.HeroVignetteStop(k) * 10 ? 1f : RiverMapScreen.TownAheadAlpha).Within(1e-3f),
+                        at + ": en color si se alcanzó, apagada si no");
+                    Rect r = map.HeroVignetteLocalRect(k);
+                    if (r.width <= 0f)
+                    {
+                        continue;
+                    }
+
+                    shownStops.Add(map.HeroVignetteStop(k));
+                    AssertClear(map, r, at + ", ciudad con hito de la parada " + map.HeroVignetteStop(k));
+                    for (int n = 0; n <= 70; n++)
+                    {
+                        Rect label = map.StopLabelLocalRect(n);
+                        Assert.That(label.width > 0f && label.Overlaps(r), Is.False, at + ": la ciudad con hito pisa el rótulo de la parada " + n);
+                    }
+
+                    for (int i = 0; i < map.TownMarkerCount; i++)
+                    {
+                        Rect tl = map.TownLabelLocalRect(i);
+                        Rect tv = map.TownVignetteLocalRect(i);
+                        Assert.That((tl.width > 0f && tl.Overlaps(r)) || (tv.width > 0f && tv.Overlaps(r)), Is.False,
+                            at + ": la ciudad con hito pisa el pueblo «" + map.TownLabelText(i) + "»");
+                    }
+                }
+
+                Assert.That(actual, Is.EqualTo(expected), at + ": solo en las paradas con héroe de ciudad");
+            }
+
+            Debug.Log("AF_MAP d069c: ciudad con hito a la vista en las paradas " + string.Join(", ", shownStops));
+            Assert.That(shownStops, Is.SupersetOf(new[] { 5 }), "se ve al menos en Manaos");
+
+            // Sin los pueblos (ui_map_towns apagada), tampoco la ciudad con hito.
+            map.Close();
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapTowns = false };
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+            Assert.That(map.HeroVignetteCount, Is.EqualTo(0));
+            map.Close();
+        }
+
         internal static void OpenLobby(GameBootstrap boot, IMapProgress progress, int playLevel)
         {
             RiverMapScreen map = boot.RiverMapView!;
@@ -578,10 +648,10 @@ namespace AF.Tests.PlayMode
         public IEnumerator CaptureThePrizeInTheLabel_TheZoomOutOfTheLongLegs_AndTheLandmarkCities_At360dp()
         {
             // Añadido de D-069 del 2026-11-09: el rótulo junto (Leticia tras el 70), el zoom alejado de los tramos largos (292, 442,
-            // 452 y 482), en Logs/snapshots/es-419/d069c_*.png.
+            // 452 y 482) y la ciudad con hito (Manaos jugando el 58 e Iquitos jugando el 145), en Logs/snapshots/es-419/d069c_*.png.
             string dir = SnapshotKit.Prepare();
             GameScreen.SimulatedPxPerDp = 3f;
-            foreach ((int play, string name) in new[] { (72, "rotulo_premio"), (292, "zoom_292"), (442, "zoom_442"), (452, "zoom_452"), (482, "zoom_482") })
+            foreach ((int play, string name) in new[] { (72, "rotulo_premio"), (292, "zoom_292"), (442, "zoom_442"), (452, "zoom_452"), (482, "zoom_482"), (58, "ciudad_hito_manaos_058"), (145, "ciudad_hito_iquitos_145") })
             {
                 Profile profile = AF.Economy.Wallet.NewProfile(new ManualClock(T0));
                 profile.Progress.NextLevel = play;
@@ -600,7 +670,7 @@ namespace AF.Tests.PlayMode
                 yield return SnapshotKit.Wait(0.2f);
                 SnapshotKit.Save(dir, "d069c_" + name + "_360dp");
                 Debug.Log("AF_MAP d069c " + play + ": zoom " + map.Zoom + ", alejado " + map.RemainingZoomedOut + ", placa " + map.StopRemainingShown
-                    + ", rótulo «" + map.StopLabelText(map.RemainingStopN()).Replace("\n", " / ") + "»");
+                    + ", rótulo «" + map.StopLabelText(map.RemainingStopN()).Replace("\n", " / ") + "», ciudades " + map.HeroVignetteCount);
                 boot.CloseRiverMap();
             }
         }

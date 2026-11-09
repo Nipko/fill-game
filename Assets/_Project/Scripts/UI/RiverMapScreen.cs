@@ -1410,6 +1410,7 @@ namespace AF.UI
             SetOffset(offset);
             PlatesFitView(); // FX10: las placas de los mundos futuros, enteras a la vista con este encuadre
             RemainingLabelFitView(); // añadido de D-069 del 2026-11-08: el rótulo con «Faltan N», entero a la vista (RiverMapScreen.Towns.cs)
+            HeroesAfterFrame(); // añadido de D-069 del 2026-11-09: la ciudad con hito, nunca debajo de una placa
             if (!(_remainingOffView || RemainingLabelHidden()) || view != MapView.World || pass >= RemainingZoomPasses)
             {
                 return;

@@ -115,6 +115,41 @@ namespace AF.Levels
         }
 
         /// <summary>
+        /// Héroes del fondo (<c>bg.hero</c> de <c>af-river-stops/2</c>) que son una ciudad con un hito construido y llevan en el Mapa v2
+        /// la viñeta de ciudad con hito (<see cref="RiverTownVignette.Landmark"/>) [P] (añadido de D-069 del 2026-11-09, pregunta 4
+        /// de M2-2, «Ya en la 1.1»): Ver-o-Peso (Belém), el Teatro Amazonas (Manaos) y los malecones de Leticia y de Iquitos, los
+        /// cuatro hitos urbanos de los 8 «que se reconocen por un hito propio» (propuesta del Mapa §7) y de las ciudades del brief de
+        /// la propuesta del Mapa v2 §7.4. Los demás héroes son paisaje (islas, lagos, bosque, la playa de Alter do Chão): una
+        /// ciudad allí no sería verdad. Orden ordinal.
+        /// </summary>
+        public static readonly string[] CityHeroes =
+        {
+            "bg_hero_iquitos",
+            "bg_hero_leticia",
+            "bg_hero_teatro_amazonas",
+            "bg_hero_ver_o_peso",
+        };
+
+        /// <summary>El héroe <paramref name="hero"/> es una ciudad con hito (<see cref="CityHeroes"/>).</summary>
+        public static bool IsCityHero(string? hero)
+        {
+            if (hero == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < CityHeroes.Length; i++)
+            {
+                if (string.Equals(CityHeroes[i], hero, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Rótulo de una parada (propuesta §9.5): solo la última alcanzada (<c>max / 10</c>) y la siguiente.
         /// </summary>
         public static bool StopLabelShown(int stop, int maxLevel)

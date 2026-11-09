@@ -68,6 +68,7 @@ Abre el Mapa con cada `af_max_level` y haz una captura:
 | 64 | Lo contrario: Tefé con «faltan 6 niveles» en su rótulo y la píldora «Premio del mundo · faltan 16» aparte (Tefé cierra la cuenca del mundo 3, pero el premio llega con el 80, en Leticia) |
 | 32 y 132 | El rótulo junto también en el Encuentro de las Aguas («Premio del mundo · faltan 8») y en Iquitos |
 | 96 | Amacayacu, entero |
+| 57, 79, 140 | **La ciudad con hito** (pregunta 4 de M2-2, «Ya en la 1.1»): la viñeta de la cúpula entre torres junto a Manaos, Leticia e Iquitos (y Belém, al arrastrar hasta el estuario), en color si ya llegaste y apagada si no; nunca en Anavilhanas, Tefé ni las demás paradas de paisaje, y sin pisar rótulos, la canoa, la tripulación ni las placas. ¿Se reconoce como ciudad? ¿Molesta junto a los pueblos? |
 
 - **El tramo recorrido** es un tinte del agua con las puntas difuminadas. ¿Ya no se ve raro? ¿Queda algún bloque oscuro de borde recto? En Manaos, el agente avisó de que se ve un degradado, pero no desaparece del todo: mírala.
 - **La píldora «Premio del mundo · faltan N»** no pisa «Andes ↑», ni la canoa, ni los pueblos.

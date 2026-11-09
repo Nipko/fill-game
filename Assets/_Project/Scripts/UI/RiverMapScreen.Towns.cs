@@ -238,6 +238,11 @@ namespace AF.UI
                 _townMarkers[i].Vignette.sprite = null;
             }
 
+            for (int k = 0; k < _heroVignettes.Count; k++)
+            {
+                _heroVignettes[k].sprite = null;
+            }
+
             _townArt.Release();
         }
 
@@ -345,7 +350,201 @@ namespace AF.UI
                 _townMarkers[i].Root.gameObject.SetActive(false);
             }
 
+            HeroesBuild(max);
             BuildStopLabels(max);
+        }
+
+        // ============================================================================================ la ciudad con hito
+
+        // Añadido de D-069 del 2026-11-09 (pregunta 4 de M2-2, «Ya en la 1.1»): la viñeta de ciudad con hito del atlas de los
+        // pueblos, junto a la mini cuia de cada parada con un héroe de ciudad (RiverTowns.CityHeroes), una vez por héroe (Leticia y
+        // «Leticia al atardecer» comparten el malecón). Como los pueblos: a la medida del zoom, en una orilla, sin pisar mini cuias,
+        // rótulos, pueblos, la canoa ni su tripulación; en color si ya se alcanzó la parada y apagada si no. Sin toque ni rótulo
+        // propios: la nombra el rótulo de su parada y la abre su mini cuia.
+        private readonly List<Image> _heroVignettes = new List<Image>();
+        private readonly List<int> _heroMarker = new List<int>();
+        private int _heroCount;
+
+        /// <summary>Viñetas de ciudad con hito de esta apertura (las paradas con héroe de ciudad dibujadas; tests).</summary>
+        internal int HeroVignetteCount => _towns ? _heroCount : 0;
+
+        /// <summary>La parada (n) de la viñeta de ciudad con hito <paramref name="k"/>.</summary>
+        internal int HeroVignetteStop(int k)
+        {
+            return _markers[_heroMarker[k]].N;
+        }
+
+        /// <summary>La viñeta de ciudad con hito <paramref name="k"/> se ve (vista Mundo, con sitio libre).</summary>
+        internal bool HeroVignetteShown(int k)
+        {
+            return k >= 0 && k < HeroVignetteCount && _heroVignettes[k].gameObject.activeInHierarchy;
+        }
+
+        /// <summary>Caja de la viñeta de ciudad con hito <paramref name="k"/> en coordenadas locales del contenido; vacía si no sale.</summary>
+        internal Rect HeroVignetteLocalRect(int k)
+        {
+            if (!HeroVignetteShown(k))
+            {
+                return default;
+            }
+
+            RectTransform rt = _heroVignettes[k].rectTransform;
+            Vector2 c = rt.anchoredPosition;
+            Vector2 sz = rt.sizeDelta;
+            return new Rect(c.x - (sz.x * 0.5f), c.y - (sz.y * 0.5f), sz.x, sz.y);
+        }
+
+        /// <summary>La viñeta de ciudad con hito <paramref name="k"/> (tests: su sprite y su color).</summary>
+        internal Image HeroVignette(int k)
+        {
+            return _heroVignettes[k];
+        }
+
+        private void HeroesBuild(int max)
+        {
+            _heroCount = 0;
+            for (int i = 0; i < _markerCount; i++)
+            {
+                StopMarker m = _markers[i];
+                string? hero = m.Stop.Backdrop.Hero;
+                if (!RiverTowns.IsCityHero(hero) || HeroSeen(hero!))
+                {
+                    continue;
+                }
+
+                while (_heroVignettes.Count <= _heroCount)
+                {
+                    Image image = UiBuilder.Image("Hero_" + _heroVignettes.Count, _townLayer!, null, Color.white);
+                    image.raycastTarget = false; // la toca su mini cuia
+                    image.preserveAspect = true;
+                    RectTransform rt = image.rectTransform;
+                    rt.anchorMin = new Vector2(0f, 1f);
+                    rt.anchorMax = new Vector2(0f, 1f);
+                    rt.pivot = new Vector2(0.5f, 0.5f);
+                    _heroVignettes.Add(image);
+                    _heroMarker.Add(-1);
+                }
+
+                Image v = _heroVignettes[_heroCount];
+                _heroMarker[_heroCount] = i;
+                v.sprite = _townArt.Piece(RiverTownVignette.Landmark, VariantOf(m.Stop.Id));
+                bool reached = max >= m.N * RiverStopCatalog.LevelsPerStop;
+                v.color = reached ? Color.white : new Color(0.80f, 0.86f, 0.84f, TownAheadAlpha);
+                v.gameObject.name = "Hero_" + m.Stop.Id;
+                _heroCount++;
+            }
+
+            for (int k = _heroCount; k < _heroVignettes.Count; k++)
+            {
+                if (_heroVignettes[k].gameObject.activeSelf)
+                {
+                    _heroVignettes[k].gameObject.SetActive(false);
+                }
+            }
+        }
+
+        // La caja r (local) pisa una boya del tramo en curso (van encima de rótulos y viñetas). Sin asignaciones.
+        private bool HitsBuoys(Rect r)
+        {
+            float radius = BuoyRadiusWorldDp + 3f;
+            for (int b = 0; b < _buoyCount; b++)
+            {
+                Vector2 p = _buoyLocal[b];
+                if (r.Overlaps(new Rect(p.x - radius, p.y - radius, 2f * radius, 2f * radius)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Con el encuadre decidido (las placas de los mundos futuros ya encajadas a la vista, PlatesFitView), una ciudad con hito
+        // que quede debajo de una placa no sale.
+        private void HeroesAfterFrame()
+        {
+            for (int k = 0; k < _heroCount; k++)
+            {
+                Image v = _heroVignettes[k];
+                if (v.gameObject.activeSelf && HitsPlate(HeroVignetteBox(k)))
+                {
+                    v.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        private Rect HeroVignetteBox(int k)
+        {
+            RectTransform rt = _heroVignettes[k].rectTransform;
+            Vector2 c = rt.anchoredPosition;
+            Vector2 sz = rt.sizeDelta;
+            return new Rect(c.x - (sz.x * 0.5f), c.y - (sz.y * 0.5f), sz.x, sz.y);
+        }
+
+        private bool HeroSeen(string hero)
+        {
+            for (int k = 0; k < _heroCount; k++)
+            {
+                if (string.Equals(_markers[_heroMarker[k]].Stop.Backdrop.Hero, hero, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // En la vista Mundo, tras las mini cuias y sus rótulos y antes de los pueblos (la ciudad de una parada gana el sitio): en la
+        // orilla de su parada, a un lado y al otro, pegada a la mini cuia y un paso más allá, el primer sitio libre [P]; si ninguno
+        // lo está, sin viñeta.
+        private void HeroesSpace(MapSpace space, float w, float h)
+        {
+            for (int k = 0; k < _heroCount; k++)
+            {
+                Image v = _heroVignettes[k];
+                StopMarker m = _markers[_heroMarker[k]];
+                bool free = false;
+                Vector2 center = default;
+                Rect rect = default;
+                RiverStopRoute? route = _routes != null ? _routes.At(m.N) : null;
+                if (m.Root.gameObject.activeSelf && _map != null && route != null)
+                {
+                    Vector2 c = m.Root.anchoredPosition;
+                    RiverMapPlace at = route.At;
+                    float lineW = MapRibbonWidthDp(_view, _map.Lines[at.Line].Class) * 0.5f;
+                    for (int spot = 0; spot < 4 && !free; spot++)
+                    {
+                        // A lo largo de la normal: fuera del río y de la caja de la mini cuia (24 × 36 dp en _townPlaced), con el
+                        // hueco de los pueblos y media viñeta; el segundo paso, media viñeta más allá.
+                        Vector2 normal = BankNormalAt(_map, at, (spot & 1) == 0 ? 1f : -1f);
+                        float nx = Mathf.Abs(normal.x);
+                        float ny = Mathf.Abs(normal.y);
+                        float half = (nx * w * 0.5f) + (ny * h * 0.5f);
+                        float reach = Mathf.Max(lineW, (nx * 12f) + (ny * 18f)) + TownBankGapDp + half;
+                        center = c + (normal * (reach + ((spot >> 1) * half)));
+                        rect = new Rect(center.x - (w * 0.5f), center.y - (h * 0.5f), w, h);
+                        free = !HitsCrew(rect) && !HitsPlate(rect) && !HitsBuoys(rect);
+                        for (int j = 0; j < _townPlaced.Count && free; j++)
+                        {
+                            free = !_townPlaced[j].Overlaps(rect);
+                        }
+                    }
+                }
+
+                if (v.gameObject.activeSelf != free)
+                {
+                    v.gameObject.SetActive(free);
+                }
+
+                if (!free)
+                {
+                    continue;
+                }
+
+                _townPlaced.Add(rect);
+                v.rectTransform.anchoredPosition = center;
+                v.rectTransform.sizeDelta = new Vector2(w, h);
+            }
         }
 
         private int TownSlotOf(RiverPassingPoint point)
@@ -464,6 +663,8 @@ namespace AF.UI
                 }
             }
 
+            HeroesSpace(space, w, h); // añadido de D-069 del 2026-11-09: la ciudad con hito de las paradas con héroe de ciudad
+
             for (int k = 0; k < _townOrder.Count; k++)
             {
                 TownMarker m = _townMarkers[_townOrder[k]];
@@ -527,10 +728,16 @@ namespace AF.UI
         // Normal del río en el punto del pueblo (local, dp), hacia el lado side (±1).
         private Vector2 BankNormal(RiverMap map, RiverPassingPoint point, float side)
         {
-            RiverLine line = map.Lines[point.At.Line];
+            return BankNormalAt(map, point.At, side);
+        }
+
+        // Normal del río en el sitio at (local, dp), hacia el lado side (±1).
+        private static Vector2 BankNormalAt(RiverMap map, RiverMapPlace at, float side)
+        {
+            RiverLine line = map.Lines[at.Line];
             float eps = Mathf.Max(1e-4f, 0.002f);
-            line.PointAt(Mathf.Clamp01(point.At.S + eps), out float ax, out float ay);
-            line.PointAt(Mathf.Clamp01(point.At.S - eps), out float bx, out float by);
+            line.PointAt(Mathf.Clamp01(at.S + eps), out float ax, out float ay);
+            line.PointAt(Mathf.Clamp01(at.S - eps), out float bx, out float by);
             Vector2 d = MapSpace.DirectionToLocal(new Vector2(ax - bx, ay - by));
             if (d.sqrMagnitude < 1e-12f)
             {
@@ -1202,22 +1409,6 @@ namespace AF.UI
             }
 
             return off;
-        }
-
-        // La caja r (local) pisa una boya del tramo en curso (van encima de rótulos y viñetas). Sin asignaciones.
-        private bool HitsBuoys(Rect r)
-        {
-            float radius = BuoyRadiusWorldDp + 3f;
-            for (int b = 0; b < _buoyCount; b++)
-            {
-                Vector2 p = _buoyLocal[b];
-                if (r.Overlaps(new Rect(p.x - radius, p.y - radius, 2f * radius, 2f * radius)))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private bool StopLabelFree(int self, Rect rect)
