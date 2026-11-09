@@ -1370,10 +1370,13 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                               for fid in rec.get("fuentes") or [] if isinstance(fuentes.get(fid), dict))
             how = ("el nombre de la investigación sin su paréntesis final [P]" if "name" not in entry else
                    f"«{name}», de tools/river-map/overrides.json (towns.places.{pid}.name), en lugar de «{point['nombre']}» [P]")
+            anchored = ("tools/river-map/geometry.py lo ancla a 5 km o menos de su línea." if pid not in geometry.TOWN_ANCHOR_EXCEPTION_KM
+                        else "tools/river-map/geometry.py lo ancla a más de 5 km de su línea, con la excepción medida de "
+                             "TOWN_ANCHOR_EXCEPTION_KM que aceptó el dueño el 2026-11-09 (D-069, M2-2, pregunta 1; como "
+                             "D-028).")
             context = (f"Nombre del {town_where}. Es {how}. Fuente: {SOURCE_REL}, rios.{rec.get('id')}.puntos («"
                        f"{point['nombre']}», conf {point.get('conf')}): el nombre verificado de P4 (a), con las fuentes del "
-                       f"río: {cites}. Candidato de la propuesta del Mapa v2 §4.3; tools/river-map/geometry.py lo ancla a "
-                       f"5 km o menos de su línea. {NO_CAPTURE}")
+                       f"río: {cites}. Candidato de la propuesta del Mapa v2 §4.3; {anchored} {NO_CAPTURE}")
             add(f"map.stop.{pid}.name", name, NAME_MAX_CHARS, context,
                 f"[P] Nombre del pueblo de paso (rio-amazonas.json, rios[].puntos). {pending_gemini}")
         river = entry.get("river")

@@ -99,7 +99,8 @@ cruzan tierra (dos tramos solo se unen en el mismo (line, s) o en una confluenci
 del ramal, y su s sobre el anfitrion; cualquier otro salto cruza tierra), via y mouths existentes; ademas, todas las reglas de
 stops.py (candidatos de la propuesta §5.1 bis incluidos). Las unicas excepciones a las tolerancias son las medidas
 (PENDING_SITE_KM, PENDING_MOUTH_KM y PENDING_CONTROL_KM: la cifra medida, sin margen), excepciones aceptadas por el duenno
-(D-028, pregunta 65, parte 1, (d)): con ellas, el criterio de M5.1 de las dos vistas se cumple. Avisa (sin fallar) de cada
+(D-028, pregunta 65, parte 1, (d)): con ellas, el criterio de M5.1 de las dos vistas se cumple; y, en el anclaje de los
+pueblos de paso, TOWN_ANCHOR_EXCEPTION_KM (Porto Velho; D-069, M2-2, pregunta 1, como D-028). Avisa (sin fallar) de cada
 excepcion en uso, de las lineas que siguen siendo el esbozo de la investigacion (pending_sketches), de las descargas
 ausentes y de los datos de los puntos de paso y de los miradores que aun no tienen texto en facts.csv.
 
@@ -872,6 +873,12 @@ def build_model(source: dict, geo: "Geometry | None" = None, towns: dict | None 
 # P4 (a): un candidato entra si tools/river-map lo ancla a <= 5 km de su linea (y su nombre se verifica: un punto de control
 # de rio-amazonas.json con conf V o E en un rio con fuentes con URL).
 TOWN_ANCHOR_KM = 5.0
+# Excepciones medidas al anclaje (como las de D-028: la cifra medida, redondeada hacia arriba a 0,1 km y sin margen). Solo
+# Porto Velho, la ciudad grande del Madeira (propuesta §4.2 y §4.3): su punto de control queda a 6,53 km del Madeira de
+# HydroRIVERS; el duenno acepto la excepcion medida el 2026-11-09 (D-069, M2-2, pregunta 1: «Excepcion medida», como D-028).
+# Borba (6,6 km) y Costa Marques (6,1 km) siguen fuera. Una excepcion solo vale para un candidato con from; --check falla si
+# su punto se aleja mas y avisa de ella mientras este en uso (y de que sobra si un dia se ancla a <= TOWN_ANCHOR_KM).
+TOWN_ANCHOR_EXCEPTION_KM = {"porto_velho": 6.6}
 TOWN_TIERS = ("town", "city", "mark")
 TOWN_VIGNETTES = ("stilts", "church", "port", "market")
 TOWN_FIELDS = frozenset({"country", "tier", "vignette", "river", "from", "name", "why"})
@@ -974,9 +981,12 @@ def add_towns(model: Model, source: dict, towns: dict) -> list:
             if best is None or d < best[0] - TIE_KM:
                 best = (d, rid, i, t)
         d, rid, i, t = best
-        if d > TOWN_ANCHOR_KM:
-            errors.append(f"towns.places.{pid}: {name!r} se ancla a {d:.1f} km de {rid} (maximo {TOWN_ANCHOR_KM:g} km, P4 "
-                          "(a)): no entra; pasalo a towns.excluded")
+        allowed = TOWN_ANCHOR_EXCEPTION_KM.get(pid, TOWN_ANCHOR_KM)
+        if d > allowed:
+            note = (f"excepcion medida {allowed:g} km; el canon es {TOWN_ANCHOR_KM:g} km" if pid in TOWN_ANCHOR_EXCEPTION_KM
+                    else f"maximo {TOWN_ANCHOR_KM:g} km, P4 (a)")
+            errors.append(f"towns.places.{pid}: {name!r} se ancla a {d:.1f} km de {rid} ({note}): no entra; pasalo a "
+                          "towns.excluded")
             continue
         if any(p["id"] == pid for p in model.passing):
             errors.append(f"towns.places.{pid}: ya es un punto de paso de la investigacion; sobra from")
@@ -1014,6 +1024,10 @@ def add_towns(model: Model, source: dict, towns: dict) -> list:
     for pid in places:
         if pid not in ids:
             errors.append(f"towns.places.{pid}: no es ningun punto de paso del Mapa")
+    for pid in sorted(TOWN_ANCHOR_EXCEPTION_KM):
+        if not isinstance(places.get(pid), dict) or places[pid].get("from") is None:
+            errors.append(f"TOWN_ANCHOR_EXCEPTION_KM: {pid!r} no es ningun candidato con from en towns.places (la excepcion "
+                          "medida solo vale para un pueblo candidato)")
     for pid in excluded:
         if _vetoed(pid.replace("_", " ")) is None and not re.fullmatch(r"[a-z0-9_]+", pid):
             errors.append(f"towns.excluded: {pid!r} no es un id [a-z0-9_]+")
@@ -3524,10 +3538,29 @@ def main(argv: list | None = None) -> int:
     emit(f"OK  {len(doc['lines'])} lineas, {len(doc['passing'])} puntos de paso y {len(doc['viewpoints'])} miradores "
          f"validos y {_rel(args.out)} al dia ({geo.kind}; {size} bytes)")
     emit(f"OK  rutas de {_rel(args.stops)} (at y leg de {len(committed['stops'])} paradas) de acuerdo con el Mapa")
-    for warning in (pending_exceptions(committed, model, records) + pending_controls(model, source)
+    for warning in (pending_exceptions(committed, model, records) + pending_town_anchors(model)
+                    + pending_controls(model, source)
                     + pending_sketches(model) + pending_facts(doc, args.facts)):
         emit(f"AVISO {warning}")
     return 0
+
+
+def pending_town_anchors(model: Model) -> list:
+    """Avisos de las excepciones medidas al anclaje de los pueblos (TOWN_ANCHOR_EXCEPTION_KM; D-069, M2-2, pregunta 1) en
+    uso, y de las que ya sobran (el pueblo se ancla a <= TOWN_ANCHOR_KM)."""
+    out = []
+    for p in model.passing:
+        pid = p["id"]
+        if pid not in TOWN_ANCHOR_EXCEPTION_KM or "anchor_km" not in p:
+            continue
+        d, limit = p["anchor_km"], TOWN_ANCHOR_EXCEPTION_KM[pid]
+        if d > TOWN_ANCHOR_KM:
+            out.append(f"{pid}: se ancla a {d:.1f} km de {p['line']} (canon {TOWN_ANCHOR_KM:g} km; excepcion medida "
+                       f"{limit:g} km, aceptada por el duenno el 2026-11-09: D-069, M2-2, pregunta 1)")
+        else:
+            out.append(f"{pid}: se ancla a {d:.1f} km de {p['line']}; sobra su excepcion de TOWN_ANCHOR_EXCEPTION_KM "
+                       f"({limit:g} km)")
+    return out
 
 
 def pending_controls(model: Model, source: dict) -> list:

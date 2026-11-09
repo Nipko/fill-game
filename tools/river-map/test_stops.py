@@ -952,7 +952,7 @@ class TextBlockTests(unittest.TestCase):
         river_map = json.loads(MAP_PATH.read_text(encoding="utf-8"))
         map_keys = ({f"map.stop.{p['id']}.name" for p in river_map["passing"] + river_map["viewpoints"]}
                     | {f"map.country.{lab['country'].lower()}.name" for lab in river_map["labels"]})
-        self.assertEqual(37, len(map_keys - set(cited)), "30 puntos de paso (M2-2), 3 miradores y 4 paises solo de los "
+        self.assertEqual(38, len(map_keys - set(cited)), "31 puntos de paso (M2-2 y Porto Velho), 3 miradores y 4 paises solo de los "
                          "rotulos")
         # Los datos de los puntos de paso con texto final en la investigacion (M4.5a: el de teotonio).
         passing_facts = {p["fact"] for p in river_map["passing"] if p["fact"] in self.table}
@@ -961,7 +961,7 @@ class TextBlockTests(unittest.TestCase):
         self.assertEqual(128, len(self.source_rows), "68 datos de llegada, map.myth.source y 59 «Otro dato»")
         # M2-2 (D-069): el rio de la ficha de cada pueblo de paso (tier town o city), map.stop.<id>.river.
         town_rivers = {f"map.stop.{p['id']}.river" for p in river_map["passing"] if p["tier"] != "mark"}
-        self.assertEqual(25, len(town_rivers))
+        self.assertEqual(26, len(town_rivers), "25 de M2-2 y Porto Velho")
         self.assertEqual(sorted(set(cited) | map_keys | passing_facts | self.source_rows | town_rivers), sorted(block),
                          "el bloque tiene justo las claves que citan river_stops_v1.json y river_map_v1.json, y las .source")
 
@@ -1484,8 +1484,8 @@ class FactsCheckTests(unittest.TestCase):
     def test_check_passes_on_the_committed_table(self):
         proc = self.check(FACTS_PATH.read_bytes())
         self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
-        self.assertIn(b"473 textos map.* validos", proc.stdout,
-                      "308, las 128 filas .source de DC9 y, desde M2-2, 12 nombres y 25 rios de pueblos")
+        self.assertIn(b"475 textos map.* validos", proc.stdout,
+                      "308, las 128 filas .source de DC9 y, desde M2-2, 13 nombres y 26 rios de pueblos (con Porto Velho)")
 
     def test_edited_row_is_drift(self):
         # Solo en la fila del Mapa: desde F1F2, la linea 14 del Agua del Tapajos (fact.*, antes del bloque) tambien la nombra.

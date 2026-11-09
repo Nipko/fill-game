@@ -759,11 +759,12 @@ class LinesTests(Base):
         self.assertEqual(3, len(self.doc["viewpoints"]))
         self.assertTrue(all(v["reveal_on"] == 10 for v in self.doc["viewpoints"]))
         passing = {p["id"]: p for p in self.doc["passing"]}
-        self.assertEqual(30, len(passing), "17 de 1-200, teotonio (M4.5a) y los 12 pueblos nuevos de M2-2 (D-069, P4 (a))")
+        self.assertEqual(31, len(passing), "17 de 1-200, teotonio (M4.5a), los 12 pueblos nuevos de M2-2 (D-069, P4 (a)) y Porto "
+                                            "Velho (excepcion medida, M2-2, pregunta 1)")
         self.assertEqual("madeira", passing["teotonio"]["line"], "el relevo del guia del viaje del 300 (Q18-A, P-M8)")
         self.assertEqual("map.stop.teotonio.dato_01", passing["teotonio"]["fact"])
         self.assertEqual("teotonio", self.doc["passing"][17]["id"], "despues de los de 1-200")
-        self.assertEqual("guajara_mirim", self.doc["passing"][-1]["id"], "los pueblos nuevos de M2-2, al final")
+        self.assertEqual("porto_velho", self.doc["passing"][-1]["id"], "los pueblos nuevos de M2-2, al final (Porto Velho, el ultimo)")
         self.assertEqual("map.stop.obidos.dato_01", passing["obidos"]["fact"])
         self.assertEqual("para", passing["breves"]["line"])
         # En la union con su anfitrion, el punto va en el anfitrion (M5.1): Gurupa, en el arranque del ramal, y las bocas.
@@ -1115,7 +1116,7 @@ class CheckTests(Base):
         code, out = self.check()
         self.assertEqual(0, code, out)
         self.assertIn("AVISO sin las descargas en", out)
-        self.assertIn("31 lineas, 30 puntos de paso y 3 miradores", out)
+        self.assertIn("31 lineas, 31 puntos de paso y 3 miradores", out)
 
     def test_stop_moved_20_km_fails(self):
         src = copy.deepcopy(self.source)

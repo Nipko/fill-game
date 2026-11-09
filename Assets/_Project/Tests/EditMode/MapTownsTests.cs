@@ -14,7 +14,8 @@ namespace AF.Tests.EditMode
     /// El Mapa del río v2, bloque M2-2 «Pueblos de paso» (D-069; <c>docs/dev/propuesta-mapa-rio-v2.md</c> §4, §7.2 y §9.5), sin
     /// escena:
     /// <list type="bullet">
-    /// <item>los datos reales: los 30 puntos de paso con su viñeta, su país y su tier, los 12 pueblos nuevos que entran (P4 (a)),
+    /// <item>los datos reales: los 31 puntos de paso con su viñeta, su país y su tier, los 12 pueblos nuevos que entran (P4 (a))
+    /// y Porto Velho, con su excepción medida (pregunta 1 de M2-2, 2026-11-09),
     /// ninguno vetado (Belén y Boca Colorado), la vía con su fracción y la excursión de los 25 tramos de 0 km (P5 (a));</item>
     /// <item>el anclaje: cada pueblo está sobre su línea (su punto del río) y su tramo lo cruza;</item>
     /// <item>la cadencia (§4.1, regla 2): cada tramo largo pasa algún pueblo, salvo las excepciones anotadas en
@@ -31,7 +32,7 @@ namespace AF.Tests.EditMode
         private static readonly string[] NewTowns =
         {
             "almeirim", "prainha", "manacapuru", "codajas", "amatura", "sao_paulo_de_olivenca", "indiana", "orellana", "humaita",
-            "manicore", "cachuela_esperanza", "guajara_mirim",
+            "manicore", "cachuela_esperanza", "guajara_mirim", "porto_velho",
         };
 
         private RiverMap _map = null!;
@@ -45,9 +46,9 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void RealData_ThirtyPassingPoints_WithVignetteCountryAndTier()
+        public void RealData_ThirtyOnePassingPoints_WithVignetteCountryAndTier()
         {
-            Assert.That(_map.Passing.Count, Is.EqualTo(30), "los 18 de la 1.0 y los 12 nuevos (P4 (a))");
+            Assert.That(_map.Passing.Count, Is.EqualTo(31), "los 18 de la 1.0, los 12 nuevos (P4 (a)) y Porto Velho (excepción medida)");
             int towns = 0;
             foreach (RiverPassingPoint p in _map.Passing)
             {
@@ -56,7 +57,7 @@ namespace AF.Tests.EditMode
                 towns += p.IsTown ? 1 : 0;
             }
 
-            Assert.That(towns, Is.EqualTo(25));
+            Assert.That(towns, Is.EqualTo(26));
             foreach (string id in NewTowns)
             {
                 RiverPassingPoint? p = _map.PassingPoint(id);
@@ -67,6 +68,9 @@ namespace AF.Tests.EditMode
 
             Assert.That(_map.PassingPoint("parintins")!.Vignette, Is.EqualTo(RiverTownVignette.Port), "Parintins, el puerto, sin bois");
             Assert.That(_map.PassingPoint("parintins")!.Tier, Is.EqualTo(RiverTownTier.City));
+            Assert.That(_map.PassingPoint("porto_velho")!.Tier, Is.EqualTo(RiverTownTier.City), "la ciudad grande del Madeira");
+            Assert.That(_map.PassingPoint("porto_velho")!.Vignette, Is.EqualTo(RiverTownVignette.Port));
+            Assert.That(_map.PassingPoint("porto_velho")!.RiverKey, Is.EqualTo("map.stop.porto_velho.river"));
             Assert.That(_map.PassingPoint("teotonio")!.Vignette, Is.EqualTo(RiverTownVignette.None), "los rápidos: el punto de la 1.0");
             Assert.That(_map.PassingPoint("cachuela_esperanza")!.CountryNameKey, Is.EqualTo("map.country.bo.name"));
             Assert.That(_map.PassingPoint("coari")!.RiverKey, Is.EqualTo("map.stop.coari.river"));
@@ -75,7 +79,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void RealData_Vetoes_NoBelenNoBocaColoradoNoExcluded()
         {
-            string[] never = { "belen", "boca_colorado", "porto_velho", "borba", "costa_marques", "masisea", "laberinto", "sao_gabriel_da_cachoeira" };
+            string[] never = { "belen", "boca_colorado", "borba", "costa_marques", "masisea", "laberinto", "sao_gabriel_da_cachoeira" };
             foreach (RiverPassingPoint p in _map.Passing)
             {
                 Assert.That(p.Id, Does.Not.Contain("belen"));
