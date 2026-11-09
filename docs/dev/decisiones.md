@@ -4550,6 +4550,17 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - `--check` después: código 0;
   - el criterio de `LocReleaseGate`: 0 problemas.
 
+### D-054, añadido del 2026-11-09: la revisión 4 de Gemini, entregada y aplicada
+
+- **Entrega:** rama `spark/revision-textos-4` (df279233), en `docs/dev/traspaso/gemini-revision-4/`. El dueño la da por buena en el chat («revisa gemini entrego») y el integrador la aplica con `apply_translations.py --review`: 194 celdas o estados, sin conflictos; `--check` después, código 0.
+- **Español:** 50 veredictos `ok`, ninguno `cambia` ni `duda`. Quedan aprobados los 13 pueblos nuevos (Porto Velho incluido), sus 26 ríos, los tutoriales del Aguapé, del Aguapé espeso y de la Lancha, la tripulación, las dos etiquetas del Mapa y los nombres `mechanic.aguape` y `mechanic.aguape_n2`. Las 21 filas en `borrador` (Liga, marcos y TalkBack de los pueblos) se leyeron sin cambios.
+- **Inglés y portugués:** las 72 filas en `revisado_nativo`. Cambios respecto a la entrada:
+  - `mechanic.aguape` y `mechanic.aguape_n2`: «Water Hyacinth» y «Thick Water Hyacinth»; «Aguapé» y «Aguapé denso»;
+  - **Lancha en PT-BR: «Lancha», no «Recreio».** La pieza es una lancha pequeña con motor; el barco de recreio es el regional de dos pisos, y «Recreio» suelto se lee como recreo escolar. «Lancha» ya era una de las alternativas del glosario §6.5. El integrador pone al día `glossary.csv`, la nota de `facts.csv` y `00-glosario.md` §6.5, y `tutorial_lancha` pasa a femenino («A lancha atraca… ela traz»);
+  - EN: «passing city/town» → «city/town along the way»; «Joins the trip» → «Joining the trip»; «…, on» → «…, in use» en el marco elegido.
+- **Dato [V] de los 13 pueblos nuevos** (`datos_pueblos.csv`, con fuente y cita): es una propuesta y no entra en las tablas. Queda para un carril de `tools/river-map` cuando el dueño lo apruebe. Las citas de Indiana y Orellana son débiles (la de Orellana habla del distrito de Vargas Guerra): conviene reforzarlas en ese carril.
+- **Pendiente:** la prueba en el teléfono en los tres idiomas (guion r2).
+
 ### D-051, añadido del 2026-10-28: la intro de la marca dura unos 3,5 s y el vertido va fluido
 
 - **Estado:** pedido por el dueño en el chat el 2026-10-28: «podemos dejar la animación del principio también un poco más fluida, se siente muy tosca el vertido como pocos fotogramas, y podemos dejarla un segundo más para apreciarla mejor». Cambia la duración del añadido del 2026-10-26 (2,5 s); lo demás de ese añadido sigue.
