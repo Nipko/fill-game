@@ -608,9 +608,61 @@ namespace AF.UI
                 || (i < _stopLabels.Count && _stopLabels[i].Pill.gameObject.activeSelf);
         }
 
-        // Al empezar un encuadre: las mini cuias y los países que cedieron en el anterior vuelven.
+        // Añadido de D-069 del 2026-11-09 (revisión): una placa oculta con el encuadre de apertura no vuelve al arrastrar ni al
+        // encuadrar el viaje (PlatesDragged) si en su sitio pisa lo que manda más que ella (PlateHitsLabels: una boya, un rótulo de
+        // parada o una de las mini cuias de CuiaOverPlate) o, en la vista Mundo del Mapa v2, cualquier mini cuia que sale (las que
+        // entraron con el zoom alejado). Sin recolocar nada.
+        private bool PlateKeptHidden(Rect box)
+        {
+            if (!_live || _view != MapView.World)
+            {
+                return false;
+            }
+
+            if (PlateHitsLabels(box))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < _markerCount; i++)
+            {
+                if (_markers[i].Root.gameObject.activeSelf && box.Overlaps(CuiaBox(_markers[i].Shown)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Las líneas finas del abanico, de las mini cuias que salen (tras ocultar o devolver alguna).
+        private void RebuildLeaders()
+        {
+            if (_leaders == null || _leaderLines == null)
+            {
+                return;
+            }
+
+            _leaders.Clear();
+            _leaderLines.Clear();
+            for (int i = 0; i < _markerCount; i++)
+            {
+                StopMarker m = _markers[i];
+                if (m.Root.gameObject.activeSelf && m.HasLeader && LeaderFoot(m.Shown, m.Real, out Vector2 foot))
+                {
+                    _leaders.Add(foot, m.Real);
+                    _leaderLines.Add(foot, m.Real);
+                }
+            }
+
+            _leaders.Commit();
+            _leaderLines.Commit();
+        }
+
+        // Al empezar un encuadre: las mini cuias y los países que cedieron en el anterior vuelven (las mini cuias, con su línea).
         private void CuiasRestore()
         {
+            bool back = false;
             for (int i = 0; i < _countryYielded.Length && i < _countries.Count; i++)
             {
                 if (_countryYielded[i])
@@ -628,8 +680,14 @@ namespace AF.UI
                     if (i < _markerCount)
                     {
                         _markers[i].Root.gameObject.SetActive(true);
+                        back = true;
                     }
                 }
+            }
+
+            if (back)
+            {
+                RebuildLeaders(); // la mini cuia que vuelve, con su línea fina (revisión)
             }
         }
 
@@ -688,25 +746,10 @@ namespace AF.UI
                 }
             }
 
-            if (!any)
+            if (any)
             {
-                return;
+                RebuildLeaders();
             }
-
-            _leaders.Clear();
-            _leaderLines.Clear();
-            for (int i = 0; i < _markerCount; i++)
-            {
-                StopMarker m = _markers[i];
-                if (m.Root.gameObject.activeSelf && m.HasLeader && LeaderFoot(m.Shown, m.Real, out Vector2 foot))
-                {
-                    _leaders.Add(foot, m.Real);
-                    _leaderLines.Add(foot, m.Real);
-                }
-            }
-
-            _leaders.Commit();
-            _leaderLines.Commit();
         }
 
         /// <summary>La mini cuia <paramref name="i"/> no sale con este encuadre: pisaría una placa o un país (añadido de D-069 del 2026-11-09; tests).</summary>

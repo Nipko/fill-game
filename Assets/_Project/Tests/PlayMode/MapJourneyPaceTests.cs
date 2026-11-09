@@ -93,6 +93,8 @@ namespace AF.Tests.PlayMode
             var unseen = new System.Collections.Generic.List<string>();
             var offView = new System.Collections.Generic.List<string>();
             var zoomedOut = new System.Collections.Generic.List<string>();
+            var zoomedOutPlays = new System.Collections.Generic.List<int>();
+            var offViewPlays = new System.Collections.Generic.List<int>();
             for (int play = 2; play <= 700; play += 5)
             {
                 OpenLobby(boot, new MemoryProgressStore(play, play - 1, play - 1), play);
@@ -158,6 +160,7 @@ namespace AF.Tests.PlayMode
                     // Respuesta 2 del dueño (2026-11-09, «Bajar el zoom»): la cámara se alejó, nunca por debajo del tope.
                     Assert.That(map.Zoom, Is.GreaterThanOrEqualTo(RiverMapScreen.RemainingZoomFloor - 1e-3f), at + ": el zoom alejado, con el tope");
                     zoomedOut.Add(play + " (×" + map.Zoom.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ")");
+                    zoomedOutPlays.Add(play);
                 }
 
                 if (play <= 690 && map.RemainingLabelOffView)
@@ -167,6 +170,7 @@ namespace AF.Tests.PlayMode
                     Assert.That(map.RemainingNeedsBelowFloor, Is.True, at + ": la placa de respaldo sin haber probado el zoom hasta el tope");
                     Assert.That(map.RemainingZoomedOut, Is.False, at + ": con la placa, el zoom del mundo");
                     offView.Add(play + " (parada " + map.RemainingStopN() + ")");
+                    offViewPlays.Add(play);
                 }
                 else if (play <= 690 && (!map.StopRemainingInLabel || map.StopRemainingShown))
                 {
@@ -184,8 +188,10 @@ namespace AF.Tests.PlayMode
                 + string.Join("; ", zoomedOut));
             // Respuesta 2 del dueño: con el zoom alejado, la placa solo queda donde haría falta bajar del tope (×1,75 [P]): las
             // «Orillas de Rurrenabaque» jugando el 452 y el 457 (piden ×1,5).
-            Assert.That(offView.Count, Is.LessThanOrEqualTo(2), "la placa de respaldo, solo por debajo del tope: " + string.Join("; ", offView));
-            Assert.That(zoomedOut.Count, Is.GreaterThanOrEqualTo(1), "los tramos largos de los mundos 7 y 8 alejan el zoom");
+            // Los conjuntos que da decisiones.md (añadido del 2026-11-09).
+            Assert.That(offViewPlays, Is.EqualTo(new[] { 452, 457 }), "la placa de respaldo, solo por debajo del tope: " + string.Join("; ", offView));
+            Assert.That(zoomedOutPlays, Is.EqualTo(new[] { 22, 192, 292, 297, 427, 442, 482, 522, 552, 557 }),
+                "las aperturas con el zoom alejado: " + string.Join("; ", zoomedOut));
             Assert.That(unseen, Is.Empty, "el rótulo con «Faltan N» queda fuera del Mapa al abrirlo jugando el " + string.Join("; ", unseen));
             Assert.That(missing, Is.Empty, "«Faltan N» fuera del rótulo de la parada siguiente (con la placa) jugando el " + string.Join("; ", missing));
 
@@ -666,6 +672,173 @@ namespace AF.Tests.PlayMode
             Assert.That(boxes, Is.GreaterThan(plays.Count * 2), "se miraron rótulos de verdad");
             Assert.That(plates, Is.GreaterThan(10), "y placas");
             map.Close();
+        }
+
+        [UnityTest]
+        public IEnumerator DraggingOrFramingTheJourney_NeverBringsBackAPlateOverABuoyALabelOrAMiniCuia()
+        {
+            // Revisión del añadido de D-069 del 2026-11-09: una placa oculta con el encuadre de apertura no vuelve al arrastrar
+            // (Drag) ni al encuadrar el viaje (FrameJourney) si en su sitio pisaría una boya, un rótulo de parada o una mini cuia
+            // (también las que entran con el zoom alejado); en un sitio libre vuelve, como en FX10.
+            yield return MapMarkersTests.OpenApp(292);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            int checks = 0;
+
+            // En las aperturas medidas a 360 dp el encuadre no oculta así ninguna placa: se oculta una a mano encima de cada cosa.
+            OpenLobby(boot, new MemoryProgressStore(292, 291, 291), 292);
+            Assert.That(map.RemainingZoomedOut, Is.True);
+            Assert.That(map.SilhouetteCount, Is.GreaterThanOrEqualTo(1));
+            int next = map.RemainingStopN();
+            var targets = new System.Collections.Generic.List<(Vector2 At, string What)>
+            {
+                (map.BuoyLocalPoint(map.BuoyCount / 2), "una boya"),
+                (map.StopLabelLocalRect(next).center, "el rótulo de la parada siguiente"),
+                (map.StopMarkerBox(map.StopMarkerIndexOf(next)).center, "la mini cuia de la parada siguiente"),
+            };
+            for (int i = 0; i < map.StopMarkerCount; i++)
+            {
+                Rect cuia = map.StopMarkerBox(i);
+                if (cuia.width > 0f && map.StopMarkerStop(i) != next)
+                {
+                    targets.Add((cuia.center, "la mini cuia de la parada " + map.StopMarkerStop(i)));
+                    break;
+                }
+            }
+
+            foreach ((Vector2 target, string what) in targets)
+            {
+                OpenLobby(boot, new MemoryProgressStore(292, 291, 291), 292);
+                Rect before = map.SilhouetteLocalBox(0);
+                map.HidePlateForTests(0, new Vector2(target.x - (before.width * 0.5f), target.y));
+                Assert.That(PlateWouldHit(map, map.SilhouetteLocalBox(0)), Is.True, "premisa: la placa encima de " + what);
+                map.Drag(new Vector2(1f, 0f));
+                Assert.That(map.SilhouettePlate(0).enabled, Is.False, "arrastrar no devuelve la placa encima de " + what);
+            }
+
+            OpenLobby(boot, new MemoryProgressStore(292, 291, 291), 292);
+            map.HidePlateForTests(0, new Vector2(4f, -map.ContentSize.y + 40f)); // abajo a la izquierda del mapa, lejos de todo
+            Assert.That(PlateWouldHit(map, map.SilhouetteLocalBox(0)), Is.False, "premisa: en un sitio libre");
+            map.Drag(new Vector2(1f, 0f));
+            Assert.That(map.SilhouettePlate(0).enabled, Is.True, "en un sitio libre, el arrastre la devuelve (FX10)");
+
+            foreach (int play in new[] { 292, 442, 482, 72 })
+            {
+                OpenLobby(boot, new MemoryProgressStore(play, play - 1, play - 1), play);
+                foreach (Vector2 d in new[] { new Vector2(40f, 0f), new Vector2(-80f, 30f), new Vector2(20f, -60f), new Vector2(60f, 60f) })
+                {
+                    map.Drag(d);
+                    Canvas.ForceUpdateCanvases();
+                    checks += AssertPlatesClear(map, "jugando el " + play + " tras arrastrar " + d);
+                }
+            }
+
+            // Un viaje que cruza de mundo (ponerse al día del 70 al 80 y del 130 al 140): el encuadre del viaje (FrameJourney) y las
+            // placas que se rehacen al cambiar de mundo (PlatesFollowProgress).
+            foreach ((int play, int seen) in new[] { (81, 70), (141, 130) })
+            {
+                OpenLobby(boot, new MemoryProgressStore(play, play - 1, seen), play);
+                for (int ms = 0; ms < 8000 && map.CatchingUp; ms += PlayModeHelpers.FrameMs)
+                {
+                    map.Tick(PlayModeHelpers.FrameMs);
+                    if (ms % 500 == 0)
+                    {
+                        Canvas.ForceUpdateCanvases();
+                        checks += AssertPlatesClear(map, "viaje al " + (play - 1) + ", " + ms + " ms");
+                    }
+                }
+
+                Assert.That(map.CatchingUp, Is.False);
+                Canvas.ForceUpdateCanvases();
+                string at = "tras el viaje al " + (play - 1);
+                checks += AssertPlatesClear(map, at);
+                for (int k = 0; k < map.HeroVignetteCount; k++)
+                {
+                    Rect hero = map.HeroVignetteLocalRect(k);
+                    if (hero.width <= 0f)
+                    {
+                        continue;
+                    }
+
+                    Assert.That(map.StopMarkerBox(map.StopMarkerIndexOf(map.HeroVignetteStop(k))).width, Is.GreaterThan(0f),
+                        at + ": la ciudad con hito de la parada " + map.HeroVignetteStop(k) + " sin su mini cuia");
+                    for (int p = 0; p < map.SilhouetteCount; p++)
+                    {
+                        UnityEngine.UI.Image plate = map.SilhouettePlate(p);
+                        Assert.That(plate.enabled && plate.gameObject.activeInHierarchy && hero.Overlaps(map.SilhouetteLocalBox(p)), Is.False,
+                            at + ": la ciudad con hito debajo de «" + map.SilhouetteText(p) + "»");
+                    }
+                }
+
+                int leaders = 0;
+                for (int i = 0; i < map.StopMarkerCount; i++)
+                {
+                    Rect box = map.StopMarkerBox(i);
+                    if (box.width > 0f && map.StopMarkerHasLeader(i) && !box.Contains(map.StopMarkerRealLocal(i)))
+                    {
+                        leaders++;
+                    }
+                }
+
+                Assert.That(map.LeaderLines.Count, Is.EqualTo(leaders), at + ": cada mini cuia en abanico que sale, con su línea fina");
+            }
+
+            Assert.That(checks, Is.GreaterThan(20), "se miraron placas de verdad");
+            map.Close();
+        }
+
+        // La caja (local) de una placa pisaría una boya del tramo, un rótulo de parada o una mini cuia que sale.
+        private static bool PlateWouldHit(RiverMapScreen map, Rect box)
+        {
+            float radius = map.BuoyClearRadiusDp - 0.01f;
+            for (int b = 0; b < map.BuoyCount; b++)
+            {
+                Vector2 p = map.BuoyLocalPoint(b);
+                if (box.Overlaps(new Rect(p.x - radius, p.y - radius, 2f * radius, 2f * radius)))
+                {
+                    return true;
+                }
+            }
+
+            for (int s = 0; s <= 70; s++)
+            {
+                Rect label = map.StopLabelLocalRect(s);
+                if (label.width > 0f && box.Overlaps(label))
+                {
+                    return true;
+                }
+            }
+
+            for (int i = 0; i < map.StopMarkerCount; i++)
+            {
+                Rect cuia = map.StopMarkerBox(i);
+                if (cuia.width > 0f && box.Overlaps(cuia))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Ninguna placa que sale pisa una boya del tramo, un rótulo de parada ni una mini cuia que sale; devuelve las placas miradas.
+        private static int AssertPlatesClear(RiverMapScreen map, string at)
+        {
+            int n = 0;
+            for (int k = 0; k < map.SilhouetteCount; k++)
+            {
+                UnityEngine.UI.Image plate = map.SilhouettePlate(k);
+                if (!plate.enabled || !plate.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                n++;
+                Assert.That(PlateWouldHit(map, map.SilhouetteLocalBox(k)), Is.False,
+                    at + ": la placa «" + map.SilhouetteText(k) + "» pisa una boya, un rótulo de parada o una mini cuia");
+            }
+
+            return n;
         }
 
         internal static void OpenLobby(GameBootstrap boot, IMapProgress progress, int playLevel)

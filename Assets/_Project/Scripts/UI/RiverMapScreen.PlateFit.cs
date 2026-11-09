@@ -177,6 +177,7 @@ namespace AF.UI
             PlaceSilhouettes(_space);
             PlatesFit();
             CuiasYieldToPlates(); // añadido de D-069 del 2026-11-09
+            HeroesAfterFrame();
             TownLabelsAfterFrame(); // añadido de D-069 del 2026-11-09
         }
 
@@ -186,9 +187,28 @@ namespace AF.UI
         {
             for (int k = 0; k < _plateFitHidden.Length && k < _silhouettes.Count; k++)
             {
-                if (_plateFitHidden[k] && !(k < _plateStacked.Length && _plateStacked[k]))
+                if (_plateFitHidden[k] && !(k < _plateStacked.Length && _plateStacked[k]) && !PlateKeptHidden(PlateBox(_silhouettes[k].Root)))
                 {
                     ShowPlate(k, true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Para los tests (revisión del añadido de D-069 del 2026-11-09): pone la placa <paramref name="i"/> (orden de
+        /// <see cref="SilhouetteCount"/>) con su esquina izquierda y su centro vertical en <paramref name="anchored"/> y la oculta
+        /// como FX10 (una placa que no cabía con el encuadre de apertura), para ver qué hace <c>PlatesDragged</c>.
+        /// </summary>
+        internal void HidePlateForTests(int i, Vector2 anchored)
+        {
+            int seen = 0;
+            for (int k = 0; k < _silhouettes.Count; k++)
+            {
+                if (_silhouettes[k].Root.gameObject.activeSelf && seen++ == i)
+                {
+                    _silhouettes[k].Root.anchoredPosition = anchored;
+                    ShowPlate(k, false);
+                    return;
                 }
             }
         }
