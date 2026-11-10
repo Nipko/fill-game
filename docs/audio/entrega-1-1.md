@@ -8,6 +8,13 @@
 Comprobados 176 de 176 archivos: 176 sin fallos; 0 fallos y 0 avisos en total.
 ```
 
+> **Nota del integrador (2026-11-09):** las líneas «Función en el juego» de §2 no describen el juego y no valen como referencia. Los ganchos reales son:
+> - el Aguapé suena en `AudioBoard.Step` con `MechanicStepKind.Loosen`, cuando se sella una cuia de su grupo (02 §9.1 M8);
+> - la Lancha suena en `AudioBoard.Step` con `MechanicStepKind.Dock`, cuando atraca (02 §9.1 M11);
+> - la fanfarria suena en `GameBootstrap.ShowLeagueDebut`, una vez por jugador, tras ganar el 41 o al llegar la 1.1 (`encargo-fanfarria-liga.md` §1).
+>
+> Licencias: el integrador comprobó que las grabaciones de Wikimedia Commons y la de `433589_stream-river-water.wav` ya estaban verificadas en la entrega 1 y que FreePats publica en CC0 su guitarra y su percusión del mundo. Los nombres de muestra «curimbo_*», «frame_hand_*» y «tumba_tap» no aparecen en FreePats: la atribución es imprecisa, pero todas las bibliotecas citadas son CC0.
+
 ---
 
 ## 1. Resumen técnico y medidas verificadas (`check_audio.py`)

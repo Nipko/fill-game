@@ -15,7 +15,7 @@ namespace AF.Tests.PlayMode
 {
     /// <summary>
     /// El juego suena con el audio definitivo de la entrega 1 (tarea AU3), con el servicio real: la escena cuelga el registro de
-    /// los 173 clips y el servicio lo usa sin generar el audio por código; cada nota de fruta es su clip, sin cambio de tono; un id
+    /// los 176 clips y el servicio lo usa sin generar el audio por código; cada nota de fruta es su clip, sin cambio de tono; un id
     /// sin clip suena con el respaldo por código; el chorro funde los 4 bucles grabados sin pasar de ± 2 semitonos; el lecho y sus
     /// capas se programan en el mismo instante del reloj de audio y miden lo mismo; el agua, la lluvia y la fauna son las del
     /// mundo (el 11, de respaldo); y un remate espera a que termine la toada. La sonda dice de dónde sale cada cosa.

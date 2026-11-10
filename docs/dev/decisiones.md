@@ -4561,6 +4561,24 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **Dato [V] de los 13 pueblos nuevos** (`datos_pueblos.csv`, con fuente y cita): es una propuesta y no entra en las tablas. Queda para un carril de `tools/river-map` cuando el dueño lo apruebe. Las citas de Indiana y Orellana son débiles (la de Orellana habla del distrito de Vargas Guerra): conviene reforzarlas en ese carril.
 - **Pendiente:** la prueba en el teléfono en los tres idiomas (guion r2).
 
+### Q-LD-3, añadido del 2026-11-09: los tres audios nuevos de la 1.1, de Gemini
+
+- **Encargo:** el dueño pidió en el chat «encarga a gemini los audios nuevos». El encargo es `docs/audio/encargo-audios-1-1.md`. Cubre tres piezas que hasta ahora sonaban con un efecto prestado: el Aguapé al soltarse, la Lancha al atracar y la fanfarria del estreno de la Liga (Q-LD-3, «Encargar audio propio»). La Palizada y la Cocha pasan a la 1.2.
+- **Entrega:** rama `spark/audio-1-1` (7f60b31c). `check_audio.py` da 176 de 176, sin fallos ni avisos. Licencias:
+  - todas `cc0`;
+  - las grabaciones de Wikimedia Commons ya se verificaron en la entrega 1;
+  - FreePats publica en CC0 su guitarra y su percusión del mundo, comprobado en su web el 2026-11-09;
+  - algunos nombres de muestra que cita Gemini (curimbó, tambor de marco, tumba) no aparecen en FreePats: la atribución es imprecisa, pero todas las bibliotecas citadas son CC0.
+- **Conexión** (`v11/audio-1-1`, 2012686c):
+  - `SfxId.MechAguape` y `SfxId.MechLancha` van al final del enum, con el respaldo por código del Remolino y del remo de Capi;
+  - `StingerId.LeagueDebut` es el sexto remate;
+  - en `AudioBoard.Step`, `Loosen` toca el Aguapé y `Dock` la Lancha;
+  - `ShowLeagueDebut` toca `Confetti` (Sonido) y el remate nuevo (Música), sin `StreakUp` ni `Arrival`.
+- **Decisiones [P] del integrador:**
+  - sin clip, la Lancha suena a −19 dBFS, el pico de su ficha, 1 dB menos que el remo de Capi;
+  - la fanfarria se acepta como montaje original de muestras CC0, con licencia `cc0`. El encargo pedía obra original con cesión total, y la licencia `cc0` de las fuentes cumple ese fin para anuncios y tráilers.
+- **Pendiente del dueño:** escuchar las tres piezas en el teléfono, que es la condición del encargo. Una que no convenza vuelve a Gemini con su comentario.
+
 ### D-051, añadido del 2026-10-28: la intro de la marca dura unos 3,5 s y el vertido va fluido
 
 - **Estado:** pedido por el dueño en el chat el 2026-10-28: «podemos dejar la animación del principio también un poco más fluida, se siente muy tosca el vertido como pocos fotogramas, y podemos dejarla un segundo más para apreciarla mejor». Cambia la duración del añadido del 2026-10-26 (2,5 s); lo demás de ese añadido sigue.
