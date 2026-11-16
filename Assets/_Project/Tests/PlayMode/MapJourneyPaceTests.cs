@@ -190,7 +190,10 @@ namespace AF.Tests.PlayMode
             // «Orillas de Rurrenabaque» jugando el 452 y el 457 (piden ×1,5).
             // Los conjuntos que da decisiones.md (añadido del 2026-11-09).
             Assert.That(offViewPlays, Is.EqualTo(new[] { 452, 457 }), "la placa de respaldo, solo por debajo del tope: " + string.Join("; ", offView));
-            Assert.That(zoomedOutPlays, Is.EqualTo(new[] { 22, 192, 292, 297, 427, 442, 482, 522, 552, 557 }),
+            // Observación 6 de la prueba r2b de la 1.1 [P]: el rótulo de la parada siguiente ya no va a dos pasos de su mini cuia
+            // (RiverMapScreen.StopLabelNearDp); en 302, 352, 447, 542, 547, 622 y 677 no le quedaba sitio más cerca y el encuadre se
+            // aleja para que quepa junto a ella (decisiones.md da el conjunto del 2026-11-09, sin estas siete).
+            Assert.That(zoomedOutPlays, Is.EqualTo(new[] { 22, 192, 292, 297, 302, 352, 427, 442, 447, 482, 522, 542, 547, 552, 557, 622, 677 }),
                 "las aperturas con el zoom alejado: " + string.Join("; ", zoomedOut));
             Assert.That(unseen, Is.Empty, "el rótulo con «Faltan N» queda fuera del Mapa al abrirlo jugando el " + string.Join("; ", unseen));
             Assert.That(missing, Is.Empty, "«Faltan N» fuera del rótulo de la parada siguiente (con la placa) jugando el " + string.Join("; ", missing));
@@ -783,7 +786,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.LeaderLines.Count, Is.EqualTo(leaders), at + ": cada mini cuia en abanico que sale, con su línea fina");
             }
 
-            Assert.That(checks, Is.GreaterThan(20), "se miraron placas de verdad");
+            Assert.That(checks, Is.GreaterThan(10), "se miraron placas de verdad"); // con el Mapa v2, una placa por apertura (observación 5 de la r2b)
             map.Close();
         }
 

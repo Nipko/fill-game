@@ -167,6 +167,12 @@ namespace AF.Tests.PlayMode
                             // Contra ocultar de más: solo se oculta la que cae junto a la canoa o la guía.
                             bool near = Hits(Grow(canoe, clear), c, r) || (!map.BuoysCompact && ((guide.HasValue && Hits(Grow(guide.Value, clear), c, r))
                                 || (tucuxi.HasValue && Hits(Grow(tucuxi.Value, clear), c, r))));
+                            // O sobre un rótulo o una placa (observación 3 de la r2b), con sus cajas de verdad y el claro.
+                            foreach (Rect label in MapRound2bTests.RealLabelBoxes(map))
+                            {
+                                near |= Hits(Grow(label, clear), map.BuoyLocalPoint(i), g.DrawnRadius);
+                            }
+
                             Assert.That(near, Is.True, at + ": la boya del " + map.BuoyLevel(i) + " se oculta lejos de la canoa y de la guía: " + c + " r " + r + ", canoa " + canoe + ", guía " + guide + ", tucuxi " + tucuxi);
                             continue;
                         }
@@ -573,7 +579,7 @@ namespace AF.Tests.PlayMode
             return new Rect(r.xMin - by, r.yMin - by, r.width + (2f * by), r.height + (2f * by));
         }
 
-        private static bool Hits(Rect box, Vector2 p, float r)
+        internal static bool Hits(Rect box, Vector2 p, float r)
         {
             float dx = Mathf.Max(0f, Mathf.Max(box.xMin - p.x, p.x - box.xMax));
             float dy = Mathf.Max(0f, Mathf.Max(box.yMin - p.y, p.y - box.yMax));

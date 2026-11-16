@@ -70,6 +70,19 @@ namespace AF.UI
         // Sitios que prueba el rótulo de una parada: los cuatro lados de su mini cuia, pegados y dos pasos más allá [P].
         private const int StopLabelSpots = 12;
 
+        /// <summary>
+        /// Lo más lejos que va el rótulo de la parada siguiente de su mini cuia (hueco entre las dos cajas, dp) [P] (observación 6 de la
+        /// prueba r2b de la 1.1: en el 451, «Orillas de Rurrenabaque · faltan 9 niveles» quedaba lejos de su parada): el sitio pegado o
+        /// un paso más allá; si no cabe ahí, la placa de respaldo.
+        /// </summary>
+        public const float StopLabelNearDp = 48f;
+
+        /// <summary>
+        /// Anillos de sitios (cuatro lados cada uno) que prueba el rótulo de la parada siguiente con el Mapa v2 [P]: el pegado y uno
+        /// más allá, que lo dejan a ≤ <see cref="StopLabelNearDp"/> de su mini cuia (observación 6 de la prueba r2b de la 1.1).
+        /// </summary>
+        public const int StopLabelNearRings = 2;
+
         private readonly MapTownArt _townArt = new MapTownArt();
         private readonly List<TownMarker> _townMarkers = new List<TownMarker>();
         private readonly List<Rect> _townPlaced = new List<Rect>();
@@ -717,6 +730,18 @@ namespace AF.UI
                 StopMarker m = _markers[i];
                 if (!m.Root.gameObject.activeSelf)
                 {
+                    continue;
+                }
+
+                if (m.Buoy != null && m.Buoy.enabled && m.HasLeader && i != _prizeMarker)
+                {
+                    // Observación 6 de la prueba r2b de la 1.1 [P]: una parada futura (más allá de la siguiente) que el abanico apartó
+                    // de su punto no sale, ni su línea fina: donde se amontonan (Bolivia), cargaban el Mapa sin decir nada aún. La del
+                    // Premio del mundo sí sale (con su píldora); la siguiente no es nunca una boya. (Eximir también a las que llevan
+                    // rótulo, como en CuiaOverPlate, dejaba sin sitio la placa del mundo 7 jugando el 301: Fx10Tests.)
+                    m.Root.gameObject.SetActive(false);
+                    _cuiaYielded[i] = true;
+                    any = true;
                     continue;
                 }
 
@@ -1473,18 +1498,72 @@ namespace AF.UI
 
         private float _closeUpLabelAlpha = 1f;
 
+        // Por encima de este primer plano (×), los rótulos y las placas no se ven (revisión de la r2b).
+        private const float CloseUpLabelsOffAbove = 1.001f;
+
+        /// <summary>
+        /// Rótulos de parada y de pueblo, la píldora del premio y placas de mundo que se ven ahora (activos y con opacidad &gt; 0;
+        /// tests: en el primer plano, ninguno).
+        /// </summary>
+        internal int VisibleMapLabelCount()
+        {
+            int n = 0;
+            for (int i = 0; i < _stopLabels.Count; i++)
+            {
+                n += PillVisible(_stopLabels[i].Pill) ? 1 : 0;
+            }
+
+            for (int i = 0; i < _townMarkers.Count; i++)
+            {
+                n += PillVisible(_townMarkers[i].Pill) ? 1 : 0;
+            }
+
+            if (_prizePill != null)
+            {
+                n += PillVisible(_prizePill) ? 1 : 0;
+            }
+
+            for (int i = 0; i < _silhouettes.Count; i++)
+            {
+                n += _silhouettes[i].Plate.enabled && PillVisible(_silhouettes[i].Root) ? 1 : 0;
+            }
+
+            return n;
+        }
+
+        private static bool PillVisible(RectTransform pill)
+        {
+            if (!pill.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            for (int c = 0; c < pill.childCount; c++)
+            {
+                if (pill.GetChild(c).TryGetComponent(out CanvasRenderer r) && r.GetAlpha() > 0f)
+                {
+                    return true;
+                }
+            }
+
+            return pill.TryGetComponent(out CanvasRenderer own) && own.GetAlpha() > 0f;
+        }
+
         /// <summary>Opacidad de los rótulos del Mapa por el primer plano de la tripulación (1 sin él; tests).</summary>
         internal float CloseUpLabelAlpha => _closeUpLabelAlpha;
 
         // Añadido de D-069 del 2026-11-08 (observación 8): en el primer plano de la tripulación, los rótulos de los pueblos y de las
-        // paradas y la píldora del Premio del mundo se apagan (a ×2 taparían la escena) y vuelven con él. Solo escribe si cambia; sin
-        // asignaciones.
+        // paradas y la píldora del Premio del mundo se apagan (a ×2 taparían la escena) y vuelven con él. Revisión de la r2b: se
+        // apagan del todo desde el primer fotograma del primer plano (o del acercamiento de llegada), con las placas de mundo; antes
+        // se desvanecían a la vez que crecían con la cámara y se veía un rótulo enorme y medio transparente. Solo escribe si cambia;
+        // sin asignaciones.
         private void CloseUpLabels()
         {
-            float a = 1f - Mathf.Clamp01((_closeZoom - 1f) / (CamCloseUpZoom - 1f));
-            if (Mathf.Abs(a - _closeUpLabelAlpha) < 0.01f && (a < 1f || _closeUpLabelAlpha == 1f))
+            float a = _closeZoom > CloseUpLabelsOffAbove ? 0f : 1f;
+            if (a == 1f && _closeUpLabelAlpha == 1f)
             {
-                return;
+                return; // en reposo, nada; en el primer plano se repasa cada fotograma: un rótulo que sale a mitad (un pueblo que
+                        // pasa, el de la parada nueva) también va apagado
             }
 
             _closeUpLabelAlpha = a;
@@ -1503,6 +1582,11 @@ namespace AF.UI
                 SetPillAlpha(_prizePill, a);
             }
 
+            for (int i = 0; i < _silhouettes.Count && !_northUpOn && !NorthUpTurning; i++)
+            {
+                SetPillAlpha(_silhouettes[i].Root, a); // las placas de mundo, que también crecen con la cámara («Norte arriba» pone las suyas)
+            }
+
             if (_buoysAhead != null)
             {
                 _buoysAhead.canvasRenderer.SetAlpha(a); // las boyas por ganar van encima de Rosa y del tucuxi
@@ -1512,16 +1596,15 @@ namespace AF.UI
         // La píldora y lo que lleva dentro (su texto y, en la del premio, la mini cuia), a la opacidad a.
         private static void SetPillAlpha(RectTransform pill, float a)
         {
-            CanvasRenderer? own = pill.GetComponent<CanvasRenderer>();
-            if (own != null)
+            // TryGetComponent: sin asignar memoria cuando no lo hay (la raíz de una placa), también en el Editor.
+            if (pill.TryGetComponent(out CanvasRenderer own) && own.GetAlpha() != a)
             {
                 own.SetAlpha(a);
             }
 
             for (int c = 0; c < pill.childCount; c++)
             {
-                CanvasRenderer? r = pill.GetChild(c).GetComponent<CanvasRenderer>();
-                if (r != null)
+                if (pill.GetChild(c).TryGetComponent(out CanvasRenderer r) && r.GetAlpha() != a)
                 {
                     r.SetAlpha(a);
                 }
@@ -1651,7 +1734,11 @@ namespace AF.UI
             bool prizeHere = _prizeMarker == i && _prizePill != null && _prizePill.gameObject.activeSelf;
             var below = new Vector2(0f, -(ch * 0.5f) - (size.y * 0.5f) - 2f);
             float side = (cw * 0.5f) + BasketBadgeDp + (size.x * 0.5f) + 2f; // más allá de la cestita de la esquina
-            for (int k = 0; k < StopLabelSpots; k++)
+            // Observación 6 de la prueba r2b de la 1.1: con el Mapa v2, el rótulo de la parada siguiente («Faltan N») prueba solo los
+            // sitios de StopLabelNearRings (pegado o un paso más allá, nunca dos; así queda a ≤ StopLabelNearDp de su mini cuia): si
+            // no, debajo y, si va en abanico, la placa de respaldo.
+            int spots = _live && _markers[i].N == RemainingStopN() ? StopLabelNearRings * 4 : StopLabelSpots;
+            for (int k = 0; k < spots; k++)
             {
                 // De cerca a lejos: debajo, encima, a la derecha y a la izquierda; y después lo mismo un paso más allá (en un abanico,
                 // las vecinas ocupan los cuatro sitios pegados).

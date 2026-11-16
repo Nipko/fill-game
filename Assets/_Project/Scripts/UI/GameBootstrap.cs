@@ -1184,7 +1184,8 @@ namespace AF.UI
             IProgressStore? progress = _progress;
             if (progress != null)
             {
-                MarkMapSeen(progress.MaxLevel);
+                // Observación 1 de la prueba r2b de la 1.1: si el compañero que se unía no llegó a verse, hasta antes de su punto.
+                MarkMapSeen(Math.Min(progress.MaxLevel, map.CrewSeenCap));
             }
 
             _probe?.MapClose(stats, progress?.MapSeenLevel ?? 0);
